@@ -76,6 +76,9 @@ async function publish(dir: string, name: string, version: string) {
   // GitHub artifact downloads can drop the executable bit, and Docker uses the
   // unpacked dist binaries directly rather than the published tarball.
   if (process.platform !== "win32") await $`chmod -R 755 .`.cwd(dir)
+  for (const file of fs.readdirSync(dir)) {
+    if (file.endsWith(".tgz")) fs.rmSync(path.join(dir, file), { force: true })
+  }
   if (dryRun) {
     const alreadyPublished = await published(name, version)
     if (alreadyPublished) console.log(`[dry-run] already published ${name}@${version}`)
@@ -88,9 +91,10 @@ async function publish(dir: string, name: string, version: string) {
     return
   }
   await $`bun pm pack`.cwd(dir)
+  const tarball = `${name}-${version}.tgz`
   for (let attempt = 1; attempt <= 5; attempt++) {
     try {
-      await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(dir)
+      await $`npm publish ${tarball} --access public --tag ${Script.channel}`.cwd(dir)
       return
     } catch (error) {
       if (await published(name, version)) {
