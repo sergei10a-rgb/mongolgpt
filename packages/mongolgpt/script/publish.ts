@@ -68,6 +68,10 @@ async function published(name: string, version: string) {
   return (await $`npm view ${name}@${version} version`.quiet().nothrow()).exitCode === 0
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function publish(dir: string, name: string, version: string) {
   // GitHub artifact downloads can drop the executable bit, and Docker uses the
   // unpacked dist binaries directly rather than the published tarball.
@@ -84,7 +88,25 @@ async function publish(dir: string, name: string, version: string) {
     return
   }
   await $`bun pm pack`.cwd(dir)
-  await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(dir)
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(dir)
+      return
+    } catch (error) {
+      if (await published(name, version)) {
+        console.log(`already published ${name}@${version}`)
+        return
+      }
+
+      const stderr = String((error as any)?.stderr ?? "")
+      const retryable = stderr.includes("E429") || stderr.toLowerCase().includes("rate limit")
+      if (!retryable || attempt === 5) throw error
+
+      const delay = attempt * 60_000
+      console.log(`rate limited while publishing ${name}@${version}; retrying in ${delay / 1000}s`)
+      await sleep(delay)
+    }
+  }
 }
 
 const binaries = await assertBinaryPackages()
@@ -132,10 +154,9 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
   ),
 )
 
-const tasks = Object.entries(binaries).map(async ([name]) => {
-  await publish(`./dist/${name}`, name, binaries[name])
-})
-await Promise.all(tasks)
+for (const [name, version] of Object.entries(binaries)) {
+  await publish(`./dist/${name}`, name, version)
+}
 await publish(`./dist/${pkg.name}`, pkg.name, version)
 
 const image = "ghcr.io/sergei10a-rgb/mongolgpt"
