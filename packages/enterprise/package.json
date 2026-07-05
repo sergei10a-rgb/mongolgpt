@@ -1,6 +1,6 @@
 {
   "name": "@mongolgpt/enterprise",
-  "version": "1.17.11",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "license": "MIT",
