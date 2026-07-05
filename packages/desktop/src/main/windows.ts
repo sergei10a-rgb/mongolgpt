@@ -13,7 +13,7 @@ import { createUnresponsiveSampler } from "./unresponsive"
 
 const root = dirname(fileURLToPath(import.meta.url))
 const rendererRoot = join(root, "../renderer")
-const rendererProtocol = "oc"
+const rendererProtocol = "mongolgpt-renderer"
 const rendererHost = "renderer"
 const clipboardWritePermission = "clipboard-sanitized-write"
 const notificationPermission = "notifications"

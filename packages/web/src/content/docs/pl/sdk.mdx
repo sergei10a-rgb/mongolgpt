@@ -13,13 +13,17 @@ Użyj go do budowania integracji i programowej kontroli MongolGPT.
 
 ---
 
-## Instalacja
+## SDK ашиглах
 
-Zainstaluj pakiet SDK z npm:
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ Spowoduje to uruchomienie zarówno serwera, jak i klienta.
 | Opcja      | Typ           | Opis                                      | Domyślne    |
 | ---------- | ------------- | ----------------------------------------- | ----------- |
 | `hostname` | `string`      | Nazwa hosta serwera                       | `127.0.0.1` |
-| `port`     | `number`      | Port serwera                              | `4096`      |
+| `port`     |
+umber`      | Port serwera                              | `4096`      |
 | `signal`   | `AbortSignal` | Sygnał przerwania w celu anulowania       | `undefined` |
-| `timeout`  | `number`      | Limit czasu w ms dla uruchomienia serwera | `5000`      |
+| `timeout`  |
+umber`      | Limit czasu w ms dla uruchomienia serwera | `5000`      |
 | `config`   | `Config`      | Obiekt konfiguracji                       | `{}`        |
 
 ---
@@ -167,7 +173,8 @@ Używając `type: 'json_schema'`, podaj:
 | ------------ | --------------- | ------------------------------------------------------------ |
 | `type`       | `'json_schema'` | Wymagane. Określa tryb schematu JSON                         |
 | `schema`     | `object`        | Wymagane. Obiekt JSON Schema definiujący strukturę wyjściową |
-| `retryCount` | `number`        | Opcjonalne. Liczba ponownych prób walidacji (domyślnie: 2)   |
+| `retryCount` |
+umber`        | Opcjonalne. Liczba ponownych prób walidacji (domyślnie: 2)   |
 
 ### Obsługa błędów
 

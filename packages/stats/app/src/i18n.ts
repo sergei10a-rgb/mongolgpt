@@ -8,6 +8,7 @@ import { dict as fr } from "./i18n/fr"
 import { dict as it } from "./i18n/it"
 import { dict as ja } from "./i18n/ja"
 import { dict as ko } from "./i18n/ko"
+import { dict as mn } from "./i18n/mn"
 import { dict as no } from "./i18n/no"
 import { dict as pl } from "./i18n/pl"
 import { dict as ru } from "./i18n/ru"
@@ -62,7 +63,7 @@ const en = {
   "footer.youtube": "YouTube",
   "footer.homeAria": "MongolGPT home",
   "footer.status": "All systems Operational",
-  "footer.copyright": "© 2026 Anomaly Innovations Inc.",
+  "footer.copyright": "© 2026 MongolGPT",
   "bridge.learnMore": "LEARN MORE",
   "modal.closeNewsletter": "Close newsletter signup",
   "modal.title": "MongolGPT Newsletter",
@@ -261,6 +262,7 @@ const dictionaries = {
   it,
   ja,
   ko,
+  mn,
   no,
   pl,
   ru,

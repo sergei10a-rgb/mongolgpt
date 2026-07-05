@@ -13,13 +13,17 @@ mongolgpt JS/TS SDK จัดเตรียมไคลเอ็นต์ปร
 
 ---
 
-## ติดตั้ง
+## SDK ашиглах
 
-ติดตั้ง SDK จาก npm:
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ const { client } = await createMongolGPT()
 | ตัวเลือก   | Type          | คำอธิบาย                                    | ค่าเริ่มต้น |
 | ---------- | ------------- | ------------------------------------------- | ----------- |
 | `hostname` | `string`      | ชื่อโฮสต์ของเซิร์ฟเวอร์                     | `127.0.0.1` |
-| `port`     | `number`      | พอร์ตเซิร์ฟเวอร์                            | `4096`      |
+| `port`     |
+umber`      | พอร์ตเซิร์ฟเวอร์                            | `4096`      |
 | `signal`   | `AbortSignal` | ยกเลิกสัญญาณสำหรับการยกเลิก                 | `undefined` |
-| `timeout`  | `number`      | หมดเวลาเป็น ms สำหรับการเริ่มต้นเซิร์ฟเวอร์ | `5000`      |
+| `timeout`  |
+umber`      | หมดเวลาเป็น ms สำหรับการเริ่มต้นเซิร์ฟเวอร์ | `5000`      |
 | `config`   | `Config`      | วัตถุการกำหนดค่า                            | `{}`        |
 
 ---
@@ -167,7 +173,8 @@ console.log(result.data.info.structured_output)
 | ------------ | --------------- | --------------------------------------------------------------------- |
 | `type`       | `'json_schema'` | จำเป็น ระบุโหมด JSON schema                                           |
 | `schema`     | `object`        | จำเป็น วัตถุ JSON Schema ที่กำหนดโครงสร้างผลลัพธ์                     |
-| `retryCount` | `number`        | ไม่จำเป็น จำนวนการลองใหม่สำหรับการตรวจสอบความถูกต้อง (ค่าเริ่มต้น: 2) |
+| `retryCount` |
+umber`        | ไม่จำเป็น จำนวนการลองใหม่สำหรับการตรวจสอบความถูกต้อง (ค่าเริ่มต้น: 2) |
 
 ### การจัดการข้อผิดพลาด
 

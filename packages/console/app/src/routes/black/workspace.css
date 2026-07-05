@@ -178,7 +178,7 @@
         line-height: normal;
       }
 
-      [data-slot="anomaly"] {
+      [data-slot="brand"] {
         display: none;
 
         @media (min-width: 768px) {
@@ -186,7 +186,7 @@
         }
       }
     }
-    [data-slot="anomaly-alt"] {
+    [data-slot="brand-alt"] {
       color: rgba(255, 255, 255, 0.39);
       font-family: "JetBrains Mono Nerd Font";
       font-size: 16px;

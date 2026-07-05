@@ -13,13 +13,17 @@ El SDK mongolgpt JS/TS proporciona un cliente con seguridad de tipos para intera
 
 ---
 
-## Instalar
+## SDK ашиглах
 
-Instale el SDK desde npm:
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ Esto inicia tanto un servidor como un cliente.
 | Opción     | Tipo          | Descripción                                     | Predeterminado |
 | ---------- | ------------- | ----------------------------------------------- | -------------- |
 | `hostname` | `string`      | Nombre de host del servidor                     | `127.0.0.1`    |
-| `port`     | `number`      | Puerto del servidor                             | `4096`         |
+| `port`     |
+umber`      | Puerto del servidor                             | `4096`         |
 | `signal`   | `AbortSignal` | Señal de aborto para cancelación                | `undefined`    |
-| `timeout`  | `number`      | Tiempo de espera en ms para inicio del servidor | `5000`         |
+| `timeout`  |
+umber`      | Tiempo de espera en ms para inicio del servidor | `5000`         |
 | `config`   | `Config`      | Objeto de configuración                         | `{}`           |
 
 ---
@@ -167,7 +173,8 @@ Cuando use `type: 'json_schema'`, proporcione:
 | ------------ | --------------- | ---------------------------------------------------------------- |
 | `type`       | `'json_schema'` | Requerido. Especifica el modo de esquema JSON                    |
 | `schema`     | `object`        | Requerido. Objeto JSON Schema que define la estructura de salida |
-| `retryCount` | `number`        | Opcional. Número de reintentos de validación (predeterminado: 2) |
+| `retryCount` |
+umber`        | Opcional. Número de reintentos de validación (predeterminado: 2) |
 
 ### Manejo de Errores
 

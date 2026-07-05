@@ -171,7 +171,7 @@ export default function Home() {
 
       <div data-component="legal">
         <span>
-          ©2025 <a href="https://anoma.ly">Anomaly</a>
+          ©2025 <a href="https://mongolgpt.duckdns.org">MongolGPT</a>
         </span>
       </div>
     </main>

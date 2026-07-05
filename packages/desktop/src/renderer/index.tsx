@@ -290,9 +290,15 @@ render(() => {
     const current = await platform.storage?.("mongolgpt.global.dat").getItem("language")
     const legacy = current ? undefined : await platform.storage?.().getItem("language.v1")
     const raw = current ?? legacy
-    if (!raw) return
+    if (!raw) {
+      await loadLocaleDict("mn")
+      return "mn" satisfies Locale
+    }
     const locale = raw.match(/"locale"\s*:\s*"([^"]+)"/)?.[1]
-    if (!locale) return
+    if (!locale) {
+      await loadLocaleDict("mn")
+      return "mn" satisfies Locale
+    }
     const next = normalizeLocale(locale)
     if (next !== "en") await loadLocaleDict(next)
     return next satisfies Locale

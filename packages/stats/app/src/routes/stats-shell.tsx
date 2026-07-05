@@ -239,7 +239,7 @@ export function Footer(props: {
     { href: "https://mongolgpt.duckdns.org/discord", label: i18n.t("footer.community") },
     { href: "https://x.com/mongolgpt", label: "X" },
     { href: githubLink.href, label: i18n.t("header.github") },
-    { href: "https://www.youtube.com/@anomaly-co", label: i18n.t("footer.youtube") },
+    { href: "https://www.youtube.com/@MongolGPT", label: i18n.t("footer.youtube") },
   ]
 
   return (

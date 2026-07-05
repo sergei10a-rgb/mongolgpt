@@ -348,8 +348,10 @@ Sie können mongolgpt so konfigurieren, dass es lokale Modelle über [Atomic Cha
 In diesem Beispiel:
 
 - `atomic-chat` ist die benutzerdefinierte Provider-ID. Dies kann eine beliebige Zeichenkette sein.
-- `npm` gibt das für diesen Provider zu verwendende Paket an. Hier wird `@ai-sdk/openai-compatible` für jede OpenAI-kompatible API verwendet.
-- `name` ist der in der UI angezeigte Name des Providers.
+-
+pm` gibt das für diesen Provider zu verwendende Paket an. Hier wird `@ai-sdk/openai-compatible` für jede OpenAI-kompatible API verwendet.
+-
+ame` ist der in der UI angezeigte Name des Providers.
 - `options.baseURL` ist der Endpunkt des lokalen Servers. Passen Sie Host und Port an Ihre Atomic-Chat-Konfiguration an.
 - `models` ist eine Zuordnung von Modell-IDs zu ihren Anzeigenamen. Jede ID muss dem `id`-Wert entsprechen, den `GET /v1/models` zurückgibt — führen Sie `curl http://127.0.0.1:1337/v1/models` aus, um die aktuell in Atomic Chat geladenen IDs aufzulisten.
 
@@ -815,7 +817,7 @@ Stellen Sie dann die Anwendung ID als Umgebungsvariable bereit:
 export GITLAB_OAUTH_CLIENT_ID=your_application_id_here
 ```
 
-Weitere Dokumentation auf der [mongolgpt-gitlab-auth](https://www.npmjs.com/package/mongolgpt-gitlab-auth)-Homepage.
+Weitere Dokumentation auf der MongolGPT GitLab auth adapter-Homepage.
 
 ##### Konfiguration
 
@@ -841,7 +843,7 @@ So greifen Sie auf GitLab-Tools zu (Zusammenführungsanfragen, Probleme, Pipelin
 ```json title="mongolgpt.json"
 {
   "$schema": "https://mongolgpt.duckdns.org/config.json",
-  "plugin": ["mongolgpt-gitlab-plugin"]
+  "plugin": ["./plugins/gitlab-duo.ts"]
 }
 ```
 
@@ -1070,17 +1072,19 @@ Helicone unterstützt benutzerdefinierte Header für Funktionen wie Caching, Ben
 
 ##### Sitzungsverfolgung
 
-Mit der [Sessions](https://docs.helicone.ai/features/sessions)-Funktion von Helicone können Sie zusammengehörige LLM-Anfragen gruppieren. Verwenden Sie das [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session)-Plugin, um jede MongolGPT-Konversation automatisch als Sitzung in Helicone zu protokollieren.
+Mit der [Sessions](https://docs.helicone.ai/features/sessions)-Funktion von Helicone können Sie zusammengehörige LLM-Anfragen gruppieren. Verwenden Sie das local Helicone session plugin-Plugin, um jede MongolGPT-Konversation automatisch als Sitzung in Helicone zu protokollieren.
 
 ```bash
-npm install -g mongolgpt-helicone-session
+# Dedicated MongolGPT npm plugin is not published yet.
+# Use a local plugin file or import an adapter with:
+mongolgpt compat import plan ./plugins/helicone-session.ts
 ```
 
 Fügen Sie es Ihrer Konfiguration hinzu.
 
 ```json title="mongolgpt.json"
 {
-  "plugin": ["mongolgpt-helicone-session"]
+  "plugin": ["./plugins/helicone-session.ts"]
 }
 ```
 
@@ -1130,8 +1134,10 @@ Sie können MongolGPT für die Verwendung lokaler Modelle über das Dienstprogra
 In diesem Beispiel:
 
 - `llama.cpp` ist der benutzerdefinierte Anbieter ID. Dies kann eine beliebige Zeichenfolge sein.
-- `npm` gibt das Paket an, das für diesen Anbieter verwendet werden soll. Hier wird `@ai-sdk/openai-compatible` für jeden OpenAI-kompatiblen API verwendet.
-- `name` ist der Anzeigename für den Anbieter im UI.
+-
+pm` gibt das Paket an, das für diesen Anbieter verwendet werden soll. Hier wird `@ai-sdk/openai-compatible` für jeden OpenAI-kompatiblen API verwendet.
+-
+ame` ist der Anzeigename für den Anbieter im UI.
 - `options.baseURL` ist der Endpunkt für den lokalen Server.
 - `models` ist eine Zuordnung von Modell-IDs zu ihren Konfigurationen. Der Modellname wird in der Modellauswahlliste angezeigt.
 
@@ -1193,8 +1199,10 @@ Sie können MongolGPT über LM Studio für die Verwendung lokaler Modelle konfig
 In diesem Beispiel:
 
 - `lmstudio` ist der benutzerdefinierte Anbieter ID. Dies kann eine beliebige Zeichenfolge sein.
-- `npm` gibt das Paket an, das für diesen Anbieter verwendet werden soll. Hier wird `@ai-sdk/openai-compatible` für jeden OpenAI-kompatiblen API verwendet.
-- `name` ist der Anzeigename für den Anbieter im UI.
+-
+pm` gibt das Paket an, das für diesen Anbieter verwendet werden soll. Hier wird `@ai-sdk/openai-compatible` für jeden OpenAI-kompatiblen API verwendet.
+-
+ame` ist der Anzeigename für den Anbieter im UI.
 - `options.baseURL` ist der Endpunkt für den lokalen Server.
 - `models` ist eine Zuordnung von Modell-IDs zu ihren Konfigurationen. Der Modellname wird in der Modellauswahlliste angezeigt.
 
@@ -1314,13 +1322,16 @@ Ollama kann sich automatisch für MongolGPT konfigurieren. Weitere Informationen
 In diesem Beispiel:
 
 - `ollama` ist der benutzerdefinierte Anbieter ID. Dies kann eine beliebige Zeichenfolge sein.
-- `npm` gibt das Paket an, das für diesen Anbieter verwendet werden soll. Hier wird `@ai-sdk/openai-compatible` für jeden OpenAI-kompatiblen API verwendet.
-- `name` ist der Anzeigename für den Anbieter im UI.
+-
+pm` gibt das Paket an, das für diesen Anbieter verwendet werden soll. Hier wird `@ai-sdk/openai-compatible` für jeden OpenAI-kompatiblen API verwendet.
+-
+ame` ist der Anzeigename für den Anbieter im UI.
 - `options.baseURL` ist der Endpunkt für den lokalen Server.
 - `models` ist eine Zuordnung von Modell-IDs zu ihren Konfigurationen. Der Modellname wird in der Modellauswahlliste angezeigt.
 
 :::tip
-Wenn Toolaufrufe nicht funktionieren, versuchen Sie, `num_ctx` in Ollama zu erhöhen. Beginnen Sie bei ca. 16.000 – 32.000 km.
+Wenn Toolaufrufe nicht funktionieren, versuchen Sie,
+um_ctx` in Ollama zu erhöhen. Beginnen Sie bei ca. 16.000 – 32.000 km.
 :::
 
 ---

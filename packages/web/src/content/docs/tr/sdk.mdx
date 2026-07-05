@@ -13,13 +13,17 @@ mongolgpt'u programatik olarak kontrol etmek ve entegrasyonlar oluşturmak için
 
 ---
 
-## Kurulum
+## SDK ашиглах
 
-SDK'yı npm'den yükleyin:
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ Bu, hem bir sunucu hem de bir istemci başlatır
 | Seçenek    | Tip           | Açıklama                                      | Varsayılan  |
 | ---------- | ------------- | --------------------------------------------- | ----------- |
 | `hostname` | `string`      | Sunucu ana bilgisayar adı                     | `127.0.0.1` |
-| `port`     | `number`      | Sunucu bağlantı noktası                       | `4096`      |
+| `port`     |
+umber`      | Sunucu bağlantı noktası                       | `4096`      |
 | `signal`   | `AbortSignal` | İptal için durdurma sinyali                   | `undefined` |
-| `timeout`  | `number`      | Sunucu başlatma için ms cinsinden zaman aşımı | `5000`      |
+| `timeout`  |
+umber`      | Sunucu başlatma için ms cinsinden zaman aşımı | `5000`      |
 | `config`   | `Config`      | Yapılandırma nesnesi                          | `{}`        |
 
 ---
@@ -167,7 +173,8 @@ console.log(result.data.info.structured_output)
 | ------------ | --------------- | ------------------------------------------------------------- |
 | `type`       | `'json_schema'` | Gerekli. JSON şema modunu belirtir                            |
 | `schema`     | `object`        | Gerekli. Çıktı yapısını tanımlayan JSON Şema nesnesi          |
-| `retryCount` | `number`        | İsteğe bağlı. Doğrulama yeniden deneme sayısı (varsayılan: 2) |
+| `retryCount` |
+umber`        | İsteğe bağlı. Doğrulama yeniden deneme sayısı (varsayılan: 2) |
 
 ### Hata Yönetimi
 

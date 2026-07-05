@@ -45,7 +45,7 @@ export const dict = {
   "footer.youtube": "YouTube",
   "footer.homeAria": "หน้าหลัก MongolGPT",
   "footer.status": "ทุกระบบทำงานปกติ",
-  "footer.copyright": "© 2026 Anomaly Innovations Inc.",
+  "footer.copyright": "© 2026 MongolGPT",
   "bridge.learnMore": "ดูเพิ่มเติม",
   "modal.closeNewsletter": "ปิดการสมัครจดหมายข่าว",
   "modal.title": "จดหมายข่าว MongolGPT",

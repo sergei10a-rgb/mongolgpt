@@ -10,6 +10,7 @@ import { SettingsProvidersV2 } from "./providers"
 import { SettingsModelsV2 } from "./models"
 import "./settings-v2.css"
 import { SettingsServersV2 } from "./servers"
+import { SettingsImportsV2 } from "./imports"
 
 export const DialogSettings: Component<{
   sessionID?: string
@@ -53,6 +54,10 @@ export const DialogSettings: Component<{
                       <Icon name="models" />
                       {language.t("settings.models.title")}
                     </TabsV2.Trigger>
+                    <TabsV2.Trigger value="imports">
+                      <Icon name="mcp" />
+                      Интеграц
+                    </TabsV2.Trigger>
                   </div>
                 </div>
               </div>
@@ -77,6 +82,9 @@ export const DialogSettings: Component<{
         </TabsV2.Content>
         <TabsV2.Content value="models" class="settings-v2-panel">
           <SettingsModelsV2 />
+        </TabsV2.Content>
+        <TabsV2.Content value="imports" class="settings-v2-panel">
+          <SettingsImportsV2 />
         </TabsV2.Content>
       </TabsV2>
     </Dialog>

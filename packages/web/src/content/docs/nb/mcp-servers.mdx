@@ -596,17 +596,19 @@ Helicone støtter tilpassede headere for funksjoner som bufring, brukersporing o
 
 ##### Sesjonssporing
 
-Helicones [Sessions](https://docs.helicone.ai/features/sessions) funksjon lar deg gruppere relaterte LLM forespørsler sammen. Bruk [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session) plugin for automatisk å logge hver MongolGPT-samtale som en økt i Helicone.
+Helicones [Sessions](https://docs.helicone.ai/features/sessions) funksjon lar deg gruppere relaterte LLM forespørsler sammen. Bruk local Helicone session plugin for automatisk å logge hver MongolGPT-samtale som en økt i Helicone.
 
 ```bash
-npm install -g mongolgpt-helicone-session
+# Dedicated MongolGPT npm plugin is not published yet.
+# Use a local plugin file or import an adapter with:
+mongolgpt compat import plan ./plugins/helicone-session.ts
 ```
 
 Legg den til i konfigurasjonen din.
 
 ```json title="mongolgpt.json"
 {
-  "plugin": ["mongolgpt-helicone-session"]
+  "plugin": ["./plugins/helicone-session.ts"]
 }
 ```
 

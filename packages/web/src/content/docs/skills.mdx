@@ -36,7 +36,8 @@ Global definitions are also loaded from `~/.config/mongolgpt/skills/*/SKILL.md`,
 Each `SKILL.md` must start with YAML frontmatter.
 Only these fields are recognized:
 
-- `name` (required)
+-
+ame` (required)
 - `description` (required)
 - `license` (optional)
 - `compatibility` (optional)
@@ -48,7 +49,8 @@ Unknown frontmatter fields are ignored.
 
 ## Validate names
 
-`name` must:
+
+ame` must:
 
 - Be 1–64 characters
 - Be lowercase alphanumeric with single hyphen separators
@@ -217,6 +219,7 @@ When disabled, the `<available_skills>` section is omitted entirely.
 If a skill does not show up:
 
 1. Verify `SKILL.md` is spelled in all caps
-2. Check that frontmatter includes `name` and `description`
+2. Check that frontmatter includes
+ame` and `description`
 3. Ensure skill names are unique across all locations
 4. Check permissions—skills with `deny` are hidden from agents

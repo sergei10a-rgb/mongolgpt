@@ -336,7 +336,7 @@ describe("HttpApi UI fallback", () => {
             return path === "/$bunfs/root/index.html"
               ? Effect.succeed(
                   new TextEncoder().encode(
-                    `<html><head><script id="oc-theme-preload-script">${script}</script></head></html>`,
+                    `<html><head><script id="mongolgpt-theme-preload-script">${script}</script></head></html>`,
                   ),
                 )
               : Effect.die(`unexpected embedded UI path: ${path}`)

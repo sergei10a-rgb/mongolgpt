@@ -503,7 +503,7 @@ export default function PrivacyPolicy() {
                 otherwise use the Services or send us any Personal Data. If we learn we have collected Personal Data
                 from a child under 18 years of age, we will delete that information as quickly as possible. If you
                 believe that a child under 18 years of age may have provided Personal Data to us, please contact us at{" "}
-                <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h2 id="california-resident-rights">California Resident Rights</h2>
@@ -522,7 +522,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a California resident, the portion that is more protective of Personal Data shall control to the
                 extent of such conflict. If you have any questions about this section or whether any of the following
-                rights apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                rights apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access</h3>
@@ -607,7 +607,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a Colorado resident, the portion that is more protective of Personal Data shall control to the
                 extent of such conflict. If you have any questions about this section or whether any of the following
-                rights apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                rights apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -678,7 +678,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a Connecticut resident, the portion that is more protective of Personal Data shall control to the
                 extent of such conflict. If you have any questions about this section or whether any of the following
-                rights apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                rights apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -747,7 +747,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a Delaware resident, the portion that is more protective of Personal Data shall control to the
                 extent of such conflict. If you have any questions about this section or whether any of the following
-                rights apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                rights apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -820,7 +820,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are an Iowa resident, the portion that is more protective of Personal Data shall control to the extent
                 of such conflict. If you have any questions about this section or whether any of the following rights
-                apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -866,7 +866,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a Montana resident, the portion that is more protective of Personal Data shall control to the extent
                 of such conflict. If you have any questions about this section or whether any of the following rights
-                apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -939,7 +939,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a Nebraska resident, the portion that is more protective of Personal Data shall control to the
                 extent of such conflict. If you have any questions about this section or whether any of the following
-                rights apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                rights apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -1009,7 +1009,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a New Hampshire resident, the portion that is more protective of Personal Data shall control to the
                 extent of such conflict. If you have any questions about this section or whether any of the following
-                rights apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                rights apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -1080,7 +1080,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a New Jersey resident, the portion that is more protective of Personal Data shall control to the
                 extent of such conflict. If you have any questions about this section or whether any of the following
-                rights apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                rights apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -1153,7 +1153,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are an Oregon resident, the portion that is more protective of Personal Data shall control to the extent
                 of such conflict. If you have any questions about this section or whether any of the following rights
-                apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -1227,7 +1227,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a Texas resident, the portion that is more protective of Personal Data shall control to the extent
                 of such conflict. If you have any questions about this section or whether any of the following rights
-                apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -1295,7 +1295,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a Utah resident, the portion that is more protective of Personal Data shall control to the extent of
                 such conflict. If you have any questions about this section or whether any of the following rights apply
-                to you, please contact us at help@anoma.ly.
+                to you, please contact us at help@mongolgpt.duckdns.org.
               </p>
 
               <h3>Access and Portability</h3>
@@ -1341,7 +1341,7 @@ export default function PrivacyPolicy() {
                 If there are any conflicts between this section and any other provision of this Privacy Policy and you
                 are a Virginia resident, the portion that is more protective of Personal Data shall control to the
                 extent of such conflict. If you have any questions about this section or whether any of the following
-                rights apply to you, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>.
+                rights apply to you, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>.
               </p>
 
               <h3>Access and Portability</h3>
@@ -1420,7 +1420,7 @@ export default function PrivacyPolicy() {
               </p>
               <ul>
                 <li>
-                  Email us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>
+                  Email us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>
                 </li>
                 <li>Call us at: +1 415 794-0209</li>
               </ul>
@@ -1432,7 +1432,7 @@ export default function PrivacyPolicy() {
               </p>
               <ul>
                 <li>
-                  Email us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>
+                  Email us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>
                 </li>
                 <li>Call us at: +1 415 794-0209</li>
               </ul>
@@ -1459,7 +1459,7 @@ export default function PrivacyPolicy() {
               </p>
               <ul>
                 <li>
-                  Email us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>
+                  Email us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>
                 </li>
                 <li>Call us at: +1 415 794-0209</li>
               </ul>
@@ -1476,7 +1476,7 @@ export default function PrivacyPolicy() {
               <p>
                 Under California Civil Code Sections 1798.83-1798.84, California residents are entitled to contact us to
                 prevent disclosure of Personal Data to third parties for such third parties' direct marketing purposes;
-                in order to submit such a request, please contact us at <a href="mailto:help@anoma.ly">help@anoma.ly</a>
+                in order to submit such a request, please contact us at <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>
                 .
               </p>
 
@@ -1502,7 +1502,7 @@ export default function PrivacyPolicy() {
               </p>
               <ul>
                 <li>
-                  Email: <a href="mailto:help@anoma.ly">help@anoma.ly</a>
+                  Email: <a href="mailto:help@mongolgpt.duckdns.org">help@mongolgpt.duckdns.org</a>
                 </li>
                 <li>Phone: +1 415 794-0209</li>
                 <li>Address: 2443 Fillmore St #380-6343, San Francisco, CA 94115, United States</li>

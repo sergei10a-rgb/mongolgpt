@@ -98,7 +98,7 @@ ${body.phone ? `${body.phone}<br>` : ""}`.trim()
         return false
       }),
       AWS.sendEmail({
-        to: "contact@anoma.ly",
+        to: "contact@mongolgpt.duckdns.org",
         subject: `Enterprise Inquiry from ${body.name}`,
         body: emailContent,
         replyTo: body.email,

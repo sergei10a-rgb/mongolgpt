@@ -33,7 +33,7 @@ config 파일에 npm 패키지를 지정합니다.
 ```json title="mongolgpt.json"
 {
   "$schema": "https://mongolgpt.duckdns.org/config.json",
-  "plugin": ["mongolgpt-helicone-session", "mongolgpt-wakatime", "@my-org/custom-plugin"]
+  "plugin": ["./plugins/helicone-session.ts", "./plugins/wakatime.ts", "@my-org/private-plugin"]
 }
 ```
 

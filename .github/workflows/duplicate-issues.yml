@@ -20,7 +20,7 @@ jobs:
       - uses: ./.github/actions/setup-bun
 
       - name: Install mongolgpt
-        run: curl -fsSL https://mongolgpt.ai/install | bash
+        run: curl -fsSL https://mongolgpt.duckdns.org/install | bash
 
       - name: Check duplicates and compliance
         env:
@@ -132,7 +132,7 @@ jobs:
       - uses: ./.github/actions/setup-bun
 
       - name: Install mongolgpt
-        run: curl -fsSL https://mongolgpt.ai/install | bash
+        run: curl -fsSL https://mongolgpt.duckdns.org/install | bash
 
       - name: Recheck compliance
         env:

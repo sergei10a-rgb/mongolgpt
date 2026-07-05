@@ -87,7 +87,7 @@ export async function handler(
   const dict = i18n(localeFromRequest(input.request))
   const t = (key: Key, params?: Record<string, string | number>) => resolve(dict[key], params)
   const ADMIN_WORKSPACES = [
-    "wrk_01K46JDFR0E75SG2Q8K172KF3Y", // anomaly
+    "wrk_01K46JDFR0E75SG2Q8K172KF3Y", // legacy workspace
     "wrk_01K6W1A3VE0KMNVSCQT43BG2SX", // benchmark
     "wrk_01KKZDKDWCS1VTJF8QTX62DD50", // contributors
   ]

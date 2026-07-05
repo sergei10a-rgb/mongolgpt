@@ -13,13 +13,17 @@ Utilisez-le pour créer des intégrations et contrôler mongolgpt par programme.
 
 ---
 
-## Installer
+## SDK ашиглах
 
-Installez le SDK à partir de npm :
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ Cela démarre à la fois un serveur et un client
 | Options    | Tapez         | Descriptif                                         | Par défaut  |
 | ---------- | ------------- | -------------------------------------------------- | ----------- |
 | `hostname` | `string`      | Nom d'hôte du serveur                              | `127.0.0.1` |
-| `port`     | `number`      | Port du serveur                                    | `4096`      |
+| `port`     |
+umber`      | Port du serveur                                    | `4096`      |
 | `signal`   | `AbortSignal` | Signal d'abandon pour annulation                   | `undefined` |
-| `timeout`  | `number`      | Délai d'attente en ms pour le démarrage du serveur | `5000`      |
+| `timeout`  |
+umber`      | Délai d'attente en ms pour le démarrage du serveur | `5000`      |
 | `config`   | `Config`      | Objet de configuration                             | `{}`        |
 
 ---
@@ -167,7 +173,8 @@ Lors de l'utilisation de `type: 'json_schema'`, fournissez :
 | ------------ | --------------- | --------------------------------------------------------------- |
 | `type`       | `'json_schema'` | Requis. Spécifie le mode de schéma JSON                         |
 | `schema`     | `object`        | Requis. Objet JSON Schema définissant la structure de sortie    |
-| `retryCount` | `number`        | Facultatif. Nombre de tentatives de validation (par défaut : 2) |
+| `retryCount` |
+umber`        | Facultatif. Nombre de tentatives de validation (par défaut : 2) |
 
 ### Gestion des erreurs
 

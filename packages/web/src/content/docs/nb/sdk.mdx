@@ -13,13 +13,17 @@ Bruk den til å bygge integrasjoner og kontrollere MongolGPT programmatisk.
 
 ---
 
-## Installasjon
+## SDK ашиглах
 
-Installer SDK fra npm:
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ Dette starter både en server og en klient
 | Alternativ | Type          | Beskrivelse                      | Standard    |
 | ---------- | ------------- | -------------------------------- | ----------- |
 | `hostname` | `string`      | Server vertsnavn                 | `127.0.0.1` |
-| `port`     | `number`      | Serverport                       | `4096`      |
+| `port`     |
+umber`      | Serverport                       | `4096`      |
 | `signal`   | `AbortSignal` | AbortSignal for avbrudd          | `undefined` |
-| `timeout`  | `number`      | Tidsavbrudd i ms for serverstart | `5000`      |
+| `timeout`  |
+umber`      | Tidsavbrudd i ms for serverstart | `5000`      |
 | `config`   | `Config`      | Konfigurasjonsobjekt             | `{}`        |
 
 ---
@@ -167,7 +173,8 @@ Når du bruker `type: 'json_schema'`, oppgi:
 | ------------ | --------------- | ---------------------------------------------------------- |
 | `type`       | `'json_schema'` | Påkrevd. Spesifiserer JSON-skjemamodus                     |
 | `schema`     | `object`        | Påkrevd. JSON Schema-objekt som definerer utdatastrukturen |
-| `retryCount` | `number`        | Valgfritt. Antall valideringsforsøk (standard: 2)          |
+| `retryCount` |
+umber`        | Valgfritt. Antall valideringsforsøk (standard: 2)          |
 
 ### Feilhåndtering
 

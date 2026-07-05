@@ -351,8 +351,10 @@ Možete konfigurirati mongolgpt za korištenje lokalnih modela preko [Atomic Cha
 U ovom primjeru:
 
 - `atomic-chat` je prilagođeni ID provajdera. Može biti bilo koji niz.
-- `npm` specificira paket koji se koristi za ovog provajdera. Ovdje se koristi `@ai-sdk/openai-compatible` za svaki OpenAI-kompatibilni API.
-- `name` je prikazano ime provajdera u interfejsu.
+-
+pm` specificira paket koji se koristi za ovog provajdera. Ovdje se koristi `@ai-sdk/openai-compatible` za svaki OpenAI-kompatibilni API.
+-
+ame` je prikazano ime provajdera u interfejsu.
 - `options.baseURL` je krajnja tačka lokalnog servera. Promijenite host i port da odgovaraju vašoj Atomic Chat konfiguraciji.
 - `models` je mapa ID-ova modela u njihova prikazana imena. Svaki ID mora odgovarati `id` vrijednosti koju vraća `GET /v1/models` — pokrenite `curl http://127.0.0.1:1337/v1/models` da vidite ID-ove trenutno učitane u Atomic Chat.
 
@@ -820,7 +822,7 @@ Zatim izložite ID aplikacije kao varijablu okruženja:
 export GITLAB_OAUTH_CLIENT_ID=your_application_id_here
 ```
 
-Više dokumentacije na početnoj stranici [mongolgpt-gitlab-auth](https://www.npmjs.com/package/mongolgpt-gitlab-auth).
+Više dokumentacije na početnoj stranici MongolGPT GitLab auth adapter.
 
 ##### Konfiguracija
 
@@ -846,7 +848,7 @@ Za pristup GitLab alatima (zahtjevi za spajanje, problemi, cjevovodi, CI/CD, itd
 ```json title="mongolgpt.json"
 {
   "$schema": "https://mongolgpt.duckdns.org/config.json",
-  "plugin": ["mongolgpt-gitlab-plugin"]
+  "plugin": ["./plugins/gitlab-duo.ts"]
 }
 ```
 
@@ -1075,17 +1077,19 @@ Helicone podržava prilagođena zaglavlja za funkcije kao što su keširanje, pr
 
 ##### Praćenje sesije
 
-Heliconeova funkcija [Sessions](https://docs.helicone.ai/features/sessions) vam omogućava da grupišete povezane LLM zahtjeve zajedno. Koristite dodatak [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session) da automatski prijavite svaki MongolGPT razgovor kao sesiju u Helicone-u.
+Heliconeova funkcija [Sessions](https://docs.helicone.ai/features/sessions) vam omogućava da grupišete povezane LLM zahtjeve zajedno. Koristite dodatak local Helicone session plugin da automatski prijavite svaki MongolGPT razgovor kao sesiju u Helicone-u.
 
 ```bash
-npm install -g mongolgpt-helicone-session
+# Dedicated MongolGPT npm plugin is not published yet.
+# Use a local plugin file or import an adapter with:
+mongolgpt compat import plan ./plugins/helicone-session.ts
 ```
 
 Dodajte ga u svoju konfiguraciju.
 
 ```json title="mongolgpt.json"
 {
-  "plugin": ["mongolgpt-helicone-session"]
+  "plugin": ["./plugins/helicone-session.ts"]
 }
 ```
 
@@ -1135,8 +1139,10 @@ Možete konfigurirati mongolgpt za korištenje lokalnih modela putem [llama.cpp'
 U ovom primjeru:
 
 - `llama.cpp` je ID prilagođenog provajdera. Ovo može biti bilo koji niz koji želite.
-- `npm` specificira paket koji će se koristiti za ovog provajdera. Ovdje se `@ai-sdk/openai-compatible` koristi za bilo koji OpenAI kompatibilan API.
-- `name` je ime za prikaz za provajdera u korisničkom sučelju.
+-
+pm` specificira paket koji će se koristiti za ovog provajdera. Ovdje se `@ai-sdk/openai-compatible` koristi za bilo koji OpenAI kompatibilan API.
+-
+ame` je ime za prikaz za provajdera u korisničkom sučelju.
 - `options.baseURL` je krajnja tačka za lokalni server.
 - `models` je mapa ID-ova modela prema njihovim konfiguracijama. Naziv modela će biti prikazan na listi za odabir modela.
 
@@ -1198,8 +1204,10 @@ Možete konfigurirati mongolgpt za korištenje lokalnih modela preko LM Studio.
 U ovom primjeru:
 
 - `lmstudio` je ID prilagođenog provajdera. Ovo može biti bilo koji niz koji želite.
-- `npm` specificira paket koji će se koristiti za ovog provajdera. Ovdje se `@ai-sdk/openai-compatible` koristi za bilo koji OpenAI kompatibilan API.
-- `name` je ime za prikaz za provajdera u korisničkom sučelju.
+-
+pm` specificira paket koji će se koristiti za ovog provajdera. Ovdje se `@ai-sdk/openai-compatible` koristi za bilo koji OpenAI kompatibilan API.
+-
+ame` je ime za prikaz za provajdera u korisničkom sučelju.
 - `options.baseURL` je krajnja tačka za lokalni server.
 - `models` je mapa ID-ova modela prema njihovim konfiguracijama. Naziv modela će biti prikazan na listi za odabir modela.
 
@@ -1319,13 +1327,16 @@ Ollama se može automatski konfigurirati za MongolGPT. Pogledajte [Ollama integr
 U ovom primjeru:
 
 - `ollama` je ID prilagođenog provajdera. Ovo može biti bilo koji niz koji želite.
-- `npm` specificira paket koji će se koristiti za ovog provajdera. Ovdje se `@ai-sdk/openai-compatible` koristi za bilo koji OpenAI kompatibilan API.
-- `name` je ime za prikaz za provajdera u korisničkom sučelju.
+-
+pm` specificira paket koji će se koristiti za ovog provajdera. Ovdje se `@ai-sdk/openai-compatible` koristi za bilo koji OpenAI kompatibilan API.
+-
+ame` je ime za prikaz za provajdera u korisničkom sučelju.
 - `options.baseURL` je krajnja tačka za lokalni server.
 - `models` je mapa ID-ova modela prema njihovim konfiguracijama. Naziv modela će biti prikazan na listi za odabir modela.
 
 :::tip
-Ako pozivi alata ne rade, pokušajte povećati `num_ctx` u Ollama. Počnite oko 16k - 32k.
+Ako pozivi alata ne rade, pokušajte povećati
+um_ctx` u Ollama. Počnite oko 16k - 32k.
 :::
 
 ---

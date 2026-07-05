@@ -43,7 +43,7 @@ export const dict = {
   "footer.youtube": "YouTube",
   "footer.homeAria": "Início do MongolGPT",
   "footer.status": "Todos os sistemas operacionais",
-  "footer.copyright": "© 2026 Anomaly Innovations Inc.",
+  "footer.copyright": "© 2026 MongolGPT",
   "bridge.learnMore": "SAIBA MAIS",
   "modal.closeNewsletter": "Fechar inscrição na newsletter",
   "modal.title": "Newsletter do MongolGPT",

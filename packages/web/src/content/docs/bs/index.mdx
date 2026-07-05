@@ -26,105 +26,25 @@ Da biste koristili MongolGPT u svom terminalu, trebat će vam:
 
 ---
 
-## Instalacija
+## Суулгах
 
-Najlakši način za instaliranje MongolGPT je putem instalacijske skripte.
+Одоогоор MongolGPT-ийн албан ёсны npm/Homebrew/AUR/Chocolatey/Scoop package нийтлэгдээгүй. Бодитоор ажиллах замууд:
+
+- Desktop: [Windows x64 installer](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
+- Source build:
+
+```bash
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
+bun run dev
+```
+
+Terminal install script:
 
 ```bash
 curl -fsSL https://mongolgpt.duckdns.org/install | bash
 ```
-
-Također ga možete instalirati pomoću sljedećih naredbi:
-
-- **Korištenje Node.js**
-
-        <Tabs>
-
-      <TabItem label="npm">
-      ```bash
-      npm install -g mongolgpt
-      ```
-
-          </TabItem>
-
-        <TabItem label="Bun">
-        ```bash
-        bun install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="pnpm">
-        ```bash
-        pnpm install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="Yarn">
-        ```bash
-        yarn global add mongolgpt
-        ```
-
-      </TabItem>
-
-  </Tabs>
-
-- **Korištenje Homebrew-a na macOS-u i Linux-u**
-
-```bash
-  brew install sergei10a-rgb/tap/mongolgpt
-```
-
-> Preporučujemo korištenje MongolGPT tap za najnovija izdanja. Službenu formulu `brew install mongolgpt` održava Homebrew tim i ažurira se rjeđe.
-
-- **Korištenje Parua na Arch Linuxu**
-
-  ```bash
-  sudo pacman -S mongolgpt           # Arch Linux (Stable)
-  paru -S mongolgpt-bin              # Arch Linux (Latest from AUR)
-  ```
-
-#### Windows
-
-:::tip[Preporučeno: Koristite WSL]
-Za najbolje iskustvo na Windows-u preporučujemo korištenje [Windows Subsystem for Linux (WSL)](/docs/windows-wsl). Pruža bolje performanse i potpunu kompatibilnost sa MongolGPT funkcijama.
-:::
-
-- **Korištenje Chocolatey-a**
-
-```bash
-  choco install mongolgpt
-```
-
-- **Korištenje Scoop-a**
-
-```bash
-  scoop install mongolgpt
-```
-
-- **Korištenje NPM-a**
-
-```bash
-  npm install -g mongolgpt
-```
-
-- **Korištenje Mise**
-
-```bash
-  mise use -g github:sergei10a-rgb/mongolgpt
-```
-
-- **Korištenje Dockera**
-
-```bash
-  docker run -it --rm ghcr.io/sergei10a-rgb/mongolgpt
-```
-
-Podrška za instaliranje MongolGPT na Windows koristeći Bun je trenutno u toku.
-Također možete preuzeti binarnu datoteku iz [Releases](https://github.com/sergei10a-rgb/mongolgpt/releases).
-
----
 
 ## Konfiguracija
 

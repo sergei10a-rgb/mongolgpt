@@ -13,13 +13,17 @@ Use-o para construir integrações e controlar o mongolgpt programaticamente.
 
 ---
 
-## Instalar
+## SDK ашиглах
 
-Instale o SDK a partir do npm:
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ Isso inicia tanto um servidor quanto um cliente.
 | Opção      | Tipo          | Descrição                                  | Padrão      |
 | ---------- | ------------- | ------------------------------------------ | ----------- |
 | `hostname` | `string`      | Nome do host do servidor                   | `127.0.0.1` |
-| `port`     | `number`      | Porta do servidor                          | `4096`      |
+| `port`     |
+umber`      | Porta do servidor                          | `4096`      |
 | `signal`   | `AbortSignal` | Sinal de abortar para cancelamento         | `undefined` |
-| `timeout`  | `number`      | Tempo limite em ms para iniciar o servidor | `5000`      |
+| `timeout`  |
+umber`      | Tempo limite em ms para iniciar o servidor | `5000`      |
 | `config`   | `Config`      | Objeto de configuração                     | `{}`        |
 
 ---
@@ -167,7 +173,8 @@ Ao usar `type: 'json_schema'`, forneça:
 | ------------ | --------------- | -------------------------------------------------------------- |
 | `type`       | `'json_schema'` | Obrigatório. Especifica o modo de esquema JSON                 |
 | `schema`     | `object`        | Obrigatório. Objeto JSON Schema definindo a estrutura de saída |
-| `retryCount` | `number`        | Opcional. Número de tentativas de validação (padrão: 2)        |
+| `retryCount` |
+umber`        | Opcional. Número de tentativas de validação (padrão: 2)        |
 
 ### Tratamento de Erros
 

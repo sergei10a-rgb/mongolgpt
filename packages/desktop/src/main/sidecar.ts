@@ -61,7 +61,7 @@ async function start(command: StartCommand) {
       hostname: command.hostname,
       username: "mongolgpt",
       password: command.password,
-      cors: ["oc://renderer"],
+      cors: ["mongolgpt-renderer://renderer"],
     })
     parentPort.postMessage({ type: "ready" })
   } catch (error) {

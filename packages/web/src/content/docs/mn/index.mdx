@@ -5,13 +5,25 @@ description: MongolGPT-ийг суулгах, тохируулах, AI agent wor
 
 [**MongolGPT**](/) бол Монгол хэрэглэгчдэд зориулсан AI coding agent платформ. Терминал, desktop app, IDE өргөтгөл, provider, skill/plugin, MCP холболтуудыг нэг дор ажиллуулах зорилготой.
 
-## Одоогийн төлөв
+## Суулгах
 
-MongolGPT-ийн Windows desktop туршилтын build GitHub Release дээр нийтлэгдсэн.
+Одоогоор MongolGPT-ийн албан ёсны npm/Homebrew/AUR/Chocolatey/Scoop package нийтлэгдээгүй. Бодитоор ажиллах замууд:
 
-[MongolGPT Desktop татах](https://github.com/sergei10a-rgb/mongolgpt/releases/latest)
+- Desktop: [Windows x64 installer](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
+- Source build:
 
-`npm install -g mongolgpt`, Homebrew, Chocolatey, Scoop package-уудыг албан ёсоор нийтлэх ажил бэлтгэгдэж байна. Эдгээр package registry дээр гараагүй үед docs дээр шууд суулгана гэж бичих нь буруу тул энэ хуудсанд зөвхөн бодитой ажиллах замуудыг үлдээв.
+```bash
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
+bun run dev
+```
+
+Terminal install script:
+
+```bash
+curl -fsSL https://mongolgpt.duckdns.org/install | bash
+```
 
 ## Desktop суулгах
 
@@ -55,13 +67,20 @@ packages/desktop/dist/
 
 Terminal CLI нь `mongolgpt` command нэрээр ажиллах ёстой. Repository дотор CLI болон publish script-үүд энэ нэр рүү шилжсэн.
 
-Registry package нийтлэгдсэний дараа суулгах үндсэн command:
+Registry package нийтлэгдэх хүртэл terminal хувилбарыг source-оос ажиллуулна:
 
 ```bash
-npm install -g mongolgpt
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
+bun run dev
 ```
 
-Package нийтлэгдээгүй үед GitHub Release эсвэл source build ашиглана.
+Мөн install script туршиж болно:
+
+```bash
+curl -fsSL https://mongolgpt.duckdns.org/install | bash
+```
 
 ## Нэвтрэх ба provider тохируулах
 
@@ -86,7 +105,23 @@ MongolGPT-ийн зорилго нь Claude, Codex, Goose, MCP server, skill/plu
 - terminal agent
 - MongolGPT account login wiring
 
-Дараагийн шатанд format танигч, adapter generator, marketplace/import workflow нэмэгдэнэ.
+Шинэ compatibility importer нь эхний ажиллах хэлбэрээр нэмэгдсэн:
+
+- command, локал зам, URL, config файлыг уншиж MCP, skill, plugin төрлийг танина
+- `plan` горимоор ямар config patch үүсэхийг эхлээд харуулна
+- `apply` горимоор global эсвэл project config-д аюулгүйгээр нэмнэ
+- plugin wrapper шаардлагатай бол хэрэглэгчээр гараар бичүүлэхгүйгээр үүсгэх суурьтай
+
+CLI дээр:
+
+```bash
+mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
+mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
+```
+
+Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, path, URL эсвэл config оруулаад шалгах болон суулгах боломжтой.
+
+Дараагийн шатанд marketplace discovery, илүү олон agent format-ийн adapter generator, signing/permission review нэмэгдэнэ.
 
 ## Хөгжүүлэлт
 

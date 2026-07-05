@@ -22,7 +22,7 @@ console.log("Updated oc-2.json v2Overrides", Object.keys(light).length, "tokens 
 function readTokens(mode: "light" | "dark") {
   const selector = mode === "light" ? ":root" : `\\[data-color-scheme="${mode}"\\]`
   const block = css.match(new RegExp(`${selector} \\{([\\s\\S]*?)\\n  \\}`))?.[1]
-  if (!block) throw new Error(`Missing ${mode} OC-2 tokens`)
+  if (!block) throw new Error(`Missing ${mode} MongolGPT tokens`)
   return Object.fromEntries(
     [...block.matchAll(/--(v2-[\w-]+):\s*([^;]+);/g)]
       // Fonts and the fixed avatar foreground remain global CSS rather than theme overrides.

@@ -13,13 +13,17 @@ SDK JS/TS с открытым кодом предоставляет типобе
 
 ---
 
-## Установить
+## SDK ашиглах
 
-Установите SDK из npm:
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ const { client } = await createMongolGPT()
 | Вариант    | Тип           | Описание                       | По умолчанию |
 | ---------- | ------------- | ------------------------------ | ------------ |
 | `hostname` | `string`      | Server hostname                | `127.0.0.1`  |
-| `port`     | `number`      | Server port                    | `4096`       |
+| `port`     |
+umber`      | Server port                    | `4096`       |
 | `signal`   | `AbortSignal` | Abort signal for cancellation  | `undefined`  |
-| `timeout`  | `number`      | Timeout in ms for server start | `5000`       |
+| `timeout`  |
+umber`      | Timeout in ms for server start | `5000`       |
 | `config`   | `Config`      | Configuration object           | `{}`         |
 
 ---
@@ -167,7 +173,8 @@ console.log(result.data.info.structured_output)
 | ------------ | --------------- | ---------------------------------------------------------------------- |
 | `type`       | `'json_schema'` | Обязательно. Указывает режим схемы JSON                                |
 | `schema`     | `object`        | Обязательно. Объект JSON Schema, определяющий структуру вывода         |
-| `retryCount` | `number`        | Необязательно. Количество повторных попыток проверки (по умолчанию: 2) |
+| `retryCount` |
+umber`        | Необязательно. Количество повторных попыток проверки (по умолчанию: 2) |
 
 ### Обработка ошибок
 

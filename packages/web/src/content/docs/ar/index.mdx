@@ -29,106 +29,25 @@ export const console = config.console
 
 ---
 
-## التثبيت
+## Суулгах
 
-أسهل طريقة لتثبيت MongolGPT هي عبر سكربت التثبيت.
+Одоогоор MongolGPT-ийн албан ёсны npm/Homebrew/AUR/Chocolatey/Scoop package нийтлэгдээгүй. Бодитоор ажиллах замууд:
+
+- Desktop: [Windows x64 installer](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
+- Source build:
+
+```bash
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
+bun run dev
+```
+
+Terminal install script:
 
 ```bash
 curl -fsSL https://mongolgpt.duckdns.org/install | bash
 ```
-
-يمكنك أيضا تثبيته عبر الأوامر التالية:
-
-- **باستخدام Node.js**
-
-        <Tabs>
-
-      <TabItem label="npm">
-      ```bash
-      npm install -g mongolgpt
-      ```
-
-          </TabItem>
-
-        <TabItem label="Bun">
-        ```bash
-        bun install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="pnpm">
-        ```bash
-        pnpm install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="Yarn">
-        ```bash
-        yarn global add mongolgpt
-        ```
-
-      </TabItem>
-
-  </Tabs>
-
-- **باستخدام Homebrew على macOS وLinux**
-
-  ```bash
-  brew install sergei10a-rgb/tap/mongolgpt
-  ```
-
-  > نوصي باستخدام tap الخاص بـ MongolGPT للحصول على أحدث الإصدارات. صيغة `brew install mongolgpt` الرسمية تُدار بواسطة فريق Homebrew ويتم تحديثها بوتيرة أقل.
-
-- **باستخدام Paru على Arch Linux**
-
-  ```bash
-  sudo pacman -S mongolgpt           # Arch Linux (Stable)
-  paru -S mongolgpt-bin              # Arch Linux (Latest from AUR)
-  ```
-
-#### Windows
-
-:::tip[موصى به: استخدم WSL]
-لأفضل تجربة على Windows، نوصي باستخدام [Windows Subsystem for Linux (WSL)](/docs/windows-wsl). يوفر أداء أفضل وتوافقا كاملا مع ميزات MongolGPT.
-:::
-
-- **باستخدام Chocolatey**
-
-  ```bash
-  choco install mongolgpt
-  ```
-
-- **باستخدام Scoop**
-
-  ```bash
-  scoop install mongolgpt
-  ```
-
-- **باستخدام NPM**
-
-  ```bash
-  npm install -g mongolgpt
-  ```
-
-- **باستخدام Mise**
-
-  ```bash
-  mise use -g github:sergei10a-rgb/mongolgpt
-  ```
-
-- **باستخدام Docker**
-
-  ```bash
-  docker run -it --rm ghcr.io/sergei10a-rgb/mongolgpt
-  ```
-
-دعم تثبيت MongolGPT على Windows باستخدام Bun قيد العمل حاليا.
-
-يمكنك أيضا تنزيل الملف التنفيذي من صفحة [Releases](https://github.com/sergei10a-rgb/mongolgpt/releases).
-
----
 
 ## الإعداد
 

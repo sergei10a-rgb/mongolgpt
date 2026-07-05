@@ -699,9 +699,10 @@ export const dict = {
   "workspace.referral.apply.confirmAction": "Apply",
 
   "download.title": "MongolGPT | Download",
-  "download.meta.description": "Download MongolGPT for macOS, Windows, and Linux",
+  "download.meta.description": "Download MongolGPT Desktop for Windows x64 or build MongolGPT from source",
   "download.hero.title": "Download MongolGPT",
-  "download.hero.subtitle": "Available in Beta for macOS, Windows, and Linux",
+  "download.hero.subtitle":
+    "Windows x64 desktop builds are published now. Other package registries are not published yet.",
   "download.hero.button": "Download for {{os}}",
   "download.section.terminal": "MongolGPT Terminal",
   "download.section.desktop": "MongolGPT Desktop (Beta)",

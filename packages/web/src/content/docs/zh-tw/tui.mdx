@@ -336,10 +336,13 @@ How is auth handled in @packages/functions/src/api/index.ts?
 - `code` - Visual Studio Code
 - `cursor` - Cursor
 - `windsurf` - Windsurf
-- `nvim` - Neovim 編輯器
+-
+vim` - Neovim 編輯器
 - `vim` - Vim 編輯器
-- `nano` - Nano 編輯器
-- `notepad` - Notepad（Windows 記事本）
+-
+ano` - Nano 編輯器
+-
+otepad` - Notepad（Windows 記事本）
 - `subl` - Sublime Text
 
 :::note
@@ -404,7 +407,8 @@ How is auth handled in @packages/functions/src/api/index.ts?
 當 MongolGPT 需要你處理問題、核准權限請求、查看工作階段錯誤，或告知工作階段已完成時，TUI 可以透過聲音和桌面通知提醒你。設定 `attention.enabled` 後會啟用這些提醒；內建事件觸發時會播放聲音。桌面通知只會在終端機視窗未聚焦時傳送，且不會用於 subagent 事件。
 
 - `enabled` - 開啟 Attention 的所有通知和聲音。預設為 `false`。
-- `notifications` - 啟用 Attention 後，允許 TUI 透過終端機傳送桌面通知。預設為 `true`。
+-
+otifications` - 啟用 Attention 後，允許 TUI 透過終端機傳送桌面通知。預設為 `true`。
 - `sound` - 啟用 Attention 後，允許播放提示音。預設為 `true`。
 - `volume` - 預設提示音音量，範圍從 `0` 到 `1`。預設為 `0.4`。
 - `sound_pack` - 要使用的 sound pack ID。預設為 `mongolgpt.default`。

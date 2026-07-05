@@ -8,6 +8,7 @@ import { SkillV2 } from "@mongolgpt/core/skill"
 import { InstanceDisposed } from "@/server/event"
 import { Question } from "@/question"
 import { ConfigApi } from "./groups/config"
+import { CompatApi } from "./groups/compat"
 import { ControlApi } from "./groups/control"
 import { ControlPlaneApi } from "./groups/control-plane"
 import { EventApi } from "./groups/event"
@@ -60,6 +61,7 @@ export const RootHttpApi = HttpApi.make("mongolgpt-root")
 
 export const InstanceHttpApi = HttpApi.make("mongolgpt-instance")
   .addHttpApi(ConfigApi)
+  .addHttpApi(CompatApi)
   .addHttpApi(ExperimentalApi)
   .addHttpApi(FileApi)
   .addHttpApi(InstanceApi)

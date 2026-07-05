@@ -19,6 +19,8 @@ const STORAGE_KEYS = {
 } as const
 
 const THEME_STYLE_ID = "oc-theme"
+const THEME_PRELOAD_STYLE_ID = "mongolgpt-theme-preload"
+const LEGACY_THEME_PRELOAD_STYLE_ID = "oc-theme-preload"
 let files: Record<string, () => Promise<{ default: DesktopTheme }>> | undefined
 let ids: string[] | undefined
 let known: Set<string> | undefined
@@ -44,7 +46,7 @@ function knownThemes() {
 }
 
 const names: Record<string, string> = {
-  "oc-2": "OC-2",
+  "oc-2": "MongolGPT",
   amoled: "AMOLED",
   aura: "Aura",
   ayu: "Ayu",
@@ -148,7 +150,8 @@ function applyThemeCss(theme: DesktopTheme, themeId: string, mode: "light" | "da
   ${v2}
 }`
 
-  document.getElementById("oc-theme-preload")?.remove()
+  document.getElementById(THEME_PRELOAD_STYLE_ID)?.remove()
+  document.getElementById(LEGACY_THEME_PRELOAD_STYLE_ID)?.remove()
   ensureThemeStyleElement().textContent = fullCss
   document.documentElement.dataset.theme = themeId
   document.documentElement.dataset.colorScheme = mode

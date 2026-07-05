@@ -336,10 +336,13 @@ How is auth handled in @packages/functions/src/api/index.ts?
 - `code` - Visual Studio Code
 - `cursor` - Cursor
 - `windsurf` - Windsurf
-- `nvim` - محرر Neovim
+-
+vim` - محرر Neovim
 - `vim` - محرر Vim
-- `nano` - محرر Nano
-- `notepad` - Windows Notepad
+-
+ano` - محرر Nano
+-
+otepad` - Windows Notepad
 - `subl` - Sublime Text
 
 :::note
@@ -404,7 +407,8 @@ How is auth handled in @packages/functions/src/api/index.ts?
 تجعل ميزة Attention واجهة TUI تنبهك عندما ينتظر MongolGPT ردًا منك، أو يحتاج إلى الموافقة على permission، أو يواجه session error، أو ينهي session. فعّلها باستخدام `attention.enabled`؛ تشغّل الأحداث المدمجة صوتًا عند حدوثها. لا تُرسل desktop notifications إلا عندما لا تكون نافذة terminal في المقدمة، ولا تُستخدم مع أحداث subagent.
 
 - `enabled` - يفعّل جميع notifications والأصوات الخاصة بميزة Attention. القيمة الافتراضية `false`.
-- `notifications` - عند تفعيل Attention، يسمح لـ TUI بإرسال desktop notifications عبر terminal. القيمة الافتراضية `true`.
+-
+otifications` - عند تفعيل Attention، يسمح لـ TUI بإرسال desktop notifications عبر terminal. القيمة الافتراضية `true`.
 - `sound` - عند تفعيل Attention، يسمح بتشغيل أصوات التنبيه. القيمة الافتراضية `true`.
 - `volume` - مستوى صوت التنبيهات الافتراضي من `0` إلى `1`. القيمة الافتراضية `0.4`.
 - `sound_pack` - sound pack ID المراد استخدامه. القيمة الافتراضية `mongolgpt.default`.

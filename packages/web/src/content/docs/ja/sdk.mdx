@@ -13,13 +13,17 @@ MongolGPT JS/TS SDK は、サーバーと対話するための型安全なクラ
 
 ---
 
-## インストール
+## SDK ашиглах
 
-npm から SDK をインストールします。
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ const { client } = await createMongolGPT()
 | オプション | タイプ        | 説明                                | デフォルト  |
 | ---------- | ------------- | ----------------------------------- | ----------- |
 | `hostname` | `string`      | サーバーのホスト名                  | `127.0.0.1` |
-| `port`     | `number`      | サーバーポート                      | `4096`      |
+| `port`     |
+umber`      | サーバーポート                      | `4096`      |
 | `signal`   | `AbortSignal` | キャンセルのためのアボート信号      | `undefined` |
-| `timeout`  | `number`      | サーバー起動のタイムアウト (ミリ秒) | `5000`      |
+| `timeout`  |
+umber`      | サーバー起動のタイムアウト (ミリ秒) | `5000`      |
 | `config`   | `Config`      | 設定オブジェクト                    | `{}`        |
 
 ---
@@ -167,7 +173,8 @@ console.log(result.data.info.structured_output)
 | ------------ | --------------- | -------------------------------------------------- |
 | `type`       | `'json_schema'` | 必須。JSON スキーマモードを指定します              |
 | `schema`     | `object`        | 必須。出力構造を定義する JSON スキーマオブジェクト |
-| `retryCount` | `number`        | オプション。検証の再試行回数 (デフォルト: 2)       |
+| `retryCount` |
+umber`        | オプション。検証の再試行回数 (デフォルト: 2)       |
 
 ### エラー処理
 

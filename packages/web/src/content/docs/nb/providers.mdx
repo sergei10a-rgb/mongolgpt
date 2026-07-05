@@ -350,8 +350,10 @@ Du kan konfigurere mongolgpt til å bruke lokale modeller via [Atomic Chat](http
 I dette eksempelet:
 
 - `atomic-chat` er den egendefinerte leverandør-ID-en. Det kan være en hvilken som helst streng.
-- `npm` spesifiserer pakken som skal brukes for denne leverandøren. Her brukes `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
-- `name` er visningsnavnet for leverandøren i grensesnittet.
+-
+pm` spesifiserer pakken som skal brukes for denne leverandøren. Her brukes `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
+-
+ame` er visningsnavnet for leverandøren i grensesnittet.
 - `options.baseURL` er endepunktet for den lokale serveren. Endre vert og port for å matche Atomic Chat-oppsettet ditt.
 - `models` er en kartlegging av modell-IDer til visningsnavnene deres. Hver ID må samsvare med `id` som returneres av `GET /v1/models` — kjør `curl http://127.0.0.1:1337/v1/models` for å liste ID-ene som er lastet inn i Atomic Chat nå.
 
@@ -817,7 +819,7 @@ Utsett deretter applikasjonen ID som miljøvariabel:
 export GITLAB_OAUTH_CLIENT_ID=your_application_id_here
 ```
 
-Mer dokumentasjon på [mongolgpt-gitlab-auth](https://www.npmjs.com/package/mongolgpt-gitlab-auth) hjemmeside.
+Mer dokumentasjon på MongolGPT GitLab auth adapter hjemmeside.
 
 ##### Konfigurasjon
 
@@ -843,7 +845,7 @@ For å få tilgang til GitLab-verktøy (sammenslåingsforespørsler, problemer, 
 ```json title="mongolgpt.json"
 {
   "$schema": "https://mongolgpt.duckdns.org/config.json",
-  "plugin": ["mongolgpt-gitlab-plugin"]
+  "plugin": ["./plugins/gitlab-duo.ts"]
 }
 ```
 
@@ -1072,17 +1074,19 @@ Helicone støtter tilpassede headere for funksjoner som bufring, brukersporing o
 
 ##### Sesjonssporing
 
-Helicones [Sessions](https://docs.helicone.ai/features/sessions) funksjon lar deg gruppere relaterte LLM forespørsler sammen. Bruk [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session) plugin for automatisk å logge hver MongolGPT-samtale som en økt i Helicone.
+Helicones [Sessions](https://docs.helicone.ai/features/sessions) funksjon lar deg gruppere relaterte LLM forespørsler sammen. Bruk local Helicone session plugin for automatisk å logge hver MongolGPT-samtale som en økt i Helicone.
 
 ```bash
-npm install -g mongolgpt-helicone-session
+# Dedicated MongolGPT npm plugin is not published yet.
+# Use a local plugin file or import an adapter with:
+mongolgpt compat import plan ./plugins/helicone-session.ts
 ```
 
 Legg den til i konfigurasjonen din.
 
 ```json title="mongolgpt.json"
 {
-  "plugin": ["mongolgpt-helicone-session"]
+  "plugin": ["./plugins/helicone-session.ts"]
 }
 ```
 
@@ -1132,8 +1136,10 @@ Du kan konfigurere MongolGPT for å bruke lokale modeller gjennom [llama.cpp](ht
 I dette eksemplet:
 
 - `llama.cpp` er den tilpassede leverandøren ID. Dette kan være hvilken som helst streng du vil.
-- `npm` spesifiserer pakken som skal brukes for denne leverandøren. Her brukes `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
-- `name` er visningsnavnet for leverandøren i UI.
+-
+pm` spesifiserer pakken som skal brukes for denne leverandøren. Her brukes `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
+-
+ame` er visningsnavnet for leverandøren i UI.
 - `options.baseURL` er endepunktet for den lokale serveren.
 - `models` er et kart over modell-ID-er til deres konfigurasjoner. Modellnavnet vil vises i modellvalglisten.
 
@@ -1195,8 +1201,10 @@ Du kan konfigurere MongolGPT for å bruke lokale modeller gjennom LM Studio.
 I dette eksemplet:
 
 - `lmstudio` er den tilpassede leverandøren ID. Dette kan være hvilken som helst streng du vil.
-- `npm` spesifiserer pakken som skal brukes for denne leverandøren. Her brukes `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
-- `name` er visningsnavnet for leverandøren i UI.
+-
+pm` spesifiserer pakken som skal brukes for denne leverandøren. Her brukes `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
+-
+ame` er visningsnavnet for leverandøren i UI.
 - `options.baseURL` er endepunktet for den lokale serveren.
 - `models` er et kart over modell-ID-er til deres konfigurasjoner. Modellnavnet vil vises i modellvalglisten.
 
@@ -1316,13 +1324,16 @@ Ollama kan automatisk konfigurere seg selv for MongolGPT. Se [Ollama-integrasjon
 I dette eksemplet:
 
 - `ollama` er den tilpassede leverandøren ID. Dette kan være hvilken som helst streng du vil.
-- `npm` spesifiserer pakken som skal brukes for denne leverandøren. Her brukes `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
-- `name` er visningsnavnet for leverandøren i UI.
+-
+pm` spesifiserer pakken som skal brukes for denne leverandøren. Her brukes `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
+-
+ame` er visningsnavnet for leverandøren i UI.
 - `options.baseURL` er endepunktet for den lokale serveren.
 - `models` er et kart over modell-ID-er til deres konfigurasjoner. Modellnavnet vil vises i modellvalglisten.
 
 :::tip
-Hvis verktøykall ikke fungerer, prøv å øke `num_ctx` i Ollama. Start rundt 16k - 32k.
+Hvis verktøykall ikke fungerer, prøv å øke
+um_ctx` i Ollama. Start rundt 16k - 32k.
 :::
 
 ---

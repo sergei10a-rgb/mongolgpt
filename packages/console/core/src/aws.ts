@@ -32,7 +32,7 @@ export namespace AWS {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          FromEmailAddress: `MongolGPT Zen <contact@anoma.ly>`,
+          FromEmailAddress: `MongolGPT Zen <contact@mongolgpt.duckdns.org>`,
           Destination: {
             ToAddresses: [input.to],
           },

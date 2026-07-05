@@ -13,13 +13,17 @@ mongolgpt JS/TS SDK 提供了一个类型安全的客户端，用于与服务器
 
 ---
 
-## 安装
+## SDK ашиглах
 
-从 npm 安装 SDK：
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ const { client } = await createMongolGPT()
 | 选项       | 类型          | 描述                       | 默认值      |
 | ---------- | ------------- | -------------------------- | ----------- |
 | `hostname` | `string`      | 服务器主机名               | `127.0.0.1` |
-| `port`     | `number`      | 服务器端口                 | `4096`      |
+| `port`     |
+umber`      | 服务器端口                 | `4096`      |
 | `signal`   | `AbortSignal` | 用于取消操作的中止信号     | `undefined` |
-| `timeout`  | `number`      | 服务器启动超时时间（毫秒） | `5000`      |
+| `timeout`  |
+umber`      | 服务器启动超时时间（毫秒） | `5000`      |
 | `config`   | `Config`      | 配置对象                   | `{}`        |
 
 ---
@@ -167,7 +173,8 @@ console.log(result.data.info.structured_output)
 | ------------ | --------------- | ------------------------------------- |
 | `type`       | `'json_schema'` | 必填。指定 JSON Schema 模式           |
 | `schema`     | `object`        | 必填。定义输出结构的 JSON Schema 对象 |
-| `retryCount` | `number`        | 可选。验证重试次数（默认值：2）       |
+| `retryCount` |
+umber`        | 可选。验证重试次数（默认值：2）       |
 
 ### 错误处理
 

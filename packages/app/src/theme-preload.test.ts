@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test"
 
-const src = await Bun.file(new URL("../public/oc-theme-preload.js", import.meta.url)).text()
+const src = await Bun.file(new URL("../public/mongolgpt-theme-preload.js", import.meta.url)).text()
 
 const run = () => Function(src)()
 
@@ -31,7 +31,7 @@ describe("theme preload", () => {
     expect(localStorage.getItem("mongolgpt-theme-id")).toBe("oc-2")
     expect(localStorage.getItem("mongolgpt-theme-css-light")).toBeNull()
     expect(localStorage.getItem("mongolgpt-theme-css-dark")).toBeNull()
-    expect(document.getElementById("oc-theme-preload")).toBeNull()
+    expect(document.getElementById("mongolgpt-theme-preload")).toBeNull()
   })
 
   test("keeps cached css for non-default themes", () => {
@@ -41,6 +41,6 @@ describe("theme preload", () => {
     run()
 
     expect(document.documentElement.dataset.theme).toBe("nightowl")
-    expect(document.getElementById("oc-theme-preload")?.textContent).toContain("--background-base:#fff;")
+    expect(document.getElementById("mongolgpt-theme-preload")?.textContent).toContain("--background-base:#fff;")
   })
 })

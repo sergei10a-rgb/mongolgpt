@@ -13,13 +13,17 @@ mongolgpt JS/TS SDK нь сервертэй харьцах төрлийн аюу
 
 ---
 
-## Суулгах
+## SDK ашиглах
 
-SDK-г npm-аас суулгана уу:
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ const { client } = await createMongolGPT()
 | Сонголт | Төрөл | Тодорхойлолт | Өгөгдмөл |
 | ---------- | ------------- | ------------------------------ | ----------- |
 | `hostname` | `string` | Серверийн хостын нэр | `127.0.0.1` |
-| `port` | `number` | Сервер порт | `4096` |
+| `port` |
+umber` | Сервер порт | `4096` |
 | `signal` | `AbortSignal` | Цуцлахыг зогсоох дохио | `undefined` |
-| `timeout` | `number` | Серверийг эхлүүлэхэд ms-ийн хугацаа | `5000` |
+| `timeout` |
+umber` | Серверийг эхлүүлэхэд ms-ийн хугацаа | `5000` |
 | `config` | `Config` | Тохиргооны объект | `{}` |
 
 ---
@@ -167,7 +173,8 @@ console.log(result.data.info.structured_output)
 | ------------ | --------------- | ---------------------------------------------------------- |
 | `type` | `'json_schema'` | Шаардлагатай. JSON схемийн горимыг заана |
 | `schema` | `object` | Шаардлагатай. JSON Гаралтын бүтцийг тодорхойлох схемийн объект |
-| `retryCount` | `number` | Нэмэлт. Баталгаажуулалтын дахин оролдлогын тоо (өгөгдмөл: 2) |
+| `retryCount` |
+umber` | Нэмэлт. Баталгаажуулалтын дахин оролдлогын тоо (өгөгдмөл: 2) |
 
 ### Алдаа засах
 

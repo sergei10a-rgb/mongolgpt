@@ -3,76 +3,28 @@ title: Экосистема
 description: Проекты и интеграции, созданные с помощью MongolGPT.
 ---
 
-Коллекция проектов сообщества, построенных на MongolGPT.
+MongolGPT-ийн ecosystem хуудсыг одоогоор зөвхөн баталгаажсан integration төрлүүдээр харуулж байна. Албан ёсны marketplace/package registry бэлэн болоогүй тул энд гуравдагч талын rebrand хийсэн package жагсаалт тавихгүй.
 
-:::note
-Хотите добавить свой проект, связанный с MongolGPT, в этот список? Разместите PR.
-:::
+## Баталгаатай integration төрлүүд
 
-Вы также можете посетить [awesome-mongolgpt](https://github.com/awesome-mongolgpt/awesome-mongolgpt) и [mongolgpt.cafe](https://mongolgpt.cafe) — хаб, объединяющий экосистему и сообщество.
+| Төрөл | Одоогийн төлөв |
+| --- | --- |
+| MCP server | `mongolgpt compat import plan/apply` command болон desktop integration wizard-аар command, local path, URL, config-оос танина |
+| Skill | Claude/Codex/Goose маягийн skill folder/config-ийг таних суурь importer нэмэгдсэн |
+| Plugin | Local plugin file болон private npm package-ийг config дээр зааж ажиллуулах боломжтой |
+| Provider | MongolGPT account login, API key provider, local/provider config wiring хадгалагдсан |
 
----
+## Import workflow
 
-## Плагины
+```bash
+mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
+mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
+```
 
-| Имя                                                                                                  | Описание                                                                                                                                          |
-| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [mongolgpt-daytona](https://github.com/daytonaio/daytona/tree/main/libs/mongolgpt-plugin)            | Автоматически запускайте сеансы MongolGPT в изолированных песочницах Daytona с синхронизацией git и предварительным просмотром в реальном времени |
-| [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session)                  | Автоматически внедрять заголовки сеансов Helicone для группировки запросов                                                                        |
-| [mongolgpt-type-inject](https://github.com/nick-vi/mongolgpt-type-inject)                            | Автоматическое внедрение типов TypeScript/Svelte в файлы, считываемые с помощью инструментов поиска                                               |
-| [mongolgpt-openai-codex-auth](https://github.com/numman-ali/mongolgpt-openai-codex-auth)             | Используйте подписку ChatGPT Plus/Pro вместо кредитов API                                                                                         |
-| [mongolgpt-gemini-auth](https://github.com/jenslys/mongolgpt-gemini-auth)                            | Используйте существующий план Gemini вместо выставления счетов через API                                                                          |
-| [mongolgpt-antigravity-auth](https://github.com/NoeFabris/mongolgpt-antigravity-auth)                | Используйте бесплатные модели Antigravity вместо выставления счетов через API                                                                     |
-| [mongolgpt-devcontainers](https://github.com/athal7/mongolgpt-devcontainers)                         | Многоветвевая изоляция контейнеров разработки с мелкими клонами и автоматическим назначением портов                                               |
-| [mongolgpt-google-antigravity-auth](https://github.com/shekohex/mongolgpt-google-antigravity-auth)   | Плагин Google Antigravity OAuth с поддержкой поиска Google и более надежной обработкой API                                                        |
-| [mongolgpt-dynamic-context-pruning](https://github.com/Tarquinen/mongolgpt-dynamic-context-pruning)  | Оптимизируйте использование токенов за счет сокращения выходных данных устаревших инструментов                                                    |
-| [mongolgpt-vibeguard](https://github.com/inkdust2021/mongolgpt-vibeguard)                            | Скрывайте секреты/PII, заменяя их плейсхолдерами в стиле VibeGuard перед отправкой в LLM; восстанавливайте локально                               |
-| [mongolgpt-websearch-cited](https://github.com/ghoulr/mongolgpt-websearch-cited.git)                 | Добавьте встроенную поддержку веб-поиска для поддерживаемых поставщиков в стиле Google                                                            |
-| [mongolgpt-pty](https://github.com/shekohex/mongolgpt-pty.git)                                       | Позволяет агентам ИИ запускать фоновые процессы в PTY и отправлять им интерактивные данные                                                        |
-| [mongolgpt-shell-strategy](https://github.com/JRedeker/mongolgpt-shell-strategy)                     | Инструкции для неинтерактивных shell-команд — предотвращают зависания из-за операций, зависящих от TTY                                            |
-| [mongolgpt-wakatime](https://github.com/angristan/mongolgpt-wakatime)                                | Отслеживайте использование MongolGPT с помощью Wakatime                                                                                           |
-| [mongolgpt-md-table-formatter](https://github.com/franlol/mongolgpt-md-table-formatter/tree/main)    | Очистка таблиц Markdown, созданных LLM                                                                                                            |
-| [mongolgpt-morph-plugin](https://github.com/morphllm/mongolgpt-morph-plugin)                         | Редактирование Fast Apply, поиск по кодовой базе WarpGrep и сжатие контекста через Morph                                                          |
-| [oh-my-mongolgpt](https://github.com/code-yeongyu/oh-my-mongolgpt)                                   | Фоновые агенты, встроенные инструменты LSP/AST/MCP, курируемые агенты, совместимость с Claude Code                                                |
-| [mongolgpt-notificator](https://github.com/panta82/mongolgpt-notificator)                            | Уведомления на рабочем столе и звуковые оповещения для сеансов MongolGPT                                                                          |
-| [mongolgpt-notifier](https://github.com/mohak34/mongolgpt-notifier)                                  | Уведомления на рабочем столе и звуковые оповещения о разрешениях, завершении и событиях ошибок                                                    |
-| [mongolgpt-zellij-namer](https://github.com/24601/mongolgpt-zellij-namer)                            | Автоматическое именование сеансов Zellij на основе искусственного интеллекта на основе контекста MongolGPT                                        |
-| [mongolgpt-skillful](https://github.com/zenobi-us/mongolgpt-skillful)                                | Разрешить агентам MongolGPT отложенную загрузку подсказок по требованию с обнаружением и внедрением навыков                                       |
-| [mongolgpt-supermemory](https://github.com/supermemoryai/mongolgpt-supermemory)                      | Постоянная память между сеансами с использованием Supermemory                                                                                     |
-| [@plannotator/mongolgpt](https://github.com/backnotprop/plannotator/tree/main/apps/mongolgpt-plugin) | Интерактивный обзор плана с визуальными аннотациями и возможностью совместного использования в частном или автономном режиме                      |
-| [@openspoon/subtask2](https://github.com/spoons-and-mirrors/subtask2)                                | Расширьте mongolgpt/команды до мощной системы оркестровки с детальным управлением потоком данных                                                  |
-| [mongolgpt-scheduler](https://github.com/different-ai/mongolgpt-scheduler)                           | Планируйте повторяющиеся задания с помощью launchd (Mac) или systemd (Linux) с синтаксисом cron                                                   |
-| [micode](https://github.com/vtemian/micode)                                                          | Структурированный мозговой штурм → План → Реализация рабочего процесса с непрерывностью сеанса                                                    |
-| [octto](https://github.com/vtemian/octto)                                                            | Интерактивный пользовательский интерфейс браузера для мозгового штурма с помощью искусственного интеллекта с формами из нескольких вопросов       |
-| [mongolgpt-background-agents](https://github.com/kdcokenny/mongolgpt-background-agents)              | Фоновые агенты в стиле Claude Code с асинхронным делегированием и сохранением контекста                                                           |
-| [mongolgpt-notify](https://github.com/kdcokenny/mongolgpt-notify)                                    | Встроенные уведомления ОС для MongolGPT – узнайте, когда задачи завершены                                                                         |
-| [mongolgpt-workspace](https://github.com/kdcokenny/mongolgpt-workspace)                              | Комплексный пакет многоагентной оркестровки — 16 компонентов, одна установка                                                                      |
-| [mongolgpt-worktree](https://github.com/kdcokenny/mongolgpt-worktree)                                | Рабочие деревья git с нулевым трением для MongolGPT                                                                                               |
-| [mongolgpt-sentry-monitor](https://github.com/stolinski/mongolgpt-sentry-monitor)                    | Отслеживайте и отлаживайте ваших ИИ-агентов с помощью Sentry AI Monitoring                                                                        |
+Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, path, URL эсвэл config оруулаад шалгах болон нэмэх боломжтой.
 
----
+## Нийтлэхээс өмнөх дүрэм
 
-## Проекты
-
-| Имя                                                                                          | Описание                                                                                       |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| [kimaki](https://github.com/remorses/kimaki)                                                 | Discord-бот для управления сеансами MongolGPT, созданный на базе SDK                           |
-| [mongolgpt.nvim](https://github.com/NickvanDyke/mongolgpt.nvim)                              | Плагин Neovim для подсказок с поддержкой редактора, созданный на основе API                    |
-| [portal](https://github.com/hosenur/portal)                                                  | Мобильный веб-интерфейс для MongolGPT через Tailscale/VPN                                      |
-| [mongolgpt plugin template](https://github.com/zenobi-us/mongolgpt-plugin-template/)         | Шаблон для создания плагинов MongolGPT                                                         |
-| [mongolgpt.nvim](https://github.com/sudo-tee/mongolgpt.nvim)                                 | Интерфейс Neovim для MongolGPT - агент кодирования искусственного интеллекта на базе терминала |
-| [ai-sdk-provider-mongolgpt-sdk](https://github.com/ben-vargas/ai-sdk-provider-mongolgpt-sdk) | Поставщик Vercel AI SDK для использования MongolGPT через @mongolgpt/sdk                       |
-| [OpenChamber](https://github.com/btriapitsyn/openchamber)                                    | Веб-приложение или настольное приложение и расширение VS Code для MongolGPT                    |
-| [MongolGPT-Obsidian](https://github.com/mtymek/mongolgpt-obsidian)                           | Плагин Obsidian, встраивающий MongolGPT в пользовательский интерфейс Obsidian                  |
-| [OpenWork](https://github.com/different-ai/openwork)                                         | Альтернатива Claude Cowork с открытым исходным кодом на базе MongolGPT                         |
-| [ocx](https://github.com/kdcokenny/ocx)                                                      | Менеджер расширений MongolGPT с переносимыми изолированными профилями                          |
-| [CodeNomad](https://github.com/NeuralNomadsAI/CodeNomad)                                     | Настольное, веб-, мобильное и удаленное клиентское приложение для MongolGPT                    |
-
----
-
-## Агенты
-
-| Имя                                                                 | Описание                                                                  |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| [Agentic](https://github.com/Cluster444/agentic)                    | Модульные ИИ-агенты и команды для структурированной разработки            |
-| [mongolgpt-agents](https://github.com/darrenhinde/mongolgpt-agents) | Конфигурации, подсказки, агенты и плагины для улучшения рабочих процессов |
+- Нийтлэгдээгүй npm/Homebrew/AUR/Chocolatey/Scoop package-ийг official install гэж харуулахгүй.
+- Гуравдагч талын plugin-ийг MongolGPT нэрээр rebrand хийж, бодитоор байхгүй URL/package руу заахгүй.
+- Шинэ integration нэмэхдээ эхлээд importer/adapter-аар шалгаж, дараа нь албан ёсны registry/marketplace дээр нийтэлсний дараа docs-д package install command нэмнэ.

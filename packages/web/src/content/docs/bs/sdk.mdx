@@ -13,13 +13,17 @@ Koristite ga za izradu integracija i programsko upravljanje mongolgpt-om.
 
 ---
 
-## Instalacija
+## SDK ашиглах
 
-Instalirajte SDK sa npm-a:
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ Ovo pokrece i server i klijent
 | Opcija     | Tip           | Opis                          | Default     |
 | ---------- | ------------- | ----------------------------- | ----------- |
 | `hostname` | `string`      | Hostname servera              | `127.0.0.1` |
-| `port`     | `number`      | Port servera                  | `4096`      |
+| `port`     |
+umber`      | Port servera                  | `4096`      |
 | `signal`   | `AbortSignal` | Abort signal za otkazivanje   | `undefined` |
-| `timeout`  | `number`      | Timeout u ms za start servera | `5000`      |
+| `timeout`  |
+umber`      | Timeout u ms za start servera | `5000`      |
 | `config`   | `Config`      | Konfiguracijski objekat       | `{}`        |
 
 ---
@@ -167,7 +173,8 @@ Kada koristite `type: 'json_schema'`, navedite:
 | ------------ | --------------- | ----------------------------------------------------------- |
 | `type`       | `'json_schema'` | Obavezno. Određuje JSON schema način rada                   |
 | `schema`     | `object`        | Obavezno. JSON Schema objekt koji definira strukturu izlaza |
-| `retryCount` | `number`        | Opcionalno. Broj ponovnih pokušaja validacije (default: 2)  |
+| `retryCount` |
+umber`        | Opcionalno. Broj ponovnih pokušaja validacije (default: 2)  |
 
 ### Rukovanje greškama
 

@@ -36,7 +36,8 @@ Las definiciones globales también se cargan desde `~/.config/mongolgpt/skills/*
 Cada `SKILL.md` debe comenzar con el frontmatter de YAML.
 Sólo se reconocen estos campos:
 
-- `name` (obligatorio)
+-
+ame` (obligatorio)
 - `description` (obligatorio)
 - `license` (opcional)
 - `compatibility` (opcional)
@@ -48,7 +49,8 @@ Los campos desconocidos se ignoran.
 
 ## Validar nombres
 
-`name` debe:
+
+ame` debe:
 
 - Tener entre 1 y 64 caracteres.
 - Ser alfanuméricos en minúsculas con separadores de guión simple
@@ -217,6 +219,7 @@ Cuando está deshabilitada, la sección `<available_skills>` se omite por comple
 Si una habilidad no aparece:
 
 1. Verifique que `SKILL.md` esté escrito en mayúsculas.
-2. Verifique que el frontmatter incluya `name` y `description`
+2. Verifique que el frontmatter incluya
+ame` y `description`
 3. Asegúrese de que los nombres de las habilidades sean únicos en todas las ubicaciones
 4. Verifique los permisos: las habilidades con `deny` están ocultas para los agentes

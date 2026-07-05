@@ -29,7 +29,7 @@ function initial() {
     if (fromCookie) return fromCookie
   }
 
-  if (typeof navigator !== "object") return "en" satisfies Locale
+  if (typeof navigator !== "object") return "mn" satisfies Locale
 
   const languages = navigator.languages?.length ? navigator.languages : [navigator.language]
   return detectFromLanguages(languages)

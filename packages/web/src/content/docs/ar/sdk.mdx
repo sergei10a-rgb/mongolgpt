@@ -13,13 +13,17 @@ export const typesUrl = `${config.github}/blob/dev/packages/sdk/js/src/gen/types
 
 ---
 
-## التثبيت
+## SDK ашиглах
 
-ثبّت SDK من npm:
+`@mongolgpt/sdk` package npm дээр хараахан нийтлэгдээгүй. Одоогоор SDK-г энэ monorepo workspace дотроос ашиглана.
 
 ```bash
-npm install @mongolgpt/sdk
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
 ```
+
+Repository дотор `@mongolgpt/sdk` import нь workspace package-ээр resolved болно. Package нийтлэгдсэний дараа npm install command-ийг энэ хуудсанд нэмнэ.
 
 ---
 
@@ -40,9 +44,11 @@ const { client } = await createMongolGPT()
 | الخيار     | النوع         | الوصف                         | الافتراضي   |
 | ---------- | ------------- | ----------------------------- | ----------- |
 | `hostname` | `string`      | اسم مضيف الخادم               | `127.0.0.1` |
-| `port`     | `number`      | منفذ الخادم                   | `4096`      |
+| `port`     |
+umber`      | منفذ الخادم                   | `4096`      |
 | `signal`   | `AbortSignal` | إشارة إلغاء للإيقاف           | `undefined` |
-| `timeout`  | `number`      | مهلة بدء الخادم بالمللي ثانية | `5000`      |
+| `timeout`  |
+umber`      | مهلة بدء الخادم بالمللي ثانية | `5000`      |
 | `config`   | `Config`      | كائن الإعدادات                | `{}`        |
 
 ---
@@ -167,7 +173,8 @@ console.log(result.data.info.structured_output)
 | ------------ | --------------- | ------------------------------------------------ |
 | `type`       | `'json_schema'` | مطلوب. يحدد وضع مخطط JSON                        |
 | `schema`     | `object`        | مطلوب. كائن مخطط JSON الذي يحدد بنية الإخراج     |
-| `retryCount` | `number`        | اختياري. عدد محاولات إعادة التحقق (الافتراضي: 2) |
+| `retryCount` |
+umber`        | اختياري. عدد محاولات إعادة التحقق (الافتراضي: 2) |
 
 ### معالجة الأخطاء
 

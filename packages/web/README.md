@@ -1,54 +1,45 @@
-# Starlight Starter Kit: Basics
+# MongolGPT docs
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+Энэ package нь [mongolgpt.duckdns.org/docs](https://mongolgpt.duckdns.org/docs/) дээрх active Starlight docs site-ийн source юм.
 
-```
-npm create astro@latest -- --template starlight
-```
+## Хаана юу байдаг вэ
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/starlight/tree/main/examples/basics)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/starlight/tree/main/examples/basics)
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/withastro/starlight&create_from_path=examples/basics)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwithastro%2Fstarlight%2Ftree%2Fmain%2Fexamples%2Fbasics&project-name=my-starlight-docs&repository-name=my-starlight-docs)
+- `src/content/docs/mn/` - Монгол баримт бичиг
+- `src/content/docs/` - English default docs
+- `astro.config.mjs` - Starlight sidebar, locale, theme тохиргоо
+- `public/` - docs site static assets
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+`packages/docs/` дотор байсан Mintlify starter template-ийг repo-оос хассан. MongolGPT-ийн идэвхтэй docs source нь энэ package.
 
-## 🚀 Project Structure
+## Local дээр ажиллуулах
 
-Inside of your Astro + Starlight project, you'll see the following folders and files:
+Repository root-оос:
 
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   ├── docs/
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
+```bash
+bun run dev:docs
 ```
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+Энэ package дотроос:
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
+```bash
+bun --cwd packages/web dev
+```
 
-Static assets, like favicons, can be placed in the `public/` directory.
+Build шалгах:
 
-## 🧞 Commands
+```bash
+bun run build:docs
+```
 
-All commands are run from the root of the project, from a terminal:
+## Монгол docs бичих зарчим
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+- Монгол хэрэглэгчид шууд ойлгох хэллэг ашиглана.
+- Нийтлэгдээгүй package, installer, marketplace зүйлийг ажиллаж байгаа мэт бичихгүй.
+- Command, config key, package name, URL-ийг орчуулалгүй үлдээнэ.
+- Compatibility эсвэл legacy alias-ыг зөвхөн шаардлагатай үед “хуучин тохиргооны нийцтэй байдал” гэж тайлбарлана.
 
-## 👀 Want to learn more?
+## Гол холбоосууд
 
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+- Монгол docs: [https://mongolgpt.duckdns.org/docs/mn/](https://mongolgpt.duckdns.org/docs/mn/)
+- Releases: [https://github.com/sergei10a-rgb/mongolgpt/releases](https://github.com/sergei10a-rgb/mongolgpt/releases)
+- Source: [https://github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)

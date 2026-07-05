@@ -33,7 +33,7 @@ description: 編寫自己的外掛來擴展 MongolGPT。
 ```json title="mongolgpt.json"
 {
   "$schema": "https://mongolgpt.duckdns.org/config.json",
-  "plugin": ["mongolgpt-helicone-session", "mongolgpt-wakatime", "@my-org/custom-plugin"]
+  "plugin": ["./plugins/helicone-session.ts", "./plugins/wakatime.ts", "@my-org/private-plugin"]
 }
 ```
 

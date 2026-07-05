@@ -342,8 +342,10 @@ Du kan konfigurere mongolgpt til at bruge lokale modeller via [Atomic Chat](http
 I dette eksempel:
 
 - `atomic-chat` er det brugerdefinerede udbyder-ID. Det kan være en vilkårlig streng.
-- `npm` specificerer pakken, der skal bruges for denne udbyder. Her bruges `@ai-sdk/openai-compatible` til enhver OpenAI-kompatibel API.
-- `name` er det viste navn på udbyderen i grænsefladen.
+-
+pm` specificerer pakken, der skal bruges for denne udbyder. Her bruges `@ai-sdk/openai-compatible` til enhver OpenAI-kompatibel API.
+-
+ame` er det viste navn på udbyderen i grænsefladen.
 - `options.baseURL` er endpoint'et for den lokale server. Ændr vært og port for at matche din Atomic Chat-opsætning.
 - `models` er en afbildning af model-ID'er til deres viste navne. Hvert ID skal matche det `id`, der returneres af `GET /v1/models` — kør `curl http://127.0.0.1:1337/v1/models` for at liste ID'erne, der i øjeblikket er indlæst i Atomic Chat.
 
@@ -809,7 +811,7 @@ Udsæt derefter applikations-ID som miljøvariabel:
 export GITLAB_OAUTH_CLIENT_ID=your_application_id_here
 ```
 
-Mere dokumentation på [mongolgpt-gitlab-auth](https://www.npmjs.com/package/mongolgpt-gitlab-auth) hjemmesiden.
+Mere dokumentation på MongolGPT GitLab auth adapter hjemmesiden.
 
 ##### Konfiguration
 
@@ -835,7 +837,7 @@ For at få adgang til GitLab-værktøjer (merge requests, problemer, pipelines, 
 ```json title="mongolgpt.json"
 {
   "$schema": "https://mongolgpt.duckdns.org/config.json",
-  "plugin": ["mongolgpt-gitlab-plugin"]
+  "plugin": ["./plugins/gitlab-duo.ts"]
 }
 ```
 
@@ -1064,17 +1066,19 @@ Helicone understøtter tilpassede headers for funktioner som caching, brugerspor
 
 ##### Sessionssporing
 
-Helicones [Sessions](https://docs.helicone.ai/features/sessions) funktion lader dig gruppe relaterede LLM anmodninger sammen. Brug [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session) plugin for automatisk at logge hver MongolGPT-samtale som en session i Helicone.
+Helicones [Sessions](https://docs.helicone.ai/features/sessions) funktion lader dig gruppe relaterede LLM anmodninger sammen. Brug local Helicone session plugin for automatisk at logge hver MongolGPT-samtale som en session i Helicone.
 
 ```bash
-npm install -g mongolgpt-helicone-session
+# Dedicated MongolGPT npm plugin is not published yet.
+# Use a local plugin file or import an adapter with:
+mongolgpt compat import plan ./plugins/helicone-session.ts
 ```
 
 Tilføj den til din konfiguration.
 
 ```json title="mongolgpt.json"
 {
-  "plugin": ["mongolgpt-helicone-session"]
+  "plugin": ["./plugins/helicone-session.ts"]
 }
 ```
 
@@ -1124,8 +1128,10 @@ Du kan konfigurere mongolgpt til at bruge lokale modeller gennem [llama.cpps](ht
 I dette eksempel:
 
 - `llama.cpp` er den tilpassede udbyder ID. Dette kan være hvilken som helst streng du vil.
-- `npm` specificerer pakken som skal bruges for denne udbyder. Her bruges `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
-- `name` er visningsnavnet for udbyderen i UI.
+-
+pm` specificerer pakken som skal bruges for denne udbyder. Her bruges `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
+-
+ame` er visningsnavnet for udbyderen i UI.
 - `options.baseURL` er endpointet for den lokale server.
 - `models` er et kort over model-ID'er til deres konfigurationer. Modelnavnet vil vises i modelvalglisten.
 
@@ -1187,8 +1193,10 @@ Du kan konfigurere mongolgpt til at bruge lokale modeller gennem LM Studio.
 I dette eksempel:
 
 - `lmstudio` er den tilpassede udbyder ID. Dette kan være hvilken som helst streng du vil.
-- `npm` specificerer pakken som skal bruges for denne udbyder. Her bruges `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
-- `name` er visningsnavnet for udbyderen i UI.
+-
+pm` specificerer pakken som skal bruges for denne udbyder. Her bruges `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
+-
+ame` er visningsnavnet for udbyderen i UI.
 - `options.baseURL` er endpointet for den lokale server.
 - `models` er et kort over model-ID'er til deres konfigurationer. Modelnavnet vil vises i modelvalglisten.
 
@@ -1308,13 +1316,16 @@ Ollama kan automatisk konfigurere sig selv for MongolGPT. Se [Ollama-integration
 I dette eksempel:
 
 - `ollama` er den tilpassede udbyder ID. Dette kan være hvilken som helst streng du vil.
-- `npm` specificerer pakken som skal bruges for denne udbyder. Her bruges `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
-- `name` er visningsnavnet for udbyderen i UI.
+-
+pm` specificerer pakken som skal bruges for denne udbyder. Her bruges `@ai-sdk/openai-compatible` for enhver OpenAI-kompatibel API.
+-
+ame` er visningsnavnet for udbyderen i UI.
 - `options.baseURL` er endpointet for den lokale server.
 - `models` er et kort over model-ID'er til deres konfigurationer. Modelnavnet vil vises i modelvalglisten.
 
 :::tip
-Hvis værktøjskald ikke fungerer, prøv at øge `num_ctx` i Ollama. Start omkring 16k - 32k.
+Hvis værktøjskald ikke fungerer, prøv at øge
+um_ctx` i Ollama. Start omkring 16k - 32k.
 :::
 
 ---

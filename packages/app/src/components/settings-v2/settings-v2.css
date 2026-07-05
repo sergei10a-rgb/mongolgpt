@@ -1,5 +1,7 @@
 @import "@mongolgpt/ui/v2/text-input-v2.css";
 @import "@mongolgpt/ui/v2/button-v2.css";
+@import "@mongolgpt/ui/v2/select-v2.css";
+@import "@mongolgpt/ui/v2/textarea-v2.css";
 
 [data-component="tabs-v2"][data-variant="settings"] {
   height: 100%;
@@ -660,4 +662,196 @@
   font-weight: 440;
   line-height: 1;
   color: var(--v2-state-fg-danger);
+}
+
+.settings-v2-tab-body.settings-v2-imports {
+  gap: 24px;
+}
+
+.settings-v2-imports .settings-v2-section-title {
+  padding-bottom: 0;
+  font-size: 13px;
+  font-weight: 530;
+  line-height: 1;
+}
+
+.settings-v2-imports .settings-v2-section-title + [data-component="settings-v2-list"] {
+  margin-top: 16px;
+}
+
+.settings-v2-import-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-block: 20px;
+}
+
+.settings-v2-import-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 760px) {
+  .settings-v2-import-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.settings-v2-import-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-v2-import-field > span,
+.settings-v2-import-switches span {
+  font-size: 12px;
+  font-weight: 530;
+  line-height: 1;
+  color: var(--v2-text-text-muted);
+}
+
+.settings-v2-import-field [data-component="text-input-v2"],
+.settings-v2-import-field [data-component="textarea-v2"],
+.settings-v2-import-field [data-component="select-v2-root"] {
+  width: 100%;
+}
+
+.settings-v2-import-source [data-slot="textarea-v2-textarea"] {
+  min-height: 96px;
+}
+
+.settings-v2-import-select-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-v2-import-select-item span {
+  font-size: 13px;
+  font-weight: 530;
+  line-height: 1;
+}
+
+.settings-v2-import-select-item small {
+  overflow: hidden;
+  color: var(--v2-text-text-muted);
+  font-size: 11px;
+  font-weight: 440;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-v2-import-switches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+  padding-top: 18px;
+}
+
+.settings-v2-import-switches label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-v2-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.settings-v2-import-error {
+  border-radius: 6px;
+  padding: 12px 14px;
+  background: color-mix(in oklch, var(--v2-state-fg-danger) 10%, transparent);
+  color: var(--v2-state-fg-danger);
+  font-size: 12px;
+  font-weight: 440;
+  line-height: 1.45;
+}
+
+.settings-v2-import-result-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-v2-import-config,
+.settings-v2-import-outcome,
+.settings-v2-import-warnings {
+  display: flex;
+  gap: 12px;
+  padding-block: 16px;
+  border-bottom: 0.5px solid var(--v2-border-border-base);
+}
+
+.settings-v2-import-config:last-child,
+.settings-v2-import-outcome:last-child,
+.settings-v2-import-warnings:last-child {
+  border-bottom: none;
+}
+
+.settings-v2-import-config {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.settings-v2-import-config > span {
+  flex-shrink: 0;
+  color: var(--v2-text-text-muted);
+  font-size: 12px;
+  font-weight: 530;
+}
+
+.settings-v2-import-config code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--v2-text-text-base);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.settings-v2-import-outcome {
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-v2-import-outcome-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-v2-import-outcome-main span {
+  color: var(--v2-text-text-base);
+  font-size: 13px;
+  font-weight: 530;
+  line-height: 1;
+}
+
+.settings-v2-import-outcome-main small {
+  overflow-wrap: anywhere;
+  color: var(--v2-text-text-muted);
+  font-size: 11px;
+  font-weight: 440;
+  line-height: 1.3;
+}
+
+.settings-v2-import-warnings {
+  flex-direction: column;
+  color: var(--v2-state-fg-warning, var(--v2-text-text-muted));
+  font-size: 12px;
+  font-weight: 440;
+  line-height: 1.4;
 }

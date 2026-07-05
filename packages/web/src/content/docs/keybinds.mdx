@@ -182,7 +182,8 @@ MongolGPT has a list of keybinds that you can customize through `tui.json`.
 On Windows, the defaults for `input_undo` and `terminal_suspend` are different:
 
 - `input_undo` defaults to `ctrl+z,ctrl+-,super+z` when it is not explicitly configured. The `ctrl+z` binding is added because Windows terminals do not support POSIX suspend.
-- `terminal_suspend` is forced to `none` because native Windows terminals do not support POSIX suspend.
+- `terminal_suspend` is forced to
+one` because native Windows terminals do not support POSIX suspend.
   :::
 
 ---
@@ -191,7 +192,8 @@ On Windows, the defaults for `input_undo` and `terminal_suspend` are different:
 
 MongolGPT uses a `leader` key for many keybinds. This avoids conflicts in your terminal.
 
-By default, `ctrl+x` is the leader key and many actions require you to first press the leader key and then the shortcut. For example, to start a new session you first press `ctrl+x` and then press `n`.
+By default, `ctrl+x` is the leader key and many actions require you to first press the leader key and then the shortcut. For example, to start a new session you first press `ctrl+x` and then press
+`.
 
 You don't need to use a leader key for your keybinds but we recommend doing so.
 

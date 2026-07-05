@@ -29,106 +29,25 @@ export const console = config.console
 
 ---
 
-## インストール
+## Суулгах
 
-MongolGPT をインストールする最も簡単な方法は、インストールスクリプトを使用することです。
+Одоогоор MongolGPT-ийн албан ёсны npm/Homebrew/AUR/Chocolatey/Scoop package нийтлэгдээгүй. Бодитоор ажиллах замууд:
+
+- Desktop: [Windows x64 installer](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
+- Source build:
+
+```bash
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
+bun run dev
+```
+
+Terminal install script:
 
 ```bash
 curl -fsSL https://mongolgpt.duckdns.org/install | bash
 ```
-
-次のコマンドを使用してインストールすることもできます。
-
-- **Node.js の使用**
-
-        <Tabs>
-
-      <TabItem label="npm">
-      ```bash
-      npm install -g mongolgpt
-      ```
-
-          </TabItem>
-
-        <TabItem label="Bun">
-        ```bash
-        bun install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="pnpm">
-        ```bash
-        pnpm install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="Yarn">
-        ```bash
-        yarn global add mongolgpt
-        ```
-
-      </TabItem>
-
-  </Tabs>
-
-- **macOS および Linux での Homebrew の使用**
-
-  ```bash
-  brew install sergei10a-rgb/tap/mongolgpt
-  ```
-
-  > 最新のリリースには MongolGPT タップを使用することをお勧めします。公式の `brew install mongolgpt` 式は Homebrew チームによって維持されており、更新頻度は低くなります。
-
-- **Arch Linux での Paru の使用**
-
-  ```bash
-  sudo pacman -S mongolgpt           # Arch Linux (Stable)
-  paru -S mongolgpt-bin              # Arch Linux (Latest from AUR)
-  ```
-
-#### Windows
-
-:::tip[推奨: WSL を使用する]
-Windows で最高のエクスペリエンスを得るには、[Windows Subsystem for Linux (WSL)](/docs/windows-wsl) を使用することをお勧めします。これにより、パフォーマンスが向上し、MongolGPT の機能との完全な互換性が提供されます。
-:::
-
-- **Chocolatey の使用**
-
-  ```bash
-  choco install mongolgpt
-  ```
-
-- **Scoop の使用**
-
-  ```bash
-  scoop install mongolgpt
-  ```
-
-- **npm の使用**
-
-  ```bash
-  npm install -g mongolgpt
-  ```
-
-- **Mise の使用**
-
-  ```bash
-  mise use -g github:sergei10a-rgb/mongolgpt
-  ```
-
-- **Docker の使用**
-
-  ```bash
-  docker run -it --rm ghcr.io/sergei10a-rgb/mongolgpt
-  ```
-
-Bun を使用して Windows に MongolGPT をインストールするためのサポートは現在進行中です。
-
-[Releases](https://github.com/sergei10a-rgb/mongolgpt/releases).
-
----
 
 ## 設定
 

@@ -1,5 +1,6 @@
 import type { Locale } from "~/lib/language"
 import { dict as en } from "~/i18n/en"
+import { dict as mn } from "~/i18n/mn"
 import { dict as zh } from "~/i18n/zh"
 import { dict as zht } from "~/i18n/zht"
 import { dict as ko } from "~/i18n/ko"
@@ -24,6 +25,7 @@ export type Dict = Record<Key, string>
 const base = en satisfies Dict
 
 export function i18n(locale: Locale): Dict {
+  if (locale === "mn") return { ...base, ...mn }
   if (locale === "en") return base
   if (locale === "zh") return { ...base, ...zh }
   if (locale === "zht") return { ...base, ...zht }

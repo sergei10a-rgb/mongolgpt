@@ -3,7 +3,7 @@ import { createSimpleContext } from "@mongolgpt/ui/context"
 import { createGlobalEmitter } from "@solid-primitives/event-bus"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { type Accessor, batch, createMemo, onCleanup, onMount } from "solid-js"
-import { createSdkForServer } from "@/utils/server"
+import { createSdkForServer, createServerRequest, type ServerRequestInit } from "@/utils/server"
 import { useLanguage } from "./language"
 import { usePlatform } from "./platform"
 import { ServerConnection, useServer } from "./server"
@@ -258,11 +258,16 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
     fetch: platform.fetch,
     throwOnError: true,
   })
+  const request = createServerRequest({
+    server: server.http,
+    fetch: platform.fetch,
+  })
 
   return {
     server,
     scope,
     url: server.http.url,
+    request,
     client: sdk,
     event: {
       on: emitter.on.bind(emitter),
@@ -332,6 +337,12 @@ function createDirSdkContext(directory: string, serverSDK: ServerSDKBase) {
     event: emitter,
     get url() {
       return serverSDK.url
+    },
+    request(path: string, init: ServerRequestInit = {}) {
+      return serverSDK.request(path, {
+        ...init,
+        directory: init.directory ?? directory,
+      })
     },
     createClient(opts: Parameters<typeof serverSDK.createClient>[0]) {
       return serverSDK.createClient(opts)

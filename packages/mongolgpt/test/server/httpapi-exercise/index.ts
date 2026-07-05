@@ -20,6 +20,7 @@
 import { Effect } from "effect"
 import { OpenApi } from "effect/unstable/httpapi"
 import { TestLLMServer } from "../../lib/llm-server"
+import fs from "fs/promises"
 import path from "path"
 import { array, boolean, check, isRecord, message, object, stable } from "./assertions"
 import { controlledPtyInput, http, route } from "./dsl"
@@ -431,6 +432,51 @@ const scenarios: Scenario[] = [
     .mutating()
     .at((ctx) => ({ path: route("/mcp/{name}/disconnect", { name: "httpapi-missing" }), headers: ctx.headers() }))
     .json(404, object, "status"),
+  http.protected
+    .post("/compat/import/plan", "compat.import.plan")
+    .at((ctx) => ({
+      path: "/compat/import/plan",
+      headers: ctx.headers(),
+      body: {
+        project: true,
+        name: "httpapi-plan",
+        mcpCommand: "npx -y @modelcontextprotocol/server-filesystem .",
+      },
+    }))
+    .json(200, (body) => {
+      object(body)
+      array(body.prepared)
+      object(body.prepared[0])
+      check(body.prepared[0].kind === "mcp", "compat plan should prepare an MCP operation")
+      check(body.configExists === false, "compat plan should not create a config file")
+      check(String(body.nextConfigText).includes("httpapi-plan"), "compat plan should preview the config text")
+    }),
+  http.protected
+    .post("/compat/import/apply", "compat.import.apply")
+    .mutating()
+    .at((ctx) => ({
+      path: "/compat/import/apply",
+      headers: ctx.headers(),
+      body: {
+        project: true,
+        name: "httpapi-apply",
+        mcpCommand: "npx -y @modelcontextprotocol/server-filesystem .",
+      },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        object(body)
+        array(body.outcomes)
+        object(body.outcomes[0])
+        check(body.outcomes[0].mode === "add", "compat apply should add config")
+        const directory = ctx.directory
+        check(typeof directory === "string", "compat apply scenario should run in a project directory")
+        const config = yield* Effect.promise(() =>
+          fs.readFile(path.join(directory, ".mongolgpt", "mongolgpt.jsonc"), "utf8"),
+        )
+        check(config.includes("httpapi-apply"), "compat apply should write project config")
+      }),
+    ),
   http.protected.get("/pty/shells", "pty.shells").json(200, array),
   http.protected.get("/pty", "pty.list").json(200, array),
   http.protected

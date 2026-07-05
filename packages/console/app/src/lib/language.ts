@@ -1,4 +1,5 @@
 export const LOCALES = [
+  "mn",
   "en",
   "zh",
   "zht",
@@ -21,7 +22,7 @@ export const LOCALES = [
 
 export type Locale = (typeof LOCALES)[number]
 
-export const LOCALE_COOKIE = "oc_locale" as const
+export const LOCALE_COOKIE = "mongolgpt_locale" as const
 export const LOCALE_HEADER = "x-mongolgpt-locale" as const
 
 function fix(pathname: string) {
@@ -30,6 +31,7 @@ function fix(pathname: string) {
 }
 
 const LABEL = {
+  mn: "Монгол",
   en: "English",
   zh: "简体中文",
   zht: "繁體中文",
@@ -51,6 +53,7 @@ const LABEL = {
 } satisfies Record<Locale, string>
 
 const TAG = {
+  mn: "mn-MN",
   en: "en",
   zh: "zh-Hans",
   zht: "zh-Hant",
@@ -72,6 +75,7 @@ const TAG = {
 } satisfies Record<Locale, string>
 
 const DOCS = {
+  mn: "mn",
   en: "root",
   zh: "zh-cn",
   zht: "zh-tw",
@@ -102,6 +106,7 @@ const DOCS_SEGMENT = new Set([
   "it",
   "ja",
   "ko",
+  "mn",
   "nb",
   "pl",
   "pt-br",
@@ -123,6 +128,7 @@ const DOCS_LOCALE = {
   it: "it",
   ja: "ja",
   ko: "ko",
+  mn: "mn",
   nb: "no",
   "pt-br": "br",
   root: "en",
@@ -231,6 +237,7 @@ function match(input: string): Locale | null {
   const value = input.trim().toLowerCase()
   if (!value) return null
 
+  if (value.startsWith("mn")) return "mn"
   if (value.startsWith("zh")) {
     if (value.includes("hant") || value.includes("-tw") || value.includes("-hk") || value.includes("-mo")) return "zht"
     return "zh"
@@ -260,11 +267,11 @@ export function detectFromLanguages(languages: readonly string[]) {
     const locale = match(language)
     if (locale) return locale
   }
-  return "en" satisfies Locale
+  return "mn" satisfies Locale
 }
 
 export function detectFromAcceptLanguage(header: string | null) {
-  if (!header) return "en" satisfies Locale
+  if (!header) return "mn" satisfies Locale
 
   const items = header
     .split(",")
@@ -290,7 +297,7 @@ export function detectFromAcceptLanguage(header: string | null) {
     if (locale) return locale
   }
 
-  return "en" satisfies Locale
+  return "mn" satisfies Locale
 }
 
 export function localeFromCookieHeader(header: string | null) {

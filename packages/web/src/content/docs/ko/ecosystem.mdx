@@ -3,76 +3,28 @@ title: 생태계
 description: MongolGPT로 구축된 프로젝트와 통합.
 ---
 
-MongolGPT를 기반으로 만들어진 커뮤니티 프로젝트 모음입니다.
+MongolGPT-ийн ecosystem хуудсыг одоогоор зөвхөн баталгаажсан integration төрлүүдээр харуулж байна. Албан ёсны marketplace/package registry бэлэн болоогүй тул энд гуравдагч талын rebrand хийсэн package жагсаалт тавихгүй.
 
-:::note
-이 목록에 MongolGPT 관련 프로젝트를 추가하고 싶다면 PR을 제출하세요.
-:::
+## Баталгаатай integration төрлүүд
 
-[awesome-mongolgpt](https://github.com/awesome-mongolgpt/awesome-mongolgpt)와 [mongolgpt.cafe](https://mongolgpt.cafe)도 함께 확인해 보세요. ecosystem과 community 정보를 한곳에 모아볼 수 있습니다.
+| Төрөл | Одоогийн төлөв |
+| --- | --- |
+| MCP server | `mongolgpt compat import plan/apply` command болон desktop integration wizard-аар command, local path, URL, config-оос танина |
+| Skill | Claude/Codex/Goose маягийн skill folder/config-ийг таних суурь importer нэмэгдсэн |
+| Plugin | Local plugin file болон private npm package-ийг config дээр зааж ажиллуулах боломжтой |
+| Provider | MongolGPT account login, API key provider, local/provider config wiring хадгалагдсан |
 
----
+## Import workflow
 
-## 플러그인
+```bash
+mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
+mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
+```
 
-| 이름                                                                                                 | 설명                                                                                            |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [mongolgpt-daytona](https://github.com/daytonaio/daytona/tree/main/libs/mongolgpt-plugin)            | git sync와 live preview를 지원하는 격리된 Daytona sandbox에서 MongolGPT 세션을 자동 실행합니다. |
-| [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session)                  | 요청을 그룹화할 수 있도록 Helicone session header를 자동으로 주입합니다.                        |
-| [mongolgpt-type-inject](https://github.com/nick-vi/mongolgpt-type-inject)                            | 조회 tool과 함께 TypeScript/Svelte 타입 정보를 파일 읽기에 자동 주입합니다.                     |
-| [mongolgpt-openai-codex-auth](https://github.com/numman-ali/mongolgpt-openai-codex-auth)             | API 크레딧 대신 ChatGPT Plus/Pro 구독을 사용할 수 있습니다.                                     |
-| [mongolgpt-gemini-auth](https://github.com/jenslys/mongolgpt-gemini-auth)                            | API 과금 대신 기존 Gemini 플랜을 사용할 수 있습니다.                                            |
-| [mongolgpt-antigravity-auth](https://github.com/NoeFabris/mongolgpt-antigravity-auth)                | API 과금 대신 Antigravity의 무료 model을 사용할 수 있습니다.                                    |
-| [mongolgpt-devcontainers](https://github.com/athal7/mongolgpt-devcontainers)                         | shallow clone과 자동 포트 할당을 기반으로 multi-branch devcontainer 격리를 제공합니다.          |
-| [mongolgpt-google-antigravity-auth](https://github.com/shekohex/mongolgpt-google-antigravity-auth)   | Google Search 지원과 견고한 API 처리를 제공하는 Google Antigravity OAuth Plugin입니다.          |
-| [mongolgpt-dynamic-context-pruning](https://github.com/Tarquinen/mongolgpt-dynamic-context-pruning)  | 오래된 tool output을 정리해 token 사용량을 최적화합니다.                                        |
-| [mongolgpt-vibeguard](https://github.com/inkdust2021/mongolgpt-vibeguard)                            | LLM 호출 전에 secrets/PII를 VibeGuard 스타일 placeholder로 가리고, 로컬에서 복원합니다.         |
-| [mongolgpt-websearch-cited](https://github.com/ghoulr/mongolgpt-websearch-cited.git)                 | 지원 provider에서 Google grounded 스타일의 네이티브 websearch를 추가합니다.                     |
-| [mongolgpt-pty](https://github.com/shekohex/mongolgpt-pty.git)                                       | AI agent가 PTY에서 백그라운드 프로세스를 실행하고 대화형 입력을 보낼 수 있게 합니다.            |
-| [mongolgpt-shell-strategy](https://github.com/JRedeker/mongolgpt-shell-strategy)                     | 비대화형 shell 명령 실행 지침을 제공해 TTY 의존 작업으로 인한 멈춤을 방지합니다.                |
-| [mongolgpt-wakatime](https://github.com/angristan/mongolgpt-wakatime)                                | Wakatime으로 MongolGPT 사용량을 추적합니다.                                                     |
-| [mongolgpt-md-table-formatter](https://github.com/franlol/mongolgpt-md-table-formatter/tree/main)    | LLM이 생성한 markdown 표를 정리합니다.                                                          |
-| [mongolgpt-morph-plugin](https://github.com/morphllm/mongolgpt-morph-plugin)                         | Morph를 통한 Fast Apply 편집, WarpGrep 코드베이스 검색 및 컨텍스트 압축                         |
-| [oh-my-mongolgpt](https://github.com/code-yeongyu/oh-my-mongolgpt)                                   | background agent, 사전 구성된 LSP/AST/MCP tool, curated agent, Claude Code 호환성을 제공합니다. |
-| [mongolgpt-notificator](https://github.com/panta82/mongolgpt-notificator)                            | MongolGPT 세션에 데스크톱 알림과 사운드 알림을 제공합니다.                                      |
-| [mongolgpt-notifier](https://github.com/mohak34/mongolgpt-notifier)                                  | permission, 완료, 오류 이벤트에 대한 데스크톱 알림과 사운드 알림을 제공합니다.                  |
-| [mongolgpt-zellij-namer](https://github.com/24601/mongolgpt-zellij-namer)                            | MongolGPT 맥락을 기반으로 Zellij session 이름을 AI로 자동 지정합니다.                           |
-| [mongolgpt-skillful](https://github.com/zenobi-us/mongolgpt-skillful)                                | skill 탐색과 주입을 통해 MongolGPT agent가 필요 시 prompt를 lazy load하도록 합니다.             |
-| [mongolgpt-supermemory](https://github.com/supermemoryai/mongolgpt-supermemory)                      | Supermemory를 사용해 세션 간 persistent memory를 제공합니다.                                    |
-| [@plannotator/mongolgpt](https://github.com/backnotprop/plannotator/tree/main/apps/mongolgpt-plugin) | 시각 주석과 private/offline 공유를 포함한 인터랙티브 계획 리뷰를 제공합니다.                    |
-| [@openspoon/subtask2](https://github.com/spoons-and-mirrors/subtask2)                                | 세밀한 flow control로 mongolgpt /commands를 강력한 orchestration 시스템으로 확장합니다.         |
-| [mongolgpt-scheduler](https://github.com/different-ai/mongolgpt-scheduler)                           | cron 문법을 사용해 launchd(Mac) 또는 systemd(Linux) 기반 반복 작업을 예약합니다.                |
-| [micode](https://github.com/vtemian/micode)                                                          | Structured Brainstorm → Plan → Implement 워크플로를 session continuity와 함께 제공합니다.       |
-| [octto](https://github.com/vtemian/octto)                                                            | 다중 질문 폼 기반의 AI 브레인스토밍용 인터랙티브 브라우저 UI를 제공합니다.                      |
-| [mongolgpt-background-agents](https://github.com/kdcokenny/mongolgpt-background-agents)              | Claude Code 스타일의 background agent를 async delegation과 context persistence로 제공합니다.    |
-| [mongolgpt-notify](https://github.com/kdcokenny/mongolgpt-notify)                                    | MongolGPT 작업 완료 시점을 native OS 알림으로 알려줍니다.                                       |
-| [mongolgpt-workspace](https://github.com/kdcokenny/mongolgpt-workspace)                              | 16개 구성요소를 한 번에 설치하는 bundled multi-agent orchestration harness를 제공합니다.        |
-| [mongolgpt-worktree](https://github.com/kdcokenny/mongolgpt-worktree)                                | MongolGPT용 git worktree를 손쉽게 사용할 수 있도록 돕습니다.                                    |
-| [mongolgpt-sentry-monitor](https://github.com/stolinski/mongolgpt-sentry-monitor)                    | Sentry AI 모니터링으로 AI 에이전트를 추적하고 디버그합니다.                                     |
+Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, path, URL эсвэл config оруулаад шалгах болон нэмэх боломжтой.
 
----
+## Нийтлэхээс өмнөх дүрэм
 
-## 프로젝트
-
-| 이름                                                                                         | 설명                                                                   |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [kimaki](https://github.com/remorses/kimaki)                                                 | SDK 기반으로 MongolGPT 세션을 제어하는 Discord bot입니다.              |
-| [mongolgpt.nvim](https://github.com/NickvanDyke/mongolgpt.nvim)                              | API 기반 editor-aware prompt를 제공하는 Neovim plugin입니다.           |
-| [portal](https://github.com/hosenur/portal)                                                  | Tailscale/VPN 환경에서 MongolGPT를 쓰기 위한 mobile-first 웹 UI입니다. |
-| [mongolgpt plugin template](https://github.com/zenobi-us/mongolgpt-plugin-template/)         | MongolGPT plugin 개발을 위한 템플릿입니다.                             |
-| [mongolgpt.nvim](https://github.com/sudo-tee/mongolgpt.nvim)                                 | terminal 기반 AI 코딩 agent인 mongolgpt용 Neovim frontend입니다.       |
-| [ai-sdk-provider-mongolgpt-sdk](https://github.com/ben-vargas/ai-sdk-provider-mongolgpt-sdk) | `@mongolgpt/sdk`로 MongolGPT를 사용하는 Vercel AI SDK provider입니다.  |
-| [OpenChamber](https://github.com/btriapitsyn/openchamber)                                    | MongolGPT용 Web/Desktop App 및 VS Code Extension입니다.                |
-| [MongolGPT-Obsidian](https://github.com/mtymek/mongolgpt-obsidian)                           | Obsidian UI에 MongolGPT를 내장하는 Obsidian plugin입니다.              |
-| [OpenWork](https://github.com/different-ai/openwork)                                         | MongolGPT 기반의 Claude Cowork 대체 오픈소스 프로젝트입니다.           |
-| [ocx](https://github.com/kdcokenny/ocx)                                                      | 휴대형 격리 프로필을 지원하는 MongolGPT extension manager입니다.       |
-| [CodeNomad](https://github.com/NeuralNomadsAI/CodeNomad)                                     | MongolGPT용 Desktop/Web/Mobile/Remote client app입니다.                |
-
----
-
-## 에이전트
-
-| 이름                                                                | 설명                                                             |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [Agentic](https://github.com/Cluster444/agentic)                    | 구조화된 개발을 위한 모듈형 AI agent와 command를 제공합니다.     |
-| [mongolgpt-agents](https://github.com/darrenhinde/mongolgpt-agents) | 향상된 워크플로를 위한 config, prompt, agent, plugin 모음입니다. |
+- Нийтлэгдээгүй npm/Homebrew/AUR/Chocolatey/Scoop package-ийг official install гэж харуулахгүй.
+- Гуравдагч талын plugin-ийг MongolGPT нэрээр rebrand хийж, бодитоор байхгүй URL/package руу заахгүй.
+- Шинэ integration нэмэхдээ эхлээд importer/adapter-аар шалгаж, дараа нь албан ёсны registry/marketplace дээр нийтэлсний дараа docs-д package install command нэмнэ.

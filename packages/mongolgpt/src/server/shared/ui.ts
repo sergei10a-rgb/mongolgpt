@@ -6,14 +6,16 @@ import { ProxyUtil } from "../proxy-util"
 
 let embeddedUIPromise: Promise<Record<string, string> | null> | undefined
 
-export const UI_UPSTREAM = new URL("https://mongolgpt.duckdns.org/app")
+export const UI_UPSTREAM = new URL("https://mongolgpt.duckdns.org/app/")
 
 export const csp = (hash = "") =>
   `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${hash ? ` 'sha256-${hash}'` : ""}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src * data:`
 export const DEFAULT_CSP = csp()
 
 export function themePreloadHash(body: string) {
-  return body.match(/<script\b(?![^>]*\bsrc\s*=)[^>]*\bid=(['"])oc-theme-preload-script\1[^>]*>([\s\S]*?)<\/script>/i)
+  return body.match(
+    /<script\b(?![^>]*\bsrc\s*=)[^>]*\bid=(['"])(?:mongolgpt-theme-preload-script|oc-theme-preload-script)\1[^>]*>([\s\S]*?)<\/script>/i,
+  )
 }
 
 export function cspForHtml(body: string) {
@@ -38,7 +40,7 @@ function proxyResponseHeaders(headers: Record<string, string>) {
 }
 
 export function upstreamURL(path: string) {
-  return new URL(path, UI_UPSTREAM).toString()
+  return new URL(path.replace(/^\/+/, ""), UI_UPSTREAM).toString()
 }
 
 export function embeddedUI(disableEmbeddedWebUi: boolean) {

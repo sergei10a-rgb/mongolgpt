@@ -29,106 +29,25 @@ export const console = config.console
 
 ---
 
-## ติดตั้ง
+## Суулгах
 
-วิธีที่ง่ายที่สุดในการติดตั้ง MongolGPT คือการใช้สคริปต์การติดตั้ง
+Одоогоор MongolGPT-ийн албан ёсны npm/Homebrew/AUR/Chocolatey/Scoop package нийтлэгдээгүй. Бодитоор ажиллах замууд:
+
+- Desktop: [Windows x64 installer](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
+- Source build:
+
+```bash
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
+bun run dev
+```
+
+Terminal install script:
 
 ```bash
 curl -fsSL https://mongolgpt.duckdns.org/install | bash
 ```
-
-คุณยังสามารถติดตั้งได้ด้วยคำสั่งต่อไปนี้:
-
-- **ใช้ Node.js**
-
-        <Tabs>
-
-      <TabItem label="npm">
-      ```bash
-      npm install -g mongolgpt
-      ```
-
-          </TabItem>
-
-        <TabItem label="Bun">
-        ```bash
-        bun install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="pnpm">
-        ```bash
-        pnpm install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="Yarn">
-        ```bash
-        yarn global add mongolgpt
-        ```
-
-      </TabItem>
-
-  </Tabs>
-
-- **ใช้ Homebrew บน macOS และ Linux**
-
-  ```bash
-  brew install sergei10a-rgb/tap/mongolgpt
-  ```
-
-  > เราขอแนะนำให้ใช้ MongolGPT tap เพื่อเผยแพร่ข้อมูลล่าสุด สูตร `brew install mongolgpt` อย่างเป็นทางการได้รับการดูแลโดยทีมงาน Homebrew และมีการอัปเดตไม่บ่อยนัก
-
-- **ใช้ Paru บน Arch Linux**
-
-  ```bash
-  sudo pacman -S mongolgpt           # Arch Linux (Stable)
-  paru -S mongolgpt-bin              # Arch Linux (Latest from AUR)
-  ```
-
-#### Windows
-
-:::tip[แนะนำ: ใช้ WSL]
-เพื่อประสบการณ์ที่ดีที่สุดบน Windows เราขอแนะนำให้ใช้ [ระบบย่อย Windows สำหรับ Linux (WSL)](/docs/windows-wsl) ให้ประสิทธิภาพที่ดีขึ้นและความเข้ากันได้เต็มรูปแบบกับคุณสมบัติของ MongolGPT
-:::
-
-- **ใช้ Chocolatey**
-
-  ```bash
-  choco install mongolgpt
-  ```
-
-- **ใช้ Scoop**
-
-  ```bash
-  scoop install mongolgpt
-  ```
-
-- **การใช้ NPM**
-
-  ```bash
-  npm install -g mongolgpt
-  ```
-
-- **ใช้ Mise**
-
-  ```bash
-  mise use -g github:sergei10a-rgb/mongolgpt
-  ```
-
-- **ใช้ Docker**
-
-  ```bash
-  docker run -it --rm ghcr.io/sergei10a-rgb/mongolgpt
-  ```
-
-ขณะนี้การสนับสนุนสำหรับการติดตั้ง MongolGPT บน Windows โดยใช้ Bun อยู่ระหว่างดำเนินการ
-
-คุณยังสามารถคว้าไบนารี่ได้จาก [เผยแพร่](https://github.com/sergei10a-rgb/mongolgpt/releases)
-
----
 
 ## กำหนดค่า
 

@@ -1,33 +1,35 @@
 # MongolGPT
 
-MongolGPT бол Монгол хэрэглэгчдэд эхнээсээ ойлгомжтой байх зорилготой хиймэл оюунтай код бичих агентын платформ юм.
+MongolGPT бол Монгол хэрэглэгчдэд эхнээсээ ойлгомжтой байх зорилготой AI coding agent платформ юм. Терминал, desktop app, IDE extension, provider, skill, plugin, connector, MCP холболтыг нэг дор ажиллуулах суурьтай.
 
 ## Юу багтсан бэ
 
-- Терминал дээр ажиллах хиймэл оюунтай код бичих агент
-- Windows ширээний апп
-- Provider, skill, plugin, connector, MCP холболтыг MongolGPT дээр тааруулах суурь
-- Монгол UI болон Монгол баримт бичгийн эхний хувилбар
-- CLI болон desktop дээр MongolGPT account-аар нэвтрэх холболтын суурь
-- Бусад agent ecosystem-ийн skill/plugin/MCP-ийг MongolGPT дээр тааруулах adapter layer-ийн эхлэл
+- Монгол хэл дээр анхдагчаар нээгдэх Windows desktop app
+- Терминал дээр ажиллах `mongolgpt` AI coding agent
+- MongolGPT account болон provider login холболтын суурь
+- Claude, Codex, Goose, Hermes зэрэг agent ecosystem-ийн skill/plugin/MCP форматыг таньж MongolGPT-д тааруулах compatibility importer
+- Settings доторх `Интеграц` tab-аас command, path, URL, config оруулж plan/apply хийх workflow
+- Монгол docs, README, download/release тайлбарын суурь
+
+## Desktop татах
+
+Одоогоор нийтлэгдсэн desktop build нь Windows x64 installer.
+
+[mongolgpt-desktop-win-x64.exe татах](https://github.com/sergei10a-rgb/mongolgpt/releases/download/v0.1.0/mongolgpt-desktop-win-x64.exe)
+
+Бүх release:
+
+[github.com/sergei10a-rgb/mongolgpt/releases](https://github.com/sergei10a-rgb/mongolgpt/releases)
+
+Одоогийн build code signing хийгдээгүй тул Windows SmartScreen анхааруулга харуулж магадгүй.
 
 ## Монгол баримт бичиг
 
-MongolGPT-ийн docs:
+MongolGPT docs:
 
-[https://mongolgpt.duckdns.org/docs/](https://mongolgpt.duckdns.org/docs/)
+[https://mongolgpt.duckdns.org/docs/mn/](https://mongolgpt.duckdns.org/docs/mn/)
 
-Docs-ийн үндсэн хуудас болон Монгол locale нь Монгол хэл дээр байна.
-
-## Desktop хувилбар татах
-
-Windows суулгагч:
-
-[mongolgpt-desktop-win-x64.exe](https://github.com/sergei10a-rgb/mongolgpt/releases/download/v0.1.0/mongolgpt-desktop-win-x64.exe)
-
-Хувилбарын хуудас:
-
-[https://github.com/sergei10a-rgb/mongolgpt/releases](https://github.com/sergei10a-rgb/mongolgpt/releases)
+Active docs source нь `packages/web/src/content/docs/mn/` дотор байна. Хуучин starter/template docs-ийг repo-оос цэвэрлэсэн.
 
 ## Local дээр ажиллуулах
 
@@ -36,13 +38,19 @@ bun install
 bun run dev
 ```
 
-Desktop хөгжүүлэлтийн горим:
+Desktop development mode:
 
 ```bash
 bun run dev:desktop
 ```
 
-Windows desktop суулгагч build хийх:
+Docs development mode:
+
+```bash
+bun run dev:docs
+```
+
+Windows desktop installer build хийх:
 
 ```powershell
 $env:MONGOLGPT_CHANNEL="prod"
@@ -55,27 +63,35 @@ Build дууссаны дараа installer энд гарна:
 packages/desktop/dist/
 ```
 
-## NPM package төлөв
+## Интеграц импортлох
 
-`mongolgpt` npm package-ийн publish script repo дотор бэлтгэгдсэн. Package registry дээр нийтлэхийн тулд npm account/token шаардлагатай.
-
-Package нийтлэгдсэний дараах command:
+MongolGPT нь MCP server, skill, plugin, connector төрлийн эх сурвалжийг plan/apply хоёр алхмаар тохиргоонд нэмнэ.
 
 ```bash
-npm install -g mongolgpt
+mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
+mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
 ```
 
-Нийтлэгдэхээс өмнө GitHub Release эсвэл source build ашиглана.
+Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, локал зам, URL эсвэл config оруулаад хэрэглэгчээр wrapper бичүүлэхгүйгээр тааруулах workflow ажиллана.
+
+## NPM package төлөв
+
+`mongolgpt` npm package-ийг repo дотор бэлдсэн боловч npm registry дээр хараахан нийтлээгүй. Нийтлэхэд npm account/token болон release permission хэрэгтэй.
+
+Нийтлэгдэхээс өмнө GitHub Release, source build, эсвэл install script ашиглана:
+
+```bash
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
+bun run dev
+```
 
 ## Эх кодын сан
 
-MongolGPT-ийн албан ёсны эх код:
+[github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)
 
-[https://github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)
-
-## Тайлбар
-
-Энэ repo нь MongolGPT-ийн өөрийн standalone history, brand, desktop build, Монгол UX рүү цэвэрлэгдсэн хувилбар.
+Энэ repository нь MongolGPT-ийн standalone source, brand, desktop build, Монгол UX, adapter layer рүү цэвэрлэгдэж буй хувилбар.
 
 ## Лиценз
 

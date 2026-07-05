@@ -29,106 +29,25 @@ export const console = config.console
 
 ---
 
-## 安装
+## Суулгах
 
-安装 MongolGPT 最简单的方法是通过安装脚本。
+Одоогоор MongolGPT-ийн албан ёсны npm/Homebrew/AUR/Chocolatey/Scoop package нийтлэгдээгүй. Бодитоор ажиллах замууд:
+
+- Desktop: [Windows x64 installer](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
+- Source build:
+
+```bash
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
+bun run dev
+```
+
+Terminal install script:
 
 ```bash
 curl -fsSL https://mongolgpt.duckdns.org/install | bash
 ```
-
-你也可以使用以下方式安装：
-
-- **使用 Node.js**
-
-        <Tabs>
-
-      <TabItem label="npm">
-      ```bash
-      npm install -g mongolgpt
-      ```
-
-          </TabItem>
-
-        <TabItem label="Bun">
-        ```bash
-        bun install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="pnpm">
-        ```bash
-        pnpm install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="Yarn">
-        ```bash
-        yarn global add mongolgpt
-        ```
-
-      </TabItem>
-
-  </Tabs>
-
-- **在 macOS 和 Linux 上使用 Homebrew**
-
-  ```bash
-  brew install sergei10a-rgb/tap/mongolgpt
-  ```
-
-  > 我们推荐使用 MongolGPT tap 以获取最新版本。官方的 `brew install mongolgpt` formula 由 Homebrew 团队维护，更新频率较低。
-
-- **在 Arch Linux 上安装**
-
-  ```bash
-  sudo pacman -S mongolgpt           # Arch Linux (Stable)
-  paru -S mongolgpt-bin              # Arch Linux (Latest from AUR)
-  ```
-
-#### Windows
-
-:::tip[推荐：使用 WSL]
-为了在 Windows 上获得最佳体验，我们推荐使用 [Windows Subsystem for Linux (WSL)](/docs/windows-wsl)。它提供更好的性能，并完全兼容 MongolGPT 的所有功能。
-:::
-
-- **使用 Chocolatey**
-
-  ```bash
-  choco install mongolgpt
-  ```
-
-- **使用 Scoop**
-
-  ```bash
-  scoop install mongolgpt
-  ```
-
-- **使用 NPM**
-
-  ```bash
-  npm install -g mongolgpt
-  ```
-
-- **使用 Mise**
-
-  ```bash
-  mise use -g github:sergei10a-rgb/mongolgpt
-  ```
-
-- **使用 Docker**
-
-  ```bash
-  docker run -it --rm ghcr.io/sergei10a-rgb/mongolgpt
-  ```
-
-在 Windows 上通过 Bun 安装 MongolGPT 的支持目前正在开发中。
-
-你也可以从 [Releases](https://github.com/sergei10a-rgb/mongolgpt/releases) 页面直接下载二进制文件。
-
----
 
 ## 配置
 

@@ -29,106 +29,25 @@ For at bruge MongolGPT i din terminal skal du bruge:
 
 ---
 
-## Installation
+## Суулгах
 
-Den nemmeste måde at installere MongolGPT på er gennem installationsscriptet.
+Одоогоор MongolGPT-ийн албан ёсны npm/Homebrew/AUR/Chocolatey/Scoop package нийтлэгдээгүй. Бодитоор ажиллах замууд:
+
+- Desktop: [Windows x64 installer](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
+- Source build:
+
+```bash
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
+bun run dev
+```
+
+Terminal install script:
 
 ```bash
 curl -fsSL https://mongolgpt.duckdns.org/install | bash
 ```
-
-Du kan også installere det med følgende kommandoer:
-
-- **Bruger Node.js**
-
-        <Tabs>
-
-      <TabItem label="npm">
-      ```bash
-      npm install -g mongolgpt
-      ```
-
-          </TabItem>
-
-        <TabItem label="Bun">
-        ```bash
-        bun install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="pnpm">
-        ```bash
-        pnpm install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="Yarn">
-        ```bash
-        yarn global add mongolgpt
-        ```
-
-      </TabItem>
-
-  </Tabs>
-
-- **Brug af Homebrew på macOS og Linux**
-
-  ```bash
-  brew install sergei10a-rgb/tap/mongolgpt
-  ```
-
-  > Vi anbefaler at bruge MongolGPT-tap for at få de mest opdaterede udgivelser. Den officielle `brew install mongolgpt`-formel vedligeholdes af Homebrew-teamet og opdateret sjældnere.
-
-- **Brug af Paru på Arch Linux**
-
-  ```bash
-  sudo pacman -S mongolgpt           # Arch Linux (Stable)
-  paru -S mongolgpt-bin              # Arch Linux (Latest from AUR)
-  ```
-
-#### Windows
-
-:::tip[Anbefalet: Brug WSL]
-For at få den bedste oplevelse på Windows anbefaler vi at bruge [Windows Subsystem for Linux (WSL)](/docs/windows-wsl). Det giver bedre ydeevne og fuld kompatibilitet med MongolGPTs funktioner.
-:::
-
-- **Brug af Chocolatey**
-
-  ```bash
-  choco install mongolgpt
-  ```
-
-- **Brug af Scoop**
-
-  ```bash
-  scoop install mongolgpt
-  ```
-
-- **Bruger NPM**
-
-  ```bash
-  npm install -g mongolgpt
-  ```
-
-- **Brug af Mise**
-
-  ```bash
-  mise use -g github:sergei10a-rgb/mongolgpt
-  ```
-
-- **Brug af Docker**
-
-  ```bash
-  docker run -it --rm ghcr.io/sergei10a-rgb/mongolgpt
-  ```
-
-Support til installation af MongolGPT på Windows ved hjælp af Bun er i gang.
-
-Du kan også få fat i binæren fra [Releases](https://github.com/sergei10a-rgb/mongolgpt/releases).
-
----
 
 ## Konfiguration
 

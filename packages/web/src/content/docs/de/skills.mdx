@@ -36,7 +36,8 @@ Globale Definitionen kommen zusaetzlich aus `~/.config/mongolgpt/skills/*/SKILL.
 Jede `SKILL.md` muss mit YAML-Frontmatter beginnen.
 Nur diese Felder werden ausgewertet:
 
-- `name` (erforderlich)
+-
+ame` (erforderlich)
 - `description` (erforderlich)
 - `license` (optional)
 - `compatibility` (optional)
@@ -48,7 +49,8 @@ Unbekannte Frontmatter-Felder werden ignoriert.
 
 ## Namen validieren
 
-`name` muss:
+
+ame` muss:
 
 - 1-64 Zeichen lang sein
 - nur Kleinbuchstaben und Ziffern mit einzelnen Bindestrichen enthalten
@@ -217,6 +219,7 @@ Wenn deaktiviert, wird der Abschnitt `<available_skills>` komplett weggelassen.
 Wenn ein Skill nicht auftaucht:
 
 1. Pruefe, ob `SKILL.md` exakt in Grossbuchstaben geschrieben ist
-2. Pruefe, ob Frontmatter `name` und `description` enthaelt
+2. Pruefe, ob Frontmatter
+ame` und `description` enthaelt
 3. Stelle sicher, dass Skill-Namen ueber alle Orte hinweg eindeutig sind
 4. Pruefe Berechtigungen - Skills mit `deny` sind fuer Agenten unsichtbar
