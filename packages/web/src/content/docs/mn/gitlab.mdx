@@ -1,0 +1,196 @@
+---
+title: GitLab
+description: GitLab асуудалд MongolGPT-г ашиглан хүсэлтийг нэгтгэнэ үү.
+---
+
+MongolGPT нь таны GitLab CI/CD дамжуулах шугам эсвэл GitLab Duo-ээр дамжуулан таны GitLab ажлын урсгалтай нэгддэг.
+
+Аль ч тохиолдолд MongolGPT таны GitLab гүйгч нар дээр гүйх болно.
+
+---
+
+## GitLab CI
+
+MongolGPT ердийн GitLab шугам хоолойд ажилладаг. Та үүнийг [CI бүрэлдэхүүн хэсэг](https://docs.gitlab.com/ee/ci/components/) хэлбэрээр дамжуулах хоолой болгон барьж болно.
+
+Энд бид олон нийтийн үүсгэсэн CI/CD бүрэлдэхүүнийг MongolGPT — [nagyv/gitlab-mongolgpt](https://gitlab.com/nagyv/gitlab-mongolgpt) ашиглаж байна.
+
+---
+
+### Онцлогууд
+
+- **Ажил бүрт тусгай тохиргоог ашиглах**: MongolGPT-г захиалгат тохиргооны лавлахаар тохируулна уу, жишээ нь MongolGPT дуудлагын функцийг идэвхжүүлэх эсвэл идэвхгүй болгохын тулд `./config/#custom-directory`.
+- **Хамгийн бага тохиргоо**: CI бүрэлдэхүүн нь цаана нь MongolGPT-г тохируулдаг тул та зөвхөн MongolGPT тохиргоо болон анхны сануулгыг үүсгэхэд л хангалттай.
+- **Уян хатан**: CI бүрэлдэхүүн хэсэг нь зан төлөвийг тохируулах хэд хэдэн оролтыг дэмждэг.
+
+---
+
+### Тохиргоо
+
+1. MongolGPT нэвтрэлт танилтаа JSON файлын төрлийн CI орчны хувьсагчийг **Тохиргоо** > **CI/CD** > **Хувьсагч** гэсэн хэсэгт хадгална уу. Тэдгээрийг "Масклагдсан ба далд" гэж тэмдэглэхээ мартуузай.
+2. `.gitlab-ci.yml` файлдаа дараахыг нэмнэ үү.
+
+   ```yaml title=".gitlab-ci.yml"
+   include:
+     - component: $CI_SERVER_FQDN/nagyv/gitlab-mongolgpt/mongolgpt@2
+       inputs:
+         config_dir: ${CI_PROJECT_DIR}/mongolgpt-config
+         auth_json: $MONGOLGPT_AUTH_JSON # The variable name for your MongolGPT authentication JSON
+         command: optional-custom-command
+         message: "Your prompt here"
+   ```
+
+Илүү их мэдээлэл авах бол энэ бүрэлдэхүүн хэсгийн хувьд [баримтуудыг шалгана уу](https://gitlab.com/explore/catalog/nagyv/gitlab-mongolgpt) ашиглана уу.
+
+---
+
+## GitLab Duo
+
+MongolGPT нь таны GitLab ажлын урсгалтай нэгддэг.
+Сэтгэгдэл бичихдээ `@mongolgpt`-г дурдвал MongolGPT таны GitLab CI шугаман дээрх ажлуудыг гүйцэтгэх болно.
+
+---
+
+### Онцлогууд
+
+- **Гурвалсан асуудлууд**: MongolGPT-аас асуудлыг судалж, танд тайлбарлахыг хүс.
+- **Засаж хэрэгжүүлэх**: Асуудлыг засах эсвэл функцийг хэрэгжүүлэхийг MongolGPT-аас хүс.
+  Энэ нь шинэ салбар үүсгэж, өөрчлөлттэй хамт нэгтгэх хүсэлт гаргах болно.
+- **Secure**: MongolGPT таны GitLab гүйгч дээр ажилладаг.
+
+---
+
+### Тохиргоо
+
+MongolGPT нь таны GitLab CI/CD шугаманд ажилладаг тул үүнийг тохируулахын тулд танд дараах зүйлс хэрэгтэй болно:
+
+:::tip
+Хамгийн сүүлийн үеийн зааварчилгааг [**GitLab баримтууд**](https://docs.gitlab.com/user/duo_agent_platform/agent_assistant/)-г үзнэ үү.
+:::
+
+1. Өөрийн GitLab орчныг тохируулна уу
+2. CI/CD-г тохируулах
+3. AI загвар нийлүүлэгч API түлхүүр аваарай
+4. Үйлчилгээний данс үүсгэх
+5. CI/CD хувьсагчдыг тохируулах
+6. Урсгалын тохиргооны файл үүсгэ, жишээ нь:
+
+        <дэлгэрэнгүй>
+
+    <summary>Урсгалын тохиргоо</summary>
+
+    ```yaml
+    image: node:22-slim
+    commands:
+      - echo "Installing mongolgpt"
+      - npm install --global mongolgpt
+      - echo "Installing glab"
+      - export GITLAB_TOKEN=$GITLAB_TOKEN_MONGOLGPT
+      - apt-get update --quiet && apt-get install --yes curl wget gpg git && rm --recursive --force /var/lib/apt/lists/*
+      - curl --silent --show-error --location "https://raw.githubusercontent.com/upciti/wakemeops/main/assets/install_repository" | bash
+      - apt-get install --yes glab
+      - echo "Configuring glab"
+      - echo $GITLAB_HOST
+      - echo "Creating MongolGPT auth configuration"
+      - mkdir --parents ~/.local/share/mongolgpt
+      - |
+        cat > ~/.local/share/mongolgpt/auth.json << EOF
+        {
+          "anthropic": {
+            "type": "api",
+            "key": "$ANTHROPIC_API_KEY"
+          }
+        }
+        EOF
+      - echo "Configuring git"
+      - git config --global user.email "mongolgpt@gitlab.com"
+      - git config --global user.name "MongolGPT"
+      - echo "Testing glab"
+      - glab issue list
+      - echo "Running MongolGPT"
+      - |
+        mongolgpt run "
+        You are an AI assistant helping with GitLab operations.
+
+        Context: $AI_FLOW_CONTEXT
+        Task: $AI_FLOW_INPUT
+        Event: $AI_FLOW_EVENT
+
+        Please execute the requested task using the available GitLab tools.
+        Be thorough in your analysis and provide clear explanations.
+
+        <important>
+        Please use the glab CLI to access data from GitLab. The glab CLI has already been authenticated. You can run the corresponding commands.
+
+        If you are asked to summarize an MR or issue or asked to provide more information then please post back a note to the MR/Issue so that the user can see it.
+        You don't need to commit or push up changes, those will be done automatically based on the file changes you make.
+        </important>
+        "
+      - git checkout --branch $CI_WORKLOAD_REF origin/$CI_WORKLOAD_REF
+      - echo "Checking for git changes and pushing if any exist"
+      - |
+        if ! git diff --quiet || ! git diff --cached --quiet || [ --not --zero "$(git ls-files --others --exclude-standard)" ]; then
+          echo "Git changes detected, adding and pushing..."
+          git add .
+          if git diff --cached --quiet; then
+            echo "No staged changes to commit"
+          else
+            echo "Committing changes to branch: $CI_WORKLOAD_REF"
+            git commit --message "Codex changes"
+            echo "Pushing changes up to $CI_WORKLOAD_REF"
+            git push https://gitlab-ci-token:$GITLAB_TOKEN@$GITLAB_HOST/gl-demo-ultimate-dev-ai-epic-17570/test-java-project.git $CI_WORKLOAD_REF
+            echo "Changes successfully pushed"
+          fi
+        else
+          echo "No git changes detected, skipping push"
+        fi
+    variables:
+      - ANTHROPIC_API_KEY
+      - GITLAB_TOKEN_MONGOLGPT
+      - GITLAB_HOST
+    ```
+
+        </details>
+
+Та нарийвчилсан зааврыг [GitLab CLI агентуудын баримт бичиг](https://docs.gitlab.com/user/duo_agent_platform/agent_assistant/) хаягаар лавлана уу.
+
+---
+
+### Жишээ
+
+GitLab-д MongolGPT-г хэрхэн ашиглаж болох зарим жишээ энд байна.
+
+:::tip
+Та `@mongolgpt`-с өөр гох хэллэг ашиглахаар тохируулж болно.
+:::
+
+- **Асуудлыг тайлбарлана уу**
+
+  Энэ сэтгэгдлийг GitLab дугаарт нэмнэ үү.
+
+  ```
+  @mongolgpt explain this issue
+  ```
+
+  MongolGPT асуудлыг уншиж, тодорхой тайлбартайгаар хариулах болно.
+
+- **Асуудлыг засах**
+
+  GitLab дугаарт:
+
+  ```
+  @mongolgpt fix this
+  ```
+
+  MongolGPT нь шинэ салбар үүсгэж, өөрчлөлтийг хэрэгжүүлж, өөрчлөлттэй нэгтгэх хүсэлтийг нээнэ.
+
+- **Нэгдэх хүсэлтийг хянан үзэх**
+
+  GitLab нэгтгэх хүсэлтийн талаар дараах тайлбарыг үлдээнэ үү.
+
+  ```
+  @mongolgpt review this merge request
+  ```
+
+  MongolGPT нэгтгэх хүсэлтийг хянаж, санал хүсэлтээ өгнө.
+

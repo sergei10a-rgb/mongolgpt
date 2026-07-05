@@ -1,0 +1,616 @@
+---
+title: CLI
+description: أوامر وخيارات CLI في MongolGPT.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components"
+
+يبدأ CLI الخاص بـ MongolGPT افتراضيا واجهة [TUI](/docs/tui) عند تشغيله بدون أي معاملات.
+
+```bash
+mongolgpt
+```
+
+كما يدعم أيضا أوامر موثقة في هذه الصفحة، ما يتيح لك التفاعل مع MongolGPT برمجيا.
+
+```bash
+mongolgpt run "Explain how closures work in JavaScript"
+```
+
+---
+
+### tui
+
+بدء واجهة المستخدم terminal (TUI) الخاصة بـ MongolGPT.
+
+```bash
+mongolgpt [project]
+```
+
+#### الخيارات
+
+| الخيار                                   | المختصر | الوصف                                                             |
+| ---------------------------------------- | ------- | ----------------------------------------------------------------- |
+| <nobr><code>{"--continue"}</code></nobr> | `-c`    | متابعة الجلسة الأخيرة                                             |
+| <nobr><code>{"--session"}</code></nobr>  | `-s`    | معرّف الجلسة للمتابعة                                             |
+| <nobr><code>{"--fork"}</code></nobr>     |         | تفريع الجلسة عند المتابعة (يستخدم مع `--continue` أو `--session`) |
+| <nobr><code>{"--prompt"}</code></nobr>   |         | الموجّه المراد استخدامه                                           |
+| <nobr><code>{"--model"}</code></nobr>    | `-m`    | النموذج المراد استخدامه بصيغة provider/model                      |
+| <nobr><code>{"--agent"}</code></nobr>    |         | الوكيل المراد استخدامه                                            |
+| <nobr><code>{"--port"}</code></nobr>     |         | المنفذ الذي يتم الاستماع عليه                                     |
+| <nobr><code>{"--hostname"}</code></nobr> |         | اسم المضيف الذي يتم الاستماع عليه                                 |
+
+---
+
+## الأوامر
+
+يتضمن CLI الخاص بـ MongolGPT أيضا الأوامر التالية.
+
+---
+
+### agent
+
+إدارة وكلاء MongolGPT.
+
+```bash
+mongolgpt agent [command]
+```
+
+---
+
+### attach
+
+إرفاق terminal بخادم الواجهة الخلفية لـ MongolGPT قيد التشغيل بالفعل، والذي تم تشغيله عبر الأمرين `serve` أو `web`.
+
+```bash
+mongolgpt attach [url]
+```
+
+يتيح ذلك استخدام واجهة TUI مع واجهة خلفية لـ MongolGPT تعمل عن بعد. على سبيل المثال:
+
+```bash
+# ابدأ خادم الواجهة الخلفية للوصول عبر الويب/الجوال
+mongolgpt web --port 4096 --hostname 0.0.0.0
+
+# في محطة طرفية (terminal) أخرى، اربط TUI بالواجهة الخلفية قيد التشغيل
+mongolgpt attach http://10.20.30.40:4096
+```
+
+#### الرايات
+
+| الراية                                   | المختصر | الوصف                                                                               |
+| ---------------------------------------- | ------- | ----------------------------------------------------------------------------------- |
+| <nobr><code>{"--dir"}</code></nobr>      |         | دليل العمل الذي ستبدأ منه واجهة TUI                                                 |
+| <nobr><code>{"--continue"}</code></nobr> | `-c`    | متابعة آخر جلسة                                                                     |
+| <nobr><code>{"--session"}</code></nobr>  | `-s`    | معرّف الجلسة للمتابعة                                                               |
+| <nobr><code>{"--fork"}</code></nobr>     |         | تفريع الجلسة عند المتابعة (استخدمه مع `--continue` أو `--session`)                  |
+| <nobr><code>{"--password"}</code></nobr> | `-p`    | كلمة مرور المصادقة الأساسية (الافتراضي `MONGOLGPT_SERVER_PASSWORD`)                 |
+| <nobr><code>{"--username"}</code></nobr> | `-u`    | اسم مستخدم المصادقة الأساسية (الافتراضي `MONGOLGPT_SERVER_USERNAME` أو `mongolgpt`) |
+
+---
+
+#### create
+
+إنشاء وكيل جديد بإعدادات مخصصة.
+
+```bash
+mongolgpt agent create
+```
+
+سيرشدك هذا الأمر خلال إنشاء وكيل جديد مع موجه نظام مخصص وإعدادات الأدوات.
+
+---
+
+#### list
+
+عرض جميع الوكلاء المتاحين.
+
+```bash
+mongolgpt agent list
+```
+
+---
+
+### auth
+
+أمر لإدارة بيانات الاعتماد وتسجيل الدخول لمزودي الخدمة.
+
+```bash
+mongolgpt auth [command]
+```
+
+---
+
+#### login
+
+يعتمد MongolGPT على قائمة المزودين في [Models.dev](https://models.dev)، لذا يمكنك استخدام `mongolgpt auth login` لتهيئة مفاتيح API لأي مزود ترغب باستخدامه. يتم حفظ ذلك في `~/.local/share/mongolgpt/auth.json`.
+
+```bash
+mongolgpt auth login
+```
+
+عند تشغيل MongolGPT يقوم بتحميل المزودين من ملف بيانات الاعتماد، وكذلك أي مفاتيح معرّفة في متغيرات البيئة لديك أو في ملف `.env` ضمن مشروعك.
+
+---
+
+#### list
+
+يسرد جميع المزودين الذين تم توثيقهم كما هم محفوظون في ملف بيانات الاعتماد.
+
+```bash
+mongolgpt auth list
+```
+
+أو النسخة المختصرة.
+
+```bash
+mongolgpt auth ls
+```
+
+---
+
+#### logout
+
+يسجلك خارج مزود عبر حذفه من ملف بيانات الاعتماد.
+
+```bash
+mongolgpt auth logout
+```
+
+---
+
+### github
+
+إدارة وكيل GitHub لأتمتة المستودع.
+
+```bash
+mongolgpt github [command]
+```
+
+---
+
+#### install
+
+تثبيت وكيل GitHub في مستودعك.
+
+```bash
+mongolgpt github install
+```
+
+يقوم ذلك بإعداد سير عمل GitHub Actions اللازم ويرشدك خلال عملية التهيئة. [اعرف المزيد](/docs/github).
+
+---
+
+#### run
+
+تشغيل وكيل GitHub. يُستخدم هذا عادة ضمن GitHub Actions.
+
+```bash
+mongolgpt github run
+```
+
+##### الرايات
+
+| الراية                                | الوصف                                |
+| ------------------------------------- | ------------------------------------ |
+| <nobr><code>{"--event"}</code></nobr> | حدث GitHub مُحاكى لتشغيل الوكيل عليه |
+| <nobr><code>{"--token"}</code></nobr> | رمز وصول شخصي لـ GitHub              |
+
+---
+
+### mcp
+
+إدارة خوادم Model Context Protocol.
+
+```bash
+mongolgpt mcp [command]
+```
+
+---
+
+#### add
+
+إضافة خادم MCP إلى تهيئتك.
+
+```bash
+mongolgpt mcp add
+```
+
+سيرشدك هذا الأمر خلال إضافة خادم MCP محلي أو بعيد.
+
+---
+
+#### list
+
+عرض جميع خوادم MCP المُهيأة وحالة اتصالها.
+
+```bash
+mongolgpt mcp list
+```
+
+أو استخدم النسخة المختصرة.
+
+```bash
+mongolgpt mcp ls
+```
+
+---
+
+#### auth
+
+إجراء المصادقة مع خادم MCP يدعم OAuth.
+
+```bash
+mongolgpt mcp auth [name]
+```
+
+إذا لم تُحدِّد اسم خادم، فسيُطلب منك الاختيار من الخوادم المتاحة الداعمة لـ OAuth.
+
+يمكنك أيضا عرض الخوادم الداعمة لـ OAuth وحالة المصادقة الخاصة بها.
+
+```bash
+mongolgpt mcp auth list
+```
+
+أو استخدم النسخة المختصرة.
+
+```bash
+mongolgpt mcp auth ls
+```
+
+---
+
+#### logout
+
+إزالة بيانات اعتماد OAuth لخادم MCP.
+
+```bash
+mongolgpt mcp logout [name]
+```
+
+---
+
+#### debug
+
+تشخيص مشاكل اتصال OAuth لخادم MCP.
+
+```bash
+mongolgpt mcp debug <name>
+```
+
+---
+
+### models
+
+عرض جميع النماذج المتاحة من المزودين المُهيأين.
+
+```bash
+mongolgpt models [provider]
+```
+
+يعرض هذا الأمر جميع النماذج المتاحة عبر المزودين المُهيأين لديك بصيغة `provider/model`.
+
+هذا مفيد لتحديد اسم النموذج الدقيق الذي ستستخدمه في [تهيئتك](/docs/config/).
+
+يمكنك اختياريا تمرير معرّف مزود لتصفية النماذج حسب ذلك المزود.
+
+```bash
+mongolgpt models anthropic
+```
+
+#### الرايات
+
+| الراية                                  | الوصف                                                         |
+| --------------------------------------- | ------------------------------------------------------------- |
+| <nobr><code>{"--refresh"}</code></nobr> | تحديث ذاكرة التخزين المؤقت للنماذج من models.dev              |
+| <nobr><code>{"--verbose"}</code></nobr> | استخدام مخرجات أكثر تفصيلا للنماذج (تشمل بيانات مثل التكاليف) |
+
+استخدم الراية `--refresh` لتحديث قائمة النماذج المخزنة مؤقتا. يفيد ذلك عند إضافة نماذج جديدة إلى مزود وتريد رؤيتها في MongolGPT.
+
+```bash
+mongolgpt models --refresh
+```
+
+---
+
+### run
+
+تشغيل mongolgpt في وضع غير تفاعلي عبر تمرير موجه مباشرة.
+
+```bash
+mongolgpt run [message..]
+```
+
+هذا مفيد للبرمجة النصية والأتمتة، أو عندما تريد إجابة سريعة دون تشغيل واجهة TUI كاملة. على سبيل المثال.
+
+```bash "mongolgpt run"
+mongolgpt run Explain the use of context in Go
+```
+
+يمكنك أيضا الإرفاق بمثيل `mongolgpt serve` قيد التشغيل لتجنّب زمن الإقلاع البارد لخوادم MCP في كل تشغيل:
+
+```bash
+# ابدأ خادمًا بلا واجهة في محطة طرفية واحدة
+mongolgpt serve
+
+# في محطة طرفية أخرى، شغّل الأوامر التي ترتبط به
+mongolgpt run --attach http://localhost:4096 "Explain async/await in JavaScript"
+```
+
+#### الرايات
+
+| الراية                                   | المختصر | الوصف                                                                               |
+| ---------------------------------------- | ------- | ----------------------------------------------------------------------------------- |
+| <nobr><code>{"--command"}</code></nobr>  |         | الأمر المراد تشغيله؛ استخدم الرسالة كوسائط                                          |
+| <nobr><code>{"--continue"}</code></nobr> | `-c`    | متابعة الجلسة الأخيرة                                                               |
+| <nobr><code>{"--session"}</code></nobr>  | `-s`    | معرّف الجلسة للمتابعة                                                               |
+| <nobr><code>{"--fork"}</code></nobr>     |         | تفريع الجلسة عند المتابعة (يستخدم مع `--continue` أو `--session`)                   |
+| <nobr><code>{"--share"}</code></nobr>    |         | مشاركة الجلسة                                                                       |
+| <nobr><code>{"--model"}</code></nobr>    | `-m`    | النموذج المراد استخدامه بصيغة provider/model                                        |
+| <nobr><code>{"--agent"}</code></nobr>    |         | الوكيل المراد استخدامه                                                              |
+| <nobr><code>{"--file"}</code></nobr>     | `-f`    | ملف/ملفات لإرفاقها بالرسالة                                                         |
+| <nobr><code>{"--format"}</code></nobr>   |         | التنسيق: default (منسق) أو json (أحداث JSON خام)                                    |
+| <nobr><code>{"--title"}</code></nobr>    |         | عنوان للجلسة (يستخدم موجهًا مقتطعًا إن لم تُحدَّد قيمة)                             |
+| <nobr><code>{"--attach"}</code></nobr>   |         | الإرفاق بخادم mongolgpt قيد التشغيل (مثل http://localhost:4096)                     |
+| <nobr><code>{"--password"}</code></nobr> | `-p`    | كلمة مرور المصادقة الأساسية (الافتراضي `MONGOLGPT_SERVER_PASSWORD`)                 |
+| <nobr><code>{"--username"}</code></nobr> | `-u`    | اسم مستخدم المصادقة الأساسية (الافتراضي `MONGOLGPT_SERVER_USERNAME` أو `mongolgpt`) |
+| <nobr><code>{"--dir"}</code></nobr>      |         | دليل التشغيل، أو المسار على الخادم البعيد عند الإرفاق                               |
+| <nobr><code>{"--variant"}</code></nobr>  |         | متغير النموذج (جهد الاستدلال الخاص بالمزود)                                         |
+| <nobr><code>{"--thinking"}</code></nobr> |         | عرض كتل التفكير                                                                     |
+| <nobr><code>{"--port"}</code></nobr>     |         | منفذ الخادم المحلي (الافتراضي منفذ عشوائي)                                          |
+
+---
+
+### serve
+
+بدء خادم MongolGPT بدون واجهة للوصول عبر API. راجع [توثيق الخادم](/docs/server) لواجهة HTTP الكاملة.
+
+```bash
+mongolgpt serve
+```
+
+يشغّل هذا خادم HTTP يوفّر وصولا عبر API لوظائف mongolgpt دون واجهة TUI. اضبط `MONGOLGPT_SERVER_PASSWORD` لتفعيل مصادقة HTTP الأساسية (اسم المستخدم الافتراضي `mongolgpt`).
+
+#### الرايات
+
+| الراية                                   | الوصف                                     |
+| ---------------------------------------- | ----------------------------------------- |
+| <nobr><code>{"--port"}</code></nobr>     | المنفذ الذي يتم الاستماع عليه             |
+| <nobr><code>{"--hostname"}</code></nobr> | اسم المضيف الذي يتم الاستماع عليه         |
+| <nobr><code>{"--mdns"}</code></nobr>     | تفعيل اكتشاف mDNS                         |
+| <nobr><code>{"--cors"}</code></nobr>     | أصول/منشأات إضافية للمتصفح للسماح بـ CORS |
+
+---
+
+### session
+
+إدارة جلسات MongolGPT.
+
+```bash
+mongolgpt session [command]
+```
+
+---
+
+#### list
+
+عرض جميع جلسات MongolGPT.
+
+```bash
+mongolgpt session list
+```
+
+##### الرايات
+
+| الراية                                    | المختصر | الوصف                                 |
+| ----------------------------------------- | ------- | ------------------------------------- |
+| <nobr><code>{"--max-count"}</code></nobr> | `-n`    | حصر النتائج في أحدث N جلسات           |
+| <nobr><code>{"--format"}</code></nobr>    |         | تنسيق المخرجات: table أو json (table) |
+
+---
+
+### stats
+
+عرض إحصاءات استخدام الرموز والتكلفة لجلسات MongolGPT لديك.
+
+```bash
+mongolgpt stats
+```
+
+#### الرايات
+
+| الراية                                  | الوصف                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------- |
+| <nobr><code>{"--days"}</code></nobr>    | عرض الإحصاءات لآخر N يومًا (الافتراضي: كل الوقت)                          |
+| <nobr><code>{"--tools"}</code></nobr>   | عدد الأدوات المطلوب عرضها (الافتراضي: الكل)                               |
+| <nobr><code>{"--models"}</code></nobr>  | عرض تفصيل استخدام النماذج (مخفي افتراضيا). مرّر رقمًا لعرض أعلى N         |
+| <nobr><code>{"--project"}</code></nobr> | التصفية حسب المشروع (الافتراضي: كل المشاريع، سلسلة فارغة: المشروع الحالي) |
+
+---
+
+### export
+
+تصدير بيانات الجلسة بصيغة JSON.
+
+```bash
+mongolgpt export [sessionID]
+```
+
+إذا لم تُقدّم معرّف جلسة، فسيُطلب منك الاختيار من الجلسات المتاحة.
+
+---
+
+### import
+
+استيراد بيانات الجلسة من ملف JSON أو رابط مشاركة MongolGPT.
+
+```bash
+mongolgpt import <file>
+```
+
+يمكنك الاستيراد من ملف محلي أو من رابط مشاركة MongolGPT.
+
+```bash
+mongolgpt import session.json
+mongolgpt import https://opncd.ai/s/abc123
+```
+
+---
+
+### web
+
+بدء خادم MongolGPT بدون واجهة مع واجهة ويب.
+
+```bash
+mongolgpt web
+```
+
+يشغّل هذا خادم HTTP ويفتح متصفح ويب للوصول إلى MongolGPT عبر واجهة ويب. اضبط `MONGOLGPT_SERVER_PASSWORD` لتفعيل مصادقة HTTP الأساسية (اسم المستخدم الافتراضي `mongolgpt`).
+
+#### الرايات
+
+| الراية                                   | الوصف                                     |
+| ---------------------------------------- | ----------------------------------------- |
+| <nobr><code>{"--port"}</code></nobr>     | المنفذ الذي يتم الاستماع عليه             |
+| <nobr><code>{"--hostname"}</code></nobr> | اسم المضيف الذي يتم الاستماع عليه         |
+| <nobr><code>{"--mdns"}</code></nobr>     | تفعيل اكتشاف mDNS                         |
+| <nobr><code>{"--cors"}</code></nobr>     | أصول/منشأات إضافية للمتصفح للسماح بـ CORS |
+
+---
+
+### acp
+
+بدء خادم ACP (Agent Client Protocol).
+
+```bash
+mongolgpt acp
+```
+
+يشغّل هذا الأمر خادم ACP يتواصل عبر stdin/stdout باستخدام nd-JSON.
+
+#### الرايات
+
+| الراية                                   | الوصف                             |
+| ---------------------------------------- | --------------------------------- |
+| <nobr><code>{"--cwd"}</code></nobr>      | دليل العمل                        |
+| <nobr><code>{"--port"}</code></nobr>     | المنفذ الذي يتم الاستماع عليه     |
+| <nobr><code>{"--hostname"}</code></nobr> | اسم المضيف الذي يتم الاستماع عليه |
+
+---
+
+### uninstall
+
+إلغاء تثبيت MongolGPT وإزالة جميع الملفات ذات الصلة.
+
+```bash
+mongolgpt uninstall
+```
+
+#### الرايات
+
+| الراية                                      | المختصر | الوصف                               |
+| ------------------------------------------- | ------- | ----------------------------------- |
+| <nobr><code>{"--keep-config"}</code></nobr> | `-c`    | الإبقاء على ملفات التهيئة           |
+| <nobr><code>{"--keep-data"}</code></nobr>   | `-d`    | الإبقاء على بيانات الجلسات واللقطات |
+| <nobr><code>{"--dry-run"}</code></nobr>     |         | عرض ما سيتم حذفه دون تنفيذ الحذف    |
+| <nobr><code>{"--force"}</code></nobr>       | `-f`    | تخطي مطالبات التأكيد                |
+
+---
+
+### upgrade
+
+تحديث mongolgpt إلى أحدث إصدار أو إلى إصدار محدد.
+
+```bash
+mongolgpt upgrade [target]
+```
+
+للترقية إلى أحدث إصدار.
+
+```bash
+mongolgpt upgrade
+```
+
+للترقية إلى إصدار محدد.
+
+```bash
+mongolgpt upgrade v0.1.48
+```
+
+#### الرايات
+
+| الراية                                 | المختصر | الوصف                                                       |
+| -------------------------------------- | ------- | ----------------------------------------------------------- |
+| <nobr><code>{"--method"}</code></nobr> | `-m`    | طريقة التثبيت المستخدمة: curl أو npm أو pnpm أو bun أو brew |
+
+---
+
+## الخيارات العامة
+
+يدعم سطر أوامر mongolgpt الخيارات العامة التالية.
+
+| الراية                                     | المختصر | الوصف                                  |
+| ------------------------------------------ | ------- | -------------------------------------- |
+| <nobr><code>{"--help"}</code></nobr>       | `-h`    | عرض المساعدة                           |
+| <nobr><code>{"--version"}</code></nobr>    | `-v`    | طباعة رقم الإصدار                      |
+| <nobr><code>{"--print-logs"}</code></nobr> |         | طباعة السجلات إلى stderr               |
+| <nobr><code>{"--log-level"}</code></nobr>  |         | مستوى السجل (DEBUG, INFO, WARN, ERROR) |
+
+---
+
+## متغيرات البيئة
+
+يمكن تهيئة MongolGPT باستخدام متغيرات البيئة.
+
+| المتغير                                | النوع   | الوصف                                                      |
+| -------------------------------------- | ------- | ---------------------------------------------------------- |
+| `MONGOLGPT_AUTO_SHARE`                 | boolean | مشاركة الجلسات تلقائيا                                     |
+| `MONGOLGPT_GIT_BASH_PATH`              | string  | مسار ملف Git Bash التنفيذي على Windows                     |
+| `MONGOLGPT_CONFIG`                     | string  | مسار ملف التهيئة                                           |
+| `MONGOLGPT_CONFIG_DIR`                 | string  | مسار دليل التهيئة                                          |
+| `MONGOLGPT_CONFIG_CONTENT`             | string  | محتوى تهيئة JSON مُضمّن                                    |
+| `MONGOLGPT_DISABLE_AUTOUPDATE`         | boolean | تعطيل التحقق التلقائي من التحديثات                         |
+| `MONGOLGPT_DISABLE_PRUNE`              | boolean | تعطيل تنقية البيانات القديمة                               |
+| `MONGOLGPT_DISABLE_TERMINAL_TITLE`     | boolean | تعطيل تحديث عنوان terminal تلقائيا                         |
+| `MONGOLGPT_PERMISSION`                 | string  | تهيئة أذونات JSON مُضمّنة                                  |
+| `MONGOLGPT_DISABLE_DEFAULT_PLUGINS`    | boolean | تعطيل الإضافات الافتراضية                                  |
+| `MONGOLGPT_DISABLE_LSP_DOWNLOAD`       | boolean | تعطيل تنزيل خوادم LSP تلقائيا                              |
+| `MONGOLGPT_ENABLE_EXPERIMENTAL_MODELS` | boolean | تفعيل النماذج التجريبية                                    |
+| `MONGOLGPT_DISABLE_AUTOCOMPACT`        | boolean | تعطيل ضغط السياق تلقائيا                                   |
+| `MONGOLGPT_DISABLE_CLAUDE_CODE`        | boolean | تعطيل القراءة من `.claude` (الموجه + المهارات)             |
+| `MONGOLGPT_DISABLE_CLAUDE_CODE_PROMPT` | boolean | تعطيل قراءة `~/.claude/CLAUDE.md`                          |
+| `MONGOLGPT_DISABLE_CLAUDE_CODE_SKILLS` | boolean | تعطيل تحميل `.claude/skills`                               |
+| `MONGOLGPT_DISABLE_MODELS_FETCH`       | boolean | تعطيل جلب النماذج من مصادر بعيدة                           |
+| `MONGOLGPT_FAKE_VCS`                   | string  | مزود VCS وهمي لأغراض الاختبار                              |
+| `MONGOLGPT_CLIENT`                     | string  | معرّف العميل (الافتراضي `cli`)                             |
+| `MONGOLGPT_ENABLE_EXA`                 | boolean | تفعيل أدوات بحث الويب من Exa                               |
+| `MONGOLGPT_SERVER_PASSWORD`            | string  | تفعيل المصادقة الأساسية لخادمي `serve`/`web`               |
+| `MONGOLGPT_SERVER_USERNAME`            | string  | تجاوز اسم مستخدم المصادقة الأساسية (الافتراضي `mongolgpt`) |
+| `MONGOLGPT_MODELS_URL`                 | string  | رابط مخصص لجلب تهيئة النماذج                               |
+
+---
+
+### تجريبي
+
+تقوم متغيرات البيئة التالية بتفعيل ميزات تجريبية قد تتغير أو تتم إزالتها.
+
+| المتغير                                          | النوع   | الوصف                                        |
+| ------------------------------------------------ | ------- | -------------------------------------------- |
+| `MONGOLGPT_EXPERIMENTAL`                         | boolean | تفعيل الميزات التجريبية الخاضعة للعلم الشامل |
+| `MONGOLGPT_EXPERIMENTAL_ICON_DISCOVERY`          | boolean | تفعيل اكتشاف الأيقونات                       |
+| `MONGOLGPT_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`  | boolean | تعطيل النسخ عند التحديد في TUI               |
+| `MONGOLGPT_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS` | number  | المهلة الافتراضية لأوامر bash بالميلي ثانية  |
+| `MONGOLGPT_EXPERIMENTAL_OUTPUT_TOKEN_MAX`        | number  | الحد الأقصى لرموز المخرجات لاستجابات LLM     |
+| `MONGOLGPT_EXPERIMENTAL_FILEWATCHER`             | boolean | تفعيل مراقب الملفات لكامل الدليل             |
+| `MONGOLGPT_EXPERIMENTAL_OXFMT`                   | boolean | تفعيل مُنسّق oxfmt                           |
+| `MONGOLGPT_EXPERIMENTAL_LSP_TOOL`                | boolean | تفعيل أداة LSP تجريبية                       |
+| `MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER`     | boolean | تعطيل مراقب الملفات                          |
+| `MONGOLGPT_EXPERIMENTAL_EXA`                     | boolean | تفعيل ميزات Exa التجريبية                    |
+| `MONGOLGPT_EXPERIMENTAL_LSP_TY`                  | boolean | تمكين TY LSP لملفات python                   |
+| `MONGOLGPT_EXPERIMENTAL_PLAN_MODE`               | boolean | تفعيل وضع الخطة                              |
+| `MONGOLGPT_EXPERIMENTAL_BACKGROUND_SUBAGENTS`    | boolean | تفعيل مهام subagent في الخلفية               |
+| `MONGOLGPT_EXPERIMENTAL_EVENT_SYSTEM`            | boolean | تفعيل نظام الأحداث التجريبي                  |
+| `MONGOLGPT_EXPERIMENTAL_NATIVE_LLM`              | boolean | تفعيل مسار طلبات LLM الأصلي                  |
+| `MONGOLGPT_EXPERIMENTAL_PARALLEL`                | boolean | تفعيل تنفيذ بحث الويب بالتوازي               |
+| `MONGOLGPT_EXPERIMENTAL_SCOUT`                   | boolean | تفعيل Scout subagent                         |
+| `MONGOLGPT_EXPERIMENTAL_WORKSPACES`              | boolean | تفعيل دعم مساحات العمل                       |

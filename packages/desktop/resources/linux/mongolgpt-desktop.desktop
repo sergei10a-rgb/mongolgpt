@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=MongolGPT
+Exec=/opt/MongolGPT/org.mongolgpt.desktop %U
+Terminal=false
+Type=Application
+Icon=org.mongolgpt.desktop
+StartupWMClass=org.mongolgpt.desktop
+NoDisplay=true
+Comment=Open source AI coding agent
+Categories=Development;

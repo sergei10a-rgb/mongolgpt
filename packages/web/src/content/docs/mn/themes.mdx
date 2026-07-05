@@ -1,0 +1,370 @@
+---
+title: Themes
+description: Суурилуулсан сэдвийг сонгох эсвэл өөрөө тодорхойл.
+---
+
+MongolGPT-ийн тусламжтайгаар та хэд хэдэн суулгасан загвараас аль нэгийг нь сонгох, терминалын загварт тохирсон загвар ашиглах эсвэл өөрийн хүссэн загвараа тодорхойлох боломжтой.
+
+Анхдагч байдлаар MongolGPT нь бидний өөрийн `mongolgpt` загварыг ашигладаг.
+
+---
+
+## Терминалын шаардлага
+
+Загваруудыг өнгөт палитраараа зөв харуулахын тулд таны терминал **truecolor** (24 битийн өнгө)-г дэмжих ёстой. Ихэнх орчин үеийн терминалууд үүнийг анхдагчаар дэмждэг боловч та үүнийг идэвхжүүлэх шаардлагатай байж магадгүй:
+
+- **Дэмжлэгийг шалгах**: `echo $COLORTERM` ажиллуулах - энэ нь `truecolor` эсвэл `24bit` гаргана.
+- ** Truecolor-г идэвхжүүлэх**: Өөрийн бүрхүүлийн профайлд `COLORTERM=truecolor` орчны хувьсагчийг тохируулна уу
+- **Терминалын нийцтэй байдал**: Таны терминал эмулятор 24 битийн өнгийг дэмждэг эсэхийг шалгаарай (iTerm2, Alacritty, Kitty, Windows Терминал гэх мэт хамгийн орчин үеийн терминалууд болон GNOME Терминалын сүүлийн хувилбарууд)
+
+Truecolor-ийн дэмжлэггүйгээр загварууд өнгөний нарийвчлал багатай гарч ирэх эсвэл хамгийн ойрын 256 өнгө хүртэл буурч болно.
+
+---
+
+## Баригдсан загварууд
+
+MongolGPT хэд хэдэн суулгасан загвартай ирдэг.
+
+| Нэр | Тодорхойлолт |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| `system` | Таны терминалын дэвсгэр өнгөнд тохируулна |
+| `tokyonight` | [Tokyonight](https://github.com/folke/tokyonight.nvim) сэдэв дээр тулгуурласан |
+| `everforest` | [Everforest](https://github.com/sainnhe/everforest) сэдэв дээр тулгуурласан |
+| `ayu` | [Ayu](https://github.com/ayu-theme) харанхуй сэдэв дээр үндэслэсэн |
+| `catppuccin` | [Catppuccin](https://github.com/catppuccin) сэдэв дээр тулгуурласан |
+| `catppuccin-macchiato` | [Catppuccin](https://github.com/catppuccin) сэдэв дээр тулгуурласан |
+| `gruvbox` | [Gruvbox](https://github.com/morhetz/gruvbox) сэдэв дээр тулгуурласан |
+| `kanagawa` | [Kanagawa](https://github.com/rebelot/kanagawa.nvim) сэдэв дээр тулгуурласан |
+| `nord` | [Nord](https://github.com/nordtheme/nord) сэдэв дээр тулгуурласан |
+| `matrix` | Хар сэдэвт хакер маягийн ногоон |
+| `one-dark` | [Атом Нэг](https://github.com/Th3Whit3Wolf/one-nvim) Харанхуй загвар дээр үндэслэсэн |
+
+Үүнээс гадна бид шинэ сэдвүүдийг байнга нэмж байдаг.
+
+---
+
+## Системийн сэдэв
+
+`system` загвар нь таны терминалын өнгөний схемд автоматаар дасан зохицоход зориулагдсан. Тогтмол өнгө ашигладаг уламжлалт загваруудаас ялгаатай нь _системийн_ сэдэв:
+
+- **Саарал хуваарийг үүсгэдэг**: Таны терминалын дэвсгэр өнгө дээр үндэслэн тохируулсан саарал масштабыг үүсгэж, оновчтой тодосгогчийг хангана.
+- ** ANSI өнгийг ашигладаг**: Таны терминалын өнгөт палитрыг хүндэтгэдэг синтаксийг тодруулах, UI элементүүдэд стандарт ANSI өнгийг (0-15) ашигладаг.
+- **Терминалын өгөгдмөл тохиргоог хадгалдаг**: Терминалынхаа эх төрхийг хадгалахын тулд текст болон дэвсгэр өнгөнд `none`-г ашигладаг.
+
+Системийн сэдэв нь дараах хэрэглэгчдэд зориулагдсан:
+
+- MongolGPT-г терминалынхаа дүр төрхтэй тааруулахыг хүсч байна
+- Захиалгат терминалын өнгөний схемийг ашиглах
+- Бүх терминалын аппликешн дээр тууштай харагдахыг илүүд үздэг
+
+---
+
+## Загвар ашиглаж байна
+
+Та `/theme` командыг ашиглан сэдвийг сонгох боломжтой. Эсвэл та үүнийг `tui.json`-д зааж өгч болно.
+
+```json title="tui.json" {3}
+{
+  "$schema": "https://mongolgpt.duckdns.org/tui.json",
+  "theme": "tokyonight"
+}
+```
+
+---
+
+## Захиалгат загварууд
+
+MongolGPT нь хэрэглэгчдэд хялбархан загвар үүсгэж, өөрчлөх боломжийг олгодог JSON- дээр суурилсан уян хатан загварын системийг дэмждэг.
+
+---
+
+### Шатлал
+
+Сэдвүүдийг хэд хэдэн сангаас дараах дарааллаар ачаалдаг бол хожмын сангууд өмнөх сангуудыг дардаг.
+
+1. **Баригдсан загварууд** - Эдгээр нь хоёртын файлд суулгагдсан
+2. **Хэрэглэгчийн тохиргооны лавлах** - `~/.config/mongolgpt/themes/*.json` эсвэл `$XDG_CONFIG_HOME/mongolgpt/themes/*.json`-д тодорхойлогдсон.
+3. **Төслийн үндсэн лавлах** - `<project-root>/.mongolgpt/themes/*.json`-д тодорхойлогдсон.
+4. **Одоогийн ажлын лавлах** - `./.mongolgpt/themes/*.json`-д тодорхойлогдсон
+
+Хэрэв олон лавлах нь ижил нэртэй сэдэв агуулж байвал илүү давуу эрхтэй лавлахын сэдвийг ашиглана.
+
+---
+
+### Загвар үүсгэх
+
+Захиалгат загвар үүсгэхийн тулд сэдвийн лавлахуудын аль нэгэнд JSON файл үүсгэнэ үү.
+
+Хэрэглэгчийн өргөн хүрээний сэдвүүдийн хувьд:
+
+```bash no-frame
+mkdir -p ~/.config/mongolgpt/themes
+vim ~/.config/mongolgpt/themes/my-theme.json
+```
+
+Мөн төслийн тусгай сэдвүүдийн хувьд.
+
+```bash no-frame
+mkdir -p .mongolgpt/themes
+vim .mongolgpt/themes/my-theme.json
+```
+
+---
+
+### JSON формат
+
+Загварууд нь уян хатан JSON форматыг ашигладаг:
+
+- **Hex өнгө**: `"#ffffff"`
+- **ANSI өнгө**: `3` (0-255)
+- **Өнгөний лавлагаа**: `"primary"` эсвэл захиалгат тодорхойлолт
+- **Харанхуй/цайвар хувилбарууд**: `{"dark": "#000", "light": "#fff"}`
+- **Өнгөгүй**: `"none"` - Терминалын өгөгдмөл өнгө буюу тунгалаг өнгийг ашиглана
+
+---
+
+### Өнгөний тодорхойлолт
+
+`defs` хэсэг нь сонголттой бөгөөд энэ нь сэдэвт лавлаж болох дахин ашиглах боломжтой өнгийг тодорхойлох боломжийг танд олгоно.
+
+---
+
+### Терминалын өгөгдмөл
+
+`"none"` тусгай утгыг терминалын анхдагч өнгийг өвлөхийн тулд ямар ч өнгөт ашиглаж болно. Энэ нь таны терминалын өнгөний схемд нийцсэн сэдвүүдийг бий болгоход онцгой ач холбогдолтой:
+
+- `"text": "none"` - Терминалын өгөгдмөл нүүрэн талын өнгийг ашигладаг
+- `"background": "none"` - Терминалын үндсэн дэвсгэр өнгийг ашигладаг
+
+---
+
+### Жишээ
+
+Захиалгат сэдвийн жишээ энд байна:
+
+```json title="my-theme.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/theme.json",
+  "defs": {
+    "nord0": "#2E3440",
+    "nord1": "#3B4252",
+    "nord2": "#434C5E",
+    "nord3": "#4C566A",
+    "nord4": "#D8DEE9",
+    "nord5": "#E5E9F0",
+    "nord6": "#ECEFF4",
+    "nord7": "#8FBCBB",
+    "nord8": "#88C0D0",
+    "nord9": "#81A1C1",
+    "nord10": "#5E81AC",
+    "nord11": "#BF616A",
+    "nord12": "#D08770",
+    "nord13": "#EBCB8B",
+    "nord14": "#A3BE8C",
+    "nord15": "#B48EAD"
+  },
+  "theme": {
+    "primary": {
+      "dark": "nord8",
+      "light": "nord10"
+    },
+    "secondary": {
+      "dark": "nord9",
+      "light": "nord9"
+    },
+    "accent": {
+      "dark": "nord7",
+      "light": "nord7"
+    },
+    "error": {
+      "dark": "nord11",
+      "light": "nord11"
+    },
+    "warning": {
+      "dark": "nord12",
+      "light": "nord12"
+    },
+    "success": {
+      "dark": "nord14",
+      "light": "nord14"
+    },
+    "info": {
+      "dark": "nord8",
+      "light": "nord10"
+    },
+    "text": {
+      "dark": "nord4",
+      "light": "nord0"
+    },
+    "textMuted": {
+      "dark": "nord3",
+      "light": "nord1"
+    },
+    "background": {
+      "dark": "nord0",
+      "light": "nord6"
+    },
+    "backgroundPanel": {
+      "dark": "nord1",
+      "light": "nord5"
+    },
+    "backgroundElement": {
+      "dark": "nord1",
+      "light": "nord4"
+    },
+    "border": {
+      "dark": "nord2",
+      "light": "nord3"
+    },
+    "borderActive": {
+      "dark": "nord3",
+      "light": "nord2"
+    },
+    "borderSubtle": {
+      "dark": "nord2",
+      "light": "nord3"
+    },
+    "diffAdded": {
+      "dark": "nord14",
+      "light": "nord14"
+    },
+    "diffRemoved": {
+      "dark": "nord11",
+      "light": "nord11"
+    },
+    "diffContext": {
+      "dark": "nord3",
+      "light": "nord3"
+    },
+    "diffHunkHeader": {
+      "dark": "nord3",
+      "light": "nord3"
+    },
+    "diffHighlightAdded": {
+      "dark": "nord14",
+      "light": "nord14"
+    },
+    "diffHighlightRemoved": {
+      "dark": "nord11",
+      "light": "nord11"
+    },
+    "diffAddedBg": {
+      "dark": "#3B4252",
+      "light": "#E5E9F0"
+    },
+    "diffRemovedBg": {
+      "dark": "#3B4252",
+      "light": "#E5E9F0"
+    },
+    "diffContextBg": {
+      "dark": "nord1",
+      "light": "nord5"
+    },
+    "diffLineNumber": {
+      "dark": "nord2",
+      "light": "nord4"
+    },
+    "diffAddedLineNumberBg": {
+      "dark": "#3B4252",
+      "light": "#E5E9F0"
+    },
+    "diffRemovedLineNumberBg": {
+      "dark": "#3B4252",
+      "light": "#E5E9F0"
+    },
+    "markdownText": {
+      "dark": "nord4",
+      "light": "nord0"
+    },
+    "markdownHeading": {
+      "dark": "nord8",
+      "light": "nord10"
+    },
+    "markdownLink": {
+      "dark": "nord9",
+      "light": "nord9"
+    },
+    "markdownLinkText": {
+      "dark": "nord7",
+      "light": "nord7"
+    },
+    "markdownCode": {
+      "dark": "nord14",
+      "light": "nord14"
+    },
+    "markdownBlockQuote": {
+      "dark": "nord3",
+      "light": "nord3"
+    },
+    "markdownEmph": {
+      "dark": "nord12",
+      "light": "nord12"
+    },
+    "markdownStrong": {
+      "dark": "nord13",
+      "light": "nord13"
+    },
+    "markdownHorizontalRule": {
+      "dark": "nord3",
+      "light": "nord3"
+    },
+    "markdownListItem": {
+      "dark": "nord8",
+      "light": "nord10"
+    },
+    "markdownListEnumeration": {
+      "dark": "nord7",
+      "light": "nord7"
+    },
+    "markdownImage": {
+      "dark": "nord9",
+      "light": "nord9"
+    },
+    "markdownImageText": {
+      "dark": "nord7",
+      "light": "nord7"
+    },
+    "markdownCodeBlock": {
+      "dark": "nord4",
+      "light": "nord0"
+    },
+    "syntaxComment": {
+      "dark": "nord3",
+      "light": "nord3"
+    },
+    "syntaxKeyword": {
+      "dark": "nord9",
+      "light": "nord9"
+    },
+    "syntaxFunction": {
+      "dark": "nord8",
+      "light": "nord8"
+    },
+    "syntaxVariable": {
+      "dark": "nord7",
+      "light": "nord7"
+    },
+    "syntaxString": {
+      "dark": "nord14",
+      "light": "nord14"
+    },
+    "syntaxNumber": {
+      "dark": "nord15",
+      "light": "nord15"
+    },
+    "syntaxType": {
+      "dark": "nord7",
+      "light": "nord7"
+    },
+    "syntaxOperator": {
+      "dark": "nord9",
+      "light": "nord9"
+    },
+    "syntaxPunctuation": {
+      "dark": "nord4",
+      "light": "nord0"
+    }
+  }
+}
+```
+

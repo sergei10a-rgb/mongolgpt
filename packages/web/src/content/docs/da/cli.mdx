@@ -1,0 +1,617 @@
+---
+title: CLI
+description: MongolGPT CLI muligheder og kommandoer.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components"
+
+MongolGPT CLI starter som standard [TUI](/docs/tui), når den kører uden nogen argumenter.
+
+```bash
+mongolgpt
+```
+
+Men den accepterer også kommandoer som dokumenteret på denne side. Dette giver dig mulighed for at interagere med MongolGPT programmatisk.
+
+```bash
+mongolgpt run "Explain how closures work in JavaScript"
+```
+
+---
+
+### tui
+
+Start MongolGPT terminalbrugergrænsefladen.
+
+```bash
+mongolgpt [project]
+```
+
+#### Flag
+
+| Flag                                     | Kort | Beskrivelse                                                                  |
+| ---------------------------------------- | ---- | ---------------------------------------------------------------------------- |
+| <nobr><code>{"--continue"}</code></nobr> | `-c` | Fortsæt sidste session                                                       |
+| <nobr><code>{"--session"}</code></nobr>  | `-s` | Sessions-id for at fortsætte                                                 |
+| <nobr><code>{"--fork"}</code></nobr>     |      | Forgren sessionen ved fortsættelse (brug med `--continue` eller `--session`) |
+| <nobr><code>{"--prompt"}</code></nobr>   |      | Spørg om at bruge                                                            |
+| <nobr><code>{"--model"}</code></nobr>    | `-m` | Model til brug i form af provider/model                                      |
+| <nobr><code>{"--agent"}</code></nobr>    |      | Agent hos bruge                                                              |
+| <nobr><code>{"--port"}</code></nobr>     |      | Port at lytte på                                                             |
+| <nobr><code>{"--hostname"}</code></nobr> |      | Værtsnavn at lytte på                                                        |
+
+---
+
+## Kommandoer
+
+MongolGPT CLI har også følgende kommandoer.
+
+---
+
+### agent
+
+Administrer agenter i MongolGPT.
+
+```bash
+mongolgpt agent [command]
+```
+
+---
+
+### attach
+
+Tilslut en terminal til en allerede kørende MongolGPT backend-server startet via `serve` eller `web` kommandoer.
+
+```bash
+mongolgpt attach [url]
+```
+
+Dette gør det muligt at bruge TUI med en ekstern MongolGPT backend. For eksempel:
+
+```bash
+# Start the backend server for web/mobile access
+mongolgpt web --port 4096 --hostname 0.0.0.0
+
+# In another terminal, attach the TUI to the running backend
+mongolgpt attach http://10.20.30.40:4096
+```
+
+#### Flag
+
+| Flag                                     | Kort | Beskrivelse                                                                         |
+| ---------------------------------------- | ---- | ----------------------------------------------------------------------------------- |
+| <nobr><code>{"--dir"}</code></nobr>      |      | Arbejdsmappe til at starte TUI i                                                    |
+| <nobr><code>{"--continue"}</code></nobr> | `-c` | Fortsæt den seneste session                                                         |
+| <nobr><code>{"--session"}</code></nobr>  | `-s` | Sessions-id for at fortsætte                                                        |
+| <nobr><code>{"--fork"}</code></nobr>     |      | Forgren sessionen ved fortsættelse (brug med `--continue` eller `--session`)        |
+| <nobr><code>{"--password"}</code></nobr> | `-p` | Adgangskode til basic auth (standard: `MONGOLGPT_SERVER_PASSWORD`)                  |
+| <nobr><code>{"--username"}</code></nobr> | `-u` | Brugernavn til basic auth (standard: `MONGOLGPT_SERVER_USERNAME` eller `mongolgpt`) |
+
+---
+
+#### create
+
+Opret en ny agent med brugerdefineret konfiguration.
+
+```bash
+mongolgpt agent create
+```
+
+Denne kommando vil guide dig gennem oprettelse af en ny agent med en brugerdefineret systemprompt og værktøjskonfiguration.
+
+---
+
+#### list
+
+Liste over alle tilgængelige agenter.
+
+```bash
+mongolgpt agent list
+```
+
+---
+
+### auth
+
+Kommando til at administrere legitimationsoplysninger og login for udbydere.
+
+```bash
+mongolgpt auth [command]
+```
+
+---
+
+#### login
+
+MongolGPT drives af udbyderlisten på [Models.dev](https://models.dev), så du kan bruge `mongolgpt auth login` til at konfigurere API-nøgler for enhver udbyder, du vil bruge. Dette er gemt i `~/.local/share/mongolgpt/auth.json`.
+
+```bash
+mongolgpt auth login
+```
+
+Når MongolGPT starter op, indlæser den udbyderne fra legitimationsfilen. Og hvis der er nogen nøgler defineret i dine miljøer eller en `.env` fil i dit projekt.
+
+---
+
+#### list
+
+Viser alle de godkendte udbydere som gemt i legitimationsfilen.
+
+```bash
+mongolgpt auth list
+```
+
+Eller den korte version.
+
+```bash
+mongolgpt auth ls
+```
+
+---
+
+#### logout
+
+Logger dig ud af en udbyder ved at rydde den fra legitimationsfilen.
+
+```bash
+mongolgpt auth logout
+```
+
+---
+
+### github
+
+Administrator GitHub-agenten til lagerautomatisering.
+
+```bash
+mongolgpt github [command]
+```
+
+---
+
+#### install
+
+Installatør GitHub-agenten i dit lager.
+
+```bash
+mongolgpt github install
+```
+
+Dette opsætter det nødvendige GitHub Actions workflow og guider dig gennem konfigurationsprocessen. [Learn more](/docs/github).
+
+---
+
+#### run
+
+Kør GitHub-agenten. Dette bruges typisk i GitHub Actions.
+
+```bash
+mongolgpt github run
+```
+
+##### Flag
+
+| Flag                                  | Beskrivelse                                    |
+| ------------------------------------- | ---------------------------------------------- |
+| <nobr><code>{"--event"}</code></nobr> | GitHub mock begivenhed for at køre agenten for |
+| <nobr><code>{"--token"}</code></nobr> | GitHub personlig adgangstoken                  |
+
+---
+
+### mcp
+
+Administrator Model Context Protocol-servere.
+
+```bash
+mongolgpt mcp [command]
+```
+
+---
+
+#### add
+
+Tilføj en MCP-server til din konfiguration.
+
+```bash
+mongolgpt mcp add
+```
+
+Denne kommando vil guide dig gennem tilføjelse af enten en lokal eller ekstern MCP-server.
+
+---
+
+#### list
+
+Liste over alle konfigurerede MCP-servere og deres forbindelsesstatus.
+
+```bash
+mongolgpt mcp list
+```
+
+Eller brug den korte version.
+
+```bash
+mongolgpt mcp ls
+```
+
+---
+
+#### auth
+
+Godkendt med en OAuth-aktiveret MCP-server.
+
+```bash
+mongolgpt mcp auth [name]
+```
+
+Hvis du ikke angiver et servernavn, bliver du bedt om at vælge blandt tilgængelige OAuth-kompatible servere.
+
+Du kan også angive OAuth-kompatible servere og deres godkendelsesstatus.
+
+```bash
+mongolgpt mcp auth list
+```
+
+Eller brug den korte version.
+
+```bash
+mongolgpt mcp auth ls
+```
+
+---
+
+#### logout
+
+Fjern OAuth-legitimationsoplysninger for en MCP-server.
+
+```bash
+mongolgpt mcp logout [name]
+```
+
+---
+
+#### debug
+
+Fejlfinding af OAuth-forbindelsesproblemer for en MCP-server.
+
+```bash
+mongolgpt mcp debug <name>
+```
+
+---
+
+### models
+
+Liste over alle tilgængelige modeller fra konfigurerede udbydere.
+
+```bash
+mongolgpt models [provider]
+```
+
+Denne kommando viser alle tilgængelige modeller på tværs af dine konfigurerede udbydere i formatet `provider/model`.
+
+Dette er nyttigt til at finde ud af det nøjagtige modelnavn, der skal bruges i [your config](/docs/config/).
+
+Du kan eventuelt videregive et udbyder-id for at filtrere modeller efter den udbyder.
+
+```bash
+mongolgpt models anthropic
+```
+
+#### Flag
+
+| Flag                                    | Beskrivelse                                                             |
+| --------------------------------------- | ----------------------------------------------------------------------- |
+| <nobr><code>{"--refresh"}</code></nobr> | Opdater modelcachen fra models.dev                                      |
+| <nobr><code>{"--verbose"}</code></nobr> | Brug mere detaljeret modeloutput (inkluderer metadata som omkostninger) |
+
+Brug flaget `--refresh` til at opdatere den cachelagrede modelliste. Dette er nyttigt, når nye modeller er blevet tilføjet til en udbyder, og du vil se dem i MongolGPT.
+
+```bash
+mongolgpt models --refresh
+```
+
+---
+
+### run
+
+Kør mongolgpt i ikke-interaktiv tilstand ved at sende en prompt direkte.
+
+```bash
+mongolgpt run [message..]
+```
+
+Dette er nyttigt til scripting, automatisering, eller når du vil have et hurtigt svar uden at starte hele TUI. F.eks.
+
+```bash "mongolgpt run"
+mongolgpt run Explain the use of context in Go
+```
+
+Du kan også vedhæfte til en kørende `mongolgpt serve`-instans for at undgå MCP serverens kolde opstartstider ved hver kørsel:
+
+```bash
+# Start a headless server in one terminal
+mongolgpt serve
+
+# In another terminal, run commands that attach to it
+mongolgpt run --attach http://localhost:4096 "Explain async/await in JavaScript"
+```
+
+#### Flag
+
+| Flag                                     | Kort | Beskrivelse                                                                         |
+| ---------------------------------------- | ---- | ----------------------------------------------------------------------------------- |
+| <nobr><code>{"--command"}</code></nobr>  |      | Kommandoen til at køre, brug besked til args                                        |
+| <nobr><code>{"--continue"}</code></nobr> | `-c` | Fortsæt sidste session                                                              |
+| <nobr><code>{"--session"}</code></nobr>  | `-s` | Sessions-id for at fortsætte                                                        |
+| <nobr><code>{"--fork"}</code></nobr>     |      | Forgren sessionen ved fortsættelse (brug med `--continue` eller `--session`)        |
+| <nobr><code>{"--share"}</code></nobr>    |      | Del sessionen                                                                       |
+| <nobr><code>{"--model"}</code></nobr>    | `-m` | Model til brug i form af provider/model                                             |
+| <nobr><code>{"--agent"}</code></nobr>    |      | Agent til brug                                                                      |
+| <nobr><code>{"--file"}</code></nobr>     | `-f` | Fil(er), der skal vedhæftes til meddelelsen                                         |
+| <nobr><code>{"--format"}</code></nobr>   |      | Format: standard (formateret) eller json (rå JSON hændelser)                        |
+| <nobr><code>{"--title"}</code></nobr>    |      | Titel for sessionen (bruger trunkeret prompt, hvis der ikke er angivet nogen værdi) |
+| <nobr><code>{"--attach"}</code></nobr>   |      | Tilslut til en kørende mongolgpt-server (f.eks. http://localhost:4096)              |
+| <nobr><code>{"--password"}</code></nobr> | `-p` | Adgangskode til basic auth (standard: `MONGOLGPT_SERVER_PASSWORD`)                  |
+| <nobr><code>{"--username"}</code></nobr> | `-u` | Brugernavn til basic auth (standard: `MONGOLGPT_SERVER_USERNAME` eller `mongolgpt`) |
+| <nobr><code>{"--dir"}</code></nobr>      |      | Mappe at køre i, eller sti på fjernserveren ved tilkobling                          |
+| <nobr><code>{"--variant"}</code></nobr>  |      | Modelvariant (udbyder-specifik ræsonneringsindsats)                                 |
+| <nobr><code>{"--thinking"}</code></nobr> |      | Vis tænkeblokke                                                                     |
+| <nobr><code>{"--port"}</code></nobr>     |      | Port til den lokale server (standard til vilkårlig port)                            |
+
+---
+
+### serve
+
+Start en hovedløs MongolGPT-server til API-adgang. Tjek [server docs](/docs/server) for den fulde HTTP-grænseflade.
+
+```bash
+mongolgpt serve
+```
+
+Dette starter en HTTP-server, der giver API-adgang til mongolgpt-funktionalitet uden TUI-grænsefladen. Indstil `MONGOLGPT_SERVER_PASSWORD` for at aktivere HTTP grundlæggende godkendelse (brugernavn er standard til `mongolgpt`).
+
+#### Flag
+
+| Flag                                     | Beskrivelse                                      |
+| ---------------------------------------- | ------------------------------------------------ |
+| <nobr><code>{"--port"}</code></nobr>     | Port at lytte på                                 |
+| <nobr><code>{"--hostname"}</code></nobr> | Værtsnavn at lytte på                            |
+| <nobr><code>{"--mdns"}</code></nobr>     | Aktiver mDNS-opdagelse                           |
+| <nobr><code>{"--cors"}</code></nobr>     | Yderligere browseroprindelse til at tillade CORS |
+
+---
+
+### session
+
+Administrator MongolGPT sessionsholder.
+
+```bash
+mongolgpt session [command]
+```
+
+---
+
+#### list
+
+Liste over alle MongolGPT sessioner.
+
+```bash
+mongolgpt session list
+```
+
+##### Flag
+
+| Flag                                      | Kort | Beskrivelse                            |
+| ----------------------------------------- | ---- | -------------------------------------- |
+| <nobr><code>{"--max-count"}</code></nobr> | `-n` | Begræns til N seneste sessioner        |
+| <nobr><code>{"--format"}</code></nobr>    |      | Outputformat: tabel eller json (tabel) |
+
+---
+
+### stats
+
+Vis tokenbrug og omkostningsstatistikker for dine MongolGPT-sessioner.
+
+```bash
+mongolgpt stats
+```
+
+#### Flag
+
+| Flag                                    | Beskrivelse                                                                 |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| <nobr><code>{"--days"}</code></nobr>    | Vis statistik for de sidste N dage (hele tiden)                             |
+| <nobr><code>{"--tools"}</code></nobr>   | Antal værktøjer, der skal vises (alle)                                      |
+| <nobr><code>{"--models"}</code></nobr>  | Vis modelbrugsopdeling (skjult som standard). Send et tal for at vise top N |
+| <nobr><code>{"--project"}</code></nobr> | Filtre efter projekt (alle projekter, tom streng: nuværende projekt)        |
+
+---
+
+### export
+
+Eksporter sessionsdata som JSON.
+
+```bash
+mongolgpt export [sessionID]
+```
+
+Hvis du ikke angiver et sessions-id, bliver du bedt om at vælge mellem tilgængelige sessioner.
+
+---
+
+### import
+
+Importer sessionsdata fra en JSON fil eller MongolGPT del URL.
+
+```bash
+mongolgpt import <file>
+```
+
+Du kan importere fra en lokal fil eller en MongolGPT share URL.
+
+```bash
+mongolgpt import session.json
+mongolgpt import https://opncd.ai/s/abc123
+```
+
+---
+
+### web
+
+Start en hovedløs MongolGPT-server med en webgrænseflade.
+
+```bash
+mongolgpt web
+```
+
+Dette starter en HTTP-server og åbner en webbrowser for at få adgang til MongolGPT via en webgrænseflade. Indstil `MONGOLGPT_SERVER_PASSWORD` for at aktivere HTTP grundlæggende godkendelse (brugernavn er standard til `mongolgpt`).
+
+#### Flag
+
+| Flag                                     | Beskrivelse                                      |
+| ---------------------------------------- | ------------------------------------------------ |
+| <nobr><code>{"--port"}</code></nobr>     | Port at lytte på                                 |
+| <nobr><code>{"--hostname"}</code></nobr> | Værtsnavn at lytte på                            |
+| <nobr><code>{"--mdns"}</code></nobr>     | Aktiver mDNS-opdagelse                           |
+| <nobr><code>{"--cors"}</code></nobr>     | Yderligere browseroprindelse til at tillade CORS |
+
+---
+
+### acp
+
+Start en ACP-server (Agent Client Protocol).
+
+```bash
+mongolgpt acp
+```
+
+Denne kommando starter en ACP-server, der kommunikerer via stdin/stdout ved hjælp af nd-JSON.
+
+#### Flag
+
+| Flag                                     | Beskrivelse           |
+| ---------------------------------------- | --------------------- |
+| <nobr><code>{"--cwd"}</code></nobr>      | Arbejdsmappe          |
+| <nobr><code>{"--port"}</code></nobr>     | Port at lytte på      |
+| <nobr><code>{"--hostname"}</code></nobr> | Værtsnavn at lytte på |
+
+---
+
+### uninstall
+
+Afinstaller MongolGPT og fjern alle relaterede filer.
+
+```bash
+mongolgpt uninstall
+```
+
+#### Flag
+
+| Flag                                        | Kort | Beskrivelse                                      |
+| ------------------------------------------- | ---- | ------------------------------------------------ |
+| <nobr><code>{"--keep-config"}</code></nobr> | `-c` | Se konfigurationsfiler                           |
+| <nobr><code>{"--keep-data"}</code></nobr>   | `-d` | Gem sessionsdata og snapshots                    |
+| <nobr><code>{"--dry-run"}</code></nobr>     |      | Vis, hvad der ville blive fjernet uden at fjerne |
+| <nobr><code>{"--force"}</code></nobr>       | `-f` | Spring bekræftelsesspørgsmål over                |
+
+---
+
+### upgrade
+
+Opdaterer MongolGPT til den nyeste version eller en specifik version.
+
+```bash
+mongolgpt upgrade [target]
+```
+
+For at opgradere til den nyeste version.
+
+```bash
+mongolgpt upgrade
+```
+
+For at opgradere til en bestemt version.
+
+```bash
+mongolgpt upgrade v0.1.48
+```
+
+#### upgrade
+
+| Flag                                   | Kort | Beskrivelse                                                      |
+| -------------------------------------- | ---- | ---------------------------------------------------------------- |
+| <nobr><code>{"--method"}</code></nobr> | `-m` | Installationsmetoden, der blev brugt; curl, npm, pnpm, bun, brew |
+
+---
+
+## Globale flag
+
+mongolgpt CLI tager følgende globale flag.
+
+| Flag                                       | Kort | Beskrivelse                          |
+| ------------------------------------------ | ---- | ------------------------------------ |
+| <nobr><code>{"--help"}</code></nobr>       | `-h` | Vis hjælp                            |
+| <nobr><code>{"--version"}</code></nobr>    | `-v` | Udskriftsversionsnummer              |
+| <nobr><code>{"--print-logs"}</code></nobr> |      | Udskriv logfiler til stderr          |
+| <nobr><code>{"--log-level"}</code></nobr>  |      | Logniveau (DEBUG, INFO, WARN, ERROR) |
+
+---
+
+## Miljøvariabler
+
+MongolGPT kan konfigureres ved hjælp af miljøvariabler.
+
+| Variabel                               | Skriv   | Beskrivelse                                                            |
+| -------------------------------------- | ------- | ---------------------------------------------------------------------- |
+| `MONGOLGPT_AUTO_SHARE`                 | boolean | Del automatisk session                                                 |
+| `MONGOLGPT_GIT_BASH_PATH`              | string  | Sti til Git Bash eksekverbar på Windows                                |
+| `MONGOLGPT_CONFIG`                     | string  | Sti til konfigurationsfil                                              |
+| `MONGOLGPT_TUI_CONFIG`                 | string  | Sti til TUI-konfigurationsfil                                          |
+| `MONGOLGPT_CONFIG_DIR`                 | string  | Sti til konfigurationsmappe                                            |
+| `MONGOLGPT_CONFIG_CONTENT`             | string  | Indbygget json-konfigurationsindhold                                   |
+| `MONGOLGPT_DISABLE_AUTOUPDATE`         | boolean | Deaktiver automatisk opdateringskontrol                                |
+| `MONGOLGPT_DISABLE_PRUNE`              | boolean | Deaktiver beskæring af gamle data                                      |
+| `MONGOLGPT_DISABLE_TERMINAL_TITLE`     | boolean | Deaktiver automatisk opdatering af terminaltitel                       |
+| `MONGOLGPT_PERMISSION`                 | string  | Indbygget json-tilladelseskonfiguration                                |
+| `MONGOLGPT_DISABLE_DEFAULT_PLUGINS`    | boolean | Deaktiver standard plugins                                             |
+| `MONGOLGPT_DISABLE_LSP_DOWNLOAD`       | boolean | Deaktiver automatisk LSP-serverdownloads                               |
+| `MONGOLGPT_ENABLE_EXPERIMENTAL_MODELS` | boolean | Aktive eksperimentelle modeller                                        |
+| `MONGOLGPT_DISABLE_AUTOCOMPACT`        | boolean | Deaktiver automatisk kontekstkomprimering                              |
+| `MONGOLGPT_DISABLE_CLAUDE_CODE`        | boolean | Deaktiver læsning fra `.claude` (prompt + færdigheder)                 |
+| `MONGOLGPT_DISABLE_CLAUDE_CODE_PROMPT` | boolean | Deaktiver læsning `~/.claude/CLAUDE.md`                                |
+| `MONGOLGPT_DISABLE_CLAUDE_CODE_SKILLS` | boolean | Deaktiver indlæsning af `.claude/skills`                               |
+| `MONGOLGPT_DISABLE_MODELS_FETCH`       | boolean | Deaktivering af modeller fra eksterne kilder                           |
+| `MONGOLGPT_FAKE_VCS`                   | string  | Falsk VCS-udbyder til testformål                                       |
+| `MONGOLGPT_CLIENT`                     | string  | Klient-id (standard til `cli`)                                         |
+| `MONGOLGPT_ENABLE_EXA`                 | boolean | Aktiver Exa-websøgeværktøjer                                           |
+| `MONGOLGPT_SERVER_PASSWORD`            | string  | Aktiver grundlæggende godkendelse for `serve`/`web`                    |
+| `MONGOLGPT_SERVER_USERNAME`            | string  | Tilsidesæt grundlæggende godkendelsesbrugernavn (standard `mongolgpt`) |
+| `MONGOLGPT_MODELS_URL`                 | string  | Brugerdefineret URL til hentning af modelkonfiguration                 |
+
+---
+
+### Eksperimentel
+
+Disse miljøvariabler muliggør eksperimentelle funktioner, der kan ændres eller fjernes.
+
+| Variabel                                         | Skriv   | Beskrivelse                                          |
+| ------------------------------------------------ | ------- | ---------------------------------------------------- |
+| `MONGOLGPT_EXPERIMENTAL`                         | boolean | Aktiver eksperimentelle funktioner under samleflaget |
+| `MONGOLGPT_EXPERIMENTAL_ICON_DISCOVERY`          | boolean | Aktiver ikonopdagelse                                |
+| `MONGOLGPT_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`  | boolean | Deaktiver kopi ved valg i TUI                        |
+| `MONGOLGPT_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS` | nummer  | Standard timeout for bash-kommandoer i ms            |
+| `MONGOLGPT_EXPERIMENTAL_OUTPUT_TOKEN_MAX`        | nummer  | Maks. output-tokens for LLM-svar                     |
+| `MONGOLGPT_EXPERIMENTAL_FILEWATCHER`             | boolean | Aktiver filovervågning for hele dir                  |
+| `MONGOLGPT_EXPERIMENTAL_OXFMT`                   | boolean | Aktiver oxfmt formatter                              |
+| `MONGOLGPT_EXPERIMENTAL_LSP_TOOL`                | boolean | Aktive eksperimenter LSP værktøj                     |
+| `MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER`     | boolean | Deaktiver filovervågning                             |
+| `MONGOLGPT_EXPERIMENTAL_EXA`                     | boolean | Aktive eksperimenter Exa-funktioner                  |
+| `MONGOLGPT_EXPERIMENTAL_LSP_TY`                  | boolean | Aktiver TY LSP for python-filer                      |
+| `MONGOLGPT_EXPERIMENTAL_PLAN_MODE`               | boolean | Aktiver plantilstand                                 |
+| `MONGOLGPT_EXPERIMENTAL_BACKGROUND_SUBAGENTS`    | boolean | Aktiver baggrundsopgaver for subagenter              |
+| `MONGOLGPT_EXPERIMENTAL_EVENT_SYSTEM`            | boolean | Aktiver eksperimentelt hændelsessystem               |
+| `MONGOLGPT_EXPERIMENTAL_NATIVE_LLM`              | boolean | Aktiver native LLM-anmodningssti                     |
+| `MONGOLGPT_EXPERIMENTAL_PARALLEL`                | boolean | Aktiver parallel udførelse af websøgning             |
+| `MONGOLGPT_EXPERIMENTAL_SCOUT`                   | boolean | Aktiver Scout-subagent                               |
+| `MONGOLGPT_EXPERIMENTAL_WORKSPACES`              | boolean | Aktiver workspace-understøttelse                     |

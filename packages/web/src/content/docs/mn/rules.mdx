@@ -1,0 +1,189 @@
+---
+title: Rules
+description: mongolgpt-д захиалгат зааврыг тохируулна уу.
+---
+
+Та `AGENTS.md` файл үүсгэснээр mongolgpt-д захиалгат заавар өгөх боломжтой. Энэ нь Курсорын дүрэмтэй төстэй юм. Энэ нь LLM-ийн контекстэд тусгагдсан зааварчилгааг агуулж байгаа бөгөөд түүний зан төлөвийг таны тодорхой төсөлд тохируулах болно.
+
+---
+
+## Эхлүүлэх
+
+Шинэ `AGENTS.md` файл үүсгэхийн тулд mongolgpt дээр `/init` командыг ажиллуулж болно.
+
+:::tip
+Та төслийнхээ `AGENTS.md` файлыг Git-д оруулах ёстой.
+:::
+
+`/init` нь таны репо дахь чухал файлуудыг сканнердаж, кодын сан тэдэнд хариулж чадахгүй үед хэд хэдэн зорилтот асуулт асууж, дараа нь төслийн тусгай зааварчилгаагаар `AGENTS.md`-г үүсгэж эсвэл шинэчилдэг.
+
+Энэ нь ирээдүйн төлөөлөгчийн хуралдаанд хамгийн их хэрэгтэй байх зүйлсэд анхаарлаа хандуулдаг:
+
+- бүтээх, линт, тест командууд
+- Тушаалын дараалал болон чухал үед чиглэсэн баталгаажуулалтын алхамууд
+- Зөвхөн файлын нэрээр тодорхойгүй архитектур ба репо бүтэц
+- төслийн тусгайлсан конвенц, тохиргооны хачирхалтай байдал, үйл ажиллагааны онцлог
+- Курсор эсвэл Копилотын дүрэм гэх мэт одоо байгаа заавар эх сурвалжийн лавлагаа
+
+Хэрэв танд `AGENTS.md` байгаа бол `/init` үүнийг сохроор солихын оронд оронд нь сайжруулах болно.
+
+---
+
+## Жишээ
+
+Та мөн энэ файлыг гараар үүсгэж болно. `AGENTS.md` файлд оруулж болох зарим зүйлсийн жишээ энд байна.
+
+```markdown title="AGENTS.md"
+# SST v3 Monorepo Project
+
+This is an SST v3 monorepo with TypeScript. The project uses bun workspaces for package management.
+
+## Project Structure
+
+- `packages/` - Contains all workspace packages (functions, core, web, etc.)
+- `infra/` - Infrastructure definitions split by service (storage.ts, api.ts, web.ts)
+- `sst.config.ts` - Main SST configuration with dynamic imports
+
+## Code Standards
+
+- Use TypeScript with strict mode enabled
+- Shared code goes in `packages/core/` with proper exports configuration
+- Functions go in `packages/functions/`
+- Infrastructure should be split into logical files in `infra/`
+
+## Monorepo Conventions
+
+- Import shared modules using workspace names: `@my-app/core/example`
+```
+
+Бид энд төслийн тусгай зааварчилгааг нэмж байгаа бөгөөд үүнийг танай багт хуваалцах болно.
+
+---
+
+## Төрөл
+
+mongolgpt нь `AGENTS.md` файлыг олон газраас уншихыг дэмждэг. Мөн энэ нь өөр өөр зорилготой.
+
+### Төсөл
+
+Төслийн тусгай дүрмийн хувьд төслийн үндэс хэсэгт `AGENTS.md` тэмдэглэнэ үү. Эдгээр нь зөвхөн таныг энэ лавлах эсвэл түүний дэд лавлах хэсэгт ажиллаж байх үед л хэрэгжинэ.
+
+### Дэлхийн
+
+Та мөн `~/.config/mongolgpt/AGENTS.md` файлд глобал дүрэмтэй байж болно. Үүнийг бүх mongolgpt сессүүдэд хэрэгжүүлнэ.
+
+Энэ нь Git-д зориулагдаагүй эсвэл танай багтай хуваалцаагүй тул LLM-ийн дагаж мөрдөх хувийн дүрмийг зааж өгөхийн тулд үүнийг ашиглахыг зөвлөж байна.
+
+### Claude Кодын нийцтэй байдал
+
+Claude Кодоос шилжиж буй хэрэглэгчдийн хувьд MongolGPT нь Claude Кодын файлын конвенцуудыг нөөц болгон дэмждэг:
+
+- **Төслийн дүрэм**: `CLAUDE.md` таны төслийн лавлах (хэрэв `AGENTS.md` байхгүй бол хэрэглэнэ)
+- **Дэлхийн дүрэм**: `~/.claude/CLAUDE.md` (хэрэв `~/.config/mongolgpt/AGENTS.md` байхгүй бол хэрэглэнэ)
+- **Ур чадвар**: `~/.claude/skills/` — дэлгэрэнгүйг [Агентын ур чадвар](/docs/skills/) харна уу
+
+Claude Кодын нийцтэй байдлыг идэвхгүй болгохын тулд эдгээр орчны хувьсагчийн аль нэгийг тохируулна уу:
+
+```bash
+export MONGOLGPT_DISABLE_CLAUDE_CODE=1        # Disable all .claude support
+export MONGOLGPT_DISABLE_CLAUDE_CODE_PROMPT=1 # Disable only ~/.claude/CLAUDE.md
+export MONGOLGPT_DISABLE_CLAUDE_CODE_SKILLS=1 # Disable only .claude/skills
+```
+
+---
+
+## Тэргүүлэх
+
+mongolgpt эхлэх үед дүрмийн файлуудыг дараах дарааллаар хайдаг:
+
+1. **Орон нутгийн файлуудыг** одоогийн лавлахаас дээш гүйлгэж (`AGENTS.md`, `CLAUDE.md`)
+2. **Глобал файл** `~/.config/mongolgpt/AGENTS.md`
+3. **Claude Кодын файл** `~/.claude/CLAUDE.md` (идэвхгүй болоогүй бол)
+
+Эхний тохирох файл нь ангилал бүрт ялна. Жишээлбэл, хэрэв танд `AGENTS.md` болон `CLAUDE.md` хоёулаа байгаа бол зөвхөн `AGENTS.md` ашигладаг. Үүний нэгэн адил `~/.config/mongolgpt/AGENTS.md` нь `~/.claude/CLAUDE.md`-ээс давуу эрхтэй.
+
+---
+
+## Тусгай заавар
+
+Та өөрийн `mongolgpt.json` эсвэл дэлхийн `~/.config/mongolgpt/mongolgpt.json`-д захиалгат зааврын файлуудыг зааж өгч болно. Энэ нь танд болон танай багт одоо байгаа дүрмийг AGENTS.md руу хуулбарлахын оронд дахин ашиглах боломжийг олгоно.
+
+Example:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "instructions": ["CONTRIBUTING.md", "docs/guidelines.md", ".cursor/rules/*.md"]
+}
+```
+
+Та мөн вэбээс зааварчилгааг ачаалахын тулд алсаас URLs ашиглаж болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "instructions": ["https://raw.githubusercontent.com/my-org/shared-rules/main/style.md"]
+}
+```
+
+Алсын зааварчилгааг 5 секундын завсарлагатайгаар татаж авдаг.
+
+Бүх зааврын файлууд нь таны `AGENTS.md` файлуудтай нийлдэг.
+
+---
+
+## Гадаад файлуудын лавлагаа
+
+mongolgpt нь `AGENTS.md` дахь файлын лавлагааг автоматаар задалдаггүй ч та ижил төстэй ажиллагааг хоёр аргаар хийж болно:
+
+### mongolgpt.json ашиглан
+
+Санал болгож буй арга бол `mongolgpt.json` дахь `instructions` талбарыг ашиглах явдал юм:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "instructions": ["docs/development-standards.md", "test/testing-guidelines.md", "packages/*/AGENTS.md"]
+}
+```
+
+### Гарын авлагын заавар AGENTS.md
+
+Та `AGENTS.md`-д тодорхой зааварчилгаа өгснөөр гадаад файлуудыг уншихыг mongolgpt-д зааж болно. Энд практик жишээ байна:
+
+```markdown title="AGENTS.md"
+# TypeScript Project Rules
+
+## External File Loading
+
+CRITICAL: When you encounter a file reference (e.g., @rules/general.md), use your Read tool to load it on a need-to-know basis. They're relevant to the SPECIFIC task at hand.
+
+Instructions:
+
+- Do NOT preemptively load all references - use lazy loading based on actual need
+- When loaded, treat content as mandatory instructions that override defaults
+- Follow references recursively when needed
+
+## Development Guidelines
+
+For TypeScript code style and best practices: @docs/typescript-guidelines.md
+For React component architecture and hooks patterns: @docs/react-patterns.md
+For REST API design and error handling: @docs/api-standards.md
+For testing strategies and coverage requirements: @test/testing-guidelines.md
+
+## General Guidelines
+
+Read the following file immediately as it's relevant to all workflows: @rules/general-guidelines.md.
+```
+
+Энэ арга нь танд дараах боломжийг олгоно:
+
+- Модульчлагдсан, дахин ашиглах боломжтой дүрмийн файлуудыг үүсгэх
+- Симлинк эсвэл git дэд модулиар дамжуулан төслүүдийн дунд дүрмийг хуваалцах
+- Нарийвчилсан удирдамжийг дурдахдаа AGENTS.md-г товчхон бичнэ үү
+- mongolgpt файлуудыг зөвхөн тухайн ажилд шаардлагатай үед ачаалдаг эсэхийг шалгаарай
+
+:::tip
+Монерепо эсвэл нийтлэг стандарттай төслүүдийн хувьд `mongolgpt.json`-г бөмбөрцөг загвартай (`packages/*/AGENTS.md` гэх мэт) ашиглах нь гарын авлагын зааварчилгаанаас илүү засвар үйлчилгээ юм.
+:::
+

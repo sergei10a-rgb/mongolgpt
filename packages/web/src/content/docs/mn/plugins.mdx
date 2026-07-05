@@ -1,0 +1,390 @@
+---
+title: Plugins
+description: MongolGPT-г өргөтгөхийн тулд өөрийн залгаасуудыг бичээрэй.
+---
+
+Plugins нь янз бүрийн үйл явдалд холбогдож, зан төлөвийг өөрчлөх замаар MongolGPT-г өргөтгөх боломжийг олгодог. Та шинэ функцуудыг нэмэх, гадны үйлчилгээтэй нэгтгэх эсвэл MongolGPT-ийн үндсэн үйлдлийг өөрчлөхийн тулд залгаасуудыг үүсгэж болно.
+
+Жишээ нь, нийгэмлэгийн үүсгэсэн [plugins](/docs/ecosystem#plugins)-г үзээрэй.
+
+---
+
+## Plugin ашиглана уу
+
+Плагинуудыг ачаалах хоёр арга бий.
+
+---
+
+### Дотоод файлуудаас
+
+JavaScript эсвэл TypeScript файлуудыг залгаасын санд байрлуул.
+
+- `.mongolgpt/plugins/` - Төслийн түвшний залгаасууд
+- `~/.config/mongolgpt/plugins/` - Глобал залгаасууд
+
+Эдгээр сангуудын файлуудыг эхлүүлэх үед автоматаар ачаалагддаг.
+
+---
+
+### npm-аас
+
+Өөрийн тохиргооны файлд npm багцуудыг зааж өгнө үү.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "plugin": ["mongolgpt-helicone-session", "mongolgpt-wakatime", "@my-org/custom-plugin"]
+}
+```
+
+Энгийн болон хамрах хүрээтэй npm багцуудыг хоёуланг нь дэмждэг.
+
+Боломжтой залгаасуудыг [ecosystem](/docs/ecosystem#plugins) дээрээс харна уу.
+
+---
+
+### Хэрхэн залгаасуудыг суулгадаг вэ
+
+**npm залгаасуудыг** эхлүүлэх үед Bun ашиглан автоматаар суулгадаг. Багцууд болон тэдгээрийн хамаарлыг `~/.cache/mongolgpt/node_modules/`-д хадгалдаг.
+
+**Орон нутгийн залгаасуудыг** залгаасын лавлахаас шууд ачаалдаг. Гадны багцуудыг ашиглахын тулд та өөрийн тохиргооны лавлах дотор `package.json` үүсгэх ёстой ([Dependencies](#dependencies)-г үзнэ үү), эсвэл залгаасыг npm болон [өөрийн тохиргоонд нэмнэ үү](/docs/config#plugins) дээр нийтлэх ёстой.
+
+---
+
+### Ачаалах захиалга
+
+Plugins нь бүх эх сурвалжаас ачаалагдсан бөгөөд бүх дэгээ нь дарааллаар ажилладаг. Ачаалах дараалал нь:
+
+1. Глобал тохиргоо (`~/.config/mongolgpt/mongolgpt.json`)
+2. Төслийн тохиргоо (`mongolgpt.json`)
+3. Глобал залгаасуудын лавлах (`~/.config/mongolgpt/plugins/`)
+4. Төслийн залгаасуудын лавлах (`.mongolgpt/plugins/`)
+
+Давхардсан npm багцуудыг ижил нэр, хувилбараар нэг удаа ачаална. Гэсэн хэдий ч ижил төстэй нэртэй локал залгаас болон npm залгаасыг тус тусад нь ачаалдаг.
+
+---
+
+## Plugin үүсгэх
+
+Plugin нь нэг буюу хэд хэдэн залгаасыг экспортлодог **JavaScript/TypeScript модуль** юм.
+функцууд. Функц бүр контекст объектыг хүлээн авч, hooks объектыг буцаана.
+
+---
+
+### Хамаарал
+
+Орон нутгийн залгаасууд болон тусгай хэрэгслүүд гадаад npm багцуудыг ашиглаж болно. Өөрт хэрэгтэй хамаарал бүхий тохиргооны лавлахдаа `package.json` нэмнэ үү.
+
+```json title=".mongolgpt/package.json"
+{
+  "dependencies": {
+    "shescape": "^2.1.0"
+  }
+}
+```
+
+MongolGPT эдгээрийг суулгахын тулд эхлүүлэх үед `bun install` ажиллуулдаг. Таны залгаасууд болон хэрэгслүүд тэдгээрийг импортлох боломжтой.
+
+```ts title=".mongolgpt/plugins/my-plugin.ts"
+import { escape } from "shescape"
+
+export const MyPlugin = async (ctx) => {
+  return {
+    "tool.execute.before": async (input, output) => {
+      if (input.tool === "bash") {
+        output.args.command = escape(output.args.command)
+      }
+    },
+  }
+}
+```
+
+---
+
+### Үндсэн бүтэц
+
+```js title=".mongolgpt/plugins/example.js"
+export const MyPlugin = async ({ project, client, $, directory, worktree }) => {
+  console.log("Plugin initialized!")
+
+  return {
+    // Hook implementations go here
+  }
+}
+```
+
+Plugin функц нь дараахь зүйлийг хүлээн авдаг.
+
+- `project`: Төслийн одоогийн мэдээлэл.
+- `directory`: Одоогийн ажлын лавлах.
+- `worktree`: Гит ажлын модны зам.
+- `client`: AI-тэй харилцах mongolgpt SDK үйлчлүүлэгч.
+- `- : тушаалуудыг гүйцэтгэх Bun-ийн [бүрхүүлийн API](https://bun.com/docs/runtime/shell).
+
+---
+
+### TypeScript дэмжлэг
+
+TypeScript залгаасуудын хувьд та залгаасын багцаас төрлүүдийг импортлох боломжтой:
+
+```ts title="my-plugin.ts" {1}
+import type { Plugin } from "@mongolgpt/plugin"
+
+export const MyPlugin: Plugin = async ({ project, client, $, directory, worktree }) => {
+  return {
+    // Type-safe hook implementations
+  }
+}
+```
+
+---
+
+### Үйл явдал
+
+Залгааснууд нь жишээ хэсэгт доороос харсны дагуу үйл явдлуудыг захиалж болно. Энд байгаа янз бүрийн арга хэмжээний жагсаалтыг энд оруулав.
+
+#### Тушаалын үйл явдал
+
+- `command.executed`
+
+#### Файлын үйл явдал
+
+- `file.edited`
+- `file.watcher.updated`
+
+#### Суулгах үйл явдлууд
+
+- `installation.updated`
+
+#### LSP Үйл явдал
+
+- `lsp.client.diagnostics`
+- `lsp.updated`
+
+#### Мессежийн үйл явдал
+
+- `message.part.removed`
+- `message.part.updated`
+- `message.removed`
+- `message.updated`
+
+#### Зөвшөөрлийн үйл явдал
+
+- `permission.asked`
+- `permission.replied`
+
+#### Серверийн үйл явдал
+
+- `server.connected`
+
+#### хуралдааны үйл явдал
+
+- `session.created`
+- `session.compacted`
+- `session.deleted`
+- `session.diff`
+- `session.error`
+- `session.idle`
+- `session.status`
+- `session.updated`
+
+#### Хийх үйл явдал
+
+- `todo.updated`
+
+#### Shell үйл явдлууд
+
+- `shell.env`
+
+#### Хэрэгслийн үйл явдал
+
+- `tool.execute.after`
+- `tool.execute.before`
+
+#### TUI Үйл явдал
+
+- `tui.prompt.append`
+- `tui.command.execute`
+- `tui.toast.show`
+
+---
+
+## Жишээ
+
+mongolgpt-г өргөтгөхөд ашиглаж болох залгаасуудын зарим жишээ энд байна.
+
+---
+
+### Мэдэгдэл илгээх
+
+Тодорхой үйл явдал тохиолдоход мэдэгдэл илгээх:
+
+```js title=".mongolgpt/plugins/notification.js"
+export const NotificationPlugin = async ({ project, client, $, directory, worktree }) => {
+  return {
+    event: async ({ event }) => {
+      // Send notification on session completion
+      if (event.type === "session.idle") {
+        await $`osascript -e 'display notification "Session completed!" with title "mongolgpt"'`
+      }
+    },
+  }
+}
+```
+
+Бид AppleScript-г macOS дээр ажиллуулахын тулд `osascript` ашиглаж байна. Энд бид үүнийг мэдэгдэл илгээхэд ашиглаж байна.
+
+:::note
+Хэрэв та MongolGPT ширээний програмыг ашиглаж байгаа бол хариу бэлэн болсон эсвэл сесс алдаа гарсан үед системийн мэдэгдлийг автоматаар илгээх боломжтой.
+:::
+
+---
+
+### .env хамгаалалт
+
+mongolgpt файлыг `.env` уншихаас урьдчилан сэргийлэх:
+
+```javascript title=".mongolgpt/plugins/env-protection.js"
+export const EnvProtection = async ({ project, client, $, directory, worktree }) => {
+  return {
+    "tool.execute.before": async (input, output) => {
+      if (input.tool === "read" && output.args.filePath.includes(".env")) {
+        throw new Error("Do not read .env files")
+      }
+    },
+  }
+}
+```
+
+---
+
+### Орчны хувьсагчдыг оруулах
+
+Бүх бүрхүүлийн гүйцэтгэлд орчны хувьсагчдыг оруулах (AI хэрэгслүүд болон хэрэглэгчийн терминалууд):
+
+```javascript title=".mongolgpt/plugins/inject-env.js"
+export const InjectEnvPlugin = async () => {
+  return {
+    "shell.env": async (input, output) => {
+      output.env.MY_API_KEY = "secret"
+      output.env.PROJECT_ROOT = input.cwd
+    },
+  }
+}
+```
+
+---
+
+### Тусгай хэрэгсэл
+
+Мөн залгаасууд нь mongolgpt-д захиалгат хэрэгслийг нэмж болно:
+
+```ts title=".mongolgpt/plugins/custom-tools.ts"
+import { type Plugin, tool } from "@mongolgpt/plugin"
+
+export const CustomToolsPlugin: Plugin = async (ctx) => {
+  return {
+    tool: {
+      mytool: tool({
+        description: "This is a custom tool",
+        args: {
+          foo: tool.schema.string(),
+        },
+        async execute(args, context) {
+          const { directory, worktree } = context
+          return `Hello ${args.foo} from ${directory} (worktree: ${worktree})`
+        },
+      }),
+    },
+  }
+}
+```
+
+`tool` туслагч нь mongolgpt дуудаж болох тусгай хэрэгсэл үүсгэдэг. Энэ нь Zod схемийн функцийг авч, багажийн тодорхойлолтыг буцаана:
+
+- `description`: Энэ хэрэгсэл юу хийдэг
+- `args`: Хэрэгслийн аргументуудын Zod схем
+- `execute`: Хэрэгсэл дуудагдах үед ажилладаг функц
+
+Таны захиалгат хэрэгслүүдийг суурилуулсан хэрэгслүүдийн хажуугаар mongolgpt хаягаар авах боломжтой.
+
+:::note
+Хэрэв залгаас хэрэгсэл нь суулгасан хэрэгсэлтэй ижил нэрийг ашигладаг бол залгаасын хэрэгсэл нь давуу эрхтэй болно.
+:::
+
+---
+
+### Мод бэлтгэх
+
+Зохицуулсан бүртгэлд `console.log`-ийн оронд `client.app.log()` ашиглана уу:
+
+```ts title=".mongolgpt/plugins/my-plugin.ts"
+export const MyPlugin = async ({ client }) => {
+  await client.app.log({
+    body: {
+      service: "my-plugin",
+      level: "info",
+      message: "Plugin initialized",
+      extra: { foo: "bar" },
+    },
+  })
+}
+```
+
+Түвшин: `debug`, `info`, `warn`, `error`. Дэлгэрэнгүйг [SDK баримт бичиг](https://mongolgpt.duckdns.org/docs/sdk) харна уу.
+
+---
+
+### Нягтруулах дэгээ
+
+Сеансыг нягтруулах үед оруулсан контекстийг тохируулна уу:
+
+```ts title=".mongolgpt/plugins/compaction.ts"
+import type { Plugin } from "@mongolgpt/plugin"
+
+export const CompactionPlugin: Plugin = async (ctx) => {
+  return {
+    "experimental.session.compacting": async (input, output) => {
+      // Inject additional context into the compaction prompt
+      output.context.push(`
+## Custom Context
+
+Include any state that should persist across compaction:
+- Current task status
+- Important decisions made
+- Files being actively worked on
+`)
+    },
+  }
+}
+```
+
+LLM үргэлжлэл хураангуйг үүсгэхээс өмнө `experimental.session.compacting` дэгээ асна. Өгөгдмөл нягтруулах сануулгыг орхигдуулах домэйны тусгай контекст оруулахын тулд үүнийг ашиглана уу.
+
+Та `output.prompt`-г тохируулснаар нягтруулах хүсэлтийг бүхэлд нь сольж болно:
+
+```ts title=".mongolgpt/plugins/custom-compaction.ts"
+import type { Plugin } from "@mongolgpt/plugin"
+
+export const CustomCompactionPlugin: Plugin = async (ctx) => {
+  return {
+    "experimental.session.compacting": async (input, output) => {
+      // Replace the entire compaction prompt
+      output.prompt = `
+You are generating a continuation prompt for a multi-agent swarm session.
+
+Summarize:
+1. The current task and its status
+2. Which files are being modified and by whom
+3. Any blockers or dependencies between agents
+4. The next steps to complete the work
+
+Format as a structured prompt that a new agent can use to resume work.
+`
+    },
+  }
+}
+```
+
+`output.prompt` тохируулагдсан үед энэ нь анхдагч нягтруулах хүсэлтийг бүрэн орлоно. Энэ тохиолдолд `output.context` массивыг үл тоомсорлодог.
+

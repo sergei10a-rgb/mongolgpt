@@ -1,0 +1,157 @@
+---
+title: ACP Дэмжлэг
+description: ACP- нийцтэй засварлагч дээр MongolGPT-г ашиглана уу.
+---
+
+MongolGPT нь [Агент үйлчлүүлэгчийн протокол](https://agentclientprotocol.com) эсвэл (ACP)-г дэмждэг бөгөөд үүнийг тохирох засварлагч болон IDEs дээр шууд ашиглах боломжийг танд олгоно.
+
+:::tip
+ACP-г дэмждэг засварлагч болон хэрэгслүүдийн жагсаалтыг [ACP явцын тайлан](https://zed.dev/blog/acp-progress-report#available-now)-г үзнэ үү.
+:::
+
+ACP нь код засварлагч болон AI кодлогч агентуудын хоорондын харилцааг стандартчилдаг нээлттэй протокол юм.
+
+---
+
+## Тохируулах
+
+MongolGPT-г ACP-ээр дамжуулан ашиглахын тулд `mongolgpt acp` командыг ажиллуулахаар засварлагчаа тохируулна уу.
+
+Энэ тушаал нь MongolGPT-г ACP- нийцтэй дэд процессоор эхлүүлж, stdio-ээр дамжуулан JSON-RPC-ээр редактортой харилцдаг.
+
+ACP-г дэмждэг алдартай редакторуудын жишээг доор харуулав.
+
+---
+
+### Зэд
+
+Өөрийн [Zed](https://zed.dev) тохиргоонд нэмнэ үү (`~/.config/zed/settings.json`):
+
+```json title="~/.config/zed/settings.json"
+{
+  "agent_servers": {
+    "MongolGPT": {
+      "command": "mongolgpt",
+      "args": ["acp"]
+    }
+  }
+}
+```
+
+Үүнийг нээхийн тулд **Командын палитр** дахь `agent: new thread` үйлдлийг ашиглана уу.
+
+Та мөн `keymap.json`-г засаж гарын товчлолыг холбож болно:
+
+```json title="keymap.json"
+[
+  {
+    "bindings": {
+      "cmd-alt-o": [
+        "agent::NewExternalAgentThread",
+        {
+          "agent": {
+            "custom": {
+              "name": "MongolGPT",
+              "command": {
+                "command": "mongolgpt",
+                "args": ["acp"]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]
+```
+
+---
+
+### JetBrains IDEs
+
+[documentation](https://www.jetbrains.com/help/ai-assistant/acp.html) дагуу өөрийн [JetBrains IDE](https://www.jetbrains.com/) acp.json руу нэмнэ үү:
+
+```json title="acp.json"
+{
+  "agent_servers": {
+    "MongolGPT": {
+      "command": "/absolute/path/bin/mongolgpt",
+      "args": ["acp"]
+    }
+  }
+}
+```
+
+Үүнийг нээхийн тулд AI Чат агент сонгогчийн шинэ 'MongolGPT' агентыг ашиглана уу.
+
+---
+
+### Avante.nvim
+
+[Avante.nvim](https://github.com/yetone/avante.nvim) тохиргоонд нэмнэ үү:
+
+```lua
+{
+  acp_providers = {
+    ["mongolgpt"] = {
+      command = "mongolgpt",
+      args = { "acp" }
+    }
+  }
+}
+```
+
+Хэрэв та орчны хувьсагчдыг дамжуулах шаардлагатай бол:
+
+```lua {6-8}
+{
+  acp_providers = {
+    ["mongolgpt"] = {
+      command = "mongolgpt",
+      args = { "acp" },
+      env = {
+        MONGOLGPT_API_KEY = os.getenv("MONGOLGPT_API_KEY")
+      }
+    }
+  }
+}
+```
+
+---
+
+### CodeCompanion.nvim
+
+MongolGPT-г [CodeCompanion.nvim](https://github.com/olimorris/codecompanion.nvim) дахь ACP агент болгон ашиглахын тулд Neovim тохиргоонд дараахыг нэмнэ үү:
+
+```lua
+require("codecompanion").setup({
+  interactions = {
+    chat = {
+      adapter = {
+        name = "mongolgpt",
+        model = "claude-sonnet-4",
+      },
+    },
+  },
+})
+```
+
+Энэхүү тохиргоо нь CodeCompanion-г MongolGPT-г чат хийх ACP агент болгон ашиглахаар тохируулдаг.
+
+Хэрэв та орчны хувьсагчдыг (`MONGOLGPT_API_KEY` гэх мэт) дамжуулах шаардлагатай бол CodeCompanion.nvim баримт бичигт байгаа [Адаптеруудыг тохируулах: Орчны хувьсагчид](https://codecompanion.olimorris.dev/getting-started#setting-an-api-key) хаягаас дэлгэрэнгүй мэдээллийг авна уу.
+
+## Дэмжлэг
+
+MongolGPT нь терминал дээр ажилладаг шиг ACP-ээр дамжуулан ажилладаг. Бүх функцууд дэмжигддэг:
+
+:::note
+`/undo` болон `/redo` гэх мэт зарим суулгасан налуу зураастай командууд одоогоор дэмжигдээгүй байна.
+:::
+
+- Суурилуулсан хэрэгслүүд (файлын ажиллагаа, терминалын команд гэх мэт)
+- Захиалгат хэрэгслүүд болон ташуу зураастай командууд
+- Таны MongolGPT тохиргоонд тохируулагдсан MCP серверүүд
+- `AGENTS.md`-аас төслийн тусгай дүрмүүд
+- Захиалгат форматлагч болон линтер
+- Агентууд ба зөвшөөрлийн систем
+

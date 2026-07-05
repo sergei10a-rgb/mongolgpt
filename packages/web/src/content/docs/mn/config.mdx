@@ -1,0 +1,925 @@
+---
+title: Config
+description: MongolGPT JSON тохиргоог ашиглаж байна.
+---
+
+Та JSON тохиргооны файлыг ашиглан MongolGPT-г тохируулах боломжтой.
+
+---
+
+## Формат
+
+MongolGPT нь **JSON** болон **JSONC** (JSON тайлбартай) форматыг хоёуланг нь дэмждэг.
+
+```jsonc title="mongolgpt.jsonc"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "model": "anthropic/claude-sonnet-4-5",
+  "autoupdate": true,
+  "server": {
+    "port": 4096,
+  },
+}
+```
+
+---
+
+## Байршил
+
+Та тохиргоогоо хэд хэдэн өөр байршилд байрлуулж болох бөгөөд тэдгээр нь
+давуу эрх олгох өөр дараалал.
+
+:::note
+Тохиргооны файлууд нь **нийтгэсэн**, солигдоогүй.
+:::
+
+Тохиргооны файлуудыг хооронд нь нэгтгэсэн, солигддоггүй. Дараах тохиргооны байршлын тохиргоог нэгтгэсэн. Сүүлчийн тохиргоо нь зөвхөн зөрчилтэй түлхүүрүүдийн хувьд өмнөх тохиргоог хүчингүй болгодог. Бүх тохиргооны зөрчилгүй тохиргоонууд хадгалагдсан.
+
+Жишээлбэл, хэрэв таны глобал тохиргоог `autoupdate: true`, төслийн тохиргоог `model: "anthropic/claude-sonnet-4-5"` гэж тохируулсан бол эцсийн тохиргоонд хоёр тохиргоо багтана.
+
+---
+
+### Тэргүүлэх дараалал
+
+Тохиргооны эх сурвалжуудыг энэ дарааллаар ачаална (дараагийн эх сурвалжууд өмнөх эх сурвалжуудыг дарна):
+
+1. **Алсын тохиргоо** (`.well-known/mongolgpt`-аас) - байгууллагын өгөгдмөл
+2. **Глобал тохиргоо** (`~/.config/mongolgpt/mongolgpt.json`) - хэрэглэгчийн сонголт
+3. **Захиалгат тохируулга** (`MONGOLGPT_CONFIG` env var) - захиалгат хүчингүй болгох
+4. **Төслийн тохиргоо** (төсөлд `mongolgpt.json`) - төслийн тусгай тохиргоо
+5. **`.mongolgpt` лавлахууд** - агентууд, тушаалууд, залгаасууд
+6. **Inline тохиргоо** (`MONGOLGPT_CONFIG_CONTENT` env var) - ажиллах хугацааг хүчингүй болгох
+7. **Удирдах тохиргооны файлууд** (`/Library/Application Support/mongolgpt/` дээр macOS) - админы хяналттай
+8. **macOS удирдаж буй тохиргоо** (`.mobileconfig` MDM-р дамжуулан) - хамгийн өндөр ач холбогдол, хэрэглэгч дарангуйлах боломжгүй
+
+Энэ нь төслийн тохиргоо нь дэлхийн өгөгдмөл тохиргоог, глобал тохиргоо нь алсын байгууллагын анхдагч тохиргоог хүчингүй болгож чадна гэсэн үг юм. Удирдах тохиргоо нь бүх зүйлийг дарна.
+
+:::note
+`.mongolgpt` болон `~/.config/mongolgpt` сангууд нь **олон тооны нэрийг** дэд директоруудын хувьд ашигладаг: `agents/`, `commands/`, `modes/`, `plugins/`, `skills/`, `tools/`, `themes/`. Ганц нэрс (жишээ нь: `agent/`) мөн буцаж нийцтэй байхаар дэмжигддэг.
+:::
+
+---
+
+### Алсын удирдлага
+
+Байгууллага `.well-known/mongolgpt` төгсгөлийн цэгээр дамжуулан анхдагч тохиргоог хийж болно. Та үүнийг дэмждэг үйлчилгээ үзүүлэгчтэй баталгаажуулах үед үүнийг автоматаар татаж авна.
+
+Алсын тохиргоог эхлээд ачаалж, үндсэн давхарга болж үйлчилнэ. Бусад бүх тохиргооны эх сурвалжууд (дэлхий, төсөл) эдгээр өгөгдмөлүүдийг хүчингүй болгож чадна.
+
+Жишээлбэл, танай байгууллага анхдагчаар идэвхгүй болсон MCP серверүүдийг хангадаг бол:
+
+```json title="Remote config from .well-known/mongolgpt"
+{
+  "mcp": {
+    "jira": {
+      "type": "remote",
+      "url": "https://jira.example.com/mcp",
+      "enabled": false
+    }
+  }
+}
+```
+
+Та өөрийн дотоод тохиргоонд тодорхой серверүүдийг идэвхжүүлж болно:
+
+```json title="mongolgpt.json"
+{
+  "mcp": {
+    "jira": {
+      "type": "remote",
+      "url": "https://jira.example.com/mcp",
+      "enabled": true
+    }
+  }
+}
+```
+
+---
+
+### Дэлхийн
+
+Өөрийн глобал MongolGPT тохиргоог `~/.config/mongolgpt/mongolgpt.json` дээр байрлуул. Үйлчилгээ үзүүлэгч, загвар, зөвшөөрөл гэх мэт хэрэглэгчийн өргөн хүрээний сервер/ажлын цагийн тохиргоонд зориулж глобал тохиргоог ашиглана уу.
+
+TUI- тусгай тохиргооны хувьд `~/.config/mongolgpt/tui.json` ашиглана уу.
+
+Глобал тохиргоо нь алсын байгууллагын өгөгдмөл тохиргоог хүчингүй болгодог.
+
+---
+
+### Төсөл тус бүрээр
+
+Төслийн үндсэн хэсэгт `mongolgpt.json` нэмнэ үү. Төслийн тохиргоо нь стандарт тохиргооны файлуудын дунд хамгийн өндөр давуу талтай байдаг - энэ нь глобал болон алсын тохиргоог хоёуланг нь дардаг.
+
+Төсөлд хамаарах TUI тохиргооны хувьд хажууд нь `tui.json` нэмнэ.
+
+:::tip
+Төслийн тусгай тохиргоог төслийн үндсэн хэсэгт байрлуул.
+:::
+
+MongolGPT ажиллаж эхлэхэд эхлээд одоогийн директороос тохиргооны файлыг хайж, дараа нь хамгийн ойрын Git лавлах руу шилжинэ.
+
+Үүнийг Git-д шалгахад аюулгүй бөгөөд дэлхийн схемтэй ижил схемийг ашигладаг.
+
+---
+
+### Захиалгат зам
+
+`MONGOLGPT_CONFIG` орчны хувьсагчийг ашиглан өөрчлөн тохируулсан файлын замыг зааж өгнө үү.
+
+```bash
+export MONGOLGPT_CONFIG=/path/to/my/custom-config.json
+mongolgpt run "Hello world"
+```
+
+Захиалгат тохиргоог глобал болон төслийн тохиргооны хооронд тэргүүлэх дарааллаар ачаална.
+
+---
+
+### Захиалгат лавлах
+
+`MONGOLGPT_CONFIG_DIR` ашиглан захиалгат тохиргооны лавлахыг зааж өгнө үү.
+орчны хувьсагч. Энэ лавлахаас агентууд, тушаалууд,
+горимууд болон залгаасууд нь стандарт `.mongolgpt` лавлахтай адил байх ёстой
+ижил бүтцийг дагаж мөрдөөрэй.
+
+```bash
+export MONGOLGPT_CONFIG_DIR=/path/to/my/config-directory
+mongolgpt run "Hello world"
+```
+
+Захиалгат лавлах нь глобал тохиргоо болон `.mongolgpt` сангуудын дараа ачаалагддаг тул тэдгээрийн тохиргоог **хэрэглэх боломжтой**.
+
+---
+
+### Удирдах тохиргоо
+
+Байгууллагууд хэрэглэгчид хүчингүй болгох боломжгүй тохиргоог хэрэгжүүлэх боломжтой. Удирдах тохиргоог хамгийн өндөр ач холбогдол бүхий түвшинд ачаалдаг.
+
+#### Файлд суурилсан
+
+`mongolgpt.json` эсвэл `mongolgpt.jsonc` файлыг системийн удирддаг тохиргооны лавлах руу оруулна уу:
+
+| Платформ | Зам |
+| -------- | ---------------------------------------- |
+| macOS | `/Library/Application Support/mongolgpt/` |
+| Linux | `/etc/mongolgpt/` |
+| Windows | `%ProgramData%\mongolgpt` |
+
+Эдгээр сангууд бичихийн тулд админ/root хандалт шаарддаг тул хэрэглэгчид тэдгээрийг өөрчлөх боломжгүй.
+
+#### macOS тохируулсан тохиргоо
+
+macOS дээр MongolGPT `ai.mongolgpt.managed` давуу домэйноос удирдаж буй тохиргоог уншина. `.mobileconfig`-г MDM (Jamf, Kandji, FleetDM)-ээр байршуулж, тохиргоонууд автоматаар хэрэгжинэ.
+
+MongolGPT эдгээр замыг шалгана:
+
+1. `/Library/Managed Preferences/<user>/ai.mongolgpt.managed.plist`
+2. `/Library/Managed Preferences/ai.mongolgpt.managed.plist`
+
+Plist товчлуурууд нь `mongolgpt.json` талбарт шууд харагдана. MDM мета өгөгдлийн түлхүүрүүд (`PayloadUUID`, `PayloadType` гэх мэт) автоматаар арилдаг.
+
+** `.mobileconfig` үүсгэх**
+
+`ai.mongolgpt.managed` PayloadType ашиглана уу. MongolGPT тохиргооны товчлуурууд нь ачааллын dict хэсэгт шууд ордог:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>PayloadType</key>
+      <string>ai.mongolgpt.managed</string>
+      <key>PayloadIdentifier</key>
+      <string>com.example.mongolgpt.config</string>
+      <key>PayloadUUID</key>
+      <string>GENERATE-YOUR-OWN-UUID</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+      <key>share</key>
+      <string>disabled</string>
+      <key>server</key>
+      <dict>
+        <key>hostname</key>
+        <string>127.0.0.1</string>
+      </dict>
+      <key>permission</key>
+      <dict>
+        <key>*</key>
+        <string>ask</string>
+        <key>bash</key>
+        <dict>
+          <key>*</key>
+          <string>ask</string>
+          <key>rm -rf *</key>
+          <string>deny</string>
+        </dict>
+      </dict>
+    </dict>
+  </array>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadIdentifier</key>
+  <string>com.example.mongolgpt</string>
+  <key>PayloadUUID</key>
+  <string>GENERATE-YOUR-OWN-UUID</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+</dict>
+</plist>
+```
+
+`uuidgen`-р өвөрмөц UUID үүсгэнэ үү. Байгууллагынхаа шаардлагад нийцүүлэн тохиргоог өөрчил.
+
+** MDM-р байршуулж байна**
+
+- **Jamf Pro:** Компьютер > Тохиргооны профайл > Байршуулах > зорилтот төхөөрөмж эсвэл ухаалаг бүлгүүдэд хамрах хүрээ
+- **FleetDM:** `.mobileconfig`-г gitops репо дээрээ `mdm.macos_settings.custom_settings` доор нэмээд `fleetctl apply` ажиллуулна уу.
+
+**Төхөөрөмжөөр баталгаажуулж байна**
+
+`.mobileconfig` дээр давхар товшоод туршилтанд оруулахын тулд (Системийн тохиргоо > Нууцлал ба Аюулгүй байдал > Профайл хэсэгт харагдана), дараа нь ажиллуулна уу:
+
+```bash
+mongolgpt debug config
+```
+
+Удирдагдсан бүх сонголтын түлхүүрүүд нь шийдвэрлэсэн тохиргоонд харагдах бөгөөд хэрэглэгч эсвэл төслийн тохиргоогоор хүчингүй болгох боломжгүй.
+
+---
+
+## схем
+
+Сервер/ажлын цагийн тохиргооны схемийг [**`mongolgpt.duckdns.org/config.json`**](https://mongolgpt.duckdns.org/config.json)-д тодорхойлсон.
+
+TUI тохиргоо нь [**`mongolgpt.duckdns.org/tui.json`**](https://mongolgpt.duckdns.org/tui.json)-г ашигладаг.
+
+Таны засварлагч схем дээр үндэслэн баталгаажуулах, автоматаар бөглөх боломжтой байх ёстой.
+
+---
+
+### TUI
+
+`tui.json` (эсвэл `tui.jsonc`) тусгай файлыг TUI- тусгай тохиргоонд ашиглана уу.
+
+```json title="tui.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/tui.json",
+  "scroll_speed": 3,
+  "scroll_acceleration": {
+    "enabled": true
+  },
+  "diff_style": "auto",
+  "mouse": true,
+  "attention": {
+    "enabled": true,
+    "notifications": true,
+    "sound": true,
+    "volume": 0.4
+  }
+}
+```
+
+`MONGOLGPT_TUI_CONFIG` ашиглан захиалгат TUI тохиргооны файл руу зааж өгнө үү.
+
+TUI ширээний мэдэгдэл болон дууг асаахын тулд `attention.enabled`-г тохируулна уу. [TUI анхаарал](/docs/tui#attention)-г үзнэ үү.
+
+`mongolgpt.json` дахь хуучин `theme`, `keybinds`, `tui` түлхүүрүүд нь хуучирсан бөгөөд боломжтой үед автоматаар шилжинэ.
+
+---
+
+### Сервер
+
+Та `mongolgpt serve` болон `mongolgpt web` командуудын серверийн тохиргоог `server` сонголтоор тохируулж болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "server": {
+    "port": 4096,
+    "hostname": "0.0.0.0",
+    "mdns": true,
+    "mdnsDomain": "myproject.local",
+    "cors": ["http://localhost:5173"]
+  }
+}
+```
+
+Боломжтой сонголтууд:
+
+- `port` - Сонсох порт.
+- `hostname` - Сонсох хостын нэр. `mdns` идэвхжсэн бөгөөд ямар ч хостын нэрийг тохируулаагүй үед анхдагч нь `0.0.0.0` байна.
+- `mdns` - mDNS үйлчилгээний нээлтийг идэвхжүүлнэ. Энэ нь сүлжээн дэх бусад төхөөрөмжүүдэд таны MongolGPT серверийг илрүүлэх боломжийг олгоно.
+- `mdnsDomain` - mDNS үйлчилгээнд зориулсан тусгай домэйн нэр. Өгөгдмөл нь `mongolgpt.local`. Нэг сүлжээнд олон тохиолдлыг ажиллуулахад хэрэгтэй.
+- `cors` - ​​Хөтөч дээр суурилсан үйлчлүүлэгчийн HTTP серверийг ашиглах үед CORS-г зөвшөөрөх нэмэлт эх сурвалж. Утга нь бүрэн эх байх ёстой (схем + хост + нэмэлт порт), жишээ нь `https://app.example.com`.
+
+[Серверийн талаар илүү ихийг эндээс авна уу](/docs/server).
+
+---
+
+### Бүрхүүл
+
+Та `shell` сонголтыг ашиглан интерактив терминалд ашигласан бүрхүүлийг тохируулж болно. Тохиромжтой бүрхүүлийг агент хэрэгслийн дуудлагад бас ашигладаг.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "shell": "pwsh"
+}
+```
+
+Хэрэв тодорхой заагаагүй бол MongolGPT таны үйлдлийн системд тулгуурлан (жишээ нь: `pwsh` эсвэл Windows дээр `cmd.exe`, `/bin/zsh` эсвэл macOS/Linux дээр `/bin/bash`) үндэслэн ухаалаг өгөгдмөл утгыг автоматаар илрүүлж ашиглах болно. Та үнэмлэхүй зам эсвэл богино нэрийг өгч болно.
+
+---
+
+### Хэрэгсэл
+
+Та LLM-ийн ашиглаж болох хэрэгслүүдийг `tools` сонголтоор удирдаж болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "tools": {
+    "write": false,
+    "bash": false
+  }
+}
+```
+
+[Хэрэгслийн талаар илүү ихийг эндээс авна уу](/docs/tools).
+
+---
+
+### Загварууд
+
+Та MongolGPT тохиргоондоо ашиглахыг хүссэн үйлчилгээ үзүүлэгч болон загваруудаа `provider`, `model` болон `small_model` сонголтоор тохируулж болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {},
+  "model": "anthropic/claude-sonnet-4-5",
+  "small_model": "anthropic/claude-haiku-4-5"
+}
+```
+
+`small_model` сонголт нь гарчиг үүсгэх гэх мэт хөнгөн ажлуудад зориулж тусдаа загварыг тохируулдаг. Анхдагч байдлаар, MongolGPT, хэрэв таны үйлчилгээ үзүүлэгчээс авах боломжтой бол хямд загварыг ашиглахыг оролддог, эс тэгвээс энэ нь таны үндсэн загварт буцаж орно.
+
+Үйлчилгээ үзүүлэгчийн сонголтууд нь `timeout`, `chunkTimeout` болон `setCacheKey` байж болно:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "timeout": 600000,
+        "chunkTimeout": 30000,
+        "setCacheKey": true
+      }
+    }
+  }
+}
+```
+
+- `timeout` - Хүсэлтийн хугацаа нь миллисекундээр (өгөгдмөл: 300000). Идэвхгүй болгохын тулд `false` гэж тохируулна уу.
+- `chunkTimeout` - Дамжуулсан хариултын хэсгүүдийн хоорондох хугацаа нь миллисекундээр. Хэрэв хэсэг хугацаанд нь ирээгүй бол хүсэлтийг цуцална.
+- `setCacheKey` - Заасан үйлчилгээ үзүүлэгчийн хувьд кэш түлхүүр үргэлж тохируулагдсан эсэхийг шалгаарай.
+
+Та мөн [орон нутгийн загварууд](/docs/models#local)-г тохируулах боломжтой. [Илүү ихийг мэдэж аваарай](/docs/models).
+
+---
+
+### Бодлого
+
+Тохируулсан нөөц дээрх MongolGPT үйлдлийг зөвшөөрөх эсвэл үгүйсгэхийн тулд `experimental.policies` сонголтыг ашиглана уу. Одоогоор бодлого нь MongolGPT аль үйлчилгээ үзүүлэгч ашиглаж болохыг хянах боломжтой.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "experimental": {
+    "policies": [
+      {
+        "effect": "deny",
+        "action": "provider.use",
+        "resource": "openai"
+      }
+    ]
+  }
+}
+```
+
+[Бодлогын талаар нэмэлт мэдээллийг эндээс авна уу](/docs/policies).
+
+---
+
+### Зургийн хавсралт
+
+MongolGPT загвар руу илгээхээсээ өмнө зургийн хавсралтыг хэвийн болгодог. Анхдагч байдлаар, зураг нь `2000x2000` пиксел эсвэл `5242880` base64 байтаас хэтэрсэн тохиолдолд хэмжээг нь өөрчилдөг.
+
+Зургийн хавсралтын хязгаарыг `attachment.image` сонголтоор тохируулна уу:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "attachment": {
+    "image": {
+      "auto_resize": true,
+      "max_width": 2000,
+      "max_height": 2000,
+      "max_base64_bytes": 5242880
+    }
+  }
+}
+```
+
+- `auto_resize` - Үйлчилгээ үзүүлэгчийн хүсэлтээс өмнө тохируулсан хязгаараас хэтэрсэн зургийн хэмжээг өөрчлөх. Оронд нь том хэмжээтэй зургуудаас татгалзахын тулд `false` гэж тохируулна уу.
+- `max_width` - Хэмжээ өөрчлөх, татгалзахаас өмнө зургийн хамгийн дээд өргөнийг пикселээр илэрхийлнэ.
+- `max_height` - Хэмжээг өөрчлөх эсвэл татгалзахаас өмнө зургийн хамгийн дээд өндөр нь пикселээр илэрхийлэгдэнэ.
+- `max_base64_bytes` - Шифрлэгдсэн зургийн ачааллын дээд хэмжээ. Энэ нь үндсэн файлын хэмжээ биш, үндсэн 64 ачааны хэмжээ юм.
+
+Хэмжээг нь өөрчилсний дараа зураг багтах боломжгүй хэвээр байвал MongolGPT хэрэгслийн үр дүнгийн том хэмжээтэй зургийг орхих эсвэл зургийн хэмжээний алдаатай хэрэглэгчийн өгсөн том хэмжээтэй зургийг амжилтгүй болгоно.
+
+---
+
+#### Үйлчилгээ үзүүлэгчийн тусгай сонголтууд
+
+Зарим үйлчилгээ үзүүлэгчид ерөнхий `timeout` болон `apiKey` тохиргооноос гадна нэмэлт тохиргооны сонголтыг дэмждэг.
+
+##### Amazon Bedrock
+
+Amazon Bedrock AWS- тусгай тохиргоог дэмждэг:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "amazon-bedrock": {
+      "options": {
+        "region": "us-east-1",
+        "profile": "my-aws-profile",
+        "endpoint": "https://bedrock-runtime.us-east-1.vpce-xxxxx.amazonaws.com"
+      }
+    }
+  }
+}
+```
+
+- `region` - Үндсэн чулуулгийн AWS бүс (өгөгдмөл нь `AWS_REGION` env var эсвэл `us-east-1`)
+- `profile` - AWS нэрлэсэн профайл нь `~/.aws/credentials` (өгөгдмөл нь `AWS_PROFILE` env var)
+- `endpoint` - VPC төгсгөлийн цэгүүдийн захиалгат төгсгөлийн цэг URL. Энэ нь AWS- тусгай нэр томъёог ашиглан ерөнхий `baseURL` сонголтын нэр юм. Хэрэв хоёуланг нь зааж өгсөн бол `endpoint` давуу эрхтэй болно.
+
+:::note
+Тэмдэглэгээний токенууд (`AWS_BEARER_TOKEN_BEDROCK` эсвэл `/connect`) профайл дээр суурилсан баталгаажуулалтаас давуу эрхтэй. Дэлгэрэнгүйг [баталгаажуулалтын давуу эрх](/docs/providers#authentication-precedence) харна уу.
+:::
+
+[Amazon Bedrock тохиргооны талаар нэмэлт мэдээлэл аваарай](/docs/providers#amazon-bedrock).
+
+---
+
+### Сэдэв
+
+UI загвараа `tui.json` дээр тохируулна уу.
+
+```json title="tui.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/tui.json",
+  "theme": "tokyonight"
+}
+```
+
+[Эндээс илүү ихийг мэдэж аваарай](/docs/themes).
+
+---
+
+### Агентууд
+
+Та `agent` сонголтоор дамжуулан тодорхой ажлуудад зориулсан тусгай агентуудыг тохируулах боломжтой.
+
+```jsonc title="mongolgpt.jsonc"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "agent": {
+    "code-reviewer": {
+      "description": "Reviews code for best practices and potential issues",
+      "model": "anthropic/claude-sonnet-4-5",
+      "prompt": "You are a code reviewer. Focus on security, performance, and maintainability.",
+      "tools": {
+        // Disable file modification tools for review-only agent
+        "write": false,
+        "edit": false,
+      },
+    },
+  },
+}
+```
+
+Та мөн `~/.config/mongolgpt/agents/` эсвэл `.mongolgpt/agents/` дахь тэмдэглэгээний файлуудыг ашиглан агентуудыг тодорхойлж болно. [Эндээс илүү ихийг мэдэж аваарай](/docs/agents).
+
+---
+
+### Өгөгдмөл агент
+
+Та `default_agent` сонголтыг ашиглан анхдагч агентыг тохируулж болно. Энэ нь тодорхой заагаагүй тохиолдолд аль агентыг ашиглахыг тодорхойлдог.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "default_agent": "plan"
+}
+```
+
+Өгөгдмөл агент нь үндсэн агент (дэд агент биш) байх ёстой. Энэ нь `"build"` эсвэл `"plan"` эсвэл таны тодорхойлсон [захиалгат агент](/docs/agents) гэх мэт суулгасан агент байж болно. Хэрэв заасан агент байхгүй эсвэл дэд агент бол MongolGPT анхааруулгатайгаар `"build"` руу буцна.
+
+Энэ тохиргоо нь бүх интерфэйсүүдэд хамаарна: TUI, CLI (`mongolgpt run`), ширээний програм, GitHub Үйлдэл.
+
+---
+
+### Хуваалцах
+
+Та [share](/docs/share) функцийг `share` сонголтоор тохируулж болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "share": "manual"
+}
+```
+
+Үүнд:
+
+- `"manual"` - Гараар тушаалаар хуваалцахыг зөвшөөрөх (өгөгдмөл)
+- `"auto"` - Шинэ харилцан яриаг автоматаар хуваалцах
+- `"disabled"` - Хуваалцахыг бүхэлд нь идэвхгүй болгох
+
+Анхдагч байдлаар, хуваалцахыг гарын авлагын горимд тохируулсан бөгөөд та `/share` командыг ашиглан харилцан яриаг тодорхой хуваалцах шаардлагатай.
+
+---
+
+### тушаалууд
+
+Та `command` сонголтоор дамжуулан давтагдах даалгаврын захиалгаар тохируулах боломжтой.
+
+```jsonc title="mongolgpt.jsonc"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "command": {
+    "test": {
+      "template": "Run the full test suite with coverage report and show any failures.\nFocus on the failing tests and suggest fixes.",
+      "description": "Run tests with coverage",
+      "agent": "build",
+      "model": "anthropic/claude-haiku-4-5",
+    },
+    "component": {
+      "template": "Create a new React component named $ARGUMENTS with TypeScript support.\nInclude proper typing and basic structure.",
+      "description": "Create a new component",
+    },
+  },
+}
+```
+
+Та мөн `~/.config/mongolgpt/commands/` эсвэл `.mongolgpt/commands/` дээр тэмдэглэх файлуудыг ашиглан тушаалуудыг тодорхойлж болно. [Эндээс илүү ихийг мэдэж аваарай](/docs/commands).
+
+---
+
+### Товчлуур
+
+`tui.json` дээрх TUI гарын товчлолыг `keybinds` ашиглан тохируулна уу.
+
+```json title="tui.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/tui.json",
+  "keybinds": {
+    "command_list": "ctrl+p"
+  }
+}
+```
+
+`keybinds` нь анхдагч тохиргоотой нэгтгэгдсэн тул та зөвхөн өөрчлөхийг хүссэн товчлолуудаа тохируулах хэрэгтэй.
+
+[Эндээс илүү ихийг мэдэж аваарай](/docs/keybinds).
+
+---
+
+### Хормын хувилбар
+
+MongolGPT нь агентын үйл ажиллагааны явцад файлын өөрчлөлтийг хянахын тулд агшин зуурын агшинг ашигладаг бөгөөд энэ нь танд сесс дотор өөрчлөлтийг буцаах, буцаах боломжийг олгоно. Хормын хувилбарыг анхдагчаар идэвхжүүлсэн.
+
+Том репозиторууд эсвэл олон дэд модулиудтай төслүүдийн хувьд хормын хувилбарын систем нь дотоод git репозиторийг ашиглан бүх өөрчлөлтийг хянадаг тул удаан индексжүүлж, дискний ихээхэн хэрэглээг үүсгэдэг. Та `snapshot` сонголтыг ашиглан агшин зуурын зургийг идэвхгүй болгож болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "snapshot": false
+}
+```
+
+Хормын хувилбаруудыг идэвхгүй болгосноор агентын хийсэн өөрчлөлтийг UI-ээр буцаах боломжгүй гэдгийг анхаарна уу.
+
+---
+
+### Автоматаар шинэчлэх
+
+MongolGPT шинэ шинэчлэлтийг эхлүүлэх үед автоматаар татаж авах болно. Та үүнийг `autoupdate` сонголтоор идэвхгүй болгож болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "autoupdate": false
+}
+```
+
+Хэрэв та шинэчлэлт хийхийг хүсэхгүй байгаа ч шинэ хувилбар гарах үед мэдэгдэхийг хүсвэл `autoupdate`-г `"notify"` гэж тохируулна уу.
+Энэ нь зөвхөн Homebrew гэх мэт багц менежерийг суулгаагүй тохиолдолд л ажиллана гэдгийг анхаарна уу.
+
+---
+
+### Форматлагч
+
+Та `formatter` сонголтоор дамжуулан код форматлагчдыг идэвхжүүлж, тохируулах боломжтой. Форматлагчдыг идэвхгүй байлгахын тулд үүнийг орхи.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "formatter": true
+}
+```
+
+Хүчингүй болгох эсвэл өөрчлөн форматлагчийг тохируулахын тулд суулгацыг идэвхжүүлэхийн тулд объект ашиглана уу.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "formatter": {
+    "prettier": {
+      "disabled": true
+    },
+    "custom-prettier": {
+      "command": ["npx", "prettier", "--write", "$FILE"],
+      "environment": {
+        "NODE_ENV": "development"
+      },
+      "extensions": [".js", ".ts", ".jsx", ".tsx"]
+    }
+  }
+}
+```
+
+[Форматлагчийн талаар илүү ихийг эндээс авна уу](/docs/formatters).
+
+---
+
+### LSP Серверүүд
+
+Та `lsp` сонголтоор дамжуулан LSP серверүүдийг идэвхжүүлж, тохируулах боломжтой. LSP-г идэвхгүй байлгахын тулд үүнийг орхи.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "lsp": true
+}
+```
+
+Хүчингүй болгох эсвэл захиалгат LSP серверүүдийг тохируулахдаа суулгасан програмуудыг идэвхжүүлэхийн тулд объект ашиглана уу.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "lsp": {
+    "typescript": {
+      "disabled": true
+    }
+  }
+}
+```
+
+[LSP серверүүдийн талаар илүү ихийг эндээс авна уу](/docs/lsp).
+
+---
+
+### Зөвшөөрөл
+
+Анхдагчаар mongolgpt **бүх үйлдлийг тодорхой зөвшөөрөл шаардахгүйгээр зөвшөөрдөг. Та үүнийг `permission` сонголтыг ашиглан өөрчилж болно.
+
+Жишээлбэл, `edit` болон `bash` хэрэгслүүд нь хэрэглэгчийн зөвшөөрөл шаарддаг эсэхийг баталгаажуулахын тулд:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "permission": {
+    "edit": "ask",
+    "bash": "ask"
+  }
+}
+```
+
+[Зөвшөөрлийн талаар эндээс дэлгэрэнгүй үзнэ үү](/docs/permissions).
+
+---
+
+### Нягтруулга
+
+Та `compaction` сонголтоор контекст нягтруулах үйлдлийг хянах боломжтой.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "compaction": {
+    "auto": true,
+    "prune": false,
+    "reserved": 10000
+  }
+}
+```
+
+- `auto` - Контекст дүүрсэн үед сессийг автоматаар нягтруулна (өгөгдмөл: `true`).
+- `prune` - Токенуудыг хадгалахын тулд хуучин хэрэгслийн гаралтыг устгана уу (өгөгдмөл: `false`). Тайралтыг идэвхжүүлэхийн тулд `true` гэж тохируулна уу.
+- `reserved` - ​​Нягтралд зориулсан токен буфер. Нягтруулах явцад халихаас сэргийлж хангалттай хэмжээний цонх үлдээдэг.
+
+---
+
+### Харагч
+
+Та `watcher` сонголтоор файл ажиглагчийг үл тоомсорлох загварыг тохируулах боломжтой.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "watcher": {
+    "ignore": ["node_modules/**", "dist/**", ".git/**"]
+  }
+}
+```
+
+Загварууд нь glob синтаксийг дагаж мөрддөг. Дуу чимээ ихтэй сангуудыг файл үзэхээс хасахын тулд үүнийг ашиглана уу.
+
+---
+
+### MCP серверүүд
+
+Та ашиглахыг хүссэн MCP серверүүдээ `mcp` сонголтоор тохируулж болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "mcp": {}
+}
+```
+
+[Эндээс илүү ихийг мэдэж аваарай](/docs/mcp-servers).
+
+---
+
+### Plugins
+
+[Plugins](/docs/plugins) захиалгат хэрэгсэл, дэгээ, интеграцчилал бүхий MongolGPT өргөтгөл.
+
+Plugin файлуудыг `.mongolgpt/plugins/` эсвэл `~/.config/mongolgpt/plugins/` дээр байрлуул. Та мөн npm-аас `plugin` сонголтоор залгаасуудыг ачаалж болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "plugin": ["mongolgpt-helicone-session", "@my-org/custom-plugin"]
+}
+```
+
+[Эндээс илүү ихийг мэдэж аваарай](/docs/plugins).
+
+---
+
+### Заавар
+
+Та `instructions` сонголтоор дамжуулан өөрийн ашиглаж буй загварын зааварчилгааг тохируулах боломжтой.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "instructions": ["CONTRIBUTING.md", "docs/guidelines.md", ".cursor/rules/*.md"]
+}
+```
+
+Энэ нь зааврын файлууд руу чиглэсэн олон тооны зам болон глоб загваруудыг авдаг. [Дэлгэрэнгүй үзэх дүрмийн талаар энд](/docs/rules).
+
+---
+
+### Идэвхгүй үйлчилгээ үзүүлэгчид
+
+Та `disabled_providers` сонголтоор автоматаар ачаалагдсан үйлчилгээ үзүүлэгчдийг идэвхгүй болгож болно. Энэ нь тодорхой үйлчилгээ үзүүлэгчдийг итгэмжлэлүүд нь боломжтой байсан ч ачаалахаас урьдчилан сэргийлэхийг хүсвэл хэрэг болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "disabled_providers": ["openai", "gemini"]
+}
+```
+
+:::note
+`disabled_providers` нь `enabled_providers`-ээс давуу эрхтэй.
+:::
+
+`disabled_providers` сонголт нь олон тооны үйлчилгээ үзүүлэгчийн ID-г хүлээн зөвшөөрдөг. Үйлчилгээ үзүүлэгч идэвхгүй болсон үед:
+
+- Орчны хувьсагчийг тохируулсан ч ачаалагдахгүй.
+- API товчлуурыг `/connect` тушаалаар тохируулсан ч ачаалагдахгүй.
+- Үйлчилгээ үзүүлэгчийн загварууд загвар сонгох жагсаалтад харагдахгүй.
+
+---
+
+### Идэвхжүүлсэн үйлчилгээ үзүүлэгч
+
+Та `enabled_providers` сонголтоор дамжуулан үйлчилгээ үзүүлэгчдийн зөвшөөрөгдсөн жагсаалтыг зааж өгч болно. Тохируулсан тохиолдолд зөвхөн заасан үйлчилгээ үзүүлэгчийг идэвхжүүлж, бусад бүх үйлчилгээ үзүүлэгчийг үл хэрэгсэх болно.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "enabled_providers": ["anthropic", "openai"]
+}
+```
+
+Энэ нь MongolGPT-г нэг нэгээр нь идэвхгүй болгохын оронд зөвхөн тодорхой үйлчилгээ үзүүлэгчдийг ашиглахыг хязгаарлахыг хүсвэл хэрэг болно.
+
+:::note
+`disabled_providers` нь `enabled_providers`-ээс давуу эрхтэй.
+:::
+
+Хэрэв үйлчилгээ үзүүлэгч нь `enabled_providers` болон `disabled_providers` аль алинд нь гарч ирвэл `disabled_providers` нь буцаан нийцтэй байдлыг чухалчилдаг.
+
+---
+
+### Туршилт
+
+`experimental` товчлуур нь идэвхтэй хөгжүүлэгдэж буй сонголтуудыг агуулдаг.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "experimental": {}
+}
+```
+
+:::caution
+Туршилтын сонголтууд тогтвортой биш байна. Тэдгээрийг мэдэгдэлгүйгээр өөрчилж эсвэл устгаж болно.
+:::
+
+---
+
+## Хувьсагч
+
+Та орчны хувьсагч болон файлын агуулгыг лавлахын тулд тохиргооны файлууддаа хувьсагчийн орлуулалтыг ашиглаж болно.
+
+---
+
+### Env vars
+
+Орчны хувьсагчдыг орлуулахын тулд `{env:VARIABLE_NAME}` ашиглана уу:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "model": "{env:MONGOLGPT_MODEL}",
+  "provider": {
+    "anthropic": {
+      "models": {},
+      "options": {
+        "apiKey": "{env:ANTHROPIC_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Хэрэв орчны хувьсагчийг тохируулаагүй бол түүнийг хоосон тэмдэгт мөрөөр солино.
+
+---
+
+### Файлууд
+
+Файлын агуулгыг орлуулахын тулд `{file:path/to/file}` ашиглана уу:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "instructions": ["./custom-instructions.md"],
+  "provider": {
+    "openai": {
+      "options": {
+        "apiKey": "{file:~/.secrets/openai-key}"
+      }
+    }
+  }
+}
+```
+
+Файлын замууд нь:
+
+- Тохируулгын файлын лавлахтай холбоотой
+- Эсвэл `/` эсвэл `~`-ээр эхэлсэн үнэмлэхүй замууд
+
+Эдгээр нь ашигтай:
+
+- API гэх мэт нууц мэдээллийг тусдаа файлд хадгалах.
+- Таны тохиргоонд саад учруулахгүйгээр том хэмжээний зааврын файлуудыг багтаасан болно.
+- Олон тохиргооны файлууд дээр нийтлэг тохиргооны хэсгүүдийг хуваалцах.

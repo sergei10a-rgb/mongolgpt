@@ -1,0 +1,78 @@
+---
+title: Ekosistem
+description: MongolGPT ile geliştirilen projeler ve entegrasyonlar.
+---
+
+MongolGPT üzerine inşa edilmiş topluluk projeleri koleksiyonu.
+
+:::note
+MongolGPT ile ilgili projenizi bu listeye eklemek ister misiniz? Bir PR gönderin.
+:::
+
+Ayrıca ekosistemi ve topluluğu bir araya getiren [awesome-mongolgpt](https://github.com/awesome-mongolgpt/awesome-mongolgpt) ve [mongolgpt.cafe](https://mongolgpt.cafe) adreslerine de göz atabilirsiniz.
+
+---
+
+## Eklentiler
+
+| İsim                                                                                                 | Açıklama                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| [mongolgpt-daytona](https://github.com/daytonaio/daytona/tree/main/libs/mongolgpt-plugin)            | MongolGPT oturumlarını, git senkronizasyonu ve canlı önizlemelerle izole Daytona sanal alanlarında otomatik olarak çalıştırın |
+| [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session)                  | İstek gruplaması için Helicone oturum başlıklarını otomatik olarak ekleyin                                                    |
+| [mongolgpt-type-inject](https://github.com/nick-vi/mongolgpt-type-inject)                            | Arama araçlarıyla TypeScript/Svelte türlerini dosya okumalarına otomatik olarak enjekte edin                                  |
+| [mongolgpt-openai-codex-auth](https://github.com/numman-ali/mongolgpt-openai-codex-auth)             | API kredisi yerine ChatGPT Plus/Pro aboneliğinizi kullanın                                                                    |
+| [mongolgpt-gemini-auth](https://github.com/jenslys/mongolgpt-gemini-auth)                            | API faturalandırması yerine mevcut Gemini planınızı kullanın                                                                  |
+| [mongolgpt-antigravity-auth](https://github.com/NoeFabris/mongolgpt-antigravity-auth)                | API faturalandırması yerine Antigravity'nin ücretsiz modellerini kullanın                                                     |
+| [mongolgpt-devcontainers](https://github.com/athal7/mongolgpt-devcontainers)                         | Sığ klonlar ve otomatik atanan portlarla çok dallı devcontainer izolasyonu                                                    |
+| [mongolgpt-google-antigravity-auth](https://github.com/shekohex/mongolgpt-google-antigravity-auth)   | Google Arama desteği ve daha sağlam API işleme özelliğiyle Google Antigravity OAuth Eklentisi                                 |
+| [mongolgpt-dynamic-context-pruning](https://github.com/Tarquinen/mongolgpt-dynamic-context-pruning)  | Eski araç çıktılarını budayarak token kullanımını optimize edin                                                               |
+| [mongolgpt-vibeguard](https://github.com/inkdust2021/mongolgpt-vibeguard)                            | LLM çağrılarından önce sırları/kişisel verileri VibeGuard tarzı yer tutucularla gizleyin; yerel olarak geri yükleyin          |
+| [mongolgpt-websearch-cited](https://github.com/ghoulr/mongolgpt-websearch-cited.git)                 | Desteklenen sağlayıcılar için Google kaynaklı stil ile yerel web araması desteği ekleyin                                      |
+| [mongolgpt-pty](https://github.com/shekohex/mongolgpt-pty.git)                                       | Yapay zeka aracılarının bir PTY'de arka plan işlemlerini çalıştırmasına ve onlara etkileşimli girdi göndermesine olanak tanır |
+| [mongolgpt-shell-strategy](https://github.com/JRedeker/mongolgpt-shell-strategy)                     | Etkileşimli olmayan kabuk komutları için talimatlar - TTY bağımlı işlemlerden kaynaklanan takılmaları önler                   |
+| [mongolgpt-wakatime](https://github.com/angristan/mongolgpt-wakatime)                                | Wakatime ile MongolGPT kullanımını takip edin                                                                                 |
+| [mongolgpt-md-table-formatter](https://github.com/franlol/mongolgpt-md-table-formatter/tree/main)    | LLM'ler tarafından üretilen markdown tablolarını temizleyin                                                                   |
+| [mongolgpt-morph-plugin](https://github.com/morphllm/mongolgpt-morph-plugin)                         | Fast Apply düzenleme, WarpGrep kod tabanı araması ve Morph ile bağlam sıkıştırma                                              |
+| [oh-my-mongolgpt](https://github.com/code-yeongyu/oh-my-mongolgpt)                                   | Arka plan aracıları, hazır LSP/AST/MCP araçları, seçilmiş aracılar, Claude Code uyumlu                                        |
+| [mongolgpt-notificator](https://github.com/panta82/mongolgpt-notificator)                            | MongolGPT oturumları için masaüstü bildirimleri ve sesli uyarılar                                                             |
+| [mongolgpt-notifier](https://github.com/mohak34/mongolgpt-notifier)                                  | İzin, tamamlanma ve hata olayları için masaüstü bildirimleri ve sesli uyarılar                                                |
+| [mongolgpt-zellij-namer](https://github.com/24601/mongolgpt-zellij-namer)                            | MongolGPT bağlamına dayalı yapay zeka destekli otomatik Zellij oturum isimlendirmesi                                          |
+| [mongolgpt-skillful](https://github.com/zenobi-us/mongolgpt-skillful)                                | MongolGPT aracılarının, beceri keşfi ve enjeksiyonu ile istemleri talep üzerine tembel yüklemesine (lazy load) izin verin     |
+| [mongolgpt-supermemory](https://github.com/supermemoryai/mongolgpt-supermemory)                      | Supermemory kullanarak oturumlar arası kalıcı hafıza                                                                          |
+| [@plannotator/mongolgpt](https://github.com/backnotprop/plannotator/tree/main/apps/mongolgpt-plugin) | Görsel not alma ve özel/çevrimdışı paylaşım ile etkileşimli plan incelemesi                                                   |
+| [@openspoon/subtask2](https://github.com/spoons-and-mirrors/subtask2)                                | mongolgpt /commands komutlarını, ayrıntılı akış kontrolü ile güçlü bir orkestrasyon sistemine genişletin                      |
+| [mongolgpt-scheduler](https://github.com/different-ai/mongolgpt-scheduler)                           | Launchd (Mac) veya systemd (Linux) kullanarak cron sözdizimi ile tekrarlayan işler planlayın                                  |
+| [micode](https://github.com/vtemian/micode)                                                          | Oturum sürekliliği ile Yapılandırılmış Beyin Fırtınası → Planlama → Uygulama iş akışı                                         |
+| [octto](https://github.com/vtemian/octto)                                                            | Çok sorulu formlarla yapay zeka beyin fırtınası için etkileşimli tarayıcı arayüzü                                             |
+| [mongolgpt-background-agents](https://github.com/kdcokenny/mongolgpt-background-agents)              | Asenkron delegasyon ve bağlam kalıcılığına sahip Claude Code tarzı arka plan aracıları                                        |
+| [mongolgpt-notify](https://github.com/kdcokenny/mongolgpt-notify)                                    | MongolGPT için yerel işletim sistemi bildirimleri – görevlerin ne zaman tamamlandığını bilin                                  |
+| [mongolgpt-workspace](https://github.com/kdcokenny/mongolgpt-workspace)                              | Paketlenmiş çoklu aracı orkestrasyon donanımı – 16 bileşen, tek kurulum                                                       |
+| [mongolgpt-worktree](https://github.com/kdcokenny/mongolgpt-worktree)                                | MongolGPT için sıfır sürtünmeli git çalışma ağaçları (worktrees)                                                              |
+| [mongolgpt-sentry-monitor](https://github.com/stolinski/mongolgpt-sentry-monitor)                    | Sentry AI Monitoring ile yapay zeka aracılarınızı izleyin ve hatalarını ayıklayın                                             |
+
+---
+
+## Projeler
+
+| İsim                                                                                         | Açıklama                                                                        |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [kimaki](https://github.com/remorses/kimaki)                                                 | SDK üzerine inşa edilmiş, MongolGPT oturumlarını kontrol eden Discord botu      |
+| [mongolgpt.nvim](https://github.com/NickvanDyke/mongolgpt.nvim)                              | API üzerine inşa edilmiş, editör farkındalıklı istemler için Neovim eklentisi   |
+| [portal](https://github.com/hosenur/portal)                                                  | Tailscale/VPN üzerinden MongolGPT için mobil öncelikli web arayüzü              |
+| [mongolgpt plugin template](https://github.com/zenobi-us/mongolgpt-plugin-template/)         | MongolGPT eklentileri oluşturmak için şablon                                    |
+| [mongolgpt.nvim](https://github.com/sudo-tee/mongolgpt.nvim)                                 | mongolgpt için Neovim ön yüzü - terminal tabanlı bir yapay zeka kodlama aracısı |
+| [ai-sdk-provider-mongolgpt-sdk](https://github.com/ben-vargas/ai-sdk-provider-mongolgpt-sdk) | @mongolgpt/sdk aracılığıyla MongolGPT kullanmak için Vercel AI SDK sağlayıcısı  |
+| [OpenChamber](https://github.com/btriapitsyn/openchamber)                                    | MongolGPT için Web / Masaüstü Uygulaması ve VS Code Uzantısı                    |
+| [MongolGPT-Obsidian](https://github.com/mtymek/mongolgpt-obsidian)                           | MongolGPT'u Obsidian arayüzüne gömen Obsidian eklentisi                         |
+| [OpenWork](https://github.com/different-ai/openwork)                                         | MongolGPT tarafından desteklenen, Claude Cowork'e açık kaynaklı bir alternatif  |
+| [ocx](https://github.com/kdcokenny/ocx)                                                      | Taşınabilir, izole profillere sahip MongolGPT eklenti yöneticisi                |
+| [CodeNomad](https://github.com/NeuralNomadsAI/CodeNomad)                                     | MongolGPT için Masaüstü, Web, Mobil ve Uzak İstemci Uygulaması                  |
+
+---
+
+## Aracılar
+
+| İsim                                                                | Açıklama                                                                    |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [Agentic](https://github.com/Cluster444/agentic)                    | Yapılandırılmış geliştirme için modüler yapay zeka aracıları ve komutları   |
+| [mongolgpt-agents](https://github.com/darrenhinde/mongolgpt-agents) | Gelişmiş iş akışları için yapılandırmalar, istemler, aracılar ve eklentiler |

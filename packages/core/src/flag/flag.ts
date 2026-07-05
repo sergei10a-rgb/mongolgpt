@@ -1,0 +1,82 @@
+import { Config } from "effect"
+
+export function truthy(key: string) {
+  const value = env(key)?.toLowerCase()
+  return value === "true" || value === "1"
+}
+
+export function env(key: string) {
+  return process.env[key]
+}
+
+const copy = env("MONGOLGPT_EXPERIMENTAL_DISABLE_COPY_ON_SELECT")
+const fff = env("MONGOLGPT_DISABLE_FFF")
+
+function enabledByExperimental(key: string) {
+  return env(key) === undefined ? truthy("MONGOLGPT_EXPERIMENTAL") : truthy(key)
+}
+
+export const Flag = {
+  OTEL_EXPORTER_OTLP_ENDPOINT: env("OTEL_EXPORTER_OTLP_ENDPOINT"),
+  OTEL_EXPORTER_OTLP_HEADERS: env("OTEL_EXPORTER_OTLP_HEADERS"),
+
+  MONGOLGPT_AUTO_HEAP_SNAPSHOT: truthy("MONGOLGPT_AUTO_HEAP_SNAPSHOT"),
+  MONGOLGPT_GIT_BASH_PATH: env("MONGOLGPT_GIT_BASH_PATH"),
+  MONGOLGPT_CONFIG: env("MONGOLGPT_CONFIG"),
+  MONGOLGPT_CONFIG_CONTENT: env("MONGOLGPT_CONFIG_CONTENT"),
+  MONGOLGPT_DISABLE_AUTOUPDATE: truthy("MONGOLGPT_DISABLE_AUTOUPDATE"),
+  MONGOLGPT_ALWAYS_NOTIFY_UPDATE: truthy("MONGOLGPT_ALWAYS_NOTIFY_UPDATE"),
+  MONGOLGPT_DISABLE_PRUNE: truthy("MONGOLGPT_DISABLE_PRUNE"),
+  MONGOLGPT_DISABLE_TERMINAL_TITLE: truthy("MONGOLGPT_DISABLE_TERMINAL_TITLE"),
+  MONGOLGPT_SHOW_TTFD: truthy("MONGOLGPT_SHOW_TTFD"),
+  MONGOLGPT_DISABLE_AUTOCOMPACT: truthy("MONGOLGPT_DISABLE_AUTOCOMPACT"),
+  MONGOLGPT_DISABLE_MODELS_FETCH: truthy("MONGOLGPT_DISABLE_MODELS_FETCH"),
+  MONGOLGPT_DISABLE_MOUSE: truthy("MONGOLGPT_DISABLE_MOUSE"),
+  MONGOLGPT_FAKE_VCS: env("MONGOLGPT_FAKE_VCS"),
+  MONGOLGPT_SERVER_PASSWORD: env("MONGOLGPT_SERVER_PASSWORD"),
+  MONGOLGPT_SERVER_USERNAME: env("MONGOLGPT_SERVER_USERNAME"),
+  MONGOLGPT_DISABLE_FFF: fff === undefined ? process.platform === "win32" : truthy("MONGOLGPT_DISABLE_FFF"),
+
+  // Experimental
+  MONGOLGPT_EXPERIMENTAL_FILEWATCHER: Config.boolean("MONGOLGPT_EXPERIMENTAL_FILEWATCHER").pipe(
+    Config.withDefault(false),
+  ),
+  MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER: Config.boolean("MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER").pipe(
+    Config.withDefault(false),
+  ),
+  MONGOLGPT_EXPERIMENTAL_DISABLE_COPY_ON_SELECT:
+    copy === undefined ? process.platform === "win32" : truthy("MONGOLGPT_EXPERIMENTAL_DISABLE_COPY_ON_SELECT"),
+  MONGOLGPT_MODELS_URL: env("MONGOLGPT_MODELS_URL"),
+  MONGOLGPT_MODELS_PATH: env("MONGOLGPT_MODELS_PATH"),
+  MONGOLGPT_DB: env("MONGOLGPT_DB"),
+
+  MONGOLGPT_WORKSPACE_ID: env("MONGOLGPT_WORKSPACE_ID"),
+  MONGOLGPT_EXPERIMENTAL_WORKSPACES: enabledByExperimental("MONGOLGPT_EXPERIMENTAL_WORKSPACES"),
+
+  // Evaluated at access time (not module load) because tests, the CLI, and
+  // external tooling set these env vars at runtime.
+  get MONGOLGPT_DISABLE_PROJECT_CONFIG() {
+    return truthy("MONGOLGPT_DISABLE_PROJECT_CONFIG")
+  },
+  get MONGOLGPT_EXPERIMENTAL_REFERENCES() {
+    return enabledByExperimental("MONGOLGPT_EXPERIMENTAL_REFERENCES")
+  },
+  get MONGOLGPT_TUI_CONFIG() {
+    return env("MONGOLGPT_TUI_CONFIG")
+  },
+  get MONGOLGPT_CONFIG_DIR() {
+    return env("MONGOLGPT_CONFIG_DIR")
+  },
+  get MONGOLGPT_PURE() {
+    return truthy("MONGOLGPT_PURE")
+  },
+  get MONGOLGPT_PERMISSION() {
+    return env("MONGOLGPT_PERMISSION")
+  },
+  get MONGOLGPT_PLUGIN_META_FILE() {
+    return env("MONGOLGPT_PLUGIN_META_FILE")
+  },
+  get MONGOLGPT_CLIENT() {
+    return env("MONGOLGPT_CLIENT") ?? "cli"
+  },
+}

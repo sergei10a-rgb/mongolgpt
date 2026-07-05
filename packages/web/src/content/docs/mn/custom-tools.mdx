@@ -1,0 +1,197 @@
+---
+title: Захиалгат хэрэгслүүд
+description: LLM нь mongolgpt руу залгаж болох хэрэгслүүдийг үүсгэ.
+---
+
+Захиалгат хэрэгслүүд нь харилцан ярианы үеэр LLM дуудаж болох функцууд юм. Тэд mongolgpt-ийн [суурилуулсан хэрэгслүүд](/docs/tools), `read`, `write`, `bash` зэрэгтэй зэрэгцэн ажилладаг.
+
+---
+
+## Хэрэгсэл үүсгэх
+
+Хэрэгслүүд нь **TypeScript** эсвэл **JavaScript** файлууд гэж тодорхойлогддог. Гэхдээ хэрэглүүрийн тодорхойлолт нь **ямар ч хэлээр** бичигдсэн скриптүүдийг дуудаж болно - TypeScript эсвэл JavaScript нь зөвхөн хэрэгслийн тодорхойлолтод ашиглагддаг.
+
+---
+
+### Байршил
+
+Тэдгээрийг тодорхойлж болно:
+
+- Тэднийг төслийнхээ `.mongolgpt/tools/` лавлах хэсэгт байрлуулснаар орон нутагт.
+- Эсвэл дэлхийн хэмжээнд `~/.config/mongolgpt/tools/`-д байрлуулж болно.
+
+---
+
+### Бүтэц
+
+Багаж хэрэгсэл үүсгэх хамгийн хялбар арга бол төрөл-аюулгүй байдал, баталгаажуулалтыг хангадаг `tool()` туслагчийг ашиглах явдал юм.
+
+```ts title=".mongolgpt/tools/database.ts" {1}
+import { tool } from "@mongolgpt/plugin"
+
+export default tool({
+  description: "Query the project database",
+  args: {
+    query: tool.schema.string().describe("SQL query to execute"),
+  },
+  async execute(args) {
+    // Your database logic here
+    return `Executed query: ${args.query}`
+  },
+})
+```
+
+**файлын нэр** нь **хэрэгслийн нэр** болно. Дээрх нь `database` хэрэгслийг үүсгэдэг.
+
+---
+
+#### Файл бүрт олон хэрэгсэл
+
+Та мөн нэг файлаас олон хэрэгслийг экспортлох боломжтой. Экспорт бүр **`<filename>_<exportname>`** нэртэй **тусдаа хэрэгсэл** болдог:
+
+```ts title=".mongolgpt/tools/math.ts"
+import { tool } from "@mongolgpt/plugin"
+
+export const add = tool({
+  description: "Add two numbers",
+  args: {
+    a: tool.schema.number().describe("First number"),
+    b: tool.schema.number().describe("Second number"),
+  },
+  async execute(args) {
+    return (args.a + args.b).toString()
+  },
+})
+
+export const multiply = tool({
+  description: "Multiply two numbers",
+  args: {
+    a: tool.schema.number().describe("First number"),
+    b: tool.schema.number().describe("Second number"),
+  },
+  async execute(args) {
+    return (args.a * args.b).toString()
+  },
+})
+```
+
+Энэ нь `math_add` ба `math_multiply` гэсэн хоёр хэрэгслийг бий болгодог.
+
+---
+
+#### Баригдсан хэрэглүүртэй мөргөлдөөнийг нэрлэ
+
+Захиалгат хэрэгслүүдийг хэрэгслийн нэрээр тохируулдаг. Хэрэв захиалгат хэрэгсэл нь суулгасан хэрэгсэлтэй ижил нэрийг ашигладаг бол захиалгат хэрэгсэл нь давуу эрхтэй болно.
+
+Жишээлбэл, энэ файл нь суурилуулсан `bash` хэрэгслийг орлоно:
+
+```ts title=".mongolgpt/tools/bash.ts"
+import { tool } from "@mongolgpt/plugin"
+
+export default tool({
+  description: "Restricted bash wrapper",
+  args: {
+    command: tool.schema.string(),
+  },
+  async execute(args) {
+    return `blocked: ${args.command}`
+  },
+})
+```
+
+:::note
+Хэрэв та суулгасан хэрэгслийг зориудаар солихыг хүсэхгүй байгаа бол өвөрмөц нэрийг сонго. Хэрэв та суулгасан хэрэгслийг идэвхгүй болгохыг хүсч байгаа ч үүнийг хүчингүй болгохыг хүсвэл [permissions](/docs/permissions)-г ашиглана уу.
+:::
+
+---
+
+### Аргументууд
+
+Та аргументийн төрлийг тодорхойлохын тулд `tool.schema` буюу зүгээр л [Zod](https://zod.dev)-г ашиглаж болно.
+
+```ts "tool.schema"
+args: {
+  query: tool.schema.string().describe("SQL query to execute")
+}
+```
+
+Та мөн [Zod](https://zod.dev)-г шууд оруулж, энгийн объектыг буцааж болно:
+
+```ts {6}
+import { z } from "zod"
+
+export default {
+  description: "Tool description",
+  args: {
+    param: z.string().describe("Parameter description"),
+  },
+  async execute(args, context) {
+    // Tool implementation
+    return "result"
+  },
+}
+```
+
+---
+
+### Контекст
+
+Хэрэгсэл нь одоогийн сешнийн контекстийг хүлээн авдаг:
+
+```ts title=".mongolgpt/tools/project.ts" {8}
+import { tool } from "@mongolgpt/plugin"
+
+export default tool({
+  description: "Get project information",
+  args: {},
+  async execute(args, context) {
+    // Access context information
+    const { agent, sessionID, messageID, directory, worktree } = context
+    return `Agent: ${agent}, Session: ${sessionID}, Message: ${messageID}, Directory: ${directory}, Worktree: ${worktree}`
+  },
+})
+```
+
+Сеансын ажлын лавлахдаа `context.directory` ашиглана уу.
+Git worktree root-д `context.worktree` ашиглана уу.
+
+---
+
+## Жишээ
+
+### хэрэгсэл бичих Python
+
+Та хүссэн хэлээрээ хэрэглүүрээ бичиж болно. Python ашиглан хоёр тоог нэмдэг жишээ энд байна.
+
+Эхлээд уг хэрэгслийг Python скрипт хэлбэрээр үүсгэнэ үү:
+
+```python title=".mongolgpt/tools/add.py"
+import sys
+
+a = int(sys.argv[1])
+b = int(sys.argv[2])
+print(a + b)
+```
+
+Дараа нь түүнийг дууддаг хэрэгслийн тодорхойлолтыг үүсгэ:
+
+```ts title=".mongolgpt/tools/python-add.ts" {10}
+import { tool } from "@mongolgpt/plugin"
+import path from "path"
+
+export default tool({
+  description: "Add two numbers using Python",
+  args: {
+    a: tool.schema.number().describe("First number"),
+    b: tool.schema.number().describe("Second number"),
+  },
+  async execute(args, context) {
+    const script = path.join(context.worktree, ".mongolgpt/tools/add.py")
+    const result = await Bun.$`python3 ${script} ${args.a} ${args.b}`.text()
+    return result.trim()
+  },
+})
+```
+
+Энд бид Python скриптийг ажиллуулахын тулд [`Bun.Энд бид Python скриптийг ажиллуулахын тулд ](https://bun.com/docs/runtime/shell) хэрэгслийг ашиглаж байна.
+

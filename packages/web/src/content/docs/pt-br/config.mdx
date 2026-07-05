@@ -1,0 +1,687 @@
+---
+title: Configuração
+description: Usando a configuração JSON do mongolgpt.
+---
+
+Você pode configurar o mongolgpt usando um arquivo de configuração JSON.
+
+---
+
+## Formato
+
+O mongolgpt suporta os formatos **JSON** e **JSONC** (JSON com Comentários).
+
+```jsonc title="mongolgpt.jsonc"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "model": "anthropic/claude-sonnet-4-5",
+  "autoupdate": true,
+  "server": {
+    "port": 4096,
+  },
+}
+```
+
+---
+
+## Locais
+
+Você pode colocar sua configuração em alguns locais diferentes e eles têm uma
+ordem de precedência diferente.
+
+:::note
+Os arquivos de configuração são **mesclados**, não substituídos.
+:::
+
+Os arquivos de configuração são mesclados, não substituídos. As configurações das seguintes localizações de configuração são combinadas. Configurações posteriores substituem as anteriores apenas para chaves conflitantes. Configurações não conflitantes de todas as configurações são preservadas.
+
+Por exemplo, se sua configuração global define `autoupdate: true` e sua configuração de projeto define `model: "anthropic/claude-sonnet-4-5"`, a configuração final incluirá as duas configurações.
+
+---
+
+### Ordem de precedência
+
+As fontes de configuração são carregadas nesta ordem (fontes posteriores substituem as anteriores):
+
+1. **Configuração remota** (de `.well-known/mongolgpt`) - padrões organizacionais
+2. **Configuração global** (`~/.config/mongolgpt/mongolgpt.json`) - preferências do usuário
+3. **Configuração personalizada** (`MONGOLGPT_CONFIG` var de ambiente) - substituições personalizadas
+4. **Configuração do projeto** (`mongolgpt.json` no projeto) - configurações específicas do projeto
+5. **Diretórios `.mongolgpt`** - agentes, comandos, plugins
+6. **Configuração inline** (`MONGOLGPT_CONFIG_CONTENT` var de ambiente) - substituições em tempo de execução
+
+Isso significa que as configurações do projeto podem substituir os padrões globais, e as configurações globais podem substituir os padrões organizacionais remotos.
+
+:::note
+Os diretórios `.mongolgpt` e `~/.config/mongolgpt` usam **nomes no plural** para subdiretórios: `agents/`, `commands/`, `modes/`, `plugins/`, `skills/`, `tools/`, e `themes/`. Nomes no singular (por exemplo, `agent/`) também são suportados para compatibilidade retroativa.
+:::
+
+---
+
+### Remoto
+
+As organizações podem fornecer configuração padrão através do endpoint `.well-known/mongolgpt`. Isso é buscado automaticamente quando você se autentica com um provedor que o suporta.
+
+A configuração remota é carregada primeiro, servindo como a camada base. Todas as outras fontes de configuração (global, projeto) podem substituir esses padrões.
+
+Por exemplo, se sua organização fornece servidores MCP que estão desativados por padrão:
+
+```json title="Remote config from .well-known/mongolgpt"
+{
+  "mcp": {
+    "jira": {
+      "type": "remote",
+      "url": "https://jira.example.com/mcp",
+      "enabled": false
+    }
+  }
+}
+```
+
+Você pode habilitar servidores específicos em sua configuração local:
+
+```json title="mongolgpt.json"
+{
+  "mcp": {
+    "jira": {
+      "type": "remote",
+      "url": "https://jira.example.com/mcp",
+      "enabled": true
+    }
+  }
+}
+```
+
+---
+
+### Global
+
+Coloque sua configuração global do mongolgpt em `~/.config/mongolgpt/mongolgpt.json`. Use a configuração global para preferências de todo o usuário, como provedores, modelos e permissões.
+
+Para configurações específicas do TUI, use `~/.config/mongolgpt/tui.json`.
+
+A configuração global substitui os padrões organizacionais remotos.
+
+---
+
+### Por projeto
+
+Adicione `mongolgpt.json` na raiz do seu projeto. A configuração do projeto tem a maior precedência entre os arquivos de configuração padrão - ela substitui tanto as configurações globais quanto as remotas.
+
+Para configurações específicas do TUI do projeto, adicione `tui.json` junto a ele.
+
+:::tip
+Coloque a configuração específica do projeto na raiz do seu projeto.
+:::
+
+Quando o mongolgpt é iniciado, ele procura um arquivo de configuração no diretório atual ou sobe até o diretório Git mais próximo.
+
+Isso também é seguro para ser verificado no Git e usa o mesmo esquema que o global.
+
+---
+
+### Caminho personalizado
+
+Especifique um caminho de arquivo de configuração personalizado usando a variável de ambiente `MONGOLGPT_CONFIG`.
+
+```bash
+export MONGOLGPT_CONFIG=/path/to/my/custom-config.json
+mongolgpt run "Hello world"
+```
+
+A configuração personalizada é carregada entre as configurações globais e do projeto na ordem de precedência.
+
+---
+
+### Diretório personalizado
+
+Especifique um diretório de configuração personalizado usando a variável de ambiente `MONGOLGPT_CONFIG_DIR`. Este diretório será pesquisado por agentes, comandos, modos e plugins, assim como o diretório padrão `.mongolgpt`, e deve seguir a mesma estrutura.
+
+```bash
+export MONGOLGPT_CONFIG_DIR=/path/to/my/config-directory
+mongolgpt run "Hello world"
+```
+
+O diretório personalizado é carregado após a configuração global e os diretórios `.mongolgpt`, então ele **pode substituir** suas configurações.
+
+---
+
+## Esquema
+
+O esquema de configuração do servidor/tempo de execução é definido em [**`mongolgpt.duckdns.org/config.json`**](https://mongolgpt.duckdns.org/config.json).
+
+A configuração do TUI usa [**`mongolgpt.duckdns.org/tui.json`**](https://mongolgpt.duckdns.org/tui.json).
+
+Seu editor deve ser capaz de validar e autocompletar com base no esquema.
+
+---
+
+### TUI
+
+Use um arquivo `tui.json` (ou `tui.jsonc`) dedicado para configurações específicas do TUI.
+
+```json title="tui.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/tui.json",
+  "scroll_speed": 3,
+  "scroll_acceleration": {
+    "enabled": true
+  },
+  "diff_style": "auto"
+}
+```
+
+Use `MONGOLGPT_TUI_CONFIG` para apontar para um arquivo de configuração TUI personalizado.
+
+Chaves legadas `theme`, `keybinds` e `tui` em `mongolgpt.json` estão obsoletas e são migradas automaticamente quando possível.
+
+[Saiba mais sobre a configuração do TUI aqui](/docs/tui#configure).
+
+---
+
+### Servidor
+
+Você pode configurar as configurações do servidor para os comandos `mongolgpt serve` e `mongolgpt web` através da opção `server`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "server": {
+    "port": 4096,
+    "hostname": "0.0.0.0",
+    "mdns": true,
+    "mdnsDomain": "myproject.local",
+    "cors": ["http://localhost:5173"]
+  }
+}
+```
+
+Opções disponíveis:
+
+- `port` - Porta para escutar.
+- `hostname` - Nome do host para escutar. Quando `mdns` está habilitado e nenhum nome de host está definido, o padrão é `0.0.0.0`.
+- `mdns` - Habilitar descoberta de serviço mDNS. Isso permite que outros dispositivos na rede descubram seu servidor mongolgpt.
+- `mdnsDomain` - Nome de domínio personalizado para o serviço mDNS. O padrão é `mongolgpt.local`. Útil para executar várias instâncias na mesma rede.
+- `cors` - Origens adicionais a serem permitidas para CORS ao usar o servidor HTTP de um cliente baseado em navegador. Os valores devem ser origens completas (esquema + host + porta opcional), por exemplo, `https://app.example.com`.
+
+[Saiba mais sobre o servidor aqui](/docs/server).
+
+---
+
+### Ferramentas
+
+Você pode gerenciar as ferramentas que um LLM pode usar através da opção `tools`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "tools": {
+    "write": false,
+    "bash": false
+  }
+}
+```
+
+[Saiba mais sobre ferramentas aqui](/docs/tools).
+
+---
+
+### Modelos
+
+Você pode configurar os provedores e modelos que deseja usar em sua configuração do mongolgpt através das opções `provider`, `model` e `small_model`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {},
+  "model": "anthropic/claude-sonnet-4-5",
+  "small_model": "anthropic/claude-haiku-4-5"
+}
+```
+
+A opção `small_model` configura um modelo separado para tarefas leves, como geração de títulos. Por padrão, o mongolgpt tenta usar um modelo mais barato se um estiver disponível do seu provedor, caso contrário, ele recua para seu modelo principal.
+
+As opções do provedor podem incluir `timeout` e `setCacheKey`:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "timeout": 600000,
+        "setCacheKey": true
+      }
+    }
+  }
+}
+```
+
+- `timeout` - Tempo limite da solicitação em milissegundos (padrão: 300000). Defina como `false` para desabilitar.
+- `setCacheKey` - Garantir que uma chave de cache seja sempre definida para o provedor designado.
+
+Você também pode configurar [modelos locais](/docs/models#local). [Saiba mais](/docs/models).
+
+---
+
+#### Opções Específicas do Provedor
+
+Alguns provedores suportam opções de configuração adicionais além das configurações genéricas `timeout` e `apiKey`.
+
+##### Amazon Bedrock
+
+Amazon Bedrock suporta configuração específica da AWS:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "amazon-bedrock": {
+      "options": {
+        "region": "us-east-1",
+        "profile": "my-aws-profile",
+        "endpoint": "https://bedrock-runtime.us-east-1.vpce-xxxxx.amazonaws.com"
+      }
+    }
+  }
+}
+```
+
+- `region` - Região AWS para Bedrock (padrão para `AWS_REGION` var de ambiente ou `us-east-1`)
+- `profile` - Perfil nomeado da AWS em `~/.aws/credentials` (padrão para `AWS_PROFILE` var de ambiente)
+- `endpoint` - URL de endpoint personalizada para endpoints VPC. Este é um alias para a opção genérica `baseURL` usando terminologia específica da AWS. Se ambos forem especificados, `endpoint` tem precedência.
+
+:::note
+Tokens Bearer (`AWS_BEARER_TOKEN_BEDROCK` ou `/connect`) têm precedência sobre a autenticação baseada em perfil. Veja [precedência de autenticação](/docs/providers#authentication-precedence) para detalhes.
+:::
+
+[Saiba mais sobre a configuração do Amazon Bedrock](/docs/providers#amazon-bedrock).
+
+---
+
+### Temas
+
+Defina seu tema de interface em `tui.json`.
+
+```json title="tui.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/tui.json",
+  "theme": "tokyonight"
+}
+```
+
+[Saiba mais aqui](/docs/themes).
+
+---
+
+### Agentes
+
+Você pode configurar agentes especializados para tarefas específicas através da opção `agent`.
+
+```jsonc title="mongolgpt.jsonc"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "agent": {
+    "code-reviewer": {
+      "description": "Revisa código para melhores práticas e potenciais problemas",
+      "model": "anthropic/claude-sonnet-4-5",
+      "prompt": "Você é um revisor de código. Foque em segurança, performance e manutenibilidade.",
+      "tools": {
+        // Desabilitar ferramentas de modificação de arquivo para agente de apenas revisão
+        "write": false,
+        "edit": false,
+      },
+    },
+  },
+}
+```
+
+Você também pode definir agentes usando arquivos markdown em `~/.config/mongolgpt/agents/` ou `.mongolgpt/agents/`. [Saiba mais aqui](/docs/agents).
+
+---
+
+### Agente padrão
+
+Você pode definir o agente padrão usando a opção `default_agent`. Isso determina qual agente é usado quando nenhum é explicitamente especificado.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "default_agent": "plan"
+}
+```
+
+O agente padrão deve ser um agente primário (não um subagente). Isso pode ser um agente embutido como `"build"` ou `"plan"`, ou um [agente personalizado](/docs/agents) que você definiu. Se o agente especificado não existir ou for um subagente, o mongolgpt recuará para `"build"` com um aviso.
+
+Essa configuração se aplica a todas as interfaces: TUI, CLI (`mongolgpt run`), aplicativo desktop e GitHub Action.
+
+---
+
+### Compartilhamento
+
+Você pode configurar o recurso [share](/docs/share) através da opção `share`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "share": "manual"
+}
+```
+
+Isso aceita:
+
+- `"manual"` - Permitir compartilhamento manual via comandos (padrão)
+- `"auto"` - Compartilhar novas conversas automaticamente
+- `"disabled"` - Desabilitar compartilhamento completamente
+
+Por padrão, o compartilhamento é definido para o modo manual, onde você precisa compartilhar explicitamente as conversas usando o comando `/share`.
+
+---
+
+### Comandos
+
+Você pode configurar comandos personalizados para tarefas repetitivas através da opção `command`.
+
+```jsonc title="mongolgpt.jsonc"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "command": {
+    "test": {
+      "template": "Execute a suíte de testes completa com relatório de cobertura e mostre quaisquer falhas.\nConcentre-se nos testes com falha e sugira correções.",
+      "description": "Execute testes com cobertura",
+      "agent": "build",
+      "model": "anthropic/claude-haiku-4-5",
+    },
+    "component": {
+      "template": "Crie um novo componente React chamado $ARGUMENTS com suporte a TypeScript.\nInclua tipagem adequada e estrutura básica.",
+      "description": "Crie um novo componente",
+    },
+  },
+}
+```
+
+Você também pode definir comandos usando arquivos markdown em `~/.config/mongolgpt/commands/` ou `.mongolgpt/commands/`. [Saiba mais aqui](/docs/commands).
+
+---
+
+### Atalhos de teclado
+
+Personalize atalhos de teclado em `tui.json`.
+
+```json title="tui.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/tui.json",
+  "keybinds": {}
+}
+```
+
+[Saiba mais aqui](/docs/keybinds).
+
+---
+
+### Atualização automática
+
+O mongolgpt fará o download automaticamente de quaisquer novas atualizações quando for iniciado. Você pode desabilitar isso com a opção `autoupdate`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "autoupdate": false
+}
+```
+
+Se você não quiser atualizações, mas deseja ser notificado quando uma nova versão estiver disponível, defina `autoupdate` como `"notify"`.
+Observe que isso só funciona se não foi instalado usando um gerenciador de pacotes como o Homebrew.
+
+---
+
+### Formatadores
+
+Você pode configurar formatadores de código através da opção `formatter`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "formatter": {
+    "prettier": {
+      "disabled": true
+    },
+    "custom-prettier": {
+      "command": ["npx", "prettier", "--write", "$FILE"],
+      "environment": {
+        "NODE_ENV": "development"
+      },
+      "extensions": [".js", ".ts", ".jsx", ".tsx"]
+    }
+  }
+}
+```
+
+[Saiba mais sobre formatadores aqui](/docs/formatters).
+
+---
+
+### Permissões
+
+Por padrão, o mongolgpt **permite todas as operações** sem exigir aprovação explícita. Você pode mudar isso usando a opção `permission`.
+
+Por exemplo, para garantir que as ferramentas `edit` e `bash` exijam aprovação do usuário:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "permission": {
+    "edit": "ask",
+    "bash": "ask"
+  }
+}
+```
+
+[Saiba mais sobre permissões aqui](/docs/permissions).
+
+---
+
+### Compactação
+
+Você pode controlar o comportamento de compactação de contexto através da opção `compaction`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "compaction": {
+    "auto": true,
+    "prune": false,
+    "reserved": 10000
+  }
+}
+```
+
+- `auto` - Compactar automaticamente a sessão quando o contexto estiver cheio (padrão: `true`).
+- `prune` - Remover saídas antigas de ferramentas para economizar tokens (padrão: `false`).
+- `reserved` - Buffer de tokens para compactação. Deixa janela suficiente para evitar estouro durante a compactação
+
+---
+
+### Observador
+
+Você pode configurar padrões de ignorar do observador de arquivos através da opção `watcher`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "watcher": {
+    "ignore": ["node_modules/**", "dist/**", ".git/**"]
+  }
+}
+```
+
+Os padrões seguem a sintaxe glob. Use isso para excluir diretórios barulhentos da observação de arquivos.
+
+---
+
+### Servidores MCP
+
+Você pode configurar servidores MCP que deseja usar através da opção `mcp`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "mcp": {}
+}
+```
+
+[Saiba mais aqui](/docs/mcp-servers).
+
+---
+
+### Plugins
+
+[Plugins](/docs/plugins) estendem o mongolgpt com ferramentas, hooks e integrações personalizadas.
+
+Coloque arquivos de plugin em `.mongolgpt/plugins/` ou `~/.config/mongolgpt/plugins/`. Você também pode carregar plugins do npm através da opção `plugin`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "plugin": ["mongolgpt-helicone-session", "@my-org/custom-plugin"]
+}
+```
+
+[Saiba mais aqui](/docs/plugins).
+
+---
+
+### Instruções
+
+Você pode configurar as instruções para o modelo que está usando através da opção `instructions`.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "instructions": ["CONTRIBUTING.md", "docs/guidelines.md", ".cursor/rules/*.md"]
+}
+```
+
+Isso aceita um array de caminhos e padrões glob para arquivos de instrução. [Saiba mais sobre regras aqui](/docs/rules).
+
+---
+
+### Provedores desabilitados
+
+Você pode desabilitar provedores que são carregados automaticamente através da opção `disabled_providers`. Isso é útil quando você deseja impedir que certos provedores sejam carregados, mesmo que suas credenciais estejam disponíveis.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "disabled_providers": ["openai", "gemini"]
+}
+```
+
+:::note
+A opção `disabled_providers` tem prioridade sobre `enabled_providers`.
+:::
+
+A opção `disabled_providers` aceita um array de IDs de provedores. Quando um provedor é desabilitado:
+
+- Ele não será carregado, mesmo que variáveis de ambiente estejam definidas.
+- Ele não será carregado, mesmo que chaves de API estejam configuradas através do comando `/connect`.
+- Os modelos do provedor não aparecerão na lista de seleção de modelos.
+
+---
+
+### Provedores habilitados
+
+Você pode especificar uma lista de permissão de provedores através da opção `enabled_providers`. Quando definida, apenas os provedores especificados serão habilitados e todos os outros serão ignorados.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "enabled_providers": ["anthropic", "openai"]
+}
+```
+
+Isso é útil quando você deseja restringir o mongolgpt para usar apenas provedores específicos, em vez de desabilitá-los um a um.
+
+:::note
+A opção `disabled_providers` tem prioridade sobre `enabled_providers`.
+:::
+
+Se um provedor aparecer em `enabled_providers` e `disabled_providers`, a `disabled_providers` tem prioridade para compatibilidade retroativa.
+
+---
+
+### Experimental
+
+A chave `experimental` contém opções que estão em desenvolvimento ativo.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "experimental": {}
+}
+```
+
+:::caution
+Opções experimentais não são estáveis. Elas podem mudar ou ser removidas sem aviso prévio.
+:::
+
+---
+
+## Variáveis
+
+Você pode usar substituição de variáveis em seus arquivos de configuração para referenciar variáveis de ambiente e conteúdos de arquivos.
+
+---
+
+### Variáveis de ambiente
+
+Use `{env:VARIABLE_NAME}` para substituir variáveis de ambiente:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "model": "{env:MONGOLGPT_MODEL}",
+  "provider": {
+    "anthropic": {
+      "models": {},
+      "options": {
+        "apiKey": "{env:ANTHROPIC_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Se a variável de ambiente não estiver definida, ela será substituída por uma string vazia.
+
+---
+
+### Arquivos
+
+Use `{file:path/to/file}` para substituir o conteúdo de um arquivo:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "instructions": ["./custom-instructions.md"],
+  "provider": {
+    "openai": {
+      "options": {
+        "apiKey": "{file:~/.secrets/openai-key}"
+      }
+    }
+  }
+}
+```
+
+Os caminhos dos arquivos podem ser:
+
+- Relativos ao diretório do arquivo de configuração
+- Ou caminhos absolutos começando com `/` ou `~`
+-
+
+Esses são úteis para:
+
+- Manter dados sensíveis, como chaves de API, em arquivos separados.
+- Incluir grandes arquivos de instrução sem sobrecarregar sua configuração.
+- Compartilhar trechos de configuração comuns entre vários arquivos de configuração.

@@ -1,0 +1,78 @@
+---
+title: Ecossistema
+description: Projetos e integrações construídos com o MongolGPT.
+---
+
+Uma coleção de projetos da comunidade construídos sobre o MongolGPT.
+
+:::note
+Quer adicionar seu projeto relacionado ao MongolGPT a esta lista? Envie um PR.
+:::
+
+Você também pode conferir [awesome-mongolgpt](https://github.com/awesome-mongolgpt/awesome-mongolgpt) e [mongolgpt.cafe](https://mongolgpt.cafe), uma comunidade que agrega o ecossistema e a comunidade.
+
+---
+
+## Plugins
+
+| Nome                                                                                                 | Descrição                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| [mongolgpt-daytona](https://github.com/daytonaio/daytona/tree/main/libs/mongolgpt-plugin)            | Execute automaticamente sessões do MongolGPT em sandboxes isoladas do Daytona com sincronização git e pré-visualizações ao vivo |
+| [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session)                  | Injete automaticamente cabeçalhos de sessão Helicone para agrupamento de requisições                                            |
+| [mongolgpt-type-inject](https://github.com/nick-vi/mongolgpt-type-inject)                            | Auto-injetar tipos TypeScript/Svelte em leituras de arquivos com ferramentas de busca                                           |
+| [mongolgpt-openai-codex-auth](https://github.com/numman-ali/mongolgpt-openai-codex-auth)             | Use sua assinatura ChatGPT Plus/Pro em vez de créditos de API                                                                   |
+| [mongolgpt-gemini-auth](https://github.com/jenslys/mongolgpt-gemini-auth)                            | Use seu plano Gemini existente em vez de cobrança de API                                                                        |
+| [mongolgpt-antigravity-auth](https://github.com/NoeFabris/mongolgpt-antigravity-auth)                | Use os modelos gratuitos do Antigravity em vez de cobrança de API                                                               |
+| [mongolgpt-devcontainers](https://github.com/athal7/mongolgpt-devcontainers)                         | Isolamento de devcontainer multi-branch com clones rasos e portas atribuídas automaticamente                                    |
+| [mongolgpt-google-antigravity-auth](https://github.com/shekohex/mongolgpt-google-antigravity-auth)   | Plugin Google Antigravity OAuth, com suporte para Google Search e manuseio de API mais robusto                                  |
+| [mongolgpt-dynamic-context-pruning](https://github.com/Tarquinen/mongolgpt-dynamic-context-pruning)  | Otimize o uso de tokens podando saídas de ferramentas obsoletas                                                                 |
+| [mongolgpt-vibeguard](https://github.com/inkdust2021/mongolgpt-vibeguard)                            | Oculte segredos/PII em marcadores estilo VibeGuard antes de chamadas LLM; restaure localmente                                   |
+| [mongolgpt-websearch-cited](https://github.com/ghoulr/mongolgpt-websearch-cited.git)                 | Adicione suporte nativo de pesquisa na web para provedores suportados com estilo fundamentado no Google                         |
+| [mongolgpt-pty](https://github.com/shekohex/mongolgpt-pty.git)                                       | Permite que agentes de IA executem processos em segundo plano em um PTY, enviando entrada interativa para eles.                 |
+| [mongolgpt-shell-strategy](https://github.com/JRedeker/mongolgpt-shell-strategy)                     | Instruções para comandos de shell não interativos - evita travamentos de operações dependentes de TTY                           |
+| [mongolgpt-wakatime](https://github.com/angristan/mongolgpt-wakatime)                                | Acompanhe o uso do MongolGPT com Wakatime                                                                                       |
+| [mongolgpt-md-table-formatter](https://github.com/franlol/mongolgpt-md-table-formatter/tree/main)    | Limpe tabelas markdown produzidas por LLMs                                                                                      |
+| [mongolgpt-morph-plugin](https://github.com/morphllm/mongolgpt-morph-plugin)                         | Edição Fast Apply, busca de código WarpGrep e compactação de contexto via Morph                                                 |
+| [oh-my-mongolgpt](https://github.com/code-yeongyu/oh-my-mongolgpt)                                   | Agentes em segundo plano, ferramentas LSP/AST/MCP pré-construídas, agentes curados, compatível com Claude Code                  |
+| [mongolgpt-notificator](https://github.com/panta82/mongolgpt-notificator)                            | Notificações de desktop e alertas sonoros para sessões do MongolGPT                                                             |
+| [mongolgpt-notifier](https://github.com/mohak34/mongolgpt-notifier)                                  | Notificações de desktop e alertas sonoros para eventos de permissão, conclusão e erro                                           |
+| [mongolgpt-zellij-namer](https://github.com/24601/mongolgpt-zellij-namer)                            | Nomeação automática de sessões Zellij com suporte de IA com base no contexto do MongolGPT                                       |
+| [mongolgpt-skillful](https://github.com/zenobi-us/mongolgpt-skillful)                                | Permite que agentes do MongolGPT carreguem prompts sob demanda com descoberta e injeção de habilidades                          |
+| [mongolgpt-supermemory](https://github.com/supermemoryai/mongolgpt-supermemory)                      | Memória persistente entre sessões usando Supermemory                                                                            |
+| [@plannotator/mongolgpt](https://github.com/backnotprop/plannotator/tree/main/apps/mongolgpt-plugin) | Revisão de plano interativa com anotação visual e compartilhamento privado/offline                                              |
+| [@openspoon/subtask2](https://github.com/spoons-and-mirrors/subtask2)                                | Estenda mongolgpt /commands em um poderoso sistema de orquestração com controle de fluxo granular                               |
+| [mongolgpt-scheduler](https://github.com/different-ai/mongolgpt-scheduler)                           | Agende trabalhos recorrentes usando launchd (Mac) ou systemd (Linux) com sintaxe cron                                           |
+| [micode](https://github.com/vtemian/micode)                                                          | Fluxo de trabalho Estruturado Brainstorm → Planejar → Implementar com continuidade de sessão                                    |
+| [octto](https://github.com/vtemian/octto)                                                            | UI interativa do navegador para brainstorming de IA com formulários de múltiplas perguntas                                      |
+| [mongolgpt-background-agents](https://github.com/kdcokenny/mongolgpt-background-agents)              | Agentes em segundo plano estilo Claude Code com delegação assíncrona e persistência de contexto                                 |
+| [mongolgpt-notify](https://github.com/kdcokenny/mongolgpt-notify)                                    | Notificações nativas do OS para MongolGPT – saiba quando as tarefas são concluídas                                              |
+| [mongolgpt-workspace](https://github.com/kdcokenny/mongolgpt-workspace)                              | Conjunto de orquestração multi-agente – 16 componentes, uma instalação                                                          |
+| [mongolgpt-worktree](https://github.com/kdcokenny/mongolgpt-worktree)                                | Worktrees git sem atrito para MongolGPT                                                                                         |
+| [mongolgpt-sentry-monitor](https://github.com/stolinski/mongolgpt-sentry-monitor)                    | Rastreie e depure seus agentes de IA com o Sentry AI Monitoring                                                                 |
+
+---
+
+## Projetos
+
+| Nome                                                                                         | Descrição                                                                        |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| [kimaki](https://github.com/remorses/kimaki)                                                 | Bot do Discord para controlar sessões do MongolGPT, construído sobre o SDK       |
+| [mongolgpt.nvim](https://github.com/NickvanDyke/mongolgpt.nvim)                              | Plugin Neovim para prompts cientes do editor, construído sobre a API             |
+| [portal](https://github.com/hosenur/portal)                                                  | UI web mobile-first para MongolGPT sobre Tailscale/VPN                           |
+| [mongolgpt plugin template](https://github.com/zenobi-us/mongolgpt-plugin-template/)         | Template para construir plugins do MongolGPT                                     |
+| [mongolgpt.nvim](https://github.com/sudo-tee/mongolgpt.nvim)                                 | Frontend Neovim para MongolGPT - um agente de codificação IA baseado em terminal |
+| [ai-sdk-provider-mongolgpt-sdk](https://github.com/ben-vargas/ai-sdk-provider-mongolgpt-sdk) | Provedor Vercel AI SDK para usar MongolGPT via @mongolgpt/sdk                    |
+| [OpenChamber](https://github.com/btriapitsyn/openchamber)                                    | Aplicativo Web / Desktop e Extensão do VS Code para MongolGPT                    |
+| [MongolGPT-Obsidian](https://github.com/mtymek/mongolgpt-obsidian)                           | Plugin Obsidian que incorpora MongolGPT na UI do Obsidian                        |
+| [OpenWork](https://github.com/different-ai/openwork)                                         | Uma alternativa de código aberto ao Claude Cowork, alimentada pelo MongolGPT     |
+| [ocx](https://github.com/kdcokenny/ocx)                                                      | Gerenciador de extensões MongolGPT com perfis portáteis e isolados.              |
+| [CodeNomad](https://github.com/NeuralNomadsAI/CodeNomad)                                     | Aplicativo Desktop, Web, Mobile e Cliente Remoto para MongolGPT                  |
+
+---
+
+## Agentes
+
+| Nome                                                                | Descrição                                                                     |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [Agentic](https://github.com/Cluster444/agentic)                    | Agentes e comandos de IA modulares para desenvolvimento estruturado           |
+| [mongolgpt-agents](https://github.com/darrenhinde/mongolgpt-agents) | Configurações, prompts, agentes e plugins para fluxos de trabalho aprimorados |

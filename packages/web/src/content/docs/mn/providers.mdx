@@ -1,0 +1,2500 @@
+---
+title: Providers
+description: MongolGPT дахь дурын LLM үйлчилгээ үзүүлэгчийг ашиглах.
+---
+
+import config from "../../../../config.mjs"
+export const console = config.console
+
+MongolGPT нь **75+ LLM үйлчилгээ үзүүлэгчдийг** дэмжихийн тулд [AI SDK](https://ai-sdk.dev/) болон [Models.dev](https://models.dev) ашигладаг бөгөөд орон нутгийн загваруудыг ажиллуулахыг дэмждэг.
+
+Үйлчилгээ үзүүлэгч нэмэхийн тулд та:
+
+1. `/connect` командыг ашиглан үйлчилгээ үзүүлэгчийн API товчлууруудыг нэмнэ үү.
+2. Өөрийн MongolGPT тохиргоонд үйлчилгээ үзүүлэгчийг тохируулна уу.
+
+---
+
+### Итгэмжлэл
+
+Та үйлчилгээ үзүүлэгчийн API товчлууруудыг `/connect` тушаалаар нэмэхэд тэдгээр нь хадгалагдана.
+`~/.local/share/mongolgpt/auth.json`-д.
+
+---
+
+### Тохиргоо
+
+Та өөрийн MongolGPT хэсэгт байгаа `provider` хэсгээс үйлчилгээ үзүүлэгчдийг өөрчлөх боломжтой.
+config.
+
+---
+
+#### Үндсэн URL
+
+Та `baseURL` сонголтыг тохируулснаар ямар ч үйлчилгээ үзүүлэгчийн URL суурийг өөрчлөх боломжтой. Энэ нь прокси үйлчилгээ эсвэл захиалгат төгсгөлийн цэгүүдийг ашиглахад хэрэгтэй.
+
+```json title="mongolgpt.json" {6}
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "baseURL": "https://api.anthropic.com/v1"
+      }
+    }
+  }
+}
+```
+
+---
+
+#### Загваруудыг нууж байна
+
+Та `blacklist` сонголтыг ашиглан үйлчилгээ үзүүлэгчийн `/models` сонгогчоос тодорхой загваруудыг нууж болно. Энэ нь үйлчилгээ үзүүлэгч таны ашиглахыг эсвэл сонгохыг хүсэхгүй байгаа загваруудыг ил гаргахад хэрэгтэй.
+
+```json title="mongolgpt.json" {6}
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "anthropic": {
+      "blacklist": ["claude-opus-4-20250514"]
+    }
+  }
+}
+```
+
+Урвуу `whitelist` сонголт нь жагсаасан загваруудаас бусад бүх загварыг нуудаг.
+
+```json title="mongolgpt.json" {6}
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "anthropic": {
+      "whitelist": ["claude-sonnet-4-20250514"]
+    }
+  }
+}
+```
+
+Хоёр сонголт хоёулаа `/models` сонгогч дээр харуулсан ижил ID-н загваруудын массивыг авдаг.
+
+- `blacklist` жагсаасан загваруудыг сонгогчоос хасна.
+- `whitelist` зөвхөн жагсаасан загваруудыг хадгалж үлдсэнийг нь нуудаг.
+- Та тэдгээрийг нэгтгэж болно: `whitelist` багцыг нарийсгаж, дараа нь `blacklist` түүнээс оруулгуудыг устгана.
+
+---
+
+## MongolGPT Зэн
+
+MongolGPT Zen бол MongolGPT багийн өгсөн загваруудын жагсаалт юм
+MongolGPT-тэй сайн ажиллахын тулд туршиж, баталгаажуулсан. [Илүү ихийг мэдэж аваарай](/docs/zen).
+
+:::tip
+Хэрэв та шинэ бол MongolGPT Zen-ээр эхлэхийг зөвлөж байна.
+:::
+
+1. TUI-д `/connect` командыг ажиллуулж, `MongolGPT Zen`-г сонгоод [mongolgpt.duckdns.org/auth](https://mongolgpt.duckdns.org/zen) руу оч.
+
+   ```txt
+   /connect
+   ```
+
+2. Нэвтэрч, төлбөрийн мэдээллээ нэмээд API түлхүүрээ хуулна.
+
+3. API түлхүүрээ буулгана уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Бидний санал болгож буй загваруудын жагсаалтыг харахын тулд TUI дээр `/models` гэж ажиллуул.
+
+   ```txt
+   /models
+   ```
+
+Энэ нь MongolGPT дахь бусад үйлчилгээ үзүүлэгчтэй адил ажилладаг бөгөөд ашиглахад бүрэн сонголттой.
+
+---
+
+## MongolGPT Яв
+
+MongolGPT Go нь MongolGPT багийн өгсөн алдартай нээлттэй кодчилол загваруудад найдвартай нэвтрэх боломжийг олгодог хямд өртөгтэй захиалгын төлөвлөгөө юм.
+MongolGPT-тэй сайн ажиллахын тулд туршиж, баталгаажуулсан.
+
+1. TUI-д `/connect` командыг ажиллуулж, `MongolGPT Go`-г сонгоод [mongolgpt.duckdns.org/auth](https://mongolgpt.duckdns.org/zen) руу оч.
+
+   ```txt
+   /connect
+   ```
+
+2. Нэвтэрч, төлбөрийн мэдээллээ нэмээд API түлхүүрээ хуулна.
+
+3. API түлхүүрээ буулгана уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Бидний санал болгож буй загваруудын жагсаалтыг харахын тулд TUI дээр `/models` гэж ажиллуул.
+
+   ```txt
+   /models
+   ```
+
+Энэ нь MongolGPT дахь бусад үйлчилгээ үзүүлэгчтэй адил ажилладаг бөгөөд ашиглахад бүрэн сонголттой.
+
+---
+
+## Лавлах
+
+Зарим үйлчилгээ үзүүлэгчдийг нарийвчлан авч үзье. Хэрэв та үйлчилгээ үзүүлэгч нэмэхийг хүсвэл
+жагсаалт, PR-г чөлөөтэй нээнэ үү.
+
+:::note
+Энд үйлчилгээ үзүүлэгч харагдахгүй байна уу? PR илгээнэ үү.
+:::
+
+---
+
+### 302.AI
+
+1. [302.AI консол](https://302.ai/) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **302.AI** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. 302.AI API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Amazon Bedrock
+
+Amazon Bedrock-г MongolGPT-тэй ашиглахын тулд:
+
+1. Amazon Bedrock консол дахь **Загварын каталог** руу орж хүсэлт гаргана уу.
+   хүссэн загварууд руугаа нэвтрэх.
+
+   :::зөвлөгөө
+   Та Amazon Bedrock хаягаар хүссэн загвартаа хандах эрхтэй байх шаардлагатай.
+   :::
+
+2. Дараах аргуудын аль нэгийг ашиглан **Баталгаажуулалтыг тохируулах**:
+
+   ***
+
+   #### Хүрээлэн буй орчны хувьсагчид (хурдан эхлүүлэх)
+
+   mongolgpt ажиллуулж байх үед эдгээр орчны хувьсагчийн аль нэгийг тохируулна уу:
+
+   ```bash
+   # Option 1: Using AWS access keys
+   AWS_ACCESS_KEY_ID=XXX AWS_SECRET_ACCESS_KEY=YYY mongolgpt
+
+   # Option 2: Using named AWS profile
+   AWS_PROFILE=my-profile mongolgpt
+
+   # Option 3: Using Bedrock bearer token
+   AWS_BEARER_TOKEN_BEDROCK=XXX mongolgpt
+   ```
+
+   Эсвэл тэдгээрийг bash профайлдаа нэмнэ үү:
+
+   ```bash title="~/.bash_profile"
+   export AWS_PROFILE=my-dev-profile
+   export AWS_REGION=us-east-1
+   ```
+
+   ***
+
+   #### Тохируулгын файл (санал болгосон)
+
+   Төсөлд зориулсан эсвэл байнгын тохиргооны хувьд `mongolgpt.json` ашиглана уу:
+
+   ```json title="mongolgpt.json"
+   {
+     "$schema": "https://mongolgpt.duckdns.org/config.json",
+     "provider": {
+       "amazon-bedrock": {
+         "options": {
+           "region": "us-east-1",
+           "profile": "my-aws-profile"
+         }
+       }
+     }
+   }
+   ```
+
+   ** Боломжтой сонголтууд:**
+   - `region` - AWS бүс (жишээ нь: `us-east-1`, `eu-west-1`)
+   - `profile` - AWS нэртэй профайлыг `~/.aws/credentials`
+- `endpoint` - VPC төгсгөлийн цэгүүдийн захиалгат төгсгөлийн цэг URL (ерөнхий `baseURL` сонголтын бусад нэр)
+
+   :::зөвлөгөө
+   Тохируулгын файлын сонголтууд нь орчны хувьсагчдаас давуу эрхтэй.
+   :::
+
+   ***
+
+   #### Нарийвчилсан: VPC Төгсгөлийн цэгүүд
+
+   Хэрэв та Berock-д VPC төгсгөлийн цэгүүдийг ашиглаж байгаа бол:
+
+   ```json title="mongolgpt.json"
+   {
+     "$schema": "https://mongolgpt.duckdns.org/config.json",
+     "provider": {
+       "amazon-bedrock": {
+         "options": {
+           "region": "us-east-1",
+           "profile": "production",
+           "endpoint": "https://bedrock-runtime.us-east-1.vpce-xxxxx.amazonaws.com"
+         }
+       }
+     }
+   }
+   ```
+
+   ::: тэмдэглэл
+   `endpoint` сонголт нь AWS- тусгай нэр томъёог ашиглан ерөнхий `baseURL` сонголтын нэр юм. Хэрэв `endpoint` болон `baseURL` хоёуланг нь зааж өгсөн бол `endpoint` давуу эрхтэй болно.
+   :::
+
+   ***
+
+   #### Баталгаажуулах аргууд
+   - **`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`**: IAM хэрэглэгч үүсгэж, AWS Консол дээр хандалтын түлхүүрүүдийг үүсгэнэ үү.
+   - **`AWS_PROFILE`**: `~/.aws/credentials`-аас нэрлэсэн профайлыг ашиглана уу. Эхлээд `aws configure --profile my-profile` эсвэл `aws sso login` тохируулна уу.
+   - **`AWS_BEARER_TOKEN_BEDROCK`**: Amazon Bedrock консолоос урт хугацааны API түлхүүрүүдийг үүсгэх
+   - **`AWS_WEB_IDENTITY_TOKEN_FILE` / `AWS_ROLE_ARN`**: EKS IRSA (IAM Үйлчилгээний дансны үүрэг) эсвэл OIDC холбоо бүхий Kubernetes-ийн бусад орчинд. Үйлчилгээний дансны тэмдэглэгээг ашиглах үед эдгээр орчны хувьсагчдыг Кубернетес автоматаар оруулдаг.
+
+   ***
+
+   #### Баталгаажуулалтын давуу эрх
+
+   Amazon Bedrock дараах баталгаажуулалтын тэргүүлэх чиглэлийг ашигладаг:
+   1. **Bearer Token** - `AWS_BEARER_TOKEN_BEDROCK` орчны хувьсагч эсвэл `/connect` командын токен
+   2. **AWS Credential Chain** - Профайл, хандалтын түлхүүр, хуваалцсан итгэмжлэл, IAM үүрэг, Вэб таних тэмдэг (EKS IRSA), жишээ мета өгөгдөл
+
+   ::: тэмдэглэл
+   Тэмдэглэгээний токеныг тохируулах үед (`/connect` эсвэл `AWS_BEARER_TOKEN_BEDROCK`-ээр) энэ нь тохируулсан профайл зэрэг бүх AWS итгэмжлэлийн аргуудаас давуу эрхтэй болно.
+   :::
+
+3. Хүссэн загвараа сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+:::note
+Захиалгат дүгнэлт гаргахын тулд түлхүүр дэх загвар болон үйлчилгээ үзүүлэгчийн нэрийг ашиглан `id` шинж чанарыг arn болгон тохируулна уу. Энэ нь зөв кэшийг баталгаажуулдаг.
+:::
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "amazon-bedrock": {
+      // ...
+      "models": {
+        "anthropic-claude-sonnet-4.5": {
+          "id": "arn:aws:bedrock:us-east-1:xxx:application-inference-profile/yyy"
+        }
+      }
+    }
+  }
+}
+```
+
+---
+
+### Anthropic
+
+1. Бүртгүүлсний дараа `/connect` командыг ажиллуулаад Anthropic-г сонгоно.
+
+   ```txt
+   /connect
+   ```
+
+2. Эндээс та **Claude Pro/Max** сонголтыг сонгох боломжтой бөгөөд энэ нь таны хөтөчийг нээх болно.
+   мөн таниас баталгаажуулахыг хүс.
+
+   ```txt
+   ┌ Select auth method
+   │
+   │ Manually enter API Key
+   └
+   ```
+
+3. Одоо `/models` командыг ашиглах үед бүх Anthropic загварууд бэлэн байх ёстой.
+
+   ```txt
+   /models
+   ```
+
+:::info
+Таны Claude Pro/Max загваруудыг ашиглах боломжтой залгаасууд байдаг
+MongolGPT. Anthropic үүнийг шууд хориглодог.
+
+MongolGPT-ийн өмнөх хувилбарууд нь эдгээр залгаасуудтай хамт ирдэг байсан ч тийм биш юм
+1.3.0-с хойшхи тохиолдолд илүү урт
+
+Бусад компаниуд хөгжүүлэгчийн хэрэгслийн тусламжтайгаар сонгох эрх чөлөөг дэмждэг - та ашиглаж болно
+Дараах захиалга MongolGPT тэг тохиргоотой:
+
+- ChatGPT Дээрээс нь
+- Github Copilot
+- Gitlab Duo
+  :::
+
+---
+
+### Атомын чат
+
+Та mongolgpt-г [Atomic Chat](https://atomic.chat)-ээр дамжуулан локал загвар ашиглахаар тохируулж болно. Atomic Chat нь локал LLM-үүдийг OpenAI нийцтэй API серверийн ард ажиллуулдаг ширээний програм юм (анхдагч endpoint `http://127.0.0.1:1337/v1`).
+
+```json title="mongolgpt.json" "atomic-chat" {5, 6, 8, 10-14}
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "atomic-chat": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Atomic Chat (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:1337/v1"
+      },
+      "models": {
+        "<your-model-id>": {
+          "name": "<your-model-name>"
+        }
+      }
+    }
+  }
+}
+```
+
+Энэ жишээнд:
+
+- `atomic-chat` нь захиалгат үйлчилгээ үзүүлэгч ID юм. Энэ нь таны хүссэн ямар ч мөр байж болно.
+- `npm` нь энэ үйлчилгээ үзүүлэгчийн ашиглах багцыг тодорхойлдог. Энд `@ai-sdk/openai-compatible` нь ямар ч OpenAI нийцтэй API-д ашиглагддаг.
+- `name` нь UI дахь үйлчилгээ үзүүлэгчийн дэлгэцийн нэр юм.
+- `options.baseURL` нь дотоод серверийн төгсгөлийн цэг юм. Atomic Chat-н тохиргоонд тохируулан хост болон портоо өөрчил.
+- `models` нь загвар ID-уудын дэлгэцийн нэрийн газрын зураг юм. ID тус бүр нь `GET /v1/models`-ийн буцаасан `id`-тэй таарч байх ёстой - одоо Atomic Chat-д ачаалагдсан id-уудыг жагсаахын тулд `curl http://127.0.0.1:1337/v1/models` ажиллуулна уу.
+
+:::tip
+Хэрэгслийн дуудлагууд сайн ажиллахгүй байвал хэрэгсэл дуудах хүчтэй дэмжлэгтэй ачаалагдсан загварыг сонгоорой (жишээ нь Qwen-Coder эсвэл DeepSeek-Coder хувилбар).
+:::
+
+---
+
+### Azure OpenAI
+
+:::note
+Хэрэв танд "Уучлаарай, гэхдээ би тэр хүсэлтэд тусалж чадахгүй байна" гэсэн алдаатай тулгарвал Azure нөөцийнхөө контентын шүүлтүүрийг **DefaultV2**-аас **Өгөгдмөл** болгож өөрчлөхийг оролдоно уу.
+:::
+
+1. [Azure портал](https://portal.azure.com/) руу очоод **Azure OpenAI** нөөц үүсгэнэ үү. Танд хэрэгтэй болно:
+   - **Нөөцийн нэр**: Энэ нь таны API төгсгөлийн цэгийн нэг хэсэг болно (`https://RESOURCE_NAME.openai.azure.com/`)
+   - **API түлхүүр**: Таны нөөцөөс `KEY 1` эсвэл `KEY 2`
+
+2. [Azure AI Foundry](https://ai.azure.com/) руу очоод загварыг байрлуул.
+
+   ::: тэмдэглэл
+   Зөв ажиллахын тулд байршуулалтын нэр нь mongolgpt-ийн загварын нэртэй тохирч байх ёстой.
+   :::
+
+3. `/connect` командыг ажиллуулаад **Azure** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+4. API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+5. Өөрийн нөөцийн нэрийг орчны хувьсагч болгон тохируулна уу:
+
+   ```bash
+   AZURE_RESOURCE_NAME=XXX mongolgpt
+   ```
+
+   Эсвэл үүнийг bash профайлдаа нэмнэ үү:
+
+   ```bash title="~/.bash_profile"
+   export AZURE_RESOURCE_NAME=XXX
+   ```
+
+6. Оруулсан загвараа сонгохын тулд `/models` командыг ажиллуулна уу.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Azure танин мэдэхүйн үйлчилгээ
+
+1. [Azure портал](https://portal.azure.com/) руу очоод **Azure OpenAI** нөөц үүсгэнэ үү. Танд хэрэгтэй болно:
+   - **Нөөцийн нэр**: Энэ нь таны API төгсгөлийн цэгийн нэг хэсэг болно (`https://AZURE_COGNITIVE_SERVICES_RESOURCE_NAME.cognitiveservices.azure.com/`)
+   - **API түлхүүр**: Таны нөөцөөс `KEY 1` эсвэл `KEY 2`
+
+2. [Azure AI Foundry](https://ai.azure.com/) руу очоод загварыг байрлуул.
+
+   ::: тэмдэглэл
+   Зөв ажиллахын тулд байршуулалтын нэр нь mongolgpt-ийн загварын нэртэй тохирч байх ёстой.
+   :::
+
+3. `/connect` командыг ажиллуулаад **Azure Cognitive Services** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+4. API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+5. Өөрийн нөөцийн нэрийг орчны хувьсагч болгон тохируулна уу:
+
+   ```bash
+   AZURE_COGNITIVE_SERVICES_RESOURCE_NAME=XXX mongolgpt
+   ```
+
+   Эсвэл үүнийг bash профайлдаа нэмнэ үү:
+
+   ```bash title="~/.bash_profile"
+   export AZURE_COGNITIVE_SERVICES_RESOURCE_NAME=XXX
+   ```
+
+6. Оруулсан загвараа сонгохын тулд `/models` командыг ажиллуулна уу.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Басетен
+
+1. [Baseten](https://app.baseten.co/) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **Baseten** гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+3. Baseten API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Тархи
+
+1. [Cerebras консол](https://inference.cerebras.ai/) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **Cerebras** гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+3. Cerebras API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _Qwen 3 Coder 480B_ шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Cloudflare AI Гарц
+
+Cloudflare AI Gateway нь нэгдсэн төгсгөлийн цэгээр дамжуулан OpenAI, Anthropic, Ажилчид AI гэх мэт загваруудад хандах боломжийг танд олгоно. [Нэгдсэн тооцоо](https://developers.cloudflare.com/ai-gateway/features/unified-billing/)-ийн тусламжтайгаар танд үйлчилгээ үзүүлэгч бүрийн хувьд тусдаа API түлхүүр хэрэггүй.
+
+1. [Cloudflare хяналтын самбар](https://dash.cloudflare.com/) руу очиж, **AI** > **AI Gateway** руу очиж, шинэ гарц үүсгэнэ үү. Өөрийн **Бүртгэл ID** болон **Gateway ID**-г анхаарна уу.
+
+2. `/connect` командыг ажиллуулаад **Cloudflare AI Gateway** гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+3. Сануулахад **Бүртгэл ID** оруулна уу.
+
+   ```txt
+   ┌ Enter your Cloudflare Account ID
+   │
+   │
+   └ enter
+   ```
+
+4. Сануулахад **Gateway ID**-г оруулна уу.
+
+   ```txt
+   ┌ Enter your Cloudflare AI Gateway ID
+   │
+   │
+   └ enter
+   ```
+
+5. **Cloudflare API токен**-г оруулна уу.
+
+   ```txt
+   ┌ Gateway API token
+   │
+   │
+   └ enter
+   ```
+
+6. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+   Та мөн mongolgpt тохиргоогоор дамжуулан загвар нэмэх боломжтой.
+
+   ```json title="mongolgpt.json"
+   {
+     "$schema": "https://mongolgpt.duckdns.org/config.json",
+     "provider": {
+       "cloudflare-ai-gateway": {
+         "models": {
+           "openai/gpt-4o": {},
+           "anthropic/claude-sonnet-4": {}
+         }
+       }
+     }
+   }
+   ```
+
+   Эсвэл `/connect`-г ашиглахын оронд орчны хувьсагчдыг тохируулж болно.
+
+   ```bash title="~/.bash_profile"
+   export CLOUDFLARE_ACCOUNT_ID=your-32-character-account-id
+   export CLOUDFLARE_GATEWAY_ID=your-gateway-id
+   export CLOUDFLARE_API_TOKEN=your-api-token
+   ```
+
+---
+
+### Cloudflare ажилчид AI
+
+Cloudflare Workers AI нь AI загваруудыг Cloudflare-ийн дэлхийн сүлжээнд шууд REST API-ээр дамжуулан ажиллуулах боломжийг олгодог бөгөөд дэмжигдсэн загваруудад тусдаа үйлчилгээ үзүүлэгчийн бүртгэл шаардлагагүй.
+
+1. [Cloudflare хяналтын самбар](https://dash.cloudflare.com/) руу очоод **Ажилчид AI** руу очоод **Ашиглах REST API** гэснийг сонгоод **Бүртгэл ID** авч, API токен үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **Cloudflare Workers AI** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Сануулахад **Бүртгэл ID** оруулна уу.
+
+   ```txt
+   ┌ Enter your Cloudflare Account ID
+   │
+   │
+   └ enter
+   ```
+
+4. **Cloudflare API түлхүүр**-ээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+5. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+   Эсвэл `/connect`-г ашиглахын оронд орчны хувьсагчдыг тохируулж болно.
+
+   ```bash title="~/.bash_profile"
+   export CLOUDFLARE_ACCOUNT_ID=your-32-character-account-id
+   export CLOUDFLARE_API_KEY=your-api-token
+   ```
+
+---
+
+### Кортекс
+
+1. [Cortecs консол](https://cortecs.ai/) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **Cortecs** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Cortecs API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _Kimi K2 Instruct_ шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Гүн хайлт
+
+1. [DeepSeek консол](https://platform.deepseek.com/) руу очиж, бүртгэл үүсгээд **Шинэ API түлхүүр үүсгэх** дээр дарна уу.
+
+2. `/connect` командыг ажиллуулаад **DeepSeek** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. DeepSeek API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. _DeepSeek V4 Pro_ шиг DeepSeek загварыг сонгохын тулд `/models` командыг ажиллуулна уу.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Гүн гүнзгий инфра
+
+1. [Deep Infra хяналтын самбар](https://deepinfra.com/dash) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **Deep Infra** гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+3. Deep Infra API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Дижитал далай
+
+DigitalOcean-ийн [Дүгнэлт хөдөлгүүр](https://docs.digitalocean.com/products/inference/) нь GPT-OSS, Llama, Qwen, болон DeepSeek зэрэг нээлттэй загваруудад хандах боломжийг олгодог бөгөөд хүсэлт бүрийг хамгийн хямд, хурдан эсвэл хамгийн тохиромжтой загвар руу чиглүүлдэг захиалгат [Дүгнэлт чиглүүлэгчид](https://docs.digitalocean.com/products/genai-platform/concepts/inference-routers/).
+
+MongolGPT нь баталгаажуулалтын хоёр аргыг дэмждэг:
+
+- **OAuth (Санал болгосон)** — DigitalOcean бүртгэлдээ нэвтэрнэ үү; MongolGPT нь таны DigitalOcean API жетоныг шууд дүгнэлт хийхэд ашиглаж, таны Inference Routers-ийг илрүүлдэг.
+- **Загвар нэвтрэх түлхүүр** — DigitalOcean консолоос байгаа түлхүүрийг буулгана уу.
+
+#### OAuth (Санал болгосон)
+
+1. `/connect` командыг ажиллуулаад **DigitalOcean** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+2. **DigitalOcean-р нэвтрэх**-г сонгоно уу.
+
+   ```txt
+   ┌ Select auth method
+   │
+   │ Login with DigitalOcean
+   │ Paste Model Access Key
+   └
+   ```
+
+3. Таны хөтөч MongolGPT-д зөвшөөрөл олгохоор нээгдэнэ. Нэвтэрч, зөвшөөрнө үү.
+
+   ::: тэмдэглэл
+   MongolGPT хүсэлт `genai:read` болон `inference:query` OAuth хамрах хүрээ. Таны DigitalOcean API токеныг дүгнэлт хийхэд шууд ашигладаг - тусдаа Загварын хандалтын түлхүүр үүсгэгдээгүй.
+   :::
+
+   ::: тэмдэглэл
+   Дүгнэлт чиглүүлэгчид зөвхөн OAuth-ийн дараа загвар сонгогч дээр гарч ирнэ. Загварын хандалтын түлхүүрийг гараар буулгах нь чиглүүлэгчийг илрүүлэхгүй.
+   :::
+
+4. `/models` командыг ажиллуулна. Таны дүгнэлт чиглүүлэгчид загвар сонгоход `router:` форматаар харагдана.
+
+   ```txt
+   /models
+   ```
+
+5. Шинээр үүсгэсэн Дүгнэлт чиглүүлэгчийг авахын тулд `/connect`-г дахин ажиллуулаад **DigitalOcean**-г дахин сонгоно уу.
+
+#### Загвар нэвтрэх түлхүүр ашиглах
+
+Хэрэв та түлхүүрээ шууд буулгахыг хүсвэл:
+
+1. [DigitalOcean консол](https://cloud.digitalocean.com/)-ийн Дүгнэлт хэсгийн **Удирдах** хуудас руу орж шинэ түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **DigitalOcean**, дараа нь **Загвар нэвтрэх түлхүүр**-г сонго.
+
+   ```txt
+   ┌ Enter your DigitalOcean Model Access Key
+   │
+   │
+   └ enter
+   ```
+
+   ::: тэмдэглэл
+   Дүгнэлт чиглүүлэгчийг энэ аргаар автоматаар илрүүлдэггүй. Тэдгээрийг загвар сонгогч дээр харуулахын тулд оронд нь OAuth-ээр нэвтэрнэ үү.
+   :::
+
+3. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+#### Хүрээлэн буй орчны хувьсагч
+
+Эсвэл загвар хандалтын түлхүүрээ орчны хувьсагч болгон тохируулна уу.
+
+```bash frame="none"
+export DIGITALOCEAN_ACCESS_TOKEN=your-model-access-key
+```
+
+#### Дүгнэлт чиглүүлэгчид
+
+Дүгнэлт чиглүүлэгч нь олон загварт чиглүүлэлтийн бодлогыг тодорхойлох боломжийг олгодог - даалгаварт үндэслэн хүсэлт бүрээс хамгийн хямд, хамгийн хурдан эсвэл хамгийн тохиромжтой загварыг сонгох. OAuth-ийн дараа MongolGPT загвар сонгогч дээр чиглүүлэгч бүрийг `router:<router-name>` гэж харуулдаг.
+
+Чиглүүлэгчийн загварыг сонгох нь өөр ямар ч загварыг орлуулах явдал юм - MongolGPT таны хүсэлтийг дамжуулах ба DigitalOcean нь чиглүүлэгчийн бодлогод үндэслэн үндсэн загварыг сонгоно. [Дүгнэлт чиглүүлэгчид](https://docs.digitalocean.com/products/inference/how-to/use-inference-router/)-ийн талаар нэмэлт мэдээлэл авах
+
+---
+
+### FrogBot
+
+1. [FrogBot хяналтын самбар](https://app.frogbot.ai/signup) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **FrogBot** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. FrogBot API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Салют AI
+
+1. [Fireworks AI консол](https://app.fireworks.ai/) руу орж, бүртгэл үүсгээд **Create API Түлхүүр** дээр дарна уу.
+
+2. `/connect` командыг ажиллуулаад **Fireworks AI** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Fireworks AI API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _Kimi K2 Instruct_ шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### GitLab Duo
+
+:::caution[Experimental]
+GitLab MongolGPT дахь Duo дэмжлэг туршилтын шинж чанартай. Онцлог, тохиргоо, болон
+зан төлөв нь ирээдүйн хувилбаруудад өөрчлөгдөж болно.
+:::
+
+MongolGPT нь [GitLab Duo Агент платформ](https://docs.gitlab.com/user/duo_agent_platform/)-тай нэгддэг,
+уугуул хэрэглүүрийн дуудлагын чадвар бүхий AI- хүчирхэг агент чатаар хангах.
+
+:::note[Лицензийн шаардлага]
+GitLab Duo Agent Platform нь **Дээд зэрэглэлийн** эсвэл **Ultimate** GitLab шаарддаг
+захиалга. Үүнийг GitLab.com болон GitLab Self-Managed дээр авах боломжтой.
+[GitLab Duo Агент платформын урьдчилсан нөхцөл](https://docs.gitlab.com/user/duo_agent_platform/#prerequisites)-г үзнэ үү
+бүрэн шаардлагын хувьд.
+:::
+
+1. `/connect` командыг ажиллуулаад GitLab-г сонгоно.
+
+   ```txt
+   /connect
+   ```
+
+2. Баталгаажуулах аргаа сонгоно уу:
+
+   ```txt
+   ┌ Select auth method
+   │
+   │ OAuth (Recommended)
+   │ Personal Access Token
+   └
+   ```
+
+   #### OAuth ашиглах (санал болгосон)
+
+   **OAuth**-г сонгосноор таны хөтөч зөвшөөрөл авахаар нээгдэнэ.
+
+   #### Хувийн хандалтын токен ашиглах
+   1. [GitLab хэрэглэгчийн тохиргоо > Хандалтын токенууд](https://gitlab.com/-/user_settings/personal_access_tokens) руу очих
+   2. **Шинэ токен нэмэх** дээр дарна уу.
+   3. Нэр: `MongolGPT`, Хамрах хүрээ: `api`
+   4. Токеныг хуулах (`glpat-`-ээр эхэлдэг)
+   5. Үүнийг терминалд оруулна уу
+
+3. Боломжтой загваруудыг харахын тулд `/models` командыг ажиллуулна уу.
+
+   ```txt
+   /models
+   ```
+
+   Claude-д суурилсан гурван загвар байгаа:
+   - **duo-chat-haiku-4-5** (Өгөгдмөл) - Шуурхай даалгаварт хурдан хариу өгөх
+   - **duo-chat-sonnet-4-5** - Ихэнх ажлын урсгалын хувьд тэнцвэртэй гүйцэтгэл
+   - **duo-chat-opus-4-5** - Нарийн төвөгтэй дүн шинжилгээ хийх хамгийн чадвартай
+
+:::note
+Хэрэв та хүсэхгүй байгаа бол 'GITLAB_TOKEN' орчны хувьсагчийг мөн зааж өгч болно
+токеныг mongolgpt баталгаажуулалтын санд хадгалах.
+:::
+
+##### Өөрөө байршуулсан GitLab
+
+:::note[дагаж мөрдөх тэмдэглэл]
+MongolGPT сессийн гарчиг үүсгэх гэх мэт зарим AI ажилд жижиг загварыг ашигладаг.
+Энэ нь анхдагчаар Zen-ийн зохион байгуулсан gpt-5-nano-г ашиглахаар тохируулагдсан. MongolGPT-г түгжихийн тулд
+зөвхөн өөрийн GitLab-хостын жишээг ашиглахын тулд дараахыг нэмнэ үү
+`mongolgpt.json` файл. Мөн сесс хуваалцахыг идэвхгүй болгохыг зөвлөж байна.
+
+```json
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "small_model": "gitlab/duo-chat-haiku-4-5",
+  "share": "disabled"
+}
+```
+
+:::
+
+Өөрөө байршуулсан GitLab тохиолдлын хувьд:
+
+```bash
+export GITLAB_INSTANCE_URL=https://gitlab.company.com
+export GITLAB_TOKEN=glpat-...
+```
+
+Хэрэв таны жишээ захиалгат AI гарц ажиллуулдаг бол:
+
+```bash
+GITLAB_AI_GATEWAY_URL=https://ai-gateway.company.com
+```
+
+Эсвэл bash профайлдаа нэмнэ үү:
+
+```bash title="~/.bash_profile"
+export GITLAB_INSTANCE_URL=https://gitlab.company.com
+export GITLAB_AI_GATEWAY_URL=https://ai-gateway.company.com
+export GITLAB_TOKEN=glpat-...
+```
+
+:::note
+Таны GitLab админ нь:
+
+1. [GitLab Duo-г асаана уу](https://docs.gitlab.com/user/duo_agent_platform/turn_on_off/#turn-gitlab-duo-on-or-off)
+   хэрэглэгч, бүлэг эсвэл жишээнд зориулсан
+2. [Агент платформыг асаана уу](https://docs.gitlab.com/user/duo_agent_platform/turn_on_off/#turn-gitlab-duo-agent-platform-on-or-off)
+   (GitLab 18.8+) эсвэл [бета болон туршилтын функцуудыг идэвхжүүлэх](https://docs.gitlab.com/user/duo_agent_platform/turn_on_off/#turn-on-beta-and-experimental-features)
+   (GitLab 18.7 ба түүнээс өмнөх)
+3. Өөрийгөө удирддаг бол [жишээгээ тохируулна уу](https://docs.gitlab.com/administration/gitlab_duo/configure/gitlab_self_managed/)
+   :::
+
+##### OAuth Өөрөө байршуулсан тохиолдлуудад
+
+Oauth-г өөрийн эзэмшдэг жишээнд ажиллуулахын тулд та үүсгэх хэрэгтэй
+бүхий шинэ програм (Тохиргоо → Програмууд).
+буцаан залгах URL `http://127.0.0.1:8080/callback` болон дараах хамрах хүрээ:
+
+- api (Таны өмнөөс API руу хандана уу)
+- read_user (Хувийн мэдээллээ уншина уу)
+- read_repository (Repository руу зөвхөн унших боломжтой)
+
+Дараа нь ID програмыг орчны хувьсагч болгон харуулна:
+
+```bash
+export GITLAB_OAUTH_CLIENT_ID=your_application_id_here
+```
+
+Дэлгэрэнгүй баримт бичгийг [mongolgpt-gitlab-auth](https://www.npmjs.com/package/mongolgpt-gitlab-auth) нүүр хуудаснаас авна уу.
+
+##### Тохиргоо
+
+`mongolgpt.json`-р дамжуулан тохируулах:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "gitlab": {
+      "options": {
+        "instanceUrl": "https://gitlab.com"
+      }
+    }
+  }
+}
+```
+
+##### GitLab Duo Agent Platform (DAP) Ажлын урсгалын загварууд
+
+DAP ажлын урсгалын загварууд нь хэрэгслийн дуудлагыг чиглүүлэх өөр гүйцэтгэх замыг өгдөг
+Стандарт агент чатын оронд GitLab-ийн Duo Workflow үйлчилгээ (DWS)-ээр дамжуулан.
+`duo-workflow-*` загварыг сонгоход MongolGPT:
+
+1. Өөрийн GitLab нэрийн талбараас боломжтой загваруудыг олж мэдээрэй
+2. Олон загвар байгаа бол сонголт сонгогчийг танилцуулна уу
+3. Дараа нь хурдан эхлүүлэхийн тулд сонгосон загвараа дискэнд хадгал
+4. Хэрэгслийн гүйцэтгэлийн хүсэлтийг MongolGPT-н зөвшөөрөлтэй хэрэгслийн системээр дамжуулан чиглүүлэх
+
+Боломжтой DAP ажлын урсгалын загварууд нь `duo-workflow-*` нэрлэх конвенцийг дагаж мөрддөг.
+таны GitLab инстансаас динамикаар нээсэн.
+
+##### GitLab API Хэрэгсэл (Заавал биш, гэхдээ маш их зөвлөж байна)
+
+GitLab хэрэгсэлд хандахын тулд (хүсэлт, асуудал, дамжуулах хоолой, CI/CD гэх мэт):
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "plugin": ["mongolgpt-gitlab-plugin"]
+}
+```
+
+Энэхүү залгаас нь MR шүүмж, асуудлыг хянах, дамжуулах хоолойн хяналт гэх мэт GitLab репозиторын менежментийн цогц чадамжийг өгдөг.
+
+---
+
+### GitHub Туслах нисгэгч
+
+GitHub Copilot захиалгаа mongolgpt ашиглан ашиглахын тулд:
+
+:::note
+Зарим загварт [Pro+ хэрэгтэй байж магадгүй захиалга](https://github.com/features/copilot/plans) ашиглана уу.
+:::
+
+1. `/connect` командыг ажиллуулаад GitHub Copilot гэж хай.
+
+   ```txt
+   /connect
+   ```
+
+2. [github.com/login/device](https://github.com/login/device) руу очиж кодыг оруулна уу.
+
+   ```txt
+   ┌ Login with GitHub Copilot
+   │
+   │ https://github.com/login/device
+   │
+   │ Enter code: 8F43-6FCF
+   │
+   └ Waiting for authorization...
+   ```
+
+3. Одоо `/models` командыг ажиллуулж хүссэн загвараа сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### GMI Үүл
+
+GMI Cloud-г MongolGPT-тэй ашиглахын тулд:
+
+1. [GMI Cloud консол](https://console.gmicloud.ai/) руу очиж API түлхүүр үүсгэнэ үү. Та мөн төгсгөлийн цэгийн дэлгэрэнгүй мэдээллийг [API лавлагаа](https://docs.gmicloud.ai/inference-engine/api-reference/llm-api-reference)-г шалгаж болно.
+
+2. `/connect` командыг ажиллуулаад **GMI Cloud** гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+3. GMI Cloud API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Хүссэн загвараа сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Google Vertex AI
+
+Google Vertex AI-г MongolGPT-тэй ашиглахын тулд:
+
+1. Google Cloud Console дээрх **Model Garden** руу очиж, шалгана уу
+   танай бүс нутагт байгаа загварууд.
+
+   ::: тэмдэглэл
+   Та Vertex AI API идэвхжүүлсэн Google Cloud төсөлтэй байх шаардлагатай.
+   :::
+
+2. Шаардлагатай орчны хувьсагчдыг тохируулна уу:
+   - `GOOGLE_CLOUD_PROJECT`: Таны Google Cloud төсөл ID
+   - `VERTEX_LOCATION` (заавал биш): Vertex-ийн бүс AI (өгөгдмөл нь `global`)
+   - Баталгаажуулалт (аль нэгийг нь сонгоно уу):
+     - `GOOGLE_APPLICATION_CREDENTIALS`: Таны үйлчилгээний дансны JSON түлхүүр файл руу очих зам
+     - gcloud CLI: `gcloud auth application-default login` ашиглан баталгаажуулах
+
+   mongolgpt ажиллуулж байх үед тэдгээрийг тохируулна уу.
+
+   ```bash
+   GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json GOOGLE_CLOUD_PROJECT=your-project-id mongolgpt
+   ```
+
+   Эсвэл тэдгээрийг bash профайлдаа нэмнэ үү.
+
+   ```bash title="~/.bash_profile"
+   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+   export GOOGLE_CLOUD_PROJECT=your-project-id
+   export VERTEX_LOCATION=global
+   ```
+
+:::tip
+`global` бүс нь хүртээмжийг сайжруулж, нэмэлт зардалгүйгээр алдааг багасгадаг. Өгөгдлийн оршин суух шаардлагад бүс нутгийн төгсгөлийн цэгүүдийг (жишээ нь, `us-central1`) ашиглана уу. [Илүү ихийг мэдэж аваарай](https://cloud.google.com/vertex-ai/generative-ai/docs/partner-models/use-partner-models#regional_and_global_endpoints)
+:::
+
+3. Хүссэн загвараа сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Грок
+
+1. [Groq консол](https://console.groq.com/) руу очоод **Create API Түлхүүр** дээр дарж, түлхүүрийг хуулна уу.
+
+2. `/connect` командыг ажиллуулаад Groq гэж хай.
+
+   ```txt
+   /connect
+   ```
+
+3. Үйлчилгээ үзүүлэгчийн API товчийг оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Хүссэнээ сонгохын тулд `/models` командыг ажиллуул.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Hugging Face
+
+[Тэврэлттэй царай дүгнэлт гаргагчид](https://huggingface.co/docs/inference-providers) нь 17+ үйлчилгээ үзүүлэгчийн дэмждэг нээлттэй загварт хандах боломжийг олгодог.
+
+1. Дүгнэлт үйлчилгээ үзүүлэгч рүү залгах зөвшөөрөлтэй токен үүсгэхийн тулд [Тэврэх царайны тохиргоо](https://huggingface.co/settings/tokens/new?ownUserPermissions=inference.serverless.write&tokenType=fineGrained) руу очно уу.
+
+2. `/connect` командыг ажиллуулаад **Hugging Face** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Hugging Face жетоноо оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. _Kimi-K2-Instruct_ эсвэл _GLM-4.6_ гэх мэт загварыг сонгохын тулд `/models` командыг ажиллуулна уу.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Helicone
+
+[Helicone](https://helicone.ai) нь AI аппликешнүүдэд бүртгэл хөтлөх, хянах, дүн шинжилгээ хийх боломжийг олгодог LLM ажиглалтын платформ юм. Helicone AI Gateway нь загварт үндэслэн таны хүсэлтийг зохих үйлчилгээ үзүүлэгч рүү автоматаар чиглүүлдэг.
+
+1. [Helicone](https://helicone.ai) руу орж, бүртгэл үүсгээд, хяналтын самбараасаа API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **Helicone** гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+3. Helicone API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+Илүү олон үйлчилгээ үзүүлэгч болон кэш хийх, хурдыг хязгаарлах зэрэг дэвшилтэт функцуудыг авахыг хүсвэл [Helicone баримт бичиг](https://docs.helicone.ai)-г шалгана уу.
+
+#### Нэмэлт тохиргоо
+
+Хэрэв та Helicone-ээс mongolgpt-р автоматаар тохируулагдаагүй функц эсвэл загварыг олж харвал та үүнийг хүссэн үедээ өөрөө тохируулах боломжтой.
+
+Энд [Helicone загварын лавлах](https://helicone.ai/models), энэ нь нэмэхийг хүссэн загварынхаа ID-г авахын тулд танд хэрэгтэй болно.
+
+```jsonc title="~/.config/mongolgpt/mongolgpt.jsonc"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "helicone": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Helicone",
+      "options": {
+        "baseURL": "https://ai-gateway.helicone.ai",
+      },
+      "models": {
+        "gpt-4o": {
+          // Model ID (from Helicone's model directory page)
+          "name": "GPT-4o", // Your own custom name for the model
+        },
+        "claude-sonnet-4-20250514": {
+          "name": "Claude Sonnet 4",
+        },
+      },
+    },
+  },
+}
+```
+
+#### Тусгай толгой
+
+Helicone нь кэш хийх, хэрэглэгчийг хянах, сессийг удирдах зэрэг функцүүдийн захиалгат толгой хэсгийг дэмждэг. Тэдгээрийг `options.headers` ашиглан үйлчилгээ үзүүлэгчийн тохиргоонд нэмнэ үү:
+
+```jsonc title="~/.config/mongolgpt/mongolgpt.jsonc"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "helicone": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Helicone",
+      "options": {
+        "baseURL": "https://ai-gateway.helicone.ai",
+        "headers": {
+          "Helicone-Cache-Enabled": "true",
+          "Helicone-User-Id": "mongolgpt",
+        },
+      },
+    },
+  },
+}
+```
+
+##### Сеанс хянах
+
+Helicone-ийн [Sessions](https://docs.helicone.ai/features/sessions) функц нь танд холбогдох LLM хүсэлтүүдийг хамтад нь бүлэглэх боломжийг олгодог. MongolGPT яриа бүрийг Helicone-д сесс болгон автоматаар бүртгэхийн тулд [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session) залгаасыг ашиглана уу.
+
+```bash
+npm install -g mongolgpt-helicone-session
+```
+
+Үүнийг өөрийн тохиргоонд нэмнэ үү.
+
+```json title="mongolgpt.json"
+{
+  "plugin": ["mongolgpt-helicone-session"]
+}
+```
+
+Энэхүү залгаас нь таны хүсэлтэд `Helicone-Session-Id` болон `Helicone-Session-Name` толгойг оруулдаг. Helicone's Sessions хуудсанд та MongolGPT харилцан яриа бүрийг тусдаа сесс хэлбэрээр жагсаасан харагдана.
+
+##### Энгийн Helicone толгой
+
+| Толгой | Тодорхойлолт |
+| -------------------------- | ------------------------------------------------------------- |
+| `Helicone-Cache-Enabled` | Хариултын кэшийг идэвхжүүлэх (`true`/`false`) |
+| `Helicone-User-Id` | Хэрэглэгчийн хэмжүүрийг хянах |
+| `Helicone-Property-[Name]` | Захиалгат шинж чанаруудыг нэмэх (жишээ нь: `Helicone-Property-Environment`) |
+| `Helicone-Prompt-Id` | Хүсэлтийг шуурхай хувилбаруудтай холбох |
+
+Боломжтой бүх толгой хэсгийг [Helicone толгойн лавлах](https://docs.helicone.ai/helicone-headers/header-directory) харна уу.
+
+---
+
+### llama.cpp
+
+Та [llama.cpp-ийн](https://github.com/ggml-org/llama.cpp) llama-server хэрэгслээр дамжуулан орон нутгийн загваруудыг ашиглахын тулд mongolgpt-г тохируулах боломжтой.
+
+```json title="mongolgpt.json" "llama.cpp" {5, 6, 8, 10-15}
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "llama.cpp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama-server (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:8080/v1"
+      },
+      "models": {
+        "qwen3-coder:a3b": {
+          "name": "Qwen3-Coder: a3b-30b (local)",
+          "limit": {
+            "context": 128000,
+            "output": 65536
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Энэ жишээнд:
+
+- `llama.cpp` нь захиалгат үйлчилгээ үзүүлэгч ID юм. Энэ нь таны хүссэн ямар ч мөр байж болно.
+- `npm` нь энэ үйлчилгээ үзүүлэгчийн ашиглах багцыг тодорхойлдог. Энд `@ai-sdk/openai-compatible` нь ямар ч OpenAI нийцтэй API-д ашиглагддаг.
+- `name` нь UI дахь үйлчилгээ үзүүлэгчийн дэлгэцийн нэр юм.
+- `options.baseURL` нь дотоод серверийн төгсгөлийн цэг юм.
+- `models` нь загвар ID-уудын тохиргооны газрын зураг юм. Загварын нэр нь загвар сонгох жагсаалтад харагдах болно.
+
+---
+
+### IO.NET
+
+IO.NET нь янз бүрийн хэрэглээнд тохирсон 17 загварыг санал болгодог:
+
+1. [IO.NET консол](https://ai.io.net/) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **IO.NET** гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+3. IO.NET API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### LM Studio
+
+Та LM Studio-ээр дамжуулан орон нутгийн загваруудыг ашиглахын тулд mongolgpt-г тохируулах боломжтой.
+
+```json title="mongolgpt.json" "lmstudio" {5, 6, 8, 10-14}
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "lmstudio": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LM Studio (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:1234/v1"
+      },
+      "models": {
+        "google/gemma-3n-e4b": {
+          "name": "Gemma 3n-e4b (local)"
+        }
+      }
+    }
+  }
+}
+```
+
+Энэ жишээнд:
+
+- `lmstudio` нь захиалгат үйлчилгээ үзүүлэгч ID юм. Энэ нь таны хүссэн ямар ч мөр байж болно.
+- `npm` нь энэ үйлчилгээ үзүүлэгчийн ашиглах багцыг тодорхойлдог. Энд `@ai-sdk/openai-compatible` нь ямар ч OpenAI нийцтэй API-д ашиглагддаг.
+- `name` нь UI дахь үйлчилгээ үзүүлэгчийн дэлгэцийн нэр юм.
+- `options.baseURL` нь дотоод серверийн төгсгөлийн цэг юм.
+- `models` нь загвар ID-уудын тохиргооны газрын зураг юм. Загварын нэр нь загвар сонгох жагсаалтад харагдах болно.
+
+---
+
+### Moonshot AI
+
+Moonshot AI Kimi K2-г ашиглахын тулд:
+
+1. [Moonshot AI консол](https://platform.moonshot.ai/console) руу очиж, бүртгэл үүсгээд **Create API товчлуур** дээр дарна уу.
+
+2. `/connect` командыг ажиллуулаад **Moonshot AI** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Moonshot API товчлуураа оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _Kimi K2_-г сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### МиниМакс
+
+1. [MiniMax API консол](https://platform.minimax.io/login) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **MiniMax** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. MiniMax API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _M2.1_ шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### NVIDIA
+
+NVIDIA нь Nemotron загвар болон бусад олон нээлттэй загваруудыг [build.nvidia.com](https://build.nvidia.com)-ээр дамжуулан үнэ төлбөргүй авах боломжийг олгодог.
+
+1. [build.nvidia.com](https://build.nvidia.com) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **NVIDIA** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. NVIDIA API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж nemotron-3-super-120b-a12b шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+#### On-Prem / NIM
+
+Та мөн NVIDIA загваруудыг [NVIDIA NIM](https://docs.nvidia.com/nim/) ашиглан URL захиалгаар суурь тохируулж ашиглаж болно.
+
+```json title="mongolgpt.json" {6}
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "nvidia": {
+      "options": {
+        "baseURL": "http://localhost:8000/v1"
+      }
+    }
+  }
+}
+```
+
+#### Хүрээлэн буй орчны хувьсагч
+
+Эсвэл API түлхүүрээ орчны хувьсагч болгон тохируулна уу.
+
+```bash frame="none"
+export NVIDIA_API_KEY=nvapi-your-key-here
+```
+
+---
+
+### Небиус жетоны үйлдвэр
+
+1. [Nebius Token Factory консол](https://tokenfactory.nebius.com/) руу орж, бүртгэл үүсгээд **Түлхүүр нэмэх** дээр дарна уу.
+
+2. `/connect` командыг ажиллуулаад **Nebius Token Factory** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Nebius Token Factory API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _Kimi K2 Instruct_ шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Оллама
+
+Та Ollama-аар дамжуулан орон нутгийн загваруудыг ашиглахын тулд mongolgpt-г тохируулах боломжтой.
+
+:::tip
+Оллама өөрийгөө автоматаар MongolGPT-д тохируулж болно. Дэлгэрэнгүйг [Оллама нэгтгэх баримтууд](https://docs.ollama.com/integrations/mongolgpt) харна уу.
+:::
+
+```json title="mongolgpt.json" "ollama" {5, 6, 8, 10-14}
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "llama2": {
+          "name": "Llama 2"
+        }
+      }
+    }
+  }
+}
+```
+
+Энэ жишээнд:
+
+- `ollama` нь захиалгат үйлчилгээ үзүүлэгч ID юм. Энэ нь таны хүссэн ямар ч мөр байж болно.
+- `npm` нь энэ үйлчилгээ үзүүлэгчийн ашиглах багцыг тодорхойлдог. Энд `@ai-sdk/openai-compatible` нь ямар ч OpenAI нийцтэй API-д ашиглагддаг.
+- `name` нь UI дахь үйлчилгээ үзүүлэгчийн дэлгэцийн нэр юм.
+- `options.baseURL` нь дотоод серверийн төгсгөлийн цэг юм.
+- `models` нь загвар ID-уудын тохиргооны газрын зураг юм. Загварын нэр нь загвар сонгох жагсаалтад харагдах болно.
+
+:::tip
+Хэрэгслийн дуудлагууд ажиллахгүй байвал Ollama-д `num_ctx`-г нэмэгдүүлж үзнэ үү. Ойролцоогоор 16k - 32k эхэлнэ.
+:::
+
+---
+
+### Оллама Үүл
+
+Ollama Cloud-г MongolGPT-тэй ашиглахын тулд:
+
+1. [https://ollama.com/](https://ollama.com/) руу орж нэвтэрч эсвэл бүртгэл үүсгэнэ үү.
+
+2. **Тохиргоо** > **Түлхүүр** руу очоод **API Түлхүүр нэмэх** дээр дарж шинэ API түлхүүр үүсгэнэ үү.
+
+3. MongolGPT-д ашиглахын тулд API товчлуурыг хуулна уу.
+
+4. `/connect` командыг ажиллуулаад **Ollama Cloud** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+5. Ollama Cloud API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+6. **Чухал**: MongolGPT-д үүлэн загвар ашиглахын өмнө та загварын мэдээллийг дотооддоо татах ёстой:
+
+   ```bash
+   ollama pull gpt-oss:20b-cloud
+   ```
+
+7. `/models` командыг ажиллуулж Ollama Cloud загвараа сонгоно уу.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### OpenAI
+
+Бид [ChatGPT Plus эсвэл Pro](https://chatgpt.com/pricing)-д бүртгүүлэхийг зөвлөж байна.
+
+1. Бүртгүүлсний дараа `/connect` командыг ажиллуулаад OpenAI-г сонгоно.
+
+   ```txt
+   /connect
+   ```
+
+2. Эндээс та **ChatGPT Plus/Pro** сонголтыг сонгох боломжтой бөгөөд энэ нь таны хөтөчийг нээх болно.
+   мөн таниас баталгаажуулахыг хүс.
+
+   ```txt
+   ┌ Select auth method
+   │
+   │ ChatGPT Plus/Pro
+   │ Manually enter API Key
+   └
+   ```
+
+3. Одоо `/models` командыг ашиглах үед бүх OpenAI загварууд бэлэн байх ёстой.
+
+   ```txt
+   /models
+   ```
+
+##### API товчлуурыг ашиглан
+
+Хэрэв танд API түлхүүр байгаа бол **Гараар API Түлхүүрийг** сонгоод терминалдаа буулгаж болно.
+
+---
+
+### MongolGPT Зэн
+
+MongolGPT Zen бол MongolGPT багийн өгсөн туршиж, баталгаажуулсан загваруудын жагсаалт юм. [Илүү ихийг мэдэж аваарай](/docs/zen).
+
+1. **<a href={console}>MongolGPT Zen</a>** руу нэвтэрч, **Create API Түлхүүр** дээр дарна уу.
+
+2. `/connect` командыг ажиллуулаад **MongolGPT Zen** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. MongolGPT API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _Qwen 3 Coder 480B_ шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Нээлттэй чиглүүлэгч
+
+1. [OpenRouter хяналтын самбар](https://openrouter.ai/settings/keys) руу очоод **Create API Түлхүүр** дээр дарж, түлхүүрийг хуулна уу.
+
+2. `/connect` командыг ажиллуулаад OpenRouter гэж хай.
+
+   ```txt
+   /connect
+   ```
+
+3. Үйлчилгээ үзүүлэгчийн API товчийг оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Олон OpenRouter загварууд өгөгдмөлөөр урьдчилан ачаалагдсан байдаг тул `/models` командыг ажиллуулж хүссэн загвараа сонго.
+
+   ```txt
+   /models
+   ```
+
+   Та мөн mongolgpt тохиргоогоор дамжуулан нэмэлт загвар нэмж болно.
+
+   ```json title="mongolgpt.json" {6}
+   {
+     "$schema": "https://mongolgpt.duckdns.org/config.json",
+     "provider": {
+       "openrouter": {
+         "models": {
+           "somecoolnewmodel": {}
+         }
+       }
+     }
+   }
+   ```
+
+5. Та мөн mongolgpt тохиргоогоор дамжуулан тэдгээрийг өөрчлөх боломжтой. Үйлчилгээ үзүүлэгчийг зааж өгөх жишээ энд байна
+
+   ```json title="mongolgpt.json"
+   {
+     "$schema": "https://mongolgpt.duckdns.org/config.json",
+     "provider": {
+       "openrouter": {
+         "models": {
+           "moonshotai/kimi-k2": {
+             "options": {
+               "provider": {
+                 "order": ["baseten"],
+                 "allow_fallbacks": false
+               }
+             }
+           }
+         }
+       }
+     }
+   }
+   ```
+
+---
+
+### LLM Гарц
+
+1. [LLM Gateway хяналтын самбар](https://llmgateway.io/dashboard) руу очоод **Create API Түлхүүр** дээр дарж, түлхүүрийг хуулна уу.
+
+2. `/connect` командыг ажиллуулаад LLM Gateway гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+3. Үйлчилгээ үзүүлэгчийн API товчийг оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. LLM гарцын олон загварууд нь анхдагчаар урьдчилан ачаалагдсан байдаг тул хүссэн загвараа сонгохын тулд `/models` командыг ажиллуул.
+
+   ```txt
+   /models
+   ```
+
+   Та мөн mongolgpt тохиргоогоор дамжуулан нэмэлт загвар нэмж болно.
+
+   ```json title="mongolgpt.json" {6}
+   {
+     "$schema": "https://mongolgpt.duckdns.org/config.json",
+     "provider": {
+       "llmgateway": {
+         "models": {
+           "somecoolnewmodel": {}
+         }
+       }
+     }
+   }
+   ```
+
+5. Та мөн mongolgpt тохиргоогоор дамжуулан тэдгээрийг өөрчлөх боломжтой. Үйлчилгээ үзүүлэгчийг зааж өгөх жишээ энд байна
+
+   ```json title="mongolgpt.json"
+   {
+     "$schema": "https://mongolgpt.duckdns.org/config.json",
+     "provider": {
+       "llmgateway": {
+         "models": {
+           "glm-4.7": {
+             "name": "GLM 4.7"
+           },
+           "gpt-5.2": {
+             "name": "GPT-5.2"
+           },
+           "gemini-2.5-pro": {
+             "name": "Gemini 2.5 Pro"
+           },
+           "claude-3-5-sonnet-20241022": {
+             "name": "Claude 3.5 Sonnet"
+           }
+         }
+       }
+     }
+   }
+   ```
+
+---
+
+### SAP AI Гол
+
+SAP AI Core нь нэгдсэн платформоор дамжуулан OpenAI, Anthropic, Google, Amazon, Meta, Mistral, AI21 зэрэг 40 гаруй загварт нэвтрэх боломжийг олгодог.
+
+1. Өөрийн [SAP BTP бүхээг](https://account.hana.ondemand.com/) руу очиж, өөрийн SAP AI Үндсэн үйлчилгээний жишээ рүү шилжиж, үйлчилгээний түлхүүр үүсгэнэ үү.
+
+   :::зөвлөгөө
+   Үйлчилгээний түлхүүр нь `clientid`, `clientsecret`, `url`, `serviceurls.AI_API_URL` агуулсан JSON объект юм. Та AI Cockpit доторх **Үйлчилгээ** > **Инстанц ба Захиалга** хэсгээс AI Үндсэн жишээгээ олох боломжтой.
+   :::
+
+2. `/connect` командыг ажиллуулаад **SAP AI Core** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Үйлчилгээний түлхүүрээ JSON оруулна уу.
+
+   ```txt
+   ┌ Service key
+   │
+   │
+   └ enter
+   ```
+
+   Эсвэл `AICORE_SERVICE_KEY` орчны хувьсагчийг тохируулна уу:
+
+   ```bash
+   AICORE_SERVICE_KEY='{"clientid":"...","clientsecret":"...","url":"...","serviceurls":{"AI_API_URL":"..."}}' mongolgpt
+   ```
+
+   Эсвэл үүнийг bash профайлдаа нэмнэ үү:
+
+   ```bash title="~/.bash_profile"
+   export AICORE_SERVICE_KEY='{"clientid":"...","clientsecret":"...","url":"...","serviceurls":{"AI_API_URL":"..."}}'
+   ```
+
+4. Сонголтоор байршуулалт ID болон нөөцийн бүлгийг тохируулна уу:
+
+   ```bash
+   AICORE_DEPLOYMENT_ID=your-deployment-id AICORE_RESOURCE_GROUP=your-resource-group mongolgpt
+   ```
+
+   ::: тэмдэглэл
+   Эдгээр тохиргоо нь сонголттой бөгөөд таны SAP AI Үндсэн тохиргооны дагуу тохируулагдсан байх ёстой.
+   :::
+
+5. `/models` командыг ажиллуулж 40 гаруй загвараас сонгох боломжтой.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### STACKIT
+
+STACKIT AI Model Serving нь AI загваруудад зориулсан бүрэн удирдлагатай бүрэн эрхт хостинг орчныг бүрдүүлж, Llama, Mistral, Qwen зэрэг LLM-д анхаарлаа хандуулж, Европын дэд бүтцэд хамгийн их мэдээллийн бүрэн эрхээр хангадаг.
+
+1. [STACKIT портал](https://portal.stackit.cloud) руу очиж, **AI Model Serving** руу очиж, төсөлдөө auth token үүсгэнэ үү.
+
+   :::зөвлөгөө
+   Баталгаажуулах жетон үүсгэхийн өмнө танд STACKIT хэрэглэгчийн бүртгэл, хэрэглэгчийн бүртгэл, төсөл хэрэгтэй.
+   :::
+
+2. `/connect` командыг ажиллуулаад **STACKIT** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Өөрийн STACKIT AI Үйлчилгээний загварыг баталгаажуулах тэмдгийг оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. _Qwen3-VL 235B_ эсвэл _Llama 3.3 70B_ зэрэг боломжтой загваруудаас сонгохын тулд `/models` командыг ажиллуулна уу.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### OVHcloud AI Төгсгөлийн цэгүүд
+
+1. [OVHcloud самбар](https://ovh.com/manager) руу очно уу. `Public Cloud` хэсэг, `AI & Machine Learning` > `AI Endpoints` болон `API Keys` таб руу шилжиж, **Шинэ API түлхүүр үүсгэх** дээр дарна уу.
+
+2. `/connect` командыг ажиллуулаад **OVHcloud AI Endpoints** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. OVHcloud AI Endpoints API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _gpt-oss-120b_ шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Scaleway
+
+[Scaleway Generative APIs](https://www.scaleway.com/en/docs/generative-apis/)-г MongolGPT-д ашиглахын тулд:
+
+1. Шинэ API түлхүүр үүсгэхийн тулд [Scaleway Console IAM тохиргоо](https://console.scaleway.com/iam/api-keys) руу очно уу.
+
+2. `/connect` командыг ажиллуулаад **Scaleway** гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+3. Scaleway API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. _devstral-2-123b-instruct-2512_ эсвэл _gpt-oss-120b_ гэх мэт загварыг сонгохын тулд `/models` командыг ажиллуулна уу.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Цасан ширхгийн Cortex
+
+[Цасан ширхгийн Cortex](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-rest-api) нь OpenAI нийцтэй API-ээр дамжуулан хилийн загварт (Claude, OpenAI GPT-5 болон бусад) хандах боломжийг олгоно. Бүх дүгнэлт нь Цасан ширхгийн периметрийн хүрээнд явагдах ба Цасан ширхгийн кредитээр тооцогдоно. Загвар бүрийн үнийг [Цасан ширхгийн үйлчилгээний хэрэглээний хүснэгт](https://www.snowflake.com/legal-files/CreditConsumptionTable.pdf) харна уу.
+
+Танд Snowflake данс байхгүй юу? [Үнэгүй туршилтанд бүртгүүлнэ үү](https://signup.snowflake.com/?utm_source=mongolgpt&utm_medium=docs&utm_campaign=cortex-provider).
+
+mongolgpt-ийн кодлох, файл засварлах, командуудыг ажиллуулах үндсэн ажлын урсгал нь багажны дуудлагад тулгуурладаг. Зөвхөн Snowflake Cortex доторх Claude болон OpenAI гэр бүлүүд үүнийг дэмждэг. Үйлчилгээ үзүүлэгч нь үндсэн ажлын урсгалыг дэмжихийн тулд тэдгээр гэр бүлээр хязгаарлагддаг.
+
+MongolGPT нь баталгаажуулалтын хоёр аргыг дэмждэг:
+
+- **Хөтөч OAuth (Санал болгосон)** — өөрийн IdP/SSO-ээр нэвтэрнэ үү; удирдах нууц байхгүй, токенууд автоматаар шинэчлэгддэг.
+- **Гараар зөөгч токен** — Snowflake консолоос PAT эсвэл JWT-г буулгана уу.
+
+#### Хөтөч OAuth (Санал болгосон)
+
+1. `/connect` командыг ажиллуулаад **Snowflake Cortex** гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+2. **Snowflake (External Browser) ашиглан нэвтрэх**-г сонгоно.
+
+   ```txt
+   ┌ Select auth method
+   │
+   │ Login with Snowflake (External Browser)
+   │ Paste PAT or bearer token manually
+   └
+   ```
+
+3. Сануулахад [данс танигч](https://docs.snowflake.com/en/user-guide/admin-account-identifier)-г оруулна уу, жишээ нь `myorg-myaccount` эсвэл `xy12345.us-east-1`.
+
+   ```txt
+   ┌ Snowflake Account Identifier
+   │
+   │
+   └ enter
+   ```
+
+4. Сонголтоор хичээлийг хамрахын тулд Цасан ширхгийн дүрийг оруулна уу (жишээ нь: `SYSADMIN`). Өгөгдмөл дүрээ ашиглахын тулд хоосон орхино уу.
+
+5. Нээгдэх вэб хөтчөөр нэвтэрч дуусгана уу. MongolGPT OAuth буцаан дуудлагыг автоматаар барьж, токеныг хадгалдаг - хуулах/буулгах шаардлагагүй.
+
+6. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+:::note
+OAuth хөтөч нь Snowflake-ийн суурилуулсан `SNOWFLAKE$LOCAL_APPLICATION` аюулгүй байдлын интеграцийг ([docs](https://docs.snowflake.com/en/user-guide/oauth-local-applications)) ашигладаг бөгөөд энэ нь бүх бүртгэлд нэвтэрч байна. Бүртгэлдээ байгаа эсэхийг шалгахын тулд:
+
+```sql
+SHOW SECURITY INTEGRATIONS LIKE 'SNOWFLAKE$LOCAL_APPLICATION';
+```
+
+Үр дүн нь хоосон байвал доорх **Гараар зөөвөрлөгч токен** аргыг ашиглана уу.
+:::
+
+#### Гарын авлагын тэмдэг
+
+Хэрэв та токеныг шууд буулгахыг хүсч байвал эсвэл таны бүртгэлд `SNOWFLAKE$LOCAL_APPLICATION` байхгүй бол:
+
+1. Snowflake дансандаа [Програмчлалын хандалтын токен (PAT)](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens) үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулж, **Snowflake Cortex** гэж хайгаад **Paste PAT эсвэл зөөгч токеныг гараар** сонгоно уу.
+
+3. Сануулахад [данс танигч](https://docs.snowflake.com/en/user-guide/admin-account-identifier)-г оруулна уу.
+
+4. PAT-г наа.
+
+5. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+#### Хүрээлэн буй орчны хувьсагч
+
+CI эсвэл толгойгүй орчинд mongolgpt эхлэхээс өмнө PAT эсвэл JWT-г тохируулна уу:
+
+```bash
+export SNOWFLAKE_ACCOUNT=myorg-myaccount
+export SNOWFLAKE_CORTEX_TOKEN=your-pat-or-jwt
+```
+
+:::note
+`SNOWFLAKE_CORTEX_TOKEN` зөвхөн PAT эсвэл JWT-г хүлээн зөвшөөрдөг - хөтчийн OAuth урсгалыг зөвхөн `/connect`-р ашиглах боломжтой бөгөөд орчны хувьсагчаар дамжуулан тохируулах боломжгүй. `SNOWFLAKE_CORTEX_PAT` нь буцаад нийцтэй байхаар дэмжигдсэн хэвээр байна.
+:::
+
+Загварын каталогийг автоматаар өгдөг. Хамгийн багадаа `mongolgpt.json` байхад л хангалттай:
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "model": "snowflake-cortex/claude-sonnet-4-6",
+  "small_model": "snowflake-cortex/claude-haiku-4-5"
+}
+```
+
+---
+
+### Хамтдаа AI
+
+1. [Хамтдаа AI консол](https://api.together.ai) руу орж, бүртгэл үүсгээд **Түлхүүр нэмэх** дээр дарна уу.
+
+2. `/connect` командыг ажиллуулаад **Together AI** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Хамтдаа AI API товчийг оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _Kimi K2 Instruct_ шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Венеци AI
+
+1. [Венецийн AI консол](https://venice.ai) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **Venice AI** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Венецийн AI API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. _Llama 3.3 70B_ шиг загварыг сонгохын тулд `/models` командыг ажиллуулна уу.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Vercel AI Гарц
+
+Vercel AI Gateway нь нэгдсэн төгсгөлийн цэгээр дамжуулан OpenAI, Anthropic, Google, xAI болон бусад зүйлсийн загварт хандах боломжийг танд олгоно. Загваруудыг жагсаалтын үнээр ямар ч нэмэлтгүйгээр санал болгож байна.
+
+1. [Vercel хяналтын самбар](https://vercel.com/) руу очиж, **AI Gateway** таб руу шилжиж, **API товчлуурууд** дээр дарж шинэ API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **Vercel AI Gateway** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. Vercel AI Gateway API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Загвар сонгохын тулд `/models` командыг ажиллуулна.
+
+   ```txt
+   /models
+   ```
+
+Та мөн mongolgpt тохиргоогоор дамжуулан загвараа өөрчлөх боломжтой. Үйлчилгээ үзүүлэгчийн чиглүүлэлтийн дарааллыг зааж өгөх жишээ энд байна.
+
+```json title="mongolgpt.json"
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "vercel": {
+      "models": {
+        "anthropic/claude-sonnet-4": {
+          "options": {
+            "order": ["anthropic", "vertex"]
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Зарим ашигтай чиглүүлэлтийн сонголтууд:
+
+| Сонголт | Тодорхойлолт |
+| ------------------- | ---------------------------------------------------- |
+| `order` | Оролдох үйлчилгээ үзүүлэгчийн дараалал |
+| `only` | Тодорхой үйлчилгээ үзүүлэгчдийг хязгаарлах |
+| `zeroDataRetention` | Зөвхөн өгөгдөл хадгалах бодлогогүй үйлчилгээ үзүүлэгчдийг ашиглана уу |
+
+---
+
+### xAI
+
+Баталгаажуулах гурван арга: OAuth хөтчөөр дамжуулан SuperGrok-ийн захиалга, толгойгүй төхөөрөмжийн кодын урсгалаар дамжуулан ижил SuperGrok захиалга (VPS / SSH / Docker) эсвэл xAI консолоос төлбөр төлдөг API түлхүүр.
+
+#### Сонголт А — SuperGrok OAuth (хөтөч рүү нэвтрэх)
+
+1. `/connect` командыг ажиллуулаад **xAI** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+2. **xAI Grok OAuth (SuperGrok Subscription)**-г сонгоно уу. MongolGPT таны хөтөч дээр xAI-ийн зөвшөөрлийн дэлгэцийг нээж, `http://127.0.0.1:56121/callback` дээр дахин залгахыг хүлээнэ.
+
+3. `/models` командыг ажиллуулж Grok загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+MongolGPT OAuth хандалтын тэмдгийг автоматаар шинэчилнэ. Grok API хандалтыг багтаасан аливаа Grok эсвэл X Premium төлөвлөгөө; танд тусдаа `XAI_API_KEY` хэрэггүй.
+
+#### Сонголт B — SuperGrok төхөөрөмжийн код (толгойгүй / алсын сервер / VPS)
+
+Үүнийг MongolGPT хөтөч loopback redirect хүрч чадахгүй орчинд ажиллаж байх үед ашиглана уу: VPS, SSH-ээр холбогдсон алсын dev box, Docker дотор, CI гэх мэт. MongolGPT ажиллаж буй хост дээр callback порт нээгдэхгүй. Харин xAI CLI-д богино код өгч, та тэр кодыг өөр төхөөрөмжийн (зөөврийн компьютер, утас гэх мэт) хөтөчид оруулна.
+
+1. Алсын хост дээр `/connect` командыг ажиллуулаад **xAI** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+2. **xAI Grok OAuth (Толгойгүй / Алсын / VPS)**-г сонгоно уу. MongolGPT баталгаажуулах URL болон хэрэглэгчийн богино кодыг хэвлэдэг.
+
+   ```txt
+   Open https://x.ai/device on any device and enter code: ABCD-1234
+   ```
+
+3. Хөтөч (зөөврийн компьютер эсвэл утас) бүхий төхөөрөмж дээр URL-г нээж, кодыг оруулаад зөвшөөрлийн дэлгэцийг зөвшөөрнө үү. MongolGPT xAI-ийн токен төгсгөлийн цэгийг санал асуулга авч, таныг зөвшөөрсний дараа үүссэн OAuth жетонуудыг хадгална. Токен шинэчлэх нь сонголт А-тай адил ажилладаг.
+
+#### Сонголт C — API товчлуур
+
+1. [xAI консол](https://console.x.ai/) руу орж, бүртгэл үүсгээд API түлхүүр үүсгэнэ үү.
+
+2. `/connect` командыг ажиллуулаад **xAI** гэж хайна уу.
+
+   ```txt
+   /connect
+   ```
+
+3. **Гараар API Түлхүүрийг** сонгоод xAI API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _Grok Beta_ шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### Z.AI
+
+1. [Z.AI API консол](https://z.ai/manage-apikey/apikey-list) руу орж, бүртгэл үүсгээд **Шинэ API түлхүүр үүсгэх** дээр дарна уу.
+
+2. `/connect` командыг ажиллуулаад **Z.AI** гэж хайна.
+
+   ```txt
+   /connect
+   ```
+
+   Хэрэв та **GLM Кодлох төлөвлөгөө**-д бүртгүүлсэн бол **Z.AI Кодлох төлөвлөгөө**-г сонгоно уу.
+
+3. Z.AI API түлхүүрээ оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. `/models` командыг ажиллуулж _GLM-4.7_ шиг загварыг сонгоно.
+
+   ```txt
+   /models
+   ```
+
+---
+
+### ZenMux
+
+1. [ZenMux хяналтын самбар](https://zenmux.ai/settings/keys) руу очоод **Create API Түлхүүр** дээр дарж, түлхүүрийг хуулна уу.
+
+2. `/connect` командыг ажиллуулаад ZenMux гэж хай.
+
+   ```txt
+   /connect
+   ```
+
+3. Үйлчилгээ үзүүлэгчийн API товчийг оруулна уу.
+
+   ```txt
+   ┌ API key
+   │
+   │
+   └ enter
+   ```
+
+4. Олон ZenMux загварууд өгөгдмөлөөр урьдчилан ачаалагдсан байдаг тул `/models` командыг ажиллуулж хүссэн загвараа сонгоно уу.
+
+   ```txt
+   /models
+   ```
+
+   Та мөн mongolgpt тохиргоогоор дамжуулан нэмэлт загвар нэмж болно.
+
+   ```json title="mongolgpt.json" {6}
+   {
+     "$schema": "https://mongolgpt.duckdns.org/config.json",
+     "provider": {
+       "zenmux": {
+         "models": {
+           "somecoolnewmodel": {}
+         }
+       }
+     }
+   }
+   ```
+
+---
+
+## Тусгай үйлчилгээ үзүүлэгч
+
+`/connect` командын жагсаалтад ороогүй **OpenAI нийцтэй** үйлчилгээ үзүүлэгчийг нэмэхийн тулд:
+
+:::tip
+Та mongolgpt-тэй ямар ч OpenAI нийцтэй үйлчилгээ үзүүлэгчийг ашиглаж болно. Ихэнх орчин үеийн AI үйлчилгээ үзүүлэгчид OpenAI нийцтэй APIs санал болгодог.
+:::
+
+1. `/connect` командыг ажиллуулаад **Бусад** руу доош гүйлгэ.
+
+   ```bash
+   $ /connect
+
+   ┌  Add credential
+   │
+   ◆  Select provider
+   │  ...
+   │  ● Other
+   └
+   ```
+
+2. Үйлчилгээ үзүүлэгчийн хувьд өвөрмөц ID оруулна уу.
+
+   ```bash
+   $ /connect
+
+   ┌  Add credential
+   │
+   ◇  Enter provider id
+   │  myprovider
+   └
+   ```
+
+   ::: тэмдэглэл
+   Мартагдашгүй ID-г сонго, та үүнийг тохиргооны файлдаа ашиглах болно.
+   :::
+
+3. Үйлчилгээ үзүүлэгчийн хувьд API түлхүүрээ оруулна уу.
+
+   ```bash
+   $ /connect
+
+   ┌  Add credential
+   │
+   ▲  This only stores a credential for myprovider - you will need to configure it in mongolgpt.json, check the docs for examples.
+   │
+   ◇  Enter your API key
+   │  sk-...
+   └
+   ```
+
+4. Төслийн лавлахдаа `mongolgpt.json` файлаа үүсгэх буюу шинэчлэх:
+
+   ```json title="mongolgpt.json" ""myprovider"" {5-15}
+   {
+     "$schema": "https://mongolgpt.duckdns.org/config.json",
+     "provider": {
+       "myprovider": {
+         "npm": "@ai-sdk/openai-compatible",
+         "name": "My AI ProviderDisplay Name",
+         "options": {
+           "baseURL": "https://api.myprovider.com/v1"
+         },
+         "models": {
+           "my-model-name": {
+             "name": "My Model Display Name"
+           }
+         }
+       }
+     }
+   }
+   ```
+
+   Энд тохиргооны сонголтууд байна:
+   - **npm**: AI SDK ашиглах багц, OpenAI нийцтэй үйлчилгээ үзүүлэгчийн хувьд `@ai-sdk/openai-compatible` (`/v1/chat/completions` хувьд). Хэрэв таны үйлчилгээ үзүүлэгч/загвар `/v1/responses` ашигладаг бол `@ai-sdk/openai` ашиглана уу.
+   - **нэр**: UI-д нэрийг харуулна.
+   - **загвар**: Боломжтой загварууд.
+   - **options.baseURL**: API төгсгөлийн цэг URL.
+   - **options.apiKey**: Зөвшөөрөл ашиглаагүй тохиолдолд API товчлуурыг тохируулна уу.
+   - **options.headers**: Сонголтоор захиалгат толгой хэсгийг тохируулна уу.
+
+   Доорх жишээн дээрх дэвшилтэт сонголтуудын талаар дэлгэрэнгүй үзнэ үү.
+
+5. `/models` командыг ажиллуулснаар таны захиалгат үйлчилгээ үзүүлэгч болон загварууд сонголтын жагсаалтад гарч ирнэ.
+
+---
+
+##### Жишээ
+
+`apiKey`, `headers`, загвар `limit` сонголтуудыг тохируулах жишээ энд байна.
+
+```json title="mongolgpt.json" {9,11,17-20}
+{
+  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "provider": {
+    "myprovider": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "My AI ProviderDisplay Name",
+      "options": {
+        "baseURL": "https://api.myprovider.com/v1",
+        "apiKey": "{env:ANTHROPIC_API_KEY}",
+        "headers": {
+          "Authorization": "Bearer custom-token"
+        }
+      },
+      "models": {
+        "my-model-name": {
+          "name": "My Model Display Name",
+          "limit": {
+            "context": 200000,
+            "output": 65536
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Тохиргооны дэлгэрэнгүй:
+
+- **apiKey**: `env` хувьсагчийн синтакс, [илүү ихийг мэдэж аваарай](/docs/config#env-vars) ашиглан тохируулна.
+- **толгой**: Хүсэлт болгонд захиалгат толгойг илгээдэг.
+- **хязгаар.контекст**: Загвар хүлээн авах хамгийн их оролтын токенууд.
+- **limit.output**: Загвар үүсгэж болох хамгийн их жетон.
+
+`limit` талбарууд нь MongolGPT танд хэр их контекст үлдээснийг ойлгох боломжийг олгодог. Стандарт үйлчилгээ үзүүлэгчид эдгээрийг models.dev-ээс автоматаар татдаг.
+
+---
+
+## Алдааг олж засварлах
+
+Хэрэв та үйлчилгээ үзүүлэгчийг тохируулахад асуудалтай байгаа бол дараахь зүйлийг шалгана уу.
+
+1. **Autth тохиргоог шалгана уу**: `mongolgpt auth list`-г ажиллуулж итгэмжлэл байгаа эсэхийг шалгана уу.
+   үйлчилгээ үзүүлэгч нь таны тохиргоонд нэмэгдсэн байна.
+
+   Энэ нь баталгаажуулалтдаа орчны хувьсагчдаас хамаардаг Amazon Bedrock зэрэг үйлчилгээ үзүүлэгчдэд хамаарахгүй.
+
+2. Захиалгат үйлчилгээ үзүүлэгчийн хувьд mongolgpt тохиргоог шалгаад:
+   - `/connect` тушаалд ашигласан ID үйлчилгээ үзүүлэгч нь mongolgpt тохиргооны ID-тэй таарч байгаа эсэхийг шалгаарай.
+- Үйлчилгээ үзүүлэгчийн хувьд зөв npm багцыг ашигладаг. Жишээлбэл, `@ai-sdk/cerebras`-г Cerebras-д ашиглана уу. Мөн бусад бүх OpenAI нийцтэй үйлчилгээ үзүүлэгчийн хувьд `@ai-sdk/openai-compatible` (`/v1/chat/completions` хувьд); Хэрэв загвар `/v1/responses` ашигладаг бол `@ai-sdk/openai`-г ашиглана уу. Нэг үйлчилгээ үзүүлэгчийн доорх холимог тохиргооны хувьд та `provider.npm`-ээр дамжуулан загвар тус бүрийг хүчингүй болгож болно.
+   - `options.baseURL` талбарт API төгсгөлийн цэг ашигласан эсэхийг шалгана уу.

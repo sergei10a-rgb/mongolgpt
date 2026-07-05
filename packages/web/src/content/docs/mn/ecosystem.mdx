@@ -1,0 +1,84 @@
+---
+title: Ecosystem
+description: MongolGPT-р бүтээгдсэн төслүүд болон интеграцчлалууд.
+---
+
+MongolGPT дээр баригдсан олон нийтийн төслүүдийн цуглуулга.
+
+:::note
+Энэ жагсаалтад MongolGPT холбоотой төслөө нэмэхийг хүсэж байна уу? PR илгээнэ үү.
+:::
+
+Та мөн [awesome-mongolgpt](https://github.com/awesome-mongolgpt/awesome-mongolgpt) болон [mongolgpt.cafe](https://mongolgpt.cafe), экосистем болон нийгэмлэгийг нэгтгэдэг нийгэмлэгийг шалгаж болно.
+
+---
+
+## Plugins
+
+| Нэр | Тодорхойлолт |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [mongolgpt-daytona](https://github.com/daytonaio/daytona/tree/main/libs/mongolgpt-plugin) | Git синхрончлол болон шууд урьдчилан үзэх бүхий тусгаарлагдсан Daytona хамгаалагдсан хязгаарлагдмал орчинд MongolGPT сессүүдийг автоматаар ажиллуулна уу |
+| [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session) | Хүсэлтийг бүлэглэхийн тулд Helicone сессийн толгойг автоматаар оруулах |
+| [mongolgpt-type-inject](https://github.com/nick-vi/mongolgpt-type-inject) | Хайлтын хэрэгслээр файл уншихад TypeScript/Svelte төрлүүдийг автоматаар оруулах |
+| [mongolgpt-openai-codex-auth](https://github.com/numman-ali/mongolgpt-openai-codex-auth) | API кредитийн оронд ChatGPT Plus/Pro захиалгаа ашиглана уу |
+| [mongolgpt-gemini-auth](https://github.com/jenslys/mongolgpt-gemini-auth) | API тооцооны оронд одоо байгаа Gemini төлөвлөгөөгөө ашиглаарай |
+| [mongolgpt-antigravity-auth](https://github.com/NoeFabris/mongolgpt-antigravity-auth) | API тооцооны оронд Antigravity-н үнэгүй загваруудыг ашигла |
+| [mongolgpt-devcontainers](https://github.com/athal7/mongolgpt-devcontainers) | Гүехэн клон болон автоматаар томилогдсон порттой олон салаа devcontainer тусгаарлалт |
+| [mongolgpt-google-antigravity-auth](https://github.com/shekohex/mongolgpt-google-antigravity-auth) | Google Хайлтын дэмжлэг бүхий Google Antigravity OAuth Plugin, илүү бат бөх API зохицуулалт |
+| [mongolgpt-dynamic-context-pruning](https://github.com/Tarquinen/mongolgpt-dynamic-context-pruning) | Хуучирсан хэрэгслийн гаралтыг тайрах замаар токен ашиглалтыг оновчтой болгох |
+| [mongolgpt-vibeguard](https://github.com/inkdust2021/mongolgpt-vibeguard) | LLM дуудлагын өмнө нууцыг/PII-г VibeGuard маягийн орлуулагчид дахин оруулах; орон нутагт сэргээх |
+| [mongolgpt-websearch-cited](https://github.com/ghoulr/mongolgpt-websearch-cited.git) | Дэмжигдсэн үйлчилгээ үзүүлэгчдэд Google-ийн үндэслэлтэй загвартай эх вэб хайлтын дэмжлэгийг нэмнэ үү |
+| [mongolgpt-pty](https://github.com/shekohex/mongolgpt-pty.git) | AI агентуудад арын процессыг PTY хэлбэрээр ажиллуулах, тэдэнд интерактив оролт илгээх боломжийг олгоно.            |
+| [mongolgpt-shell-strategy](https://github.com/JRedeker/mongolgpt-shell-strategy) | Интерактив бус бүрхүүлийн командуудын заавар - TTY- хамааралтай үйлдлээс саатахаас сэргийлдэг |
+| [mongolgpt-wakatime](https://github.com/angristan/mongolgpt-wakatime) | Wakatime \| ашиглан MongolGPT хэрэглээг хянах |
+| [mongolgpt-md-table-formatter](https://github.com/franlol/mongolgpt-md-table-formatter/tree/main) | LLMs \|-ийн үйлдвэрлэсэн тэмдэглэгээний хүснэгтүүдийг цэвэрлэ |
+| [mongolgpt-morph-fast-apply](https://github.com/JRedeker/mongolgpt-morph-fast-apply) | Morph Fast Apply API болон залхуу засварлах тэмдэглэгээг ашиглан 10 дахин хурдан код засварлах боломжтой |
+| [mongolgpt-morph-plugin](https://github.com/morphllm/mongolgpt-morph-plugin) | Морф \|-ээр дамжуулан хурдан хэрэглэх засварлах, WarpGrep кодын хайлт, контекст нягтруулах |
+| [oh-my-mongolgpt](https://github.com/code-yeongyu/oh-my-mongolgpt) | Суурь агентууд, урьдчилан бүтээгдсэн LSP/AST/MCP хэрэгслүүд, боловсруулсан агентууд, Claude Код нийцтэй |
+| [mongolgpt-notificator](https://github.com/panta82/mongolgpt-notificator) | MongolGPT сессийн ширээний мэдэгдэл болон дуут дохио |
+| [mongolgpt-notifier](https://github.com/mohak34/mongolgpt-notifier) | Зөвшөөрөл, гүйцэтгэл, алдааны үйл явдлын талаархи ширээний мэдэгдэл болон дуут дохио |
+| [mongolgpt-zellij-namer](https://github.com/24601/mongolgpt-zellij-namer) | MongolGPT контекст дээр суурилсан AI- хөдөлгүүртэй автомат Zellij сессийн нэршил |
+| [mongolgpt-skillful](https://github.com/zenobi-us/mongolgpt-skillful) | MongolGPT төлөөлөгчдөд ур чадвар илрүүлэх, тарилга хийх замаар хүсэлтийн дагуу сануулгыг залхуу ачаалахыг зөвшөөрөх |
+| [mongolgpt-supermemory](https://github.com/supermemoryai/mongolgpt-supermemory) | Supermemory \| ашиглан сесс хоорондын байнгын санах ой |
+| [@plannotator/mongolgpt](https://github.com/backnotprop/plannotator/tree/main/apps/mongolgpt-plugin) | Харааны тайлбар болон хувийн/офлайн хуваалцах бүхий интерактив төлөвлөгөөний тойм |
+| [@openspoon/subtask2](https://github.com/spoons-and-mirrors/subtask2) | mongolgpt /командуудыг мөхлөгт урсгалын удирдлагатай хүчирхэг зохион байгуулалтын систем болгон өргөжүүлэх |
+| [mongolgpt-scheduler](https://github.com/different-ai/mongolgpt-scheduler) | cron синтакс бүхий launchd (Mac) эсвэл systemd (Linux) ашиглан давтагдах ажлуудын хуваарь |
+| [mongolgpt-conductor](https://github.com/derekbar90/mongolgpt-conductor) | Протоколоор удирдуулсан ажлын урсгал: Контекстыг автоматжуулах -> Spec -> Төлөвлөгөө -> Амьдралын мөчлөгийг хэрэгжүүлэх.        |
+| [micode](https://github.com/vtemian/micode) | Бүтэцлэгдсэн оюуны шуурга → Төлөвлөгөө → Ажлын урсгалыг хуралдааны тасралтгүйгээр хэрэгжүүлэх |
+| [octto](https://github.com/vtemian/octto) | AI олон асуултын маягт бүхий оюуны довтолгоонд зориулсан интерактив хөтөч UI |
+| [mongolgpt-background-agents](https://github.com/kdcokenny/mongolgpt-background-agents) | Claude Асинхронгүй төлөөлөгч, контекст тогтвортой байдал бүхий кодын маягийн суурь агентууд |
+| [mongolgpt-notify](https://github.com/kdcokenny/mongolgpt-notify) | MongolGPT-д зориулсан уугуул OS мэдэгдэл – ажил дуусах үед мэдэх |
+| [mongolgpt-workspace](https://github.com/kdcokenny/mongolgpt-workspace) | Bundled олон агенттай зохион байгуулалттай бэхэлгээ – 16 бүрэлдэхүүн хэсэг, нэг суулгац |
+| [mongolgpt-worktree](https://github.com/kdcokenny/mongolgpt-worktree) | MongolGPT \|-д зориулсан тэг үрэлтийн git ажлын мод |
+| [mongolgpt-sentry-monitor](https://github.com/stolinski/mongolgpt-sentry-monitor) | Sentry AI Мониторинг ашиглан AI агентуудаа мөшгиж, дибаг хийх |
+| [mongolgpt-firecrawl](https://github.com/firecrawl/mongolgpt-firecrawl) | Firecrawl CLI \| ашиглан вэб хусах, мөлхөх, хайх |
+| [mongolgpt-jfrog-plugin](https://github.com/jfrog/mongolgpt-jfrog-plugin) | MongolGPT хэрэглэгчдийг JFrog платформтой тасралтгүй нэгтгэх JFrog Plugin |
+| [mongolgpt-goal-plugin](https://github.com/willytop8/MongolGPT-goal-plugin) | Хэлэлцүүлэгт хамрагдсан `/goal` ажлын урсгал нь зорилтуудыг контекстэд багтааж, дуусах хүртэл автоматаар үргэлжилдэг |
+
+---
+
+## Төсөл
+
+| Нэр | Тодорхойлолт |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| [kimaki](https://github.com/remorses/kimaki) | SDK дээр бүтээгдсэн MongolGPT сессүүдийг хянах Discord бот |
+| [mongolgpt.nvim](https://github.com/NickvanDyke/mongolgpt.nvim) | API \| дээр бүтээгдсэн, засварлагчийг мэддэг сануулгад зориулсан Neovim залгаас |
+| [portal](https://github.com/hosenur/portal) | Tailscale/VPN дээр MongolGPT-д зориулсан гар утасны анхны вэб UI |
+| [нээлттэй код залгаасын загвар](https://github.com/zenobi-us/mongolgpt-plugin-template/) | MongolGPT залгаасуудыг бүтээх загвар |
+| [mongolgpt.nvim](https://github.com/sudo-tee/mongolgpt.nvim) | mongolgpt-д зориулсан Neovim frontend - терминал дээр суурилсан AI кодлогч |
+| [ai-sdk-provider-mongolgpt-sdk](https://github.com/ben-vargas/ai-sdk-provider-mongolgpt-sdk) | Vercel AI SDK үйлчилгээ үзүүлэгч MongolGPT-ээр дамжуулан @mongolgpt/sdk |
+| [OpenChamber](https://github.com/btriapitsyn/openchamber) | Вэб / Ширээний програм ба VS Кодын өргөтгөл нь MongolGPT |
+| [MongolGPT-Obsidian](https://github.com/mtymek/mongolgpt-obsidian) | Obsidian-ийн UI-д MongolGPT-г оруулсан Obsidian залгаас |
+| [OpenWork](https://github.com/different-ai/openwork) | Claude Cowork-ийн нээлттэй эхийн хувилбар, MongolGPT |
+| [ocx](https://github.com/kdcokenny/ocx) | MongolGPT зөөврийн, тусгаарлагдсан профайл бүхий өргөтгөлийн менежер.     |
+| [CodeNomad](https://github.com/NeuralNomadsAI/CodeNomad) | MongolGPT-д зориулсан ширээний компьютер, вэб, гар утас болон алсын хэрэглэгчийн програм |
+
+---
+
+## Агентууд
+
+| Нэр | Тодорхойлолт |
+| ----------------------------------------------------------------- | ------------------------------------------------------------ |
+| [Agentic](https://github.com/Cluster444/agentic) | Модульчлагдсан AI агентууд ба бүтэцтэй хөгжүүлэлтийн командууд |
+| [mongolgpt-agents](https://github.com/darrenhinde/mongolgpt-agents) | Сайжруулсан ажлын урсгалд зориулсан тохиргоо, сануулга, агентууд болон залгаасууд |
+

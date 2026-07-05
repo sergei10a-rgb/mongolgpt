@@ -1,0 +1,79 @@
+name: "mongolgpt GitHub Action"
+description: "Run mongolgpt in GitHub Actions workflows"
+branding:
+  icon: "code"
+  color: "orange"
+
+inputs:
+  model:
+    description: "Model to use"
+    required: true
+
+  agent:
+    description: "Agent to use. Must be a primary agent. Falls back to default_agent from config or 'build' if not found."
+    required: false
+
+  share:
+    description: "Share the mongolgpt session (defaults to true for public repos)"
+    required: false
+
+  prompt:
+    description: "Custom prompt to override the default prompt"
+    required: false
+
+  use_github_token:
+    description: "Use GITHUB_TOKEN directly instead of MongolGPT App token exchange. When true, skips OIDC and uses the GITHUB_TOKEN env var."
+    required: false
+    default: "false"
+
+  mentions:
+    description: "Comma-separated list of trigger phrases (case-insensitive). Defaults to '/mongolgpt,/oc'"
+    required: false
+
+  variant:
+    description: "Model variant for provider-specific reasoning effort (e.g., high, max, minimal)"
+    required: false
+
+  oidc_base_url:
+    description: "Base URL for OIDC token exchange API. Only required when running a custom GitHub App install. Defaults to https://mongolgpt.duckdns.org/api"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get mongolgpt version
+      id: version
+      shell: bash
+      run: |
+        VERSION=$(curl -sf https://api.github.com/repos/sergei10a-rgb/mongolgpt/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+        echo "version=${VERSION:-latest}" >> $GITHUB_OUTPUT
+
+    - name: Cache mongolgpt
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.mongolgpt/bin
+        key: mongolgpt-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.version }}
+
+    - name: Install mongolgpt
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: curl -fsSL https://mongolgpt.duckdns.org/install | bash
+
+    - name: Add mongolgpt to PATH
+      shell: bash
+      run: echo "$HOME/.mongolgpt/bin" >> $GITHUB_PATH
+
+    - name: Run mongolgpt
+      shell: bash
+      id: run_mongolgpt
+      run: mongolgpt github run
+      env:
+        MODEL: ${{ inputs.model }}
+        AGENT: ${{ inputs.agent }}
+        SHARE: ${{ inputs.share }}
+        PROMPT: ${{ inputs.prompt }}
+        USE_GITHUB_TOKEN: ${{ inputs.use_github_token }}
+        MENTIONS: ${{ inputs.mentions }}
+        VARIANT: ${{ inputs.variant }}
+        OIDC_BASE_URL: ${{ inputs.oidc_base_url }}

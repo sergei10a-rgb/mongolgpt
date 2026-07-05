@@ -1,0 +1,78 @@
+---
+title: ระบบนิเวศ
+description: โปรเจ็กต์และการผสานรวมที่สร้างด้วย MongolGPT
+---
+
+ชุดโครงการชุมชนที่สร้างขึ้นบน MongolGPT
+
+:::note
+ต้องการเพิ่มโครงการที่เกี่ยวข้องกับ MongolGPT ของคุณลงในรายการนี้หรือไม่ ส่งพีอาร์.
+:::
+
+คุณยังสามารถลองดู [awesome-mongolgpt](https://github.com/awesome-mongolgpt/awesome-mongolgpt) และ [mongolgpt.cafe](https://mongolgpt.cafe) ซึ่งเป็นชุมชนที่รวบรวมระบบนิเวศและชุมชนไว้ด้วยกัน
+
+---
+
+## ปลั๊กอิน
+
+| ชื่อ                                                                                                 | คำอธิบาย                                                                                                              |
+| ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| [mongolgpt-daytona](https://github.com/daytonaio/daytona/tree/main/libs/mongolgpt-plugin)            | เรียกใช้เซสชัน MongolGPT โดยอัตโนมัติในแซนด์บ็อกซ์ Daytona ที่แยกออกมาพร้อม git sync และการแสดงตัวอย่างแบบสด          |
+| [mongolgpt-helicone-session](https://github.com/H2Shami/mongolgpt-helicone-session)                  | แทรกส่วนหัวเซสชัน Helicone โดยอัตโนมัติสำหรับการจัดกลุ่มคำขอ                                                          |
+| [mongolgpt-type-inject](https://github.com/nick-vi/mongolgpt-type-inject)                            | ฉีดประเภท TypeScript/Svelte ลงในไฟล์ที่อ่านโดยอัตโนมัติด้วยเครื่องมือค้นหา                                            |
+| [mongolgpt-openai-codex-auth](https://github.com/numman-ali/mongolgpt-openai-codex-auth)             | ใช้การสมัครสมาชิก ChatGPT Plus/Pro แทนเครดิต API                                                                      |
+| [mongolgpt-gemini-auth](https://github.com/jenslys/mongolgpt-gemini-auth)                            | ใช้แผน Gemini ที่มีอยู่ของคุณแทนการเรียกเก็บเงิน API                                                                  |
+| [mongolgpt-antigravity-auth](https://github.com/NoeFabris/mongolgpt-antigravity-auth)                | ใช้โมเดลฟรีของ Antigravity แทนการเรียกเก็บเงิน API                                                                    |
+| [mongolgpt-devcontainers](https://github.com/athal7/mongolgpt-devcontainers)                         | การแยกคอนเทนเนอร์ Devcontainer แบบหลายสาขาพร้อมโคลนแบบตื้นและพอร์ตที่กำหนดอัตโนมัติ                                   |
+| [mongolgpt-google-antigravity-auth](https://github.com/shekohex/mongolgpt-google-antigravity-auth)   | ปลั๊กอิน Google Antigravity OAuth พร้อมรองรับ Google Search และการจัดการ API ที่แข็งแกร่งยิ่งขึ้น                     |
+| [mongolgpt-dynamic-context-pruning](https://github.com/Tarquinen/mongolgpt-dynamic-context-pruning)  | ปรับการใช้โทเค็นให้เหมาะสมโดยการตัดเอาท์พุตของเครื่องมือที่ล้าสมัย                                                    |
+| [mongolgpt-vibeguard](https://github.com/inkdust2021/mongolgpt-vibeguard)                            | ปกปิดความลับ/PII เป็นตัวยึดตำแหน่งแบบ VibeGuard ก่อนการเรียก LLM และกู้คืนในเครื่อง                                   |
+| [mongolgpt-websearch-cited](https://github.com/ghoulr/mongolgpt-websearch-cited.git)                 | เพิ่มการสนับสนุนการค้นหาเว็บแบบเนทีฟสำหรับผู้ให้บริการที่รองรับด้วยรูปแบบที่มีเหตุผลของ Google                        |
+| [mongolgpt-pty](https://github.com/shekohex/mongolgpt-pty.git)                                       | ช่วยให้ตัวแทน AI สามารถเรียกใช้กระบวนการเบื้องหลังใน PTY และส่งข้อมูลเชิงโต้ตอบให้พวกเขาได้                           |
+| [mongolgpt-shell-strategy](https://github.com/JRedeker/mongolgpt-shell-strategy)                     | คำแนะนำสำหรับคำสั่ง shell แบบไม่โต้ตอบ - ป้องกันการแฮงค์จากการดำเนินการที่ขึ้นอยู่กับ TTY                             |
+| [mongolgpt-wakatime](https://github.com/angristan/mongolgpt-wakatime)                                | ติดตามการใช้งาน MongolGPT ด้วย Wakatime                                                                               |
+| [mongolgpt-md-table-formatter](https://github.com/franlol/mongolgpt-md-table-formatter/tree/main)    | ทำความสะอาดตาราง Markdown ที่ผลิตโดย LLM                                                                              |
+| [mongolgpt-morph-plugin](https://github.com/morphllm/mongolgpt-morph-plugin)                         | การแก้ไข Fast Apply, การค้นหาโค้ดเบส WarpGrep และการบีบอัดบริบทผ่าน Morph                                             |
+| [oh-my-mongolgpt](https://github.com/code-yeongyu/oh-my-mongolgpt)                                   | ตัวแทนเบื้องหลัง, เครื่องมือ LSP/AST/MCP ที่สร้างไว้ล่วงหน้า, ตัวแทนที่ได้รับการดูแลจัดการ, เข้ากันได้กับ Claude Code |
+| [mongolgpt-notificator](https://github.com/panta82/mongolgpt-notificator)                            | การแจ้งเตือนบนเดสก์ท็อปและเสียงเตือนสำหรับเซสชัน MongolGPT                                                            |
+| [mongolgpt-notifier](https://github.com/mohak34/mongolgpt-notifier)                                  | การแจ้งเตือนบนเดสก์ท็อปและเสียงเตือนสำหรับการอนุญาต การดำเนินการเสร็จสิ้น และเหตุการณ์ข้อผิดพลาด                      |
+| [mongolgpt-zellij-namer](https://github.com/24601/mongolgpt-zellij-namer)                            | การตั้งชื่อเซสชัน Zellij อัตโนมัติที่ขับเคลื่อนด้วย AI ตามบริบทของ MongolGPT                                          |
+| [mongolgpt-skillful](https://github.com/zenobi-us/mongolgpt-skillful)                                | อนุญาตให้ตัวแทน MongolGPT โหลดแบบ Lazy Load ตามความต้องการพร้อมการค้นพบทักษะและการแทรก                                |
+| [mongolgpt-supermemory](https://github.com/supermemoryai/mongolgpt-supermemory)                      | หน่วยความจำถาวรตลอดเซสชันโดยใช้ Supermemory                                                                           |
+| [@plannotator/mongolgpt](https://github.com/backnotprop/plannotator/tree/main/apps/mongolgpt-plugin) | การตรวจสอบแผนเชิงโต้ตอบพร้อมคำอธิบายประกอบแบบภาพและการแชร์ส่วนตัว/offline                                             |
+| [@openspoon/subtask2](https://github.com/spoons-and-mirrors/subtask2)                                | ขยาย mongolgpt /commands ไปสู่ระบบการประสานที่มีประสิทธิภาพพร้อมการควบคุมโฟลว์แบบละเอียด                              |
+| [mongolgpt-scheduler](https://github.com/different-ai/mongolgpt-scheduler)                           | กำหนดเวลางานที่เกิดซ้ำโดยใช้ launchd (Mac) หรือ systemd (Linux) ด้วยไวยากรณ์ cron                                     |
+| [micode](https://github.com/vtemian/micode)                                                          | ระดมความคิดอย่างมีโครงสร้าง → วางแผน → นำเวิร์กโฟลว์ไปใช้ด้วยความต่อเนื่องของเซสชัน                                   |
+| [octto](https://github.com/vtemian/octto)                                                            | UI เบราว์เซอร์แบบโต้ตอบสำหรับการระดมความคิด AI ด้วยแบบฟอร์มคำถามหลายข้อ                                               |
+| [mongolgpt-background-agents](https://github.com/kdcokenny/mongolgpt-background-agents)              | เอเจนต์พื้นหลังสไตล์ Claude Code พร้อมการมอบหมายแบบอะซิงก์และการคงอยู่ของบริบท                                        |
+| [mongolgpt-notify](https://github.com/kdcokenny/mongolgpt-notify)                                    | การแจ้งเตือนระบบปฏิบัติการดั้งเดิมสำหรับ MongolGPT – ทราบเมื่องานเสร็จสมบูรณ์                                         |
+| [mongolgpt-workspace](https://github.com/kdcokenny/mongolgpt-workspace)                              | ชุดสายรัดประสานหลายเอเจนต์ที่ให้มา – ส่วนประกอบ 16 ชิ้น ติดตั้งเพียงครั้งเดียว                                        |
+| [mongolgpt-worktree](https://github.com/kdcokenny/mongolgpt-worktree)                                | เวิร์กทรีคอมไพล์ไร้แรงเสียดทานสำหรับ MongolGPT                                                                        |
+| [mongolgpt-sentry-monitor](https://github.com/stolinski/mongolgpt-sentry-monitor)                    | ติดตามและแก้ไขข้อบกพร่องเอเจนต์ AI ของคุณด้วย Sentry AI Monitoring                                                    |
+
+---
+
+## โครงการ
+
+| ชื่อ                                                                                         | คำอธิบาย                                                                  |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [kimaki](https://github.com/remorses/kimaki)                                                 | บอท Discord เพื่อควบคุมเซสชัน MongolGPT สร้างขึ้นบน SDK                   |
+| [mongolgpt.nvim](https://github.com/NickvanDyke/mongolgpt.nvim)                              | ปลั๊กอิน Neovim สำหรับข้อความแจ้งที่ทราบโดยบรรณาธิการ ซึ่งสร้างขึ้นบน API |
+| [portal](https://github.com/hosenur/portal)                                                  | UI เว็บบนมือถือเป็นครั้งแรกสำหรับ MongolGPT บน Tailscale/VPN              |
+| [mongolgpt plugin template](https://github.com/zenobi-us/mongolgpt-plugin-template/)         | เทมเพลตสำหรับสร้างปลั๊กอิน MongolGPT                                      |
+| [mongolgpt.nvim](https://github.com/sudo-tee/mongolgpt.nvim)                                 | ส่วนหน้า Neovim สำหรับ mongolgpt - เอเจนต์การเข้ารหัส AI ที่ใช้ terminal  |
+| [ai-sdk-provider-mongolgpt-sdk](https://github.com/ben-vargas/ai-sdk-provider-mongolgpt-sdk) | ผู้ให้บริการ Vercel AI SDK สำหรับการใช้งาน MongolGPT ผ่าน @mongolgpt/sdk  |
+| [OpenChamber](https://github.com/btriapitsyn/openchamber)                                    | แอพเว็บ / เดสก์ท็อปและส่วนขยาย VS Code สำหรับ MongolGPT                   |
+| [MongolGPT-Obsidian](https://github.com/mtymek/mongolgpt-obsidian)                           | ปลั๊กอิน Obsidian ที่ฝัง MongolGPT ไว้ใน UI ของ Obsidian                  |
+| [OpenWork](https://github.com/different-ai/openwork)                                         | ทางเลือกโอเพ่นซอร์สแทน Claude Cowork ซึ่งขับเคลื่อนโดย MongolGPT          |
+| [ocx](https://github.com/kdcokenny/ocx)                                                      | ตัวจัดการส่วนขยาย MongolGPT พร้อมโปรไฟล์แบบพกพาและแยกส่วน                 |
+| [CodeNomad](https://github.com/NeuralNomadsAI/CodeNomad)                                     | แอปเดสก์ท็อป เว็บ มือถือ และไคลเอ็นต์ระยะไกลสำหรับ MongolGPT              |
+
+---
+
+## ตัวแทน
+
+| ชื่อ                                                                | คำอธิบาย                                                                 |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [Agentic](https://github.com/Cluster444/agentic)                    | เอเจนต์ AI แบบแยกส่วนและคำสั่งสำหรับการพัฒนาแบบมีโครงสร้าง               |
+| [mongolgpt-agents](https://github.com/darrenhinde/mongolgpt-agents) | กำหนดค่า พรอมต์ เอเจนต์ และปลั๊กอินสำหรับเวิร์กโฟลว์ที่ได้รับการปรับปรุง |

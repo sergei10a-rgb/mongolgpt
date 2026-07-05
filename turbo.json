@@ -1,0 +1,33 @@
+{
+  "$schema": "https://v2-8-13.turborepo.dev/schema.json",
+  "globalEnv": ["CI", "MONGOLGPT_DISABLE_SHARE"],
+  "globalPassThroughEnv": ["CI", "MONGOLGPT_DISABLE_SHARE"],
+  "tasks": {
+    "typecheck": {},
+    "build": {
+      "dependsOn": [],
+      "outputs": ["dist/**"]
+    },
+    "mongolgpt#test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "passThroughEnv": ["*"]
+    },
+    "@mongolgpt/core#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@mongolgpt/app#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@mongolgpt/ui#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@mongolgpt/session-ui#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    }
+  }
+}

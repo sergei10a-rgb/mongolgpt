@@ -1,0 +1,464 @@
+---
+title: SDK
+description: mongolgpt серверт зориулсан аюулгүй JS үйлчлүүлэгч.
+---
+
+import config from "../../../../config.mjs"
+export const typesUrl = `${config.github}/blob/dev/packages/sdk/js/src/gen/types.gen.ts`
+
+mongolgpt JS/TS SDK нь сервертэй харьцах төрлийн аюулгүй клиентээр хангадаг.
+Интеграцчлалыг бий болгох, mongolgpt-г програмын дагуу хянахын тулд үүнийг ашиглана уу.
+
+[Илүү ихийг мэдэж аваарай](/docs/server) сервер хэрхэн ажилладаг талаар. Жишээлбэл, нийгэмлэгийн бүтээсэн [projects](/docs/ecosystem#projects)-г үзээрэй.
+
+---
+
+## Суулгах
+
+SDK-г npm-аас суулгана уу:
+
+```bash
+npm install @mongolgpt/sdk
+```
+
+---
+
+## Үйлчлүүлэгч үүсгэх
+
+mongolgpt жишээ үүсгэх:
+
+```javascript
+import { createMongolGPT } from "@mongolgpt/sdk"
+
+const { client } = await createMongolGPT()
+```
+
+Энэ нь сервер болон үйлчлүүлэгчийг хоёуланг нь эхлүүлнэ
+
+#### Сонголтууд
+
+| Сонголт | Төрөл | Тодорхойлолт | Өгөгдмөл |
+| ---------- | ------------- | ------------------------------ | ----------- |
+| `hostname` | `string` | Серверийн хостын нэр | `127.0.0.1` |
+| `port` | `number` | Сервер порт | `4096` |
+| `signal` | `AbortSignal` | Цуцлахыг зогсоох дохио | `undefined` |
+| `timeout` | `number` | Серверийг эхлүүлэхэд ms-ийн хугацаа | `5000` |
+| `config` | `Config` | Тохиргооны объект | `{}` |
+
+---
+
+## Тохиргоо
+
+Та зан төлөвийг өөрчлөхийн тулд тохиргооны объектыг дамжуулж болно. Энэ жишээ нь таны `mongolgpt.json`-г авсан хэвээр байгаа ч та тохиргоог дарж бичих эсвэл нэмэх боломжтой:
+
+```javascript
+import { createMongolGPT } from "@mongolgpt/sdk"
+
+const mongolgpt = await createMongolGPT({
+  hostname: "127.0.0.1",
+  port: 4096,
+  config: {
+    model: "anthropic/claude-3-5-sonnet-20241022",
+  },
+})
+
+console.log(`Server running at ${mongolgpt.server.url}`)
+
+mongolgpt.server.close()
+```
+
+## Зөвхөн үйлчлүүлэгч
+
+Хэрэв танд mongolgpt-ийн ажиллаж байгаа жишээ байгаа бол та түүнтэй холбогдохын тулд үйлчлүүлэгчийн жишээ үүсгэж болно:
+
+```javascript
+import { createMongolGPTClient } from "@mongolgpt/sdk"
+
+const client = createMongolGPTClient({
+  baseUrl: "http://localhost:4096",
+})
+```
+
+#### Сонголтууд
+
+| Сонголт | Төрөл | Тодорхойлолт | Өгөгдмөл |
+| --------------- | ---------- | -------------------------------- | ----------------------- |
+| `baseUrl` | `string` | URL серверийн | `http://localhost:4096` |
+| `fetch` | `function` | Захиалгат дуудлагын хэрэгжилт | `globalThis.fetch` |
+| `parseAs` | `string` | Хариултыг задлан шинжлэх арга | `auto` |
+| `responseStyle` | `string` | Буцах загвар: `data` эсвэл `fields` | `fields` |
+| `throwOnError` | `boolean` | Буцаахын оронд алдаа шидэх | `false` |
+
+---
+
+## Төрөл
+
+SDK нь бүх API төрлийн TypeScript тодорхойлолтуудыг агуулдаг. Тэдгээрийг шууд импортлох:
+
+```typescript
+import type { Session, Message, Part } from "@mongolgpt/sdk"
+```
+
+Бүх төрлийг серверийн OpenAPI тодорхойлолтоос үүсгэсэн бөгөөд <a href={typesUrl}>төрлийн файлд</a> ашиглах боломжтой.
+
+---
+
+## Алдаа
+
+SDK нь таны барьж авч шийдвэрлэх боломжтой алдаануудыг гаргаж чадна:
+
+```typescript
+try {
+  await client.session.get({ path: { id: "invalid-id" } })
+} catch (error) {
+  console.error("Failed to get session:", (error as Error).message)
+}
+```
+
+---
+
+## Бүтэцлэгдсэн гаралт
+
+Та JSON схем бүхий `format`-г зааж өгснөөр загвараас бүтэцлэгдсэн JSON гаралтыг хүсч болно. Загвар нь таны схемд тохирсон JSON-г буцаахын тулд `StructuredOutput` хэрэгслийг ашиглана.
+
+### Үндсэн хэрэглээ
+
+```typescript
+const result = await client.session.prompt({
+  path: { id: sessionId },
+  body: {
+    parts: [{ type: "text", text: "Research Anthropic and provide company info" }],
+    format: {
+      type: "json_schema",
+      schema: {
+        type: "object",
+        properties: {
+          company: { type: "string", description: "Company name" },
+          founded: { type: "number", description: "Year founded" },
+          products: {
+            type: "array",
+            items: { type: "string" },
+            description: "Main products",
+          },
+        },
+        required: ["company", "founded"],
+      },
+    },
+  },
+})
+
+// Access the structured output
+console.log(result.data.info.structured_output)
+// { company: "Anthropic", founded: 2021, products: ["Claude", "Claude API"] }
+```
+
+### Гаралтын форматын төрлүүд
+
+| Төрөл | Тодорхойлолт |
+| ------------- | ------------------------------------------------------ |
+| `text` | Өгөгдмөл. Стандарт текстийн хариу (бүтэцлэгдсэн гаралт байхгүй) |
+| `json_schema` | Өгөгдсөн схемтэй тохирч баталгаажуулсан JSON буцаана |
+
+### JSON Схемийн формат
+
+`type: 'json_schema'`-г ашиглахдаа:
+
+| Талбай | Төрөл | Тодорхойлолт |
+| ------------ | --------------- | ---------------------------------------------------------- |
+| `type` | `'json_schema'` | Шаардлагатай. JSON схемийн горимыг заана |
+| `schema` | `object` | Шаардлагатай. JSON Гаралтын бүтцийг тодорхойлох схемийн объект |
+| `retryCount` | `number` | Нэмэлт. Баталгаажуулалтын дахин оролдлогын тоо (өгөгдмөл: 2) |
+
+### Алдаа засах
+
+Хэрэв загвар бүх дахин оролдлого хийсний дараа хүчинтэй бүтэцтэй гаралтыг гаргаж чадахгүй бол хариулт нь `StructuredOutputError`-г агуулна:
+
+```typescript
+if (result.data.info.error?.name === "StructuredOutputError") {
+  console.error("Failed to produce structured output:", result.data.info.error.message)
+  console.error("Attempts:", result.data.info.error.retries)
+}
+```
+
+### Шилдэг туршлага
+
+1. Загварт ямар өгөгдөл гаргаж авахыг ойлгоход туслахын тулд схемийн шинж чанартаа **тодорхой тайлбаруудыг оруулна уу**
+2. ** `required`**-г ашиглан аль талбарууд байх ёстойг зааж өгнө үү
+3. **Схемүүдийг анхаарлаа төвлөрүүлэх** - нийлмэл үүрлэсэн схемүүд нь загварт зөв бөглөхөд хэцүү байж болно.
+4. **Тохирохыг тохируулна уу `retryCount`** - нарийн төвөгтэй схемийн хувьд нэмэгдүүлэх, энгийн схемийн хувьд бууруулна.
+
+---
+
+## APIs
+
+SDK нь төрөл аюулгүй клиентээр дамжуулан бүх серверийн API-г илрүүлдэг.
+
+---
+
+### Дэлхийн
+
+| арга | Тодорхойлолт | Хариулт |
+| ----------------- | ------------------------------- | ------------------------------------ |
+| `global.health()` | Серверийн эрүүл мэнд, хувилбарыг шалгана уу | `{ healthy: true, version: string }` |
+
+---
+
+#### Жишээ
+
+```javascript
+const health = await client.global.health()
+console.log(health.data.version)
+```
+
+---
+
+### Апп
+
+| арга | Тодорхойлолт | Хариулт |
+| -------------- | ------------------------- | ------------------------------------------- |
+| `app.log()` | Бүртгэлийн бичилт бичих | `boolean` |
+| `app.agents()` | Боломжтой бүх агентуудыг жагсаах | <a href={typesUrl}><code>Агент[]</code></a> |
+
+---
+
+#### Жишээ
+
+```javascript
+// Write a log entry
+await client.app.log({
+  body: {
+    service: "my-app",
+    level: "info",
+    message: "Operation completed",
+  },
+})
+
+// List available agents
+const agents = await client.app.agents()
+```
+
+---
+
+### Төсөл
+
+| арга | Тодорхойлолт | Хариулт |
+| ------------------- | ------------------- | --------------------------------------------- |
+| `project.list()` | Бүх төслүүдийг жагсаах | <a href={typesUrl}><code>Төсөл[]</code></a> |
+| `project.current()` | Одоогийн төслийг авах | <a href={typesUrl}><code>Төсөл</code></a> |
+
+---
+
+#### Жишээ
+
+```javascript
+// List all projects
+const projects = await client.project.list()
+
+// Get current project
+const currentProject = await client.project.current()
+```
+
+---
+
+### Зам
+
+| арга | Тодорхойлолт | Хариулт |
+| ------------ | ---------------- | ---------------------------------------- |
+| `path.get()` | Одоогийн замыг авах | <a href={typesUrl}><code>Зам</code></a> |
+
+---
+
+#### Жишээ
+
+```javascript
+// Get current path information
+const pathInfo = await client.path.get()
+```
+
+---
+
+### Тохиргоо
+
+| арга | Тодорхойлолт | Хариулт |
+| -------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `config.get()` | Тохиргооны мэдээлэл авах | <a href={typesUrl}><code>Тохиргоо</code></a> |
+| `config.providers()` | Үйлчилгээ үзүүлэгч болон өгөгдмөл загваруудыг жагсаах | `{ providers: `<a href={typesUrl}><code>Үйлчилгээ үзүүлэгч[]</code></a>`, default: { [key: string]: string } }` |
+
+---
+
+#### Жишээ
+
+```javascript
+const config = await client.config.get()
+
+const { providers, default: defaults } = await client.config.providers()
+```
+
+---
+
+### Сеанс
+
+| арга | Тодорхойлолт | Тэмдэглэл |
+| ---------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `session.list()` | Жагсаалт сесс | <a href={typesUrl}><code>Session[]</code></a>-г буцаана |
+| `session.get({ path })` | Хурал авах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
+| `session.children({ path })` | Хүүхдийн сессүүдийг жагсаах | <a href={typesUrl}><code>Session[]</code></a>-г буцаана |
+| `session.create({ body })` | Сеанс үүсгэх | <a href={typesUrl}><code>Session</code></a>-г буцаана |
+| `session.delete({ path })` | Сеанс устгах | `boolean` \| буцаана |
+| `session.update({ path, body })` | Сеансын шинж чанарыг шинэчлэх | <a href={typesUrl}><code>Session</code></a>-г буцаана |
+| `session.init({ path, body })` | Програмд ​​дүн шинжилгээ хийж, `AGENTS.md` | үүсгэнэ үү `boolean` \| буцаана |
+| `session.abort({ path })` | Ажиллаж байгаа сессийг зогсоох | `boolean` \| буцаана |
+| `session.share({ path })` | Сеанс хуваалцах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
+| `session.unshare({ path })` | Сешн хуваалцахыг болиулах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
+| `session.summarize({ path, body })` | Хуралдааныг нэгтгэн дүгнэх | `boolean` \| буцаана |
+| `session.messages({ path })` | Сеанс дахь мессежүүдийг жагсаах | `{ info: `<a href={typesUrl}><code>Мессеж</code></a>`, parts: `<a href={typesUrl}><code>Хэсэг[]</code></a>`}[]` буцаана |
+| `session.message({ path })` | Мессежийн дэлгэрэнгүй мэдээллийг авах | `{ info: `<a href={typesUrl}><code>Мессеж</code></a>`, parts: `<a href={typesUrl}><code>Хэсэг[]</code></a>`}` буцаана |
+| `session.prompt({ path, body })` | Шуурхай мессеж илгээх | `body.noReply: true` UserMessage (зөвхөн контекст) буцаана. Өгөгдмөл нь AI хариулттай <a href={typesUrl}><code>AssistantMessage</code></a>-г буцаана. [бүтэцтэй гаралт](#structured-output) \|-д `body.outputFormat` дэмждэг |
+| `session.command({ path, body })` | Сеанс руу тушаал илгээх | `{ info: `<a href={typesUrl}><code>AssistantMessage</code></a>`, parts: `<a href={typesUrl}><code>Хэсэг[]</code></a>`}`-г буцаана |
+| `session.shell({ path, body })` | Shell командыг ажиллуулах | <a href={typesUrl}><code>AssistantMessage</code></a>-г буцаана |
+| `session.revert({ path, body })` | Зурвас буцаах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
+| `session.unrevert({ path })` | Буцаасан мессежүүдийг сэргээх | <a href={typesUrl}><code>Session</code></a>-г буцаана |
+| `postSessionByIdPermissionsByPermissionId({ path, body })` | Зөвшөөрлийн хүсэлтэд хариу өгөх | `boolean` \| буцаана |
+
+---
+
+#### Жишээ
+
+```javascript
+// Create and manage sessions
+const session = await client.session.create({
+  body: { title: "My session" },
+})
+
+const sessions = await client.session.list()
+
+// Send a prompt message
+const result = await client.session.prompt({
+  path: { id: session.id },
+  body: {
+    model: { providerID: "anthropic", modelID: "claude-3-5-sonnet-20241022" },
+    parts: [{ type: "text", text: "Hello!" }],
+  },
+})
+
+// Inject context without triggering AI response (useful for plugins)
+await client.session.prompt({
+  path: { id: session.id },
+  body: {
+    noReply: true,
+    parts: [{ type: "text", text: "You are a helpful assistant." }],
+  },
+})
+```
+
+---
+
+### Файлууд
+
+| арга | Тодорхойлолт | Хариулт |
+| ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `find.text({ query })` | Файлаас текст хайх | `path`, `lines`, `line_number`, `absolute_offset`, `submatches`-тай таарах объектуудын массив |
+| `find.files({ query })` | Файл, санг нэрээр нь хайж олох | `string[]` (замууд) |
+| `find.symbols({ query })` | Ажлын талбарын тэмдэгтүүдийг олох | <a href={typesUrl}><code>Тэмдэгт[]</code></a> |
+| `file.read({ query })` | Файл унших | `{ type: "raw" \| "patch", content: string }` |
+| `file.status({ query? })` | Хянагдсан файлуудын статусыг авах | <a href={typesUrl}><code>Файл[]</code></a> |
+
+`find.files` нь хэд хэдэн нэмэлт асуулгын талбаруудыг дэмждэг:
+
+- `type`: `"file"` эсвэл `"directory"`
+- `directory`: хайлтын төслийн үндэсийг хүчингүй болгох
+- `limit`: хамгийн их үр дүн (1–200)
+
+---
+
+#### Жишээ
+
+```javascript
+// Search and read files
+const textResults = await client.find.text({
+  query: { pattern: "function.*mongolgpt" },
+})
+
+const files = await client.find.files({
+  query: { query: "*.ts", type: "file" },
+})
+
+const directories = await client.find.files({
+  query: { query: "packages", type: "directory", limit: 20 },
+})
+
+const content = await client.file.read({
+  query: { path: "src/index.ts" },
+})
+```
+
+---
+
+### TUI
+
+| арга | Тодорхойлолт | Хариулт |
+| ------------------------------ | ------------------------- | --------- |
+| `tui.appendPrompt({ body })` | Сануулгад текст нэмэх | `boolean` |
+| `tui.openHelp()` | Тусламжийн харилцах цонхыг нээнэ үү `boolean` | |
+| `tui.openSessions()` | Сеанс сонгогчийг нээх | `boolean` |
+| `tui.openThemes()` | Загвар сонгогчийг нээх | `boolean` |
+| `tui.openModels()` | Загвар сонгогчийг нээх | `boolean` |
+| `tui.submitPrompt()` | Одоогийн сануулгыг илгээх | `boolean` |
+| `tui.clearPrompt()` | Сануулгыг арилгах | `boolean` |
+| `tui.executeCommand({ body })` | командыг гүйцэтгэх | `boolean` |
+| `tui.showToast({ body })` | Шарсан талхны мэдэгдлийг харуулах | `boolean` |
+
+---
+
+#### Жишээ
+
+```javascript
+// Control TUI interface
+await client.tui.appendPrompt({
+  body: { text: "Add this to prompt" },
+})
+
+await client.tui.showToast({
+  body: { message: "Task completed", variant: "success" },
+})
+```
+
+---
+
+### Auth
+
+| арга | Тодорхойлолт | Хариулт |
+| ------------------- | ------------------------------ | --------- |
+| `auth.set({ ... })` | Баталгаажуулалтын итгэмжлэлүүдийг тохируулах | `boolean` |
+
+---
+
+#### Жишээ
+
+```javascript
+await client.auth.set({
+  path: { id: "anthropic" },
+  body: { type: "api", key: "your-api-key" },
+})
+```
+
+---
+
+### Үйл явдал
+
+| арга | Тодорхойлолт | Хариулт |
+| ------------------- | ------------------------- | ------------------------- |
+| `event.subscribe()` | Серверээс илгээсэн үйл явдлын урсгал | Серверээс илгээсэн үйл явдлын урсгал |
+
+---
+
+#### Жишээ
+
+```javascript
+// Listen to real-time events
+const events = await client.event.subscribe()
+for await (const event of events.stream) {
+  console.log("Event:", event.type, event.properties)
+}
+```
+
