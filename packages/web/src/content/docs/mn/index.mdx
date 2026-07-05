@@ -1,359 +1,108 @@
 ---
-title: Intro
-description: MongolGPT-г эхлүүлээрэй.
+title: MongolGPT баримт бичиг
+description: MongolGPT-ийг суулгах, тохируулах, AI agent workflow-д ашиглах монгол гарын авлага.
 ---
 
-import { Tabs, TabItem } from "@astrojs/starlight/components"
-import config from "../../../../config.mjs"
-export const console = config.console
+[**MongolGPT**](/) бол Монгол хэрэглэгчдэд зориулсан AI coding agent платформ. Терминал, desktop app, IDE өргөтгөл, provider, skill/plugin, MCP холболтуудыг нэг дор ажиллуулах зорилготой.
 
-[**Нээлттэй код**](/) нь нээлттэй эх сурвалжийн AI кодлогч агент юм. Үүнийг терминал дээр суурилсан интерфейс, ширээний програм эсвэл IDE өргөтгөл хэлбэрээр ашиглах боломжтой.
+## Одоогийн төлөв
 
-![Нээлттэй код сэдэвтэй MongolGPT TUI](../../../assets/lander/screenshot.png)
+MongolGPT-ийн Windows desktop туршилтын build GitHub Release дээр нийтлэгдсэн.
 
-Эхэлцгээе.
+[MongolGPT Desktop татах](https://github.com/sergei10a-rgb/mongolgpt/releases/latest)
 
----
+`npm install -g mongolgpt`, Homebrew, Chocolatey, Scoop package-уудыг албан ёсоор нийтлэх ажил бэлтгэгдэж байна. Эдгээр package registry дээр гараагүй үед docs дээр шууд суулгана гэж бичих нь буруу тул энэ хуудсанд зөвхөн бодитой ажиллах замуудыг үлдээв.
 
-#### Урьдчилсан нөхцөл
+## Desktop суулгах
 
-Терминалдаа MongolGPT-г ашиглахын тулд танд дараах зүйлс хэрэгтэй:
-
-1. Орчин үеийн терминал эмулятор:
-   - [WezTerm](https://wezterm.org), хөндлөн платформ
-   - [Alacritty](https://alacritty.org), хөндлөн платформ
-   - [Ghostty](https://ghostty.org), Linux болон macOS
-   - [Kitty](https://sw.kovidgoyal.net/kitty/), Linux болон macOS
-
-2. Таны ашиглахыг хүссэн LLM үйлчилгээ үзүүлэгчийн API товчлуурууд.
-
----
-
-## Суулгах
-
-MongolGPT-г суулгах хамгийн хялбар арга бол суулгах скрипт юм.
-
-```bash
-curl -fsSL https://mongolgpt.duckdns.org/install | bash
-```
-
-Та мөн дараах тушаалаар үүнийг суулгаж болно.
-
-- ** Node.js ашиглах**
-
-        <Tabs>
-
-      <TabItem label="npm">
-      ```bash
-      npm install -g mongolgpt
-      ```
-
-          </TabItem>
-
-        <TabItem label="Bun">
-        ```bash
-        bun install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="pnpm">
-        ```bash
-        pnpm install -g mongolgpt
-        ```
-
-          </TabItem>
-
-        <TabItem label="Yarn">
-        ```bash
-        yarn global add mongolgpt
-        ```
-
-      </TabItem>
-
-  </Tabs>
-
-- ** macOS болон Linux дээр Homebrew ашиглах**
-
-  ```bash
-  brew install sergei10a-rgb/tap/mongolgpt
-  ```
-
-  > Бид хамгийн сүүлийн үеийн хувилбаруудыг үзэхийн тулд MongolGPT товшилтыг ашиглахыг зөвлөж байна. Албан ёсны `brew install mongolgpt` томьёог Homebrew баг дагаж мөрддөг бөгөөд бага зэрэг шинэчлэгддэг.
-
-- ** Arch Linux** дээр суулгаж байна
-
-  ```bash
-  sudo pacman -S mongolgpt           # Arch Linux (Stable)
-  paru -S mongolgpt-bin              # Arch Linux (Latest from AUR)
-  ```
-
-#### Windows
-
-:::tip[Санал болгож байна: WSL ашиглах]
-Windows-г ашиглахын тулд бид [Linux-д зориулсан Windows дэд систем (WSL)](/docs/windows-wsl)-г ашиглахыг зөвлөж байна. Энэ нь MongolGPT-ийн онцлогтой илүү сайн гүйцэтгэл, бүрэн нийцтэй байдлыг хангадаг.
-:::
-
-- ** Chocolatey ашиглах**
-
-  ```bash
-  choco install mongolgpt
-  ```
-
-- ** Scoop ашиглах**
-
-  ```bash
-  scoop install mongolgpt
-  ```
-
-- ** NPM ашиглах**
-
-  ```bash
-  npm install -g mongolgpt
-  ```
-
-- ** Mise ашиглах**
-
-  ```bash
-  mise use -g github:sergei10a-rgb/mongolgpt
-  ```
-
-- ** Docker ашиглах**
-
-  ```bash
-  docker run -it --rm ghcr.io/sergei10a-rgb/mongolgpt
-  ```
-
-MongolGPT-г Windows дээр Bun ашиглан суулгах дэмжлэг одоогоор хийгдэж байна.
-
-Та мөн [Releases](https://github.com/sergei10a-rgb/mongolgpt/releases)-аас хоёртын файлыг татаж авах боломжтой.
-
----
-
-## Тохируулах
-
-MongolGPT-ийн тусламжтайгаар та LLM үйлчилгээ үзүүлэгчийн API товчлуурыг тохируулж ашиглаж болно.
-
-Хэрэв та LLM үйлчилгээ үзүүлэгчийг шинээр ашиглаж байгаа бол [MongolGPT Zen](/docs/zen) ашиглахыг зөвлөж байна.
-Энэ нь MongolGPT-аар шалгагдсан загваруудын жагсаалт юм.
-team.
-
-1. TUI-д `/connect` командыг ажиллуулж, mongolgpt-г сонгоод [mongolgpt.duckdns.org/auth](https://mongolgpt.duckdns.org/auth) руу оч.
-
-   ```txt
-   /connect
-   ```
-
-2. Нэвтэрч, төлбөрийн мэдээллээ нэмээд API түлхүүрээ хуулна.
-
-3. API түлхүүрээ буулгана уу.
-
-   ```txt
-   ┌ API key
-   │
-   │
-   └ enter
-   ```
-
-Эсвэл та бусад үйлчилгээ үзүүлэгчийн аль нэгийг сонгож болно. [Илүү ихийг мэдэж аваарай](/docs/providers#directory).
-
----
-
-## Эхлүүлэх
-
-Одоо та үйлчилгээ үзүүлэгчийг тохируулсан бол тэр төсөл рүү шилжих боломжтой
-Та ажиллахыг хүсч байна.
-
-```bash
-cd /path/to/project
-```
-
-Мөн MongolGPT ажиллуулна уу.
-
-```bash
-mongolgpt
-```
-
-Дараа нь дараах тушаалыг ажиллуулж төслийн MongolGPT-г эхлүүлнэ үү.
-
-```bash frame="none"
-/init
-```
-
-Энэ нь MongolGPT-г таны төсөлд дүн шинжилгээ хийж, дотор нь `AGENTS.md` файл үүсгэх болно
-төслийн үндэс.
-
-:::tip
-Та төслийнхээ `AGENTS.md` файлыг Git-д оруулах ёстой.
-:::
-
-Энэ нь MongolGPT-д төслийн бүтэц, кодчиллын хэв маягийг ойлгоход тусална
-used.
-
----
-
-## Хэрэглээ
-
-Та одоо төсөл дээрээ ажиллахын тулд MongolGPT ашиглахад бэлэн боллоо. Үүнийг чөлөөтэй асуугаарай
-юу ч биш!
-
-Хэрэв та AI кодлогчийг шинээр ашиглаж байгаа бол энд байж болох зарим жишээг энд оруулав
-help.
-
----
-
-### Асуулт асуу
-
-Та кодын баазыг тайлбарлахыг MongolGPT-оос асууж болно.
-
-:::tip
-`@` товчийг ашиглан төсөл дэх файлуудыг тодорхой бус хайх.
-:::
-
-```txt frame="none" "@packages/functions/src/api/index.ts"
-How is authentication handled in @packages/functions/src/api/index.ts
-```
-
-Хэрэв таны ажиллаж байгаагүй кодын зарим хэсэг байвал энэ нь тустай.
-
----
-
-### Онцлогуудыг нэмнэ үү
-
-Та төсөлдөө шинэ функц нэмэхийг MongolGPT-оос асууж болно. Хэдийгээр бид эхлээд түүнээс төлөвлөгөө гаргахыг хүсэхийг зөвлөж байна.
-
-1. **Төлөвлөгөө үүсгэх**
-
-   MongolGPT нь _Төлөвлөгөөний горимтой_ бөгөөд энэ нь өөрчлөлт хийх болон өөрчлөх чадварыг идэвхгүй болгодог
-   оронд нь энэ функцийг хэрхэн хэрэгжүүлэхийг санал болго.
-
-   **Tab** товчийг ашиглан түүн рүү шилжинэ үү. Та баруун доод буланд энэ үзүүлэлтийг харах болно.
-
-   ```bash frame="none" title="Switch to Plan mode"
-   <TAB>
-   ```
-
-   Одоо бид үүнийг юу хийхийг хүсч байгаагаа тайлбарлая.
-
-   ```txt frame="none"
-   When a user deletes a note, we'd like to flag it as deleted in the database.
-   Then create a screen that shows all the recently deleted notes.
-   From this screen, the user can undelete a note or permanently delete it.
-   ```
-
-Та юу хүсч байгаагаа ойлгохын тулд MongolGPT хангалттай мэдээлэл өгөхийг хүсч байна. Энэ нь тусалдаг
-Багийнхаа бага хөгжүүлэгчтэй ярьж байгаа юм шиг түүнтэй ярих.
-
-:::зөвлөгөө
-MongolGPT-д таны юуг ойлгоход нь туслахын тулд олон контекст, жишээ хэлээрэй
-хүсэж байна.
-:::
-
-2. **Төлөвлөгөөгөө давтах**
-
-   Энэ нь танд төлөвлөгөө өгсний дараа та түүнд санал хүсэлт өгөх эсвэл илүү дэлгэрэнгүй мэдээлэл нэмэх боломжтой.
-
-   ```txt frame="none"
-   We'd like to design this new screen using a design I've used before.
-   [Image #1] Take a look at this image and use it as a reference.
-   ```
-
-   :::зөвлөгөө
-   Зургийг терминал руу чирж буулгаж, сануулгад нэмнэ үү.
-   :::
-
-   MongolGPT таны өгсөн дурын зургийг сканнердаж, сануулгад нэмэх боломжтой. Та чадна
-   терминал руу дүрсийг чирж буулгах замаар үүнийг хийнэ үү.
-
-3. **Онцлогийг бий болгох**
-
-   Төлөвлөгөөнд таатай санагдсаны дараа _Бүтээх горим_ руу буцна уу
-   **Tab** товчийг дахин дарна уу.
-
-   ```bash frame="none"
-   <TAB>
-   ```
-
-   Тэгээд өөрчлөлт оруулахыг гуйж байна.
-
-   ```bash frame="none"
-   Sounds good! Go ahead and make the changes.
-   ```
-
----
-
-### Өөрчлөлт хийх
-
-Илүү энгийн өөрчлөлтийг хийхийн тулд та үүнийг шууд бүтээхийг MongolGPT-аас асууж болно
-эхлээд төлөвлөгөөгөө эргэн харах шаардлагагүй.
-
-```txt frame="none" "@packages/functions/src/settings.ts" "@packages/functions/src/notes.ts"
-We need to add authentication to the /settings route. Take a look at how this is
-handled in the /notes route in @packages/functions/src/notes.ts and implement
-the same logic in @packages/functions/src/settings.ts
-```
-
-Та MongolGPT зөв болгохын тулд хангалттай дэлгэрэнгүй мэдээлэл өгөхийг хүсч байна
-changes.
-
----
-
-### Өөрчлөлтийг буцаах
-
-Та зарим өөрчлөлт оруулахыг MongolGPT-аас асууя гэж бодъё.
-
-```txt frame="none" "@packages/functions/src/api/index.ts"
-Can you refactor the function in @packages/functions/src/api/index.ts?
-```
-
-Гэхдээ энэ нь таны хүссэн зүйл биш гэдгийг та ойлгож байна. Та өөрчлөлтийг **буцааж болно**
-`/undo` командыг ашиглан.
-
-```bash frame="none"
-/undo
-```
-
-MongolGPT одоо таны хийсэн өөрчлөлтийг буцааж, таны анхны мессежийг харуулах болно
-again.
-
-```txt frame="none" "@packages/functions/src/api/index.ts"
-Can you refactor the function in @packages/functions/src/api/index.ts?
-```
-
-Эндээс та сануулгыг тохируулаад MongolGPT-аас дахин оролдохыг хүснэ үү.
-
-:::tip
-Та олон өөрчлөлтийг буцаахын тулд `/undo`-г олон удаа ажиллуулж болно.
-:::
-
-Эсвэл `/redo` командыг ашиглан өөрчлөлтийг **дахин хийж болно**.
-
-```bash frame="none"
-/redo
-```
-
----
-
-## Хуваалцах
-
-MongolGPT-тай хийсэн харилцан яриаг [тантай хуваалцаж болно баг](/docs/share).
-
-```bash frame="none"
-/share
-```
-
-Энэ нь одоогийн харилцан ярианы холбоосыг үүсгэж, санах ой руу хуулах болно.
+1. [Releases](https://github.com/sergei10a-rgb/mongolgpt/releases/latest) хуудас руу орно.
+2. `mongolgpt-desktop-win-x64.exe` файлыг татна.
+3. Суулгагчийг ажиллуулна.
 
 :::note
-Анхдагч байдлаар харилцан яриаг хуваалцдаггүй.
+Одоогийн build code signing хийгдээгүй. Windows SmartScreen анхааруулга харуулж магадгүй.
 :::
 
-Энд MongolGPT бүхий [жишээ яриа](https://mongolgpt.duckdns.org/s/4XP1fce5) байна.
+## Source-оос ажиллуулах
 
----
+Repository-г clone хийсэн бол дараах байдлаар локал орчинд ажиллуулна.
 
-## Тохируулах
+```bash
+bun install
+bun run dev
+```
 
-Тэгээд л болоо! Та одоо MongolGPT-г ашиглах чадвартай болсон.
+Desktop development mode:
 
-Үүнийг өөрийн болгохын тулд бид [сэдэв сонгох](/docs/themes), [товчлууруудыг тохируулах](/docs/keybinds), [код форматлагчдыг тохируулах](/docs/formatters), [захиалгат тушаалуудыг бий болгох](/docs/commands) эсвэл [MongolGPT тохиргоо](/docs/config)-тэй тоглохыг зөвлөж байна.
+```bash
+bun run dev:desktop
+```
+
+Windows desktop installer build хийх:
+
+```powershell
+$env:MONGOLGPT_CHANNEL="prod"
+bun --cwd packages/desktop run package:win
+```
+
+Build дууссаны дараа installer файл энд гарна.
+
+```txt
+packages/desktop/dist/
+```
+
+## Терминал хувилбар
+
+Terminal CLI нь `mongolgpt` command нэрээр ажиллах ёстой. Repository дотор CLI болон publish script-үүд энэ нэр рүү шилжсэн.
+
+Registry package нийтлэгдсэний дараа суулгах үндсэн command:
+
+```bash
+npm install -g mongolgpt
+```
+
+Package нийтлэгдээгүй үед GitHub Release эсвэл source build ашиглана.
+
+## Нэвтрэх ба provider тохируулах
+
+MongolGPT account-аар нэвтрэх урсгал нь `https://mongolgpt.duckdns.org/auth` endpoint руу чиглэнэ.
+
+```txt
+/connect
+```
+
+`/connect` командаар provider сонгоод API key эсвэл MongolGPT account холболтоо тохируулна.
+
+## Skill, plugin, MCP
+
+MongolGPT-ийн зорилго нь Claude, Codex, Goose, MCP server, skill/plugin зэрэг өөр өөр AI agent format-уудыг хэрэглэгчээр гараар тааруулахгүйгээр таньж, шаардлагатай үед adapter/wrapper үүсгэн холбох юм.
+
+Эхний суурь нь repo дотор байна:
+
+- provider integration
+- plugin API суурь
+- MCP холболтын суурь
+- desktop shell
+- terminal agent
+- MongolGPT account login wiring
+
+Дараагийн шатанд format танигч, adapter generator, marketplace/import workflow нэмэгдэнэ.
+
+## Хөгжүүлэлт
+
+```bash
+bun install
+bun run dev
+```
+
+Test болон typecheck:
+
+```bash
+bun run typecheck
+```
+
+## Тусламж
+
+Issue, release, source code:
+
+[github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)

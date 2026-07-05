@@ -10,7 +10,7 @@ import VscodeScreenshot from "../assets/lander/screenshot-vscode.png";
 import GithubScreenshot from "../assets/lander/screenshot-github.png";
 
 const { data } = Astro.locals.starlightRoute.entry;
-const { title = data.title, tagline, image, actions = [] } = data.hero || {};
+const { image } = data.hero || {};
 
 const imageAttrs = {
     loading: 'eager' as const,
@@ -28,22 +28,19 @@ const docsCliHref = getRelativeLocaleUrl(locale, "cli")
 const docsIdeHref = getRelativeLocaleUrl(locale, "ide")
 const docsGithubHref = getRelativeLocaleUrl(locale, "github")
 
-const command = "curl -fsSL"
-const protocol = "https://"
-const url = "mongolgpt.duckdns.org/install"
-const bash = "| bash"
+const command = "git clone"
+const protocol = ""
+const url = "https://github.com/sergei10a-rgb/mongolgpt.git"
+const bash = ""
 
 let darkImage: ImageMetadata | undefined;
 let lightImage: ImageMetadata | undefined;
-let rawHtml: string | undefined;
 if (image) {
     if ('file' in image) {
         darkImage = image.file;
     } else if ('dark' in image) {
         darkImage = image.dark;
         lightImage = image.light;
-    } else {
-        rawHtml = image.html;
   }
 }
 ---
@@ -93,10 +90,10 @@ if (image) {
 
     <section class="alternatives">
       <div class="col1">
-        <h3>npm</h3>
-        <button class="command" data-command="npm install -g mongolgpt">
+        <h3>Desktop</h3>
+        <button class="command" data-command="https://github.com/sergei10a-rgb/mongolgpt/releases/latest">
           <code>
-            <span>npm install -g</span> <span class="highlight">mongolgpt</span>
+            <span>GitHub</span> <span class="highlight">Release татах</span>
           </code>
           <span class="copy">
             <CopyIcon />
@@ -105,10 +102,10 @@ if (image) {
         </button>
       </div>
       <div class="col2">
-        <h3>Bun</h3>
-        <button class="command" data-command="bun install -g mongolgpt">
+        <h3>Source</h3>
+        <button class="command" data-command="git clone https://github.com/sergei10a-rgb/mongolgpt.git">
           <code>
-            <span>bun install -g</span> <span class="highlight">mongolgpt</span>
+            <span>git clone</span> <span class="highlight">mongolgpt</span>
           </code>
           <span class="copy">
             <CopyIcon />
@@ -117,10 +114,10 @@ if (image) {
         </button>
       </div>
       <div class="col3">
-        <h3>Homebrew</h3>
-        <button class="command" data-command="brew install mongolgpt">
+        <h3>Dev</h3>
+        <button class="command" data-command="bun install && bun run dev">
           <code>
-            <span>brew install</span> <span class="highlight">mongolgpt</span>
+            <span>bun install</span> <span class="highlight">bun run dev</span>
           </code>
           <span class="copy">
             <CopyIcon />
@@ -129,10 +126,10 @@ if (image) {
         </button>
       </div>
       <div class="col4">
-        <h3>Paru</h3>
-        <button class="command" data-command="paru -S mongolgpt-bin">
+        <h3>Desktop build</h3>
+        <button class="command" data-command="bun --cwd packages/desktop run package:win">
           <code>
-            <span>paru -S</span> <span class="highlight">mongolgpt-bin</span>
+            <span>bun --cwd packages/desktop</span> <span class="highlight">package:win</span>
           </code>
           <span class="copy">
             <CopyIcon />
@@ -141,10 +138,10 @@ if (image) {
         </button>
       </div>
       <div class="col4">
-        <h3>Mise</h3>
-        <button class="command" data-command="mise use -g github:sergei10a-rgb/mongolgpt">
+        <h3>Docs</h3>
+        <button class="command" data-command="https://mongolgpt.duckdns.org/docs/">
           <code>
-            <span>mise use -g</span> <span class="highlight">github:sergei10a-rgb/mongolgpt</span>
+            <span>Монгол</span> <span class="highlight">баримт бичиг</span>
           </code>
           <span class="copy">
             <CopyIcon />
@@ -191,7 +188,7 @@ if (image) {
         <a href={discord.href} target="_blank" rel="noopener noreferrer">Discord</a>
       </div>
       <div class="col3">
-      <span>&copy;2025 <a href="https://anoma.ly" target="_blank" rel="noopener noreferrer">Anomaly Innovations</a></span>
+      <span>&copy;2025 <a href="https://mongolgpt.duckdns.org" target="_blank" rel="noopener noreferrer">MongolGPT</a></span>
       </div>
     </section>
 </div>

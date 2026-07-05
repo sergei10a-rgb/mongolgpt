@@ -72,7 +72,7 @@ export default function Share(props: {
         created: props.info.time.created,
         updated: props.info.time.updated,
       },
-    },
+    } as Session.Info,
     messages: {},
   })
   const messages = createMemo(() => Object.values(store.messages).toSorted((a, b) => a.id?.localeCompare(b.id)))
@@ -539,7 +539,7 @@ export function fromV1(v1: Message.Info): MessageWithParts {
               type: "text",
               text: part.text,
             },
-          ]
+          ] as unknown as MessageV2.Part[]
         }
         if (part.type === "step-start") {
           return [
@@ -547,7 +547,7 @@ export function fromV1(v1: Message.Info): MessageWithParts {
               ...base,
               type: "step-start",
             },
-          ]
+          ] as unknown as MessageV2.Part[]
         }
         if (part.type === "tool-invocation") {
           return [
@@ -589,11 +589,11 @@ export function fromV1(v1: Message.Info): MessageWithParts {
                 throw new Error("unknown tool invocation state")
               })(),
             },
-          ]
+          ] as unknown as MessageV2.Part[]
         }
-        return []
+        return [] as MessageV2.Part[]
       }),
-    }
+    } as MessageWithParts
   }
 
   if (v1.role === "user") {
@@ -622,7 +622,7 @@ export function fromV1(v1: Message.Info): MessageWithParts {
               type: "text",
               text: part.text,
             },
-          ]
+          ] as unknown as MessageV2.Part[]
         }
         if (part.type === "file") {
           return [
@@ -633,11 +633,11 @@ export function fromV1(v1: Message.Info): MessageWithParts {
               filename: part.filename,
               url: part.url,
             },
-          ]
+          ] as unknown as MessageV2.Part[]
         }
-        return []
+        return [] as MessageV2.Part[]
       }),
-    }
+    } as MessageWithParts
   }
 
   throw new Error("unknown message type")

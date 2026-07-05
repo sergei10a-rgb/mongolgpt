@@ -19,8 +19,8 @@ function docsAlias(pathname: string) {
 }
 
 function cookie(locale: string) {
-  const value = locale === "root" ? "en" : locale
-  return `oc_locale=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax`
+  const value = locale === "root" ? "mn" : locale
+  return `mongolgpt_locale=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax`
 }
 
 function redirect(url: URL, path: string, locale?: string) {
@@ -41,14 +41,14 @@ function localeFromCookie(header: string | null) {
   const raw = header
     .split(";")
     .map((x) => x.trim())
-    .find((x) => x.startsWith("oc_locale="))
-    ?.slice("oc_locale=".length)
+    .find((x) => x.startsWith("mongolgpt_locale="))
+    ?.slice("mongolgpt_locale=".length)
   if (!raw) return null
   return matchLocale(raw)
 }
 
 function localeFromAcceptLanguage(header: string | null) {
-  if (!header) return "root"
+  if (!header) return "mn"
 
   const items = header
     .split(",")
@@ -74,7 +74,7 @@ function localeFromAcceptLanguage(header: string | null) {
     .map((lang) => matchLocale(lang))
     .find((lang) => lang)
 
-  return locale ?? "root"
+  return locale ?? "mn"
 }
 
 export const onRequest = defineMiddleware((ctx, next) => {

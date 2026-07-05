@@ -15,6 +15,7 @@ import {
   User,
   WithParts,
 } from "@mongolgpt/core/v1/session"
+export { Assistant, Info, Part, ToolPart, ToolStateCompleted } from "@mongolgpt/core/v1/session"
 
 import { NamedError } from "@mongolgpt/core/util/error"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"

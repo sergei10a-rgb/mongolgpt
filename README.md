@@ -11,6 +11,14 @@ MongolGPT бол Монгол хэрэглэгчдэд эхнээсээ ойлг
 - CLI болон desktop дээр MongolGPT account-аар нэвтрэх холболтын суурь
 - Бусад agent ecosystem-ийн skill/plugin/MCP-ийг MongolGPT дээр тааруулах adapter layer-ийн эхлэл
 
+## Монгол баримт бичиг
+
+MongolGPT-ийн docs:
+
+[https://mongolgpt.duckdns.org/docs/](https://mongolgpt.duckdns.org/docs/)
+
+Docs-ийн үндсэн хуудас болон Монгол locale нь Монгол хэл дээр байна.
+
 ## Desktop хувилбар татах
 
 Windows суулгагч:
@@ -46,6 +54,18 @@ Build дууссаны дараа installer энд гарна:
 ```text
 packages/desktop/dist/
 ```
+
+## NPM package төлөв
+
+`mongolgpt` npm package-ийн publish script repo дотор бэлтгэгдсэн. Package registry дээр нийтлэхийн тулд npm account/token шаардлагатай.
+
+Package нийтлэгдсэний дараах command:
+
+```bash
+npm install -g mongolgpt
+```
+
+Нийтлэгдэхээс өмнө GitHub Release эсвэл source build ашиглана.
 
 ## Эх кодын сан
 

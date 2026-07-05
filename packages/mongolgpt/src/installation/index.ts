@@ -122,8 +122,8 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
     )
 
     const getBrewFormula = Effect.fnUntraced(function* () {
-      const tapFormula = yield* text(["brew", "list", "--formula", "mongolgpt"])
-      if (tapFormula.includes("mongolgpt")) return "mongolgpt"
+      const tapFormula = yield* text(["brew", "list", "--formula", "sergei10a-rgb/tap/mongolgpt"])
+      if (tapFormula.includes("mongolgpt")) return "sergei10a-rgb/tap/mongolgpt"
       const coreFormula = yield* text(["brew", "list", "--formula", "mongolgpt"])
       if (coreFormula.includes("mongolgpt")) return "mongolgpt"
       return "mongolgpt"
