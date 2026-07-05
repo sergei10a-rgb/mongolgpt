@@ -5,7 +5,6 @@ export default {
   console:
     stage === "production" ? "https://mongolgpt.duckdns.org/auth" : `https://${stage}.mongolgpt.duckdns.org/auth`,
   email: "support@mongolgpt.duckdns.org",
-  socialCard: "https://social-cards.sst.dev",
   github: "https://github.com/sergei10a-rgb/mongolgpt",
   discord: "https://mongolgpt.duckdns.org/discord",
   headerLinks: [

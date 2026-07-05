@@ -88,71 +88,37 @@ export default function Home() {
                 aria-label={i18n.t("home.install.ariaLabel")}
                 class="tabs"
                 data-component="tabs"
-                data-active="curl"
-                defaultValue="curl"
+                data-active="windows"
+                defaultValue="windows"
               >
                 <Tabs.List data-slot="tablist">
-                  <Tabs.Trigger value="curl" data-slot="tab">
-                    curl
+                  <Tabs.Trigger value="windows" data-slot="tab">
+                    Windows
                   </Tabs.Trigger>
-                  <Tabs.Trigger value="npm" data-slot="tab">
-                    npm
-                  </Tabs.Trigger>
-                  <Tabs.Trigger value="bun" data-slot="tab">
-                    bun
-                  </Tabs.Trigger>
-                  <Tabs.Trigger value="brew" data-slot="tab">
-                    brew
-                  </Tabs.Trigger>
-                  <Tabs.Trigger value="paru" data-slot="tab">
-                    paru
+                  <Tabs.Trigger value="source" data-slot="tab">
+                    source
                   </Tabs.Trigger>
                   <Tabs.Indicator />
                 </Tabs.List>
                 <div data-slot="panels">
-                  <Tabs.Content as="pre" data-slot="panel" value="curl">
+                  <Tabs.Content as="pre" data-slot="panel" value="windows">
                     <button data-copy data-slot="command" onClick={handleCopyClick}>
                       <span data-slot="command-script">
-                        <span>curl -fsSL </span>
+                        <span>download </span>
                         <span data-slot="protocol">https://</span>
-                        <span data-slot="highlight">mongolgpt.duckdns.org/install</span>
-                        <span> | bash</span>
+                        <span data-slot="highlight">
+                          github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe
+                        </span>
                       </span>
                       <CopyStatus />
                     </button>
                   </Tabs.Content>
-                  <Tabs.Content as="pre" data-slot="panel" value="npm">
+                  <Tabs.Content as="pre" data-slot="panel" value="source">
                     <button data-copy data-slot="command" onClick={handleCopyClick}>
                       <span>
-                        <span data-slot="protocol">npm i -g </span>
-                        <span data-slot="highlight">mongolgpt</span>
-                      </span>
-                      <CopyStatus />
-                    </button>
-                  </Tabs.Content>
-                  <Tabs.Content as="pre" data-slot="panel" value="bun">
-                    <button data-copy data-slot="command" onClick={handleCopyClick}>
-                      <span>
-                        <span data-slot="protocol">bun add -g </span>
-                        <span data-slot="highlight">mongolgpt</span>
-                      </span>
-                      <CopyStatus />
-                    </button>
-                  </Tabs.Content>
-                  <Tabs.Content as="pre" data-slot="panel" value="brew">
-                    <button data-copy data-slot="command" onClick={handleCopyClick}>
-                      <span>
-                        <span data-slot="protocol">brew install </span>
-                        <span data-slot="highlight">mongolgpt</span>
-                      </span>
-                      <CopyStatus />
-                    </button>
-                  </Tabs.Content>
-                  <Tabs.Content as="pre" data-slot="panel" value="paru">
-                    <button data-copy data-slot="command" onClick={handleCopyClick}>
-                      <span>
-                        <span data-slot="protocol">paru -S </span>
-                        <span data-slot="highlight">mongolgpt</span>
+                        <span data-slot="protocol">git clone </span>
+                        <span data-slot="highlight">https://github.com/sergei10a-rgb/mongolgpt</span>
+                        <span> && cd mongolgpt && bun install</span>
                       </span>
                       <CopyStatus />
                     </button>

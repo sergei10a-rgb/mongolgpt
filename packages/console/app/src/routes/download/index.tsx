@@ -111,15 +111,6 @@ export default function Download() {
             <div data-component="section-content">
               <button
                 data-component="cli-row"
-                onClick={handleCopyClick("curl -fsSL https://mongolgpt.duckdns.org/install | bash")}
-              >
-                <code>
-                  curl -fsSL https://<strong>mongolgpt.duckdns.org/install</strong> | bash
-                </code>
-                <CopyStatus />
-              </button>
-              <button
-                data-component="cli-row"
                 onClick={handleCopyClick(
                   "git clone https://github.com/sergei10a-rgb/mongolgpt && cd mongolgpt && bun install",
                 )}

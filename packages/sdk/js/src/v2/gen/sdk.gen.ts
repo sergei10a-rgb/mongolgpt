@@ -17,6 +17,11 @@ import type {
   AuthSetResponses,
   CommandListErrors,
   CommandListResponses,
+  CompatImportApplyErrors,
+  CompatImportApplyResponses,
+  CompatImportPayload,
+  CompatImportPlanErrors,
+  CompatImportPlanResponses,
   Config as Config3,
   ConfigGetErrors,
   ConfigGetResponses,
@@ -441,7 +446,7 @@ class HeyApiRegistry<T> {
   get(key?: string): T {
     const instance = this.instances.get(key ?? this.defaultKey)
     if (!instance) {
-      throw new Error(`No SDK client found. Create one with "new MongolGPTClient()" to fix this error.`)
+      throw new Error(`No SDK client found. Create one with "new MongolGptClient()" to fix this error.`)
     }
     return instance
   }
@@ -1353,9 +1358,9 @@ export class Global extends HeyApiClient {
   }
 
   /**
-   * Upgrade mongolgpt
+   * Upgrade MongolGPT
    *
-   * Upgrade mongolgpt to the specified version or latest if not specified.
+   * Upgrade MongolGPT to the specified version or latest if not specified.
    */
   public upgrade<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1510,6 +1515,89 @@ export class Config2 extends HeyApiClient {
       ...options,
       ...params,
     })
+  }
+}
+
+export class Import extends HeyApiClient {
+  /**
+   * Plan compatibility import
+   *
+   * Plan how a foreign skill, plugin, or MCP configuration will be adapted into MongolGPT.
+   */
+  public plan<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      compatImportPayload?: CompatImportPayload
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "compatImportPayload", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<CompatImportPlanResponses, CompatImportPlanErrors, ThrowOnError>({
+      url: "/compat/import/plan",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Apply compatibility import
+   *
+   * Apply a planned compatibility import to the active MongolGPT instance configuration.
+   */
+  public apply<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      compatImportPayload?: CompatImportPayload
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "compatImportPayload", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<CompatImportApplyResponses, CompatImportApplyErrors, ThrowOnError>({
+      url: "/compat/import/apply",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Compat extends HeyApiClient {
+  private _import?: Import
+  get import(): Import {
+    return (this._import ??= new Import({ client: this.client }))
   }
 }
 
@@ -7074,12 +7162,12 @@ export class V2 extends HeyApiClient {
   }
 }
 
-export class MongolGPTClient extends HeyApiClient {
-  public static readonly __registry = new HeyApiRegistry<MongolGPTClient>()
+export class MongolGptClient extends HeyApiClient {
+  public static readonly __registry = new HeyApiRegistry<MongolGptClient>()
 
   constructor(args?: { client?: Client; key?: string }) {
     super(args)
-    MongolGPTClient.__registry.set(this, args?.key)
+    MongolGptClient.__registry.set(this, args?.key)
   }
 
   private _auth?: Auth
@@ -7110,6 +7198,11 @@ export class MongolGPTClient extends HeyApiClient {
   private _config?: Config2
   get config(): Config2 {
     return (this._config ??= new Config2({ client: this.client }))
+  }
+
+  private _compat?: Compat
+  get compat(): Compat {
+    return (this._compat ??= new Compat({ client: this.client }))
   }
 
   private _tool?: Tool

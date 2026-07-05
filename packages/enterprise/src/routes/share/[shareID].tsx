@@ -21,7 +21,6 @@ import { MessageNav } from "@mongolgpt/session-ui/message-nav"
 import { FileSSR } from "@mongolgpt/session-ui/file-ssr"
 import { clientOnly } from "@solidjs/start"
 import { Meta, Title } from "@solidjs/meta"
-import { Base64 } from "js-base64"
 import { getRequestEvent } from "solid-js/web"
 
 const ClientOnlyWorkerPoolProvider = clientOnly(() =>
@@ -158,29 +157,7 @@ export default function () {
           const match = createMemo(() => Binary.search(data().session, data().sessionID, (s) => s.id))
           if (!match().found) throw new Error(`Session ${data().sessionID} not found`)
           const info = createMemo(() => data().session[match().index])
-          const ogImage = createMemo(() => {
-            const models = new Set<string>()
-            const messages = data().message[data().sessionID] ?? []
-            for (const msg of messages) {
-              if (msg.role === "assistant" && msg.modelID) {
-                models.add(msg.modelID)
-              }
-            }
-            const modelIDs = Array.from(models)
-            const encodedTitle = encodeURIComponent(Base64.encode(encodeURIComponent(info().title.substring(0, 700))))
-            let modelParam: string
-            if (modelIDs.length === 1) {
-              modelParam = modelIDs[0]
-            } else if (modelIDs.length === 2) {
-              modelParam = encodeURIComponent(`${modelIDs[0]} & ${modelIDs[1]}`)
-            } else if (modelIDs.length > 2) {
-              modelParam = encodeURIComponent(`${modelIDs[0]} & ${modelIDs.length - 1} others`)
-            } else {
-              modelParam = "unknown"
-            }
-            const version = `v${info().version}`
-            return `https://social-cards.sst.dev/mongolgpt-share/${encodedTitle}.png?model=${modelParam}&version=${version}&id=${data().shareID}`
-          })
+          const ogImage = createMemo(() => "https://mongolgpt.duckdns.org/social-share.png")
 
           return (
             <>

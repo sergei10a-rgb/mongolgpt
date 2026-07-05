@@ -49,10 +49,6 @@ jobs:
           mongolgpt-app-id: ${{ vars.MONGOLGPT_APP_ID }}
           mongolgpt-app-secret: ${{ secrets.MONGOLGPT_APP_SECRET }}
 
-      - name: Install MongolGPT
-        if: inputs.bump || inputs.version
-        run: bun i -g mongolgpt-ai
-
       - id: version
         run: |
           ./script/version.ts

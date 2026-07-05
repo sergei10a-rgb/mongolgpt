@@ -4,6 +4,8 @@ import path from "path"
 
 const rootPkgPath = path.resolve(import.meta.dir, "../../../package.json")
 const rootPkg = await Bun.file(rootPkgPath).json()
+const cliPkgPath = path.resolve(import.meta.dir, "../../../packages/mongolgpt/package.json")
+const cliPkg = await Bun.file(cliPkgPath).json()
 const expectedBunVersion = rootPkg.packageManager?.split("@")[1]
 
 if (!expectedBunVersion) {
@@ -34,8 +36,9 @@ const IS_PREVIEW = CHANNEL !== "latest"
 const VERSION = await (async () => {
   if (env.MONGOLGPT_VERSION) return env.MONGOLGPT_VERSION
   if (IS_PREVIEW) return `0.0.0-${CHANNEL}-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}`
-  const version = await fetch("https://registry.npmjs.org/mongolgpt-ai/latest")
+  const version = await fetch("https://registry.npmjs.org/mongolgpt/latest")
     .then((res) => {
+      if (res.status === 404) return { version: cliPkg.version }
       if (!res.ok) throw new Error(res.statusText)
       return res.json()
     })

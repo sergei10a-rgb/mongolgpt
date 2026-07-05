@@ -6,5 +6,5 @@ Type=Application
 Icon=org.mongolgpt.desktop
 StartupWMClass=org.mongolgpt.desktop
 NoDisplay=true
-Comment=Open source AI coding agent
+Comment=Монгол хэлтэй AI coding agent
 Categories=Development;

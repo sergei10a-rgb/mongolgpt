@@ -49,11 +49,11 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
   )
 
   if (method._tag === "browser") {
-    yield* Prompt.log.info("Ð­Ð½Ð´ Ð¾Ñ‡Ð½Ð¾ ÑƒÑƒ: " + method.login.url)
+    yield* Prompt.log.info("Энд очно уу: " + method.login.url)
     yield* openBrowser(method.login.url)
 
     const s = Prompt.spinner()
-    yield* s.start("MongolGPT Ð°ÐºÐºÐ°ÑƒÐ½Ñ‚Ñ‹Ð½ Ð·Ó©Ð²ÑˆÓ©Ó©Ñ€Ó©Ð» Ñ…Ò¯Ð»ÑÑÐ¶ Ð±Ð°Ð¹Ð½Ð°...")
+    yield* s.start("MongolGPT аккаунтын зөвшөөрөл хүлээж байна...")
 
     const result = yield* method.login.wait.pipe(
       Effect.timeout(Duration.minutes(5)),
@@ -64,11 +64,11 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
     yield* Match.valueTags(result, {
       PollSuccess: (r) =>
         Effect.gen(function* () {
-          yield* s.stop(r.email + " Ð½ÑÑ€ÑÑÑ€ Ð½ÑÐ²Ñ‚ÑÑ€Ð»ÑÑ")
-          yield* Prompt.outro("Ð”ÑƒÑƒÑÐ»Ð°Ð°")
+          yield* s.stop(r.email + " нэрээр нэвтэрлээ")
+          yield* Prompt.outro("Дууслаа")
         }),
-      PollExpired: () => s.stop("ÐÑÐ²Ñ‚Ñ€ÑÑ… Ñ…ÑƒÐ³Ð°Ñ†Ð°Ð° Ð´ÑƒÑƒÑÑÐ°Ð½", 1),
-      PollError: (r) => s.stop("ÐÐ»Ð´Ð°Ð°: " + String(r.cause), 1),
+      PollExpired: () => s.stop("Нэвтрэх хугацаа дууссан", 1),
+      PollError: (r) => s.stop("Алдаа: " + String(r.cause), 1),
     })
     return
   }

@@ -7,10 +7,10 @@ export const config = {
 
   // GitHub
   github: {
-    repoUrl: "https://mongolgpt.duckdns.org",
+    repoUrl: "https://github.com/sergei10a-rgb/mongolgpt",
     starsFormatted: {
-      compact: "160K",
-      full: "160,000",
+      compact: "0",
+      full: "0",
     },
   },
 
@@ -22,8 +22,8 @@ export const config = {
 
   // Static stats (used on landing page)
   stats: {
-    contributors: "900",
-    commits: "13,000",
-    monthlyUsers: "7.5M",
+    contributors: "1",
+    commits: "5",
+    monthlyUsers: "0",
   },
 } as const

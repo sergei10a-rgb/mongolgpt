@@ -2121,6 +2121,80 @@ export type Provider = {
   }
 }
 
+export type CompatImportPayload = {
+  source?: string
+  type?: "auto" | "mcp" | "skill" | "plugin"
+  name?: string
+  scope?: "global" | "project"
+  project?: boolean
+  mcpCommand?: string
+  url?: string
+  env?: Array<string>
+  header?: Array<string>
+  force?: boolean
+  adapter?: boolean
+}
+
+export type CompatAdapterPlan = {
+  file: string
+  target: string
+  format: string
+  original: string
+}
+
+export type CompatOperation =
+  | {
+      kind: "mcp"
+      name: string
+      config: McpLocalConfig | McpRemoteConfig
+      source: string
+    }
+  | {
+      kind: "skill-path"
+      value: string
+      source: string
+    }
+  | {
+      kind: "skill-url"
+      value: string
+      source: string
+    }
+  | {
+      kind: "plugin"
+      spec:
+        | string
+        | [
+            string,
+            {
+              [key: string]: unknown
+            },
+          ]
+      source: string
+      adapter?: CompatAdapterPlan
+    }
+
+export type CompatPatchOutcome = {
+  mode: "add" | "replace" | "noop"
+  operation: CompatOperation
+}
+
+export type CompatImportResponse = {
+  scope: "global" | "project"
+  configPath: string
+  operations: Array<CompatOperation>
+  prepared: Array<CompatOperation>
+  descriptions: Array<string>
+  warnings: Array<string>
+  outcomes: Array<CompatPatchOutcome>
+  existingConfigText: string
+  nextConfigText: string
+  configExists: boolean
+}
+
+export type CompatImportError = {
+  message: string
+}
+
 export type ExperimentalCapabilities = {
   backgroundSubagents: boolean
 }
@@ -7488,6 +7562,62 @@ export type ConfigProvidersResponses = {
 }
 
 export type ConfigProvidersResponse = ConfigProvidersResponses[keyof ConfigProvidersResponses]
+
+export type CompatImportPlanData = {
+  body?: CompatImportPayload
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/compat/import/plan"
+}
+
+export type CompatImportPlanErrors = {
+  /**
+   * CompatImportError | InvalidRequestError
+   */
+  400: CompatImportError | InvalidRequestError
+}
+
+export type CompatImportPlanError = CompatImportPlanErrors[keyof CompatImportPlanErrors]
+
+export type CompatImportPlanResponses = {
+  /**
+   * MongolGPT compatibility import plan
+   */
+  200: CompatImportResponse
+}
+
+export type CompatImportPlanResponse = CompatImportPlanResponses[keyof CompatImportPlanResponses]
+
+export type CompatImportApplyData = {
+  body?: CompatImportPayload
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/compat/import/apply"
+}
+
+export type CompatImportApplyErrors = {
+  /**
+   * CompatImportError | InvalidRequestError
+   */
+  400: CompatImportError | InvalidRequestError
+}
+
+export type CompatImportApplyError = CompatImportApplyErrors[keyof CompatImportApplyErrors]
+
+export type CompatImportApplyResponses = {
+  /**
+   * MongolGPT compatibility import result
+   */
+  200: CompatImportResponse
+}
+
+export type CompatImportApplyResponse = CompatImportApplyResponses[keyof CompatImportApplyResponses]
 
 export type ExperimentalCapabilitiesGetData = {
   body?: never

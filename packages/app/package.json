@@ -1,6 +1,7 @@
 {
   "name": "@mongolgpt/app",
   "version": "0.1.1",
+  "private": true,
   "description": "",
   "type": "module",
   "exports": {

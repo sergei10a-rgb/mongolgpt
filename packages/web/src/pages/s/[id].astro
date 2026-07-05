@@ -1,5 +1,4 @@
 ---
-import { Base64 } from "js-base64"
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro"
 import type { Session } from "mongolgpt/session/index"
 import config from "../../../config.mjs"
@@ -83,30 +82,7 @@ if (!data.info) {
   })
 }
 
-const models: Set<string> = new Set()
-const version = data.info.version ? `v${data.info.version}` : "v0.0.1"
-
-for (const d of Object.values(data.messages)) {
-  if (d.role === "assistant" && d.modelID) {
-    models.add(d.modelID)
-  }
-}
-
-const encodedTitle = encodeURIComponent(
-  Base64.encode(
-    encodeURIComponent(data.info.title.substring(0, 700)),
-  ),
-)
-
-const modelsArray = Array.from(models)
-const modelParam =
-  modelsArray.length === 1
-    ? modelsArray[0]
-    : modelsArray.length === 2
-      ? encodeURIComponent(`${modelsArray[0]} & ${modelsArray[1]}`)
-      : encodeURIComponent(`${modelsArray[0]} & ${modelsArray.length - 1} others`)
-
-const ogImage = `${config.socialCard}/mongolgpt-share/${encodedTitle}.png?model=${modelParam}&version=${version}&id=${id}`
+const ogImage = `${config.url}/social-share.png`
 ---
 <StarlightPage
   hasSidebar={false}

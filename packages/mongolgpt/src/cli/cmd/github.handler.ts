@@ -363,7 +363,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run mongolgpt
+      - name: Run MongolGPT
         uses: sergei10a-rgb/mongolgpt/github@latest${envStr}
         with:
           model: ${provider}/${model}`,
@@ -1352,9 +1352,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
         if (!opts?.image) return ""
 
         const titleAlt = encodeURIComponent(session.title.substring(0, 50))
-        const title64 = Buffer.from(session.title.substring(0, 700), "utf8").toString("base64")
-
-        return `<a href="${shareBaseUrl}/s/${shareId}"><img width="200" alt="${titleAlt}" src="https://social-cards.sst.dev/mongolgpt-share/${title64}.png?model=${providerID}/${modelID}&version=${session.version}&id=${shareId}" /></a>\n`
+        return `<a href="${shareBaseUrl}/s/${shareId}"><img width="200" alt="${titleAlt}" src="${shareBaseUrl}/social-share.png" /></a>\n`
       })()
       const shareUrl = shareId ? `[mongolgpt session](${shareBaseUrl}/s/${shareId})&nbsp;&nbsp;|&nbsp;&nbsp;` : ""
       return `\n\n${image}${shareUrl}[github run](${runUrl})`

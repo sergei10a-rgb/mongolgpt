@@ -15,7 +15,7 @@ new cloudflare.RegionalHostname("RegionalHostname", {
 })
 
 export const shortDomain = (() => {
-  if ($app.stage === "production") return "opncd.ai"
-  if ($app.stage === "dev") return "dev.opncd.ai"
-  return `${$app.stage}.dev.opncd.ai`
+  if ($app.stage === "production") return "mongolgpt.duckdns.org"
+  if ($app.stage === "dev") return "dev.mongolgpt.duckdns.org"
+  return `${$app.stage}.dev.mongolgpt.duckdns.org`
 })()

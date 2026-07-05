@@ -3,9 +3,9 @@ export type { FileSystemEntry as LocationFileSystemEntry } from "./gen/types.gen
 
 import { createClient } from "./gen/client/client.gen.js"
 import { type Config } from "./gen/client/types.gen.js"
-import { MongolGPTClient } from "./gen/sdk.gen.js"
+import { MongolGptClient } from "./gen/sdk.gen.js"
 import { wrapClientError } from "../error-interceptor.js"
-export { type Config as MongolGPTClientConfig, MongolGPTClient }
+export { type Config as MongolGPTClientConfig, MongolGptClient as MongolGPTClient }
 
 function pick(value: string | null, fallback?: string, encode?: (value: string) => string) {
   if (!value) return
@@ -89,5 +89,5 @@ export function createMongolGPTClient(config?: Config & { directory?: string; ex
     return response
   })
   client.interceptors.error.use(wrapClientError)
-  return new MongolGPTClient({ client })
+  return new MongolGptClient({ client })
 }
