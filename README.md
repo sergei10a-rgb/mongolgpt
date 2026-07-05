@@ -15,7 +15,7 @@ MongolGPT бол Монгол хэрэглэгчдэд эхнээсээ ойлг
 
 Одоогоор нийтлэгдсэн desktop build нь Windows x64 installer.
 
-[mongolgpt-desktop-win-x64.exe татах](https://github.com/sergei10a-rgb/mongolgpt/releases/download/v0.1.0/mongolgpt-desktop-win-x64.exe)
+[mongolgpt-desktop-win-x64.exe татах](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
 
 Бүх release:
 
