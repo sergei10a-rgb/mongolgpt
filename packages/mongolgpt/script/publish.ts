@@ -1,20 +1,84 @@
 #!/usr/bin/env bun
 import { $ } from "bun"
+import fs from "fs"
 import pkg from "../package.json"
 import { Script } from "@mongolgpt/script"
 import { fileURLToPath } from "url"
+import path from "path"
 
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
+const dryRun = process.argv.includes("--dry-run")
+const npmOnly = process.argv.includes("--npm-only") || process.argv.includes("--skip-registries")
+
+const expectedBinaryPackages = [
+  "mongolgpt-linux-arm64",
+  "mongolgpt-linux-x64",
+  "mongolgpt-linux-x64-baseline",
+  "mongolgpt-linux-arm64-musl",
+  "mongolgpt-linux-x64-musl",
+  "mongolgpt-linux-x64-baseline-musl",
+  "mongolgpt-darwin-arm64",
+  "mongolgpt-darwin-x64",
+  "mongolgpt-darwin-x64-baseline",
+  "mongolgpt-windows-arm64",
+  "mongolgpt-windows-x64",
+  "mongolgpt-windows-x64-baseline",
+]
+
+function binaryName(name: string) {
+  return name.includes("-windows-") ? "mongolgpt.exe" : "mongolgpt"
+}
+
+async function assertBinaryPackages() {
+  if (!fs.existsSync("./dist")) throw new Error("dist directory is missing; run script/build.ts before publishing")
+
+  const seenPackageJsons = new Set<string>()
+  for (const filepath of new Bun.Glob("*/package.json").scanSync({ cwd: "./dist" })) {
+    seenPackageJsons.add(filepath.split(/[\\/]/)[0]!)
+  }
+
+  const extras = Array.from(seenPackageJsons).filter((name) => name !== pkg.name && !expectedBinaryPackages.includes(name))
+  if (extras.length) throw new Error(`unexpected package directories in dist: ${extras.join(", ")}`)
+
+  const binaries: Record<string, string> = {}
+  for (const name of expectedBinaryPackages) {
+    const packageDir = path.join("./dist", name)
+    const packagePath = path.join(packageDir, "package.json")
+    if (!fs.existsSync(packagePath)) throw new Error(`missing ${packagePath}`)
+
+    const binaryPath = path.join(packageDir, "bin", binaryName(name))
+    if (!fs.existsSync(binaryPath)) throw new Error(`missing ${binaryPath}`)
+    const stat = fs.statSync(binaryPath)
+    if (!stat.isFile() || stat.size < 1_000_000) throw new Error(`invalid binary artifact ${binaryPath}`)
+
+    const metadata = await Bun.file(packagePath).json()
+    if (metadata.name !== name) throw new Error(`${packagePath} has name ${metadata.name}, expected ${name}`)
+    if (!metadata.version) throw new Error(`${packagePath} is missing version`)
+    binaries[name] = metadata.version
+  }
+
+  const versions = new Set(Object.values(binaries))
+  if (versions.size !== 1) throw new Error(`binary package versions differ: ${Array.from(versions).join(", ")}`)
+
+  return binaries
+}
 
 async function published(name: string, version: string) {
-  return (await $`npm view ${name}@${version} version`.nothrow()).exitCode === 0
+  return (await $`npm view ${name}@${version} version`.quiet().nothrow()).exitCode === 0
 }
 
 async function publish(dir: string, name: string, version: string) {
   // GitHub artifact downloads can drop the executable bit, and Docker uses the
   // unpacked dist binaries directly rather than the published tarball.
   if (process.platform !== "win32") await $`chmod -R 755 .`.cwd(dir)
+  if (dryRun) {
+    const alreadyPublished = await published(name, version)
+    if (alreadyPublished) console.log(`[dry-run] already published ${name}@${version}`)
+    await $`npm pack --dry-run --json`.cwd(dir)
+    console.log(`[dry-run] would publish ${name}@${version} with tag ${Script.channel}`)
+    return
+  }
   if (await published(name, version)) {
     console.log(`already published ${name}@${version}`)
     return
@@ -23,11 +87,7 @@ async function publish(dir: string, name: string, version: string) {
   await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(dir)
 }
 
-const binaries: Record<string, string> = {}
-for (const filepath of new Bun.Glob("*/package.json").scanSync({ cwd: "./dist" })) {
-  const pkg = await Bun.file(`./dist/${filepath}`).json()
-  binaries[pkg.name] = pkg.version
-}
+const binaries = await assertBinaryPackages()
 console.log("binaries", binaries)
 const version = Object.values(binaries)[0]
 
@@ -84,7 +144,7 @@ const tags = [`${image}:${version}`, `${image}:${Script.channel}`]
 const tagFlags = tags.flatMap((t) => ["-t", t])
 
 // registries
-if (!Script.preview) {
+if (!Script.preview && !dryRun && !npmOnly) {
   await $`docker buildx build --platform ${platforms} ${tagFlags} --push .`
   // Calculate SHA values
   const arm64Sha = await $`sha256sum ./dist/mongolgpt-linux-arm64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
