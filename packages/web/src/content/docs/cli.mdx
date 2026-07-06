@@ -1,17 +1,17 @@
 ---
 title: CLI
-description: MongolGPT CLI options and commands.
+description: MongolGPT CLI сонголт ба тушаалууд.
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components"
 
-The MongolGPT CLI by default starts the [TUI](/docs/tui) when run without any arguments.
+Анхдагчаар MongolGPT CLI нь ямар ч аргументгүйгээр ажиллах үед [TUI](/docs/tui)-г эхлүүлдэг.
 
 ```bash
 mongolgpt
 ```
 
-But it also accepts commands as documented on this page. This allows you to interact with MongolGPT programmatically.
+Гэхдээ энэ хуудсан дээр бичигдсэн тушаалуудыг бас хүлээн авдаг. Энэ нь MongolGPT-тай программчлан харилцах боломжийг олгоно.
 
 ```bash
 mongolgpt run "Explain how closures work in JavaScript"
@@ -19,41 +19,41 @@ mongolgpt run "Explain how closures work in JavaScript"
 
 ---
 
-### tui
+### туй
 
-Start the MongolGPT terminal user interface.
+MongolGPT терминалын хэрэглэгчийн интерфэйсийг эхлүүлнэ үү.
 
 ```bash
 mongolgpt [project]
 ```
 
-#### Flags
+#### Тугнууд
 
-| Flag                                        | Short | Description                                                             |
+| Туг | Богино | Тодорхойлолт |
 | ------------------------------------------- | ----- | ----------------------------------------------------------------------- |
-| <nobr><code>{"--continue"}</code></nobr>    | `-c`  | Continue the last session                                               |
-| <nobr><code>{"--session"}</code></nobr>     | `-s`  | Session ID to continue                                                  |
-| <nobr><code>{"--fork"}</code></nobr>        |       | Fork the session when continuing (use with `--continue` or `--session`) |
-| <nobr><code>{"--prompt"}</code></nobr>      |       | Prompt to use                                                           |
-| <nobr><code>{"--model"}</code></nobr>       | `-m`  | Model to use in the form of provider/model                              |
-| <nobr><code>{"--agent"}</code></nobr>       |       | Agent to use                                                            |
-| <nobr><code>{"--port"}</code></nobr>        |       | Port to listen on                                                       |
-| <nobr><code>{"--hostname"}</code></nobr>    |       | Hostname to listen on                                                   |
-| <nobr><code>{"--mdns"}</code></nobr>        |       | Enable mDNS discovery                                                   |
-| <nobr><code>{"--mdns-domain"}</code></nobr> |       | Custom mDNS domain name                                                 |
-| <nobr><code>{"--cors"}</code></nobr>        |       | Additional browser origin(s) to allow CORS                              |
+| <nobr><code>{"--continue"}</code></nobr> | `-c` | Сүүлийн сессийг үргэлжлүүлэх |
+| <nobr><code>{"--session"}</code></nobr> | `-s` | Үргэлжлүүлэхийн тулд сесс ID |
+| <nobr><code>{"--fork"}</code></nobr> |       | Үргэлжлүүлэхдээ сессийг хойшлуул (`--continue` эсвэл `--session` ашиглана уу) |
+| <nobr><code>{"--prompt"}</code></nobr> |       | Ашиглахыг сануулах |
+| <nobr><code>{"--model"}</code></nobr> | `-m` | Үйлчилгээ үзүүлэгч/загвар хэлбэрээр ашиглах загвар |
+| <nobr><code>{"--agent"}</code></nobr> |       | Ашиглах агент |
+| <nobr><code>{"--port"}</code></nobr> |       | Сонсох порт |
+| <nobr><code>{"--hostname"}</code></nobr> |       | Сонсох хостын нэр |
+| <nobr><code>{"--mdns"}</code></nobr> |       | mDNS илрүүлэлтийг идэвхжүүлэх |
+| <nobr><code>{"--mdns-domain"}</code></nobr> |       | Захиалгат mDNS домэйн нэр |
+| <nobr><code>{"--cors"}</code></nobr> |       | CORS \| зөвшөөрөх нэмэлт хөтчийн гарал үүсэл(үүд). |
 
 ---
 
-## Commands
+## тушаалууд
 
-The MongolGPT CLI also has the following commands.
+MongolGPT CLI нь мөн дараах тушаалуудтай.
 
 ---
 
-### agent
+### төлөөлөгч
 
-Manage agents for MongolGPT.
+MongolGPT-н агентуудыг удирдах.
 
 ```bash
 mongolgpt agent [command]
@@ -61,33 +61,33 @@ mongolgpt agent [command]
 
 ---
 
-#### create
+#### үүсгэх
 
-Create a new agent with custom configuration.
+Өөрчлөн тохируулсан шинэ агент үүсгэнэ үү.
 
 ```bash
 mongolgpt agent create
 ```
 
-This command will guide you through creating a new agent with a custom system prompt and permission configuration. Anything you don't allow is denied in the generated agent's frontmatter.
+Энэ команд нь тусгай системийн хүсэлт, зөвшөөрлийн тохиргоо бүхий шинэ агент үүсгэхэд тань туслах болно. Таны зөвшөөрөөгүй бүх зүйлийг үүсгэсэн агентын нүүрэнд үгүйсгэдэг.
 
-#### Flags
+#### Тугнууд
 
-| Flag                                        | Short | Description                                                                                                                                                                                                                |
+| Туг | Богино | Тодорхойлолт |
 | ------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <nobr><code>{"--path"}</code></nobr>        |       | Directory to write the agent file to (defaults to global or `.mongolgpt/agent` based on the prompt)                                                                                                                        |
-| <nobr><code>{"--description"}</code></nobr> |       | What the agent should do                                                                                                                                                                                                   |
-| <nobr><code>{"--mode"}</code></nobr>        |       | Agent mode: `all`, `primary`, or `subagent`                                                                                                                                                                                |
-| <nobr><code>{"--permissions"}</code></nobr> |       | Comma-separated list of permissions to allow (default: all). Available: `bash`, `read`, `edit`, `glob`, `grep`, `webfetch`, `task`, `todowrite`, `websearch`, `lsp`, `skill`. Anything omitted is denied. Alias: `--tools` |
-| <nobr><code>{"--model"}</code></nobr>       | `-m`  | Model to use, in `provider/model` format                                                                                                                                                                                   |
+| <nobr><code>{"--path"}</code></nobr> |       | Агент файлыг бичих лавлах (өгөгдмөл нь глобал юмуу `.mongolgpt/agent` сануулгыг үндэслэн) |
+| <nobr><code>{"--description"}</code></nobr> |       | Агент юу хийх ёстой вэ |
+| <nobr><code>{"--mode"}</code></nobr> |       | Агент горим: `all`, `primary`, эсвэл `subagent` |
+| <nobr><code>{"--permissions"}</code></nobr> |       | Зөвшөөрөх зөвшөөрлийн таслалаар тусгаарлагдсан жагсаалт (өгөгдмөл: бүгд). Боломжтой: `bash`, `read`, `edit`, `glob`, `grep`, `webfetch`, `task`, `todowrite`, `websearch`, `lsp`, `skill`. Орхигдсон бүх зүйлийг үгүйсгэдэг. Нэр: `--tools` |
+| <nobr><code>{"--model"}</code></nobr> | `-m` | Ашиглах загвар, `provider/model` формат |
 
-Passing all of `--path`, `--description`, `--mode`, and `--permissions` runs the command non-interactively.
+`--path`, `--description`, `--mode`, `--permissions`-г бүгдийг нь дамжуулснаар командыг интерактив бус байдлаар ажиллуулна.
 
 ---
 
-#### list
+#### жагсаалт
 
-List all available agents.
+Боломжтой бүх агентуудыг жагсаана уу.
 
 ```bash
 mongolgpt agent list
@@ -95,15 +95,15 @@ mongolgpt agent list
 
 ---
 
-### attach
+### хавсаргана уу
 
-Attach a terminal to an already running MongolGPT backend server started via `serve` or `web` commands.
+`serve` эсвэл `web` тушаалуудаар эхлүүлсэн аль хэдийн ажиллаж байгаа MongolGPT backend серверт терминалыг холбоно уу.
 
 ```bash
 mongolgpt attach [url]
 ```
 
-This allows using the TUI with a remote MongolGPT backend. For example:
+Энэ нь алсын удирдлагатай TUI-г ашиглах боломжийг олгодог. Жишээ нь:
 
 ```bash
 # Start the backend server for web/mobile access
@@ -113,22 +113,22 @@ mongolgpt web --port 4096 --hostname 0.0.0.0
 mongolgpt attach http://10.20.30.40:4096
 ```
 
-#### Flags
+#### Тугнууд
 
-| Flag                                     | Short | Description                                                                  |
-| ---------------------------------------- | ----- | ---------------------------------------------------------------------------- |
-| <nobr><code>{"--dir"}</code></nobr>      |       | Working directory to start TUI in                                            |
-| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Continue the last session                                                    |
-| <nobr><code>{"--session"}</code></nobr>  | `-s`  | Session ID to continue                                                       |
-| <nobr><code>{"--fork"}</code></nobr>     |       | Fork the session when continuing (use with `--continue` or `--session`)      |
-| <nobr><code>{"--password"}</code></nobr> | `-p`  | Basic auth password (defaults to `MONGOLGPT_SERVER_PASSWORD`)                |
-| <nobr><code>{"--username"}</code></nobr> | `-u`  | Basic auth username (defaults to `MONGOLGPT_SERVER_USERNAME` or `mongolgpt`) |
+| Туг | Богино | Тодорхойлолт |
+| ---------------------------------------- | ----- | -------------------------------------------------------------------------- |
+| <nobr><code>{"--dir"}</code></nobr> |       | TUI-г \|-д эхлүүлэх ажлын лавлах |
+| <nobr><code>{"--continue"}</code></nobr> | `-c` | Сүүлийн сессийг үргэлжлүүлэх |
+| <nobr><code>{"--session"}</code></nobr> | `-s` | Үргэлжлүүлэхийн тулд сесс ID |
+| <nobr><code>{"--fork"}</code></nobr> |       | Үргэлжлүүлэхдээ сессийг хойшлуул (`--continue` эсвэл `--session` ашиглана уу) |
+| <nobr><code>{"--password"}</code></nobr> | `-p` | Баталгаажуулах үндсэн нууц үг (өгөгдмөл нь `MONGOLGPT_SERVER_PASSWORD`) |
+| <nobr><code>{"--username"}</code></nobr> | `-u` | Баталгаажуулах үндсэн хэрэглэгчийн нэр (өгөгдмөл нь `MONGOLGPT_SERVER_USERNAME` эсвэл `mongolgpt`) |
 
 ---
 
-### auth
+### баталгаажуулалт
 
-Command to manage credentials and login for providers.
+Итгэмжлэх жуух бичгийг удирдах, үйлчилгээ үзүүлэгчдийн нэвтрэх тушаал.
 
 ```bash
 mongolgpt auth [command]
@@ -136,34 +136,34 @@ mongolgpt auth [command]
 
 ---
 
-#### login
+#### нэвтэрнэ үү
 
-MongolGPT is powered by the provider list at [Models.dev](https://models.dev), so you can use `mongolgpt auth login` to configure API keys for any provider you'd like to use. This is stored in `~/.local/share/mongolgpt/auth.json`.
+MongolGPT нь [Models.dev](https://models.dev) хаягаар үйлчилгээ үзүүлэгчийн жагсаалтаар тэжээгддэг тул та ашиглахыг хүссэн бүх үйлчилгээ үзүүлэгчдээ API товчлуурыг тохируулахын тулд `mongolgpt auth login` ашиглаж болно. Үүнийг `~/.local/share/mongolgpt/auth.json`-д хадгална.
 
 ```bash
 mongolgpt auth login
 ```
 
-When MongolGPT starts up it loads the providers from the credentials file. And if there are any keys defined in your environments or a `.env` file in your project.
+MongolGPT эхлэхэд итгэмжлэлийн файлаас үйлчилгээ үзүүлэгчдийг ачаална. Хэрэв таны орчинд тодорхойлогдсон түлхүүрүүд эсвэл таны төсөлд `.env` файл байгаа бол.
 
-##### Flags
+##### Тугнууд
 
-| Flag                                     | Short | Description                                          |
+| Туг | Богино | Тодорхойлолт |
 | ---------------------------------------- | ----- | ---------------------------------------------------- |
-| <nobr><code>{"--provider"}</code></nobr> | `-p`  | Provider ID or name to log in to                     |
-| <nobr><code>{"--method"}</code></nobr>   | `-m`  | Login method label to use, skipping method selection |
+| <nobr><code>{"--provider"}</code></nobr> | `-p` | Үйлчилгээ үзүүлэгч ID эсвэл \| руу нэвтрэх нэр |
+| <nobr><code>{"--method"}</code></nobr> | `-m` | Ашиглах нэвтрэх аргын шошго, аргын сонголтыг алгасах |
 
 ---
 
-#### list
+#### жагсаалт
 
-Lists all the authenticated providers as stored in the credentials file.
+Итгэмжлэлийн файлд хадгалагдсан бүх баталгаажсан үйлчилгээ үзүүлэгчдийг жагсаана.
 
 ```bash
 mongolgpt auth list
 ```
 
-Or the short version.
+Эсвэл богино хувилбар.
 
 ```bash
 mongolgpt auth ls
@@ -171,9 +171,9 @@ mongolgpt auth ls
 
 ---
 
-#### logout
+#### гарах
 
-Logs you out of a provider by clearing it from the credentials file.
+Таныг итгэмжлэлийн файлаас устгаснаар үйлчилгээ үзүүлэгчээс гарна.
 
 ```bash
 mongolgpt auth logout
@@ -183,7 +183,7 @@ mongolgpt auth logout
 
 ### github
 
-Manage the GitHub agent for repository automation.
+Хадгалах газрын автоматжуулалтын GitHub агентийг удирдана уу.
 
 ```bash
 mongolgpt github [command]
@@ -191,38 +191,38 @@ mongolgpt github [command]
 
 ---
 
-#### install
+#### суулгана
 
-Install the GitHub agent in your repository.
+GitHub агентийг өөрийн сандаа суулгана уу.
 
 ```bash
 mongolgpt github install
 ```
 
-This sets up the necessary GitHub Actions workflow and guides you through the configuration process. [Learn more](/docs/github).
+Энэ нь шаардлагатай GitHub Үйлдлийн ажлын урсгалыг тохируулж, тохиргооны үйл явцыг удирдан чиглүүлдэг. [Илүү ихийг мэдэж аваарай](/docs/github).
 
 ---
 
-#### run
+#### гүйх
 
-Run the GitHub agent. This is typically used in GitHub Actions.
+GitHub агентийг ажиллуул. Үүнийг ихэвчлэн GitHub Үйлдлүүдэд ашигладаг.
 
 ```bash
 mongolgpt github run
 ```
 
-##### Flags
+##### Тугнууд
 
-| Flag                                  | Description                            |
+| Туг | Тодорхойлолт |
 | ------------------------------------- | -------------------------------------- |
-| <nobr><code>{"--event"}</code></nobr> | GitHub mock event to run the agent for |
-| <nobr><code>{"--token"}</code></nobr> | GitHub personal access token           |
+| <nobr><code>{"--event"}</code></nobr> | GitHub төлөө агентыг ажиллуулах хуурамч үйл явдал |
+| <nobr><code>{"--token"}</code></nobr> | GitHub хувийн хандалтын токен |
 
 ---
 
 ### mcp
 
-Manage Model Context Protocol servers.
+Загварын контекст протоколын серверүүдийг удирдах.
 
 ```bash
 mongolgpt mcp [command]
@@ -230,27 +230,27 @@ mongolgpt mcp [command]
 
 ---
 
-#### add
+#### нэмнэ үү
 
-Add an MCP server to your configuration.
+Өөрийн тохиргоонд MCP сервер нэмнэ үү.
 
 ```bash
 mongolgpt mcp add
 ```
 
-This command will guide you through adding either a local or remote MCP server.
+Энэ тушаал нь таныг дотоод эсвэл алсын MCP сервер нэмэхэд чиглүүлэх болно.
 
 ---
 
-#### list
+#### жагсаалт
 
-List all configured MCP servers and their connection status.
+Бүх тохируулсан MCP серверүүд болон тэдгээрийн холболтын статусыг жагсаа.
 
 ```bash
 mongolgpt mcp list
 ```
 
-Or use the short version.
+Эсвэл богино хувилбарыг ашиглана уу.
 
 ```bash
 mongolgpt mcp ls
@@ -258,23 +258,23 @@ mongolgpt mcp ls
 
 ---
 
-#### auth
+#### баталгаажуулалт
 
-Authenticate with an OAuth-enabled MCP server.
+OAuth идэвхжүүлсэн MCP серверээр баталгаажуулна уу.
 
 ```bash
 mongolgpt mcp auth [name]
 ```
 
-If you don't provide a server name, you'll be prompted to select from available OAuth-capable servers.
+Хэрэв та серверийн нэр өгөхгүй бол OAuth боломжтой серверүүдээс сонгохыг хүсэх болно.
 
-You can also list OAuth-capable servers and their authentication status.
+Та мөн OAuth чадвартай серверүүд болон тэдгээрийн баталгаажуулалтын статусыг жагсааж болно.
 
 ```bash
 mongolgpt mcp auth list
 ```
 
-Or use the short version.
+Эсвэл богино хувилбарыг ашиглана уу.
 
 ```bash
 mongolgpt mcp auth ls
@@ -282,9 +282,9 @@ mongolgpt mcp auth ls
 
 ---
 
-#### logout
+#### гарах
 
-Remove OAuth credentials for an MCP server.
+MCP серверийн OAuth итгэмжлэлийг устгана уу.
 
 ```bash
 mongolgpt mcp logout [name]
@@ -292,9 +292,9 @@ mongolgpt mcp logout [name]
 
 ---
 
-#### debug
+#### дибаг хийх
 
-Debug OAuth connection issues for an MCP server.
+MCP серверийн OAuth холболтын асуудлыг дибаг хийх.
 
 ```bash
 mongolgpt mcp debug <name>
@@ -302,32 +302,32 @@ mongolgpt mcp debug <name>
 
 ---
 
-### models
+### загвар
 
-List all available models from configured providers.
+Тохируулсан үйлчилгээ үзүүлэгчээс боломжтой бүх загваруудыг жагсаана уу.
 
 ```bash
 mongolgpt models [provider]
 ```
 
-This command displays all models available across your configured providers in the format `provider/model`.
+Энэ тушаал нь `provider/model` форматаар таны тохируулсан үйлчилгээ үзүүлэгчд байгаа бүх загваруудыг харуулдаг.
 
-This is useful for figuring out the exact model name to use in [your config](/docs/config/).
+Энэ нь [таны тохиргоо](/docs/config/)-д яг ямар загварын нэрийг ашиглахыг олоход хэрэгтэй.
 
-You can optionally pass a provider ID to filter models by that provider.
+Та сонголтоороо ID үйлчилгээ үзүүлэгчээр дамжуулж загваруудыг тухайн үйлчилгээ үзүүлэгчээр шүүж болно.
 
 ```bash
 mongolgpt models anthropic
 ```
 
-#### Flags
+#### Тугнууд
 
-| Flag                                    | Description                                                  |
+| Туг | Тодорхойлолт |
 | --------------------------------------- | ------------------------------------------------------------ |
-| <nobr><code>{"--refresh"}</code></nobr> | Refresh the models cache from models.dev                     |
-| <nobr><code>{"--verbose"}</code></nobr> | Use more verbose model output (includes metadata like costs) |
+| <nobr><code>{"--refresh"}</code></nobr> | models.dev \| сайтаас загварын кэшийг сэргээнэ үү |
+| <nobr><code>{"--verbose"}</code></nobr> | Илүү дэлгэрэнгүй загвар гаралтыг ашиглах (зардал гэх мэт мета өгөгдөл орно) |
 
-Use the `--refresh` flag to update the cached model list. This is useful when new models have been added to a provider and you want to see them in MongolGPT.
+`--refresh` тугийг ашиглан кэштэй загварын жагсаалтыг шинэчилнэ үү. Энэ нь үйлчилгээ үзүүлэгчид шинэ загвар нэмэгдсэн бөгөөд та тэдгээрийг MongolGPT дээр харахыг хүсвэл хэрэг болно.
 
 ```bash
 mongolgpt models --refresh
@@ -335,21 +335,21 @@ mongolgpt models --refresh
 
 ---
 
-### run
+### гүйх
 
-Run mongolgpt in non-interactive mode by passing a prompt directly.
+Сануулгыг шууд дамжуулж интерактив бус горимд mongolgpt-г ажиллуулна уу.
 
 ```bash
 mongolgpt run [message..]
 ```
 
-This is useful for scripting, automation, or when you want a quick answer without launching the full TUI. For example.
+Энэ нь скрипт бичих, автоматжуулалт эсвэл TUI-г бүрэн эхлүүлэхгүйгээр хурдан хариулт авахыг хүссэн үед хэрэгтэй. Жишээ нь.
 
 ```bash "mongolgpt run"
 mongolgpt run Explain the use of context in Go
 ```
 
-You can also attach to a running `mongolgpt serve` instance to avoid MCP server cold boot times on every run:
+Та мөн ажиллаж байгаа `mongolgpt serve` жишээнд хавсаргаж болох бөгөөд гүйлт болгонд MCP серверийг ачаалахаас зайлсхийх боломжтой.
 
 ```bash
 # Start a headless server in one terminal
@@ -359,56 +359,56 @@ mongolgpt serve
 mongolgpt run --attach http://localhost:4096 "Explain async/await in JavaScript"
 ```
 
-#### Flags
+#### Тугнууд
 
-| Flag                                                         | Short | Description                                                                  |
-| ------------------------------------------------------------ | ----- | ---------------------------------------------------------------------------- |
-| <nobr><code>{"--command"}</code></nobr>                      |       | The command to run, use message for args                                     |
-| <nobr><code>{"--continue"}</code></nobr>                     | `-c`  | Continue the last session                                                    |
-| <nobr><code>{"--session"}</code></nobr>                      | `-s`  | Session ID to continue                                                       |
-| <nobr><code>{"--fork"}</code></nobr>                         |       | Fork the session when continuing (use with `--continue` or `--session`)      |
-| <nobr><code>{"--share"}</code></nobr>                        |       | Share the session                                                            |
-| <nobr><code>{"--model"}</code></nobr>                        | `-m`  | Model to use in the form of provider/model                                   |
-| <nobr><code>{"--agent"}</code></nobr>                        |       | Agent to use                                                                 |
-| <nobr><code>{"--file"}</code></nobr>                         | `-f`  | File(s) to attach to message                                                 |
-| <nobr><code>{"--format"}</code></nobr>                       |       | Format: default (formatted) or json (raw JSON events)                        |
-| <nobr><code>{"--title"}</code></nobr>                        |       | Title for the session (uses truncated prompt if no value provided)           |
-| <nobr><code>{"--attach"}</code></nobr>                       |       | Attach to a running mongolgpt server (e.g., http://localhost:4096)           |
-| <nobr><code>{"--password"}</code></nobr>                     | `-p`  | Basic auth password (defaults to `MONGOLGPT_SERVER_PASSWORD`)                |
-| <nobr><code>{"--username"}</code></nobr>                     | `-u`  | Basic auth username (defaults to `MONGOLGPT_SERVER_USERNAME` or `mongolgpt`) |
-| <nobr><code>{"--dir"}</code></nobr>                          |       | Directory to run in, or path on the remote server when attaching             |
-| <nobr><code>{"--port"}</code></nobr>                         |       | Port for the local server (defaults to random port)                          |
-| <nobr><code>{"--variant"}</code></nobr>                      |       | Model variant (provider-specific reasoning effort)                           |
-| <nobr><code>{"--thinking"}</code></nobr>                     |       | Show thinking blocks                                                         |
-| <nobr><code>{"--dangerously-skip-permissions"}</code></nobr> |       | Auto-approve permissions that are not explicitly denied (dangerous!)         |
+| Туг | Богино | Тодорхойлолт |
+| ------------------------------------------------------------ | ----- | -------------------------------------------------------------------------- |
+| <nobr><code>{"--command"}</code></nobr> |       | Ажиллуулах тушаал, args \| мессежийг ашиглана уу |
+| <nobr><code>{"--continue"}</code></nobr> | `-c` | Сүүлийн сессийг үргэлжлүүлэх |
+| <nobr><code>{"--session"}</code></nobr> | `-s` | Үргэлжлүүлэхийн тулд сесс ID |
+| <nobr><code>{"--fork"}</code></nobr> |       | Үргэлжлүүлэхдээ сессийг хойшлуул (`--continue` эсвэл `--session` ашиглана уу) |
+| <nobr><code>{"--share"}</code></nobr> |       | Сессийг хуваалцах |
+| <nobr><code>{"--model"}</code></nobr> | `-m` | Үйлчилгээ үзүүлэгч/загвар хэлбэрээр ашиглах загвар |
+| <nobr><code>{"--agent"}</code></nobr> |       | Ашиглах агент |
+| <nobr><code>{"--file"}</code></nobr> | `-f` | Мессежид хавсаргах файл(ууд) |
+| <nobr><code>{"--format"}</code></nobr> |       | Формат: анхдагч (форматлагдсан) эсвэл json (түүхий JSON үйл явдлууд) |
+| <nobr><code>{"--title"}</code></nobr> |       | Сеансын гарчиг (утга заагаагүй бол тайрсан сануулгыг ашигладаг) |
+| <nobr><code>{"--attach"}</code></nobr> |       | Ажиллаж байгаа mongolgpt серверт хавсаргах (жишээ нь: http://localhost:4096) |
+| <nobr><code>{"--password"}</code></nobr> | `-p` | Баталгаажуулах үндсэн нууц үг (өгөгдмөл нь `MONGOLGPT_SERVER_PASSWORD`) |
+| <nobr><code>{"--username"}</code></nobr> | `-u` | Баталгаажуулах үндсэн хэрэглэгчийн нэр (өгөгдмөл нь `MONGOLGPT_SERVER_USERNAME` эсвэл `mongolgpt`) |
+| <nobr><code>{"--dir"}</code></nobr> |       | Ажиллуулах лавлах эсвэл \| хавсаргах үед алсын сервер дээрх зам |
+| <nobr><code>{"--port"}</code></nobr> |       | Локал серверийн порт (анхдагчаар санамсаргүй порт) |
+| <nobr><code>{"--variant"}</code></nobr> |       | Загварын хувилбар (үйлүүлэгчийн тусгай үндэслэлийн хүчин чармайлт) |
+| <nobr><code>{"--thinking"}</code></nobr> |       | Сэтгэлгээний блокуудыг харуулах |
+| <nobr><code>{"--dangerously-skip-permissions"}</code></nobr> |       | Тодорхой үгүйсгээгүй зөвшөөрлийг автоматаар батлах (аюултай!) |
 
 ---
 
-### serve
+### үйлчилнэ
 
-Start a headless MongolGPT server for API access. Check out the [server docs](/docs/server) for the full HTTP interface.
+API хандахын тулд толгойгүй MongolGPT сервер ажиллуулна уу. Бүрэн HTTP интерфэйсийг [серверийн баримтууд](/docs/server)-г үзнэ үү.
 
 ```bash
 mongolgpt serve
 ```
 
-This starts an HTTP server that provides API access to mongolgpt functionality without the TUI interface. Set `MONGOLGPT_SERVER_PASSWORD` to enable HTTP basic auth (username defaults to `mongolgpt`).
+Энэ нь TUI интерфэйсгүйгээр mongolgpt функцэд API хандалтыг хангадаг HTTP серверийг эхлүүлнэ. HTTP үндсэн баталгаажуулалтыг идэвхжүүлэхийн тулд `MONGOLGPT_SERVER_PASSWORD`-г тохируулна уу (хэрэглэгчийн нэр нь `mongolgpt`).
 
-#### Flags
+#### Тугнууд
 
-| Flag                                        | Description                                |
+| Туг | Тодорхойлолт |
 | ------------------------------------------- | ------------------------------------------ |
-| <nobr><code>{"--port"}</code></nobr>        | Port to listen on                          |
-| <nobr><code>{"--hostname"}</code></nobr>    | Hostname to listen on                      |
-| <nobr><code>{"--mdns"}</code></nobr>        | Enable mDNS discovery                      |
-| <nobr><code>{"--mdns-domain"}</code></nobr> | Custom mDNS domain name                    |
-| <nobr><code>{"--cors"}</code></nobr>        | Additional browser origin(s) to allow CORS |
+| <nobr><code>{"--port"}</code></nobr> | Сонсох порт |
+| <nobr><code>{"--hostname"}</code></nobr> | Сонсох хостын нэр |
+| <nobr><code>{"--mdns"}</code></nobr> | mDNS илрүүлэлтийг идэвхжүүлэх |
+| <nobr><code>{"--mdns-domain"}</code></nobr> | Захиалгат mDNS домэйн нэр |
+| <nobr><code>{"--cors"}</code></nobr> | CORS \| зөвшөөрөх нэмэлт хөтчийн гарал үүсэл(үүд). |
 
 ---
 
-### session
+### сесс
 
-Manage MongolGPT sessions.
+MongolGPT сессүүдийг удирдах.
 
 ```bash
 mongolgpt session [command]
@@ -416,26 +416,26 @@ mongolgpt session [command]
 
 ---
 
-#### list
+#### жагсаалт
 
-List all MongolGPT sessions.
+Бүх MongolGPT сешнүүдийг жагсаа.
 
 ```bash
 mongolgpt session list
 ```
 
-##### Flags
+##### Тугнууд
 
-| Flag                                      | Short | Description                          |
+| Туг | Богино | Тодорхойлолт |
 | ----------------------------------------- | ----- | ------------------------------------ |
-| <nobr><code>{"--max-count"}</code></nobr> | `-n`  | Limit to N most recent sessions      |
-| <nobr><code>{"--format"}</code></nobr>    |       | Output format: table or json (table) |
+| <nobr><code>{"--max-count"}</code></nobr> | `-n` | Хамгийн сүүлийн үеийн N сессийг хязгаарлах |
+| <nobr><code>{"--format"}</code></nobr> |       | Гаралтын формат: хүснэгт эсвэл json (хүснэгт) |
 
 ---
 
-#### delete
+#### устгах
 
-Delete an MongolGPT session.
+MongolGPT сессийг устгах.
 
 ```bash
 mongolgpt session delete <sessionID>
@@ -443,52 +443,52 @@ mongolgpt session delete <sessionID>
 
 ---
 
-### stats
+### статистик
 
-Show token usage and cost statistics for your MongolGPT sessions.
+MongolGPT сессийн токен ашиглалт болон зардлын статистикийг харуул.
 
 ```bash
 mongolgpt stats
 ```
 
-#### Flags
+#### Тугнууд
 
-| Flag                                    | Description                                                                 |
+| Туг | Тодорхойлолт |
 | --------------------------------------- | --------------------------------------------------------------------------- |
-| <nobr><code>{"--days"}</code></nobr>    | Show stats for the last N days (all time)                                   |
-| <nobr><code>{"--tools"}</code></nobr>   | Number of tools to show (all)                                               |
-| <nobr><code>{"--models"}</code></nobr>  | Show model usage breakdown (hidden by default). Pass a number to show top N |
-| <nobr><code>{"--project"}</code></nobr> | Filter by project (all projects, empty string: current project)             |
+| <nobr><code>{"--days"}</code></nobr> | Сүүлийн N өдрийн статистикийг харуулах (бүх цаг үед) |
+| <nobr><code>{"--tools"}</code></nobr> | Харуулах хэрэгслийн тоо (бүгд) |
+| <nobr><code>{"--models"}</code></nobr> | Загварын ашиглалтын задаргааг харуулах (өгөгдмөлөөр нуугдсан). Шилдэг N \|-г харуулахын тулд дугаарыг дамжуулаарай |
+| <nobr><code>{"--project"}</code></nobr> | Төслөөр шүүх (бүх төсөл, хоосон мөр: одоогийн төсөл) |
 
 ---
 
-### export
+### экспорт
 
-Export session data as JSON.
+Сеанс өгөгдлийг JSON хэлбэрээр экспортлох.
 
 ```bash
 mongolgpt export [sessionID]
 ```
 
-If you don't provide a session ID, you'll be prompted to select from available sessions.
+Хэрэв та ID сессийг өгөхгүй бол боломжтой сешнүүдээс сонгохыг танаас хүсэх болно.
 
-#### Flags
+#### Тугнууд
 
-| Flag                                     | Description                           |
+| Туг | Тодорхойлолт |
 | ---------------------------------------- | ------------------------------------- |
-| <nobr><code>{"--sanitize"}</code></nobr> | Redact sensitive transcript/file data |
+| <nobr><code>{"--sanitize"}</code></nobr> | Эмзэг хуулбар/файлын өгөгдлийг засварлах |
 
 ---
 
-### import
+### импорт
 
-Import session data from a JSON file or MongolGPT share URL.
+JSON файлаас сессийн өгөгдлийг импортлох эсвэл MongolGPT URL хуваалцах.
 
 ```bash
 mongolgpt import <file>
 ```
 
-You can import from a local file or an MongolGPT share URL.
+Та дотоод файл эсвэл MongolGPT хуваалцах URL-аас импортлох боломжтой.
 
 ```bash
 mongolgpt import session.json
@@ -497,77 +497,77 @@ mongolgpt import https://mongolgpt.duckdns.org/s/abc123
 
 ---
 
-### web
+### вэб
 
-Start a headless MongolGPT server with a web interface.
+Вэб интерфэйстэй толгойгүй MongolGPT серверийг эхлүүл.
 
 ```bash
 mongolgpt web
 ```
 
-This starts an HTTP server and opens a web browser to access MongolGPT through a web interface. Set `MONGOLGPT_SERVER_PASSWORD` to enable HTTP basic auth (username defaults to `mongolgpt`).
+Энэ нь HTTP серверийг эхлүүлж, вэб интерфэйсээр дамжуулан MongolGPT руу хандах вэб хөтчийг нээнэ. HTTP үндсэн баталгаажуулалтыг идэвхжүүлэхийн тулд `MONGOLGPT_SERVER_PASSWORD`-г тохируулна уу (хэрэглэгчийн нэр нь `mongolgpt`).
 
-#### Flags
+#### Тугнууд
 
-| Flag                                        | Description                                |
+| Туг | Тодорхойлолт |
 | ------------------------------------------- | ------------------------------------------ |
-| <nobr><code>{"--port"}</code></nobr>        | Port to listen on                          |
-| <nobr><code>{"--hostname"}</code></nobr>    | Hostname to listen on                      |
-| <nobr><code>{"--mdns"}</code></nobr>        | Enable mDNS discovery                      |
-| <nobr><code>{"--mdns-domain"}</code></nobr> | Custom mDNS domain name                    |
-| <nobr><code>{"--cors"}</code></nobr>        | Additional browser origin(s) to allow CORS |
+| <nobr><code>{"--port"}</code></nobr> | Сонсох порт |
+| <nobr><code>{"--hostname"}</code></nobr> | Сонсох хостын нэр |
+| <nobr><code>{"--mdns"}</code></nobr> | mDNS илрүүлэлтийг идэвхжүүлэх |
+| <nobr><code>{"--mdns-domain"}</code></nobr> | Захиалгат mDNS домэйн нэр |
+| <nobr><code>{"--cors"}</code></nobr> | CORS \| зөвшөөрөх нэмэлт хөтчийн гарал үүсэл(үүд). |
 
 ---
 
 ### acp
 
-Start an ACP (Agent Client Protocol) server.
+ACP (Agent Client Protocol) серверийг эхлүүлнэ үү.
 
 ```bash
 mongolgpt acp
 ```
 
-This command starts an ACP server that communicates via stdin/stdout using nd-JSON.
+Энэ тушаал нь nd-JSON ашиглан stdin/stdout-ээр холбогддог ACP серверийг эхлүүлнэ.
 
-#### Flags
+#### Тугнууд
 
-| Flag                                        | Description                                |
+| Туг | Тодорхойлолт |
 | ------------------------------------------- | ------------------------------------------ |
-| <nobr><code>{"--cwd"}</code></nobr>         | Working directory                          |
-| <nobr><code>{"--port"}</code></nobr>        | Port to listen on                          |
-| <nobr><code>{"--hostname"}</code></nobr>    | Hostname to listen on                      |
-| <nobr><code>{"--mdns"}</code></nobr>        | Enable mDNS discovery                      |
-| <nobr><code>{"--mdns-domain"}</code></nobr> | Custom mDNS domain name                    |
-| <nobr><code>{"--cors"}</code></nobr>        | Additional browser origin(s) to allow CORS |
+| <nobr><code>{"--cwd"}</code></nobr> | Ажлын лавлах |
+| <nobr><code>{"--port"}</code></nobr> | Сонсох порт |
+| <nobr><code>{"--hostname"}</code></nobr> | Сонсох хостын нэр |
+| <nobr><code>{"--mdns"}</code></nobr> | mDNS илрүүлэлтийг идэвхжүүлэх |
+| <nobr><code>{"--mdns-domain"}</code></nobr> | Захиалгат mDNS домэйн нэр |
+| <nobr><code>{"--cors"}</code></nobr> | CORS \| зөвшөөрөх нэмэлт хөтчийн гарал үүсэл(үүд). |
 
 ---
 
-### plugin
+### залгаас
 
-Install a plugin and update your config.
+Plugin суулгаад тохиргоогоо шинэчил.
 
 ```bash
 mongolgpt plugin <module>
 ```
 
-Or use the alias.
+Эсвэл өөр нэрийг ашиглана уу.
 
 ```bash
 mongolgpt plug <module>
 ```
 
-#### Flags
+#### Тугнууд
 
-| Flag                                   | Short | Description                     |
+| Туг | Богино | Тодорхойлолт |
 | -------------------------------------- | ----- | ------------------------------- |
-| <nobr><code>{"--global"}</code></nobr> | `-g`  | Install in global config        |
-| <nobr><code>{"--force"}</code></nobr>  | `-f`  | Replace existing plugin version |
+| <nobr><code>{"--global"}</code></nobr> | `-g` | Глобал тохиргоонд суулгана уу |
+| <nobr><code>{"--force"}</code></nobr> | `-f` | Одоо байгаа залгаасын хувилбарыг солих |
 
 ---
 
 ### pr
 
-Fetch and checkout a GitHub PR branch, then run MongolGPT.
+GitHub PR салбарыг дуудаж, тооцоо хийгээд дараа нь MongolGPT ажиллуулна уу.
 
 ```bash
 mongolgpt pr <number>
@@ -575,25 +575,25 @@ mongolgpt pr <number>
 
 ---
 
-### db
+### дб
 
-Database tools.
+Өгөгдлийн сангийн хэрэгслүүд.
 
 ```bash
 mongolgpt db [query]
 ```
 
-#### Flags
+#### Тугнууд
 
-| Flag                                   | Description                    |
+| Туг | Тодорхойлолт |
 | -------------------------------------- | ------------------------------ |
-| <nobr><code>{"--format"}</code></nobr> | Output format: `json` or `tsv` |
+| <nobr><code>{"--format"}</code></nobr> | Гаралтын формат: `json` эсвэл `tsv` |
 
 ---
 
-#### path
+#### зам
 
-Print the database path.
+Өгөгдлийн сангийн замыг хэвлэх.
 
 ```bash
 mongolgpt db path
@@ -601,9 +601,9 @@ mongolgpt db path
 
 ---
 
-### debug
+### дибаг хийх
 
-Debugging and troubleshooting tools.
+Дибаг хийх, алдааг олж засварлах хэрэгсэл.
 
 ```bash
 mongolgpt debug [command]
@@ -611,122 +611,122 @@ mongolgpt debug [command]
 
 ---
 
-### uninstall
+### устгах
 
-Uninstall MongolGPT and remove all related files.
+MongolGPT-г устгаад холбогдох бүх файлыг устгана уу.
 
 ```bash
 mongolgpt uninstall
 ```
 
-#### Flags
+#### Тугнууд
 
-| Flag                                        | Short | Description                                 |
+| Туг | Богино | Тодорхойлолт |
 | ------------------------------------------- | ----- | ------------------------------------------- |
-| <nobr><code>{"--keep-config"}</code></nobr> | `-c`  | Keep configuration files                    |
-| <nobr><code>{"--keep-data"}</code></nobr>   | `-d`  | Keep session data and snapshots             |
-| <nobr><code>{"--dry-run"}</code></nobr>     |       | Show what would be removed without removing |
-| <nobr><code>{"--force"}</code></nobr>       | `-f`  | Skip confirmation prompts                   |
+| <nobr><code>{"--keep-config"}</code></nobr> | `-c` | Тохиргооны файлуудыг хадгалах |
+| <nobr><code>{"--keep-data"}</code></nobr> | `-d` | Сеансын өгөгдөл болон агшин зуурын зургийг хадгалах |
+| <nobr><code>{"--dry-run"}</code></nobr> |       | Устгахгүйгээр юу устгахыг харуулах |
+| <nobr><code>{"--force"}</code></nobr> | `-f` | Баталгаажуулах сануулгыг алгасах |
 
 ---
 
-### upgrade
+### шинэчлэх
 
-Updates mongolgpt to the latest version or a specific version.
+mongolgpt-г хамгийн сүүлийн хувилбар эсвэл тодорхой хувилбар руу шинэчилнэ.
 
 ```bash
 mongolgpt upgrade [target]
 ```
 
-To upgrade to the latest version.
+Хамгийн сүүлийн хувилбар руу шинэчлэхийн тулд.
 
 ```bash
 mongolgpt upgrade
 ```
 
-To upgrade to a specific version.
+Тодорхой хувилбар руу шинэчлэхийн тулд.
 
 ```bash
 mongolgpt upgrade v0.1.48
 ```
 
-#### Flags
+#### Тугнууд
 
-| Flag                                   | Short | Description                                                       |
+| Туг | Богино | Тодорхойлолт |
 | -------------------------------------- | ----- | ----------------------------------------------------------------- |
-| <nobr><code>{"--method"}</code></nobr> | `-m`  | The installation method that was used; curl, npm, pnpm, bun, brew |
+| <nobr><code>{"--method"}</code></nobr> | `-m` | Ашигласан суулгах арга; curl, npm, pnpm, бин, шар айраг |
 
 ---
 
-## Global Flags
+## Дэлхийн тугнууд
 
-The mongolgpt CLI takes the following global flags.
+mongolgpt CLI нь дараах дэлхийн далбааг авдаг.
 
-| Flag                                       | Short | Description                          |
+| Туг | Богино | Тодорхойлолт |
 | ------------------------------------------ | ----- | ------------------------------------ |
-| <nobr><code>{"--help"}</code></nobr>       | `-h`  | Display help                         |
-| <nobr><code>{"--version"}</code></nobr>    | `-v`  | Print version number                 |
-| <nobr><code>{"--print-logs"}</code></nobr> |       | Print logs to stderr                 |
-| <nobr><code>{"--log-level"}</code></nobr>  |       | Log level (DEBUG, INFO, WARN, ERROR) |
-| <nobr><code>{"--pure"}</code></nobr>       |       | Run without external plugins         |
+| <nobr><code>{"--help"}</code></nobr> | `-h` | Тусламжийг харуулах |
+| <nobr><code>{"--version"}</code></nobr> | `-v` | Хэвлэх хувилбарын дугаар |
+| <nobr><code>{"--print-logs"}</code></nobr> |       | Логуудыг stderr \| рүү хэвлэх |
+| <nobr><code>{"--log-level"}</code></nobr> |       | Бүртгэлийн түвшин (DEBUG, INFO, WARN, ERROR) |
+| <nobr><code>{"--pure"}</code></nobr> |       | Гадаад залгаасгүйгээр ажиллуулах |
 
 ---
 
-## Environment variables
+## Хүрээлэн буй орчны хувьсагчид
 
-MongolGPT can be configured using environment variables.
+MongolGPT орчны хувьсагчийг ашиглан тохируулж болно.
 
-| Variable                               | Type    | Description                                        |
-| -------------------------------------- | ------- | -------------------------------------------------- |
-| `MONGOLGPT_AUTO_SHARE`                 | boolean | Automatically share sessions                       |
-| `MONGOLGPT_GIT_BASH_PATH`              | string  | Path to Git Bash executable on Windows             |
-| `MONGOLGPT_CONFIG`                     | string  | Path to config file                                |
-| `MONGOLGPT_TUI_CONFIG`                 | string  | Path to TUI config file                            |
-| `MONGOLGPT_CONFIG_DIR`                 | string  | Path to config directory                           |
-| `MONGOLGPT_CONFIG_CONTENT`             | string  | Inline json config content                         |
-| `MONGOLGPT_DISABLE_AUTOUPDATE`         | boolean | Disable automatic update checks                    |
-| `MONGOLGPT_DISABLE_PRUNE`              | boolean | Disable pruning of old data                        |
-| `MONGOLGPT_DISABLE_TERMINAL_TITLE`     | boolean | Disable automatic terminal title updates           |
-| `MONGOLGPT_PERMISSION`                 | string  | Inlined json permissions config                    |
-| `MONGOLGPT_DISABLE_DEFAULT_PLUGINS`    | boolean | Disable default plugins                            |
-| `MONGOLGPT_DISABLE_LSP_DOWNLOAD`       | boolean | Disable automatic LSP server downloads             |
-| `MONGOLGPT_ENABLE_EXPERIMENTAL_MODELS` | boolean | Enable experimental models                         |
-| `MONGOLGPT_DISABLE_AUTOCOMPACT`        | boolean | Disable automatic context compaction               |
-| `MONGOLGPT_DISABLE_CLAUDE_CODE`        | boolean | Disable reading from `.claude` (prompt + skills)   |
-| `MONGOLGPT_DISABLE_CLAUDE_CODE_PROMPT` | boolean | Disable reading `~/.claude/CLAUDE.md`              |
-| `MONGOLGPT_DISABLE_CLAUDE_CODE_SKILLS` | boolean | Disable loading `.claude/skills`                   |
-| `MONGOLGPT_DISABLE_MODELS_FETCH`       | boolean | Disable fetching models from remote sources        |
-| `MONGOLGPT_DISABLE_MOUSE`              | boolean | Disable mouse capture in the TUI                   |
-| `MONGOLGPT_FAKE_VCS`                   | string  | Fake VCS provider for testing purposes             |
-| `MONGOLGPT_CLIENT`                     | string  | Client identifier (defaults to `cli`)              |
-| `MONGOLGPT_ENABLE_EXA`                 | boolean | Enable Exa web search tools                        |
-| `MONGOLGPT_SERVER_PASSWORD`            | string  | Enable basic auth for `serve`/`web`                |
-| `MONGOLGPT_SERVER_USERNAME`            | string  | Override basic auth username (default `mongolgpt`) |
-| `MONGOLGPT_MODELS_URL`                 | string  | Custom URL for fetching models configuration       |
+| Хувьсагч | Төрөл | Тодорхойлолт |
+| ------------------------------------- | ------- | ------------------------------------------------- |
+| `MONGOLGPT_AUTO_SHARE` | логикийн | Сешнүүдийг автоматаар хуваалцах |
+| `MONGOLGPT_GIT_BASH_PATH` | мөр | Git Bash руу очих замыг Windows дээр ажиллуулж болно |
+| `MONGOLGPT_CONFIG` | мөр | Тохиргооны файлын зам |
+| `MONGOLGPT_TUI_CONFIG` | мөр | TUI тохиргооны файл руу орох зам |
+| `MONGOLGPT_CONFIG_DIR` | мөр | Тохируулгын лавлах зам |
+| `MONGOLGPT_CONFIG_CONTENT` | мөр | Inline json тохиргооны контент |
+| `MONGOLGPT_DISABLE_AUTOUPDATE` | логикийн | Автомат шинэчлэлтийн шалгалтыг идэвхгүй болгох |
+| `MONGOLGPT_DISABLE_PRUNE` | логикийн | Хуучин өгөгдлийг тайрахыг идэвхгүй болгох |
+| `MONGOLGPT_DISABLE_TERMINAL_TITLE` | логикийн | Автомат терминалын гарчгийн шинэчлэлтийг идэвхгүй болгох |
+| `MONGOLGPT_PERMISSION` | мөр | Доторлогдсон json зөвшөөрлийн тохиргоо |
+| `MONGOLGPT_DISABLE_DEFAULT_PLUGINS` | логикийн | Өгөгдмөл залгаасуудыг идэвхгүй болгох |
+| `MONGOLGPT_DISABLE_LSP_DOWNLOAD` | логикийн | LSP серверийн автомат таталтыг идэвхгүй болгох |
+| `MONGOLGPT_ENABLE_EXPERIMENTAL_MODELS` | логикийн | Туршилтын загваруудыг идэвхжүүлэх |
+| `MONGOLGPT_DISABLE_AUTOCOMPACT` | логикийн | Автомат контекст нягтруулахыг идэвхгүй болгох |
+| `MONGOLGPT_DISABLE_CLAUDE_CODE` | логикийн | `.claude`-аас уншихыг идэвхгүй болгох (шүргэх + ур чадвар) |
+| `MONGOLGPT_DISABLE_CLAUDE_CODE_PROMPT` | логикийн | Уншихыг идэвхгүй болгох `~/.claude/CLAUDE.md` |
+| `MONGOLGPT_DISABLE_CLAUDE_CODE_SKILLS` | логикийн | `.claude/skills` ачаалахыг идэвхгүй болгох |
+| `MONGOLGPT_DISABLE_MODELS_FETCH` | логикийн | Алсын эх сурвалжаас загвар татахыг идэвхгүй болгох |
+| `MONGOLGPT_DISABLE_MOUSE` | логикийн | TUI \|-д хулганаар авах ажиллагааг идэвхгүй болгох |
+| `MONGOLGPT_FAKE_VCS` | мөр | Туршилтын зорилгоор хуурамч VCS үйлчилгээ үзүүлэгч |
+| `MONGOLGPT_CLIENT` | мөр | Үйлчлүүлэгчийн танигч (өгөгдмөл нь `cli`) |
+| `MONGOLGPT_ENABLE_EXA` | логикийн | Exa вэб хайлтын хэрэгслүүдийг идэвхжүүлнэ үү |
+| `MONGOLGPT_SERVER_PASSWORD` | мөр | `serve`/`web` \| үндсэн баталгаажуулалтыг идэвхжүүл |
+| `MONGOLGPT_SERVER_USERNAME` | мөр | Баталгаажуулах үндсэн хэрэглэгчийн нэрийг хүчингүй болгох (өгөгдмөл `mongolgpt`) |
+| `MONGOLGPT_MODELS_URL` | мөр | Загварын тохиргоог дуудах захиалгат URL |
 
 ---
 
-### Experimental
+### Туршилт
 
-These environment variables enable experimental features that may change or be removed.
+Эдгээр орчны хувьсагч нь өөрчлөгдөж эсвэл устгаж болох туршилтын функцуудыг идэвхжүүлдэг.
 
-| Variable                                         | Type    | Description                             |
-| ------------------------------------------------ | ------- | --------------------------------------- |
-| `MONGOLGPT_EXPERIMENTAL`                         | boolean | Enable the experimental umbrella flag   |
-| `MONGOLGPT_EXPERIMENTAL_ICON_DISCOVERY`          | boolean | Enable icon discovery                   |
-| `MONGOLGPT_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`  | boolean | Disable copy on select in TUI           |
-| `MONGOLGPT_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS` | number  | Default timeout for bash commands in ms |
-| `MONGOLGPT_EXPERIMENTAL_OUTPUT_TOKEN_MAX`        | number  | Max output tokens for LLM responses     |
-| `MONGOLGPT_EXPERIMENTAL_FILEWATCHER`             | boolean | Enable file watcher for entire dir      |
-| `MONGOLGPT_EXPERIMENTAL_OXFMT`                   | boolean | Enable oxfmt formatter                  |
-| `MONGOLGPT_EXPERIMENTAL_LSP_TOOL`                | boolean | Enable experimental LSP tool            |
-| `MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER`     | boolean | Disable file watcher                    |
-| `MONGOLGPT_EXPERIMENTAL_EXA`                     | boolean | Enable experimental Exa features        |
-| `MONGOLGPT_EXPERIMENTAL_LSP_TY`                  | boolean | Enable TY LSP for python files          |
-| `MONGOLGPT_EXPERIMENTAL_PLAN_MODE`               | boolean | Enable plan mode                        |
-| `MONGOLGPT_EXPERIMENTAL_BACKGROUND_SUBAGENTS`    | boolean | Enable background subagent tasks        |
-| `MONGOLGPT_EXPERIMENTAL_EVENT_SYSTEM`            | boolean | Enable experimental event system        |
-| `MONGOLGPT_EXPERIMENTAL_NATIVE_LLM`              | boolean | Enable native LLM request path          |
-| `MONGOLGPT_EXPERIMENTAL_PARALLEL`                | boolean | Enable parallel web search execution    |
-| `MONGOLGPT_EXPERIMENTAL_SCOUT`                   | boolean | Enable Scout subagent                   |
-| `MONGOLGPT_EXPERIMENTAL_WORKSPACES`              | boolean | Enable workspace support                |
+| Хувьсагч | Төрөл | Тодорхойлолт |
+| ----------------------------------------------- | ------- | --------------------------------------- |
+| `MONGOLGPT_EXPERIMENTAL` | логикийн | Туршилтын шүхрийн тугийг идэвхжүүлэх |
+| `MONGOLGPT_EXPERIMENTAL_ICON_DISCOVERY` | логикийн | Дүрс илрүүлэхийг идэвхжүүлэх |
+| `MONGOLGPT_EXPERIMENTAL_DISABLE_COPY_ON_SELECT` | логикийн | TUI \| дээр сонгоод хуулбарыг идэвхгүй болгох |
+| `MONGOLGPT_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS` | тоо | ms \| дэх bash командуудын өгөгдмөл хугацаа |
+| `MONGOLGPT_EXPERIMENTAL_OUTPUT_TOKEN_MAX` | тоо | LLM хариултын хамгийн их гаралтын жетон |
+| `MONGOLGPT_EXPERIMENTAL_FILEWATCHER` | логикийн | Файл ажиглагчийг бүхэлд нь dir |
+| `MONGOLGPT_EXPERIMENTAL_OXFMT` | логикийн | oxfmt форматлагчийг идэвхжүүлнэ үү |
+| `MONGOLGPT_EXPERIMENTAL_LSP_TOOL` | логикийн | Туршилтын LSP хэрэгслийг идэвхжүүлнэ үү |
+| `MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER` | логикийн | Файл ажиглагчийг идэвхгүй болгох |
+| `MONGOLGPT_EXPERIMENTAL_EXA` | логикийн | Туршилтын Exa функцуудыг идэвхжүүлэх |
+| `MONGOLGPT_EXPERIMENTAL_LSP_TY` | логикийн | Python файлуудад TY LSP-г идэвхжүүлнэ үү |
+| `MONGOLGPT_EXPERIMENTAL_PLAN_MODE` | логикийн | Төлөвлөгөөний горимыг идэвхжүүлэх |
+| `MONGOLGPT_EXPERIMENTAL_BACKGROUND_SUBAGENTS` | логикийн | Арын дэд агентийн ажлыг идэвхжүүлэх |
+| `MONGOLGPT_EXPERIMENTAL_EVENT_SYSTEM` | логикийн | Туршилтын үйл явдлын системийг идэвхжүүлэх |
+| `MONGOLGPT_EXPERIMENTAL_NATIVE_LLM` | логикийн | Эх LLM хүсэлтийн замыг идэвхжүүлэх |
+| `MONGOLGPT_EXPERIMENTAL_PARALLEL` | логикийн | Зэрэгцээ вэб хайлтын гүйцэтгэлийг идэвхжүүлэх |
+| `MONGOLGPT_EXPERIMENTAL_SCOUT` | логикийн | Scout subagent \|-г идэвхжүүлнэ |
+| `MONGOLGPT_EXPERIMENTAL_WORKSPACES` | логикийн | Ажлын талбарын дэмжлэгийг идэвхжүүлэх |

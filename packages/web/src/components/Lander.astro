@@ -28,9 +28,9 @@ const docsCliHref = getRelativeLocaleUrl(locale, "cli")
 const docsIdeHref = getRelativeLocaleUrl(locale, "ide")
 const docsGithubHref = getRelativeLocaleUrl(locale, "github")
 
-const command = "git clone"
+const command = "desktop"
 const protocol = ""
-const url = "https://github.com/sergei10a-rgb/mongolgpt.git"
+const url = "mongolgpt-desktop-win-x64.exe"
 const bash = ""
 
 let darkImage: ImageMetadata | undefined;
@@ -64,7 +64,7 @@ if (image) {
         <a href={docsHref}>{t('app.lander.cta.getStarted')}</a>
       </div>
       <div class="col2">
-      <button class="command" data-command={`${command} ${protocol}${url} ${bash}`}>
+      <button class="command" data-command="https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe">
           <code>
             <span>{command}&nbsp;</span><span class="protocol">{protocol}</span><span class="highlight">{url}</span>&nbsp;{bash}
           </code>
@@ -90,7 +90,7 @@ if (image) {
 
     <section class="alternatives">
       <div class="col1">
-        <h3>Desktop</h3>
+        <h3>Desktop татах</h3>
         <button class="command" data-command="https://github.com/sergei10a-rgb/mongolgpt/releases/latest">
           <code>
             <span>GitHub</span> <span class="highlight">Release татах</span>
@@ -102,7 +102,7 @@ if (image) {
         </button>
       </div>
       <div class="col2">
-        <h3>Source</h3>
+        <h3>Source ажиллуулах</h3>
         <button class="command" data-command="git clone https://github.com/sergei10a-rgb/mongolgpt.git">
           <code>
             <span>git clone</span> <span class="highlight">mongolgpt</span>
@@ -114,7 +114,7 @@ if (image) {
         </button>
       </div>
       <div class="col3">
-        <h3>Dev</h3>
+        <h3>Dev орчин</h3>
         <button class="command" data-command="bun install && bun run dev">
           <code>
             <span>bun install</span> <span class="highlight">bun run dev</span>
@@ -138,7 +138,7 @@ if (image) {
         </button>
       </div>
       <div class="col4">
-        <h3>Docs</h3>
+        <h3>Баримт бичиг</h3>
         <button class="command" data-command="https://mongolgpt.duckdns.org/docs/">
           <code>
             <span>Монгол</span> <span class="highlight">баримт бичиг</span>

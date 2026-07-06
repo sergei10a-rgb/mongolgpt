@@ -1,81 +1,81 @@
 ---
 title: Troubleshooting
-description: Common issues and how to resolve them.
+description: Нийтлэг асуудлууд, тэдгээрийг хэрхэн шийдвэрлэх талаар.
 ---
 
-To debug issues with MongolGPT, start by checking the logs and local data it stores on disk.
+MongolGPT-тэй холбоотой асуудлыг дибаг хийхдээ дискэн дээр хадгалсан бүртгэлүүд болон дотоод өгөгдлийг шалгаж эхэлнэ.
 
 ---
 
-## Logs
+## Бүртгэл
 
-Log files are written to:
+Лог файлуудыг дараах руу бичдэг:
 
 - **macOS/Linux**: `~/.local/share/mongolgpt/log/`
-- **Windows**: Press `WIN+R` and paste `%USERPROFILE%\.local\share\mongolgpt\log`
+- **Windows**: `WIN+R` дарж, `%USERPROFILE%\.local\share\mongolgpt\log` дарна уу.
 
-Log files are named with timestamps (e.g., `2025-01-09T123456.log`) and the most recent 10 log files are kept.
+Лог файлуудыг цагийн тэмдэгээр нэрлэсэн (жишээ нь: `2025-01-09T123456.log`) бөгөөд хамгийн сүүлийн 10 бүртгэлийн файл хадгалагдана.
 
-You can set the log level with the `--log-level` command-line option to get more detailed debug information. For example, `mongolgpt --log-level DEBUG`.
+Та илүү нарийвчилсан дибаг хийх мэдээллийг авахын тулд `--log-level` тушаалын мөрийн сонголтоор бүртгэлийн түвшинг тохируулж болно. Жишээлбэл, `mongolgpt --log-level DEBUG`.
 
 ---
 
-## Storage
+## Хадгалах
 
-mongolgpt stores session data and other application data on disk at:
+mongolgpt сессийн өгөгдөл болон бусад програмын өгөгдлийг дискэн дээр хадгалдаг:
 
 - **macOS/Linux**: `~/.local/share/mongolgpt/`
-- **Windows**: Press `WIN+R` and paste `%USERPROFILE%\.local\share\mongolgpt`
+- **Windows**: `WIN+R` дарж, `%USERPROFILE%\.local\share\mongolgpt` дарна уу.
 
-This directory contains:
+Энэ лавлах нь:
 
-- `auth.json` - Authentication data like API keys, OAuth tokens
-- `log/` - Application logs
-- `project/` - Project-specific data like session and message data
-  - If the project is within a Git repo, it is stored in `./<project-slug>/storage/`
-  - If it is not a Git repo, it is stored in `./global/storage/`
+- `auth.json` - API түлхүүр, OAuth жетон гэх мэт баталгаажуулалтын өгөгдөл
+- `log/` - Програмын бүртгэл
+- `project/` - Сеанс болон мессежийн өгөгдөл зэрэг төслийн тусгай өгөгдөл
+  - Хэрэв төсөл нь Git репо дотор байгаа бол `./<project-slug>/storage/`-д хадгалагдана.
+  - Хэрэв энэ нь Git репо биш бол `./global/storage/`-д хадгалагдана.
 
 ---
 
-## Uninstall
+## Устгах
 
-To uninstall the MongolGPT CLI and remove its related files, run:
+MongolGPT CLI-г устгаж, холбогдох файлуудыг устгахын тулд дараахыг ажиллуулна уу:
 
 ```bash
 mongolgpt uninstall
 ```
 
-The command shows what will be removed and asks for confirmation. See the [CLI reference](/docs/cli#uninstall) for options to keep your configuration or application data.
+Тушаал нь юу устгахыг харуулж, баталгаажуулахыг хүсэх болно. Тохиргоо эсвэл програмын өгөгдлийг хадгалах сонголтуудыг [CLI лавлагаа](/docs/cli#uninstall) харна уу.
 
-To remove MongolGPT Desktop, uninstall the application through your operating system's app management tools.
-
----
-
-## Desktop app
-
-MongolGPT Desktop runs a local MongolGPT server (the `mongolgpt-cli` sidecar) in the background. Most issues are caused by a misbehaving plugin, a corrupted cache, or a bad server setting.
-
-### Quick checks
-
-- Fully quit and relaunch the app.
-- If the app shows an error screen, click **Restart** and copy the error details.
-- macOS only: `MongolGPT` menu -> **Reload Webview** (helps if the UI is blank/frozen).
+MongolGPT Desktop-г устгахын тулд үйлдлийн системийнхээ програмын удирдлагын хэрэгслээр дамжуулан програмыг устгана уу.
 
 ---
 
-### Disable plugins
+## Ширээний програм
 
-If the desktop app is crashing on launch, hanging, or behaving strangely, start by disabling plugins.
+MongolGPT Ширээний компьютер нь орон нутгийн MongolGPT серверийг (`mongolgpt-cli` хажуугийн хайрцаг) ар талд ажиллуулдаг. Ихэнх асуудлууд залгаас, гэмтсэн кэш, серверийн тохиргоо муутай зэргээс шалтгаална.
 
-#### Check the global config
+### Шуурхай шалгалт
 
-Open your global config file and look for a `plugin` key.
+- Бүрэн гарч, програмаа дахин ажиллуулна уу.
+- Хэрэв програмд алдаа гарсан дэлгэц гарч байвал **Дахин эхлүүлэх** дээр дарж алдааны мэдээллийг хуулна.
+- Зөвхөн macOS: `MongolGPT` цэс -> **Вэб харахыг дахин ачаалах** (хэрэв UI хоосон/царцаасан тохиолдолд тусална).
 
-- **macOS/Linux**: `~/.config/mongolgpt/mongolgpt.jsonc` (or `~/.config/mongolgpt/mongolgpt.json`)
-- **macOS/Linux** (older installs): `~/.local/share/mongolgpt/mongolgpt.jsonc`
-- **Windows**: Press `WIN+R` and paste `%USERPROFILE%\.config\mongolgpt\mongolgpt.jsonc`
+---
 
-If you have plugins configured, temporarily disable them by removing the key or setting it to an empty array:
+### залгаасуудыг идэвхгүй болгох
+
+Хэрэв ширээний програмыг эхлүүлэх үед гацаж, унжсан эсвэл хачирхалтай ажиллаж байвал залгаасуудыг идэвхгүй болго.
+
+#### Глобал тохиргоог шалгана уу
+
+Глобал тохиргооны файлаа нээгээд `plugin` түлхүүрийг олоорой.
+
+- **macOS/Linux**: `~/.config/mongolgpt/mongolgpt.jsonc` (эсвэл `~/.config/mongolgpt/mongolgpt.json`)
+- **macOS/Linux** (хуучин суулгацууд): `~/.local/share/mongolgpt/mongolgpt.jsonc`
+- **Windows**: `WIN+R` дарж, `%USERPROFILE%\.config\mongolgpt\mongolgpt.jsonc` дарна уу.
+
+Хэрэв танд тохируулсан залгаасууд байгаа бол түлхүүрийг арилгах эсвэл хоосон массив болгон тохируулах замаар тэдгээрийг түр идэвхгүй болго.
 
 ```jsonc
 {
@@ -84,156 +84,156 @@ If you have plugins configured, temporarily disable them by removing the key or 
 }
 ```
 
-#### Check plugin directories
+#### Plugin лавлахуудыг шалгана уу
 
-MongolGPT can also load local plugins from disk. Temporarily move these out of the way (or rename the folder) and restart the desktop app:
+MongolGPT нь мөн дискнээс локал залгаасуудыг ачаалж болно. Эдгээрийг замаас түр зуур зөөж (эсвэл фолдерын нэрийг өөрчлөх) болон ширээний програмыг дахин эхлүүлнэ үү:
 
-- **Global plugins**
+- **Глобал залгаасууд**
   - **macOS/Linux**: `~/.config/mongolgpt/plugins/`
-  - **Windows**: Press `WIN+R` and paste `%USERPROFILE%\.config\mongolgpt\plugins`
-- **Project plugins** (only if you use per-project config)
+  - **Windows**: `WIN+R` дарж, `%USERPROFILE%\.config\mongolgpt\plugins` дарна уу.
+- **Төслийн залгаасууд** (зөвхөн та төсөл бүрийн тохиргоог ашигладаг бол)
   - `<your-project>/.mongolgpt/plugins/`
 
-If the app starts working again, re-enable plugins one at a time to find which one is causing the issue.
+Хэрэв програм дахин ажиллаж эхэлбэл аль нь асуудал үүсгэж байгааг олохын тулд залгаасуудыг нэг нэгээр нь дахин идэвхжүүлнэ үү.
 
 ---
 
-### Clear the cache
+### Кэшийг цэвэрлэ
 
-If disabling plugins doesn't help (or a plugin install is stuck), clear the cache so MongolGPT can rebuild it.
+Хэрэв залгаасуудыг идэвхгүй болгох нь тус болохгүй (эсвэл залгаас суулгахад гацсан бол MongolGPT үүнийг дахин бүтээхийн тулд кэшийг цэвэрлэ.
 
-1. Quit MongolGPT Desktop completely.
-2. Delete the cache directory:
+1. MongolGPT Десктопоос бүрмөсөн гарах.
+2. Кэшийн лавлахыг устгана уу:
 
 - **macOS**: Finder -> `Cmd+Shift+G` -> paste `~/.cache/mongolgpt`
-- **Linux**: delete `~/.cache/mongolgpt` (or run `rm -rf ~/.cache/mongolgpt`)
-- **Windows**: Press `WIN+R` and paste `%USERPROFILE%\.cache\mongolgpt`
+- **Linux**: устгах `~/.cache/mongolgpt` (эсвэл `rm -rf ~/.cache/mongolgpt` ажиллуулах)
+- **Windows**: `WIN+R` дарж, `%USERPROFILE%\.cache\mongolgpt` дарна уу.
 
-3. Restart MongolGPT Desktop.
-
----
-
-### Fix server connection issues
-
-MongolGPT Desktop can either start its own local server (default) or connect to a server URL you configured.
-
-If you see a **"Connection Failed"** dialog (or the app never gets past the splash screen), check for a custom server URL.
-
-#### Clear the desktop default server URL
-
-From the Home screen, click the server name (with the status dot) to open the Server picker. In the **Default server** section, click **Clear**.
-
-#### Remove `server.port` / `server.hostname` from your config
-
-If your `mongolgpt.json(c)` contains a `server` section, temporarily remove it and restart the desktop app.
-
-#### Check environment variables
-
-If you have `MONGOLGPT_PORT` set in your environment, the desktop app will try to use that port for the local server.
-
-- Unset `MONGOLGPT_PORT` (or pick a free port) and restart.
+3. MongolGPT Десктопыг дахин эхлүүлнэ үү.
 
 ---
 
-### Linux: Wayland / X11 issues
+### Серверийн холболтын асуудлыг засах
 
-On Linux, some Wayland setups can cause blank windows or compositor errors.
+MongolGPT Ширээний компьютер нь өөрийн дотоод серверийг эхлүүлэх (анхдагч) эсвэл таны тохируулсан URL серверт холбогдох боломжтой.
 
-- If you're on Wayland and the app is blank/crashing, try launching with `OC_ALLOW_WAYLAND=1`.
-- If that makes things worse, remove it and try launching under an X11 session instead.
+Хэрэв та **"Холболт амжилтгүй болсон"** харилцах цонхыг харвал (эсвэл програм хэзээ ч дэлгэцийн өмнө гарч ирэхгүй), захиалгат сервер URL байгаа эсэхийг шалгана уу.
 
----
+#### Ширээний үндсэн серверийг арилгах URL
 
-### Windows: WebView2 runtime
+Үндсэн дэлгэцээс серверийн нэрийг (төлөв цэгтэй) дарж Сервер сонгогчийг нээнэ үү. **Үндсэн сервер** хэсэгт **Clear** дээр дарна уу.
 
-On Windows, MongolGPT Desktop requires the Microsoft Edge **WebView2 Runtime**. If the app opens to a blank window or won't start, install/update WebView2 and try again.
+#### Өөрийн тохиргооноос `server.port` / `server.hostname` устгана уу
 
----
+Хэрэв таны `mongolgpt.json(c)`-д `server` хэсэг байгаа бол түр устгаад ширээний програмыг дахин эхлүүлнэ үү.
 
-### Windows: General performance issues
+#### Орчны хувьсагчдыг шалгана уу
 
-If you're experiencing slow performance, file access issues, or terminal problems on Windows, try using [WSL (Windows Subsystem for Linux)](/docs/windows-wsl). WSL provides a Linux environment that works more seamlessly with MongolGPT's features.
+Хэрэв таны орчинд `MONGOLGPT_PORT` тохируулагдсан бол ширээний програм нь тухайн портыг дотоод серверт ашиглахыг оролдох болно.
 
----
-
-### Notifications not showing
-
-MongolGPT Desktop only shows system notifications when:
-
-- notifications are enabled for MongolGPT in your OS settings, and
-- the app window is not focused.
+- `MONGOLGPT_PORT` тохиргоог болиулж (эсвэл үнэгүй порт сонгоод) дахин эхлүүлнэ үү.
 
 ---
 
-### Reset desktop app storage (last resort)
+### Linux: Wayland / X11 асуудлууд
 
-If the app won't start and you can't clear settings from inside the UI, reset the desktop app's saved state.
+Linux дээр Wayland-н зарим тохиргоо нь хоосон цонх эсвэл нэгтгэгчийн алдаа үүсгэж болзошгүй.
 
-1. Quit MongolGPT Desktop.
-2. Find and delete these files (they live in the MongolGPT Desktop app data directory):
-
-- `mongolgpt.settings.dat` (desktop default server URL)
-- `mongolgpt.global.dat` and `mongolgpt.workspace.*.dat` (UI state like recent servers/projects)
-
-To find the directory quickly:
-
-- **macOS**: Finder -> `Cmd+Shift+G` -> `~/Library/Application Support` (then search for the filenames above)
-- **Linux**: search under `~/.local/share` for the filenames above
-- **Windows**: Press `WIN+R` -> `%APPDATA%` (then search for the filenames above)
+- Хэрэв та Wayland дээр байгаа бөгөөд програм хоосон/гажигтай байвал `OC_ALLOW_WAYLAND=1`-р ажиллуулж үзнэ үү.
+- Хэрэв энэ нь байдлыг улам дордуулах юм бол устгаад оронд нь X11 сессийн дагуу ажиллуулж үзнэ үү.
 
 ---
 
-## Getting help
+### Windows: WebView2 ажиллах хугацаа
 
-If you're experiencing issues with MongolGPT:
+Windows, MongolGPT Ширээний компьютер дээр Microsoft Edge **WebView2 Runtime** шаардлагатай. Хэрэв програм хоосон цонхонд нээгдэх эсвэл эхлэхгүй бол WebView2-г суулгаж/шинэчлээд дахин оролдоно уу.
 
-1. **Report issues on GitHub**
+---
 
-   The best way to report bugs or request features is through our GitHub repository:
+### Windows: Гүйцэтгэлийн ерөнхий асуудлууд
+
+Хэрэв та Windows дээр гүйцэтгэл удаашрах, файлд хандах асуудал эсвэл терминалын асуудалтай тулгарвал [WSL (Linux-д зориулсан Windows дэд систем)](/docs/windows-wsl)-г ашиглана уу. WSL нь MongolGPT-ийн онцлогтой илүү жигд ажилладаг Linux орчинг бүрдүүлдэг.
+
+---
+
+### Мэдэгдэл харагдахгүй байна
+
+MongolGPT Ширээний компьютер нь зөвхөн дараах тохиолдолд системийн мэдэгдлийг харуулдаг.
+
+- Таны OS тохиргоонд MongolGPT-д мэдэгдлүүд идэвхжсэн, мөн
+- програмын цонх анхаарлаа төвлөрүүлээгүй байна.
+
+---
+
+### Ширээний програмын санг дахин тохируулах (хамгийн сүүлийн арга)
+
+Хэрэв програм эхлэхгүй бөгөөд та UI доторх тохиргоог арилгах боломжгүй бол ширээний програмын хадгалсан төлөвийг дахин тохируулна уу.
+
+1. MongolGPT Десктопоос гарна.
+2. Эдгээр файлуудыг олж устгана уу (тэд MongolGPT Ширээний програмын мэдээллийн санд амьдардаг):
+
+- `mongolgpt.settings.dat` (ширээний үндсэн сервер URL)
+- `mongolgpt.global.dat` болон `mongolgpt.workspace.*.dat` (UI сүүлийн үеийн серверүүд/төслүүд шиг)
+
+Лавлахыг хурдан олохын тулд:
+
+- **macOS**: Finder -> `Cmd+Shift+G` -> `~/Library/Application Support` (дараа нь дээрх файлын нэрийг хайна уу)
+- **Linux**: дээрх файлын нэрийг `~/.local/share` доороос хайна уу
+- **Windows**: `WIN+R` -> `%APPDATA%` дарна уу (дараа нь дээрх файлын нэрийг хайна уу)
+
+---
+
+## Тусламж авч байна
+
+Хэрэв танд MongolGPT-тай холбоотой асуудал гарвал:
+
+1. **Асуудлыг GitHub** дээр мэдээлэх
+
+   Алдаа мэдээлэх эсвэл функц хүсэх хамгийн сайн арга бол манай GitHub хадгалах газар юм:
 
    [**github.com/sergei10a-rgb/mongolgpt/issues**](https://github.com/sergei10a-rgb/mongolgpt/issues)
 
-   Before creating a new issue, search existing issues to see if your problem has already been reported.
+   Шинэ асуудал үүсгэхээсээ өмнө таны асуудал аль хэдийн мэдэгдсэн эсэхийг шалгахын тулд одоо байгаа асуудлуудыг хайж олоорой.
 
-2. **Join our Discord**
+2. **Манай Discord-д нэгдээрэй**
 
-   For real-time help and community discussion, join our Discord server:
+   Бодит цагийн тусламж болон олон нийтийн хэлэлцүүлгийг авахын тулд манай Discord серверт нэгдээрэй:
 
    [**mongolgpt.duckdns.org/discord**](https://mongolgpt.duckdns.org/discord)
 
 ---
 
-## Common issues
+## Нийтлэг асуудлууд
 
-Here are some common issues and how to resolve them.
-
----
-
-### MongolGPT won't start
-
-1. Check the logs for error messages
-2. Try running with `--print-logs` to see output in the terminal
-3. Ensure you have the latest version with `mongolgpt upgrade`
+Зарим нийтлэг асуудлууд, тэдгээрийг хэрхэн шийдвэрлэх талаар энд оруулав.
 
 ---
 
-### Authentication issues
+### MongolGPT эхлэхгүй
 
-1. Try re-authenticating with the `/connect` command in the TUI
-2. Check that your API keys are valid
-3. Ensure your network allows connections to the provider's API
+1. Алдааны мэдэгдлийн бүртгэлийг шалгана уу
+2. Терминал дахь гаралтыг харахын тулд `--print-logs` гэж ажиллуулж үзнэ үү
+3. Та `mongolgpt upgrade` гэсэн хамгийн сүүлийн хувилбартай эсэхийг шалгаарай.
 
 ---
 
-### Model not available
+### Баталгаажуулалтын асуудал
 
-1. Check that you've authenticated with the provider
-2. Verify the model name in your config is correct
-3. Some models may require specific access or subscriptions
+1. TUI дээрх `/connect` командыг ашиглан дахин баталгаажуулахыг оролдоно уу.
+2. API түлхүүрүүд хүчинтэй эсэхийг шалгана уу
+3. Таны сүлжээ үйлчилгээ үзүүлэгчийн API-д холбогдохыг зөвшөөрч байгаа эсэхийг шалгаарай.
 
-If you encounter `ProviderModelNotFoundError` you are most likely incorrectly
-referencing a model somewhere.
-Models should be referenced like so: `<providerId>/<modelId>`
+---
+
+### Загвар байхгүй
+
+1. Үйлчилгээ үзүүлэгчээс баталгаажуулсан эсэхээ шалгана уу
+2. Өөрийн тохиргоонд байгаа загварын нэр зөв эсэхийг шалгана уу
+3. Зарим загвар нь тусгай хандалт эсвэл захиалга шаарддаг
+
+Хэрэв та `ProviderModelNotFoundError`-тэй таарвал та буруу байх магадлалтай
+хаа нэгтээ загвараас лавлаж байна.
+Загваруудыг дараах байдлаар дурдах ёстой: `<providerId>/<modelId>`
 
 Examples:
 
@@ -241,54 +241,54 @@ Examples:
 - `openrouter/google/gemini-2.5-flash`
 - `mongolgpt/kimi-k2`
 
-To figure out what models you have access to, run `mongolgpt models`
+Та ямар загварт хандах боломжтойг мэдэхийн тулд `mongolgpt models` гэж ажиллуулна уу.
 
 ---
 
 ### ProviderInitError
 
-If you encounter a ProviderInitError, you likely have an invalid or corrupted configuration.
+Хэрэв та ProviderInitError-тэй тулгарвал та буруу эсвэл эвдэрсэн тохиргоотой байх магадлалтай.
 
-To resolve this:
+Үүнийг шийдэхийн тулд:
 
-1. First, verify your provider is set up correctly by following the [providers guide](/docs/providers)
-2. If the issue persists, try clearing your stored configuration:
+1. Эхлээд [үйлчилгээ үзүүлэгчдийн гарын авлага](/docs/providers)-г дагаж үйлчилгээ үзүүлэгчээ зөв тохируулсан эсэхийг шалгана уу.
+2. Хэрэв асуудал хэвээр байвал хадгалсан тохиргоогоо устгаж үзнэ үү:
 
    ```bash
    rm -rf ~/.local/share/mongolgpt
    ```
 
-   On Windows, press `WIN+R` and delete: `%USERPROFILE%\.local\share\mongolgpt`
+   Windows дээр `WIN+R` дарж устгана уу: `%USERPROFILE%\.local\share\mongolgpt`
 
-3. Re-authenticate with your provider using the `/connect` command in the TUI.
+3. TUI дээрх `/connect` командыг ашиглан үйлчилгээ үзүүлэгчтэйгээ дахин баталгаажуулна уу.
 
 ---
 
-### AI_APICallError and provider package issues
+### AI_APICallError болон үйлчилгээ үзүүлэгчийн багцын асуудлууд
 
-If you encounter API call errors, this may be due to outdated provider packages. mongolgpt dynamically installs provider packages (OpenAI, Anthropic, Google, etc.) as needed and caches them locally.
+Хэрэв та API дуудлагын алдаатай тулгарвал энэ нь үйлчилгээ үзүүлэгчийн багц хуучирсантай холбоотой байж болох юм. mongolgpt нь шаардлагатай бол үйлчилгээ үзүүлэгчийн багцуудыг (OpenAI, Anthropic, Google гэх мэт) динамикаар суулгаж, тэдгээрийг дотооддоо кэш болгодог.
 
-To resolve provider package issues:
+Үйлчилгээ үзүүлэгчийн багцын асуудлыг шийдвэрлэхийн тулд:
 
-1. Clear the provider package cache:
+1. Үйлчилгээ үзүүлэгчийн багцын кэшийг арилгах:
 
    ```bash
    rm -rf ~/.cache/mongolgpt
    ```
 
-   On Windows, press `WIN+R` and delete: `%USERPROFILE%\.cache\mongolgpt`
+   Windows дээр `WIN+R` дарж устгана уу: `%USERPROFILE%\.cache\mongolgpt`
 
-2. Restart mongolgpt to reinstall the latest provider packages
+2. Хамгийн сүүлийн үеийн үйлчилгээ үзүүлэгчийн багцуудыг дахин суулгахын тулд mongolgpt-г дахин эхлүүлнэ үү
 
-This will force mongolgpt to download the most recent versions of provider packages, which often resolves compatibility issues with model parameters and API changes.
+Энэ нь mongolgpt-г үйлчилгээ үзүүлэгчийн багцын хамгийн сүүлийн хувилбарыг татахад хүргэх бөгөөд энэ нь загварын параметрүүд болон API өөрчлөлтүүдтэй нийцтэй байдлын асуудлыг шийддэг.
 
 ---
 
-### Copy/paste not working on Linux
+### Хуулах/буулгах нь Linux дээр ажиллахгүй байна
 
-Linux users need to have one of the following clipboard utilities installed for copy/paste functionality to work:
+Linux хэрэглэгчид хуулах/буулгах функцийг ажиллуулахын тулд дараах санах ойн хэрэгслүүдийн аль нэгийг суулгасан байх шаардлагатай:
 
-**For X11 systems:**
+**X11 системийн хувьд:**
 
 ```bash
 apt install -y xclip
@@ -296,13 +296,13 @@ apt install -y xclip
 apt install -y xsel
 ```
 
-**For Wayland systems:**
+** Wayland системийн хувьд:**
 
 ```bash
 apt install -y wl-clipboard
 ```
 
-**For headless environments:**
+**Толгойгүй орчинд:**
 
 ```bash
 apt install -y xvfb
@@ -311,4 +311,4 @@ Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
 export DISPLAY=:99.0
 ```
 
-mongolgpt will detect if you're using Wayland and prefer `wl-clipboard`, otherwise it will try to find clipboard tools in order of: `xclip` and `xsel`.
+mongolgpt таныг Wayland ашиглаж байгаа эсэхийг илрүүлж, `wl-clipboard`-г илүүд үзэх болно, эс бөгөөс энэ нь санах ойн хэрэгслүүдийг дараах дарааллаар хайх болно: `xclip` болон `xsel`.

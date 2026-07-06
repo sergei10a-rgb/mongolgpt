@@ -562,7 +562,8 @@ export const dict = {
   "error.chain.didYouMean": "Did you mean: {{suggestions}}",
   "error.chain.modelNotFound": "Model not found: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Check your config (mongolgpt.json) provider/model names",
-  "error.chain.mcpFailed": 'MCP server "{{name}}" failed. Note, MongolGPT does not support MCP authentication yet.',
+  "error.chain.mcpFailed":
+    'MCP server "{{name}}" failed. If authentication is required, use the MCP auth prompt or run the MongolGPT MCP auth flow, then retry.',
   "error.chain.providerAuthFailed": "Provider authentication failed ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Failed to initialize provider "{{provider}}". Check credentials and configuration.',
@@ -981,7 +982,8 @@ export const dict = {
   "settings.commands.title": "Commands",
   "settings.commands.description": "Command settings will be configurable here.",
   "settings.mcp.title": "MCP",
-  "settings.mcp.description": "MCP settings will be configurable here.",
+  "settings.mcp.description":
+    "Add MCP servers from Settings > Integration, then authenticate required servers from their MCP status prompt.",
 
   "settings.permissions.title": "Permissions",
   "settings.permissions.description": "Control what tools the server can use by default.",

@@ -1,23 +1,23 @@
 ---
 title: Policies
-description: Control which configured resources MongolGPT may use.
+description: MongolGPT аль тохируулсан нөөцүүдийг ашиглаж болохыг хянах.
 ---
 
-Policies control whether MongolGPT may perform an action on a named resource. This feature is experimental and is configured with the `experimental.policies` array in `mongolgpt.json`.
+Бодлого нь MongolGPT нэртэй нөөц дээр үйлдэл хийж болох эсэхийг хянадаг. Энэ функц нь туршилтын шинж чанартай бөгөөд `mongolgpt.json` дахь `experimental.policies` массиваар тохируулагдсан.
 
-Policies are separate from [permissions](/docs/permissions). Permissions control what tools can do during a session, while policies control whether MongolGPT may use a resource such as an LLM provider.
+Бодлого нь [permissions](/docs/permissions)-аас тусдаа. Зөвшөөрөл нь сессийн үед ямар хэрэглүүр хийж болохыг хянадаг бол бодлого нь MongolGPT үйлчилгээ үзүүлэгч гэх мэт нөөцийг ашиглаж болох эсэхийг хянадаг.
 
 ---
 
-## Configuration
+## Тохиргоо
 
-Each policy statement has three fields:
+Бодлогын мэдэгдэл бүр гурван талбартай:
 
-- `effect` - Either `"allow"` or `"deny"`.
-- `action` - The operation being controlled.
-- `resource` - The resource ID or wildcard pattern the statement applies to.
+- `effect` - `"allow"` эсвэл `"deny"`.
+- `action` - Хянаж буй үйл ажиллагаа.
+- `resource` - Нөөц ID эсвэл мэдэгдэлд хамаарах орлуулагч хэв маяг.
 
-For example, deny use of the `openai` provider:
+Жишээ нь, `openai` үйлчилгээ үзүүлэгчийг ашиглахаас татгалзах:
 
 ```json title="mongolgpt.json"
 {
@@ -34,25 +34,25 @@ For example, deny use of the `openai` provider:
 }
 ```
 
-A provider denied by policy is not available for model selection or model use, even if it has credentials or is otherwise configured correctly.
+Бодлогын дагуу татгалзсан үйлчилгээ үзүүлэгч нь итгэмжлэлтэй эсвэл зөв тохируулагдсан байсан ч загвар сонгох эсвэл загвар ашиглах боломжгүй.
 
 ---
 
-## Available Policies
+## Боломжтой бодлого
 
-MongolGPT currently supports one policy action:
+MongolGPT одоогоор нэг бодлогын арга хэмжээг дэмждэг:
 
-| Action         | Resource                      | Description                           |
+| Үйлдэл | Нөөц | Тодорхойлолт |
 | -------------- | ----------------------------- | ------------------------------------- |
-| `provider.use` | Provider ID, such as `openai` | Allow or deny use of an LLM provider. |
+| `provider.use` | Үйлчилгээ үзүүлэгч ID, жишээ нь `openai` | LLM үйлчилгээ үзүүлэгчийг ашиглахыг зөвшөөрөх эсвэл татгалзах. |
 
-More policy actions may be added in the future.
+Цаашид бодлогын олон арга хэмжээ нэмж болно.
 
 ---
 
-## Matching
+## Тохирох
 
-The `resource` field supports wildcard matching. Use `*` to match zero or more characters and `?` to match one character.
+`resource` талбар нь орлуулагч тэмдэгт тохирохыг дэмждэг. `*` тэг ба түүнээс дээш тэмдэгттэй тааруулах бол `?` нэг тэмдэгтийг тааруулна.
 
 ```json title="mongolgpt.json"
 {
@@ -69,15 +69,15 @@ The `resource` field supports wildcard matching. Use `*` to match zero or more c
 }
 ```
 
-This denies providers such as `company-us` and `company-eu`.
+Энэ нь `company-us` болон `company-eu` зэрэг үйлчилгээ үзүүлэгчдийг үгүйсгэдэг.
 
 ---
 
-## Rule Order
+## Дүрэм
 
-When multiple statements match, the last matching statement wins. Put broad rules first, then more specific exceptions after them.
+Олон хэллэг таарч байвал хамгийн сүүлд тохирох мэдэгдэл ялна. Эхлээд өргөн хүрээтэй дүрмийг, дараа нь илүү тодорхой үл хамаарах зүйлийг тавь.
 
-For example, allow only Anthropic:
+Жишээлбэл, зөвхөн Anthropic-г зөвшөөрөх:
 
 ```json title="mongolgpt.json"
 {
@@ -99,17 +99,17 @@ For example, allow only Anthropic:
 }
 ```
 
-If no policy matches a provider, provider use is allowed by default.
+Хэрэв үйлчилгээ үзүүлэгчтэй тохирох бодлого байхгүй бол үйлчилгээ үзүүлэгчийн хэрэглээг өгөгдмөлөөр зөвшөөрнө.
 
-Policies may be set in both your global config and project config. If policies from both locations match the same provider, your global policy takes priority over the project policy. This prevents a repository from re-enabling a provider that you deny globally.
+Бодлогуудыг таны глобал тохиргоо болон төслийн тохиргоонд тохируулж болно. Хэрэв хоёр байршлын бодлого нь ижил үйлчилгээ үзүүлэгчтэй таарч байвал таны дэлхийн бодлого төслийн бодлогоос давуу эрхтэй болно. Энэ нь таны дэлхий даяар үгүйсгэсэн үйлчилгээ үзүүлэгчийг хадгалах газар дахин идэвхжүүлэхээс сэргийлнэ.
 
 ---
 
-## Provider Lists
+## Үйлчилгээ үзүүлэгчдийн жагсаалт
 
-Use policies instead of the older `disabled_providers` and `enabled_providers` settings when controlling provider access.
+Үйлчилгээ үзүүлэгчийн хандалтыг хянахдаа хуучин `disabled_providers` болон `enabled_providers` тохиргооны оронд бодлогыг ашиглаарай.
 
-To replace `disabled_providers`:
+`disabled_providers`-г солихын тулд:
 
 ```json title="mongolgpt.json"
 {
@@ -122,7 +122,7 @@ To replace `disabled_providers`:
 }
 ```
 
-To replace `enabled_providers`, deny all providers first and allow the selected providers after it:
+`enabled_providers`-г солихын тулд эхлээд бүх үйлчилгээ үзүүлэгчээс татгалзаж, дараа нь сонгосон үйлчилгээ үзүүлэгчдийг зөвшөөрнө үү:
 
 ```json title="mongolgpt.json"
 {

@@ -4,8 +4,8 @@
 
 ## Хаана юу байдаг вэ
 
-- `src/content/docs/mn/` - Монгол баримт бичиг
-- `src/content/docs/` - English default docs
+- `src/content/docs/` - `/docs/` дээр гарах үндсэн Монгол баримт бичиг
+- `src/content/docs/mn/` - хуучин `/docs/mn/` холбоосын нийцтэй Монгол хуулбар
 - `astro.config.mjs` - Starlight sidebar, locale, theme тохиргоо
 - `public/` - docs site static assets
 
@@ -40,6 +40,6 @@ bun run build:docs
 
 ## Гол холбоосууд
 
-- Монгол docs: [https://mongolgpt.duckdns.org/docs/mn/](https://mongolgpt.duckdns.org/docs/mn/)
+- Монгол docs: [https://mongolgpt.duckdns.org/docs/](https://mongolgpt.duckdns.org/docs/)
 - Releases: [https://github.com/sergei10a-rgb/mongolgpt/releases](https://github.com/sergei10a-rgb/mongolgpt/releases)
 - Source: [https://github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)

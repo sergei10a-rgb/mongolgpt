@@ -1,23 +1,23 @@
 ---
 title: Commands
-description: Create custom commands for repetitive tasks.
+description: Дахин давтагдах даалгавруудад зориулсан захиалгат тушаалуудыг үүсгэ.
 ---
 
-Custom commands let you specify a prompt you want to run when that command is executed in the TUI.
+Захиалгат тушаалууд нь TUI-д тухайн тушаалыг гүйцэтгэх үед ажиллуулахыг хүссэн хүсэлтийг зааж өгөх боломжийг танд олгоно.
 
 ```bash frame="none"
 /my-command
 ```
 
-Custom commands are in addition to the built-in commands like `/init`, `/undo`, `/redo`, `/share`, `/help`. [Learn more](/docs/tui#commands).
+Захиалгат тушаалууд нь `/init`, `/undo`, `/redo`, `/share`, `/help` гэх мэт суулгасан командуудаас гадна байдаг. [Илүү ихийг мэдэж аваарай](/docs/tui#commands).
 
 ---
 
-## Create command files
+## Тушаалын файл үүсгэх
 
-Create markdown files in the `commands/` directory to define custom commands.
+Захиалгат тушаалуудыг тодорхойлохын тулд `commands/` директорт бууруулах файлуудыг үүсгэ.
 
-Create `.mongolgpt/commands/test.md`:
+`.mongolgpt/commands/test.md` үүсгэх:
 
 ```md title=".mongolgpt/commands/test.md"
 ---
@@ -30,9 +30,9 @@ Run the full test suite with coverage report and show any failures.
 Focus on the failing tests and suggest fixes.
 ```
 
-The frontmatter defines command properties. The content becomes the template.
+Frontmatter нь тушаалын шинж чанарыг тодорхойлдог. Агуулга нь загвар болж хувирдаг.
 
-Use the command by typing `/` followed by the command name.
+`/` гэж бичээд дараа нь тушаалын нэрийг бичнэ үү.
 
 ```bash frame="none"
 "/test"
@@ -40,15 +40,15 @@ Use the command by typing `/` followed by the command name.
 
 ---
 
-## Configure
+## Тохируулах
 
-You can add custom commands through the MongolGPT config or by creating markdown files in the `commands/` directory.
+Та захиалгат тушаалуудыг MongolGPT тохиргоогоор эсвэл `commands/` директорт бууруулах файлуудыг үүсгэх замаар нэмж болно.
 
 ---
 
 ### JSON
 
-Use the `command` option in your MongolGPT [config](/docs/config):
+Өөрийн MongolGPT [config](/docs/config) дээрх `command` сонголтыг ашиглана уу:
 
 ```json title="mongolgpt.jsonc" {4-12}
 {
@@ -67,7 +67,7 @@ Use the `command` option in your MongolGPT [config](/docs/config):
 }
 ```
 
-Now you can run this command in the TUI:
+Одоо та энэ тушаалыг TUI дээр ажиллуулж болно:
 
 ```bash frame="none"
 /test
@@ -75,12 +75,12 @@ Now you can run this command in the TUI:
 
 ---
 
-### Markdown
+### Тэмдэглэгээ
 
-You can also define commands using markdown files. Place them in:
+Та мөн markdown файлуудыг ашиглан тушаалуудыг тодорхойлж болно. Тэдгээрийг байрлуул:
 
-- Global: `~/.config/mongolgpt/commands/`
-- Per-project: `.mongolgpt/commands/`
+- Глобал: `~/.config/mongolgpt/commands/`
+- Төсөл тус бүр: `.mongolgpt/commands/`
 
 ```markdown title="~/.config/mongolgpt/commands/test.md"
 ---
@@ -93,8 +93,8 @@ Run the full test suite with coverage report and show any failures.
 Focus on the failing tests and suggest fixes.
 ```
 
-The markdown file name becomes the command name. For example, `test.md` lets
-you run:
+Маркdown файлын нэр нь тушаалын нэр болно. Жишээлбэл, `test.md` зөвшөөрнө
+чи гүйж:
 
 ```bash frame="none"
 /test
@@ -102,15 +102,15 @@ you run:
 
 ---
 
-## Prompt config
+## Шуурхай тохиргоо
 
-The prompts for the custom commands support several special placeholders and syntax.
+Захиалгат тушаалын сануулгууд нь хэд хэдэн тусгай орлуулагч болон синтаксийг дэмждэг.
 
 ---
 
-### Arguments
+### Аргументууд
 
-Pass arguments to commands using the `$ARGUMENTS` placeholder.
+`$ARGUMENTS` орлуулагчийг ашиглан командуудад аргумент дамжуулна уу.
 
 ```md title=".mongolgpt/commands/component.md"
 ---
@@ -121,22 +121,22 @@ Create a new React component named $ARGUMENTS with TypeScript support.
 Include proper typing and basic structure.
 ```
 
-Run the command with arguments:
+Аргументтай командыг ажиллуулна уу:
 
 ```bash frame="none"
 /component Button
 ```
 
-And `$ARGUMENTS` will be replaced with `Button`.
+Мөн `$ARGUMENTS`-г `Button` гэж солино.
 
-You can also access individual arguments using positional parameters:
+Та мөн байрлалын параметрүүдийг ашиглан бие даасан аргументуудад хандах боломжтой:
 
-- `$1` - First argument
-- `$2` - Second argument
-- `$3` - Third argument
-- And so on...
+- `$1` - Эхний аргумент
+- `$2` - Хоёр дахь аргумент
+- `$3` - Гурав дахь аргумент
+- Гэх мэт...
 
-For example:
+Жишээ нь:
 
 ```md title=".mongolgpt/commands/create-file.md"
 ---
@@ -147,25 +147,25 @@ Create a file named $1 in the directory $2
 with the following content: $3
 ```
 
-Run the command:
+Командыг ажиллуулна уу:
 
 ```bash frame="none"
 /create-file config.json src "{ \"key\": \"value\" }"
 ```
 
-This replaces:
+Энэ нь орлоно:
 
-- `$1` with `config.json`
-- `$2` with `src`
-- `$3` with `{ "key": "value" }`
+- `$1`, `config.json`
+- `$2`, `src`
+- `$3`, `{ "key": "value" }`
 
 ---
 
-### Shell output
+### Бүрхүүлийн гаралт
 
-Use _!`command`_ to inject [bash command](/docs/tui#bash-commands) output into your prompt.
+_!`command`_-г ашиглан [bash тушаал](/docs/tui#bash-commands) гаралтыг өөрийн сануулгад оруулна.
 
-For example, to create a custom command that analyzes test coverage:
+Жишээлбэл, тестийн хамрах хүрээг шинжилдэг захиалгат командыг үүсгэхийн тулд:
 
 ```md title=".mongolgpt/commands/analyze-coverage.md"
 ---
@@ -179,7 +179,7 @@ pm test`
 Based on these results, suggest improvements to increase coverage.
 ```
 
-Or to review recent changes:
+Эсвэл сүүлийн үеийн өөрчлөлтүүдийг шалгахын тулд:
 
 ```md title=".mongolgpt/commands/review-changes.md"
 ---
@@ -192,13 +192,13 @@ Recent git commits:
 Review these changes and suggest any improvements.
 ```
 
-Commands run in your project's root directory and their output becomes part of the prompt.
+Командууд нь таны төслийн үндсэн директорт ажилладаг бөгөөд тэдгээрийн гаралт нь сануулгын нэг хэсэг болно.
 
 ---
 
-### File references
+### Файлын лавлагаа
 
-Include files in your command using `@` followed by the filename.
+Файлуудыг `@`, дараа нь файлын нэрийг ашиглан тушаалдаа оруулна уу.
 
 ```md title=".mongolgpt/commands/review-component.md"
 ---
@@ -209,19 +209,19 @@ Review the component in @src/components/Button.tsx.
 Check for performance issues and suggest improvements.
 ```
 
-The file content gets included in the prompt automatically.
+Файлын агуулгыг сануулгад автоматаар оруулна.
 
 ---
 
-## Options
+## Сонголт
 
-Let's look at the configuration options in detail.
+Тохиргооны сонголтуудыг нарийвчлан авч үзье.
 
 ---
 
-### Template
+### Загвар
 
-The `template` option defines the prompt that will be sent to the LLM when the command is executed.
+`template` сонголт нь тушаалыг гүйцэтгэх үед LLM руу илгээгдэх хүсэлтийг тодорхойлдог.
 
 ```json title="mongolgpt.json"
 {
@@ -233,13 +233,13 @@ The `template` option defines the prompt that will be sent to the LLM when the c
 }
 ```
 
-This is a **required** config option.
+Энэ нь **шаардлагатай** тохиргооны сонголт юм.
 
 ---
 
-### Description
+### Тодорхойлолт
 
-Use the `description` option to provide a brief description of what the command does.
+`description` сонголтыг ашиглан команд юу хийдэг талаар товч тайлбар өгнө үү.
 
 ```json title="mongolgpt.json"
 {
@@ -251,15 +251,15 @@ Use the `description` option to provide a brief description of what the command 
 }
 ```
 
-This is shown as the description in the TUI when you type in the command.
+Энэ нь таныг тушаалыг бичих үед TUI-д тайлбар хэлбэрээр харагдана.
 
 ---
 
-### Agent
+### Агент
 
-Use the `agent` config to optionally specify which [agent](/docs/agents) should execute this command.
-If this is a [subagent](/docs/agents/#subagents) the command will trigger a subagent invocation by default.
-To disable this behavior, set `subtask` to `false`.
+`agent` тохиргоог ашиглан аль [agent](/docs/agents) энэ командыг гүйцэтгэх ёстойг тохируулна уу.
+Хэрэв энэ нь [subagent](/docs/agents/#subagents) бол тушаал нь дэд агентын дуудлагыг өгөгдмөлөөр өдөөдөг.
+Энэ үйлдлийг идэвхгүй болгохын тулд `subtask`-г `false` гэж тохируулна уу.
 
 ```json title="mongolgpt.json"
 {
@@ -271,15 +271,15 @@ To disable this behavior, set `subtask` to `false`.
 }
 ```
 
-This is an **optional** config option. If not specified, defaults to your current agent.
+Энэ нь **заавал биш** тохиргооны сонголт юм. Хэрэв заагаагүй бол таны одоогийн төлөөлөгчийн өгөгдмөл.
 
 ---
 
-### Subtask
+### Дэд даалгавар
 
-Use the `subtask` boolean to force the command to trigger a [subagent](/docs/agents/#subagents) invocation.
-This is useful if you want the command to not pollute your primary context and will **force** the agent to act as a subagent,
-even if `mode` is set to `primary` on the [agent](/docs/agents) configuration.
+[subagent](/docs/agents/#subagents) дуудлагыг өдөөх командыг албадахын тулд `subtask` логикийг ашиглана уу.
+Хэрэв та команд нь таны үндсэн контекстийг бохирдуулахгүй байхыг хүсэж байгаа бөгөөд агентыг дэд агентын үүрэг гүйцэтгэхийг **хүчлэх** бол энэ нь ашигтай.
+`mode` тохиргоонд `primary` гэж тохируулсан ч гэсэн.
 
 ```json title="mongolgpt.json"
 {
@@ -291,13 +291,13 @@ even if `mode` is set to `primary` on the [agent](/docs/agents) configuration.
 }
 ```
 
-This is an **optional** config option.
+Энэ нь **заавал биш** тохиргооны сонголт юм.
 
 ---
 
-### Model
+### Загвар
 
-Use the `model` config to override the default model for this command.
+Энэ тушаалын өгөгдмөл загварыг хүчингүй болгохын тулд `model` тохиргоог ашиглана уу.
 
 ```json title="mongolgpt.json"
 {
@@ -309,16 +309,16 @@ Use the `model` config to override the default model for this command.
 }
 ```
 
-This is an **optional** config option.
+Энэ нь **заавал биш** тохиргооны сонголт юм.
 
 ---
 
-## Built-in
+## Баригдсан
 
-mongolgpt includes several built-in commands like `/init`, `/undo`, `/redo`, `/share`, `/help`; [learn more](/docs/tui#commands).
+mongolgpt нь `/init`, `/undo`, `/redo`, `/share`, `/help` гэх мэт хэд хэдэн суулгасан тушаалуудыг агуулдаг; [илүү ихийг мэдэж аваарай](/docs/tui#commands).
 
 :::note
-Custom commands can override built-in commands.
+Захиалгат тушаалууд нь суулгасан командуудыг дарж болно.
 :::
 
-If you define a custom command with the same name, it will override the built-in command.
+Хэрэв та ижил нэртэй захиалгат тушаалыг тодорхойлсон бол энэ нь суулгасан тушаалыг хүчингүй болгоно.

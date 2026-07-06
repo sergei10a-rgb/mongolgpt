@@ -1,15 +1,15 @@
 ---
 title: Config
-description: Using the MongolGPT JSON config.
+description: MongolGPT JSON тохиргоог ашиглаж байна.
 ---
 
-You can configure MongolGPT using a JSON config file.
+Та JSON тохиргооны файлыг ашиглан MongolGPT-г тохируулах боломжтой.
 
 ---
 
-## Format
+## Формат
 
-MongolGPT supports both **JSON** and **JSONC** (JSON with Comments) formats.
+MongolGPT нь **JSON** болон **JSONC** (JSON тайлбартай) форматыг хоёуланг нь дэмждэг.
 
 ```jsonc title="mongolgpt.jsonc"
 {
@@ -24,49 +24,49 @@ MongolGPT supports both **JSON** and **JSONC** (JSON with Comments) formats.
 
 ---
 
-## Locations
+## Байршил
 
-You can place your config in a couple of different locations and they have a
-different order of precedence.
+Та тохиргоогоо хэд хэдэн өөр байршилд байрлуулж болох бөгөөд тэдгээр нь
+давуу эрх олгох өөр дараалал.
 
 :::note
-Configuration files are **merged together**, not replaced.
+Тохиргооны файлууд нь **нийтгэсэн**, солигдоогүй.
 :::
 
-Configuration files are merged together, not replaced. Settings from the following config locations are combined. Later configs override earlier ones only for conflicting keys. Non-conflicting settings from all configs are preserved.
+Тохиргооны файлуудыг хооронд нь нэгтгэсэн, солигддоггүй. Дараах тохиргооны байршлын тохиргоог нэгтгэсэн. Сүүлчийн тохиргоо нь зөвхөн зөрчилтэй түлхүүрүүдийн хувьд өмнөх тохиргоог хүчингүй болгодог. Бүх тохиргооны зөрчилгүй тохиргоонууд хадгалагдсан.
 
-For example, if your global config sets `autoupdate: true` and your project config sets `model: "anthropic/claude-sonnet-4-5"`, the final configuration will include both settings.
+Жишээлбэл, хэрэв таны глобал тохиргоог `autoupdate: true`, төслийн тохиргоог `model: "anthropic/claude-sonnet-4-5"` гэж тохируулсан бол эцсийн тохиргоонд хоёр тохиргоо багтана.
 
 ---
 
-### Precedence order
+### Тэргүүлэх дараалал
 
-Config sources are loaded in this order (later sources override earlier ones):
+Тохиргооны эх сурвалжуудыг энэ дарааллаар ачаална (дараагийн эх сурвалжууд өмнөх эх сурвалжуудыг дарна):
 
-1. **Remote config** (from `.well-known/mongolgpt`) - organizational defaults
-2. **Global config** (`~/.config/mongolgpt/mongolgpt.json`) - user preferences
-3. **Custom config** (`MONGOLGPT_CONFIG` env var) - custom overrides
-4. **Project config** (`mongolgpt.json` in project) - project-specific settings
-5. **`.mongolgpt` directories** - agents, commands, plugins
-6. **Inline config** (`MONGOLGPT_CONFIG_CONTENT` env var) - runtime overrides
-7. **Managed config files** (`/Library/Application Support/mongolgpt/` on macOS) - admin-controlled
-8. **macOS managed preferences** (`.mobileconfig` via MDM) - highest priority, not user-overridable
+1. **Алсын тохиргоо** (`.well-known/mongolgpt`-аас) - байгууллагын өгөгдмөл
+2. **Глобал тохиргоо** (`~/.config/mongolgpt/mongolgpt.json`) - хэрэглэгчийн сонголт
+3. **Захиалгат тохируулга** (`MONGOLGPT_CONFIG` env var) - захиалгат хүчингүй болгох
+4. **Төслийн тохиргоо** (төсөлд `mongolgpt.json`) - төслийн тусгай тохиргоо
+5. **`.mongolgpt` лавлахууд** - агентууд, тушаалууд, залгаасууд
+6. **Inline тохиргоо** (`MONGOLGPT_CONFIG_CONTENT` env var) - ажиллах хугацааг хүчингүй болгох
+7. **Удирдах тохиргооны файлууд** (`/Library/Application Support/mongolgpt/` дээр macOS) - админы хяналттай
+8. **macOS удирдаж буй тохиргоо** (`.mobileconfig` MDM-р дамжуулан) - хамгийн өндөр ач холбогдол, хэрэглэгч дарангуйлах боломжгүй
 
-This means project configs can override global defaults, and global configs can override remote organizational defaults. Managed settings override everything.
+Энэ нь төслийн тохиргоо нь дэлхийн өгөгдмөл тохиргоог, глобал тохиргоо нь алсын байгууллагын анхдагч тохиргоог хүчингүй болгож чадна гэсэн үг юм. Удирдах тохиргоо нь бүх зүйлийг дарна.
 
 :::note
-The `.mongolgpt` and `~/.config/mongolgpt` directories use **plural names** for subdirectories: `agents/`, `commands/`, `modes/`, `plugins/`, `skills/`, `tools/`, and `themes/`. Singular names (e.g., `agent/`) are also supported for backwards compatibility.
+`.mongolgpt` болон `~/.config/mongolgpt` сангууд нь **олон тооны нэрийг** дэд директоруудын хувьд ашигладаг: `agents/`, `commands/`, `modes/`, `plugins/`, `skills/`, `tools/`, `themes/`. Ганц нэрс (жишээ нь: `agent/`) мөн буцаж нийцтэй байхаар дэмжигддэг.
 :::
 
 ---
 
-### Remote
+### Алсын удирдлага
 
-Organizations can provide default configuration via the `.well-known/mongolgpt` endpoint. This is fetched automatically when you authenticate with a provider that supports it.
+Байгууллага `.well-known/mongolgpt` төгсгөлийн цэгээр дамжуулан анхдагч тохиргоог хийж болно. Та үүнийг дэмждэг үйлчилгээ үзүүлэгчтэй баталгаажуулах үед үүнийг автоматаар татаж авна.
 
-Remote config is loaded first, serving as the base layer. All other config sources (global, project) can override these defaults.
+Алсын тохиргоог эхлээд ачаалж, үндсэн давхарга болж үйлчилнэ. Бусад бүх тохиргооны эх сурвалжууд (дэлхий, төсөл) эдгээр өгөгдмөлүүдийг хүчингүй болгож чадна.
 
-For example, if your organization provides MCP servers that are disabled by default:
+Жишээлбэл, танай байгууллага анхдагчаар идэвхгүй болсон MCP серверүүдийг хангадаг бол:
 
 ```json title="Remote config from .well-known/mongolgpt"
 {
@@ -80,7 +80,7 @@ For example, if your organization provides MCP servers that are disabled by defa
 }
 ```
 
-You can enable specific servers in your local config:
+Та өөрийн дотоод тохиргоонд тодорхой серверүүдийг идэвхжүүлж болно:
 
 ```json title="mongolgpt.json"
 {
@@ -96,91 +96,91 @@ You can enable specific servers in your local config:
 
 ---
 
-### Global
+### Дэлхийн
 
-Place your global MongolGPT config in `~/.config/mongolgpt/mongolgpt.json`. Use global config for user-wide server/runtime preferences like providers, models, and permissions.
+Өөрийн глобал MongolGPT тохиргоог `~/.config/mongolgpt/mongolgpt.json` дээр байрлуул. Үйлчилгээ үзүүлэгч, загвар, зөвшөөрөл гэх мэт хэрэглэгчийн өргөн хүрээний сервер/ажлын цагийн тохиргоонд зориулж глобал тохиргоог ашиглана уу.
 
-For TUI-specific settings, use `~/.config/mongolgpt/tui.json`.
+TUI- тусгай тохиргооны хувьд `~/.config/mongolgpt/tui.json` ашиглана уу.
 
-Global config overrides remote organizational defaults.
+Глобал тохиргоо нь алсын байгууллагын өгөгдмөл тохиргоог хүчингүй болгодог.
 
 ---
 
-### Per project
+### Төсөл тус бүрээр
 
-Add `mongolgpt.json` in your project root. Project config has the highest precedence among standard config files - it overrides both global and remote configs.
+Төслийн үндсэн хэсэгт `mongolgpt.json` нэмнэ үү. Төслийн тохиргоо нь стандарт тохиргооны файлуудын дунд хамгийн өндөр давуу талтай байдаг - энэ нь глобал болон алсын тохиргоог хоёуланг нь дардаг.
 
-For project-specific TUI settings, add `tui.json` alongside it.
+Төсөлд хамаарах TUI тохиргооны хувьд хажууд нь `tui.json` нэмнэ.
 
 :::tip
-Place project specific config in the root of your project.
+Төслийн тусгай тохиргоог төслийн үндсэн хэсэгт байрлуул.
 :::
 
-When MongolGPT starts up, it first looks for a config file in the current directory, then traverses up to the nearest Git directory.
+MongolGPT ажиллаж эхлэхэд эхлээд одоогийн директороос тохиргооны файлыг хайж, дараа нь хамгийн ойрын Git лавлах руу шилжинэ.
 
-This is also safe to be checked into Git and uses the same schema as the global one.
+Үүнийг Git-д шалгахад аюулгүй бөгөөд дэлхийн схемтэй ижил схемийг ашигладаг.
 
 ---
 
-### Custom path
+### Захиалгат зам
 
-Specify a custom config file path using the `MONGOLGPT_CONFIG` environment variable.
+`MONGOLGPT_CONFIG` орчны хувьсагчийг ашиглан өөрчлөн тохируулсан файлын замыг зааж өгнө үү.
 
 ```bash
 export MONGOLGPT_CONFIG=/path/to/my/custom-config.json
 mongolgpt run "Hello world"
 ```
 
-Custom config is loaded between global and project configs in the precedence order.
+Захиалгат тохиргоог глобал болон төслийн тохиргооны хооронд тэргүүлэх дарааллаар ачаална.
 
 ---
 
-### Custom directory
+### Захиалгат лавлах
 
-Specify a custom config directory using the `MONGOLGPT_CONFIG_DIR`
-environment variable. This directory will be searched for agents, commands,
-modes, and plugins just like the standard `.mongolgpt` directory, and should
-follow the same structure.
+`MONGOLGPT_CONFIG_DIR` ашиглан захиалгат тохиргооны лавлахыг зааж өгнө үү.
+орчны хувьсагч. Энэ лавлахаас агентууд, тушаалууд,
+горимууд болон залгаасууд нь стандарт `.mongolgpt` лавлахтай адил байх ёстой
+ижил бүтцийг дагаж мөрдөөрэй.
 
 ```bash
 export MONGOLGPT_CONFIG_DIR=/path/to/my/config-directory
 mongolgpt run "Hello world"
 ```
 
-The custom directory is loaded after the global config and `.mongolgpt` directories, so it **can override** their settings.
+Захиалгат лавлах нь глобал тохиргоо болон `.mongolgpt` сангуудын дараа ачаалагддаг тул тэдгээрийн тохиргоог **хэрэглэх боломжтой**.
 
 ---
 
-### Managed settings
+### Удирдах тохиргоо
 
-Organizations can enforce configuration that users cannot override. Managed settings are loaded at the highest priority tier.
+Байгууллагууд хэрэглэгчид хүчингүй болгох боломжгүй тохиргоог хэрэгжүүлэх боломжтой. Удирдах тохиргоог хамгийн өндөр ач холбогдол бүхий түвшинд ачаалдаг.
 
-#### File-based
+#### Файлд суурилсан
 
-Drop an `mongolgpt.json` or `mongolgpt.jsonc` file in the system managed config directory:
+`mongolgpt.json` эсвэл `mongolgpt.jsonc` файлыг системийн удирддаг тохиргооны лавлах руу оруулна уу:
 
-| Platform | Path                                      |
-| -------- | ----------------------------------------- |
-| macOS    | `/Library/Application Support/mongolgpt/` |
-| Linux    | `/etc/mongolgpt/`                         |
-| Windows  | `%ProgramData%\mongolgpt`                 |
+| Платформ | Зам |
+| -------- | ---------------------------------------- |
+| macOS | `/Library/Application Support/mongolgpt/` |
+| Linux | `/etc/mongolgpt/` |
+| Windows | `%ProgramData%\mongolgpt` |
 
-These directories require admin/root access to write, so users cannot modify them.
+Эдгээр сангууд бичихийн тулд админ/root хандалт шаарддаг тул хэрэглэгчид тэдгээрийг өөрчлөх боломжгүй.
 
-#### macOS managed preferences
+#### macOS тохируулсан тохиргоо
 
-On macOS, MongolGPT reads managed preferences from the `ai.mongolgpt.managed` preference domain. Deploy a `.mobileconfig` via MDM (Jamf, Kandji, FleetDM) and the settings are enforced automatically.
+macOS дээр MongolGPT `ai.mongolgpt.managed` давуу домэйноос удирдаж буй тохиргоог уншина. `.mobileconfig`-г MDM (Jamf, Kandji, FleetDM)-ээр байршуулж, тохиргоонууд автоматаар хэрэгжинэ.
 
-MongolGPT checks these paths:
+MongolGPT эдгээр замыг шалгана:
 
 1. `/Library/Managed Preferences/<user>/ai.mongolgpt.managed.plist`
 2. `/Library/Managed Preferences/ai.mongolgpt.managed.plist`
 
-The plist keys map directly to `mongolgpt.json` fields. MDM metadata keys (`PayloadUUID`, `PayloadType`, etc.) are stripped automatically.
+Plist товчлуурууд нь `mongolgpt.json` талбарт шууд харагдана. MDM мета өгөгдлийн түлхүүрүүд (`PayloadUUID`, `PayloadType` гэх мэт) автоматаар арилдаг.
 
-**Creating a `.mobileconfig`**
+** `.mobileconfig` үүсгэх**
 
-Use the `ai.mongolgpt.managed` PayloadType. The MongolGPT config keys go directly in the payload dict:
+`ai.mongolgpt.managed` PayloadType ашиглана уу. MongolGPT тохиргооны товчлуурууд нь ачааллын dict хэсэгт шууд ордог:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -232,38 +232,38 @@ Use the `ai.mongolgpt.managed` PayloadType. The MongolGPT config keys go directl
 </plist>
 ```
 
-Generate unique UUIDs with `uuidgen`. Customize the settings to match your organization's requirements.
+`uuidgen`-р өвөрмөц UUID үүсгэнэ үү. Байгууллагынхаа шаардлагад нийцүүлэн тохиргоог өөрчил.
 
-**Deploying via MDM**
+** MDM-р байршуулж байна**
 
-- **Jamf Pro:** Computers > Configuration Profiles > Upload > scope to target devices or smart groups
-- **FleetDM:** Add the `.mobileconfig` to your gitops repo under `mdm.macos_settings.custom_settings` and run `fleetctl apply`
+- **Jamf Pro:** Компьютер > Тохиргооны профайл > Байршуулах > зорилтот төхөөрөмж эсвэл ухаалаг бүлгүүдэд хамрах хүрээ
+- **FleetDM:** `.mobileconfig`-г gitops репо дээрээ `mdm.macos_settings.custom_settings` доор нэмээд `fleetctl apply` ажиллуулна уу.
 
-**Verifying on a device**
+**Төхөөрөмжөөр баталгаажуулж байна**
 
-Double-click the `.mobileconfig` to install locally for testing (shows in System Settings > Privacy & Security > Profiles), then run:
+`.mobileconfig` дээр давхар товшоод туршилтанд оруулахын тулд (Системийн тохиргоо > Нууцлал ба Аюулгүй байдал > Профайл хэсэгт харагдана), дараа нь ажиллуулна уу:
 
 ```bash
 mongolgpt debug config
 ```
 
-All managed preference keys appear in the resolved config and cannot be overridden by user or project configuration.
+Удирдагдсан бүх сонголтын түлхүүрүүд нь шийдвэрлэсэн тохиргоонд харагдах бөгөөд хэрэглэгч эсвэл төслийн тохиргоогоор хүчингүй болгох боломжгүй.
 
 ---
 
-## Schema
+## схем
 
-The server/runtime config schema is defined in [**`mongolgpt.duckdns.org/config.json`**](https://mongolgpt.duckdns.org/config.json).
+Сервер/ажлын цагийн тохиргооны схемийг [**`mongolgpt.duckdns.org/config.json`**](https://mongolgpt.duckdns.org/config.json)-д тодорхойлсон.
 
-TUI config uses [**`mongolgpt.duckdns.org/tui.json`**](https://mongolgpt.duckdns.org/tui.json).
+TUI тохиргоо нь [**`mongolgpt.duckdns.org/tui.json`**](https://mongolgpt.duckdns.org/tui.json)-г ашигладаг.
 
-Your editor should be able to validate and autocomplete based on the schema.
+Таны засварлагч схем дээр үндэслэн баталгаажуулах, автоматаар бөглөх боломжтой байх ёстой.
 
 ---
 
 ### TUI
 
-Use a dedicated `tui.json` (or `tui.jsonc`) file for TUI-specific settings.
+`tui.json` (эсвэл `tui.jsonc`) тусгай файлыг TUI- тусгай тохиргоонд ашиглана уу.
 
 ```json title="tui.json"
 {
@@ -283,17 +283,17 @@ Use a dedicated `tui.json` (or `tui.jsonc`) file for TUI-specific settings.
 }
 ```
 
-Use `MONGOLGPT_TUI_CONFIG` to point to a custom TUI config file.
+`MONGOLGPT_TUI_CONFIG` ашиглан захиалгат TUI тохиргооны файл руу зааж өгнө үү.
 
-Set `attention.enabled` to turn on TUI desktop notifications and sounds. See [TUI attention](/docs/tui#attention).
+TUI ширээний мэдэгдэл болон дууг асаахын тулд `attention.enabled`-г тохируулна уу. [TUI анхаарал](/docs/tui#attention)-г үзнэ үү.
 
-Legacy `theme`, `keybinds`, and `tui` keys in `mongolgpt.json` are deprecated and automatically migrated when possible.
+`mongolgpt.json` дахь хуучин `theme`, `keybinds`, `tui` түлхүүрүүд нь хуучирсан бөгөөд боломжтой үед автоматаар шилжинэ.
 
 ---
 
-### Server
+### Сервер
 
-You can configure server settings for the `mongolgpt serve` and `mongolgpt web` commands through the `server` option.
+Та `mongolgpt serve` болон `mongolgpt web` командуудын серверийн тохиргоог `server` сонголтоор тохируулж болно.
 
 ```json title="mongolgpt.json"
 {
@@ -308,21 +308,21 @@ You can configure server settings for the `mongolgpt serve` and `mongolgpt web` 
 }
 ```
 
-Available options:
+Боломжтой сонголтууд:
 
-- `port` - Port to listen on.
-- `hostname` - Hostname to listen on. When `mdns` is enabled and no hostname is set, defaults to `0.0.0.0`.
-- `mdns` - Enable mDNS service discovery. This allows other devices on the network to discover your MongolGPT server.
-- `mdnsDomain` - Custom domain name for mDNS service. Defaults to `mongolgpt.local`. Useful for running multiple instances on the same network.
-- `cors` - Additional origins to allow for CORS when using the HTTP server from a browser-based client. Values must be full origins (scheme + host + optional port), eg `https://app.example.com`.
+- `port` - Сонсох порт.
+- `hostname` - Сонсох хостын нэр. `mdns` идэвхжсэн бөгөөд ямар ч хостын нэрийг тохируулаагүй үед анхдагч нь `0.0.0.0` байна.
+- `mdns` - mDNS үйлчилгээний нээлтийг идэвхжүүлнэ. Энэ нь сүлжээн дэх бусад төхөөрөмжүүдэд таны MongolGPT серверийг илрүүлэх боломжийг олгоно.
+- `mdnsDomain` - mDNS үйлчилгээнд зориулсан тусгай домэйн нэр. Өгөгдмөл нь `mongolgpt.local`. Нэг сүлжээнд олон тохиолдлыг ажиллуулахад хэрэгтэй.
+- `cors` - ​​Хөтөч дээр суурилсан үйлчлүүлэгчийн HTTP серверийг ашиглах үед CORS-г зөвшөөрөх нэмэлт эх сурвалж. Утга нь бүрэн эх байх ёстой (схем + хост + нэмэлт порт), жишээ нь `https://app.example.com`.
 
-[Learn more about the server here](/docs/server).
+[Серверийн талаар илүү ихийг эндээс авна уу](/docs/server).
 
 ---
 
-### Shell
+### Бүрхүүл
 
-You can configure the shell used for the interactive terminal using the `shell` option. Compatible shells are also used for agent tool calls.
+Та `shell` сонголтыг ашиглан интерактив терминалд ашигласан бүрхүүлийг тохируулж болно. Тохиромжтой бүрхүүлийг агент хэрэгслийн дуудлагад бас ашигладаг.
 
 ```json title="mongolgpt.json"
 {
@@ -331,13 +331,13 @@ You can configure the shell used for the interactive terminal using the `shell` 
 }
 ```
 
-If not specified, MongolGPT will automatically discover and use a sensible default based on your operating system (e.g. `pwsh` or `cmd.exe` on Windows, `/bin/zsh` or `/bin/bash` on macOS/Linux). You can provide an absolute path or a short name.
+Хэрэв тодорхой заагаагүй бол MongolGPT таны үйлдлийн системд тулгуурлан (жишээ нь: `pwsh` эсвэл Windows дээр `cmd.exe`, `/bin/zsh` эсвэл macOS/Linux дээр `/bin/bash`) үндэслэн ухаалаг өгөгдмөл утгыг автоматаар илрүүлж ашиглах болно. Та үнэмлэхүй зам эсвэл богино нэрийг өгч болно.
 
 ---
 
-### Tools
+### Хэрэгсэл
 
-You can manage the tools an LLM can use through the `tools` option.
+Та LLM-ийн ашиглаж болох хэрэгслүүдийг `tools` сонголтоор удирдаж болно.
 
 ```json title="mongolgpt.json"
 {
@@ -349,13 +349,13 @@ You can manage the tools an LLM can use through the `tools` option.
 }
 ```
 
-[Learn more about tools here](/docs/tools).
+[Хэрэгслийн талаар илүү ихийг эндээс авна уу](/docs/tools).
 
 ---
 
-### Models
+### Загварууд
 
-You can configure the providers and models you want to use in your MongolGPT config through the `provider`, `model` and `small_model` options.
+Та MongolGPT тохиргоондоо ашиглахыг хүссэн үйлчилгээ үзүүлэгч болон загваруудаа `provider`, `model` болон `small_model` сонголтоор тохируулж болно.
 
 ```json title="mongolgpt.json"
 {
@@ -366,9 +366,9 @@ You can configure the providers and models you want to use in your MongolGPT con
 }
 ```
 
-The `small_model` option configures a separate model for lightweight tasks like title generation. By default, MongolGPT tries to use a cheaper model if one is available from your provider, otherwise it falls back to your main model.
+`small_model` сонголт нь гарчиг үүсгэх гэх мэт хөнгөн ажлуудад зориулж тусдаа загварыг тохируулдаг. Анхдагч байдлаар, MongolGPT, хэрэв таны үйлчилгээ үзүүлэгчээс авах боломжтой бол хямд загварыг ашиглахыг оролддог, эс тэгвээс энэ нь таны үндсэн загварт буцаж орно.
 
-Provider options can include `timeout`, `chunkTimeout`, and `setCacheKey`:
+Үйлчилгээ үзүүлэгчийн сонголтууд нь `timeout`, `chunkTimeout` болон `setCacheKey` байж болно:
 
 ```json title="mongolgpt.json"
 {
@@ -385,17 +385,17 @@ Provider options can include `timeout`, `chunkTimeout`, and `setCacheKey`:
 }
 ```
 
-- `timeout` - Request timeout in milliseconds (default: 300000). Set to `false` to disable.
-- `chunkTimeout` - Timeout in milliseconds between streamed response chunks. If no chunk arrives in time, the request is aborted.
-- `setCacheKey` - Ensure a cache key is always set for designated provider.
+- `timeout` - Хүсэлтийн хугацаа нь миллисекундээр (өгөгдмөл: 300000). Идэвхгүй болгохын тулд `false` гэж тохируулна уу.
+- `chunkTimeout` - Дамжуулсан хариултын хэсгүүдийн хоорондох хугацаа нь миллисекундээр. Хэрэв хэсэг хугацаанд нь ирээгүй бол хүсэлтийг цуцална.
+- `setCacheKey` - Заасан үйлчилгээ үзүүлэгчийн хувьд кэш түлхүүр үргэлж тохируулагдсан эсэхийг шалгаарай.
 
-You can also configure [local models](/docs/models#local). [Learn more](/docs/models).
+Та мөн [орон нутгийн загварууд](/docs/models#local)-г тохируулах боломжтой. [Илүү ихийг мэдэж аваарай](/docs/models).
 
 ---
 
-### Policies
+### Бодлого
 
-Use the `experimental.policies` option to allow or deny MongolGPT actions on configured resources. Currently, policies can control which providers MongolGPT may use.
+Тохируулсан нөөц дээрх MongolGPT үйлдлийг зөвшөөрөх эсвэл үгүйсгэхийн тулд `experimental.policies` сонголтыг ашиглана уу. Одоогоор бодлого нь MongolGPT аль үйлчилгээ үзүүлэгч ашиглаж болохыг хянах боломжтой.
 
 ```json title="mongolgpt.json"
 {
@@ -412,15 +412,15 @@ Use the `experimental.policies` option to allow or deny MongolGPT actions on con
 }
 ```
 
-[Learn more about policies here](/docs/policies).
+[Бодлогын талаар нэмэлт мэдээллийг эндээс авна уу](/docs/policies).
 
 ---
 
-### Image attachments
+### Зургийн хавсралт
 
-MongolGPT normalizes image attachments before sending them to the model. By default, images are resized when they exceed `2000x2000` pixels or `5242880` base64 bytes.
+MongolGPT загвар руу илгээхээсээ өмнө зургийн хавсралтыг хэвийн болгодог. Анхдагч байдлаар, зураг нь `2000x2000` пиксел эсвэл `5242880` base64 байтаас хэтэрсэн тохиолдолд хэмжээг нь өөрчилдөг.
 
-Configure image attachment limits with the `attachment.image` option:
+Зургийн хавсралтын хязгаарыг `attachment.image` сонголтоор тохируулна уу:
 
 ```json title="mongolgpt.json"
 {
@@ -436,22 +436,22 @@ Configure image attachment limits with the `attachment.image` option:
 }
 ```
 
-- `auto_resize` - Resize images that exceed the configured limits before provider requests. Set to `false` to reject oversized images instead.
-- `max_width` - Maximum image width in pixels before resizing or rejection.
-- `max_height` - Maximum image height in pixels before resizing or rejection.
-- `max_base64_bytes` - Maximum encoded image payload size. This is the base64 payload size, not the original file size.
+- `auto_resize` - Үйлчилгээ үзүүлэгчийн хүсэлтээс өмнө тохируулсан хязгаараас хэтэрсэн зургийн хэмжээг өөрчлөх. Оронд нь том хэмжээтэй зургуудаас татгалзахын тулд `false` гэж тохируулна уу.
+- `max_width` - Хэмжээ өөрчлөх, татгалзахаас өмнө зургийн хамгийн дээд өргөнийг пикселээр илэрхийлнэ.
+- `max_height` - Хэмжээг өөрчлөх эсвэл татгалзахаас өмнө зургийн хамгийн дээд өндөр нь пикселээр илэрхийлэгдэнэ.
+- `max_base64_bytes` - Шифрлэгдсэн зургийн ачааллын дээд хэмжээ. Энэ нь үндсэн файлын хэмжээ биш, үндсэн 64 ачааны хэмжээ юм.
 
-If an image still cannot fit after resizing, MongolGPT omits oversized tool-result images or fails oversized user-provided images with an image size error.
+Хэмжээг нь өөрчилсний дараа зураг багтах боломжгүй хэвээр байвал MongolGPT хэрэгслийн үр дүнгийн том хэмжээтэй зургийг орхих эсвэл зургийн хэмжээний алдаатай хэрэглэгчийн өгсөн том хэмжээтэй зургийг амжилтгүй болгоно.
 
 ---
 
-#### Provider-Specific Options
+#### Үйлчилгээ үзүүлэгчийн тусгай сонголтууд
 
-Some providers support additional configuration options beyond the generic `timeout` and `apiKey` settings.
+Зарим үйлчилгээ үзүүлэгчид ерөнхий `timeout` болон `apiKey` тохиргооноос гадна нэмэлт тохиргооны сонголтыг дэмждэг.
 
 ##### Amazon Bedrock
 
-Amazon Bedrock supports AWS-specific configuration:
+Amazon Bedrock AWS- тусгай тохиргоог дэмждэг:
 
 ```json title="mongolgpt.json"
 {
@@ -468,21 +468,21 @@ Amazon Bedrock supports AWS-specific configuration:
 }
 ```
 
-- `region` - AWS region for Bedrock (defaults to `AWS_REGION` env var or `us-east-1`)
-- `profile` - AWS named profile from `~/.aws/credentials` (defaults to `AWS_PROFILE` env var)
-- `endpoint` - Custom endpoint URL for VPC endpoints. This is an alias for the generic `baseURL` option using AWS-specific terminology. If both are specified, `endpoint` takes precedence.
+- `region` - Үндсэн чулуулгийн AWS бүс (өгөгдмөл нь `AWS_REGION` env var эсвэл `us-east-1`)
+- `profile` - AWS нэрлэсэн профайл нь `~/.aws/credentials` (өгөгдмөл нь `AWS_PROFILE` env var)
+- `endpoint` - VPC төгсгөлийн цэгүүдийн захиалгат төгсгөлийн цэг URL. Энэ нь AWS- тусгай нэр томъёог ашиглан ерөнхий `baseURL` сонголтын нэр юм. Хэрэв хоёуланг нь зааж өгсөн бол `endpoint` давуу эрхтэй болно.
 
 :::note
-Bearer tokens (`AWS_BEARER_TOKEN_BEDROCK` or `/connect`) take precedence over profile-based authentication. See [authentication precedence](/docs/providers#authentication-precedence) for details.
+Тэмдэглэгээний токенууд (`AWS_BEARER_TOKEN_BEDROCK` эсвэл `/connect`) профайл дээр суурилсан баталгаажуулалтаас давуу эрхтэй. Дэлгэрэнгүйг [баталгаажуулалтын давуу эрх](/docs/providers#authentication-precedence) харна уу.
 :::
 
-[Learn more about Amazon Bedrock configuration](/docs/providers#amazon-bedrock).
+[Amazon Bedrock тохиргооны талаар нэмэлт мэдээлэл аваарай](/docs/providers#amazon-bedrock).
 
 ---
 
-### Themes
+### Сэдэв
 
-Set your UI theme in `tui.json`.
+UI загвараа `tui.json` дээр тохируулна уу.
 
 ```json title="tui.json"
 {
@@ -491,13 +491,13 @@ Set your UI theme in `tui.json`.
 }
 ```
 
-[Learn more here](/docs/themes).
+[Эндээс илүү ихийг мэдэж аваарай](/docs/themes).
 
 ---
 
-### Agents
+### Агентууд
 
-You can configure specialized agents for specific tasks through the `agent` option.
+Та `agent` сонголтоор дамжуулан тодорхой ажлуудад зориулсан тусгай агентуудыг тохируулах боломжтой.
 
 ```jsonc title="mongolgpt.jsonc"
 {
@@ -517,13 +517,13 @@ You can configure specialized agents for specific tasks through the `agent` opti
 }
 ```
 
-You can also define agents using markdown files in `~/.config/mongolgpt/agents/` or `.mongolgpt/agents/`. [Learn more here](/docs/agents).
+Та мөн `~/.config/mongolgpt/agents/` эсвэл `.mongolgpt/agents/` дахь тэмдэглэгээний файлуудыг ашиглан агентуудыг тодорхойлж болно. [Эндээс илүү ихийг мэдэж аваарай](/docs/agents).
 
 ---
 
-### Default agent
+### Өгөгдмөл агент
 
-You can set the default agent using the `default_agent` option. This determines which agent is used when none is explicitly specified.
+Та `default_agent` сонголтыг ашиглан анхдагч агентыг тохируулж болно. Энэ нь тодорхой заагаагүй тохиолдолд аль агентыг ашиглахыг тодорхойлдог.
 
 ```json title="mongolgpt.json"
 {
@@ -532,15 +532,15 @@ You can set the default agent using the `default_agent` option. This determines 
 }
 ```
 
-The default agent must be a primary agent (not a subagent). This can be a built-in agent like `"build"` or `"plan"`, or a [custom agent](/docs/agents) you've defined. If the specified agent doesn't exist or is a subagent, MongolGPT will fall back to `"build"` with a warning.
+Өгөгдмөл агент нь үндсэн агент (дэд агент биш) байх ёстой. Энэ нь `"build"` эсвэл `"plan"` эсвэл таны тодорхойлсон [захиалгат агент](/docs/agents) гэх мэт суулгасан агент байж болно. Хэрэв заасан агент байхгүй эсвэл дэд агент бол MongolGPT анхааруулгатайгаар `"build"` руу буцна.
 
-This setting applies across all interfaces: TUI, CLI (`mongolgpt run`), desktop app, and GitHub Action.
+Энэ тохиргоо нь бүх интерфэйсүүдэд хамаарна: TUI, CLI (`mongolgpt run`), ширээний програм, GitHub Үйлдэл.
 
 ---
 
-### Sharing
+### Хуваалцах
 
-You can configure the [share](/docs/share) feature through the `share` option.
+Та [share](/docs/share) функцийг `share` сонголтоор тохируулж болно.
 
 ```json title="mongolgpt.json"
 {
@@ -549,19 +549,19 @@ You can configure the [share](/docs/share) feature through the `share` option.
 }
 ```
 
-This takes:
+Үүнд:
 
-- `"manual"` - Allow manual sharing via commands (default)
-- `"auto"` - Automatically share new conversations
-- `"disabled"` - Disable sharing entirely
+- `"manual"` - Гараар тушаалаар хуваалцахыг зөвшөөрөх (өгөгдмөл)
+- `"auto"` - Шинэ харилцан яриаг автоматаар хуваалцах
+- `"disabled"` - Хуваалцахыг бүхэлд нь идэвхгүй болгох
 
-By default, sharing is set to manual mode where you need to explicitly share conversations using the `/share` command.
+Анхдагч байдлаар, хуваалцахыг гарын авлагын горимд тохируулсан бөгөөд та `/share` командыг ашиглан харилцан яриаг тодорхой хуваалцах шаардлагатай.
 
 ---
 
-### Commands
+### тушаалууд
 
-You can configure custom commands for repetitive tasks through the `command` option.
+Та `command` сонголтоор дамжуулан давтагдах даалгаврын захиалгаар тохируулах боломжтой.
 
 ```jsonc title="mongolgpt.jsonc"
 {
@@ -581,13 +581,13 @@ You can configure custom commands for repetitive tasks through the `command` opt
 }
 ```
 
-You can also define commands using markdown files in `~/.config/mongolgpt/commands/` or `.mongolgpt/commands/`. [Learn more here](/docs/commands).
+Та мөн `~/.config/mongolgpt/commands/` эсвэл `.mongolgpt/commands/` дээр тэмдэглэх файлуудыг ашиглан тушаалуудыг тодорхойлж болно. [Эндээс илүү ихийг мэдэж аваарай](/docs/commands).
 
 ---
 
-### Keybinds
+### Товчлуур
 
-Customize TUI keyboard shortcuts in `tui.json` with `keybinds`.
+`tui.json` дээрх TUI гарын товчлолыг `keybinds` ашиглан тохируулна уу.
 
 ```json title="tui.json"
 {
@@ -598,17 +598,17 @@ Customize TUI keyboard shortcuts in `tui.json` with `keybinds`.
 }
 ```
 
-`keybinds` is merged with built-in defaults, so you only need to configure the shortcuts you want to change.
+`keybinds` нь анхдагч тохиргоотой нэгтгэгдсэн тул та зөвхөн өөрчлөхийг хүссэн товчлолуудаа тохируулах хэрэгтэй.
 
-[Learn more here](/docs/keybinds).
+[Эндээс илүү ихийг мэдэж аваарай](/docs/keybinds).
 
 ---
 
-### Snapshot
+### Хормын хувилбар
 
-MongolGPT uses snapshots to track file changes during agent operations, enabling you to undo and revert changes within a session. Snapshots are enabled by default.
+MongolGPT нь агентын үйл ажиллагааны явцад файлын өөрчлөлтийг хянахын тулд агшин зуурын агшинг ашигладаг бөгөөд энэ нь танд сесс дотор өөрчлөлтийг буцаах, буцаах боломжийг олгоно. Хормын хувилбарыг анхдагчаар идэвхжүүлсэн.
 
-For large repositories or projects with many submodules, the snapshot system can cause slow indexing and significant disk usage as it tracks all changes using an internal git repository. You can disable snapshots using the `snapshot` option.
+Том репозиторууд эсвэл олон дэд модулиудтай төслүүдийн хувьд хормын хувилбарын систем нь дотоод git репозиторийг ашиглан бүх өөрчлөлтийг хянадаг тул удаан индексжүүлж, дискний ихээхэн хэрэглээг үүсгэдэг. Та `snapshot` сонголтыг ашиглан агшин зуурын зургийг идэвхгүй болгож болно.
 
 ```json title="mongolgpt.json"
 {
@@ -617,13 +617,13 @@ For large repositories or projects with many submodules, the snapshot system can
 }
 ```
 
-Note that disabling snapshots means changes made by the agent cannot be rolled back through the UI.
+Хормын хувилбаруудыг идэвхгүй болгосноор агентын хийсэн өөрчлөлтийг UI-ээр буцаах боломжгүй гэдгийг анхаарна уу.
 
 ---
 
-### Autoupdate
+### Автоматаар шинэчлэх
 
-MongolGPT will automatically download any new updates when it starts up. You can disable this with the `autoupdate` option.
+MongolGPT шинэ шинэчлэлтийг эхлүүлэх үед автоматаар татаж авах болно. Та үүнийг `autoupdate` сонголтоор идэвхгүй болгож болно.
 
 ```json title="mongolgpt.json"
 {
@@ -632,14 +632,14 @@ MongolGPT will automatically download any new updates when it starts up. You can
 }
 ```
 
-If you don't want updates but want to be notified when a new version is available, set `autoupdate` to `"notify"`.
-Notice that this only works if it was not installed using a package manager such as Homebrew.
+Хэрэв та шинэчлэлт хийхийг хүсэхгүй байгаа ч шинэ хувилбар гарах үед мэдэгдэхийг хүсвэл `autoupdate`-г `"notify"` гэж тохируулна уу.
+Энэ нь зөвхөн Homebrew гэх мэт багц менежерийг суулгаагүй тохиолдолд л ажиллана гэдгийг анхаарна уу.
 
 ---
 
-### Formatters
+### Форматлагч
 
-You can enable and configure code formatters through the `formatter` option. Omit it to keep formatters disabled.
+Та `formatter` сонголтоор дамжуулан код форматлагчдыг идэвхжүүлж, тохируулах боломжтой. Форматлагчдыг идэвхгүй байлгахын тулд үүнийг орхи.
 
 ```json title="mongolgpt.json"
 {
@@ -648,7 +648,7 @@ You can enable and configure code formatters through the `formatter` option. Omi
 }
 ```
 
-Use an object to keep built-ins enabled while configuring overrides or custom formatters.
+Хүчингүй болгох эсвэл өөрчлөн форматлагчийг тохируулахын тулд суулгацыг идэвхжүүлэхийн тулд объект ашиглана уу.
 
 ```json title="mongolgpt.json"
 {
@@ -668,13 +668,13 @@ Use an object to keep built-ins enabled while configuring overrides or custom fo
 }
 ```
 
-[Learn more about formatters here](/docs/formatters).
+[Форматлагчийн талаар илүү ихийг эндээс авна уу](/docs/formatters).
 
 ---
 
-### LSP Servers
+### LSP Серверүүд
 
-You can enable and configure LSP servers through the `lsp` option. Omit it to keep LSP disabled.
+Та `lsp` сонголтоор дамжуулан LSP серверүүдийг идэвхжүүлж, тохируулах боломжтой. LSP-г идэвхгүй байлгахын тулд үүнийг орхи.
 
 ```json title="mongolgpt.json"
 {
@@ -683,7 +683,7 @@ You can enable and configure LSP servers through the `lsp` option. Omit it to ke
 }
 ```
 
-Use an object to keep built-ins enabled while configuring overrides or custom LSP servers.
+Хүчингүй болгох эсвэл захиалгат LSP серверүүдийг тохируулахдаа суулгасан програмуудыг идэвхжүүлэхийн тулд объект ашиглана уу.
 
 ```json title="mongolgpt.json"
 {
@@ -696,15 +696,15 @@ Use an object to keep built-ins enabled while configuring overrides or custom LS
 }
 ```
 
-[Learn more about LSP servers here](/docs/lsp).
+[LSP серверүүдийн талаар илүү ихийг эндээс авна уу](/docs/lsp).
 
 ---
 
-### Permissions
+### Зөвшөөрөл
 
-By default, mongolgpt **allows all operations** without requiring explicit approval. You can change this using the `permission` option.
+Анхдагчаар mongolgpt **бүх үйлдлийг тодорхой зөвшөөрөл шаардахгүйгээр зөвшөөрдөг. Та үүнийг `permission` сонголтыг ашиглан өөрчилж болно.
 
-For example, to ensure that the `edit` and `bash` tools require user approval:
+Жишээлбэл, `edit` болон `bash` хэрэгслүүд нь хэрэглэгчийн зөвшөөрөл шаарддаг эсэхийг баталгаажуулахын тулд:
 
 ```json title="mongolgpt.json"
 {
@@ -716,13 +716,13 @@ For example, to ensure that the `edit` and `bash` tools require user approval:
 }
 ```
 
-[Learn more about permissions here](/docs/permissions).
+[Зөвшөөрлийн талаар эндээс дэлгэрэнгүй үзнэ үү](/docs/permissions).
 
 ---
 
-### Compaction
+### Нягтруулга
 
-You can control context compaction behavior through the `compaction` option.
+Та `compaction` сонголтоор контекст нягтруулах үйлдлийг хянах боломжтой.
 
 ```json title="mongolgpt.json"
 {
@@ -735,15 +735,15 @@ You can control context compaction behavior through the `compaction` option.
 }
 ```
 
-- `auto` - Automatically compact the session when context is full (default: `true`).
-- `prune` - Remove old tool outputs to save tokens (default: `false`). Set to `true` to enable pruning.
-- `reserved` - Token buffer for compaction. Leaves enough window to avoid overflow during compaction.
+- `auto` - Контекст дүүрсэн үед сессийг автоматаар нягтруулна (өгөгдмөл: `true`).
+- `prune` - Токенуудыг хадгалахын тулд хуучин хэрэгслийн гаралтыг устгана уу (өгөгдмөл: `false`). Тайралтыг идэвхжүүлэхийн тулд `true` гэж тохируулна уу.
+- `reserved` - ​​Нягтралд зориулсан токен буфер. Нягтруулах явцад халихаас сэргийлж хангалттай хэмжээний цонх үлдээдэг.
 
 ---
 
-### Watcher
+### Харагч
 
-You can configure file watcher ignore patterns through the `watcher` option.
+Та `watcher` сонголтоор файл ажиглагчийг үл тоомсорлох загварыг тохируулах боломжтой.
 
 ```json title="mongolgpt.json"
 {
@@ -754,13 +754,13 @@ You can configure file watcher ignore patterns through the `watcher` option.
 }
 ```
 
-Patterns follow glob syntax. Use this to exclude noisy directories from file watching.
+Загварууд нь glob синтаксийг дагаж мөрддөг. Дуу чимээ ихтэй сангуудыг файл үзэхээс хасахын тулд үүнийг ашиглана уу.
 
 ---
 
-### MCP servers
+### MCP серверүүд
 
-You can configure MCP servers you want to use through the `mcp` option.
+Та ашиглахыг хүссэн MCP серверүүдээ `mcp` сонголтоор тохируулж болно.
 
 ```json title="mongolgpt.json"
 {
@@ -769,15 +769,15 @@ You can configure MCP servers you want to use through the `mcp` option.
 }
 ```
 
-[Learn more here](/docs/mcp-servers).
+[Эндээс илүү ихийг мэдэж аваарай](/docs/mcp-servers).
 
 ---
 
 ### Plugins
 
-[Plugins](/docs/plugins) extend MongolGPT with custom tools, hooks, and integrations.
+[Plugins](/docs/plugins) захиалгат хэрэгсэл, дэгээ, интеграцчилал бүхий MongolGPT өргөтгөл.
 
-Place plugin files in `.mongolgpt/plugins/` or `~/.config/mongolgpt/plugins/`. You can also load plugins from npm through the `plugin` option.
+Plugin файлуудыг `.mongolgpt/plugins/` эсвэл `~/.config/mongolgpt/plugins/` дээр байрлуул. Та мөн npm-аас `plugin` сонголтоор залгаасуудыг ачаалж болно.
 
 ```json title="mongolgpt.json"
 {
@@ -786,13 +786,13 @@ Place plugin files in `.mongolgpt/plugins/` or `~/.config/mongolgpt/plugins/`. Y
 }
 ```
 
-[Learn more here](/docs/plugins).
+[Эндээс илүү ихийг мэдэж аваарай](/docs/plugins).
 
 ---
 
-### Instructions
+### Заавар
 
-You can configure the instructions for the model you're using through the `instructions` option.
+Та `instructions` сонголтоор дамжуулан өөрийн ашиглаж буй загварын зааварчилгааг тохируулах боломжтой.
 
 ```json title="mongolgpt.json"
 {
@@ -801,14 +801,13 @@ You can configure the instructions for the model you're using through the `instr
 }
 ```
 
-This takes an array of paths and glob patterns to instruction files. [Learn more
-about rules here](/docs/rules).
+Энэ нь зааврын файлууд руу чиглэсэн олон тооны зам болон глоб загваруудыг авдаг. [Дэлгэрэнгүй үзэх дүрмийн талаар энд](/docs/rules).
 
 ---
 
-### Disabled providers
+### Идэвхгүй үйлчилгээ үзүүлэгчид
 
-You can disable providers that are loaded automatically through the `disabled_providers` option. This is useful when you want to prevent certain providers from being loaded even if their credentials are available.
+Та `disabled_providers` сонголтоор автоматаар ачаалагдсан үйлчилгээ үзүүлэгчдийг идэвхгүй болгож болно. Энэ нь тодорхой үйлчилгээ үзүүлэгчдийг итгэмжлэлүүд нь боломжтой байсан ч ачаалахаас урьдчилан сэргийлэхийг хүсвэл хэрэг болно.
 
 ```json title="mongolgpt.json"
 {
@@ -818,20 +817,20 @@ You can disable providers that are loaded automatically through the `disabled_pr
 ```
 
 :::note
-The `disabled_providers` takes priority over `enabled_providers`.
+`disabled_providers` нь `enabled_providers`-ээс давуу эрхтэй.
 :::
 
-The `disabled_providers` option accepts an array of provider IDs. When a provider is disabled:
+`disabled_providers` сонголт нь олон тооны үйлчилгээ үзүүлэгчийн ID-г хүлээн зөвшөөрдөг. Үйлчилгээ үзүүлэгч идэвхгүй болсон үед:
 
-- It won't be loaded even if environment variables are set.
-- It won't be loaded even if API keys are configured through the `/connect` command.
-- The provider's models won't appear in the model selection list.
+- Орчны хувьсагчийг тохируулсан ч ачаалагдахгүй.
+- API товчлуурыг `/connect` тушаалаар тохируулсан ч ачаалагдахгүй.
+- Үйлчилгээ үзүүлэгчийн загварууд загвар сонгох жагсаалтад харагдахгүй.
 
 ---
 
-### Enabled providers
+### Идэвхжүүлсэн үйлчилгээ үзүүлэгч
 
-You can specify an allowlist of providers through the `enabled_providers` option. When set, only the specified providers will be enabled and all others will be ignored.
+Та `enabled_providers` сонголтоор дамжуулан үйлчилгээ үзүүлэгчдийн зөвшөөрөгдсөн жагсаалтыг зааж өгч болно. Тохируулсан тохиолдолд зөвхөн заасан үйлчилгээ үзүүлэгчийг идэвхжүүлж, бусад бүх үйлчилгээ үзүүлэгчийг үл хэрэгсэх болно.
 
 ```json title="mongolgpt.json"
 {
@@ -840,19 +839,19 @@ You can specify an allowlist of providers through the `enabled_providers` option
 }
 ```
 
-This is useful when you want to restrict MongolGPT to only use specific providers rather than disabling them one by one.
+Энэ нь MongolGPT-г нэг нэгээр нь идэвхгүй болгохын оронд зөвхөн тодорхой үйлчилгээ үзүүлэгчдийг ашиглахыг хязгаарлахыг хүсвэл хэрэг болно.
 
 :::note
-The `disabled_providers` takes priority over `enabled_providers`.
+`disabled_providers` нь `enabled_providers`-ээс давуу эрхтэй.
 :::
 
-If a provider appears in both `enabled_providers` and `disabled_providers`, the `disabled_providers` takes priority for backwards compatibility.
+Хэрэв үйлчилгээ үзүүлэгч нь `enabled_providers` болон `disabled_providers` аль алинд нь гарч ирвэл `disabled_providers` нь буцаан нийцтэй байдлыг чухалчилдаг.
 
 ---
 
-### Experimental
+### Туршилт
 
-The `experimental` key contains options that are under active development.
+`experimental` товчлуур нь идэвхтэй хөгжүүлэгдэж буй сонголтуудыг агуулдаг.
 
 ```json title="mongolgpt.json"
 {
@@ -862,20 +861,20 @@ The `experimental` key contains options that are under active development.
 ```
 
 :::caution
-Experimental options are not stable. They may change or be removed without notice.
+Туршилтын сонголтууд тогтвортой биш байна. Тэдгээрийг мэдэгдэлгүйгээр өөрчилж эсвэл устгаж болно.
 :::
 
 ---
 
-## Variables
+## Хувьсагч
 
-You can use variable substitution in your config files to reference environment variables and file contents.
+Та орчны хувьсагч болон файлын агуулгыг лавлахын тулд тохиргооны файлууддаа хувьсагчийн орлуулалтыг ашиглаж болно.
 
 ---
 
 ### Env vars
 
-Use `{env:VARIABLE_NAME}` to substitute environment variables:
+Орчны хувьсагчдыг орлуулахын тулд `{env:VARIABLE_NAME}` ашиглана уу:
 
 ```json title="mongolgpt.json"
 {
@@ -892,13 +891,13 @@ Use `{env:VARIABLE_NAME}` to substitute environment variables:
 }
 ```
 
-If the environment variable is not set, it will be replaced with an empty string.
+Хэрэв орчны хувьсагчийг тохируулаагүй бол түүнийг хоосон тэмдэгт мөрөөр солино.
 
 ---
 
-### Files
+### Файлууд
 
-Use `{file:path/to/file}` to substitute the contents of a file:
+Файлын агуулгыг орлуулахын тулд `{file:path/to/file}` ашиглана уу:
 
 ```json title="mongolgpt.json"
 {
@@ -914,13 +913,13 @@ Use `{file:path/to/file}` to substitute the contents of a file:
 }
 ```
 
-File paths can be:
+Файлын замууд нь:
 
-- Relative to the config file directory
-- Or absolute paths starting with `/` or `~`
+- Тохируулгын файлын лавлахтай холбоотой
+- Эсвэл `/` эсвэл `~`-ээр эхэлсэн үнэмлэхүй замууд
 
-These are useful for:
+Эдгээр нь ашигтай:
 
-- Keeping sensitive data like API keys in separate files.
-- Including large instruction files without cluttering your config.
-- Sharing common configuration snippets across multiple config files.
+- API гэх мэт нууц мэдээллийг тусдаа файлд хадгалах.
+- Таны тохиргоонд саад учруулахгүйгээр том хэмжээний зааврын файлуудыг багтаасан болно.
+- Олон тохиргооны файлууд дээр нийтлэг тохиргооны хэсгүүдийг хуваалцах.

@@ -516,7 +516,7 @@ export const dict = {
   "error.chain.modelNotFound": "Загвар олдсонгүй: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Өөрийн тохиргооны (mongolgpt.json) үйлчилгээ үзүүлэгч/загварын нэрийг шалгана уу",
   "error.chain.mcpFailed":
-    'MCP сервер "{{name}}" амжилтгүй болсон. MongolGPT хараахан MCP баталгаажуулалтыг дэмждэггүйг анхаарна уу.',
+    'MCP сервер "{{name}}" амжилтгүй болсон. Хэрэв баталгаажуулалт шаардлагатай бол MCP auth prompt эсвэл MongolGPT MCP auth flow ашиглаад дахин оролдоно уу.',
   "error.chain.providerAuthFailed":
     "Үйлчилгээ үзүүлэгчийн баталгаажуулалт амжилтгүй болсон ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
@@ -913,7 +913,8 @@ export const dict = {
   "settings.commands.title": "Командууд",
   "settings.commands.description": "Энд командын тохиргоог хийх боломжтой.",
   "settings.mcp.title": "MCP",
-  "settings.mcp.description": "MCP тохиргоог энд тохируулах боломжтой.",
+  "settings.mcp.description":
+    "MCP серверийг Тохиргоо > Интеграц хэсгээс нэмээд, шаардлагатай серверийг MCP status prompt-оос баталгаажуулна.",
   "settings.permissions.title": "Зөвшөөрлүүд",
   "settings.permissions.description": "Анхдагчаар сервер ямар хэрэгслийг ашиглаж болохыг хянах.",
   "settings.permissions.section.tools": "Хэрэгслүүд",

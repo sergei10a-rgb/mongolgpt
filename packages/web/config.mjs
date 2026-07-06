@@ -8,7 +8,7 @@ export default {
   github: "https://github.com/sergei10a-rgb/mongolgpt",
   discord: "https://mongolgpt.duckdns.org/discord",
   headerLinks: [
-    { name: "app.header.home", url: "/" },
-    { name: "app.header.docs", url: "/docs/" },
+    { name: "Нүүр", url: "/" },
+    { name: "Баримт бичиг", url: "/docs/" },
   ],
 }

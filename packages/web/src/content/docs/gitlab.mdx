@@ -1,34 +1,34 @@
 ---
 title: GitLab
-description: Use MongolGPT in GitLab issues and merge requests.
+description: GitLab асуудалд MongolGPT-г ашиглан хүсэлтийг нэгтгэнэ үү.
 ---
 
-MongolGPT integrates with your GitLab workflow through your GitLab CI/CD pipeline or with GitLab Duo.
+MongolGPT нь таны GitLab CI/CD дамжуулах шугам эсвэл GitLab Duo-ээр дамжуулан таны GitLab ажлын урсгалтай нэгддэг.
 
-In both cases, MongolGPT will run on your GitLab runners.
+Аль ч тохиолдолд MongolGPT таны GitLab гүйгч нар дээр гүйх болно.
 
 ---
 
 ## GitLab CI
 
-MongolGPT works in a regular GitLab pipeline. You can build it into a pipeline as a [CI component](https://docs.gitlab.com/ee/ci/components/)
+MongolGPT ердийн GitLab шугам хоолойд ажилладаг. Та үүнийг [CI бүрэлдэхүүн хэсэг](https://docs.gitlab.com/ee/ci/components/) хэлбэрээр дамжуулах хоолой болгон барьж болно.
 
-Here we are using a community-created CI/CD component for MongolGPT — [nagyv/gitlab-mongolgpt](https://gitlab.com/nagyv/gitlab-mongolgpt).
-
----
-
-### Features
-
-- **Use custom configuration per job**: Configure MongolGPT with a custom configuration directory, for example `./config/#custom-directory` to enable or disable functionality per MongolGPT invocation.
-- **Minimal setup**: The CI component sets up MongolGPT in the background, you only need to create the MongolGPT configuration and the initial prompt.
-- **Flexible**: The CI component supports several inputs for customizing its behavior
+Энд бид олон нийтийн үүсгэсэн CI/CD бүрэлдэхүүнийг MongolGPT — [nagyv/gitlab-mongolgpt](https://gitlab.com/nagyv/gitlab-mongolgpt) ашиглаж байна.
 
 ---
 
-### Setup
+### Онцлогууд
 
-1. Store your MongolGPT authentication JSON as a File type CI environment variables under **Settings** > **CI/CD** > **Variables**. Make sure to mark them as "Masked and hidden".
-2. Add the following to your `.gitlab-ci.yml` file.
+- **Ажил бүрт тусгай тохиргоог ашиглах**: MongolGPT-г захиалгат тохиргооны лавлахаар тохируулна уу, жишээ нь MongolGPT дуудлагын функцийг идэвхжүүлэх эсвэл идэвхгүй болгохын тулд `./config/#custom-directory`.
+- **Хамгийн бага тохиргоо**: CI бүрэлдэхүүн нь цаана нь MongolGPT-г тохируулдаг тул та зөвхөн MongolGPT тохиргоо болон анхны сануулгыг үүсгэхэд л хангалттай.
+- **Уян хатан**: CI бүрэлдэхүүн хэсэг нь зан төлөвийг тохируулах хэд хэдэн оролтыг дэмждэг.
+
+---
+
+### Тохиргоо
+
+1. MongolGPT нэвтрэлт танилтаа JSON файлын төрлийн CI орчны хувьсагчийг **Тохиргоо** > **CI/CD** > **Хувьсагч** гэсэн хэсэгт хадгална уу. Тэдгээрийг "Масклагдсан ба далд" гэж тэмдэглэхээ мартуузай.
+2. `.gitlab-ci.yml` файлдаа дараахыг нэмнэ үү.
 
    ```yaml title=".gitlab-ci.yml"
    include:
@@ -40,44 +40,44 @@ Here we are using a community-created CI/CD component for MongolGPT — [nagyv/g
          message: "Your prompt here"
    ```
 
-For more inputs and use cases [check out the docs](https://gitlab.com/explore/catalog/nagyv/gitlab-mongolgpt) for this component.
+Илүү их мэдээлэл авах бол энэ бүрэлдэхүүн хэсгийн хувьд [баримтуудыг шалгана уу](https://gitlab.com/explore/catalog/nagyv/gitlab-mongolgpt) ашиглана уу.
 
 ---
 
 ## GitLab Duo
 
-MongolGPT integrates with your GitLab workflow.
-Mention `@mongolgpt` in a comment, and MongolGPT will execute tasks within your GitLab CI pipeline.
+MongolGPT нь таны GitLab ажлын урсгалтай нэгддэг.
+Сэтгэгдэл бичихдээ `@mongolgpt`-г дурдвал MongolGPT таны GitLab CI шугаман дээрх ажлуудыг гүйцэтгэх болно.
 
 ---
 
-### Features
+### Онцлогууд
 
-- **Triage issues**: Ask MongolGPT to look into an issue and explain it to you.
-- **Fix and implement**: Ask MongolGPT to fix an issue or implement a feature.
-  It will create a new branch and raise a merge request with the changes.
-- **Secure**: MongolGPT runs on your GitLab runners.
+- **Гурвалсан асуудлууд**: MongolGPT-аас асуудлыг судалж, танд тайлбарлахыг хүс.
+- **Засаж хэрэгжүүлэх**: Асуудлыг засах эсвэл функцийг хэрэгжүүлэхийг MongolGPT-аас хүс.
+  Энэ нь шинэ салбар үүсгэж, өөрчлөлттэй хамт нэгтгэх хүсэлт гаргах болно.
+- **Secure**: MongolGPT таны GitLab гүйгч дээр ажилладаг.
 
 ---
 
-### Setup
+### Тохиргоо
 
-MongolGPT runs in your GitLab CI/CD pipeline, here's what you'll need to set it up:
+MongolGPT нь таны GitLab CI/CD шугаманд ажилладаг тул үүнийг тохируулахын тулд танд дараах зүйлс хэрэгтэй болно:
 
 :::tip
-Check out the [**GitLab docs**](https://docs.gitlab.com/user/duo_agent_platform/agent_assistant/) for up to date instructions.
+Хамгийн сүүлийн үеийн зааварчилгааг [**GitLab баримтууд**](https://docs.gitlab.com/user/duo_agent_platform/agent_assistant/)-г үзнэ үү.
 :::
 
-1.  Configure your GitLab environment
-2.  Set up CI/CD
-3.  Get an AI model provider API key
-4.  Create a service account
-5.  Configure CI/CD variables
-6.  Create a flow config file, here's an example:
+1. Өөрийн GitLab орчныг тохируулна уу
+2. CI/CD-г тохируулах
+3. AI загвар нийлүүлэгч API түлхүүр аваарай
+4. Үйлчилгээний данс үүсгэх
+5. CI/CD хувьсагчдыг тохируулах
+6. Урсгалын тохиргооны файл үүсгэ, жишээ нь:
 
         <details>
 
-    <summary>Flow configuration</summary>
+    <summary>Урсгалын тохиргоо</summary>
 
     ```yaml
     image: node:22-slim
@@ -152,44 +152,44 @@ Check out the [**GitLab docs**](https://docs.gitlab.com/user/duo_agent_platform/
 
         </details>
 
-You can refer to the [GitLab CLI agents docs](https://docs.gitlab.com/user/duo_agent_platform/agent_assistant/) for detailed instructions.
+Та нарийвчилсан зааврыг [GitLab CLI агентуудын баримт бичиг](https://docs.gitlab.com/user/duo_agent_platform/agent_assistant/) хаягаар лавлана уу.
 
 ---
 
-### Examples
+### Жишээ
 
-Here are some examples of how you can use MongolGPT in GitLab.
+GitLab-д MongolGPT-г хэрхэн ашиглаж болох зарим жишээ энд байна.
 
 :::tip
-You can configure to use a different trigger phrase than `@mongolgpt`.
+Та `@mongolgpt`-с өөр гох хэллэг ашиглахаар тохируулж болно.
 :::
 
-- **Explain an issue**
+- **Асуудлыг тайлбарлана уу**
 
-  Add this comment in a GitLab issue.
+  Энэ сэтгэгдлийг GitLab дугаарт нэмнэ үү.
 
   ```
   @mongolgpt explain this issue
   ```
 
-  MongolGPT will read the issue and reply with a clear explanation.
+  MongolGPT асуудлыг уншиж, тодорхой тайлбартайгаар хариулах болно.
 
-- **Fix an issue**
+- **Асуудлыг засах**
 
-  In a GitLab issue, say:
+  GitLab дугаарт:
 
   ```
   @mongolgpt fix this
   ```
 
-  MongolGPT will create a new branch, implement the changes, and open a merge request with the changes.
+  MongolGPT нь шинэ салбар үүсгэж, өөрчлөлтийг хэрэгжүүлж, өөрчлөлттэй нэгтгэх хүсэлтийг нээнэ.
 
-- **Review merge requests**
+- **Нэгдэх хүсэлтийг хянан үзэх**
 
-  Leave the following comment on a GitLab merge request.
+  GitLab нэгтгэх хүсэлтийн талаар дараах тайлбарыг үлдээнэ үү.
 
   ```
   @mongolgpt review this merge request
   ```
 
-  MongolGPT will review the merge request and provide feedback.
+  MongolGPT нэгтгэх хүсэлтийг хянаж, санал хүсэлтээ өгнө.

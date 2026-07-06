@@ -1,34 +1,34 @@
 ---
 title: Plugins
-description: Write your own plugins to extend MongolGPT.
+description: MongolGPT-г өргөтгөхийн тулд өөрийн залгаасуудыг бичээрэй.
 ---
 
-Plugins allow you to extend MongolGPT by hooking into various events and customizing behavior. You can create plugins to add new features, integrate with external services, or modify MongolGPT's default behavior.
+Plugins нь янз бүрийн үйл явдалд холбогдож, зан төлөвийг өөрчлөх замаар MongolGPT-г өргөтгөх боломжийг олгодог. Та шинэ функцуудыг нэмэх, гадны үйлчилгээтэй нэгтгэх эсвэл MongolGPT-ийн үндсэн үйлдлийг өөрчлөхийн тулд залгаасуудыг үүсгэж болно.
 
-For examples, check out the [plugins](/docs/ecosystem#plugins) created by the community.
-
----
-
-## Use a plugin
-
-There are two ways to load plugins.
+Жишээ нь, нийгэмлэгийн үүсгэсэн [plugins](/docs/ecosystem#plugins)-г үзээрэй.
 
 ---
 
-### From local files
+## Plugin ашиглана уу
 
-Place JavaScript or TypeScript files in the plugin directory.
-
-- `.mongolgpt/plugins/` - Project-level plugins
-- `~/.config/mongolgpt/plugins/` - Global plugins
-
-Files in these directories are automatically loaded at startup.
+Плагинуудыг ачаалах хоёр арга бий.
 
 ---
 
-### From npm
+### Дотоод файлуудаас
 
-Specify npm packages in your config file.
+JavaScript эсвэл TypeScript файлуудыг залгаасын санд байрлуул.
+
+- `.mongolgpt/plugins/` - Төслийн түвшний залгаасууд
+- `~/.config/mongolgpt/plugins/` - Глобал залгаасууд
+
+Эдгээр сангуудын файлуудыг эхлүүлэх үед автоматаар ачаалагддаг.
+
+---
+
+### npm-аас
+
+Өөрийн тохиргооны файлд npm багцуудыг зааж өгнө үү.
 
 ```json title="mongolgpt.json"
 {
@@ -37,43 +37,43 @@ Specify npm packages in your config file.
 }
 ```
 
-Both regular and scoped npm packages are supported.
+Энгийн болон хамрах хүрээтэй npm багцуудыг хоёуланг нь дэмждэг.
 
-Browse available plugins in the [ecosystem](/docs/ecosystem#plugins).
-
----
-
-### How plugins are installed
-
-**npm plugins** are installed automatically using Bun at startup. Packages and their dependencies are cached in `~/.cache/mongolgpt/node_modules/`.
-
-**Local plugins** are loaded directly from the plugin directory. To use external packages, you must create a `package.json` within your config directory (see [Dependencies](#dependencies)), or publish the plugin to npm and [add it to your config](/docs/config#plugins).
+Боломжтой залгаасуудыг [ecosystem](/docs/ecosystem#plugins) дээрээс харна уу.
 
 ---
 
-### Load order
+### Хэрхэн залгаасуудыг суулгадаг вэ
 
-Plugins are loaded from all sources and all hooks run in sequence. The load order is:
+**npm залгаасуудыг** эхлүүлэх үед Bun ашиглан автоматаар суулгадаг. Багцууд болон тэдгээрийн хамаарлыг `~/.cache/mongolgpt/node_modules/`-д хадгалдаг.
 
-1. Global config (`~/.config/mongolgpt/mongolgpt.json`)
-2. Project config (`mongolgpt.json`)
-3. Global plugin directory (`~/.config/mongolgpt/plugins/`)
-4. Project plugin directory (`.mongolgpt/plugins/`)
-
-Duplicate npm packages with the same name and version are loaded once. However, a local plugin and an npm plugin with similar names are both loaded separately.
+**Орон нутгийн залгаасуудыг** залгаасын лавлахаас шууд ачаалдаг. Гадны багцуудыг ашиглахын тулд та өөрийн тохиргооны лавлах дотор `package.json` үүсгэх ёстой ([Dependencies](#dependencies)-г үзнэ үү), эсвэл залгаасыг npm болон [өөрийн тохиргоонд нэмнэ үү](/docs/config#plugins) дээр нийтлэх ёстой.
 
 ---
 
-## Create a plugin
+### Ачаалах захиалга
 
-A plugin is a **JavaScript/TypeScript module** that exports one or more plugin
-functions. Each function receives a context object and returns a hooks object.
+Plugins нь бүх эх сурвалжаас ачаалагдсан бөгөөд бүх дэгээ нь дарааллаар ажилладаг. Ачаалах дараалал нь:
+
+1. Глобал тохиргоо (`~/.config/mongolgpt/mongolgpt.json`)
+2. Төслийн тохиргоо (`mongolgpt.json`)
+3. Глобал залгаасуудын лавлах (`~/.config/mongolgpt/plugins/`)
+4. Төслийн залгаасуудын лавлах (`.mongolgpt/plugins/`)
+
+Давхардсан npm багцуудыг ижил нэр, хувилбараар нэг удаа ачаална. Гэсэн хэдий ч ижил төстэй нэртэй локал залгаас болон npm залгаасыг тус тусад нь ачаалдаг.
 
 ---
 
-### Dependencies
+## Plugin үүсгэх
 
-Local plugins and custom tools can use external npm packages. Add a `package.json` to your config directory with the dependencies you need.
+Plugin нь нэг буюу хэд хэдэн залгаасыг экспортлодог **JavaScript/TypeScript модуль** юм.
+функцууд. Функц бүр контекст объектыг хүлээн авч, hooks объектыг буцаана.
+
+---
+
+### Хамаарал
+
+Орон нутгийн залгаасууд болон тусгай хэрэгслүүд гадаад npm багцуудыг ашиглаж болно. Өөрт хэрэгтэй хамаарал бүхий тохиргооны лавлахдаа `package.json` нэмнэ үү.
 
 ```json title=".mongolgpt/package.json"
 {
@@ -83,7 +83,7 @@ Local plugins and custom tools can use external npm packages. Add a `package.jso
 }
 ```
 
-MongolGPT runs `bun install` at startup to install these. Your plugins and tools can then import them.
+MongolGPT эдгээрийг суулгахын тулд эхлүүлэх үед `bun install` ажиллуулдаг. Таны залгаасууд болон хэрэгслүүд тэдгээрийг импортлох боломжтой.
 
 ```ts title=".mongolgpt/plugins/my-plugin.ts"
 import { escape } from "shescape"
@@ -101,7 +101,7 @@ export const MyPlugin = async (ctx) => {
 
 ---
 
-### Basic structure
+### Үндсэн бүтэц
 
 ```js title=".mongolgpt/plugins/example.js"
 export const MyPlugin = async ({ project, client, $, directory, worktree }) => {
@@ -113,19 +113,19 @@ export const MyPlugin = async ({ project, client, $, directory, worktree }) => {
 }
 ```
 
-The plugin function receives:
+Plugin функц нь дараахь зүйлийг хүлээн авдаг.
 
-- `project`: The current project information.
-- `directory`: The current working directory.
-- `worktree`: The git worktree path.
-- `client`: An mongolgpt SDK client for interacting with the AI.
-- `$`: Bun's [shell API](https://bun.com/docs/runtime/shell) for executing commands.
+- `project`: Төслийн одоогийн мэдээлэл.
+- `directory`: Одоогийн ажлын лавлах.
+- `worktree`: Гит ажлын модны зам.
+- `client`: AI-тэй харилцах mongolgpt SDK үйлчлүүлэгч.
+- `- : тушаалуудыг гүйцэтгэх Bun-ийн [бүрхүүлийн API](https://bun.com/docs/runtime/shell).
 
 ---
 
-### TypeScript support
+### TypeScript дэмжлэг
 
-For TypeScript plugins, you can import types from the plugin package:
+TypeScript залгаасуудын хувьд та залгаасын багцаас төрлүүдийг импортлох боломжтой:
 
 ```ts title="my-plugin.ts" {1}
 import type { Plugin } from "@mongolgpt/plugin"
@@ -139,45 +139,45 @@ export const MyPlugin: Plugin = async ({ project, client, $, directory, worktree
 
 ---
 
-### Events
+### Үйл явдал
 
-Plugins can subscribe to events as seen below in the Examples section. Here is a list of the different events available.
+Залгааснууд нь жишээ хэсэгт доороос харсны дагуу үйл явдлуудыг захиалж болно. Энд байгаа янз бүрийн арга хэмжээний жагсаалтыг энд оруулав.
 
-#### Command Events
+#### Тушаалын үйл явдал
 
 - `command.executed`
 
-#### File Events
+#### Файлын үйл явдал
 
 - `file.edited`
 - `file.watcher.updated`
 
-#### Installation Events
+#### Суулгах үйл явдлууд
 
 - `installation.updated`
 
-#### LSP Events
+#### LSP Үйл явдал
 
 - `lsp.client.diagnostics`
 - `lsp.updated`
 
-#### Message Events
+#### Мессежийн үйл явдал
 
 - `message.part.removed`
 - `message.part.updated`
 - `message.removed`
 - `message.updated`
 
-#### Permission Events
+#### Зөвшөөрлийн үйл явдал
 
 - `permission.asked`
 - `permission.replied`
 
-#### Server Events
+#### Серверийн үйл явдал
 
 - `server.connected`
 
-#### Session Events
+#### хуралдааны үйл явдал
 
 - `session.created`
 - `session.compacted`
@@ -188,20 +188,20 @@ Plugins can subscribe to events as seen below in the Examples section. Here is a
 - `session.status`
 - `session.updated`
 
-#### Todo Events
+#### Хийх үйл явдал
 
 - `todo.updated`
 
-#### Shell Events
+#### Shell үйл явдлууд
 
 - `shell.env`
 
-#### Tool Events
+#### Хэрэгслийн үйл явдал
 
 - `tool.execute.after`
 - `tool.execute.before`
 
-#### TUI Events
+#### TUI Үйл явдал
 
 - `tui.prompt.append`
 - `tui.command.execute`
@@ -209,15 +209,15 @@ Plugins can subscribe to events as seen below in the Examples section. Here is a
 
 ---
 
-## Examples
+## Жишээ
 
-Here are some examples of plugins you can use to extend mongolgpt.
+mongolgpt-г өргөтгөхөд ашиглаж болох залгаасуудын зарим жишээ энд байна.
 
 ---
 
-### Send notifications
+### Мэдэгдэл илгээх
 
-Send notifications when certain events occur:
+Тодорхой үйл явдал тохиолдоход мэдэгдэл илгээх:
 
 ```js title=".mongolgpt/plugins/notification.js"
 export const NotificationPlugin = async ({ project, client, $, directory, worktree }) => {
@@ -232,17 +232,17 @@ export const NotificationPlugin = async ({ project, client, $, directory, worktr
 }
 ```
 
-We are using `osascript` to run AppleScript on macOS. Here we are using it to send notifications.
+Бид AppleScript-г macOS дээр ажиллуулахын тулд `osascript` ашиглаж байна. Энд бид үүнийг мэдэгдэл илгээхэд ашиглаж байна.
 
 :::note
-If you’re using the MongolGPT desktop app, it can send system notifications automatically when a response is ready or when a session errors.
+Хэрэв та MongolGPT ширээний програмыг ашиглаж байгаа бол хариу бэлэн болсон эсвэл сесс алдаа гарсан үед системийн мэдэгдлийг автоматаар илгээх боломжтой.
 :::
 
 ---
 
-### .env protection
+### .env хамгаалалт
 
-Prevent mongolgpt from reading `.env` files:
+mongolgpt файлыг `.env` уншихаас урьдчилан сэргийлэх:
 
 ```javascript title=".mongolgpt/plugins/env-protection.js"
 export const EnvProtection = async ({ project, client, $, directory, worktree }) => {
@@ -258,9 +258,9 @@ export const EnvProtection = async ({ project, client, $, directory, worktree })
 
 ---
 
-### Inject environment variables
+### Орчны хувьсагчдыг оруулах
 
-Inject environment variables into all shell execution (AI tools and user terminals):
+Бүх бүрхүүлийн гүйцэтгэлд орчны хувьсагчдыг оруулах (AI хэрэгслүүд болон хэрэглэгчийн терминалууд):
 
 ```javascript title=".mongolgpt/plugins/inject-env.js"
 export const InjectEnvPlugin = async () => {
@@ -275,9 +275,9 @@ export const InjectEnvPlugin = async () => {
 
 ---
 
-### Custom tools
+### Тусгай хэрэгсэл
 
-Plugins can also add custom tools to mongolgpt:
+Мөн залгаасууд нь mongolgpt-д захиалгат хэрэгслийг нэмж болно:
 
 ```ts title=".mongolgpt/plugins/custom-tools.ts"
 import { type Plugin, tool } from "@mongolgpt/plugin"
@@ -300,23 +300,23 @@ export const CustomToolsPlugin: Plugin = async (ctx) => {
 }
 ```
 
-The `tool` helper creates a custom tool that mongolgpt can call. It takes a Zod schema function and returns a tool definition with:
+`tool` туслагч нь mongolgpt дуудаж болох тусгай хэрэгсэл үүсгэдэг. Энэ нь Zod схемийн функцийг авч, багажийн тодорхойлолтыг буцаана:
 
-- `description`: What the tool does
-- `args`: Zod schema for the tool's arguments
-- `execute`: Function that runs when the tool is called
+- `description`: Энэ хэрэгсэл юу хийдэг
+- `args`: Хэрэгслийн аргументуудын Zod схем
+- `execute`: Хэрэгсэл дуудагдах үед ажилладаг функц
 
-Your custom tools will be available to mongolgpt alongside built-in tools.
+Таны захиалгат хэрэгслүүдийг суурилуулсан хэрэгслүүдийн хажуугаар mongolgpt хаягаар авах боломжтой.
 
 :::note
-If a plugin tool uses the same name as a built-in tool, the plugin tool takes precedence.
+Хэрэв залгаас хэрэгсэл нь суулгасан хэрэгсэлтэй ижил нэрийг ашигладаг бол залгаасын хэрэгсэл нь давуу эрхтэй болно.
 :::
 
 ---
 
-### Logging
+### Мод бэлтгэх
 
-Use `client.app.log()` instead of `console.log` for structured logging:
+Зохицуулсан бүртгэлд `console.log`-ийн оронд `client.app.log()` ашиглана уу:
 
 ```ts title=".mongolgpt/plugins/my-plugin.ts"
 export const MyPlugin = async ({ client }) => {
@@ -331,13 +331,13 @@ export const MyPlugin = async ({ client }) => {
 }
 ```
 
-Levels: `debug`, `info`, `warn`, `error`. See [SDK documentation](https://mongolgpt.duckdns.org/docs/sdk) for details.
+Түвшин: `debug`, `info`, `warn`, `error`. Дэлгэрэнгүйг [SDK баримт бичиг](https://mongolgpt.duckdns.org/docs/sdk) харна уу.
 
 ---
 
-### Compaction hooks
+### Нягтруулах дэгээ
 
-Customize the context included when a session is compacted:
+Сеансыг нягтруулах үед оруулсан контекстийг тохируулна уу:
 
 ```ts title=".mongolgpt/plugins/compaction.ts"
 import type { Plugin } from "@mongolgpt/plugin"
@@ -359,9 +359,9 @@ Include any state that should persist across compaction:
 }
 ```
 
-The `experimental.session.compacting` hook fires before the LLM generates a continuation summary. Use it to inject domain-specific context that the default compaction prompt would miss.
+LLM үргэлжлэл хураангуйг үүсгэхээс өмнө `experimental.session.compacting` дэгээ асна. Өгөгдмөл нягтруулах сануулгыг орхигдуулах домэйны тусгай контекст оруулахын тулд үүнийг ашиглана уу.
 
-You can also replace the compaction prompt entirely by setting `output.prompt`:
+Та `output.prompt`-г тохируулснаар нягтруулах хүсэлтийг бүхэлд нь сольж болно:
 
 ```ts title=".mongolgpt/plugins/custom-compaction.ts"
 import type { Plugin } from "@mongolgpt/plugin"
@@ -386,4 +386,4 @@ Format as a structured prompt that a new agent can use to resume work.
 }
 ```
 
-When `output.prompt` is set, it completely replaces the default compaction prompt. The `output.context` array is ignored in this case.
+`output.prompt` тохируулагдсан үед энэ нь анхдагч нягтруулах хүсэлтийг бүрэн орлоно. Энэ тохиолдолд `output.context` массивыг үл тоомсорлодог.

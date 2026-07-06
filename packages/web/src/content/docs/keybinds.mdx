@@ -1,9 +1,9 @@
 ---
 title: Keybinds
-description: Customize your keybinds.
+description: Товчлуураа тохируулна уу.
 ---
 
-MongolGPT has a list of keybinds that you can customize through `tui.json`.
+MongolGPT нь `tui.json`-ээр дамжуулан өөрчлөх боломжтой товчлууруудын жагсаалттай.
 
 ```json title="tui.json"
 {
@@ -179,35 +179,35 @@ MongolGPT has a list of keybinds that you can customize through `tui.json`.
 ```
 
 :::note
-On Windows, the defaults for `input_undo` and `terminal_suspend` are different:
+Windows дээр `input_undo` болон `terminal_suspend`-н өгөгдмөл нь өөр байна:
 
-- `input_undo` defaults to `ctrl+z,ctrl+-,super+z` when it is not explicitly configured. The `ctrl+z` binding is added because Windows terminals do not support POSIX suspend.
-- `terminal_suspend` is forced to
-one` because native Windows terminals do not support POSIX suspend.
+- `input_undo` нь тодорхой тохируулагдаагүй үед анхдагч нь `ctrl+z,ctrl+-,super+z` байна. Windows терминалууд нь POSIX түр зогсоохыг дэмждэггүй тул `ctrl+z` холболт нэмэгдсэн.
+- Төрөлхийн Windows терминалууд нь POSIX түр зогсоохыг дэмждэггүй тул `terminal_suspend` нь
+one` гэж албаддаг.
   :::
 
 ---
 
-## Leader Key
+## Удирдагч түлхүүр
 
-MongolGPT uses a `leader` key for many keybinds. This avoids conflicts in your terminal.
+MongolGPT нь олон товчлуурын холбоосын хувьд `leader` товчлуурыг ашигладаг. Энэ нь таны терминал дахь зөрчилдөөнөөс зайлсхийх болно.
 
-By default, `ctrl+x` is the leader key and many actions require you to first press the leader key and then the shortcut. For example, to start a new session you first press `ctrl+x` and then press
-`.
+Анхдагч байдлаар, `ctrl+x` нь удирдагч түлхүүр бөгөөд олон үйлдэл хийхдээ эхлээд ахлагч товчийг дараа нь товчлолыг дарахыг шаарддаг. Жишээлбэл, шинэ сесс эхлүүлэхийн тулд эхлээд `ctrl+x`, дараа нь
+` дарна уу.
 
-You don't need to use a leader key for your keybinds but we recommend doing so.
+Та товчлууруудаа удирдах түлхүүр ашиглах шаардлагагүй, гэхдээ бид үүнийг хийхийг зөвлөж байна.
 
-Some navigation keybinds intentionally do not use the leader key by default. For subagent sessions, the defaults are `session_child_first` = `<leader>down`, `session_child_cycle` = `right`, `session_child_cycle_reverse` = `left`, and `session_parent` = `up`.
+Зарим навигацийн товчлуурууд нь анхдагчаар удирдагч товчлуурыг санаатайгаар ашигладаггүй. Дэд агент сешнүүдийн хувьд өгөгдмөл нь `session_child_first` = `<leader>down`, `session_child_cycle` = `right`, `session_child_cycle_reverse` = `left`, `session_parent` = `up`.
 
-`leader_timeout` controls how long MongolGPT waits for the next key after the leader key. It defaults to `2000` milliseconds.
+`leader_timeout` нь удирдагч товчлуурын дараа дараагийн түлхүүрийг хэр удаан хүлээхийг MongolGPT хянадаг. Энэ нь анхдагчаар `2000` миллисекунд байна.
 
 ---
 
-## Binding Values
+## Холбох утгууд
 
-A string can contain one shortcut or multiple comma-separated shortcuts. You can also use an array for multiple shortcuts.
+Мөр нь нэг товчлол эсвэл таслалаар тусгаарлагдсан олон товчлол агуулж болно. Та мөн олон товчлолд массив ашиглаж болно.
 
-For advanced cases, use an object with `key`, `event`, `preventDefault`, or `fallthrough`.
+Нарийвчилсан тохиолдлуудын хувьд `key`, `event`, `preventDefault` эсвэл `fallthrough` бүхий объектыг ашиглана уу.
 
 ```json title="tui.json"
 {
@@ -224,9 +224,9 @@ For advanced cases, use an object with `key`, `event`, `preventDefault`, or `fal
 
 ---
 
-## Disable Keybind
+## Keybind-г идэвхгүй болгох
 
-You can disable a keybind by adding the key to `tui.json` with a value of `"none"` or `false`.
+Та `tui.json` дээр `"none"` эсвэл `false` гэсэн утгатай түлхүүр нэмснээр товчлуурын холбоосыг идэвхгүй болгож болно.
 
 ```json title="tui.json"
 {
@@ -239,41 +239,41 @@ You can disable a keybind by adding the key to `tui.json` with a value of `"none
 
 ---
 
-## Desktop Prompt Shortcuts
+## Ширээний програмын товчлолууд
 
-The MongolGPT desktop app prompt input supports common Readline/Emacs-style shortcuts for editing text. These are built-in and currently not configurable via `mongolgpt.json`.
+MongolGPT ширээний програмын шуурхай оролт нь текст засварлах нийтлэг Readline/Emacs маягийн товчлолуудыг дэмждэг. Эдгээр нь суурилагдсан бөгөөд одоогоор `mongolgpt.json`-ээр тохируулах боломжгүй.
 
-| Shortcut | Action                                   |
+| Товчлол | Үйлдэл |
 | -------- | ---------------------------------------- |
-| `ctrl+a` | Move to start of current line            |
-| `ctrl+e` | Move to end of current line              |
-| `ctrl+b` | Move cursor back one character           |
-| `ctrl+f` | Move cursor forward one character        |
-| `alt+b`  | Move cursor back one word                |
-| `alt+f`  | Move cursor forward one word             |
-| `ctrl+d` | Delete character under cursor            |
-| `ctrl+k` | Kill to end of line                      |
-| `ctrl+u` | Kill to start of line                    |
-| `ctrl+w` | Kill previous word                       |
-| `alt+d`  | Kill next word                           |
-| `ctrl+t` | Transpose characters                     |
-| `ctrl+g` | Cancel popovers / abort running response |
+| `ctrl+a` | Одоогийн мөрийн эхлэл рүү шилжих |
+| `ctrl+e` | Одоогийн мөрийн төгсгөл рүү шилжих |
+| `ctrl+b` | Курсорыг нэг тэмдэгтээр ухраах |
+| `ctrl+f` | Курсорыг нэг тэмдэгт урагшлуулах |
+| `alt+b` | Курсорыг нэг үг ухраах |
+| `alt+f` | Курсорыг нэг үг урагшлуулах |
+| `ctrl+d` | Курсорын доорх тэмдэгтийг устгах |
+| `ctrl+k` | Мөрийн төгсгөл хүртэл алах |
+| `ctrl+u` | Мөр эхлэх хүртэл алах |
+| `ctrl+w` | Өмнөх үгийг алах |
+| `alt+d` | Дараагийн үгийг алах |
+| `ctrl+t` | Тэмдэгтүүдийг шилжүүлэх |
+| `ctrl+g` | Поповеруудыг цуцлах / ажиллаж байгаа хариултыг зогсоох |
 
 ---
 
 ## Shift+Enter
 
-Some terminals don't send modifier keys with Enter by default. You may need to configure your terminal to send `Shift+Enter` as an escape sequence.
+Зарим терминалууд өгөгдмөлөөр Enter-тэй өөрчлөх түлхүүрүүдийг илгээдэггүй. Та `Shift+Enter`-г зугтах дараалал болгон илгээхийн тулд терминалаа тохируулах шаардлагатай байж магадгүй.
 
-### Windows Terminal
+### Windows Терминал
 
-Open your `settings.json` at:
+`settings.json`-г нээнэ үү:
 
 ```
 %LOCALAPPDATA%\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json
 ```
 
-Add this to the root-level `actions` array:
+Үүнийг root түвшний `actions` массивт нэмнэ үү:
 
 ```json
 "actions": [
@@ -287,7 +287,7 @@ Add this to the root-level `actions` array:
 ]
 ```
 
-Add this to the root-level `keybindings` array:
+Үүнийг root түвшний `keybindings` массивт нэмнэ үү:
 
 ```json
 "keybindings": [
@@ -298,4 +298,4 @@ Add this to the root-level `keybindings` array:
 ]
 ```
 
-Save the file and restart Windows Terminal or open a new tab.
+Файлыг хадгалаад Windows Терминалыг дахин эхлүүлэх эсвэл шинэ таб нээнэ үү.

@@ -1,125 +1,125 @@
 ---
 title: Zen
-description: Curated list of models provided by MongolGPT.
+description: MongolGPT өгсөн загваруудын жагсаалт.
 ---
 
 import config from "../../../config.mjs"
 export const console = config.console
 export const email = `mailto:${config.email}`
 
-MongolGPT Zen is a list of tested and verified models provided by the MongolGPT team.
+MongolGPT Zen бол MongolGPT багийн өгсөн туршиж, баталгаажуулсан загваруудын жагсаалт юм.
 
-Zen works like any other provider in MongolGPT. You login to MongolGPT Zen and get
-your API key. It's **completely optional** and you don't need to use it to use
+Zen нь MongolGPT дахь бусад үйлчилгээ үзүүлэгчтэй адил ажилладаг. Та MongolGPT Zen руу нэвтэрч, аваарай
+таны API түлхүүр. Энэ нь **бүрэн сонголттой** бөгөөд ашиглахын тулд үүнийг ашиглах шаардлагагүй
 MongolGPT.
 
 ---
 
-## Background
+## Дэвсгэр
 
-There are a large number of models out there but only a few of
-these models work well as coding agents. Additionally, most providers are
-configured very differently; so you get very different performance and quality.
+Маш олон тооны загварууд байдаг, гэхдээ цөөхөн нь л байдаг
+Эдгээр загварууд нь кодлогчийн хувьд сайн ажилладаг. Үүнээс гадна ихэнх үйлчилгээ үзүүлэгчид байдаг
+маш өөрөөр тохируулагдсан; Ингэснээр та маш өөр гүйцэтгэл, чанарыг олж авах болно.
 
 :::tip
-We tested a select group of models and providers that work well with MongolGPT.
+Бид MongolGPT-тэй сайн ажилладаг загвар, үйлчилгээ үзүүлэгчдийн сонгогдсон бүлгийг туршиж үзсэн.
 :::
 
-So if you are using a model through something like OpenRouter, you can never be
-sure if you are getting the best version of the model you want.
+Хэрэв та OpenRouter шиг загвар ашиглаж байгаа бол хэзээ ч байж чадахгүй
+Та хүссэн загварынхаа хамгийн сайн хувилбарыг авч байгаа эсэхээ шалгаарай.
 
-To fix this, we did a couple of things:
+Үүнийг засахын тулд бид хэд хэдэн зүйлийг хийсэн:
 
-1. We tested a select group of models and talked to their teams about how to
-   best run them.
-2. We then worked with a few providers to make sure these were being served
-   correctly.
-3. Finally, we benchmarked the combination of the model/provider and came up
-   with a list that we feel good recommending.
+1. Бид сонгосон загвар өмсөгчдийг туршиж үзээд, хэрхэн хийх талаар багуудтай нь ярилцсан
+   тэднийг ажиллуулах нь дээр.
+2. Дараа нь бид эдгээр үйлчилгээ үзүүлж байгаа эсэхийг шалгахын тулд цөөн хэдэн үйлчилгээ үзүүлэгчтэй ажилласан
+   зөв.
+3. Эцэст нь бид загвар/үйлчилгээ үзүүлэгчийн хослолыг харьцуулж үзээд гарч ирлээ
+   Бидний санал болгож буй жагсаалтын хамт.
 
-MongolGPT Zen is an AI gateway that gives you access to these models.
-
----
-
-## How it works
-
-MongolGPT Zen works like any other provider in MongolGPT.
-
-1. You sign in to **<a href={console}>MongolGPT Zen</a>**, add your billing
-   details, and copy your API key.
-2. You run the `/connect` command in the TUI, select MongolGPT Zen, and paste your API key.
-3. Run `/models` in the TUI to see the list of models we recommend.
-
-You are charged per request and you can add credits to your account.
+MongolGPT Zen нь эдгээр загварт нэвтрэх боломжийг олгодог AI гарц юм.
 
 ---
 
-## Endpoints
+## Энэ хэрхэн ажилладаг
 
-You can also access our models through the following API endpoints.
+MongolGPT Zen нь MongolGPT дахь бусад үйлчилгээ үзүүлэгчтэй адил ажилладаг.
 
-| Model                  | Model ID               | Endpoint                                                       | AI SDK Package              |
-| ---------------------- | ---------------------- | -------------------------------------------------------------- | --------------------------- |
-| GPT 5.5                | gpt-5.5                | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.5 Pro            | gpt-5.5-pro            | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.4                | gpt-5.4                | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.4 Pro            | gpt-5.4-pro            | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.4 Mini           | gpt-5.4-mini           | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.4 Nano           | gpt-5.4-nano           | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.3 Codex          | gpt-5.3-codex          | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.3 Codex Spark    | gpt-5.3-codex-spark    | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.2                | gpt-5.2                | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.2 Codex          | gpt-5.2-codex          | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.1                | gpt-5.1                | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.1 Codex          | gpt-5.1-codex          | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.1 Codex Max      | gpt-5.1-codex-max      | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5.1 Codex Mini     | gpt-5.1-codex-mini     | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5                  | gpt-5                  | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5 Codex            | gpt-5-codex            | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| GPT 5 Nano             | gpt-5-nano             | `https://mongolgpt.duckdns.org/zen/v1/responses`               | `@ai-sdk/openai`            |
-| Claude Fable 5         | claude-fable-5         | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Claude Opus 4.8        | claude-opus-4-8        | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Claude Opus 4.7        | claude-opus-4-7        | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Claude Opus 4.6        | claude-opus-4-6        | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Claude Opus 4.5        | claude-opus-4-5        | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Claude Opus 4.1        | claude-opus-4-1        | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Claude Sonnet 4.6      | claude-sonnet-4-6      | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Claude Sonnet 4.5      | claude-sonnet-4-5      | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Claude Sonnet 4        | claude-sonnet-4        | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Claude Haiku 4.5       | claude-haiku-4-5       | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Claude Haiku 3.5       | claude-3-5-haiku       | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Gemini 3.5 Flash       | gemini-3.5-flash       | `https://mongolgpt.duckdns.org/zen/v1/models/gemini-3.5-flash` | `@ai-sdk/google`            |
-| Gemini 3.1 Pro         | gemini-3.1-pro         | `https://mongolgpt.duckdns.org/zen/v1/models/gemini-3.1-pro`   | `@ai-sdk/google`            |
-| Gemini 3 Flash         | gemini-3-flash         | `https://mongolgpt.duckdns.org/zen/v1/models/gemini-3-flash`   | `@ai-sdk/google`            |
-| Qwen3.7 Max            | qwen3.7-max            | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Qwen3.7 Plus           | qwen3.7-plus           | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Qwen3.6 Plus           | qwen3.6-plus           | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| Qwen3.5 Plus           | qwen3.5-plus           | `https://mongolgpt.duckdns.org/zen/v1/messages`                | `@ai-sdk/anthropic`         |
-| DeepSeek V4 Pro        | deepseek-v4-pro        | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| DeepSeek V4 Flash      | deepseek-v4-flash      | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| MiniMax M2.7           | minimax-m2.7           | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| MiniMax M2.5           | minimax-m2.5           | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| GLM 5.2                | glm-5.2                | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| GLM 5.1                | glm-5.1                | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| GLM 5                  | glm-5                  | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| Kimi K2.5              | kimi-k2.5              | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| Kimi K2.6              | kimi-k2.6              | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| Grok Build 0.1         | grok-build-0.1         | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| Big Pickle             | big-pickle             | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| MiMo-V2.5 Free         | mimo-v2.5-free         | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| North Mini Code Free   | north-mini-code-free   | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| Nemotron 3 Ultra Free  | nemotron-3-ultra-free  | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
-| DeepSeek V4 Flash Free | deepseek-v4-flash-free | `https://mongolgpt.duckdns.org/zen/v1/chat/completions`        | `@ai-sdk/openai-compatible` |
+1. Та **<a href={console}>MongolGPT Zen</a>** руу нэвтэрч, тооцоогоо нэмнэ үү.
+   дэлгэрэнгүй мэдээлэл болон API түлхүүрээ хуулна уу.
+2. Та TUI-д `/connect` командыг ажиллуулж, MongolGPT Zen-г сонгоод API товчлуураа оруулна уу.
+3. Бидний санал болгож буй загваруудын жагсаалтыг харахын тулд TUI дээр `/models` гэж ажиллуул.
 
-The [model id](/docs/config/#models) in your MongolGPT config
-uses the format `mongolgpt/<model-id>`. For example, for GPT 5.5, you would
-use `mongolgpt/gpt-5.5` in your config.
+Та хүсэлт бүрд төлбөр авах бөгөөд та дансандаа кредит нэмэх боломжтой.
 
 ---
 
-### Models
+## Төгсгөлийн цэгүүд
 
-You can fetch the full list of available models and their metadata from:
+Мөн та дараах API төгсгөлийн цэгүүдээр дамжуулан манай загварт хандах боломжтой.
+
+| Загвар | Загвар ID | Төгсгөлийн цэг | AI SDK Багц |
+| ---------------------- | ---------------------- | ---------------------------------------------------- | --------------------------- |
+| GPT 5.5 | gpt-5.5 | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.5 Pro | gpt-5.5-pro | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.4 | gpt-5.4 | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.4 Pro | gpt-5.4-pro | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.4 Мини | gpt-5.4-mini | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.4 Нано | gpt-5.4-нано | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.3 Кодекс | gpt-5.3-кодекс | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.3 Codex Spark | gpt-5.3-codex-spark | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.2 | gpt-5.2 | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.2 Кодекс | gpt-5.2-код | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.1 | gpt-5.1 | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.1 Кодекс | gpt-5.1-кодек | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.1 Codex Max | gpt-5.1-codex-max | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5.1 Codex Mini | gpt-5.1-codex-mini | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5 | gpt-5 | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5 Кодекс | gpt-5-кодекс | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| GPT 5 Нано | gpt-5-nano | `https://mongolgpt.duckdns.org/zen/v1/responses` | `@ai-sdk/openai` |
+| Claude Үлгэр 5 | claude-fable-5 | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Claude Opus 4.8 | claude-opus-4-8 | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Claude Opus 4.7 | claude-opus-4-7 | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Claude Opus 4.6 | claude-opus-4-6 | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Claude Opus 4.5 | claude-opus-4-5 | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Claude Opus 4.1 | claude-opus-4-1 | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Claude Sonnet 4.6 | claude-sonnet-4-6 | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Claude Sonnet 4.5 | claude-sonnet-4-5 | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Claude Sonnet 4 | claude-sonnet-4 | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Claude Хайку 4.5 | claude-haiku-4-5 | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Claude Хайку 3.5 | claude-3-5-хайку | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Gemini 3.5 Flash | gemini-3.5-флэш | `https://mongolgpt.duckdns.org/zen/v1/models/gemini-3.5-flash` | `@ai-sdk/google` |
+| Gemini 3.1 Pro | gemini-3.1-pro | `https://mongolgpt.duckdns.org/zen/v1/models/gemini-3.1-pro` | `@ai-sdk/google` |
+| Gemini 3 Flash | gemini-3-флэш | `https://mongolgpt.duckdns.org/zen/v1/models/gemini-3-flash` | `@ai-sdk/google` |
+| Qwen3.7 Макс | qwen3.7-макс | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Qwen3.7 Plus | qwen3.7-нэмэх | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Qwen3.6 Plus | qwen3.6-нэмэх | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| Qwen3.5 Plus | qwen3.5-нэмэх | `https://mongolgpt.duckdns.org/zen/v1/messages` | `@ai-sdk/anthropic` |
+| DeepSeek V4 Pro | deepseek-v4-pro | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| DeepSeek V4 Flash | deepseek-v4-flash | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| MiniMax M2.7 | минимакс-м2.7 | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| MiniMax M2.5 | минимакс-м2.5 | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| GLM 5.2 | glm-5.2 | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| GLM 5.1 | glm-5.1 | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| GLM 5 | glm-5 | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Kimi K2.5 | kimi-k2.5 | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Kimi K2.6 | kimi-k2.6 | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Grok Build 0.1 | grok-build-0.1 | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Том даршилсан ногоо | том даршилсан ногоо | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| MiMo-V2.5 Үнэгүй | mimo-v2.5 үнэгүй | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Хойд мини код үнэгүй | хойд мини кодгүй | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Nemotron 3 Ultra Free | nemotron-3-ultra-free | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| DeepSeek V4 Flash Free | deepseek-v4-flash-free | `https://mongolgpt.duckdns.org/zen/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+
+Таны MongolGPT тохиргооны [загварын ID](/docs/config/#models)
+`mongolgpt/<model-id>` форматыг ашигладаг. Жишээлбэл, GPT 5.5-ийн хувьд та үүнийг хийх болно
+тохиргоондоо `mongolgpt/gpt-5.5`-г ашиглана уу.
+
+---
+
+### Загварууд
+
+Та боломжтой загваруудын бүрэн жагсаалт болон тэдгээрийн мета өгөгдлийг дараахаас татаж авах боломжтой:
 
 ```
 https://mongolgpt.duckdns.org/zen/v1/models
@@ -127,190 +127,190 @@ https://mongolgpt.duckdns.org/zen/v1/models
 
 ---
 
-## Pricing
+## Үнэ
 
-We support a pay-as-you-go model. Below are the prices **per 1M tokens**.
+Бид төлбөрөө төлдөг загварыг дэмждэг. Доорх үнэ **1 сая жетон** тутамд байна.
 
-| Model                             | Input  | Output  | Cached Read | Cached Write |
+| Загвар | Оруулах | Гаралт | Кэш хийсэн Унших | Cached Write |
 | --------------------------------- | ------ | ------- | ----------- | ------------ |
-| Big Pickle                        | Free   | Free    | Free        | -            |
-| DeepSeek V4 Flash Free            | Free   | Free    | Free        | -            |
-| MiMo-V2.5 Free                    | Free   | Free    | Free        | -            |
-| North Mini Code Free              | Free   | Free    | Free        | -            |
-| Nemotron 3 Ultra Free             | Free   | Free    | Free        | -            |
-| MiniMax M2.7                      | $0.30  | $1.20   | $0.06       | $0.375       |
-| MiniMax M2.5                      | $0.30  | $1.20   | $0.06       | $0.375       |
-| GLM 5.2                           | $1.40  | $4.40   | $0.26       | -            |
-| GLM 5.1                           | $1.40  | $4.40   | $0.26       | -            |
-| GLM 5                             | $1.00  | $3.20   | $0.20       | -            |
-| Kimi K2.5                         | $0.60  | $3.00   | $0.10       | -            |
-| Kimi K2.6                         | $0.95  | $4.00   | $0.16       | -            |
-| Qwen3.7 Max                       | $2.50  | $7.50   | $0.50       | $3.125       |
-| Qwen3.7 Plus                      | $0.40  | $1.60   | $0.04       | $0.50        |
-| Qwen3.6 Plus                      | $0.50  | $3.00   | $0.05       | $0.625       |
-| Qwen3.5 Plus                      | $0.20  | $1.20   | $0.02       | $0.25        |
-| DeepSeek V4 Pro                   | $1.74  | $3.48   | $0.145      | -            |
-| DeepSeek V4 Flash                 | $0.14  | $0.28   | $0.028      | -            |
-| Grok Build 0.1                    | $1.00  | $2.00   | $0.20       | -            |
-| Claude Fable 5                    | $10.00 | $50.00  | $1.00       | $12.50       |
-| Claude Opus 4.8                   | $5.00  | $25.00  | $0.50       | $6.25        |
-| Claude Opus 4.7                   | $5.00  | $25.00  | $0.50       | $6.25        |
-| Claude Opus 4.6                   | $5.00  | $25.00  | $0.50       | $6.25        |
-| Claude Opus 4.5                   | $5.00  | $25.00  | $0.50       | $6.25        |
-| Claude Opus 4.1                   | $15.00 | $75.00  | $1.50       | $18.75       |
-| Claude Sonnet 4.6                 | $3.00  | $15.00  | $0.30       | $3.75        |
-| Claude Sonnet 4.5 (≤ 200K tokens) | $3.00  | $15.00  | $0.30       | $3.75        |
-| Claude Sonnet 4.5 (> 200K tokens) | $6.00  | $22.50  | $0.60       | $7.50        |
-| Claude Sonnet 4 (≤ 200K tokens)   | $3.00  | $15.00  | $0.30       | $3.75        |
-| Claude Sonnet 4 (> 200K tokens)   | $6.00  | $22.50  | $0.60       | $7.50        |
-| Claude Haiku 4.5                  | $1.00  | $5.00   | $0.10       | $1.25        |
-| Gemini 3.5 Flash                  | $1.50  | $9.00   | $0.15       | -            |
-| Gemini 3.1 Pro (≤ 200K tokens)    | $2.00  | $12.00  | $0.20       | -            |
-| Gemini 3.1 Pro (> 200K tokens)    | $4.00  | $18.00  | $0.40       | -            |
-| Gemini 3 Flash                    | $0.50  | $3.00   | $0.05       | -            |
-| GPT 5.5 (≤ 272K tokens)           | $5.00  | $30.00  | $0.50       | -            |
-| GPT 5.5 (> 272K tokens)           | $10.00 | $45.00  | $1.00       | -            |
-| GPT 5.5 Pro                       | $30.00 | $180.00 | $30.00      | -            |
-| GPT 5.4 (≤ 272K tokens)           | $2.50  | $15.00  | $0.25       | -            |
-| GPT 5.4 (> 272K tokens)           | $5.00  | $22.50  | $0.50       | -            |
-| GPT 5.4 Pro                       | $30.00 | $180.00 | $30.00      | -            |
-| GPT 5.4 Mini                      | $0.75  | $4.50   | $0.075      | -            |
-| GPT 5.4 Nano                      | $0.20  | $1.25   | $0.02       | -            |
-| GPT 5.3 Codex Spark               | $1.75  | $14.00  | $0.175      | -            |
-| GPT 5.3 Codex                     | $1.75  | $14.00  | $0.175      | -            |
-| GPT 5.2                           | $1.75  | $14.00  | $0.175      | -            |
-| GPT 5.2 Codex                     | $1.75  | $14.00  | $0.175      | -            |
-| GPT 5.1                           | $1.07  | $8.50   | $0.107      | -            |
-| GPT 5.1 Codex                     | $1.07  | $8.50   | $0.107      | -            |
-| GPT 5.1 Codex Max                 | $1.25  | $10.00  | $0.125      | -            |
-| GPT 5.1 Codex Mini                | $0.25  | $2.00   | $0.025      | -            |
-| GPT 5                             | $1.07  | $8.50   | $0.107      | -            |
-| GPT 5 Codex                       | $1.07  | $8.50   | $0.107      | -            |
-| GPT 5 Nano                        | $0.05  | $0.40   | $0.005      | -            |
+| Том даршилсан ногоо | Үнэгүй | Үнэгүй | Үнэгүй | - |
+| DeepSeek V4 Flash Free | Үнэгүй | Үнэгүй | Үнэгүй | - |
+| MiMo-V2.5 Үнэгүй | Үнэгүй | Үнэгүй | Үнэгүй | - |
+| Хойд мини код үнэгүй | Үнэгүй | Үнэгүй | Үнэгүй | - |
+| Nemotron 3 Ultra Free | Үнэгүй | Үнэгүй | Үнэгүй | - |
+| MiniMax M2.7 | $0.30 | $1.20 | $0.06 | $0.375 |
+| MiniMax M2.5 | $0.30 | $1.20 | $0.06 | $0.375 |
+| GLM 5.2 | $1.40 | $4.40 | $0.26 | - |
+| GLM 5.1 | $1.40 | $4.40 | $0.26 | - |
+| GLM 5 | $1.00 | $3.20 | $0.20 | - |
+| Kimi K2.5 | $0.60 | $3.00 | $0.10 | - |
+| Kimi K2.6 | $0.95 | $4.00 | $0.16 | - |
+| Qwen3.7 Макс | $2.50 | $7.50 | $0.50 | $3.125 |
+| Qwen3.7 Plus | $0.40 | $1.60 | $0.04 | $0.50 |
+| Qwen3.6 Plus | $0.50 | $3.00 | $0.05 | $0.625 |
+| Qwen3.5 Plus | $0.20 | $1.20 | $0.02 | $0.25 |
+| DeepSeek V4 Pro | $1.74 | $3.48 | $0.145 | - |
+| DeepSeek V4 Flash | $0.14 | $0.28 | $0.028 | - |
+| Grok Build 0.1 | $1.00 | $2.00 | $0.20 | - |
+| Claude Үлгэр 5 | $10.00 | $50.00 | $1.00 | $12.50 |
+| Claude Opus 4.8 | $5.00 | $25.00 | $0.50 | $6.25 |
+| Claude Opus 4.7 | $5.00 | $25.00 | $0.50 | $6.25 |
+| Claude Opus 4.6 | $5.00 | $25.00 | $0.50 | $6.25 |
+| Claude Opus 4.5 | $5.00 | $25.00 | $0.50 | $6.25 |
+| Claude Opus 4.1 | $15.00 | $75.00 | $1.50 | $18.75 |
+| Claude Sonnet 4.6 | $3.00 | $15.00 | $0.30 | $3.75 |
+| Claude Sonnet 4.5 (≤ 200K жетон) | $3.00 | $15.00 | $0.30 | $3.75 |
+| Claude Sonnet 4.5 (> 200K жетон) | $6.00 | $22.50 | $0.60 | $7.50 |
+| Claude Sonnet 4 (≤ 200K жетон) | $3.00 | $15.00 | $0.30 | $3.75 |
+| Claude Sonnet 4 (> 200K жетон) | $6.00 | $22.50 | $0.60 | $7.50 |
+| Claude Хайку 4.5 | $1.00 | $5.00 | $0.10 | $1.25 |
+| Gemini 3.5 Flash | $1.50 | $9.00 | $0.15 | - |
+| Gemini 3.1 Pro (≤ 200К жетон) | $2.00 | $12.00 | $0.20 | - |
+| Gemini 3.1 Pro (> 200К жетон) | $4.00 | $18.00 | $0.40 | - |
+| Gemini 3 Flash | $0.50 | $3.00 | $0.05 | - |
+| GPT 5.5 (≤ 272K жетон) | $5.00 | $30.00 | $0.50 | - |
+| GPT 5.5 (> 272К жетон) | $10.00 | $45.00 | $1.00 | - |
+| GPT 5.5 Pro | $30.00 | $180.00 | $30.00 | - |
+| GPT 5.4 (≤ 272K жетон) | $2.50 | $15.00 | $0.25 | - |
+| GPT 5.4 (> 272К жетон) | $5.00 | $22.50 | $0.50 | - |
+| GPT 5.4 Pro | $30.00 | $180.00 | $30.00 | - |
+| GPT 5.4 Мини | $0.75 | $4.50 | $0.075 | - |
+| GPT 5.4 Нано | $0.20 | $1.25 | $0.02 | - |
+| GPT 5.3 Codex Spark | $1.75 | $14.00 | $0.175 | - |
+| GPT 5.3 Кодекс | $1.75 | $14.00 | $0.175 | - |
+| GPT 5.2 | $1.75 | $14.00 | $0.175 | - |
+| GPT 5.2 Кодекс | $1.75 | $14.00 | $0.175 | - |
+| GPT 5.1 | $1.07 | $8.50 | $0.107 | - |
+| GPT 5.1 Кодекс | $1.07 | $8.50 | $0.107 | - |
+| GPT 5.1 Codex Max | $1.25 | $10.00 | $0.125 | - |
+| GPT 5.1 Codex Mini | $0.25 | $2.00 | $0.025 | - |
+| GPT 5 | $1.07 | $8.50 | $0.107 | - |
+| GPT 5 Кодекс | $1.07 | $8.50 | $0.107 | - |
+| GPT 5 Нано | $0.05 | $0.40 | $0.005 | - |
 
-You might notice _Claude Haiku 3.5_ in your usage history. This is a [low cost model](/docs/config/#models) that's used to generate the titles of your sessions.
+Та өөрийн хэрэглээний түүхэнд _Claude Haiku 3.5_-г анзаарч магадгүй. Энэ бол [бага өртөгтэй загвар](/docs/config/#models) бөгөөд таны сешнүүдийн гарчгийг үүсгэхэд ашигладаг.
 
 :::note
-Credit card fees are passed along at cost (4.4% + $0.30 per transaction); we don't charge anything beyond that.
+Зээлийн картын хураамжийг өөрийн өртгөөр (4.4% + гүйлгээ бүрт $0.30) шилжүүлдэг; Бид үүнээс илүү төлбөр авахгүй.
 :::
 
-The free models:
+Үнэгүй загварууд:
 
-- DeepSeek V4 Flash Free is available on MongolGPT for a limited time. The team is using this time to collect feedback and improve the model.
-- MiMo-V2.5 Free is available on MongolGPT for a limited time. The team is using this time to collect feedback and improve the model.
-- North Mini Code Free is available on MongolGPT for a limited time. The team is using this time to collect feedback and improve the model.
-- Nemotron 3 Ultra Free is available on MongolGPT for a limited time. The team is using this time to collect feedback and improve the model.
-- Big Pickle is a stealth model that's free on MongolGPT for a limited time. The team is using this time to collect feedback and improve the model.
+- DeepSeek V4 Flash Free нь MongolGPT дээр хязгаарлагдмал хугацаанд ашиглах боломжтой. Багийнхан энэ цагийг санал хүсэлтийг цуглуулж, загварыг сайжруулахад ашиглаж байна.
+- MiMo-V2.5 үнэгүй нь MongolGPT дээр хязгаарлагдмал хугацаанд ашиглах боломжтой. Багийнхан энэ цагийг санал хүсэлтийг цуглуулж, загварыг сайжруулахад ашиглаж байна.
+- North Mini Code Free нь MongolGPT дээр хязгаарлагдмал хугацаанд ашиглах боломжтой. Багийнхан энэ цагийг санал хүсэлтийг цуглуулж, загварыг сайжруулахад ашиглаж байна.
+- Nemotron 3 Ultra Free програмыг MongolGPT хаягаар хязгаарлагдмал хугацаагаар авах боломжтой. Багийнхан энэ цагийг санал хүсэлтийг цуглуулж, загварыг сайжруулахад ашиглаж байна.
+- Big Pickle нь MongolGPT дээр хязгаарлагдмал хугацаанд үнэ төлбөргүй байдаг үл үзэгдэх загвар юм. Багийнхан энэ цагийг санал хүсэлтийг цуглуулж, загварыг сайжруулахад ашиглаж байна.
 
-<a href={email}>Contact us</a> if you have any questions.
-
----
-
-### Auto-reload
-
-If your balance goes below $5, Zen will automatically reload $20.
-
-You can change the auto-reload amount. You can also disable auto-reload entirely.
+Хэрэв танд асуух зүйл байвал <a href={email}>Бидэнтэй холбогдоно уу</a>.
 
 ---
 
-### Monthly limits
+### Автоматаар дахин ачаалах
 
-You can also set a monthly usage limit for the entire workspace and for each
-member of your team.
+Хэрэв таны үлдэгдэл 5 доллараас доош орвол Zen автоматаар 20 долларыг дахин ачаална.
 
-For example, let's say you set a monthly usage limit to $20, Zen will not use
-more than $20 in a month. But if you have auto-reload enabled, Zen might end up
-charging you more than $20 if your balance goes below $5.
+Та автоматаар дахин ачаалах хэмжээг өөрчилж болно. Та мөн автоматаар дахин ачаалахыг бүхэлд нь идэвхгүй болгож болно.
 
 ---
 
-### Deprecated models
+### Сарын хязгаар
 
-| Model              | Deprecation date |
+Та мөн бүхэл бүтэн ажлын талбар болон тус бүрийн хувьд сарын хэрэглээний хязгаарыг тогтоож болно
+танай багийн гишүүн.
+
+Жишээлбэл, та сарын хэрэглээний хязгаарыг 20 доллараар тогтоосон гэж бодъё, Zen ашиглахгүй
+сард 20 гаруй доллар. Гэхдээ хэрэв та автоматаар дахин ачаалахыг идэвхжүүлсэн бол Zen дуусч магадгүй юм
+Хэрэв таны үлдэгдэл 5 доллараас доош болвол 20 доллараас дээш төлбөр авах болно.
+
+---
+
+### Хуучирсан загварууд
+
+| Загвар | Хасагдах огноо |
 | ------------------ | ---------------- |
-| GPT 5.2 Codex      | July 23, 2026    |
-| GPT 5.1 Codex      | July 23, 2026    |
-| GPT 5.1 Codex Max  | July 23, 2026    |
-| GPT 5.1 Codex Mini | July 23, 2026    |
-| GPT 5 Codex        | July 23, 2026    |
-| Claude Sonnet 4    | June 15, 2026    |
-| GLM 5              | May 14, 2026     |
-| MiniMax M2.1       | March 15, 2026   |
-| GLM 4.7            | March 15, 2026   |
-| GLM 4.6            | March 15, 2026   |
-| Gemini 3 Pro       | March 9, 2026    |
-| Kimi K2 Thinking   | March 6, 2026    |
-| Kimi K2            | March 6, 2026    |
-| Claude Haiku 3.5   | Feb 16, 2026     |
-| Qwen3 Coder 480B   | Feb 6, 2026      |
+| GPT 5.2 Кодекс | 2026 оны 7 сарын 23 |
+| GPT 5.1 Кодекс | 2026 оны 7 сарын 23 |
+| GPT 5.1 Codex Max | 2026 оны 7 сарын 23 |
+| GPT 5.1 Codex Mini | 2026 оны 7 сарын 23 |
+| GPT 5 Кодекс | 2026 оны 7 сарын 23 |
+| Claude Sonnet 4 | 2026 оны 6 сарын 15 |
+| GLM 5 | 2026 оны тавдугаар сарын 14 |
+| MiniMax M2.1 | 2026 оны 3 сарын 15 |
+| GLM 4.7 | 2026 оны 3 сарын 15 |
+| GLM 4.6 | 2026 оны 3 сарын 15 |
+| Gemini 3 Pro | 2026 оны 3 сарын 9 |
+| Kimi K2 Thinking | 2026 оны 3 сарын 6 |
+| Kimi K2 | 2026 оны 3 сарын 6 |
+| Claude Хайку 3.5 | 2026 оны 2 сарын 16 |
+| Qwen3 кодлогч 480B | 2026 оны 2 сарын 6 |
 
 ---
 
-## Privacy
+## Нууцлал
 
-All our models are hosted in the US. Our providers follow a zero-retention policy and do not use your data for model training, with the following exceptions:
+Манай бүх загварууд US хаягаар байршдаг. Манай үйлчилгээ үзүүлэгчид хадгаламжийг тэглэх бодлогыг баримталдаг бөгөөд дараах тохиолдлуудыг эс тооцвол таны өгөгдлийг загвар сургалтанд ашиглахгүй.
 
-- Big Pickle: During its free period, collected data may be used to improve the model.
-- DeepSeek V4 Flash Free: During its free period, collected data may be used to improve the model.
-- MiMo-V2.5 Free: During its free period, collected data may be used to improve the model.
-- North Mini Code Free: During its free period, collected data may be retained and used to improve the model. Do not submit personal or confidential data. See our [Terms of Use](https://cohere.com/terms-of-use) and [Privacy Policy](https://cohere.com/privacy).
-- Nemotron 3 Ultra Free (NVIDIA free endpoints): Trial use only — do not submit personal or confidential data. Your use is logged for security purposes and to improve NVIDIA products and services. The logged session data for improvement purposes is not linked to your identity or any persistent identifier. For more information about our data processing practices, see our [Privacy Policy](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf). By interacting with this endpoint, you consent to our collection, recording, and use of such information and the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf).
-- OpenAI APIs: Requests are retained for 30 days in accordance with [OpenAI's Data Policies](https://platform.openai.com/docs/guides/your-data).
-- Anthropic APIs: Requests are retained for 30 days in accordance with [Anthropic's Data Policies](https://docs.anthropic.com/en/docs/claude-code/data-usage).
+- Том даршилсан ногоо: Чөлөөт хугацаанд цуглуулсан өгөгдлийг загварыг сайжруулахад ашиглаж болно.
+- DeepSeek V4 Flash Free: Үнэгүй хугацаанд цуглуулсан өгөгдлийг загварыг сайжруулахад ашиглаж болно.
+- MiMo-V2.5 Үнэгүй: Чөлөөт хугацаанд цуглуулсан өгөгдлийг загварыг сайжруулахад ашиглаж болно.
+- North Mini Code Free: Үнэгүй хугацаанд цуглуулсан өгөгдлийг хадгалж, загварыг сайжруулахад ашиглаж болно. Хувийн болон нууц мэдээллийг бүү илгээ. Манай [Хэрэглэх нөхцөл](https://cohere.com/terms-of-use) болон [Нууцлалын бодлого](https://cohere.com/privacy) харна уу.
+- Nemotron 3 Ultra Free (NVIDIA үнэгүй төгсгөлийн цэгүүд): Зөвхөн туршилтын хэрэглээ - хувийн болон нууц мэдээллийг бүү илгээ. Таны хэрэглээг аюулгүй байдлын зорилгоор болон NVIDIA бүтээгдэхүүн, үйлчилгээг сайжруулах зорилгоор бүртгэсэн. Сайжруулах зорилгоор бүртгэлд орсон сессийн өгөгдөл нь таны таниулбар эсвэл байнгын танигчтай холбоогүй. Манай өгөгдөл боловсруулах практикийн талаар дэлгэрэнгүй мэдээллийг манай[Нууцлалын бодлого](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) хаягаас авна уу. Энэхүү төгсгөлийн цэгтэй харилцсанаар та ийм мэдээллийг цуглуулах, бүртгэх, ашиглахыг зөвшөөрч, [NVIDIA API туршилтын үйлчилгээний нөхцөл](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf).
+- OpenAI APIs: Хүсэлтийг [OpenAI-ийн мэдээллийн бодлого](https://platform.openai.com/docs/guides/your-data) дагуу 30 хоногийн турш хадгална.
+- Anthropic APIs: Хүсэлтийг [Антропикийн мэдээллийн бодлого](https://docs.anthropic.com/en/docs/claude-code/data-usage) дагуу 30 хоногийн турш хадгална.
 
 ---
 
-## For Teams
+## Багуудад зориулав
 
-Zen also works great for teams. You can invite teammates, assign roles, curate
-the models your team uses, and more.
+Зэн ч гэсэн багуудад маш сайн ажилладаг. Та багын найзуудаа урих, үүрэг гүйцэтгэх, удирдах боломжтой
+танай багийн ашигладаг загварууд болон бусад.
 
 :::note
-Workspaces are currently free for teams as a part of the beta.
+Ажлын талбарууд нь бета хувилбарын нэг хэсэг болгон багуудад одоогоор үнэ төлбөргүй байдаг.
 :::
 
-Managing your workspace is currently free for teams as a part of the beta. We'll be
-sharing more details on the pricing soon.
+Өөрийн ажлын талбарыг удирдах нь бета хувилбарын нэг хэсэг болох багууд одоогоор үнэ төлбөргүй байна. Бид байх болно
+үнийн талаар дэлгэрэнгүй мэдээллийг удахгүй хуваалцах болно.
 
 ---
 
-### Roles
+### Дүрүүд
 
-You can invite teammates to your workspace and assign roles:
+Та ажлын байрандаа багийн найзуудаа урьж, үүрэг даалгавар өгч болно.
 
-- **Admin**: Manage models, members, API keys, and billing
-- **Member**: Manage only their own API keys
+- **Админ**: Загвар, гишүүд, API түлхүүрүүд болон тооцоог удирдах
+- **Гишүүн**: Зөвхөн өөрийн API түлхүүрүүдийг удирдах
 
-Admins can also set monthly spending limits for each member to keep costs under control.
-
----
-
-### Model access
-
-Admins can enable or disable specific models for the workspace. Requests made to a disabled model will return an error.
-
-This is useful for cases where you want to disable the use of a model that
-collects data.
+Админууд зардлаа хяналтандаа байлгахын тулд гишүүн бүрт сар бүр зардлын хязгаар тогтоож болно.
 
 ---
 
-### Bring your own key
+### Загварын хандалт
 
-You can use your own OpenAI or Anthropic API keys while still accessing other models in Zen.
+Админууд ажлын талбарт зориулсан тодорхой загварыг идэвхжүүлж эсвэл идэвхгүй болгож болно. Тахир дутуу загварт хийсэн хүсэлт нь алдаа гаргах болно.
 
-When you use your own keys, tokens are billed directly by the provider, not by Zen.
-
-For example, your organization might already have a key for OpenAI or Anthropic
-and you want to use that instead of the one that Zen provides.
+Энэ нь тухайн загварын хэрэглээг идэвхгүй болгохыг хүссэн тохиолдолд хэрэг болно
+өгөгдөл цуглуулдаг.
 
 ---
 
-## Goals
+### Өөрийнхөө түлхүүрийг авчир
 
-We created MongolGPT Zen to:
+Та Zen дээрх бусад загварт хандахын зэрэгцээ өөрийн OpenAI эсвэл Anthropic API түлхүүрүүдийг ашиглаж болно.
 
-1. **Benchmark** the best models/providers for coding agents.
-2. Have access to the **highest quality** options and not downgrade performance or route to cheaper providers.
-3. Pass along any **price drops** by selling at cost; so the only markup is to cover our processing fees.
-4. Have **no lock-in** by allowing you to use it with any other coding agent. And always let you use any other provider with MongolGPT as well.
+Таныг өөрийн түлхүүрийг ашиглах үед жетоныг Зэн биш харин үйлчилгээ үзүүлэгч шууд нэхэмжлэх болно.
+
+Жишээлбэл, танай байгууллага OpenAI эсвэл Anthropic гэсэн түлхүүртэй байж болно.
+мөн та Зэнгийн өгсөн нэгний оронд үүнийг ашиглахыг хүсч байна.
+
+---
+
+## Зорилго
+
+Бид MongolGPT Zen-г дараах зорилгоор үүсгэсэн:
+
+1. **Benchmark** кодлогч агентуудын шилдэг загвар/үзүүлэгч.
+2. **хамгийн чанартай** сонголтуудыг ашиглах боломжтой байх ба гүйцэтгэлийг бууруулж эсвэл хямд үйлчилгээ үзүүлэгч рүү чиглүүлэхгүй байх.
+3. Аливаа **үнийн бууралтыг** өртгөөр нь зарах; тиймээс цорын ганц тэмдэглэгээ нь бидний боловсруулалтын төлбөрийг нөхөх явдал юм.
+4. Өөр ямар ч кодлогчтой ашиглахыг зөвшөөрснөөр **түгжихгүй** байх. Мөн MongolGPT бүхий өөр үйлчилгээ үзүүлэгчийг үргэлж ашиглахыг зөвшөөрнө үү.

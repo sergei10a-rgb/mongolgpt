@@ -22,10 +22,10 @@ import { dict as tr } from "~/i18n/tr"
 export type Key = keyof typeof en
 export type Dict = Record<Key, string>
 
-const base = en satisfies Dict
+const base = { ...en, ...mn } satisfies Dict
 
 export function i18n(locale: Locale): Dict {
-  if (locale === "mn") return { ...base, ...mn }
+  if (locale === "mn") return base
   if (locale === "en") return base
   if (locale === "zh") return { ...base, ...zh }
   if (locale === "zht") return { ...base, ...zht }

@@ -1,17 +1,17 @@
 ---
 title: Tools
-description: Manage the tools an LLM can use.
+description: LLM-ийн ашиглаж болох хэрэгслүүдийг удирдах.
 ---
 
-Tools allow the LLM to perform actions in your codebase. MongolGPT comes with a set of built-in tools, but you can extend it with [custom tools](/docs/custom-tools) or [MCP servers](/docs/mcp-servers).
+Хэрэгслүүд нь LLM-д таны кодын санд үйлдэл хийхийг зөвшөөрдөг. MongolGPT суулгасан хэрэгслүүдийн хамт ирдэг боловч та үүнийг [захиалгат хэрэгслүүд](/docs/custom-tools) эсвэл [MCP серверүүд](/docs/mcp-servers)-ээр сунгаж болно.
 
-By default, all tools are **enabled** and don't need permission to run. You can control tool behavior through [permissions](/docs/permissions).
+Анхдагч байдлаар, бүх хэрэгслүүд **идэвхжсэн** бөгөөд ажиллуулах зөвшөөрөл шаардлагагүй. Та [permissions](/docs/permissions)-ээр дамжуулан багажийн ажиллагааг хянах боломжтой.
 
 ---
 
-## Configure
+## Тохируулах
 
-Use the `permission` field to control tool behavior. You can allow, deny, or require approval for each tool.
+Багажны ажиллагааг хянахын тулд `permission` талбарыг ашиглана уу. Та хэрэгсэл тус бүрийг зөвшөөрөх, татгалзах эсвэл зөвшөөрөл шаардах боломжтой.
 
 ```json title="mongolgpt.json"
 {
@@ -24,7 +24,7 @@ Use the `permission` field to control tool behavior. You can allow, deny, or req
 }
 ```
 
-You can also use wildcards to control multiple tools at once. For example, to require approval for all tools from an MCP server:
+Та мөн олон хэрэгслийг нэгэн зэрэг удирдахын тулд орлуулагч тэмдгийг ашиглаж болно. Жишээлбэл, MCP серверээс бүх хэрэгсэлд зөвшөөрөл шаардахын тулд:
 
 ```json title="mongolgpt.json"
 {
@@ -35,19 +35,19 @@ You can also use wildcards to control multiple tools at once. For example, to re
 }
 ```
 
-[Learn more](/docs/permissions) about configuring permissions.
+[Илүү ихийг мэдэж аваарай](/docs/permissions) зөвшөөрлийг тохируулах талаар.
 
 ---
 
-## Built-in
+## Баригдсан
 
-Here are all the built-in tools available in MongolGPT.
+MongolGPT-д байгаа бүх суурилуулсан хэрэгслүүд энд байна.
 
 ---
 
-### bash
+### баш
 
-Execute shell commands in your project environment.
+Төслийн орчинд бүрхүүлийн командуудыг гүйцэтгэнэ.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -58,14 +58,14 @@ Execute shell commands in your project environment.
 }
 ```
 
-This tool allows the LLM to run terminal commands like
-pm install`, `git status`, or any other shell command.
+Энэ хэрэгсэл нь LLM-д
+pm install`, `git status` эсвэл бусад бүрхүүлийн команд зэрэг терминалын командуудыг ажиллуулах боломжийг олгодог.
 
 ---
 
-### edit
+### засвар
 
-Modify existing files using exact string replacements.
+Яг мөр солих ашиглан одоо байгаа файлуудыг өөрчлөх.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -76,13 +76,13 @@ Modify existing files using exact string replacements.
 }
 ```
 
-This tool performs precise edits to files by replacing exact text matches. It's the primary way the LLM modifies code.
+Энэ хэрэгсэл нь текстийн яг таарч байгаа зүйлийг солих замаар файлд нарийн засвар хийдэг. Энэ нь LLM кодыг өөрчлөх үндсэн арга юм.
 
 ---
 
-### write
+### бичээрэй
 
-Create new files or overwrite existing ones.
+Шинэ файл үүсгэх эсвэл байгаа файлуудыг дарж бичих.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -93,17 +93,17 @@ Create new files or overwrite existing ones.
 }
 ```
 
-Use this to allow the LLM to create new files. It will overwrite existing files if they already exist.
+Үүнийг ашиглан LLM шинэ файл үүсгэхийг зөвшөөрнө үү. Энэ нь одоо байгаа файлууд байгаа бол тэдгээрийг дарж бичих болно.
 
 :::note
-The `write` tool is controlled by the `edit` permission, which covers all file modifications (`edit`, `write`, `apply_patch`).
+`write` хэрэгсэл нь файлын бүх өөрчлөлтийг (`edit`, `write`, `apply_patch`) хамарсан `edit` зөвшөөрлөөр хянагддаг.
 :::
 
 ---
 
-### read
+### уншсан
 
-Read file contents from your codebase.
+Кодын сангаас файлын агуулгыг уншина уу.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -114,13 +114,13 @@ Read file contents from your codebase.
 }
 ```
 
-This tool reads files and returns their contents. It supports reading specific line ranges for large files.
+Энэ хэрэгсэл нь файлуудыг уншиж, агуулгыг нь буцаадаг. Энэ нь том файлуудын тодорхой мөрийн хүрээг уншихыг дэмждэг.
 
 ---
 
 ### grep
 
-Search file contents using regular expressions.
+Ердийн илэрхийлэл ашиглан файлын агуулгыг хайх.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -131,13 +131,13 @@ Search file contents using regular expressions.
 }
 ```
 
-Fast content search across your codebase. Supports full regex syntax and file pattern filtering.
+Өөрийн кодын сангаас хурдан контент хайх. Бүрэн регекс синтакс болон файлын загвар шүүлтүүрийг дэмждэг.
 
 ---
 
-### glob
+### бөмбөрцөг
 
-Find files by pattern matching.
+Загвар тааруулах замаар файлуудыг олоорой.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -148,16 +148,16 @@ Find files by pattern matching.
 }
 ```
 
-Search for files using glob patterns like `**/*.js` or `src/**/*.ts`. Returns matching file paths sorted by modification time.
+`**/*.js` эсвэл `src/**/*.ts` гэх мэт бөмбөрцөг загваруудыг ашиглан файл хайх. Өөрчлөлтийн хугацаагаар эрэмбэлсэн тохирох файлын замыг буцаана.
 
 ---
 
-### lsp (experimental)
+### lsp (туршилтын)
 
-Interact with your configured LSP servers to get code intelligence features like definitions, references, hover info, and call hierarchy.
+Тодорхойлолт, лавлагаа, хулганын мэдээлэл, дуудлагын шатлал зэрэг кодын тагнуулын функцуудыг авахын тулд өөрийн тохируулсан LSP серверүүдтэйгээ харилцаж болно.
 
 :::note
-This tool is only available when `MONGOLGPT_EXPERIMENTAL_LSP_TOOL=true` (or `MONGOLGPT_EXPERIMENTAL=true`).
+Энэ хэрэгслийг зөвхөн `MONGOLGPT_EXPERIMENTAL_LSP_TOOL=true` (эсвэл `MONGOLGPT_EXPERIMENTAL=true`) үед ашиглах боломжтой.
 :::
 
 ```json title="mongolgpt.json" {4}
@@ -169,15 +169,15 @@ This tool is only available when `MONGOLGPT_EXPERIMENTAL_LSP_TOOL=true` (or `MON
 }
 ```
 
-Supported operations include `goToDefinition`, `findReferences`, `hover`, `documentSymbol`, `workspaceSymbol`, `goToImplementation`, `prepareCallHierarchy`, `incomingCalls`, and `outgoingCalls`.
+Дэмжигдсэн үйлдлүүд нь `goToDefinition`, `findReferences`, `hover`, `documentSymbol`, `workspaceSymbol`, `goToImplementation`, `prepareCallHierarchy`, `incomingCalls` болон `outgoingCalls`.
 
-To configure which LSP servers are available for your project, see [LSP Servers](/docs/lsp).
+Танай төсөлд ямар LSP серверүүдийг ашиглах боломжтойг тохируулахын тулд [LSP серверүүд](/docs/lsp)-г үзнэ үү.
 
 ---
 
-### apply_patch
+### нөхөөсийг хэрэглэнэ
 
-Apply patches to files.
+Файлуудад засваруудыг ашиглах.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -188,21 +188,21 @@ Apply patches to files.
 }
 ```
 
-This tool applies patch files to your codebase. Useful for applying diffs and patches from various sources.
+Энэ хэрэгсэл нь нөхөөс файлуудыг таны кодын санд ашигладаг. Янз бүрийн эх сурвалжаас ялгаатай болон засваруудыг хэрэглэхэд хэрэгтэй.
 
-When handling `tool.execute.before` or `tool.execute.after` hooks, check `input.tool === "apply_patch"` (not `"patch"`).
+`tool.execute.before` эсвэл `tool.execute.after` дэгээтэй харьцахдаа `input.tool === "apply_patch"` (`"patch"` биш) шалгана уу.
 
-`apply_patch` uses `output.args.patchText` instead of `output.args.filePath`. Paths are embedded in marker lines within `patchText` and are relative to the project root (for example: `*** Add File: src/new-file.ts`, `*** Update File: src/existing.ts`, `*** Move to: src/renamed.ts`, `*** Delete File: src/obsolete.ts`).
+`apply_patch` `output.args.filePath`-ийн оронд `output.args.patchText` ашигладаг. Замууд нь `patchText` доторх тэмдэглэгээний мөрөнд суулгагдсан бөгөөд төслийн үндэстэй холбоотой байдаг (жишээ нь: `*** Add File: src/new-file.ts`, `*** Update File: src/existing.ts`, `*** Move to: src/renamed.ts`, `*** Delete File: src/obsolete.ts`).
 
 :::note
-The `apply_patch` tool is controlled by the `edit` permission, which covers all file modifications (`edit`, `write`, `apply_patch`).
+`apply_patch` хэрэгсэл нь файлын бүх өөрчлөлтийг (`edit`, `write`, `apply_patch`) хамарсан `edit` зөвшөөрлөөр хянагддаг.
 :::
 
 ---
 
-### skill
+### ур чадвар
 
-Load a [skill](/docs/skills) (a `SKILL.md` file) and return its content in the conversation.
+[skill](/docs/skills) (`SKILL.md` файл) ачаалж, түүний агуулгыг харилцан ярианд буцаана уу.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -215,9 +215,9 @@ Load a [skill](/docs/skills) (a `SKILL.md` file) and return its content in the c
 
 ---
 
-### todowrite
+### энэ нь
 
-Manage todo lists during coding sessions.
+Кодлох сессийн үеэр хийх зүйлсийн жагсаалтыг удирдах.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -228,17 +228,17 @@ Manage todo lists during coding sessions.
 }
 ```
 
-Creates and updates task lists to track progress during complex operations. The LLM uses this to organize multi-step tasks.
+Нарийн төвөгтэй үйл ажиллагааны явцад явцыг хянахын тулд даалгаврын жагсаалтыг үүсгэж, шинэчилдэг. LLM нь үүнийг олон алхамт ажлуудыг зохион байгуулахад ашигладаг.
 
 :::note
-This tool is disabled for subagents by default, but you can enable it manually. [Learn more](/docs/agents/#permissions)
+Энэ хэрэгсэл нь анхдагчаар дэд агентуудад идэвхгүй болсон боловч та үүнийг гараар идэвхжүүлж болно. [Илүү ихийг мэдэж аваарай](/docs/agents/#permissions)
 :::
 
 ---
 
-### webfetch
+### вэб татах
 
-Fetch web content.
+Вэб контентыг татах.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -249,18 +249,18 @@ Fetch web content.
 }
 ```
 
-Allows the LLM to fetch and read web pages. Useful for looking up documentation or researching online resources.
+LLM-д вэб хуудсыг татаж авах, унших боломжийг олгоно. Баримт бичиг хайх эсвэл онлайн эх сурвалжийг судлахад хэрэгтэй.
 
 ---
 
-### websearch
+### вэб хайлт
 
-Search the web for information.
+Мэдээллийг вэбээс хайж олоорой.
 
 :::note
-This tool is only available when using the MongolGPT provider or when the `MONGOLGPT_ENABLE_EXA` environment variable is set to any truthy value (e.g., `true` or `1`).
+Энэ хэрэгсэл нь зөвхөн MongolGPT үйлчилгээ үзүүлэгчийг ашиглах эсвэл `MONGOLGPT_ENABLE_EXA` орчны хувьсагчийг үнэн зөв утгаар тохируулсан үед л боломжтой (жишээ нь: `true` эсвэл `1`).
 
-To enable when launching MongolGPT:
+MongolGPT-г эхлүүлэх үед идэвхжүүлэхийн тулд:
 
 ```bash
 MONGOLGPT_ENABLE_EXA=1 mongolgpt
@@ -277,19 +277,19 @@ MONGOLGPT_ENABLE_EXA=1 mongolgpt
 }
 ```
 
-Performs web searches using Exa AI to find relevant information online. Useful for researching topics, finding current events, or gathering information beyond the training data cutoff.
+Холбогдох мэдээллийг онлайнаар олохын тулд Exa AI ашиглан вэб хайлт хийдэг. Сэдвийг судлах, одоогийн үйл явдлуудыг хайх, сургалтын мэдээллийн хязгаараас гадуур мэдээлэл цуглуулахад тустай.
 
-No API key is required — the tool connects directly to Exa AI's hosted MCP service without authentication.
+API түлхүүр шаардлагагүй — уг хэрэгсэл нь баталгаажуулалтгүйгээр Exa AI-ийн байршуулсан MCP үйлчилгээтэй шууд холбогддог.
 
 :::tip
-Use `websearch` when you need to find information (discovery), and `webfetch` when you need to retrieve content from a specific URL (retrieval).
+Мэдээлэл (нээлт) олох шаардлагатай үед `websearch`, тодорхой URL (олж авах) -аас контент авах шаардлагатай бол `webfetch` ашиглана уу.
 :::
 
 ---
 
-### question
+### асуулт
 
-Ask the user questions during execution.
+Гүйцэтгэх явцад хэрэглэгчээс асуулт асуу.
 
 ```json title="mongolgpt.json" {4}
 {
@@ -300,42 +300,42 @@ Ask the user questions during execution.
 }
 ```
 
-This tool allows the LLM to ask the user questions during a task. It's useful for:
+Энэ хэрэгсэл нь LLM-д даалгавар гүйцэтгэх явцад хэрэглэгчээс асуулт асуух боломжийг олгодог. Энэ нь ашигтай:
 
-- Gathering user preferences or requirements
-- Clarifying ambiguous instructions
-- Getting decisions on implementation choices
-- Offering choices about what direction to take
+- Хэрэглэгчийн сонголт, шаардлагыг цуглуулах
+- Хоёрдмол утгатай зааврыг тодруулах
+- Хэрэгжүүлэх сонголтын талаар шийдвэр гаргах
+- Аль чиглэлийг сонгох талаар санал болгож байна
 
-Each question includes a header, the question text, and a list of options. Users can select from the provided options or type a custom answer. When there are multiple questions, users can navigate between them before submitting all answers.
-
----
-
-## Custom tools
-
-Custom tools let you define your own functions that the LLM can call. These are defined in your config file and can execute arbitrary code.
-
-[Learn more](/docs/custom-tools) about creating custom tools.
+Асуулт бүр нь толгой хэсэг, асуултын текст, сонголтуудын жагсаалтыг агуулдаг. Хэрэглэгчид өгсөн сонголтуудаас сонгох эсвэл захиалгат хариулт бичих боломжтой. Олон асуулт байгаа үед хэрэглэгчид бүх хариултыг илгээхээсээ өмнө тэдгээрийн хооронд шилжих боломжтой.
 
 ---
 
-## MCP servers
+## Тусгай хэрэгсэл
 
-MCP (Model Context Protocol) servers allow you to integrate external tools and services. This includes database access, API integrations, and third-party services.
+Захиалгат хэрэгслүүд нь LLM дуудаж болох өөрийн функцийг тодорхойлох боломжийг танд олгоно. Эдгээр нь таны тохиргооны файлд тодорхойлогдсон бөгөөд дурын кодыг ажиллуулж болно.
 
-[Learn more](/docs/mcp-servers) about configuring MCP servers.
-
----
-
-## Internals
-
-Internally, tools like `grep` and `glob` use [ripgrep](https://github.com/BurntSushi/ripgrep) under the hood. By default, ripgrep respects `.gitignore` patterns, which means files and directories listed in your `.gitignore` will be excluded from searches and listings.
+[Илүү ихийг мэдэж аваарай](/docs/custom-tools) захиалгат хэрэгсэл бий болгох талаар.
 
 ---
 
-### Ignore patterns
+## MCP серверүүд
 
-To include files that would normally be ignored, create a `.ignore` file in your project root. This file can explicitly allow certain paths.
+MCP (Загвар контекст протокол) серверүүд нь танд гадны хэрэгсэл, үйлчилгээг нэгтгэх боломжийг олгодог. Үүнд мэдээллийн санд нэвтрэх, API интеграцчлал, гуравдагч талын үйлчилгээ орно.
+
+MCP серверүүдийг тохируулах талаар [Илүү ихийг мэдэж аваарай](/docs/mcp-servers).
+
+---
+
+## Дотоод
+
+Дотооддоо `grep` болон `glob` зэрэг хэрэгслүүд бүрээсний доор [ripgrep](https://github.com/BurntSushi/ripgrep) ашигладаг. Анхдагч байдлаар, ripgrep нь `.gitignore` хэв маягийг хүндэтгэдэг бөгөөд энэ нь таны `.gitignore`-д орсон файлууд болон лавлахуудыг хайлт болон жагсаалтаас хасна гэсэн үг юм.
+
+---
+
+### Загварыг үл тоомсорло
+
+Ердийн үед үл тоомсорлож болох файлуудыг оруулахын тулд төслийн үндсэн хэсэгт `.ignore` файл үүсгэнэ үү. Энэ файл нь тодорхой замыг зөвшөөрч болно.
 
 ```text title=".ignore"
 !node_modules/
@@ -343,5 +343,5 @@ To include files that would normally be ignored, create a `.ignore` file in your
 !build/
 ```
 
-For example, this `.ignore` file allows ripgrep to search within
-ode_modules/`, `dist/`, and `build/` directories even if they're listed in `.gitignore`.
+Жишээ нь, энэ `.ignore` файл нь ripgrep-д
+ode_modules/`, `dist/` болон `build/` лавлахууд нь `.gitignore`-д орсон байсан ч хайлт хийх боломжийг олгодог.

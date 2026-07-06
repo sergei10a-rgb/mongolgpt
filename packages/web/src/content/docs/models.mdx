@@ -1,23 +1,23 @@
 ---
 title: Models
-description: Configuring an LLM provider and model.
+description: LLM үйлчилгээ үзүүлэгч болон загварыг тохируулах.
 ---
 
-MongolGPT uses the [AI SDK](https://ai-sdk.dev/) and [Models.dev](https://models.dev) to support **75+ LLM providers** and it supports running local models.
-
----
-
-## Providers
-
-Most popular providers are preloaded by default. If you've added the credentials for a provider through the `/connect` command, they'll be available when you start MongolGPT.
-
-Learn more about [providers](/docs/providers).
+MongolGPT нь **75+ LLM үйлчилгээ үзүүлэгчдийг** дэмжихийн тулд [AI SDK](https://ai-sdk.dev/) болон [Models.dev](https://models.dev) ашигладаг бөгөөд орон нутгийн загваруудыг ажиллуулахыг дэмждэг.
 
 ---
 
-## Select a model
+## Үйлчилгээ үзүүлэгчид
 
-Once you've configured your provider you can select the model you want by typing in:
+Ихэнх алдартай үйлчилгээ үзүүлэгчид анхдагчаар урьдчилан ачаалагдсан байдаг. Хэрэв та `/connect` тушаалаар үйлчилгээ үзүүлэгчийн итгэмжлэлүүдийг нэмсэн бол MongolGPT-г эхлүүлэх үед тэдгээр нь бэлэн болно.
+
+[providers](/docs/providers)-ийн талаар нэмэлт мэдээлэл аваарай.
+
+---
+
+## Загвар сонгоно уу
+
+Үйлчилгээ үзүүлэгчээ тохируулсны дараа та дараахийг бичээд хүссэн загвараа сонгох боломжтой.
 
 ```bash frame="none"
 /models
@@ -25,20 +25,20 @@ Once you've configured your provider you can select the model you want by typing
 
 ---
 
-## Recommended models
+## Санал болгож буй загварууд
 
-There are a lot of models out there, with new models coming out every week.
+Долоо хоног бүр шинэ загварууд гарч ирдэг маш олон загварууд байдаг.
 
 :::tip
-Consider using one of the models we recommend.
+Бидний санал болгож буй загваруудын аль нэгийг ашиглах талаар бодож үзээрэй.
 :::
 
-However, there are only a few of them that are good at both generating code and tool calling.
+Гэсэн хэдий ч, тэдгээрийн зөвхөн цөөн хэдэн нь код үүсгэх, багажийн дуудлага хийх чадвартай байдаг.
 
-Here are several models that work well with MongolGPT, in no particular order. (This is not an exhaustive list nor is it necessarily up to date):
+Тодорхой дараалалгүйгээр MongolGPT-тэй сайн ажилладаг хэд хэдэн загвар энд байна. (Энэ бол бүрэн жагсаалт биш бөгөөд заавал шинэчлэгдсэн байх албагүй):
 
 - GPT 5.2
-- GPT 5.1 Codex
+- GPT 5.1 Кодекс
 - Claude Opus 4.5
 - Claude Sonnet 4.5
 - Minimax M2.1
@@ -46,10 +46,10 @@ Here are several models that work well with MongolGPT, in no particular order. (
 
 ---
 
-## Set a default
+## Өгөгдмөл тохируул
 
-To set one of these as the default model, you can set the `model` key in your
-MongolGPT config.
+Эдгээрийн аль нэгийг өгөгдмөл загвар болгон тохируулахын тулд та өөрийн тохиргоонд `model` товчлуурыг тохируулж болно
+MongolGPT тохиргоо.
 
 ```json title="mongolgpt.json" {3}
 {
@@ -58,15 +58,15 @@ MongolGPT config.
 }
 ```
 
-Here the full ID is `provider_id/model_id`. For example, if you're using [MongolGPT Zen](/docs/zen), you would use `mongolgpt/gpt-5.1-codex` for GPT 5.1 Codex.
+Энд бүтэн ID нь `provider_id/model_id` байна. Жишээлбэл, хэрэв та [MongolGPT Zen](/docs/zen) ашиглаж байгаа бол GPT 5.1 Codex-д `mongolgpt/gpt-5.1-codex`-г ашиглах болно.
 
-If you've configured a [custom provider](/docs/providers#custom), the `provider_id` is key from the `provider` part of your config, and the `model_id` is the key from `provider.models`.
+Хэрэв та [захиалгат үйлчилгээ үзүүлэгч](/docs/providers#custom)-г тохируулсан бол `provider_id` нь таны тохиргооны `provider` хэсгийн түлхүүр бөгөөд `model_id` нь `provider.models`-ийн түлхүүр юм.
 
 ---
 
-## Configure models
+## Загваруудыг тохируулах
 
-You can globally configure a model's options through the config.
+Та тохиргоогоор дамжуулан загварын сонголтыг дэлхийн хэмжээнд тохируулах боломжтой.
 
 ```jsonc title="mongolgpt.jsonc" {7-12,19-24}
 {
@@ -100,12 +100,12 @@ You can globally configure a model's options through the config.
 }
 ```
 
-Here we're configuring global settings for two built-in models: `gpt-5` when accessed via the `openai` provider, and `claude-sonnet-4-20250514` when accessed via the `anthropic` provider.
-The built-in provider and model names can be found on [Models.dev](https://models.dev).
+Энд бид хоёр суурилуулсан загварт зориулсан глобал тохиргоог хийж байна: `openai` үйлчилгээ үзүүлэгчээр хандах үед `gpt-5`, `anthropic` үйлчилгээ үзүүлэгчээр дамжуулан хандах үед `claude-sonnet-4-20250514`.
+Баригдсан үйлчилгээ үзүүлэгч болон загварын нэрийг [Models.dev](https://models.dev) дээрээс олж болно.
 
-You can also configure these options for any agents that you are using. The agent config overrides any global options here. [Learn more](/docs/agents/#additional).
+Та мөн ашиглаж байгаа аливаа агентдаа эдгээр тохируулгыг тохируулах боломжтой. Агентын тохиргоо нь энд байгаа бүх глобал сонголтыг дарна. [Илүү ихийг мэдэж аваарай](/docs/agents/#additional).
 
-You can also define custom variants that extend built-in ones. Variants let you configure different settings for the same model without creating duplicate entries:
+Та мөн суулгасан хувилбаруудыг өргөтгөх захиалгат хувилбаруудыг тодорхойлж болно. Хувилбарууд нь давхардсан оруулгууд үүсгэхгүйгээр ижил загварын өөр өөр тохиргоог тохируулах боломжийг танд олгоно.
 
 ```jsonc title="mongolgpt.jsonc" {6-21}
 {
@@ -135,43 +135,43 @@ You can also define custom variants that extend built-in ones. Variants let you 
 
 ---
 
-## Variants
+## Хувилбарууд
 
-Many models support multiple variants with different configurations. MongolGPT ships with built-in default variants for popular providers.
+Олон загварууд өөр өөр тохиргоотой олон хувилбаруудыг дэмждэг. MongolGPT алдартай үйлчилгээ үзүүлэгчдэд зориулсан анхдагч хувилбаруудыг нийлүүлдэг.
 
-### Built-in variants
+### Баригдсан хувилбарууд
 
-MongolGPT ships with default variants for many providers:
+MongolGPT нь олон үйлчилгээ үзүүлэгчийн үндсэн хувилбаруудыг нийлүүлдэг:
 
 **Anthropic**:
 
-- `high` - High thinking budget (default)
-- `max` - Maximum thinking budget
+- `high` - Өндөр бодолтой төсөв (анхдагч)
+- `max` - Хамгийн их бодох төсөв
 
 **OpenAI**:
 
-Varies by model but roughly:
+Загвараас хамааран өөр өөр байдаг боловч ойролцоогоор:
 
 -
-one` - No reasoning
-- `minimal` - Minimal reasoning effort
-- `low` - Low reasoning effort
-- `medium` - Medium reasoning effort
-- `high` - High reasoning effort
-- `xhigh` - Extra high reasoning effort
+one` - Ямар ч үндэслэлгүй
+- `minimal` - Хамгийн бага үндэслэл гаргах хүчин чармайлт
+- `low` - Бодол санааны хүчин чармайлт бага
+- `medium` - Дунд зэргийн үндэслэл гаргах хүчин чармайлт
+- `high` - Өндөр үндэслэл гаргах хүчин чармайлт
+- `xhigh` - Хэт өндөр үндэслэл гаргах хүчин чармайлт
 
 **Google**:
 
-- `low` - Lower effort/token budget
-- `high` - Higher effort/token budget
+- `low` - Бага хүчин чармайлт / жетон төсөв
+- `high` - Өндөр хүчин чармайлт/жетон төсөв
 
 :::tip
-This list is not comprehensive. Many other providers have built-in defaults too.
+Энэ жагсаалт нь цогц биш юм. Бусад олон үйлчилгээ үзүүлэгчид мөн анхдагч тохиргоотой байдаг.
 :::
 
-### Custom variants
+### Захиалгат хувилбарууд
 
-You can override existing variants or add your own:
+Та одоо байгаа хувилбаруудыг хүчингүй болгох эсвэл өөрийн хувилбарыг нэмж болно:
 
 ```jsonc title="mongolgpt.jsonc" {7-18}
 {
@@ -196,19 +196,19 @@ You can override existing variants or add your own:
 }
 ```
 
-### Cycle variants
+### Циклийн хувилбарууд
 
-Use the keybind `variant_cycle` to quickly switch between variants. [Learn more](/docs/keybinds).
+Хувилбаруудын хооронд хурдан шилжихийн тулд `variant_cycle` товчлуурыг ашиглана уу. [Илүү ихийг мэдэж аваарай](/docs/keybinds).
 
 ---
 
-## Loading models
+## Загваруудыг ачаалж байна
 
-When MongolGPT starts up, it checks for models in the following priority order:
+MongolGPT эхлэх үед дараах тэргүүлэх дарааллаар загваруудыг шалгана:
 
-1. The `--model` or `-m` command line flag. The format is the same as in the config file: `provider_id/model_id`.
+1. `--model` эсвэл `-m` тушаалын мөр. Формат нь тохиргооны файлтай адил байна: `provider_id/model_id`.
 
-2. The model list in the MongolGPT config.
+2. MongolGPT тохиргооны загварын жагсаалт.
 
    ```json title="mongolgpt.json"
    {
@@ -217,8 +217,8 @@ When MongolGPT starts up, it checks for models in the following priority order:
    }
    ```
 
-   The format here is `provider/model`.
+   Энд байгаа формат нь `provider/model`.
 
-3. The last used model.
+3. Хамгийн сүүлд ашигласан загвар.
 
-4. The first model using an internal priority.
+4. Дотоод давуу талыг ашигласан анхны загвар.

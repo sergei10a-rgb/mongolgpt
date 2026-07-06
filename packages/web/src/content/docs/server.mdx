@@ -1,32 +1,32 @@
 ---
 title: Server
-description: Interact with mongolgpt server over HTTP.
+description: mongolgpt сервертэй HTTP дээр харьцана уу.
 ---
 
 import config from "../../../config.mjs"
 export const typesUrl = `${config.github}/blob/dev/packages/sdk/js/src/gen/types.gen.ts`
 
-The `mongolgpt serve` command runs a headless HTTP server that exposes an OpenAPI endpoint that an mongolgpt client can use.
+`mongolgpt serve` тушаал нь толгойгүй HTTP серверийг ажиллуулдаг бөгөөд энэ нь mongolgpt үйлчлүүлэгч ашиглаж болох НээлттэйAPI төгсгөлийн цэгийг харуулж байна.
 
 ---
 
-### Usage
+### Хэрэглээ
 
 ```bash
 mongolgpt serve [--port <number>] [--hostname <string>] [--cors <origin>]
 ```
 
-#### Options
+#### Сонголтууд
 
-| Flag            | Description                         | Default           |
-| --------------- | ----------------------------------- | ----------------- |
-| `--port`        | Port to listen on                   | `4096`            |
-| `--hostname`    | Hostname to listen on               | `127.0.0.1`       |
-| `--mdns`        | Enable mDNS discovery               | `false`           |
-| `--mdns-domain` | Custom domain name for mDNS service | `mongolgpt.local` |
-| `--cors`        | Additional browser origins to allow | `[]`              |
+| Туг | Тодорхойлолт | Өгөгдмөл |
+| --------------- | ----------------------------------- | ---------------- |
+| `--port` | Сонсох порт | `4096` |
+| `--hostname` | Сонсох хостын нэр | `127.0.0.1` |
+| `--mdns` | mDNS илрүүлэлтийг идэвхжүүлэх | `false` |
+| `--mdns-domain` | mDNS үйлчилгээний захиалгат домэйн нэр | `mongolgpt.local` |
+| `--cors` | Зөвшөөрөх нэмэлт хөтчийн гарал үүсэл | `[]` |
 
-`--cors` can be passed multiple times:
+`--cors` хэд хэдэн удаа дамжуулж болно:
 
 ```bash
 mongolgpt serve --cors http://localhost:5173 --cors https://app.example.com
@@ -34,9 +34,9 @@ mongolgpt serve --cors http://localhost:5173 --cors https://app.example.com
 
 ---
 
-### Authentication
+### Баталгаажуулалт
 
-Set `MONGOLGPT_SERVER_PASSWORD` to protect the server with HTTP basic auth. The username defaults to `mongolgpt`, or set `MONGOLGPT_SERVER_USERNAME` to override it. This applies to both `mongolgpt serve` and `mongolgpt web`.
+Серверийг HTTP үндсэн баталгаажуулалтаар хамгаалахын тулд `MONGOLGPT_SERVER_PASSWORD`-г тохируулна уу. Хэрэглэгчийн нэр нь анхдагчаар `mongolgpt` эсвэл үүнийг хүчингүй болгохын тулд `MONGOLGPT_SERVER_USERNAME` гэж тохируулна уу. Энэ нь `mongolgpt serve` болон `mongolgpt web` хоёуланд нь хамаарна.
 
 ```bash
 MONGOLGPT_SERVER_PASSWORD=your-password mongolgpt serve
@@ -44,244 +44,244 @@ MONGOLGPT_SERVER_PASSWORD=your-password mongolgpt serve
 
 ---
 
-### How it works
+### Энэ нь хэрхэн ажилладаг
 
-When you run `mongolgpt` it starts a TUI and a server. Where the TUI is the
-client that talks to the server. The server exposes an OpenAPI 3.1 spec
-endpoint. This endpoint is also used to generate an [SDK](/docs/sdk).
+`mongolgpt`-г ажиллуулахад энэ нь TUI болон серверийг эхлүүлнэ. TUI хаана байна
+сервертэй ярьдаг үйлчлүүлэгч. Сервер нь OpenAPI 3.1 үзүүлэлтийг харуулж байна
+эцсийн цэг. Энэ төгсгөлийн цэгийг мөн [SDK](/docs/sdk) үүсгэхэд ашигладаг.
 
 :::tip
-Use the mongolgpt server to interact with mongolgpt programmatically.
+mongolgpt серверийг ашиглан mongolgpt программтай харьцана.
 :::
 
-This architecture lets mongolgpt support multiple clients and allows you to interact with mongolgpt programmatically.
+Энэхүү архитектур нь mongolgpt-д олон үйлчлүүлэгчийг дэмжих боломжийг олгож, mongolgpt-тэй программын дагуу харилцах боломжийг олгодог.
 
-You can run `mongolgpt serve` to start a standalone server. If you have the
-mongolgpt TUI running, `mongolgpt serve` will start a new server.
-
----
-
-#### Connect to an existing server
-
-When you start the TUI it randomly assigns a port and hostname. You can instead pass in the `--hostname` and `--port` [flags](/docs/cli). Then use this to connect to its server.
-
-The [`/tui`](#tui) endpoint can be used to drive the TUI through the server. For example, you can prefill or run a prompt. This setup is used by the MongolGPT [IDE](/docs/ide) plugins.
+Та бие даасан сервер эхлүүлэхийн тулд `mongolgpt serve` ажиллуулж болно. Хэрэв танд байгаа бол
+mongolgpt TUI ажиллаж байгаа, `mongolgpt serve` шинэ сервер эхлүүлэх болно.
 
 ---
 
-## Spec
+#### Одоо байгаа сервертэй холбогдоно уу
 
-The server publishes an OpenAPI 3.1 spec that can be viewed at:
+TUI-г эхлүүлэхэд энэ нь санамсаргүй байдлаар порт болон хостын нэрийг зааж өгдөг. Та үүний оронд `--hostname` болон `--port` [flags](/docs/cli)-ээр дамжуулж болно. Дараа нь сервертэй холбогдохын тулд үүнийг ашиглана уу.
+
+[`/tui`](#tui) төгсгөлийн цэгийг TUI серверээр дамжуулан жолоодоход ашиглаж болно. Жишээлбэл, та сануулгыг урьдчилан бөглөх эсвэл ажиллуулах боломжтой. Энэ тохиргоог MongolGPT [IDE](/docs/ide) залгаасууд ашигладаг.
+
+---
+
+## Тодорхойлолт
+
+Сервер нь OpenAPI 3.1 тодорхойлолтыг нийтэлдэг бөгөөд үүнийг дараах хаягаар үзэх боломжтой:
 
 ```
 http://<hostname>:<port>/doc
 ```
 
-For example, `http://localhost:4096/doc`. Use the spec to generate clients or inspect request and response types. Or view it in a Swagger explorer.
+Жишээлбэл, `http://localhost:4096/doc`. Үйлчлүүлэгч үүсгэх эсвэл хүсэлт, хариултын төрлүүдийг шалгахын тулд техникийн үзүүлэлтийг ашиглана уу. Эсвэл Swagger Explorer дээр үзэх.
 
 ---
 
 ## APIs
 
-The mongolgpt server exposes the following APIs.
+mongolgpt сервер нь дараах APIs-г илрүүлдэг.
 
 ---
 
-### Global
+### Дэлхийн
 
-| Method | Path             | Description                    | Response                             |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ---------------- | ------------------------------ | ------------------------------------ |
-| `GET`  | `/global/health` | Get server health and version  | `{ healthy: true, version: string }` |
-| `GET`  | `/global/event`  | Get global events (SSE stream) | Event stream                         |
+| `GET` | `/global/health` | Серверийн эрүүл мэнд, хувилбарыг авах | `{ healthy: true, version: string }` |
+| `GET` | `/global/event` | Дэлхийн үйл явдлуудыг авах (SSE урсгал) | Үйл явдлын урсгал |
 
 ---
 
-### Project
+### Төсөл
 
-| Method | Path               | Description             | Response                                      |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ------------------ | ----------------------- | --------------------------------------------- |
-| `GET`  | `/project`         | List all projects       | <a href={typesUrl}><code>Project[]</code></a> |
-| `GET`  | `/project/current` | Get the current project | <a href={typesUrl}><code>Project</code></a>   |
+| `GET` | `/project` | Бүх төслийг жагсаах | <a href={typesUrl}><code>Төсөл[]</code></a> |
+| `GET` | `/project/current` | Одоогийн төслийг авах | <a href={typesUrl}><code>Төсөл</code></a> |
 
 ---
 
-### Path & VCS
+### Зам & VCS
 
-| Method | Path    | Description                          | Response                                    |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ------- | ------------------------------------ | ------------------------------------------- |
-| `GET`  | `/path` | Get the current path                 | <a href={typesUrl}><code>Path</code></a>    |
-| `GET`  | `/vcs`  | Get VCS info for the current project | <a href={typesUrl}><code>VcsInfo</code></a> |
+| `GET` | `/path` | Одоогийн замыг авах | <a href={typesUrl}><code>Зам</code></a> |
+| `GET` | `/vcs` | Одоогийн төслийн талаарх мэдээллийг VCS авна уу | <a href={typesUrl}><code>VcsInfo</code></a> |
 
 ---
 
-### Instance
+### Жишээ
 
-| Method | Path                | Description                  | Response  |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ------------------- | ---------------------------- | --------- |
-| `POST` | `/instance/dispose` | Dispose the current instance | `boolean` |
+| `POST` | `/instance/dispose` | Одоогийн жишээг устгах | `boolean` |
 
 ---
 
-### Config
+### Тохиргоо
 
-| Method  | Path                | Description                       | Response                                                                                 |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------- | ------------------- | --------------------------------- | ---------------------------------------------------------------------------------------- |
-| `GET`   | `/config`           | Get config info                   | <a href={typesUrl}><code>Config</code></a>                                               |
-| `PATCH` | `/config`           | Update config                     | <a href={typesUrl}><code>Config</code></a>                                               |
-| `GET`   | `/config/providers` | List providers and default models | `{ providers: `<a href={typesUrl}>Provider[]</a>`, default: { [key: string]: string } }` |
+| `GET` | `/config` | Тохиргооны мэдээлэл авах | <a href={typesUrl}><code>Тохиргоо</code></a> |
+| `PATCH` | `/config` | Тохиргоог шинэчлэх | <a href={typesUrl}><code>Тохиргоо</code></a> |
+| `GET` | `/config/providers` | Үйлчилгээ үзүүлэгч болон өгөгдмөл загваруудыг жагсаах | `{ providers: `<a href={typesUrl}>Үйлчилгээ үзүүлэгч[]</a>`, default: { [key: string]: string } }` |
 
 ---
 
-### Provider
+### Үйлчилгээ үзүүлэгч
 
-| Method | Path                             | Description                          | Response                                                                            |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | -------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------- |
-| `GET`  | `/provider`                      | List all providers                   | `{ all: `<a href={typesUrl}>Provider[]</a>`, default: {...}, connected: string[] }` |
-| `GET`  | `/provider/auth`                 | Get provider authentication methods  | `{ [providerID: string]: `<a href={typesUrl}>ProviderAuthMethod[]</a>` }`           |
-| `POST` | `/provider/{id}/oauth/authorize` | Authorize a provider using OAuth     | <a href={typesUrl}><code>ProviderAuthAuthorization</code></a>                       |
-| `POST` | `/provider/{id}/oauth/callback`  | Handle OAuth callback for a provider | `boolean`                                                                           |
+| `GET` | `/provider` | Бүх үйлчилгээ үзүүлэгчдийг жагсаах | `{ all: `<a href={typesUrl}>Үйлчилгээ үзүүлэгч[]</a>`, default: {...}, connected: string[] }` |
+| `GET` | `/provider/auth` | Үйлчилгээ үзүүлэгчийн баталгаажуулалтын аргуудыг авах | `{ [providerID: string]: `<a href={typesUrl}>ProviderAuthMethod[]</a>` }` |
+| `POST` | `/provider/{id}/oauth/authorize` | OAuth | ашиглан үйлчилгээ үзүүлэгчийг зөвшөөрөх <a href={typesUrl}><code>ProviderAuthAuthorization</code></a> |
+| `POST` | `/provider/{id}/oauth/callback` | Үйлчилгээ үзүүлэгчийн хувьд OAuth дуудлагыг зохицуулах | `boolean` |
 
 ---
 
-### Sessions
+### Сеанс
 
-| Method   | Path                                     | Description                           | Notes                                                                              |
+| арга | Зам | Тодорхойлолт | Тэмдэглэл |
 | -------- | ---------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
-| `GET`    | `/session`                               | List all sessions                     | Returns <a href={typesUrl}><code>Session[]</code></a>                              |
-| `POST`   | `/session`                               | Create a new session                  | body: `{ parentID?, title? }`, returns <a href={typesUrl}><code>Session</code></a> |
-| `GET`    | `/session/status`                        | Get session status for all sessions   | Returns `{ [sessionID: string]: `<a href={typesUrl}>SessionStatus</a>` }`          |
-| `GET`    | `/session/:id`                           | Get session details                   | Returns <a href={typesUrl}><code>Session</code></a>                                |
-| `DELETE` | `/session/:id`                           | Delete a session and all its data     | Returns `boolean`                                                                  |
-| `PATCH`  | `/session/:id`                           | Update session properties             | body: `{ title? }`, returns <a href={typesUrl}><code>Session</code></a>            |
-| `GET`    | `/session/:id/children`                  | Get a session's child sessions        | Returns <a href={typesUrl}><code>Session[]</code></a>                              |
-| `GET`    | `/session/:id/todo`                      | Get the todo list for a session       | Returns <a href={typesUrl}><code>Todo[]</code></a>                                 |
-| `POST`   | `/session/:id/init`                      | Analyze app and create `AGENTS.md`    | body: `{ messageID, providerID, modelID }`, returns `boolean`                      |
-| `POST`   | `/session/:id/fork`                      | Fork an existing session at a message | body: `{ messageID? }`, returns <a href={typesUrl}><code>Session</code></a>        |
-| `POST`   | `/session/:id/abort`                     | Abort a running session               | Returns `boolean`                                                                  |
-| `POST`   | `/session/:id/share`                     | Share a session                       | Returns <a href={typesUrl}><code>Session</code></a>                                |
-| `DELETE` | `/session/:id/share`                     | Unshare a session                     | Returns <a href={typesUrl}><code>Session</code></a>                                |
-| `GET`    | `/session/:id/diff`                      | Get the diff for this session         | query: `messageID?`, returns <a href={typesUrl}><code>FileDiff[]</code></a>        |
-| `POST`   | `/session/:id/summarize`                 | Summarize the session                 | body: `{ providerID, modelID }`, returns `boolean`                                 |
-| `POST`   | `/session/:id/revert`                    | Revert a message                      | body: `{ messageID, partID? }`, returns `boolean`                                  |
-| `POST`   | `/session/:id/unrevert`                  | Restore all reverted messages         | Returns `boolean`                                                                  |
-| `POST`   | `/session/:id/permissions/:permissionID` | Respond to a permission request       | body: `{ response, remember? }`, returns `boolean`                                 |
+| `GET` | `/session` | Бүх сешнүүдийг жагсаах | <a href={typesUrl}><code>Session[]</code></a>-г буцаана |
+| `POST` | `/session` | Шинэ сесс үүсгэх | Үндсэн хэсэг: `{ parentID?, title? }`, <a href={typesUrl}><code>Сурц</code></a>-г буцаана |
+| `GET` | `/session/status` | Бүх сешнүүдийн сессийн статусыг авах | `{ [sessionID: string]: `<a href={typesUrl}>SessionStatus</a>` }` буцаана |
+| `GET` | `/session/:id` | Сессийн дэлгэрэнгүй мэдээллийг авах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
+| `DELETE` | `/session/:id` | Сесс болон түүний бүх өгөгдлийг устгах | `boolean` \| буцаана |
+| `PATCH` | `/session/:id` | Сеанс шинж чанарыг шинэчлэх | үндсэн хэсэг: `{ title? }`, <a href={typesUrl}><code>Сурц</code></a>-г буцаана |
+| `GET` | `/session/:id/children` | Сессийн хүүхдийн сессийг авах | <a href={typesUrl}><code>Session[]</code></a>-г буцаана |
+| `GET` | `/session/:id/todo` | Сешн хийх ажлын жагсаалтыг аваарай | <a href={typesUrl}><code>Todo[]</code></a>-г буцаана |
+| `POST` | `/session/:id/init` | Програмд ​​дүн шинжилгээ хийж, `AGENTS.md` | үүсгэнэ үү их бие: `{ messageID, providerID, modelID }`, `boolean` \| буцаана |
+| `POST` | `/session/:id/fork` | Зурвас дээр байгаа сессийг салаа | Үндсэн хэсэг: `{ messageID? }`, <a href={typesUrl}><code>Сурц</code></a>-г буцаана |
+| `POST` | `/session/:id/abort` | Ажиллаж байгаа сессийг зогсоох | `boolean` \| буцаана |
+| `POST` | `/session/:id/share` | Сешн хуваалцах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
+| `DELETE` | `/session/:id/share` | Сешн хуваалцахыг болиулах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
+| `GET` | `/session/:id/diff` | Энэ сессийн ялгааг аваарай | асуулга: `messageID?`, <a href={typesUrl}><code>FileDiff[]</code></a>-г буцаана |
+| `POST` | `/session/:id/summarize` | Хуралдааныг дүгнэх | бие: `{ providerID, modelID }`, `boolean` буцаана |
+| `POST` | `/session/:id/revert` | Зурвас буцаах | бие: `{ messageID, partID? }`, `boolean` буцаана |
+| `POST` | `/session/:id/unrevert` | Бүх буцаасан мессежийг сэргээх | `boolean` \| буцаана |
+| `POST` | `/session/:id/permissions/:permissionID` | Зөвшөөрлийн хүсэлтэд хариу өгөх | бие: `{ response, remember? }`, `boolean` буцаана |
 
 ---
 
-### Messages
+### Зурвас
 
-| Method | Path                              | Description                             | Notes                                                                                                                                                                 |
+| арга | Зам | Тодорхойлолт | Тэмдэглэл |
 | ------ | --------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`  | `/session/:id/message`            | List messages in a session              | query: `limit?`, returns `{ info: `<a href={typesUrl}>Message</a>`, parts: `<a href={typesUrl}>Part[]</a>`}[]`                                                        |
-| `POST` | `/session/:id/message`            | Send a message and wait for response    | body: `{ messageID?, model?, agent?, noReply?, system?, tools?, parts }`, returns `{ info: `<a href={typesUrl}>Message</a>`, parts: `<a href={typesUrl}>Part[]</a>`}` |
-| `GET`  | `/session/:id/message/:messageID` | Get message details                     | Returns `{ info: `<a href={typesUrl}>Message</a>`, parts: `<a href={typesUrl}>Part[]</a>`}`                                                                           |
-| `POST` | `/session/:id/prompt_async`       | Send a message asynchronously (no wait) | body: same as `/session/:id/message`, returns `204 No Content`                                                                                                        |
-| `POST` | `/session/:id/command`            | Execute a slash command                 | body: `{ messageID?, agent?, model?, command, arguments }`, returns `{ info: `<a href={typesUrl}>Message</a>`, parts: `<a href={typesUrl}>Part[]</a>`}`               |
-| `POST` | `/session/:id/shell`              | Run a shell command                     | body: `{ agent, model?, command }`, returns `{ info: `<a href={typesUrl}>Message</a>`, parts: `<a href={typesUrl}>Part[]</a>`}`                                       |
+| `GET` | `/session/:id/message` | Сеанс дахь мессежүүдийг жагсаах | асуулга: `limit?`, буцаана `{ info: `<a href={typesUrl}>Мессеж</a>`, parts: `<a href={typesUrl}>Хэсэг[]</a>`}[]` |
+| `POST` | `/session/:id/message` | Мессеж илгээгээд хариу хүлээнэ үү | үндсэн хэсэг: `{ messageID?, model?, agent?, noReply?, system?, tools?, parts }`, буцаана `{ info: `<a href={typesUrl}>Мессеж</a>`, parts: `<a href={typesUrl}>Хэсэг[]</a>`}` |
+| `GET` | `/session/:id/message/:messageID` | Мессежийн дэлгэрэнгүй мэдээллийг авах | `{ info: `<a href={typesUrl}>Мессеж</a>`, parts: `<a href={typesUrl}>Хэсэг[]</a>`}` буцаана |
+| `POST` | `/session/:id/prompt_async` | Мессежийг асинхроноор илгээх (хүлээхгүй) | их бие: `/session/:id/message`-тэй ижил, `204 No Content` \| буцаана |
+| `POST` | `/session/:id/command` | Ташуу зураас командыг гүйцэтгэх | үндсэн хэсэг: `{ messageID?, agent?, model?, command, arguments }`, буцаана `{ info: `<a href={typesUrl}>Мессеж</a>`, parts: `<a href={typesUrl}>Хэсэг[]</a>`}` |
+| `POST` | `/session/:id/shell` | Shell командыг ажиллуулах | үндсэн хэсэг: `{ agent, model?, command }`, буцаана `{ info: `<a href={typesUrl}>Мессеж</a>`, parts: `<a href={typesUrl}>Хэсэг[]</a>`}` |
 
 ---
 
-### Commands
+### тушаалууд
 
-| Method | Path       | Description       | Response                                      |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ---------- | ----------------- | --------------------------------------------- |
-| `GET`  | `/command` | List all commands | <a href={typesUrl}><code>Command[]</code></a> |
+| `GET` | `/command` | Бүх тушаалуудыг жагсаах | <a href={typesUrl}><code>Тушаал[]</code></a> |
 
 ---
 
-### Files
+### Файлууд
 
-| Method | Path                     | Description                        | Response                                                                                    |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ------------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| `GET`  | `/find?pattern=<pat>`    | Search for text in files           | Array of match objects with `path`, `lines`, `line_number`, `absolute_offset`, `submatches` |
-| `GET`  | `/find/file?query=<q>`   | Find files and directories by name | `string[]` (paths)                                                                          |
-| `GET`  | `/find/symbol?query=<q>` | Find workspace symbols             | <a href={typesUrl}><code>Symbol[]</code></a>                                                |
-| `GET`  | `/file?path=<path>`      | List files and directories         | <a href={typesUrl}><code>FileNode[]</code></a>                                              |
-| `GET`  | `/file/content?path=<p>` | Read a file                        | <a href={typesUrl}><code>FileContent</code></a>                                             |
-| `GET`  | `/file/status`           | Get status for tracked files       | <a href={typesUrl}><code>File[]</code></a>                                                  |
+| `GET` | `/find?pattern=<pat>` | Файлаас текст хайх | `path`, `lines`, `line_number`, `absolute_offset`, `submatches`-тай тохирох объектуудын массив |
+| `GET` | `/find/file?query=<q>` | Файл, санг нэрээр нь хайж олох | `string[]` (замууд) |
+| `GET` | `/find/symbol?query=<q>` | Ажлын талбарын тэмдэгтүүдийг олох | <a href={typesUrl}><code>Тэмдэгт[]</code></a> |
+| `GET` | `/file?path=<path>` | Файл, лавлах жагсаалт | <a href={typesUrl}><code>FileNode[]</code></a> |
+| `GET` | `/file/content?path=<p>` | Файл унших | <a href={typesUrl}><code>Файлын контент</code></a> |
+| `GET` | `/file/status` | Хянагдсан файлуудын статусыг авах | <a href={typesUrl}><code>Файл[]</code></a> |
 
-#### `/find/file` query parameters
+#### `/find/file` асуулгын параметрүүд
 
-- `query` (required) — search string (fuzzy match)
-- `type` (optional) — limit results to `"file"` or `"directory"`
-- `directory` (optional) — override the project root for the search
-- `limit` (optional) — max results (1–200)
-- `dirs` (optional) — legacy flag (`"false"` returns only files)
+- `query` (шаардлагатай) — хайлтын мөр (тодорхой таарахгүй)
+- `type` (заавал биш) - үр дүнг `"file"` эсвэл `"directory"` гэж хязгаарлах
+- `directory` (заавал биш) — хайлтын төслийн үндэсийг дарна
+- `limit` (заавал биш) — хамгийн их үр дүн (1–200)
+- `dirs` (заавал биш) — хуучин туг (`"false"` зөвхөн файлуудыг буцаана)
 
 ---
 
-### Tools (Experimental)
+### Багаж хэрэгсэл (туршилтын)
 
-| Method | Path                                        | Description                              | Response                                     |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ------------------------------------------- | ---------------------------------------- | -------------------------------------------- |
-| `GET`  | `/experimental/tool/ids`                    | List all tool IDs                        | <a href={typesUrl}><code>ToolIDs</code></a>  |
-| `GET`  | `/experimental/tool?provider=<p>&model=<m>` | List tools with JSON schemas for a model | <a href={typesUrl}><code>ToolList</code></a> |
+| `GET` | `/experimental/tool/ids` | Бүх хэрэгслийн ID-г жагсаах | <a href={typesUrl}><code>ToolIDs</code></a> |
+| `GET` | `/experimental/tool?provider=<p>&model=<m>` | Загварт зориулсан JSON схем бүхий хэрэгслүүдийн жагсаалт | <a href={typesUrl}><code>Хэрэгслийн жагсаалт</code></a> |
 
 ---
 
-### LSP, Formatters & MCP
+### LSP, Форматчид ба MCP
 
-| Method | Path         | Description                | Response                                                 |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ------------ | -------------------------- | -------------------------------------------------------- |
-| `GET`  | `/lsp`       | Get LSP server status      | <a href={typesUrl}><code>LSPStatus[]</code></a>          |
-| `GET`  | `/formatter` | Get formatter status       | <a href={typesUrl}><code>FormatterStatus[]</code></a>    |
-| `GET`  | `/mcp`       | Get MCP server status      | `{ [name: string]: `<a href={typesUrl}>MCPStatus</a>` }` |
-| `POST` | `/mcp`       | Add MCP server dynamically | body: `{ name, config }`, returns MCP status object      |
+| `GET` | `/lsp` | LSP серверийн статусыг авах | <a href={typesUrl}><code>LSPStatus[]</code></a> |
+| `GET` | `/formatter` | Форматлагчийн статусыг авах | <a href={typesUrl}><code>FormatterStatus[]</code></a> |
+| `GET` | `/mcp` | MCP серверийн статусыг авах | `{ [name: string]: `<a href={typesUrl}>MCPStatus</a>` }` |
+| `POST` | `/mcp` | MCP серверийг динамик байдлаар нэмнэ үү бие: `{ name, config }`, MCP төлөвийн объектыг буцаана | |
 
 ---
 
-### Agents
+### Агентууд
 
-| Method | Path     | Description               | Response                                    |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | -------- | ------------------------- | ------------------------------------------- |
-| `GET`  | `/agent` | List all available agents | <a href={typesUrl}><code>Agent[]</code></a> |
+| `GET` | `/agent` | Боломжтой бүх агентуудыг жагсаах | <a href={typesUrl}><code>Агент[]</code></a> |
 
 ---
 
-### Logging
+### Мод бэлтгэх
 
-| Method | Path   | Description                                                  | Response  |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ------ | ------------------------------------------------------------ | --------- |
-| `POST` | `/log` | Write log entry. Body: `{ service, level, message, extra? }` | `boolean` |
+| `POST` | `/log` | Бүртгэлийн бичилт бичих. Их бие: `{ service, level, message, extra? }` | `boolean` |
 
 ---
 
 ### TUI
 
-| Method | Path                    | Description                                 | Response               |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ----------------------- | ------------------------------------------- | ---------------------- |
-| `POST` | `/tui/append-prompt`    | Append text to the prompt                   | `boolean`              |
-| `POST` | `/tui/open-help`        | Open the help dialog                        | `boolean`              |
-| `POST` | `/tui/open-sessions`    | Open the session selector                   | `boolean`              |
-| `POST` | `/tui/open-themes`      | Open the theme selector                     | `boolean`              |
-| `POST` | `/tui/open-models`      | Open the model selector                     | `boolean`              |
-| `POST` | `/tui/submit-prompt`    | Submit the current prompt                   | `boolean`              |
-| `POST` | `/tui/clear-prompt`     | Clear the prompt                            | `boolean`              |
-| `POST` | `/tui/execute-command`  | Execute a command (`{ command }`)           | `boolean`              |
-| `POST` | `/tui/show-toast`       | Show toast (`{ title?, message, variant }`) | `boolean`              |
-| `GET`  | `/tui/control/next`     | Wait for the next control request           | Control request object |
-| `POST` | `/tui/control/response` | Respond to a control request (`{ body }`)   | `boolean`              |
+| `POST` | `/tui/append-prompt` | Сануулгад текст нэмэх | `boolean` |
+| `POST` | `/tui/open-help` | Тусламжийн харилцах цонхыг нээнэ үү `boolean` | |
+| `POST` | `/tui/open-sessions` | Сеанс сонгогчийг нээх | `boolean` |
+| `POST` | `/tui/open-themes` | Загвар сонгогчийг нээх | `boolean` |
+| `POST` | `/tui/open-models` | Загвар сонгогчийг нээх | `boolean` |
+| `POST` | `/tui/submit-prompt` | Одоогийн сануулгыг илгээх | `boolean` |
+| `POST` | `/tui/clear-prompt` | Сануулгыг арилгах | `boolean` |
+| `POST` | `/tui/execute-command` | Командыг гүйцэтгэх (`{ command }`) | `boolean` |
+| `POST` | `/tui/show-toast` | Шарсан талхыг харуулах (`{ title?, message, variant }`) | `boolean` |
+| `GET` | `/tui/control/next` | Дараагийн хяналтын хүсэлтийг хүлээнэ үү | Хяналтын хүсэлтийн объект |
+| `POST` | `/tui/control/response` | Хяналтын хүсэлтэд хариу өгөх (`{ body }`) | `boolean` |
 
 ---
 
 ### Auth
 
-| Method | Path        | Description                                                     | Response  |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ----------- | --------------------------------------------------------------- | --------- |
-| `PUT`  | `/auth/:id` | Set authentication credentials. Body must match provider schema | `boolean` |
+| `PUT` | `/auth/:id` | Баталгаажуулалтын итгэмжлэлүүдийг тохируулна уу. Үндсэн хэсэг нь үйлчилгээ үзүүлэгчийн схемтэй тохирч байх ёстой | `boolean` |
 
 ---
 
-### Events
+### Үйл явдал
 
-| Method | Path     | Description                                                                   | Response                  |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | -------- | ----------------------------------------------------------------------------- | ------------------------- |
-| `GET`  | `/event` | Server-sent events stream. First event is `server.connected`, then bus events | Server-sent events stream |
+| `GET` | `/event` | Серверээс илгээсэн үйл явдлын урсгал. Эхний арга хэмжээ `server.connected`, дараа нь автобусны арга хэмжээ | Серверээс илгээсэн үйл явдлын урсгал |
 
 ---
 
-### Docs
+### Докс
 
-| Method | Path   | Description               | Response                    |
+| арга | Зам | Тодорхойлолт | Хариулт |
 | ------ | ------ | ------------------------- | --------------------------- |
-| `GET`  | `/doc` | OpenAPI 3.1 specification | HTML page with OpenAPI spec |
+| `GET` | `/doc` | OpenAPI 3.1 тодорхойлолт | НээлттэйAPI тодорхойлолт бүхий HTML хуудас |

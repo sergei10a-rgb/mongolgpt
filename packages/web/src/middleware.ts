@@ -10,7 +10,7 @@ function docsAlias(pathname: string) {
   const locale = exactLocale(value)
   if (!locale) return null
 
-  const next = locale === "root" ? `/docs${tail}` : `/docs/${locale}${tail}`
+  const next = locale === "root" || locale === "mn" ? `/docs${tail}` : `/docs/${locale}${tail}`
   if (next === pathname) return null
   return {
     path: next,
@@ -19,8 +19,13 @@ function docsAlias(pathname: string) {
 }
 
 function cookie(locale: string) {
-  const value = locale === "root" ? "mn" : locale
+  const value = locale === "root" || locale === "mn" ? "root" : locale
   return `mongolgpt_locale=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax`
+}
+
+function canonicalDocsLocale(locale: string | null) {
+  if (!locale || locale === "mn") return "root"
+  return locale
 }
 
 function redirect(url: URL, path: string, locale?: string) {
@@ -48,7 +53,7 @@ function localeFromCookie(header: string | null) {
 }
 
 function localeFromAcceptLanguage(header: string | null) {
-  if (!header) return "mn"
+  if (!header) return "root"
 
   const items = header
     .split(",")
@@ -74,7 +79,7 @@ function localeFromAcceptLanguage(header: string | null) {
     .map((lang) => matchLocale(lang))
     .find((lang) => lang)
 
-  return locale ?? "mn"
+  return canonicalDocsLocale(locale ?? "root")
 }
 
 export const onRequest = defineMiddleware((ctx, next) => {
@@ -85,9 +90,10 @@ export const onRequest = defineMiddleware((ctx, next) => {
 
   if (ctx.url.pathname !== "/docs" && ctx.url.pathname !== "/docs/") return next()
 
-  const locale =
+  const locale = canonicalDocsLocale(
     localeFromCookie(ctx.request.headers.get("cookie")) ??
-    localeFromAcceptLanguage(ctx.request.headers.get("accept-language"))
+      localeFromAcceptLanguage(ctx.request.headers.get("accept-language")),
+  )
   if (!locale || locale === "root") return next()
 
   return redirect(ctx.url, `/docs/${locale}/`)

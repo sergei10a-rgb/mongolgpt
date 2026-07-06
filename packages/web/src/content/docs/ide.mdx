@@ -1,48 +1,48 @@
 ---
 title: IDE
-description: The MongolGPT extension for VS Code, Cursor, and other IDEs
+description: VS код, курсор болон бусад IDE-д зориулсан MongolGPT өргөтгөл
 ---
 
-MongolGPT integrates with VS Code, Cursor, or any IDE that supports a terminal. Just run `mongolgpt` in the terminal to get started.
-
----
-
-## Usage
-
-- **Quick Launch**: Use `Cmd+Esc` (Mac) or `Ctrl+Esc` (Windows/Linux) to open MongolGPT in a split terminal view, or focus an existing terminal session if one is already running.
-- **New Session**: Use `Cmd+Shift+Esc` (Mac) or `Ctrl+Shift+Esc` (Windows/Linux) to start a new MongolGPT terminal session, even if one is already open. You can also click the MongolGPT button in the UI.
-- **Context Awareness**: Automatically share your current selection or tab with MongolGPT.
-- **File Reference Shortcuts**: Use `Cmd+Option+K` (Mac) or `Alt+Ctrl+K` (Linux/Windows) to insert file references. For example, `@File#L37-42`.
+MongolGPT нь VS код, курсор эсвэл терминалыг дэмждэг аливаа IDE-тэй нэгтгэдэг. Эхлэхийн тулд терминал дээр `mongolgpt` гэж ажиллуулна уу.
 
 ---
 
-## Installation
+## Хэрэглээ
 
-To install MongolGPT on VS Code and popular forks like Cursor, Windsurf, VSCodium:
-
-1. Open VS Code
-2. Open the integrated terminal
-3. Run `mongolgpt` - the extension installs automatically
-
-If on the other hand you want to use your own IDE when you run `/editor` or `/export` from the TUI, you'll need to set `export EDITOR="code --wait"`. [Learn more](/docs/tui/#editor-setup).
+- **Түргэн эхлүүлэх**: `Cmd+Esc` (Mac) эсвэл `Ctrl+Esc` (Windows/@Linux)-г ашиглан MongolGPT-г салангид терминалын харагдацаар нээх, эсвэл аль хэдийн ажиллаж байгаа бол одоо байгаа терминалын сессийг төвлөрүүл.
+- **Шинэ сесс**: `Cmd+Shift+Esc` (Mac) эсвэл `Ctrl+Shift+Esc` (Windows/Linux) ашиглан аль хэдийн нээгдсэн байсан ч шинэ MongolGPT терминал сессийг эхлүүлнэ үү. Та мөн UI дээрх MongolGPT товчийг дарж болно.
+- **Контекст мэдлэг**: Өөрийн одоогийн сонголт эсвэл табыг MongolGPT-тай автоматаар хуваалцаарай.
+- **Файлын лавлагааны товчлол**: Файлын лавлагааг оруулахын тулд `Cmd+Option+K` (Mac) эсвэл `Alt+Ctrl+K` (Linux/Windows) ашиглана уу. Жишээлбэл, `@File#L37-42`.
 
 ---
 
-### Manual Install
+## Суурилуулалт
 
-Search for **MongolGPT** in the Extension Marketplace and click **Install**.
+VS код болон Cursor, Windsurf, VSCodium зэрэг алдартай сэрээ дээр MongolGPT-г суулгахын тулд:
+
+1. VS кодыг нээнэ үү
+2. Нэгдсэн терминалыг нээнэ үү
+3. `mongolgpt` ажиллуулна уу - өргөтгөл автоматаар суулгана
+
+Нөгөө талаас та TUI-аас `/editor` эсвэл `/export` ажиллуулахдаа өөрийн IDE-г ашиглахыг хүсвэл `export EDITOR="code --wait"`-г тохируулах хэрэгтэй. [Илүү ихийг мэдэж аваарай](/docs/tui/#editor-setup).
 
 ---
 
-### Troubleshooting
+### Гараар суулгах
 
-If the extension fails to install automatically:
+Өргөтгөлийн зах зээлээс **MongolGPT** гэж хайгаад **Суулгах** дээр дарна уу.
 
-- Ensure you’re running `mongolgpt` in the integrated terminal.
-- Confirm the CLI for your IDE is installed:
-  - For VS Code: `code` command
-  - For Cursor: `cursor` command
-  - For Windsurf: `windsurf` command
-  - For VSCodium: `codium` command
-  - If not, run `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux) and search for "Shell Command: Install 'code' command in PATH" (or the equivalent for your IDE)
-- Ensure VS Code has permission to install extensions
+---
+
+### Алдааг олж засварлах
+
+Хэрэв өргөтгөлийг автоматаар суулгаж чадахгүй бол:
+
+- Нэгдсэн терминал дээр `mongolgpt` ажиллаж байгаа эсэхээ шалгаарай.
+- Өөрийн IDE-ийн CLI суулгасан эсэхийг баталгаажуулна уу:
+  - VS Кодын хувьд: `code` тушаал
+  - Курсорын хувьд: `cursor` команд
+  - Windsurf-ийн хувьд: `windsurf` команд
+  - VSCodium-ийн хувьд: `codium` тушаал
+  - Үгүй бол `Cmd+Shift+P` (Mac) эсвэл `Ctrl+Shift+P` (Windows/Linux) ажиллуулаад "Shell Command: Install 'code' command in PATH" (эсвэл таны IDE) гэж хайна уу.
+- VS код өргөтгөл суулгах зөвшөөрөлтэй эсэхийг шалгаарай

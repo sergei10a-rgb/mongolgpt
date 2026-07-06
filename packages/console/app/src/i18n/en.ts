@@ -81,12 +81,12 @@ export const dict = {
   "error.reloadAmountMin": "Reload amount must be at least ${{amount}}",
   "error.reloadTriggerMin": "Balance trigger must be at least ${{amount}}",
 
-  "app.meta.description": "MongolGPT - The open source coding agent.",
+  "app.meta.description": "MongolGPT - Монгол-first AI coding agent.",
 
-  "home.title": "MongolGPT | The open source AI coding agent",
+  "home.title": "MongolGPT | Монгол-first AI coding agent",
 
-  "temp.title": "mongolgpt | AI coding agent built for the terminal",
-  "temp.hero.title": "The AI coding agent built for the terminal",
+  "temp.title": "MongolGPT | Терминалд зориулсан AI coding agent",
+  "temp.hero.title": "Терминалд зориулсан AI coding agent",
   "temp.zen": "mongolgpt zen",
   "temp.getStarted": "Get Started",
   "temp.feature.native.title": "Native TUI",
@@ -107,7 +107,7 @@ export const dict = {
   "home.banner.downloadNow": "Download now",
   "home.banner.downloadBetaNow": "Download the desktop beta now",
 
-  "home.hero.title": "The open source AI coding agent",
+  "home.hero.title": "Монгол-first AI coding agent",
   "home.hero.subtitle.a": "Free models included or connect any model from any provider,",
   "home.hero.subtitle.b": "including Claude, GPT, Gemini and more.",
 
@@ -131,7 +131,7 @@ export const dict = {
   "home.what.anyEditor.body": "Available as a terminal interface, desktop app, and IDE extension",
   "home.what.readDocs": "Read docs",
 
-  "home.growth.title": "The open source AI coding agent",
+  "home.growth.title": "Монгол-first AI coding agent",
   "home.growth.body":
     "With over <strong>{{stars}}</strong> GitHub stars, <strong>{{contributors}}</strong> contributors, and over <strong>{{commits}}</strong> commits, MongolGPT is used and trusted by over <strong>{{monthlyUsers}}</strong> developers every month.",
   "home.growth.githubStars": "GitHub Stars",

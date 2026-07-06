@@ -27,9 +27,9 @@ MongolGPT бол Монгол хэрэглэгчдэд эхнээсээ ойлг
 
 MongolGPT docs:
 
-[https://mongolgpt.duckdns.org/docs/mn/](https://mongolgpt.duckdns.org/docs/mn/)
+[https://mongolgpt.duckdns.org/docs/](https://mongolgpt.duckdns.org/docs/)
 
-Active docs source нь `packages/web/src/content/docs/mn/` дотор байна. Хуучин starter/template docs-ийг repo-оос цэвэрлэсэн.
+Active docs source нь `packages/web/src/content/docs/` доторх үндсэн Монгол баримт бичиг. `/docs/mn/` хуучин холбоосын нийцтэй байдлаар хадгалагдана.
 
 ## Local дээр ажиллуулах
 
@@ -76,7 +76,7 @@ Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, 
 
 ## NPM package төлөв
 
-`mongolgpt` npm package-ийг repo дотор бэлдсэн боловч npm registry дээр хараахан нийтлээгүй. Нийтлэхэд npm account/token болон release permission хэрэгтэй.
+`mongolgpt` npm package-ийн release pipeline бэлэн. Зарим binary package npm registry дээр гарсан, үлдсэн package-уудыг registry rate limit сулрах үед үргэлжлүүлэн нийтэлнэ.
 
 Нийтлэгдэхээс өмнө GitHub Release, source build, эсвэл install script ашиглана:
 
@@ -91,7 +91,7 @@ bun run dev
 
 [github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)
 
-Энэ repository нь MongolGPT-ийн standalone source, brand, desktop build, Монгол UX, adapter layer рүү цэвэрлэгдэж буй хувилбар.
+Энэ repository нь MongolGPT-ийн standalone source, brand, desktop build, Монгол UX, adapter layer-ийн үндсэн source юм.
 
 ## Лиценз
 

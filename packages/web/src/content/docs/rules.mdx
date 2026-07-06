@@ -1,37 +1,37 @@
 ---
 title: Rules
-description: Set custom instructions for mongolgpt.
+description: mongolgpt-д захиалгат зааврыг тохируулна уу.
 ---
 
-You can provide custom instructions to mongolgpt by creating an `AGENTS.md` file. This is similar to Cursor's rules. It contains instructions that will be included in the LLM's context to customize its behavior for your specific project.
+Та `AGENTS.md` файл үүсгэснээр mongolgpt-д захиалгат заавар өгөх боломжтой. Энэ нь Курсорын дүрэмтэй төстэй юм. Энэ нь LLM-ийн контекстэд тусгагдсан зааварчилгааг агуулж байгаа бөгөөд түүний зан төлөвийг таны тодорхой төсөлд тохируулах болно.
 
 ---
 
-## Initialize
+## Эхлүүлэх
 
-To create a new `AGENTS.md` file, you can run the `/init` command in mongolgpt.
+Шинэ `AGENTS.md` файл үүсгэхийн тулд mongolgpt дээр `/init` командыг ажиллуулж болно.
 
 :::tip
-You should commit your project's `AGENTS.md` file to Git.
+Та төслийнхээ `AGENTS.md` файлыг Git-д оруулах ёстой.
 :::
 
-`/init` scans the important files in your repo, may ask a couple of targeted questions when the codebase cannot answer them, and then creates or updates `AGENTS.md` with concise project-specific guidance.
+`/init` нь таны репо дахь чухал файлуудыг сканнердаж, кодын сан тэдэнд хариулж чадахгүй үед хэд хэдэн зорилтот асуулт асууж, дараа нь төслийн тусгай зааварчилгаагаар `AGENTS.md`-г үүсгэж эсвэл шинэчилдэг.
 
-It focuses on the things future agent sessions are most likely to need:
+Энэ нь ирээдүйн төлөөлөгчийн хуралдаанд хамгийн их хэрэгтэй байх зүйлсэд анхаарлаа хандуулдаг:
 
-- build, lint, and test commands
-- command order and focused verification steps when they matter
-- architecture and repo structure that are not obvious from filenames alone
-- project-specific conventions, setup quirks, and operational gotchas
-- references to existing instruction sources like Cursor or Copilot rules
+- бүтээх, линт, тест командууд
+- Тушаалын дараалал болон чухал үед чиглэсэн баталгаажуулалтын алхамууд
+- Зөвхөн файлын нэрээр тодорхойгүй архитектур ба репо бүтэц
+- төслийн тусгайлсан конвенц, тохиргооны хачирхалтай байдал, үйл ажиллагааны онцлог
+- Курсор эсвэл Копилотын дүрэм гэх мэт одоо байгаа заавар эх сурвалжийн лавлагаа
 
-If you already have an `AGENTS.md`, `/init` will improve it in place instead of blindly replacing it.
+Хэрэв танд `AGENTS.md` байгаа бол `/init` үүнийг сохроор солихын оронд оронд нь сайжруулах болно.
 
 ---
 
-## Example
+## Жишээ
 
-You can also just create this file manually. Here's an example of some things you can put into an `AGENTS.md` file.
+Та мөн энэ файлыг гараар үүсгэж болно. `AGENTS.md` файлд оруулж болох зарим зүйлсийн жишээ энд байна.
 
 ```markdown title="AGENTS.md"
 # SST v3 Monorepo Project
@@ -56,33 +56,33 @@ This is an SST v3 monorepo with TypeScript. The project uses bun workspaces for 
 - Import shared modules using workspace names: `@my-app/core/example`
 ```
 
-We are adding project-specific instructions here and this will be shared across your team.
+Бид энд төслийн тусгай зааварчилгааг нэмж байгаа бөгөөд үүнийг танай багт хуваалцах болно.
 
 ---
 
-## Types
+## Төрөл
 
-mongolgpt also supports reading the `AGENTS.md` file from multiple locations. And this serves different purposes.
+mongolgpt нь `AGENTS.md` файлыг олон газраас уншихыг дэмждэг. Мөн энэ нь өөр өөр зорилготой.
 
-### Project
+### Төсөл
 
-Place an `AGENTS.md` in your project root for project-specific rules. These only apply when you are working in this directory or its sub-directories.
+Төслийн тусгай дүрмийн хувьд төслийн үндэс хэсэгт `AGENTS.md` тэмдэглэнэ үү. Эдгээр нь зөвхөн таныг энэ лавлах эсвэл түүний дэд лавлах хэсэгт ажиллаж байх үед л хэрэгжинэ.
 
-### Global
+### Дэлхийн
 
-You can also have global rules in a `~/.config/mongolgpt/AGENTS.md` file. This gets applied across all mongolgpt sessions.
+Та мөн `~/.config/mongolgpt/AGENTS.md` файлд глобал дүрэмтэй байж болно. Үүнийг бүх mongolgpt сессүүдэд хэрэгжүүлнэ.
 
-Since this isn't committed to Git or shared with your team, we recommend using this to specify any personal rules that the LLM should follow.
+Энэ нь Git-д зориулагдаагүй эсвэл танай багтай хуваалцаагүй тул LLM-ийн дагаж мөрдөх хувийн дүрмийг зааж өгөхийн тулд үүнийг ашиглахыг зөвлөж байна.
 
-### Claude Code Compatibility
+### Claude Кодын нийцтэй байдал
 
-For users migrating from Claude Code, MongolGPT supports Claude Code's file conventions as fallbacks:
+Claude Кодоос шилжиж буй хэрэглэгчдийн хувьд MongolGPT нь Claude Кодын файлын конвенцуудыг нөөц болгон дэмждэг:
 
-- **Project rules**: `CLAUDE.md` in your project directory (used if no `AGENTS.md` exists)
-- **Global rules**: `~/.claude/CLAUDE.md` (used if no `~/.config/mongolgpt/AGENTS.md` exists)
-- **Skills**: `~/.claude/skills/` — see [Agent Skills](/docs/skills/) for details
+- **Төслийн дүрэм**: `CLAUDE.md` таны төслийн лавлах (хэрэв `AGENTS.md` байхгүй бол хэрэглэнэ)
+- **Дэлхийн дүрэм**: `~/.claude/CLAUDE.md` (хэрэв `~/.config/mongolgpt/AGENTS.md` байхгүй бол хэрэглэнэ)
+- **Ур чадвар**: `~/.claude/skills/` — дэлгэрэнгүйг [Агентын ур чадвар](/docs/skills/) харна уу
 
-To disable Claude Code compatibility, set one of these environment variables:
+Claude Кодын нийцтэй байдлыг идэвхгүй болгохын тулд эдгээр орчны хувьсагчийн аль нэгийг тохируулна уу:
 
 ```bash
 export MONGOLGPT_DISABLE_CLAUDE_CODE=1        # Disable all .claude support
@@ -92,21 +92,21 @@ export MONGOLGPT_DISABLE_CLAUDE_CODE_SKILLS=1 # Disable only .claude/skills
 
 ---
 
-## Precedence
+## Тэргүүлэх
 
-When mongolgpt starts, it looks for rule files in this order:
+mongolgpt эхлэх үед дүрмийн файлуудыг дараах дарааллаар хайдаг:
 
-1. **Local files** by traversing up from the current directory (`AGENTS.md`, `CLAUDE.md`)
-2. **Global file** at `~/.config/mongolgpt/AGENTS.md`
-3. **Claude Code file** at `~/.claude/CLAUDE.md` (unless disabled)
+1. **Орон нутгийн файлуудыг** одоогийн лавлахаас дээш гүйлгэж (`AGENTS.md`, `CLAUDE.md`)
+2. **Глобал файл** `~/.config/mongolgpt/AGENTS.md`
+3. **Claude Кодын файл** `~/.claude/CLAUDE.md` (идэвхгүй болоогүй бол)
 
-The first matching file wins in each category. For example, if you have both `AGENTS.md` and `CLAUDE.md`, only `AGENTS.md` is used. Similarly, `~/.config/mongolgpt/AGENTS.md` takes precedence over `~/.claude/CLAUDE.md`.
+Эхний тохирох файл нь ангилал бүрт ялна. Жишээлбэл, хэрэв танд `AGENTS.md` болон `CLAUDE.md` хоёулаа байгаа бол зөвхөн `AGENTS.md` ашигладаг. Үүний нэгэн адил `~/.config/mongolgpt/AGENTS.md` нь `~/.claude/CLAUDE.md`-ээс давуу эрхтэй.
 
 ---
 
-## Custom Instructions
+## Тусгай заавар
 
-You can specify custom instruction files in your `mongolgpt.json` or the global `~/.config/mongolgpt/mongolgpt.json`. This allows you and your team to reuse existing rules rather than having to duplicate them to AGENTS.md.
+Та өөрийн `mongolgpt.json` эсвэл дэлхийн `~/.config/mongolgpt/mongolgpt.json`-д захиалгат зааврын файлуудыг зааж өгч болно. Энэ нь танд болон танай багт одоо байгаа дүрмийг AGENTS.md руу хуулбарлахын оронд дахин ашиглах боломжийг олгоно.
 
 Example:
 
@@ -117,7 +117,7 @@ Example:
 }
 ```
 
-You can also use remote URLs to load instructions from the web.
+Та мөн вэбээс зааварчилгааг ачаалахын тулд алсаас URLs ашиглаж болно.
 
 ```json title="mongolgpt.json"
 {
@@ -126,19 +126,19 @@ You can also use remote URLs to load instructions from the web.
 }
 ```
 
-Remote instructions are fetched with a 5 second timeout.
+Алсын зааварчилгааг 5 секундын завсарлагатайгаар татаж авдаг.
 
-All instruction files are combined with your `AGENTS.md` files.
+Бүх зааврын файлууд нь таны `AGENTS.md` файлуудтай нийлдэг.
 
 ---
 
-## Referencing External Files
+## Гадаад файлуудын лавлагаа
 
-While mongolgpt doesn't automatically parse file references in `AGENTS.md`, you can achieve similar functionality in two ways:
+mongolgpt нь `AGENTS.md` дахь файлын лавлагааг автоматаар задалдаггүй ч та ижил төстэй ажиллагааг хоёр аргаар хийж болно:
 
-### Using mongolgpt.json
+### mongolgpt.json ашиглан
 
-The recommended approach is to use the `instructions` field in `mongolgpt.json`:
+Санал болгож буй арга бол `mongolgpt.json` дахь `instructions` талбарыг ашиглах явдал юм:
 
 ```json title="mongolgpt.json"
 {
@@ -147,9 +147,9 @@ The recommended approach is to use the `instructions` field in `mongolgpt.json`:
 }
 ```
 
-### Manual Instructions in AGENTS.md
+### Гарын авлагын заавар AGENTS.md
 
-You can teach mongolgpt to read external files by providing explicit instructions in your `AGENTS.md`. Here's a practical example:
+Та `AGENTS.md`-д тодорхой зааварчилгаа өгснөөр гадаад файлуудыг уншихыг mongolgpt-д зааж болно. Энд практик жишээ байна:
 
 ```markdown title="AGENTS.md"
 # TypeScript Project Rules
@@ -176,13 +176,13 @@ For testing strategies and coverage requirements: @test/testing-guidelines.md
 Read the following file immediately as it's relevant to all workflows: @rules/general-guidelines.md.
 ```
 
-This approach allows you to:
+Энэ арга нь танд дараах боломжийг олгоно:
 
-- Create modular, reusable rule files
-- Share rules across projects via symlinks or git submodules
-- Keep AGENTS.md concise while referencing detailed guidelines
-- Ensure mongolgpt loads files only when needed for the specific task
+- Модульчлагдсан, дахин ашиглах боломжтой дүрмийн файлуудыг үүсгэх
+- Симлинк эсвэл git дэд модулиар дамжуулан төслүүдийн дунд дүрмийг хуваалцах
+- Нарийвчилсан удирдамжийг дурдахдаа AGENTS.md-г товчхон бичнэ үү
+- mongolgpt файлуудыг зөвхөн тухайн ажилд шаардлагатай үед ачаалдаг эсэхийг шалгаарай
 
 :::tip
-For monorepos or projects with shared standards, using `mongolgpt.json` with glob patterns (like `packages/*/AGENTS.md`) is more maintainable than manual instructions.
+Монерепо эсвэл нийтлэг стандарттай төслүүдийн хувьд `mongolgpt.json`-г бөмбөрцөг загвартай (`packages/*/AGENTS.md` гэх мэт) ашиглах нь гарын авлагын зааварчилгаанаас илүү засвар үйлчилгээ юм.
 :::

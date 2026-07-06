@@ -1,15 +1,15 @@
 ---
 title: Network
-description: Configure proxies and custom certificates.
+description: Прокси болон тусгай гэрчилгээг тохируулах.
 ---
 
-MongolGPT supports standard proxy environment variables and custom certificates for enterprise network environments.
+MongolGPT нь стандарт прокси орчны хувьсагч болон байгууллагын сүлжээний орчинд зориулсан тусгай гэрчилгээг дэмждэг.
 
 ---
 
-## Proxy
+## Прокси
 
-MongolGPT respects standard proxy environment variables.
+MongolGPT стандарт прокси орчны хувьсагчдыг хүндэтгэдэг.
 
 ```bash
 # HTTPS proxy (recommended)
@@ -23,35 +23,35 @@ export NO_PROXY=localhost,127.0.0.1
 ```
 
 :::caution
-The TUI communicates with a local HTTP server. You must bypass the proxy for this connection to prevent routing loops.
+TUI нь орон нутгийн HTTP сервертэй холбогддог. Чиглүүлэлтийн гогцооноос сэргийлэхийн тулд та энэ холболтын проксиг тойрч гарах ёстой.
 :::
 
-You can configure the server's port and hostname using [CLI flags](/docs/cli#run).
+Та [CLI тугууд](/docs/cli#run) ашиглан серверийн порт болон хостын нэрийг тохируулах боломжтой.
 
 ---
 
-### Authenticate
+### Баталгаажуулах
 
-If your proxy requires basic authentication, include credentials in the URL.
+Хэрэв таны прокси үндсэн баталгаажуулалт шаарддаг бол URL-д итгэмжлэлүүдийг оруулна уу.
 
 ```bash
 export HTTPS_PROXY=http://username:password@proxy.example.com:8080
 ```
 
 :::caution
-Avoid hardcoding passwords. Use environment variables or secure credential storage.
+Хатуу кодлох нууц үгээс зайлсхий. Хүрээлэн буй орчны хувьсагч эсвэл найдвартай итгэмжлэлийн хадгалах санг ашиглах.
 :::
 
-For proxies requiring advanced authentication like NTLM or Kerberos, consider using an LLM Gateway that supports your authentication method.
+NTLM эсвэл Kerberos зэрэг дэвшилтэт нэвтрэлт танилт шаарддаг проксигийн хувьд таны баталгаажуулалтын аргыг дэмждэг LLM гарцыг ашиглахыг бодоорой.
 
 ---
 
-## Custom certificates
+## Тусгай гэрчилгээ
 
-If your enterprise uses custom CAs for HTTPS connections, configure MongolGPT to trust them.
+Хэрэв танай байгууллага HTTPS холболтод захиалгат CA ашигладаг бол тэдгээрт итгэхийн тулд MongolGPT-г тохируулна уу.
 
 ```bash
 export NODE_EXTRA_CA_CERTS=/path/to/ca-cert.pem
 ```
 
-This works for both proxy connections and direct API access.
+Энэ нь прокси холболт болон шууд API хандалтад хоёуланд нь ажилладаг.

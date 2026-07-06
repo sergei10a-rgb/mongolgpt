@@ -1,67 +1,67 @@
 ---
 title: Formatters
-description: MongolGPT uses language specific formatters.
+description: MongolGPT нь хэлний тусгай форматлагчдыг ашигладаг.
 ---
 
-MongolGPT can format files after they are written or edited using language-specific formatters. Formatters are disabled by default; enable them in your config before MongolGPT will run them.
+MongolGPT нь тухайн хэлний форматлагч ашиглан файлуудыг бичиж эсвэл зассаны дараа форматлах боломжтой. Форматлагч нь анхдагчаар идэвхгүй болсон; MongolGPT тэдгээрийг ажиллуулахаас өмнө тохиргоондоо идэвхжүүлнэ үү.
 
 ---
 
-## Built-in
+## Баригдсан
 
-MongolGPT comes with several built-in formatters for popular languages and frameworks. Below is a list of the formatters, supported file extensions, and commands or config options it needs.
+MongolGPT алдартай хэл болон фреймворкуудад зориулсан хэд хэдэн суулгасан форматлагчтай ирдэг. Доорх нь форматлагчдын жагсаалт, дэмжигдсэн файлын өргөтгөлүүд, түүнд шаардлагатай командууд эсвэл тохиргооны сонголтуудын жагсаалт юм.
 
-| Formatter            | Extensions                                                                                               | Requirements                                                                                          |
+| Форматлагч | Өргөтгөлүүд | Тавигдах шаардлага |
 | -------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| air                  | .R                                                                                                       | `air` command available                                                                               |
-| biome                | .js, .jsx, .ts, .tsx, .html, .css, .md, .json, .yaml, and [more](https://biomejs.dev/)                   | `biome.json(c)` config file                                                                           |
-| cargofmt             | .rs                                                                                                      | `cargo fmt` command available                                                                         |
-| clang-format         | .c, .cpp, .h, .hpp, .ino, and [more](https://clang.llvm.org/docs/ClangFormat.html)                       | `.clang-format` config file                                                                           |
-| cljfmt               | .clj, .cljs, .cljc, .edn                                                                                 | `cljfmt` command available                                                                            |
-| dart                 | .dart                                                                                                    | `dart` command available                                                                              |
-| dfmt                 | .d                                                                                                       | `dfmt` command available                                                                              |
-| gleam                | .gleam                                                                                                   | `gleam` command available                                                                             |
-| gofmt                | .go                                                                                                      | `gofmt` command available                                                                             |
-| htmlbeautifier       | .erb, .html.erb                                                                                          | `htmlbeautifier` command available                                                                    |
-| ktlint               | .kt, .kts                                                                                                | `ktlint` command available                                                                            |
-| mix                  | .ex, .exs, .eex, .heex, .leex, .neex, .sface                                                             | `mix` command available                                                                               |
-| nixfmt               | .nix                                                                                                     |
-ixfmt` command available                                                                            |
-| ocamlformat          | .ml, .mli                                                                                                | `ocamlformat` command available and `.ocamlformat` config file                                        |
-| ormolu               | .hs                                                                                                      | `ormolu` command available                                                                            |
-| oxfmt (Experimental) | .js, .jsx, .ts, .tsx                                                                                     | `oxfmt` dependency in `package.json` and an [experimental env variable flag](/docs/cli/#experimental) |
-| pint                 | .php                                                                                                     | `laravel/pint` dependency in `composer.json`                                                          |
-| prettier             | .js, .jsx, .ts, .tsx, .html, .css, .md, .json, .yaml, and [more](https://prettier.io/docs/en/index.html) | `prettier` dependency in `package.json`                                                               |
-| rubocop              | .rb, .rake, .gemspec, .ru                                                                                | `rubocop` command available                                                                           |
-| ruff                 | .py, .pyi                                                                                                | `ruff` command available with config                                                                  |
-| rustfmt              | .rs                                                                                                      | `rustfmt` command available                                                                           |
-| shfmt                | .sh, .bash                                                                                               | `shfmt` command available                                                                             |
-| standardrb           | .rb, .rake, .gemspec, .ru                                                                                | `standardrb` command available                                                                        |
-| terraform            | .tf, .tfvars                                                                                             | `terraform` command available                                                                         |
-| uv                   | .py, .pyi                                                                                                | `uv` command available                                                                                |
-| zig                  | .zig, .zon                                                                                               | `zig` command available                                                                               |
+| агаар | .R | `air` тушаал боломжтой |
+| биом | .js, .jsx, .ts, .tsx, .html, .css, .md, .json, .yaml болон [more](https://biomejs.dev/) | `biome.json(c)` тохиргооны файл |
+| cargofmt | .rs | `cargo fmt` тушаал боломжтой |
+| clang-format | .c, .cpp, .h, .hpp, .ino, болон [more](https://clang.llvm.org/docs/ClangFormat.html) | `.clang-format` тохиргооны файл |
+| cljfmt | .clj, .cljs, .cljc, .edn | `cljfmt` тушаал боломжтой |
+| сум | .dart | `dart` тушаал боломжтой |
+| dfmt | .d | `dfmt` тушаал боломжтой |
+| гялалзах | .gleam | `gleam` тушаал боломжтой |
+| gofmt | .go | `gofmt` тушаал боломжтой |
+| htmlbeautifier | .erb, .html.erb | `htmlbeautifier` тушаал боломжтой |
+| ktlint | .кт, .ктс | `ktlint` тушаал боломжтой |
+| холих | .ex, .exs, .eex, .heex, .leex, .neex, .sface | `mix` тушаал боломжтой |
+| nixfmt | .nix |
+ixfmt` тушаал боломжтой |
+| ocamlformat | .мл, .мли | `ocamlformat` тушаал болон `.ocamlformat` тохиргооны файл |
+| ormolu | .hs | `ormolu` тушаал боломжтой |
+| oxfmt (Туршилтын) | .js, .jsx, .ts, .tsx | `oxfmt` хамаарал нь `package.json` ба [туршилтын env хувьсагч туг](/docs/cli/#experimental) |
+| пинт | .php | `laravel/pint` хамаарал нь `composer.json` |
+| prettier | .js, .jsx, .ts, .tsx, .html, .css, .md, .json, .yaml болон [more](https://prettier.io/docs/en/index.html) | `prettier` хамаарал нь `package.json` |
+| рубокоп | .rb, .rake, .gemspec, .ru | `rubocop` тушаал боломжтой |
+| ruff | .py, .pyi | `ruff` командыг тохируулах боломжтой |
+| rustfmt | .rs | `rustfmt` тушаал боломжтой |
+| shfmt | .sh, .bash | `shfmt` тушаал боломжтой |
+| standardrb | .rb, .rake, .gemspec, .ru | `standardrb` тушаал боломжтой |
+| терраформ | .tf, .tfvars | `terraform` тушаал боломжтой |
+| uv | .py, .pyi | `uv` тушаал боломжтой |
+| зиг | .zig, .zon | `zig` тушаал боломжтой |
 
-When formatters are enabled, MongolGPT will use `prettier` for matching files if your project has `prettier` in `package.json`.
-
----
-
-## How it works
-
-When MongolGPT writes or edits a file and formatters are enabled, it:
-
-1. Checks the file extension against all enabled formatters.
-2. Runs the appropriate formatter command on the file.
-3. Applies the formatting changes.
-
-This process happens in the background for enabled formatters.
+Форматлагчийг идэвхжүүлсэн үед MongolGPT таны төсөлд `package.json`-д `prettier` байгаа бол тохирох файлд `prettier` ашиглах болно.
 
 ---
 
-## Configure
+## Энэ хэрхэн ажилладаг
 
-You can enable and customize formatters through the `formatter` section in your MongolGPT config.
+MongolGPT файл бичих, засварлах, форматлагчдыг идэвхжүүлсэн үед энэ нь:
 
-To enable all built-in formatters, set `formatter` to `true`.
+1. Бүх идэвхжүүлсэн форматлагчтай файлын өргөтгөлийг шалгана.
+2. Файл дээр тохирох форматлагч командыг ажиллуулна.
+3. Форматын өөрчлөлтийг хэрэгжүүлнэ.
+
+Идэвхжүүлсэн форматлагчийн хувьд энэ процесс арын дэвсгэр дээр явагдана.
+
+---
+
+## Тохируулах
+
+Та өөрийн MongolGPT тохиргооны `formatter` хэсгээс форматлагчдыг идэвхжүүлж, өөрчлөх боломжтой.
+
+Бүх суулгасан форматлагчдыг идэвхжүүлэхийн тулд `formatter`-г `true` гэж тохируулна уу.
 
 ```json title="mongolgpt.json"
 {
@@ -70,7 +70,7 @@ To enable all built-in formatters, set `formatter` to `true`.
 }
 ```
 
-Use an object to keep built-ins enabled while configuring overrides or custom formatters.
+Хүчингүй болгох эсвэл өөрчлөн форматлагчийг тохируулахын тулд суулгацыг идэвхжүүлэхийн тулд объект ашиглана уу.
 
 ```json title="mongolgpt.json"
 {
@@ -79,22 +79,22 @@ Use an object to keep built-ins enabled while configuring overrides or custom fo
 }
 ```
 
-Each formatter configuration supports the following:
+Форматлагчийн тохиргоо бүр дараахь зүйлийг дэмждэг.
 
-| Property      | Type     | Description                                                                                |
+| Үл хөдлөх хөрөнгө | Төрөл | Тодорхойлолт |
 | ------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `disabled`    | boolean  | Set this to `true` to disable the formatter                                                |
-| `command`     | string[] | The command to run for formatting. Required for custom formatters; optional for built-ins. |
-| `environment` | object   | Environment variables to set when running the formatter                                    |
-| `extensions`  | string[] | File extensions this formatter should handle                                               |
+| `disabled` | логикийн | Форматлагчийг идэвхгүй болгохын тулд үүнийг `true` гэж тохируулна уу |
+| `command` | мөр[] | Форматлахын тулд ажиллуулах тушаал. Захиалгат форматлагчдад шаардлагатай; суулгацын хувьд сонголттой. |
+| `environment` | объект | Форматлагчийг ажиллуулах үед тохируулах орчны хувьсагчууд |
+| `extensions` | мөр[] | Энэ форматлагчийн ажиллах ёстой файлын өргөтгөлүүд |
 
-Let's look at some examples.
+Зарим жишээг харцгаая.
 
 ---
 
-### Disabling formatters
+### Форматлагчдыг идэвхгүй болгож байна
 
-If `formatter` is omitted, all formatters are disabled. To disable all formatters after another config enabled them, set `formatter` to `false`:
+Хэрэв `formatter`-г орхигдуулсан бол бүх форматлагч идэвхгүй болно. Өөр тохиргоог идэвхжүүлсний дараа бүх форматлагчдыг идэвхгүй болгохын тулд `formatter`-г `false` гэж тохируулна уу:
 
 ```json title="mongolgpt.json" {3}
 {
@@ -103,7 +103,7 @@ If `formatter` is omitted, all formatters are disabled. To disable all formatter
 }
 ```
 
-To disable a **specific** formatter, set `disabled` to `true`:
+**Тодорхой** форматлагчийг идэвхгүй болгохын тулд `disabled`-г `true` болгож тохируулна уу:
 
 ```json title="mongolgpt.json" {5}
 {
@@ -118,9 +118,9 @@ To disable a **specific** formatter, set `disabled` to `true`:
 
 ---
 
-### Custom formatters
+### Захиалгат форматлагч
 
-You can configure built-in formatters with options like `environment` or `extensions`. To add a custom formatter, specify a `command` and `extensions`:
+Та `environment` эсвэл `extensions` гэх мэт сонголтоор суурилуулсан форматлагчдыг тохируулах боломжтой. Захиалгат форматлагч нэмэхийн тулд `command` болон `extensions`-г зааж өгнө үү:
 
 ```json title="mongolgpt.json" {4-14}
 {
@@ -141,4 +141,4 @@ You can configure built-in formatters with options like `environment` or `extens
 }
 ```
 
-The **`$FILE` placeholder** in the command will be replaced with the path to the file being formatted.
+Тушаал дахь **`$FILE` орлуулагч** нь форматлаж буй файлын замаар солигдох болно.

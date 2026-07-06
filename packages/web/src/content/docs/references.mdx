@@ -1,11 +1,11 @@
 ---
 title: References
-description: Add local directories and Git repositories as project references.
+description: Төслийн лавлагаа болгон локал лавлах болон Git репозиторыг нэмнэ үү.
 ---
 
-References give MongolGPT access to directories outside the current project. Use them to make documentation, shared libraries, examples, or another repository available while you work.
+Лавлагаа нь MongolGPT-д одоогийн төслийн гаднах лавлах руу хандах боломжийг олгоно. Ажиллаж байхдаа баримт бичиг, хуваалцсан номын сан, жишээнүүд эсвэл өөр хадгалах газрыг ашиглах боломжтой болгохын тулд тэдгээрийг ашиглана уу.
 
-References are configured by alias in `mongolgpt.json` or `mongolgpt.jsonc`.
+Лавлагаа нь `mongolgpt.json` эсвэл `mongolgpt.jsonc` дахь өөр нэрээр тохируулагдсан.
 
 ```jsonc title="mongolgpt.jsonc"
 {
@@ -26,9 +26,9 @@ References are configured by alias in `mongolgpt.json` or `mongolgpt.jsonc`.
 
 ---
 
-## Local directories
+## Орон нутгийн лавлахууд
 
-Use `path` to reference a local directory.
+Орон нутгийн лавлахыг лавлахын тулд `path` ашиглана уу.
 
 ```jsonc title="mongolgpt.jsonc"
 {
@@ -40,13 +40,13 @@ Use `path` to reference a local directory.
 }
 ```
 
-Paths can be:
+Замууд нь дараахь байж болно.
 
-- Relative to the config file that defines the reference
-- Absolute, such as `/home/user/docs`
-- Relative to your home directory, such as `~/docs`
+- Лавлагааг тодорхойлсон тохиргооны файлтай холбоотой
+- Үнэмлэхүй, тухайлбал `/home/user/docs`
+- `~/docs` гэх мэт таны гэрийн лавлахтай холбоотой
 
-You can also use a string shorthand:
+Та мөн мөрийн товчлолыг ашиглаж болно:
 
 ```jsonc title="mongolgpt.jsonc"
 {
@@ -58,9 +58,9 @@ You can also use a string shorthand:
 
 ---
 
-## Git repositories
+## Git репозиторууд
 
-Use `repository` to reference a Git repository. MongolGPT materializes the repository in its local repository cache and makes the checked-out source available as a reference directory.
+Git репозиторыг лавлахдаа `repository` ашиглана уу. MongolGPT репозиторыг локал репозиторын кэшдээ материалжуулж, шалгагдсан эх сурвалжийг лавлах лавлах болгон ашиглах боломжтой болгоно.
 
 ```jsonc title="mongolgpt.jsonc"
 {
@@ -73,9 +73,9 @@ Use `repository` to reference a Git repository. MongolGPT materializes the repos
 }
 ```
 
-`repository` accepts Git URLs, host/path references, and GitHub `owner/repo` shorthand. The optional `branch` field selects a branch or ref. Without `branch`, MongolGPT uses the repository's default branch.
+`repository` Git URLs, хост/замын лавлагаа, GitHub `owner/repo` товчлолыг хүлээн зөвшөөрдөг. Нэмэлт `branch` талбар нь салбар эсвэл лавлахыг сонгоно. `branch` байхгүй бол MongolGPT репозиторын анхдагч салбарыг ашигладаг.
 
-You can use string shorthand when you do not need a branch, description, or other options:
+Салбар, тайлбар болон бусад сонголт шаардлагагүй үед та мөрийн товчлолыг ашиглаж болно:
 
 ```jsonc title="mongolgpt.jsonc"
 {
@@ -86,14 +86,14 @@ You can use string shorthand when you do not need a branch, description, or othe
 ```
 
 :::note
-Git references are refreshed asynchronously. A newly configured repository may take a moment to finish cloning or updating.
+Git лавлагааг асинхрон байдлаар шинэчилдэг. Шинээр тохируулсан репозитор клончлох эсвэл шинэчлэхэд хэсэг хугацаа зарцуулагдаж магадгүй.
 :::
 
 ---
 
-## Describe usage
+## Хэрэглээг тайлбарлана уу
 
-Add `description` to explain when an agent should use a reference.
+Агент хэзээ лавлагаа ашиглах ёстойг тайлбарлахын тулд `description` нэмнэ үү.
 
 ```jsonc title="mongolgpt.jsonc"
 {
@@ -106,13 +106,13 @@ Add `description` to explain when an agent should use a reference.
 }
 ```
 
-MongolGPT includes references with descriptions in agent context. Descriptions should be short and specific enough to distinguish references with similar content. References without descriptions remain available through autocomplete and direct use, but are not advertised to agents.
+MongolGPT нь агентийн контекст дэх тайлбар бүхий лавлагааг агуулдаг. Тодорхойлолт нь ижил төстэй агуулгатай лавлагааг ялгахад хангалттай богино бөгөөд тодорхой байх ёстой. Тодорхойлолтгүй лавлагааг автоматаар бөглөх, шууд ашиглах замаар ашиглах боломжтой боловч агентуудад сурталчлахгүй.
 
 ---
 
-## Hide autocomplete entries
+## Автоматаар бөглөх бичилтүүдийг нуу
 
-Set `hidden` to `true` to omit a reference from `@` autocomplete in the TUI.
+`hidden`-д `@` автомат бөглөхөөс лавлагааг орхихын тулд `true` гэж тохируулна уу.
 
 ```jsonc title="mongolgpt.jsonc"
 {
@@ -126,32 +126,32 @@ Set `hidden` to `true` to omit a reference from `@` autocomplete in the TUI.
 }
 ```
 
-`hidden` only affects autocomplete. A hidden reference with a description remains included in agent context.
+`hidden` зөвхөн автоматаар бөглөхөд нөлөөлдөг. Тодорхойлолт бүхий далд лавлагааг агентийн контекст оруулсан хэвээр байна.
 
 ---
 
-## Use references
+## Лавлагаа ашиглах
 
-Configured references appear in TUI `@` autocomplete. Type `@alias` to attach the reference root, or `@alias/` to search for files inside it.
+Тохируулсан лавлагаа нь TUI `@` автомат бөглөх хэсэгт харагдана. Лавлагааны язгуурыг хавсаргах бол `@alias`, доторх файлуудыг хайх бол `@alias/` гэж бичнэ үү.
 
 ```text
 Compare this implementation with @sdk/src/client.ts
 ```
 
-Agents also receive the resolved paths and descriptions of configured references that have descriptions in their system context, so they can inspect a reference when it is relevant without you attaching it manually.
+Агентууд мөн өөрсдийн системийн контекст дэх тайлбар бүхий тохируулсан лавлагааны шийдвэрлэсэн замууд болон тайлбаруудыг хүлээн авдаг бөгөөд ингэснээр тэд лавлагааг холбогдох үед нь гараар хавсаргахгүйгээр шалгаж болно.
 
-MongolGPT automatically allows reference directories through its external-directory permission boundary. Normal tool permissions still apply; for example, an agent that cannot edit files does not gain edit access because a directory is configured as a reference.
+MongolGPT нь гадаад лавлах зөвшөөрлийн хилээр дамжуулан лавлагаа лавлахыг автоматаар зөвшөөрдөг. Хэрэгслийн ердийн зөвшөөрөл хэрэгжсэн хэвээр байна; жишээлбэл, лавлах болгон тохируулсан лавлах учраас файл засварлах боломжгүй агент засварлах эрх олж авдаггүй.
 
 ---
 
-## Configure fields
+## Талбаруудыг тохируулах
 
-| Field         | Local | Git | Description                                      |
-| ------------- | ----- | --- | ------------------------------------------------ |
-| `path`        | Yes   | No  | Local reference directory                        |
-| `repository`  | No    | Yes | Git URL, host/path, or GitHub `owner/repo` value |
-| `branch`      | No    | Yes | Optional Git branch or ref                       |
-| `description` | Yes   | Yes | Guidance describing when to use the reference    |
-| `hidden`      | Yes   | Yes | Hide the reference from TUI `@` autocomplete     |
+| Талбай        | Орон нутгийн | Git  | Тодорхойлолт                                      |
+| ------------- | ------------ | ---- | ------------------------------------------------- |
+| `path`        | Тийм         | Үгүй | Орон нутгийн лавлах лавлах                        |
+| `repository`  | Үгүй         | Тийм | Git URL, хост/зам, эсвэл GitHub `owner/repo` утга |
+| `branch`      | Үгүй         | Тийм | Нэмэлт Git салбар эсвэл ref                       |
+| `description` | Тийм         | Тийм | Лавлагааг хэзээ ашиглахыг тайлбарласан заавар     |
+| `hidden`      | Тийм         | Тийм | Лавлагааг TUI `@` автомат бөглөхөөс нуу           |
 
-Reference aliases cannot be empty or contain `/`, whitespace, backticks, or commas.
+Лавлах нэр нь хоосон байж болохгүй эсвэл `/`, хоосон зай, арын тэмдэг, таслал агуулсан байж болохгүй.

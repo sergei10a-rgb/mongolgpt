@@ -20,7 +20,7 @@ export function useShareMessages() {
 }
 
 export function normalizeLocale(locale: string) {
-  return locale === "root" ? "en" : locale
+  return locale === "root" ? "mn" : locale
 }
 
 export function formatNumber(value: number, locale: string) {

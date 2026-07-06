@@ -1,69 +1,69 @@
 ---
 title: Themes
-description: Select a built-in theme or define your own.
+description: Суурилуулсан сэдвийг сонгох эсвэл өөрөө тодорхойл.
 ---
 
-With MongolGPT you can select from one of several built-in themes, use a theme that adapts to your terminal theme, or define your own custom theme.
+MongolGPT-ийн тусламжтайгаар та хэд хэдэн суулгасан загвараас аль нэгийг нь сонгох, терминалын загварт тохирсон загвар ашиглах эсвэл өөрийн хүссэн загвараа тодорхойлох боломжтой.
 
-By default, MongolGPT uses our own `mongolgpt` theme.
-
----
-
-## Terminal requirements
-
-For themes to display correctly with their full color palette, your terminal must support **truecolor** (24-bit color). Most modern terminals support this by default, but you may need to enable it:
-
-- **Check support**: Run `echo $COLORTERM` - it should output `truecolor` or `24bit`
-- **Enable truecolor**: Set the environment variable `COLORTERM=truecolor` in your shell profile
-- **Terminal compatibility**: Ensure your terminal emulator supports 24-bit color (most modern terminals like iTerm2, Alacritty, Kitty, Windows Terminal, and recent versions of GNOME Terminal do)
-
-Without truecolor support, themes may appear with reduced color accuracy or fall back to the nearest 256-color approximation.
+Анхдагч байдлаар MongolGPT нь бидний өөрийн `mongolgpt` загварыг ашигладаг.
 
 ---
 
-## Built-in themes
+## Терминалын шаардлага
 
-MongolGPT comes with several built-in themes.
+Загваруудыг өнгөт палитраараа зөв харуулахын тулд таны терминал **truecolor** (24 битийн өнгө)-г дэмжих ёстой. Ихэнх орчин үеийн терминалууд үүнийг анхдагчаар дэмждэг боловч та үүнийг идэвхжүүлэх шаардлагатай байж магадгүй:
 
-| Name                   | Description                                                                  |
+- **Дэмжлэгийг шалгах**: `echo $COLORTERM` ажиллуулах - энэ нь `truecolor` эсвэл `24bit` гаргана.
+- ** Truecolor-г идэвхжүүлэх**: Өөрийн бүрхүүлийн профайлд `COLORTERM=truecolor` орчны хувьсагчийг тохируулна уу
+- **Терминалын нийцтэй байдал**: Таны терминал эмулятор 24 битийн өнгийг дэмждэг эсэхийг шалгаарай (iTerm2, Alacritty, Kitty, Windows Терминал гэх мэт хамгийн орчин үеийн терминалууд болон GNOME Терминалын сүүлийн хувилбарууд)
+
+Truecolor-ийн дэмжлэггүйгээр загварууд өнгөний нарийвчлал багатай гарч ирэх эсвэл хамгийн ойрын 256 өнгө хүртэл буурч болно.
+
+---
+
+## Баригдсан загварууд
+
+MongolGPT хэд хэдэн суулгасан загвартай ирдэг.
+
+| Нэр | Тодорхойлолт |
 | ---------------------- | ---------------------------------------------------------------------------- |
-| `system`               | Adapts to your terminal’s background color                                   |
-| `tokyonight`           | Based on the [Tokyonight](https://github.com/folke/tokyonight.nvim) theme    |
-| `everforest`           | Based on the [Everforest](https://github.com/sainnhe/everforest) theme       |
-| `ayu`                  | Based on the [Ayu](https://github.com/ayu-theme) dark theme                  |
-| `catppuccin`           | Based on the [Catppuccin](https://github.com/catppuccin) theme               |
-| `catppuccin-macchiato` | Based on the [Catppuccin](https://github.com/catppuccin) theme               |
-| `gruvbox`              | Based on the [Gruvbox](https://github.com/morhetz/gruvbox) theme             |
-| `kanagawa`             | Based on the [Kanagawa](https://github.com/rebelot/kanagawa.nvim) theme      |
+| `system` | Таны терминалын дэвсгэр өнгөнд тохируулна |
+| `tokyonight` | [Tokyonight](https://github.com/folke/tokyonight.nvim) сэдэв дээр тулгуурласан |
+| `everforest` | [Everforest](https://github.com/sainnhe/everforest) сэдэв дээр тулгуурласан |
+| `ayu` | [Ayu](https://github.com/ayu-theme) харанхуй сэдэв дээр үндэслэсэн |
+| `catppuccin` | [Catppuccin](https://github.com/catppuccin) сэдэв дээр тулгуурласан |
+| `catppuccin-macchiato` | [Catppuccin](https://github.com/catppuccin) сэдэв дээр тулгуурласан |
+| `gruvbox` | [Gruvbox](https://github.com/morhetz/gruvbox) сэдэв дээр тулгуурласан |
+| `kanagawa` | [Kanagawa](https://github.com/rebelot/kanagawa.nvim) сэдэв дээр тулгуурласан |
 |
-ord`                 | Based on the [Nord](https://github.com/nordtheme/nord) theme                 |
-| `matrix`               | Hacker-style green on black theme                                            |
-| `one-dark`             | Based on the [Atom One](https://github.com/Th3Whit3Wolf/one-nvim) Dark theme |
+ord` | [Nord](https://github.com/nordtheme/nord) сэдэв дээр тулгуурласан |
+| `matrix` | Хар сэдэвт хакер маягийн ногоон |
+| `one-dark` | [Атом Нэг](https://github.com/Th3Whit3Wolf/one-nvim) Харанхуй загвар дээр үндэслэсэн |
 
-And more, we are constantly adding new themes.
-
----
-
-## System theme
-
-The `system` theme is designed to automatically adapt to your terminal's color scheme. Unlike traditional themes that use fixed colors, the _system_ theme:
-
-- **Generates gray scale**: Creates a custom gray scale based on your terminal's background color, ensuring optimal contrast.
-- **Uses ANSI colors**: Leverages standard ANSI colors (0-15) for syntax highlighting and UI elements, which respect your terminal's color palette.
-- **Preserves terminal defaults**: Uses
-one` for text and background colors to maintain your terminal's native appearance.
-
-The system theme is for users who:
-
-- Want MongolGPT to match their terminal's appearance
-- Use custom terminal color schemes
-- Prefer a consistent look across all terminal applications
+Үүнээс гадна бид шинэ сэдвүүдийг байнга нэмж байдаг.
 
 ---
 
-## Using a theme
+## Системийн сэдэв
 
-You can select a theme by bringing up the theme select with the `/theme` command. Or you can specify it in `tui.json`.
+`system` загвар нь таны терминалын өнгөний схемд автоматаар дасан зохицоход зориулагдсан. Тогтмол өнгө ашигладаг уламжлалт загваруудаас ялгаатай нь _системийн_ сэдэв:
+
+- **Саарал хуваарийг үүсгэдэг**: Таны терминалын дэвсгэр өнгө дээр үндэслэн тохируулсан саарал масштабыг үүсгэж, оновчтой тодосгогчийг хангана.
+- ** ANSI өнгийг ашигладаг**: Таны терминалын өнгөт палитрыг хүндэтгэдэг синтаксийг тодруулах, UI элементүүдэд стандарт ANSI өнгийг (0-15) ашигладаг.
+- **Терминалын өгөгдмөл тохиргоог хадгалдаг**: Терминалынхаа эх төрхийг хадгалахын тулд текст болон дэвсгэр өнгөнд
+one`-г ашигладаг.
+
+Системийн сэдэв нь дараах хэрэглэгчдэд зориулагдсан:
+
+- MongolGPT-г терминалынхаа дүр төрхтэй тааруулахыг хүсч байна
+- Захиалгат терминалын өнгөний схемийг ашиглах
+- Бүх терминалын аппликешн дээр тууштай харагдахыг илүүд үздэг
+
+---
+
+## Загвар ашиглаж байна
+
+Та `/theme` командыг ашиглан сэдвийг сонгох боломжтой. Эсвэл та үүнийг `tui.json`-д зааж өгч болно.
 
 ```json title="tui.json" {3}
 {
@@ -74,37 +74,37 @@ You can select a theme by bringing up the theme select with the `/theme` command
 
 ---
 
-## Custom themes
+## Захиалгат загварууд
 
-MongolGPT supports a flexible JSON-based theme system that allows users to create and customize themes easily.
-
----
-
-### Hierarchy
-
-Themes are loaded from multiple directories in the following order where later directories override earlier ones:
-
-1. **Built-in themes** - These are embedded in the binary
-2. **User config directory** - Defined in `~/.config/mongolgpt/themes/*.json` or `$XDG_CONFIG_HOME/mongolgpt/themes/*.json`
-3. **Project root directory** - Defined in the `<project-root>/.mongolgpt/themes/*.json`
-4. **Current working directory** - Defined in `./.mongolgpt/themes/*.json`
-
-If multiple directories contain a theme with the same name, the theme from the directory with higher priority will be used.
+MongolGPT нь хэрэглэгчдэд хялбархан загвар үүсгэж, өөрчлөх боломжийг олгодог JSON- дээр суурилсан уян хатан загварын системийг дэмждэг.
 
 ---
 
-### Creating a theme
+### Шатлал
 
-To create a custom theme, create a JSON file in one of the theme directories.
+Сэдвүүдийг хэд хэдэн сангаас дараах дарааллаар ачаалдаг бол хожмын сангууд өмнөх сангуудыг дардаг.
 
-For user-wide themes:
+1. **Баригдсан загварууд** - Эдгээр нь хоёртын файлд суулгагдсан
+2. **Хэрэглэгчийн тохиргооны лавлах** - `~/.config/mongolgpt/themes/*.json` эсвэл `$XDG_CONFIG_HOME/mongolgpt/themes/*.json`-д тодорхойлогдсон.
+3. **Төслийн үндсэн лавлах** - `<project-root>/.mongolgpt/themes/*.json`-д тодорхойлогдсон.
+4. **Одоогийн ажлын лавлах** - `./.mongolgpt/themes/*.json`-д тодорхойлогдсон
+
+Хэрэв олон лавлах нь ижил нэртэй сэдэв агуулж байвал илүү давуу эрхтэй лавлахын сэдвийг ашиглана.
+
+---
+
+### Загвар үүсгэх
+
+Захиалгат загвар үүсгэхийн тулд сэдвийн лавлахуудын аль нэгэнд JSON файл үүсгэнэ үү.
+
+Хэрэглэгчийн өргөн хүрээний сэдвүүдийн хувьд:
 
 ```bash no-frame
 mkdir -p ~/.config/mongolgpt/themes
 vim ~/.config/mongolgpt/themes/my-theme.json
 ```
 
-And for project-specific themes.
+Мөн төслийн тусгай сэдвүүдийн хувьд.
 
 ```bash no-frame
 mkdir -p .mongolgpt/themes
@@ -113,36 +113,36 @@ vim .mongolgpt/themes/my-theme.json
 
 ---
 
-### JSON format
+### JSON формат
 
-Themes use a flexible JSON format with support for:
+Загварууд нь уян хатан JSON форматыг ашигладаг:
 
-- **Hex colors**: `"#ffffff"`
-- **ANSI colors**: `3` (0-255)
-- **Color references**: `"primary"` or custom definitions
-- **Dark/light variants**: `{"dark": "#000", "light": "#fff"}`
-- **No color**: `"none"` - Uses the terminal's default color or transparent
-
----
-
-### Color definitions
-
-The `defs` section is optional and it allows you to define reusable colors that can be referenced in the theme.
+- **Hex өнгө**: `"#ffffff"`
+- **ANSI өнгө**: `3` (0-255)
+- **Өнгөний лавлагаа**: `"primary"` эсвэл захиалгат тодорхойлолт
+- **Харанхуй/цайвар хувилбарууд**: `{"dark": "#000", "light": "#fff"}`
+- **Өнгөгүй**: `"none"` - Терминалын өгөгдмөл өнгө буюу тунгалаг өнгийг ашиглана
 
 ---
 
-### Terminal defaults
+### Өнгөний тодорхойлолт
 
-The special value `"none"` can be used for any color to inherit the terminal's default color. This is particularly useful for creating themes that blend seamlessly with your terminal's color scheme:
-
-- `"text": "none"` - Uses terminal's default foreground color
-- `"background": "none"` - Uses terminal's default background color
+`defs` хэсэг нь сонголттой бөгөөд энэ нь сэдэвт лавлаж болох дахин ашиглах боломжтой өнгийг тодорхойлох боломжийг танд олгоно.
 
 ---
 
-### Example
+### Терминалын өгөгдмөл
 
-Here's an example of a custom theme:
+`"none"` тусгай утгыг терминалын анхдагч өнгийг өвлөхийн тулд ямар ч өнгөт ашиглаж болно. Энэ нь таны терминалын өнгөний схемд нийцсэн сэдвүүдийг бий болгоход онцгой ач холбогдолтой:
+
+- `"text": "none"` - Терминалын өгөгдмөл нүүрэн талын өнгийг ашигладаг
+- `"background": "none"` - Терминалын үндсэн дэвсгэр өнгийг ашигладаг
+
+---
+
+### Жишээ
+
+Захиалгат сэдвийн жишээ энд байна:
 
 ```json title="my-theme.json"
 {

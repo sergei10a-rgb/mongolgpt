@@ -1,30 +1,30 @@
 ---
-title: Custom Tools
-description: Create tools the LLM can call in mongolgpt.
+title: Захиалгат хэрэгслүүд
+description: LLM нь mongolgpt руу залгаж болох хэрэгслүүдийг үүсгэ.
 ---
 
-Custom tools are functions you create that the LLM can call during conversations. They work alongside mongolgpt's [built-in tools](/docs/tools) like `read`, `write`, and `bash`.
-
----
-
-## Creating a tool
-
-Tools are defined as **TypeScript** or **JavaScript** files. However, the tool definition can invoke scripts written in **any language** — TypeScript or JavaScript is only used for the tool definition itself.
+Захиалгат хэрэгслүүд нь харилцан ярианы үеэр LLM дуудаж болох функцууд юм. Тэд mongolgpt-ийн [суурилуулсан хэрэгслүүд](/docs/tools), `read`, `write`, `bash` зэрэгтэй зэрэгцэн ажилладаг.
 
 ---
 
-### Location
+## Хэрэгсэл үүсгэх
 
-They can be defined:
-
-- Locally by placing them in the `.mongolgpt/tools/` directory of your project.
-- Or globally, by placing them in `~/.config/mongolgpt/tools/`.
+Хэрэгслүүд нь **TypeScript** эсвэл **JavaScript** файлууд гэж тодорхойлогддог. Гэхдээ хэрэглүүрийн тодорхойлолт нь **ямар ч хэлээр** бичигдсэн скриптүүдийг дуудаж болно - TypeScript эсвэл JavaScript нь зөвхөн хэрэгслийн тодорхойлолтод ашиглагддаг.
 
 ---
 
-### Structure
+### Байршил
 
-The easiest way to create tools is using the `tool()` helper which provides type-safety and validation.
+Тэдгээрийг тодорхойлж болно:
+
+- Тэднийг төслийнхээ `.mongolgpt/tools/` лавлах хэсэгт байрлуулснаар орон нутагт.
+- Эсвэл дэлхийн хэмжээнд `~/.config/mongolgpt/tools/`-д байрлуулж болно.
+
+---
+
+### Бүтэц
+
+Багаж хэрэгсэл үүсгэх хамгийн хялбар арга бол төрөл-аюулгүй байдал, баталгаажуулалтыг хангадаг `tool()` туслагчийг ашиглах явдал юм.
 
 ```ts title=".mongolgpt/tools/database.ts" {1}
 import { tool } from "@mongolgpt/plugin"
@@ -41,13 +41,13 @@ export default tool({
 })
 ```
 
-The **filename** becomes the **tool name**. The above creates a `database` tool.
+**файлын нэр** нь **хэрэгслийн нэр** болно. Дээрх нь `database` хэрэгслийг үүсгэдэг.
 
 ---
 
-#### Multiple tools per file
+#### Файл бүрт олон хэрэгсэл
 
-You can also export multiple tools from a single file. Each export becomes **a separate tool** with the name **`<filename>_<exportname>`**:
+Та мөн нэг файлаас олон хэрэгслийг экспортлох боломжтой. Экспорт бүр **`<filename>_<exportname>`** нэртэй **тусдаа хэрэгсэл** болдог:
 
 ```ts title=".mongolgpt/tools/math.ts"
 import { tool } from "@mongolgpt/plugin"
@@ -75,15 +75,15 @@ export const multiply = tool({
 })
 ```
 
-This creates two tools: `math_add` and `math_multiply`.
+Энэ нь `math_add` ба `math_multiply` гэсэн хоёр хэрэгслийг бий болгодог.
 
 ---
 
-#### Name collisions with built-in tools
+#### Баригдсан хэрэглүүртэй мөргөлдөөнийг нэрлэ
 
-Custom tools are keyed by tool name. If a custom tool uses the same name as a built-in tool, the custom tool takes precedence.
+Захиалгат хэрэгслүүдийг хэрэгслийн нэрээр тохируулдаг. Хэрэв захиалгат хэрэгсэл нь суулгасан хэрэгсэлтэй ижил нэрийг ашигладаг бол захиалгат хэрэгсэл нь давуу эрхтэй болно.
 
-For example, this file replaces the built-in `bash` tool:
+Жишээлбэл, энэ файл нь суурилуулсан `bash` хэрэгслийг орлоно:
 
 ```ts title=".mongolgpt/tools/bash.ts"
 import { tool } from "@mongolgpt/plugin"
@@ -100,14 +100,14 @@ export default tool({
 ```
 
 :::note
-Prefer unique names unless you intentionally want to replace a built-in tool. If you want to disable a built in tool but not override it, use [permissions](/docs/permissions).
+Хэрэв та суулгасан хэрэгслийг зориудаар солихыг хүсэхгүй байгаа бол өвөрмөц нэрийг сонго. Хэрэв та суулгасан хэрэгслийг идэвхгүй болгохыг хүсч байгаа ч үүнийг хүчингүй болгохыг хүсвэл [permissions](/docs/permissions)-г ашиглана уу.
 :::
 
 ---
 
-### Arguments
+### Аргументууд
 
-You can use `tool.schema`, which is just [Zod](https://zod.dev), to define argument types.
+Та аргументийн төрлийг тодорхойлохын тулд `tool.schema` буюу зүгээр л [Zod](https://zod.dev)-г ашиглаж болно.
 
 ```ts "tool.schema"
 args: {
@@ -115,7 +115,7 @@ args: {
 }
 ```
 
-You can also import [Zod](https://zod.dev) directly and return a plain object:
+Та мөн [Zod](https://zod.dev)-г шууд оруулж, энгийн объектыг буцааж болно:
 
 ```ts {6}
 import { z } from "zod"
@@ -134,9 +134,9 @@ export default {
 
 ---
 
-### Context
+### Контекст
 
-Tools receive context about the current session:
+Хэрэгсэл нь одоогийн сешнийн контекстийг хүлээн авдаг:
 
 ```ts title=".mongolgpt/tools/project.ts" {8}
 import { tool } from "@mongolgpt/plugin"
@@ -152,18 +152,18 @@ export default tool({
 })
 ```
 
-Use `context.directory` for the session working directory.
-Use `context.worktree` for the git worktree root.
+Сеансын ажлын лавлахдаа `context.directory` ашиглана уу.
+Git worktree root-д `context.worktree` ашиглана уу.
 
 ---
 
-## Examples
+## Жишээ
 
-### Write a tool in Python
+### хэрэгсэл бичих Python
 
-You can write your tools in any language you want. Here's an example that adds two numbers using Python.
+Та хүссэн хэлээрээ хэрэглүүрээ бичиж болно. Python ашиглан хоёр тоог нэмдэг жишээ энд байна.
 
-First, create the tool as a Python script:
+Эхлээд уг хэрэгслийг Python скрипт хэлбэрээр үүсгэнэ үү:
 
 ```python title=".mongolgpt/tools/add.py"
 import sys
@@ -173,7 +173,7 @@ b = int(sys.argv[2])
 print(a + b)
 ```
 
-Then create the tool definition that invokes it:
+Дараа нь түүнийг дууддаг хэрэгслийн тодорхойлолтыг үүсгэ:
 
 ```ts title=".mongolgpt/tools/python-add.ts" {10}
 import { tool } from "@mongolgpt/plugin"
@@ -193,4 +193,4 @@ export default tool({
 })
 ```
 
-Here we are using the [`Bun.$`](https://bun.com/docs/runtime/shell) utility to run the Python script.
+Энд бид Python скриптийг ажиллуулахын тулд [`Bun.Энд бид Python скриптийг ажиллуулахын тулд ](https://bun.com/docs/runtime/shell) хэрэгслийг ашиглаж байна.

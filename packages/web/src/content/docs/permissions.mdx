@@ -1,27 +1,27 @@
 ---
 title: Permissions
-description: Control which actions require approval to run.
+description: Ямар үйлдлийг гүйцэтгэхийн тулд зөвшөөрөл шаардлагатайг хянах.
 ---
 
-MongolGPT uses the `permission` config to decide whether a given action should run automatically, prompt you, or be blocked.
+MongolGPT нь `permission` тохиргоог ашиглан өгөгдсөн үйлдлийг автоматаар гүйцэтгэх, танд сануулах эсвэл хаагдах эсэхийг шийддэг.
 
-As of `v1.1.1`, the legacy `tools` boolean config is deprecated and has been merged into `permission`. The old `tools` config is still supported for backwards compatibility.
-
----
-
-## Actions
-
-Each permission rule resolves to one of:
-
-- `"allow"` — run without approval
-- `"ask"` — prompt for approval
-- `"deny"` — block the action
+`v1.1.1`-ийн байдлаар, хуучин `tools` логикийн тохиргоо хуучирсан бөгөөд `permission`-д нэгтгэгдсэн. Хуучин `tools` тохиргоог буцаан нийцүүлэхийн тулд дэмжсэн хэвээр байна.
 
 ---
 
-## Configuration
+## Үйлдэл
 
-You can set permissions globally (with `*`), and override specific tools.
+Зөвшөөрлийн дүрэм бүр нь дараахь зүйлийг шийддэг.
+
+- `"allow"` - зөвшөөрөлгүйгээр ажиллуулах
+- `"ask"` — зөвшөөрөл авах хүсэлт
+- `"deny"` — үйлдлийг хаах
+
+---
+
+## Тохиргоо
+
+Та зөвшөөрлийг дэлхий даяар (`*`-тай) тохируулж, тусгай хэрэгслийг хүчингүй болгож болно.
 
 ```json title="mongolgpt.json"
 {
@@ -34,7 +34,7 @@ You can set permissions globally (with `*`), and override specific tools.
 }
 ```
 
-You can also set all permissions at once:
+Та мөн бүх зөвшөөрлийг нэг дор тохируулж болно:
 
 ```json title="mongolgpt.json"
 {
@@ -45,9 +45,9 @@ You can also set all permissions at once:
 
 ---
 
-## Granular Rules (Object Syntax)
+## Мөхлөгт дүрмүүд (Объектийн синтакс)
 
-For most permissions, you can use an object to apply different actions based on the tool input.
+Ихэнх зөвшөөрлийн хувьд та багажийн оролт дээр тулгуурлан өөр өөр үйлдэл хийх объектыг ашиглаж болно.
 
 ```json title="mongolgpt.json"
 {
@@ -68,31 +68,31 @@ For most permissions, you can use an object to apply different actions based on 
 }
 ```
 
-Rules are evaluated by pattern match, with the **last matching rule winning**. A common pattern is to put the catch-all `"*"` rule first, and more specific rules after it.
+Дүрмүүдийг загварын тохирлоор үнэлдэг ба **хамгийн сүүлд тохирсон дүрэм ялна**. Нийтлэг загвар бол catch-all `"*"` дүрмийг эхлээд, дараа нь илүү тодорхой дүрмийг тавих явдал юм.
 
-### Wildcards
+### Орлогч тэмдэг
 
-Permission patterns use simple wildcard matching:
+Зөвшөөрлийн загвар нь энгийн орлуулагдах тэмдэгтийг ашиглана:
 
-- `*` matches zero or more of any character
-- `?` matches exactly one character
-- All other characters match literally
+- `*` нь ямар ч тэмдэгтийн тэг буюу түүнээс дээш хэмжээтэй таарч байна
+- `?` яг нэг тэмдэгттэй таарч байна
+- Бусад бүх дүрүүд шууд утгаараа таарч байна
 
-### Home Directory Expansion
+### Нүүр хуудасны лавлах өргөтгөл
 
-You can use `~` or `$HOME` at the start of a pattern to reference your home directory. This is particularly useful for [`external_directory`](#external-directories) rules.
+Та хээний эхэнд `~` эсвэл `$HOME`-г ашиглан гэрийн лавлах лавлах боломжтой. Энэ нь ялангуяа [`гадаад_заах'](#external-directories) дүрэмд хэрэгтэй.
 
 - `~/projects/*` -> `/Users/username/projects/*`
 - `$HOME/projects/*` -> `/Users/username/projects/*`
 - `~` -> `/Users/username`
 
-### External Directories
+### Гадаад лавлахууд
 
-Use `external_directory` to allow tool calls that touch paths outside the working directory where MongolGPT was started. This applies to any tool that takes a path as input (for example `read`, `edit`, `glob`, `grep`, and many `bash` commands).
+`external_directory`-г эхлүүлсэн ажлын лавлахын гаднах замд хүрэх хэрэгслийн дуудлагыг зөвшөөрөхийн тулд `external_directory` ашиглана уу. Энэ нь оролт болгон замыг авдаг аливаа хэрэгсэлд хамаарна (жишээ нь `read`, `edit`, `glob`, `grep` болон олон `bash` тушаалууд).
 
-Home expansion (like `~/...`) only affects how a pattern is written. It does not make an external path part of the current workspace, so paths outside the working directory must still be allowed via `external_directory`.
+Гэрийн өргөтгөл (`~/...` гэх мэт) нь зөвхөн загварыг хэрхэн бичихэд нөлөөлдөг. Энэ нь одоогийн ажлын талбарын гадаад замын хэсэг болгодоггүй тул ажлын лавлахаас гадуурх замыг `external_directory`-ээр дамжуулан зөвшөөрөх ёстой.
 
-For example, this allows access to everything under `~/projects/personal/`:
+Жишээлбэл, энэ нь `~/projects/personal/` доорх бүх зүйлд хандах боломжийг олгоно:
 
 ```json title="mongolgpt.json"
 {
@@ -105,7 +105,7 @@ For example, this allows access to everything under `~/projects/personal/`:
 }
 ```
 
-Any directory allowed here inherits the same defaults as the current workspace. Since [`read` defaults to `allow`](#defaults), reads are also allowed for entries under `external_directory` unless overridden. Add explicit rules when a tool should be restricted in these paths, such as blocking edits while keeping reads:
+Энд зөвшөөрөгдсөн дурын лавлах нь одоогийн ажлын талбартай ижил өгөгдмөлүүдийг өвлөнө. [`унших` нь анхдагчаар `зөвшөөрөх` байна](#defaults) тул, хүчингүй болгоогүй бол `external_directory` доорх бичилтүүдийг уншихыг зөвшөөрдөг. Уншсан мэдээллийг хадгалах явцад засварыг блоклох гэх мэт эдгээр замд хэрэгслийг хязгаарлах шаардлагатай тодорхой дүрмийг нэмнэ үү:
 
 ```json title="mongolgpt.json"
 {
@@ -121,37 +121,37 @@ Any directory allowed here inherits the same defaults as the current workspace. 
 }
 ```
 
-Keep the list focused on trusted paths, and layer extra allow or deny rules as needed for other tools (for example `bash`).
+Жагсаалтыг итгэмжлэгдсэн замууд дээр төвлөрүүлж, бусад хэрэгсэлд шаардлагатай бол нэмэлт дүрмүүдийг зөвшөөрөх эсвэл үгүйсгэх (жишээ нь `bash`).
 
 ---
 
-## Available Permissions
+## Боломжтой зөвшөөрөл
 
-MongolGPT permissions are keyed by tool name, plus a couple of safety guards:
+MongolGPT зөвшөөрлүүд нь багаж хэрэгслийн нэр, мөн хэд хэдэн хамгаалалтын хамгаалалтаар тодорхойлогддог:
 
-- `read` — reading a file (matches the file path)
-- `edit` — all file modifications (covers `edit`, `write`, `patch`)
-- `glob` — file globbing (matches the glob pattern)
-- `grep` — content search (matches the regex pattern)
-- `bash` — running shell commands (matches parsed commands like `git status --porcelain`)
-- `task` — launching subagents (matches the subagent type)
-- `skill` — loading a skill (matches the skill name)
-- `lsp` — running LSP queries (currently non-granular)
-- `question` — asking the user questions during execution
-- `webfetch` — fetching a URL (matches the URL)
-- `websearch` — web search (matches the query)
-- `external_directory` — triggered when a tool touches paths outside the project working directory
-- `doom_loop` — triggered when the same tool call repeats 3 times with identical input
+- `read` — файл унших (файлын замд таарч байна)
+- `edit` — файлын бүх өөрчлөлт (`edit`, `write`, `patch` хамарна)
+- `glob` — файлын бөмбөрцөг (глоб загвартай таарч байна)
+- `grep` — агуулгын хайлт (regex загварт таарч байна)
+- `bash` — бүрхүүлийн командуудыг ажиллуулж байна (`git status --porcelain` гэх мэт задалсан командуудтай таарч байна)
+- `task` — дэд агентуудыг ажиллуулж байна (дэд агентын төрөлд таарч байна)
+- `skill` — ур чадвар ачаалж байна (ур чадварын нэрэнд таарч байна)
+- `lsp` — LSP асуулга ажиллуулж байна (одоогоор нарийн биш)
+- `question` - гүйцэтгэлийн явцад хэрэглэгчээс асуулт асуух
+- `webfetch` — URL дуудаж байна (URL-тэй таарч байна)
+- `websearch` — вэб хайлт (асуулгатай тохирч байна)
+- `external_directory` - хэрэгсэл нь төслийн ажлын лавлахаас гадна замд хүрэх үед идэвхждэг
+- `doom_loop` — нэг багажны дуудлагыг ижил оролтоор 3 удаа давтах үед идэвхждэг.
 
 ---
 
-## Defaults
+## Өгөгдмөл
 
-If you don’t specify anything, MongolGPT starts from permissive defaults:
+Хэрэв та юу ч заагаагүй бол MongolGPT зөвшөөрөгдсөн өгөгдмөлөөс эхэлнэ:
 
-- Most permissions default to `"allow"`.
-- `doom_loop` and `external_directory` default to `"ask"`.
-- `read` is `"allow"`, but `.env` files are denied by default:
+- Ихэнх зөвшөөрлүүд өгөгдмөлөөр `"allow"` байна.
+- `doom_loop` болон `external_directory` анхдагч нь `"ask"`.
+- `read` нь `"allow"` боловч `.env` файлууд нь анхдагчаар татгалзсан байна:
 
 ```json title="mongolgpt.json"
 {
@@ -168,24 +168,24 @@ If you don’t specify anything, MongolGPT starts from permissive defaults:
 
 ---
 
-## What “Ask” Does
+## “Асуу” юу хийдэг вэ
 
-When MongolGPT prompts for approval, the UI offers three outcomes:
+MongolGPT зөвшөөрөл хүсэхэд UI гурван үр дүнг санал болгодог:
 
-- `once` — approve just this request
-- `always` — approve future requests matching the suggested patterns (for the rest of the current MongolGPT session)
-- `reject` — deny the request
+- `once` - зөвхөн энэ хүсэлтийг зөвшөөрнө үү
+- `always` - санал болгож буй загварт тохирсон ирээдүйн хүсэлтийг батлах (одоогийн MongolGPT сессийн үлдсэн хугацаанд)
+- `reject` - хүсэлтийг үгүйсгэх
 
-The set of patterns that `always` would approve is provided by the tool (for example, bash approvals typically whitelist a safe command prefix like `git status*`).
+`always`-ийн зөвшөөрөх загваруудын багцыг хэрэгслээр хангадаг (жишээ нь, bash зөвшөөрөл нь `git status*` гэх мэт аюулгүй командын угтварыг цагаан жагсаалтад оруулах).
 
 ---
 
-## Agents
+## Агентууд
 
-You can override permissions per agent. Agent permissions are merged with the global config, and agent rules take precedence. [Learn more](/docs/agents#permissions) about agent permissions.
+Та төлөөлөгч бүрийн зөвшөөрлийг хүчингүй болгож болно. Агентийн зөвшөөрлийг глобал тохиргоотой нэгтгэсэн бөгөөд агентын дүрмүүдийг давуу эрхтэй болгоно. [Илүү ихийг мэдэж аваарай](/docs/agents#permissions) төлөөлөгчийн зөвшөөрлийн талаар.
 
 :::note
-Refer to the [Granular Rules (Object Syntax)](#granular-rules-object-syntax) section above for more detailed pattern matching examples.
+Дэлгэрэнгүй загвар тохирох жишээг дээрх [Нарийн дүрмүүд (Объектийн синтакс)](#granular-rules-object-syntax) хэсгээс харна уу.
 :::
 
 ```json title="mongolgpt.json"
@@ -216,7 +216,7 @@ Refer to the [Granular Rules (Object Syntax)](#granular-rules-object-syntax) sec
 }
 ```
 
-You can also configure agent permissions in Markdown:
+Та мөн Markdown-д агентийн зөвшөөрлийг тохируулах боломжтой:
 
 ```markdown title="~/.config/mongolgpt/agents/review.md"
 ---
@@ -232,5 +232,5 @@ Only analyze code and suggest changes.
 ```
 
 :::tip
-Use pattern matching for commands with arguments. `"grep *"` allows `grep pattern file.txt`, while `"grep"` alone would block it. Commands like `git status` work for default behavior but require explicit permission (like `"git status *"`) when arguments are passed.
+Аргументтай командуудад тохирох загвар ашиглана уу. `"grep *"` нь `grep pattern file.txt`-г зөвшөөрдөг бол `"grep"` ганцаараа үүнийг хориглох болно. `git status` гэх мэт тушаалууд нь анхдагч үйлдлийн хувьд ажилладаг боловч аргумент дамжуулагдах үед тодорхой зөвшөөрөл (`"git status *"` гэх мэт) шаарддаг.
 :::

@@ -1,153 +1,153 @@
 ---
 title: Agents
-description: Configure and use specialized agents.
+description: Мэргэшсэн агентуудыг тохируулах, ашиглах.
 ---
 
-Agents are specialized AI assistants that can be configured for specific tasks and workflows. They allow you to create focused tools with custom prompts, models, and tool access.
+Агентууд нь тусгай даалгавар болон ажлын урсгалд тохируулж болох AI тусгай туслахууд юм. Эдгээр нь танд тусгай сануулга, загвар, хэрэгсэлд хандах хандалт бүхий төвлөрсөн хэрэгслийг бий болгох боломжийг олгодог.
 
 :::tip
-Use the plan agent to analyze code and review suggestions without making any code changes.
+Төлөвлөгөөний төлөөлөгчийг ашиглан кодын дүн шинжилгээ хийж, ямар нэгэн кодын өөрчлөлт хийхгүйгээр саналуудыг хянана.
 :::
 
-You can switch between agents during a session or invoke them with the `@` mention.
+Та сессийн үеэр төлөөлөгчдийн хооронд шилжих эсвэл `@` дурдахад тэднийг дуудаж болно.
 
 ---
 
-## Types
+## Төрөл
 
-There are two types of agents in MongolGPT; primary agents and subagents.
+MongolGPT-д хоёр төрлийн агент байдаг; үндсэн бодис ба дэд агентууд.
 
 ---
 
-### Primary agents
+### Анхдагч агентууд
 
-Primary agents are the main assistants you interact with directly. You can cycle through them using the **Tab** key, or your configured `switch_agent` keybind. These agents handle your main conversation. Tool access is configured via permissions — for example, Build has all tools enabled while Plan is restricted.
+Анхдагч агентууд бол таны шууд харилцдаг гол туслахууд юм. Та **Tab** товчлуур эсвэл өөрийн тохируулсан `switch_agent` товчлуурыг ашиглан тэдгээрийн дундуур эргэлдэж болно. Эдгээр агентууд таны үндсэн яриаг зохицуулдаг. Хэрэгслийн хандалтыг зөвшөөрлөөр тохируулдаг — жишээлбэл, Төлөвлөгөө хязгаарлагдсан үед Build-д бүх хэрэгслийг идэвхжүүлсэн байна.
 
 :::tip
-You can use the **Tab** key to switch between primary agents during a session.
+Та сессийн үеэр үндсэн агентуудын хооронд шилжихийн тулд **Tab** товчлуурыг ашиглаж болно.
 :::
 
-MongolGPT comes with two built-in primary agents, **Build** and **Plan**. We'll
-look at these below.
+MongolGPT нь **Build** болон **Plan** гэсэн хоёр үндсэн агенттай ирдэг. Бид болно
+эдгээрийг доороос харна уу.
 
 ---
 
-### Subagents
+### Дэд агентууд
 
-Subagents are specialized assistants that primary agents can invoke for specific tasks. You can also manually invoke them by **@ mentioning** them in your messages.
+Дэд агентууд нь үндсэн агентууд тодорхой ажлуудад дуудаж болох тусгай туслахууд юм. Та мөн тэдгээрийг мессежэндээ **@ дурдах** замаар гараар дуудаж болно.
 
-MongolGPT comes with three built-in subagents, **General**, **Explore**, and **Scout**. We'll look at this below.
-
----
-
-## Built-in
-
-MongolGPT comes with two built-in primary agents and three built-in subagents.
+MongolGPT нь **General**, **Explore**, **Scout** гэсэн гурван дэд агенттай ирдэг. Үүнийг бид доор авч үзэх болно.
 
 ---
 
-### Use build
+## Баригдсан
 
-_Mode_: `primary`
-
-Build is the **default** primary agent with all tools enabled. This is the standard agent for development work where you need full access to file operations and system commands.
+MongolGPT нь хоёр үндсэн агент, гурван дэд агенттай ирдэг.
 
 ---
 
-### Use plan
+### Бүтэц ашиглах
 
-_Mode_: `primary`
+_Мод_: `primary`
 
-A restricted agent designed for planning and analysis. We use a permission system to give you more control and prevent unintended changes.
-By default, all of the following are set to `ask`:
-
-- `file edits`: All writes, patches, and edits
-- `bash`: All bash commands
-
-This agent is useful when you want the LLM to analyze code, suggest changes, or create plans without making any actual modifications to your codebase.
+Build нь бүх хэрэгслийг идэвхжүүлсэн **өгөгдмөл** үндсэн агент юм. Энэ бол файлын үйлдлүүд болон системийн командуудад бүрэн хандах шаардлагатай хөгжүүлэлтийн ажлын стандарт агент юм.
 
 ---
 
-### Use general
+### Төлөвлөгөө ашигла
 
-_Mode_: `subagent`
+_Мод_: `primary`
 
-A general-purpose agent for researching complex questions and executing multi-step tasks. Has full tool access (except todo), so it can make file changes when needed. Use this to run multiple units of work in parallel.
+Төлөвлөлт, дүн шинжилгээ хийхэд зориулагдсан хязгаарлагдмал агент. Бид танд илүү их хяналт тавьж, хүсээгүй өөрчлөлтөөс урьдчилан сэргийлэхийн тулд зөвшөөрлийн системийг ашигладаг.
+Өгөгдмөлөөр дараах бүх зүйлийг `ask` гэж тохируулсан:
 
----
+- `file edits`: Бүх бичих, засварлах, засварлах
+- `bash`: Бүх bash командууд
 
-### Use explore
-
-_Mode_: `subagent`
-
-A fast, read-only agent for exploring codebases. Cannot modify files. Use this when you need to quickly find files by patterns, search code for keywords, or answer questions about the codebase.
+Энэ агент нь LLM кодыг шинжлэх, өөрчлөлт санал болгох эсвэл кодын санд ямар нэгэн бодит өөрчлөлт хийхгүйгээр төлөвлөгөө гаргахыг хүсвэл хэрэг болно.
 
 ---
 
-### Use scout
+### Ерөнхий ашиглах
 
-_Mode_: `subagent`
+_Мод_: `subagent`
 
-A read-only agent for external docs and dependency research. Use this when you need to clone a dependency repository into MongolGPT's managed cache, inspect library source, or cross-reference local code against upstream implementations without modifying your workspace.
-
----
-
-### Use compaction
-
-_Mode_: `primary`
-
-Hidden system agent that compacts long context into a smaller summary. It runs automatically when needed and is not selectable in the UI.
+Нарийн төвөгтэй асуултуудыг судлах, олон шатлалт даалгавруудыг гүйцэтгэх ерөнхий зориулалтын агент. Хэрэгслийн бүрэн хандалттай (хийхээс бусад) тул шаардлагатай үед файлд өөрчлөлт оруулах боломжтой. Үүнийг ашиглан олон нэгж ажлыг зэрэгцүүлэн ажиллуул.
 
 ---
 
-### Use title
+### Explore ашиглана уу
 
-_Mode_: `primary`
+_Мод_: `subagent`
 
-Hidden system agent that generates short session titles. It runs automatically and is not selectable in the UI.
-
----
-
-### Use summary
-
-_Mode_: `primary`
-
-Hidden system agent that creates session summaries. It runs automatically and is not selectable in the UI.
+Кодын санг судлахад зориулагдсан хурдан, зөвхөн унших боломжтой агент. Файлуудыг өөрчлөх боломжгүй. Файлуудыг хэв маягаар нь хурдан олох, түлхүүр үг хайх код эсвэл кодын сангийн талаархи асуултуудад хариулах шаардлагатай үед үүнийг ашиглана уу.
 
 ---
 
-## Usage
+### Скаут ашигла
 
-1. For primary agents, use the **Tab** key to cycle through them during a session. You can also use your configured `switch_agent` keybind.
+_Мод_: `subagent`
 
-2. Subagents can be invoked:
-   - **Automatically** by primary agents for specialized tasks based on their descriptions.
-   - Manually by **@ mentioning** a subagent in your message. For example.
+Гадны баримт бичиг болон хараат байдлын судалгаанд зориулсан зөвхөн унших боломжтой агент. Хэрэв та өөрийн ажлын талбарыг өөрчлөхгүйгээр MongolGPT-ийн удирдаж буй кэш рүү хамаарлын агуулахыг хувилах, номын сангийн эх сурвалжийг шалгах эсвэл дээд талын хэрэгжилтийн эсрэг локал кодыг хөндлөн лавлах шаардлагатай үед үүнийг ашиглаарай.
+
+---
+
+### Нягтруулж хэрэглэх
+
+_Мод_: `primary`
+
+Урт контекстийг жижиг хураангуй болгон нягтруулдаг далд системийн агент. Энэ нь шаардлагатай үед автоматаар ажилладаг бөгөөд UI-д сонгох боломжгүй.
+
+---
+
+### Гарчиг ашиглана уу
+
+_Мод_: `primary`
+
+Богино сессийн гарчиг үүсгэдэг далд системийн агент. Энэ нь автоматаар ажилладаг бөгөөд UI-д сонгох боломжгүй.
+
+---
+
+### Хураангуйг ашиглана уу
+
+_Мод_: `primary`
+
+Сешн хураангуйг үүсгэдэг далд системийн агент. Энэ нь автоматаар ажилладаг бөгөөд UI-д сонгох боломжгүй.
+
+---
+
+## Хэрэглээ
+
+1. Анхдагч агентуудын хувьд **Tab** товчийг ашиглан сессийн үеэр тэдгээрийн хооронд эргэлдэнэ. Та мөн өөрийн тохируулсан `switch_agent` товчлуурыг ашиглаж болно.
+
+2. Дэд агентуудыг дуудаж болно:
+   - **Автоматаар** үндсэн агентууд нь тэдний тайлбар дээр үндэслэн тусгай даалгавар.
+   - Таны зурваст дэд агентыг **@ дурдах** замаар гараар. Жишээ нь.
 
      ```txt frame="none"
      @general help me search for this function
      ```
 
-3. **Navigation between sessions**: When subagents create child sessions, use `session_child_first` (default: **\<Leader>+Down**) to enter the first child session from the parent.
+3. **Сурц хоорондын навигаци**: Дэд агентууд хүүхэд сесс үүсгэх үед `session_child_first` (өгөгдмөл: **\<Leader>+Down**) ашиглан эцэг эхээс эхний хүүхэд сессийг оруулна уу.
 
-4. Once you are in a child session, use:
-   - `session_child_cycle` (default: **Right**) to cycle to the next child session
-   - `session_child_cycle_reverse` (default: **Left**) to cycle to the previous child session
-   - `session_parent` (default: **Up**) to return to the parent session
+4. Хүүхдийн хуралдаанд орсны дараа дараахыг ашиглана уу:
+   - `session_child_cycle` (өгөгдмөл: **Баруун**) дараагийн хүүхдийн сесс рүү шилжих
+   - `session_child_cycle_reverse` (өгөгдмөл: **Зүүн**) өмнөх хүүхэд сесс рүү шилжих
+   - `session_parent` (өгөгдмөл: **Дээш**) эцэг эхийн хуралдаан руу буцна
 
-   This lets you switch between the main conversation and specialized subagent work.
+   Энэ нь танд үндсэн яриа болон тусгай дэд агентын ажил хооронд шилжих боломжийг олгоно.
 
 ---
 
-## Configure
+## Тохируулах
 
-You can customize the built-in agents or create your own through configuration. Agents can be configured in two ways:
+Та суулгасан агентуудыг тохируулах эсвэл тохиргоогоор дамжуулан өөрөө үүсгэж болно. Агентуудыг хоёр аргаар тохируулж болно:
 
 ---
 
 ### JSON
 
-Configure agents in your `mongolgpt.json` config file:
+Өөрийн `mongolgpt.json` тохиргооны файл дахь агентуудыг тохируулна уу:
 
 ```json title="mongolgpt.json"
 {
@@ -185,12 +185,12 @@ Configure agents in your `mongolgpt.json` config file:
 
 ---
 
-### Markdown
+### Тэмдэглэгээ
 
-You can also define agents using markdown files. Place them in:
+Та мөн тэмдэглэгээний файлуудыг ашиглан агентуудыг тодорхойлж болно. Тэдгээрийг байрлуул:
 
-- Global: `~/.config/mongolgpt/agents/`
-- Per-project: `.mongolgpt/agents/`
+- Глобал: `~/.config/mongolgpt/agents/`
+- Төсөл тус бүр: `.mongolgpt/agents/`
 
 ```markdown title="~/.config/mongolgpt/agents/review.md"
 ---
@@ -213,19 +213,19 @@ You are in code review mode. Focus on:
 Provide constructive feedback without making direct changes.
 ```
 
-The markdown file name becomes the agent name. For example, `review.md` creates a `review` agent.
+Маркdown файлын нэр нь агентын нэр болно. Жишээ нь `review.md` нь `review` агент үүсгэдэг.
 
 ---
 
-## Options
+## Сонголт
 
-Let's look at these configuration options in detail.
+Эдгээр тохиргооны сонголтыг нарийвчлан авч үзье.
 
 ---
 
-### Description
+### Тодорхойлолт
 
-Use the `description` option to provide a brief description of what the agent does and when to use it.
+`description` сонголтыг ашиглан төлөөлөгч юу хийдэг, хэзээ ашиглах талаар товч тайлбар өгнө үү.
 
 ```json title="mongolgpt.json"
 {
@@ -237,15 +237,15 @@ Use the `description` option to provide a brief description of what the agent do
 }
 ```
 
-This is a **required** config option.
+Энэ нь **шаардлагатай** тохиргооны сонголт юм.
 
 ---
 
-### Temperature
+### Температур
 
-Control the randomness and creativity of the LLM's responses with the `temperature` config.
+LLM-ийн хариултуудын санамсаргүй байдал, бүтээлч байдлыг `temperature` тохиргоогоор хяна.
 
-Lower values make responses more focused and deterministic, while higher values increase creativity and variability.
+Бага үнэ цэнэ нь хариултыг илүү төвлөрч, шийдэмгий болгодог бол өндөр утга нь бүтээлч байдал, хувьсах чадварыг нэмэгдүүлдэг.
 
 ```json title="mongolgpt.json"
 {
@@ -260,11 +260,11 @@ Lower values make responses more focused and deterministic, while higher values 
 }
 ```
 
-Temperature values typically range from 0.0 to 1.0:
+Температурын утга нь ихэвчлэн 0.0-1.0 хооронд хэлбэлздэг:
 
-- **0.0-0.2**: Very focused and deterministic responses, ideal for code analysis and planning
-- **0.3-0.5**: Balanced responses with some creativity, good for general development tasks
-- **0.6-1.0**: More creative and varied responses, useful for brainstorming and exploration
+- **0.0-0.2**: Маш төвлөрсөн, тодорхой хариултууд, кодын дүн шинжилгээ хийх, төлөвлөхөд тохиромжтой
+- **0.3-0.5**: Бүтээлч байдал бүхий тэнцвэртэй хариултууд, ерөнхий хөгжлийн даалгаварт тохиромжтой
+- **0.6-1.0**: Илүү бүтээлч, олон талт хариултууд нь оюуны довтолгоо, эрэл хайгуул хийхэд хэрэгтэй.
 
 ```json title="mongolgpt.json"
 {
@@ -284,15 +284,15 @@ Temperature values typically range from 0.0 to 1.0:
 }
 ```
 
-If no temperature is specified, MongolGPT uses model-specific defaults; typically 0 for most models, 0.55 for Qwen models.
+Хэрэв температурыг заагаагүй бол MongolGPT загварт хамаарах анхдагч утгыг ашиглана; Ихэнх загваруудад ихэвчлэн 0, Qwen загваруудад 0.55 байдаг.
 
 ---
 
-### Max steps
+### Хамгийн их алхам
 
-Control the maximum number of agentic iterations an agent can perform before being forced to respond with text only. This allows users who wish to control costs to set a limit on agentic actions.
+Зөвхөн текстээр хариу өгөхөөс өмнө агентын хийж чадах хамгийн их тооны төлөөлөгч давталтыг хяна. Энэ нь зардлаа хянах хүсэлтэй хэрэглэгчдэд агентын үйлдэлд хязгаарлалт тавих боломжийг олгодог.
 
-If this is not set, the agent will continue to iterate until the model chooses to stop or the user interrupts the session.
+Хэрэв үүнийг тохируулаагүй бол загвар зогсоохоор сонгох эсвэл хэрэглэгч сессийг тасалдуулах хүртэл агент давталтыг үргэлжлүүлнэ.
 
 ```json title="mongolgpt.json"
 {
@@ -306,17 +306,17 @@ If this is not set, the agent will continue to iterate until the model chooses t
 }
 ```
 
-When the limit is reached, the agent receives a special system prompt instructing it to respond with a summarization of its work and recommended remaining tasks.
+Хязгаарт хүрэхэд агент нь ажлынхаа хураангуй, санал болгосон үлдсэн ажлуудын хариуг өгөхийг зааварласан тусгай системийн хүсэлтийг хүлээн авдаг.
 
 :::caution
-The legacy `maxSteps` field is deprecated. Use `steps` instead.
+Хуучин `maxSteps` талбар хуучирсан. Оронд нь `steps` ашиглана уу.
 :::
 
 ---
 
-### Disable
+### Идэвхгүй болгох
 
-Set to `true` to disable the agent.
+Агентийг идэвхгүй болгохын тулд `true` гэж тохируулна уу.
 
 ```json title="mongolgpt.json"
 {
@@ -330,9 +330,9 @@ Set to `true` to disable the agent.
 
 ---
 
-### Prompt
+### Шуурхай
 
-Specify a custom system prompt file for this agent with the `prompt` config. The prompt file should contain instructions specific to the agent's purpose.
+`prompt` тохиргоотой энэ агентын системийн хүсэлтийн файлыг зааж өгнө үү. Мэдээллийн файл нь төлөөлөгчийн зорилгод зориулагдсан зааврыг агуулсан байх ёстой.
 
 ```json title="mongolgpt.json"
 {
@@ -344,16 +344,16 @@ Specify a custom system prompt file for this agent with the `prompt` config. The
 }
 ```
 
-This path is relative to where the config file is located. So this works for both the global MongolGPT config and the project specific config.
+Энэ зам нь тохиргооны файл хаана байрладагтай холбоотой юм. Тиймээс энэ нь дэлхийн MongolGPT тохиргоо болон төслийн тусгай тохиргоонд хоёуланд нь ажилладаг.
 
 ---
 
-### Model
+### Загвар
 
-Use the `model` config to override the model for this agent. Useful for using different models optimized for different tasks. For example, a faster model for planning, a more capable model for implementation.
+Энэ агентын загварыг хүчингүй болгохын тулд `model` тохиргоог ашиглана уу. Янз бүрийн даалгаварт тохирсон өөр өөр загваруудыг ашиглахад хэрэгтэй. Жишээлбэл, төлөвлөлтийн илүү хурдан загвар, хэрэгжүүлэхэд илүү чадвартай загвар.
 
 :::tip
-If you don’t specify a model, primary agents use the [model globally configured](/docs/config#models) while subagents will use the model of the primary agent that invoked the subagent.
+Хэрэв та загвар заагаагүй бол үндсэн агентууд [дэлхийн хэмжээнд тохируулсан загвар](/docs/config#models)-г ашигладаг бол дэд агентууд дэд агентыг дуудсан үндсэн агентын загварыг ашиглана.
 :::
 
 ```json title="mongolgpt.json"
@@ -366,15 +366,15 @@ If you don’t specify a model, primary agents use the [model globally configure
 }
 ```
 
-The model ID in your MongolGPT config uses the format `provider/model-id`. For example, if you're using [MongolGPT Zen](/docs/zen), you would use `mongolgpt/gpt-5.1-codex` for GPT 5.1 Codex.
+Таны MongolGPT тохиргооны ID загвар нь `provider/model-id` форматыг ашигладаг. Жишээлбэл, хэрэв та [MongolGPT Zen](/docs/zen) ашиглаж байгаа бол GPT 5.1 Codex-д `mongolgpt/gpt-5.1-codex`-г ашиглах болно.
 
 ---
 
-### Tools (deprecated)
+### Хэрэгсэл (хуучирсан)
 
-`tools` is **deprecated**. Prefer the agent's [`permission`](#permissions) field for new configs, updates and more fine-grained control.
+`tools` нь **хуучирсан**. Шинэ тохиргоо, шинэчлэлт болон илүү нарийн хяналтыг хийхийн тулд төлөөлөгчийн [`зөвшөөрөл`](#permissions) талбарыг илүүд үзээрэй.
 
-Allows you to control which tools are available in this agent. You can enable or disable specific tools by setting them to `true` or `false`. In an agent's `tools` config, `true` is equivalent to `{"*": "allow"}` permission and `false` is equivalent to `{"*": "deny"}` permission.
+Энэ агент дээр ямар хэрэгслүүд байгааг хянах боломжийг танд олгоно. Та тодорхой хэрэгслүүдийг `true` эсвэл `false` болгож идэвхжүүлж эсвэл идэвхгүй болгож болно. Агентын `tools` тохиргоонд `true` нь `{"*": "allow"}` зөвшөөрөлтэй, `false` нь `{"*": "deny"}` зөвшөөрөлтэй тэнцүү байна.
 
 ```json title="mongolgpt.json" {3-6,9-12}
 {
@@ -395,10 +395,10 @@ Allows you to control which tools are available in this agent. You can enable or
 ```
 
 :::note
-The agent-specific config overrides the global config.
+Агентд зориулсан тохиргоо нь глобал тохиргоог дарна.
 :::
 
-You can also use wildcards in legacy `tools` entries to control multiple tools at once. For example, to disable all tools from an MCP server:
+Та мөн олон хэрэгслийг нэгэн зэрэг удирдахын тулд хуучин `tools` оруулгууд дахь орлуулагч тэмдэгтүүдийг ашиглаж болно. Жишээлбэл, MCP серверийн бүх хэрэгслийг идэвхгүй болгохын тулд:
 
 ```json title="mongolgpt.json"
 {
@@ -415,21 +415,21 @@ You can also use wildcards in legacy `tools` entries to control multiple tools a
 }
 ```
 
-[Learn more about tools](/docs/tools).
+[Хэрэгслийн талаар илүү ихийг мэдэж аваарай](/docs/tools).
 
 ---
 
-### Permissions
+### Зөвшөөрөл
 
-You can configure permissions to manage what actions an agent can take. Each permission key can be set to:
+Агент ямар үйлдэл хийж болохыг удирдахын тулд та зөвшөөрлийг тохируулах боломжтой. Зөвшөөрлийн түлхүүр бүрийг дараах байдлаар тохируулж болно:
 
-- `"ask"` — Prompt for approval before running the tool
-- `"allow"` — Allow all operations without approval
-- `"deny"` — Disable the tool
+- `"ask"` — Хэрэгслийг ажиллуулахын өмнө зөвшөөрөл авах
+- `"allow"` - Зөвшөөрөлгүйгээр бүх үйлдлийг зөвшөөрөх
+- `"deny"` - Хэрэгслийг идэвхгүй болгох
 
-The available permission keys are:
+Боломжтой зөвшөөрлийн түлхүүрүүд нь:
 
-| Key                  | Tools it gates                                                   |
+| Түлхүүр              | Энэ хаалганы хэрэгсэл                                            |
 | -------------------- | ---------------------------------------------------------------- |
 | `read`               | `read`                                                           |
 | `edit`               | `write`, `edit`, `apply_patch`                                   |
@@ -438,19 +438,19 @@ The available permission keys are:
 | `list`               | `list`                                                           |
 | `bash`               | `bash`                                                           |
 | `task`               | `task`                                                           |
-| `external_directory` | Any tool that reads or writes files outside the project worktree |
+| `external_directory` | Төслийн ажлын модны гадна файлуудыг унших, бичих аливаа хэрэгсэл |
 | `todowrite`          | `todowrite`, `todoread`                                          |
 | `webfetch`           | `webfetch`                                                       |
 | `websearch`          | `websearch`                                                      |
 | `lsp`                | `lsp`                                                            |
 | `skill`              | `skill`                                                          |
 | `question`           | `question`                                                       |
-| `doom_loop`          | Recovery prompts when an agent appears stuck                     |
+| `doom_loop`          | Агент гацсан мэт санагдах үед сэргээх хүсэлт гаргана             |
 
-`read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `external_directory`, `lsp`, and `skill` accept either a shorthand action (`"allow" | "ask" | "deny"`) or an object of glob/pattern → action for fine-grained control. The remaining keys accept the shorthand action only.
+`read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `external_directory`, `lsp`, болон `skill` нь богино хэмжээний үйлдэл (`"allow" | "ask" | "deny"`) эсвэл бөмбөрцөг → торгуулийн үйлдэл/хяналтын объектыг хүлээн зөвшөөрдөг. Үлдсэн товчлуурууд нь зөвхөн товчилсон үйлдлийг хүлээн авдаг.
 
 :::note
-Permission keys are matched as wildcard patterns against the underlying tool name, so the same syntax works for built-ins, custom tools, and MCP tools — for example `"mymcp_*": "deny"` denies every tool from an MCP server, and `"mymcp_search": "ask"` targets a single one.
+Зөвшөөрлийн түлхүүрүүд нь үндсэн хэрэгслийн нэрийн эсрэг орлуулагч тэмдэгтийн загвартай таарч байгаа тул уг синтакс нь суулгасан хэрэгсэл, захиалгат хэрэгсэл болон MCP хэрэгслүүдэд ажилладаг - жишээлбэл `"mymcp_*": "deny"` нь MCP серверийн хэрэгсэл бүрийг үгүйсгэдэг ба `"mymcp_search": "ask"` нь нэгийг онилдог.
 :::
 
 ```json title="mongolgpt.json"
@@ -462,7 +462,7 @@ Permission keys are matched as wildcard patterns against the underlying tool nam
 }
 ```
 
-You can override these permissions per agent.
+Та эдгээр зөвшөөрлийг агент тус бүрээр нь хүчингүй болгож болно.
 
 ```json title="mongolgpt.json" {3-5,8-10}
 {
@@ -480,7 +480,7 @@ You can override these permissions per agent.
 }
 ```
 
-You can also set permissions in Markdown agents.
+Та мөн Markdown агентууд дээр зөвшөөрлийг тохируулах боломжтой.
 
 ```markdown title="~/.config/mongolgpt/agents/review.md"
 ---
@@ -499,7 +499,7 @@ permission:
 Only analyze code and suggest changes.
 ```
 
-You can set permissions for specific bash commands.
+Та тодорхой bash командын зөвшөөрлийг тохируулж болно.
 
 ```json title="mongolgpt.json" {7}
 {
@@ -517,7 +517,7 @@ You can set permissions for specific bash commands.
 }
 ```
 
-This can take a glob pattern.
+Энэ нь бөмбөрцгийн загварыг авч болно.
 
 ```json title="mongolgpt.json" {7}
 {
@@ -534,8 +534,8 @@ This can take a glob pattern.
 }
 ```
 
-And you can also use the `*` wildcard to manage permissions for all commands.
-Since the last matching rule takes precedence, put the `*` wildcard first and specific rules after.
+Мөн та бүх тушаалын зөвшөөрлийг удирдахын тулд `*` тэмдэгтийг ашиглаж болно.
+Сүүлийн тохирох дүрэм давуу эрхтэй тул `*` орлуулагч тэмдэгтийг, дараа нь тусгай дүрмүүдийг тавина.
 
 ```json title="mongolgpt.json" {8}
 {
@@ -553,13 +553,13 @@ Since the last matching rule takes precedence, put the `*` wildcard first and sp
 }
 ```
 
-[Learn more about permissions](/docs/permissions).
+[Зөвшөөрлийн талаар нэмэлт мэдээлэл аваарай](/docs/permissions).
 
 ---
 
-### Mode
+### горим
 
-Control the agent's mode with the `mode` config. The `mode` option is used to determine how the agent can be used.
+Агентын горимыг `mode` тохиргоогоор удирдана уу. `mode` сонголтыг агентийг хэрхэн ашиглаж болохыг тодорхойлоход ашигладаг.
 
 ```json title="mongolgpt.json"
 {
@@ -571,13 +571,13 @@ Control the agent's mode with the `mode` config. The `mode` option is used to de
 }
 ```
 
-The `mode` option can be set to `primary`, `subagent`, or `all`. If no `mode` is specified, it defaults to `all`.
+`mode` сонголтыг `primary`, `subagent` эсвэл `all` гэж тохируулж болно. Хэрэв `mode`-г заагаагүй бол энэ нь анхдагчаар `all` болно.
 
 ---
 
-### Hidden
+### Нуугдсан
 
-Hide a subagent from the `@` autocomplete menu with `hidden: true`. Useful for internal subagents that should only be invoked programmatically by other agents via the Task tool.
+Дэд агентийг `@` автоматаар гүйцээх цэснээс `hidden: true` ашиглан нуу. Зөвхөн Task хэрэгслээр дамжуулан бусад агентууд программчлан дуудах ёстой дотоод дэд агентуудад хэрэгтэй.
 
 ```json title="mongolgpt.json"
 {
@@ -590,17 +590,17 @@ Hide a subagent from the `@` autocomplete menu with `hidden: true`. Useful for i
 }
 ```
 
-This only affects user visibility in the autocomplete menu. Hidden agents can still be invoked by the model via the Task tool if permissions allow.
+Энэ нь зөвхөн автоматаар бөглөх цэсэнд хэрэглэгчийн харагдах байдалд нөлөөлнө. Зөвшөөрөл зөвшөөрсөн тохиолдолд далд агентуудыг Task хэрэгслээр дамжуулан загвар дуудаж болно.
 
 :::note
-Only applies to `mode: subagent` agents.
+Зөвхөн `mode: subagent` агентуудад хамаарна.
 :::
 
 ---
 
-### Task permissions
+### Ажлын зөвшөөрөл
 
-Control which subagents an agent can invoke via the Task tool with `permission.task`. Uses glob patterns for flexible matching.
+Task хэрэгслээр дамжуулан төлөөлөгч ямар дэд агентуудыг дуудаж болохыг `permission.task` ашиглан удирдана. Глоб хэв маягийг уян хатан тааруулахын тулд ашигладаг.
 
 ```json title="mongolgpt.json"
 {
@@ -619,23 +619,23 @@ Control which subagents an agent can invoke via the Task tool with `permission.t
 }
 ```
 
-When set to `deny`, the subagent is removed from the Task tool description entirely, so the model won't attempt to invoke it.
+`deny` гэж тохируулсан үед дэд агент нь Даалгаврын хэрэгслийн тайлбараас бүрмөсөн хасагдах тул загвар нь түүнийг дуудахыг оролдохгүй.
 
 :::tip
-Rules are evaluated in order, and the **last matching rule wins**. In the example above, `orchestrator-planner` matches both `*` (deny) and `orchestrator-*` (allow), but since `orchestrator-*` comes after `*`, the result is `allow`.
+Дүрмүүдийг дарааллаар нь үнэлдэг бөгөөд **хамгийн сүүлд тохирсон дүрэм ялна**. Дээрх жишээнд `orchestrator-planner` нь `*` (үгүйсгэх) ба `orchestrator-*` (зөвшөөрөх) хоёуланд нь таарч байгаа боловч `orchestrator-*` нь `*`-ийн араас ирсэн тул үр дүн нь `allow` байна.
 :::
 
 :::tip
-Users can always invoke any subagent directly via the `@` autocomplete menu, even if the agent's task permissions would deny it.
+Агентын даалгаврын зөвшөөрөл үүнийг үгүйсгэж байсан ч хэрэглэгчид `@` автоматаар гүйцээх цэсээр дамжуулан дурын дэд агентийг үргэлж дуудаж болно.
 :::
 
 ---
 
-### Color
+### Өнгө
 
-Customize the agent's visual appearance in the UI with the `color` option. This affects how the agent appears in the interface.
+`color` сонголтоор төлөөлөгчийн харагдах байдлыг UI-д тохируулна уу. Энэ нь агент интерфэйс дээр хэрхэн харагдахад нөлөөлдөг.
 
-Use a valid hex color (e.g., `#FF5733`) or theme color: `primary`, `secondary`, `accent`, `success`, `warning`, `error`, `info`.
+Хүчинтэй зургаан өнцөгт өнгө (жишээ нь: `#FF5733`) эсвэл загварын өнгө ашиглана уу: `primary`, `secondary`, `accent`, `success`, `warning`, `error`, `info`.
 
 ```json title="mongolgpt.json"
 {
@@ -652,9 +652,9 @@ Use a valid hex color (e.g., `#FF5733`) or theme color: `primary`, `secondary`, 
 
 ---
 
-### Top P
+### Топ П
 
-Control response diversity with the `top_p` option. Alternative to temperature for controlling randomness.
+`top_p` сонголтоор хариултын олон янз байдлыг хянах. Санамсаргүй байдлыг хянах температурын өөр хувилбар.
 
 ```json title="mongolgpt.json"
 {
@@ -666,15 +666,15 @@ Control response diversity with the `top_p` option. Alternative to temperature f
 }
 ```
 
-Values range from 0.0 to 1.0. Lower values are more focused, higher values more diverse.
+Утга нь 0.0-1.0 хооронд хэлбэлздэг. Доод утга нь илүү төвлөрч, өндөр үнэ цэнэ нь олон янз байдаг.
 
 ---
 
-### Additional
+### Нэмэлт
 
-Any other options you specify in your agent configuration will be **passed through directly** to the provider as model options. This allows you to use provider-specific features and parameters.
+Таны агентийн тохиргоонд заасан бусад сонголтуудыг загвар сонголт болгон **шууд дамжуулж** үйлчилгээ үзүүлэгч рүү илгээнэ. Энэ нь үйлчилгээ үзүүлэгчийн онцлог шинж чанар, параметрүүдийг ашиглах боломжийг танд олгоно.
 
-For example, with OpenAI's reasoning models, you can control the reasoning effort:
+Жишээлбэл, OpenAI-ийн үндэслэлийн загваруудын тусламжтайгаар та үндэслэл гаргах хүчин чармайлтыг хянах боломжтой.
 
 ```json title="mongolgpt.json" {6,7}
 {
@@ -689,55 +689,55 @@ For example, with OpenAI's reasoning models, you can control the reasoning effor
 }
 ```
 
-These additional options are model and provider-specific. Check your provider's documentation for available parameters.
+Эдгээр нэмэлт сонголтууд нь загвар болон үйлчилгээ үзүүлэгчийн онцлог юм. Боломжтой параметрүүдийг үйлчилгээ үзүүлэгчийнхээ бичиг баримтаас шалгана уу.
 
 :::tip
-Run `mongolgpt models` to see a list of the available models.
+Боломжтой загваруудын жагсаалтыг харахын тулд `mongolgpt models` гэж ажиллуулна уу.
 :::
 
 ---
 
-## Create agents
+## Агент үүсгэх
 
-You can create new agents using the following command:
+Та дараах тушаалыг ашиглан шинэ агент үүсгэж болно.
 
 ```bash
 mongolgpt agent create
 ```
 
-This interactive command will:
+Энэхүү интерактив тушаал нь:
 
-1. Ask where to save the agent; global or project-specific.
-2. Description of what the agent should do.
-3. Generate an appropriate system prompt and identifier.
-4. Let you select which permissions the agent should be allowed (anything you don't select is denied).
-5. Finally, create a markdown file with the agent configuration.
-
----
-
-## Use cases
-
-Here are some common use cases for different agents.
-
-- **Build agent**: Full development work with all tools enabled
-- **Plan agent**: Analysis and planning without making changes
-- **Review agent**: Code review with read-only access plus documentation tools
-- **Debug agent**: Focused on investigation with bash and read tools enabled
-- **Docs agent**: Documentation writing with file operations but no system commands
+1. Агентийг хаана хадгалахыг асуух; дэлхийн эсвэл төсөлд зориулагдсан.
+2. Төлөөлөгчийн хийх ёстой зүйлийн тодорхойлолт.
+3. Тохиромжтой системийн сануулга болон танигчийг үүсгэнэ.
+4. Агентд ямар зөвшөөрлийг олгохыг сонгох боломжийг танд олгоно (таны сонгоогүй бүх зүйлийг үгүйсгэнэ).
+5. Эцэст нь агентын тохиргоотой тэмдэглэгээний файл үүсгэнэ.
 
 ---
 
-## Examples
+## Хэрэглэх тохиолдол
 
-Here are some example agents you might find useful.
+Төрөл бүрийн агентуудын нийтлэг хэрэглээний зарим тохиолдлууд энд байна.
+
+- **Бүтээгч агент**: Бүх хэрэгслийг идэвхжүүлсэн бүрэн хөгжүүлэлтийн ажил
+- **Төлөвлөгөөний агент**: Өөрчлөлт хийхгүйгээр дүн шинжилгээ хийх, төлөвлөх
+- **Хяналтын агент**: Зөвхөн уншигдах хандалт болон баримт бичгийн хэрэглүүр бүхий кодыг шалгах
+- **Дбаг хийх агент**: Bash болон унших хэрэгслүүдийг идэвхжүүлснээр судалгаанд анхаарлаа хандуулсан
+- **Docs agent**: Файлын үйлдлээр баримт бичгийг бичих боловч системийн команд байхгүй
+
+---
+
+## Жишээ
+
+Танд хэрэгтэй байж болох зарим төлөөлөгчийн жишээ энд байна.
 
 :::tip
-Do you have an agent you'd like to share? [Submit a PR](https://github.com/sergei10a-rgb/mongolgpt).
+Танд хуваалцахыг хүссэн агент байна уу? [PR оруулах](https://github.com/sergei10a-rgb/mongolgpt).
 :::
 
 ---
 
-### Documentation agent
+### Баримт бичгийн агент
 
 ```markdown title="~/.config/mongolgpt/agents/docs-writer.md"
 ---
@@ -759,7 +759,7 @@ Focus on:
 
 ---
 
-### Security auditor
+### Аюулгүй байдлын аудитор
 
 ```markdown title="~/.config/mongolgpt/agents/security-auditor.md"
 ---

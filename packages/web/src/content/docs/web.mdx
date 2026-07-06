@@ -1,53 +1,53 @@
 ---
 title: Web
-description: Using MongolGPT in your browser.
+description: Хөтөчдөө MongolGPT-г ашиглана уу.
 ---
 
-MongolGPT can run as a web application in your browser, providing the same powerful AI coding experience without needing a terminal.
+MongolGPT нь таны хөтөч дээр вэб программ хэлбэрээр ажиллах боломжтой бөгөөд энэ нь терминал шаардлагагүйгээр ижил хүчирхэг AI кодлох туршлагыг хангана.
 
-![MongolGPT Web - New Session](../../assets/web/web-homepage-new-session.png)
+![MongolGPT Web - Шинэ сесс](../../assets/web/web-homepage-new-session.png)
 
-## Getting Started
+## Эхлэл
 
-Start the web interface by running:
+Вэб интерфэйсийг эхлүүлэхийн тулд:
 
 ```bash
 mongolgpt web
 ```
 
-This starts a local server on `127.0.0.1` with a random available port and automatically opens MongolGPT in your default browser.
+Энэ нь `127.0.0.1` дээрх локал серверийг санамсаргүй боломжтой портоор эхлүүлж, таны анхдагч хөтөч дээр MongolGPT автоматаар нээгдэнэ.
 
 :::caution
-If `MONGOLGPT_SERVER_PASSWORD` is not set, the server will be unsecured. This is fine for local use but should be set for network access.
+Хэрэв `MONGOLGPT_SERVER_PASSWORD`-г тохируулаагүй бол сервер хамгаалалтгүй болно. Энэ нь орон нутгийн хэрэглээнд тохиромжтой боловч сүлжээнд хандахад тохируулсан байх ёстой.
 :::
 
-:::tip[Windows Users]
-For the best experience, run `mongolgpt web` from [WSL](/docs/windows-wsl) rather than PowerShell. This ensures proper file system access and terminal integration.
+:::tip[Windows Хэрэглэгчид]
+Хамгийн сайн туршлага авахын тулд PowerShell-ийн оронд `mongolgpt web`-ийг [WSL](/docs/windows-wsl)-ээс ажиллуулна уу. Энэ нь файлын системийн зөв хандалт болон терминалын нэгтгэлийг баталгаажуулдаг.
 :::
 
 ---
 
-## Configuration
+## Тохиргоо
 
-You can configure the web server using command line flags or in your [config file](/docs/config).
+Та вэб серверийг командын мөрийн туг ашиглан эсвэл [тохиргооны файл](/docs/config)-д тохируулж болно.
 
-### Port
+### Порт
 
-By default, MongolGPT picks an available port. You can specify a port:
+Анхдагчаар MongolGPT боломжтой портыг сонгоно. Та портыг зааж өгч болно:
 
 ```bash
 mongolgpt web --port 4096
 ```
 
-### Hostname
+### Хостын нэр
 
-By default, the server binds to `127.0.0.1` (localhost only). To make MongolGPT accessible on your network:
+Анхдагчаар сервер нь `127.0.0.1` (зөвхөн локал хост) руу холбогддог. MongolGPT-г сүлжээндээ хандах боломжтой болгохын тулд:
 
 ```bash
 mongolgpt web --hostname 0.0.0.0
 ```
 
-When using `0.0.0.0`, MongolGPT will display both local and network addresses:
+`0.0.0.0`-г ашиглах үед MongolGPT дотоод болон сүлжээний хаягийг харуулна:
 
 ```
   Local access:       http://localhost:4096
@@ -56,15 +56,15 @@ When using `0.0.0.0`, MongolGPT will display both local and network addresses:
 
 ### mDNS Discovery
 
-Enable mDNS to make your server discoverable on the local network:
+Дотоод сүлжээнд өөрийн серверийг харуулахын тулд mDNS-г идэвхжүүлнэ үү:
 
 ```bash
 mongolgpt web --mdns
 ```
 
-This automatically sets the hostname to `0.0.0.0` and advertises the server as `mongolgpt.local`.
+Энэ нь автоматаар хостын нэрийг `0.0.0.0` болгож серверийг `mongolgpt.local` гэж сурталчилдаг.
 
-You can customize the mDNS domain name to run multiple instances on the same network:
+Та нэг сүлжээнд олон тохиолдлыг ажиллуулахын тулд mDNS домэйн нэрийг өөрчилж болно:
 
 ```bash
 mongolgpt web --mdns --mdns-domain myproject.local
@@ -72,45 +72,45 @@ mongolgpt web --mdns --mdns-domain myproject.local
 
 ### CORS
 
-To allow additional domains for CORS (useful for custom frontends):
+CORS-д нэмэлт домэйныг зөвшөөрөхийн тулд (захиалгат нүүрэнд хэрэгтэй):
 
 ```bash
 mongolgpt web --cors https://example.com
 ```
 
-### Authentication
+### Баталгаажуулалт
 
-To protect access, set a password using the `MONGOLGPT_SERVER_PASSWORD` environment variable:
+Хандалтыг хамгаалахын тулд `MONGOLGPT_SERVER_PASSWORD` орчны хувьсагчийг ашиглан нууц үг тохируулна уу:
 
 ```bash
 MONGOLGPT_SERVER_PASSWORD=secret mongolgpt web
 ```
 
-The username defaults to `mongolgpt` but can be changed with `MONGOLGPT_SERVER_USERNAME`.
+Хэрэглэгчийн нэр нь анхдагчаар `mongolgpt` боловч `MONGOLGPT_SERVER_USERNAME` гэж өөрчлөх боломжтой.
 
 ---
 
-## Using the Web Interface
+## Вэб интерфэйс ашиглах
 
-Once started, the web interface provides access to your MongolGPT sessions.
+Ажиллаж эхэлмэгц вэб интерфэйс нь таны MongolGPT сессүүдэд хандах боломжийг олгоно.
 
-### Sessions
+### Сеанс
 
-View and manage your sessions from the homepage. You can see active sessions and start new ones.
+Нүүр хуудаснаас өөрийн сессүүдийг харж удирдах боломжтой. Та идэвхтэй сессүүдийг харж, шинээр эхлүүлэх боломжтой.
 
-![MongolGPT Web - Active Session](../../assets/web/web-homepage-active-session.png)
+![MongolGPT Web - Идэвхтэй сесс](../../assets/web/web-homepage-active-session.png)
 
-### Server Status
+### Серверийн төлөв
 
-Click "See Servers" to view connected servers and their status.
+Холбогдсон серверүүд болон тэдгээрийн статусыг харахын тулд "Серверүүдийг харах" дээр дарна уу.
 
-![MongolGPT Web - See Servers](../../assets/web/web-homepage-see-servers.png)
+![MongolGPT Web - Серверүүдийг үзнэ үү](../../assets/web/web-homepage-see-servers.png)
 
 ---
 
-## Attaching a Terminal
+## Терминал холбох
 
-You can attach a terminal TUI to a running web server:
+Та ажиллаж байгаа вэб серверт TUI терминал хавсаргаж болно:
 
 ```bash
 # Start the web server
@@ -120,13 +120,13 @@ mongolgpt web --port 4096
 mongolgpt attach http://localhost:4096
 ```
 
-This allows you to use both the web interface and terminal simultaneously, sharing the same sessions and state.
+Энэ нь танд вэб интерфэйс болон терминалыг нэгэн зэрэг ашиглах, ижил сесс болон төлөвийг хуваалцах боломжийг олгоно.
 
 ---
 
-## Config File
+## Тохиргооны файл
 
-You can also configure server settings in your `mongolgpt.json` config file:
+Та мөн `mongolgpt.json` тохиргооны файлдаа серверийн тохиргоог хийж болно:
 
 ```json
 {
@@ -139,4 +139,4 @@ You can also configure server settings in your `mongolgpt.json` config file:
 }
 ```
 
-Command line flags take precedence over config file settings.
+Командын мөрийн туг нь тохиргооны файлын тохиргооноос давуу эрхтэй.

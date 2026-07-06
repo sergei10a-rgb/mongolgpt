@@ -35,8 +35,8 @@ export default defineConfig({
       defaultLocale: "root",
       locales: {
         root: {
-          label: "English",
-          lang: "en",
+          label: "Монгол",
+          lang: "mn",
           dir: "ltr",
         },
         ar: {

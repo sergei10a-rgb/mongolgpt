@@ -1,47 +1,47 @@
 ---
 title: Enterprise
-description: Using MongolGPT securely in your organization.
+description: MongolGPT-г байгууллагадаа аюулгүй ашиглах.
 ---
 
 export const enterprise = "https://mongolgpt.duckdns.org/enterprise"
 
-MongolGPT Enterprise is for organizations that want to ensure that their code and data never leaves their infrastructure. It can do this by using a centralized config that integrates with your SSO and internal AI gateway.
+MongolGPT Enterprise нь код болон өгөгдөл нь дэд бүтцээсээ хэзээ ч гарахгүй байхыг хүсч буй байгууллагуудад зориулагдсан юм. Энэ нь таны SSO болон дотоод AI гарцтай нэгдсэн төвлөрсөн тохиргоог ашиглан үүнийг хийж чадна.
 
 :::note
-MongolGPT does not store any of your code or context data.
+MongolGPT нь таны код эсвэл контекст өгөгдлийг хадгалахгүй.
 :::
 
-To get started with MongolGPT Enterprise:
+MongolGPT Enterprise-г эхлүүлэхийн тулд:
 
-1. Do a trial internally with your team.
-2. **<a href={enterprise}>Contact us</a>** to discuss pricing and implementation options.
-
----
-
-## Trial
-
-MongolGPT is open source and does not store any of your code or context data, so your developers can simply [get started](/docs/) and carry out a trial.
+1. Өөрийн багтай дотооддоо туршилт хийх.
+2. **<a href={enterprise}>Бидэнтэй холбогдоно уу</a>** Үнэ болон хэрэгжүүлэх хувилбаруудын талаар ярилцана уу.
 
 ---
 
-### Data handling
+## Шүүх хурал
 
-**MongolGPT does not store your code or context data.** All processing happens locally or through direct API calls to your AI provider.
-
-This means that as long as you are using a provider you trust, or an internal
-AI gateway, you can use MongolGPT securely.
-
-The only caveat here is the optional `/share` feature.
+MongolGPT нь нээлттэй эх сурвалж бөгөөд таны код эсвэл контекст өгөгдлийг хадгалахгүй тул таны хөгжүүлэгчид зүгээр л [эхлэх](/docs/) болон туршилтыг явуулах боломжтой.
 
 ---
 
-#### Sharing conversations
+### Өгөгдөл боловсруулах
 
-If a user enables the `/share` feature, the conversation and the data associated with it are sent to the service we use to host these share pages at mongolgpt.duckdns.org.
+**MongolGPT нь таны код эсвэл контекст өгөгдлийг хадгалахгүй.** Бүх боловсруулалт дотооддоо эсвэл AI үйлчилгээ үзүүлэгч рүү шууд API дуудлага хийх замаар хийгддэг.
 
-The data is currently served through our CDN's edge network, and is cached on the edge near your users.
+Энэ нь хэрэв та итгэмжлэгдсэн үйлчилгээ үзүүлэгч эсвэл дотоод үйлчилгээ үзүүлэгчээ ашиглаж байгаа бол гэсэн үг юм
+AI гарц, та MongolGPT-г аюулгүй ашиглаж болно.
 
-We recommend you disable this for your trial.
+Энд байгаа цорын ганц анхааруулга бол нэмэлт `/share` функц юм.
+
+---
+
+#### Харилцан яриа хуваалцах
+
+Хэрэв хэрэглэгч `/share` функцийг идэвхжүүлбэл харилцан яриа болон үүнтэй холбоотой өгөгдлийг mongolgpt.duckdns.org хаягаар эдгээр хуваалцах хуудсуудыг байршуулахад ашигладаг үйлчилгээ рүү илгээнэ.
+
+Өгөгдөл нь одоогоор манай CDN-н захын сүлжээгээр дамжуулагдаж байгаа бөгөөд таны хэрэглэгчдийн ойролцоох захад хадгалагдаж байна.
+
+Туршилтын хувьд үүнийг идэвхгүй болгохыг бид танд зөвлөж байна.
 
 ```json title="mongolgpt.json"
 {
@@ -50,120 +50,120 @@ We recommend you disable this for your trial.
 }
 ```
 
-[Learn more about sharing](/docs/share).
+[Хуваалцах талаар илүү ихийг мэдэж аваарай](/docs/share).
 
 ---
 
-### Code ownership
+### Кодын эзэмшил
 
-**You own all code produced by MongolGPT.** There are no licensing restrictions or ownership claims.
-
----
-
-## Pricing
-
-We use a per-seat model for MongolGPT Enterprise. If you have your own LLM gateway, we do not charge for tokens used. For further details about pricing and implementation options, **<a href={enterprise}>contact us</a>**.
+**Та MongolGPT-ийн үйлдвэрлэсэн бүх кодыг эзэмшдэг.** Лицензийн хязгаарлалт эсвэл өмчлөлийн нэхэмжлэл байхгүй.
 
 ---
 
-## Deployment
+## Үнэ
 
-Once you have completed your trial and you are ready to use MongolGPT at
-your organization, you can **<a href={enterprise}>contact us</a>** to discuss
-pricing and implementation options.
+Бид MongolGPT Enterprise-д нэг суудалд зориулсан загварыг ашигладаг. Хэрэв та өөрийн LLM гарцтай бол ашигласан жетоныг бид төлбөр авахгүй. Үнэ болон хэрэгжүүлэх сонголтуудын талаар дэлгэрэнгүй мэдээлэл авахыг хүсвэл **<a href={enterprise}>бидэнтэй холбогдоно уу</a>**.
 
 ---
 
-### Central Config
+## Байрлуулалт
 
-We can set up MongolGPT to use a single central config for your entire organization.
-
-This centralized config can integrate with your SSO provider and ensures all users access only your internal AI gateway.
-
----
-
-### SSO integration
-
-Through the central config, MongolGPT can integrate with your organization's SSO provider for authentication.
-
-This allows MongolGPT to obtain credentials for your internal AI gateway through your existing identity management system.
+Туршилтаа дуусгасны дараа MongolGPT хаягийг ашиглахад бэлэн болно
+Та өөрийн байгууллагын хувьд **<a href={enterprise}>бидэнтэй холбогдож</a>** ярилцаж болно
+үнэ болон хэрэгжүүлэх сонголтууд.
 
 ---
 
-### Internal AI gateway
+### Төв тохиргоо
 
-With the central config, MongolGPT can also be configured to use only your internal AI gateway.
+Бид MongolGPT-г танай байгууллагад нэг төвийн тохиргоог ашиглахаар тохируулж болно.
 
-You can also disable all other AI providers, ensuring all requests go through your organization's approved infrastructure.
+Энэхүү төвлөрсөн тохиргоо нь таны SSO үйлчилгээ үзүүлэгчтэй нэгдэж, бүх хэрэглэгчид зөвхөн таны дотоод AI гарц руу нэвтрэх боломжийг олгодог.
 
 ---
 
-### Self-hosting
+### SSO интеграцчилал
 
-While we recommend disabling the share pages to ensure your data never leaves
-your organization, we can also help you self-host them on your infrastructure.
+Төвийн тохиргоогоор дамжуулан MongolGPT нь танай байгууллагын SSO үйлчилгээ үзүүлэгчтэй холбогдож баталгаажуулах боломжтой.
 
-This is currently on our roadmap. If you're interested, **<a href={enterprise}>let us know</a>**.
+Энэ нь MongolGPT-д одоо байгаа таних удирдлагын системээр дамжуулан дотоод AI гарцын итгэмжлэлийг авах боломжийг олгоно.
+
+---
+
+### Дотоод AI гарц
+
+Төвийн тохиргооны тусламжтайгаар MongolGPT зөвхөн өөрийн дотоод AI гарцыг ашиглахаар тохируулж болно.
+
+Та мөн бусад бүх AI үйлчилгээ үзүүлэгчийг идэвхгүй болгож, бүх хүсэлтийг танай байгууллагын батлагдсан дэд бүтцээр дамжуулж болно.
+
+---
+
+### Өөрийгөө байршуулах
+
+Бид таны өгөгдөл хэзээ ч үлдэхгүйн тулд хуваалцах хуудсыг идэвхгүй болгохыг зөвлөж байна
+Танай байгууллагын хувьд бид танд тэдгээрийг дэд бүтцэд өөрөө байршуулахад тусалж чадна.
+
+Энэ нь одоогоор манай замын зураг дээр байгаа. Хэрэв та сонирхож байгаа бол **<a href={enterprise}>бидэнд мэдэгдэнэ үү</a>**.
 
 ---
 
 ## FAQ
 
 <details>
-<summary>What is MongolGPT Enterprise?</summary>
+<summary>MongolGPT Enterprise гэж юу вэ?</summary>
 
-MongolGPT Enterprise is for organizations that want to ensure that their code and data never leaves their infrastructure. It can do this by using a centralized config that integrates with your SSO and internal AI gateway.
-
-</details>
-
-<details>
-<summary>How do I get started with MongolGPT Enterprise?</summary>
-
-Simply start with an internal trial with your team. MongolGPT by default does not store your code or context data, making it easy to get started.
-
-Then **<a href={enterprise}>contact us</a>** to discuss pricing and implementation options.
+MongolGPT Enterprise нь код болон өгөгдөл нь дэд бүтцээсээ хэзээ ч гарахгүй байхыг хүсч буй байгууллагуудад зориулагдсан юм. Энэ нь таны SSO болон дотоод AI гарцтай нэгдсэн төвлөрсөн тохиргоог ашиглан үүнийг хийж чадна.
 
 </details>
 
 <details>
-<summary>How does enterprise pricing work?</summary>
+<summary>Би MongolGPT Enterprise-г хэрхэн эхлүүлэх вэ?</summary>
 
-We offer per-seat enterprise pricing. If you have your own LLM gateway, we do not charge for tokens used. For further details, **<a href={enterprise}>contact us</a>** for a custom quote based on your organization's needs.
+Зүгээр л багтайгаа дотоод туршилтыг эхлүүлээрэй. MongolGPT нь анхдагч байдлаар таны код эсвэл контекст өгөгдлийг хадгалахгүй тул эхлүүлэхэд хялбар болгодог.
 
-</details>
-
-<details>
-<summary>Is my data secure with MongolGPT Enterprise?</summary>
-
-Yes. MongolGPT does not store your code or context data. All processing happens locally or through direct API calls to your AI provider. With central config and SSO integration, your data remains secure within your organization's infrastructure.
+Дараа нь **<a href={enterprise}>бидэнтэй холбогдоно уу</a>** үнэ болон хэрэгжүүлэх хувилбаруудын талаар ярилцана уу.
 
 </details>
 
 <details>
-<summary>Can we use our own private NPM registry?</summary>
+<summary>Байгууллагын үнэ хэрхэн ажилладаг вэ?</summary>
 
-MongolGPT supports private npm registries through Bun's native `.npmrc` file support. If your organization uses a private registry, such as JFrog Artifactory, Nexus, or similar, ensure developers are authenticated before running MongolGPT.
+Бид нэг суудлын аж ахуйн нэгжийн үнийг санал болгож байна. Хэрэв та өөрийн LLM гарцтай бол ашигласан жетоныг бид төлбөр авахгүй. Дэлгэрэнгүй мэдээлэл авахыг хүсвэл **<a href={enterprise}>бидэнтэй холбогдоно уу</a>** танай байгууллагын хэрэгцээнд үндэслэн захиалгат үнийн санал авна уу.
 
-To set up authentication with your private registry:
+</details>
+
+<details>
+<summary>Миний өгөгдөл MongolGPT Enterprise-д аюулгүй юу?</summary>
+
+Тиймээ. MongolGPT нь таны код эсвэл контекст өгөгдлийг хадгалахгүй. Бүх боловсруулалт дотооддоо эсвэл AI үйлчилгээ үзүүлэгч рүү шууд API дуудлага хийх замаар хийгддэг. Төвийн тохиргоо болон SSO интеграцчилснаар таны өгөгдөл танай байгууллагын дэд бүтцэд аюулгүй хэвээр байна.
+
+</details>
+
+<details>
+<summary>Бид өөрсдийн хувийн NPM бүртгэлийг ашиглаж болох уу?</summary>
+
+MongolGPT нь Bun-ийн уугуул `.npmrc` файлын дэмжлэгээр дамжуулан хувийн npm бүртгэлийг дэмждэг. Хэрэв танай байгууллага JFrog Artifactory, Nexus эсвэл үүнтэй төстэй хувийн бүртгэл ашигладаг бол MongolGPT-г ажиллуулахын өмнө хөгжүүлэгчдийг баталгаажуулсан эсэхийг шалгаарай.
+
+Хувийн бүртгэлээрээ баталгаажуулалтыг тохируулахын тулд:
 
 ```bash
 npm login --registry=https://your-company.jfrog.io/api/npm/npm-virtual/
 ```
 
-This creates `~/.npmrc` with authentication details. MongolGPT will automatically
-pick this up.
+Энэ нь баталгаажуулалтын дэлгэрэнгүй мэдээлэл бүхий `~/.npmrc`-г үүсгэдэг. MongolGPT автоматаар болно
+энийг ав.
 
 :::caution
-You must be logged into the private registry before running MongolGPT.
+MongolGPT-г ажиллуулахын өмнө та хувийн бүртгэлд нэвтэрсэн байх ёстой.
 :::
 
-Alternatively, you can manually configure a `.npmrc` file:
+Эсвэл та `.npmrc` файлыг гараар тохируулах боломжтой:
 
 ```bash title="~/.npmrc"
 registry=https://your-company.jfrog.io/api/npm/npm-virtual/
 //your-company.jfrog.io/api/npm/npm-virtual/:_authToken=${NPM_AUTH_TOKEN}
 ```
 
-Developers must be logged into the private registry before running MongolGPT to ensure packages can be installed from your enterprise registry.
+Хөгжүүлэгчид MongolGPT-г ажиллуулахын өмнө хувийн бүртгэлд нэвтэрсэн байх ёстой бөгөөд багцуудыг танай байгууллагын бүртгэлээс суулгаж болно.
 
 </details>

@@ -18,7 +18,7 @@ const locales = Object.keys(config.locales ?? {})
     const locales = JSON.parse(wrapper.dataset.locales ?? "[]") as string[]
     const locale = locales[event.target.selectedIndex]
     if (!locale) return
-    document.cookie = `mongolgpt_locale=${encodeURIComponent(locale === "root" ? "mn" : locale)}; Path=/; Max-Age=31536000; SameSite=Lax`
+    document.cookie = `mongolgpt_locale=${encodeURIComponent(locale === "root" || locale === "mn" ? "root" : locale)}; Path=/; Max-Age=31536000; SameSite=Lax`
   })
 </script>
 

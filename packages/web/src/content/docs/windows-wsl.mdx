@@ -1,37 +1,37 @@
 ---
 title: Windows (WSL)
-description: Run MongolGPT on Windows using WSL for the best experience.
+description: Хамгийн сайн туршлага авахын тулд WSL ашиглан Windows дээр MongolGPT ажиллуул.
 ---
 
 import { Steps } from "@astrojs/starlight/components"
 
-While MongolGPT can run directly on Windows, we recommend using [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) for the best experience. WSL provides a Linux environment that works seamlessly with MongolGPT's features.
+MongolGPT Windows дээр шууд ажиллах боломжтой хэдий ч бид хамгийн сайн туршлага болохын тулд [Linux-д зориулсан Windows дэд систем (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install) ашиглахыг зөвлөж байна. WSL нь MongolGPT-ийн онцлогтой саадгүй ажилладаг Linux орчинг бүрдүүлдэг.
 
-:::tip[Why WSL?]
-WSL offers better file system performance, full terminal support, and compatibility with development tools that MongolGPT relies on.
+:::tip[Яагаад WSL?]
+WSL нь илүү сайн файлын системийн гүйцэтгэл, терминалын бүрэн дэмжлэг, MongolGPT-ийн тулгуурласан хөгжүүлэлтийн хэрэгслүүдтэй нийцтэй байдлыг санал болгодог.
 :::
 
 ---
 
-## Setup
+## Тохиргоо
 
 <Steps>
 
-1. **Install WSL**
+1. **Суулгах WSL**
 
-   If you haven't already, [install WSL](https://learn.microsoft.com/en-us/windows/wsl/install) using the official Microsoft guide.
+   Хэрэв та хараахан амжаагүй бол [WSL суулгах](https://learn.microsoft.com/en-us/windows/wsl/install) албан ёсны Microsoft гарын авлагыг ашиглана уу.
 
-2. **Install MongolGPT in WSL**
+2. ** MongolGPT-г WSL-д суулгана уу**
 
-   Once WSL is set up, open your WSL terminal and install MongolGPT using one of the [installation methods](/docs/).
+   WSL-г тохируулсны дараа WSL терминалаа нээгээд [суурилуулах аргууд](/docs/)-ийн аль нэгийг ашиглан MongolGPT-г суулгаарай.
 
    ```bash
    git clone https://github.com/sergei10a-rgb/mongolgpt && cd mongolgpt && bun install
    ```
 
-3. **Use MongolGPT from WSL**
+3. ** WSL-аас MongolGPT ашиглана уу**
 
-   Navigate to your project directory (access Windows files via `/mnt/c/`, `/mnt/d/`, etc.) and run MongolGPT.
+   Төслийн лавлах руугаа (Windows файлд `/mnt/c/`, `/mnt/d/` гэх мэтээр хандана уу) MongolGPT ажиллуулна уу.
 
    ```bash
    cd /mnt/c/Users/YourName/project
@@ -42,24 +42,24 @@ WSL offers better file system performance, full terminal support, and compatibil
 
 ---
 
-## Desktop App + WSL Server
+## Ширээний програм + WSL Сервер
 
-If you prefer using the MongolGPT Desktop app but want to run the server in WSL:
+Хэрэв та MongolGPT Ширээний програмыг ашиглахыг хүсч байгаа ч серверийг WSL дээр ажиллуулахыг хүсвэл:
 
-1. **Start the server in WSL** with `--hostname 0.0.0.0` to allow external connections:
+1. **Гадаад холболтыг зөвшөөрөхийн тулд WSL** серверийг `--hostname 0.0.0.0`-р эхлүүлнэ үү:
 
    ```bash
    mongolgpt serve --hostname 0.0.0.0 --port 4096
    ```
 
-2. **Connect the Desktop app** to `http://localhost:4096`
+2. **Desktop програмыг** `http://localhost:4096` руу холбоно уу
 
 :::note
-If `localhost` does not work in your setup, connect using the WSL IP address instead (from WSL: `hostname -I`) and use `http://<wsl-ip>:4096`.
+Хэрэв `localhost` таны тохиргоонд ажиллахгүй бол оронд нь WSL IP хаягийг (WSL: `hostname -I`) ашиглан холбож, `http://<wsl-ip>:4096` ашиглана уу.
 :::
 
 :::caution
-When using `--hostname 0.0.0.0`, set `MONGOLGPT_SERVER_PASSWORD` to secure the server.
+`--hostname 0.0.0.0`-г ашиглах үед серверийг хамгаалахын тулд `MONGOLGPT_SERVER_PASSWORD`-г тохируулна уу.
 :::
 
 ```bash
@@ -68,29 +68,29 @@ MONGOLGPT_SERVER_PASSWORD=your-password mongolgpt serve --hostname 0.0.0.0
 
 ---
 
-## Web Client + WSL
+## Вэб үйлчлүүлэгч + WSL
 
-For the best web experience on Windows:
+Windows дээрх вэбийг хамгийн сайн ашиглахын тулд:
 
-1. **Run `mongolgpt web` in the WSL terminal** rather than PowerShell:
+1. ** PowerShell биш WSL терминал**-д `mongolgpt web` ажиллуулна уу:
 
    ```bash
    mongolgpt web --hostname 0.0.0.0
    ```
 
-2. **Access from your Windows browser** at `http://localhost:<port>` (MongolGPT prints the URL)
+2. **Өөрийн Windows хөтчөөсөө хандана уу** `http://localhost:<port>` (MongolGPT URL-г хэвлэнэ)
 
-Running `mongolgpt web` from WSL ensures proper file system access and terminal integration while still being accessible from your Windows browser.
+WSL-аас `mongolgpt web`-г ажиллуулах нь таны Windows хөтчөөс хандах боломжтой хэвээр байхын зэрэгцээ файлын системийн зөв хандалт болон терминалын нэгдлийг хангана.
 
 ---
 
-## Accessing Windows Files
+## Windows файлуудад хандаж байна
 
-WSL can access all your Windows files through the `/mnt/` directory:
+WSL `/mnt/` лавлахаар дамжуулан таны бүх Windows файлд хандах боломжтой:
 
-- `C:` drive → `/mnt/c/`
-- `D:` drive → `/mnt/d/`
-- And so on...
+- `C:` хөтөч → `/mnt/c/`
+- `D:` хөтөч → `/mnt/d/`
+- Гэх мэт...
 
 Example:
 
@@ -100,13 +100,13 @@ mongolgpt
 ```
 
 :::tip
-For the smoothest experience, consider cloning/copying your repo into the WSL filesystem (for example under `~/code/`) and running MongolGPT there.
+Тохиромжтой болгохын тулд репогоо WSL файлын системд (жишээ нь `~/code/` доор) хуулж, MongolGPT ажиллуулна уу.
 :::
 
 ---
 
-## Tips
+## Зөвлөмж
 
-- Keep MongolGPT running in WSL for projects stored on Windows drives - file access is seamless
-- Use VS Code's [WSL extension](https://code.visualstudio.com/docs/remote/wsl) alongside MongolGPT for an integrated development workflow
-- Your MongolGPT config and sessions are stored within the WSL environment at `~/.local/share/mongolgpt/`
+- Windows хөтчүүд дээр хадгалагдсан төслүүдийн хувьд MongolGPT-г WSL дээр ажиллуулж байгаарай - файлын хандалт ямар ч саадгүй
+- Нэгдсэн хөгжүүлэлтийн ажлын урсгалын хувьд VS Кодын [WSL өргөтгөл](https://code.visualstudio.com/docs/remote/wsl)-г MongolGPT-ийн хажууд ашиглана уу.
+- Таны MongolGPT тохиргоо болон сешнүүдийг WSL орчинд `~/.local/share/mongolgpt/` хаягаар хадгална.
