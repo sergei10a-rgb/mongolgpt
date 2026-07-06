@@ -1,5 +1,7 @@
 import * as http from "node:http"
+import { dirname, join } from "node:path"
 import * as tls from "node:tls"
+import { fileURLToPath, pathToFileURL } from "node:url"
 
 type NodeHttpWithEnvProxy = typeof http & {
   setGlobalProxyFromEnv: () => void
@@ -35,6 +37,18 @@ type Listener = {
   stop(close?: boolean): void | Promise<void>
 }
 
+type ServerModule = {
+  Server: {
+    listen(options: {
+      port: number
+      hostname: string
+      username: string
+      password: string
+      cors: string[]
+    }): Promise<Listener>
+  }
+}
+
 const parentPort = getParentPort()
 let listener: Listener | undefined
 
@@ -54,7 +68,7 @@ async function start(command: StartCommand) {
     ensureLoopbackNoProxy()
     useSystemCertificates()
     useEnvProxy()
-    const { Server } = await import("virtual:mongolgpt-server")
+    const { Server } = await loadServerModule()
 
     listener = await Server.listen({
       port: command.port,
@@ -143,6 +157,11 @@ function parseCommand(value: unknown): SidecarCommand | undefined {
     password: command.password,
     userDataPath: command.userDataPath,
   }
+}
+
+async function loadServerModule(): Promise<ServerModule> {
+  const serverPath = join(dirname(fileURLToPath(import.meta.url)), "server", "node.js")
+  return import(pathToFileURL(serverPath).href) as Promise<ServerModule>
 }
 
 function serializeError(error: unknown) {

@@ -30,7 +30,6 @@ export const api = new sst.cloudflare.Worker("Api", {
   transform: {
     worker: (args) => {
       args.logpush = true
-      if ($app.stage === "vimtor" || $app.stage === "adam") return
       args.bindings = $resolve(args.bindings).apply((bindings) => [
         ...bindings,
         {
@@ -41,8 +40,8 @@ export const api = new sst.cloudflare.Worker("Api", {
       ])
       args.migrations = {
         // Note: when releasing the next tag, make sure all stages use tag v2
-        oldTag: $app.stage === "production" || $app.stage === "thdxr" ? "" : "v1",
-        newTag: $app.stage === "production" || $app.stage === "thdxr" ? "" : "v1",
+        oldTag: $app.stage === "production" ? "" : "v1",
+        newTag: $app.stage === "production" ? "" : "v1",
         //newSqliteClasses: ["SyncServer"],
       }
     },

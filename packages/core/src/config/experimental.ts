@@ -1,16 +1,16 @@
 export * as ConfigExperimental from "./experimental"
 
 import { Schema } from "effect"
-import { Catalog } from "../catalog"
-import { Policy as PolicyV2 } from "../policy"
 
 // Each core domain exports the policy actions it supports. Adding an action to
 // this union makes it valid in authored config while keeping Policy generic.
-export const PolicyAction = Schema.Union([Catalog.PolicyActions])
+export const PolicyAction = Schema.Literals(["provider.use"])
+export const PolicyEffect = Schema.Literals(["allow", "deny"]).annotate({ identifier: "Policy.Effect" })
 
 export class Policy extends Schema.Class<Policy>("ConfigV2.Experimental.Policy")({
-  ...PolicyV2.Info.fields,
   action: PolicyAction,
+  effect: PolicyEffect,
+  resource: Schema.String,
 }) {}
 
 export class Experimental extends Schema.Class<Experimental>("ConfigV2.Experimental")({

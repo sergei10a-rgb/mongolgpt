@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 
-import { Config } from "@/config/config"
 import { ConfigV1 } from "@mongolgpt/core/v1/config/config"
 import { TuiConfig } from "@mongolgpt/tui/config"
 import { Schema } from "effect"

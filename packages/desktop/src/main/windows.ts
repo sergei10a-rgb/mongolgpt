@@ -47,6 +47,12 @@ const pinchZoomEnabled = new WeakMap<BrowserWindow, boolean>()
 const titlebarHeight = 40
 const maxZoomLevel = 10
 const minZoomLevel = 0.2
+const recoveryButtons = {
+  relaunch: "Дахин нээх",
+  exportLogs: "Лог экспортлох",
+  keepWaiting: "Хүлээх",
+  quit: "Гарах",
+}
 
 export function setRelaunchHandler(handler: () => void) {
   relaunchHandler = handler
@@ -237,18 +243,18 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
   const sampler = createUnresponsiveSampler(win, name)
 
   const handle = async (button: string | undefined, wait: boolean) => {
-    if (button === "Export Logs") {
+    if (button === recoveryButtons.exportLogs) {
       const sampling = sampler.stopAndFlush()
       await exportDebugLogs().catch((error) => writeLog("main", "failed to export debug logs", { error }, "error"))
       if (wait && sampling) sampler.start()
       return true
     }
-    if (button === "Relaunch") {
+    if (button === recoveryButtons.relaunch) {
       sampler.stopAndFlush()
       relaunchHandler()
       return false
     }
-    if (button === "Quit") {
+    if (button === recoveryButtons.quit) {
       sampler.stopAndFlush()
       app.quit()
     }
@@ -260,7 +266,9 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
     showing = true
     try {
       while (!win.isDestroyed()) {
-        const buttons = wait ? ["Relaunch", "Export Logs", "Keep Waiting"] : ["Relaunch", "Export Logs", "Quit"]
+        const buttons = wait
+          ? [recoveryButtons.relaunch, recoveryButtons.exportLogs, recoveryButtons.keepWaiting]
+          : [recoveryButtons.relaunch, recoveryButtons.exportLogs, recoveryButtons.quit]
         const result = await dialog.showMessageBox(win, {
           type: "warning",
           buttons,
@@ -301,8 +309,8 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
 
     if (!isMainFrame || errorCode === -3) return
     void show(
-      "MongolGPT failed to load",
-      [`Window: ${name}`, `URL: ${validatedURL}`, `Error: ${errorCode} ${errorDescription}`].join("\n"),
+      "MongolGPT ачаалагдсангүй",
+      [`Цонх: ${name}`, `URL: ${validatedURL}`, `Алдаа: ${errorCode} ${errorDescription}`].join("\n"),
       false,
     )
   }
@@ -322,15 +330,19 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
       "error",
     )
     void show(
-      "MongolGPT window terminated unexpectedly",
-      [`Window: ${name}`, `Reason: ${details.reason}`, `Code: ${details.exitCode ?? "<unknown>"}`].join("\n"),
+      "MongolGPT цонх гэнэт хаагдлаа",
+      [`Цонх: ${name}`, `Шалтгаан: ${details.reason}`, `Код: ${details.exitCode ?? "<unknown>"}`].join("\n"),
       false,
     )
   })
   win.on("unresponsive", () => {
     writeLog("window", "renderer unresponsive", { window: name, currentURL: win.webContents.getURL() }, "error")
     sampler.start()
-    void show("MongolGPT is not responding", "You can relaunch the app, open the logs, or keep waiting.", true)
+    void show(
+      "MongolGPT хариу өгөхгүй байна",
+      "Аппыг дахин нээж, логийг экспортлох эсвэл үргэлжлүүлэн хүлээж болно.",
+      true,
+    )
   })
   win.on("responsive", () => {
     writeLog("window", "renderer responsive", { window: name, currentURL: win.webContents.getURL() }, "error")

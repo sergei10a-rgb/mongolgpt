@@ -107,7 +107,7 @@ function pick(list: Item[], exts: string[]) {
 
 function link(raw: string) {
   if (raw.startsWith("https://") || raw.startsWith("http://")) return raw
-  return `https://github.com/${repo}/releases/download/v${version}/${raw}`
+  return `https://github.com/${repo}/releases/download/mongolgpt-v${version}/${raw}`
 }
 
 async function sign(url: string, key: string) {

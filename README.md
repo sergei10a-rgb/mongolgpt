@@ -76,7 +76,7 @@ Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, 
 
 ## NPM package төлөв
 
-`mongolgpt` npm package-ийн release pipeline бэлэн. Зарим binary package npm registry дээр гарсан, үлдсэн package-уудыг registry rate limit сулрах үед үргэлжлүүлэн нийтэлнэ.
+`mongolgpt` npm package-ийн release pipeline бэлэн. Ихэнх native binary package npm registry дээр гарсан. Одоогоор `mongolgpt`, `mongolgpt-linux-x64-baseline`, `mongolgpt-windows-x64` гэсэн 3 package registry-ийн `E429 Too Many Requests` rate-limit сулрах үед үргэлжлүүлэн нийтлэгдэнэ.
 
 Нийтлэгдэхээс өмнө GitHub Release, source build, эсвэл install script ашиглана:
 

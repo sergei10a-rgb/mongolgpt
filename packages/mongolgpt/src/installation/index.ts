@@ -71,6 +71,10 @@ const ChocoPackage = Schema.Struct({
 })
 const ScoopManifest = NpmPackage
 
+function versionFromReleaseTag(tag: string) {
+  return tag.replace(/^mongolgpt-/, "").replace(/^v/, "")
+}
+
 export interface Interface {
   readonly info: () => Effect.Effect<Info>
   readonly method: () => Effect.Effect<Method>
@@ -258,7 +262,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
           ),
         )
         const data = yield* HttpClientResponse.schemaBodyJson(GitHubRelease)(response)
-        return data.tag_name.replace(/^v/, "")
+        return versionFromReleaseTag(data.tag_name)
       }, Effect.orDie),
       upgrade: Effect.fn("Installation.upgrade")(function* (m: Method, target: string) {
         let upgradeResult: { code: number; stdout: string; stderr: string } | undefined

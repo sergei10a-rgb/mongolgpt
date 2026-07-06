@@ -52,19 +52,10 @@ export default defineConfig({
         },
       },
       {
-        name: "mongolgpt:virtual-server-module",
-        enforce: "pre",
-        resolveId(id) {
-          if (id === "virtual:mongolgpt-server") return this.resolve(`${MONGOLGPT_SERVER_DIST}/node.js`)
-        },
-      },
-      {
-        name: "mongolgpt:copy-server-assets",
+        name: "mongolgpt:copy-server-dist",
         async writeBundle() {
-          for (const l of await fs.readdir(MONGOLGPT_SERVER_DIST)) {
-            if (!l.endsWith(".wasm")) continue
-            await fs.writeFile(`./out/main/chunks/${l}`, await fs.readFile(`${MONGOLGPT_SERVER_DIST}/${l}`))
-          }
+          await fs.rm("./out/main/server", { recursive: true, force: true })
+          await fs.cp(MONGOLGPT_SERVER_DIST, "./out/main/server", { recursive: true })
         },
       },
     ],

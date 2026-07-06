@@ -76,6 +76,15 @@ describe("installation", () => {
         }),
     )
 
+    testEffect(testLayer(() => jsonResponse({ tag_name: "mongolgpt-v0.1.1" }))).effect(
+      "strips MongolGPT release tag prefix",
+      () =>
+        Effect.gen(function* () {
+          const result = yield* Installation.use.latest("curl")
+          expect(result).toBe("0.1.1")
+        }),
+    )
+
     const npmCalls: string[] = []
     testEffect(
       testLayer((request) => {

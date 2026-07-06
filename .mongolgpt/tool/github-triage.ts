@@ -2,11 +2,11 @@
 import { tool } from "@mongolgpt/plugin"
 
 const TEAM = {
-  tui: ["kommander", "simonklee"],
-  desktop_web: ["Hona", "Brendonovich"],
-  core: ["jlongster", "rekram1-node", "nexxeln", "kitlangton", "starptech"],
-  inference: ["fwang", "MrMushrooooom", "starptech"],
-  windows: ["Hona"],
+  tui: ["sergei10a-rgb"],
+  desktop_web: ["sergei10a-rgb"],
+  core: ["sergei10a-rgb"],
+  inference: ["sergei10a-rgb"],
+  windows: ["sergei10a-rgb"],
 } as const
 
 function pick<T>(items: readonly T[]) {

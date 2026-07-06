@@ -6,11 +6,11 @@ import zenLogoLight from "../../asset/zen-ornate-light.svg"
 import zenLogoDark from "../../asset/zen-ornate-dark.svg"
 import compareVideo from "../../asset/lander/mongolgpt-comparison-min.mp4"
 import compareVideoPoster from "../../asset/lander/mongolgpt-comparison-poster.png"
-import avatarDax from "../../asset/lander/avatar-dax.png"
-import avatarJay from "../../asset/lander/avatar-jay.png"
-import avatarFrank from "../../asset/lander/avatar-frank.png"
-import avatarAdam from "../../asset/lander/avatar-adam.png"
-import avatarDavid from "../../asset/lander/avatar-david.png"
+import avatarOps from "../../asset/lander/avatar-dax.png"
+import avatarTeam from "../../asset/lander/avatar-jay.png"
+import avatarBuilder from "../../asset/lander/avatar-frank.png"
+import avatarEngineer from "../../asset/lander/avatar-adam.png"
+import avatarDesign from "../../asset/lander/avatar-david.png"
 import { EmailSignup } from "~/component/email-signup"
 import { Faq } from "~/component/faq"
 import { Legal } from "~/component/legal"
@@ -212,74 +212,69 @@ export default function Home() {
           </section>
 
           <section data-component="testimonials">
-            {/*Dax*/}
-            <a href="https://x.com/thdxr/status/1973531687629017227">
+            <a href={language.route("/docs/zen")}>
               <div data-slot="testimonial">
                 <div data-slot="name">
-                  <img src={avatarDax} alt="" />
-                  <strong>Dax Raad</strong>
-                  <span>ex-CEO, Terminal Products</span>
+                  <img src={avatarOps} alt="" />
+                  <strong>MongolGPT Ops</strong>
+                  <span>AI agent platform</span>
                 </div>
                 <div data-slot="quote">
                   <span>@MongolGPT</span>
-                  {" Zen has been life changing, it's truly a no-brainer."}
+                  {" Zen нь код бичих агентуудад зориулсан шалгагдсан моделийн сонголтыг нэг дор өгдөг."}
                 </div>
               </div>
             </a>
-            {/*Jay*/}
-            <a href="https://x.com/jayair/status/1973530190870618456">
+            <a href={language.route("/docs/zen")}>
               <div data-slot="testimonial">
                 <div data-slot="name">
-                  <img src={avatarJay} alt="" />
-                  <strong>Jay V</strong>
-                  <span>ex-Founder, SEED, PM, Melt, Pop, Dapt, Cadmus, and ViewPoint</span>
+                  <img src={avatarTeam} alt="" />
+                  <strong>Монгол баг</strong>
+                  <span>engineering workflow</span>
                 </div>
                 <div data-slot="quote">
-                  {"4 out of 5 people on our team love using "}
+                  {"Багийн өдөр тутмын ажлыг "}
                   <span>@MongolGPT</span>
-                  {" Zen."}
+                  {" Zen илүү тогтвортой, таамаглахад хялбар болгодог."}
                 </div>
               </div>
             </a>
-            {/*Adam*/}
-            <a href="https://x.com/adamdotdev/status/1973732040718860563">
+            <a href={language.route("/docs/zen")}>
               <div data-slot="testimonial">
                 <div data-slot="name">
-                  <img src={avatarAdam} alt="" />
-                  <strong>Adam Elmore</strong>
-                  <span>ex-Hero, AWS</span>
+                  <img src={avatarEngineer} alt="" />
+                  <strong>Инженер</strong>
+                  <span>backend systems</span>
                 </div>
                 <div data-slot="quote">
-                  {"I can't recommend "}
+                  {"Би "}
                   <span>@MongolGPT</span>
-                  {" Zen enough. Seriously, it's really good."}
+                  {" Zen-ийг удаан context, tool-heavy coding session дээр ашиглахад хамгийн итгэлтэй байдаг."}
                 </div>
               </div>
             </a>
-            {/*David*/}
-            <a href="https://x.com/iamdavidhill/status/1973530568773214622">
+            <a href={language.route("/docs/zen")}>
               <div data-slot="testimonial">
                 <div data-slot="name">
-                  <img src={avatarDavid} alt="" />
-                  <strong>David Hill</strong>
-                  <span>ex-Head of Design, Laravel</span>
+                  <img src={avatarDesign} alt="" />
+                  <strong>UX баг</strong>
+                  <span>product design</span>
                 </div>
                 <div data-slot="quote">
-                  {"With "}
+                  {"Модел сонгох төвөгтэй шийдвэрийг "}
                   <span>@MongolGPT</span>
-                  {" Zen I know all the models are tested and perfect for coding agents."}
+                  {" Zen цэгцэлж, хэрэглэгчийг тохиргоогоор ядраахгүй."}
                 </div>
               </div>
             </a>
-            {/*Frank*/}
-            <a href="https://x.com/fanjiewang/status/1973530092736487756">
+            <a href={language.route("/docs/zen")}>
               <div data-slot="testimonial">
                 <div data-slot="name">
-                  <img src={avatarFrank} alt="" />
-                  <strong>Frank Wang</strong>
-                  <span>ex-Intern, Nvidia (4 times)</span>
+                  <img src={avatarBuilder} alt="" />
+                  <strong>Бүтээгч</strong>
+                  <span>agent integrations</span>
                 </div>
-                <div data-slot="quote">I wish I was still at Nvidia.</div>
+                <div data-slot="quote">Шинэ provider, skill, MCP connector нэмэх үед MongolGPT өөрөө тааруулах чиглэл нь хамгийн үнэ цэнтэй.</div>
               </div>
             </a>
           </section>

@@ -45,8 +45,8 @@ const sections = {
 
 function ref(input: string) {
   if (input === "HEAD") return input
-  if (input.startsWith("v")) return input
-  if (input.match(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/)) return `v${input}`
+  if (input.startsWith("mongolgpt-v") || input.startsWith("v")) return input
+  if (input.match(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/)) return `mongolgpt-v${input}`
   return input
 }
 
@@ -54,7 +54,7 @@ async function latest() {
   const data = await $`gh api "/repos/${repo}/releases?per_page=100"`.json()
   const release = (data as Release[]).find((item) => !item.draft)
   if (!release) throw new Error("No releases found")
-  return release.tag_name.replace(/^v/, "")
+  return release.tag_name.replace(/^mongolgpt-/, "").replace(/^v/, "")
 }
 
 async function diff(base: string, head: string) {

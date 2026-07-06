@@ -76,7 +76,7 @@ Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, 
 
 ## NPM package төлөв
 
-`mongolgpt` npm package-ийг repo дотор бэлдсэн боловч npm registry дээр хараахан нийтлээгүй. Нийтлэхэд npm account/token болон release permission хэрэгтэй.
+`mongolgpt` npm package-ийн release pipeline бэлэн. Ихэнх native binary package npm registry дээр гарсан. Одоогоор `mongolgpt`, `mongolgpt-linux-x64-baseline`, `mongolgpt-windows-x64` гэсэн 3 package registry-ийн `E429 Too Many Requests` rate-limit сулрах үед үргэлжлүүлэн нийтлэгдэнэ.
 
 Нийтлэгдэхээс өмнө GitHub Release, source build, эсвэл install script ашиглана:
 

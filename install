@@ -182,25 +182,36 @@ else
 
     if [ -z "$requested_version" ]; then
         url="https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/$filename"
-        specific_version=$(curl -s https://api.github.com/repos/sergei10a-rgb/mongolgpt/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+        latest_release=$(curl -fsSL https://api.github.com/repos/sergei10a-rgb/mongolgpt/releases/latest || true)
+        tag_name=$(echo "$latest_release" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+        specific_version="${tag_name#mongolgpt-}"
+        specific_version="${specific_version#v}"
 
-        if [[ $? -ne 0 || -z "$specific_version" ]]; then
+        if [ -z "$specific_version" ]; then
             echo -e "${RED}Failed to fetch version information${NC}"
             exit 1
         fi
     else
-        # Strip leading 'v' if present
+        # Strip leading product/prefix markers if present
+        requested_version="${requested_version#mongolgpt-}"
         requested_version="${requested_version#v}"
-        url="https://github.com/sergei10a-rgb/mongolgpt/releases/download/v${requested_version}/$filename"
         specific_version=$requested_version
 
         # Verify the release exists before downloading
-        http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/sergei10a-rgb/mongolgpt/releases/tag/v${requested_version}")
-        if [ "$http_status" = "404" ]; then
-            echo -e "${RED}Error: Release v${requested_version} not found${NC}"
+        release_tag=""
+        for candidate in "mongolgpt-v${requested_version}" "v${requested_version}"; do
+            http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/sergei10a-rgb/mongolgpt/releases/tag/${candidate}")
+            if [ "$http_status" != "404" ]; then
+                release_tag="$candidate"
+                break
+            fi
+        done
+        if [ -z "$release_tag" ]; then
+            echo -e "${RED}Error: Release mongolgpt-v${requested_version} not found${NC}"
             echo -e "${MUTED}Available releases: https://github.com/sergei10a-rgb/mongolgpt/releases${NC}"
             exit 1
         fi
+        url="https://github.com/sergei10a-rgb/mongolgpt/releases/download/${release_tag}/$filename"
     fi
 fi
 

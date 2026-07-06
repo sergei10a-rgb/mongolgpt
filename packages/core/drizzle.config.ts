@@ -5,6 +5,6 @@ export default defineConfig({
   schema: ["./src/**/*.sql.ts", "./src/**/sql.ts"],
   out: "./migration",
   dbCredentials: {
-    url: "/home/thdxr/.local/share/mongolgpt/mongolgpt.db",
+    url: process.env.MONGOLGPT_DB_PATH ?? ".mongolgpt/mongolgpt.db",
   },
 })

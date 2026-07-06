@@ -43,7 +43,7 @@ export const UpgradeCommand = {
       }
     }
     prompts.log.info("Ашиглаж буй арга: " + method)
-    const target = args.target ? args.target.replace(/^v/, "") : await Installation.latest()
+    const target = args.target ? args.target.replace(/^mongolgpt-/, "").replace(/^v/, "") : await Installation.latest()
 
     if (InstallationVersion === target) {
       prompts.log.warn(`mongolgpt upgrade алгаслаа: ${target} аль хэдийн суусан байна`)

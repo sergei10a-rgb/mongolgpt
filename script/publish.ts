@@ -8,7 +8,7 @@ console.log("=== publishing ===\n")
 
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
-const tag = `v${Script.version}`
+const tag = `mongolgpt-v${Script.version}`
 
 const pkgjsons = await Array.fromAsync(
   new Bun.Glob("**/package.json").scan({
