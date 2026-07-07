@@ -143,7 +143,7 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
     {
       name: pkg.name,
       bin: {
-        [pkg.name]: `./bin/${pkg.name}.exe`,
+        [pkg.name]: `bin/${pkg.name}.exe`,
       },
       scripts: {
         postinstall: "node ./postinstall.mjs",

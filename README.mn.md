@@ -76,9 +76,14 @@ Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, 
 
 ## NPM package төлөв
 
-`mongolgpt` npm package-ийн release pipeline бэлэн. Ихэнх native binary package npm registry дээр гарсан. Одоогоор `mongolgpt`, `mongolgpt-linux-x64-baseline`, `mongolgpt-windows-x64` гэсэн 3 package registry-ийн `E429 Too Many Requests` rate-limit сулрах үед үргэлжлүүлэн нийтлэгдэнэ.
+`mongolgpt@0.1.1` болон бүх native binary package npm registry дээр нийтлэгдсэн. Терминал хувилбарыг npm-ээр шууд суулгаж туршиж болно:
 
-Нийтлэгдэхээс өмнө GitHub Release, source build, эсвэл install script ашиглана:
+```bash
+npm install -g mongolgpt
+mongolgpt --version
+```
+
+Source build эсвэл development mode ашиглах бол:
 
 ```bash
 git clone https://github.com/sergei10a-rgb/mongolgpt
