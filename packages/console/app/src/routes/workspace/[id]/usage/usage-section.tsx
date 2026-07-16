@@ -176,12 +176,12 @@ export function UsageSection() {
                       </td>
                       <td data-slot="usage-cost">
                         <Switch fallback={<>${((usage.cost ?? 0) / 100000000).toFixed(4)}</>}>
-                          <Match when={usage.enrichment?.plan === "sub"}>
+                          <Match when={usage.enrichment?.plan === "basic" || usage.enrichment?.plan === "pro" || usage.enrichment?.plan === "max"}>
                             {i18n.t("workspace.usage.subscription", {
                               amount: ((usage.cost ?? 0) / 100000000).toFixed(4),
                             })}
                           </Match>
-                          <Match when={usage.enrichment?.plan === "lite"}>
+                          <Match when={usage.enrichment?.plan === "legacy-lite"}>
                             {i18n.t("workspace.usage.lite", {
                               amount: ((usage.cost ?? 0) / 100000000).toFixed(4),
                             })}

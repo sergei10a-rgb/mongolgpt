@@ -6,7 +6,7 @@ import { Database, eq, and, isNull, sql } from "@mongolgpt/console-core/drizzle/
 import { BillingTable, SubscriptionTable } from "@mongolgpt/console-core/schema/billing.sql.js"
 import { Actor } from "@mongolgpt/console-core/actor.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
-import { BlackData } from "@mongolgpt/console-core/black.js"
+import { PlanData } from "@mongolgpt/console-core/plan.js"
 import { withActor } from "~/context/auth.withActor"
 import { queryBillingInfo } from "../../common"
 import styles from "./black-section.module.css"
@@ -33,19 +33,19 @@ const querySubscription = query(async (workspaceID: string) => {
         .then((r) => r[0]),
     )
     if (!row?.subscription) return null
-    const blackData = BlackData.getLimits({ plan: row.subscription.plan })
+    const planData = PlanData.getLimits({ plan: row.subscription.plan })
 
     return {
       plan: row.subscription.plan,
       useBalance: row.subscription.useBalance ?? false,
       rollingUsage: Subscription.analyzeRollingUsage({
-        limit: blackData.rollingLimit,
-        window: blackData.rollingWindow,
+        limit: planData.rollingCostLimit,
+        window: planData.rollingWindow,
         usage: row.rollingUsage ?? 0,
         timeUpdated: row.timeRollingUpdated ?? new Date(),
       }),
       weeklyUsage: Subscription.analyzeWeeklyUsage({
-        limit: blackData.fixedLimit,
+        limit: planData.weeklyCostLimit,
         usage: row.fixedUsage ?? 0,
         timeUpdated: row.timeFixedUpdated ?? new Date(),
       }),

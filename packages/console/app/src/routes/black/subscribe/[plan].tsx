@@ -65,7 +65,7 @@ const createSetupIntent = async (input: { plan: string; workspaceID: string }) =
   "use server"
   const { plan, workspaceID } = input
 
-  if (!plan || !["20", "100", "200"].includes(plan)) return { error: formError.invalidPlan }
+  if (!plan || !["basic", "pro", "max"].includes(plan)) return { error: formError.invalidPlan }
   if (!workspaceID) return { error: formError.workspaceRequired }
 
   return withActor(async () => {
@@ -276,7 +276,7 @@ export default function BlackSubscribe() {
   const i18n = useI18n()
   const language = useLanguage()
   const enabled = createAsync(() => getEnabled())
-  const planData = plansMap[(params.plan as PlanID) ?? "20"] ?? plansMap["20"]
+  const planData = plansMap[(params.plan as PlanID) ?? "basic"] ?? plansMap.basic
   const plan = planData.id
 
   const workspaces = createAsync(() => getWorkspaces(plan))
