@@ -1,5 +1,5 @@
 ---
-title: Commands
+title: Тушаалууд
 description: Дахин давтагдах даалгавруудад зориулсан захиалгат тушаалуудыг үүсгэ.
 ---
 
@@ -21,13 +21,13 @@ description: Дахин давтагдах даалгавруудад зориу
 
 ```md title=".mongolgpt/commands/test.md"
 ---
-description: Run tests with coverage
+description: Тестийг хамралтын тайлантай ажиллуулна
 agent: build
 model: anthropic/claude-3-5-sonnet-20241022
 ---
 
-Run the full test suite with coverage report and show any failures.
-Focus on the failing tests and suggest fixes.
+Бүх тестийг хамралтын тайлантай ажиллуулж, алдааг харуул.
+Унасан тестүүдэд төвлөрч, засвар санал болго.
 ```
 
 Frontmatter нь тушаалын шинж чанарыг тодорхойлдог. Агуулга нь загвар болж хувирдаг.
@@ -52,14 +52,14 @@ Frontmatter нь тушаалын шинж чанарыг тодорхойлдо
 
 ```json title="mongolgpt.jsonc" {4-12}
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "$schema": "https://mgpt.mn/config.json",
   "command": {
-    // This becomes the name of the command
+    // Энэ нь тушаалын нэр болно
     "test": {
-      // This is the prompt that will be sent to the LLM
-      "template": "Run the full test suite with coverage report and show any failures.\nFocus on the failing tests and suggest fixes.",
-      // This is shown as the description in the TUI
-      "description": "Run tests with coverage",
+      // Энэ сануулгыг LLM рүү илгээнэ
+      "template": "Бүх тестийг хамралтын тайлантай ажиллуулж, алдааг харуул.\nУнасан тестүүдэд төвлөрч, засвар санал болго.",
+      // Үүнийг TUI-д тайлбар болгон харуулна
+      "description": "Тестийг хамралтын тайлантай ажиллуулна",
       "agent": "build",
       "model": "anthropic/claude-3-5-sonnet-20241022"
     }
@@ -84,13 +84,13 @@ Frontmatter нь тушаалын шинж чанарыг тодорхойлдо
 
 ```markdown title="~/.config/mongolgpt/commands/test.md"
 ---
-description: Run tests with coverage
+description: Тестийг хамралтын тайлантай ажиллуулна
 agent: build
 model: anthropic/claude-3-5-sonnet-20241022
 ---
 
-Run the full test suite with coverage report and show any failures.
-Focus on the failing tests and suggest fixes.
+Бүх тестийг хамралтын тайлантай ажиллуулж, алдааг харуул.
+Унасан тестүүдэд төвлөрч, засвар санал болго.
 ```
 
 Маркdown файлын нэр нь тушаалын нэр болно. Жишээлбэл, `test.md` зөвшөөрнө
@@ -114,11 +114,11 @@ Focus on the failing tests and suggest fixes.
 
 ```md title=".mongolgpt/commands/component.md"
 ---
-description: Create a new component
+description: Шинэ компонент үүсгэнэ
 ---
 
-Create a new React component named $ARGUMENTS with TypeScript support.
-Include proper typing and basic structure.
+TypeScript дэмжлэгтэй `$ARGUMENTS` нэртэй шинэ React компонент үүсгэ.
+Зөв төрөл болон үндсэн бүтцийг оруул.
 ```
 
 Аргументтай командыг ажиллуулна уу:
@@ -140,11 +140,11 @@ Include proper typing and basic structure.
 
 ```md title=".mongolgpt/commands/create-file.md"
 ---
-description: Create a new file with content
+description: Агуулгатай шинэ файл үүсгэнэ
 ---
 
-Create a file named $1 in the directory $2
-with the following content: $3
+`$2` сан дотор `$1` нэртэй файл үүсгэ.
+Дараах агуулгыг оруул: `$3`
 ```
 
 Командыг ажиллуулна уу:
@@ -169,27 +169,26 @@ _!`command`_-г ашиглан [bash тушаал](/docs/tui#bash-commands) га
 
 ```md title=".mongolgpt/commands/analyze-coverage.md"
 ---
-description: Analyze test coverage
+description: Тестийн хамралтыг шинжилнэ
 ---
 
-Here are the current test results:
-!
-pm test`
+Одоогийн тестийн үр дүн:
+!`npm test`
 
-Based on these results, suggest improvements to increase coverage.
+Эдгээр үр дүнд үндэслэн хамралтыг нэмэгдүүлэх сайжруулалт санал болго.
 ```
 
 Эсвэл сүүлийн үеийн өөрчлөлтүүдийг шалгахын тулд:
 
 ```md title=".mongolgpt/commands/review-changes.md"
 ---
-description: Review recent changes
+description: Сүүлийн өөрчлөлтүүдийг хянана
 ---
 
-Recent git commits:
+Сүүлийн git commit-ууд:
 !`git log --oneline -10`
 
-Review these changes and suggest any improvements.
+Эдгээр өөрчлөлтийг хянаж, сайжруулалт санал болго.
 ```
 
 Командууд нь таны төслийн үндсэн директорт ажилладаг бөгөөд тэдгээрийн гаралт нь сануулгын нэг хэсэг болно.
@@ -202,11 +201,11 @@ Review these changes and suggest any improvements.
 
 ```md title=".mongolgpt/commands/review-component.md"
 ---
-description: Review component
+description: Компонентыг хянана
 ---
 
-Review the component in @src/components/Button.tsx.
-Check for performance issues and suggest improvements.
+`@src/components/Button.tsx` доторх компонентыг хяна.
+Гүйцэтгэлийн асуудлыг шалгаж, сайжруулалт санал болго.
 ```
 
 Файлын агуулгыг сануулгад автоматаар оруулна.
@@ -227,7 +226,7 @@ Check for performance issues and suggest improvements.
 {
   "command": {
     "test": {
-      "template": "Run the full test suite with coverage report and show any failures.\nFocus on the failing tests and suggest fixes."
+      "template": "Бүх тестийг хамралтын тайлантай ажиллуулж, алдааг харуул.\nУнасан тестүүдэд төвлөрч, засвар санал болго."
     }
   }
 }
@@ -245,7 +244,7 @@ Check for performance issues and suggest improvements.
 {
   "command": {
     "test": {
-      "description": "Run tests with coverage"
+      "description": "Тестийг хамралтын тайлантай ажиллуулна"
     }
   }
 }
@@ -322,4 +321,3 @@ mongolgpt нь `/init`, `/undo`, `/redo`, `/share`, `/help` гэх мэт хэд
 :::
 
 Хэрэв та ижил нэртэй захиалгат тушаалыг тодорхойлсон бол энэ нь суулгасан тушаалыг хүчингүй болгоно.
-

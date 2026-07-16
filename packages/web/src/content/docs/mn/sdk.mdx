@@ -41,15 +41,15 @@ const { client } = await createMongolGPT()
 
 #### Сонголтууд
 
-| Сонголт | Төрөл | Тодорхойлолт | Өгөгдмөл |
-| ---------- | ------------- | ------------------------------ | ----------- |
-| `hostname` | `string` | Серверийн хостын нэр | `127.0.0.1` |
-| `port` |
-umber` | Сервер порт | `4096` |
-| `signal` | `AbortSignal` | Цуцлахыг зогсоох дохио | `undefined` |
-| `timeout` |
-umber` | Серверийг эхлүүлэхэд ms-ийн хугацаа | `5000` |
-| `config` | `Config` | Тохиргооны объект | `{}` |
+| Сонголт    | Төрөл                               | Тодорхойлолт           | Өгөгдмөл    |
+| ---------- | ----------------------------------- | ---------------------- | ----------- |
+| `hostname` | `string`                            | Серверийн хостын нэр   | `127.0.0.1` |
+| `port`     |
+| umber`     | Сервер порт                         | `4096`                 |
+| `signal`   | `AbortSignal`                       | Цуцлахыг зогсоох дохио | `undefined` |
+| `timeout`  |
+| umber`     | Серверийг эхлүүлэхэд ms-ийн хугацаа | `5000`                 |
+| `config`   | `Config`                            | Тохиргооны объект      | `{}`        |
 
 ---
 
@@ -68,7 +68,7 @@ const mongolgpt = await createMongolGPT({
   },
 })
 
-console.log(`Server running at ${mongolgpt.server.url}`)
+console.log(`Сервер ${mongolgpt.server.url} хаягт ажиллаж байна`)
 
 mongolgpt.server.close()
 ```
@@ -87,13 +87,13 @@ const client = createMongolGPTClient({
 
 #### Сонголтууд
 
-| Сонголт | Төрөл | Тодорхойлолт | Өгөгдмөл |
-| --------------- | ---------- | -------------------------------- | ----------------------- |
-| `baseUrl` | `string` | URL серверийн | `http://localhost:4096` |
-| `fetch` | `function` | Захиалгат дуудлагын хэрэгжилт | `globalThis.fetch` |
-| `parseAs` | `string` | Хариултыг задлан шинжлэх арга | `auto` |
-| `responseStyle` | `string` | Буцах загвар: `data` эсвэл `fields` | `fields` |
-| `throwOnError` | `boolean` | Буцаахын оронд алдаа шидэх | `false` |
+| Сонголт         | Төрөл      | Тодорхойлолт                        | Өгөгдмөл                |
+| --------------- | ---------- | ----------------------------------- | ----------------------- |
+| `baseUrl`       | `string`   | URL серверийн                       | `http://localhost:4096` |
+| `fetch`         | `function` | Захиалгат дуудлагын хэрэгжилт       | `globalThis.fetch`      |
+| `parseAs`       | `string`   | Хариултыг задлан шинжлэх арга       | `auto`                  |
+| `responseStyle` | `string`   | Буцах загвар: `data` эсвэл `fields` | `fields`                |
+| `throwOnError`  | `boolean`  | Буцаахын оронд алдаа шидэх          | `false`                 |
 
 ---
 
@@ -133,7 +133,7 @@ try {
 const result = await client.session.prompt({
   path: { id: sessionId },
   body: {
-    parts: [{ type: "text", text: "Research Anthropic and provide company info" }],
+    parts: [{ type: "text", text: "Anthropic-ийг судалж, компанийн мэдээлэл өг" }],
     format: {
       type: "json_schema",
       schema: {
@@ -153,28 +153,28 @@ const result = await client.session.prompt({
   },
 })
 
-// Access the structured output
+// Бүтэцтэй гаралтад хандах
 console.log(result.data.info.structured_output)
 // { company: "Anthropic", founded: 2021, products: ["Claude", "Claude API"] }
 ```
 
 ### Гаралтын форматын төрлүүд
 
-| Төрөл | Тодорхойлолт |
-| ------------- | ------------------------------------------------------ |
-| `text` | Өгөгдмөл. Стандарт текстийн хариу (бүтэцлэгдсэн гаралт байхгүй) |
-| `json_schema` | Өгөгдсөн схемтэй тохирч баталгаажуулсан JSON буцаана |
+| Төрөл         | Тодорхойлолт                                                    |
+| ------------- | --------------------------------------------------------------- |
+| `text`        | Өгөгдмөл. Стандарт текстийн хариу (бүтэцлэгдсэн гаралт байхгүй) |
+| `json_schema` | Өгөгдсөн схемтэй тохирч баталгаажуулсан JSON буцаана            |
 
 ### JSON Схемийн формат
 
 `type: 'json_schema'`-г ашиглахдаа:
 
-| Талбай | Төрөл | Тодорхойлолт |
-| ------------ | --------------- | ---------------------------------------------------------- |
-| `type` | `'json_schema'` | Шаардлагатай. JSON схемийн горимыг заана |
-| `schema` | `object` | Шаардлагатай. JSON Гаралтын бүтцийг тодорхойлох схемийн объект |
+| Талбай       | Төрөл                                                        | Тодорхойлолт                                                   |
+| ------------ | ------------------------------------------------------------ | -------------------------------------------------------------- |
+| `type`       | `'json_schema'`                                              | Шаардлагатай. JSON схемийн горимыг заана                       |
+| `schema`     | `object`                                                     | Шаардлагатай. JSON Гаралтын бүтцийг тодорхойлох схемийн объект |
 | `retryCount` |
-umber` | Нэмэлт. Баталгаажуулалтын дахин оролдлогын тоо (өгөгдмөл: 2) |
+| umber`       | Нэмэлт. Баталгаажуулалтын дахин оролдлогын тоо (өгөгдмөл: 2) |
 
 ### Алдаа засах
 
@@ -196,7 +196,7 @@ if (result.data.info.error?.name === "StructuredOutputError") {
 
 ---
 
-## APIs
+## API-ууд
 
 SDK нь төрөл аюулгүй клиентээр дамжуулан бүх серверийн API-г илрүүлдэг.
 
@@ -204,8 +204,8 @@ SDK нь төрөл аюулгүй клиентээр дамжуулан бүх 
 
 ### Дэлхийн
 
-| арга | Тодорхойлолт | Хариулт |
-| ----------------- | ------------------------------- | ------------------------------------ |
+| арга              | Тодорхойлолт                                | Хариулт                              |
+| ----------------- | ------------------------------------------- | ------------------------------------ |
 | `global.health()` | Серверийн эрүүл мэнд, хувилбарыг шалгана уу | `{ healthy: true, version: string }` |
 
 ---
@@ -221,9 +221,9 @@ console.log(health.data.version)
 
 ### Апп
 
-| арга | Тодорхойлолт | Хариулт |
-| -------------- | ------------------------- | ------------------------------------------- |
-| `app.log()` | Бүртгэлийн бичилт бичих | `boolean` |
+| арга           | Тодорхойлолт                     | Хариулт                                     |
+| -------------- | -------------------------------- | ------------------------------------------- |
+| `app.log()`    | Бүртгэлийн бичилт бичих          | `boolean`                                   |
 | `app.agents()` | Боломжтой бүх агентуудыг жагсаах | <a href={typesUrl}><code>Агент[]</code></a> |
 
 ---
@@ -231,7 +231,7 @@ console.log(health.data.version)
 #### Жишээ
 
 ```javascript
-// Write a log entry
+// Логийн бичлэг үүсгэх
 await client.app.log({
   body: {
     service: "my-app",
@@ -240,7 +240,7 @@ await client.app.log({
   },
 })
 
-// List available agents
+// Боломжтой агентуудыг жагсаах
 const agents = await client.app.agents()
 ```
 
@@ -248,20 +248,20 @@ const agents = await client.app.agents()
 
 ### Төсөл
 
-| арга | Тодорхойлолт | Хариулт |
-| ------------------- | ------------------- | --------------------------------------------- |
-| `project.list()` | Бүх төслүүдийг жагсаах | <a href={typesUrl}><code>Төсөл[]</code></a> |
-| `project.current()` | Одоогийн төслийг авах | <a href={typesUrl}><code>Төсөл</code></a> |
+| арга                | Тодорхойлолт           | Хариулт                                     |
+| ------------------- | ---------------------- | ------------------------------------------- |
+| `project.list()`    | Бүх төслүүдийг жагсаах | <a href={typesUrl}><code>Төсөл[]</code></a> |
+| `project.current()` | Одоогийн төслийг авах  | <a href={typesUrl}><code>Төсөл</code></a>   |
 
 ---
 
 #### Жишээ
 
 ```javascript
-// List all projects
+// Бүх төслийг жагсаах
 const projects = await client.project.list()
 
-// Get current project
+// Одоогийн төслийг авах
 const currentProject = await client.project.current()
 ```
 
@@ -269,8 +269,8 @@ const currentProject = await client.project.current()
 
 ### Зам
 
-| арга | Тодорхойлолт | Хариулт |
-| ------------ | ---------------- | ---------------------------------------- |
+| арга         | Тодорхойлолт        | Хариулт                                 |
+| ------------ | ------------------- | --------------------------------------- |
 | `path.get()` | Одоогийн замыг авах | <a href={typesUrl}><code>Зам</code></a> |
 
 ---
@@ -278,7 +278,7 @@ const currentProject = await client.project.current()
 #### Жишээ
 
 ```javascript
-// Get current path information
+// Одоогийн замын мэдээллийг авах
 const pathInfo = await client.path.get()
 ```
 
@@ -286,9 +286,9 @@ const pathInfo = await client.path.get()
 
 ### Тохиргоо
 
-| арга | Тодорхойлолт | Хариулт |
-| -------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `config.get()` | Тохиргооны мэдээлэл авах | <a href={typesUrl}><code>Тохиргоо</code></a> |
+| арга                 | Тодорхойлолт                                          | Хариулт                                                                                                         |
+| -------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `config.get()`       | Тохиргооны мэдээлэл авах                              | <a href={typesUrl}><code>Тохиргоо</code></a>                                                                    |
 | `config.providers()` | Үйлчилгээ үзүүлэгч болон өгөгдмөл загваруудыг жагсаах | `{ providers: `<a href={typesUrl}><code>Үйлчилгээ үзүүлэгч[]</code></a>`, default: { [key: string]: string } }` |
 
 ---
@@ -305,41 +305,41 @@ const { providers, default: defaults } = await client.config.providers()
 
 ### Сеанс
 
-| арга | Тодорхойлолт | Тэмдэглэл |
-| ---------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `session.list()` | Жагсаалт сесс | <a href={typesUrl}><code>Session[]</code></a>-г буцаана |
-| `session.get({ path })` | Хурал авах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
-| `session.children({ path })` | Хүүхдийн сессүүдийг жагсаах | <a href={typesUrl}><code>Session[]</code></a>-г буцаана |
-| `session.create({ body })` | Сеанс үүсгэх | <a href={typesUrl}><code>Session</code></a>-г буцаана |
-| `session.delete({ path })` | Сеанс устгах | `boolean` \| буцаана |
-| `session.update({ path, body })` | Сеансын шинж чанарыг шинэчлэх | <a href={typesUrl}><code>Session</code></a>-г буцаана |
-| `session.init({ path, body })` | Програмд ​​дүн шинжилгээ хийж, `AGENTS.md` | үүсгэнэ үү `boolean` \| буцаана |
-| `session.abort({ path })` | Ажиллаж байгаа сессийг зогсоох | `boolean` \| буцаана |
-| `session.share({ path })` | Сеанс хуваалцах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
-| `session.unshare({ path })` | Сешн хуваалцахыг болиулах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
-| `session.summarize({ path, body })` | Хуралдааныг нэгтгэн дүгнэх | `boolean` \| буцаана |
-| `session.messages({ path })` | Сеанс дахь мессежүүдийг жагсаах | `{ info: `<a href={typesUrl}><code>Мессеж</code></a>`, parts: `<a href={typesUrl}><code>Хэсэг[]</code></a>`}[]` буцаана |
-| `session.message({ path })` | Мессежийн дэлгэрэнгүй мэдээллийг авах | `{ info: `<a href={typesUrl}><code>Мессеж</code></a>`, parts: `<a href={typesUrl}><code>Хэсэг[]</code></a>`}` буцаана |
-| `session.prompt({ path, body })` | Шуурхай мессеж илгээх | `body.noReply: true` UserMessage (зөвхөн контекст) буцаана. Өгөгдмөл нь AI хариулттай <a href={typesUrl}><code>AssistantMessage</code></a>-г буцаана. [бүтэцтэй гаралт](#structured-output) \|-д `body.outputFormat` дэмждэг |
-| `session.command({ path, body })` | Сеанс руу тушаал илгээх | `{ info: `<a href={typesUrl}><code>AssistantMessage</code></a>`, parts: `<a href={typesUrl}><code>Хэсэг[]</code></a>`}`-г буцаана |
-| `session.shell({ path, body })` | Shell командыг ажиллуулах | <a href={typesUrl}><code>AssistantMessage</code></a>-г буцаана |
-| `session.revert({ path, body })` | Зурвас буцаах | <a href={typesUrl}><code>Session</code></a>-г буцаана |
-| `session.unrevert({ path })` | Буцаасан мессежүүдийг сэргээх | <a href={typesUrl}><code>Session</code></a>-г буцаана |
-| `postSessionByIdPermissionsByPermissionId({ path, body })` | Зөвшөөрлийн хүсэлтэд хариу өгөх | `boolean` \| буцаана |
+| арга                                                       | Тодорхойлолт                               | Тэмдэглэл                                                                                                                                                                                                                    |
+| ---------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session.list()`                                           | Жагсаалт сесс                              | <a href={typesUrl}><code>Session[]</code></a>-г буцаана                                                                                                                                                                      |
+| `session.get({ path })`                                    | Хурал авах                                 | <a href={typesUrl}><code>Session</code></a>-г буцаана                                                                                                                                                                        |
+| `session.children({ path })`                               | Хүүхдийн сессүүдийг жагсаах                | <a href={typesUrl}><code>Session[]</code></a>-г буцаана                                                                                                                                                                      |
+| `session.create({ body })`                                 | Сеанс үүсгэх                               | <a href={typesUrl}><code>Session</code></a>-г буцаана                                                                                                                                                                        |
+| `session.delete({ path })`                                 | Сеанс устгах                               | `boolean` \| буцаана                                                                                                                                                                                                         |
+| `session.update({ path, body })`                           | Сеансын шинж чанарыг шинэчлэх              | <a href={typesUrl}><code>Session</code></a>-г буцаана                                                                                                                                                                        |
+| `session.init({ path, body })`                             | Програмд ​​дүн шинжилгээ хийж, `AGENTS.md` | үүсгэнэ үү `boolean` \| буцаана                                                                                                                                                                                              |
+| `session.abort({ path })`                                  | Ажиллаж байгаа сессийг зогсоох             | `boolean` \| буцаана                                                                                                                                                                                                         |
+| `session.share({ path })`                                  | Сеанс хуваалцах                            | <a href={typesUrl}><code>Session</code></a>-г буцаана                                                                                                                                                                        |
+| `session.unshare({ path })`                                | Сешн хуваалцахыг болиулах                  | <a href={typesUrl}><code>Session</code></a>-г буцаана                                                                                                                                                                        |
+| `session.summarize({ path, body })`                        | Хуралдааныг нэгтгэн дүгнэх                 | `boolean` \| буцаана                                                                                                                                                                                                         |
+| `session.messages({ path })`                               | Сеанс дахь мессежүүдийг жагсаах            | `{ info: `<a href={typesUrl}><code>Мессеж</code></a>`, parts: `<a href={typesUrl}><code>Хэсэг[]</code></a>`}[]` буцаана                                                                                                      |
+| `session.message({ path })`                                | Мессежийн дэлгэрэнгүй мэдээллийг авах      | `{ info: `<a href={typesUrl}><code>Мессеж</code></a>`, parts: `<a href={typesUrl}><code>Хэсэг[]</code></a>`}` буцаана                                                                                                        |
+| `session.prompt({ path, body })`                           | Шуурхай мессеж илгээх                      | `body.noReply: true` UserMessage (зөвхөн контекст) буцаана. Өгөгдмөл нь AI хариулттай <a href={typesUrl}><code>AssistantMessage</code></a>-г буцаана. [бүтэцтэй гаралт](#structured-output) \|-д `body.outputFormat` дэмждэг |
+| `session.command({ path, body })`                          | Сеанс руу тушаал илгээх                    | `{ info: `<a href={typesUrl}><code>AssistantMessage</code></a>`, parts: `<a href={typesUrl}><code>Хэсэг[]</code></a>`}`-г буцаана                                                                                            |
+| `session.shell({ path, body })`                            | Shell командыг ажиллуулах                  | <a href={typesUrl}><code>AssistantMessage</code></a>-г буцаана                                                                                                                                                               |
+| `session.revert({ path, body })`                           | Зурвас буцаах                              | <a href={typesUrl}><code>Session</code></a>-г буцаана                                                                                                                                                                        |
+| `session.unrevert({ path })`                               | Буцаасан мессежүүдийг сэргээх              | <a href={typesUrl}><code>Session</code></a>-г буцаана                                                                                                                                                                        |
+| `postSessionByIdPermissionsByPermissionId({ path, body })` | Зөвшөөрлийн хүсэлтэд хариу өгөх            | `boolean` \| буцаана                                                                                                                                                                                                         |
 
 ---
 
 #### Жишээ
 
 ```javascript
-// Create and manage sessions
+// Сешн үүсгэж, удирдах
 const session = await client.session.create({
   body: { title: "My session" },
 })
 
 const sessions = await client.session.list()
 
-// Send a prompt message
+// Сануулгын зурвас илгээх
 const result = await client.session.prompt({
   path: { id: session.id },
   body: {
@@ -348,12 +348,12 @@ const result = await client.session.prompt({
   },
 })
 
-// Inject context without triggering AI response (useful for plugins)
+// AI хариу үүсгэхгүйгээр контекст оруулах (нэмэлтэд хэрэгтэй)
 await client.session.prompt({
   path: { id: session.id },
   body: {
     noReply: true,
-    parts: [{ type: "text", text: "You are a helpful assistant." }],
+    parts: [{ type: "text", text: "Та тусч хиймэл оюуны агент." }],
   },
 })
 ```
@@ -362,13 +362,13 @@ await client.session.prompt({
 
 ### Файлууд
 
-| арга | Тодорхойлолт | Хариулт |
-| ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| `find.text({ query })` | Файлаас текст хайх | `path`, `lines`, `line_number`, `absolute_offset`, `submatches`-тай таарах объектуудын массив |
-| `find.files({ query })` | Файл, санг нэрээр нь хайж олох | `string[]` (замууд) |
-| `find.symbols({ query })` | Ажлын талбарын тэмдэгтүүдийг олох | <a href={typesUrl}><code>Тэмдэгт[]</code></a> |
-| `file.read({ query })` | Файл унших | `{ type: "raw" \| "patch", content: string }` |
-| `file.status({ query? })` | Хянагдсан файлуудын статусыг авах | <a href={typesUrl}><code>Файл[]</code></a> |
+| арга                      | Тодорхойлолт                      | Хариулт                                                                                       |
+| ------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------- |
+| `find.text({ query })`    | Файлаас текст хайх                | `path`, `lines`, `line_number`, `absolute_offset`, `submatches`-тай таарах объектуудын массив |
+| `find.files({ query })`   | Файл, санг нэрээр нь хайж олох    | `string[]` (замууд)                                                                           |
+| `find.symbols({ query })` | Ажлын талбарын тэмдэгтүүдийг олох | <a href={typesUrl}><code>Тэмдэгт[]</code></a>                                                 |
+| `file.read({ query })`    | Файл унших                        | `{ type: "raw" \| "patch", content: string }`                                                 |
+| `file.status({ query? })` | Хянагдсан файлуудын статусыг авах | <a href={typesUrl}><code>Файл[]</code></a>                                                    |
 
 `find.files` нь хэд хэдэн нэмэлт асуулгын талбаруудыг дэмждэг:
 
@@ -381,7 +381,7 @@ await client.session.prompt({
 #### Жишээ
 
 ```javascript
-// Search and read files
+// Файл хайж унших
 const textResults = await client.find.text({
   query: { pattern: "function.*mongolgpt" },
 })
@@ -403,26 +403,26 @@ const content = await client.file.read({
 
 ### TUI
 
-| арга | Тодорхойлолт | Хариулт |
-| ------------------------------ | ------------------------- | --------- |
-| `tui.appendPrompt({ body })` | Сануулгад текст нэмэх | `boolean` |
-| `tui.openHelp()` | Тусламжийн харилцах цонхыг нээнэ үү `boolean` | |
-| `tui.openSessions()` | Сеанс сонгогчийг нээх | `boolean` |
-| `tui.openThemes()` | Загвар сонгогчийг нээх | `boolean` |
-| `tui.openModels()` | Загвар сонгогчийг нээх | `boolean` |
-| `tui.submitPrompt()` | Одоогийн сануулгыг илгээх | `boolean` |
-| `tui.clearPrompt()` | Сануулгыг арилгах | `boolean` |
-| `tui.executeCommand({ body })` | командыг гүйцэтгэх | `boolean` |
-| `tui.showToast({ body })` | Шарсан талхны мэдэгдлийг харуулах | `boolean` |
+| арга                           | Тодорхойлолт                                  | Хариулт   |
+| ------------------------------ | --------------------------------------------- | --------- |
+| `tui.appendPrompt({ body })`   | Сануулгад текст нэмэх                         | `boolean` |
+| `tui.openHelp()`               | Тусламжийн харилцах цонхыг нээнэ үү `boolean` |           |
+| `tui.openSessions()`           | Сеанс сонгогчийг нээх                         | `boolean` |
+| `tui.openThemes()`             | Загвар сонгогчийг нээх                        | `boolean` |
+| `tui.openModels()`             | Загвар сонгогчийг нээх                        | `boolean` |
+| `tui.submitPrompt()`           | Одоогийн сануулгыг илгээх                     | `boolean` |
+| `tui.clearPrompt()`            | Сануулгыг арилгах                             | `boolean` |
+| `tui.executeCommand({ body })` | командыг гүйцэтгэх                            | `boolean` |
+| `tui.showToast({ body })`      | Шарсан талхны мэдэгдлийг харуулах             | `boolean` |
 
 ---
 
 #### Жишээ
 
 ```javascript
-// Control TUI interface
+// TUI интерфэйсийг удирдах
 await client.tui.appendPrompt({
-  body: { text: "Add this to prompt" },
+  body: { text: "Үүнийг сануулгад нэм" },
 })
 
 await client.tui.showToast({
@@ -432,10 +432,10 @@ await client.tui.showToast({
 
 ---
 
-### Auth
+### Нэвтрэлт
 
-| арга | Тодорхойлолт | Хариулт |
-| ------------------- | ------------------------------ | --------- |
+| арга                | Тодорхойлолт                                 | Хариулт   |
+| ------------------- | -------------------------------------------- | --------- |
 | `auth.set({ ... })` | Баталгаажуулалтын итгэмжлэлүүдийг тохируулах | `boolean` |
 
 ---
@@ -453,8 +453,8 @@ await client.auth.set({
 
 ### Үйл явдал
 
-| арга | Тодорхойлолт | Хариулт |
-| ------------------- | ------------------------- | ------------------------- |
+| арга                | Тодорхойлолт                         | Хариулт                              |
+| ------------------- | ------------------------------------ | ------------------------------------ |
 | `event.subscribe()` | Серверээс илгээсэн үйл явдлын урсгал | Серверээс илгээсэн үйл явдлын урсгал |
 
 ---
@@ -462,10 +462,9 @@ await client.auth.set({
 #### Жишээ
 
 ```javascript
-// Listen to real-time events
+// Бодит цагийн үйл явдлыг сонсох
 const events = await client.event.subscribe()
 for await (const event of events.stream) {
   console.log("Event:", event.type, event.properties)
 }
 ```
-

@@ -1,5 +1,5 @@
 ---
-title: Rules
+title: Дүрмүүд
 description: mongolgpt-д захиалгат зааврыг тохируулна уу.
 ---
 
@@ -34,26 +34,26 @@ description: mongolgpt-д захиалгат зааврыг тохируулна
 Та мөн энэ файлыг гараар үүсгэж болно. `AGENTS.md` файлд оруулж болох зарим зүйлсийн жишээ энд байна.
 
 ```markdown title="AGENTS.md"
-# SST v3 Monorepo Project
+# SST v3 монорепо төсөл
 
-This is an SST v3 monorepo with TypeScript. The project uses bun workspaces for package management.
+Энэ бол TypeScript ашигладаг SST v3 монорепо. Төсөл багц удирдахад Bun workspace ашиглана.
 
-## Project Structure
+## Төслийн бүтэц
 
-- `packages/` - Contains all workspace packages (functions, core, web, etc.)
-- `infra/` - Infrastructure definitions split by service (storage.ts, api.ts, web.ts)
-- `sst.config.ts` - Main SST configuration with dynamic imports
+- `packages/` - Workspace-ийн бүх багцыг агуулна (`functions`, `core`, `web` гэх мэт)
+- `infra/` - Үйлчилгээгээр салгасан дэд бүтцийн тодорхойлолтууд (`storage.ts`, `api.ts`, `web.ts`)
+- `sst.config.ts` - Динамик импорттой үндсэн SST тохиргоо
 
-## Code Standards
+## Кодын стандарт
 
-- Use TypeScript with strict mode enabled
-- Shared code goes in `packages/core/` with proper exports configuration
-- Functions go in `packages/functions/`
-- Infrastructure should be split into logical files in `infra/`
+- TypeScript-ийн strict горимыг идэвхжүүл
+- Хуваалцсан кодыг зөв export тохиргоотой `packages/core/` дотор байрлуул
+- Function-уудыг `packages/functions/` дотор байрлуул
+- Дэд бүтцийг `infra/` дотор логик файлуудад салга
 
-## Monorepo Conventions
+## Монорепогийн дүрэм
 
-- Import shared modules using workspace names: `@my-app/core/example`
+- Хуваалцсан модулийг workspace нэрээр импортол: `@my-app/core/example`
 ```
 
 Бид энд төслийн тусгай зааварчилгааг нэмж байгаа бөгөөд үүнийг танай багт хуваалцах болно.
@@ -112,7 +112,7 @@ Example:
 
 ```json title="mongolgpt.json"
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "$schema": "https://mgpt.mn/config.json",
   "instructions": ["CONTRIBUTING.md", "docs/guidelines.md", ".cursor/rules/*.md"]
 }
 ```
@@ -121,7 +121,7 @@ Example:
 
 ```json title="mongolgpt.json"
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "$schema": "https://mgpt.mn/config.json",
   "instructions": ["https://raw.githubusercontent.com/my-org/shared-rules/main/style.md"]
 }
 ```
@@ -142,7 +142,7 @@ mongolgpt нь `AGENTS.md` дахь файлын лавлагааг автома
 
 ```json title="mongolgpt.json"
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
+  "$schema": "https://mgpt.mn/config.json",
   "instructions": ["docs/development-standards.md", "test/testing-guidelines.md", "packages/*/AGENTS.md"]
 }
 ```
@@ -152,28 +152,28 @@ mongolgpt нь `AGENTS.md` дахь файлын лавлагааг автома
 Та `AGENTS.md`-д тодорхой зааварчилгаа өгснөөр гадаад файлуудыг уншихыг mongolgpt-д зааж болно. Энд практик жишээ байна:
 
 ```markdown title="AGENTS.md"
-# TypeScript Project Rules
+# TypeScript төслийн дүрэм
 
-## External File Loading
+## Гадаад файл ачаалах
 
-CRITICAL: When you encounter a file reference (e.g., @rules/general.md), use your Read tool to load it on a need-to-know basis. They're relevant to the SPECIFIC task at hand.
+ЧУХАЛ: Файлын заалттай (`@rules/general.md` гэх мэт) таарвал зөвхөн тухайн ажилд хэрэгтэй үед Read хэрэгслээр ачаал. Эдгээр нь яг одоогийн ажилд хамаарна.
 
-Instructions:
+Заавар:
 
-- Do NOT preemptively load all references - use lazy loading based on actual need
-- When loaded, treat content as mandatory instructions that override defaults
-- Follow references recursively when needed
+- Бүх заалтыг урьдчилан ачаалахгүй; бодит хэрэгцээнд тулгуурлан хойшлуулж ачаал
+- Ачаалсан агуулгыг өгөгдмөл дүрмийг давсан заавал мөрдөх заавар гэж үз
+- Шаардлагатай үед заалтуудыг давтан дагаж унш
 
-## Development Guidelines
+## Хөгжүүлэлтийн заавар
 
-For TypeScript code style and best practices: @docs/typescript-guidelines.md
-For React component architecture and hooks patterns: @docs/react-patterns.md
-For REST API design and error handling: @docs/api-standards.md
-For testing strategies and coverage requirements: @test/testing-guidelines.md
+TypeScript кодын хэв маяг болон зөв дадал: @docs/typescript-guidelines.md
+React component архитектур болон hook загвар: @docs/react-patterns.md
+REST API дизайн болон алдаа боловсруулах: @docs/api-standards.md
+Тестийн стратеги болон хамралтын шаардлага: @test/testing-guidelines.md
 
-## General Guidelines
+## Ерөнхий заавар
 
-Read the following file immediately as it's relevant to all workflows: @rules/general-guidelines.md.
+Бүх ажлын урсгалд хамаарах тул дараах файлыг шууд унш: @rules/general-guidelines.md.
 ```
 
 Энэ арга нь танд дараах боломжийг олгоно:
@@ -186,4 +186,3 @@ Read the following file immediately as it's relevant to all workflows: @rules/ge
 :::tip
 Монерепо эсвэл нийтлэг стандарттай төслүүдийн хувьд `mongolgpt.json`-г бөмбөрцөг загвартай (`packages/*/AGENTS.md` гэх мэт) ашиглах нь гарын авлагын зааварчилгаанаас илүү засвар үйлчилгээ юм.
 :::
-

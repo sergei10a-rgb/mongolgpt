@@ -1,16 +1,17 @@
 ---
 title: MongolGPT баримт бичиг
-description: MongolGPT-ийг суулгах, тохируулах, AI agent workflow-д ашиглах монгол гарын авлага.
+description: MongolGPT-ийг суулгах, тохируулах, хиймэл оюуны кодын агенттай ажиллах Монгол гарын авлага.
 ---
 
-[**MongolGPT**](/) бол Монгол хэрэглэгчдэд зориулсан AI coding agent платформ. Терминал, desktop app, IDE өргөтгөл, provider, skill/plugin, MCP холболтуудыг нэг дор ажиллуулах зорилготой.
+[**MongolGPT**](/) бол Монгол хэрэглэгчдэд зориулсан хиймэл оюуны кодын агентын платформ. Терминал, ширээний апп, хөгжүүлэлтийн орчны өргөтгөл, үйлчилгээ үзүүлэгч, чадвар, нэмэлт болон MCP холболтыг нэг дор ажиллуулах зорилготой.
 
 ## Суулгах
 
-Одоогоор MongolGPT-ийн албан ёсны npm/Homebrew/AUR/Chocolatey/Scoop package нийтлэгдээгүй. Бодитоор ажиллах замууд:
+Дараах баталгаатай аргуудаас өөрт тохирохыг сонгон суулгана:
 
-- Desktop: [Windows x64 installer](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
-- Source build:
+- Ширээний апп: [Windows x64 суулгагч](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
+- Терминалын хувилбар: `npm install -g mongolgpt`
+- Эх кодоос ажиллуулах:
 
 ```bash
 git clone https://github.com/sergei10a-rgb/mongolgpt
@@ -19,45 +20,45 @@ bun install
 bun run dev
 ```
 
-Terminal install script:
+Терминалаас суулгах тушаал:
 
 ```bash
 git clone https://github.com/sergei10a-rgb/mongolgpt && cd mongolgpt && bun install
 ```
 
-## Desktop суулгах
+## Ширээний апп суулгах
 
-1. [Releases](https://github.com/sergei10a-rgb/mongolgpt/releases/latest) хуудас руу орно.
+1. [Хувилбарууд](https://github.com/sergei10a-rgb/mongolgpt/releases/latest) хуудас руу орно.
 2. `mongolgpt-desktop-win-x64.exe` файлыг татна.
 3. Суулгагчийг ажиллуулна.
 
 :::note
-Одоогийн build code signing хийгдээгүй. Windows SmartScreen анхааруулга харуулж магадгүй.
+Одоогийн бүтээлтэд кодын тоон гарын үсэг хийгдээгүй тул Windows SmartScreen анхааруулга харуулж магадгүй.
 :::
 
-## Source-оос ажиллуулах
+## Эх кодоос ажиллуулах
 
-Repository-г clone хийсэн бол дараах байдлаар локал орчинд ажиллуулна.
+Кодын санг татсан бол дараах тушаалаар өөрийн төхөөрөмж дээр ажиллуулна.
 
 ```bash
 bun install
 bun run dev
 ```
 
-Desktop development mode:
+Ширээний аппын хөгжүүлэлтийн горим:
 
 ```bash
 bun run dev:desktop
 ```
 
-Windows desktop installer build хийх:
+Windows-ийн ширээний суулгагч бүтээх:
 
 ```powershell
 $env:MONGOLGPT_CHANNEL="prod"
 bun --cwd packages/desktop run package:win
 ```
 
-Build дууссаны дараа installer файл энд гарна.
+Бүтээлт дууссаны дараа суулгагч файл энд гарна.
 
 ```txt
 packages/desktop/dist/
@@ -65,9 +66,16 @@ packages/desktop/dist/
 
 ## Терминал хувилбар
 
-Terminal CLI нь `mongolgpt` command нэрээр ажиллах ёстой. Repository дотор CLI болон publish script-үүд энэ нэр рүү шилжсэн.
+Терминалын хувилбар `mongolgpt` тушаалаар ажиллана. Кодын сан дахь тушаалын мөр болон нийтлэх скриптүүд энэ нэрийг ашиглана.
 
-Registry package нийтлэгдэх хүртэл terminal хувилбарыг source-оос ажиллуулна:
+Терминалын хувилбарыг npm-ээс суулгана:
+
+```bash
+npm install -g mongolgpt
+mongolgpt
+```
+
+Харин хөгжүүлэлт хийх бол эх кодоос ажиллуулна:
 
 ```bash
 git clone https://github.com/sergei10a-rgb/mongolgpt
@@ -76,52 +84,60 @@ bun install
 bun run dev
 ```
 
-Мөн install script туршиж болно:
+Мөн дараах суулгах тушаалыг ашиглаж болно:
 
 ```bash
 git clone https://github.com/sergei10a-rgb/mongolgpt && cd mongolgpt && bun install
 ```
 
-## Нэвтрэх ба provider тохируулах
+## Нэвтрэх ба үйлчилгээ үзүүлэгч тохируулах
 
-MongolGPT account-аар нэвтрэх урсгал нь `https://mongolgpt.duckdns.org/auth` endpoint руу чиглэнэ.
+MongolGPT Desktop-ийг анх нээхэд, мөн `mongolgpt` тушаалыг анх ажиллуулахад MongolGPT бүртгэлээр нэвтрэх цонх нээгдэнэ. Вэб хөтөч дээр бүртгүүлэх эсвэл нэвтэрч зөвшөөрсний дараа апп руу автоматаар буцна.
+
+Нэвтэрсний дараа **MongolGPT Free Auto** анхдагчаар бэлэн болно. Free Auto нь тухайн үед боломжтой загвар руу автоматаар чиглүүлж, таны бүртгэлийн хязгаарыг мөрдөнө. Үйлчилгээний боломж, загвар, хязгаар өөрчлөгдөж болох тул үүрд хязгааргүй, үнэгүй байна гэсэн амлалт биш.
+
+Нэмэлт үйлчилгээ үзүүлэгч холбохдоо `/connect` ашиглана.
 
 ```txt
 /connect
 ```
 
-`/connect` командаар provider сонгоод API key эсвэл MongolGPT account холболтоо тохируулна.
+1. OpenAI, Anthropic, Google, OpenRouter зэрэг үйлчилгээг өөрийн API түлхүүр эсвэл OAuth эрхээр холбож болно.
+2. [Ollama](./providers#оллама), [LM Studio](./providers#lm-studio) болон [OpenAI-тэй нийцтэй тусгай үйлчилгээ](./providers#тусгай-үйлчилгээ-үзүүлэгч) ашиглан орон нутгийн загвар холбоно.
+3. NVIDIA NIM-ийг өөрийн API түлхүүрээр сонголтоор холбоно. NVIDIA-ийн байршуулсан туршилтын API эрх нь хувийн хөгжүүлэлт, туршилт, үнэлгээнд зориулагддаг; үйлдвэрлэлийн хэрэглээнд зохих лиценз эсвэл захиалга шаардлагатай.
 
-## Skill, plugin, MCP
+MongolGPT бүртгэл нь Free Auto болон MongolGPT-ийн удирддаг үйлчилгээнд шаардлагатай. Өөрийн API түлхүүр, орон нутгийн загварын нууц мэдээлэл хэрэглэгчийн төхөөрөмж дээрх MongolGPT нууц мэдээллийн үйлчилгээнд хадгалагдана.
 
-MongolGPT-ийн зорилго нь Claude, Codex, Goose, MCP server, skill/plugin зэрэг өөр өөр AI agent format-уудыг хэрэглэгчээр гараар тааруулахгүйгээр таньж, шаардлагатай үед adapter/wrapper үүсгэн холбох юм.
+## Чадвар, нэмэлт, MCP
+
+MongolGPT-ийн зорилго нь Claude, Codex, Goose, MCP сервер, чадвар болон нэмэлт зэрэг өөр өөр агентын форматыг таньж, шаардлагатай тааруулагчийг хэрэглэгчээр гараар бичүүлэхгүйгээр үүсгэн холбох юм.
 
 Эхний суурь нь repo дотор байна:
 
-- provider integration
-- plugin API суурь
+- үйлчилгээ үзүүлэгчийн холболт
+- нэмэлтийн API-ийн суурь
 - MCP холболтын суурь
-- desktop shell
-- terminal agent
-- MongolGPT account login wiring
+- ширээний апп
+- терминалд ажиллах агент
+- MongolGPT бүртгэлийн нэвтрэлтийн холболт
 
-Шинэ compatibility importer нь эхний ажиллах хэлбэрээр нэмэгдсэн:
+Нийцтэй байдлын импортлогчийн эхний ажиллах хувилбар нэмэгдсэн:
 
-- command, локал зам, URL, config файлыг уншиж MCP, skill, plugin төрлийг танина
-- `plan` горимоор ямар config patch үүсэхийг эхлээд харуулна
-- `apply` горимоор global эсвэл project config-д аюулгүйгээр нэмнэ
-- plugin wrapper шаардлагатай бол хэрэглэгчээр гараар бичүүлэхгүйгээр үүсгэх суурьтай
+- тушаал, дотоод зам, URL, тохиргооны файлыг уншиж MCP, чадвар, нэмэлтийн төрлийг танина
+- `plan` горимоор тохиргоонд орох өөрчлөлтийг эхлээд харуулна
+- `apply` горимоор нийтлэг эсвэл төслийн тохиргоонд аюулгүйгээр нэмнэ
+- нэмэлтийн тааруулагч шаардлагатай бол хэрэглэгчээр гараар бичүүлэхгүйгээр үүсгэх суурьтай
 
-CLI дээр:
+Терминал дээр:
 
 ```bash
 mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
 mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
 ```
 
-Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, path, URL эсвэл config оруулаад шалгах болон суулгах боломжтой.
+Ширээний аппын `Тохиргоо -> Интеграц` хэсэгт тушаал, дотоод зам, URL эсвэл тохиргоо оруулж шалгаад суулгаж болно.
 
-Дараагийн шатанд marketplace discovery, илүү олон agent format-ийн adapter generator, signing/permission review нэмэгдэнэ.
+Дараагийн шатанд нэмэлтийн сангаас хайх, илүү олон агентын форматад тааруулагч үүсгэх, гарын үсэг болон зөвшөөрлийг шалгах боломж нэмэгдэнэ.
 
 ## Хөгжүүлэлт
 
@@ -130,7 +146,7 @@ bun install
 bun run dev
 ```
 
-Test болон typecheck:
+Тест болон төрлийн шалгалт:
 
 ```bash
 bun run typecheck
@@ -138,6 +154,6 @@ bun run typecheck
 
 ## Тусламж
 
-Issue, release, source code:
+Асуудал мэдээлэх, хувилбар татах, эх код үзэх:
 
 [github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)

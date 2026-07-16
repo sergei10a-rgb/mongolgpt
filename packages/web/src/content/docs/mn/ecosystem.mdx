@@ -1,30 +1,30 @@
 ---
-title: Ecosystem
-description: MongolGPT-р бүтээгдсэн төслүүд болон интеграцчлалууд.
+title: Экосистем
+description: MongolGPT-ээр бүтээсэн төслүүд болон холболтууд.
 ---
 
-MongolGPT-ийн ecosystem хуудсыг одоогоор зөвхөн баталгаажсан integration төрлүүдээр харуулж байна. Албан ёсны marketplace/package registry бэлэн болоогүй тул энд гуравдагч талын rebrand хийсэн package жагсаалт тавихгүй.
+MongolGPT-ийн экосистемийн хуудсанд одоогоор зөвхөн баталгаажсан холболтын төрлүүдийг харуулна. Албан ёсны зах зээл болон багцын бүртгэл бэлэн болоогүй тул гуравдагч талын дахин брэндчилсэн багцыг энд жагсаахгүй.
 
-## Баталгаатай integration төрлүүд
+## Баталгаатай холболтын төрлүүд
 
-| Төрөл | Одоогийн төлөв |
-| --- | --- |
-| MCP server | `mongolgpt compat import plan/apply` command болон desktop integration wizard-аар command, local path, URL, config-оос танина |
-| Skill | Claude/Codex/Goose маягийн skill folder/config-ийг таних суурь importer нэмэгдсэн |
-| Plugin | Local plugin file болон private npm package-ийг config дээр зааж ажиллуулах боломжтой |
-| Provider | MongolGPT account login, API key provider, local/provider config wiring хадгалагдсан |
+| Төрөл              | Одоогийн төлөв                                                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| MCP сервер         | `mongolgpt compat import plan/apply` тушаал болон ширээний аппын холболтын хөтчөөр тушаал, дотоод зам, URL, тохиргоог танина |
+| Чадвар             | Claude, Codex, Goose маягийн чадварын сан болон тохиргоог таних суурь импортлогчтой                                          |
+| Нэмэлт             | Дотоод нэмэлтийн файл болон хувийн npm багцыг тохиргоонд зааж ажиллуулна                                                     |
+| Үйлчилгээ үзүүлэгч | MongolGPT бүртгэлээр нэвтрэх, API түлхүүр, дотоод болон үйлчилгээ үзүүлэгчийн тохиргооны холболтыг дэмжинэ                   |
 
-## Import workflow
+## Импортын ажлын урсгал
 
 ```bash
 mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
 mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
 ```
 
-Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, path, URL эсвэл config оруулаад шалгах болон нэмэх боломжтой.
+Ширээний аппын `Тохиргоо -> Холболт` хэсэгт тушаал, зам, URL эсвэл тохиргоо оруулж шалгаад нэмнэ.
 
 ## Нийтлэхээс өмнөх дүрэм
 
-- Нийтлэгдээгүй npm/Homebrew/AUR/Chocolatey/Scoop package-ийг official install гэж харуулахгүй.
-- Гуравдагч талын plugin-ийг MongolGPT нэрээр rebrand хийж, бодитоор байхгүй URL/package руу заахгүй.
-- Шинэ integration нэмэхдээ эхлээд importer/adapter-аар шалгаж, дараа нь албан ёсны registry/marketplace дээр нийтэлсний дараа docs-д package install command нэмнэ.
+- Нийтлэгдээгүй npm, Homebrew, AUR, Chocolatey эсвэл Scoop багцыг албан ёсны суулгац гэж харуулахгүй.
+- Гуравдагч талын нэмэлтийг MongolGPT нэрээр дахин брэндчилж, бодитоор байхгүй URL эсвэл багц руу заахгүй.
+- Шинэ холболтыг эхлээд импортлогч болон тохируулагчаар шалгана. Албан ёсны бүртгэл эсвэл зах зээлд нийтэлсний дараа баримт бичигт суулгах тушаалыг нэмнэ.

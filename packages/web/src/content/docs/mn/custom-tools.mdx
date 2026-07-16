@@ -30,12 +30,12 @@ description: LLM нь mongolgpt руу залгаж болох хэрэгслү�
 import { tool } from "@mongolgpt/plugin"
 
 export default tool({
-  description: "Query the project database",
+  description: "Төслийн өгөгдлийн сангаас асуулга хийх",
   args: {
     query: tool.schema.string().describe("SQL query to execute"),
   },
   async execute(args) {
-    // Your database logic here
+    // Өгөгдлийн сангийн логик энд байна
     return `Executed query: ${args.query}`
   },
 })
@@ -53,7 +53,7 @@ export default tool({
 import { tool } from "@mongolgpt/plugin"
 
 export const add = tool({
-  description: "Add two numbers",
+  description: "Хоёр тоо нэмнэ",
   args: {
     a: tool.schema.number().describe("First number"),
     b: tool.schema.number().describe("Second number"),
@@ -126,7 +126,7 @@ export default {
     param: z.string().describe("Parameter description"),
   },
   async execute(args, context) {
-    // Tool implementation
+    // Хэрэгслийн хэрэгжүүлэлт
     return "result"
   },
 }
@@ -142,10 +142,10 @@ export default {
 import { tool } from "@mongolgpt/plugin"
 
 export default tool({
-  description: "Get project information",
+  description: "Төслийн мэдээлэл авах",
   args: {},
   async execute(args, context) {
-    // Access context information
+    // Контекстийн мэдээлэлд хандах
     const { agent, sessionID, messageID, directory, worktree } = context
     return `Agent: ${agent}, Session: ${sessionID}, Message: ${messageID}, Directory: ${directory}, Worktree: ${worktree}`
   },
@@ -180,7 +180,7 @@ import { tool } from "@mongolgpt/plugin"
 import path from "path"
 
 export default tool({
-  description: "Add two numbers using Python",
+  description: "Python ашиглан хоёр тоо нэмэх",
   args: {
     a: tool.schema.number().describe("First number"),
     b: tool.schema.number().describe("Second number"),
@@ -193,5 +193,4 @@ export default tool({
 })
 ```
 
-Энд бид Python скриптийг ажиллуулахын тулд [`Bun.Энд бид Python скриптийг ажиллуулахын тулд ](https://bun.com/docs/runtime/shell) хэрэгслийг ашиглаж байна.
-
+Энд Python скриптийг ажиллуулахдаа [`Bun Shell`](https://bun.com/docs/runtime/shell) ашиглаж байна.
