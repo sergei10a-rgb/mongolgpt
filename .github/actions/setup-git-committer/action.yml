@@ -3,31 +3,40 @@ description: "Create app token and configure git user"
 inputs:
   mongolgpt-app-id:
     description: "MongolGPT GitHub App ID"
-    required: true
+    required: false
   mongolgpt-app-secret:
     description: "MongolGPT GitHub App private key"
-    required: true
+    required: false
 outputs:
   token:
     description: "GitHub App token"
-    value: ${{ steps.apptoken.outputs.token }}
+    value: ${{ steps.apptoken.outputs.token || steps.fallback-token.outputs.token }}
   app-slug:
     description: "GitHub App slug"
-    value: ${{ steps.apptoken.outputs.app-slug }}
+    value: ${{ steps.apptoken.outputs.app-slug || 'github-actions' }}
 runs:
   using: "composite"
   steps:
     - name: Create app token
       id: apptoken
+      if: inputs.mongolgpt-app-id != '' && inputs.mongolgpt-app-secret != ''
       uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
       with:
         app-id: ${{ inputs.mongolgpt-app-id }}
         private-key: ${{ inputs.mongolgpt-app-secret }}
         owner: ${{ github.repository_owner }}
 
+    - name: Use repository token
+      id: fallback-token
+      if: inputs.mongolgpt-app-id == '' || inputs.mongolgpt-app-secret == ''
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: echo "token=$GITHUB_TOKEN" >> "$GITHUB_OUTPUT"
+
     - name: Configure git user
       run: |
-        slug="${{ steps.apptoken.outputs.app-slug }}"
+        slug="${{ steps.apptoken.outputs.app-slug || 'github-actions' }}"
         git config --global user.name "${slug}[bot]"
         git config --global user.email "${slug}[bot]@users.noreply.github.com"
       shell: bash
@@ -38,6 +47,8 @@ runs:
       shell: bash
 
     - name: Configure git remote
+      env:
+        GH_AUTH_TOKEN: ${{ steps.apptoken.outputs.token || steps.fallback-token.outputs.token }}
       run: |
-        git remote set-url origin https://x-access-token:${{ steps.apptoken.outputs.token }}@github.com/${{ github.repository }}
+        git remote set-url origin "https://x-access-token:${GH_AUTH_TOKEN}@github.com/${{ github.repository }}"
       shell: bash
