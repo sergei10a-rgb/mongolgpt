@@ -3,6 +3,7 @@
 import { rm } from "fs/promises"
 import path from "path"
 import { parseArgs } from "util"
+import { $ } from "bun"
 
 const root = path.resolve(import.meta.dir, "..")
 const file = path.join(root, "UPCOMING_CHANGELOG.md")
@@ -75,4 +76,14 @@ if (quiet) {
   if (err) process.stderr.write(err)
 }
 
-process.exit(code)
+// Release notes must not depend on an external model credential. Keep the
+// release pipeline useful by producing a deterministic commit-based fallback.
+const commits = await $`git log --no-merges --format=%s -n 30`.cwd(root).text()
+const lines = commits
+  .split("\n")
+  .map((line) => line.trim())
+  .filter(Boolean)
+  .map((line) => `- ${line}`)
+await Bun.write(file, `# MongolGPT-ийн өөрчлөлтүүд\n\n${lines.join("\n")}\n`)
+if (values.print) process.stdout.write(await Bun.file(file).text())
+process.exit(0)
