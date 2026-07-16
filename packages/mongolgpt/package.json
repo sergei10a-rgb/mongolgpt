@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "name": "mongolgpt",
   "private": true,
-  "description": "Mongolian-first AI coding agent CLI and compatibility runtime",
+  "description": "Монгол хэрэглэгчдэд зориулсан AI код бичих агентын CLI болон нийцтэй ажиллагааны орчин",
   "type": "module",
   "license": "MIT",
   "publishConfig": {
