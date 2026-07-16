@@ -153,8 +153,7 @@ export const dict = {
   "home.faq.a2.before": "Эхлэх хамгийн хялбар арга нь",
   "home.faq.a2.link": "танилцуулгыг унших",
   "home.faq.q3": "MongolGPT ашиглахад хиймэл оюуны нэмэлт захиалга хэрэгтэй юу?",
-  "home.faq.a3.p1":
-    "Заавал биш. MongolGPT-д бүртгэл үүсгэлгүй ашиглаж болох хэд хэдэн үнэгүй загвар бий.",
+  "home.faq.a3.p1": "Заавал биш. MongolGPT-д бүртгэл үүсгэлгүй ашиглаж болох хэд хэдэн үнэгүй загвар бий.",
   "home.faq.a3.p2.beforeZen": "Үүнээс гадна түгээмэл кодын загваруудыг ашиглахын тулд",
   "home.faq.a3.p2.afterZen": " бүртгэл үүсгэж болно.",
   "home.faq.a3.p3":
@@ -173,7 +172,8 @@ export const dict = {
   "home.faq.a6":
     "MongolGPT-ийг бүрэн үнэгүй ашиглана. Мөн хэд хэдэн үнэгүй загвар дагалдана. Өөр нийлүүлэгч холбовол нэмэлт төлбөр гарч болзошгүй.",
   "home.faq.q7": "Өгөгдөл болон нууцлалын талаар ямар бодлоготой вэ?",
-  "home.faq.a7.p1": "Манай үнэгүй загваруудыг ашиглах эсвэл хуваалцах холбоос үүсгэх үед л таны өгөгдөл, мэдээллийг хадгална.",
+  "home.faq.a7.p1":
+    "Манай үнэгүй загваруудыг ашиглах эсвэл хуваалцах холбоос үүсгэх үед л таны өгөгдөл, мэдээллийг хадгална.",
   "home.faq.a7.p2.beforeModels": "Дэлгэрэнгүйг",
   "home.faq.a7.p2.modelsLink": "манай загварууд",
   "home.faq.a7.p2.and": "болон",
@@ -263,7 +263,8 @@ export const dict = {
   "go.cta.text": "Go-д захиалах",
   "go.cta.price": "$10/сар",
   "go.cta.promo": "Эхний сар $5",
-  "go.pricing.body": "Дурын агенттай ашиглана. Эхний сар $5, дараа нь сард $10. Шаардлагатай бол эрхээ цэнэглэнэ. Хүссэн үедээ цуцална.",
+  "go.pricing.body":
+    "Дурын агенттай ашиглана. Эхний сар $5, дараа нь сард $10. Шаардлагатай бол эрхээ цэнэглэнэ. Хүссэн үедээ цуцална.",
   "go.graph.free": "Үнэгүй",
   "go.graph.freePill": "Big Pickle болон үнэгүй загварууд",
   "go.graph.go": "Go",
@@ -353,6 +354,9 @@ export const dict = {
     "Үнэгүй загварт Big Pickle болон тухайн үед санал болгож буй урамшууллын загварууд багтаж, өдөрт 200 хүсэлтийн эрх олгоно. Go-д GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro болон DeepSeek V4 Flash багтаж, таван цаг, долоо хоног, сарын гулсах хугацаанд илүү өндөр хүсэлтийн хязгаар хэрэглэнэ. Энэ нь ойролцоогоор таван цагт $12, долоо хоногт $30, сард $60-тай тэнцэнэ. Бодит хүсэлтийн тоо загвар болон хэрэглээнээс хамаарна.",
 
   "zen.api.error.rateLimitExceeded": "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Дараа дахин оролдоно уу.",
+  "zen.api.error.freeAutoWeeklyLimitExceeded":
+    "Free Auto-ийн долоо хоногийн token хязгаарт хүрлээ. {{retryIn}} дараа дахин оролдоно уу.",
+  "zen.api.error.organizationRequired": "MongolGPT аккаунтаа ашиглахын өмнө байгууллагаа сонгоно уу.",
   "zen.api.error.modelNotSupported": "{{model}} загварыг дэмжихгүй",
   "zen.api.error.modelFormatNotSupported": "{{model}} загвар {{format}} форматыг дэмжихгүй",
   "zen.api.error.noProviderAvailable": "Ашиглах боломжтой нийлүүлэгч алга",
@@ -369,7 +373,8 @@ export const dict = {
   "zen.api.error.goSubscriptionMonthlyLimitExceeded":
     "Сарын хэрэглээний хязгаарт хүрлээ. {{retryIn}} дараа шинэчлэгдэнэ. Энэ загварыг одоо үргэлжлүүлэн ашиглахын тулд үлдэгдлээсээ төлөхийг идэвхжүүлнэ үү: {{consoleGoUrl}}",
   "zen.api.error.noPaymentMethod": "Төлбөрийн хэрэгсэл алга. Эндээс нэмнэ үү: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "Үлдэгдэл хүрэлцэхгүй байна. Төлбөр тооцоогоо эндээс удирдана уу: {{billingUrl}}",
+  "zen.api.error.insufficientBalance":
+    "Үлдэгдэл хүрэлцэхгүй байна. Төлбөр тооцоогоо эндээс удирдана уу: {{billingUrl}}",
   "zen.api.error.workspaceMonthlyLimitReached":
     "Таны ажлын талбар сарын ${{amount}} зарцуулалтын хязгаарт хүрлээ. Хязгаараа эндээс удирдана уу: {{billingUrl}}",
   "zen.api.error.userMonthlyLimitReached":
@@ -634,8 +639,7 @@ export const dict = {
   "workspace.black.waitlist.enroll": "Идэвхжүүлэх",
   "workspace.black.waitlist.enrolling": "Идэвхжүүлж байна...",
   "workspace.black.waitlist.enrolled": "Идэвхжүүлсэн",
-  "workspace.black.waitlist.enrollNote":
-    "Идэвхжүүлэх товчийг дармагц таны захиалга эхэлж, картаас тань төлбөр авна.",
+  "workspace.black.waitlist.enrollNote": "Идэвхжүүлэх товчийг дармагц таны захиалга эхэлж, картаас тань төлбөр авна.",
 
   "workspace.lite.loading": "Ачаалж байна...",
   "workspace.lite.time.day": "өдөр",
@@ -653,7 +657,7 @@ export const dict = {
   "workspace.lite.subscription.resetsIn": "Шинэчлэгдэх хугацаа:",
   "workspace.lite.subscription.useBalance": "Хэрэглээний хязгаарт хүрсний дараа боломжит үлдэгдлээ ашиглах",
   "workspace.lite.subscription.selectProvider":
-    "Go загваруудыг ашиглахын тулд MongolGPT-ийн тохиргоонд нийлүүлэгчээр \"MongolGPT Go\"-г сонгоно уу.",
+    'Go загваруудыг ашиглахын тулд MongolGPT-ийн тохиргоонд нийлүүлэгчээр "MongolGPT Go"-г сонгоно уу.',
   "workspace.lite.black.message":
     "Та одоогоор MongolGPT Black-д захиалсан эсвэл хүлээлгийн жагсаалтад байна. Go руу шилжихийн тулд эхлээд одоогийн захиалгаа цуцална уу.",
   "workspace.lite.other.message":
@@ -703,7 +707,8 @@ export const dict = {
   "workspace.referral.apply.confirmAction": "Ашиглах",
 
   "download.title": "MongolGPT | Татах",
-  "download.meta.description": "Windows x64-д зориулсан MongolGPT Desktop-ийг татах эсвэл MongolGPT-ийг эх кодоос бүтээх",
+  "download.meta.description":
+    "Windows x64-д зориулсан MongolGPT Desktop-ийг татах эсвэл MongolGPT-ийг эх кодоос бүтээх",
   "download.hero.title": "MongolGPT татах",
   "download.hero.subtitle":
     "Windows x64-д зориулсан компьютерийн хувилбар нийтлэгдсэн. Бусад багцын бүртгэлд хараахан нийтлээгүй байна.",

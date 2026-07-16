@@ -1,0 +1,42 @@
+{
+  "zenModels": {
+    "free-auto": {
+      "name": "MongolGPT Free Auto",
+      "cost": {
+        "input": 0.000001,
+        "output": 0.000001
+      },
+      "allowAnonymous": false,
+      "freeForAuthenticated": true,
+      "fallbackProvider": "production-secondary",
+      "rateLimit": 20,
+      "freeWeeklyTokenLimit": 100000,
+      "freeMaxTokensPerRequest": 32000,
+      "providers": [
+        {
+          "id": "production-primary",
+          "model": "replace-with-primary-model",
+          "priority": 0
+        },
+        {
+          "id": "production-secondary",
+          "model": "replace-with-secondary-model",
+          "priority": 1
+        }
+      ]
+    }
+  },
+  "liteModels": {},
+  "providers": {
+    "production-primary": {
+      "displayName": "Primary production provider",
+      "api": "https://replace-with-primary-provider.example/v1",
+      "apiKey": "replace-with-primary-secret"
+    },
+    "production-secondary": {
+      "displayName": "Secondary production provider",
+      "api": "https://replace-with-secondary-provider.example/v1",
+      "apiKey": "replace-with-secondary-secret"
+    }
+  }
+}

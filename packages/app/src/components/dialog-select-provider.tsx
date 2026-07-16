@@ -23,6 +23,7 @@ export const DialogSelectProvider: Component<{ directory?: Accessor<string | und
     if (id === "anthropic") return language.t("dialog.provider.anthropic.note")
     if (id === "openai") return language.t("dialog.provider.openai.note")
     if (id.startsWith("github-copilot")) return language.t("dialog.provider.copilot.note")
+    if (id === "nvidia") return language.t("dialog.provider.nvidia.note")
     if (id === "mongolgpt-go") return language.t("dialog.provider.mongolgptGo.tagline")
   }
 

@@ -126,6 +126,14 @@ export const TuiThreadCommand = cmd({
         hidden: true,
       }),
   handler: async (args) => {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const { ensureAccountLogin } = await import("./account")
+    if (!(await AppRuntime.runPromise(ensureAccountLogin()))) {
+      UI.error("MongolGPT ашиглахын өмнө аккаунтаар нэвтэрнэ үү")
+      process.exitCode = 1
+      return
+    }
+
     if (args.replay === true) {
       UI.error("--replay дэмжигдэхгүй; replay анхдагчаар идэвхтэй")
       process.exitCode = 1

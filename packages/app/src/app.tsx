@@ -60,6 +60,7 @@ import {
   sessionHref,
 } from "./utils/session-route"
 import { isSessionNotFoundError } from "./utils/server-errors"
+import { AccountOnboardingGate } from "@/components/account-onboarding"
 
 import Session from "@/pages/session"
 import { NewHome, LegacyHome } from "@/pages/home"
@@ -191,7 +192,10 @@ function SelectedServerProviders(props: ParentProps) {
   return (
     <ServerKey>
       <ServerSDKProvider>
-        <ServerSyncProvider>{props.children}</ServerSyncProvider>
+        <ServerSyncProvider>
+          <AccountOnboardingGate />
+          {props.children}
+        </ServerSyncProvider>
       </ServerSDKProvider>
     </ServerKey>
   )

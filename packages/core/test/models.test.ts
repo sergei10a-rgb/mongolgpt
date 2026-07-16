@@ -138,6 +138,31 @@ describe("ModelsDev Service", () => {
     }),
   )
 
+  it.live("rebrands inherited hosted providers and points them at MongolGPT", () =>
+    Effect.sync(() => {
+      const providers = {
+        ...fixture,
+        opencode: { ...fixture.acme, id: "opencode", name: "OpenCode Zen", api: "https://opencode.ai/zen/v1" },
+        "opencode-go": {
+          ...fixture.acme,
+          id: "opencode-go",
+          name: "OpenCode Go",
+          api: "https://opencode.ai/zen/go/v1",
+        },
+      }
+      const result = ModelsDev.rebrandHostedProviders(providers, "https://mgpt.mn/")
+
+      expect(result.opencode).toBeUndefined()
+      expect(result["opencode-go"]).toBeUndefined()
+      expect(result.mongolgpt).toMatchObject({ id: "mongolgpt", name: "MongolGPT", api: "https://mgpt.mn/zen/v1" })
+      expect(result["mongolgpt-go"]).toMatchObject({
+        id: "mongolgpt-go",
+        name: "MongolGPT Go",
+        api: "https://mgpt.mn/zen/go/v1",
+      })
+    }),
+  )
+
   it.live("get() returns providers from disk when cache file exists", () =>
     Effect.gen(function* () {
       yield* writeCache(fixture)

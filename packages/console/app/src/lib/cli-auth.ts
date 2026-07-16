@@ -26,21 +26,23 @@ export type CliAccount = {
   email: string
 }
 
+export async function verifyCliToken(token: string): Promise<CliAccount | undefined> {
+  const verified = await authClient.verify(token).catch(() => undefined)
+  if (!verified || "err" in verified || verified.subject.type !== "account") return
+  return {
+    accountID: verified.subject.properties.accountID,
+    email: verified.subject.properties.email,
+  }
+}
+
 export async function verifyCliAccount(request: Request): Promise<{ account: CliAccount } | { response: Response }> {
   const header = request.headers.get("authorization")
   const token = header?.match(/^Bearer\s+(.+)$/i)?.[1]
   if (!token) return { response: unauthorized("Bearer token алга") }
 
-  const verified = await authClient.verify(token)
-  if ("err" in verified) return { response: unauthorized("Bearer token буруу байна") }
-  if (verified.subject.type !== "account") return { response: unauthorized("Account token шаардлагатай") }
-
-  return {
-    account: {
-      accountID: verified.subject.properties.accountID,
-      email: verified.subject.properties.email,
-    },
-  }
+  const account = await verifyCliToken(token)
+  if (!account) return { response: unauthorized("Account token буруу байна") }
+  return { account }
 }
 
 function unauthorized(message: string) {

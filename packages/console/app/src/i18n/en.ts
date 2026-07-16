@@ -351,6 +351,8 @@ export const dict = {
     "Free models include Big Pickle plus promotional models available at the time, with a quota of 200 requests/day. Go includes GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro, and DeepSeek V4 Flash with higher request quotas enforced across rolling windows (5-hour, weekly, and monthly), roughly equivalent to $12 per 5 hours, $30 per week, and $60 per month (actual request counts vary by model and usage).",
 
   "zen.api.error.rateLimitExceeded": "Rate limit exceeded. Please try again later.",
+  "zen.api.error.freeAutoWeeklyLimitExceeded": "Free Auto weekly token limit reached. Retry in {{retryIn}}.",
+  "zen.api.error.organizationRequired": "Select an organization before using your MongolGPT account.",
   "zen.api.error.modelNotSupported": "Model {{model}} is not supported",
   "zen.api.error.modelFormatNotSupported": "Model {{model}} is not supported for format {{format}}",
   "zen.api.error.noProviderAvailable": "No provider available",

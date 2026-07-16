@@ -21,6 +21,14 @@ export { defaultConsoleUrl }
 export const formatAccountLabel = (account: { email: string; url: string }, isActive: boolean) =>
   `${account.email} ${dim(account.url)}${activeSuffix(isActive)}`
 
+export const formatPostLoginGuidance = () => [
+  "Бүртгэлээр нэвтэрсний дараа MongolGPT Free Auto анхдагчаар идэвхжинэ.",
+  "Орон нутгийн болон OpenAI-тэй нийцтэй загваруудыг хүсвэл дараа нь нэмэлтээр холбоно.",
+  "NVIDIA NIM-ийг өөрийн API түлхүүрээр хувийн хөгжүүлэлт, туршилт, үнэлгээнд холбоно. Үйлдвэрлэлийн хэрэглээнд зохих NVIDIA лиценз эсвэл захиалга шаардлагатай.",
+]
+
+export const accountOnboardingRequired = (hasActiveAccount: boolean) => !hasActiveAccount
+
 const formatOrgChoiceLabel = (account: { email: string }, org: { name: string }, isActive: boolean) =>
   `${org.name} (${account.email})${activeSuffix(isActive)}`
 
@@ -65,6 +73,9 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
       PollSuccess: (r) =>
         Effect.gen(function* () {
           yield* s.stop(r.email + " нэрээр нэвтэрлээ")
+          for (const message of formatPostLoginGuidance()) {
+            yield* Prompt.log.info(message)
+          }
           yield* Prompt.outro("Дууслаа")
         }),
       PollExpired: () => s.stop("Нэвтрэх хугацаа дууссан", 1),
@@ -100,6 +111,9 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
     PollSuccess: (r) =>
       Effect.gen(function* () {
         yield* s.stop(r.email + " нэрээр нэвтэрлээ")
+        for (const message of formatPostLoginGuidance()) {
+          yield* Prompt.log.info(message)
+        }
         yield* Prompt.outro("Дууслаа")
       }),
     PollExpired: () => s.stop("Төхөөрөмжийн кодын хугацаа дууссан", 1),
@@ -108,6 +122,15 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
     PollPending: () => s.stop("Санаандгүй төлөв", 1),
     PollSlow: () => s.stop("Санаандгүй төлөв", 1),
   })
+})
+
+export const ensureAccountLogin = Effect.fn("Cli.account.ensureLogin")(function* () {
+  const service = yield* Account.Service
+  const active = yield* service.active()
+  if (!accountOnboardingRequired(Option.isSome(active))) return true
+
+  yield* loginEffect(defaultConsoleUrl)
+  return Option.isSome(yield* service.active())
 })
 
 const logoutEffect = Effect.fn("logout")(function* (email?: string) {

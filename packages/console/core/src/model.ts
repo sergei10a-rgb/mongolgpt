@@ -24,12 +24,15 @@ export namespace ZenData {
     cost: ModelCostSchema,
     cost200K: ModelCostSchema.optional(),
     allowAnonymous: z.boolean().optional(),
+    freeForAuthenticated: z.boolean().optional(),
     byokProvider: z.enum(["openai", "anthropic", "google"]).optional(),
     stickyProvider: z.enum(["strict", "prefer"]).optional(),
     trialProvider: z.string().optional(),
     trialEnded: z.boolean().optional(),
     fallbackProvider: z.string().optional(),
     rateLimit: z.number().optional(),
+    freeWeeklyTokenLimit: z.number().int().positive().optional(),
+    freeMaxTokensPerRequest: z.number().int().positive().optional(),
     providers: z.array(
       z.object({
         id: z.string(),
@@ -58,17 +61,81 @@ export namespace ZenData {
     budget: z.number().optional(),
   })
 
-  const ModelsSchema = z.object({
-    zenModels: z.record(
-      z.string(),
-      z.union([ModelSchema, z.array(ModelSchema.extend({ formatFilter: FormatSchema }))]),
-    ),
-    liteModels: z.record(
-      z.string(),
-      z.union([ModelSchema, z.array(ModelSchema.extend({ formatFilter: FormatSchema }))]),
-    ),
-    providers: z.record(z.string(), ProviderSchema),
-  })
+  const ModelsSchema = z
+    .object({
+      zenModels: z.record(
+        z.string(),
+        z.union([ModelSchema, z.array(ModelSchema.extend({ formatFilter: FormatSchema }))]),
+      ),
+      liteModels: z.record(
+        z.string(),
+        z.union([ModelSchema, z.array(ModelSchema.extend({ formatFilter: FormatSchema }))]),
+      ),
+      providers: z.record(z.string(), ProviderSchema),
+    })
+    .superRefine((value, ctx) => {
+      for (const [list, models] of [
+        ["zenModels", value.zenModels],
+        ["liteModels", value.liteModels],
+      ] as const) {
+        const configured = models["free-auto"]
+        if (!configured) continue
+
+        for (const [index, model] of (Array.isArray(configured) ? configured : [configured]).entries()) {
+          const path = [list, "free-auto", ...(Array.isArray(configured) ? [index] : [])]
+          if (model.allowAnonymous !== false)
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: "Free Auto must require authentication" })
+          if (model.freeForAuthenticated !== true)
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path,
+              message: "Free Auto must use authenticated free billing",
+            })
+          if (model.trialProvider)
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path,
+              message: "Free Auto cannot depend on a hosted trial provider",
+            })
+          if (!model.rateLimit)
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path,
+              message: "Free Auto must define a per-account rate limit",
+            })
+          if (!model.freeWeeklyTokenLimit)
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path,
+              message: "Free Auto must define a weekly token limit",
+            })
+          if (!model.freeMaxTokensPerRequest)
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path,
+              message: "Free Auto must define a per-request billable token upper bound",
+            })
+          if (
+            model.freeMaxTokensPerRequest &&
+            model.freeWeeklyTokenLimit &&
+            model.freeMaxTokensPerRequest > model.freeWeeklyTokenLimit
+          )
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path,
+              message: "Free Auto per-request token upper bound cannot exceed its weekly token limit",
+            })
+          if (model.providers.length < 2)
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: "Free Auto must define a fallback route" })
+          if (!model.fallbackProvider || !model.providers.some((provider) => provider.id === model.fallbackProvider))
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path,
+              message: "Free Auto fallbackProvider must reference a configured provider",
+            })
+        }
+      }
+    })
 
   export const validate = fn(ModelsSchema, (input) => {
     return input

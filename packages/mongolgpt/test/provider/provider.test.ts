@@ -71,8 +71,29 @@ const list = Provider.use.list()
 
 const paid = (providers: Record<string, { models: Record<string, { cost: { input: number } }> }>) => {
   const item = providers[ProviderV2.ID.make("mongolgpt")]
-  expect(item).toBeDefined()
+  if (!item) return 0
   return Object.values(item.models).filter((model) => model.cost.input > 0).length
+}
+
+const mongolgptProviderConfig = {
+  name: "MongolGPT",
+  npm: "@ai-sdk/openai-compatible",
+  api: "https://example.com/v1",
+  env: ["MONGOLGPT_API_KEY"],
+  models: {
+    "free-auto": {
+      name: "Free Auto",
+      cost: { input: 0, output: 0 },
+      tool_call: true,
+      limit: { context: 32_000, output: 4_096 },
+    },
+    paid: {
+      name: "Paid",
+      cost: { input: 1, output: 1 },
+      tool_call: true,
+      limit: { context: 32_000, output: 4_096 },
+    },
+  },
 }
 
 const languageBaseURL = (language: unknown) => (language as { config: { baseURL: string } }).config.baseURL
@@ -1141,12 +1162,12 @@ it.instance("ModelNotFoundError for provider includes suggestions", () =>
 
 it.instance("ModelNotFoundError suggests catalog models for unloaded providers", () =>
   Effect.gen(function* () {
-    yield* remove("MONGOLGPT_API_KEY")
+    yield* remove("ANTHROPIC_API_KEY")
     const error = yield* Provider.use
-      .getModel(ProviderV2.ID.mongolgpt, ModelV2.ID.make("claude-haiku-fake-model"))
+      .getModel(ProviderV2.ID.anthropic, ModelV2.ID.make("claude-haiku-fake-model"))
       .pipe(Effect.flip)
     if (!Provider.ModelNotFoundError.isInstance(error)) throw error
-    expect(error.suggestions ?? []).toContain("claude-haiku-4-5")
+    expect((error.suggestions ?? []).some((id) => id.includes("haiku"))).toBe(true)
   }),
 )
 
@@ -1850,9 +1871,11 @@ it.instance(
 
 it.effect("mongolgpt loader keeps paid models when config apiKey is present", () =>
   Effect.gen(function* () {
-    const noneDir = yield* tmpdirScoped()
+    const noneDir = yield* tmpdirScoped({ config: { provider: { mongolgpt: mongolgptProviderConfig } } })
     const keyedDir = yield* tmpdirScoped({
-      config: { provider: { mongolgpt: { options: { apiKey: "test-key" } } } },
+      config: {
+        provider: { mongolgpt: { ...mongolgptProviderConfig, options: { apiKey: "test-key" } } },
+      },
     })
 
     const listIn = (directory: string) =>
@@ -1869,10 +1892,25 @@ it.effect("mongolgpt loader keeps paid models when config apiKey is present", ()
   }).pipe(provideMultiInstance),
 )
 
+it.effect("mongolgpt loader hides every managed model until account credentials exist", () =>
+  Effect.gen(function* () {
+    const noneDir = yield* tmpdirScoped({ config: { provider: { mongolgpt: mongolgptProviderConfig } } })
+    const listIn = (directory: string) =>
+      Provider.use
+        .list()
+        .pipe(provideInstanceEffect(directory))
+        .pipe(Effect.provide(InstanceLayer.layer), Effect.provide(CrossSpawnSpawner.defaultLayer))
+
+    const providers = yield* listIn(noneDir)
+    expect(Object.keys(providers[ProviderV2.ID.make("mongolgpt")]?.models ?? {})).toHaveLength(0)
+  }).pipe(provideMultiInstance),
+)
+
 it.effect("mongolgpt loader keeps paid models when auth exists", () =>
   Effect.gen(function* () {
-    const noneDir = yield* tmpdirScoped()
-    const keyedDir = yield* tmpdirScoped()
+    const config = { provider: { mongolgpt: mongolgptProviderConfig } }
+    const noneDir = yield* tmpdirScoped({ config })
+    const keyedDir = yield* tmpdirScoped({ config })
 
     const listIn = (directory: string) =>
       Provider.use

@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { Catalog } from "@mongolgpt/core/catalog"
 import { Credential } from "@mongolgpt/core/credential"
@@ -6,7 +6,7 @@ import { Integration } from "@mongolgpt/core/integration"
 import { ModelV2 } from "@mongolgpt/core/model"
 import { PluginV2 } from "@mongolgpt/core/plugin"
 import { PluginHost } from "@mongolgpt/core/plugin/host"
-import { MongolGPTPlugin } from "@mongolgpt/core/plugin/provider/mongolgpt"
+import { MongolGPTPlugin, selectSoleOrganization } from "@mongolgpt/core/plugin/provider/mongolgpt"
 import { ProviderV2 } from "@mongolgpt/core/provider"
 import { testEffect } from "../lib/effect"
 import { PluginTestLayer } from "./fixture"
@@ -63,6 +63,16 @@ function withEnv<A, E, R>(vars: Record<string, string | undefined>, effect: () =
 const cost = (input: number, output = 0) => [{ input, output, cache: { read: 0, write: 0 } }]
 
 describe("MongolGPTPlugin", () => {
+  test("selects an organization only when the account has exactly one", () => {
+    expect(selectSoleOrganization([{ id: "org-1", name: "One" }])).toEqual({ id: "org-1", name: "One" })
+    expect(
+      selectSoleOrganization([
+        { id: "org-1", name: "One" },
+        { id: "org-2", name: "Two" },
+      ]),
+    ).toBeUndefined()
+  })
+
   it.effect("registers account and service account methods", () =>
     Effect.gen(function* () {
       yield* addPlugin()
@@ -192,7 +202,7 @@ describe("MongolGPTPlugin", () => {
     ),
   )
 
-  it.effect("uses a public key and disables paid models without credentials", () =>
+  it.effect("requires credentials and disables paid models", () =>
     withEnv({ MONGOLGPT_API_KEY: undefined }, () =>
       Effect.gen(function* () {
         const catalog = yield* Catalog.Service
@@ -212,13 +222,13 @@ describe("MongolGPTPlugin", () => {
           })
         })
         yield* addPlugin()
-        expect(required(yield* catalog.provider.get(ProviderV2.ID.mongolgpt)).request.body.apiKey).toBe("public")
+        expect(required(yield* catalog.provider.get(ProviderV2.ID.mongolgpt)).request.body.apiKey).toBeUndefined()
         expect(required(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("paid"))).enabled).toBe(false)
       }),
     ),
   )
 
-  it.effect("keeps free models without credentials", () =>
+  it.effect("disables free models without account credentials", () =>
     withEnv({ MONGOLGPT_API_KEY: undefined }, () =>
       Effect.gen(function* () {
         const catalog = yield* Catalog.Service
@@ -238,13 +248,13 @@ describe("MongolGPTPlugin", () => {
           })
         })
         yield* addPlugin()
-        expect(required(yield* catalog.provider.get(ProviderV2.ID.mongolgpt)).request.body.apiKey).toBe("public")
-        expect(required(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("free"))).enabled).toBe(true)
+        expect(required(yield* catalog.provider.get(ProviderV2.ID.mongolgpt)).request.body.apiKey).toBeUndefined()
+        expect(required(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("free"))).enabled).toBe(false)
       }),
     ),
   )
 
-  it.effect("treats output-only cost as free without credentials", () =>
+  it.effect("disables output-only models without account credentials", () =>
     withEnv({ MONGOLGPT_API_KEY: undefined }, () =>
       Effect.gen(function* () {
         const catalog = yield* Catalog.Service
@@ -264,10 +274,10 @@ describe("MongolGPTPlugin", () => {
           })
         })
         yield* addPlugin()
-        expect(required(yield* catalog.provider.get(ProviderV2.ID.mongolgpt)).request.body.apiKey).toBe("public")
+        expect(required(yield* catalog.provider.get(ProviderV2.ID.mongolgpt)).request.body.apiKey).toBeUndefined()
         expect(
           required(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("output-only"))).enabled,
-        ).toBe(true)
+        ).toBe(false)
       }),
     ),
   )

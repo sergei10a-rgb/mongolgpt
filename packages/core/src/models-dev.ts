@@ -3,7 +3,7 @@ import { Context, Duration, Effect, Layer, Option, Schedule, Schema } from "effe
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { ModelsDev } from "@mongolgpt/schema/models-dev"
 import { Global } from "./global"
-import { Flag } from "./flag/flag"
+import { env, Flag } from "./flag/flag"
 import { Flock } from "./util/flock"
 import { Hash } from "./util/hash"
 import { FSUtil } from "./fs-util"
@@ -11,12 +11,38 @@ import { InstallationChannel, InstallationVersion } from "./installation/version
 import { EventV2 } from "./event"
 import { makeGlobalNode } from "./effect/node"
 import { httpClient } from "./effect/layer-node-platform"
+import { localConsoleUrl } from "./product"
 
 export const CatalogModelStatus = Schema.Literals(["alpha", "beta", "deprecated"])
 export type CatalogModelStatus = typeof CatalogModelStatus.Type
 
 const USER_AGENT = `mongolgpt/${InstallationChannel}/${InstallationVersion}/${Flag.MONGOLGPT_CLIENT}`
 const hostedProviderIDs = new Set(["mongolgpt", "mongolgpt-go", "opencode", "opencode-go"])
+const hostedServer = env("MONGOLGPT_CONSOLE_URL")?.trim() || localConsoleUrl
+
+export function rebrandHostedProviders(providers: Record<string, Provider>, consoleUrl = hostedServer) {
+  const result = { ...providers }
+  const base = consoleUrl.replace(/\/+$/, "")
+  if (!result.mongolgpt && result.opencode) {
+    result.mongolgpt = {
+      ...result.opencode,
+      id: "mongolgpt",
+      name: "MongolGPT",
+      api: `${base}/zen/v1`,
+    }
+  }
+  if (!result["mongolgpt-go"] && result["opencode-go"]) {
+    result["mongolgpt-go"] = {
+      ...result["opencode-go"],
+      id: "mongolgpt-go",
+      name: "MongolGPT Go",
+      api: `${base}/zen/go/v1`,
+    }
+  }
+  delete result.opencode
+  delete result["opencode-go"]
+  return result
+}
 
 export function filterHostedProviders(
   providers: Record<string, Provider>,
@@ -219,7 +245,8 @@ export const layer = Layer.effect(
 
     const [cachedGet, invalidate] = yield* Effect.cachedInvalidateWithTTL(populate, Duration.infinity)
 
-    const get = (): Effect.Effect<Record<string, Provider>> => cachedGet.pipe(Effect.map(filterHostedProviders))
+    const get = (): Effect.Effect<Record<string, Provider>> =>
+      cachedGet.pipe(Effect.map(rebrandHostedProviders), Effect.map(filterHostedProviders))
 
     const refresh = Effect.fn("ModelsDev.refresh")(function* (force = false) {
       if (!force && (yield* fresh())) return

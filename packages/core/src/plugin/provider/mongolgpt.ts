@@ -204,11 +204,10 @@ export const MongolGPTPlugin = define<HttpClient.HttpClient | EventV2.Service | 
       if (!item) return
       const hasKey = Boolean(env("MONGOLGPT_API_KEY") || connected || item.provider.request.body.apiKey)
       catalog.provider.update(item.provider.id, (provider) => {
-        if (!hasKey) provider.request.body.apiKey = "public"
+        if (!hasKey && provider.request.body.apiKey === "public") delete provider.request.body.apiKey
       })
       if (hasKey) return
       for (const model of item.models.values()) {
-        if (!model.cost.some((cost) => cost.input > 0)) continue
         catalog.model.update(item.provider.id, model.id, (draft) => {
           draft.enabled = false
         })
@@ -333,7 +332,7 @@ function credential(http: HttpClient.HttpClient, server: string, token: typeof T
       ],
       { concurrency: 2 },
     )
-    const org = orgs.toSorted((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))[0]
+    const org = selectSoleOrganization(orgs)
     return Credential.OAuth.make({
       type: "oauth" as const,
       methodID,
@@ -349,6 +348,11 @@ function credential(http: HttpClient.HttpClient, server: string, token: typeof T
       },
     })
   })
+}
+
+export function selectSoleOrganization(orgs: ReadonlyArray<{ id: string; name: string }>) {
+  if (orgs.length !== 1) return
+  return orgs[0]
 }
 
 function get<S extends Schema.Top>(http: HttpClient.HttpClient, url: string, token: string, schema: S) {

@@ -1,5 +1,5 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { and, Database, eq, isNull, lt, or, sql } from "@mongolgpt/console-core/drizzle/index.js"
+import { and, Database, eq, gte, isNull, lt, or, sql } from "@mongolgpt/console-core/drizzle/index.js"
 import { KeyTable } from "@mongolgpt/console-core/schema/key.sql.js"
 import { BillingTable, LiteTable, SubscriptionTable, UsageTable } from "@mongolgpt/console-core/schema/billing.sql.js"
 import { centsToMicroCents } from "@mongolgpt/console-core/util/price.js"
@@ -50,6 +50,9 @@ import { createModelTpmLimiter } from "./modelTpmLimiter"
 import { createModelTpsLimiter } from "./modelTpsLimiter"
 import { createProviderBudgetTracker } from "./providerBudgetTracker"
 import { accumulateUsage, HOT_WORKSPACES } from "./usageBatcher"
+import { verifyCliToken } from "~/lib/cli-auth"
+import { authenticatedRateLimitIdentity, sanitizeProviderRequestHeaders } from "./request-security"
+import { freeAutoReservationUpperBound, reserveFreeAutoQuota } from "./free-auto-quota"
 
 type ZenData = Awaited<ReturnType<typeof ZenData.list>>
 type RetryOptions = {
@@ -57,6 +60,7 @@ type RetryOptions = {
   retryCount: number
 }
 type BillingSource = "anonymous" | "free" | "byok" | "plan" | "lite" | "balance"
+type AuthCredential = { type: "key"; value: string } | { type: "account"; accountID: string; workspaceID: string }
 
 function resolve(text: string, params?: Record<string, string | number>) {
   if (!params) return text
@@ -85,6 +89,18 @@ function configuredWorkspaceIDs(value: string | undefined) {
   )
 }
 
+function formatRetryTime(seconds: number, locale: string) {
+  const days = Math.floor(seconds / 86400)
+  if (days >= 1) return locale === "mn" ? `${days} өдөр` : `${days} day${days === 1 ? "" : "s"}`
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.ceil((seconds % 3600) / 60)
+  if (hours >= 1)
+    return locale === "mn"
+      ? `${hours} цаг ${minutes} минут`
+      : `${hours} hour${hours === 1 ? "" : "s"} ${minutes} minute${minutes === 1 ? "" : "s"}`
+  return locale === "mn" ? `${minutes} минут` : `${minutes} minute${minutes === 1 ? "" : "s"}`
+}
+
 export async function handler(
   input: APIEvent,
   opts: {
@@ -103,9 +119,11 @@ export async function handler(
 
   const MAX_FAILOVER_RETRIES = 3
   const MAX_429_RETRIES = 3
-  const dict = i18n(localeFromRequest(input.request))
+  const locale = localeFromRequest(input.request)
+  const dict = i18n(locale)
   const t = (key: Key, params?: Record<string, string | number>) => resolve(dict[key], params)
   const freeWorkspaceIDs = configuredWorkspaceIDs(import.meta.env.MONGOLGPT_FREE_WORKSPACE_IDS)
+  const quota = { current: undefined as Awaited<ReturnType<typeof reserveFreeAutoQuota>> }
 
   try {
     const url = input.request.url
@@ -133,17 +151,26 @@ export async function handler(
     })
     const zenData = ZenData.list(opts.modelList)
     const modelInfo = validateModel(zenData, model)
+    const authInfo = await authenticate(modelInfo, zenApiKey)
     const trialLimiter = createTrialLimiter(modelInfo.trialProvider, ip)
     const trialProviders = await trialLimiter?.check()
     const rateLimiter = modelInfo.allowAnonymous
       ? createIpRateLimiter(modelInfo.id, modelInfo.rateLimit, ip, input.request)
-      : createKeyRateLimiter(modelInfo.id, modelInfo.rateLimit, zenApiKey, input.request)
+      : createKeyRateLimiter(
+          modelInfo.id,
+          modelInfo.rateLimit,
+          authenticatedRateLimitIdentity(
+            authInfo ? { workspaceID: authInfo.workspaceID, userID: authInfo.user.id } : undefined,
+            zenApiKey,
+          ),
+          input.request,
+        )
     await rateLimiter?.check()
-    const authInfo = await authenticate(modelInfo, zenApiKey)
     const stickyId = sessionId ? sessionId : (authInfo?.workspaceID ?? ip)
     const stickyTracker = createStickyTracker(modelInfo.id, modelInfo.stickyProvider, stickyId)
     const stickyProvider = await stickyTracker?.get()
     const billingSource = validateBilling(authInfo, modelInfo)
+    quota.current = await reserveFreeAutoWeeklyUsage(authInfo, modelInfo)
     logger.metric({ source: billingSource })
     const modelTpmLimiter = createModelTpmLimiter(modelInfo.providers)
     const modelTpmLimits = await modelTpmLimiter?.check()
@@ -210,7 +237,7 @@ export async function handler(
       const res = await fetchWith429Retry(reqUrl, {
         method: "POST",
         headers: (() => {
-          const headers = new Headers(input.request.headers)
+          const headers = sanitizeProviderRequestHeaders(input.request.headers)
           providerInfo.modifyHeaders(headers, providerInfo.apiKey, stickyId)
           Object.entries(providerInfo.headerModifier ?? {}).forEach(([k, v]) => {
             if (v === "$ip") return headers.set(k, ip)
@@ -300,6 +327,7 @@ export async function handler(
         await modelTpmLimiter?.track(providerInfo.id, providerInfo.model, usageInfo)
         await providerBudgetTracker?.track(providerInfo.id, costInfo.totalCostInCent)
         await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
+        await quota.current?.settle(usageTokenTotal(usageInfo))
         await reload(billingSource, authInfo, costInfo)
         json.cost = calculateOccurredCost(billingSource, costInfo)
       }
@@ -314,6 +342,7 @@ export async function handler(
       const body = JSON.stringify(responseConverter(json))
       const responseLength = contentByteLength(body)
       logger.metric({ response_length: responseLength })
+      await quota.current?.settle()
       return new Response(body, {
         status: resStatus,
         statusText: res.statusText,
@@ -361,10 +390,12 @@ export async function handler(
                   )
                   await providerBudgetTracker?.track(providerInfo.id, costInfo.totalCostInCent)
                   await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
+                  await quota.current?.settle(usageTokenTotal(usageInfo))
                   await reload(billingSource, authInfo, costInfo)
                   const cost = calculateOccurredCost(billingSource, costInfo)
                   c.enqueue(encoder.encode(buildCostChunk(opts.format, cost)))
                 }
+                await quota.current?.settle()
                 c.close()
                 return
               }
@@ -405,7 +436,13 @@ export async function handler(
           )
         }
 
-        return pump()
+        return pump().catch(async (error) => {
+          await quota.current?.settle()
+          c.error(error)
+        })
+      },
+      async cancel() {
+        await quota.current?.settle()
       },
     })
     return new Response(stream, {
@@ -414,6 +451,7 @@ export async function handler(
       headers: resHeaders,
     })
   } catch (error) {
+    await quota.current?.settle()
     logger.metric({
       "error.type": error instanceof Error ? error.constructor.name : "UnknownError",
     })
@@ -626,11 +664,77 @@ export async function handler(
       throw new AuthError(t("zen.api.error.missingApiKey"))
     }
 
-    const data = await Database.use((tx) =>
+    const data = await (async () => {
+      const key = await loadAuthData(modelInfo, { type: "key", value: zenApiKey })
+      if (key) return key
+
+      const account = await verifyCliToken(zenApiKey)
+      if (!account) return
+      const workspaceID = input.request.headers.get("x-org-id")
+      if (!workspaceID) throw new AuthError(t("zen.api.error.organizationRequired"))
+      return loadAuthData(modelInfo, {
+        type: "account",
+        accountID: account.accountID,
+        workspaceID,
+      })
+    })()
+
+    if (!data) throw new AuthError(t("zen.api.error.invalidApiKey"))
+    if (
+      modelInfo.id.startsWith("alpha-") &&
+      Resource.App.stage === "production" &&
+      !freeWorkspaceIDs.has(data.workspaceID)
+    )
+      throw new AuthError(t("zen.api.error.modelNotSupported", { model: modelInfo.id }))
+
+    logger.metric({
+      workspace: data.workspaceID,
+      ...(() => {
+        if (data.billing.subscription)
+          return {
+            subscription: data.billing.subscription.plan,
+          }
+        if (data.billing.lite)
+          return {
+            subscription: "lite",
+          }
+        return {}
+      })(),
+    })
+
+    return {
+      apiKeyId: data.apiKey,
+      workspaceID: data.workspaceID,
+      billing: data.billing,
+      user: data.user,
+      planUsage: data.planUsage,
+      lite: data.lite,
+      provider: data.provider,
+      isFree: freeWorkspaceIDs.has(data.workspaceID),
+      isDisabled: !!data.timeDisabled,
+    }
+  }
+
+  function loadAuthData(modelInfo: ModelInfo, credential: AuthCredential) {
+    const key =
+      credential.type === "key"
+        ? and(
+            eq(KeyTable.workspaceID, UserTable.workspaceID),
+            eq(KeyTable.userID, UserTable.id),
+            eq(KeyTable.key, credential.value),
+            isNull(KeyTable.timeDeleted),
+          )
+        : sql`false`
+    const account =
+      credential.type === "account"
+        ? and(eq(UserTable.accountID, credential.accountID), eq(UserTable.workspaceID, credential.workspaceID))
+        : eq(KeyTable.key, credential.value)
+
+    return Database.use((tx) =>
       tx
         .select({
           apiKey: KeyTable.id,
-          workspaceID: KeyTable.workspaceID,
+          workspaceID: UserTable.workspaceID,
           billing: {
             balance: BillingTable.balance,
             paymentMethodID: BillingTable.paymentMethodID,
@@ -672,16 +776,19 @@ export async function handler(
           },
           timeDisabled: ModelTable.timeCreated,
         })
-        .from(KeyTable)
-        .innerJoin(WorkspaceTable, eq(WorkspaceTable.id, KeyTable.workspaceID))
-        .innerJoin(BillingTable, eq(BillingTable.workspaceID, KeyTable.workspaceID))
-        .innerJoin(UserTable, and(eq(UserTable.workspaceID, KeyTable.workspaceID), eq(UserTable.id, KeyTable.userID)))
-        .leftJoin(ModelTable, and(eq(ModelTable.workspaceID, KeyTable.workspaceID), eq(ModelTable.model, modelInfo.id)))
+        .from(UserTable)
+        .innerJoin(WorkspaceTable, eq(WorkspaceTable.id, UserTable.workspaceID))
+        .innerJoin(BillingTable, eq(BillingTable.workspaceID, UserTable.workspaceID))
+        .leftJoin(KeyTable, key)
+        .leftJoin(
+          ModelTable,
+          and(eq(ModelTable.workspaceID, UserTable.workspaceID), eq(ModelTable.model, modelInfo.id)),
+        )
         .leftJoin(
           ProviderTable,
           modelInfo.byokProvider
             ? and(
-                eq(ProviderTable.workspaceID, KeyTable.workspaceID),
+                eq(ProviderTable.workspaceID, UserTable.workspaceID),
                 eq(ProviderTable.provider, modelInfo.byokProvider),
               )
             : sql`false`,
@@ -689,73 +796,88 @@ export async function handler(
         .leftJoin(
           SubscriptionTable,
           and(
-            eq(SubscriptionTable.workspaceID, KeyTable.workspaceID),
-            eq(SubscriptionTable.userID, KeyTable.userID),
+            eq(SubscriptionTable.workspaceID, UserTable.workspaceID),
+            eq(SubscriptionTable.userID, UserTable.id),
             isNull(SubscriptionTable.timeDeleted),
           ),
         )
         .leftJoin(
           LiteTable,
           and(
-            eq(LiteTable.workspaceID, KeyTable.workspaceID),
-            eq(LiteTable.userID, KeyTable.userID),
+            eq(LiteTable.workspaceID, UserTable.workspaceID),
+            eq(LiteTable.userID, UserTable.id),
             isNull(LiteTable.timeDeleted),
           ),
         )
-        .where(and(eq(KeyTable.key, zenApiKey), isNull(KeyTable.timeDeleted)))
+        .where(and(account, isNull(UserTable.timeDeleted)))
+        .orderBy(UserTable.workspaceID)
+        .limit(1)
         .then((rows) => rows[0]),
     )
+  }
 
-    if (!data) throw new AuthError(t("zen.api.error.invalidApiKey"))
-    if (
-      modelInfo.id.startsWith("alpha-") &&
-      Resource.App.stage === "production" &&
-      !freeWorkspaceIDs.has(data.workspaceID)
+  async function reserveFreeAutoWeeklyUsage(authInfo: AuthInfo, modelInfo: ModelInfo) {
+    if (!modelInfo.freeForAuthenticated || !modelInfo.freeWeeklyTokenLimit || !modelInfo.freeMaxTokensPerRequest) return
+    if (!authInfo) throw new AuthError(t("zen.api.error.missingApiKey"))
+
+    const week = getWeekBounds(new Date())
+    const usage = await Database.use((db) =>
+      db
+        .select({
+          total: sql<number>`
+            COALESCE(SUM(${UsageTable.inputTokens}), 0) +
+            COALESCE(SUM(${UsageTable.outputTokens}), 0) +
+            COALESCE(SUM(${UsageTable.reasoningTokens}), 0) +
+            COALESCE(SUM(${UsageTable.cacheReadTokens}), 0) +
+            COALESCE(SUM(${UsageTable.cacheWrite5mTokens}), 0) +
+            COALESCE(SUM(${UsageTable.cacheWrite1hTokens}), 0)
+          `.as("total"),
+        })
+        .from(UsageTable)
+        .where(
+          and(
+            eq(UsageTable.workspaceID, authInfo.workspaceID),
+            eq(UsageTable.model, modelInfo.id),
+            gte(UsageTable.timeCreated, week.start),
+          ),
+        )
+        .then((rows) => Number(rows[0]?.total ?? 0)),
     )
-      throw new AuthError(t("zen.api.error.modelNotSupported", { model: modelInfo.id }))
-
-    logger.metric({
-      workspace: data.workspaceID,
-      ...(() => {
-        if (data.billing.subscription)
-          return {
-            subscription: data.billing.subscription.plan,
-          }
-        if (data.billing.lite)
-          return {
-            subscription: "lite",
-          }
-        return {}
-      })(),
+    const result = Subscription.analyzeWeeklyTokens({
+      limit: modelInfo.freeWeeklyTokenLimit,
+      usage,
+      timeUpdated: week.start,
     })
+    if (result.status === "rate-limited") throw freeAutoWeeklyLimitError(result.resetInSec)
 
-    return {
-      apiKeyId: data.apiKey,
-      workspaceID: data.workspaceID,
-      billing: data.billing,
-      user: data.user,
-      planUsage: data.planUsage,
-      lite: data.lite,
-      provider: data.provider,
-      isFree: freeWorkspaceIDs.has(data.workspaceID),
-      isDisabled: !!data.timeDisabled,
-    }
+    const reservation = await reserveFreeAutoQuota({
+      workspaceID: authInfo.workspaceID,
+      modelID: modelInfo.id,
+      weekStart: week.start,
+      persistedUsage: usage,
+      reservation: freeAutoReservationUpperBound(modelInfo.freeMaxTokensPerRequest, modelInfo.freeWeeklyTokenLimit),
+      weeklyLimit: modelInfo.freeWeeklyTokenLimit,
+      ttlSeconds: result.resetInSec,
+    })
+    if (!reservation) throw freeAutoWeeklyLimitError(result.resetInSec)
+    return reservation
+  }
+
+  function freeAutoWeeklyLimitError(retryAfter: number) {
+    return new FreeUsageLimitError(
+      t("zen.api.error.freeAutoWeeklyLimitExceeded", {
+        retryIn: formatRetryTime(retryAfter, locale),
+      }),
+      retryAfter,
+    )
   }
 
   function validateBilling(authInfo: AuthInfo, modelInfo: ModelInfo): BillingSource {
     if (!authInfo) return "anonymous"
     if (authInfo.provider?.credentials) return "byok"
+    if (modelInfo.freeForAuthenticated) return "free"
     if (authInfo.isFree) return "free"
     if (modelInfo.allowAnonymous) return "free"
-
-    const formatRetryTime = (seconds: number) => {
-      const days = Math.floor(seconds / 86400)
-      if (days >= 1) return `${days} өдөр`
-      const hours = Math.floor(seconds / 3600)
-      const minutes = Math.ceil((seconds % 3600) / 60)
-      if (hours >= 1) return `${hours} цаг ${minutes} минут`
-      return `${minutes} минут`
-    }
 
     if (authInfo.billing.subscription && authInfo.planUsage) {
       try {
@@ -772,7 +894,7 @@ export async function handler(
           if (result.status === "rate-limited")
             throw new PlanUsageLimitError(
               t("zen.api.error.subscriptionQuotaExceeded", {
-                retryIn: formatRetryTime(result.resetInSec),
+                retryIn: formatRetryTime(result.resetInSec, locale),
               }),
               result.resetInSec,
             )
@@ -787,7 +909,7 @@ export async function handler(
           if (result.status === "rate-limited")
             throw new PlanUsageLimitError(
               t("zen.api.error.subscriptionQuotaExceeded", {
-                retryIn: formatRetryTime(result.resetInSec),
+                retryIn: formatRetryTime(result.resetInSec, locale),
               }),
               result.resetInSec,
             )
@@ -803,7 +925,7 @@ export async function handler(
           if (result.status === "rate-limited")
             throw new PlanUsageLimitError(
               t("zen.api.error.subscriptionQuotaExceeded", {
-                retryIn: formatRetryTime(result.resetInSec),
+                retryIn: formatRetryTime(result.resetInSec, locale),
               }),
               result.resetInSec,
             )
@@ -832,7 +954,7 @@ export async function handler(
           if (result.status === "rate-limited")
             throw new GoUsageLimitError(
               t("zen.api.error.goSubscriptionWeeklyLimitExceeded", {
-                retryIn: formatRetryTime(result.resetInSec),
+                retryIn: formatRetryTime(result.resetInSec, locale),
                 consoleGoUrl,
               }),
               authInfo.workspaceID,
@@ -852,7 +974,7 @@ export async function handler(
           if (result.status === "rate-limited")
             throw new GoUsageLimitError(
               t("zen.api.error.goSubscriptionMonthlyLimitExceeded", {
-                retryIn: formatRetryTime(result.resetInSec),
+                retryIn: formatRetryTime(result.resetInSec, locale),
                 consoleGoUrl,
               }),
               authInfo.workspaceID,
@@ -872,7 +994,7 @@ export async function handler(
           if (result.status === "rate-limited")
             throw new GoUsageLimitError(
               t("zen.api.error.goSubscriptionRollingLimitExceeded", {
-                retryIn: formatRetryTime(result.resetInSec),
+                retryIn: formatRetryTime(result.resetInSec, locale),
                 consoleGoUrl,
               }),
               authInfo.workspaceID,
@@ -995,6 +1117,17 @@ export async function handler(
     return billingSource === "balance" ? (costInfo.totalCostInCent / 100).toFixed(8) : "0"
   }
 
+  function usageTokenTotal(usageInfo: UsageInfo) {
+    return (
+      usageInfo.inputTokens +
+      usageInfo.outputTokens +
+      (usageInfo.reasoningTokens ?? 0) +
+      (usageInfo.cacheReadTokens ?? 0) +
+      (usageInfo.cacheWrite5mTokens ?? 0) +
+      (usageInfo.cacheWrite1hTokens ?? 0)
+    )
+  }
+
   async function trackUsage(
     sessionId: string,
     billingSource: BillingSource,
@@ -1033,13 +1166,7 @@ export async function handler(
     authInfo = authInfo!
 
     const cost = centsToMicroCents(totalCostInCent)
-    const totalTokens =
-      inputTokens +
-      outputTokens +
-      (reasoningTokens ?? 0) +
-      (cacheReadTokens ?? 0) +
-      (cacheWrite5mTokens ?? 0) +
-      (cacheWrite1hTokens ?? 0)
+    const totalTokens = usageTokenTotal(usageInfo)
 
     // For hot workspaces, batch balance/usage updates through Redis to avoid
     // row-level lock contention on BillingTable/UserTable. Returns the amount

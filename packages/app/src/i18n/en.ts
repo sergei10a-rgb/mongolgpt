@@ -109,6 +109,7 @@ export const dict = {
   "dialog.provider.openai.note": "GPT models for fast, capable general AI tasks",
   "dialog.provider.google.note": "Gemini models for fast, structured responses",
   "dialog.provider.openrouter.note": "Access all supported models from one provider",
+  "dialog.provider.nvidia.note": "Connect NVIDIA NIM models with your own API key",
   "dialog.provider.vercel.note": "Unified access to AI models with smart routing",
 
   "dialog.model.select.title": "Select model",
@@ -142,6 +143,13 @@ export const dict = {
   "provider.connect.mongolgptZen.visit.prefix": "Visit ",
   "provider.connect.mongolgptZen.visit.link": "the MongolGPT provider guide",
   "provider.connect.mongolgptZen.visit.suffix": " to collect your API key.",
+  "provider.connect.nvidia.step1.prefix": "Open ",
+  "provider.connect.nvidia.step1.link": "NVIDIA Build",
+  "provider.connect.nvidia.step1.suffix": ", choose a model, create an API key, then paste it below.",
+  "provider.connect.nvidia.notice":
+    "NVIDIA hosted API trial access is for personal development and evaluation. Availability and limits may change, and production use requires the appropriate NVIDIA license or subscription.",
+  "provider.connect.nvidia.storage":
+    "Your key is stored by the local MongolGPT credential service and is not saved in onboarding preferences.",
   "provider.connect.oauth.code.visit.prefix": "Visit ",
   "provider.connect.oauth.code.visit.link": "this link",
   "provider.connect.oauth.code.visit.suffix":
@@ -197,6 +205,24 @@ export const dict = {
 
   "provider.disconnect.toast.disconnected.title": "{{provider}} disconnected",
   "provider.disconnect.toast.disconnected.description": "{{provider}} models are no longer available.",
+
+  "onboarding.account.title": "Welcome to MongolGPT",
+  "onboarding.account.heading": "Sign in to your MongolGPT account",
+  "onboarding.account.description":
+    "Create an account or sign in in your browser. MongolGPT will return here automatically after authorization.",
+  "onboarding.account.login": "Create account or sign in",
+  "onboarding.providers.heading": "Choose how to start",
+  "onboarding.providers.description":
+    "Free Auto is ready by default. Local models and providers using your own key remain optional.",
+  "onboarding.providers.freeAuto.title": "MongolGPT Free Auto",
+  "onboarding.providers.freeAuto.description": "Uses the available free model route and applies your account quota.",
+  "onboarding.providers.nvidia.title": "NVIDIA NIM with your own key",
+  "onboarding.providers.nvidia.description": "Optional access for personal development and evaluation.",
+  "onboarding.providers.local.title": "Local or OpenAI-compatible model",
+  "onboarding.providers.local.description": "Optionally connect Ollama, LM Studio, or another compatible endpoint.",
+  "onboarding.providers.connected": "Connected",
+  "onboarding.providers.configure": "Configure",
+  "onboarding.providers.continue": "Start with Free Auto",
 
   "model.tag.free": "Free",
   "model.tag.latest": "Latest",

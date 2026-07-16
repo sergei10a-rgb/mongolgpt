@@ -18,7 +18,12 @@ import { useLanguage } from "@/context/language"
 import { useProviders } from "@/hooks/use-providers"
 import { documentationUrl } from "@/product"
 
-export function DialogConnectProvider(props: { provider: string; directory?: Accessor<string | undefined> }) {
+export function DialogConnectProvider(props: {
+  provider: string
+  directory?: Accessor<string | undefined>
+  back?: "providers" | "close"
+  onConnected?: (providerID: string) => void
+}) {
   const dialog = useDialog()
   const serverSync = useServerSync()
   const serverSDK = useServerSDK()
@@ -26,6 +31,10 @@ export function DialogConnectProvider(props: { provider: string; directory?: Acc
   const providers = useProviders(props.directory)
 
   const all = () => {
+    if (props.back === "close") {
+      dialog.close()
+      return
+    }
     void import("./dialog-select-provider").then((x) => {
       dialog.show(() => <x.DialogSelectProvider directory={props.directory} />)
     })
@@ -355,6 +364,7 @@ export function DialogConnectProvider(props: { provider: string; directory?: Acc
 
   async function complete() {
     await serverSDK().client.global.dispose()
+    props.onConnected?.(props.provider)
     dialog.close()
     showToast({
       variant: "success",
@@ -457,6 +467,19 @@ export function DialogConnectProvider(props: { provider: string; directory?: Acc
                 </Link>
                 {language.t("provider.connect.mongolgptZen.visit.suffix")}
               </div>
+            </div>
+          </Match>
+          <Match when={provider().id === "nvidia"}>
+            <div class="flex flex-col gap-4">
+              <div class="text-14-regular text-text-base">
+                {language.t("provider.connect.nvidia.step1.prefix")}
+                <Link href="https://build.nvidia.com/" tabIndex={-1}>
+                  {language.t("provider.connect.nvidia.step1.link")}
+                </Link>
+                {language.t("provider.connect.nvidia.step1.suffix")}
+              </div>
+              <div class="text-12-regular text-text-weak">{language.t("provider.connect.nvidia.notice")}</div>
+              <div class="text-12-regular text-text-weak">{language.t("provider.connect.nvidia.storage")}</div>
             </div>
           </Match>
           <Match when={true}>
