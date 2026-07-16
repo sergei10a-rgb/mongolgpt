@@ -25,10 +25,8 @@ on:
         type: string
 
 concurrency:
-  group: mongolgpt-publish-${{ github.repository }}
+  group: mongolgpt-publish-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: false
-
-concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inputs.bump }}
 
 permissions:
   id-token: write
