@@ -25,11 +25,11 @@ MongolGPT бол Монгол хэрэглэгчдэд эхнээсээ ойлг
 
 ## Монгол баримт бичиг
 
-MongolGPT docs:
+MongolGPT-ийн Монгол баримт бичиг:
 
-[https://mongolgpt.duckdns.org/docs/](https://mongolgpt.duckdns.org/docs/)
+[Баримт бичгийн эхийг GitHub дээрээс нээх](https://github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs)
 
-Active docs source нь `packages/web/src/content/docs/` доторх үндсэн Монгол баримт бичиг. `/docs/mn/` хуучин холбоосын нийцтэй байдлаар хадгалагдана.
+Баримт бичгийн үндсэн эх нь `packages/web/src/content/docs/` дотор байна. Нийтлэх домэйн баталгаажаагүй байгаа тул эзэмшдэггүй туршилтын домэйн руу холбоос заагаагүй.
 
 ## Local дээр ажиллуулах
 
@@ -100,4 +100,4 @@ bun run dev
 
 ## Лиценз
 
-MIT
+MIT. Гуравдагч талын эх кодын мэдэгдлийг [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)-оос үзнэ үү.

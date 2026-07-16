@@ -9,7 +9,7 @@
 
 ## Local Dev
 
-- `mongolgpt dev web` proxies `https://mongolgpt.duckdns.org/app`, so local UI/CSS changes will not show there.
+- `mongolgpt dev web` proxies the configured web UI upstream, so local UI/CSS changes will not show there.
 - For local UI changes, run the backend and app dev servers separately.
 - Backend (from `packages/mongolgpt`): `bun run --conditions=browser ./src/index.ts serve --port 4096`
 - App (from `packages/app`): `bun dev -- --port 4444`

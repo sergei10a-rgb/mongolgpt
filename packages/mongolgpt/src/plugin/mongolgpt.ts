@@ -3,11 +3,12 @@ import { createServer, type Server } from "http"
 import { createClient } from "@openauthjs/openauth/client"
 import { InstallationVersion } from "@mongolgpt/core/installation/version"
 import { OauthCallbackPage } from "@mongolgpt/core/oauth/page"
+import { localAuthUrl, localConsoleUrl } from "@mongolgpt/core/product"
 import { OAUTH_DUMMY_KEY } from "../auth"
 
 const CLIENT_ID = "mongolgpt-cli"
-const CONSOLE_URL = "https://mongolgpt.duckdns.org"
-const AUTH_ISSUER = "https://auth.mongolgpt.duckdns.org"
+const CONSOLE_URL = process.env.MONGOLGPT_CONSOLE_URL?.trim() || localConsoleUrl
+const AUTH_ISSUER = process.env.MONGOLGPT_AUTH_URL?.trim() || localAuthUrl
 const CALLBACK_HOST = "127.0.0.1"
 const CALLBACK_PATH = "/auth/callback"
 const CALLBACK_TIMEOUT_MS = 5 * 60 * 1000

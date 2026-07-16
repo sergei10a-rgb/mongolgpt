@@ -137,7 +137,8 @@ export const dict = {
   "provider.connect.mongolgptZen.line2":
     "Sa jednim API ključem dobijaš pristup modelima kao što su Claude, GPT, Gemini, GLM i drugi.",
   "provider.connect.mongolgptZen.visit.prefix": "Posjeti ",
-  "provider.connect.mongolgptZen.visit.link": "mongolgpt.duckdns.org/zen",
+  "provider.connect.mongolgptZen.visit.link":
+    "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
   "provider.connect.mongolgptZen.visit.suffix": " da preuzmeš svoj API ključ.",
   "provider.connect.oauth.code.visit.prefix": "Posjeti ",
   "provider.connect.oauth.code.visit.link": "ovaj link",

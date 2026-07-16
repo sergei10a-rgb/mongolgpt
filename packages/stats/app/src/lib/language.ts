@@ -21,7 +21,7 @@ export {
 export type { Locale } from "../../../../console/app/src/lib/language"
 
 export const basePath = "/data"
-export const baseUrl = "https://mongolgpt.duckdns.org"
+export const baseUrl = import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim() || "http://localhost:3000"
 
 function normalizeDataPathname(pathname: string) {
   const next = localeStrip(pathname)

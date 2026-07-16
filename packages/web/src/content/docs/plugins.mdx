@@ -1,11 +1,11 @@
 ---
-title: Plugins
+title: Плагинууд
 description: MongolGPT-г өргөтгөхийн тулд өөрийн залгаасуудыг бичээрэй.
 ---
 
 Plugins нь янз бүрийн үйл явдалд холбогдож, зан төлөвийг өөрчлөх замаар MongolGPT-г өргөтгөх боломжийг олгодог. Та шинэ функцуудыг нэмэх, гадны үйлчилгээтэй нэгтгэх эсвэл MongolGPT-ийн үндсэн үйлдлийг өөрчлөхийн тулд залгаасуудыг үүсгэж болно.
 
-Жишээ нь, нийгэмлэгийн үүсгэсэн [plugins](/docs/ecosystem#plugins)-г үзээрэй.
+Integration төрлүүдийг [экосистемийн хуудаснаас](../ecosystem) харна уу.
 
 ---
 
@@ -32,14 +32,13 @@ JavaScript эсвэл TypeScript файлуудыг залгаасын санд 
 
 ```json title="mongolgpt.json"
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
   "plugin": ["./plugins/helicone-session.ts", "./plugins/wakatime.ts", "@my-org/private-plugin"]
 }
 ```
 
 Энгийн болон хамрах хүрээтэй npm багцуудыг хоёуланг нь дэмждэг.
 
-Боломжтой залгаасуудыг [ecosystem](/docs/ecosystem#plugins) дээрээс харна уу.
+Баталгаажсан integration төрлүүдийг [экосистемийн хуудаснаас](../ecosystem) харна уу.
 
 ---
 
@@ -47,7 +46,7 @@ JavaScript эсвэл TypeScript файлуудыг залгаасын санд 
 
 **npm залгаасуудыг** эхлүүлэх үед Bun ашиглан автоматаар суулгадаг. Багцууд болон тэдгээрийн хамаарлыг `~/.cache/mongolgpt/node_modules/`-д хадгалдаг.
 
-**Орон нутгийн залгаасуудыг** залгаасын лавлахаас шууд ачаалдаг. Гадны багцуудыг ашиглахын тулд та өөрийн тохиргооны лавлах дотор `package.json` үүсгэх ёстой ([Dependencies](#dependencies)-г үзнэ үү), эсвэл залгаасыг npm болон [өөрийн тохиргоонд нэмнэ үү](/docs/config#plugins) дээр нийтлэх ёстой.
+**Локал plugin**-ийг plugin directory-оос шууд ачаална. Гадаад package ашиглахын тулд config directory-д `package.json` үүсгэнэ ([Хамаарал](#хамаарал)), эсвэл package-ийг npm-д нийтэлж [тохиргоонд нэмнэ](../config#плагинууд).
 
 ---
 
@@ -105,10 +104,10 @@ export const MyPlugin = async (ctx) => {
 
 ```js title=".mongolgpt/plugins/example.js"
 export const MyPlugin = async ({ project, client, $, directory, worktree }) => {
-  console.log("Plugin initialized!")
+  console.log("Plugin эхэллээ!")
 
   return {
-    // Hook implementations go here
+    // Hook-ийн хэрэгжилтийг энд бичнэ
   }
 }
 ```
@@ -119,7 +118,7 @@ Plugin функц нь дараахь зүйлийг хүлээн авдаг.
 - `directory`: Одоогийн ажлын лавлах.
 - `worktree`: Гит ажлын модны зам.
 - `client`: AI-тэй харилцах mongolgpt SDK үйлчлүүлэгч.
-- `- : тушаалуудыг гүйцэтгэх Bun-ийн [бүрхүүлийн API](https://bun.com/docs/runtime/shell).
+- `$`: команд ажиллуулах Bun-ийн [shell API](https://bun.com/docs/runtime/shell).
 
 ---
 
@@ -132,7 +131,7 @@ import type { Plugin } from "@mongolgpt/plugin"
 
 export const MyPlugin: Plugin = async ({ project, client, $, directory, worktree }) => {
   return {
-    // Type-safe hook implementations
+    // Type-safe hook-ийн хэрэгжилт
   }
 }
 ```
@@ -223,9 +222,9 @@ mongolgpt-г өргөтгөхөд ашиглаж болох залгаасууд
 export const NotificationPlugin = async ({ project, client, $, directory, worktree }) => {
   return {
     event: async ({ event }) => {
-      // Send notification on session completion
+      // Сесс дуусахад мэдэгдэл илгээнэ
       if (event.type === "session.idle") {
-        await $`osascript -e 'display notification "Session completed!" with title "mongolgpt"'`
+        await $`osascript -e 'display notification "Сесс дууслаа!" with title "MongolGPT"'`
       }
     },
   }
@@ -249,7 +248,7 @@ export const EnvProtection = async ({ project, client, $, directory, worktree })
   return {
     "tool.execute.before": async (input, output) => {
       if (input.tool === "read" && output.args.filePath.includes(".env")) {
-        throw new Error("Do not read .env files")
+        throw new Error(".env файл уншихыг хориглосон")
       }
     },
   }
@@ -286,13 +285,13 @@ export const CustomToolsPlugin: Plugin = async (ctx) => {
   return {
     tool: {
       mytool: tool({
-        description: "This is a custom tool",
+        description: "Захиалгат хэрэгслийн жишээ",
         args: {
           foo: tool.schema.string(),
         },
         async execute(args, context) {
           const { directory, worktree } = context
-          return `Hello ${args.foo} from ${directory} (worktree: ${worktree})`
+          return `Сайн байна уу, ${args.foo}. Хавтас: ${directory} (worktree: ${worktree})`
         },
       }),
     },
@@ -324,14 +323,14 @@ export const MyPlugin = async ({ client }) => {
     body: {
       service: "my-plugin",
       level: "info",
-      message: "Plugin initialized",
+      message: "Plugin эхэллээ",
       extra: { foo: "bar" },
     },
   })
 }
 ```
 
-Түвшин: `debug`, `info`, `warn`, `error`. Дэлгэрэнгүйг [SDK баримт бичиг](https://mongolgpt.duckdns.org/docs/sdk) харна уу.
+Түвшин: `debug`, `info`, `warn`, `error`. Дэлгэрэнгүйг [SDK баримт бичгээс](../sdk) үзнэ үү.
 
 ---
 
@@ -345,14 +344,14 @@ import type { Plugin } from "@mongolgpt/plugin"
 export const CompactionPlugin: Plugin = async (ctx) => {
   return {
     "experimental.session.compacting": async (input, output) => {
-      // Inject additional context into the compaction prompt
+      // Нягтруулах prompt-д нэмэлт контекст оруулна
       output.context.push(`
-## Custom Context
+## Нэмэлт контекст
 
-Include any state that should persist across compaction:
-- Current task status
-- Important decisions made
-- Files being actively worked on
+Нягтруулалтын дараа хадгалах шаардлагатай төлөвийг оруул:
+- Одоогийн ажлын төлөв
+- Гаргасан чухал шийдвэрүүд
+- Идэвхтэй өөрчилж буй файлууд
 `)
     },
   }
@@ -369,17 +368,17 @@ import type { Plugin } from "@mongolgpt/plugin"
 export const CustomCompactionPlugin: Plugin = async (ctx) => {
   return {
     "experimental.session.compacting": async (input, output) => {
-      // Replace the entire compaction prompt
+      // Нягтруулах prompt-ийг бүхэлд нь солино
       output.prompt = `
-You are generating a continuation prompt for a multi-agent swarm session.
+Та олон агенттай сессийг үргэлжлүүлэх prompt үүсгэж байна.
 
-Summarize:
-1. The current task and its status
-2. Which files are being modified and by whom
-3. Any blockers or dependencies between agents
-4. The next steps to complete the work
+Дараахыг хураангуйл:
+1. Одоогийн ажил болон төлөв
+2. Аль файлыг хэн өөрчилж байгаа
+3. Агентуудын хоорондын саад, хамаарал
+4. Ажлыг дуусгах дараагийн алхам
 
-Format as a structured prompt that a new agent can use to resume work.
+Шинэ агент ажлыг үргэлжлүүлж чадах бүтэцтэй prompt болго.
 `
     },
   }
@@ -387,3 +386,4 @@ Format as a structured prompt that a new agent can use to resume work.
 ```
 
 `output.prompt` тохируулагдсан үед энэ нь анхдагч нягтруулах хүсэлтийг бүрэн орлоно. Энэ тохиолдолд `output.context` массивыг үл тоомсорлодог.
+

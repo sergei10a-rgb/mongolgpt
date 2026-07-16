@@ -1,67 +1,67 @@
-# mongolgpt GitHub Action
+# MongolGPT-д зориулсан GitHub Action
 
-A GitHub Action that integrates [mongolgpt](https://mongolgpt.duckdns.org) directly into your GitHub workflow.
+[MongolGPT](https://github.com/sergei10a-rgb/mongolgpt)-ийг GitHub-ийн ажлын урсгалд шууд нэгтгэдэг GitHub Action.
 
-Mention `/mongolgpt` in your comment, and mongolgpt will execute tasks within your GitHub Actions runner.
+Сэтгэгдэлдээ `/mongolgpt` гэж бичихэд MongolGPT хүсэлтийг GitHub Actions-ийн ажиллуулагч орчинд гүйцэтгэнэ.
 
-## Features
+## Боломжууд
 
-#### Explain an issue
+#### Асуудлыг тайлбарлуулах
 
-Leave the following comment on a GitHub issue. `mongolgpt` will read the entire thread, including all comments, and reply with a clear explanation.
+GitHub-д бүртгэсэн асуудал дээр дараах сэтгэгдлийг үлдээнэ үү. `mongolgpt` бүх сэтгэгдлийг багтаасан хэлэлцүүлгийг бүтнээр нь уншаад ойлгомжтой тайлбар өгнө.
 
 ```
 /mongolgpt explain this issue
 ```
 
-#### Fix an issue
+#### Асуудлыг засуулах
 
-Leave the following comment on a GitHub issue. mongolgpt will create a new branch, implement the changes, and open a PR with the changes.
+GitHub-д бүртгэсэн асуудал дээр дараах сэтгэгдлийг үлдээнэ үү. MongolGPT шинэ салбар үүсгэж, өөрчлөлтийг хэрэгжүүлээд PR нээнэ.
 
 ```
 /mongolgpt fix this
 ```
 
-#### Review PRs and make changes
+#### PR-ийг хянуулж, өөрчлөлт хийлгэх
 
-Leave the following comment on a GitHub PR. mongolgpt will implement the requested change and commit it to the same PR.
+GitHub PR дээр дараах сэтгэгдлийг үлдээнэ үү. MongolGPT хүссэн өөрчлөлтийг хэрэгжүүлээд тухайн PR-д шууд нэмнэ.
 
 ```
 Delete the attachment from S3 when the note is removed /oc
 ```
 
-#### Review specific code lines
+#### Кодын тодорхой мөрүүдийг хянуулах
 
-Leave a comment directly on code lines in the PR's "Files" tab. mongolgpt will automatically detect the file, line numbers, and diff context to provide precise responses.
+PR-ийн `Files` таб дахь кодын мөрөн дээр шууд сэтгэгдэл үлдээнэ үү. MongolGPT файл, мөрийн дугаар болон өөрчлөлтийн ойр орчмын мэдээллийг автоматаар таньж, нарийвчилсан хариу өгнө.
 
 ```
 [Comment on specific lines in Files tab]
 /oc add error handling here
 ```
 
-When commenting on specific lines, mongolgpt receives:
+Тодорхой мөрөн дээр сэтгэгдэл үлдээхэд MongolGPT дараах мэдээллийг хүлээн авна:
 
-- The exact file being reviewed
-- The specific lines of code
-- The surrounding diff context
-- Line number information
+- Хянаж буй файл
+- Сонгосон кодын мөрүүд
+- Өөрчлөлтийн эргэн тойрны мэдээлэл
+- Мөрийн дугаарууд
 
-This allows for more targeted requests without needing to specify file paths or line numbers manually.
+Ингэснээр файлын зам эсвэл мөрийн дугаарыг гараар дурдахгүйгээр хүсэлтээ тодорхой хэсэгт чиглүүлэх боломжтой.
 
-## Installation
+## Суулгах
 
-Run the following command in the terminal from your GitHub repo:
+GitHub репогийн хавтас дахь терминалаас дараах командыг ажиллуулна уу:
 
 ```bash
 mongolgpt github install
 ```
 
-This will walk you through installing the GitHub app, creating the workflow, and setting up secrets.
+Энэ команд GitHub App-ийг суулгах, ажлын урсгалын файл үүсгэх, GitHub Actions-ийн нууц утгуудыг тохируулах алхмуудыг дарааллаар нь заана.
 
-### Manual Setup
+### Гараар тохируулах
 
-1. Install the GitHub app https://github.com/apps/mongolgpt-agent. Make sure it is installed on the target repository.
-2. Add the following workflow file to `.github/workflows/mongolgpt.yml` in your repo. Set the appropriate `model` and required API keys in `env`.
+1. GitHub App-ийг https://github.com/apps/mongolgpt-agent холбоосоос суулгаад холбох репод идэвхжсэн эсэхийг шалгана уу.
+2. Реподоо дараах ажлын урсгалын файлыг `.github/workflows/mongolgpt.yml` замаар нэмнэ үү. Тохирох `model` болон шаардлагатай API түлхүүрүүдийг `env` дотор тохируулна.
 
    ```yml
    name: mongolgpt
@@ -97,23 +97,23 @@ This will walk you through installing the GitHub app, creating the workflow, and
              use_github_token: true
    ```
 
-3. Store the API keys in secrets. In your organization or project **settings**, expand **Secrets and variables** on the left and select **Actions**. Add the required API keys.
+3. API түлхүүрүүдээ нууц утгаар хадгална уу. Байгууллага эсвэл төслийн **settings** рүү орж, зүүн талын **Secrets and variables** цэсийг дэлгээд **Actions**-ийг сонгоно. Дараа нь шаардлагатай API түлхүүрүүдийг нэмнэ.
 
-## Support
+## Тусламж
 
-This is an early release. If you encounter issues or have feedback, please create an issue at https://github.com/sergei10a-rgb/mongolgpt/issues.
+Энэ бол эхний хувилбар. Асуудал гарвал эсвэл санал хүсэлт байвал https://github.com/sergei10a-rgb/mongolgpt/issues хаягаар шинэ асуудал бүртгүүлнэ үү.
 
-## Development
+## Хөгжүүлэлт
 
-To test locally:
+Локал орчинд туршихын тулд:
 
-1. Navigate to a test repo (e.g. `hello-world`):
+1. Туршилтын репо руу (жишээ нь `hello-world`) шилжинэ үү:
 
    ```bash
    cd hello-world
    ```
 
-2. Run:
+2. Дараах командыг ажиллуулна уу:
 
    ```bash
    MODEL=anthropic/claude-sonnet-4-20250514 \
@@ -124,42 +124,42 @@ To test locally:
      bun /path/to/mongolgpt/github/index.ts
    ```
 
-   - `MODEL`: The model used by mongolgpt. Same as the `MODEL` defined in the GitHub workflow.
-   - `ANTHROPIC_API_KEY`: Your model provider API key. Same as the keys defined in the GitHub workflow.
-   - `GITHUB_RUN_ID`: Dummy value to emulate GitHub action environment.
-   - `MOCK_TOKEN`: A GitHub personal access token. This token is used to verify you have `admin` or `write` access to the test repo. Generate a token [here](https://github.com/settings/personal-access-tokens).
-   - `MOCK_EVENT`: Mock GitHub event payload (see templates below).
-   - `/path/to/mongolgpt`: Path to your cloned mongolgpt repo. `bun /path/to/mongolgpt/github/index.ts` runs your local version of `mongolgpt`.
+   - `MODEL`: MongolGPT-ийн ашиглах загвар. GitHub-ийн ажлын урсгалд тодорхойлсон `MODEL`-тэй ижил байна.
+   - `ANTHROPIC_API_KEY`: Загвар нийлүүлэгчийн API түлхүүр. GitHub-ийн ажлын урсгалд тодорхойлсон түлхүүртэй ижил байна.
+   - `GITHUB_RUN_ID`: GitHub Action орчныг дуурайлгах туршилтын утга.
+   - `MOCK_TOKEN`: GitHub-ийн хувийн хандалтын токен. Энэ токеноор туршилтын репод `admin` эсвэл `write` эрхтэй эсэхийг шалгана. Токеноо [эндээс](https://github.com/settings/personal-access-tokens) үүсгэнэ үү.
+   - `MOCK_EVENT`: GitHub үйл явдлын туршилтын өгөгдөл (доорх загваруудыг харна уу).
+   - `/path/to/mongolgpt`: Хуулбарласан MongolGPT репогийн зам. `bun /path/to/mongolgpt/github/index.ts` нь `mongolgpt`-ийн локал хувилбарыг ажиллуулна.
 
-### Issue comment event
+### Асуудал дээр сэтгэгдэл нэмэх үйл явдал
 
 ```
 MOCK_EVENT='{"eventName":"issue_comment","repo":{"owner":"sst","repo":"hello-world"},"actor":"fwang","payload":{"issue":{"number":4},"comment":{"id":1,"body":"hey mongolgpt, summarize thread"}}}'
 ```
 
-Replace:
+Дараах утгуудыг солино уу:
 
-- `"owner":"sst"` with repo owner
-- `"repo":"hello-world"` with repo name
-- `"actor":"fwang"` with the GitHub username of commenter
-- `"number":4` with the GitHub issue id
-- `"body":"hey mongolgpt, summarize thread"` with comment body
+- `"owner":"sst"`-ийг репо эзэмшигчийн нэрээр
+- `"repo":"hello-world"`-ийг репогийн нэрээр
+- `"actor":"fwang"`-ийг сэтгэгдэл бичих хүний GitHub хэрэглэгчийн нэрээр
+- `"number":4`-ийг GitHub асуудлын дугаараар
+- `"body":"hey mongolgpt, summarize thread"`-ийг сэтгэгдлийн агуулгаар
 
-### Issue comment with image attachment.
+### Зураг хавсаргасан асуудлын сэтгэгдэл
 
 ```
 MOCK_EVENT='{"eventName":"issue_comment","repo":{"owner":"sst","repo":"hello-world"},"actor":"fwang","payload":{"issue":{"number":4},"comment":{"id":1,"body":"hey mongolgpt, what is in my image ![Image](https://github.com/user-attachments/assets/xxxxxxxx)"}}}'
 ```
 
-Replace the image URL `https://github.com/user-attachments/assets/xxxxxxxx` with a valid GitHub attachment (you can generate one by commenting with an image in any issue).
+Зургийн `https://github.com/user-attachments/assets/xxxxxxxx` URL-ийг хүчинтэй GitHub хавсралтын холбоосоор солино уу. Аль нэг асуудал дээр зурагтай сэтгэгдэл үлдээж ийм холбоос үүсгэж болно.
 
-### PR comment event
+### PR дээр сэтгэгдэл нэмэх үйл явдал
 
 ```
 MOCK_EVENT='{"eventName":"issue_comment","repo":{"owner":"sst","repo":"hello-world"},"actor":"fwang","payload":{"issue":{"number":4,"pull_request":{}},"comment":{"id":1,"body":"hey mongolgpt, summarize thread"}}}'
 ```
 
-### PR review comment event
+### PR хяналтын сэтгэгдлийн үйл явдал
 
 ```
 MOCK_EVENT='{"eventName":"pull_request_review_comment","repo":{"owner":"sst","repo":"hello-world"},"actor":"fwang","payload":{"pull_request":{"number":7},"comment":{"id":1,"body":"hey mongolgpt, add error handling","path":"src/components/Button.tsx","diff_hunk":"@@ -45,8 +45,11 @@\n- const handleClick = () => {\n-   console.log('clicked')\n+ const handleClick = useCallback(() => {\n+   console.log('clicked')\n+   doSomething()\n+ }, [doSomething])","line":47,"original_line":45,"position":10,"commit_id":"abc123","original_commit_id":"def456"}}}'

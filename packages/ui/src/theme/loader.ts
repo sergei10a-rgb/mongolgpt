@@ -3,12 +3,26 @@ import { resolveThemeVariant, themeToCss } from "./resolve"
 import { resolveThemeVariantV2, themeV2ToCss } from "./v2/resolve"
 
 let activeTheme: DesktopTheme | null = null
+const DEFAULT_THEME_ID = "mongolgpt"
+const LEGACY_THEME_IDS = new Set(["oc-1", "oc-2"])
 const THEME_STYLE_ID = "mongolgpt-theme"
+const LEGACY_THEME_STYLE_IDS = ["oc-theme"] as const
+
+function normalizeThemeId(themeId: string) {
+  return LEGACY_THEME_IDS.has(themeId) ? DEFAULT_THEME_ID : themeId
+}
 
 function ensureLoaderStyleElement(): HTMLStyleElement {
   const existing = document.getElementById(THEME_STYLE_ID) as HTMLStyleElement | null
   if (existing) {
+    for (const id of LEGACY_THEME_STYLE_IDS) document.getElementById(id)?.remove()
     return existing
+  }
+  for (const id of LEGACY_THEME_STYLE_IDS) {
+    const legacy = document.getElementById(id) as HTMLStyleElement | null
+    if (!legacy) continue
+    legacy.id = THEME_STYLE_ID
+    return legacy
   }
   const element = document.createElement("style")
   element.id = THEME_STYLE_ID
@@ -22,7 +36,7 @@ export function applyTheme(theme: DesktopTheme, themeId?: string): void {
   const darkTokens = resolveThemeVariant(theme.dark, true)
   const lightV2Tokens = resolveThemeVariantV2(theme.light, false)
   const darkV2Tokens = resolveThemeVariantV2(theme.dark, true)
-  const targetThemeId = themeId ?? theme.id
+  const targetThemeId = normalizeThemeId(themeId ?? theme.id)
   const css = buildThemeCss(lightTokens, darkTokens, lightV2Tokens, darkV2Tokens, targetThemeId)
   const themeStyleElement = ensureLoaderStyleElement()
   themeStyleElement.textContent = css
@@ -36,7 +50,7 @@ function buildThemeCss(
   darkV2: ResolvedV2Theme,
   themeId: string,
 ): string {
-  const isDefaultTheme = themeId === "oc-2"
+  const isDefaultTheme = themeId === DEFAULT_THEME_ID
   const lightCss = `${themeToCss(light)}\n  ${themeV2ToCss(lightV2)}`
   const darkCss = `${themeToCss(dark)}\n  ${themeV2ToCss(darkV2)}`
 
@@ -88,7 +102,7 @@ export function getActiveTheme(): DesktopTheme | null {
   if (!activeId) {
     return null
   }
-  if (activeTheme?.id === activeId) {
+  if (activeTheme && normalizeThemeId(activeTheme.id) === activeId) {
     return activeTheme
   }
   return null
@@ -100,6 +114,7 @@ export function removeTheme(): void {
   if (existingElement) {
     existingElement.remove()
   }
+  for (const id of LEGACY_THEME_STYLE_IDS) document.getElementById(id)?.remove()
   document.documentElement.removeAttribute("data-theme")
 }
 

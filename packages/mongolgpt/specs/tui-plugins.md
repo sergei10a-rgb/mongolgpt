@@ -18,7 +18,7 @@ Example:
 
 ```json
 {
-  "$schema": "https://mongolgpt.duckdns.org/tui.json",
+  "$schema": "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/tui.json",
   "theme": "smoke-theme",
   "leader_timeout": 2000,
   "keybinds": {

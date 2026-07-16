@@ -198,7 +198,7 @@ describe("HttpApi UI fallback", () => {
       expect(response.status).toBe(200)
       expect(response.headers.get("content-type")).toContain("text/html")
       expect(yield* responseText(response)).toBe("<html>mongolgpt</html>")
-      expect(proxiedUrl).toBe("https://mongolgpt.duckdns.org/app/")
+      expect(proxiedUrl).toBe("http://localhost:4444/")
     }),
   )
 
@@ -243,7 +243,7 @@ describe("HttpApi UI fallback", () => {
       )
 
       expect(response.status).toBe(200)
-      expect(proxiedUrl).toBe("https://mongolgpt.duckdns.org/app/assets/app.js")
+      expect(proxiedUrl).toBe("http://localhost:4444/assets/app.js")
       expect(response.headers.get("content-encoding")).toBeNull()
       expect(response.headers.get("content-length")).not.toBe("999")
       expect(response.headers.get("content-type")).toContain("text/javascript")

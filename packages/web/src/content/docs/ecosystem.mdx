@@ -1,6 +1,6 @@
 ---
-title: Ecosystem
-description: MongolGPT-р бүтээгдсэн төслүүд болон интеграцчлалууд.
+title: Экосистем
+description: MongolGPT-ээр ашиглах баталгаажсан integration төрлүүд.
 ---
 
 MongolGPT-ийн ecosystem хуудсыг одоогоор зөвхөн баталгаажсан integration төрлүүдээр харуулж байна. Албан ёсны marketplace/package registry бэлэн болоогүй тул энд гуравдагч талын rebrand хийсэн package жагсаалт тавихгүй.
@@ -12,9 +12,9 @@ MongolGPT-ийн ecosystem хуудсыг одоогоор зөвхөн бата
 | MCP server | `mongolgpt compat import plan/apply` command болон desktop integration wizard-аар command, local path, URL, config-оос танина |
 | Skill | Claude/Codex/Goose маягийн skill folder/config-ийг таних суурь importer нэмэгдсэн |
 | Plugin | Local plugin file болон private npm package-ийг config дээр зааж ажиллуулах боломжтой |
-| Provider | MongolGPT account login, API key provider, local/provider config wiring хадгалагдсан |
+| Provider | Өөрийн API key/OAuth ашиглах BYOK provider болон локал provider config дэмжигдэнэ; MongolGPT account одоогоор дэмжигдэхгүй |
 
-## Import workflow
+## Импортын урсгал
 
 ```bash
 mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"

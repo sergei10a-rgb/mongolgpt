@@ -4,8 +4,8 @@ import stripAnsi from "strip-ansi"
 import { defaultConsoleUrl, formatAccountLabel, formatOrgLine } from "../../src/cli/cmd/account"
 
 describe("console account display", () => {
-  test("uses mongolgpt.duckdns.org as the default login URL", () => {
-    expect(defaultConsoleUrl).toBe("https://mongolgpt.duckdns.org")
+  test("uses the local console as the default login URL", () => {
+    expect(defaultConsoleUrl).toBe("http://localhost:3000")
   })
 
   test("includes the account url in account labels", () => {

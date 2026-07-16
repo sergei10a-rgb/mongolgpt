@@ -3,7 +3,7 @@ import { query } from "@solidjs/router"
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import { useI18n } from "../context/i18n"
 import { useLanguage } from "../context/language"
-import { route, type Locale } from "../lib/language"
+import { baseUrl, route, type Locale } from "../lib/language"
 
 export type HeaderLink = { href: string; label: string }
 
@@ -12,6 +12,9 @@ export const githubLink = {
   apiHref: "https://api.github.com/repos/sergei10a-rgb/mongolgpt",
   fallbackStars: "150K",
 }
+const supportUrl = `${githubLink.href}/issues`
+const communityUrl = import.meta.env.VITE_MONGOLGPT_COMMUNITY_URL?.trim() || `${githubLink.href}/discussions`
+const contactEmail = import.meta.env.VITE_MONGOLGPT_CONTACT_EMAIL?.trim()
 export const themePreferences = ["dark", "light", "system"] as const
 export const themeStorageKey = "mongolgpt:stats-theme"
 export type ThemePreference = (typeof themePreferences)[number]
@@ -132,7 +135,7 @@ export function Header(props: { githubStars: string; links?: readonly HeaderLink
             <strong>{i18n.t("header.github")}</strong>
             <span>[{props.githubStars}]</span>
           </a>
-          <a data-slot="header-button" data-variant="contrast" href="https://mongolgpt.duckdns.org/">
+          <a data-slot="header-button" data-variant="contrast" href={baseUrl}>
             <strong>{i18n.t("header.tryMongolGPT")}</strong>
           </a>
           <button
@@ -231,12 +234,12 @@ export function Footer(props: {
     { href: "#geo-breakdown", label: i18n.t("nav.geoBreakdown") },
   ]
   const legal = [
-    { href: "https://mongolgpt.duckdns.org/legal/terms-of-service", label: i18n.t("footer.terms") },
-    { href: "https://mongolgpt.duckdns.org/legal/privacy-policy", label: i18n.t("footer.privacy") },
+    { href: "/legal/terms-of-service", label: i18n.t("footer.terms") },
+    { href: "/legal/privacy-policy", label: i18n.t("footer.privacy") },
   ]
   const connect = [
-    { href: "mailto:hello@mongolgpt.duckdns.org", label: i18n.t("footer.contact") },
-    { href: "https://mongolgpt.duckdns.org/discord", label: i18n.t("footer.community") },
+    { href: contactEmail ? `mailto:${contactEmail}` : supportUrl, label: i18n.t("footer.contact") },
+    { href: communityUrl, label: i18n.t("footer.community") },
     { href: "https://x.com/mongolgpt", label: "X" },
     { href: githubLink.href, label: i18n.t("header.github") },
     { href: "https://www.youtube.com/@MongolGPT", label: i18n.t("footer.youtube") },
@@ -246,7 +249,7 @@ export function Footer(props: {
     <footer data-component="footer">
       <SectionBridge label={i18n.t("nav.geoBreakdown").toUpperCase()} href="#geo-breakdown" />
       <div data-slot="footer-grid">
-        <a data-slot="footer-mark" href="https://mongolgpt.duckdns.org" aria-label={i18n.t("footer.homeAria")}>
+        <a data-slot="footer-mark" href={baseUrl} aria-label={i18n.t("footer.homeAria")}>
           <MongolGPTMark />
         </a>
         <FooterColumn title={i18n.t("footer.modelData")} links={modelStats} localHref={localHref} />

@@ -1,6 +1,57 @@
 import { Resource } from "@mongolgpt/console-resource"
 import type { TraceItem } from "@cloudflare/workers-types"
 
+const allowedMetricKeys = new Set([
+  "cf.continent",
+  "cf.country",
+  "cf.region",
+  "cf.timezone",
+  "duration",
+  "request_length",
+  "request_retry",
+  "response_status",
+  "status",
+  "ip.prefix",
+  "is_stream",
+  "session",
+  "request",
+  "client",
+  "user_agent",
+  "model",
+  "model.tier",
+  "model.variant",
+  "source",
+  "provider",
+  "provider.model",
+  "provider.budget_usage",
+  "model.budget_usage",
+  "llm.error.code",
+  "error.type",
+  "workspace",
+  "subscription",
+  "response_length",
+  "time_to_first_byte",
+  "timestamp.first_byte",
+  "timestamp.last_byte",
+  "tokens.input",
+  "tokens.output",
+  "tokens.reasoning",
+  "tokens.cache_read",
+  "tokens.cache_write_5m",
+  "tokens.cache_write_1h",
+  "cost.input.microcents",
+  "cost.output.microcents",
+  "cost.cache_read.microcents",
+  "cost.cache_write.microcents",
+  "cost.total.microcents",
+  "cost.input",
+  "cost.output",
+  "cost.cache_read",
+  "cost.cache_write_5m",
+  "cost.cache_write_1h",
+  "cost.total",
+])
+
 export default {
   async tail(events: TraceItem[]) {
     for (const event of events) {
@@ -21,29 +72,25 @@ export default {
       )
         continue
 
-      const ip = event.event.request.headers["x-real-ip"]
-      let data: Record<string, unknown> = {
+      let data = sanitizeMetric({
         "cf.continent": event.event.request.cf?.continent,
         "cf.country": event.event.request.cf?.country,
-        "cf.city": event.event.request.cf?.city,
         "cf.region": event.event.request.cf?.region,
-        "cf.latitude": event.event.request.cf?.latitude,
-        "cf.longitude": event.event.request.cf?.longitude,
         "cf.timezone": event.event.request.cf?.timezone,
         duration: event.wallTime,
         request_length: parseInt(event.event.request.headers["content-length"] ?? "0"),
         status: event.event.response?.status ?? 0,
-        ip,
-        "ip.prefix": ipPrefix(ip),
-      }
+        "ip.prefix": ipPrefix(event.event.request.headers["x-real-ip"]),
+      })
       const time = new Date(event.eventTimestamp ?? Date.now()).toISOString()
-      const events = [
+      const telemetryEvents = [
         ...event.logs.flatMap((log) =>
           log.message.flatMap((message: string) => {
             if (!message.startsWith("_metric:")) return []
-            const json = JSON.parse(message.slice(8)) as Record<string, unknown>
-            data = { ...data, ...json }
-            if ("llm.error.code" in json) {
+            const metric = parseMetric(message)
+            if (!metric) return []
+            data = { ...data, ...metric }
+            if ("llm.error.code" in metric) {
               return [{ time, data: { ...data, event_type: "llm.error" } }]
             }
             return []
@@ -51,8 +98,6 @@ export default {
         ),
         { time, data: { ...data, event_type: "completions" } },
       ]
-      console.log(JSON.stringify(data, null, 2))
-
       const lakeIngest = getLakeIngest()
       const [honeycomb, lake] = await Promise.all([
         fetch("https://api.honeycomb.io/1/batch/zen", {
@@ -61,7 +106,7 @@ export default {
             "Content-Type": "application/json",
             "X-Honeycomb-Team": Resource.HONEYCOMB_API_KEY.value,
           },
-          body: JSON.stringify(events),
+          body: JSON.stringify(telemetryEvents),
         }),
         ...(lakeIngest
           ? [
@@ -71,17 +116,15 @@ export default {
                   "Content-Type": "application/json",
                   Authorization: `Bearer ${lakeIngest.secret}`,
                 },
-                body: JSON.stringify({ events: events.map((event) => toLakeEvent(event.time, event.data)) }),
+                body: JSON.stringify({
+                  events: telemetryEvents.map((event) => toLakeEvent(event.time, event.data)),
+                }),
               }),
             ]
           : []),
       ])
-      console.log(honeycomb.status)
-      console.log(await honeycomb.text())
-      if (lake) {
-        console.log(lake.status)
-        console.log(await lake.text())
-      }
+      if (!honeycomb.ok) console.error("Honeycomb ingest failed", honeycomb.status, honeycomb.statusText)
+      if (lake && !lake.ok) console.error("Lake ingest failed", lake.status, lake.statusText)
     }
   },
 }
@@ -94,24 +137,45 @@ function getLakeIngest(): { url: string; secret: string } | undefined {
   }
 }
 
-function toLakeEvent(time: string, data: Record<string, unknown>) {
+function parseMetric(message: string) {
+  try {
+    const metric = sanitizeMetric(JSON.parse(message.slice(8)))
+    return Object.keys(metric).length ? metric : undefined
+  } catch {
+    return undefined
+  }
+}
+
+export function sanitizeMetric(input: unknown) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {}
+  return Object.fromEntries(
+    Object.entries(input).flatMap(([key, value]): [string, string | number | boolean][] => {
+      if (!allowedMetricKeys.has(key)) return []
+      if (typeof value === "boolean") return [[key, value]]
+      if (typeof value === "number") return Number.isFinite(value) ? [[key, value]] : []
+      if (typeof value !== "string") return []
+      const limit = key === "user_agent" ? 256 : key === "error.type" ? 128 : 512
+      return [[key, value.slice(0, limit)]]
+    }),
+  )
+}
+
+export function toLakeEvent(time: string, input: Record<string, unknown>) {
+  const data = sanitizeMetric(input)
+  const eventType = string(input, "event_type")
   return {
     _datalake_key: "inference.event",
     event_timestamp: time,
     event_date: time.slice(0, 10),
-    event_type: string(data, "event_type"),
+    event_type: eventType === "llm.error" ? eventType : "completions",
     dataset: "zen",
     cf_continent: string(data, "cf.continent"),
     cf_country: string(data, "cf.country"),
-    cf_city: string(data, "cf.city"),
     cf_region: string(data, "cf.region"),
-    cf_latitude: number(data, "cf.latitude"),
-    cf_longitude: number(data, "cf.longitude"),
     cf_timezone: string(data, "cf.timezone"),
     duration: number(data, "duration"),
     request_length: integer(data, "request_length"),
-    status: integer(data, "status"),
-    ip: string(data, "ip"),
+    status: integer(data, "response_status") ?? integer(data, "status"),
     ip_prefix: string(data, "ip.prefix"),
     is_stream: boolean(data, "is_stream"),
     session: string(data, "session"),
@@ -125,16 +189,8 @@ function toLakeEvent(time: string, data: Record<string, unknown>) {
     provider: string(data, "provider"),
     provider_model: string(data, "provider.model"),
     llm_error_code: integer(data, "llm.error.code"),
-    llm_error_message: string(data, "llm.error.message"),
-    error_response: string(data, "error.response"),
     error_type: string(data, "error.type"),
-    error_message: string(data, "error.message"),
-    error_cause: string(data, "error.cause"),
-    error_cause2: string(data, "error.cause2"),
-    api_key: string(data, "api_key"),
     workspace: string(data, "workspace"),
-    user_id: string(data, "user_id"),
-    is_subscription: boolean(data, "isSubscription"), // removed
     subscription: string(data, "subscription"),
     response_length: integer(data, "response_length"),
     time_to_first_byte: integer(data, "time_to_first_byte"),
@@ -154,30 +210,41 @@ function toLakeEvent(time: string, data: Record<string, unknown>) {
   }
 }
 
-// Returns a stable lookup key for an IP address.
-// IPv4: full address as /32 (e.g. "203.0.113.45/32").
-// IPv6: the /64 network prefix (e.g. "2001:db8:abcd:1234::/64"). ISPs commonly
-// rotate the lower 64 host bits via SLAAC privacy extensions (RFC 8981), so
-// grouping by /64 collapses those rotations into one key.
-function ipPrefix(ip: string | undefined) {
-  if (!ip) return undefined
-  if (ip.includes(".") && !ip.includes(":")) return `${ip}/32`
-  if (!ip.includes(":")) return undefined
+export function ipPrefix(ip: string | undefined) {
+  const value = ip?.trim()
+  if (!value) return undefined
 
-  // Expand "::" to its full form, then keep the first 4 hextets.
-  const [head, tail] = ip.split("::") as [string, string | undefined]
-  const headParts = head ? head.split(":") : []
-  const tailParts = tail !== undefined ? tail.split(":") : []
-  const missing = 8 - headParts.length - tailParts.length
-  if (missing < 0) return undefined
-  const full = [...headParts, ...new Array(missing).fill("0"), ...tailParts]
+  const mapped = value.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i)
+  if (mapped) return ipv4Prefix(mapped[1])
+  if (value.includes(".")) return ipv4Prefix(value)
+  if (!value.includes(":")) return undefined
+
+  const split = value.split("::")
+  if (split.length > 2) return undefined
+  const head = split[0] ? split[0].split(":") : []
+  const tail = split.length === 2 && split[1] ? split[1].split(":") : []
+  const compressed = split.length === 2
+  if ([...head, ...tail].some((part) => !/^[0-9a-f]{1,4}$/i.test(part))) return undefined
+  if (!compressed && head.length !== 8) return undefined
+
+  const missing = compressed ? 8 - head.length - tail.length : 0
+  if (compressed && missing < 1) return undefined
+  const full = compressed ? [...head, ...new Array(missing).fill("0"), ...tail] : head
   if (full.length !== 8) return undefined
 
   const prefix = full
     .slice(0, 4)
-    .map((part) => part.toLowerCase().replace(/^0+(?=.)/, ""))
+    .map((part) => parseInt(part, 16).toString(16))
     .join(":")
   return `${prefix}::/64`
+}
+
+function ipv4Prefix(ip: string) {
+  const parts = ip.split(".")
+  if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/.test(part))) return undefined
+  const octets = parts.map(Number)
+  if (octets.some((part) => part < 0 || part > 255)) return undefined
+  return `${octets[0]}.${octets[1]}.${octets[2]}.0/24`
 }
 
 function string(data: Record<string, unknown>, key: string) {

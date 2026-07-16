@@ -15,6 +15,11 @@ import { isConsoleManagedProvider } from "../util/provider-origin"
 import { useConnected } from "./use-connected"
 import { useBindings } from "../keymap"
 import { useClipboard } from "../context/clipboard"
+import { localAuthUrl, localConsoleUrl } from "@mongolgpt/core/product"
+
+const mongolgptConsoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || localConsoleUrl
+const mongolgptAuthUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || localAuthUrl
+const mongolgptGoUrl = process.env.MONGOLGPT_GO_URL?.trim() || `${mongolgptConsoleUrl}/go`
 
 const PROVIDER_PRIORITY: Record<string, number> = {
   mongolgpt: 0,
@@ -374,8 +379,7 @@ function ApiMethod(props: ApiMethodProps) {
                 MongolGPT Zen нь нэг API түлхүүрээр шилдэг coding загваруудад хамгийн хямд үнээр хандах боломж олгоно.
               </text>
               <text fg={theme.text}>
-                Түлхүүр авахын тулд <span style={{ fg: theme.primary }}>https://mongolgpt.duckdns.org/zen</span> руу
-                орно уу
+                Түлхүүр авахын тулд <span style={{ fg: theme.primary }}>{mongolgptAuthUrl}</span> руу орно уу
               </text>
             </box>
           ),
@@ -386,8 +390,7 @@ function ApiMethod(props: ApiMethodProps) {
                 limit-тэй хандах боломж олгоно.
               </text>
               <text fg={theme.text}>
-                <span style={{ fg: theme.primary }}>https://mongolgpt.duckdns.org/go</span> руу орж MongolGPT Go-г
-                асаана уу
+                <span style={{ fg: theme.primary }}>{mongolgptGoUrl}</span> руу орж MongolGPT Go-г асаана уу
               </text>
             </box>
           ),

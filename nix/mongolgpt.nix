@@ -101,7 +101,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
   meta = {
     description = "The open source coding agent";
-    homepage = "https://mongolgpt.duckdns.org";
+    homepage = "https://github.com/sergei10a-rgb/mongolgpt";
     license = lib.licenses.mit;
     mainProgram = "mongolgpt";
     inherit (node_modules.meta) platforms;

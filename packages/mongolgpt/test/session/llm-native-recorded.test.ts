@@ -29,7 +29,7 @@ import { ModelV2 } from "@mongolgpt/core/model"
 
 const FIXTURES_DIR = path.join(import.meta.dir, "../fixtures/recordings")
 
-const zenURL = (connection: string) => `https://mongolgpt.duckdns.org/console/proxy/connections/${connection}/v1`
+const zenURL = (connection: string) => `https://example.invalid/console/proxy/connections/${connection}/v1`
 
 const replayOpenAIOAuth = {
   type: "oauth",
@@ -311,7 +311,10 @@ const writeConfig = (directory: string, scenario: RecordedScenario, model: Model
   Effect.promise(() =>
     Bun.write(
       path.join(directory, "mongolgpt.json"),
-      JSON.stringify({ $schema: "https://mongolgpt.duckdns.org/config.json", ...scenario.config(model) }),
+      JSON.stringify({
+        $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json",
+        ...scenario.config(model),
+      }),
     ),
   )
 

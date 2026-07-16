@@ -8,6 +8,7 @@ import { usePlatform } from "@/context/platform"
 import { useLanguage } from "@/context/language"
 import { Icon } from "@mongolgpt/ui/icon"
 import { errorDescriptionKey } from "./error-description"
+import { supportUrl } from "@/product"
 
 export type InitError = {
   name: string
@@ -351,7 +352,7 @@ export const ErrorPage: Component<ErrorPageProps> = (props) => {
             <button
               type="button"
               class="flex items-center text-text-interactive-base gap-1"
-              onClick={() => platform.openLink("https://mongolgpt.duckdns.org/desktop-feedback")}
+              onClick={() => platform.openLink(supportUrl)}
             >
               <div>{language.t("error.page.report.discord")}</div>
               <Icon name="discord" class="text-text-interactive-base" />

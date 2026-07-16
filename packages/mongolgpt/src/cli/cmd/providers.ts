@@ -5,6 +5,7 @@ import { CliError, effectCmd, fail } from "../effect-cmd"
 import { UI } from "../ui"
 import * as Prompt from "../effect/prompt"
 import { ModelsDev } from "@mongolgpt/core/models-dev"
+import { documentationRepositoryUrl, localAuthUrl } from "@mongolgpt/core/product"
 
 import { map, pipe, sortBy, values } from "remeda"
 import path from "path"
@@ -464,7 +465,8 @@ export const ProvidersLoginCommand = effectCmd({
     }
 
     if (provider === "mongolgpt") {
-      yield* Prompt.log.info("API key-ээ https://mongolgpt.duckdns.org/auth дээр үүсгэнэ үү")
+      const authUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || localAuthUrl
+      yield* Prompt.log.info(`API key-ээ ${authUrl} дээр үүсгэнэ үү`)
     }
 
     if (provider === "vercel") {
@@ -473,7 +475,7 @@ export const ProvidersLoginCommand = effectCmd({
 
     if (["cloudflare", "cloudflare-ai-gateway"].includes(provider)) {
       yield* Prompt.log.info(
-        "Cloudflare AI Gateway-г CLOUDFLARE_GATEWAY_ID, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN орчны хувьсагчаар тохируулж болно. Дэлгэрэнгүй: https://mongolgpt.duckdns.org/docs/providers/#cloudflare-ai-gateway",
+        `Cloudflare AI Gateway-г CLOUDFLARE_GATEWAY_ID, CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN орчны хувьсагчаар тохируулж болно. Дэлгэрэнгүй: ${documentationRepositoryUrl}/providers.mdx`,
       )
     }
 

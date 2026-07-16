@@ -1,13 +1,14 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { Resource } from "@mongolgpt/console-resource"
 import { cookie, docs, localeFromRequest, tag } from "~/lib/language"
 
 async function handler(evt: APIEvent) {
   const req = evt.request.clone()
   const url = new URL(req.url)
   const locale = localeFromRequest(req)
-  const host = Resource.App.stage === "production" ? "docs.mongolgpt.duckdns.org" : "docs.dev.mongolgpt.duckdns.org"
-  const targetUrl = `https://${host}${docs(locale, url.pathname)}${url.search}`
+  const docsUrl = import.meta.env.VITE_MONGOLGPT_DOCS_URL?.trim()
+  if (!docsUrl) return upstreamUnavailable()
+  const upstreamUrl = new URL(docsUrl)
+  const targetUrl = new URL(`${docs(locale, url.pathname)}${url.search}`, upstreamUrl)
 
   const headers = new Headers(req.headers)
   headers.set("accept-language", tag(locale))
@@ -20,6 +21,15 @@ async function handler(evt: APIEvent) {
   const next = new Response(response.body, response)
   next.headers.append("set-cookie", cookie(locale))
   return next
+}
+
+function upstreamUnavailable() {
+  return new Response("Баримт бичгийн үйлчилгээний хаяг одоогоор тохируулаагүй байна.", {
+    status: 503,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+    },
+  })
 }
 
 export const GET = handler

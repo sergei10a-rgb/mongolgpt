@@ -4,10 +4,9 @@
   "version": "0.1.1",
   "type": "module",
   "license": "MIT",
-  "homepage": "https://mongolgpt.duckdns.org",
+  "homepage": "https://github.com/sergei10a-rgb/mongolgpt",
   "author": {
-    "name": "MongolGPT",
-    "email": "hello@mongolgpt.duckdns.org"
+    "name": "MongolGPT"
   },
   "scripts": {
     "typecheck": "tsgo -b",

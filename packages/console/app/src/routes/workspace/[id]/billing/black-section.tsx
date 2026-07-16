@@ -77,7 +77,7 @@ const enroll = action(async (workspaceID: string) => {
   "use server"
   return json(
     await withActor(async () => {
-      await Billing.subscribeBlack({ seats: 1 })
+      await Billing.subscribePlan({ seats: 1 })
       return { error: undefined }
     }, workspaceID).catch((e) => ({ error: e.message as string })),
     { revalidate: [queryBillingInfo.key, querySubscription.key] },

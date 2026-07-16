@@ -20,6 +20,7 @@ import { Identifier } from "@mongolgpt/console-core/identifier.js"
 
 type Env = {
   AuthStorage: KVNamespace
+  MONGOLGPT_AUTH_EMAIL_DOMAINS?: string
 }
 
 export const subjects = createSubjects({
@@ -36,7 +37,7 @@ export const subjects = createSubjects({
 
 const MY_THEME: Theme = {
   ...THEME_OPENAUTH,
-  logo: "https://mongolgpt.duckdns.org/favicon-v3.svg",
+  logo: "/favicon-v3.svg",
 }
 
 export default {
@@ -103,8 +104,6 @@ export default {
       }),
       subjects,
       async success(ctx, response) {
-        console.log(response)
-
         let subject: string | undefined
         let email: string | undefined
 
@@ -138,7 +137,7 @@ export default {
         if (!email) throw new Error("No email found")
         if (!subject) throw new Error("No subject found")
 
-        if (Resource.App.stage !== "production" && !email.endsWith("@mongolgpt.duckdns.org")) {
+        if (Resource.App.stage !== "production" && !isAllowedNonProductionEmail(email, env.MONGOLGPT_AUTH_EMAIL_DOMAINS)) {
           throw new Error("Invalid email")
         }
 
@@ -166,7 +165,6 @@ export default {
           // create account if not found
           let accountID = idByProvider ?? idByEmail
           if (!accountID) {
-            console.log("creating account for", email)
             accountID = await Account.create({})
             newAccount = true
           }
@@ -223,4 +221,14 @@ export default {
     }).fetch(request, env, ctx)
     return result
   },
+}
+
+function isAllowedNonProductionEmail(email: string, domains: string | undefined) {
+  const allowlist = domains
+    ?.split(",")
+    .map((domain) => domain.trim().toLowerCase())
+    .filter(Boolean)
+  if (!allowlist?.length) return false
+  const normalizedEmail = email.toLowerCase()
+  return allowlist.some((domain) => normalizedEmail.endsWith(`@${domain}`))
 }

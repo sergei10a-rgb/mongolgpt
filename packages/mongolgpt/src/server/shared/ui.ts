@@ -2,11 +2,12 @@ import { FSUtil } from "@mongolgpt/core/fs-util"
 import { Effect, Stream } from "effect"
 import { HttpBody, HttpClient, HttpClientRequest, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { createHash } from "node:crypto"
+import { localWebAppUrl } from "@mongolgpt/core/product"
 import { ProxyUtil } from "../proxy-util"
 
 let embeddedUIPromise: Promise<Record<string, string> | null> | undefined
 
-export const UI_UPSTREAM = new URL("https://mongolgpt.duckdns.org/app/")
+export const UI_UPSTREAM = new URL(process.env.MONGOLGPT_WEB_UI_URL?.trim() || `${localWebAppUrl}/`)
 
 export const csp = (hash = "") =>
   `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${hash ? ` 'sha256-${hash}'` : ""}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src * data:`

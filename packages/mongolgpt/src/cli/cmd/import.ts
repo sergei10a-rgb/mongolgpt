@@ -12,6 +12,9 @@ import path from "path"
 import { FSUtil } from "@mongolgpt/core/fs-util"
 import { Effect, Schema } from "effect"
 import type { InstanceContext } from "@/project/instance-context"
+import { parseShareUrl } from "@/share/url"
+
+export { parseShareUrl } from "@/share/url"
 
 const decodeMessageInfo = Schema.decodeUnknownSync(SessionV1.Info)
 const decodePart = Schema.decodeUnknownSync(SessionV1.Part)
@@ -23,12 +26,6 @@ export type ShareData =
   | { type: "part"; data: Part }
   | { type: "session_diff"; data: unknown }
   | { type: "model"; data: unknown }
-
-/** Extract share ID from a share URL like https://mongolgpt.duckdns.org/share/abc123 */
-export function parseShareUrl(url: string): string | null {
-  const match = url.match(/^https?:\/\/[^/]+\/share\/([a-zA-Z0-9_-]+)$/)
-  return match ? match[1] : null
-}
 
 export function shouldAttachShareAuthHeaders(shareUrl: string, accountBaseUrl: string): boolean {
   try {
@@ -109,7 +106,7 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     const slug = parseShareUrl(file)
     if (!slug) {
       const baseUrl = yield* Effect.orDie(share.url())
-      process.stdout.write(`Invalid URL format. Expected: ${baseUrl}/share/<slug>`)
+      process.stdout.write(`URL формат буруу байна. Зөв загвар: ${baseUrl}/share/<slug>`)
       process.stdout.write(EOL)
       return
     }
@@ -123,7 +120,7 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
         try: () => fetch(url, { headers }),
         catch: (e) =>
           new CliError({
-            message: `Share өгөгдлийг татаж чадсангүй: ${e instanceof Error ? e.message : String(e)}`,
+            message: `Хуваалцсан өгөгдлийг татаж чадсангүй: ${e instanceof Error ? e.message : String(e)}`,
           }),
       })
 
@@ -135,19 +132,19 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     }
 
     if (!response.ok) {
-      process.stdout.write(`Share өгөгдөл татаж чадсангүй: ${response.statusText}`)
+      process.stdout.write(`Хуваалцсан өгөгдлийг татаж чадсангүй: ${response.statusText}`)
       process.stdout.write(EOL)
       return
     }
 
     const shareData = yield* Effect.tryPromise({
       try: () => response.json() as Promise<ShareData[]>,
-      catch: () => new CliError({ message: "Share өгөгдөл зөв JSON биш байна" }),
+      catch: () => new CliError({ message: "Хуваалцсан өгөгдөл зөв JSON форматтай биш байна" }),
     })
     const transformed = transformShareData(shareData)
 
     if (!transformed) {
-      process.stdout.write(`Share олдсонгүй эсвэл хоосон байна: ${slug}`)
+      process.stdout.write(`Хуваалцсан сешн олдсонгүй эсвэл хоосон байна: ${slug}`)
       process.stdout.write(EOL)
       return
     }
@@ -219,6 +216,6 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     }
   }
 
-  process.stdout.write(`Imported session: ${exportData.info.id}`)
+  process.stdout.write(`Сешн импортлогдлоо: ${exportData.info.id}`)
   process.stdout.write(EOL)
 })

@@ -266,7 +266,7 @@ export async function installWslMongolGPT(version: string, distro: string, opts?
       [
         "bash",
         "-lc",
-        `curl -fsSL https://mongolgpt.duckdns.org/install | bash -s -- --version ${shellEscape(version)}`,
+        `curl -fsSL https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/install | bash -s -- --version ${shellEscape(version)}`,
       ],
       distro,
     ),

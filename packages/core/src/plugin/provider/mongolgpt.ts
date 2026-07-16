@@ -15,9 +15,10 @@ import { ConfigProviderV1 } from "../../v1/config/provider"
 import { ConfigProviderOptionsV1 } from "../../v1/config/provider-options"
 import { ConfigV1 } from "../../v1/config/config"
 import { env } from "../../flag/flag"
+import { localAuthUrl, localConsoleUrl } from "../../product"
 
-const defaultServer = "https://mongolgpt.duckdns.org"
-const defaultAuthServer = "https://auth.mongolgpt.duckdns.org"
+const defaultServer = env("MONGOLGPT_CONSOLE_URL")?.trim() || localConsoleUrl
+const defaultAuthServer = env("MONGOLGPT_AUTH_URL")?.trim() || localAuthUrl
 const clientID = "mongolgpt-cli"
 const callbackPort = 1456
 const methodID = Integration.MethodID.make("device")

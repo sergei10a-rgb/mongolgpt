@@ -1,5 +1,5 @@
-﻿{
-  "$schema": "https://mongolgpt.duckdns.org/theme.json",
+{
+  "$schema": "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/theme.json",
   "defs": {
     "darkBg0": "#282828",
     "darkBg1": "#3c3836",

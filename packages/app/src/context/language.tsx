@@ -33,8 +33,15 @@ type RawDictionary = typeof en & typeof uiEn
 type Dictionary = i18n.Flatten<RawDictionary>
 type Source = { dict: Record<string, string> }
 
-function cookie(locale: Locale) {
-  return `oc_locale=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax`
+const LOCALE_COOKIE = "mongolgpt_locale"
+const LEGACY_LOCALE_COOKIES = ["oc_locale"] as const
+
+function localeCookie(name: string, locale: Locale) {
+  return `${name}=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax`
+}
+
+function clearCookie(name: string) {
+  return `${name}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
 }
 
 const LOCALES: readonly Locale[] = [
@@ -60,6 +67,36 @@ const LOCALES: readonly Locale[] = [
 ]
 
 const DEFAULT_LOCALE: Locale = "mn"
+
+function parseLocale(value: string | undefined): Locale | undefined {
+  return LOCALES.includes(value as Locale) ? (value as Locale) : undefined
+}
+
+export function readLocaleCookie() {
+  if (typeof document !== "object") return
+  const values = new Map(
+    document.cookie.split(";").flatMap((entry) => {
+      const index = entry.indexOf("=")
+      if (index === -1) return []
+      const key = entry.slice(0, index).trim()
+      try {
+        return [[key, decodeURIComponent(entry.slice(index + 1))] as const]
+      } catch {
+        return []
+      }
+    }),
+  )
+  return (
+    parseLocale(values.get(LOCALE_COOKIE)) ??
+    LEGACY_LOCALE_COOKIES.map((name) => parseLocale(values.get(name))).find((locale) => locale !== undefined)
+  )
+}
+
+export function syncLocaleCookie(locale: Locale) {
+  if (typeof document !== "object") return
+  document.cookie = localeCookie(LOCALE_COOKIE, locale)
+  for (const name of LEGACY_LOCALE_COOKIES) document.cookie = clearCookie(name)
+}
 
 const INTL: Record<Locale, string> = {
   en: "en",
@@ -156,7 +193,7 @@ function detectLocale(): Locale {
 }
 
 export function normalizeLocale(value: string): Locale {
-  return LOCALES.includes(value as Locale) ? (value as Locale) : DEFAULT_LOCALE
+  return parseLocale(value) ?? DEFAULT_LOCALE
 }
 
 function migrateLanguage(value: unknown) {
@@ -181,14 +218,14 @@ function readStoredLocale() {
   }
 }
 
-const warm = readStoredLocale() ?? detectLocale()
+const warm = readStoredLocale() ?? readLocaleCookie() ?? detectLocale()
 if (warm !== "en") void loadDict(warm)
 
 export const { use: useLanguage, provider: LanguageProvider } = createSimpleContext({
   name: "Language",
   gate: false,
   init: (props: { locale?: Locale }) => {
-    const initial = props.locale ?? readStoredLocale() ?? detectLocale()
+    const initial = props.locale ?? readStoredLocale() ?? readLocaleCookie() ?? detectLocale()
     const [store, setStore, _, ready] = persisted(
       { ...Persist.global("language", ["language.v1"]), migrate: migrateLanguage },
       createStore({
@@ -215,7 +252,7 @@ export const { use: useLanguage, provider: LanguageProvider } = createSimpleCont
     createEffect(() => {
       if (typeof document !== "object") return
       document.documentElement.lang = locale()
-      document.cookie = cookie(locale())
+      syncLocaleCookie(locale())
     })
 
     return {

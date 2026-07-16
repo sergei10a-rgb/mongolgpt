@@ -5,7 +5,8 @@ import { Subscription } from "@mongolgpt/console-core/subscription.js"
 
 export function createTrialLimiter(trialProviders: string[] | undefined, ip: string) {
   if (!trialProviders) return
-  if (!ip) return
+  const identifier = ip.trim()
+  if (!identifier) return
 
   const limit = Subscription.getFreeLimits().promoTokens
 
@@ -19,7 +20,7 @@ export function createTrialLimiter(trialProviders: string[] | undefined, ip: str
             usage: IpTable.usage,
           })
           .from(IpTable)
-          .where(eq(IpTable.ip, ip))
+          .where(eq(IpTable.ip, identifier))
           .then((rows) => rows[0]),
       )
 
@@ -38,7 +39,7 @@ export function createTrialLimiter(trialProviders: string[] | undefined, ip: str
       await Database.use((tx) =>
         tx
           .insert(IpTable)
-          .values({ ip, usage })
+          .values({ ip: identifier, usage })
           .onDuplicateKeyUpdate({ set: { usage: sql`${IpTable.usage} + ${usage}` } }),
       )
     },

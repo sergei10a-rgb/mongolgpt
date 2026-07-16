@@ -34,6 +34,7 @@ import { ConfigPaths } from "./paths"
 import { ConfigPlugin } from "./plugin"
 import { ConfigVariable } from "./variable"
 import { Npm } from "@mongolgpt/core/npm"
+import { configSchemaUrl } from "@mongolgpt/core/product"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 
 // Custom merge function that concatenates array fields instead of replacing them
@@ -229,8 +230,8 @@ export const layer = Layer.effect(
 
       yield* Effect.promise(() => resolveLoadedPlugins(data, options.path))
       if (!data.$schema) {
-        data.$schema = "https://mongolgpt.duckdns.org/config.json"
-        const updated = text.replace(/^\s*\{/, '{\n  "$schema": "https://mongolgpt.duckdns.org/config.json",')
+        data.$schema = configSchemaUrl
+        const updated = text.replace(/^\s*\{/, `{\n  "$schema": "${configSchemaUrl}",`)
         yield* fs.writeFileString(options.path, updated).pipe(Effect.catch(() => Effect.void))
       }
       return data
@@ -251,7 +252,7 @@ export const layer = Layer.effect(
         const file = globalConfigFile()
         if (!existsSync(file)) {
           yield* fs
-            .writeWithDirs(file, JSON.stringify({ $schema: "https://mongolgpt.duckdns.org/config.json" }, null, 2))
+            .writeWithDirs(file, JSON.stringify({ $schema: configSchemaUrl }, null, 2))
             .pipe(Effect.catch(() => Effect.void))
         }
       }
@@ -266,7 +267,7 @@ export const layer = Layer.effect(
             .then(async (mod) => {
               const { provider, model, ...rest } = mod.default
               if (provider && model) result.model = `${provider}/${model}`
-              result["$schema"] = "https://mongolgpt.duckdns.org/config.json"
+              result["$schema"] = configSchemaUrl
               result = mergeConfig(result, rest)
               await fsNode.writeFile(path.join(Global.Path.config, "config.json"), JSON.stringify(result, null, 2))
               await fsNode.unlink(legacy)
@@ -379,7 +380,7 @@ export const layer = Layer.effect(
                 })
               : {}
             const remoteConfig = mergeConfig(isRecord(wellknown.config) ? wellknown.config : {}, fetchedConfig)
-            if (!remoteConfig.$schema) remoteConfig.$schema = "https://mongolgpt.duckdns.org/config.json"
+            if (!remoteConfig.$schema) remoteConfig.$schema = configSchemaUrl
             const source = wellknownURL
             const next = yield* loadConfig(
               JSON.stringify(remoteConfig),
@@ -578,6 +579,7 @@ export const layer = Layer.effect(
         if (result.autoshare === true && !result.share) {
           result.share = "auto"
         }
+        if (!result.share) result.share = "disabled"
 
         if (Flag.MONGOLGPT_DISABLE_AUTOCOMPACT) {
           result.compaction = { ...result.compaction, auto: false }

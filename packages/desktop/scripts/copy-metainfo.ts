@@ -32,12 +32,12 @@ const xml = `<?xml version="1.0" encoding="UTF-8"?>
   <content_rating type="oars-1.1" />
 
   <url type="bugtracker">https://github.com/sergei10a-rgb/mongolgpt/issues</url>
-  <url type="homepage">https://mongolgpt.duckdns.org</url>
+  <url type="homepage">https://github.com/sergei10a-rgb/mongolgpt</url>
   <url type="vcs-browser">https://github.com/sergei10a-rgb/mongolgpt</url>
 
   <screenshots>
     <screenshot type="default">
-      <image>https://mongolgpt.duckdns.org/og.png</image>
+      <image>https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/social-share.png</image>
     </screenshot>
   </screenshots>
 </component>

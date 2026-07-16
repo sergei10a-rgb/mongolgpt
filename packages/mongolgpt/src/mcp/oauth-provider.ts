@@ -6,6 +6,7 @@ import type {
   OAuthClientInformationFull,
 } from "@modelcontextprotocol/sdk/shared/auth.js"
 import { Effect } from "effect"
+import { repositoryUrl } from "@mongolgpt/core/product"
 import { McpAuth } from "./auth"
 
 const OAUTH_CALLBACK_PORT = 19876
@@ -44,7 +45,7 @@ export class McpOAuthProvider implements OAuthClientProvider {
     return {
       redirect_uris: [this.redirectUrl],
       client_name: "MongolGPT",
-      client_uri: "https://mongolgpt.duckdns.org",
+      client_uri: repositoryUrl,
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       token_endpoint_auth_method: this.config.clientSecret ? "client_secret_post" : "none",

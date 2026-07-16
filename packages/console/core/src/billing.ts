@@ -16,7 +16,7 @@ import { Resource } from "@mongolgpt/console-resource"
 import { Identifier } from "./identifier"
 import { centsToMicroCents } from "./util/price"
 import { User } from "./user"
-import { BlackData } from "./black"
+import { PlanData } from "./plan"
 import { LiteData } from "./lite"
 
 export namespace Billing {
@@ -470,7 +470,7 @@ export namespace Billing {
     },
   )
 
-  export const subscribeBlack = fn(
+  export const subscribePlan = fn(
     z.object({
       seats: z.number(),
       coupon: z.string().optional(),
@@ -501,7 +501,7 @@ export namespace Billing {
       const subscription = await Billing.stripe().subscriptions.create({
         customer: billing.customerID,
         default_payment_method: billing.paymentMethodID,
-        items: [{ price: BlackData.planToPriceID({ plan: billing.subscriptionPlan }) }],
+        items: [{ price: PlanData.planToPriceID({ plan: billing.subscriptionPlan }) }],
         metadata: {
           workspaceID: Actor.workspace(),
         },
@@ -535,7 +535,7 @@ export namespace Billing {
     },
   )
 
-  export const unsubscribeBlack = fn(
+  export const unsubscribePlan = fn(
     z.object({
       subscriptionID: z.string(),
     }),

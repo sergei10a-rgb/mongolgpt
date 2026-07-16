@@ -5,6 +5,7 @@ import logoLight from "../asset/logo-ornate-light.svg"
 import logoDark from "../asset/logo-ornate-dark.svg"
 import IMG_SPLASH from "../asset/lander/screenshot-splash.png"
 import { IconCopy, IconCheck } from "../component/icon"
+import { config, repositorySupportUrl } from "~/config"
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
 
@@ -65,10 +66,8 @@ export default function Home() {
           <div data-slot="right">
             <button data-copy data-slot="command">
               <span>
-                <span>curl -fsSL </span>
-                <span data-slot="protocol">https://</span>
-                <span data-slot="highlight">mongolgpt.duckdns.org/install</span>
-                <span> | bash</span>
+                <span>npm install -g </span>
+                <span data-slot="highlight">mongolgpt</span>
               </span>
               <CopyStatus />
             </button>
@@ -158,20 +157,20 @@ export default function Home() {
 
         <footer data-component="footer">
           <div data-slot="cell">
-            <a href="https://mongolgpt.duckdns.org">{i18n.t("footer.x")}</a>
+            <a href={repositorySupportUrl}>{i18n.t("footer.x")}</a>
           </div>
           <div data-slot="cell">
-            <a href="https://mongolgpt.duckdns.org">{i18n.t("footer.github")}</a>
+            <a href={config.github.repoUrl}>{i18n.t("footer.github")}</a>
           </div>
           <div data-slot="cell">
-            <a href="https://mongolgpt.duckdns.org/discord">{i18n.t("footer.discord")}</a>
+            <a href={config.social.discord}>{i18n.t("footer.discord")}</a>
           </div>
         </footer>
       </div>
 
       <div data-component="legal">
         <span>
-          ©2025 <a href="https://mongolgpt.duckdns.org">MongolGPT</a>
+          ©2025 <a href={config.github.repoUrl}>MongolGPT</a>
         </span>
       </div>
     </main>

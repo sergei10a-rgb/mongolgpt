@@ -1,5 +1,5 @@
 ---
-title: Commands
+title: Захиалгат командууд
 description: Дахин давтагдах даалгавруудад зориулсан захиалгат тушаалуудыг үүсгэ.
 ---
 
@@ -9,7 +9,7 @@ description: Дахин давтагдах даалгавруудад зориу
 /my-command
 ```
 
-Захиалгат тушаалууд нь `/init`, `/undo`, `/redo`, `/share`, `/help` гэх мэт суулгасан командуудаас гадна байдаг. [Илүү ихийг мэдэж аваарай](/docs/tui#commands).
+Custom command нь `/init`, `/undo`, `/redo`, `/share`, `/help` зэрэг built-in command-аас тусдаа. [TUI командуудыг](../tui#командууд) харна уу.
 
 ---
 
@@ -21,13 +21,13 @@ description: Дахин давтагдах даалгавруудад зориу
 
 ```md title=".mongolgpt/commands/test.md"
 ---
-description: Run tests with coverage
+description: Тестийг coverage-тай ажиллуулах
 agent: build
 model: anthropic/claude-3-5-sonnet-20241022
 ---
 
-Run the full test suite with coverage report and show any failures.
-Focus on the failing tests and suggest fixes.
+Бүх тестийг coverage тайлантай ажиллуулж, унасан тестүүдийг харуул.
+Унасан тестүүдэд төвлөрч засвар санал болго.
 ```
 
 Frontmatter нь тушаалын шинж чанарыг тодорхойлдог. Агуулга нь загвар болж хувирдаг.
@@ -48,18 +48,17 @@ Frontmatter нь тушаалын шинж чанарыг тодорхойлдо
 
 ### JSON
 
-Өөрийн MongolGPT [config](/docs/config) дээрх `command` сонголтыг ашиглана уу:
+Өөрийн MongolGPT [config](../config) дээрх `command` сонголтыг ашиглана уу:
 
 ```json title="mongolgpt.jsonc" {4-12}
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
   "command": {
-    // This becomes the name of the command
+    // Энэ нь командын нэр болно
     "test": {
-      // This is the prompt that will be sent to the LLM
-      "template": "Run the full test suite with coverage report and show any failures.\nFocus on the failing tests and suggest fixes.",
-      // This is shown as the description in the TUI
-      "description": "Run tests with coverage",
+      // LLM рүү илгээх prompt
+      "template": "Бүх тестийг coverage тайлантай ажиллуулж, унасан тестүүдийг харуул.\nУнасан тестүүдэд төвлөрч засвар санал болго.",
+      // TUI-д харагдах тайлбар
+      "description": "Тестийг coverage-тай ажиллуулах",
       "agent": "build",
       "model": "anthropic/claude-3-5-sonnet-20241022"
     }
@@ -84,13 +83,13 @@ Frontmatter нь тушаалын шинж чанарыг тодорхойлдо
 
 ```markdown title="~/.config/mongolgpt/commands/test.md"
 ---
-description: Run tests with coverage
+description: Тестийг coverage-тай ажиллуулах
 agent: build
 model: anthropic/claude-3-5-sonnet-20241022
 ---
 
-Run the full test suite with coverage report and show any failures.
-Focus on the failing tests and suggest fixes.
+Бүх тестийг coverage тайлантай ажиллуулж, унасан тестүүдийг харуул.
+Унасан тестүүдэд төвлөрч засвар санал болго.
 ```
 
 Маркdown файлын нэр нь тушаалын нэр болно. Жишээлбэл, `test.md` зөвшөөрнө
@@ -114,11 +113,11 @@ Focus on the failing tests and suggest fixes.
 
 ```md title=".mongolgpt/commands/component.md"
 ---
-description: Create a new component
+description: Шинэ component үүсгэх
 ---
 
-Create a new React component named $ARGUMENTS with TypeScript support.
-Include proper typing and basic structure.
+TypeScript дэмжлэгтэй `$ARGUMENTS` нэртэй React component үүсгэ.
+Зөв type болон үндсэн бүтцийг оруул.
 ```
 
 Аргументтай командыг ажиллуулна уу:
@@ -140,11 +139,11 @@ Include proper typing and basic structure.
 
 ```md title=".mongolgpt/commands/create-file.md"
 ---
-description: Create a new file with content
+description: Агуулгатай шинэ файл үүсгэх
 ---
 
-Create a file named $1 in the directory $2
-with the following content: $3
+`$2` хавтаст `$1` нэртэй файл үүсгэ.
+Дараах агуулгыг бич: `$3`
 ```
 
 Командыг ажиллуулна уу:
@@ -163,33 +162,33 @@ with the following content: $3
 
 ### Бүрхүүлийн гаралт
 
-_!`command`_-г ашиглан [bash тушаал](/docs/tui#bash-commands) гаралтыг өөрийн сануулгад оруулна.
+_!`command`_ ашиглан [Bash command](../tui#bash-командууд)-ийн гаралтыг prompt-д оруулна.
 
 Жишээлбэл, тестийн хамрах хүрээг шинжилдэг захиалгат командыг үүсгэхийн тулд:
 
 ```md title=".mongolgpt/commands/analyze-coverage.md"
 ---
-description: Analyze test coverage
+description: Тестийн coverage шинжлэх
 ---
 
-Here are the current test results:
+Одоогийн тестийн үр дүн:
 !
 pm test`
 
-Based on these results, suggest improvements to increase coverage.
+Эдгээр үр дүнд тулгуурлан coverage нэмэх сайжруулалт санал болго.
 ```
 
 Эсвэл сүүлийн үеийн өөрчлөлтүүдийг шалгахын тулд:
 
 ```md title=".mongolgpt/commands/review-changes.md"
 ---
-description: Review recent changes
+description: Сүүлийн өөрчлөлтийг шалгах
 ---
 
-Recent git commits:
+Сүүлийн Git commit-ууд:
 !`git log --oneline -10`
 
-Review these changes and suggest any improvements.
+Эдгээр өөрчлөлтийг шалгаж сайжруулалт санал болго.
 ```
 
 Командууд нь таны төслийн үндсэн директорт ажилладаг бөгөөд тэдгээрийн гаралт нь сануулгын нэг хэсэг болно.
@@ -202,11 +201,11 @@ Review these changes and suggest any improvements.
 
 ```md title=".mongolgpt/commands/review-component.md"
 ---
-description: Review component
+description: Component шалгах
 ---
 
-Review the component in @src/components/Button.tsx.
-Check for performance issues and suggest improvements.
+`@src/components/Button.tsx` дахь component-ийг шалга.
+Гүйцэтгэлийн асуудал байгаа эсэхийг шалгаж сайжруулалт санал болго.
 ```
 
 Файлын агуулгыг сануулгад автоматаар оруулна.
@@ -227,7 +226,7 @@ Check for performance issues and suggest improvements.
 {
   "command": {
     "test": {
-      "template": "Run the full test suite with coverage report and show any failures.\nFocus on the failing tests and suggest fixes."
+      "template": "Бүх тестийг coverage тайлантай ажиллуулаад алдааг харуул.\nУнасан тестүүдэд төвлөрч, засах санал өг."
     }
   }
 }
@@ -257,8 +256,8 @@ Check for performance issues and suggest improvements.
 
 ### Агент
 
-`agent` тохиргоог ашиглан аль [agent](/docs/agents) энэ командыг гүйцэтгэх ёстойг тохируулна уу.
-Хэрэв энэ нь [subagent](/docs/agents/#subagents) бол тушаал нь дэд агентын дуудлагыг өгөгдмөлөөр өдөөдөг.
+`agent` тохиргоог ашиглан аль [agent](../agents) энэ командыг гүйцэтгэх ёстойг тохируулна уу.
+Хэрэв сонгосон agent нь [дэд агент](../agents/#дэд-агентууд) бол command анхдагчаар subagent call үүсгэнэ.
 Энэ үйлдлийг идэвхгүй болгохын тулд `subtask`-г `false` гэж тохируулна уу.
 
 ```json title="mongolgpt.json"
@@ -277,7 +276,7 @@ Check for performance issues and suggest improvements.
 
 ### Дэд даалгавар
 
-[subagent](/docs/agents/#subagents) дуудлагыг өдөөх командыг албадахын тулд `subtask` логикийг ашиглана уу.
+[Дэд агент](../agents/#дэд-агентууд) дуудахыг албадах бол `subtask` boolean ашиглана.
 Хэрэв та команд нь таны үндсэн контекстийг бохирдуулахгүй байхыг хүсэж байгаа бөгөөд агентыг дэд агентын үүрэг гүйцэтгэхийг **хүчлэх** бол энэ нь ашигтай.
 `mode` тохиргоонд `primary` гэж тохируулсан ч гэсэн.
 
@@ -315,10 +314,11 @@ Check for performance issues and suggest improvements.
 
 ## Баригдсан
 
-mongolgpt нь `/init`, `/undo`, `/redo`, `/share`, `/help` гэх мэт хэд хэдэн суулгасан тушаалуудыг агуулдаг; [илүү ихийг мэдэж аваарай](/docs/tui#commands).
+MongolGPT нь `/init`, `/undo`, `/redo`, `/share`, `/help` зэрэг built-in command-тай. [TUI командуудыг](../tui#командууд) харна уу.
 
 :::note
 Захиалгат тушаалууд нь суулгасан командуудыг дарж болно.
 :::
 
 Хэрэв та ижил нэртэй захиалгат тушаалыг тодорхойлсон бол энэ нь суулгасан тушаалыг хүчингүй болгоно.
+

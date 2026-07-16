@@ -4,6 +4,9 @@ import { effectCmd, fail } from "../effect-cmd"
 import { Git } from "@/git"
 import { InstanceRef } from "@/effect/instance-ref"
 import { Process } from "@/util/process"
+import { extractShareUrl } from "@/share/url"
+
+export { extractShareUrl } from "@/share/url"
 
 export const PrCommand = effectCmd({
   command: "pr <number>",
@@ -64,7 +67,7 @@ export const PrCommand = effectCmd({
           yield* git.run(["remote", "add", remoteName, `https://github.com/${forkOwner}/${forkName}.git`], {
             cwd: worktree,
           })
-          UI.println(`Added fork remote: ${remoteName}`)
+          UI.println(`Fork-ийн алсын эх сурвалж нэмэгдлээ: ${remoteName}`)
         }
 
         yield* git.run(["branch", `--set-upstream-to=${remoteName}/${prInfo.headRefName}`, localBranchName], {
@@ -73,29 +76,28 @@ export const PrCommand = effectCmd({
       }
 
       if (prInfo?.body) {
-        const sessionMatch = prInfo.body.match(/https:\/\/mongolgpt\.duckdns\.org\/s\/([a-zA-Z0-9_-]+)/)
-        if (sessionMatch) {
-          const sessionUrl = sessionMatch[0]
-          UI.println(`Found mongolgpt session: ${sessionUrl}`)
-          UI.println(`Importing session...`)
+        const sessionUrl = extractShareUrl(prInfo.body)
+        if (sessionUrl) {
+          UI.println(`MongolGPT сешн олдлоо: ${sessionUrl}`)
+          UI.println("Сешнийг импортолж байна...")
 
           const importResult = yield* Effect.promise(() =>
             Process.text(["mongolgpt", "import", sessionUrl], { nothrow: true }),
           )
           if (importResult.code === 0) {
-            const sessionIdMatch = importResult.text.trim().match(/Imported session: ([a-zA-Z0-9_-]+)/)
+            const sessionIdMatch = importResult.text.trim().match(/Сешн импортлогдлоо:\s*([a-zA-Z0-9_-]+)/)
             if (sessionIdMatch) {
               sessionId = sessionIdMatch[1]
-              UI.println(`Session imported: ${sessionId}`)
+              UI.println(`Сешн импортлогдлоо: ${sessionId}`)
             }
           }
         }
       }
     }
 
-    UI.println(`Successfully checked out PR #${prNumber} as branch '${localBranchName}'`)
+    UI.println(`PR #${prNumber}-г '${localBranchName}' салбар болгон амжилттай татлаа`)
     UI.println()
-    UI.println("Starting mongolgpt...")
+    UI.println("MongolGPT-г эхлүүлж байна...")
     UI.println()
 
     const mongolgptArgs = sessionId ? ["-s", sessionId] : []
@@ -110,6 +112,6 @@ export const PrCommand = effectCmd({
     )
     // Match legacy throw semantics — propagate as a defect so the top-level
     // index.ts catch handles it identically (exit 1, "Unexpected error" banner).
-    if (code !== 0) return yield* Effect.die(new Error(`mongolgpt exited with code ${code}`))
+    if (code !== 0) return yield* Effect.die(new Error(`MongolGPT ${code} кодоор зогслоо`))
   }),
 })

@@ -14,15 +14,13 @@ describe("account url helpers", () => {
     else process.env.MONGOLGPT_AUTH_URL = previousAuthUrl
   })
 
-  test("defaults to the MongolGPT console origin", () => {
-    expect(defaultConsoleUrl).toBe("https://mongolgpt.duckdns.org")
+  test("defaults to the local MongolGPT console origin", () => {
+    expect(defaultConsoleUrl).toBe("http://localhost:3000")
   })
 
   test("normalizes console UI paths back to the account API origin", () => {
-    expect(normalizeServerUrl("https://mongolgpt.duckdns.org/console")).toBe("https://mongolgpt.duckdns.org")
-    expect(normalizeServerUrl("https://mongolgpt.duckdns.org/auth?next=/workspace")).toBe(
-      "https://mongolgpt.duckdns.org",
-    )
+    expect(normalizeServerUrl("https://console.example.com/console")).toBe("https://console.example.com")
+    expect(normalizeServerUrl("https://console.example.com/auth?next=/workspace")).toBe("https://console.example.com")
   })
 
   test("keeps custom API path prefixes", () => {

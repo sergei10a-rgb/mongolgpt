@@ -71,7 +71,7 @@ const notify: Platform["notify"] = async (title, description, href) => {
 
   const notification = new Notification(title, {
     body: description ?? "",
-    icon: "https://mongolgpt.duckdns.org/favicon-96x96-v3.png",
+    icon: new URL("./favicon-96x96-v3.png", window.location.href).toString(),
   })
 
   notification.onclick = () => {
@@ -102,7 +102,6 @@ if (!(root instanceof HTMLElement) && import.meta.env.DEV) {
 }
 
 const getCurrentUrl = () => {
-  if (location.hostname.includes("mongolgpt.duckdns.org")) return "http://localhost:4096"
   if (import.meta.env.DEV)
     return `http://${import.meta.env.VITE_MONGOLGPT_SERVER_HOST ?? "localhost"}:${import.meta.env.VITE_MONGOLGPT_SERVER_PORT ?? "4096"}`
   return location.origin

@@ -32,6 +32,7 @@ import type { WorkspaceAdapter } from "@/control-plane/types"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { InstallationChannel } from "@mongolgpt/core/installation/version"
+import { Flag } from "@mongolgpt/core/flag/flag"
 
 type State = {
   hooks: Hooks[]
@@ -78,7 +79,7 @@ function internalPlugins(flags: RuntimeFlags.Info): PluginInstance[] {
     PoeAuthPlugin,
     CloudflareWorkersAuthPlugin,
     CloudflareAIGatewayAuthPlugin,
-    MongolGPTAuthPlugin,
+    ...(Flag.MONGOLGPT_ENABLE_HOSTED_SERVICES ? [MongolGPTAuthPlugin] : []),
     AzureAuthPlugin,
     DigitalOceanAuthPlugin,
     SnowflakeCortexAuthPlugin,

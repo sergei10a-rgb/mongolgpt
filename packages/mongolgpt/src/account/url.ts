@@ -1,3 +1,5 @@
+import { localAuthUrl, localConsoleUrl } from "@mongolgpt/core/product"
+
 export const normalizeServerUrl = (input: string): string => {
   const url = new URL(input)
   url.search = ""
@@ -8,8 +10,8 @@ export const normalizeServerUrl = (input: string): string => {
   return `${url.origin}${pathname}`
 }
 
-export const defaultConsoleUrl = "https://mongolgpt.duckdns.org"
-export const defaultAuthUrl = "https://auth.mongolgpt.duckdns.org"
+export const defaultConsoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || localConsoleUrl
+export const defaultAuthUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || localAuthUrl
 
 const accountUiPaths = new Set(["/auth", "/console", "/go", "/workspace", "/zen"])
 
@@ -25,8 +27,7 @@ export const resolveAuthServerUrl = (input: string): string => {
   if (pathname.startsWith("/auth")) return pathname.length === 0 ? url.origin : `${url.origin}${pathname}`
   if (url.hostname.startsWith("auth.")) return pathname.length === 0 ? url.origin : `${url.origin}${pathname}`
 
-  if (url.hostname === "mongolgpt.duckdns.org") return defaultAuthUrl
-  if (url.hostname.endsWith(".mongolgpt.duckdns.org")) return `${url.protocol}//auth.${url.hostname}`
+  if (normalizeServerUrl(input) === normalizeServerUrl(defaultConsoleUrl)) return defaultAuthUrl
 
   return normalizeServerUrl(input)
 }

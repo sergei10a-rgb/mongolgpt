@@ -1,9 +1,9 @@
 import { defineCollection, z } from "astro:content"
 import { docsLoader, i18nLoader } from "@astrojs/starlight/loaders"
 import { docsSchema, i18nSchema } from "@astrojs/starlight/schema"
-import en from "./content/i18n/en.json"
+import mn from "./content/i18n/mn.json"
 
-const custom = Object.fromEntries(Object.keys(en).map((key) => [key, z.string()]))
+const custom = Object.fromEntries(Object.keys(mn).map((key) => [key, z.string()]))
 
 export const collections = {
   docs: defineCollection({ loader: docsLoader(), schema: docsSchema() }),

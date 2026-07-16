@@ -1,41 +1,46 @@
-name: "mongolgpt GitHub Action"
-description: "Run mongolgpt in GitHub Actions workflows"
+name: "MongolGPT GitHub Action"
+description: "GitHub workflow дотор MongolGPT ажиллуулна"
 branding:
   icon: "code"
   color: "orange"
 
 inputs:
   model:
-    description: "Model to use"
+    description: "Ашиглах provider/model"
     required: true
 
   agent:
-    description: "Agent to use. Must be a primary agent. Falls back to default_agent from config or 'build' if not found."
+    description: "Ашиглах үндсэн агент; хоосон бол тохиргооны анхдагч агентыг хэрэглэнэ"
     required: false
 
   share:
-    description: "Share the mongolgpt session (defaults to true for public repos)"
-    required: false
-
-  prompt:
-    description: "Custom prompt to override the default prompt"
-    required: false
-
-  use_github_token:
-    description: "Use GITHUB_TOKEN directly instead of MongolGPT App token exchange. When true, skips OIDC and uses the GITHUB_TOKEN env var."
+    description: "MongolGPT сешнийг нийтлэх эсэх; өөрийн share backend тохируулсан үед хэрэглэнэ"
     required: false
     default: "false"
 
+  share_base_url:
+    description: "Өөрийн share backend-ийн үндсэн URL"
+    required: false
+
+  prompt:
+    description: "Анхдагч даалгаврыг орлуулах заавар"
+    required: false
+
+  use_github_token:
+    description: "Өөрийн GitHub App-ийн оронд workflow-ийн GITHUB_TOKEN-ийг шууд ашиглана"
+    required: false
+    default: "true"
+
   mentions:
-    description: "Comma-separated list of trigger phrases (case-insensitive). Defaults to '/mongolgpt,/oc'"
+    description: "Таслалаар тусгаарласан дуудах үгс; анхдагч нь /mongolgpt,/oc"
     required: false
 
   variant:
-    description: "Model variant for provider-specific reasoning effort (e.g., high, max, minimal)"
+    description: "Загварын reasoning хувилбар, жишээ нь high эсвэл max"
     required: false
 
   oidc_base_url:
-    description: "Base URL for OIDC token exchange API. Only required when running a custom GitHub App install. Defaults to https://mongolgpt.duckdns.org/api"
+    description: "Өөрийн GitHub App ашиглах үед OIDC token солилцох API-ийн үндсэн URL"
     required: false
 
 runs:
@@ -58,7 +63,7 @@ runs:
     - name: Install mongolgpt
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
-      run: curl -fsSL https://mongolgpt.duckdns.org/install | bash
+      run: curl -fsSL https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/install | bash
 
     - name: Add mongolgpt to PATH
       shell: bash
@@ -74,6 +79,8 @@ runs:
         SHARE: ${{ inputs.share }}
         PROMPT: ${{ inputs.prompt }}
         USE_GITHUB_TOKEN: ${{ inputs.use_github_token }}
+        GITHUB_TOKEN: ${{ github.token }}
+        MONGOLGPT_SHARE_URL: ${{ inputs.share_base_url }}
         MENTIONS: ${{ inputs.mentions }}
         VARIANT: ${{ inputs.variant }}
         OIDC_BASE_URL: ${{ inputs.oidc_base_url }}

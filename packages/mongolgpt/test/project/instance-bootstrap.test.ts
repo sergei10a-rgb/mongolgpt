@@ -47,7 +47,7 @@ const bootstrapFixture = Effect.gen(function* () {
     Bun.write(
       path.join(dir, "mongolgpt.json"),
       JSON.stringify({
-        $schema: "https://mongolgpt.duckdns.org/config.json",
+        $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json",
         plugin: [pathToFileURL(pluginFile).href],
       }),
     ),

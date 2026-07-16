@@ -46,7 +46,7 @@ function subscribe(email: string, fullName: string) {
   }).then(
     async (res) => {
       if (!res.ok) {
-        console.error("EmailOctopus subscribe failed:", res.status, res.statusText, await res.text())
+        console.error("EmailOctopus subscribe failed:", res.status, res.statusText)
         return false
       }
       return true
@@ -85,6 +85,8 @@ ${body.role}<br>
 ${body.company ? `${body.company}<br>` : ""}${body.email}<br>
 ${body.phone ? `${body.phone}<br>` : ""}`.trim()
 
+    const contactEmail = import.meta.env.MONGOLGPT_ENTERPRISE_CONTACT_EMAIL?.trim()
+
     const [lead, mail, octopus] = await Promise.all([
       createLead({
         name: body.name,
@@ -97,27 +99,29 @@ ${body.phone ? `${body.phone}<br>` : ""}`.trim()
         console.error("Failed to create Salesforce lead:", err)
         return false
       }),
-      AWS.sendEmail({
-        to: "contact@mongolgpt.duckdns.org",
-        subject: `Enterprise Inquiry from ${body.name}`,
-        body: emailContent,
-        replyTo: body.email,
-      }).then(
-        () => true,
-        (err) => {
-          console.error("Failed to send enterprise email:", err)
-          return false
-        },
-      ),
+      contactEmail
+        ? AWS.sendEmail({
+            to: contactEmail,
+            subject: `Enterprise Inquiry from ${body.name}`,
+            body: emailContent,
+            replyTo: body.email,
+          }).then(
+            () => true,
+            (err) => {
+              console.error("Failed to send enterprise email:", err)
+              return false
+            },
+          )
+        : Promise.resolve(false),
       subscribe(body.email, body.name),
     ])
 
     if (!lead && !mail && !octopus) {
       if (import.meta.env.DEV) {
-        console.warn("Enterprise inquiry accepted in dev mode without integrations", { email: body.email })
+        console.warn("Enterprise inquiry accepted in dev mode without integrations")
         return Response.json({ success: true, message: dict["enterprise.form.success.submitted"] }, { status: 200 })
       }
-      console.error("Enterprise inquiry delivery failed", { email: body.email })
+      console.error("Enterprise inquiry delivery failed")
       return Response.json({ error: dict["enterprise.form.error.internalServer"] }, { status: 500 })
     }
 

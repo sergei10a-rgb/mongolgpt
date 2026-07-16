@@ -445,7 +445,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://mongolgpt.duckdns.org/",
+            "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
             "X-Title": "mongolgpt",
             "X-Source": "mongolgpt",
           },
@@ -456,7 +456,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://mongolgpt.duckdns.org/",
+            "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
             "X-Title": "mongolgpt",
           },
         },
@@ -466,7 +466,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: provider.source === "config",
         options: {
           headers: {
-            "HTTP-Referer": "https://mongolgpt.duckdns.org/",
+            "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
             "X-Title": "mongolgpt",
             "X-BILLING-INVOKE-ORIGIN": "MongolGPT",
           },
@@ -477,7 +477,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "http-referer": "https://mongolgpt.duckdns.org/",
+            "http-referer": "https://github.com/sergei10a-rgb/mongolgpt",
             "x-title": "mongolgpt",
           },
         },
@@ -583,7 +583,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://mongolgpt.duckdns.org/",
+            "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
             "X-Title": "mongolgpt",
           },
         },
@@ -841,7 +841,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://mongolgpt.duckdns.org/",
+            "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
             "X-Title": "mongolgpt",
           },
         },

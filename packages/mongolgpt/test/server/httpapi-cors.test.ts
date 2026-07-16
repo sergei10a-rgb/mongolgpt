@@ -71,14 +71,14 @@ describe("HttpApi CORS", () => {
       const response = yield* Effect.promise(() =>
         handler(
           new Request(new URL("/global/config", "http://localhost"), {
-            headers: { origin: "https://mongolgpt.duckdns.org/app" },
+            headers: { origin: "https://example.invalid" },
           }),
           HttpApiApp.context,
         ),
       )
 
       expect(response.status).toBe(401)
-      expect(response.headers.get("access-control-allow-origin")).toBe("https://mongolgpt.duckdns.org/app")
+      expect(response.headers.get("access-control-allow-origin")).toBe("https://example.invalid")
     }),
   )
 

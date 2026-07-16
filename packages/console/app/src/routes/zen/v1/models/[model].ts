@@ -10,7 +10,6 @@ export function POST(input: APIEvent) {
     parseModel: (url: string, _body: any) => url.split("/").pop()?.split(":")?.[0] ?? "",
     parseVariant: (url: string, body: any) => parseGoogleVariant(body),
     parseIsStream: (url: string, _body: any) =>
-      // ie. url: https://mongolgpt.duckdns.org/zen/v1/models/gemini-3-pro:streamGenerateContent?alt=sse'
       url.split("/").pop()?.split(":")?.[1]?.startsWith("streamGenerateContent") ?? false,
   })
 }

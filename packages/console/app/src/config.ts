@@ -1,9 +1,12 @@
+export const repositoryUrl = "https://github.com/sergei10a-rgb/mongolgpt"
+export const repositorySupportUrl = `${repositoryUrl}/issues`
+
 /**
  * Application-wide constants and configuration
  */
 export const config = {
   // Base URL
-  baseUrl: "https://mongolgpt.duckdns.org",
+  baseUrl: import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim() || repositoryUrl,
 
   // GitHub
   github: {
@@ -16,8 +19,8 @@ export const config = {
 
   // Social links
   social: {
-    twitter: "https://mongolgpt.duckdns.org",
-    discord: "https://mongolgpt.duckdns.org",
+    twitter: repositorySupportUrl,
+    discord: import.meta.env.VITE_MONGOLGPT_COMMUNITY_URL?.trim() || `${repositoryUrl}/discussions`,
   },
 
   // Static stats (used on landing page)

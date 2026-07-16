@@ -218,7 +218,7 @@ const createPlatform = (): Platform => {
 
       const notification = new Notification(title, {
         body: description ?? "",
-        icon: "https://mongolgpt.duckdns.org/favicon-96x96-v3.png",
+        icon: new URL("./favicon-96x96-v3.png", window.location.href).toString(),
       })
       notification.onclick = () => {
         void window.api.showWindow()

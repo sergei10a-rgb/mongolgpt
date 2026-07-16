@@ -82,12 +82,11 @@ export async function POST(input: APIEvent) {
   }
 
   const body = await input.request.json()
-  console.log(body, JSON.stringify(body, null, 2))
 
   const parsed = honeycombWebhookPayload.safeParse(body)
 
   if (!parsed.success) {
-    console.error(parsed.error)
+    console.error("Invalid Honeycomb webhook payload", parsed.error.issues.length)
     return Response.json({ message: "invalid payload" }, { status: 400 })
   }
 

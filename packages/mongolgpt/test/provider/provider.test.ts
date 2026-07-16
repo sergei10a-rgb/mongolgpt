@@ -1230,7 +1230,7 @@ it.instance(
   Effect.gen(function* () {
     const providers = yield* list
     expect(providers[ProviderV2.ID.make("nvidia")].options.headers).toEqual({
-      "HTTP-Referer": "https://mongolgpt.duckdns.org/",
+      "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
       "X-Title": "mongolgpt",
       "X-BILLING-INVOKE-ORIGIN": "MongolGPT",
     })
@@ -1243,7 +1243,7 @@ it.instance(
   Effect.gen(function* () {
     const providers = yield* list
     expect(providers[ProviderV2.ID.make("nvidia")].options.headers).toEqual({
-      "HTTP-Referer": "https://mongolgpt.duckdns.org/",
+      "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
       "X-Title": "mongolgpt",
       "X-BILLING-INVOKE-ORIGIN": "MongolGPT",
     })

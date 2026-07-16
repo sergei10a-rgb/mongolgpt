@@ -16,6 +16,7 @@ import { useServerSDK } from "@/context/server-sdk"
 import { useServerSync } from "@/context/server-sync"
 import { useLanguage } from "@/context/language"
 import { useProviders } from "@/hooks/use-providers"
+import { documentationUrl } from "@/product"
 
 export function DialogConnectProvider(props: { provider: string; directory?: Accessor<string | undefined> }) {
   const dialog = useDialog()
@@ -451,7 +452,7 @@ export function DialogConnectProvider(props: { provider: string; directory?: Acc
               <div class="text-14-regular text-text-base">{language.t("provider.connect.mongolgptZen.line2")}</div>
               <div class="text-14-regular text-text-base">
                 {language.t("provider.connect.mongolgptZen.visit.prefix")}
-                <Link href="https://mongolgpt.duckdns.org/zen" tabIndex={-1}>
+                <Link href={documentationUrl("providers/#mongolgpt-account")} tabIndex={-1}>
                   {language.t("provider.connect.mongolgptZen.visit.link")}
                 </Link>
                 {language.t("provider.connect.mongolgptZen.visit.suffix")}

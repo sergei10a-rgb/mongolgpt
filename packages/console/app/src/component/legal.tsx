@@ -1,5 +1,6 @@
 import { A } from "@solidjs/router"
 import { LanguagePicker } from "~/component/language-picker"
+import { config } from "~/config"
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
 
@@ -9,7 +10,7 @@ export function Legal() {
   return (
     <div data-component="legal">
       <span>
-        ©{new Date().getFullYear()} <a href="https://mongolgpt.duckdns.org">MongolGPT</a>
+        ©{new Date().getFullYear()} <a href={config.github.repoUrl}>MongolGPT</a>
       </span>
       <span>
         <A href={language.route("/brand")}>{i18n.t("legal.brand")}</A>

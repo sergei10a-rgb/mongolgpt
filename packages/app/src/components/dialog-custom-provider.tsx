@@ -14,6 +14,7 @@ import { useServerSync } from "@/context/server-sync"
 import { useLanguage } from "@/context/language"
 import { type FormState, headerRow, modelRow, validateCustomProvider } from "./dialog-custom-provider-form"
 import { DialogSelectProvider } from "./dialog-select-provider"
+import { documentationUrl } from "@/product"
 
 type Props = {
   back?: "providers" | "close"
@@ -184,7 +185,7 @@ export function DialogCustomProvider(props: Props) {
         <form onSubmit={save} class="px-2.5 pb-6 flex flex-col gap-6">
           <p class="text-14-regular text-text-base">
             {language.t("provider.custom.description.prefix")}
-            <Link href="https://mongolgpt.duckdns.org/docs/providers/#custom-provider" tabIndex={-1}>
+            <Link href={documentationUrl("providers/#custom-provider")} tabIndex={-1}>
               {language.t("provider.custom.description.link")}
             </Link>
             {language.t("provider.custom.description.suffix")}

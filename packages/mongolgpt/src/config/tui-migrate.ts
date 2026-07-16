@@ -5,10 +5,9 @@ import { Option, Schema } from "effect"
 import { TuiConfig } from "@mongolgpt/tui/config"
 import { Flag } from "@mongolgpt/core/flag/flag"
 import { Global } from "@mongolgpt/core/global"
+import { tuiSchemaUrl } from "@mongolgpt/core/product"
 import { Filesystem } from "@/util/filesystem"
 import * as ConfigPaths from "@/config/paths"
-
-const TUI_SCHEMA_URL = "https://mongolgpt.duckdns.org/tui.json"
 
 const decodeTheme = Schema.decodeUnknownOption(Schema.String)
 const decodeRecord = Schema.decodeUnknownOption(Schema.Record(Schema.String, Schema.Unknown))
@@ -51,7 +50,7 @@ export async function migrateTuiConfig(input: MigrateInput) {
     if (targetExists) continue
 
     const payload: Record<string, unknown> = {
-      $schema: TUI_SCHEMA_URL,
+      $schema: tuiSchemaUrl,
     }
     if (extracted.theme !== undefined) payload.theme = extracted.theme
     if (extracted.keybinds !== undefined) payload.keybinds = extracted.keybinds

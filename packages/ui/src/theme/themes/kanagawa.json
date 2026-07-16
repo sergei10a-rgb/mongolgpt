@@ -1,5 +1,5 @@
 {
-  "$schema": "https://mongolgpt.duckdns.org/desktop-theme.json",
+  "$schema": "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/desktop-theme.json",
   "name": "Kanagawa",
   "id": "kanagawa",
   "light": {

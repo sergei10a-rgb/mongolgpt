@@ -19,6 +19,7 @@ import { SessionShareTable } from "@mongolgpt/core/share/sql"
 import { ProviderV2 } from "@mongolgpt/core/provider"
 import { ModelV2 } from "@mongolgpt/core/model"
 import { EventV2 } from "@mongolgpt/core/event"
+import { localConsoleUrl } from "@mongolgpt/core/product"
 
 const disabled = process.env["MONGOLGPT_DISABLE_SHARE"] === "true" || process.env["MONGOLGPT_DISABLE_SHARE"] === "1"
 
@@ -207,7 +208,11 @@ export const layer = Layer.effect(
       const headers: Record<string, string> = {}
       const active = yield* account.active()
       if (Option.isNone(active) || !active.value.active_org_id) {
-        const baseUrl = (yield* cfg.get()).enterprise?.url ?? "https://mongolgpt.duckdns.org"
+        const baseUrl =
+          (yield* cfg.get()).enterprise?.url ||
+          process.env.MONGOLGPT_SHARE_URL?.trim() ||
+          process.env.MONGOLGPT_CONSOLE_URL?.trim() ||
+          localConsoleUrl
         return { headers, api: legacyApi, baseUrl } satisfies Req
       }
 

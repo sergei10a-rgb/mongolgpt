@@ -20,7 +20,7 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       - name: Install mongolgpt
-        run: curl -fsSL https://mongolgpt.duckdns.org/install | bash
+        run: curl -fsSL https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/install | bash
 
       - name: Triage issue
         env:

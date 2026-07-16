@@ -1,5 +1,4 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { Resource } from "@mongolgpt/console-resource"
 import { LOCALE_HEADER, cookie, localeFromRequest, route, tag } from "~/lib/language"
 
 const dataPath = "/data"
@@ -10,11 +9,14 @@ export async function statsProxy(evt: APIEvent) {
   const redirect = redirectToLocalizedData(req, new URL(req.url), locale)
   if (redirect) return redirect
 
+  const statsUrl = import.meta.env.VITE_MONGOLGPT_STATS_URL?.trim()
+  if (!statsUrl) return upstreamUnavailable()
+
   const targetUrl = new URL(req.url)
-  targetUrl.protocol = "https:"
-  targetUrl.hostname =
-    Resource.App.stage === "production" ? "stats.mongolgpt.duckdns.org" : "stats.dev.mongolgpt.duckdns.org"
-  targetUrl.port = ""
+  const upstreamUrl = new URL(statsUrl)
+  targetUrl.protocol = upstreamUrl.protocol
+  targetUrl.hostname = upstreamUrl.hostname
+  targetUrl.port = upstreamUrl.port
 
   if (
     targetUrl.pathname.startsWith(`${dataPath}/_build/`) ||
@@ -119,4 +121,13 @@ function appendVary(headers: Headers, ...values: string[]) {
       )
       .join(", "),
   )
+}
+
+function upstreamUnavailable() {
+  return new Response("Статистикийн үйлчилгээний хаяг одоогоор тохируулаагүй байна.", {
+    status: 503,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+    },
+  })
 }

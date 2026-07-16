@@ -147,6 +147,7 @@ try {
   session = await client.session.create<true>().then((r) => r.data)
   await subscribeSessionEvents()
   shareId = await (async () => {
+    if (!process.env.MONGOLGPT_SHARE_URL?.trim()) return
     if (useEnvShare() === false) return
     if (!useEnvShare() && repoData.data.private) return
     await client.session.share<true>({ path: session })
@@ -363,7 +364,9 @@ function useIssueId() {
 }
 
 function useShareUrl() {
-  return isMock() ? "https://mongolgpt.duckdns.org/dev" : "https://mongolgpt.duckdns.org"
+  const value = process.env.MONGOLGPT_SHARE_URL?.trim()
+  if (!value) throw new Error("Сешн нийтлэх бол MONGOLGPT_SHARE_URL тохируулна уу")
+  return value.replace(/\/+$/, "")
 }
 
 async function getAccessToken() {
@@ -372,9 +375,14 @@ async function getAccessToken() {
   const envToken = useEnvGithubToken()
   if (envToken) return envToken
 
+  const oidcBaseUrl = process.env.OIDC_BASE_URL?.trim()?.replace(/\/+$/, "")
+  if (!oidcBaseUrl) {
+    throw new Error("GITHUB_TOKEN өгнө үү, эсвэл өөрийн GitHub App ашиглах бол OIDC_BASE_URL тохируулна уу")
+  }
+
   let response
   if (isMock()) {
-    response = await fetch("https://mongolgpt.duckdns.org/api/exchange_github_app_token_with_pat", {
+    response = await fetch(`${oidcBaseUrl}/exchange_github_app_token_with_pat`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${useEnvMock().mockToken}`,
@@ -383,7 +391,7 @@ async function getAccessToken() {
     })
   } else {
     const oidcToken = await core.getIDToken("mongolgpt-github-action")
-    response = await fetch("https://mongolgpt.duckdns.org/api/exchange_github_app_token", {
+    response = await fetch(`${oidcBaseUrl}/exchange_github_app_token`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${oidcToken}`,

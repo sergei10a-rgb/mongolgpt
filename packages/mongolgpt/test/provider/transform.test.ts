@@ -2331,7 +2331,7 @@ describe("ProviderTransform.message - strip openai metadata when store=false", (
       providerID: "mongolgpt",
       api: {
         id: "mongolgpt-test",
-        url: "https://mongolgpt.duckdns.org/api",
+        url: "https://example.invalid/api",
         npm: "@ai-sdk/openai-compatible",
       },
     }
@@ -2365,7 +2365,7 @@ describe("ProviderTransform.message - strip openai metadata when store=false", (
       providerID: "mongolgpt",
       api: {
         id: "mongolgpt-test",
-        url: "https://mongolgpt.duckdns.org/api",
+        url: "https://example.invalid/api",
         npm: "@ai-sdk/openai-compatible",
       },
     }

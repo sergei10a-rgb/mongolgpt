@@ -33,6 +33,7 @@ import { Icon } from "@mongolgpt/ui/icon"
 import { usePlatform } from "@/context/platform"
 import { DateTime } from "luxon"
 import { useDialog } from "@mongolgpt/ui/context/dialog"
+import { supportUrl } from "@/product"
 import { useDirectoryPicker } from "@/components/directory-picker"
 import { useSettingsCommand } from "@/components/settings-dialog"
 import { DialogSelectServer, useServerManagementController } from "@/components/dialog-select-server"
@@ -429,7 +430,7 @@ export function NewHome() {
           clearNotifications={clearNotifications}
           unseenCount={unseenCount}
           openSettings={openSettings}
-          openHelp={() => platform.openLink("https://mongolgpt.duckdns.org/desktop-feedback")}
+          openHelp={() => platform.openLink(supportUrl)}
           language={language}
         />
 
@@ -501,7 +502,7 @@ export function NewHome() {
         <HomeUtilityNav
           class="flex lg:hidden"
           openSettings={openSettings}
-          openHelp={() => platform.openLink("https://mongolgpt.duckdns.org/desktop-feedback")}
+          openHelp={() => platform.openLink(supportUrl)}
           language={language}
         />
       </div>

@@ -15,22 +15,24 @@ import {
   buttonText,
 } from "../styles"
 
-const CONSOLE_URL = "https://mongolgpt.duckdns.org/"
+const DEFAULT_CONSOLE_URL = "http://localhost:3000/"
 
 interface InviteEmailProps {
   inviter: string
   workspaceID: string
   workspaceName: string
   assetsUrl: string
+  consoleUrl: string
 }
 export const InviteEmail = ({
-  inviter = "test@mongolgpt.duckdns.org",
+  inviter = "test@example.com",
   workspaceID = "wrk_01K6XFY7V53T8XN0A7X8G9BTN3",
   workspaceName = "mongolgpt",
-  assetsUrl = `${CONSOLE_URL}email`,
+  consoleUrl = DEFAULT_CONSOLE_URL,
+  assetsUrl = `${consoleUrl}email`,
 }: InviteEmailProps) => {
   const messagePlain = `${inviter} таныг ${workspaceName} ажлын талбарт нэгдэхээр урьсан байна.`
-  const url = `${CONSOLE_URL}workspace/${workspaceID}`
+  const url = new URL(`workspace/${workspaceID}`, consoleUrl).toString()
   return (
     <Html lang="mn">
       <Head>
@@ -43,7 +45,7 @@ export const InviteEmail = ({
           <Section style={frame}>
             <Row>
               <Column>
-                <A href={`${CONSOLE_URL}zen`}>
+                <A href={new URL("zen", consoleUrl).toString()}>
                   <Img height="32" alt="MongolGPT лого" src={`${assetsUrl}/logo.png`} />
                 </A>
               </Column>

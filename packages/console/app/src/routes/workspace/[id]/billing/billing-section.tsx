@@ -8,6 +8,7 @@ import styles from "./billing-section.module.css"
 import { createCheckoutUrl, formatBalance, queryBillingInfo } from "../../common"
 import { useI18n } from "~/context/i18n"
 import { localizeError } from "~/lib/form-error"
+import { repositorySupportUrl } from "~/config"
 
 const createSessionUrl = action(async (workspaceID: string, returnUrl: string) => {
   "use server"
@@ -143,7 +144,7 @@ export function BillingSection() {
         <h2>{i18n.t("workspace.billing.title")}</h2>
         <p>
           {i18n.t("workspace.billing.subtitle.beforeLink")}{" "}
-          <a href="mailto:help@mongolgpt.duckdns.org">{i18n.t("workspace.billing.contactUs")}</a>{" "}
+          <a href={repositorySupportUrl}>{i18n.t("workspace.billing.contactUs")}</a>{" "}
           {i18n.t("workspace.billing.subtitle.afterLink")}
         </p>
       </div>

@@ -13,7 +13,7 @@ class LimitError extends Error {
 }
 export class RateLimitError extends LimitError {}
 export class FreeUsageLimitError extends LimitError {}
-export class BlackUsageLimitError extends LimitError {}
+export class PlanUsageLimitError extends LimitError {}
 
 type LimitName = "5 hour" | "weekly" | "monthly"
 export class GoUsageLimitError extends LimitError {

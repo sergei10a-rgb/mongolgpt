@@ -237,10 +237,10 @@ describe("SessionStatus.Info", () => {
       action: {
         reason: "free_tier_limit",
         provider: "mongolgpt",
-        title: "Free limit reached",
-        message: "Subscribe to MongolGPT Go.",
-        label: "subscribe",
-        link: "https://mongolgpt.duckdns.org/go",
+        title: "Үнэгүй хэрэглээний хязгаарт хүрлээ",
+        message: "MongolGPT Go багцыг идэвхжүүлнэ үү.",
+        label: "багц идэвхжүүлэх",
+        link: "http://localhost:3000/go",
       },
       next: 500,
     }

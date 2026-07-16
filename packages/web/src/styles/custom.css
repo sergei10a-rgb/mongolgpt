@@ -211,9 +211,14 @@ site-search > button span {
   display: flex;
   gap: 16px;
   align-items: start;
+  min-width: 0;
+  max-width: 100%;
 
   .starlight-aside__content {
     margin-top: 0;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
   }
 
   @media (max-width: 768px) {
@@ -382,6 +387,15 @@ nav.sidebar ul.top-level > li > details > summary .group-label > span {
 .expressive-code {
   margin: 0.75rem 0 3rem 0 !important;
   border-radius: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.starlight-aside .expressive-code,
+.starlight-aside .expressive-code figure,
+.starlight-aside .expressive-code pre {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .expressive-code figure {

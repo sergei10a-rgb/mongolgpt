@@ -1,5 +1,4 @@
 import path from "path"
-import { exec } from "child_process"
 import { Filesystem } from "@/util/filesystem"
 import * as prompts from "@clack/prompts"
 import { map, pipe, sortBy, values } from "remeda"
@@ -34,6 +33,7 @@ import { Process } from "@/util/process"
 import { parseGitHubRemote } from "@/util/repository"
 import { Effect } from "effect"
 import { extractResponseText, formatPromptTooLargeError } from "./github.shared"
+import { parseShareUrl } from "@/share/url"
 
 type GitHubAuthor = {
   login: string
@@ -163,7 +163,6 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
       UI.empty()
       prompts.intro("GitHub agent суулгах")
       const app = await getAppInfo()
-      await installGitHubApp()
 
       const providers = await Effect.runPromise(modelsDev.get()).then((p) => {
         // TODO: add guide for copilot, for now just hide it
@@ -198,9 +197,9 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
             `    1. \`${WORKFLOW_FILE}\` файлыг commit хийгээд push хийнэ үү`,
             step2,
             "",
-            "    3. GitHub issue дээр очоод `/oc summarize` comment бичиж agent хэрхэн ажиллахыг үзнэ үү",
+            "    3. GitHub issue дээр очоод `/mongolgpt дүгнэ` comment бичиж agent хэрхэн ажиллахыг үзнэ үү",
             "",
-            "   GitHub agent-ийн талаар дэлгэрэнгүй - https://mongolgpt.duckdns.org/docs/github/#usage-examples",
+            "   GitHub agent-ийн баримт бичиг - https://github.com/sergei10a-rgb/mongolgpt/blob/main/packages/web/src/content/docs/mn/github.mdx",
           ].join("\n"),
         )
       }
@@ -275,59 +274,6 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
         return model
       }
 
-      async function installGitHubApp() {
-        const s = prompts.spinner()
-        s.start("GitHub app суулгаж байна")
-
-        // Get installation
-        const installation = await getInstallation()
-        if (installation) return s.stop("GitHub app аль хэдийн суусан байна")
-
-        // Open browser
-        const url = "https://github.com/apps/mongolgpt-agent"
-        const command =
-          process.platform === "darwin"
-            ? `open "${url}"`
-            : process.platform === "win32"
-              ? `start "" "${url}"`
-              : `xdg-open "${url}"`
-
-        exec(command, (error) => {
-          if (error) {
-            prompts.log.warn(`Browser нээж чадсангүй. Дараах URL руу орно уу: ${url}`)
-          }
-        })
-
-        // Wait for installation
-        s.message("GitHub app суухыг хүлээж байна")
-        const MAX_RETRIES = 120
-        let retries = 0
-        do {
-          const installation = await getInstallation()
-          if (installation) break
-
-          if (retries > MAX_RETRIES) {
-            s.stop(
-              `GitHub app суулгалтыг илрүүлж чадсангүй. App-ийг \`${app.owner}/${app.repo}\` repository-д суулгасан эсэхээ шалгана уу.`,
-            )
-            throw new UI.CancelledError()
-          }
-
-          retries++
-          await sleep(1000)
-        } while (true) // oxlint-disable-line no-constant-condition
-
-        s.stop("GitHub app суулгалаа")
-
-        async function getInstallation() {
-          return await fetch(
-            `https://mongolgpt.duckdns.org/api/get_github_app_installation?owner=${app.owner}&repo=${app.repo}`,
-          )
-            .then((res) => res.json())
-            .then((data) => data.installation)
-        }
-      }
-
       async function addWorkflowFiles() {
         const envStr =
           provider === "amazon-bedrock"
@@ -353,10 +299,9 @@ jobs:
       startsWith(github.event.comment.body, '/mongolgpt')
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
-      contents: read
-      pull-requests: read
-      issues: read
+      contents: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -364,9 +309,10 @@ jobs:
           persist-credentials: false
 
       - name: Run MongolGPT
-        uses: sergei10a-rgb/mongolgpt/github@latest${envStr}
+        uses: sergei10a-rgb/mongolgpt/github@main${envStr}
         with:
-          model: ${provider}/${model}`,
+          model: ${provider}/${model}
+          use_github_token: true`,
         )
 
         prompts.log.success(`Workflow файл нэмлээ: "${WORKFLOW_FILE}"`)
@@ -428,14 +374,16 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
         ? (payload as IssueCommentEvent | IssuesEvent).issue.number
         : (payload as PullRequestEvent | PullRequestReviewCommentEvent).pull_request.number
     const runUrl = `/${owner}/${repo}/actions/runs/${runId}`
-    const shareBaseUrl = isMock ? "https://mongolgpt.duckdns.org/dev" : "https://mongolgpt.duckdns.org"
+    const shareConfigured = Boolean(
+      process.env.MONGOLGPT_SHARE_URL?.trim() || process.env.MONGOLGPT_CONSOLE_URL?.trim(),
+    )
 
     let appToken: string
     let octoRest: Octokit
     let octoGraph: typeof graphql
     let gitConfig: string
     let session: { id: SessionID; title: string; version: string }
-    let shareId: string | undefined
+    let shareUrl: string | undefined
     let exitCode = 0
     type PromptFiles = Awaited<ReturnType<typeof getUserPrompt>>["promptFiles"]
     const triggerCommentId = isCommentEvent
@@ -510,11 +458,13 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
         }),
       )
       await subscribeSessionEvents()
-      shareId = await (async () => {
+      shareUrl = await (async () => {
+        if (!shareConfigured) return
         if (share === false) return
         if (!share && repoData.data.private) return
-        await runLocalEffect(sessionShare.share(session.id))
-        return session.id.slice(-8)
+        const result = await runLocalEffect(sessionShare.share(session.id))
+        if (!parseShareUrl(result.url)) throw new Error("Хуваалцах сервер буруу URL буцаалаа")
+        return result.url
       })()
       console.log("mongolgpt сешн", session.id)
 
@@ -574,7 +524,9 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
             const summary = await summarize(response)
             await pushToLocalBranch(summary, uncommittedChanges)
           }
-          const hasShared = prData.comments.nodes.some((c) => c.body.includes(`${shareBaseUrl}/s/${shareId}`))
+          const currentShareUrl = shareUrl
+          const hasShared =
+            currentShareUrl !== undefined && prData.comments.nodes.some((c) => c.body.includes(currentShareUrl))
           await createComment(`${response}${footer({ image: !hasShared })}`)
           await removeReaction(commentType)
         }
@@ -592,7 +544,9 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
             const summary = await summarize(response)
             await pushToForkBranch(summary, prData, uncommittedChanges)
           }
-          const hasShared = prData.comments.nodes.some((c) => c.body.includes(`${shareBaseUrl}/s/${shareId}`))
+          const currentShareUrl = shareUrl
+          const hasShared =
+            currentShareUrl !== undefined && prData.comments.nodes.some((c) => c.body.includes(currentShareUrl))
           await createComment(`${response}${footer({ image: !hasShared })}`)
           await removeReaction(commentType)
         }
@@ -681,15 +635,15 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
 
     function normalizeUseGithubToken() {
       const value = process.env["USE_GITHUB_TOKEN"]
-      if (!value) return false
+      if (!value) return true
       if (value === "true") return true
       if (value === "false") return false
       throw new Error(`use_github_token утга буруу байна: ${value}. Boolean байх ёстой.`)
     }
 
-    function normalizeOidcBaseUrl(): string {
+    function normalizeOidcBaseUrl() {
       const value = process.env["OIDC_BASE_URL"]
-      if (!value) return "https://mongolgpt.duckdns.org/api"
+      if (!value) return undefined
       return value.replace(/\/+$/, "")
     }
 
@@ -988,6 +942,9 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     }
 
     async function exchangeForAppToken(token: string) {
+      if (!oidcBaseUrl) {
+        throw new Error("Custom GitHub App ашиглах бол oidc_base_url тохируулна уу, эсвэл use_github_token: true хэрэглэнэ үү.")
+      }
       const response = token.startsWith("github_pat_")
         ? await fetch(`${oidcBaseUrl}/exchange_github_app_token_with_pat`, {
             method: "POST",
@@ -1348,14 +1305,15 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
 
     function footer(opts?: { image?: boolean }) {
       const image = (() => {
-        if (!shareId) return ""
+        if (!shareUrl) return ""
         if (!opts?.image) return ""
 
         const titleAlt = encodeURIComponent(session.title.substring(0, 50))
-        return `<a href="${shareBaseUrl}/s/${shareId}"><img width="200" alt="${titleAlt}" src="${shareBaseUrl}/social-share.png" /></a>\n`
+        const socialImageUrl = new URL("/social-share.png", shareUrl).toString()
+        return `<a href="${shareUrl}"><img width="200" alt="${titleAlt}" src="${socialImageUrl}" /></a>\n`
       })()
-      const shareUrl = shareId ? `[mongolgpt session](${shareBaseUrl}/s/${shareId})&nbsp;&nbsp;|&nbsp;&nbsp;` : ""
-      return `\n\n${image}${shareUrl}[github run](${runUrl})`
+      const sharedSession = shareUrl ? `[MongolGPT сешн](${shareUrl})&nbsp;&nbsp;|&nbsp;&nbsp;` : ""
+      return `\n\n${image}${sharedSession}[GitHub ажиллуулалт](${runUrl})`
     }
 
     async function fetchRepo() {

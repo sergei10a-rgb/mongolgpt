@@ -1,0 +1,27 @@
+diff --git a/index.ts b/index.ts
+index 96cd63de0f..5bfdf4167a 100644
+--- a/index.ts
++++ b/index.ts
+@@ -156,12 +156,18 @@ export default function StarlightIntegration(
+ 				const targetDir = fileURLToPath(dir);
+ 				const cwd = dirname(fileURLToPath(import.meta.url));
+ 				const relativeDir = relative(cwd, targetDir);
+-				return new Promise<void>((resolve) => {
+-					spawn('npx', ['-y', 'pagefind', ...loglevelFlag, '--site', relativeDir], {
++				const pagefind = process.platform === 'win32' ? 'pagefind.exe' : 'pagefind';
++				return new Promise<void>((resolve, reject) => {
++					const child = spawn(pagefind, [...loglevelFlag, '--site', relativeDir], {
+ 						stdio: 'inherit',
+-						shell: true,
++						shell: false,
+ 						cwd,
+-					}).on('close', () => resolve());
++					});
++					child.on('error', reject);
++					child.on('close', (code) => {
++						if (code === 0) resolve();
++						else reject(new Error(`Pagefind exited with code ${code ?? 'unknown'}`));
++					});
+ 				});
+ 			},
+ 		},

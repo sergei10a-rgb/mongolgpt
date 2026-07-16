@@ -1,27 +1,50 @@
 ;(function () {
-  var key = "mongolgpt-theme-id"
-  var themeId = localStorage.getItem(key) || "oc-2"
+  var defaultTheme = "mongolgpt"
+  var themeKey = "mongolgpt-theme-id"
+  var schemeKey = "mongolgpt-color-scheme"
+  var legacyThemeKey = "opencode-theme-id"
+  var legacySchemeKey = "opencode-color-scheme"
+  var legacyCssPrefix = "opencode-theme-css"
+  var legacyThemes = { "oc-1": true, "oc-2": true }
+  var rawTheme = localStorage.getItem(themeKey) || localStorage.getItem(legacyThemeKey)
+  var themeId = legacyThemes[rawTheme] ? defaultTheme : rawTheme || defaultTheme
 
-  if (themeId === "oc-1") {
-    themeId = "oc-2"
-    localStorage.setItem(key, themeId)
+  localStorage.setItem(themeKey, themeId)
+  localStorage.removeItem(legacyThemeKey)
+
+  var scheme = localStorage.getItem(schemeKey) || localStorage.getItem(legacySchemeKey) || "system"
+  localStorage.setItem(schemeKey, scheme)
+  localStorage.removeItem(legacySchemeKey)
+
+  if (rawTheme) {
+    ;["light", "dark"].forEach(function (mode) {
+      var key = "mongolgpt-theme-css-" + mode
+      var legacyKey = legacyCssPrefix + "-" + rawTheme + "-" + mode
+      if (themeId !== defaultTheme) {
+        var css = localStorage.getItem(key) || localStorage.getItem(legacyKey)
+        if (css) localStorage.setItem(key, css)
+      }
+      localStorage.removeItem(legacyKey)
+    })
+  }
+
+  if (themeId === defaultTheme) {
     localStorage.removeItem("mongolgpt-theme-css-light")
     localStorage.removeItem("mongolgpt-theme-css-dark")
   }
 
-  var scheme = localStorage.getItem("mongolgpt-color-scheme") || "system"
   var isDark = scheme === "dark" || (scheme === "system" && matchMedia("(prefers-color-scheme: dark)").matches)
   var mode = isDark ? "dark" : "light"
+  var background = isDark ? "#0a0a0a" : "#ffffff"
 
   document.documentElement.dataset.theme = themeId
   document.documentElement.dataset.colorScheme = mode
-  document.documentElement.style.backgroundColor = isDark ? "#080808" : "#fafafa"
+  document.documentElement.style.backgroundColor = background
 
-  // Update theme-color meta tag to match app color scheme
   var metas = document.querySelectorAll("meta[name='theme-color']")
-  if (metas.length > 0) metas[0].setAttribute("content", isDark ? "#080808" : "#fafafa")
+  if (metas.length > 0) metas[0].setAttribute("content", background)
 
-  if (themeId === "oc-2") return
+  if (themeId === defaultTheme) return
 
   var css = localStorage.getItem("mongolgpt-theme-css-" + mode)
   if (css) {

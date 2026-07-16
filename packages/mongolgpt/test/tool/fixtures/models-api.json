@@ -28004,9 +28004,9 @@
     "id": "mongolgpt-go",
     "env": ["MONGOLGPT_API_KEY"],
     "npm": "@ai-sdk/openai-compatible",
-    "api": "https://mongolgpt.duckdns.org/zen/go/v1",
+    "api": "https://example.invalid/zen/go/v1",
     "name": "MongolGPT Go",
-    "doc": "https://mongolgpt.duckdns.org/docs/zen",
+    "doc": "https://example.invalid/docs/zen",
     "models": {
       "minimax-m2.7": {
         "id": "minimax-m2.7",
@@ -57814,9 +57814,9 @@
     "id": "mongolgpt",
     "env": ["MONGOLGPT_API_KEY"],
     "npm": "@ai-sdk/openai-compatible",
-    "api": "https://mongolgpt.duckdns.org/zen/v1",
+    "api": "https://example.invalid/zen/v1",
     "name": "MongolGPT Zen",
-    "doc": "https://mongolgpt.duckdns.org/docs/zen",
+    "doc": "https://example.invalid/docs/zen",
     "models": {
       "minimax-m2.7": {
         "id": "minimax-m2.7",

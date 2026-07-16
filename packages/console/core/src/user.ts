@@ -140,6 +140,8 @@ export namespace User {
         )
 
         const { InviteEmail } = await import("@mongolgpt/console-mail/InviteEmail.jsx")
+        const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL
+        if (!consoleUrl) throw new Error("MONGOLGPT_CONSOLE_URL is required before sending invite email")
         await AWS.sendEmail({
           to: email,
           subject: `You've been invited to join the ${emailInfo.workspaceName} workspace on MongolGPT`,
@@ -147,7 +149,8 @@ export namespace User {
             // @ts-ignore
             InviteEmail({
               inviter: emailInfo.inviterEmail,
-              assetsUrl: `https://mongolgpt.duckdns.org/email`,
+              consoleUrl,
+              assetsUrl: new URL("email", consoleUrl).toString(),
               workspaceID: workspaceID,
               workspaceName: emailInfo.workspaceName,
             }),

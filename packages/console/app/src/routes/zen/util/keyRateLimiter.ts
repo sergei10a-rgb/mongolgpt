@@ -10,7 +10,8 @@ export function createRateLimiter(
   request: Request,
 ) {
   if (!zenApiKey) return
-  const dict = i18n(localeFromRequest(request))
+  const locale = localeFromRequest(request)
+  const dict = i18n(locale)
 
   const LIMIT = rateLimit ?? 1000
   const yyyyMMddHHmm = new Date(Date.now())
@@ -19,13 +20,13 @@ export function createRateLimiter(
     .substring(0, 12)
   const interval = `${modelId.substring(0, 27)}-${yyyyMMddHHmm}`
   const redis = getRedis()
-  const key = buildRateLimitKey("key", zenApiKey, interval)
+  const key = buildRateLimitKey("key", hashIdentifier(zenApiKey), interval)
 
   return {
     check: async () => {
       const count = Number((await redis.mget<(string | number | null)[]>([key]))[0] ?? 0)
 
-      if (count >= LIMIT) throw new RateLimitError(dict["zen.api.error.rateLimitExceeded"], 60)
+      if (count >= LIMIT) throw new RateLimitError(rateLimitMessage(locale, dict["zen.api.error.rateLimitExceeded"]), 60)
     },
     track: async () => {
       const pipeline = redis.pipeline()
@@ -34,4 +35,13 @@ export function createRateLimiter(
       await pipeline.exec()
     },
   }
+}
+
+function rateLimitMessage(locale: string, fallback: string) {
+  if (locale !== "mn") return fallback
+  return "API түлхүүрийн хүсэлтийн хязгаарт хүрлээ. Нэг минут хүлээгээд дахин оролдоно уу."
+}
+
+function hashIdentifier(value: string) {
+  return Bun.hash(value).toString(16)
 }

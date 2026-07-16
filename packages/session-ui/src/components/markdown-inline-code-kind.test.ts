@@ -24,9 +24,9 @@ describe("inlineCodeKind", () => {
   })
 
   test("detects urls", () => {
-    expect(inlineCodeKind(`https://mongolgpt.duckdns.org/docs`)).toBe("url")
+    expect(inlineCodeKind(`https://example.invalid/docs`)).toBe("url")
     expect(inlineCodeKind(`http://localhost:4444`)).toBe("url")
     expect(inlineCodeKind(`file:///tmp/mongolgpt`)).toBeUndefined()
-    expect(inlineCodeKind(`ftp://mongolgpt.duckdns.org/docs`)).toBeUndefined()
+    expect(inlineCodeKind(`ftp://example.invalid/docs`)).toBeUndefined()
   })
 })

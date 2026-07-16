@@ -23,6 +23,11 @@ import { clientOnly } from "@solidjs/start"
 import { Meta, Title } from "@solidjs/meta"
 import { getRequestEvent } from "solid-js/web"
 
+const repositoryUrl = "https://github.com/sergei10a-rgb/mongolgpt"
+const publicBaseUrl = import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim()
+const communityUrl = import.meta.env.VITE_MONGOLGPT_COMMUNITY_URL?.trim() || `${repositoryUrl}/discussions`
+const productUrl = publicBaseUrl || repositoryUrl
+
 const ClientOnlyWorkerPoolProvider = clientOnly(() =>
   import("@mongolgpt/session-ui/pierre/worker").then((m) => ({
     default: (props: { children: any }) => (
@@ -157,16 +162,24 @@ export default function () {
           const match = createMemo(() => Binary.search(data().session, data().sessionID, (s) => s.id))
           if (!match().found) throw new Error(`Session ${data().sessionID} not found`)
           const info = createMemo(() => data().session[match().index])
-          const ogImage = createMemo(() => "https://mongolgpt.duckdns.org/social-share.png")
+          const ogImage = createMemo(() =>
+            publicBaseUrl ? new URL("/social-share.png", publicBaseUrl).toString() : undefined,
+          )
 
           return (
             <>
               <Show when={info().title}>
                 <Title>{info().title} | MongolGPT</Title>
               </Show>
-              <Meta name="description" content="mongolgpt - The AI coding agent built for the terminal." />
-              <Meta property="og:image" content={ogImage()} />
-              <Meta name="twitter:image" content={ogImage()} />
+              <Meta name="description" content="MongolGPT - Монгол хэлтэй AI код хөгжүүлэлтийн агент." />
+              <Show when={ogImage()}>
+                {(image) => (
+                  <>
+                    <Meta property="og:image" content={image()} />
+                    <Meta name="twitter:image" content={image()} />
+                  </>
+                )}
+              </Show>
               <ClientOnlyWorkerPoolProvider>
                 <FileComponentProvider component={FileSSR}>
                   <DataProvider data={data()} directory={info().directory}>
@@ -251,7 +264,7 @@ export default function () {
                         <div class="relative bg-background-stronger w-screen h-screen overflow-hidden flex flex-col">
                           <header class="h-12 px-6 py-2 flex items-center justify-between self-stretch bg-background-base border-b border-border-weak-base">
                             <div class="">
-                              <a href="https://mongolgpt.duckdns.org">
+                              <a href={productUrl}>
                                 <Mark />
                               </a>
                             </div>
@@ -265,7 +278,7 @@ export default function () {
                               />
                               <IconButton
                                 as={"a"}
-                                href="https://mongolgpt.duckdns.org/discord"
+                                href={communityUrl}
                                 target="_blank"
                                 icon="discord"
                                 variant="ghost"

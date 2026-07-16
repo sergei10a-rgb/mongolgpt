@@ -4,11 +4,13 @@ import { Cause, Clock, Duration, Effect, Schedule } from "effect"
 import { MessageV2 } from "./message-v2"
 import { iife } from "@/util/iife"
 import { isRecord } from "@/util/record"
+import { localConsoleUrl } from "@mongolgpt/core/product"
 
 export type Err = ReturnType<NamedError["toObject"]>
 
-export const GO_UPSELL_MESSAGE = "Free usage exceeded, subscribe to Go"
-export const GO_UPSELL_URL = "https://mongolgpt.duckdns.org/go"
+export const GO_UPSELL_MESSAGE = "Үнэгүй хэрэглээний хязгаарт хүрлээ"
+const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || localConsoleUrl
+export const GO_UPSELL_URL = process.env.MONGOLGPT_GO_URL?.trim() || `${consoleUrl}/go`
 export type RetryReason = "free_tier_limit" | "account_rate_limit" | (string & {})
 
 export type Retryable = {
@@ -79,10 +81,9 @@ export function retryable(error: Err, provider: string) {
         action: {
           reason: "free_tier_limit",
           provider,
-          title: "Free limit reached",
-          message:
-            "Subscribe to MongolGPT Go for reliable access to the best open-source models, starting at $5/month.",
-          label: "subscribe",
+          title: "Үнэгүй хэрэглээний хязгаарт хүрлээ",
+          message: "Үргэлжлүүлэн ашиглахын тулд MongolGPT Go багцыг идэвхжүүлнэ үү.",
+          label: "багц идэвхжүүлэх",
           link: GO_UPSELL_URL,
         },
       }
@@ -90,7 +91,6 @@ export function retryable(error: Err, provider: string) {
     if (error.data.responseBody?.includes("GoUsageLimitError")) {
       const body = parseJSON(error.data.responseBody)
       const workspace = str(body?.metadata?.workspace)
-      const limitName = str(body?.metadata?.limitName)
       const retryAfter = num(error.data.responseHeaders?.["retry-after"])
       const resetIn = iife(() => {
         if (retryAfter === undefined) return ""
@@ -98,29 +98,29 @@ export function retryable(error: Err, provider: string) {
         const days = Math.floor(seconds / 86_400)
         const hours = Math.floor((seconds % 86_400) / 3_600)
         const minutes = Math.ceil((seconds % 3_600) / 60)
-        const unit = (value: number, name: string) => `${value} ${name}${value === 1 ? "" : "s"}`
+        const unit = (value: number, name: string) => `${value} ${name}`
 
-        if (days > 0) return hours > 0 ? `${unit(days, "day")} ${unit(hours, "hour")}` : unit(days, "day")
-        if (hours > 0) return minutes > 0 ? `${unit(hours, "hour")} ${unit(minutes, "minute")}` : unit(hours, "hour")
-        return minutes > 0 ? unit(minutes, "minute") : "less than a minute"
+        if (days > 0) return hours > 0 ? `${unit(days, "өдөр")} ${unit(hours, "цаг")}` : unit(days, "өдөр")
+        if (hours > 0) return minutes > 0 ? `${unit(hours, "цаг")} ${unit(minutes, "минут")}` : unit(hours, "цаг")
+        return minutes > 0 ? unit(minutes, "минут") : "нэг минутаас бага хугацаа"
       })
 
-      const message = `${limitName ? `${limitName} usage limit` : "Usage limit"} reached. It will reset in ${resetIn}. To continue using this model now, enable usage from your available balance`
+      const message = `Хэрэглээний хязгаарт хүрлээ. ${resetIn} дараа шинэчлэгдэнэ. Одоо үргэлжлүүлэхийн тулд үлдэгдлээсээ төлбөртэй хэрэглээг идэвхжүүлнэ үү.`
 
-      const link = `https://mongolgpt.duckdns.org/workspace/${workspace}/go`
+      const link = `${consoleUrl}/workspace/${workspace}/go`
       return {
         message: `${message} - ${link}`,
         action: {
           reason: "account_rate_limit",
           provider,
-          title: "Go limit reached",
+          title: "Go хэрэглээний хязгаарт хүрлээ",
           message,
-          label: "open settings",
+          label: "тохиргоо нээх",
           link,
         },
       }
     }
-    return { message: error.data.message.includes("Overloaded") ? "Provider is overloaded" : error.data.message }
+    return { message: error.data.message.includes("Overloaded") ? "Үйлчилгээ түр ачаалалтай байна" : error.data.message }
   }
 
   // Check for rate limit patterns in plain text error messages
@@ -141,13 +141,13 @@ export function retryable(error: Err, provider: string) {
   const code = typeof json.code === "string" ? json.code : ""
 
   if (json.type === "error" && json.error?.type === "too_many_requests") {
-    return { message: "Too Many Requests" }
+    return { message: "Хэт олон хүсэлт илгээлээ" }
   }
   if (code.includes("exhausted") || code.includes("unavailable")) {
-    return { message: "Provider is overloaded" }
+    return { message: "Үйлчилгээ түр ачаалалтай байна" }
   }
   if (json.type === "error" && typeof json.error?.code === "string" && json.error.code.includes("rate_limit")) {
-    return { message: "Rate Limited" }
+    return { message: "Хүсэлтийн давтамжийн хязгаарт хүрлээ" }
   }
   return undefined
 }

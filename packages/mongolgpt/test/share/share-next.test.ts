@@ -111,7 +111,7 @@ describe("ShareNext", () => {
         Effect.gen(function* () {
           const req = yield* svc.request()
 
-          expect(req.baseUrl).toBe("https://mongolgpt.duckdns.org")
+          expect(req.baseUrl).toBe("http://localhost:3000")
           expect(req.api.create).toBe("/api/share")
           expect(req.headers).toEqual({})
         }),

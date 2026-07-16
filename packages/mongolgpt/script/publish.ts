@@ -182,7 +182,7 @@ if (!Script.preview && !dryRun && !npmOnly) {
 
   // arch
   const binaryPkgbuild = [
-    "# Maintainer: MongolGPT <hello@mongolgpt.duckdns.org>",
+    "# Maintainer: MongolGPT <hello@example.invalid>",
     "",
     "pkgname='mongolgpt-bin'",
     `pkgver=${pkgver}`,

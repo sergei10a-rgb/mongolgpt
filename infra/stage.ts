@@ -1,21 +1,10 @@
-﻿export const domain = (() => {
-  if ($app.stage === "production") return "mongolgpt.duckdns.org"
-  if ($app.stage === "dev") return "dev.mongolgpt.duckdns.org"
-  return `${$app.stage}.dev.mongolgpt.duckdns.org`
-})()
+const rootDomain = process.env.MONGOLGPT_DOMAIN?.trim()
+if (!rootDomain) throw new Error("MONGOLGPT_DOMAIN is required for infrastructure deployment")
 
-export const zoneID = "430ba34c138cfb5360826c4909f99be8"
+export const domain = $app.stage === "production" ? rootDomain : `${$app.stage}.${rootDomain}`
 export const awsStage = $app.stage === "production" ? "production" : "dev"
 export const deployAws = $app.stage === awsStage
 
-new cloudflare.RegionalHostname("RegionalHostname", {
-  hostname: domain,
-  regionKey: "us",
-  zoneId: zoneID,
-})
-
-export const shortDomain = (() => {
-  if ($app.stage === "production") return "mongolgpt.duckdns.org"
-  if ($app.stage === "dev") return "dev.mongolgpt.duckdns.org"
-  return `${$app.stage}.dev.mongolgpt.duckdns.org`
-})()
+export const publicOrigin = `https://${domain}`
+export const docsOrigin = `https://docs.${domain}`
+export const shareOrigin = `https://share.${domain}`

@@ -126,6 +126,18 @@ const initialState: MockState = {
 }
 
 describe("ModelsDev Service", () => {
+  it.live("filters unowned hosted providers unless explicitly enabled", () =>
+    Effect.sync(() => {
+      const providers = {
+        ...fixture,
+        mongolgpt: { ...fixture.acme, id: "mongolgpt" },
+        "mongolgpt-go": { ...fixture.acme, id: "mongolgpt-go" },
+      }
+      expect(ModelsDev.filterHostedProviders(providers, false)).toEqual(fixture)
+      expect(ModelsDev.filterHostedProviders(providers, true)).toEqual(providers)
+    }),
+  )
+
   it.live("get() returns providers from disk when cache file exists", () =>
     Effect.gen(function* () {
       yield* writeCache(fixture)

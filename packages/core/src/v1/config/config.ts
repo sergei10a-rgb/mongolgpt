@@ -4,6 +4,7 @@ import { Schema } from "effect"
 import { NonNegativeInt, PositiveInt, type DeepMutable } from "../../schema"
 import { ConfigExperimental } from "../../config/experimental"
 import { ConfigReference } from "../../config/reference"
+import { documentationRepositoryUrl } from "../../product"
 import { ConfigAgentV1 } from "./agent"
 import { ConfigAttachmentV1 } from "./attachment"
 import { ConfigCommandV1 } from "./command"
@@ -39,7 +40,7 @@ export const Info = Schema.Struct({
     description: "Server configuration for mongolgpt serve and web commands",
   }),
   command: Schema.optional(Schema.Record(Schema.String, ConfigCommandV1.Info)).annotate({
-    description: "Command configuration, see https://mongolgpt.duckdns.org/docs/commands",
+    description: `Командын тохиргоо. Дэлгэрэнгүй: ${documentationRepositoryUrl}/commands.mdx`,
   }),
   skills: Schema.optional(ConfigSkillsV1.Info).annotate({ description: "Additional skill folder paths" }),
   references: Schema.optional(ConfigReference.Info).annotate({
@@ -103,7 +104,7 @@ export const Info = Schema.Struct({
       }),
       [Schema.Record(Schema.String, ConfigAgentV1.Info)],
     ),
-  ).annotate({ description: "Agent configuration, see https://mongolgpt.duckdns.org/docs/agents" }),
+  ).annotate({ description: `Агентын тохиргоо. Дэлгэрэнгүй: ${documentationRepositoryUrl}/agents.mdx` }),
   provider: Schema.optional(Schema.Record(Schema.String, ConfigProviderV1.Info)).annotate({
     description: "Custom provider configurations and model overrides",
   }),

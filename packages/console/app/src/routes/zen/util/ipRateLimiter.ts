@@ -6,21 +6,17 @@ import { localeFromRequest } from "~/lib/language"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 
 export function createRateLimiter(modelId: string, rateLimit: number | undefined, rawIp: string, request: Request) {
-  const dict = i18n(localeFromRequest(request))
+  const locale = localeFromRequest(request)
+  const dict = i18n(locale)
 
   const limits = Subscription.getFreeLimits()
-  // temporarily disable check headers
-  //const headersExist = Object.entries(limits.checkHeaders).every(
-  //  ([name, value]) => request.headers.get(name)?.toLowerCase().includes(value) ?? false,
-  //)
-  //const dailyLimit = !headersExist ? limits.dailyRequestsFallback : (rateLimit ?? limits.dailyRequests)
-  const headersExist = true
-  const dailyLimit = !headersExist ? limits.dailyRequestsFallback : (rateLimit ?? limits.dailyRequests)
-  const isDefaultModel = headersExist && !rateLimit
+  const proxyHeadersVerified = hasVerifiedProxyHeaders(request, limits.checkHeaders)
+  const dailyLimit = proxyHeadersVerified ? (rateLimit ?? limits.dailyRequests) : limits.dailyRequestsFallback
+  const isDefaultModel = proxyHeadersVerified && !rateLimit
 
-  const ip = !rawIp.length ? "unknown" : rawIp
+  const ip = normalizeIdentifier(rawIp)
   const now = Date.now()
-  const dailyInterval = rateLimit ? `${buildYYYYMMDD(now)}${modelId.substring(0, 2)}` : buildYYYYMMDD(now)
+  const dailyInterval = proxyHeadersVerified && rateLimit ? `${buildYYYYMMDD(now)}${modelId.substring(0, 2)}` : buildYYYYMMDD(now)
   const retryAfter = getRetryAfterDay(now)
   const redis = getRedis()
   const lifetimeKey = buildRateLimitKey("ip", ip)
@@ -37,7 +33,7 @@ export function createRateLimiter(modelId: string, rateLimit: number | undefined
       isNew = isDefaultModel && lifetimeCount < dailyLimit * 7
 
       if ((isNew && dailyCount >= dailyLimit * 2) || (!isNew && dailyCount >= dailyLimit))
-        throw new FreeUsageLimitError(dict["zen.api.error.rateLimitExceeded"], retryAfter)
+        throw new FreeUsageLimitError(rateLimitMessage(locale, dict["zen.api.error.rateLimitExceeded"]), retryAfter)
     },
     track: async () => {
       const pipeline = redis.pipeline()
@@ -51,6 +47,28 @@ export function createRateLimiter(modelId: string, rateLimit: number | undefined
 
 export function getRetryAfterDay(now: number) {
   return Math.ceil((86_400_000 - (now % 86_400_000)) / 1000)
+}
+
+function hasVerifiedProxyHeaders(request: Request, checkHeaders: Record<string, string>) {
+  const headers = Object.entries(checkHeaders)
+  if (!headers.length) return false
+
+  return headers.every(([name, value]) => {
+    const actual = request.headers.get(name)
+    if (!actual) return false
+    return actual.toLowerCase().includes(value.toLowerCase())
+  })
+}
+
+function normalizeIdentifier(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return "unknown"
+  return trimmed
+}
+
+function rateLimitMessage(locale: string, fallback: string) {
+  if (locale !== "mn") return fallback
+  return "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Түр хүлээгээд дахин оролдоно уу."
 }
 
 function buildYYYYMMDD(timestamp: number) {

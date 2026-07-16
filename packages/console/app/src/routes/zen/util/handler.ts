@@ -10,7 +10,7 @@ import { Actor } from "@mongolgpt/console-core/actor.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { ZenData } from "@mongolgpt/console-core/model.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
-import { BlackData } from "@mongolgpt/console-core/black.js"
+import { PlanData } from "@mongolgpt/console-core/plan.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { ModelTable } from "@mongolgpt/console-core/schema/model.sql.js"
 import { ProviderTable } from "@mongolgpt/console-core/schema/provider.sql.js"
@@ -24,7 +24,7 @@ import {
   RateLimitError,
   FreeUsageLimitError,
   GoUsageLimitError,
-  BlackUsageLimitError,
+  PlanUsageLimitError,
 } from "./error"
 import {
   buildCostChunk,
@@ -45,6 +45,7 @@ import { LiteData } from "@mongolgpt/console-core/lite.js"
 import { Resource } from "@mongolgpt/console-resource"
 import { i18n, type Key } from "~/i18n"
 import { localeFromRequest } from "~/lib/language"
+import { config } from "~/config"
 import { createModelTpmLimiter } from "./modelTpmLimiter"
 import { createModelTpsLimiter } from "./modelTpsLimiter"
 import { createProviderBudgetTracker } from "./providerBudgetTracker"
@@ -55,7 +56,7 @@ type RetryOptions = {
   excludeProviders: string[]
   retryCount: number
 }
-type BillingSource = "anonymous" | "free" | "byok" | "subscription" | "lite" | "balance"
+type BillingSource = "anonymous" | "free" | "byok" | "plan" | "lite" | "balance"
 
 function resolve(text: string, params?: Record<string, string | number>) {
   if (!params) return text
@@ -64,6 +65,24 @@ function resolve(text: string, params?: Record<string, string | number>) {
     if (value === undefined || value === null) return raw
     return String(value)
   })
+}
+
+function contentByteLength(value: string) {
+  return new TextEncoder().encode(value).byteLength
+}
+
+function consolePath(path: string) {
+  const base = config.baseUrl.replace(/\/+$/, "")
+  return `${base}/${path.replace(/^\/+/, "")}`
+}
+
+function configuredWorkspaceIDs(value: string | undefined) {
+  return new Set(
+    (value ?? "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  )
 }
 
 export async function handler(
@@ -86,11 +105,7 @@ export async function handler(
   const MAX_429_RETRIES = 3
   const dict = i18n(localeFromRequest(input.request))
   const t = (key: Key, params?: Record<string, string | number>) => resolve(dict[key], params)
-  const ADMIN_WORKSPACES = [
-    "wrk_01K46JDFR0E75SG2Q8K172KF3Y", // legacy workspace
-    "wrk_01K6W1A3VE0KMNVSCQT43BG2SX", // benchmark
-    "wrk_01KKZDKDWCS1VTJF8QTX62DD50", // contributors
-  ]
+  const freeWorkspaceIDs = configuredWorkspaceIDs(import.meta.env.MONGOLGPT_FREE_WORKSPACE_IDS)
 
   try {
     const url = input.request.url
@@ -114,7 +129,7 @@ export async function handler(
       client: ocClient,
       user_agent: userAgent,
       "model.variant": variant,
-      "model.tier": opts.modelList === "full" ? "zen" : "go",
+      "model.tier": opts.modelList,
     })
     const zenData = ZenData.list(opts.modelList)
     const modelInfo = validateModel(zenData, model)
@@ -187,8 +202,11 @@ export async function handler(
           })(),
         }),
       )
-      logger.debug("REQUEST URL: " + reqUrl)
-      logger.debug("REQUEST: " + reqBody.substring(0, 300) + "...")
+      const requestLength = contentByteLength(reqBody)
+      logger.metric({
+        request_length: requestLength,
+        request_retry: retry.retryCount,
+      })
       const res = await fetchWith429Retry(reqUrl, {
         method: "POST",
         headers: (() => {
@@ -228,7 +246,6 @@ export async function handler(
       if (res.status !== 200) {
         logger.metric({
           "llm.error.code": res.status,
-          "llm.error.message": res.statusText,
         })
       }
 
@@ -250,10 +267,10 @@ export async function handler(
         })
       }
 
-      return { providerInfo, reqBody, res, startTimestamp }
+      return { providerInfo, res, startTimestamp }
     }
 
-    const { providerInfo, reqBody, res, startTimestamp } = await retriableRequest()
+    const { providerInfo, res, startTimestamp } = await retriableRequest()
 
     // Store sticky provider
     if (res.status === 200) await stickyTracker?.set(providerInfo.id)
@@ -269,7 +286,7 @@ export async function handler(
         resHeaders.set(k, v)
       }
     }
-    logger.debug("STATUS: " + res.status + " " + res.statusText)
+    logger.metric({ response_status: res.status })
 
     // Handle non-streaming response
     if (!isStream || [400, 404, 429].includes(res.status)) {
@@ -286,17 +303,17 @@ export async function handler(
         await reload(billingSource, authInfo, costInfo)
         json.cost = calculateOccurredCost(billingSource, costInfo)
       }
-      if (res.status === 400) {
-        logger.metric({ "error.response": JSON.stringify(json) })
-      }
       if (json.error?.message) {
-        json.error.message = `Error from provider${providerInfo.displayName ? ` (${providerInfo.displayName})` : ""}: ${json.error.message}`
+        json.error.message = t("zen.api.error.providerFailure", {
+          provider: providerInfo.displayName ? ` (${providerInfo.displayName})` : "",
+          message: json.error.message,
+        })
       }
 
       const responseConverter = createResponseConverter(providerInfo.format, opts.format)
       const body = JSON.stringify(responseConverter(json))
-      logger.metric({ response_length: body.length })
-      logger.debug("RESPONSE: " + body)
+      const responseLength = contentByteLength(body)
+      logger.metric({ response_length: responseLength })
       return new Response(body, {
         status: resStatus,
         statusText: res.statusText,
@@ -370,8 +387,6 @@ export async function handler(
               buffer = parts.pop() ?? ""
 
               for (let part of parts) {
-                logger.debug("PART: " + part)
-
                 part = part.trim()
                 usageParser.parse(part)
 
@@ -398,19 +413,10 @@ export async function handler(
       statusText: res.statusText,
       headers: resHeaders,
     })
-  } catch (error: any) {
+  } catch (error) {
     logger.metric({
-      "error.type": error.constructor.name,
-      "error.message": error.message,
-      "error.cause": error.cause?.toString(),
+      "error.type": error instanceof Error ? error.constructor.name : "UnknownError",
     })
-    if (error.message.startsWith("Failed query")) {
-      try {
-        logger.metric({
-          "error.cause2": JSON.stringify(error.cause),
-        })
-      } catch {}
-    }
 
     // Note: both top level "type" and "error.type" fields are used by the @ai-sdk/anthropic client to render the error message.
     if (
@@ -432,7 +438,7 @@ export async function handler(
       error instanceof RateLimitError ||
       error instanceof FreeUsageLimitError ||
       error instanceof GoUsageLimitError ||
-      error instanceof BlackUsageLimitError
+      error instanceof PlanUsageLimitError
     ) {
       const headers = new Headers()
       if (error.retryAfter) {
@@ -462,7 +468,7 @@ export async function handler(
         type: "error",
         error: {
           type: "error",
-          message: "Internal server error",
+          message: t("zen.api.error.internalServer"),
         },
       }),
       { status: 500 },
@@ -489,7 +495,7 @@ export async function handler(
       throw new ModelError(
         `${t("zen.api.error.trialEnded", {
           model: modelData.name,
-          link: "https://mongolgpt.duckdns.org/go",
+          link: consolePath("/go"),
         })}`,
       )
 
@@ -642,12 +648,14 @@ export async function handler(
             monthlyUsage: UserTable.monthlyUsage,
             timeMonthlyUsageUpdated: UserTable.timeMonthlyUsageUpdated,
           },
-          black: {
+          planUsage: {
             id: SubscriptionTable.id,
             rollingUsage: SubscriptionTable.rollingUsage,
             fixedUsage: SubscriptionTable.fixedUsage,
+            weeklyTokens: SubscriptionTable.weeklyTokens,
             timeRollingUpdated: SubscriptionTable.timeRollingUpdated,
             timeFixedUpdated: SubscriptionTable.timeFixedUpdated,
+            timeWeeklyTokensUpdated: SubscriptionTable.timeWeeklyTokensUpdated,
           },
           lite: {
             id: LiteTable.id,
@@ -702,14 +710,12 @@ export async function handler(
     if (
       modelInfo.id.startsWith("alpha-") &&
       Resource.App.stage === "production" &&
-      !ADMIN_WORKSPACES.includes(data.workspaceID)
+      !freeWorkspaceIDs.has(data.workspaceID)
     )
       throw new AuthError(t("zen.api.error.modelNotSupported", { model: modelInfo.id }))
 
     logger.metric({
-      api_key: data.apiKey,
       workspace: data.workspaceID,
-      user_id: data.user.id,
       ...(() => {
         if (data.billing.subscription)
           return {
@@ -728,10 +734,10 @@ export async function handler(
       workspaceID: data.workspaceID,
       billing: data.billing,
       user: data.user,
-      black: data.black,
+      planUsage: data.planUsage,
       lite: data.lite,
       provider: data.provider,
-      isFree: ADMIN_WORKSPACES.includes(data.workspaceID),
+      isFree: freeWorkspaceIDs.has(data.workspaceID),
       isDisabled: !!data.timeDisabled,
     }
   }
@@ -744,29 +750,27 @@ export async function handler(
 
     const formatRetryTime = (seconds: number) => {
       const days = Math.floor(seconds / 86400)
-      if (days >= 1) return `${days} day${days > 1 ? "s" : ""}`
+      if (days >= 1) return `${days} өдөр`
       const hours = Math.floor(seconds / 3600)
       const minutes = Math.ceil((seconds % 3600) / 60)
-      if (hours >= 1) return `${hours}hr ${minutes}min`
-      return `${minutes}min`
+      if (hours >= 1) return `${hours} цаг ${minutes} минут`
+      return `${minutes} минут`
     }
 
-    // Validate black subscription billing
-    if (authInfo.billing.subscription && authInfo.black) {
+    if (authInfo.billing.subscription && authInfo.planUsage) {
       try {
-        const sub = authInfo.black
+        const sub = authInfo.planUsage
         const plan = authInfo.billing.subscription.plan
+        const limits = PlanData.getLimits({ plan })
 
-        // Check weekly limit
         if (sub.fixedUsage && sub.timeFixedUpdated) {
-          const blackData = BlackData.getLimits({ plan })
           const result = Subscription.analyzeWeeklyUsage({
-            limit: blackData.fixedLimit,
+            limit: limits.weeklyCostLimit,
             usage: sub.fixedUsage,
             timeUpdated: sub.timeFixedUpdated,
           })
           if (result.status === "rate-limited")
-            throw new BlackUsageLimitError(
+            throw new PlanUsageLimitError(
               t("zen.api.error.subscriptionQuotaExceeded", {
                 retryIn: formatRetryTime(result.resetInSec),
               }),
@@ -774,17 +778,30 @@ export async function handler(
             )
         }
 
-        // Check rolling limit
+        if (sub.weeklyTokens && sub.timeWeeklyTokensUpdated) {
+          const result = Subscription.analyzeWeeklyTokens({
+            limit: limits.weeklyTokenLimit,
+            usage: sub.weeklyTokens,
+            timeUpdated: sub.timeWeeklyTokensUpdated,
+          })
+          if (result.status === "rate-limited")
+            throw new PlanUsageLimitError(
+              t("zen.api.error.subscriptionQuotaExceeded", {
+                retryIn: formatRetryTime(result.resetInSec),
+              }),
+              result.resetInSec,
+            )
+        }
+
         if (sub.rollingUsage && sub.timeRollingUpdated) {
-          const blackData = BlackData.getLimits({ plan })
           const result = Subscription.analyzeRollingUsage({
-            limit: blackData.rollingLimit,
-            window: blackData.rollingWindow,
+            limit: limits.rollingCostLimit,
+            window: limits.rollingWindow,
             usage: sub.rollingUsage,
             timeUpdated: sub.timeRollingUpdated,
           })
           if (result.status === "rate-limited")
-            throw new BlackUsageLimitError(
+            throw new PlanUsageLimitError(
               t("zen.api.error.subscriptionQuotaExceeded", {
                 retryIn: formatRetryTime(result.resetInSec),
               }),
@@ -792,7 +809,7 @@ export async function handler(
             )
         }
 
-        return "subscription"
+        return "plan"
       } catch (e) {
         if (!authInfo.billing.subscription.useBalance) throw e
       }
@@ -801,7 +818,7 @@ export async function handler(
     // Validate lite subscription billing
     if (opts.modelList === "lite" && authInfo.billing.lite && authInfo.lite) {
       try {
-        const consoleGoUrl = `https://mongolgpt.duckdns.org/workspace/${authInfo.workspaceID}/go`
+        const consoleGoUrl = consolePath(`/workspace/${encodeURIComponent(authInfo.workspaceID)}/go`)
         const sub = authInfo.lite
         const liteData = LiteData.getLimits()
 
@@ -872,8 +889,9 @@ export async function handler(
 
     // Validate pay as you go billing
     const billing = authInfo.billing
-    const billingUrl = `https://mongolgpt.duckdns.org/workspace/${authInfo.workspaceID}/billing`
-    const membersUrl = `https://mongolgpt.duckdns.org/workspace/${authInfo.workspaceID}/members`
+    const workspacePath = `/workspace/${encodeURIComponent(authInfo.workspaceID)}`
+    const billingUrl = consolePath(`${workspacePath}/billing`)
+    const membersUrl = consolePath(`${workspacePath}/members`)
     if (!billing.paymentMethodID && billing.balance <= 0)
       throw new CreditsError(t("zen.api.error.noPaymentMethod", { billingUrl }))
     if (billing.balance <= 0) throw new CreditsError(t("zen.api.error.insufficientBalance", { billingUrl }))
@@ -1015,12 +1033,19 @@ export async function handler(
     authInfo = authInfo!
 
     const cost = centsToMicroCents(totalCostInCent)
+    const totalTokens =
+      inputTokens +
+      outputTokens +
+      (reasoningTokens ?? 0) +
+      (cacheReadTokens ?? 0) +
+      (cacheWrite5mTokens ?? 0) +
+      (cacheWrite1hTokens ?? 0)
 
     // For hot workspaces, batch balance/usage updates through Redis to avoid
     // row-level lock contention on BillingTable/UserTable. Returns the amount
     // to flush this request, or null to skip the DB writes entirely.
     const balanceFlush = await (async () => {
-      if (billingSource !== "subscription" && billingSource !== "lite" && HOT_WORKSPACES.has(authInfo.workspaceID)) {
+      if (billingSource !== "plan" && billingSource !== "lite" && HOT_WORKSPACES.has(authInfo.workspaceID)) {
         const workspaceCost = billingSource === "free" || billingSource === "byok" ? 0 : cost
         const flush = await accumulateUsage(authInfo.workspaceID, authInfo.user.id, workspaceCost, cost)
         return { batched: true as const, flush }
@@ -1045,18 +1070,19 @@ export async function handler(
           keyID: authInfo.apiKeyId,
           sessionID: sessionId.substring(0, 30),
           enrichment: (() => {
-            if (billingSource === "subscription") return { plan: "sub" }
+            if (billingSource === "plan") return { plan: authInfo.billing.subscription!.plan }
             if (billingSource === "byok") return { plan: "byok" }
-            if (billingSource === "lite") return { plan: "lite" }
+            if (billingSource === "lite") return { plan: "legacy-lite" }
+            if (billingSource === "balance") return { plan: "balance" }
             return undefined
           })(),
         }),
         ...(() => {
-          if (billingSource === "subscription") {
+          if (billingSource === "plan") {
             const plan = authInfo.billing.subscription!.plan
-            const black = BlackData.getLimits({ plan })
+            const limits = PlanData.getLimits({ plan })
             const week = getWeekBounds(new Date())
-            const rollingWindowSeconds = black.rollingWindow * 3600
+            const rollingWindowSeconds = limits.rollingWindow * 3600
             return [
               db
                 .update(SubscriptionTable)
@@ -1068,6 +1094,13 @@ export async function handler(
               END
             `,
                   timeFixedUpdated: sql`now()`,
+                  weeklyTokens: sql`
+              CASE
+                WHEN ${SubscriptionTable.timeWeeklyTokensUpdated} >= ${week.start} THEN COALESCE(${SubscriptionTable.weeklyTokens}, 0) + ${totalTokens}
+                ELSE ${totalTokens}
+              END
+            `,
+                  timeWeeklyTokensUpdated: sql`now()`,
                   rollingUsage: sql`
               CASE
                 WHEN UNIX_TIMESTAMP(${SubscriptionTable.timeRollingUpdated}) >= UNIX_TIMESTAMP(now()) - ${rollingWindowSeconds} THEN ${SubscriptionTable.rollingUsage} + ${cost}

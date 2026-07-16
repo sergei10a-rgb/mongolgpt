@@ -7,7 +7,7 @@
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "dev": "vite dev --host 0.0.0.0",
-    "dev:remote": "VITE_AUTH_URL=https://mongolgpt.duckdns.org/auth/dev VITE_STRIPE_PUBLISHABLE_KEY=pk_test_51RtuLNE7fOCwHSD4mewwzFejyytjdGoSDK7CAvhbffwaZnPbNb2rwJICw6LTOXCmWO320fSNXvb5NzI08RZVkAxd00syfqrW7t bun sst shell --stage=dev bun dev",
+    "dev:remote": "vite dev --host 0.0.0.0",
     "build": "bun ./script/generate-sitemap.ts && vite build && bun ../../mongolgpt/script/schema.ts ./.output/public/config.json ./.output/public/tui.json",
     "start": "vite start"
   },

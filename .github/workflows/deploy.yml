@@ -1,11 +1,21 @@
 name: deploy
 
 on:
-  push:
-    branches:
-      - dev
-      - production
   workflow_dispatch:
+    inputs:
+      stage:
+        description: "Deploy хийх орчин"
+        required: true
+        type: choice
+        default: "dev"
+        options:
+          - dev
+          - production
+      hosted_services:
+        description: "Gateway, account, billing, enterprise үйлчилгээг зориуд асаах"
+        required: true
+        type: boolean
+        default: false
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -15,9 +25,9 @@ permissions:
 
 jobs:
   deploy:
-    if: github.repository == 'sergei10a-rgb/mongolgpt' && (github.ref_name == 'dev' || github.ref_name == 'production')
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && vars.MONGOLGPT_DOMAIN != ''
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name }}
+    environment: ${{ inputs.stage }}
     steps:
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
 
@@ -28,17 +38,20 @@ jobs:
           node-version: "24"
 
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        if: inputs.hosted_services
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           role-session-name: mongolgpt-${{ github.run_id }}
           aws-region: us-east-1
 
-      - run: bun sst deploy --stage=${{ github.ref_name }}
+      - run: bun sst deploy --stage=${{ inputs.stage }}
         env:
+          MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+          MONGOLGPT_ENABLE_HOSTED_SERVICES: ${{ inputs.hosted_services }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           PLANETSCALE_SERVICE_TOKEN_NAME: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_NAME }}
           PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
-          STRIPE_SECRET_KEY: ${{ github.ref_name == 'production' && secrets.STRIPE_SECRET_KEY_PROD || secrets.STRIPE_SECRET_KEY_DEV }}
+          STRIPE_SECRET_KEY: ${{ inputs.stage == 'production' && secrets.STRIPE_SECRET_KEY_PROD || secrets.STRIPE_SECRET_KEY_DEV }}
           HONEYCOMB_API_KEY: ${{ secrets.HONEYCOMB_API_KEY }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}

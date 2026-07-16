@@ -1,10 +1,10 @@
 import { SECRET } from "./secret"
-import { shortDomain } from "./stage"
+import { domain, publicOrigin } from "./stage"
 
 const storage = new sst.cloudflare.Bucket("EnterpriseStorage")
 
-new sst.cloudflare.x.SolidStart("Teams", {
-  domain: shortDomain,
+export const teams = new sst.cloudflare.x.SolidStart("Teams", {
+  domain: `share.${domain}`,
   path: "packages/enterprise",
   buildCommand: "bun run build:cloudflare",
   link: [SECRET.SupportApiKey],
@@ -14,5 +14,7 @@ new sst.cloudflare.x.SolidStart("Teams", {
     MONGOLGPT_STORAGE_ACCESS_KEY_ID: SECRET.R2AccessKey.value,
     MONGOLGPT_STORAGE_SECRET_ACCESS_KEY: SECRET.R2SecretKey.value,
     MONGOLGPT_STORAGE_BUCKET: storage.name,
+    VITE_MONGOLGPT_PUBLIC_URL: publicOrigin,
+    VITE_MONGOLGPT_COMMUNITY_URL: "https://github.com/sergei10a-rgb/mongolgpt/discussions",
   },
 })

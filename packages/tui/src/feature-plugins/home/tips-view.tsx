@@ -167,7 +167,7 @@ const TIPS: Tip[] = [
   (shortcuts) => press(shortcuts.agentCycle(), "Build ба Plan агентуудын хооронд шилжинэ"),
   "{highlight}/undo{/highlight} ашиглаж сүүлийн мессеж болон файлын өөрчлөлтийг буцаана",
   "{highlight}/redo{/highlight} ашиглаж өмнө буцаасан мессеж, файлын өөрчлөлтийг сэргээнэ",
-  "{highlight}/share{/highlight} ажиллуулж mongolgpt.duckdns.org дээрх яриандаа public link үүсгэнэ",
+  "{highlight}/share{/highlight} ажиллуулж өөрийн тохируулсан share серверт ярианы холбоос үүсгэнэ",
   "Зураг эсвэл PDF файлыг терминал руу чирж тавиад контекст болгон нэмнэ",
   (shortcuts) => press(shortcuts.inputPaste(), "clipboard дахь зургаа prompt руу наана"),
   (shortcuts) => `${commandText("/editor", shortcuts.editorOpen())} ашиглаж гадаад editor дээр мессеж бичнэ`,

@@ -11,7 +11,7 @@ export const ZenmuxPlugin = define({
           if (item.provider.api.package !== "@ai-sdk/openai-compatible") continue
           if (item.provider.api.url !== "https://zenmux.ai/api/v1") continue
           evt.provider.update(item.provider.id, (provider) => {
-            provider.request.headers["HTTP-Referer"] ??= "https://mongolgpt.duckdns.org/"
+            provider.request.headers["HTTP-Referer"] ??= "https://github.com/sergei10a-rgb/mongolgpt"
             provider.request.headers["X-Title"] ??= "MongolGPT"
           })
         }

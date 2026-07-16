@@ -1,45 +1,45 @@
-# MongolGPT docs
+# MongolGPT баримт бичиг
 
-Энэ package нь [mongolgpt.duckdns.org/docs](https://mongolgpt.duckdns.org/docs/) дээрх active Starlight docs site-ийн source юм.
+Энэ багц нь MongolGPT-ийн Starlight-д суурилсан баримт бичгийн сайтын идэвхтэй эх код юм.
 
 ## Хаана юу байдаг вэ
 
-- `src/content/docs/` - `/docs/` дээр гарах үндсэн Монгол баримт бичиг
-- `src/content/docs/mn/` - хуучин `/docs/mn/` холбоосын нийцтэй Монгол хуулбар
-- `astro.config.mjs` - Starlight sidebar, locale, theme тохиргоо
-- `public/` - docs site static assets
+- `src/content/docs/` - `/docs/` хаягаар гарах Монгол хэлний үндсэн баримт бичиг
+- `src/content/docs/mn/` - хуучин `/docs/mn/` холбоостой нийцүүлэх Монгол хуулбар
+- `astro.config.mjs` - Starlight-ийн хажуугийн цэс, хэл, загварын тохиргоо
+- `public/` - баримт бичгийн сайтын статик файлууд
 
-`packages/docs/` дотор байсан Mintlify starter template-ийг repo-оос хассан. MongolGPT-ийн идэвхтэй docs source нь энэ package.
+`packages/docs/` дотор байсан Mintlify-ийн суурь загварыг репогоос хассан. MongolGPT-ийн идэвхтэй баримт бичгийн эх код энэ багцад байна.
 
-## Local дээр ажиллуулах
+## Локал орчинд ажиллуулах
 
-Repository root-оос:
+Репогийн үндсэн хавтсаас:
 
 ```bash
 bun run dev:docs
 ```
 
-Энэ package дотроос:
+Эсвэл ижил хөгжүүлэлтийн серверийг дараах командаар ажиллуулж болно:
 
 ```bash
 bun --cwd packages/web dev
 ```
 
-Build шалгах:
+Төслийг бүтээж шалгах:
 
 ```bash
 bun run build:docs
 ```
 
-## Монгол docs бичих зарчим
+## Монгол баримт бичиг бичих зарчим
 
 - Монгол хэрэглэгчид шууд ойлгох хэллэг ашиглана.
-- Нийтлэгдээгүй package, installer, marketplace зүйлийг ажиллаж байгаа мэт бичихгүй.
-- Command, config key, package name, URL-ийг орчуулалгүй үлдээнэ.
-- Compatibility эсвэл legacy alias-ыг зөвхөн шаардлагатай үед “хуучин тохиргооны нийцтэй байдал” гэж тайлбарлана.
+- Нийтлэгдээгүй багц, суулгагч эсвэл өргөтгөлийн дэлгүүрийн зүйлийг ажиллаж байгаа мэт бичихгүй.
+- Команд, тохиргооны түлхүүр, багцын нэр, орчны хувьсагчийн нэр болон URL-ийг орчуулалгүй үлдээнэ.
+- Нийцтэй байдал эсвэл хуучин нэршлийг зөвхөн шаардлагатай үед “хуучин тохиргооны нийцтэй байдал” гэж тайлбарлана.
 
 ## Гол холбоосууд
 
-- Монгол docs: [https://mongolgpt.duckdns.org/docs/](https://mongolgpt.duckdns.org/docs/)
-- Releases: [https://github.com/sergei10a-rgb/mongolgpt/releases](https://github.com/sergei10a-rgb/mongolgpt/releases)
-- Source: [https://github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)
+- Монгол баримт бичгийн эх код: [packages/web/src/content/docs](https://github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs)
+- Хувилбарууд: [github.com/sergei10a-rgb/mongolgpt/releases](https://github.com/sergei10a-rgb/mongolgpt/releases)
+- Эх кодын сан: [github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)

@@ -22,9 +22,13 @@ export namespace AWS {
       to: z.string(),
       subject: z.string(),
       body: z.string(),
+      from: z.string().optional(),
       replyTo: z.string().optional(),
     }),
     async (input) => {
+      const from = input.from ?? process.env.MONGOLGPT_SES_FROM_EMAIL
+      if (!from) throw new Error("MONGOLGPT_SES_FROM_EMAIL is required before sending email")
+
       const res = await createClient().fetch("https://email.us-east-1.amazonaws.com/v2/email/outbound-emails", {
         method: "POST",
         headers: {
@@ -32,7 +36,7 @@ export namespace AWS {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          FromEmailAddress: `MongolGPT Zen <contact@mongolgpt.duckdns.org>`,
+          FromEmailAddress: from,
           Destination: {
             ToAddresses: [input.to],
           },

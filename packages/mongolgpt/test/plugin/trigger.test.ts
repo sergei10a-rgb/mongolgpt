@@ -53,7 +53,7 @@ function withProject<A, E, R>(source: string, self: Effect.Effect<A, E, R>) {
             path.join(test.directory, "mongolgpt.json"),
             JSON.stringify(
               {
-                $schema: "https://mongolgpt.duckdns.org/config.json",
+                $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json",
                 plugin: [pathToFileURL(file).href],
               },
               null,

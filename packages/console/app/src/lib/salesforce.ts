@@ -22,7 +22,7 @@ async function login() {
   if (!res) return
 
   if (!res.ok) {
-    console.error("Failed to fetch Salesforce access token:", res.status, await res.text())
+    console.error("Failed to fetch Salesforce access token:", res.status, res.statusText)
     return
   }
 
@@ -73,7 +73,7 @@ export async function createLead(input: SalesforceLeadInput): Promise<boolean> {
   if (!res) return false
 
   if (!res.ok) {
-    console.error("Failed to create Salesforce lead:", res.status, await res.text())
+    console.error("Failed to create Salesforce lead:", res.status, res.statusText)
     return false
   }
 

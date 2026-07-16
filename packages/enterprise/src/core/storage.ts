@@ -15,7 +15,7 @@ export namespace Storage {
       async read(path: string): Promise<string | undefined> {
         const response = await client.fetch(`${base}/${path}`)
         if (response.status === 404) return undefined
-        if (!response.ok) throw new Error(`Failed to read ${path}: ${response.status}`)
+        if (!response.ok) throw new Error(`${path}-г уншиж чадсангүй: ${response.status}`)
         return response.text()
       },
 
@@ -27,14 +27,14 @@ export namespace Storage {
             "Content-Type": "application/json",
           },
         })
-        if (!response.ok) throw new Error(`Failed to write ${path}: ${response.status}`)
+        if (!response.ok) throw new Error(`${path}-г хадгалж чадсангүй: ${response.status}`)
       },
 
       async remove(path: string): Promise<void> {
         const response = await client.fetch(`${base}/${path}`, {
           method: "DELETE",
         })
-        if (!response.ok) throw new Error(`Failed to remove ${path}: ${response.status}`)
+        if (!response.ok) throw new Error(`${path}-г устгаж чадсангүй: ${response.status}`)
       },
 
       async list(options?: { prefix?: string; limit?: number; after?: string; before?: string }): Promise<string[]> {
@@ -46,7 +46,7 @@ export namespace Storage {
           params.set("start-after", afterPath)
         }
         const response = await client.fetch(`${base}?${params}`)
-        if (!response.ok) throw new Error(`Failed to list ${prefix}: ${response.status}`)
+        if (!response.ok) throw new Error(`${prefix} жагсаалтыг авч чадсангүй: ${response.status}`)
         const xml = await response.text()
         const keys: string[] = []
         const regex = /<Key>([^<]+)<\/Key>/g
@@ -83,11 +83,44 @@ export namespace Storage {
     return createAdapter(client, `https://${accountId}.r2.cloudflarestorage.com`, process.env.MONGOLGPT_STORAGE_BUCKET!)
   }
 
+  function memory(): Adapter {
+    const store = new Map<string, string>()
+    return {
+      async read(path) {
+        return store.get(path)
+      },
+      async write(path, value) {
+        store.set(path, value)
+      },
+      async remove(path) {
+        store.delete(path)
+      },
+      async list(options) {
+        const prefix = options?.prefix || ""
+        let keys = [...store.keys()].filter((key) => key.startsWith(prefix)).sort()
+        if (options?.after) {
+          const afterPath = prefix + options.after + ".json"
+          keys = keys.filter((key) => key > afterPath)
+        }
+        if (options?.before) {
+          const beforePath = prefix + options.before + ".json"
+          keys = keys.filter((key) => key < beforePath)
+        }
+        return keys.slice(0, options?.limit)
+      },
+    }
+  }
+
   const adapter = lazy(() => {
     const type = process.env.MONGOLGPT_STORAGE_ADAPTER
+    if (type === "memory") {
+      if (process.env.NODE_ENV !== "test")
+        throw new Error("Санах ойн хадгалалтыг зөвхөн туршилтын орчинд ашиглана")
+      return memory()
+    }
     if (type === "r2") return r2()
     if (type === "s3") return s3()
-    throw new Error("No storage adapter configured")
+    throw new Error("Хадгалалтын тохиргоо хийгдээгүй байна")
   })
 
   function resolve(key: string[]) {
@@ -121,7 +154,7 @@ export namespace Storage {
 
   export async function update<T>(key: string[], fn: (draft: T) => void) {
     const val = await read<T>(key)
-    if (!val) throw new Error("Not found")
+    if (!val) throw new Error("Олдсонгүй")
     fn(val)
     await write(key, val)
     return val

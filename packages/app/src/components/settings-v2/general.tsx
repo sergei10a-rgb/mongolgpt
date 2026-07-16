@@ -29,6 +29,7 @@ import { Link } from "../link"
 import { SettingsListV2 } from "./parts/list"
 import { SettingsRowV2 } from "./parts/row"
 import "./settings-v2.css"
+import { documentationUrl } from "@/product"
 
 let demoSoundState = {
   cleanup: undefined as (() => void) | undefined,
@@ -435,7 +436,7 @@ export const SettingsGeneralV2: Component<{
           description={
             <>
               {language.t("settings.general.row.theme.description")}{" "}
-              <Link class="settings-v2-link" href="https://mongolgpt.duckdns.org/docs/themes/">
+              <Link class="settings-v2-link" href={documentationUrl("themes/")}>
                 {language.t("common.learnMore")}
               </Link>
             </>

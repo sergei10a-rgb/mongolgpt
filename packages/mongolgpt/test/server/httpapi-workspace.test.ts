@@ -406,7 +406,9 @@ describe("workspace HttpApi", () => {
             "content-type": "application/json",
             "x-mongolgpt-workspace": "internal",
           },
-          body: JSON.stringify({ $schema: "https://mongolgpt.duckdns.org/config.json" }),
+          body: JSON.stringify({
+            $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json",
+          }),
         })
 
         const responseBody = yield* response.text
@@ -423,7 +425,9 @@ describe("workspace HttpApi", () => {
               "content-type": "application/json",
               "x-target-auth": "secret",
             }),
-            body: JSON.stringify({ $schema: "https://mongolgpt.duckdns.org/config.json" }),
+            body: JSON.stringify({
+              $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json",
+            }),
           },
         ])
         expect(forwarded[0]?.headers).not.toHaveProperty("x-mongolgpt-directory")

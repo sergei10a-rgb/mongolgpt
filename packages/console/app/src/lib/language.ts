@@ -75,25 +75,25 @@ const TAG = {
 } satisfies Record<Locale, string>
 
 const DOCS = {
-  mn: "mn",
+  mn: "root",
   en: "root",
-  zh: "zh-cn",
-  zht: "zh-tw",
-  ko: "ko",
-  de: "de",
-  es: "es",
-  fr: "fr",
-  it: "it",
-  da: "da",
-  ja: "ja",
-  pl: "pl",
-  ru: "ru",
-  uk: "uk",
-  ar: "ar",
-  no: "nb",
-  br: "pt-br",
-  th: "th",
-  tr: "tr",
+  zh: "root",
+  zht: "root",
+  ko: "root",
+  de: "root",
+  es: "root",
+  fr: "root",
+  it: "root",
+  da: "root",
+  ja: "root",
+  pl: "root",
+  ru: "root",
+  uk: "root",
+  ar: "root",
+  no: "root",
+  br: "root",
+  th: "root",
+  tr: "root",
 } satisfies Record<Locale, string>
 
 const DOCS_SEGMENT = new Set([
@@ -101,6 +101,7 @@ const DOCS_SEGMENT = new Set([
   "bs",
   "da",
   "de",
+  "en",
   "es",
   "fr",
   "it",
@@ -163,9 +164,12 @@ export function docs(locale: Locale, pathname: string) {
   }
 
   if (value === "root") {
-    if (next.path === "/docs/en") return `/docs${next.suffix}`
-    if (next.path === "/docs/en/") return `/docs/${next.suffix}`
-    if (next.path.startsWith("/docs/en/")) return `/docs/${next.path.slice("/docs/en/".length)}${next.suffix}`
+    const rest = next.path.slice("/docs/".length)
+    const head = rest.split("/")[0] ?? ""
+    if (DOCS_SEGMENT.has(head)) {
+      const tail = rest.slice(head.length)
+      return `/docs${tail}${next.suffix}`
+    }
     return `${next.path}${next.suffix}`
   }
 

@@ -1,34 +1,34 @@
-# mongolgpt VS Code Extension
+# MongolGPT VS Code өргөтгөл
 
-A Visual Studio Code extension that integrates [mongolgpt](https://mongolgpt.duckdns.org) directly into your development workflow.
+Visual Studio Code-д [MongolGPT](https://github.com/sergei10a-rgb/mongolgpt)-ийг шууд нэгтгэх өргөтгөл.
 
-## Prerequisites
+## Урьдчилсан шаардлага
 
-This extension requires the [mongolgpt CLI](https://mongolgpt.duckdns.org) to be installed on your system. Visit [mongolgpt.duckdns.org](https://mongolgpt.duckdns.org) for installation instructions.
+Энэ өргөтгөлийг ашиглахын өмнө [MongolGPT CLI](https://github.com/sergei10a-rgb/mongolgpt#local-дээр-ажиллуулах)-г суулгасан байх шаардлагатай.
 
-## Features
+## Боломжууд
 
-- **Quick Launch**: Use `Cmd+Esc` (Mac) or `Ctrl+Esc` (Windows/Linux) to open mongolgpt in a split terminal view, or focus an existing terminal session if one is already running.
-- **New Session**: Use `Cmd+Shift+Esc` (Mac) or `Ctrl+Shift+Esc` (Windows/Linux) to start a new mongolgpt terminal session, even if one is already open. You can also click the mongolgpt button in the UI.
-- **Context Awareness**: Automatically share your current selection or tab with mongolgpt.
-- **File Reference Shortcuts**: Use `Cmd+Option+K` (Mac) or `Alt+Ctrl+K` (Linux/Windows) to insert file references. For example, `@File#L37-42`.
+- **Хурдан нээх**: `Cmd+Esc` (Mac) эсвэл `Ctrl+Esc` (Windows/Linux) дарж MongolGPT-ийг терминалын хуваасан хэсэгт нээнэ. Аль хэдийн ажиллаж буй терминал байвал түүн рүү шилжинэ.
+- **Шинэ сесс**: MongolGPT-ийн терминал нээлттэй байсан ч `Cmd+Shift+Esc` (Mac) эсвэл `Ctrl+Shift+Esc` (Windows/Linux) дарж шинэ сесс эхлүүлнэ. Мөн интерфэйс дэх MongolGPT товчийг дарж болно.
+- **Контекст дамжуулах**: Одоогийн сонголт эсвэл нээлттэй табыг MongolGPT-д автоматаар дамжуулна.
+- **Файлын лавлагааны товчлол**: `Cmd+Option+K` (Mac) эсвэл `Alt+Ctrl+K` (Linux/Windows) дарж файлын лавлагаа оруулна. Жишээ нь `@File#L37-42`.
 
-## Support
+## Тусламж
 
-This is an early release. If you encounter issues or have feedback, please create an issue at https://github.com/sergei10a-rgb/mongolgpt/issues.
+Энэ бол эхний хувилбар. Асуудал гарвал эсвэл санал хүсэлт байвал https://github.com/sergei10a-rgb/mongolgpt/issues хаягаар шинэ асуудал бүртгүүлнэ үү.
 
-## Development
+## Хөгжүүлэлт
 
-1. `code sdks/vscode` - Open the `sdks/vscode` directory in VS Code. **Do not open from repo root.**
-2. `bun install` - Run inside the `sdks/vscode` directory.
-3. Press `F5` to start debugging - This launches a new VS Code window with the extension loaded.
+1. `code sdks/vscode` - `sdks/vscode` хавтсыг VS Code-д нээнэ. **Репогийн үндсэн хавтсаас нээж болохгүй.**
+2. `bun install` - `sdks/vscode` хавтас дотор ажиллуулна.
+3. `F5` дарж дибаг хийж эхэлнэ. Өргөтгөлийг ачаалсан шинэ VS Code цонх нээгдэнэ.
 
-#### Making Changes
+#### Өөрчлөлт хийх
 
-`tsc` and `esbuild` watchers run automatically during debugging (visible in the Terminal tab). Changes to the extension are automatically rebuilt in the background.
+`tsc` болон `esbuild`-ийн файл ажиглагчид дибаг хийх үед автоматаар ажиллана (`Terminal` табаас харж болно). Өргөтгөлийн өөрчлөлтүүдийг арын горимд автоматаар дахин бүтээнэ.
 
-To test your changes:
+Өөрчлөлтөө шалгахын тулд:
 
-1. In the debug VS Code window, press `Cmd+Shift+P`
-2. Search for `Developer: Reload Window`
-3. Reload to see your changes without restarting the debug session
+1. Дибаг хийж буй VS Code цонхонд `Cmd+Shift+P` дарна.
+2. `Developer: Reload Window` гэж хайна.
+3. Дибагийн ажиллагааг дахин эхлүүлэхгүйгээр өөрчлөлтөө харахын тулд цонхыг дахин ачаална.

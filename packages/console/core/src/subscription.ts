@@ -5,6 +5,13 @@ import { getWeekBounds, getMonthlyBounds } from "./util/date"
 import { Resource } from "@mongolgpt/console-resource"
 
 export namespace Subscription {
+  const PlanLimitSchema = z.object({
+    weeklyCostLimit: z.number().int().positive(),
+    weeklyTokenLimit: z.number().int().positive(),
+    rollingCostLimit: z.number().int().positive(),
+    rollingWindow: z.number().int().positive(),
+  })
+
   const LimitsSchema = z.object({
     free: z.object({
       promoTokens: z.number().int(),
@@ -18,22 +25,10 @@ export namespace Subscription {
       weeklyLimit: z.number().int(),
       monthlyLimit: z.number().int(),
     }),
-    black: z.object({
-      "20": z.object({
-        fixedLimit: z.number().int(),
-        rollingLimit: z.number().int(),
-        rollingWindow: z.number().int(),
-      }),
-      "100": z.object({
-        fixedLimit: z.number().int(),
-        rollingLimit: z.number().int(),
-        rollingWindow: z.number().int(),
-      }),
-      "200": z.object({
-        fixedLimit: z.number().int(),
-        rollingLimit: z.number().int(),
-        rollingWindow: z.number().int(),
-      }),
+    plans: z.object({
+      basic: PlanLimitSchema,
+      pro: PlanLimitSchema,
+      max: PlanLimitSchema,
     }),
   })
 
@@ -42,7 +37,7 @@ export namespace Subscription {
   })
 
   export const getLimits = fn(z.void(), () => {
-    const json = JSON.parse(Resource.ZEN_LIMITS.value)
+    const json = JSON.parse(Resource.MONGOLGPT_PLAN_LIMITS.value)
     return LimitsSchema.parse(json)
   })
 
@@ -111,6 +106,37 @@ export namespace Subscription {
         }
       }
 
+      return {
+        status: "rate-limited" as const,
+        resetInSec: Math.ceil((week.end.getTime() - now.getTime()) / 1000),
+        usagePercent: 100,
+      }
+    },
+  )
+
+  export const analyzeWeeklyTokens = fn(
+    z.object({
+      limit: z.number().int().positive(),
+      usage: z.number().int().nonnegative(),
+      timeUpdated: z.date(),
+    }),
+    ({ limit, usage, timeUpdated }) => {
+      const now = new Date()
+      const week = getWeekBounds(now)
+      if (timeUpdated < week.start) {
+        return {
+          status: "ok" as const,
+          resetInSec: Math.ceil((week.end.getTime() - now.getTime()) / 1000),
+          usagePercent: 0,
+        }
+      }
+      if (usage < limit) {
+        return {
+          status: "ok" as const,
+          resetInSec: Math.ceil((week.end.getTime() - now.getTime()) / 1000),
+          usagePercent: Math.floor(Math.min(100, (usage / limit) * 100)),
+        }
+      }
       return {
         status: "rate-limited" as const,
         resetInSec: Math.ceil((week.end.getTime() - now.getTime()) / 1000),

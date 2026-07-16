@@ -13,7 +13,10 @@ import {
 import { timestamps, ulid, utc, workspaceColumns } from "../drizzle/types"
 import { workspaceIndexes } from "./workspace.sql"
 
-export const BlackPlans = ["20", "100", "200"] as const
+export const PlanNames = ["basic", "pro", "max"] as const
+export const LegacyPlanCodes = ["20", "100", "200"] as const
+/** @deprecated Legacy maintenance scripts only. */
+export const BlackPlans = LegacyPlanCodes
 export const BillingTable = mysqlTable(
   "billing",
   {
@@ -36,12 +39,12 @@ export const BillingTable = mysqlTable(
     subscription: json("subscription").$type<{
       status: "subscribed"
       seats: number
-      plan: (typeof BlackPlans)[number]
+      plan: (typeof PlanNames)[number]
       useBalance?: boolean
       coupon?: string
     }>(),
     subscriptionID: varchar("subscription_id", { length: 28 }),
-    subscriptionPlan: mysqlEnum("subscription_plan", BlackPlans),
+    subscriptionPlan: mysqlEnum("subscription_plan", PlanNames),
     timeSubscriptionBooked: utc("time_subscription_booked"),
     timeSubscriptionSelected: utc("time_subscription_selected"),
     liteSubscriptionID: varchar("lite_subscription_id", { length: 28 }),
@@ -64,8 +67,10 @@ export const SubscriptionTable = mysqlTable(
     userID: ulid("user_id").notNull(),
     rollingUsage: bigint("rolling_usage", { mode: "number" }),
     fixedUsage: bigint("fixed_usage", { mode: "number" }),
+    weeklyTokens: bigint("weekly_tokens", { mode: "number" }),
     timeRollingUpdated: utc("time_rolling_updated"),
     timeFixedUpdated: utc("time_fixed_updated"),
+    timeWeeklyTokensUpdated: utc("time_weekly_tokens_updated"),
   },
   (table) => [...workspaceIndexes(table), uniqueIndex("workspace_user_id").on(table.workspaceID, table.userID)],
 )
@@ -127,7 +132,7 @@ export const UsageTable = mysqlTable(
     keyID: ulid("key_id"),
     sessionID: varchar("session_id", { length: 30 }),
     enrichment: json("enrichment").$type<{
-      plan: "sub" | "byok" | "lite"
+      plan: (typeof PlanNames)[number] | "byok" | "legacy-lite" | "balance"
     }>(),
   },
   (table) => [...workspaceIndexes(table), index("usage_time_created").on(table.workspaceID, table.timeCreated)],

@@ -14,6 +14,7 @@ import { SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { testEffect } from "../lib/effect"
 import { ProviderV2 } from "@mongolgpt/core/provider"
+import { localConsoleUrl } from "@mongolgpt/core/product"
 
 const providerID = ProviderV2.ID.make("test")
 const retryProvider = "test"
@@ -121,12 +122,12 @@ describe("session.retry.delay", () => {
 describe("session.retry.retryable", () => {
   test("maps too_many_requests json messages", () => {
     const error = wrap(JSON.stringify({ type: "error", error: { type: "too_many_requests" } }))
-    expect(SessionRetry.retryable(error, retryProvider)).toEqual({ message: "Too Many Requests" })
+    expect(SessionRetry.retryable(error, retryProvider)).toEqual({ message: "Хэт олон хүсэлт илгээлээ" })
   })
 
   test("maps overloaded provider codes", () => {
     const error = wrap(JSON.stringify({ code: "resource_exhausted" }))
-    expect(SessionRetry.retryable(error, retryProvider)).toEqual({ message: "Provider is overloaded" })
+    expect(SessionRetry.retryable(error, retryProvider)).toEqual({ message: "Үйлчилгээ түр ачаалалтай байна" })
   })
 
   test("does not retry unknown json messages", () => {
@@ -273,9 +274,9 @@ describe("session.retry.retryable", () => {
       action: {
         reason: "free_tier_limit",
         provider: "mongolgpt",
-        title: "Free limit reached",
-        message: "Subscribe to MongolGPT Go for reliable access to the best open-source models, starting at $5/month.",
-        label: "subscribe",
+        title: "Үнэгүй хэрэглээний хязгаарт хүрлээ",
+        message: "Үргэлжлүүлэн ашиглахын тулд MongolGPT Go багцыг идэвхжүүлнэ үү.",
+        label: "багц идэвхжүүлэх",
         link: SessionRetry.GO_UPSELL_URL,
       },
     })
@@ -305,16 +306,15 @@ describe("session.retry.retryable", () => {
     )
 
     expect(SessionRetry.retryable(error, "mongolgpt-go")).toEqual({
-      message:
-        "5 hour usage limit reached. It will reset in 5 hours 23 minutes. To continue using this model now, enable usage from your available balance - https://mongolgpt.duckdns.org/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/go",
+      message: `Хэрэглээний хязгаарт хүрлээ. 5 цаг 23 минут дараа шинэчлэгдэнэ. Одоо үргэлжлүүлэхийн тулд үлдэгдлээсээ төлбөртэй хэрэглээг идэвхжүүлнэ үү. - ${localConsoleUrl}/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/go`,
       action: {
         reason: "account_rate_limit",
         provider: "mongolgpt-go",
-        title: "Go limit reached",
+        title: "Go хэрэглээний хязгаарт хүрлээ",
         message:
-          "5 hour usage limit reached. It will reset in 5 hours 23 minutes. To continue using this model now, enable usage from your available balance",
-        label: "open settings",
-        link: "https://mongolgpt.duckdns.org/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/go",
+          "Хэрэглээний хязгаарт хүрлээ. 5 цаг 23 минут дараа шинэчлэгдэнэ. Одоо үргэлжлүүлэхийн тулд үлдэгдлээсээ төлбөртэй хэрэглээг идэвхжүүлнэ үү.",
+        label: "тохиргоо нээх",
+        link: `${localConsoleUrl}/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/go`,
       },
     })
   })
@@ -342,7 +342,7 @@ describe("session.retry.retryable", () => {
     )
 
     expect(SessionRetry.retryable(error, "mongolgpt-go")?.action?.message).toBe(
-      "Usage limit reached. It will reset in 15 minutes. To continue using this model now, enable usage from your available balance",
+      "Хэрэглээний хязгаарт хүрлээ. 15 минут дараа шинэчлэгдэнэ. Одоо үргэлжлүүлэхийн тулд үлдэгдлээсээ төлбөртэй хэрэглээг идэвхжүүлнэ үү.",
     )
   })
 })

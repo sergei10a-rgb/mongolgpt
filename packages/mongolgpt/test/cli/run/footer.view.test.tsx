@@ -59,7 +59,7 @@ function model(input: {
     providerID: "mongolgpt",
     api: {
       id: "mongolgpt",
-      url: "https://mongolgpt.duckdns.org",
+      url: "https://github.com/sergei10a-rgb/mongolgpt",
       npm: "@ai-sdk/openai-compatible",
     },
     name: input.name,

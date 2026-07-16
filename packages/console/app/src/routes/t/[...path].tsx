@@ -4,9 +4,12 @@ import { LOCALE_HEADER, localeFromCookieHeader, parseLocale, tag } from "~/lib/l
 async function handler(evt: APIEvent) {
   const req = evt.request.clone()
   const url = new URL(req.url)
-  const targetUrl = `https://mongolgpt.duckdns.org/enterprise/${url.pathname}${url.search}`
+  const enterpriseUrl = import.meta.env.VITE_MONGOLGPT_ENTERPRISE_URL?.trim()
+  if (!enterpriseUrl) return upstreamUnavailable()
+  const targetUrl = new URL(`/enterprise${url.pathname}${url.search}`, enterpriseUrl)
 
   const headers = new Headers(req.headers)
+  headers.delete("host")
   const locale = parseLocale(req.headers.get(LOCALE_HEADER)) ?? localeFromCookieHeader(req.headers.get("cookie"))
   if (locale) headers.set("accept-language", tag(locale))
 
@@ -16,6 +19,15 @@ async function handler(evt: APIEvent) {
     body: req.body,
   })
   return response
+}
+
+function upstreamUnavailable() {
+  return new Response("Enterprise үйлчилгээний хаяг одоогоор тохируулаагүй байна.", {
+    status: 503,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+    },
+  })
 }
 
 export const GET = handler

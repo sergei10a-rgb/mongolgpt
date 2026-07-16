@@ -129,7 +129,7 @@ export const dict = {
   "provider.connect.mongolgptZen.line2":
     "Ганц API товчлуураар та Claude, GPT, Gemini, GLM гэх мэт загваруудад хандах боломжтой.",
   "provider.connect.mongolgptZen.visit.prefix": "зочилно уу ",
-  "provider.connect.mongolgptZen.visit.link": "mongolgpt.duckdns.org/zen",
+  "provider.connect.mongolgptZen.visit.link": "MongolGPT үйлчилгээ үзүүлэгчийн заавар",
   "provider.connect.mongolgptZen.visit.suffix": " API түлхүүрээ авахын тулд.",
   "provider.connect.oauth.code.visit.prefix": "зочилно уу ",
   "provider.connect.oauth.code.visit.link": "энэ холбоос",

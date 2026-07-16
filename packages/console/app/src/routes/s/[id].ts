@@ -1,30 +1,38 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { Resource } from "@mongolgpt/console-resource"
-import { cookie, docs, localeFromRequest, tag } from "~/lib/language"
 
-async function handler(evt: APIEvent) {
-  const req = evt.request.clone()
-  const url = new URL(req.url)
-  const locale = localeFromRequest(req)
-  const host = Resource.App.stage === "production" ? "docs.mongolgpt.duckdns.org" : "docs.dev.mongolgpt.duckdns.org"
-  const targetUrl = `https://${host}${docs(locale, `/docs${url.pathname}`)}${url.search}`
+const shareID = /^[a-zA-Z0-9_-]+$/
 
-  const headers = new Headers(req.headers)
-  headers.set("accept-language", tag(locale))
+export function legacyShareTarget(id: string, shareBaseUrl: string): string | null {
+  if (!shareID.test(id)) return null
 
-  const response = await fetch(targetUrl, {
-    method: req.method,
-    headers,
-    body: req.body,
+  try {
+    const base = new URL(shareBaseUrl)
+    if (base.protocol !== "https:" && base.protocol !== "http:") return null
+    return new URL(`/share/${id}`, base).toString()
+  } catch {
+    return null
+  }
+}
+
+function handler(evt: APIEvent) {
+  const shareBaseUrl = import.meta.env.VITE_MONGOLGPT_ENTERPRISE_URL?.trim()
+  if (!shareBaseUrl) return upstreamUnavailable()
+
+  const path = new URL(evt.request.url).pathname
+  const id = path.match(/^\/s\/([a-zA-Z0-9_-]+)\/?$/)?.[1]
+  const target = id ? legacyShareTarget(id, shareBaseUrl) : null
+  if (!target) return new Response("Хуваалцах холбоос буруу байна.", { status: 400 })
+  return Response.redirect(target, 308)
+}
+
+function upstreamUnavailable() {
+  return new Response("Хуваалцах үйлчилгээний хаяг одоогоор тохируулаагүй байна.", {
+    status: 503,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+    },
   })
-  const next = new Response(response.body, response)
-  next.headers.append("set-cookie", cookie(locale))
-  return next
 }
 
 export const GET = handler
-export const POST = handler
-export const PUT = handler
-export const DELETE = handler
-export const OPTIONS = handler
-export const PATCH = handler
+export const HEAD = handler

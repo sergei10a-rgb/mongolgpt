@@ -140,7 +140,7 @@ export const dict = {
   "provider.connect.mongolgptZen.line2":
     "With a single API key you'll get access to models such as Claude, GPT, Gemini, GLM and more.",
   "provider.connect.mongolgptZen.visit.prefix": "Visit ",
-  "provider.connect.mongolgptZen.visit.link": "mongolgpt.duckdns.org/zen",
+  "provider.connect.mongolgptZen.visit.link": "the MongolGPT provider guide",
   "provider.connect.mongolgptZen.visit.suffix": " to collect your API key.",
   "provider.connect.oauth.code.visit.prefix": "Visit ",
   "provider.connect.oauth.code.visit.link": "this link",

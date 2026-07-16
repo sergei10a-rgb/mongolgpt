@@ -6,8 +6,7 @@ import { usePlatform } from "@/context/platform"
 import { useSettings } from "@/context/settings"
 import { persisted } from "@/utils/persist"
 import { DialogReleaseNotes, type Highlight } from "@/components/dialog-release-notes"
-
-const CHANGELOG_URL = "https://mongolgpt.duckdns.org/changelog.json"
+import { changelogUrl } from "@/product"
 
 type Store = {
   version?: string
@@ -169,6 +168,10 @@ export const { use: useHighlights, provider: HighlightsProvider } = createSimple
         markSeen()
         return
       }
+      if (!changelogUrl) {
+        markSeen()
+        return
+      }
 
       const fetcher = platform.fetch ?? fetch
       const controller = new AbortController()
@@ -177,7 +180,7 @@ export const { use: useHighlights, provider: HighlightsProvider } = createSimple
         clearTimer()
       })
 
-      fetcher(CHANGELOG_URL, {
+      fetcher(changelogUrl, {
         signal: controller.signal,
         headers: { Accept: "application/json" },
       })

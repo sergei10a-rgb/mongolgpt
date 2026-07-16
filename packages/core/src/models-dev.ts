@@ -16,6 +16,15 @@ export const CatalogModelStatus = Schema.Literals(["alpha", "beta", "deprecated"
 export type CatalogModelStatus = typeof CatalogModelStatus.Type
 
 const USER_AGENT = `mongolgpt/${InstallationChannel}/${InstallationVersion}/${Flag.MONGOLGPT_CLIENT}`
+const hostedProviderIDs = new Set(["mongolgpt", "mongolgpt-go", "opencode", "opencode-go"])
+
+export function filterHostedProviders(
+  providers: Record<string, Provider>,
+  hostedServicesEnabled = Flag.MONGOLGPT_ENABLE_HOSTED_SERVICES,
+) {
+  if (hostedServicesEnabled) return providers
+  return Object.fromEntries(Object.entries(providers).filter(([id]) => !hostedProviderIDs.has(id)))
+}
 
 const CostTier = Schema.Struct({
   input: Schema.Finite,
@@ -210,7 +219,7 @@ export const layer = Layer.effect(
 
     const [cachedGet, invalidate] = yield* Effect.cachedInvalidateWithTTL(populate, Duration.infinity)
 
-    const get = (): Effect.Effect<Record<string, Provider>> => cachedGet
+    const get = (): Effect.Effect<Record<string, Provider>> => cachedGet.pipe(Effect.map(filterHostedProviders))
 
     const refresh = Effect.fn("ModelsDev.refresh")(function* (force = false) {
       if (!force && (yield* fresh())) return

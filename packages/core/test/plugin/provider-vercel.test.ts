@@ -32,7 +32,7 @@ describe("VercelPlugin", () => {
       yield* addPlugin()
       expect((yield* catalog.provider.get(ProviderV2.ID.make("vercel")))?.request.headers).toEqual({
         Existing: "1",
-        "http-referer": "https://mongolgpt.duckdns.org/",
+        "http-referer": "https://github.com/sergei10a-rgb/mongolgpt",
         "x-title": "mongolgpt",
       })
     }),

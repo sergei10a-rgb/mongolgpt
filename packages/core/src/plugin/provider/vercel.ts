@@ -10,7 +10,7 @@ export const VercelPlugin = define({
           if (item.provider.api.type !== "aisdk") continue
           if (item.provider.api.package !== "@ai-sdk/vercel") continue
           evt.provider.update(item.provider.id, (provider) => {
-            provider.request.headers["http-referer"] = "https://mongolgpt.duckdns.org/"
+            provider.request.headers["http-referer"] = "https://github.com/sergei10a-rgb/mongolgpt"
             provider.request.headers["x-title"] = "MongolGPT"
           })
         }

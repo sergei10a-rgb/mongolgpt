@@ -4,6 +4,7 @@ import { Deferred, Effect } from "effect"
 import { Global } from "@mongolgpt/core/global"
 import { Flag } from "@mongolgpt/core/flag/flag"
 import { InstallationVersion } from "@mongolgpt/core/installation/version"
+import { documentationRepositoryUrl } from "@mongolgpt/core/product"
 import { ClipboardProvider, useClipboard } from "./context/clipboard"
 import { ExitProvider, useExit } from "./context/exit"
 import { EpilogueProvider } from "./context/epilogue"
@@ -804,7 +805,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         name: "docs.open",
         title: "Баримт бичиг нээх",
         run: () => {
-          open("https://mongolgpt.duckdns.org/docs").catch(() => {})
+          open(documentationRepositoryUrl).catch(() => {})
           dialog.clear()
         },
         category: "Систем",

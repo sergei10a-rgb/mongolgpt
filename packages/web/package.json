@@ -6,7 +6,7 @@
   "version": "0.1.1",
   "scripts": {
     "dev": "astro dev",
-    "dev:remote": "VITE_API_URL=https://mongolgpt.duckdns.org/api astro dev",
+    "dev:remote": "astro dev",
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
@@ -40,6 +40,7 @@
     "mongolgpt": "workspace:*",
     "@types/node": "catalog:",
     "@astrojs/check": "0.9.6",
+    "pagefind": "1.5.2",
     "typescript": "catalog:"
   }
 }

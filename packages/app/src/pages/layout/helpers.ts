@@ -101,7 +101,7 @@ const LEGACY_PROJECT_ICON_MARKER = ["o", "pen", "code"].join("")
 function projectIconSource(url: string | undefined) {
   if (!url) return undefined
   const value = url.toLowerCase()
-  if (value.includes(LEGACY_PROJECT_ICON_MARKER) || value.includes("mongolgpt.duckdns.org/favicon")) {
+  if (value.includes(LEGACY_PROJECT_ICON_MARKER) || value.includes("/favicon-96x96-v3.png")) {
     return MONGOLGPT_PROJECT_ICON
   }
   return url

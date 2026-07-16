@@ -1,4 +1,4 @@
-import { deployAws, domain } from "./stage"
+import { deployAws, docsOrigin, domain, publicOrigin, shareOrigin } from "./stage"
 import { EMAILOCTOPUS_API_KEY } from "./app"
 import { SECRET } from "./secret"
 
@@ -72,7 +72,7 @@ export const auth = new sst.cloudflare.Worker("AuthApi", {
 ////////////////
 
 export const stripeWebhook = new stripe.WebhookEndpoint("StripeWebhookEndpoint", {
-  url: $interpolate`https://${domain}/stripe/webhook`,
+  url: `${publicOrigin}/stripe/webhook`,
   enabledEvents: [
     "checkout.session.async_payment_failed",
     "checkout.session.async_payment_succeeded",
@@ -161,26 +161,44 @@ const ZEN_LITE_PRICE = new sst.Linkable("ZEN_LITE_PRICE", {
   },
 })
 
-const zenBlackProduct = new stripe.Product("ZenBlack", {
-  name: "MongolGPT Black",
+function requiredPrice(name: string) {
+  const value = Number(process.env[name])
+  if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer in cents`)
+  return value
+}
+
+const mongolGPTPlanProduct = new stripe.Product("MongolGPTPlans", {
+  name: "MongolGPT",
 })
-const zenBlackPriceProps = {
-  product: zenBlackProduct.id,
+const mongolGPTPlanPriceProps = {
+  product: mongolGPTPlanProduct.id,
   currency: "usd",
   recurring: {
     interval: "month",
     intervalCount: 1,
   },
 }
-const zenBlackPrice200 = new stripe.Price("ZenBlackPrice", { ...zenBlackPriceProps, unitAmount: 20000 })
-const zenBlackPrice100 = new stripe.Price("ZenBlack100Price", { ...zenBlackPriceProps, unitAmount: 10000 })
-const zenBlackPrice20 = new stripe.Price("ZenBlack20Price", { ...zenBlackPriceProps, unitAmount: 2000 })
-const ZEN_BLACK_PRICE = new sst.Linkable("ZEN_BLACK_PRICE", {
+const mongolGPTBasicPrice = new stripe.Price("MongolGPTBasicPrice", {
+  ...mongolGPTPlanPriceProps,
+  nickname: "Basic",
+  unitAmount: requiredPrice("MONGOLGPT_BASIC_PRICE_CENTS"),
+})
+const mongolGPTProPrice = new stripe.Price("MongolGPTProPrice", {
+  ...mongolGPTPlanPriceProps,
+  nickname: "Pro",
+  unitAmount: requiredPrice("MONGOLGPT_PRO_PRICE_CENTS"),
+})
+const mongolGPTMaxPrice = new stripe.Price("MongolGPTMaxPrice", {
+  ...mongolGPTPlanPriceProps,
+  nickname: "Max",
+  unitAmount: requiredPrice("MONGOLGPT_MAX_PRICE_CENTS"),
+})
+const MONGOLGPT_PLAN_PRICE = new sst.Linkable("MONGOLGPT_PLAN_PRICE", {
   properties: {
-    product: zenBlackProduct.id,
-    plan200: zenBlackPrice200.id,
-    plan100: zenBlackPrice100.id,
-    plan20: zenBlackPrice20.id,
+    product: mongolGPTPlanProduct.id,
+    basic: mongolGPTBasicPrice.id,
+    pro: mongolGPTProPrice.id,
+    max: mongolGPTMaxPrice.id,
   },
 })
 
@@ -245,7 +263,7 @@ const logProcessor = new sst.cloudflare.Worker("LogProcessor", {
   link: [SECRET.HoneycombApiKey, ...(lake?.lakeIngest ? [lake.lakeIngest] : [])],
 })
 
-new sst.cloudflare.x.SolidStart("Console", {
+export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
   domain,
   path: "packages/console/app",
   link: [
@@ -266,9 +284,9 @@ new sst.cloudflare.x.SolidStart("Console", {
     SALESFORCE_CLIENT_ID,
     SALESFORCE_CLIENT_SECRET,
     SALESFORCE_INSTANCE_URL,
-    ZEN_BLACK_PRICE,
+    MONGOLGPT_PLAN_PRICE,
     ZEN_LITE_PRICE,
-    new sst.Secret("ZEN_LIMITS"),
+    new sst.Secret("MONGOLGPT_PLAN_LIMITS"),
     new sst.Secret("ZEN_SESSION_SECRET"),
     ...ZEN_MODELS,
     ...($dev
@@ -279,10 +297,14 @@ new sst.cloudflare.x.SolidStart("Console", {
       : []),
   ],
   environment: {
-    //VITE_DOCS_URL: web.url.apply((url) => url!),
-    //VITE_API_URL: gateway.url.apply((url) => url!),
     VITE_AUTH_URL: auth.url.apply((url) => url!),
     VITE_STRIPE_PUBLISHABLE_KEY: STRIPE_PUBLISHABLE_KEY.value,
+    VITE_MONGOLGPT_PUBLIC_URL: publicOrigin,
+    VITE_MONGOLGPT_DOCS_URL: docsOrigin,
+    VITE_MONGOLGPT_ENTERPRISE_URL: shareOrigin,
+    VITE_MONGOLGPT_COMMUNITY_URL: "https://github.com/sergei10a-rgb/mongolgpt/discussions",
+    MONGOLGPT_CONSOLE_URL: publicOrigin,
+    MONGOLGPT_FREE_WORKSPACE_IDS: process.env.MONGOLGPT_FREE_WORKSPACE_IDS ?? "",
   },
   transform: {
     server: {

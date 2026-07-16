@@ -1,16 +1,79 @@
 ---
 title: MongolGPT баримт бичиг
-description: MongolGPT-ийг суулгах, тохируулах, AI agent workflow-д ашиглах монгол гарын авлага.
+description: MongolGPT-ийг татах, суулгах, тохируулах, анх ажиллуулах монгол гарын авлага.
 ---
 
-[**MongolGPT**](/) бол Монгол хэрэглэгчдэд зориулсан AI coding agent платформ. Терминал, desktop app, IDE өргөтгөл, provider, skill/plugin, MCP холболтуудыг нэг дор ажиллуулах зорилготой.
+[**MongolGPT**](/) бол терминал, ширээний програм, IDE, вэб интерфэйсээр ашиглах боломжтой AI кодын агент юм. Эх код, албан ёсны хувилбар, татах файлуудыг зөвхөн [GitHub Releases](https://github.com/sergei10a-rgb/mongolgpt/releases) болон төслийн [GitHub сангаас](https://github.com/sergei10a-rgb/mongolgpt) авна.
 
-## Суулгах
+## Нээлтийн дэмжлэгийн хүрээ
 
-Одоогоор MongolGPT-ийн албан ёсны npm/Homebrew/AUR/Chocolatey/Scoop package нийтлэгдээгүй. Бодитоор ажиллах замууд:
+Одоогийн release нь өөрийн компьютерт ажиллах дараах боломжуудад төвлөрнө.
 
-- Desktop: [Windows x64 installer](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
-- Source build:
+| Төлөв | Боломж |
+| --- | --- |
+| Дэмжигдэнэ | [CLI](./cli) болон [TUI](./tui) |
+| Дэмжигдэнэ | [`mongolgpt web`](./web)-ээр ажиллах локал web UI |
+| Дэмжигдэнэ | GitHub Releases-д asset нь нийтлэгдсэн [Windows desktop](#ширээний-програм-суулгах) |
+| Дэмжигдэнэ | Өөрийн API key эсвэл OAuth эрх ашиглах [BYOK provider](./providers) |
+| Дэмжигдэнэ | [MCP](./mcp-servers) болон [LSP](./lsp) integration |
+| Дэмжигдэхгүй | MongolGPT Zen, MongolGPT Go, MongolGPT Black |
+| Дэмжигдэхгүй | MongolGPT account, billing, subscription, нийтийн share link |
+
+:::caution[Hosted боломжууд идэвхгүй]
+Zen, Go, Black, account, billing болон public share-д шаардлагатай MongolGPT-ийн өөрийн backend одоогоор бэлэн биш. Эдгээрт зориулсан танихгүй домэйнд нэвтрэх мэдээлэл, API key, төлбөрийн мэдээлэл бүү оруул. CLI/TUI, локал web, desktop болон BYOK provider ашиглахад домэйн эсвэл hosting хэрэггүй.
+:::
+
+## Аль хувилбарыг сонгох вэ?
+
+- **Windows-ийн ширээний програм** хэрэгтэй бол Releases хуудасны `mongolgpt-desktop-win-x64.exe` файлыг сонгоно.
+- **Терминалын CLI** хэрэгтэй бол үйлдлийн систем, процессортоо тохирох `mongolgpt-windows-*`, `mongolgpt-darwin-*`, эсвэл `mongolgpt-linux-*` архивыг сонгоно.
+- **Хөгжүүлэлт хийх** эсвэл бэлэн файл байхгүй платформ дээр ажиллуулах бол эх кодоос ажиллуулна.
+
+:::caution
+Татах файлын нэр, хувилбар бүрд өөр байж болно. Release-ийн тайлбар болон файлын жагсаалтыг шалгаж, танихгүй домэйн эсвэл гуравдагч талын толин сайтаас суулгагч бүү тат.
+:::
+
+## Ширээний програм суулгах
+
+1. [MongolGPT Releases](https://github.com/sergei10a-rgb/mongolgpt/releases) хуудсыг нээнэ.
+2. Хамгийн сүүлийн тогтвортой release-ийг сонгоно.
+3. `mongolgpt-desktop-win-x64.exe` файл тухайн release-д байвал татаж ажиллуулна.
+4. Суулгасны дараа MongolGPT-ийг нээгээд төслийн хавтсаа сонгоно.
+5. **Connect provider** хэсгээс өөрийн ашиглах үйлчилгээ үзүүлэгчийг холбоно.
+
+Хэрэв Windows SmartScreen анхааруулга үзүүлбэл release-ийн URL нь `github.com/sergei10a-rgb/mongolgpt/releases` мөн эсэхийг дахин шалга. Release-ийн тайлбарт гарын үсэггүй build гэж тэмдэглэсэн бол байгууллагынхаа аюулгүй байдлын бодлогыг дагана.
+
+Ширээний програм нээгдэхгүй, хоосон цонх харуулах, сервертэй холбогдохгүй байвал [алдаа оношлох зааврын ширээний програмын хэсгийг](./troubleshooting#ширээний-програм) үзнэ үү.
+
+## CLI суулгах
+
+1. [MongolGPT Releases](https://github.com/sergei10a-rgb/mongolgpt/releases) хуудсаас платформдоо тохирох архивыг татна.
+2. Архивыг задлахад `mongolgpt` эсвэл Windows дээр `mongolgpt.exe` файл гарна.
+3. Файлыг `PATH`-д бүртгэлтэй хавтас руу байрлуулах эсвэл тухайн хавтсаас шууд ажиллуулна.
+4. Суулгалтыг шалгана.
+
+```bash
+mongolgpt --version
+```
+
+macOS болон Linux дээр ажиллуулах эрх шаардлагатай бол:
+
+```bash
+chmod +x mongolgpt
+./mongolgpt --version
+```
+
+Windows PowerShell дээр:
+
+```powershell
+.\mongolgpt.exe --version
+```
+
+Package manager-ийн команд release-ийн тайлбарт албан ёсоор дурдагдсан үед л ашиглаарай. Баталгаатай үндсэн татах суваг нь GitHub Releases юм.
+
+## Эх кодоос ажиллуулах
+
+Энэ арга нь Bun болон Git суулгасан хөгжүүлэлтийн орчинд зориулагдсан.
 
 ```bash
 git clone https://github.com/sergei10a-rgb/mongolgpt
@@ -19,125 +82,60 @@ bun install
 bun run dev
 ```
 
-Terminal install script:
-
-```bash
-git clone https://github.com/sergei10a-rgb/mongolgpt && cd mongolgpt && bun install
-```
-
-## Desktop суулгах
-
-1. [Releases](https://github.com/sergei10a-rgb/mongolgpt/releases/latest) хуудас руу орно.
-2. `mongolgpt-desktop-win-x64.exe` файлыг татна.
-3. Суулгагчийг ажиллуулна.
-
-:::note
-Одоогийн build code signing хийгдээгүй. Windows SmartScreen анхааруулга харуулж магадгүй.
-:::
-
-## Source-оос ажиллуулах
-
-Repository-г clone хийсэн бол дараах байдлаар локал орчинд ажиллуулна.
-
-```bash
-bun install
-bun run dev
-```
-
-Desktop development mode:
+Ширээний програмыг хөгжүүлэлтийн горимоор ажиллуулах:
 
 ```bash
 bun run dev:desktop
 ```
 
-Windows desktop installer build хийх:
+Windows суулгагч үүсгэх:
 
 ```powershell
 $env:MONGOLGPT_CHANNEL="prod"
 bun --cwd packages/desktop run package:win
 ```
 
-Build дууссаны дараа installer файл энд гарна.
+Үүссэн файл `packages/desktop/dist/` хавтаст байрлана.
 
-```txt
-packages/desktop/dist/
-```
+## Анхны ажиллагаа
 
-## Терминал хувилбар
-
-Terminal CLI нь `mongolgpt` command нэрээр ажиллах ёстой. Repository дотор CLI болон publish script-үүд энэ нэр рүү шилжсэн.
-
-Registry package нийтлэгдэх хүртэл terminal хувилбарыг source-оос ажиллуулна:
+CLI-г төслийнхөө хавтсаас эхлүүлнэ.
 
 ```bash
-git clone https://github.com/sergei10a-rgb/mongolgpt
-cd mongolgpt
-bun install
-bun run dev
+cd path/to/project
+mongolgpt
 ```
 
-Мөн install script туршиж болно:
+Дараа нь:
 
-```bash
-git clone https://github.com/sergei10a-rgb/mongolgpt && cd mongolgpt && bun install
-```
-
-## Нэвтрэх ба provider тохируулах
-
-MongolGPT account-аар нэвтрэх урсгал нь `https://mongolgpt.duckdns.org/auth` endpoint руу чиглэнэ.
+1. `/connect` командаар үйлчилгээ үзүүлэгчээ сонгож API түлхүүр эсвэл тухайн үйлчилгээний нэвтрэх аргыг тохируулна.
+2. `/models` командаар ашиглах боломжтой загваруудаа шалгана.
+3. Загвараа сонгоод хийх ажлаа монгол эсвэл өөрийн хүссэн хэлээр тодорхой бичнэ.
+4. Файл өөрчлөх, команд ажиллуулах зөвшөөрлийн хүсэлтийг уншаад зөвшөөрөх эсэхээ шийднэ.
 
 ```txt
 /connect
+/models
+Энэ төслийн тест яагаад унаж байгааг шалгаад зас.
 ```
 
-`/connect` командаар provider сонгоод API key эсвэл MongolGPT account холболтоо тохируулна.
+MongolGPT account одоогоор дэмжигдэхгүй бөгөөд үндсэн ажиллагаанд хэрэггүй. OpenAI, Anthropic, Google, OpenRouter болон бусад дэмжигдсэн provider-ийг өөрийн API key эсвэл provider-ийн OAuth эрхээр холбоно. Дэлгэрэнгүйг [үйлчилгээ үзүүлэгчдийн заавраас](./providers) үзнэ үү.
 
-## Skill, plugin, MCP
+## Домэйн болон байршуулалт хэрэгтэй юу?
 
-MongolGPT-ийн зорилго нь Claude, Codex, Goose, MCP server, skill/plugin зэрэг өөр өөр AI agent format-уудыг хэрэглэгчээр гараар тааруулахгүйгээр таньж, шаардлагатай үед adapter/wrapper үүсгэн холбох юм.
+Үгүй. Одоогийн launch profile бүхэлдээ standalone/local тул MongolGPT ашиглахын тулд production domain, DNS эсвэл hosting тохируулах шаардлагагүй.
 
-Эхний суурь нь repo дотор байна:
+Ирээдүйд төслийн өөрийн production backend бэлэн болж hosted боломжуудыг байршуулбал repository-ийн `.env.example`-ийг суурь болгон `MONGOLGPT_PUBLIC_URL`, `MONGOLGPT_AUTH_URL`, `MONGOLGPT_API_URL`, `MONGOLGPT_SHARE_URL`, `MONGOLGPT_GO_URL` зэрэг утгыг зөвхөн өөрийн эзэмшлийн URL-аар солино. Тэр хүртэл `MONGOLGPT_ENABLE_HOSTED_SERVICES=false` хэвээр байна. `.env.example` доторх `https://your-domain.example` нь ажилладаг service биш, илэрхий placeholder юм.
 
-- provider integration
-- plugin API суурь
-- MCP холболтын суурь
-- desktop shell
-- terminal agent
-- MongolGPT account login wiring
+## Дараагийн алхам
 
-Шинэ compatibility importer нь эхний ажиллах хэлбэрээр нэмэгдсэн:
-
-- command, локал зам, URL, config файлыг уншиж MCP, skill, plugin төрлийг танина
-- `plan` горимоор ямар config patch үүсэхийг эхлээд харуулна
-- `apply` горимоор global эсвэл project config-д аюулгүйгээр нэмнэ
-- plugin wrapper шаардлагатай бол хэрэглэгчээр гараар бичүүлэхгүйгээр үүсгэх суурьтай
-
-CLI дээр:
-
-```bash
-mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
-mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
-```
-
-Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, path, URL эсвэл config оруулаад шалгах болон суулгах боломжтой.
-
-Дараагийн шатанд marketplace discovery, илүү олон agent format-ийн adapter generator, signing/permission review нэмэгдэнэ.
-
-## Хөгжүүлэлт
-
-```bash
-bun install
-bun run dev
-```
-
-Test болон typecheck:
-
-```bash
-bun run typecheck
-```
+- [CLI командын лавлагаа](./cli)
+- [TUI ашиглах](./tui)
+- [Вэб интерфэйс ажиллуулах](./web)
+- [Тохиргооны файл](./config)
+- [Windows болон WSL](./windows-wsl)
+- [Алдаа оношлох ба түгээмэл асуулт](./troubleshooting)
 
 ## Тусламж
 
-Issue, release, source code:
-
-[github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)
+Эхлээд [алдаа оношлох зааврыг](./troubleshooting) шалгаад `mongolgpt --version`, үйлдлийн систем, ажиллуулсан команд, нууц мэдээллээ арилгасан логийн хэсгийг бэлдэнэ. Шийдэгдэхгүй бол [GitHub Issues](https://github.com/sergei10a-rgb/mongolgpt/issues) дээр хайж, давхардалгүй шинэ issue нээнэ.

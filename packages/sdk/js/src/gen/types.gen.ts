@@ -1209,7 +1209,7 @@ export type Config = {
     diff_style?: "auto" | "stacked"
   }
   /**
-   * Command configuration, see https://mongolgpt.duckdns.org/docs/commands
+   * Command configuration, see https://github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/commands.mdx
    */
   command?: {
     [key: string]: {
@@ -1266,7 +1266,7 @@ export type Config = {
     [key: string]: AgentConfig | undefined
   }
   /**
-   * Agent configuration, see https://mongolgpt.duckdns.org/docs/agent
+   * Agent configuration, see https://github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/agents.mdx
    */
   agent?: {
     plan?: AgentConfig

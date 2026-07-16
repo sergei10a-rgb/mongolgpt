@@ -1,3 +1,5 @@
+import { docsUrl, supportUrl } from "@/product"
+
 export type DesktopMenuPlatform = "macos" | "windows"
 
 export type DesktopMenuAction =
@@ -206,8 +208,8 @@ export const DESKTOP_MENU: DesktopMenu[] = [
     id: "help",
     label: "Тусламж",
     items: [
-      { type: "item", label: "MongolGPT баримт", href: "https://mongolgpt.duckdns.org/docs" },
-      { type: "item", label: "Дэмжлэгийн форум", href: "https://mongolgpt.duckdns.org" },
+      { type: "item", label: "MongolGPT баримт", href: docsUrl },
+      { type: "item", label: "Тусламж ба асуудал мэдээлэх", href: supportUrl },
       { type: "item", label: "Лог экспортлох...", command: "logs.export" },
       { type: "separator" },
       {

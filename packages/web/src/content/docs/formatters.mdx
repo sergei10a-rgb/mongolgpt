@@ -1,5 +1,5 @@
 ---
-title: Formatters
+title: Форматлагч
 description: MongolGPT нь хэлний тусгай форматлагчдыг ашигладаг.
 ---
 
@@ -13,33 +13,31 @@ MongolGPT алдартай хэл болон фреймворкуудад зор
 
 | Форматлагч | Өргөтгөлүүд | Тавигдах шаардлага |
 | -------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| агаар | .R | `air` тушаал боломжтой |
-| биом | .js, .jsx, .ts, .tsx, .html, .css, .md, .json, .yaml болон [more](https://biomejs.dev/) | `biome.json(c)` тохиргооны файл |
-| cargofmt | .rs | `cargo fmt` тушаал боломжтой |
-| clang-format | .c, .cpp, .h, .hpp, .ino, болон [more](https://clang.llvm.org/docs/ClangFormat.html) | `.clang-format` тохиргооны файл |
+| `air` | `.R` | `air` command |
+| `biome` | `.js`, `.jsx`, `.ts`, `.tsx`, `.html`, `.css`, `.md`, `.json`, `.yaml` болон [бусад](https://biomejs.dev/) | `biome.json` эсвэл `biome.jsonc` тохиргооны файл |
+| `clang-format` | `.c`, `.cpp`, `.h`, `.hpp`, `.ino` болон [бусад](https://clang.llvm.org/docs/ClangFormat.html) | `.clang-format` тохиргооны файл |
 | cljfmt | .clj, .cljs, .cljc, .edn | `cljfmt` тушаал боломжтой |
-| сум | .dart | `dart` тушаал боломжтой |
+| `dart` | `.dart` | `dart` command |
 | dfmt | .d | `dfmt` тушаал боломжтой |
-| гялалзах | .gleam | `gleam` тушаал боломжтой |
+| `gleam` | `.gleam` | `gleam` command |
 | gofmt | .go | `gofmt` тушаал боломжтой |
 | htmlbeautifier | .erb, .html.erb | `htmlbeautifier` тушаал боломжтой |
-| ktlint | .кт, .ктс | `ktlint` тушаал боломжтой |
-| холих | .ex, .exs, .eex, .heex, .leex, .neex, .sface | `mix` тушаал боломжтой |
-| nixfmt | .nix |
-ixfmt` тушаал боломжтой |
-| ocamlformat | .мл, .мли | `ocamlformat` тушаал болон `.ocamlformat` тохиргооны файл |
+| `ktlint` | `.kt`, `.kts` | `ktlint` command |
+| `mix` | `.ex`, `.exs`, `.eex`, `.heex`, `.leex`, `.neex`, `.sface` | `mix` command |
+| `nixfmt` | `.nix` | `nixfmt` command |
+| `ocamlformat` | `.ml`, `.mli` | `ocamlformat` command болон `.ocamlformat` тохиргооны файл |
 | ormolu | .hs | `ormolu` тушаал боломжтой |
-| oxfmt (Туршилтын) | .js, .jsx, .ts, .tsx | `oxfmt` хамаарал нь `package.json` ба [туршилтын env хувьсагч туг](/docs/cli/#experimental) |
-| пинт | .php | `laravel/pint` хамаарал нь `composer.json` |
-| prettier | .js, .jsx, .ts, .tsx, .html, .css, .md, .json, .yaml болон [more](https://prettier.io/docs/en/index.html) | `prettier` хамаарал нь `package.json` |
-| рубокоп | .rb, .rake, .gemspec, .ru | `rubocop` тушаал боломжтой |
+| `oxfmt` (туршилтын) | `.js`, `.jsx`, `.ts`, `.tsx` | `package.json` дахь `oxfmt` dependency болон [туршилтын орчны хувьсагч](../cli/#туршилтын-хувьсагчид) |
+| `pint` | `.php` | `composer.json` дахь `laravel/pint` dependency |
+| `prettier` | `.js`, `.jsx`, `.ts`, `.tsx`, `.html`, `.css`, `.md`, `.json`, `.yaml` болон [бусад](https://prettier.io/docs/en/index.html) | `package.json` дахь `prettier` dependency |
+| `rubocop` | `.rb`, `.rake`, `.gemspec`, `.ru` | `rubocop` command |
 | ruff | .py, .pyi | `ruff` командыг тохируулах боломжтой |
 | rustfmt | .rs | `rustfmt` тушаал боломжтой |
 | shfmt | .sh, .bash | `shfmt` тушаал боломжтой |
 | standardrb | .rb, .rake, .gemspec, .ru | `standardrb` тушаал боломжтой |
-| терраформ | .tf, .tfvars | `terraform` тушаал боломжтой |
+| `terraform` | `.tf`, `.tfvars` | `terraform` command |
 | uv | .py, .pyi | `uv` тушаал боломжтой |
-| зиг | .zig, .zon | `zig` тушаал боломжтой |
+| `zig` | `.zig`, `.zon` | `zig` command |
 
 Форматлагчийг идэвхжүүлсэн үед MongolGPT таны төсөлд `package.json`-д `prettier` байгаа бол тохирох файлд `prettier` ашиглах болно.
 
@@ -65,7 +63,6 @@ MongolGPT файл бичих, засварлах, форматлагчдыг и
 
 ```json title="mongolgpt.json"
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
   "formatter": true
 }
 ```
@@ -74,7 +71,6 @@ MongolGPT файл бичих, засварлах, форматлагчдыг и
 
 ```json title="mongolgpt.json"
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
   "formatter": {}
 }
 ```
@@ -98,7 +94,6 @@ MongolGPT файл бичих, засварлах, форматлагчдыг и
 
 ```json title="mongolgpt.json" {3}
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
   "formatter": false
 }
 ```
@@ -107,7 +102,6 @@ MongolGPT файл бичих, засварлах, форматлагчдыг и
 
 ```json title="mongolgpt.json" {5}
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
   "formatter": {
     "prettier": {
       "disabled": true
@@ -124,7 +118,6 @@ MongolGPT файл бичих, засварлах, форматлагчдыг и
 
 ```json title="mongolgpt.json" {4-14}
 {
-  "$schema": "https://mongolgpt.duckdns.org/config.json",
   "formatter": {
     "prettier": {
       "command": ["npx", "prettier", "--write", "$FILE"],
@@ -142,3 +135,4 @@ MongolGPT файл бичих, засварлах, форматлагчдыг и
 ```
 
 Тушаал дахь **`$FILE` орлуулагч** нь форматлаж буй файлын замаар солигдох болно.
+
