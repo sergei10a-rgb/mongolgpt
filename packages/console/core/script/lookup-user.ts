@@ -8,10 +8,12 @@ import {
   BlackPlans,
   UsageTable,
   LiteTable,
+  PlanNames,
 } from "../src/schema/billing.sql.js"
 import { WorkspaceTable } from "../src/schema/workspace.sql.js"
 import { KeyTable } from "../src/schema/key.sql.js"
 import { BlackData } from "../src/black.js"
+import { PlanData } from "../src/plan.js"
 import { centsToMicroCents } from "../src/util/price.js"
 import { getWeekBounds } from "../src/util/date.js"
 import { ModelTable } from "../src/schema/model.sql.js"
@@ -315,7 +317,7 @@ function formatRetryTime(seconds: number) {
 
 function getSubscriptionStatus(row: {
   subscription: {
-    plan: (typeof BlackPlans)[number]
+    plan: (typeof PlanNames)[number]
   } | null
   timeSubscriptionCreated: Date | null
   fixedUsage: number | null
@@ -327,12 +329,12 @@ function getSubscriptionStatus(row: {
     return { weekly: null, rolling: null, rateLimited: null, retryIn: null }
   }
 
-  const black = BlackData.getLimits({ plan: row.subscription.plan })
+  const black = PlanData.getLimits({ plan: row.subscription.plan })
   const now = new Date()
   const week = getWeekBounds(now)
 
-  const fixedLimit = black.fixedLimit ? centsToMicroCents(black.fixedLimit * 100) : null
-  const rollingLimit = black.rollingLimit ? centsToMicroCents(black.rollingLimit * 100) : null
+  const fixedLimit = black.weeklyCostLimit ? centsToMicroCents(black.weeklyCostLimit * 100) : null
+  const rollingLimit = black.rollingCostLimit ? centsToMicroCents(black.rollingCostLimit * 100) : null
   const rollingWindowMs = (black.rollingWindow ?? 5) * 3600 * 1000
 
   // Calculate current weekly usage (reset if outside current week)
@@ -358,8 +360,8 @@ function getSubscriptionStatus(row: {
   }
 
   return {
-    weekly: fixedLimit !== null ? `${formatMicroCents(currentWeekly)} / $${black.fixedLimit}` : null,
-    rolling: rollingLimit !== null ? `${formatMicroCents(currentRolling)} / $${black.rollingLimit}` : null,
+    weekly: fixedLimit !== null ? `${formatMicroCents(currentWeekly)} / $${black.weeklyCostLimit}` : null,
+    rolling: rollingLimit !== null ? `${formatMicroCents(currentRolling)} / $${black.rollingCostLimit}` : null,
     rateLimited: isWeeklyLimited || isRollingLimited ? "yes" : "no",
     retryIn,
   }

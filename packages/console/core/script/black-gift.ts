@@ -1,12 +1,12 @@
 import { Billing } from "../src/billing.js"
 import { and, Database, eq, isNull } from "../src/drizzle/index.js"
 import { UserTable } from "../src/schema/user.sql.js"
-import { BillingTable, SubscriptionTable } from "../src/schema/billing.sql.js"
+import { BillingTable, PlanNames, SubscriptionTable } from "../src/schema/billing.sql.js"
 import { Identifier } from "../src/identifier.js"
 import { AuthTable } from "../src/schema/auth.sql.js"
-import { BlackData } from "../src/black.js"
+import { PlanData } from "../src/plan.js"
 
-const plan = "200"
+const plan = "max" satisfies (typeof PlanNames)[number]
 const couponID = "JAIr0Pe1"
 const workspaceID = process.argv[2]
 const seats = parseInt(process.argv[3])
@@ -66,7 +66,7 @@ const subscription = await Billing.stripe().subscriptions.create({
   customer: customerID!,
   items: [
     {
-      price: BlackData.planToPriceID({ plan }),
+      price: PlanData.planToPriceID({ plan }),
       discounts: [{ coupon: couponID }],
       quantity: seats,
     },
