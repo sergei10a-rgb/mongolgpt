@@ -1,1 +1,6 @@
-../../../ui/src/assets/favicon/favicon.svg
+<svg width="96" height="96" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="34" y="34" width="444" height="444" rx="112" fill="#151111"/>
+  <path d="M178 168L294 256L178 344" stroke="#F7F7F3" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M310 342H382" stroke="#26E6F2" stroke-width="46" stroke-linecap="round"/>
+  <circle cx="360" cy="170" r="24" fill="#37F28B"/>
+</svg>
