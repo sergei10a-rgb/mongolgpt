@@ -48,7 +48,9 @@ Examples:
 await rm(file, { force: true })
 
 const quiet = values.quiet
-const cmd = ["mongolgpt", "run"]
+// Release runners do not have the published CLI installed. Run the checked-out
+// CLI directly so changelog generation works before the new package is published.
+const cmd = ["bun", "run", "--conditions=browser", "packages/mongolgpt/src/index.ts", "run"]
 cmd.push("--variant", values.variant)
 cmd.push("--command", "changelog", "--", ...args)
 
