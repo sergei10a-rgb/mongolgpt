@@ -14,6 +14,7 @@ const staticDocs = process.env.MONGOLGPT_STATIC_DOCS === "true"
 export default defineConfig({
   site: config.url,
   base: "/docs",
+  outDir: staticDocs ? "./dist/docs" : "./dist",
   output: staticDocs ? "static" : "server",
   image: {
     service: passthroughImageService(),
