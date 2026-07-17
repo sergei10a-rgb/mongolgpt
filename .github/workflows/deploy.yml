@@ -73,6 +73,9 @@ jobs:
       - name: Build web app
         run: bun --cwd packages/app build
 
+      - name: Clear stale SST lock
+        run: bun sst unlock --stage=${{ inputs.stage }} || true
+
       - name: Deploy to Cloudflare
         run: bun sst deploy --stage=${{ inputs.stage }} --print-logs
 
