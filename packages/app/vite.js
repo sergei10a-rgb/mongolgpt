@@ -2,15 +2,11 @@ import { readFileSync } from "node:fs"
 import solidPlugin from "vite-plugin-solid"
 import tailwindcss from "@tailwindcss/vite"
 import { fileURLToPath } from "url"
+import { resolveChannel, resolveRuntimeMetadata } from "./src/utils/build-config.js"
 
 const theme = fileURLToPath(new URL("./public/mongolgpt-theme-preload.js", import.meta.url))
-
-const channel = (() => {
-  const raw = process.env.MONGOLGPT_CHANNEL
-  if (raw === "dev" || raw === "beta" || raw === "prod") return raw
-  if (raw === "latest") return "prod"
-  return "dev"
-})()
+const channel = resolveChannel()
+const runtime = resolveRuntimeMetadata()
 
 /**
  * @type {import("vite").PluginOption}
@@ -27,11 +23,21 @@ export default [
         },
         define: {
           "import.meta.env.VITE_MONGOLGPT_CHANNEL": JSON.stringify(channel),
+          "import.meta.env.VITE_MONGOLGPT_RUNTIME_MODE": JSON.stringify(runtime.mode),
+          "import.meta.env.VITE_MONGOLGPT_SERVER_URL": JSON.stringify(runtime.serverUrl),
         },
         worker: {
           format: "es",
         },
       }
+    },
+    transformIndexHtml(html) {
+      const metadata = [
+        `<meta name="mongolgpt-channel" content="${channel}">`,
+        `<meta name="mongolgpt-runtime-mode" content="${runtime.mode}">`,
+        `<meta name="mongolgpt-server-url" content="${runtime.serverUrl}">`,
+      ].join("\n    ")
+      return html.replace("</head>", `    ${metadata}\n  </head>`)
     },
   },
   {

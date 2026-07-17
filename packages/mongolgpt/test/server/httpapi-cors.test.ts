@@ -60,7 +60,7 @@ describe("HttpApi CORS", () => {
     }),
   )
 
-  it.live("adds CORS headers to unauthorized responses", () =>
+  it.live("adds CORS headers to unauthorized responses only for trusted app origins", () =>
     Effect.gen(function* () {
       const handler = HttpRouter.toWebHandler(
         HttpApiApp.createRoutes().pipe(
@@ -71,14 +71,26 @@ describe("HttpApi CORS", () => {
       const response = yield* Effect.promise(() =>
         handler(
           new Request(new URL("/global/config", "http://localhost"), {
-            headers: { origin: "https://example.invalid" },
+            headers: { origin: "https://app.dev.mgpt.mn" },
           }),
           HttpApiApp.context,
         ),
       )
 
       expect(response.status).toBe(401)
-      expect(response.headers.get("access-control-allow-origin")).toBe("https://example.invalid")
+      expect(response.headers.get("access-control-allow-origin")).toBe("https://app.dev.mgpt.mn")
+
+      const rejected = yield* Effect.promise(() =>
+        handler(
+          new Request(new URL("/global/config", "http://localhost"), {
+            headers: { origin: "https://example.invalid" },
+          }),
+          HttpApiApp.context,
+        ),
+      )
+
+      expect(rejected.status).toBe(401)
+      expect(rejected.headers.get("access-control-allow-origin")).toBeNull()
     }),
   )
 

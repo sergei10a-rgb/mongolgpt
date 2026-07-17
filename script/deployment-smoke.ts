@@ -1,4 +1,5 @@
 import { deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/deployment"
+import { inspectAppHtml } from "@mongolgpt/script/deployment-smoke-contract"
 
 const result = preflightDeployment({
   stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
@@ -33,6 +34,11 @@ async function check(name: string, url: string, health: boolean) {
       } else if (name === "docs") {
         const html = await response.text()
         await checkStylesheet(url, html)
+      } else if (name === "app") {
+        const html = await response.text()
+        const contract = inspectAppHtml(html, url)
+        await checkAppModule(url, html)
+        if (contract.mode === "hosted") await checkAgentRuntime(contract.serverUrl)
       } else {
         await response.body?.cancel()
       }
@@ -74,4 +80,47 @@ async function checkStylesheet(pageUrl: string, html: string) {
     throw new Error(`docs stylesheet is not CSS: ${contentType || "missing content-type"} (${stylesheetUrl})`)
   }
   await response.body?.cancel()
+}
+
+async function checkAppModule(pageUrl: string, html: string) {
+  const match = html.match(/<script[^>]+type=["']module["'][^>]+src=["']([^"']+)["']/i)
+  if (!match?.[1]) throw new Error("app module script was not found")
+
+  const moduleUrl = new URL(match[1], pageUrl)
+  const response = await fetch(moduleUrl, {
+    headers: { "User-Agent": "mongolgpt-deployment-smoke" },
+    redirect: "follow",
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (!response.ok) throw new Error(`app module HTTP ${response.status}: ${moduleUrl}`)
+
+  const contentType = response.headers.get("content-type") ?? ""
+  if (!contentType.includes("javascript")) {
+    throw new Error(`app module is not JavaScript: ${contentType || "missing content-type"} (${moduleUrl})`)
+  }
+  await response.body?.cancel()
+}
+
+async function checkAgentRuntime(serverUrl: string) {
+  const healthUrl = new URL("/global/health", `${serverUrl}/`)
+  const response = await fetch(healthUrl, {
+    headers: { "User-Agent": "mongolgpt-deployment-smoke" },
+    redirect: "follow",
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (!response.ok) throw new Error(`agent runtime health HTTP ${response.status}: ${healthUrl}`)
+
+  const contentType = response.headers.get("content-type") ?? ""
+  if (!contentType.includes("application/json")) {
+    throw new Error(`agent runtime health is not JSON: ${contentType || "missing content-type"} (${healthUrl})`)
+  }
+  const body: unknown = await response.json()
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("healthy" in body) ||
+    (body as { healthy?: unknown }).healthy !== true
+  ) {
+    throw new Error(`agent runtime health response is invalid: ${healthUrl}`)
+  }
 }

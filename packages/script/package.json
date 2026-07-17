@@ -13,7 +13,8 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./deployment": "./src/deployment.ts"
+    "./deployment": "./src/deployment.ts",
+    "./deployment-smoke-contract": "./src/deployment-smoke-contract.ts"
   },
   "scripts": {
     "test": "bun test",

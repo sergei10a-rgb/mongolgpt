@@ -348,6 +348,12 @@ export const dict = {
   "app.server.unreachable": "Could not reach {{server}}",
   "app.server.retrying": "Retrying automatically...",
   "app.server.otherServers": "Other servers",
+  "app.server.localBridge.title": "Start the MongolGPT engine",
+  "app.server.localBridge.description":
+    "This web app works with the MongolGPT engine on your computer. Run this command in a terminal, then return here.",
+  "app.server.localBridge.retrying": "MongolGPT will connect automatically when the engine is ready.",
+  "app.server.localBridge.retry": "Check again",
+  "app.server.localBridge.docs": "View setup guide",
 
   "dialog.server.title": "Servers",
   "dialog.server.description": "Switch which MongolGPT server this app connects to.",

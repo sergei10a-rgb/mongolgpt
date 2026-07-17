@@ -324,6 +324,12 @@ export const dict = {
   "app.server.unreachable": "{{server}}-д холбогдож чадсангүй",
   "app.server.retrying": "Автоматаар дахин оролдож байна...",
   "app.server.otherServers": "Бусад серверүүд",
+  "app.server.localBridge.title": "MongolGPT хөдөлгүүрээ асаана уу",
+  "app.server.localBridge.description":
+    "Энэ веб апп таны компьютер дээрх MongolGPT хөдөлгүүртэй ажиллана. Терминалд доорх командыг ажиллуулаад энэ хуудсанд буцаж ирнэ үү.",
+  "app.server.localBridge.retrying": "Хөдөлгүүр бэлэн болмогц MongolGPT автоматаар холбогдоно.",
+  "app.server.localBridge.retry": "Дахин шалгах",
+  "app.server.localBridge.docs": "Суулгах заавар",
   "dialog.server.title": "Серверүүд",
   "dialog.server.description": "Энэ апп аль MongolGPT серверт холбогдохыг сэлгэнэ үү.",
   "dialog.server.search.placeholder": "Серверүүдийг хайх",

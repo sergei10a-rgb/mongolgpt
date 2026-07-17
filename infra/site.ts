@@ -30,6 +30,6 @@ export const webApp = new sst.cloudflare.StaticSiteV2("WebApp", {
     VITE_MONGOLGPT_PUBLIC_URL: publicOrigin,
     VITE_MONGOLGPT_DOCS_URL: docsUrl,
     VITE_MONGOLGPT_SUPPORT_URL: supportUrl,
-    VITE_MONGOLGPT_CHANNEL: $app.stage === "production" ? "prod" : "beta",
+    MONGOLGPT_CHANNEL: $app.stage === "production" ? "prod" : "beta",
   },
 })

@@ -5,6 +5,7 @@ import { DialogProvider } from "@mongolgpt/ui/context/dialog"
 import { FileComponentProvider } from "@mongolgpt/ui/context/file"
 import { MarkedProvider } from "@mongolgpt/ui/context/marked"
 import { File } from "@mongolgpt/session-ui/file"
+import { Button } from "@mongolgpt/ui/button"
 import { Font } from "@mongolgpt/ui/font"
 import { Splash } from "@mongolgpt/ui/logo"
 import { ThemeProvider } from "@mongolgpt/ui/theme/context"
@@ -41,6 +42,7 @@ import { ModelsProvider } from "@/context/models"
 import { NotificationProvider, useNotification } from "@/context/notification"
 import { PermissionProvider } from "@/context/permission"
 import { PromptProvider } from "@/context/prompt"
+import { usePlatform } from "@/context/platform"
 import { ServerConnection, ServerProvider, serverName, useServer } from "@/context/server"
 import { SettingsProvider, useSettings } from "@/context/settings"
 import { TerminalProvider } from "@/context/terminal"
@@ -61,6 +63,7 @@ import {
 } from "./utils/session-route"
 import { isSessionNotFoundError } from "./utils/server-errors"
 import { AccountOnboardingGate } from "@/components/account-onboarding"
+import { documentationUrl } from "@/product"
 
 import Session from "@/pages/session"
 import { NewHome, LegacyHome } from "@/pages/home"
@@ -484,9 +487,11 @@ function ConnectionGate(props: ParentProps<{ disableHealthCheck?: boolean }>) {
 
 function ConnectionError(props: { onRetry?: () => void; onServerSelected?: (key: ServerConnection.Key) => void }) {
   const language = useLanguage()
+  const platform = usePlatform()
   const server = useServer()
   const others = () => server.list.filter((s) => ServerConnection.key(s) !== server.key)
   const name = createMemo(() => server.name || server.key)
+  const localBridge = createMemo(() => platform.platform === "web" && ServerConnection.local(server.current))
   const serverToken = "\u0000server\u0000"
   const unreachable = createMemo(() => language.t("app.server.unreachable", { server: serverToken }).split(serverToken))
 
@@ -495,15 +500,38 @@ function ConnectionError(props: { onRetry?: () => void; onServerSelected?: (key:
 
   return (
     <div class="h-dvh w-screen flex flex-col items-center justify-center bg-background-base gap-6 p-6">
-      <div class="flex flex-col items-center max-w-md text-center">
-        <Splash class="w-12 h-15 mb-4" />
-        <p class="text-14-regular text-text-base">
-          {unreachable()[0]}
-          <span class="text-text-strong font-medium">{name()}</span>
-          {unreachable()[1]}
-        </p>
-        <p class="mt-1 text-12-regular text-text-weak">{language.t("app.server.retrying")}</p>
-      </div>
+      <Show
+        when={localBridge()}
+        fallback={
+          <div class="flex flex-col items-center max-w-md text-center">
+            <Splash class="w-12 h-15 mb-4" />
+            <p class="text-14-regular text-text-base">
+              {unreachable()[0]}
+              <span class="text-text-strong font-medium">{name()}</span>
+              {unreachable()[1]}
+            </p>
+            <p class="mt-1 text-12-regular text-text-weak">{language.t("app.server.retrying")}</p>
+          </div>
+        }
+      >
+        <div class="flex w-full max-w-lg flex-col items-center text-center">
+          <Splash class="mb-5 h-15 w-12" />
+          <h1 class="text-18-medium text-text-strong">{language.t("app.server.localBridge.title")}</h1>
+          <p class="mt-2 max-w-md text-14-regular text-text-base">{language.t("app.server.localBridge.description")}</p>
+          <code class="mt-5 w-full overflow-x-auto border-y border-border-weak-base px-4 py-3 text-left text-13-regular text-text-strong">
+            mongolgpt serve --port 4096
+          </code>
+          <p class="mt-3 text-12-regular text-text-weak">{language.t("app.server.localBridge.retrying")}</p>
+          <div class="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <Button size="large" variant="primary" onClick={() => props.onRetry?.()}>
+              {language.t("app.server.localBridge.retry")}
+            </Button>
+            <Button size="large" variant="secondary" onClick={() => platform.openLink(documentationUrl("web/"))}>
+              {language.t("app.server.localBridge.docs")}
+            </Button>
+          </div>
+        </div>
+      </Show>
       <Show when={others().length > 0}>
         <div class="flex flex-col gap-2 w-full max-w-sm">
           <span class="text-12-regular text-text-base text-center">{language.t("app.server.otherServers")}</span>

@@ -8,6 +8,7 @@ import { dict as en } from "@/i18n/en"
 import { dict as zh } from "@/i18n/zh"
 import { handleNotificationClick } from "@/utils/notification-click"
 import { authFromToken } from "@/utils/server"
+import { resolveDefaultServerUrl, resolveWebRuntime } from "@/utils/web-runtime"
 import pkg from "../package.json"
 import { ServerConnection } from "./context/server"
 
@@ -101,17 +102,19 @@ if (!(root instanceof HTMLElement) && import.meta.env.DEV) {
   throw new Error(getRootNotFoundError())
 }
 
-const getCurrentUrl = () => {
-  if (import.meta.env.DEV)
-    return `http://${import.meta.env.VITE_MONGOLGPT_SERVER_HOST ?? "localhost"}:${import.meta.env.VITE_MONGOLGPT_SERVER_PORT ?? "4096"}`
-  return location.origin
-}
-
-const getDefaultUrl = () => {
-  const lsDefault = readDefaultServerUrl()
-  if (lsDefault) return lsDefault
-  return getCurrentUrl()
-}
+const runtime = resolveWebRuntime({
+  dev: import.meta.env.DEV,
+  origin: location.origin,
+  serverHost: import.meta.env.VITE_MONGOLGPT_SERVER_HOST,
+  serverPort: import.meta.env.VITE_MONGOLGPT_SERVER_PORT,
+  serverUrl: import.meta.env.VITE_MONGOLGPT_SERVER_URL,
+})
+const defaultServer = resolveDefaultServerUrl({
+  runtime,
+  storedUrl: readDefaultServerUrl(),
+  appOrigin: location.origin,
+})
+if (defaultServer.clearStored) writeDefaultServerUrl(null)
 
 const clearAuthToken = () => {
   const params = new URLSearchParams(location.search)
@@ -160,19 +163,19 @@ if (root instanceof HTMLElement) {
     type: "http",
     authToken: !!auth,
     http: {
-      url: getCurrentUrl(),
+      url: runtime.serverUrl,
       ...auth,
     },
   }
+  const serverKey = ServerConnection.key(server)
   render(
     () => (
       <PlatformProvider value={platform}>
         <AppBaseProviders>
           <AppInterface
-            defaultServer={ServerConnection.Key.make(getDefaultUrl())}
-            canonicalLocalServer={ServerConnection.key(server)}
+            defaultServer={ServerConnection.Key.make(defaultServer.url)}
+            canonicalLocalServer={runtime.mode === "local-bridge" ? serverKey : undefined}
             servers={[server]}
-            disableHealthCheck
           />
         </AppBaseProviders>
       </PlatformProvider>

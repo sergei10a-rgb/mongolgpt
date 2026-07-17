@@ -1,7 +1,8 @@
 interface ImportMetaEnv {
   readonly VITE_MONGOLGPT_SERVER_HOST: string
   readonly VITE_MONGOLGPT_SERVER_PORT: string
-  readonly VITE_MONGOLGPT_CHANNEL?: "dev" | "beta" | "prod"
+  readonly VITE_MONGOLGPT_SERVER_URL?: string
+  readonly VITE_MONGOLGPT_RUNTIME_MODE?: "local-bridge" | "hosted"
   readonly VITE_MONGOLGPT_CHANNEL?: "dev" | "beta" | "prod"
 
   readonly VITE_SENTRY_DSN?: string
