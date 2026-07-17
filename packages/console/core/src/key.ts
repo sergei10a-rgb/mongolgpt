@@ -78,7 +78,7 @@ export namespace Key {
       tx
         .update(KeyTable)
         .set({
-          timeDeleted: sql`now()`,
+          timeDeleted: new Date(),
         })
         .where(
           and(

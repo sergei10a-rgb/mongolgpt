@@ -925,8 +925,18 @@ function usageTotal(point: UsagePoint) {
 }
 
 function formatTokens(value: number) {
-  if (value >= 1) return `${value.toFixed(value >= 10 ? 0 : 1)}T`
-  return `${Math.round(value * 1000)}B`
+  if (value >= 1_000_000_000_000)
+    return `${trimTokenNumber(value / 1_000_000_000_000, value >= 10_000_000_000_000 ? 0 : 1)}T`
+  if (value >= 1_000_000_000)
+    return `${trimTokenNumber(value / 1_000_000_000, value >= 10_000_000_000 ? 0 : 1)}B`
+  if (value >= 1_000_000)
+    return `${trimTokenNumber(value / 1_000_000, value >= 10_000_000 ? 0 : 1)}M`
+  if (value >= 1_000) return `${trimTokenNumber(value / 1_000, value >= 10_000 ? 0 : 1)}K`
+  return new Intl.NumberFormat("en").format(Math.round(value))
+}
+
+function trimTokenNumber(value: number, digits: number) {
+  return Number(value.toFixed(digits)).toLocaleString("en")
 }
 
 function formatUsageChartValue(value: number, metric: "tokens" | "users") {
@@ -1032,7 +1042,7 @@ function LeaderboardCard(props: {
         <div data-slot="leader-copy">
           <div>
             <strong>{props.entry.model}</strong>
-            <span>{formatBillions(props.entry.tokens)}</span>
+            <span>{formatTokens(props.entry.tokens)}</span>
           </div>
           <div>
             <span>{props.entry.author}</span>
@@ -1055,11 +1065,6 @@ function getProviderIconId(author: string) {
   if (author === "Moonshot") return "moonshotai"
   if (author === "Zhipu") return "zhipuai"
   return author.toLowerCase()
-}
-
-function formatBillions(value: number) {
-  if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}T`
-  return `${value}B`
 }
 
 function formatChange(value: number | null, i18n: ReturnType<typeof useI18n>) {
@@ -1193,7 +1198,7 @@ function MarketShare(props: {
               onPointerEnter={() => props.onActiveIndexChange(index())}
             >
               <span data-slot="market-axis-label">
-                <span data-slot="market-total">{formatTrillions(day.total)}</span>
+                <span data-slot="market-total">{formatTokens(day.total)}</span>
                 <span data-slot="market-date">
                   <span data-slot="market-date-full">{day.date}</span>
                   <span data-slot="market-date-mobile">{formatMarketMobileDate(day.date)}</span>
@@ -1208,7 +1213,7 @@ function MarketShare(props: {
           {(day, index) => (
             <button
               type="button"
-              aria-label={`${day.date} ${formatTrillions(day.total)}`}
+              aria-label={`${day.date} ${formatTokens(day.total)}`}
               data-active={props.inspecting && props.activeIndex === index() ? "true" : undefined}
               onClick={() => props.onActiveIndexChange(index())}
               onPointerEnter={() => props.onActiveIndexChange(index())}
@@ -1269,7 +1274,7 @@ function MarketShareList(props: {
           <li
             role="button"
             tabIndex={0}
-            aria-label={`${item.author} ${formatTrillions(item.tokens)} ${item.share.toFixed(1)} ${i18n.t("chart.percent")}`}
+            aria-label={`${item.author} ${formatTokens(item.tokens)} ${item.share.toFixed(1)} ${i18n.t("chart.percent")}`}
             data-active={props.activeAuthor === item.author ? "true" : undefined}
             onPointerEnter={() => props.onActiveAuthorChange(item.author)}
             onFocus={() => props.onActiveAuthorChange(item.author)}
@@ -1282,7 +1287,7 @@ function MarketShareList(props: {
             <span>{String(index() + 1).padStart(2, "0")}</span>
             <i style={{ background: getRankColor(item.author, index(), props.authorOrder, marketColors) }} />
             <strong>{item.author}</strong>
-            <em>{formatTrillions(item.tokens)}</em>
+            <em>{formatTokens(item.tokens)}</em>
             <b>{item.share.toFixed(1)}%</b>
           </li>
         )}
@@ -1504,7 +1509,7 @@ function formatCountryName(country: string, locale: string, unknown: string) {
 }
 
 function formatGeoTokens(value: number) {
-  return formatTrillions(value)
+  return formatTokens(value)
 }
 
 function formatGeoShare(value: number) {
@@ -1557,13 +1562,6 @@ function isMarketMobileLabelHidden(index: number, count: number) {
 
 function formatMarketMobileDate(label: string) {
   return marketDateParts(label).start
-}
-
-function formatTrillions(value: number) {
-  if (value === 0) return "0"
-  if (value < 0.001) return `${Number((value * 1_000_000).toFixed(value >= 0.00001 ? 0 : 1))}M`
-  if (value < 1) return `${Number((value * 1_000).toFixed(value >= 0.01 ? 0 : 1))}B`
-  return `${value.toFixed(value >= 10 ? 0 : 1)}T`
 }
 
 function formatMarketDate(day: MarketDay | undefined, fallback: string) {
@@ -1762,11 +1760,11 @@ function CacheRatioChart(props: {
             </p>
             <p>
               <span>{i18n.t("chart.cached")}</span>
-              <strong>{formatBillions(item().cached)}</strong>
+              <strong>{formatTokens(item().cached)}</strong>
             </p>
             <p>
               <span>{i18n.t("chart.uncached")}</span>
-              <strong>{formatBillions(item().uncached)}</strong>
+              <strong>{formatTokens(item().uncached)}</strong>
             </p>
           </div>
         )}
@@ -1897,7 +1895,7 @@ function SessionCostChart(props: {
             </p>
             <p>
               <span>{i18n.t("chart.tokensSession")}</span>
-              <strong>{formatTokenCount(item().tokens)}</strong>
+              <strong>{formatTokens(item().tokens)}</strong>
             </p>
           </div>
         )}
@@ -1909,11 +1907,6 @@ function SessionCostChart(props: {
 function LiveIndicator() {
   const i18n = useI18n()
   return <span data-component="live-filter">{i18n.t("chart.live")}</span>
-}
-
-function formatTokenCount(value: number) {
-  if (value >= 1_000_000) return `${Number((value / 1_000_000).toFixed(1))}M`
-  return `${Math.round(value / 1_000)}K`
 }
 
 function priceTokenCostFromCatalog(data: TokenCostEntry[], catalog: ModelCatalog | null) {

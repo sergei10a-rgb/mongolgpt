@@ -230,7 +230,7 @@ async function printWorkspace(workspaceID: string) {
     await printTable("28-Day Usage", (tx) =>
       tx
         .select({
-          date: sql<string>`DATE(${UsageTable.timeCreated})`.as("date"),
+          date: sql<string>`date(${UsageTable.timeCreated} / 1000, 'unixepoch')`.as("date"),
           requests: sql<number>`COUNT(*)`.as("requests"),
           inputTokens: sql<number>`SUM(${UsageTable.inputTokens})`.as("input_tokens"),
           outputTokens: sql<number>`SUM(${UsageTable.outputTokens})`.as("output_tokens"),
@@ -244,11 +244,11 @@ async function printWorkspace(workspaceID: string) {
         .where(
           and(
             eq(UsageTable.workspaceID, workspace.id),
-            sql`${UsageTable.timeCreated} >= DATE_SUB(NOW(), INTERVAL 28 DAY)`,
+            sql`${UsageTable.timeCreated} >= cast(strftime('%s', 'now', '-28 days') as integer) * 1000`,
           ),
         )
-        .groupBy(sql`DATE(${UsageTable.timeCreated})`)
-        .orderBy(sql`DATE(${UsageTable.timeCreated}) DESC`)
+        .groupBy(sql`date(${UsageTable.timeCreated} / 1000, 'unixepoch')`)
+        .orderBy(sql`date(${UsageTable.timeCreated} / 1000, 'unixepoch') DESC`)
         .then((rows) => {
           const totalCost = rows.reduce((sum, r) => sum + Number(r.cost), 0)
           const mapped = rows.map((row) => ({

@@ -36,7 +36,7 @@ export const dict = {
   "email.subtitle": "加入候補名單，搶先體驗。",
   "email.placeholder": "電子郵件地址",
   "email.subscribe": "訂閱",
-  "email.success": "就差一步，請查收你的信箱並確認電子郵件地址",
+  "email.success": "訂閱成功。",
 
   "notFound.title": "找不到頁面 | MongolGPT",
   "notFound.heading": "404 - 找不到頁面",

@@ -11,6 +11,9 @@
     "dev:web": "bun --cwd packages/app dev",
     "dev:docs": "bun --cwd packages/web dev",
     "build:docs": "bun --cwd packages/web build",
+    "deploy:preflight": "bun script/deployment-preflight.ts",
+    "deploy:smoke": "bun script/deployment-smoke.ts",
+    "db:migrate": "bun --cwd packages/console/core drizzle-kit migrate --config=drizzle.remote.config.ts",
     "dev:console": "ulimit -n 10240 2>/dev/null; bun run --cwd packages/console/app dev",
     "dev:stats": "bun sst shell --stage=production -- bun run --cwd packages/stats/app dev",
     "dev:storybook": "bun --cwd packages/storybook storybook",
@@ -20,7 +23,6 @@
     "postinstall": "bun run --cwd packages/core fix-node-pty",
     "prepare": "husky",
     "random": "echo 'Random script'",
-    "sso": "aws sso login --sso-session=mongolgpt --no-browser",
     "test": "echo 'do not run tests from root' && exit 1"
   },
   "workspaces": {
@@ -109,7 +111,6 @@
     "turbo": "2.8.13"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "3.933.0",
     "@mongolgpt/plugin": "workspace:*",
     "@mongolgpt/script": "workspace:*",
     "@mongolgpt/sdk": "workspace:*",

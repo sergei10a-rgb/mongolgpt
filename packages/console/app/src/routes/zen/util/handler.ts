@@ -49,7 +49,7 @@ import { config } from "~/config"
 import { createModelTpmLimiter } from "./modelTpmLimiter"
 import { createModelTpsLimiter } from "./modelTpsLimiter"
 import { createProviderBudgetTracker } from "./providerBudgetTracker"
-import { accumulateUsage, HOT_WORKSPACES } from "./usageBatcher"
+import { enqueueBatchedUsage, HOT_WORKSPACES } from "./usageBatcher"
 import { verifyCliToken } from "~/lib/cli-auth"
 import { authenticatedRateLimitIdentity, sanitizeProviderRequestHeaders } from "./request-security"
 import { freeAutoReservationUpperBound, reserveFreeAutoQuota } from "./free-auto-quota"
@@ -73,6 +73,11 @@ function resolve(text: string, params?: Record<string, string | number>) {
 
 function contentByteLength(value: string) {
   return new TextEncoder().encode(value).byteLength
+}
+
+function locationCode(value: string | undefined) {
+  const normalized = value?.trim().toUpperCase()
+  return normalized && /^[A-Z]{2}$/.test(normalized) ? normalized : undefined
 }
 
 function consolePath(path: string) {
@@ -1166,25 +1171,76 @@ export async function handler(
     authInfo = authInfo!
 
     const cost = centsToMicroCents(totalCostInCent)
+    const inputCostInMicroCents = centsToMicroCents(inputCost)
+    const outputCostInMicroCents = centsToMicroCents(outputCost)
+    const cacheReadCostInMicroCents = cacheReadCost ? centsToMicroCents(cacheReadCost) : undefined
+    const cacheWriteCostInMicroCents =
+      cacheWrite5mCost || cacheWrite1hCost
+        ? centsToMicroCents((cacheWrite5mCost ?? 0) + (cacheWrite1hCost ?? 0))
+        : undefined
     const totalTokens = usageTokenTotal(usageInfo)
-
-    // For hot workspaces, batch balance/usage updates through Redis to avoid
-    // row-level lock contention on BillingTable/UserTable. Returns the amount
-    // to flush this request, or null to skip the DB writes entirely.
-    const balanceFlush = await (async () => {
-      if (billingSource !== "plan" && billingSource !== "lite" && HOT_WORKSPACES.has(authInfo.workspaceID)) {
-        const workspaceCost = billingSource === "free" || billingSource === "byok" ? 0 : cost
-        const flush = await accumulateUsage(authInfo.workspaceID, authInfo.user.id, workspaceCost, cost)
-        return { batched: true as const, flush }
-      }
-      return { batched: false as const, flush: null }
+    const now = new Date()
+    const nowMs = now.getTime()
+    const currentMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    const usageID = Identifier.create("usage")
+    const cf = (input.request as Request & { cf?: { country?: string; continent?: string } }).cf
+    const country = locationCode(cf?.country ?? input.request.headers.get("cf-ipcountry") ?? undefined)
+    const continent = locationCode(cf?.continent)
+    const enrichment = (() => {
+      if (billingSource === "plan") return { plan: authInfo.billing.subscription!.plan }
+      if (billingSource === "byok") return { plan: "byok" as const }
+      if (billingSource === "lite") return { plan: "legacy-lite" as const }
+      if (billingSource === "balance") return { plan: "balance" as const }
+      return undefined
     })()
+    const queueEligible =
+      billingSource !== "plan" && billingSource !== "lite" && HOT_WORKSPACES.has(authInfo.workspaceID)
+    const queuedWorkspaceCost = billingSource === "free" || billingSource === "byok" ? 0 : cost
 
-    await Database.use((db) =>
-      Promise.all([
-        db.insert(UsageTable).values({
+    if (queueEligible) {
+      try {
+        await enqueueBatchedUsage({
+          version: 1,
+          id: usageID,
           workspaceID: authInfo.workspaceID,
-          id: Identifier.create("usage"),
+          userID: authInfo.user.id,
+          timeCreated: nowMs,
+          workspaceCost: queuedWorkspaceCost,
+          userCost: cost,
+          usage: {
+            model: modelInfo.id,
+            provider: providerInfo.id,
+            inputTokens,
+            outputTokens,
+            reasoningTokens,
+            cacheReadTokens,
+            cacheWrite5mTokens,
+            cacheWrite1hTokens,
+            cost,
+            inputCost: inputCostInMicroCents,
+            outputCost: outputCostInMicroCents,
+            cacheReadCost: cacheReadCostInMicroCents,
+            cacheWriteCost: cacheWriteCostInMicroCents,
+            country,
+            continent,
+            keyID: authInfo.apiKeyId ?? undefined,
+            sessionID: sessionId.substring(0, 30),
+            enrichment,
+          },
+        })
+        return { costInMicroCents: cost }
+      } catch (error) {
+        // The D1 primary-key makes a late Queue delivery and this synchronous fallback idempotent.
+        console.error("Usage queue unavailable; falling back to D1", { usageID, error })
+      }
+    }
+
+    await Database.use(async (db) => {
+      const inserted = await db
+        .insert(UsageTable)
+        .values({
+          workspaceID: authInfo.workspaceID,
+          id: usageID,
           model: modelInfo.id,
           provider: providerInfo.id,
           inputTokens,
@@ -1194,50 +1250,55 @@ export async function handler(
           cacheWrite5mTokens,
           cacheWrite1hTokens,
           cost,
+          inputCost: inputCostInMicroCents,
+          outputCost: outputCostInMicroCents,
+          cacheReadCost: cacheReadCostInMicroCents,
+          cacheWriteCost: cacheWriteCostInMicroCents,
+          country,
+          continent,
           keyID: authInfo.apiKeyId,
           sessionID: sessionId.substring(0, 30),
-          enrichment: (() => {
-            if (billingSource === "plan") return { plan: authInfo.billing.subscription!.plan }
-            if (billingSource === "byok") return { plan: "byok" }
-            if (billingSource === "lite") return { plan: "legacy-lite" }
-            if (billingSource === "balance") return { plan: "balance" }
-            return undefined
-          })(),
-        }),
-        ...(() => {
+          enrichment,
+        })
+        .onConflictDoNothing()
+      if (inserted.meta.changes === 0) return
+
+      await Promise.all(
+        (() => {
           if (billingSource === "plan") {
             const plan = authInfo.billing.subscription!.plan
             const limits = PlanData.getLimits({ plan })
-            const week = getWeekBounds(new Date())
-            const rollingWindowSeconds = limits.rollingWindow * 3600
+            const week = getWeekBounds(now)
+            const weekStartMs = week.start.getTime()
+            const rollingWindowMs = limits.rollingWindow * 3600 * 1000
             return [
               db
                 .update(SubscriptionTable)
                 .set({
                   fixedUsage: sql`
               CASE
-                WHEN ${SubscriptionTable.timeFixedUpdated} >= ${week.start} THEN ${SubscriptionTable.fixedUsage} + ${cost}
+                WHEN ${SubscriptionTable.timeFixedUpdated} >= ${weekStartMs} THEN COALESCE(${SubscriptionTable.fixedUsage}, 0) + ${cost}
                 ELSE ${cost}
               END
             `,
-                  timeFixedUpdated: sql`now()`,
+                  timeFixedUpdated: now,
                   weeklyTokens: sql`
               CASE
-                WHEN ${SubscriptionTable.timeWeeklyTokensUpdated} >= ${week.start} THEN COALESCE(${SubscriptionTable.weeklyTokens}, 0) + ${totalTokens}
+                WHEN ${SubscriptionTable.timeWeeklyTokensUpdated} >= ${weekStartMs} THEN COALESCE(${SubscriptionTable.weeklyTokens}, 0) + ${totalTokens}
                 ELSE ${totalTokens}
               END
             `,
-                  timeWeeklyTokensUpdated: sql`now()`,
+                  timeWeeklyTokensUpdated: now,
                   rollingUsage: sql`
               CASE
-                WHEN UNIX_TIMESTAMP(${SubscriptionTable.timeRollingUpdated}) >= UNIX_TIMESTAMP(now()) - ${rollingWindowSeconds} THEN ${SubscriptionTable.rollingUsage} + ${cost}
+                WHEN ${SubscriptionTable.timeRollingUpdated} >= ${nowMs - rollingWindowMs} THEN COALESCE(${SubscriptionTable.rollingUsage}, 0) + ${cost}
                 ELSE ${cost}
               END
             `,
                   timeRollingUpdated: sql`
               CASE
-                WHEN UNIX_TIMESTAMP(${SubscriptionTable.timeRollingUpdated}) >= UNIX_TIMESTAMP(now()) - ${rollingWindowSeconds} THEN ${SubscriptionTable.timeRollingUpdated}
-                ELSE now()
+                WHEN ${SubscriptionTable.timeRollingUpdated} >= ${nowMs - rollingWindowMs} THEN ${SubscriptionTable.timeRollingUpdated}
+                ELSE ${nowMs}
               END
             `,
                 })
@@ -1251,37 +1312,39 @@ export async function handler(
           }
           if (billingSource === "lite") {
             const lite = LiteData.getLimits()
-            const week = getWeekBounds(new Date())
-            const month = getMonthlyBounds(new Date(), authInfo.lite!.timeCreated)
-            const rollingWindowSeconds = lite.rollingWindow * 3600
+            const week = getWeekBounds(now)
+            const weekStartMs = week.start.getTime()
+            const month = getMonthlyBounds(now, authInfo.lite!.timeCreated)
+            const monthStartMs = month.start.getTime()
+            const rollingWindowMs = lite.rollingWindow * 3600 * 1000
             return [
               db
                 .update(LiteTable)
                 .set({
                   monthlyUsage: sql`
               CASE
-                WHEN ${LiteTable.timeMonthlyUpdated} >= ${month.start} THEN ${LiteTable.monthlyUsage} + ${cost}
+                WHEN ${LiteTable.timeMonthlyUpdated} >= ${monthStartMs} THEN COALESCE(${LiteTable.monthlyUsage}, 0) + ${cost}
                 ELSE ${cost}
               END
             `,
-                  timeMonthlyUpdated: sql`now()`,
+                  timeMonthlyUpdated: now,
                   weeklyUsage: sql`
               CASE
-                WHEN ${LiteTable.timeWeeklyUpdated} >= ${week.start} THEN ${LiteTable.weeklyUsage} + ${cost}
+                WHEN ${LiteTable.timeWeeklyUpdated} >= ${weekStartMs} THEN COALESCE(${LiteTable.weeklyUsage}, 0) + ${cost}
                 ELSE ${cost}
               END
             `,
-                  timeWeeklyUpdated: sql`now()`,
+                  timeWeeklyUpdated: now,
                   rollingUsage: sql`
               CASE
-                WHEN UNIX_TIMESTAMP(${LiteTable.timeRollingUpdated}) >= UNIX_TIMESTAMP(now()) - ${rollingWindowSeconds} THEN ${LiteTable.rollingUsage} + ${cost}
+                WHEN ${LiteTable.timeRollingUpdated} >= ${nowMs - rollingWindowMs} THEN COALESCE(${LiteTable.rollingUsage}, 0) + ${cost}
                 ELSE ${cost}
               END
             `,
                   timeRollingUpdated: sql`
               CASE
-                WHEN UNIX_TIMESTAMP(${LiteTable.timeRollingUpdated}) >= UNIX_TIMESTAMP(now()) - ${rollingWindowSeconds} THEN ${LiteTable.timeRollingUpdated}
-                ELSE now()
+                WHEN ${LiteTable.timeRollingUpdated} >= ${nowMs - rollingWindowMs} THEN ${LiteTable.timeRollingUpdated}
+                ELSE ${nowMs}
               END
             `,
                 })
@@ -1289,11 +1352,8 @@ export async function handler(
             ]
           }
 
-          // Batched hot workspace: skip DB writes unless this request is the flush.
-          if (balanceFlush.batched && !balanceFlush.flush) return []
-
-          const workspaceDelta = balanceFlush.flush?.workspaceCost ?? cost
-          const userDelta = balanceFlush.flush?.userCost ?? cost
+          const workspaceDelta = queueEligible ? queuedWorkspaceCost : cost
+          const userDelta = cost
           const balanceDelta = billingSource === "free" || billingSource === "byok" ? 0 : workspaceDelta
 
           return [
@@ -1303,11 +1363,11 @@ export async function handler(
                 balance: sql`${BillingTable.balance} - ${balanceDelta}`,
                 monthlyUsage: sql`
               CASE
-                WHEN MONTH(${BillingTable.timeMonthlyUsageUpdated}) = MONTH(now()) AND YEAR(${BillingTable.timeMonthlyUsageUpdated}) = YEAR(now()) THEN ${BillingTable.monthlyUsage} + ${workspaceDelta}
+                WHEN ${BillingTable.timeMonthlyUsageUpdated} >= ${currentMonthStart.getTime()} THEN COALESCE(${BillingTable.monthlyUsage}, 0) + ${workspaceDelta}
                 ELSE ${workspaceDelta}
               END
             `,
-                timeMonthlyUsageUpdated: sql`now()`,
+                timeMonthlyUsageUpdated: now,
               })
               .where(eq(BillingTable.workspaceID, authInfo.workspaceID)),
             db
@@ -1315,17 +1375,17 @@ export async function handler(
               .set({
                 monthlyUsage: sql`
               CASE
-                WHEN MONTH(${UserTable.timeMonthlyUsageUpdated}) = MONTH(now()) AND YEAR(${UserTable.timeMonthlyUsageUpdated}) = YEAR(now()) THEN ${UserTable.monthlyUsage} + ${userDelta}
+                WHEN ${UserTable.timeMonthlyUsageUpdated} >= ${currentMonthStart.getTime()} THEN COALESCE(${UserTable.monthlyUsage}, 0) + ${userDelta}
                 ELSE ${userDelta}
               END
             `,
-                timeMonthlyUsageUpdated: sql`now()`,
+                timeMonthlyUsageUpdated: now,
               })
               .where(and(eq(UserTable.workspaceID, authInfo.workspaceID), eq(UserTable.id, authInfo.user.id))),
           ]
         })(),
-      ]),
-    )
+      )
+    })
 
     return { costInMicroCents: cost }
   }
@@ -1336,24 +1396,26 @@ export async function handler(
 
     const reloadTrigger = centsToMicroCents((authInfo.billing.reloadTrigger ?? Billing.RELOAD_TRIGGER) * 100)
     if (authInfo.billing.balance - costInfo.totalCostInCent >= reloadTrigger) return
-    if (authInfo.billing.timeReloadLockedTill && authInfo.billing.timeReloadLockedTill > new Date()) return
+    const now = new Date()
+    if (authInfo.billing.timeReloadLockedTill && authInfo.billing.timeReloadLockedTill > now) return
+    const reloadLockedTill = new Date(now.getTime() + 60_000)
 
     const lock = await Database.use((tx) =>
       tx
         .update(BillingTable)
         .set({
-          timeReloadLockedTill: sql`now() + interval 1 minute`,
+          timeReloadLockedTill: reloadLockedTill,
         })
         .where(
           and(
             eq(BillingTable.workspaceID, authInfo.workspaceID),
             eq(BillingTable.reload, true),
             lt(BillingTable.balance, reloadTrigger),
-            or(isNull(BillingTable.timeReloadLockedTill), lt(BillingTable.timeReloadLockedTill, sql`now()`)),
+            or(isNull(BillingTable.timeReloadLockedTill), lt(BillingTable.timeReloadLockedTill, now)),
           ),
         ),
     )
-    if (lock.rowsAffected === 0) return
+    if (lock.meta.changes === 0) return
 
     await Actor.provide("system", { workspaceID: authInfo.workspaceID }, async () => {
       await Billing.reload()

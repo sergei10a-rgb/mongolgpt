@@ -35,7 +35,7 @@ export const dict = {
   "email.subtitle": "대기 명단에 등록하여 조기 이용 권한을 받으세요.",
   "email.placeholder": "이메일 주소",
   "email.subscribe": "구독",
-  "email.success": "거의 완료되었습니다. 이메일 수신함을 확인하고 주소를 인증해주세요.",
+  "email.success": "구독이 완료되었습니다.",
 
   "notFound.title": "페이지를 찾을 수 없음 | MongolGPT",
   "notFound.heading": "404 - 페이지를 찾을 수 없음",

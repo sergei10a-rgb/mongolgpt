@@ -6,6 +6,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "noEmit": true,
-    "types": ["bun", "node"]
-  }
+    "types": ["@cloudflare/workers-types", "bun"]
+  },
+  "include": ["src/domain/home.ts", "sst-env.d.ts"]
 }

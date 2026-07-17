@@ -17,6 +17,7 @@ import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { AuthTable } from "@mongolgpt/console-core/schema/auth.sql.js"
 import { Identifier } from "@mongolgpt/console-core/identifier.js"
+import { isAllowedNonProductionEmail } from "./auth-allowlist"
 
 type Env = {
   AuthStorage: KVNamespace
@@ -42,6 +43,17 @@ const MY_THEME: Theme = {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    if (new URL(request.url).pathname === "/health") {
+      return Response.json(
+        { status: "ok", service: "auth" },
+        {
+          headers: {
+            "Cache-Control": "no-store",
+          },
+        },
+      )
+    }
+
     const result = await issuer({
       theme: MY_THEME,
       providers: {
@@ -137,7 +149,10 @@ export default {
         if (!email) throw new Error("No email found")
         if (!subject) throw new Error("No subject found")
 
-        if (Resource.App.stage !== "production" && !isAllowedNonProductionEmail(email, env.MONGOLGPT_AUTH_EMAIL_DOMAINS)) {
+        if (
+          Resource.App.stage !== "production" &&
+          !isAllowedNonProductionEmail(email, env.MONGOLGPT_AUTH_EMAIL_DOMAINS)
+        ) {
           throw new Error("Invalid email")
         }
 
@@ -186,7 +201,8 @@ export default {
                   subject: email,
                 },
               ])
-              .onDuplicateKeyUpdate({
+              .onConflictDoUpdate({
+                target: [AuthTable.provider, AuthTable.subject],
                 set: {
                   timeDeleted: null,
                 },
@@ -221,14 +237,4 @@ export default {
     }).fetch(request, env, ctx)
     return result
   },
-}
-
-function isAllowedNonProductionEmail(email: string, domains: string | undefined) {
-  const allowlist = domains
-    ?.split(",")
-    .map((domain) => domain.trim().toLowerCase())
-    .filter(Boolean)
-  if (!allowlist?.length) return false
-  const normalizedEmail = email.toLowerCase()
-  return allowlist.some((domain) => normalizedEmail.endsWith(`@${domain}`))
 }

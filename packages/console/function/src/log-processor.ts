@@ -98,43 +98,17 @@ export default {
         ),
         { time, data: { ...data, event_type: "completions" } },
       ]
-      const lakeIngest = getLakeIngest()
-      const [honeycomb, lake] = await Promise.all([
-        fetch("https://api.honeycomb.io/1/batch/zen", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Honeycomb-Team": Resource.HONEYCOMB_API_KEY.value,
-          },
-          body: JSON.stringify(telemetryEvents),
-        }),
-        ...(lakeIngest
-          ? [
-              fetch(lakeIngest.url, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${lakeIngest.secret}`,
-                },
-                body: JSON.stringify({
-                  events: telemetryEvents.map((event) => toLakeEvent(event.time, event.data)),
-                }),
-              }),
-            ]
-          : []),
-      ])
+      const honeycomb = await fetch("https://api.honeycomb.io/1/batch/zen", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Honeycomb-Team": Resource.HONEYCOMB_API_KEY.value,
+        },
+        body: JSON.stringify(telemetryEvents),
+      })
       if (!honeycomb.ok) console.error("Honeycomb ingest failed", honeycomb.status, honeycomb.statusText)
-      if (lake && !lake.ok) console.error("Lake ingest failed", lake.status, lake.statusText)
     }
   },
-}
-
-function getLakeIngest(): { url: string; secret: string } | undefined {
-  try {
-    return Resource.LakeIngest
-  } catch {
-    return undefined
-  }
 }
 
 function parseMetric(message: string) {
@@ -158,56 +132,6 @@ export function sanitizeMetric(input: unknown) {
       return [[key, value.slice(0, limit)]]
     }),
   )
-}
-
-export function toLakeEvent(time: string, input: Record<string, unknown>) {
-  const data = sanitizeMetric(input)
-  const eventType = string(input, "event_type")
-  return {
-    _datalake_key: "inference.event",
-    event_timestamp: time,
-    event_date: time.slice(0, 10),
-    event_type: eventType === "llm.error" ? eventType : "completions",
-    dataset: "zen",
-    cf_continent: string(data, "cf.continent"),
-    cf_country: string(data, "cf.country"),
-    cf_region: string(data, "cf.region"),
-    cf_timezone: string(data, "cf.timezone"),
-    duration: number(data, "duration"),
-    request_length: integer(data, "request_length"),
-    status: integer(data, "response_status") ?? integer(data, "status"),
-    ip_prefix: string(data, "ip.prefix"),
-    is_stream: boolean(data, "is_stream"),
-    session: string(data, "session"),
-    request: string(data, "request"),
-    client: string(data, "client"),
-    user_agent: string(data, "user_agent"),
-    model: string(data, "model"),
-    model_tier: string(data, "model.tier"),
-    model_variant: string(data, "model.variant"),
-    source: string(data, "source"),
-    provider: string(data, "provider"),
-    provider_model: string(data, "provider.model"),
-    llm_error_code: integer(data, "llm.error.code"),
-    error_type: string(data, "error.type"),
-    workspace: string(data, "workspace"),
-    subscription: string(data, "subscription"),
-    response_length: integer(data, "response_length"),
-    time_to_first_byte: integer(data, "time_to_first_byte"),
-    timestamp_first_byte: integer(data, "timestamp.first_byte"),
-    timestamp_last_byte: integer(data, "timestamp.last_byte"),
-    tokens_input: integer(data, "tokens.input"),
-    tokens_output: integer(data, "tokens.output"),
-    tokens_reasoning: integer(data, "tokens.reasoning"),
-    tokens_cache_read: integer(data, "tokens.cache_read"),
-    tokens_cache_write_5m: integer(data, "tokens.cache_write_5m"),
-    tokens_cache_write_1h: integer(data, "tokens.cache_write_1h"),
-    cost_input_microcents: integer(data, "cost.input.microcents"),
-    cost_output_microcents: integer(data, "cost.output.microcents"),
-    cost_cache_read_microcents: integer(data, "cost.cache_read.microcents"),
-    cost_cache_write_microcents: integer(data, "cost.cache_write.microcents"),
-    cost_total_microcents: integer(data, "cost.total.microcents"),
-  }
 }
 
 export function ipPrefix(ip: string | undefined) {
@@ -245,34 +169,4 @@ function ipv4Prefix(ip: string) {
   const octets = parts.map(Number)
   if (octets.some((part) => part < 0 || part > 255)) return undefined
   return `${octets[0]}.${octets[1]}.${octets[2]}.0/24`
-}
-
-function string(data: Record<string, unknown>, key: string) {
-  const value = data[key]
-  if (typeof value === "string") return value
-  if (typeof value === "number" || typeof value === "boolean") return String(value)
-  return undefined
-}
-
-function boolean(data: Record<string, unknown>, key: string) {
-  const value = data[key]
-  if (typeof value === "boolean") return value
-  if (typeof value === "string") return value === "true" ? true : value === "false" ? false : undefined
-  return undefined
-}
-
-function integer(data: Record<string, unknown>, key: string) {
-  const value = number(data, key)
-  if (value === undefined) return undefined
-  return Math.round(value)
-}
-
-function number(data: Record<string, unknown>, key: string) {
-  const value = data[key]
-  if (typeof value === "number") return Number.isFinite(value) ? value : undefined
-  if (typeof value === "string") {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : undefined
-  }
-  return undefined
 }

@@ -1,0 +1,126 @@
+---
+title: Cloudflare байршуулалт
+description: MongolGPT-ийн Cloudflare-only staging, production, DNS, нууц утга, шалгалт болон буцаалтын гарын авлага.
+---
+
+MongolGPT-ийн веб бүтээгдэхүүний байршуулалтын үндсэн платформ нь **Cloudflare**. Vercel болон Supabase нь launch архитектурын сонголт биш.
+
+OpenRouter, NVIDIA NIM, Bonum болон QPay нь хиймэл оюуны загвар, төлбөрийн гадаад API болохоос MongolGPT-ийн hosting платформ биш.
+
+:::caution
+Hosted орчны үндсэн өгөгдөл D1, quota болон rate limit нь SQLite-backed Durable Objects, өндөр ачааллын usage бичилт нь Queues ашиглана. Production deploy нээлттэй боловч OAuth, model provider болон domain-ийн бодит нууц утгыг тохируулж, `deploy:preflight` болон smoke шалгалтыг заавал давуулна.
+:::
+
+## Үйлчилгээний хаягууд
+
+Production domain-ийг `mgpt.mn` гэж үзвэл:
+
+| Үйлчилгээ             | Хаяг                        |
+| --------------------- | --------------------------- |
+| Account болон Console | `https://mgpt.mn`           |
+| Web app               | `https://app.mgpt.mn`       |
+| Монгол баримт бичиг   | `https://docs.mgpt.mn/docs` |
+| OAuth үйлчилгээ       | `https://auth.mgpt.mn`      |
+| Sync API (сонголттой) | `https://api.mgpt.mn`       |
+
+`dev` орчинд эдгээрийн domain-ийн өмнө `dev.` нэмэгдэнэ. Жишээ нь `https://app.dev.mgpt.mn`.
+
+`api.<domain>` нь үндсэн launch үйлчилгээ биш. Зөвхөн `MONGOLGPT_ENABLE_SYNC_SERVICE=true` үед нэмэлт sync service-тэй хамт байршуулна.
+
+## Cloudflare бүтэц
+
+| Хэсэг                             | Cloudflare үйлчилгээ            |
+| --------------------------------- | ------------------------------- |
+| Баримт бичиг                      | Astro Worker                    |
+| Web app                           | Static Assets / Worker          |
+| Console ба Free Auto gateway      | SolidStart Worker               |
+| OAuth                             | Worker + KV                     |
+| Үндсэн өгөгдөл                    | D1                              |
+| Token quota, атомик тоолуур       | SQLite-backed Durable Objects   |
+| Өндөр ачааллын usage бичилт       | Queues + dead-letter Queue + D1 |
+| Бодит цагийн статистик            | Cloudflare D1 + `stats.<domain>` |
+| Мэдээллийн захидлын бүртгэл       | Cloudflare D1                   |
+| Enterprise холбогдох хүсэлт       | Cloudflare D1                   |
+
+KV нь нэг key-д олон зэрэгцээ бичилт шаарддаг token болон төлбөрийн тоолуурт ашиглагдахгүй. Ийм төлөвийг Durable Objects сериал дарааллаар удирдана.
+
+## Deploy-оос өмнөх шалгалт
+
+Repository-ийн үндсэн хавтаснаас:
+
+```powershell
+$env:MONGOLGPT_DOMAIN="mgpt.mn"
+$env:CLOUDFLARE_DEFAULT_ACCOUNT_ID="<account-id>"
+$env:CLOUDFLARE_API_TOKEN="<api-token>"
+bun run deploy:preflight -- dev
+```
+
+Static dev staging байрлуулах:
+
+```powershell
+$env:MONGOLGPT_ENABLE_HOSTED_SERVICES="false"
+bun sst deploy --stage=dev
+bun run deploy:smoke -- dev
+```
+
+Production deploy хийхэд нэмэлт баталгаажуулалт заавал өгнө:
+
+```powershell
+$env:MONGOLGPT_PRODUCTION_CONFIRMATION="DEPLOY mgpt.mn"
+bun run deploy:preflight -- production
+```
+
+## GitHub тохиргоо
+
+Cloudflare Dashboard хэвийн болмогц GitHub repository-ийн `Settings` → `Secrets and variables` → `Actions` хэсэгт дараахыг тохируулна.
+
+| Төрөл    | Нэр                             | Утга                                                         |
+| -------- | ------------------------------- | ------------------------------------------------------------ |
+| Variable | `MONGOLGPT_DOMAIN`              | `mgpt.mn`                                                    |
+| Variable | `CLOUDFLARE_DEFAULT_ACCOUNT_ID` | Cloudflare account ID                                        |
+| Variable | `MONGOLGPT_AUTH_EMAIL_DOMAINS`  | Dev-д зөвшөөрөх яг email эсвэл domain; таслалаар тусгаарлана |
+| Secret   | `CLOUDFLARE_API_TOKEN`          | Хамгийн бага шаардлагатай эрхтэй API token                   |
+
+Hosted dev орчны OAuth болон Free Auto runtime-д дараах SST secret шаардлагатай. Нууц утгыг repository эсвэл workflow файлд бичихгүй.
+
+```powershell
+bun sst secret set GITHUB_CLIENT_ID_CONSOLE "<github-client-id>" --stage dev
+bun sst secret set GITHUB_CLIENT_SECRET_CONSOLE "<github-client-secret>" --stage dev
+bun sst secret set GOOGLE_CLIENT_ID "<google-client-id>" --stage dev
+bun sst secret set ZEN_SESSION_SECRET "<random-long-secret>" --stage dev
+bun sst secret set ZEN_MODELS1 "<validated-model-config-json>" --stage dev
+```
+
+Quota service-ийн дотоод token-ийг SST deploy үеэр автоматаар үүсгэнэ. Upstash болон PlanetScale secret шаардлагагүй.
+
+`Cloudflare deploy` workflow нь preflight, typecheck, docs/web build, SST deploy, D1 migration, URL smoke check гэсэн дарааллаар ажиллана. Production үед `DEPLOY <domain>` гэсэн яг тохирох баталгаажуулалтгүй бол preflight зогсооно.
+
+`MONGOLGPT_ENABLE_ANALYTICS=true` бол зөвхөн `MONGOLGPT_ENABLE_HOSTED_SERVICES=true` үеийн deploy дээр `https://stats.<domain>` live stats сайтыг Cloudflare D1-backed орчноор хамт гаргана.
+
+Stats сайтын мэдээллийн захидлын маягт бүртгэлийг үндсэн D1 сангийн `newsletter_subscriber` хүснэгтэд хадгална. EmailOctopus secret болон тусдаа newsletter database шаардахгүй.
+
+Enterprise холбогдох маягтын хүсэлтийг `enterprise_inquiry` хүснэгтэд хадгална. Ингэснээр Salesforce, AWS SES эсвэл EmailOctopus түр тохируулаагүй үед ч хэрэглэгчийн хүсэлт алдагдахгүй.
+
+## Health шалгалт
+
+Hosted орчинд:
+
+```txt
+GET https://mgpt.mn/api/health
+GET https://auth.mgpt.mn/health
+```
+
+Амжилттай хариу нь `status` талбарт `ok` утгатай JSON байна. Health endpoint нь нууц утга, database мэдээлэл, хувилбарын дотоод дугаар задруулахгүй.
+
+## Буцаах
+
+1. Асуудалтай deploy-оос өмнөх баталгаатай Git commit-ийг сонгоно.
+2. Тухайн commit-оос ижил stage руу `bun sst deploy --stage=<stage>` ажиллуулна.
+3. `bun run deploy:smoke -- <stage>` ажиллуулж бүх нийтэд нээлттэй URL-ийг шалгана.
+4. Өгөгдлийн migration орсон бол кодыг дангаар буцаахгүй; migration бүр тусдаа forward fix эсвэл урьдчилан бэлтгэсэн restore ажиллагаатай байна.
+
+Production resource нь SST дээр хамгаалагдсан бөгөөд repository устгах эсвэл stage арилгах үйлдлээр санамсаргүй устахгүй.
+
+## Cloudflare тасалдсан үед
+
+Cloudflare Dashboard нээгдэхгүй бол DNS болон нууц үгийг олон дахин өөрчлөхөөс өмнө [Cloudflare Status](https://www.cloudflarestatus.com/) болон [status API](https://www.cloudflarestatus.com/api/v2/status.json)-г шалгана. Dashboard тасарсан үед local хөгжүүлэлт, test, build болон GitHub configuration бэлтгэх ажлаа үргэлжлүүлж болно; deploy-г үйлчилгээ хэвийн болтол түр хүлээнэ.

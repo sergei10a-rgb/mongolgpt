@@ -1,5 +1,5 @@
 import { RateLimitError } from "./error"
-import { buildRateLimitKey, getRedis } from "./redis"
+import { buildRateLimitKey, claimResult, hashIdentifier, ledgerCommand } from "./quota-service"
 import { i18n } from "~/i18n"
 import { localeFromRequest } from "~/lib/language"
 
@@ -19,29 +19,28 @@ export function createRateLimiter(
     .replace(/[^0-9]/g, "")
     .substring(0, 12)
   const interval = `${modelId.substring(0, 27)}-${yyyyMMddHHmm}`
-  const redis = getRedis()
-  const key = buildRateLimitKey("key", hashIdentifier(zenApiKey), interval)
 
   return {
     check: async () => {
-      const count = Number((await redis.mget<(string | number | null)[]>([key]))[0] ?? 0)
-
-      if (count >= LIMIT) throw new RateLimitError(rateLimitMessage(locale, dict["zen.api.error.rateLimitExceeded"]), 60)
+      const identifier = await hashIdentifier(zenApiKey)
+      const key = buildRateLimitKey("key", identifier, interval)
+      const result = claimResult(
+        await ledgerCommand(`key:${identifier}`, {
+          type: "claim",
+          key,
+          amount: 1,
+          limit: Math.max(1, Math.ceil(LIMIT)),
+          expiresAt: Date.now() + 60_000,
+        }),
+      )
+      if (!result.allowed)
+        throw new RateLimitError(rateLimitMessage(locale, dict["zen.api.error.rateLimitExceeded"]), 60)
     },
-    track: async () => {
-      const pipeline = redis.pipeline()
-      pipeline.incr(key)
-      pipeline.expire(key, 60)
-      await pipeline.exec()
-    },
+    track: async () => undefined,
   }
 }
 
 function rateLimitMessage(locale: string, fallback: string) {
   if (locale !== "mn") return fallback
   return "API түлхүүрийн хүсэлтийн хязгаарт хүрлээ. Нэг минут хүлээгээд дахин оролдоно уу."
-}
-
-function hashIdentifier(value: string) {
-  return Bun.hash(value).toString(16)
 }

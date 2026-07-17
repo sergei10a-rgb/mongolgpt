@@ -1,7 +1,7 @@
-import { domain, publicOrigin } from "./stage"
+import { docsOrigin, domain, publicOrigin } from "./stage"
 
 const supportUrl = "https://github.com/sergei10a-rgb/mongolgpt/issues"
-export const docsUrl = `${publicOrigin}/docs`
+export const docsUrl = docsOrigin
 
 export const website = new sst.cloudflare.x.Astro("Website", {
   domain: `docs.${domain}`,

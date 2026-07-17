@@ -1,6 +1,6 @@
 import { FreeUsageLimitError } from "./error"
 import { logger } from "./logger"
-import { buildRateLimitKey, getRedis } from "./redis"
+import { buildRateLimitKey, claimResult, ledgerCommand } from "./quota-service"
 import { i18n } from "~/i18n"
 import { localeFromRequest } from "~/lib/language"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
@@ -16,32 +16,28 @@ export function createRateLimiter(modelId: string, rateLimit: number | undefined
 
   const ip = normalizeIdentifier(rawIp)
   const now = Date.now()
-  const dailyInterval = proxyHeadersVerified && rateLimit ? `${buildYYYYMMDD(now)}${modelId.substring(0, 2)}` : buildYYYYMMDD(now)
+  const dailyInterval =
+    proxyHeadersVerified && rateLimit ? `${buildYYYYMMDD(now)}${modelId.substring(0, 2)}` : buildYYYYMMDD(now)
   const retryAfter = getRetryAfterDay(now)
-  const redis = getRedis()
   const lifetimeKey = buildRateLimitKey("ip", ip)
   const dailyKey = buildRateLimitKey("ip", ip, dailyInterval)
-  let isNew = false
 
   return {
     check: async () => {
-      const counts = await redis.mget<(string | number | null)[]>(isDefaultModel ? [lifetimeKey, dailyKey] : [dailyKey])
-      const lifetimeCount = isDefaultModel ? Number(counts[0] ?? 0) : 0
-      const dailyCount = Number(counts[isDefaultModel ? 1 : 0] ?? 0)
-      logger.debug(`rate limit lifetime: ${lifetimeCount}, daily: ${dailyCount}`)
-
-      isNew = isDefaultModel && lifetimeCount < dailyLimit * 7
-
-      if ((isNew && dailyCount >= dailyLimit * 2) || (!isNew && dailyCount >= dailyLimit))
+      const result = claimResult(
+        await ledgerCommand(`ip:${ip}`, {
+          type: "ip-claim",
+          dailyKey,
+          lifetimeKey: isDefaultModel ? lifetimeKey : null,
+          dailyLimit: Math.max(1, Math.ceil(dailyLimit)),
+          dailyExpiresAt: now + retryAfter * 1_000,
+        }),
+      )
+      logger.debug(`rate limit lifetime: ${Number(result.lifetime ?? 0)}, daily: ${Number(result.daily ?? 0)}`)
+      if (!result.allowed)
         throw new FreeUsageLimitError(rateLimitMessage(locale, dict["zen.api.error.rateLimitExceeded"]), retryAfter)
     },
-    track: async () => {
-      const pipeline = redis.pipeline()
-      pipeline.incr(dailyKey)
-      pipeline.expire(dailyKey, retryAfter)
-      if (isNew) pipeline.incr(lifetimeKey)
-      await pipeline.exec()
-    },
+    track: async () => undefined,
   }
 }
 

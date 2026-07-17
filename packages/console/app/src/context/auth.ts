@@ -1,5 +1,5 @@
 import { getRequestEvent } from "solid-js/web"
-import { and, Database, eq, inArray, isNull, sql } from "@mongolgpt/console-core/drizzle/index.js"
+import { and, Database, eq, inArray, isNull } from "@mongolgpt/console-core/drizzle/index.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { redirect } from "@solidjs/router"
 import { Actor } from "@mongolgpt/console-core/actor.js"
@@ -31,8 +31,9 @@ export function useAuthSession() {
     name: "auth",
     maxAge: 60 * 60 * 24 * 365,
     cookie: {
-      secure: false,
+      secure: import.meta.env.PROD,
       httpOnly: true,
+      sameSite: "lax",
     },
   })
 }
@@ -96,7 +97,7 @@ export const getActor = async (workspace?: string): Promise<Actor.Info> => {
         await Database.use((tx) =>
           tx
             .update(UserTable)
-            .set({ timeSeen: sql`now()` })
+            .set({ timeSeen: new Date() })
             .where(and(eq(UserTable.workspaceID, workspace), eq(UserTable.id, user.id))),
         )
         return {

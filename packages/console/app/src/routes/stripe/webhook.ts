@@ -12,6 +12,7 @@ import { BlackData } from "@mongolgpt/console-core/black.js"
 import { Referral } from "@mongolgpt/console-core/referral.js"
 
 export async function POST(input: APIEvent) {
+  Billing.assertLegacyStripeEnabled()
   const body = await Billing.stripe().webhooks.constructEventAsync(
     await input.request.text(),
     input.request.headers.get("stripe-signature")!,
@@ -313,7 +314,7 @@ export async function POST(input: APIEvent) {
               .set({
                 reload: false,
                 reloadError: errorMessage ?? "workspace.reload.error.paymentFailed",
-                timeReloadError: sql`now()`,
+                timeReloadError: new Date(),
               })
               .where(eq(BillingTable.workspaceID, Actor.workspace())),
           )

@@ -21,11 +21,14 @@ import { Resource } from "@mongolgpt/console-resource"
 
 const getEnabled = query(async () => {
   "use server"
-  return Resource.App.stage !== "production"
+  return Billing.legacyStripeEnabled() && Resource.App.stage !== "production"
 }, "black.subscribe.enabled")
 
 const plansMap = Object.fromEntries(plans.map((p) => [p.id, p])) as Record<PlanID, (typeof plans)[number]>
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!)
+const stripePromise =
+  import.meta.env.VITE_MONGOLGPT_BILLING_ENABLED === "true"
+    ? loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!)
+    : Promise.resolve(null)
 
 const getWorkspaces = query(async (plan: string) => {
   "use server"
@@ -63,6 +66,7 @@ const getWorkspaces = query(async (plan: string) => {
 
 const createSetupIntent = async (input: { plan: string; workspaceID: string }) => {
   "use server"
+  Billing.assertLegacyStripeEnabled()
   const { plan, workspaceID } = input
 
   if (!plan || !["basic", "pro", "max"].includes(plan)) return { error: formError.invalidPlan }
@@ -126,6 +130,7 @@ const bookSubscription = async (input: {
   paymentMethodLast4?: string
 }) => {
   "use server"
+  Billing.assertLegacyStripeEnabled()
   return withActor(
     () =>
       Database.use((tx) =>

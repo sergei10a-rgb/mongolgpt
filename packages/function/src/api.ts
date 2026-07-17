@@ -114,7 +114,11 @@ export class SyncServer extends DurableObject<Env> {
 }
 
 export default new Hono<{ Bindings: Env }>()
-  .get("/", (c) => c.text("Hello, world!"))
+  .get("/", (c) => c.text("MongolGPT API"))
+  .get("/health", (c) => {
+    c.header("Cache-Control", "no-store")
+    return c.json({ status: "ok", service: "api" })
+  })
   .post("/share_create", async (c) => {
     const body = await c.req.json<{ sessionID: string }>()
     const sessionID = body.sessionID

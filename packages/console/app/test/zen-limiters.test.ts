@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
-const redisState = {
-  mgetValues: [] as Array<string | number | null>,
-  mgetCalls: [] as string[][],
-  pipelineIncr: [] as string[],
-  pipelineExpire: [] as Array<{ key: string; ttl: number }>,
+const quotaState = {
+  result: { allowed: true, daily: 0, lifetime: 0 } as Record<string, unknown>,
+  calls: [] as Array<{ scope: string; command: Record<string, unknown> }>,
 }
 
 const dbState = {
@@ -22,26 +20,15 @@ const limits = {
   },
 }
 
-mock.module("../src/routes/zen/util/redis", () => ({
+mock.module("../src/routes/zen/util/quota-service", () => ({
   buildRateLimitKey: (kind: string, identifier: string, interval?: string) =>
-    `stage:ratelimit:${kind}:${identifier}${interval ? `:${interval}` : ""}`,
-  getRedis: () => ({
-    mget: async (keys: string[]) => {
-      redisState.mgetCalls.push(keys)
-      return redisState.mgetValues
-    },
-    pipeline: () => ({
-      incr: (key: string) => {
-        redisState.pipelineIncr.push(key)
-        return undefined
-      },
-      expire: (key: string, ttl: number) => {
-        redisState.pipelineExpire.push({ key, ttl })
-        return undefined
-      },
-      exec: async () => [],
-    }),
-  }),
+    `ratelimit:${kind}:${identifier}${interval ? `:${interval}` : ""}`,
+  hashIdentifier: async () => "hashed-secret",
+  ledgerCommand: async (scope: string, command: Record<string, unknown>) => {
+    quotaState.calls.push({ scope, command })
+    return quotaState.result
+  },
+  claimResult: (value: unknown) => value,
 }))
 
 mock.module("../src/routes/zen/util/logger", () => ({
@@ -69,7 +56,7 @@ mock.module("@mongolgpt/console-core/drizzle/index.js", () => ({
           values: (value: { ip: string; usage: number }) => {
             dbState.inserted.push(value)
             return {
-              onDuplicateKeyUpdate: async ({ set }: { set: unknown }) => {
+              onConflictDoUpdate: async ({ set }: { set: unknown }) => {
                 dbState.duplicateUpdates.push(set)
               },
             }
@@ -93,10 +80,8 @@ const keyLimiterModule = await import("../src/routes/zen/util/keyRateLimiter")
 const trialLimiterModule = await import("../src/routes/zen/util/trialLimiter")
 
 beforeEach(() => {
-  redisState.mgetValues = []
-  redisState.mgetCalls = []
-  redisState.pipelineIncr = []
-  redisState.pipelineExpire = []
+  quotaState.result = { allowed: true, daily: 0, lifetime: 0 }
+  quotaState.calls = []
   dbState.rows = []
   dbState.inserted = []
   dbState.duplicateUpdates = []
@@ -104,7 +89,7 @@ beforeEach(() => {
 
 describe("zen limiters", () => {
   test("ip limiter falls back deterministically when trusted proxy headers are missing", async () => {
-    redisState.mgetValues = [3]
+    quotaState.result = { allowed: false, daily: 3, lifetime: 0 }
     const request = new Request("https://example.com/zen", {
       headers: {
         "accept-language": "en",
@@ -116,14 +101,14 @@ describe("zen limiters", () => {
     await expect(limiter.check()).rejects.toMatchObject({
       message: "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Дараа дахин оролдоно уу.",
     })
-    expect(redisState.mgetCalls).toHaveLength(1)
-    expect(redisState.mgetCalls[0]).toHaveLength(1)
-    expect(redisState.mgetCalls[0]?.[0]).toContain("203.0.113.7")
-    expect(redisState.mgetCalls[0]?.[0]).not.toContain("gp")
+    expect(quotaState.calls).toHaveLength(1)
+    expect(quotaState.calls[0]?.scope).toContain("203.0.113.7")
+    expect(quotaState.calls[0]?.command.lifetimeKey).toBeNull()
+    expect(String(quotaState.calls[0]?.command.dailyKey)).not.toContain("gp")
   })
 
   test("ip limiter uses verified proxy headers for model-specific limits and Mongolian errors", async () => {
-    redisState.mgetValues = [2]
+    quotaState.result = { allowed: false, daily: 2, lifetime: 0 }
     const request = new Request("https://example.com/zen", {
       headers: {
         "accept-language": "mn",
@@ -136,12 +121,12 @@ describe("zen limiters", () => {
     await expect(limiter.check()).rejects.toMatchObject({
       message: "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Түр хүлээгээд дахин оролдоно уу.",
     })
-    expect(redisState.mgetCalls[0]?.[0]).toContain("unknown")
-    expect(redisState.mgetCalls[0]?.[0]).toContain("gp")
+    expect(String(quotaState.calls[0]?.command.dailyKey)).toContain("unknown")
+    expect(String(quotaState.calls[0]?.command.dailyKey)).toContain("gp")
   })
 
   test("ip limiter tracks lifetime usage only for verified default traffic", async () => {
-    redisState.mgetValues = [0, 0]
+    quotaState.result = { allowed: true, daily: 1, lifetime: 1, isNew: true }
     const request = new Request("https://example.com/zen", {
       headers: {
         "accept-language": "en",
@@ -153,13 +138,13 @@ describe("zen limiters", () => {
     await limiter.check()
     await limiter.track()
 
-    expect(redisState.pipelineIncr).toHaveLength(2)
-    expect(redisState.pipelineIncr[0]).toContain("203.0.113.7")
-    expect(redisState.pipelineIncr[1]).toContain("203.0.113.7")
+    expect(quotaState.calls).toHaveLength(1)
+    expect(String(quotaState.calls[0]?.command.dailyKey)).toContain("203.0.113.7")
+    expect(String(quotaState.calls[0]?.command.lifetimeKey)).toContain("203.0.113.7")
   })
 
   test("key limiter returns clear Mongolian copy without exposing the key", async () => {
-    redisState.mgetValues = [5]
+    quotaState.result = { allowed: false, value: 5 }
     const request = new Request("https://example.com/zen", {
       headers: {
         "accept-language": "mn",
@@ -170,7 +155,8 @@ describe("zen limiters", () => {
     await expect(limiter?.check()).rejects.toMatchObject({
       message: "API түлхүүрийн хүсэлтийн хязгаарт хүрлээ. Нэг минут хүлээгээд дахин оролдоно уу.",
     })
-    expect(redisState.mgetCalls[0]?.[0]).not.toContain("sk-secret-token")
+    expect(JSON.stringify(quotaState.calls)).not.toContain("sk-secret-token")
+    expect(JSON.stringify(quotaState.calls)).toContain("hashed-secret")
   })
 
   test("trial limiter trims identifiers and records actual implementation usage totals", async () => {

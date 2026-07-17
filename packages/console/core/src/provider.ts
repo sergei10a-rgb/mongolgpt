@@ -31,7 +31,8 @@ export namespace Provider {
             provider,
             credentials,
           })
-          .onDuplicateKeyUpdate({
+          .onConflictDoUpdate({
+            target: [ProviderTable.workspaceID, ProviderTable.provider],
             set: {
               credentials,
               timeDeleted: null,

@@ -35,7 +35,7 @@ export const dict = {
   "email.subtitle": "Tilmeld dig ventelisten for tidlig adgang.",
   "email.placeholder": "E-mailadresse",
   "email.subscribe": "Tilmeld",
-  "email.success": "Næsten færdig - tjek din indbakke og bekræft din e-mailadresse",
+  "email.success": "Tilmeldingen er gennemført.",
 
   "notFound.title": "Ikke fundet | mongolgpt",
   "notFound.heading": "404 - Siden blev ikke fundet",

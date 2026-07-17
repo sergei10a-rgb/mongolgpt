@@ -48,7 +48,12 @@ const subscriptionPayment = await Database.use((tx) =>
       timeCreated: PaymentTable.timeCreated,
     })
     .from(PaymentTable)
-    .where(and(eq(PaymentTable.workspaceID, fromWrkID), sql`JSON_EXTRACT(enrichment, '$.type') = 'subscription'`))
+    .where(
+      and(
+        eq(PaymentTable.workspaceID, fromWrkID),
+        sql`json_extract(${PaymentTable.enrichment}, '$.type') = 'subscription'`,
+      ),
+    )
     .then((rows) => {
       if (rows.length > 1) {
         console.error(`Error: Multiple subscription payments found for workspace ${fromWrkID}`)
@@ -154,7 +159,7 @@ await Database.transaction(async (tx) => {
     .where(
       and(
         eq(PaymentTable.workspaceID, fromWrkID),
-        sql`JSON_EXTRACT(enrichment, '$.type') = 'subscription'`,
+        sql`json_extract(${PaymentTable.enrichment}, '$.type') = 'subscription'`,
         eq(PaymentTable.amount, 20000000000),
       ),
     )

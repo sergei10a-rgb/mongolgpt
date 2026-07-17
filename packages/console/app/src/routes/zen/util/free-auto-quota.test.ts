@@ -11,12 +11,10 @@ describe("Free Auto weekly quota reservation", () => {
   })
 
   test("uses reservation IDs and keeps the ledger alive until the weekly reset", async () => {
-    const calls: Array<{ keys: string[]; args: unknown[] }> = []
-    const redis = {
-      async eval(_script: string, keys: string[], args: unknown[]) {
-        calls.push({ keys, args })
-        return calls.length === 1 ? [1, 5_000] : 4_500
-      },
+    const calls: Array<{ scope: string; command: Record<string, unknown> }> = []
+    const client = async (scope: string, command: Record<string, unknown>) => {
+      calls.push({ scope, command })
+      return command.type === "reserve" ? { allowed: true, value: 5_000 } : { value: 4_500 }
     }
     const quota = await reserveFreeAutoQuota(
       {
@@ -28,30 +26,31 @@ describe("Free Auto weekly quota reservation", () => {
         weeklyLimit: 100_000,
         ttlSeconds: 86_400,
       },
-      redis,
-      (kind, identifier, interval) => `${kind}:${identifier}:${interval}`,
+      client,
     )
 
     expect(quota).toBeDefined()
-    expect(calls[0]?.keys).toHaveLength(2)
-    expect(calls[0]?.args[4]).toBe(86_400)
-    const reservationID = calls[0]?.args[0]
+    expect(calls[0]?.scope).toContain("workspace-1:free-auto:2026-07-13")
+    expect(Number(calls[0]?.command.expiresAt)).toBeGreaterThan(Date.now())
+    const reservationID = calls[0]?.command.reservationID
     expect(typeof reservationID).toBe("string")
 
     await quota!.settle(3_500)
     await quota!.settle(0)
 
     expect(calls).toHaveLength(2)
-    expect(calls[1]?.args).toEqual([reservationID, 3_500, 86_400])
+    expect(calls[1]?.command).toMatchObject({
+      type: "settle",
+      reservationID,
+      actual: 3_500,
+    })
   })
 
   test("keeps the conservative reservation when settlement has no trusted usage", async () => {
-    const calls: Array<{ args: unknown[] }> = []
-    const redis = {
-      async eval(_script: string, _keys: string[], args: unknown[]) {
-        calls.push({ args })
-        return calls.length === 1 ? [1, 2_000] : 2_000
-      },
+    const calls: Array<Record<string, unknown>> = []
+    const client = async (_scope: string, command: Record<string, unknown>) => {
+      calls.push(command)
+      return command.type === "reserve" ? { allowed: true, value: 2_000 } : { value: 2_000 }
     }
     const quota = await reserveFreeAutoQuota(
       {
@@ -63,12 +62,11 @@ describe("Free Auto weekly quota reservation", () => {
         weeklyLimit: 100_000,
         ttlSeconds: 7_200,
       },
-      redis,
-      (kind, identifier, interval) => `${kind}:${identifier}:${interval}`,
+      client,
     )
 
     await quota!.settle()
 
-    expect(calls[1]?.args[1]).toBe(2_000)
+    expect(calls[1]?.actual).toBe(2_000)
   })
 })

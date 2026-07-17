@@ -1,31 +1,18 @@
-import { drizzle } from "drizzle-orm/planetscale-serverless"
+import { drizzle } from "drizzle-orm/d1"
 import { Resource } from "@mongolgpt/console-resource"
 export * from "drizzle-orm"
-import { Client } from "@planetscale/database"
-
-import { MySqlTransaction, type MySqlTransactionConfig } from "drizzle-orm/mysql-core"
-import type { PlanetScalePreparedQueryHKT, PlanetscaleQueryResultHKT } from "drizzle-orm/planetscale-serverless"
+import type { SQLiteTransactionConfig } from "drizzle-orm/sqlite-core"
 import { Context } from "../context"
 import { memo } from "../util/memo"
+import * as schema from "../schema-d1"
 
 export namespace Database {
-  export type Transaction = MySqlTransaction<
-    PlanetscaleQueryResultHKT,
-    PlanetScalePreparedQueryHKT,
-    Record<string, never>,
-    any
-  >
-
   const client = memo(() => {
-    const result = new Client({
-      host: Resource.Database.host,
-      username: Resource.Database.username,
-      password: Resource.Database.password,
-    })
-    const db = drizzle({ client: result })
-    return db
+    return drizzle(Resource.Database, { schema })
   })
 
+  type Client = ReturnType<typeof client>
+  export type Transaction = Parameters<Parameters<Client["transaction"]>[0]>[0]
   export type TxOrDb = Transaction | ReturnType<typeof client>
 
   const TransactionContext = Context.create<{
@@ -66,7 +53,7 @@ export namespace Database {
     }
   }
 
-  export async function transaction<T>(callback: (tx: TxOrDb) => Promise<T>, config?: MySqlTransactionConfig) {
+  export async function transaction<T>(callback: (tx: TxOrDb) => Promise<T>, config?: SQLiteTransactionConfig) {
     try {
       const { tx } = TransactionContext.use()
       return callback(tx)

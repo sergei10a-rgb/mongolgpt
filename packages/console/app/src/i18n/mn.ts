@@ -36,7 +36,7 @@ export const dict = {
   "email.subtitle": "Эрт ашиглах хүлээлгийн жагсаалтад нэгдээрэй.",
   "email.placeholder": "Имэйл хаяг",
   "email.subscribe": "Бүртгүүлэх",
-  "email.success": "Бараг боллоо. Имэйлээ шалгаад хаягаа баталгаажуулна уу",
+  "email.success": "Бүртгэл амжилттай.",
 
   "notFound.title": "Олдсонгүй | MongolGPT",
   "notFound.heading": "404 - Хуудас олдсонгүй",

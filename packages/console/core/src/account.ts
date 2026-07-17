@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { and, eq, inArray, sql } from "drizzle-orm"
+import { and, eq, inArray } from "drizzle-orm"
 import { fn } from "./util/fn"
 import { Database } from "./drizzle"
 import { Identifier } from "./identifier"
@@ -42,7 +42,7 @@ export namespace Account {
       if (users.length > 0) {
         await tx
           .update(KeyTable)
-          .set({ timeDeleted: sql`now()` })
+          .set({ timeDeleted: new Date() })
           .where(
             inArray(
               KeyTable.userID,
@@ -52,7 +52,7 @@ export namespace Account {
       }
       await tx
         .update(UserTable)
-        .set({ accountID: null, email: null, name: "", timeDeleted: sql`now()` })
+        .set({ accountID: null, email: null, name: "", timeDeleted: new Date() })
         .where(eq(UserTable.accountID, account.id))
       if (emails.length > 0) {
         await tx.delete(CouponTable).where(
@@ -65,7 +65,7 @@ export namespace Account {
       await tx.delete(AuthTable).where(eq(AuthTable.accountID, account.id))
       await tx
         .update(AccountTable)
-        .set({ timeDeleted: sql`now()` })
+        .set({ timeDeleted: new Date() })
         .where(eq(AccountTable.id, account.id))
     })
   })

@@ -38,10 +38,13 @@ export namespace Referral {
         .then((rows) => rows[0])
       if (existing) return { code: existing.code }
 
-      await db.insert(ReferralCodeTable).ignore().values({
-        workspaceID,
-        code: generateCode(),
-      })
+      await db
+        .insert(ReferralCodeTable)
+        .values({
+          workspaceID,
+          code: generateCode(),
+        })
+        .onConflictDoNothing()
 
       const created = await db
         .select({ code: ReferralCodeTable.code })
@@ -194,7 +197,7 @@ export namespace Referral {
       const update = await tx
         .update(ReferralRewardTable)
         .set({
-          timeApplied: sql`now()`,
+          timeApplied: new Date(),
         })
         .where(
           and(
@@ -204,7 +207,7 @@ export namespace Referral {
             isNull(ReferralRewardTable.timeDeleted),
           ),
         )
-      if (update.rowsAffected === 0) throw new Error("Referral reward already applied")
+      if (update.meta.changes === 0) throw new Error("Referral reward already applied")
 
       await Billing.subtractLiteUsage(workspaceID, reward.amount)
 
@@ -339,18 +342,21 @@ export namespace Referral {
           and(
             inArray(PaymentTable.workspaceID, workspaceIDs),
             isNull(PaymentTable.timeDeleted),
-            sql`JSON_UNQUOTE(JSON_EXTRACT(${PaymentTable.enrichment}, '$.type')) = 'lite'`,
+            sql`json_extract(${PaymentTable.enrichment}, '$.type') = 'lite'`,
           ),
         )
         .then((rows) => rows[0])
       if (litePayment) return
 
       const referralID = Identifier.create("referral")
-      await tx.insert(ReferralTable).ignore().values({
-        workspaceID: code.workspaceID,
-        id: referralID,
-        inviteeAccountID: input.accountID,
-      })
+      await tx
+        .insert(ReferralTable)
+        .values({
+          workspaceID: code.workspaceID,
+          id: referralID,
+          inviteeAccountID: input.accountID,
+        })
+        .onConflictDoNothing()
 
       const referral = await tx
         .select({ id: ReferralTable.id, workspaceID: ReferralTable.workspaceID })
@@ -425,11 +431,14 @@ export namespace Referral {
 
       const referralID = existingReferral?.id ?? Identifier.create("referral")
       if (!existingReferral) {
-        await tx.insert(ReferralTable).ignore().values({
-          workspaceID: input.inviterWorkspaceID,
-          id: referralID,
-          inviteeAccountID: invitee.accountID,
-        })
+        await tx
+          .insert(ReferralTable)
+          .values({
+            workspaceID: input.inviterWorkspaceID,
+            id: referralID,
+            inviteeAccountID: invitee.accountID,
+          })
+          .onConflictDoNothing()
 
         const referral = await tx
           .select({ id: ReferralTable.id })
@@ -442,11 +451,11 @@ export namespace Referral {
 
       const rewardInsert = await tx
         .insert(ReferralRewardTable)
-        .ignore()
         .values([
           { workspaceID: input.inviterWorkspaceID, referralID, amount: REWARD_AMOUNT },
           { workspaceID: input.inviteeWorkspaceID, referralID, amount: REWARD_AMOUNT },
         ])
+        .onConflictDoNothing()
 
       const rewards = await tx
         .select({ workspaceID: ReferralRewardTable.workspaceID, amount: ReferralRewardTable.amount })
@@ -466,7 +475,7 @@ export namespace Referral {
       return {
         referralID,
         createdReferral: !existingReferral,
-        createdRewards: rewardInsert.rowsAffected,
+        createdRewards: rewardInsert.meta.changes,
         inviteeAccountID: invitee.accountID,
         inviteeUserID: invitee.userID,
         liteID: invitee.liteID,
@@ -497,11 +506,14 @@ export namespace Referral {
         .then((rows) => rows[0])
       if (!referral) return
 
-      await tx.insert(ReferralRewardTable).ignore().values({
-        workspaceID: referral.workspaceID,
-        referralID: referral.id,
-        amount: REWARD_AMOUNT,
-      })
+      await tx
+        .insert(ReferralRewardTable)
+        .values({
+          workspaceID: referral.workspaceID,
+          referralID: referral.id,
+          amount: REWARD_AMOUNT,
+        })
+        .onConflictDoNothing()
 
       const existingInviteeReward = await tx
         .select({ workspaceID: ReferralRewardTable.workspaceID })
@@ -516,11 +528,14 @@ export namespace Referral {
         .then((rows) => rows[0])
       if (existingInviteeReward) return
 
-      await tx.insert(ReferralRewardTable).ignore().values({
-        workspaceID: input.workspaceID,
-        referralID: referral.id,
-        amount: REWARD_AMOUNT,
-      })
+      await tx
+        .insert(ReferralRewardTable)
+        .values({
+          workspaceID: input.workspaceID,
+          referralID: referral.id,
+          amount: REWARD_AMOUNT,
+        })
+        .onConflictDoNothing()
     })
   }
 

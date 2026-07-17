@@ -18,6 +18,10 @@ import { centsToMicroCents } from "./util/price"
 import { User } from "./user"
 import { PlanData } from "./plan"
 import { LiteData } from "./lite"
+import {
+  assertLegacyStripeEnabled as assertLegacyStripeEnabledForEnvironment,
+  legacyStripeEnabled as legacyStripeEnabledForEnvironment,
+} from "./billing-provider"
 
 export namespace Billing {
   export const ITEM_CREDIT_NAME = "mongolgpt credits"
@@ -26,11 +30,16 @@ export namespace Billing {
   export const RELOAD_AMOUNT_MIN = 10
   export const RELOAD_TRIGGER = 5
   export const RELOAD_TRIGGER_MIN = 5
-  export const stripe = () =>
-    new Stripe(Resource.STRIPE_SECRET_KEY.value, {
+  export const legacyStripeEnabled = legacyStripeEnabledForEnvironment
+  export const assertLegacyStripeEnabled = assertLegacyStripeEnabledForEnvironment
+
+  export const stripe = () => {
+    assertLegacyStripeEnabled()
+    return new Stripe(Resource.STRIPE_SECRET_KEY.value, {
       apiVersion: "2025-03-31.basil",
       httpClient: Stripe.createFetchHttpClient(),
     })
+  }
 
   export const get = async () => {
     return Database.use(async (tx) =>
@@ -122,13 +131,13 @@ export namespace Billing {
       console.error(e)
       await Database.use((tx) =>
         tx
-          .update(BillingTable)
-          .set({
-            reload: false,
-            reloadError: e.message ?? "Payment failed.",
-            timeReloadError: sql`now()`,
-          })
-          .where(eq(BillingTable.workspaceID, Actor.workspace())),
+        .update(BillingTable)
+        .set({
+          reload: false,
+          reloadError: e.message ?? "Payment failed.",
+          timeReloadError: new Date(),
+        })
+        .where(eq(BillingTable.workspaceID, Actor.workspace())),
       )
       return
     }
@@ -167,9 +176,9 @@ export namespace Billing {
       await tx
         .update(LiteTable)
         .set({
-          monthlyUsage: sql`GREATEST(0, COALESCE(${LiteTable.monthlyUsage}, 0) - ${amountInMicroCents})`,
-          weeklyUsage: sql`GREATEST(0, COALESCE(${LiteTable.weeklyUsage}, 0) - ${amountInMicroCents})`,
-          rollingUsage: sql`GREATEST(0, COALESCE(${LiteTable.rollingUsage}, 0) - ${amountInMicroCents})`,
+          monthlyUsage: sql`max(0, coalesce(${LiteTable.monthlyUsage}, 0) - ${amountInMicroCents})`,
+          weeklyUsage: sql`max(0, coalesce(${LiteTable.weeklyUsage}, 0) - ${amountInMicroCents})`,
+          rollingUsage: sql`max(0, coalesce(${LiteTable.rollingUsage}, 0) - ${amountInMicroCents})`,
         })
         .where(and(eq(LiteTable.workspaceID, workspaceID), isNull(LiteTable.timeDeleted)))
     })
@@ -196,10 +205,11 @@ export namespace Billing {
     await Database.use((tx) =>
       tx
         .insert(CouponTable)
-        .values({ email, type, timeRedeemed: sql`now()` })
-        .onDuplicateKeyUpdate({
+        .values({ email, type, timeRedeemed: new Date() })
+        .onConflictDoUpdate({
+          target: [CouponTable.email, CouponTable.type],
           set: {
-            timeRedeemed: sql`now()`,
+            timeRedeemed: new Date(),
           },
         }),
     )

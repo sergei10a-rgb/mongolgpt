@@ -13,6 +13,10 @@ const app = new Hono()
 app
   .basePath("/api")
   .use(cors())
+  .get("/health", (c) => {
+    c.header("Cache-Control", "no-store")
+    return c.json({ status: "ok", service: "share" })
+  })
   .get(
     "/doc",
     openAPIRouteHandler(app, {

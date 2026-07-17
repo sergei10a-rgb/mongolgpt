@@ -35,7 +35,8 @@ export function createStickyTracker(
             id,
             providerId,
           })
-          .onDuplicateKeyUpdate({
+          .onConflictDoUpdate({
+            target: ModelStickyProviderTable.id,
             set: {
               providerId,
             },

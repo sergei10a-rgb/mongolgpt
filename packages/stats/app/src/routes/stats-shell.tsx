@@ -401,6 +401,7 @@ function ThemePreferenceIcon(props: { preference: ThemePreference }) {
 
 function SubscribeModal(props: { onClose: () => void }) {
   const i18n = useI18n()
+  const language = useLanguage()
   const [status, setStatus] = createSignal<"idle" | "pending" | "success" | "error">("idle")
   const [message, setMessage] = createSignal("")
   let input: HTMLInputElement | undefined
@@ -476,6 +477,7 @@ function SubscribeModal(props: { onClose: () => void }) {
               )
             }}
           >
+            <input type="hidden" name="locale" value={language.locale()} />
             <input ref={input} type="email" name="email" placeholder={i18n.t("modal.email")} required />
             <button type="submit" disabled={status() === "pending"}>
               <span>{status() === "pending" ? i18n.t("modal.subscribing") : i18n.t("modal.subscribe")}</span>

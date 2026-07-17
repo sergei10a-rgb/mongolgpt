@@ -14,7 +14,7 @@ const workspaces = await Database.use((tx) =>
     .select({ workspaceID: BillingTable.workspaceID })
     .from(BillingTable)
     .where(and(eq(BillingTable.subscriptionPlan, plan), isNull(BillingTable.timeSubscriptionSelected)))
-    .orderBy(sql`RAND()`)
+    .orderBy(sql`random()`)
     .limit(100),
 )
 

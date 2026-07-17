@@ -92,7 +92,10 @@ export namespace User {
             role,
             monthlyLimit,
           })
-          .onDuplicateKeyUpdate({
+          .onConflictDoUpdate({
+            target: accountID
+              ? [UserTable.workspaceID, UserTable.accountID]
+              : [UserTable.workspaceID, UserTable.email],
             set: {
               role,
               monthlyLimit,
@@ -229,7 +232,7 @@ export namespace User {
       tx
         .update(UserTable)
         .set({
-          timeDeleted: sql`now()`,
+          timeDeleted: new Date(),
         })
         .where(and(eq(UserTable.id, id), eq(UserTable.workspaceID, Actor.workspace()))),
     )

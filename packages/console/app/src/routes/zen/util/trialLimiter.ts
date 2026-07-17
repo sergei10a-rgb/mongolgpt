@@ -40,7 +40,10 @@ export function createTrialLimiter(trialProviders: string[] | undefined, ip: str
         tx
           .insert(IpTable)
           .values({ ip: identifier, usage })
-          .onDuplicateKeyUpdate({ set: { usage: sql`${IpTable.usage} + ${usage}` } }),
+          .onConflictDoUpdate({
+            target: IpTable.ip,
+            set: { usage: sql`COALESCE(${IpTable.usage}, 0) + ${usage}` },
+          }),
       )
     },
   }

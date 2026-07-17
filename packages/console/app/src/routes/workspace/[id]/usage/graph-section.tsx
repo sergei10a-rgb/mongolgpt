@@ -36,7 +36,7 @@ async function getCosts(workspaceID: string, year: number, month: number, tzOffs
 
     const monthStartUTC = new Date(Date.UTC(year, month, 1, 0, 0, 0) - timezoneOffset)
     const monthEndUTC = new Date(Date.UTC(year, month + 1, 1, 0, 0, 0) - timezoneOffset)
-    const dateExpr = sql<string>`DATE(CONVERT_TZ(${UsageTable.timeCreated}, '+00:00', ${tzOffset}))`
+    const dateExpr = sql<string>`date(${UsageTable.timeCreated} / 1000, 'unixepoch', ${tzOffset})`
     const usageData = await Database.use((tx) =>
       tx
         .select({
@@ -44,7 +44,7 @@ async function getCosts(workspaceID: string, year: number, month: number, tzOffs
           model: UsageTable.model,
           totalCost: sum(UsageTable.cost),
           keyId: UsageTable.keyID,
-          plan: sql<string | null>`JSON_EXTRACT(${UsageTable.enrichment}, '$.plan')`,
+          plan: sql<string | null>`json_extract(${UsageTable.enrichment}, '$.plan')`,
         })
         .from(UsageTable)
         .where(
@@ -54,7 +54,7 @@ async function getCosts(workspaceID: string, year: number, month: number, tzOffs
             lt(UsageTable.timeCreated, monthEndUTC),
           ),
         )
-        .groupBy(dateExpr, UsageTable.model, UsageTable.keyID, sql`JSON_EXTRACT(${UsageTable.enrichment}, '$.plan')`)
+        .groupBy(dateExpr, UsageTable.model, UsageTable.keyID, sql`json_extract(${UsageTable.enrichment}, '$.plan')`)
         .then((x) =>
           x.map((r) => ({
             ...r,
@@ -133,7 +133,7 @@ function formatDateLabel(dateStr: string): string {
   return `${month} ${d.toString().padStart(2, "0")}`
 }
 
-// Compute the UTC offset (in MySQL CONVERT_TZ format like "+05:30") for the
+// Compute the UTC offset (in SQLite modifier format like "+05:30") for the
 // given IANA timezone at the given instant. Honors DST.
 function getTimezoneOffset(timezone: string, at: Date): string {
   const parts = new Intl.DateTimeFormat("en-US", {

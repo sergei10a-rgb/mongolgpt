@@ -88,6 +88,7 @@ export default defineConfig({
         "config",
         "providers",
         "network",
+        "deployment",
         "enterprise",
         "troubleshooting",
         { label: "Windows ба WSL", link: "windows-wsl" },

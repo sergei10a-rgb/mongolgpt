@@ -51,16 +51,8 @@ declare module "sst" {
       "value": string
     }
     "Database": {
-      "database": string
-      "host": string
-      "password": string
-      "port": number
-      "type": "sst.sst.Linkable"
-      "username": string
-    }
-    "EMAILOCTOPUS_API_KEY": {
-      "type": "sst.sst.Secret"
-      "value": string
+      "databaseId": string
+      "type": "sst.cloudflare.D1"
     }
     "EnterpriseStorage": import("@cloudflare/workers-types").R2Bucket
     "FEISHU_APP_ID": {
@@ -100,23 +92,16 @@ declare module "sst" {
       "value": string
     }
     "LogProcessor": import("@cloudflare/workers-types").Service
+    "QuotaService": import("@cloudflare/workers-types").Service
+    "QuotaServiceToken": {
+      "type": "random.index/randomPassword.RandomPassword"
+      "value": string
+    }
     "R2AccessKey": {
       "type": "sst.sst.Secret"
       "value": string
     }
     "R2SecretKey": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "SALESFORCE_CLIENT_ID": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "SALESFORCE_CLIENT_SECRET": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "SALESFORCE_INSTANCE_URL": {
       "type": "sst.sst.Secret"
       "value": string
     }
@@ -137,18 +122,15 @@ declare module "sst" {
       "value": string
     }
     "Stat": import("@cloudflare/workers-types").Service
+    "Stats": {
+      "type": "sst.cloudflare.SolidStart"
+      "url": string
+    }
     "Teams": {
       "type": "sst.cloudflare.SolidStart"
       "url": string
     }
-    "UpstashRedisRestToken": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "UpstashRedisRestUrl": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
+    "UsageQueue": import("@cloudflare/workers-types").Queue
     "Web": {
       "type": "sst.cloudflare.Astro"
       "url": string

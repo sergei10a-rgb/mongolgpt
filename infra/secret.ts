@@ -7,9 +7,8 @@ sst.Linkable.wrap(random.RandomPassword, (resource) => ({
 export const SECRET = {
   R2AccessKey: new sst.Secret("R2AccessKey", "unknown"),
   R2SecretKey: new sst.Secret("R2SecretKey", "unknown"),
-  HoneycombApiKey: new sst.Secret("HONEYCOMB_API_KEY"),
+  HoneycombApiKey: new sst.Secret("HONEYCOMB_API_KEY", "disabled"),
   HoneycombWebhookSecret: new random.RandomPassword("HoneycombWebhookSecret", { length: 24 }),
-  SupportApiKey: new sst.Secret("SUPPORT_API_KEY"),
-  UpstashRedisRestUrl: new sst.Secret("UpstashRedisRestUrl"),
-  UpstashRedisRestToken: new sst.Secret("UpstashRedisRestToken"),
+  SupportApiKey: new sst.Secret("SUPPORT_API_KEY", "disabled"),
+  QuotaServiceToken: new random.RandomPassword("QuotaServiceToken", { length: 48 }),
 }

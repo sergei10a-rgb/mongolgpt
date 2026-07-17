@@ -35,7 +35,7 @@ export const dict = {
   "email.subtitle": "Присоединяйтесь к списку ожидания для раннего доступа.",
   "email.placeholder": "Email адрес",
   "email.subscribe": "Подписаться",
-  "email.success": "Почти готово, проверьте почту и подтвердите ваш email",
+  "email.success": "Подписка оформлена.",
 
   "notFound.title": "Не найдено | mongolgpt",
   "notFound.heading": "404 - Страница не найдена",

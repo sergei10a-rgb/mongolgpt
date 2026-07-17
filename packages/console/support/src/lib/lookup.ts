@@ -303,11 +303,11 @@ async function loadWorkspace(workspaceID: string): Promise<WorkspaceSection> {
       ),
   )
 
-  const planExpr = sql`JSON_UNQUOTE(JSON_EXTRACT(${UsageTable.enrichment}, '$.plan'))`
+  const planExpr = sql`json_extract(${UsageTable.enrichment}, '$.plan')`
   const usage = await Database.use((tx) =>
     tx
       .select({
-        date: sql<string>`DATE(${UsageTable.timeCreated})`.as("date"),
+        date: sql<string>`date(${UsageTable.timeCreated} / 1000, 'unixepoch')`.as("date"),
         freeRequests: sql<number>`SUM(CASE WHEN ${UsageTable.cost} = 0 THEN 1 ELSE 0 END)`.as("free_requests"),
         goRequests: sql<number>`SUM(CASE WHEN ${planExpr} = 'lite' THEN 1 ELSE 0 END)`.as("go_requests"),
         goCost: sql<number>`SUM(CASE WHEN ${planExpr} = 'lite' THEN ${UsageTable.cost} ELSE 0 END)`.as("go_cost"),
@@ -323,11 +323,11 @@ async function loadWorkspace(workspaceID: string): Promise<WorkspaceSection> {
       .where(
         and(
           eq(UsageTable.workspaceID, workspace.id),
-          sql`${UsageTable.timeCreated} >= DATE_SUB(NOW(), INTERVAL 28 DAY)`,
+          sql`${UsageTable.timeCreated} >= CAST(strftime('%s', 'now', '-28 days') AS INTEGER) * 1000`,
         ),
       )
-      .groupBy(sql`DATE(${UsageTable.timeCreated})`)
-      .orderBy(sql`DATE(${UsageTable.timeCreated}) DESC`)
+      .groupBy(sql`date(${UsageTable.timeCreated} / 1000, 'unixepoch')`)
+      .orderBy(sql`date(${UsageTable.timeCreated} / 1000, 'unixepoch') DESC`)
       .then((rows) => {
         const totals = rows.reduce(
           (acc, r) => ({

@@ -18,12 +18,12 @@ const workspaces = await Database.use((tx) =>
     .select({ workspaceID: BillingTable.workspaceID })
     .from(BillingTable)
     .where(
-      and(isNotNull(BillingTable.subscriptionID), sql`JSON_UNQUOTE(JSON_EXTRACT(subscription, '$.plan')) = ${plan}`),
+      and(isNotNull(BillingTable.subscriptionID), sql`json_extract(${BillingTable.subscription}, '$.plan') = ${plan}`),
     ),
 )
 if (workspaces.length === 0) throw new Error(`No active Black ${plan} subscriptions found`)
 
-const week = sql<number>`YEARWEEK(${UsageTable.timeCreated}, 3)`
+const week = sql<number>`cast(strftime('%G%V', ${UsageTable.timeCreated} / 1000, 'unixepoch') as integer)`
 const workspaceIDs = workspaces.map((row) => row.workspaceID)
 // Get subscription spend
 const spend = await Database.use((tx) =>
@@ -35,7 +35,7 @@ const spend = await Database.use((tx) =>
     })
     .from(UsageTable)
     .where(
-      and(inArray(UsageTable.workspaceID, workspaceIDs), sql`JSON_UNQUOTE(JSON_EXTRACT(enrichment, '$.plan')) = 'sub'`),
+      and(inArray(UsageTable.workspaceID, workspaceIDs), sql`json_extract(${UsageTable.enrichment}, '$.plan') = 'sub'`),
     )
     .groupBy(UsageTable.workspaceID, week),
 )
@@ -52,7 +52,7 @@ const ppu = await Database.use((tx) =>
     .where(
       and(
         inArray(UsageTable.workspaceID, workspaceIDs),
-        sql`(${UsageTable.enrichment} IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(enrichment, '$.plan')) != 'sub')`,
+        sql`(${UsageTable.enrichment} IS NULL OR json_extract(${UsageTable.enrichment}, '$.plan') != 'sub')`,
       ),
     )
     .groupBy(UsageTable.workspaceID, week),
@@ -67,7 +67,7 @@ const models = await Database.use((tx) =>
     })
     .from(UsageTable)
     .where(
-      and(inArray(UsageTable.workspaceID, workspaceIDs), sql`JSON_UNQUOTE(JSON_EXTRACT(enrichment, '$.plan')) = 'sub'`),
+      and(inArray(UsageTable.workspaceID, workspaceIDs), sql`json_extract(${UsageTable.enrichment}, '$.plan') = 'sub'`),
     )
     .groupBy(UsageTable.workspaceID, UsageTable.model),
 )
@@ -83,7 +83,7 @@ const tokens = await Database.use((tx) =>
     })
     .from(UsageTable)
     .where(
-      and(inArray(UsageTable.workspaceID, workspaceIDs), sql`JSON_UNQUOTE(JSON_EXTRACT(enrichment, '$.plan')) = 'sub'`),
+      and(inArray(UsageTable.workspaceID, workspaceIDs), sql`json_extract(${UsageTable.enrichment}, '$.plan') = 'sub'`),
     )
     .groupBy(UsageTable.workspaceID, week),
 )

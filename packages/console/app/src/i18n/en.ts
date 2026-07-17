@@ -34,7 +34,7 @@ export const dict = {
   "email.subtitle": "Join the waitlist for early access.",
   "email.placeholder": "Email address",
   "email.subscribe": "Subscribe",
-  "email.success": "Almost done, check your inbox and confirm your email address",
+  "email.success": "Subscription successful.",
 
   "notFound.title": "Not Found | mongolgpt",
   "notFound.heading": "404 - Page Not Found",

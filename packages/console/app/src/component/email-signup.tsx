@@ -1,29 +1,32 @@
 import { action, useSubmission } from "@solidjs/router"
-import { Resource } from "@mongolgpt/console-resource"
+import {
+  InvalidNewsletterSubscriptionError,
+  subscribeNewsletter,
+} from "@mongolgpt/console-core/newsletter.js"
 import { Show } from "solid-js"
 import { useI18n } from "~/context/i18n"
+import { useLanguage } from "~/context/language"
 
 const emailSignup = action(async (formData: FormData) => {
   "use server"
-  const emailAddress = formData.get("email")!
-  const listId = "8b9bb82c-9d5f-11f0-975f-0df6fd1e4945"
-  const response = await fetch(`https://api.emailoctopus.com/lists/${listId}/contacts`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${Resource.EMAILOCTOPUS_API_KEY.value}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email_address: emailAddress,
-    }),
-  })
-  if (!response.ok) throw new Error("Бүртгэл амжилтгүй боллоо.")
-  return true
+  try {
+    await subscribeNewsletter({
+      email: formData.get("email"),
+      locale: formData.get("locale"),
+      source: "console",
+    })
+    return true
+  } catch (error) {
+    if (error instanceof InvalidNewsletterSubscriptionError) throw new Error(error.message)
+    console.error("Newsletter subscription failed", error instanceof Error ? error.name : typeof error)
+    throw new Error("Бүртгэл түр амжилтгүй боллоо. Дараа дахин оролдоно уу.")
+  }
 })
 
 export function EmailSignup() {
   const submission = useSubmission(emailSignup)
   const i18n = useI18n()
+  const language = useLanguage()
   return (
     <section data-component="email">
       <div data-slot="section-title">
@@ -31,6 +34,7 @@ export function EmailSignup() {
         <p>{i18n.t("email.subtitle")}</p>
       </div>
       <form data-slot="form" action={emailSignup} method="post">
+        <input type="hidden" name="locale" value={language.locale()} />
         <input type="email" name="email" placeholder={i18n.t("email.placeholder")} required />
         <button type="submit" disabled={submission.pending}>
           {i18n.t("email.subscribe")}

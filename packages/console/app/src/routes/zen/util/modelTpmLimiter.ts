@@ -40,7 +40,10 @@ export function createModelTpmLimiter(providers: { id: string; model: string; tp
         tx
           .insert(ModelTpmRateLimitTable)
           .values({ id, interval: yyyyMMddHHmm, count: usage })
-          .onDuplicateKeyUpdate({ set: { count: sql`${ModelTpmRateLimitTable.count} + ${usage}` } }),
+          .onConflictDoUpdate({
+            target: [ModelTpmRateLimitTable.id, ModelTpmRateLimitTable.interval],
+            set: { count: sql`COALESCE(${ModelTpmRateLimitTable.count}, 0) + ${usage}` },
+          }),
       )
     },
   }

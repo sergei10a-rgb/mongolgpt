@@ -114,8 +114,8 @@ const setUseBalance = action(async (form: FormData) => {
           .update(BillingTable)
           .set({
             subscription: useBalance
-              ? sql`JSON_SET(subscription, '$.useBalance', true)`
-              : sql`JSON_REMOVE(subscription, '$.useBalance')`,
+              ? sql`json_set(${BillingTable.subscription}, '$.useBalance', json('true'))`
+              : sql`json_remove(${BillingTable.subscription}, '$.useBalance')`,
           })
           .where(eq(BillingTable.workspaceID, workspaceID)),
       )

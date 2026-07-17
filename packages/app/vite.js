@@ -27,7 +27,6 @@ export default [
         },
         define: {
           "import.meta.env.VITE_MONGOLGPT_CHANNEL": JSON.stringify(channel),
-          "import.meta.env.VITE_MONGOLGPT_CHANNEL": JSON.stringify(channel),
         },
         worker: {
           format: "es",

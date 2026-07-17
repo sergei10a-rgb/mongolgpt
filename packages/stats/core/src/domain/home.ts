@@ -1,9 +1,42 @@
-import { Client } from "@planetscale/database"
 import { Effect } from "effect"
-import { Resource } from "sst/resource"
-import type { GeoStatMetric } from "./geo"
-import type { ModelStatMetric } from "./model"
-import type { ProviderStatMetric } from "./provider"
+import { Resource } from "@mongolgpt/console-resource"
+
+type ModelStatMetric = {
+  periodKey: string
+  updatedAt: Date
+  tier: string
+  provider: string
+  model: string
+  sessions: number
+  uniqueUsers: number
+  inputTokens: number
+  outputTokens: number
+  reasoningTokens: number
+  cacheReadTokens: number
+  totalTokens: number
+  inputCostMicrocents: number
+  outputCostMicrocents: number
+  totalCostMicrocents: number
+}
+
+type ProviderStatMetric = {
+  periodKey: string
+  updatedAt: Date
+  tier: string
+  provider: string
+  totalTokens: number
+}
+
+type GeoStatMetric = {
+  periodKey: string
+  updatedAt: Date
+  tier: string
+  provider: string
+  model: string
+  country: string
+  continent: string
+  totalTokens: number
+}
 
 export type UsageProduct = "All Users" | "Zen" | "Go" | "Enterprise"
 export type TokenProduct = "Zen" | "Go" | "Enterprise"
@@ -189,10 +222,30 @@ export function getStatsLabData(provider: string): Effect.Effect<StatsLabData | 
 
 async function listModelDaily(): Promise<ModelStatMetric[]> {
   return (
-    await queryRows(`select period_key, updated_at, tier, provider, model, sessions, unique_users, input_tokens,
-    output_tokens, reasoning_tokens, cache_read_tokens, total_tokens, input_cost_microcents, output_cost_microcents,
-    total_cost_microcents from model_stat where grain = 'day' and client = 'all' and source = 'all'
-    and tier in ('Go', 'go') order by period_key`)
+    await queryRows(`
+      select
+        date(time_created / 1000, 'unixepoch') as period_key,
+        max(time_updated) as updated_at,
+        'Go' as tier,
+        provider,
+        model,
+        count(distinct nullif(session_id, '')) as sessions,
+        count(distinct workspace_id) as unique_users,
+        coalesce(sum(input_tokens), 0) as input_tokens,
+        coalesce(sum(output_tokens), 0) as output_tokens,
+        coalesce(sum(reasoning_tokens), 0) as reasoning_tokens,
+        coalesce(sum(cache_read_tokens), 0) as cache_read_tokens,
+        coalesce(sum(input_tokens), 0) + coalesce(sum(output_tokens), 0) +
+          coalesce(sum(reasoning_tokens), 0) + coalesce(sum(cache_read_tokens), 0) +
+          coalesce(sum(cache_write_5m_tokens), 0) + coalesce(sum(cache_write_1h_tokens), 0) as total_tokens,
+        coalesce(sum(input_cost), 0) as input_cost_microcents,
+        coalesce(sum(output_cost), 0) as output_cost_microcents,
+        coalesce(sum(cost), 0) as total_cost_microcents
+      from usage
+      where time_deleted is null
+      group by date(time_created / 1000, 'unixepoch'), provider, model
+      order by period_key
+    `)
   ).map((row) => ({
     periodKey: stringValue(row.period_key),
     updatedAt: dateValue(row.updated_at),
@@ -214,8 +267,20 @@ async function listModelDaily(): Promise<ModelStatMetric[]> {
 
 async function listProviderDaily(): Promise<ProviderStatMetric[]> {
   return (
-    await queryRows(`select period_key, updated_at, tier, provider, total_tokens from provider_stat
-    where grain = 'day' and client = 'all' and source = 'all' and tier in ('Go', 'go') order by period_key`)
+    await queryRows(`
+      select
+        date(time_created / 1000, 'unixepoch') as period_key,
+        max(time_updated) as updated_at,
+        'Go' as tier,
+        provider,
+        coalesce(sum(input_tokens), 0) + coalesce(sum(output_tokens), 0) +
+          coalesce(sum(reasoning_tokens), 0) + coalesce(sum(cache_read_tokens), 0) +
+          coalesce(sum(cache_write_5m_tokens), 0) + coalesce(sum(cache_write_1h_tokens), 0) as total_tokens
+      from usage
+      where time_deleted is null
+      group by date(time_created / 1000, 'unixepoch'), provider
+      order by period_key
+    `)
   ).map((row) => ({
     periodKey: stringValue(row.period_key),
     updatedAt: dateValue(row.updated_at),
@@ -231,12 +296,25 @@ async function listGeoDaily(opts?: { provider?: string; model?: string }): Promi
       ? "and provider = ? and model = ?"
       : opts?.model
         ? "and model = ?"
-        : "and provider = 'all' and model = 'all'"
+        : ""
   const params = opts?.model && opts.provider ? [opts.provider, opts.model] : opts?.model ? [opts.model] : []
   return (
     await queryRows(
-      `select period_key, updated_at, tier, provider, model, country, continent, total_tokens from geo_stat
-    where grain = 'day' and client = 'all' and source = 'all' and tier in ('Go', 'go') ${scope} order by period_key`,
+      `select
+        date(time_created / 1000, 'unixepoch') as period_key,
+        max(time_updated) as updated_at,
+        'Go' as tier,
+        ${opts?.model ? "provider" : "'all'"} as provider,
+        ${opts?.model ? "model" : "'all'"} as model,
+        country,
+        coalesce(max(continent), '') as continent,
+        coalesce(sum(input_tokens), 0) + coalesce(sum(output_tokens), 0) +
+          coalesce(sum(reasoning_tokens), 0) + coalesce(sum(cache_read_tokens), 0) +
+          coalesce(sum(cache_write_5m_tokens), 0) + coalesce(sum(cache_write_1h_tokens), 0) as total_tokens
+      from usage
+      where time_deleted is null and country is not null ${scope}
+      group by date(time_created / 1000, 'unixepoch')${opts?.model ? ", provider, model" : ""}, country
+      order by period_key`,
       params,
     )
   ).map((row) => ({
@@ -251,12 +329,10 @@ async function listGeoDaily(opts?: { provider?: string; model?: string }): Promi
   }))
 }
 
-async function queryRows(query: string, params: string[] = []) {
-  return (await new Client({ url: databaseUrl() }).execute(query, params)).rows as RawRow[]
-}
-
-function databaseUrl() {
-  return process.env.DATABASE_URL ?? Resource.StatsDatabase.url
+async function queryRows(query: string, params: string[] = []): Promise<RawRow[]> {
+  const statement = Resource.Database.prepare(query)
+  const result = await (params.length ? statement.bind(...params) : statement).all()
+  return result.results as RawRow[]
 }
 
 function stringValue(value: unknown) {
@@ -268,6 +344,7 @@ function numberValue(value: unknown) {
 }
 
 function dateValue(value: unknown) {
+  if (typeof value === "number") return new Date(value)
   return value instanceof Date ? value : new Date(stringValue(value))
 }
 
@@ -496,9 +573,8 @@ function modelUsageValue(item: ModelAggregate, metric: "tokens" | "users") {
   return item.totalTokens
 }
 
-function usagePointValue(value: number, metric: "tokens" | "users") {
-  if (metric === "users") return value
-  return round(value / 1_000_000_000_000, 4)
+function usagePointValue(value: number, _metric: "tokens" | "users") {
+  return value
 }
 
 function buildLeaderboard(rows: StatMetricRow[], product: UsageProduct, rankWindow: DateWindow) {
@@ -515,7 +591,7 @@ function buildLeaderboard(rows: StatMetricRow[], product: UsageProduct, rankWind
       model: item.model,
       provider: item.provider,
       author: formatProvider(item.provider),
-      tokens: Math.round(item.totalTokens / 1_000_000_000),
+      tokens: item.totalTokens,
       change: leaderboardChange(item.totalTokens, previous.get(item.model) ?? 0),
       rank: index + 1,
     }))
@@ -538,11 +614,11 @@ function buildMarketShare(rows: ProviderMetricRow[], product: UsageProduct, rang
     return [
       {
         date: bucket.label,
-        total: round(totalTokens / 1_000_000_000_000, 6),
+        total: totalTokens,
         authors: withOther.map((item) => ({
           author: item.provider === "Other" ? "Other" : formatProvider(item.provider),
           share: round((item.tokens / totalTokens) * 100, 1),
-          tokens: round(item.tokens / 1_000_000_000_000, 6),
+          tokens: item.tokens,
         })),
       },
     ]
@@ -559,7 +635,7 @@ function buildCountryStats(rows: GeoMetricRow[], window: DateWindow) {
   return countries.map((item, index) => ({
     country: item.country,
     continent: item.continent,
-    tokens: round(item.tokens / 1_000_000_000_000, 4),
+    tokens: item.tokens,
     share: round((item.tokens / totalTokens) * 100, 1),
     rank: index + 1,
   }))
@@ -591,9 +667,9 @@ function buildCacheRatio(rows: StatMetricRow[], product: TokenProduct, window: D
         {
           model: item.model,
           ratio: round((item.cacheReadTokens / total) * 100, 1),
-          cached: round(item.cacheReadTokens / 1_000_000_000, 1),
-          uncached: round(item.inputTokens / 1_000_000_000, 1),
-          total: round(total / 1_000_000_000, 1),
+          cached: item.cacheReadTokens,
+          uncached: item.inputTokens,
+          total,
         },
       ]
     })

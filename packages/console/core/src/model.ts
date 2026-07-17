@@ -261,7 +261,8 @@ export namespace Model {
           workspaceID: Actor.workspace(),
           model: model,
         })
-        .onDuplicateKeyUpdate({
+        .onConflictDoUpdate({
+          target: [ModelTable.workspaceID, ModelTable.model],
           set: {
             timeDeleted: null,
           },

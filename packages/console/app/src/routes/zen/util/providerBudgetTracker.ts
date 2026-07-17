@@ -1,5 +1,5 @@
 import { centsToMicroCents } from "@mongolgpt/console-core/util/price.js"
-import { buildRateLimitKey, getRedis } from "./redis"
+import { buildRateLimitKey, ledgerCommand, numberRecord } from "./quota-service"
 import { logger } from "./logger"
 
 export function createProviderBudgetTracker(
@@ -19,7 +19,8 @@ export function createProviderBudgetTracker(
     .toISOString()
     .replace(/[^0-9]/g, "")
     .substring(0, 12)
-  const redis = getRedis()
+  const scope = `provider-budget:${interval}`
+  const expiresAt = Date.now() + 120_000
   const keys = Object.fromEntries(
     tracked.map((provider) => [provider.id, buildRateLimitKey("provider-budget", provider.id, interval)]),
   )
@@ -29,8 +30,13 @@ export function createProviderBudgetTracker(
     check: async () => {
       const ids = tracked.map((provider) => provider.id)
       if (ids.length === 0) return {}
-      const values = await redis.mget<(string | number | null)[]>(ids.map((id) => keys[id]))
-      budgetUsage = Object.fromEntries(ids.map((id, index) => [id, Number(values[index] ?? 0)]))
+      const result = numberRecord(
+        await ledgerCommand(scope, {
+          type: "read",
+          keys: ids.map((id) => keys[id]),
+        }),
+      )
+      budgetUsage = Object.fromEntries(ids.map((id) => [id, result[keys[id]] ?? 0]))
       return budgetUsage
     },
     track: async (provider: string, costInCent: number) => {
@@ -39,12 +45,12 @@ export function createProviderBudgetTracker(
       if (config.budgetContribution === undefined) return
       const cost = centsToMicroCents(costInCent * config.budgetContribution)
       if (cost <= 0) return
-      const pipeline = redis.pipeline()
-      pipeline.incrby(keys[provider], cost)
-      pipeline.expire(keys[provider], 120)
-      await pipeline.exec()
+      await ledgerCommand(scope, {
+        type: "increment",
+        changes: [{ key: keys[provider], amount: cost, expiresAt }],
+      })
       logger.metric({
-        "provider.budget_usage": budgetUsage[provider] + cost,
+        "provider.budget_usage": (budgetUsage[provider] ?? 0) + cost,
         "model.budget_usage": cost,
       })
     },

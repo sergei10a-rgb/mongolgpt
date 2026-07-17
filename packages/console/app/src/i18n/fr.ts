@@ -36,7 +36,7 @@ export const dict = {
   "email.subtitle": "Inscrivez-vous à la liste d'attente pour un accès anticipé.",
   "email.placeholder": "Adresse e-mail",
   "email.subscribe": "S'abonner",
-  "email.success": "Presque terminé - vérifiez votre boîte de réception et confirmez votre adresse e-mail",
+  "email.success": "Inscription réussie.",
 
   "notFound.title": "Introuvable | MongolGPT",
   "notFound.heading": "404 - Page introuvable",

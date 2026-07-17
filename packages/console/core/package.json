@@ -10,7 +10,6 @@
     "@jsx-email/render": "1.1.1",
     "@mongolgpt/console-mail": "workspace:*",
     "@mongolgpt/console-resource": "workspace:*",
-    "@planetscale/database": "1.19.0",
     "aws4fetch": "1.0.20",
     "drizzle-orm": "catalog:",
     "postgres": "3.4.7",
@@ -23,12 +22,11 @@
     "./*": "./src/*"
   },
   "scripts": {
-    "db": "sst shell drizzle-kit",
-    "db-dev": "sst shell --stage dev -- drizzle-kit",
-    "db-prod": "sst shell --stage production -- drizzle-kit",
-    "shell": "sst shell",
-    "shell-dev": "sst shell --stage dev",
-    "shell-prod": "sst shell --stage production",
+    "db": "drizzle-kit generate --config=drizzle.config.ts",
+    "db-d1-generate": "drizzle-kit generate --config=drizzle.d1.config.ts",
+    "db-dev": "sst shell --stage dev -- drizzle-kit migrate --config=drizzle.remote.config.ts",
+    "db-prod": "sst shell --stage production -- drizzle-kit migrate --config=drizzle.remote.config.ts",
+    "db-studio": "sst shell -- drizzle-kit studio --config=drizzle.remote.config.ts",
     "update-models": "script/update-models.ts",
     "promote-models-to-dev": "script/promote-models.ts dev",
     "promote-models-to-prod": "script/promote-models.ts production",
@@ -37,6 +35,7 @@
     "update-limits": "script/update-limits.ts",
     "promote-limits-to-dev": "script/promote-limits.ts dev",
     "promote-limits-to-prod": "script/promote-limits.ts production",
+    "test": "bun test test",
     "typecheck": "tsgo --noEmit"
   },
   "devDependencies": {
@@ -45,7 +44,6 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "drizzle-kit": "catalog:",
-    "mysql2": "3.14.4",
     "typescript": "catalog:",
     "@typescript/native-preview": "catalog:"
   }

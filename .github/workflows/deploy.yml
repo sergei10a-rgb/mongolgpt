@@ -1,4 +1,4 @@
-name: deploy
+name: Cloudflare deploy
 
 on:
   workflow_dispatch:
@@ -7,55 +7,78 @@ on:
         description: "Deploy хийх орчин"
         required: true
         type: choice
-        default: "dev"
+        default: dev
         options:
           - dev
           - production
       hosted_services:
-        description: "Gateway, account, billing, enterprise үйлчилгээг зориуд асаах"
+        description: "Account, auth болон Free Auto API-г асаах"
         required: true
         type: boolean
         default: false
+      analytics:
+        description: "Hosted deploy дээр Cloudflare D1 live stats-г асаах"
+        required: true
+        type: boolean
+        default: false
+      production_confirmation:
+        description: "Production бол DEPLOY <domain> гэж яг бичнэ"
+        required: false
+        type: string
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+concurrency:
+  group: cloudflare-deploy-${{ inputs.stage }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
-  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+  MONGOLGPT_ENABLE_HOSTED_SERVICES: ${{ inputs.hosted_services }}
+  MONGOLGPT_ENABLE_ANALYTICS: ${{ inputs.analytics }}
+  MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false"
+  MONGOLGPT_ENABLE_LEGACY_STRIPE: "false"
+  MONGOLGPT_ENABLE_MONITORING: "false"
+  MONGOLGPT_ENABLE_SHARE_SERVICE: "false"
+  MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
+  MONGOLGPT_PRODUCTION_CONFIRMATION: ${{ inputs.production_confirmation }}
+  MONGOLGPT_AUTH_EMAIL_DOMAINS: ${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}
+  CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
 jobs:
   deploy:
     if: github.repository == 'sergei10a-rgb/mongolgpt' && vars.MONGOLGPT_DOMAIN != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     environment: ${{ inputs.stage }}
     steps:
-      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      - uses: ./.github/actions/setup-bun
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: "24"
+      - name: Validate Cloudflare deployment
+        run: bun run deploy:preflight -- ${{ inputs.stage }}
 
-      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
-        if: inputs.hosted_services
-        with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          role-session-name: mongolgpt-${{ github.run_id }}
-          aws-region: us-east-1
+      - name: Typecheck
+        run: bun typecheck
 
-      - run: bun sst deploy --stage=${{ inputs.stage }}
-        env:
-          MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
-          MONGOLGPT_ENABLE_HOSTED_SERVICES: ${{ inputs.hosted_services }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          PLANETSCALE_SERVICE_TOKEN_NAME: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_NAME }}
-          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
-          STRIPE_SECRET_KEY: ${{ inputs.stage == 'production' && secrets.STRIPE_SECRET_KEY_PROD || secrets.STRIPE_SECRET_KEY_DEV }}
-          HONEYCOMB_API_KEY: ${{ secrets.HONEYCOMB_API_KEY }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ vars.WEB_SENTRY_PROJECT }}
-          SENTRY_RELEASE: web@${{ github.sha }}
-          VITE_SENTRY_DSN: ${{ vars.WEB_SENTRY_DSN }}
-          VITE_SENTRY_RELEASE: web@${{ github.sha }}
+      - name: Build docs
+        run: bun run build:docs
+
+      - name: Build web app
+        run: bun --cwd packages/app build
+
+      - name: Deploy to Cloudflare
+        run: bun sst deploy --stage=${{ inputs.stage }}
+
+      - name: Apply Cloudflare D1 migrations
+        if: inputs.hosted_services == true
+        run: bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate
+
+      - name: Verify deployed URLs
+        run: bun run deploy:smoke -- ${{ inputs.stage }}

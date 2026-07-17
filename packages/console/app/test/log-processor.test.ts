@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { ipPrefix, sanitizeMetric, toLakeEvent } from "../../function/src/log-processor"
+import { ipPrefix, sanitizeMetric } from "../../function/src/log-processor"
 
 describe("log processor telemetry privacy", () => {
   test("keeps allowlisted metadata and removes secrets or content", () => {
@@ -39,39 +39,5 @@ describe("log processor telemetry privacy", () => {
     expect(ipPrefix("2001:db8:abcd:1234::1")).toBe("2001:db8:abcd:1234::/64")
     expect(ipPrefix("999.0.0.1")).toBeUndefined()
     expect(ipPrefix("not-an-ip")).toBeUndefined()
-  })
-
-  test("lake events never expose direct identifiers or precise location", () => {
-    const event = toLakeEvent("2026-07-16T00:00:00.000Z", {
-      event_type: "completions",
-      workspace: "wrk_test",
-      "ip.prefix": "203.0.113.0/24",
-      api_key: "secret-key",
-      user_id: "usr_test",
-      ip: "203.0.113.45",
-      "cf.city": "Ulaanbaatar",
-      "cf.latitude": 47.9,
-      "cf.longitude": 106.9,
-      "error.message": "private provider response",
-    })
-
-    expect(event.event_type).toBe("completions")
-    expect(event.workspace).toBe("wrk_test")
-    expect(event.ip_prefix).toBe("203.0.113.0/24")
-    expect(event).not.toHaveProperty("api_key")
-    expect(event).not.toHaveProperty("user_id")
-    expect(event).not.toHaveProperty("ip")
-    expect(event).not.toHaveProperty("cf_city")
-    expect(event).not.toHaveProperty("cf_latitude")
-    expect(event).not.toHaveProperty("cf_longitude")
-    expect(event).not.toHaveProperty("error_message")
-  })
-
-  test("normalizes unknown event types", () => {
-    const event = toLakeEvent("2026-07-16T00:00:00.000Z", {
-      event_type: "attacker-controlled",
-    })
-
-    expect(event.event_type).toBe("completions")
   })
 })
