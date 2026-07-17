@@ -155,6 +155,9 @@ const eagerRefreshThresholdMs = Duration.toMillis(eagerRefreshThreshold)
 const isTokenFresh = (tokenExpiry: number | null, now: number) =>
   tokenExpiry != null && tokenExpiry > now + eagerRefreshThresholdMs
 
+const initialOrg = (orgs: readonly Org[]) =>
+  orgs.length === 1 ? Option.some(orgs[0].id) : Option.none<OrgID>()
+
 const mapAccountServiceError =
   (message = "Account үйлчилгээний үйлдэл амжилтгүй боллоо") =>
   <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, AccountError, R> =>
@@ -372,7 +375,6 @@ export const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient
           { concurrency: 2 },
         )
 
-        const firstOrgID = remoteOrgs.length > 0 ? Option.some(remoteOrgs[0].id) : Option.none<OrgID>()
         const expiry = (yield* Clock.currentTimeMillis) + exchanged.tokens.expiresIn * 1000
 
         yield* repo.persistAccount({
@@ -382,7 +384,7 @@ export const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient
           accessToken,
           refreshToken,
           expiry,
-          orgID: firstOrgID,
+          orgID: initialOrg(remoteOrgs),
         })
 
         return new PollSuccess({ email: account.email })
@@ -503,9 +505,6 @@ export const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient
 
       const [account, remoteOrgs] = yield* Effect.all([user, orgs], { concurrency: 2 })
 
-      // TODO: When there are multiple orgs, let the user choose
-      const firstOrgID = remoteOrgs.length > 0 ? Option.some(remoteOrgs[0].id) : Option.none<OrgID>()
-
       const now = yield* Clock.currentTimeMillis
       const expiry = now + Duration.toMillis(parsed.expires_in)
       const refreshToken = parsed.refresh_token
@@ -517,7 +516,7 @@ export const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient
         accessToken,
         refreshToken,
         expiry,
-        orgID: firstOrgID,
+        orgID: initialOrg(remoteOrgs),
       })
 
       return new PollSuccess({ email: account.email })

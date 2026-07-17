@@ -19,7 +19,7 @@ import { SessionShareTable } from "@mongolgpt/core/share/sql"
 import { ProviderV2 } from "@mongolgpt/core/provider"
 import { ModelV2 } from "@mongolgpt/core/model"
 import { EventV2 } from "@mongolgpt/core/event"
-import { localConsoleUrl } from "@mongolgpt/core/product"
+import { productServiceUrls } from "@mongolgpt/core/product"
 
 const disabled = process.env["MONGOLGPT_DISABLE_SHARE"] === "true" || process.env["MONGOLGPT_DISABLE_SHARE"] === "1"
 
@@ -212,7 +212,7 @@ export const layer = Layer.effect(
           (yield* cfg.get()).enterprise?.url ||
           process.env.MONGOLGPT_SHARE_URL?.trim() ||
           process.env.MONGOLGPT_CONSOLE_URL?.trim() ||
-          localConsoleUrl
+          productServiceUrls.console
         return { headers, api: legacyApi, baseUrl } satisfies Req
       }
 

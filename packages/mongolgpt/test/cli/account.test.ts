@@ -2,16 +2,33 @@ import { describe, expect, test } from "bun:test"
 import stripAnsi from "strip-ansi"
 
 import {
+  accountDeviceFallbackAllowed,
   accountOnboardingRequired,
   defaultConsoleUrl,
   formatAccountLabel,
   formatOrgLine,
   formatPostLoginGuidance,
+  normalizeAccountLoginUrl,
 } from "../../src/cli/cmd/account"
 
 describe("console account display", () => {
   test("uses the local console as the default login URL", () => {
     expect(defaultConsoleUrl).toBe("http://localhost:3000")
+  })
+
+  test("disables device-code downgrade for official hosted account services", () => {
+    expect(accountDeviceFallbackAllowed("https://mgpt.mn")).toBe(false)
+    expect(accountDeviceFallbackAllowed("https://dev.mgpt.mn/console")).toBe(false)
+    expect(accountDeviceFallbackAllowed("https://mgpt.mn./custom-prefix")).toBe(false)
+  })
+
+  test("keeps device-code compatibility for custom account services", () => {
+    expect(accountDeviceFallbackAllowed("https://accounts.example.com")).toBe(true)
+  })
+
+  test("rejects insecure official account service URLs", () => {
+    expect(() => normalizeAccountLoginUrl("http://mgpt.mn")).toThrow("HTTPS")
+    expect(normalizeAccountLoginUrl("http://accounts.example.com/path/")).toBe("http://accounts.example.com/path")
   })
 
   test("includes the account url in account labels", () => {
@@ -51,7 +68,7 @@ describe("console account display", () => {
     expect(combined).not.toContain("продакшн")
   })
 
-  test("requires account onboarding only when no active account exists", () => {
+  test("requires account onboarding until an active workspace exists", () => {
     expect(accountOnboardingRequired(false)).toBe(true)
     expect(accountOnboardingRequired(true)).toBe(false)
   })

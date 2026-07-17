@@ -5,7 +5,7 @@ import { CliError, effectCmd, fail } from "../effect-cmd"
 import { UI } from "../ui"
 import * as Prompt from "../effect/prompt"
 import { ModelsDev } from "@mongolgpt/core/models-dev"
-import { documentationRepositoryUrl, localAuthUrl } from "@mongolgpt/core/product"
+import { documentationRepositoryUrl, productServiceUrls } from "@mongolgpt/core/product"
 
 import { map, pipe, sortBy, values } from "remeda"
 import path from "path"
@@ -465,7 +465,7 @@ export const ProvidersLoginCommand = effectCmd({
     }
 
     if (provider === "mongolgpt") {
-      const authUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || localAuthUrl
+      const authUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || productServiceUrls.auth
       yield* Prompt.log.info(`API key-ээ ${authUrl} дээр үүсгэнэ үү`)
     }
 

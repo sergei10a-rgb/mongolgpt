@@ -4,12 +4,12 @@ import { Cause, Clock, Duration, Effect, Schedule } from "effect"
 import { MessageV2 } from "./message-v2"
 import { iife } from "@/util/iife"
 import { isRecord } from "@/util/record"
-import { localConsoleUrl } from "@mongolgpt/core/product"
+import { productServiceUrls } from "@mongolgpt/core/product"
 
 export type Err = ReturnType<NamedError["toObject"]>
 
 export const GO_UPSELL_MESSAGE = "Үнэгүй хэрэглээний хязгаарт хүрлээ"
-const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || localConsoleUrl
+const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
 export const GO_UPSELL_URL = process.env.MONGOLGPT_GO_URL?.trim() || `${consoleUrl}/go`
 export type RetryReason = "free_tier_limit" | "account_rate_limit" | (string & {})
 

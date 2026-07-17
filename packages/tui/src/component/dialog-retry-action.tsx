@@ -6,9 +6,9 @@ import { useDialog, type DialogContext } from "../ui/dialog"
 import { Link } from "../ui/link"
 import { BgPulse } from "./bg-pulse"
 import { useBindings } from "../keymap"
-import { localConsoleUrl } from "@mongolgpt/core/product"
+import { productServiceUrls } from "@mongolgpt/core/product"
 
-const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || localConsoleUrl
+const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
 const GO_URL = process.env.MONGOLGPT_GO_URL?.trim() || `${consoleUrl}/go`
 const PAD_X = 3
 const PAD_TOP_OUTER = 1

@@ -11,14 +11,14 @@ import { InstallationChannel, InstallationVersion } from "./installation/version
 import { EventV2 } from "./event"
 import { makeGlobalNode } from "./effect/node"
 import { httpClient } from "./effect/layer-node-platform"
-import { localConsoleUrl } from "./product"
+import { productServiceUrls } from "./product"
 
 export const CatalogModelStatus = Schema.Literals(["alpha", "beta", "deprecated"])
 export type CatalogModelStatus = typeof CatalogModelStatus.Type
 
 const USER_AGENT = `mongolgpt/${InstallationChannel}/${InstallationVersion}/${Flag.MONGOLGPT_CLIENT}`
 const hostedProviderIDs = new Set(["mongolgpt", "mongolgpt-go", "opencode", "opencode-go"])
-const hostedServer = env("MONGOLGPT_CONSOLE_URL")?.trim() || localConsoleUrl
+const hostedServer = env("MONGOLGPT_CONSOLE_URL")?.trim() || productServiceUrls.console
 
 export function rebrandHostedProviders(providers: Record<string, Provider>, consoleUrl = hostedServer) {
   const result = { ...providers }

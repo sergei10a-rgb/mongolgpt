@@ -396,6 +396,33 @@ it.live("poll stores the account and first org on success", () =>
   }),
 )
 
+it.live("poll leaves organization selection empty when multiple orgs are available", () =>
+  Effect.gen(function* () {
+    const client = HttpClient.make((req) =>
+      Effect.succeed(
+        req.url === "https://one.example.com/auth/device/token"
+          ? json(req, {
+              access_token: "at_1",
+              refresh_token: "rt_1",
+              token_type: "Bearer",
+              expires_in: 60,
+            })
+          : req.url === "https://one.example.com/api/user"
+            ? json(req, { id: "user-1", email: "user@example.com" })
+            : req.url === "https://one.example.com/api/orgs"
+              ? json(req, [org("org-1", "One"), org("org-2", "Two")])
+              : json(req, {}, 404),
+      ),
+    )
+
+    const res = yield* Account.Service.use((s) => s.poll(login())).pipe(Effect.provide(live(client)))
+
+    expect(res._tag).toBe("PollSuccess")
+    const active = yield* AccountRepo.use.active()
+    expect(Option.getOrThrow(active).active_org_id).toBeNull()
+  }),
+)
+
 for (const [name, body, expectedTag] of [
   [
     "pending",

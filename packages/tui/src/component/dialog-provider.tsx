@@ -15,10 +15,10 @@ import { isConsoleManagedProvider } from "../util/provider-origin"
 import { useConnected } from "./use-connected"
 import { useBindings } from "../keymap"
 import { useClipboard } from "../context/clipboard"
-import { localAuthUrl, localConsoleUrl } from "@mongolgpt/core/product"
+import { productServiceUrls } from "@mongolgpt/core/product"
 
-const mongolgptConsoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || localConsoleUrl
-const mongolgptAuthUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || localAuthUrl
+const mongolgptConsoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
+const mongolgptAuthUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || productServiceUrls.auth
 const mongolgptGoUrl = process.env.MONGOLGPT_GO_URL?.trim() || `${mongolgptConsoleUrl}/go`
 
 const PROVIDER_PRIORITY: Record<string, number> = {

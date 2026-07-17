@@ -1,4 +1,4 @@
-import { localAuthUrl, localConsoleUrl } from "@mongolgpt/core/product"
+import { productServiceUrls } from "@mongolgpt/core/product"
 
 export const normalizeServerUrl = (input: string): string => {
   const url = new URL(input)
@@ -10,8 +10,8 @@ export const normalizeServerUrl = (input: string): string => {
   return `${url.origin}${pathname}`
 }
 
-export const defaultConsoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || localConsoleUrl
-export const defaultAuthUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || localAuthUrl
+export const defaultConsoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
+export const defaultAuthUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || productServiceUrls.auth
 
 const accountUiPaths = new Set(["/auth", "/console", "/go", "/workspace", "/zen"])
 

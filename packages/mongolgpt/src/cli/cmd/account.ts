@@ -2,8 +2,17 @@ import { cmd } from "./cmd"
 import { Duration, Effect, Match, Option } from "effect"
 import { UI } from "../ui"
 import { Account } from "@/account/account"
-import { AccountID, OrgID, PollError, PollExpired, type PollResult, type AccountError } from "@/account/schema"
-import { defaultConsoleUrl } from "@/account/url"
+import {
+  AccountID,
+  AccountServiceError,
+  OrgID,
+  PollError,
+  PollExpired,
+  type AccountError,
+  type PollResult,
+} from "@/account/schema"
+import { defaultConsoleUrl, normalizeServerUrl } from "@/account/url"
+import { resolveProductServiceUrls } from "@mongolgpt/core/product"
 import { effectCmd } from "../effect-cmd"
 import * as Prompt from "../effect/prompt"
 import open from "open"
@@ -15,8 +24,26 @@ const println = (msg: string) => Effect.sync(() => UI.println(msg))
 const dim = (value: string) => UI.Style.TEXT_DIM + value + UI.Style.TEXT_NORMAL
 
 const activeSuffix = (isActive: boolean) => (isActive ? dim(" (идэвхтэй)") : "")
+const hostedAccountHostnames = new Set([
+  new URL(resolveProductServiceUrls("prod").console).hostname,
+  new URL(resolveProductServiceUrls("beta").console).hostname,
+])
 
 export { defaultConsoleUrl }
+
+const canonicalHostname = (url: URL) => url.hostname.toLowerCase().replace(/\.$/, "")
+
+export function normalizeAccountLoginUrl(input: string) {
+  const normalized = normalizeServerUrl(input)
+  const url = new URL(normalized)
+  if (hostedAccountHostnames.has(canonicalHostname(url)) && url.protocol !== "https:") {
+    throw new Error("MongolGPT аккаунтын албан ёсны хаяг HTTPS ашиглах ёстой")
+  }
+  return normalized
+}
+
+export const accountDeviceFallbackAllowed = (input: string) =>
+  !hostedAccountHostnames.has(canonicalHostname(new URL(normalizeServerUrl(input))))
 
 export const formatAccountLabel = (account: { email: string; url: string }, isActive: boolean) =>
   `${account.email} ${dim(account.url)}${activeSuffix(isActive)}`
@@ -27,7 +54,7 @@ export const formatPostLoginGuidance = () => [
   "NVIDIA NIM-ийг өөрийн API түлхүүрээр хувийн хөгжүүлэлт, туршилт, үнэлгээнд холбоно. Үйлдвэрлэлийн хэрэглээнд зохих NVIDIA лиценз эсвэл захиалга шаардлагатай.",
 ]
 
-export const accountOnboardingRequired = (hasActiveAccount: boolean) => !hasActiveAccount
+export const accountOnboardingRequired = (hasActiveWorkspace: boolean) => !hasActiveWorkspace
 
 const formatOrgChoiceLabel = (account: { email: string }, org: { name: string }, isActive: boolean) =>
   `${org.name} (${account.email})${activeSuffix(isActive)}`
@@ -47,13 +74,51 @@ const isActiveOrgChoice = (
   choice: { accountID: AccountID; orgID: OrgID },
 ) => Option.isSome(active) && active.value.id === choice.accountID && active.value.active_org_id === choice.orgID
 
+const selectLoginOrg = Effect.fnUntraced(function* () {
+  const service = yield* Account.Service
+  const active = yield* service.active()
+  if (Option.isNone(active)) return false
+  if (active.value.active_org_id) return true
+
+  const orgs = yield* service.orgs(active.value.id)
+  if (orgs.length === 0) return false
+  if (orgs.length === 1) {
+    yield* service.use(active.value.id, Option.some(orgs[0].id))
+    return true
+  }
+
+  const selected = yield* Prompt.select({
+    message: "Ашиглах workspace-аа сонгоно уу",
+    options: orgs.map((org) => ({
+      value: org,
+      label: org.name,
+      hint: org.id,
+    })),
+  })
+  if (Option.isNone(selected)) {
+    yield* Prompt.log.warn("Workspace сонголт дуусаагүй байна")
+    return false
+  }
+
+  yield* service.use(active.value.id, Option.some(selected.value.id))
+  yield* Prompt.log.success(selected.value.name + " workspace идэвхжлээ")
+  return true
+})
+
 const loginEffect = Effect.fn("login")(function* (url: string) {
   const service = yield* Account.Service
+  const loginUrl = yield* Effect.try({
+    try: () => normalizeAccountLoginUrl(url),
+    catch: (cause) => new AccountServiceError({ message: "Нэвтрэх серверийн URL буруу байна", cause }),
+  })
 
   yield* Prompt.intro("Нэвтрэх")
-  const method = yield* service.browserLogin(url).pipe(
+  const method = yield* service.browserLogin(loginUrl).pipe(
     Effect.map((login) => ({ _tag: "browser" as const, login })),
-    Effect.catch(() => service.login(url).pipe(Effect.map((login) => ({ _tag: "device" as const, login })))),
+    Effect.catch((cause) => {
+      if (!accountDeviceFallbackAllowed(loginUrl)) return Effect.fail(cause)
+      return service.login(loginUrl).pipe(Effect.map((login) => ({ _tag: "device" as const, login })))
+    }),
   )
 
   if (method._tag === "browser") {
@@ -73,6 +138,8 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
       PollSuccess: (r) =>
         Effect.gen(function* () {
           yield* s.stop(r.email + " нэрээр нэвтэрлээ")
+          const selected = yield* selectLoginOrg()
+          if (!selected) return yield* Prompt.outro("Workspace сонгосны дараа нэвтрэлт бүрэн дуусна")
           for (const message of formatPostLoginGuidance()) {
             yield* Prompt.log.info(message)
           }
@@ -111,6 +178,8 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
     PollSuccess: (r) =>
       Effect.gen(function* () {
         yield* s.stop(r.email + " нэрээр нэвтэрлээ")
+        const selected = yield* selectLoginOrg()
+        if (!selected) return yield* Prompt.outro("Workspace сонгосны дараа нэвтрэлт бүрэн дуусна")
         for (const message of formatPostLoginGuidance()) {
           yield* Prompt.log.info(message)
         }
@@ -127,10 +196,12 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
 export const ensureAccountLogin = Effect.fn("Cli.account.ensureLogin")(function* () {
   const service = yield* Account.Service
   const active = yield* service.active()
-  if (!accountOnboardingRequired(Option.isSome(active))) return true
+  if (!accountOnboardingRequired(Option.isSome(active) && Boolean(active.value.active_org_id))) return true
+  if (Option.isSome(active)) return yield* selectLoginOrg()
 
   yield* loginEffect(defaultConsoleUrl)
-  return Option.isSome(yield* service.active())
+  const current = yield* service.active()
+  return Option.isSome(current) && Boolean(current.value.active_org_id)
 })
 
 const logoutEffect = Effect.fn("logout")(function* (email?: string) {
