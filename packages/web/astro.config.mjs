@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from "astro/config"
+import { defineConfig, passthroughImageService } from "astro/config"
 import starlight from "@astrojs/starlight"
 import solidJs from "@astrojs/solid-js"
 import cloudflare from "@astrojs/cloudflare"
@@ -9,13 +9,20 @@ import { rehypeHeadingIds } from "@astrojs/markdown-remark"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
 import { spawnSync } from "child_process"
 
+const staticDocs = process.env.MONGOLGPT_STATIC_DOCS === "true"
+
 export default defineConfig({
   site: config.url,
   base: "/docs",
-  output: "server",
-  adapter: cloudflare({
-    imageService: "passthrough",
-  }),
+  output: staticDocs ? "static" : "server",
+  image: {
+    service: passthroughImageService(),
+  },
+  adapter: staticDocs
+    ? undefined
+    : cloudflare({
+        imageService: "passthrough",
+      }),
   devToolbar: {
     enabled: false,
   },
