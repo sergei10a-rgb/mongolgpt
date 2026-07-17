@@ -3,7 +3,7 @@ import { docsOrigin, domain, publicOrigin } from "./stage"
 const supportUrl = "https://github.com/sergei10a-rgb/mongolgpt/issues"
 export const docsUrl = docsOrigin
 
-export const website = new sst.cloudflare.StaticSite("Website", {
+export const website = new sst.cloudflare.StaticSiteV2("Website", {
   domain: `docs.${domain}`,
   path: "packages/web",
   build: {
@@ -19,7 +19,7 @@ export const website = new sst.cloudflare.StaticSite("Website", {
   },
 })
 
-export const webApp = new sst.cloudflare.StaticSite("WebApp", {
+export const webApp = new sst.cloudflare.StaticSiteV2("WebApp", {
   domain: `app.${domain}`,
   path: "packages/app",
   build: {
