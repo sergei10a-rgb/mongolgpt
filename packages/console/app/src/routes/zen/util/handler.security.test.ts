@@ -66,4 +66,10 @@ describe("Zen handler telemetry security", () => {
     expect(source).toContain("config.baseUrl")
     expect(source).not.toMatch(/https?:\/\//)
   })
+
+  test("never selects a deleted BYOK credential", () => {
+    expect(source).toMatch(
+      /eq\(ProviderTable\.provider,\s*modelInfo\.byokProvider\),\s*isNull\(ProviderTable\.timeDeleted\)/,
+    )
+  })
 })

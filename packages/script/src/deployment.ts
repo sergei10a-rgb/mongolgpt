@@ -73,6 +73,7 @@ export function preflightDeployment(input: {
   if (hostedServices && stage !== "production") {
     requireValue("MONGOLGPT_AUTH_EMAIL_DOMAINS", env.MONGOLGPT_AUTH_EMAIL_DOMAINS, issues)
   }
+  if (hostedServices) validateSecretKey("BYOK_CREDENTIALS_KEY_V1", env.BYOK_CREDENTIALS_KEY_V1, issues)
 
   if (stage === "production" && domain) {
     const expected = `DEPLOY ${domain}`
@@ -117,6 +118,15 @@ function validateBoolean(name: string, value: string | undefined, issues: string
 
 function requireValue(name: string, value: string | undefined, issues: string[]) {
   if (!value?.trim()) issues.push(`${name} дутуу байна.`)
+}
+
+function validateSecretKey(name: string, value: string | undefined, issues: string[]) {
+  const secret = value?.trim()
+  if (!secret) {
+    issues.push(`${name} дутуу байна.`)
+    return
+  }
+  if (secret.length < 32) issues.push(`${name} хамгийн багадаа 32 тэмдэгттэй байна.`)
 }
 
 function validateDomain(value: string | undefined, issues: string[]) {

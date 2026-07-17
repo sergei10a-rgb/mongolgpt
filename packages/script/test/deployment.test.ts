@@ -6,6 +6,9 @@ const cloudflare = {
   CLOUDFLARE_API_TOKEN: "test-token",
   CLOUDFLARE_DEFAULT_ACCOUNT_ID: "test-account",
 }
+const byok = {
+  BYOK_CREDENTIALS_KEY_V1: "test-byok-key-with-at-least-32-characters",
+}
 
 describe("Cloudflare deployment preflight", () => {
   test("accepts a static dev deployment and derives its endpoints", () => {
@@ -45,6 +48,7 @@ describe("Cloudflare deployment preflight", () => {
       stage: "production",
       env: {
         ...cloudflare,
+        ...byok,
         MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
         MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
       },
@@ -64,7 +68,23 @@ describe("Cloudflare deployment preflight", () => {
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
           },
         }),
-      ["MONGOLGPT_AUTH_EMAIL_DOMAINS"],
+      ["MONGOLGPT_AUTH_EMAIL_DOMAINS", "BYOK_CREDENTIALS_KEY_V1"],
+    )
+  })
+
+  test("rejects a short BYOK vault key for hosted services", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            BYOK_CREDENTIALS_KEY_V1: "too-short",
+          },
+        }),
+      ["BYOK_CREDENTIALS_KEY_V1", "32"],
     )
   })
 
@@ -85,6 +105,7 @@ describe("Cloudflare deployment preflight", () => {
       stage: "dev",
       env: {
         ...cloudflare,
+        ...byok,
         MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
         MONGOLGPT_ENABLE_ANALYTICS: "true",
         MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
@@ -99,6 +120,7 @@ describe("Cloudflare deployment preflight", () => {
           stage: "dev",
           env: {
             ...cloudflare,
+            ...byok,
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
             MONGOLGPT_ENABLE_ANALYTICS: "true",
             MONGOLGPT_ENABLE_LEGACY_STRIPE: "true",

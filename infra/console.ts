@@ -202,6 +202,7 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     database,
     quotaService,
     SECRET.QuotaServiceToken,
+    SECRET.ByokCredentialsKeyV1,
     AUTH_API_URL,
     STRIPE_WEBHOOK_SECRET,
     SECRET.SupportApiKey,

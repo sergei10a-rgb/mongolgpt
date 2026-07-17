@@ -14,6 +14,7 @@ import { PlanData } from "@mongolgpt/console-core/plan.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { ModelTable } from "@mongolgpt/console-core/schema/model.sql.js"
 import { ProviderTable } from "@mongolgpt/console-core/schema/provider.sql.js"
+import { ProviderCredentials } from "@mongolgpt/console-core/provider-credentials.js"
 import { logger } from "./logger"
 import {
   AuthError,
@@ -201,11 +202,11 @@ export async function handler(
         providerBudgetUsage,
       )
       validateModelSettings(billingSource, authInfo)
-      updateProviderKey(authInfo, providerInfo)
       logger.metric({
         provider: providerInfo.id,
         "provider.model": providerInfo.model,
       })
+      await updateProviderKey(authInfo, modelInfo, providerInfo)
 
       const startTimestamp = Date.now()
       const reqUrl = providerInfo.modifyUrl(providerInfo.api, isStream)
@@ -795,6 +796,7 @@ export async function handler(
             ? and(
                 eq(ProviderTable.workspaceID, UserTable.workspaceID),
                 eq(ProviderTable.provider, modelInfo.byokProvider),
+                isNull(ProviderTable.timeDeleted),
               )
             : sql`false`,
         )
@@ -1065,9 +1067,13 @@ export async function handler(
     if (authInfo!.isDisabled) throw new ModelError(t("zen.api.error.modelDisabled"))
   }
 
-  function updateProviderKey(authInfo: AuthInfo, providerInfo: ProviderInfo) {
-    if (!authInfo?.provider?.credentials) return
-    providerInfo.apiKey = authInfo.provider.credentials
+  async function updateProviderKey(authInfo: AuthInfo, modelInfo: ModelInfo, providerInfo: ProviderInfo) {
+    if (!authInfo?.provider?.credentials || providerInfo.id !== modelInfo.byokProvider) return
+    providerInfo.apiKey = await ProviderCredentials.decrypt({
+      workspaceID: authInfo.workspaceID,
+      provider: modelInfo.byokProvider,
+      credentials: authInfo.provider.credentials,
+    })
   }
 
   async function fetchWith429Retry(url: string, options: RequestInit, retry = { count: 0 }) {
