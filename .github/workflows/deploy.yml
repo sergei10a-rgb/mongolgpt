@@ -74,7 +74,7 @@ jobs:
         run: bun --cwd packages/app build
 
       - name: Deploy to Cloudflare
-        run: bun sst deploy --stage=${{ inputs.stage }}
+        run: bun sst deploy --stage=${{ inputs.stage }} --print-logs
 
       - name: Apply Cloudflare D1 migrations
         if: inputs.hosted_services == true
