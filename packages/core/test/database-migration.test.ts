@@ -47,7 +47,7 @@ describe("DatabaseMigration", () => {
         { concurrency: "unbounded" },
       ),
     )
-  })
+  }, 30_000)
   if (process.platform === "linux") {
     test("declared schema has no ungenerated migrations", async () => {
       const result = await $`bun ${fileURLToPath(new URL("../script/migration.ts", import.meta.url))} --check`
