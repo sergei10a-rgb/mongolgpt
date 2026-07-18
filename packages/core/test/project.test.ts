@@ -11,7 +11,7 @@ import { AbsolutePath } from "@mongolgpt/core/schema"
 import { Hash } from "@mongolgpt/core/util/hash"
 import { ProjectDirectories } from "@mongolgpt/core/project/directories"
 import { tmpdir } from "./fixture/tmpdir"
-import { testEffect } from "./lib/effect"
+import { testEffect, windowsTestTimeout } from "./lib/effect"
 
 const it = testEffect(Layer.mergeAll(ProjectV2.defaultLayer, Database.defaultLayer, ProjectDirectories.defaultLayer))
 
@@ -198,7 +198,7 @@ describe("ProjectV2.resolve", () => {
     }),
   )
 
-  it.live("linked worktree returns opened worktree directory and previous from common dir", () =>
+  it.live.serial("linked worktree returns opened worktree directory and previous from common dir", () =>
     Effect.gen(function* () {
       const tmp = yield* Effect.acquireRelease(
         Effect.promise(() => tmpdir()),
@@ -220,5 +220,6 @@ describe("ProjectV2.resolve", () => {
       expect(result.id).toBe(remoteID("github.com/owner/repo"))
       expect(result.vcs?.type).toBe("git")
     }),
+    windowsTestTimeout(30_000),
   )
 })

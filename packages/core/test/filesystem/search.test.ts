@@ -5,7 +5,7 @@ import { Effect } from "effect"
 import { Ripgrep } from "@mongolgpt/core/ripgrep"
 import { AbsolutePath, RelativePath } from "@mongolgpt/core/schema"
 import { tmpdir } from "../fixture/tmpdir"
-import { testEffect } from "../lib/effect"
+import { testEffect, windowsTestTimeout } from "../lib/effect"
 
 const it = testEffect(Ripgrep.defaultLayer)
 
@@ -16,7 +16,7 @@ const withTmp = <A, E, R>(f: (directory: AbsolutePath) => Effect.Effect<A, E, R>
   ).pipe(Effect.flatMap((tmp) => f(AbsolutePath.make(tmp.path))))
 
 describe("Ripgrep", () => {
-  it.live("globs files as an array", () =>
+  it.live.serial("globs files as an array", () =>
     withTmp((cwd) =>
       Effect.gen(function* () {
         yield* Effect.promise(() => fs.mkdir(path.join(cwd, "src")))
@@ -25,9 +25,10 @@ describe("Ripgrep", () => {
         expect(result.map((item) => item.path)).toEqual([RelativePath.make("src/match.ts")])
       }),
     ),
+    windowsTestTimeout(30_000),
   )
 
-  it.live("greps files with include filtering", () =>
+  it.live.serial("greps files with include filtering", () =>
     withTmp((cwd) =>
       Effect.gen(function* () {
         yield* Effect.promise(() => fs.mkdir(path.join(cwd, "src")))
@@ -39,5 +40,6 @@ describe("Ripgrep", () => {
         expect(result[0]?.submatches[0]?.text).toBe("needle")
       }),
     ),
+    windowsTestTimeout(30_000),
   )
 })

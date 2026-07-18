@@ -7,12 +7,12 @@ import { Git } from "@mongolgpt/core/git"
 import { AbsolutePath, RelativePath } from "@mongolgpt/core/schema"
 import { branch, commit, gitRemote } from "./fixture/git"
 import { tmpdir } from "./fixture/tmpdir"
-import { testEffect } from "./lib/effect"
+import { testEffect, windowsTestTimeout } from "./lib/effect"
 
 const it = testEffect(Git.defaultLayer)
 
 describe("Git", () => {
-  it.live("clones a remote and reads checkout metadata", () =>
+  it.live.serial("clones a remote and reads checkout metadata", () =>
     withRemote((fixture) =>
       Effect.gen(function* () {
         const git = yield* Git.Service
@@ -29,9 +29,10 @@ describe("Git", () => {
         expect(yield* read(path.join(target, "README.md"))).toBe("one\n")
       }),
     ),
+    windowsTestTimeout(30_000),
   )
 
-  it.live("fetches, checks out, and resets remote changes", () =>
+  it.live.serial("fetches, checks out, and resets remote changes", () =>
     withRemote((fixture) =>
       Effect.gen(function* () {
         const git = yield* Git.Service
@@ -51,6 +52,7 @@ describe("Git", () => {
         expect(yield* read(path.join(target, "README.md"))).toBe("feature\n")
       }),
     ),
+    windowsTestTimeout(30_000),
   )
 })
 
@@ -79,7 +81,7 @@ async function initRepo(directory: string) {
 }
 
 describe("Git worktrees", () => {
-  it.live("creates, lists, and removes linked worktrees", () =>
+  it.live.serial("creates, lists, and removes linked worktrees", () =>
     Effect.gen(function* () {
       const root = yield* Effect.acquireRelease(
         Effect.promise(() => tmpdir()),
@@ -106,11 +108,12 @@ describe("Git worktrees", () => {
       yield* git.worktree.remove({ repository: linked, directory: worktree, force: false })
       expect((yield* git.worktree.list(repo)).some((entry) => entry.directory.endsWith("-git-worktree"))).toBe(false)
     }),
+    windowsTestTimeout(30_000),
   )
 })
 
 describe("Git trees", () => {
-  it.live("captures, compares, previews, and restores scoped trees", () =>
+  it.live.serial("captures, compares, previews, and restores scoped trees", () =>
     Effect.gen(function* () {
       const root = yield* Effect.acquireRelease(
         Effect.promise(() => tmpdir()),
@@ -159,5 +162,6 @@ describe("Git trees", () => {
       expect(yield* read(path.join(root.path, "scope", "added.txt"))).toBe("added\n")
       expect(yield* read(path.join(root.path, "outside.txt"))).toBe("changed outside\n")
     }),
+    windowsTestTimeout(30_000),
   )
 })

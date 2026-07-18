@@ -12,11 +12,20 @@ export const tmpdir = async () => {
   }
 }
 
-async function remove(dir: string, retries = 30): Promise<void> {
+const transientWindowsErrors = new Set(["EBUSY", "EPERM", "EACCES", "ENOTEMPTY"])
+
+async function remove(dir: string, retries = process.platform === "win32" ? 60 : 30): Promise<void> {
   try {
     await fs.rm(dir, { recursive: true, force: true })
   } catch (error) {
-    if (retries === 0 || !error || typeof error !== "object" || !("code" in error) || error.code !== "EBUSY")
+    if (
+      retries === 0 ||
+      !error ||
+      typeof error !== "object" ||
+      !("code" in error) ||
+      typeof error.code !== "string" ||
+      (error.code !== "EBUSY" && (process.platform !== "win32" || !transientWindowsErrors.has(error.code)))
+    )
       throw error
     Bun.gc(true)
     await Bun.sleep(100)

@@ -13,10 +13,10 @@ import { AbsolutePath, RelativePath } from "@mongolgpt/core/schema"
 import { Snapshot } from "@mongolgpt/core/snapshot"
 import { Hash } from "@mongolgpt/core/util/hash"
 import { tmpdir } from "./fixture/tmpdir"
-import { testEffect } from "./lib/effect"
+import { testEffect, windowsTestTimeout } from "./lib/effect"
 
 describe("Snapshot", () => {
-  testEffect(Layer.empty).live("captures and restores Location-scoped changes", () =>
+  testEffect(Layer.empty).live.serial("captures and restores Location-scoped changes", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
       (tmp) =>
@@ -68,9 +68,10 @@ describe("Snapshot", () => {
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
+    windowsTestTimeout(30_000),
   )
 
-  testEffect(Layer.empty).live("treats capture outside Git as unavailable", () =>
+  testEffect(Layer.empty).live.serial("treats capture outside Git as unavailable", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
       (tmp) =>
@@ -84,9 +85,10 @@ describe("Snapshot", () => {
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
+    windowsTestTimeout(30_000),
   )
 
-  testEffect(Layer.empty).live("isolates snapshot indexes by canonical Git worktree", () =>
+  testEffect(Layer.empty).live.serial("isolates snapshot indexes by canonical Git worktree", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
       (tmp) =>
@@ -132,9 +134,10 @@ describe("Snapshot", () => {
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
+    windowsTestTimeout(30_000),
   )
 
-  testEffect(Layer.empty).live("checks out a legacy revert snapshot without removing unrelated files", () =>
+  testEffect(Layer.empty).live.serial("checks out a legacy revert snapshot without removing unrelated files", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
       (tmp) =>
@@ -168,6 +171,7 @@ describe("Snapshot", () => {
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
+    windowsTestTimeout(30_000),
   )
 })
 

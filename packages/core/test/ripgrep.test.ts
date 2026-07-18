@@ -5,12 +5,12 @@ import { Effect } from "effect"
 import { Ripgrep } from "@mongolgpt/core/ripgrep"
 import { RelativePath } from "@mongolgpt/core/schema"
 import { tmpdir } from "./fixture/tmpdir"
-import { testEffect } from "./lib/effect"
+import { testEffect, windowsTestTimeout } from "./lib/effect"
 
 const it = testEffect(Ripgrep.defaultLayer)
 
 describe("Ripgrep", () => {
-  it.live("keeps ignored files out of catch-all find results", () =>
+  it.live.serial("keeps ignored files out of catch-all find results", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
       (tmp) =>
@@ -28,9 +28,10 @@ describe("Ripgrep", () => {
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
+    windowsTestTimeout(15_000),
   )
 
-  it.live("never includes git metadata", () =>
+  it.live.serial("never includes git metadata", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
       (tmp) =>
@@ -60,5 +61,6 @@ describe("Ripgrep", () => {
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
+    windowsTestTimeout(15_000),
   )
 })
