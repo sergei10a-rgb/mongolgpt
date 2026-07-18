@@ -77,6 +77,7 @@ const hosted = {
       nvidia: {
         api: "https://integrate.api.nvidia.com/v1",
         apiKey: { primary: "unit-test-nvidia-key" },
+        productionUseApproved: true,
       },
     },
   }),
@@ -389,6 +390,39 @@ describe("Cloudflare deployment preflight", () => {
         }),
       ["runtime model schema", "rate limit"],
     )
+  })
+
+  test("blocks NVIDIA API Catalog trial routes from production", () => {
+    const models = JSON.parse(hosted.SST_SECRET_ZEN_MODELS1)
+    models.providers.nvidia.productionUseApproved = false
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
+            SST_SECRET_ZEN_MODELS1: JSON.stringify(models),
+          },
+        }),
+      ["NVIDIA API Catalog", "productionUseApproved=true"],
+    )
+
+    expect(
+      preflightDeployment({
+        stage: "dev",
+        env: {
+          ...cloudflare,
+          ...hosted,
+          MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+          MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+          SST_SECRET_ZEN_MODELS1: JSON.stringify(models),
+        },
+      }).stage,
+    ).toBe("dev")
   })
 })
 

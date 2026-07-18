@@ -46,6 +46,7 @@ const ProviderSchema = z.object({
   displayName: z.string().optional(),
   api: z.string(),
   apiKey: z.union([z.string(), z.record(z.string(), z.string())]),
+  productionUseApproved: z.boolean().optional(),
   format: ModelFormatSchema.optional(),
   headerModifier: z.record(z.string(), z.any()).optional(),
   payloadModifier: z.record(z.string(), z.any()).optional(),
@@ -73,8 +74,16 @@ export const MongolGPTModelConfigurationSchema = z
       for (const [modelID, configured] of Object.entries(models)) {
         for (const [index, model] of (Array.isArray(configured) ? configured : [configured]).entries()) {
           const path = [list, modelID, ...(Array.isArray(configured) ? [index] : [])]
+          const providerIDs = new Set<string>()
 
           for (const [routeIndex, route] of model.providers.entries()) {
+            if (providerIDs.has(route.id))
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: [...path, "providers", routeIndex, "id"],
+                message: `Provider route "${route.id}" must be unique within the model`,
+              })
+            providerIDs.add(route.id)
             if (!value.providers[route.id])
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
@@ -88,6 +97,15 @@ export const MongolGPTModelConfigurationSchema = z
               code: z.ZodIssueCode.custom,
               path: [...path, "fallbackProvider"],
               message: "fallbackProvider must reference a route configured for the model",
+            })
+          if (
+            model.fallbackProvider &&
+            !model.providers.some((provider) => provider.id === model.fallbackProvider && !provider.disabled)
+          )
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [...path, "fallbackProvider"],
+              message: "fallbackProvider must reference an enabled provider route",
             })
 
           if (modelID !== "free-auto") continue
@@ -134,7 +152,7 @@ export const MongolGPTModelConfigurationSchema = z
               path,
               message: "Free Auto per-request token upper bound cannot exceed its weekly token limit",
             })
-          if (model.providers.length < 2)
+          if (new Set(model.providers.filter((provider) => !provider.disabled).map((provider) => provider.id)).size < 2)
             ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: "Free Auto must define a fallback route" })
           if (!model.fallbackProvider || !model.providers.some((provider) => provider.id === model.fallbackProvider))
             ctx.addIssue({

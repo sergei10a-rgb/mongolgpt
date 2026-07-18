@@ -8,19 +8,19 @@
       },
       "allowAnonymous": false,
       "freeForAuthenticated": true,
-      "fallbackProvider": "production-secondary",
+      "fallbackProvider": "nvidia-nim-production",
       "rateLimit": 20,
       "freeWeeklyTokenLimit": 100000,
       "freeMaxTokensPerRequest": 32000,
       "providers": [
         {
-          "id": "production-primary",
-          "model": "replace-with-primary-model",
+          "id": "openrouter-free",
+          "model": "openrouter/free",
           "priority": 0
         },
         {
-          "id": "production-secondary",
-          "model": "replace-with-secondary-model",
+          "id": "nvidia-nim-production",
+          "model": "replace-with-licensed-nvidia-model",
           "priority": 1
         }
       ]
@@ -28,15 +28,16 @@
   },
   "liteModels": {},
   "providers": {
-    "production-primary": {
-      "displayName": "Primary production provider",
-      "api": "https://replace-with-primary-provider.example/v1",
-      "apiKey": "replace-with-primary-secret"
+    "openrouter-free": {
+      "displayName": "OpenRouter Free",
+      "api": "https://openrouter.ai/api/v1",
+      "apiKey": "replace-with-openrouter-secret"
     },
-    "production-secondary": {
-      "displayName": "Secondary production provider",
-      "api": "https://replace-with-secondary-provider.example/v1",
-      "apiKey": "replace-with-secondary-secret"
+    "nvidia-nim-production": {
+      "displayName": "NVIDIA NIM production subscription",
+      "api": "https://integrate.api.nvidia.com/v1",
+      "apiKey": "replace-with-nvidia-production-secret",
+      "productionUseApproved": false
     }
   }
 }

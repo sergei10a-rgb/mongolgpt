@@ -54,6 +54,12 @@ import { enqueueBatchedUsage, HOT_WORKSPACES } from "./usageBatcher"
 import { verifyCliToken } from "~/lib/cli-auth"
 import { authenticatedRateLimitIdentity, sanitizeProviderRequestHeaders } from "./request-security"
 import { freeAutoReservationUpperBound, reserveFreeAutoQuota } from "./free-auto-quota"
+import {
+  canFailoverProvider,
+  cancelProviderResponse,
+  inlineProviderRetryDelayMs,
+  shouldFailoverProviderStatus,
+} from "./provider-retry"
 
 type ZenData = Awaited<ReturnType<typeof ZenData.list>>
 type RetryOptions = {
@@ -240,31 +246,45 @@ export async function handler(
         request_length: requestLength,
         request_retry: retry.retryCount,
       })
-      const res = await fetchWith429Retry(reqUrl, {
-        method: "POST",
-        headers: (() => {
-          const headers = sanitizeProviderRequestHeaders(input.request.headers)
-          providerInfo.modifyHeaders(headers, providerInfo.apiKey, stickyId)
-          Object.entries(providerInfo.headerModifier ?? {}).forEach(([k, v]) => {
-            if (v === "$ip") return headers.set(k, ip)
-            if (v === "$caller") return headers.set(k, stickyId)
-            if (v === "$session") return headers.set(k, sessionId)
-            if (v === "$model") return headers.set(k, model)
-            if (v === "$request") return headers.set(k, requestId)
-            if (v === "$project") return headers.set(k, projectId)
-            if (v === "$workspace" && authInfo?.workspaceID) return headers.set(k, authInfo.workspaceID)
-            headers.set(k, v)
-          })
-          headers.delete("host")
-          headers.delete("content-length")
-          headers.delete("x-mongolgpt-request")
-          headers.delete("x-mongolgpt-session")
-          headers.delete("x-mongolgpt-project")
-          headers.delete("x-mongolgpt-client")
-          return headers
-        })(),
-        body: reqBody,
-      })
+      const canFailover = () =>
+        canFailoverProvider({
+          retryCount: retry.retryCount,
+          maxRetries: MAX_FAILOVER_RETRIES,
+          stickyProvider: modelInfo.stickyProvider,
+          fallbackProvider: modelInfo.fallbackProvider,
+          currentProvider: providerInfo.id,
+        })
+      let res: Response
+      try {
+        res = await fetchWith429Retry(reqUrl, {
+          method: "POST",
+          headers: (() => {
+            const headers = sanitizeProviderRequestHeaders(input.request.headers)
+            providerInfo.modifyHeaders(headers, providerInfo.apiKey, stickyId)
+            Object.entries(providerInfo.headerModifier ?? {}).forEach(([k, v]) => {
+              if (v === "$ip") return headers.set(k, ip)
+              if (v === "$caller") return headers.set(k, stickyId)
+              if (v === "$session") return headers.set(k, sessionId)
+              if (v === "$model") return headers.set(k, model)
+              if (v === "$request") return headers.set(k, requestId)
+              if (v === "$project") return headers.set(k, projectId)
+              if (v === "$workspace" && authInfo?.workspaceID) return headers.set(k, authInfo.workspaceID)
+              headers.set(k, v)
+            })
+            headers.delete("host")
+            headers.delete("content-length")
+            headers.delete("x-mongolgpt-request")
+            headers.delete("x-mongolgpt-session")
+            headers.delete("x-mongolgpt-project")
+            headers.delete("x-mongolgpt-client")
+            return headers
+          })(),
+          body: reqBody,
+        })
+      } catch (error) {
+        logger.metric({ "llm.error.type": "network" })
+        throw error
+      }
 
       if (providerInfo.id.startsWith("console.")) {
         const resEndpointId = res.headers.get("x-mongolgpt-endpoint-id")
@@ -282,18 +302,8 @@ export async function handler(
         })
       }
 
-      // Try another provider => stop retrying if using fallback provider
-      if (
-        res.status !== 200 &&
-        // ie. 400 error is usually provider error like malformed request
-        res.status !== 400 &&
-        // ie. openai 404 error: Item with id 'msg_0ead8b004a3b165d0069436a6b6834819896da85b63b196a3f' not found.
-        !(modelInfo.id.startsWith("gpt-") && res.status === 404) &&
-        // ie. cannot change codex model providers mid-session
-        modelInfo.stickyProvider !== "strict" &&
-        modelInfo.fallbackProvider &&
-        providerInfo.id !== modelInfo.fallbackProvider
-      ) {
+      if (shouldFailoverProviderStatus(res.status) && canFailover()) {
+        await cancelProviderResponse(res)
         return retriableRequest({
           excludeProviders: [...retry.excludeProviders, providerInfo.id],
           retryCount: retry.retryCount + 1,
@@ -1079,7 +1089,10 @@ export async function handler(
   async function fetchWith429Retry(url: string, options: RequestInit, retry = { count: 0 }) {
     const res = await fetch(url, options)
     if (res.status === 429 && retry.count < MAX_429_RETRIES) {
-      await new Promise((resolve) => setTimeout(resolve, Math.pow(2, retry.count) * 500))
+      const delay = inlineProviderRetryDelayMs(res.headers.get("retry-after"), retry.count)
+      if (delay === undefined) return res
+      await cancelProviderResponse(res)
+      await new Promise((resolve) => setTimeout(resolve, delay))
       return fetchWith429Retry(url, options, { count: retry.count + 1 })
     }
     return res

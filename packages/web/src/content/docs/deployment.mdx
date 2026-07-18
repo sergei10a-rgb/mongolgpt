@@ -91,11 +91,15 @@ Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог х
 | Variable | `GOOGLE_CLIENT_ID`             | Тухайн environment-ийн Google Web OAuth client ID                    |
 | Secret   | `GITHUB_CLIENT_SECRET_CONSOLE` | GitHub OAuth App client secret                                       |
 | Secret   | `BYOK_CREDENTIALS_KEY_V1`      | 32+ тэмдэгт тогтвортой CSPRNG key; rotation хийх хүртэл солихгүй     |
+| Secret   | `MONGOLGPT_RUNTIME_SECRET`     | 32+ тэмдэгт Cloudflare Sandbox account-isolation secret              |
+| Secret   | `MONGOLGPT_PLAN_LIMITS`        | Free/Basic/Pro/Max plan, token, cost болон rate-limit JSON           |
 | Secret   | `ZEN_SESSION_SECRET`           | 32+ тэмдэгт тусдаа CSPRNG session secret                             |
 | Secret   | `ZEN_MODELS1`                  | Баталгаажсан Free Auto model/provider JSON; provider key-ийг агуулна |
 | Secret   | `ZEN_MODELS2`…`ZEN_MODELS30`   | `ZEN_MODELS1` багтахгүй үед JSON-ийн дараалсан optional хэсгүүд      |
 
-Workflow нь secret-гүй verify job-ийг эхэлж ажиллуулаад, зөвхөн `main` revision болон сонгосон GitHub Environment-д deploy job нээнэ. Deploy step эдгээр утгыг command argument-д гаргалгүй stdin-аар тухайн SST stage-ийн encrypted secret store-д шинэчилсний дараа deploy хийнэ. GitHub Environment-ийн deployment branch дүрмийг `main`-ээр хязгаарлана. Иймээс нууц утгыг repository файл, command history эсвэл SST placeholder-д бичихгүй. `deploy:preflight` нь OAuth, session болон Free Auto JSON-ийг Cloudflare resource үүсгэхээс өмнө runtime-ийн яг ижил schema-аар шалгана.
+Workflow нь secret-гүй verify job-ийг эхэлж ажиллуулаад, зөвхөн `main` revision болон сонгосон GitHub Environment-д deploy job нээнэ. Deploy step эдгээр утгыг command argument-д гаргалгүй stdin-аар тухайн SST stage-ийн encrypted secret store-д шинэчилсний дараа deploy хийнэ. GitHub Environment-ийн deployment branch дүрмийг `main`-ээр хязгаарлана. Иймээс нууц утгыг repository файл, command history эсвэл SST placeholder-д бичихгүй. `deploy:preflight` нь OAuth, session, plan/quota болон Free Auto JSON-ийг Cloudflare resource үүсгэхээс өмнө runtime-ийн яг ижил schema-аар шалгана.
+
+NVIDIA API Catalog-ийн trial endpoint нь зөвхөн туршилт, үнэлгээнд зориулагдсан. Production `ZEN_MODELS` тохиргоонд `integrate.api.nvidia.com` ашиглах бол тусдаа production subscription/license-аа баталгаажуулсны дараа тухайн provider дээр `productionUseApproved: true` гэж санаатай тэмдэглэнэ. Энэ баталгаа байхгүй production deploy-ийг preflight зогсооно.
 
 Quota service-ийн дотоод token-ийг SST deploy үеэр автоматаар үүсгэнэ. Upstash болон PlanetScale secret шаардлагагүй.
 

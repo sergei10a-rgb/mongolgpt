@@ -95,7 +95,11 @@ export function preflightDeployment(input: {
     validateSecretKey("BYOK_CREDENTIALS_KEY_V1", deploymentSecret(env, "ByokCredentialsKeyV1"), issues)
     validatePlanConfiguration(deploymentSecret(env, "MONGOLGPT_PLAN_LIMITS"), issues)
     validateSecretKey("ZEN_SESSION_SECRET", deploymentSecret(env, "ZEN_SESSION_SECRET"), issues)
-    validateModelConfiguration(modelSecretNames.map((name) => deploymentSecret(env, name) ?? "").join(""), issues)
+    validateModelConfiguration(
+      modelSecretNames.map((name) => deploymentSecret(env, name) ?? "").join(""),
+      issues,
+      stage,
+    )
   }
 
   if (stage === "production" && domain) {
@@ -181,7 +185,7 @@ function validatePlanConfiguration(value: string | undefined, issues: string[]) 
   issues.push(`MONGOLGPT_PLAN_LIMITS plan/quota schema-д нийцэхгүй байна. ${details}`)
 }
 
-function validateModelConfiguration(value: string | undefined, issues: string[]) {
+function validateModelConfiguration(value: string | undefined, issues: string[], stage: string) {
   const raw = value?.trim()
   if (!raw) {
     issues.push("ZEN_MODELS1 дутуу байна.")
@@ -247,6 +251,11 @@ function validateModelConfiguration(value: string | undefined, issues: string[])
       if (placeholderValue(api) || reservedProviderHostname(url.hostname)) {
         issues.push(`ZEN_MODELS дэх "${providerID}" provider бодит API endpoint-тэй байна.`)
       }
+      if (stage === "production" && nvidiaApiCatalogHostname(url.hostname) && provider.productionUseApproved !== true) {
+        issues.push(
+          `ZEN_MODELS дэх "${providerID}" NVIDIA API Catalog provider production subscription/license баталгаажсан productionUseApproved=true тохиргоотой байна.`,
+        )
+      }
     } catch {
       issues.push(`ZEN_MODELS дэх "${providerID}" provider-ийн API URL хүчинтэй байна.`)
     }
@@ -270,6 +279,10 @@ function reservedProviderHostname(value: string) {
     hostname === "example.org" ||
     [".invalid", ".test", ".example"].some((suffix) => hostname.endsWith(suffix))
   )
+}
+
+function nvidiaApiCatalogHostname(value: string) {
+  return value.trim().toLowerCase().replace(/\.$/, "") === "integrate.api.nvidia.com"
 }
 
 function validateDomain(value: string | undefined, issues: string[]) {

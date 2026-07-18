@@ -40,6 +40,19 @@ describe("MongolGPT Free Auto model contract", () => {
     expect(() => validate(config({ ...model, freeForAuthenticated: false }))).toThrow()
     expect(() => validate(config({ ...model, fallbackProvider: undefined }))).toThrow()
     expect(() => validate(config({ ...model, fallbackProvider: "missing" }))).toThrow()
+    expect(() =>
+      validate(
+        config({
+          ...model,
+          providers: model.providers.map((provider) =>
+            provider.id === model.fallbackProvider ? { ...provider, disabled: true } : provider,
+          ),
+        }),
+      ),
+    ).toThrow(/enabled provider route/)
+    expect(() => validate(config({ ...model, providers: [...model.providers, model.providers[0]] }))).toThrow(
+      /must be unique within the model/,
+    )
   })
 
   test("requires a weekly token quota", () => {
