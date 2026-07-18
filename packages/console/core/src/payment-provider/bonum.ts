@@ -123,13 +123,19 @@ const FailureWebhookSchema = z
 
 const WebhookSchema = z.discriminatedUnion("status", [SuccessWebhookSchema, FailureWebhookSchema])
 
-const WebhookVerificationInputSchema = z
+const WebhookSignatureInputSchema = z
   .object({
     rawBody: z.string().min(2).max(MAX_WEBHOOK_BYTES),
     checksum: z
       .string()
       .trim()
       .regex(/^[0-9a-fA-F]{64}$/),
+  })
+  .strict()
+
+const WebhookVerificationInputSchema = z
+  .object({
+    ...WebhookSignatureInputSchema.shape,
     expectedExternalInvoiceID: z.string().trim().min(1).max(255),
     expectedReference: z.string().trim().min(1).max(45),
     expectedAmount: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
@@ -140,7 +146,8 @@ const WebhookVerificationInputSchema = z
 
 type BonumConfig = z.input<typeof BonumConfigSchema>
 type Fetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
-type WebhookVerificationInput = z.input<typeof WebhookVerificationInputSchema>
+export type BonumWebhookSignatureInput = z.input<typeof WebhookSignatureInputSchema>
+export type BonumWebhookVerificationInput = z.input<typeof WebhookVerificationInputSchema>
 
 export class BonumWebhookVerificationError extends Error {
   readonly code: "signature" | "payload" | "binding"
@@ -224,8 +231,8 @@ export class BonumAdapter implements PaymentProviderAdapter {
     })
   }
 
-  async verifyWebhook(input: WebhookVerificationInput): Promise<VerifiedPaymentEvent[]> {
-    const request = WebhookVerificationInputSchema.safeParse(input)
+  async verifyWebhookSignature(input: BonumWebhookSignatureInput) {
+    const request = WebhookSignatureInputSchema.safeParse(input)
     if (!request.success) throw new BonumWebhookVerificationError("payload")
     const rawBytes = new TextEncoder().encode(request.data.rawBody)
     if (rawBytes.byteLength > MAX_WEBHOOK_BYTES) throw new BonumWebhookVerificationError("payload")
@@ -233,6 +240,15 @@ export class BonumAdapter implements PaymentProviderAdapter {
     if (!constantTimeEqualHex(expectedChecksum, request.data.checksum)) {
       throw new BonumWebhookVerificationError("signature")
     }
+  }
+
+  async verifyWebhook(input: BonumWebhookVerificationInput): Promise<VerifiedPaymentEvent[]> {
+    const request = WebhookVerificationInputSchema.safeParse(input)
+    if (!request.success) throw new BonumWebhookVerificationError("payload")
+    await this.verifyWebhookSignature({
+      rawBody: request.data.rawBody,
+      checksum: request.data.checksum,
+    })
 
     let parsed: unknown
     try {

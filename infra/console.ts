@@ -74,6 +74,53 @@ paymentQueue.subscribe(
   },
 )
 
+const paymentEnvironment = process.env.MONGOLGPT_PAYMENT_ENVIRONMENT?.trim() || "disabled"
+if (!["disabled", "sandbox", "production"].includes(paymentEnvironment)) {
+  throw new Error("MONGOLGPT_PAYMENT_ENVIRONMENT must be disabled, sandbox, or production.")
+}
+if (paymentEnvironment === "production" && process.env.MONGOLGPT_ENABLE_REAL_PAYMENTS !== "true") {
+  throw new Error("Production payments require MONGOLGPT_ENABLE_REAL_PAYMENTS=true.")
+}
+
+const paymentConfig = new sst.Linkable("PaymentConfig", {
+  properties: {
+    enabled: paymentEnvironment !== "disabled",
+    environment: paymentEnvironment === "production" ? "production" : "sandbox",
+    callbackBaseURL: `https://pay.${domain}`,
+    bonumProviders: ["E_COMMERCE"],
+  },
+})
+const QPAY_MERCHANT_ACCOUNT_ID = new sst.Secret("QPayMerchantAccountID", "disabled")
+const QPAY_CLIENT_ID = new sst.Secret("QPayClientID", "disabled")
+const QPAY_CLIENT_SECRET = new sst.Secret("QPayClientSecret", "disabled")
+const QPAY_INVOICE_CODE = new sst.Secret("QPayInvoiceCode", "disabled")
+const BONUM_MERCHANT_ACCOUNT_ID = new sst.Secret("BonumMerchantAccountID", "disabled")
+const BONUM_APP_SECRET = new sst.Secret("BonumAppSecret", "disabled")
+const BONUM_TERMINAL_ID = new sst.Secret("BonumTerminalID", "disabled")
+const BONUM_WEBHOOK_CHECKSUM_KEY = new sst.Secret("BonumWebhookChecksumKey", "disabled")
+
+export const paymentService = new sst.cloudflare.Worker("PaymentService", {
+  domain: `pay.${domain}`,
+  handler: "packages/console/function/src/payment-webhook.ts",
+  url: true,
+  link: [
+    database,
+    paymentQueue,
+    paymentConfig,
+    QPAY_MERCHANT_ACCOUNT_ID,
+    QPAY_CLIENT_ID,
+    QPAY_CLIENT_SECRET,
+    QPAY_INVOICE_CODE,
+    BONUM_MERCHANT_ACCOUNT_ID,
+    BONUM_APP_SECRET,
+    BONUM_TERMINAL_ID,
+    BONUM_WEBHOOK_CHECKSUM_KEY,
+  ],
+  compatibility: {
+    date: "2026-07-15",
+  },
+})
+
 export const quotaService = new sst.cloudflare.Worker("QuotaService", {
   handler: "packages/console/function/src/quota.ts",
   url: true,

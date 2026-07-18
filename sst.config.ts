@@ -5,10 +5,7 @@ export default $config({
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const monitoring = hostedServices && flag("MONGOLGPT_ENABLE_MONITORING")
     const analytics = flag("MONGOLGPT_ENABLE_ANALYTICS")
-    const unsupported = [
-      "MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS",
-      "MONGOLGPT_ENABLE_LEGACY_STRIPE",
-    ].filter(flag)
+    const unsupported = ["MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS", "MONGOLGPT_ENABLE_LEGACY_STRIPE"].filter(flag)
     if (unsupported.length) {
       throw new Error(`Cloudflare-only launch profile does not support: ${unsupported.join(", ")}`)
     }
@@ -43,7 +40,7 @@ export default $config({
     }
 
     if (stage.enableSyncService) await import("./infra/app.js")
-    const { consoleApp, stat } = await import("./infra/console.js")
+    const { consoleApp, paymentService, stat } = await import("./infra/console.js")
     const stats = stage.enableAnalytics ? await import("./infra/stats.js") : undefined
     const enterprise = stage.enableShareService ? await import("./infra/enterprise.js") : undefined
     if (stage.enableMonitoring && ($app.stage === "production" || $app.stage === "vimtor")) {
@@ -54,6 +51,7 @@ export default $config({
       StatWorkerUrl: stat.url,
       StatsUrl: stats?.app.url ?? "",
       WebsiteUrl: consoleApp.url,
+      PaymentServiceUrl: paymentService.url,
       DocsUrl: site.docsUrl,
       DocsWorkerUrl: site.website.url,
       WebAppUrl: site.webApp.url,
