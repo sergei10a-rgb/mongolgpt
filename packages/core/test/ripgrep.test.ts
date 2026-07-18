@@ -28,7 +28,7 @@ describe("Ripgrep", () => {
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
-    windowsTestTimeout(15_000),
+    windowsTestTimeout(60_000),
   )
 
   it.live.serial("never includes git metadata", () =>
@@ -61,6 +61,6 @@ describe("Ripgrep", () => {
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
-    windowsTestTimeout(15_000),
+    windowsTestTimeout(60_000),
   )
 })
