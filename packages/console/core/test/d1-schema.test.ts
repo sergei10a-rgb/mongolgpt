@@ -104,6 +104,49 @@ const contract = {
     "timeRefunded",
     "enrichment",
   ],
+  PaymentInvoiceTable: [
+    "id",
+    "workspace_id",
+    "provider",
+    "merchant_account_id",
+    "external_invoice_id",
+    "external_payment_id",
+    "purpose",
+    "plan",
+    "amount",
+    "currency",
+    "status",
+    "time_expires",
+    "time_failed",
+    "time_expired",
+    "time_cancelled",
+    "time_verified",
+    "time_refunded",
+    "timeCreated",
+    "timeUpdated",
+    "timeDeleted",
+  ],
+  PaymentEventTable: [
+    "id",
+    "invoice_id",
+    "workspace_id",
+    "provider",
+    "merchant_account_id",
+    "external_event_id",
+    "external_invoice_id",
+    "external_payment_id",
+    "amount",
+    "currency",
+    "type",
+    "outcome",
+    "from_status",
+    "to_status",
+    "payload_hash",
+    "time_occurred",
+    "timeCreated",
+    "timeUpdated",
+    "timeDeleted",
+  ],
   UsageTable: [
     "id",
     "workspaceID",
@@ -182,6 +225,19 @@ describe("D1 schema contract", () => {
     expect(d1.AuthProvider).toEqual(["email", "github", "google"])
     expect(d1.UserRole).toEqual(["admin", "member"])
     expect(d1.PlanNames).toEqual(["basic", "pro", "max"])
+    expect(d1.PaymentProviders).toEqual(["qpay", "bonum"])
+    expect(d1.PaymentPurposes).toEqual(["subscription", "credit"])
+    expect(d1.PaymentInvoiceStatuses).toEqual([
+      "created",
+      "pending",
+      "paid",
+      "failed",
+      "expired",
+      "cancelled",
+      "refunded",
+    ])
+    expect(d1.PaymentEventTypes).toEqual(["pending", "paid", "failed", "expired", "cancelled", "refunded"])
+    expect(d1.PaymentEventOutcomes).toEqual(["applied", "noop", "rejected"])
     expect(d1.NewsletterSubscriberStatus).toEqual(["active", "unsubscribed"])
     expect(d1.NewsletterSubscriberSource).toEqual(["console", "stats"])
     expect(d1.EnterpriseInquiryStatus).toEqual(["new", "reviewing", "resolved", "spam"])

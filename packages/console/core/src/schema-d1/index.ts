@@ -6,6 +6,19 @@ import { currency, id, timestamps, ulid, utc, workspaceColumns } from "../drizzl
 export const AuthProvider = ["email", "github", "google"] as const
 export const UserRole = ["admin", "member"] as const
 export const PlanNames = ["basic", "pro", "max"] as const
+export const PaymentProviders = ["qpay", "bonum"] as const
+export const PaymentPurposes = ["subscription", "credit"] as const
+export const PaymentInvoiceStatuses = [
+  "created",
+  "pending",
+  "paid",
+  "failed",
+  "expired",
+  "cancelled",
+  "refunded",
+] as const
+export const PaymentEventTypes = ["pending", "paid", "failed", "expired", "cancelled", "refunded"] as const
+export const PaymentEventOutcomes = ["applied", "noop", "rejected"] as const
 export const NewsletterSubscriberStatus = ["active", "unsubscribed"] as const
 export const NewsletterSubscriberSource = ["console", "stats"] as const
 export const EnterpriseInquiryStatus = ["new", "reviewing", "resolved", "spam"] as const
@@ -254,6 +267,112 @@ export const PaymentTable = sqliteTable(
   (table) => [
     ...workspaceIndexes(table),
     check("payment_enrichment_json_check", sql`${table.enrichment} is null or json_valid(${table.enrichment})`),
+  ],
+)
+
+export const PaymentInvoiceTable = sqliteTable(
+  "payment_invoice",
+  {
+    id: id(),
+    workspace_id: ulid("workspace_id").notNull(),
+    provider: text("provider", { enum: PaymentProviders }).notNull(),
+    merchant_account_id: text("merchant_account_id", { length: 255 }).notNull(),
+    external_invoice_id: text("external_invoice_id", { length: 255 }).notNull(),
+    external_payment_id: text("external_payment_id", { length: 255 }),
+    purpose: text("purpose", { enum: PaymentPurposes }).notNull(),
+    plan: text("plan", { enum: PlanNames }),
+    amount: integer("amount").notNull(),
+    currency: text("currency", { enum: ["MNT"] })
+      .notNull()
+      .default("MNT"),
+    status: text("status", { enum: PaymentInvoiceStatuses }).notNull().default("created"),
+    time_expires: utc("time_expires"),
+    time_failed: utc("time_failed"),
+    time_expired: utc("time_expired"),
+    time_cancelled: utc("time_cancelled"),
+    time_verified: utc("time_verified"),
+    time_refunded: utc("time_refunded"),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    index("payment_invoice_workspace_time_created").on(table.workspace_id, table.timeCreated),
+    uniqueIndex("payment_invoice_merchant_external_invoice").on(
+      table.provider,
+      table.merchant_account_id,
+      table.external_invoice_id,
+    ),
+    uniqueIndex("payment_invoice_merchant_external_payment").on(
+      table.provider,
+      table.merchant_account_id,
+      table.external_payment_id,
+    ),
+    check("payment_invoice_provider_check", sql`${table.provider} in ('qpay', 'bonum')`),
+    check("payment_invoice_purpose_check", sql`${table.purpose} in ('subscription', 'credit')`),
+    check(
+      "payment_invoice_plan_check",
+      sql`(${table.purpose} = 'subscription' and ${table.plan} in ('basic', 'pro', 'max'))
+        or (${table.purpose} = 'credit' and ${table.plan} is null)`,
+    ),
+    check("payment_invoice_amount_check", sql`${table.amount} > 0`),
+    check("payment_invoice_currency_check", sql`${table.currency} = 'MNT'`),
+    check(
+      "payment_invoice_status_check",
+      sql`${table.status} in ('created', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')`,
+    ),
+  ],
+)
+
+export const PaymentEventTable = sqliteTable(
+  "payment_event",
+  {
+    id: id(),
+    invoice_id: ulid("invoice_id").notNull(),
+    workspace_id: ulid("workspace_id").notNull(),
+    provider: text("provider", { enum: PaymentProviders }).notNull(),
+    merchant_account_id: text("merchant_account_id", { length: 255 }).notNull(),
+    external_event_id: text("external_event_id", { length: 255 }).notNull(),
+    external_invoice_id: text("external_invoice_id", { length: 255 }).notNull(),
+    external_payment_id: text("external_payment_id", { length: 255 }),
+    amount: integer("amount"),
+    currency: text("currency", { enum: ["MNT"] }),
+    type: text("type", { enum: PaymentEventTypes }).notNull(),
+    outcome: text("outcome", { enum: PaymentEventOutcomes }).notNull(),
+    from_status: text("from_status", { enum: PaymentInvoiceStatuses }).notNull(),
+    to_status: text("to_status", { enum: PaymentInvoiceStatuses }).notNull(),
+    payload_hash: text("payload_hash", { length: 64 }).notNull(),
+    time_occurred: utc("time_occurred").notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    index("payment_event_invoice_time_created").on(table.invoice_id, table.timeCreated),
+    index("payment_event_workspace_time_created").on(table.workspace_id, table.timeCreated),
+    uniqueIndex("payment_event_merchant_external_event").on(
+      table.provider,
+      table.merchant_account_id,
+      table.external_event_id,
+    ),
+    check("payment_event_provider_check", sql`${table.provider} in ('qpay', 'bonum')`),
+    check(
+      "payment_event_amount_currency_check",
+      sql`(${table.amount} is null and ${table.currency} is null)
+        or (${table.amount} > 0 and ${table.currency} = 'MNT')`,
+    ),
+    check(
+      "payment_event_type_check",
+      sql`${table.type} in ('pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')`,
+    ),
+    check("payment_event_outcome_check", sql`${table.outcome} in ('applied', 'noop', 'rejected')`),
+    check(
+      "payment_event_from_status_check",
+      sql`${table.from_status} in ('created', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')`,
+    ),
+    check(
+      "payment_event_to_status_check",
+      sql`${table.to_status} in ('created', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')`,
+    ),
+    check("payment_event_payload_hash_check", sql`length(${table.payload_hash}) = 64`),
   ],
 )
 

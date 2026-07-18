@@ -11,6 +11,8 @@ export namespace Identifier {
     lite: "lit",
     model: "mod",
     payment: "pay",
+    paymentEvent: "pev",
+    paymentInvoice: "inv",
     provider: "prv",
     referral: "ref",
     subscription: "sub",

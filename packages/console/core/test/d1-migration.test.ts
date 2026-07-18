@@ -23,10 +23,12 @@ describe("D1 migration", () => {
       .query("select name from sqlite_schema where type = 'table' and name not like 'sqlite_%' order by name")
       .values()
 
-    expect(tables).toHaveLength(25)
+    expect(tables).toHaveLength(27)
     expect(tables).toContainEqual(["account"])
     expect(tables).toContainEqual(["enterprise_inquiry"])
     expect(tables).toContainEqual(["newsletter_subscriber"])
+    expect(tables).toContainEqual(["payment_event"])
+    expect(tables).toContainEqual(["payment_invoice"])
     expect(tables).toContainEqual(["workspace"])
   })
 
