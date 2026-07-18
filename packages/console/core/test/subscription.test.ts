@@ -104,3 +104,44 @@ describe("Subscription.analyzeMonthlyUsage", () => {
     expect(result.resetInSec).toBe(expected)
   })
 })
+
+describe("Subscription.LimitsSchema", () => {
+  const limits = {
+    free: {
+      promoTokens: 0,
+      dailyRequests: 20,
+      dailyRequestsFallback: 5,
+      checkHeaders: { "x-mongolgpt-proxy": "secret" },
+    },
+    lite: {
+      rollingLimit: 1,
+      rollingWindow: 5,
+      weeklyLimit: 5,
+      monthlyLimit: 10,
+    },
+    plans: {
+      basic: { weeklyCostLimit: 1, weeklyTokenLimit: 100_000, rollingCostLimit: 1, rollingWindow: 5 },
+      pro: { weeklyCostLimit: 5, weeklyTokenLimit: 500_000, rollingCostLimit: 2, rollingWindow: 5 },
+      max: { weeklyCostLimit: 10, weeklyTokenLimit: 1_000_000, rollingCostLimit: 4, rollingWindow: 5 },
+    },
+  }
+
+  test("accepts complete positive plan and quota limits", () => {
+    expect(Subscription.LimitsSchema.safeParse(limits).success).toBe(true)
+  })
+
+  test("rejects disabled or missing safety limits", () => {
+    expect(
+      Subscription.LimitsSchema.safeParse({
+        ...limits,
+        free: { ...limits.free, dailyRequestsFallback: 0 },
+      }).success,
+    ).toBe(false)
+    expect(
+      Subscription.LimitsSchema.safeParse({
+        ...limits,
+        plans: { ...limits.plans, basic: { ...limits.plans.basic, weeklyTokenLimit: 0 } },
+      }).success,
+    ).toBe(false)
+  })
+})

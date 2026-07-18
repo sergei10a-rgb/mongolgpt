@@ -1,4 +1,5 @@
 import { MongolGPTModelConfigurationSchema } from "@mongolgpt/console-core/model-config.js"
+import { Subscription } from "@mongolgpt/console-core/subscription.js"
 
 const booleanVariables = [
   "MONGOLGPT_ENABLE_HOSTED_SERVICES",
@@ -16,6 +17,7 @@ export const hostedSstSecretNames = [
   "GITHUB_CLIENT_ID_CONSOLE",
   "GITHUB_CLIENT_SECRET_CONSOLE",
   "GOOGLE_CLIENT_ID",
+  "MONGOLGPT_PLAN_LIMITS",
   "ZEN_SESSION_SECRET",
   ...modelSecretNames,
 ] as const
@@ -91,6 +93,7 @@ export function preflightDeployment(input: {
     requireValue("GITHUB_CLIENT_SECRET_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"), issues)
     requireValue("GOOGLE_CLIENT_ID", deploymentSecret(env, "GOOGLE_CLIENT_ID"), issues)
     validateSecretKey("BYOK_CREDENTIALS_KEY_V1", deploymentSecret(env, "ByokCredentialsKeyV1"), issues)
+    validatePlanConfiguration(deploymentSecret(env, "MONGOLGPT_PLAN_LIMITS"), issues)
     validateSecretKey("ZEN_SESSION_SECRET", deploymentSecret(env, "ZEN_SESSION_SECRET"), issues)
     validateModelConfiguration(modelSecretNames.map((name) => deploymentSecret(env, name) ?? "").join(""), issues)
   }
@@ -152,6 +155,30 @@ function validateSecretKey(name: string, value: string | undefined, issues: stri
     return
   }
   if (secret.length < 32) issues.push(`${name} хамгийн багадаа 32 тэмдэгттэй байна.`)
+}
+
+function validatePlanConfiguration(value: string | undefined, issues: string[]) {
+  const raw = value?.trim()
+  if (!raw) {
+    issues.push("MONGOLGPT_PLAN_LIMITS дутуу байна.")
+    return
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    issues.push("MONGOLGPT_PLAN_LIMITS хүчинтэй JSON биш байна.")
+    return
+  }
+
+  const result = Subscription.LimitsSchema.safeParse(parsed)
+  if (result.success) return
+  const details = result.error.issues
+    .slice(0, 3)
+    .map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`)
+    .join("; ")
+  issues.push(`MONGOLGPT_PLAN_LIMITS plan/quota schema-д нийцэхгүй байна. ${details}`)
 }
 
 function validateModelConfiguration(value: string | undefined, issues: string[]) {

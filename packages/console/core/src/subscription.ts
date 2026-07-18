@@ -12,18 +12,18 @@ export namespace Subscription {
     rollingWindow: z.number().int().positive(),
   })
 
-  const LimitsSchema = z.object({
+  export const LimitsSchema = z.object({
     free: z.object({
-      promoTokens: z.number().int(),
-      dailyRequests: z.number().int(),
-      dailyRequestsFallback: z.number().int(),
-      checkHeaders: z.record(z.string(), z.string()),
+      promoTokens: z.number().int().nonnegative(),
+      dailyRequests: z.number().int().positive(),
+      dailyRequestsFallback: z.number().int().positive(),
+      checkHeaders: z.record(z.string().min(1), z.string().min(1)),
     }),
     lite: z.object({
-      rollingLimit: z.number().int(),
-      rollingWindow: z.number().int(),
-      weeklyLimit: z.number().int(),
-      monthlyLimit: z.number().int(),
+      rollingLimit: z.number().int().positive(),
+      rollingWindow: z.number().int().positive(),
+      weeklyLimit: z.number().int().positive(),
+      monthlyLimit: z.number().int().positive(),
     }),
     plans: z.object({
       basic: PlanLimitSchema,

@@ -9,12 +9,47 @@ const cloudflare = {
 const byok = {
   SST_SECRET_ByokCredentialsKeyV1: "test-byok-key-with-at-least-32-characters",
 }
+const planLimits = {
+  free: {
+    promoTokens: 1_000,
+    dailyRequests: 20,
+    dailyRequestsFallback: 5,
+    checkHeaders: { "x-mongolgpt-proxy": "unit-test-proxy-secret" },
+  },
+  lite: {
+    rollingLimit: 1,
+    rollingWindow: 5,
+    weeklyLimit: 5,
+    monthlyLimit: 10,
+  },
+  plans: {
+    basic: {
+      weeklyCostLimit: 1,
+      weeklyTokenLimit: 100_000,
+      rollingCostLimit: 1,
+      rollingWindow: 5,
+    },
+    pro: {
+      weeklyCostLimit: 5,
+      weeklyTokenLimit: 500_000,
+      rollingCostLimit: 2,
+      rollingWindow: 5,
+    },
+    max: {
+      weeklyCostLimit: 10,
+      weeklyTokenLimit: 1_000_000,
+      rollingCostLimit: 4,
+      rollingWindow: 5,
+    },
+  },
+}
 const hosted = {
   ...byok,
   MONGOLGPT_RUNTIME_SECRET: "test-runtime-secret-with-at-least-32-characters",
   SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: "github-client-id",
   SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "github-client-secret",
   SST_SECRET_GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
+  SST_SECRET_MONGOLGPT_PLAN_LIMITS: JSON.stringify(planLimits),
   SST_SECRET_ZEN_SESSION_SECRET: "test-session-secret-with-at-least-32-characters",
   SST_SECRET_ZEN_MODELS1: JSON.stringify({
     zenModels: {
@@ -213,9 +248,48 @@ describe("Cloudflare deployment preflight", () => {
         "GITHUB_CLIENT_ID_CONSOLE",
         "GITHUB_CLIENT_SECRET_CONSOLE",
         "GOOGLE_CLIENT_ID",
+        "MONGOLGPT_PLAN_LIMITS",
         "ZEN_SESSION_SECRET",
         "ZEN_MODELS1",
       ],
+    )
+  })
+
+  test("rejects malformed or unsafe plan quota configuration", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_MONGOLGPT_PLAN_LIMITS: JSON.stringify({
+              ...planLimits,
+              free: {
+                ...planLimits.free,
+                dailyRequestsFallback: 0,
+              },
+            }),
+          },
+        }),
+      ["MONGOLGPT_PLAN_LIMITS", "dailyRequestsFallback"],
+    )
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_MONGOLGPT_PLAN_LIMITS: "{",
+          },
+        }),
+      ["MONGOLGPT_PLAN_LIMITS", "JSON"],
     )
   })
 

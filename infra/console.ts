@@ -207,7 +207,7 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     STRIPE_SECRET_KEY,
     MONGOLGPT_PLAN_PRICE,
     ZEN_LITE_PRICE,
-    new sst.Secret("MONGOLGPT_PLAN_LIMITS", "{}"),
+    new sst.Secret("MONGOLGPT_PLAN_LIMITS"),
     new sst.Secret("ZEN_SESSION_SECRET"),
     ...ZEN_MODELS,
     ...businessIntegrationSecrets,
