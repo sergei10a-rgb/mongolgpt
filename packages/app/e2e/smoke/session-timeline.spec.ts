@@ -5,7 +5,7 @@ import { trackPageErrors, expectNoSmokeErrors } from "../utils/errors"
 import { mockMongolGPTServer } from "../utils/mock-server"
 import { APP_READY_TIMEOUT, expectAppVisible, expectSessionTitle } from "../utils/waits"
 
-const forbiddenText = ["Load details", "Show earlier steps"]
+const forbiddenText = ["Өмнөх мессежүүдийг ачаалж байна...", "Өмнөх мессежүүдийг үзүүлэх"]
 
 type SmokeState = {
   ids: string[]
@@ -467,7 +467,7 @@ async function configureSmokePage(page: Page, directory: string) {
         if (text && !smoke.__timelineSmokeErrorToasts!.includes(text)) smoke.__timelineSmokeErrorToasts!.push(text)
       }
       const text = document.body?.textContent ?? ""
-      for (const value of ["Load details", "Show earlier steps"]) {
+      for (const value of ["Өмнөх мессежүүдийг ачаалж байна...", "Өмнөх мессежүүдийг үзүүлэх"]) {
         if (text.includes(value) && !smoke.__timelineSmokeForbiddenText!.includes(value)) {
           smoke.__timelineSmokeForbiddenText!.push(value)
         }

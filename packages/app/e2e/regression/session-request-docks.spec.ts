@@ -42,7 +42,7 @@ test("shows a pending question dock", async ({ page }) => {
   const reply = page.waitForRequest(
     (request) => request.method() === "POST" && new URL(request.url()).pathname === "/question/question-request/reply",
   )
-  await question.getByRole("button", { name: "Submit" }).click()
+  await question.getByRole("button", { name: "Илгээх" }).click()
   expect((await reply).postDataJSON()).toEqual({ answers: [["Minimal"]] })
 })
 
@@ -71,7 +71,7 @@ test("shows a pending permission dock", async ({ page }) => {
   await expect(page.locator('[data-component="session-composer"]')).toHaveCount(0)
 
   const reply = page.waitForRequest((request) => request.method() === "POST")
-  await permission.getByRole("button", { name: "Allow once" }).click()
+  await permission.getByRole("button", { name: "Нэг удаа зөвшөөрнө үү" }).click()
   const request = await reply
   expect(new URL(request.url()).pathname).toBe(`/session/${sessionID}/permissions/permission-request`)
   expect(request.postDataJSON()).toEqual({ response: "once" })

@@ -3,6 +3,8 @@ import { base64Encode } from "@mongolgpt/core/util/encode"
 
 const serverA = "http://127.0.0.1:4096"
 const serverB = "http://127.0.0.1:4097"
+const serverAPort = new URL(serverA).port
+const serverBPort = new URL(serverB).port
 const sessionA = session("ses_server_a", "C:/server-a", "Server A session")
 const sessionB = session("ses_server_b", "/home/server-b", "Server B session")
 
@@ -10,9 +12,9 @@ test("closing the active server's last tab opens the remaining server tab", asyn
   const requests: string[] = []
   await mockServers(page, requests)
   await page.addInitScript(
-    ({ serverB, sessionA, sessionB }) => {
+    ({ serverA, serverB, sessionA, sessionB }) => {
       localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
-      localStorage.setItem("mongolgpt.global.dat:server", JSON.stringify({ list: [serverB] }))
+      localStorage.setItem("mongolgpt.global.dat:server", JSON.stringify({ list: [serverA, serverB] }))
       localStorage.setItem(
         "mongolgpt.global.dat:tabs",
         JSON.stringify([
@@ -21,7 +23,7 @@ test("closing the active server's last tab opens the remaining server tab", asyn
         ]),
       )
     },
-    { serverB, sessionA: sessionA.id, sessionB: sessionB.id },
+    { serverA, serverB, sessionA: sessionA.id, sessionB: sessionB.id },
   )
 
   const hrefA = `/server/${base64Encode(serverA)}/session/${sessionA.id}`
@@ -48,15 +50,15 @@ test("closing the active server's last tab opens the remaining server tab", asyn
 test("legacy session routes preserve an existing tab's server", async ({ page }) => {
   await mockServers(page, [])
   await page.addInitScript(
-    ({ serverB, sessionB }) => {
+    ({ serverA, serverB, sessionB }) => {
       localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
-      localStorage.setItem("mongolgpt.global.dat:server", JSON.stringify({ list: [serverB] }))
+      localStorage.setItem("mongolgpt.global.dat:server", JSON.stringify({ list: [serverA, serverB] }))
       localStorage.setItem(
         "mongolgpt.global.dat:tabs",
         JSON.stringify([{ type: "session", server: serverB, sessionId: sessionB }]),
       )
     },
-    { serverB, sessionB: sessionB.id },
+    { serverA, serverB, sessionB: sessionB.id },
   )
 
   const hrefB = `/server/${base64Encode(serverB)}/session/${sessionB.id}`
@@ -79,9 +81,9 @@ function session(id: string, directory: string, title: string) {
 async function mockServers(page: Page, requests: string[]) {
   await page.route("**/*", async (route) => {
     const url = new URL(route.request().url())
-    if (url.origin !== serverA && url.origin !== serverB) return route.fallback()
+    if (url.port !== serverAPort && url.port !== serverBPort) return route.fallback()
     requests.push(url.toString())
-    const current = url.origin === serverA ? sessionA : sessionB
+    const current = url.port === serverAPort ? sessionA : sessionB
     const directory = url.searchParams.get("directory")
     if (directory && directory !== current.directory) return json(route, { name: "InvalidDirectory" }, 500)
     if (url.pathname === "/global/event" || url.pathname === "/event") return sse(route)

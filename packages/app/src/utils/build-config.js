@@ -23,7 +23,10 @@ export function resolveChannel(env = process.env) {
 }
 
 export function resolveRuntimeMetadata(env = process.env) {
-  const serverUrl = httpUrl(env.VITE_MONGOLGPT_SERVER_URL) ?? "http://localhost:4096"
+  const host = env.VITE_MONGOLGPT_SERVER_HOST?.trim()
+  const port = env.VITE_MONGOLGPT_SERVER_PORT?.trim() || "4096"
+  const fallback = host ? `http://${host}:${port}` : "http://localhost:4096"
+  const serverUrl = httpUrl(env.VITE_MONGOLGPT_SERVER_URL) ?? httpUrl(fallback)
   return {
     mode: local(serverUrl) ? "local-bridge" : "hosted",
     serverUrl,

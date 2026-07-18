@@ -34,4 +34,16 @@ describe("resolveRuntimeMetadata", () => {
       serverUrl: "https://runtime.dev.mgpt.mn",
     })
   })
+
+  test("builds the local bridge URL from the configured host and port", () => {
+    expect(
+      resolveRuntimeMetadata({
+        VITE_MONGOLGPT_SERVER_HOST: "127.0.0.1",
+        VITE_MONGOLGPT_SERVER_PORT: "5096",
+      }),
+    ).toEqual({
+      mode: "local-bridge",
+      serverUrl: "http://127.0.0.1:5096",
+    })
+  })
 })

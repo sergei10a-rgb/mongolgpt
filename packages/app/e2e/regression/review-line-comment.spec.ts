@@ -52,7 +52,7 @@ test("shows a comment button when a line number is hovered", async ({ page }) =>
   const lineNumber = review.locator('[data-column-number="1"]').last()
   await expectAppVisible(lineNumber)
 
-  const comment = review.getByRole("button", { name: "Comment", exact: true })
+  const comment = review.getByRole("button", { name: "Сэтгэгдэл бичих", exact: true })
   await expect(async () => {
     await page.mouse.move(0, 0)
     await lineNumber.hover()
@@ -74,7 +74,7 @@ test("stages a submitted line comment in the prompt context", async ({ page }) =
   await review.locator('[data-slot="line-comment-action"][data-variant="primary"]').click()
 
   await expect(review.getByText("Use the existing value instead", { exact: true })).toBeVisible()
-  await page.getByRole("tab", { name: "Session" }).click()
+  await page.getByRole("tab", { name: "Сесс" }).click()
   const context = page.getByText("Use the existing value instead", { exact: true }).last()
   await expect(context).toBeVisible()
   await expect(context.locator("..")).toContainText("review.ts:2")
@@ -144,7 +144,7 @@ async function openReview(page: Page) {
   await page.goto(`/${base64Encode(directory)}/session/${sessionID}`)
   await expectSessionTitle(page, title)
   const diffResponse = page.waitForResponse((response) => new URL(response.url()).pathname === "/vcs/diff")
-  await page.getByRole("tab", { name: "Changes" }).click()
+  await page.getByRole("tab", { name: "Өөрчлөлтүүд" }).click()
   expect(await (await diffResponse).json()).toHaveLength(1)
 
   const review = page.locator('[data-component="session-review"]')
