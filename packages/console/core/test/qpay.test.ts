@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { QPayAdapter } from "../src/payment-provider/qpay"
-import { PaymentProviderResponseError } from "../src/payment-provider"
+import { MNTAmountSchema, PaymentProviderResponseError } from "../src/payment-provider"
 
 type MockResponse = {
   status?: number
@@ -300,6 +300,59 @@ describe("QPay Merchant V2 adapter", () => {
     expect(error).toBeInstanceOf(PaymentProviderResponseError)
     expect(mock.calls).toHaveLength(2)
     expect(mock.pending).toHaveLength(0)
+  })
+
+  test("reuses short-lived tokens and parses MNT strings without precision loss", async () => {
+    let current = 1_000
+    const mock = mockFetch([
+      { body: { ...token, expires_in: 10 } },
+      {
+        body: {
+          invoice_id: "invoice-1",
+          qr_text: "qpay-qr-1",
+          qr_image: "base64-qr-1",
+          urls: [],
+        },
+      },
+      {
+        body: {
+          invoice_id: "invoice-2",
+          qr_text: "qpay-qr-2",
+          qr_image: "base64-qr-2",
+          urls: [],
+        },
+      },
+    ])
+    const qpay = new QPayAdapter(
+      {
+        environment: "sandbox",
+        merchantAccountID: "qpay_merchant_test",
+        clientID: "client-id",
+        clientSecret: "client-secret",
+        invoiceCode: "MONGOLGPT_TEST",
+        invoiceCallbackURL: "https://dev.mgpt.mn/api/payments/qpay/callback",
+      },
+      { fetch: mock.fetcher, now: () => current },
+    )
+    await qpay.createInvoice({
+      reference: "inv_local_1",
+      customerReference: "customer_1",
+      description: "MongolGPT Pro багц",
+      amount: 39_000,
+      currency: "MNT",
+    })
+    current += 5_000
+    await qpay.createInvoice({
+      reference: "inv_local_2",
+      customerReference: "customer_1",
+      description: "MongolGPT Basic багц",
+      amount: 19_000,
+      currency: "MNT",
+    })
+
+    expect(mock.calls).toHaveLength(3)
+    expect(MNTAmountSchema.parse("39000.00")).toBe(39_000)
+    expect(MNTAmountSchema.safeParse("39000.0000000000000001").success).toBe(false)
   })
 
   test("rejects credentials that HTTP Basic authentication cannot encode safely", () => {

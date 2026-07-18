@@ -1,14 +1,16 @@
 import {
   PaymentInvoiceCheckoutSchema,
   PaymentInvoiceRequestSchema,
-  PaymentProviderResponseError,
+  MNTAmountSchema,
   PaymentReconciliationRequestSchema,
+  cancelPaymentProviderResponse,
   parseVerifiedPaymentEvent,
+  readPaymentProviderJSON,
   sha256Hex,
   stableJson,
   type PaymentInvoiceCheckout,
   type PaymentInvoiceRequest,
-  type PaymentProviderAdapter,
+  type PaymentReconciliationAdapter,
   type PaymentReconciliationRequest,
   type VerifiedPaymentEvent,
 } from "../payment-provider"
@@ -18,25 +20,7 @@ const QPAY_BASE_URL = {
   sandbox: "https://merchant-sandbox.qpay.mn",
   production: "https://merchant.qpay.mn",
 } as const
-const MAX_RESPONSE_BYTES = 2_000_000
 const printableASCII = /^[\x20-\x7e]+$/
-
-const money = z
-  .union([
-    z.number(),
-    z
-      .string()
-      .trim()
-      .regex(/^\d+(?:\.\d+)?$/),
-  ])
-  .transform((value, context) => {
-    const amount = typeof value === "number" ? value : Number(value)
-    if (!Number.isSafeInteger(amount) || amount < 0) {
-      context.addIssue({ code: "custom", message: "QPay returned an invalid MNT amount" })
-      return z.NEVER
-    }
-    return amount
-  })
 
 const QPayConfigSchema = z
   .object({
@@ -99,7 +83,7 @@ const PaymentRowSchema = z
     payment_id: z.union([z.string(), z.number()]).transform(String).pipe(z.string().trim().min(1).max(255)),
     payment_status: z.enum(["NEW", "FAILED", "PAID", "REFUNDED"]),
     payment_date: z.iso.datetime({ offset: true }),
-    payment_amount: money,
+    payment_amount: MNTAmountSchema,
     payment_currency: z.literal("MNT"),
   })
   .passthrough()
@@ -107,7 +91,7 @@ const PaymentRowSchema = z
 const PaymentCheckResponseSchema = z
   .object({
     count: z.number().int().min(0).max(100),
-    paid_amount: money,
+    paid_amount: MNTAmountSchema,
     rows: z.array(PaymentRowSchema).max(100),
   })
   .passthrough()
@@ -126,13 +110,13 @@ const QPayCallbackHintSchema = z
 type QPayConfig = z.input<typeof QPayConfigSchema>
 type Fetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
-export class QPayAdapter implements PaymentProviderAdapter {
+export class QPayAdapter implements PaymentReconciliationAdapter {
   readonly provider = "qpay" as const
   readonly merchantAccountID: string
   private readonly config: z.output<typeof QPayConfigSchema>
   private readonly fetcher: Fetch
   private readonly now: () => number
-  private token?: { value: string; expiresAt: number }
+  private token?: { value: string; refreshAt: number }
   private tokenRequest?: Promise<string>
 
   constructor(input: QPayConfig, dependencies: { fetch?: Fetch; now?: () => number } = {}) {
@@ -285,16 +269,16 @@ export class QPayAdapter implements PaymentProviderAdapter {
       redirect: "error",
       signal: AbortSignal.timeout(this.config.timeoutMs),
     })
+    if (response.status === 401 && this.token?.value === token) this.token = undefined
     if (response.status === 401 && retryUnauthorized) {
-      if (this.token?.value === token) this.token = undefined
-      await cancelBody(response)
+      await cancelPaymentProviderResponse(response)
       return this.request(operation, path, init, false)
     }
-    return readResponse(this.provider, operation, response)
+    return readPaymentProviderJSON({ provider: this.provider, operation, response })
   }
 
   private async accessToken() {
-    if (this.token && this.token.expiresAt - 30_000 > this.now()) return this.token.value
+    if (this.token && this.token.refreshAt > this.now()) return this.token.value
     if (this.tokenRequest) return this.tokenRequest
     this.tokenRequest = this.createToken().finally(() => {
       this.tokenRequest = undefined
@@ -315,75 +299,18 @@ export class QPayAdapter implements PaymentProviderAdapter {
       redirect: "error",
       signal: AbortSignal.timeout(this.config.timeoutMs),
     })
-    const token = TokenResponseSchema.parse(await readResponse(this.provider, "create token", response))
+    const token = TokenResponseSchema.parse(
+      await readPaymentProviderJSON({ provider: this.provider, operation: "create token", response }),
+    )
     this.token = {
       value: token.access_token,
-      expiresAt: this.now() + token.expires_in * 1_000,
+      refreshAt: tokenRefreshAt(this.now(), token.expires_in * 1_000),
     }
     return token.access_token
   }
 }
 
-async function readResponse(provider: "qpay", operation: string, response: Response) {
-  if (!response.ok) {
-    await cancelBody(response)
-    throw new PaymentProviderResponseError({
-      provider,
-      operation,
-      status: response.status,
-    })
-  }
-  if (response.status === 204) return undefined
-  const contentType = response.headers.get("content-type")?.toLowerCase() ?? ""
-  if (!contentType.includes("application/json")) {
-    await cancelBody(response)
-    throw invalidResponse(provider, operation)
-  }
-  const body = await readLimitedBody(provider, operation, response)
-  try {
-    return JSON.parse(body)
-  } catch {
-    throw invalidResponse(provider, operation)
-  }
-}
-
-async function readLimitedBody(provider: "qpay", operation: string, response: Response) {
-  const declared = response.headers.get("content-length")
-  if (declared !== null) {
-    const bytes = Number(declared)
-    if (!Number.isSafeInteger(bytes) || bytes < 0 || bytes > MAX_RESPONSE_BYTES) {
-      await cancelBody(response)
-      throw invalidResponse(provider, operation)
-    }
-  }
-  if (!response.body) return ""
-
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
-  let bytes = 0
-  let body = ""
-  try {
-    while (true) {
-      const part = await reader.read()
-      if (part.done) break
-      bytes += part.value.byteLength
-      if (bytes > MAX_RESPONSE_BYTES) {
-        await reader.cancel().catch(() => undefined)
-        throw invalidResponse(provider, operation)
-      }
-      body += decoder.decode(part.value, { stream: true })
-    }
-    return body + decoder.decode()
-  } finally {
-    reader.releaseLock()
-  }
-}
-
-function invalidResponse(provider: "qpay", operation: string) {
-  return new PaymentProviderResponseError({ provider, operation, status: 502, retryable: false })
-}
-
-async function cancelBody(response: Response) {
-  if (!response.body) return
-  await response.body.cancel().catch(() => undefined)
+function tokenRefreshAt(now: number, ttlMs: number) {
+  const margin = Math.min(30_000, Math.max(100, Math.floor(ttlMs / 10)))
+  return now + ttlMs - margin
 }
