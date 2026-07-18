@@ -1712,6 +1712,7 @@ const scenarios: Scenario[] = [
   http.protected
     .post("/session/{sessionID}/share", "session.share")
     .mutating()
+    .inProject({ git: true, config: { share: "manual" } })
     .seeded((ctx) => ctx.session({ title: "Share session" }))
     .at((ctx) => ({ path: route("/session/{sessionID}/share", { sessionID: ctx.state.id }), headers: ctx.headers() }))
     .json(
