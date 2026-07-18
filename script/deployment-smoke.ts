@@ -7,15 +7,21 @@ const result = preflightDeployment({
   requireCloudflareCredentials: false,
 })
 const endpoints = deploymentEndpoints(result)
-const healthUrls = new Set([endpoints.consoleHealth, endpoints.authHealth].filter((url): url is string => Boolean(url)))
+const healthContracts = new Map(
+  [
+    [endpoints.consoleHealth, "status"],
+    [endpoints.authHealth, "status"],
+    [endpoints.runtimeHealth, "runtime"],
+  ].filter((entry): entry is [string, "status" | "runtime"] => Boolean(entry[0])),
+)
 
 for (const [name, url] of Object.entries(endpoints)) {
-  await check(name, url, healthUrls.has(url))
+  await check(name, url, healthContracts.get(url))
 }
 
 console.log("Cloudflare deployment smoke check passed.")
 
-async function check(name: string, url: string, health: boolean) {
+async function check(name: string, url: string, health?: "status" | "runtime") {
   const retries = positiveInteger(process.env.MONGOLGPT_SMOKE_RETRIES, 8)
   const delay = positiveInteger(process.env.MONGOLGPT_SMOKE_DELAY_MS, 10_000)
   let lastError: unknown
@@ -29,8 +35,15 @@ async function check(name: string, url: string, health: boolean) {
       })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       if (health) {
+        const contentType = response.headers.get("content-type") ?? ""
+        if (!contentType.includes("application/json")) {
+          throw new Error(`health response is not JSON: ${contentType || "missing content-type"}`)
+        }
         const body: unknown = await response.json()
-        if (!isHealthyResponse(body)) throw new Error("health response status is not ok")
+        if (health === "status" && !isHealthyResponse(body)) throw new Error("health response status is not ok")
+        if (health === "runtime" && !isRuntimeHealthyResponse(body, result.stage)) {
+          throw new Error("runtime health response is invalid")
+        }
       } else if (name === "docs") {
         const html = await response.text()
         await checkStylesheet(url, html)
@@ -38,7 +51,21 @@ async function check(name: string, url: string, health: boolean) {
         const html = await response.text()
         const contract = inspectAppHtml(html, url)
         await checkAppModule(url, html)
-        if (contract.mode === "hosted") await checkAgentRuntime(contract.serverUrl)
+        const expectedChannel = result.stage === "production" ? "prod" : result.stage === "dev" ? "dev" : "beta"
+        if (contract.channel !== expectedChannel) {
+          throw new Error(`app channel is ${contract.channel}; expected ${expectedChannel}`)
+        }
+        const expectedMode = result.hostedServices ? "hosted" : "local-bridge"
+        if (contract.mode !== expectedMode) throw new Error(`app runtime mode is ${contract.mode}; expected ${expectedMode}`)
+        if (contract.mode === "hosted") {
+          const expectedRuntime = endpoints.runtimeHealth
+            ? new URL(endpoints.runtimeHealth).origin
+            : undefined
+          if (!expectedRuntime || new URL(contract.serverUrl).origin !== expectedRuntime) {
+            throw new Error(`app runtime origin is ${new URL(contract.serverUrl).origin}; expected ${expectedRuntime}`)
+          }
+          await checkAgentRuntime(contract.serverUrl)
+        }
       } else {
         await response.body?.cancel()
       }
@@ -61,6 +88,12 @@ function positiveInteger(value: string | undefined, fallback: number) {
 
 function isHealthyResponse(value: unknown): value is { status: "ok" } {
   return typeof value === "object" && value !== null && "status" in value && value.status === "ok"
+}
+
+function isRuntimeHealthyResponse(value: unknown, stage: string) {
+  if (typeof value !== "object" || value === null) return false
+  const body = value as { healthy?: unknown; service?: unknown; stage?: unknown }
+  return body.healthy === true && body.service === "mongolgpt-runtime" && body.stage === stage
 }
 
 async function checkStylesheet(pageUrl: string, html: string) {

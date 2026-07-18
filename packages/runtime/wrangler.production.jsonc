@@ -1,0 +1,62 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mongolgpt-runtime-production",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    {
+      "pattern": "runtime.mgpt.mn",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "MONGOLGPT_APP_ORIGIN": "https://app.mgpt.mn",
+    "MONGOLGPT_CONSOLE_ORIGIN": "https://mgpt.mn",
+    "MONGOLGPT_RUNTIME_VERSION": "0.1.1",
+    "STAGE": "production"
+  },
+  "secrets": {
+    "required": ["MONGOLGPT_RUNTIME_SECRET"]
+  },
+  "ratelimits": [
+    {
+      "name": "MONGOLGPT_RUNTIME_BURST_LIMITER",
+      "namespace_id": "206071811",
+      "simple": {
+        "limit": 60,
+        "period": 10
+      }
+    },
+    {
+      "name": "MONGOLGPT_RUNTIME_RATE_LIMITER",
+      "namespace_id": "206071812",
+      "simple": {
+        "limit": 300,
+        "period": 60
+      }
+    }
+  ],
+  "containers": [
+    {
+      "class_name": "MongolGPTSandbox",
+      "image": "./Dockerfile",
+      "instance_type": "basic",
+      "max_instances": 5
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "Sandbox",
+        "class_name": "MongolGPTSandbox"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MongolGPTSandbox"]
+    }
+  ]
+}

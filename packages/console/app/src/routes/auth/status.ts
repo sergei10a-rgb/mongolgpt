@@ -1,7 +1,9 @@
-import { APIEvent } from "@solidjs/start"
+import type { APIEvent } from "@solidjs/start"
 import { useAuthSession } from "~/context/auth"
 
 export async function GET(_input: APIEvent) {
   const session = await useAuthSession()
-  return Response.json(session.data)
+  return Response.json(session.data, {
+    headers: { "cache-control": "no-store" },
+  })
 }

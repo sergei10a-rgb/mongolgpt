@@ -488,7 +488,7 @@ test("inserts spacers for new visible groups", async () => {
     try {
       expect(commits).toHaveLength(2)
       expect(renderCommit(commits[0]!).trim()).toBe("")
-      expect(renderCommit(commits[1]!).replace(/ +/g, " ").trim()).toBe('✱ Glob "**/run.ts"')
+      expect(renderCommit(commits[1]!).replace(/ +/g, " ").trim()).toBe('✱ Файл хайлт "**/run.ts"')
     } finally {
       destroy(commits)
     }
@@ -675,7 +675,7 @@ test("renders completed bash output with one blank line after the command and be
     take()
 
     const output = lines.join("\n")
-    expect(output).toContain("# Running in /tmp/demo\n$ git status")
+    expect(output).toContain("# /tmp/demo дотор ажиллаж байна\n$ git status")
     expect(output).toContain("$ git status\n\nOn branch demo")
     expect(output).toContain("nothing to commit, working tree clean\n\noc-run-dev ahead 1")
     expect(output).not.toContain("nothing to commit, working tree clean\n\n\noc-run-dev ahead 1")
@@ -754,7 +754,7 @@ test("inserts a spacer before the next tool after completed multiline bash outpu
     take()
 
     const output = lines.join("\n")
-    expect(output).toContain('total 4\n\n✱ Glob "**/*tool*" in src/cli/cmd')
+    expect(output).toContain('total 4\n\n✱ Файл хайлт "**/*tool*" src/cli/cmd дотор')
   } finally {
     out.scrollback.destroy()
   }
@@ -846,8 +846,8 @@ test("does not double-space before completed bash output when inline tool header
     take()
 
     const output = lines.join("\n")
-    expect(output).toContain('✱ Grep "tool" in src/cli/cmd/run\n\ndemo.ts')
-    expect(output).not.toContain('✱ Grep "tool" in src/cli/cmd/run\n\n\ndemo.ts')
+    expect(output).toContain('✱ Агуулга хайлт "tool" src/cli/cmd/run дотор\n\ndemo.ts')
+    expect(output).not.toContain('✱ Агуулга хайлт "tool" src/cli/cmd/run дотор\n\n\ndemo.ts')
   } finally {
     out.scrollback.destroy()
   }
@@ -943,10 +943,10 @@ test("does not emit blank patch snapshots between edit and task", async () => {
     take()
 
     const output = lines.join("\n")
-    expect(output).toContain("+ Created README-demo.md")
-    expect(output).not.toContain("~ Patched src/demo-format.ts")
-    expect(output).toContain("+ Created README-demo.md\n\n# Explore Task")
-    expect(output).not.toContain("+ Created README-demo.md\n\n\n# Explore Task")
+    expect(output).toContain("+ Үүсгэсэн README-demo.md")
+    expect(output).not.toContain("~ Зассан src/demo-format.ts")
+    expect(output).toContain("+ Үүсгэсэн README-demo.md\n\n# Explore даалгавар")
+    expect(output).not.toContain("+ Үүсгэсэн README-demo.md\n\n\n# Explore даалгавар")
   } finally {
     out.scrollback.destroy()
   }
@@ -1032,7 +1032,7 @@ test("renders structured write finals once as code blocks", async () => {
     try {
       expect(commits).toHaveLength(1)
       const output = render(commits[0] ? [commits[0]] : [])
-      expect(output).toContain("# Wrote src/a.ts")
+      expect(output).toContain("# Бичсэн src/a.ts")
       expect(output).toMatch(/1\s+const x = 1/)
       expect(output).toMatch(/2\s+const y = 2/)
     } finally {

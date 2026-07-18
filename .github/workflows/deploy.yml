@@ -12,10 +12,10 @@ on:
           - dev
           - production
       hosted_services:
-        description: "Account, auth болон Free Auto API-г асаах"
+        description: "Account, auth, Free Auto болон cloud coding runtime-г асаах"
         required: true
         type: boolean
-        default: false
+        default: true
       analytics:
         description: "Hosted deploy дээр Cloudflare D1 live stats-г асаах"
         required: true
@@ -64,6 +64,7 @@ jobs:
         run: |
           bun run --cwd packages/script test
           bun run --cwd packages/console/core test
+          bun run --cwd packages/runtime test
 
       - name: Build docs
         run: bun run build:docs
@@ -75,11 +76,12 @@ jobs:
     needs: verify
     if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main' && vars.MONGOLGPT_DOMAIN != ''
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: ${{ inputs.stage }}
     env:
       MONGOLGPT_AUTH_EMAIL_DOMAINS: ${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}
       CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
     steps:
       - name: Checkout verified revision
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -92,6 +94,7 @@ jobs:
       - name: Validate and deploy to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_RUNTIME_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_SECRET }}
           SST_SECRET_ByokCredentialsKeyV1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}
           SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: ${{ vars.GITHUB_CLIENT_ID_CONSOLE }}
           SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: ${{ secrets.GITHUB_CLIENT_SECRET_CONSOLE }}
@@ -137,6 +140,20 @@ jobs:
             if [ -z "$value" ]; then value=" "; fi
             printf '%s' "$value" | bun sst secret set "$name" --stage="$stage"
           done < <(compgen -A variable SST_SECRET_ | sort -V)
+          if [ "${{ inputs.hosted_services }}" = "true" ]; then
+            if [ "$stage" = "production" ]; then
+              runtime_channel="latest"
+            else
+              runtime_channel="dev"
+            fi
+            runtime_version="$(node -p "require('./packages/mongolgpt/package.json').version")"
+            MONGOLGPT_CHANNEL="$runtime_channel" MONGOLGPT_VERSION="$runtime_version" bun run --cwd packages/mongolgpt build --single --skip-embed-web-ui --skip-install
+            cp packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt packages/runtime/container/mongolgpt
+            runtime_secrets="$RUNNER_TEMP/mongolgpt-runtime-secrets.json"
+            trap 'rm -f "$runtime_secrets"' EXIT
+            node -e 'require("node:fs").writeFileSync(process.argv[1], JSON.stringify({ MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET }))' "$runtime_secrets"
+            bun --cwd packages/runtime wrangler deploy --config="wrangler.$stage.jsonc" --secrets-file="$runtime_secrets"
+          fi
           bun sst unlock --stage=${{ inputs.stage }} || true
           bun sst deploy --stage=${{ inputs.stage }} --print-logs
           if [ "${{ inputs.hosted_services }}" = "true" ]; then

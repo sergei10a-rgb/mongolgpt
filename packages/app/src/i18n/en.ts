@@ -354,6 +354,11 @@ export const dict = {
   "app.server.localBridge.retrying": "MongolGPT will connect automatically when the engine is ready.",
   "app.server.localBridge.retry": "Check again",
   "app.server.localBridge.docs": "View setup guide",
+  "auth.hosted.title": "Sign in to MongolGPT",
+  "auth.hosted.description": "Sign in with your MongolGPT account to use the web app.",
+  "auth.hosted.login": "Sign in",
+  "auth.hosted.unavailable": "We could not check your account. Please try again.",
+  "auth.hosted.retry": "Try again",
 
   "dialog.server.title": "Servers",
   "dialog.server.description": "Switch which MongolGPT server this app connects to.",

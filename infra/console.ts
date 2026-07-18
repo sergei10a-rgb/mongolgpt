@@ -1,4 +1,5 @@
 import {
+  appOrigin,
   docsOrigin,
   domain,
   enableBusinessIntegrations,
@@ -214,6 +215,8 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
   ],
   environment: {
     VITE_AUTH_URL: auth.url.apply((url) => url!),
+    MONGOLGPT_APP_URL: appOrigin,
+    MONGOLGPT_COOKIE_DOMAIN: process.env.MONGOLGPT_COOKIE_DOMAIN?.trim() || ($dev ? "" : `.${domain}`),
     VITE_MONGOLGPT_BILLING_ENABLED: "false",
     MONGOLGPT_BILLING_PROVIDER: "disabled",
     VITE_STRIPE_PUBLISHABLE_KEY: STRIPE_PUBLISHABLE_KEY.value,

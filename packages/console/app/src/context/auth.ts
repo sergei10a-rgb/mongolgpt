@@ -5,10 +5,25 @@ import { redirect } from "@solidjs/router"
 import { Actor } from "@mongolgpt/console-core/actor.js"
 
 import { createClient } from "@openauthjs/openauth/client"
+import { createSubjects } from "@openauthjs/openauth/subject"
+import { z } from "zod"
+
+export const AuthSubjects = createSubjects({
+  account: z.object({
+    accountID: z.string(),
+    email: z.string(),
+    newAccount: z.boolean().optional(),
+  }),
+  user: z.object({
+    userID: z.string(),
+    workspaceID: z.string(),
+  }),
+})
 
 export const AuthClient = createClient({
   clientID: "app",
   issuer: import.meta.env.VITE_AUTH_URL,
+  subjects: AuthSubjects,
 })
 
 import { useSession } from "@solidjs/start/http"
@@ -34,6 +49,7 @@ export function useAuthSession() {
       secure: import.meta.env.PROD,
       httpOnly: true,
       sameSite: "lax",
+      domain: import.meta.env.MONGOLGPT_COOKIE_DOMAIN?.trim() || undefined,
     },
   })
 }

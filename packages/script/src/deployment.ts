@@ -86,6 +86,7 @@ export function preflightDeployment(input: {
     requireValue("MONGOLGPT_AUTH_EMAIL_DOMAINS", env.MONGOLGPT_AUTH_EMAIL_DOMAINS, issues)
   }
   if (hostedServices) {
+    validateSecretKey("MONGOLGPT_RUNTIME_SECRET", env.MONGOLGPT_RUNTIME_SECRET, issues)
     requireValue("GITHUB_CLIENT_ID_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"), issues)
     requireValue("GITHUB_CLIENT_SECRET_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"), issues)
     requireValue("GOOGLE_CLIENT_ID", deploymentSecret(env, "GOOGLE_CLIENT_ID"), issues)
@@ -121,6 +122,7 @@ export function deploymentEndpoints(result: DeploymentPreflightResult) {
           console: root,
           consoleHealth: `${root}/api/health`,
           authHealth: `https://auth.${result.stageDomain}/health`,
+          runtimeHealth: `https://runtime.${result.stageDomain}/global/health`,
         }
       : {}),
   }

@@ -63,6 +63,7 @@ import {
 } from "./utils/session-route"
 import { isSessionNotFoundError } from "./utils/server-errors"
 import { AccountOnboardingGate } from "@/components/account-onboarding"
+import { HostedAccountGate } from "@/components/hosted-account-gate"
 import { documentationUrl } from "@/product"
 
 import Session from "@/pages/session"
@@ -411,9 +412,11 @@ export function AppBaseProviders(props: ParentProps<{ locale?: Locale }>) {
               <QueryProvider>
                 <WslServersProvider>
                   <DialogProvider>
-                    <MarkedProvider>
-                      <FileComponentProvider component={File}>{props.children}</FileComponentProvider>
-                    </MarkedProvider>
+                    <HostedAccountGate>
+                      <MarkedProvider>
+                        <FileComponentProvider component={File}>{props.children}</FileComponentProvider>
+                      </MarkedProvider>
+                    </HostedAccountGate>
                   </DialogProvider>
                 </WslServersProvider>
               </QueryProvider>

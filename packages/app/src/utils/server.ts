@@ -13,6 +13,15 @@ export function authTokenFromCredentials(input: { username?: string; password: s
   return btoa(`${input.username ?? "mongolgpt"}:${input.password}`)
 }
 
+export function isHostedServer(url: string) {
+  try {
+    const hostname = new URL(url).hostname
+    return hostname !== "localhost" && hostname !== "127.0.0.1" && hostname !== "::1"
+  } catch {
+    return false
+  }
+}
+
 export function authFromToken(token: string | null) {
   const decoded = decode64(token ?? undefined)
   if (!decoded) return
@@ -39,6 +48,7 @@ export function createSdkForServer({
 
   return createMongolGPTClient({
     ...config,
+    credentials: config.credentials ?? (isHostedServer(server.url) ? "include" : undefined),
     headers: {
       ...(config.headers instanceof Headers ? Object.fromEntries(config.headers.entries()) : config.headers),
       ...auth,
@@ -67,6 +77,12 @@ export function createServerRequest(input: { server: ServerConnection.HttpBase; 
     }
 
     const url = new URL(path.replace(/^\/+/, ""), base)
-    return fetcher(new Request(url, { ...rest, headers }))
+    return fetcher(
+      new Request(url, {
+        ...rest,
+        credentials: rest.credentials ?? (isHostedServer(input.server.url) ? "include" : undefined),
+        headers,
+      }),
+    )
   }
 }

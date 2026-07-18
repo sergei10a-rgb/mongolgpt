@@ -11,6 +11,7 @@ const byok = {
 }
 const hosted = {
   ...byok,
+  MONGOLGPT_RUNTIME_SECRET: "test-runtime-secret-with-at-least-32-characters",
   SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: "github-client-id",
   SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "github-client-secret",
   SST_SECRET_GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
@@ -92,6 +93,27 @@ describe("Cloudflare deployment preflight", () => {
 
     expect(result.hostedServices).toBe(true)
     expect(result.stageDomain).toBe("mgpt.mn")
+    expect(deploymentEndpoints(result)).toMatchObject({
+      app: "https://app.mgpt.mn",
+      runtimeHealth: "https://runtime.mgpt.mn/global/health",
+    })
+  })
+
+  test("requires a strong account-isolation secret for the hosted runtime", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            MONGOLGPT_RUNTIME_SECRET: "too-short",
+          },
+        }),
+      ["MONGOLGPT_RUNTIME_SECRET", "32"],
+    )
   })
 
   test("requires a dev OAuth allowlist for hosted services", () => {

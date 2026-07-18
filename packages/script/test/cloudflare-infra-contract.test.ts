@@ -94,4 +94,25 @@ describe("Cloudflare hosted infrastructure contract", () => {
     )
     expect(exposed.map((step) => step.name)).toEqual(["Validate and deploy to Cloudflare"])
   })
+
+  test("deploys the authenticated Sandbox runtime before publishing the hosted app", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
+    const workflow = parseWorkflow(source)
+    const deployStep = workflow.jobs.deploy.steps.find((step) => step.name === "Validate and deploy to Cloudflare")
+    expect(deployStep).toBeDefined()
+    expect(deployStep?.env).toHaveProperty("MONGOLGPT_RUNTIME_SECRET")
+
+    const run = deployStep?.run ?? ""
+    const sst = run.indexOf("bun sst deploy")
+    const binary = run.indexOf("packages/mongolgpt build --single")
+    const copy = run.indexOf("cp packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt")
+    const secrets = run.indexOf("MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET")
+    const runtime = run.indexOf("wrangler deploy")
+    expect(binary).toBeGreaterThanOrEqual(0)
+    expect(copy).toBeGreaterThan(binary)
+    expect(secrets).toBeGreaterThan(copy)
+    expect(runtime).toBeGreaterThan(secrets)
+    expect(sst).toBeGreaterThan(runtime)
+    expect(run).toContain('--secrets-file="$runtime_secrets"')
+  })
 })

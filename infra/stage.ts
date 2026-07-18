@@ -9,5 +9,7 @@ export const enableShareService = process.env.MONGOLGPT_ENABLE_SHARE_SERVICE ===
 export const enableSyncService = process.env.MONGOLGPT_ENABLE_SYNC_SERVICE === "true"
 
 export const publicOrigin = `https://${domain}`
+export const appOrigin = `https://app.${domain}`
 export const docsOrigin = `https://docs.${domain}/docs`
+export const runtimeOrigin = `https://runtime.${domain}`
 export const shareOrigin = `https://share.${domain}`

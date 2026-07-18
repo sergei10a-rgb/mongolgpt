@@ -1,6 +1,8 @@
-import { docsOrigin, domain, publicOrigin } from "./stage"
+import { docsOrigin, domain, publicOrigin, runtimeOrigin } from "./stage"
 
 const supportUrl = "https://github.com/sergei10a-rgb/mongolgpt/issues"
+const hostedServices = process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES === "true"
+const channel = $app.stage === "production" ? "prod" : $app.stage === "dev" ? "dev" : "beta"
 export const docsUrl = docsOrigin
 
 export const website = new sst.cloudflare.StaticSiteV2("Website", {
@@ -30,6 +32,7 @@ export const webApp = new sst.cloudflare.StaticSiteV2("WebApp", {
     VITE_MONGOLGPT_PUBLIC_URL: publicOrigin,
     VITE_MONGOLGPT_DOCS_URL: docsUrl,
     VITE_MONGOLGPT_SUPPORT_URL: supportUrl,
-    MONGOLGPT_CHANNEL: $app.stage === "production" ? "prod" : "beta",
+    MONGOLGPT_CHANNEL: channel,
+    ...(hostedServices ? { VITE_MONGOLGPT_SERVER_URL: runtimeOrigin } : {}),
   },
 })
