@@ -44,18 +44,12 @@ env:
   MONGOLGPT_ENABLE_SHARE_SERVICE: "false"
   MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
   MONGOLGPT_PRODUCTION_CONFIRMATION: ${{ inputs.production_confirmation }}
-  MONGOLGPT_AUTH_EMAIL_DOMAINS: ${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}
-  CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
-  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
 jobs:
-  deploy:
-    if: github.repository == 'sergei10a-rgb/mongolgpt' && vars.MONGOLGPT_DOMAIN != ''
+  verify:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    environment: ${{ inputs.stage }}
-    env:
-      BYOK_CREDENTIALS_KEY_V1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -63,11 +57,13 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-      - name: Validate Cloudflare deployment
-        run: bun run deploy:preflight -- ${{ inputs.stage }}
-
       - name: Typecheck
         run: bun typecheck
+
+      - name: Test deployment contracts
+        run: |
+          bun run --cwd packages/script test
+          bun run --cwd packages/console/core test
 
       - name: Build docs
         run: bun run build:docs
@@ -75,15 +71,77 @@ jobs:
       - name: Build web app
         run: bun --cwd packages/app build
 
-      - name: Clear stale SST lock
-        run: bun sst unlock --stage=${{ inputs.stage }} || true
+  deploy:
+    needs: verify
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main' && vars.MONGOLGPT_DOMAIN != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.stage }}
+    env:
+      MONGOLGPT_AUTH_EMAIL_DOMAINS: ${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}
+      CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+    steps:
+      - name: Checkout verified revision
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.sha }}
 
-      - name: Deploy to Cloudflare
-        run: bun sst deploy --stage=${{ inputs.stage }} --print-logs
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
 
-      - name: Apply Cloudflare D1 migrations
-        if: inputs.hosted_services == true
-        run: bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate
+      - name: Validate and deploy to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SST_SECRET_ByokCredentialsKeyV1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}
+          SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: ${{ vars.GITHUB_CLIENT_ID_CONSOLE }}
+          SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: ${{ secrets.GITHUB_CLIENT_SECRET_CONSOLE }}
+          SST_SECRET_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          SST_SECRET_ZEN_SESSION_SECRET: ${{ secrets.ZEN_SESSION_SECRET }}
+          SST_SECRET_ZEN_MODELS1: ${{ secrets.ZEN_MODELS1 }}
+          SST_SECRET_ZEN_MODELS2: ${{ secrets.ZEN_MODELS2 }}
+          SST_SECRET_ZEN_MODELS3: ${{ secrets.ZEN_MODELS3 }}
+          SST_SECRET_ZEN_MODELS4: ${{ secrets.ZEN_MODELS4 }}
+          SST_SECRET_ZEN_MODELS5: ${{ secrets.ZEN_MODELS5 }}
+          SST_SECRET_ZEN_MODELS6: ${{ secrets.ZEN_MODELS6 }}
+          SST_SECRET_ZEN_MODELS7: ${{ secrets.ZEN_MODELS7 }}
+          SST_SECRET_ZEN_MODELS8: ${{ secrets.ZEN_MODELS8 }}
+          SST_SECRET_ZEN_MODELS9: ${{ secrets.ZEN_MODELS9 }}
+          SST_SECRET_ZEN_MODELS10: ${{ secrets.ZEN_MODELS10 }}
+          SST_SECRET_ZEN_MODELS11: ${{ secrets.ZEN_MODELS11 }}
+          SST_SECRET_ZEN_MODELS12: ${{ secrets.ZEN_MODELS12 }}
+          SST_SECRET_ZEN_MODELS13: ${{ secrets.ZEN_MODELS13 }}
+          SST_SECRET_ZEN_MODELS14: ${{ secrets.ZEN_MODELS14 }}
+          SST_SECRET_ZEN_MODELS15: ${{ secrets.ZEN_MODELS15 }}
+          SST_SECRET_ZEN_MODELS16: ${{ secrets.ZEN_MODELS16 }}
+          SST_SECRET_ZEN_MODELS17: ${{ secrets.ZEN_MODELS17 }}
+          SST_SECRET_ZEN_MODELS18: ${{ secrets.ZEN_MODELS18 }}
+          SST_SECRET_ZEN_MODELS19: ${{ secrets.ZEN_MODELS19 }}
+          SST_SECRET_ZEN_MODELS20: ${{ secrets.ZEN_MODELS20 }}
+          SST_SECRET_ZEN_MODELS21: ${{ secrets.ZEN_MODELS21 }}
+          SST_SECRET_ZEN_MODELS22: ${{ secrets.ZEN_MODELS22 }}
+          SST_SECRET_ZEN_MODELS23: ${{ secrets.ZEN_MODELS23 }}
+          SST_SECRET_ZEN_MODELS24: ${{ secrets.ZEN_MODELS24 }}
+          SST_SECRET_ZEN_MODELS25: ${{ secrets.ZEN_MODELS25 }}
+          SST_SECRET_ZEN_MODELS26: ${{ secrets.ZEN_MODELS26 }}
+          SST_SECRET_ZEN_MODELS27: ${{ secrets.ZEN_MODELS27 }}
+          SST_SECRET_ZEN_MODELS28: ${{ secrets.ZEN_MODELS28 }}
+          SST_SECRET_ZEN_MODELS29: ${{ secrets.ZEN_MODELS29 }}
+          SST_SECRET_ZEN_MODELS30: ${{ secrets.ZEN_MODELS30 }}
+        run: |
+          bun run deploy:preflight -- ${{ inputs.stage }}
+          stage="${{ inputs.stage }}"
+          while IFS= read -r variable; do
+            name="${variable#SST_SECRET_}"
+            value="${!variable}"
+            # A space clears stale optional model chunks while remaining valid JSON whitespace.
+            if [ -z "$value" ]; then value=" "; fi
+            printf '%s' "$value" | bun sst secret set "$name" --stage="$stage"
+          done < <(compgen -A variable SST_SECRET_ | sort -V)
+          bun sst unlock --stage=${{ inputs.stage }} || true
+          bun sst deploy --stage=${{ inputs.stage }} --print-logs
+          if [ "${{ inputs.hosted_services }}" = "true" ]; then
+            bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate
+          fi
 
       - name: Verify deployed URLs
         run: bun run deploy:smoke -- ${{ inputs.stage }}

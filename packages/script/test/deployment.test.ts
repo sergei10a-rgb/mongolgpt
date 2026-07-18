@@ -7,7 +7,43 @@ const cloudflare = {
   CLOUDFLARE_DEFAULT_ACCOUNT_ID: "test-account",
 }
 const byok = {
-  BYOK_CREDENTIALS_KEY_V1: "test-byok-key-with-at-least-32-characters",
+  SST_SECRET_ByokCredentialsKeyV1: "test-byok-key-with-at-least-32-characters",
+}
+const hosted = {
+  ...byok,
+  SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: "github-client-id",
+  SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "github-client-secret",
+  SST_SECRET_GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
+  SST_SECRET_ZEN_SESSION_SECRET: "test-session-secret-with-at-least-32-characters",
+  SST_SECRET_ZEN_MODELS1: JSON.stringify({
+    zenModels: {
+      "free-auto": {
+        name: "MongolGPT Free Auto",
+        cost: { input: 0, output: 0 },
+        allowAnonymous: false,
+        freeForAuthenticated: true,
+        rateLimit: 20,
+        freeWeeklyTokenLimit: 100_000,
+        freeMaxTokensPerRequest: 32_000,
+        fallbackProvider: "nvidia",
+        providers: [
+          { id: "openrouter", model: "openrouter/auto" },
+          { id: "nvidia", model: "nvidia/auto" },
+        ],
+      },
+    },
+    liteModels: {},
+    providers: {
+      openrouter: {
+        api: "https://openrouter.ai/api/v1",
+        apiKey: "unit-test-provider-key",
+      },
+      nvidia: {
+        api: "https://integrate.api.nvidia.com/v1",
+        apiKey: { primary: "unit-test-nvidia-key" },
+      },
+    },
+  }),
 }
 
 describe("Cloudflare deployment preflight", () => {
@@ -48,7 +84,7 @@ describe("Cloudflare deployment preflight", () => {
       stage: "production",
       env: {
         ...cloudflare,
-        ...byok,
+        ...hosted,
         MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
         MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
       },
@@ -79,9 +115,10 @@ describe("Cloudflare deployment preflight", () => {
           stage: "dev",
           env: {
             ...cloudflare,
+            ...hosted,
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
             MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
-            BYOK_CREDENTIALS_KEY_V1: "too-short",
+            SST_SECRET_ByokCredentialsKeyV1: "too-short",
           },
         }),
       ["BYOK_CREDENTIALS_KEY_V1", "32"],
@@ -105,7 +142,7 @@ describe("Cloudflare deployment preflight", () => {
       stage: "dev",
       env: {
         ...cloudflare,
-        ...byok,
+        ...hosted,
         MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
         MONGOLGPT_ENABLE_ANALYTICS: "true",
         MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
@@ -120,7 +157,7 @@ describe("Cloudflare deployment preflight", () => {
           stage: "dev",
           env: {
             ...cloudflare,
-            ...byok,
+            ...hosted,
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
             MONGOLGPT_ENABLE_ANALYTICS: "true",
             MONGOLGPT_ENABLE_LEGACY_STRIPE: "true",
@@ -135,6 +172,126 @@ describe("Cloudflare deployment preflight", () => {
     expectIssues(
       () => preflightDeployment({ stage: "dev", env: { ...cloudflare, MONGOLGPT_ENABLE_HOSTED_SERVICES: "TRUE" } }),
       ["MONGOLGPT_ENABLE_HOSTED_SERVICES"],
+    )
+  })
+
+  test("rejects incomplete OAuth, session, and Free Auto configuration before SST deploy", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_ByokCredentialsKeyV1: "test-byok-key-with-at-least-32-characters",
+          },
+        }),
+      [
+        "GITHUB_CLIENT_ID_CONSOLE",
+        "GITHUB_CLIENT_SECRET_CONSOLE",
+        "GOOGLE_CLIENT_ID",
+        "ZEN_SESSION_SECRET",
+        "ZEN_MODELS1",
+      ],
+    )
+  })
+
+  test("rejects common placeholder model, key, and provider endpoint values", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_ZEN_MODELS1: JSON.stringify({
+              zenModels: {
+                "free-auto": {
+                  name: "MongolGPT Free Auto",
+                  cost: { input: 0, output: 0 },
+                  allowAnonymous: false,
+                  freeForAuthenticated: true,
+                  rateLimit: 20,
+                  freeWeeklyTokenLimit: 1000,
+                  freeMaxTokensPerRequest: 100,
+                  fallbackProvider: "fallback",
+                  providers: [
+                    { id: "primary", model: "your-model-id" },
+                    { id: "fallback", model: "fallback-model" },
+                  ],
+                },
+              },
+              liteModels: {},
+              providers: {
+                primary: {
+                  api: "https://api.example.invalid/v1",
+                  apiKey: "your-api-key",
+                },
+                fallback: {
+                  api: "https://fallback.test/v1",
+                  apiKey: "sample-api-key",
+                },
+              },
+            }),
+          },
+        }),
+      ["provider route", '"primary" provider бодит API key', '"primary" provider бодит API endpoint'],
+    )
+  })
+
+  test("rejects placeholder credentials used only by a non-Free-Auto route", () => {
+    const models = JSON.parse(hosted.SST_SECRET_ZEN_MODELS1)
+    models.liteModels.assistant = {
+      name: "Assistant",
+      cost: { input: 0, output: 0 },
+      providers: [{ id: "sample", model: "sample-model-id" }],
+    }
+    models.providers.sample = {
+      api: "https://provider.example/v1",
+      apiKey: "sample-api-key",
+    }
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_ZEN_MODELS1: JSON.stringify(models),
+          },
+        }),
+      ["liteModels.assistant", '"sample" provider бодит API key', '"sample" provider бодит API endpoint'],
+    )
+  })
+
+  test("uses the same Free Auto contract as the runtime", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_ZEN_MODELS1: JSON.stringify({
+              ...JSON.parse(hosted.SST_SECRET_ZEN_MODELS1),
+              zenModels: {
+                "free-auto": {
+                  ...JSON.parse(hosted.SST_SECRET_ZEN_MODELS1).zenModels["free-auto"],
+                  rateLimit: undefined,
+                },
+              },
+            }),
+          },
+        }),
+      ["runtime model schema", "rate limit"],
     )
   })
 })

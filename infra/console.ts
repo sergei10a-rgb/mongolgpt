@@ -7,6 +7,7 @@ import {
   publicOrigin,
   shareOrigin,
 } from "./stage"
+import { businessIntegrationSecretNames, quotaServiceMigrations } from "./console-policy"
 import { SECRET } from "./secret"
 
 ////////////////
@@ -57,12 +58,7 @@ export const quotaService = new sst.cloudflare.Worker("QuotaService", {
   compatibility: {
     date: "2026-07-15",
   },
-  migrations: [
-    {
-      tag: "v1",
-      newSqliteClasses: ["QuotaLedger"],
-    },
-  ],
+  migrations: quotaServiceMigrations,
   transform: {
     worker: (args) => {
       args.bindings = $resolve(args.bindings).apply((bindings) => [
@@ -182,9 +178,9 @@ const STRIPE_WEBHOOK_SECRET = new sst.Linkable("STRIPE_WEBHOOK_SECRET", {
 const bucket = new sst.cloudflare.Bucket("ZenData")
 const bucketNew = new sst.cloudflare.Bucket("ZenDataNew")
 
-const DISCORD_INCIDENT_WEBHOOK_URL = new sst.Secret("DISCORD_INCIDENT_WEBHOOK_URL")
-const AWS_SES_ACCESS_KEY_ID = new sst.Secret("AWS_SES_ACCESS_KEY_ID")
-const AWS_SES_SECRET_ACCESS_KEY = new sst.Secret("AWS_SES_SECRET_ACCESS_KEY")
+const businessIntegrationSecrets = businessIntegrationSecretNames(enableBusinessIntegrations).map(
+  (name) => new sst.Secret(name),
+)
 
 const logProcessor = enableMonitoring
   ? new sst.cloudflare.Worker("LogProcessor", {
@@ -213,13 +209,7 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     new sst.Secret("MONGOLGPT_PLAN_LIMITS", "{}"),
     new sst.Secret("ZEN_SESSION_SECRET"),
     ...ZEN_MODELS,
-    ...(enableBusinessIntegrations
-      ? [
-          DISCORD_INCIDENT_WEBHOOK_URL,
-          AWS_SES_ACCESS_KEY_ID,
-          AWS_SES_SECRET_ACCESS_KEY,
-        ]
-      : []),
+    ...businessIntegrationSecrets,
     ...devCloudflareSecrets,
   ],
   environment: {
@@ -235,17 +225,15 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     MONGOLGPT_FREE_WORKSPACE_IDS: process.env.MONGOLGPT_FREE_WORKSPACE_IDS ?? "",
   },
   transform: {
-    server: {
-      ...(logProcessor
-        ? {
-            transform: {
-              worker: {
-                tailConsumers: [{ service: logProcessor.nodes.worker.scriptName }],
-              },
+    server: logProcessor
+      ? {
+          transform: {
+            worker: {
+              tailConsumers: [{ service: logProcessor.nodes.worker.scriptName }],
             },
-          }
-        : {}),
-    },
+          },
+        }
+      : {},
   },
 })
 

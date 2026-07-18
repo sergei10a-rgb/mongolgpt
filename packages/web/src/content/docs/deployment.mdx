@@ -29,18 +29,18 @@ Production domain-ийг `mgpt.mn` гэж үзвэл:
 
 ## Cloudflare бүтэц
 
-| Хэсэг                             | Cloudflare үйлчилгээ            |
-| --------------------------------- | ------------------------------- |
-| Баримт бичиг                      | Astro Worker                    |
-| Web app                           | Static Assets / Worker          |
-| Console ба Free Auto gateway      | SolidStart Worker               |
-| OAuth                             | Worker + KV                     |
-| Үндсэн өгөгдөл                    | D1                              |
-| Token quota, атомик тоолуур       | SQLite-backed Durable Objects   |
-| Өндөр ачааллын usage бичилт       | Queues + dead-letter Queue + D1 |
-| Бодит цагийн статистик            | Cloudflare D1 + `stats.<domain>` |
-| Мэдээллийн захидлын бүртгэл       | Cloudflare D1                   |
-| Enterprise холбогдох хүсэлт       | Cloudflare D1                   |
+| Хэсэг                        | Cloudflare үйлчилгээ             |
+| ---------------------------- | -------------------------------- |
+| Баримт бичиг                 | Astro Worker                     |
+| Web app                      | Static Assets / Worker           |
+| Console ба Free Auto gateway | SolidStart Worker                |
+| OAuth                        | Worker + KV                      |
+| Үндсэн өгөгдөл               | D1                               |
+| Token quota, атомик тоолуур  | SQLite-backed Durable Objects    |
+| Өндөр ачааллын usage бичилт  | Queues + dead-letter Queue + D1  |
+| Бодит цагийн статистик       | Cloudflare D1 + `stats.<domain>` |
+| Мэдээллийн захидлын бүртгэл  | Cloudflare D1                    |
+| Enterprise холбогдох хүсэлт  | Cloudflare D1                    |
 
 KV нь нэг key-д олон зэрэгцээ бичилт шаарддаг token болон төлбөрийн тоолуурт ашиглагдахгүй. Ийм төлөвийг Durable Objects сериал дарааллаар удирдана.
 
@@ -74,22 +74,28 @@ bun run deploy:preflight -- production
 
 Cloudflare Dashboard хэвийн болмогц GitHub repository-ийн `Settings` → `Secrets and variables` → `Actions` хэсэгт дараахыг тохируулна.
 
-| Төрөл    | Нэр                             | Утга                                                         |
-| -------- | ------------------------------- | ------------------------------------------------------------ |
-| Variable | `MONGOLGPT_DOMAIN`              | `mgpt.mn`                                                    |
-| Variable | `CLOUDFLARE_DEFAULT_ACCOUNT_ID` | Cloudflare account ID                                        |
-| Variable | `MONGOLGPT_AUTH_EMAIL_DOMAINS`  | Dev-д зөвшөөрөх яг email эсвэл domain; таслалаар тусгаарлана |
-| Secret   | `CLOUDFLARE_API_TOKEN`          | Хамгийн бага шаардлагатай эрхтэй API token                   |
+Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог хадгална.
 
-Hosted dev орчны OAuth болон Free Auto runtime-д дараах SST secret шаардлагатай. Нууц утгыг repository эсвэл workflow файлд бичихгүй.
+| Төрөл    | Нэр                             | Утга                                       |
+| -------- | ------------------------------- | ------------------------------------------ |
+| Variable | `MONGOLGPT_DOMAIN`              | `mgpt.mn`                                  |
+| Variable | `CLOUDFLARE_DEFAULT_ACCOUNT_ID` | Cloudflare account ID                      |
+| Secret   | `CLOUDFLARE_API_TOKEN`          | Хамгийн бага шаардлагатай эрхтэй API token |
 
-```powershell
-bun sst secret set GITHUB_CLIENT_ID_CONSOLE "<github-client-id>" --stage dev
-bun sst secret set GITHUB_CLIENT_SECRET_CONSOLE "<github-client-secret>" --stage dev
-bun sst secret set GOOGLE_CLIENT_ID "<google-client-id>" --stage dev
-bun sst secret set ZEN_SESSION_SECRET "<random-long-secret>" --stage dev
-bun sst secret set ZEN_MODELS1 "<validated-model-config-json>" --stage dev
-```
+`dev` болон `production` GitHub Environment тус бүрд өөрийн OAuth, session болон model credential хадгална.
+
+| Төрөл    | Нэр                            | Утга                                                                 |
+| -------- | ------------------------------ | -------------------------------------------------------------------- |
+| Variable | `MONGOLGPT_AUTH_EMAIL_DOMAINS` | Dev-д зөвшөөрөх яг email эсвэл domain; таслалаар тусгаарлана         |
+| Variable | `GITHUB_CLIENT_ID_CONSOLE`     | Тухайн environment-ийн GitHub OAuth App client ID                    |
+| Variable | `GOOGLE_CLIENT_ID`             | Тухайн environment-ийн Google Web OAuth client ID                    |
+| Secret   | `GITHUB_CLIENT_SECRET_CONSOLE` | GitHub OAuth App client secret                                       |
+| Secret   | `BYOK_CREDENTIALS_KEY_V1`      | 32+ тэмдэгт тогтвортой CSPRNG key; rotation хийх хүртэл солихгүй     |
+| Secret   | `ZEN_SESSION_SECRET`           | 32+ тэмдэгт тусдаа CSPRNG session secret                             |
+| Secret   | `ZEN_MODELS1`                  | Баталгаажсан Free Auto model/provider JSON; provider key-ийг агуулна |
+| Secret   | `ZEN_MODELS2`…`ZEN_MODELS30`   | `ZEN_MODELS1` багтахгүй үед JSON-ийн дараалсан optional хэсгүүд      |
+
+Workflow нь secret-гүй verify job-ийг эхэлж ажиллуулаад, зөвхөн `main` revision болон сонгосон GitHub Environment-д deploy job нээнэ. Deploy step эдгээр утгыг command argument-д гаргалгүй stdin-аар тухайн SST stage-ийн encrypted secret store-д шинэчилсний дараа deploy хийнэ. GitHub Environment-ийн deployment branch дүрмийг `main`-ээр хязгаарлана. Иймээс нууц утгыг repository файл, command history эсвэл SST placeholder-д бичихгүй. `deploy:preflight` нь OAuth, session болон Free Auto JSON-ийг Cloudflare resource үүсгэхээс өмнө runtime-ийн яг ижил schema-аар шалгана.
 
 Quota service-ийн дотоод token-ийг SST deploy үеэр автоматаар үүсгэнэ. Upstash болон PlanetScale secret шаардлагагүй.
 

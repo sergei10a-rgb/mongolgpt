@@ -4,6 +4,7 @@
   "private": true,
   "license": "MIT",
   "dependencies": {
+    "@mongolgpt/console-core": "workspace:*",
     "semver": "^7.6.3"
   },
   "devDependencies": {

@@ -81,7 +81,7 @@
       "@typescript/native-preview": "7.0.0-dev.20251207.1",
       "zod": "4.1.8",
       "remeda": "2.26.0",
-      "sst": "4.13.1",
+      "sst": "4.17.1",
       "shiki": "4.2.0",
       "solid-list": "0.3.0",
       "tailwindcss": "4.1.11",

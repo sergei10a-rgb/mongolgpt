@@ -52,4 +52,41 @@ describe("MongolGPT Free Auto model contract", () => {
     expect(() => validate(config({ ...model, freeMaxTokensPerRequest: 0 }))).toThrow()
     expect(() => validate(config({ ...model, freeMaxTokensPerRequest: 100_001 }))).toThrow()
   })
+
+  test("rejects undefined providers in zen model routes", () => {
+    expect(() =>
+      validate({
+        ...config(model),
+        zenModels: {
+          paid: {
+            name: "Paid",
+            cost: { input: 1, output: 1 },
+            providers: [{ id: "missing", model: "paid-model" }],
+          },
+        },
+      }),
+    ).toThrow(/providers map/)
+  })
+
+  test("rejects undefined providers in lite model routes", () => {
+    expect(() =>
+      validate({
+        ...config(model),
+        zenModels: {},
+        liteModels: {
+          lite: {
+            name: "Lite",
+            cost: { input: 1, output: 1 },
+            providers: [{ id: "missing", model: "lite-model" }],
+          },
+        },
+      }),
+    ).toThrow(/providers map/)
+  })
+
+  test("rejects blank model ids in every provider route", () => {
+    expect(() => validate(config({ ...model, providers: [{ id: "primary", model: "  " }] }))).toThrow(
+      /model id must not be empty/,
+    )
+  })
 })
