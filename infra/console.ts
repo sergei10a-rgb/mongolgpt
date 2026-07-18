@@ -52,6 +52,28 @@ usageQueue.subscribe(
   },
 )
 
+const paymentDeadLetterQueue = new sst.cloudflare.Queue("PaymentDeadLetterQueue")
+export const paymentQueue = new sst.cloudflare.Queue("PaymentQueue", {
+  dlq: {
+    queue: paymentDeadLetterQueue.nodes.queue.queueName,
+    retry: 8,
+    retryDelay: "30 seconds",
+  },
+})
+
+paymentQueue.subscribe(
+  {
+    handler: "packages/console/function/src/payment-queue.ts",
+    link: [database],
+  },
+  {
+    batch: {
+      size: 10,
+      window: "5 seconds",
+    },
+  },
+)
+
 export const quotaService = new sst.cloudflare.Worker("QuotaService", {
   handler: "packages/console/function/src/quota.ts",
   url: true,
