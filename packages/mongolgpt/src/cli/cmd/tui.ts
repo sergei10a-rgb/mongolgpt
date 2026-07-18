@@ -126,12 +126,13 @@ export const TuiThreadCommand = cmd({
         hidden: true,
       }),
   handler: async (args) => {
-    const { AppRuntime } = await import("@/effect/app-runtime")
-    const { ensureAccountLogin } = await import("./account")
-    if (!(await AppRuntime.runPromise(ensureAccountLogin()))) {
+    const ensureLogin = async () => {
+      const { AppRuntime } = await import("@/effect/app-runtime")
+      const { ensureAccountLogin } = await import("./account")
+      if (await AppRuntime.runPromise(ensureAccountLogin())) return true
       UI.error("MongolGPT ашиглахын өмнө аккаунтаар нэвтэрнэ үү")
       process.exitCode = 1
-      return
+      return false
     }
 
     if (args.replay === true) {
@@ -150,6 +151,29 @@ export const TuiThreadCommand = cmd({
         process.exitCode = 1
         return
       }
+
+      if (
+        args.replayLimit !== undefined &&
+        (!Number.isInteger(args.replayLimit) || args.replayLimit <= 0)
+      ) {
+        UI.error("--replay-limit эерэг бүхэл тоо байх ёстой")
+        process.exitCode = 1
+        return
+      }
+
+      if (!process.stdout.isTTY) {
+        UI.error("--mini нь TTY stdout шаарддаг")
+        process.exitCode = 1
+        return
+      }
+
+      if (args.fork && !args.continue && !args.session) {
+        UI.error("--fork нь --continue эсвэл --session шаарддаг")
+        process.exitCode = 1
+        return
+      }
+
+      if (!(await ensureLogin())) return
 
       const { runMini } = await import("./run")
       await runMini({
@@ -178,15 +202,17 @@ export const TuiThreadCommand = cmd({
       return
     }
 
+    if (args.fork && !args.continue && !args.session) {
+      UI.error("--fork нь --continue эсвэл --session шаарддаг")
+      process.exitCode = 1
+      return
+    }
+
+    if (!(await ensureLogin())) return
+
     const unguard = win32InstallCtrlCGuard()
     try {
       const { TuiConfig } = await import("@/config/tui")
-      if (args.fork && !args.continue && !args.session) {
-        UI.error("--fork нь --continue эсвэл --session шаарддаг")
-        process.exitCode = 1
-        return
-      }
-
       // Resolve relative --project paths from PWD, then use the real cwd after
       // chdir so the thread and worker share the same directory key.
       const next = resolveThreadDirectory(args.project)

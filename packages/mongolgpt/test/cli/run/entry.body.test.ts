@@ -126,7 +126,7 @@ describe("run entry body", () => {
       }),
       snapshot: {
         kind: "code",
-        title: "# Wrote src/a.ts",
+        title: "# Бичсэн src/a.ts",
         content: "const x = 1\n",
         file: "src/a.ts",
       },
@@ -152,7 +152,7 @@ describe("run entry body", () => {
         kind: "diff",
         items: [
           {
-            title: "# Edited src/a.ts",
+            title: "# Зассан src/a.ts",
             diff: "@@ -1 +1 @@\n-old\n+new\n",
             file: "src/a.ts",
           },
@@ -185,7 +185,7 @@ describe("run entry body", () => {
         kind: "diff",
         items: [
           {
-            title: "# Patched src/a.ts",
+            title: "# Нөхсөн src/a.ts",
             diff: "@@ -1 +1 @@\n-old\n+new\n",
             file: "src/a.ts",
             deletions: 0,
@@ -276,7 +276,7 @@ describe("run entry body", () => {
       ),
     ).toEqual({
       kind: "task",
-      title: "# Explore Task",
+      title: "# Explore даалгавар",
       rows: ["Inspect reducer"],
       tail: "",
     })
@@ -450,7 +450,7 @@ describe("run entry body", () => {
       ),
     ).toEqual({
       type: "text",
-      content: "~ Patched src/a.ts",
+      content: "~ Нөхсөн src/a.ts",
     })
   })
 
@@ -487,7 +487,7 @@ describe("run entry body", () => {
       ),
     ).toEqual({
       type: "text",
-      content: "+ Created README-demo.md",
+      content: "+ Үүсгэсэн README-demo.md",
     })
   })
 
@@ -530,7 +530,7 @@ describe("run entry body", () => {
       ),
     ).toEqual({
       type: "text",
-      content: "assistant interrupted",
+      content: "туслах таслагдлаа",
     })
   })
 })

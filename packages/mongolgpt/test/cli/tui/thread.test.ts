@@ -71,7 +71,7 @@ describe("tui thread", () => {
       const result = yield* mongolgpt.spawn(["--replay-limit", "10"])
 
       mongolgpt.expectExit(result, 1)
-      expect(result.stderr).toContain("--replay-limit requires --mini")
+      expect(result.stderr).toContain("--replay-limit нь --mini шаарддаг")
     }),
   )
 
@@ -80,7 +80,7 @@ describe("tui thread", () => {
       const result = yield* mongolgpt.spawn(["attach", "http://127.0.0.1:1", "--mini"])
 
       mongolgpt.expectExit(result, 1)
-      expect(result.stderr).toContain("--mini requires a TTY stdout")
+      expect(result.stderr).toContain("--mini нь TTY stdout шаарддаг")
     }),
   )
 
@@ -89,7 +89,7 @@ describe("tui thread", () => {
       const result = yield* mongolgpt.spawn(["--mini", "--port", "4096"])
 
       mongolgpt.expectExit(result, 1)
-      expect(result.stderr).toContain("--port cannot be used with --mini")
+      expect(result.stderr).toContain("--port-ийг --mini-тэй хамт ашиглах боломжгүй")
     }),
   )
 })

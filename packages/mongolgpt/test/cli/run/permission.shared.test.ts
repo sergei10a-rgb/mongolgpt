@@ -89,7 +89,8 @@ describe("run permission shared", () => {
         }),
       ),
     ).toMatchObject({
-      title: "Shell command",
+      icon: "#",
+      title: "Shell команд",
       lines: ["$ git status --short"],
     })
 
@@ -104,7 +105,7 @@ describe("run permission shared", () => {
         }),
       ),
     ).toMatchObject({
-      title: "General Task",
+      title: "General даалгавар",
       lines: ["◉ investigate stream"],
     })
 

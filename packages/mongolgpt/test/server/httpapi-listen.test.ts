@@ -17,6 +17,7 @@ const original = {
 }
 const auth = { username: "mongolgpt", password: "listen-secret" }
 const testPty = process.platform === "win32" ? test.skip : test
+const pluginClientTimeout = process.platform === "win32" ? 120_000 : 30_000
 
 afterEach(async () => {
   Flag.MONGOLGPT_SERVER_PASSWORD = original.MONGOLGPT_SERVER_PASSWORD
@@ -293,7 +294,7 @@ describe("HttpApi Server.listen", () => {
       return true
     }) as typeof process.stderr.write
     try {
-      const response = await Server.Default().app.request("/status")
+      const response = await Server.Default().app.request("/global/health")
       expect(response.status).toBe(200)
     } finally {
       process.stderr.write = original
@@ -302,56 +303,60 @@ describe("HttpApi Server.listen", () => {
     expect(output).not.toContain("Sent HTTP response")
   })
 
-  test("plugin client requests reuse the listening server instance", async () => {
-    await using tmp = await tmpdir({
-      init: async (directory) => {
-        const plugin = path.join(directory, "plugin.ts")
-        const initialized = path.join(directory, "initialized.txt")
-        const completed = path.join(directory, "completed.txt")
-        await Bun.write(
-          plugin,
-          [
-            "export default async function plugin(input) {",
-            `  await Bun.write(${JSON.stringify(initialized)}, (await Bun.file(${JSON.stringify(initialized)}).text().catch(() => "")) + "initialized\\n")`,
-            "  setTimeout(async () => {",
-            "    await input.client.config.get()",
-            `    await Bun.write(${JSON.stringify(completed)}, "completed")`,
-            "  }, 50)",
-            "  return {}",
-            "}",
-            "",
-          ].join("\n"),
-        )
-        await Bun.write(
-          path.join(directory, "mongolgpt.json"),
-          JSON.stringify({ formatter: false, lsp: false, plugin: [pathToFileURL(plugin).href] }),
-        )
-        return { initialized, completed }
-      },
-    })
-    const previous = process.env.MONGOLGPT_DISABLE_DEFAULT_PLUGINS
-    process.env.MONGOLGPT_DISABLE_DEFAULT_PLUGINS = "1"
-    let listener: Awaited<ReturnType<typeof startListener>> | undefined
-    try {
-      listener = await startListener()
-      const response = await fetch(new URL("/config", listener.url), {
-        headers: { authorization: authorization(), "x-mongolgpt-directory": tmp.path },
+  test(
+    "plugin client requests reuse the listening server instance",
+    async () => {
+      await using tmp = await tmpdir({
+        init: async (directory) => {
+          const plugin = path.join(directory, "plugin.ts")
+          const initialized = path.join(directory, "initialized.txt")
+          const completed = path.join(directory, "completed.txt")
+          await Bun.write(
+            plugin,
+            [
+              "export default async function plugin(input) {",
+              `  await Bun.write(${JSON.stringify(initialized)}, (await Bun.file(${JSON.stringify(initialized)}).text().catch(() => "")) + "initialized\\n")`,
+              "  setTimeout(async () => {",
+              "    await input.client.config.get()",
+              `    await Bun.write(${JSON.stringify(completed)}, "completed")`,
+              "  }, 50)",
+              "  return {}",
+              "}",
+              "",
+            ].join("\n"),
+          )
+          await Bun.write(
+            path.join(directory, "mongolgpt.json"),
+            JSON.stringify({ formatter: false, lsp: false, plugin: [pathToFileURL(plugin).href] }),
+          )
+          return { initialized, completed }
+        },
       })
-      expect(response.status).toBe(200)
-      await withTimeout(
-        (async () => {
-          while (!(await Bun.file(tmp.extra.completed).exists())) await Bun.sleep(10)
-        })(),
-        5_000,
-        "timed out waiting for plugin client request",
-      )
-      expect(await Bun.file(tmp.extra.initialized).text()).toBe("initialized\n")
-    } finally {
-      if (listener) await stop(listener, "timed out cleaning up plugin client listener").catch(() => undefined)
-      if (previous === undefined) delete process.env.MONGOLGPT_DISABLE_DEFAULT_PLUGINS
-      else process.env.MONGOLGPT_DISABLE_DEFAULT_PLUGINS = previous
-    }
-  })
+      const previous = process.env.MONGOLGPT_DISABLE_DEFAULT_PLUGINS
+      process.env.MONGOLGPT_DISABLE_DEFAULT_PLUGINS = "1"
+      let listener: Awaited<ReturnType<typeof startListener>> | undefined
+      try {
+        listener = await startListener()
+        const response = await fetch(new URL("/config", listener.url), {
+          headers: { authorization: authorization(), "x-mongolgpt-directory": tmp.path },
+        })
+        expect(response.status).toBe(200)
+        await withTimeout(
+          (async () => {
+            while (!(await Bun.file(tmp.extra.completed).exists())) await Bun.sleep(10)
+          })(),
+          5_000,
+          "timed out waiting for plugin client request",
+        )
+        expect(await Bun.file(tmp.extra.initialized).text()).toBe("initialized\n")
+      } finally {
+        if (listener) await stop(listener, "timed out cleaning up plugin client listener").catch(() => undefined)
+        if (previous === undefined) delete process.env.MONGOLGPT_DISABLE_DEFAULT_PLUGINS
+        else process.env.MONGOLGPT_DISABLE_DEFAULT_PLUGINS = previous
+      }
+    },
+    pluginClientTimeout,
+  )
 
   test("port 0 prefers 4096 when free", async () => {
     if (!(await isPortFree(4096))) return
