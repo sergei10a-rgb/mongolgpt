@@ -114,12 +114,17 @@ async function backupAndStripLegacy(file: string, source: string) {
 async function mongolgptFiles(input: { directories: string[]; cwd: string }) {
   const files = [
     ...ConfigPaths.fileInDirectory(Global.Path.config, "mongolgpt"),
-    ...(await Filesystem.findUp(["mongolgpt.json", "mongolgpt.jsonc"], input.cwd, undefined, {
-      rootFirst: true,
-    })),
+    ...(await Filesystem.findUp(
+      ["opencode.json", "opencode.jsonc", "mongolgpt.json", "mongolgpt.jsonc"],
+      input.cwd,
+      undefined,
+      {
+        rootFirst: true,
+      },
+    )),
   ]
   for (const dir of unique(input.directories)) {
-    files.push(...ConfigPaths.fileInDirectory(dir, "mongolgpt"))
+    files.push(...ConfigPaths.fileInDirectory(dir, "opencode"), ...ConfigPaths.fileInDirectory(dir, "mongolgpt"))
   }
   if (Flag.MONGOLGPT_CONFIG) files.push(Flag.MONGOLGPT_CONFIG)
 

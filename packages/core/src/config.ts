@@ -139,7 +139,7 @@ export const layer = Layer.effect(
     const global = yield* Global.Service
     const location = yield* Location.Service
     const policy = yield* Policy.Service
-    const names = ["config.json", "mongolgpt.json", "mongolgpt.jsonc"]
+    const names = ["config.json", "opencode.json", "opencode.jsonc", "mongolgpt.json", "mongolgpt.jsonc"]
     const decodeOptions = { errors: "all", onExcessProperty: "ignore", propertyOrder: "original" } as const
     const decodeInfo = Schema.decodeUnknownOption(Info, decodeOptions)
     const decodeV1Info = Schema.decodeUnknownOption(ConfigV1.Info, decodeOptions)
@@ -178,7 +178,7 @@ export const layer = Layer.effect(
       ? []
       : yield* fs
           .up({
-            targets: [".mongolgpt", ".mongolgpt", ...names.toReversed()],
+            targets: [".mongolgpt", ".opencode", ...names.toReversed()],
             start: location.directory,
             stop: location.project.directory,
           })
@@ -186,7 +186,7 @@ export const layer = Layer.effect(
     const directories = [
       globalDirectory,
       ...discovered
-        .filter((item) => path.basename(item) === ".mongolgpt" || path.basename(item) === ".mongolgpt")
+        .filter((item) => path.basename(item) === ".mongolgpt" || path.basename(item) === ".opencode")
         .toReversed()
         .map((directory) => AbsolutePath.make(directory)),
     ]
@@ -195,7 +195,7 @@ export const layer = Layer.effect(
     const directPaths = discovered
       .filter((item) => {
         const basename = path.basename(item)
-        return basename !== ".mongolgpt" && basename !== ".mongolgpt"
+        return basename !== ".mongolgpt" && basename !== ".opencode"
       })
       .toReversed()
     const direct = yield* Effect.forEach(directPaths, loadFile).pipe(
@@ -204,7 +204,7 @@ export const layer = Layer.effect(
     )
     const supplementary = yield* Effect.forEach(directories, loadDirectory).pipe(Effect.orDie)
     // Apply general settings first and more specific settings last:
-    // global config, project files, then `.mongolgpt`/legacy `.mongolgpt` files.
+    // global config, project files, then legacy `.opencode` and primary `.mongolgpt` files.
     const configs = [...(supplementary[0] ?? []), ...direct, ...supplementary.slice(1).flat()]
     // Rules use the opposite order so a user-global rule can override a
     // repository rule. Statement order inside each file stays unchanged.

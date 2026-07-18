@@ -69,9 +69,7 @@ const emitDeepLinks = (urls: string[]) => {
   window.__MONGOLGPT__ ??= {}
   const pending = window.__MONGOLGPT__.deepLinks ?? []
   window.__MONGOLGPT__.deepLinks = [...pending, ...urls]
-  window.__MONGOLGPT__ = window.__MONGOLGPT__
   window.dispatchEvent(new CustomEvent(deepLinkEvent, { detail: { urls } }))
-  window.dispatchEvent(new CustomEvent("mongolgpt:deep-link", { detail: { urls } }))
 }
 
 const listenForDeepLinks = () => {

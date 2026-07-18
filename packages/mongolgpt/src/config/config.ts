@@ -404,7 +404,7 @@ export const layer = Layer.effect(
         }
 
         if (!Flag.MONGOLGPT_DISABLE_PROJECT_CONFIG) {
-          for (const file of yield* ConfigPaths.files("mongolgpt", ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
+          for (const file of yield* ConfigPaths.files("opencode", ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
             yield* merge(file, yield* loadFile(file, authEnv), "local")
           }
 
@@ -426,8 +426,11 @@ export const layer = Layer.effect(
         const deps: Fiber.Fiber<void>[] = []
 
         for (const dir of directories) {
-          if (dir.endsWith(".mongolgpt") || dir === Flag.MONGOLGPT_CONFIG_DIR) {
-            for (const file of ["mongolgpt.json", "mongolgpt.jsonc"]) {
+          if (dir.endsWith(".opencode") || dir.endsWith(".mongolgpt") || dir === Flag.MONGOLGPT_CONFIG_DIR) {
+            const files = dir.endsWith(".opencode")
+              ? ["opencode.json", "opencode.jsonc"]
+              : ["mongolgpt.json", "mongolgpt.jsonc"]
+            for (const file of files) {
               const source = path.join(dir, file)
               yield* Effect.logDebug(`loading config from ${source}`)
               yield* merge(source, yield* loadFile(source, authEnv))

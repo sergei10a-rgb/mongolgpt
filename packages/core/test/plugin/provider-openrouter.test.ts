@@ -40,7 +40,7 @@ describe("OpenRouterPlugin", () => {
       expect((yield* catalog.provider.get(ProviderV2.ID.openrouter))?.request.headers).toEqual({
         Existing: "value",
         "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
-        "X-Title": "mongolgpt",
+        "X-Title": "MongolGPT",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("nvidia")))?.request.headers).toEqual({})
     }),

@@ -392,20 +392,20 @@ export const McpLogoutCommand = effectCmd({
 })
 
 async function resolveConfigPath(baseDir: string, global = false) {
-  // Check for existing config files (prefer .jsonc over .json, check .mongolgpt/ subdirectory too)
+  // Prefer MongolGPT config names, then fall back to legacy names and hidden project directories.
   const candidates = [
     path.join(baseDir, "mongolgpt.json"),
     path.join(baseDir, "mongolgpt.jsonc"),
-    path.join(baseDir, "mongolgpt.json"),
-    path.join(baseDir, "mongolgpt.jsonc"),
+    path.join(baseDir, "opencode.json"),
+    path.join(baseDir, "opencode.jsonc"),
   ]
 
   if (!global) {
     candidates.push(
       path.join(baseDir, ".mongolgpt", "mongolgpt.json"),
       path.join(baseDir, ".mongolgpt", "mongolgpt.jsonc"),
-      path.join(baseDir, ".mongolgpt", "mongolgpt.json"),
-      path.join(baseDir, ".mongolgpt", "mongolgpt.jsonc"),
+      path.join(baseDir, ".opencode", "opencode.json"),
+      path.join(baseDir, ".opencode", "opencode.jsonc"),
     )
   }
 

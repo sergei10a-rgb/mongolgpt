@@ -779,6 +779,35 @@ Test agent prompt`,
   }),
 )
 
+it.instance("loads legacy .opencode config before primary .mongolgpt config", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".opencode", "agent", "shared.md"),
+      `---
+model: test/model
+---
+Legacy prompt`,
+    )
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".mongolgpt", "agent", "shared.md"),
+      `---
+model: test/model
+---
+MongolGPT prompt`,
+    )
+
+    const config = yield* Config.use.get()
+    expect(config.agent?.shared).toEqual(
+      expect.objectContaining({
+        name: "shared",
+        model: "test/model",
+        prompt: "MongolGPT prompt",
+      }),
+    )
+  }),
+)
+
 it.instance("agent markdown permission config preserves user key order", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance

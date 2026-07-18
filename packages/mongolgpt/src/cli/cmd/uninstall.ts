@@ -215,7 +215,7 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
     prompts.log.info(`  rm "${targets.binary}"`)
 
     const binDir = path.dirname(targets.binary)
-    if (binDir.includes(".mongolgpt") || binDir.includes(".mongolgpt")) {
+    if (binDir.includes(".mongolgpt") || binDir.includes(".opencode")) {
       prompts.log.info(`  rmdir "${binDir}" 2>/dev/null`)
     }
   }
@@ -268,9 +268,9 @@ async function getShellConfigFile(): Promise<string | null> {
     const content = await Filesystem.readText(file).catch(() => "")
     if (
       content.includes("# mongolgpt") ||
-      content.includes("# mongolgpt") ||
+      content.includes("# opencode") ||
       content.includes(".mongolgpt/bin") ||
-      content.includes(".mongolgpt/bin")
+      content.includes(".opencode/bin")
     ) {
       return file
     }
@@ -289,7 +289,7 @@ async function cleanShellConfig(file: string) {
   for (const line of lines) {
     const trimmed = line.trim()
 
-    if (trimmed === "# mongolgpt") {
+    if (trimmed === "# mongolgpt" || trimmed === "# opencode") {
       skip = true
       continue
     }
@@ -298,7 +298,7 @@ async function cleanShellConfig(file: string) {
       skip = false
       if (
         trimmed.includes(".mongolgpt/bin") ||
-        trimmed.includes(".mongolgpt/bin") ||
+        trimmed.includes(".opencode/bin") ||
         trimmed.includes("fish_add_path")
       ) {
         continue
@@ -307,8 +307,8 @@ async function cleanShellConfig(file: string) {
 
     if (
       (trimmed.startsWith("export PATH=") &&
-        (trimmed.includes(".mongolgpt/bin") || trimmed.includes(".mongolgpt/bin"))) ||
-      (trimmed.startsWith("fish_add_path") && (trimmed.includes(".mongolgpt") || trimmed.includes(".mongolgpt")))
+        (trimmed.includes(".mongolgpt/bin") || trimmed.includes(".opencode/bin"))) ||
+      (trimmed.startsWith("fish_add_path") && (trimmed.includes(".mongolgpt") || trimmed.includes(".opencode")))
     ) {
       continue
     }

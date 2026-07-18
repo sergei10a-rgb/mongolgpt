@@ -49,7 +49,7 @@ const APP_IDS: Record<string, string> = {
   beta: "org.mongolgpt.desktop.beta",
   prod: "org.mongolgpt.desktop",
 }
-const TEST_ONBOARDING = process.env.MONGOLGPT_TEST_ONBOARDING === "1" || process.env.MONGOLGPT_TEST_ONBOARDING === "1"
+const TEST_ONBOARDING = process.env.MONGOLGPT_TEST_ONBOARDING === "1" || process.env.OPENCODE_TEST_ONBOARDING === "1"
 const jsCallStackFeature = "DocumentPolicyIncludeJSCallStacksInCrashReports"
 
 let logger: ReturnType<typeof initLogging>

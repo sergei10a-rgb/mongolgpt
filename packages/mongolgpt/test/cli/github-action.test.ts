@@ -123,7 +123,7 @@ describe("extractResponseText", () => {
   })
 
   test("throws on empty array", () => {
-    expect(() => extractResponseText([])).toThrow("no parts returned")
+    expect(() => extractResponseText([])).toThrow("Хариуг parse хийж чадсангүй: part буцаагүй байна")
   })
 
   test("returns null for step-start only", () => {
@@ -165,7 +165,7 @@ describe("extractResponseText", () => {
 describe("formatPromptTooLargeError", () => {
   test("formats error without files", () => {
     const result = formatPromptTooLargeError([])
-    expect(result).toBe("PROMPT_TOO_LARGE: The prompt exceeds the model's context limit.")
+    expect(result).toBe("PROMPT_TOO_LARGE: Prompt загварын context хязгаараас давсан байна.")
   })
 
   test("formats error with files (base64 content)", () => {
@@ -177,8 +177,8 @@ describe("formatPromptTooLargeError", () => {
     ]
     const result = formatPromptTooLargeError(files)
 
-    expect(result).toStartWith("PROMPT_TOO_LARGE: The prompt exceeds the model's context limit.")
-    expect(result).toInclude("Files in prompt:")
+    expect(result).toStartWith("PROMPT_TOO_LARGE: Prompt загварын context хязгаараас давсан байна.")
+    expect(result).toInclude("Prompt дахь файлууд:")
     expect(result).toInclude("screenshot.png (300 KB)")
     expect(result).toInclude("diagram.png (150 KB)")
   })

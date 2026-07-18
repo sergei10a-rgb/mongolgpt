@@ -40,7 +40,7 @@ describe("KiloPlugin", () => {
       expect((yield* catalog.provider.get(ProviderV2.ID.make("kilo")))?.request.headers).toEqual({
         Existing: "value",
         "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
-        "X-Title": "mongolgpt",
+        "X-Title": "MongolGPT",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.openrouter))?.request.headers).toEqual({})
     }),
@@ -62,7 +62,7 @@ describe("KiloPlugin", () => {
 
       expect((yield* catalog.provider.get(ProviderV2.ID.make("kilo")))?.request.headers).toEqual({
         "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
-        "X-Title": "mongolgpt",
+        "X-Title": "MongolGPT",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("kilo")))?.request.headers).not.toHaveProperty(
         "http-referer",
@@ -91,7 +91,7 @@ describe("KiloPlugin", () => {
 
       expect((yield* catalog.provider.get(ProviderV2.ID.make("kilo")))?.request.headers).toEqual({
         "HTTP-Referer": "https://github.com/sergei10a-rgb/mongolgpt",
-        "X-Title": "mongolgpt",
+        "X-Title": "MongolGPT",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("custom-kilo")))?.request.headers).toEqual({})
     }),

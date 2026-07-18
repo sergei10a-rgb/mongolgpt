@@ -166,8 +166,8 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       acc.plugin_origins = plugins
     })
 
-  // Every config dir we may read from: global config dir, any `.mongolgpt`
-  // or legacy `.mongolgpt` folders between cwd and home, and MONGOLGPT_CONFIG_DIR.
+  // Every config dir we may read from: global config dir, primary `.mongolgpt`
+  // or legacy `.opencode` folders between cwd and home, and MONGOLGPT_CONFIG_DIR.
   const directories = yield* ConfigPaths.directories(ctx.directory)
   yield* Effect.promise(() => migrateTuiConfig({ directories, cwd: ctx.directory }))
 
@@ -195,15 +195,16 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
     yield* mergeFile(acc, file)
   }
 
-  // 4. `.mongolgpt`/`.mongolgpt` directories (and MONGOLGPT_CONFIG_DIR) discovered while
+  // 4. Legacy `.opencode` and primary `.mongolgpt` directories (plus MONGOLGPT_CONFIG_DIR)
+  // discovered while
   // walking up the tree. Also returned below so callers can install plugin
   // dependencies from each location.
   const dirs = unique(directories).filter(
-    (dir) => dir.endsWith(".mongolgpt") || dir.endsWith(".mongolgpt") || dir === Flag.MONGOLGPT_CONFIG_DIR,
+    (dir) => dir.endsWith(".opencode") || dir.endsWith(".mongolgpt") || dir === Flag.MONGOLGPT_CONFIG_DIR,
   )
 
   for (const dir of dirs) {
-    if (!dir.endsWith(".mongolgpt") && !dir.endsWith(".mongolgpt") && dir !== Flag.MONGOLGPT_CONFIG_DIR) continue
+    if (!dir.endsWith(".opencode") && !dir.endsWith(".mongolgpt") && dir !== Flag.MONGOLGPT_CONFIG_DIR) continue
     for (const file of ConfigPaths.fileInDirectory(dir, "tui")) {
       yield* mergeFile(acc, file)
     }
