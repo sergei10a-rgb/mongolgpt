@@ -57,6 +57,20 @@ export const PaymentReconciliationRequestSchema = z
   })
   .strict()
 
+export const PaymentInvoiceCancellationRequestSchema = z
+  .object({
+    externalInvoiceID: z.string().trim().min(1).max(255),
+  })
+  .strict()
+
+export const PaymentInvoiceCancellationReceiptSchema = z
+  .object({
+    provider: z.enum(PaymentProviders),
+    merchantAccountID: z.string().trim().min(1).max(255),
+    externalInvoiceID: z.string().trim().min(1).max(255),
+  })
+  .strict()
+
 export const MNTAmountSchema = z
   .union([
     z.number(),
@@ -77,3 +91,5 @@ export const MNTAmountSchema = z
 export type PaymentInvoiceRequest = z.input<typeof PaymentInvoiceRequestSchema>
 export type PaymentInvoiceCheckout = z.output<typeof PaymentInvoiceCheckoutSchema>
 export type PaymentReconciliationRequest = z.input<typeof PaymentReconciliationRequestSchema>
+export type PaymentInvoiceCancellationRequest = z.input<typeof PaymentInvoiceCancellationRequestSchema>
+export type PaymentInvoiceCancellationReceipt = z.output<typeof PaymentInvoiceCancellationReceiptSchema>

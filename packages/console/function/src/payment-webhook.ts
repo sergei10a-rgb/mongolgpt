@@ -10,6 +10,18 @@ import { BonumAdapter, BonumWebhookVerificationError } from "@mongolgpt/console-
 import { QPayAdapter } from "@mongolgpt/console-core/payment-provider/qpay.js"
 import { PaymentProviderResponseError, type VerifiedPaymentEvent } from "@mongolgpt/console-core/payment-provider.js"
 import {
+  cancelSubscriptionCheckout,
+  PaymentCancellationAuthorizationError,
+  PaymentCancellationConflictError,
+  PaymentCancellationOperationError,
+  PaymentCancellationUnavailableError,
+  PaymentCancellationUnsupportedError,
+  SubscriptionCheckoutCancellationRequestSchema,
+  SubscriptionCheckoutCancellationResultSchema,
+  type SubscriptionCancellationOutcome,
+  type SubscriptionCheckoutCancellationRequest,
+} from "@mongolgpt/console-core/payment-cancellation.js"
+import {
   createSubscriptionCheckout,
   PaymentCheckoutAuthorizationError,
   PaymentCheckoutConflictError,
@@ -30,6 +42,9 @@ type Dependencies = {
   enqueue(events: PaymentQueueEvent[]): Promise<void>
   internalToken?: string
   createSubscriptionCheckout?: (input: SubscriptionCheckoutRequest) => Promise<SubscriptionCheckoutResult>
+  cancelSubscriptionCheckout?: (
+    input: SubscriptionCheckoutCancellationRequest,
+  ) => Promise<SubscriptionCancellationOutcome>
 }
 
 class PaymentQueueUnavailableError extends Error {
@@ -147,6 +162,7 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
               bonum: Boolean(dependencies.bonum),
             },
             checkout: Boolean(dependencies.createSubscriptionCheckout),
+            cancellation: Boolean(dependencies.cancelSubscriptionCheckout),
           },
           { headers: { "Cache-Control": "no-store" } },
         )
@@ -163,7 +179,7 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
         }
         if (!dependencies.createSubscriptionCheckout) {
           await request.body?.cancel().catch(() => undefined)
-          return json({ error: "Төлбөрийн sandbox одоогоор тохируулагдаагүй байна." }, 503)
+          return json({ error: "Төлбөрийн туршилтын орчин одоогоор тохируулагдаагүй байна." }, 503)
         }
         const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase()
         if (contentType !== "application/json") {
@@ -184,6 +200,40 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
         )
         if (!result.success) throw new InvalidPaymentCheckoutResponseError()
         return json(result.data, 201)
+      }
+
+      if (url.pathname === "/v1/checkouts/subscription/cancel") {
+        if (!authorized(request, dependencies.internalToken)) {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Дотоод төлбөрийн үйлчилгээний зөвшөөрөл хүчингүй байна." }, 401)
+        }
+        if (request.method !== "POST") {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Зөвшөөрөгдөөгүй хүсэлт." }, 405, { Allow: "POST" })
+        }
+        if (!dependencies.cancelSubscriptionCheckout) {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Төлбөрийн цуцлалтын үйлчилгээ одоогоор тохируулагдаагүй байна." }, 503)
+        }
+        const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase()
+        if (contentType !== "application/json") {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Цуцлах хүсэлт JSON байх ёстой." }, 400)
+        }
+        let body: unknown
+        try {
+          body = JSON.parse(await readBoundedBody(request))
+        } catch (error) {
+          if (error instanceof RangeError) throw error
+          return json({ error: "Цуцлах хүсэлтийн JSON буруу байна." }, 400)
+        }
+        const parsed = SubscriptionCheckoutCancellationRequestSchema.safeParse(body)
+        if (!parsed.success) return json({ error: "Цуцлах хүсэлтийн бүтэц буруу байна." }, 400)
+        const outcome = await dependencies.cancelSubscriptionCheckout(parsed.data)
+        const result = SubscriptionCheckoutCancellationResultSchema.safeParse(outcome.result)
+        if (!result.success) throw new InvalidPaymentCheckoutResponseError()
+        if (outcome.event) await enqueueVerifiedEvents([outcome.event], dependencies)
+        return json(result.data)
       }
 
       if (url.pathname === "/v1/webhooks/qpay") {
@@ -221,7 +271,18 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
         ray: request.headers.get("cf-ray") ?? "unknown",
         error: error instanceof Error ? error.name : typeof error,
       })
-      if (error instanceof PaymentQueueUnavailableError) return text("TRY_AGAIN", 503)
+      if (error instanceof PaymentQueueUnavailableError) {
+        if (url.pathname === "/v1/checkouts/subscription/cancel") {
+          return json(
+            {
+              error: "Нэхэмжлэх цуцлагдсан боловч төлөв шинэчлэх дараалал түр ажиллахгүй байна. Дахин шалгана уу.",
+              code: "queue_unavailable",
+            },
+            503,
+          )
+        }
+        return text("TRY_AGAIN", 503)
+      }
       if (error instanceof PaymentIngressNotFoundError) return text("NOT_FOUND", 404)
       if (error instanceof BonumWebhookVerificationError) {
         return text("INVALID_WEBHOOK", error.code === "signature" ? 401 : 400)
@@ -258,13 +319,55 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
           error.state === "unknown" ? 503 : 502,
         )
       }
+      if (error instanceof PaymentCancellationAuthorizationError) {
+        return json({ error: "Энэ ажлын талбарт төлбөр цуцлах эрх алга.", code: "workspace_admin_required" }, 403)
+      }
+      if (error instanceof PaymentCancellationUnsupportedError) {
+        return json(
+          {
+            error: "Bonum нэхэмжлэхийг API-аар цуцлах боломж албан ёсоор дэмжигдээгүй. Хугацаа дуусахыг хүлээнэ үү.",
+            code: "provider_cancellation_unsupported",
+          },
+          409,
+        )
+      }
+      if (error instanceof PaymentCancellationUnavailableError) {
+        return json({ error: "QPay цуцлалтын үйлчилгээ тохируулагдаагүй байна.", code: "provider_unavailable" }, 503)
+      }
+      if (error instanceof PaymentCancellationConflictError) {
+        return json(
+          {
+            error: cancellationConflictMessage(error.state),
+            code: error.state,
+          },
+          error.state === "settled" ? 409 : 422,
+        )
+      }
+      if (error instanceof PaymentCancellationOperationError) {
+        return json(
+          {
+            error:
+              error.state === "unknown"
+                ? "Цуцлалтын үр дүн тодорхойгүй байна. Давтан цуцлахгүйгээр дэмжлэгтэй холбогдоно уу."
+                : "QPay цуцлах хүсэлтийг зөвшөөрсөнгүй.",
+            code: error.code,
+          },
+          error.state === "unknown" ? 503 : 502,
+        )
+      }
       if (error instanceof InvalidPaymentCheckoutResponseError) {
         return json({ error: "Төлбөрийн үйлчилгээ буруу хариу буцаалаа." }, 502)
       }
-      if (url.pathname === "/v1/checkouts/subscription" && error instanceof RangeError) {
+      if (error instanceof RangeError && url.pathname === "/v1/checkouts/subscription") {
         return json({ error: "Төлбөрийн хүсэлт хэт том байна." }, 413)
       }
+      if (error instanceof RangeError && url.pathname === "/v1/checkouts/subscription/cancel") {
+        return json({ error: "Цуцлах хүсэлт хэт том байна." }, 413)
+      }
       if (error instanceof RangeError) return text("PAYLOAD_TOO_LARGE", 413)
+      if (url.pathname === "/v1/checkouts/subscription" || url.pathname === "/v1/checkouts/subscription/cancel") {
+        return json({ error: "Төлбөрийн үйлчилгээний дотоод алдаа гарлаа.", code: "internal_error" }, 500)
+      }
       if (error instanceof InvalidPaymentWebhookRequestError) return text("INVALID_REQUEST", 400)
       if (error instanceof z.ZodError || error instanceof SyntaxError) return text("INVALID_REQUEST", 400)
       return text("INTERNAL_ERROR", 500)
@@ -273,10 +376,19 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
 }
 
 function checkoutConflictMessage(state: PaymentCheckoutConflictError["state"]) {
-  if (state === "active_subscription") return "Энэ workspace идэвхтэй багцтай байна."
+  if (state === "active_subscription") return "Энэ ажлын талбар идэвхтэй багцтай байна."
   if (state === "open_checkout") return "Өмнөх төлбөрийн нэхэмжлэх дуусаагүй байна."
   if (state === "request_in_progress") return "Нэхэмжлэх үүсгэж байна. Түр хүлээгээд дахин шалгана уу."
   return "Энэ төлбөрийн хүсэлт хаагдсан байна. Шинэ хүсэлт үүсгэнэ үү."
+}
+
+function cancellationConflictMessage(state: PaymentCancellationConflictError["state"]) {
+  if (state === "settled") return "Төлбөр аль хэдийн баталгаажсан тул нэхэмжлэх цуцлах боломжгүй."
+  if (state === "not_cancellable") return "Энэ нэхэмжлэхийг одоогийн төлвөөс цуцлах боломжгүй."
+  if (state === "request_in_progress") return "Нэхэмжлэхийг цуцалж байна. Түр хүлээгээд төлвийг дахин ачаална уу."
+  if (state === "result_unknown")
+    return "Цуцлалтын үр дүн тодорхойгүй байна. Давтан цуцлахгүйгээр дэмжлэгтэй холбогдоно уу."
+  return "Өмнөх цуцлах хүсэлт амжилтгүй болсон. Нэхэмжлэхийн одоогийн төлвийг шалгана уу."
 }
 
 let runtimeDependencies: Dependencies | undefined
@@ -336,6 +448,9 @@ function defaults() {
           if (!catalog) throw new PaymentCheckoutCreationError("failed", "catalog_not_configured")
           return createSubscriptionCheckout(input, { adapter, catalog })
         }
+      : undefined,
+    cancelSubscriptionCheckout: config.enabled
+      ? (input) => cancelSubscriptionCheckout(input, { adapters: { qpay } })
       : undefined,
     async enqueue(events) {
       await Resource.PaymentQueue.sendBatch(events.map((body) => ({ body })))

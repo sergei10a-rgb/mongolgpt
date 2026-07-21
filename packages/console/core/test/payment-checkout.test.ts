@@ -114,6 +114,7 @@ describe("subscription payment checkout", () => {
       checkout: {
         ...first,
         createdAt: NOW,
+        cancellation: null,
       },
     })
   })
@@ -290,19 +291,65 @@ describe("subscription payment checkout", () => {
     })
 
     expect(await syncPaymentCheckoutStatusWithDb(db, result.invoiceID, "pending", NOW + 1_000)).toBe(true)
-    expect(await syncPaymentCheckoutStatusWithDb(db, result.invoiceID, "paid", NOW + 2_000)).toBe(true)
-    expect(await syncPaymentCheckoutStatusWithDb(db, result.invoiceID, "refunded", NOW + 3_000)).toBe(true)
-    expect(sqlite.query("select status, time_paid, time_refunded from payment_checkout").get()).toEqual({
+    expect(await syncPaymentCheckoutStatusWithDb(db, result.invoiceID, "failed", NOW + 2_000)).toBe(true)
+    expect(await syncPaymentCheckoutStatusWithDb(db, result.invoiceID, "paid", NOW + 3_000)).toBe(true)
+    expect(await syncPaymentCheckoutStatusWithDb(db, result.invoiceID, "refunded", NOW + 4_000)).toBe(true)
+    expect(sqlite.query("select status, time_failed, time_paid, time_refunded from payment_checkout").get()).toEqual({
       status: "refunded",
-      time_paid: NOW + 2_000,
-      time_refunded: NOW + 3_000,
+      time_failed: NOW + 2_000,
+      time_paid: NOW + 3_000,
+      time_refunded: NOW + 4_000,
     })
-    const transitionError = await syncPaymentCheckoutStatusWithDb(db, result.invoiceID, "paid", NOW + 4_000).catch(
+    const transitionError = await syncPaymentCheckoutStatusWithDb(db, result.invoiceID, "paid", NOW + 5_000).catch(
       (error) => error,
     )
     expect(transitionError).toBeInstanceOf(Error)
     if (!(transitionError instanceof Error)) throw new Error("Expected an invalid transition")
     expect(transitionError.message).toContain("does not match verified event")
+  })
+
+  test("repairs an expired or cancelled checkout when a verified payment arrives late", async () => {
+    for (const [index, terminalStatus] of (["expired", "cancelled"] as const).entries()) {
+      const { sqlite, db, workspaceID, accountID, transaction } = await fixture()
+      const result = await createSubscriptionCheckout(request(workspaceID, accountID), {
+        adapter: adapter(async () => ({
+          provider: "qpay",
+          merchantAccountID: "qpay_merchant_test",
+          externalInvoiceID: `qpay_late_checkout_${terminalStatus}`,
+          deepLinks: [],
+        })),
+        catalog,
+        transaction,
+        now: () => NOW,
+      })
+
+      expect(await syncPaymentCheckoutStatusWithDb(db, result.invoiceID, terminalStatus, NOW + index + 1)).toBe(true)
+      expect(await syncPaymentCheckoutStatusWithDb(db, result.invoiceID, "paid", NOW + index + 10)).toBe(true)
+      sqlite
+        .query(
+          `insert into payment_cancellation
+            (invoice_id, workspace_id, account_id, request_key, provider, merchant_account_id,
+              external_invoice_id, status, time_requested, time_completed)
+            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          result.invoiceID,
+          workspaceID,
+          accountID,
+          `late-paid-${index}`,
+          "qpay",
+          "qpay_merchant_test",
+          `qpay_late_checkout_${terminalStatus}`,
+          "cancelled",
+          NOW + index + 2,
+          NOW + index + 3,
+        )
+      expect(sqlite.query("select status, time_paid from payment_checkout").get()).toEqual({
+        status: "paid",
+        time_paid: NOW + index + 10,
+      })
+      expect((await getSubscriptionBillingOverviewWithDb(db, workspaceID, NOW)).checkout?.cancellation).toBeNull()
+    }
   })
 
   test("rejects purchase while an active plan entitlement exists", async () => {

@@ -28,6 +28,7 @@ export const PaymentCheckoutStatuses = [
   "cancelled",
   "refunded",
 ] as const
+export const PaymentCancellationStatuses = ["requested", "unknown", "cancelled", "failed"] as const
 export const PaymentEventTypes = ["pending", "paid", "failed", "expired", "cancelled", "refunded"] as const
 export const PaymentEventOutcomes = ["applied", "noop", "rejected"] as const
 export const PlanSubscriptionStatuses = ["active", "expired", "cancelled", "refunded"] as const
@@ -428,13 +429,48 @@ export const PaymentCheckoutTable = sqliteTable(
     ),
     check(
       "payment_checkout_ready_check",
-      sql`(${table.status} in ('creating', 'unknown', 'failed') and ${table.external_invoice_id} is null and ${table.checkout} is null)
-        or (${table.status} = 'expired' and (
+      sql`(${table.status} in ('creating', 'unknown') and ${table.external_invoice_id} is null and ${table.checkout} is null)
+        or (${table.status} in ('failed', 'expired') and (
           (${table.external_invoice_id} is null and ${table.checkout} is null)
           or (${table.external_invoice_id} is not null and ${table.checkout} is not null)
         ))
         or (${table.status} in ('ready', 'pending', 'paid', 'cancelled', 'refunded')
           and ${table.external_invoice_id} is not null and ${table.checkout} is not null)`,
+    ),
+  ],
+)
+
+export const PaymentCancellationTable = sqliteTable(
+  "payment_cancellation",
+  {
+    invoice_id: ulid("invoice_id").notNull(),
+    workspace_id: ulid("workspace_id").notNull(),
+    account_id: ulid("account_id").notNull(),
+    request_key: text("request_key", { length: 64 }).notNull(),
+    provider: text("provider", { enum: PaymentProviders }).notNull(),
+    merchant_account_id: text("merchant_account_id", { length: 255 }).notNull(),
+    external_invoice_id: text("external_invoice_id", { length: 255 }).notNull(),
+    status: text("status", { enum: PaymentCancellationStatuses }).notNull().default("requested"),
+    error_code: text("error_code", { length: 64 }),
+    time_requested: utc("time_requested").notNull(),
+    time_completed: utc("time_completed"),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.invoice_id] }),
+    uniqueIndex("payment_cancellation_workspace_request_key").on(table.workspace_id, table.request_key),
+    uniqueIndex("payment_cancellation_merchant_external_invoice").on(
+      table.provider,
+      table.merchant_account_id,
+      table.external_invoice_id,
+    ),
+    index("payment_cancellation_status_time_requested").on(table.status, table.time_requested),
+    check("payment_cancellation_provider_check", sql`${table.provider} in ('qpay', 'bonum')`),
+    check("payment_cancellation_status_check", sql`${table.status} in ('requested', 'unknown', 'cancelled', 'failed')`),
+    check(
+      "payment_cancellation_completion_check",
+      sql`(${table.status} in ('requested', 'unknown') and ${table.time_completed} is null)
+        or (${table.status} in ('cancelled', 'failed') and ${table.time_completed} is not null)`,
     ),
   ],
 )

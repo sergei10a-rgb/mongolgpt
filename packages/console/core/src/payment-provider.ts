@@ -1,6 +1,8 @@
 import { ApplyPaymentEventSchema, type ApplyPaymentEventInput } from "./payment-ledger"
 import { PaymentProviders } from "./schema/billing.sql"
 import type {
+  PaymentInvoiceCancellationReceipt,
+  PaymentInvoiceCancellationRequest,
   PaymentInvoiceCheckout,
   PaymentInvoiceRequest,
   PaymentReconciliationRequest,
@@ -10,9 +12,13 @@ export {
   MNTAmountSchema,
   PaymentDeepLinkSchema,
   PaymentInvoiceCheckoutSchema,
+  PaymentInvoiceCancellationReceiptSchema,
+  PaymentInvoiceCancellationRequestSchema,
   PaymentInvoiceRequestSchema,
   PaymentReconciliationRequestSchema,
   type PaymentInvoiceCheckout,
+  type PaymentInvoiceCancellationReceipt,
+  type PaymentInvoiceCancellationRequest,
   type PaymentInvoiceRequest,
   type PaymentReconciliationRequest,
 } from "./payment-provider-contract"
@@ -28,6 +34,10 @@ export interface PaymentProviderAdapter {
 
 export interface PaymentReconciliationAdapter extends PaymentProviderAdapter {
   reconcileInvoice(input: PaymentReconciliationRequest): Promise<VerifiedPaymentEvent[]>
+}
+
+export interface PaymentCancellationAdapter extends PaymentProviderAdapter {
+  cancelInvoice(input: PaymentInvoiceCancellationRequest): Promise<PaymentInvoiceCancellationReceipt>
 }
 
 export class PaymentProviderResponseError extends Error {

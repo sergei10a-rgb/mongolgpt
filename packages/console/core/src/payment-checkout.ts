@@ -3,6 +3,7 @@ import { Identifier } from "./identifier"
 import { recordPaymentInvoiceWithDb } from "./payment-ledger"
 import {
   PaymentCheckoutTable,
+  PaymentCancellationTable,
   PaymentEventTypes,
   PaymentInvoiceTable,
   PlanSubscriptionTable,
@@ -201,8 +202,11 @@ export async function getSubscriptionBillingOverviewWithDb(
         createdAt: PaymentCheckoutTable.timeCreated,
         expiresAt: PaymentCheckoutTable.time_expires,
         checkout: PaymentCheckoutTable.checkout,
+        cancellationStatus: PaymentCancellationTable.status,
+        cancellationErrorCode: PaymentCancellationTable.error_code,
       })
       .from(PaymentCheckoutTable)
+      .leftJoin(PaymentCancellationTable, eq(PaymentCancellationTable.invoice_id, PaymentCheckoutTable.id))
       .where(
         and(
           eq(PaymentCheckoutTable.workspace_id, workspace),
@@ -214,6 +218,19 @@ export async function getSubscriptionBillingOverviewWithDb(
       .limit(1)
       .then((rows) => rows[0]),
   ])
+  const checkoutOverview = checkout
+    ? (() => {
+        const { cancellationStatus, cancellationErrorCode, ...value } = checkout
+        const settled = value.status === "paid" || value.status === "refunded"
+        return {
+          ...value,
+          createdAt: value.createdAt.getTime(),
+          expiresAt: value.expiresAt.getTime(),
+          cancellation:
+            !settled && cancellationStatus ? { status: cancellationStatus, errorCode: cancellationErrorCode } : null,
+        }
+      })()
+    : null
 
   return SubscriptionBillingOverviewSchema.parse({
     subscription: subscription
@@ -223,14 +240,7 @@ export async function getSubscriptionBillingOverviewWithDb(
           periodEnd: subscription.periodEnd.getTime(),
         }
       : null,
-    checkout: checkout
-      ? {
-          ...checkout,
-          plan: checkout.plan,
-          createdAt: checkout.createdAt.getTime(),
-          expiresAt: checkout.expiresAt.getTime(),
-        }
-      : null,
+    checkout: checkoutOverview,
   })
 }
 
@@ -289,7 +299,9 @@ export async function syncPaymentCheckoutStatusWithDb(
   const allowed =
     status === "refunded"
       ? current.status === "paid"
-      : current.status === "ready" || current.status === "pending" || current.status === status
+      : status === "paid"
+        ? ["ready", "pending", "failed", "expired", "cancelled", "paid"].includes(current.status)
+        : current.status === "ready" || current.status === "pending" || current.status === status
   if (!allowed) throw new Error("Payment checkout status does not match verified event")
 
   const timestamp = new Date(occurredAt)

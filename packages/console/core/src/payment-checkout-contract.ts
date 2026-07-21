@@ -1,4 +1,5 @@
 import { PaymentInvoiceCheckoutSchema } from "./payment-provider-contract"
+import { PaymentCancellationStateSchema } from "./payment-cancellation-contract"
 import { PaymentCheckoutStatuses, PaymentProviders, PlanNames } from "./schema/billing.sql"
 import { z } from "zod"
 
@@ -58,6 +59,7 @@ export const SubscriptionBillingOverviewSchema = z
         createdAt: z.number().int().nonnegative(),
         expiresAt: z.number().int().nonnegative(),
         checkout: PaymentInvoiceCheckoutSchema.nullable(),
+        cancellation: PaymentCancellationStateSchema.nullable(),
       })
       .strict()
       .nullable(),

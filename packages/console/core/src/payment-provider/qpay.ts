@@ -1,7 +1,10 @@
 import {
   PaymentInvoiceCheckoutSchema,
+  PaymentInvoiceCancellationReceiptSchema,
+  PaymentInvoiceCancellationRequestSchema,
   PaymentInvoiceRequestSchema,
   MNTAmountSchema,
+  PaymentProviderResponseError,
   PaymentReconciliationRequestSchema,
   cancelPaymentProviderResponse,
   parseVerifiedPaymentEvent,
@@ -9,6 +12,9 @@ import {
   sha256Hex,
   stableJson,
   type PaymentInvoiceCheckout,
+  type PaymentInvoiceCancellationReceipt,
+  type PaymentInvoiceCancellationRequest,
+  type PaymentCancellationAdapter,
   type PaymentInvoiceRequest,
   type PaymentReconciliationAdapter,
   type PaymentReconciliationRequest,
@@ -110,7 +116,7 @@ const QPayCallbackHintSchema = z
 type QPayConfig = z.input<typeof QPayConfigSchema>
 type Fetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
-export class QPayAdapter implements PaymentReconciliationAdapter {
+export class QPayAdapter implements PaymentReconciliationAdapter, PaymentCancellationAdapter {
   readonly provider = "qpay" as const
   readonly merchantAccountID: string
   private readonly config: z.output<typeof QPayConfigSchema>
@@ -218,6 +224,38 @@ export class QPayAdapter implements PaymentReconciliationAdapter {
         type: "refunded",
       }),
     ]
+  }
+
+  async cancelInvoice(input: PaymentInvoiceCancellationRequest): Promise<PaymentInvoiceCancellationReceipt> {
+    const request = PaymentInvoiceCancellationRequestSchema.parse(input)
+    const token = await this.accessToken()
+    const response = await this.fetcher(
+      new URL(`/v2/invoice/${encodeURIComponent(request.externalInvoiceID)}`, QPAY_BASE_URL[this.config.environment]),
+      {
+        method: "DELETE",
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${token}`,
+        },
+        redirect: "error",
+        signal: AbortSignal.timeout(this.config.timeoutMs),
+      },
+    )
+    if (response.status === 401 && this.token?.value === token) this.token = undefined
+    if (!response.ok) {
+      await cancelPaymentProviderResponse(response)
+      throw new PaymentProviderResponseError({
+        provider: this.provider,
+        operation: "cancel invoice",
+        status: response.status,
+      })
+    }
+    await cancelPaymentProviderResponse(response)
+    return PaymentInvoiceCancellationReceiptSchema.parse({
+      provider: this.provider,
+      merchantAccountID: this.merchantAccountID,
+      externalInvoiceID: request.externalInvoiceID,
+    })
   }
 
   static callbackHint(input: unknown) {

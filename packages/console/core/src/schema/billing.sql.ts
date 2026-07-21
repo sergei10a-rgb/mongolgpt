@@ -10,6 +10,8 @@ export {
   PaymentEventTypes,
   PaymentCheckoutStatuses,
   PaymentCheckoutTable,
+  PaymentCancellationStatuses,
+  PaymentCancellationTable,
   PaymentInvoiceStatuses,
   PaymentInvoiceTable,
   PaymentProviders,

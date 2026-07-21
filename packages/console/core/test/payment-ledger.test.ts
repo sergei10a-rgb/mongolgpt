@@ -57,10 +57,67 @@ describe("provider-neutral payment ledger", () => {
     expect(paymentTransition("created", "paid")).toBe("applied")
     expect(paymentTransition("created", "refunded")).toBe("rejected")
     expect(paymentTransition("pending", "paid")).toBe("applied")
+    expect(paymentTransition("failed", "paid")).toBe("applied")
+    expect(paymentTransition("expired", "paid")).toBe("applied")
+    expect(paymentTransition("cancelled", "paid")).toBe("applied")
     expect(paymentTransition("paid", "refunded")).toBe("applied")
     expect(paymentTransition("paid", "expired")).toBe("rejected")
+    expect(paymentTransition("paid", "cancelled")).toBe("rejected")
     expect(paymentTransition("refunded", "paid")).toBe("rejected")
     expect(paymentTransition("cancelled", "cancelled")).toBe("noop")
+  })
+
+  test("repairs a local failed, expired, or cancelled invoice when a verified payment arrives late", async () => {
+    const { sqlite, db, workspaceID, merchantAccountID, transaction } = await fixture()
+    const terminalStates = ["failed", "expired", "cancelled"] as const
+
+    for (const [index, state] of terminalStates.entries()) {
+      const externalInvoiceID = `qpay_late_payment_${state}`
+      await recordPaymentInvoiceWithDb(db, {
+        workspaceID,
+        provider: "qpay",
+        merchantAccountID,
+        externalInvoiceID,
+        purpose: "subscription",
+        plan: "pro",
+        amount: 49_000,
+      })
+      await transaction((tx) =>
+        applyPaymentEventWithDb(tx, {
+          provider: "qpay",
+          merchantAccountID,
+          externalEventID: `event_${state}`,
+          externalInvoiceID,
+          type: state,
+          payloadHash: payloadHash(String(index + 5)),
+          occurredAt: 10 + index,
+        }),
+      )
+      expect(
+        await transaction((tx) =>
+          applyPaymentEventWithDb(tx, {
+            provider: "qpay",
+            merchantAccountID,
+            externalEventID: `event_paid_after_${state}`,
+            externalInvoiceID,
+            externalPaymentID: `payment_after_${state}`,
+            amount: 49_000,
+            currency: "MNT",
+            type: "paid",
+            payloadHash: payloadHash(["8", "9", "a"][index]),
+            occurredAt: 20 + index,
+          }),
+        ),
+      ).toMatchObject({ kind: "applied", invoice: { status: "paid" } })
+    }
+
+    expect(
+      sqlite.query("select external_invoice_id, status from payment_invoice order by external_invoice_id").all(),
+    ).toEqual([
+      { external_invoice_id: "qpay_late_payment_cancelled", status: "paid" },
+      { external_invoice_id: "qpay_late_payment_expired", status: "paid" },
+      { external_invoice_id: "qpay_late_payment_failed", status: "paid" },
+    ])
   })
 
   test("records one immutable invoice for a provider invoice ID", async () => {

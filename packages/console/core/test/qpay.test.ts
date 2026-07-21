@@ -302,6 +302,50 @@ describe("QPay Merchant V2 adapter", () => {
     expect(mock.pending).toHaveLength(0)
   })
 
+  test("cancels one encoded invoice with the current bearer token and ignores the success body", async () => {
+    let bodyCancelled = false
+    const successBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("provider success body"))
+      },
+      cancel() {
+        bodyCancelled = true
+      },
+    })
+    const mock = mockFetch([{ body: token }, { stream: successBody, contentType: "text/plain" }])
+    const receipt = await adapter(mock).cancelInvoice({ externalInvoiceID: "invoice/one ?" })
+
+    expect(receipt).toEqual({
+      provider: "qpay",
+      merchantAccountID: "qpay_merchant_test",
+      externalInvoiceID: "invoice/one ?",
+    })
+    expect(mock.calls).toHaveLength(2)
+    expect(mock.calls[1]?.url).toBe("https://merchant-sandbox.qpay.mn/v2/invoice/invoice%2Fone%20%3F")
+    expect(mock.calls[1]?.init.method).toBe("DELETE")
+    expect(header(mock.calls[1].init, "authorization")).toBe("Bearer access-token")
+    expect(bodyCancelled).toBe(true)
+
+    const empty = mockFetch([{ body: token }, { status: 204 }])
+    expect(await adapter(empty).cancelInvoice({ externalInvoiceID: "invoice-204" })).toMatchObject({
+      externalInvoiceID: "invoice-204",
+    })
+    expect(empty.calls).toHaveLength(2)
+  })
+
+  test("never retries an uncertain or unauthorized cancellation mutation", async () => {
+    for (const status of [401, 503]) {
+      const mock = mockFetch([{ body: token }, { status, body: { error: "provider failure" } }])
+      const error = await captureError(adapter(mock).cancelInvoice({ externalInvoiceID: `invoice-${status}` }))
+
+      expect(error).toBeInstanceOf(PaymentProviderResponseError)
+      expect(error).toMatchObject({ status })
+      expect(mock.calls).toHaveLength(2)
+      expect(mock.calls[1]?.init.method).toBe("DELETE")
+      expect(mock.pending).toHaveLength(0)
+    }
+  })
+
   test("reuses short-lived tokens and parses MNT strings without precision loss", async () => {
     let current = 1_000
     const mock = mockFetch([

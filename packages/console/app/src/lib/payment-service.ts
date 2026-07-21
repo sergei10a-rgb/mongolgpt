@@ -3,6 +3,11 @@ import {
   SubscriptionCheckoutResultSchema,
   type SubscriptionCheckoutRequest,
 } from "@mongolgpt/console-core/payment-checkout-contract.js"
+import {
+  SubscriptionCheckoutCancellationRequestSchema,
+  SubscriptionCheckoutCancellationResultSchema,
+  type SubscriptionCheckoutCancellationRequest,
+} from "@mongolgpt/console-core/payment-cancellation-contract.js"
 import { z } from "zod"
 
 const PaymentServiceErrorSchema = z
@@ -65,6 +70,42 @@ export function createPaymentServiceClient(input: { fetcher: Fetcher; token: str
         throw new PaymentServiceClientError(502, "Төлбөрийн үйлчилгээ буруу хариу буцаалаа.")
       }
       return checkout.data
+    },
+    async cancelSubscriptionCheckout(request: SubscriptionCheckoutCancellationRequest) {
+      const body = SubscriptionCheckoutCancellationRequestSchema.parse(request)
+      let response: Response
+      try {
+        response = await input.fetcher("https://payments.internal/v1/checkouts/subscription/cancel", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        })
+      } catch {
+        throw new PaymentServiceClientError(503, "Төлбөрийн үйлчилгээтэй холбогдож чадсангүй.")
+      }
+
+      let payload: unknown
+      try {
+        payload = await response.json()
+      } catch {
+        throw new PaymentServiceClientError(502, "Төлбөрийн үйлчилгээ буруу хариу буцаалаа.")
+      }
+      if (!response.ok) {
+        const error = PaymentServiceErrorSchema.safeParse(payload)
+        if (!error.success) {
+          throw new PaymentServiceClientError(response.status, "Нэхэмжлэх цуцлах хүсэлт амжилтгүй боллоо.")
+        }
+        throw new PaymentServiceClientError(response.status, error.data.error, error.data.code, error.data.invoiceID)
+      }
+
+      const cancellation = SubscriptionCheckoutCancellationResultSchema.safeParse(payload)
+      if (!cancellation.success) {
+        throw new PaymentServiceClientError(502, "Төлбөрийн үйлчилгээ буруу хариу буцаалаа.")
+      }
+      return cancellation.data
     },
   }
 }

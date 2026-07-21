@@ -269,6 +269,7 @@ export function paymentTransition(
   if (from === to) return "noop"
   if (from === "created" && ["pending", "paid", "failed", "expired", "cancelled"].includes(to)) return "applied"
   if (from === "pending" && ["paid", "failed", "expired", "cancelled"].includes(to)) return "applied"
+  if (["failed", "expired", "cancelled"].includes(from) && to === "paid") return "applied"
   if (from === "paid" && to === "refunded") return "applied"
   return "rejected"
 }

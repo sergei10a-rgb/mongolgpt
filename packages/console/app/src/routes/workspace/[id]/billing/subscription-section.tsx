@@ -6,13 +6,17 @@ import {
   type SubscriptionBillingOverview,
   type SubscriptionCheckoutResult,
 } from "@mongolgpt/console-core/payment-checkout.js"
+import {
+  SubscriptionCheckoutCancellationRequestSchema,
+  type PaymentCancellationState,
+} from "@mongolgpt/console-core/payment-cancellation-contract.js"
 import { Resource } from "@mongolgpt/console-resource"
 import { action, createAsync, json, query, useAction, useParams, useSubmission } from "@solidjs/router"
 import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js"
 import { withActor } from "~/context/auth.withActor"
 import { safeHttpsHref, safePaymentDeepLink, safeQrImage } from "~/lib/payment-display"
 import { PaymentServiceClientError } from "~/lib/payment-service"
-import { requestSubscriptionCheckout } from "~/lib/payment-service.server"
+import { requestSubscriptionCheckout, requestSubscriptionCheckoutCancellation } from "~/lib/payment-service.server"
 import styles from "./subscription-section.module.css"
 
 const planOrder = ["basic", "pro", "max"] as const
@@ -80,14 +84,47 @@ export const createPlanCheckout = action(async (workspaceID: string, plan: strin
   )
 }, "subscription.billing.create")
 
+export const cancelPlanCheckout = action(async (workspaceID: string, invoiceID: string, key: string) => {
+  "use server"
+  return json(
+    await withActor(async () => {
+      Actor.assertAdmin()
+      const actor = Actor.assert("user")
+      const input = SubscriptionCheckoutCancellationRequestSchema.safeParse({
+        workspaceID: Actor.workspace(),
+        accountID: actor.properties.accountID,
+        invoiceID,
+        requestKey: key,
+      })
+      if (!input.success) return { ok: false as const, error: "Цуцлах хүсэлт буруу байна." }
+      try {
+        return { ok: true as const, data: await requestSubscriptionCheckoutCancellation(input.data) }
+      } catch (error) {
+        if (error instanceof PaymentServiceClientError) {
+          return { ok: false as const, error: error.message, code: error.code }
+        }
+        console.error("Subscription checkout cancellation action failed", {
+          workspaceID: Actor.workspace(),
+          error: error instanceof Error ? error.name : typeof error,
+        })
+        return { ok: false as const, error: "Нэхэмжлэх цуцлах үед алдаа гарлаа." }
+      }
+    }, workspaceID),
+    { revalidate: querySubscriptionBilling.key },
+  )
+}, "subscription.billing.cancel")
+
 export function SubscriptionSection() {
   const params = useParams()
   const billing = createAsync(() => querySubscriptionBilling(params.id!))
   const createCheckout = useAction(createPlanCheckout)
   const submission = useSubmission(createPlanCheckout)
+  const cancelCheckout = useAction(cancelPlanCheckout)
+  const cancellationSubmission = useSubmission(cancelPlanCheckout)
   const [plan, setPlan] = createSignal<(typeof planOrder)[number]>("pro")
   const [provider, setProvider] = createSignal<keyof typeof providerNames>("qpay")
   const [requestKey, setRequestKey] = createSignal("")
+  const [cancellationRequest, setCancellationRequest] = createSignal<{ invoiceID: string; key: string }>()
   const [copied, setCopied] = createSignal(false)
 
   const overview = createMemo(() => billing()?.overview)
@@ -95,7 +132,13 @@ export function SubscriptionSection() {
     const result = submission.result
     return result?.ok ? result.data : undefined
   })
-  const checkout = createMemo(() => actionCheckout() ?? overview()?.checkout ?? null)
+  const checkout = createMemo(() => {
+    const persisted = overview()?.checkout
+    const created = actionCheckout()
+    if (!created) return persisted ?? null
+    if (persisted?.invoiceID === created.invoiceID) return persisted
+    return created
+  })
   const active = createMemo(() => overview()?.subscription ?? null)
   const canCreate = createMemo(() => {
     const current = checkout()
@@ -103,12 +146,24 @@ export function SubscriptionSection() {
   })
 
   async function onCreate() {
+    setCancellationRequest(undefined)
+    cancellationSubmission.clear()
     let key = requestKey()
     if (!key) {
       key = crypto.randomUUID()
       setRequestKey(key)
     }
     await createCheckout(params.id!, plan(), provider(), key)
+  }
+
+  async function onCancel(invoiceID: string) {
+    let request = cancellationRequest()
+    if (!request || request.invoiceID !== invoiceID) {
+      request = { invoiceID, key: crypto.randomUUID() }
+      setCancellationRequest(request)
+    }
+    await cancelCheckout(params.id!, invoiceID, request.key)
+    submission.clear()
   }
 
   function selectPlan(value: (typeof planOrder)[number]) {
@@ -162,7 +217,9 @@ export function SubscriptionSection() {
               <Match when={!state().enabled || !state().catalog}>
                 <div data-slot="notice" data-tone="neutral">
                   <strong>Туршилтын төлбөрийн орчин тохируулагдаагүй байна</strong>
-                  <span>QPay эсвэл Bonum sandbox merchant холбогдсоны дараа эндээс нэхэмжлэх үүсгэнэ.</span>
+                  <span>
+                    QPay эсвэл Bonum-ын туршилтын байгууллагын эрх холбогдсоны дараа эндээс нэхэмжлэх үүсгэнэ.
+                  </span>
                 </div>
               </Match>
               <Match when={state().catalog}>
@@ -207,7 +264,7 @@ export function SubscriptionSection() {
                           {submission.pending ? "Нэхэмжлэх үүсгэж байна..." : "Нэхэмжлэх үүсгэх"}
                         </button>
                         <span data-slot="environment">
-                          {state().environment === "sandbox" ? "Sandbox" : "Production"}
+                          {state().environment === "sandbox" ? "Туршилтын орчин" : "Үйлдвэрлэлийн орчин"}
                         </span>
                       </div>
                     </Show>
@@ -227,8 +284,25 @@ export function SubscriptionSection() {
           )}
         </Show>
 
+        <Show when={cancellationSubmission.result?.ok === false ? cancellationSubmission.result : undefined}>
+          {(result) => (
+            <div data-slot="notice" data-tone={result().code === "request_in_progress" ? "neutral" : "danger"}>
+              <strong>Нэхэмжлэх цуцлагдсангүй</strong>
+              <span>{result().error}</span>
+            </div>
+          )}
+        </Show>
+
         <Show when={!active() && checkout()}>
-          {(invoice) => <CheckoutDetails invoice={invoice()} copied={copied()} onCopy={(value) => copyQr(value)} />}
+          {(invoice) => (
+            <CheckoutDetails
+              invoice={invoice()}
+              copied={copied()}
+              cancellationPending={Boolean(cancellationSubmission.pending)}
+              onCopy={(value) => copyQr(value)}
+              onCancel={() => onCancel(invoice().invoiceID)}
+            />
+          )}
         </Show>
       </div>
     </section>
@@ -238,8 +312,11 @@ export function SubscriptionSection() {
 function CheckoutDetails(props: {
   invoice: SubscriptionBillingOverview["checkout"] | SubscriptionCheckoutResult
   copied: boolean
+  cancellationPending: boolean
   onCopy(value: string): void
+  onCancel(): void
 }) {
+  const [confirmCancellation, setConfirmCancellation] = createSignal(false)
   const invoice = () => props.invoice!
   const details = () => invoice().checkout
   const qrImage = () => safeQrImage(details()?.qrImage)
@@ -249,11 +326,27 @@ function CheckoutDetails(props: {
       const href = safePaymentDeepLink(link.link)
       return href ? [{ ...link, href }] : []
     }) ?? []
+  const cancellation = (): PaymentCancellationState | null => {
+    const current = invoice()
+    if (current.status === "paid" || current.status === "refunded") return null
+    return "cancellation" in current ? current.cancellation : null
+  }
   const effectiveStatus = () => {
+    if (cancellation()?.status === "cancelled") return "cancelled"
     const status = invoice().status
     return (status === "ready" || status === "pending") && invoice().expiresAt <= Date.now() ? "expired" : status
   }
-  const payable = () => effectiveStatus() === "ready" || effectiveStatus() === "pending"
+  const cancellationBlocksPayment = () => {
+    const status = cancellation()?.status
+    return status === "requested" || status === "unknown" || status === "cancelled"
+  }
+  const payable = () =>
+    !cancellationBlocksPayment() && (effectiveStatus() === "ready" || effectiveStatus() === "pending")
+  const statusLabel = () => {
+    if (cancellation()?.status === "requested") return "Цуцалж байна"
+    if (cancellation()?.status === "unknown") return "Цуцлалт тодорхойгүй"
+    return statusName(effectiveStatus())
+  }
 
   return (
     <div data-slot="invoice" data-status={effectiveStatus()}>
@@ -262,14 +355,17 @@ function CheckoutDetails(props: {
           <span data-slot="eyebrow">{providerNames[invoice().provider]} нэхэмжлэх</span>
           <strong>{formatMnt(invoice().amount)}</strong>
         </div>
-        <span data-slot="status">{statusName(effectiveStatus())}</span>
+        <span data-slot="status">{statusLabel()}</span>
       </div>
       <Show
         when={payable() && details()}
         fallback={
-          <div data-slot="notice" data-tone={effectiveStatus() === "unknown" ? "danger" : "neutral"}>
-            <strong>{statusName(effectiveStatus())}</strong>
-            <span>{statusDescription(effectiveStatus())}</span>
+          <div
+            data-slot="notice"
+            data-tone={cancellation()?.status === "unknown" || effectiveStatus() === "unknown" ? "danger" : "neutral"}
+          >
+            <strong>{statusLabel()}</strong>
+            <span>{cancellationDescription(cancellation()?.status) ?? statusDescription(effectiveStatus())}</span>
           </div>
         }
       >
@@ -308,6 +404,38 @@ function CheckoutDetails(props: {
                     {props.copied ? "QR утгыг хууллаа" : "QR утгыг хуулах"}
                   </button>
                 )}
+              </Show>
+              <Show when={invoice().provider === "qpay" && !cancellation()}>
+                <Show
+                  when={confirmCancellation()}
+                  fallback={
+                    <button type="button" data-color="ghost" onClick={() => setConfirmCancellation(true)}>
+                      Нэхэмжлэх цуцлах
+                    </button>
+                  }
+                >
+                  <div data-slot="cancel-confirmation">
+                    <span>Энэ QPay нэхэмжлэхийг цуцлах уу?</span>
+                    <div>
+                      <button type="button" data-color="ghost" onClick={() => setConfirmCancellation(false)}>
+                        Үгүй
+                      </button>
+                      <button type="button" disabled={props.cancellationPending} onClick={() => props.onCancel()}>
+                        {props.cancellationPending ? "Цуцалж байна..." : "Тийм, цуцлах"}
+                      </button>
+                    </div>
+                  </div>
+                </Show>
+              </Show>
+              <Show when={invoice().provider === "bonum"}>
+                <small data-slot="provider-note">
+                  Bonum нэхэмжлэх API-аар цуцлагддаггүй. Төлөхгүй бол хүчинтэй хугацаандаа автоматаар хаагдана.
+                </small>
+              </Show>
+              <Show when={cancellation()?.status === "failed"}>
+                <small data-slot="provider-note">
+                  Өмнөх цуцлах хүсэлт амжилтгүй болсон. Энэ нэхэмжлэхээр төлөх боломжтой хэвээр байна.
+                </small>
               </Show>
             </div>
           </div>
@@ -351,4 +479,13 @@ function statusDescription(status: NonNullable<SubscriptionBillingOverview["chec
   if (status === "cancelled") return "Энэ нэхэмжлэх цуцлагдсан."
   if (status === "refunded") return "Төлбөрийг буцаан олгосон."
   return "Төлбөрийн сувгаа сонгон төлнө үү."
+}
+
+function cancellationDescription(status: PaymentCancellationState["status"] | undefined) {
+  if (status === "requested") return "QPay цуцлах хүсэлтийг боловсруулж байна. Энэ хооронд төлбөр бүү хийгээрэй."
+  if (status === "unknown")
+    return "Төлбөрийн үйлчилгээний хариу тодорхойгүй байна. Давтан цуцлахгүйгээр дэмжлэгтэй холбогдоно уу."
+  if (status === "cancelled") return "Энэ нэхэмжлэх QPay дээр цуцлагдсан."
+  if (status === "failed") return "Цуцлах хүсэлт амжилтгүй болсон. Нэхэмжлэх хүчинтэй хэвээр байна."
+  return undefined
 }
