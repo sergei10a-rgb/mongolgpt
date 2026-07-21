@@ -1,6 +1,6 @@
-import { Billing } from "@mongolgpt/console-core/billing.js"
+import { listWorkspaceUsage } from "@mongolgpt/console-core/workspace-usage.js"
 import { createAsync, query, useParams } from "@solidjs/router"
-import { createMemo, For, Show, Switch, Match, createEffect, createSignal } from "solid-js"
+import { createMemo, For, Show, Switch, Match, createEffect, createSignal, onCleanup } from "solid-js"
 import { formatDateUTC, formatDateForTable } from "../../common"
 import { withActor } from "~/context/auth.withActor"
 import { IconChevronLeft, IconChevronRight, IconBreakdown } from "~/component/icon"
@@ -12,9 +12,7 @@ const PAGE_SIZE = 50
 
 async function getUsageInfo(workspaceID: string, page: number) {
   "use server"
-  return withActor(async () => {
-    return await Billing.usages(page, PAGE_SIZE)
-  }, workspaceID)
+  return withActor(() => listWorkspaceUsage(page, PAGE_SIZE), workspaceID)
 }
 
 const queryUsageInfo = query(getUsageInfo, "usage.list")
@@ -34,14 +32,14 @@ export function UsageSection() {
     if (!openBreakdownId()) return
 
     const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target.closest('[data-slot="tokens-with-breakdown"]')) {
+      const target = e.target
+      if (!(target instanceof Element) || !target.closest('[data-slot="tokens-with-breakdown"]')) {
         setOpenBreakdownId(null)
       }
     }
 
     document.addEventListener("click", handleClickOutside)
-    return () => document.removeEventListener("click", handleClickOutside)
+    onCleanup(() => document.removeEventListener("click", handleClickOutside))
   })
 
   const hasResults = createMemo(() => store.usage && store.usage.length > 0)
@@ -176,7 +174,13 @@ export function UsageSection() {
                       </td>
                       <td data-slot="usage-cost">
                         <Switch fallback={<>${((usage.cost ?? 0) / 100000000).toFixed(4)}</>}>
-                          <Match when={usage.enrichment?.plan === "basic" || usage.enrichment?.plan === "pro" || usage.enrichment?.plan === "max"}>
+                          <Match
+                            when={
+                              usage.enrichment?.plan === "basic" ||
+                              usage.enrichment?.plan === "pro" ||
+                              usage.enrichment?.plan === "max"
+                            }
+                          >
                             {i18n.t("workspace.usage.subscription", {
                               amount: ((usage.cost ?? 0) / 100000000).toFixed(4),
                             })}

@@ -2,16 +2,14 @@ import { query, useParams, createAsync } from "@solidjs/router"
 import { createMemo, createSignal, Show } from "solid-js"
 import { IconCopy, IconCheck } from "~/component/icon"
 import { Key } from "@mongolgpt/console-core/key.js"
-import { Billing } from "@mongolgpt/console-core/billing.js"
+import { listWorkspaceUsage } from "@mongolgpt/console-core/workspace-usage.js"
 import { withActor } from "~/context/auth.withActor"
 import styles from "./new-user-section.module.css"
 import { useI18n } from "~/context/i18n"
 
 const getUsageInfo = query(async (workspaceID: string) => {
   "use server"
-  return withActor(async () => {
-    return await Billing.usages()
-  }, workspaceID)
+  return withActor(() => listWorkspaceUsage(), workspaceID)
 }, "usage.list")
 
 const listKeys = query(async (workspaceID: string) => {

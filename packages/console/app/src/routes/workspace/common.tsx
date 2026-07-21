@@ -1,8 +1,7 @@
 import { Resource } from "@mongolgpt/console-resource"
 import { Actor } from "@mongolgpt/console-core/actor.js"
-import { action, json, query } from "@solidjs/router"
+import { query } from "@solidjs/router"
 import { withActor } from "~/context/auth.withActor"
-import { Billing } from "@mongolgpt/console-core/billing.js"
 import { and, Database, desc, eq, isNull } from "@mongolgpt/console-core/drizzle/index.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
@@ -31,11 +30,6 @@ export function formatDateUTC(date: Date) {
     timeZone: "UTC",
   }
   return date.toLocaleDateString(undefined, options)
-}
-
-export function formatBalance(amount: number) {
-  const balance = ((amount ?? 0) / 100000000).toFixed(2)
-  return balance === "-0.00" ? "0.00" : balance
 }
 
 export async function getLastSeenWorkspaceID() {
@@ -70,53 +64,3 @@ export const querySessionInfo = query(async (workspaceID: string) => {
     }
   }, workspaceID)
 }, "session.get")
-
-export const createCheckoutUrl = action(
-  async (workspaceID: string, amount: number, successUrl: string, cancelUrl: string) => {
-    "use server"
-    return json(
-      await withActor(
-        () =>
-          Billing.generateCheckoutUrl({ amount, successUrl, cancelUrl })
-            .then((data) => ({ error: undefined, data }))
-            .catch((e) => ({
-              error: e.message as string,
-              data: undefined,
-            })),
-        workspaceID,
-      ),
-    )
-  },
-  "checkoutUrl",
-)
-
-export const queryBillingInfo = query(async (workspaceID: string) => {
-  "use server"
-  return withActor(async () => {
-    const billing = await Billing.get()
-    return {
-      customerID: billing.customerID,
-      paymentMethodID: billing.paymentMethodID,
-      paymentMethodType: billing.paymentMethodType,
-      paymentMethodLast4: billing.paymentMethodLast4,
-      balance: billing.balance,
-      reload: billing.reload,
-      reloadAmount: billing.reloadAmount ?? Billing.RELOAD_AMOUNT,
-      reloadAmountMin: Billing.RELOAD_AMOUNT_MIN,
-      reloadTrigger: billing.reloadTrigger ?? Billing.RELOAD_TRIGGER,
-      reloadTriggerMin: Billing.RELOAD_TRIGGER_MIN,
-      monthlyLimit: billing.monthlyLimit,
-      monthlyUsage: billing.monthlyUsage,
-      timeMonthlyUsageUpdated: billing.timeMonthlyUsageUpdated,
-      reloadError: billing.reloadError,
-      timeReloadError: billing.timeReloadError,
-      subscription: billing.subscription,
-      subscriptionID: billing.subscriptionID,
-      subscriptionPlan: billing.subscriptionPlan,
-      timeSubscriptionBooked: billing.timeSubscriptionBooked,
-      timeSubscriptionSelected: billing.timeSubscriptionSelected,
-      lite: billing.lite,
-      liteSubscriptionID: billing.liteSubscriptionID,
-    }
-  }, workspaceID)
-}, "billing.get")
