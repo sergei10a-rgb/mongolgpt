@@ -72,7 +72,7 @@ const messages = {
   debug_key: tx("share.debug_key"),
 }
 
-const id = Astro.params.id || ""
+const id = (Astro.params as { id?: string }).id ?? ""
 const res = await fetch(`${apiUrl}/share_data?id=${id}`)
 const data = (await res.json()) as {
   info?: Session.Info

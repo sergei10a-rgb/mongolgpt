@@ -14,6 +14,12 @@ const staticDocs = process.env.MONGOLGPT_STATIC_DOCS === "true"
 export default defineConfig({
   site: config.url,
   base: "/docs",
+  redirects: {
+    "/go": "/docs/account",
+    "/zen": "/docs/account",
+    "/mn/go": "/docs/account",
+    "/mn/zen": "/docs/account",
+  },
   outDir: staticDocs ? "./dist/docs" : "./dist",
   output: staticDocs ? "static" : "server",
   image: {
@@ -102,7 +108,7 @@ export default defineConfig({
         { label: "Windows ба WSL", link: "windows-wsl" },
         {
           label: "Хэрэглээ",
-          items: ["go", "tui", "cli", "web", "ide", "zen", "share", "github", "gitlab"],
+          items: ["account", "tui", "cli", "web", "ide", "share", "github", "gitlab"],
         },
         {
           label: "Тохируулах",
@@ -136,6 +142,7 @@ export default defineConfig({
         Header: "./src/components/Header.astro",
         Footer: "./src/components/Footer.astro",
         SiteTitle: "./src/components/SiteTitle.astro",
+        MobileMenuToggle: "./src/components/MobileMenuToggle.astro",
       },
       plugins: [
         theme({

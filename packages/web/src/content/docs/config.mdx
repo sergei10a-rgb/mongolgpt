@@ -252,7 +252,7 @@ mongolgpt debug config
 
 ## JSON схем
 
-Одоогийн standalone launch-д domain эсвэл schema URL шаардлагагүй. `$schema` мөргүй `mongolgpt.json` болон `tui.json` runtime-д хэвийн ажиллана.
+Локал эсвэл offline горимд domain болон schema URL шаардлагагүй. `$schema` мөргүй `mongolgpt.json` болон `tui.json` runtime-д хэвийн ажиллана.
 
 Ирээдүйд баримт бичгийг өөрийн production domain дээр байршуулбал build нь `config.json` болон `tui.json` схемийг сайтын үндсэн замд үүсгэнэ. Тэр үед repository-ийн `.env.example` доторх `MONGOLGPT_PUBLIC_URL` болон docs URL-ийг өөрийн эзэмшлийн хаягаар тохируулж, editor autocomplete-д `$schema`-г сонголтоор нэмнэ.
 

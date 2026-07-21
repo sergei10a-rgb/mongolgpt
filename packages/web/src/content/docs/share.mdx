@@ -5,7 +5,7 @@ description: Public share-ийн төлөв болон сессийг локал
 
 ## Одоогийн төлөв
 
-**Нийтийн share link одоогоор дэмжигдэхгүй.** `/share` болон `/unshare` командын client талын интерфэйс байж болох ч тэдгээрт шаардлагатай MongolGPT-ийн өөрийн account/share backend бэлэн болоогүй. Иймээс launch profile-д public URL үүсгэх боломж гэж үзэж болохгүй.
+**Нийтийн share link production-д одоогоор идэвхжээгүй.** `/share` болон `/unshare` командын client талын интерфэйс байж болох ч share service-ийн authorization, retention болон deletion flow бүрэн баталгаажаагүй орчинд public URL үүсгэх боломж гэж үзэж болохгүй.
 
 :::caution
 Танихгүй share домэйнд сесс, source code, API key, нэвтрэх эсвэл төлбөрийн мэдээлэл бүү илгээ. CLI, TUI, local web, desktop болон BYOK provider ашиглахад share service хэрэггүй.
@@ -39,7 +39,7 @@ mongolgpt export [sessionID] > session.json
 
 ## Ирээдүйн hosted байршуулалт
 
-Төслийн өөрийн share/account backend бүрэн бэлэн болж, release notes-д public share дэмжлэгийг идэвхжүүлсэн үед л repository-ийн `.env.example` доторх `MONGOLGPT_PUBLIC_URL`, `MONGOLGPT_API_URL`, `MONGOLGPT_SHARE_URL` зэрэг утгыг өөрийн эзэмшлийн production URL-аар тохируулна. Одоогоор:
+Share backend бүрэн баталгаажиж, release notes-д public share дэмжлэгийг идэвхжүүлсэн үед л repository-ийн `.env.example` доторх `MONGOLGPT_PUBLIC_URL`, `MONGOLGPT_API_URL`, `MONGOLGPT_SHARE_URL` зэрэг утгыг өөрийн эзэмшлийн production URL-аар тохируулна. Баталгаажаагүй орчинд:
 
 ```dotenv
 MONGOLGPT_ENABLE_HOSTED_SERVICES=false

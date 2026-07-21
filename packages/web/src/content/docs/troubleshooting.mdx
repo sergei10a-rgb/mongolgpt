@@ -259,7 +259,7 @@ mongolgpt uninstall
 <details>
 <summary>MongolGPT account заавал хэрэгтэй юу?</summary>
 
-Үгүй. MongolGPT account одоогоор дэмжигдэхгүй бөгөөд CLI/TUI, локал web, desktop ашиглахад хэрэггүй. Дэмжигдсэн provider-ийн өөрийн API key, OAuth эрх эсвэл локал endpoint-оор шууд холбоно.
+Free Auto, багц, quota болон төхөөрөмж хооронд хуваалцах workspace ашиглахад MongolGPT бүртгэл хэрэгтэй. Өөрийн API түлхүүр болон локал загварын нууц мэдээлэл тусдаа хадгалагдана. Hosted service идэвхтэй release дээр CLI-д `mongolgpt console login` тушаалаар нэвтэрнэ. [Бүртгэл ба багцын зааврыг](../account) үзнэ үү.
 
 </details>
 
@@ -273,14 +273,14 @@ mongolgpt uninstall
 <details>
 <summary>`https://your-domain.example` ажиллахгүй байна. Яагаад?</summary>
 
-Энэ нь `.env.example` доторх ирээдүйн production deployment-ийн placeholder бөгөөд бодит үйлчилгээ биш. Одоогийн standalone launch-д domain эсвэл hosting хэрэггүй. Төслийн өөрийн backend бэлэн болж hosted боломж release notes-д идэвхжсэний дараа л өөрийн эзэмшлийн URL-аар солино.
+Энэ нь `.env.example` доторх deployment placeholder бөгөөд бодит үйлчилгээ биш. Хөгжүүлэгч өөрийн Cloudflare орчны бодит URL-аар солино. Энгийн хэрэглэгч URL-ийг гараар тохируулахгүй; Desktop болон CLI нь release channel-ийн service URL-ийг сонгоно.
 
 </details>
 
 <details>
-<summary>Zen, Go, Black, billing эсвэл public share ажиллах уу?</summary>
+<summary>Free Auto, төлбөртэй багц эсвэл public share production-д нээгдсэн үү?</summary>
 
-Одоогоор ажиллахгүй. Эдгээрт шаардлагатай MongolGPT-ийн өөрийн production backend, account, authentication болон billing бэлэн болоогүй. Танихгүй домэйнд credential эсвэл төлбөрийн мэдээлэл бүү оруул. [Нээлтийн дэмжлэгийн хүрээнд](../#нээлтийн-дэмжлэгийн-хүрээ) тэмдэглэсэн CLI/TUI, local web, desktop, BYOK provider, MCP, LSP боломжуудыг ашиглана.
+Нэгдсэн auth, Free Auto, quota болон QPay/Bonum төлбөрийн код dev орчинд туршигдаж байна. Release notes-д production нээлтийг албан ёсоор зарлаж, бүртгэлийн самбарт хүчинтэй нөхцөл нийтлэгдэх хүртэл бодит төлбөрийн мэдээлэл бүү оруул. Энэ хооронд CLI/TUI, local web, desktop, BYOK provider, локал model, MCP болон LSP боломжуудыг ашиглаж болно. [Одоогийн төлөвийг](../account) үзнэ үү.
 
 </details>
 

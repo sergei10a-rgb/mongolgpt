@@ -5,9 +5,9 @@ description: MongolGPT-ийг татах, суулгах, тохируулах, 
 
 [**MongolGPT**](/) бол терминал, ширээний програм, IDE, вэб интерфэйсээр ашиглах боломжтой AI кодын агент юм. Эх код, албан ёсны хувилбар, татах файлуудыг зөвхөн [GitHub Releases](https://github.com/sergei10a-rgb/mongolgpt/releases) болон төслийн [GitHub сангаас](https://github.com/sergei10a-rgb/mongolgpt) авна.
 
-## Нээлтийн дэмжлэгийн хүрээ
+## Одоогийн дэмжлэгийн хүрээ
 
-Одоогийн release нь өөрийн компьютерт ажиллах дараах боломжуудад төвлөрнө.
+MongolGPT нь локал coding agent боломжуудаа хадгалж, Web, Desktop болон CLI-д нэг бүртгэл ашиглах SaaS архитектур руу хөгжиж байна.
 
 | Төлөв | Боломж |
 | --- | --- |
@@ -15,12 +15,13 @@ description: MongolGPT-ийг татах, суулгах, тохируулах, 
 | Дэмжигдэнэ | [`mongolgpt web`](./web)-ээр ажиллах локал web UI |
 | Дэмжигдэнэ | GitHub Releases-д asset нь нийтлэгдсэн [Windows desktop](#ширээний-програм-суулгах) |
 | Дэмжигдэнэ | Өөрийн API key эсвэл OAuth эрх ашиглах [BYOK provider](./providers) |
+| Дэмжигдэнэ | Desktop болон CLI дээр Ollama, LM Studio зэрэг локал загвар |
 | Дэмжигдэнэ | [MCP](./mcp-servers) болон [LSP](./lsp) integration |
-| Дэмжигдэхгүй | MongolGPT Zen, MongolGPT Go, MongolGPT Black |
-| Дэмжигдэхгүй | MongolGPT account, billing, subscription, нийтийн share link |
+| Dev туршилт | Нэгдсэн бүртгэл, OAuth, [Free Auto болон багц](./account) |
+| Production-д идэвхгүй | Basic/Pro/Max бодит төлбөр, QPay/Bonum merchant, нийтийн share |
 
-:::caution[Hosted боломжууд идэвхгүй]
-Zen, Go, Black, account, billing болон public share-д шаардлагатай MongolGPT-ийн өөрийн backend одоогоор бэлэн биш. Эдгээрт зориулсан танихгүй домэйнд нэвтрэх мэдээлэл, API key, төлбөрийн мэдээлэл бүү оруул. CLI/TUI, локал web, desktop болон BYOK provider ашиглахад домэйн эсвэл hosting хэрэггүй.
+:::caution[Dev ба production-ийг ялгана уу]
+Нэгдсэн auth, model gateway, quota болон төлбөрийн backend код хөгжүүлэлтийн орчинд туршигдаж байна. Production нээлтийг release notes-д албан ёсоор зарлахаас өмнө бодит төлбөрийн мэдээлэл бүү оруул. `*.dev.mgpt.mn` нь туршилтын орчин бөгөөд production үйлчилгээ биш.
 :::
 
 ## Аль хувилбарыг сонгох вэ?
@@ -39,7 +40,7 @@ Zen, Go, Black, account, billing болон public share-д шаардлагат
 2. Хамгийн сүүлийн тогтвортой release-ийг сонгоно.
 3. `mongolgpt-desktop-win-x64.exe` файл тухайн release-д байвал татаж ажиллуулна.
 4. Суулгасны дараа MongolGPT-ийг нээгээд төслийн хавтсаа сонгоно.
-5. **Connect provider** хэсгээс өөрийн ашиглах үйлчилгээ үзүүлэгчийг холбоно.
+5. **Үйлчилгээ үзүүлэгч холбох** хэсгээс ашиглах загварын эх үүсвэрээ сонгоно.
 
 Хэрэв Windows SmartScreen анхааруулга үзүүлбэл release-ийн URL нь `github.com/sergei10a-rgb/mongolgpt/releases` мөн эсэхийг дахин шалга. Release-ийн тайлбарт гарын үсэггүй build гэж тэмдэглэсэн бол байгууллагынхаа аюулгүй байдлын бодлогыг дагана.
 
@@ -106,6 +107,12 @@ cd path/to/project
 mongolgpt
 ```
 
+Hosted үйлчилгээ идэвхтэй release дээр эхлээд MongolGPT бүртгэлээр нэвтэрнэ:
+
+```bash
+mongolgpt console login
+```
+
 Дараа нь:
 
 1. `/connect` командаар үйлчилгээ үзүүлэгчээ сонгож API түлхүүр эсвэл тухайн үйлчилгээний нэвтрэх аргыг тохируулна.
@@ -119,19 +126,20 @@ mongolgpt
 Энэ төслийн тест яагаад унаж байгааг шалгаад зас.
 ```
 
-MongolGPT account одоогоор дэмжигдэхгүй бөгөөд үндсэн ажиллагаанд хэрэггүй. OpenAI, Anthropic, Google, OpenRouter болон бусад дэмжигдсэн provider-ийг өөрийн API key эсвэл provider-ийн OAuth эрхээр холбоно. Дэлгэрэнгүйг [үйлчилгээ үзүүлэгчдийн заавраас](./providers) үзнэ үү.
+MongolGPT бүртгэл нь Free Auto, багц, quota болон төхөөрөмж хооронд хуваалцах workspace эрхэд хэрэглэгдэнэ. OpenAI, Anthropic, Google, OpenRouter болон бусад provider-ийг өөрийн API key эсвэл provider-ийн OAuth эрхээр нэмж болно. Ollama, LM Studio зэрэг локал загварын хүсэлт хэрэглэгчийн төхөөрөмжөөс гарна. Дэлгэрэнгүйг [бүртгэл ба багцын](./account) болон [үйлчилгээ үзүүлэгчдийн](./providers) заавраас үзнэ үү.
 
-## Домэйн болон байршуулалт хэрэгтэй юу?
+## Домэйн болон байршуулалт
 
-Үгүй. Одоогийн launch profile бүхэлдээ standalone/local тул MongolGPT ашиглахын тулд production domain, DNS эсвэл hosting тохируулах шаардлагагүй.
+Энгийн хэрэглэгч domain, DNS эсвэл hosting тохируулахгүй. Desktop болон CLI нь суулгасан release channel-д тохирох MongolGPT service URL-ийг өөрөө сонгоно. Локал/BYOK ажиллагаа хэрэглэгчийн төхөөрөмж дээр үргэлжилнэ.
 
-Ирээдүйд төслийн өөрийн production backend бэлэн болж hosted боломжуудыг байршуулбал repository-ийн `.env.example`-ийг суурь болгон `MONGOLGPT_PUBLIC_URL`, `MONGOLGPT_AUTH_URL`, `MONGOLGPT_API_URL`, `MONGOLGPT_SHARE_URL`, `MONGOLGPT_GO_URL` зэрэг утгыг зөвхөн өөрийн эзэмшлийн URL-аар солино. Тэр хүртэл `MONGOLGPT_ENABLE_HOSTED_SERVICES=false` хэвээр байна. `.env.example` доторх `https://your-domain.example` нь ажилладаг service биш, илэрхий placeholder юм.
+MongolGPT-ийг өөрөө хөгжүүлж байршуулж байгаа тохиолдолд `.env.example` доторх `https://your-domain.example` утгуудыг өөрийн Cloudflare орчны бодит URL-аар солино. Placeholder хаяг нь ажилладаг service биш. Auth/API health check баталгаажаагүй орчинд `MONGOLGPT_ENABLE_HOSTED_SERVICES`-ийг идэвхжүүлэхгүй.
 
 ## Дараагийн алхам
 
 - [CLI командын лавлагаа](./cli)
 - [TUI ашиглах](./tui)
 - [Вэб интерфэйс ажиллуулах](./web)
+- [Бүртгэл, Free Auto ба багцууд](./account)
 - [Тохиргооны файл](./config)
 - [Windows болон WSL](./windows-wsl)
 - [Алдаа оношлох ба түгээмэл асуулт](./troubleshooting)
