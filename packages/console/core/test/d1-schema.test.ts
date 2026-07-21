@@ -77,6 +77,20 @@ const contract = {
     "timeFixedUpdated",
     "timeWeeklyTokensUpdated",
   ],
+  PlanSubscriptionTable: [
+    "id",
+    "workspaceID",
+    "invoiceID",
+    "plan",
+    "status",
+    "timePeriodStart",
+    "timePeriodEnd",
+    "timeCancelled",
+    "timeRefunded",
+    "timeCreated",
+    "timeUpdated",
+    "timeDeleted",
+  ],
   LiteTable: [
     "id",
     "workspaceID",
@@ -216,7 +230,12 @@ describe("D1 schema contract", () => {
   for (const [exportName, columns] of Object.entries(contract)) {
     test(`${exportName} keeps its table and column contract`, () => {
       const table = d1[exportName as keyof typeof contract] as Table
-      expect(getTableName(table)).toBe(exportName.replace(/Table$/, "").replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`).replace(/^_/, ""))
+      expect(getTableName(table)).toBe(
+        exportName
+          .replace(/Table$/, "")
+          .replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+          .replace(/^_/, ""),
+      )
       expect(Object.keys(getTableColumns(table))).toEqual([...columns])
     })
   }
@@ -238,6 +257,7 @@ describe("D1 schema contract", () => {
     ])
     expect(d1.PaymentEventTypes).toEqual(["pending", "paid", "failed", "expired", "cancelled", "refunded"])
     expect(d1.PaymentEventOutcomes).toEqual(["applied", "noop", "rejected"])
+    expect(d1.PlanSubscriptionStatuses).toEqual(["active", "expired", "cancelled", "refunded"])
     expect(d1.NewsletterSubscriberStatus).toEqual(["active", "unsubscribed"])
     expect(d1.NewsletterSubscriberSource).toEqual(["console", "stats"])
     expect(d1.EnterpriseInquiryStatus).toEqual(["new", "reviewing", "resolved", "spam"])

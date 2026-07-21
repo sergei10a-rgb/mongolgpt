@@ -3,12 +3,13 @@ import { z } from "zod"
 export const ModelFormatSchema = z.enum(["anthropic", "google", "openai", "oa-compat"])
 export type ModelFormat = z.infer<typeof ModelFormatSchema>
 
+const unitCost = z.number().nonnegative()
 const ModelCostSchema = z.object({
-  input: z.number(),
-  output: z.number(),
-  cacheRead: z.number().optional(),
-  cacheWrite5m: z.number().optional(),
-  cacheWrite1h: z.number().optional(),
+  input: unitCost,
+  output: unitCost,
+  cacheRead: unitCost.optional(),
+  cacheWrite5m: unitCost.optional(),
+  cacheWrite1h: unitCost.optional(),
 })
 
 export const MongolGPTModelSchema = z.object({
@@ -23,6 +24,7 @@ export const MongolGPTModelSchema = z.object({
   trialEnded: z.boolean().optional(),
   fallbackProvider: z.string().optional(),
   rateLimit: z.number().optional(),
+  maxTokensPerRequest: z.number().int().positive().optional(),
   freeWeeklyTokenLimit: z.number().int().positive().optional(),
   freeMaxTokensPerRequest: z.number().int().positive().optional(),
   providers: z.array(
@@ -106,6 +108,13 @@ export const MongolGPTModelConfigurationSchema = z
               code: z.ZodIssueCode.custom,
               path: [...path, "fallbackProvider"],
               message: "fallbackProvider must reference an enabled provider route",
+            })
+
+          if (modelID !== "free-auto" && !model.maxTokensPerRequest)
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [...path, "maxTokensPerRequest"],
+              message: "Managed model must define maxTokensPerRequest for atomic quota reservation",
             })
 
           if (modelID !== "free-auto") continue

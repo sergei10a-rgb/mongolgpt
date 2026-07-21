@@ -97,6 +97,165 @@ describe("Cloudflare quota ledger", () => {
     ).resolves.toEqual({ allowed: false, value: 9_000 })
   })
 
+  test("deactivates a single-counter scope when usage exceeds its reservation", async () => {
+    const storage = new MemoryStorage()
+    const reservationID = "4158c03b-cded-4dbf-b3c6-c14e5fddc12f"
+    const reserve = {
+      type: "reserve" as const,
+      counterKey: "weekly",
+      reservationID,
+      persistedUsage: 1_000,
+      amount: 2_000,
+      limit: 10_000,
+      expiresAt: 2_000,
+    }
+    await executeQuotaLedgerCommand(storage, reserve, 1_000)
+    await expect(
+      executeQuotaLedgerCommand(
+        storage,
+        { type: "settle", counterKey: "weekly", reservationID, actual: 2_001, expiresAt: 2_000 },
+        1_100,
+      ),
+    ).resolves.toMatchObject({ deactivated: true, overrun: true, value: 3_000 })
+    await expect(
+      executeQuotaLedgerCommand(storage, { ...reserve, reservationID: "00dd2ee7-afaa-42f7-929c-cfd5434df4b9" }, 1_100),
+    ).resolves.toMatchObject({ allowed: false, deactivated: true })
+  })
+
+  test("reserves plan cost and token dimensions atomically, then deactivates the entitlement", async () => {
+    const storage = new MemoryStorage()
+    const entries = [
+      { counterKey: "user/weekly-cost", persistedUsage: 100, amount: 200, limit: 500, expiresAt: 2_000 },
+      { counterKey: "user/weekly-tokens", persistedUsage: 1_000, amount: 2_000, limit: 5_000, expiresAt: 2_000 },
+      { counterKey: "user/rolling-cost", persistedUsage: 50, amount: 200, limit: 400, expiresAt: 1_500 },
+    ]
+    const firstID = "0148f9c1-f8dd-49d7-8037-fc5601e7268f"
+    const secondID = "87ce07aa-c2c5-4f45-b26a-5298a40f9725"
+
+    await expect(
+      executeQuotaLedgerCommand(storage, { type: "reserve-many", reservationID: firstID, entries }, 1_000),
+    ).resolves.toEqual({
+      allowed: true,
+      values: {
+        "user/weekly-cost": 300,
+        "user/weekly-tokens": 3_000,
+        "user/rolling-cost": 250,
+      },
+    })
+    await expect(
+      executeQuotaLedgerCommand(storage, { type: "reserve-many", reservationID: firstID, entries }, 1_000),
+    ).resolves.toMatchObject({ allowed: true })
+    await expect(
+      executeQuotaLedgerCommand(
+        storage,
+        {
+          type: "reserve-many",
+          reservationID: firstID,
+          entries: entries.map((entry, index) => (index === 0 ? { ...entry, limit: entry.limit + 1 } : entry)),
+        },
+        1_000,
+      ),
+    ).rejects.toThrow("scope mismatch")
+
+    await expect(
+      executeQuotaLedgerCommand(storage, { type: "reserve-many", reservationID: secondID, entries }, 1_000),
+    ).resolves.toMatchObject({
+      allowed: false,
+      blockedKey: "user/rolling-cost",
+    })
+    await expect(
+      executeQuotaLedgerCommand(storage, { type: "read", keys: entries.map((entry) => entry.counterKey) }, 1_000),
+    ).resolves.toEqual({
+      values: {
+        "user/weekly-cost": 300,
+        "user/weekly-tokens": 3_000,
+        "user/rolling-cost": 250,
+      },
+    })
+
+    await expect(
+      executeQuotaLedgerCommand(
+        storage,
+        {
+          type: "settle-many",
+          reservationID: firstID,
+          entries: [
+            { counterKey: "user/weekly-cost", actual: 75, expiresAt: 2_000 },
+            { counterKey: "user/weekly-tokens", actual: 500, expiresAt: 2_000 },
+            { counterKey: "user/rolling-cost", actual: 75, expiresAt: 1_500 },
+          ],
+        },
+        1_100,
+      ),
+    ).resolves.toEqual({
+      values: {
+        "user/weekly-cost": 175,
+        "user/weekly-tokens": 1_500,
+        "user/rolling-cost": 125,
+      },
+    })
+    await expect(
+      executeQuotaLedgerCommand(storage, { type: "reserve-many", reservationID: secondID, entries }, 1_100),
+    ).resolves.toMatchObject({ allowed: true })
+
+    await expect(executeQuotaLedgerCommand(storage, { type: "deactivate" }, 1_200)).resolves.toEqual({
+      deactivated: true,
+    })
+    await expect(
+      executeQuotaLedgerCommand(
+        storage,
+        {
+          type: "reserve-many",
+          reservationID: "90431c3d-d17d-465a-89c3-a24813166676",
+          entries,
+        },
+        1_200,
+      ),
+    ).resolves.toMatchObject({ allowed: false, deactivated: true })
+  })
+
+  test("deactivates a plan scope when provider usage exceeds its atomic reservation", async () => {
+    const storage = new MemoryStorage()
+    const reservationID = "428cd527-387e-4293-9285-6ca43dcbf3ae"
+    const entries = [
+      { counterKey: "user/weekly-cost", persistedUsage: 100, amount: 200, limit: 500, expiresAt: 2_000 },
+      { counterKey: "user/weekly-tokens", persistedUsage: 1_000, amount: 2_000, limit: 5_000, expiresAt: 2_000 },
+      { counterKey: "user/rolling-cost", persistedUsage: 50, amount: 200, limit: 400, expiresAt: 1_500 },
+    ]
+    await executeQuotaLedgerCommand(storage, { type: "reserve-many", reservationID, entries }, 1_000)
+
+    await expect(
+      executeQuotaLedgerCommand(
+        storage,
+        {
+          type: "settle-many",
+          reservationID,
+          entries: [
+            { counterKey: "user/weekly-cost", actual: 201, expiresAt: 2_000 },
+            { counterKey: "user/weekly-tokens", actual: 1_500, expiresAt: 2_000 },
+            { counterKey: "user/rolling-cost", actual: 201, expiresAt: 1_500 },
+          ],
+        },
+        1_100,
+      ),
+    ).resolves.toMatchObject({
+      deactivated: true,
+      overrun: true,
+      blockedKey: "user/weekly-cost",
+    })
+    await expect(
+      executeQuotaLedgerCommand(
+        storage,
+        {
+          type: "reserve-many",
+          reservationID: "430e0349-977c-4b38-9fd2-fd6c5e689507",
+          entries,
+        },
+        1_100,
+      ),
+    ).resolves.toMatchObject({ allowed: false, deactivated: true })
+  })
+
   test("claims IP limits atomically and doubles the allowance only for new users", async () => {
     const storage = new MemoryStorage()
     const command = {

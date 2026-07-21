@@ -1,6 +1,6 @@
 import { describe, expect, spyOn, test } from "bun:test"
 import { createPaymentQueueEvent } from "@mongolgpt/console-core/payment-queue.js"
-import { createPaymentQueueConsumer } from "../src/payment-queue"
+import { createPaymentEntitlementApply, createPaymentQueueConsumer } from "../src/payment-queue"
 
 const payment = createPaymentQueueEvent(
   {
@@ -65,6 +65,74 @@ describe("payment queue consumer", () => {
 
     expect(failed.result()).toEqual({ acknowledged: 0, retried: 1 })
     expect(errorLog).toHaveBeenCalledTimes(1)
+    errorLog.mockRestore()
+  })
+
+  test("deactivates refunded entitlement quota and retries if deactivation fails", async () => {
+    const refunded = createPaymentQueueEvent(
+      {
+        ...payment.event,
+        externalEventID: "bonum_refund_1",
+        type: "refunded",
+        payloadHash: "c".repeat(64),
+      },
+      payment.enqueuedAt,
+    )
+    const calls: Array<[string, string]> = []
+    const apply = createPaymentEntitlementApply(
+      async () => ({
+        kind: "applied",
+        invoice: {
+          id: "inv_internal_1",
+          workspace_id: "wrk_internal_1",
+          status: "refunded",
+          purpose: "subscription",
+        },
+      }),
+      async (workspaceID, invoiceID) => {
+        calls.push([workspaceID, invoiceID])
+      },
+    )
+
+    await expect(apply(refunded)).resolves.toMatchObject({ kind: "applied" })
+    expect(calls).toEqual([["wrk_internal_1", "inv_internal_1"]])
+
+    await createPaymentEntitlementApply(
+      async () => ({
+        kind: "applied",
+        invoice: {
+          id: "inv_credit_1",
+          workspace_id: "wrk_internal_1",
+          status: "refunded",
+          purpose: "credit",
+        },
+      }),
+      async (workspaceID, invoiceID) => {
+        calls.push([workspaceID, invoiceID])
+      },
+    )(refunded)
+    expect(calls).toEqual([["wrk_internal_1", "inv_internal_1"]])
+
+    const errorLog = spyOn(console, "error").mockImplementation(() => {})
+    const retry = message(refunded)
+    const consumer = createPaymentQueueConsumer(
+      createPaymentEntitlementApply(
+        async () => ({
+          kind: "duplicate",
+          invoice: {
+            id: "inv_internal_1",
+            workspace_id: "wrk_internal_1",
+            status: "refunded",
+            purpose: "subscription",
+          },
+        }),
+        async () => {
+          throw new Error("Quota service unavailable")
+        },
+      ),
+    )
+    await consumer.queue({ messages: [retry] })
+    expect(retry.result()).toEqual({ acknowledged: 0, retried: 1 })
     errorLog.mockRestore()
   })
 })

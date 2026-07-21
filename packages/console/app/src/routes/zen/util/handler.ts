@@ -1,10 +1,17 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { and, Database, eq, gte, isNull, lt, or, sql } from "@mongolgpt/console-core/drizzle/index.js"
+import { and, Database, eq, gt, gte, isNull, lt, lte, or, sql } from "@mongolgpt/console-core/drizzle/index.js"
 import { KeyTable } from "@mongolgpt/console-core/schema/key.sql.js"
-import { BillingTable, LiteTable, SubscriptionTable, UsageTable } from "@mongolgpt/console-core/schema/billing.sql.js"
+import {
+  BillingTable,
+  LiteTable,
+  PlanSubscriptionTable,
+  SubscriptionTable,
+  UsageTable,
+} from "@mongolgpt/console-core/schema/billing.sql.js"
 import { centsToMicroCents } from "@mongolgpt/console-core/util/price.js"
 import { getMonthlyBounds, getWeekBounds } from "@mongolgpt/console-core/util/date.js"
 import { Identifier } from "@mongolgpt/console-core/identifier.js"
+import { recordPlanUsageWithDb } from "@mongolgpt/console-core/plan-usage.js"
 import { Billing } from "@mongolgpt/console-core/billing.js"
 import { Actor } from "@mongolgpt/console-core/actor.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
@@ -54,6 +61,7 @@ import { enqueueBatchedUsage, HOT_WORKSPACES } from "./usageBatcher"
 import { verifyCliToken } from "~/lib/cli-auth"
 import { authenticatedRateLimitIdentity, sanitizeProviderRequestHeaders } from "./request-security"
 import { freeAutoReservationUpperBound, reserveFreeAutoQuota } from "./free-auto-quota"
+import { planQuotaReservationBounds, reservePlanQuota } from "./plan-quota"
 import {
   canFailoverProvider,
   cancelProviderResponse,
@@ -131,11 +139,16 @@ export async function handler(
 
   const MAX_FAILOVER_RETRIES = 3
   const MAX_429_RETRIES = 3
+  const MINUTE_IN_SECONDS = 60
   const locale = localeFromRequest(input.request)
   const dict = i18n(locale)
   const t = (key: Key, params?: Record<string, string | number>) => resolve(dict[key], params)
   const freeWorkspaceIDs = configuredWorkspaceIDs(import.meta.env.MONGOLGPT_FREE_WORKSPACE_IDS)
-  const quota = { current: undefined as Awaited<ReturnType<typeof reserveFreeAutoQuota>> }
+  type PlanQuotaReservation = Extract<Awaited<ReturnType<typeof reservePlanQuota>>, { allowed: true }>["reservation"]
+  const quota = {
+    freeAuto: undefined as Awaited<ReturnType<typeof reserveFreeAutoQuota>>,
+    plan: undefined as PlanQuotaReservation | undefined,
+  }
 
   try {
     const url = input.request.url
@@ -182,7 +195,8 @@ export async function handler(
     const stickyTracker = createStickyTracker(modelInfo.id, modelInfo.stickyProvider, stickyId)
     const stickyProvider = await stickyTracker?.get()
     const billingSource = validateBilling(authInfo, modelInfo)
-    quota.current = await reserveFreeAutoWeeklyUsage(authInfo, modelInfo)
+    quota.freeAuto = await reserveFreeAutoWeeklyUsage(authInfo, modelInfo)
+    quota.plan = await reservePaidPlanUsage(billingSource, authInfo, modelInfo)
     logger.metric({ source: billingSource })
     const modelTpmLimiter = createModelTpmLimiter(modelInfo.providers)
     const modelTpmLimits = await modelTpmLimiter?.check()
@@ -343,7 +357,10 @@ export async function handler(
         await modelTpmLimiter?.track(providerInfo.id, providerInfo.model, usageInfo)
         await providerBudgetTracker?.track(providerInfo.id, costInfo.totalCostInCent)
         await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
-        await quota.current?.settle(usageTokenTotal(usageInfo))
+        await settleRequestQuota({
+          costInMicroCents: centsToMicroCents(costInfo.totalCostInCent),
+          tokens: usageTokenTotal(usageInfo),
+        })
         await reload(billingSource, authInfo, costInfo)
         json.cost = calculateOccurredCost(billingSource, costInfo)
       }
@@ -358,7 +375,7 @@ export async function handler(
       const body = JSON.stringify(responseConverter(json))
       const responseLength = contentByteLength(body)
       logger.metric({ response_length: responseLength })
-      await quota.current?.settle()
+      await settleRequestQuota()
       return new Response(body, {
         status: resStatus,
         statusText: res.statusText,
@@ -406,12 +423,15 @@ export async function handler(
                   )
                   await providerBudgetTracker?.track(providerInfo.id, costInfo.totalCostInCent)
                   await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
-                  await quota.current?.settle(usageTokenTotal(usageInfo))
+                  await settleRequestQuota({
+                    costInMicroCents: centsToMicroCents(costInfo.totalCostInCent),
+                    tokens: usageTokenTotal(usageInfo),
+                  })
                   await reload(billingSource, authInfo, costInfo)
                   const cost = calculateOccurredCost(billingSource, costInfo)
                   c.enqueue(encoder.encode(buildCostChunk(opts.format, cost)))
                 }
-                await quota.current?.settle()
+                await settleRequestQuota()
                 c.close()
                 return
               }
@@ -453,12 +473,12 @@ export async function handler(
         }
 
         return pump().catch(async (error) => {
-          await quota.current?.settle()
+          await settleRequestQuota()
           c.error(error)
         })
       },
       async cancel() {
-        await quota.current?.settle()
+        await settleRequestQuota()
       },
     })
     return new Response(stream, {
@@ -467,7 +487,7 @@ export async function handler(
       headers: resHeaders,
     })
   } catch (error) {
-    await quota.current?.settle()
+    await settleRequestQuota()
     logger.metric({
       "error.type": error instanceof Error ? error.constructor.name : "UnknownError",
     })
@@ -706,9 +726,9 @@ export async function handler(
     logger.metric({
       workspace: data.workspaceID,
       ...(() => {
-        if (data.billing.subscription)
+        if (data.planEntitlement)
           return {
-            subscription: data.billing.subscription.plan,
+            subscription: data.planEntitlement.plan,
           }
         if (data.billing.lite)
           return {
@@ -723,6 +743,7 @@ export async function handler(
       workspaceID: data.workspaceID,
       billing: data.billing,
       user: data.user,
+      planEntitlement: data.planEntitlement,
       planUsage: data.planUsage,
       lite: data.lite,
       provider: data.provider,
@@ -732,6 +753,7 @@ export async function handler(
   }
 
   function loadAuthData(modelInfo: ModelInfo, credential: AuthCredential) {
+    const now = new Date()
     const key =
       credential.type === "key"
         ? and(
@@ -767,6 +789,13 @@ export async function handler(
             monthlyLimit: UserTable.monthlyLimit,
             monthlyUsage: UserTable.monthlyUsage,
             timeMonthlyUsageUpdated: UserTable.timeMonthlyUsageUpdated,
+          },
+          planEntitlement: {
+            id: PlanSubscriptionTable.id,
+            invoiceID: PlanSubscriptionTable.invoiceID,
+            plan: PlanSubscriptionTable.plan,
+            timePeriodStart: PlanSubscriptionTable.timePeriodStart,
+            timePeriodEnd: PlanSubscriptionTable.timePeriodEnd,
           },
           planUsage: {
             id: SubscriptionTable.id,
@@ -809,6 +838,16 @@ export async function handler(
                 isNull(ProviderTable.timeDeleted),
               )
             : sql`false`,
+        )
+        .leftJoin(
+          PlanSubscriptionTable,
+          and(
+            eq(PlanSubscriptionTable.workspaceID, UserTable.workspaceID),
+            eq(PlanSubscriptionTable.status, "active"),
+            lte(PlanSubscriptionTable.timePeriodStart, now),
+            gt(PlanSubscriptionTable.timePeriodEnd, now),
+            isNull(PlanSubscriptionTable.timeDeleted),
+          ),
         )
         .leftJoin(
           SubscriptionTable,
@@ -880,6 +919,47 @@ export async function handler(
     return reservation
   }
 
+  async function reservePaidPlanUsage(billingSource: BillingSource, authInfo: AuthInfo, modelInfo: ModelInfo) {
+    if (billingSource !== "plan") return
+    const entitlement = authInfo!.planEntitlement!
+    const limits = PlanData.getLimits({ plan: entitlement.plan })
+    const reservation = planQuotaReservationBounds({
+      weeklyTokenLimit: limits.weeklyTokenLimit,
+      maxTokensPerRequest: modelInfo.maxTokensPerRequest,
+      costs: [modelInfo.cost, modelInfo.cost200K],
+    })
+    const result = await reservePlanQuota({
+      workspaceID: authInfo!.workspaceID,
+      invoiceID: entitlement.invoiceID,
+      userID: authInfo!.user.id,
+      now: new Date(),
+      usage: authInfo!.planUsage ?? undefined,
+      limits,
+      reservation,
+    })
+    if (result.allowed) return result.reservation
+
+    const retryAfter = Math.max(MINUTE_IN_SECONDS, result.retryAfter)
+    throw new PlanUsageLimitError(
+      t("zen.api.error.subscriptionQuotaExceeded", {
+        retryIn: formatRetryTime(retryAfter, locale),
+      }),
+      retryAfter,
+    )
+  }
+
+  function settleRequestQuota(actual?: { costInMicroCents: number; tokens: number }) {
+    return Promise.all([
+      quota.freeAuto?.settle(actual?.tokens),
+      quota.plan?.settle(
+        actual && {
+          costInMicroCents: actual.costInMicroCents,
+          tokens: actual.tokens,
+        },
+      ),
+    ]).then(() => undefined)
+  }
+
   function freeAutoWeeklyLimitError(retryAfter: number) {
     return new FreeUsageLimitError(
       t("zen.api.error.freeAutoWeeklyLimitExceeded", {
@@ -896,13 +976,13 @@ export async function handler(
     if (authInfo.isFree) return "free"
     if (modelInfo.allowAnonymous) return "free"
 
-    if (authInfo.billing.subscription && authInfo.planUsage) {
+    if (authInfo.planEntitlement) {
       try {
         const sub = authInfo.planUsage
-        const plan = authInfo.billing.subscription.plan
+        const plan = authInfo.planEntitlement.plan
         const limits = PlanData.getLimits({ plan })
 
-        if (sub.fixedUsage && sub.timeFixedUpdated) {
+        if (sub?.fixedUsage && sub.timeFixedUpdated) {
           const result = Subscription.analyzeWeeklyUsage({
             limit: limits.weeklyCostLimit,
             usage: sub.fixedUsage,
@@ -917,7 +997,7 @@ export async function handler(
             )
         }
 
-        if (sub.weeklyTokens && sub.timeWeeklyTokensUpdated) {
+        if (sub?.weeklyTokens && sub.timeWeeklyTokensUpdated) {
           const result = Subscription.analyzeWeeklyTokens({
             limit: limits.weeklyTokenLimit,
             usage: sub.weeklyTokens,
@@ -932,7 +1012,7 @@ export async function handler(
             )
         }
 
-        if (sub.rollingUsage && sub.timeRollingUpdated) {
+        if (sub?.rollingUsage && sub.timeRollingUpdated) {
           const result = Subscription.analyzeRollingUsage({
             limit: limits.rollingCostLimit,
             window: limits.rollingWindow,
@@ -950,7 +1030,7 @@ export async function handler(
 
         return "plan"
       } catch (e) {
-        if (!authInfo.billing.subscription.useBalance) throw e
+        if (!authInfo.billing.subscription?.useBalance) throw e
       }
     }
 
@@ -1206,7 +1286,7 @@ export async function handler(
     const country = locationCode(cf?.country ?? input.request.headers.get("cf-ipcountry") ?? undefined)
     const continent = locationCode(cf?.continent)
     const enrichment = (() => {
-      if (billingSource === "plan") return { plan: authInfo.billing.subscription!.plan }
+      if (billingSource === "plan") return { plan: authInfo.planEntitlement!.plan }
       if (billingSource === "byok") return { plan: "byok" as const }
       if (billingSource === "lite") return { plan: "legacy-lite" as const }
       if (billingSource === "balance") return { plan: "balance" as const }
@@ -1254,7 +1334,7 @@ export async function handler(
       }
     }
 
-    await Database.use(async (db) => {
+    await Database.transaction(async (db) => {
       const inserted = await db
         .insert(UsageTable)
         .values({
@@ -1282,53 +1362,23 @@ export async function handler(
         .onConflictDoNothing()
       if (inserted.meta.changes === 0) return
 
+      if (billingSource === "plan") {
+        const plan = authInfo.planEntitlement!.plan
+        const limits = PlanData.getLimits({ plan })
+        await recordPlanUsageWithDb(db, {
+          workspaceID: authInfo.workspaceID,
+          userID: authInfo.user.id,
+          entitlementID: authInfo.planEntitlement!.id,
+          costInMicroCents: cost,
+          tokens: totalTokens,
+          rollingWindowHours: limits.rollingWindow,
+          now,
+        })
+        return
+      }
+
       await Promise.all(
         (() => {
-          if (billingSource === "plan") {
-            const plan = authInfo.billing.subscription!.plan
-            const limits = PlanData.getLimits({ plan })
-            const week = getWeekBounds(now)
-            const weekStartMs = week.start.getTime()
-            const rollingWindowMs = limits.rollingWindow * 3600 * 1000
-            return [
-              db
-                .update(SubscriptionTable)
-                .set({
-                  fixedUsage: sql`
-              CASE
-                WHEN ${SubscriptionTable.timeFixedUpdated} >= ${weekStartMs} THEN COALESCE(${SubscriptionTable.fixedUsage}, 0) + ${cost}
-                ELSE ${cost}
-              END
-            `,
-                  timeFixedUpdated: now,
-                  weeklyTokens: sql`
-              CASE
-                WHEN ${SubscriptionTable.timeWeeklyTokensUpdated} >= ${weekStartMs} THEN COALESCE(${SubscriptionTable.weeklyTokens}, 0) + ${totalTokens}
-                ELSE ${totalTokens}
-              END
-            `,
-                  timeWeeklyTokensUpdated: now,
-                  rollingUsage: sql`
-              CASE
-                WHEN ${SubscriptionTable.timeRollingUpdated} >= ${nowMs - rollingWindowMs} THEN COALESCE(${SubscriptionTable.rollingUsage}, 0) + ${cost}
-                ELSE ${cost}
-              END
-            `,
-                  timeRollingUpdated: sql`
-              CASE
-                WHEN ${SubscriptionTable.timeRollingUpdated} >= ${nowMs - rollingWindowMs} THEN ${SubscriptionTable.timeRollingUpdated}
-                ELSE ${nowMs}
-              END
-            `,
-                })
-                .where(
-                  and(
-                    eq(SubscriptionTable.workspaceID, authInfo.workspaceID),
-                    eq(SubscriptionTable.userID, authInfo.user.id),
-                  ),
-                ),
-            ]
-          }
           if (billingSource === "lite") {
             const lite = LiteData.getLimits()
             const week = getWeekBounds(now)

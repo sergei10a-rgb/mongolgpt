@@ -23,12 +23,13 @@ describe("D1 migration", () => {
       .query("select name from sqlite_schema where type = 'table' and name not like 'sqlite_%' order by name")
       .values()
 
-    expect(tables).toHaveLength(27)
+    expect(tables).toHaveLength(28)
     expect(tables).toContainEqual(["account"])
     expect(tables).toContainEqual(["enterprise_inquiry"])
     expect(tables).toContainEqual(["newsletter_subscriber"])
     expect(tables).toContainEqual(["payment_event"])
     expect(tables).toContainEqual(["payment_invoice"])
+    expect(tables).toContainEqual(["plan_subscription"])
     expect(tables).toContainEqual(["workspace"])
   })
 
@@ -46,6 +47,19 @@ describe("D1 migration", () => {
       database
         .query("insert into billing (id, workspace_id, balance, subscription) values (?, ?, ?, ?)")
         .run("billing-id", "workspace-id", 0, "{"),
+    ).toThrow()
+
+    database
+      .query(
+        "insert into plan_subscription (id, workspace_id, invoice_id, plan, time_period_start, time_period_end) values (?, ?, ?, ?, ?, ?)",
+      )
+      .run("sub-1", "workspace-id", "invoice-1", "basic", 1, 2)
+    expect(() =>
+      database
+        .query(
+          "insert into plan_subscription (id, workspace_id, invoice_id, plan, time_period_start, time_period_end) values (?, ?, ?, ?, ?, ?)",
+        )
+        .run("sub-2", "workspace-id", "invoice-2", "pro", 1, 2),
     ).toThrow()
   })
 })

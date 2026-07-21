@@ -13,6 +13,8 @@ export {
   PaymentProviders,
   PaymentPurposes,
   PaymentTable,
+  PlanSubscriptionStatuses,
+  PlanSubscriptionTable,
   PlanNames,
   SubscriptionTable,
   UsageTable,

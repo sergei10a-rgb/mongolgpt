@@ -33,6 +33,9 @@ function expirationOf(command: QuotaLedgerCommand) {
   if (command.type === "claim") return command.expiresAt ?? undefined
   if (command.type === "ip-claim") return command.dailyExpiresAt
   if (command.type === "reserve" || command.type === "settle") return command.expiresAt
+  if (command.type === "reserve-many" || command.type === "settle-many") {
+    return Math.min(...command.entries.map((entry) => entry.expiresAt))
+  }
   return undefined
 }
 

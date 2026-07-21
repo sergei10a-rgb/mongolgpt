@@ -344,6 +344,7 @@ describe("Cloudflare deployment preflight", () => {
     models.liteModels.assistant = {
       name: "Assistant",
       cost: { input: 0, output: 0 },
+      maxTokensPerRequest: 32_000,
       providers: [{ id: "sample", model: "sample-model-id" }],
     }
     models.providers.sample = {

@@ -19,9 +19,7 @@ export type PlanQuotaInput = {
   invoiceID: string
   userID: string
   now: Date
-  existingPlanUsage?: PlanQuotaUsage
-  planUsage?: PlanQuotaUsage
-  existing?: PlanQuotaUsage
+  usage?: PlanQuotaUsage
   limits: {
     weeklyCostLimit: number
     weeklyTokenLimit: number
@@ -55,6 +53,35 @@ const WEEKLY_TOKENS = "weekly-tokens"
 const ROLLING_COST = "rolling-cost"
 const SECOND = 1_000
 const MINUTE = 60
+
+type ModelCost = {
+  input: number
+  output: number
+  cacheRead?: number
+  cacheWrite5m?: number
+  cacheWrite1h?: number
+}
+
+export function planQuotaReservationBounds(input: {
+  weeklyTokenLimit: number
+  maxTokensPerRequest?: number
+  costs: Array<ModelCost | undefined>
+}) {
+  if (!Number.isSafeInteger(input.weeklyTokenLimit) || input.weeklyTokenLimit < 1) {
+    throw new TypeError("Plan weekly token limit is invalid")
+  }
+  const configured = input.maxTokensPerRequest ?? input.weeklyTokenLimit
+  if (!Number.isSafeInteger(configured) || configured < 1) {
+    throw new TypeError("Model request token bound is invalid")
+  }
+  const tokens = Math.min(configured, input.weeklyTokenLimit)
+  const rates = input.costs.flatMap((cost) => (cost ? Object.values(cost) : []))
+  if (rates.some((rate) => !Number.isFinite(rate) || rate < 0)) throw new TypeError("Model cost is invalid")
+  const highestRate = Math.max(0, ...rates)
+  const costInMicroCents = Math.max(1, centsToMicroCents(highestRate * tokens * 100))
+  if (!Number.isSafeInteger(costInMicroCents)) throw new TypeError("Model request cost bound is invalid")
+  return { costInMicroCents, tokens }
+}
 
 function counterKey(userID: string, dimension: string) {
   return `user/${userID}/${dimension}`
@@ -105,6 +132,12 @@ function responseObject(value: unknown): Record<string, unknown> | undefined {
   return value as Record<string, unknown>
 }
 
+function validLedgerValues(value: unknown, expectedKeys: readonly string[]) {
+  const object = responseObject(value)
+  if (!object || Object.keys(object).length !== expectedKeys.length) return false
+  return expectedKeys.every((key) => nonnegativeInteger(object[key]) !== undefined)
+}
+
 function blockedRetryAfter(
   blockedKey: unknown,
   keys: { weeklyCost: string; weeklyTokens: string; rollingCost: string },
@@ -126,11 +159,23 @@ export async function reservePlanQuota(
   client: PlanQuotaLedgerClient = ledgerCommand,
 ): Promise<PlanQuotaResult> {
   const now = input.now.getTime()
-  if (!Number.isFinite(now)) return { allowed: false, retryAfter: MINUTE, deactivated: false }
+  if (!Number.isSafeInteger(now) || now < 0) return { allowed: false, retryAfter: MINUTE, deactivated: false }
+  if (
+    !Number.isSafeInteger(input.limits.weeklyTokenLimit) ||
+    input.limits.weeklyTokenLimit < 1 ||
+    !Number.isSafeInteger(input.limits.rollingWindow) ||
+    input.limits.rollingWindow < 1 ||
+    validLimit(input.limits.weeklyCostLimit) < 1 ||
+    validLimit(input.limits.rollingCostLimit) < 1 ||
+    nonnegativeInteger(input.reservation.costInMicroCents) === undefined ||
+    nonnegativeInteger(input.reservation.tokens) === undefined
+  ) {
+    return { allowed: false, retryAfter: MINUTE, deactivated: false }
+  }
 
   const weekEnd = nextMonday(input.now)
   const rollingWindowMs = Math.max(1, input.limits.rollingWindow * 60 * 60 * 1_000)
-  const existing = input.existingPlanUsage ?? input.planUsage ?? input.existing
+  const existing = input.usage
   const weekStart = weekEnd - 7 * 24 * 60 * 60 * 1_000
   const rollingThreshold = now - rollingWindowMs
   const rollingUpdated = timestamp(existing?.timeRollingUpdated)
@@ -143,6 +188,7 @@ export async function reservePlanQuota(
     weeklyTokens: counterKey(input.userID, WEEKLY_TOKENS),
     rollingCost: counterKey(input.userID, ROLLING_COST),
   }
+  const ledgerKeys = [keys.weeklyCost, keys.weeklyTokens, keys.rollingCost] as const
   const amounts = {
     cost: Math.max(1, validAmount(input.reservation.costInMicroCents)),
     tokens: Math.max(1, validAmount(input.reservation.tokens)),
@@ -186,7 +232,11 @@ export async function reservePlanQuota(
   }
 
   const parsed = responseObject(response)
-  if (!parsed || typeof parsed.allowed !== "boolean") {
+  if (
+    !parsed ||
+    typeof parsed.allowed !== "boolean" ||
+    (parsed.allowed && !validLedgerValues(parsed.values, ledgerKeys))
+  ) {
     return { allowed: false, retryAfter: MINUTE, deactivated: false }
   }
   if (!parsed.allowed) {
@@ -221,7 +271,13 @@ export async function reservePlanQuota(
             },
           ],
         }
-        settlementState.promise = client(scope, settleCommand).then(() => undefined)
+        settlementState.promise = client(scope, settleCommand).then((value) => {
+          const parsed = responseObject(value)
+          if (parsed?.overrun === true) throw new Error("Plan quota settlement exceeded its reservation")
+          if (!parsed || (parsed.deactivated !== true && !validLedgerValues(parsed.values, ledgerKeys))) {
+            throw new Error("Plan quota settlement response is invalid")
+          }
+        })
         return settlementState.promise
       },
     },

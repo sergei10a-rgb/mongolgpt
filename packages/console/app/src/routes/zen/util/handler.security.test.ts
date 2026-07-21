@@ -72,4 +72,13 @@ describe("Zen handler telemetry security", () => {
       /eq\(ProviderTable\.provider,\s*modelInfo\.byokProvider\),\s*isNull\(ProviderTable\.timeDeleted\)/,
     )
   })
+
+  test("rechecks plan entitlement inside the usage transaction", () => {
+    expect(source).toContain("await Database.transaction(async (db) =>")
+    expect(source).toContain("await recordPlanUsageWithDb(db, {")
+    expect(source).toContain("entitlementID: authInfo.planEntitlement!.id")
+    expect(source).toMatch(
+      /lte\(PlanSubscriptionTable\.timePeriodStart, now\)[\s\S]*gt\(PlanSubscriptionTable\.timePeriodEnd, now\)/,
+    )
+  })
 })

@@ -102,4 +102,34 @@ describe("MongolGPT Free Auto model contract", () => {
       /model id must not be empty/,
     )
   })
+
+  test("accepts only bounded nonnegative managed-model cost metadata", () => {
+    expect(() =>
+      validate({
+        ...config(model),
+        zenModels: {
+          paid: {
+            name: "Paid",
+            cost: { input: 0.000001, output: 0.000002 },
+            maxTokensPerRequest: 32_000,
+            providers: [{ id: "primary", model: "paid-model" }],
+          },
+        },
+      }),
+    ).not.toThrow()
+    expect(() => validate(config({ ...model, cost: { input: -1, output: 1 } }))).toThrow()
+    expect(() => validate(config({ ...model, maxTokensPerRequest: 0 }))).toThrow()
+    expect(() =>
+      validate({
+        ...config(model),
+        zenModels: {
+          paid: {
+            name: "Paid",
+            cost: { input: 0.000001, output: 0.000002 },
+            providers: [{ id: "primary", model: "paid-model" }],
+          },
+        },
+      }),
+    ).toThrow(/maxTokensPerRequest/)
+  })
 })

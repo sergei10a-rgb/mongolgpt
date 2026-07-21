@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test"
-import { reservePlanQuota } from "./plan-quota"
+import { planQuotaReservationBounds, reservePlanQuota } from "./plan-quota"
 
 const now = new Date("2026-07-22T12:00:00.000Z")
+const ledgerValues = {
+  "user/user-1/weekly-cost": 250_000,
+  "user/user-1/weekly-tokens": 4_000,
+  "user/user-1/rolling-cost": 250_000,
+}
 
 function input(overrides: Record<string, unknown> = {}) {
   return {
@@ -25,7 +30,7 @@ describe("plan quota reservation", () => {
     const calls: Array<{ scope: string; command: Record<string, unknown> }> = []
     const quota = await reservePlanQuota(input(), async (scope, command) => {
       calls.push({ scope, command: command as Record<string, unknown> })
-      return { allowed: true, values: {} }
+      return { allowed: true, values: ledgerValues }
     })
 
     expect(quota.allowed).toBe(true)
@@ -44,7 +49,7 @@ describe("plan quota reservation", () => {
     let command: Record<string, unknown> | undefined
     await reservePlanQuota(
       input({
-        existingPlanUsage: {
+        usage: {
           fixedUsage: 999,
           timeFixedUpdated: new Date("2026-07-12T23:59:59.000Z"),
           weeklyTokens: 888,
@@ -55,7 +60,7 @@ describe("plan quota reservation", () => {
       }),
       async (_scope, value) => {
         command = value as Record<string, unknown>
-        return { allowed: true }
+        return { allowed: true, values: ledgerValues }
       },
     )
 
@@ -79,7 +84,7 @@ describe("plan quota reservation", () => {
     const calls: Array<Record<string, unknown>> = []
     const quota = await reservePlanQuota(input(), async (_scope, command) => {
       calls.push(command as Record<string, unknown>)
-      return { allowed: true }
+      return { allowed: true, values: ledgerValues }
     })
     if (!quota.allowed) throw new Error("expected reservation")
 
@@ -101,7 +106,7 @@ describe("plan quota reservation", () => {
     let settled: Record<string, unknown> | undefined
     const quota = await reservePlanQuota(input(), async (_scope, command) => {
       if (command.type === "settle-many") settled = command as Record<string, unknown>
-      return { allowed: true }
+      return { allowed: true, values: ledgerValues }
     })
     if (!quota.allowed) throw new Error("expected reservation")
     await quota.reservation.settle()
@@ -110,8 +115,37 @@ describe("plan quota reservation", () => {
     ])
   })
 
+  test("rejects a provider usage overrun reported by the atomic ledger", async () => {
+    const quota = await reservePlanQuota(input(), async (_scope, command) => {
+      if (command.type === "settle-many") {
+        return { deactivated: true, overrun: true, values: ledgerValues }
+      }
+      return { allowed: true, values: ledgerValues }
+    })
+    if (!quota.allowed) throw new Error("expected reservation")
+
+    await expect(quota.reservation.settle({ costInMicroCents: 250_001, tokens: 4_001 })).rejects.toThrow(
+      "exceeded its reservation",
+    )
+  })
+
   test("fails closed for malformed responses and deactivated ledgers", async () => {
     await expect(reservePlanQuota(input(), async () => ({ values: {} }))).resolves.toEqual({
+      allowed: false,
+      retryAfter: 60,
+      deactivated: false,
+    })
+    await expect(reservePlanQuota(input(), async () => ({ allowed: true, values: {} }))).resolves.toEqual({
+      allowed: false,
+      retryAfter: 60,
+      deactivated: false,
+    })
+    await expect(
+      reservePlanQuota(input(), async () => ({
+        allowed: true,
+        values: { ...ledgerValues, unexpected: 0 },
+      })),
+    ).resolves.toEqual({
       allowed: false,
       retryAfter: 60,
       deactivated: false,
@@ -121,5 +155,24 @@ describe("plan quota reservation", () => {
       retryAfter: 0,
       deactivated: true,
     })
+  })
+
+  test("derives a conservative request reservation from all configured model rates", () => {
+    expect(
+      planQuotaReservationBounds({
+        weeklyTokenLimit: 100_000,
+        maxTokensPerRequest: 32_000,
+        costs: [
+          { input: 0.000001, output: 0.000004, cacheRead: 0.0000005 },
+          { input: 0.000002, output: 0.000006 },
+        ],
+      }),
+    ).toEqual({ tokens: 32_000, costInMicroCents: 19_200_000 })
+    expect(() =>
+      planQuotaReservationBounds({
+        weeklyTokenLimit: 100_000,
+        costs: [{ input: -1, output: 1 }],
+      }),
+    ).toThrow("Model cost is invalid")
   })
 })

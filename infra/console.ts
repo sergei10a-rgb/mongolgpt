@@ -61,19 +61,6 @@ export const paymentQueue = new sst.cloudflare.Queue("PaymentQueue", {
   },
 })
 
-paymentQueue.subscribe(
-  {
-    handler: "packages/console/function/src/payment-queue.ts",
-    link: [database],
-  },
-  {
-    batch: {
-      size: 10,
-      window: "5 seconds",
-    },
-  },
-)
-
 const paymentEnvironment = process.env.MONGOLGPT_PAYMENT_ENVIRONMENT?.trim() || "disabled"
 if (!["disabled", "sandbox", "production"].includes(paymentEnvironment)) {
   throw new Error("MONGOLGPT_PAYMENT_ENVIRONMENT must be disabled, sandbox, or production.")
@@ -139,6 +126,30 @@ export const quotaService = new sst.cloudflare.Worker("QuotaService", {
           className: "QuotaLedger",
         },
       ])
+    },
+  },
+})
+
+paymentQueue.subscribe(
+  {
+    handler: "packages/console/function/src/payment-queue.ts",
+    link: [database, quotaService, SECRET.QuotaServiceToken],
+  },
+  {
+    batch: {
+      size: 10,
+      window: "5 seconds",
+    },
+  },
+)
+
+export const subscriptionExpiration = new sst.cloudflare.Cron("SubscriptionExpiration", {
+  schedules: ["*/5 * * * *"],
+  worker: {
+    handler: "packages/console/function/src/subscription-expiration.ts",
+    link: [database],
+    compatibility: {
+      date: "2026-07-15",
     },
   },
 })

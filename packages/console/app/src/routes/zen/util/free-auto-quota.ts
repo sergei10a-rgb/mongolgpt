@@ -35,6 +35,9 @@ export async function reserveFreeAutoQuota(
     }),
   )
   if (!result.allowed) return
+  if (!Number.isSafeInteger(result.value) || Number(result.value) < 0) {
+    throw new Error("Free Auto quota reserve хариу буруу байна")
+  }
 
   const state: { settle?: Promise<void> } = {}
   return {
@@ -47,7 +50,15 @@ export async function reserveFreeAutoQuota(
         reservationID,
         actual: Math.max(0, Math.ceil(actualUsage)),
         expiresAt,
-      }).then(() => undefined)
+      }).then((value) => {
+        if (!value || typeof value !== "object") throw new Error("Free Auto quota settlement хариу буруу байна")
+        if ("overrun" in value && value.overrun === true) {
+          throw new Error("Free Auto хэрэглээ нөөцөлсөн хэмжээнээс хэтэрлээ")
+        }
+        if (!("value" in value) || !Number.isSafeInteger(value.value) || Number(value.value) < 0) {
+          throw new Error("Free Auto quota settlement хариу буруу байна")
+        }
+      })
       return state.settle
     },
   }

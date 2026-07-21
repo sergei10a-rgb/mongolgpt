@@ -19,6 +19,7 @@ export const PaymentInvoiceStatuses = [
 ] as const
 export const PaymentEventTypes = ["pending", "paid", "failed", "expired", "cancelled", "refunded"] as const
 export const PaymentEventOutcomes = ["applied", "noop", "rejected"] as const
+export const PlanSubscriptionStatuses = ["active", "expired", "cancelled", "refunded"] as const
 export const NewsletterSubscriberStatus = ["active", "unsubscribed"] as const
 export const NewsletterSubscriberSource = ["console", "stats"] as const
 export const EnterpriseInquiryStatus = ["new", "reviewing", "resolved", "spam"] as const
@@ -118,10 +119,7 @@ export const EnterpriseInquiryTable = sqliteTable(
     index("enterprise_inquiry_status_time_created").on(table.status, table.timeCreated),
     index("enterprise_inquiry_email").on(table.email),
     check("enterprise_inquiry_source_check", sql`${table.source} in ('enterprise')`),
-    check(
-      "enterprise_inquiry_status_check",
-      sql`${table.status} in ('new', 'reviewing', 'resolved', 'spam')`,
-    ),
+    check("enterprise_inquiry_status_check", sql`${table.status} in ('new', 'reviewing', 'resolved', 'spam')`),
   ],
 )
 
@@ -186,6 +184,10 @@ export const BillingTable = sqliteTable(
       plan: (typeof PlanNames)[number]
       useBalance?: boolean
       coupon?: string
+      source?: "stripe" | (typeof PaymentProviders)[number]
+      invoiceID?: string
+      currentPeriodStart?: number
+      currentPeriodEnd?: number
     }>(),
     subscriptionID: text("subscription_id", { length: 28 }),
     subscriptionPlan: text("subscription_plan", { enum: PlanNames }),
@@ -226,6 +228,33 @@ export const SubscriptionTable = sqliteTable(
   ],
 )
 
+export const PlanSubscriptionTable = sqliteTable(
+  "plan_subscription",
+  {
+    id: id(),
+    workspaceID: ulid("workspace_id").notNull(),
+    invoiceID: ulid("invoice_id").notNull(),
+    plan: text("plan", { enum: PlanNames }).notNull(),
+    status: text("status", { enum: PlanSubscriptionStatuses }).notNull().default("active"),
+    timePeriodStart: utc("time_period_start").notNull(),
+    timePeriodEnd: utc("time_period_end").notNull(),
+    timeCancelled: utc("time_cancelled"),
+    timeRefunded: utc("time_refunded"),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    uniqueIndex("plan_subscription_invoice_id").on(table.invoiceID),
+    index("plan_subscription_workspace_period_end").on(table.workspaceID, table.timePeriodEnd),
+    uniqueIndex("plan_subscription_workspace_active")
+      .on(table.workspaceID)
+      .where(sql`${table.status} = 'active' and ${table.timeDeleted} is null`),
+    check("plan_subscription_plan_check", sql`${table.plan} in ('basic', 'pro', 'max')`),
+    check("plan_subscription_status_check", sql`${table.status} in ('active', 'expired', 'cancelled', 'refunded')`),
+    check("plan_subscription_period_check", sql`${table.timePeriodEnd} > ${table.timePeriodStart}`),
+  ],
+)
+
 export const LiteTable = sqliteTable(
   "lite",
   {
@@ -239,10 +268,7 @@ export const LiteTable = sqliteTable(
     timeWeeklyUpdated: utc("time_weekly_updated"),
     timeMonthlyUpdated: utc("time_monthly_updated"),
   },
-  (table) => [
-    ...workspaceIndexes(table),
-    uniqueIndex("lite_workspace_user_id").on(table.workspaceID, table.userID),
-  ],
+  (table) => [...workspaceIndexes(table), uniqueIndex("lite_workspace_user_id").on(table.workspaceID, table.userID)],
 )
 
 export const PaymentTable = sqliteTable(
@@ -507,10 +533,7 @@ export const ModelTable = sqliteTable(
     ...timestamps,
     model: text("model", { length: 64 }).notNull(),
   },
-  (table) => [
-    ...workspaceIndexes(table),
-    uniqueIndex("model_workspace_model").on(table.workspaceID, table.model),
-  ],
+  (table) => [...workspaceIndexes(table), uniqueIndex("model_workspace_model").on(table.workspaceID, table.model)],
 )
 
 export const ProviderTable = sqliteTable(
@@ -534,10 +557,7 @@ export const ReferralCodeTable = sqliteTable(
     code: text("code", { length: 10 }).notNull(),
     ...timestamps,
   },
-  (table) => [
-    primaryKey({ columns: [table.workspaceID] }),
-    uniqueIndex("referral_code_code").on(table.code),
-  ],
+  (table) => [primaryKey({ columns: [table.workspaceID] }), uniqueIndex("referral_code_code").on(table.code)],
 )
 
 export const ReferralTable = sqliteTable(
@@ -547,10 +567,7 @@ export const ReferralTable = sqliteTable(
     ...timestamps,
     inviteeAccountID: ulid("invitee_account_id").notNull(),
   },
-  (table) => [
-    ...workspaceIndexes(table),
-    uniqueIndex("referral_invitee_account_id").on(table.inviteeAccountID),
-  ],
+  (table) => [...workspaceIndexes(table), uniqueIndex("referral_invitee_account_id").on(table.inviteeAccountID)],
 )
 
 export const ReferralRewardTable = sqliteTable(

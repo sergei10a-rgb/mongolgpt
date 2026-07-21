@@ -69,4 +69,24 @@ describe("Free Auto weekly quota reservation", () => {
 
     expect(calls[1]?.actual).toBe(2_000)
   })
+
+  test("fails closed when provider usage exceeds the reserved request bound", async () => {
+    const quota = await reserveFreeAutoQuota(
+      {
+        workspaceID: "workspace-1",
+        modelID: "free-auto",
+        weekStart: new Date("2026-07-13T00:00:00.000Z"),
+        persistedUsage: 0,
+        reservation: 2_000,
+        weeklyLimit: 100_000,
+        ttlSeconds: 7_200,
+      },
+      async (_scope, command) =>
+        command.type === "reserve"
+          ? { allowed: true, value: 2_000 }
+          : { deactivated: true, overrun: true, value: 2_000 },
+    )
+
+    await expect(quota!.settle(2_001)).rejects.toThrow("нөөцөлсөн хэмжээнээс хэтэрлээ")
+  })
 })
