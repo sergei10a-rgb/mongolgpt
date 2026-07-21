@@ -66,6 +66,24 @@ describe("Cloudflare hosted infrastructure contract", () => {
     ])
   })
 
+  test("does not bind legacy Stripe credentials to the hosted console", async () => {
+    const sources = await Promise.all(
+      ["../../../infra/console.ts", "../../../sst-env.d.ts"].map((path) =>
+        Bun.file(new URL(path, import.meta.url)).text(),
+      ),
+    )
+    const legacyBindings = [
+      "STRIPE_SECRET_KEY",
+      "STRIPE_PUBLISHABLE_KEY",
+      "STRIPE_WEBHOOK_SECRET",
+      "VITE_STRIPE_PUBLISHABLE_KEY",
+    ]
+
+    for (const source of sources) {
+      for (const binding of legacyBindings) expect(source).not.toContain(binding)
+    }
+  })
+
   test("syncs every hosted credential into the SST stage before deployment", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
     const workflow = parseWorkflow(source)

@@ -9,7 +9,6 @@ import { UserTable } from "./schema/user.sql"
 import { WorkspaceTable } from "./schema/workspace.sql"
 import { centsToMicroCents, microCentsToCents } from "./util/price"
 import { fn } from "./util/fn"
-import { Billing } from "./billing"
 import { LiteData } from "./lite"
 import { Subscription } from "./subscription"
 import { ulid } from "ulid"
@@ -17,6 +16,26 @@ import { ulid } from "ulid"
 export namespace Referral {
   export const REWARD_AMOUNT = centsToMicroCents(500)
   export const CODE_LENGTH = 10
+
+  async function subtractLiteUsage(workspaceID: string, amountInMicroCents: number) {
+    await Database.transaction(async (tx) => {
+      const lite = await tx
+        .select({ id: LiteTable.id })
+        .from(LiteTable)
+        .where(and(eq(LiteTable.workspaceID, workspaceID), isNull(LiteTable.timeDeleted)))
+        .then((rows) => rows[0])
+      if (!lite) throw new Error("Legacy Lite subscription is required to apply this referral reward")
+
+      await tx
+        .update(LiteTable)
+        .set({
+          monthlyUsage: sql`max(0, coalesce(${LiteTable.monthlyUsage}, 0) - ${amountInMicroCents})`,
+          weeklyUsage: sql`max(0, coalesce(${LiteTable.weeklyUsage}, 0) - ${amountInMicroCents})`,
+          rollingUsage: sql`max(0, coalesce(${LiteTable.rollingUsage}, 0) - ${amountInMicroCents})`,
+        })
+        .where(and(eq(LiteTable.workspaceID, workspaceID), isNull(LiteTable.timeDeleted)))
+    })
+  }
 
   export function normalizeCode(code?: string | null) {
     return code
@@ -209,7 +228,7 @@ export namespace Referral {
         )
       if (update.meta.changes === 0) throw new Error("Referral reward already applied")
 
-      await Billing.subtractLiteUsage(workspaceID, reward.amount)
+      await subtractLiteUsage(workspaceID, reward.amount)
 
       return { amount: microCentsToCents(reward.amount) }
     })

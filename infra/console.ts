@@ -165,8 +165,8 @@ const GITHUB_CLIENT_SECRET_CONSOLE = new sst.Secret("GITHUB_CLIENT_SECRET_CONSOL
 const GOOGLE_CLIENT_ID = new sst.Secret("GOOGLE_CLIENT_ID")
 const devCloudflareSecrets = $dev
   ? [
-      new sst.Secret("CLOUDFLARE_DEFAULT_ACCOUNT_ID", process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID!),
-      new sst.Secret("CLOUDFLARE_API_TOKEN", process.env.CLOUDFLARE_API_TOKEN!),
+      new sst.Secret("CLOUDFLARE_DEFAULT_ACCOUNT_ID", process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID),
+      new sst.Secret("CLOUDFLARE_API_TOKEN", process.env.CLOUDFLARE_API_TOKEN),
     ]
   : []
 const authStorage = new sst.cloudflare.Kv("AuthStorage")
@@ -245,13 +245,8 @@ const ZEN_MODELS = [
   new sst.Secret("ZEN_MODELS29", ""),
   new sst.Secret("ZEN_MODELS30", ""),
 ]
-const STRIPE_SECRET_KEY = new sst.Secret("STRIPE_SECRET_KEY", disabledBillingValue)
-const STRIPE_PUBLISHABLE_KEY = new sst.Secret("STRIPE_PUBLISHABLE_KEY", disabledBillingValue)
 const AUTH_API_URL = new sst.Linkable("AUTH_API_URL", {
   properties: { value: auth.url.apply((url) => url!) },
-})
-const STRIPE_WEBHOOK_SECRET = new sst.Linkable("STRIPE_WEBHOOK_SECRET", {
-  properties: { value: disabledBillingValue },
 })
 
 ////////////////
@@ -286,10 +281,8 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     SECRET.PaymentServiceToken,
     SECRET.ByokCredentialsKeyV1,
     AUTH_API_URL,
-    STRIPE_WEBHOOK_SECRET,
     SECRET.SupportApiKey,
     SECRET.HoneycombWebhookSecret,
-    STRIPE_SECRET_KEY,
     MONGOLGPT_PLAN_PRICE,
     ZEN_LITE_PRICE,
     new sst.Secret("MONGOLGPT_PLAN_LIMITS"),
@@ -304,7 +297,6 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     MONGOLGPT_COOKIE_DOMAIN: process.env.MONGOLGPT_COOKIE_DOMAIN?.trim() || ($dev ? "" : `.${domain}`),
     VITE_MONGOLGPT_BILLING_ENABLED: "false",
     MONGOLGPT_BILLING_PROVIDER: "disabled",
-    VITE_STRIPE_PUBLISHABLE_KEY: STRIPE_PUBLISHABLE_KEY.value,
     VITE_MONGOLGPT_PUBLIC_URL: publicOrigin,
     VITE_MONGOLGPT_DOCS_URL: docsOrigin,
     VITE_MONGOLGPT_ENTERPRISE_URL: enableShareService ? shareOrigin : "",
