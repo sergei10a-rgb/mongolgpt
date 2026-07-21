@@ -3,6 +3,7 @@ import { dirname, join } from "node:path"
 import { defineConfig, type Plugin, type PluginOption } from "vite"
 import { solidStart } from "@solidjs/start/config"
 import { nitro } from "nitro/vite"
+import { normalizeSolidStartRoutePaths } from "./vite-route-manifest"
 
 const require = createRequire(import.meta.url)
 
@@ -47,6 +48,7 @@ function resolveMangledSolidStartRuntimeImports(): Plugin {
       const compact = source.replace(/[^a-z0-9]/gi, "").toLowerCase()
       if (compact.includes("solidjsstartdistserverserverfnsruntime")) return serverFnsRuntime
       if (compact.includes("solidjsstartdistserverserverruntime")) return serverRuntime
+      return undefined
     },
   }
 }
@@ -57,6 +59,7 @@ export default defineConfig({
     solidStart({
       middleware: "./src/middleware.ts",
     }) as PluginOption,
+    normalizeSolidStartRoutePaths(),
     quoteWindowsDefinePaths(),
     nitro({
       compatibilityDate: "2024-09-19",
