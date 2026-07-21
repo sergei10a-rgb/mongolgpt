@@ -1,141 +1,137 @@
-import { Billing } from "@mongolgpt/console-core/billing.js"
-import { query, action, useParams, createAsync, useAction } from "@solidjs/router"
-import { For, Match, Show, Switch } from "solid-js"
+import { Actor } from "@mongolgpt/console-core/actor.js"
+import {
+  getWorkspacePaymentHistory,
+  type WorkspacePaymentHistoryItem,
+} from "@mongolgpt/console-core/payment-history.js"
+import { createAsync, query, useParams } from "@solidjs/router"
+import { ErrorBoundary, For, Show } from "solid-js"
 import { withActor } from "~/context/auth.withActor"
-import { formatDateUTC, formatDateForTable } from "../../common"
 import styles from "./payment-section.module.css"
-import { useI18n } from "~/context/i18n"
 
-function money(amount: number, currency?: string) {
-  const formatter =
-    currency === "inr"
-      ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" })
-      : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" })
-  return formatter.format(amount / 100_000_000)
-}
+const providerNames = { qpay: "QPay", bonum: "Bonum" } as const
+const planNames = { basic: "Basic", pro: "Pro", max: "Max" } as const
 
-const getPaymentsInfo = query(async (workspaceID: string) => {
+const queryPaymentHistory = query(async (workspaceID: string) => {
   "use server"
   return withActor(async () => {
-    return await Billing.payments()
+    Actor.assertAdmin()
+    return getWorkspacePaymentHistory(Actor.workspace())
   }, workspaceID)
-}, "payment.list")
-
-const downloadReceipt = action(async (workspaceID: string, paymentID: string) => {
-  "use server"
-  return withActor(() => Billing.generateReceiptUrl({ paymentID }), workspaceID)
-}, "receipt.download")
+}, "subscription.billing.history")
 
 export function PaymentSection() {
   const params = useParams()
-  const i18n = useI18n()
-  const payments = createAsync(() => getPaymentsInfo(params.id!))
-  const downloadReceiptAction = useAction(downloadReceipt)
-
-  // DUMMY DATA FOR TESTING
-  // const payments = () => [
-  //   {
-  //     id: "pi_3QK1x2FT9vXn4A6r1234567890",
-  //     paymentID: "pi_3QK1x2FT9vXn4A6r1234567890",
-  //     timeCreated: new Date(Date.now() - 86400000 * 1).toISOString(), // 1 day ago
-  //     amount: 2100000000, // $21.00 ($20 + $1 fee)
-  //   },
-  //   {
-  //     id: "pi_3QJ8k7FT9vXn4A6r0987654321",
-  //     paymentID: "pi_3QJ8k7FT9vXn4A6r0987654321",
-  //     timeCreated: new Date(Date.now() - 86400000 * 15).toISOString(), // 15 days ago
-  //     amount: 2100000000, // $21.00
-  //   },
-  //   {
-  //     id: "pi_3QI5m1FT9vXn4A6r5678901234",
-  //     paymentID: "pi_3QI5m1FT9vXn4A6r5678901234",
-  //     timeCreated: new Date(Date.now() - 86400000 * 32).toISOString(), // 32 days ago
-  //     amount: 2100000000, // $21.00
-  //   },
-  //   {
-  //     id: "pi_3QH2n9FT9vXn4A6r3456789012",
-  //     paymentID: "pi_3QH2n9FT9vXn4A6r3456789012",
-  //     timeCreated: new Date(Date.now() - 86400000 * 47).toISOString(), // 47 days ago
-  //     amount: 2100000000, // $21.00
-  //   },
-  //   {
-  //     id: "pi_3QG7p4FT9vXn4A6r7890123456",
-  //     paymentID: "pi_3QG7p4FT9vXn4A6r7890123456",
-  //     timeCreated: new Date(Date.now() - 86400000 * 63).toISOString(), // 63 days ago
-  //     amount: 2100000000, // $21.00
-  //   },
-  // ]
+  const history = createAsync(() => queryPaymentHistory(params.id!))
 
   return (
-    <Show when={payments() && payments()!.length > 0}>
-      <section class={styles.root}>
-        <div data-slot="section-title">
-          <h2>{i18n.t("workspace.payments.title")}</h2>
-          <p>{i18n.t("workspace.payments.subtitle")}</p>
-        </div>
-        <div data-slot="payments-table">
-          <table data-slot="payments-table-element">
-            <thead>
-              <tr>
-                <th>{i18n.t("workspace.payments.table.date")}</th>
-                <th>{i18n.t("workspace.payments.table.paymentId")}</th>
-                <th>{i18n.t("workspace.payments.table.amount")}</th>
-                <th>{i18n.t("workspace.payments.table.receipt")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <For each={payments()!}>
-                {(payment) => {
-                  const date = new Date(payment.timeCreated)
-                  const amount =
-                    payment.enrichment?.type === "subscription" && payment.enrichment.couponID ? 0 : payment.amount
-                  const currency =
-                    payment.enrichment?.type === "subscription" || payment.enrichment?.type === "lite"
-                      ? payment.enrichment.currency
-                      : undefined
-                  return (
+    <section class={styles.root} aria-labelledby="payment-history-title">
+      <div data-slot="section-title">
+        <h2 id="payment-history-title">Төлбөрийн түүх</h2>
+        <p>Сүүлийн 25 QPay болон Bonum нэхэмжлэхийн одоогийн төлөв.</p>
+      </div>
+      <ErrorBoundary
+        fallback={
+          <div data-slot="error" role="alert">
+            Төлбөрийн түүхийг ачаалж чадсангүй. Хуудсаа дахин ачаална уу.
+          </div>
+        }
+      >
+        <Show
+          when={history()}
+          fallback={
+            <div data-slot="loading" role="status" aria-live="polite">
+              Төлбөрийн түүхийг ачаалж байна...
+            </div>
+          }
+        >
+          {(items) => (
+            <Show
+              when={items().length > 0}
+              fallback={
+                <div data-slot="empty">
+                  <strong>Төлбөрийн бүртгэл алга</strong>
+                  <span>Нэхэмжлэх үүсгэсний дараа төлөв нь энд харагдана.</span>
+                </div>
+              }
+            >
+              <div data-slot="payments-table">
+                <table>
+                  <caption>QPay болон Bonum төлбөрийн сүүлийн 25 нэхэмжлэх</caption>
+                  <thead>
                     <tr>
-                      <td data-slot="payment-date" title={formatDateUTC(date)}>
-                        {formatDateForTable(date)}
-                      </td>
-                      <td data-slot="payment-id">{payment.id}</td>
-                      <td data-slot="payment-amount" data-refunded={!!payment.timeRefunded}>
-                        {money(amount, currency)}
-                        <Switch>
-                          <Match when={payment.enrichment?.type === "credit"}>
-                            {" "}
-                            ({i18n.t("workspace.payments.type.credit")})
-                          </Match>
-                          <Match when={payment.enrichment?.type === "subscription"}>
-                            ({i18n.t("workspace.payments.type.subscription")})
-                          </Match>
-                        </Switch>
-                      </td>
-                      <td data-slot="payment-receipt">
-                        {payment.paymentID ? (
-                          <button
-                            onClick={async () => {
-                              const receiptUrl = await downloadReceiptAction(params.id!, payment.paymentID!)
-                              if (receiptUrl) {
-                                window.open(receiptUrl, "_blank")
-                              }
-                            }}
-                            data-slot="receipt-button"
-                          >
-                            {i18n.t("workspace.payments.view")}
-                          </button>
-                        ) : (
-                          <span>-</span>
-                        )}
-                      </td>
+                      <th scope="col">Огноо</th>
+                      <th scope="col">Багц</th>
+                      <th scope="col" data-column="provider">
+                        Суваг
+                      </th>
+                      <th scope="col">Дүн</th>
+                      <th scope="col">Төлөв</th>
+                      <th scope="col" data-column="invoice">
+                        Нэхэмжлэх
+                      </th>
                     </tr>
-                  )
-                }}
-              </For>
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </Show>
+                  </thead>
+                  <tbody>
+                    <For each={items()}>{(payment) => <PaymentRow payment={payment} />}</For>
+                  </tbody>
+                </table>
+              </div>
+            </Show>
+          )}
+        </Show>
+      </ErrorBoundary>
+    </section>
   )
+}
+
+function PaymentRow(props: { payment: WorkspacePaymentHistoryItem }) {
+  const occurred = () => new Date(props.payment.refundedAt ?? props.payment.verifiedAt ?? props.payment.createdAt)
+  return (
+    <tr data-status={props.payment.status}>
+      <td>
+        <time dateTime={occurred().toISOString()} title={occurred().toLocaleString("mn-MN")}>
+          {formatDate(occurred())}
+        </time>
+      </td>
+      <td>{props.payment.plan ? planNames[props.payment.plan] : purposeName(props.payment.purpose)}</td>
+      <td data-column="provider">{providerNames[props.payment.provider]}</td>
+      <td data-slot="amount">{formatMnt(props.payment.amount)}</td>
+      <td>
+        <span data-slot="status" data-status={props.payment.status}>
+          {statusName(props.payment.status)}
+        </span>
+      </td>
+      <td data-column="invoice">
+        <code title={props.payment.invoiceID}>{props.payment.invoiceID}</code>
+      </td>
+    </tr>
+  )
+}
+
+function formatMnt(amount: number) {
+  return new Intl.NumberFormat("mn-MN", { style: "currency", currency: "MNT", maximumFractionDigits: 0 }).format(amount)
+}
+
+function formatDate(value: Date) {
+  return new Intl.DateTimeFormat("mn-MN", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value)
+}
+
+function purposeName(purpose: WorkspacePaymentHistoryItem["purpose"]) {
+  return purpose === "credit" ? "Нэмэлт эрх" : "Багц"
+}
+
+function statusName(status: WorkspacePaymentHistoryItem["status"]) {
+  if (status === "created") return "Үүссэн"
+  if (status === "pending") return "Хүлээгдэж байна"
+  if (status === "paid") return "Төлөгдсөн"
+  if (status === "failed") return "Амжилтгүй"
+  if (status === "expired") return "Хугацаа дууссан"
+  if (status === "cancelled") return "Цуцлагдсан"
+  return "Буцаан олгосон"
 }

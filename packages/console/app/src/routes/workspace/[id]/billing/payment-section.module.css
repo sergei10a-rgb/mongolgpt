@@ -1,93 +1,139 @@
 .root {
-  [data-slot="payments-table"] {
-    overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+
+  [data-slot="section-title"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+
+    h2,
+    p {
+      margin: 0;
+    }
+
+    p {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+    }
   }
 
-  [data-slot="payments-table-element"] {
+  [data-slot="loading"],
+  [data-slot="empty"],
+  [data-slot="error"] {
+    min-height: 5rem;
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    background: var(--color-bg-surface);
+    color: var(--color-text-muted);
+  }
+
+  [data-slot="empty"] {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-1);
+
+    strong {
+      color: var(--color-text);
+    }
+  }
+
+  [data-slot="error"] {
+    border-color: var(--color-danger);
+    color: var(--color-text);
+  }
+
+  [data-slot="payments-table"] {
+    overflow-x: auto;
+    border-top: 1px solid var(--color-border);
+  }
+
+  table {
     width: 100%;
     border-collapse: collapse;
     font-size: var(--font-size-sm);
+  }
 
-    thead {
-      border-bottom: 1px solid var(--color-border);
+  caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  th,
+  td {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-border-muted);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+
+  td {
+    color: var(--color-text-muted);
+  }
+
+  time,
+  [data-slot="amount"] {
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+
+  code {
+    display: block;
+    max-width: 15rem;
+    overflow: hidden;
+    color: var(--color-text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  [data-slot="status"] {
+    display: inline-flex;
+    min-height: 1.75rem;
+    align-items: center;
+    padding: 0 var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    white-space: nowrap;
+
+    &[data-status="paid"] {
+      border-color: var(--color-success);
     }
 
-    th {
-      padding: var(--space-3) var(--space-4);
-      text-align: left;
-      font-weight: normal;
+    &[data-status="failed"],
+    &[data-status="expired"],
+    &[data-status="cancelled"] {
       color: var(--color-text-muted);
-      text-transform: uppercase;
     }
 
+    &[data-status="refunded"] {
+      border-color: var(--color-warning);
+    }
+  }
+
+  @media (max-width: 48rem) {
+    th,
     td {
-      padding: var(--space-3) var(--space-4);
-      border-bottom: 1px solid var(--color-border-muted);
-      color: var(--color-text-muted);
-      font-family: var(--font-mono);
-
-      &[data-slot="payment-date"] {
-        color: var(--color-text);
-      }
-
-      &[data-slot="payment-id"] {
-        font-family: var(--font-mono);
-        font-weight: 400;
-        color: var(--color-text-muted);
-        max-width: 200px;
-        word-break: break-word;
-      }
-
-      &[data-slot="payment-amount"] {
-        color: var(--color-text);
-
-        &[data-refunded="true"] {
-          text-decoration: line-through;
-        }
-      }
-
-      &[data-slot="payment-receipt"] {
-        span {
-          display: inline-block;
-          padding: var(--space-3) var(--space-4);
-          font-size: var(--font-size-sm);
-          line-height: 1.5;
-        }
-
-        button {
-          font-size: var(--font-size-sm);
-        }
-      }
+      padding: var(--space-2);
+      font-size: var(--font-size-xs);
     }
 
-    tbody tr {
-      &:last-child td {
-        border-bottom: none;
-      }
-    }
-
-    @media (max-width: 40rem) {
-      th,
-      td {
-        padding: var(--space-2) var(--space-3);
-        font-size: var(--font-size-xs);
-      }
-
-      th {
-        &:nth-child(2)
-
-        /* Payment ID */ {
-          display: none;
-        }
-      }
-
-      td {
-        &:nth-child(2)
-
-        /* Payment ID */ {
-          display: none;
-        }
-      }
+    [data-column="provider"],
+    [data-column="invoice"] {
+      display: none;
     }
   }
 }
