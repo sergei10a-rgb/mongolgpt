@@ -1,10 +1,41 @@
 import { describe, expect, spyOn, test } from "bun:test"
 import { createPaymentQueueEvent } from "@mongolgpt/console-core/payment-queue.js"
 import { PaymentIngressNotFoundError } from "@mongolgpt/console-core/payment-ingress.js"
+import {
+  PaymentCheckoutAuthorizationError,
+  PaymentCheckoutConflictError,
+  PaymentCheckoutCreationError,
+} from "@mongolgpt/console-core/payment-checkout.js"
 import { createPaymentWebhookHandler } from "../src/payment-webhook"
 
 const invoiceID = "inv_01JV5T0G9H5Q3N7S2R8M4K6WXA"
 const missingInvoiceID = "inv_01JV5T0G9H5Q3N7S2R8M4K6WXB"
+const requestKey = "650f7299-0f46-4d09-92b7-3f8338672227"
+
+const checkoutRequest = {
+  workspaceID: "wrk_01JV5T0G9H5Q3N7S2R8M4K6WXA",
+  accountID: "acc_01JV5T0G9H5Q3N7S2R8M4K6WXA",
+  requestKey,
+  provider: "qpay" as const,
+  plan: "pro" as const,
+}
+
+const checkoutResult = {
+  invoiceID,
+  status: "ready" as const,
+  provider: "qpay" as const,
+  plan: "pro" as const,
+  amount: 39_000,
+  currency: "MNT" as const,
+  expiresAt: 1_769_658_191_559,
+  checkout: {
+    provider: "qpay" as const,
+    merchantAccountID: "merchant_1",
+    externalInvoiceID: "invoice_1",
+    qrText: "qpay://invoice_1",
+    deepLinks: [],
+  },
+}
 
 const paid = {
   provider: "qpay" as const,
@@ -20,6 +51,213 @@ const paid = {
 }
 
 describe("payment webhook worker", () => {
+  test("requires the internal bearer token before reading a checkout request", async () => {
+    let calls = 0
+    const handler = createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      async createSubscriptionCheckout() {
+        calls++
+        return checkoutResult
+      },
+      async enqueue() {},
+    })
+
+    const response = await handler(
+      new Request("https://pay.dev.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(checkoutRequest),
+      }),
+    )
+
+    expect(response.status).toBe(401)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    const payload: unknown = await response.json()
+    expect(payload).toEqual({
+      error: "Дотоод төлбөрийн үйлчилгээний зөвшөөрөл хүчингүй байна.",
+    })
+    expect(calls).toBe(0)
+  })
+
+  test("creates an authenticated subscription checkout with an exact response contract", async () => {
+    const requests: unknown[] = []
+    const handler = createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      async createSubscriptionCheckout(input) {
+        requests.push(input)
+        return checkoutResult
+      },
+      async enqueue() {},
+    })
+
+    const response = await handler(
+      new Request("https://pay.dev.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer test-internal-token",
+          "content-type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify(checkoutRequest),
+      }),
+    )
+
+    expect(response.status).toBe(201)
+    expect(response.headers.get("content-type")).toContain("application/json")
+    const payload: unknown = await response.json()
+    expect(payload).toEqual(checkoutResult)
+    expect(requests).toEqual([checkoutRequest])
+  })
+
+  test("rejects malformed, unsupported, and disabled checkout requests", async () => {
+    let calls = 0
+    const configured = createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      async createSubscriptionCheckout() {
+        calls++
+        return checkoutResult
+      },
+      async enqueue() {},
+    })
+    const headers = { authorization: "Bearer test-internal-token", "content-type": "application/json" }
+
+    const wrongMethod = await configured(
+      new Request("https://pay.dev.mgpt.mn/v1/checkouts/subscription", {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(checkoutRequest),
+      }),
+    )
+    const malformed = await configured(
+      new Request("https://pay.dev.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers,
+        body: "{",
+      }),
+    )
+    const invalid = await configured(
+      new Request("https://pay.dev.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ ...checkoutRequest, plan: "enterprise" }),
+      }),
+    )
+    const disabled = await createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      async enqueue() {},
+    })(
+      new Request("https://pay.dev.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(checkoutRequest),
+      }),
+    )
+
+    expect(wrongMethod.status).toBe(405)
+    expect(wrongMethod.headers.get("allow")).toBe("POST")
+    expect(malformed.status).toBe(400)
+    expect(invalid.status).toBe(400)
+    expect(disabled.status).toBe(503)
+    expect(calls).toBe(0)
+  })
+
+  test("returns stable conflict and uncertain creation errors without leaking provider details", async () => {
+    const errorLog = spyOn(console, "error").mockImplementation(() => {})
+    const headers = { authorization: "Bearer test-internal-token", "content-type": "application/json" }
+    const request = () =>
+      new Request("https://pay.dev.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(checkoutRequest),
+      })
+    const conflict = createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      async createSubscriptionCheckout() {
+        throw new PaymentCheckoutConflictError("open_checkout", invoiceID)
+      },
+      async enqueue() {},
+    })
+    const uncertain = createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      async createSubscriptionCheckout() {
+        throw new PaymentCheckoutCreationError("unknown", "provider_500")
+      },
+      async enqueue() {},
+    })
+
+    const conflictResponse = await conflict(request())
+    const uncertainResponse = await uncertain(request())
+    const conflictBody: unknown = await conflictResponse.json()
+    const uncertainBody: unknown = await uncertainResponse.json()
+
+    expect(conflictResponse.status).toBe(409)
+    expect(conflictBody).toEqual({
+      error: "Өмнөх төлбөрийн нэхэмжлэх дуусаагүй байна.",
+      code: "open_checkout",
+      invoiceID,
+    })
+    expect(uncertainResponse.status).toBe(503)
+    expect(uncertainBody).toEqual({
+      error: "Нэхэмжлэхийн төлөв тодорхойгүй байна. Давтан төлөхөөс өмнө дэмжлэгтэй холбогдоно уу.",
+      code: "provider_500",
+    })
+    expect(JSON.stringify(uncertainBody)).not.toContain("failed with HTTP")
+    expect(errorLog).toHaveBeenCalledTimes(2)
+    errorLog.mockRestore()
+  })
+
+  test("returns a fixed authorization error when the account cannot manage workspace billing", async () => {
+    const errorLog = spyOn(console, "error").mockImplementation(() => {})
+    const handler = createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      async createSubscriptionCheckout() {
+        throw new PaymentCheckoutAuthorizationError()
+      },
+      async enqueue() {},
+    })
+    const response = await handler(
+      new Request("https://pay.dev.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers: { authorization: "Bearer test-internal-token", "content-type": "application/json" },
+        body: JSON.stringify(checkoutRequest),
+      }),
+    )
+
+    expect(response.status).toBe(403)
+    const payload: unknown = await response.json()
+    expect(payload).toEqual({
+      error: "Энэ ажлын талбарт төлбөр удирдах эрх алга.",
+      code: "workspace_admin_required",
+    })
+    expect(errorLog).toHaveBeenCalledTimes(1)
+    errorLog.mockRestore()
+  })
+
+  test("rejects malformed checkout service responses", async () => {
+    const errorLog = spyOn(console, "error").mockImplementation(() => {})
+    const handler = createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      async createSubscriptionCheckout() {
+        return { ...checkoutResult, amount: 0 }
+      },
+      async enqueue() {},
+    })
+    const response = await handler(
+      new Request("https://pay.dev.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers: { authorization: "Bearer test-internal-token", "content-type": "application/json" },
+        body: JSON.stringify(checkoutRequest),
+      }),
+    )
+
+    expect(response.status).toBe(502)
+    const payload: unknown = await response.json()
+    expect(payload).toEqual({
+      error: "Төлбөрийн үйлчилгээ буруу хариу буцаалаа.",
+    })
+    expect(errorLog).toHaveBeenCalledTimes(1)
+    errorLog.mockRestore()
+  })
+
   test("reconciles a QPay callback and enqueues only verified events", async () => {
     const reconciliations: unknown[] = []
     const queued: unknown[] = []

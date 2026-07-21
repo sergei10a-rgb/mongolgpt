@@ -374,29 +374,31 @@ describe("QPay Merchant V2 adapter", () => {
     expect(mock.calls).toHaveLength(0)
   })
 
-  test("rejects executable bank deep links from the provider response", async () => {
-    const mock = mockFetch([
-      { body: token },
-      {
-        body: {
-          invoice_id: "invoice-1",
-          qr_text: "qpay-qr",
-          qr_image: "base64-qr",
-          urls: [{ name: "Хуурамч банк", description: "", link: "javascript:alert(1)" }],
+  test("rejects executable and insecure bank deep links from the provider response", async () => {
+    for (const link of ["javascript:alert(1)", "http://bank.example/pay"]) {
+      const mock = mockFetch([
+        { body: token },
+        {
+          body: {
+            invoice_id: "invoice-1",
+            qr_text: "qpay-qr",
+            qr_image: "base64-qr",
+            urls: [{ name: "Хуурамч банк", description: "", link }],
+          },
         },
-      },
-    ])
-    const error = await captureError(
-      adapter(mock).createInvoice({
-        reference: "inv_local_1",
-        customerReference: "customer_1",
-        description: "MongolGPT Pro багц",
-        amount: 39_000,
-        currency: "MNT",
-      }),
-    )
+      ])
+      const error = await captureError(
+        adapter(mock).createInvoice({
+          reference: "inv_local_1",
+          customerReference: "customer_1",
+          description: "MongolGPT Pro багц",
+          amount: 39_000,
+          currency: "MNT",
+        }),
+      )
 
-    expect(String(error)).toContain("unsafe protocol")
+      expect(String(error)).toContain("unsafe protocol")
+    }
   })
 
   test("rejects non-JSON success responses without exposing their body", async () => {

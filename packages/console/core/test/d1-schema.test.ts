@@ -140,6 +140,32 @@ const contract = {
     "timeUpdated",
     "timeDeleted",
   ],
+  PaymentCheckoutTable: [
+    "id",
+    "workspace_id",
+    "account_id",
+    "request_key",
+    "provider",
+    "merchant_account_id",
+    "external_invoice_id",
+    "purpose",
+    "plan",
+    "amount",
+    "currency",
+    "checkout",
+    "creation_error_code",
+    "status",
+    "time_expires",
+    "time_ready",
+    "time_failed",
+    "time_expired",
+    "time_cancelled",
+    "time_paid",
+    "time_refunded",
+    "timeCreated",
+    "timeUpdated",
+    "timeDeleted",
+  ],
   PaymentEventTable: [
     "id",
     "invoice_id",
@@ -229,6 +255,7 @@ const contract = {
 describe("D1 schema contract", () => {
   for (const [exportName, columns] of Object.entries(contract)) {
     test(`${exportName} keeps its table and column contract`, () => {
+      // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- Object.entries cannot preserve literal keys
       const table = d1[exportName as keyof typeof contract] as Table
       expect(getTableName(table)).toBe(
         exportName
@@ -248,6 +275,17 @@ describe("D1 schema contract", () => {
     expect(d1.PaymentPurposes).toEqual(["subscription", "credit"])
     expect(d1.PaymentInvoiceStatuses).toEqual([
       "created",
+      "pending",
+      "paid",
+      "failed",
+      "expired",
+      "cancelled",
+      "refunded",
+    ])
+    expect(d1.PaymentCheckoutStatuses).toEqual([
+      "creating",
+      "unknown",
+      "ready",
       "pending",
       "paid",
       "failed",

@@ -75,6 +75,7 @@ const paymentConfig = new sst.Linkable("PaymentConfig", {
     environment: paymentEnvironment === "production" ? "production" : "sandbox",
     callbackBaseURL: `https://pay.${domain}`,
     bonumProviders: ["E_COMMERCE"],
+    planCatalog: process.env.MONGOLGPT_PAYMENT_PLAN_CATALOG?.trim() || "",
   },
 })
 const QPAY_MERCHANT_ACCOUNT_ID = new sst.Secret("QPayMerchantAccountID", "disabled")
@@ -102,6 +103,7 @@ export const paymentService = new sst.cloudflare.Worker("PaymentService", {
     BONUM_APP_SECRET,
     BONUM_TERMINAL_ID,
     BONUM_WEBHOOK_CHECKSUM_KEY,
+    SECRET.PaymentServiceToken,
   ],
   compatibility: {
     date: "2026-07-15",
@@ -278,7 +280,10 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     bucketNew,
     database,
     quotaService,
+    paymentService,
+    paymentConfig,
     SECRET.QuotaServiceToken,
+    SECRET.PaymentServiceToken,
     SECRET.ByokCredentialsKeyV1,
     AUTH_API_URL,
     STRIPE_WEBHOOK_SECRET,

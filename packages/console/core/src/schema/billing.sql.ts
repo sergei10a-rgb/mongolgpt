@@ -8,6 +8,8 @@ export {
   PaymentEventOutcomes,
   PaymentEventTable,
   PaymentEventTypes,
+  PaymentCheckoutStatuses,
+  PaymentCheckoutTable,
   PaymentInvoiceStatuses,
   PaymentInvoiceTable,
   PaymentProviders,

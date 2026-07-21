@@ -9,6 +9,17 @@ import {
 import { BonumAdapter, BonumWebhookVerificationError } from "@mongolgpt/console-core/payment-provider/bonum.js"
 import { QPayAdapter } from "@mongolgpt/console-core/payment-provider/qpay.js"
 import { PaymentProviderResponseError, type VerifiedPaymentEvent } from "@mongolgpt/console-core/payment-provider.js"
+import {
+  createSubscriptionCheckout,
+  PaymentCheckoutAuthorizationError,
+  PaymentCheckoutConflictError,
+  PaymentCheckoutCreationError,
+  PaymentPlanCatalogSchema,
+  SubscriptionCheckoutRequestSchema,
+  SubscriptionCheckoutResultSchema,
+  type SubscriptionCheckoutRequest,
+  type SubscriptionCheckoutResult,
+} from "@mongolgpt/console-core/payment-checkout.js"
 import { z } from "zod"
 
 const MAX_WEBHOOK_BYTES = 1_000_000
@@ -17,6 +28,8 @@ type Dependencies = {
   qpay?: (input: { reference: string; callbackPaymentID?: string }) => Promise<VerifiedPaymentEvent[]>
   bonum?: (input: { rawBody: string; checksum: string }) => Promise<VerifiedPaymentEvent[]>
   enqueue(events: PaymentQueueEvent[]): Promise<void>
+  internalToken?: string
+  createSubscriptionCheckout?: (input: SubscriptionCheckoutRequest) => Promise<SubscriptionCheckoutResult>
 }
 
 class PaymentQueueUnavailableError extends Error {
@@ -33,6 +46,13 @@ class InvalidPaymentWebhookRequestError extends Error {
   }
 }
 
+class InvalidPaymentCheckoutResponseError extends Error {
+  constructor() {
+    super("Invalid payment checkout response")
+    this.name = "InvalidPaymentCheckoutResponseError"
+  }
+}
+
 function text(body: string, status = 200, headers: HeadersInit = {}) {
   const responseHeaders = new Headers(headers)
   responseHeaders.set("Cache-Control", "no-store")
@@ -41,6 +61,27 @@ function text(body: string, status = 200, headers: HeadersInit = {}) {
     status,
     headers: responseHeaders,
   })
+}
+
+function json(body: unknown, status = 200, headers: HeadersInit = {}) {
+  const responseHeaders = new Headers(headers)
+  responseHeaders.set("Cache-Control", "no-store")
+  return Response.json(body, { status, headers: responseHeaders })
+}
+
+function secretsEqual(actual: string, expected: string) {
+  const encoder = new TextEncoder()
+  const left = encoder.encode(actual)
+  const right = encoder.encode(expected)
+  let mismatch = left.length ^ right.length
+  const length = Math.max(left.length, right.length)
+  for (let index = 0; index < length; index++) mismatch |= (left[index] ?? 0) ^ (right[index] ?? 0)
+  return mismatch === 0
+}
+
+function authorized(request: Request, token: string | undefined) {
+  if (!token) return false
+  return secretsEqual(request.headers.get("authorization") ?? "", `Bearer ${token}`)
 }
 
 async function enqueueVerifiedEvents(events: VerifiedPaymentEvent[], dependencies: Dependencies) {
@@ -105,9 +146,44 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
               qpay: Boolean(dependencies.qpay),
               bonum: Boolean(dependencies.bonum),
             },
+            checkout: Boolean(dependencies.createSubscriptionCheckout),
           },
           { headers: { "Cache-Control": "no-store" } },
         )
+      }
+
+      if (url.pathname === "/v1/checkouts/subscription") {
+        if (!authorized(request, dependencies.internalToken)) {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Дотоод төлбөрийн үйлчилгээний зөвшөөрөл хүчингүй байна." }, 401)
+        }
+        if (request.method !== "POST") {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Зөвшөөрөгдөөгүй хүсэлт." }, 405, { Allow: "POST" })
+        }
+        if (!dependencies.createSubscriptionCheckout) {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Төлбөрийн sandbox одоогоор тохируулагдаагүй байна." }, 503)
+        }
+        const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase()
+        if (contentType !== "application/json") {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Төлбөрийн хүсэлт JSON байх ёстой." }, 400)
+        }
+        let body: unknown
+        try {
+          body = JSON.parse(await readBoundedBody(request))
+        } catch (error) {
+          if (error instanceof RangeError) throw error
+          return json({ error: "Төлбөрийн хүсэлтийн JSON буруу байна." }, 400)
+        }
+        const parsed = SubscriptionCheckoutRequestSchema.safeParse(body)
+        if (!parsed.success) return json({ error: "Төлбөрийн хүсэлтийн бүтэц буруу байна." }, 400)
+        const result = SubscriptionCheckoutResultSchema.safeParse(
+          await dependencies.createSubscriptionCheckout(parsed.data),
+        )
+        if (!result.success) throw new InvalidPaymentCheckoutResponseError()
+        return json(result.data, 201)
       }
 
       if (url.pathname === "/v1/webhooks/qpay") {
@@ -151,12 +227,56 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
         return text("INVALID_WEBHOOK", error.code === "signature" ? 401 : 400)
       }
       if (error instanceof PaymentProviderResponseError) return text("TRY_AGAIN", error.retryable ? 503 : 502)
+      if (error instanceof PaymentCheckoutAuthorizationError) {
+        return json(
+          {
+            error: "Энэ ажлын талбарт төлбөр удирдах эрх алга.",
+            code: "workspace_admin_required",
+          },
+          403,
+        )
+      }
+      if (error instanceof PaymentCheckoutConflictError) {
+        return json(
+          {
+            error: checkoutConflictMessage(error.state),
+            code: error.state,
+            ...(error.invoiceID ? { invoiceID: error.invoiceID } : {}),
+          },
+          409,
+        )
+      }
+      if (error instanceof PaymentCheckoutCreationError) {
+        return json(
+          {
+            error:
+              error.state === "unknown"
+                ? "Нэхэмжлэхийн төлөв тодорхойгүй байна. Давтан төлөхөөс өмнө дэмжлэгтэй холбогдоно уу."
+                : "Нэхэмжлэх үүсгэж чадсангүй.",
+            code: error.code,
+          },
+          error.state === "unknown" ? 503 : 502,
+        )
+      }
+      if (error instanceof InvalidPaymentCheckoutResponseError) {
+        return json({ error: "Төлбөрийн үйлчилгээ буруу хариу буцаалаа." }, 502)
+      }
+      if (url.pathname === "/v1/checkouts/subscription" && error instanceof RangeError) {
+        return json({ error: "Төлбөрийн хүсэлт хэт том байна." }, 413)
+      }
       if (error instanceof RangeError) return text("PAYLOAD_TOO_LARGE", 413)
       if (error instanceof InvalidPaymentWebhookRequestError) return text("INVALID_REQUEST", 400)
       if (error instanceof z.ZodError || error instanceof SyntaxError) return text("INVALID_REQUEST", 400)
       return text("INTERNAL_ERROR", 500)
     }
   }
+}
+
+function checkoutConflictMessage(state: PaymentCheckoutConflictError["state"]) {
+  if (state === "active_subscription") return "Энэ workspace идэвхтэй багцтай байна."
+  if (state === "open_checkout") return "Өмнөх төлбөрийн нэхэмжлэх дуусаагүй байна."
+  if (state === "request_in_progress") return "Нэхэмжлэх үүсгэж байна. Түр хүлээгээд дахин шалгана уу."
+  return "Энэ төлбөрийн хүсэлт хаагдсан байна. Шинэ хүсэлт үүсгэнэ үү."
 }
 
 let runtimeDependencies: Dependencies | undefined
@@ -196,10 +316,27 @@ function defaults() {
         timeoutMs: 8_000,
       })
     : undefined
+  const catalog = (() => {
+    if (!config.enabled) return undefined
+    try {
+      return PaymentPlanCatalogSchema.parse(JSON.parse(config.planCatalog))
+    } catch {
+      return undefined
+    }
+  })()
 
   runtimeDependencies = {
     qpay: qpay ? (input) => reconcileQPayCallback(input, { adapter: qpay }) : undefined,
     bonum: bonum ? (input) => verifyBonumWebhook(input, { adapter: bonum }) : undefined,
+    internalToken: Resource.PaymentServiceToken.value,
+    createSubscriptionCheckout: config.enabled
+      ? async (input) => {
+          const adapter = input.provider === "qpay" ? qpay : bonum
+          if (!adapter) throw new PaymentCheckoutCreationError("failed", "provider_not_configured")
+          if (!catalog) throw new PaymentCheckoutCreationError("failed", "catalog_not_configured")
+          return createSubscriptionCheckout(input, { adapter, catalog })
+        }
+      : undefined,
     async enqueue(events) {
       await Resource.PaymentQueue.sendBatch(events.map((body) => ({ body })))
     },

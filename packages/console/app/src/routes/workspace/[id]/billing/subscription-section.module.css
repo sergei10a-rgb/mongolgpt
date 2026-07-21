@@ -1,0 +1,188 @@
+.root {
+  [data-slot="section-content"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  [data-slot="muted"],
+  [data-slot="environment"],
+  [data-slot="invoice-meta"] span,
+  [data-slot="plan-period"] span {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  [data-slot="plans"] {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+
+    @media (max-width: 42rem) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  [data-slot="plan"] {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
+    min-height: 4rem;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    background: var(--color-bg-surface);
+    color: var(--color-text);
+    text-align: left;
+
+    &[data-selected="true"] {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 1px var(--color-accent);
+    }
+
+    span {
+      font-weight: 600;
+    }
+
+    strong {
+      font-size: var(--font-size-lg);
+    }
+
+    small {
+      color: var(--color-text-muted);
+    }
+  }
+
+  [data-slot="checkout-controls"] {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  [data-slot="provider-group"] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(5rem, 1fr));
+    padding: 2px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    background: var(--color-bg-surface);
+
+    button {
+      min-height: 2rem;
+      border: 0;
+      border-radius: calc(var(--border-radius-sm) - 2px);
+      background: transparent;
+      color: var(--color-text-muted);
+
+      &[data-selected="true"] {
+        background: var(--color-bg);
+        color: var(--color-text);
+        box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text) 12%, transparent);
+      }
+    }
+  }
+
+  [data-slot="notice"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    background: var(--color-bg-surface);
+
+    span {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+    }
+
+    &[data-tone="danger"] {
+      border-color: var(--color-danger);
+    }
+  }
+
+  [data-slot="active-plan"],
+  [data-slot="invoice-header"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+
+    > div {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+  }
+
+  [data-slot="active-plan"],
+  [data-slot="invoice"] {
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    background: var(--color-bg-surface);
+  }
+
+  [data-slot="eyebrow"] {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+  }
+
+  [data-slot="plan-period"] {
+    text-align: right;
+  }
+
+  [data-slot="status"] {
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+  }
+
+  [data-slot="payment-body"] {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+
+    @media (max-width: 42rem) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  [data-slot="qr"] {
+    width: 220px;
+    height: 220px;
+    border: 1px solid var(--color-border);
+    background: white;
+    object-fit: contain;
+  }
+
+  [data-slot="payment-actions"],
+  [data-slot="invoice-meta"] {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  [data-slot="invoice-meta"] code {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  [data-slot="bank-links"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  [data-slot="invoice"] > [data-slot="notice"] {
+    margin-top: var(--space-3);
+  }
+}

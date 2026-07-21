@@ -16,5 +16,6 @@ export const SECRET = {
   HoneycombWebhookSecret: new random.RandomPassword("HoneycombWebhookSecret", { length: 24 }),
   SupportApiKey: new sst.Secret("SUPPORT_API_KEY", "disabled"),
   QuotaServiceToken: new random.RandomPassword("QuotaServiceToken", { length: 48 }),
+  PaymentServiceToken: new random.RandomPassword("PaymentServiceToken", { length: 48 }),
   ByokCredentialsKeyV1: new sst.Secret("ByokCredentialsKeyV1"),
 }

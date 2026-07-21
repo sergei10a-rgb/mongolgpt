@@ -17,6 +17,17 @@ export const PaymentInvoiceStatuses = [
   "cancelled",
   "refunded",
 ] as const
+export const PaymentCheckoutStatuses = [
+  "creating",
+  "unknown",
+  "ready",
+  "pending",
+  "paid",
+  "failed",
+  "expired",
+  "cancelled",
+  "refunded",
+] as const
 export const PaymentEventTypes = ["pending", "paid", "failed", "expired", "cancelled", "refunded"] as const
 export const PaymentEventOutcomes = ["applied", "noop", "rejected"] as const
 export const PlanSubscriptionStatuses = ["active", "expired", "cancelled", "refunded"] as const
@@ -345,6 +356,85 @@ export const PaymentInvoiceTable = sqliteTable(
     check(
       "payment_invoice_status_check",
       sql`${table.status} in ('created', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')`,
+    ),
+  ],
+)
+
+export const PaymentCheckoutTable = sqliteTable(
+  "payment_checkout",
+  {
+    id: id(),
+    workspace_id: ulid("workspace_id").notNull(),
+    account_id: ulid("account_id").notNull(),
+    request_key: text("request_key", { length: 64 }).notNull(),
+    provider: text("provider", { enum: PaymentProviders }).notNull(),
+    merchant_account_id: text("merchant_account_id", { length: 255 }).notNull(),
+    external_invoice_id: text("external_invoice_id", { length: 255 }),
+    purpose: text("purpose", { enum: PaymentPurposes }).notNull(),
+    plan: text("plan", { enum: PlanNames }),
+    amount: integer("amount").notNull(),
+    currency: text("currency", { enum: ["MNT"] })
+      .notNull()
+      .default("MNT"),
+    checkout: text("checkout", { mode: "json" }).$type<{
+      provider: (typeof PaymentProviders)[number]
+      merchantAccountID: string
+      externalInvoiceID: string
+      qrText?: string
+      qrImage?: string
+      checkoutURL?: string
+      deepLinks: Array<{ name: string; description: string; link: string }>
+    }>(),
+    creation_error_code: text("creation_error_code", { length: 64 }),
+    status: text("status", { enum: PaymentCheckoutStatuses }).notNull().default("creating"),
+    time_expires: utc("time_expires").notNull(),
+    time_ready: utc("time_ready"),
+    time_failed: utc("time_failed"),
+    time_expired: utc("time_expired"),
+    time_cancelled: utc("time_cancelled"),
+    time_paid: utc("time_paid"),
+    time_refunded: utc("time_refunded"),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    uniqueIndex("payment_checkout_workspace_request_key").on(table.workspace_id, table.request_key),
+    uniqueIndex("payment_checkout_workspace_open_subscription")
+      .on(table.workspace_id)
+      .where(
+        sql`${table.purpose} = 'subscription'
+          and ${table.status} in ('creating', 'unknown', 'ready', 'pending')
+          and ${table.timeDeleted} is null`,
+      ),
+    uniqueIndex("payment_checkout_merchant_external_invoice").on(
+      table.provider,
+      table.merchant_account_id,
+      table.external_invoice_id,
+    ),
+    index("payment_checkout_status_time_expires").on(table.status, table.time_expires),
+    check("payment_checkout_provider_check", sql`${table.provider} in ('qpay', 'bonum')`),
+    check("payment_checkout_purpose_check", sql`${table.purpose} in ('subscription', 'credit')`),
+    check(
+      "payment_checkout_plan_check",
+      sql`(${table.purpose} = 'subscription' and ${table.plan} in ('basic', 'pro', 'max'))
+        or (${table.purpose} = 'credit' and ${table.plan} is null)`,
+    ),
+    check("payment_checkout_amount_check", sql`${table.amount} > 0`),
+    check("payment_checkout_currency_check", sql`${table.currency} = 'MNT'`),
+    check("payment_checkout_json_check", sql`${table.checkout} is null or json_valid(${table.checkout})`),
+    check(
+      "payment_checkout_status_check",
+      sql`${table.status} in ('creating', 'unknown', 'ready', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')`,
+    ),
+    check(
+      "payment_checkout_ready_check",
+      sql`(${table.status} in ('creating', 'unknown', 'failed') and ${table.external_invoice_id} is null and ${table.checkout} is null)
+        or (${table.status} = 'expired' and (
+          (${table.external_invoice_id} is null and ${table.checkout} is null)
+          or (${table.external_invoice_id} is not null and ${table.checkout} is not null)
+        ))
+        or (${table.status} in ('ready', 'pending', 'paid', 'cancelled', 'refunded')
+          and ${table.external_invoice_id} is not null and ${table.checkout} is not null)`,
     ),
   ],
 )

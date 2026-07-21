@@ -1,6 +1,7 @@
 import { and, asc, Database, eq, isNull, lte } from "./drizzle"
 import { Identifier } from "./identifier"
 import type { PaymentTransitionEffect } from "./payment-ledger"
+import { syncPaymentCheckoutStatusWithDb } from "./payment-checkout"
 import { BillingTable, PlanSubscriptionTable, SubscriptionTable } from "./schema/billing.sql"
 import { UserTable } from "./schema/user.sql"
 
@@ -30,6 +31,7 @@ export function createPlanSubscriptionPaymentEffect(options: { now?: () => numbe
   const now = options.now ?? Date.now
 
   return async ({ db, invoice, event }) => {
+    await syncPaymentCheckoutStatusWithDb(db, invoice.id, event.type, event.occurredAt)
     if (invoice.purpose !== "subscription") return
     if (event.type === "paid") {
       if (!invoice.plan) throw new Error("Subscription invoice has no plan")
