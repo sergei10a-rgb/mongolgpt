@@ -7,7 +7,6 @@ import {
   BillingTable,
   PaymentTable,
   SubscriptionTable,
-  BlackPlans,
   UsageTable,
   LiteTable,
   PlanNames,
@@ -15,7 +14,6 @@ import {
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { KeyTable } from "@mongolgpt/console-core/schema/key.sql.js"
 import { ModelTable } from "@mongolgpt/console-core/schema/model.sql.js"
-import { BlackData } from "@mongolgpt/console-core/black.js"
 import { PlanData } from "@mongolgpt/console-core/plan.js"
 import { LiteData } from "@mongolgpt/console-core/lite.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
@@ -292,9 +290,7 @@ async function loadWorkspace(workspaceID: string): Promise<WorkspaceSection> {
       .then((rows) =>
         rows.map((row) => ({
           amount: `$${(row.amount / 100000000).toFixed(2)}`,
-          paymentID: row.paymentID
-            ? `https://dashboard.stripe.com/acct_1RszBH2StuRr0lbX/payments/${row.paymentID}`
-            : null,
+          paymentID: row.paymentID ?? null,
           invoiceID: row.invoiceID,
           customerID: row.customerID,
           timeCreated: formatDate(row.timeCreated),
@@ -331,21 +327,21 @@ async function loadWorkspace(workspaceID: string): Promise<WorkspaceSection> {
       .then((rows) => {
         const totals = rows.reduce(
           (acc, r) => ({
-            freeRequests: acc.freeRequests + Number(r.freeRequests),
-            goRequests: acc.goRequests + Number(r.goRequests),
-            goCost: acc.goCost + Number(r.goCost),
-            apiRequests: acc.apiRequests + Number(r.apiRequests),
-            apiCost: acc.apiCost + Number(r.apiCost),
+            freeRequests: acc.freeRequests + r.freeRequests,
+            goRequests: acc.goRequests + r.goRequests,
+            goCost: acc.goCost + r.goCost,
+            apiRequests: acc.apiRequests + r.apiRequests,
+            apiCost: acc.apiCost + r.apiCost,
           }),
           { freeRequests: 0, goRequests: 0, goCost: 0, apiRequests: 0, apiCost: 0 },
         )
         const mapped: Record<string, unknown>[] = rows.map((row) => ({
           date: row.date,
-          freeRequests: Number(row.freeRequests),
-          goRequests: Number(row.goRequests),
-          goCost: formatMicroCents(Number(row.goCost)) ?? "$0.00",
-          apiRequests: Number(row.apiRequests),
-          apiCost: formatMicroCents(Number(row.apiCost)) ?? "$0.00",
+          freeRequests: row.freeRequests,
+          goRequests: row.goRequests,
+          goCost: formatMicroCents(row.goCost) ?? "$0.00",
+          apiRequests: row.apiRequests,
+          apiCost: formatMicroCents(row.apiCost) ?? "$0.00",
         }))
         if (mapped.length > 0) {
           mapped.push({

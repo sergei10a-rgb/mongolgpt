@@ -5,14 +5,12 @@ import {
   BillingTable,
   PaymentTable,
   SubscriptionTable,
-  BlackPlans,
   UsageTable,
   LiteTable,
   PlanNames,
 } from "../src/schema/billing.sql.js"
 import { WorkspaceTable } from "../src/schema/workspace.sql.js"
 import { KeyTable } from "../src/schema/key.sql.js"
-import { BlackData } from "../src/black.js"
 import { PlanData } from "../src/plan.js"
 import { centsToMicroCents } from "../src/util/price.js"
 import { getWeekBounds } from "../src/util/date.js"
@@ -219,9 +217,6 @@ async function printWorkspace(workspaceID: string) {
         rows.map((row) => ({
           ...row,
           amount: `$${(row.amount / 100000000).toFixed(2)}`,
-          paymentID: row.paymentID
-            ? `https://dashboard.stripe.com/acct_1RszBH2StuRr0lbX/payments/${row.paymentID}`
-            : null,
         })),
       ),
   )
@@ -250,21 +245,21 @@ async function printWorkspace(workspaceID: string) {
         .groupBy(sql`date(${UsageTable.timeCreated} / 1000, 'unixepoch')`)
         .orderBy(sql`date(${UsageTable.timeCreated} / 1000, 'unixepoch') DESC`)
         .then((rows) => {
-          const totalCost = rows.reduce((sum, r) => sum + Number(r.cost), 0)
-          const mapped = rows.map((row) => ({
+          const totalCost = rows.reduce((sum, row) => sum + row.cost, 0)
+          const mapped: Record<string, unknown>[] = rows.map((row) => ({
             ...row,
-            cost: `$${(Number(row.cost) / 100000000).toFixed(2)}`,
+            cost: `$${(row.cost / 100000000).toFixed(2)}`,
           }))
           if (mapped.length > 0) {
             mapped.push({
               date: "TOTAL",
-              requests: null as any,
-              inputTokens: null as any,
-              outputTokens: null as any,
-              reasoningTokens: null as any,
-              cacheReadTokens: null as any,
-              cacheWrite5mTokens: null as any,
-              cacheWrite1hTokens: null as any,
+              requests: null,
+              inputTokens: null,
+              outputTokens: null,
+              reasoningTokens: null,
+              cacheReadTokens: null,
+              cacheWrite5mTokens: null,
+              cacheWrite1hTokens: null,
               cost: `$${(totalCost / 100000000).toFixed(2)}`,
             })
           }
@@ -370,7 +365,7 @@ function getSubscriptionStatus(row: {
 function printHeader(title: string) {
   console.log()
   console.log("─".repeat(title.length))
-  console.log(`${title}`)
+  console.log(title)
   console.log("─".repeat(title.length))
 }
 
