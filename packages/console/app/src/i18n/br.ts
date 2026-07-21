@@ -9,7 +9,6 @@ export const dict = {
   "nav.discord": "Discord",
   "nav.x": "X",
   "nav.enterprise": "Enterprise",
-  "nav.zen": "Zen",
   "nav.login": "Entrar",
   "nav.free": "Download",
   "nav.home": "Início",
@@ -85,22 +84,6 @@ export const dict = {
 
   "home.title": "MongolGPT | O agente de codificação de código aberto com IA",
 
-  "temp.title": "mongolgpt | Agente de codificação com IA feito para o terminal",
-  "temp.hero.title": "O agente de codificação com IA feito para o terminal",
-  "temp.zen": "mongolgpt zen",
-  "temp.getStarted": "Começar",
-  "temp.feature.native.title": "TUI Nativa",
-  "temp.feature.native.body": "Uma interface de terminal responsiva, nativa e personalizável",
-  "temp.feature.zen.beforeLink": "Uma",
-  "temp.feature.zen.link": "lista selecionada de modelos",
-  "temp.feature.zen.afterLink": "fornecida pela mongolgpt",
-  "temp.feature.models.beforeLink": "Suporta mais de 75 provedores de LLM através do",
-  "temp.feature.models.afterLink": ", incluindo modelos locais",
-  "temp.screenshot.caption": "MongolGPT TUI com o tema tokyonight",
-  "temp.screenshot.alt": "MongolGPT TUI com tema tokyonight",
-  "temp.logoLightAlt": "logo mongolgpt claro",
-  "temp.logoDarkAlt": "logo mongolgpt escuro",
-
   "home.banner.badge": "Novo",
   "home.banner.text": "App desktop disponível em beta",
   "home.banner.platforms": "no macOS, Windows e Linux",
@@ -154,11 +137,6 @@ export const dict = {
   "home.faq.q3": "Preciso de assinaturas extras de IA para usar o MongolGPT?",
   "home.faq.a3.p1":
     "Não necessariamente, MongolGPT vem com um conjunto de modelos grátis que você pode usar sem criar conta.",
-  "home.faq.a3.p2.beforeZen":
-    "Além disso, você pode usar qualquer um dos modelos de codificação populares criando uma conta",
-  "home.faq.a3.p2.afterZen": ".",
-  "home.faq.a3.p3":
-    "Embora incentivemos os usuários a usar o Zen, MongolGPT também funciona com todos os provedores populares, como OpenAI, Anthropic, xAI etc.",
   "home.faq.a3.p4.beforeLocal": "Você pode até conectar seus",
   "home.faq.a3.p4.localLink": "modelos locais",
   "home.faq.q4": "Posso usar minhas assinaturas de IA existentes com o MongolGPT?",
@@ -170,8 +148,6 @@ export const dict = {
   "home.faq.a5.and": "e",
   "home.faq.a5.web": "web",
   "home.faq.q6": "Quanto custa o MongolGPT?",
-  "home.faq.a6":
-    "MongolGPT é 100% gratuito para usar. Ele também vem com um conjunto de modelos gratuitos. Pode haver custos adicionais se você conectar qualquer outro provedor.",
   "home.faq.q7": "E sobre dados e privacidade?",
   "home.faq.a7.p1":
     "Seus dados e informações só são armazenados quando você usa nossos modelos gratuitos ou cria links compartilháveis.",
@@ -185,176 +161,6 @@ export const dict = {
   "home.faq.a8.mitLicense": "Licença MIT",
   "home.faq.a8.p3":
     ", o que significa que qualquer pessoa pode usar, modificar ou contribuir para o seu desenvolvimento. Qualquer pessoa da comunidade pode abrir issues, enviar pull requests e estender a funcionalidade.",
-
-  "home.zenCta.title": "Acesse modelos confiáveis e otimizados para agentes de codificação",
-  "home.zenCta.body":
-    "O Zen dá acesso a um conjunto selecionado de modelos de IA que a MongolGPT testou e avaliou especificamente para agentes de codificação. Não precisa se preocupar com desempenho e qualidade inconsistentes entre provedores, use modelos validados que funcionam.",
-  "home.zenCta.link": "Saiba mais sobre o Zen",
-
-  "zen.title": "MongolGPT Zen | Um conjunto selecionado de modelos confiáveis e otimizados para agentes de codificação",
-  "zen.hero.title": "Modelos confiáveis e otimizados para agentes de codificação",
-  "zen.hero.body":
-    "O Zen dá acesso a um conjunto selecionado de modelos de IA que a MongolGPT testou e avaliou especificamente para agentes de codificação. Não precisa se preocupar com desempenho e qualidade inconsistentes, use modelos validados que funcionam.",
-
-  "zen.faq.q1": "O que é MongolGPT Zen?",
-  "zen.faq.a1":
-    "Zen é um conjunto selecionado de modelos de IA testados e avaliados para agentes de codificação, criado pela equipe por trás do MongolGPT.",
-  "zen.faq.q2": "O que torna o Zen mais preciso?",
-  "zen.faq.a2":
-    "O Zen fornece apenas modelos que foram especificamente testados e avaliados para agentes de codificação. Você não usaria uma faca de manteiga para cortar um bife, não use modelos ruins para programar.",
-  "zen.faq.q3": "O Zen é mais barato?",
-  "zen.faq.a3":
-    "O Zen não tem fins lucrativos. O Zen repassa os custos dos provedores de modelos para você. Quanto maior o uso do Zen, mais a MongolGPT pode negociar melhores taxas e repassá-las para você.",
-  "zen.faq.q4": "Quanto custa o Zen?",
-  "zen.faq.a4.p1.beforePricing": "Zen",
-  "zen.faq.a4.p1.pricingLink": "cobra por requisição",
-  "zen.faq.a4.p1.afterPricing": "sem margens de lucro, então você paga exatamente o que o provedor do modelo cobra.",
-  "zen.faq.a4.p2.beforeAccount": "Seu custo total depende do uso, e você pode definir limites de gastos mensais em sua",
-  "zen.faq.a4.p2.accountLink": "conta",
-  "zen.faq.a4.p3":
-    "Para cobrir custos, a MongolGPT adiciona apenas uma pequena taxa de processamento de pagamento de $1,23 por recarga de $20.",
-  "zen.faq.q5": "E sobre dados e privacidade?",
-  "zen.faq.a5.beforeExceptions":
-    "Todos os modelos Zen são hospedados nos EUA. Os provedores seguem uma política de retenção zero e não usam seus dados para treinamento de modelos, com as",
-  "zen.faq.a5.exceptionsLink": "seguintes exceções",
-  "zen.faq.q6": "Posso definir limites de gastos?",
-  "zen.faq.a6": "Sim, você pode definir limites de gastos mensais em sua conta.",
-  "zen.faq.q7": "Posso cancelar?",
-  "zen.faq.a7": "Sim, você pode desativar o faturamento a qualquer momento e usar seu saldo restante.",
-  "zen.faq.q8": "Posso usar o Zen com outros agentes de codificação?",
-  "zen.faq.a8":
-    "Embora o Zen funcione muito bem com o MongolGPT, você pode usar o Zen com qualquer agente. Siga as instruções de configuração no seu agente de codificação preferido.",
-
-  "zen.cta.start": "Comece com o Zen",
-  "zen.pricing.title": "Adicionar $20 de saldo pré-pago",
-  "zen.pricing.fee": "(+$1,23 taxa de processamento do cartão)",
-  "zen.pricing.body": "Use com qualquer agente. Defina limites de gastos mensais. Cancele a qualquer momento.",
-  "zen.problem.title": "Que problema o Zen resolve?",
-  "zen.problem.body":
-    "Existem muitos modelos disponíveis, mas apenas alguns funcionam bem com agentes de codificação. A maioria dos provedores os configura de maneira diferente, com resultados variados.",
-  "zen.problem.subtitle": "Estamos corrigindo isso para todos, não apenas para os usuários do MongolGPT.",
-  "zen.problem.item1": "Testando modelos selecionados e consultando suas equipes",
-  "zen.problem.item2": "Trabalhando com provedores para garantir que sejam entregues corretamente",
-  "zen.problem.item3": "Avaliando todas as combinações de modelo-provedor que recomendamos",
-  "zen.how.title": "Como o Zen funciona",
-  "zen.how.body": "Embora sugerimos que você use o Zen com o MongolGPT, você pode usá-lo com qualquer agente.",
-  "zen.how.step1.title": "Cadastre-se e adicione $20 de saldo",
-  "zen.how.step1.beforeLink": "siga as",
-  "zen.how.step1.link": "instruções de configuração",
-  "zen.how.step2.title": "Use o Zen com preços transparentes",
-  "zen.how.step2.link": "pague por requisição",
-  "zen.how.step2.afterLink": "sem margens de lucro",
-  "zen.how.step3.title": "Recarga automática",
-  "zen.how.step3.body": "quando seu saldo atingir $5, adicionaremos automaticamente $20",
-  "zen.privacy.title": "Sua privacidade é importante para nós",
-  "zen.privacy.beforeExceptions":
-    "Todos os modelos Zen são hospedados nos EUA. Os provedores seguem uma política de retenção zero e não usam seus dados para treinamento de modelo, com as",
-  "zen.privacy.exceptionsLink": "seguintes exceções",
-
-  "go.title": "MongolGPT Go | Modelos de codificação de baixo custo para todos",
-  "go.banner.text": "MiniMax M3 tem limite de uso 3x maior por tempo limitado",
-  "go.meta.description":
-    "O Go começa em $5 no primeiro mês, depois $10/mês, com limites generosos de solicitação de 5 horas para GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro e DeepSeek V4 Flash.",
-  "go.hero.title": "Modelos de codificação de baixo custo para todos",
-  "go.hero.body":
-    "O Go traz a codificação com agentes para programadores em todo o mundo. Oferecendo limites generosos e acesso confiável aos modelos de código aberto mais capazes, para que você possa construir com agentes poderosos sem se preocupar com custos ou disponibilidade.",
-
-  "go.cta.start": "Assinar o Go",
-  "go.cta.template": "{{text}} {{price}}",
-  "go.cta.text": "Assinar o Go",
-  "go.cta.price": "$10/mês",
-  "go.cta.promo": "$5 no primeiro mês",
-  "go.pricing.body":
-    "Use com qualquer agente. $5 no primeiro mês, depois $10/mês. Recarregue o crédito se necessário. Cancele a qualquer momento.",
-  "go.graph.free": "Grátis",
-  "go.graph.freePill": "Big Pickle e modelos gratuitos",
-  "go.graph.go": "Go",
-  "go.graph.label": "Requisições por 5 horas",
-  "go.graph.usageLimits": "Limites de uso",
-  "go.graph.tick": "{{n}}x",
-  "go.graph.aria": "Requisições por 5h: {{free}} vs {{go}}",
-
-  "go.testimonials.brand.zen": "Zen",
-  "go.testimonials.brand.go": "Go",
-  "go.testimonials.handle": "@MongolGPT",
-  "go.testimonials.dax.name": "Dax Raad",
-  "go.testimonials.dax.title": "ex-CEO, Terminal Products",
-  "go.testimonials.dax.quoteAfter": "mudou minha vida, é realmente uma escolha óbvia.",
-  "go.testimonials.jay.name": "Jay V",
-  "go.testimonials.jay.title": "ex-Fundador, SEED, PM, Melt, Pop, Dapt, Cadmus e ViewPoint",
-  "go.testimonials.jay.quoteBefore": "4 de 5 pessoas em nossa equipe adoram usar",
-  "go.testimonials.jay.quoteAfter": ".",
-  "go.testimonials.adam.name": "Adam Elmore",
-  "go.testimonials.adam.title": "ex-Hero, AWS",
-  "go.testimonials.adam.quoteBefore": "Eu não consigo recomendar o",
-  "go.testimonials.adam.quoteAfter": "o suficiente. Sério, é muito bom.",
-  "go.testimonials.david.name": "David Hill",
-  "go.testimonials.david.title": "ex-Head de Design, Laravel",
-  "go.testimonials.david.quoteBefore": "Com o",
-  "go.testimonials.david.quoteAfter":
-    "eu sei que todos os modelos são testados e perfeitos para agentes de codificação.",
-  "go.testimonials.frank.name": "Frank Wang",
-  "go.testimonials.frank.title": "ex-Estagiário, Nvidia (4 vezes)",
-  "go.testimonials.frank.quote": "Eu queria ainda estar na Nvidia.",
-  "go.problem.title": "Que problema o Go resolve?",
-  "go.problem.body":
-    "Estamos focados em levar a experiência do MongolGPT para o maior número de pessoas possível. MongolGPT Go é uma assinatura de baixo custo: $5 no primeiro mês, depois $10/mês. Oferece limites generosos e acesso confiável aos modelos open source mais capazes.",
-  "go.problem.subtitle": " ",
-  "go.problem.item1": "Preço de assinatura de baixo custo",
-  "go.problem.item2": "Limites generosos e acesso confiável",
-  "go.problem.item3": "Feito para o maior número possível de programadores",
-  "go.problem.item4":
-    "Inclui GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro e DeepSeek V4 Flash",
-  "go.how.title": "Como o Go funciona",
-  "go.how.body":
-    "O Go começa em $5 no primeiro mês, depois $10/mês. Você pode usá-lo com o MongolGPT ou qualquer agente.",
-  "go.how.step1.title": "Crie uma conta",
-  "go.how.step1.beforeLink": "siga as",
-  "go.how.step1.link": "instruções de configuração",
-  "go.how.step2.title": "Assinar o Go",
-  "go.how.step2.link": "$5 no primeiro mês",
-  "go.how.step2.afterLink": "depois $10/mês com limites generosos",
-  "go.how.step3.title": "Comece a codificar",
-  "go.how.step3.body": "com acesso confiável a modelos de código aberto",
-  "go.privacy.title": "Sua privacidade é importante para nós",
-  "go.privacy.body":
-    "O plano é projetado principalmente para usuários internacionais, com modelos hospedados nos EUA, UE e Singapura para acesso global estável.",
-  "go.privacy.contactAfter": "se você tiver alguma dúvida.",
-  "go.privacy.beforeExceptions":
-    "Os modelos Go são hospedados nos EUA. Os provedores seguem uma política de retenção zero e não usam seus dados para treinamento de modelos, com as",
-  "go.privacy.exceptionsLink": "seguintes exceções",
-  "go.faq.q1": "O que é MongolGPT Go?",
-  "go.faq.a1":
-    "Go é uma assinatura de baixo custo que oferece acesso confiável a modelos de código aberto capazes para codificação com agentes.",
-  "go.faq.q2": "Quais modelos o Go inclui?",
-  "go.faq.a2": "O Go inclui os modelos listados abaixo, com limites generosos e acesso confiável.",
-  "go.faq.q3": "O Go é o mesmo que o Zen?",
-  "go.faq.a3":
-    "Não. Zen é pay-as-you-go, enquanto o Go começa em $5 no primeiro mês, depois $10/mês, com limites generosos e acesso confiável aos modelos open source GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro e DeepSeek V4 Flash.",
-  "go.faq.q4": "Quanto custa o Go?",
-  "go.faq.a4.p1.beforePricing": "O Go custa",
-  "go.faq.a4.p1.pricingLink": "$5 no primeiro mês",
-  "go.faq.a4.p1.afterPricing": "depois $10/mês com limites generosos.",
-  "go.faq.a4.p2.beforeAccount": "Você pode gerenciar sua assinatura em sua",
-  "go.faq.a4.p2.accountLink": "conta",
-  "go.faq.a4.p3": "Cancele a qualquer momento.",
-  "go.faq.q5": "E sobre dados e privacidade?",
-  "go.faq.a5.body":
-    "O plano é projetado principalmente para usuários internacionais, com modelos hospedados nos EUA, UE e Singapura para acesso global estável. Nossos provedores seguem uma política de retenção zero e não usam seus dados para treinamento de modelos.",
-  "go.faq.a5.beforeExceptions":
-    "Os modelos Go são hospedados nos EUA. Os provedores seguem uma política de retenção zero e não usam seus dados para treinamento de modelos, com as",
-  "go.faq.a5.exceptionsLink": "seguintes exceções",
-  "go.faq.q6": "Posso recarregar crédito?",
-  "go.faq.a6": "Se você precisar de mais uso, pode recarregar crédito em sua conta.",
-  "go.faq.q7": "Posso cancelar?",
-  "go.faq.a7": "Sim, você pode cancelar a qualquer momento.",
-  "go.faq.q8": "Posso usar o Go com outros agentes de codificação?",
-  "go.faq.a8":
-    "Sim, você pode usar o Go com qualquer agente. Siga as instruções de configuração no seu agente de codificação preferido.",
-
-  "go.faq.q9": "Qual a diferença entre os modelos gratuitos e o Go?",
-  "go.faq.a9":
-    "Os modelos gratuitos incluem Big Pickle e modelos promocionais disponíveis no momento, com uma cota de 200 requisições/dia. O Go inclui GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro e DeepSeek V4 Flash com cotas de requisição mais altas aplicadas em janelas móveis (5 horas, semanal e mensal), aproximadamente equivalentes a $12 por 5 horas, $30 por semana e $60 por mês (as contagens reais de requisições variam de acordo com o modelo e o uso).",
 
   "zen.api.error.rateLimitExceeded": "Limite de taxa excedido. Por favor, tente novamente mais tarde.",
   "zen.api.error.modelNotSupported": "Modelo {{model}} não suportado",
@@ -377,11 +183,6 @@ export const dict = {
   "zen.api.error.userMonthlyLimitReached":
     "Você atingiu seu limite de gastos mensais de ${{amount}}. Gerencie seus limites aqui: {{membersUrl}}",
   "zen.api.error.modelDisabled": "O modelo está desabilitado",
-  "zen.api.error.trialEnded":
-    "A promoção gratuita do {{model}} terminou. Você pode continuar usando o modelo assinando o MongolGPT Go - {{link}}",
-
-  "workspace.nav.zen": "Zen",
-  "workspace.nav.go": "Go",
   "workspace.nav.usage": "Uso",
   "workspace.nav.apiKeys": "Chaves de API",
   "workspace.nav.members": "Membros",
@@ -389,7 +190,6 @@ export const dict = {
   "workspace.nav.settings": "Configurações",
 
   "workspace.home.banner.beforeLink": "Modelos otimizados e confiáveis para agentes de codificação.",
-  "workspace.lite.banner.beforeLink": "Modelos de codificação de baixo custo para todos.",
   "workspace.home.billing.loading": "Carregando...",
   "workspace.home.billing.enable": "Ativar faturamento",
   "workspace.home.billing.currentBalance": "Saldo atual",
@@ -401,8 +201,6 @@ export const dict = {
   "workspace.newUser.feature.quality.body":
     "Acesse modelos configurados para desempenho ideal - sem downgrades ou roteamento para provedores mais baratos.",
   "workspace.newUser.feature.lockin.title": "Sem Fidelidade",
-  "workspace.newUser.feature.lockin.body":
-    "Use o Zen com qualquer agente de codificação e continue usando outros provedores com mongolgpt sempre que quiser.",
   "workspace.newUser.copyApiKey": "Copiar chave de API",
   "workspace.newUser.copyKey": "Copiar Chave",
   "workspace.newUser.copied": "Copiado!",
@@ -444,7 +242,6 @@ export const dict = {
   "workspace.usage.breakdown.output": "Saída",
   "workspace.usage.breakdown.reasoning": "Raciocínio",
   "workspace.usage.subscription": "{{plan}} (${{amount}})",
-  "workspace.usage.lite": "Go (${{amount}})",
   "workspace.usage.byok": "BYOK (${{amount}})",
 
   "workspace.cost.title": "Custo",
@@ -563,8 +360,6 @@ export const dict = {
   "workspace.payments.type.credit": "crédito",
   "workspace.payments.type.subscription": "assinatura",
   "workspace.payments.view": "Ver",
-
-  "workspace.lite.loading": "Carregando...",
   "workspace.lite.time.day": "dia",
   "workspace.lite.time.days": "dias",
   "workspace.lite.time.hour": "hora",
@@ -572,62 +367,6 @@ export const dict = {
   "workspace.lite.time.minute": "minuto",
   "workspace.lite.time.minutes": "minutos",
   "workspace.lite.time.fewSeconds": "alguns segundos",
-  "workspace.lite.subscription.message": "Você assina o MongolGPT Go.",
-  "workspace.lite.subscription.manage": "Gerenciar Assinatura",
-  "workspace.lite.subscription.rollingUsage": "Uso Contínuo",
-  "workspace.lite.subscription.weeklyUsage": "Uso Semanal",
-  "workspace.lite.subscription.monthlyUsage": "Uso Mensal",
-  "workspace.lite.subscription.resetsIn": "Reinicia em",
-  "workspace.lite.subscription.useBalance": "Use seu saldo disponível após atingir os limites de uso",
-  "workspace.lite.subscription.selectProvider":
-    'Selecione "MongolGPT Go" como provedor na sua configuração do mongolgpt para usar os modelos Go.',
-
-  "workspace.lite.other.message":
-    "Outro membro neste workspace já assina o MongolGPT Go. Apenas um membro por workspace pode assinar.",
-  "workspace.lite.promo.description":
-    "O MongolGPT Go começa em {{price}}, depois $10/mês, e oferece acesso confiável a modelos de codificação abertos populares com limites de uso generosos.",
-  "workspace.lite.promo.price": "$5 no primeiro mês",
-  "workspace.lite.promo.modelsTitle": "O que está incluído",
-  "workspace.lite.promo.footer":
-    "O plano é projetado principalmente para usuários internacionais, com modelos hospedados nos EUA, UE e Singapura para acesso global estável. Preços e limites de uso podem mudar conforme aprendemos com o uso inicial e feedback.",
-  "workspace.lite.promo.subscribe": "Assinar Go",
-  "workspace.lite.promo.subscribing": "Redirecionando...",
-  "workspace.lite.promo.otherMethods": "Outros métodos de pagamento",
-  "workspace.lite.promo.selectMethod": "Selecionar método de pagamento",
-
-  "workspace.referral.copyLink": "Copiar link",
-  "workspace.referral.copied": "Copiado",
-  "workspace.referral.overview.title": "Convide amigos",
-  "workspace.referral.overview.subtitle": "Ganhe $5 quando um amigo assinar. Ele também ganha $5.",
-  "workspace.referral.instructions.share": "Compartilhe seu link de indicação",
-  "workspace.referral.instructions.subscribe": "Seu amigo entra e assina o Go",
-  "workspace.referral.instructions.claim":
-    "Vocês dois ganham um crédito de uso de $5 para aplicar aos seus limites de uso do Go",
-  "workspace.referral.rewards.title": "Recompensas de indicação",
-  "workspace.referral.rewards.description": "Aplique os créditos de indicação disponíveis no seu uso do Go.",
-  "workspace.referral.rewards.subtitle": "{{applied}} / {{total}} recompensas aplicadas.",
-  "workspace.referral.rewards.empty": "Ainda não há recompensas de indicação.",
-  "workspace.referral.table.reward": "Recompensa",
-  "workspace.referral.table.referral": "Descrição",
-  "workspace.referral.table.date": "Data",
-  "workspace.referral.reward.description.inviter": "Convidou {{email}}",
-  "workspace.referral.reward.description.invitee": "Convidado por {{email}}",
-  "workspace.referral.reward.action.subscribeUnlock": "Assine para desbloquear",
-  "workspace.referral.reward.action.view": "Ver recompensa",
-  "workspace.referral.reward.action.applied": "Recompensa aplicada",
-  "workspace.referral.reward.source.pendingInviter": "Aguardando ele assinar",
-  "workspace.referral.reward.source.pendingInvitee": "Assine para desbloquear a recompensa",
-  "workspace.referral.reward.source.available": "Recompensa pronta para usar",
-  "workspace.referral.reward.source.applied": "Recompensa aplicada",
-  "workspace.referral.reward.status.applied": "Recompensa aplicada",
-  "workspace.referral.reward.status.pendingInviter": "Assine para desbloquear",
-  "workspace.referral.reward.status.pendingInvitee": "Assine para desbloquear",
-  "workspace.referral.apply.noGo": "Assine para desbloquear",
-  "workspace.referral.apply.preview": "Ver recompensa",
-  "workspace.referral.apply.action": "Aplicar",
-  "workspace.referral.apply.confirmTitle": "Aplicar recompensa",
-  "workspace.referral.apply.confirmBody": "Aplique {{amount}} para reduzir o uso atual deste workspace.",
-  "workspace.referral.apply.confirmAction": "Aplicar",
 
   "download.title": "MongolGPT | Baixar",
   "download.meta.description": "Baixe o MongolGPT para macOS, Windows e Linux",
@@ -650,14 +389,8 @@ export const dict = {
   "download.faq.a3.beforeLocal":
     "Não necessariamente, mas provavelmente. Você precisará de uma assinatura de IA se quiser conectar o MongolGPT a um provedor pago, embora você possa trabalhar com",
   "download.faq.a3.localLink": "modelos locais",
-  "download.faq.a3.afterLocal.beforeZen": "de graça. Embora incentivemos os usuários a usar o",
-  "download.faq.a3.afterZen":
-    ", o MongolGPT funciona com todos os provedores populares, como OpenAI, Anthropic, xAI etc.",
 
   "download.faq.a5.p1": "O MongolGPT é 100% gratuito para usar.",
-  "download.faq.a5.p2.beforeZen":
-    "Quaisquer custos adicionais virão da sua assinatura de um provedor de modelo. Embora o MongolGPT funcione com qualquer provedor de modelo, recomendamos o uso do",
-  "download.faq.a5.p2.afterZen": ".",
 
   "download.faq.a6.p1":
     "Seus dados e informações só são armazenados quando você cria links compartilháveis no MongolGPT.",

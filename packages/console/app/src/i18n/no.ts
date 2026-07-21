@@ -9,7 +9,6 @@ export const dict = {
   "nav.discord": "Discord",
   "nav.x": "X",
   "nav.enterprise": "Enterprise",
-  "nav.zen": "Zen",
   "nav.login": "Logg inn",
   "nav.free": "Last ned",
   "nav.home": "Hjem",
@@ -85,22 +84,6 @@ export const dict = {
 
   "home.title": "MongolGPT | Den åpne kildekode AI-kodingsagenten",
 
-  "temp.title": "mongolgpt | AI-kodingsagent bygget for terminalen",
-  "temp.hero.title": "AI-kodingsagenten bygget for terminalen",
-  "temp.zen": "mongolgpt zen",
-  "temp.getStarted": "Kom i gang",
-  "temp.feature.native.title": "Native TUI",
-  "temp.feature.native.body": "Et responsivt, native terminal-brukergrensesnitt som kan temes",
-  "temp.feature.zen.beforeLink": "En",
-  "temp.feature.zen.link": "kuratert liste over modeller",
-  "temp.feature.zen.afterLink": "levert av mongolgpt",
-  "temp.feature.models.beforeLink": "Støtter 75+ LLM-leverandører gjennom",
-  "temp.feature.models.afterLink": ", inkludert lokale modeller",
-  "temp.screenshot.caption": "mongolgpt TUI med tokyonight-tema",
-  "temp.screenshot.alt": "mongolgpt TUI med tokyonight-tema",
-  "temp.logoLightAlt": "MongolGPT logo lys",
-  "temp.logoDarkAlt": "MongolGPT logo mørk",
-
   "home.banner.badge": "Ny",
   "home.banner.text": "Desktop-app tilgjengelig i beta",
   "home.banner.platforms": "på macOS, Windows og Linux",
@@ -154,10 +137,6 @@ export const dict = {
   "home.faq.q3": "Trenger jeg ekstra AI-abonnementer for å bruke MongolGPT?",
   "home.faq.a3.p1":
     "Ikke nødvendigvis. MongolGPT kommer med et sett gratis modeller du kan bruke uten å opprette en konto.",
-  "home.faq.a3.p2.beforeZen": "I tillegg kan du bruke populære kodemodeller ved å opprette en",
-  "home.faq.a3.p2.afterZen": " konto.",
-  "home.faq.a3.p3":
-    "Vi oppfordrer til å bruke Zen, men MongolGPT fungerer også med populære leverandører som OpenAI, Anthropic, xAI osv.",
   "home.faq.a3.p4.beforeLocal": "Du kan til og med koble til dine",
   "home.faq.a3.p4.localLink": "lokale modeller",
   "home.faq.q4": "Kan jeg bruke mine eksisterende AI-abonnementer med MongolGPT?",
@@ -169,8 +148,6 @@ export const dict = {
   "home.faq.a5.and": "og",
   "home.faq.a5.web": "web",
   "home.faq.q6": "Hva koster MongolGPT?",
-  "home.faq.a6":
-    "MongolGPT er 100% gratis å bruke. Det kommer også med et sett gratis modeller. Det kan være ekstra kostnader hvis du kobler til en annen leverandør.",
   "home.faq.q7": "Hva med data og personvern?",
   "home.faq.a7.p1": "Dataene dine lagres kun når du bruker våre gratis modeller eller lager delbare lenker.",
   "home.faq.a7.p2.beforeModels": "Les mer om",
@@ -183,175 +160,6 @@ export const dict = {
   "home.faq.a8.mitLicense": "MIT-lisensen",
   "home.faq.a8.p3":
     ", som betyr at hvem som helst kan bruke, endre eller bidra til utviklingen. Alle i communityet kan opprette issues, sende inn pull requests og utvide funksjonalitet.",
-
-  "home.zenCta.title": "Få tilgang til pålitelige, optimaliserte modeller for kodeagenter",
-  "home.zenCta.body":
-    "Zen gir deg tilgang til et håndplukket sett med AI-modeller som MongolGPT har testet og benchmarked spesielt for kodeagenter. Du slipper å bekymre deg for ujevn ytelse og kvalitet på tvers av leverandører; bruk validerte modeller som fungerer.",
-  "home.zenCta.link": "Les om Zen",
-
-  "zen.title": "MongolGPT Zen | Et kuratert sett med pålitelige, optimaliserte modeller for kodeagenter",
-  "zen.hero.title": "Pålitelige optimaliserte modeller for kodeagenter",
-  "zen.hero.body":
-    "Zen gir deg tilgang til et kuratert sett med AI-modeller som MongolGPT har testet og benchmarked spesielt for kodeagenter. Du slipper å bekymre deg for ujevn ytelse og kvalitet; bruk validerte modeller som fungerer.",
-
-  "zen.faq.q1": "Hva er MongolGPT Zen?",
-  "zen.faq.a1":
-    "Zen er et kuratert sett med AI-modeller testet og benchmarked for kodeagenter, laget av teamet bak MongolGPT.",
-  "zen.faq.q2": "Hva gjør Zen mer presis?",
-  "zen.faq.a2":
-    "Zen tilbyr bare modeller som er testet og benchmarked spesifikt for kodeagenter. Du ville ikke brukt en smørkniv til å skjære biff; ikke bruk dårlige modeller til koding.",
-  "zen.faq.q3": "Er Zen billigere?",
-  "zen.faq.a3":
-    "Zen er ikke for profitt. Zen videreformidler kostnadene fra modellleverandørene direkte til deg. Jo mer Zen brukes, desto bedre priser kan MongolGPT forhandle og gi videre til deg.",
-  "zen.faq.q4": "Hva koster Zen?",
-  "zen.faq.a4.p1.beforePricing": "Zen",
-  "zen.faq.a4.p1.pricingLink": "tar betalt per forespørsel",
-  "zen.faq.a4.p1.afterPricing": "uten påslag, så du betaler akkurat det modellleverandøren tar betalt.",
-  "zen.faq.a4.p2.beforeAccount": "Totalprisen avhenger av bruk, og du kan sette månedlige utgiftsgrenser i din",
-  "zen.faq.a4.p2.accountLink": "konto",
-  "zen.faq.a4.p3":
-    "For å dekke kostnader legger MongolGPT til bare et lite betalingsbehandlingsgebyr på $1.23 per $20 saldo-påfyll.",
-  "zen.faq.q5": "Hva med data og personvern?",
-  "zen.faq.a5.beforeExceptions":
-    "Alle Zen-modeller hostes i USA. Leverandører følger en policy om null oppbevaring og bruker ikke dataene dine til modelltrening, med de",
-  "zen.faq.a5.exceptionsLink": "følgende unntakene",
-  "zen.faq.q6": "Kan jeg sette utgiftsgrenser?",
-  "zen.faq.a6": "Ja, du kan sette månedlige utgiftsgrenser i kontoen din.",
-  "zen.faq.q7": "Kan jeg avslutte?",
-  "zen.faq.a7": "Ja, du kan deaktivere fakturering når som helst og bruke gjenværende saldo.",
-  "zen.faq.q8": "Kan jeg bruke Zen med andre kodeagenter?",
-  "zen.faq.a8":
-    "Selv om Zen fungerer veldig bra med MongolGPT, kan du bruke Zen med hvilken som helst agent. Følg oppsettinstruksjonene i din foretrukne kodeagent.",
-
-  "zen.cta.start": "Kom i gang med Zen",
-  "zen.pricing.title": "Legg til $20 Pay as you go-saldo",
-  "zen.pricing.fee": "(+$1.23 kortbehandlingsgebyr)",
-  "zen.pricing.body": "Bruk med hvilken som helst agent. Angi månedlige forbruksgrenser. Avslutt når som helst.",
-  "zen.problem.title": "Hvilket problem løser Zen?",
-  "zen.problem.body":
-    "Det er så mange modeller tilgjengelig, men bare noen få fungerer bra med kodeagenter. De fleste leverandører konfigurerer dem annerledes med varierende resultater.",
-  "zen.problem.subtitle": "Vi fikser dette for alle, ikke bare MongolGPT-brukere.",
-  "zen.problem.item1": "Tester utvalgte modeller og konsulterer teamene deres",
-  "zen.problem.item2": "Samarbeider med leverandører for å sikre at de blir levert riktig",
-  "zen.problem.item3": "Benchmarker alle modell-leverandør-kombinasjoner vi anbefaler",
-  "zen.how.title": "Hvordan Zen fungerer",
-  "zen.how.body": "Selv om vi foreslår at du bruker Zen med MongolGPT, kan du bruke Zen med hvilken som helst agent.",
-  "zen.how.step1.title": "Registrer deg og legg til $20 saldo",
-  "zen.how.step1.beforeLink": "følg",
-  "zen.how.step1.link": "oppsettsinstruksjonene",
-  "zen.how.step2.title": "Bruk Zen med transparente priser",
-  "zen.how.step2.link": "betal per forespørsel",
-  "zen.how.step2.afterLink": "uten påslag",
-  "zen.how.step3.title": "Auto-påfyll",
-  "zen.how.step3.body": "når saldoen din når $5, fyller vi automatisk på $20",
-  "zen.privacy.title": "Personvernet ditt er viktig for oss",
-  "zen.privacy.beforeExceptions":
-    "Alle Zen-modeller hostes i USA. Leverandører følger en policy om null oppbevaring og bruker ikke dataene dine til modelltrening, med",
-  "zen.privacy.exceptionsLink": "følgende unntak",
-
-  "go.title": "MongolGPT Go | Rimelige kodemodeller for alle",
-  "go.banner.text": "MiniMax M3 får 3x bruksgrense i en begrenset periode",
-  "go.meta.description":
-    "Go starter på $5 for den første måneden, deretter $10/måned, med sjenerøse 5-timers forespørselsgrenser for GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro og DeepSeek V4 Flash.",
-  "go.hero.title": "Rimelige kodemodeller for alle",
-  "go.hero.body":
-    "Go bringer agent-koding til programmerere over hele verden. Med rause grenser og pålitelig tilgang til de mest kapable åpen kildekode-modellene, kan du bygge med kraftige agenter uten å bekymre deg for kostnader eller tilgjengelighet.",
-
-  "go.cta.start": "Abonner på Go",
-  "go.cta.template": "{{text}} {{price}}",
-  "go.cta.text": "Abonner på Go",
-  "go.cta.price": "$10/måned",
-  "go.cta.promo": "$5 første måned",
-  "go.pricing.body":
-    "Bruk med hvilken som helst agent. $5 første måned, deretter $10/måned. Fyll på kreditt ved behov. Avslutt når som helst.",
-  "go.graph.free": "Gratis",
-  "go.graph.freePill": "Big Pickle og gratis modeller",
-  "go.graph.go": "Go",
-  "go.graph.label": "Forespørsler per 5 timer",
-  "go.graph.usageLimits": "Bruksgrenser",
-  "go.graph.tick": "{{n}}x",
-  "go.graph.aria": "Forespørsler per 5t: {{free}} vs {{go}}",
-
-  "go.testimonials.brand.zen": "Zen",
-  "go.testimonials.brand.go": "Go",
-  "go.testimonials.handle": "@MongolGPT",
-  "go.testimonials.dax.name": "Dax Raad",
-  "go.testimonials.dax.title": "tidligere CEO, Terminal Products",
-  "go.testimonials.dax.quoteAfter": "har endret livet mitt, det er virkelig en no-brainer.",
-  "go.testimonials.jay.name": "Jay V",
-  "go.testimonials.jay.title": "tidligere grunnlegger, SEED, PM, Melt, Pop, Dapt, Cadmus og ViewPoint",
-  "go.testimonials.jay.quoteBefore": "4 av 5 personer på teamet vårt elsker å bruke",
-  "go.testimonials.jay.quoteAfter": ".",
-  "go.testimonials.adam.name": "Adam Elmore",
-  "go.testimonials.adam.title": "tidligere Hero, AWS",
-  "go.testimonials.adam.quoteBefore": "Jeg kan ikke anbefale",
-  "go.testimonials.adam.quoteAfter": "nok. Seriøst, det er virkelig bra.",
-  "go.testimonials.david.name": "David Hill",
-  "go.testimonials.david.title": "tidligere Head of Design, Laravel",
-  "go.testimonials.david.quoteBefore": "Med",
-  "go.testimonials.david.quoteAfter": "vet jeg at alle modellene er testet og perfekte for kodeagenter.",
-  "go.testimonials.frank.name": "Frank Wang",
-  "go.testimonials.frank.title": "tidligere intern, Nvidia (4 ganger)",
-  "go.testimonials.frank.quote": "Jeg skulle ønske jeg fortsatt var hos Nvidia.",
-  "go.problem.title": "Hvilket problem løser Go?",
-  "go.problem.body":
-    "Vi fokuserer på å bringe MongolGPT-opplevelsen til så mange som mulig. MongolGPT Go er et rimelig abonnement: $5 for den første måneden, deretter $10/måned. Det gir sjenerøse grenser og pålitelig tilgang til de mest kapable åpen kildekode-modellene.",
-  "go.problem.subtitle": " ",
-  "go.problem.item1": "Rimelig abonnementspris",
-  "go.problem.item2": "Rause grenser og pålitelig tilgang",
-  "go.problem.item3": "Bygget for så mange programmerere som mulig",
-  "go.problem.item4":
-    "Inkluderer GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro og DeepSeek V4 Flash",
-  "go.how.title": "Hvordan Go fungerer",
-  "go.how.body":
-    "Go starter på $5 for den første måneden, deretter $10/måned. Du kan bruke det med MongolGPT eller hvilken som helst agent.",
-  "go.how.step1.title": "Opprett en konto",
-  "go.how.step1.beforeLink": "følg",
-  "go.how.step1.link": "oppsettsinstruksjonene",
-  "go.how.step2.title": "Abonner på Go",
-  "go.how.step2.link": "$5 første måned",
-  "go.how.step2.afterLink": "deretter $10/måned med sjenerøse grenser",
-  "go.how.step3.title": "Begynn å kode",
-  "go.how.step3.body": "med pålitelig tilgang til åpen kildekode-modeller",
-  "go.privacy.title": "Personvernet ditt er viktig for oss",
-  "go.privacy.body":
-    "Planen er primært designet for internasjonale brukere, med modeller driftet i USA, EU og Singapore for stabil global tilgang.",
-  "go.privacy.contactAfter": "hvis du har spørsmål.",
-  "go.privacy.beforeExceptions":
-    "Go-modeller hostes i USA. Leverandører følger en policy om null oppbevaring og bruker ikke dataene dine til modelltrening, med",
-  "go.privacy.exceptionsLink": "følgende unntak",
-  "go.faq.q1": "Hva er MongolGPT Go?",
-  "go.faq.a1":
-    "Go er et rimelig abonnement som gir deg pålitelig tilgang til kapable åpen kildekode-modeller for agent-koding.",
-  "go.faq.q2": "Hvilke modeller inkluderer Go?",
-  "go.faq.a2": "Go inkluderer modellene nedenfor, med høye grenser og pålitelig tilgang.",
-  "go.faq.q3": "Er Go det samme som Zen?",
-  "go.faq.a3":
-    "Nei. Zen er betaling etter bruk, mens Go starter på $5 for den første måneden, deretter $10/måned, med sjenerøse grenser og pålitelig tilgang til åpen kildekode-modellene GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro og DeepSeek V4 Flash.",
-  "go.faq.q4": "Hva koster Go?",
-  "go.faq.a4.p1.beforePricing": "Go koster",
-  "go.faq.a4.p1.pricingLink": "$5 første måned",
-  "go.faq.a4.p1.afterPricing": "deretter $10/måned med sjenerøse grenser.",
-  "go.faq.a4.p2.beforeAccount": "Du kan administrere abonnementet ditt i din",
-  "go.faq.a4.p2.accountLink": "konto",
-  "go.faq.a4.p3": "Avslutt når som helst.",
-  "go.faq.q5": "Hva med data og personvern?",
-  "go.faq.a5.body":
-    "Planen er primært designet for internasjonale brukere, med modeller driftet i USA, EU og Singapore for stabil global tilgang. Våre leverandører følger en policy om null oppbevaring og bruker ikke dataene dine til modelltrening.",
-  "go.faq.a5.beforeExceptions":
-    "Go-modeller hostes i USA. Leverandører følger en policy om null oppbevaring og bruker ikke dataene dine til modelltrening, med",
-  "go.faq.a5.exceptionsLink": "følgende unntak",
-  "go.faq.q6": "Kan jeg fylle på kreditt?",
-  "go.faq.a6": "Hvis du trenger mer bruk, kan du fylle på kreditt i kontoen din.",
-  "go.faq.q7": "Kan jeg avslutte?",
-  "go.faq.a7": "Ja, du kan avslutte når som helst.",
-  "go.faq.q8": "Kan jeg bruke Go med andre kodeagenter?",
-  "go.faq.a8":
-    "Ja, du kan bruke Go med hvilken som helst agent. Følg oppsettinstruksjonene i din foretrukne kodeagent.",
-
-  "go.faq.q9": "Hva er forskjellen mellom gratis modeller og Go?",
-  "go.faq.a9":
-    "Gratis modeller inkluderer Big Pickle pluss kampanjemodeller tilgjengelig på det tidspunktet, med en kvote på 200 forespørsler/dag. Go inkluderer GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro og DeepSeek V4 Flash med høyere kvoter håndhevet over rullerende vinduer (5 timer, ukentlig og månedlig), omtrent tilsvarende $12 per 5 timer, $30 per uke og $60 per måned (faktiske forespørselsantall varierer etter modell og bruk).",
 
   "zen.api.error.rateLimitExceeded": "Rate limit overskredet. Vennligst prøv igjen senere.",
   "zen.api.error.modelNotSupported": "Modell {{model}} støttes ikke",
@@ -374,11 +182,6 @@ export const dict = {
   "zen.api.error.userMonthlyLimitReached":
     "Du har nådd din månedlige utgiftsgrense på ${{amount}}. Administrer grensene dine her: {{membersUrl}}",
   "zen.api.error.modelDisabled": "Modellen er deaktivert",
-  "zen.api.error.trialEnded":
-    "Den gratis kampanjen for {{model}} er avsluttet. Du kan fortsette å bruke modellen ved å abonnere på MongolGPT Go - {{link}}",
-
-  "workspace.nav.zen": "Zen",
-  "workspace.nav.go": "Go",
   "workspace.nav.usage": "Bruk",
   "workspace.nav.apiKeys": "API-nøkler",
   "workspace.nav.members": "Medlemmer",
@@ -386,7 +189,6 @@ export const dict = {
   "workspace.nav.settings": "Innstillinger",
 
   "workspace.home.banner.beforeLink": "Pålitelige optimaliserte modeller for kodeagenter.",
-  "workspace.lite.banner.beforeLink": "Lavkost kodemodeller for alle.",
   "workspace.home.billing.loading": "Laster...",
   "workspace.home.billing.enable": "Aktiver fakturering",
   "workspace.home.billing.currentBalance": "Gjeldende saldo",
@@ -398,8 +200,6 @@ export const dict = {
   "workspace.newUser.feature.quality.body":
     "Få tilgang til modeller konfigurert for optimal ytelse – ingen nedgraderinger eller ruting til billigere leverandører.",
   "workspace.newUser.feature.lockin.title": "Ingen innlåsing",
-  "workspace.newUser.feature.lockin.body":
-    "Bruk Zen med hvilken som helst kodeagent, og fortsett å bruke andre leverandører med mongolgpt når du vil.",
   "workspace.newUser.copyApiKey": "Kopier API-nøkkel",
   "workspace.newUser.copyKey": "Kopier nøkkel",
   "workspace.newUser.copied": "Kopiert!",
@@ -441,7 +241,6 @@ export const dict = {
   "workspace.usage.breakdown.output": "Output",
   "workspace.usage.breakdown.reasoning": "Resonnering",
   "workspace.usage.subscription": "{{plan}} (${{amount}})",
-  "workspace.usage.lite": "Go (${{amount}})",
   "workspace.usage.byok": "BYOK (${{amount}})",
 
   "workspace.cost.title": "Kostnad",
@@ -560,8 +359,6 @@ export const dict = {
   "workspace.payments.type.credit": "kreditt",
   "workspace.payments.type.subscription": "abonnement",
   "workspace.payments.view": "Vis",
-
-  "workspace.lite.loading": "Laster...",
   "workspace.lite.time.day": "dag",
   "workspace.lite.time.days": "dager",
   "workspace.lite.time.hour": "time",
@@ -569,61 +366,6 @@ export const dict = {
   "workspace.lite.time.minute": "minutt",
   "workspace.lite.time.minutes": "minutter",
   "workspace.lite.time.fewSeconds": "noen få sekunder",
-  "workspace.lite.subscription.message": "Du abonnerer på MongolGPT Go.",
-  "workspace.lite.subscription.manage": "Administrer abonnement",
-  "workspace.lite.subscription.rollingUsage": "Løpende bruk",
-  "workspace.lite.subscription.weeklyUsage": "Ukentlig bruk",
-  "workspace.lite.subscription.monthlyUsage": "Månedlig bruk",
-  "workspace.lite.subscription.resetsIn": "Nullstilles om",
-  "workspace.lite.subscription.useBalance": "Bruk din tilgjengelige saldo etter å ha nådd bruksgrensene",
-  "workspace.lite.subscription.selectProvider":
-    'Velg "MongolGPT Go" som leverandør i mongolgpt-konfigurasjonen din for å bruke Go-modeller.',
-
-  "workspace.lite.other.message":
-    "Et annet medlem i dette arbeidsområdet abonnerer allerede på MongolGPT Go. Kun ett medlem per arbeidsområde kan abonnere.",
-  "workspace.lite.promo.description":
-    "MongolGPT Go starter på {{price}}, deretter $10/måned, og gir pålitelig tilgang til populære åpne kodingsmodeller med sjenerøse bruksgrenser.",
-  "workspace.lite.promo.price": "$5 for den første måneden",
-  "workspace.lite.promo.modelsTitle": "Hva som er inkludert",
-  "workspace.lite.promo.footer":
-    "Planen er primært designet for internasjonale brukere, med modeller driftet i USA, EU og Singapore for stabil global tilgang. Priser og bruksgrenser kan endres etter hvert som vi lærer fra tidlig bruk og tilbakemeldinger.",
-  "workspace.lite.promo.subscribe": "Abonner på Go",
-  "workspace.lite.promo.subscribing": "Omdirigerer...",
-  "workspace.lite.promo.otherMethods": "Andre betalingsmetoder",
-  "workspace.lite.promo.selectMethod": "Velg betalingsmetode",
-
-  "workspace.referral.copyLink": "Kopier lenke",
-  "workspace.referral.copied": "Kopiert",
-  "workspace.referral.overview.title": "Inviter venner",
-  "workspace.referral.overview.subtitle": "Få $5 når en venn abonnerer. De får også $5.",
-  "workspace.referral.instructions.share": "Del henvisningslenken din",
-  "workspace.referral.instructions.subscribe": "Vennen din blir med og abonnerer på Go",
-  "workspace.referral.instructions.claim": "Dere får begge $5 i brukskreditt å bruke på Go-bruksgrensene deres",
-  "workspace.referral.rewards.title": "Henvisningsbelønninger",
-  "workspace.referral.rewards.description": "Bruk tilgjengelige henvisningskreditter på Go-bruken din.",
-  "workspace.referral.rewards.subtitle": "{{applied}} / {{total}} belønninger brukt.",
-  "workspace.referral.rewards.empty": "Ingen henvisningsbelønninger ennå.",
-  "workspace.referral.table.reward": "Belønning",
-  "workspace.referral.table.referral": "Beskrivelse",
-  "workspace.referral.table.date": "Dato",
-  "workspace.referral.reward.description.inviter": "Inviterte {{email}}",
-  "workspace.referral.reward.description.invitee": "Invitert av {{email}}",
-  "workspace.referral.reward.action.subscribeUnlock": "Abonner for å låse opp",
-  "workspace.referral.reward.action.view": "Vis belønning",
-  "workspace.referral.reward.action.applied": "Belønning brukt",
-  "workspace.referral.reward.source.pendingInviter": "Venter på at de abonnerer",
-  "workspace.referral.reward.source.pendingInvitee": "Abonner for å låse opp belønningen",
-  "workspace.referral.reward.source.available": "Belønning klar til bruk",
-  "workspace.referral.reward.source.applied": "Belønning brukt",
-  "workspace.referral.reward.status.applied": "Belønning brukt",
-  "workspace.referral.reward.status.pendingInviter": "Abonner for å låse opp",
-  "workspace.referral.reward.status.pendingInvitee": "Abonner for å låse opp",
-  "workspace.referral.apply.noGo": "Abonner for å låse opp",
-  "workspace.referral.apply.preview": "Vis belønning",
-  "workspace.referral.apply.action": "Bruk",
-  "workspace.referral.apply.confirmTitle": "Bruk belønning",
-  "workspace.referral.apply.confirmBody": "Bruk {{amount}} for å redusere dette workspacets nåværende forbruk.",
-  "workspace.referral.apply.confirmAction": "Bruk",
 
   "download.title": "MongolGPT | Last ned",
   "download.meta.description": "Last ned MongolGPT for macOS, Windows og Linux",
@@ -646,13 +388,8 @@ export const dict = {
   "download.faq.a3.beforeLocal":
     "Ikke nødvendigvis, men sannsynligvis. Du trenger et AI-abonnement hvis du vil koble MongolGPT til en betalt leverandør, selv om du kan jobbe med",
   "download.faq.a3.localLink": "lokale modeller",
-  "download.faq.a3.afterLocal.beforeZen": "gratis. Selv om vi oppfordrer brukere til å bruke",
-  "download.faq.a3.afterZen": ", fungerer MongolGPT med alle populære leverandører som OpenAI, Anthropic, xAI osv.",
 
   "download.faq.a5.p1": "MongolGPT er 100% gratis å bruke.",
-  "download.faq.a5.p2.beforeZen":
-    "Eventuelle ekstra kostnader kommer fra abonnementet ditt hos en modellleverandør. Selv om MongolGPT fungerer med enhver modellleverandør, anbefaler vi å bruke",
-  "download.faq.a5.p2.afterZen": ".",
 
   "download.faq.a6.p1": "Dataene og informasjonen din lagres bare når du oppretter delbare lenker i MongolGPT.",
   "download.faq.a6.p2.beforeShare": "Les mer om",

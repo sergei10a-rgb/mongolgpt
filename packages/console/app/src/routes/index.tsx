@@ -1,8 +1,7 @@
 import "./index.css"
 import { Title, Meta } from "@solidjs/meta"
 //import { HttpHeader } from "@solidjs/start"
-import video from "../asset/lander/mongolgpt-min.mp4"
-import videoPoster from "../asset/lander/mongolgpt-poster.png"
+import productSession from "../asset/lander/mongolgpt-product-session.png"
 import { IconCopy, IconCheck } from "../component/icon"
 import { A, createAsync } from "@solidjs/router"
 import { EmailSignup } from "~/component/email-signup"
@@ -128,10 +127,8 @@ export default function Home() {
             </div>
           </section>
 
-          <section data-component="video">
-            <video src={video} autoplay playsinline loop muted preload="auto" poster={videoPoster}>
-              {i18n.t("common.videoUnsupported")}
-            </video>
+          <section data-component="product-showcase">
+            <img src={productSession} alt={i18n.t("home.product.alt")} width="1440" height="810" loading="eager" />
           </section>
 
           <section data-component="what">
@@ -644,9 +641,10 @@ export default function Home() {
               </li>
               <li>
                 <Faq question={i18n.t("home.faq.q3")}>
-                  {i18n.t("home.faq.a3.p1")} {i18n.t("home.faq.a3.p2.beforeZen")}{" "}
-                  <A href={language.route("/zen")}>{i18n.t("nav.zen")}</A>
-                  {i18n.t("home.faq.a3.p2.afterZen")} {i18n.t("home.faq.a3.p3")} {i18n.t("home.faq.a3.p4.beforeLocal")}{" "}
+                  {i18n.t("home.faq.a3.p1")} {i18n.t("home.faq.a3.p2.beforePlans")}{" "}
+                  <A href={language.route("/pricing")}>{i18n.t("home.faq.a3.p2.plansLink")}</A>
+                  {i18n.t("home.faq.a3.p2.afterPlans")} {i18n.t("home.faq.a3.p3")}{" "}
+                  {i18n.t("home.faq.a3.p4.beforeLocal")}{" "}
                   <a href={language.route("/docs/providers/#lm-studio")} target="_blank">
                     {i18n.t("home.faq.a3.p4.localLink")}
                   </a>
@@ -667,12 +665,16 @@ export default function Home() {
                 </Faq>
               </li>
               <li>
-                <Faq question={i18n.t("home.faq.q6")}>{i18n.t("home.faq.a6")}</Faq>
+                <Faq question={i18n.t("home.faq.q6")}>
+                  {i18n.t("home.faq.a6.beforePricing")}{" "}
+                  <A href={language.route("/pricing")}>{i18n.t("home.faq.a6.pricingLink")}</A>
+                  {i18n.t("home.faq.a6.afterPricing")}
+                </Faq>
               </li>
               <li>
                 <Faq question={i18n.t("home.faq.q7")}>
                   {i18n.t("home.faq.a7.p1")} {i18n.t("home.faq.a7.p2.beforeModels")}{" "}
-                  <a href={language.route("/docs/zen/#privacy")}>{i18n.t("home.faq.a7.p2.modelsLink")}</a>{" "}
+                  <a href={language.route("/docs/providers/")}>{i18n.t("home.faq.a7.p2.modelsLink")}</a>{" "}
                   {i18n.t("home.faq.a7.p2.and")}{" "}
                   <a href={language.route("/docs/share/#privacy")}>{i18n.t("home.faq.a7.p2.shareLink")}</a>.
                 </Faq>
@@ -693,11 +695,11 @@ export default function Home() {
             </ul>
           </section>
 
-          <section data-component="zen-cta">
-            <div data-slot="zen-cta-copy">
-              <strong>{i18n.t("home.zenCta.title")}</strong>
-              <p>{i18n.t("home.zenCta.body")}</p>
-              <div data-slot="model-logos">
+          <section data-component="pricing-cta">
+            <div data-slot="pricing-cta-copy">
+              <strong>{i18n.t("home.pricingCta.title")}</strong>
+              <p>{i18n.t("home.pricingCta.body")}</p>
+              <div data-slot="provider-logos">
                 <div>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <mask
@@ -778,8 +780,8 @@ export default function Home() {
                   </svg>
                 </div>
               </div>
-              <A href={language.route("/zen")}>
-                <span>{i18n.t("home.zenCta.link")} </span>
+              <A href={language.route("/pricing")}>
+                <span>{i18n.t("home.pricingCta.link")} </span>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M6.5 12L17 12M13 16.5L17.5 12L13 7.5"

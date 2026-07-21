@@ -194,7 +194,7 @@ export function UsageSection() {
                             })}
                           </Match>
                           <Match when={usage.enrichment?.plan === "legacy-lite"}>
-                            {i18n.t("workspace.usage.lite", {
+                            {i18n.t("workspace.usage.legacyPlan", {
                               amount: ((usage.cost ?? 0) / 100000000).toFixed(4),
                             })}
                           </Match>

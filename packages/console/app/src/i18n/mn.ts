@@ -9,8 +9,6 @@ export const dict = {
   "nav.discord": "Discord",
   "nav.x": "X",
   "nav.enterprise": "Байгууллагад",
-  "nav.zen": "Zen",
-  "nav.go": "Go",
   "nav.login": "Нэвтрэх",
   "nav.free": "Татах",
   "nav.home": "Нүүр",
@@ -123,22 +121,6 @@ export const dict = {
   "pricing.note.payment":
     "Төлбөртэй багц QPay болон Bonum ашиглана. Төлбөрийн орчин бүрэн тохирсны дараа нэхэмжлэх үүсгэх боломж нээгдэнэ.",
 
-  "temp.title": "MongolGPT | Терминалын хиймэл оюунт кодын агент",
-  "temp.hero.title": "Терминалын хиймэл оюунт кодын агент",
-  "temp.zen": "MongolGPT Zen",
-  "temp.getStarted": "Эхлэх",
-  "temp.feature.native.title": "Төрөлх TUI",
-  "temp.feature.native.body": "Хурдан ажиллагаатай, загвараа сольж болдог терминалын интерфэйс",
-  "temp.feature.zen.beforeLink": "нь",
-  "temp.feature.zen.link": "сонгон шалгаруулсан загваруудын жагсаалт",
-  "temp.feature.zen.afterLink": "юм.",
-  "temp.feature.models.beforeLink": "75-аас олон LLM нийлүүлэгчийг",
-  "temp.feature.models.afterLink": "-ээр дамжуулан дэмжинэ, үүнд дотоод загварууд ч багтана",
-  "temp.screenshot.caption": "tokyonight загвартай MongolGPT TUI",
-  "temp.screenshot.alt": "tokyonight загвартай MongolGPT TUI",
-  "temp.logoLightAlt": "MongolGPT-ийн цайвар лого",
-  "temp.logoDarkAlt": "MongolGPT-ийн бараан лого",
-
   "home.banner.badge": "Шинэ",
   "home.banner.text": "Компьютерийн аппын туршилтын хувилбар гарлаа",
   "home.banner.platforms": "macOS, Windows болон Linux-д",
@@ -148,6 +130,7 @@ export const dict = {
   "home.hero.title": "Монгол хэлд зориулсан хиймэл оюунт кодын агент",
   "home.hero.subtitle.a": "Үнэгүй загваруудаас ашиглах эсвэл дурын нийлүүлэгчийн загварыг холбоорой,",
   "home.hero.subtitle.b": "Claude, GPT, Gemini болон бусад загварыг дэмжинэ.",
+  "home.product.alt": "MongolGPT-ийн Монгол хэлтэй кодын session, tool болон Git хяналтын дэлгэц",
 
   "home.install.ariaLabel": "Суулгах сонголтууд",
 
@@ -189,11 +172,12 @@ export const dict = {
   "home.faq.a2.before": "Эхлэх хамгийн хялбар арга нь",
   "home.faq.a2.link": "танилцуулгыг унших",
   "home.faq.q3": "MongolGPT ашиглахад хиймэл оюуны нэмэлт захиалга хэрэгтэй юу?",
-  "home.faq.a3.p1": "Заавал биш. MongolGPT-д бүртгэл үүсгэлгүй ашиглаж болох хэд хэдэн үнэгүй загвар бий.",
-  "home.faq.a3.p2.beforeZen": "Үүнээс гадна түгээмэл кодын загваруудыг ашиглахын тулд",
-  "home.faq.a3.p2.afterZen": " бүртгэл үүсгэж болно.",
+  "home.faq.a3.p1": "Заавал биш. MongolGPT-ийн Free Auto багцаар үнэгүй загваруудаас шууд эхэлж болно.",
+  "home.faq.a3.p2.beforePlans": "Илүү өндөр хязгаар эсвэл төлбөртэй загвар хэрэгтэй бол",
+  "home.faq.a3.p2.plansLink": "Basic, Pro эсвэл Max багц",
+  "home.faq.a3.p2.afterPlans": " сонгоно.",
   "home.faq.a3.p3":
-    "Бид Zen-ийг санал болгодог ч MongolGPT нь OpenAI, Anthropic, xAI зэрэг түгээмэл бүх нийлүүлэгчтэй ажиллана.",
+    "Мөн OpenRouter, NVIDIA NIM болон OpenAI-compatible үйлчилгээний өөрийн API түлхүүрийг холбож болно.",
   "home.faq.a3.p4.beforeLocal": "Та бүр өөрийн",
   "home.faq.a3.p4.localLink": "дотоод загваруудаа холбож болно",
   "home.faq.q4": "Одоо байгаа хиймэл оюуны захиалгаа MongolGPT-д ашиглаж болох уу?",
@@ -205,8 +189,9 @@ export const dict = {
   "home.faq.a5.and": "болон",
   "home.faq.a5.web": "вэбээр ашиглах боломжтой",
   "home.faq.q6": "MongolGPT ямар үнэтэй вэ?",
-  "home.faq.a6":
-    "MongolGPT-ийг бүрэн үнэгүй ашиглана. Мөн хэд хэдэн үнэгүй загвар дагалдана. Өөр нийлүүлэгч холбовол нэмэлт төлбөр гарч болзошгүй.",
+  "home.faq.a6.beforePricing": "Free багцаар үнэ төлбөргүй эхэлнэ.",
+  "home.faq.a6.pricingLink": "Basic, Pro, Max багцын үнэ болон хязгаарыг эндээс харна уу",
+  "home.faq.a6.afterPricing": ". Өөрийн API түлхүүртэй хэрэглэгч тухайн нийлүүлэгчийн үнээр төлнө.",
   "home.faq.q7": "Өгөгдөл болон нууцлалын талаар ямар бодлоготой вэ?",
   "home.faq.a7.p1":
     "Манай үнэгүй загваруудыг ашиглах эсвэл хуваалцах холбоос үүсгэх үед л таны өгөгдөл, мэдээллийг хадгална.",
@@ -221,173 +206,10 @@ export const dict = {
   "home.faq.a8.p3":
     "-ийн дагуу хэн ч ашиглаж, өөрчилж, хөгжилд нь хувь нэмэр оруулж болно. Олон нийтийн хэн ч асуудал бүртгэх, татах хүсэлт илгээх, боломжийг нь өргөжүүлэх эрхтэй.",
 
-  "home.zenCta.title": "Кодын агентуудад зориулсан найдвартай, оновчилсон загваруудыг ашиглаарай",
-  "home.zenCta.body":
-    "Zen танд MongolGPT-ийн кодын агентуудад зориулан тусгайлан туршиж, жишиг шалгалтаар үнэлсэн хиймэл оюуны загваруудаас сонгон ашиглах боломж олгоно. Нийлүүлэгч бүрийн тогтворгүй гүйцэтгэл, чанарт санаа зоволгүй, баталгаажсан загваруудаар ажиллаарай.",
-  "home.zenCta.link": "Zen-ийн тухай",
-
-  "zen.title": "MongolGPT Zen | Кодын агентуудад зориулсан найдвартай, оновчилсон загварууд",
-  "zen.hero.title": "Кодын агентуудад зориулсан найдвартай, оновчилсон загварууд",
-  "zen.hero.body":
-    "Zen танд MongolGPT-ийн кодын агентуудад зориулан тусгайлан туршиж, жишиг шалгалтаар үнэлсэн хиймэл оюуны загваруудаас сонгон ашиглах боломж олгоно. Тогтворгүй гүйцэтгэл, чанарт санаа зоволгүй, баталгаажсан загваруудаар ажиллаарай.",
-
-  "zen.faq.q1": "MongolGPT Zen гэж юу вэ?",
-  "zen.faq.a1":
-    "Zen бол MongolGPT-ийн багийн кодын агентуудад зориулан туршиж, жишиг шалгалтаар үнэлсэн хиймэл оюуны загваруудын сонголт юм.",
-  "zen.faq.q2": "Zen яагаад илүү нарийвчлалтай вэ?",
-  "zen.faq.a2":
-    "Zen зөвхөн кодын агентуудад тусгайлан туршиж, жишиг шалгалтаар үнэлсэн загваруудыг санал болгодог. Махыг маслоны хутгаар хэрчдэггүйтэй адил код бичихдээ чанар муутай загвар бүү ашиглаарай.",
-  "zen.faq.q3": "Zen хямд уу?",
-  "zen.faq.a3":
-    "Zen ашгийн төлөө үйлчилгээ биш. Загвар нийлүүлэгчийн зардлыг нэмэгдэлгүйгээр танд шилжүүлнэ. Zen-ийн хэрэглээ өсөх тусам MongolGPT илүү таатай үнэ тохиролцож, хэмнэлтийг танд хүргэх боломж нэмэгдэнэ.",
-  "zen.faq.q4": "Zen ямар үнэтэй вэ?",
-  "zen.faq.a4.p1.beforePricing": "Zen нь",
-  "zen.faq.a4.p1.pricingLink": "хүсэлт бүрээр төлбөр тооцож",
-  "zen.faq.a4.p1.afterPricing": "нэмэгдэл авдаггүй тул та загвар нийлүүлэгчийн тогтоосон үнийг яг хэвээр нь төлнө.",
-  "zen.faq.a4.p2.beforeAccount": "Нийт зардал хэрэглээнээс хамаарна. Сарын зарцуулалтын хязгаарыг",
-  "zen.faq.a4.p2.accountLink": "бүртгэлдээ тохируулж болно",
-  "zen.faq.a4.p3":
-    "Зардлаа нөхөхийн тулд MongolGPT үлдэгдэлд $20 нэмэх бүрд зөвхөн $1.23-ын төлбөр боловсруулалтын шимтгэл авна.",
-  "zen.faq.q5": "Өгөгдөл болон нууцлалын талаар ямар бодлоготой вэ?",
-  "zen.faq.a5.beforeExceptions":
-    "Zen-ийн бүх загварыг АНУ-д байршуулдаг. Нийлүүлэгчид өгөгдөл хадгалахгүй байх бодлого мөрдөж, таны өгөгдлийг загвар сургахад ашигладаггүй. Харин",
-  "zen.faq.a5.exceptionsLink": "дараах онцгой тохиолдлууд хамаарахгүй",
-  "zen.faq.q6": "Зарцуулалтын хязгаар тавьж болох уу?",
-  "zen.faq.a6": "Болно. Бүртгэлдээ сарын зарцуулалтын хязгаар тохируулж болно.",
-  "zen.faq.q7": "Цуцалж болох уу?",
-  "zen.faq.a7": "Болно. Төлбөр тооцоог хүссэн үедээ идэвхгүй болгоод үлдсэн үлдэгдлээ ашиглаж болно.",
-  "zen.faq.q8": "Zen-ийг өөр кодын агенттай ашиглаж болох уу?",
-  "zen.faq.a8":
-    "Zen MongolGPT-тэй маш сайн ажилладаг ч дурын агенттай ашиглаж болно. Сонгосон кодын агентынхаа тохируулах зааврыг дагана уу.",
-
-  "zen.cta.start": "Zen ашиглаж эхлэх",
-  "zen.pricing.title": "Хэрэглэснээрээ төлөх үлдэгдэлд $20 нэмэх",
-  "zen.pricing.fee": "(картын төлбөр боловсруулалтын $1.23 шимтгэлтэй)",
-  "zen.pricing.body": "Дурын агенттай ашиглана. Сарын зарцуулалтын хязгаар тавина. Хүссэн үедээ цуцална.",
-  "zen.problem.title": "Zen ямар асуудлыг шийддэг вэ?",
-  "zen.problem.body":
-    "Загвар маш олон болсон ч цөөн хэд нь кодын агенттай сайн ажилладаг. Ихэнх нийлүүлэгч загваруудаа өөр өөрөөр тохируулдаг тул үр дүн нь харилцан адилгүй байдаг.",
-  "zen.problem.subtitle": "Бид үүнийг зөвхөн MongolGPT бус, бүх хэрэглэгчид зориулан шийдэж байна.",
-  "zen.problem.item1": "Сонгосон загваруудыг туршиж, багуудтай нь зөвлөлдөх",
-  "zen.problem.item2": "Загваруудыг зөв хүргэхийн тулд нийлүүлэгчидтэй хамтран ажиллах",
-  "zen.problem.item3": "Санал болгож буй загвар, нийлүүлэгчийн бүх хослолд жишиг шалгалт хийх",
-  "zen.how.title": "Zen хэрхэн ажилладаг вэ?",
-  "zen.how.body": "Zen-ийг MongolGPT-тэй ашиглахыг санал болгодог ч дурын агенттай ашиглаж болно.",
-  "zen.how.step1.title": "Бүртгүүлээд үлдэгдэлд $20 нэмэх",
-  "zen.how.step1.beforeLink": "Дараах",
-  "zen.how.step1.link": "тохируулах зааврыг дагана уу",
-  "zen.how.step2.title": "Zen-ийг ил тод үнээр ашиглах",
-  "zen.how.step2.link": "хүсэлт бүрээр төлөх",
-  "zen.how.step2.afterLink": "бөгөөд нэмэгдэлгүй",
-  "zen.how.step3.title": "Автоматаар цэнэглэх",
-  "zen.how.step3.body": "Үлдэгдэл $5 болоход бид автоматаар $20 нэмнэ",
-  "zen.privacy.title": "Таны нууцлал бидэнд чухал",
-  "zen.privacy.beforeExceptions":
-    "Zen-ийн бүх загварыг АНУ-д байршуулдаг. Нийлүүлэгчид өгөгдөл хадгалахгүй байх бодлого мөрдөж, таны өгөгдлийг загвар сургахад ашигладаггүй. Харин",
-  "zen.privacy.exceptionsLink": "дараах онцгой тохиолдлууд хамаарахгүй",
-
-  "go.title": "MongolGPT Go | Хүн бүрд зориулсан хямд кодын загварууд",
-  "go.banner.text": "MiniMax M3 загварын хэрэглээний хязгаар түр хугацаанд 3 дахин нэмэгдлээ",
-  "go.meta.description":
-    "Go эхний сард $5, дараа нь сард $10-ын үнэтэй. GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro болон DeepSeek V4 Flash загварт таван цаг тутмын өгөөмөр хүсэлтийн хязгаар олгоно.",
-  "go.hero.title": "Хүн бүрд зориулсан хямд кодын загварууд",
-  "go.hero.body":
-    "Go нь дэлхийн өнцөг булан бүрийн хөгжүүлэгчдэд агент ашиглан код бичих боломжийг хүргэнэ. Хамгийн чадварлаг нээлттэй эхийн загваруудыг өгөөмөр хязгаар, найдвартай хандалтаар ашиглах тул үнэ болон хүртээмжид санаа зоволгүй хүчирхэг агентуудаар бүтээж болно.",
-
-  "go.cta.start": "Go-д захиалах",
-  "go.cta.template": "{{text}} {{price}}",
-  "go.cta.text": "Go-д захиалах",
-  "go.cta.price": "$10/сар",
-  "go.cta.promo": "Эхний сар $5",
-  "go.pricing.body":
-    "Дурын агенттай ашиглана. Эхний сар $5, дараа нь сард $10. Шаардлагатай бол эрхээ цэнэглэнэ. Хүссэн үедээ цуцална.",
-  "go.graph.free": "Үнэгүй",
-  "go.graph.freePill": "Big Pickle болон үнэгүй загварууд",
-  "go.graph.go": "Go",
-  "go.graph.label": "5 цаг тутмын хүсэлт",
-  "go.graph.usageLimits": "Хэрэглээний хязгаар",
-  "go.graph.tick": "{{n}}x",
-  "go.graph.aria": "5 цаг тутмын хүсэлт: {{free}} ба {{go}}",
-
-  "go.testimonials.brand.zen": "Zen",
-  "go.testimonials.brand.go": "Go",
-  "go.testimonials.handle": "@MongolGPT",
-  "go.testimonials.dax.name": "Dax Raad",
-  "go.testimonials.dax.title": "Terminal Products-ийн гүйцэтгэх захирал асан",
-  "go.testimonials.dax.quoteAfter": "амьдралыг минь өөрчилсөн, эргэлзэх зүйлгүй сонголт болсон.",
-  "go.testimonials.jay.name": "Jay V",
-  "go.testimonials.jay.title": "SEED, PM, Melt, Pop, Dapt, Cadmus болон ViewPoint-ийн үүсгэн байгуулагч асан",
-  "go.testimonials.jay.quoteBefore": "Манай багийн таван хүн тутмын дөрөв нь хэрэглэх дуртай зүйл бол",
-  "go.testimonials.jay.quoteAfter": ".",
-  "go.testimonials.adam.name": "Adam Elmore",
-  "go.testimonials.adam.title": "AWS-ийн Hero асан",
-  "go.testimonials.adam.quoteBefore": "Би",
-  "go.testimonials.adam.quoteAfter": "-ийг хангалттай их санал болгоод ч барахгүй. Үнэхээр сайн.",
-  "go.testimonials.david.name": "David Hill",
-  "go.testimonials.david.title": "Laravel-ийн дизайны албаны дарга асан",
-  "go.testimonials.david.quoteBefore": "",
-  "go.testimonials.david.quoteAfter": "-ийн бүх загварыг туршиж, кодын агентуудад яг тохирсныг би мэддэг.",
-  "go.testimonials.frank.name": "Frank Wang",
-  "go.testimonials.frank.title": "Nvidia-д дөрвөн удаа дадлагажигч байсан",
-  "go.testimonials.frank.quote": "Nvidia-д одоо ч ажиллаж байсан болоосой.",
-  "go.problem.title": "Go ямар асуудлыг шийддэг вэ?",
-  "go.problem.body":
-    "Бид MongolGPT-ийн боломжийг аль болох олон хүнд хүргэхэд төвлөрдөг. MongolGPT Go бол эхний сард $5, дараа нь сард $10-ын үнэтэй хямд захиалга юм. Хамгийн чадварлаг нээлттэй эхийн загваруудыг өгөөмөр хязгаар, найдвартай хандалтаар ашиглуулна.",
-  "go.problem.subtitle": " ",
-  "go.problem.item1": "Хямд захиалгын үнэ",
-  "go.problem.item2": "Өгөөмөр хязгаар, найдвартай хандалт",
-  "go.problem.item3": "Аль болох олон хөгжүүлэгчид зориулан бүтээсэн",
-  "go.problem.item4":
-    "GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro болон DeepSeek V4 Flash багтана",
-  "go.how.title": "Go хэрхэн ажилладаг вэ?",
-  "go.how.body": "Go эхний сард $5, дараа нь сард $10-ын үнэтэй. MongolGPT эсвэл дурын агенттай ашиглаж болно.",
-  "go.how.step1.title": "Бүртгэл үүсгэх",
-  "go.how.step1.beforeLink": "Дараах",
-  "go.how.step1.link": "тохируулах зааврыг дагана уу",
-  "go.how.step2.title": "Go-д захиалах",
-  "go.how.step2.link": "эхний сар $5",
-  "go.how.step2.afterLink": "дараа нь өгөөмөр хязгаартайгаар сард $10",
-  "go.how.step3.title": "Код бичиж эхлэх",
-  "go.how.step3.body": "нээлттэй эхийн загваруудыг найдвартай ашиглана",
-  "go.privacy.title": "Таны нууцлал бидэнд чухал",
-  "go.privacy.body":
-    "Энэ багцыг голчлон олон улсын хэрэглэгчдэд зориулсан бөгөөд дэлхий даяар тогтвортой ашиглуулахын тулд загваруудыг АНУ, ЕХ болон Сингапурт байршуулдаг.",
-  "go.privacy.contactAfter": "асуух зүйл байвал бидэнтэй холбогдоно уу.",
-  "go.privacy.beforeExceptions":
-    "Go-ийн загваруудыг АНУ-д байршуулдаг. Нийлүүлэгчид өгөгдөл хадгалахгүй байх бодлого мөрдөж, таны өгөгдлийг загвар сургахад ашигладаггүй. Харин",
-  "go.privacy.exceptionsLink": "дараах онцгой тохиолдлууд хамаарахгүй",
-  "go.faq.q1": "MongolGPT Go гэж юу вэ?",
-  "go.faq.a1":
-    "Go бол агент ашиглан код бичихэд тохирсон чадварлаг нээлттэй эхийн загваруудыг найдвартай ашиглуулах хямд захиалга юм.",
-  "go.faq.q2": "Go-д ямар загварууд багтдаг вэ?",
-  "go.faq.a2": "Go-д доор жагсаасан загварууд өгөөмөр хязгаар, найдвартай хандалттайгаар багтана.",
-  "go.faq.q3": "Go болон Zen ижил үү?",
-  "go.faq.a3":
-    "Үгүй. Zen хэрэглэснээрээ төлдөг бол Go эхний сард $5, дараа нь сард $10-ын үнэтэй бөгөөд GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro болон DeepSeek V4 Flash нээлттэй эхийн загваруудыг өгөөмөр хязгаар, найдвартай хандалтаар ашиглуулна.",
-  "go.faq.q4": "Go ямар үнэтэй вэ?",
-  "go.faq.a4.p1.beforePricing": "Go-ийн үнэ",
-  "go.faq.a4.p1.pricingLink": "эхний сард $5",
-  "go.faq.a4.p1.afterPricing": ", дараа нь өгөөмөр хязгаартайгаар сард $10.",
-  "go.faq.a4.p2.beforeAccount": "Захиалгаа",
-  "go.faq.a4.p2.accountLink": "бүртгэлээсээ удирдаж болно",
-  "go.faq.a4.p3": "Хүссэн үедээ цуцална.",
-  "go.faq.q5": "Өгөгдөл болон нууцлалын талаар ямар бодлоготой вэ?",
-  "go.faq.a5.body":
-    "Энэ багцыг голчлон олон улсын хэрэглэгчдэд зориулсан бөгөөд дэлхий даяар тогтвортой ашиглуулахын тулд загваруудыг АНУ, ЕХ болон Сингапурт байршуулдаг. Манай нийлүүлэгчид өгөгдөл хадгалахгүй байх бодлого мөрдөж, таны өгөгдлийг загвар сургахад ашигладаггүй.",
-
-  "go.faq.a5.beforeExceptions":
-    "Go-ийн загваруудыг АНУ-д байршуулдаг. Нийлүүлэгчид өгөгдөл хадгалахгүй байх бодлого мөрдөж, таны өгөгдлийг загвар сургахад ашигладаггүй. Харин",
-  "go.faq.a5.exceptionsLink": "дараах онцгой тохиолдлууд хамаарахгүй",
-  "go.faq.q6": "Эрхээ нэмж цэнэглэж болох уу?",
-  "go.faq.a6": "Илүү их хэрэглээ шаардлагатай бол бүртгэлээсээ эрхээ нэмж цэнэглэж болно.",
-  "go.faq.q7": "Цуцалж болох уу?",
-  "go.faq.a7": "Болно. Хүссэн үедээ цуцална.",
-  "go.faq.q8": "Go-г өөр кодын агенттай ашиглаж болох уу?",
-  "go.faq.a8": "Болно. Go-г дурын агенттай ашиглаж болно. Сонгосон кодын агентынхаа тохируулах зааврыг дагана уу.",
-
-  "go.faq.q9": "Үнэгүй загварууд болон Go ямар ялгаатай вэ?",
-  "go.faq.a9":
-    "Үнэгүй загварт Big Pickle болон тухайн үед санал болгож буй урамшууллын загварууд багтаж, өдөрт 200 хүсэлтийн эрх олгоно. Go-д GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro болон DeepSeek V4 Flash багтаж, таван цаг, долоо хоног, сарын гулсах хугацаанд илүү өндөр хүсэлтийн хязгаар хэрэглэнэ. Энэ нь ойролцоогоор таван цагт $12, долоо хоногт $30, сард $60-тай тэнцэнэ. Бодит хүсэлтийн тоо загвар болон хэрэглээнээс хамаарна.",
+  "home.pricingCta.title": "Free, Basic, Pro, Max-аас тохирох багцаа сонгоорой",
+  "home.pricingCta.body":
+    "Free Auto-оор эхэлж, хэрэгцээ өсөхөд илүү өндөр хязгаартай багц руу шилжинэ. Үнэ, хязгаар, боломж бүрийг ил тод харуулж, төлбөрийг QPay эсвэл Bonum-аар төлнө.",
+  "home.pricingCta.link": "Үнэ, багцыг харах",
 
   "zen.api.error.rateLimitExceeded": "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Дараа дахин оролдоно уу.",
   "zen.api.error.freeAutoWeeklyLimitExceeded":
@@ -416,11 +238,9 @@ export const dict = {
   "zen.api.error.userMonthlyLimitReached":
     "Та сарын ${{amount}} зарцуулалтын хязгаарт хүрлээ. Хязгаараа эндээс удирдана уу: {{membersUrl}}",
   "zen.api.error.modelDisabled": "Загварыг идэвхгүй болгосон",
-  "zen.api.error.trialEnded":
-    "{{model}} загварын үнэгүй урамшуулал дууслаа. MongolGPT Go-д захиалж үргэлжлүүлэн ашиглаж болно: {{link}}",
+  "zen.api.error.trialEnded": "{{model}} загварын үнэгүй эрх дууслаа. Үргэлжлүүлэх багцаа эндээс сонгоно уу: {{link}}",
 
-  "workspace.nav.zen": "Загварууд",
-  "workspace.nav.go": "Go",
+  "workspace.nav.models": "Загварууд",
   "workspace.nav.usage": "Хэрэглээ",
   "workspace.nav.apiKeys": "API түлхүүрүүд",
   "workspace.nav.members": "Гишүүд",
@@ -428,7 +248,6 @@ export const dict = {
   "workspace.nav.settings": "Тохиргоо",
 
   "workspace.home.banner.beforeLink": "Кодын агентуудад зориулсан найдвартай, оновчилсон загварууд.",
-  "workspace.lite.banner.beforeLink": "Хүн бүрд зориулсан хямд кодын загварууд.",
   "workspace.home.billing.loading": "Ачаалж байна...",
   "workspace.home.billing.enable": "Төлбөр тооцоог идэвхжүүлэх",
   "workspace.home.billing.currentBalance": "Одоогийн үлдэгдэл",
@@ -441,7 +260,7 @@ export const dict = {
     "Хамгийн сайн гүйцэтгэлд тохируулсан загваруудыг ашиглана. Чанарыг бууруулахгүй, хямд нийлүүлэгч рүү шилжүүлэхгүй.",
   "workspace.newUser.feature.lockin.title": "Нэг үйлчилгээнд хүлэгдэхгүй",
   "workspace.newUser.feature.lockin.body":
-    "Zen-ийг дурын кодын агенттай ашиглаж, MongolGPT дээр хүссэн үедээ бусад нийлүүлэгчийг үргэлжлүүлэн ашиглана.",
+    "MongolGPT-д өөрийн API түлхүүрийг оруулаад хүссэн загвар, нийлүүлэгчээ ашиглана.",
   "workspace.newUser.copyApiKey": "API түлхүүр хуулах",
   "workspace.newUser.copyKey": "Түлхүүр хуулах",
   "workspace.newUser.copied": "Хууллаа!",
@@ -483,7 +302,7 @@ export const dict = {
   "workspace.usage.breakdown.output": "Гаралт",
   "workspace.usage.breakdown.reasoning": "Бодолт",
   "workspace.usage.subscription": "{{plan}} (${{amount}})",
-  "workspace.usage.lite": "Go (${{amount}})",
+  "workspace.usage.legacyPlan": "Хуучин багц (${{amount}})",
   "workspace.usage.byok": "BYOK (${{amount}})",
 
   "workspace.cost.title": "Зардал",
@@ -493,6 +312,7 @@ export const dict = {
   "workspace.cost.deletedSuffix": "(устгасан)",
   "workspace.cost.empty": "Сонгосон хугацаанд хэрэглээний өгөгдөл алга.",
   "workspace.cost.subscriptionShort": "зах.",
+  "workspace.cost.legacyPlanShort": "хуучин багц",
 
   "workspace.keys.title": "API түлхүүрүүд",
   "workspace.keys.subtitle": "MongolGPT үйлчилгээнд хандах API түлхүүрүүдээ удирдана.",
@@ -602,8 +422,6 @@ export const dict = {
   "workspace.payments.type.credit": "цэнэглэлт",
   "workspace.payments.type.subscription": "захиалга",
   "workspace.payments.view": "Харах",
-
-  "workspace.lite.loading": "Ачаалж байна...",
   "workspace.lite.time.day": "өдөр",
   "workspace.lite.time.days": "өдөр",
   "workspace.lite.time.hour": "цаг",
@@ -611,61 +429,6 @@ export const dict = {
   "workspace.lite.time.minute": "минут",
   "workspace.lite.time.minutes": "минут",
   "workspace.lite.time.fewSeconds": "хэдхэн секунд",
-  "workspace.lite.subscription.message": "Та MongolGPT Go-д захиалсан байна.",
-  "workspace.lite.subscription.manage": "Захиалга удирдах",
-  "workspace.lite.subscription.rollingUsage": "Гулсах хугацааны хэрэглээ",
-  "workspace.lite.subscription.weeklyUsage": "Долоо хоногийн хэрэглээ",
-  "workspace.lite.subscription.monthlyUsage": "Сарын хэрэглээ",
-  "workspace.lite.subscription.resetsIn": "Шинэчлэгдэх хугацаа:",
-  "workspace.lite.subscription.useBalance": "Хэрэглээний хязгаарт хүрсний дараа боломжит үлдэгдлээ ашиглах",
-  "workspace.lite.subscription.selectProvider":
-    'Go загваруудыг ашиглахын тулд MongolGPT-ийн тохиргоонд нийлүүлэгчээр "MongolGPT Go"-г сонгоно уу.',
-
-  "workspace.lite.other.message":
-    "Энэ ажлын талбарын өөр гишүүн MongolGPT Go-д аль хэдийн захиалсан байна. Нэг ажлын талбараас зөвхөн нэг гишүүн захиалах боломжтой.",
-  "workspace.lite.promo.description":
-    "MongolGPT Go эхэндээ {{price}}, дараа нь сард $10-ын үнэтэй бөгөөд түгээмэл нээлттэй кодын загваруудыг өгөөмөр хэрэглээний хязгаартайгаар найдвартай ашиглуулна.",
-  "workspace.lite.promo.price": "эхний сард $5",
-  "workspace.lite.promo.modelsTitle": "Багцад багтах зүйлс",
-  "workspace.lite.promo.footer":
-    "Энэ багцыг голчлон олон улсын хэрэглэгчдэд зориулсан бөгөөд дэлхий даяар тогтвортой ашиглуулахын тулд загваруудыг АНУ, ЕХ болон Сингапурт байршуулдаг. Эхний хэрэглээ, санал хүсэлтээс суралцахын хэрээр үнэ болон хэрэглээний хязгаар өөрчлөгдөж болно.",
-  "workspace.lite.promo.subscribe": "Go-д захиалах",
-  "workspace.lite.promo.subscribing": "Шилжүүлж байна...",
-  "workspace.lite.promo.otherMethods": "Төлбөрийн бусад хэрэгсэл",
-  "workspace.lite.promo.selectMethod": "Төлбөрийн хэрэгсэл сонгох",
-
-  "workspace.referral.copyLink": "Холбоос хуулах",
-  "workspace.referral.copied": "Хууллаа",
-  "workspace.referral.overview.title": "Найзуудаа урих",
-  "workspace.referral.overview.subtitle": "Найз тань захиалбал та $5 авна. Найз тань мөн $5 авна.",
-  "workspace.referral.instructions.share": "Урилгын холбоосоо хуваалцах",
-  "workspace.referral.instructions.subscribe": "Найз тань нэгдээд Go-д захиалах",
-  "workspace.referral.instructions.claim": "Та хоёр Go-ийн хэрэглээний хязгаарт зарцуулах $5-ын эрх тус бүр авна",
-  "workspace.referral.rewards.title": "Урилгын урамшуулал",
-  "workspace.referral.rewards.description": "Боломжит урилгын эрхээ Go-ийн хэрэглээндээ зарцуулна.",
-  "workspace.referral.rewards.subtitle": "{{total}} урамшууллаас {{applied}}-г ашигласан.",
-  "workspace.referral.rewards.empty": "Урилгын урамшуулал одоогоор алга.",
-  "workspace.referral.table.reward": "Урамшуулал",
-  "workspace.referral.table.referral": "Тайлбар",
-  "workspace.referral.table.date": "Огноо",
-  "workspace.referral.reward.description.inviter": "{{email}} хаягтай хүнийг урьсан",
-  "workspace.referral.reward.description.invitee": "{{email}} хаягтай хүн урьсан",
-  "workspace.referral.reward.action.subscribeUnlock": "Нээхийн тулд захиалах",
-  "workspace.referral.reward.action.view": "Урамшуулал харах",
-  "workspace.referral.reward.action.applied": "Урамшууллыг ашигласан",
-  "workspace.referral.reward.source.pendingInviter": "Захиалахыг нь хүлээж байна",
-  "workspace.referral.reward.source.pendingInvitee": "Урамшууллаа нээхийн тулд захиална уу",
-  "workspace.referral.reward.source.available": "Урамшууллыг ашиглахад бэлэн",
-  "workspace.referral.reward.source.applied": "Урамшууллыг ашигласан",
-  "workspace.referral.reward.status.applied": "Урамшууллыг ашигласан",
-  "workspace.referral.reward.status.pendingInviter": "Нээхийн тулд захиалах",
-  "workspace.referral.reward.status.pendingInvitee": "Нээхийн тулд захиалах",
-  "workspace.referral.apply.noGo": "Нээхийн тулд захиалах",
-  "workspace.referral.apply.preview": "Урамшуулал харах",
-  "workspace.referral.apply.action": "Ашиглах",
-  "workspace.referral.apply.confirmTitle": "Урамшуулал ашиглах",
-  "workspace.referral.apply.confirmBody": "Энэ ажлын талбарын одоогийн хэрэглээг бууруулахад {{amount}} зарцуулна.",
-  "workspace.referral.apply.confirmAction": "Ашиглах",
 
   "download.title": "MongolGPT | Татах",
   "download.meta.description":
@@ -690,14 +453,14 @@ export const dict = {
   "download.faq.a3.beforeLocal":
     "Заавал биш ч хэрэг болох магадлалтай. MongolGPT-ийг төлбөртэй нийлүүлэгчтэй холбохын тулд хиймэл оюуны захиалга хэрэгтэй. Харин",
   "download.faq.a3.localLink": "дотоод загваруудыг",
-  "download.faq.a3.afterLocal.beforeZen": "үнэгүй ашиглаж болно. Бид",
-  "download.faq.a3.afterZen":
-    "-ийг санал болгодог ч MongolGPT нь OpenAI, Anthropic, xAI зэрэг түгээмэл бүх нийлүүлэгчтэй ажиллана.",
+  "download.faq.a3.afterLocal.beforeProviders": "үнэгүй ашиглаж болно. Мөн",
+  "download.faq.a3.providersLink": "дэмждэг үйлчилгээ үзүүлэгчдийн заавраас",
+  "download.faq.a3.afterProviders": " OpenRouter, NVIDIA NIM болон бусад API-г холбож болно.",
 
-  "download.faq.a5.p1": "MongolGPT-ийг бүрэн үнэгүй ашиглана.",
-  "download.faq.a5.p2.beforeZen":
-    "Нэмэлт зардал зөвхөн сонгосон загвар нийлүүлэгчийн захиалгаас гарна. MongolGPT дурын загвар нийлүүлэгчтэй ажилладаг. Харин бидний санал болгох сонголт бол",
-  "download.faq.a5.p2.afterZen": ".",
+  "download.faq.a5.p1": "MongolGPT-ийн Free багцаар үнэ төлбөргүй эхэлнэ.",
+  "download.faq.a5.p2.beforePricing": "Basic, Pro, Max багцын нөхцөлийг",
+  "download.faq.a5.p2.pricingLink": "үнэ, багцын хуудаснаас",
+  "download.faq.a5.p2.afterPricing": " харна уу. Өөрийн API түлхүүр ашиглавал төлбөрийг тухайн нийлүүлэгчид төлнө.",
 
   "download.faq.a6.p1": "MongolGPT-д хуваалцах холбоос үүсгэх үед л таны өгөгдөл, мэдээллийг хадгална.",
   "download.faq.a6.p2.beforeShare": "Дэлгэрэнгүйг",

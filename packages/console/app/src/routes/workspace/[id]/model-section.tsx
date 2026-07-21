@@ -120,7 +120,7 @@ export function ModelSection() {
         <h2>{i18n.t("workspace.models.title")}</h2>
         <p>
           {i18n.t("workspace.models.subtitle.beforeLink")}{" "}
-          <a href={language.route("/docs/zen#pricing")}>{i18n.t("common.learnMore")}</a>.
+          <a href={language.route("/docs/providers/")}>{i18n.t("common.learnMore")}</a>.
         </p>
       </div>
       <div data-slot="models-list">

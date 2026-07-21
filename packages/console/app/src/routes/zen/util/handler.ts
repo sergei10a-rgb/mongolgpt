@@ -565,7 +565,7 @@ export async function handler(
       throw new ModelError(
         `${t("zen.api.error.trialEnded", {
           model: modelData.name,
-          link: consolePath("/go"),
+          link: consolePath("/pricing"),
         })}`,
       )
 
@@ -1033,7 +1033,7 @@ export async function handler(
     // Validate lite subscription billing
     if (opts.modelList === "lite" && authInfo.billing.lite && authInfo.lite) {
       try {
-        const consoleGoUrl = consolePath(`/workspace/${encodeURIComponent(authInfo.workspaceID)}/go`)
+        const consoleGoUrl = consolePath(`/workspace/${encodeURIComponent(authInfo.workspaceID)}/billing`)
         const sub = authInfo.lite
         const liteData = LiteData.getLimits()
 

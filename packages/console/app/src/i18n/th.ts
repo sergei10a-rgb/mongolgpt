@@ -9,7 +9,6 @@ export const dict = {
   "nav.discord": "Discord",
   "nav.x": "X",
   "nav.enterprise": "องค์กร",
-  "nav.zen": "Zen",
   "nav.login": "เข้าสู่ระบบ",
   "nav.free": "ดาวน์โหลด",
   "nav.home": "หน้าหลัก",
@@ -85,22 +84,6 @@ export const dict = {
 
   "home.title": "MongolGPT | เอเจนต์เขียนโค้ดด้วย AI แบบโอเพนซอร์ส",
 
-  "temp.title": "MongolGPT | เอเจนต์เขียนโค้ด AI ที่สร้างมาเพื่อเทอร์มินัล",
-  "temp.hero.title": "เอเจนต์เขียนโค้ด AI ที่สร้างมาเพื่อเทอร์มินัล",
-  "temp.zen": "MongolGPT Zen",
-  "temp.getStarted": "เริ่มต้นใช้งาน",
-  "temp.feature.native.title": "Native TUI",
-  "temp.feature.native.body": "UI เทอร์มินัลแบบเนทีฟที่ตอบสนองไวและปรับแต่งธีมได้",
-  "temp.feature.zen.beforeLink": "",
-  "temp.feature.zen.link": "รายการโมเดลที่คัดสรรแล้ว",
-  "temp.feature.zen.afterLink": "โดย MongolGPT",
-  "temp.feature.models.beforeLink": "รองรับผู้ให้บริการ LLM กว่า 75 รายผ่าน",
-  "temp.feature.models.afterLink": "รวมถึงโมเดล Local",
-  "temp.screenshot.caption": "MongolGPT TUI พร้อมธีม tokyonight",
-  "temp.screenshot.alt": "MongolGPT TUI พร้อมธีม tokyonight",
-  "temp.logoLightAlt": "โลโก้ mongolgpt แบบสว่าง",
-  "temp.logoDarkAlt": "โลโก้ mongolgpt แบบมืด",
-
   "home.banner.badge": "ใหม่",
   "home.banner.text": "แอปเดสก์ท็อปพร้อมใช้งานในเวอร์ชันเบต้า",
   "home.banner.platforms": "บน macOS, Windows และ Linux",
@@ -152,10 +135,6 @@ export const dict = {
   "home.faq.a2.link": "บทนำ",
   "home.faq.q3": "ต้องสมัครสมาชิก AI เพิ่มเติมเพื่อใช้ MongolGPT หรือไม่?",
   "home.faq.a3.p1": "ไม่จำเป็นเสมอไป MongolGPT มาพร้อมกับชุดโมเดลฟรีที่คุณสามารถใช้ได้โดยไม่ต้องสร้างบัญชี",
-  "home.faq.a3.p2.beforeZen": "นอกจากนี้ คุณสามารถใช้โมเดลยอดนิยมใดก็ได้โดยการสร้างบัญชี",
-  "home.faq.a3.p2.afterZen": "",
-  "home.faq.a3.p3":
-    "แม้เราจะแนะนำให้ใช้ Zen แต่ MongolGPT ก็ทำงานร่วมกับผู้ให้บริการยอดนิยมทั้งหมด เช่น OpenAI, Anthropic, xAI เป็นต้น",
   "home.faq.a3.p4.beforeLocal": "คุณยังสามารถเชื่อมต่อกับ",
   "home.faq.a3.p4.localLink": "โมเดล Local ของคุณ",
   "home.faq.q4": "ฉันสามารถใช้การสมัครสมาชิก AI ที่มีอยู่กับ MongolGPT ได้หรือไม่?",
@@ -167,8 +146,6 @@ export const dict = {
   "home.faq.a5.and": "และ",
   "home.faq.a5.web": "เว็บ",
   "home.faq.q6": "MongolGPT ราคาเท่าไหร่?",
-  "home.faq.a6":
-    "MongolGPT ใช้งานได้ฟรี 100% และมาพร้อมกับชุดโมเดลฟรี อาจมีค่าใช้จ่ายเพิ่มเติมหากคุณเชื่อมต่อกับผู้ให้บริการรายอื่น",
   "home.faq.q7": "แล้วเรื่องข้อมูลและความเป็นส่วนตัวล่ะ?",
   "home.faq.a7.p1": "ข้อมูลของคุณจะถูกจัดเก็บเฉพาะเมื่อคุณใช้โมเดลฟรีของเราหรือสร้างลิงก์ที่แชร์ได้",
   "home.faq.a7.p2.beforeModels": "เรียนรู้เพิ่มเติมเกี่ยวกับ",
@@ -181,173 +158,6 @@ export const dict = {
   "home.faq.a8.mitLicense": "MIT License",
   "home.faq.a8.p3":
     " ซึ่งหมายความว่าใครๆ ก็สามารถใช้ แก้ไข หรือร่วมพัฒนาได้ ทุกคนในชุมชนสามารถเปิด issue, ส่ง pull request และขยายฟังก์ชันการทำงานได้",
-
-  "home.zenCta.title": "เข้าถึงโมเดลที่เชื่อถือได้และปรับแต่งมาแล้วสำหรับเอเจนต์เขียนโค้ด",
-  "home.zenCta.body":
-    "Zen ให้คุณเข้าถึงชุดโมเดล AI ที่คัดสรรมาแล้ว ซึ่ง MongolGPT ได้ทดสอบและทำเบนช์มาร์กโดยเฉพาะสำหรับเอเจนต์เขียนโค้ด ไม่ต้องกังวลเรื่องประสิทธิภาพและคุณภาพที่ไม่สม่ำเสมอจากผู้ให้บริการ ใช้โมเดลที่ผ่านการตรวจสอบแล้วว่าใช้งานได้จริง",
-  "home.zenCta.link": "เรียนรู้เกี่ยวกับ Zen",
-
-  "zen.title": "MongolGPT Zen | ชุดโมเดลที่คัดสรรมาอย่างดี เชื่อถือได้ และปรับแต่งแล้วสำหรับเอเจนต์เขียนโค้ด",
-  "zen.hero.title": "โมเดลที่ปรับแต่งมาอย่างดีและเชื่อถือได้สำหรับเอเจนต์เขียนโค้ด",
-  "zen.hero.body":
-    "Zen ให้คุณเข้าถึงชุดโมเดล AI ที่คัดสรรมาแล้ว ซึ่ง MongolGPT ได้ทดสอบและทำเบนช์มาร์กโดยเฉพาะสำหรับเอเจนต์เขียนโค้ด ไม่ต้องกังวลเรื่องประสิทธิภาพและคุณภาพที่ไม่สม่ำเสมอ ใช้โมเดลที่ผ่านการตรวจสอบแล้วว่าใช้งานได้จริง",
-
-  "zen.faq.q1": "MongolGPT Zen คืออะไร?",
-  "zen.faq.a1":
-    "Zen คือชุดโมเดล AI ที่คัดสรรมาอย่างดี ผ่านการทดสอบและทำเบนช์มาร์กสำหรับเอเจนต์เขียนโค้ด สร้างโดยทีมงานผู้อยู่เบื้องหลัง MongolGPT",
-  "zen.faq.q2": "อะไรทำให้ Zen แม่นยำกว่า?",
-  "zen.faq.a2":
-    "Zen ให้บริการเฉพาะโมเดลที่ได้รับการทดสอบและทำเบนช์มาร์กสำหรับเอเจนต์เขียนโค้ดโดยเฉพาะ คุณคงไม่ใช้มีดทาเนยมาหั่นสเต็ก ดังนั้นอย่าใช้โมเดลคุณภาพต่ำสำหรับการเขียนโค้ด",
-  "zen.faq.q3": "Zen ราคาถูกกว่าหรือไม่?",
-  "zen.faq.a3":
-    "Zen ไม่ได้แสวงหากำไร Zen ส่งผ่านต้นทุนจากผู้ให้บริการโมเดลมาถึงคุณ ยิ่งมีการใช้งาน Zen มากเท่าไหร่ MongolGPT ก็ยิ่งสามารถต่อรองเรตราคาที่ดีกว่าและส่งต่อให้คุณได้มากขึ้นเท่านั้น",
-  "zen.faq.q4": "Zen ราคาเท่าไหร่?",
-  "zen.faq.a4.p1.beforePricing": "Zen",
-  "zen.faq.a4.p1.pricingLink": "คิดค่าบริการต่อคำขอ",
-  "zen.faq.a4.p1.afterPricing": "โดยไม่มีการบวกเพิ่ม ดังนั้นคุณจ่ายเท่ากับที่ผู้ให้บริการโมเดลเรียกเก็บ",
-  "zen.faq.a4.p2.beforeAccount":
-    "ค่าใช้จ่ายรวมของคุณขึ้นอยู่กับการใช้งาน และคุณสามารถตั้งวงเงินการใช้จ่ายรายเดือนได้ใน",
-  "zen.faq.a4.p2.accountLink": "บัญชีของคุณ",
-  "zen.faq.a4.p3":
-    "เพื่อครอบคลุมต้นทุน MongolGPT คิดค่าธรรมเนียมการประมวลผลการชำระเงินเพียงเล็กน้อย $1.23 ต่อการเติมเงิน $20",
-  "zen.faq.q5": "แล้วเรื่องข้อมูลและความเป็นส่วนตัวล่ะ?",
-  "zen.faq.a5.beforeExceptions":
-    "โมเดล Zen ทั้งหมดโฮสต์ในสหรัฐอเมริกา ผู้ให้บริการปฏิบัติตามนโยบายไม่เก็บรักษาข้อมูล (zero-retention policy) และไม่ใช้ข้อมูลของคุณสำหรับการฝึกโมเดล โดยมี",
-  "zen.faq.a5.exceptionsLink": "ข้อยกเว้นดังนี้",
-  "zen.faq.q6": "ฉันสามารถตั้งวงเงินการใช้จ่ายได้หรือไม่?",
-  "zen.faq.a6": "ได้ คุณสามารถตั้งวงเงินการใช้จ่ายรายเดือนได้ในบัญชีของคุณ",
-  "zen.faq.q7": "ฉันสามารถยกเลิกได้หรือไม่?",
-  "zen.faq.a7": "ได้ คุณสามารถปิดการเรียกเก็บเงินได้ตลอดเวลาและใช้ยอดเงินคงเหลือของคุณจนหมด",
-  "zen.faq.q8": "ฉันสามารถใช้ Zen กับเอเจนต์เขียนโค้ดอื่นได้หรือไม่?",
-  "zen.faq.a8":
-    "แม้ว่า Zen จะทำงานได้ดีเยี่ยมกับ MongolGPT แต่คุณสามารถใช้ Zen กับเอเจนต์ใดก็ได้ เพียงทำตามคำแนะนำการตั้งค่าในเอเจนต์เขียนโค้ดที่คุณต้องการ",
-
-  "zen.cta.start": "เริ่มต้นใช้งาน Zen",
-  "zen.pricing.title": "เติมเงิน $20 แบบ Pay as you go",
-  "zen.pricing.fee": "(+ค่าธรรมเนียมประมวลผลบัตร $1.23)",
-  "zen.pricing.body": "ใช้ได้กับทุกเอเจนต์ ตั้งวงเงินรายเดือนได้ ยกเลิกได้ตลอดเวลา",
-  "zen.problem.title": "Zen กำลังแก้ปัญหาอะไร?",
-  "zen.problem.body":
-    "มีโมเดลมากมายให้เลือก แต่มีเพียงไม่กี่ตัวที่ทำงานได้ดีกับเอเจนต์เขียนโค้ด ผู้ให้บริการส่วนใหญ่กำหนดค่าแตกต่างกันไปซึ่งให้ผลลัพธ์ที่หลากหลาย",
-  "zen.problem.subtitle": "เรากำลังแก้ไขปัญหานี้สำหรับทุกคน ไม่ใช่แค่ผู้ใช้ MongolGPT เท่านั้น",
-  "zen.problem.item1": "ทดสอบโมเดลที่คัดเลือกมาและปรึกษากับทีมของโมเดลนั้นๆ",
-  "zen.problem.item2": "ทำงานร่วมกับผู้ให้บริการเพื่อให้มั่นใจว่าโมเดลถูกส่งมอบอย่างถูกต้อง",
-  "zen.problem.item3": "ทำเบนช์มาร์กทุกการจับคู่ระหว่างโมเดลและผู้ให้บริการที่เราแนะนำ",
-  "zen.how.title": "Zen ทำงานอย่างไร",
-  "zen.how.body": "แม้เราจะแนะนำให้คุณใช้ Zen กับ MongolGPT แต่คุณสามารถใช้ Zen กับเอเจนต์ใดก็ได้",
-  "zen.how.step1.title": "ลงทะเบียนและเติมเงิน $20",
-  "zen.how.step1.beforeLink": "ทำตาม",
-  "zen.how.step1.link": "คำแนะนำการตั้งค่า",
-  "zen.how.step2.title": "ใช้ Zen ด้วยราคาที่โปร่งใส",
-  "zen.how.step2.link": "จ่ายตามคำขอ (pay per request)",
-  "zen.how.step2.afterLink": "โดยไม่มีการบวกเพิ่ม",
-  "zen.how.step3.title": "เติมเงินอัตโนมัติ",
-  "zen.how.step3.body": "เมื่อยอดเงินของคุณเหลือ $5 เราจะเติมเงิน $20 ให้โดยอัตโนมัติ",
-  "zen.privacy.title": "ความเป็นส่วนตัวของคุณสำคัญสำหรับเรา",
-  "zen.privacy.beforeExceptions":
-    "โมเดล Zen ทั้งหมดโฮสต์ในสหรัฐอเมริกา ผู้ให้บริการปฏิบัติตามนโยบายไม่เก็บรักษาข้อมูล (zero-retention policy) และไม่ใช้ข้อมูลของคุณสำหรับการฝึกโมเดล โดยมี",
-  "zen.privacy.exceptionsLink": "ข้อยกเว้นดังนี้",
-
-  "go.title": "MongolGPT Go | โมเดลเขียนโค้ดราคาประหยัดสำหรับทุกคน",
-  "go.banner.text": "MiniMax M3 เพิ่มโควตาการใช้งานเป็น 3 เท่าในช่วงเวลาจำกัด",
-  "go.meta.description":
-    "Go เริ่มต้นที่ $5 สำหรับเดือนแรก จากนั้น $10/เดือน พร้อมขีดจำกัดคำขอ 5 ชั่วโมงที่เอื้อเฟื้อสำหรับ GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro และ DeepSeek V4 Flash",
-  "go.hero.title": "โมเดลเขียนโค้ดราคาประหยัดสำหรับทุกคน",
-  "go.hero.body":
-    "Go นำการเขียนโค้ดแบบเอเจนต์มาสู่นักเขียนโปรแกรมทั่วโลก เสนอขีดจำกัดที่กว้างขวางและการเข้าถึงโมเดลโอเพนซอร์สที่มีความสามารถสูงสุดได้อย่างน่าเชื่อถือ เพื่อให้คุณสามารถสร้างสรรค์ด้วยเอเจนต์ที่ทรงพลังโดยไม่ต้องกังวลเรื่องค่าใช้จ่ายหรือความพร้อมใช้งาน",
-
-  "go.cta.start": "สมัครสมาชิก Go",
-  "go.cta.template": "{{text}} {{price}}",
-  "go.cta.text": "สมัครสมาชิก Go",
-  "go.cta.price": "$10/เดือน",
-  "go.cta.promo": "$5 เดือนแรก",
-  "go.pricing.body": "ใช้กับเอเจนต์ใดก็ได้ $5 ในเดือนแรก จากนั้น $10/เดือน เติมเครดิตหากจำเป็น ยกเลิกได้ตลอดเวลา",
-  "go.graph.free": "ฟรี",
-  "go.graph.freePill": "Big Pickle และโมเดลฟรี",
-  "go.graph.go": "Go",
-  "go.graph.label": "คำขอต่อ 5 ชั่วโมง",
-  "go.graph.usageLimits": "ขีดจำกัดการใช้งาน",
-  "go.graph.tick": "{{n}}x",
-  "go.graph.aria": "คำขอต่อ 5 ชม.: {{free}} vs {{go}}",
-
-  "go.testimonials.brand.zen": "Zen",
-  "go.testimonials.brand.go": "Go",
-  "go.testimonials.handle": "@MongolGPT",
-  "go.testimonials.dax.name": "Dax Raad",
-  "go.testimonials.dax.title": "อดีต CEO, Terminal Products",
-  "go.testimonials.dax.quoteAfter": "เปลี่ยนชีวิตไปเลย มันเป็นสิ่งที่ต้องมีจริงๆ",
-  "go.testimonials.jay.name": "Jay V",
-  "go.testimonials.jay.title": "อดีตผู้ก่อตั้ง SEED, PM, Melt, Pop, Dapt, Cadmus และ ViewPoint",
-  "go.testimonials.jay.quoteBefore": "4 ใน 5 คนในทีมของเราชอบใช้",
-  "go.testimonials.jay.quoteAfter": "",
-  "go.testimonials.adam.name": "Adam Elmore",
-  "go.testimonials.adam.title": "อดีต Hero, AWS",
-  "go.testimonials.adam.quoteBefore": "ผมแนะนำ",
-  "go.testimonials.adam.quoteAfter": "ได้ไม่พอจริงๆ พูดจริงนะ มันดีมากๆ",
-  "go.testimonials.david.name": "David Hill",
-  "go.testimonials.david.title": "อดีตหัวหน้าฝ่ายออกแบบ, Laravel",
-  "go.testimonials.david.quoteBefore": "ด้วย",
-  "go.testimonials.david.quoteAfter": "ผมรู้ว่าโมเดลทั้งหมดผ่านการทดสอบและสมบูรณ์แบบสำหรับเอเจนต์เขียนโค้ด",
-  "go.testimonials.frank.name": "Frank Wang",
-  "go.testimonials.frank.title": "อดีตเด็กฝึกงาน, Nvidia (4 ครั้ง)",
-  "go.testimonials.frank.quote": "ผมหวังว่าผมจะยังอยู่ที่ Nvidia",
-  "go.problem.title": "Go แก้ปัญหาอะไร?",
-  "go.problem.body":
-    "เรามุ่งมั่นที่จะนำประสบการณ์ MongolGPT ไปสู่ผู้คนให้ได้มากที่สุด MongolGPT Go เป็นการสมัครสมาชิกราคาประหยัด: $5 สำหรับเดือนแรก จากนั้น $10/เดือน โดยมอบขีดจำกัดที่เอื้อเฟื้อและการเข้าถึงโมเดลโอเพนซอร์สที่มีความสามารถสูงสุดอย่างเชื่อถือได้",
-  "go.problem.subtitle": " ",
-  "go.problem.item1": "ราคาการสมัครสมาชิกที่ต่ำ",
-  "go.problem.item2": "ขีดจำกัดที่กว้างขวางและการเข้าถึงที่เชื่อถือได้",
-  "go.problem.item3": "สร้างขึ้นเพื่อโปรแกรมเมอร์จำนวนมากที่สุดเท่าที่จะเป็นไปได้",
-  "go.problem.item4":
-    "รวมถึง GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro และ DeepSeek V4 Flash",
-  "go.how.title": "Go ทำงานอย่างไร",
-  "go.how.body": "Go เริ่มต้นที่ $5 สำหรับเดือนแรก จากนั้น $10/เดือน คุณสามารถใช้กับ MongolGPT หรือเอเจนต์ใดก็ได้",
-  "go.how.step1.title": "สร้างบัญชี",
-  "go.how.step1.beforeLink": "ทำตาม",
-  "go.how.step1.link": "คำแนะนำการตั้งค่า",
-  "go.how.step2.title": "สมัครสมาชิก Go",
-  "go.how.step2.link": "$5 เดือนแรก",
-  "go.how.step2.afterLink": "จากนั้น $10/เดือน พร้อมขีดจำกัดที่เอื้อเฟื้อ",
-  "go.how.step3.title": "เริ่มเขียนโค้ด",
-  "go.how.step3.body": "ด้วยการเข้าถึงโมเดลโอเพนซอร์สที่เชื่อถือได้",
-  "go.privacy.title": "ความเป็นส่วนตัวของคุณสำคัญสำหรับเรา",
-  "go.privacy.body":
-    "แผนนี้ออกแบบมาเพื่อผู้ใช้งานระหว่างประเทศเป็นหลัก โดยมีโมเดลโฮสต์ในสหรัฐอเมริกา สหภาพยุโรป และสิงคโปร์ เพื่อการเข้าถึงทั่วโลกที่เสถียร",
-  "go.privacy.contactAfter": "หากคุณมีคำถามใดๆ",
-  "go.privacy.beforeExceptions":
-    "โมเดล Go โฮสต์ในสหรัฐอเมริกา ผู้ให้บริการปฏิบัติตามนโยบายไม่เก็บรักษาข้อมูล (zero-retention policy) และไม่ใช้ข้อมูลของคุณสำหรับการฝึกโมเดล โดยมี",
-  "go.privacy.exceptionsLink": "ข้อยกเว้นดังนี้",
-  "go.faq.q1": "MongolGPT Go คืออะไร?",
-  "go.faq.a1":
-    "Go คือการสมัครสมาชิกราคาประหยัดที่ให้คุณเข้าถึงโมเดลโอเพนซอร์สที่มีความสามารถสำหรับการเขียนโค้ดแบบเอเจนต์ได้อย่างน่าเชื่อถือ",
-  "go.faq.q2": "Go รวมโมเดลอะไรบ้าง?",
-  "go.faq.a2": "Go รวมโมเดลด้านล่างนี้ พร้อมขีดจำกัดที่มากและการเข้าถึงที่เชื่อถือได้",
-  "go.faq.q3": "Go เหมือนกับ Zen หรือไม่?",
-  "go.faq.a3":
-    "ไม่ Zen เป็นแบบจ่ายตามการใช้งาน ในขณะที่ Go เริ่มต้นที่ $5 สำหรับเดือนแรก จากนั้น $10/เดือน พร้อมขีดจำกัดที่เอื้อเฟื้อและการเข้าถึงโมเดลโอเพนซอร์ส GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro และ DeepSeek V4 Flash อย่างเชื่อถือได้",
-  "go.faq.q4": "Go ราคาเท่าไหร่?",
-  "go.faq.a4.p1.beforePricing": "Go ราคา",
-  "go.faq.a4.p1.pricingLink": "$5 เดือนแรก",
-  "go.faq.a4.p1.afterPricing": "จากนั้น $10/เดือน พร้อมขีดจำกัดที่เอื้อเฟื้อ",
-  "go.faq.a4.p2.beforeAccount": "คุณสามารถจัดการการสมัครสมาชิกของคุณได้ใน",
-  "go.faq.a4.p2.accountLink": "บัญชีของคุณ",
-  "go.faq.a4.p3": "ยกเลิกได้ตลอดเวลา",
-  "go.faq.q5": "แล้วเรื่องข้อมูลและความเป็นส่วนตัวล่ะ?",
-  "go.faq.a5.body":
-    "แผนนี้ออกแบบมาเพื่อผู้ใช้งานระหว่างประเทศเป็นหลัก โดยมีโมเดลโฮสต์ในสหรัฐอเมริกา สหภาพยุโรป และสิงคโปร์ เพื่อการเข้าถึงทั่วโลกที่เสถียร ผู้ให้บริการของเราปฏิบัติตามนโยบายไม่เก็บรักษาข้อมูลและไม่ใช้ข้อมูลของคุณสำหรับการฝึกโมเดล",
-  "go.faq.a5.beforeExceptions":
-    "โมเดล Go โฮสต์ในสหรัฐอเมริกา ผู้ให้บริการปฏิบัติตามนโยบายไม่เก็บรักษาข้อมูล (zero-retention policy) และไม่ใช้ข้อมูลของคุณสำหรับการฝึกโมเดล โดยมี",
-  "go.faq.a5.exceptionsLink": "ข้อยกเว้นดังนี้",
-  "go.faq.q6": "ฉันสามารถเติมเครดิตได้หรือไม่?",
-  "go.faq.a6": "หากคุณต้องการใช้งานเพิ่ม คุณสามารถเติมเครดิตในบัญชีของคุณได้",
-  "go.faq.q7": "ฉันสามารถยกเลิกได้หรือไม่?",
-  "go.faq.a7": "ได้ คุณสามารถยกเลิกได้ตลอดเวลา",
-  "go.faq.q8": "ฉันสามารถใช้ Go กับเอเจนต์เขียนโค้ดอื่นได้หรือไม่?",
-  "go.faq.a8": "ได้ คุณสามารถใช้ Go กับเอเจนต์ใดก็ได้ ทำตามคำแนะนำการตั้งค่าในเอเจนต์เขียนโค้ดที่คุณต้องการ",
-
-  "go.faq.q9": "ความแตกต่างระหว่างโมเดลฟรีและ Go คืออะไร?",
-  "go.faq.a9":
-    "โมเดลฟรีรวมถึง Big Pickle บวกกับโมเดลโปรโมชั่นที่มีให้ในขณะนั้น ด้วยโควต้า 200 คำขอ/วัน Go รวมถึง GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro และ DeepSeek V4 Flash ที่มีโควต้าคำขอสูงกว่า ซึ่งบังคับใช้ผ่านช่วงเวลาหมุนเวียน (5 ชั่วโมง, รายสัปดาห์ และรายเดือน) เทียบเท่าประมาณ $12 ต่อ 5 ชั่วโมง, $30 ต่อสัปดาห์ และ $60 ต่อเดือน (จำนวนคำขอจริงจะแตกต่างกันไปตามโมเดลและการใช้งาน)",
 
   "zen.api.error.rateLimitExceeded": "เกินขีดจำกัดอัตราการใช้งาน กรุณาลองใหม่ในภายหลัง",
   "zen.api.error.modelNotSupported": "ไม่รองรับโมเดล {{model}}",
@@ -370,11 +180,6 @@ export const dict = {
   "zen.api.error.userMonthlyLimitReached":
     "คุณถึงขีดจำกัดการใช้จ่ายรายเดือนที่ ${{amount}} แล้ว จัดการขีดจำกัดของคุณที่นี่: {{membersUrl}}",
   "zen.api.error.modelDisabled": "โมเดลถูกปิดใช้งาน",
-  "zen.api.error.trialEnded":
-    "โปรโมชันฟรีสำหรับ {{model}} สิ้นสุดแล้ว คุณสามารถใช้โมเดลต่อได้โดยสมัครสมาชิก MongolGPT Go - {{link}}",
-
-  "workspace.nav.zen": "Zen",
-  "workspace.nav.go": "Go",
   "workspace.nav.usage": "การใช้งาน",
   "workspace.nav.apiKeys": "API Keys",
   "workspace.nav.members": "สมาชิก",
@@ -382,7 +187,6 @@ export const dict = {
   "workspace.nav.settings": "การตั้งค่า",
 
   "workspace.home.banner.beforeLink": "โมเดลที่เชื่อถือได้และปรับแต่งแล้วสำหรับเอเจนต์เขียนโค้ด",
-  "workspace.lite.banner.beforeLink": "โมเดลเขียนโค้ดต้นทุนต่ำสำหรับทุกคน",
   "workspace.home.billing.loading": "กำลังโหลด...",
   "workspace.home.billing.enable": "เปิดใช้งานการเรียกเก็บเงิน",
   "workspace.home.billing.currentBalance": "ยอดคงเหลือปัจจุบัน",
@@ -394,8 +198,6 @@ export const dict = {
   "workspace.newUser.feature.quality.body":
     "เข้าถึงโมเดลที่กำหนดค่าไว้เพื่อประสิทธิภาพสูงสุด - ไม่มีการลดเกรดหรือส่งงานไปยังผู้ให้บริการที่ราคาถูกกว่า",
   "workspace.newUser.feature.lockin.title": "ไม่มีการผูกมัด (Lock-in)",
-  "workspace.newUser.feature.lockin.body":
-    "ใช้ Zen กับเอเจนต์เขียนโค้ดใดก็ได้ และกลับมาใช้ผู้ให้บริการรายอื่นด้วย MongolGPT ได้ทุกเมื่อที่คุณต้องการ",
   "workspace.newUser.copyApiKey": "คัดลอก API key",
   "workspace.newUser.copyKey": "คัดลอก Key",
   "workspace.newUser.copied": "คัดลอกแล้ว!",
@@ -437,7 +239,6 @@ export const dict = {
   "workspace.usage.breakdown.output": "Output",
   "workspace.usage.breakdown.reasoning": "Reasoning",
   "workspace.usage.subscription": "{{plan}} (${{amount}})",
-  "workspace.usage.lite": "Go (${{amount}})",
   "workspace.usage.byok": "BYOK (${{amount}})",
 
   "workspace.cost.title": "ค่าใช้จ่าย",
@@ -556,8 +357,6 @@ export const dict = {
   "workspace.payments.type.credit": "credit",
   "workspace.payments.type.subscription": "subscription",
   "workspace.payments.view": "ดู",
-
-  "workspace.lite.loading": "กำลังโหลด...",
   "workspace.lite.time.day": "วัน",
   "workspace.lite.time.days": "วัน",
   "workspace.lite.time.hour": "ชั่วโมง",
@@ -565,61 +364,6 @@ export const dict = {
   "workspace.lite.time.minute": "นาที",
   "workspace.lite.time.minutes": "นาที",
   "workspace.lite.time.fewSeconds": "ไม่กี่วินาที",
-  "workspace.lite.subscription.message": "คุณได้สมัครสมาชิก MongolGPT Go แล้ว",
-  "workspace.lite.subscription.manage": "จัดการการสมัครสมาชิก",
-  "workspace.lite.subscription.rollingUsage": "การใช้งานแบบหมุนเวียน",
-  "workspace.lite.subscription.weeklyUsage": "การใช้งานรายสัปดาห์",
-  "workspace.lite.subscription.monthlyUsage": "การใช้งานรายเดือน",
-  "workspace.lite.subscription.resetsIn": "รีเซ็ตใน",
-  "workspace.lite.subscription.useBalance": "ใช้ยอดคงเหลือของคุณหลังจากถึงขีดจำกัดการใช้งาน",
-  "workspace.lite.subscription.selectProvider":
-    'เลือก "MongolGPT Go" เป็นผู้ให้บริการในการตั้งค่า mongolgpt ของคุณเพื่อใช้โมเดล Go',
-
-  "workspace.lite.other.message":
-    "สมาชิกคนอื่นใน Workspace นี้ได้สมัคร MongolGPT Go แล้ว สามารถสมัครได้เพียงหนึ่งคนต่อหนึ่ง Workspace เท่านั้น",
-  "workspace.lite.promo.description":
-    "MongolGPT Go เริ่มต้นที่ {{price}} จากนั้น $10/เดือน และมอบการเข้าถึงโมเดลการเขียนโค้ดแบบเปิดยอดนิยมอย่างเสถียรพร้อมขีดจำกัดการใช้งานที่ให้มาอย่างเหลือเฟือ",
-  "workspace.lite.promo.price": "$5 สำหรับเดือนแรก",
-  "workspace.lite.promo.modelsTitle": "สิ่งที่รวมอยู่ด้วย",
-  "workspace.lite.promo.footer":
-    "แผนนี้ออกแบบมาสำหรับผู้ใช้งานต่างประเทศเป็นหลัก โดยมีโมเดลโฮสต์อยู่ในสหรัฐอเมริกา สหภาพยุโรป และสิงคโปร์ เพื่อการเข้าถึงที่เสถียรทั่วโลก ราคาและขีดจำกัดการใช้งานอาจมีการเปลี่ยนแปลงตามที่เราได้เรียนรู้จากการใช้งานในช่วงแรกและข้อเสนอแนะ",
-  "workspace.lite.promo.subscribe": "สมัครสมาชิก Go",
-  "workspace.lite.promo.subscribing": "กำลังเปลี่ยนเส้นทาง...",
-  "workspace.lite.promo.otherMethods": "วิธีการชำระเงินอื่นๆ",
-  "workspace.lite.promo.selectMethod": "เลือกวิธีการชำระเงิน",
-
-  "workspace.referral.copyLink": "คัดลอกลิงก์",
-  "workspace.referral.copied": "คัดลอกแล้ว",
-  "workspace.referral.overview.title": "ชวนเพื่อน",
-  "workspace.referral.overview.subtitle": "รับ $5 เมื่อเพื่อนสมัครสมาชิก เพื่อนก็จะได้รับ $5 เช่นกัน",
-  "workspace.referral.instructions.share": "แชร์ลิงก์แนะนำของคุณ",
-  "workspace.referral.instructions.subscribe": "เพื่อนของคุณเข้าร่วมและสมัครสมาชิก Go",
-  "workspace.referral.instructions.claim": "คุณทั้งคู่จะได้รับเครดิตการใช้งาน $5 เพื่อใช้กับขีดจำกัดการใช้งาน Go",
-  "workspace.referral.rewards.title": "รางวัลการแนะนำ",
-  "workspace.referral.rewards.description": "ใช้เครดิตการแนะนำที่มีอยู่กับการใช้งาน Go ของคุณ",
-  "workspace.referral.rewards.subtitle": "ใช้แล้ว {{applied}} / {{total}} รางวัล",
-  "workspace.referral.rewards.empty": "ยังไม่มีรางวัลการแนะนำ",
-  "workspace.referral.table.reward": "รางวัล",
-  "workspace.referral.table.referral": "คำอธิบาย",
-  "workspace.referral.table.date": "วันที่",
-  "workspace.referral.reward.description.inviter": "เชิญ {{email}}",
-  "workspace.referral.reward.description.invitee": "ได้รับเชิญจาก {{email}}",
-  "workspace.referral.reward.action.subscribeUnlock": "สมัครสมาชิกเพื่อปลดล็อก",
-  "workspace.referral.reward.action.view": "ดูรางวัล",
-  "workspace.referral.reward.action.applied": "ใช้รางวัลแล้ว",
-  "workspace.referral.reward.source.pendingInviter": "รอเพื่อนสมัครสมาชิก",
-  "workspace.referral.reward.source.pendingInvitee": "สมัครสมาชิกเพื่อปลดล็อกรางวัล",
-  "workspace.referral.reward.source.available": "รางวัลพร้อมใช้งาน",
-  "workspace.referral.reward.source.applied": "ใช้รางวัลแล้ว",
-  "workspace.referral.reward.status.applied": "ใช้รางวัลแล้ว",
-  "workspace.referral.reward.status.pendingInviter": "สมัครสมาชิกเพื่อปลดล็อก",
-  "workspace.referral.reward.status.pendingInvitee": "สมัครสมาชิกเพื่อปลดล็อก",
-  "workspace.referral.apply.noGo": "สมัครสมาชิกเพื่อปลดล็อก",
-  "workspace.referral.apply.preview": "ดูรางวัล",
-  "workspace.referral.apply.action": "ใช้",
-  "workspace.referral.apply.confirmTitle": "ใช้รางวัล",
-  "workspace.referral.apply.confirmBody": "ใช้ {{amount}} เพื่อลดการใช้งานปัจจุบันของ workspace นี้",
-  "workspace.referral.apply.confirmAction": "ใช้",
 
   "download.title": "MongolGPT | ดาวน์โหลด",
   "download.meta.description": "ดาวน์โหลด MongolGPT สำหรับ macOS, Windows และ Linux",
@@ -642,14 +386,8 @@ export const dict = {
   "download.faq.a3.beforeLocal":
     "ไม่จำเป็นเสมอไป แต่อาจจะต้องมี คุณจะต้องมีการสมัครสมาชิก AI หากต้องการเชื่อมต่อ MongolGPT กับผู้ให้บริการที่มีค่าใช้จ่าย แม้ว่าคุณจะสามารถทำงานกับ",
   "download.faq.a3.localLink": "โมเดล Local",
-  "download.faq.a3.afterLocal.beforeZen": "ได้ฟรี แม้ว่าเราจะแนะนำให้ผู้ใช้ใช้งาน",
-  "download.faq.a3.afterZen":
-    ", MongolGPT ก็ทำงานร่วมกับผู้ให้บริการยอดนิยมทั้งหมด เช่น OpenAI, Anthropic, xAI เป็นต้น",
 
   "download.faq.a5.p1": "MongolGPT ใช้งานได้ฟรี 100%",
-  "download.faq.a5.p2.beforeZen":
-    "ค่าใช้จ่ายเพิ่มเติมใดๆ จะมาจากการสมัครสมาชิกของคุณกับผู้ให้บริการโมเดล แม้ว่า MongolGPT จะทำงานร่วมกับผู้ให้บริการโมเดลใดก็ได้ แต่เราแนะนำให้ใช้",
-  "download.faq.a5.p2.afterZen": "",
 
   "download.faq.a6.p1": "ข้อมูลของคุณจะถูกจัดเก็บเฉพาะเมื่อคุณสร้างลิงก์ที่แชร์ได้ใน MongolGPT เท่านั้น",
   "download.faq.a6.p2.beforeShare": "เรียนรู้เพิ่มเติมเกี่ยวกับ",

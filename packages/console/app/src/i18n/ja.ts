@@ -9,7 +9,6 @@ export const dict = {
   "nav.discord": "Discord",
   "nav.x": "X",
   "nav.enterprise": "エンタープライズ",
-  "nav.zen": "Zen",
   "nav.login": "ログイン",
   "nav.free": "ダウンロード",
   "nav.home": "ホーム",
@@ -85,22 +84,6 @@ export const dict = {
 
   "home.title": "MongolGPT | オープンソースのAIコーディングエージェント",
 
-  "temp.title": "MongolGPT | ターミナル向けに構築されたAIコーディングエージェント",
-  "temp.hero.title": "ターミナル向けに構築されたAIコーディングエージェント",
-  "temp.zen": "MongolGPT Zen",
-  "temp.getStarted": "はじめる",
-  "temp.feature.native.title": "ネイティブ TUI",
-  "temp.feature.native.body": "レスポンシブでネイティブ、テーマ変更可能なターミナルUI",
-  "temp.feature.zen.beforeLink": "MongolGPTが提供する",
-  "temp.feature.zen.link": "厳選されたモデルリスト",
-  "temp.feature.zen.afterLink": "",
-  "temp.feature.models.beforeLink": "ローカルモデルを含む、",
-  "temp.feature.models.afterLink": "を通じて75以上のLLMプロバイダーをサポート",
-  "temp.screenshot.caption": "tokyonight テーマを使用した MongolGPT TUI",
-  "temp.screenshot.alt": "tokyonight テーマの MongolGPT TUI",
-  "temp.logoLightAlt": "mongolgptのロゴ（ライト）",
-  "temp.logoDarkAlt": "mongolgptのロゴ（ダーク）",
-
   "home.banner.badge": "新着",
   "home.banner.text": "デスクトップアプリのベータ版が利用可能",
   "home.banner.platforms": "macOS、Windows、Linux で",
@@ -153,10 +136,6 @@ export const dict = {
   "home.faq.a2.link": "イントロを読む",
   "home.faq.q3": "MongolGPTには追加のAIサブスクリプションが必要ですか？",
   "home.faq.a3.p1": "必ずしも必要ではありません。MongolGPTには、アカウント不要で使える無料モデルが含まれています。",
-  "home.faq.a3.p2.beforeZen": "これらに加えて、",
-  "home.faq.a3.p2.afterZen": " アカウントを作成することで、人気のコーディングモデルを利用できます。",
-  "home.faq.a3.p3":
-    "Zenの利用を推奨していますが、MongolGPTはOpenAI、Anthropic、xAIなどの主要プロバイダーにも対応しています。",
   "home.faq.a3.p4.beforeLocal": "さらに、",
   "home.faq.a3.p4.localLink": "ローカルモデル",
   "home.faq.q4": "既存のAIサブスクリプションをMongolGPTで使えますか？",
@@ -168,8 +147,6 @@ export const dict = {
   "home.faq.a5.and": "と",
   "home.faq.a5.web": "ウェブ",
   "home.faq.q6": "MongolGPTの価格は？",
-  "home.faq.a6":
-    "MongolGPTは100%無料で使えます。無料モデルも含まれています。他のプロバイダーに接続する場合は追加費用が発生することがあります。",
   "home.faq.q7": "データとプライバシーは？",
   "home.faq.a7.p1": "無料モデルを使う場合や共有リンクを作成する場合にのみ、データが保存されます。",
   "home.faq.a7.p2.beforeModels": "詳しくは",
@@ -182,175 +159,6 @@ export const dict = {
   "home.faq.a8.mitLicense": "MITライセンス",
   "home.faq.a8.p3":
     "のもとで公開されており、誰でも使用、変更、開発への参加ができます。コミュニティの誰でもissueを起こしたり、pull requestを送ったり、機能を拡張できます。",
-
-  "home.zenCta.title": "コーディングエージェント向けの信頼できる最適化モデル",
-  "home.zenCta.body":
-    "Zenは、MongolGPTがコーディングエージェント向けにテスト・ベンチマーク済みのAIモデルを厳選して提供します。プロバイダー間の性能・品質のブレを気にせず、検証済みのモデルを利用できます。",
-  "home.zenCta.link": "Zenについて知る",
-
-  "zen.title": "MongolGPT Zen | コーディングエージェント向けの信頼できる最適化モデル",
-  "zen.hero.title": "コーディングエージェント向けの信頼できる最適化モデル",
-  "zen.hero.body":
-    "Zenは、MongolGPTがコーディングエージェント向けにテスト・ベンチマーク済みのAIモデルを厳選して提供します。プロバイダー間の性能・品質のブレを気にせず、検証済みのモデルを利用できます。",
-
-  "zen.faq.q1": "MongolGPT Zenとは？",
-  "zen.faq.a1":
-    "Zenは、MongolGPTのチームが作成した、コーディングエージェント向けにテスト・ベンチマークされたAIモデルの厳選セットです。",
-  "zen.faq.q2": "Zenはなぜ精度が高いのですか？",
-  "zen.faq.a2":
-    "Zenはコーディングエージェント向けにテスト・ベンチマークされたモデルだけを提供します。ステーキを切るのにバターナイフを使わないように、コーディングには品質の低いモデルを使わないでください。",
-  "zen.faq.q3": "Zenは安いですか？",
-  "zen.faq.a3":
-    "Zenは営利目的ではありません。Zenはモデル提供元のコストをそのままあなたに渡します。Zenの利用が増えるほど、MongolGPTはより良いレートを交渉し、その分をあなたに還元できます。",
-  "zen.faq.q4": "Zenの料金は？",
-  "zen.faq.a4.p1.beforePricing": "Zenは",
-  "zen.faq.a4.p1.pricingLink": "リクエスト単位で課金",
-  "zen.faq.a4.p1.afterPricing": "し、マークアップはありません。つまり、モデル提供元の請求額をそのまま支払います。",
-  "zen.faq.a4.p2.beforeAccount": "総コストは利用量に依存し、月次の支出上限を",
-  "zen.faq.a4.p2.accountLink": "アカウント",
-  "zen.faq.a4.p3": "コストを賄うために、MongolGPTは$20の残高チャージあたり$1.23の小さな決済手数料のみを追加します。",
-  "zen.faq.q5": "データとプライバシーは？",
-  "zen.faq.a5.beforeExceptions":
-    "Zenのモデルはすべて米国でホストされています。プロバイダーはゼロ保持ポリシーを守り、データをモデル学習に使用しません（",
-  "zen.faq.a5.exceptionsLink": "以下の例外",
-  "zen.faq.q6": "支出上限を設定できますか？",
-  "zen.faq.a6": "はい、アカウントで月次の支出上限を設定できます。",
-  "zen.faq.q7": "キャンセルできますか？",
-  "zen.faq.a7": "はい、いつでも請求を無効化し、残りの残高を利用できます。",
-  "zen.faq.q8": "他のコーディングエージェントでもZenを使えますか？",
-  "zen.faq.a8":
-    "ZenはMongolGPTとの相性が良いですが、どのエージェントでもZenを利用できます。お使いのコーディングエージェントのセットアップ手順に従ってください。",
-
-  "zen.cta.start": "Zenをはじめる",
-  "zen.pricing.title": "$20の従量課金制残高を追加",
-  "zen.pricing.fee": "(+$1.23 カード処理手数料)",
-  "zen.pricing.body":
-    "任意のエージェントと一緒に使用できます。毎月の支出制限を設定できます。いつでもキャンセルできます。",
-  "zen.problem.title": "Zenはどのような問題を解決していますか？",
-  "zen.problem.body":
-    "利用可能なモデルは非常に多くありますが、コーディングエージェントで適切に機能するモデルはほんのわずかです。ほとんどのプロバイダーは、それらを異なる設定で提供し、結果も異なります。",
-  "zen.problem.subtitle": "MongolGPTユーザーだけでなく、すべての人を対象にこの問題を修正しています。",
-  "zen.problem.item1": "選択したモデルをテストし、チームに相談する",
-  "zen.problem.item2": "プロバイダーと連携して適切に提供されるようにする",
-  "zen.problem.item3": "私たちが推奨するすべてのモデルとプロバイダーの組み合わせをベンチマークする",
-  "zen.how.title": "Zenの仕組み",
-  "zen.how.body": "ZenをMongolGPTとともに使用することをお勧めしますが、Zenはどのエージェントでも使用できます。",
-  "zen.how.step1.title": "サインアップして$20の残高を追加",
-  "zen.how.step1.beforeLink": "",
-  "zen.how.step1.link": "セットアップ手順",
-  "zen.how.step2.title": "透明性のある価格設定でZenを使用する",
-  "zen.how.step2.link": "リクエストごとに支払う",
-  "zen.how.step2.afterLink": "（マークアップなし）",
-  "zen.how.step3.title": "自動チャージ",
-  "zen.how.step3.body": "残高が$5に達すると、自動的に$20が追加されます",
-  "zen.privacy.title": "あなたのプライバシーは私たちにとって重要です",
-  "zen.privacy.beforeExceptions":
-    "すべてのZenモデルは米国でホストされています。プロバイダーはゼロ保持ポリシーに従い、モデルのトレーニングにデータを使用しません（",
-  "zen.privacy.exceptionsLink": "以下の例外",
-
-  "go.title": "MongolGPT Go | すべての人のための低価格なコーディングモデル",
-  "go.banner.text": "MiniMax M3の利用上限が期間限定で3倍に",
-  "go.meta.description":
-    "Goは最初の月$5、その後$10/月で、GLM-5.2、GLM-5.1、Kimi K2.7 Code、Kimi K2.6、MiMo-V2.5-Pro、MiMo-V2.5、Qwen3.7 Max、Qwen3.7 Plus、Qwen3.6 Plus、MiniMax M2.7、MiniMax M3、DeepSeek V4 Pro、DeepSeek V4 Flashに対して5時間のゆとりあるリクエスト上限があります。",
-  "go.hero.title": "すべての人のための低価格なコーディングモデル",
-  "go.hero.body":
-    "Goは、世界中のプログラマーにエージェント型コーディングをもたらします。最も高性能なオープンソースモデルへの十分な制限と安定したアクセスを提供し、コストや可用性を気にすることなく強力なエージェントで構築できます。",
-
-  "go.cta.start": "Goを購読する",
-  "go.cta.template": "{{text}} {{price}}",
-  "go.cta.text": "Goを購読する",
-  "go.cta.price": "$10/月",
-  "go.cta.promo": "初月 $5",
-  "go.pricing.body":
-    "どのエージェントでも使えます。最初の月$5、その後$10/月。必要に応じてクレジットを追加。いつでもキャンセルできます。",
-  "go.graph.free": "無料",
-  "go.graph.freePill": "Big Pickleと無料モデル",
-  "go.graph.go": "Go",
-  "go.graph.label": "5時間あたりのリクエスト数",
-  "go.graph.usageLimits": "利用制限",
-  "go.graph.tick": "{{n}}倍",
-  "go.graph.aria": "5時間あたりのリクエスト数: {{free}} 対 {{go}}",
-
-  "go.testimonials.brand.zen": "Zen",
-  "go.testimonials.brand.go": "Go",
-  "go.testimonials.handle": "@MongolGPT",
-  "go.testimonials.dax.name": "Dax Raad",
-  "go.testimonials.dax.title": "元CEO, Terminal Products",
-  "go.testimonials.dax.quoteAfter": "は人生を変えるものでした。本当に迷う必要はありません。",
-  "go.testimonials.jay.name": "Jay V",
-  "go.testimonials.jay.title": "元創業者, SEED, PM, Melt, Pop, Dapt, Cadmus, ViewPoint",
-  "go.testimonials.jay.quoteBefore": "チームの5人中4人が",
-  "go.testimonials.jay.quoteAfter": "の使用を気に入っています。",
-  "go.testimonials.adam.name": "Adam Elmore",
-  "go.testimonials.adam.title": "元Hero, AWS",
-  "go.testimonials.adam.quoteBefore": "私は",
-  "go.testimonials.adam.quoteAfter": "をどれだけ推薦してもしきれません。真剣に、本当に良いです。",
-  "go.testimonials.david.name": "David Hill",
-  "go.testimonials.david.title": "元デザイン責任者, Laravel",
-  "go.testimonials.david.quoteBefore": "",
-  "go.testimonials.david.quoteAfter":
-    "を使えば、すべてのモデルがテスト済みでコーディングエージェントに最適だと確信できます。",
-  "go.testimonials.frank.name": "Frank Wang",
-  "go.testimonials.frank.title": "元インターン, Nvidia (4回)",
-  "go.testimonials.frank.quote": "まだNvidiaにいられたらよかったのに。",
-  "go.problem.title": "Goはどのような問題を解決していますか？",
-  "go.problem.body":
-    "私たちはMongolGPTの体験をできるだけ多くの人に届けることに注力しています。MongolGPT Goは低価格のサブスクリプションで、最初の月は$5、その後は$10/月です。ゆとりある上限と、最も高性能なオープンソースモデルへの信頼できるアクセスを提供します。",
-  "go.problem.subtitle": " ",
-  "go.problem.item1": "低価格なサブスクリプション料金",
-  "go.problem.item2": "十分な制限と安定したアクセス",
-  "go.problem.item3": "できるだけ多くのプログラマーのために構築",
-  "go.problem.item4":
-    "GLM-5.2、GLM-5.1、Kimi K2.7 Code、Kimi K2.6、MiMo-V2.5-Pro、MiMo-V2.5、Qwen3.7 Max、Qwen3.7 Plus、Qwen3.6 Plus、MiniMax M2.7、MiniMax M3、DeepSeek V4 Pro、DeepSeek V4 Flashを含む",
-  "go.how.title": "Goの仕組み",
-  "go.how.body": "Goは最初の月$5、その後$10/月で始まります。MongolGPTまたは任意のエージェントで使えます。",
-  "go.how.step1.title": "アカウントを作成",
-  "go.how.step1.beforeLink": "",
-  "go.how.step1.link": "セットアップ手順はこちら",
-  "go.how.step2.title": "Goを購読する",
-  "go.how.step2.link": "最初の月$5",
-  "go.how.step2.afterLink": "その後$10/月、ゆとりある上限付き",
-  "go.how.step3.title": "コーディングを開始",
-  "go.how.step3.body": "オープンソースモデルへの安定したアクセスで",
-  "go.privacy.title": "あなたのプライバシーは私たちにとって重要です",
-  "go.privacy.body":
-    "このプランは主に海外ユーザー向けに設計されており、米国、EU、シンガポールでホストされたモデルにより安定したグローバルアクセスを提供します。",
-  "go.privacy.contactAfter": "ご質問がございましたら。",
-  "go.privacy.beforeExceptions":
-    "Goのモデルは米国でホストされています。プロバイダーはゼロ保持ポリシーに従い、モデルのトレーニングにデータを使用しません（",
-  "go.privacy.exceptionsLink": "以下の例外",
-  "go.faq.q1": "MongolGPT Goとは？",
-  "go.faq.a1":
-    "Goは、エージェント型コーディングのための有能なオープンソースモデルへの安定したアクセスを提供する低価格なサブスクリプションです。",
-  "go.faq.q2": "Goにはどのモデルが含まれますか？",
-  "go.faq.a2": "Go には、十分な利用上限と安定したアクセスを備えた、以下のモデルが含まれます。",
-  "go.faq.q3": "GoはZenと同じですか？",
-  "go.faq.a3":
-    "いいえ。Zenは従量課金制ですが、Goは最初の月$5、その後$10/月で始まり、GLM-5.2、GLM-5.1、Kimi K2.7 Code、Kimi K2.6、MiMo-V2.5-Pro、MiMo-V2.5、Qwen3.7 Max、Qwen3.7 Plus、Qwen3.6 Plus、MiniMax M2.7、MiniMax M3、DeepSeek V4 Pro、DeepSeek V4 Flashのオープンソースモデルに対して、ゆとりある上限と信頼できるアクセスを提供します。",
-  "go.faq.q4": "Goの料金は？",
-  "go.faq.a4.p1.beforePricing": "Goは",
-  "go.faq.a4.p1.pricingLink": "最初の月$5",
-  "go.faq.a4.p1.afterPricing": "その後$10/月、ゆとりある上限付き。",
-  "go.faq.a4.p2.beforeAccount": "管理画面：",
-  "go.faq.a4.p2.accountLink": "アカウント",
-  "go.faq.a4.p3": "いつでもキャンセル可能です。",
-  "go.faq.q5": "データとプライバシーは？",
-  "go.faq.a5.body":
-    "このプランは主に海外ユーザー向けに設計されており、米国、EU、シンガポールでホストされたモデルにより安定したグローバルアクセスを提供します。プロバイダーはゼロ保持ポリシーに従い、お客様のデータをモデルのトレーニングに使用しません。",
-  "go.faq.a5.beforeExceptions":
-    "Goのモデルは米国でホストされています。プロバイダーはゼロ保持ポリシーに従い、モデルのトレーニングにデータを使用しません（",
-  "go.faq.a5.exceptionsLink": "以下の例外",
-  "go.faq.q6": "クレジットをチャージできますか？",
-  "go.faq.a6": "利用枠を追加したい場合は、アカウントでクレジットをチャージできます。",
-  "go.faq.q7": "キャンセルできますか？",
-  "go.faq.a7": "はい、いつでもキャンセル可能です。",
-  "go.faq.q8": "他のコーディングエージェントでGoを使えますか？",
-  "go.faq.a8":
-    "はい、Goは任意のエージェントで使用できます。お使いのコーディングエージェントのセットアップ手順に従ってください。",
-
-  "go.faq.q9": "無料モデルとGoの違いは何ですか？",
-  "go.faq.a9":
-    "無料モデルにはBig Pickleと、その時点で利用可能なプロモーションモデルが含まれ、1日200リクエストの制限があります。GoにはGLM-5.2、GLM-5.1、Kimi K2.7 Code、Kimi K2.6、MiMo-V2.5-Pro、MiMo-V2.5、Qwen3.7 Max、Qwen3.7 Plus、Qwen3.6 Plus、MiniMax M2.7、MiniMax M3、DeepSeek V4 Pro、DeepSeek V4 Flashが含まれ、ローリングウィンドウ（5時間、週間、月間）全体でより高いリクエスト制限が適用されます。これは概算で5時間あたり$12、週間$30、月間$60相当です（実際のリクエスト数はモデルと使用状況により異なります）。",
 
   "zen.api.error.rateLimitExceeded": "レート制限を超えました。後でもう一度お試しください。",
   "zen.api.error.modelNotSupported": "モデル {{model}} はサポートされていません",
@@ -374,11 +182,6 @@ export const dict = {
   "zen.api.error.userMonthlyLimitReached":
     "月額の利用上限 ${{amount}} に達しました。こちらから上限を管理してください: {{membersUrl}}",
   "zen.api.error.modelDisabled": "モデルが無効です",
-  "zen.api.error.trialEnded":
-    "{{model}} の無料プロモーションは終了しました。MongolGPT Go を購読するとモデルを引き続き使用できます - {{link}}",
-
-  "workspace.nav.zen": "Zen",
-  "workspace.nav.go": "Go",
   "workspace.nav.usage": "利用",
   "workspace.nav.apiKeys": "APIキー",
   "workspace.nav.members": "メンバー",
@@ -386,7 +189,6 @@ export const dict = {
   "workspace.nav.settings": "設定",
 
   "workspace.home.banner.beforeLink": "コーディングエージェント向けに信頼性の高い最適化されたモデル。",
-  "workspace.lite.banner.beforeLink": "誰でも使える低コストコーディングモデル。",
   "workspace.home.billing.loading": "読み込み中...",
   "workspace.home.billing.enable": "課金を有効にする",
   "workspace.home.billing.currentBalance": "現在の残高",
@@ -398,8 +200,6 @@ export const dict = {
   "workspace.newUser.feature.quality.body":
     "最適なパフォーマンスを実現するように構成されたモデルにアクセスします。ダウングレードや安価なプロバイダーへのルーティングはありません。",
   "workspace.newUser.feature.lockin.title": "ロックインなし",
-  "workspace.newUser.feature.lockin.body":
-    "任意のコーディングエージェントでZenを使用でき、必要に応じていつでもMongolGPTを備えた他のプロバイダーを使用し続けることができます。",
   "workspace.newUser.copyApiKey": "APIキーをコピー",
   "workspace.newUser.copyKey": "キーをコピー",
   "workspace.newUser.copied": "コピーしました！",
@@ -441,7 +241,6 @@ export const dict = {
   "workspace.usage.breakdown.output": "出力",
   "workspace.usage.breakdown.reasoning": "推論",
   "workspace.usage.subscription": "{{plan}} (${{amount}})",
-  "workspace.usage.lite": "Go (${{amount}})",
   "workspace.usage.byok": "BYOK (${{amount}})",
 
   "workspace.cost.title": "コスト",
@@ -560,8 +359,6 @@ export const dict = {
   "workspace.payments.type.credit": "クレジット",
   "workspace.payments.type.subscription": "サブスクリプション",
   "workspace.payments.view": "表示",
-
-  "workspace.lite.loading": "読み込み中...",
   "workspace.lite.time.day": "日",
   "workspace.lite.time.days": "日",
   "workspace.lite.time.hour": "時間",
@@ -569,61 +366,6 @@ export const dict = {
   "workspace.lite.time.minute": "分",
   "workspace.lite.time.minutes": "分",
   "workspace.lite.time.fewSeconds": "数秒",
-  "workspace.lite.subscription.message": "あなたは MongolGPT Go を購読しています。",
-  "workspace.lite.subscription.manage": "サブスクリプションの管理",
-  "workspace.lite.subscription.rollingUsage": "ローリング利用量",
-  "workspace.lite.subscription.weeklyUsage": "週間利用量",
-  "workspace.lite.subscription.monthlyUsage": "月間利用量",
-  "workspace.lite.subscription.resetsIn": "リセットまで",
-  "workspace.lite.subscription.useBalance": "利用限度額に達したら利用可能な残高を使用する",
-  "workspace.lite.subscription.selectProvider":
-    "Go モデルを使用するには、mongolgpt の設定で「MongolGPT Go」をプロバイダーとして選択してください。",
-
-  "workspace.lite.other.message":
-    "このワークスペースの別のメンバーが既に MongolGPT Go を購読しています。ワークスペースにつき1人のメンバーのみが購読できます。",
-  "workspace.lite.promo.description":
-    "MongolGPT Goは{{price}}で始まり、その後は$10/月で、人気の高いオープンコーディングモデルへの安定したアクセスと余裕のある利用枠を提供します。",
-  "workspace.lite.promo.price": "初月$5",
-  "workspace.lite.promo.modelsTitle": "含まれるもの",
-  "workspace.lite.promo.footer":
-    "このプランは主にグローバルユーザー向けに設計されており、米国、EU、シンガポールでホストされたモデルにより安定したグローバルアクセスを提供します。料金と利用制限は、初期の利用状況やフィードバックに基づいて変更される可能性があります。",
-  "workspace.lite.promo.subscribe": "Goを購読する",
-  "workspace.lite.promo.subscribing": "リダイレクト中...",
-  "workspace.lite.promo.otherMethods": "その他の支払い方法",
-  "workspace.lite.promo.selectMethod": "支払い方法を選択",
-
-  "workspace.referral.copyLink": "リンクをコピー",
-  "workspace.referral.copied": "コピーしました",
-  "workspace.referral.overview.title": "友達を招待",
-  "workspace.referral.overview.subtitle": "友達がサブスクライブすると $5 を獲得。友達にも $5 が付与されます。",
-  "workspace.referral.instructions.share": "リファラルリンクをシェア",
-  "workspace.referral.instructions.subscribe": "友達が参加して Go にサブスクライブ",
-  "workspace.referral.instructions.claim": "二人とも $5 の利用クレジットを獲得し、Go の利用上限に充当できます",
-  "workspace.referral.rewards.title": "リファラル特典",
-  "workspace.referral.rewards.description": "利用可能なリファラルクレジットを Go の利用に適用します。",
-  "workspace.referral.rewards.subtitle": "{{applied}} / {{total}} 件の特典を適用済み。",
-  "workspace.referral.rewards.empty": "リファラル特典はまだありません。",
-  "workspace.referral.table.reward": "特典",
-  "workspace.referral.table.referral": "説明",
-  "workspace.referral.table.date": "日付",
-  "workspace.referral.reward.description.inviter": "{{email}} を招待しました",
-  "workspace.referral.reward.description.invitee": "{{email}} に招待されました",
-  "workspace.referral.reward.action.subscribeUnlock": "サブスクライブしてアンロック",
-  "workspace.referral.reward.action.view": "特典を表示",
-  "workspace.referral.reward.action.applied": "特典を適用済み",
-  "workspace.referral.reward.source.pendingInviter": "友達のサブスクライブ待ち",
-  "workspace.referral.reward.source.pendingInvitee": "サブスクライブして特典をアンロック",
-  "workspace.referral.reward.source.available": "特典は適用可能です",
-  "workspace.referral.reward.source.applied": "特典を適用済み",
-  "workspace.referral.reward.status.applied": "特典を適用済み",
-  "workspace.referral.reward.status.pendingInviter": "サブスクライブしてアンロック",
-  "workspace.referral.reward.status.pendingInvitee": "サブスクライブしてアンロック",
-  "workspace.referral.apply.noGo": "サブスクライブしてアンロック",
-  "workspace.referral.apply.preview": "特典を表示",
-  "workspace.referral.apply.action": "適用",
-  "workspace.referral.apply.confirmTitle": "特典を適用",
-  "workspace.referral.apply.confirmBody": "{{amount}} を適用して、このワークスペースの現在の使用量を減らします。",
-  "workspace.referral.apply.confirmAction": "適用",
 
   "download.title": "MongolGPT | ダウンロード",
   "download.meta.description": "MongolGPT を macOS、Windows、Linux 向けにダウンロード",
@@ -646,14 +388,8 @@ export const dict = {
   "download.faq.a3.beforeLocal":
     "必ずしもそうではありませんが、おそらく必要です。MongolGPTを有料プロバイダーに接続したい場合はAIサブスクリプションが必要ですが、",
   "download.faq.a3.localLink": "ローカルモデル",
-  "download.faq.a3.afterLocal.beforeZen": "であれば無料で利用できます。ユーザーには",
-  "download.faq.a3.afterZen":
-    "の利用をお勧めしていますが、MongolGPTはOpenAI、Anthropic、xAIなどの主要なプロバイダーに対応しています。",
 
   "download.faq.a5.p1": "MongolGPTは100%無料で利用できます。",
-  "download.faq.a5.p2.beforeZen":
-    "追加コストはモデルプロバイダーのサブスクリプションから発生します。MongolGPTはどのモデルプロバイダーでも利用できますが、",
-  "download.faq.a5.p2.afterZen": "の利用をおすすめします。",
 
   "download.faq.a6.p1": "あなたのデータと情報は、MongolGPTで共有リンクを作成したときにのみ保存されます。",
   "download.faq.a6.p2.beforeShare": "詳しくは",

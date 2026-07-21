@@ -9,7 +9,6 @@ export const dict = {
   "nav.discord": "Discord",
   "nav.x": "X",
   "nav.enterprise": "Kurumsal",
-  "nav.zen": "Zen",
   "nav.login": "Giriş",
   "nav.free": "İndir",
   "nav.home": "Ana sayfa",
@@ -85,22 +84,6 @@ export const dict = {
 
   "home.title": "MongolGPT | Açık kaynaklı yapay zeka kodlama ajanı",
 
-  "temp.title": "mongolgpt | Terminal için geliştirilmiş yapay zeka kodlama ajanı",
-  "temp.hero.title": "Terminal için geliştirilmiş yapay zeka kodlama ajanı",
-  "temp.zen": "mongolgpt zen",
-  "temp.getStarted": "Başlayın",
-  "temp.feature.native.title": "Yerel (Native) TUI",
-  "temp.feature.native.body": "Duyarlı, yerel, temalandırılabilir bir terminal arayüzü",
-  "temp.feature.zen.beforeLink": "mongolgpt tarafından sağlanan ",
-  "temp.feature.zen.link": "seçkin modeller listesi",
-  "temp.feature.zen.afterLink": "",
-  "temp.feature.models.beforeLink": "Yerel modeller dahil 75+ LLM sağlayıcısını ",
-  "temp.feature.models.afterLink": " üzerinden destekler",
-  "temp.screenshot.caption": "mongolgpt TUI ve tokyonight teması",
-  "temp.screenshot.alt": "tokyonight temalı mongolgpt TUI",
-  "temp.logoLightAlt": "mongolgpt açık logo",
-  "temp.logoDarkAlt": "mongolgpt koyu logo",
-
   "home.banner.badge": "Yeni",
   "home.banner.text": "Masaüstü uygulaması beta olarak mevcut",
   "home.banner.platforms": "macOS, Windows ve Linux'ta",
@@ -153,9 +136,6 @@ export const dict = {
   "home.faq.a2.link": "girişi okumaktır",
   "home.faq.q3": "MongolGPT için ek AI aboneliklerine ihtiyacım var mı?",
   "home.faq.a3.p1": "Şart değil. MongolGPT, hesap açmadan kullanabileceğiniz ücretsiz modellerle gelir.",
-  "home.faq.a3.p2.beforeZen": "Bunun dışında, popüler kodlama modellerini kullanmak için bir",
-  "home.faq.a3.p2.afterZen": " hesabı oluşturabilirsiniz.",
-  "home.faq.a3.p3": "Zen'i öneriyoruz, ancak MongolGPT OpenAI, Anthropic, xAI gibi popüler sağlayıcılarla da çalışır.",
   "home.faq.a3.p4.beforeLocal": "Hatta",
   "home.faq.a3.p4.localLink": "yerel modellerinizi bağlayabilirsiniz",
   "home.faq.q4": "Mevcut AI aboneliklerimi MongolGPT ile kullanabilir miyim?",
@@ -167,8 +147,6 @@ export const dict = {
   "home.faq.a5.and": "ve",
   "home.faq.a5.web": "web",
   "home.faq.q6": "MongolGPT ne kadar?",
-  "home.faq.a6":
-    "MongolGPT %100 ücretsizdir. Ayrıca ücretsiz model setiyle gelir. Başka bir sağlayıcı bağlarsanız ek maliyetler olabilir.",
   "home.faq.q7": "Veri ve gizlilik ne olacak?",
   "home.faq.a7.p1":
     "Verileriniz yalnızca ücretsiz modellerimizi kullandığınızda veya paylaşılabilir bağlantılar oluşturduğunuzda saklanır.",
@@ -182,179 +160,6 @@ export const dict = {
   "home.faq.a8.mitLicense": "MIT Lisansı",
   "home.faq.a8.p3":
     "altında herkese açıktır, yani herkes kullanabilir, değiştirebilir veya geliştirmeye katkıda bulunabilir. Topluluktan herkes issue açabilir, pull request gönderebilir ve işlevselliği genişletebilir.",
-
-  "home.zenCta.title": "Kodlama ajanları için güvenilir, optimize modeller",
-  "home.zenCta.body":
-    "Zen, MongolGPT'un kodlama ajanları için özel olarak test edip benchmark ettiği seçilmiş AI modellerine erişim sağlar. Sağlayıcılar arasında tutarsız performans ve kalite konusunda endişelenmeyin; çalışan, doğrulanmış modelleri kullanın.",
-  "home.zenCta.link": "Zen hakkında",
-
-  "zen.title": "MongolGPT Zen | Kodlama ajanları için güvenilir, optimize edilmiş modellerin seçilmiş seti",
-  "zen.hero.title": "Kodlama ajanları için güvenilir, optimize modeller",
-  "zen.hero.body":
-    "Zen, MongolGPT'un kodlama ajanları için özel olarak test edip benchmark ettiği seçilmiş AI modellerine erişim sağlar. Sağlayıcılar arasında tutarsız performans ve kalite konusunda endişelenmeyin; çalışan, doğrulanmış modelleri kullanın.",
-
-  "zen.faq.q1": "MongolGPT Zen nedir?",
-  "zen.faq.a1":
-    "Zen, MongolGPT ekibi tarafından oluşturulan ve kodlama ajanları için test edilip benchmark edilen seçilmiş bir AI model setidir.",
-  "zen.faq.q2": "Zen'i daha doğru yapan nedir?",
-  "zen.faq.a2":
-    "Zen yalnızca kodlama ajanları için özel olarak test edilip benchmark edilmiş modelleri sunar. Biftek kesmek için tereyağı bıçağı kullanmazsın; kodlama için kötü modeller kullanma.",
-  "zen.faq.q3": "Zen daha ucuz mu?",
-  "zen.faq.a3":
-    "Zen kâr amaçlı değildir. Zen, model sağlayıcılarının maliyetlerini size yansıtır. Zen'in kullanımı arttıkça MongolGPT daha iyi fiyatlar pazarlayabilir ve bunları size yansıtabilir.",
-  "zen.faq.q4": "Zen ne kadar?",
-  "zen.faq.a4.p1.beforePricing": "Zen",
-  "zen.faq.a4.p1.pricingLink": "istek başı ücret alır",
-  "zen.faq.a4.p1.afterPricing":
-    "ve hiçbir markup eklemez, yani model sağlayıcının ücretlendirdiği tutarı aynen ödersiniz.",
-  "zen.faq.a4.p2.beforeAccount": "Toplam maliyetiniz kullanım miktarına bağlıdır ve aylık harcama limitlerini",
-  "zen.faq.a4.p2.accountLink": "hesabınızda ayarlayabilirsiniz",
-  "zen.faq.a4.p3":
-    "Maliyetleri karşılamak için MongolGPT, $20 bakiye yüklemesi başına yalnızca $1.23 tutarında küçük bir ödeme işleme ücreti ekler.",
-  "zen.faq.q5": "Veri ve gizlilik ne olacak?",
-  "zen.faq.a5.beforeExceptions":
-    "Tüm Zen modelleri ABD'de barındırılır. Sağlayıcılar sıfır-retention politikasını uygular ve verilerinizi model eğitimi için kullanmaz; şu",
-  "zen.faq.a5.exceptionsLink": "istisnalarla",
-  "zen.faq.q6": "Harcama limitleri ayarlayabilir miyim?",
-  "zen.faq.a6": "Evet, hesabınızda aylık harcama limitleri ayarlayabilirsiniz.",
-  "zen.faq.q7": "İptal edebilir miyim?",
-  "zen.faq.a7":
-    "Evet, istediğiniz zaman faturalandırmayı devre dışı bırakabilir ve kalan bakiyenizi kullanabilirsiniz.",
-  "zen.faq.q8": "Zen'i diğer kodlama ajanlarıyla kullanabilir miyim?",
-  "zen.faq.a8":
-    "Zen MongolGPT ile harika çalışır, ama Zen'i herhangi bir ajan ile kullanabilirsiniz. Tercih ettiğiniz kodlama ajanında kurulum talimatlarını izleyin.",
-
-  "zen.cta.start": "Zen'i kullanmaya başlayın",
-  "zen.pricing.title": "20$ Kullandıkça öde bakiyesi ekle",
-  "zen.pricing.fee": "(+1,23$ kart işlem ücreti)",
-  "zen.pricing.body":
-    "Herhangi bir ajan ile kullanın. Aylık harcama limitlerini belirleyin. İstediğiniz zaman iptal edin.",
-  "zen.problem.title": "Zen hangi sorunu çözüyor?",
-  "zen.problem.body":
-    "Pek çok model mevcut ancak yalnızca birkaçı kodlama ajanlarıyla iyi çalışıyor. Çoğu sağlayıcı, bunları değişen sonuçlarla farklı şekilde yapılandırır.",
-  "zen.problem.subtitle": "Bu sorunu yalnızca MongolGPT kullanıcıları için değil, herkes için düzeltiyoruz.",
-  "zen.problem.item1": "Seçilen modelleri test etme ve ekiplerine danışmanlık yapma",
-  "zen.problem.item2": "Düzgün bir şekilde teslim edildiklerinden emin olmak için sağlayıcılarla çalışmak",
-  "zen.problem.item3": "Önerdiğimiz tüm model-sağlayıcı kombinasyonlarının karşılaştırılması",
-  "zen.how.title": "Zen nasıl çalışır?",
-  "zen.how.body": "Zen'i MongolGPT ile kullanmanızı önersek de, Zen'i herhangi bir ajan ile kullanabilirsiniz.",
-  "zen.how.step1.title": "Kaydolun ve 20$ bakiye ekleyin",
-  "zen.how.step1.beforeLink": "takip edin",
-  "zen.how.step1.link": "kurulum talimatları",
-  "zen.how.step2.title": "Şeffaf fiyatlandırmayla Zen kullanın",
-  "zen.how.step2.link": "istek başına ödeme",
-  "zen.how.step2.afterLink": "sıfır işaretlemeyle",
-  "zen.how.step3.title": "Otomatik yükleme",
-  "zen.how.step3.body": "bakiyeniz 5$'a ulaştığında otomatik olarak 20$ ekleyeceğiz",
-  "zen.privacy.title": "Gizliliğiniz bizim için önemlidir",
-  "zen.privacy.beforeExceptions":
-    "Tüm Zen modelleri ABD'de barındırılmaktadır. Sağlayıcılar sıfır saklama politikası izler ve verilerinizi model eğitimi için kullanmaz; şu",
-  "zen.privacy.exceptionsLink": "aşağıdaki istisnalar",
-
-  "go.title": "MongolGPT Go | Herkes için düşük maliyetli kodlama modelleri",
-  "go.banner.text": "MiniMax M3 sınırlı bir süre için 3x kullanım limiti sunuyor",
-  "go.meta.description":
-    "Go ilk ay $5, sonrasında ayda 10$ fiyatıyla başlar; GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro ve DeepSeek V4 Flash için cömert 5 saatlik istek limitleri sunar.",
-  "go.hero.title": "Herkes için düşük maliyetli kodlama modelleri",
-  "go.hero.body":
-    "Go, dünya çapındaki programcılara ajan tabanlı kodlama getiriyor. En yetenekli açık kaynaklı modellere cömert limitler ve güvenilir erişim sunarak, maliyet veya erişilebilirlik konusunda endişelenmeden güçlü ajanlarla geliştirme yapmanızı sağlar.",
-
-  "go.cta.start": "Go'ya abone ol",
-  "go.cta.template": "{{text}} {{price}}",
-  "go.cta.text": "Go'ya abone ol",
-  "go.cta.price": "Ayda 10$",
-  "go.cta.promo": "İlk ay $5",
-  "go.pricing.body":
-    "Herhangi bir ajanla kullanın. İlk ay $5, sonrasında ayda 10$. Gerekirse kredi yükleyin. İstediğiniz zaman iptal edin.",
-  "go.graph.free": "Ücretsiz",
-  "go.graph.freePill": "Big Pickle ve ücretsiz modeller",
-  "go.graph.go": "Go",
-  "go.graph.label": "5 saat başına istekler",
-  "go.graph.usageLimits": "Kullanım limitleri",
-  "go.graph.tick": "{{n}}x",
-  "go.graph.aria": "5 saatlik istekler: {{free}} vs {{go}}",
-
-  "go.testimonials.brand.zen": "Zen",
-  "go.testimonials.brand.go": "Go",
-  "go.testimonials.handle": "@MongolGPT",
-  "go.testimonials.dax.name": "Dax Raad",
-  "go.testimonials.dax.title": "Eski CEO, Terminal Ürünleri",
-  "go.testimonials.dax.quoteAfter": "hayat değiştirdi, gerçekten düşünmeye bile gerek yok.",
-  "go.testimonials.jay.name": "Jay V",
-  "go.testimonials.jay.title": "Eski Kurucu, SEED, PM, Melt, Pop, Dapt, Cadmus ve ViewPoint",
-  "go.testimonials.jay.quoteBefore": "Ekibimizdeki 5 kişiden 4'ü",
-  "go.testimonials.jay.quoteAfter": "kullanmayı seviyor.",
-  "go.testimonials.adam.name": "Adam Elmore",
-  "go.testimonials.adam.title": "Eski Hero, AWS",
-  "go.testimonials.adam.quoteBefore": "",
-  "go.testimonials.adam.quoteAfter": "için tavsiyem sonsuz. Cidden, gerçekten çok iyi.",
-  "go.testimonials.david.name": "David Hill",
-  "go.testimonials.david.title": "Eski Tasarım Başkanı, Laravel",
-  "go.testimonials.david.quoteBefore": "",
-  "go.testimonials.david.quoteAfter":
-    " ile modellerin test edildiğini ve kodlama ajanları için mükemmel olduğunu biliyorum.",
-  "go.testimonials.frank.name": "Frank Wang",
-  "go.testimonials.frank.title": "Eski Stajyer, Nvidia (4 kez)",
-  "go.testimonials.frank.quote": "Keşke hala Nvidia'da olsaydım.",
-  "go.problem.title": "Go hangi sorunu çözüyor?",
-  "go.problem.body":
-    "MongolGPT deneyimini mümkün olduğunca çok kişiye ulaştırmaya odaklandık. MongolGPT Go düşük maliyetli bir aboneliktir: İlk ay $5, sonrasında ayda 10$. Cömert limitler ve en yetenekli açık kaynak modellere güvenilir erişim sağlar.",
-  "go.problem.subtitle": " ",
-  "go.problem.item1": "Düşük maliyetli abonelik fiyatlandırması",
-  "go.problem.item2": "Cömert limitler ve güvenilir erişim",
-  "go.problem.item3": "Mümkün olduğunca çok programcı için geliştirildi",
-  "go.problem.item4":
-    "GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro ve DeepSeek V4 Flash içerir",
-  "go.how.title": "Go nasıl çalışır?",
-  "go.how.body":
-    "Go ilk ay $5, sonrasında ayda 10$ fiyatıyla başlar. MongolGPT veya herhangi bir ajanla kullanabilirsiniz.",
-  "go.how.step1.title": "Bir hesap oluşturun",
-  "go.how.step1.beforeLink": "takip edin",
-  "go.how.step1.link": "kurulum talimatları",
-  "go.how.step2.title": "Go'ya abone olun",
-  "go.how.step2.link": "İlk ay $5",
-  "go.how.step2.afterLink": "sonrasında cömert limitlerle ayda 10$",
-  "go.how.step3.title": "Kodlamaya başlayın",
-  "go.how.step3.body": "açık kaynaklı modellere güvenilir erişimle",
-  "go.privacy.title": "Gizliliğiniz bizim için önemlidir",
-  "go.privacy.body":
-    "Bu plan öncelikle uluslararası kullanıcılar için tasarlanmış olup, istikrarlı küresel erişim için modeller ABD, AB ve Singapur'da barındırılmaktadır.",
-  "go.privacy.contactAfter": "herhangi bir sorunuz varsa.",
-  "go.privacy.beforeExceptions":
-    "Go modelleri ABD'de barındırılmaktadır. Sağlayıcılar sıfır saklama politikası izler ve verilerinizi model eğitimi için kullanmaz; şu",
-  "go.privacy.exceptionsLink": "aşağıdaki istisnalar",
-  "go.faq.q1": "MongolGPT Go nedir?",
-  "go.faq.a1":
-    "Go, ajan tabanlı kodlama için yetenekli açık kaynaklı modellere güvenilir erişim sağlayan düşük maliyetli bir aboneliktir.",
-  "go.faq.q2": "Go hangi modelleri içerir?",
-  "go.faq.a2": "Go, aşağıda listelenen modelleri cömert limitler ve güvenilir erişimle sunar.",
-  "go.faq.q3": "Go, Zen ile aynı mı?",
-  "go.faq.a3":
-    "Hayır. Zen kullandıkça öde modelidir, Go ise ilk ay $5, sonrasında ayda 10$ fiyatıyla başlar; GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro ve DeepSeek V4 Flash açık kaynak modellerine cömert limitler ve güvenilir erişim sunar.",
-  "go.faq.q4": "Go ne kadar?",
-  "go.faq.a4.p1.beforePricing": "Go'nun maliyeti",
-  "go.faq.a4.p1.pricingLink": "İlk ay $5",
-  "go.faq.a4.p1.afterPricing": "sonrasında cömert limitlerle ayda 10$.",
-  "go.faq.a4.p2.beforeAccount": "Aboneliğinizi",
-  "go.faq.a4.p2.accountLink": "hesabınızdan",
-  "go.faq.a4.p3": "yönetebilirsiniz. İstediğiniz zaman iptal edin.",
-  "go.faq.q5": "Veri ve gizlilik ne olacak?",
-  "go.faq.a5.body":
-    "Bu plan öncelikle uluslararası kullanıcılar için tasarlanmış olup, istikrarlı küresel erişim için modeller ABD, AB ve Singapur'da barındırılmaktadır. Sağlayıcılarımız sıfır saklama politikası izler ve verilerinizi model eğitimi için kullanmaz.",
-  "go.faq.a5.beforeExceptions":
-    "Go modelleri ABD'de barındırılmaktadır. Sağlayıcılar sıfır saklama politikası izler ve verilerinizi model eğitimi için kullanmaz; şu",
-  "go.faq.a5.exceptionsLink": "aşağıdaki istisnalar",
-  "go.faq.q6": "Kredi yükleyebilir miyim?",
-  "go.faq.a6": "Daha fazla kullanıma ihtiyacınız varsa, hesabınıza kredi yükleyebilirsiniz.",
-  "go.faq.q7": "İptal edebilir miyim?",
-  "go.faq.a7": "Evet, istediğiniz zaman iptal edebilirsiniz.",
-  "go.faq.q8": "Go'yu diğer kodlama ajanlarıyla kullanabilir miyim?",
-  "go.faq.a8":
-    "Evet, Go'yu herhangi bir ajanla kullanabilirsiniz. Tercih ettiğiniz kodlama ajanındaki kurulum talimatlarını izleyin.",
-
-  "go.faq.q9": "Ücretsiz modeller ve Go arasındaki fark nedir?",
-  "go.faq.a9":
-    "Ücretsiz modeller, günlük 200 istek kotası ile Big Pickle ve o sırada mevcut olan promosyonel modelleri içerir. Go ise GLM-5.2, GLM-5.1, Kimi K2.7 Code, Kimi K2.6, MiMo-V2.5-Pro, MiMo-V2.5, Qwen3.7 Max, Qwen3.7 Plus, Qwen3.6 Plus, MiniMax M2.7, MiniMax M3, DeepSeek V4 Pro ve DeepSeek V4 Flash modellerini; yuvarlanan pencereler (5 saatlik, haftalık ve aylık) üzerinden uygulanan daha yüksek istek kotalarıyla içerir. Bu kotalar kabaca her 5 saatte 12$, haftada 30$ ve ayda 60$ değerine eşdeğerdir (gerçek istek sayıları modele ve kullanıma göre değişir).",
 
   "zen.api.error.rateLimitExceeded": "İstek limiti aşıldı. Lütfen daha sonra tekrar deneyin.",
   "zen.api.error.modelNotSupported": "{{model}} modeli desteklenmiyor",
@@ -377,11 +182,6 @@ export const dict = {
   "zen.api.error.userMonthlyLimitReached":
     "Aylık ${{amount}} harcama limitinize ulaştınız. Limitlerinizi buradan yönetin: {{membersUrl}}",
   "zen.api.error.modelDisabled": "Model devre dışı",
-  "zen.api.error.trialEnded":
-    "{{model}} için ücretsiz promosyon sona erdi. MongolGPT Go'ya abone olarak modeli kullanmaya devam edebilirsiniz - {{link}}",
-
-  "workspace.nav.zen": "Zen",
-  "workspace.nav.go": "Go",
   "workspace.nav.usage": "Kullanım",
   "workspace.nav.apiKeys": "API Anahtarları",
   "workspace.nav.members": "Üyeler",
@@ -389,7 +189,6 @@ export const dict = {
   "workspace.nav.settings": "Ayarlar",
 
   "workspace.home.banner.beforeLink": "Kodlama ajanları için güvenilir optimize edilmiş modeller.",
-  "workspace.lite.banner.beforeLink": "Herkes için düşük maliyetli kodlama modelleri.",
   "workspace.home.billing.loading": "Yükleniyor...",
   "workspace.home.billing.enable": "Faturalandırmayı etkinleştir",
   "workspace.home.billing.currentBalance": "Mevcut bakiye",
@@ -401,8 +200,6 @@ export const dict = {
   "workspace.newUser.feature.quality.body":
     "Optimum performans için yapılandırılmış modellere erişin; sürüm düşürme veya daha ucuz sağlayıcılara yönlendirme yok.",
   "workspace.newUser.feature.lockin.title": "Kilitlenme Yok",
-  "workspace.newUser.feature.lockin.body":
-    "Zen'i herhangi bir kodlama ajanıyla kullanın ve istediğiniz zaman mongolgpt ile diğer sağlayıcıları kullanmaya devam edin.",
   "workspace.newUser.copyApiKey": "API anahtarını kopyala",
   "workspace.newUser.copyKey": "Anahtarı Kopyala",
   "workspace.newUser.copied": "Kopyalandı!",
@@ -444,7 +241,6 @@ export const dict = {
   "workspace.usage.breakdown.output": "Çıkış",
   "workspace.usage.breakdown.reasoning": "Muhakeme",
   "workspace.usage.subscription": "{{plan}} (${{amount}})",
-  "workspace.usage.lite": "Go (${{amount}})",
   "workspace.usage.byok": "BYOK (${{amount}})",
 
   "workspace.cost.title": "Maliyet",
@@ -563,8 +359,6 @@ export const dict = {
   "workspace.payments.type.credit": "kredi",
   "workspace.payments.type.subscription": "abonelik",
   "workspace.payments.view": "Görüntüle",
-
-  "workspace.lite.loading": "Yükleniyor...",
   "workspace.lite.time.day": "gün",
   "workspace.lite.time.days": "gün",
   "workspace.lite.time.hour": "saat",
@@ -572,62 +366,6 @@ export const dict = {
   "workspace.lite.time.minute": "dakika",
   "workspace.lite.time.minutes": "dakika",
   "workspace.lite.time.fewSeconds": "birkaç saniye",
-  "workspace.lite.subscription.message": "MongolGPT Go abonesisiniz.",
-  "workspace.lite.subscription.manage": "Aboneliği Yönet",
-  "workspace.lite.subscription.rollingUsage": "Devam Eden Kullanım",
-  "workspace.lite.subscription.weeklyUsage": "Haftalık Kullanım",
-  "workspace.lite.subscription.monthlyUsage": "Aylık Kullanım",
-  "workspace.lite.subscription.resetsIn": "Sıfırlama süresi",
-  "workspace.lite.subscription.useBalance": "Kullanım limitlerine ulaştıktan sonra mevcut bakiyenizi kullanın",
-  "workspace.lite.subscription.selectProvider":
-    'Go modellerini kullanmak için mongolgpt yapılandırmanızda "MongolGPT Go"\'yu sağlayıcı olarak seçin.',
-
-  "workspace.lite.other.message":
-    "Bu çalışma alanındaki başka bir üye zaten MongolGPT Go abonesi. Çalışma alanı başına yalnızca bir üye abone olabilir.",
-  "workspace.lite.promo.description":
-    "MongolGPT Go {{price}} fiyatından başlar, sonrasında ayda 10$ olur ve cömert kullanım limitleriyle popüler açık kodlama modellerine güvenilir erişim sağlar.",
-  "workspace.lite.promo.price": "İlk ay $5",
-  "workspace.lite.promo.modelsTitle": "Neler Dahil",
-  "workspace.lite.promo.footer":
-    "Plan öncelikle uluslararası kullanıcılar için tasarlanmıştır; modeller istikrarlı küresel erişim için ABD, AB ve Singapur'da barındırılmaktadır. Erken kullanımdan öğrendikçe ve geri bildirim topladıkça fiyatlandırma ve kullanım limitleri değişebilir.",
-  "workspace.lite.promo.subscribe": "Go'ya Abone Ol",
-  "workspace.lite.promo.subscribing": "Yönlendiriliyor...",
-  "workspace.lite.promo.otherMethods": "Diğer ödeme yöntemleri",
-  "workspace.lite.promo.selectMethod": "Ödeme yöntemini seçin",
-
-  "workspace.referral.copyLink": "Bağlantıyı Kopyala",
-  "workspace.referral.copied": "Kopyalandı",
-  "workspace.referral.overview.title": "Arkadaşlarını davet et",
-  "workspace.referral.overview.subtitle": "Bir arkadaşın abone olduğunda $5 kazan. O da $5 alacak.",
-  "workspace.referral.instructions.share": "Referans bağlantını paylaş",
-  "workspace.referral.instructions.subscribe": "Arkadaşın katılır ve Go'ya abone olur",
-  "workspace.referral.instructions.claim":
-    "İkiniz de Go kullanım limitlerinize uygulamak için $5 kullanım kredisi alırsınız",
-  "workspace.referral.rewards.title": "Davet ödülleri",
-  "workspace.referral.rewards.description": "Mevcut davet kredilerini Go kullanımınıza uygulayın.",
-  "workspace.referral.rewards.subtitle": "{{applied}} / {{total}} ödül kullanıldı.",
-  "workspace.referral.rewards.empty": "Henüz davet ödülü yok.",
-  "workspace.referral.table.reward": "Ödül",
-  "workspace.referral.table.referral": "Açıklama",
-  "workspace.referral.table.date": "Tarih",
-  "workspace.referral.reward.description.inviter": "{{email}} davet edildi",
-  "workspace.referral.reward.description.invitee": "{{email}} tarafından davet edildi",
-  "workspace.referral.reward.action.subscribeUnlock": "Kilidi açmak için abone ol",
-  "workspace.referral.reward.action.view": "Ödülü Görüntüle",
-  "workspace.referral.reward.action.applied": "Ödül Kullanıldı",
-  "workspace.referral.reward.source.pendingInviter": "Abone olması bekleniyor",
-  "workspace.referral.reward.source.pendingInvitee": "Ödülün kilidini açmak için abone ol",
-  "workspace.referral.reward.source.available": "Ödül kullanıma hazır",
-  "workspace.referral.reward.source.applied": "Ödül kullanıldı",
-  "workspace.referral.reward.status.applied": "Ödül Kullanıldı",
-  "workspace.referral.reward.status.pendingInviter": "Kilidi açmak için abone ol",
-  "workspace.referral.reward.status.pendingInvitee": "Kilidi açmak için abone ol",
-  "workspace.referral.apply.noGo": "Kilidi açmak için abone ol",
-  "workspace.referral.apply.preview": "Ödülü Görüntüle",
-  "workspace.referral.apply.action": "Kullan",
-  "workspace.referral.apply.confirmTitle": "Ödülü kullan",
-  "workspace.referral.apply.confirmBody": "Bu workspace'in mevcut kullanımını azaltmak için {{amount}} kullan.",
-  "workspace.referral.apply.confirmAction": "Kullan",
 
   "download.title": "MongolGPT | İndir",
   "download.meta.description": "MongolGPT'u macOS, Windows ve Linux için indirin",
@@ -650,14 +388,8 @@ export const dict = {
   "download.faq.a3.beforeLocal":
     "Tam olarak değil, ama muhtemelen. MongolGPT'u ücretli bir sağlayıcıya bağlamak istiyorsanız bir AI aboneliği gerekir, ancak",
   "download.faq.a3.localLink": "yerel modeller",
-  "download.faq.a3.afterLocal.beforeZen": "ile ücretsiz çalışabilirsiniz. Kullanıcıları",
-  "download.faq.a3.afterZen":
-    " kullanmaya teşvik ediyoruz, ancak MongolGPT OpenAI, Anthropic, xAI vb. gibi tüm popüler sağlayıcılarla çalışır.",
 
   "download.faq.a5.p1": "MongolGPT %100 ücretsizdir.",
-  "download.faq.a5.p2.beforeZen":
-    "Ek maliyetler, bir model sağlayıcısına olan aboneliğinizden gelir. MongolGPT herhangi bir model sağlayıcısıyla çalışır, ancak",
-  "download.faq.a5.p2.afterZen": " kullanmanızı öneririz.",
 
   "download.faq.a6.p1":
     "Verileriniz ve bilginiz yalnızca MongolGPT'da paylaşılabilir bağlantılar oluşturduğunuzda saklanır.",
