@@ -87,7 +87,7 @@ export async function lookup(identifier: string): Promise<LookupResult> {
         workspaceName: WorkspaceTable.name,
         balance: BillingTable.balance,
         role: UserTable.role,
-        black: SubscriptionTable.timeCreated,
+        legacySubscription: SubscriptionTable.timeCreated,
         lite: LiteTable.timeCreated,
       })
       .from(UserTable)
@@ -105,7 +105,7 @@ export async function lookup(identifier: string): Promise<LookupResult> {
           workspaceID: row.workspaceID,
           balance: formatMicroCents(row.balance) ?? "$0.00",
           role: row.role,
-          black: formatDate(row.black),
+          legacySubscription: formatDate(row.legacySubscription),
           lite: formatDate(row.lite),
         })),
       ),
@@ -185,13 +185,13 @@ async function loadWorkspace(workspaceID: string): Promise<WorkspaceSection> {
         balance: BillingTable.balance,
         customerID: BillingTable.customerID,
         reload: BillingTable.reload,
-        blackSubscriptionID: BillingTable.subscriptionID,
-        blackSubscription: {
+        legacySubscriptionID: BillingTable.subscriptionID,
+        legacySubscription: {
           plan: BillingTable.subscriptionPlan,
           booked: BillingTable.timeSubscriptionBooked,
           enrichment: BillingTable.subscription,
         },
-        timeBlackSubscriptionSelected: BillingTable.timeSubscriptionSelected,
+        timeLegacySubscriptionSelected: BillingTable.timeSubscriptionSelected,
         liteSubscriptionID: BillingTable.liteSubscriptionID,
       })
       .from(BillingTable)
@@ -203,19 +203,19 @@ async function loadWorkspace(workspaceID: string): Promise<WorkspaceSection> {
             reload: row.reload ? "yes" : "no",
             customerID: row.customerID,
             GO: row.liteSubscriptionID,
-            Black: row.blackSubscriptionID
+            legacySubscription: row.legacySubscriptionID
               ? [
-                  `Black ${row.blackSubscription.enrichment!.plan}`,
-                  row.blackSubscription.enrichment!.seats > 1
-                    ? `X ${row.blackSubscription.enrichment!.seats} seats`
+                  `Legacy plan ${row.legacySubscription.enrichment!.plan}`,
+                  row.legacySubscription.enrichment!.seats > 1
+                    ? `X ${row.legacySubscription.enrichment!.seats} seats`
                     : "",
-                  row.blackSubscription.enrichment!.coupon
-                    ? `(coupon: ${row.blackSubscription.enrichment!.coupon})`
+                  row.legacySubscription.enrichment!.coupon
+                    ? `(coupon: ${row.legacySubscription.enrichment!.coupon})`
                     : "",
-                  `(ref: ${row.blackSubscriptionID})`,
+                  `(ref: ${row.legacySubscriptionID})`,
                 ].join(" ")
-              : row.blackSubscription.booked
-                ? `Waitlist ${row.blackSubscription.plan} plan${row.timeBlackSubscriptionSelected ? " (selected)" : ""}`
+              : row.legacySubscription.booked
+                ? `Legacy waitlist ${row.legacySubscription.plan} plan${row.timeLegacySubscriptionSelected ? " (selected)" : ""}`
                 : undefined,
           }))[0] ?? null,
       ),
@@ -444,13 +444,13 @@ function getSubscriptionStatus(row: {
     return { weekly: null, rolling: null, rateLimited: null, retryIn: null }
   }
 
-  const black = PlanData.getLimits({ plan: row.subscription.plan })
+  const limits = PlanData.getLimits({ plan: row.subscription.plan })
   const now = new Date()
   const week = getWeekBounds(now)
 
-  const fixedLimit = black.weeklyCostLimit ? centsToMicroCents(black.weeklyCostLimit * 100) : null
-  const rollingLimit = black.rollingCostLimit ? centsToMicroCents(black.rollingCostLimit * 100) : null
-  const rollingWindowMs = (black.rollingWindow ?? 5) * 3600 * 1000
+  const fixedLimit = limits.weeklyCostLimit ? centsToMicroCents(limits.weeklyCostLimit * 100) : null
+  const rollingLimit = limits.rollingCostLimit ? centsToMicroCents(limits.rollingCostLimit * 100) : null
+  const rollingWindowMs = (limits.rollingWindow ?? 5) * 3600 * 1000
 
   const currentWeekly =
     row.fixedUsage && row.timeFixedUpdated && row.timeFixedUpdated >= week.start ? row.fixedUsage : 0
@@ -469,8 +469,8 @@ function getSubscriptionStatus(row: {
       : null
 
   return {
-    weekly: fixedLimit !== null ? `${formatMicroCents(currentWeekly)} / $${black.weeklyCostLimit}` : null,
-    rolling: rollingLimit !== null ? `${formatMicroCents(currentRolling)} / $${black.rollingCostLimit}` : null,
+    weekly: fixedLimit !== null ? `${formatMicroCents(currentWeekly)} / $${limits.weeklyCostLimit}` : null,
+    rolling: rollingLimit !== null ? `${formatMicroCents(currentRolling)} / $${limits.rollingCostLimit}` : null,
     rateLimited: isWeeklyLimited || isRollingLimited ? "yes" : "no",
     retryIn,
   }

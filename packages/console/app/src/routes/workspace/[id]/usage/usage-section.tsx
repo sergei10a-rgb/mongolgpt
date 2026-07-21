@@ -10,6 +10,13 @@ import { useI18n } from "~/context/i18n"
 
 const PAGE_SIZE = 50
 
+function subscriptionPlanName(plan: unknown) {
+  if (plan === "basic") return "Basic"
+  if (plan === "pro") return "Pro"
+  if (plan === "max") return "Max"
+  return ""
+}
+
 async function getUsageInfo(workspaceID: string, page: number) {
   "use server"
   return withActor(() => listWorkspaceUsage(page, PAGE_SIZE), workspaceID)
@@ -182,6 +189,7 @@ export function UsageSection() {
                             }
                           >
                             {i18n.t("workspace.usage.subscription", {
+                              plan: subscriptionPlanName(usage.enrichment?.plan),
                               amount: ((usage.cost ?? 0) / 100000000).toFixed(4),
                             })}
                           </Match>
