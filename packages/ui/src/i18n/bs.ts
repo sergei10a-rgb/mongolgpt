@@ -50,14 +50,14 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "Besplatna upotreba premašena",
   "ui.sessionTurn.error.addCredits": "Dodaj kredite",
 
-  "dialog.usageExceeded.freeTier.title": "Dostignut besplatan limit",
+  "dialog.usageExceeded.freeTier.title": "Free Auto limit reached",
   "dialog.usageExceeded.freeTier.description":
-    "Pretplatite se na MongolGPT Go za pouzdan pristup najboljim open-source modelima, počevši od $5/mjesec.",
-  "dialog.usageExceeded.freeTier.actionLabel": "Pretplati se",
-  "dialog.usageExceeded.accountRateLimit.title": "Dostignut Go limit",
+    "Your Free Auto allowance has been used. Choose a Basic, Pro, or Max plan to continue.",
+  "dialog.usageExceeded.freeTier.actionLabel": "View plans",
+  "dialog.usageExceeded.accountRateLimit.title": "Plan usage limit reached",
   "dialog.usageExceeded.accountRateLimit.description":
-    "Dostignut je limit korištenja. Da nastavite koristiti ovaj model sada, omogućite korištenje iz vašeg dostupnog stanja",
-  "dialog.usageExceeded.accountRateLimit.actionLabel": "Otvori postavke",
+    "Your plan allowance has been used. Wait for it to reset or review your billing settings.",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Open billing",
 
   "ui.sessionTurn.status.delegating": "Delegiranje posla",
   "ui.sessionTurn.status.planning": "Planiranje sljedećih koraka",

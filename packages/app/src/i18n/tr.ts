@@ -104,7 +104,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Önerilen",
   "dialog.provider.mongolgpt.note": "Claude, GPT, Gemini ve daha fazlasını içeren seçilmiş modeller",
   "dialog.provider.mongolgpt.tagline": "Güvenilir optimize edilmiş modeller",
-  "dialog.provider.mongolgptGo.tagline": "Herkes için düşük maliyetli abonelik",
+  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Pro ve Max dahil Claude modellerine doğrudan erişim",
   "dialog.provider.copilot.note": "GitHub Copilot üzerinden kodlama yardımı için yapay zekâ modelleri",
   "dialog.provider.openai.note": "Hızlı ve yetenekli genel yapay zekâ görevleri için GPT modelleri",
@@ -136,14 +136,14 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API anahtarı",
   "provider.connect.apiKey.placeholder": "API anahtarı",
   "provider.connect.apiKey.required": "API anahtarı gerekli",
-  "provider.connect.mongolgptZen.line1":
-    "MongolGPT Zen, kodlama ajanları için seçilmiş güvenilir optimize edilmiş modellere erişim sağlar.",
-  "provider.connect.mongolgptZen.line2":
+  "provider.connect.mongolgptAccount.line1":
+    "MongolGPT, kodlama ajanları için seçilmiş güvenilir optimize edilmiş modellere erişim sağlar.",
+  "provider.connect.mongolgptAccount.line2":
     "Tek bir API anahtarıyla Claude, GPT, Gemini, GLM ve daha fazlası gibi modellere erişebilirsiniz.",
-  "provider.connect.mongolgptZen.visit.prefix": "",
-  "provider.connect.mongolgptZen.visit.link":
+  "provider.connect.mongolgptAccount.visit.prefix": "",
+  "provider.connect.mongolgptAccount.visit.link":
     "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
-  "provider.connect.mongolgptZen.visit.suffix": " adresini ziyaret ederek API anahtarınızı alın.",
+  "provider.connect.mongolgptAccount.visit.suffix": " adresini ziyaret ederek API anahtarınızı alın.",
   "provider.connect.oauth.code.visit.prefix":
     "Hesabınızı bağlamak ve MongolGPT'da {{provider}} modellerini kullanmak için ",
   "provider.connect.oauth.code.visit.link": "bu bağlantıya",

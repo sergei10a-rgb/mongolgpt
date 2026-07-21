@@ -8,9 +8,10 @@ import { productServiceUrls } from "@mongolgpt/core/product"
 
 export type Err = ReturnType<NamedError["toObject"]>
 
-export const GO_UPSELL_MESSAGE = "Үнэгүй хэрэглээний хязгаарт хүрлээ"
+export const FREE_AUTO_LIMIT_MESSAGE = "Free Auto хэрэглээний хязгаарт хүрлээ"
 const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
-export const GO_UPSELL_URL = process.env.MONGOLGPT_GO_URL?.trim() || `${consoleUrl}/go`
+export const PRICING_URL =
+  process.env.MONGOLGPT_PRICING_URL?.trim() || process.env.MONGOLGPT_GO_URL?.trim() || `${consoleUrl}/pricing`
 export type RetryReason = "free_tier_limit" | "account_rate_limit" | (string & {})
 
 export type Retryable = {
@@ -77,14 +78,14 @@ export function retryable(error: Err, provider: string) {
     if (!error.data.isRetryable && !(status !== undefined && status >= 500)) return undefined
     if (error.data.responseBody?.includes("FreeUsageLimitError")) {
       return {
-        message: GO_UPSELL_MESSAGE,
+        message: FREE_AUTO_LIMIT_MESSAGE,
         action: {
           reason: "free_tier_limit",
           provider,
-          title: "Үнэгүй хэрэглээний хязгаарт хүрлээ",
-          message: "Үргэлжлүүлэн ашиглахын тулд MongolGPT Go багцыг идэвхжүүлнэ үү.",
-          label: "багц идэвхжүүлэх",
-          link: GO_UPSELL_URL,
+          title: "Free Auto хэрэглээний хязгаарт хүрлээ",
+          message: "Үргэлжлүүлэхийн тулд Basic, Pro эсвэл Max багцаас сонгоно уу.",
+          label: "багц харах",
+          link: PRICING_URL,
         },
       }
     }
@@ -105,22 +106,24 @@ export function retryable(error: Err, provider: string) {
         return minutes > 0 ? unit(minutes, "минут") : "нэг минутаас бага хугацаа"
       })
 
-      const message = `Хэрэглээний хязгаарт хүрлээ. ${resetIn} дараа шинэчлэгдэнэ. Одоо үргэлжлүүлэхийн тулд үлдэгдлээсээ төлбөртэй хэрэглээг идэвхжүүлнэ үү.`
+      const message = `Багцын хэрэглээний хязгаарт хүрлээ. ${resetIn} дараа шинэчлэгдэнэ. Багцын эрх болон төлбөрийн тохиргоогоо шалгана уу.`
 
-      const link = `${consoleUrl}/workspace/${workspace}/go`
+      const link = workspace ? `${consoleUrl}/workspace/${workspace}/billing` : PRICING_URL
       return {
         message: `${message} - ${link}`,
         action: {
           reason: "account_rate_limit",
           provider,
-          title: "Go хэрэглээний хязгаарт хүрлээ",
+          title: "Багцын хэрэглээний хязгаарт хүрлээ",
           message,
-          label: "тохиргоо нээх",
+          label: "төлбөрийн тохиргоо",
           link,
         },
       }
     }
-    return { message: error.data.message.includes("Overloaded") ? "Үйлчилгээ түр ачаалалтай байна" : error.data.message }
+    return {
+      message: error.data.message.includes("Overloaded") ? "Үйлчилгээ түр ачаалалтай байна" : error.data.message,
+    }
   }
 
   // Check for rate limit patterns in plain text error messages

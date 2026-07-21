@@ -458,14 +458,14 @@ export function DialogConnectProvider(props: {
         <Switch>
           <Match when={provider().id === "mongolgpt"}>
             <div class="flex flex-col gap-4">
-              <div class="text-14-regular text-text-base">{language.t("provider.connect.mongolgptZen.line1")}</div>
-              <div class="text-14-regular text-text-base">{language.t("provider.connect.mongolgptZen.line2")}</div>
+              <div class="text-14-regular text-text-base">{language.t("provider.connect.mongolgptAccount.line1")}</div>
+              <div class="text-14-regular text-text-base">{language.t("provider.connect.mongolgptAccount.line2")}</div>
               <div class="text-14-regular text-text-base">
-                {language.t("provider.connect.mongolgptZen.visit.prefix")}
+                {language.t("provider.connect.mongolgptAccount.visit.prefix")}
                 <Link href={documentationUrl("providers/#mongolgpt-account")} tabIndex={-1}>
-                  {language.t("provider.connect.mongolgptZen.visit.link")}
+                  {language.t("provider.connect.mongolgptAccount.visit.link")}
                 </Link>
-                {language.t("provider.connect.mongolgptZen.visit.suffix")}
+                {language.t("provider.connect.mongolgptAccount.visit.suffix")}
               </div>
             </div>
           </Match>

@@ -19,7 +19,7 @@ type ProviderItem = ReturnType<ReturnType<typeof useProviders>["connected"]>[num
 
 const PROVIDER_NOTES = [
   { match: (id: string) => id === "mongolgpt", key: "dialog.provider.mongolgpt.note" },
-  { match: (id: string) => id === "mongolgpt-go", key: "dialog.provider.mongolgptGo.tagline" },
+  { match: (id: string) => id === "mongolgpt-go", key: "dialog.provider.mongolgptLegacy.tagline" },
   { match: (id: string) => id === "anthropic", key: "dialog.provider.anthropic.note" },
   { match: (id: string) => id.startsWith("github-copilot"), key: "dialog.provider.copilot.note" },
   { match: (id: string) => id === "openai", key: "dialog.provider.openai.note" },
@@ -196,9 +196,6 @@ const SettingsProvidersContent: Component = () => {
                       <ProviderIcon id={item.id} class="size-5 shrink-0 icon-strong-base" />
                       <span class="text-14-medium text-text-strong">{item.name}</span>
                       <Show when={item.id === "mongolgpt"}>
-                        <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
-                      </Show>
-                      <Show when={item.id === "mongolgpt-go"}>
                         <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
                       </Show>
                     </div>

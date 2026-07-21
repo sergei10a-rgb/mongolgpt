@@ -46,14 +46,14 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "Límite de uso gratuito excedido",
   "ui.sessionTurn.error.addCredits": "Añadir créditos",
 
-  "dialog.usageExceeded.freeTier.title": "Límite gratuito alcanzado",
+  "dialog.usageExceeded.freeTier.title": "Free Auto limit reached",
   "dialog.usageExceeded.freeTier.description":
-    "Suscríbete a MongolGPT Go para acceso fiable a los mejores modelos de código abierto, desde $5/mes.",
-  "dialog.usageExceeded.freeTier.actionLabel": "Suscribirse",
-  "dialog.usageExceeded.accountRateLimit.title": "Límite de Go alcanzado",
+    "Your Free Auto allowance has been used. Choose a Basic, Pro, or Max plan to continue.",
+  "dialog.usageExceeded.freeTier.actionLabel": "View plans",
+  "dialog.usageExceeded.accountRateLimit.title": "Plan usage limit reached",
   "dialog.usageExceeded.accountRateLimit.description":
-    "Límite de uso alcanzado. Para seguir usando este modelo ahora, habilita el uso desde tu saldo disponible",
-  "dialog.usageExceeded.accountRateLimit.actionLabel": "Abrir configuración",
+    "Your plan allowance has been used. Wait for it to reset or review your billing settings.",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Open billing",
 
   "ui.sessionTurn.status.delegating": "Delegando trabajo",
   "ui.sessionTurn.status.planning": "Planificando siguientes pasos",

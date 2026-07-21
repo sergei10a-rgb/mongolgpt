@@ -92,7 +92,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Zalecane",
   "dialog.provider.mongolgpt.note": "Wyselekcjonowane modele, w tym Claude, GPT, Gemini i inne",
   "dialog.provider.mongolgpt.tagline": "Niezawodne, zoptymalizowane modele",
-  "dialog.provider.mongolgptGo.tagline": "Tania subskrypcja dla każdego",
+  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Bezpośredni dostęp do modeli Claude, w tym Pro i Max",
   "dialog.provider.copilot.note": "Modele AI do pomocy w kodowaniu przez GitHub Copilot",
   "dialog.provider.openai.note": "Modele GPT do szybkich i wszechstronnych zadań AI",
@@ -120,14 +120,14 @@ export const dict = {
   "provider.connect.apiKey.label": "Klucz API {{provider}}",
   "provider.connect.apiKey.placeholder": "Klucz API",
   "provider.connect.apiKey.required": "Klucz API jest wymagany",
-  "provider.connect.mongolgptZen.line1":
-    "MongolGPT Zen daje dostęp do wybranego zestawu niezawodnych, zoptymalizowanych modeli dla agentów kodujących.",
-  "provider.connect.mongolgptZen.line2":
+  "provider.connect.mongolgptAccount.line1":
+    "MongolGPT daje dostęp do wybranego zestawu niezawodnych, zoptymalizowanych modeli dla agentów kodujących.",
+  "provider.connect.mongolgptAccount.line2":
     "Z jednym kluczem API uzyskasz dostęp do modeli takich jak Claude, GPT, Gemini, GLM i więcej.",
-  "provider.connect.mongolgptZen.visit.prefix": "Odwiedź ",
-  "provider.connect.mongolgptZen.visit.link":
+  "provider.connect.mongolgptAccount.visit.prefix": "Odwiedź ",
+  "provider.connect.mongolgptAccount.visit.link":
     "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
-  "provider.connect.mongolgptZen.visit.suffix": ", aby odebrać swój klucz API.",
+  "provider.connect.mongolgptAccount.visit.suffix": ", aby odebrać swój klucz API.",
   "provider.connect.oauth.code.visit.prefix": "Odwiedź ",
   "provider.connect.oauth.code.visit.link": "ten link",
   "provider.connect.oauth.code.visit.suffix":

@@ -276,7 +276,7 @@ const TIPS: Tip[] = [
       ? `Командын palette-аар chat дахь username харагдацыг асааж/унтраана (${shortcutText(shortcuts.commandList())})`
       : "Командын palette-аар chat дахь username харагдацыг асааж/унтраана",
   "Container дотор ашиглахын тулд {highlight}docker run -it --rm ghcr.io/sergei10a-rgb/mongolgpt{/highlight} ажиллуулна",
-  "Сонгож шалгасан загварууд авахын тулд MongolGPT Zen-тэй {highlight}/connect{/highlight} ашиглана",
+  "MongolGPT аккаунт эсвэл өөрийн provider-оо холбохын тулд {highlight}/connect{/highlight} ашиглана",
   "Багаараа хуваалцахын тулд project-ийн {highlight}AGENTS.md{/highlight} файлыг Git-д commit хийнэ",
   "Commit хийгдээгүй өөрчлөлт, branch эсвэл PR review хийхийн тулд {highlight}/review{/highlight} ашиглана",
   (shortcuts) => `${commandText("/help", shortcuts.helpShow())} ашиглаж тусламжийн dialog харуулна`,

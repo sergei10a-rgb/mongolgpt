@@ -92,7 +92,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "추천",
   "dialog.provider.mongolgpt.note": "Claude, GPT, Gemini 등을 포함한 엄선된 모델",
   "dialog.provider.mongolgpt.tagline": "신뢰할 수 있는 최적화 모델",
-  "dialog.provider.mongolgptGo.tagline": "모두를 위한 저렴한 구독",
+  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Claude Pro/Max 또는 API 키로 연결",
   "dialog.provider.copilot.note": "Copilot 또는 API 키로 연결",
   "dialog.provider.openai.note": "ChatGPT Pro/Plus 또는 API 키로 연결",
@@ -120,14 +120,14 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API 키",
   "provider.connect.apiKey.placeholder": "API 키",
   "provider.connect.apiKey.required": "API 키가 필요합니다",
-  "provider.connect.mongolgptZen.line1":
-    "MongolGPT Zen은 코딩 에이전트를 위해 최적화된 신뢰할 수 있는 엄선된 모델에 대한 액세스를 제공합니다.",
-  "provider.connect.mongolgptZen.line2":
+  "provider.connect.mongolgptAccount.line1":
+    "MongolGPT은 코딩 에이전트를 위해 최적화된 신뢰할 수 있는 엄선된 모델에 대한 액세스를 제공합니다.",
+  "provider.connect.mongolgptAccount.line2":
     "단일 API 키로 Claude, GPT, Gemini, GLM 등 다양한 모델에 액세스할 수 있습니다.",
-  "provider.connect.mongolgptZen.visit.prefix": "다음 ",
-  "provider.connect.mongolgptZen.visit.link":
+  "provider.connect.mongolgptAccount.visit.prefix": "다음 ",
+  "provider.connect.mongolgptAccount.visit.link":
     "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
-  "provider.connect.mongolgptZen.visit.suffix": "을 방문하여 API 키를 받으세요.",
+  "provider.connect.mongolgptAccount.visit.suffix": "을 방문하여 API 키를 받으세요.",
   "provider.connect.oauth.code.visit.prefix": "다음 ",
   "provider.connect.oauth.code.visit.link": "이 링크",
   "provider.connect.oauth.code.visit.suffix":

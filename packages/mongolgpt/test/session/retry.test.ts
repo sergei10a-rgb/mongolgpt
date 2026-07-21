@@ -256,7 +256,7 @@ describe("session.retry.retryable", () => {
     expect(retryable).toEqual({ message: "Response decompression failed" })
   })
 
-  test("maps free limits to Go upsell action", () => {
+  test("maps Free Auto limits to the current plan picker", () => {
     const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
       new SessionV1.APIError({
         message: "Free usage exceeded",
@@ -270,19 +270,19 @@ describe("session.retry.retryable", () => {
     )
 
     expect(SessionRetry.retryable(error, "mongolgpt")).toEqual({
-      message: SessionRetry.GO_UPSELL_MESSAGE,
+      message: SessionRetry.FREE_AUTO_LIMIT_MESSAGE,
       action: {
         reason: "free_tier_limit",
         provider: "mongolgpt",
-        title: "Үнэгүй хэрэглээний хязгаарт хүрлээ",
-        message: "Үргэлжлүүлэн ашиглахын тулд MongolGPT Go багцыг идэвхжүүлнэ үү.",
-        label: "багц идэвхжүүлэх",
-        link: SessionRetry.GO_UPSELL_URL,
+        title: "Free Auto хэрэглээний хязгаарт хүрлээ",
+        message: "Үргэлжлүүлэхийн тулд Basic, Pro эсвэл Max багцаас сонгоно уу.",
+        label: "багц харах",
+        link: SessionRetry.PRICING_URL,
       },
     })
   })
 
-  test("maps Go subscription limits to workspace PAYG upsell", () => {
+  test("maps legacy subscription limits to workspace billing", () => {
     const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
       new SessionV1.APIError({
         message: "Subscription quota exceeded. You can continue using free models.",
@@ -306,20 +306,20 @@ describe("session.retry.retryable", () => {
     )
 
     expect(SessionRetry.retryable(error, "mongolgpt-go")).toEqual({
-      message: `Хэрэглээний хязгаарт хүрлээ. 5 цаг 23 минут дараа шинэчлэгдэнэ. Одоо үргэлжлүүлэхийн тулд үлдэгдлээсээ төлбөртэй хэрэглээг идэвхжүүлнэ үү. - ${localConsoleUrl}/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/go`,
+      message: `Багцын хэрэглээний хязгаарт хүрлээ. 5 цаг 23 минут дараа шинэчлэгдэнэ. Багцын эрх болон төлбөрийн тохиргоогоо шалгана уу. - ${localConsoleUrl}/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/billing`,
       action: {
         reason: "account_rate_limit",
         provider: "mongolgpt-go",
-        title: "Go хэрэглээний хязгаарт хүрлээ",
+        title: "Багцын хэрэглээний хязгаарт хүрлээ",
         message:
-          "Хэрэглээний хязгаарт хүрлээ. 5 цаг 23 минут дараа шинэчлэгдэнэ. Одоо үргэлжлүүлэхийн тулд үлдэгдлээсээ төлбөртэй хэрэглээг идэвхжүүлнэ үү.",
-        label: "тохиргоо нээх",
-        link: `${localConsoleUrl}/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/go`,
+          "Багцын хэрэглээний хязгаарт хүрлээ. 5 цаг 23 минут дараа шинэчлэгдэнэ. Багцын эрх болон төлбөрийн тохиргоогоо шалгана уу.",
+        label: "төлбөрийн тохиргоо",
+        link: `${localConsoleUrl}/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/billing`,
       },
     })
   })
 
-  test("maps Go subscription limits without limit metadata", () => {
+  test("maps legacy subscription limits without limit metadata", () => {
     const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
       new SessionV1.APIError({
         message: "Subscription quota exceeded. You can continue using free models.",
@@ -342,8 +342,24 @@ describe("session.retry.retryable", () => {
     )
 
     expect(SessionRetry.retryable(error, "mongolgpt-go")?.action?.message).toBe(
-      "Хэрэглээний хязгаарт хүрлээ. 15 минут дараа шинэчлэгдэнэ. Одоо үргэлжлүүлэхийн тулд үлдэгдлээсээ төлбөртэй хэрэглээг идэвхжүүлнэ үү.",
+      "Багцын хэрэглээний хязгаарт хүрлээ. 15 минут дараа шинэчлэгдэнэ. Багцын эрх болон төлбөрийн тохиргоогоо шалгана уу.",
     )
+  })
+
+  test("falls back to pricing when a legacy limit omits the workspace", () => {
+    const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
+      new SessionV1.APIError({
+        message: "Subscription quota exceeded.",
+        isRetryable: true,
+        statusCode: 429,
+        responseBody: JSON.stringify({
+          type: "error",
+          error: { type: "GoUsageLimitError", message: "Subscription quota exceeded." },
+        }),
+      }).toObject(),
+    )
+
+    expect(SessionRetry.retryable(error, "mongolgpt-go")?.action?.link).toBe(SessionRetry.PRICING_URL)
   })
 })
 

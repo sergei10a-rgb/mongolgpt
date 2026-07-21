@@ -100,7 +100,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Рекомендуемые",
   "dialog.provider.mongolgpt.note": "Отобранные модели, включая Claude, GPT, Gemini и другие",
   "dialog.provider.mongolgpt.tagline": "Надежные оптимизированные модели",
-  "dialog.provider.mongolgptGo.tagline": "Доступная подписка для всех",
+  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Прямой доступ к моделям Claude, включая Pro и Max",
   "dialog.provider.copilot.note": "ИИ-модели для помощи в кодировании через GitHub Copilot",
   "dialog.provider.openai.note": "Модели GPT для быстрых и мощных задач общего ИИ",
@@ -132,14 +132,14 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API ключ",
   "provider.connect.apiKey.placeholder": "API ключ",
   "provider.connect.apiKey.required": "API ключ обязателен",
-  "provider.connect.mongolgptZen.line1":
-    "MongolGPT Zen даёт вам доступ к отобранным надёжным оптимизированным моделям для агентов программирования.",
-  "provider.connect.mongolgptZen.line2":
+  "provider.connect.mongolgptAccount.line1":
+    "MongolGPT даёт вам доступ к отобранным надёжным оптимизированным моделям для агентов программирования.",
+  "provider.connect.mongolgptAccount.line2":
     "С одним API ключом вы получите доступ к таким моделям как Claude, GPT, Gemini, GLM и другим.",
-  "provider.connect.mongolgptZen.visit.prefix": "Посетите ",
-  "provider.connect.mongolgptZen.visit.link":
+  "provider.connect.mongolgptAccount.visit.prefix": "Посетите ",
+  "provider.connect.mongolgptAccount.visit.link":
     "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
-  "provider.connect.mongolgptZen.visit.suffix": " чтобы получить ваш API ключ.",
+  "provider.connect.mongolgptAccount.visit.suffix": " чтобы получить ваш API ключ.",
   "provider.connect.oauth.code.visit.prefix": "Посетите ",
   "provider.connect.oauth.code.visit.link": "эту ссылку",
   "provider.connect.oauth.code.visit.suffix":

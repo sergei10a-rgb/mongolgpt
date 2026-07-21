@@ -8,27 +8,27 @@ import { useDialog } from "@mongolgpt/ui/context"
 import { DialogUsageExceeded } from "@/components/dialog-usage-exceeded"
 import { useI18n } from "@mongolgpt/ui/context"
 
-const GO_UPSELL_FREE_TIER_LAST_SEEN_AT = "go_upsell_last_seen_at"
-const GO_UPSELL_FREE_TIER_DONT_SHOW = "go_upsell_dont_show"
-const GO_UPSELL_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT = "go_upsell_account_rate_limit_last_seen_at"
-const GO_UPSELL_ACCOUNT_RATE_LIMIT_DONT_SHOW = "go_upsell_account_rate_limit_dont_show"
-const GO_UPSELL_WINDOW = 86_400_000 // 24 hrs
-const GO_UPSELL_PROVIDERS = new Set(["mongolgpt", "mongolgpt-go"])
+const USAGE_PROMPT_FREE_TIER_LAST_SEEN_AT = "go_upsell_last_seen_at"
+const USAGE_PROMPT_FREE_TIER_DONT_SHOW = "go_upsell_dont_show"
+const USAGE_PROMPT_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT = "go_upsell_account_rate_limit_last_seen_at"
+const USAGE_PROMPT_ACCOUNT_RATE_LIMIT_DONT_SHOW = "go_upsell_account_rate_limit_dont_show"
+const USAGE_PROMPT_WINDOW = 86_400_000 // 24 hrs
+const MANAGED_PROVIDERS = new Set(["mongolgpt", "mongolgpt-go"])
 
-function goUpsellKeys(status: SessionStatus) {
+function usagePromptKeys(status: SessionStatus) {
   if (status.type !== "retry" || !status.action) return
   const { action } = status
-  if (!GO_UPSELL_PROVIDERS.has(action.provider)) return
+  if (!MANAGED_PROVIDERS.has(action.provider)) return
   if (action.reason === "free_tier_limit") {
     return {
-      lastSeenAt: GO_UPSELL_FREE_TIER_LAST_SEEN_AT,
-      dontShow: GO_UPSELL_FREE_TIER_DONT_SHOW,
+      lastSeenAt: USAGE_PROMPT_FREE_TIER_LAST_SEEN_AT,
+      dontShow: USAGE_PROMPT_FREE_TIER_DONT_SHOW,
     } as const
   }
   if (action.reason === "account_rate_limit") {
     return {
-      lastSeenAt: GO_UPSELL_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT,
-      dontShow: GO_UPSELL_ACCOUNT_RATE_LIMIT_DONT_SHOW,
+      lastSeenAt: USAGE_PROMPT_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT,
+      dontShow: USAGE_PROMPT_ACCOUNT_RATE_LIMIT_DONT_SHOW,
     } as const
   }
 }
@@ -38,15 +38,15 @@ export function useUsageExceededDialogs() {
   const dialog = useDialog()
   const { params } = useSessionLayout()
   const { t, locale } = useI18n()
-  const isEnglish = () => locale() === "en"
+  const isMongolian = () => locale() === "mn"
 
-  const [goUpsellState, setGoUpsellState] = persisted(
-    Persist.global("go-upsell"),
+  const [usagePromptState, setUsagePromptState] = persisted(
+    Persist.global("usage-limit-prompt", ["go-upsell"]),
     createStore({
-      [GO_UPSELL_FREE_TIER_LAST_SEEN_AT]: null as null | number,
-      [GO_UPSELL_FREE_TIER_DONT_SHOW]: null as null | number,
-      [GO_UPSELL_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT]: null as null | number,
-      [GO_UPSELL_ACCOUNT_RATE_LIMIT_DONT_SHOW]: null as null | number,
+      [USAGE_PROMPT_FREE_TIER_LAST_SEEN_AT]: null as null | number,
+      [USAGE_PROMPT_FREE_TIER_DONT_SHOW]: null as null | number,
+      [USAGE_PROMPT_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT]: null as null | number,
+      [USAGE_PROMPT_ACCOUNT_RATE_LIMIT_DONT_SHOW]: null as null | number,
     }),
   )
 
@@ -58,41 +58,36 @@ export function useUsageExceededDialogs() {
       if (!action) return
       if (dialog.active) return
 
-      const keys = goUpsellKeys(evt.properties.status)
+      const keys = usagePromptKeys(evt.properties.status)
       if (!keys) return
 
-      const seen = goUpsellState[keys.lastSeenAt]
-      if (seen && Date.now() - seen < GO_UPSELL_WINDOW) return
-      if (goUpsellState[keys.dontShow]) return
+      const seen = usagePromptState[keys.lastSeenAt]
+      if (seen && Date.now() - seen < USAGE_PROMPT_WINDOW) return
+      if (usagePromptState[keys.dontShow]) return
 
       if (action.reason === "free_tier_limit") {
         dialog.show(() => (
           <DialogUsageExceeded
-            title={isEnglish() ? action.title : t("dialog.usageExceeded.freeTier.title")}
-            description={isEnglish() ? action.message : t("dialog.usageExceeded.freeTier.description")}
-            actionLabel={isEnglish() ? action.label : t("dialog.usageExceeded.freeTier.actionLabel")}
+            title={isMongolian() ? action.title : t("dialog.usageExceeded.freeTier.title")}
+            description={isMongolian() ? action.message : t("dialog.usageExceeded.freeTier.description")}
+            actionLabel={isMongolian() ? action.label : t("dialog.usageExceeded.freeTier.actionLabel")}
             link={action.link}
             onClose={(dontShowAgain) => {
-              setGoUpsellState(keys.lastSeenAt, Date.now())
-              if (dontShowAgain) setGoUpsellState(keys.dontShow, Date.now())
-              else {
-                void import("../../components/dialog-connect-provider").then((x) =>
-                  dialog.show(() => <x.DialogConnectProvider provider="mongolgpt-go" />),
-                )
-              }
+              setUsagePromptState(keys.lastSeenAt, Date.now())
+              if (dontShowAgain) setUsagePromptState(keys.dontShow, Date.now())
             }}
           />
         ))
       } else if (action.reason === "account_rate_limit") {
         dialog.show(() => (
           <DialogUsageExceeded
-            title={isEnglish() ? action.title : t("dialog.usageExceeded.accountRateLimit.title")}
-            description={isEnglish() ? action.message : t("dialog.usageExceeded.accountRateLimit.description")}
-            actionLabel={isEnglish() ? action.label : t("dialog.usageExceeded.accountRateLimit.actionLabel")}
+            title={isMongolian() ? action.title : t("dialog.usageExceeded.accountRateLimit.title")}
+            description={isMongolian() ? action.message : t("dialog.usageExceeded.accountRateLimit.description")}
+            actionLabel={isMongolian() ? action.label : t("dialog.usageExceeded.accountRateLimit.actionLabel")}
             link={action.link}
             onClose={(dontShowAgain) => {
-              setGoUpsellState(keys.lastSeenAt, Date.now())
-              if (dontShowAgain) setGoUpsellState(keys.dontShow, Date.now())
+              setUsagePromptState(keys.lastSeenAt, Date.now())
+              if (dontShowAgain) setUsagePromptState(keys.dontShow, Date.now())
             }}
           />
         ))

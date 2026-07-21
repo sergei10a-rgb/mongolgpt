@@ -50,13 +50,14 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "免費使用額度已用完",
   "ui.sessionTurn.error.addCredits": "新增點數",
 
-  "dialog.usageExceeded.freeTier.title": "已達免費額度上限",
-  "dialog.usageExceeded.freeTier.description": "訂閱 MongolGPT Go，可靠地使用最佳開源模型，每月 $5 起。",
-  "dialog.usageExceeded.freeTier.actionLabel": "訂閱",
-  "dialog.usageExceeded.accountRateLimit.title": "已達 Go 額度上限",
+  "dialog.usageExceeded.freeTier.title": "Free Auto limit reached",
+  "dialog.usageExceeded.freeTier.description":
+    "Your Free Auto allowance has been used. Choose a Basic, Pro, or Max plan to continue.",
+  "dialog.usageExceeded.freeTier.actionLabel": "View plans",
+  "dialog.usageExceeded.accountRateLimit.title": "Plan usage limit reached",
   "dialog.usageExceeded.accountRateLimit.description":
-    "已達使用額度上限。若要現在繼續使用此模型，請從可用餘額中啟用使用",
-  "dialog.usageExceeded.accountRateLimit.actionLabel": "開啟設定",
+    "Your plan allowance has been used. Wait for it to reset or review your billing settings.",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Open billing",
 
   "ui.sessionTurn.status.delegating": "正在委派工作",
   "ui.sessionTurn.status.planning": "正在規劃下一步",

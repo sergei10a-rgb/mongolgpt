@@ -9,7 +9,8 @@ import { useBindings } from "../keymap"
 import { productServiceUrls } from "@mongolgpt/core/product"
 
 const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
-const GO_URL = process.env.MONGOLGPT_GO_URL?.trim() || `${consoleUrl}/go`
+const PRICING_URL =
+  process.env.MONGOLGPT_PRICING_URL?.trim() || process.env.MONGOLGPT_GO_URL?.trim() || `${consoleUrl}/pricing`
 const PAD_X = 3
 const PAD_TOP_OUTER = 1
 const FOREGROUND_ALPHA = 186
@@ -42,8 +43,8 @@ export function DialogRetryAction(props: DialogRetryActionProps) {
   const dialog = useDialog()
   const { theme } = useTheme()
   const fg = selectedForeground(theme)
-  const showGoTreatment = () => props.link === GO_URL
-  const textBg = () => (showGoTreatment() ? panelOverlay(theme.backgroundPanel) : undefined)
+  const showPricingTreatment = () => props.link === PRICING_URL
+  const textBg = () => (showPricingTreatment() ? panelOverlay(theme.backgroundPanel) : undefined)
   const [selected, setSelected] = createSignal<"dismiss" | "action">("action")
 
   useBindings(() => ({
@@ -80,7 +81,7 @@ export function DialogRetryAction(props: DialogRetryActionProps) {
 
   return (
     <box>
-      {showGoTreatment() ? (
+      {showPricingTreatment() ? (
         <box position="absolute" top={-PAD_TOP_OUTER} left={0} right={0} bottom={0} zIndex={0}>
           <BgPulse />
         </box>
@@ -100,7 +101,7 @@ export function DialogRetryAction(props: DialogRetryActionProps) {
           </text>
         </box>
         {props.link ? (
-          showGoTreatment() ? (
+          showPricingTreatment() ? (
             <box alignItems="center" justifyContent="flex-end" height={7} paddingBottom={1}>
               <Link href={props.link} fg={theme.primary} bg={textBg()} wrapMode="none" />
             </box>

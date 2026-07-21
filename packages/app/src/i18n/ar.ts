@@ -92,7 +92,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "موصى به",
   "dialog.provider.mongolgpt.note": "نماذج مختارة تتضمن Claude و GPT و Gemini والمزيد",
   "dialog.provider.mongolgpt.tagline": "نماذج موثوقة ومحسنة",
-  "dialog.provider.mongolgptGo.tagline": "اشتراك منخفض التكلفة للجميع",
+  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "اتصل باستخدام Claude Pro/Max أو مفتاح API",
   "dialog.provider.copilot.note": "اتصل باستخدام Copilot أو مفتاح API",
   "dialog.provider.openai.note": "اتصل باستخدام ChatGPT Pro/Plus أو مفتاح API",
@@ -120,14 +120,14 @@ export const dict = {
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
   "provider.connect.apiKey.placeholder": "مفتاح API",
   "provider.connect.apiKey.required": "مفتاح API مطلوب",
-  "provider.connect.mongolgptZen.line1":
-    "يمنحك MongolGPT Zen الوصول إلى مجموعة مختارة من النماذج الموثوقة والمحسنة لوكلاء البرمجة.",
-  "provider.connect.mongolgptZen.line2":
+  "provider.connect.mongolgptAccount.line1":
+    "يمنحك MongolGPT الوصول إلى مجموعة مختارة من النماذج الموثوقة والمحسنة لوكلاء البرمجة.",
+  "provider.connect.mongolgptAccount.line2":
     "باستخدام مفتاح API واحد، ستحصل على إمكانية الوصول إلى نماذج مثل Claude و GPT و Gemini و GLM والمزيد.",
-  "provider.connect.mongolgptZen.visit.prefix": "قم بزيارة ",
-  "provider.connect.mongolgptZen.visit.link":
+  "provider.connect.mongolgptAccount.visit.prefix": "قم بزيارة ",
+  "provider.connect.mongolgptAccount.visit.link":
     "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
-  "provider.connect.mongolgptZen.visit.suffix": " للحصول على مفتاح API الخاص بك.",
+  "provider.connect.mongolgptAccount.visit.suffix": " للحصول على مفتاح API الخاص بك.",
   "provider.connect.oauth.code.visit.prefix": "قم بزيارة ",
   "provider.connect.oauth.code.visit.link": "هذا الرابط",
   "provider.connect.oauth.code.visit.suffix":

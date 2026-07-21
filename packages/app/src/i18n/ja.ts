@@ -92,7 +92,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "推奨",
   "dialog.provider.mongolgpt.note": "Claude, GPT, Geminiなどを含む厳選されたモデル",
   "dialog.provider.mongolgpt.tagline": "信頼性の高い最適化モデル",
-  "dialog.provider.mongolgptGo.tagline": "すべての人に低価格のサブスクリプション",
+  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Claude Pro/MaxまたはAPIキーで接続",
   "dialog.provider.copilot.note": "CopilotまたはAPIキーで接続",
   "dialog.provider.openai.note": "ChatGPT Pro/PlusまたはAPIキーで接続",
@@ -120,13 +120,13 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} APIキー",
   "provider.connect.apiKey.placeholder": "APIキー",
   "provider.connect.apiKey.required": "APIキーが必要です",
-  "provider.connect.mongolgptZen.line1":
-    "MongolGPT Zenは、コーディングエージェント向けに最適化された信頼性の高いモデルへのアクセスを提供します。",
-  "provider.connect.mongolgptZen.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
-  "provider.connect.mongolgptZen.visit.prefix": " ",
-  "provider.connect.mongolgptZen.visit.link":
+  "provider.connect.mongolgptAccount.line1":
+    "MongolGPTは、コーディングエージェント向けに最適化された信頼性の高いモデルへのアクセスを提供します。",
+  "provider.connect.mongolgptAccount.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
+  "provider.connect.mongolgptAccount.visit.prefix": " ",
+  "provider.connect.mongolgptAccount.visit.link":
     "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
-  "provider.connect.mongolgptZen.visit.suffix": " にアクセスしてAPIキーを取得してください。",
+  "provider.connect.mongolgptAccount.visit.suffix": " にアクセスしてAPIキーを取得してください。",
   "provider.connect.oauth.code.visit.prefix": " ",
   "provider.connect.oauth.code.visit.link": "このリンク",
   "provider.connect.oauth.code.visit.suffix":

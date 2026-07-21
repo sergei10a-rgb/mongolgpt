@@ -157,7 +157,7 @@ describe("ModelsDev Service", () => {
       expect(result.mongolgpt).toMatchObject({ id: "mongolgpt", name: "MongolGPT", api: "https://mgpt.mn/zen/v1" })
       expect(result["mongolgpt-go"]).toMatchObject({
         id: "mongolgpt-go",
-        name: "MongolGPT Go",
+        name: "MongolGPT (хуучин холболт)",
         api: "https://mgpt.mn/zen/go/v1",
       })
     }),

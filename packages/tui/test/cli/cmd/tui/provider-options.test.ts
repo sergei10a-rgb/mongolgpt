@@ -4,14 +4,14 @@ import { normalizeCustomProviderID, providerOptions } from "../../../../src/comp
 describe("providerOptions", () => {
   test("includes a synthetic Other option for custom providers", () => {
     expect(providerOptions([{ id: "openai", name: "OpenAI" }]).at(-1)).toMatchObject({
-      title: "Other",
-      description: "Custom provider",
-      category: "Providers",
+      title: "Бусад",
+      description: "Custom провайдер",
+      category: "Провайдерууд",
     })
   })
 
   test("does not use Other as the generic provider category", () => {
-    expect(providerOptions([{ id: "mistral", name: "Mistral" }])[0]?.category).toBe("Providers")
+    expect(providerOptions([{ id: "mistral", name: "Mistral" }])[0]?.category).toBe("Провайдерууд")
   })
 
   test("keeps popular providers first and sorts the rest alphabetically", () => {
@@ -29,6 +29,16 @@ describe("providerOptions", () => {
   test("does not collide with a configured provider named other", () => {
     const values = providerOptions([{ id: "other", name: "Other Provider" }]).map((option) => option.value)
     expect(new Set(values).size).toBe(values.length)
+  })
+
+  test("hides the retired managed provider from new connections", () => {
+    const values = providerOptions([
+      { id: "mongolgpt", name: "MongolGPT" },
+      { id: "mongolgpt-go", name: "MongolGPT (хуучин холболт)" },
+    ]).map((option) => option.value)
+
+    expect(values).toContain("mongolgpt")
+    expect(values).not.toContain("mongolgpt-go")
   })
 
   test("normalizes and validates custom provider ids", () => {

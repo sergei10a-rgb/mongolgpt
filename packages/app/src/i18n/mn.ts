@@ -96,7 +96,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Санал болгосон",
   "dialog.provider.mongolgpt.note": "Claude, GPT, Gemini гэх мэт сонгомол загварууд",
   "dialog.provider.mongolgpt.tagline": "Найдвартай оновчтой загварууд",
-  "dialog.provider.mongolgptGo.tagline": "Хүн бүрт зориулсан хямд өртөгтэй захиалга",
+  "dialog.provider.mongolgptLegacy.tagline": "Өмнөх хувилбарын холболт",
   "dialog.provider.anthropic.note": "Pro болон Max зэрэг Claude загваруудад шууд хандах",
   "dialog.provider.copilot.note": "GitHub Copilot-ээр дамжуулан кодлоход туслах AI загварууд",
   "dialog.provider.openai.note": "Хурдан, чадвартай ерөнхий AI даалгаварт зориулсан GPT загварууд",
@@ -125,12 +125,13 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API түлхүүр",
   "provider.connect.apiKey.placeholder": "API түлхүүр",
   "provider.connect.apiKey.required": "API түлхүүр шаардлагатай",
-  "provider.connect.mongolgptZen.line1":
-    "MongolGPT Zen нь кодлох агентуудад зориулсан найдвартай оновчтой загваруудын цуглуулгад хандах боломжийг танд олгоно.",
-  "provider.connect.mongolgptZen.line2": "Ганц API түлхүүрээр Claude, GPT, Gemini, GLM зэрэг загварт хандах боломжтой.",
-  "provider.connect.mongolgptZen.visit.prefix": "зочилно уу ",
-  "provider.connect.mongolgptZen.visit.link": "MongolGPT үйлчилгээ үзүүлэгчийн заавар",
-  "provider.connect.mongolgptZen.visit.suffix": " API түлхүүрээ авахын тулд.",
+  "provider.connect.mongolgptAccount.line1":
+    "MongolGPT-ийн удирддаг загварууд таны аккаунт, багц болон хэрэглээний хязгаартай холбогдоно.",
+  "provider.connect.mongolgptAccount.line2":
+    "Удирдлагатай эрх нээгдсэн үед нэг MongolGPT түлхүүрээр дэмжигдсэн Claude, GPT, Gemini, GLM зэрэг загварыг ашиглана.",
+  "provider.connect.mongolgptAccount.visit.prefix": "",
+  "provider.connect.mongolgptAccount.visit.link": "MongolGPT үйлчилгээ үзүүлэгчийн зааврыг",
+  "provider.connect.mongolgptAccount.visit.suffix": " нээж бэлэн байдал болон холболтын алхмыг шалгана уу.",
   "provider.connect.nvidia.step1.prefix": "",
   "provider.connect.nvidia.step1.link": "NVIDIA Build",
   "provider.connect.nvidia.step1.suffix": "-д нэвтэрч загвараа сонгоод API түлхүүр үүсгэн, доорх талбарт оруулна уу.",

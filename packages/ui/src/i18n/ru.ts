@@ -45,14 +45,14 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "Лимит бесплатного использования превышен",
   "ui.sessionTurn.error.addCredits": "Добавить кредиты",
 
-  "dialog.usageExceeded.freeTier.title": "Достигнут бесплатный лимит",
+  "dialog.usageExceeded.freeTier.title": "Free Auto limit reached",
   "dialog.usageExceeded.freeTier.description":
-    "Подпишитесь на MongolGPT Go для надёжного доступа к лучшим моделям с открытым исходным кодом, от $5/месяц.",
-  "dialog.usageExceeded.freeTier.actionLabel": "Подписаться",
-  "dialog.usageExceeded.accountRateLimit.title": "Достигнут лимит Go",
+    "Your Free Auto allowance has been used. Choose a Basic, Pro, or Max plan to continue.",
+  "dialog.usageExceeded.freeTier.actionLabel": "View plans",
+  "dialog.usageExceeded.accountRateLimit.title": "Plan usage limit reached",
   "dialog.usageExceeded.accountRateLimit.description":
-    "Достигнут лимит использования. Чтобы продолжить использовать эту модель сейчас, включите использование из доступного баланса",
-  "dialog.usageExceeded.accountRateLimit.actionLabel": "Открыть настройки",
+    "Your plan allowance has been used. Wait for it to reset or review your billing settings.",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Open billing",
 
   "ui.sessionTurn.status.delegating": "Делегирование работы",
   "ui.sessionTurn.status.planning": "Планирование следующих шагов",

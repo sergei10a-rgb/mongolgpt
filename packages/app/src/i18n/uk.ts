@@ -103,7 +103,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Рекомендовані",
   "dialog.provider.mongolgpt.note": "Відібрані моделі, включаючи Claude, GPT, Gemini та інші",
   "dialog.provider.mongolgpt.tagline": "Надійні оптимізовані моделі",
-  "dialog.provider.mongolgptGo.tagline": "Недорога підписка для всіх",
+  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Прямий доступ до моделей Claude, включаючи Pro та Max",
   "dialog.provider.copilot.note": "Моделі AI для допомоги в кодуванні через GitHub Copilot",
   "dialog.provider.openai.note": "Моделі GPT для швидких і універсальних завдань AI",
@@ -135,14 +135,14 @@ export const dict = {
   "provider.connect.apiKey.label": "Ключ API {{provider}}",
   "provider.connect.apiKey.placeholder": "Ключ API",
   "provider.connect.apiKey.required": "Ключ API обов'язковий",
-  "provider.connect.mongolgptZen.line1":
-    "MongolGPT Zen надає доступ до відібраного набору надійних оптимізованих моделей для агентів кодування.",
-  "provider.connect.mongolgptZen.line2":
+  "provider.connect.mongolgptAccount.line1":
+    "MongolGPT надає доступ до відібраного набору надійних оптимізованих моделей для агентів кодування.",
+  "provider.connect.mongolgptAccount.line2":
     "З одним ключем API ви отримаєте доступ до таких моделей, як Claude, GPT, Gemini, GLM та інших.",
-  "provider.connect.mongolgptZen.visit.prefix": "Відвідайте ",
-  "provider.connect.mongolgptZen.visit.link":
+  "provider.connect.mongolgptAccount.visit.prefix": "Відвідайте ",
+  "provider.connect.mongolgptAccount.visit.link":
     "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
-  "provider.connect.mongolgptZen.visit.suffix": ", щоб отримати ключ API.",
+  "provider.connect.mongolgptAccount.visit.suffix": ", щоб отримати ключ API.",
   "provider.connect.oauth.code.visit.prefix": "Відвідайте ",
   "provider.connect.oauth.code.visit.link": "це посилання",
   "provider.connect.oauth.code.visit.suffix":

@@ -19,7 +19,8 @@ import { productServiceUrls } from "@mongolgpt/core/product"
 
 const mongolgptConsoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
 const mongolgptAuthUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || productServiceUrls.auth
-const mongolgptGoUrl = process.env.MONGOLGPT_GO_URL?.trim() || `${mongolgptConsoleUrl}/go`
+const mongolgptPricingUrl =
+  process.env.MONGOLGPT_PRICING_URL?.trim() || process.env.MONGOLGPT_GO_URL?.trim() || `${mongolgptConsoleUrl}/pricing`
 
 const PROVIDER_PRIORITY: Record<string, number> = {
   mongolgpt: 0,
@@ -53,6 +54,7 @@ export function providerOptions(list: { id: string; name: string }[]): ProviderO
   return [
     ...pipe(
       list,
+      (providers) => providers.filter((provider) => provider.id !== "mongolgpt-go"),
       sortBy(
         (x) => PROVIDER_PRIORITY[x.id] ?? 99,
         (x) => x.name.toLowerCase(),
@@ -67,7 +69,6 @@ export function providerOptions(list: { id: string; name: string }[]): ProviderO
           mongolgpt: "(Санал болгосон)",
           anthropic: "(API key)",
           openai: "(ChatGPT Plus/Pro or API key)",
-          "mongolgpt-go": "Хүн бүрт зориулсан хямд subscription",
         }[provider.id],
         category: provider.id in PROVIDER_PRIORITY ? "Түгээмэл" : "Провайдерууд",
       })),
@@ -376,7 +377,7 @@ function ApiMethod(props: ApiMethodProps) {
           mongolgpt: (
             <box gap={1}>
               <text fg={theme.textMuted}>
-                MongolGPT Zen нь нэг API түлхүүрээр шилдэг coding загваруудад хамгийн хямд үнээр хандах боломж олгоно.
+                MongolGPT-ийн удирддаг загварууд нь таны аккаунт, багц болон хэрэглээний хязгаартай холбогдоно.
               </text>
               <text fg={theme.text}>
                 Түлхүүр авахын тулд <span style={{ fg: theme.primary }}>{mongolgptAuthUrl}</span> руу орно уу
@@ -386,11 +387,11 @@ function ApiMethod(props: ApiMethodProps) {
           "mongolgpt-go": (
             <box gap={1}>
               <text fg={theme.textMuted}>
-                MongolGPT Go нь сарын $10 subscription бөгөөд түгээмэл open coding загваруудад найдвартай, өргөн usage
-                limit-тэй хандах боломж олгоно.
+                Энэ хуучин provider ID-г зөвхөн өмнөх тохиргооны нийцтэй байдлыг хадгалахад ашиглана. Шинэ холболтод
+                MongolGPT аккаунтаа ашиглана уу.
               </text>
               <text fg={theme.text}>
-                <span style={{ fg: theme.primary }}>{mongolgptGoUrl}</span> руу орж MongolGPT Go-г асаана уу
+                Багц болон хэрэглээгээ <span style={{ fg: theme.primary }}>{mongolgptPricingUrl}</span> хаягаас удирдана
               </text>
             </box>
           ),

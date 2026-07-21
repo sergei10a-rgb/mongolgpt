@@ -92,7 +92,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Recomendado",
   "dialog.provider.mongolgpt.note": "Modelos selecionados incluindo Claude, GPT, Gemini e mais",
   "dialog.provider.mongolgpt.tagline": "Modelos otimizados e confiáveis",
-  "dialog.provider.mongolgptGo.tagline": "Assinatura de baixo custo para todos",
+  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Conectar com Claude Pro/Max ou chave de API",
   "dialog.provider.copilot.note": "Conectar com Copilot ou chave de API",
   "dialog.provider.openai.note": "Conectar com ChatGPT Pro/Plus ou chave de API",
@@ -120,14 +120,14 @@ export const dict = {
   "provider.connect.apiKey.label": "Chave de API do {{provider}}",
   "provider.connect.apiKey.placeholder": "Chave de API",
   "provider.connect.apiKey.required": "A chave de API é obrigatória",
-  "provider.connect.mongolgptZen.line1":
-    "MongolGPT Zen oferece acesso a um conjunto selecionado de modelos confiáveis otimizados para agentes de código.",
-  "provider.connect.mongolgptZen.line2":
+  "provider.connect.mongolgptAccount.line1":
+    "MongolGPT oferece acesso a um conjunto selecionado de modelos confiáveis otimizados para agentes de código.",
+  "provider.connect.mongolgptAccount.line2":
     "Com uma única chave de API você terá acesso a modelos como Claude, GPT, Gemini, GLM e mais.",
-  "provider.connect.mongolgptZen.visit.prefix": "Visite ",
-  "provider.connect.mongolgptZen.visit.link":
+  "provider.connect.mongolgptAccount.visit.prefix": "Visite ",
+  "provider.connect.mongolgptAccount.visit.link":
     "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
-  "provider.connect.mongolgptZen.visit.suffix": " para obter sua chave de API.",
+  "provider.connect.mongolgptAccount.visit.suffix": " para obter sua chave de API.",
   "provider.connect.oauth.code.visit.prefix": "Visite ",
   "provider.connect.oauth.code.visit.link": "este link",
   "provider.connect.oauth.code.visit.suffix":

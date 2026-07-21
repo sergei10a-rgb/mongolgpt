@@ -35,7 +35,7 @@ export function rebrandHostedProviders(providers: Record<string, Provider>, cons
     result["mongolgpt-go"] = {
       ...result["opencode-go"],
       id: "mongolgpt-go",
-      name: "MongolGPT Go",
+      name: "MongolGPT (хуучин холболт)",
       api: `${base}/zen/go/v1`,
     }
   }

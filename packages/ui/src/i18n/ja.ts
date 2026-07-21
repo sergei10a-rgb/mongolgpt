@@ -45,14 +45,14 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "無料使用制限に達しました",
   "ui.sessionTurn.error.addCredits": "クレジットを追加",
 
-  "dialog.usageExceeded.freeTier.title": "無料制限に達しました",
+  "dialog.usageExceeded.freeTier.title": "Free Auto limit reached",
   "dialog.usageExceeded.freeTier.description":
-    "MongolGPT Go にサブスクライブして、最高のオープンソースモデルに安定してアクセスできます。月額 $5 から。",
-  "dialog.usageExceeded.freeTier.actionLabel": "サブスクライブ",
-  "dialog.usageExceeded.accountRateLimit.title": "Go の制限に達しました",
+    "Your Free Auto allowance has been used. Choose a Basic, Pro, or Max plan to continue.",
+  "dialog.usageExceeded.freeTier.actionLabel": "View plans",
+  "dialog.usageExceeded.accountRateLimit.title": "Plan usage limit reached",
   "dialog.usageExceeded.accountRateLimit.description":
-    "使用制限に達しました。今すぐこのモデルを使い続けるには、利用可能な残高からの使用を有効にしてください",
-  "dialog.usageExceeded.accountRateLimit.actionLabel": "設定を開く",
+    "Your plan allowance has been used. Wait for it to reset or review your billing settings.",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Open billing",
 
   "ui.sessionTurn.status.delegating": "作業を委任中",
   "ui.sessionTurn.status.planning": "次のステップを計画中",

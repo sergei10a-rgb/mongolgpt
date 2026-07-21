@@ -24,7 +24,7 @@ export const DialogSelectProvider: Component<{ directory?: Accessor<string | und
     if (id === "openai") return language.t("dialog.provider.openai.note")
     if (id.startsWith("github-copilot")) return language.t("dialog.provider.copilot.note")
     if (id === "nvidia") return language.t("dialog.provider.nvidia.note")
-    if (id === "mongolgpt-go") return language.t("dialog.provider.mongolgptGo.tagline")
+    if (id === "mongolgpt-go") return language.t("dialog.provider.mongolgptLegacy.tagline")
   }
 
   return (
@@ -37,7 +37,9 @@ export const DialogSelectProvider: Component<{ directory?: Accessor<string | und
         key={(x) => x?.id}
         items={() => {
           language.locale()
-          return [{ id: CUSTOM_ID, name: customLabel() }, ...providers.all().values()]
+          return [{ id: CUSTOM_ID, name: customLabel() }, ...providers.all().values()].filter(
+            (item) => item.id !== "mongolgpt-go",
+          )
         }}
         filterKeys={["id", "name"]}
         groupBy={(x) => (popularProviders.includes(x.id) ? popularGroup() : otherGroup())}
@@ -77,9 +79,6 @@ export const DialogSelectProvider: Component<{ directory?: Accessor<string | und
               <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
             </Show>
             <Show when={note(i.id)}>{(value) => <div class="text-14-regular text-text-weak">{value()}</div>}</Show>
-            <Show when={i.id === "mongolgpt-go"}>
-              <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
-            </Show>
           </div>
         )}
       </List>

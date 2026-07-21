@@ -103,7 +103,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Recommended",
   "dialog.provider.mongolgpt.note": "Curated models including Claude, GPT, Gemini and more",
   "dialog.provider.mongolgpt.tagline": "Reliable optimized models",
-  "dialog.provider.mongolgptGo.tagline": "Low cost subscription for everyone",
+  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Direct access to Claude models, including Pro and Max",
   "dialog.provider.copilot.note": "AI models for coding assistance via GitHub Copilot",
   "dialog.provider.openai.note": "GPT models for fast, capable general AI tasks",
@@ -136,13 +136,13 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API key",
   "provider.connect.apiKey.placeholder": "API key",
   "provider.connect.apiKey.required": "API key is required",
-  "provider.connect.mongolgptZen.line1":
-    "MongolGPT Zen gives you access to a curated set of reliable optimized models for coding agents.",
-  "provider.connect.mongolgptZen.line2":
-    "With a single API key you'll get access to models such as Claude, GPT, Gemini, GLM and more.",
-  "provider.connect.mongolgptZen.visit.prefix": "Visit ",
-  "provider.connect.mongolgptZen.visit.link": "the MongolGPT provider guide",
-  "provider.connect.mongolgptZen.visit.suffix": " to collect your API key.",
+  "provider.connect.mongolgptAccount.line1":
+    "MongolGPT managed models are linked to your account, plan, and usage allowance.",
+  "provider.connect.mongolgptAccount.line2":
+    "When managed access is available, one MongolGPT key can connect supported Claude, GPT, Gemini, GLM, and other models.",
+  "provider.connect.mongolgptAccount.visit.prefix": "Visit ",
+  "provider.connect.mongolgptAccount.visit.link": "the MongolGPT provider guide",
+  "provider.connect.mongolgptAccount.visit.suffix": " to check availability and connection steps.",
   "provider.connect.nvidia.step1.prefix": "Open ",
   "provider.connect.nvidia.step1.link": "NVIDIA Build",
   "provider.connect.nvidia.step1.suffix": ", choose a model, create an API key, then paste it below.",

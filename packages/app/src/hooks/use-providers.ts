@@ -7,7 +7,6 @@ import { selectProviderCatalog } from "./provider-catalog"
 
 export const popularProviders = [
   "mongolgpt",
-  "mongolgpt-go",
   "anthropic",
   "github-copilot",
   "openai",
