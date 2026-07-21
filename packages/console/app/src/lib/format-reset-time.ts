@@ -21,16 +21,6 @@ export const liteResetTimeKeys = {
   fewSeconds: "workspace.lite.time.fewSeconds",
 } satisfies ResetTimeKeys
 
-export const blackResetTimeKeys = {
-  day: "workspace.black.time.day",
-  days: "workspace.black.time.days",
-  hour: "workspace.black.time.hour",
-  hours: "workspace.black.time.hours",
-  minute: "workspace.black.time.minute",
-  minutes: "workspace.black.time.minutes",
-  fewSeconds: "workspace.black.time.fewSeconds",
-} satisfies ResetTimeKeys
-
 export function formatResetTime(seconds: number, i18n: ReturnType<typeof useI18n>, keys: ResetTimeKeys) {
   const days = Math.floor(seconds / 86400)
   if (days >= 1) {

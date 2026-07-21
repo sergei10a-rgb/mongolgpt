@@ -6,7 +6,6 @@ interface ModalProps {
   open: boolean
   onClose: () => void
   title?: string
-  variant?: "black"
   children: JSX.Element
 }
 
@@ -25,12 +24,10 @@ export function Modal(props: ModalProps) {
           <Kobalte.Overlay data-component="modal" data-slot="overlay" onClick={props.onClose}>
             <Kobalte.Content
               data-slot="content"
-              data-variant={props.variant}
               onClick={(e) => e.stopPropagation()}
               onOpenAutoFocus={(e) => {
                 e.preventDefault()
-                const target = e.currentTarget as HTMLElement | null
-                target?.focus({ preventScroll: true })
+                if (e.currentTarget instanceof HTMLElement) e.currentTarget.focus({ preventScroll: true })
               }}
             >
               <Show when={props.title}>

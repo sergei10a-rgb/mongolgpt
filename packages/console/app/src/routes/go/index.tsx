@@ -252,11 +252,11 @@ export default function Home() {
       <Meta property="og:url" content={`${config.baseUrl}${language.route("/go")}`} />
       <Meta property="og:title" content={i18n.t("go.title")} />
       <Meta property="og:description" content={i18n.t("go.meta.description")} />
-      <Meta property="og:image" content="/social-share-black.png" />
+      <Meta property="og:image" content="/social-share.png" />
       <Meta name="twitter:card" content="summary_large_image" />
       <Meta name="twitter:title" content={i18n.t("go.title")} />
       <Meta name="twitter:description" content={i18n.t("go.meta.description")} />
-      <Meta name="twitter:image" content="/social-share-black.png" />
+      <Meta name="twitter:image" content="/social-share.png" />
       <Meta name="mongolgpt:auth" content={workspaceID() ? "true" : "false"} />
 
       <div data-component="container">
