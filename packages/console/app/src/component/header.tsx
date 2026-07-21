@@ -14,7 +14,7 @@ import copyLogoSvgDark from "../asset/lander/mongolgpt-logo-dark.svg"
 import copyWordmarkSvgLight from "../asset/lander/mongolgpt-wordmark-light.svg"
 import copyWordmarkSvgDark from "../asset/lander/mongolgpt-wordmark-dark.svg"
 import { A, useNavigate } from "@solidjs/router"
-import { createMemo, Match, Show, Switch } from "solid-js"
+import { Match, Show, Switch } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createEffect, onCleanup } from "solid-js"
 import { config } from "~/config"
@@ -35,7 +35,7 @@ const fetchSvgContent = async (svgPath: string): Promise<string> => {
   }
 }
 
-export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: boolean }) {
+export function Header(props: { hideGetStarted?: boolean }) {
   const navigate = useNavigate()
   const i18n = useI18n()
   const language = useLanguage()
@@ -76,7 +76,8 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
 
   const handleLogoContextMenu = (event: MouseEvent) => {
     event.preventDefault()
-    const logoElement = (event.currentTarget as HTMLElement).querySelector("a")
+    if (!(event.currentTarget instanceof HTMLElement)) return
+    const logoElement = event.currentTarget.querySelector("a")
     if (logoElement) {
       const rect = logoElement.getBoundingClientRect()
       setStore("contextMenuPosition", {
@@ -151,22 +152,14 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
             <a href={language.route("/docs")}>{i18n.t("nav.docs")}</a>
           </li>
           <li>
-            <a href={language.route("/data")}>{i18n.t("nav.data")}</a>
-          </li>
-          <li>
-            <A href={language.route("/zen")}>{i18n.t("nav.zen")}</A>
-          </li>
-          <li>
-            <A href={language.route("/go")}>{i18n.t("nav.go")}</A>
+            <A href={language.route("/pricing")}>{i18n.t("nav.pricing")}</A>
           </li>
           <li>
             <A href={language.route("/enterprise")}>{i18n.t("nav.enterprise")}</A>
           </li>
-          <Show when={props.zen || props.go}>
-            <li>
-              <a href="/auth">{i18n.t("nav.login")}</a>
-            </li>
-          </Show>
+          <li>
+            <a href="/auth">{i18n.t("nav.login")}</a>
+          </li>
           <Show when={!props.hideGetStarted}>
             <li>
               <A href={language.route("/download")} data-slot="cta-button">
@@ -251,26 +244,14 @@ export function Header(props: { zen?: boolean; go?: boolean; hideGetStarted?: bo
                   <a href={language.route("/docs")}>{i18n.t("nav.docs")}</a>
                 </li>
                 <li>
-                  <a href={language.route("/data")}>{i18n.t("nav.data")}</a>
+                  <A href={language.route("/pricing")}>{i18n.t("nav.pricing")}</A>
                 </li>
-                <Show when={!props.zen}>
-                  <li>
-                    <A href={language.route("/zen")}>{i18n.t("nav.zen")}</A>
-                  </li>
-                </Show>
-                <Show when={!props.go}>
-                  <li>
-                    <A href={language.route("/go")}>{i18n.t("nav.go")}</A>
-                  </li>
-                </Show>
                 <li>
                   <A href={language.route("/enterprise")}>{i18n.t("nav.enterprise")}</A>
                 </li>
-                <Show when={props.zen || props.go}>
-                  <li>
-                    <a href="/auth">{i18n.t("nav.login")}</a>
-                  </li>
-                </Show>
+                <li>
+                  <a href="/auth">{i18n.t("nav.login")}</a>
+                </li>
                 <Show when={!props.hideGetStarted}>
                   <li>
                     <A href={language.route("/download")} data-slot="cta-button">
