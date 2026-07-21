@@ -1,5 +1,5 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { and, Database, eq, gt, gte, isNull, lt, lte, or, sql } from "@mongolgpt/console-core/drizzle/index.js"
+import { and, Database, eq, gt, gte, isNull, lte, sql } from "@mongolgpt/console-core/drizzle/index.js"
 import { KeyTable } from "@mongolgpt/console-core/schema/key.sql.js"
 import {
   BillingTable,
@@ -12,8 +12,6 @@ import { centsToMicroCents } from "@mongolgpt/console-core/util/price.js"
 import { getMonthlyBounds, getWeekBounds } from "@mongolgpt/console-core/util/date.js"
 import { Identifier } from "@mongolgpt/console-core/identifier.js"
 import { recordPlanUsageWithDb } from "@mongolgpt/console-core/plan-usage.js"
-import { Billing } from "@mongolgpt/console-core/billing.js"
-import { Actor } from "@mongolgpt/console-core/actor.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { ZenData } from "@mongolgpt/console-core/model.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
@@ -361,7 +359,6 @@ export async function handler(
           costInMicroCents: centsToMicroCents(costInfo.totalCostInCent),
           tokens: usageTokenTotal(usageInfo),
         })
-        await reload(billingSource, authInfo, costInfo)
         json.cost = calculateOccurredCost(billingSource, costInfo)
       }
       if (json.error?.message) {
@@ -427,7 +424,6 @@ export async function handler(
                     costInMicroCents: centsToMicroCents(costInfo.totalCostInCent),
                     tokens: usageTokenTotal(usageInfo),
                   })
-                  await reload(billingSource, authInfo, costInfo)
                   const cost = calculateOccurredCost(billingSource, costInfo)
                   c.enqueue(encoder.encode(buildCostChunk(opts.format, cost)))
                 }
@@ -1457,37 +1453,5 @@ export async function handler(
     })
 
     return { costInMicroCents: cost }
-  }
-
-  async function reload(billingSource: BillingSource, authInfo: AuthInfo, costInfo: CostInfo) {
-    if (billingSource !== "balance") return
-    authInfo = authInfo!
-
-    const reloadTrigger = centsToMicroCents((authInfo.billing.reloadTrigger ?? Billing.RELOAD_TRIGGER) * 100)
-    if (authInfo.billing.balance - costInfo.totalCostInCent >= reloadTrigger) return
-    const now = new Date()
-    if (authInfo.billing.timeReloadLockedTill && authInfo.billing.timeReloadLockedTill > now) return
-    const reloadLockedTill = new Date(now.getTime() + 60_000)
-
-    const lock = await Database.use((tx) =>
-      tx
-        .update(BillingTable)
-        .set({
-          timeReloadLockedTill: reloadLockedTill,
-        })
-        .where(
-          and(
-            eq(BillingTable.workspaceID, authInfo.workspaceID),
-            eq(BillingTable.reload, true),
-            lt(BillingTable.balance, reloadTrigger),
-            or(isNull(BillingTable.timeReloadLockedTill), lt(BillingTable.timeReloadLockedTill, now)),
-          ),
-        ),
-    )
-    if (lock.meta.changes === 0) return
-
-    await Actor.provide("system", { workspaceID: authInfo.workspaceID }, async () => {
-      await Billing.reload()
-    })
   }
 }

@@ -430,7 +430,7 @@ export const dict = {
   "black.subscribe.success.dateJoined": "Нэгдсэн огноо",
   "black.subscribe.success.chargeNotice": "Захиалга идэвхжих үед таны картаас төлбөр авна",
 
-  "workspace.nav.zen": "Zen",
+  "workspace.nav.zen": "Загварууд",
   "workspace.nav.go": "Go",
   "workspace.nav.usage": "Хэрэглээ",
   "workspace.nav.apiKeys": "API түлхүүрүүд",
