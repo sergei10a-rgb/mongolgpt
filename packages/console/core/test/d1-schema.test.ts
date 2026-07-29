@@ -308,6 +308,25 @@ const contract = {
     "payload_hash",
     "time_created",
   ],
+  FinancePaymentSettlementTable: [
+    "id",
+    "workspace_id",
+    "payment_invoice_id",
+    "payment_event_id",
+    "provider",
+    "merchant_account_id",
+    "external_settlement_id",
+    "kind",
+    "gross_amount_mnt",
+    "fee_amount_mnt",
+    "tax_amount_mnt",
+    "net_amount_mnt",
+    "currency",
+    "idempotency_key",
+    "payload_hash",
+    "time_effective",
+    "time_created",
+  ],
   CouponTable: ["email", "type", "timeRedeemed"],
   IpTable: ["ip", "timeCreated", "timeUpdated", "timeDeleted", "usage"],
   IpRateLimitTable: ["ip", "interval", "count"],
@@ -379,6 +398,7 @@ describe("D1 schema contract", () => {
     expect(d1.FinanceCostBases).toEqual(["estimated", "actual", "allocated"])
     expect(d1.FinanceCostSourceTypes).toEqual(["usage", "provider_statement", "payment_settlement", "manual"])
     expect(d1.FinanceCostValuationMethods).toEqual(["historical_spot", "provider_settlement", "manual"])
+    expect(d1.FinancePaymentSettlementKinds).toEqual(["payment", "refund", "adjustment"])
     expect(d1.PaymentInvoiceStatuses).toEqual([
       "created",
       "pending",

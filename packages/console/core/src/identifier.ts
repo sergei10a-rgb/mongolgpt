@@ -10,6 +10,7 @@ export namespace Identifier {
     financeCost: "fce",
     financeCostValuation: "fvl",
     financeFxRate: "fxr",
+    financePaymentSettlement: "fps",
     key: "key",
     lite: "lit",
     model: "mod",

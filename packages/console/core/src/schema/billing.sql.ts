@@ -12,6 +12,8 @@ export {
   FinanceCostValuationTable,
   FinanceCurrencies,
   FinanceFxRateTable,
+  FinancePaymentSettlementKinds,
+  FinancePaymentSettlementTable,
   LegacyPlanCodes,
   LiteTable,
   PaymentEventOutcomes,

@@ -42,6 +42,7 @@ export const FinanceCostDirections = ["debit", "credit"] as const
 export const FinanceCostBases = ["estimated", "actual", "allocated"] as const
 export const FinanceCostSourceTypes = ["usage", "provider_statement", "payment_settlement", "manual"] as const
 export const FinanceCostValuationMethods = ["historical_spot", "provider_settlement", "manual"] as const
+export const FinancePaymentSettlementKinds = ["payment", "refund", "adjustment"] as const
 export const NewsletterSubscriberStatus = ["active", "unsubscribed"] as const
 export const NewsletterSubscriberSource = ["console", "stats"] as const
 export const EnterpriseInquiryStatus = ["new", "reviewing", "resolved", "spam"] as const
@@ -797,6 +798,63 @@ export const FinanceCostValuationTable = sqliteTable(
     check("finance_cost_valuation_amount_check", sql`${table.amount_mnt_micros} > 0`),
     check("finance_cost_valuation_identity_check", sql`length(trim(${table.idempotency_key})) between 1 and 255`),
     check("finance_cost_valuation_payload_hash_check", sql`length(${table.payload_hash}) = 64`),
+  ],
+)
+
+export const FinancePaymentSettlementTable = sqliteTable(
+  "finance_payment_settlement",
+  {
+    id: id(),
+    workspace_id: ulid("workspace_id").notNull(),
+    payment_invoice_id: ulid("payment_invoice_id").notNull(),
+    payment_event_id: ulid("payment_event_id"),
+    provider: text("provider", { enum: PaymentProviders }).notNull(),
+    merchant_account_id: text("merchant_account_id", { length: 255 }).notNull(),
+    external_settlement_id: text("external_settlement_id", { length: 255 }).notNull(),
+    kind: text("kind", { enum: FinancePaymentSettlementKinds }).notNull(),
+    gross_amount_mnt: integer("gross_amount_mnt").notNull(),
+    fee_amount_mnt: integer("fee_amount_mnt").notNull(),
+    tax_amount_mnt: integer("tax_amount_mnt").notNull(),
+    net_amount_mnt: integer("net_amount_mnt").notNull(),
+    currency: text("currency", { enum: ["MNT"] })
+      .notNull()
+      .default("MNT"),
+    idempotency_key: text("idempotency_key", { length: 255 }).notNull(),
+    payload_hash: text("payload_hash", { length: 64 }).notNull(),
+    time_effective: utc("time_effective").notNull(),
+    time_created: utc("time_created").notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    uniqueIndex("finance_payment_settlement_idempotency_key").on(table.idempotency_key),
+    uniqueIndex("finance_payment_settlement_provider_external").on(
+      table.provider,
+      table.merchant_account_id,
+      table.external_settlement_id,
+    ),
+    index("finance_payment_settlement_invoice_time").on(table.payment_invoice_id, table.time_effective),
+    index("finance_payment_settlement_workspace_time").on(table.workspace_id, table.time_effective),
+    index("finance_payment_settlement_event_id").on(table.payment_event_id),
+    check("finance_payment_settlement_provider_check", sql`${table.provider} in ('qpay', 'bonum')`),
+    check("finance_payment_settlement_kind_check", sql`${table.kind} in ('payment', 'refund', 'adjustment')`),
+    check(
+      "finance_payment_settlement_gross_sign_check",
+      sql`(${table.kind} = 'payment' and ${table.gross_amount_mnt} > 0)
+        or (${table.kind} = 'refund' and ${table.gross_amount_mnt} < 0)
+        or (${table.kind} = 'adjustment' and ${table.gross_amount_mnt} <> 0)`,
+    ),
+    check(
+      "finance_payment_settlement_balance_check",
+      sql`${table.net_amount_mnt} = ${table.gross_amount_mnt} - ${table.fee_amount_mnt} - ${table.tax_amount_mnt}`,
+    ),
+    check("finance_payment_settlement_currency_check", sql`${table.currency} = 'MNT'`),
+    check(
+      "finance_payment_settlement_identity_check",
+      sql`length(trim(${table.merchant_account_id})) between 1 and 255
+        and length(trim(${table.external_settlement_id})) between 1 and 255
+        and length(trim(${table.idempotency_key})) between 1 and 255`,
+    ),
+    check("finance_payment_settlement_payload_hash_check", sql`length(${table.payload_hash}) = 64`),
   ],
 )
 
