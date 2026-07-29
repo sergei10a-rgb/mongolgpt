@@ -152,6 +152,7 @@
         "solid-js": "catalog:",
         "ulid": "catalog:",
         "vite": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@types/bun": "catalog:",

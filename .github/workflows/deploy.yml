@@ -173,10 +173,11 @@ jobs:
             bun --cwd packages/runtime wrangler deploy --config="wrangler.$stage.jsonc" --secrets-file="$runtime_secrets"
           fi
           bun sst unlock --stage=${{ inputs.stage }} || true
-          bun sst deploy --stage=${{ inputs.stage }} --print-logs
           if [ "${{ inputs.hosted_services }}" = "true" ]; then
+            bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs
             bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate
           fi
+          bun sst deploy --stage=${{ inputs.stage }} --print-logs
 
       - name: Verify deployed URLs
         run: bun run deploy:smoke -- ${{ inputs.stage }}

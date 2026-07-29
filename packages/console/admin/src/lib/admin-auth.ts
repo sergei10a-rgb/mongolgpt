@@ -1,20 +1,11 @@
-import {
-  and,
-  count,
-  Database,
-  eq,
-  isNull,
-} from "@mongolgpt/console-core/drizzle/index.js"
+import { and, count, Database, eq, isNull } from "@mongolgpt/console-core/drizzle/index.js"
 import {
   hasPlatformAdminPermission,
   isPlatformAdminRole,
   PlatformAdminPermissions,
 } from "@mongolgpt/console-core/platform-admin.js"
 import type { PlatformAdminPermission } from "@mongolgpt/console-core/platform-admin.js"
-import {
-  AdminAuditLogTable,
-  PlatformAdminTable,
-} from "@mongolgpt/console-core/schema/admin.sql.js"
+import { AdminAuditLogTable, PlatformAdminTable } from "@mongolgpt/console-core/schema/admin.sql.js"
 import { ulid } from "ulid"
 import type { AdminAccessConfig, CloudflareAccessIdentity } from "./access"
 import type { PlatformAdminContext } from "./admin-context"
@@ -81,7 +72,7 @@ export async function authorizePlatformAdmin(
         timeDeleted: null,
       }
       await tx.insert(PlatformAdminTable).values(admin)
-      await insertAdminAudit(tx, {
+      await writeAdminAuditWithDb(tx, {
         adminID: admin.id,
         actorEmail: admin.email,
         action: "admin.bootstrap_owner",
@@ -152,9 +143,7 @@ export async function authorizePlatformAdmin(
     email: decision.admin.email,
     subject: identity.subject,
     role,
-    permissions: PlatformAdminPermissions.filter((permission) =>
-      hasPlatformAdminPermission(role, permission),
-    ),
+    permissions: PlatformAdminPermissions.filter((permission) => hasPlatformAdminPermission(role, permission)),
     requestID: requestID(request),
     bootstrapped: decision.bootstrapped,
   }
@@ -204,16 +193,13 @@ export function evaluateExistingPlatformAdmin(
   }
 }
 
-export function requirePlatformAdminPermission(
-  context: PlatformAdminContext,
-  permission: PlatformAdminPermission,
-) {
+export function requirePlatformAdminPermission(context: PlatformAdminContext, permission: PlatformAdminPermission) {
   if (context.permissions.includes(permission)) return context
   throw new AdminAuthorizationError("forbidden", "Энэ үйлдлийг хийх админы эрх хүрэлцэхгүй байна.")
 }
 
 export async function writeAdminAudit(input: AdminAuditInput) {
-  await Database.use((tx) => insertAdminAudit(tx, input))
+  await Database.use((tx) => writeAdminAuditWithDb(tx, input))
 }
 
 export function requestID(request: Request) {
@@ -225,7 +211,7 @@ export function requestTarget(request: Request) {
   return `${request.method.toUpperCase()} ${url.pathname}`.slice(0, 255)
 }
 
-async function insertAdminAudit(tx: Database.TxOrDb, input: AdminAuditInput) {
+export async function writeAdminAuditWithDb(tx: Database.TxOrDb, input: AdminAuditInput) {
   await tx.insert(AdminAuditLogTable).values({
     id: `aud_${ulid()}`,
     admin_id: input.adminID,

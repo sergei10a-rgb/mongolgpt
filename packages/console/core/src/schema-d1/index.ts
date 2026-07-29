@@ -4,6 +4,7 @@ import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core"
 import { currency, id, timestamps, ulid, utc, workspaceColumns } from "../drizzle-d1/types"
 
 export const AuthProvider = ["email", "github", "google"] as const
+export const AccountStatuses = ["active", "suspended"] as const
 export const UserRole = ["admin", "member"] as const
 export const PlatformAdminRoles = ["owner", "administrator", "support", "finance", "operations"] as const
 export const PlatformAdminStatuses = ["active", "suspended"] as const
@@ -59,9 +60,33 @@ export const AccountTable = sqliteTable(
   "account",
   {
     id: id(),
+    status: text({ enum: AccountStatuses }).notNull().default("active"),
+    auth_version: integer().notNull().default(0),
+    suspension_reason: text({ length: 500 }),
+    suspended_by: ulid("suspended_by"),
+    time_suspended: utc("time_suspended"),
     ...timestamps,
   },
-  (table) => [primaryKey({ columns: [table.id] })],
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    index("account_status_id").on(table.status, table.id),
+    check("account_status_check", sql`${table.status} in ('active', 'suspended')`),
+    check("account_auth_version_check", sql`${table.auth_version} >= 0`),
+    check(
+      "account_suspension_check",
+      sql`(
+        ${table.status} = 'active'
+        and ${table.suspension_reason} is null
+        and ${table.suspended_by} is null
+        and ${table.time_suspended} is null
+      ) or (
+        ${table.status} = 'suspended'
+        and length(trim(${table.suspension_reason})) between 10 and 500
+        and ${table.suspended_by} is not null
+        and ${table.time_suspended} is not null
+      )`,
+    ),
+  ],
 )
 
 export const AuthTable = sqliteTable(

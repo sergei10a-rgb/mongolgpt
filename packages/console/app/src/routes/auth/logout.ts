@@ -5,13 +5,14 @@ import { useAuthSession } from "~/context/auth"
 export async function GET(event: APIEvent) {
   const auth = await useAuthSession()
   const current = auth.data.current
-  if (current)
-    await auth.update((val) => {
+  await auth.update((val) => {
+    if (current) {
       delete val.account?.[current]
-      const first = Object.keys(val.account ?? {})[0]
-      val.current = first
-      event!.locals.actor = undefined
-      return val
-    })
+    }
+    val.current = Object.keys(val.account ?? {})[0]
+    val.blocked = undefined
+    event.locals.actor = undefined
+    return val
+  })
   return redirect("/pricing")
 }

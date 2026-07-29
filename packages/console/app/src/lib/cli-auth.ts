@@ -1,6 +1,7 @@
 import { createClient } from "@openauthjs/openauth/client"
 import { createSubjects } from "@openauthjs/openauth/subject"
 import { Resource } from "@mongolgpt/console-resource"
+import { AccountAccess } from "@mongolgpt/console-core/account-access.js"
 import { z } from "zod"
 
 const subjects = createSubjects({
@@ -8,6 +9,7 @@ const subjects = createSubjects({
     accountID: z.string(),
     email: z.string(),
     newAccount: z.boolean().optional(),
+    authVersion: z.number().int().nonnegative().optional(),
   }),
   user: z.object({
     userID: z.string(),
@@ -24,14 +26,22 @@ const authClient = createClient({
 export type CliAccount = {
   accountID: string
   email: string
+  authVersion: number
 }
 
 export async function verifyCliToken(token: string): Promise<CliAccount | undefined> {
   const verified = await authClient.verify(token).catch(() => undefined)
-  if (!verified || "err" in verified || verified.subject.type !== "account") return
+  if (!verified || "err" in verified || verified.subject.type !== "account") return undefined
+  const authVersion = verified.subject.properties.authVersion ?? 0
+  const access = await AccountAccess.verify({
+    accountID: verified.subject.properties.accountID,
+    authVersion,
+  })
+  if (!access.allowed) return undefined
   return {
     accountID: verified.subject.properties.accountID,
     email: verified.subject.properties.email,
+    authVersion,
   }
 }
 
@@ -41,7 +51,7 @@ export async function verifyCliAccount(request: Request): Promise<{ account: Cli
   if (!token) return { response: unauthorized("Bearer token алга") }
 
   const account = await verifyCliToken(token)
-  if (!account) return { response: unauthorized("Account token буруу байна") }
+  if (!account) return { response: unauthorized("Account token буруу эсвэл хүчингүй болсон байна") }
   return { account }
 }
 

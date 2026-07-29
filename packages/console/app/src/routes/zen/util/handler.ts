@@ -1,6 +1,7 @@
 import type { APIEvent } from "@solidjs/start/server"
 import { and, Database, eq, gt, gte, isNull, lte, sql } from "@mongolgpt/console-core/drizzle/index.js"
 import { KeyTable } from "@mongolgpt/console-core/schema/key.sql.js"
+import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
 import {
   BillingTable,
   LiteTable,
@@ -818,6 +819,14 @@ export async function handler(
           timeDisabled: ModelTable.timeCreated,
         })
         .from(UserTable)
+        .innerJoin(
+          AccountTable,
+          and(
+            eq(AccountTable.id, UserTable.accountID),
+            eq(AccountTable.status, "active"),
+            isNull(AccountTable.timeDeleted),
+          ),
+        )
         .innerJoin(WorkspaceTable, eq(WorkspaceTable.id, UserTable.workspaceID))
         .innerJoin(BillingTable, eq(BillingTable.workspaceID, UserTable.workspaceID))
         .leftJoin(KeyTable, key)
@@ -861,7 +870,7 @@ export async function handler(
             isNull(LiteTable.timeDeleted),
           ),
         )
-        .where(and(account, isNull(UserTable.timeDeleted)))
+        .where(and(account, isNull(UserTable.timeDeleted), isNull(WorkspaceTable.timeDeleted)))
         .orderBy(UserTable.workspaceID)
         .limit(1)
         .then((rows) => rows[0]),

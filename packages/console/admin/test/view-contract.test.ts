@@ -3,9 +3,12 @@ import { resolve } from "node:path"
 
 describe("MongolGPT admin overview contract", () => {
   test("keeps the operational surface Mongolian-first and branded", async () => {
-    const view = await Bun.file(
-      resolve(import.meta.dir, "../src/component/admin-overview.tsx"),
-    ).text()
+    const view = (
+      await Promise.all([
+        Bun.file(resolve(import.meta.dir, "../src/component/admin-overview.tsx")).text(),
+        Bun.file(resolve(import.meta.dir, "../src/component/admin-header.tsx")).text(),
+      ])
+    ).join("\n")
 
     expect(view).toContain("MongolGPT")
     expect(view).toContain("Ерөнхий хяналт")
@@ -21,7 +24,7 @@ describe("MongolGPT admin overview contract", () => {
   test("keeps compact desktop and mobile layout constraints", async () => {
     const css = await Bun.file(resolve(import.meta.dir, "../src/app.css")).text()
 
-    expect(css).toContain('grid-template-columns: repeat(6, minmax(0, 1fr))')
+    expect(css).toContain("grid-template-columns: repeat(6, minmax(0, 1fr))")
     expect(css).toContain("@media (max-width: 620px)")
     expect(css).toContain("overflow-x: auto")
     expect(css).toContain("text-overflow: ellipsis")

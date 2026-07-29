@@ -1,0 +1,69 @@
+.page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: var(--background-base);
+  color: var(--text-strong);
+}
+
+.content {
+  width: min(100%, 520px);
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+
+.mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--icon-strong-base);
+  color: var(--background-base);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.eyebrow {
+  margin: 8px 0 0;
+  color: var(--text-weak);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.content h1 {
+  max-width: 18ch;
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.content p:not(.eyebrow) {
+  max-width: 58ch;
+  margin: 0;
+  color: var(--text-base);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.action {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border: 1px solid var(--border-base);
+  border-radius: 6px;
+  background: var(--surface-raised-base);
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--border-interactive-focus);
+  outline-offset: 2px;
+}

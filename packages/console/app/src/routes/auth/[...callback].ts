@@ -29,9 +29,11 @@ export async function GET(input: APIEvent) {
           [id]: {
             id,
             email: verified.subject.properties.email,
+            authVersion: verified.subject.properties.authVersion ?? 0,
           },
         },
         current: id,
+        blocked: undefined,
       }
     })
     return redirect(route(locale, authCallbackTarget(url)))

@@ -8,6 +8,7 @@ import { GithubProvider } from "@openauthjs/openauth/provider/github"
 import { GoogleOidcProvider } from "@openauthjs/openauth/provider/google"
 import { CloudflareStorage } from "@openauthjs/openauth/storage/cloudflare"
 import { Account } from "@mongolgpt/console-core/account.js"
+import { AccountAccess } from "@mongolgpt/console-core/account-access.js"
 import { Workspace } from "@mongolgpt/console-core/workspace.js"
 import { Actor } from "@mongolgpt/console-core/actor.js"
 import { Resource } from "@mongolgpt/console-resource"
@@ -29,6 +30,7 @@ export const subjects = createSubjects({
     accountID: z.string(),
     email: z.string(),
     newAccount: z.boolean().optional(),
+    authVersion: z.number().int().nonnegative().optional(),
   }),
   user: z.object({
     userID: z.string(),
@@ -211,6 +213,13 @@ export default {
 
           return accountID
         })()
+        const access = await AccountAccess.verify({ accountID })
+        if (!access.allowed) {
+          if (access.reason === "suspended") {
+            throw new Error("Таны MongolGPT аккаунт түр түдгэлзсэн байна.")
+          }
+          throw new Error("MongolGPT аккаунтын нэвтрэх эрх хүчингүй болсон байна.")
+        }
 
         // Get workspace
         await Actor.provide("account", { accountID, email }, async () => {
@@ -232,7 +241,12 @@ export default {
             await Workspace.create({ name: "Default" })
           }
         })
-        return ctx.subject("account", accountID, { accountID, email, newAccount })
+        return ctx.subject("account", accountID, {
+          accountID,
+          email,
+          newAccount,
+          authVersion: access.authVersion,
+        })
       },
     }).fetch(request, env, ctx)
     return result

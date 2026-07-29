@@ -140,6 +140,21 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(run).toContain('--secrets-file="$runtime_secrets"')
   })
 
+  test("migrates D1 before publishing schema-dependent hosted services", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
+    const workflow = parseWorkflow(source)
+    const deployStep = workflow.jobs.deploy.steps.find((step) => step.name === "Validate and deploy to Cloudflare")
+    expect(deployStep).toBeDefined()
+
+    const run = deployStep?.run ?? ""
+    const database = run.indexOf("bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs")
+    const migration = run.indexOf("bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate")
+    const application = run.lastIndexOf("bun sst deploy --stage=${{ inputs.stage }} --print-logs")
+    expect(database).toBeGreaterThanOrEqual(0)
+    expect(migration).toBeGreaterThan(database)
+    expect(application).toBeGreaterThan(migration)
+  })
+
   test("creates a fail-closed Cloudflare Access admin application through IaC", async () => {
     const [adminSource, stageSource, configSource, accessSource, mfaScriptSource] = await Promise.all(
       [

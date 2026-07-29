@@ -154,6 +154,36 @@ describe("D1 migration", () => {
     ).toThrow()
   })
 
+  test("enforces account suspension state and auth version constraints", async () => {
+    const database = new Database(":memory:")
+    database.exec(await migrationSql())
+
+    database.query("insert into account (id) values (?)").run("acc_active")
+    expect(database.query("select status, auth_version from account where id = ?").get("acc_active")).toEqual({
+      status: "active",
+      auth_version: 0,
+    })
+
+    expect(() =>
+      database
+        .query(
+          "update account set status = 'suspended', suspension_reason = ?, suspended_by = ?, time_suspended = ? where id = ?",
+        )
+        .run("Дүрэм зөрчсөн хэрэглэгч", "adm_01", 1, "acc_active"),
+    ).not.toThrow()
+    expect(() => database.query("update account set auth_version = -1 where id = ?").run("acc_active")).toThrow()
+    expect(() =>
+      database
+        .query(
+          "insert into account (id, status, suspension_reason, suspended_by, time_suspended) values (?, 'active', ?, ?, ?)",
+        )
+        .run("acc_invalid_active", "Шалтгаан үлдсэн", "adm_01", 1),
+    ).toThrow()
+    expect(() =>
+      database.query("insert into account (id, status) values (?, 'suspended')").run("acc_invalid_suspended"),
+    ).toThrow()
+  })
+
   test("preserves closed checkout data while adding cancellation support", async () => {
     const target = "20260721194202_abandoned_madame_web"
     const paths = await migrationPaths()

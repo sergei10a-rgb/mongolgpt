@@ -4,7 +4,17 @@ import type { Table } from "drizzle-orm"
 import * as d1 from "../src/schema-d1"
 
 const contract = {
-  AccountTable: ["id", "timeCreated", "timeUpdated", "timeDeleted"],
+  AccountTable: [
+    "id",
+    "status",
+    "auth_version",
+    "suspension_reason",
+    "suspended_by",
+    "time_suspended",
+    "timeCreated",
+    "timeUpdated",
+    "timeDeleted",
+  ],
   AuthTable: ["id", "timeCreated", "timeUpdated", "timeDeleted", "provider", "subject", "accountID"],
   PlatformAdminTable: [
     "id",
@@ -309,6 +319,7 @@ describe("D1 schema contract", () => {
   }
 
   test("keeps product enums aligned", () => {
+    expect(d1.AccountStatuses).toEqual(["active", "suspended"])
     expect(d1.AuthProvider).toEqual(["email", "github", "google"])
     expect(d1.UserRole).toEqual(["admin", "member"])
     expect(d1.PlatformAdminRoles).toEqual(["owner", "administrator", "support", "finance", "operations"])

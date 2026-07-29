@@ -1,5 +1,6 @@
 import { getRequestEvent } from "solid-js/web"
 import { and, Database, eq, inArray, isNull } from "@mongolgpt/console-core/drizzle/index.js"
+import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { redirect } from "@solidjs/router"
 import { Actor } from "@mongolgpt/console-core/actor.js"
@@ -13,6 +14,7 @@ export const AuthSubjects = createSubjects({
     accountID: z.string(),
     email: z.string(),
     newAccount: z.boolean().optional(),
+    authVersion: z.number().int().nonnegative().optional(),
   }),
   user: z.object({
     userID: z.string(),
@@ -28,6 +30,7 @@ export const AuthClient = createClient({
 
 import { useSession } from "@solidjs/start/http"
 import { Resource } from "@mongolgpt/console-resource"
+import { resolveSessionAccess } from "~/lib/session-access"
 
 export interface AuthSession {
   account?: Record<
@@ -35,9 +38,11 @@ export interface AuthSession {
     {
       id: string
       email: string
+      authVersion?: number
     }
   >
   current?: string
+  blocked?: "suspended"
 }
 
 export function useAuthSession() {
@@ -54,13 +59,80 @@ export function useAuthSession() {
   })
 }
 
+export async function validateAuthSession() {
+  const auth = await useAuthSession()
+  const entries = Object.entries(auth.data.account ?? {})
+  if (entries.length === 0) {
+    const resolved = resolveSessionAccess({
+      accounts: {},
+      current: auth.data.current,
+      blocked: auth.data.blocked,
+      records: [],
+    })
+    return {
+      data: {
+        ...auth.data,
+        account: resolved.accounts,
+        current: resolved.current,
+        blocked: resolved.blocked,
+      },
+      suspended: resolved.suspended,
+    }
+  }
+
+  const records = await Database.use((tx) =>
+    tx
+      .select({
+        id: AccountTable.id,
+        status: AccountTable.status,
+        auth_version: AccountTable.auth_version,
+        timeDeleted: AccountTable.timeDeleted,
+      })
+      .from(AccountTable)
+      .where(
+        inArray(
+          AccountTable.id,
+          entries.map(([id]) => id),
+        ),
+      ),
+  )
+  const resolved = resolveSessionAccess({
+    accounts: auth.data.account ?? {},
+    current: auth.data.current,
+    blocked: auth.data.blocked,
+    records,
+  })
+  const changed =
+    entries.length !== Object.keys(resolved.accounts).length ||
+    resolved.current !== auth.data.current ||
+    resolved.blocked !== auth.data.blocked
+  if (changed) {
+    await auth.update((value) => ({
+      ...value,
+      account: resolved.accounts,
+      current: resolved.current,
+      blocked: resolved.blocked,
+    }))
+  }
+
+  return {
+    data: {
+      ...auth.data,
+      account: resolved.accounts,
+      current: resolved.current,
+      blocked: resolved.blocked,
+    },
+    suspended: resolved.suspended,
+  }
+}
+
 export const getActor = async (workspace?: string): Promise<Actor.Info> => {
   "use server"
   const evt = getRequestEvent()
   if (!evt) throw new Error("No request event")
   if (evt.locals.actor) return evt.locals.actor
   evt.locals.actor = (async () => {
-    const auth = await useAuthSession()
+    const auth = await validateAuthSession()
     if (!workspace) {
       const account = auth.data.account ?? {}
       const current = account[auth.data.current ?? ""]
@@ -73,20 +145,7 @@ export const getActor = async (workspace?: string): Promise<Actor.Info> => {
           },
         }
       }
-      if (Object.keys(account).length > 0) {
-        const current = Object.values(account)[0]
-        await auth.update((val) => ({
-          ...val,
-          current: current.id,
-        }))
-        return {
-          type: "account",
-          properties: {
-            email: current.email,
-            accountID: current.id,
-          },
-        }
-      }
+      if (auth.suspended) throw redirect("/auth/suspended")
       return {
         type: "public",
         properties: {},
@@ -127,6 +186,7 @@ export const getActor = async (workspace?: string): Promise<Actor.Info> => {
         }
       }
     }
+    if (auth.suspended) throw redirect("/auth/suspended")
     throw redirect("/auth/authorize")
   })()
   return evt.locals.actor

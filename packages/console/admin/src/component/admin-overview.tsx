@@ -1,5 +1,6 @@
 import { For, Show } from "solid-js"
 import type { PlatformAdminContext } from "~/lib/admin-context"
+import { AdminHeader, roleLabel } from "./admin-header"
 
 export interface AdminOverviewData {
   admin: PlatformAdminContext
@@ -26,21 +27,7 @@ export interface AdminOverviewData {
 export function AdminOverviewView(props: { data: AdminOverviewData }) {
   return (
     <>
-      <header data-component="admin-header">
-        <a href="/" data-component="brand" aria-label="MongolGPT удирдлагын нүүр">
-          <span data-component="brand-mark" aria-hidden="true">
-            M
-          </span>
-          <span>
-            <strong>MongolGPT</strong>
-            <small>Удирдлага</small>
-          </span>
-        </a>
-        <div data-component="admin-identity">
-          <span>{roleLabel(props.data.admin.role)}</span>
-          <strong>{props.data.admin.email}</strong>
-        </div>
-      </header>
+      <AdminHeader admin={props.data.admin} active="overview" />
 
       <main data-page="admin-overview">
         <section data-component="page-heading">
@@ -52,9 +39,7 @@ export function AdminOverviewView(props: { data: AdminOverviewData }) {
         </section>
 
         <Show when={props.data.admin.bootstrapped}>
-          <p data-component="notice">
-            Анхны эзэмшигчийн эрх энэ баталгаажсан Cloudflare Access бүртгэлд үүслээ.
-          </p>
+          <p data-component="notice">Анхны эзэмшигчийн эрх энэ баталгаажсан Cloudflare Access бүртгэлд үүслээ.</p>
         </Show>
 
         <section data-component="metrics" aria-label="Платформын үндсэн үзүүлэлт">
@@ -95,11 +80,7 @@ export function AdminOverviewView(props: { data: AdminOverviewData }) {
 
           <Show
             when={props.data.auditVisible}
-            fallback={
-              <p data-component="empty">
-                Энэ эрхэд админы үйлдлийн бүртгэл харах зөвшөөрөл олгогдоогүй.
-              </p>
-            }
+            fallback={<p data-component="empty">Энэ эрхэд админы үйлдлийн бүртгэл харах зөвшөөрөл олгогдоогүй.</p>}
           >
             <div data-component="table-scroll">
               <table>
@@ -153,18 +134,6 @@ function Metric(props: { label: string; value: number; tone?: "warning" }) {
       <span>{props.label}</span>
       <strong>{new Intl.NumberFormat("mn-MN").format(props.value)}</strong>
     </article>
-  )
-}
-
-function roleLabel(role: string) {
-  return (
-    {
-      owner: "Эзэмшигч",
-      administrator: "Ерөнхий админ",
-      support: "Хэрэглэгчийн тусламж",
-      finance: "Санхүү",
-      operations: "Системийн ажиллагаа",
-    }[role] ?? role
   )
 }
 
