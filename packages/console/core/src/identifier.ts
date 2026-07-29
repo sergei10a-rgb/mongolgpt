@@ -7,6 +7,8 @@ export namespace Identifier {
     auth: "aut",
     benchmark: "ben",
     billing: "bil",
+    financeCost: "fce",
+    financeFxRate: "fxr",
     key: "key",
     lite: "lit",
     model: "mod",

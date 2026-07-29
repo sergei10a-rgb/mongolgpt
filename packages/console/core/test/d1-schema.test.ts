@@ -263,6 +263,40 @@ const contract = {
     "sessionID",
     "enrichment",
   ],
+  FinanceFxRateTable: [
+    "id",
+    "base_currency",
+    "quote_currency",
+    "rate_micromnt_per_usd",
+    "source",
+    "source_reference",
+    "idempotency_key",
+    "payload_hash",
+    "time_effective",
+    "time_created",
+  ],
+  FinanceCostEntryTable: [
+    "id",
+    "workspace_id",
+    "category",
+    "direction",
+    "basis",
+    "source_type",
+    "source_reference",
+    "usage_id",
+    "payment_invoice_id",
+    "payment_event_id",
+    "provider",
+    "model",
+    "original_amount",
+    "original_currency",
+    "fx_rate_id",
+    "amount_mnt_micros",
+    "idempotency_key",
+    "payload_hash",
+    "time_effective",
+    "time_created",
+  ],
   CouponTable: ["email", "type", "timeRedeemed"],
   IpTable: ["ip", "timeCreated", "timeUpdated", "timeDeleted", "usage"],
   IpRateLimitTable: ["ip", "interval", "count"],
@@ -328,6 +362,11 @@ describe("D1 schema contract", () => {
     expect(d1.PlanNames).toEqual(["basic", "pro", "max"])
     expect(d1.PaymentProviders).toEqual(["qpay", "bonum"])
     expect(d1.PaymentPurposes).toEqual(["subscription", "credit"])
+    expect(d1.FinanceCurrencies).toEqual(["MNT", "USD"])
+    expect(d1.FinanceCostCategories).toEqual(["model_cost", "payment_fee", "tax", "adjustment"])
+    expect(d1.FinanceCostDirections).toEqual(["debit", "credit"])
+    expect(d1.FinanceCostBases).toEqual(["estimated", "actual", "allocated"])
+    expect(d1.FinanceCostSourceTypes).toEqual(["usage", "provider_statement", "payment_settlement", "manual"])
     expect(d1.PaymentInvoiceStatuses).toEqual([
       "created",
       "pending",

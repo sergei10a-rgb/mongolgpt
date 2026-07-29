@@ -36,6 +36,11 @@ export const PaymentCancellationStatuses = ["requested", "unknown", "cancelled",
 export const PaymentEventTypes = ["pending", "paid", "failed", "expired", "cancelled", "refunded"] as const
 export const PaymentEventOutcomes = ["applied", "noop", "rejected"] as const
 export const PlanSubscriptionStatuses = ["active", "expired", "cancelled", "refunded"] as const
+export const FinanceCurrencies = ["MNT", "USD"] as const
+export const FinanceCostCategories = ["model_cost", "payment_fee", "tax", "adjustment"] as const
+export const FinanceCostDirections = ["debit", "credit"] as const
+export const FinanceCostBases = ["estimated", "actual", "allocated"] as const
+export const FinanceCostSourceTypes = ["usage", "provider_statement", "payment_settlement", "manual"] as const
 export const NewsletterSubscriberStatus = ["active", "unsubscribed"] as const
 export const NewsletterSubscriberSource = ["console", "stats"] as const
 export const EnterpriseInquiryStatus = ["new", "reviewing", "resolved", "spam"] as const
@@ -641,6 +646,126 @@ export const UsageTable = sqliteTable(
     index("usage_workspace_time_created").on(table.workspaceID, table.timeCreated),
     index("usage_time_model_provider").on(table.timeCreated, table.model, table.provider),
     check("usage_enrichment_json_check", sql`${table.enrichment} is null or json_valid(${table.enrichment})`),
+  ],
+)
+
+export const FinanceFxRateTable = sqliteTable(
+  "finance_fx_rate",
+  {
+    id: id(),
+    base_currency: text("base_currency", { enum: ["USD"] })
+      .notNull()
+      .default("USD"),
+    quote_currency: text("quote_currency", { enum: ["MNT"] })
+      .notNull()
+      .default("MNT"),
+    rate_micromnt_per_usd: integer("rate_micromnt_per_usd").notNull(),
+    source: text("source", { length: 64 }).notNull(),
+    source_reference: text("source_reference", { length: 255 }).notNull(),
+    idempotency_key: text("idempotency_key", { length: 255 }).notNull(),
+    payload_hash: text("payload_hash", { length: 64 }).notNull(),
+    time_effective: utc("time_effective").notNull(),
+    time_created: utc("time_created").notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    uniqueIndex("finance_fx_rate_idempotency_key").on(table.idempotency_key),
+    uniqueIndex("finance_fx_rate_source_reference").on(table.source, table.source_reference),
+    index("finance_fx_rate_pair_time_effective").on(table.base_currency, table.quote_currency, table.time_effective),
+    check("finance_fx_rate_pair_check", sql`${table.base_currency} = 'USD' and ${table.quote_currency} = 'MNT'`),
+    check("finance_fx_rate_value_check", sql`${table.rate_micromnt_per_usd} > 0`),
+    check(
+      "finance_fx_rate_identity_check",
+      sql`length(trim(${table.source})) between 1 and 64
+        and length(trim(${table.source_reference})) between 1 and 255
+        and length(trim(${table.idempotency_key})) between 1 and 255`,
+    ),
+    check("finance_fx_rate_payload_hash_check", sql`length(${table.payload_hash}) = 64`),
+  ],
+)
+
+export const FinanceCostEntryTable = sqliteTable(
+  "finance_cost_entry",
+  {
+    id: id(),
+    workspace_id: ulid("workspace_id").notNull(),
+    category: text("category", { enum: FinanceCostCategories }).notNull(),
+    direction: text("direction", { enum: FinanceCostDirections }).notNull(),
+    basis: text("basis", { enum: FinanceCostBases }).notNull(),
+    source_type: text("source_type", { enum: FinanceCostSourceTypes }).notNull(),
+    source_reference: text("source_reference", { length: 255 }).notNull(),
+    usage_id: ulid("usage_id"),
+    payment_invoice_id: ulid("payment_invoice_id"),
+    payment_event_id: ulid("payment_event_id"),
+    provider: text("provider", { length: 255 }),
+    model: text("model", { length: 255 }),
+    original_amount: integer("original_amount").notNull(),
+    original_currency: text("original_currency", { enum: FinanceCurrencies }).notNull(),
+    fx_rate_id: ulid("fx_rate_id"),
+    amount_mnt_micros: integer("amount_mnt_micros"),
+    idempotency_key: text("idempotency_key", { length: 255 }).notNull(),
+    payload_hash: text("payload_hash", { length: 64 }).notNull(),
+    time_effective: utc("time_effective").notNull(),
+    time_created: utc("time_created").notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    uniqueIndex("finance_cost_entry_idempotency_key").on(table.idempotency_key),
+    uniqueIndex("finance_cost_entry_source_identity").on(
+      table.source_type,
+      table.source_reference,
+      table.category,
+      table.direction,
+      table.basis,
+    ),
+    index("finance_cost_entry_workspace_time_effective").on(table.workspace_id, table.time_effective),
+    index("finance_cost_entry_usage_id").on(table.usage_id),
+    index("finance_cost_entry_payment_invoice_id").on(table.payment_invoice_id),
+    index("finance_cost_entry_provider_time_effective").on(table.provider, table.time_effective),
+    check(
+      "finance_cost_entry_category_check",
+      sql`${table.category} in ('model_cost', 'payment_fee', 'tax', 'adjustment')`,
+    ),
+    check("finance_cost_entry_direction_check", sql`${table.direction} in ('debit', 'credit')`),
+    check("finance_cost_entry_basis_check", sql`${table.basis} in ('estimated', 'actual', 'allocated')`),
+    check(
+      "finance_cost_entry_source_type_check",
+      sql`${table.source_type} in ('usage', 'provider_statement', 'payment_settlement', 'manual')`,
+    ),
+    check("finance_cost_entry_original_amount_check", sql`${table.original_amount} > 0`),
+    check(
+      "finance_cost_entry_currency_check",
+      sql`(
+        ${table.original_currency} = 'MNT'
+        and ${table.fx_rate_id} is null
+        and ${table.amount_mnt_micros} > 0
+      ) or (
+        ${table.original_currency} = 'USD'
+        and (
+          (${table.fx_rate_id} is null and ${table.amount_mnt_micros} is null)
+          or (${table.fx_rate_id} is not null and ${table.amount_mnt_micros} > 0)
+        )
+      )`,
+    ),
+    check(
+      "finance_cost_entry_source_reference_check",
+      sql`length(trim(${table.source_reference})) between 1 and 255
+        and length(trim(${table.idempotency_key})) between 1 and 255`,
+    ),
+    check(
+      "finance_cost_entry_source_link_check",
+      sql`(${table.source_type} = 'usage' and ${table.usage_id} is not null and ${table.source_reference} = ${table.usage_id})
+        or ${table.source_type} = 'provider_statement'
+        or (${table.source_type} = 'payment_settlement'
+          and (${table.payment_invoice_id} is not null or ${table.payment_event_id} is not null))
+        or ${table.source_type} = 'manual'`,
+    ),
+    check(
+      "finance_cost_entry_usage_model_check",
+      sql`${table.source_type} <> 'usage'
+        or (${table.category} = 'model_cost' and ${table.provider} is not null and ${table.model} is not null)`,
+    ),
+    check("finance_cost_entry_payload_hash_check", sql`length(${table.payload_hash}) = 64`),
   ],
 )
 

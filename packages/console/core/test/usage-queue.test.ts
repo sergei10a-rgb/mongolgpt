@@ -5,6 +5,7 @@ import { resolve } from "node:path"
 import { persistUsageQueueEventWithDb } from "../src/usage-queue"
 import * as schema from "../src/schema-d1"
 import type { UsageQueueEvent } from "../src/quota"
+import type { Database } from "../src/drizzle"
 
 async function migrationSql() {
   const directory = resolve(import.meta.dir, "../migrations-d1")
@@ -45,7 +46,18 @@ describe("Cloudflare usage queue persistence", () => {
     sqlite
       .query("insert into user (id, workspace_id, name, role, monthly_usage) values (?, ?, ?, ?, ?)")
       .run(event.userID, event.workspaceID, "User", "admin", 0)
-    return { sqlite, db: compatibleDb }
+    async function transaction<T>(callback: (tx: Database.TxOrDb) => Promise<T>) {
+      sqlite.exec("BEGIN IMMEDIATE")
+      try {
+        const result = await callback(compatibleDb)
+        sqlite.exec("COMMIT")
+        return result
+      } catch (error) {
+        sqlite.exec("ROLLBACK")
+        throw error
+      }
+    }
+    return { sqlite, db: compatibleDb, transaction }
   }
 
   test("writes usage and account balances exactly once", async () => {
@@ -54,6 +66,23 @@ describe("Cloudflare usage queue persistence", () => {
     await expect(persistUsageQueueEventWithDb(db, event)).resolves.toBe("duplicate")
 
     expect(sqlite.query("select count(*) from usage").get()).toEqual({ "count(*)": 1 })
+    expect(
+      sqlite
+        .query(
+          "select basis, source_type, usage_id, provider, model, original_amount, original_currency, fx_rate_id, amount_mnt_micros from finance_cost_entry",
+        )
+        .get(),
+    ).toEqual({
+      basis: "estimated",
+      source_type: "usage",
+      usage_id: event.id,
+      provider: event.usage.provider,
+      model: event.usage.model,
+      original_amount: event.usage.cost,
+      original_currency: "USD",
+      fx_rate_id: null,
+      amount_mnt_micros: null,
+    })
     expect(sqlite.query("select balance, monthly_usage from billing").get()).toEqual({
       balance: 9_875,
       monthly_usage: 125,
@@ -73,5 +102,38 @@ describe("Cloudflare usage queue persistence", () => {
       monthly_usage: 900,
     })
     expect(sqlite.query('select monthly_usage from "user"').get()).toEqual({ monthly_usage: 800 })
+  })
+
+  test("rejects a conflicting replay instead of silently reusing the usage ID", async () => {
+    const { db } = await fixture()
+    await persistUsageQueueEventWithDb(db, event)
+    await expect(
+      persistUsageQueueEventWithDb(db, {
+        ...event,
+        usage: { ...event.usage, outputTokens: event.usage.outputTokens + 1 },
+      }),
+    ).rejects.toThrow("replay conflicts with the stored usage")
+  })
+
+  test("rolls back both usage and finance cost when account projection is missing", async () => {
+    const { sqlite, transaction } = await fixture()
+    sqlite.query('delete from "user" where id = ? and workspace_id = ?').run(event.userID, event.workspaceID)
+
+    await expect(transaction((db) => persistUsageQueueEventWithDb(db, event))).rejects.toThrow(
+      "references a missing billing or user row",
+    )
+    expect(sqlite.query("select count(*) as count from usage").get()).toEqual({ count: 0 })
+    expect(sqlite.query("select count(*) as count from finance_cost_entry").get()).toEqual({ count: 0 })
+  })
+
+  test("does not create a MongolGPT model cost for BYOK usage", async () => {
+    const { sqlite, db } = await fixture()
+    await persistUsageQueueEventWithDb(db, {
+      ...event,
+      workspaceCost: 0,
+      usage: { ...event.usage, enrichment: { plan: "byok" } },
+    })
+
+    expect(sqlite.query("select count(*) as count from finance_cost_entry").get()).toEqual({ count: 0 })
   })
 })

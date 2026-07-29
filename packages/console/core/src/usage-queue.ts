@@ -3,6 +3,7 @@ import { Database } from "./drizzle"
 import { BillingTable, UsageTable } from "./schema/billing.sql"
 import { UserTable } from "./schema/user.sql"
 import { UsageQueueEventSchema, type UsageQueueEvent } from "./quota"
+import { recordEstimatedModelCostWithDb } from "./finance-ledger"
 
 function resultChanges(result: unknown) {
   if (!result || typeof result !== "object") return 0
@@ -52,7 +53,35 @@ export async function persistUsageQueueEventWithDb(db: Database.TxOrDb, input: U
     })
     .onConflictDoNothing()
 
-  if (resultChanges(inserted) === 0) return "duplicate" as const
+  if (resultChanges(inserted) === 0) {
+    const stored = await db
+      .select()
+      .from(UsageTable)
+      .where(and(eq(UsageTable.workspaceID, event.workspaceID), eq(UsageTable.id, event.id)))
+      .then((rows) => rows[0])
+    if (!stored) throw new Error(`Usage event ${event.id} uniqueness conflict`)
+    assertUsageReplay(stored, event)
+    await recordEstimatedModelCostWithDb(db, {
+      workspaceID: event.workspaceID,
+      usageID: event.id,
+      provider: event.usage.provider,
+      model: event.usage.model,
+      costUSDInMicrocents: event.usage.cost,
+      effectiveAt: event.timeCreated,
+      plan: event.usage.enrichment?.plan,
+    })
+    return "duplicate" as const
+  }
+
+  await recordEstimatedModelCostWithDb(db, {
+    workspaceID: event.workspaceID,
+    usageID: event.id,
+    provider: event.usage.provider,
+    model: event.usage.model,
+    costUSDInMicrocents: event.usage.cost,
+    effectiveAt: event.timeCreated,
+    plan: event.usage.enrichment?.plan,
+  })
 
   const billing = await db
     .update(BillingTable)
@@ -113,4 +142,31 @@ export async function persistUsageQueueEventWithDb(db: Database.TxOrDb, input: U
 
 export function persistUsageQueueEvent(input: UsageQueueEvent) {
   return Database.transaction((db) => persistUsageQueueEventWithDb(db, input))
+}
+
+function assertUsageReplay(stored: typeof UsageTable.$inferSelect, replay: UsageQueueEvent) {
+  const usage = replay.usage
+  if (
+    stored.timeCreated.getTime() !== replay.timeCreated ||
+    stored.model !== usage.model ||
+    stored.provider !== usage.provider ||
+    stored.inputTokens !== usage.inputTokens ||
+    stored.outputTokens !== usage.outputTokens ||
+    stored.reasoningTokens !== (usage.reasoningTokens ?? null) ||
+    stored.cacheReadTokens !== (usage.cacheReadTokens ?? null) ||
+    stored.cacheWrite5mTokens !== (usage.cacheWrite5mTokens ?? null) ||
+    stored.cacheWrite1hTokens !== (usage.cacheWrite1hTokens ?? null) ||
+    stored.cost !== usage.cost ||
+    stored.inputCost !== (usage.inputCost ?? null) ||
+    stored.outputCost !== (usage.outputCost ?? null) ||
+    stored.cacheReadCost !== (usage.cacheReadCost ?? null) ||
+    stored.cacheWriteCost !== (usage.cacheWriteCost ?? null) ||
+    stored.country !== (usage.country ?? null) ||
+    stored.continent !== (usage.continent ?? null) ||
+    stored.keyID !== (usage.keyID ?? null) ||
+    stored.sessionID !== (usage.sessionID ?? null) ||
+    stored.enrichment?.plan !== usage.enrichment?.plan
+  ) {
+    throw new Error(`Usage event ${replay.id} replay conflicts with the stored usage`)
+  }
 }

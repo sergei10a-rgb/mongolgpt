@@ -13,6 +13,7 @@ import { centsToMicroCents } from "@mongolgpt/console-core/util/price.js"
 import { getMonthlyBounds, getWeekBounds } from "@mongolgpt/console-core/util/date.js"
 import { Identifier } from "@mongolgpt/console-core/identifier.js"
 import { recordPlanUsageWithDb } from "@mongolgpt/console-core/plan-usage.js"
+import { recordEstimatedModelCostWithDb } from "@mongolgpt/console-core/finance-ledger.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { ZenData } from "@mongolgpt/console-core/model.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
@@ -1345,6 +1346,8 @@ export async function handler(
         .values({
           workspaceID: authInfo.workspaceID,
           id: usageID,
+          timeCreated: now,
+          timeUpdated: now,
           model: modelInfo.id,
           provider: providerInfo.id,
           inputTokens,
@@ -1366,6 +1369,16 @@ export async function handler(
         })
         .onConflictDoNothing()
       if (inserted.meta.changes === 0) return
+
+      await recordEstimatedModelCostWithDb(db, {
+        workspaceID: authInfo.workspaceID,
+        usageID,
+        provider: providerInfo.id,
+        model: modelInfo.id,
+        costUSDInMicrocents: cost,
+        effectiveAt: nowMs,
+        plan: enrichment?.plan,
+      })
 
       if (billingSource === "plan") {
         const plan = authInfo.planEntitlement!.plan
