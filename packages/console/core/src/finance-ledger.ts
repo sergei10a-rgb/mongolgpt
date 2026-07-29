@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import { z } from "zod"
 import { Database } from "./drizzle"
 import { Identifier } from "./identifier"
@@ -9,6 +9,8 @@ import {
   FinanceCostDirections,
   FinanceCostEntryTable,
   FinanceCostSourceTypes,
+  FinanceCostValuationMethods,
+  FinanceCostValuationTable,
   FinanceCurrencies,
   FinanceFxRateTable,
 } from "./schema/billing.sql"
@@ -102,8 +104,21 @@ export const RecordFinanceCostEntrySchema = z
     }
   })
 
+export const RecordFinanceCostValuationSchema = z
+  .object({
+    id: identifier.optional(),
+    costEntryID: identifier,
+    fxRateID: identifier,
+    method: z.enum(FinanceCostValuationMethods),
+    version: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    idempotencyKey: externalIdentifier,
+    payloadHash,
+  })
+  .strict()
+
 export type RecordFinanceFxRateInput = z.input<typeof RecordFinanceFxRateSchema>
 export type RecordFinanceCostEntryInput = z.input<typeof RecordFinanceCostEntrySchema>
+export type RecordFinanceCostValuationInput = z.input<typeof RecordFinanceCostValuationSchema>
 
 export async function recordFinanceFxRateWithDb(db: Database.TxOrDb, input: RecordFinanceFxRateInput) {
   const rate = RecordFinanceFxRateSchema.parse(input)
@@ -174,6 +189,74 @@ export function recordFinanceCostEntry(input: RecordFinanceCostEntryInput) {
   return Database.transaction((db) => recordFinanceCostEntryWithDb(db, input))
 }
 
+export async function recordFinanceCostValuationWithDb(db: Database.TxOrDb, input: RecordFinanceCostValuationInput) {
+  const valuation = RecordFinanceCostValuationSchema.parse(input)
+  const costEntry = await db
+    .select()
+    .from(FinanceCostEntryTable)
+    .where(eq(FinanceCostEntryTable.id, valuation.costEntryID))
+    .then((rows) => rows[0])
+  if (!costEntry) throw new Error("Finance cost valuation references a missing cost entry")
+  if (costEntry.original_currency !== "USD" || costEntry.fx_rate_id !== null || costEntry.amount_mnt_micros !== null) {
+    throw new Error("Finance cost valuation requires an unvalued USD cost entry")
+  }
+
+  const rate = await db
+    .select()
+    .from(FinanceFxRateTable)
+    .where(eq(FinanceFxRateTable.id, valuation.fxRateID))
+    .then((rows) => rows[0])
+  if (!rate) throw new Error("Finance cost valuation references a missing FX rate")
+  if (rate.base_currency !== "USD" || rate.quote_currency !== "MNT") {
+    throw new Error("Finance cost valuation references an incompatible FX rate")
+  }
+
+  const amountMntMicros = valueUsdInMntMicros(costEntry.original_amount, rate.rate_micromnt_per_usd)
+  const stored = await findCostValuation(db, valuation)
+  if (stored) {
+    assertCostValuationReplay(stored, valuation, amountMntMicros)
+    return { kind: "duplicate" as const, valuation: stored }
+  }
+
+  const latest = await db
+    .select({ version: FinanceCostValuationTable.version })
+    .from(FinanceCostValuationTable)
+    .where(eq(FinanceCostValuationTable.cost_entry_id, valuation.costEntryID))
+    .orderBy(desc(FinanceCostValuationTable.version))
+    .limit(1)
+    .then((rows) => rows[0])
+  const expectedVersion = (latest?.version ?? 0) + 1
+  if (valuation.version !== expectedVersion) {
+    throw new Error(`Finance cost valuation version must be ${expectedVersion}`)
+  }
+
+  const inserted = await db
+    .insert(FinanceCostValuationTable)
+    .values({
+      id: valuation.id ?? Identifier.create("financeCostValuation"),
+      cost_entry_id: valuation.costEntryID,
+      fx_rate_id: valuation.fxRateID,
+      method: valuation.method,
+      version: valuation.version,
+      amount_mnt_micros: amountMntMicros,
+      idempotency_key: valuation.idempotencyKey,
+      payload_hash: valuation.payloadHash,
+    })
+    .onConflictDoNothing()
+
+  const recorded = await findCostValuation(db, valuation)
+  if (!recorded) throw new Error("Finance cost valuation uniqueness conflict")
+  assertCostValuationReplay(recorded, valuation, amountMntMicros)
+  return {
+    kind: resultChanges(inserted) === 0 ? ("duplicate" as const) : ("created" as const),
+    valuation: recorded,
+  }
+}
+
+export function recordFinanceCostValuation(input: RecordFinanceCostValuationInput) {
+  return Database.transaction((db) => recordFinanceCostValuationWithDb(db, input))
+}
+
 const EstimatedModelCostSchema = z
   .object({
     workspaceID: identifier,
@@ -233,8 +316,7 @@ async function resolveMntValuation(db: Database.TxOrDb, entry: z.infer<typeof Re
   if (rate.base_currency !== "USD" || rate.quote_currency !== "MNT") {
     throw new Error("Finance cost entry references an incompatible FX rate")
   }
-  const numerator = BigInt(entry.originalAmount) * BigInt(rate.rate_micromnt_per_usd)
-  return safeNumber((numerator + USD_MICROCENTS_PER_USD / 2n) / USD_MICROCENTS_PER_USD)
+  return valueUsdInMntMicros(entry.originalAmount, rate.rate_micromnt_per_usd)
 }
 
 async function findFxRate(db: Database.TxOrDb, input: z.infer<typeof RecordFinanceFxRateSchema>) {
@@ -270,6 +352,25 @@ async function findCostEntry(db: Database.TxOrDb, input: z.infer<typeof RecordFi
         eq(FinanceCostEntryTable.category, input.category),
         eq(FinanceCostEntryTable.direction, input.direction),
         eq(FinanceCostEntryTable.basis, input.basis),
+      ),
+    )
+    .then((rows) => rows[0])
+}
+
+async function findCostValuation(db: Database.TxOrDb, input: z.infer<typeof RecordFinanceCostValuationSchema>) {
+  const byKey = await db
+    .select()
+    .from(FinanceCostValuationTable)
+    .where(eq(FinanceCostValuationTable.idempotency_key, input.idempotencyKey))
+    .then((rows) => rows[0])
+  if (byKey) return byKey
+  return db
+    .select()
+    .from(FinanceCostValuationTable)
+    .where(
+      and(
+        eq(FinanceCostValuationTable.cost_entry_id, input.costEntryID),
+        eq(FinanceCostValuationTable.version, input.version),
       ),
     )
     .then((rows) => rows[0])
@@ -318,6 +419,29 @@ function assertCostEntryReplay(
   ) {
     throw new Error("Finance cost entry replay conflicts with the stored entry")
   }
+}
+
+function assertCostValuationReplay(
+  stored: typeof FinanceCostValuationTable.$inferSelect,
+  replay: z.infer<typeof RecordFinanceCostValuationSchema>,
+  amountMntMicros: number,
+) {
+  if (
+    stored.cost_entry_id !== replay.costEntryID ||
+    stored.fx_rate_id !== replay.fxRateID ||
+    stored.method !== replay.method ||
+    stored.version !== replay.version ||
+    stored.amount_mnt_micros !== amountMntMicros ||
+    stored.idempotency_key !== replay.idempotencyKey ||
+    stored.payload_hash !== replay.payloadHash
+  ) {
+    throw new Error("Finance cost valuation replay conflicts with the stored valuation")
+  }
+}
+
+function valueUsdInMntMicros(amountMicrocents: number, rateMicromntPerUSD: number) {
+  const numerator = BigInt(amountMicrocents) * BigInt(rateMicromntPerUSD)
+  return safeNumber((numerator + USD_MICROCENTS_PER_USD / 2n) / USD_MICROCENTS_PER_USD)
 }
 
 function safeNumber(value: bigint) {

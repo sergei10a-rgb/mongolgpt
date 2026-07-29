@@ -8,6 +8,8 @@ export {
   FinanceCostDirections,
   FinanceCostEntryTable,
   FinanceCostSourceTypes,
+  FinanceCostValuationMethods,
+  FinanceCostValuationTable,
   FinanceCurrencies,
   FinanceFxRateTable,
   LegacyPlanCodes,

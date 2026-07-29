@@ -6,9 +6,12 @@ import type { Database } from "../src/drizzle"
 import {
   recordEstimatedModelCostWithDb,
   recordFinanceCostEntryWithDb,
+  recordFinanceCostValuationWithDb,
   recordFinanceFxRateWithDb,
 } from "../src/finance-ledger"
 import * as schema from "../src/schema-d1"
+
+// oxlint-disable typescript-eslint/await-thenable -- Bun's async expect matchers are thenable at runtime.
 
 async function migrationSql() {
   const directory = resolve(import.meta.dir, "../migrations-d1")
@@ -25,6 +28,7 @@ describe("immutable finance ledger", () => {
     const sqlite = new SQLite(":memory:")
     sqlite.exec(await migrationSql())
     const drizzleDb: SQLiteBunDatabase<typeof schema> = drizzle({ client: sqlite, schema })
+    // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- Test drivers share this schema contract.
     const db = drizzleDb as unknown as Database.TxOrDb
     sqlite.query("insert into workspace (id, name) values (?, ?)").run("wrk_finance", "Finance test")
     return { sqlite, db }
@@ -115,7 +119,7 @@ describe("immutable finance ledger", () => {
       sourceReference: "nvidia:statement:1",
       provider: "nvidia",
       model: "meta/llama",
-      originalAmount: 25,
+      originalAmount: 25_000_000,
       originalCurrency: "USD" as const,
       idempotencyKey: "nvidia:statement:1:model-cost",
       payloadHash: hash("e"),
@@ -127,6 +131,75 @@ describe("immutable finance ledger", () => {
     await expect(recordFinanceCostEntryWithDb(db, { ...entry, originalAmount: 26 })).rejects.toThrow(
       "Finance cost entry replay conflicts",
     )
+    expect(
+      sqlite.query("select fx_rate_id, amount_mnt_micros from finance_cost_entry where id = ?").get(entry.id),
+    ).toEqual({ fx_rate_id: null, amount_mnt_micros: null })
+
+    await recordFinanceFxRateWithDb(db, {
+      id: "fxr_unvalued_v1",
+      rateMicromntPerUSD: 3_450_123_456,
+      source: "mongolbank",
+      sourceReference: "2026-07-29:USD",
+      idempotencyKey: "fx:mongolbank:2026-07-29:USD",
+      payloadHash: hash("3"),
+      effectiveAt,
+    })
+    const valuation = {
+      id: "fvl_unvalued_v1",
+      costEntryID: entry.id,
+      fxRateID: "fxr_unvalued_v1",
+      method: "historical_spot" as const,
+      version: 1,
+      idempotencyKey: "valuation:nvidia:statement:1:v1",
+      payloadHash: hash("4"),
+    }
+    await expect(recordFinanceCostValuationWithDb(db, valuation)).resolves.toMatchObject({ kind: "created" })
+    await expect(recordFinanceCostValuationWithDb(db, valuation)).resolves.toMatchObject({ kind: "duplicate" })
+    await expect(recordFinanceCostValuationWithDb(db, { ...valuation, method: "manual" })).rejects.toThrow(
+      "Finance cost valuation replay conflicts",
+    )
+
+    await recordFinanceFxRateWithDb(db, {
+      id: "fxr_unvalued_v2",
+      rateMicromntPerUSD: 3_500_000_000,
+      source: "provider_settlement",
+      sourceReference: "nvidia:statement:1:USD",
+      idempotencyKey: "fx:nvidia:statement:1:USD",
+      payloadHash: hash("5"),
+      effectiveAt,
+    })
+    const correction = {
+      id: "fvl_unvalued_v2",
+      costEntryID: entry.id,
+      fxRateID: "fxr_unvalued_v2",
+      method: "provider_settlement" as const,
+      version: 2,
+      idempotencyKey: "valuation:nvidia:statement:1:v2",
+      payloadHash: hash("6"),
+    }
+    await expect(recordFinanceCostValuationWithDb(db, { ...correction, version: 3 })).rejects.toThrow(
+      "Finance cost valuation version must be 2",
+    )
+    await expect(recordFinanceCostValuationWithDb(db, correction)).resolves.toMatchObject({ kind: "created" })
+
+    expect(
+      sqlite
+        .query("select fx_rate_id, method, version, amount_mnt_micros from finance_cost_valuation order by version")
+        .all(),
+    ).toEqual([
+      {
+        fx_rate_id: "fxr_unvalued_v1",
+        method: "historical_spot",
+        version: 1,
+        amount_mnt_micros: 862_530_864,
+      },
+      {
+        fx_rate_id: "fxr_unvalued_v2",
+        method: "provider_settlement",
+        version: 2,
+        amount_mnt_micros: 875_000_000,
+      },
+    ])
     expect(
       sqlite.query("select fx_rate_id, amount_mnt_micros from finance_cost_entry where id = ?").get(entry.id),
     ).toEqual({ fx_rate_id: null, amount_mnt_micros: null })
@@ -217,6 +290,31 @@ describe("immutable finance ledger", () => {
       payloadHash: hash("2"),
       effectiveAt,
     })
+    await recordFinanceCostEntryWithDb(db, {
+      id: "fce_immutable_usd",
+      workspaceID: "wrk_finance",
+      category: "model_cost",
+      direction: "debit",
+      basis: "actual",
+      sourceType: "provider_statement",
+      sourceReference: "immutable:model-cost",
+      provider: "openrouter",
+      model: "openai/gpt",
+      originalAmount: 100_000_000,
+      originalCurrency: "USD",
+      idempotencyKey: "immutable:model-cost",
+      payloadHash: hash("7"),
+      effectiveAt,
+    })
+    await recordFinanceCostValuationWithDb(db, {
+      id: "fvl_immutable",
+      costEntryID: "fce_immutable_usd",
+      fxRateID: "fxr_immutable",
+      method: "historical_spot",
+      version: 1,
+      idempotencyKey: "immutable:model-cost:valuation",
+      payloadHash: hash("8"),
+    })
 
     expect(() =>
       sqlite.query("update finance_fx_rate set rate_micromnt_per_usd = ? where id = ?").run(1, "fxr_immutable"),
@@ -230,5 +328,20 @@ describe("immutable finance ledger", () => {
     expect(() => sqlite.query("delete from finance_cost_entry where id = ?").run("fce_immutable")).toThrow(
       "finance_cost_entry is immutable",
     )
+    expect(() =>
+      sqlite.query("update finance_cost_valuation set amount_mnt_micros = ? where id = ?").run(1, "fvl_immutable"),
+    ).toThrow("finance_cost_valuation is immutable")
+    expect(() => sqlite.query("delete from finance_cost_valuation where id = ?").run("fvl_immutable")).toThrow(
+      "finance_cost_valuation is immutable",
+    )
+    expect(() =>
+      sqlite
+        .query(
+          `insert into finance_cost_valuation
+            (id, cost_entry_id, fx_rate_id, method, version, amount_mnt_micros, idempotency_key, payload_hash)
+           values (?, ?, ?, 'manual', 1, 1, ?, ?)`,
+        )
+        .run("fvl_orphan", "fce_missing", "fxr_immutable", "orphan:valuation", hash("9")),
+    ).toThrow("finance_cost_valuation requires an unvalued USD cost entry")
   })
 })

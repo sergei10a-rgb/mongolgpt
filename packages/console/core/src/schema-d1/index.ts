@@ -41,6 +41,7 @@ export const FinanceCostCategories = ["model_cost", "payment_fee", "tax", "adjus
 export const FinanceCostDirections = ["debit", "credit"] as const
 export const FinanceCostBases = ["estimated", "actual", "allocated"] as const
 export const FinanceCostSourceTypes = ["usage", "provider_statement", "payment_settlement", "manual"] as const
+export const FinanceCostValuationMethods = ["historical_spot", "provider_settlement", "manual"] as const
 export const NewsletterSubscriberStatus = ["active", "unsubscribed"] as const
 export const NewsletterSubscriberSource = ["console", "stats"] as const
 export const EnterpriseInquiryStatus = ["new", "reviewing", "resolved", "spam"] as const
@@ -766,6 +767,36 @@ export const FinanceCostEntryTable = sqliteTable(
         or (${table.category} = 'model_cost' and ${table.provider} is not null and ${table.model} is not null)`,
     ),
     check("finance_cost_entry_payload_hash_check", sql`length(${table.payload_hash}) = 64`),
+  ],
+)
+
+export const FinanceCostValuationTable = sqliteTable(
+  "finance_cost_valuation",
+  {
+    id: id(),
+    cost_entry_id: ulid("cost_entry_id").notNull(),
+    fx_rate_id: ulid("fx_rate_id").notNull(),
+    method: text("method", { enum: FinanceCostValuationMethods }).notNull(),
+    version: integer("version").notNull(),
+    amount_mnt_micros: integer("amount_mnt_micros").notNull(),
+    idempotency_key: text("idempotency_key", { length: 255 }).notNull(),
+    payload_hash: text("payload_hash", { length: 64 }).notNull(),
+    time_created: utc("time_created").notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    uniqueIndex("finance_cost_valuation_idempotency_key").on(table.idempotency_key),
+    uniqueIndex("finance_cost_valuation_entry_version").on(table.cost_entry_id, table.version),
+    index("finance_cost_valuation_entry_created").on(table.cost_entry_id, table.time_created),
+    index("finance_cost_valuation_fx_rate_id").on(table.fx_rate_id),
+    check(
+      "finance_cost_valuation_method_check",
+      sql`${table.method} in ('historical_spot', 'provider_settlement', 'manual')`,
+    ),
+    check("finance_cost_valuation_version_check", sql`${table.version} > 0`),
+    check("finance_cost_valuation_amount_check", sql`${table.amount_mnt_micros} > 0`),
+    check("finance_cost_valuation_identity_check", sql`length(trim(${table.idempotency_key})) between 1 and 255`),
+    check("finance_cost_valuation_payload_hash_check", sql`length(${table.payload_hash}) = 64`),
   ],
 )
 

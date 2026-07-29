@@ -297,6 +297,17 @@ const contract = {
     "time_effective",
     "time_created",
   ],
+  FinanceCostValuationTable: [
+    "id",
+    "cost_entry_id",
+    "fx_rate_id",
+    "method",
+    "version",
+    "amount_mnt_micros",
+    "idempotency_key",
+    "payload_hash",
+    "time_created",
+  ],
   CouponTable: ["email", "type", "timeRedeemed"],
   IpTable: ["ip", "timeCreated", "timeUpdated", "timeDeleted", "usage"],
   IpRateLimitTable: ["ip", "interval", "count"],
@@ -367,6 +378,7 @@ describe("D1 schema contract", () => {
     expect(d1.FinanceCostDirections).toEqual(["debit", "credit"])
     expect(d1.FinanceCostBases).toEqual(["estimated", "actual", "allocated"])
     expect(d1.FinanceCostSourceTypes).toEqual(["usage", "provider_statement", "payment_settlement", "manual"])
+    expect(d1.FinanceCostValuationMethods).toEqual(["historical_spot", "provider_settlement", "manual"])
     expect(d1.PaymentInvoiceStatuses).toEqual([
       "created",
       "pending",
