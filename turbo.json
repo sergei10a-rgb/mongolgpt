@@ -1,7 +1,7 @@
 {
   "$schema": "https://v2-8-13.turborepo.dev/schema.json",
-  "globalEnv": ["CI", "MONGOLGPT_DISABLE_SHARE"],
-  "globalPassThroughEnv": ["CI", "MONGOLGPT_DISABLE_SHARE"],
+  "globalEnv": ["CI", "MONGOLGPT_DISABLE_SHARE", "MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER"],
+  "globalPassThroughEnv": ["CI", "MONGOLGPT_DISABLE_SHARE", "MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER"],
   "tasks": {
     "typecheck": {},
     "build": {
