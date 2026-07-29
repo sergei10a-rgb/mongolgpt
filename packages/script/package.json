@@ -14,6 +14,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./cloudflare-access": "./src/cloudflare-access.ts",
     "./deployment": "./src/deployment.ts",
     "./deployment-smoke-contract": "./src/deployment-smoke-contract.ts"
   },

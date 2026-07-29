@@ -21,6 +21,7 @@ Production domain-ийг `mgpt.mn` гэж үзвэл:
 | Web app               | `https://app.mgpt.mn`       |
 | Монгол баримт бичиг   | `https://docs.mgpt.mn/docs` |
 | OAuth үйлчилгээ       | `https://auth.mgpt.mn`      |
+| Админ удирдлага       | `https://admin.mgpt.mn`     |
 | Sync API (сонголттой) | `https://api.mgpt.mn`       |
 
 `dev` орчинд эдгээрийн domain-ийн өмнө `dev.` нэмэгдэнэ. Жишээ нь `https://app.dev.mgpt.mn`.
@@ -35,6 +36,7 @@ Production domain-ийг `mgpt.mn` гэж үзвэл:
 | Web app                      | Static Assets / Worker           |
 | Console ба Free Auto gateway | SolidStart Worker                |
 | OAuth                        | Worker + KV                      |
+| Админ хамгаалалт             | Cloudflare Access + MFA          |
 | Үндсэн өгөгдөл               | D1                               |
 | Token quota, атомик тоолуур  | SQLite-backed Durable Objects    |
 | Өндөр ачааллын usage бичилт  | Queues + dead-letter Queue + D1  |
@@ -97,7 +99,36 @@ Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог х
 | Secret   | `ZEN_MODELS1`                  | Баталгаажсан Free Auto model/provider JSON; provider key-ийг агуулна |
 | Secret   | `ZEN_MODELS2`…`ZEN_MODELS30`   | `ZEN_MODELS1` багтахгүй үед JSON-ийн дараалсан optional хэсгүүд      |
 
-Workflow нь secret-гүй verify job-ийг эхэлж ажиллуулаад, зөвхөн `main` revision болон сонгосон GitHub Environment-д deploy job нээнэ. Deploy step эдгээр утгыг command argument-д гаргалгүй stdin-аар тухайн SST stage-ийн encrypted secret store-д шинэчилсний дараа deploy хийнэ. GitHub Environment-ийн deployment branch дүрмийг `main`-ээр хязгаарлана. Иймээс нууц утгыг repository файл, command history эсвэл SST placeholder-д бичихгүй. `deploy:preflight` нь OAuth, session, plan/quota болон Free Auto JSON-ийг Cloudflare resource үүсгэхээс өмнө runtime-ийн яг ижил schema-аар шалгана.
+Admin-ийг асаах environment-д дараах хоёр secret нэмнэ.
+
+| Төрөл  | Нэр                                | Утга                                                         |
+| ------ | ---------------------------------- | ------------------------------------------------------------ |
+| Secret | `CLOUDFLARE_ACCESS_API_TOKEN`      | Зөвхөн Access application үүсгэх тусгай Cloudflare API token |
+| Secret | `MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS` | Админы зөвшөөрөгдсөн имэйлүүд; таслал эсвэл шинэ мөрөөр      |
+
+`CLOUDFLARE_ACCESS_API_TOKEN`-ийг Cloudflare-ийн **My Profile → API Tokens → Create Custom Token** хэсэгт дараах хамгийн бага эрхээр үүсгэнэ.
+
+| Хамрах хүрээ | Үйлчилгээ                                               | Эрх  |
+| ------------ | ------------------------------------------------------- | ---- |
+| Account      | Access: Apps and Policies                               | Edit |
+| Account      | Access: Organizations, Identity Providers, and Groups   | Edit |
+| Resources    | Include → MongolGPT байрлаж буй ганц Cloudflare account |      |
+
+Zone permission, DNS edit, Worker edit, D1, R2 болон KV эрх энэ тусгай token-д хэрэггүй. Ерөнхий `CLOUDFLARE_API_TOKEN`-оос тусад нь хадгална. Access token нь SST config ажиллах үед л ашиглагдах бөгөөд admin Worker-т resource, environment variable эсвэл secret хэлбэрээр холбогдохгүй.
+
+Cloudflare Zero Trust-ийг тухайн account дээр нэг удаа эхлүүлж, team domain болон дор хаяж нэг login method/identity provider-ийг идэвхжүүлсэн байна. Үүний дараа IaC нь:
+
+- organization-ийн одоогийн бүх тохиргоог GET-ээр авч хадгалан, Independent MFA-д TOTP, biometrics, security key аргыг idempotent PUT-ээр нэмнэ;
+- global MFA-г бусад application-д хүчээр шаардахгүй бөгөөд stack устахад organization MFA-г автоматаар сулруулахгүй;
+- `admin.<stage-domain>` self-hosted Access application үүсгэнэ;
+- зөвхөн `MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS`-ийн имэйлүүдийг allow хийнэ;
+- application болон policy түвшинд independent MFA шаардана;
+- Access audience болон team domain-ийг Cloudflare-аас автоматаар авч Worker-т холбоно;
+- HttpOnly, SameSite Strict болон binding cookie хамгаалалтыг асаана.
+
+`MONGOLGPT_ADMIN_ACCESS_TEAM_DOMAIN`, `MONGOLGPT_ADMIN_ACCESS_AUDIENCE`, `MONGOLGPT_ADMIN_MFA_ENFORCED` гэсэн гар тохиргоо ашиглахгүй. `everyone` болон `bypass` policy үүсгэхгүй.
+
+Workflow нь secret-гүй verify job-ийг эхэлж ажиллуулаад, зөвхөн `main` revision болон сонгосон GitHub Environment-д deploy job нээнэ. Access token нь зөвхөн admin асаалттай deploy-д орчинд орно. Deploy step эдгээр утгыг command argument-д гаргалгүй stdin-аар тухайн SST stage-ийн encrypted secret store-д шинэчилсний дараа deploy хийнэ. GitHub Environment-ийн deployment branch дүрмийг `main`-ээр хязгаарлана. Иймээс нууц утгыг repository файл, command history эсвэл SST placeholder-д бичихгүй. `deploy:preflight` нь OAuth, session, plan/quota, Free Auto JSON болон Access-ийн organization/login method/application жагсаалтыг Cloudflare resource үүсгэхээс өмнө шалгана. Энэ нь side effect-гүй Read шалгалт тул token-ийн Edit эрхийг ялгаж нотлохгүй; organization MFA PUT болон Access application create нь deploy дотор Edit эрхийг fail-closed байдлаар бодитоор батална.
 
 NVIDIA API Catalog-ийн trial endpoint нь зөвхөн туршилт, үнэлгээнд зориулагдсан. Production `ZEN_MODELS` тохиргоонд `integrate.api.nvidia.com` ашиглах бол тусдаа production subscription/license-аа баталгаажуулсны дараа тухайн provider дээр `productionUseApproved: true` гэж санаатай тэмдэглэнэ. Энэ баталгаа байхгүй production deploy-ийг preflight зогсооно.
 

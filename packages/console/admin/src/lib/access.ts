@@ -33,8 +33,8 @@ const remoteKeyResolvers = new Map<string, JWTVerifyGetKey>()
 
 export function loadAdminAccessConfig() {
   return parseAdminAccessConfig({
-    teamDomain: readSecret("MongolGPTAdminAccessTeamDomain"),
-    audience: readSecret("MongolGPTAdminAccessAudience"),
+    teamDomain: readResourceProperty("AdminAccessConfig", "teamDomain"),
+    audience: readResourceProperty("AdminAccessConfig", "audience"),
     bootstrapEmails: readSecret("MongolGPTAdminBootstrapEmails"),
   })
 }
@@ -87,33 +87,22 @@ export async function verifyCloudflareAccessAssertion(
   }
 
   try {
-    const result = await jwtVerify(
-      token,
-      keyResolver ?? remoteKeyResolver(config.teamDomain),
-      {
-        algorithms: ["RS256"],
-        audience: config.audience,
-        issuer: config.teamDomain,
-        clockTolerance: 5,
-      },
-    )
+    const result = await jwtVerify(token, keyResolver ?? remoteKeyResolver(config.teamDomain), {
+      algorithms: ["RS256"],
+      audience: config.audience,
+      issuer: config.teamDomain,
+      clockTolerance: 5,
+    })
     if (result.protectedHeader.alg !== "RS256") {
       throw new AdminAccessVerificationError("Cloudflare Access гарын үсгийн алгоритм буруу байна.")
     }
     if (typeof result.payload.exp !== "number" || typeof result.payload.iat !== "number") {
       throw new AdminAccessVerificationError("Cloudflare Access токены хугацаа дутуу байна.")
     }
-    if (
-      result.payload.iat > Math.floor(Date.now() / 1000) + 5 ||
-      result.payload.exp <= result.payload.iat
-    ) {
+    if (result.payload.iat > Math.floor(Date.now() / 1000) + 5 || result.payload.exp <= result.payload.iat) {
       throw new AdminAccessVerificationError("Cloudflare Access токены хугацаа буруу байна.")
     }
-    if (
-      typeof result.payload.sub !== "string" ||
-      !result.payload.sub.trim() ||
-      result.payload.sub.length > 255
-    ) {
+    if (typeof result.payload.sub !== "string" || !result.payload.sub.trim() || result.payload.sub.length > 255) {
       throw new AdminAccessVerificationError("Cloudflare Access хэрэглэгчийн таних утга дутуу байна.")
     }
     if (typeof result.payload.email !== "string") {
@@ -152,6 +141,23 @@ function readSecret(name: string) {
   throw new AdminAccessConfigurationError(`${name} нууц тохиргоо хоосон байна.`)
 }
 
+function readResourceProperty(name: string, property: string) {
+  try {
+    const resource: unknown = Resource[name]
+    if (record(resource)) {
+      const value = resource[property]
+      if (typeof value === "string") return value
+    }
+  } catch {
+    throw new AdminAccessConfigurationError(`${name}.${property} тохиргоо холбогдоогүй байна.`)
+  }
+  throw new AdminAccessConfigurationError(`${name}.${property} тохиргоо хоосон байна.`)
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
 function requireText(value: unknown, name: string) {
   if (typeof value !== "string" || !value.trim()) {
     throw new AdminAccessConfigurationError(`${name} тохиргоо хоосон байна.`)
@@ -163,16 +169,8 @@ function parseTeamDomain(value: string) {
   try {
     const url = new URL(value)
     const exactOrigin = value === url.origin || value === `${url.origin}/`
-    const cloudflareTeam =
-      url.hostname.endsWith(".cloudflareaccess.com") && url.hostname !== "cloudflareaccess.com"
-    if (
-      url.protocol !== "https:" ||
-      !cloudflareTeam ||
-      !exactOrigin ||
-      url.username ||
-      url.password ||
-      url.port
-    ) {
+    const cloudflareTeam = url.hostname.endsWith(".cloudflareaccess.com") && url.hostname !== "cloudflareaccess.com"
+    if (url.protocol !== "https:" || !cloudflareTeam || !exactOrigin || url.username || url.password || url.port) {
       throw new Error("invalid origin")
     }
     return url

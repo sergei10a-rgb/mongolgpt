@@ -20,8 +20,6 @@ export const hostedSstSecretNames = [
   "GOOGLE_CLIENT_ID",
   "MONGOLGPT_PLAN_LIMITS",
   "ZEN_SESSION_SECRET",
-  "MongolGPTAdminAccessTeamDomain",
-  "MongolGPTAdminAccessAudience",
   "MongolGPTAdminBootstrapEmails",
   ...modelSecretNames,
 ] as const
@@ -91,18 +89,7 @@ export function preflightDeployment(input: {
   }
 
   if (adminEnabled) {
-    if (env.MONGOLGPT_ADMIN_MFA_ENFORCED !== "true") {
-      issues.push("Admin launch-д MONGOLGPT_ADMIN_MFA_ENFORCED=true заавал байна.")
-    }
-    validateCloudflareAccessTeamDomain(
-      deploymentSecret(env, "MongolGPTAdminAccessTeamDomain"),
-      issues,
-    )
-    validateNonEmptyNoWhitespace(
-      "MongolGPTAdminAccessAudience",
-      deploymentSecret(env, "MongolGPTAdminAccessAudience"),
-      issues,
-    )
+    requireValue("CLOUDFLARE_ACCESS_API_TOKEN", env.CLOUDFLARE_ACCESS_API_TOKEN, issues)
     validateBootstrapEmails(deploymentSecret(env, "MongolGPTAdminBootstrapEmails"), issues)
   }
 
@@ -340,44 +327,6 @@ function validateDomain(value: string | undefined, issues: string[]) {
     }
   }
   return domain
-}
-
-function validateCloudflareAccessTeamDomain(value: string | undefined, issues: string[]) {
-  const raw = value?.trim() ?? ""
-  if (!raw) {
-    issues.push("MongolGPTAdminAccessTeamDomain дутуу байна.")
-    return
-  }
-  try {
-    const url = new URL(raw)
-    if (
-      url.protocol !== "https:" ||
-      url.pathname !== "/" ||
-      url.search ||
-      url.hash ||
-      url.username ||
-      url.password ||
-      url.port
-    ) {
-      issues.push("MongolGPTAdminAccessTeamDomain нь яг https://<team>.cloudflareaccess.com хэлбэртэй байна.")
-      return
-    }
-    const hostname = url.hostname.toLowerCase()
-    if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.cloudflareaccess\.com$/.test(hostname)) {
-      issues.push("MongolGPTAdminAccessTeamDomain нь .cloudflareaccess.com домэйн байх ёстой.")
-    }
-  } catch {
-    issues.push("MongolGPTAdminAccessTeamDomain хүчинтэй HTTPS URL биш байна.")
-  }
-}
-
-function validateNonEmptyNoWhitespace(name: string, value: string | undefined, issues: string[]) {
-  const normalized = value?.trim() ?? ""
-  if (!normalized) {
-    issues.push(`${name} дутуу байна.`)
-  } else if (/\s/.test(normalized)) {
-    issues.push(`${name} хоосон зай агуулахгүй байна.`)
-  }
 }
 
 function validateBootstrapEmails(value: string | undefined, issues: string[]) {

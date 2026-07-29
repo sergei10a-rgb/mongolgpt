@@ -94,6 +94,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     for (const name of hostedSstSecretNames) {
       expect(env).toHaveProperty(`SST_SECRET_${name}`)
     }
+    expect(env).toHaveProperty(
+      "CLOUDFLARE_ACCESS_API_TOKEN",
+      "${{ inputs.admin && secrets.CLOUDFLARE_ACCESS_API_TOKEN || '' }}",
+    )
 
     const run = deployStep?.run ?? ""
     const preflight = run.indexOf("deploy:preflight")
@@ -108,7 +112,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
     const workflow = parseWorkflow(source)
     const exposed = workflow.jobs.deploy.steps.filter((step) =>
-      Object.keys(step.env ?? {}).some((name) => name.startsWith("SST_SECRET_")),
+      Object.keys(step.env ?? {}).some(
+        (name) => name.startsWith("SST_SECRET_") || name === "CLOUDFLARE_ACCESS_API_TOKEN",
+      ),
     )
     expect(exposed.map((step) => step.name)).toEqual(["Validate and deploy to Cloudflare"])
   })
@@ -134,23 +140,52 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(run).toContain('--secrets-file="$runtime_secrets"')
   })
 
-  test("keeps the admin sidecar Cloudflare-only and conditionally deployed", async () => {
-    const [adminSource, stageSource, configSource] = await Promise.all(
-      ["../../../infra/admin.ts", "../../../infra/stage.ts", "../../../sst.config.ts"].map((path) =>
-        Bun.file(new URL(path, import.meta.url)).text(),
-      ),
+  test("creates a fail-closed Cloudflare Access admin application through IaC", async () => {
+    const [adminSource, stageSource, configSource, accessSource, mfaScriptSource] = await Promise.all(
+      [
+        "../../../infra/admin.ts",
+        "../../../infra/stage.ts",
+        "../../../sst.config.ts",
+        "../../console/admin/src/lib/access.ts",
+        "../../../script/cloudflare-access-mfa.ts",
+      ].map((path) => Bun.file(new URL(path, import.meta.url)).text()),
     )
     expect(adminSource).toContain('new sst.cloudflare.x.SolidStart("Admin"')
     expect(adminSource).toContain('path: "packages/console/admin"')
     expect(adminSource).toContain("database")
-    expect(adminSource).toContain("MongolGPTAdminAccessTeamDomain")
-    expect(adminSource).toContain("MongolGPTAdminAccessAudience")
+    expect(adminSource).toContain('new cloudflare.Provider("AdminAccessProvider"')
+    expect(adminSource).toContain("CLOUDFLARE_ACCESS_API_TOKEN")
+    expect(adminSource).toContain("new cloudflare.ZeroTrustAccessApplication")
+    expect(adminSource).toContain('"command:local:Command"')
+    expect(adminSource).toContain("bun run script/cloudflare-access-mfa.ts")
+    expect(adminSource).toContain("additionalSecretOutputs")
+    expect(adminSource).toContain("dependsOn: [accessOrganizationMfa]")
+    expect(adminSource).toContain('type: "self_hosted"')
+    expect(adminSource).toContain('decision: "allow"')
+    expect(adminSource).toContain("parseBootstrapEmails(value).map")
+    expect(adminSource).toContain('allowedAuthenticators: ["totp", "biometrics", "security_key"]')
+    expect(adminSource).toContain("mfaDisabled: false")
+    expect(adminSource).toContain("optionsPreflightBypass: false")
+    expect(adminSource).toContain("enableBindingCookie: true")
+    expect(adminSource).toContain("httpOnlyCookieAttribute: true")
+    expect(adminSource).toContain('sameSiteCookieAttribute: "strict"')
+    expect(adminSource).toContain('new sst.Linkable("AdminAccessConfig"')
+    expect(adminSource).toContain("link: [database, accessConfig, bootstrapEmails]")
     expect(adminSource).toContain("MongolGPTAdminBootstrapEmails")
+    expect(adminSource).not.toContain("MongolGPTAdminAccessTeamDomain")
+    expect(adminSource).not.toContain("MongolGPTAdminAccessAudience")
+    expect(adminSource).not.toMatch(/\beveryone\s*:/)
+    expect(adminSource).not.toMatch(/decision:\s*["']bypass["']/)
+    expect(accessSource).toContain('readResourceProperty("AdminAccessConfig", "teamDomain")')
+    expect(accessSource).toContain('readResourceProperty("AdminAccessConfig", "audience")')
     expect(stageSource).toContain("enableAdmin")
     expect(stageSource).toContain("adminOrigin")
     expect(configSource).toContain('flag("MONGOLGPT_ENABLE_ADMIN")')
+    expect(configSource).toContain('admin ? { command: "1.0.1" }')
     expect(configSource).toContain('await import("./infra/admin.js")')
     expect(configSource).toContain("Production hosted launch requires MONGOLGPT_ENABLE_ADMIN=true.")
-    expect(configSource).toContain("MONGOLGPT_ADMIN_MFA_ENFORCED")
+    expect(configSource).not.toContain("MONGOLGPT_ADMIN_MFA_ENFORCED")
+    expect(mfaScriptSource).toContain("configureCloudflareAccessMfa")
+    expect(mfaScriptSource).not.toContain("CLOUDFLARE_API_TOKEN")
   })
 })

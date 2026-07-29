@@ -125,9 +125,7 @@ describe("Cloudflare deployment preflight", () => {
         ...hosted,
         MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
         MONGOLGPT_ENABLE_ADMIN: "true",
-        MONGOLGPT_ADMIN_MFA_ENFORCED: "true",
-        SST_SECRET_MongolGPTAdminAccessTeamDomain: "https://team.cloudflareaccess.com",
-        SST_SECRET_MongolGPTAdminAccessAudience: "admin-audience",
+        CLOUDFLARE_ACCESS_API_TOKEN: "access-token",
         SST_SECRET_MongolGPTAdminBootstrapEmails: "owner@mgpt.mn",
         MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
       },
@@ -158,7 +156,7 @@ describe("Cloudflare deployment preflight", () => {
     )
   })
 
-  test("validates Cloudflare Access admin configuration", () => {
+  test("requires the dedicated Cloudflare Access token and admin allowlist", () => {
     expectIssues(
       () =>
         preflightDeployment({
@@ -168,33 +166,11 @@ describe("Cloudflare deployment preflight", () => {
             ...hosted,
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
             MONGOLGPT_ENABLE_ADMIN: "true",
-            MONGOLGPT_ADMIN_MFA_ENFORCED: "true",
-            SST_SECRET_MongolGPTAdminAccessTeamDomain: "https://not-cloudflare.example.com/path",
-            SST_SECRET_MongolGPTAdminAccessAudience: "bad audience",
             SST_SECRET_MongolGPTAdminBootstrapEmails: "not-an-email",
             MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
           },
         }),
-      ["cloudflareaccess.com", "хоосон зай", "хүчинтэй email"],
-    )
-    expectIssues(
-      () =>
-        preflightDeployment({
-          stage: "dev",
-          env: {
-            ...cloudflare,
-            ...hosted,
-            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
-            MONGOLGPT_ENABLE_ADMIN: "true",
-            MONGOLGPT_ADMIN_MFA_ENFORCED: "true",
-            SST_SECRET_MongolGPTAdminAccessTeamDomain:
-              "https://team.cloudflareaccess.com:8443",
-            SST_SECRET_MongolGPTAdminAccessAudience: "admin-audience",
-            SST_SECRET_MongolGPTAdminBootstrapEmails: "owner@mgpt.mn",
-            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
-          },
-        }),
-      ["яг https://<team>.cloudflareaccess.com"],
+      ["CLOUDFLARE_ACCESS_API_TOKEN", "хүчинтэй email"],
     )
   })
 

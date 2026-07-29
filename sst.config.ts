@@ -19,9 +19,6 @@ export default $config({
     if (input?.stage === "production" && hostedServices && !admin) {
       throw new Error("Production hosted launch requires MONGOLGPT_ENABLE_ADMIN=true.")
     }
-    if (admin && process.env.MONGOLGPT_ADMIN_MFA_ENFORCED !== "true") {
-      throw new Error("Admin launch requires MONGOLGPT_ADMIN_MFA_ENFORCED=true.")
-    }
     return {
       name: "mongolgpt",
       removal: input?.stage === "production" ? "retain" : "remove",
@@ -30,6 +27,7 @@ export default $config({
       providers: hostedServices
         ? {
             random: "4.19.2",
+            ...(admin ? { command: "1.0.1" } : {}),
             ...(monitoring ? { honeycomb: "0.49.0" } : {}),
           }
         : {},
