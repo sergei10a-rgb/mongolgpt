@@ -129,7 +129,8 @@ a {
 }
 
 main[data-page="admin-overview"],
-main[data-page="admin-users"] {
+main[data-page="admin-users"],
+main[data-page="admin-billing"] {
   width: min(1240px, calc(100% - 48px));
   margin: 0 auto;
   padding: 40px 0 64px;
@@ -217,6 +218,12 @@ h2 {
   gap: 10px;
 }
 
+[data-component="financial-metrics"] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
 [data-component="metric"] {
   min-width: 0;
   min-height: 106px;
@@ -241,6 +248,20 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
+[data-component="financial-metrics"] [data-component="metric"] strong {
+  font-size: 20px;
+  line-height: 25px;
+}
+
+[data-component="metric"] small {
+  min-height: 16px;
+  overflow: hidden;
+  color: #686d73;
+  font-size: 10px;
+  line-height: 14px;
+  text-overflow: ellipsis;
+}
+
 [data-component="metric"][data-tone="warning"] {
   border-color: #d9b45d;
   background: #fffaf0;
@@ -252,6 +273,39 @@ h2 {
   margin-top: 16px;
   border-block: 1px solid #dfe2e5;
   background: #ffffff;
+}
+
+[data-component="finance-status"] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 16px;
+  border-block: 1px solid #dfe2e5;
+  background: #ffffff;
+}
+
+[data-component="finance-status"] > div {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  padding: 16px;
+  border-right: 1px solid #e8eaec;
+}
+
+[data-component="finance-status"] > div:last-child {
+  border-right: 0;
+}
+
+[data-component="finance-status"] span {
+  color: #686d73;
+  font-size: 11px;
+}
+
+[data-component="finance-status"] strong {
+  overflow: hidden;
+  color: #292d31;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 [data-component="status-band"] > div {
@@ -290,7 +344,12 @@ h2 {
   margin-top: 40px;
 }
 
-[data-component="user-filters"] {
+[data-component="data-section"] {
+  margin-top: 40px;
+}
+
+[data-component="user-filters"],
+[data-component="billing-filters"] {
   display: grid;
   grid-template-columns: minmax(240px, 1fr) 180px 170px auto;
   align-items: end;
@@ -300,13 +359,15 @@ h2 {
   border-block: 1px solid #dfe2e5;
 }
 
-[data-component="user-filters"] label {
+[data-component="user-filters"] label,
+[data-component="billing-filters"] label {
   min-width: 0;
   display: grid;
   gap: 6px;
 }
 
 [data-component="user-filters"] label > span,
+[data-component="billing-filters"] label > span,
 [data-component="account-action"] label {
   color: #686d73;
   font-size: 11px;
@@ -315,6 +376,7 @@ h2 {
 
 [data-component="user-filters"] input,
 [data-component="user-filters"] select,
+[data-component="billing-filters"] select,
 [data-component="account-action"] textarea {
   width: 100%;
   min-height: 38px;
@@ -328,6 +390,7 @@ h2 {
 }
 
 [data-component="user-filters"] button,
+[data-component="billing-filters"] button,
 [data-component="account-action"] button {
   min-height: 38px;
   padding: 0 12px;
@@ -343,6 +406,7 @@ h2 {
 
 [data-component="user-filters"] input:focus,
 [data-component="user-filters"] select:focus,
+[data-component="billing-filters"] select:focus,
 [data-component="account-action"] textarea:focus {
   border-color: #295ea8;
   outline: 2px solid rgba(41, 94, 168, 0.2);
@@ -370,6 +434,60 @@ td[data-account] small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+td[data-workspace] {
+  min-width: 220px;
+}
+
+td[data-workspace] strong,
+td[data-workspace] code {
+  max-width: 280px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+td[data-workspace] strong {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+td[data-workspace] code {
+  color: #686d73;
+  font-size: 10px;
+}
+
+[data-payment-status] {
+  display: inline-block;
+  min-width: 86px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #edf5f2;
+  color: #12745a;
+  text-align: center;
+}
+
+[data-payment-status="created"],
+[data-payment-status="pending"] {
+  background: #fffaf0;
+  color: #8a651c;
+}
+
+[data-payment-status="failed"],
+[data-payment-status="expired"],
+[data-payment-status="cancelled"],
+[data-payment-status="refunded"] {
+  background: #fff0ef;
+  color: #a2362c;
+}
+
+[data-component="report-generated"] {
+  margin: 18px 0 0;
+  color: #686d73;
+  font-size: 11px;
+  text-align: right;
 }
 
 td[data-account] strong {
@@ -529,23 +647,29 @@ td[data-empty] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  [data-component="status-band"] {
+  [data-component="financial-metrics"],
+  [data-component="status-band"],
+  [data-component="finance-status"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  [data-component="status-band"] > div:nth-child(2) {
+  [data-component="status-band"] > div:nth-child(2),
+  [data-component="finance-status"] > div:nth-child(2) {
     border-right: 0;
   }
 
-  [data-component="status-band"] > div:nth-child(-n + 2) {
+  [data-component="status-band"] > div:nth-child(-n + 2),
+  [data-component="finance-status"] > div:nth-child(-n + 2) {
     border-bottom: 1px solid #e8eaec;
   }
 
-  [data-component="user-filters"] {
+  [data-component="user-filters"],
+  [data-component="billing-filters"] {
     grid-template-columns: minmax(220px, 1fr) 1fr 1fr;
   }
 
-  [data-component="user-filters"] button {
+  [data-component="user-filters"] button,
+  [data-component="billing-filters"] button {
     grid-column: 1 / -1;
     justify-self: start;
   }
@@ -579,7 +703,8 @@ td[data-empty] {
   }
 
   main[data-page="admin-overview"],
-  main[data-page="admin-users"] {
+  main[data-page="admin-users"],
+  main[data-page="admin-billing"] {
     width: calc(100% - 28px);
     padding-top: 28px;
   }
@@ -595,7 +720,8 @@ td[data-empty] {
     line-height: 30px;
   }
 
-  [data-component="metrics"] {
+  [data-component="metrics"],
+  [data-component="financial-metrics"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -603,24 +729,34 @@ td[data-empty] {
     min-height: 94px;
   }
 
-  [data-component="status-band"] {
+  [data-component="financial-metrics"] [data-component="metric"] strong {
+    font-size: 18px;
+    line-height: 24px;
+  }
+
+  [data-component="status-band"],
+  [data-component="finance-status"] {
     grid-template-columns: 1fr;
   }
 
-  [data-component="status-band"] > div {
+  [data-component="status-band"] > div,
+  [data-component="finance-status"] > div {
     border-right: 0;
     border-bottom: 1px solid #e8eaec;
   }
 
-  [data-component="status-band"] > div:last-child {
+  [data-component="status-band"] > div:last-child,
+  [data-component="finance-status"] > div:last-child {
     border-bottom: 0;
   }
 
-  [data-component="user-filters"] {
+  [data-component="user-filters"],
+  [data-component="billing-filters"] {
     grid-template-columns: 1fr;
   }
 
-  [data-component="user-filters"] button {
+  [data-component="user-filters"] button,
+  [data-component="billing-filters"] button {
     grid-column: auto;
     width: 100%;
   }
@@ -635,6 +771,16 @@ td[data-empty] {
   }
 }
 
+@media (max-width: 340px) {
+  [data-component="admin-identity"] {
+    display: none;
+  }
+
+  [data-component="financial-metrics"] {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root,
   body {
@@ -645,10 +791,12 @@ td[data-empty] {
   [data-component="admin-header"],
   [data-component="metric"],
   [data-component="status-band"],
+  [data-component="finance-status"],
   [data-component="table-scroll"],
   [data-component="read-only"],
   [data-component="user-filters"] input,
   [data-component="user-filters"] select,
+  [data-component="billing-filters"] select,
   [data-component="account-action"] textarea,
   [data-component="pagination"] a {
     border-color: #34383d;
@@ -672,7 +820,9 @@ td[data-empty] {
   [data-component="loading"],
   [data-component="empty"],
   [data-component="metric"] span,
+  [data-component="metric"] small,
   [data-component="status-band"] span,
+  [data-component="finance-status"] span,
   th {
     color: #9ea4aa;
   }
@@ -680,8 +830,10 @@ td[data-empty] {
   [data-component="read-only"],
   [data-component="status-band"] strong,
   [data-component="status-band"] code,
+  [data-component="finance-status"] strong,
   [data-component="user-filters"] input,
   [data-component="user-filters"] select,
+  [data-component="billing-filters"] select,
   [data-component="account-action"] textarea {
     color: #d8dcdf;
   }
@@ -708,6 +860,8 @@ td[data-empty] {
 
   [data-component="status-band"],
   [data-component="status-band"] > div,
+  [data-component="finance-status"],
+  [data-component="finance-status"] > div,
   [data-component="section-heading"],
   th,
   td {
