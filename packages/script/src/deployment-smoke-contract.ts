@@ -4,6 +4,10 @@ export type AppRuntimeContract = {
   serverUrl: string
 }
 
+export type AnonymousHostedSessionContract = {
+  authenticated: false
+}
+
 export type PaymentHealthContract = {
   status: "disabled" | "ok"
   environment: "disabled" | "sandbox" | "production"
@@ -62,6 +66,16 @@ export function inspectAppHtml(html: string, appUrl?: string): AppRuntimeContrac
   }
 
   return { channel, mode, serverUrl }
+}
+
+export function inspectAnonymousHostedSession(value: unknown): AnonymousHostedSessionContract {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("hosted session response is not an object")
+  }
+  const body = value as { authenticated?: unknown; account?: unknown }
+  if (body.authenticated !== false) throw new Error("hosted session response is not anonymous")
+  if (body.account !== undefined) throw new Error("anonymous hosted session exposed account data")
+  return { authenticated: false }
 }
 
 export function inspectPaymentHealth(

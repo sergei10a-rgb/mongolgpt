@@ -38,10 +38,20 @@ async function loadHostedSession(runtimeUrl: string): Promise<HostedSession> {
   if (response.status === 401) return { authenticated: false }
   if (!response.ok) throw new Error(`Hosted session check failed (${response.status})`)
 
-  const value = (await response.json()) as Partial<HostedSession>
-  if (value.authenticated === true && value.account?.id && value.account.email) return value as HostedSession
-  if (value.authenticated === false) return { authenticated: false }
+  const value: unknown = await response.json()
+  if (record(value) && value.authenticated === true && record(value.account)) {
+    const id = value.account.id
+    const email = value.account.email
+    if (typeof id === "string" && id && typeof email === "string" && email) {
+      return { authenticated: true, account: { id, email } }
+    }
+  }
+  if (record(value) && value.authenticated === false) return { authenticated: false }
   throw new Error("Hosted session response was invalid")
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
 export function HostedAccountGate(props: ParentProps) {
@@ -56,12 +66,13 @@ export function HostedAccountGate(props: ParentProps) {
   const [shown, setShown] = createSignal(false)
   const [session, actions] = createResource(
     () => (enabled && runtimeUrl ? runtimeUrl : undefined),
-    (url) => loadHostedSession(url!),
+    (url) => loadHostedSession(url),
   )
 
   createEffect(() => {
     if (!enabled || session.loading) return
-    if (session()?.authenticated) {
+    const authenticated = !session.error && session()?.authenticated === true
+    if (authenticated) {
       if (shown()) dialog.close()
       return
     }
@@ -104,7 +115,7 @@ export function HostedAccountGate(props: ParentProps) {
 
   return (
     <Show
-      when={!enabled || session()?.authenticated === true}
+      when={!enabled || (!session.error && session()?.authenticated === true)}
       fallback={
         <div class="h-dvh w-screen flex items-center justify-center bg-background-base">
           <Splash class="w-16 h-20 opacity-50 animate-pulse" />

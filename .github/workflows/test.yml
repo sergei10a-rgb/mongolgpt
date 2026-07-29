@@ -134,7 +134,9 @@ jobs:
         run: bunx playwright install chromium
 
       - name: Run app e2e tests
-        run: bun --cwd packages/app test:e2e:local
+        run: |
+          bun --cwd packages/app test:e2e:local
+          bun --cwd packages/app test:e2e:hosted
         env:
           CI: true
         timeout-minutes: 30
@@ -148,4 +150,6 @@ jobs:
           retention-days: 7
           path: |
             packages/app/e2e/test-results
+            packages/app/e2e/test-results-hosted
             packages/app/e2e/playwright-report
+            packages/app/e2e/playwright-report-hosted

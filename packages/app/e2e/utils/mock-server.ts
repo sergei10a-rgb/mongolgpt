@@ -90,12 +90,18 @@ export async function mockMongolGPTServer(page: Page, config: MockServerConfig) 
 }
 
 function json(route: Route, body: unknown, headers?: Record<string, string>, status = 200) {
+  const requestOrigin = route.request().headers()["origin"]
+  const requestedHeaders = route.request().headers()["access-control-request-headers"]
   return route.fulfill({
     status,
     contentType: "application/json",
     headers: {
-      "access-control-allow-origin": "*",
+      "access-control-allow-origin": requestOrigin ?? "*",
+      "access-control-allow-credentials": "true",
+      "access-control-allow-methods": "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
+      ...(requestedHeaders ? { "access-control-allow-headers": requestedHeaders } : {}),
       "access-control-expose-headers": "x-next-cursor",
+      vary: "Origin",
       ...headers,
     },
     body: JSON.stringify(body ?? null),
@@ -103,9 +109,15 @@ function json(route: Route, body: unknown, headers?: Record<string, string>, sta
 }
 
 function sse(route: Route, events?: unknown[], retry?: number) {
+  const requestOrigin = route.request().headers()["origin"]
   return route.fulfill({
     status: 200,
     contentType: "text/event-stream",
+    headers: {
+      "access-control-allow-origin": requestOrigin ?? "*",
+      "access-control-allow-credentials": "true",
+      vary: "Origin",
+    },
     body: `${retry === undefined ? "" : `retry: ${retry}\n\n`}${events?.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") || ": ok\n\n"}`,
   })
 }

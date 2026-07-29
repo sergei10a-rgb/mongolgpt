@@ -1,5 +1,9 @@
 import { deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/deployment"
-import { inspectAppHtml, inspectPaymentHealth } from "@mongolgpt/script/deployment-smoke-contract"
+import {
+  inspectAnonymousHostedSession,
+  inspectAppHtml,
+  inspectPaymentHealth,
+} from "@mongolgpt/script/deployment-smoke-contract"
 
 const result = preflightDeployment({
   stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
@@ -72,6 +76,7 @@ async function check(name: string, url: string, health?: "status" | "runtime" | 
             throw new Error(`app runtime origin is ${new URL(contract.serverUrl).origin}; expected ${expectedRuntime}`)
           }
           await checkAgentRuntime(contract.serverUrl)
+          await checkHostedSessionBoundary(contract.serverUrl, url)
         }
       } else {
         await response.body?.cancel()
@@ -162,5 +167,58 @@ async function checkAgentRuntime(serverUrl: string) {
     (body as { healthy?: unknown }).healthy !== true
   ) {
     throw new Error(`agent runtime health response is invalid: ${healthUrl}`)
+  }
+}
+
+async function checkHostedSessionBoundary(serverUrl: string, appUrl: string) {
+  const sessionUrl = new URL("/auth/session", `${serverUrl}/`)
+  const appOrigin = new URL(appUrl).origin
+  const response = await fetch(sessionUrl, {
+    headers: {
+      Accept: "application/json",
+      Origin: appOrigin,
+      "User-Agent": "mongolgpt-deployment-smoke",
+    },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (response.status !== 401) {
+    throw new Error(`anonymous hosted session returned HTTP ${response.status}; expected 401: ${sessionUrl}`)
+  }
+  const contentType = response.headers.get("content-type") ?? ""
+  if (!contentType.includes("application/json")) {
+    throw new Error(`anonymous hosted session is not JSON: ${contentType || "missing content-type"} (${sessionUrl})`)
+  }
+  if (response.headers.get("access-control-allow-origin") !== appOrigin) {
+    throw new Error(`hosted session CORS origin does not match the app: ${sessionUrl}`)
+  }
+  if (response.headers.get("access-control-allow-credentials") !== "true") {
+    throw new Error(`hosted session does not allow credentialed requests: ${sessionUrl}`)
+  }
+  if (!response.headers.get("cache-control")?.toLowerCase().includes("no-store")) {
+    throw new Error(`hosted session response is cacheable: ${sessionUrl}`)
+  }
+  inspectAnonymousHostedSession(await response.json())
+
+  const foreignOrigin = "https://invalid-origin.example"
+  const rejected = await fetch(sessionUrl, {
+    headers: {
+      Accept: "application/json",
+      Origin: foreignOrigin,
+      "User-Agent": "mongolgpt-deployment-smoke",
+    },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (rejected.status !== 403) {
+    throw new Error(`foreign hosted session origin returned HTTP ${rejected.status}; expected 403: ${sessionUrl}`)
+  }
+  const rejectedType = rejected.headers.get("content-type") ?? ""
+  if (!rejectedType.includes("application/json")) {
+    throw new Error(`foreign origin rejection is not JSON: ${rejectedType || "missing content-type"} (${sessionUrl})`)
+  }
+  const body: unknown = await rejected.json()
+  if (typeof body !== "object" || body === null || typeof (body as { error?: unknown }).error !== "string") {
+    throw new Error(`foreign origin rejection body is invalid: ${sessionUrl}`)
   }
 }

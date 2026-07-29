@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { inspectAppHtml, inspectPaymentHealth } from "../src/deployment-smoke-contract"
+import { inspectAnonymousHostedSession, inspectAppHtml, inspectPaymentHealth } from "../src/deployment-smoke-contract"
 
 const html = (meta: string) => `<!doctype html>
 <html>
@@ -41,6 +41,25 @@ describe("inspectAppHtml", () => {
         "https://app.dev.mgpt.mn",
       ),
     ).toThrow("static app origin")
+  })
+})
+
+describe("inspectAnonymousHostedSession", () => {
+  test("accepts only a fail-closed anonymous session", () => {
+    expect(inspectAnonymousHostedSession({ authenticated: false })).toEqual({ authenticated: false })
+    expect(() => inspectAnonymousHostedSession("<html>not an API</html>")).toThrow("not an object")
+    expect(() =>
+      inspectAnonymousHostedSession({
+        authenticated: true,
+        account: { id: "leaked" },
+      }),
+    ).toThrow("not anonymous")
+    expect(() =>
+      inspectAnonymousHostedSession({
+        authenticated: false,
+        account: { id: "leaked" },
+      }),
+    ).toThrow("exposed account")
   })
 })
 
