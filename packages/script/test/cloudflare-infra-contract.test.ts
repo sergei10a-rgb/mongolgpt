@@ -133,4 +133,24 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(sst).toBeGreaterThan(runtime)
     expect(run).toContain('--secrets-file="$runtime_secrets"')
   })
+
+  test("keeps the admin sidecar Cloudflare-only and conditionally deployed", async () => {
+    const [adminSource, stageSource, configSource] = await Promise.all(
+      ["../../../infra/admin.ts", "../../../infra/stage.ts", "../../../sst.config.ts"].map((path) =>
+        Bun.file(new URL(path, import.meta.url)).text(),
+      ),
+    )
+    expect(adminSource).toContain('new sst.cloudflare.x.SolidStart("Admin"')
+    expect(adminSource).toContain('path: "packages/console/admin"')
+    expect(adminSource).toContain("database")
+    expect(adminSource).toContain("MongolGPTAdminAccessTeamDomain")
+    expect(adminSource).toContain("MongolGPTAdminAccessAudience")
+    expect(adminSource).toContain("MongolGPTAdminBootstrapEmails")
+    expect(stageSource).toContain("enableAdmin")
+    expect(stageSource).toContain("adminOrigin")
+    expect(configSource).toContain('flag("MONGOLGPT_ENABLE_ADMIN")')
+    expect(configSource).toContain('await import("./infra/admin.js")')
+    expect(configSource).toContain("Production hosted launch requires MONGOLGPT_ENABLE_ADMIN=true.")
+    expect(configSource).toContain("MONGOLGPT_ADMIN_MFA_ENFORCED")
+  })
 })

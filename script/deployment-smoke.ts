@@ -12,7 +12,8 @@ const healthContracts = new Map(
     [endpoints.consoleHealth, "status"],
     [endpoints.authHealth, "status"],
     [endpoints.runtimeHealth, "runtime"],
-  ].filter((entry): entry is [string, "status" | "runtime"] => Boolean(entry[0])),
+    [endpoints.admin, "admin"],
+  ].filter((entry): entry is [string, "status" | "runtime" | "admin"] => Boolean(entry[0])),
 )
 
 for (const [name, url] of Object.entries(endpoints)) {
@@ -21,7 +22,7 @@ for (const [name, url] of Object.entries(endpoints)) {
 
 console.log("Cloudflare deployment smoke check passed.")
 
-async function check(name: string, url: string, health?: "status" | "runtime") {
+async function check(name: string, url: string, health?: "status" | "runtime" | "admin") {
   const retries = positiveInteger(process.env.MONGOLGPT_SMOKE_RETRIES, 8)
   const delay = positiveInteger(process.env.MONGOLGPT_SMOKE_DELAY_MS, 10_000)
   let lastError: unknown
@@ -30,11 +31,15 @@ async function check(name: string, url: string, health?: "status" | "runtime") {
     try {
       const response = await fetch(url, {
         headers: { "User-Agent": "mongolgpt-deployment-smoke" },
-        redirect: "follow",
+        redirect: health === "admin" ? "manual" : "follow",
         signal: AbortSignal.timeout(15_000),
       })
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      if (health) {
+      if (health === "admin") {
+        if (![302, 401, 403].includes(response.status)) {
+          throw new Error(`admin endpoint is not protected: HTTP ${response.status}`)
+        }
+      } else if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      if (health && health !== "admin") {
         const contentType = response.headers.get("content-type") ?? ""
         if (!contentType.includes("application/json")) {
           throw new Error(`health response is not JSON: ${contentType || "missing content-type"}`)

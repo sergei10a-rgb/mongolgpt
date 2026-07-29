@@ -5,6 +5,9 @@ import { currency, id, timestamps, ulid, utc, workspaceColumns } from "../drizzl
 
 export const AuthProvider = ["email", "github", "google"] as const
 export const UserRole = ["admin", "member"] as const
+export const PlatformAdminRoles = ["owner", "administrator", "support", "finance", "operations"] as const
+export const PlatformAdminStatuses = ["active", "suspended"] as const
+export const AdminAuditOutcomes = ["success", "denied", "failure"] as const
 export const PlanNames = ["basic", "pro", "max"] as const
 export const PaymentProviders = ["qpay", "bonum"] as const
 export const PaymentPurposes = ["subscription", "credit"] as const
@@ -75,6 +78,60 @@ export const AuthTable = sqliteTable(
     uniqueIndex("auth_provider_subject").on(table.provider, table.subject),
     index("auth_account_id").on(table.accountID),
     check("auth_provider_check", sql`${table.provider} in ('email', 'github', 'google')`),
+  ],
+)
+
+export const PlatformAdminTable = sqliteTable(
+  "platform_admin",
+  {
+    id: id(),
+    email: text("email", { length: 254 }).notNull(),
+    access_subject: text("access_subject", { length: 255 }),
+    role: text("role", { enum: PlatformAdminRoles }).notNull(),
+    status: text("status", { enum: PlatformAdminStatuses }).notNull().default("active"),
+    time_last_seen: utc("time_last_seen"),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    uniqueIndex("platform_admin_email").on(table.email),
+    uniqueIndex("platform_admin_access_subject").on(table.access_subject),
+    index("platform_admin_status_role").on(table.status, table.role),
+    check(
+      "platform_admin_email_normalized_check",
+      sql`${table.email} = lower(trim(${table.email})) and length(${table.email}) between 3 and 254`,
+    ),
+    check(
+      "platform_admin_role_check",
+      sql`${table.role} in ('owner', 'administrator', 'support', 'finance', 'operations')`,
+    ),
+    check("platform_admin_status_check", sql`${table.status} in ('active', 'suspended')`),
+  ],
+)
+
+export const AdminAuditLogTable = sqliteTable(
+  "admin_audit_log",
+  {
+    id: id(),
+    admin_id: ulid("admin_id"),
+    actor_email: text("actor_email", { length: 254 }).notNull(),
+    action: text("action", { length: 128 }).notNull(),
+    target_type: text("target_type", { length: 64 }),
+    target_id: text("target_id", { length: 255 }),
+    outcome: text("outcome", { enum: AdminAuditOutcomes }).notNull(),
+    request_id: text("request_id", { length: 128 }).notNull(),
+    source_ip: text("source_ip", { length: 45 }),
+    user_agent: text("user_agent", { length: 512 }),
+    metadata: text("metadata", { mode: "json" }).$type<Record<string, string | number | boolean | null>>(),
+    time_created: utc("time_created").notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    index("admin_audit_log_time_created").on(table.time_created),
+    index("admin_audit_log_admin_time_created").on(table.admin_id, table.time_created),
+    index("admin_audit_log_action_time_created").on(table.action, table.time_created),
+    check("admin_audit_log_outcome_check", sql`${table.outcome} in ('success', 'denied', 'failure')`),
+    check("admin_audit_log_metadata_json_check", sql`${table.metadata} is null or json_valid(${table.metadata})`),
   ],
 )
 

@@ -1,21 +1,27 @@
 {
-  "name": "@mongolgpt/console-support",
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@mongolgpt/console-admin",
   "version": "0.1.1",
   "private": true,
   "type": "module",
   "license": "MIT",
   "scripts": {
+    "test": "bun test test",
     "typecheck": "tsgo --noEmit",
-    "dev": "sst shell --stage production -- vite dev"
+    "build": "vite build",
+    "dev": "sst shell --stage dev -- vite dev"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "1.15.2",
     "@mongolgpt/console-core": "workspace:*",
+    "@mongolgpt/console-resource": "workspace:*",
     "@solidjs/meta": "catalog:",
     "@solidjs/router": "catalog:",
     "@solidjs/start": "catalog:",
+    "jose": "6.0.11",
     "nitro": "3.0.1-alpha.1",
     "solid-js": "catalog:",
+    "ulid": "catalog:",
     "vite": "catalog:"
   },
   "devDependencies": {

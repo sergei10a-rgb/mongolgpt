@@ -9,6 +9,7 @@ const booleanVariables = [
   "MONGOLGPT_ENABLE_MONITORING",
   "MONGOLGPT_ENABLE_SHARE_SERVICE",
   "MONGOLGPT_ENABLE_SYNC_SERVICE",
+  "MONGOLGPT_ENABLE_ADMIN",
 ] as const
 
 export const modelSecretNames = Array.from({ length: 30 }, (_, index) => `ZEN_MODELS${index + 1}`)
@@ -19,6 +20,9 @@ export const hostedSstSecretNames = [
   "GOOGLE_CLIENT_ID",
   "MONGOLGPT_PLAN_LIMITS",
   "ZEN_SESSION_SECRET",
+  "MongolGPTAdminAccessTeamDomain",
+  "MongolGPTAdminAccessAudience",
+  "MongolGPTAdminBootstrapEmails",
   ...modelSecretNames,
 ] as const
 
@@ -36,6 +40,7 @@ export type DeploymentPreflightResult = {
   domain: string
   stageDomain: string
   hostedServices: boolean
+  adminEnabled: boolean
   warnings: string[]
 }
 
@@ -62,6 +67,7 @@ export function preflightDeployment(input: {
   }
 
   const hostedServices = enabled(env.MONGOLGPT_ENABLE_HOSTED_SERVICES)
+  const adminEnabled = enabled(env.MONGOLGPT_ENABLE_ADMIN)
   const optionalServices = [
     "MONGOLGPT_ENABLE_ANALYTICS",
     "MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS",
@@ -75,6 +81,29 @@ export function preflightDeployment(input: {
       if (enabled(env[name])) issues.push(`${name} нь hosted service унтраалттай үед true байж болохгүй.`)
     }
     warnings.push("Зөвхөн docs болон web app deploy хийнэ; account, auth, Free Auto API асахгүй.")
+  }
+
+  if (adminEnabled && !hostedServices) {
+    issues.push("MONGOLGPT_ENABLE_ADMIN нь hosted services асаалттай үед л true байж болно.")
+  }
+  if (hostedServices && stage === "production" && !adminEnabled) {
+    issues.push("Production hosted launch-д MONGOLGPT_ENABLE_ADMIN=true заавал байна.")
+  }
+
+  if (adminEnabled) {
+    if (env.MONGOLGPT_ADMIN_MFA_ENFORCED !== "true") {
+      issues.push("Admin launch-д MONGOLGPT_ADMIN_MFA_ENFORCED=true заавал байна.")
+    }
+    validateCloudflareAccessTeamDomain(
+      deploymentSecret(env, "MongolGPTAdminAccessTeamDomain"),
+      issues,
+    )
+    validateNonEmptyNoWhitespace(
+      "MongolGPTAdminAccessAudience",
+      deploymentSecret(env, "MongolGPTAdminAccessAudience"),
+      issues,
+    )
+    validateBootstrapEmails(deploymentSecret(env, "MongolGPTAdminBootstrapEmails"), issues)
   }
 
   if (enabled(env.MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS)) {
@@ -115,6 +144,7 @@ export function preflightDeployment(input: {
     domain,
     stageDomain: stage === "production" ? domain : `${stage}.${domain}`,
     hostedServices,
+    adminEnabled,
     warnings,
   }
 }
@@ -132,6 +162,7 @@ export function deploymentEndpoints(result: DeploymentPreflightResult) {
           runtimeHealth: `https://runtime.${result.stageDomain}/global/health`,
         }
       : {}),
+    ...(result.adminEnabled ? { admin: `https://admin.${result.stageDomain}` } : {}),
   }
 }
 
@@ -309,4 +340,57 @@ function validateDomain(value: string | undefined, issues: string[]) {
     }
   }
   return domain
+}
+
+function validateCloudflareAccessTeamDomain(value: string | undefined, issues: string[]) {
+  const raw = value?.trim() ?? ""
+  if (!raw) {
+    issues.push("MongolGPTAdminAccessTeamDomain дутуу байна.")
+    return
+  }
+  try {
+    const url = new URL(raw)
+    if (
+      url.protocol !== "https:" ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash ||
+      url.username ||
+      url.password ||
+      url.port
+    ) {
+      issues.push("MongolGPTAdminAccessTeamDomain нь яг https://<team>.cloudflareaccess.com хэлбэртэй байна.")
+      return
+    }
+    const hostname = url.hostname.toLowerCase()
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.cloudflareaccess\.com$/.test(hostname)) {
+      issues.push("MongolGPTAdminAccessTeamDomain нь .cloudflareaccess.com домэйн байх ёстой.")
+    }
+  } catch {
+    issues.push("MongolGPTAdminAccessTeamDomain хүчинтэй HTTPS URL биш байна.")
+  }
+}
+
+function validateNonEmptyNoWhitespace(name: string, value: string | undefined, issues: string[]) {
+  const normalized = value?.trim() ?? ""
+  if (!normalized) {
+    issues.push(`${name} дутуу байна.`)
+  } else if (/\s/.test(normalized)) {
+    issues.push(`${name} хоосон зай агуулахгүй байна.`)
+  }
+}
+
+function validateBootstrapEmails(value: string | undefined, issues: string[]) {
+  const emails = (value ?? "")
+    .split(/[;,\n]/)
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+  if (!emails.length) {
+    issues.push("MongolGPTAdminBootstrapEmails дутуу байна.")
+    return
+  }
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (emails.some((email) => !validEmail.test(email))) {
+    issues.push("MongolGPTAdminBootstrapEmails дотор хүчинтэй email-үүдийг таслал эсвэл шинэ мөрөөр өгнө.")
+  }
 }

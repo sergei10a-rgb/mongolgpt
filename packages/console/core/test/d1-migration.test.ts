@@ -27,8 +27,9 @@ describe("D1 migration", () => {
       .query("select name from sqlite_schema where type = 'table' and name not like 'sqlite_%' order by name")
       .values()
 
-    expect(tables).toHaveLength(30)
+    expect(tables).toHaveLength(32)
     expect(tables).toContainEqual(["account"])
+    expect(tables).toContainEqual(["admin_audit_log"])
     expect(tables).toContainEqual(["enterprise_inquiry"])
     expect(tables).toContainEqual(["newsletter_subscriber"])
     expect(tables).toContainEqual(["payment_event"])
@@ -36,7 +37,71 @@ describe("D1 migration", () => {
     expect(tables).toContainEqual(["payment_cancellation"])
     expect(tables).toContainEqual(["payment_invoice"])
     expect(tables).toContainEqual(["plan_subscription"])
+    expect(tables).toContainEqual(["platform_admin"])
     expect(tables).toContainEqual(["workspace"])
+  })
+
+  test("keeps the admin audit log immutable", async () => {
+    const database = new Database(":memory:")
+    database.exec(await migrationSql())
+    database
+      .query(
+        `insert into admin_audit_log
+          (id, actor_email, action, outcome, request_id, time_created)
+         values (?, ?, ?, ?, ?, ?)`,
+      )
+      .run("aud_01", "owner@mgpt.mn", "admin.request", "success", "request-1", 1)
+
+    expect(() =>
+      database.query("update admin_audit_log set outcome = ? where id = ?").run("failure", "aud_01"),
+    ).toThrow("admin_audit_log is immutable")
+    expect(() => database.query("delete from admin_audit_log where id = ?").run("aud_01")).toThrow(
+      "admin_audit_log is immutable",
+    )
+  })
+
+  test("enforces unique and normalized platform administrator identities", async () => {
+    const database = new Database(":memory:")
+    database.exec(await migrationSql())
+    database
+      .query(
+        `insert into platform_admin (id, email, access_subject, role, status)
+         values (?, ?, ?, ?, ?)`,
+      )
+      .run("adm_01", "owner@mgpt.mn", "subject-1", "owner", "active")
+
+    expect(() =>
+      database
+        .query(
+          `insert into platform_admin (id, email, access_subject, role, status)
+           values (?, ?, ?, ?, ?)`,
+        )
+        .run("adm_02", "owner@mgpt.mn", "subject-2", "support", "active"),
+    ).toThrow()
+    expect(() =>
+      database
+        .query(
+          `insert into platform_admin (id, email, access_subject, role, status)
+           values (?, ?, ?, ?, ?)`,
+        )
+        .run("adm_03", "support@mgpt.mn", "subject-1", "support", "active"),
+    ).toThrow()
+    expect(() =>
+      database
+        .query(
+          `insert into platform_admin (id, email, access_subject, role, status)
+           values (?, ?, ?, ?, ?)`,
+        )
+        .run("adm_04", "Owner@MGPT.MN", "subject-4", "owner", "active"),
+    ).toThrow()
+    expect(() =>
+      database
+        .query(
+          `insert into platform_admin (id, email, access_subject, role, status)
+           values (?, ?, ?, ?, ?)`,
+        )
+        .run("adm_05", "invalid-role@mgpt.mn", "subject-5", "member", "active"),
+    ).toThrow()
   })
 
   test("enforces enum and JSON constraints", async () => {

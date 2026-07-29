@@ -7,9 +7,11 @@ export const enableAnalytics = process.env.MONGOLGPT_ENABLE_ANALYTICS === "true"
 export const enableMonitoring = process.env.MONGOLGPT_ENABLE_MONITORING === "true"
 export const enableShareService = process.env.MONGOLGPT_ENABLE_SHARE_SERVICE === "true"
 export const enableSyncService = process.env.MONGOLGPT_ENABLE_SYNC_SERVICE === "true"
+export const enableAdmin = process.env.MONGOLGPT_ENABLE_ADMIN === "true"
 
 export const publicOrigin = `https://${domain}`
 export const appOrigin = `https://app.${domain}`
 export const docsOrigin = `https://docs.${domain}/docs`
 export const runtimeOrigin = `https://runtime.${domain}`
 export const shareOrigin = `https://share.${domain}`
+export const adminOrigin = `https://admin.${domain}`

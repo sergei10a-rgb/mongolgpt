@@ -91,6 +91,7 @@ describe("Cloudflare deployment preflight", () => {
       domain: "mgpt.mn",
       stageDomain: "dev.mgpt.mn",
       hostedServices: false,
+      adminEnabled: false,
     })
     expect(deploymentEndpoints(result)).toEqual({
       docs: "https://docs.dev.mgpt.mn/docs",
@@ -123,6 +124,11 @@ describe("Cloudflare deployment preflight", () => {
         ...cloudflare,
         ...hosted,
         MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_ENABLE_ADMIN: "true",
+        MONGOLGPT_ADMIN_MFA_ENFORCED: "true",
+        SST_SECRET_MongolGPTAdminAccessTeamDomain: "https://team.cloudflareaccess.com",
+        SST_SECRET_MongolGPTAdminAccessAudience: "admin-audience",
+        SST_SECRET_MongolGPTAdminBootstrapEmails: "owner@mgpt.mn",
         MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
       },
     })
@@ -132,7 +138,64 @@ describe("Cloudflare deployment preflight", () => {
     expect(deploymentEndpoints(result)).toMatchObject({
       app: "https://app.mgpt.mn",
       runtimeHealth: "https://runtime.mgpt.mn/global/health",
+      admin: "https://admin.mgpt.mn",
     })
+  })
+
+  test("requires a protected admin for production hosted launches", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
+          },
+        }),
+      ["MONGOLGPT_ENABLE_ADMIN=true"],
+    )
+  })
+
+  test("validates Cloudflare Access admin configuration", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_ADMIN_MFA_ENFORCED: "true",
+            SST_SECRET_MongolGPTAdminAccessTeamDomain: "https://not-cloudflare.example.com/path",
+            SST_SECRET_MongolGPTAdminAccessAudience: "bad audience",
+            SST_SECRET_MongolGPTAdminBootstrapEmails: "not-an-email",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+          },
+        }),
+      ["cloudflareaccess.com", "хоосон зай", "хүчинтэй email"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_ADMIN_MFA_ENFORCED: "true",
+            SST_SECRET_MongolGPTAdminAccessTeamDomain:
+              "https://team.cloudflareaccess.com:8443",
+            SST_SECRET_MongolGPTAdminAccessAudience: "admin-audience",
+            SST_SECRET_MongolGPTAdminBootstrapEmails: "owner@mgpt.mn",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+          },
+        }),
+      ["яг https://<team>.cloudflareaccess.com"],
+    )
   })
 
   test("requires a strong account-isolation secret for the hosted runtime", () => {

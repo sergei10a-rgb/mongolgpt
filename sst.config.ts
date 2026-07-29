@@ -3,6 +3,7 @@
 export default $config({
   app(input) {
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
+    const admin = flag("MONGOLGPT_ENABLE_ADMIN")
     const monitoring = hostedServices && flag("MONGOLGPT_ENABLE_MONITORING")
     const analytics = flag("MONGOLGPT_ENABLE_ANALYTICS")
     const unsupported = ["MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS", "MONGOLGPT_ENABLE_LEGACY_STRIPE"].filter(flag)
@@ -11,6 +12,15 @@ export default $config({
     }
     if (analytics && !hostedServices) {
       throw new Error("MONGOLGPT_ENABLE_ANALYTICS requires MONGOLGPT_ENABLE_HOSTED_SERVICES=true.")
+    }
+    if (admin && !hostedServices) {
+      throw new Error("MONGOLGPT_ENABLE_ADMIN requires MONGOLGPT_ENABLE_HOSTED_SERVICES=true.")
+    }
+    if (input?.stage === "production" && hostedServices && !admin) {
+      throw new Error("Production hosted launch requires MONGOLGPT_ENABLE_ADMIN=true.")
+    }
+    if (admin && process.env.MONGOLGPT_ADMIN_MFA_ENFORCED !== "true") {
+      throw new Error("Admin launch requires MONGOLGPT_ADMIN_MFA_ENFORCED=true.")
     }
     return {
       name: "mongolgpt",
@@ -29,6 +39,7 @@ export default $config({
     const stage = await import("./infra/stage.js")
     const site = await import("./infra/site.js")
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
+    const adminEnabled = stage.enableAdmin
     if (!hostedServices) {
       return {
         DocsUrl: site.docsUrl,
@@ -41,6 +52,7 @@ export default $config({
 
     if (stage.enableSyncService) await import("./infra/app.js")
     const { consoleApp, paymentService, stat } = await import("./infra/console.js")
+    const admin = adminEnabled ? await import("./infra/admin.js") : undefined
     const stats = stage.enableAnalytics ? await import("./infra/stats.js") : undefined
     const enterprise = stage.enableShareService ? await import("./infra/enterprise.js") : undefined
     if (stage.enableMonitoring && ($app.stage === "production" || $app.stage === "vimtor")) {
@@ -56,6 +68,7 @@ export default $config({
       DocsWorkerUrl: site.website.url,
       WebAppUrl: site.webApp.url,
       ShareUrl: enterprise?.teams.url ?? "",
+      AdminUrl: admin?.adminUrl ?? "",
       HostedServices: true,
     }
   },

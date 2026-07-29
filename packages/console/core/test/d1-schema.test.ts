@@ -6,6 +6,31 @@ import * as d1 from "../src/schema-d1"
 const contract = {
   AccountTable: ["id", "timeCreated", "timeUpdated", "timeDeleted"],
   AuthTable: ["id", "timeCreated", "timeUpdated", "timeDeleted", "provider", "subject", "accountID"],
+  PlatformAdminTable: [
+    "id",
+    "email",
+    "access_subject",
+    "role",
+    "status",
+    "time_last_seen",
+    "timeCreated",
+    "timeUpdated",
+    "timeDeleted",
+  ],
+  AdminAuditLogTable: [
+    "id",
+    "admin_id",
+    "actor_email",
+    "action",
+    "target_type",
+    "target_id",
+    "outcome",
+    "request_id",
+    "source_ip",
+    "user_agent",
+    "metadata",
+    "time_created",
+  ],
   BenchmarkTable: ["id", "timeCreated", "timeUpdated", "timeDeleted", "model", "agent", "result"],
   NewsletterSubscriberTable: [
     "email",
@@ -286,6 +311,9 @@ describe("D1 schema contract", () => {
   test("keeps product enums aligned", () => {
     expect(d1.AuthProvider).toEqual(["email", "github", "google"])
     expect(d1.UserRole).toEqual(["admin", "member"])
+    expect(d1.PlatformAdminRoles).toEqual(["owner", "administrator", "support", "finance", "operations"])
+    expect(d1.PlatformAdminStatuses).toEqual(["active", "suspended"])
+    expect(d1.AdminAuditOutcomes).toEqual(["success", "denied", "failure"])
     expect(d1.PlanNames).toEqual(["basic", "pro", "max"])
     expect(d1.PaymentProviders).toEqual(["qpay", "bonum"])
     expect(d1.PaymentPurposes).toEqual(["subscription", "credit"])
