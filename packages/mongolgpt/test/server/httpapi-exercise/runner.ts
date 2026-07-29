@@ -14,6 +14,8 @@ import type { ActiveScenario, Options, ProjectOptions, Result, Scenario, Scenari
 import { ProviderV2 } from "@mongolgpt/core/provider"
 import { ModelV2 } from "@mongolgpt/core/model"
 
+const validAuthProbeScenario = "global.health"
+
 export function runScenario(options: Options) {
   return (scenario: Scenario) => {
     if (scenario.kind === "todo") return Effect.succeed({ status: "skip", scenario } as Result)
@@ -49,6 +51,9 @@ function runAuth(scenario: ActiveScenario) {
     const result = yield* callAuthProbe(scenario, "missing")
     if (scenario.auth === "protected") {
       if (result.status !== 401) throw new Error(`auth expected 401, got ${result.status}`)
+      // Missing credentials are checked on every route. Test valid credentials once
+      // against a side-effect-free endpoint so this gate cannot mutate application state.
+      if (scenario.name !== validAuthProbeScenario) return
       const authed = yield* callAuthProbe(scenario, "valid")
       if (authed.status === 401) throw new Error("auth rejected valid credentials")
       return
