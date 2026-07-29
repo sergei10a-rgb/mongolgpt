@@ -83,6 +83,73 @@ const cancelled = {
 }
 
 describe("payment webhook worker", () => {
+  test("reports disabled, ready, and degraded payment readiness without exposing credentials", async () => {
+    const disabled = createPaymentWebhookHandler({
+      health: { environment: "disabled", catalog: false },
+      async enqueue() {},
+    })
+    const disabledPayload: unknown = await (await disabled(new Request("https://pay.dev.mgpt.mn/health"))).json()
+    expect(disabledPayload).toEqual({
+      status: "disabled",
+      service: "payments",
+      environment: "disabled",
+      providers: { qpay: false, bonum: false },
+      catalog: false,
+      checkout: false,
+      cancellation: false,
+    })
+
+    const ready = createPaymentWebhookHandler({
+      health: { environment: "sandbox", catalog: true },
+      async qpay() {
+        return []
+      },
+      async bonum() {
+        return []
+      },
+      async createSubscriptionCheckout() {
+        return checkoutResult
+      },
+      async cancelSubscriptionCheckout() {
+        return { result: cancellationResult }
+      },
+      async enqueue() {},
+    })
+    const readyResponse = await ready(new Request("https://pay.dev.mgpt.mn/health"))
+    expect(readyResponse.headers.get("content-type")).toContain("application/json")
+    expect(readyResponse.headers.get("cache-control")).toBe("no-store")
+    const readyPayload: unknown = await readyResponse.json()
+    expect(readyPayload).toEqual({
+      status: "ok",
+      service: "payments",
+      environment: "sandbox",
+      providers: { qpay: true, bonum: true },
+      catalog: true,
+      checkout: true,
+      cancellation: true,
+    })
+
+    const degraded = createPaymentWebhookHandler({
+      health: { environment: "production", catalog: true },
+      async qpay() {
+        return []
+      },
+      async createSubscriptionCheckout() {
+        return checkoutResult
+      },
+      async cancelSubscriptionCheckout() {
+        return { result: cancellationResult }
+      },
+      async enqueue() {},
+    })
+    const degradedPayload: unknown = await (await degraded(new Request("https://pay.mgpt.mn/health"))).json()
+    expect(degradedPayload).toMatchObject({
+      status: "degraded",
+      environment: "production",
+      providers: { qpay: true, bonum: false },
+    })
+  })
+
   test("requires the internal bearer token before reading a checkout request", async () => {
     let calls = 0
     const handler = createPaymentWebhookHandler({

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { inspectAppHtml } from "../src/deployment-smoke-contract"
+import { inspectAppHtml, inspectPaymentHealth } from "../src/deployment-smoke-contract"
 
 const html = (meta: string) => `<!doctype html>
 <html>
@@ -41,5 +41,88 @@ describe("inspectAppHtml", () => {
         "https://app.dev.mgpt.mn",
       ),
     ).toThrow("static app origin")
+  })
+})
+
+describe("inspectPaymentHealth", () => {
+  test("accepts a fully disabled payment service", () => {
+    expect(
+      inspectPaymentHealth(
+        {
+          status: "disabled",
+          service: "payments",
+          environment: "disabled",
+          providers: { qpay: false, bonum: false },
+          catalog: false,
+          checkout: false,
+          cancellation: false,
+        },
+        "disabled",
+      ),
+    ).toEqual({ status: "disabled", environment: "disabled" })
+  })
+
+  test("accepts a fully ready sandbox service", () => {
+    expect(
+      inspectPaymentHealth(
+        {
+          status: "ok",
+          service: "payments",
+          environment: "sandbox",
+          providers: { qpay: true, bonum: true },
+          catalog: true,
+          checkout: true,
+          cancellation: true,
+        },
+        "sandbox",
+      ),
+    ).toEqual({ status: "ok", environment: "sandbox" })
+  })
+
+  test("rejects degraded, mismatched, or accidentally enabled payment state", () => {
+    expect(() =>
+      inspectPaymentHealth(
+        {
+          status: "degraded",
+          service: "payments",
+          environment: "sandbox",
+          providers: { qpay: true, bonum: false },
+          catalog: true,
+          checkout: false,
+          cancellation: true,
+        },
+        "sandbox",
+      ),
+    ).toThrow("not fully ready")
+
+    expect(() =>
+      inspectPaymentHealth(
+        {
+          status: "ok",
+          service: "payments",
+          environment: "sandbox",
+          providers: { qpay: true, bonum: true },
+          catalog: true,
+          checkout: true,
+          cancellation: true,
+        },
+        "production",
+      ),
+    ).toThrow("expected production")
+
+    expect(() =>
+      inspectPaymentHealth(
+        {
+          status: "disabled",
+          service: "payments",
+          environment: "disabled",
+          providers: { qpay: true, bonum: false },
+          catalog: false,
+          checkout: false,
+          cancellation: false,
+        },
+        "disabled",
+      ),
+    ).toThrow("enabled capability")
   })
 })

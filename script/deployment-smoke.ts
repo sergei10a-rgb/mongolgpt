@@ -1,10 +1,11 @@
 import { deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/deployment"
-import { inspectAppHtml } from "@mongolgpt/script/deployment-smoke-contract"
+import { inspectAppHtml, inspectPaymentHealth } from "@mongolgpt/script/deployment-smoke-contract"
 
 const result = preflightDeployment({
   stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
   env: process.env,
   requireCloudflareCredentials: false,
+  requireDeploymentSecrets: false,
 })
 const endpoints = deploymentEndpoints(result)
 const healthContracts = new Map(
@@ -12,8 +13,9 @@ const healthContracts = new Map(
     [endpoints.consoleHealth, "status"],
     [endpoints.authHealth, "status"],
     [endpoints.runtimeHealth, "runtime"],
+    [endpoints.paymentHealth, "payment"],
     [endpoints.admin, "admin"],
-  ].filter((entry): entry is [string, "status" | "runtime" | "admin"] => Boolean(entry[0])),
+  ].filter((entry): entry is [string, "status" | "runtime" | "payment" | "admin"] => Boolean(entry[0])),
 )
 
 for (const [name, url] of Object.entries(endpoints)) {
@@ -22,7 +24,7 @@ for (const [name, url] of Object.entries(endpoints)) {
 
 console.log("Cloudflare deployment smoke check passed.")
 
-async function check(name: string, url: string, health?: "status" | "runtime" | "admin") {
+async function check(name: string, url: string, health?: "status" | "runtime" | "payment" | "admin") {
   const retries = positiveInteger(process.env.MONGOLGPT_SMOKE_RETRIES, 8)
   const delay = positiveInteger(process.env.MONGOLGPT_SMOKE_DELAY_MS, 10_000)
   let lastError: unknown
@@ -49,6 +51,7 @@ async function check(name: string, url: string, health?: "status" | "runtime" | 
         if (health === "runtime" && !isRuntimeHealthyResponse(body, result.stage)) {
           throw new Error("runtime health response is invalid")
         }
+        if (health === "payment") inspectPaymentHealth(body, result.paymentEnvironment)
       } else if (name === "docs") {
         const html = await response.text()
         await checkStylesheet(url, html)
@@ -61,11 +64,10 @@ async function check(name: string, url: string, health?: "status" | "runtime" | 
           throw new Error(`app channel is ${contract.channel}; expected ${expectedChannel}`)
         }
         const expectedMode = result.hostedServices ? "hosted" : "local-bridge"
-        if (contract.mode !== expectedMode) throw new Error(`app runtime mode is ${contract.mode}; expected ${expectedMode}`)
+        if (contract.mode !== expectedMode)
+          throw new Error(`app runtime mode is ${contract.mode}; expected ${expectedMode}`)
         if (contract.mode === "hosted") {
-          const expectedRuntime = endpoints.runtimeHealth
-            ? new URL(endpoints.runtimeHealth).origin
-            : undefined
+          const expectedRuntime = endpoints.runtimeHealth ? new URL(endpoints.runtimeHealth).origin : undefined
           if (!expectedRuntime || new URL(contract.serverUrl).origin !== expectedRuntime) {
             throw new Error(`app runtime origin is ${new URL(contract.serverUrl).origin}; expected ${expectedRuntime}`)
           }

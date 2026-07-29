@@ -41,6 +41,10 @@ type Dependencies = {
   bonum?: (input: { rawBody: string; checksum: string }) => Promise<VerifiedPaymentEvent[]>
   enqueue(events: PaymentQueueEvent[]): Promise<void>
   internalToken?: string
+  health?: {
+    environment: "disabled" | "sandbox" | "production"
+    catalog: boolean
+  }
   createSubscriptionCheckout?: (input: SubscriptionCheckoutRequest) => Promise<SubscriptionCheckoutResult>
   cancelSubscriptionCheckout?: (
     input: SubscriptionCheckoutCancellationRequest,
@@ -153,16 +157,25 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
     const url = new URL(request.url)
     try {
       if (url.pathname === "/health") {
+        const providers = {
+          qpay: Boolean(dependencies.qpay),
+          bonum: Boolean(dependencies.bonum),
+        }
+        const environment =
+          dependencies.health?.environment ?? (providers.qpay || providers.bonum ? "sandbox" : "disabled")
+        const catalog = dependencies.health?.catalog ?? Boolean(dependencies.createSubscriptionCheckout)
+        const checkout =
+          catalog && Boolean(dependencies.createSubscriptionCheckout) && providers.qpay && providers.bonum
+        const cancellation = Boolean(dependencies.cancelSubscriptionCheckout) && providers.qpay
         return Response.json(
           {
-            status: dependencies.qpay || dependencies.bonum ? "ok" : "disabled",
+            status: environment === "disabled" ? "disabled" : checkout && cancellation ? "ok" : "degraded",
             service: "payments",
-            providers: {
-              qpay: Boolean(dependencies.qpay),
-              bonum: Boolean(dependencies.bonum),
-            },
-            checkout: Boolean(dependencies.createSubscriptionCheckout),
-            cancellation: Boolean(dependencies.cancelSubscriptionCheckout),
+            environment,
+            providers,
+            catalog,
+            checkout,
+            cancellation,
           },
           { headers: { "Cache-Control": "no-store" } },
         )
@@ -441,6 +454,10 @@ function defaults() {
     qpay: qpay ? (input) => reconcileQPayCallback(input, { adapter: qpay }) : undefined,
     bonum: bonum ? (input) => verifyBonumWebhook(input, { adapter: bonum }) : undefined,
     internalToken: Resource.PaymentServiceToken.value,
+    health: {
+      environment: config.enabled ? config.environment : "disabled",
+      catalog: Boolean(catalog),
+    },
     createSubscriptionCheckout: config.enabled
       ? async (input) => {
           const adapter = input.provider === "qpay" ? qpay : bonum

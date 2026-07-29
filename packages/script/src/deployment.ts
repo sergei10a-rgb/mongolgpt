@@ -1,4 +1,5 @@
 import { MongolGPTModelConfigurationSchema } from "@mongolgpt/console-core/model-config.js"
+import { PaymentPlanCatalogSchema } from "@mongolgpt/console-core/payment-checkout.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 
 const booleanVariables = [
@@ -10,9 +11,20 @@ const booleanVariables = [
   "MONGOLGPT_ENABLE_SHARE_SERVICE",
   "MONGOLGPT_ENABLE_SYNC_SERVICE",
   "MONGOLGPT_ENABLE_ADMIN",
+  "MONGOLGPT_ENABLE_REAL_PAYMENTS",
 ] as const
 
 export const modelSecretNames = Array.from({ length: 30 }, (_, index) => `ZEN_MODELS${index + 1}`)
+export const paymentSstSecretNames = [
+  "QPayMerchantAccountID",
+  "QPayClientID",
+  "QPayClientSecret",
+  "QPayInvoiceCode",
+  "BonumMerchantAccountID",
+  "BonumAppSecret",
+  "BonumTerminalID",
+  "BonumWebhookChecksumKey",
+] as const
 export const hostedSstSecretNames = [
   "ByokCredentialsKeyV1",
   "GITHUB_CLIENT_ID_CONSOLE",
@@ -21,6 +33,7 @@ export const hostedSstSecretNames = [
   "MONGOLGPT_PLAN_LIMITS",
   "ZEN_SESSION_SECRET",
   "MongolGPTAdminBootstrapEmails",
+  ...paymentSstSecretNames,
   ...modelSecretNames,
 ] as const
 
@@ -39,6 +52,7 @@ export type DeploymentPreflightResult = {
   stageDomain: string
   hostedServices: boolean
   adminEnabled: boolean
+  paymentEnvironment: "disabled" | "sandbox" | "production"
   warnings: string[]
 }
 
@@ -46,6 +60,7 @@ export function preflightDeployment(input: {
   stage: string
   env: Environment
   requireCloudflareCredentials?: boolean
+  requireDeploymentSecrets?: boolean
 }): DeploymentPreflightResult {
   const issues: string[] = []
   const warnings: string[] = []
@@ -66,6 +81,8 @@ export function preflightDeployment(input: {
 
   const hostedServices = enabled(env.MONGOLGPT_ENABLE_HOSTED_SERVICES)
   const adminEnabled = enabled(env.MONGOLGPT_ENABLE_ADMIN)
+  const paymentEnvironment = validatePaymentEnvironment(env.MONGOLGPT_PAYMENT_ENVIRONMENT, issues)
+  const requireDeploymentSecrets = input.requireDeploymentSecrets !== false
   const optionalServices = [
     "MONGOLGPT_ENABLE_ANALYTICS",
     "MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS",
@@ -84,11 +101,14 @@ export function preflightDeployment(input: {
   if (adminEnabled && !hostedServices) {
     issues.push("MONGOLGPT_ENABLE_ADMIN нь hosted services асаалттай үед л true байж болно.")
   }
+  if (paymentEnvironment !== "disabled" && !hostedServices) {
+    issues.push("MONGOLGPT_PAYMENT_ENVIRONMENT нь hosted services асаалттай үед л sandbox эсвэл production байж болно.")
+  }
   if (hostedServices && stage === "production" && !adminEnabled) {
     issues.push("Production hosted launch-д MONGOLGPT_ENABLE_ADMIN=true заавал байна.")
   }
 
-  if (adminEnabled) {
+  if (adminEnabled && requireDeploymentSecrets) {
     requireValue("CLOUDFLARE_ACCESS_API_TOKEN", env.CLOUDFLARE_ACCESS_API_TOKEN, issues)
     validateBootstrapEmails(deploymentSecret(env, "MongolGPTAdminBootstrapEmails"), issues)
   }
@@ -103,7 +123,7 @@ export function preflightDeployment(input: {
   if (hostedServices && stage !== "production") {
     requireValue("MONGOLGPT_AUTH_EMAIL_DOMAINS", env.MONGOLGPT_AUTH_EMAIL_DOMAINS, issues)
   }
-  if (hostedServices) {
+  if (hostedServices && requireDeploymentSecrets) {
     validateSecretKey("MONGOLGPT_RUNTIME_SECRET", env.MONGOLGPT_RUNTIME_SECRET, issues)
     requireValue("GITHUB_CLIENT_ID_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"), issues)
     requireValue("GITHUB_CLIENT_SECRET_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"), issues)
@@ -117,6 +137,15 @@ export function preflightDeployment(input: {
       stage,
     )
   }
+  validatePaymentConfiguration({
+    env,
+    stage,
+    stageDomain: stage === "production" ? domain : `${stage}.${domain}`,
+    hostedServices,
+    paymentEnvironment,
+    requireDeploymentSecrets,
+    issues,
+  })
 
   if (stage === "production" && domain) {
     const expected = `DEPLOY ${domain}`
@@ -132,6 +161,7 @@ export function preflightDeployment(input: {
     stageDomain: stage === "production" ? domain : `${stage}.${domain}`,
     hostedServices,
     adminEnabled,
+    paymentEnvironment,
     warnings,
   }
 }
@@ -147,6 +177,7 @@ export function deploymentEndpoints(result: DeploymentPreflightResult) {
           consoleHealth: `${root}/api/health`,
           authHealth: `https://auth.${result.stageDomain}/health`,
           runtimeHealth: `https://runtime.${result.stageDomain}/global/health`,
+          paymentHealth: `https://pay.${result.stageDomain}/health`,
         }
       : {}),
     ...(result.adminEnabled ? { admin: `https://admin.${result.stageDomain}` } : {}),
@@ -160,6 +191,13 @@ function enabled(value: string | undefined) {
 function validateBoolean(name: string, value: string | undefined, issues: string[]) {
   if (value === undefined || value === "") return
   if (value !== "true" && value !== "false") issues.push(`${name} нь зөвхөн true эсвэл false байна.`)
+}
+
+function validatePaymentEnvironment(value: string | undefined, issues: string[]) {
+  const environment = value?.trim() || "disabled"
+  if (environment === "disabled" || environment === "sandbox" || environment === "production") return environment
+  issues.push("MONGOLGPT_PAYMENT_ENVIRONMENT нь disabled, sandbox эсвэл production байна.")
+  return "disabled"
 }
 
 function requireValue(name: string, value: string | undefined, issues: string[]) {
@@ -201,6 +239,105 @@ function validatePlanConfiguration(value: string | undefined, issues: string[]) 
     .map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`)
     .join("; ")
   issues.push(`MONGOLGPT_PLAN_LIMITS plan/quota schema-д нийцэхгүй байна. ${details}`)
+}
+
+function validatePaymentConfiguration(input: {
+  env: Environment
+  stage: string
+  stageDomain: string
+  hostedServices: boolean
+  paymentEnvironment: "disabled" | "sandbox" | "production"
+  requireDeploymentSecrets: boolean
+  issues: string[]
+}) {
+  if (input.paymentEnvironment === "disabled") return
+
+  validatePaymentCatalog(input.env.MONGOLGPT_PAYMENT_PLAN_CATALOG, input.issues)
+  if (input.paymentEnvironment === "sandbox" && input.stage === "production") {
+    input.issues.push("Production stage-д sandbox төлбөр ажиллуулахгүй; disabled эсвэл production сонгоно.")
+  }
+  if (input.paymentEnvironment === "production") {
+    if (input.stage !== "production") {
+      input.issues.push("Production төлбөрийг зөвхөн production stage-д асаана.")
+    }
+    if (!enabled(input.env.MONGOLGPT_ENABLE_REAL_PAYMENTS)) {
+      input.issues.push("Production төлбөрт MONGOLGPT_ENABLE_REAL_PAYMENTS=true заавал байна.")
+    }
+    const expected = `ENABLE REAL PAYMENTS ${input.stageDomain}`
+    if (input.env.MONGOLGPT_REAL_PAYMENT_CONFIRMATION !== expected) {
+      input.issues.push(
+        `Бодит төлбөрийг баталгаажуулахын тулд MONGOLGPT_REAL_PAYMENT_CONFIRMATION="${expected}" гэж өгнө.`,
+      )
+    }
+  }
+  if (!input.hostedServices || !input.requireDeploymentSecrets) return
+
+  const values = Object.fromEntries(
+    paymentSstSecretNames.map((name) => [name, deploymentSecret(input.env, name)?.trim() ?? ""]),
+  ) as Record<(typeof paymentSstSecretNames)[number], string>
+  const missing = paymentSstSecretNames.filter((name) => !values[name])
+  for (const name of missing) input.issues.push(`${name} дутуу байна.`)
+  if (missing.length) return
+
+  for (const name of paymentSstSecretNames) {
+    if (values[name] === "disabled" || placeholderValue(values[name])) {
+      input.issues.push(`${name} бодит merchant credential-тэй байна.`)
+    }
+  }
+  if (paymentSstSecretNames.some((name) => values[name] === "disabled" || placeholderValue(values[name]))) return
+
+  if (!validQPayCredentials(values)) {
+    input.issues.push("QPay merchant credential provider-ийн schema-д нийцэхгүй байна.")
+  }
+
+  if (!validBonumCredentials(values)) {
+    input.issues.push("Bonum merchant credential provider-ийн schema-д нийцэхгүй байна.")
+  }
+}
+
+function validQPayCredentials(values: Record<(typeof paymentSstSecretNames)[number], string>) {
+  return (
+    bounded(values.QPayMerchantAccountID, 1, 255, true) &&
+    bounded(values.QPayClientID, 1, 255, true) &&
+    !values.QPayClientID.includes(":") &&
+    printableAscii(values.QPayClientID) &&
+    bounded(values.QPayClientSecret, 1, 2_048) &&
+    printableAscii(values.QPayClientSecret) &&
+    bounded(values.QPayInvoiceCode, 1, 45, true)
+  )
+}
+
+function validBonumCredentials(values: Record<(typeof paymentSstSecretNames)[number], string>) {
+  return (
+    bounded(values.BonumMerchantAccountID, 1, 255, true) &&
+    bounded(values.BonumAppSecret, 1, 4_096) &&
+    printableAscii(values.BonumAppSecret) &&
+    /^\d{1,32}$/.test(values.BonumTerminalID.trim()) &&
+    bounded(values.BonumWebhookChecksumKey, 16, 4_096)
+  )
+}
+
+function bounded(value: string, minimum: number, maximum: number, trim = false) {
+  const length = trim ? value.trim().length : value.length
+  return length >= minimum && length <= maximum
+}
+
+function printableAscii(value: string) {
+  return /^[\x20-\x7e]+$/.test(value)
+}
+
+function validatePaymentCatalog(value: string | undefined, issues: string[]) {
+  const raw = value?.trim()
+  if (!raw) {
+    issues.push("MONGOLGPT_PAYMENT_PLAN_CATALOG дутуу байна.")
+    return
+  }
+
+  try {
+    PaymentPlanCatalogSchema.parse(JSON.parse(raw))
+  } catch {
+    issues.push("MONGOLGPT_PAYMENT_PLAN_CATALOG нь Basic/Pro/Max MNT үнийн хүчинтэй JSON байна.")
+  }
 }
 
 function validateModelConfiguration(value: string | undefined, issues: string[], stage: string) {

@@ -4,6 +4,11 @@ export type AppRuntimeContract = {
   serverUrl: string
 }
 
+export type PaymentHealthContract = {
+  status: "disabled" | "ok"
+  environment: "disabled" | "sandbox" | "production"
+}
+
 function attribute(tag: string, name: string) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   return tag.match(new RegExp(`\\b${escaped}\\s*=\\s*["']([^"']+)["']`, "i"))?.[1]
@@ -57,4 +62,54 @@ export function inspectAppHtml(html: string, appUrl?: string): AppRuntimeContrac
   }
 
   return { channel, mode, serverUrl }
+}
+
+export function inspectPaymentHealth(
+  value: unknown,
+  expectedEnvironment: PaymentHealthContract["environment"],
+): PaymentHealthContract {
+  if (typeof value !== "object" || value === null) throw new Error("payment health response is not an object")
+  const body = value as {
+    status?: unknown
+    service?: unknown
+    environment?: unknown
+    providers?: unknown
+    catalog?: unknown
+    checkout?: unknown
+    cancellation?: unknown
+  }
+  if (body.service !== "payments") throw new Error("payment health service is invalid")
+  if (body.environment !== expectedEnvironment) {
+    throw new Error(`payment environment is ${String(body.environment)}; expected ${expectedEnvironment}`)
+  }
+  if (typeof body.providers !== "object" || body.providers === null) {
+    throw new Error("payment provider health is missing")
+  }
+
+  const providers = body.providers as { qpay?: unknown; bonum?: unknown }
+  if (expectedEnvironment === "disabled") {
+    if (
+      body.status !== "disabled" ||
+      providers.qpay !== false ||
+      providers.bonum !== false ||
+      body.catalog !== false ||
+      body.checkout !== false ||
+      body.cancellation !== false
+    ) {
+      throw new Error("disabled payment service exposes an enabled capability")
+    }
+    return { status: "disabled", environment: expectedEnvironment }
+  }
+
+  if (
+    body.status !== "ok" ||
+    providers.qpay !== true ||
+    providers.bonum !== true ||
+    body.catalog !== true ||
+    body.checkout !== true ||
+    body.cancellation !== true
+  ) {
+    throw new Error("enabled payment service is not fully ready")
+  }
+  return { status: "ok", environment: expectedEnvironment }
 }

@@ -26,8 +26,21 @@ on:
         required: true
         type: boolean
         default: false
+      payment_environment:
+        description: "Bonum + QPay төлбөрийн орчин"
+        required: true
+        type: choice
+        default: disabled
+        options:
+          - disabled
+          - sandbox
+          - production
       production_confirmation:
         description: "Production бол DEPLOY <domain> гэж яг бичнэ"
+        required: false
+        type: string
+      real_payment_confirmation:
+        description: "Бодит төлбөр бол ENABLE REAL PAYMENTS <domain> гэж яг бичнэ"
         required: false
         type: string
 
@@ -50,6 +63,10 @@ env:
   MONGOLGPT_ENABLE_SHARE_SERVICE: "false"
   MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
   MONGOLGPT_PRODUCTION_CONFIRMATION: ${{ inputs.production_confirmation }}
+  MONGOLGPT_PAYMENT_ENVIRONMENT: ${{ inputs.payment_environment }}
+  MONGOLGPT_PAYMENT_PLAN_CATALOG: ${{ vars.MONGOLGPT_PAYMENT_PLAN_CATALOG }}
+  MONGOLGPT_ENABLE_REAL_PAYMENTS: ${{ inputs.payment_environment == 'production' && 'true' || 'false' }}
+  MONGOLGPT_REAL_PAYMENT_CONFIRMATION: ${{ inputs.real_payment_confirmation }}
 
 jobs:
   verify:
@@ -115,6 +132,14 @@ jobs:
           SST_SECRET_MONGOLGPT_PLAN_LIMITS: ${{ secrets.MONGOLGPT_PLAN_LIMITS }}
           SST_SECRET_ZEN_SESSION_SECRET: ${{ secrets.ZEN_SESSION_SECRET }}
           SST_SECRET_MongolGPTAdminBootstrapEmails: ${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}
+          SST_SECRET_QPayMerchantAccountID: ${{ secrets.QPAY_MERCHANT_ACCOUNT_ID }}
+          SST_SECRET_QPayClientID: ${{ secrets.QPAY_CLIENT_ID }}
+          SST_SECRET_QPayClientSecret: ${{ secrets.QPAY_CLIENT_SECRET }}
+          SST_SECRET_QPayInvoiceCode: ${{ secrets.QPAY_INVOICE_CODE }}
+          SST_SECRET_BonumMerchantAccountID: ${{ secrets.BONUM_MERCHANT_ACCOUNT_ID }}
+          SST_SECRET_BonumAppSecret: ${{ secrets.BONUM_APP_SECRET }}
+          SST_SECRET_BonumTerminalID: ${{ secrets.BONUM_TERMINAL_ID }}
+          SST_SECRET_BonumWebhookChecksumKey: ${{ secrets.BONUM_WEBHOOK_CHECKSUM_KEY }}
           SST_SECRET_ZEN_MODELS1: ${{ secrets.ZEN_MODELS1 }}
           SST_SECRET_ZEN_MODELS2: ${{ secrets.ZEN_MODELS2 }}
           SST_SECRET_ZEN_MODELS3: ${{ secrets.ZEN_MODELS3 }}

@@ -82,6 +82,23 @@ const hosted = {
     },
   }),
 }
+const paymentCatalog = JSON.stringify({
+  basic: { label: "Basic", amount: 29_900 },
+  pro: { label: "Pro", amount: 79_900 },
+  max: { label: "Max", amount: 199_900 },
+})
+const payment = {
+  MONGOLGPT_PAYMENT_ENVIRONMENT: "sandbox",
+  MONGOLGPT_PAYMENT_PLAN_CATALOG: paymentCatalog,
+  SST_SECRET_QPayMerchantAccountID: "unit-qpay-merchant",
+  SST_SECRET_QPayClientID: "unit-qpay-client",
+  SST_SECRET_QPayClientSecret: "unit-qpay-client-secret",
+  SST_SECRET_QPayInvoiceCode: "unit-qpay-invoice",
+  SST_SECRET_BonumMerchantAccountID: "unit-bonum-merchant",
+  SST_SECRET_BonumAppSecret: "unit-bonum-app-secret",
+  SST_SECRET_BonumTerminalID: "12345678",
+  SST_SECRET_BonumWebhookChecksumKey: "unit-bonum-webhook-key",
+}
 
 describe("Cloudflare deployment preflight", () => {
   test("accepts a static dev deployment and derives its endpoints", () => {
@@ -92,6 +109,7 @@ describe("Cloudflare deployment preflight", () => {
       stageDomain: "dev.mgpt.mn",
       hostedServices: false,
       adminEnabled: false,
+      paymentEnvironment: "disabled",
     })
     expect(deploymentEndpoints(result)).toEqual({
       docs: "https://docs.dev.mgpt.mn/docs",
@@ -136,8 +154,93 @@ describe("Cloudflare deployment preflight", () => {
     expect(deploymentEndpoints(result)).toMatchObject({
       app: "https://app.mgpt.mn",
       runtimeHealth: "https://runtime.mgpt.mn/global/health",
+      paymentHealth: "https://pay.mgpt.mn/health",
       admin: "https://admin.mgpt.mn",
     })
+  })
+
+  test("accepts a complete Bonum and QPay sandbox configuration", () => {
+    const result = preflightDeployment({
+      stage: "dev",
+      env: {
+        ...cloudflare,
+        ...hosted,
+        ...payment,
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+      },
+    })
+
+    expect(result.paymentEnvironment).toBe("sandbox")
+    expect(deploymentEndpoints(result).paymentHealth).toBe("https://pay.dev.mgpt.mn/health")
+  })
+
+  test("fails closed when sandbox prices or merchant credentials are missing", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            MONGOLGPT_PAYMENT_ENVIRONMENT: "sandbox",
+          },
+        }),
+      ["MONGOLGPT_PAYMENT_PLAN_CATALOG", "QPayMerchantAccountID", "BonumWebhookChecksumKey"],
+    )
+  })
+
+  test("lets smoke derive payment endpoints without receiving deploy secrets", () => {
+    const result = preflightDeployment({
+      stage: "dev",
+      env: {
+        ...cloudflare,
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+        MONGOLGPT_PAYMENT_ENVIRONMENT: "sandbox",
+        MONGOLGPT_PAYMENT_PLAN_CATALOG: paymentCatalog,
+      },
+      requireCloudflareCredentials: false,
+      requireDeploymentSecrets: false,
+    })
+
+    expect(result.paymentEnvironment).toBe("sandbox")
+    expect(deploymentEndpoints(result).paymentHealth).toBe("https://pay.dev.mgpt.mn/health")
+  })
+
+  test("requires explicit production payment approval", () => {
+    const env = {
+      ...cloudflare,
+      MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+      MONGOLGPT_ENABLE_ADMIN: "true",
+      MONGOLGPT_PAYMENT_ENVIRONMENT: "production",
+      MONGOLGPT_PAYMENT_PLAN_CATALOG: paymentCatalog,
+      MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
+    }
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env,
+          requireDeploymentSecrets: false,
+        }),
+      ["MONGOLGPT_ENABLE_REAL_PAYMENTS=true", "ENABLE REAL PAYMENTS mgpt.mn"],
+    )
+
+    expect(
+      preflightDeployment({
+        stage: "production",
+        env: {
+          ...env,
+          MONGOLGPT_ENABLE_REAL_PAYMENTS: "true",
+          MONGOLGPT_REAL_PAYMENT_CONFIRMATION: "ENABLE REAL PAYMENTS mgpt.mn",
+        },
+        requireDeploymentSecrets: false,
+      }).paymentEnvironment,
+    ).toBe("production")
   })
 
   test("requires a protected admin for production hosted launches", () => {
