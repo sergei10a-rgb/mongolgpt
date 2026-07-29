@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import { resolve } from "node:path"
-import { AdminBillingQueryInput, adminBillingPeriodBounds } from "../src/lib/admin-billing"
+import {
+  AdminBillingQueryInput,
+  adminBillingPeriodBounds,
+  adminBillingSafeDifference,
+  adminBillingSafeSum,
+} from "../src/lib/admin-billing"
 
 async function source(path: string) {
   return Bun.file(resolve(import.meta.dir, "..", path)).text()
@@ -38,8 +43,17 @@ describe("admin billing contract", () => {
     expect(now.toISOString()).toBe("2026-07-29T12:00:00.000Z")
   })
 
+  test("rejects aggregate arithmetic outside the safe integer range", () => {
+    expect(adminBillingSafeSum(10, 20, 30)).toBe(60)
+    expect(adminBillingSafeDifference(10, 30)).toBe(-20)
+    expect(() => adminBillingSafeSum(Number.MAX_SAFE_INTEGER, 1)).toThrow("аюулгүй бүхэл тооны хязгаараас")
+    expect(() => adminBillingSafeDifference(Number.MIN_SAFE_INTEGER, 1)).toThrow("аюулгүй бүхэл тооны хязгаараас")
+    expect(() => adminBillingSafeSum(Number.MAX_SAFE_INTEGER + 1)).toThrow("хүчинтэй бүхэл тоо биш")
+  })
+
   test("keeps billing read-only, permission-gated, and based on the authoritative ledgers", async () => {
     const billing = await source("src/lib/admin-billing.ts")
+    const finance = await source("../core/src/finance-reporting.ts")
     const route = await source("src/routes/billing/index.tsx")
     const header = await source("src/component/admin-header.tsx")
 
@@ -47,6 +61,8 @@ describe("admin billing contract", () => {
     expect(billing).toContain("PaymentInvoiceTable")
     expect(billing).toContain("PlanSubscriptionTable")
     expect(billing).toContain("UsageTable")
+    expect(billing).toContain("getFinanceMarginEvidenceWithDb")
+    expect(billing).toContain("calculateFinanceGrossMargin")
     expect(billing).toContain("PaymentInvoiceTable.time_verified")
     expect(billing).toContain("PaymentInvoiceTable.time_refunded")
     expect(billing).toContain("lte(PlanSubscriptionTable.timePeriodStart, period.end)")
@@ -55,22 +71,30 @@ describe("admin billing contract", () => {
     expect(billing).toContain("isNull(UsageTable.timeDeleted)")
     expect(billing).toContain("'$.plan'")
     expect(billing).toContain("<> 'byok'")
-    expect(billing).toContain("lte(UsageTable.timeCreated, period.end)")
+    expect(billing).toContain("lt(UsageTable.timeCreated, period.end)")
     expect(billing).not.toContain("PaymentTable")
+    expect(finance).toContain("FinanceCostEntryTable")
+    expect(finance).toContain("FinancePaymentSettlementTable")
+    expect(finance).toContain("finance_cost_valuation")
+    expect(finance).toContain("basis = 'actual'")
+    expect(finance).toContain("payment_provider_filter")
     expect(route).toContain("Санхүүгийн хяналт")
     expect(route).not.toContain("action(")
     expect(header).toContain('permissions.includes("billing.read")')
     expect(header).toContain('href="/billing"')
   })
 
-  test("shows native currencies and refuses to present an invented gross margin", async () => {
+  test("shows actual and estimated costs separately and refuses to invent an incomplete margin", async () => {
     const view = await source("src/component/admin-billing.tsx")
 
     expect(view).toContain("Цэвэр орлого")
-    expect(view).toContain("MongolGPT-ийн загварын өртөг")
+    expect(view).toContain("Загварын бодит өртөг")
+    expect(view).toContain("Загварын урьдчилсан өртөг")
+    expect(view).toContain("Төлбөрийн шимтгэл ба татвар")
     expect(view).toContain("Нийт ашигт ажиллагаа")
     expect(view).toContain("Тооцоолоогүй")
-    expect(view).toContain("Түүхэн USD/MNT ханш, шимтгэлийн бүртгэл шаардлагатай")
+    expect(view).toContain("Зарим хэрэглээний бодит өртөг дутуу")
+    expect(view).toContain("Зарим төлбөрийн тооцоо нийлүүлэлтийн баримт дутуу")
     expect(view).toContain('currency: "MNT"')
     expect(view).toContain('currency: "USD"')
     expect(view).not.toContain("opencode")

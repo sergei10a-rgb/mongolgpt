@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js"
+import type { FinanceMarginUnavailableReason } from "@mongolgpt/console-core/finance-reporting.js"
 import type { PlatformAdminContext } from "~/lib/admin-context"
 import { AdminHeader } from "./admin-header"
 
@@ -21,10 +22,42 @@ export interface AdminBillingData {
     refundedInvoices: number
     pendingInvoices: number
     activeSubscriptions: number
-    modelCostMicroCents: number
+    estimatedModelCostMicroCents: number
+    actualModelCostMNTMicros: number
+    paymentCostMNTMicros: number | null
+    recognizedRevenueMNTMicros: number | null
     requests: number
     tokens: number
-    marginAvailable: false
+  }
+  finance: {
+    model: {
+      expectedUsage: number
+      coveredUsage: number
+      missingUsage: number
+      valuedEntries: number
+      unvaluedEntries: number
+      debitMNTMicros: number
+      creditMNTMicros: number
+      costMNTMicros: number
+      complete: boolean
+    }
+    payments: {
+      expectedEvents: number
+      coveredEvents: number
+      missingEvents: number
+      ambiguousEvents: number
+      feeMNTMicros: number | null
+      taxMNTMicros: number | null
+      revenueAdjustmentMNTMicros: number | null
+      costMNTMicros: number | null
+      complete: boolean
+    }
+    margin: {
+      available: boolean
+      recognizedRevenueMNTMicros: number | null
+      valueMNTMicros: number | null
+      reasons: FinanceMarginUnavailableReason[]
+    }
   }
   usage: {
     provider: string
@@ -102,7 +135,24 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
         </form>
 
         <section data-component="financial-metrics" aria-label="Санхүүгийн үндсэн үзүүлэлт">
-          <FinancialMetric label="Цэвэр орлого" value={formatMNT(props.data.metrics.netRevenueMNT)} />
+          <FinancialMetric
+            label={
+              props.data.metrics.recognizedRevenueMNTMicros === null ? "Нэхэмжлэхийн цэвэр орлого" : "Цэвэр орлого"
+            }
+            value={
+              props.data.metrics.recognizedRevenueMNTMicros === null
+                ? formatMNT(props.data.metrics.netRevenueMNT)
+                : formatMNTMicros(props.data.metrics.recognizedRevenueMNTMicros)
+            }
+            detail={
+              props.data.finance.payments.revenueAdjustmentMNTMicros === null
+                ? "Тооцоо нийлүүлэлтийн баримт бүрдээгүй"
+                : props.data.finance.payments.revenueAdjustmentMNTMicros === 0
+                  ? undefined
+                  : `${formatMNTMicros(props.data.finance.payments.revenueAdjustmentMNTMicros)} тооцооны засвар`
+            }
+            tone={props.data.metrics.recognizedRevenueMNTMicros === null ? "warning" : undefined}
+          />
           <FinancialMetric
             label="Баталгаажсан төлбөр"
             value={formatMNT(props.data.metrics.grossRevenueMNT)}
@@ -115,9 +165,33 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
             tone={props.data.metrics.refundsMNT > 0 ? "warning" : undefined}
           />
           <FinancialMetric
-            label="MongolGPT-ийн загварын өртөг"
-            value={formatUSD(props.data.metrics.modelCostMicroCents)}
-            detail={`${formatNumber(props.data.metrics.requests)} хүсэлт`}
+            label={
+              props.data.filters.provider === "all"
+                ? "Загварын бодит өртөг"
+                : "Загварын бодит өртөг (бүх төлбөрийн суваг)"
+            }
+            value={formatMNTMicros(props.data.metrics.actualModelCostMNTMicros)}
+            detail={`${formatNumber(props.data.finance.model.coveredUsage)}/${formatNumber(
+              props.data.finance.model.expectedUsage,
+            )} хэрэглээ нотлогдсон`}
+            tone={props.data.finance.model.complete ? undefined : "warning"}
+          />
+          <FinancialMetric
+            label="Төлбөрийн шимтгэл ба татвар"
+            value={
+              props.data.metrics.paymentCostMNTMicros === null
+                ? "Тооцоолоогүй"
+                : formatMNTMicros(props.data.metrics.paymentCostMNTMicros)
+            }
+            detail={`${formatNumber(props.data.finance.payments.coveredEvents)}/${formatNumber(
+              props.data.finance.payments.expectedEvents,
+            )} үйл явдал нотлогдсон`}
+            tone={props.data.finance.payments.complete ? undefined : "warning"}
+          />
+          <FinancialMetric
+            label="Загварын урьдчилсан өртөг"
+            value={formatUSD(props.data.metrics.estimatedModelCostMicroCents)}
+            detail={`${formatNumber(props.data.metrics.requests)} хүсэлтийн үйлчилгээний тооцоо`}
           />
           <FinancialMetric label="Нийт токен" value={formatNumber(props.data.metrics.tokens)} />
           <FinancialMetric
@@ -131,27 +205,40 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
           />
           <FinancialMetric
             label="Нийт ашигт ажиллагаа"
-            value="Тооцоолоогүй"
-            detail="Түүхэн USD/MNT ханш, шимтгэлийн бүртгэл шаардлагатай"
+            value={
+              props.data.finance.margin.available && props.data.finance.margin.valueMNTMicros !== null
+                ? formatMNTMicros(props.data.finance.margin.valueMNTMicros)
+                : "Тооцоолоогүй"
+            }
+            detail={marginDetail(props.data.finance.margin)}
+            tone={props.data.finance.margin.available ? undefined : "warning"}
           />
         </section>
 
         <section data-component="finance-status">
           <div>
-            <span>Тайлангийн эхлэл</span>
-            <strong>{formatDate(props.data.period.start)}</strong>
+            <span>Загварын бодит өртөг</span>
+            <strong>
+              {formatNumber(props.data.finance.model.coveredUsage)} /{" "}
+              {formatNumber(props.data.finance.model.expectedUsage)}
+            </strong>
           </div>
           <div>
-            <span>Тайлангийн төгсгөл</span>
-            <strong>{formatDate(props.data.period.end)}</strong>
+            <span>Төлбөрийн тооцоо нийлүүлэлт</span>
+            <strong>
+              {formatNumber(props.data.finance.payments.coveredEvents)} /{" "}
+              {formatNumber(props.data.finance.payments.expectedEvents)}
+            </strong>
           </div>
           <div>
-            <span>Орлогын валют</span>
-            <strong>MNT</strong>
+            <span>Үнэлгээгүй өртгийн мөр</span>
+            <strong>{formatNumber(props.data.finance.model.unvaluedEntries)}</strong>
           </div>
           <div>
-            <span>Загварын өртгийн валют</span>
-            <strong>USD</strong>
+            <span>Тайлангийн хугацаа</span>
+            <strong>
+              {formatDate(props.data.period.start)} - {formatDate(props.data.period.end)}
+            </strong>
           </div>
         </section>
 
@@ -286,6 +373,15 @@ function formatMNT(value: number) {
   }).format(value)
 }
 
+function formatMNTMicros(value: number) {
+  return new Intl.NumberFormat("mn-MN", {
+    style: "currency",
+    currency: "MNT",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 6,
+  }).format(value / 1_000_000)
+}
+
 function formatUSD(value: number) {
   return new Intl.NumberFormat("mn-MN", {
     style: "currency",
@@ -305,6 +401,23 @@ function formatDate(value: string) {
     timeStyle: "short",
     timeZone: "Asia/Ulaanbaatar",
   }).format(new Date(value))
+}
+
+function marginDetail(margin: AdminBillingData["finance"]["margin"]) {
+  if (margin.available) return "Бодит загварын өртөг, шимтгэл, татварыг хассан"
+  return margin.reasons.map(marginUnavailableReasonLabel).join(" · ")
+}
+
+function marginUnavailableReasonLabel(reason: FinanceMarginUnavailableReason) {
+  return (
+    {
+      payment_provider_filter: "Төлбөрийн сувгаар шүүхэд загварын өртөг хуваарилагдахгүй",
+      missing_model_costs: "Зарим хэрэглээний бодит өртөг дутуу",
+      unvalued_model_costs: "Зарим USD өртөг MNT-д үнэлэгдээгүй",
+      missing_payment_settlements: "Зарим төлбөрийн тооцоо нийлүүлэлтийн баримт дутуу",
+      ambiguous_payment_settlements: "Давхардсан тооцоо нийлүүлэлтийн баримт шалгах шаардлагатай",
+    }[reason] ?? reason
+  )
 }
 
 function paymentProviderLabel(provider: string) {
