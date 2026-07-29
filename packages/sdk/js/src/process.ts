@@ -1,11 +1,16 @@
 import { type ChildProcess, spawnSync } from "node:child_process"
 
+const WINDOWS_TREE_KILL_TIMEOUT_MS = 5_000
+
 // Duplicated from `packages/mongolgpt/src/util/process.ts` because the SDK cannot
 // import `mongolgpt` without creating a cycle (`mongolgpt` depends on `@mongolgpt/sdk`).
 export function stop(proc: ChildProcess) {
   if (proc.exitCode !== null || proc.signalCode !== null) return
   if (process.platform === "win32" && proc.pid) {
-    const out = spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { windowsHide: true })
+    const out = spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], {
+      windowsHide: true,
+      timeout: WINDOWS_TREE_KILL_TIMEOUT_MS,
+    })
     if (!out.error && out.status === 0) return
   }
   proc.kill()

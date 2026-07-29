@@ -43,6 +43,16 @@ describe("util.process", () => {
     expect(Date.now() - started).toBeLessThan(1000)
   }, 3000)
 
+  test("stops a running process tree", async () => {
+    const proc = Process.spawn(node("setInterval(() => {}, 1000)"))
+    const started = Date.now()
+
+    await Process.stop(proc)
+
+    expect(await proc.exited).not.toBe(0)
+    expect(Date.now() - started).toBeLessThan(10_000)
+  }, 12_000)
+
   test("kills after timeout when process ignores terminate signal", async () => {
     if (process.platform === "win32") return
 

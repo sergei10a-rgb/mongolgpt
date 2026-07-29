@@ -4,6 +4,9 @@ import launch from "cross-spawn"
 import { buffer } from "node:stream/consumers"
 import { errorMessage } from "./error"
 
+const WINDOWS_TREE_KILL_TIMEOUT_MS = 5_000
+const WINDOWS_TREE_KILL_GRACE_MS = 1_000
+
 export type Stdio = "inherit" | "pipe" | "ignore" | number | Stream
 export type Shell = boolean | string
 
@@ -155,7 +158,9 @@ export async function stop(proc: ChildProcess) {
   }
 
   const out = await run(["taskkill", "/pid", String(proc.pid), "/T", "/F"], {
+    abort: AbortSignal.timeout(WINDOWS_TREE_KILL_TIMEOUT_MS),
     nothrow: true,
+    timeout: WINDOWS_TREE_KILL_GRACE_MS,
   })
 
   if (out.code === 0) return
