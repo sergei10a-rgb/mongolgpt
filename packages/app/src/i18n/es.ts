@@ -138,7 +138,7 @@ export const dict = {
     "Con una sola clave API obtendrás acceso a modelos como Claude, GPT, Gemini, GLM y más.",
   "provider.connect.mongolgptAccount.visit.prefix": "Visita ",
   "provider.connect.mongolgptAccount.visit.link":
-    "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
+    "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/providers.mdx#mongolgpt-account",
   "provider.connect.mongolgptAccount.visit.suffix": " para obtener tu clave API.",
   "provider.connect.oauth.code.visit.prefix": "Visita ",
   "provider.connect.oauth.code.visit.link": "este enlace",

@@ -8,6 +8,9 @@ import config from "./config.mjs"
 import { rehypeHeadingIds } from "@astrojs/markdown-remark"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
 import { spawnSync } from "child_process"
+import { readdirSync, readFileSync, writeFileSync } from "fs"
+import { join } from "path"
+import { legacyMongolianDocRedirects, normalizeStaticRedirectHtmlDocument } from "./legacy-mn-redirects.mjs"
 
 const staticDocs = process.env.MONGOLGPT_STATIC_DOCS === "true"
 
@@ -17,8 +20,7 @@ export default defineConfig({
   redirects: {
     "/go": "/docs/account",
     "/zen": "/docs/account",
-    "/mn/go": "/docs/account",
-    "/mn/zen": "/docs/account",
+    ...legacyMongolianDocRedirects,
   },
   outDir: staticDocs ? "./dist/docs" : "./dist",
   output: staticDocs ? "static" : "server",
@@ -161,7 +163,24 @@ function configSchema() {
       "astro:build:done": async () => {
         console.log("MongolGPT тохиргооны schema үүсгэж байна")
         spawnSync("../mongolgpt/script/schema.ts", ["./dist/config.json", "./dist/tui.json"])
+        if (staticDocs) normalizeStaticRedirectHtml("./dist/docs")
       },
     },
+  }
+}
+
+/** @param {string} root */
+function normalizeStaticRedirectHtml(root) {
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const path = join(root, entry.name)
+    if (entry.isDirectory()) {
+      normalizeStaticRedirectHtml(path)
+      continue
+    }
+    if (!entry.name.endsWith(".html")) continue
+
+    const html = readFileSync(path, "utf8")
+    const normalized = normalizeStaticRedirectHtmlDocument(html)
+    if (normalized !== html) writeFileSync(path, normalized)
   }
 }

@@ -140,7 +140,7 @@ export const dict = {
   "provider.connect.mongolgptAccount.line2": "只需一個 API 金鑰，你就能使用 Claude、GPT、Gemini、GLM 等模型。",
   "provider.connect.mongolgptAccount.visit.prefix": "造訪 ",
   "provider.connect.mongolgptAccount.visit.link":
-    "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
+    "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/providers.mdx#mongolgpt-account",
   "provider.connect.mongolgptAccount.visit.suffix": " 取得你的 API 金鑰。",
   "provider.connect.oauth.code.visit.prefix": "造訪 ",
   "provider.connect.oauth.code.visit.link": "此連結",

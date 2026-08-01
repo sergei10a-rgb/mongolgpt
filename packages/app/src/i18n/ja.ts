@@ -125,7 +125,7 @@ export const dict = {
   "provider.connect.mongolgptAccount.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
   "provider.connect.mongolgptAccount.visit.prefix": " ",
   "provider.connect.mongolgptAccount.visit.link":
-    "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
+    "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/providers.mdx#mongolgpt-account",
   "provider.connect.mongolgptAccount.visit.suffix": " にアクセスしてAPIキーを取得してください。",
   "provider.connect.oauth.code.visit.prefix": " ",
   "provider.connect.oauth.code.visit.link": "このリンク",

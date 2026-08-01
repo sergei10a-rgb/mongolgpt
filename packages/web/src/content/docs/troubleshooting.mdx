@@ -175,7 +175,7 @@ Rename-Item "$env:USERPROFILE\.cache\mongolgpt" "mongolgpt.backup-$(Get-Date -Fo
 
 ```jsonc title="mongolgpt.jsonc"
 {
-  "plugin": []
+  "plugin": [],
 }
 ```
 
@@ -196,6 +196,10 @@ Rename-Item "$env:USERPROFILE\.cache\mongolgpt" "mongolgpt.backup-$(Get-Date -Fo
 - `mongolgpt.workspace.*.dat`: workspace бүрийн UI төлөв
 
 Эдгээр файл operating system-ийн application data хавтаст байрлана. Reset хийснээр recent server, tab, workspace төлөв алдагдаж болно; төслийн эх кодыг устгах ёсгүй.
+
+### Мэдэгдэл харагдахгүй
+
+Системийн мэдэгдэл харагдахын тулд үйлдлийн системийн мэдэгдлийн тохиргоонд MongolGPT зөвшөөрөгдсөн, мөн програмын цонх идэвхгүй байх ёстой. Эхлээд үйлдлийн системийн мэдэгдлийн тохиргооноос MongolGPT-г зөвшөөрч, дараа нь цонхноос гарч турш.
 
 ## Вэб сервер
 

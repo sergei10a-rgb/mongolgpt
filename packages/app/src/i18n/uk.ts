@@ -141,7 +141,7 @@ export const dict = {
     "З одним ключем API ви отримаєте доступ до таких моделей, як Claude, GPT, Gemini, GLM та інших.",
   "provider.connect.mongolgptAccount.visit.prefix": "Відвідайте ",
   "provider.connect.mongolgptAccount.visit.link":
-    "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/providers.mdx#mongolgpt-account",
+    "github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/providers.mdx#mongolgpt-account",
   "provider.connect.mongolgptAccount.visit.suffix": ", щоб отримати ключ API.",
   "provider.connect.oauth.code.visit.prefix": "Відвідайте ",
   "provider.connect.oauth.code.visit.link": "це посилання",

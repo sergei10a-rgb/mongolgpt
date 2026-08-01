@@ -3,7 +3,15 @@ import { readdir } from "node:fs/promises"
 
 const docs = new URL("../../web/src/content/docs/", import.meta.url)
 const astro = new URL("../../web/astro.config.mjs", import.meta.url)
+const legacyRedirects = new URL("../../web/legacy-mn-redirects.mjs", import.meta.url)
 const mobileMenu = new URL("../../web/src/components/MobileMenuToggle.astro", import.meta.url)
+const install = new URL("../../../install", import.meta.url)
+const productSourceRoots = [
+  new URL("../../app/src/i18n/", import.meta.url),
+  new URL("../../mongolgpt/src/", import.meta.url),
+  new URL("../../sdk/js/src/", import.meta.url),
+  new URL("../../web/src/", import.meta.url),
+]
 
 async function markdownFiles(directory: URL): Promise<URL[]> {
   const entries = await readdir(directory, { withFileTypes: true })
@@ -12,6 +20,18 @@ async function markdownFiles(directory: URL): Promise<URL[]> {
       const child = new URL(entry.name + (entry.isDirectory() ? "/" : ""), directory)
       if (entry.isDirectory()) return markdownFiles(child)
       return /\.mdx?$/.test(entry.name) ? [child] : []
+    }),
+  )
+  return files.flat()
+}
+
+async function textSourceFiles(directory: URL): Promise<URL[]> {
+  const entries = await readdir(directory, { withFileTypes: true })
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const child = new URL(entry.name + (entry.isDirectory() ? "/" : ""), directory)
+      if (entry.isDirectory()) return textSourceFiles(child)
+      return /\.(?:[cm]?[jt]sx?|mdx?|json|txt)$/.test(entry.name) ? [child] : []
     }),
   )
   return files.flat()
@@ -32,6 +52,7 @@ describe("documentation product contract", () => {
   test("publishes the current account guide and removes retired pages from navigation", async () => {
     const account = await Bun.file(new URL("account.mdx", docs)).text()
     const config = await Bun.file(astro).text()
+    const legacy = await Bun.file(legacyRedirects).text()
     const sidebar = config.slice(config.indexOf("sidebar:"), config.indexOf("components:"))
 
     expect(account).toContain("mongolgpt console login")
@@ -40,9 +61,18 @@ describe("documentation product contract", () => {
     expect(account).toContain("Production үйлчилгээ")
     expect(sidebar).toContain('"account"')
     expect(sidebar).not.toMatch(/["'](?:go|zen)["']/)
-    expect(config.match(/"\/(?:go|zen|mn\/go|mn\/zen)": "\/docs\/account"/g)).toHaveLength(4)
+    expect(config.match(/"\/(?:go|zen)": "\/docs\/account"/g)).toHaveLength(2)
+    expect(legacy).toContain('"/mn": "/docs/"')
+    expect(legacy).not.toMatch(/["'](?:go|zen)["']/)
     expect(await Bun.file(new URL("go.mdx", docs)).exists()).toBe(false)
     expect(await Bun.file(new URL("zen.mdx", docs)).exists()).toBe(false)
+  })
+
+  test("keeps repository documentation links on canonical Mongolian sources", async () => {
+    const files = [install, ...(await Promise.all(productSourceRoots.map(textSourceFiles))).flat()]
+    for (const file of files) {
+      expect(await Bun.file(file).text()).not.toContain("packages/web/src/content/docs/mn")
+    }
   })
 
   test("keeps the mobile navigation state accessible", async () => {

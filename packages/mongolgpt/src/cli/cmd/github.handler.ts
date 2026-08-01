@@ -199,7 +199,7 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
             "",
             "    3. GitHub issue дээр очоод `/mongolgpt дүгнэ` comment бичиж agent хэрхэн ажиллахыг үзнэ үү",
             "",
-            "   GitHub agent-ийн баримт бичиг - https://github.com/sergei10a-rgb/mongolgpt/blob/main/packages/web/src/content/docs/mn/github.mdx",
+            "   GitHub agent-ийн баримт бичиг - https://github.com/sergei10a-rgb/mongolgpt/blob/main/packages/web/src/content/docs/github.mdx",
           ].join("\n"),
         )
       }
@@ -943,7 +943,9 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
 
     async function exchangeForAppToken(token: string) {
       if (!oidcBaseUrl) {
-        throw new Error("Custom GitHub App ашиглах бол oidc_base_url тохируулна уу, эсвэл use_github_token: true хэрэглэнэ үү.")
+        throw new Error(
+          "Custom GitHub App ашиглах бол oidc_base_url тохируулна уу, эсвэл use_github_token: true хэрэглэнэ үү.",
+        )
       }
       const response = token.startsWith("github_pat_")
         ? await fetch(`${oidcBaseUrl}/exchange_github_app_token_with_pat`, {

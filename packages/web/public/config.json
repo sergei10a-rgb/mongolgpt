@@ -800,7 +800,7 @@
             ],
             "additionalProperties": false
           },
-          "description": "Командын тохиргоо. Дэлгэрэнгүй: https://github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/commands.mdx"
+          "description": "Командын тохиргоо. Дэлгэрэнгүй: https://github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/commands.mdx"
         },
         "skills": {
           "type": "object",
@@ -998,7 +998,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/AgentConfig"
           },
-          "description": "Агентын тохиргоо. Дэлгэрэнгүй: https://github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/mn/agents.mdx"
+          "description": "Агентын тохиргоо. Дэлгэрэнгүй: https://github.com/sergei10a-rgb/mongolgpt/tree/main/packages/web/src/content/docs/agents.mdx"
         },
         "provider": {
           "type": "object",
