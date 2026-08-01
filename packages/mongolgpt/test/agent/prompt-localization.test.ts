@@ -6,15 +6,16 @@ import TITLE from "../../src/agent/prompt/title.txt"
 
 describe("built-in agent prompt localization", () => {
   test("agent generator is Mongolian and preserves its JSON contract", () => {
-    expect(GENERATE).toContain("монгол хэлээр")
-    expect(GENERATE).toContain("Task tool")
-    expect(GENERATE).not.toContain("You are an elite AI agent architect")
+    const generate = GENERATE.replaceAll("\r\n", "\n")
+    expect(generate).toContain("монгол хэлээр")
+    expect(generate).toContain("Task tool")
+    expect(generate).not.toContain("You are an elite AI agent architect")
 
-    const start = GENERATE.indexOf("{\n")
-    const end = GENERATE.indexOf("\n}", start)
+    const start = generate.indexOf("{\n")
+    const end = generate.indexOf("\n}", start)
     expect(start).toBeGreaterThanOrEqual(0)
     expect(end).toBeGreaterThan(start)
-    const template = JSON.parse(GENERATE.slice(start, end + 2))
+    const template = JSON.parse(generate.slice(start, end + 2))
     expect(Object.keys(template)).toEqual(["identifier", "whenToUse", "systemPrompt"])
   })
 
