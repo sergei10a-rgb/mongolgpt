@@ -11,80 +11,94 @@ import { RepositoryCache } from "@mongolgpt/core/repository-cache"
 import { EffectFlock } from "@mongolgpt/core/util/effect-flock"
 import { git, gitRemote } from "./fixture/git"
 import { tmpdir } from "./fixture/tmpdir"
-import { testEffect } from "./lib/effect"
+import { testEffect, windowsTestTimeout } from "./lib/effect"
 
 const it = testEffect(Layer.empty)
+// A local bare remote needs several git processes. Windows runners can take longer under the full suite's load.
+const gitIntegrationTimeout = windowsTestTimeout(30_000)
 
 describe("RepositoryCache", () => {
-  it.live("replaces a stale cache directory before cloning", () =>
-    withRemote((fixture) =>
-      Effect.gen(function* () {
-        const localPath = Repository.cachePath(path.join(fixture.root, "repos"), fixture.reference)
-        yield* Effect.promise(async () => {
-          await fs.mkdir(localPath, { recursive: true })
-          await fs.writeFile(path.join(localPath, "stale.txt"), "stale")
-        })
+  it.live(
+    "replaces a stale cache directory before cloning",
+    () =>
+      withRemote((fixture) =>
+        Effect.gen(function* () {
+          const localPath = Repository.cachePath(path.join(fixture.root, "repos"), fixture.reference)
+          yield* Effect.promise(async () => {
+            await fs.mkdir(localPath, { recursive: true })
+            await fs.writeFile(path.join(localPath, "stale.txt"), "stale")
+          })
 
-        const result = yield* (yield* RepositoryCache.Service).ensure({ reference: fixture.reference })
+          const result = yield* (yield* RepositoryCache.Service).ensure({ reference: fixture.reference })
 
-        expect(result.status).toBe("cloned")
-        expect(yield* exists(path.join(localPath, "stale.txt"))).toBe(false)
-        expect(yield* read(path.join(localPath, "README.md"))).toBe("one\n")
-      }).pipe(Effect.provide(cacheLayer(fixture.root))),
-    ),
+          expect(result.status).toBe("cloned")
+          expect(yield* exists(path.join(localPath, "stale.txt"))).toBe(false)
+          expect(yield* read(path.join(localPath, "README.md"))).toBe("one\n")
+        }).pipe(Effect.provide(cacheLayer(fixture.root))),
+      ),
+    gitIntegrationTimeout,
   )
 
-  it.live("serializes concurrent materialization for the same checkout", () =>
-    withRemote((fixture) =>
-      Effect.gen(function* () {
-        const cache = yield* RepositoryCache.Service
-        const results = yield* Effect.all(
-          [cache.ensure({ reference: fixture.reference }), cache.ensure({ reference: fixture.reference })],
-          { concurrency: "unbounded" },
-        )
+  it.live(
+    "serializes concurrent materialization for the same checkout",
+    () =>
+      withRemote((fixture) =>
+        Effect.gen(function* () {
+          const cache = yield* RepositoryCache.Service
+          const results = yield* Effect.all(
+            [cache.ensure({ reference: fixture.reference }), cache.ensure({ reference: fixture.reference })],
+            { concurrency: "unbounded" },
+          )
 
-        expect(results.map((result) => result.status).toSorted()).toEqual(["cached", "cloned"])
-        expect(results[0].localPath).toBe(results[1].localPath)
-      }).pipe(Effect.provide(cacheLayer(fixture.root))),
-    ),
+          expect(results.map((result) => result.status).toSorted()).toEqual(["cached", "cloned"])
+          expect(results[0].localPath).toBe(results[1].localPath)
+        }).pipe(Effect.provide(cacheLayer(fixture.root))),
+      ),
+    gitIntegrationTimeout,
   )
 
-  it.live("replaces an existing checkout whose origin does not match", () =>
-    withRemote((fixture) =>
-      Effect.gen(function* () {
-        const cache = yield* RepositoryCache.Service
-        const initial = yield* cache.ensure({ reference: fixture.reference })
-        yield* Effect.promise(async () => {
-          await git(initial.localPath, "config", "remote.origin.url", "https://github.com/other/repo.git")
-          await fs.writeFile(path.join(initial.localPath, "stale.txt"), "stale")
-        })
+  it.live(
+    "replaces an existing checkout whose origin does not match",
+    () =>
+      withRemote((fixture) =>
+        Effect.gen(function* () {
+          const cache = yield* RepositoryCache.Service
+          const initial = yield* cache.ensure({ reference: fixture.reference })
+          yield* Effect.promise(async () => {
+            await git(initial.localPath, "config", "remote.origin.url", "https://github.com/other/repo.git")
+            await fs.writeFile(path.join(initial.localPath, "stale.txt"), "stale")
+          })
 
-        const replaced = yield* cache.ensure({ reference: fixture.reference })
+          const replaced = yield* cache.ensure({ reference: fixture.reference })
 
-        expect(replaced.status).toBe("cloned")
-        expect(yield* exists(path.join(replaced.localPath, "stale.txt"))).toBe(false)
-      }).pipe(Effect.provide(cacheLayer(fixture.root))),
-    ),
+          expect(replaced.status).toBe("cloned")
+          expect(yield* exists(path.join(replaced.localPath, "stale.txt"))).toBe(false)
+        }).pipe(Effect.provide(cacheLayer(fixture.root))),
+      ),
+    gitIntegrationTimeout,
   )
 
-  it.live("returns typed validation and clone failures", () =>
-    withRemote((fixture) =>
-      Effect.gen(function* () {
-        const cache = yield* RepositoryCache.Service
-        const invalidRepository = yield* Effect.flip(RepositoryCache.parseRemote("not-a-repo"))
-        expect(invalidRepository).toBeInstanceOf(RepositoryCache.InvalidRepositoryError)
+  it.live(
+    "returns typed validation and clone failures",
+    () =>
+      withRemote((fixture) =>
+        Effect.gen(function* () {
+          const cache = yield* RepositoryCache.Service
+          const invalidRepository = yield* Effect.flip(RepositoryCache.parseRemote("not-a-repo"))
+          expect(invalidRepository).toBeInstanceOf(RepositoryCache.InvalidRepositoryError)
 
-        const invalidBranch = yield* Effect.flip(cache.ensure({ reference: fixture.reference, branch: "../unsafe" }))
-        expect(invalidBranch).toBeInstanceOf(RepositoryCache.InvalidBranchError)
+          const invalidBranch = yield* Effect.flip(cache.ensure({ reference: fixture.reference, branch: "../unsafe" }))
+          expect(invalidBranch).toBeInstanceOf(RepositoryCache.InvalidBranchError)
 
-        const cloneFailure = yield* Effect.flip(
-          cache.ensure({
-            reference: { ...fixture.reference, remote: pathToFileURL(path.join(fixture.root, "missing.git")).href },
-          }),
-        )
-        expect(cloneFailure).toBeInstanceOf(RepositoryCache.CloneFailedError)
-      }).pipe(Effect.provide(cacheLayer(fixture.root))),
-    ),
+          const cloneFailure = yield* Effect.flip(
+            cache.ensure({
+              reference: { ...fixture.reference, remote: pathToFileURL(path.join(fixture.root, "missing.git")).href },
+            }),
+          )
+          expect(cloneFailure).toBeInstanceOf(RepositoryCache.CloneFailedError)
+        }).pipe(Effect.provide(cacheLayer(fixture.root))),
+      ),
+    gitIntegrationTimeout,
   )
 })
 
