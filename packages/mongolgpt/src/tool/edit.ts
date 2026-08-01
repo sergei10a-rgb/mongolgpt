@@ -122,7 +122,7 @@ export const EditTool = Tool.define(
 
               const info = yield* afs.stat(filePath).pipe(Effect.catch(() => Effect.succeed(undefined)))
               if (!info) throw new Error(`Файл олдсонгүй: ${filePath}`)
-              if (info.type === "Directory") throw new Error(`Зам нь файл биш, directory байна: ${filePath}`)
+              if (info.type === "Directory") throw new Error(`Зам нь файл биш, хавтас байна: ${filePath}`)
               const source = yield* Bom.readFile(afs, filePath)
               contentOld = source.text
 

@@ -149,7 +149,7 @@ describe("tool.grep", () => {
       const grep = yield* info.init()
       const result = yield* grep.execute({ pattern: "needle", path: test.directory, include: "*.txt" }, ctx)
 
-      expect(result.output).toContain("(Үр дүн таслагдсан. Илүү тодорхой path эсвэл pattern ашиглана уу.)")
+      expect(result.output).toContain("(Үр дүн таслагдсан. Илүү тодорхой зам эсвэл хайлтын загвар ашиглана уу.)")
       expect(result.output).not.toMatch(/showing \d+ of \d+ matches/)
     }),
   )

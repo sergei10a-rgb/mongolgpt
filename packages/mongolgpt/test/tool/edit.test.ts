@@ -323,7 +323,7 @@ describe("tool.edit", () => {
         const dirpath = path.join(test.directory, "adir")
         yield* makeDirectory(dirpath)
 
-        expect((yield* fail({ filePath: dirpath, oldString: "old", newString: "new" })).message).toContain("directory")
+        expect((yield* fail({ filePath: dirpath, oldString: "old", newString: "new" })).message).toContain("хавтас")
       }),
     )
 

@@ -21,16 +21,16 @@ const operations = [
 ] as const
 
 export const Parameters = Schema.Struct({
-  operation: Schema.Literals(operations).annotate({ description: "Гүйцэтгэх LSP operation" }),
-  filePath: Schema.String.annotate({ description: "Файлын абсолют эсвэл relative path" }),
+  operation: Schema.Literals(operations).annotate({ description: "Гүйцэтгэх LSP үйлдэл" }),
+  filePath: Schema.String.annotate({ description: "Файлын абсолют эсвэл харьцангуй зам" }),
   line: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({
-    description: "Мөрийн дугаар (editor дээрхтэй адил 1-ээс эхэлнэ)",
+    description: "Мөрийн дугаар (засварлагч дээрхтэй адил 1-ээс эхэлнэ)",
   }),
   character: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({
-    description: "Тэмдэгтийн offset (editor дээрхтэй адил 1-ээс эхэлнэ)",
+    description: "Тэмдэгтийн байрлал (засварлагч дээрхтэй адил 1-ээс эхэлнэ)",
   }),
   query: Schema.optional(Schema.String).annotate({
-    description: "workspaceSymbol-д ашиглах хайлтын query. Хоосон string нь бүх symbol-ийг хүснэ.",
+    description: "workspaceSymbol-д ашиглах хайлтын мөр. Хоосон мөр нь бүх тэмдэглэгээг хүснэ.",
   }),
 })
 

@@ -26,7 +26,7 @@ class ReadStop extends Schema.TaggedErrorClass<ReadStop>()("ReadStop", {}) {}
 // Schema output is identical (`type: "number"`), so the LLM view is
 // unchanged; purely CLI-facing uses must now send numbers rather than strings.
 export const Parameters = Schema.Struct({
-  filePath: Schema.String.annotate({ description: "Унших файл эсвэл directory-ийн абсолют зам" }),
+  filePath: Schema.String.annotate({ description: "Унших файл эсвэл хавтасны абсолют зам" }),
   offset: Schema.optional(NonNegativeInt).annotate({
     description: "Уншиж эхлэх мөрийн дугаар (1-ээс эхэлнэ)",
   }),
@@ -277,8 +277,8 @@ export const ReadTool = Tool.define<
             `<entries>`,
             sliced.join("\n"),
             truncated
-              ? `\nНийт ${items.length} entry-ээс ${sliced.length}-ыг харуулж байна. ${offset + sliced.length}-р entry-ээс цааш уншихын тулд 'offset' параметр ашиглана уу.`
-              : `\n(${items.length} entry)`,
+              ? `\nНийт ${items.length} оруулгаас ${sliced.length}-ыг харуулж байна. ${offset + sliced.length}-р оруулгаас цааш уншихын тулд 'offset' параметр ашиглана уу.`
+              : `\n(${items.length} оруулга)`,
             `</entries>`,
           ].join("\n"),
           metadata: {

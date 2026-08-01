@@ -8,12 +8,12 @@ import DESCRIPTION from "./grep.txt"
 import * as Tool from "./tool"
 
 export const Parameters = Schema.Struct({
-  pattern: Schema.String.annotate({ description: "Файлын агуулгаас хайх regex pattern" }),
+  pattern: Schema.String.annotate({ description: "Файлын агуулгаас хайх regex илэрхийлэл" }),
   path: Schema.optional(Schema.String).annotate({
-    description: "Хайх directory. Тодорхойлоогүй бол одоогийн working directory ашиглана.",
+    description: "Хайх хавтас. Тодорхойлоогүй бол одоогийн ажиллаж буй хавтас ашиглана.",
   }),
   include: Schema.optional(Schema.String).annotate({
-    description: 'Хайлтад оруулах файлын pattern (жишээ нь "*.js", "*.{ts,tsx}")',
+    description: 'Хайлтад оруулах файлын загвар (жишээ нь "*.js", "*.{ts,tsx}")',
   }),
 })
 
@@ -33,7 +33,7 @@ export const GrepTool = Tool.define(
             output: "Файл олдсонгүй",
           }
           if (!params.pattern) {
-            throw new Error("pattern шаардлагатай")
+            throw new Error("Хайлтын загвар шаардлагатай.")
           }
 
           yield* ctx.ask({
@@ -95,7 +95,7 @@ export const GrepTool = Tool.define(
 
           if (truncated) {
             output.push("")
-            output.push("(Үр дүн таслагдсан. Илүү тодорхой path эсвэл pattern ашиглана уу.)")
+            output.push("(Үр дүн таслагдсан. Илүү тодорхой зам эсвэл хайлтын загвар ашиглана уу.)")
           }
 
           return {

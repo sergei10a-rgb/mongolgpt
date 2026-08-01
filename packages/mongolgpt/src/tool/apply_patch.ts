@@ -16,7 +16,7 @@ import { Format } from "../format"
 import * as Bom from "@/util/bom"
 
 export const Parameters = Schema.Struct({
-  patchText: Schema.String.annotate({ description: "Хийх бүх өөрчлөлтийг тодорхойлсон бүрэн patch текст" }),
+  patchText: Schema.String.annotate({ description: "Хийх бүх өөрчлөлтийг тодорхойлсон бүрэн patch-ийн текст" }),
 })
 
 export const ApplyPatchTool = Tool.define(

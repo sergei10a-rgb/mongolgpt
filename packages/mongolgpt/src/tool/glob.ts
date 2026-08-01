@@ -8,9 +8,9 @@ import DESCRIPTION from "./glob.txt"
 import * as Tool from "./tool"
 
 export const Parameters = Schema.Struct({
-  pattern: Schema.String.annotate({ description: "Файлуудтай тулгах glob pattern" }),
+  pattern: Schema.String.annotate({ description: "Файлуудтай тулгах glob загвар" }),
   path: Schema.optional(Schema.String).annotate({
-    description: `Хайх directory. Тодорхойлоогүй бол одоогийн working directory ашиглана. ЧУХАЛ: Анхдагч directory ашиглах бол энэ талбарыг орхино уу. "undefined" эсвэл "null" бүү оруул, зүгээр л орхино уу. Өгсөн тохиолдолд хүчинтэй directory path байх ёстой.`,
+    description: `Хайх хавтас. Тодорхойлоогүй бол одоогийн ажиллаж буй хавтас ашиглана. ЧУХАЛ: Анхдагч хавтас ашиглах бол энэ талбарыг орхино уу. "undefined" эсвэл "null" бүү оруул, зүгээр л орхино уу. Өгсөн тохиолдолд хүчинтэй хавтасны зам байх ёстой.`,
   }),
 })
 
@@ -39,7 +39,7 @@ export const GlobTool = Tool.define(
           search = path.isAbsolute(search) ? search : path.resolve(ins.directory, search)
           const info = yield* fs.stat(search).pipe(Effect.catch(() => Effect.succeed(undefined)))
           if (info?.type === "File") {
-            throw new Error(`glob path нь directory байх ёстой: ${search}`)
+            throw new Error(`glob path нь хавтас байх ёстой: ${search}`)
           }
           yield* assertExternalDirectoryEffect(ctx, search, {
             bypass: false,
@@ -57,7 +57,7 @@ export const GlobTool = Tool.define(
             if (truncated) {
               output.push("")
               output.push(
-                `(Үр дүн таслагдсан: эхний ${limit}-ыг харуулж байна. Илүү тодорхой path эсвэл pattern ашиглана уу.)`,
+                `(Үр дүн таслагдсан: эхний ${limit}-ыг харуулж байна. Илүү тодорхой зам эсвэл хайлтын загвар ашиглана уу.)`,
               )
             }
           }
