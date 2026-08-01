@@ -46,7 +46,7 @@ describe("tool.todo", () => {
       )
 
       expect(result.title).toBe("1 хийх ажил")
-      expect(updated).toEqual([todos])
+      expect(updated).toEqual([[...todos]])
     }),
   )
 })
