@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Cause, Effect, Exit, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { Agent } from "../../src/agent/agent"
 import { Truncate } from "@/tool/truncate"
@@ -38,6 +38,34 @@ const exec = Effect.fn("WebFetchToolTest.exec")(function* (args: Tool.InferParam
 })
 
 describe("tool.webfetch", () => {
+  it.instance("rejects URLs without a supported scheme", () =>
+    Effect.gen(function* () {
+      const exit = yield* exec({ url: "file:///tmp/secret.txt", format: "text" }).pipe(Effect.exit)
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(Cause.pretty(exit.cause)).toContain("URL нь http:// эсвэл https://-ээр эхлэх ёстой.")
+      }
+    }),
+  )
+
+  it.instance("rejects responses larger than the Content-Length limit", () =>
+    withFetch(
+      () =>
+        new Response(new Uint8Array(5 * 1024 * 1024 + 1), {
+          status: 200,
+          headers: { "content-type": "text/plain", "content-length": "5242881" },
+        }),
+      (url) =>
+        Effect.gen(function* () {
+          const exit = yield* exec({ url: new URL("/large.txt", url).toString(), format: "text" }).pipe(Effect.exit)
+          expect(Exit.isFailure(exit)).toBe(true)
+          if (Exit.isFailure(exit)) {
+            expect(Cause.pretty(exit.cause)).toContain("Хариу хэт том байна (5 MB-ийн хязгаараас давсан).")
+          }
+        }),
+    ),
+  )
+
   it.instance("returns image responses as file attachments", () =>
     Effect.gen(function* () {
       const bytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])
@@ -46,7 +74,7 @@ describe("tool.webfetch", () => {
         (url) =>
           Effect.gen(function* () {
             const result = yield* exec({ url: new URL("/image.png", url).toString(), format: "markdown" })
-            expect(result.output).toBe("Image fetched successfully")
+            expect(result.output).toBe("Зургийг амжилттай татлаа.")
             expect(result.attachments).toBeDefined()
             expect(result.attachments?.length).toBe(1)
             expect(result.attachments?.[0].type).toBe("file")

@@ -18,9 +18,9 @@ import * as Bom from "@/util/bom"
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
 
 export const Parameters = Schema.Struct({
-  content: Schema.String.annotate({ description: "The content to write to the file" }),
+  content: Schema.String.annotate({ description: "Файлд бичих агуулга" }),
   filePath: Schema.String.annotate({
-    description: "The absolute path to the file to write (must be absolute, not relative)",
+    description: "Бичих файлын абсолют зам (харьцангуй зам байж болохгүй).",
   }),
 })
 
@@ -71,7 +71,7 @@ export const WriteTool = Tool.define(
             event: exists ? "change" : "add",
           })
 
-          let output = "Wrote file successfully."
+          let output = "Файлыг амжилттай бичлээ."
           yield* lsp.touchFile(filepath, "document")
           const diagnostics = yield* lsp.diagnostics()
           const normalizedFilepath = FSUtil.normalizePath(filepath)
@@ -82,11 +82,11 @@ export const WriteTool = Tool.define(
             const block = LSP.Diagnostic.report(current ? filepath : file, issues)
             if (!block) continue
             if (current) {
-              output += `\n\nLSP errors detected in this file, please fix:\n${block}`
+              output += `\n\nЭнэ файлд LSP алдаа илэрлээ, засна уу:\n${block}`
               continue
             }
             projectDiagnosticsCount++
-            output += `\n\nLSP errors detected in other files:\n${block}`
+            output += `\n\nБусад файлд LSP алдаа илэрлээ:\n${block}`
           }
 
           return {

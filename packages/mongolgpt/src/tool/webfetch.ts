@@ -11,10 +11,10 @@ const DEFAULT_TIMEOUT = 30 * 1000 // 30 seconds
 const MAX_TIMEOUT = 120 * 1000 // 2 minutes
 
 export const Parameters = Schema.Struct({
-  url: Schema.String.annotate({ description: "The URL to fetch content from" }),
+  url: Schema.String.annotate({ description: "Агуулга татах URL" }),
   format: Schema.Literals(["text", "markdown", "html"])
     .annotate({
-      description: "The format to return the content in (text, markdown, or html). Defaults to markdown.",
+      description: "Агуулгыг буцаах формат (text, markdown эсвэл html). Анхдагч нь markdown.",
       default: "markdown",
     })
     .pipe(Schema.withDecodingDefault(Effect.succeed("markdown" as const))),
@@ -33,7 +33,7 @@ export const WebFetchTool = Tool.define(
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           if (!params.url.startsWith("http://") && !params.url.startsWith("https://")) {
-            throw new Error("URL must start with http:// or https://")
+            throw new Error("URL нь http:// эсвэл https://-ээр эхлэх ёстой.")
           }
 
           yield* ctx.ask({
@@ -89,18 +89,18 @@ export const WebFetchTool = Tool.define(
                   ),
                 ),
             ),
-            Effect.timeoutOrElse({ duration: timeout, orElse: () => Effect.die(new Error("Request timed out")) }),
+            Effect.timeoutOrElse({ duration: timeout, orElse: () => Effect.die(new Error("Хүсэлтийн хугацаа дууслаа.")) }),
           )
 
           // Check content length
           const contentLength = response.headers["content-length"]
           if (contentLength && parseInt(contentLength) > MAX_RESPONSE_SIZE) {
-            throw new Error("Response too large (exceeds 5MB limit)")
+            throw new Error("Хариу хэт том байна (5 MB-ийн хязгаараас давсан).")
           }
 
           const arrayBuffer = yield* response.arrayBuffer
           if (arrayBuffer.byteLength > MAX_RESPONSE_SIZE) {
-            throw new Error("Response too large (exceeds 5MB limit)")
+            throw new Error("Хариу хэт том байна (5 MB-ийн хязгаараас давсан).")
           }
 
           const contentType = response.headers["content-type"] || ""
@@ -111,7 +111,7 @@ export const WebFetchTool = Tool.define(
             const base64Content = Buffer.from(arrayBuffer).toString("base64")
             return {
               title,
-              output: "Image fetched successfully",
+              output: "Зургийг амжилттай татлаа.",
               metadata: {},
               attachments: [
                 {

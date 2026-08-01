@@ -379,7 +379,7 @@ exports[`tool parameters JSON Schema (wire shape) webfetch 1`] = `
   "properties": {
     "format": {
       "default": "markdown",
-      "description": "The format to return the content in (text, markdown, or html). Defaults to markdown.",
+      "description": "Агуулгыг буцаах формат (text, markdown эсвэл html). Анхдагч нь markdown.",
       "enum": [
         "text",
         "markdown",
@@ -392,7 +392,7 @@ exports[`tool parameters JSON Schema (wire shape) webfetch 1`] = `
       "type": "number",
     },
     "url": {
-      "description": "The URL to fetch content from",
+      "description": "Агуулга татах URL",
       "type": "string",
     },
   },
@@ -449,11 +449,11 @@ exports[`tool parameters JSON Schema (wire shape) write 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "content": {
-      "description": "The content to write to the file",
+      "description": "Файлд бичих агуулга",
       "type": "string",
     },
     "filePath": {
-      "description": "The absolute path to the file to write (must be absolute, not relative)",
+      "description": "Бичих файлын абсолют зам (харьцангуй зам байж болохгүй).",
       "type": "string",
     },
   },

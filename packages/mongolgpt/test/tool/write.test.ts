@@ -63,7 +63,7 @@ describe("tool.write", () => {
         const filepath = path.join(test.directory, "newfile.txt")
         const result = yield* run({ filePath: filepath, content: "Hello, World!" })
 
-        expect(result.output).toContain("Wrote file successfully")
+        expect(result.output).toContain("Файлыг амжилттай бичлээ.")
         expect(result.metadata.exists).toBe(false)
 
         const content = yield* Effect.promise(() => fs.readFile(filepath, "utf-8"))
@@ -101,7 +101,7 @@ describe("tool.write", () => {
         yield* Effect.promise(() => fs.writeFile(filepath, "old content", "utf-8"))
         const result = yield* run({ filePath: filepath, content: "new content" })
 
-        expect(result.output).toContain("Wrote file successfully")
+        expect(result.output).toContain("Файлыг амжилттай бичлээ.")
         expect(result.metadata.exists).toBe(true)
 
         const content = yield* Effect.promise(() => fs.readFile(filepath, "utf-8"))
