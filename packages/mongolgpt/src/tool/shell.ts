@@ -256,7 +256,7 @@ function tail(text: string, maxLines: number, maxBytes: number) {
 
 const parse = Effect.fn("ShellTool.parse")(function* (command: string, ps: boolean) {
   const tree = yield* Effect.promise(() => parser().then((p) => (ps ? p.ps : p.bash).parse(command)))
-  if (!tree) throw new Error("Failed to parse command")
+  if (!tree) throw new Error("Командыг задлан шинжилж чадсангүй")
   return tree
 })
 
@@ -561,10 +561,10 @@ export const ShellTool = Tool.define(
       const meta: string[] = []
       if (expired) {
         meta.push(
-          `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.`,
+          `shell хэрэгсэл ${input.timeout} миллисекундын хугацаа хэтэрсэн тул командыг зогсоолоо. Энэ команд илүү удаан ажиллах ёстой бөгөөд интерактив оролт хүлээгээгүй бол миллисекундээр илүү урт timeout өгч дахин ажиллуулна уу.`,
         )
       }
-      if (aborted) meta.push("User aborted the command")
+      if (aborted) meta.push("Хэрэглэгч командыг зогсоосон")
       const raw = list.map((item) => item.text).join("")
       const end = tail(raw, limits.maxLines, limits.maxBytes)
       if (end.cut) cut = true
@@ -573,10 +573,10 @@ export const ShellTool = Tool.define(
       }
 
       let output = end.text
-      if (!output) output = "(no output)"
+      if (!output) output = "(гаралтгүй)"
 
       if (cut && file) {
-        output = `...output truncated...\n\nFull output saved to: ${file}\n\n` + output
+        output = `...гаралтыг хасаж товчиллоо...\n\nБүтэн гаралтыг хадгалсан зам: ${file}\n\n` + output
       }
 
       if (meta.length > 0) {
@@ -613,7 +613,7 @@ export const ShellTool = Tool.define(
                 ? yield* resolvePath(params.workdir, instanceCtx.directory, shell)
                 : instanceCtx.directory
               if (params.timeout !== undefined && params.timeout < 0) {
-                throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
+                throw new Error(`Timeout-ийн утга буруу байна: ${params.timeout}. Timeout нь эерэг тоо байх ёстой.`)
               }
               const timeout = params.timeout ?? defaultTimeoutMs
               const ps = Shell.ps(shell)

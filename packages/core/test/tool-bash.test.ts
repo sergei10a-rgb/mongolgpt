@@ -148,7 +148,7 @@ describe("BashTool", () => {
                 type: "content",
                 value: [
                   { type: "text", text: "hello\n" },
-                  { type: "text", text: "Command exited with code 0." },
+                  { type: "text", text: "Команд 0 кодтой дууслаа." },
                 ],
               },
               output: {
@@ -158,7 +158,7 @@ describe("BashTool", () => {
                 },
                 content: [
                   { type: "text", text: "hello\n" },
-                  { type: "text", text: "Command exited with code 0." },
+                  { type: "text", text: "Команд 0 кодтой дууслаа." },
                 ],
               },
             })
@@ -239,7 +239,7 @@ describe("BashTool", () => {
                   type: "content",
                   value: [
                     { type: "text", text: "core-bash" },
-                    { type: "text", text: "Command exited with code 0." },
+                    { type: "text", text: "Команд 0 кодтой дууслаа." },
                   ],
                 })
                 expect(settled.output?.structured).toMatchObject({
@@ -325,7 +325,7 @@ describe("BashTool", () => {
               expect(settled.output?.structured).not.toHaveProperty("warnings")
               expect(settled.output?.content[1]).toMatchObject({
                 type: "text",
-                text: expect.stringContaining("Warnings:"),
+                text: expect.stringContaining("Анхааруулга:"),
               })
             }),
           ),
@@ -349,7 +349,7 @@ describe("BashTool", () => {
             Effect.sync(() => {
               expect(settled.output?.content[1]).toMatchObject({
                 type: "text",
-                text: expect.stringContaining("Command exited with code 7"),
+                text: expect.stringContaining("Команд 7 кодтой дууслаа"),
               })
               expect(settled.output?.structured).toMatchObject({
                 exit: 7,
@@ -376,7 +376,7 @@ describe("BashTool", () => {
               expect(settled.output?.structured).toMatchObject({ truncated: true })
               expect(settled.output?.content[0]).toMatchObject({
                 type: "text",
-                text: expect.stringContaining("output capture truncated"),
+                text: expect.stringContaining("гаралтыг санах ойн аюулгүй хязгаарт багтаан товчиллоо"),
               })
               expect(settled.output?.structured).not.toHaveProperty("resource")
             }),
@@ -398,7 +398,7 @@ describe("BashTool", () => {
             Effect.sync(() => {
               expect(settled.output?.content[1]).toMatchObject({
                 type: "text",
-                text: expect.stringContaining("Command timed out"),
+                text: expect.stringContaining("Команд хугацаа дуусахаас өмнө бүрэн ажиллаж чадсангүй."),
               })
               expect(settled.output?.structured).toMatchObject({
                 timeout: true,

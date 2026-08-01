@@ -1028,7 +1028,7 @@ describe("tool.shell abort", () => {
             },
           )
           expect(res.output).toContain("before")
-          expect(res.output).toContain("User aborted the command")
+          expect(res.output).toContain("Хэрэглэгч командыг зогсоосон")
           expect(collected.length).toBeGreaterThan(0)
         }),
       ),
@@ -1045,8 +1045,8 @@ describe("tool.shell abort", () => {
             command: `sleep 60`,
             timeout: 500,
           })
-          expect(result.output).toContain("shell tool terminated command after exceeding timeout")
-          expect(result.output).toContain("retry with a larger timeout value in milliseconds")
+          expect(result.output).toContain("shell хэрэгсэл 500 миллисекундын хугацаа хэтэрсэн тул командыг зогсоолоо")
+          expect(result.output).toContain("миллисекундээр илүү урт timeout өгч дахин ажиллуулна уу")
         }),
       ),
     15_000,
@@ -1059,14 +1059,14 @@ describe("tool.shell abort", () => {
         projectRoot,
         Effect.gen(function* () {
           const tool = yield* initShell()
-          expect(tool.description).toContain("commands will time out after 500ms")
+          expect(tool.description).toContain("command 500ms-ийн дараа timeout болно")
           const result = yield* tool.execute(
             {
               command: `sleep 60`,
             },
             ctx,
           )
-          expect(result.output).toContain("exceeding timeout 500 ms")
+          expect(result.output).toContain("500 миллисекундын хугацаа хэтэрсэн")
         }),
       ).pipe(Effect.provide(RuntimeFlags.layer({ bashDefaultTimeoutMs: 500 }))),
     15_000,
@@ -1136,8 +1136,8 @@ describe("tool.shell truncation", () => {
           command: fill("lines", lineCount),
         })
         mustTruncate(result)
-        expect(result.output).toMatch(/\.\.\.output truncated\.\.\./)
-        expect(result.output).toMatch(/Full output saved to:\s+\S+/)
+        expect(result.output).toMatch(/\.\.\.гаралтыг хасаж товчиллоо\.\.\./)
+        expect(result.output).toMatch(/Бүтэн гаралтыг хадгалсан зам:\s+\S+/)
       }),
     ),
   )
@@ -1151,8 +1151,8 @@ describe("tool.shell truncation", () => {
           command: fill("bytes", byteCount),
         })
         mustTruncate(result)
-        expect(result.output).toMatch(/\.\.\.output truncated\.\.\./)
-        expect(result.output).toMatch(/Full output saved to:\s+\S+/)
+        expect(result.output).toMatch(/\.\.\.гаралтыг хасаж товчиллоо\.\.\./)
+        expect(result.output).toMatch(/Бүтэн гаралтыг хадгалсан зам:\s+\S+/)
       }),
     ),
   )

@@ -19,14 +19,14 @@ export const MAX_TIMEOUT_MS = 10 * 60 * 1_000
 export const MAX_CAPTURE_BYTES = 1024 * 1024
 
 export const Input = Schema.Struct({
-  command: Schema.String.annotate({ description: "Shell command string to execute" }),
+  command: Schema.String.annotate({ description: "Ажиллуулах shell командын мөр" }),
   workdir: Schema.String.pipe(Schema.optional).annotate({
-    description: "Working directory. Defaults to the active Location; relative paths resolve from that Location.",
+    description: "Ажиллуулах ажлын хавтас. Анхдагчаар идэвхтэй Location-ийг ашиглана; relative path нь тэр Location-оос бодогдоно.",
   }),
   timeout: PositiveInt.check(Schema.isLessThanOrEqualTo(MAX_TIMEOUT_MS))
     .pipe(Schema.optional)
     .annotate({
-      description: `Timeout in milliseconds. Defaults to ${DEFAULT_TIMEOUT_MS} and may not exceed ${MAX_TIMEOUT_MS}.`,
+      description: `Миллисекундээр илэрхийлсэн timeout. Анхдагч утга нь ${DEFAULT_TIMEOUT_MS}, ${MAX_TIMEOUT_MS}-аас хэтрэхгүй.`,
     }),
 })
 
@@ -48,10 +48,10 @@ const defaultShell = () => (process.platform === "win32" ? (process.env.COMSPEC 
 
 const modelOutput = (output: Output) => {
   const warnings = output.warnings?.length
-    ? `\n\nWarnings:\n${output.warnings.map((warning) => `- ${warning}`).join("\n")}`
+    ? `\n\nАнхааруулга:\n${output.warnings.map((warning) => `- ${warning}`).join("\n")}`
     : ""
-  if (output.timeout) return `${warnings.trimStart()}${warnings ? "\n\n" : ""}Command timed out before completion.`
-  return `${warnings.trimStart()}${warnings ? "\n\n" : ""}Command exited with code ${output.exit}.`
+  if (output.timeout) return `${warnings.trimStart()}${warnings ? "\n\n" : ""}Команд хугацаа дуусахаас өмнө бүрэн ажиллаж чадсангүй.`
+  return `${warnings.trimStart()}${warnings ? "\n\n" : ""}Команд ${output.exit} кодтой дууслаа.`
 }
 
 const isTimeout = (error: AppProcess.AppProcessError) =>
@@ -100,7 +100,7 @@ export const layer = Layer.effectDiscard(
     yield* tools
       .register({
         [name]: Tool.make({
-          description: `Execute one shell command string with the host user's filesystem, process, and network authority. The active Location is the default working directory. Relative workdir values resolve from that Location. External workdir values require external_directory approval; best-effort command-argument path warnings are advisory only. Timeout values are milliseconds (default: ${DEFAULT_TIMEOUT_MS}; maximum: ${MAX_TIMEOUT_MS}). Uses the configured shell when set; otherwise uses /bin/sh on POSIX and COMSPEC or cmd.exe on Windows.`,
+          description: `Хост хэрэглэгчийн файл, процесс болон сүлжээний эрхээр нэг shell команд ажиллуулна. Идэвхтэй Location нь анхдагч ажлын хавтас байна. Relative workdir нь тэр Location-оос бодогдоно. Гадаад workdir-д external_directory зөвшөөрөл шаардлагатай; командын аргумент дахь замын анхааруулга нь зөвхөн мэдээллийн зориулалттай. Timeout-ийг миллисекундээр өгнө (анхдагч: ${DEFAULT_TIMEOUT_MS}; дээд хэмжээ: ${MAX_TIMEOUT_MS}). Тохируулсан shell байвал түүнийг, үгүй бол POSIX дээр /bin/sh, Windows дээр COMSPEC эсвэл cmd.exe ашиглана.`,
           input: Input,
           output: Output,
           structured: StructuredOutput,
@@ -131,7 +131,7 @@ export const layer = Layer.effectDiscard(
                 })
               const warnings = externalCommandDirectories(input.command, target.canonical).map(
                 (directory) =>
-                  `Command argument references external directory ${path.join(directory, "*").replaceAll("\\", "/")}. Bash runs with host-user filesystem, process, and network authority; this scan is advisory only.`,
+                  `Командын аргумент гадаад хавтас руу зааж байна: ${path.join(directory, "*").replaceAll("\\", "/")}. Bash нь хост хэрэглэгчийн файл, процесс болон сүлжээний эрхээр ажиллана; энэ шалгалт зөвхөн мэдээллийн зориулалттай.`,
               )
               yield* permission.assert({
                 action: name,
@@ -143,7 +143,7 @@ export const layer = Layer.effectDiscard(
               })
 
               if ((yield* fs.stat(target.canonical)).type !== "Directory")
-                return yield* Effect.fail(new Error(`Working directory is not a directory: ${target.canonical}`))
+                return yield* Effect.fail(new Error(`Ажлын зам нь хавтас биш байна: ${target.canonical}`))
 
               const entries = yield* config.entries()
               const shell =
@@ -170,16 +170,16 @@ export const layer = Layer.effectDiscard(
                 )
               if (!result) {
                 return {
-                  output: `Command exceeded timeout of ${timeout} ms. Retry with a larger timeout if the command is expected to take longer.`,
+                  output: `Командын ${timeout} миллисекундын хугацаа хэтэрлээ. Команд илүү удаан ажиллах ёстой бол илүү урт timeout өгч дахин ажиллуулна уу.`,
                   truncated: false,
                   timeout: true,
                   ...(warnings.length ? { warnings } : {}),
                 }
               }
 
-              const output = result.output?.toString("utf8") || "(no output)"
+              const output = result.output?.toString("utf8") || "(гаралтгүй)"
               const notice = result.outputTruncated
-                ? "[output capture truncated at the in-memory safety limit]"
+                ? "[гаралтыг санах ойн аюулгүй хязгаарт багтаан товчиллоо]"
                 : undefined
               return {
                 exit: result.exitCode,
@@ -187,7 +187,7 @@ export const layer = Layer.effectDiscard(
                 truncated: result.outputTruncated === true,
                 ...(warnings.length ? { warnings } : {}),
               }
-            }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to execute command: ${input.command}` }))),
+            }).pipe(Effect.mapError(() => new ToolFailure({ message: `Командыг ажиллуулж чадсангүй: ${input.command}` }))),
         }),
       })
       .pipe(Effect.orDie)
