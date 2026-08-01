@@ -309,7 +309,7 @@ describe("mongolgpt run (non-interactive subprocess)", () => {
         })
 
         expect(result.exitCode).not.toBe(0)
-        expect(result.stderr).toContain("Cannot attach local directory without a shared filesystem")
+        expect(result.stderr).toContain("Хуваалцсан файлын системгүй үед локал хавтас хавсаргах боломжгүй")
       }),
     30_000,
   )

@@ -346,14 +346,14 @@ export const RunCommand = effectCmd({
         for (const filePath of list) {
           const resolvedPath = path.resolve(args.attach ? root : (directory ?? root), filePath)
           if (!(await Filesystem.exists(resolvedPath))) {
-            UI.error(`File not found: ${filePath}`)
+            UI.error(`Файл олдсонгүй: ${filePath}`)
             process.exit(1)
           }
 
           const stat = Filesystem.stat(resolvedPath)
           const isDirectory = stat?.isDirectory() ?? false
           if (args.attach && isDirectory) {
-            UI.error(`Cannot attach local directory without a shared filesystem: ${filePath}`)
+            UI.error(`Хуваалцсан файлын системгүй үед локал хавтас хавсаргах боломжгүй: ${filePath}`)
             process.exit(1)
           }
 
@@ -363,7 +363,7 @@ export const RunCommand = effectCmd({
             try {
               const opened = await handle.stat()
               if (!opened.isFile() || Number(opened.size) > ATTACH_FILE_MAX_BYTES) {
-                UI.error(`Cannot attach local file larger than 10 MiB or a special file: ${filePath}`)
+                UI.error(`10 MiB-аас том эсвэл тусгай төрлийн локал файл хавсаргах боломжгүй: ${filePath}`)
                 process.exit(1)
               }
               if (opened.size === 0) return Buffer.alloc(0)
@@ -403,12 +403,12 @@ export const RunCommand = effectCmd({
       const initialInput = resolveRunInput(rawMessage, piped)
 
       if (message.trim().length === 0 && !args.command && !interactive) {
-        UI.error("You must provide a message or a command")
+        UI.error("Мессеж эсвэл командын аль нэгийг өгнө үү")
         process.exit(1)
       }
 
       if (args.fork && !args.continue && !args.session) {
-        UI.error("--fork requires --continue or --session")
+        UI.error("--fork ашиглахад --continue эсвэл --session шаардлагатай")
         process.exit(1)
       }
 
@@ -447,7 +447,7 @@ export const RunCommand = effectCmd({
             .catch(() => undefined)
 
           if (!current?.data) {
-            UI.error("Session not found")
+            UI.error("Сешн олдсонгүй")
             process.exit(1)
           }
 
@@ -655,7 +655,7 @@ export const RunCommand = effectCmd({
       async function execute(sdk: MongolGPTClient) {
         const sess = await session(sdk)
         if (!sess?.id) {
-          UI.error("Session not found")
+          UI.error("Сешн олдсонгүй")
           process.exit(1)
         }
         const sessionID = sess.id
@@ -960,7 +960,7 @@ type MiniCommandInput = {
 }
 
 export async function runMini(input: MiniCommandInput) {
-  if (!RunCommand.handler) throw new Error("Mini command handler боломжгүй байна")
+  if (!RunCommand.handler) throw new Error("Mini командын боловсруулагч боломжгүй байна")
   await RunCommand.handler({
     $0: "mongolgpt",
     _: ["mini"],
