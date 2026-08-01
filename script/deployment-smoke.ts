@@ -2,6 +2,8 @@ import { deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/depl
 import {
   inspectAnonymousHostedSession,
   inspectAppHtml,
+  inspectHostedAppRuntime,
+  inspectJsonApiPayload,
   inspectPaymentHealth,
 } from "@mongolgpt/script/deployment-smoke-contract"
 
@@ -46,11 +48,11 @@ async function check(name: string, url: string, health?: "status" | "runtime" | 
         }
       } else if (!response.ok) throw new Error(`HTTP ${response.status}`)
       if (health && health !== "admin") {
-        const contentType = response.headers.get("content-type") ?? ""
-        if (!contentType.includes("application/json")) {
-          throw new Error(`health response is not JSON: ${contentType || "missing content-type"}`)
-        }
-        const body: unknown = await response.json()
+        const body = inspectJsonApiPayload(
+          response.headers.get("content-type"),
+          await response.text(),
+          `${health} health response`,
+        )
         if (health === "status" && !isHealthyResponse(body)) throw new Error("health response status is not ok")
         if (health === "runtime" && !isRuntimeHealthyResponse(body, result.stage)) {
           throw new Error("runtime health response is invalid")
@@ -72,9 +74,8 @@ async function check(name: string, url: string, health?: "status" | "runtime" | 
           throw new Error(`app runtime mode is ${contract.mode}; expected ${expectedMode}`)
         if (contract.mode === "hosted") {
           const expectedRuntime = endpoints.runtimeHealth ? new URL(endpoints.runtimeHealth).origin : undefined
-          if (!expectedRuntime || new URL(contract.serverUrl).origin !== expectedRuntime) {
-            throw new Error(`app runtime origin is ${new URL(contract.serverUrl).origin}; expected ${expectedRuntime}`)
-          }
+          if (!endpoints.runtimeHealth || !expectedRuntime) throw new Error("hosted app runtime endpoint is missing")
+          inspectHostedAppRuntime(contract, { channel: expectedChannel, runtimeHealthUrl: endpoints.runtimeHealth })
           await checkAgentRuntime(contract.serverUrl)
           await checkHostedSessionBoundary(contract.serverUrl, url)
         }
@@ -155,11 +156,11 @@ async function checkAgentRuntime(serverUrl: string) {
   })
   if (!response.ok) throw new Error(`agent runtime health HTTP ${response.status}: ${healthUrl}`)
 
-  const contentType = response.headers.get("content-type") ?? ""
-  if (!contentType.includes("application/json")) {
-    throw new Error(`agent runtime health is not JSON: ${contentType || "missing content-type"} (${healthUrl})`)
-  }
-  const body: unknown = await response.json()
+  const body = inspectJsonApiPayload(
+    response.headers.get("content-type"),
+    await response.text(),
+    `agent runtime health (${healthUrl})`,
+  )
   if (
     typeof body !== "object" ||
     body === null ||
@@ -185,10 +186,6 @@ async function checkHostedSessionBoundary(serverUrl: string, appUrl: string) {
   if (response.status !== 401) {
     throw new Error(`anonymous hosted session returned HTTP ${response.status}; expected 401: ${sessionUrl}`)
   }
-  const contentType = response.headers.get("content-type") ?? ""
-  if (!contentType.includes("application/json")) {
-    throw new Error(`anonymous hosted session is not JSON: ${contentType || "missing content-type"} (${sessionUrl})`)
-  }
   if (response.headers.get("access-control-allow-origin") !== appOrigin) {
     throw new Error(`hosted session CORS origin does not match the app: ${sessionUrl}`)
   }
@@ -198,7 +195,13 @@ async function checkHostedSessionBoundary(serverUrl: string, appUrl: string) {
   if (!response.headers.get("cache-control")?.toLowerCase().includes("no-store")) {
     throw new Error(`hosted session response is cacheable: ${sessionUrl}`)
   }
-  inspectAnonymousHostedSession(await response.json())
+  inspectAnonymousHostedSession(
+    inspectJsonApiPayload(
+      response.headers.get("content-type"),
+      await response.text(),
+      `anonymous hosted session (${sessionUrl})`,
+    ),
+  )
 
   const foreignOrigin = "https://invalid-origin.example"
   const rejected = await fetch(sessionUrl, {
@@ -213,11 +216,11 @@ async function checkHostedSessionBoundary(serverUrl: string, appUrl: string) {
   if (rejected.status !== 403) {
     throw new Error(`foreign hosted session origin returned HTTP ${rejected.status}; expected 403: ${sessionUrl}`)
   }
-  const rejectedType = rejected.headers.get("content-type") ?? ""
-  if (!rejectedType.includes("application/json")) {
-    throw new Error(`foreign origin rejection is not JSON: ${rejectedType || "missing content-type"} (${sessionUrl})`)
-  }
-  const body: unknown = await rejected.json()
+  const body = inspectJsonApiPayload(
+    rejected.headers.get("content-type"),
+    await rejected.text(),
+    `foreign origin rejection (${sessionUrl})`,
+  )
   if (typeof body !== "object" || body === null || typeof (body as { error?: unknown }).error !== "string") {
     throw new Error(`foreign origin rejection body is invalid: ${sessionUrl}`)
   }

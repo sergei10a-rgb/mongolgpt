@@ -13,6 +13,23 @@ export type PaymentHealthContract = {
   environment: "disabled" | "sandbox" | "production"
 }
 
+export function inspectJsonApiPayload(contentType: string | null, payload: string, label: string): unknown {
+  const mediaType = contentType?.split(";", 1)[0]?.trim().toLowerCase()
+  if (mediaType !== "application/json") {
+    throw new Error(`${label} is not JSON: ${contentType || "missing content-type"}`)
+  }
+
+  if (/^\s*<(?:!doctype\s+html|html|head|body)\b/i.test(payload)) {
+    throw new Error(`${label} returned an HTML/static shell instead of JSON`)
+  }
+
+  try {
+    return JSON.parse(payload)
+  } catch {
+    throw new Error(`${label} body is not valid JSON`)
+  }
+}
+
 function attribute(tag: string, name: string) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   return tag.match(new RegExp(`\\b${escaped}\\s*=\\s*["']([^"']+)["']`, "i"))?.[1]
@@ -66,6 +83,22 @@ export function inspectAppHtml(html: string, appUrl?: string): AppRuntimeContrac
   }
 
   return { channel, mode, serverUrl }
+}
+
+export function inspectHostedAppRuntime(
+  contract: AppRuntimeContract,
+  expected: { channel: AppRuntimeContract["channel"]; runtimeHealthUrl: string },
+) {
+  if (contract.mode !== "hosted") throw new Error(`app runtime mode is ${contract.mode}; expected hosted`)
+  if (contract.channel !== expected.channel) {
+    throw new Error(`app channel is ${contract.channel}; expected ${expected.channel}`)
+  }
+
+  const expectedOrigin = new URL(expected.runtimeHealthUrl).origin
+  const actualOrigin = new URL(contract.serverUrl).origin
+  if (actualOrigin !== expectedOrigin) {
+    throw new Error(`app runtime origin is ${actualOrigin}; expected ${expectedOrigin}`)
+  }
 }
 
 export function inspectAnonymousHostedSession(value: unknown): AnonymousHostedSessionContract {
