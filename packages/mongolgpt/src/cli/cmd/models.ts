@@ -16,18 +16,18 @@ export const ModelsCommand = effectCmd({
         array: false,
       })
       .option("verbose", {
-        describe: "загварын дэлгэрэнгүй гаралт ашиглах (өртөг зэрэг metadata орно)",
+        describe: "загварын дэлгэрэнгүй гаралт ашиглах (өртөг зэрэг мета өгөгдөл орно)",
         type: "boolean",
       })
       .option("refresh", {
-        describe: "загварын cache-ийг models.dev-ээс шинэчлэх",
+        describe: "models.dev-ээс загварын кэшийг шинэчлэх",
         type: "boolean",
       }),
   handler: Effect.fn("Cli.models")(function* (args) {
     const { Provider } = yield* Effect.promise(() => import("@/provider/provider"))
     if (args.refresh) {
       yield* ModelsDev.Service.use((s) => s.refresh(true))
-      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Models cache refreshed" + UI.Style.TEXT_NORMAL)
+      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Загварын кэш шинэчлэгдлээ" + UI.Style.TEXT_NORMAL)
     }
 
     const provider = yield* Provider.Service
@@ -48,7 +48,7 @@ export const ModelsCommand = effectCmd({
 
     if (args.provider) {
       const providerID = ProviderV2.ID.make(args.provider)
-      if (!providers[providerID]) return yield* fail(`Provider not found: ${args.provider}`)
+      if (!providers[providerID]) return yield* fail(`Үйлчилгээ үзүүлэгч олдсонгүй: ${args.provider}`)
       print(providerID, args.verbose)
       return
     }

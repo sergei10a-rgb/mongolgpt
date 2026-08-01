@@ -62,8 +62,8 @@ export const SessionDeleteCommand = effectCmd({
     const sessionID = SessionID.make(args.sessionID)
     yield* svc
       .remove(sessionID)
-      .pipe(Effect.catchIf(NotFoundError.isInstance, () => fail(`Session not found: ${args.sessionID}`)))
-    UI.println(UI.Style.TEXT_SUCCESS_BOLD + `Session ${args.sessionID} deleted` + UI.Style.TEXT_NORMAL)
+      .pipe(Effect.catchIf(NotFoundError.isInstance, () => fail(`Сешн олдсонгүй: ${args.sessionID}`)))
+    UI.println(UI.Style.TEXT_SUCCESS_BOLD + `Сешн ${args.sessionID} устгагдлаа` + UI.Style.TEXT_NORMAL)
   }),
 })
 
@@ -121,7 +121,10 @@ function formatSessionTable(sessions: Session.Info[]): string {
   const maxIdWidth = Math.max(20, ...sessions.map((s) => s.id.length))
   const maxTitleWidth = Math.max(25, ...sessions.map((s) => s.title.length))
 
-  const header = `Session ID${" ".repeat(maxIdWidth - 10)}  Title${" ".repeat(maxTitleWidth - 5)}  Updated`
+  const idHeader = "Сешний ID"
+  const titleHeader = "Гарчиг"
+  const updatedHeader = "Шинэчилсэн"
+  const header = `${idHeader}${" ".repeat(maxIdWidth - idHeader.length)}  ${titleHeader}${" ".repeat(maxTitleWidth - titleHeader.length)}  ${updatedHeader}`
   lines.push(header)
   lines.push("─".repeat(header.length))
   for (const session of sessions) {

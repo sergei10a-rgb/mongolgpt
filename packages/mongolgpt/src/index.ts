@@ -47,21 +47,21 @@ const cli = yargs(args)
   .parserConfiguration({ "populate--": true })
   .scriptName("mongolgpt")
   .wrap(100)
-  .help("help", "show help")
+  .help("help", "тусламж харуулах")
   .alias("help", "h")
-  .version("version", "show version number", InstallationVersion)
+  .version("version", "хувилбарын дугаар харуулах", InstallationVersion)
   .alias("version", "v")
   .option("print-logs", {
-    describe: "print logs to stderr",
+    describe: "логийг stderr рүү хэвлэх",
     type: "boolean",
   })
   .option("log-level", {
-    describe: "log level",
+    describe: "логийн түвшин",
     type: "string",
     choices: ["DEBUG", "INFO", "WARN", "ERROR"],
   })
   .option("pure", {
-    describe: "run without external plugins",
+    describe: "гадаад plugin-гүй ажиллуулах",
     type: "boolean",
   })
   .middleware(async (opts) => {

@@ -17,7 +17,7 @@ export const ServeCommand = effectCmd({
     }
     const opts = yield* resolveNetworkOptions(args)
     const server = yield* Effect.promise(() => Server.listen(opts))
-    console.log(`mongolgpt server listening on http://${server.hostname}:${server.port}`)
+    console.log(`mongolgpt сервер http://${server.hostname}:${server.port} дээр холболт хүлээж байна`)
 
     yield* Effect.never
   }),

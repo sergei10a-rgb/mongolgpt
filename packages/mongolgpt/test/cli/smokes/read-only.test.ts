@@ -44,7 +44,7 @@ describe("mongolgpt read-only commands (smoke)", () => {
       Effect.gen(function* () {
         const r = yield* mongolgpt.spawn(["providers", "list"])
         mongolgpt.expectExit(r, 0, "providers list")
-        expect(r.stdout).toContain("Credentials")
+        expect(r.stdout).toContain("Итгэмжлэлүүд")
       }),
     60_000,
   )

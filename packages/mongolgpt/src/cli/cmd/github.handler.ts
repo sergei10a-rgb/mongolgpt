@@ -161,7 +161,7 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
   yield* Effect.promise(async () => {
     {
       UI.empty()
-      prompts.intro("GitHub agent суулгах")
+      prompts.intro("GitHub агент суулгах")
       const app = await getAppInfo()
 
       const providers = await Effect.runPromise(modelsDev.get()).then((p) => {
@@ -184,7 +184,7 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
             "AWS дээр OIDC тохируулна уу - https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services"
         } else {
           step2 = [
-            `    2. Org эсвэл repo (${app.owner}/${app.repo}) settings дотор дараах secret-үүдийг нэмнэ үү`,
+            `    2. Байгууллага эсвэл репозиторийн (${app.owner}/${app.repo}) тохиргоонд дараах нууц утгуудыг нэмнэ үү`,
             "",
             ...providers[provider].env.map((e) => `       - ${e}`),
           ].join("\n")
@@ -197,9 +197,9 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
             `    1. \`${WORKFLOW_FILE}\` файлыг commit хийгээд push хийнэ үү`,
             step2,
             "",
-            "    3. GitHub issue дээр очоод `/mongolgpt дүгнэ` comment бичиж agent хэрхэн ажиллахыг үзнэ үү",
+            "    3. GitHub issue дээр очоод `/mongolgpt дүгнэ` сэтгэгдэл бичиж агент хэрхэн ажиллахыг үзнэ үү",
             "",
-            "   GitHub agent-ийн баримт бичиг - https://github.com/sergei10a-rgb/mongolgpt/blob/main/packages/web/src/content/docs/github.mdx",
+            "   GitHub агентийн баримт бичиг - https://github.com/sergei10a-rgb/mongolgpt/blob/main/packages/web/src/content/docs/github.mdx",
           ].join("\n"),
         )
       }
@@ -207,7 +207,7 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
       async function getAppInfo() {
         const project = ctx.project
         if (project.vcs !== "git") {
-          prompts.log.error(`Git repository олдсонгүй. Энэ командыг git repository дотроос ажиллуулна уу.`)
+          prompts.log.error(`Git репозитор олдсонгүй. Энэ командыг Git репозитор дотроос ажиллуулна уу.`)
           throw new UI.CancelledError()
         }
 
@@ -217,7 +217,7 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
         )
         const parsed = parseGitHubRemote(info)
         if (!parsed) {
-          prompts.log.error(`Git repository олдсонгүй. Энэ командыг git repository дотроос ажиллуулна уу.`)
+          prompts.log.error(`Git репозитор олдсонгүй. Энэ командыг Git репозитор дотроос ажиллуулна уу.`)
           throw new UI.CancelledError()
         }
         return { owner: parsed.owner, repo: parsed.repo, root: ctx.worktree }
@@ -231,7 +231,7 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
           google: 3,
         }
         let provider = await prompts.select({
-          message: "Provider сонгоно уу",
+          message: "Үйлчилгээ үзүүлэгч сонгоно уу",
           maxItems: 8,
           options: pipe(
             providers,
@@ -886,7 +886,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
 
           if (result.info.role === "assistant" && result.info.error) {
             const err = result.info.error
-            console.error("Agent-ийн алдаа:", err)
+            console.error("Агентийн алдаа:", err)
             if (err.name === "ContextOverflowError") throw new Error(formatPromptTooLargeError(files))
             const message = "message" in err.data ? err.data.message : ""
             throw new Error(`${err.name}: ${message}`)
@@ -895,7 +895,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
           const text = extractResponseText(result.parts)
           if (text) return text
 
-          console.log("Agent-аас хураангуй хүсэж байна...")
+          console.log("Агентаас хураангуй хүсэж байна...")
           const summary = yield* prompt.prompt({
             sessionID: session.id,
             messageID: MessageID.ascending(),
@@ -916,14 +916,14 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
 
           if (summary.info.role === "assistant" && summary.info.error) {
             const err = summary.info.error
-            console.error("Хураангуй гаргах agent-ийн алдаа:", err)
+            console.error("Хураангуй гаргах агентийн алдаа:", err)
             if (err.name === "ContextOverflowError") throw new Error(formatPromptTooLargeError(files))
             const message = "message" in err.data ? err.data.message : ""
             throw new Error(`${err.name}: ${message}`)
           }
 
           const summaryText = extractResponseText(summary.parts)
-          if (!summaryText) throw new Error("Agent-аас хураангуй авч чадсангүй")
+          if (!summaryText) throw new Error("Агентаас хураангуй авч чадсангүй")
           return summaryText
         }),
       )

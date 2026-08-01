@@ -348,10 +348,8 @@ export function withCliFixture<A, E>(
       const stderrChunks: string[] = []
       yield* forkStderrDrain(proc.stderr, stderrChunks)
 
-      // Watch stdout line-by-line for the listening sentinel. Format
-      // (see src/cli/cmd/serve.ts):
-      //   "mongolgpt server listening on http://<host>:<port>"
-      const readyRe = /listening on (http:\/\/([^\s:]+):(\d+))/
+      // Match the stable command name and URL; the surrounding status text is localized.
+      const readyRe = /^mongolgpt .*?(http:\/\/([^\s:]+):(\d+))(?:\s|$)/
       const readyDeferred = yield* Deferred.make<{ url: string; hostname: string; port: number }>()
       yield* Effect.forkScoped(
         fromBunStream("stdout", () => proc.stdout).pipe(

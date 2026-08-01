@@ -48,7 +48,7 @@ interface SessionStats {
 
 export const StatsCommand = effectCmd({
   command: "stats",
-  describe: "token хэрэглээ болон өртгийн статистик харуулах",
+  describe: "токены хэрэглээ болон өртгийн статистик харуулах",
   builder: (yargs) =>
     yargs
       .option("days", {
@@ -312,20 +312,20 @@ export function displayStats(stats: SessionStats, toolLimit?: number, modelLimit
 
   // Cost & Tokens section
   console.log("┌────────────────────────────────────────────────────────┐")
-  console.log("│                    ӨРТӨГ БА TOKEN                     │")
+  console.log("│                    ӨРТӨГ БА ТОКЕН                     │")
   console.log("├────────────────────────────────────────────────────────┤")
   const cost = isNaN(stats.totalCost) ? 0 : stats.totalCost
   const costPerDay = isNaN(stats.costPerDay) ? 0 : stats.costPerDay
   const tokensPerSession = isNaN(stats.tokensPerSession) ? 0 : stats.tokensPerSession
   console.log(renderRow("Нийт өртөг", `$${cost.toFixed(2)}`))
   console.log(renderRow("Өдрийн дундаж өртөг", `$${costPerDay.toFixed(2)}`))
-  console.log(renderRow("Сешн дундах token", formatNumber(Math.round(tokensPerSession))))
+  console.log(renderRow("Нэг сешний дундаж токен", formatNumber(Math.round(tokensPerSession))))
   const medianTokensPerSession = isNaN(stats.medianTokensPerSession) ? 0 : stats.medianTokensPerSession
-  console.log(renderRow("Сешн дундах median token", formatNumber(Math.round(medianTokensPerSession))))
+  console.log(renderRow("Нэг сешний медиан токен", formatNumber(Math.round(medianTokensPerSession))))
   console.log(renderRow("Оролт", formatNumber(stats.totalTokens.input)))
   console.log(renderRow("Гаралт", formatNumber(stats.totalTokens.output)))
-  console.log(renderRow("Cache уншсан", formatNumber(stats.totalTokens.cache.read)))
-  console.log(renderRow("Cache бичсэн", formatNumber(stats.totalTokens.cache.write)))
+  console.log(renderRow("Кэш уншсан", formatNumber(stats.totalTokens.cache.read)))
+  console.log(renderRow("Кэш бичсэн", formatNumber(stats.totalTokens.cache.write)))
   console.log("└────────────────────────────────────────────────────────┘")
   console.log()
 
@@ -341,10 +341,10 @@ export function displayStats(stats: SessionStats, toolLimit?: number, modelLimit
     for (const [model, usage] of modelsToDisplay) {
       console.log(`│ ${model.padEnd(54)} │`)
       console.log(renderRow("  Мессеж", usage.messages.toLocaleString()))
-      console.log(renderRow("  Оролтын token", formatNumber(usage.tokens.input)))
-      console.log(renderRow("  Гаралтын token", formatNumber(usage.tokens.output)))
-      console.log(renderRow("  Cache уншсан", formatNumber(usage.tokens.cache.read)))
-      console.log(renderRow("  Cache бичсэн", formatNumber(usage.tokens.cache.write)))
+      console.log(renderRow("  Оролтын токен", formatNumber(usage.tokens.input)))
+      console.log(renderRow("  Гаралтын токен", formatNumber(usage.tokens.output)))
+      console.log(renderRow("  Кэш уншсан", formatNumber(usage.tokens.cache.read)))
+      console.log(renderRow("  Кэш бичсэн", formatNumber(usage.tokens.cache.write)))
       console.log(renderRow("  Өртөг", `$${usage.cost.toFixed(4)}`))
       console.log("├────────────────────────────────────────────────────────┤")
     }

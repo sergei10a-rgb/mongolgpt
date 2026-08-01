@@ -94,7 +94,7 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
   }
 
   if (method.type === "oauth") {
-    const authorize = yield* cliTry("Authorize хийж чадсангүй: ", () => method.authorize(inputs))
+    const authorize = yield* cliTry("Зөвшөөрөл олгож чадсангүй: ", () => method.authorize(inputs))
 
     if (authorize.url) {
       yield* Prompt.log.info("Энд очно уу: " + authorize.url)
@@ -105,10 +105,10 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
         yield* Prompt.log.info(authorize.instructions)
       }
       const spinner = Prompt.spinner()
-      yield* spinner.start("Authorize хүлээж байна...")
-      const result = yield* cliTry("Authorize хийж чадсангүй: ", () => authorize.callback())
+      yield* spinner.start("Зөвшөөрөл хүлээж байна...")
+      const result = yield* cliTry("Зөвшөөрөл олгож чадсангүй: ", () => authorize.callback())
       if (result.type === "failed") {
-        yield* spinner.stop("Authorize хийж чадсангүй", 1)
+        yield* spinner.stop("Зөвшөөрөл олгож чадсангүй", 1)
       }
       if (result.type === "success") {
         const saveProvider = result.provider ?? provider
@@ -135,13 +135,13 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
 
     if (authorize.method === "code") {
       const code = yield* Prompt.text({
-        message: "Authorization code-оо энд хуулна уу: ",
+        message: "Зөвшөөрлийн кодоо энд оруулна уу: ",
         validate: (x) => (x && x.length > 0 ? undefined : "Шаардлагатай"),
       })
       const authorizationCode = yield* promptValue(code)
-      const result = yield* cliTry("Authorize хийж чадсангүй: ", () => authorize.callback(authorizationCode))
+      const result = yield* cliTry("Зөвшөөрөл олгож чадсангүй: ", () => authorize.callback(authorizationCode))
       if (result.type === "failed") {
-        yield* Prompt.log.error("Authorize хийж чадсангүй")
+        yield* Prompt.log.error("Зөвшөөрөл олгож чадсангүй")
       }
       if (result.type === "success") {
         const saveProvider = result.provider ?? provider
@@ -189,9 +189,9 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
       return true
     }
 
-    const result = yield* cliTry("Authorize хийж чадсангүй: ", () => authorizeApi(inputs))
+    const result = yield* cliTry("Зөвшөөрөл олгож чадсангүй: ", () => authorizeApi(inputs))
     if (result.type === "failed") {
-      yield* Prompt.log.error("Authorize хийж чадсангүй")
+      yield* Prompt.log.error("Зөвшөөрөл олгож чадсангүй")
     }
     if (result.type === "success") {
       const saveProvider = result.provider ?? provider
@@ -240,7 +240,7 @@ export function resolvePluginProviders(input: {
 export const ProvidersCommand = cmd({
   command: "providers",
   aliases: ["auth"],
-  describe: "AI provider болон credentials-ийг удирдах",
+  describe: "AI үйлчилгээ үзүүлэгч болон итгэмжлэлүүдийг удирдах",
   builder: (yargs) =>
     yargs.command(ProvidersListCommand).command(ProvidersLoginCommand).command(ProvidersLogoutCommand).demandCommand(),
   async handler() {},
@@ -249,7 +249,7 @@ export const ProvidersCommand = cmd({
 export const ProvidersListCommand = effectCmd({
   command: "list",
   aliases: ["ls"],
-  describe: "provider болон credentials-ийг жагсаах",
+  describe: "үйлчилгээ үзүүлэгч болон итгэмжлэлүүдийг жагсаах",
   // Lists global credentials + provider env vars; no project instance needed.
   instance: false,
   handler: Effect.fn("Cli.providers.list")(function* (_args) {
@@ -260,7 +260,7 @@ export const ProvidersListCommand = effectCmd({
     const authPath = path.join(Global.Path.data, "auth.json")
     const homedir = os.homedir()
     const displayPath = authPath.startsWith(homedir) ? authPath.replace(homedir, "~") : authPath
-    yield* Prompt.intro(`Credentials ${UI.Style.TEXT_DIM}${displayPath}`)
+    yield* Prompt.intro(`Итгэмжлэлүүд ${UI.Style.TEXT_DIM}${displayPath}`)
     const results = Object.entries(yield* Effect.orDie(authSvc.all()))
     const database = yield* modelsDev.get()
 
@@ -269,7 +269,7 @@ export const ProvidersListCommand = effectCmd({
       yield* Prompt.log.info(`${name} ${UI.Style.TEXT_DIM}${result.type}`)
     }
 
-    yield* Prompt.outro(`${results.length} credentials`)
+    yield* Prompt.outro(`${results.length} итгэмжлэл`)
 
     const activeEnvVars: Array<{ provider: string; envVar: string }> = []
 
@@ -299,34 +299,35 @@ export const ProvidersListCommand = effectCmd({
 
 export const ProvidersLoginCommand = effectCmd({
   command: "login [url]",
-  describe: "provider руу нэвтрэх",
+  describe: "үйлчилгээ үзүүлэгчид нэвтрэх",
   // URL login skips instance bootstrap, which would load remote config with the stale token and crash before re-auth.
   instance: (args) => !args.url,
   builder: (yargs: Argv) =>
     yargs
       .positional("url", {
-        describe: "mongolgpt auth provider",
+        describe: "MongolGPT нэвтрэлтийн үйлчилгээ үзүүлэгч",
         type: "string",
       })
       .option("provider", {
         alias: ["p"],
-        describe: "нэвтрэх provider-ийн ID эсвэл нэр (provider сонголтыг алгасна)",
+        describe: "нэвтрэх үйлчилгээ үзүүлэгчийн ID эсвэл нэр (сонголтыг алгасна)",
         type: "string",
       })
       .option("method", {
         alias: ["m"],
-        describe: "нэвтрэх аргын label (арга сонголтыг алгасна)",
+        describe: "нэвтрэх аргын нэр (арга сонголтыг алгасна)",
         type: "string",
       }),
   handler: Effect.fn("Cli.providers.login")(function* (args) {
     const authSvc = yield* Auth.Service
 
     UI.empty()
-    yield* Prompt.intro("Credential нэмэх")
+    yield* Prompt.intro("Итгэмжлэл нэмэх")
     if (args.url) {
       const url = args.url.replace(/\/+$/, "")
-      const wellknown = (yield* cliTry(`${url}-аас auth provider metadata ачаалж чадсангүй: `, () =>
-        fetch(`${url}/.well-known/mongolgpt`).then((x) => x.json()),
+      const wellknown = (yield* cliTry(
+        `${url}-аас нэвтрэлтийн үйлчилгээ үзүүлэгчийн мета өгөгдлийг ачаалж чадсангүй: `,
+        () => fetch(`${url}/.well-known/mongolgpt`).then((x) => x.json()),
       )) as {
         auth: { command: string[]; env: string }
       }
@@ -338,7 +339,7 @@ export const ProvidersLoginCommand = effectCmd({
         yield* Prompt.outro("Дууслаа")
         return
       }
-      const [exit, token] = yield* cliTry("Auth provider командыг ажиллуулж чадсангүй: ", () =>
+      const [exit, token] = yield* cliTry("Нэвтрэлтийн үйлчилгээ үзүүлэгчийн командыг ажиллуулж чадсангүй: ", () =>
         Promise.all([proc.exited, text(proc.stdout!)]),
       ).pipe(Effect.ensuring(Effect.sync(() => abort.abort())))
       if (exit !== 0) {
@@ -492,10 +493,10 @@ export const ProvidersLoginCommand = effectCmd({
 
 export const ProvidersLogoutCommand = effectCmd({
   command: "logout [provider]",
-  describe: "тохируулсан provider-оос гарах",
+  describe: "тохируулсан үйлчилгээ үзүүлэгчээс гарах",
   builder: (yargs) =>
     yargs.positional("provider", {
-      describe: "гарах provider-ийн ID эсвэл нэр",
+      describe: "гарах үйлчилгээ үзүүлэгчийн ID эсвэл нэр",
       type: "string",
     }),
   // Removes a global auth credential; no project instance needed.
@@ -506,9 +507,9 @@ export const ProvidersLogoutCommand = effectCmd({
 
     UI.empty()
     const credentials: Array<[string, Auth.Info]> = Object.entries(yield* Effect.orDie(authSvc.all()))
-    yield* Prompt.intro("Credential устгах")
+    yield* Prompt.intro("Итгэмжлэл устгах")
     if (credentials.length === 0) {
-      yield* Prompt.log.error("Credential олдсонгүй")
+      yield* Prompt.log.error("Итгэмжлэл олдсонгүй")
       return
     }
     const database = yield* modelsDev.get()
