@@ -1039,7 +1039,7 @@ describe("ACP service sessions", () => {
     )
 
     expect(error.code).toBe(-32603)
-    expect(error.message).toBe("Internal error: Provider request failed")
+    expect(error.message).toBe("Дотоод алдаа: Provider request failed")
     expect(error.data).toEqual({ service: "session", errorName: "APIError" })
   })
 
