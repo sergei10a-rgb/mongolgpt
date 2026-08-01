@@ -1,14 +1,14 @@
-Use this tool to suggest switching to plan agent when the user's request would benefit from planning before implementation.
+Хэрэглэгчийн хүсэлт хэрэгжүүлэлтээс өмнө төлөвлөлт хийвэл илүү үр дүнтэй бол plan agent руу шилжихийг санал болгохдоо энэ хэрэгслийг ашигла.
 
-If they explicitly mention wanting to create a plan ALWAYS call this tool first.
+Хэрэглэгч төлөвлөгөө үүсгэх хүсэлтэйгээ тодорхой хэлсэн бол энэ хэрэгслийг ҮРГЭЛЖ эхэлж дууд.
 
-This tool will ask the user if they want to switch to plan agent.
+Энэ хэрэгсэл plan agent руу шилжих эсэхийг хэрэглэгчээс асууна.
 
-Call this tool when:
-- The user's request is complex and would benefit from planning first
-- You want to research and design before making changes
-- The task involves multiple files or significant architectural decisions
+Дараах үед энэ хэрэгслийг дууд:
+- Хэрэглэгчийн хүсэлт төвөгтэй бөгөөд эхлээд төлөвлөвөл илүү үр дүнтэй үед.
+- Өөрчлөлт хийхээс өмнө судалж, загварчлахыг хүсэж байгаа үед.
+- Даалгавар олон файл эсвэл архитектурын чухал шийдвэр хамарч байгаа үед.
 
-Do NOT call this tool:
-- For simple, straightforward tasks
-- When the user explicitly wants immediate implementation
+Дараах үед энэ хэрэгслийг БҮҮ дууд:
+- Энгийн, шууд гүйцэтгэх даалгаварт.
+- Хэрэглэгч шууд хэрэгжүүлэлт хийхийг тодорхой хүссэн үед.

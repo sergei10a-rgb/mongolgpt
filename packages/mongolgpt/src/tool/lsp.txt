@@ -1,24 +1,24 @@
-Interact with Language Server Protocol (LSP) servers to get code intelligence features.
+Кодын ухаалаг боломжуудыг ашиглахын тулд Language Server Protocol (LSP) серверүүдтэй харилцана.
 
-Supported operations:
-- goToDefinition: Find where a symbol is defined
-- findReferences: Find all references to a symbol
-- hover: Get hover information (documentation, type info) for a symbol
-- documentSymbol: Get all symbols (functions, classes, variables) in a document
-- workspaceSymbol: List project-wide symbols matching a query string
-- goToImplementation: Find implementations of an interface or abstract method
-- prepareCallHierarchy: Get call hierarchy item at a position (functions/methods)
-- incomingCalls: Find all functions/methods that call the function at a position
-- outgoingCalls: Find all functions/methods called by the function at a position
+Дэмждэг үйлдлүүд:
+- goToDefinition: Symbol хаана тодорхойлогдсоныг олно.
+- findReferences: Symbol-ийн бүх лавлагааг олно.
+- hover: Symbol дээр хулгана аваачих мэдээлэл (баримт бичиг, type info)-г авна.
+- documentSymbol: Баримтад байгаа бүх symbol (function, class, variable)-ийг авна.
+- workspaceSymbol: Query string-тэй таарах төслийн хэмжээндэх symbol-уудыг жагсаана.
+- goToImplementation: Interface эсвэл abstract method-ийн хэрэгжүүлэлтүүдийг олно.
+- prepareCallHierarchy: Байрлал дээрх call hierarchy item (function/method)-ийг авна.
+- incomingCalls: Тухайн байрлал дахь function-ийг дууддаг бүх function/method-ийг олно.
+- outgoingCalls: Тухайн function-аас дуудагддаг бүх function/method-ийг олно.
 
-All operations require:
-- filePath: The file to operate on
-- line: The line number (1-based, as shown in editors)
-- character: The character offset (1-based, as shown in editors)
+Бүх үйлдэлд дараах зүйл шаардлагатай:
+- filePath: Үйлдэл хийх файл.
+- line: Мөрийн дугаар (editor-т харагддаг шиг 1-ээс эхэлнэ).
+- character: Тэмдэгтийн offset (1-ээс эхэлнэ).
 
-workspaceSymbol also accepts:
-- query: A query string to filter symbols by. Empty string requests all symbols.
+workspaceSymbol мөн дараахыг авна:
+- query: Symbol-ийг шүүх query string. Хоосон string нь бүх symbol-ийг хүснэ.
 
-For workspaceSymbol, filePath is not sent in the LSP workspace/symbol request. It is used by MongolGPT to select and start the matching LSP server.
+workspaceSymbol-ийн хувьд filePath-ийг LSP workspace/symbol хүсэлтэд илгээхгүй. MongolGPT үүнийг тохирох LSP серверийг сонгож эхлүүлэхэд ашиглана.
 
-Note: LSP servers must be configured for the file type. If no server is available, an error will be returned.
+Тэмдэглэл: LSP серверүүдийг файлын төрөл бүрд тохируулсан байх ёстой. Ямар ч сервер боломжгүй бол алдаа буцаана.

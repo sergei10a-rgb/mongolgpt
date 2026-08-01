@@ -14,10 +14,10 @@ export type Limits = {
 
 export function parameterSchema() {
   return Schema.Struct({
-    command: Schema.String.annotate({ description: "The command to execute" }),
-    timeout: Schema.optional(PositiveInt).annotate({ description: "Optional timeout in milliseconds" }),
+    command: Schema.String.annotate({ description: "Ажиллуулах command" }),
+    timeout: Schema.optional(PositiveInt).annotate({ description: "Миллисекундээр өгөх optional timeout" }),
     workdir: Schema.optional(Schema.String).annotate({
-      description: `The working directory to run the command in. Defaults to the current directory. Use this instead of 'cd' commands.`,
+      description: `Command ажиллуулах ажлын хавтас. Анхдагчаар одоогийн хавтсыг ашиглана. 'cd' command-ын оронд үүнийг ашигла.`,
     }),
   })
 }
@@ -28,7 +28,7 @@ export type Parameters = Schema.Schema.Type<typeof Parameters>
 function renderPrompt(template: string, values: Record<string, string>) {
   return template.replace(/\$\{(\w+)\}/g, (_, key: string) => {
     const value = values[key]
-    if (value === undefined) throw new Error(`Missing shell prompt value: ${key}`)
+    if (value === undefined) throw new Error(`Shell prompt-ийн утга алга: ${key}`)
     return value
   })
 }
@@ -42,76 +42,76 @@ function shellDisplayName(name: string) {
 
 function powershellNotes(name: string) {
   if (name === "pwsh") {
-    return `# PowerShell (7+) shell notes
-- This cross-platform shell supports pipeline chain operators (\`&&\` and \`||\`).
-- Use double quotes for interpolated strings (\`"Hello $name"\`), single quotes for verbatim strings.
-- Prefer full cmdlet names like \`Get-ChildItem\`, \`Set-Content\`, \`Remove-Item\`, and \`New-Item\` over aliases.
-- Use \`$(...)\` for subexpressions. Use \`@(...)\` for array expressions.
-- To call a native executable whose path contains spaces, use the call operator: \`& "path/to/exe" args\`.
-- Escape special characters with the PowerShell backtick character.`
+    return `# PowerShell (7+) shell-ийн тэмдэглэл
+- Энэ cross-platform shell нь pipeline chain operator (\`&&\` болон \`||\`)-уудыг дэмждэг.
+- Interpolated string-д давхар хашилт (\`"Hello $name"\`), verbatim string-д дан хашилт ашигла.
+- Alias-ийн оронд \`Get-ChildItem\`, \`Set-Content\`, \`Remove-Item\`, \`New-Item\` зэрэг бүтэн cmdlet нэрийг илүүд үз.
+- Subexpression-д \`$(...)\` ашигла. Array expression-д \`@(...)\` ашигла.
+- Зам нь зай агуулсан native executable дуудахдаа call operator ашигла: \`& "path/to/exe" args\`.
+- Тусгай тэмдэгтүүдийг PowerShell-ийн backtick тэмдэгтээр escape хий.`
   }
   if (name === "powershell") {
-    return `# Windows PowerShell (5.1) shell notes
-- Use \`cmd1; if ($?) { cmd2 }\` to chain dependent commands.
-- Use double quotes for interpolated strings (\`"Hello $name"\`), single quotes for verbatim strings.
-- Prefer full cmdlet names like \`Get-ChildItem\`, \`Set-Content\`, \`Remove-Item\`, and \`New-Item\` over aliases.
-- Use \`$(...)\` for subexpressions. Use \`@(...)\` for array expressions.
-- To call a native executable whose path contains spaces, use the call operator: \`& "path/to/exe" args\`.
-- Escape special characters with the PowerShell backtick character.`
+    return `# Windows PowerShell (5.1) shell-ийн тэмдэглэл
+- Хамааралтай command-уудыг холбоход \`cmd1; if ($?) { cmd2 }\` ашигла.
+- Interpolated string-д давхар хашилт (\`"Hello $name"\`), verbatim string-д дан хашилт ашигла.
+- Alias-ийн оронд \`Get-ChildItem\`, \`Set-Content\`, \`Remove-Item\`, \`New-Item\` зэрэг бүтэн cmdlet нэрийг илүүд үз.
+- Subexpression-д \`$(...)\` ашигла. Array expression-д \`@(...)\` ашигла.
+- Зам нь зай агуулсан native executable дуудахдаа call operator ашигла: \`& "path/to/exe" args\`.
+- Тусгай тэмдэгтүүдийг PowerShell-ийн backtick тэмдэгтээр escape хий.`
   }
   return ""
 }
 
 function chainGuidance(name: string) {
   if (name === "powershell") {
-    return "If the commands depend on each other and must run sequentially, avoid '&&' in this shell because Windows PowerShell (5.1) does not support it. Use PowerShell conditionals such as `cmd1; if ($?) { cmd2 }` when later commands must depend on earlier success."
+    return "Command-ууд хоорондоо хамааралтай бөгөөд дарааллаар ажиллах ёстой бол Windows PowerShell (5.1) үүнийг дэмждэггүй тул энэ shell-д '&&' бүү ашигла. Дараагийн command өмнөхийн амжилтаас хамаарах үед `cmd1; if ($?) { cmd2 }` зэрэг PowerShell conditional ашигла."
   }
   if (PS.has(name)) {
-    return "If the commands depend on each other and must run sequentially, use a single bash tool call with '&&' to chain them together (e.g., `git add . && git commit -m \"message\" && git push`). For instance, if one operation must complete before another starts (like New-Item before Copy-Item, Write before bash for git operations, or git add before git commit), run these operations sequentially instead."
+    return "Command-ууд хоорондоо хамааралтай бөгөөд дарааллаар ажиллах ёстой бол тэдгээрийг нэг bash tool call дотор '&&'-ээр холбо (жишээлбэл, `git add . && git commit -m \"message\" && git push`). Нэг үйлдэл нөгөөхөөсөө өмнө дуусах ёстой бол (жишээлбэл, Copy-Item-ийн өмнө New-Item, git үйлдэлд bash-ийн өмнө Write, эсвэл git commit-ийн өмнө git add) эдгээр үйлдлийг дарааллаар ажиллуул."
   }
   if (CMD.has(name)) {
-    return "If the commands depend on each other and must run sequentially, use a single bash tool call with `&&` to chain them together (e.g., `mkdir out && dir out`). For instance, if one operation must complete before another starts, run these operations sequentially instead."
+    return "Command-ууд хоорондоо хамааралтай бөгөөд дарааллаар ажиллах ёстой бол тэдгээрийг нэг bash tool call дотор `&&`-ээр холбо (жишээлбэл, `mkdir out && dir out`). Нэг үйлдэл нөгөөхөөсөө өмнө дуусах ёстой бол эдгээр үйлдлийг дарааллаар ажиллуул."
   }
-  return "If the commands depend on each other and must run sequentially, use a single Bash call with '&&' to chain them together (e.g., `git add . && git commit -m \"message\" && git push`). For instance, if one operation must complete before another starts (like mkdir before cp, Write before Bash for git operations, or git add before git commit), run these operations sequentially instead."
+  return "Command-ууд хоорондоо хамааралтай бөгөөд дарааллаар ажиллах ёстой бол тэдгээрийг нэг Bash call дотор '&&'-ээр холбо (жишээлбэл, `git add . && git commit -m \"message\" && git push`). Нэг үйлдэл нөгөөхөөсөө өмнө дуусах ёстой бол (жишээлбэл, cp-ийн өмнө mkdir, git үйлдэлд Bash-ийн өмнө Write, эсвэл git commit-ийн өмнө git add) эдгээр үйлдлийг дарааллаар ажиллуул."
 }
 
 function bashCommandSection(chain: string, limits: Limits, defaultTimeoutMs: number) {
-  return `Before executing the command, please follow these steps:
+  return `Command ажиллуулахын өмнө дараах алхмуудыг дага:
 
-1. Directory Verification:
-   - If the command will create new directories or files, first use \`ls\` to verify the parent directory exists and is the correct location
-   - For example, before running "mkdir foo/bar", first use \`ls foo\` to check that "foo" exists and is the intended parent directory
+1. Хавтас шалгах:
+   - Command шинэ хавтас эсвэл файл үүсгэх бол эхлээд \`ls\` ашиглан parent directory байгаа бөгөөд зөв байрлал мөн эсэхийг шалга
+   - Жишээлбэл, "mkdir foo/bar" ажиллуулахын өмнө эхлээд \`ls foo\` ашиглан "foo" байгаа бөгөөд зорьсон parent directory мөн эсэхийг шалга
 
-2. Command Execution:
-   - Always quote file paths that contain spaces with double quotes (e.g., rm "path with spaces/file.txt")
-   - Examples of proper quoting:
-     - mkdir "/Users/name/My Documents" (correct)
-     - mkdir /Users/name/My Documents (incorrect - will fail)
-     - python "/path/with spaces/script.py" (correct)
-     - python /path/with spaces/script.py (incorrect - will fail)
-   - After ensuring proper quoting, execute the command.
-   - Capture the output of the command.
+2. Command ажиллуулах:
+   - Зай агуулсан file path-уудыг үргэлж давхар хашилтаар хүрээл (жишээлбэл, rm "path with spaces/file.txt")
+   - Зөв хашилтын жишээ:
+     - mkdir "/Users/name/My Documents" (зөв)
+     - mkdir /Users/name/My Documents (буруу - амжилтгүй болно)
+     - python "/path/with spaces/script.py" (зөв)
+     - python /path/with spaces/script.py (буруу - амжилтгүй болно)
+   - Зөв хашилт хэрэглэснээ баталгаажуулсны дараа command-ыг ажиллуул.
+   - Command-ын гаралтыг хадгал.
 
-Usage notes:
-  - The command argument is required.
-  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after ${defaultTimeoutMs}ms.
-  - If the output exceeds ${limits.maxLines} lines or ${limits.maxBytes} bytes, it will be truncated and the full output will be written to a file. You can use Read with offset/limit to read specific sections or Grep to search the full content. Do NOT use \`head\`, \`tail\`, or other truncation commands to limit output; the full output will already be captured to a file for more precise searching.
+Хэрэглэх тэмдэглэл:
+  - command argument заавал шаардлагатай.
+  - Миллисекундээр optional timeout зааж болно. Заагаагүй бол command ${defaultTimeoutMs}ms-ийн дараа timeout болно.
+  - Гаралт ${limits.maxLines} мөр эсвэл ${limits.maxBytes} byte-ээс хэтэрвэл таслагдаж, бүтэн гаралт файлд бичигдэнэ. Тодорхой хэсгийг уншихдаа Read-ийг offset/limit-тэй ашиглах эсвэл бүтэн агуулгаас хайхдаа Grep ашиглаж болно. Гаралтыг хязгаарлахын тулд \`head\`, \`tail\` болон бусад truncation command БҮҮ ашигла; илүү нарийн хайхад зориулж бүтэн гаралт файлд аль хэдийн хадгалагдсан байна.
 
-  - Avoid using Bash with the \`find\`, \`grep\`, \`cat\`, \`head\`, \`tail\`, \`sed\`, \`awk\`, or \`echo\` commands, unless explicitly instructed or when these commands are truly necessary for the task. Instead, always prefer using the dedicated tools for these commands:
-    - File search: Use Glob (NOT find or ls)
-    - Content search: Use Grep (NOT grep or rg)
-    - Read files: Use Read (NOT cat/head/tail)
-    - Edit files: Use Edit (NOT sed/awk)
-    - Write files: Use Write (NOT echo >/cat <<EOF)
-    - Communication: Output text directly (NOT echo/printf)
-  - When issuing multiple commands:
-    - If the commands are independent and can run in parallel, make multiple bash tool calls in a single message. For example, if you need to run "git status" and "git diff", send a single message with two bash tool calls in parallel.
+  - Илэрхий заагаагүй эсвэл тухайн даалгаварт үнэхээр шаардлагагүй бол Bash-д \`find\`, \`grep\`, \`cat\`, \`head\`, \`tail\`, \`sed\`, \`awk\`, \`echo\` command ашиглахаас зайлсхий. Оронд нь эдгээр command-д зориулсан тусгай tool-уудыг үргэлж илүүд үз:
+    - Файл хайх: Glob ашигла (find эсвэл ls БИШ)
+    - Агуулга хайх: Grep ашигла (grep эсвэл rg БИШ)
+    - Файл унших: Read ашигла (cat/head/tail БИШ)
+    - Файл засах: Edit ашигла (sed/awk БИШ)
+    - Файл бичих: Write ашигла (echo >/cat <<EOF БИШ)
+    - Харилцах: Текстийг шууд гарга (echo/printf БИШ)
+  - Олон command өгөх үед:
+    - Command-ууд бие даасан бөгөөд зэрэг ажиллаж болох бол нэг message дотор олон bash tool call өг. Жишээлбэл, "git status" болон "git diff" ажиллуулах шаардлагатай бол нэг message дотор хоёр bash tool call-ыг зэрэг өг.
     - ${chain}
-    - Use ';' only when you need to run commands sequentially but don't care if earlier commands fail
-    - DO NOT use newlines to separate commands (newlines are ok in quoted strings)
-  - AVOID using \`cd <directory> && <command>\`. Use the \`workdir\` parameter to change directories instead.
+    - Command-уудыг дарааллаар ажиллуулах шаардлагатай боловч өмнөх command амжилтгүй болсон эсэх хамаарахгүй үед л ';' ашигла
+    - Command-уудыг тусгаарлахын тулд newline БҮҮ ашигла (хашилттай string дотор newline байж болно)
+  - \`cd <directory> && <command>\` хэлбэрийг ашиглахаас ЗАЙЛСХИЙ. Хавтас солихын оронд \`workdir\` parameter ашигла.
     <good-example>
-    Use workdir="/foo/bar" with command: pytest tests
+    workdir="/foo/bar"-тай command: pytest tests ашигла
     </good-example>
     <bad-example>
     cd /foo/bar && pytest tests
@@ -127,42 +127,42 @@ function powershellCommandSection(
 ) {
   return `${powershellNotes(name)}
 
-Before executing the command, please follow these steps:
+Command ажиллуулахын өмнө дараах алхмуудыг дага:
 
-1. Directory Verification:
-   - If the command will create new directories or files, first use \`Test-Path -LiteralPath <parent>\` to verify the parent directory exists and is the correct location
-   - For example, before creating \`foo${pathSep}bar\`, first use \`Test-Path -LiteralPath "foo"\` to check that \`foo\` exists and is the intended parent directory
+1. Хавтас шалгах:
+   - Command шинэ хавтас эсвэл файл үүсгэх бол эхлээд \`Test-Path -LiteralPath <parent>\` ашиглан parent directory байгаа бөгөөд зөв байрлал мөн эсэхийг шалга
+   - Жишээлбэл, \`foo${pathSep}bar\` үүсгэхийн өмнө эхлээд \`Test-Path -LiteralPath "foo"\` ашиглан \`foo\` байгаа бөгөөд зорьсон parent directory мөн эсэхийг шалга
 
-2. Command Execution:
-   - Always quote file paths that contain spaces with double quotes (e.g., Remove-Item -LiteralPath "path with spaces${pathSep}file.txt")
-   - Examples of proper quoting:
-     - New-Item -ItemType Directory -Path "My Documents" (correct)
-     - New-Item -ItemType Directory -Path My Documents (incorrect - path is split)
-     - & "path with spaces${pathSep}script.ps1" (correct)
-     - path with spaces${pathSep}script.ps1 (incorrect - path is split and not invoked)
-   - After ensuring proper quoting, execute the command.
-   - Capture the output of the command.
+2. Command ажиллуулах:
+   - Зай агуулсан file path-уудыг үргэлж давхар хашилтаар хүрээл (жишээлбэл, Remove-Item -LiteralPath "path with spaces${pathSep}file.txt")
+   - Зөв хашилтын жишээ:
+     - New-Item -ItemType Directory -Path "My Documents" (зөв)
+     - New-Item -ItemType Directory -Path My Documents (буруу - path сална)
+     - & "path with spaces${pathSep}script.ps1" (зөв)
+     - path with spaces${pathSep}script.ps1 (буруу - path салж, дуудагдахгүй)
+   - Зөв хашилт хэрэглэснээ баталгаажуулсны дараа command-ыг ажиллуул.
+   - Command-ын гаралтыг хадгал.
 
-Usage notes:
-  - The command argument is required.
-  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after ${defaultTimeoutMs}ms.
-  - If the output exceeds ${limits.maxLines} lines or ${limits.maxBytes} bytes, it will be truncated and the full output will be written to a file. You can use Read with offset/limit to read specific sections or Grep to search the full content. Do NOT use \`Select-Object -First\`, \`Select-Object -Last\`, or other truncation commands to limit output; the full output will already be captured to a file for more precise searching.
+Хэрэглэх тэмдэглэл:
+  - command argument заавал шаардлагатай.
+  - Миллисекундээр optional timeout зааж болно. Заагаагүй бол command ${defaultTimeoutMs}ms-ийн дараа timeout болно.
+  - Гаралт ${limits.maxLines} мөр эсвэл ${limits.maxBytes} byte-ээс хэтэрвэл таслагдаж, бүтэн гаралт файлд бичигдэнэ. Тодорхой хэсгийг уншихдаа Read-ийг offset/limit-тэй ашиглах эсвэл бүтэн агуулгаас хайхдаа Grep ашиглаж болно. Гаралтыг хязгаарлахын тулд \`Select-Object -First\`, \`Select-Object -Last\` болон бусад truncation command БҮҮ ашигла; илүү нарийн хайхад зориулж бүтэн гаралт файлд аль хэдийн хадгалагдсан байна.
 
-  - Avoid using Shell with PowerShell file/content cmdlets unless explicitly instructed or when these cmdlets are truly necessary for the task. Instead, always prefer using the dedicated tools for these commands:
-    - File search: Use Glob (NOT Get-ChildItem)
-    - Content search: Use Grep (NOT Select-String)
-    - Read files: Use Read (NOT Get-Content)
-    - Edit files: Use Edit (NOT Set-Content)
-    - Write files: Use Write (NOT Set-Content/Out-File or here-strings)
-    - Communication: Output text directly (NOT Write-Output/Write-Host)
-  - When issuing multiple commands:
-    - If the commands are independent and can run in parallel, make multiple bash tool calls in a single message. For example, if you need to run "git status" and "git diff", send a single message with two bash tool calls in parallel.
+  - Илэрхий заагаагүй эсвэл тухайн даалгаварт үнэхээр шаардлагагүй бол Shell-д PowerShell-ийн file/content cmdlet ашиглахаас зайлсхий. Оронд нь эдгээр command-д зориулсан тусгай tool-уудыг үргэлж илүүд үз:
+    - Файл хайх: Glob ашигла (Get-ChildItem БИШ)
+    - Агуулга хайх: Grep ашигла (Select-String БИШ)
+    - Файл унших: Read ашигла (Get-Content БИШ)
+    - Файл засах: Edit ашигла (Set-Content БИШ)
+    - Файл бичих: Write ашигла (Set-Content/Out-File эсвэл here-string БИШ)
+    - Харилцах: Текстийг шууд гарга (Write-Output/Write-Host БИШ)
+  - Олон command өгөх үед:
+    - Command-ууд бие даасан бөгөөд зэрэг ажиллаж болох бол нэг message дотор олон bash tool call өг. Жишээлбэл, "git status" болон "git diff" ажиллуулах шаардлагатай бол нэг message дотор хоёр bash tool call-ыг зэрэг өг.
     - ${chain}
-    - Use \`;\` only when you need to run commands sequentially but don't care if earlier commands fail
-    - DO NOT use newlines to separate commands (newlines are ok in quoted strings)
-  - AVOID changing directories inside the command. Use the \`workdir\` parameter to change directories instead.
+    - Command-уудыг дарааллаар ажиллуулах шаардлагатай боловч өмнөх command амжилтгүй болсон эсэх хамаарахгүй үед л \`;\` ашигла
+    - Command-уудыг тусгаарлахын тулд newline БҮҮ ашигла (хашилттай string дотор newline байж болно)
+  - Command дотор хавтас солихоос ЗАЙЛСХИЙ. Хавтас солихын оронд \`workdir\` parameter ашигла.
     <good-example>
-    Use workdir="project${pathSep}subdir" with command: pytest tests
+    workdir="project${pathSep}subdir"-тай command: pytest tests ашигла
     </good-example>
     <bad-example>
     ${name === "powershell" ? `Set-Location -LiteralPath "project${pathSep}subdir"; if ($?) { pytest tests }` : `Set-Location -LiteralPath "project${pathSep}subdir" && pytest tests`}
@@ -170,48 +170,48 @@ Usage notes:
 }
 
 function cmdCommandSection(chain: string, limits: Limits, defaultTimeoutMs: number) {
-  return `# cmd.exe shell notes
-- Use double quotes for paths with spaces.
-- Use %VAR% for environment variables.
-- Use \`if exist\` for existence checks.
-- Use \`call\` when invoking batch files from another batch-style command.
+  return `# cmd.exe shell-ийн тэмдэглэл
+- Зай агуулсан path-д давхар хашилт ашигла.
+- Environment variable-д %VAR% ашигла.
+- Байгаа эсэхийг шалгахад \`if exist\` ашигла.
+- Нэг batch-style command-аас өөр batch file дуудахдаа \`call\` ашигла.
 
-Before executing the command, please follow these steps:
+Command ажиллуулахын өмнө дараах алхмуудыг дага:
 
-1. Directory Verification:
-   - If the command will create new directories or files, first use \`if exist\` to verify the parent directory exists and is the correct location
-   - For example, before creating \`foo\\bar\`, first use \`if exist "foo\\" dir "foo"\` to check that \`foo\` exists and is the intended parent directory
+1. Хавтас шалгах:
+   - Command шинэ хавтас эсвэл файл үүсгэх бол эхлээд \`if exist\` ашиглан parent directory байгаа бөгөөд зөв байрлал мөн эсэхийг шалга
+   - Жишээлбэл, \`foo\\bar\` үүсгэхийн өмнө эхлээд \`if exist "foo\\" dir "foo"\` ашиглан \`foo\` байгаа бөгөөд зорьсон parent directory мөн эсэхийг шалга
 
-2. Command Execution:
-   - Always quote file paths that contain spaces with double quotes (e.g., del "path with spaces\\file.txt")
-   - Examples of proper quoting:
-     - mkdir "My Documents" (correct)
-     - mkdir My Documents (incorrect - path is split)
-     - call "path with spaces\\script.bat" (correct)
-     - path with spaces\\script.bat (incorrect - path is split and not invoked correctly)
-   - After ensuring proper quoting, execute the command.
-   - Capture the output of the command.
+2. Command ажиллуулах:
+   - Зай агуулсан file path-уудыг үргэлж давхар хашилтаар хүрээл (жишээлбэл, del "path with spaces\\file.txt")
+   - Зөв хашилтын жишээ:
+     - mkdir "My Documents" (зөв)
+     - mkdir My Documents (буруу - path сална)
+     - call "path with spaces\\script.bat" (зөв)
+     - path with spaces\\script.bat (буруу - path салж, зөв дуудагдахгүй)
+   - Зөв хашилт хэрэглэснээ баталгаажуулсны дараа command-ыг ажиллуул.
+   - Command-ын гаралтыг хадгал.
 
-Usage notes:
-  - The command argument is required.
-  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after ${defaultTimeoutMs}ms.
-  - If the output exceeds ${limits.maxLines} lines or ${limits.maxBytes} bytes, it will be truncated and the full output will be written to a file. You can use Read with offset/limit to read specific sections or Grep to search the full content. Do NOT use \`more\` or other pagination commands to limit output; the full output will already be captured to a file for more precise searching.
+Хэрэглэх тэмдэглэл:
+  - command argument заавал шаардлагатай.
+  - Миллисекундээр optional timeout зааж болно. Заагаагүй бол command ${defaultTimeoutMs}ms-ийн дараа timeout болно.
+  - Гаралт ${limits.maxLines} мөр эсвэл ${limits.maxBytes} byte-ээс хэтэрвэл таслагдаж, бүтэн гаралт файлд бичигдэнэ. Тодорхой хэсгийг уншихдаа Read-ийг offset/limit-тэй ашиглах эсвэл бүтэн агуулгаас хайхдаа Grep ашиглаж болно. Гаралтыг хязгаарлахын тулд \`more\` болон бусад pagination command БҮҮ ашигла; илүү нарийн хайхад зориулж бүтэн гаралт файлд аль хэдийн хадгалагдсан байна.
 
-  - Avoid using Shell with cmd.exe file/content commands unless explicitly instructed or when these commands are truly necessary for the task. Instead, always prefer using the dedicated tools for these commands:
-    - File search: Use Glob (NOT dir /s)
-    - Content search: Use Grep (NOT findstr)
-    - Read files: Use Read (NOT type)
-    - Edit files: Use Edit (NOT copy)
-    - Write files: Use Write (NOT echo > file)
-    - Communication: Output text directly (NOT echo)
-  - When issuing multiple commands:
-    - If the commands are independent and can run in parallel, make multiple bash tool calls in a single message. For example, if you need to run "dir" and "where cmd", send a single message with two bash tool calls in parallel.
+  - Илэрхий заагаагүй эсвэл тухайн даалгаварт үнэхээр шаардлагагүй бол Shell-д cmd.exe-ийн file/content command ашиглахаас зайлсхий. Оронд нь эдгээр command-д зориулсан тусгай tool-уудыг үргэлж илүүд үз:
+    - Файл хайх: Glob ашигла (dir /s БИШ)
+    - Агуулга хайх: Grep ашигла (findstr БИШ)
+    - Файл унших: Read ашигла (type БИШ)
+    - Файл засах: Edit ашигла (copy БИШ)
+    - Файл бичих: Write ашигла (echo > file БИШ)
+    - Харилцах: Текстийг шууд гарга (echo БИШ)
+  - Олон command өгөх үед:
+    - Command-ууд бие даасан бөгөөд зэрэг ажиллаж болох бол нэг message дотор олон bash tool call өг. Жишээлбэл, "dir" болон "where cmd" ажиллуулах шаардлагатай бол нэг message дотор хоёр bash tool call-ыг зэрэг өг.
     - ${chain}
-    - Use \`&\` only when you need to run commands sequentially but don't care if earlier commands fail
-    - DO NOT use newlines to separate commands (newlines are ok in quoted strings)
-  - AVOID changing directories inside the command. Use the \`workdir\` parameter to change directories instead.
+    - Command-уудыг дарааллаар ажиллуулах шаардлагатай боловч өмнөх command амжилтгүй болсон эсэх хамаарахгүй үед л \`&\` ашигла
+    - Command-уудыг тусгаарлахын тулд newline БҮҮ ашигла (хашилттай string дотор newline байж болно)
+  - Command дотор хавтас солихоос ЗАЙЛСХИЙ. Хавтас солихын оронд \`workdir\` parameter ашигла.
     <good-example>
-    Use workdir="project\\subdir" with command: dir
+    workdir="project\\subdir"-тай command: dir ашигла
     </good-example>
     <bad-example>
     cd /d "project\\subdir" && dir
@@ -223,21 +223,21 @@ function profile(name: string, platform: NodeJS.Platform, limits: Limits, defaul
   const chain = chainGuidance(name)
   if (CMD.has(name)) {
     return {
-      intro: `Executes a given ${shellDisplayName(name)} command with optional timeout, ensuring proper handling and security measures.`,
+      intro: `Өгсөн ${shellDisplayName(name)} command-ыг optional timeout-той ажиллуулж, зөв боловсруулалт болон аюулгүй байдлын арга хэмжээг хангана.`,
       workdirSection:
-        "All commands run in the current working directory by default. Use the `workdir` parameter if you need to run a command in a different directory. AVOID changing directories inside the command - use `workdir` instead.",
+        "Бүх command анхдагчаар одоогийн working directory-д ажиллана. Өөр directory-д command ажиллуулах шаардлагатай бол `workdir` parameter ашигла. Command дотор directory солихоос ЗАЙЛСХИЙ, оронд нь `workdir` ашигла.",
       commandSection: cmdCommandSection(chain, limits, defaultTimeoutMs),
-      gitCommands: "git commands",
-      gitCommandRestriction: "git commands",
-      createPrInstruction: "Create PR using a temporary body file so cmd.exe quoting stays simple.",
+      gitCommands: "git command-ууд",
+      gitCommandRestriction: "git command-ууд",
+      createPrInstruction: "cmd.exe-ийн хашилтыг энгийн байлгахын тулд түр body file ашиглан PR үүсгэ.",
       createPrExample: `(\n  echo ## Summary\n  echo - ^<1-3 bullet points^>\n) > pr-body.txt\ngh pr create --title "the pr title" --body-file pr-body.txt`,
     }
   }
   if (isPowerShell) {
     return {
-      intro: `Executes a given ${shellDisplayName(name)} command with optional timeout, ensuring proper handling and security measures.`,
+      intro: `Өгсөн ${shellDisplayName(name)} command-ыг optional timeout-той ажиллуулж, зөв боловсруулалт болон аюулгүй байдлын арга хэмжээг хангана.`,
       workdirSection:
-        "All commands run in the current working directory by default. Use the `workdir` parameter if you need to run a command in a different directory. AVOID changing directories inside the command - use `workdir` instead.",
+        "Бүх command анхдагчаар одоогийн working directory-д ажиллана. Өөр directory-д command ажиллуулах шаардлагатай бол `workdir` parameter ашигла. Command дотор directory солихоос ЗАЙЛСХИЙ, оронд нь `workdir` ашигла.",
       commandSection: powershellCommandSection(
         name,
         chain,
@@ -245,9 +245,9 @@ function profile(name: string, platform: NodeJS.Platform, limits: Limits, defaul
         limits,
         defaultTimeoutMs,
       ),
-      gitCommands: "git commands",
-      gitCommandRestriction: "git commands",
-      createPrInstruction: "Create PR using gh pr create with a PowerShell here-string to pass the body correctly.",
+      gitCommands: "git command-ууд",
+      gitCommandRestriction: "git command-ууд",
+      createPrInstruction: "Body-г зөв дамжуулахын тулд PowerShell here-string-тэй gh pr create ашиглан PR үүсгэ.",
       createPrExample: `gh pr create --title "the pr title" --body @'
 ## Summary
 - <1-3 bullet points>
@@ -256,14 +256,14 @@ function profile(name: string, platform: NodeJS.Platform, limits: Limits, defaul
   }
   return {
     intro:
-      "Executes a given bash command in a persistent shell session with optional timeout, ensuring proper handling and security measures.",
+      "Өгсөн bash command-ыг persistent shell session дотор optional timeout-той ажиллуулж, зөв боловсруулалт болон аюулгүй байдлын арга хэмжээг хангана.",
     workdirSection:
-      "All commands run in the current working directory by default. Use the `workdir` parameter if you need to run a command in a different directory. AVOID using `cd <directory> && <command>` patterns - use `workdir` instead.",
+      "Бүх command анхдагчаар одоогийн working directory-д ажиллана. Өөр directory-д command ажиллуулах шаардлагатай бол `workdir` parameter ашигла. `cd <directory> && <command>` хэлбэрээс ЗАЙЛСХИЙ, оронд нь `workdir` ашигла.",
     commandSection: bashCommandSection(chain, limits, defaultTimeoutMs),
-    gitCommands: "bash commands",
-    gitCommandRestriction: "git bash commands",
+    gitCommands: "bash command-ууд",
+    gitCommandRestriction: "git bash command-ууд",
     createPrInstruction:
-      "Create PR using gh pr create with the format below. Use a HEREDOC to pass the body to ensure correct formatting.",
+      "Доорх format-аар gh pr create ашиглан PR үүсгэ. Зөв format-ыг хадгалахын тулд body-г HEREDOC-оор дамжуул.",
     createPrExample: `gh pr create --title "the pr title" --body "$(cat <<'EOF'
 ## Summary
 <1-3 bullet points>`,

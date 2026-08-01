@@ -6,7 +6,7 @@ import * as Tool from "./tool"
 import DESCRIPTION from "./skill.txt"
 
 export const Parameters = Schema.Struct({
-  name: Schema.String.annotate({ description: "The name of the skill from available_skills" }),
+  name: Schema.String.annotate({ description: "available_skills доторх skill-ийн нэр" }),
 })
 
 export const SkillTool = Tool.define(
@@ -43,16 +43,16 @@ export const SkillTool = Tool.define(
           })
 
           return {
-            title: `Loaded skill: ${info.name}`,
+            title: `Skill ачааллаа: ${info.name}`,
             output: [
               `<skill_content name="${info.name}">`,
               `# Skill: ${info.name}`,
               "",
               info.content.trim(),
               "",
-              `Base directory for this skill: ${base}`,
-              "Relative paths in this skill (e.g., scripts/, reference/) are relative to this base directory.",
-              "Note: file list is sampled.",
+              `Энэ skill-ийн үндсэн хавтас: ${base}`,
+              "Энэ skill доторх харьцангуй замууд (жишээ нь, scripts/, reference/) нь энэ үндсэн хавтастай харьцангуй байна.",
+              "Тэмдэглэл: файлын жагсаалтыг түүвэрлэсэн.",
               "",
               "<skill_files>",
               files.map((file) => `<file>${path.resolve(dir, file.path)}</file>`).join("\n"),

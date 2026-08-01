@@ -1,19 +1,19 @@
-Launch a new agent to handle complex, multistep tasks autonomously.
+Нарийн төвөгтэй, олон алхамт даалгаврыг бие даан гүйцэтгүүлэхийн тулд шинэ agent ажиллуул.
 
-When using the Task tool, you must specify a subagent_type parameter to select which agent type to use.
+Task tool-ийг ашиглахдаа ямар төрлийн agent ашиглахаа сонгохын тулд subagent_type parameter-ийг заавал өгнө.
 
-When NOT to use the Task tool:
-- If you want to read a specific file path, use the Read or Glob tool instead of the Task tool, to find the match more quickly
-- If you are searching for a specific class definition like "class Foo", use the Grep tool instead, to find the match more quickly
-- If you are searching for code within a specific file or set of 2-3 files, use the Read tool instead of the Task tool, to find the match more quickly
-- If no available agent is a good fit for the task, use other tools directly
+Task tool-ийг ашиглаж БОЛОХГҮЙ үе:
+- Тодорхой файлын замыг уншихыг хүсэж байвал тохирох файлыг хурдан олохын тулд Task tool-ийн оронд Read эсвэл Glob tool ашигла
+- "class Foo" гэх мэт тодорхой class definition хайж байвал тохирох хэсгийг хурдан олохын тулд Grep tool ашигла
+- Тодорхой нэг файл эсвэл 2-3 файлын багц дотор код хайж байвал тохирох хэсгийг хурдан олохын тулд Task tool-ийн оронд Read tool ашигла
+- Боломжтой agent-уудаас аль нь ч даалгаварт тохирохгүй бол бусад tool-ийг шууд ашигла
 
 
-Usage notes:
-1. Launch multiple agents concurrently whenever possible, to maximize performance; to do that, use a single message with multiple tool uses
-2. Once you have delegated work to an agent, do not duplicate that work yourself. Continue with non-overlapping tasks, or wait for the result. For background tasks, you will be notified automatically when the result is ready.
-3. When the agent is done, it will return a single message back to you. The result returned by the agent is not visible to the user. To show the user the result, you should send a text message back to the user with a concise summary of the result. The output includes a task_id you can reuse later to continue the same subagent session.
-4. Each agent invocation starts with a fresh context unless you provide task_id to resume the same subagent session (which continues with its previous messages and tool outputs). When starting fresh, your prompt should contain a highly detailed task description for the agent to perform autonomously and you should specify exactly what information the agent should return back to you in its final and only message to you.
-5. The agent's outputs should generally be trusted
-6. Clearly tell the agent whether you expect it to write code or just to do research (search, file reads, web fetches, etc.), since it is not aware of the user's intent. Tell it how to verify its work if possible (e.g., relevant test commands).
-7. If the agent description mentions that it should be used proactively, then you should try your best to use it without the user having to ask for it first. Use your judgement.
+Хэрэглэх тэмдэглэл:
+1. Гүйцэтгэлийг нэмэгдүүлэхийн тулд боломжтой бүх үед олон agent-ийг зэрэг ажиллуул; үүний тулд нэг message дотор олон tool use өг
+2. Ажлыг agent-д даалгасны дараа тэр ажлыг өөрөө давхар бүү хий. Давхцахгүй ажлуудаа үргэлжлүүл эсвэл үр дүнг хүлээ. Background task-ийн үр дүн бэлэн болоход танд автоматаар мэдэгдэнэ.
+3. Agent дуусахдаа танд нэг message буцаана. Agent-ийн буцаасан үр дүн хэрэглэгчид харагдахгүй. Үр дүнг хэрэглэгчид харуулахын тулд үр дүнгийн товч хураангуйг текст message-ээр хэрэглэгчид илгээ. Гаралт нь тухайн subagent session-ийг дараа үргэлжлүүлэхэд дахин ашиглаж болох task_id агуулна.
+4. Ижил subagent session-ийг өмнөх message болон tool output-тай нь үргэлжлүүлэх task_id өгөөгүй бол agent invocation бүр шинэ context-оос эхэлнэ. Шинээр эхлүүлэхдээ agent бие даан гүйцэтгэх даалгаврын маш дэлгэрэнгүй тайлбарыг prompt-д оруулж, эцсийн бөгөөд цорын ганц message-дээ яг ямар мэдээлэл буцаахыг тодорхой заа.
+5. Agent-ийн гаралтад ерөнхийдөө итгэж болно
+6. Agent хэрэглэгчийн санааг мэдэхгүй тул түүнээс код бичихийг хүсэж байна уу эсвэл зөвхөн судалгаа (хайлт, файл унших, web fetch гэх мэт) хийхийг хүсэж байна уу гэдгээ тодорхой хэл. Боломжтой бол ажлаа хэрхэн шалгахыг нь мөн хэл (жишээлбэл, холбогдох test command).
+7. Agent-ийн description-д proactive ашиглах ёстой гэж дурдсан бол хэрэглэгч заавал дахин хүсэхийг хүлээлгүйгээр түүнийг ашиглахыг боломжийн хэмжээнд хичээ. Өөрийн дүгнэлтийг ашигла.

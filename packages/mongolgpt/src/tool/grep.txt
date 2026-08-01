@@ -1,8 +1,8 @@
-- Fast content search tool that works with any codebase size
-- Searches file contents using regular expressions
+- Ямар ч хэмжээтэй кодын сантай ажиллах хурдан агуулга хайх хэрэгсэл.
+- Regular expression ашиглан файлын агуулгаас хайна.
 - Supports full regex syntax (eg. "log.*Error", "function\s+\w+", etc.)
-- Filter files by pattern with the include parameter (eg. "*.js", "*.{ts,tsx}")
-- Returns file paths and line numbers with matching lines
-- Use this tool when you need to find files containing specific patterns
-- If you need to identify/count the number of matches within files, use the Bash tool with `rg` (ripgrep) directly. Do NOT use `grep`.
-- When you are doing an open-ended search that may require multiple rounds of globbing and grepping, use the Task tool instead
+- `include` parameter-аар pattern-д тохирох файлуудыг шүүнэ (жишээ нь `"*.js"`, `"*.{ts,tsx}"`).
+- Таарсан мөрүүдийн file path болон мөрийн дугаарыг буцаана.
+- Тодорхой pattern агуулсан файлуудыг олох шаардлагатай үед энэ хэрэгслийг ашигла.
+- Таарсан үр дүнгийн тоог тодорхойлох/тоолох шаардлагатай бол Bash tool ашиглан `rg` (ripgrep)-ийг шууд ажиллуул. `grep`-ийг БҮҮ ашигла.
+- Олон удаагийн glob болон grep шаардаж болзошгүй нээлттэй хайлт хийж байгаа бол оронд нь Task tool ашигла.

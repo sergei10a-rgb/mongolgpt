@@ -1,21 +1,21 @@
 ${intro}
 
-Be aware: OS: ${os}, Shell: ${shell}
+Анхаар: OS: ${os}, Shell: ${shell}
 
 ${workdirSection}
 
-Use `${tmp}` for temporary work outside the workspace. This directory has already been created, already exists, and is pre-approved for external directory access.
+Workspace-оос гадуурх түр ажлыг `${tmp}`-д хий. Энэ хавтас аль хэдийн үүссэн, байгаа бөгөөд гаднын хавтаст хандах зөвшөөрөл нь урьдчилан олгогдсон.
 
-IMPORTANT: This tool is for terminal operations like git, npm, docker, etc. DO NOT use it for file operations (reading, writing, editing, searching, finding files) - use the specialized tools for this instead.
+ЧУХАЛ: Энэ хэрэгсэл нь git, npm, docker зэрэг terminal үйлдэлд зориулагдсан. Файл унших, бичих, засах, хайх, олох зэрэг файлтай ажиллахдаа үүнийг БҮҮ ашигла; оронд нь зориулалтын хэрэгслүүдийг ашигла.
 
 ${commandSection}
 
-# Git and GitHub
-- Only commit, amend, push, or create PRs when explicitly requested.
-- Before committing, inspect `git status`, `git diff`, and `git log --oneline -10`; stage only intended files and never commit secrets.
-- Write a concise commit message that matches the repo style.
-- Do not update git config, skip hooks, use interactive `-i`, force-push, or create empty commits unless explicitly requested.
-- If a commit fails or hooks reject it, fix the issue and create a new commit; do not amend the failed commit.
-- Before creating a PR, inspect status, diff, remote tracking, recent commits, and the diff from the base branch.
-- Review all commits included in the PR, not just the latest commit.
-- Use `gh` for GitHub tasks, including PRs, issues, checks, and releases; return the PR URL when done.
+# Git болон GitHub
+- Хэрэглэгч тодорхой хүссэн үед л commit, amend, push эсвэл PR үүсгэ.
+- Commit хийхийн өмнө `git status`, `git diff`, `git log --oneline -10`-ийг шалга; зөвхөн зорьсон файлуудаа stage хийж, нууц мэдээллийг хэзээ ч commit бүү хий.
+- Репогийн хэв маягт тохирсон товч commit message бич.
+- Хэрэглэгч тодорхой хүсээгүй бол git config шинэчлэх, hook алгасах, interactive `-i` ашиглах, force-push хийх эсвэл хоосон commit үүсгэхгүй.
+- Commit бүтэлгүйтэх эсвэл hook татгалзвал асуудлыг засаж шинэ commit үүсгэ; бүтэлгүй commit-ийг amend бүү хий.
+- PR үүсгэхийн өмнө status, diff, remote tracking, сүүлийн commit-ууд болон base branch-тай харьцуулсан diff-ийг шалга.
+- Зөвхөн хамгийн сүүлийн commit бус, PR-д орох бүх commit-ийг хянан үз.
+- PR, issue, check, release зэрэг GitHub-ийн ажлуудад `gh` ашигла; дуусмагц PR URL-ийг буцаа.

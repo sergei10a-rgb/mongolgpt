@@ -1,14 +1,14 @@
-- Search the web using the session's web search provider - performs real-time web searches and can scrape content from specific URLs
-- Provides up-to-date information for current events and recent data
-- Supports configurable result counts and returns the content from the most relevant websites
-- Use this tool for accessing information beyond knowledge cutoff
-- Searches are performed automatically within a single API call
+- Сешнийн web search provider ашиглан вэбээс хайна. Бодит цагийн хайлт хийж, тодорхой URL-уудаас агуулга татаж чадна.
+- Одоогийн үйл явдал болон сүүлийн үеийн өгөгдлийн шинэчилсэн мэдээллийг өгнө.
+- Үр дүнгийн тоог тохируулах боломжтой бөгөөд хамгийн хамааралтай вэбсайтуудын агуулгыг буцаана.
+- Мэдлэгийн таслах хугацаанаас хойших мэдээлэлд хандах шаардлагатай үед энэ хэрэгслийг ашигла.
+- Хайлтыг нэг API дуудлагын дотор автоматаар гүйцэтгэнэ.
 
-Usage notes:
-  - Supports live crawling modes when available: 'fallback' (backup if cached unavailable) or 'preferred' (prioritize live crawling)
-  - Search types when available: 'auto' (balanced), 'fast' (quick results), 'deep' (comprehensive search)
-  - Configurable context length for optimal LLM integration
-  - Domain filtering and advanced search options available
+Хэрэглээний тэмдэглэл:
+  - Боломжтой үед live crawling горим дэмжинэ: 'fallback' (кэш ашиглах боломжгүй бол нөөц горим) эсвэл 'preferred' (live crawling-ийг урьтал болгоно).
+  - Боломжтой үед хайлтын төрөл дэмжинэ: 'auto' (тэнцвэртэй), 'fast' (хурдан үр дүн), 'deep' (дэлгэрэнгүй хайлт).
+  - LLM-тэй оновчтой холбохын тулд context length-ийг тохируулж болно.
+  - Домэйноор шүүх болон дэвшилтэт хайлтын сонголтууд боломжтой.
 
-The current year is {{year}}. You MUST use this year when searching for recent information or current events
-- Example: If the current year is 2026 and the user asks for "latest AI news", search for "AI news 2026", NOT "AI news 2025"
+Одоогийн он {{year}} байна. Сүүлийн үеийн мэдээлэл эсвэл одоогийн үйл явдлыг хайхдаа энэ оныг заавал ашигла.
+- Жишээ: Одоогийн он 2026 бөгөөд хэрэглэгч "latest AI news" гэж асуувал "AI news 2026" гэж хай; "AI news 2025" гэж хайж болохгүй.

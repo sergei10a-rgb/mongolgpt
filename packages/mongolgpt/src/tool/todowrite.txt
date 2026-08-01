@@ -1,44 +1,44 @@
-Create and maintain a structured task list for the current coding session. Tracks progress, organizes multi-step work, and surfaces status to the user.
+Одоогийн coding session-д зориулсан бүтэцтэй task list үүсгэж, хөтөл. Явцыг бүртгэж, олон алхамт ажлыг зохион байгуулж, status-ийг хэрэглэгчид харуулна.
 
-## When to use
-Use proactively when:
-- The task requires 3+ distinct steps or actions (not just 3 tool calls for a single conceptual step)
-- The work is non-trivial and benefits from planning
-- The user provides multiple tasks (numbered or comma-separated) or explicitly asks for a todo list
-- New instructions arrive - capture them as todos
-- You start a task - mark it `in_progress` (only one at a time) before working
-- You finish a task - mark it `completed` and add any follow-ups discovered during the work
+## Хэзээ ашиглах
+Дараах үед proactive ашигла:
+- Даалгавар 3 ба түүнээс олон тусдаа алхам эсвэл үйлдэл шаардах үед (нэг утгын алхамд зориулсан ердөө 3 tool call биш)
+- Ажил энгийн бус бөгөөд төлөвлөлтөөс ашиг хүртэх үед
+- Хэрэглэгч олон даалгавар (дугаарласан эсвэл таслалаар тусгаарласан) өгсөн, эсвэл todo list илэрхий хүссэн үед
+- Шинэ заавар ирэхэд түүнийг todo болгон бүртгэ
+- Даалгавар эхлэхдээ ажиллахаас өмнө `in_progress` гэж тэмдэглэ (нэг удаад зөвхөн нэг)
+- Даалгавар дуусахдаа `completed` гэж тэмдэглээд ажлын явцад илэрсэн follow-up-уудыг нэм
 
-## When NOT to use
-Skip when:
-- The work is a single, straightforward task (or <3 trivial steps)
-- The request is purely informational or conversational
-- Tracking adds no organizational value
+## Хэзээ ашиглахгүй
+Дараах үед алгас:
+- Ажил нэг, энгийн даалгавар (эсвэл 3-аас цөөн жижиг алхам) байх үед
+- Хүсэлт зөвхөн мэдээллийн эсвэл харилцан ярианы шинжтэй үед
+- Явц бүртгэх нь зохион байгуулалтын ямар ч үнэ цэн нэмэхгүй үед
 
-## States
-- `pending` - not started
-- `in_progress` - actively working (exactly ONE at a time)
-- `completed` - finished successfully
-- `cancelled` - no longer needed
+## Төлөвүүд
+- `pending` - эхлээгүй
+- `in_progress` - идэвхтэй ажиллаж байгаа (нэг удаад яг НЭГ)
+- `completed` - амжилттай дууссан
+- `cancelled` - цаашид шаардлагагүй болсон
 
-## Rules
-- Update status in real time; don't batch completions
-- Mark `completed` only after the required work is actually done, including any required verification. Never based on intent.
-- Keep exactly one `in_progress` while work remains
-- If blocked or partial, keep it `in_progress` and add a follow-up todo describing the blocker
-- Preserve user-provided commands verbatim (flags, args, order)
-- Items should be specific and actionable; break large work into smaller steps
+## Дүрмүүд
+- Status-ийг бодит цагт шинэчил; completion-уудыг багцлан бүү шинэчил
+- Шаардлагатай verification-ийг оролцуулан шаардсан ажил бодитоор дууссаны дараа л `completed` гэж тэмдэглэ. Зөвхөн хийх санаанд үндэслэж хэзээ ч бүү тэмдэглэ.
+- Ажил үлдсэн хугацаанд яг нэг `in_progress` байлга
+- Blocked эсвэл хэсэгчлэн дууссан бол `in_progress` хэвээр үлдээгээд blocker-ийг тайлбарласан follow-up todo нэм
+- Хэрэглэгчийн өгсөн command-уудыг үгчлэн хэвээр хадгал (flags, args, order)
+- Item бүр тодорхой, хэрэгжүүлэх боломжтой байх ёстой; том ажлыг жижиг алхмуудад хуваа
 
-## Examples
+## Жишээнүүд
 
-Use it:
-- "Add a dark mode toggle and run the tests" -> multi-step feature + explicit verification
-- "Rename getCwd -> getCurrentWorkingDirectory across the repo" -> grep reveals 15 occurrences in 8 files
-- "Implement registration, catalog, cart, checkout" -> multiple complex features
+Ашиглах:
+- "Add a dark mode toggle and run the tests" -> олон алхамт feature + илэрхий verification
+- "Rename getCwd -> getCurrentWorkingDirectory across the repo" -> grep 8 файл дахь 15 давхцлыг илрүүлнэ
+- "Implement registration, catalog, cart, checkout" -> олон нарийн төвөгтэй feature
 
-Skip it:
-- "How do I print Hello World in Python?" -> informational
-- "Add a comment to calculateTotal" -> single edit
-- "Run npm install and tell me what happened" -> one command
+Алгасах:
+- "How do I print Hello World in Python?" -> мэдээллийн хүсэлт
+- "Add a comment to calculateTotal" -> нэг энгийн засвар
+- "Run npm install and tell me what happened" -> нэг command
 
-When in doubt, use it.
+Эргэлзэж байвал ашигла.
