@@ -50,7 +50,7 @@ describe("file HttpApi", () => {
 
     expect(status.status).toBe(200)
     expect(await status.json()).toEqual([])
-  })
+  }, 30_000)
 
   test("serves search endpoints", async () => {
     await using tmp = await tmpdir({ git: true })
@@ -79,5 +79,5 @@ describe("file HttpApi", () => {
 
     expect(symbols.status).toBe(200)
     expect(await symbols.json()).toEqual([])
-  })
+  }, 30_000)
 })

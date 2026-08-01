@@ -36,6 +36,7 @@ process.env["XDG_CACHE_HOME"] = path.join(dir, "cache")
 process.env["XDG_CONFIG_HOME"] = path.join(dir, "config")
 process.env["XDG_STATE_HOME"] = path.join(dir, "state")
 process.env["MONGOLGPT_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
+process.env["MONGOLGPT_DISABLE_MODELS_FETCH"] = "true"
 process.env["MONGOLGPT_EXPERIMENTAL_EVENT_SYSTEM"] = "true"
 process.env["MONGOLGPT_EXPERIMENTAL_WORKSPACES"] = "true"
 
