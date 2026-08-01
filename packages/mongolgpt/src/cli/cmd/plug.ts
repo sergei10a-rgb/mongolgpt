@@ -74,7 +74,7 @@ export function createPlugTask(input: PlugInput, dep: PlugDeps = defaultPlugDeps
 
   return async (ctx: PlugCtx) => {
     const install = dep.spinner()
-    install.start("Plugin package суулгаж байна...")
+    install.start("Plugin багц суулгаж байна...")
     const target = await installPlugin(mod, dep)
     if (!target.ok) {
       install.stop("Суулгалт амжилтгүй", 1)
@@ -90,8 +90,8 @@ export function createPlugTask(input: PlugInput, dep: PlugDeps = defaultPlugDeps
         const detail = errs[0] ?? lines.at(-1)
         if (detail) dep.log.error(detail)
         if (lines.some((line) => line.includes("No version matching"))) {
-          dep.log.info("Энэ package таны npm registry-д байхгүй хувилбараас хамаарч байна.")
-          dep.log.info("npm registry/auth тохиргоогоо шалгаад дахин оролдоно уу.")
+          dep.log.info("Энэ багц таны npm registry-д байхгүй хувилбараас хамаарч байна.")
+          dep.log.info("npm registry болон нэвтрэлтийн тохиргоогоо шалгаад дахин оролдоно уу.")
         }
       }
       if (!(hit instanceof Process.RunFailedError)) {
@@ -99,10 +99,10 @@ export function createPlugTask(input: PlugInput, dep: PlugDeps = defaultPlugDeps
       }
       return false
     }
-    install.stop("Plugin package бэлэн")
+    install.stop("Plugin багц бэлэн")
 
     const inspect = dep.spinner()
-    inspect.start("Plugin manifest уншиж байна...")
+    inspect.start("Plugin manifest файл уншиж байна...")
     const manifest = await readPluginManifest(target.target)
     if (!manifest.ok) {
       if (manifest.code === "manifest_read_failed") {
@@ -113,8 +113,8 @@ export function createPlugTask(input: PlugInput, dep: PlugDeps = defaultPlugDeps
       }
 
       if (manifest.code === "manifest_no_targets") {
-        inspect.stop("Plugin target олдсонгүй", 1)
-        dep.log.error(`"${mod}" package.json дотор plugin entrypoint ил гаргаагүй байна`)
+        inspect.stop("Plugin-ийн зорилтот хэсэг олдсонгүй", 1)
+        dep.log.error(`"${mod}" package.json дотор plugin эхлэх цэгийг ил гаргаагүй байна`)
         dep.log.info(
           'Дараахын аль нэгийг хүлээсэн: exports["./tui"], exports["./server"], server-ийн package.json main, эсвэл tui theme-д package.json["oc-themes"].',
         )
@@ -125,7 +125,7 @@ export function createPlugTask(input: PlugInput, dep: PlugDeps = defaultPlugDeps
       return false
     }
 
-    inspect.stop(`${manifest.targets.map((item) => item.kind).join(" + ")} target илэрлээ`)
+    inspect.stop(`${manifest.targets.map((item) => item.kind).join(" + ")} зорилтот хэсэг илэрлээ`)
 
     const patch = dep.spinner()
     patch.start("Plugin тохиргоо шинэчилж байна...")
@@ -168,7 +168,7 @@ export function createPlugTask(input: PlugInput, dep: PlugDeps = defaultPlugDeps
     }
 
     dep.log.success(`${mod} суулгалаа`)
-    dep.log.info(global ? `Хүрээ: global (${out.dir})` : `Хүрээ: local (${out.dir})`)
+    dep.log.info(global ? `Хүрээ: глобал (${out.dir})` : `Хүрээ: локал (${out.dir})`)
     return true
   }
 }
@@ -198,13 +198,13 @@ export const PluginCommand = effectCmd({
   handler: Effect.fn("Cli.plug")(function* (args) {
     const mod = String(args.module ?? "").trim()
     if (!mod) {
-      UI.error("module is required")
+      UI.error("module шаардлагатай")
       process.exitCode = 1
       return
     }
 
     UI.empty()
-    intro(`Install plugin ${mod}`)
+    intro(`Plugin суулгах: ${mod}`)
 
     const run = createPlugTask({
       mod,

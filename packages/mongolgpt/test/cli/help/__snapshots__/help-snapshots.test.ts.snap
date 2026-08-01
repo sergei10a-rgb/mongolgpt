@@ -30,8 +30,8 @@ Commands:
   mongolgpt mcp add [name]     MCP сервер нэмэх
   mongolgpt mcp list           MCP серверүүд болон төлөвийг жагсаах                    [aliases: ls]
   mongolgpt mcp auth [name]    OAuth идэвхтэй MCP серверт нэвтрэх
-  mongolgpt mcp logout [name]  MCP серверийн OAuth credentials-ийг устгах
-  mongolgpt mcp debug <name>   MCP серверийн OAuth холболтыг debug хийх
+  mongolgpt mcp logout [name]  MCP серверийн OAuth нэвтрэх мэдээллийг устгах
+  mongolgpt mcp debug <name>   MCP серверийн OAuth холболтыг оношлох
 
 Options:
   -h, --help        тусламж харуулах                                                       [boolean]
@@ -467,7 +467,7 @@ Options:
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt mcp logout --help 1`] = `
 "mongolgpt mcp logout [name]
 
-MCP серверийн OAuth credentials-ийг устгах
+MCP серверийн OAuth нэвтрэх мэдээллийг устгах
 
 Positionals:
   name  MCP серверийн нэр                                                                   [string]

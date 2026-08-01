@@ -35,11 +35,11 @@ function getAuthStatusIcon(status: MCP.AuthStatus): string {
 function getAuthStatusText(status: MCP.AuthStatus): string {
   switch (status) {
     case "authenticated":
-      return "authenticated"
+      return "нэвтэрсэн"
     case "expired":
-      return "expired"
+      return "хугацаа дууссан"
     case "not_authenticated":
-      return "not authenticated"
+      return "нэвтрээгүй"
   }
 }
 
@@ -112,14 +112,14 @@ export const McpListCommand = effectCmd({
   describe: "MCP серверүүд болон төлөвийг жагсаах",
   handler: Effect.fn("Cli.mcp.list")(function* () {
     UI.empty()
-    prompts.intro("MCP Servers")
+    prompts.intro("MCP серверүүд")
 
     const { config, statuses, stored } = yield* listState()
     const servers = configuredServers(config)
 
     if (servers.length === 0) {
       prompts.log.warn("MCP сервер тохируулаагүй байна")
-      prompts.outro("Add servers with: mongolgpt mcp add")
+      prompts.outro("Сервер нэмэхдээ: mongolgpt mcp add")
       return
     }
 
@@ -134,26 +134,26 @@ export const McpListCommand = effectCmd({
 
       if (!status) {
         statusIcon = "○"
-        statusText = "not initialized"
+        statusText = "эхлүүлээгүй"
       } else if (status.status === "connected") {
         statusIcon = "✓"
-        statusText = "connected"
+        statusText = "холбогдсон"
         if (hasOAuth && hasStoredTokens) {
           hint = " (OAuth)"
         }
       } else if (status.status === "disabled") {
         statusIcon = "○"
-        statusText = "disabled"
+        statusText = "идэвхгүй"
       } else if (status.status === "needs_auth") {
         statusIcon = "⚠"
-        statusText = "needs authentication"
+        statusText = "нэвтрэх шаардлагатай"
       } else if (status.status === "needs_client_registration") {
         statusIcon = "✗"
-        statusText = "needs client registration"
+        statusText = "client бүртгэх шаардлагатай"
         hint = "\n    " + status.error
       } else {
         statusIcon = "✗"
-        statusText = "failed"
+        statusText = "амжилтгүй"
         hint = "\n    " + status.error
       }
 
@@ -163,7 +163,7 @@ export const McpListCommand = effectCmd({
       )
     }
 
-    prompts.outro(`${servers.length} server(s)`)
+    prompts.outro(`${servers.length} сервер`)
   }),
 })
 
@@ -242,7 +242,7 @@ export const McpAuthCommand = effectCmd({
     if (authStatus === "authenticated") {
       const confirm = yield* Effect.promise(() =>
         prompts.confirm({
-          message: `${serverName} хүчинтэй credentials-тэй байна. Дахин нэвтрэх үү?`,
+          message: `${serverName} хүчинтэй нэвтрэх мэдээлэлтэй байна. Дахин нэвтрэх үү?`,
         }),
       )
       if (prompts.isCancel(confirm) || !confirm) {
@@ -250,7 +250,7 @@ export const McpAuthCommand = effectCmd({
         return
       }
     } else if (authStatus === "expired") {
-      prompts.log.warn(`${serverName}-ийн credentials хугацаа дууссан байна. Дахин нэвтэрч байна...`)
+      prompts.log.warn(`${serverName}-ийн нэвтрэх мэдээллийн хугацаа дууссан байна. Дахин нэвтэрч байна...`)
     }
 
     const spinner = prompts.spinner()
@@ -258,9 +258,9 @@ export const McpAuthCommand = effectCmd({
 
     yield* MCP.Service.use((mcp) =>
       mcp.authenticate(serverName, (url) => {
-        spinner.stop("Browser дээрээ authorize хийнэ үү:")
+        spinner.stop("Browser дээрээ зөвшөөрөл олгоно уу:")
         prompts.log.info(url)
-        spinner.start("Authorize хүлээж байна...")
+        spinner.start("Зөвшөөрөл хүлээж байна...")
       }),
     ).pipe(
       Effect.tap((status) =>
@@ -335,7 +335,7 @@ export const McpAuthListCommand = effectCmd({
 
 export const McpLogoutCommand = effectCmd({
   command: "logout [name]",
-  describe: "MCP серверийн OAuth credentials-ийг устгах",
+  describe: "MCP серверийн OAuth нэвтрэх мэдээллийг устгах",
   builder: (yargs) =>
     yargs.positional("name", {
       describe: "MCP серверийн нэр",
@@ -349,7 +349,7 @@ export const McpLogoutCommand = effectCmd({
     const serverNames = Object.keys(credentials)
 
     if (serverNames.length === 0) {
-      prompts.log.warn("MCP OAuth credential хадгалагдаагүй байна")
+      prompts.log.warn("MCP OAuth нэвтрэх мэдээлэл хадгалагдаагүй байна")
       prompts.outro("Дууслаа")
       return
     }
@@ -380,13 +380,13 @@ export const McpLogoutCommand = effectCmd({
     }
 
     if (!credentials[serverName]) {
-      prompts.log.error(`${serverName}-д credential олдсонгүй`)
+      prompts.log.error(`${serverName}-д нэвтрэх мэдээлэл олдсонгүй`)
       prompts.outro("Дууслаа")
       return
     }
 
     yield* MCP.Service.use((mcp) => mcp.removeAuth(serverName))
-    prompts.log.success(`${serverName}-ийн OAuth credentials устгагдлаа`)
+    prompts.log.success(`${serverName}-ийн OAuth нэвтрэх мэдээлэл устгагдлаа`)
     prompts.outro("Дууслаа")
   }),
 })
@@ -668,7 +668,7 @@ export const McpAddCommand = effectCmd({
 
 export const McpDebugCommand = effectCmd({
   command: "debug <name>",
-  describe: "MCP серверийн OAuth холболтыг debug хийх",
+  describe: "MCP серверийн OAuth холболтыг оношлох",
   builder: (yargs) =>
     yargs.positional("name", {
       describe: "MCP серверийн нэр",
@@ -689,7 +689,7 @@ export const McpDebugCommand = effectCmd({
         : undefined
     yield* Effect.promise(async () => {
       UI.empty()
-      prompts.intro("MCP OAuth Debug")
+      prompts.intro("MCP OAuth оношилгоо")
 
       const serverName = args.name
 
@@ -719,7 +719,7 @@ export const McpDebugCommand = effectCmd({
 
       if (entry?.tokens) {
         prompts.log.info(
-          `  Access token: ${entry.tokens.accessToken.length > 8 ? `${entry.tokens.accessToken.slice(0, 4)}***${entry.tokens.accessToken.slice(-4)}` : "***"}`,
+          `  Хандах токен: ${entry.tokens.accessToken.length > 8 ? `${entry.tokens.accessToken.slice(0, 4)}***${entry.tokens.accessToken.slice(-4)}` : "***"}`,
         )
         if (entry.tokens.expiresAt) {
           const expiresDate = new Date(entry.tokens.expiresAt * 1000)
@@ -727,7 +727,7 @@ export const McpDebugCommand = effectCmd({
           prompts.log.info(`  Дуусах хугацаа: ${expiresDate.toISOString()} ${isExpired ? "(ДУУССАН)" : ""}`)
         }
         if (entry.tokens.refreshToken) {
-          prompts.log.info(`  Refresh token: байна`)
+          prompts.log.info(`  Шинэчлэх токен: байна`)
         }
       }
       if (entry?.clientInfo) {
@@ -762,7 +762,7 @@ export const McpDebugCommand = effectCmd({
           }),
         })
 
-        spinner.stop(`HTTP response: ${response.status} ${response.statusText}`)
+        spinner.stop(`HTTP хариу: ${response.status} ${response.statusText}`)
 
         // Check for WWW-Authenticate header
         const wwwAuth = response.headers.get("www-authenticate")
@@ -771,7 +771,7 @@ export const McpDebugCommand = effectCmd({
         }
 
         if (response.status === 401) {
-          prompts.log.warn("Сервер 401 Unauthorized буцаалаа")
+          prompts.log.warn("Сервер 401 Unauthorized хариу буцаалаа")
 
           // Try to discover OAuth metadata
           const oauthConfig = typeof serverConfig.oauth === "object" ? serverConfig.oauth : undefined
@@ -790,7 +790,7 @@ export const McpDebugCommand = effectCmd({
             auth,
           )
 
-          prompts.log.info("OAuth урсгалыг шалгаж байна (authorization дуусгахгүй)...")
+          prompts.log.info("OAuth урсгалыг шалгаж байна (зөвшөөрлийг бүрэн гүйцээхгүй)...")
 
           // Try creating transport with auth provider to trigger discovery
           const transport = new StreamableHTTPClientTransport(new URL(serverConfig.url), {
@@ -808,7 +808,7 @@ export const McpDebugCommand = effectCmd({
             await client.close()
           } catch (error) {
             if (error instanceof UnauthorizedError) {
-              prompts.log.info(`OAuth flow triggered: ${error.message}`)
+              prompts.log.info(`OAuth урсгал эхэллээ: ${error.message}`)
 
               // Check if dynamic registration would be attempted
               const clientInfo = await authProvider.clientInformation()
@@ -833,10 +833,10 @@ export const McpDebugCommand = effectCmd({
             // Not JSON, ignore
           }
         } else {
-          prompts.log.warn(`Unexpected status: ${response.status}`)
+          prompts.log.warn(`Хүлээгдээгүй төлөв: ${response.status}`)
           const body = await response.text().catch(() => "")
           if (body) {
-            prompts.log.info(`Response body: ${body.substring(0, 500)}`)
+            prompts.log.info(`Хариуны агуулга: ${body.substring(0, 500)}`)
           }
         }
       } catch (error) {
@@ -844,7 +844,7 @@ export const McpDebugCommand = effectCmd({
         prompts.log.error(`Алдаа: ${error instanceof Error ? error.message : String(error)}`)
       }
 
-      prompts.outro("Debug complete")
+      prompts.outro("Оношилгоо дууслаа")
     })
   }),
 })
