@@ -171,6 +171,6 @@ function serializeError(error: unknown) {
 
 function getParentPort() {
   const port = process.parentPort as ParentPort | undefined
-  if (!port) throw new Error("Sidecar parent port unavailable")
+  if (!port) throw new Error("Sidecar-ийн үндсэн процессын порт олдсонгүй")
   return port
 }

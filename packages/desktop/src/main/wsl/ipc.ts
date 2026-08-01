@@ -71,13 +71,13 @@ export function registerWslIpcHandlers(controller: WslServersController) {
 
 function registerUnavailableWslIpcHandlers() {
   const unavailable = () => {
-    throw new Error("WSL is only available on Windows")
+    throw new Error("WSL зөвхөн Windows дээр боломжтой")
   }
   const state = (): WslServersState => ({
     runtime: {
       available: false,
       version: null,
-      error: "WSL is only available on Windows",
+      error: "WSL зөвхөн Windows дээр боломжтой",
     },
     installed: [],
     online: [],

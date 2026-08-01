@@ -18,7 +18,7 @@ export function createPickedFileAuthorizations(
     async read(sender: number, token: string, path: string) {
       const selection = selections.get(token)
       if (selection?.sender !== sender || !selection.paths.delete(path))
-        throw new Error("File was not selected by the picker")
+        throw new Error("Файлыг сонголтын цонхоор сонгоогүй байна")
       const bytes = await read(path, selection.remaining)
       selection.remaining -= bytes.byteLength
       if (selection.paths.size === 0) selections.delete(token)
@@ -33,7 +33,7 @@ export function createPickedFileAuthorizations(
 export function assertAttachmentBudget(files: { size: number }[]) {
   const total = files.reduce((sum, file) => sum + file.size, 0)
   if (total <= MAX_ATTACHMENT_BYTES) return
-  throw new Error(`Selected attachments exceed the ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB limit`)
+  throw new Error(`Сонгосон хавсралтуудын хэмжээ ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB-ийн хязгаараас хэтэрлээ`)
 }
 
 export async function readAttachment(filePath: string, maxBytes = MAX_ATTACHMENT_BYTES) {
@@ -41,7 +41,7 @@ export async function readAttachment(filePath: string, maxBytes = MAX_ATTACHMENT
   try {
     const info = await file.stat()
     if (info.size > maxBytes)
-      throw new Error(`Selected attachments exceed the ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB limit`)
+      throw new Error(`Сонгосон хавсралтуудын хэмжээ ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB-ийн хязгаараас хэтэрлээ`)
     const bytes = Buffer.allocUnsafe(info.size)
     let offset = 0
     while (offset < info.size) {

@@ -18,7 +18,7 @@ export async function spawnWslSidecar(
   opts: { onLine?: (line: WslCommandLine) => void; healthTimeoutMs?: number } = {},
 ): Promise<WslSidecar> {
   const mongolgpt = await resolveWslMongolGPT(distro)
-  if (!mongolgpt) throw new Error(`MongolGPT is not installed in ${distro}`)
+  if (!mongolgpt) throw new Error(`${distro} дотор MongolGPT суулгагдаагүй байна`)
 
   const port = await allocatePort()
   const password = randomUUID()
@@ -68,7 +68,7 @@ export async function spawnWslSidecar(
   const timedOut = new Promise<never>(
     (_, reject) =>
       (timeout = setTimeout(
-        () => reject(new Error(`Sidecar for ${distro} health check timed out after ${timeoutMs}ms`)),
+        () => reject(new Error(`${distro}-ийн Sidecar бэлэн байдлын шалгалт ${timeoutMs} мс-ийн дотор дууссангүй`)),
         timeoutMs,
       )),
   )
@@ -101,7 +101,7 @@ function allocatePort() {
       const address = server.address()
       if (typeof address !== "object" || !address) {
         server.close()
-        reject(new Error("Failed to get port"))
+        reject(new Error("Порт хуваарилж чадсангүй"))
         return
       }
       server.close(() => resolve(address.port))
@@ -129,5 +129,5 @@ function forwardLines(
 
 function startupFailure(code: number | null, signal: NodeJS.Signals | null, recentOutput: string[]) {
   const suffix = recentOutput.length ? `\n${recentOutput.join("\n")}` : ""
-  return `WSL server exited before becoming healthy (code=${code ?? "null"} signal=${signal ?? "null"})${suffix}`
+  return `WSL сервер бэлэн байдлын шалгалт амжилттай болохоос өмнө зогслоо (code=${code ?? "null"} signal=${signal ?? "null"})${suffix}`
 }

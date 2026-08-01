@@ -99,7 +99,7 @@ export async function spawnLocalServer(
     const refreshTimeout = () => {
       clearTimeout(timeout)
       timeout = setTimeout(() => {
-        fail(new Error(`Sidecar did not become ready within ${SIDECAR_START_STALL_TIMEOUT}ms: ${sidecar}`))
+        fail(new Error(`Sidecar ${SIDECAR_START_STALL_TIMEOUT} мс-ийн дотор бэлэн болсонгүй: ${sidecar}`))
       }, SIDECAR_START_STALL_TIMEOUT)
     }
 
@@ -116,7 +116,7 @@ export async function spawnLocalServer(
       }
     }
     const onExit = (code: number) => {
-      fail(new Error(`Sidecar exited before ready with code ${code}`))
+      fail(new Error(`Sidecar бэлэн болохоос өмнө ${code} гарах кодтой зогслоо`))
     }
     const cleanup = () => {
       clearTimeout(timeout)
@@ -144,7 +144,7 @@ export async function spawnLocalServer(
     let healthy = false
     const gone = exit.promise.then((code) => {
       if (healthy) return
-      throw new Error(`Sidecar exited before health check passed with code ${code}`)
+      throw new Error(`Sidecar бэлэн байдлын шалгалт амжилттай болохоос өмнө ${code} гарах кодтой зогслоо`)
     })
 
     const ready = async () => {

@@ -303,7 +303,7 @@ export function createWslServersController(
       await runJob({ kind: "install-wsl", startedAt: Date.now() }, async (abort) => {
         const result = await installWslRuntimeElevated({ signal: abort.signal })
         if (result.code !== 0) {
-          const message = summarize(result.stderr || result.stdout) || "WSL installation failed"
+          const message = summarize(result.stderr || result.stdout) || "WSL суулгалт амжилтгүй боллоо"
           throw new Error(message)
         }
         const runtime = await probeWslRuntime({ signal: abort.signal })
@@ -315,7 +315,7 @@ export function createWslServersController(
       await runJob({ kind: "install-distro", distro: name, startedAt: Date.now() }, async (abort) => {
         const result = await installWslDistro(name, { signal: abort.signal })
         if (result.code !== 0) {
-          const message = summarize(result.stderr || result.stdout) || `Failed to install distro: ${name}`
+          const message = summarize(result.stderr || result.stdout) || `WSL түгээлтийг суулгаж чадсангүй: ${name}`
           throw new Error(message)
         }
         const distros = await refreshDistroLists({ signal: abort.signal })
@@ -344,7 +344,7 @@ export function createWslServersController(
       await runJob({ kind: "install-mongolgpt", distro: name, startedAt: Date.now() }, async (abort) => {
         const result = await installWslMongolGPT(appVersion, name, { signal: abort.signal })
         if (result.code !== 0) {
-          throw new Error(summarize(result.stderr || result.stdout) || "MongolGPT installation failed")
+          throw new Error(summarize(result.stderr || result.stdout) || "MongolGPT суулгалт амжилтгүй боллоо")
         }
         await refreshMongolGPTCheck(name, { signal: abort.signal })
         expectMongolGPTVersion(state.mongolgptChecks[name]?.version ?? null, appVersion, name)
@@ -360,7 +360,7 @@ export function createWslServersController(
     async addServer(distro: string): Promise<WslServerConfig> {
       const id = wslServerIdForDistro(distro)
       if (state.servers.some((item) => item.config.id === id)) {
-        throw new Error(`${distro} is already added`)
+        throw new Error(`${distro} WSL түгээлт аль хэдийн нэмэгдсэн байна`)
       }
       const config: WslServerConfig = {
         id,
@@ -481,7 +481,7 @@ function mongolgptCheck(
 }
 
 function startupFailure(code: number | null, signal: NodeJS.Signals | null) {
-  return `WSL server exited after startup (code=${code ?? "null"} signal=${signal ?? "null"})`
+  return `WSL сервер эхэлсний дараа зогслоо (code=${code ?? "null"} signal=${signal ?? "null"})`
 }
 
 // Re-export types used by callers

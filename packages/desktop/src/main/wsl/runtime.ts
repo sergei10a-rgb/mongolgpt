@@ -68,7 +68,7 @@ function runCommand(command: string, args: string[], opts: RunWslOptions = {}) {
       } catch {
         /* ignore */
       }
-      reject(new Error(`${command} ${args.join(" ")} timed out after ${timeoutMs}ms`))
+      reject(new Error(`${command} ${args.join(" ")} команд ${timeoutMs} мс-ийн дотор дууссангүй`))
     }, timeoutMs)
 
     let stdout = ""
@@ -139,7 +139,7 @@ function runInteractiveCommand(command: string, args: string[], opts: RunWslOpti
       if (settled) return
       settled = true
       cleanup()
-      reject(new Error(`${command} ${args.join(" ")} timed out after ${timeoutMs}ms`))
+      reject(new Error(`${command} ${args.join(" ")} команд ${timeoutMs} мс-ийн дотор дууссангүй`))
     }, timeoutMs)
 
     const abortHandler = () => {
@@ -214,7 +214,7 @@ export async function probeWslRuntime(opts?: RunWslOptions): Promise<WslRuntimeC
     return {
       available: false,
       version: null,
-      error: summarize(version.stderr || version.stdout) || "WSL is unavailable",
+      error: summarize(version.stderr || version.stdout) || "WSL боломжгүй байна",
     }
   }
 
@@ -228,7 +228,7 @@ export async function probeWslRuntime(opts?: RunWslOptions): Promise<WslRuntimeC
 export async function listInstalledWslDistros(opts?: RunWslOptions) {
   const result = await runWsl(["--list", "--verbose"], opts)
   if (result.code !== 0) {
-    throw new Error(summarize(result.stderr || result.stdout) || "Failed to list installed WSL distros")
+    throw new Error(summarize(result.stderr || result.stdout) || "Суулгасан WSL түгээлтүүдийг жагсааж чадсангүй")
   }
   return parseInstalledDistros(result.stdout)
 }
@@ -236,7 +236,9 @@ export async function listInstalledWslDistros(opts?: RunWslOptions) {
 export async function listOnlineWslDistros(opts?: RunWslOptions) {
   const result = await runWsl(["--list", "--online"], opts)
   if (result.code !== 0) {
-    throw new Error(summarize(result.stderr || result.stdout) || "Failed to list online WSL distros")
+    throw new Error(
+      summarize(result.stderr || result.stdout) || "Суулгах боломжтой WSL түгээлтүүдийг жагсааж чадсангүй",
+    )
   }
   return parseOnlineDistros(result.stdout)
 }
@@ -288,7 +290,7 @@ export async function probeWslDistro(name: string, opts?: RunWslOptions): Promis
       canExecute: false,
       hasBash: false,
       hasCurl: false,
-      error: summarize(executable.stderr || executable.stdout) || "Cannot execute commands in distro",
+      error: summarize(executable.stderr || executable.stdout) || "WSL түгээлт дотор команд ажиллуулж чадсангүй",
     }
   }
 
