@@ -101,8 +101,21 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
 
         const ignore = Effect.fnUntraced(function* (files: string[]) {
           if (!files.length) return new Set<string>()
-          // check-ignore treats a leading colon as pathspec magic but accepts and echoes a protective ./ prefix.
-          const checkIgnorePaths = files.map((item) => (item.startsWith(":") ? `./${item}` : item))
+          const escapePathspec = (value: string) => {
+            let result = ""
+            for (const char of value) {
+              result += "\\\\*?[]:".includes(char) ? `\\${char}` : char
+            }
+            return result
+          }
+          const outputPaths = new Map<string, string>()
+          for (const file of files) {
+            const escaped = escapePathspec(file)
+            outputPaths.set(file, file)
+            outputPaths.set(escaped, file)
+            outputPaths.set(`./${file}`, file)
+            outputPaths.set(`./${escaped}`, file)
+          }
           const check = yield* git(
             [
               ...quote,
@@ -117,7 +130,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
             ],
             {
               cwd: state.worktree,
-              stdin: encodeNulTerminatedPaths(checkIgnorePaths),
+              stdin: encodeNulTerminatedPaths(files.map(escapePathspec)),
             },
           )
           if (check.code !== 0 && check.code !== 1) return new Set<string>()
@@ -125,7 +138,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
             check.text
               .split("\0")
               .filter(Boolean)
-              .map((item) => (item.startsWith("./:") ? item.slice(2) : item)),
+              .map((item) => outputPaths.get(item) ?? item),
           )
         })
 
