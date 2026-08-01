@@ -27,12 +27,12 @@ export async function paginate<T, R extends { nextCursor?: string }>(
     const page = await list(cursor)
     result.push(...items(page))
     if (page.nextCursor === undefined) return result
-    if (cursors.has(page.nextCursor)) throw new Error(`MCP list returned duplicate cursor: ${page.nextCursor}`)
+    if (cursors.has(page.nextCursor)) throw new Error(`MCP жагсаалт давхардсан \`cursor\` утга буцаалаа: ${page.nextCursor}`)
     cursors.add(page.nextCursor)
     cursor = page.nextCursor
   }
 
-  throw new Error(`MCP list exceeded ${MAX_LIST_PAGES} pages`)
+  throw new Error(`MCP жагсаалт ${MAX_LIST_PAGES} хуудасны дээд хязгаараас хэтэрлээ`)
 }
 
 export function defs(client: Client, timeout?: number) {
@@ -70,7 +70,7 @@ export function convertTool(mcpTool: MCPToolDef, client: Client, timeout?: numbe
           result.content
             .flatMap((item) => (item.type === "text" ? [item.text] : []))
             .filter((text) => text.trim())
-            .join("\n\n") || "MCP tool returned an error",
+            .join("\n\n") || "MCP хэрэгсэл алдаа буцаалаа",
         )
       if (result.structuredContent === undefined || result.structuredContent === null) return result
       return {
@@ -93,7 +93,7 @@ export function fetch<T extends { name: string }>(
     catch: (error) => error,
   }).pipe(
     Effect.tapError((error) =>
-      Effect.logWarning(`failed to get ${label}`, {
+      Effect.logWarning(`MCP-ийн \`${label}\` жагсаалтыг авч чадсангүй`, {
         clientName,
         error: error instanceof Error ? error.message : String(error),
       }),

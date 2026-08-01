@@ -44,7 +44,7 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
 
   if (url.pathname !== currentPath) {
     res.writeHead(404)
-    res.end("Not found")
+    res.end("Хуудас олдсонгүй")
     return
   }
 
@@ -55,7 +55,7 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
 
   // Enforce state parameter presence
   if (!state) {
-    const errorMsg = "Missing required state parameter - potential CSRF attack"
+    const errorMsg = "Шаардлагатай `state` параметр алга байна. CSRF халдлага байж болзошгүй."
     res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
     res.end(OauthCallbackPage.error(errorMsg, { provider: "MCP" }))
     return
@@ -78,13 +78,13 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
 
   if (!code) {
     res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
-    res.end(OauthCallbackPage.error("No authorization code provided", { provider: "MCP" }))
+    res.end(OauthCallbackPage.error("Зөвшөөрлийн код ирсэнгүй.", { provider: "MCP" }))
     return
   }
 
   // Validate state parameter
   if (!pendingAuths.has(state)) {
-    const errorMsg = "Invalid or expired state parameter - potential CSRF attack"
+    const errorMsg = "`state` параметр буруу эсвэл хугацаа нь дууссан байна. CSRF халдлага байж болзошгүй."
     res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
     res.end(OauthCallbackPage.error(errorMsg, { provider: "MCP" }))
     return
@@ -137,7 +137,7 @@ export function waitForCallback(oauthState: string, mcpName?: string): Promise<s
       if (pendingAuths.has(oauthState)) {
         pendingAuths.delete(oauthState)
         if (mcpName) mcpNameToState.delete(mcpName)
-        reject(new Error("OAuth callback timeout - authorization took too long"))
+        reject(new Error("OAuth буцах хүсэлтийг хүлээх хугацаа дууслаа. Зөвшөөрөл олгох үйлдэл хэт удав."))
         stopIfIdle()
       }
     }, CALLBACK_TIMEOUT_MS)
@@ -155,7 +155,7 @@ export function cancelPending(mcpName: string): void {
     clearTimeout(pending.timeout)
     pendingAuths.delete(key)
     mcpNameToState.delete(mcpName)
-    pending.reject(new Error("Authorization cancelled"))
+    pending.reject(new Error("Зөвшөөрөл олгох үйлдэл цуцлагдлаа."))
     stopIfIdle()
   }
 }
@@ -181,7 +181,7 @@ export async function stop(): Promise<void> {
 
   for (const [_name, pending] of pendingAuths) {
     clearTimeout(pending.timeout)
-    pending.reject(new Error("OAuth callback server stopped"))
+    pending.reject(new Error("OAuth буцах хүсэлт хүлээн авах сервер зогслоо."))
   }
   pendingAuths.clear()
   mcpNameToState.clear()

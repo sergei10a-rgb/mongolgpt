@@ -136,7 +136,7 @@ export class McpOAuthProvider implements OAuthClientProvider {
   async codeVerifier(): Promise<string> {
     const entry = await Effect.runPromise(this.auth.get(this.mcpName))
     if (!entry?.codeVerifier) {
-      throw new Error(`No code verifier saved for MCP server: ${this.mcpName}`)
+      throw new Error(`MCP серверт хадгалсан код баталгаажуулагч (\`code_verifier\`) алга: ${this.mcpName}`)
     }
     return entry.codeVerifier
   }

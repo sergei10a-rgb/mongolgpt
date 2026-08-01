@@ -235,7 +235,7 @@ export const layer = Layer.effect(
       if (!url) {
         return {
           client: undefined as MCPClient | undefined,
-          status: { status: "failed" as const, error: `Invalid MCP URL for "${key}"` },
+          status: { status: "failed" as const, error: `MCP URL буруу байна: "${key}"` },
         }
       }
       let authProvider: McpOAuthProvider | undefined
@@ -290,12 +290,12 @@ export const layer = Layer.effect(
               if (lastError.message.includes("registration") || lastError.message.includes("client_id")) {
                 lastStatus = {
                   status: "needs_client_registration" as const,
-                  error: "Server does not support dynamic client registration. Please provide clientId in config.",
+                  error: "Сервер клиентийг автоматаар бүртгэх боломжийг дэмждэггүй. Тохиргоонд `clientId` оруулна уу.",
                 }
                 return events
                   .publish(TuiEvent.ToastShow, {
-                    title: "MCP Authentication Required",
-                    message: `Server "${key}" requires a pre-registered client ID. Add clientId to your config.`,
+                    title: "MCP нэвтрэлт шаардлагатай",
+                    message: `"${key}" серверт урьдчилан бүртгүүлсэн клиентийн таних дугаар шаардлагатай. Тохиргоонд \`clientId\` нэмнэ үү.`,
                     variant: "warning",
                     duration: 8000,
                   })
@@ -305,8 +305,8 @@ export const layer = Layer.effect(
                 lastStatus = { status: "needs_auth" as const }
                 return events
                   .publish(TuiEvent.ToastShow, {
-                    title: "MCP Authentication Required",
-                    message: `Server "${key}" requires authentication. Run: mongolgpt mcp auth ${key}`,
+                    title: "MCP нэвтрэлт шаардлагатай",
+                    message: `"${key}" серверт нэвтрэх шаардлагатай. Ажиллуулах команд: mongolgpt mcp auth ${key}`,
                     variant: "warning",
                     duration: 8000,
                   })
@@ -325,7 +325,7 @@ export const layer = Layer.effect(
 
       return {
         client: undefined as MCPClient | undefined,
-        status: (lastStatus ?? { status: "failed", error: "Unknown error" }) as Status,
+        status: (lastStatus ?? { status: "failed", error: "Тодорхойгүй алдаа" }) as Status,
       }
     })
 
@@ -374,7 +374,7 @@ export const layer = Layer.effect(
 
         if (!mcpClient) {
           if (status.status !== "connected" && status.status !== "disabled") {
-            yield* Effect.logWarning("server unavailable", { key, type: mcp.type, status: status.status })
+            yield* Effect.logWarning("Сервер ашиглах боломжгүй байна", { key, type: mcp.type, status: status.status })
           }
           return { status } satisfies CreateResult
         }
@@ -382,7 +382,7 @@ export const layer = Layer.effect(
         return yield* Effect.gen(function* () {
           const listed = mcpClient.getServerCapabilities()?.tools ? yield* McpCatalog.defs(mcpClient, mcp.timeout) : []
           if (!listed) {
-            return yield* Effect.fail(new Error("Failed to get tools"))
+            return yield* Effect.fail(new Error("Хэрэгслүүдийг авч чадсангүй"))
           }
           return {
             mcpClient,
@@ -437,9 +437,9 @@ export const layer = Layer.effect(
         delete s.clients[name]
         delete s.defs[name]
         delete s.instructions[name]
-        s.status[name] = { status: "failed", error: "Connection closed" }
+        s.status[name] = { status: "failed", error: "Холболт хаагдлаа" }
         bridge.fork(
-          Effect.logWarning("MCP connection closed", { server: name }).pipe(
+          Effect.logWarning("MCP холболт хаагдлаа", { server: name }).pipe(
             Effect.andThen(events.publish(ToolsChanged, { server: name })),
             Effect.ignore,
           ),
@@ -668,7 +668,7 @@ export const layer = Layer.effect(
         const mcpConfig = config[clientName]
         const listed = s.defs[clientName]
         if (!listed) {
-          yield* Effect.logWarning("missing cached tools for connected server", { clientName })
+          yield* Effect.logWarning("Холбогдсон серверийн түр санах ойд хэрэгслийн мэдээлэл алга байна", { clientName })
           continue
         }
         const timeout = requestTimeout(s, clientName, mcpConfig, defaultTimeout)
@@ -739,7 +739,7 @@ export const layer = Layer.effect(
       const s = yield* InstanceState.get(state)
       const client = s.clients[clientName]
       if (!client) {
-        yield* Effect.logWarning(`client not found for ${label}`, { clientName })
+        yield* Effect.logWarning(`\`${label}\` үйлдэлд ашиглах холбогч олдсонгүй`, { clientName })
         return undefined
       }
       const cfg = yield* cfgSvc.get()
@@ -748,7 +748,7 @@ export const layer = Layer.effect(
         catch: (error) => error,
       }).pipe(
         Effect.tapError((error) =>
-          Effect.logError(`failed to ${label}`, {
+          Effect.logError(`\`${label}\` үйлдэл амжилтгүй боллоо`, {
             clientName,
             ...meta,
             error: error instanceof Error ? error.message : String(error),
@@ -798,10 +798,10 @@ export const layer = Layer.effect(
 
     const startAuth = Effect.fn("MCP.startAuth")(function* (mcpName: string) {
       const mcpConfig = yield* requireMcpConfig(mcpName)
-      if (mcpConfig.type !== "remote") throw new Error(`MCP server ${mcpName} is not a remote server`)
-      if (mcpConfig.oauth === false) throw new Error(`MCP server ${mcpName} has OAuth explicitly disabled`)
+      if (mcpConfig.type !== "remote") throw new Error(`MCP сервер ${mcpName} нь алсын сервер биш байна`)
+      if (mcpConfig.oauth === false) throw new Error(`MCP сервер ${mcpName}-д OAuth-г зориуд идэвхгүй болгосон байна`)
       const url = remoteURL(mcpConfig.url)
-      if (!url) throw new Error(`Invalid MCP URL for "${mcpName}"`)
+      if (!url) throw new Error(`MCP URL буруу байна: "${mcpName}"`)
 
       // OAuth config is optional - if not provided, we'll use auto-discovery
       const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
@@ -880,7 +880,7 @@ export const layer = Layer.effect(
           : undefined
         if (!client || !listed) {
           yield* Effect.tryPromise(() => client?.close() ?? Promise.resolve()).pipe(Effect.ignore)
-          return { status: "failed", error: "Failed to get tools" } satisfies Status
+          return { status: "failed", error: "Хэрэгслүүдийг авч чадсангүй" } satisfies Status
         }
 
         const s = yield* InstanceState.get(state)
@@ -902,7 +902,7 @@ export const layer = Layer.effect(
             subprocess.on("exit", (code) => {
               if (code !== null && code !== 0) {
                 clearTimeout(timer)
-                resume(Effect.fail(new Error(`Browser open failed with exit code ${code}`)))
+                resume(Effect.fail(new Error(`Хөтөч нээж чадсангүй. Гаралтын код: ${code}`)))
               }
             })
           }),
@@ -917,7 +917,7 @@ export const layer = Layer.effect(
       const storedState = yield* auth.getOAuthState(mcpName)
       if (storedState !== result.oauthState) {
         yield* auth.clearOAuthState(mcpName)
-        throw new Error("OAuth state mismatch - potential CSRF attack")
+        throw new Error("OAuth `state` утга таарахгүй байна. CSRF халдлага байж болзошгүй.")
       }
       yield* auth.clearOAuthState(mcpName)
       return yield* finishAuth(mcpName, code)
@@ -926,7 +926,7 @@ export const layer = Layer.effect(
     const finishAuth = Effect.fn("MCP.finishAuth")(function* (mcpName: string, authorizationCode: string) {
       yield* requireMcpConfig(mcpName)
       const pending = pendingOAuthTransports.get(mcpName)
-      if (!pending) throw new Error(`No pending OAuth flow for MCP server: ${mcpName}`)
+      if (!pending) throw new Error(`MCP серверт хүлээгдэж буй OAuth баталгаажуулалтын үйл явц алга: ${mcpName}`)
 
       const error = yield* Effect.tryPromise({
         try: () => pending.transport.finishAuth(authorizationCode),
@@ -938,7 +938,7 @@ export const layer = Layer.effect(
         }),
       )
 
-      if (error) return { status: "failed", error: `OAuth completion failed: ${error}` } satisfies Status
+      if (error) return { status: "failed", error: `OAuth дуусгаж чадсангүй: ${error}` } satisfies Status
 
       yield* Effect.promise(() => pending.provider?.commit() ?? Promise.resolve())
       yield* auth.clearCodeVerifier(mcpName)
