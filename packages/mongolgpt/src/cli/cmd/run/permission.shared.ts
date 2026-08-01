@@ -103,7 +103,7 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
     const dir = raw.includes("*") ? raw.slice(0, raw.indexOf("*")).replace(/[\\/]+$/, "") : raw
     return {
       icon: "←",
-      title: `Access external directory ${toolPath(dir, { home: true })}`,
+      title: `Гадаад хавтаст хандах ${toolPath(dir, { home: true })}`,
       lines: pats.map((item) => `- ${item}`),
     }
   }
@@ -111,35 +111,35 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
   if (request.permission === "doom_loop") {
     return {
       icon: "⟳",
-      title: "Continue after repeated failures",
-      lines: ["This keeps the session running despite repeated failures."],
+      title: "Давтагдсан алдааны дараа үргэлжлүүлэх",
+      lines: ["Давтагдсан алдааг үл харгалзан сессийг үргэлжлүүлнэ."],
     }
   }
 
   return {
     icon: "⚙",
-    title: `Call tool ${request.permission}`,
-    lines: [`Tool: ${request.permission}`],
+    title: `Хэрэгсэл дуудах ${request.permission}`,
+    lines: [`Хэрэгсэл: ${request.permission}`],
   }
 }
 
 export function permissionAlwaysLines(request: PermissionRequest): string[] {
   if (request.always.length === 1 && request.always[0] === "*") {
-    return [`This will allow ${request.permission} until MongolGPT is restarted.`]
+    return [`MongolGPT-г дахин эхлүүлэх хүртэл ${request.permission}-ийг зөвшөөрнө.`]
   }
 
   return [
-    "This will allow the following patterns until MongolGPT is restarted.",
+    "MongolGPT-г дахин эхлүүлэх хүртэл дараах хэвүүдийг зөвшөөрнө.",
     ...request.always.map((item) => `- ${item}`),
   ]
 }
 
 export function permissionLabel(option: PermissionOption): string {
-  if (option === "once") return "Allow once"
-  if (option === "always") return "Allow always"
-  if (option === "reject") return "Reject"
-  if (option === "confirm") return "Confirm"
-  return "Cancel"
+  if (option === "once") return "Нэг удаа"
+  if (option === "always") return "Үргэлж"
+  if (option === "reject") return "Татгалзах"
+  if (option === "confirm") return "Батлах"
+  return "Цуцлах"
 }
 
 export function permissionReply(requestID: string, reply: PermissionReply["reply"], message?: string): PermissionReply {

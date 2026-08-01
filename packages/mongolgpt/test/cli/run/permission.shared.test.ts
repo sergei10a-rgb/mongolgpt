@@ -6,6 +6,7 @@ import {
   permissionCancel,
   permissionEscape,
   permissionInfo,
+  permissionLabel,
   permissionReject,
   permissionRun,
 } from "@/cli/cmd/run/permission.shared"
@@ -23,6 +24,22 @@ function req(input: Partial<PermissionRequest> = {}): PermissionRequest {
 }
 
 describe("run permission shared", () => {
+  test("uses concise Mongolian permission labels", () => {
+    expect(([
+      "once",
+      "always",
+      "reject",
+      "confirm",
+      "cancel",
+    ] as const).map(permissionLabel)).toEqual([
+      "Нэг удаа",
+      "Үргэлж",
+      "Татгалзах",
+      "Батлах",
+      "Цуцлах",
+    ])
+  })
+
   test("replies immediately for allow once", () => {
     const out = permissionRun(createPermissionBodyState("perm-1"), "perm-1", "once")
 
@@ -117,27 +134,27 @@ describe("run permission shared", () => {
         }),
       ),
     ).toMatchObject({
-      title: "Access external directory /tmp/work",
+      title: "Гадаад хавтаст хандах /tmp/work",
       lines: ["- /tmp/work/**/*.ts", "- /tmp/work/**/*.tsx"],
     })
 
     expect(permissionInfo(req({ permission: "doom_loop" }))).toMatchObject({
-      title: "Continue after repeated failures",
+      title: "Давтагдсан алдааны дараа үргэлжлүүлэх",
     })
 
     expect(permissionInfo(req({ permission: "custom_tool" }))).toMatchObject({
-      title: "Call tool custom_tool",
-      lines: ["Tool: custom_tool"],
+      title: "Хэрэгсэл дуудах custom_tool",
+      lines: ["Хэрэгсэл: custom_tool"],
     })
   })
 
   test("formats always-allow copy for wildcard and explicit patterns", () => {
     expect(permissionAlwaysLines(req({ permission: "bash", always: ["*"] }))).toEqual([
-      "This will allow bash until MongolGPT is restarted.",
+      "MongolGPT-г дахин эхлүүлэх хүртэл bash-ийг зөвшөөрнө.",
     ])
 
     expect(permissionAlwaysLines(req({ always: ["src/**/*.ts", "src/**/*.tsx"] }))).toEqual([
-      "This will allow the following patterns until MongolGPT is restarted.",
+      "MongolGPT-г дахин эхлүүлэх хүртэл дараах хэвүүдийг зөвшөөрнө.",
       "- src/**/*.ts",
       "- src/**/*.tsx",
     ])

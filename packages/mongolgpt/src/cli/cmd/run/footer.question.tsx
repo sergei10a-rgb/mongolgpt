@@ -309,7 +309,7 @@ export function RunQuestionBody(props: {
                 if (!disabled()) setTab(props.request.questions.length)
               }}
             >
-              <text fg={confirm() ? props.theme.surface : props.theme.muted}>Confirm</text>
+              <text fg={confirm() ? props.theme.surface : props.theme.muted}>Батлах</text>
             </box>
           </box>
         </Show>
@@ -330,7 +330,7 @@ export function RunQuestionBody(props: {
               >
                 <box width="100%" flexDirection="column" gap={1}>
                   <box paddingLeft={1}>
-                    <text fg={props.theme.text}>Review</text>
+                    <text fg={props.theme.text}>Шалгах</text>
                   </box>
                   <For each={props.request.questions}>
                     {(item, index) => {
