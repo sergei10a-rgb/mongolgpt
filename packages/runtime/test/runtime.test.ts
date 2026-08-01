@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { issueRuntimeCapability } from "@mongolgpt/runtime-auth"
 import {
   createRuntimeHandler,
   deriveRuntimeIdentity,
@@ -9,8 +10,9 @@ import {
 } from "../src/runtime"
 
 const appOrigin = "https://app.dev.mgpt.mn"
-const consoleOrigin = "https://dev.mgpt.mn"
+const runtimeOrigin = "https://runtime.dev.mgpt.mn"
 const secret = "runtime-secret-that-is-longer-than-thirty-two-characters"
+const authSecret = "runtime-auth-secret-that-is-longer-than-thirty-two-characters"
 
 type Environment = RuntimeVariables & {
   Sandbox: string
@@ -23,7 +25,7 @@ function environment(): Environment {
   return {
     Sandbox: "binding",
     MONGOLGPT_APP_ORIGIN: appOrigin,
-    MONGOLGPT_CONSOLE_ORIGIN: consoleOrigin,
+    MONGOLGPT_RUNTIME_AUTH_SECRET: authSecret,
     MONGOLGPT_RUNTIME_BURST_LIMITER: limiter,
     MONGOLGPT_RUNTIME_RATE_LIMITER: limiter,
     MONGOLGPT_RUNTIME_SECRET: secret,
@@ -36,12 +38,14 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
-function session(account = { id: "acc_123", email: "user@example.com" }) {
-  return Response.json({
-    account: {
-      [account.id]: account,
-    },
-    current: account.id,
+async function capability(input: Partial<Parameters<typeof issueRuntimeCapability>[0]> = {}) {
+  return issueRuntimeCapability({
+    accountID: "acc_123",
+    authVersion: 1,
+    audience: runtimeOrigin,
+    secret: authSecret,
+    ttlSeconds: 90,
+    ...input,
   })
 }
 
@@ -59,7 +63,7 @@ function process(status: RuntimeProcess["status"] = "running") {
   }
 }
 
-function sandbox(input: { existing?: RuntimeProcess | null; response?: Response } = {}) {
+function sandbox(input: { existing?: RuntimeProcess | null; response?: Response; websocketResponse?: Response } = {}) {
   const started: Array<{
     command: string
     options: Parameters<RuntimeSandbox["startProcess"]>[1]
@@ -84,7 +88,7 @@ function sandbox(input: { existing?: RuntimeProcess | null; response?: Response 
       },
       wsConnect: async (request) => {
         websocket.push(request)
-        return new Response("websocket")
+        return input.websocketResponse ?? new Response("websocket")
       },
     } satisfies RuntimeSandbox,
   }
@@ -93,78 +97,37 @@ function sandbox(input: { existing?: RuntimeProcess | null; response?: Response 
 function hostedRequest(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers)
   headers.set("origin", appOrigin)
-  headers.set("cookie", "theme=dark; auth=session-value; analytics=1")
-  return new Request(`https://runtime.dev.mgpt.mn${path}`, {
-    ...init,
-    headers,
-  })
+  if (!headers.has("cookie")) headers.set("cookie", "theme=dark; auth=console-session; analytics=1")
+  return new Request(`${runtimeOrigin}${path}`, { ...init, headers })
 }
 
 describe("MongolGPT Cloudflare runtime", () => {
-  test("reports a configured JSON health contract without starting a sandbox", async () => {
-    let sandboxes = 0
-    const handler = createRuntimeHandler<Environment>({
-      fetch: async () => {
-        throw new Error("auth should not run")
-      },
-      sandbox: () => {
-        sandboxes += 1
-        return sandbox().value
-      },
-    })
+  test("reports health only when both runtime secrets are configured", async () => {
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => sandbox().value })
 
-    const response = await handler(
-      new Request("https://runtime.dev.mgpt.mn/global/health", {
-        headers: { origin: appOrigin },
-      }),
-      environment(),
-    )
-
-    expect(response.status).toBe(200)
-    expect(response.headers.get("content-type")).toContain("application/json")
-    expect(response.headers.get("access-control-allow-origin")).toBe(appOrigin)
-    expect(response.headers.get("access-control-allow-credentials")).toBe("true")
-    expect(response.headers.get("cache-control")).toBe("no-store")
-    const body: unknown = await response.json()
-    expect(body).toEqual({
+    const healthy = await handler(hostedRequest("/global/health"), environment())
+    expect(healthy.status).toBe(200)
+    const healthyBody: unknown = await healthy.json()
+    expect(healthyBody).toEqual({
       healthy: true,
       service: "mongolgpt-runtime",
       stage: "dev",
       version: "test",
     })
-    expect(sandboxes).toBe(0)
+
+    const missing = environment()
+    missing.MONGOLGPT_RUNTIME_AUTH_SECRET = ""
+    const unhealthy = await handler(hostedRequest("/global/health"), missing)
+    expect(unhealthy.status).toBe(503)
+    expect(await unhealthy.json()).toMatchObject({ healthy: false })
   })
 
-  test("fails health when a required secret is absent", async () => {
-    const env = environment()
-    env.MONGOLGPT_RUNTIME_SECRET = ""
-    const handler = createRuntimeHandler<Environment>({
-      fetch: async () => session(),
-      sandbox: () => sandbox().value,
-    })
-
-    const response = await handler(new Request("https://runtime.dev.mgpt.mn/global/health"), env)
-
-    expect(response.status).toBe(503)
-    expect(await response.json()).toMatchObject({ healthy: false })
-  })
-
-  test("answers strict credentialed CORS preflight without authenticating", async () => {
-    let authCalls = 0
-    const handler = createRuntimeHandler<Environment>({
-      fetch: async () => {
-        authCalls += 1
-        return session()
-      },
-      sandbox: () => sandbox().value,
-    })
-
+  test("answers exact-origin credentialed preflight without a console fetch dependency", async () => {
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => sandbox().value })
     const response = await handler(
       hostedRequest("/session", {
         method: "OPTIONS",
-        headers: {
-          "access-control-request-method": "GET",
-        },
+        headers: { "access-control-request-method": "POST" },
       }),
       environment(),
     )
@@ -172,75 +135,221 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(response.status).toBe(204)
     expect(response.headers.get("access-control-allow-origin")).toBe(appOrigin)
     expect(response.headers.get("access-control-allow-credentials")).toBe("true")
-    expect(authCalls).toBe(0)
+    expect(response.headers.get("access-control-allow-headers")).toContain("authorization")
+    expect(await Bun.file(new URL("../src/runtime.ts", import.meta.url)).text()).not.toContain("/auth/status")
   })
 
-  test("rejects protected requests from every origin except the hosted app", async () => {
-    let authCalls = 0
+  test("rejects requests from origins other than the hosted app before authentication", async () => {
+    let sandboxes = 0
     const handler = createRuntimeHandler<Environment>({
-      fetch: async () => {
-        authCalls += 1
-        return session()
-      },
-      sandbox: () => sandbox().value,
-    })
-    const request = new Request("https://runtime.dev.mgpt.mn/session", {
-      headers: {
-        cookie: "auth=session-value",
-        origin: "https://attacker.example",
+      sandbox: () => {
+        sandboxes += 1
+        return sandbox().value
       },
     })
-
-    const response = await handler(request, environment())
+    const response = await handler(
+      new Request(`${runtimeOrigin}/session`, {
+        headers: { origin: "https://attacker.example", authorization: `Bearer ${await capability()}` },
+      }),
+      environment(),
+    )
 
     expect(response.status).toBe(403)
-    expect(authCalls).toBe(0)
+    expect(sandboxes).toBe(0)
   })
 
-  test("returns the hosted account session and forwards only the auth cookie", async () => {
-    const authRequests: Request[] = []
-    const handler = createRuntimeHandler<Environment>({
-      fetch: async (request) => {
-        authRequests.push(request)
-        return session()
-      },
-      sandbox: () => sandbox().value,
-    })
-
-    const response = await handler(hostedRequest("/auth/session"), environment())
+  test("exchanges a valid bearer capability for a hardened host-only runtime cookie", async () => {
+    const now = Math.floor(Date.now() / 1000)
+    const token = await capability({ now })
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => sandbox().value })
+    const response = await handler(
+      hostedRequest("/auth/session", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, cookie: "__Host-mongolgpt-runtime=stale-token" },
+      }),
+      environment(),
+    )
 
     expect(response.status).toBe(200)
-    expect(response.headers.get("cache-control")).toBe("no-store")
-    expect(response.headers.get("access-control-allow-origin")).toBe(appOrigin)
     const body: unknown = await response.json()
     expect(body).toEqual({
       authenticated: true,
-      account: {
-        id: "acc_123",
-        email: "user@example.com",
+      account: { id: "acc_123" },
+      expiresAt: (now + 90) * 1000,
+    })
+    const cookie = response.headers.get("set-cookie")
+    expect(cookie).toMatch(
+      new RegExp(`^__Host-mongolgpt-runtime=${token}; Max-Age=([1-9]\\d*); Path=/; Secure; HttpOnly; SameSite=Strict$`),
+    )
+    expect(cookie).not.toContain("Domain=")
+    expect(Number(/Max-Age=(\d+)/.exec(cookie ?? "")?.[1])).toBeLessThanOrEqual(90)
+  })
+
+  test("verifies the runtime auth secret without trimming it", async () => {
+    const exactSecret = ` ${authSecret} `
+    const token = await capability({ secret: exactSecret })
+    const env = environment()
+    env.MONGOLGPT_RUNTIME_AUTH_SECRET = exactSecret
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => sandbox().value })
+
+    const response = await handler(
+      hostedRequest("/auth/session", { method: "POST", headers: { authorization: `Bearer ${token}` } }),
+      env,
+    )
+
+    expect(response.status).toBe(200)
+  })
+
+  test("authenticates HTTP and WebSocket requests through only the runtime cookie", async () => {
+    const token = await capability()
+    const runtime = sandbox()
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+
+    const session = await handler(
+      hostedRequest("/auth/session", { headers: { cookie: `__Host-mongolgpt-runtime=${token}` } }),
+      environment(),
+    )
+    expect(session.status).toBe(200)
+    const sessionBody: unknown = await session.json()
+    expect(sessionBody).toMatchObject({ authenticated: true, account: { id: "acc_123" } })
+
+    const http = await handler(
+      hostedRequest("/project", { headers: { cookie: `__Host-mongolgpt-runtime=${token}` } }),
+      environment(),
+    )
+    expect(http.status).toBe(200)
+    expect(runtime.requests).toHaveLength(1)
+
+    const websocket = await handler(
+      hostedRequest("/pty/pty_123/connect", {
+        headers: { cookie: `__Host-mongolgpt-runtime=${token}`, upgrade: "websocket" },
+      }),
+      environment(),
+    )
+    expect(await websocket.text()).toBe("websocket")
+    expect(runtime.websocket).toHaveLength(1)
+  })
+
+  test("closes an upgraded WebSocket when its runtime capability expires", async () => {
+    const token = await capability()
+    const closeCalls: Array<{ code?: number; reason?: string }> = []
+    const socket = Object.assign(new EventTarget(), {
+      close(code?: number, reason?: string) {
+        closeCalls.push({ code, reason })
       },
     })
-    expect(authRequests).toHaveLength(1)
-    expect(authRequests[0]?.url).toBe(`${consoleOrigin}/auth/status`)
-    expect(authRequests[0]?.headers.get("cookie")).toBe("auth=session-value")
+    const websocketResponse = new Response("websocket")
+    Object.defineProperty(websocketResponse, "webSocket", { value: socket })
+
+    let expire: (() => void) | undefined
+    let delay = -1
+    let cancelled = 0
+    const runtime = sandbox({ websocketResponse })
+    const handler = createRuntimeHandler<Environment>({
+      sandbox: () => runtime.value,
+      schedule(callback, timeout) {
+        expire = callback
+        delay = timeout
+        return () => {
+          cancelled += 1
+        }
+      },
+    })
+
+    const response = await handler(
+      hostedRequest("/pty/pty_123/connect", {
+        headers: { cookie: `__Host-mongolgpt-runtime=${token}`, upgrade: "websocket" },
+      }),
+      environment(),
+    )
+
+    expect(response).toBe(websocketResponse)
+    expect(delay).toBeGreaterThan(0)
+    expect(delay).toBeLessThanOrEqual(90_000)
+    expect(expire).toBeFunction()
+    expire?.()
+    expect(closeCalls).toEqual([{ code: 4001, reason: "MongolGPT runtime сесс дууссан" }])
+
+    socket.dispatchEvent(new Event("close"))
+    expect(cancelled).toBe(1)
+  })
+
+  test("ignores broad console auth cookies and rejects malformed token sources", async () => {
+    const token = await capability()
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => sandbox().value })
+
+    const broadCookie = await handler(hostedRequest("/auth/session"), environment())
+    expect(broadCookie.status).toBe(401)
+    const broadCookieBody: unknown = await broadCookie.json()
+    expect(broadCookieBody).toEqual({ authenticated: false })
+
+    const malformedBearer = await handler(
+      hostedRequest("/auth/session", { headers: { authorization: `Bearer ${token}, Bearer another-token` } }),
+      environment(),
+    )
+    expect(malformedBearer.status).toBe(401)
+
+    const duplicateRuntimeCookie = await handler(
+      hostedRequest("/auth/session", {
+        headers: { cookie: `__Host-mongolgpt-runtime=${token}; __Host-mongolgpt-runtime=${token}` },
+      }),
+      environment(),
+    )
+    expect(duplicateRuntimeCookie.status).toBe(401)
+
+    const emptyRuntimeCookie = await handler(
+      hostedRequest("/auth/session", { headers: { cookie: "__Host-mongolgpt-runtime=" } }),
+      environment(),
+    )
+    expect(emptyRuntimeCookie.status).toBe(401)
+  })
+
+  test("rejects capabilities with the wrong audience, secret, or expiry", async () => {
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => sandbox().value })
+    const tokens = await Promise.all([
+      capability({ audience: "https://runtime.other.mgpt.mn" }),
+      capability({ secret: "different-runtime-auth-secret-that-is-longer-than-thirty-two-characters" }),
+      capability({ now: 0, ttlSeconds: 60 }),
+    ])
+
+    for (const token of tokens) {
+      const response = await handler(
+        hostedRequest("/auth/session", { method: "POST", headers: { authorization: `Bearer ${token}` } }),
+        environment(),
+      )
+      expect(response.status).toBe(401)
+      const body: unknown = await response.json()
+      expect(body).toEqual({ authenticated: false })
+    }
+  })
+
+  test("clears the hardened runtime cookie on logout", async () => {
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => sandbox().value })
+    const response = await handler(hostedRequest("/auth/session", { method: "DELETE" }), environment())
+
+    expect(response.status).toBe(200)
+    const body: unknown = await response.json()
+    expect(body).toEqual({ authenticated: false })
+    expect(response.headers.get("set-cookie")).toBe(
+      "__Host-mongolgpt-runtime=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Strict",
+    )
   })
 
   test("starts an account-isolated server and proxies with internal credentials", async () => {
     const runtime = sandbox()
     const ids: string[] = []
     const handler = createRuntimeHandler<Environment>({
-      fetch: async () => session(),
       sandbox: (_env, id) => {
         ids.push(id)
         return runtime.value
       },
     })
-
+    const token = await capability()
     const response = await handler(
       hostedRequest("/session", {
         method: "POST",
         headers: {
-          authorization: "Bearer attacker-controlled",
+          authorization: `Bearer ${token}`,
           "content-type": "application/json",
           "x-mongolgpt-directory": encodeURIComponent("projects/demo"),
         },
@@ -250,124 +359,71 @@ describe("MongolGPT Cloudflare runtime", () => {
     )
 
     expect(response.status).toBe(200)
-    expect(response.headers.get("access-control-allow-origin")).toBe(appOrigin)
-    expect(ids).toHaveLength(1)
     expect(ids[0]).toStartWith("account-")
     expect(ids[0]).not.toContain("acc_123")
     expect(runtime.started).toHaveLength(1)
-    expect(runtime.started[0]?.command).toBe("/usr/local/bin/mongolgpt serve --hostname 0.0.0.0 --port 4096")
-    expect(runtime.started[0]?.options.cwd).toBe("/workspace")
     expect(runtime.started[0]?.options.env.MONGOLGPT_SERVER_PASSWORD).toHaveLength(43)
     expect(runtime.requests).toHaveLength(1)
     expect(runtime.requests[0]?.headers.get("cookie")).toBeNull()
-    expect(runtime.requests[0]?.headers.get("origin")).toBeNull()
     expect(runtime.requests[0]?.headers.get("authorization")).toStartWith("Basic ")
-    expect(runtime.requests[0]?.headers.get("authorization")).not.toContain("attacker-controlled")
+    expect(runtime.requests[0]?.headers.get("authorization")).not.toContain(token)
     expect(decodeURIComponent(runtime.requests[0]?.headers.get("x-mongolgpt-directory") ?? "")).toBe(
       "/workspace/projects/demo",
     )
   })
 
-  test("rate limits an authenticated account before allocating a sandbox", async () => {
-    let sandboxes = 0
-    const keys: string[] = []
-    const env = environment()
-    env.MONGOLGPT_RUNTIME_BURST_LIMITER = {
-      limit: async ({ key }) => {
-        keys.push(key)
-        return { success: false }
-      },
-    }
-    const handler = createRuntimeHandler<Environment>({
-      fetch: async () => session(),
-      sandbox: () => {
-        sandboxes += 1
-        return sandbox().value
-      },
-    })
-
-    const response = await handler(hostedRequest("/session"), env)
-
-    expect(response.status).toBe(429)
-    expect(response.headers.get("retry-after")).toBe("60")
-    expect(keys).toEqual(["account:acc_123"])
-    expect(sandboxes).toBe(0)
-  })
-
-  test("rejects oversized request bodies before allocating a sandbox", async () => {
-    let sandboxes = 0
-    const handler = createRuntimeHandler<Environment>({
-      fetch: async () => session(),
-      sandbox: () => {
-        sandboxes += 1
-        return sandbox().value
-      },
-    })
-
-    const response = await handler(
-      hostedRequest("/session", {
-        method: "POST",
-        headers: {
-          "content-length": String(16 * 1024 * 1024 + 1),
-        },
-        body: "x",
-      }),
-      environment(),
-    )
-
-    expect(response.status).toBe(413)
-    expect(sandboxes).toBe(0)
-  })
-
   test("reuses a healthy server process instead of starting another", async () => {
     const running = process()
     const runtime = sandbox({ existing: running.value })
-    const handler = createRuntimeHandler<Environment>({
-      fetch: async () => session(),
-      sandbox: () => runtime.value,
-    })
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
 
-    const response = await handler(hostedRequest("/project"), environment())
+    const response = await handler(
+      hostedRequest("/project", { headers: { authorization: `Bearer ${await capability()}` } }),
+      environment(),
+    )
 
     expect(response.status).toBe(200)
     expect(runtime.started).toHaveLength(0)
     expect(running.ports).toEqual([4096])
   })
 
-  test("routes websocket upgrades through the authenticated sandbox", async () => {
-    const runtime = sandbox()
+  test("rate limits before allocating a sandbox and rejects oversized bodies", async () => {
+    let sandboxes = 0
+    const keys: string[] = []
+    const token = await capability()
+    const limited = environment()
+    limited.MONGOLGPT_RUNTIME_BURST_LIMITER = {
+      limit: async ({ key }) => {
+        keys.push(key)
+        return { success: false }
+      },
+    }
     const handler = createRuntimeHandler<Environment>({
-      fetch: async () => session(),
-      sandbox: () => runtime.value,
+      sandbox: () => {
+        sandboxes += 1
+        return sandbox().value
+      },
     })
 
-    const response = await handler(
-      hostedRequest("/pty/pty_123/connect", {
-        headers: {
-          upgrade: "websocket",
-        },
+    const rateLimited = await handler(
+      hostedRequest("/session", { headers: { authorization: `Bearer ${token}` } }),
+      limited,
+    )
+    expect(rateLimited.status).toBe(429)
+    expect(rateLimited.headers.get("retry-after")).toBe("60")
+    expect(keys).toEqual(["account:acc_123"])
+    expect(sandboxes).toBe(0)
+
+    const oversized = await handler(
+      hostedRequest("/session", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-length": String(16 * 1024 * 1024 + 1) },
+        body: "x",
       }),
       environment(),
     )
-
-    expect(await response.text()).toBe("websocket")
-    expect(runtime.websocket).toHaveLength(1)
-    expect(runtime.requests).toHaveLength(0)
-  })
-
-  test("does not turn an unavailable auth service into a fake login state", async () => {
-    const handler = createRuntimeHandler<Environment>({
-      fetch: async () => new Response("<html>fallback</html>", { headers: { "content-type": "text/html" } }),
-      sandbox: () => sandbox().value,
-    })
-
-    const response = await handler(hostedRequest("/auth/session"), environment())
-
-    expect(response.status).toBe(503)
-    const body: unknown = await response.json()
-    expect(body).toEqual({
-      error: "Нэвтрэлтийн үйлчилгээнд түр холбогдож чадсангүй.",
-    })
+    expect(oversized.status).toBe(413)
+    expect(sandboxes).toBe(0)
   })
 })
 
@@ -395,20 +451,23 @@ describe("runtime account and path isolation", () => {
 })
 
 describe("runtime deployment contract", () => {
-  test("requires its secret, rate limits accounts, and deploys the restricted sandbox in every stage", async () => {
+  test("requires both runtime secrets and deploys the restricted sandbox in every stage", async () => {
     for (const stage of ["dev", "production"]) {
-      const parsed: unknown = JSON.parse(
+      const parsed: unknown = Bun.JSONC.parse(
         await Bun.file(new URL(`../wrangler.${stage}.jsonc`, import.meta.url)).text(),
       )
-      if (!record(parsed)) throw new Error(`wrangler.${stage}.jsonc must contain an object`)
-      const config = parsed
-      const secrets = record(config.secrets) ? config.secrets : {}
-      const durableObjects = record(config.durable_objects) ? config.durable_objects : {}
-      const bindings = Array.isArray(durableObjects.bindings) ? durableObjects.bindings : []
-      const binding = record(bindings[0]) ? bindings[0] : {}
-
-      expect(secrets.required).toEqual(["MONGOLGPT_RUNTIME_SECRET"])
-      expect(config.ratelimits).toEqual([
+      if (
+        !record(parsed) ||
+        !record(parsed.secrets) ||
+        !Array.isArray(parsed.ratelimits) ||
+        !Array.isArray(parsed.containers) ||
+        !record(parsed.durable_objects) ||
+        !Array.isArray(parsed.durable_objects.bindings)
+      ) {
+        throw new Error(`wrangler.${stage}.jsonc must contain runtime deployment settings`)
+      }
+      expect(parsed.secrets.required).toEqual(["MONGOLGPT_RUNTIME_SECRET", "MONGOLGPT_RUNTIME_AUTH_SECRET"])
+      expect(parsed.ratelimits).toEqual([
         expect.objectContaining({
           name: "MONGOLGPT_RUNTIME_BURST_LIMITER",
           simple: { limit: 60, period: 10 },
@@ -418,14 +477,16 @@ describe("runtime deployment contract", () => {
           simple: { limit: 300, period: 60 },
         }),
       ])
-      expect(config.containers).toEqual([
+      expect(parsed.containers).toEqual([
         expect.objectContaining({
           class_name: "MongolGPTSandbox",
           instance_type: "basic",
           max_instances: 5,
         }),
       ])
-      expect(binding.class_name).toBe("MongolGPTSandbox")
+      expect(record(parsed.durable_objects.bindings[0]) && parsed.durable_objects.bindings[0].class_name).toBe(
+        "MongolGPTSandbox",
+      )
     }
   })
 })

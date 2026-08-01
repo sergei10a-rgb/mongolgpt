@@ -48,13 +48,13 @@ export interface AuthSession {
 export function useAuthSession() {
   return useSession<AuthSession>({
     password: Resource.ZEN_SESSION_SECRET.value,
-    name: "auth",
+    name: import.meta.env.PROD ? "__Host-mongolgpt-auth" : "auth",
     maxAge: 60 * 60 * 24 * 365,
     cookie: {
       secure: import.meta.env.PROD,
       httpOnly: true,
       sameSite: "lax",
-      domain: import.meta.env.MONGOLGPT_COOKIE_DOMAIN?.trim() || undefined,
+      path: "/",
     },
   })
 }

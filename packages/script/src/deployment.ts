@@ -32,6 +32,7 @@ export const hostedSstSecretNames = [
   "GITHUB_CLIENT_SECRET_CONSOLE",
   "GOOGLE_CLIENT_ID",
   "MONGOLGPT_PLAN_LIMITS",
+  "MongolGPTRuntimeAuthSecret",
   "ZEN_SESSION_SECRET",
   "MongolGPTAdminBootstrapEmails",
   ...paymentSstSecretNames,
@@ -62,6 +63,7 @@ export function preflightDeployment(input: {
   env: Environment
   requireCloudflareCredentials?: boolean
   requireDeploymentSecrets?: boolean
+  requireHostedServices?: boolean
 }): DeploymentPreflightResult {
   const issues: string[] = []
   const warnings: string[] = []
@@ -98,6 +100,11 @@ export function preflightDeployment(input: {
     }
     warnings.push("Зөвхөн docs болон web app deploy хийнэ; account, auth, Free Auto API асахгүй.")
   }
+  if (input.requireHostedServices && !hostedServices) {
+    issues.push(
+      "Нийтийн MongolGPT Web app deploy хийхэд MONGOLGPT_ENABLE_HOSTED_SERVICES=true заавал байна; local-bridge build-ийг SaaS app гэж нийтлэхгүй.",
+    )
+  }
 
   if (adminEnabled && !hostedServices) {
     issues.push("MONGOLGPT_ENABLE_ADMIN нь hosted services асаалттай үед л true байж болно.")
@@ -126,6 +133,16 @@ export function preflightDeployment(input: {
   }
   if (hostedServices && requireDeploymentSecrets) {
     validateSecretKey("MONGOLGPT_RUNTIME_SECRET", env.MONGOLGPT_RUNTIME_SECRET, issues)
+    validateSecretKey("MONGOLGPT_RUNTIME_AUTH_SECRET", env.MONGOLGPT_RUNTIME_AUTH_SECRET, issues)
+    const linkedRuntimeAuthSecret = deploymentSecret(env, "MongolGPTRuntimeAuthSecret")
+    validateSecretKey("SST_SECRET_MongolGPTRuntimeAuthSecret", linkedRuntimeAuthSecret, issues)
+    if (
+      env.MONGOLGPT_RUNTIME_AUTH_SECRET?.trim() &&
+      linkedRuntimeAuthSecret?.trim() &&
+      env.MONGOLGPT_RUNTIME_AUTH_SECRET !== linkedRuntimeAuthSecret
+    ) {
+      issues.push("MONGOLGPT_RUNTIME_AUTH_SECRET болон SST_SECRET_MongolGPTRuntimeAuthSecret ижил утгатай байна.")
+    }
     requireValue("D1_BACKUP_API_TOKEN", deploymentSecret(env, "D1BackupApiToken"), issues)
     requireValue("GITHUB_CLIENT_ID_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"), issues)
     requireValue("GITHUB_CLIENT_SECRET_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"), issues)
@@ -274,9 +291,18 @@ function validatePaymentConfiguration(input: {
   }
   if (!input.hostedServices || !input.requireDeploymentSecrets) return
 
-  const values = Object.fromEntries(
-    paymentSstSecretNames.map((name) => [name, deploymentSecret(input.env, name)?.trim() ?? ""]),
-  ) as Record<(typeof paymentSstSecretNames)[number], string>
+  const paymentSecret = (name: (typeof paymentSstSecretNames)[number]) =>
+    deploymentSecret(input.env, name)?.trim() ?? ""
+  const values = {
+    QPayMerchantAccountID: paymentSecret("QPayMerchantAccountID"),
+    QPayClientID: paymentSecret("QPayClientID"),
+    QPayClientSecret: paymentSecret("QPayClientSecret"),
+    QPayInvoiceCode: paymentSecret("QPayInvoiceCode"),
+    BonumMerchantAccountID: paymentSecret("BonumMerchantAccountID"),
+    BonumAppSecret: paymentSecret("BonumAppSecret"),
+    BonumTerminalID: paymentSecret("BonumTerminalID"),
+    BonumWebhookChecksumKey: paymentSecret("BonumWebhookChecksumKey"),
+  } satisfies Record<(typeof paymentSstSecretNames)[number], string>
   const missing = paymentSstSecretNames.filter((name) => !values[name])
   for (const name of missing) input.issues.push(`${name} дутуу байна.`)
   if (missing.length) return

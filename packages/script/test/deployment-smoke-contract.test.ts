@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { inspectAnonymousRuntimeToken, inspectRuntimeTokenPreflight } from "../../../script/deployment-smoke"
 import {
   inspectAnonymousHostedSession,
   inspectAppHtml,
@@ -12,6 +13,40 @@ const html = (meta: string) => `<!doctype html>
   <head>${meta}</head>
   <body><div id="root"></div><script type="module" src="/assets/index-abc123.js"></script></body>
 </html>`
+
+const appOrigin = "https://app.dev.mgpt.mn"
+
+function corsHeaders() {
+  return {
+    "access-control-allow-origin": appOrigin,
+    "access-control-allow-credentials": "true",
+    "cache-control": "no-store",
+    vary: "Origin",
+  }
+}
+
+function preflightResponse(headers: Record<string, string> = {}) {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      ...corsHeaders(),
+      "access-control-allow-methods": "POST, OPTIONS",
+      "access-control-allow-headers": "Content-Type",
+      "access-control-max-age": "600",
+      ...headers,
+    },
+  })
+}
+
+function anonymousResponse(
+  body: unknown = { error: "unauthorized", message: "MongolGPT бүртгэлээр нэвтэрнэ үү." },
+  headers: Record<string, string> = {},
+) {
+  return new Response(JSON.stringify(body), {
+    status: 401,
+    headers: { ...corsHeaders(), "content-type": "application/json", ...headers },
+  })
+}
 
 describe("inspectAppHtml", () => {
   test("accepts a branded local bridge build", () => {
@@ -103,6 +138,51 @@ describe("inspectJsonApiPayload", () => {
     )
   })
 })
+
+describe("hosted runtime token smoke contract", () => {
+  test("requires the exact credentialed preflight contract", () => {
+    expect(() => inspectRuntimeTokenPreflight(preflightResponse(), appOrigin)).not.toThrow()
+    expect(() =>
+      inspectRuntimeTokenPreflight(preflightResponse({ "access-control-allow-origin": "*" }), appOrigin),
+    ).toThrow("CORS origin")
+    expect(() =>
+      inspectRuntimeTokenPreflight(preflightResponse({ "access-control-allow-methods": "POST" }), appOrigin),
+    ).toThrow("methods")
+  })
+
+  test("requires an anonymous JSON 401 with no capability data", async () => {
+    expect(await inspectAnonymousRuntimeToken(anonymousResponse(), appOrigin)).toBeUndefined()
+    await expectFailure(
+      inspectAnonymousRuntimeToken(anonymousResponse({ token: "must-not-exist" }), appOrigin),
+      "fail-closed",
+    )
+    await expectFailure(
+      inspectAnonymousRuntimeToken(
+        anonymousResponse({ error: "unauthorized" }, { "content-type": "text/html" }),
+        appOrigin,
+      ),
+      "not JSON",
+    )
+    await expectFailure(
+      inspectAnonymousRuntimeToken(
+        anonymousResponse({ error: "unauthorized" }, { "access-control-allow-origin": "*" }),
+        appOrigin,
+      ),
+      "CORS origin",
+    )
+  })
+})
+
+async function expectFailure(result: Promise<unknown>, message: string) {
+  try {
+    await result
+  } catch (error) {
+    if (!(error instanceof Error)) throw error
+    expect(error.message).toContain(message)
+    return
+  }
+  throw new Error(`Expected failure containing: ${message}`)
+}
 
 describe("inspectAnonymousHostedSession", () => {
   test("accepts only a fail-closed anonymous session", () => {

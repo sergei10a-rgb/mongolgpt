@@ -1,3 +1,5 @@
+import { verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
+
 const PORT = 4096
 const PROCESS_ID = "mongolgpt-server"
 const SERVER_USERNAME = "mongolgpt"
@@ -5,6 +7,7 @@ const WORKSPACE_ROOT = "/workspace"
 const START_TIMEOUT_MS = 120_000
 const MAX_REQUEST_BODY_BYTES = 16 * 1024 * 1024
 const RATE_LIMIT_PERIOD_SECONDS = 60
+const RUNTIME_COOKIE_NAME = "__Host-mongolgpt-runtime"
 
 type ProcessStatus = "starting" | "running" | "completed" | "failed" | "killed" | "error"
 
@@ -38,7 +41,7 @@ export interface RuntimeSandbox {
 
 export interface RuntimeVariables {
   MONGOLGPT_APP_ORIGIN: string
-  MONGOLGPT_CONSOLE_ORIGIN: string
+  MONGOLGPT_RUNTIME_AUTH_SECRET: string
   MONGOLGPT_RUNTIME_BURST_LIMITER: RuntimeRateLimiter
   MONGOLGPT_RUNTIME_RATE_LIMITER: RuntimeRateLimiter
   MONGOLGPT_RUNTIME_SECRET: string
@@ -51,30 +54,31 @@ export interface RuntimeRateLimiter {
 }
 
 type RuntimeDependencies<Environment extends RuntimeVariables> = {
-  fetch: (this: void, request: Request) => Promise<Response>
   sandbox(env: Environment, id: string): RuntimeSandbox
   report?(error: unknown): void
+  schedule?: (callback: () => void, delay: number) => () => void
 }
 
-type Account = {
-  id: string
-  email: string
+type Authentication = {
+  account: {
+    id: string
+  }
+  expiresAt: number
 }
 
-type Authentication =
-  | { status: "authenticated"; account: Account }
-  | { status: "anonymous" }
-  | { status: "unavailable" }
+type TokenSource = {
+  value?: string
+  invalid?: true
+}
 
 export function createRuntimeHandler<Environment extends RuntimeVariables>(
   dependencies: RuntimeDependencies<Environment>,
 ) {
   return async (request: Request, env: Environment) => {
     const appOrigin = configuredOrigin(env.MONGOLGPT_APP_ORIGIN)
-    const consoleOrigin = configuredOrigin(env.MONGOLGPT_CONSOLE_ORIGIN)
     const configured = Boolean(
       appOrigin &&
-        consoleOrigin &&
+        env.MONGOLGPT_RUNTIME_AUTH_SECRET?.trim().length >= 32 &&
         env.MONGOLGPT_RUNTIME_SECRET?.trim().length >= 32 &&
         env.MONGOLGPT_RUNTIME_BURST_LIMITER &&
         env.MONGOLGPT_RUNTIME_RATE_LIMITER,
@@ -101,9 +105,7 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
       return request.headers.get("origin") === appOrigin && appOrigin ? cors(response, appOrigin) : response
     }
 
-    if (!configured || !appOrigin || !consoleOrigin) {
-      return json({ error: "Runtime үйлчилгээний тохиргоо бүрэн биш байна." }, 503)
-    }
+    if (!configured || !appOrigin) return json({ error: "Runtime үйлчилгээний тохиргоо бүрэн биш байна." }, 503)
 
     if (request.method === "OPTIONS") {
       if (request.headers.get("origin") !== appOrigin) return json({ error: "Хориотой origin байна." }, 403)
@@ -114,31 +116,14 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
       return json({ error: "MongolGPT веб апп-аас хүсэлт илгээнэ үү." }, 403)
     }
 
-    const authentication = await authenticate(request, consoleOrigin, dependencies.fetch)
-    if (authentication.status === "unavailable") {
-      return cors(json({ error: "Нэвтрэлтийн үйлчилгээнд түр холбогдож чадсангүй." }, 503), appOrigin)
-    }
-    if (authentication.status === "anonymous") {
-      return cors(
-        json(url.pathname === "/auth/session" ? { authenticated: false } : { error: "Нэвтэрч орно уу." }, 401),
-        appOrigin,
-      )
-    }
+    if (url.pathname === "/auth/session") return session(request, env.MONGOLGPT_RUNTIME_AUTH_SECRET, appOrigin)
 
-    if (url.pathname === "/auth/session") {
-      if (request.method !== "GET") return cors(methodNotAllowed(["GET"]), appOrigin)
-      return cors(
-        json(
-          {
-            authenticated: true,
-            account: authentication.account,
-          },
-          200,
-          { "cache-control": "no-store" },
-        ),
-        appOrigin,
-      )
-    }
+    const authentication = await requestAuthentication(
+      request,
+      env.MONGOLGPT_RUNTIME_AUTH_SECRET,
+      request.headers.get("upgrade")?.toLowerCase() === "websocket",
+    )
+    if (!authentication) return cors(json({ error: "Нэвтэрч орно уу." }, 401), appOrigin)
 
     const limited = await enforceRateLimit(env, authentication.account.id)
     if (limited === "unavailable") {
@@ -146,11 +131,9 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
     }
     if (limited === "exceeded") {
       return cors(
-        json(
-          { error: "Runtime хүсэлтийн хязгаар түр хэтэрлээ. Нэг минутын дараа дахин оролдоно уу." },
-          429,
-          { "retry-after": String(RATE_LIMIT_PERIOD_SECONDS) },
-        ),
+        json({ error: "Runtime хүсэлтийн хязгаар түр хэтэрлээ. Нэг минутын дараа дахин оролдоно уу." }, 429, {
+          "retry-after": String(RATE_LIMIT_PERIOD_SECONDS),
+        }),
         appOrigin,
       )
     }
@@ -165,24 +148,146 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
       const identity = await deriveRuntimeIdentity(authentication.account.id, env.MONGOLGPT_RUNTIME_SECRET)
       const sandbox = dependencies.sandbox(env, identity.sandboxID)
       await ensureServer(sandbox, identity.password)
+      if (authentication.expiresAt <= Date.now()) {
+        return cors(json({ error: "Runtime сессийн хугацаа дууссан байна. Дахин нэвтэрнэ үү." }, 401), appOrigin)
+      }
       const internal = internalRequest(request, identity.password, directory, body)
 
       if (request.headers.get("upgrade")?.toLowerCase() === "websocket") {
-        return await sandbox.wsConnect(internal, PORT)
+        const response = await sandbox.wsConnect(internal, PORT)
+        return expireWebSocket(response, authentication.expiresAt, dependencies.schedule ?? scheduleTimeout)
       }
-
       return cors(await sandbox.containerFetch(internal, PORT), appOrigin)
     } catch (error) {
       if (error instanceof RequestBodyTooLarge) {
-        return cors(
-          json({ error: "Хүсэлтийн хэмжээ 16 MiB хязгаараас хэтэрсэн байна." }, 413),
-          appOrigin,
-        )
+        return cors(json({ error: "Хүсэлтийн хэмжээ 16 MiB хязгаараас хэтэрсэн байна." }, 413), appOrigin)
       }
       dependencies.report?.(error)
-      return cors(json({ error: "Cloud coding runtime-г эхлүүлж чадсангүй. Түр хүлээгээд дахин оролдоно уу." }, 502), appOrigin)
+      return cors(
+        json({ error: "Cloud coding runtime-г эхлүүлж чадсангүй. Түр хүлээгээд дахин оролдоно уу." }, 502),
+        appOrigin,
+      )
     }
   }
+}
+
+function expireWebSocket(
+  response: Response,
+  expiresAt: number,
+  schedule: NonNullable<RuntimeDependencies<never>["schedule"]>,
+) {
+  const socket = response.webSocket
+  if (!socket) return response
+
+  const cancel = schedule(
+    () => socket.close(4001, "MongolGPT runtime сесс дууссан"),
+    Math.max(0, expiresAt - Date.now()),
+  )
+  socket.addEventListener("close", cancel, { once: true })
+  socket.addEventListener("error", cancel, { once: true })
+  return response
+}
+
+function scheduleTimeout(callback: () => void, delay: number) {
+  const timer = setTimeout(callback, delay)
+  return () => clearTimeout(timer)
+}
+
+async function session(request: Request, secret: string, appOrigin: string) {
+  if (request.method === "POST") {
+    const capability = bearerToken(request.headers.get("authorization"))
+    if (capability.invalid || !capability.value) return cors(json({ authenticated: false }, 401), appOrigin)
+
+    const authentication = await authenticate(capability.value, request, secret)
+    if (!authentication) return cors(json({ authenticated: false }, 401), appOrigin)
+
+    const maxAge = Math.floor(authentication.expiresAt / 1000 - Date.now() / 1000)
+    if (maxAge < 1) return cors(json({ authenticated: false }, 401), appOrigin)
+    return cors(
+      json(
+        {
+          authenticated: true,
+          account: authentication.account,
+          expiresAt: authentication.expiresAt,
+        },
+        200,
+        { "set-cookie": runtimeCookie(capability.value, maxAge) },
+      ),
+      appOrigin,
+    )
+  }
+
+  if (request.method === "DELETE") {
+    return cors(json({ authenticated: false }, 200, { "set-cookie": clearRuntimeCookie() }), appOrigin)
+  }
+
+  if (request.method !== "GET") return cors(methodNotAllowed(["GET", "POST", "DELETE"]), appOrigin)
+  const authentication = await requestAuthentication(request, secret, false)
+  if (!authentication) return cors(json({ authenticated: false }, 401), appOrigin)
+  return cors(
+    json(
+      {
+        authenticated: true,
+        account: authentication.account,
+        expiresAt: authentication.expiresAt,
+      },
+      200,
+    ),
+    appOrigin,
+  )
+}
+
+async function requestAuthentication(request: Request, secret: string, websocket: boolean) {
+  const bearer = bearerToken(request.headers.get("authorization"))
+  const cookie = runtimeCookieToken(request.headers.get("cookie"))
+  if (bearer.invalid || cookie.invalid || (websocket && bearer.value) || (!websocket && bearer.value && cookie.value)) {
+    return null
+  }
+
+  const token = websocket ? cookie.value : (bearer.value ?? cookie.value)
+  return token ? authenticate(token, request, secret) : null
+}
+
+async function authenticate(token: string, request: Request, secret: string): Promise<Authentication | null> {
+  try {
+    const capability = await verifyRuntimeCapability({
+      token,
+      audience: new URL(request.url).origin,
+      secret,
+    })
+    return {
+      account: { id: capability.sub },
+      expiresAt: capability.exp * 1000,
+    }
+  } catch {
+    return null
+  }
+}
+
+function bearerToken(value: string | null): TokenSource {
+  if (value === null) return {}
+  const match = /^Bearer ([A-Za-z0-9._-]+)$/.exec(value)
+  return match ? { value: match[1] } : { invalid: true }
+}
+
+function runtimeCookieToken(value: string | null): TokenSource {
+  if (!value) return {}
+  const tokens = value
+    .split(";")
+    .map((item) => item.trim())
+    .filter((item) => item.startsWith(`${RUNTIME_COOKIE_NAME}=`))
+    .map((item) => item.slice(RUNTIME_COOKIE_NAME.length + 1))
+  if (tokens.length === 0) return {}
+  if (tokens.length !== 1 || !tokens[0]) return { invalid: true }
+  return { value: tokens[0] }
+}
+
+function runtimeCookie(token: string, maxAge: number) {
+  return `${RUNTIME_COOKIE_NAME}=${token}; Max-Age=${maxAge}; Path=/; Secure; HttpOnly; SameSite=Strict`
+}
+
+function clearRuntimeCookie() {
+  return `${RUNTIME_COOKIE_NAME}=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Strict`
 }
 
 async function enforceRateLimit(env: RuntimeVariables, accountID: string) {
@@ -245,71 +350,6 @@ export function hostedDirectory(raw: string | null) {
   return segments.length ? `${WORKSPACE_ROOT}/${segments.join("/")}` : WORKSPACE_ROOT
 }
 
-async function authenticate(
-  request: Request,
-  consoleOrigin: string,
-  fetcher: RuntimeDependencies<RuntimeVariables>["fetch"],
-): Promise<Authentication> {
-  const cookie = authCookie(request.headers.get("cookie"))
-  if (!cookie) return { status: "anonymous" }
-
-  try {
-    const response = await fetcher(
-      new Request(new URL("/auth/status", consoleOrigin), {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-          cookie,
-          "user-agent": "MongolGPT-Runtime/1",
-        },
-        cache: "no-store",
-      }),
-    )
-    if (response.status === 401) return { status: "anonymous" }
-    if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
-      return { status: "unavailable" }
-    }
-
-    const account = accountFromSession(await response.json())
-    return account ? { status: "authenticated", account } : { status: "anonymous" }
-  } catch {
-    return { status: "unavailable" }
-  }
-}
-
-function accountFromSession(value: unknown) {
-  if (!record(value)) return null
-  const session = value
-  if (!record(session.account)) return null
-
-  const accounts = session.account
-  const selected =
-    typeof session.current === "string" && session.current in accounts
-      ? accounts[session.current]
-      : Object.values(accounts)[0]
-  if (!record(selected)) return null
-
-  if (typeof selected.id !== "string" || !selected.id.trim()) return null
-  if (typeof selected.email !== "string" || !selected.email.trim()) return null
-  return {
-    id: selected.id,
-    email: selected.email,
-  }
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-function authCookie(value: string | null) {
-  return (
-    value
-      ?.split(";")
-      .map((item) => item.trim())
-      .find((item) => item.startsWith("auth=") && item.length > "auth=".length) ?? null
-  )
-}
-
 async function ensureServer(sandbox: RuntimeSandbox, password: string) {
   const existing = await sandbox.getProcess(PROCESS_ID)
   if (existing && (await waitForServer(existing))) return
@@ -350,12 +390,7 @@ async function waitForServer(process: RuntimeProcess) {
   return true
 }
 
-function internalRequest(
-  request: Request,
-  password: string,
-  directory: string,
-  body: Uint8Array | undefined,
-) {
+function internalRequest(request: Request, password: string, directory: string, body: Uint8Array | undefined) {
   const headers = new Headers(request.headers)
   for (const name of [
     "cookie",
@@ -375,7 +410,8 @@ function internalRequest(
   }
   headers.set("authorization", `Basic ${btoa(`${SERVER_USERNAME}:${password}`)}`)
   headers.set("x-mongolgpt-directory", encodeURIComponent(directory))
-  return new Request(request, body ? { headers, body } : { headers })
+  const requestBody = body ? Uint8Array.from(body) : undefined
+  return new Request(request, requestBody ? { headers, body: requestBody } : { headers })
 }
 
 class RequestBodyTooLarge extends Error {}

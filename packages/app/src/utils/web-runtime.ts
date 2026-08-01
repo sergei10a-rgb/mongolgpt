@@ -20,8 +20,14 @@ function normalizeHttpUrl(input: string) {
 }
 
 function isLoopback(url: string) {
-  const hostname = new URL(url).hostname
-  return hostname === "localhost" || hostname === "127.0.0.1"
+  const hostname = new URL(url).hostname.replace(/^\[|\]$/g, "")
+  return (
+    hostname === "localhost" ||
+    hostname === "0.0.0.0" ||
+    hostname === "::" ||
+    hostname === "::1" ||
+    /^127(?:\.\d{1,3}){3}$/.test(hostname)
+  )
 }
 
 export function resolveWebRuntime(input: ResolveWebRuntimeInput): WebRuntime {
@@ -58,7 +64,7 @@ export function resolveDefaultServerUrl(input: { runtime: WebRuntime; storedUrl:
   }
 
   const appOrigin = normalizeHttpUrl(input.appOrigin)
-  if (storedUrl === appOrigin) {
+  if (new URL(storedUrl).origin === new URL(appOrigin).origin) {
     return {
       url: input.runtime.serverUrl,
       clearStored: true,

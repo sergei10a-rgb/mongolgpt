@@ -11,8 +11,21 @@ function httpUrl(input) {
 }
 
 function local(url) {
-  const hostname = new URL(url).hostname
-  return hostname === "localhost" || hostname === "127.0.0.1"
+  const hostname = new URL(url).hostname.replace(/^\[|\]$/g, "")
+  return (
+    hostname === "localhost" ||
+    hostname === "0.0.0.0" ||
+    hostname === "::" ||
+    hostname === "::1" ||
+    /^127(?:\.\d{1,3}){3}$/.test(hostname)
+  )
+}
+
+function hostedWeb(env) {
+  return (
+    Boolean(env.VITE_MONGOLGPT_APP_URL?.trim() || env.VITE_MONGOLGPT_PUBLIC_URL?.trim()) &&
+    channels.has(resolveChannel(env))
+  )
 }
 
 export function resolveChannel(env = process.env) {
@@ -23,10 +36,31 @@ export function resolveChannel(env = process.env) {
 }
 
 export function resolveRuntimeMetadata(env = process.env) {
+  const appUrl = env.VITE_MONGOLGPT_APP_URL ? httpUrl(env.VITE_MONGOLGPT_APP_URL) : undefined
+  const publicUrl = env.VITE_MONGOLGPT_PUBLIC_URL ? httpUrl(env.VITE_MONGOLGPT_PUBLIC_URL) : undefined
   const host = env.VITE_MONGOLGPT_SERVER_HOST?.trim()
   const port = env.VITE_MONGOLGPT_SERVER_PORT?.trim() || "4096"
   const fallback = host ? `http://${host}:${port}` : "http://localhost:4096"
-  const serverUrl = httpUrl(env.VITE_MONGOLGPT_SERVER_URL) ?? httpUrl(fallback)
+  const configured = httpUrl(env.VITE_MONGOLGPT_SERVER_URL)
+  const hosted = hostedWeb(env)
+  if (hosted && (!appUrl || local(appUrl) || new URL(appUrl).protocol !== "https:")) {
+    throw new Error("MongolGPT hosted Web build requires a non-local HTTPS app URL")
+  }
+  if (hosted && (!publicUrl || local(publicUrl) || new URL(publicUrl).protocol !== "https:")) {
+    throw new Error("MongolGPT hosted Web build requires a non-local HTTPS public URL")
+  }
+  if (
+    hosted &&
+    (!configured ||
+      local(configured) ||
+      (appUrl && new URL(configured).origin === new URL(appUrl).origin) ||
+      (publicUrl && new URL(configured).origin === new URL(publicUrl).origin) ||
+      new URL(configured).protocol !== "https:")
+  ) {
+    throw new Error("MongolGPT hosted Web build requires a non-local HTTPS runtime URL")
+  }
+
+  const serverUrl = configured ?? httpUrl(fallback)
   return {
     mode: local(serverUrl) ? "local-bridge" : "hosted",
     serverUrl,

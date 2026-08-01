@@ -17,10 +17,14 @@ type WorkflowStep = {
 
 type Workflow = {
   jobs: {
-    deploy: {
-      steps: WorkflowStep[]
-    }
+    verify: WorkflowJob
+    deploy: WorkflowJob
   }
+}
+
+type WorkflowJob = {
+  condition?: string
+  steps: WorkflowStep[]
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -29,14 +33,22 @@ function record(value: unknown): value is Record<string, unknown> {
 
 function parseWorkflow(source: string): Workflow {
   const parsed: unknown = Bun.YAML.parse(source)
-  if (!record(parsed) || !record(parsed.jobs) || !record(parsed.jobs.deploy)) {
+  if (!record(parsed) || !record(parsed.jobs)) {
     throw new Error("Deploy workflow jobs are missing")
   }
 
-  const rawSteps = parsed.jobs.deploy.steps
-  if (!Array.isArray(rawSteps)) throw new Error("Deploy workflow steps are missing")
+  return {
+    jobs: {
+      verify: parseWorkflowJob(parsed.jobs.verify, "verify"),
+      deploy: parseWorkflowJob(parsed.jobs.deploy, "deploy"),
+    },
+  }
+}
 
-  const steps = rawSteps.map((rawStep): WorkflowStep => {
+function parseWorkflowJob(input: unknown, name: string): WorkflowJob {
+  if (!record(input) || !Array.isArray(input.steps)) throw new Error(`Deploy workflow ${name} job is missing`)
+
+  const steps = input.steps.map((rawStep): WorkflowStep => {
     if (!record(rawStep)) throw new Error("Deploy workflow contains an invalid step")
     const env: Record<string, string> = {}
     if (record(rawStep.env)) {
@@ -51,10 +63,37 @@ function parseWorkflow(source: string): Workflow {
     }
   })
 
-  return { jobs: { deploy: { steps } } }
+  return {
+    condition: typeof input.if === "string" ? input.if : undefined,
+    steps,
+  }
 }
 
 describe("Cloudflare hosted infrastructure contract", () => {
+  test("never publishes the public web app without hosted services", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
+    const workflow = parseWorkflow(source)
+    const buildStep = workflow.jobs.verify.steps.find((step) => step.name === "Build web app")
+    const deployStep = workflow.jobs.deploy.steps.find((step) => step.name === "Validate and deploy to Cloudflare")
+
+    expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"')
+    expect(source).not.toContain("inputs.hosted_services")
+    expect(buildStep?.env).toEqual({
+      MONGOLGPT_CHANNEL: "${{ inputs.stage == 'production' && 'prod' || 'dev' }}",
+      VITE_MONGOLGPT_APP_URL:
+        "${{ inputs.stage == 'production' && format('https://app.{0}', vars.MONGOLGPT_DOMAIN) || format('https://app.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}",
+      VITE_MONGOLGPT_PUBLIC_URL:
+        "${{ inputs.stage == 'production' && format('https://{0}', vars.MONGOLGPT_DOMAIN) || format('https://{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}",
+      VITE_MONGOLGPT_SERVER_URL:
+        "${{ inputs.stage == 'production' && format('https://runtime.{0}', vars.MONGOLGPT_DOMAIN) || format('https://runtime.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}",
+    })
+    expect(workflow.jobs.deploy.condition).toBe(
+      "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
+    )
+    expect(deployStep?.run).toContain("wrangler deploy")
+    expect(deployStep?.run).toContain("bun sst deploy --stage=${{ inputs.stage }} --target Database")
+  })
+
   test("keeps the complete ordered QuotaLedger SQLite migration history", () => {
     expect(quotaServiceMigrations).toEqual([
       {
@@ -89,6 +128,44 @@ describe("Cloudflare hosted infrastructure contract", () => {
     for (const source of sources) {
       for (const binding of legacyBindings) expect(source).not.toContain(binding)
     }
+  })
+
+  test("keeps the OAuth session host-only without weakening cookie protections", async () => {
+    const [consoleSource, authSessionSource] = await Promise.all(
+      ["../../../infra/console.ts", "../../console/app/src/context/auth.ts"].map((path) =>
+        Bun.file(new URL(path, import.meta.url)).text(),
+      ),
+    )
+
+    expect(consoleSource).not.toContain("MONGOLGPT_COOKIE_DOMAIN")
+    expect(authSessionSource).not.toContain("domain:")
+    expect(authSessionSource).toContain('name: import.meta.env.PROD ? "__Host-mongolgpt-auth" : "auth"')
+    expect(authSessionSource).toContain("secure: import.meta.env.PROD")
+    expect(authSessionSource).toContain("httpOnly: true")
+    expect(authSessionSource).toContain('sameSite: "lax"')
+    expect(authSessionSource).toContain('path: "/"')
+  })
+
+  test("wires one audience-bound capability secret into the console issuer and runtime verifier", async () => {
+    const [consoleSource, secretSource, workflowSource] = await Promise.all(
+      ["../../../infra/console.ts", "../../../infra/secret.ts", "../../../.github/workflows/deploy.yml"].map((path) =>
+        Bun.file(new URL(path, import.meta.url)).text(),
+      ),
+    )
+    const workflow = parseWorkflow(workflowSource)
+    const deployStep = workflow.jobs.deploy.steps.find((step) => step.name === "Validate and deploy to Cloudflare")
+
+    expect(consoleSource).toContain("SECRET.MongolGPTRuntimeAuthSecret")
+    expect(consoleSource).toContain("MONGOLGPT_RUNTIME_URL: runtimeOrigin")
+    expect(secretSource).toContain('new sst.Secret("MongolGPTRuntimeAuthSecret")')
+    expect(deployStep?.env).toMatchObject({
+      MONGOLGPT_RUNTIME_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_SECRET }}",
+      MONGOLGPT_RUNTIME_AUTH_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+      SST_SECRET_MongolGPTRuntimeAuthSecret: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+    })
+    expect(deployStep?.run).toContain(
+      "MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET, MONGOLGPT_RUNTIME_AUTH_SECRET: process.env.MONGOLGPT_RUNTIME_AUTH_SECRET",
+    )
   })
 
   test("syncs every hosted credential into the SST stage before deployment", async () => {

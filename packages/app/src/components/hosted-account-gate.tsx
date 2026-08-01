@@ -1,14 +1,19 @@
 import { Button } from "@mongolgpt/ui/button"
 import { useDialog } from "@mongolgpt/ui/context/dialog"
 import { Dialog } from "@mongolgpt/ui/dialog"
-import { type ParentProps, createEffect, createResource, createSignal, Show } from "solid-js"
+import { type ParentProps, createEffect, createResource, createSignal, onCleanup, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { Splash } from "@mongolgpt/ui/logo"
 
-type HostedSession = { authenticated: true; account: { id: string; email: string } } | { authenticated: false }
+type HostedAccount = { id: string; email: string }
+type HostedSession = { authenticated: true; account: HostedAccount; expiresAt: number } | { authenticated: false }
 
 export function hostedSessionUrl(runtimeUrl: string) {
   return new URL("/auth/session", `${runtimeUrl.replace(/\/+$/, "")}/`).toString()
+}
+
+export function hostedRuntimeTokenUrl(publicOrigin: string) {
+  return new URL("/auth/runtime-token", `${publicOrigin.replace(/\/+$/, "")}/`).toString()
 }
 
 export function hostedLoginUrl(publicOrigin: string) {
@@ -29,25 +34,92 @@ export function hostedAccountGateEnabled(mode: string | undefined, runtimeUrl: s
   }
 }
 
-async function loadHostedSession(runtimeUrl: string): Promise<HostedSession> {
-  const response = await fetch(hostedSessionUrl(runtimeUrl), {
+export async function loadHostedSession(runtimeUrl: string, publicOrigin: string): Promise<HostedSession> {
+  const capabilityResponse = await fetch(hostedRuntimeTokenUrl(publicOrigin), {
+    method: "POST",
     credentials: "include",
     headers: { Accept: "application/json" },
   })
 
-  if (response.status === 401) return { authenticated: false }
-  if (!response.ok) throw new Error(`Hosted session check failed (${response.status})`)
+  if (capabilityResponse.status === 401) return { authenticated: false }
+  const capability = await jsonResponse(capabilityResponse)
+  if (!isRuntimeCapability(capability)) throw new Error("Hosted runtime token response was invalid")
 
-  const value: unknown = await response.json()
-  if (record(value) && value.authenticated === true && record(value.account)) {
-    const id = value.account.id
-    const email = value.account.email
-    if (typeof id === "string" && id && typeof email === "string" && email) {
-      return { authenticated: true, account: { id, email } }
-    }
+  const sessionResponse = await fetch(hostedSessionUrl(runtimeUrl), {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${capability.token}`,
+    },
+  })
+
+  if (sessionResponse.status === 401) throw new Error("Hosted runtime rejected a fresh capability")
+  const session = await jsonResponse(sessionResponse)
+  if (
+    !record(session) ||
+    session.authenticated !== true ||
+    !record(session.account) ||
+    Object.keys(session.account).length !== 1 ||
+    typeof session.account.id !== "string" ||
+    session.account.id !== capability.account.id ||
+    !expiresAt(session.expiresAt, capability.expiresAt)
+  ) {
+    throw new Error("Hosted runtime session response was invalid")
   }
-  if (record(value) && value.authenticated === false) return { authenticated: false }
-  throw new Error("Hosted session response was invalid")
+
+  return { authenticated: true, account: capability.account, expiresAt: session.expiresAt }
+}
+
+async function jsonResponse(response: Response): Promise<unknown> {
+  if (!response.ok) throw new Error(`Hosted auth check failed (${response.status})`)
+  if (response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() !== "application/json") {
+    throw new Error("Hosted auth response was not JSON")
+  }
+  try {
+    return await response.json()
+  } catch {
+    throw new Error("Hosted auth response was invalid JSON")
+  }
+}
+
+function isRuntimeCapability(value: unknown): value is { token: string; expiresAt: number; account: HostedAccount } {
+  return (
+    record(value) &&
+    Object.keys(value).length === 3 &&
+    typeof value.token === "string" &&
+    value.token.length > 0 &&
+    value.token.length <= 4_096 &&
+    expiresAt(value.expiresAt) &&
+    record(value.account) &&
+    Object.keys(value.account).length === 2 &&
+    account(value.account)
+  )
+}
+
+function account(value: Record<string, unknown>): value is HostedAccount {
+  return (
+    typeof value.id === "string" &&
+    value.id.length > 0 &&
+    value.id.length <= 256 &&
+    value.id.trim() === value.id &&
+    typeof value.email === "string" &&
+    value.email.length > 0 &&
+    value.email.length <= 320 &&
+    value.email.trim() === value.email
+  )
+}
+
+function expiresAt(value: unknown, maximum?: number): value is number {
+  const now = Date.now()
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value > now &&
+    value <= now + 125_000 &&
+    (maximum === undefined || value <= maximum)
+  )
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -65,9 +137,37 @@ export function HostedAccountGate(props: ParentProps) {
   const publicOrigin = import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim()
   const [shown, setShown] = createSignal(false)
   const [session, actions] = createResource(
-    () => (enabled && runtimeUrl ? runtimeUrl : undefined),
-    (url) => loadHostedSession(url),
+    () => (enabled && runtimeUrl && publicOrigin ? ([runtimeUrl, publicOrigin] as const) : undefined),
+    ([server, publicUrl]) => loadHostedSession(server, publicUrl),
   )
+
+  let refreshTimer: ReturnType<typeof setTimeout> | undefined
+  const refresh = () => void actions.refetch()
+  const onVisibilityChange = () => {
+    const current = session()
+    if (
+      document.visibilityState === "visible" &&
+      current?.authenticated === true &&
+      current.expiresAt - Date.now() <= 30_000
+    ) {
+      refresh()
+    }
+  }
+
+  if (enabled) {
+    document.addEventListener("visibilitychange", onVisibilityChange)
+    onCleanup(() => {
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+      if (refreshTimer !== undefined) clearTimeout(refreshTimer)
+    })
+  }
+
+  createEffect(() => {
+    const current = session()
+    if (refreshTimer !== undefined) clearTimeout(refreshTimer)
+    if (current?.authenticated !== true) return
+    refreshTimer = setTimeout(refresh, Math.max(1_000, current.expiresAt - Date.now() - 15_000))
+  })
 
   createEffect(() => {
     if (!enabled || session.loading) return

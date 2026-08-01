@@ -36,7 +36,6 @@ interface RuntimeEnvironment extends RuntimeVariables {
 }
 
 const handler = createRuntimeHandler<RuntimeEnvironment>({
-  fetch: (request) => fetch(request),
   sandbox: (env, id) =>
     getSandbox(env.Sandbox, id, {
       normalizeId: true,

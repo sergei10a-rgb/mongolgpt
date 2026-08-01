@@ -5,7 +5,12 @@ import { configuredAppUrl } from "./helpers"
 
 export async function GET(_input: APIEvent) {
   const appUrl = configuredAppUrl(import.meta.env.MONGOLGPT_APP_URL)
-  if (!appUrl) return Response.json({ error: "MONGOLGPT_APP_URL is not configured" }, { status: 500 })
+  if (!appUrl) {
+    return Response.json(
+      { error: "app_not_configured", message: "MongolGPT Web аппын хаяг тохируулагдаагүй байна." },
+      { status: 500 },
+    )
+  }
 
   const actor = await getActor()
   if (actor.type !== "account") {

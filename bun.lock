@@ -172,6 +172,7 @@
         "@mongolgpt/console-core": "workspace:*",
         "@mongolgpt/console-mail": "workspace:*",
         "@mongolgpt/console-resource": "workspace:*",
+        "@mongolgpt/runtime-auth": "workspace:*",
         "@mongolgpt/ui": "workspace:*",
         "@openauthjs/openauth": "catalog:",
         "@smithy/eventstream-codec": "4.2.7",
@@ -712,6 +713,7 @@
       "version": "0.1.1",
       "dependencies": {
         "@cloudflare/sandbox": "0.12.3",
+        "@mongolgpt/runtime-auth": "workspace:*",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "catalog:",
@@ -721,6 +723,15 @@
         "@typescript/native-preview": "catalog:",
         "typescript": "catalog:",
         "wrangler": "4.110.0",
+      },
+    },
+    "packages/runtime-auth": {
+      "name": "@mongolgpt/runtime-auth",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
       },
     },
     "packages/schema": {
@@ -1822,6 +1833,8 @@
     "@mongolgpt/protocol": ["@mongolgpt/protocol@workspace:packages/protocol"],
 
     "@mongolgpt/runtime": ["@mongolgpt/runtime@workspace:packages/runtime"],
+
+    "@mongolgpt/runtime-auth": ["@mongolgpt/runtime-auth@workspace:packages/runtime-auth"],
 
     "@mongolgpt/schema": ["@mongolgpt/schema@workspace:packages/schema"],
 

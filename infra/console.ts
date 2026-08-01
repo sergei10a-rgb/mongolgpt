@@ -6,6 +6,7 @@ import {
   enableMonitoring,
   enableShareService,
   publicOrigin,
+  runtimeOrigin,
   shareOrigin,
 } from "./stage"
 import {
@@ -342,6 +343,7 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     paymentConfig,
     SECRET.QuotaServiceToken,
     SECRET.PaymentServiceToken,
+    SECRET.MongolGPTRuntimeAuthSecret,
     SECRET.ByokCredentialsKeyV1,
     AUTH_API_URL,
     SECRET.SupportApiKey,
@@ -357,7 +359,7 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
   environment: {
     VITE_AUTH_URL: auth.url.apply((url) => url!),
     MONGOLGPT_APP_URL: appOrigin,
-    MONGOLGPT_COOKIE_DOMAIN: process.env.MONGOLGPT_COOKIE_DOMAIN?.trim() || ($dev ? "" : `.${domain}`),
+    MONGOLGPT_RUNTIME_URL: runtimeOrigin,
     VITE_MONGOLGPT_BILLING_ENABLED: "false",
     MONGOLGPT_BILLING_PROVIDER: "disabled",
     VITE_MONGOLGPT_PUBLIC_URL: publicOrigin,

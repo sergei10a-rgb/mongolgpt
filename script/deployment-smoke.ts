@@ -1,4 +1,5 @@
 import { deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/deployment"
+import type { DeploymentPreflightResult } from "@mongolgpt/script/deployment"
 import {
   inspectAnonymousHostedSession,
   inspectAppHtml,
@@ -7,30 +8,41 @@ import {
   inspectPaymentHealth,
 } from "@mongolgpt/script/deployment-smoke-contract"
 
-const result = preflightDeployment({
-  stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
-  env: process.env,
-  requireCloudflareCredentials: false,
-  requireDeploymentSecrets: false,
-})
-const endpoints = deploymentEndpoints(result)
-const healthContracts = new Map(
-  [
-    [endpoints.consoleHealth, "status"],
-    [endpoints.authHealth, "status"],
-    [endpoints.runtimeHealth, "runtime"],
-    [endpoints.paymentHealth, "payment"],
-    [endpoints.admin, "admin"],
-  ].filter((entry): entry is [string, "status" | "runtime" | "payment" | "admin"] => Boolean(entry[0])),
-)
+if (import.meta.main) await runSmoke()
 
-for (const [name, url] of Object.entries(endpoints)) {
-  await check(name, url, healthContracts.get(url))
+async function runSmoke() {
+  const result = preflightDeployment({
+    stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
+    env: process.env,
+    requireCloudflareCredentials: false,
+    requireDeploymentSecrets: false,
+    requireHostedServices: true,
+  })
+  const endpoints = deploymentEndpoints(result)
+  const healthContracts = new Map(
+    [
+      [endpoints.consoleHealth, "status"],
+      [endpoints.authHealth, "status"],
+      [endpoints.runtimeHealth, "runtime"],
+      [endpoints.paymentHealth, "payment"],
+      [endpoints.admin, "admin"],
+    ].filter((entry): entry is [string, "status" | "runtime" | "payment" | "admin"] => Boolean(entry[0])),
+  )
+
+  for (const [name, url] of Object.entries(endpoints)) {
+    await check(name, url, healthContracts.get(url), result, endpoints.app)
+  }
+
+  console.log("Cloudflare deployment smoke check passed.")
 }
 
-console.log("Cloudflare deployment smoke check passed.")
-
-async function check(name: string, url: string, health?: "status" | "runtime" | "payment" | "admin") {
+async function check(
+  name: string,
+  url: string,
+  health: "status" | "runtime" | "payment" | "admin" | undefined,
+  result: DeploymentPreflightResult,
+  appUrl: string,
+) {
   const retries = positiveInteger(process.env.MONGOLGPT_SMOKE_RETRIES, 8)
   const delay = positiveInteger(process.env.MONGOLGPT_SMOKE_DELAY_MS, 10_000)
   let lastError: unknown
@@ -58,6 +70,8 @@ async function check(name: string, url: string, health?: "status" | "runtime" | 
           throw new Error("runtime health response is invalid")
         }
         if (health === "payment") inspectPaymentHealth(body, result.paymentEnvironment)
+      } else if (name === "console") {
+        await checkHostedRuntimeToken(url, appUrl)
       } else if (name === "docs") {
         const html = await response.text()
         await checkStylesheet(url, html)
@@ -73,9 +87,10 @@ async function check(name: string, url: string, health?: "status" | "runtime" | 
         if (contract.mode !== expectedMode)
           throw new Error(`app runtime mode is ${contract.mode}; expected ${expectedMode}`)
         if (contract.mode === "hosted") {
-          const expectedRuntime = endpoints.runtimeHealth ? new URL(endpoints.runtimeHealth).origin : undefined
-          if (!endpoints.runtimeHealth || !expectedRuntime) throw new Error("hosted app runtime endpoint is missing")
-          inspectHostedAppRuntime(contract, { channel: expectedChannel, runtimeHealthUrl: endpoints.runtimeHealth })
+          const runtimeHealthUrl = deploymentEndpoints(result).runtimeHealth
+          const expectedRuntime = runtimeHealthUrl ? new URL(runtimeHealthUrl).origin : undefined
+          if (!runtimeHealthUrl || !expectedRuntime) throw new Error("hosted app runtime endpoint is missing")
+          inspectHostedAppRuntime(contract, { channel: expectedChannel, runtimeHealthUrl })
           await checkAgentRuntime(contract.serverUrl)
           await checkHostedSessionBoundary(contract.serverUrl, url)
         }
@@ -92,6 +107,93 @@ async function check(name: string, url: string, health?: "status" | "runtime" | 
   }
 
   throw new Error(`${name} smoke check failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`)
+}
+
+async function checkHostedRuntimeToken(consoleUrl: string, appUrl: string) {
+  const tokenUrl = new URL("/auth/runtime-token", `${consoleUrl}/`)
+  const appOrigin = new URL(appUrl).origin
+  const preflight = await fetch(tokenUrl, {
+    method: "OPTIONS",
+    headers: {
+      Origin: appOrigin,
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "content-type",
+      "User-Agent": "mongolgpt-deployment-smoke",
+    },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  inspectRuntimeTokenPreflight(preflight, appOrigin)
+
+  const anonymous = await fetch(tokenUrl, {
+    method: "POST",
+    credentials: "omit",
+    headers: {
+      Accept: "application/json",
+      Origin: appOrigin,
+      "User-Agent": "mongolgpt-deployment-smoke",
+    },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  await inspectAnonymousRuntimeToken(anonymous, appOrigin)
+}
+
+export function inspectRuntimeTokenPreflight(response: Response, appOrigin: string) {
+  if (response.status !== 204) {
+    throw new Error(`runtime token preflight returned HTTP ${response.status}; expected 204`)
+  }
+  inspectRuntimeTokenCors(response, appOrigin)
+  if (response.headers.get("access-control-allow-methods") !== "POST, OPTIONS") {
+    throw new Error("runtime token preflight methods are not exact")
+  }
+  if (response.headers.get("access-control-allow-headers") !== "Content-Type") {
+    throw new Error("runtime token preflight headers are not exact")
+  }
+  if (response.headers.get("access-control-max-age") !== "600") {
+    throw new Error("runtime token preflight max age is not exact")
+  }
+}
+
+export async function inspectAnonymousRuntimeToken(response: Response, appOrigin: string) {
+  if (response.status !== 401) {
+    throw new Error(`anonymous runtime token request returned HTTP ${response.status}; expected 401`)
+  }
+  inspectRuntimeTokenCors(response, appOrigin)
+  const body = inspectJsonApiPayload(
+    response.headers.get("content-type"),
+    await response.text(),
+    "anonymous runtime token response",
+  )
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    Array.isArray(body) ||
+    Object.keys(body).length !== 2 ||
+    (body as { error?: unknown }).error !== "unauthorized" ||
+    (body as { message?: unknown }).message !== "MongolGPT бүртгэлээр нэвтэрнэ үү."
+  ) {
+    throw new Error("anonymous runtime token response is not fail-closed")
+  }
+}
+
+function inspectRuntimeTokenCors(response: Response, appOrigin: string) {
+  if (response.headers.get("access-control-allow-origin") !== appOrigin) {
+    throw new Error("runtime token CORS origin does not match the app")
+  }
+  if (response.headers.get("access-control-allow-credentials") !== "true") {
+    throw new Error("runtime token CORS credentials are not enabled")
+  }
+  if (response.headers.get("cache-control")?.toLowerCase().includes("no-store") !== true) {
+    throw new Error("runtime token response is cacheable")
+  }
+  const vary = response.headers
+    .get("vary")
+    ?.split(",")
+    .map((value) => value.trim().toLowerCase())
+  if (!vary?.includes("origin")) {
+    throw new Error("runtime token response does not vary by Origin")
+  }
 }
 
 function positiveInteger(value: string | undefined, fallback: number) {

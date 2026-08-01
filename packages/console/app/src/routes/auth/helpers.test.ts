@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import { authCallbackTarget, configuredAppUrl, safeAuthContinue } from "./helpers"
+import {
+  authCallbackTarget,
+  canonicalHttpsOrigin,
+  configuredAppUrl,
+  currentAuthAccount,
+  safeAuthContinue,
+} from "./helpers"
 
 describe("safeAuthContinue", () => {
   test("keeps internal paths and query strings", () => {
@@ -16,9 +22,7 @@ describe("authCallbackTarget", () => {
   test("preserves the internal continuation query and removes OAuth parameters", () => {
     expect(
       authCallbackTarget(
-        new URL(
-          "https://dev.mgpt.mn/auth/callback/auth/app?source=login&code=secret-code&state=oauth-state",
-        ),
+        new URL("https://dev.mgpt.mn/auth/callback/auth/app?source=login&code=secret-code&state=oauth-state"),
       ),
     ).toBe("/auth/app?source=login")
   })
@@ -41,5 +45,56 @@ describe("configuredAppUrl", () => {
 
   test("allows plain HTTP only for local development", () => {
     expect(configuredAppUrl("http://127.0.0.1:3000")?.toString()).toBe("http://127.0.0.1:3000/")
+  })
+})
+
+describe("canonicalHttpsOrigin", () => {
+  test("canonicalizes a clean HTTPS origin", () => {
+    expect(canonicalHttpsOrigin(" https://app.dev.mgpt.mn/ ")).toBe("https://app.dev.mgpt.mn")
+  })
+
+  test("rejects non-origin URLs and non-HTTPS URLs", () => {
+    expect(canonicalHttpsOrigin("https://app.dev.mgpt.mn/path")).toBeUndefined()
+    expect(canonicalHttpsOrigin("http://localhost:3000/")).toBeUndefined()
+    expect(canonicalHttpsOrigin("https://user:pass@app.dev.mgpt.mn/")).toBeUndefined()
+  })
+})
+
+describe("currentAuthAccount", () => {
+  test("selects only the current account", () => {
+    const account = { id: "acct_current", email: "current@example.com", authVersion: 4 }
+    expect(
+      currentAuthAccount({
+        data: {
+          current: "acct_current",
+          account: { acct_other: { id: "acct_other", email: "other@example.com" }, acct_current: account },
+        },
+      }),
+    ).toEqual(account)
+  })
+
+  test("returns no account when current is missing or stale", () => {
+    expect(currentAuthAccount({ data: { account: { acct: { id: "acct", email: "a@example.com" } } } })).toBeUndefined()
+    expect(
+      currentAuthAccount({ data: { current: "missing", account: { acct: { id: "acct", email: "a@example.com" } } } }),
+    ).toBeUndefined()
+  })
+
+  test("rejects malformed current account credentials", () => {
+    expect(
+      currentAuthAccount({
+        data: { current: "acct", account: { acct: { id: "other", email: "a@example.com" } } },
+      }),
+    ).toBeUndefined()
+    expect(
+      currentAuthAccount({
+        data: { current: "acct", account: { acct: { id: "acct", email: " a@example.com" } } },
+      }),
+    ).toBeUndefined()
+    expect(
+      currentAuthAccount({
+        data: { current: "acct", account: { acct: { id: "acct", email: "a@example.com", authVersion: -1 } } },
+      }),
+    ).toBeUndefined()
   })
 })

@@ -12,7 +12,8 @@
     "deploy:production": "wrangler deploy --config wrangler.production.jsonc"
   },
   "dependencies": {
-    "@cloudflare/sandbox": "0.12.3"
+    "@cloudflare/sandbox": "0.12.3",
+    "@mongolgpt/runtime-auth": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",

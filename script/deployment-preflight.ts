@@ -5,6 +5,7 @@ try {
   const result = preflightDeployment({
     stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
     env: process.env,
+    requireHostedServices: true,
   })
   const access = result.adminEnabled
     ? await preflightCloudflareAccess({

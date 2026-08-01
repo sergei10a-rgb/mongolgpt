@@ -5,12 +5,26 @@ import { mockMongolGPTServer } from "../utils/mock-server"
 
 const runtimeUrl = process.env.PLAYWRIGHT_HOSTED_RUNTIME_URL ?? "https://runtime.e2e.mgpt.test:4443"
 const publicUrl = process.env.PLAYWRIGHT_HOSTED_PUBLIC_URL ?? "https://dev.e2e.mgpt.test"
+const tokenUrl = new URL("/auth/runtime-token", `${publicUrl}/`).toString()
 const sessionUrl = new URL("/auth/session", `${runtimeUrl}/`).toString()
+const capability = () => ({
+  token: "e2e-runtime-token",
+  expiresAt: Date.now() + 60_000,
+  account: { id: "account_e2e", email: "e2e@mgpt.mn" },
+})
 
 test.describe("hosted MongolGPT account gate", () => {
   test("shows the Mongolian login gate and uses the fixed internal continuation", async ({ page }) => {
     await mockRuntime(page)
-    await page.route(sessionUrl, (route) => session(route, 401, { authenticated: false }))
+    let tokenRequest: { method: string; accept: string; credentials: string } | undefined
+    await page.route(tokenUrl, async (route) => {
+      tokenRequest = {
+        method: route.request().method(),
+        accept: route.request().headers().accept ?? "",
+        credentials: "include",
+      }
+      await session(route, 401, { authenticated: false })
+    })
 
     let authorization: URL | undefined
     await page.route(`${publicUrl}/auth/authorize**`, async (route) => {
@@ -23,6 +37,8 @@ test.describe("hosted MongolGPT account gate", () => {
     })
 
     await page.goto("/")
+    await expect.poll(() => tokenRequest?.method).toBe("POST")
+    expect(tokenRequest).toEqual({ method: "POST", accept: "application/json", credentials: "include" })
 
     await expect(page.getByRole("heading", { name: "MongolGPT-д нэвтэрнэ үү" })).toBeVisible()
     await expect(page.getByText("Web хувилбарыг ашиглахын тулд MongolGPT аккаунтаараа нэвтэрнэ үү.")).toBeVisible()
@@ -50,14 +66,24 @@ test.describe("hosted MongolGPT account gate", () => {
 
     let state: "unavailable" | "authenticated" = "unavailable"
     let checks = 0
+    let currentCapability = capability()
+    let exchangeMethod = ""
+    let exchangeAuthorization = ""
+    await page.route(tokenUrl, async (route) => {
+      currentCapability = capability()
+      await session(route, 200, currentCapability)
+    })
     await page.route(sessionUrl, (route) => {
       checks += 1
       if (state === "unavailable") {
         return session(route, 200, "<!doctype html><title>not an API</title>", "text/html")
       }
+      exchangeMethod = route.request().method()
+      exchangeAuthorization = route.request().headers().authorization ?? ""
       return session(route, 200, {
         authenticated: true,
-        account: { id: "account_e2e", email: "e2e@mgpt.mn" },
+        account: { id: currentCapability.account.id },
+        expiresAt: currentCapability.expiresAt,
       })
     })
 
@@ -67,6 +93,8 @@ test.describe("hosted MongolGPT account gate", () => {
     state = "authenticated"
     await page.getByRole("button", { name: "Дахин шалгах" }).click()
     await expect.poll(() => checks).toBeGreaterThanOrEqual(2)
+    expect(exchangeMethod).toBe("POST")
+    expect(exchangeAuthorization).toBe(`Bearer ${currentCapability.token}`)
 
     await page.goto(`/${base64Encode(fixture.directory)}/session/${fixture.sourceID}`)
     await expect(page.getByRole("heading", { name: fixture.expected.sourceTitle })).toBeVisible()

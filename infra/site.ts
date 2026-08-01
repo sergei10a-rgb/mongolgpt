@@ -1,4 +1,4 @@
-import { docsOrigin, domain, publicOrigin, runtimeOrigin } from "./stage"
+import { appOrigin, docsOrigin, domain, publicOrigin, runtimeOrigin } from "./stage"
 
 const supportUrl = "https://github.com/sergei10a-rgb/mongolgpt/issues"
 const hostedServices = process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES === "true"
@@ -29,6 +29,7 @@ export const webApp = new sst.cloudflare.StaticSiteV2("WebApp", {
     output: "./dist",
   },
   environment: {
+    VITE_MONGOLGPT_APP_URL: appOrigin,
     VITE_MONGOLGPT_PUBLIC_URL: publicOrigin,
     VITE_MONGOLGPT_DOCS_URL: docsUrl,
     VITE_MONGOLGPT_SUPPORT_URL: supportUrl,

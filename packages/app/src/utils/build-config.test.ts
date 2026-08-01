@@ -21,7 +21,7 @@ describe("resolveChannel", () => {
 })
 
 describe("resolveRuntimeMetadata", () => {
-  test("describes the default deployed local bridge", () => {
+  test("keeps the local Web development bridge when no hosted metadata is present", () => {
     expect(resolveRuntimeMetadata({})).toEqual({
       mode: "local-bridge",
       serverUrl: "http://localhost:4096",
@@ -29,7 +29,14 @@ describe("resolveRuntimeMetadata", () => {
   })
 
   test("describes a configured hosted runtime", () => {
-    expect(resolveRuntimeMetadata({ VITE_MONGOLGPT_SERVER_URL: "https://runtime.dev.mgpt.mn/" })).toEqual({
+    expect(
+      resolveRuntimeMetadata({
+        MONGOLGPT_CHANNEL: "dev",
+        VITE_MONGOLGPT_APP_URL: "https://app.dev.mgpt.mn",
+        VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
+        VITE_MONGOLGPT_SERVER_URL: "https://runtime.dev.mgpt.mn/",
+      }),
+    ).toEqual({
       mode: "hosted",
       serverUrl: "https://runtime.dev.mgpt.mn",
     })
@@ -45,5 +52,109 @@ describe("resolveRuntimeMetadata", () => {
       mode: "local-bridge",
       serverUrl: "http://127.0.0.1:5096",
     })
+  })
+
+  test("keeps the desktop local bridge even when a desktop channel is set", () => {
+    expect(resolveRuntimeMetadata({ MONGOLGPT_CHANNEL: "prod" })).toEqual({
+      mode: "local-bridge",
+      serverUrl: "http://localhost:4096",
+    })
+  })
+
+  test("fails a hosted Web build without a runtime URL", () => {
+    expect(() =>
+      resolveRuntimeMetadata({
+        MONGOLGPT_CHANNEL: "dev",
+        VITE_MONGOLGPT_APP_URL: "https://app.dev.mgpt.mn",
+        VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
+      }),
+    ).toThrow("requires a non-local HTTPS runtime URL")
+  })
+
+  test("fails a hosted Web build pointed at loopback", () => {
+    expect(() =>
+      resolveRuntimeMetadata({
+        MONGOLGPT_CHANNEL: "beta",
+        VITE_MONGOLGPT_APP_URL: "https://app.beta.mgpt.mn",
+        VITE_MONGOLGPT_PUBLIC_URL: "https://beta.mgpt.mn",
+        VITE_MONGOLGPT_SERVER_URL: "http://[::1]:4096",
+      }),
+    ).toThrow("requires a non-local HTTPS runtime URL")
+  })
+
+  test("fails a hosted Web build pointed at an alternate loopback address", () => {
+    expect(() =>
+      resolveRuntimeMetadata({
+        MONGOLGPT_CHANNEL: "dev",
+        VITE_MONGOLGPT_APP_URL: "https://app.dev.mgpt.mn",
+        VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
+        VITE_MONGOLGPT_SERVER_URL: "https://127.12.34.56:4096",
+      }),
+    ).toThrow("requires a non-local HTTPS runtime URL")
+  })
+
+  test("fails a hosted Web build pointed at a non-TLS remote runtime", () => {
+    expect(() =>
+      resolveRuntimeMetadata({
+        MONGOLGPT_CHANNEL: "dev",
+        VITE_MONGOLGPT_APP_URL: "https://app.dev.mgpt.mn",
+        VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
+        VITE_MONGOLGPT_SERVER_URL: "http://runtime.dev.mgpt.mn",
+      }),
+    ).toThrow("requires a non-local HTTPS runtime URL")
+  })
+
+  test("fails a hosted Web build pointed at its static app origin", () => {
+    expect(() =>
+      resolveRuntimeMetadata({
+        MONGOLGPT_CHANNEL: "prod",
+        VITE_MONGOLGPT_APP_URL: "https://app.mgpt.mn",
+        VITE_MONGOLGPT_PUBLIC_URL: "https://mgpt.mn",
+        VITE_MONGOLGPT_SERVER_URL: "https://app.mgpt.mn/",
+      }),
+    ).toThrow("requires a non-local HTTPS runtime URL")
+  })
+
+  test("fails a hosted Web build pointed at a path on its static app origin", () => {
+    expect(() =>
+      resolveRuntimeMetadata({
+        MONGOLGPT_CHANNEL: "dev",
+        VITE_MONGOLGPT_APP_URL: "https://app.dev.mgpt.mn",
+        VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
+        VITE_MONGOLGPT_SERVER_URL: "https://app.dev.mgpt.mn/api",
+      }),
+    ).toThrow("requires a non-local HTTPS runtime URL")
+  })
+
+  test("fails a hosted Web build with a local app URL", () => {
+    expect(() =>
+      resolveRuntimeMetadata({
+        MONGOLGPT_CHANNEL: "dev",
+        VITE_MONGOLGPT_APP_URL: "http://localhost:4444",
+        VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
+        VITE_MONGOLGPT_SERVER_URL: "https://runtime.dev.mgpt.mn",
+      }),
+    ).toThrow("requires a non-local HTTPS app URL")
+  })
+
+  test("fails a legacy hosted Web build without an explicit app URL", () => {
+    expect(() =>
+      resolveRuntimeMetadata({
+        MONGOLGPT_CHANNEL: "dev",
+        VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
+        VITE_MONGOLGPT_SERVER_URL: "https://runtime.dev.mgpt.mn",
+      }),
+    ).toThrow("requires a non-local HTTPS app URL")
+  })
+
+  test("fails a hosted Web build without a secure public account URL", () => {
+    expect(() =>
+      resolveRuntimeMetadata({
+        MONGOLGPT_CHANNEL: "dev",
+        VITE_MONGOLGPT_APP_URL: "https://app.dev.mgpt.mn",
+        VITE_MONGOLGPT_PUBLIC_URL: "http://dev.mgpt.mn",
+        VITE_MONGOLGPT_SERVER_URL: "https://runtime.dev.mgpt.mn",
+      }),
+    ).toThrow("requires a non-local HTTPS public URL")
   })
 })

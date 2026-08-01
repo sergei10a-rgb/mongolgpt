@@ -20,6 +20,7 @@
     "@mongolgpt/console-core": "workspace:*",
     "@mongolgpt/console-mail": "workspace:*",
     "@mongolgpt/console-resource": "workspace:*",
+    "@mongolgpt/runtime-auth": "workspace:*",
     "@mongolgpt/ui": "workspace:*",
     "@smithy/eventstream-codec": "4.2.7",
     "@smithy/util-utf8": "4.2.0",

@@ -28,6 +28,30 @@ describe("resolveWebRuntime", () => {
     })
   })
 
+  test("recognizes IPv6 and alternate IPv4 loopback bridges", () => {
+    expect(
+      resolveWebRuntime({
+        dev: false,
+        origin: "https://app.dev.mgpt.mn",
+        serverUrl: "http://[::1]:4096",
+      }),
+    ).toEqual({
+      mode: "local-bridge",
+      serverUrl: "http://[::1]:4096",
+    })
+
+    expect(
+      resolveWebRuntime({
+        dev: false,
+        origin: "https://app.dev.mgpt.mn",
+        serverUrl: "http://127.12.34.56:4096",
+      }),
+    ).toEqual({
+      mode: "local-bridge",
+      serverUrl: "http://127.12.34.56:4096",
+    })
+  })
+
   test("uses an explicit hosted runtime URL", () => {
     expect(
       resolveWebRuntime({
@@ -79,6 +103,22 @@ describe("resolveDefaultServerUrl", () => {
           serverUrl: "https://runtime.dev.mgpt.mn",
         },
         storedUrl: "https://app.dev.mgpt.mn/",
+        appOrigin: "https://app.dev.mgpt.mn",
+      }),
+    ).toEqual({
+      url: "https://runtime.dev.mgpt.mn",
+      clearStored: true,
+    })
+  })
+
+  test("drops a legacy API path on the static app origin", () => {
+    expect(
+      resolveDefaultServerUrl({
+        runtime: {
+          mode: "hosted",
+          serverUrl: "https://runtime.dev.mgpt.mn",
+        },
+        storedUrl: "https://app.dev.mgpt.mn/api",
         appOrigin: "https://app.dev.mgpt.mn",
       }),
     ).toEqual({

@@ -46,6 +46,8 @@ const planLimits = {
 const hosted = {
   ...byok,
   MONGOLGPT_RUNTIME_SECRET: "test-runtime-secret-with-at-least-32-characters",
+  MONGOLGPT_RUNTIME_AUTH_SECRET: "test-runtime-auth-secret-with-at-least-32-characters",
+  SST_SECRET_MongolGPTRuntimeAuthSecret: "test-runtime-auth-secret-with-at-least-32-characters",
   SST_SECRET_D1BackupApiToken: "test-d1-backup-token",
   SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: "github-client-id",
   SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "github-client-secret",
@@ -116,6 +118,13 @@ describe("Cloudflare deployment preflight", () => {
       docs: "https://docs.dev.mgpt.mn/docs",
       app: "https://app.dev.mgpt.mn",
     })
+  })
+
+  test("does not publish a local-bridge build as the public SaaS app", () => {
+    expectIssues(
+      () => preflightDeployment({ stage: "dev", env: cloudflare, requireHostedServices: true }),
+      ["MONGOLGPT_ENABLE_HOSTED_SERVICES=true", "local-bridge build-ийг SaaS app гэж нийтлэхгүй"],
+    )
   })
 
   test("rejects placeholders, DuckDNS, and missing Cloudflare credentials", () => {
@@ -292,6 +301,23 @@ describe("Cloudflare deployment preflight", () => {
           },
         }),
       ["MONGOLGPT_RUNTIME_SECRET", "32"],
+    )
+  })
+
+  test("requires one matching capability secret for the console issuer and runtime verifier", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_MongolGPTRuntimeAuthSecret: "different-runtime-auth-secret-with-at-least-32-characters",
+          },
+        }),
+      ["MONGOLGPT_RUNTIME_AUTH_SECRET", "SST_SECRET_MongolGPTRuntimeAuthSecret", "ижил утгатай"],
     )
   })
 
