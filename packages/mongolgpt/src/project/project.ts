@@ -306,7 +306,10 @@ export const layer = Layer.effect(
       if (projectID !== ProjectV2.ID.global && data.vcs?.type === "git") {
         yield* projectV2.commit({ store: data.vcs.store, id: data.id })
       }
-      return { project: result, sandbox: FSUtil.resolve(directory) }
+      // Git projects keep the repository root as the sandbox so session paths
+      // remain relative to the project. Non-Git projects stay scoped to the
+      // directory the user opened.
+      return { project: result, sandbox: data.vcs ? data.directory : FSUtil.resolve(directory) }
     })
 
     const discover = Effect.fn("Project.discover")(function* (input: Info) {
