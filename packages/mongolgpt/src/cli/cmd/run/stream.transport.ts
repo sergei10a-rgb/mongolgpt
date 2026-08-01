@@ -550,7 +550,7 @@ function createLayer(input: StreamInput) {
             return next
           }
 
-          return yield* Effect.fail(new Error("no primary agent available for shell mode"))
+          return yield* Effect.fail(new Error("Shell горимд үндсэн агент боломжгүй байна."))
         })
 
         const recoverQuestion = Effect.fn("RunStreamTransport.recoverQuestion")(function* (partID: string) {
@@ -1137,7 +1137,7 @@ function createLayer(input: StreamInput) {
                 }
 
                 if (isMatchingDisposeEvent(item, input.directory)) {
-                  yield* fail(new Error("instance disposed"))
+                  yield* fail(new Error("Ажиллах орчин хаагдсан байна."))
                   yield* closeScope()
                   return
                 }
@@ -1173,7 +1173,7 @@ function createLayer(input: StreamInput) {
             Effect.ensuring(
               Effect.gen(function* () {
                 if (!abort.signal.aborted && !state.fault) {
-                  yield* fail(new Error("global event stream closed"))
+                  yield* fail(new Error("Ерөнхий үйл явдлын урсгал хаагдсан байна."))
                 }
                 closeStream()
               }),
@@ -1195,7 +1195,7 @@ function createLayer(input: StreamInput) {
           }
 
           if (state.wait) {
-            yield* Effect.fail(new Error("prompt already running"))
+            yield* Effect.fail(new Error("Энэ хүсэлт аль хэдийн ажиллаж байна."))
             return
           }
 

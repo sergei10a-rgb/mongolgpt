@@ -464,12 +464,12 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     const next = (async () => {
       await ensureSession()
       if (footer.isClosed) {
-        throw new Error("runtime closed")
+        throw new Error("Ажиллах орчин хаагдсан байна.")
       }
 
       const mod = await streamTask
       if (footer.isClosed) {
-        throw new Error("runtime closed")
+        throw new Error("Ажиллах орчин хаагдсан байна.")
       }
 
       const handle = await mod.createSessionTransport({
@@ -486,7 +486,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       })
       if (footer.isClosed) {
         await handle.close()
-        throw new Error("runtime closed")
+        throw new Error("Ажиллах орчин хаагдсан байна.")
       }
 
       state.selectSubagent = (sessionID) => handle.selectSubagent(sessionID)

@@ -2310,7 +2310,7 @@ describe("run stream transport", () => {
           files: [],
           includeFiles: false,
         }),
-      ).rejects.toThrow("instance disposed")
+      ).rejects.toThrow("Ажиллах орчин хаагдсан байна.")
     } finally {
       await transport.close()
     }
@@ -2351,7 +2351,7 @@ describe("run stream transport", () => {
           files: [],
           includeFiles: false,
         }),
-      ).rejects.toThrow("prompt already running")
+      ).rejects.toThrow("Энэ хүсэлт аль хэдийн ажиллаж байна.")
 
       ctrl.abort()
       await task

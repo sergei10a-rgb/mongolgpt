@@ -372,12 +372,12 @@ export async function createRuntimeLifecycle(input: LifecycleInput): Promise<Lif
       },
       async resetForReplay(next) {
         if (closed || renderer.isDestroyed || footer.isClosed) {
-          throw new Error("runtime closed")
+          throw new Error("Ажиллах орчин хаагдсан байна.")
         }
 
         await footer.idle()
         if (closed || renderer.isDestroyed || footer.isClosed) {
-          throw new Error("runtime closed")
+          throw new Error("Ажиллах орчин хаагдсан байна.")
         }
 
         footer.resetForReplay(true)

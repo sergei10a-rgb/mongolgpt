@@ -16,9 +16,9 @@ describe("built-in command template localization", () => {
   test("review template is Mongolian and preserves tool and argument names", () => {
     expect(REVIEW).toContain("Эцсийн хариуг монгол хэлээр")
     expect(REVIEW).toContain("$ARGUMENTS")
-    expect(REVIEW).toContain("Explore agent")
+    expect(REVIEW).toContain("Судлах агент")
     expect(REVIEW).toContain("Exa Code Context")
-    expect(REVIEW).toContain("Web Search")
+    expect(REVIEW).toContain("Вэб хайлт")
     expect(REVIEW).not.toContain("You are a code reviewer")
     expect(REVIEW).not.toContain("Based on the input provided")
   })

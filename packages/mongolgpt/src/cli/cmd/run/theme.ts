@@ -296,12 +296,12 @@ export function resolveTheme(theme: ThemeJson, pick: "dark" | "light"): TuiTheme
     }
 
     if (chain.includes(value)) {
-      throw new Error(`Circular color reference: ${[...chain, value].join(" -> ")}`)
+      throw new Error(`Өнгөний лавлагаа мөчлөг үүсгэсэн: ${[...chain, value].join(" -> ")}`)
     }
 
     const next = defs[value] ?? theme.theme[value as ThemeColor]
     if (next === undefined) {
-      throw new Error(`Color reference "${value}" not found in defs or theme`)
+      throw new Error(`Өнгөний лавлагаа "${value}" defs эсвэл theme дотор олдсонгүй.`)
     }
 
     return resolveColor(next, [...chain, value])
