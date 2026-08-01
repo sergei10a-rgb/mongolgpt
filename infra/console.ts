@@ -8,7 +8,13 @@ import {
   publicOrigin,
   shareOrigin,
 } from "./stage"
-import { businessIntegrationSecretNames, quotaServiceMigrations } from "./console-policy"
+import {
+  businessIntegrationSecretNames,
+  D1_BACKUP_MULTIPART_ABORT_SECONDS,
+  D1_BACKUP_RETENTION_SECONDS,
+  D1_BACKUP_SCHEDULE,
+  quotaServiceMigrations,
+} from "./console-policy"
 import { SECRET } from "./secret"
 
 ////////////////
@@ -23,6 +29,52 @@ new sst.x.DevCommand("Studio", {
     command: "bun run db-studio",
     directory: "packages/console/core",
     autostart: true,
+  },
+})
+
+export const d1Backups = new sst.cloudflare.Bucket("D1Backups")
+
+new cloudflare.R2BucketLifecycle(
+  "D1BackupRetention",
+  {
+    accountId: sst.cloudflare.DEFAULT_ACCOUNT_ID,
+    bucketName: d1Backups.name,
+    rules: [
+      {
+        id: "expire-d1-backups-after-90-days",
+        conditions: { prefix: "d1/" },
+        enabled: true,
+        deleteObjectsTransition: {
+          condition: { maxAge: D1_BACKUP_RETENTION_SECONDS, type: "Age" },
+        },
+        abortMultipartUploadsTransition: {
+          condition: { maxAge: D1_BACKUP_MULTIPART_ABORT_SECONDS, type: "Age" },
+        },
+      },
+    ],
+  },
+  { dependsOn: [d1Backups.nodes.bucket] },
+)
+
+export const d1BackupWorkflow = new sst.cloudflare.Workflow("D1BackupWorkflow", {
+  handler: "packages/console/function/src/d1-backup-workflow.ts",
+  className: "D1BackupWorkflow",
+  link: [d1Backups, SECRET.D1BackupApiToken],
+  environment: {
+    CLOUDFLARE_ACCOUNT_ID: sst.cloudflare.DEFAULT_ACCOUNT_ID,
+    D1_DATABASE_ID: database.databaseId,
+    MONGOLGPT_STAGE: $app.stage,
+  },
+})
+
+export const d1BackupSchedule = new sst.cloudflare.Cron("D1BackupSchedule", {
+  schedules: [D1_BACKUP_SCHEDULE],
+  worker: {
+    handler: "packages/console/function/src/d1-backup-schedule.ts",
+    link: [d1BackupWorkflow],
+    compatibility: {
+      date: "2026-07-15",
+    },
   },
 })
 

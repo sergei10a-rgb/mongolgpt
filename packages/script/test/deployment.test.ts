@@ -46,6 +46,7 @@ const planLimits = {
 const hosted = {
   ...byok,
   MONGOLGPT_RUNTIME_SECRET: "test-runtime-secret-with-at-least-32-characters",
+  SST_SECRET_D1BackupApiToken: "test-d1-backup-token",
   SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: "github-client-id",
   SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "github-client-secret",
   SST_SECRET_GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
@@ -291,6 +292,23 @@ describe("Cloudflare deployment preflight", () => {
           },
         }),
       ["MONGOLGPT_RUNTIME_SECRET", "32"],
+    )
+  })
+
+  test("requires a dedicated D1 export token for hosted backups", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_D1BackupApiToken: "",
+          },
+        }),
+      ["D1_BACKUP_API_TOKEN"],
     )
   })
 

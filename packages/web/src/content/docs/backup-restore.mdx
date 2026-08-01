@@ -1,0 +1,76 @@
+---
+title: Нөөцлөлт ба сэргээх
+description: MongolGPT-ийн D1 өгөгдлийг private R2-д нөөцлөх, шалгах, аюулгүй сэргээх ажиллагааны гарын авлага.
+---
+
+MongolGPT-ийн account, workspace, subscription, payment, usage болон audit өгөгдөл D1-д хадгалагдана. Нөөцлөлт нь хоёр давхар хамгаалалттай:
+
+1. Cloudflare D1 Time Travel нь төлөвлөгөөнөөс хамаарч сүүлийн 7 эсвэл 30 хоногийн цэг рүү буцаана.
+2. Cloudflare Workflow нь өдөр бүр `00:20 UTC` буюу Улаанбаатарын цагаар `08:20`-д D1 SQL export үүсгэж, нийтэд нээлтгүй `D1Backups` R2 bucket-д хадгална.
+
+R2 lifecycle нь `d1/` prefix-тэй object-ийг 90 хоногийн дараа устгаж, 24 цагаас удаан дуусаагүй multipart upload-ийг цэвэрлэнэ. Bucket-д public domain болон anonymous access бүү холбо.
+
+:::caution[Production сэргээх эрх]
+Restore нь одоогийн D1 өгөгдлийг өөрчилдөг буцаахад хүндрэлтэй ажиллагаа. Maintenance mode, одоогийн bookmark/backup, яг тохирох баталгаажуулалт, хариуцсан хүний зөвшөөрөлгүй production restore бүү эхлүүл.
+:::
+
+## Backup token
+
+Cloudflare **My Profile → API Tokens → Create Custom Token** хэсэгт тусдаа token үүсгэнэ.
+
+| Хамрах хүрээ | Үйлчилгээ                                    | Эрх  |
+| ------------ | -------------------------------------------- | ---- |
+| Account      | D1                                           | Edit |
+| Resources    | Include → MongolGPT байрлаж буй ганц account |      |
+
+Zone, DNS, Worker, R2, Access болон account-wide нэмэлт эрх өгөхгүй. Token-ийг GitHub-ийн `dev` болон `production` Environment бүрд `D1_BACKUP_API_TOKEN` secret нэрээр хадгална. Код, log, screenshot, issue эсвэл shell history-д утгыг нь бүү оруул.
+
+## Өдөр тутмын шалгалт
+
+Deploy хийсний дараа дараахыг шалгана.
+
+1. Cloudflare Workflows дотор `D1BackupWorkflow` instance амжилттай дууссан байна.
+2. Private R2 bucket-д `d1/<stage>/YYYY/MM/DD/<timestamp>-<filename>.sql` object үүссэн байна.
+3. Object-ийн хэмжээ 0-ээс их, metadata дахь `source` нь `cloudflare-d1-export`, `stage` нь зөв байна.
+4. Lifecycle rule 90 хоног, multipart cleanup 24 цаг гэж харагдана.
+5. Workflow log-д token, signed URL эсвэл SQL агуулга гараагүй байна.
+
+D1 export ажиллах богино хугацаанд database query саатаж болдог тул нөөцлөлтийг ачаалал багатай цагт ажиллуулна. Workflow export-ийг дуусах хүртэл bounded retry ашиглан poll хийнэ; амжилтгүй instance-ийг алгасалгүй шалгана.
+
+## Сүүлийн 7/30 хоногоос сэргээх
+
+Cloudflare D1 Time Travel ашиглахдаа:
+
+1. Incident ticket нээж, шалтгаан, stage, зорьж буй timestamp/bookmark-ийг тэмдэглэнэ.
+2. Бичих урсгалыг maintenance mode-д оруулж, payment webhook болон background queue-г түр зогсооно.
+3. Одоогийн bookmark-ийг авч, шинэ on-demand export-ийг private R2-д бүрэн хадгалсныг батална.
+4. Сэргээх цэгийн өмнөх/дараах migration version, account, payment, audit хүснэгтийн хүлээгдэж буй төлвийг шалгана.
+5. Баталгаажуулалтыг `RESTORE D1 <stage> <timestamp-or-bookmark>` хэлбэрээр яг бичүүлж, хариуцсан хүний зөвшөөрөл авна.
+6. Cloudflare-ийн Time Travel restore-г ажиллуулна. Буцаалтын bookmark-ийг тусад нь хадгална.
+7. Migration status, account login, subscription, payment ledger, usage/quota, admin audit болон health smoke-г шалгасны дараа queue ба write traffic-ийг нээнэ.
+
+Restore буруу бол Cloudflare-ийн буцаалтын bookmark ашиглан өмнөх төлөв рүү дахин сэргээж болно. Баталгаажуулалтгүй автомат production restore pipeline бүү үүсгэ.
+
+## 90 хоногийн R2 export-оос сэргээх
+
+Урт хугацааны SQL backup-ийг шууд production D1 рүү import хийхгүй.
+
+1. R2 object-ийн key, хэмжээ, ETag, огноо болон stage-ийг incident ticket-д тэмдэглэнэ.
+2. SQL export-ийг access-controlled түр хавтас руу татаж, disposable SQLite database-д уншуулна.
+
+```bash
+sqlite3 restore-check.db < backup.sql
+sqlite3 restore-check.db "PRAGMA integrity_check;"
+```
+
+3. `integrity_check` нь `ok`, migration хүснэгт болон зайлшгүй schema/row count зөв эсэхийг шалгана.
+4. Нууц болон хэрэглэгчийн өгөгдөл агуулсан түр файлд encryption, access control хэрэглэж, шалгалтын дараа retention бодлогын дагуу устгана.
+5. Одоогийн production bookmark болон on-demand export-ийг эхэлж авна.
+6. Maintenance mode, queue pause, `RESTORE D1 production <backup-key>` гэсэн яг баталгаажуулалт, эзэмшигчийн эцсийн зөвшөөрөл авна.
+7. Cloudflare D1 import хийж, migration болон бүх smoke/E2E шалгалтыг давуулсны дараа traffic-ийг нээнэ.
+
+## Restore drill
+
+Улирал тутам production бус тусдаа database дээр restore drill хийнэ. Сүүлчийн backup-ийг сэргээж integrity, migration, login, subscription/payment ledger, quota, admin audit шалгалтыг ажиллуулаад сэргээх хугацаа болон алдааг тэмдэглэнэ. Production backup-ийг developer laptop дээр удаан хадгалахгүй.
+
+Account deletion хийгдсэн хэрэглэгчийн өгөгдөл идэвхтэй D1-ээс бодлогын дагуу устах буюу санхүүгийн баримтад pseudonymize хийгдэнэ. Backup дахь хуучин хуулбар 90 хоногийн lifecycle дуусахад автоматаар устаж, сэргээсний дараа deletion tombstone/retention job дахин хэрэгжинэ.

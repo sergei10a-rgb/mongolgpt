@@ -27,6 +27,7 @@ export const paymentSstSecretNames = [
 ] as const
 export const hostedSstSecretNames = [
   "ByokCredentialsKeyV1",
+  "D1BackupApiToken",
   "GITHUB_CLIENT_ID_CONSOLE",
   "GITHUB_CLIENT_SECRET_CONSOLE",
   "GOOGLE_CLIENT_ID",
@@ -125,6 +126,7 @@ export function preflightDeployment(input: {
   }
   if (hostedServices && requireDeploymentSecrets) {
     validateSecretKey("MONGOLGPT_RUNTIME_SECRET", env.MONGOLGPT_RUNTIME_SECRET, issues)
+    requireValue("D1_BACKUP_API_TOKEN", deploymentSecret(env, "D1BackupApiToken"), issues)
     requireValue("GITHUB_CLIENT_ID_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"), issues)
     requireValue("GITHUB_CLIENT_SECRET_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"), issues)
     requireValue("GOOGLE_CLIENT_ID", deploymentSecret(env, "GOOGLE_CLIENT_ID"), issues)

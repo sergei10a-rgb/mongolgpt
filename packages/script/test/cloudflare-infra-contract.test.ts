@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test"
-import { businessIntegrationSecretNames, quotaServiceMigrations } from "../../../infra/console-policy"
+import {
+  businessIntegrationSecretNames,
+  D1_BACKUP_MULTIPART_ABORT_SECONDS,
+  D1_BACKUP_RETENTION_DAYS,
+  D1_BACKUP_RETENTION_SECONDS,
+  D1_BACKUP_SCHEDULE,
+  quotaServiceMigrations,
+} from "../../../infra/console-policy"
 import { hostedSstSecretNames } from "../src/deployment"
 
 type WorkflowStep = {
@@ -161,6 +168,39 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain('schedules: ["*/15 * * * *"]')
     expect(source).toContain('handler: "packages/console/function/src/account-deletion.ts"')
     expect(source).toContain("link: [database]")
+  })
+
+  test("backs up D1 daily to a private, expiring R2 bucket", async () => {
+    const [consoleSource, secretSource, workflowSource, scheduleSource] = await Promise.all(
+      [
+        "../../../infra/console.ts",
+        "../../../infra/secret.ts",
+        "../../console/function/src/d1-backup-workflow.ts",
+        "../../console/function/src/d1-backup-schedule.ts",
+      ].map((path) => Bun.file(new URL(path, import.meta.url)).text()),
+    )
+
+    expect(D1_BACKUP_SCHEDULE).toBe("20 0 * * *")
+    expect(D1_BACKUP_RETENTION_DAYS).toBe(90)
+    expect(D1_BACKUP_RETENTION_SECONDS).toBe(7_776_000)
+    expect(D1_BACKUP_MULTIPART_ABORT_SECONDS).toBe(86_400)
+    expect(consoleSource).toContain('new sst.cloudflare.Bucket("D1Backups")')
+    expect(consoleSource).toContain("new cloudflare.R2BucketLifecycle(")
+    expect(consoleSource).toContain('conditions: { prefix: "d1/" }')
+    expect(consoleSource).toContain("maxAge: D1_BACKUP_RETENTION_SECONDS")
+    expect(consoleSource).toContain("maxAge: D1_BACKUP_MULTIPART_ABORT_SECONDS")
+    expect(consoleSource).toContain('new sst.cloudflare.Workflow("D1BackupWorkflow"')
+    expect(consoleSource).toContain('className: "D1BackupWorkflow"')
+    expect(consoleSource).toContain("link: [d1Backups, SECRET.D1BackupApiToken]")
+    expect(consoleSource).toContain('new sst.cloudflare.Cron("D1BackupSchedule"')
+    expect(consoleSource).toContain("schedules: [D1_BACKUP_SCHEDULE]")
+    expect(consoleSource).not.toContain("public: true")
+    expect(secretSource).toContain('D1BackupApiToken: new sst.Secret("D1BackupApiToken")')
+    expect(hostedSstSecretNames).toContain("D1BackupApiToken")
+    expect(workflowSource).toContain("startD1Export")
+    expect(workflowSource).toContain("storeCompletedD1Export")
+    expect(scheduleSource).toContain('successRetention: "30 days"')
+    expect(scheduleSource).toContain('errorRetention: "30 days"')
   })
 
   test("creates a fail-closed Cloudflare Access admin application through IaC", async () => {

@@ -103,6 +103,7 @@ export default defineConfig({
         "providers",
         "network",
         "deployment",
+        "backup-restore",
         "enterprise",
         "troubleshooting",
         { label: "Windows ба WSL", link: "windows-wsl" },

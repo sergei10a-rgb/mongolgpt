@@ -40,6 +40,7 @@ Production domain-ийг `mgpt.mn` гэж үзвэл:
 | QPay + Bonum gateway         | Worker + Queue + D1              |
 | Админ хамгаалалт             | Cloudflare Access + MFA          |
 | Үндсэн өгөгдөл               | D1                               |
+| Өдөр тутмын нөөц             | D1 export Workflow + private R2  |
 | Token quota, атомик тоолуур  | SQLite-backed Durable Objects    |
 | Өндөр ачааллын usage бичилт  | Queues + dead-letter Queue + D1  |
 | Бодит цагийн статистик       | Cloudflare D1 + `stats.<domain>` |
@@ -96,6 +97,7 @@ Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог х
 | Variable | `MONGOLGPT_PAYMENT_PLAN_CATALOG` | Basic/Pro/Max багцын MNT үнэ, Монгол нэр бүхий JSON                  |
 | Secret   | `GITHUB_CLIENT_SECRET_CONSOLE`   | GitHub OAuth App client secret                                       |
 | Secret   | `BYOK_CREDENTIALS_KEY_V1`        | 32+ тэмдэгт тогтвортой CSPRNG key; rotation хийх хүртэл солихгүй     |
+| Secret   | `D1_BACKUP_API_TOKEN`            | Зөвхөн тухайн account-ийн D1 Edit эрхтэй backup/export token         |
 | Secret   | `MONGOLGPT_RUNTIME_SECRET`       | 32+ тэмдэгт Cloudflare Sandbox account-isolation secret              |
 | Secret   | `MONGOLGPT_PLAN_LIMITS`          | Free/Basic/Pro/Max plan, token, cost болон rate-limit JSON           |
 | Secret   | `ZEN_SESSION_SECRET`             | 32+ тэмдэгт тусдаа CSPRNG session secret                             |
@@ -159,6 +161,8 @@ Cloudflare Zero Trust-ийг тухайн account дээр нэг удаа эх�
 Workflow нь secret-гүй verify job-ийг эхэлж ажиллуулаад, зөвхөн `main` revision болон сонгосон GitHub Environment-д deploy job нээнэ. Access token нь зөвхөн admin асаалттай deploy-д, merchant credential нь зөвхөн төлбөр асаалттай deploy-ийн SST secret sync-д ашиглагдана. Deploy step эдгээр утгыг command argument-д гаргалгүй stdin-аар тухайн SST stage-ийн encrypted secret store-д шинэчилсний дараа deploy хийнэ. GitHub Environment-ийн deployment branch дүрмийг `main`-ээр хязгаарлана. Иймээс нууц утгыг repository файл, command history эсвэл SST placeholder-д бичихгүй. `deploy:preflight` нь OAuth, session, plan/quota, Free Auto JSON, QPay/Bonum catalog ба credential, Access-ийн organization/login method/application жагсаалтыг Cloudflare resource үүсгэхээс өмнө шалгана. Энэ нь side effect-гүй Read шалгалт тул token-ийн Edit эрхийг ялгаж нотлохгүй; organization MFA PUT болон Access application create нь deploy дотор Edit эрхийг fail-closed байдлаар бодитоор батална.
 
 NVIDIA API Catalog-ийн trial endpoint нь зөвхөн туршилт, үнэлгээнд зориулагдсан. Production `ZEN_MODELS` тохиргоонд `integrate.api.nvidia.com` ашиглах бол тусдаа production subscription/license-аа баталгаажуулсны дараа тухайн provider дээр `productionUseApproved: true` гэж санаатай тэмдэглэнэ. Энэ баталгаа байхгүй production deploy-ийг preflight зогсооно.
+
+`D1_BACKUP_API_TOKEN`-ийг ерөнхий deploy token-оос тусад нь үүсгэнэ: **Account → D1 → Edit**, Resources дээр зөвхөн MongolGPT байрлаж буй ганц account-ийг сонгоно. Zone, DNS, Worker, R2 болон Access эрх нэмэхгүй. Token-ийг GitHub Environment secret-д хадгална. Нөөцлөлт, хадгалалтын хугацаа, сэргээх ажиллагааг [Нөөцлөлт ба сэргээх](./backup-restore) гарын авлагаас харна уу.
 
 Quota service-ийн дотоод token-ийг SST deploy үеэр автоматаар үүсгэнэ. Upstash болон PlanetScale secret шаардлагагүй.
 
