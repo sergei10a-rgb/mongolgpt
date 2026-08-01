@@ -1962,9 +1962,7 @@ unixNoLLMServer(
       Effect.gen(function* () {
         const { prompt, chat } = yield* boot()
 
-        const a = yield* prompt
-          .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
-          .pipe(Effect.forkChild)
+        const a = yield* prompt.shell({ sessionID: chat.id, agent: "build", command: "sleep 2" }).pipe(Effect.forkChild)
         yield* waitForBusy(chat.id)
 
         const exit = yield* prompt.shell({ sessionID: chat.id, agent: "build", command: "echo hi" }).pipe(Effect.exit)
