@@ -140,7 +140,7 @@ export const layer = Layer.effect(
         const agents: Record<string, Info> = {
           build: {
             name: "build",
-            description: "The default agent. Executes tools based on configured permissions.",
+            description: "Үндсэн агент. Тохируулсан зөвшөөрлийн дагуу хэрэгслүүдийг ажиллуулна.",
             options: {},
             permission: Permission.merge(
               defaults,
@@ -155,7 +155,7 @@ export const layer = Layer.effect(
           },
           plan: {
             name: "plan",
-            description: "Plan mode. Disallows all edit tools.",
+            description: "Төлөвлөх горим. Код өөрчлөх бүх хэрэгслийг хориглоно.",
             options: {},
             permission: Permission.merge(
               defaults,
@@ -182,7 +182,7 @@ export const layer = Layer.effect(
           },
           general: {
             name: "general",
-            description: `General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.`,
+            description: `Төвөгтэй асуултыг судалж, олон алхамт ажил гүйцэтгэх ерөнхий зориулалтын туслах агент. Хэд хэдэн бие даасан ажлыг зэрэг гүйцэтгэхэд ашиглана.`,
             permission: Permission.merge(
               defaults,
               Permission.fromConfig({
@@ -211,7 +211,7 @@ export const layer = Layer.effect(
               }),
               user,
             ),
-            description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
+            description: `Кодын санг хурдан судлах туслах агент. Файлыг загвараар (жишээ нь "src/components/**/*.tsx") олох, кодоос түлхүүр үг хайх (жишээ нь "API endpoints"), эсвэл кодын сангийн талаарх асуултад хариулахад ашиглана. Дуудахдаа судалгааны түвшнийг заана: энгийн хайлтад "quick", дунд түвшний судалгаанд "medium", олон байршил болон нэршлийн хувилбарыг хамарсан дэлгэрэнгүй судалгаанд "very thorough".`,
             prompt: PROMPT_EXPLORE,
             options: {},
             mode: "subagent",
@@ -330,13 +330,13 @@ export const layer = Layer.effect(
           const c = yield* config.get()
           if (c.default_agent) {
             const agent = agents[c.default_agent]
-            if (!agent) throw new Error(`default agent "${c.default_agent}" not found`)
-            if (agent.mode === "subagent") throw new Error(`default agent "${c.default_agent}" is a subagent`)
-            if (agent.hidden === true) throw new Error(`default agent "${c.default_agent}" is hidden`)
+            if (!agent) throw new Error(`Үндсэн агент "${c.default_agent}" олдсонгүй`)
+            if (agent.mode === "subagent") throw new Error(`Үндсэн агент "${c.default_agent}" нь туслах агент байна`)
+            if (agent.hidden === true) throw new Error(`Үндсэн агент "${c.default_agent}" нь далд байна`)
             return agent
           }
           const visible = Object.values(agents).find((a) => a.mode !== "subagent" && a.hidden !== true)
-          if (!visible) throw new Error("no primary visible agent found")
+          if (!visible) throw new Error("Харагдах үндсэн агент олдсонгүй")
           return visible
         })
 
@@ -406,7 +406,7 @@ export const layer = Layer.effect(
                 )),
             {
               role: "user",
-              content: `Create an agent configuration based on this request: "${input.description}".\n\nIMPORTANT: The following identifiers already exist and must NOT be used: ${existing.map((i) => i.name).join(", ")}\n  Return ONLY the JSON object, no other text, do not wrap in backticks`,
+              content: `Энэ хүсэлтэд үндэслэн agent config үүсгэ: "${input.description}".\n\nЧУХАЛ: Дараах identifier-ууд аль хэдийн байгаа тул ашиглаж БОЛОХГҮЙ: ${existing.map((i) => i.name).join(", ")}\nЗӨВХӨН JSON object буцаа. Өөр бичвэр бүү нэм, backtick-д бүү ороо.`,
             },
           ],
           model: language,

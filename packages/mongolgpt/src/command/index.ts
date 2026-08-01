@@ -69,7 +69,7 @@ export const layer = Layer.effect(
 
       commands[Default.INIT] = {
         name: Default.INIT,
-        description: "guided AGENTS.md setup",
+        description: "AGENTS.md тохиргоог алхамчилж үүсгэх",
         source: "command",
         get template() {
           return PROMPT_INITIALIZE.replace("${path}", ctx.worktree)
@@ -78,7 +78,7 @@ export const layer = Layer.effect(
       }
       commands[Default.REVIEW] = {
         name: Default.REVIEW,
-        description: "review changes [commit|branch|pr], defaults to uncommitted",
+        description: "өөрчлөлтийг хянах [commit|branch|pr], үндсэндээ commit хийгдээгүй өөрчлөлтийг хянана",
         source: "command",
         get template() {
           return PROMPT_REVIEW.replace("${path}", ctx.worktree)
@@ -143,8 +143,8 @@ export const layer = Layer.effect(
             return [
               item.content,
               "",
-              `Base directory for this skill: ${dir}`,
-              "Relative paths in this skill (e.g., scripts/, references/) are relative to this base directory.",
+              `Энэ ур чадварын үндсэн хавтас: ${dir}`,
+              "Энэ ур чадвар дахь харьцангуй замууд (жишээ нь scripts/, references/) уг үндсэн хавтаст харьяалагдана.",
             ].join("\n")
           },
           hints: [],

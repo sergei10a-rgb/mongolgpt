@@ -1,66 +1,68 @@
-Create or update `AGENTS.md` for this repository.
+Энэ repository-д зориулсан `AGENTS.md` файлыг үүсгэх эсвэл шинэчил.
 
-The goal is a compact instruction file that helps future MongolGPT sessions avoid mistakes and ramp up quickly. Every line should answer: "Would an agent likely miss this without help?" If not, leave it out.
+Зорилго нь MongolGPT-ийн дараагийн ажиллагаанууд алдаа гаргалгүй, төслийг хурдан ойлгоход туслах товч зааврын файл үүсгэх. Мөр бүр "Тусламжгүй бол агент үүнийг анзаарахгүй өнгөрөх магадлалтай юу?" гэсэн асуултад хариулах ёстой. Үгүй бол бүү оруул.
 
-User-provided focus or constraints (honor these):
+Хэрэглэгчийн өгсөн анхаарах зүйл эсвэл хязгаарлалт (заавал мөрдөнө):
 $ARGUMENTS
 
-## How to investigate
+## Хэрхэн судлах вэ
 
-Read the highest-value sources first:
-- `README*`, root manifests, workspace config, lockfiles
-- build, test, lint, formatter, typecheck, and codegen config
-- CI workflows and pre-commit / task runner config
-- existing instruction files (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`, `.cursorrules`, `.github/copilot-instructions.md`)
-- repo-local MongolGPT config such as `mongolgpt.json`
+Хамгийн их мэдээлэлтэй эх сурвалжийг эхэлж унш:
+- `README*`, root manifest, workspace config, lockfile
+- build, test, lint, formatter, typecheck, codegen config
+- CI workflow болон pre-commit / task runner config
+- одоо байгаа зааврын файл (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`, `.cursorrules`, `.github/copilot-instructions.md`)
+- `mongolgpt.json` зэрэг repository доторх MongolGPT config
 
-If architecture is still unclear after reading config and docs, inspect a small number of representative code files to find the real entrypoints, package boundaries, and execution flow. Prefer reading the files that explain how the system is wired together over random leaf files.
+Config болон docs-ийг уншсаны дараа архитектур тодорхойгүй хэвээр байвал бодит entrypoint, package-ийн зааг, ажиллах урсгалыг олохын тулд төлөөлөх цөөн кодын файлыг шалга. Санамсаргүй захын файлаас илүү системийн хэсгүүд хэрхэн холбогдсоныг тайлбарлах файлыг түрүүлж унш.
 
-Prefer executable sources of truth over prose. If docs conflict with config or scripts, trust the executable source and only keep what you can verify.
+Ердийн тайлбар бичвэрээс илүү ажиллуулж шалгаж болох эх сурвалжийг үнэн зөвийн үндэс болго. Docs нь config эсвэл script-тэй зөрчилдвөл ажиллуулж болох эх сурвалжид итгэж, зөвхөн баталж чадсан мэдээллээ үлдээ.
 
-## What to extract
+## Ямар мэдээлэл гаргаж авах вэ
 
-Look for the highest-signal facts for an agent working in this repo:
-- exact developer commands, especially non-obvious ones
-- how to run a single test, a single package, or a focused verification step
-- required command order when it matters, such as `lint -> typecheck -> test`
-- monorepo or multi-package boundaries, ownership of major directories, and the real app/library entrypoints
-- framework or toolchain quirks: generated code, migrations, codegen, build artifacts, special env loading, dev servers, infra deploy flow
-- repo-specific style or workflow conventions that differ from defaults
-- testing quirks: fixtures, integration test prerequisites, snapshot workflows, required services, flaky or expensive suites
-- important constraints from existing instruction files worth preserving
+Энэ repository-д ажиллах агентын хувьд хамгийн хэрэгтэй баримтыг ол:
+- хөгжүүлэгчийн яг ажиллуулах command, ялангуяа шууд ойлгомжгүй command
+- нэг test, нэг package, эсвэл төвлөрсөн verification алхмыг хэрхэн ажиллуулах
+- дараалал чухал үед мөрдөх command-ийн дараалал, жишээ нь `lint -> typecheck -> test`
+- monorepo эсвэл олон package-ийн зааг, үндсэн хавтасны эзэмшил, бодит app/library entrypoint
+- framework эсвэл toolchain-ийн онцлог: generated code, migration, codegen, build artifact, тусгай env ачаалалт, dev server, infra deploy урсгал
+- үндсэн тохиргооноос ялгаатай, зөвхөн энэ repository-д мөрдөх style эсвэл workflow convention
+- test-ийн онцлог: fixture, integration test-ийн урьдчилсан нөхцөл, snapshot workflow, шаардлагатай service, тогтворгүй эсвэл өндөр өртөгтэй suite
+- одоо байгаа зааврын файлаас хадгалах шаардлагатай чухал хязгаарлалт
 
-Good `AGENTS.md` content is usually hard-earned context that took reading multiple files to infer.
+Сайн `AGENTS.md`-ийн агуулга нь ихэвчлэн хэд хэдэн файл уншиж байж ойлгох, амархан харагддаггүй нөхцөл байдаг.
 
-## Questions
+## Асуулт
 
-Only ask the user questions if the repo cannot answer something important. Use the `question` tool for one short batch at most.
+Repository-оос чухал мэдээллийн хариуг олж чадахгүй үед л хэрэглэгчээс асуу. `question` хэрэгслээр хамгийн ихдээ нэг богино багц асуулт асууна.
 
-Good questions:
-- undocumented team conventions
-- branch / PR / release expectations
-- missing setup or test prerequisites that are known but not written down
+Зөв асуултын жишээ:
+- баримтжуулаагүй багийн convention
+- branch / PR / release-ийн хүлээлт
+- мэдэгдэж байгаа боловч бичээгүй setup эсвэл test-ийн урьдчилсан нөхцөл
 
-Do not ask about anything the repo already makes clear.
+Repository-оос тодорхой харагдаж буй зүйлийг бүү асуу.
 
-## Writing rules
+## Бичих дүрэм
 
-Include only high-signal, repo-specific guidance such as:
-- exact commands and shortcuts the agent would otherwise guess wrong
-- architecture notes that are not obvious from filenames
-- conventions that differ from language or framework defaults
-- setup requirements, environment quirks, and operational gotchas
-- references to existing instruction sources that matter
+Зөвхөн энэ repository-д хамаарах, хэрэгтэй мэдээллийг оруул. Жишээ нь:
+- агент тааж буруу хийх магадлалтай яг command болон shortcut
+- файлын нэрээс шууд ойлгогдохгүй архитектурын тэмдэглэл
+- хэл эсвэл framework-ийн үндсэн тохиргооноос ялгаатай convention
+- setup шаардлага, environment-ийн онцлог, ажиллагааны анхаарах зүйл
+- одоо байгаа чухал зааврын эх сурвалжийн холбоос
 
-Exclude:
-- generic software advice
-- long tutorials or exhaustive file trees
-- obvious language conventions
-- speculative claims or anything you could not verify
-- content better stored in another file referenced via `mongolgpt.json` `instructions`
+Бүү оруул:
+- ерөнхий software зөвлөгөө
+- урт tutorial эсвэл файлын бүрэн мод
+- ойлгомжтой хэлний convention
+- таамагласан мэдэгдэл эсвэл баталж чадаагүй зүйл
+- `mongolgpt.json`-ийн `instructions`-ээр заасан өөр файлд хадгалахад илүү тохиромжтой агуулга
 
-When in doubt, omit.
+Эргэлзэж байвал бүү оруул.
 
-Prefer short sections and bullets. If the repo is simple, keep the file simple. If the repo is large, summarize the few structural facts that actually change how an agent should work.
+Богино хэсэг, жагсаалт ашигла. Repository энгийн бол файлыг энгийн байлга. Том бол агентын ажиллах аргад бодитоор нөлөөлөх цөөн бүтцийн баримтыг л хураангуйл.
 
-If `AGENTS.md` already exists at `${path}`, improve it in place rather than rewriting blindly. Preserve verified useful guidance, delete fluff or stale claims, and reconcile it with the current codebase.
+`${path}` байршилд `AGENTS.md` аль хэдийн байвал сохроор дахин бичихийн оронд байранд нь сайжруул. Баталгаажсан хэрэгтэй зааврыг хадгалж, хэрэггүй эсвэл хуучирсан мэдээллийг устган, одоогийн кодын сантай нийцүүл.
+
+Тайлбарыг монгол хэлээр бич. Command, file path, code identifier болон техникийн нэрийг эх хэлбэрээр нь хадгал.

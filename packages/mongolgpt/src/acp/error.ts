@@ -63,35 +63,42 @@ export type Error =
 export function toRequestError(error: Error) {
   switch (error._tag) {
     case "ACPSessionNotFoundError":
-      return RequestError.invalidParams({ sessionId: error.sessionId }, `session not found: ${error.sessionId}`)
+      return new RequestError(-32602, `Сесс олдсонгүй: ${error.sessionId}`, { sessionId: error.sessionId })
     case "ACPInvalidConfigOptionError":
-      return RequestError.invalidParams({ configId: error.configId }, `unknown config option: ${error.configId}`)
+      return new RequestError(-32602, `Тохиргооны сонголт танигдсангүй: ${error.configId}`, {
+        configId: error.configId,
+      })
     case "ACPInvalidModelError":
-      return RequestError.invalidParams(
-        { providerId: error.providerId, modelId: error.modelId },
-        `model not found: ${error.modelId}`,
-      )
+      return new RequestError(-32602, `Загвар олдсонгүй: ${error.modelId}`, {
+        providerId: error.providerId,
+        modelId: error.modelId,
+      })
     case "ACPInvalidEffortError":
-      return RequestError.invalidParams({ effort: error.effort }, `effort not found: ${error.effort}`)
+      return new RequestError(-32602, `Чармайлтын түвшин танигдсангүй: ${error.effort}`, { effort: error.effort })
     case "ACPInvalidModeError":
-      return RequestError.invalidParams({ mode: error.mode }, `mode not found: ${error.mode}`)
+      return new RequestError(-32602, `Горим танигдсангүй: ${error.mode}`, { mode: error.mode })
     case "ACPAuthRequiredError":
-      return RequestError.authRequired({ providerId: error.providerId }, "provider authentication required")
+      return new RequestError(-32000, "Үйлчилгээ үзүүлэгчид нэвтрэх шаардлагатай", {
+        providerId: error.providerId,
+      })
     case "ACPUnknownAuthMethodError":
-      return RequestError.invalidParams({ methodId: error.methodId }, `unknown auth method: ${error.methodId}`)
+      return new RequestError(-32602, `Нэвтрэх арга танигдсангүй: ${error.methodId}`, {
+        methodId: error.methodId,
+      })
     case "ACPUnsupportedOperationError":
-      return RequestError.methodNotFound(error.method)
+      return new RequestError(-32601, `Үйлдэл олдсонгүй: ${error.method}`, { method: error.method })
     case "ACPServiceFailureError":
-      return RequestError.internalError(
-        {
-          ...(error.service ? { service: error.service } : {}),
-          ...(error.errorName ? { errorName: error.errorName } : {}),
-        },
-        error.safeMessage,
-      )
+      return new RequestError(-32603, `Дотоод алдаа: ${error.safeMessage}`, {
+        ...(error.service ? { service: error.service } : {}),
+        ...(error.errorName ? { errorName: error.errorName } : {}),
+      })
+    default: {
+      const exhaustive: never = error
+      return exhaustive
+    }
   }
 }
 
-export function fromUnknownDefect(_defect: unknown, safeMessage = "Internal service failure") {
+export function fromUnknownDefect(_defect: unknown, safeMessage = "Дотоод үйлчилгээний алдаа гарлаа") {
   return new ServiceFailureError({ safeMessage })
 }

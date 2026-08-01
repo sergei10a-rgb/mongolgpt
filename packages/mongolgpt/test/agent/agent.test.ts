@@ -701,7 +701,7 @@ it.instance(
 
 it.instance(
   "defaultAgent throws when default_agent points to subagent",
-  () => expectDefaultAgentError('default agent "explore" is a subagent'),
+  () => expectDefaultAgentError('Үндсэн агент "explore" нь туслах агент байна'),
   {
     config: {
       default_agent: "explore",
@@ -711,7 +711,7 @@ it.instance(
 
 it.instance(
   "defaultAgent throws when default_agent points to hidden agent",
-  () => expectDefaultAgentError('default agent "compaction" is hidden'),
+  () => expectDefaultAgentError('Үндсэн агент "compaction" нь далд байна'),
   {
     config: {
       default_agent: "compaction",
@@ -721,7 +721,7 @@ it.instance(
 
 it.instance(
   "defaultAgent throws when default_agent points to non-existent agent",
-  () => expectDefaultAgentError('default agent "does_not_exist" not found'),
+  () => expectDefaultAgentError('Үндсэн агент "does_not_exist" олдсонгүй'),
   {
     config: {
       default_agent: "does_not_exist",
@@ -748,7 +748,7 @@ it.instance(
 
 it.instance(
   "defaultAgent throws when all primary agents are disabled",
-  () => expectDefaultAgentError("no primary visible agent found"),
+  () => expectDefaultAgentError("Харагдах үндсэн агент олдсонгүй"),
   {
     config: {
       agent: {
