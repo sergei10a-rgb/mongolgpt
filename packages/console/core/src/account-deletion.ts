@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { and, asc, eq, inArray, isNull, lt, lte, ne, sql } from "./drizzle"
+import { and, asc, eq, inArray, isNotNull, isNull, lt, lte, ne, sql } from "./drizzle"
 import { Account } from "./account"
 import { Database } from "./drizzle"
 import { Identifier } from "./identifier"
@@ -10,6 +10,7 @@ import { UserTable } from "./schema/user.sql"
 export const ACCOUNT_DELETION_GRACE_MS = 7 * 24 * 60 * 60 * 1_000
 export const ACCOUNT_DELETION_MAX_ATTEMPTS = 5
 export const ACCOUNT_DELETION_RETRY_MS = 15 * 60 * 1_000
+export const ACCOUNT_DELETION_OPERATIONAL_RETENTION_MS = 30 * 24 * 60 * 60 * 1_000
 
 const AccountID = z.string().trim().min(1).max(255)
 const Request = z.object({
@@ -163,6 +164,83 @@ export async function processEligibleAccountDeletions(
     }
   }
   return { processed, failed, skipped, truncated: candidates.length === limit }
+}
+
+export async function purgeCompletedAccountDeletions(
+  input: {
+    now: number
+    limit?: number
+  },
+  dependencies: {
+    use?: Use
+    transaction?: Transaction
+  } = {},
+) {
+  const now = timestamp(input.now)
+  const limit = input.limit ?? 50
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+    throw new TypeError("Account deletion purge batch limit is invalid")
+  }
+  const use = dependencies.use ?? ((callback) => Database.use(callback))
+  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
+  const cutoff = new Date(now - ACCOUNT_DELETION_OPERATIONAL_RETENTION_MS)
+  const date = new Date(now)
+  const candidates = await use((db) =>
+    db
+      .select({ id: AccountDeletionTable.id, accountID: AccountDeletionTable.account_id })
+      .from(AccountDeletionTable)
+      .where(
+        and(
+          eq(AccountDeletionTable.status, "completed"),
+          lte(AccountDeletionTable.time_completed, cutoff),
+          isNull(AccountDeletionTable.timeDeleted),
+        ),
+      )
+      .orderBy(asc(AccountDeletionTable.time_completed), asc(AccountDeletionTable.id))
+      .limit(limit),
+  )
+
+  let purged = 0
+  let skipped = 0
+  for (const candidate of candidates) {
+    const changed = await transaction(async (db) => {
+      const account = await db
+        .select({ timeDeleted: AccountTable.timeDeleted })
+        .from(AccountTable)
+        .where(eq(AccountTable.id, candidate.accountID))
+        .limit(1)
+        .then((rows) => rows[0])
+      if (account && !account.timeDeleted) return false
+
+      const detached = await db
+        .update(AccountDeletionTable)
+        .set({
+          account_id: Identifier.create("account"),
+          timeDeleted: date,
+          timeUpdated: date,
+        })
+        .where(
+          and(
+            eq(AccountDeletionTable.id, candidate.id),
+            eq(AccountDeletionTable.account_id, candidate.accountID),
+            eq(AccountDeletionTable.status, "completed"),
+            lte(AccountDeletionTable.time_completed, cutoff),
+            isNull(AccountDeletionTable.timeDeleted),
+          ),
+        )
+        .returning({ id: AccountDeletionTable.id })
+        .then((rows) => rows[0])
+      if (!detached) return false
+
+      await db
+        .delete(AccountTable)
+        .where(and(eq(AccountTable.id, candidate.accountID), isNotNull(AccountTable.timeDeleted)))
+      return true
+    })
+    if (changed) purged++
+    else skipped++
+  }
+  return { purged, skipped, truncated: candidates.length === limit }
 }
 
 async function requestWithDb(db: Database.TxOrDb, accountID: string, now: number, eligibleAt: number) {

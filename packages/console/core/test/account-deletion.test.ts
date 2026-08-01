@@ -3,11 +3,13 @@ import { Database as SQLite } from "bun:sqlite"
 import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import { resolve } from "node:path"
 import {
+  ACCOUNT_DELETION_OPERATIONAL_RETENTION_MS,
   ACCOUNT_DELETION_RETRY_MS,
   AccountDeletionError,
   cancelAccountDeletion,
   getAccountDeletion,
   processEligibleAccountDeletions,
+  purgeCompletedAccountDeletions,
   requestAccountDeletion,
 } from "../src/account-deletion"
 import type { Database } from "../src/drizzle"
@@ -17,6 +19,7 @@ const now = 2_000_000_000_000
 const accountID = "acc_account_deletion"
 const workspaceID = "wrk_account_deletion"
 const userID = "usr_account_deletion"
+const invitationID = "usr_account_deletion_invitation"
 const keyID = "key_account_deletion"
 
 async function migrationSql() {
@@ -47,8 +50,32 @@ async function setup() {
     .query("insert into user (id, workspace_id, account_id, email, name, role) values (?, ?, ?, ?, ?, ?)")
     .run(userID, workspaceID, accountID, "owner@mgpt.mn", "Owner", "admin")
   sqlite
+    .query("insert into user (id, workspace_id, email, name, role) values (?, ?, ?, ?, ?)")
+    .run(invitationID, workspaceID, "invited@mgpt.mn", "Invited user", "member")
+  sqlite
     .query("insert into key (id, workspace_id, name, key, user_id) values (?, ?, ?, ?, ?)")
     .run(keyID, workspaceID, "Delete me", "mgpt_delete_me", userID)
+  sqlite.query("insert into key_rate_limit (key, interval, count) values (?, ?, ?)").run("mgpt_delete_me", "day", 1)
+  sqlite
+    .query("insert into provider (id, workspace_id, provider, credentials) values (?, ?, ?, ?)")
+    .run("prv_account_deletion", workspaceID, "openrouter", '{"apiKey":"provider-secret"}')
+  sqlite
+    .query("insert into subscription (id, workspace_id, user_id) values (?, ?, ?)")
+    .run("sub_account_deletion", workspaceID, userID)
+  sqlite
+    .query("insert into lite (id, workspace_id, user_id) values (?, ?, ?)")
+    .run("lit_account_deletion", workspaceID, userID)
+  sqlite
+    .query(
+      "insert into usage (id, workspace_id, model, provider, input_tokens, output_tokens, cost, key_id, session_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .run("usg_account_deletion", workspaceID, "test-model", "openrouter", 10, 20, 0, keyID, "session-secret")
+  sqlite
+    .query("insert into newsletter_subscriber (email, consent_version, time_consented) values (?, ?, ?)")
+    .run("owner@mgpt.mn", "v1", now)
+  sqlite
+    .query("insert into referral (id, workspace_id, invitee_account_id) values (?, ?, ?)")
+    .run("ref_account_deletion", workspaceID, accountID)
   sqlite
     .query(
       "insert into payment_checkout (id, workspace_id, account_id, request_key, provider, merchant_account_id, purpose, plan, amount, time_expires) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -64,6 +91,20 @@ async function setup() {
       "basic",
       10_000,
       now + 60_000,
+    )
+  sqlite
+    .query(
+      "insert into payment_cancellation (invoice_id, workspace_id, account_id, request_key, provider, merchant_account_id, external_invoice_id, time_requested) values (?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .run(
+      "inv_account_deletion",
+      workspaceID,
+      accountID,
+      "cancel_account_deletion",
+      "qpay",
+      "merchant_account_deletion",
+      "external_account_deletion",
+      now,
     )
   return { sqlite, db, use, transaction }
 }
@@ -175,7 +216,7 @@ describe("account deletion lifecycle", () => {
     })
   })
 
-  test("revokes account access atomically after the grace period while retaining payment records", async () => {
+  test("revokes access, scrubs sole-workspace secrets, and pseudonymizes retained payment records", async () => {
     const { sqlite, use, transaction } = await setup()
     await requestAccountDeletion({ accountID, graceMs: 1_000 }, { now: () => now, transaction })
 
@@ -210,12 +251,72 @@ describe("account deletion lifecycle", () => {
       time_deleted: now + 1_000,
     })
     expect(sqlite.query("select count(*) as count from key where key = ?").get("mgpt_delete_me")).toEqual({ count: 0 })
+    expect(sqlite.query("select count(*) as count from key_rate_limit where key = ?").get("mgpt_delete_me")).toEqual({
+      count: 0,
+    })
+    expect(sqlite.query("select key_id, session_id from usage where id = ?").get("usg_account_deletion")).toEqual({
+      key_id: null,
+      session_id: null,
+    })
     expect(
-      sqlite.query("select account_id, amount from payment_checkout where id = ?").get("checkout_account_deletion"),
+      sqlite.query("select credentials, time_deleted from provider where id = ?").get("prv_account_deletion"),
     ).toEqual({
-      account_id: accountID,
+      credentials: "",
+      time_deleted: now + 1_000,
+    })
+    expect(sqlite.query("select name, slug, time_deleted from workspace where id = ?").get(workspaceID)).toEqual({
+      name: "",
+      slug: null,
+      time_deleted: now + 1_000,
+    })
+    expect(
+      sqlite.query("select account_id, email, name, time_deleted from user where id = ?").get(invitationID),
+    ).toEqual({ account_id: null, email: null, name: "", time_deleted: now + 1_000 })
+    expect(sqlite.query("select time_deleted from subscription where id = ?").get("sub_account_deletion")).toEqual({
+      time_deleted: now + 1_000,
+    })
+    expect(sqlite.query("select time_deleted from lite where id = ?").get("lit_account_deletion")).toEqual({
+      time_deleted: now + 1_000,
+    })
+    expect(
+      sqlite.query("select count(*) as count from newsletter_subscriber where email = ?").get("owner@mgpt.mn"),
+    ).toEqual({ count: 0 })
+
+    const checkout = sqlite
+      .query("select account_id, request_key, status, checkout, amount from payment_checkout where id = ?")
+      .get("checkout_account_deletion")
+    expect(checkout).toMatchObject({
+      request_key: "deleted:checkout_account_deletion",
+      status: "expired",
+      checkout: null,
       amount: 10_000,
     })
+    expect(checkout).not.toMatchObject({ account_id: accountID })
+    if (
+      typeof checkout !== "object" ||
+      checkout === null ||
+      !("account_id" in checkout) ||
+      typeof checkout.account_id !== "string"
+    ) {
+      throw new Error("Expected pseudonymous checkout account")
+    }
+    const pseudonymousAccountID = checkout.account_id
+    expect(
+      sqlite
+        .query(
+          "select account_id, request_key, status, error_code, time_completed from payment_cancellation where invoice_id = ?",
+        )
+        .get("inv_account_deletion"),
+    ).toEqual({
+      account_id: pseudonymousAccountID,
+      request_key: "deleted:inv_account_deletion",
+      status: "failed",
+      error_code: "account_deleted",
+      time_completed: now + 1_000,
+    })
+    expect(
+      sqlite.query("select invitee_account_id, time_deleted from referral where id = ?").get("ref_account_deletion"),
+    ).toBeNull()
     expect(await getAccountDeletion({ accountID }, { use })).toMatchObject({
       status: "completed",
       attempts: 1,
@@ -233,6 +334,77 @@ describe("account deletion lifecycle", () => {
     expect(rejected).toMatchObject({
       code: "too_late",
     } satisfies Partial<AccountDeletionError>)
+  })
+
+  test("keeps shared workspace credentials while removing only the departing account", async () => {
+    const { sqlite, use, transaction } = await setup()
+    const otherAccountID = "acc_account_deletion_shared"
+    const otherUserID = "usr_account_deletion_shared"
+    sqlite.query("insert into account (id) values (?)").run(otherAccountID)
+    sqlite
+      .query("insert into user (id, workspace_id, account_id, email, name, role) values (?, ?, ?, ?, ?, ?)")
+      .run(otherUserID, workspaceID, otherAccountID, "shared@mgpt.mn", "Shared admin", "admin")
+
+    await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, transaction })
+    expect(await processEligibleAccountDeletions({ now }, { use, transaction })).toEqual({
+      processed: 1,
+      failed: 0,
+      skipped: 0,
+      truncated: false,
+    })
+    expect(
+      sqlite.query("select credentials, time_deleted from provider where id = ?").get("prv_account_deletion"),
+    ).toEqual({ credentials: '{"apiKey":"provider-secret"}', time_deleted: null })
+    expect(sqlite.query("select name, time_deleted from workspace where id = ?").get(workspaceID)).toEqual({
+      name: "Deletion test",
+      time_deleted: null,
+    })
+    expect(sqlite.query("select account_id, time_deleted from user where id = ?").get(otherUserID)).toEqual({
+      account_id: otherAccountID,
+      time_deleted: null,
+    })
+    const sharedCheckout = sqlite
+      .query("select account_id, request_key, status from payment_checkout where id = ?")
+      .get("checkout_account_deletion")
+    expect(sharedCheckout).toMatchObject({
+      request_key: "deleted:checkout_account_deletion",
+      status: "creating",
+    })
+    expect(sharedCheckout).not.toMatchObject({ account_id: accountID })
+    expect(
+      sqlite
+        .query("select account_id, request_key, status from payment_cancellation where invoice_id = ?")
+        .get("inv_account_deletion"),
+    ).toMatchObject({ request_key: "deleted:inv_account_deletion", status: "requested" })
+    const sharedReferral = sqlite
+      .query("select invitee_account_id, time_deleted from referral where id = ?")
+      .get("ref_account_deletion")
+    expect(sharedReferral).not.toMatchObject({ invitee_account_id: accountID })
+    expect(sharedReferral).toMatchObject({ time_deleted: now })
+  })
+
+  test("detaches completed deletion records and removes tombstone accounts after 30 days", async () => {
+    const { sqlite, use, transaction } = await setup()
+    await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, transaction })
+    await processEligibleAccountDeletions({ now }, { use, transaction })
+
+    expect(
+      await purgeCompletedAccountDeletions(
+        { now: now + ACCOUNT_DELETION_OPERATIONAL_RETENTION_MS - 1 },
+        { use, transaction },
+      ),
+    ).toEqual({ purged: 0, skipped: 0, truncated: false })
+    expect(
+      await purgeCompletedAccountDeletions(
+        { now: now + ACCOUNT_DELETION_OPERATIONAL_RETENTION_MS },
+        { use, transaction },
+      ),
+    ).toEqual({ purged: 1, skipped: 0, truncated: false })
+    expect(sqlite.query("select count(*) as count from account where id = ?").get(accountID)).toEqual({ count: 0 })
+    const operation = sqlite.query("select account_id, time_deleted from account_deletion where id like 'adl_%'").get()
+    expect(operation).not.toMatchObject({ account_id: accountID })
+    expect(operation).toMatchObject({ time_deleted: now + ACCOUNT_DELETION_OPERATIONAL_RETENTION_MS })
+    expect(await getAccountDeletion({ accountID }, { use })).toBeUndefined()
   })
 
   test("records only a bounded error code and retries without exposing failure details", async () => {
