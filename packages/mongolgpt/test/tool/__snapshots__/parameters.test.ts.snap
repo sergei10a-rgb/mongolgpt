@@ -199,7 +199,7 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "questions": {
-      "description": "Questions to ask",
+      "description": "Асуух асуултууд",
       "items": {
         "properties": {
           "header": {
@@ -302,27 +302,27 @@ exports[`tool parameters JSON Schema (wire shape) task 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "background": {
-      "description": "Run the agent in the background. You will be notified when it completes. DO NOT sleep, poll, or proactively check on its progress",
+      "description": "Агентыг арын горимд ажиллуулна. Дуусахад танд мэдэгдэнэ. Унтах, явцыг давтан шалгах, эсвэл санаачилгаар явцыг хянах хэрэггүй",
       "type": "boolean",
     },
     "command": {
-      "description": "The command that triggered this task",
+      "description": "Энэ даалгаврыг эхлүүлсэн command",
       "type": "string",
     },
     "description": {
-      "description": "A short (3-5 words) description of the task",
+      "description": "Даалгаврын товч (3-5 үгтэй) тайлбар",
       "type": "string",
     },
     "prompt": {
-      "description": "The task for the agent to perform",
+      "description": "Агентын гүйцэтгэх даалгавар",
       "type": "string",
     },
     "subagent_type": {
-      "description": "The type of specialized agent to use for this task",
+      "description": "Энэ даалгаварт ашиглах төрөлжсөн агентын төрөл",
       "type": "string",
     },
     "task_id": {
-      "description": "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
+      "description": "Өмнөх даалгаврыг үргэлжлүүлэх үед л тохируулна (өмнөх task_id-г өгвөл шинэ session үүсгэхийн оронд тухайн туслах агентын session-ийг үргэлжлүүлнэ)",
       "type": "string",
     },
   },
@@ -340,7 +340,7 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "todos": {
-      "description": "The updated todo list",
+      "description": "Шинэчилсэн хийх ажлын жагсаалт",
       "items": {
         "properties": {
           "content": {

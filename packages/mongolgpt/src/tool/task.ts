@@ -23,32 +23,32 @@ export interface TaskPromptOps {
 
 const id = "task"
 const BACKGROUND_DESCRIPTION = [
-  "Background mode: background=true launches the subagent asynchronously and returns immediately.",
-  "Foreground is the default; use it when you need the result before continuing.",
-  "Use background only for independent work that can run while you continue elsewhere.",
-  "You will be notified automatically when it finishes.",
+  "Арын горим: background=true нь туслах агентийг асинхроноор эхлүүлээд шууд буцаана.",
+  "Урд талын горим нь анхдагч; үр дүнг нь хүлээж аваад үргэлжлүүлэх шаардлагатай үед ашиглана.",
+  "Арын горимыг зөвхөн таныг өөр ажил үргэлжлүүлж байх хооронд бие даан ажиллах даалгаварт ашиглана.",
+  "Дуусахад танд автоматаар мэдэгдэнэ.",
 ].join(" ")
 const BACKGROUND_STARTED = [
-  "The task is working in the background. You will be notified automatically when it finishes.",
-  "DO NOT sleep, poll for progress, ask the task for status, or duplicate this task's work — avoid working with the same files or topics it is using.",
-  "Work on non-overlapping tasks, or briefly tell the user what you launched and end your response.",
+  "Даалгавар арын горимд ажиллаж байна. Дуусахад танд автоматаар мэдэгдэнэ.",
+  "Унтах, явцыг давтан шалгах, даалгавраас статус асуух, эсвэл энэ ажлыг давхар хийх хэрэггүй. Түүний ашиглаж буй файл, сэдэвтэй давхцахаас зайлсхий.",
+  "Давхцахгүй даалгавар дээр ажиллах, эсвэл эхлүүлсэн зүйлээ хэрэглэгчид товч хэлээд хариугаа дуусга.",
 ].join("\n")
 const BACKGROUND_UPDATED = [
-  "Additional context sent to the running background task.",
-  "The task is still working in the background. You will be notified automatically when it finishes.",
-  "DO NOT sleep, poll for progress, ask the task for status, or duplicate this task's work — avoid working with the same files or topics it is using.",
-  "Work on non-overlapping tasks, or briefly tell the user what you sent and end your response.",
+  "Нэмэлт мэдээллийг ажиллаж буй арын даалгаварт илгээлээ.",
+  "Даалгавар арын горимд үргэлжлэн ажиллаж байна. Дуусахад танд автоматаар мэдэгдэнэ.",
+  "Унтах, явцыг давтан шалгах, даалгавраас статус асуух, эсвэл энэ ажлыг давхар хийх хэрэггүй. Түүний ашиглаж буй файл, сэдэвтэй давхцахаас зайлсхий.",
+  "Давхцахгүй даалгавар дээр ажиллах, эсвэл илгээсэн зүйлээ хэрэглэгчид товч хэлээд хариугаа дуусга.",
 ].join("\n")
 
 const BaseParameterFields = {
-  description: Schema.String.annotate({ description: "A short (3-5 words) description of the task" }),
-  prompt: Schema.String.annotate({ description: "The task for the agent to perform" }),
-  subagent_type: Schema.String.annotate({ description: "The type of specialized agent to use for this task" }),
+  description: Schema.String.annotate({ description: "Даалгаврын товч (3-5 үгтэй) тайлбар" }),
+  prompt: Schema.String.annotate({ description: "Агентын гүйцэтгэх даалгавар" }),
+  subagent_type: Schema.String.annotate({ description: "Энэ даалгаварт ашиглах төрөлжсөн агентын төрөл" }),
   task_id: Schema.optional(Schema.String).annotate({
     description:
-      "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
+      "Өмнөх даалгаврыг үргэлжлүүлэх үед л тохируулна (өмнөх task_id-г өгвөл шинэ session үүсгэхийн оронд тухайн туслах агентын session-ийг үргэлжлүүлнэ)",
   }),
-  command: Schema.optional(Schema.String).annotate({ description: "The command that triggered this task" }),
+  command: Schema.optional(Schema.String).annotate({ description: "Энэ даалгаврыг эхлүүлсэн command" }),
 }
 
 const BaseParameters = Schema.Struct(BaseParameterFields)
@@ -57,7 +57,7 @@ export const Parameters = Schema.Struct({
   ...BaseParameterFields,
   background: Schema.optional(Schema.Boolean).annotate({
     description:
-      "Run the agent in the background. You will be notified when it completes. DO NOT sleep, poll, or proactively check on its progress",
+      "Агентыг арын горимд ажиллуулна. Дуусахад танд мэдэгдэнэ. Унтах, явцыг давтан шалгах, эсвэл санаачилгаар явцыг хянах хэрэггүй",
   }),
 })
 
@@ -97,7 +97,7 @@ export const TaskTool = Tool.define(
       const runInBackground = params.background === true
       if (runInBackground && !flags.experimentalBackgroundSubagents) {
         return yield* Effect.fail(
-          new Error("Background subagents require MONGOLGPT_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true"),
+          new Error("Арын туслах агент ажиллуулахын тулд MONGOLGPT_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true шаардлагатай"),
         )
       }
 
@@ -115,7 +115,7 @@ export const TaskTool = Tool.define(
 
       const next = yield* agent.get(params.subagent_type)
       if (!next) {
-        return yield* Effect.fail(new Error(`Unknown agent type: ${params.subagent_type} is not a valid agent type`))
+        return yield* Effect.fail(new Error(`Үл мэдэгдэх агентын төрөл: ${params.subagent_type} нь зөвшөөрөгдөх агентын төрөл биш`))
       }
 
       const session = params.task_id
@@ -143,7 +143,7 @@ export const TaskTool = Tool.define(
         session ??
         (yield* sessions.create({
           parentID: ctx.sessionID,
-          title: params.description + ` (@${next.name} subagent)`,
+          title: params.description + ` (@${next.name} туслах агент)`,
           agent: next.name,
           permission: [
             ...childPermission,
@@ -161,7 +161,7 @@ export const TaskTool = Tool.define(
         Effect.provideService(Database.Service, database),
         Effect.orDie,
       )
-      if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
+      if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Энэ нь туслах агентын message биш байна"))
       const variant = msg.info.variant
 
       const model = next.model ?? {
@@ -181,7 +181,7 @@ export const TaskTool = Tool.define(
       })
 
       const ops = ctx.extra?.promptOps as TaskPromptOps
-      if (!ops) return yield* Effect.fail(new Error("TaskTool requires promptOps in ctx.extra"))
+      if (!ops) return yield* Effect.fail(new Error("TaskTool ажиллахын тулд ctx.extra дотор promptOps шаардлагатай"))
 
       const runTask = Effect.fn("TaskTool.runTask")(function* () {
         const parts = yield* ops.resolvePromptParts(params.prompt)
@@ -218,8 +218,8 @@ export const TaskTool = Tool.define(
                   state,
                   summary:
                     state === "completed"
-                      ? `Background task completed: ${params.description}`
-                      : `Background task failed: ${params.description}`,
+                      ? `Арын даалгавар дууслаа: ${params.description}`
+                      : `Арын даалгавар амжилтгүй боллоо: ${params.description}`,
                   text,
                 }),
               },
@@ -250,7 +250,7 @@ export const TaskTool = Tool.define(
           output: renderOutput({
             sessionID: nextSession.id,
             state: "running",
-            summary: "Background task updated",
+            summary: "Арын даалгаврыг шинэчиллээ",
             text: BACKGROUND_UPDATED,
           }),
         }
@@ -282,7 +282,7 @@ export const TaskTool = Tool.define(
           output: renderOutput({
             sessionID: nextSession.id,
             state: "running",
-            summary: "Background task started",
+            summary: "Арын даалгаврыг эхлүүллээ",
             text: BACKGROUND_STARTED,
           }),
         }
@@ -311,8 +311,8 @@ export const TaskTool = Tool.define(
               background.waitForPromotion(nextSession.id),
             )
             if (result?.metadata?.background === true) return backgroundResult()
-            if (result?.status === "error") return yield* Effect.fail(new Error(result.error ?? "Task failed"))
-            if (result?.status === "cancelled") return yield* Effect.fail(new Error("Task cancelled"))
+            if (result?.status === "error") return yield* Effect.fail(new Error(result.error ?? "Даалгавар амжилтгүй боллоо"))
+            if (result?.status === "cancelled") return yield* Effect.fail(new Error("Даалгаврыг цуцаллаа"))
             return {
               title: params.description,
               metadata,

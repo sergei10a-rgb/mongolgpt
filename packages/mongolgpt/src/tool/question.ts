@@ -4,7 +4,7 @@ import { Question } from "../question"
 import DESCRIPTION from "./question.txt"
 
 export const Parameters = Schema.Struct({
-  questions: Schema.mutable(Schema.Array(Question.Prompt)).annotate({ description: "Questions to ask" }),
+  questions: Schema.mutable(Schema.Array(Question.Prompt)).annotate({ description: "Асуух асуултууд" }),
 })
 
 type Metadata = {
@@ -28,12 +28,12 @@ export const QuestionTool = Tool.define<typeof Parameters, Metadata, Question.Se
           })
 
           const formatted = params.questions
-            .map((q, i) => `"${q.question}"="${answers[i]?.length ? answers[i].join(", ") : "Unanswered"}"`)
+            .map((q, i) => `"${q.question}"="${answers[i]?.length ? answers[i].join(", ") : "Хариулаагүй"}"`)
             .join(", ")
 
           return {
-            title: `Asked ${params.questions.length} question${params.questions.length > 1 ? "s" : ""}`,
-            output: `User has answered your questions: ${formatted}. You can now continue with the user's answers in mind.`,
+            title: `${params.questions.length} асуулт асуусан`,
+            output: `Хэрэглэгч таны асуултуудад хариуллаа: ${formatted}. Одоо хэрэглэгчийн хариултыг харгалзан ажлаа үргэлжлүүлж болно.`,
             metadata: {
               answers,
             },

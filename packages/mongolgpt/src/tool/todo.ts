@@ -4,7 +4,7 @@ import DESCRIPTION_WRITE from "./todowrite.txt"
 import { Todo } from "../session/todo"
 
 export const Parameters = Schema.Struct({
-  todos: Schema.mutable(Schema.Array(Todo.Info)).annotate({ description: "The updated todo list" }),
+  todos: Schema.mutable(Schema.Array(Todo.Info)).annotate({ description: "Шинэчилсэн хийх ажлын жагсаалт" }),
 })
 
 type Metadata = {
@@ -34,7 +34,7 @@ export const TodoWriteTool = Tool.define<typeof Parameters, Metadata, Todo.Servi
           })
 
           return {
-            title: `${params.todos.filter((x) => x.status !== "completed").length} todos`,
+            title: `${params.todos.filter((x) => x.status !== "completed").length} хийх ажил`,
             output: JSON.stringify(params.todos, null, 2),
             metadata: {
               todos: params.todos,

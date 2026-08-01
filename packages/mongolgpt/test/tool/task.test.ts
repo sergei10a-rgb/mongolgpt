@@ -375,6 +375,7 @@ describe("tool.task", () => {
       const kids = yield* sessions.children(chat.id)
       expect(kids).toHaveLength(1)
       expect(kids[0]?.id).toBe(result.metadata.sessionId)
+      expect(kids[0]?.title).toBe("inspect bug (@general туслах агент)")
       expect(result.metadata.sessionId).not.toBe("ses_missing")
       expect(result.output).toContain(`<task id="${result.metadata.sessionId}" state="completed">`)
       expect(seen?.sessionID).toBe(result.metadata.sessionId)
@@ -640,7 +641,7 @@ describe("tool.task", () => {
 
       expect(result.metadata.sessionId).toBe(started.metadata.sessionId)
       expect(result.metadata.background).toBe(true)
-      expect(result.output).toContain("Background task updated")
+      expect(result.output).toContain("Арын даалгаврыг шинэчиллээ")
       first.resolve()
       expect((yield* jobs.get(started.metadata.sessionId))?.status).toBe("running")
       expect((yield* Effect.promise(() => updated.promise)).parts).toEqual([

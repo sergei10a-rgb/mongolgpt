@@ -69,7 +69,7 @@ describe("tool.question", () => {
       yield* question.reply({ requestID: item.id, answers: [["Red"]] })
 
       const result = yield* Fiber.join(fiber)
-      expect(result.title).toBe("Asked 1 question")
+      expect(result.title).toBe("1 асуулт асуусан")
     }),
   )
 
