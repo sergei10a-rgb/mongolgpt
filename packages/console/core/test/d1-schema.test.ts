@@ -15,6 +15,20 @@ const contract = {
     "timeUpdated",
     "timeDeleted",
   ],
+  AccountDeletionTable: [
+    "id",
+    "account_id",
+    "status",
+    "attempts",
+    "last_error_code",
+    "time_eligible",
+    "time_started",
+    "time_completed",
+    "time_cancelled",
+    "timeCreated",
+    "timeUpdated",
+    "timeDeleted",
+  ],
   AuthTable: ["id", "timeCreated", "timeUpdated", "timeDeleted", "provider", "subject", "accountID"],
   PlatformAdminTable: [
     "id",
@@ -384,6 +398,7 @@ describe("D1 schema contract", () => {
 
   test("keeps product enums aligned", () => {
     expect(d1.AccountStatuses).toEqual(["active", "suspended"])
+    expect(d1.AccountDeletionStatuses).toEqual(["requested", "processing", "completed", "failed", "cancelled"])
     expect(d1.AuthProvider).toEqual(["email", "github", "google"])
     expect(d1.UserRole).toEqual(["admin", "member"])
     expect(d1.PlatformAdminRoles).toEqual(["owner", "administrator", "support", "finance", "operations"])

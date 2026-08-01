@@ -66,7 +66,7 @@ describe("account deletion API", () => {
         },
       }),
     })
-    expect(response.status).toBe(200)
+    expect(response.status).toBe(202)
     expect(await body(response)).toEqual({ success: true, deletion: { status: "scheduled" } })
     expect(received).toEqual([{ accountID: "acc_current" }])
   })
@@ -99,6 +99,20 @@ describe("account deletion API", () => {
     expect(malformed.status).toBe(400)
   })
 
+  test("returns an explicit empty status before a request exists", async () => {
+    const response = await handleAccountDeletion({
+      request: request("GET"),
+      identity,
+      service: service({ getAccountDeletion: async () => undefined }),
+    })
+    expect(response.status).toBe(200)
+    expect(await body(response)).toEqual({
+      success: true,
+      account: { email: identity.email },
+      deletion: null,
+    })
+  })
+
   test("maps typed core errors to not found and conflict", async () => {
     const notFound = await handleAccountDeletion({
       request: request("GET"),
@@ -127,8 +141,21 @@ describe("account deletion API", () => {
         },
       }),
     })
+    const workspaceAdminRequired = await handleAccountDeletion({
+      request: request("POST", { email: identity.email, confirmation: "УСТГАХ" }),
+      identity,
+      service: service({
+        requestAccountDeletion: async () => {
+          throw { code: "workspace_admin_required" }
+        },
+      }),
+    })
     expect(notFound.status).toBe(404)
     expect(conflict.status).toBe(409)
     expect(tooLate.status).toBe(409)
+    expect(workspaceAdminRequired.status).toBe(409)
+    expect(await body(workspaceAdminRequired)).toEqual({
+      error: "Хуваалцсан ажлын талбарт өөр админ томилсны дараа аккаунтаа устгана уу.",
+    })
   })
 })

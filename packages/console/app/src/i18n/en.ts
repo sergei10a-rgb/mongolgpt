@@ -351,6 +351,22 @@ export const dict = {
   "workspace.settings.updating": "Updating...",
   "workspace.settings.save": "Save",
   "workspace.settings.edit": "Edit",
+  "account.deletion.title": "Delete MongolGPT account",
+  "account.deletion.subtitle": "Schedule permanent account access removal and personal data cleanup.",
+  "account.deletion.warning":
+    "Your login, API keys, and workspace memberships will be revoked after seven days. Payment and finance records required for reconciliation remain pseudonymized.",
+  "account.deletion.email": "Account email",
+  "account.deletion.confirmation": "Type УСТГАХ to confirm",
+  "account.deletion.request": "Schedule deletion",
+  "account.deletion.requesting": "Scheduling...",
+  "account.deletion.cancel": "Cancel deletion",
+  "account.deletion.cancelling": "Cancelling...",
+  "account.deletion.scheduled": "Account deletion is scheduled for {{date}}.",
+  "account.deletion.retrying":
+    "Account cleanup will retry automatically. You may still cancel before processing starts.",
+  "account.deletion.processing": "Account cleanup has started and can no longer be cancelled.",
+  "account.deletion.cancelled": "The previous deletion request was cancelled.",
+  "account.deletion.loadError": "Account deletion status could not be loaded.",
 
   "workspace.billing.title": "Billing",
   "workspace.billing.subtitle.beforeLink": "Manage payment methods.",

@@ -1,4 +1,4 @@
-import type { APIEvent } from "@solidjs/start"
+import type { APIEvent } from "@solidjs/start/server"
 import {
   cancelAccountDeletion,
   getAccountDeletion,

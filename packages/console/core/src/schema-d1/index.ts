@@ -5,6 +5,7 @@ import { currency, id, timestamps, ulid, utc, workspaceColumns } from "../drizzl
 
 export const AuthProvider = ["email", "github", "google"] as const
 export const AccountStatuses = ["active", "suspended"] as const
+export const AccountDeletionStatuses = ["requested", "processing", "completed", "failed", "cancelled"] as const
 export const UserRole = ["admin", "member"] as const
 export const PlatformAdminRoles = ["owner", "administrator", "support", "finance", "operations"] as const
 export const PlatformAdminStatuses = ["active", "suspended"] as const
@@ -91,6 +92,66 @@ export const AccountTable = sqliteTable(
         and length(trim(${table.suspension_reason})) between 10 and 500
         and ${table.suspended_by} is not null
         and ${table.time_suspended} is not null
+      )`,
+    ),
+  ],
+)
+
+export const AccountDeletionTable = sqliteTable(
+  "account_deletion",
+  {
+    id: id(),
+    account_id: ulid("account_id").notNull(),
+    status: text({ enum: AccountDeletionStatuses }).notNull().default("requested"),
+    attempts: integer().notNull().default(0),
+    last_error_code: text({ length: 64 }),
+    time_eligible: utc("time_eligible").notNull(),
+    time_started: utc("time_started"),
+    time_completed: utc("time_completed"),
+    time_cancelled: utc("time_cancelled"),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    uniqueIndex("account_deletion_account_id").on(table.account_id),
+    index("account_deletion_status_eligible").on(table.status, table.time_eligible),
+    check(
+      "account_deletion_status_check",
+      sql`${table.status} in ('requested', 'processing', 'completed', 'failed', 'cancelled')`,
+    ),
+    check("account_deletion_attempts_check", sql`${table.attempts} >= 0 and ${table.attempts} <= 5`),
+    check(
+      "account_deletion_state_check",
+      sql`(
+        ${table.status} = 'requested'
+        and ${table.time_started} is null
+        and ${table.time_completed} is null
+        and ${table.time_cancelled} is null
+        and ${table.last_error_code} is null
+      ) or (
+        ${table.status} = 'failed'
+        and ${table.time_started} is not null
+        and ${table.time_completed} is null
+        and ${table.time_cancelled} is null
+        and length(trim(${table.last_error_code})) between 1 and 64
+      ) or (
+        ${table.status} = 'processing'
+        and ${table.time_started} is not null
+        and ${table.time_completed} is null
+        and ${table.time_cancelled} is null
+        and ${table.last_error_code} is null
+      ) or (
+        ${table.status} = 'completed'
+        and ${table.time_started} is not null
+        and ${table.time_completed} is not null
+        and ${table.time_cancelled} is null
+        and ${table.last_error_code} is null
+      ) or (
+        ${table.status} = 'cancelled'
+        and ${table.time_started} is null
+        and ${table.time_completed} is null
+        and ${table.time_cancelled} is not null
+        and ${table.last_error_code} is null
       )`,
     ),
   ],

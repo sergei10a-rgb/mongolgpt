@@ -156,6 +156,17 @@ export const subscriptionExpiration = new sst.cloudflare.Cron("SubscriptionExpir
   },
 })
 
+export const accountDeletionRetention = new sst.cloudflare.Cron("AccountDeletionRetention", {
+  schedules: ["*/15 * * * *"],
+  worker: {
+    handler: "packages/console/function/src/account-deletion.ts",
+    link: [database],
+    compatibility: {
+      date: "2026-07-15",
+    },
+  },
+})
+
 ////////////////
 // AUTH
 ////////////////

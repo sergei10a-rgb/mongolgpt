@@ -357,6 +357,22 @@ export const dict = {
   "workspace.settings.updating": "Шинэчилж байна...",
   "workspace.settings.save": "Хадгалах",
   "workspace.settings.edit": "Засах",
+  "account.deletion.title": "MongolGPT аккаунт устгах",
+  "account.deletion.subtitle": "Аккаунтын нэвтрэх эрх болон хувийн өгөгдлийг устгах хүсэлт гаргана.",
+  "account.deletion.warning":
+    "Долоо хоногийн дараа нэвтрэлт, API түлхүүр, ажлын талбарын гишүүнчлэл хүчингүй болно. Төлбөр тулгалт, санхүүгийн хууль ёсны бүртгэлийг нэргүйжүүлэн хадгална.",
+  "account.deletion.email": "Аккаунтын имэйл",
+  "account.deletion.confirmation": "Баталгаажуулахын тулд УСТГАХ гэж бичнэ үү",
+  "account.deletion.request": "Устгахаар төлөвлөх",
+  "account.deletion.requesting": "Төлөвлөж байна...",
+  "account.deletion.cancel": "Устгах хүсэлтийг цуцлах",
+  "account.deletion.cancelling": "Цуцалж байна...",
+  "account.deletion.scheduled": "Аккаунтыг {{date}}-нд устгахаар төлөвлөлөө.",
+  "account.deletion.retrying":
+    "Аккаунтын цэвэрлэгээг автоматаар дахин оролдоно. Боловсруулалт эхлэхээс өмнө хүсэлтийг цуцалж болно.",
+  "account.deletion.processing": "Аккаунтын цэвэрлэгээ эхэлсэн тул одоо цуцлах боломжгүй.",
+  "account.deletion.cancelled": "Өмнөх устгах хүсэлтийг цуцалсан.",
+  "account.deletion.loadError": "Аккаунт устгах хүсэлтийн төлөвийг ачаалж чадсангүй.",
 
   "workspace.billing.title": "Төлбөр тооцоо",
   "workspace.billing.subtitle.beforeLink": "Төлбөрийн хэрэгслээ удирдана. Асуух зүйл байвал",

@@ -155,6 +155,14 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(application).toBeGreaterThan(migration)
   })
 
+  test("runs bounded account deletion retention against the linked D1 database", async () => {
+    const source = await Bun.file(new URL("../../../infra/console.ts", import.meta.url)).text()
+    expect(source).toContain('new sst.cloudflare.Cron("AccountDeletionRetention"')
+    expect(source).toContain('schedules: ["*/15 * * * *"]')
+    expect(source).toContain('handler: "packages/console/function/src/account-deletion.ts"')
+    expect(source).toContain("link: [database]")
+  })
+
   test("creates a fail-closed Cloudflare Access admin application through IaC", async () => {
     const [adminSource, stageSource, configSource, accessSource, mfaScriptSource] = await Promise.all(
       [

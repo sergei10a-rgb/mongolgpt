@@ -27,8 +27,9 @@ describe("D1 migration", () => {
       .query("select name from sqlite_schema where type = 'table' and name not like 'sqlite_%' order by name")
       .values()
 
-    expect(tables).toHaveLength(36)
+    expect(tables).toHaveLength(37)
     expect(tables).toContainEqual(["account"])
+    expect(tables).toContainEqual(["account_deletion"])
     expect(tables).toContainEqual(["admin_audit_log"])
     expect(tables).toContainEqual(["enterprise_inquiry"])
     expect(tables).toContainEqual(["finance_cost_entry"])
@@ -185,6 +186,47 @@ describe("D1 migration", () => {
     ).toThrow()
     expect(() =>
       database.query("insert into account (id, status) values (?, 'suspended')").run("acc_invalid_suspended"),
+    ).toThrow()
+  })
+
+  test("enforces account deletion retry and state constraints", async () => {
+    const database = new Database(":memory:")
+    database.exec(await migrationSql())
+
+    database
+      .query(
+        `insert into account_deletion
+          (id, account_id, status, attempts, time_eligible)
+         values (?, ?, 'requested', 0, ?)`,
+      )
+      .run("adl_requested", "acc_requested", 1)
+
+    expect(() =>
+      database
+        .query(
+          `insert into account_deletion
+            (id, account_id, status, attempts, time_eligible)
+           values (?, ?, 'processing', 1, ?)`,
+        )
+        .run("adl_invalid_processing", "acc_invalid_processing", 1),
+    ).toThrow()
+    expect(() =>
+      database
+        .query(
+          `insert into account_deletion
+            (id, account_id, status, attempts, time_eligible, time_started, last_error_code)
+           values (?, ?, 'failed', 6, ?, ?, ?)`,
+        )
+        .run("adl_invalid_attempts", "acc_invalid_attempts", 1, 1, "account_cleanup_failed"),
+    ).toThrow()
+    expect(() =>
+      database
+        .query(
+          `insert into account_deletion
+            (id, account_id, status, attempts, time_eligible, time_started, last_error_code)
+           values (?, ?, 'failed', 1, ?, ?, ?)`,
+        )
+        .run("adl_invalid_error", "acc_invalid_error", 1, 1, ""),
     ).toThrow()
   })
 

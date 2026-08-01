@@ -28,7 +28,7 @@ function json(body: unknown, status = 200) {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
 function isSameOrigin(request: Request) {
@@ -55,13 +55,12 @@ function coreErrorStatus(error: unknown) {
   if (error.status === 404 || error.status === 409) return error.status
   const code = typeof error.code === "string" ? error.code.toLowerCase() : ""
   const name = typeof error.name === "string" ? error.name.toLowerCase() : ""
-  const value = `${code} ${name}`
-  if (value.includes("not_found") || value.includes("notfound")) return 404
+  if (code === "not_found" || code === "account_not_found" || name === "accountdeletionnotfounderror") return 404
   if (
-    value.includes("conflict") ||
-    value.includes("already") ||
-    value.includes("pending") ||
-    value.includes("too_late")
+    code === "too_late" ||
+    code === "deletion_conflict" ||
+    code === "workspace_admin_required" ||
+    name === "accountdeletionconflicterror"
   ) {
     return 409
   }
@@ -70,6 +69,9 @@ function coreErrorStatus(error: unknown) {
 
 function errorMessage(error: unknown, status: number) {
   if (status === 404) return "Устгах хүсэлттэй холбоотой аккаунт олдсонгүй."
+  if (isRecord(error) && error.code === "workspace_admin_required") {
+    return "Хуваалцсан ажлын талбарт өөр админ томилсны дараа аккаунтаа устгана уу."
+  }
   if (status === 409) return "Аккаунтыг устгах хүсэлтийн төлөв энэ үйлдэлтэй зөрчилдөж байна."
   return "Серверийн алдаа гарлаа."
 }
@@ -83,16 +85,20 @@ export async function handleAccountDeletion({ request, identity, service }: Acco
   try {
     if (request.method === "GET") {
       const deletion = await service.getAccountDeletion({ accountID: identity.accountID })
-      return json({ success: true, deletion })
+      return json({ success: true, account: { email: identity.email }, deletion: deletion ?? null })
     }
 
     if (request.method === "POST") {
       const body = await readJson(request)
-      if (!isRecord(body) || body.confirmation !== CONFIRM_DELETE || body.email !== identity.email) {
+      if (!isRecord(body)) {
+        return json({ error: "Имэйл болон ‘УСТГАХ’ баталгаажуулалтыг зөв оруулна уу." }, 400)
+      }
+      const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : ""
+      if (body.confirmation !== CONFIRM_DELETE || email !== identity.email.trim().toLowerCase()) {
         return json({ error: "Имэйл болон ‘УСТГАХ’ баталгаажуулалтыг зөв оруулна уу." }, 400)
       }
       const deletion = await service.requestAccountDeletion({ accountID: identity.accountID })
-      return json({ success: true, deletion })
+      return json({ success: true, deletion }, 202)
     }
 
     if (request.method === "DELETE") {
