@@ -21,16 +21,16 @@ const operations = [
 ] as const
 
 export const Parameters = Schema.Struct({
-  operation: Schema.Literals(operations).annotate({ description: "The LSP operation to perform" }),
-  filePath: Schema.String.annotate({ description: "The absolute or relative path to the file" }),
+  operation: Schema.Literals(operations).annotate({ description: "Гүйцэтгэх LSP operation" }),
+  filePath: Schema.String.annotate({ description: "Файлын абсолют эсвэл relative path" }),
   line: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({
-    description: "The line number (1-based, as shown in editors)",
+    description: "Мөрийн дугаар (editor дээрхтэй адил 1-ээс эхэлнэ)",
   }),
   character: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({
-    description: "The character offset (1-based, as shown in editors)",
+    description: "Тэмдэгтийн offset (editor дээрхтэй адил 1-ээс эхэлнэ)",
   }),
   query: Schema.optional(Schema.String).annotate({
-    description: "Search query for workspaceSymbol. Empty string requests all symbols.",
+    description: "workspaceSymbol-д ашиглах хайлтын query. Хоосон string нь бүх symbol-ийг хүснэ.",
   }),
 })
 
@@ -72,10 +72,10 @@ export const LspTool = Tool.define(
           const title = detail ? `${args.operation} ${detail}` : args.operation
 
           const exists = yield* fs.existsSafe(file)
-          if (!exists) throw new Error(`File not found: ${file}`)
+          if (!exists) throw new Error(`Файл олдсонгүй: ${file}`)
 
           const available = yield* lsp.hasClients(file)
-          if (!available) throw new Error("No LSP server available for this file type.")
+          if (!available) throw new Error("Энэ файлын төрөлд ашиглах LSP server алга.")
 
           yield* lsp.touchFile(file, "document")
 
@@ -105,7 +105,7 @@ export const LspTool = Tool.define(
           return {
             title,
             metadata: { result },
-            output: result.length === 0 ? `No results found for ${args.operation}` : JSON.stringify(result, null, 2),
+            output: result.length === 0 ? `${args.operation}-д үр дүн олдсонгүй` : JSON.stringify(result, null, 2),
           }
         }).pipe(Effect.orDie),
     }

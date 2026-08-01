@@ -93,21 +93,21 @@ describe("tool.apply_patch freeform", () => {
   it.live("requires patchText", () =>
     Effect.gen(function* () {
       const { ctx } = makeCtx()
-      yield* expectFailure(execute({ patchText: "" }, ctx), "patchText is required")
+      yield* expectFailure(execute({ patchText: "" }, ctx), "patchText шаардлагатай")
     }),
   )
 
   it.live("rejects invalid patch format", () =>
     Effect.gen(function* () {
       const { ctx } = makeCtx()
-      yield* expectFailure(execute({ patchText: "invalid patch" }, ctx), "apply_patch verification failed")
+      yield* expectFailure(execute({ patchText: "invalid patch" }, ctx), "apply_patch баталгаажуулалт амжилтгүй боллоо")
     }),
   )
 
   it.live("rejects empty patch", () =>
     Effect.gen(function* () {
       const { ctx } = makeCtx()
-      yield* expectFailure(execute({ patchText: "*** Begin Patch\n*** End Patch" }, ctx), "patch rejected: empty patch")
+      yield* expectFailure(execute({ patchText: "*** Begin Patch\n*** End Patch" }, ctx), "patch татгалзагдлаа")
     }),
   )
 
@@ -127,8 +127,8 @@ describe("tool.apply_patch freeform", () => {
 
         const result = yield* execute({ patchText }, ctx)
 
-        expect(result.title).toContain("Success. Updated the following files")
-        expect(result.output).toContain("Success. Updated the following files")
+        expect(result.title).toContain("Амжилттай. Дараах файлууд шинэчлэгдлээ")
+        expect(result.output).toContain("Амжилттай. Дараах файлууд шинэчлэгдлээ")
         // Strict formatting assertions for slashes
         expect(result.output).toMatch(/A nested\/new\.txt/)
         expect(result.output).toMatch(/D delete\.txt/)
@@ -323,7 +323,7 @@ describe("tool.apply_patch freeform", () => {
 
       yield* expectFailure(
         execute({ patchText }, ctx),
-        "apply_patch verification failed: Failed to read file to update",
+        "apply_patch баталгаажуулалт амжилтгүй боллоо: шинэчлэх файлыг уншиж чадсангүй",
       )
     }),
   )
@@ -355,7 +355,7 @@ describe("tool.apply_patch freeform", () => {
       const { ctx } = makeCtx()
       const patchText = "*** Begin Patch\n*** Frobnicate File: foo\n*** End Patch"
 
-      yield* expectFailure(execute({ patchText }, ctx), "apply_patch verification failed")
+      yield* expectFailure(execute({ patchText }, ctx), "apply_patch баталгаажуулалт амжилтгүй боллоо")
     }),
   )
 
@@ -368,7 +368,7 @@ describe("tool.apply_patch freeform", () => {
 
       const patchText = "*** Begin Patch\n*** Update File: modify.txt\n@@\n-missing\n+changed\n*** End Patch"
 
-      yield* expectFailure(execute({ patchText }, ctx), "apply_patch verification failed")
+      yield* expectFailure(execute({ patchText }, ctx), "apply_patch баталгаажуулалт амжилтгүй боллоо")
       expect(yield* readText(target)).toBe("line1\nline2\n")
     }),
   )

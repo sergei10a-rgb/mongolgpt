@@ -8,12 +8,12 @@ import DESCRIPTION from "./grep.txt"
 import * as Tool from "./tool"
 
 export const Parameters = Schema.Struct({
-  pattern: Schema.String.annotate({ description: "The regex pattern to search for in file contents" }),
+  pattern: Schema.String.annotate({ description: "Файлын агуулгаас хайх regex pattern" }),
   path: Schema.optional(Schema.String).annotate({
-    description: "The directory to search in. Defaults to the current working directory.",
+    description: "Хайх directory. Тодорхойлоогүй бол одоогийн working directory ашиглана.",
   }),
   include: Schema.optional(Schema.String).annotate({
-    description: 'File pattern to include in the search (e.g. "*.js", "*.{ts,tsx}")',
+    description: 'Хайлтад оруулах файлын pattern (жишээ нь "*.js", "*.{ts,tsx}")',
   }),
 })
 
@@ -30,10 +30,10 @@ export const GrepTool = Tool.define(
           const empty = {
             title: params.pattern,
             metadata: { matches: 0, truncated: false },
-            output: "No files found",
+            output: "Файл олдсонгүй",
           }
           if (!params.pattern) {
-            throw new Error("pattern is required")
+            throw new Error("pattern шаардлагатай")
           }
 
           yield* ctx.ask({
@@ -81,7 +81,7 @@ export const GrepTool = Tool.define(
 
           const total = rows.length
           const hasMore = truncated || result.length === limit
-          const output = [`Found ${total} matches${hasMore ? " (more matches available)" : ""}`]
+          const output = [`${total} тохирол олдлоо${hasMore ? " (илүү тохирол байна)" : ""}`]
 
           let current = ""
           for (const match of final) {
@@ -90,12 +90,12 @@ export const GrepTool = Tool.define(
               current = match.path
               output.push(`${match.path}:`)
             }
-            output.push(`  Line ${match.line}: ${match.text}`)
+            output.push(`  ${match.line}-р мөр: ${match.text}`)
           }
 
           if (truncated) {
             output.push("")
-            output.push("(Results truncated. Consider using a more specific path or pattern.)")
+            output.push("(Үр дүн таслагдсан. Илүү тодорхой path эсвэл pattern ашиглана уу.)")
           }
 
           return {

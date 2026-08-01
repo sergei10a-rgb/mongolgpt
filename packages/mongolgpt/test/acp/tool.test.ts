@@ -147,7 +147,7 @@ describe("acp tool conversion", () => {
             oldString: "before",
             newString: "after",
           },
-          output: "Edit applied successfully.",
+          output: "Edit амжилттай хэрэгжлээ.",
         },
       }),
     ).toEqual({
@@ -156,7 +156,7 @@ describe("acp tool conversion", () => {
       content: [
         {
           type: "content",
-          content: { type: "text", text: "Edit applied successfully." },
+          content: { type: "text", text: "Edit амжилттай хэрэгжлээ." },
         },
         {
           type: "diff",
@@ -166,7 +166,7 @@ describe("acp tool conversion", () => {
         },
       ],
       rawOutput: {
-        output: "Edit applied successfully.",
+        output: "Edit амжилттай хэрэгжлээ.",
       },
     })
 
@@ -182,7 +182,7 @@ describe("acp tool conversion", () => {
             newString: "after",
           },
           title: "file.ts",
-          output: "Edit applied successfully.",
+          output: "Edit амжилттай хэрэгжлээ.",
         },
       }),
     ).toMatchObject({

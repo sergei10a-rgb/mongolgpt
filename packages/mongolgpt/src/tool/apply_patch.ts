@@ -16,7 +16,7 @@ import { Format } from "../format"
 import * as Bom from "@/util/bom"
 
 export const Parameters = Schema.Struct({
-  patchText: Schema.String.annotate({ description: "The full patch text that describes all changes to be made" }),
+  patchText: Schema.String.annotate({ description: "Хийх бүх өөрчлөлтийг тодорхойлсон бүрэн patch текст" }),
 })
 
 export const ApplyPatchTool = Tool.define(
@@ -32,7 +32,7 @@ export const ApplyPatchTool = Tool.define(
       ctx: Tool.Context,
     ) {
       if (!params.patchText) {
-        return yield* Effect.fail(new Error("patchText is required"))
+        return yield* Effect.fail(new Error("patchText шаардлагатай"))
       }
 
       // Parse the patch to get hunks
@@ -41,15 +41,15 @@ export const ApplyPatchTool = Tool.define(
         const parseResult = Patch.parsePatch(params.patchText)
         hunks = parseResult.hunks
       } catch (error) {
-        return yield* Effect.fail(new Error(`apply_patch verification failed: ${error}`))
+        return yield* Effect.fail(new Error(`apply_patch баталгаажуулалт амжилтгүй боллоо: ${error}`))
       }
 
       if (hunks.length === 0) {
         const normalized = params.patchText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim()
         if (normalized === "*** Begin Patch\n*** End Patch") {
-          return yield* Effect.fail(new Error("patch rejected: empty patch"))
+          return yield* Effect.fail(new Error("patch татгалзагдлаа: хоосон patch байна"))
         }
-        return yield* Effect.fail(new Error("apply_patch verification failed: no hunks found"))
+        return yield* Effect.fail(new Error("apply_patch баталгаажуулалт амжилтгүй боллоо: hunk олдсонгүй"))
       }
 
       const instance = yield* InstanceState.context
@@ -108,7 +108,7 @@ export const ApplyPatchTool = Tool.define(
             const stats = yield* afs.stat(filePath).pipe(Effect.catch(() => Effect.succeed(undefined)))
             if (!stats || stats.type === "Directory") {
               return yield* Effect.fail(
-                new Error(`apply_patch verification failed: Failed to read file to update: ${filePath}`),
+                new Error(`apply_patch баталгаажуулалт амжилтгүй боллоо: шинэчлэх файлыг уншиж чадсангүй: ${filePath}`),
               )
             }
 
@@ -127,7 +127,7 @@ export const ApplyPatchTool = Tool.define(
               newContent = fileUpdate.content
               bom = fileUpdate.bom
             } catch (error) {
-              return yield* Effect.fail(new Error(`apply_patch verification failed: ${error}`))
+              return yield* Effect.fail(new Error(`apply_patch баталгаажуулалт амжилтгүй боллоо: ${error}`))
             }
 
             const diff = trimDiff(createTwoFilesPatch(filePath, filePath, oldContent, newContent))
@@ -163,7 +163,7 @@ export const ApplyPatchTool = Tool.define(
               Effect.catch((error) =>
                 Effect.fail(
                   new Error(
-                    `apply_patch verification failed: ${error instanceof Error ? error.message : String(error)}`,
+                    `apply_patch баталгаажуулалт амжилтгүй боллоо: ${error instanceof Error ? error.message : String(error)}`,
                   ),
                 ),
               ),
@@ -281,7 +281,7 @@ export const ApplyPatchTool = Tool.define(
         const target = change.movePath ?? change.filePath
         return `M ${path.relative(instance.worktree, target).replaceAll("\\", "/")}`
       })
-      let output = `Success. Updated the following files:\n${summaryLines.join("\n")}`
+      let output = `Амжилттай. Дараах файлууд шинэчлэгдлээ:\n${summaryLines.join("\n")}`
 
       for (const change of fileChanges) {
         if (change.type === "delete") continue
@@ -289,7 +289,7 @@ export const ApplyPatchTool = Tool.define(
         const block = LSP.Diagnostic.report(target, diagnostics[FSUtil.normalizePath(target)] ?? [])
         if (!block) continue
         const rel = path.relative(instance.worktree, target).replaceAll("\\", "/")
-        output += `\n\nLSP errors detected in ${rel}, please fix:\n${block}`
+        output += `\n\n${rel} дотор LSP алдаа илэрлээ. Засна уу:\n${block}`
       }
 
       return {

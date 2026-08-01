@@ -320,8 +320,8 @@ describe("tool.read truncation", () => {
 
       const result = yield* run({ filePath: path.join(test.directory, "large.json") })
       expect(result.metadata.truncated).toBe(true)
-      expect(result.output).toContain("Output capped at")
-      expect(result.output).toContain("Use offset=")
+      expect(result.output).toContain("Гаралт")
+      expect(result.output).toContain("Үргэлжлүүлэхийн тулд offset=")
     }),
   )
 
@@ -352,7 +352,7 @@ describe("tool.read truncation", () => {
       )
 
       expect(result.metadata.truncated).toBe(true)
-      expect(result.output).toContain("Output capped at")
+      expect(result.output).toContain("Гаралт")
       expect(counter.bytes).toBeLessThan(Buffer.byteLength(content, "utf-8") / 2)
     }),
   )
@@ -365,8 +365,8 @@ describe("tool.read truncation", () => {
 
       const result = yield* run({ filePath: path.join(test.directory, "many-lines.txt"), limit: 10 })
       expect(result.metadata.truncated).toBe(true)
-      expect(result.output).toContain("Showing lines 1-10 of 100")
-      expect(result.output).toContain("Use offset=11")
+      expect(result.output).toContain("100 мөрөөс 1-10-р мөрийг харуулж байна")
+      expect(result.output).toContain("Үргэлжлүүлэхийн тулд offset=11")
       expect(result.output).toContain("line0")
       expect(result.output).toContain("line9")
       expect(result.output).not.toContain("line10")
@@ -380,7 +380,7 @@ describe("tool.read truncation", () => {
 
       const result = yield* run({ filePath: path.join(test.directory, "small.txt") })
       expect(result.metadata.truncated).toBe(false)
-      expect(result.output).toContain("End of file")
+      expect(result.output).toContain("Файлын төгсгөл")
       expect(result.metadata.display).toMatchObject({
         type: "file",
         path: path.join(test.directory, "small.txt"),
@@ -418,7 +418,7 @@ describe("tool.read truncation", () => {
       yield* put(path.join(dir, "short.txt"), lines)
 
       const err = yield* fail(dir, { filePath: path.join(dir, "short.txt"), offset: 4, limit: 5 })
-      expect(err.message).toContain("Offset 4 is out of range for this file (3 lines)")
+      expect(err.message).toContain("Энэ файлын хувьд offset 4 хязгаараас гадуур байна (3 мөр)")
     }),
   )
 
@@ -429,7 +429,7 @@ describe("tool.read truncation", () => {
 
       const result = yield* exec(dir, { filePath: path.join(dir, "empty.txt") })
       expect(result.metadata.truncated).toBe(false)
-      expect(result.output).toContain("End of file - total 0 lines")
+      expect(result.output).toContain("Файлын төгсгөл - нийт 0 мөр")
     }),
   )
 
@@ -439,7 +439,7 @@ describe("tool.read truncation", () => {
       yield* put(path.join(dir, "empty.txt"), "")
 
       const err = yield* fail(dir, { filePath: path.join(dir, "empty.txt"), offset: 2 })
-      expect(err.message).toContain("Offset 2 is out of range for this file (0 lines)")
+      expect(err.message).toContain("Энэ файлын хувьд offset 2 хязгаараас гадуур байна (0 мөр)")
     }),
   )
 
@@ -474,7 +474,7 @@ describe("tool.read truncation", () => {
       yield* put(path.join(dir, "long-line.txt"), "x".repeat(3000))
 
       const result = yield* exec(dir, { filePath: path.join(dir, "long-line.txt") })
-      expect(result.output).toContain("(line truncated to 2000 chars)")
+      expect(result.output).toContain("(мөрийг 2000 тэмдэгтээр таслав)")
       expect(result.output.length).toBeLessThan(3000)
     }),
   )
@@ -505,7 +505,7 @@ describe("tool.read truncation", () => {
       yield* put(path.join(dir, "image.bin"), jpeg)
 
       const result = yield* exec(dir, { filePath: path.join(dir, "image.bin") })
-      expect(result.output).toBe("Image read successfully")
+      expect(result.output).toBe("Зураг амжилттай уншигдлаа")
       expect(result.attachments?.[0].mime).toBe("image/jpeg")
       expect(result.attachments?.[0].url.startsWith("data:image/jpeg;base64,")).toBe(true)
     }),
@@ -589,7 +589,7 @@ describe("tool.read binary detection", () => {
       yield* put(path.join(dir, "null-byte.txt"), bytes)
 
       const err = yield* fail(dir, { filePath: path.join(dir, "null-byte.txt") })
-      expect(err.message).toContain("Cannot read binary file")
+      expect(err.message).toContain("Binary файлыг уншиж чадсангүй")
     }),
   )
 
@@ -599,7 +599,7 @@ describe("tool.read binary detection", () => {
       yield* put(path.join(dir, "module.wasm"), "not really wasm")
 
       const err = yield* fail(dir, { filePath: path.join(dir, "module.wasm") })
-      expect(err.message).toContain("Cannot read binary file")
+      expect(err.message).toContain("Binary файлыг уншиж чадсангүй")
     }),
   )
 })

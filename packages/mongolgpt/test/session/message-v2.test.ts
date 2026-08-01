@@ -458,7 +458,7 @@ describe("session.message-v2.toModelMessage", () => {
             state: {
               status: "completed",
               input: { filePath: "/tmp/rails-demo.png" },
-              output: "Image read successfully",
+              output: "Зураг амжилттай уншигдлаа",
               title: "Read",
               metadata: {},
               time: { start: 0, end: 1 },
@@ -487,7 +487,7 @@ describe("session.message-v2.toModelMessage", () => {
       output: {
         type: "content",
         value: [
-          { type: "text", text: "Image read successfully" },
+          { type: "text", text: "Зураг амжилттай уншигдлаа" },
           { type: "media", mediaType: "image/jpeg", data: jpeg },
         ],
       },
@@ -539,7 +539,7 @@ describe("session.message-v2.toModelMessage", () => {
             state: {
               status: "completed",
               input: { filePath: "/tmp/example.pdf" },
-              output: "PDF read successfully",
+              output: "PDF амжилттай уншигдлаа",
               title: "Read",
               metadata: {},
               time: { start: 0, end: 1 },
@@ -582,7 +582,7 @@ describe("session.message-v2.toModelMessage", () => {
             type: "tool-result",
             toolCallId: "call-bedrock-pdf-1",
             toolName: "read",
-            output: { type: "text", value: "PDF read successfully" },
+            output: { type: "text", value: "PDF амжилттай уншигдлаа" },
           },
         ],
       },

@@ -1760,7 +1760,7 @@ describe("session.llm.stream", () => {
                 state: {
                   status: "completed",
                   input: { pattern: "**/*.pdf", path: "/root" },
-                  output: "No files found",
+                  output: "Файл олдсонгүй",
                   metadata: {},
                   title: "root",
                   time: { start: 12, end: 13 },
@@ -1832,7 +1832,7 @@ describe("session.llm.stream", () => {
           role: "user",
           content: [
             { type: "tool_result", tool_use_id: "toolu_01N8mDEzG8DSTs7UPHFtmgCT", content: "<path>/root</path>" },
-            { type: "tool_result", tool_use_id: "toolu_01APxrADs7VozN8uWzw9WwHr", content: "No files found" },
+            { type: "tool_result", tool_use_id: "toolu_01APxrADs7VozN8uWzw9WwHr", content: "Файл олдсонгүй" },
           ],
         })
       }),

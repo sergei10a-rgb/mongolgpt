@@ -45,9 +45,9 @@ describe("websearch provider", () => {
   })
 
   test("uses branded labels", () => {
-    expect(webSearchProviderLabel("parallel")).toBe("Parallel Web Search")
-    expect(webSearchProviderLabel("exa")).toBe("Exa Web Search")
-    expect(webSearchProviderLabel(undefined)).toBe("Web Search")
+    expect(webSearchProviderLabel("parallel")).toBe("Parallel вэб хайлт")
+    expect(webSearchProviderLabel("exa")).toBe("Exa вэб хайлт")
+    expect(webSearchProviderLabel(undefined)).toBe("Вэб хайлт")
   })
 
   test("uses the provider API model id for Parallel analytics", () => {

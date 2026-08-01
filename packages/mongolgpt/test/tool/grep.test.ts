@@ -96,7 +96,7 @@ describe("tool.grep", () => {
         ),
       )
       expect(result.metadata.matches).toBeGreaterThan(0)
-      expect(result.output).toContain("Found")
+      expect(result.output).toContain("тохирол олдлоо")
     }),
   )
 
@@ -114,7 +114,7 @@ describe("tool.grep", () => {
         ctx,
       )
       expect(result.metadata.matches).toBe(0)
-      expect(result.output).toBe("No files found")
+      expect(result.output).toBe("Файл олдсонгүй")
     }),
   )
 
@@ -149,7 +149,7 @@ describe("tool.grep", () => {
       const grep = yield* info.init()
       const result = yield* grep.execute({ pattern: "needle", path: test.directory, include: "*.txt" }, ctx)
 
-      expect(result.output).toContain("(Results truncated. Consider using a more specific path or pattern.)")
+      expect(result.output).toContain("(Үр дүн таслагдсан. Илүү тодорхой path эсвэл pattern ашиглана уу.)")
       expect(result.output).not.toMatch(/showing \d+ of \d+ matches/)
     }),
   )
@@ -170,7 +170,7 @@ describe("tool.grep", () => {
       )
       expect(result.metadata.matches).toBe(1)
       expect(result.output).toContain(file)
-      expect(result.output).toContain("Line 2: line2")
+      expect(result.output).toContain("2-р мөр: line2")
     }),
   )
 

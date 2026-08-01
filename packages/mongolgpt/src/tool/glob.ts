@@ -8,9 +8,9 @@ import DESCRIPTION from "./glob.txt"
 import * as Tool from "./tool"
 
 export const Parameters = Schema.Struct({
-  pattern: Schema.String.annotate({ description: "The glob pattern to match files against" }),
+  pattern: Schema.String.annotate({ description: "Файлуудтай тулгах glob pattern" }),
   path: Schema.optional(Schema.String).annotate({
-    description: `The directory to search in. If not specified, the current working directory will be used. IMPORTANT: Omit this field to use the default directory. DO NOT enter "undefined" or "null" - simply omit it for the default behavior. Must be a valid directory path if provided.`,
+    description: `Хайх directory. Тодорхойлоогүй бол одоогийн working directory ашиглана. ЧУХАЛ: Анхдагч directory ашиглах бол энэ талбарыг орхино уу. "undefined" эсвэл "null" бүү оруул, зүгээр л орхино уу. Өгсөн тохиолдолд хүчинтэй directory path байх ёстой.`,
   }),
 })
 
@@ -39,7 +39,7 @@ export const GlobTool = Tool.define(
           search = path.isAbsolute(search) ? search : path.resolve(ins.directory, search)
           const info = yield* fs.stat(search).pipe(Effect.catch(() => Effect.succeed(undefined)))
           if (info?.type === "File") {
-            throw new Error(`glob path must be a directory: ${search}`)
+            throw new Error(`glob path нь directory байх ёстой: ${search}`)
           }
           yield* assertExternalDirectoryEffect(ctx, search, {
             bypass: false,
@@ -51,13 +51,13 @@ export const GlobTool = Tool.define(
           const truncated = files.length === limit
 
           const output = []
-          if (files.length === 0) output.push("No files found")
+          if (files.length === 0) output.push("Файл олдсонгүй")
           if (files.length > 0) {
             output.push(...files.map((file) => path.resolve(search, file.path)))
             if (truncated) {
               output.push("")
               output.push(
-                `(Results are truncated: showing first ${limit} results. Consider using a more specific path or pattern.)`,
+                `(Үр дүн таслагдсан: эхний ${limit}-ыг харуулж байна. Илүү тодорхой path эсвэл pattern ашиглана уу.)`,
               )
             }
           }

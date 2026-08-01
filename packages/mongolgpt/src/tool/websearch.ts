@@ -8,19 +8,19 @@ import { InstallationVersion } from "@mongolgpt/core/installation/version"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 
 export const Parameters = Schema.Struct({
-  query: Schema.String.annotate({ description: "Websearch query" }),
+  query: Schema.String.annotate({ description: "Вэб хайлтын query" }),
   numResults: Schema.optional(Schema.Number).annotate({
-    description: "Number of search results to return (default: 8)",
+    description: "Буцаах хайлтын үр дүнгийн тоо (анхдагч нь 8)",
   }),
   livecrawl: Schema.optional(Schema.Literals(["fallback", "preferred"])).annotate({
     description:
-      "Live crawl mode - 'fallback': use live crawling as backup if cached content unavailable, 'preferred': prioritize live crawling (default: 'fallback')",
+      "Live crawl горим - 'fallback': кэшлэгдсэн агуулга байхгүй үед live crawl-ийг нөөцөөр ашиглана, 'preferred': live crawl-ийг түрүүнд ашиглана (анхдагч нь 'fallback')",
   }),
   type: Schema.optional(Schema.Literals(["auto", "fast", "deep"])).annotate({
-    description: "Search type - 'auto': balanced search (default), 'fast': quick results, 'deep': comprehensive search",
+    description: "Хайлтын төрөл - 'auto': тэнцвэртэй хайлт (анхдагч), 'fast': хурдан үр дүн, 'deep': дэлгэрэнгүй хайлт",
   }),
   contextMaxCharacters: Schema.optional(Schema.Number).annotate({
-    description: "Maximum characters for context string optimized for LLMs (default: 10000)",
+    description: "LLM-д зориулсан context string-ийн дээд тэмдэгтийн тоо (анхдагч нь 10000)",
   }),
 })
 
@@ -37,9 +37,9 @@ export function selectWebSearchProvider(sessionID: string, flags = { exa: false,
 }
 
 export function webSearchProviderLabel(provider: unknown) {
-  if (provider === "parallel") return "Parallel Web Search"
-  if (provider === "exa") return "Exa Web Search"
-  return "Web Search"
+  if (provider === "parallel") return "Parallel вэб хайлт"
+  if (provider === "exa") return "Exa вэб хайлт"
+  return "Вэб хайлт"
 }
 
 export function webSearchModelName(extra: Tool.Context["extra"]) {
@@ -133,7 +133,7 @@ export const WebSearchTool = Tool.define(
           const result = yield* callProvider(http, provider, params, ctx)
 
           return {
-            output: result ?? "No search results found. Please try a different query.",
+            output: result ?? "Хайлтын үр дүн олдсонгүй. Өөр query ашиглана уу.",
             title: `${title}: ${params.query}`,
             metadata: { provider },
           }

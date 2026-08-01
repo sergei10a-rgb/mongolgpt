@@ -31,19 +31,19 @@ export const PlanExitTool = Tool.define(
             sessionID: ctx.sessionID,
             questions: [
               {
-                question: `Plan at ${plan} is complete. Would you like to switch to the build agent and start implementing?`,
-                header: "Build Agent",
+                question: `${plan} дахь plan дууслаа. Build agent руу шилжиж хэрэгжүүлж эхлэх үү?`,
+                header: "Build agent",
                 custom: false,
                 options: [
-                  { label: "Yes", description: "Switch to build agent and start implementing the plan" },
-                  { label: "No", description: "Stay with plan agent to continue refining the plan" },
+                  { label: "Тийм", description: "Build agent руу шилжиж plan-ийг хэрэгжүүлж эхлэх" },
+                  { label: "Үгүй", description: "Plan agent дээр үлдэж plan-ийг үргэлжлүүлэн сайжруулах" },
                 ],
               },
             ],
             tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
           })
 
-          if (answers[0]?.[0] === "No") yield* new Question.RejectedError()
+          if (answers[0]?.[0] === "Үгүй") yield* new Question.RejectedError()
 
           const messages = yield* session.messages({ sessionID: ctx.sessionID }).pipe(Effect.orDie)
           const lastUser = messages.findLast((item) => item.info.role === "user" && item.info.model)
@@ -64,13 +64,13 @@ export const PlanExitTool = Tool.define(
             messageID: msg.id,
             sessionID: ctx.sessionID,
             type: "text",
-            text: `The plan at ${plan} has been approved, you can now edit files. Execute the plan`,
+            text: `${plan} дахь plan зөвшөөрөгдлөө. Одоо файл засварлаж болно. Plan-ийг хэрэгжүүл`,
             synthetic: true,
           } satisfies SessionV1.TextPart)
 
           return {
-            title: "Switching to build agent",
-            output: "User approved switching to build agent. Wait for further instructions.",
+            title: "Build agent руу шилжиж байна",
+            output: "Хэрэглэгч build agent руу шилжихийг зөвшөөрлөө. Дараагийн зааврыг хүлээнэ үү.",
             metadata: {},
           }
         }).pipe(Effect.orDie),

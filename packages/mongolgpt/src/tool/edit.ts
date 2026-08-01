@@ -45,13 +45,13 @@ function lock(filePath: string) {
 }
 
 export const Parameters = Schema.Struct({
-  filePath: Schema.String.annotate({ description: "The absolute path to the file to modify" }),
-  oldString: Schema.String.annotate({ description: "The text to replace" }),
+  filePath: Schema.String.annotate({ description: "Өөрчлөх файлын абсолют зам" }),
+  oldString: Schema.String.annotate({ description: "Орлуулах текст" }),
   newString: Schema.String.annotate({
-    description: "The text to replace it with (must be different from oldString)",
+    description: "Орлуулах шинэ текст (oldString-ээс ялгаатай байх ёстой)",
   }),
   replaceAll: Schema.optional(Schema.Boolean).annotate({
-    description: "Replace all occurrences of oldString (default false)",
+    description: "oldString-ийн бүх тохиолдлыг орлуулах (анхдагч нь false)",
   }),
 })
 
@@ -69,11 +69,11 @@ export const EditTool = Tool.define(
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           if (!params.filePath) {
-            throw new Error("filePath is required")
+            throw new Error("filePath шаардлагатай")
           }
 
           if (params.oldString === params.newString) {
-            throw new Error("No changes to apply: oldString and newString are identical.")
+            throw new Error("Хэрэгжүүлэх өөрчлөлт алга: oldString болон newString ижил байна.")
           }
 
           const instance = yield* InstanceState.context
@@ -91,7 +91,7 @@ export const EditTool = Tool.define(
                 const existed = yield* afs.existsSafe(filePath)
                 if (existed) {
                   throw new Error(
-                    "oldString cannot be empty when editing an existing file. Provide the exact text to replace, or use write for an intentional full-file replacement.",
+                    "Одоо байгаа файлыг өөрчлөх үед oldString хоосон байж болохгүй. Орлуулах яг текстээ өгнө үү, эсвэл файлыг зориуд бүхэлд нь солих бол write ашиглана уу.",
                   )
                 }
                 const next = Bom.split(params.newString)
@@ -121,8 +121,8 @@ export const EditTool = Tool.define(
               }
 
               const info = yield* afs.stat(filePath).pipe(Effect.catch(() => Effect.succeed(undefined)))
-              if (!info) throw new Error(`File ${filePath} not found`)
-              if (info.type === "Directory") throw new Error(`Path is a directory, not a file: ${filePath}`)
+              if (!info) throw new Error(`Файл олдсонгүй: ${filePath}`)
+              if (info.type === "Directory") throw new Error(`Зам нь файл биш, directory байна: ${filePath}`)
               const source = yield* Bom.readFile(afs, filePath)
               contentOld = source.text
 
@@ -193,12 +193,12 @@ export const EditTool = Tool.define(
             },
           })
 
-          let output = "Edit applied successfully."
+          let output = "Edit амжилттай хэрэгжлээ."
           yield* lsp.touchFile(filePath, "document")
           const diagnostics = yield* lsp.diagnostics()
           const normalizedFilePath = FSUtil.normalizePath(filePath)
           const block = LSP.Diagnostic.report(filePath, diagnostics[normalizedFilePath] ?? [])
-          if (block) output += `\n\nLSP errors detected in this file, please fix:\n${block}`
+          if (block) output += `\n\nЭнэ файлд LSP алдаа илэрлээ. Засна уу:\n${block}`
 
           return {
             metadata: {
@@ -681,11 +681,11 @@ export function trimDiff(diff: string): string {
 
 export function replace(content: string, oldString: string, newString: string, replaceAll = false): string {
   if (oldString === newString) {
-    throw new Error("No changes to apply: oldString and newString are identical.")
+    throw new Error("Хэрэгжүүлэх өөрчлөлт алга: oldString болон newString ижил байна.")
   }
   if (oldString === "") {
     throw new Error(
-      "oldString cannot be empty when editing an existing file. Provide the exact text to replace, or use write for an intentional full-file replacement.",
+      "Одоо байгаа файлыг өөрчлөх үед oldString хоосон байж болохгүй. Орлуулах яг текстээ өгнө үү, эсвэл файлыг зориуд бүхэлд нь солих бол write ашиглана уу.",
     )
   }
 
@@ -708,7 +708,7 @@ export function replace(content: string, oldString: string, newString: string, r
       notFound = false
       if (isDisproportionateMatch(search, oldString)) {
         throw new Error(
-          "Refusing replacement because the matched span is much larger than oldString. Re-read the file and provide the full exact oldString for the intended replacement.",
+          "Таарсан хэсэг oldString-ээс хэт том тул орлуулалтыг цуцаллаа. Файлыг дахин уншаад зорьж буй орлуулалтын бүтэн, яг oldString-ийг өгнө үү.",
         )
       }
       if (replaceAll) {
@@ -721,11 +721,9 @@ export function replace(content: string, oldString: string, newString: string, r
   }
 
   if (notFound) {
-    throw new Error(
-      "Could not find oldString in the file. It must match exactly, including whitespace, indentation, and line endings.",
-    )
+    throw new Error("Файлаас oldString олдсонгүй. Зай, догол мөр, мөрийн төгсгөл хүртэл яг таарсан байх ёстой.")
   }
-  throw new Error("Found multiple matches for oldString. Provide more surrounding context to make the match unique.")
+  throw new Error("oldString олон удаа таарлаа. Яг нэгийг нь ялгахын тулд илүү өргөн орчны текст өгнө үү.")
 }
 
 function isDisproportionateMatch(search: string, oldString: string) {

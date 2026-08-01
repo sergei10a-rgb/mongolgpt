@@ -115,7 +115,7 @@ describe("tool.edit", () => {
         yield* put(filepath, original)
 
         expect((yield* fail({ filePath: filepath, oldString: "", newString: "using Up;\n" })).message).toContain(
-          "oldString cannot be empty",
+          "oldString хоосон байж болохгүй",
         )
 
         const content = yield* loadRaw(filepath)
@@ -154,7 +154,7 @@ describe("tool.edit", () => {
 
         const result = yield* run({ filePath: filepath, oldString: "old content", newString: "new content" })
 
-        expect(result.output).toContain("Edit applied successfully")
+        expect(result.output).toContain("Edit амжилттай хэрэгжлээ")
         expect(yield* load(filepath)).toBe("new content here")
       }),
     )
@@ -184,7 +184,7 @@ describe("tool.edit", () => {
         expect(
           (yield* fail({ filePath: path.join(test.directory, "nonexistent.txt"), oldString: "old", newString: "new" }))
             .message,
-        ).toContain("not found")
+        ).toContain("Файл олдсонгүй")
       }),
     )
 
@@ -195,7 +195,7 @@ describe("tool.edit", () => {
         yield* put(filepath, "content")
 
         expect((yield* fail({ filePath: filepath, oldString: "same", newString: "same" })).message).toContain(
-          "identical",
+          "oldString болон newString ижил байна",
         )
       }),
     )
@@ -232,7 +232,7 @@ describe("tool.edit", () => {
             oldString: ["function configure() {", "  const enabled = true", "}"].join("\n"),
             newString: ["function configure() {", "  const enabled = false", "}"].join("\n"),
           })).message,
-        ).toContain("Could not find oldString")
+        ).toContain("Файлаас oldString олдсонгүй")
         expect(yield* load(filepath)).toBe(original)
       }),
     )
@@ -250,7 +250,7 @@ describe("tool.edit", () => {
             oldString: ["function configure() {", "  const enabled = true", "}"].join("\n"),
             newString: ["function configure() {", "  const enabled = false", "}"].join("\n"),
           })).message,
-        ).toContain("Could not find oldString")
+        ).toContain("Файлаас oldString олдсонгүй")
         expect(yield* load(filepath)).toBe(original)
       }),
     )
@@ -311,7 +311,9 @@ describe("tool.edit", () => {
         const filepath = path.join(test.directory, "file.txt")
         yield* put(filepath, "content")
 
-        expect((yield* fail({ filePath: filepath, oldString: "", newString: "" })).message).toContain("identical")
+        expect((yield* fail({ filePath: filepath, oldString: "", newString: "" })).message).toContain(
+          "oldString болон newString ижил байна",
+        )
       }),
     )
 

@@ -12,7 +12,7 @@ import { isPdfAttachment, sniffAttachmentMime } from "@/util/media"
 
 const DEFAULT_READ_LIMIT = 2000
 const MAX_LINE_LENGTH = 2000
-const MAX_LINE_SUFFIX = `... (line truncated to ${MAX_LINE_LENGTH} chars)`
+const MAX_LINE_SUFFIX = `... (мөрийг ${MAX_LINE_LENGTH} тэмдэгтээр таслав)`
 const MAX_BYTES = 50 * 1024
 const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
 const SAMPLE_BYTES = 4096
@@ -26,12 +26,12 @@ class ReadStop extends Schema.TaggedErrorClass<ReadStop>()("ReadStop", {}) {}
 // Schema output is identical (`type: "number"`), so the LLM view is
 // unchanged; purely CLI-facing uses must now send numbers rather than strings.
 export const Parameters = Schema.Struct({
-  filePath: Schema.String.annotate({ description: "The absolute path to the file or directory to read" }),
+  filePath: Schema.String.annotate({ description: "Унших файл эсвэл directory-ийн абсолют зам" }),
   offset: Schema.optional(NonNegativeInt).annotate({
-    description: "The line number to start reading from (1-indexed)",
+    description: "Уншиж эхлэх мөрийн дугаар (1-ээс эхэлнэ)",
   }),
   limit: Schema.optional(NonNegativeInt).annotate({
-    description: "The maximum number of lines to read (defaults to 2000)",
+    description: "Унших мөрийн дээд тоо (анхдагч нь 2000)",
   }),
 })
 
@@ -91,11 +91,11 @@ export const ReadTool = Tool.define<
 
       if (items.length > 0) {
         return yield* Effect.fail(
-          new Error(`File not found: ${filepath}\n\nDid you mean one of these?\n${items.join("\n")}`),
+          new Error(`Файл олдсонгүй: ${filepath}\n\nТа эдгээрийн аль нэгийг хэлсэн үү?\n${items.join("\n")}`),
         )
       }
 
-      return yield* Effect.fail(new Error(`File not found: ${filepath}`))
+      return yield* Effect.fail(new Error(`Файл олдсонгүй: ${filepath}`))
     })
 
     const list = Effect.fn("ReadTool.list")(function* (filepath: string) {
@@ -277,8 +277,8 @@ export const ReadTool = Tool.define<
             `<entries>`,
             sliced.join("\n"),
             truncated
-              ? `\n(Showing ${sliced.length} of ${items.length} entries. Use 'offset' parameter to read beyond entry ${offset + sliced.length})`
-              : `\n(${items.length} entries)`,
+              ? `\nНийт ${items.length} entry-ээс ${sliced.length}-ыг харуулж байна. ${offset + sliced.length}-р entry-ээс цааш уншихын тулд 'offset' параметр ашиглана уу.`
+              : `\n(${items.length} entry)`,
             `</entries>`,
           ].join("\n"),
           metadata: {
@@ -305,7 +305,7 @@ export const ReadTool = Tool.define<
 
       if (isImage || isPdfAttachment(mime)) {
         const bytes = yield* fs.readFile(filepath)
-        const msg = isPdfAttachment(mime) ? "PDF read successfully" : "Image read successfully"
+        const msg = isPdfAttachment(mime) ? "PDF амжилттай уншигдлаа" : "Зураг амжилттай уншигдлаа"
         return {
           title,
           output: msg,
@@ -325,13 +325,13 @@ export const ReadTool = Tool.define<
       }
 
       if (isBinaryFile(filepath, sample)) {
-        return yield* Effect.fail(new Error(`Cannot read binary file: ${filepath}`))
+        return yield* Effect.fail(new Error(`Binary файлыг уншиж чадсангүй: ${filepath}`))
       }
 
       const file = yield* lines(filepath, { limit: params.limit ?? DEFAULT_READ_LIMIT, offset: params.offset || 1 })
       if (file.count < file.offset && !(file.count === 0 && file.offset === 1)) {
         return yield* Effect.fail(
-          new Error(`Offset ${file.offset} is out of range for this file (${file.count} lines)`),
+          new Error(`Энэ файлын хувьд offset ${file.offset} хязгаараас гадуур байна (${file.count} мөр)`),
         )
       }
 
@@ -342,11 +342,11 @@ export const ReadTool = Tool.define<
       const next = last + 1
       const truncated = file.more || file.cut
       if (file.cut) {
-        output += `\n\n(Output capped at ${MAX_BYTES_LABEL}. Showing lines ${file.offset}-${last}. Use offset=${next} to continue.)`
+        output += `\n\n(Гаралт ${MAX_BYTES_LABEL}-ээр хязгаарлагдсан. ${file.offset}-${last}-р мөрийг харуулж байна. Үргэлжлүүлэхийн тулд offset=${next} ашиглана уу.)`
       } else if (file.more) {
-        output += `\n\n(Showing lines ${file.offset}-${last} of ${file.count}. Use offset=${next} to continue.)`
+        output += `\n\n(${file.count} мөрөөс ${file.offset}-${last}-р мөрийг харуулж байна. Үргэлжлүүлэхийн тулд offset=${next} ашиглана уу.)`
       } else {
-        output += `\n\n(End of file - total ${file.count} lines)`
+        output += `\n\n(Файлын төгсгөл - нийт ${file.count} мөр)`
       }
       output += "\n</content>"
 

@@ -9,12 +9,12 @@ export const Parameters = Schema.Struct({
 export const InvalidTool = Tool.define(
   "invalid",
   Effect.succeed({
-    description: "Do not use",
+    description: "Ашиглахгүй",
     parameters: Parameters,
     execute: (params: { tool: string; error: string }) =>
       Effect.succeed({
-        title: "Invalid Tool",
-        output: `The arguments provided to the tool are invalid: ${params.error}`,
+        title: "Буруу tool",
+        output: `Tool-д өгсөн аргументууд буруу байна: ${params.error}`,
         metadata: {},
       }),
   }),
