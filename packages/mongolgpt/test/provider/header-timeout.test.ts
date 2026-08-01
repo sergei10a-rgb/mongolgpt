@@ -104,7 +104,9 @@ it.live("headerTimeout aborts when response headers do not arrive", () =>
             }
             return errors
           })
-          expect(errors.join("\n")).toContain("response headers timed out")
+          expect(errors.join("\n")).toContain(
+            "Үйлчилгээ үзүүлэгчийн хариуны толгой хэсгийг 50 миллисекундийн дотор хүлээн авч чадсангүй.",
+          )
         }),
       { config: providerConfig(server.url, { headerTimeout: 50 }) },
     )

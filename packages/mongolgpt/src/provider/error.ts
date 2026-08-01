@@ -8,7 +8,7 @@ export class HeaderTimeoutError extends Error {
   public override readonly name = "ProviderHeaderTimeoutError"
 
   constructor(public readonly ms: number) {
-    super(`Provider response headers timed out after ${ms}ms`)
+    super(`Үйлчилгээ үзүүлэгчийн хариуны толгой хэсгийг ${ms} миллисекундийн дотор хүлээн авч чадсангүй.`)
   }
 }
 
@@ -38,7 +38,7 @@ function message(providerID: ProviderV2.ID, e: APICallError) {
         const err = STATUS_CODES[e.statusCode]
         if (err) return err
       }
-      return "Unknown error"
+      return "Тодорхойгүй алдаа"
     }
 
     if (!e.responseBody || (e.statusCode && msg !== STATUS_CODES[e.statusCode])) {
@@ -58,10 +58,10 @@ function message(providerID: ProviderV2.ID, e: APICallError) {
     // provide a human-readable message instead of dumping raw markup
     if (/^\s*<!doctype|^\s*<html/i.test(e.responseBody)) {
       if (e.statusCode === 401) {
-        return "Unauthorized: request was blocked by a gateway or proxy. Your authentication token may be missing or expired — try running `mongolgpt auth login <your provider URL>` to re-authenticate."
+        return "Нэвтрэх зөвшөөрөлгүй: хүсэлтийг API гарц эсвэл зуучлагч сервер хаасан байна. Нэвтрэх баталгаажуулалтын мэдээлэл байхгүй эсвэл хугацаа нь дууссан байж болзошгүй. Дахин нэвтрэхийн тулд `mongolgpt auth login <your provider URL>` командыг ажиллуулна уу."
       }
       if (e.statusCode === 403) {
-        return "Forbidden: request was blocked by a gateway or proxy. You may not have permission to access this resource — check your account and provider settings."
+        return "Хандах эрхгүй: хүсэлтийг API гарц эсвэл зуучлагч сервер хаасан байна. Энэ нөөцөд хандах эрхгүй байж болзошгүй тул бүртгэл болон үйлчилгээ үзүүлэгчийн тохиргоогоо шалгана уу."
       }
       return msg
     }
@@ -111,27 +111,27 @@ export function parseStreamError(input: unknown): ParsedStreamError | undefined 
     case "context_length_exceeded":
       return {
         type: "context_overflow",
-        message: "Input exceeds context window of this model",
+        message: "Оруулсан мэдээлэл энэ загварын контекстийн багтаамжаас хэтэрлээ.",
         responseBody,
       }
     case "insufficient_quota":
       return {
         type: "api_error",
-        message: "Quota exceeded. Check your plan and billing details.",
+        message: "Хэрэглээний хязгаар дууслаа. Багц болон төлбөрийн мэдээллээ шалгана уу.",
         isRetryable: false,
         responseBody,
       }
     case "usage_not_included":
       return {
         type: "api_error",
-        message: "To use Codex with your ChatGPT plan, upgrade to Plus: https://chatgpt.com/explore/plus.",
+        message: "Codex-ийг ChatGPT багцаараа ашиглахын тулд Plus багц руу шинэчилнэ үү: https://chatgpt.com/explore/plus.",
         isRetryable: false,
         responseBody,
       }
     case "invalid_prompt":
       return {
         type: "api_error",
-        message: typeof body?.error?.message === "string" ? body?.error?.message : "Invalid prompt.",
+        message: typeof body?.error?.message === "string" ? body?.error?.message : "Оруулсан заавар буруу байна.",
         isRetryable: false,
         responseBody,
       }
@@ -139,7 +139,7 @@ export function parseStreamError(input: unknown): ParsedStreamError | undefined 
     case "server_error":
       return {
         type: "api_error",
-        message: typeof body?.error?.message === "string" ? body?.error?.message : "Server error.",
+        message: typeof body?.error?.message === "string" ? body?.error?.message : "Серверийн алдаа гарлаа.",
         isRetryable: true,
         responseBody,
       }
