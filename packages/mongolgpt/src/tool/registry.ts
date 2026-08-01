@@ -258,10 +258,10 @@ export const layer = Layer.effect(
       const description = list
         .map(
           (item) =>
-            `- ${item.name}: ${item.description ?? "This subagent should only be called manually by the user."}`,
+            `- ${item.name}: ${item.description ?? "Энэ дэд агентийг зөвхөн хэрэглэгч өөрөө дуудах ёстой."}`,
         )
         .join("\n")
-      return ["Available agent types and the tools they have access to:", description].join("\n")
+      return ["Боломжтой агентын төрлүүд болон ашиглах хэрэгслүүд:", description].join("\n")
     })
 
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {

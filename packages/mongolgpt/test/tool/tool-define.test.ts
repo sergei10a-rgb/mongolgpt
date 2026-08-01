@@ -145,8 +145,8 @@ describe("Tool.define", () => {
       expect(error).toBeInstanceOf(Tool.InvalidArgumentsError)
       const args = error as Tool.InvalidArgumentsError
       expect(args.tool).toBe("qtest")
-      expect(args.message).toContain("qtest tool was called with invalid arguments")
-      expect(args.message).toContain("Please rewrite the input")
+      expect(args.message).toContain("qtest хэрэгсэл буруу аргументаар дуудагдлаа")
+      expect(args.message).toContain("Оролтыг шаардлагатай схемд нийцүүлэн дахин бичнэ үү")
       expect(args.message).toContain(`["questions"][0]["question"]`)
     }),
   )

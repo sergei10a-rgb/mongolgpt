@@ -29,7 +29,7 @@ export class InvalidArgumentsError extends Schema.TaggedErrorClass<InvalidArgume
   },
 ) {
   override get message() {
-    return `The ${this.tool} tool was called with invalid arguments: ${this.detail}.\nPlease rewrite the input so it satisfies the expected schema.`
+    return `${this.tool} хэрэгсэл буруу аргументаар дуудагдлаа: ${this.detail}.\nОролтыг шаардлагатай схемд нийцүүлэн дахин бичнэ үү.`
   }
 }
 

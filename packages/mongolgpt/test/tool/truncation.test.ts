@@ -182,7 +182,7 @@ describe("Truncate", () => {
         const result = yield* svc.output(lines, { maxLines: 10 })
 
         expect(result.truncated).toBe(true)
-        expect(result.content).toContain("The tool call succeeded but the output was truncated")
+        expect(result.content).toContain("Хэрэгслийн дуудлага амжилттай боловч гаралтыг товчиллоо")
         expect(result.content).toContain("Grep")
         if (!result.truncated) throw new Error("expected truncated")
         expect(result.outputPath).toBeDefined()
@@ -203,7 +203,7 @@ describe("Truncate", () => {
 
         expect(result.truncated).toBe(true)
         expect(result.content).toContain("Grep")
-        expect(result.content).toContain("Task tool")
+        expect(result.content).toContain("Task хэрэгслээр")
       }),
     )
 

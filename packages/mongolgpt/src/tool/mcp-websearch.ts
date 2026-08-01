@@ -89,7 +89,7 @@ export const call = <F extends Schema.Struct.Fields>(
     const response = yield* HttpClient.filterStatusOk(http)
       .execute(request)
       .pipe(
-        Effect.timeoutOrElse({ duration: timeout, orElse: () => Effect.die(new Error(`${tool} request timed out`)) }),
+        Effect.timeoutOrElse({ duration: timeout, orElse: () => Effect.die(new Error(`${tool} хүсэлтийн хугацаа дууслаа`)) }),
       )
     const body = yield* response.text
     return yield* parseResponse(body)
