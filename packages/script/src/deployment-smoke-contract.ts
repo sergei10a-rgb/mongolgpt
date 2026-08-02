@@ -13,6 +13,13 @@ export type PaymentHealthContract = {
   environment: "disabled" | "sandbox" | "production"
 }
 
+export function inspectHtmlContentType(contentType: string | null, label: string) {
+  const mediaType = contentType?.split(";", 1)[0]?.trim().toLowerCase()
+  if (mediaType !== "text/html") {
+    throw new Error(`${label} is not HTML: ${contentType || "missing content-type"}`)
+  }
+}
+
 export function inspectJsonApiPayload(contentType: string | null, payload: string, label: string): unknown {
   const mediaType = contentType?.split(";", 1)[0]?.trim().toLowerCase()
   if (mediaType !== "application/json") {
@@ -94,8 +101,12 @@ export function inspectHostedAppRuntime(
     throw new Error(`app channel is ${contract.channel}; expected ${expected.channel}`)
   }
 
+  const actual = new URL(contract.serverUrl)
+  if (actual.pathname !== "/" || actual.search !== "" || actual.hash !== "") {
+    throw new Error(`hosted runtime URL must be an exact root URL: ${contract.serverUrl}`)
+  }
   const expectedOrigin = new URL(expected.runtimeHealthUrl).origin
-  const actualOrigin = new URL(contract.serverUrl).origin
+  const actualOrigin = actual.origin
   if (actualOrigin !== expectedOrigin) {
     throw new Error(`app runtime origin is ${actualOrigin}; expected ${expectedOrigin}`)
   }

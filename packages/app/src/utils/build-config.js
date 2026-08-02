@@ -55,6 +55,9 @@ export function resolveRuntimeMetadata(env = process.env) {
       local(configured) ||
       (appUrl && new URL(configured).origin === new URL(appUrl).origin) ||
       (publicUrl && new URL(configured).origin === new URL(publicUrl).origin) ||
+      new URL(configured).pathname !== "/" ||
+      new URL(configured).search !== "" ||
+      new URL(configured).hash !== "" ||
       new URL(configured).protocol !== "https:")
   ) {
     throw new Error("MongolGPT hosted Web build requires a non-local HTTPS runtime URL")

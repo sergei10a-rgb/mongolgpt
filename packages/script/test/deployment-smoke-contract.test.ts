@@ -4,6 +4,7 @@ import {
   inspectAnonymousHostedSession,
   inspectAppHtml,
   inspectHostedAppRuntime,
+  inspectHtmlContentType,
   inspectJsonApiPayload,
   inspectPaymentHealth,
 } from "../src/deployment-smoke-contract"
@@ -113,6 +114,41 @@ describe("inspectAppHtml", () => {
         runtimeHealthUrl: "https://runtime.beta.mgpt.mn/global/health",
       }),
     ).toThrow("expected https://runtime.beta.mgpt.mn")
+  })
+
+  test("rejects a hosted runtime path, query, or fragment", () => {
+    for (const serverUrl of [
+      "https://runtime.dev.mgpt.mn/api",
+      "https://runtime.dev.mgpt.mn?tenant=x",
+      "https://runtime.dev.mgpt.mn#fragment",
+    ]) {
+      const contract = inspectAppHtml(
+        html(`
+          <title>MongolGPT</title>
+          <meta name="mongolgpt-channel" content="dev">
+          <meta name="mongolgpt-runtime-mode" content="hosted">
+          <meta name="mongolgpt-server-url" content="${serverUrl}">
+        `),
+        "https://app.dev.mgpt.mn",
+      )
+
+      expect(() =>
+        inspectHostedAppRuntime(contract, {
+          channel: "dev",
+          runtimeHealthUrl: "https://runtime.dev.mgpt.mn/global/health",
+        }),
+      ).toThrow("exact root URL")
+    }
+  })
+})
+
+describe("inspectHtmlContentType", () => {
+  test("accepts HTML media types with parameters", () => {
+    expect(() => inspectHtmlContentType("text/html; charset=utf-8", "app response")).not.toThrow()
+  })
+
+  test("rejects a valid HTML body labelled as JSON", () => {
+    expect(() => inspectHtmlContentType("application/json", "app response")).toThrow("not HTML")
   })
 })
 

@@ -115,6 +115,24 @@ describe("resolveRuntimeMetadata", () => {
     ).toThrow("requires a non-local HTTPS runtime URL")
   })
 
+  test("fails a hosted Web build pointed at a runtime path", () => {
+    for (const serverUrl of [
+      "https://runtime.dev.mgpt.mn/api",
+      "https://runtime.dev.mgpt.mn/runtime/edge",
+      "https://runtime.dev.mgpt.mn?tenant=x",
+      "https://runtime.dev.mgpt.mn#fragment",
+    ]) {
+      expect(() =>
+        resolveRuntimeMetadata({
+          MONGOLGPT_CHANNEL: "dev",
+          VITE_MONGOLGPT_APP_URL: "https://app.dev.mgpt.mn",
+          VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
+          VITE_MONGOLGPT_SERVER_URL: serverUrl,
+        }),
+      ).toThrow("requires a non-local HTTPS runtime URL")
+    }
+  })
+
   test("fails a hosted Web build pointed at a path on its static app origin", () => {
     expect(() =>
       resolveRuntimeMetadata({

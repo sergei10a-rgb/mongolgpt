@@ -4,6 +4,7 @@ import {
   inspectAnonymousHostedSession,
   inspectAppHtml,
   inspectHostedAppRuntime,
+  inspectHtmlContentType,
   inspectJsonApiPayload,
   inspectPaymentHealth,
 } from "@mongolgpt/script/deployment-smoke-contract"
@@ -73,9 +74,11 @@ async function check(
       } else if (name === "console") {
         await checkHostedRuntimeToken(url, appUrl)
       } else if (name === "docs") {
+        inspectHtmlContentType(response.headers.get("content-type"), "docs response")
         const html = await response.text()
         await checkStylesheet(url, html)
       } else if (name === "app") {
+        inspectHtmlContentType(response.headers.get("content-type"), "app response")
         const html = await response.text()
         const contract = inspectAppHtml(html, url)
         await checkAppModule(url, html)
