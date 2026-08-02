@@ -129,7 +129,7 @@ describe("tool.glob", () => {
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) {
         const err = Cause.squash(exit.cause)
-        expect(err instanceof Error ? err.message : String(err)).toContain("glob path нь хавтас байх ёстой")
+        expect(err instanceof Error ? err.message : String(err)).toContain("glob-ийн зам нь хавтас байх ёстой")
       }
     }),
   )

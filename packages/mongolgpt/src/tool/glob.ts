@@ -39,7 +39,7 @@ export const GlobTool = Tool.define(
           search = path.isAbsolute(search) ? search : path.resolve(ins.directory, search)
           const info = yield* fs.stat(search).pipe(Effect.catch(() => Effect.succeed(undefined)))
           if (info?.type === "File") {
-            throw new Error(`glob path нь хавтас байх ёстой: ${search}`)
+            throw new Error(`glob-ийн зам нь хавтас байх ёстой: ${search}`)
           }
           yield* assertExternalDirectoryEffect(ctx, search, {
             bypass: false,
