@@ -140,17 +140,17 @@ export default {
           subject = user.id.toString()
 
           const primaryEmail = emails.find((x: any) => x.primary)
-          if (!primaryEmail) throw new Error("No primary email found for GitHub user")
-          if (!primaryEmail.verified) throw new Error("Primary email for GitHub user not verified")
+          if (!primaryEmail) throw new Error("GitHub хэрэглэгчийн үндсэн имэйл олдсонгүй")
+          if (!primaryEmail.verified) throw new Error("GitHub хэрэглэгчийн үндсэн имэйл баталгаажаагүй байна")
           email = primaryEmail.email
         } else if (response.provider === "google") {
-          if (!response.id.email_verified) throw new Error("Google email not verified")
+          if (!response.id.email_verified) throw new Error("Google имэйл баталгаажаагүй байна")
           subject = response.id.sub as string
           email = response.id.email as string
-        } else throw new Error("Unsupported provider")
+        } else throw new Error("Нэвтрэх үйлчилгээ үзүүлэгчийг дэмжихгүй байна")
 
-        if (!email) throw new Error("No email found")
-        if (!subject) throw new Error("No subject found")
+        if (!email) throw new Error("Имэйл олдсонгүй")
+        if (!subject) throw new Error("Хэрэглэгчийн таних дугаар олдсонгүй")
 
         if (
           Resource.App.stage !== "production" &&
