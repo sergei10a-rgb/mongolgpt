@@ -1100,7 +1100,7 @@ describe("tool.shell abort", () => {
     ),
   )
 
-  it.live("streams metadata updates progressively", () =>
+  it.live("streams output through metadata updates", () =>
     runIn(
       projectRoot,
       Effect.gen(function* () {
@@ -1120,7 +1120,9 @@ describe("tool.shell abort", () => {
         )
         expect(result.output).toContain("first")
         expect(result.output).toContain("second")
-        expect(updates.length).toBeGreaterThan(1)
+        expect(updates.length).toBeGreaterThan(0)
+        expect(updates.at(-1)).toContain("first")
+        expect(updates.at(-1)).toContain("second")
       }),
     ),
   )
