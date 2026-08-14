@@ -630,7 +630,7 @@ export const layer = Layer.effect(
         const space = yield* get(workspaceID)
         if (!space)
           return yield* new WorkspaceNotFoundError({
-            message: `Workspace not found: ${workspaceID}`,
+            message: `Ажлын талбар олдсонгүй: ${workspaceID}`,
             workspaceID,
           })
 

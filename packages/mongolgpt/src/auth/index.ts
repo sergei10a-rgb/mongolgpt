@@ -78,7 +78,7 @@ export const layer = Layer.effect(
       delete data[norm + "/"]
       yield* fsys
         .writeJson(file, { ...data, [norm]: info }, 0o600)
-        .pipe(Effect.mapError(fail("Failed to write auth data")))
+        .pipe(Effect.mapError(fail("Нэвтрэх мэдээллийг бичиж чадсангүй")))
     })
 
     const remove = Effect.fn("Auth.remove")(function* (key: string) {
@@ -86,7 +86,7 @@ export const layer = Layer.effect(
       const data = yield* all()
       delete data[key]
       delete data[norm]
-      yield* fsys.writeJson(file, data, 0o600).pipe(Effect.mapError(fail("Failed to write auth data")))
+      yield* fsys.writeJson(file, data, 0o600).pipe(Effect.mapError(fail("Нэвтрэх мэдээллийг бичиж чадсангүй")))
     })
 
     return Service.of({ get, all, set, remove })

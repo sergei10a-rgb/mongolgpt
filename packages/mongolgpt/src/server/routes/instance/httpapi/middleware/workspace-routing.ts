@@ -100,7 +100,7 @@ function resolveWorkspace(
 }
 
 function missingWorkspaceResponse(id: WorkspaceV2.ID): HttpServerResponse.HttpServerResponse {
-  return HttpServerResponse.text(`Workspace not found: ${id}`, {
+  return HttpServerResponse.text(`Ажлын талбар олдсонгүй: ${id}`, {
     status: 500,
     contentType: "text/plain; charset=utf-8",
   })
@@ -195,7 +195,7 @@ function routeWorkspace<E>(
       Effect.succeed(
         HttpServerResponse.jsonUnsafe(
           new InvalidRequestError({
-            message: "Invalid workspace query parameter",
+            message: "Ажлын талбарын асуулгын параметр буруу байна",
             kind: "Query",
             field: "workspace",
           }),

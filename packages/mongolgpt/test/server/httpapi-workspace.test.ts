@@ -280,7 +280,7 @@ describe("workspace HttpApi", () => {
       expect(response.status).toBe(404)
       expect(yield* response.json).toEqual({
         name: "NotFoundError",
-        data: { message: `Workspace not found: ${workspaceID}` },
+        data: { message: `Ажлын талбар олдсонгүй: ${workspaceID}` },
       })
     }),
   )

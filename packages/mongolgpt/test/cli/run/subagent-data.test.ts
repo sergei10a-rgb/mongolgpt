@@ -49,7 +49,11 @@ function reduce(data: ReturnType<typeof createSubagentData>, event: unknown) {
   })
 }
 
-function taskMessage(sessionID: string, status: "running" | "completed" | "interrupted" = "completed"): SessionMessage {
+function taskMessage(
+  sessionID: string,
+  status: "running" | "completed" | "interrupted" = "completed",
+  interrupted?: { error?: string; metadata?: boolean },
+): SessionMessage {
   if (status === "running") {
     return {
       parts: [
@@ -94,11 +98,11 @@ function taskMessage(sessionID: string, status: "running" | "completed" | "inter
               description: "Scan reducer paths",
               subagent_type: "explore",
             },
-            error: "Tool execution aborted",
+            error: interrupted?.error ?? "Tool execution aborted",
             metadata: {
               sessionId: sessionID,
               toolcalls: 4,
-              interrupted: true,
+              ...(interrupted?.metadata === false ? {} : { interrupted: true }),
             },
             time: { start: 1, end: 2 },
           },
@@ -280,6 +284,28 @@ describe("run subagent data", () => {
       }),
     ])
   })
+
+  test.each(["Tool execution aborted", "Хэрэгслийн гүйцэтгэл тасалдсан"])(
+    "recognizes persisted abort text without metadata: %s",
+    (error) => {
+      const data = createSubagentData()
+
+      bootstrapSubagentData({
+        data,
+        messages: [taskMessage("child-1", "interrupted", { error, metadata: false })],
+        children: [{ id: "child-1" }],
+        permissions: [],
+        questions: [],
+      })
+
+      expect(snapshotSubagentData(data).tabs).toEqual([
+        expect.objectContaining({
+          sessionID: "child-1",
+          status: "cancelled",
+        }),
+      ])
+    },
+  )
 
   test("captures child activity and blocker metadata in the footer detail state", () => {
     const data = createSubagentData()

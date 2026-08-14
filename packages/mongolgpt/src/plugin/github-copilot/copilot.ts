@@ -245,7 +245,7 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
             })
 
             if (!deviceResponse.ok) {
-              throw new Error("Failed to initiate device authorization")
+              throw new Error("Төхөөрөмжийн баталгаажуулалтыг эхлүүлж чадсангүй")
             }
 
             const deviceData = (await deviceResponse.json()) as {

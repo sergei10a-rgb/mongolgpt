@@ -327,7 +327,7 @@ description: A skill in the .claude/skills directory.
           expect(error).toBeInstanceOf(Skill.NotFoundError)
           expect(error._tag).toBe("Skill.NotFoundError")
           expect(error.name).toBe("missing-skill")
-          expect(error.message).toContain('Skill "missing-skill" not found.')
+          expect(error.message).toContain('Ур чадвар "missing-skill" олдсонгүй.')
         }),
       { git: true },
     ),

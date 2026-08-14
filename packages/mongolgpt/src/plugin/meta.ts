@@ -162,7 +162,7 @@ export async function touch(spec: string, target: string, id: string): Promise<{
   return touchMany([{ spec, target, id }]).then((item) => {
     const hit = item[0]
     if (hit) return hit
-    throw new Error("Failed to touch plugin metadata.")
+    throw new Error("Плагиний мета өгөгдлийг шинэчилж чадсангүй.")
   })
 }
 

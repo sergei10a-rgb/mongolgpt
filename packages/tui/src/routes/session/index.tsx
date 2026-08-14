@@ -1443,7 +1443,7 @@ function UserMessage(props: {
         <box
           marginTop={1}
           border={["top"]}
-          title=" Compaction "
+          title=" Контекст хураалт "
           titleAlignment="center"
           borderColor={theme.borderActive}
         />
@@ -2462,7 +2462,7 @@ function TodoWrite(props: ToolProps) {
   return (
     <Switch>
       <Match when={parseTodos(props.metadata.todos).length}>
-        <BlockTool title="# Todos" part={props.part}>
+        <BlockTool title="# Хийх зүйлс" part={props.part}>
           <box>
             <For each={todos()}>{(todo) => <TodoItem status={todo.status} content={todo.content} />}</For>
           </box>
@@ -2476,7 +2476,7 @@ function TodoWrite(props: ToolProps) {
           complete={false}
           part={props.part}
         >
-          Updating todos...
+          Хийх зүйлсийг шинэчилж байна...
         </InlineTool>
       </Match>
     </Switch>
@@ -2497,7 +2497,7 @@ function Question(props: ToolProps) {
   return (
     <Switch>
       <Match when={answers()}>
-        <BlockTool title="# Questions" part={props.part}>
+        <BlockTool title="# Асуултууд" part={props.part}>
           <box gap={1}>
             <For each={questions()}>
               {(q, i) => (
@@ -2512,7 +2512,7 @@ function Question(props: ToolProps) {
       </Match>
       <Match when={true}>
         <InlineTool icon="→" pending="Асуулт асууж байна..." complete={count()} part={props.part}>
-          Asked {count()} question{count() !== 1 ? "s" : ""}
+          {count()} асуулт асуусан
         </InlineTool>
       </Match>
     </Switch>

@@ -368,10 +368,10 @@ export const layer = Layer.effect(
 
     const initGit = Effect.fn("Project.initGit")(function* (input: { directory: string; project: Info }) {
       if (input.project.vcs === "git") return input.project
-      if (!(yield* Effect.sync(() => which("git")))) throw new Error("Git is not installed")
+      if (!(yield* Effect.sync(() => which("git")))) throw new Error("Git суулгагдаагүй байна")
       const result = yield* git(["init", "--quiet"], { cwd: input.directory })
       if (result.code !== 0) {
-        throw new Error(result.stderr.trim() || result.text.trim() || "Failed to initialize git repository")
+        throw new Error(result.stderr.trim() || result.text.trim() || "Git репозиторыг эхлүүлж чадсангүй")
       }
       const { project } = yield* fromDirectory(input.directory)
       return project
@@ -419,7 +419,7 @@ export const layer = Layer.effect(
 
     const addSandbox = Effect.fn("Project.addSandbox")(function* (id: ProjectV2.ID, directory: string) {
       const row = yield* db.select().from(ProjectTable).where(eq(ProjectTable.id, id)).get().pipe(Effect.orDie)
-      if (!row) throw new Error(`Project not found: ${id}`)
+      if (!row) throw new Error(`Төсөл олдсонгүй: ${id}`)
       const sandbox = AbsolutePath.make(directory)
       const sboxes = [...row.sandboxes]
       if (!sboxes.includes(sandbox)) sboxes.push(sandbox)
@@ -430,13 +430,13 @@ export const layer = Layer.effect(
         .returning()
         .get()
         .pipe(Effect.orDie)
-      if (!result) throw new Error(`Project not found: ${id}`)
+      if (!result) throw new Error(`Төсөл олдсонгүй: ${id}`)
       yield* emitUpdated(fromRow(result))
     })
 
     const removeSandbox = Effect.fn("Project.removeSandbox")(function* (id: ProjectV2.ID, directory: string) {
       const row = yield* db.select().from(ProjectTable).where(eq(ProjectTable.id, id)).get().pipe(Effect.orDie)
-      if (!row) throw new Error(`Project not found: ${id}`)
+      if (!row) throw new Error(`Төсөл олдсонгүй: ${id}`)
       const sandbox = AbsolutePath.make(directory)
       const sboxes = row.sandboxes.filter((s) => s !== sandbox)
       const result = yield* db
@@ -446,7 +446,7 @@ export const layer = Layer.effect(
         .returning()
         .get()
         .pipe(Effect.orDie)
-      if (!result) throw new Error(`Project not found: ${id}`)
+      if (!result) throw new Error(`Төсөл олдсонгүй: ${id}`)
       yield* emitUpdated(fromRow(result))
     })
 

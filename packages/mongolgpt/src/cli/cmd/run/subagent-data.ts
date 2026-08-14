@@ -292,13 +292,15 @@ function metadata(part: ToolPart, key: string) {
   return ("metadata" in part.state ? part.state.metadata?.[key] : undefined) ?? part.metadata?.[key]
 }
 
+const abortedToolErrors = new Set(["Tool execution aborted", "Хэрэгслийн гүйцэтгэл тасалдсан"])
+
 function taskStatus(part: ToolPart): FooterSubagentTab["status"] {
   if (part.state.status === "completed") {
     return "completed"
   }
 
   if (part.state.status === "error") {
-    if (metadata(part, "interrupted") === true || text(part.state.error) === "Tool execution aborted") {
+    if (metadata(part, "interrupted") === true || abortedToolErrors.has(text(part.state.error) ?? "")) {
       return "cancelled"
     }
 

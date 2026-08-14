@@ -75,7 +75,7 @@ export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Ski
   available: Schema.Array(Schema.String),
 }) {
   override get message() {
-    return `Skill "${this.name}" not found. Available skills: ${this.available.join(", ") || "none"}`
+    return `Ур чадвар "${this.name}" олдсонгүй. Боломжтой ур чадварууд: ${this.available.join(", ") || "байхгүй"}`
   }
 }
 
@@ -109,7 +109,9 @@ const add = Effect.fnUntraced(function* (state: State, match: string, events: Ev
   }).pipe(
     Effect.catch(
       Effect.fnUntraced(function* (err) {
-        const message = FrontmatterError.isInstance(err) ? err.data.message : `Failed to parse skill ${match}`
+        const message = FrontmatterError.isInstance(err)
+          ? err.data.message
+          : `Ур чадварыг задлан шинжилж чадсангүй: ${match}`
         const { Session } = yield* Effect.promise(() => import("@/session/session"))
         yield* events.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
         yield* Effect.logError("failed to load skill", { skill: match, error: err })

@@ -46,7 +46,7 @@ export function recentConnectedWorkspaces<WorkspaceInfo extends { id: string; ti
 }
 
 export function warpReminderText(dir: string) {
-  return `<system-reminder>The user has changed the current working directory to "${dir}". This is still the same project but at a possibly new location; take this into account when working with any files from now on.</system-reminder>`
+  return `<system-reminder>Хэрэглэгч одоогийн ажиллах санг "${dir}" болгож өөрчилсөн. Энэ нь ижил төсөл хэвээр боловч өөр байршил байж болох тул одооноос файлтай ажиллахдаа үүнийг харгалзан үз.</system-reminder>`
 }
 
 async function loadWorkspaceAdapters(input: {

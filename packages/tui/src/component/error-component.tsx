@@ -41,7 +41,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
       }
 
   const message = props.error.message || "Тодорхойгүй алдаа гарлаа."
-  const stack = props.error.stack || "Stack trace алга."
+  const stack = props.error.stack || "Стек мөр алга."
   const issueURL = buildIssueURL(message, stack)
 
   const copyReport = () => {
@@ -160,7 +160,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
           </For>
         </box>
 
-        {/* Stack trace */}
+        {/* Стек мөр */}
         <box
           flexGrow={1}
           flexBasis={0}
@@ -168,7 +168,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
           border
           borderStyle="rounded"
           borderColor={colors.borderSubtle}
-          title=" Stack trace "
+          title=" Стек мөр "
           titleColor={colors.muted}
           bottomTitle=" ↑↓ гүйлгэх "
           bottomTitleAlignment="right"
@@ -220,7 +220,7 @@ function buildIssueURL(message: string, stack: string) {
   // so measuring url.toString() is both correct and safe on any input.
   const MAX_URL_LENGTH = 6000
   const marker = "\n... (таслав)"
-  const head = `mongolgpt TUI санаандгүй алдаагаар гацлаа.\n\n**Алдаа:** ${message}\n\n**Stack trace:**\n`
+  const head = `mongolgpt TUI санаандгүй алдаагаар гацлаа.\n\n**Алдаа:** ${message}\n\n**Стек мөр:**\n`
   const setBody = (body: string) => url.searchParams.set("description", head + "```\n" + body + "\n```")
 
   setBody(stack)

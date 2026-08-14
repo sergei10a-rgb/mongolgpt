@@ -589,7 +589,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                   input.focus()
                 }, 1)
               }}
-              placeholder={props.placeholder ?? "Search"}
+              placeholder={props.placeholder ?? "Хайх"}
               placeholderColor={theme.textMuted}
             />
           </box>

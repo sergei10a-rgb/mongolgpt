@@ -583,7 +583,7 @@ export const layer = Layer.effect(
             state: {
               ...part.state,
               status: "error",
-              error: "Tool execution aborted",
+              error: "Хэрэгслийн гүйцэтгэл тасалдсан",
               metadata: { ...metadata, interrupted: true },
               time: { start: "time" in part.state ? part.state.time.start : end, end },
             },

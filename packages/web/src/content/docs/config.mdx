@@ -67,7 +67,7 @@ MongolGPT нь **JSON** болон **JSONC** (JSON тайлбартай) фор�
 
 Жишээлбэл, танай байгууллага анхдагчаар идэвхгүй болсон MCP серверүүдийг хангадаг бол:
 
-```json title="Remote config from .well-known/mongolgpt"
+```json title=".well-known/mongolgpt-оос авах алсын тохиргоо"
 {
   "mcp": {
     "jira": {
@@ -158,11 +158,11 @@ mongolgpt run "Hello world"
 
 `mongolgpt.json` эсвэл `mongolgpt.jsonc` файлыг системийн удирддаг тохиргооны лавлах руу оруулна уу:
 
-| Платформ | Зам |
-| -------- | ---------------------------------------- |
-| macOS | `/Library/Application Support/mongolgpt/` |
-| Linux | `/etc/mongolgpt/` |
-| Windows | `%ProgramData%\mongolgpt` |
+| Платформ | Зам                                       |
+| -------- | ----------------------------------------- |
+| macOS    | `/Library/Application Support/mongolgpt/` |
+| Linux    | `/etc/mongolgpt/`                         |
+| Windows  | `%ProgramData%\mongolgpt`                 |
 
 Эдгээр сангууд бичихийн тулд админ/root хандалт шаарддаг тул хэрэглэгчид тэдгээрийг өөрчлөх боломжгүй.
 
@@ -502,7 +502,7 @@ UI загвараа `tui.json` дээр тохируулна уу.
       "model": "anthropic/claude-sonnet-4-5",
       "prompt": "Та код хянагч. Аюулгүй байдал, гүйцэтгэл, арчлахад хялбар байдалд төвлөр.",
       "tools": {
-      // Зөвхөн review хийх агентын файл өөрчлөх хэрэгслийг хаана
+        // Зөвхөн review хийх агентын файл өөрчлөх хэрэгслийг хаана
         "write": false,
         "edit": false,
       },
@@ -553,14 +553,14 @@ UI загвараа `tui.json` дээр тохируулна уу.
 {
   "command": {
     "test": {
-      "template": "Бүх тестийг coverage тайлантай ажиллуулаад алдааг харуул.\nУнасан тестүүдэд төвлөрч, засах санал өг.",
-      "description": "Run tests with coverage",
+      "template": "Бүх тестийг хамралтын тайлантай ажиллуулаад алдааг харуул.\nУнасан тестүүдэд төвлөрч, засах санал өг.",
+      "description": "Тестүүдийг хамралтын тайлантай ажиллуулах",
       "agent": "build",
       "model": "anthropic/claude-haiku-4-5",
     },
     "component": {
-      "template": "$ARGUMENTS нэртэй, TypeScript дэмжлэгтэй шинэ React component үүсгэ.\nЗөв type болон үндсэн бүтцийг оруул.",
-      "description": "Create a new component",
+      "template": "$ARGUMENTS нэртэй, TypeScript дэмжлэгтэй шинэ React бүрэлдэхүүн үүсгэ.\nЗөв төрлүүд болон үндсэн бүтцийг оруул.",
+      "description": "Шинэ бүрэлдэхүүн үүсгэх",
     },
   },
 }
@@ -680,7 +680,7 @@ MongolGPT шинэ шинэчлэлтийг эхлүүлэх үед автома
 
 ### Зөвшөөрөл
 
-Анхдагчаар mongolgpt **бүх үйлдлийг тодорхой зөвшөөрөл шаардахгүйгээр зөвшөөрдөг. Та үүнийг `permission` сонголтыг ашиглан өөрчилж болно.
+Анхдагчаар MongolGPT **бүх үйлдлийг** тусгай зөвшөөрөл шаардахгүйгээр зөвшөөрдөг. Та үүнийг `permission` сонголтоор өөрчилж болно.
 
 Жишээлбэл, `edit` болон `bash` хэрэгслүүд нь хэрэглэгчийн зөвшөөрөл шаарддаг эсэхийг баталгаажуулахын тулд:
 
@@ -749,9 +749,9 @@ MongolGPT шинэ шинэчлэлтийг эхлүүлэх үед автома
 
 ### Плагинууд
 
-[Plugins](../plugins) захиалгат хэрэгсэл, дэгээ, интеграцчилал бүхий MongolGPT өргөтгөл.
+[Залгаасууд](../plugins) нь захиалгат хэрэгсэл, дэгээ (`hook`), нэгтгэл бүхий MongolGPT-ийн өргөтгөл юм.
 
-Plugin файлуудыг `.mongolgpt/plugins/` эсвэл `~/.config/mongolgpt/plugins/` дээр байрлуул. Та мөн npm-аас `plugin` сонголтоор залгаасуудыг ачаалж болно.
+Залгаасын файлуудыг `.mongolgpt/plugins/` эсвэл `~/.config/mongolgpt/plugins/` дээр байрлуул. Та мөн npm-ээс `plugin` сонголтоор залгаасуудыг ачаалж болно.
 
 ```json title="mongolgpt.json"
 {

@@ -128,7 +128,7 @@ Use this skill.
       if (Exit.isFailure(exit)) {
         const error = Cause.squash(exit.cause)
         expect(error).toBeInstanceOf(Error)
-        if (error instanceof Error) expect(error.message).toContain('Skill "missing-skill" not found.')
+        if (error instanceof Error) expect(error.message).toContain('Ур чадвар "missing-skill" олдсонгүй.')
       }
     }),
   )

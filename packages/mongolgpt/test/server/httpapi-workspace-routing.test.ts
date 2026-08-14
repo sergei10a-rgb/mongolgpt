@@ -455,7 +455,7 @@ describe("HttpApi workspace routing middleware", () => {
       const response = yield* HttpClient.get(`/probe?workspace=${workspaceID}`)
 
       expect(response.status).toBe(500)
-      expect(yield* response.text).toBe(`Workspace not found: ${workspaceID}`)
+      expect(yield* response.text).toBe(`Ажлын талбар олдсонгүй: ${workspaceID}`)
     }),
   )
 
