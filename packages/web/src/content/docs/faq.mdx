@@ -1,0 +1,38 @@
+---
+title: Түгээмэл асуулт
+description: MongolGPT-ийн бүртгэл, Web, Desktop, CLI, загвар, local bridge болон нийтлэг хязгаарлалтын хариулт.
+---
+
+Энэ хуудас нь хамгийн их асуудаг асуултыг товч хариулна. Алдааны дэлгэрэнгүй оношилгоог [алдаа оношлох заавар](./troubleshooting), суулгалтыг [Windows ба WSL](./windows-wsl), тохиргоог [тохиргоо](./config) хуудаснаас үзнэ үү.
+
+## MongolGPT гэж юу вэ?
+
+MongolGPT нь Монгол хэлний үндсэн интерфэйстэй AI coding agent. Web, Windows Desktop, CLI нь нэг MongolGPT аккаунтын үйлчилгээнд холбогдох архитектуртай; production OAuth-ийн live end-to-end баталгаажуулалт дууссаны дараа нийтэд нээнэ. Кодын хууль ёсны эх үүсвэр, гуравдагч талын лицензийг [экосистем](./ecosystem) болон repository-ийн attribution-оос үзнэ үү.
+
+## Яаж бүртгүүлж, нэвтрэх вэ?
+
+Web дээр GitHub эсвэл Google OAuth-оор нэвтэрнэ. Амжилттай бүртгүүлсний дараа ижил аккаунтаа Desktop болон CLI-д ашиглана. Нууц үгийн тусдаа MongolGPT бүртгэл байхгүй.
+
+CLI-ийн браузер нэвтрэлт нь дэмжигдэнэ. Харин албан ёсны hosted орчинд device-code grant одоогоор идэвхжээгүй тул terminal дээрх device code зааврыг ажиллаж байгаа боломж гэж бүү тооцоорой. Нэвтрэлт гацвал [аккаунт](./account) болон [алдаа оношлох](./troubleshooting) хуудсыг үзнэ үү.
+
+## Web дээр local project ажиллах уу?
+
+Web хөтөч өөрийн компьютерийн файлд шууд хүрэхгүй. Local repository, terminal, Git болон local model ашиглахын тулд аюулгүй local bridge эсвэл Desktop/CLI хэрэгтэй. Local browser client ашиглаж байгаа үед `mongolgpt serve --port 4096` ажиллуулах заавар хэвийн. Харин official hosted `app.mgpt.mn` эсвэл түүний dev орчин нэвтрэх дэлгэцийн оронд энэ зааврыг харуулбал hosted runtime буруу deploy хийгдсэний шинж тул [алдаа оношлох](./troubleshooting) зааврыг дагана уу. [Web](./web), [CLI](./cli), [local model provider](./providers) хуудсуудыг үзнэ үү.
+
+## Ямар загвар ашиглаж болох вэ?
+
+OpenRouter, NVIDIA NIM, OpenAI-compatible endpoint, өөрийн API key болон local provider-ийг тохируулж болно. Ollama, LM Studio зэрэг нь generic OpenAI-compatible холболтоор ажиллах боломжтой боловч бүх хувилбар, endpoint-ийн end-to-end дэмжлэгийг тусад нь шалгах шаардлагатай.
+
+Free Auto-ийн бодлого, provider-ийн эрх, үнэ болон rate limit нь тухайн provider-ийн нөхцөлөөс хамаарна. OpenRouter free-ээс NVIDIA руу fallback хийхийг UI-ийн тайлбар дангаараа баталгаажуулахгүй; зөвхөн production тохиргоо, provider health, quota бодитоор батлагдсан үед ажиллана. [Providers](./providers) хуудсыг үзнэ үү.
+
+## Миний token эсвэл quota дуусвал яах вэ?
+
+Free, Basic, Pro, Max төлөвлөгөө нь token, cost болон хугацааны хязгаартай. Хязгаарт хүрвэл хүсэлт fail-closed байдлаар зогсох эсвэл дахин оролдох хугацааг заана. Дахин оролдох нь quota-г тойрох арга биш. Төлөвлөгөө, хэрэглээний дэлгэрэнгүйг [төлбөр ба хэрэглээ](./billing) хуудаснаас үзнэ үү.
+
+## Төлбөрийн талаар хаанаас харах вэ?
+
+MongolGPT нь QPay болон Bonum-д зориулсан invoice, callback шалгалт, давхар callback-оос хамгаалах бүртгэл, expiry урсгалтай. Sandbox болон бодит төлбөр тусдаа: бодит мөнгө татахын өмнө merchant тохиргоо, production зөвшөөрөл, preflight шаардлагатай. [Төлбөр ба хэрэглээ](./billing)-г уншина уу.
+
+## Асуудлаа яаж мэдэгдэх вэ?
+
+Эхлээд [алдаа оношлох ба FAQ](./troubleshooting)-г шалгаад хувилбар, үйлдлийн систем, команд, нууц мэдээлэлгүй log-ийн хэсгээ бэлдэнэ. API key, OAuth code, session token-оо issue, screenshot, чатанд бүү оруул. Шийдэгдэхгүй бол repository-ийн GitHub Issues дээр давхардсан асуудлыг хайж байгаад мэдээлнэ.

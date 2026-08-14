@@ -1,0 +1,36 @@
+---
+title: Нууцлал ба өгөгдлийн амьдралын мөчлөг
+description: MongolGPT-ийн аккаунт, код, provider key, usage, log, backup болон устгалын талаарх одоогийн зарчим.
+---
+
+Энэ хуудас нь MongolGPT-ийн одоогийн архитектурт хэрэгжсэн өгөгдлийн урсгалыг тайлбарлана. Эцсийн хууль зүйн нууцлалын мэдэгдэл, хадгалалтын хугацаа нь production deployment-ийн бодит тохиргоотойгоо нийцэж шинэчлэгдэнэ.
+
+## Ямар өгөгдөл үүсдэг вэ?
+
+- OAuth-оор баталгаажсан provider subject, email, аккаунт болон workspace-ийн холбоос.
+- Session, authentication version, access болон quota-ийн төлөв.
+- Сонгосон runtime, session persistence болон export тохиргооноос хамаарч coding session-ийн prompt, хариу, tool-ийн үр дүн, project metadata үүсэж болно. Hosted model хүсэлтэд provider нь илгээсэн prompt-ийг өөрийн бодлогын дагуу боловсруулна; local-only session-ийг hosted storage-д заавал хадгална гэж энэ баримт бичиг амлахгүй.
+- Provider-ийн API key болон тохиргоо. BYOK key нь workspace/provider-ийн хүрээнд AES-GCM envelope-оор шифрлэгдэн хадгалагдана.
+- Payment invoice, provider event, subscription, reconciliation болон audit мэдээлэл.
+
+## Өгөгдөл хаана хадгалагддаг вэ?
+
+Үндсэн hosted өгөгдлийн урсгал Cloudflare-ийн D1, R2, KV, Durable Objects, Queues болон Workers дээр хэрэгжинэ. Backup, restore, migration-ийн ажиллагааг [backup ба сэргээх](./backup-restore), байршуулалт болон хадгалалтын тохиргоог [Cloudflare байршуулалт](./deployment)-аас үзнэ үү.
+
+Web нь таны local filesystem-д шууд хүрдэггүй. Local project-ийн өгөгдөл Desktop/CLI эсвэл зөвшөөрсөн local bridge-ээр дамжина. Bridge-ийн шаардлага, local model-ийн хязгаарлалтыг [Web](./web) болон [providers](./providers)-оос үзнэ үү.
+
+## Key, session, access-ийг хэрхэн хамгаалдаг вэ?
+
+BYOK provider key нь raw plaintext хэлбэрээр хадгалагдахгүй бөгөөд workspace болон provider context-той холбогдоно. Runtime capability token нь богино хугацаатай, audience болон аккаунтын auth version-той шалгагдана. Logout, suspension эсвэл auth version өөрчлөгдвөл одоо байгаа access хүчингүй болно.
+
+Гэхдээ provider өөрөө хүсэлтийг хэрхэн бүртгэх, хадгалах нь тухайн provider-ийн нөхцөлөөс хамаарна. OpenRouter, NVIDIA болон бусад provider руу илгээхээсээ өмнө тэдний data policy-г шалгана уу.
+
+## Хадгалалт, backup, устгал
+
+Usage, payment, audit зэрэг үйл ажиллагааны бүртгэл нь тооцоо, аюулгүй байдал, маргаан шийдвэрлэхэд шаардлагатай байж болно. Яг retention хугацаа нь deployment-ийн migration болон Cloudflare resource тохиргоонд тулгуурлана; энэ docs өөрөө бүх өгөгдөл шууд устна гэж амлахгүй.
+
+Аккаунт хаах, workspace устгах, export эсвэл backup сэргээх хүсэлт гаргахдаа support/admin сувгийг ашиглана. Аюулгүй байдлын асуудлыг нийтэд ил гаргахаас өмнө repository-ийн security зааврыг дагана уу.
+
+## Хэрэглэгч юу анхаарах вэ?
+
+Нууц түлхүүр, production credential, хувийн source code-ыг prompt, issue, screenshot болон log-д бүү оруул. Local bridge-д зөвхөн шаардлагатай repository болон tool permission өг. Suspicious session, provider key leak эсвэл буруу access илэрвэл logout хийж key-гээ provider дээр revoke/rotate хийнэ.

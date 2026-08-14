@@ -110,6 +110,10 @@ export default defineConfig({
         "troubleshooting",
         { label: "Windows ба WSL", link: "windows-wsl" },
         {
+          label: "MongolGPT үйлчилгээ",
+          items: ["faq", "privacy", "billing", "admin"],
+        },
+        {
           label: "Хэрэглээ",
           items: ["account", "tui", "cli", "web", "ide", "share", "github", "gitlab"],
         },

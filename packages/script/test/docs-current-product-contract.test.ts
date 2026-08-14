@@ -68,6 +68,29 @@ describe("documentation product contract", () => {
     expect(await Bun.file(new URL("zen.mdx", docs)).exists()).toBe(false)
   })
 
+  test("publishes dedicated Mongolian service, privacy, billing, and admin guidance", async () => {
+    const [faq, privacy, billing, admin, config] = await Promise.all([
+      Bun.file(new URL("faq.mdx", docs)).text(),
+      Bun.file(new URL("privacy.mdx", docs)).text(),
+      Bun.file(new URL("billing.mdx", docs)).text(),
+      Bun.file(new URL("admin.mdx", docs)).text(),
+      Bun.file(astro).text(),
+    ])
+    const sidebar = config.slice(config.indexOf("sidebar:"), config.indexOf("components:"))
+
+    expect(sidebar).toContain('label: "MongolGPT үйлчилгээ"')
+    for (const page of ["faq", "privacy", "billing", "admin"]) expect(sidebar).toContain(`"${page}"`)
+    expect(faq).toContain("official hosted `app.mgpt.mn`")
+    expect(faq).toContain("hosted runtime буруу deploy")
+    expect(privacy).toContain("local-only session-ийг hosted storage-д заавал хадгална гэж")
+    expect(billing).toContain("QPay")
+    expect(billing).toContain("Bonum")
+    expect(billing).toContain("### Sandbox")
+    expect(billing).toContain("### Production")
+    expect(admin).toContain("## Одоогийн хязгаарлалт")
+    expect(admin).toContain("refund")
+  })
+
   test("keeps repository documentation links on canonical Mongolian sources", async () => {
     const files = [install, ...(await Promise.all(productSourceRoots.map(textSourceFiles))).flat()]
     for (const file of files) {

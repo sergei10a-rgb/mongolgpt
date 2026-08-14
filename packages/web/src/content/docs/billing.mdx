@@ -1,0 +1,38 @@
+---
+title: Төлбөр, төлөвлөгөө ба хэрэглээ
+description: MongolGPT-ийн Free, Basic, Pro, Max төлөвлөгөө, quota, usage, QPay болон Bonum-ийн sandbox ба production урсгал.
+---
+
+## Төлөвлөгөө ба хязгаар
+
+MongolGPT нь Free, Basic, Pro, Max гэсэн төлөвлөгөөний ойлголттой. Token, cost болон rolling/weekly quota нь серверийн тохиргоо, subscription төлөвөөс хамаарч хүсэлт бүрийн өмнө шалгагдана. Хязгаарын үед систем хүсэлтийг fail-closed зогсоох бөгөөд provider солих замаар төлбөрийн хязгаарыг тойрох ёсгүй.
+
+Төлөвлөгөөний бүх лимитийг хэрэглэгч өөрөө admin UI-гаас дур мэдэн өөрчилдөг гэж бүү ойлгоорой. Одоогийн хэрэгжилтэд лимитийн үндсэн утгууд deployment configuration-той холбоотой; админ дээр plan CRUD болон бүх subscription mutation бүрэн нээгдээгүй байж болно.
+
+## Free Auto ба provider-ийн өртөг
+
+Free Auto нь нэвтэрсэн хэрэглэгч, per-request bound, weekly token болон quota ledger ашиглана. Provider retry/failover нь зөвхөн зөвшөөрсөн transient алдаанд хязгаарлагдана. OpenRouter free болон NVIDIA free route-ийг production дээр ашиглах эрх, approval, rate limit, availability-г бодитоор шалгаж байж идэвхжүүлнэ. UI дээр provider харагдаж байгаа нь resale эрх эсвэл production approval байна гэсэн үг биш.
+
+BYOK ашиглавал хэрэглэгч өөрийн provider credential-ийг холбож болно. Key хадгалалт, provider тохиргооны дэлгэрэнгүйг [providers](./providers)-оос үзнэ үү.
+
+## QPay ба Bonum
+
+QPay болон Bonum төлбөрийн урсгалд invoice үүсгэх, callback/webhook-ийн гарын үсэг болон дүнгийн шалгалт, invoice/payment-ийн холбоос, давхар event-оос хамгаалах idempotency, expiry болон reconciliation хэрэгжинэ. Амжилттай төлбөр subscription болон quota entitlement-тэй холбогдоно.
+
+### Sandbox
+
+Эхний туршилтыг sandbox/test merchant-ээр хийнэ. Sandbox event нь бодит мөнгөний төлбөр гэж тооцогдохгүй. Test callback-ийг production endpoint руу илгээхгүй, test credential-ийг бодит credential-тэй хольж болохгүй.
+
+### Production
+
+Бодит төлбөрийн provider нь production merchant credential, webhook secret, domain/TLS, reconciliation болон monitoring бэлэн болсон үед л идэвхжинэ. Production real-payment enablement нь зөвшөөрөлгүйгээр хийх ажил биш. [Cloudflare байршуулалт](./deployment)-ын preflight болон payment environment тохиргоог заавал дагана.
+
+Одоогоор admin console-оос refund, plan өөрчлөлт, subscription lifecycle-ийн бүх mutation бүрэн хэрэгжсэн гэж бүү үз. Хэрэглэгчийн төлбөрийн маргаан, буцаалт, reconciliation gap-ийг audit-тай операторын журмаар шийднэ.
+
+## Хэрэглээгээ шалгах
+
+Usage нь provider, model, token, cost болон session metadata-тай бүртгэгдэнэ. Хэрэглэгчийн харах дэлгэцийн боломж нь тухайн hosted deployment-ээс хамаарна. Лимит гэнэт зогсвол төлөвлөгөө, provider key, quota reset time болон [алдаа оношлох](./troubleshooting)-ыг шалгана уу.
+
+## Аюулгүй байдлын анхааруулга
+
+QPay/Bonum callback-ийг зөвхөн provider-ийн баталгаатай signature, invoice, amount, currency, reference-тэй тулгаж хүлээн авна. Screenshot эсвэл хэрэглэгчийн “төлсөн” гэсэн мэдэгдлийг subscription идэвхжүүлэх нотолгоо гэж бүү ашигла. Payment credential, webhook secret, API key-ийг log болон issue-д бүү нийтэл.
