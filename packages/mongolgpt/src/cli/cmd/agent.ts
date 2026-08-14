@@ -167,17 +167,17 @@ const AgentCreateCommand = effectCmd({
             {
               label: "Бүгд",
               value: "all" as const,
-              hint: "primary болон subagent үүрэгт хоёуланд нь ажиллана",
+              hint: "үндсэн болон дэд агентын үүрэгт ажиллана",
             },
             {
-              label: "Primary",
+              label: "Үндсэн агент",
               value: "primary" as const,
-              hint: "үндсэн agent байдлаар ажиллана",
+              hint: "үндсэн агент байдлаар ажиллана",
             },
             {
-              label: "Subagent",
+              label: "Дэд агент",
               value: "subagent" as const,
-              hint: "бусад agent-ууд subagent болгон ашиглаж чадна",
+              hint: "бусад агентууд дэд агент болгон ашиглаж чадна",
             },
           ],
           initialValue: "all" as const,

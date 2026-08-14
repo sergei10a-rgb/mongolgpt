@@ -26,7 +26,7 @@ const base = { ...en, ...mn } satisfies Dict
 
 export function i18n(locale: Locale): Dict {
   if (locale === "mn") return base
-  if (locale === "en") return base
+  if (locale === "en") return en
   if (locale === "zh") return { ...base, ...zh }
   if (locale === "zht") return { ...base, ...zht }
   if (locale === "ko") return { ...base, ...ko }

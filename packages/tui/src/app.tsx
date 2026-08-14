@@ -589,7 +589,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "workspace.copy_path",
-        title: "Worktree замыг хуулах",
+        title: "Ажлын модны замыг хуулах",
         category: "Ажлын орчин",
         enabled: () => currentWorktreeWorkspace() !== undefined,
         run: async () => {
@@ -597,7 +597,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
           if (!workspace?.directory) return
           await clipboard
             .write?.(workspace.directory)
-            .then(() => toast.show({ message: "Worktree замыг хууллаа", variant: "info" }))
+            .then(() => toast.show({ message: "Ажлын модны замыг хууллаа", variant: "info" }))
             .catch(toast.error)
           dialog.clear()
         },

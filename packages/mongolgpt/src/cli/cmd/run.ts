@@ -111,14 +111,14 @@ async function toolError(part: ToolPart) {
     const next = toolInlineInfo(part)
     inline({
       icon: "✗",
-      title: `${next.title} failed`,
+      title: `${next.title} амжилтгүй боллоо`,
       ...(next.description && { description: next.description }),
     })
     return
   } catch {
     inline({
       icon: "✗",
-      title: `${part.tool} failed`,
+      title: `${part.tool} амжилтгүй боллоо`,
     })
   }
 }

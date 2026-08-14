@@ -46,15 +46,15 @@ function Install(props: { api: TuiPluginApi }) {
 
   return (
     <props.api.ui.DialogPrompt
-      title="Plugin суулгах"
-      placeholder="npm package нэр"
+      title="Плагин суулгах"
+      placeholder="npm багцын нэр"
       busy={busy()}
-      busyText="Plugin суулгаж байна..."
+      busyText="Плагин суулгаж байна..."
       description={() => (
         <box flexDirection="row" gap={1}>
           <text fg={props.api.theme.current.textMuted}>хүрээ:</text>
           <text fg={busy() ? props.api.theme.current.textMuted : props.api.theme.current.text}>
-            {global() ? "global" : "local"}
+            {global() ? "системийн" : "локал"}
           </text>
           <Show when={!busy()}>
             <text fg={props.api.theme.current.textMuted}>(tab дарж солино)</text>
@@ -67,7 +67,7 @@ function Install(props: { api: TuiPluginApi }) {
         if (!mod) {
           props.api.ui.toast({
             variant: "error",
-            message: "Plugin package нэр шаардлагатай",
+            message: "Плагины багцын нэр шаардлагатай",
           })
           return
         }
@@ -93,7 +93,7 @@ function Install(props: { api: TuiPluginApi }) {
 
             props.api.ui.toast({
               variant: "success",
-              message: `${mod} суулгалаа (${global() ? "global" : "local"}: ${out.dir})`,
+              message: `${mod} суулгалаа (${global() ? "системийн" : "локал"}: ${out.dir})`,
             })
             if (!out.tui) {
               props.api.ui.toast({
@@ -109,7 +109,7 @@ function Install(props: { api: TuiPluginApi }) {
                 props.api.ui.toast({
                   variant: "warning",
                   message:
-                    "Plugin суусан ч runtime дээр ачаалж чадсангүй. Console/logs шалгаад TUI-г дахин эхлүүлнэ үү.",
+                    "Плагин суусан боловч ажиллах орчинд ачаалж чадсангүй. Консолын бүртгэлийг шалгаад TUI-г дахин эхлүүлнэ үү.",
                 })
                 show(props.api)
                 return
@@ -250,7 +250,7 @@ const tui: TuiPlugin = async (api) => {
       },
       {
         name: "plugins.install",
-        title: "Plugin суулгах",
+        title: "Плагин суулгах",
         category: "Систем",
         namespace: "palette",
         run() {

@@ -1,5 +1,6 @@
 import { createContext, useContext, type Accessor, type ParentProps } from "solid-js"
 import { dict as en } from "../i18n/en"
+import { dict as mn } from "../i18n/mn"
 
 export type UiI18nKey = keyof typeof en
 
@@ -20,9 +21,9 @@ function resolveTemplate(text: string, params?: UiI18nParams) {
 }
 
 const fallback: UiI18n = {
-  locale: () => "en",
+  locale: () => "mn",
   t: (key, params) => {
-    const value = en[key] ?? String(key)
+    const value = mn[key] ?? en[key] ?? String(key)
     return resolveTemplate(value, params)
   },
 }
