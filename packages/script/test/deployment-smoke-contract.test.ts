@@ -1,12 +1,18 @@
 import { describe, expect, test } from "bun:test"
 import { inspectAnonymousRuntimeToken, inspectRuntimeTokenPreflight } from "../../../script/deployment-smoke"
 import {
+  inspectAuthHealth,
+  inspectAdminProtection,
+  inspectConsoleHealth,
   inspectAnonymousHostedSession,
   inspectAppHtml,
+  inspectHtmlAssets,
   inspectHostedAppRuntime,
   inspectHtmlContentType,
   inspectJsonApiPayload,
   inspectPaymentHealth,
+  inspectResponseOrigin,
+  inspectStaticAssetContentType,
   inspectRuntimeHealth,
 } from "../src/deployment-smoke-contract"
 
@@ -146,10 +152,12 @@ describe("inspectAppHtml", () => {
 describe("inspectHtmlContentType", () => {
   test("accepts HTML media types with parameters", () => {
     expect(() => inspectHtmlContentType("text/html; charset=utf-8", "app response")).not.toThrow()
+    expect(() => inspectHtmlContentType("text/html, text/html", "app response")).not.toThrow()
   })
 
   test("rejects a valid HTML body labelled as JSON", () => {
     expect(() => inspectHtmlContentType("application/json", "app response")).toThrow("not HTML")
+    expect(() => inspectHtmlContentType("text/html, application/json", "app response")).toThrow("not HTML")
   })
 })
 
@@ -173,6 +181,150 @@ describe("inspectJsonApiPayload", () => {
     expect(() => inspectJsonApiPayload("application/problem+json", '{"status":"ok"}', "console health")).toThrow(
       "not JSON",
     )
+  })
+})
+
+describe("exact health contracts", () => {
+  test("require the console and auth response shapes used by the actual handlers", () => {
+    expect(inspectConsoleHealth({ status: "ok", service: "console" })).toEqual({
+      status: "ok",
+      service: "console",
+    })
+    expect(inspectAuthHealth({ status: "ok", service: "auth" })).toEqual({ status: "ok", service: "auth" })
+    expect(() => inspectConsoleHealth({ status: "ok", service: "console", version: "1.2.3" })).toThrow(
+      "unexpected shape",
+    )
+    expect(() => inspectConsoleHealth({ status: "ok", service: "auth" })).toThrow("not healthy")
+    expect(() => inspectAuthHealth({ status: "ok" })).toThrow("unexpected shape")
+    expect(() => inspectAuthHealth({ status: "ok", service: "console" })).toThrow("not healthy")
+  })
+})
+
+describe("static asset contracts", () => {
+  test("extracts every module script, stylesheet, and modulepreload reference", () => {
+    expect(
+      inspectHtmlAssets(
+        `<!doctype html>
+<html>
+  <head>
+    <link rel="modulepreload" href="/assets/runtime-a.js">
+    <link rel="stylesheet" href="/assets/app.css">
+    <script type="module" src="/assets/vendor.js"></script>
+    <script type="module" src="/assets/main.js"></script>
+  </head>
+</html>`,
+        appOrigin,
+        "app response",
+      ),
+    ).toEqual([
+      { kind: "modulepreload", url: `${appOrigin}/assets/runtime-a.js` },
+      { kind: "stylesheet", url: `${appOrigin}/assets/app.css` },
+      { kind: "script", url: `${appOrigin}/assets/vendor.js` },
+      { kind: "script", url: `${appOrigin}/assets/main.js` },
+    ])
+  })
+
+  test("validates static asset content types and rejects HTML shells", () => {
+    expect(() =>
+      inspectStaticAssetContentType(
+        "text/css; charset=utf-8",
+        { kind: "stylesheet", url: `${appOrigin}/assets/app.css` },
+        "docs stylesheet",
+      ),
+    ).not.toThrow()
+    expect(() =>
+      inspectStaticAssetContentType(
+        "text/css, text/css",
+        { kind: "stylesheet", url: `${appOrigin}/assets/app.css` },
+        "docs stylesheet",
+      ),
+    ).not.toThrow()
+    expect(() =>
+      inspectStaticAssetContentType(
+        "application/javascript; charset=utf-8",
+        { kind: "script", url: `${appOrigin}/assets/main.js` },
+        "app module",
+      ),
+    ).not.toThrow()
+    expect(() =>
+      inspectStaticAssetContentType(
+        "text/html; charset=utf-8",
+        { kind: "modulepreload", url: `${appOrigin}/assets/runtime-a.js` },
+        "app preload",
+      ),
+    ).toThrow("returned HTML")
+    expect(() =>
+      inspectStaticAssetContentType(
+        "application/json",
+        { kind: "stylesheet", url: `${appOrigin}/assets/app.css` },
+        "docs stylesheet",
+      ),
+    ).toThrow("not CSS")
+    expect(() =>
+      inspectStaticAssetContentType(
+        "text/css, text/html",
+        { kind: "stylesheet", url: `${appOrigin}/assets/app.css` },
+        "docs stylesheet",
+      ),
+    ).toThrow("conflicting content-type")
+  })
+})
+
+describe("redirect origin contracts", () => {
+  test("rejects a response that lands on the wrong host after redirect", () => {
+    expect(
+      inspectResponseOrigin({
+        requestUrl: `${appOrigin}/docs`,
+        responseUrl: `${appOrigin}/docs`,
+        status: 200,
+        label: "docs",
+      }),
+    ).toBeUndefined()
+
+    expect(() =>
+      inspectResponseOrigin({
+        requestUrl: `${appOrigin}/docs`,
+        responseUrl: "https://cdn.example.com/docs",
+        status: 200,
+        label: "docs",
+      }),
+    ).toThrow("left the expected origin")
+
+    expect(() =>
+      inspectResponseOrigin({
+        requestUrl: `${appOrigin}/docs`,
+        responseUrl: `${appOrigin}/docs`,
+        status: 302,
+        location: "https://cdn.example.com/docs",
+        label: "docs",
+      }),
+    ).toThrow("redirect leaves")
+  })
+
+  test("accepts only a Cloudflare Access login redirect for the admin app", () => {
+    expect(() =>
+      inspectAdminProtection({
+        requestUrl: "https://admin.dev.mgpt.mn",
+        responseUrl: "https://admin.dev.mgpt.mn",
+        status: 302,
+        location: "https://mongolgpt.cloudflareaccess.com/cdn-cgi/access/login/admin.dev.mgpt.mn",
+      }),
+    ).not.toThrow()
+    expect(() =>
+      inspectAdminProtection({
+        requestUrl: "https://admin.dev.mgpt.mn",
+        responseUrl: "https://admin.dev.mgpt.mn",
+        status: 302,
+        location: "https://example.com/login",
+      }),
+    ).toThrow("Cloudflare Access")
+    expect(() =>
+      inspectAdminProtection({
+        requestUrl: "https://admin.dev.mgpt.mn",
+        responseUrl: "https://admin.dev.mgpt.mn",
+        status: 200,
+      }),
+    ).toThrow("not protected")
   })
 })
 
@@ -249,9 +401,7 @@ describe("inspectRuntimeHealth", () => {
       version: "0.1.1",
     } as const
     expect(inspectRuntimeHealth(health, { stage: "dev", version: "0.1.1" })).toEqual(health)
-    expect(() => inspectRuntimeHealth(health, { stage: "production", version: "0.1.1" })).toThrow(
-      "expected production",
-    )
+    expect(() => inspectRuntimeHealth(health, { stage: "production", version: "0.1.1" })).toThrow("expected production")
     expect(() => inspectRuntimeHealth(health, { stage: "dev", version: "0.1.2" })).toThrow("expected 0.1.2")
   })
 })

@@ -11,8 +11,11 @@ import { hostedSstSecretNames } from "../src/deployment"
 
 type WorkflowStep = {
   name?: string
+  condition?: string
   env?: Record<string, string>
   run?: string
+  uses?: string
+  with?: Record<string, unknown>
 }
 
 type Workflow = {
@@ -58,7 +61,10 @@ function parseWorkflowJob(input: unknown, name: string): WorkflowJob {
     }
     return {
       name: typeof rawStep.name === "string" ? rawStep.name : undefined,
+      condition: typeof rawStep.if === "string" ? rawStep.if : undefined,
       run: typeof rawStep.run === "string" ? rawStep.run : undefined,
+      uses: typeof rawStep.uses === "string" ? rawStep.uses : undefined,
+      with: record(rawStep.with) ? rawStep.with : undefined,
       env,
     }
   })
@@ -92,6 +98,24 @@ describe("Cloudflare hosted infrastructure contract", () => {
     )
     expect(deployStep?.run).toContain("wrangler deploy")
     expect(deployStep?.run).toContain("bun sst deploy --stage=${{ inputs.stage }} --target Database")
+  })
+
+  test("gates every deployed app with HTTP and Chromium smoke checks", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
+    const steps = parseWorkflow(source).jobs.deploy.steps
+    const http = steps.findIndex((step) => step.name === "Verify deployed URLs")
+    const browser = steps.findIndex((step) => step.name === "Verify deployed app in Chromium")
+    const artifact = steps.findIndex((step) => step.name === "Upload deployed browser artifacts")
+
+    expect(http).toBeGreaterThanOrEqual(0)
+    expect(browser).toBeGreaterThan(http)
+    expect(artifact).toBeGreaterThan(browser)
+    expect(steps[browser]?.run).toBe("bun --cwd packages/app test:e2e:deployed")
+    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_BASE_URL).toContain("https://app.{0}")
+    expect(steps[artifact]?.condition).toBe("always()")
+    expect(steps[artifact]?.uses).toContain("actions/upload-artifact@")
+    expect(steps[artifact]?.with?.path).toContain("packages/app/e2e/test-results-deployed")
+    expect(steps[artifact]?.with?.path).toContain("packages/app/e2e/playwright-report-deployed")
   })
 
   test("keeps the complete ordered QuotaLedger SQLite migration history", () => {

@@ -4,6 +4,11 @@ export type AppRuntimeContract = {
   serverUrl: string
 }
 
+export type HtmlAssetContract = {
+  kind: "script" | "stylesheet" | "modulepreload"
+  url: string
+}
+
 export type AnonymousHostedSessionContract = {
   authenticated: false
 }
@@ -21,21 +26,19 @@ export type RuntimeHealthContract = {
 }
 
 export function inspectHtmlContentType(contentType: string | null, label: string) {
-  const mediaType = contentType?.split(";", 1)[0]?.trim().toLowerCase()
+  const mediaType = normalizedMediaType(contentType)
   if (mediaType !== "text/html") {
     throw new Error(`${label} is not HTML: ${contentType || "missing content-type"}`)
   }
 }
 
 export function inspectJsonApiPayload(contentType: string | null, payload: string, label: string): unknown {
-  const mediaType = contentType?.split(";", 1)[0]?.trim().toLowerCase()
+  const mediaType = normalizedMediaType(contentType)
   if (mediaType !== "application/json") {
     throw new Error(`${label} is not JSON: ${contentType || "missing content-type"}`)
   }
 
-  if (/^\s*<(?:!doctype\s+html|html|head|body)\b/i.test(payload)) {
-    throw new Error(`${label} returned an HTML/static shell instead of JSON`)
-  }
+  inspectNotHtmlShell(payload, label)
 
   try {
     return JSON.parse(payload)
@@ -68,6 +71,157 @@ function normalizeHttpUrl(input: string, label: string) {
     throw new Error(`${label} must use http or https`)
   }
   return url.toString().replace(/\/+$/, "")
+}
+
+function isHtmlShell(payload: string) {
+  return /^\s*<(?:!doctype\s+html|html|head|body)\b/i.test(payload)
+}
+
+function inspectNotHtmlShell(payload: string, label: string) {
+  if (isHtmlShell(payload)) {
+    throw new Error(`${label} returned an HTML/static shell instead of JSON`)
+  }
+}
+
+function exactObjectKeys(value: Record<string, unknown>, expected: string[], label: string) {
+  const keys = Object.keys(value).sort()
+  const wanted = [...expected].sort()
+  if (keys.length !== wanted.length || keys.some((key, index) => key !== wanted[index])) {
+    throw new Error(`${label} has an unexpected shape`)
+  }
+}
+
+function normalizedMediaType(contentType: string | null) {
+  const values = contentType
+    ?.split(",")
+    .map((value) => value.split(";", 1)[0]?.trim().toLowerCase())
+    .filter((value): value is string => Boolean(value))
+  if (!values?.length || values.some((value) => value !== values[0])) return undefined
+  return values[0]
+}
+
+export function inspectResponseOrigin(input: {
+  requestUrl: string
+  responseUrl?: string | null
+  status: number
+  location?: string | null
+  label: string
+}) {
+  const expected = new URL(normalizeHttpUrl(input.requestUrl, `${input.label} request URL`))
+  if (input.status >= 300 && input.status < 400) {
+    if (!input.location) {
+      throw new Error(`${input.label} redirected without a Location header`)
+    }
+    const target = new URL(input.location, expected)
+    if (target.origin !== expected.origin) {
+      throw new Error(`${input.label} redirect leaves the expected origin: ${target.origin} != ${expected.origin}`)
+    }
+  }
+
+  if (!input.responseUrl) return
+  const actual = new URL(normalizeHttpUrl(input.responseUrl, `${input.label} response URL`))
+  if (actual.origin !== expected.origin) {
+    throw new Error(`${input.label} response left the expected origin: ${actual.origin} != ${expected.origin}`)
+  }
+}
+
+export function inspectAdminProtection(input: {
+  requestUrl: string
+  responseUrl?: string | null
+  status: number
+  location?: string | null
+}) {
+  const request = new URL(normalizeHttpUrl(input.requestUrl, "admin request URL"))
+  if (input.status === 401 || input.status === 403) {
+    inspectResponseOrigin({ ...input, label: "admin" })
+    return
+  }
+  if (input.status !== 302 || !input.location) {
+    throw new Error(`admin endpoint is not protected: HTTP ${input.status}`)
+  }
+
+  const target = new URL(input.location, request)
+  const accessHost = target.origin === request.origin || target.hostname.endsWith(".cloudflareaccess.com")
+  if (target.protocol !== "https:" || !accessHost || !target.pathname.startsWith("/cdn-cgi/access/")) {
+    throw new Error(`admin endpoint did not redirect to Cloudflare Access: ${target}`)
+  }
+}
+
+export function inspectHtmlAssets(html: string, baseUrl: string, label: string) {
+  const pageUrl = new URL(normalizeHttpUrl(baseUrl, `${label} base URL`))
+  const tags = html.match(/<(?:link|script)\b[^>]*>/gi) ?? []
+  const assets = tags.flatMap((tag) => {
+    if (/^<script\b/i.test(tag)) {
+      const type = attribute(tag, "type")?.trim().toLowerCase()
+      const src = attribute(tag, "src")
+      if (type !== "module" || !src) return []
+      return [{ kind: "script" as const, url: new URL(src, pageUrl).toString() }]
+    }
+
+    const href = attribute(tag, "href")
+    const rel = attribute(tag, "rel")
+      ?.split(/\s+/)
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean)
+    if (!href || !rel?.length) return []
+
+    const result: HtmlAssetContract[] = []
+    if (rel.includes("stylesheet")) result.push({ kind: "stylesheet", url: new URL(href, pageUrl).toString() })
+    if (rel.includes("modulepreload")) result.push({ kind: "modulepreload", url: new URL(href, pageUrl).toString() })
+    return result
+  })
+
+  if (!assets.length) {
+    throw new Error(`${label} did not reference any module scripts, stylesheets, or modulepreloads`)
+  }
+
+  return assets
+}
+
+export function inspectStaticAssetContentType(contentType: string | null, asset: HtmlAssetContract, label: string) {
+  const mediaType = normalizedMediaType(contentType)
+  if (!contentType) {
+    throw new Error(`${label} is missing content-type`)
+  }
+  if (!mediaType) throw new Error(`${label} has a conflicting content-type: ${contentType}`)
+  if (mediaType === "text/html") {
+    throw new Error(`${label} returned HTML instead of ${asset.kind}`)
+  }
+
+  if (asset.kind === "stylesheet") {
+    if (mediaType !== "text/css") {
+      throw new Error(`${label} is not CSS: ${contentType}`)
+    }
+    return
+  }
+
+  if (!mediaType.includes("javascript") && !mediaType.includes("ecmascript")) {
+    throw new Error(`${label} is not JavaScript: ${contentType}`)
+  }
+}
+
+export function inspectConsoleHealth(value: unknown) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("console health response is not an object")
+  }
+  const body = value as { status?: unknown; service?: unknown }
+  exactObjectKeys(body, ["status", "service"], "console health response")
+  if (body.status !== "ok" || body.service !== "console") {
+    throw new Error("console health response is not healthy")
+  }
+  return { status: "ok" as const, service: "console" as const }
+}
+
+export function inspectAuthHealth(value: unknown) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("auth health response is not an object")
+  }
+  const body = value as { status?: unknown; service?: unknown }
+  exactObjectKeys(body, ["status", "service"], "auth health response")
+  if (body.status !== "ok" || body.service !== "auth") {
+    throw new Error("auth health response is not healthy")
+  }
+  return { status: "ok" as const, service: "auth" as const }
 }
 
 export function inspectAppHtml(html: string, appUrl?: string): AppRuntimeContract {
@@ -126,6 +280,7 @@ export function inspectAnonymousHostedSession(value: unknown): AnonymousHostedSe
   const body = value as { authenticated?: unknown; account?: unknown }
   if (body.authenticated !== false) throw new Error("hosted session response is not anonymous")
   if (body.account !== undefined) throw new Error("anonymous hosted session exposed account data")
+  exactObjectKeys(body, ["authenticated"], "hosted session response")
   return { authenticated: false }
 }
 
@@ -137,6 +292,7 @@ export function inspectRuntimeHealth(
     throw new Error("runtime health response is not an object")
   }
   const body = value as { healthy?: unknown; service?: unknown; stage?: unknown; version?: unknown }
+  exactObjectKeys(body, ["healthy", "service", "stage", "version"], "runtime health response")
   if (body.healthy !== true || body.service !== "mongolgpt-runtime") {
     throw new Error("runtime health response is not healthy")
   }
@@ -168,6 +324,11 @@ export function inspectPaymentHealth(
     checkout?: unknown
     cancellation?: unknown
   }
+  exactObjectKeys(
+    body,
+    ["catalog", "cancellation", "checkout", "environment", "providers", "service", "status"],
+    "payment health response",
+  )
   if (body.service !== "payments") throw new Error("payment health service is invalid")
   if (body.environment !== expectedEnvironment) {
     throw new Error(`payment environment is ${String(body.environment)}; expected ${expectedEnvironment}`)

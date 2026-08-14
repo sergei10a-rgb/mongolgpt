@@ -1,12 +1,18 @@
 import { deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/deployment"
 import type { DeploymentPreflightResult } from "@mongolgpt/script/deployment"
 import {
+  inspectAdminProtection,
+  inspectAuthHealth,
+  inspectConsoleHealth,
   inspectAnonymousHostedSession,
   inspectAppHtml,
+  inspectHtmlAssets,
   inspectHostedAppRuntime,
   inspectHtmlContentType,
   inspectJsonApiPayload,
   inspectPaymentHealth,
+  inspectResponseOrigin,
+  inspectStaticAssetContentType,
   inspectRuntimeHealth,
 } from "@mongolgpt/script/deployment-smoke-contract"
 
@@ -24,12 +30,12 @@ async function runSmoke() {
   const runtimeVersion = await expectedRuntimeVersion()
   const healthContracts = new Map(
     [
-      [endpoints.consoleHealth, "status"],
-      [endpoints.authHealth, "status"],
+      [endpoints.consoleHealth, "console"],
+      [endpoints.authHealth, "auth"],
       [endpoints.runtimeHealth, "runtime"],
       [endpoints.paymentHealth, "payment"],
       [endpoints.admin, "admin"],
-    ].filter((entry): entry is [string, "status" | "runtime" | "payment" | "admin"] => Boolean(entry[0])),
+    ].filter((entry): entry is [string, "console" | "auth" | "runtime" | "payment" | "admin"] => Boolean(entry[0])),
   )
 
   for (const [name, url] of Object.entries(endpoints)) {
@@ -42,7 +48,7 @@ async function runSmoke() {
 async function check(
   name: string,
   url: string,
-  health: "status" | "runtime" | "payment" | "admin" | undefined,
+  health: "console" | "auth" | "runtime" | "payment" | "admin" | undefined,
   result: DeploymentPreflightResult,
   appUrl: string,
   runtimeVersion: string,
@@ -59,17 +65,30 @@ async function check(
         signal: AbortSignal.timeout(15_000),
       })
       if (health === "admin") {
-        if (![302, 401, 403].includes(response.status)) {
-          throw new Error(`admin endpoint is not protected: HTTP ${response.status}`)
-        }
-      } else if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        inspectAdminProtection({
+          requestUrl: url,
+          responseUrl: response.url,
+          status: response.status,
+          location: response.headers.get("location"),
+        })
+      } else {
+        inspectResponseOrigin({
+          requestUrl: url,
+          responseUrl: response.url,
+          status: response.status,
+          location: response.headers.get("location"),
+          label: name,
+        })
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      }
       if (health && health !== "admin") {
         const body = inspectJsonApiPayload(
           response.headers.get("content-type"),
           await response.text(),
           `${health} health response`,
         )
-        if (health === "status" && !isHealthyResponse(body)) throw new Error("health response status is not ok")
+        if (health === "console") inspectConsoleHealth(body)
+        if (health === "auth") inspectAuthHealth(body)
         if (health === "runtime") inspectRuntimeHealth(body, { stage: result.stage, version: runtimeVersion })
         if (health === "payment") inspectPaymentHealth(body, result.paymentEnvironment)
       } else if (name === "console") {
@@ -77,12 +96,12 @@ async function check(
       } else if (name === "docs") {
         inspectHtmlContentType(response.headers.get("content-type"), "docs response")
         const html = await response.text()
-        await checkStylesheet(url, html)
+        await checkStaticAssets(url, html, "docs response")
       } else if (name === "app") {
         inspectHtmlContentType(response.headers.get("content-type"), "app response")
         const html = await response.text()
         const contract = inspectAppHtml(html, url)
-        await checkAppModule(url, html)
+        await checkStaticAssets(url, html, "app response")
         const expectedChannel = result.stage === "production" ? "prod" : result.stage === "dev" ? "dev" : "beta"
         if (contract.channel !== expectedChannel) {
           throw new Error(`app channel is ${contract.channel}; expected ${expectedChannel}`)
@@ -92,10 +111,9 @@ async function check(
           throw new Error(`app runtime mode is ${contract.mode}; expected ${expectedMode}`)
         if (contract.mode === "hosted") {
           const runtimeHealthUrl = deploymentEndpoints(result).runtimeHealth
-          const expectedRuntime = runtimeHealthUrl ? new URL(runtimeHealthUrl).origin : undefined
-          if (!runtimeHealthUrl || !expectedRuntime) throw new Error("hosted app runtime endpoint is missing")
+          if (!runtimeHealthUrl) throw new Error("hosted app runtime endpoint is missing")
           inspectHostedAppRuntime(contract, { channel: expectedChannel, runtimeHealthUrl })
-          await checkAgentRuntime(contract.serverUrl)
+          await checkAgentRuntime(contract.serverUrl, result.stage, runtimeVersion)
           await checkHostedSessionBoundary(contract.serverUrl, url)
         }
       } else {
@@ -127,6 +145,13 @@ async function checkHostedRuntimeToken(consoleUrl: string, appUrl: string) {
     redirect: "manual",
     signal: AbortSignal.timeout(15_000),
   })
+  inspectResponseOrigin({
+    requestUrl: tokenUrl.toString(),
+    responseUrl: preflight.url,
+    status: preflight.status,
+    location: preflight.headers.get("location"),
+    label: "runtime token preflight",
+  })
   inspectRuntimeTokenPreflight(preflight, appOrigin)
 
   const anonymous = await fetch(tokenUrl, {
@@ -139,6 +164,13 @@ async function checkHostedRuntimeToken(consoleUrl: string, appUrl: string) {
     },
     redirect: "manual",
     signal: AbortSignal.timeout(15_000),
+  })
+  inspectResponseOrigin({
+    requestUrl: tokenUrl.toString(),
+    responseUrl: anonymous.url,
+    status: anonymous.status,
+    location: anonymous.headers.get("location"),
+    label: "anonymous runtime token",
   })
   await inspectAnonymousRuntimeToken(anonymous, appOrigin)
 }
@@ -205,10 +237,6 @@ function positiveInteger(value: string | undefined, fallback: number) {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback
 }
 
-function isHealthyResponse(value: unknown): value is { status: "ok" } {
-  return typeof value === "object" && value !== null && "status" in value && value.status === "ok"
-}
-
 async function expectedRuntimeVersion() {
   const packageJSON: unknown = await Bun.file(new URL("../packages/runtime/package.json", import.meta.url)).json()
   if (
@@ -223,50 +251,19 @@ async function expectedRuntimeVersion() {
   return packageJSON.version.trim()
 }
 
-async function checkStylesheet(pageUrl: string, html: string) {
-  const match = html.match(/<link[^>]+rel=["']stylesheet["'][^>]+href=["']([^"']+)["']/i)
-  if (!match?.[1]) throw new Error("docs stylesheet was not found")
-
-  const stylesheetUrl = new URL(match[1], pageUrl)
-  const response = await fetch(stylesheetUrl, {
-    headers: { "User-Agent": "mongolgpt-deployment-smoke" },
-    redirect: "follow",
-    signal: AbortSignal.timeout(15_000),
-  })
-  if (!response.ok) throw new Error(`docs stylesheet HTTP ${response.status}: ${stylesheetUrl}`)
-
-  const contentType = response.headers.get("content-type") ?? ""
-  if (!contentType.includes("text/css")) {
-    throw new Error(`docs stylesheet is not CSS: ${contentType || "missing content-type"} (${stylesheetUrl})`)
-  }
-  await response.body?.cancel()
-}
-
-async function checkAppModule(pageUrl: string, html: string) {
-  const match = html.match(/<script[^>]+type=["']module["'][^>]+src=["']([^"']+)["']/i)
-  if (!match?.[1]) throw new Error("app module script was not found")
-
-  const moduleUrl = new URL(match[1], pageUrl)
-  const response = await fetch(moduleUrl, {
-    headers: { "User-Agent": "mongolgpt-deployment-smoke" },
-    redirect: "follow",
-    signal: AbortSignal.timeout(15_000),
-  })
-  if (!response.ok) throw new Error(`app module HTTP ${response.status}: ${moduleUrl}`)
-
-  const contentType = response.headers.get("content-type") ?? ""
-  if (!contentType.includes("javascript")) {
-    throw new Error(`app module is not JavaScript: ${contentType || "missing content-type"} (${moduleUrl})`)
-  }
-  await response.body?.cancel()
-}
-
-async function checkAgentRuntime(serverUrl: string) {
+async function checkAgentRuntime(serverUrl: string, stage: string, version: string) {
   const healthUrl = new URL("/global/health", `${serverUrl}/`)
   const response = await fetch(healthUrl, {
     headers: { "User-Agent": "mongolgpt-deployment-smoke" },
     redirect: "follow",
     signal: AbortSignal.timeout(15_000),
+  })
+  inspectResponseOrigin({
+    requestUrl: healthUrl.toString(),
+    responseUrl: response.url,
+    status: response.status,
+    location: response.headers.get("location"),
+    label: "agent runtime health",
   })
   if (!response.ok) throw new Error(`agent runtime health HTTP ${response.status}: ${healthUrl}`)
 
@@ -275,14 +272,7 @@ async function checkAgentRuntime(serverUrl: string) {
     await response.text(),
     `agent runtime health (${healthUrl})`,
   )
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !("healthy" in body) ||
-    (body as { healthy?: unknown }).healthy !== true
-  ) {
-    throw new Error(`agent runtime health response is invalid: ${healthUrl}`)
-  }
+  inspectRuntimeHealth(body, { stage, version })
 }
 
 async function checkHostedSessionBoundary(serverUrl: string, appUrl: string) {
@@ -296,6 +286,13 @@ async function checkHostedSessionBoundary(serverUrl: string, appUrl: string) {
     },
     redirect: "manual",
     signal: AbortSignal.timeout(15_000),
+  })
+  inspectResponseOrigin({
+    requestUrl: sessionUrl.toString(),
+    responseUrl: response.url,
+    status: response.status,
+    location: response.headers.get("location"),
+    label: "hosted session",
   })
   if (response.status !== 401) {
     throw new Error(`anonymous hosted session returned HTTP ${response.status}; expected 401: ${sessionUrl}`)
@@ -327,6 +324,13 @@ async function checkHostedSessionBoundary(serverUrl: string, appUrl: string) {
     redirect: "manual",
     signal: AbortSignal.timeout(15_000),
   })
+  inspectResponseOrigin({
+    requestUrl: sessionUrl.toString(),
+    responseUrl: rejected.url,
+    status: rejected.status,
+    location: rejected.headers.get("location"),
+    label: "foreign origin hosted session",
+  })
   if (rejected.status !== 403) {
     throw new Error(`foreign hosted session origin returned HTTP ${rejected.status}; expected 403: ${sessionUrl}`)
   }
@@ -337,5 +341,29 @@ async function checkHostedSessionBoundary(serverUrl: string, appUrl: string) {
   )
   if (typeof body !== "object" || body === null || typeof (body as { error?: unknown }).error !== "string") {
     throw new Error(`foreign origin rejection body is invalid: ${sessionUrl}`)
+  }
+}
+
+async function checkStaticAssets(pageUrl: string, html: string, label: string) {
+  const assets = inspectHtmlAssets(html, pageUrl, label)
+  for (const asset of assets) {
+    const response = await fetch(asset.url, {
+      headers: { "User-Agent": "mongolgpt-deployment-smoke" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(15_000),
+    })
+    inspectResponseOrigin({
+      requestUrl: asset.url,
+      responseUrl: response.url,
+      status: response.status,
+      location: response.headers.get("location"),
+      label: `${label} ${asset.kind}`,
+    })
+    if (!response.ok) throw new Error(`${label} ${asset.kind} HTTP ${response.status}: ${asset.url}`)
+    inspectStaticAssetContentType(response.headers.get("content-type"), asset, `${label} ${asset.kind}`)
+    const body = await response.text()
+    if (/^\s*<(?:!doctype\s+html|html|head|body)\b/i.test(body)) {
+      throw new Error(`${label} ${asset.kind} returned an HTML/static shell`)
+    }
   }
 }
