@@ -1,4 +1,4 @@
-import { docsUrl, supportUrl } from "@/product"
+import { docsUrl, supportUrl } from "./product"
 
 export type DesktopMenuPlatform = "macos" | "windows"
 

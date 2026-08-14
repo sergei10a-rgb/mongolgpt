@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import type { Configuration } from "electron-builder"
 
 const legacyDesktopEntry = "resources/linux/mongolgpt-desktop.desktop"
+const portablePath = (value: string) => value.replaceAll("\\", "/")
 
 const channels = [
   { channel: "dev", appId: "org.mongolgpt.desktop.dev" },
@@ -37,8 +38,12 @@ test("keeps a hidden prod launcher for old Linux pins", async () => {
   if (previous === undefined) delete process.env.MONGOLGPT_CHANNEL
   else process.env.MONGOLGPT_CHANNEL = previous
 
-  expect(config.deb?.fpm?.[0]).toEndWith(`${legacyDesktopEntry}=/usr/share/applications/mongolgpt-desktop.desktop`)
-  expect(config.rpm?.fpm?.[0]).toEndWith(`${legacyDesktopEntry}=/usr/share/applications/mongolgpt-desktop.desktop`)
+  expect(portablePath(config.deb?.fpm?.[0] ?? "")).toEndWith(
+    `${legacyDesktopEntry}=/usr/share/applications/mongolgpt-desktop.desktop`,
+  )
+  expect(portablePath(config.rpm?.fpm?.[0] ?? "")).toEndWith(
+    `${legacyDesktopEntry}=/usr/share/applications/mongolgpt-desktop.desktop`,
+  )
 
   const desktop = await Bun.file(legacyDesktopEntry).text()
   expect(desktop).toContain("Exec=/opt/MongolGPT/org.mongolgpt.desktop %U")

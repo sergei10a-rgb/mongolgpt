@@ -109,7 +109,7 @@ export function registerIpcHandlers(deps: Deps) {
     async (_event: IpcMainInvokeEvent, opts?: { multiple?: boolean; title?: string; defaultPath?: string }) => {
       const result = await dialog.showOpenDialog({
         properties: ["openDirectory", ...(opts?.multiple ? ["multiSelections" as const] : []), "createDirectory"],
-        title: opts?.title ?? "Choose a folder",
+        title: opts?.title ?? "Хавтас сонгох",
         defaultPath: opts?.defaultPath,
       })
       if (result.canceled) return null
@@ -125,7 +125,7 @@ export function registerIpcHandlers(deps: Deps) {
     ) => {
       const result = await dialog.showOpenDialog({
         properties: ["openFile", ...(opts?.multiple ? ["multiSelections" as const] : [])],
-        title: opts?.title ?? "Choose a file",
+        title: opts?.title ?? "Файл сонгох",
         defaultPath: opts?.defaultPath,
         filters: pickerFilters(opts?.extensions),
       })

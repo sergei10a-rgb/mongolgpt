@@ -212,7 +212,7 @@ export function Prompt(props: PromptProps) {
   function promptModelWarning() {
     toast.show({
       variant: "warning",
-      message: "Prompt илгээхийн тулд провайдер холбоно уу",
+      message: "Хүсэлт илгээхийн тулд провайдер холбоно уу",
       duration: 3000,
     })
     if (sync.data.provider.length === 0) {
@@ -330,9 +330,9 @@ export function Prompt(props: PromptProps) {
   const promptCommands = createMemo(() =>
     [
       {
-        title: "Prompt цэвэрлэх",
+        title: "Хүсэлт цэвэрлэх",
         name: "prompt.clear",
-        category: "Prompt",
+        category: "Хүсэлт",
         hidden: true,
         run: () => {
           clearPrompt()
@@ -340,9 +340,9 @@ export function Prompt(props: PromptProps) {
         },
       },
       {
-        title: "Prompt илгээх",
+        title: "Хүсэлт илгээх",
         name: "prompt.submit",
-        category: "Prompt",
+        category: "Хүсэлт",
         hidden: true,
         run: async () => {
           if (!input.focused) return
@@ -353,9 +353,9 @@ export function Prompt(props: PromptProps) {
         },
       },
       {
-        title: "Editor контекстыг хасах",
+        title: "Засварлагчийн контекстыг хасах",
         name: "prompt.editor_context.clear",
-        category: "Prompt",
+        category: "Хүсэлт",
         enabled: Boolean(editorContext()),
         run: () => {
           dismissEditorContext()
@@ -365,7 +365,7 @@ export function Prompt(props: PromptProps) {
       {
         title: "Наах",
         name: "prompt.paste",
-        category: "Prompt",
+        category: "Хүсэлт",
         hidden: true,
         run: async (ctx: CommandContext<Renderable, KeyEvent>) => {
           ctx.event.preventDefault()
@@ -416,7 +416,7 @@ export function Prompt(props: PromptProps) {
         },
       },
       {
-        title: "Editor нээх",
+        title: "Засварлагч нээх",
         category: "Сешн",
         name: "prompt.editor",
         slashName: "editor",
@@ -508,9 +508,9 @@ export function Prompt(props: PromptProps) {
         },
       },
       {
-        title: "Skills",
+        title: "Ур чадварууд",
         name: "prompt.skills",
-        category: "Prompt",
+        category: "Хүсэлт",
         slashName: "skills",
         run: () => {
           dialog.replace(() => (
@@ -528,7 +528,7 @@ export function Prompt(props: PromptProps) {
         },
       },
       {
-        title: "Warp",
+        title: "Ажлын орчин солих",
         desc: "Сешний ажлын орчинг солих",
         name: "workspace.set",
         category: "Сешн",
@@ -540,7 +540,7 @@ export function Prompt(props: PromptProps) {
       },
       {
         title: "Сешн зөөх",
-        desc: "Өөр project хавтас руу зөөх",
+        desc: "Өөр төслийн хавтас руу зөөх",
         name: "session.move",
         category: "Сешн",
         slashName: "move",
@@ -730,9 +730,9 @@ export function Prompt(props: PromptProps) {
   const stashCommands = createMemo(() =>
     [
       {
-        title: "Prompt-ыг stash хийх",
+        title: "Хүсэлтийг хадгалах",
         name: "prompt.stash",
-        category: "Prompt",
+        category: "Хүсэлт",
         enabled: !!store.prompt.input,
         run: () => {
           if (!store.prompt.input) return
@@ -748,9 +748,9 @@ export function Prompt(props: PromptProps) {
         },
       },
       {
-        title: "Stash-аас prompt гаргах",
+        title: "Хадгалсан хүсэлтийг сэргээх",
         name: "prompt.stash.pop",
-        category: "Prompt",
+        category: "Хүсэлт",
         enabled: stash.list().length > 0,
         run: () => {
           const entry = stash.pop()
@@ -764,9 +764,9 @@ export function Prompt(props: PromptProps) {
         },
       },
       {
-        title: "Stash жагсаалт",
+        title: "Хадгалсан хүсэлтүүд",
         name: "prompt.stash.list",
-        category: "Prompt",
+        category: "Хүсэлт",
         enabled: stash.list().length > 0,
         run: () => {
           dialog.replace(() => (
@@ -823,8 +823,8 @@ export function Prompt(props: PromptProps) {
       bindings: [
         {
           key: "!",
-          desc: "Shell горим",
-          group: "Prompt",
+          desc: "Терминалын горим",
+          group: "Хүсэлт",
           cmd: () => {
             setStore("placeholder", randomIndex(shell().length))
             setStore("mode", "shell")
@@ -839,7 +839,12 @@ export function Prompt(props: PromptProps) {
       target: inputTarget,
       enabled: inputTarget() !== undefined && store.mode === "shell",
       bindings: [
-        { key: "escape", desc: "Shell горимоос гарах", group: "Prompt", cmd: () => setStore("mode", "normal") },
+        {
+          key: "escape",
+          desc: "Терминалын горимоос гарах",
+          group: "Хүсэлт",
+          cmd: () => setStore("mode", "normal"),
+        },
       ],
     }
   })
@@ -852,7 +857,12 @@ export function Prompt(props: PromptProps) {
         return inputTarget() !== undefined && store.mode === "shell" && input?.visualCursor.offset === 0
       })(),
       bindings: [
-        { key: "backspace", desc: "Shell горимоос гарах", group: "Prompt", cmd: () => setStore("mode", "normal") },
+        {
+          key: "backspace",
+          desc: "Терминалын горимоос гарах",
+          group: "Хүсэлт",
+          cmd: () => setStore("mode", "normal"),
+        },
       ],
     }
   })
@@ -867,8 +877,8 @@ export function Prompt(props: PromptProps) {
       commands: [
         {
           name: "prompt.history.previous",
-          title: "Өмнөх prompt түүх",
-          category: "Prompt",
+          title: "Өмнөх хүсэлт",
+          category: "Хүсэлт",
           run() {
             if (input.cursorOffset !== 0) {
               if (input.scrollY + input.visualCursor.visualRow === 0) input.cursorOffset = 0
@@ -899,8 +909,8 @@ export function Prompt(props: PromptProps) {
       commands: [
         {
           name: "prompt.history.next",
-          title: "Дараагийн prompt түүх",
-          category: "Prompt",
+          title: "Дараагийн хүсэлт",
+          category: "Хүсэлт",
           run() {
             if (input.cursorOffset !== input.plainText.length) {
               if (
@@ -1110,7 +1120,7 @@ export function Prompt(props: PromptProps) {
         )
         .catch((error) => {
           toast.show({
-            title: "Prompt илгээж чадсангүй",
+            title: "Хүсэлт илгээж чадсангүй",
             message: errorMessage(error),
             variant: "error",
           })

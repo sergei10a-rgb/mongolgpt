@@ -341,7 +341,7 @@ export function RunQuestionBody(props: {
                           <text wrapMode="word">
                             <span style={{ fg: props.theme.muted }}>{item.header}:</span>{" "}
                             <span style={{ fg: answered() ? props.theme.text : props.theme.error }}>
-                              {answered() ? value() : "(not answered)"}
+                              {answered() ? value() : "(хариулаагүй)"}
                             </span>
                           </text>
                         </box>
@@ -357,7 +357,7 @@ export function RunQuestionBody(props: {
             <box>
               <text fg={props.theme.text} wrapMode="word">
                 {info()?.question}
-                {info()?.multiple ? " (select all that apply)" : ""}
+                {info()?.multiple ? " (тохирох бүхнийг сонгоно уу)" : ""}
               </text>
             </box>
 
@@ -453,8 +453,8 @@ export function RunQuestionBody(props: {
                             fg={other() ? props.theme.highlight : picked() ? props.theme.success : props.theme.text}
                           >
                             {info()?.multiple
-                              ? `[${picked() ? "✓" : " "}] Type your own answer`
-                              : "Type your own answer"}
+                              ? `[${picked() ? "✓" : " "}] Өөрийн хариултыг бичих`
+                              : "Өөрийн хариултыг бичих"}
                           </text>
                         </box>
                         <Show when={!info()?.multiple}>
@@ -479,7 +479,7 @@ export function RunQuestionBody(props: {
                             minHeight={1}
                             maxHeight={4}
                             wrapMode="word"
-                            placeholder="Type your own answer"
+                            placeholder="Өөрийн хариултыг бичнэ үү"
                             placeholderColor={props.theme.muted}
                             textColor={props.theme.text}
                             focusedTextColor={props.theme.text}

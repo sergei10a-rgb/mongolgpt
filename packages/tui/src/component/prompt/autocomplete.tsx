@@ -584,8 +584,8 @@ export function Autocomplete(props: {
     commands: [
       {
         name: "prompt.autocomplete.prev",
-        title: "Өмнөх autocomplete зүйл",
-        category: "Autocomplete",
+        title: "Өмнөх автоматаар бөглөх зүйл",
+        category: "Автоматаар бөглөх",
         run() {
           setStore("input", "keyboard")
           move(-1)
@@ -593,8 +593,8 @@ export function Autocomplete(props: {
       },
       {
         name: "prompt.autocomplete.next",
-        title: "Дараагийн autocomplete зүйл",
-        category: "Autocomplete",
+        title: "Дараагийн автоматаар бөглөх зүйл",
+        category: "Автоматаар бөглөх",
         run() {
           setStore("input", "keyboard")
           move(1)
@@ -602,24 +602,24 @@ export function Autocomplete(props: {
       },
       {
         name: "prompt.autocomplete.hide",
-        title: "Autocomplete нуух",
-        category: "Autocomplete",
+        title: "Автоматаар бөглөхийг нуух",
+        category: "Автоматаар бөглөх",
         run() {
           hide()
         },
       },
       {
         name: "prompt.autocomplete.select",
-        title: "Autocomplete зүйл сонгох",
-        category: "Autocomplete",
+        title: "Автоматаар бөглөх зүйл сонгох",
+        category: "Автоматаар бөглөх",
         run() {
           select()
         },
       },
       {
         name: "prompt.autocomplete.complete",
-        title: "Autocomplete зүйлийг гүйцээх",
-        category: "Autocomplete",
+        title: "Автоматаар бөглөх зүйлийг гүйцээх",
+        category: "Автоматаар бөглөх",
         run() {
           const selected = options()[store.selected]
           if (selected?.isDirectory) {

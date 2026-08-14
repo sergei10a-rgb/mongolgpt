@@ -53,12 +53,12 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
                 ✕
               </text>
             </box>
-            <text fg={theme().textMuted}>MongolGPT үнэгүй model-уудтай тул шууд эхэлж болно.</text>
+            <text fg={theme().textMuted}>MongolGPT үнэгүй загваруудтай тул шууд эхэлж болно.</text>
             <text fg={theme().textMuted}>
-              Claude, GPT, Gemini зэрэг бусад model ашиглахын тулд 75+ provider-оос холбоно уу
+              Claude, GPT, Gemini зэрэг бусад загвар ашиглахын тулд 75+ үйлчилгээ үзүүлэгчээс холбоно уу
             </text>
             <box flexDirection="row" gap={1} justifyContent="space-between">
-              <text fg={theme().text}>Provider холбох</text>
+              <text fg={theme().text}>Үйлчилгээ үзүүлэгч холбох</text>
               <text fg={theme().textMuted}>/connect</text>
             </box>
           </box>
@@ -69,11 +69,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
         <span style={{ fg: theme().text }}>{path().name}</span>
       </text>
       <text fg={theme().textMuted}>
-        <span style={{ fg: theme().success }}>•</span> <b>Open</b>
-        <span style={{ fg: theme().text }}>
-          <b>Code</b>
-        </span>{" "}
-        <span>{props.api.app.version}</span>
+        <span style={{ fg: theme().success }}>•</span> <b>MongolGPT</b> <span>{props.api.app.version}</span>
       </text>
     </box>
   )

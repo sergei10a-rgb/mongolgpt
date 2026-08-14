@@ -433,7 +433,7 @@ export function createPromptState(input: PromptInput): PromptState {
               action: "skill-menu" as const,
               name: "skills",
               display: "/skills",
-              description: "боломжтой skill-үүдийг үзэх",
+              description: "боломжтой ур чадваруудыг үзэх",
             } satisfies SlashOption,
           ]
         : []),
@@ -1100,25 +1100,25 @@ export function createPromptState(input: PromptInput): PromptState {
       {
         name: "prompt.autocomplete.prev",
         title: "Өмнөх автоматаар бөглөх зүйл",
-        category: "Autocomplete",
+        category: "Автоматаар бөглөх",
         run: () => menu.move(-1),
       },
       {
         name: "prompt.autocomplete.next",
         title: "Дараагийн автоматаар бөглөх зүйл",
-        category: "Autocomplete",
+        category: "Автоматаар бөглөх",
         run: () => menu.move(1),
       },
       {
         name: "prompt.autocomplete.hide",
         title: "Автоматаар бөглөхийг нуух",
-        category: "Autocomplete",
+        category: "Автоматаар бөглөх",
         run: cancelAutocomplete,
       },
       {
         name: "prompt.autocomplete.select",
         title: "Автоматаар бөглөх зүйл сонгох",
-        category: "Autocomplete",
+        category: "Автоматаар бөглөх",
         run() {
           if (mode() === "slash" && options().length === 0) {
             hide()
@@ -1130,7 +1130,7 @@ export function createPromptState(input: PromptInput): PromptState {
       {
         name: "prompt.autocomplete.complete",
         title: "Автоматаар бөглөх зүйлийг гүйцээх",
-        category: "Autocomplete",
+        category: "Автоматаар бөглөх",
         run() {
           if (mode() === "slash" && options().length === 0) {
             hide()

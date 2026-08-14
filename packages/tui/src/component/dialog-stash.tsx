@@ -54,7 +54,7 @@ export function DialogStash(props: { onSelect: (entry: StashEntry) => void }) {
 
   return (
     <DialogSelect
-      title="Stash"
+      title="Хадгалсан хүсэлтүүд"
       options={options()}
       onMove={() => {
         setToDelete(undefined)

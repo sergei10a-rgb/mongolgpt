@@ -74,7 +74,7 @@ export function DialogMcp() {
   return (
     <DialogSelect
       ref={setRef}
-      title="MCPs"
+      title="MCP серверүүд"
       options={options()}
       actions={actions()}
       onSelect={(_option) => {

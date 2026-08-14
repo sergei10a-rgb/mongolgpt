@@ -106,7 +106,7 @@ export async function warpWorkspaceSession(input: {
     })
   } catch (err) {
     input.toast.show({
-      title: "Сешнийг warp хийж чадсангүй",
+      title: "Сешнийг ажлын орчинд шилжүүлж чадсангүй",
       message: errorMessage(err),
       variant: "error",
     })
@@ -116,14 +116,14 @@ export async function warpWorkspaceSession(input: {
     if (result?.error && "name" in result.error && result.error.name === "VcsApplyError") {
       await DialogAlert.show(
         input.dialog,
-        "Сешнийг warp хийж чадсангүй",
-        "Файлын өөрчлөлтийг энэ ажлын орчинд хэрэгжүүлж чадсангүй. Зөрчилтэй өөрчлөлт байна эсвэл өөр branch дээр суурилсан байна. Сешнийг warp хийгээгүй.",
+        "Сешнийг ажлын орчинд шилжүүлж чадсангүй",
+        "Файлын өөрчлөлтийг энэ ажлын орчинд хэрэгжүүлж чадсангүй. Зөрчилтэй өөрчлөлт байна эсвэл өөр салбар дээр суурилсан байна. Сешнийг шилжүүлээгүй.",
       )
       return false
     }
 
     input.toast.show({
-      title: "Сешнийг warp хийж чадсангүй",
+      title: "Сешнийг ажлын орчинд шилжүүлж чадсангүй",
       message: errorMessage(result?.error ?? "хариу ирсэнгүй"),
       variant: "error",
     })
@@ -216,7 +216,7 @@ export function DialogWorkspaceSelect(props: {
       {
         title: "Байхгүй",
         value: { type: "none" as const },
-        description: "Локал project ашиглах",
+        description: "Дотоод төсөл ашиглах",
         category: "Ажлын орчин сонгох",
       },
       ...recent.map((workspace: Workspace) => ({
@@ -246,7 +246,7 @@ export function DialogWorkspaceSelect(props: {
   if (!adapters()) return null
   return (
     <DialogSelect<WorkspaceSelectValue>
-      title="Warp"
+      title="Ажлын орчин солих"
       skipFilter={true}
       renderFilter={false}
       options={options()}

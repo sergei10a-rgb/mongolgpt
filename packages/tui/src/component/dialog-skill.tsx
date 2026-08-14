@@ -40,7 +40,7 @@ export function DialogSkill(props: DialogSkillProps) {
       title: skill.name.padEnd(maxWidth),
       description: skill.description?.replace(/\s+/g, " ").trim(),
       value: skill.name,
-      category: "Skills",
+      category: "Ур чадварууд",
       onSelect: () => {
         props.onSelect(skill.name)
         dialog.clear()
@@ -50,8 +50,8 @@ export function DialogSkill(props: DialogSkillProps) {
 
   return (
     <DialogSelect
-      title="Skills"
-      placeholder="Skill хайх..."
+      title="Ур чадварууд"
+      placeholder="Ур чадвар хайх..."
       options={options()}
       renderFilter={!showError()}
       locked={showError()}
@@ -59,7 +59,7 @@ export function DialogSkill(props: DialogSkillProps) {
         showError() ? (
           <box paddingLeft={4} paddingRight={4}>
             <text fg={theme.error} attributes={TextAttributes.BOLD}>
-              Skill-үүдийг ачаалж чадсангүй
+              Ур чадваруудыг ачаалж чадсангүй
             </text>
             <text fg={theme.textMuted}>{errorMessage(loadError())}</text>
           </box>
