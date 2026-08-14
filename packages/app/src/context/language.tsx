@@ -188,7 +188,7 @@ export function loadLocaleDict(locale: Locale) {
   return loadDict(locale).then(() => undefined)
 }
 
-function detectLocale(): Locale {
+export function detectLocale(): Locale {
   return DEFAULT_LOCALE
 }
 
@@ -205,7 +205,7 @@ function migrateLanguage(value: unknown) {
   return { ...next, defaultLocale: next.defaultLocale ?? DEFAULT_LOCALE }
 }
 
-function readStoredLocale() {
+export function readStoredLocale() {
   if (typeof localStorage !== "object") return
   try {
     const raw = localStorage.getItem("mongolgpt.global.dat:language")
@@ -218,14 +218,18 @@ function readStoredLocale() {
   }
 }
 
-const warm = readStoredLocale() ?? readLocaleCookie() ?? detectLocale()
+export function resolveInitialLocale(storedLocale?: string, cookieLocale?: Locale): Locale {
+  return (storedLocale ? normalizeLocale(storedLocale) : undefined) ?? cookieLocale ?? detectLocale()
+}
+
+const warm = resolveInitialLocale(readStoredLocale(), readLocaleCookie())
 if (warm !== "en") void loadDict(warm)
 
 export const { use: useLanguage, provider: LanguageProvider } = createSimpleContext({
   name: "Language",
   gate: false,
   init: (props: { locale?: Locale }) => {
-    const initial = props.locale ?? readStoredLocale() ?? readLocaleCookie() ?? detectLocale()
+    const initial = props.locale ?? resolveInitialLocale(readStoredLocale(), readLocaleCookie())
     const [store, setStore, _, ready] = persisted(
       { ...Persist.global("language", ["language.v1"]), migrate: migrateLanguage },
       createStore({

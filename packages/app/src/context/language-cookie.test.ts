@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, test } from "bun:test"
-import { readLocaleCookie, syncLocaleCookie } from "./language"
+import { readLocaleCookie, readStoredLocale, resolveInitialLocale, syncLocaleCookie } from "./language"
 
 beforeEach(() => {
   ;(window as typeof window & { happyDOM: { setURL(url: string): void } }).happyDOM.setURL("https://mongolgpt.local/")
   document.cookie = "mongolgpt_locale=; Path=/; Max-Age=0"
   document.cookie = "oc_locale=; Path=/; Max-Age=0"
+  localStorage.removeItem("mongolgpt.global.dat:language")
 })
 
 describe("locale cookie identity migration", () => {
@@ -23,5 +24,21 @@ describe("locale cookie identity migration", () => {
     document.cookie = "mongolgpt_locale=mn; Path=/"
 
     expect(readLocaleCookie()).toBe("mn")
+  })
+})
+
+describe("initial locale", () => {
+  test("defaults a fresh install to Mongolian", () => {
+    expect(resolveInitialLocale()).toBe("mn")
+  })
+
+  test("keeps an explicitly persisted user locale", () => {
+    localStorage.setItem(
+      "mongolgpt.global.dat:language",
+      JSON.stringify({ locale: "en", source: "user", defaultLocale: "mn" }),
+    )
+
+    expect(readStoredLocale()).toBe("en")
+    expect(resolveInitialLocale(readStoredLocale())).toBe("en")
   })
 })
