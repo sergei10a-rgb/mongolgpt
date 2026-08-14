@@ -192,6 +192,25 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy).toBeGreaterThan(secretSync)
   })
 
+  test("overwrites stale payment secrets when payment is disabled", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
+    const workflow = parseWorkflow(source)
+    const deployStep = workflow.jobs.deploy.steps.find((step) => step.name === "Validate and deploy to Cloudflare")
+    const run = deployStep?.run ?? ""
+
+    expect(run).toContain('payment_environment="${{ inputs.payment_environment }}"')
+    expect(run).toContain(
+      'if [[ "$name" = QPay* || "$name" = Bonum* ]] && [[ "$payment_environment" = "disabled" ]]; then',
+    )
+    expect(run).toContain('value="disabled"')
+    const disabled = run.indexOf('[[ "$payment_environment" = "disabled" ]]')
+    const sentinel = run.indexOf('value="disabled"', disabled)
+    const secretSet = run.indexOf('bun sst secret set "$name" --stage="$stage"', sentinel)
+    expect(disabled).toBeGreaterThan(-1)
+    expect(sentinel).toBeGreaterThan(disabled)
+    expect(secretSet).toBeGreaterThan(sentinel)
+  })
+
   test("keeps SST deployment credentials scoped to the deploy step", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
     const workflow = parseWorkflow(source)

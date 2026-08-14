@@ -183,14 +183,19 @@ jobs:
         run: |
           bun run deploy:preflight -- ${{ inputs.stage }}
           stage="${{ inputs.stage }}"
+          payment_environment="${{ inputs.payment_environment }}"
           while IFS= read -r variable; do
             name="${variable#SST_SECRET_}"
             if [[ "$name" = MongolGPTAdmin* && "${{ inputs.admin }}" != "true" ]]; then
               continue
             fi
-            value="${!variable}"
-            # A space clears stale optional model chunks while remaining valid JSON whitespace.
-            if [ -z "$value" ]; then value=" "; fi
+            if [[ "$name" = QPay* || "$name" = Bonum* ]] && [[ "$payment_environment" = "disabled" ]]; then
+              value="disabled"
+            else
+              value="${!variable}"
+              # A space clears stale optional model chunks while remaining valid JSON whitespace.
+              if [ -z "$value" ]; then value=" "; fi
+            fi
             printf '%s' "$value" | bun sst secret set "$name" --stage="$stage"
           done < <(compgen -A variable SST_SECRET_ | sort -V)
           if [ "$stage" = "production" ]; then
