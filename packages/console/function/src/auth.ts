@@ -19,6 +19,7 @@ import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { AuthTable } from "@mongolgpt/console-core/schema/auth.sql.js"
 import { Identifier } from "@mongolgpt/console-core/identifier.js"
 import { isAllowedNonProductionEmail } from "./auth-allowlist"
+import { resolveOAuthAccountIdentity } from "./auth-identity"
 
 type Env = {
   AuthStorage: KVNamespace
@@ -177,10 +178,12 @@ export default {
           )
           const idByProvider = matches.find((x) => x.provider === response.provider)?.accountID
           const idByEmail = matches.find((x) => x.provider === "email")?.accountID
-          if (idByProvider && idByEmail) return idByProvider
+          let accountID = resolveOAuthAccountIdentity({
+            providerAccountID: idByProvider,
+            emailAccountID: idByEmail,
+          })
 
-          // create account if not found
-          let accountID = idByProvider ?? idByEmail
+          // Create the account only after identity resolution has succeeded.
           if (!accountID) {
             accountID = await Account.create({})
             newAccount = true
