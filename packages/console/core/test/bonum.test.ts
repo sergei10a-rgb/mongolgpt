@@ -324,7 +324,7 @@ describe("Bonum Ecommerce Gateway adapter", () => {
       provider: "bonum",
       merchantAccountID: "bonum_terminal_17171994",
       externalInvoiceID: "bonum-invoice-1",
-      externalPaymentID: "bonum-invoice-1",
+      externalPaymentID: "inv_local_1",
       amount: 39_000,
       currency: "MNT",
       type: "paid",

@@ -332,7 +332,7 @@ export class BonumAdapter implements PaymentProviderAdapter {
         merchantAccountID: this.merchantAccountID,
         externalEventID: await sha256Hex(`bonum:${terminalID}:${externalInvoiceID}:${reference}:${type}:${occurredAt}`),
         externalInvoiceID,
-        ...(type === "paid" ? { externalPaymentID: externalInvoiceID } : {}),
+        ...(type === "paid" ? { externalPaymentID: reference } : {}),
         amount,
         currency,
         type,
