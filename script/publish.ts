@@ -3,6 +3,10 @@
 import { Script } from "@mongolgpt/script"
 import { $ } from "bun"
 import { fileURLToPath } from "url"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
+import { createSha256Sums, RELEASE_ARTIFACTS, RELEASE_CHECKSUM_ASSET } from "../packages/script/src/release-integrity"
 
 console.log("=== publishing ===\n")
 
@@ -26,6 +30,24 @@ async function prepareReleaseFiles() {
 
   await $`bun install`
   await $`./packages/sdk/js/script/build.ts`
+}
+
+async function publishReleaseChecksums() {
+  const repo = process.env.GH_REPO
+  if (!repo) throw new Error("GH_REPO is required to publish release checksums")
+  const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mongolgpt-release-"))
+  try {
+    await $`gh release download ${tag} --repo ${repo} --dir ${temp}`
+    const files = await Promise.all(
+      RELEASE_ARTIFACTS.map(async (name) => ({ name, bytes: await Bun.file(path.join(temp, name)).bytes() })),
+    )
+    const checksumPath = path.join(temp, RELEASE_CHECKSUM_ASSET)
+    await Bun.write(checksumPath, createSha256Sums(files))
+    await $`gh release upload ${tag} ${checksumPath} --clobber --repo ${repo}`
+    await $`bun ./packages/mongolgpt/script/release-preflight.ts --github`
+  } finally {
+    await fs.promises.rm(temp, { recursive: true, force: true })
+  }
 }
 
 if (Script.release && !Script.preview) {
@@ -53,6 +75,7 @@ await $`bun ./packages/ui/script/publish.ts`
 if (Script.release) {
   await $`bun ./packages/desktop/scripts/finalize-latest-json.ts`
   await $`bun ./packages/desktop/scripts/finalize-latest-yml.ts`
+  await publishReleaseChecksums()
 }
 
 if (Script.release && !Script.preview) {

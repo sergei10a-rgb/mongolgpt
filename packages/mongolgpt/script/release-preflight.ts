@@ -2,7 +2,14 @@
 
 import { $ } from "bun"
 import fs from "node:fs"
+import os from "node:os"
 import path from "node:path"
+import {
+  RELEASE_ARTIFACTS,
+  RELEASE_CHECKSUM_ASSET,
+  createSha256Sums,
+  validateReleaseChecksumContract,
+} from "@mongolgpt/script/release-integrity"
 
 const dist = path.resolve(import.meta.dirname, "../dist")
 const repo = process.env.GH_REPO ?? "sergei10a-rgb/mongolgpt"
@@ -77,12 +84,31 @@ async function githubMissing(version: string) {
   if (result.exitCode !== 0) return [`release:${tag}`]
 
   const data = JSON.parse(result.stdout.toString()) as { assets?: { name?: string }[] }
-  const assetNames = new Set((data.assets ?? []).map((asset) => asset.name).filter(Boolean))
-  const expected = [
-    ...binaryPackages.map((name) => `${name}${name.includes("linux") ? ".tar.gz" : ".zip"}`),
-    "mongolgpt-desktop-win-x64.exe",
-  ]
-  return expected.filter((name) => !assetNames.has(name))
+  const assetNames = new Set(
+    (data.assets ?? []).map((asset) => asset.name).filter((name): name is string => Boolean(name)),
+  )
+  const missing = validateReleaseChecksumContract(Array.from(assetNames))
+  if (!missing.includes(`missing ${RELEASE_CHECKSUM_ASSET}`)) {
+    const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mongolgpt-release-preflight-"))
+    try {
+      const checksum = await $`gh release download ${tag} --repo ${repo} --dir ${temp}`.quiet().nothrow()
+      if (checksum.exitCode !== 0) missing.push(`unable to download ${RELEASE_CHECKSUM_ASSET}`)
+      else {
+        const content = fs.readFileSync(path.join(temp, RELEASE_CHECKSUM_ASSET), "utf8")
+        missing.push(
+          ...validateReleaseChecksumContract(Array.from(assetNames), content).filter((item) => !missing.includes(item)),
+        )
+        const files = await Promise.all(
+          RELEASE_ARTIFACTS.map(async (name) => ({ name, bytes: await Bun.file(path.join(temp, name)).bytes() })),
+        )
+        const expected = createSha256Sums(files)
+        if (content !== expected) missing.push("checksum content does not match release artifacts")
+      }
+    } finally {
+      await fs.promises.rm(temp, { recursive: true, force: true })
+    }
+  }
+  return missing
 }
 
 const version = checkLocalDist()
