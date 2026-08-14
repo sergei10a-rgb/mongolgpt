@@ -78,6 +78,8 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
     const appOrigin = configuredOrigin(env.MONGOLGPT_APP_ORIGIN)
     const configured = Boolean(
       appOrigin &&
+        env.STAGE?.trim() &&
+        env.MONGOLGPT_RUNTIME_VERSION?.trim() &&
         env.MONGOLGPT_RUNTIME_AUTH_SECRET?.trim().length >= 32 &&
         env.MONGOLGPT_RUNTIME_SECRET?.trim().length >= 32 &&
         env.MONGOLGPT_RUNTIME_BURST_LIMITER &&
@@ -92,8 +94,8 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
           ? {
               healthy: true,
               service: "mongolgpt-runtime",
-              stage: env.STAGE,
-              version: env.MONGOLGPT_RUNTIME_VERSION ?? "unknown",
+              stage: env.STAGE.trim(),
+              version: env.MONGOLGPT_RUNTIME_VERSION!.trim(),
             }
           : {
               healthy: false,

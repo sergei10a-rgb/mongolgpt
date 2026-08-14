@@ -7,6 +7,7 @@ import {
   inspectHtmlContentType,
   inspectJsonApiPayload,
   inspectPaymentHealth,
+  inspectRuntimeHealth,
 } from "../src/deployment-smoke-contract"
 
 const html = (meta: string) => `<!doctype html>
@@ -236,6 +237,22 @@ describe("inspectAnonymousHostedSession", () => {
         account: { id: "leaked" },
       }),
     ).toThrow("exposed account")
+  })
+})
+
+describe("inspectRuntimeHealth", () => {
+  test("requires the deployed runtime stage and version to match exactly", () => {
+    const health = {
+      healthy: true,
+      service: "mongolgpt-runtime",
+      stage: "dev",
+      version: "0.1.1",
+    } as const
+    expect(inspectRuntimeHealth(health, { stage: "dev", version: "0.1.1" })).toEqual(health)
+    expect(() => inspectRuntimeHealth(health, { stage: "production", version: "0.1.1" })).toThrow(
+      "expected production",
+    )
+    expect(() => inspectRuntimeHealth(health, { stage: "dev", version: "0.1.2" })).toThrow("expected 0.1.2")
   })
 })
 

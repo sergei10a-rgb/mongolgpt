@@ -7,6 +7,7 @@ import {
   inspectHtmlContentType,
   inspectJsonApiPayload,
   inspectPaymentHealth,
+  inspectRuntimeHealth,
 } from "@mongolgpt/script/deployment-smoke-contract"
 
 if (import.meta.main) await runSmoke()
@@ -20,6 +21,7 @@ async function runSmoke() {
     requireHostedServices: true,
   })
   const endpoints = deploymentEndpoints(result)
+  const runtimeVersion = await expectedRuntimeVersion()
   const healthContracts = new Map(
     [
       [endpoints.consoleHealth, "status"],
@@ -31,7 +33,7 @@ async function runSmoke() {
   )
 
   for (const [name, url] of Object.entries(endpoints)) {
-    await check(name, url, healthContracts.get(url), result, endpoints.app)
+    await check(name, url, healthContracts.get(url), result, endpoints.app, runtimeVersion)
   }
 
   console.log("Cloudflare deployment smoke check passed.")
@@ -43,6 +45,7 @@ async function check(
   health: "status" | "runtime" | "payment" | "admin" | undefined,
   result: DeploymentPreflightResult,
   appUrl: string,
+  runtimeVersion: string,
 ) {
   const retries = positiveInteger(process.env.MONGOLGPT_SMOKE_RETRIES, 8)
   const delay = positiveInteger(process.env.MONGOLGPT_SMOKE_DELAY_MS, 10_000)
@@ -67,9 +70,7 @@ async function check(
           `${health} health response`,
         )
         if (health === "status" && !isHealthyResponse(body)) throw new Error("health response status is not ok")
-        if (health === "runtime" && !isRuntimeHealthyResponse(body, result.stage)) {
-          throw new Error("runtime health response is invalid")
-        }
+        if (health === "runtime") inspectRuntimeHealth(body, { stage: result.stage, version: runtimeVersion })
         if (health === "payment") inspectPaymentHealth(body, result.paymentEnvironment)
       } else if (name === "console") {
         await checkHostedRuntimeToken(url, appUrl)
@@ -208,10 +209,18 @@ function isHealthyResponse(value: unknown): value is { status: "ok" } {
   return typeof value === "object" && value !== null && "status" in value && value.status === "ok"
 }
 
-function isRuntimeHealthyResponse(value: unknown, stage: string) {
-  if (typeof value !== "object" || value === null) return false
-  const body = value as { healthy?: unknown; service?: unknown; stage?: unknown }
-  return body.healthy === true && body.service === "mongolgpt-runtime" && body.stage === stage
+async function expectedRuntimeVersion() {
+  const packageJSON: unknown = await Bun.file(new URL("../packages/runtime/package.json", import.meta.url)).json()
+  if (
+    typeof packageJSON !== "object" ||
+    packageJSON === null ||
+    !("version" in packageJSON) ||
+    typeof packageJSON.version !== "string" ||
+    !packageJSON.version.trim()
+  ) {
+    throw new Error("runtime package version is missing")
+  }
+  return packageJSON.version.trim()
 }
 
 async function checkStylesheet(pageUrl: string, html: string) {

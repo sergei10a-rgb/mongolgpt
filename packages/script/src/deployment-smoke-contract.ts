@@ -13,6 +13,13 @@ export type PaymentHealthContract = {
   environment: "disabled" | "sandbox" | "production"
 }
 
+export type RuntimeHealthContract = {
+  healthy: true
+  service: "mongolgpt-runtime"
+  stage: string
+  version: string
+}
+
 export function inspectHtmlContentType(contentType: string | null, label: string) {
   const mediaType = contentType?.split(";", 1)[0]?.trim().toLowerCase()
   if (mediaType !== "text/html") {
@@ -120,6 +127,31 @@ export function inspectAnonymousHostedSession(value: unknown): AnonymousHostedSe
   if (body.authenticated !== false) throw new Error("hosted session response is not anonymous")
   if (body.account !== undefined) throw new Error("anonymous hosted session exposed account data")
   return { authenticated: false }
+}
+
+export function inspectRuntimeHealth(
+  value: unknown,
+  expected: { stage: string; version: string },
+): RuntimeHealthContract {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("runtime health response is not an object")
+  }
+  const body = value as { healthy?: unknown; service?: unknown; stage?: unknown; version?: unknown }
+  if (body.healthy !== true || body.service !== "mongolgpt-runtime") {
+    throw new Error("runtime health response is not healthy")
+  }
+  if (body.stage !== expected.stage) {
+    throw new Error(`runtime stage is ${String(body.stage)}; expected ${expected.stage}`)
+  }
+  if (body.version !== expected.version) {
+    throw new Error(`runtime version is ${String(body.version)}; expected ${expected.version}`)
+  }
+  return {
+    healthy: true,
+    service: "mongolgpt-runtime",
+    stage: expected.stage,
+    version: expected.version,
+  }
 }
 
 export function inspectPaymentHealth(

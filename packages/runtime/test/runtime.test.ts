@@ -107,6 +107,8 @@ describe("MongolGPT Cloudflare runtime", () => {
 
     const healthy = await handler(hostedRequest("/global/health"), environment())
     expect(healthy.status).toBe(200)
+    expect(healthy.headers.get("content-type")).toBe("application/json; charset=utf-8")
+    expect(healthy.headers.get("cache-control")).toBe("no-store")
     const healthyBody: unknown = await healthy.json()
     expect(healthyBody).toEqual({
       healthy: true,
@@ -120,6 +122,23 @@ describe("MongolGPT Cloudflare runtime", () => {
     const unhealthy = await handler(hostedRequest("/global/health"), missing)
     expect(unhealthy.status).toBe(503)
     expect(await unhealthy.json()).toMatchObject({ healthy: false })
+
+    const missingVersion = environment()
+    missingVersion.MONGOLGPT_RUNTIME_VERSION = "  "
+    const versionless = await handler(hostedRequest("/global/health"), missingVersion)
+    expect(versionless.status).toBe(503)
+    expect(await versionless.json()).toMatchObject({ healthy: false })
+
+    const missingStage = environment()
+    missingStage.STAGE = "  "
+    const stageless = await handler(hostedRequest("/global/health"), missingStage)
+    expect(stageless.status).toBe(503)
+    expect(await stageless.json()).toMatchObject({ healthy: false })
+
+    const head = await handler(new Request(`${runtimeOrigin}/global/health`, { method: "HEAD" }), environment())
+    expect(head.status).toBe(200)
+    expect(head.headers.get("content-type")).toBe("application/json; charset=utf-8")
+    expect(head.headers.get("cache-control")).toBe("no-store")
   })
 
   test("answers exact-origin credentialed preflight without a console fetch dependency", async () => {
@@ -452,6 +471,12 @@ describe("runtime account and path isolation", () => {
 
 describe("runtime deployment contract", () => {
   test("requires both runtime secrets and deploys the restricted sandbox in every stage", async () => {
+    const packageJSON = JSON.parse(await Bun.file(new URL("../package.json", import.meta.url)).text()) as {
+      scripts?: Record<string, unknown>
+      version?: unknown
+    }
+    expect(typeof packageJSON.version).toBe("string")
+
     for (const stage of ["dev", "production"]) {
       const parsed: unknown = Bun.JSONC.parse(
         await Bun.file(new URL(`../wrangler.${stage}.jsonc`, import.meta.url)).text(),
@@ -487,6 +512,21 @@ describe("runtime deployment contract", () => {
       expect(record(parsed.durable_objects.bindings[0]) && parsed.durable_objects.bindings[0].class_name).toBe(
         "MongolGPTSandbox",
       )
+
+      expect(parsed.name).toBe(stage === "dev" ? "mongolgpt-runtime-dev" : "mongolgpt-runtime-production")
+      expect(parsed.vars).toEqual(
+        expect.objectContaining({
+          MONGOLGPT_APP_ORIGIN: stage === "dev" ? appOrigin : "https://app.mgpt.mn",
+          MONGOLGPT_RUNTIME_VERSION: packageJSON.version,
+          STAGE: stage,
+        }),
+      )
+      if (stage === "dev") {
+        expect(parsed.routes).toEqual([{ pattern: "runtime.dev.mgpt.mn", custom_domain: true }])
+      }
     }
+
+    expect(packageJSON.scripts?.["deploy:dev"]).toBe("wrangler deploy --config wrangler.dev.jsonc")
+    expect(packageJSON.scripts?.["deploy:production"]).toBe("wrangler deploy --config wrangler.production.jsonc")
   })
 })
