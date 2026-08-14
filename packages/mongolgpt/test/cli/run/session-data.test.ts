@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { Event } from "@mongolgpt/sdk/v2"
-import { createSessionData, flushInterrupted, reduceSessionData } from "@/cli/cmd/run/session-data"
+import { blockerStatus, createSessionData, flushInterrupted, formatError, reduceSessionData } from "@/cli/cmd/run/session-data"
 import type { StreamCommit } from "@/cli/cmd/run/types"
 
 function reduce(data: ReturnType<typeof createSessionData>, event: unknown, thinking = true) {
@@ -111,6 +111,12 @@ function tool(input: { id: string; messageID: string; tool: string; state: Recor
 }
 
 describe("run session data", () => {
+  test("uses Mongolian user-facing blocker and fallback statuses", () => {
+    expect(blockerStatus({ type: "permission", request: {} as never })).toBe("зөвшөөрөл хүлээж байна")
+    expect(blockerStatus({ type: "question", request: {} as never })).toBe("хариу хүлээж байна")
+    expect(formatError({})).toBe("тодорхойгүй алдаа")
+  })
+
   test("buffers delayed assistant text until the role is known", () => {
     let data = createSessionData()
     data = reduce(data, delta("msg-1", "txt-1", "hello")).data
@@ -209,7 +215,7 @@ describe("run session data", () => {
     })
 
     expect(ask.footer).toEqual({
-      patch: { status: "awaiting permission" },
+      patch: { status: "зөвшөөрөл хүлээж байна" },
       view: {
         type: "permission",
         request: expect.objectContaining({ id: "perm-1" }),
@@ -226,7 +232,7 @@ describe("run session data", () => {
         },
       }).footer,
     ).toEqual({
-      patch: { status: "awaiting answer" },
+      patch: { status: "хариу хүлээж байна" },
       view: {
         type: "question",
         request: expect.objectContaining({ id: "question-1" }),

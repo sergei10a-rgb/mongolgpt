@@ -27,6 +27,10 @@ function previewMargin(limit: number) {
   return Math.max(0, Math.min(2, Math.floor((limit - 1) / 2)))
 }
 
+function displayCategory(category: string) {
+  return { Prompt: "Хүсэлт", Model: "Загвар", Session: "Сесс", Autocomplete: "Автоматаар бөглөх" }[category] ?? category
+}
+
 function revealOffset(value: number, input: { count: number; limit: number; selected: number }) {
   const max = maxOffset(input.count, input.limit)
   if (input.selected < value) {
@@ -144,7 +148,7 @@ export function RunFooterMenu(props: {
         }
 
         category = item.category
-        all.push({ type: "header", label: item.category })
+        all.push({ type: "header", label: displayCategory(item.category) })
       }
 
       all.push({ type: "item", item, index })
@@ -249,7 +253,7 @@ export function RunFooterMenu(props: {
             backgroundColor={props.background ? props.theme().shade : transparent}
           >
             <text fg={props.theme().muted} wrapMode="none" truncate>
-              {props.empty ?? "No matching items"}
+              {props.empty ?? "Тохирох зүйл олдсонгүй"}
             </text>
           </box>
         </box>

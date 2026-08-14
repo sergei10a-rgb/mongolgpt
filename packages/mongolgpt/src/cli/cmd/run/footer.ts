@@ -135,7 +135,7 @@ function eventPatch(next: FooterEvent): FooterPatch | undefined {
   if (next.type === "turn.send") {
     return {
       phase: "running",
-      status: "sending prompt",
+      status: "хүсэлт илгээж байна",
       queue: next.queue,
       interrupt: 0,
       exit: 0,
@@ -145,7 +145,7 @@ function eventPatch(next: FooterEvent): FooterPatch | undefined {
   if (next.type === "turn.wait") {
     return {
       phase: "running",
-      status: "waiting for assistant",
+      status: "AI туслахыг хүлээж байна",
     }
   }
 
@@ -999,7 +999,7 @@ export class RunFooter implements FooterApi {
     }
 
     this.clearExitTimer()
-    this.patch({ exit: 0, status: "exiting" })
+    this.patch({ exit: 0, status: "гарч байна" })
     this.close()
     this.options.onExit?.()
     return true

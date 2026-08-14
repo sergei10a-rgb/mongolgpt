@@ -267,7 +267,7 @@ export function formatUnknownError(error: unknown): string {
     }
   }
 
-  return "unknown error"
+  return "тодорхойгүй алдаа"
 }
 
 function sameView(a: FooterView, b: FooterView) {
@@ -1347,7 +1347,7 @@ function createLayer(input: StreamInput) {
               if (!input.footer.isClosed && !state.data.announced) {
                 input.trace?.write("ui.patch", {
                   phase: "running",
-                  status: "waiting for assistant",
+                  status: "AI туслахыг хүлээж байна",
                 })
                 input.footer.event({
                   type: "turn.wait",

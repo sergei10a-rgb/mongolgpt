@@ -179,7 +179,7 @@ export function formatError(error: {
     return error.name
   }
 
-  return "unknown error"
+  return "тодорхойгүй алдаа"
 }
 
 function isAbort(error: { name?: string } | undefined): boolean {
@@ -230,11 +230,11 @@ export function pickBlockerView(input: { permission?: PermissionRequest; questio
 
 export function blockerStatus(view: FooterView) {
   if (view.type === "permission") {
-    return "awaiting permission"
+    return "зөвшөөрөл хүлээж байна"
   }
 
   if (view.type === "question") {
-    return "awaiting answer"
+    return "хариу хүлээж байна"
   }
 
   return ""
@@ -412,10 +412,10 @@ function toolStatus(part: ToolPart): string {
 
   const type = state.input?.subagent_type
   if (typeof type === "string" && type.trim()) {
-    return `running ${type.trim()}`
+    return `${type.trim()} ажиллаж байна`
   }
 
-  return "running task"
+  return "даалгавар ажиллаж байна"
 }
 
 // Returns true if we can flush this part's text to scrollback.
@@ -694,7 +694,7 @@ function startShell(callID: string, command: string): SessionCommit {
       command,
     },
     {
-      text: "running shell",
+      text: "Команд ажиллаж байна",
       phase: "start",
       toolState: "running",
     },
@@ -787,12 +787,12 @@ export function reduceSessionData(input: SessionDataInput): SessionDataOutput {
 
     const partID = shellPartID(event.properties.callID)
     if (data.ids.has(partID) || data.tools.has(partID)) {
-      return out(data, commits, patch({ status: "running shell" }))
+      return out(data, commits, patch({ status: "Команд ажиллаж байна" }))
     }
 
     data.tools.add(partID)
     commits.push(startShell(event.properties.callID, shell.command ?? event.properties.command))
-    return out(data, commits, patch({ status: "running shell" }))
+    return out(data, commits, patch({ status: "Команд ажиллаж байна" }))
   }
 
   if (event.type === "session.next.shell.ended") {
@@ -840,7 +840,7 @@ export function reduceSessionData(input: SessionDataInput): SessionDataOutput {
     let next: FooterPatch | undefined
     if (!data.announced) {
       data.announced = true
-      next = { status: "assistant responding" }
+      next = { status: "AI туслах хариулж байна" }
     }
 
     const usage = formatUsage(
@@ -992,7 +992,7 @@ export function reduceSessionData(input: SessionDataInput): SessionDataOutput {
 
         data.ids.add(part.id)
         const text =
-          typeof part.state.error === "string" && part.state.error.trim() ? part.state.error : "unknown error"
+          typeof part.state.error === "string" && part.state.error.trim() ? part.state.error : "тодорхойгүй алдаа"
         commits.push(failTool(part, text))
         return out(data, commits, view)
       }

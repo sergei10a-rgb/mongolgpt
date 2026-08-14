@@ -1841,7 +1841,7 @@ describe("run stream transport", () => {
         type: "stream.patch",
         patch: {
           phase: "running",
-          status: "awaiting answer",
+          status: "хариу хүлээж байна",
         },
       })
 

@@ -501,13 +501,13 @@ export function RunFooterView(props: RunFooterViewProps) {
     commands: [
       {
         name: "command.palette.show",
-        title: "Open command palette",
+        title: "Командын цэсийг нээх",
         category: "Prompt",
         run: openCommand,
       },
       {
         name: "variant.cycle",
-        title: "Cycle model variant",
+        title: "Загварын хувилбар солих",
         category: "Model",
         run: props.onCycle,
       },
@@ -525,7 +525,7 @@ export function RunFooterView(props: RunFooterViewProps) {
     commands: [
       {
         name: "session.background",
-        title: "Background subagents",
+        title: "Дэд агентуудыг арын горимд оруулах",
         category: "Session",
         run: () => props.onBackground?.(),
       },
@@ -539,7 +539,7 @@ export function RunFooterView(props: RunFooterViewProps) {
     commands: [
       {
         name: "session.child.first",
-        title: "View subagents",
+        title: "Дэд агентуудыг харах",
         category: "Session",
         run: openSubagentMenu,
       },
@@ -553,7 +553,7 @@ export function RunFooterView(props: RunFooterViewProps) {
     commands: [
       {
         name: "session.queued_prompts",
-        title: "Manage queued prompts",
+        title: "Дараалалд буй хүсэлтүүдийг удирдах",
         category: "Session",
         run: openQueuedMenu,
       },

@@ -359,8 +359,8 @@ export function RunCommandMenuBody(props: {
     const session: CommandEntry[] = [
       {
         action: "editor",
-        category: "Сешн",
-        display: "Editor нээх",
+        category: "Сесс",
+        display: "Засварлагч нээх",
         footer: "/editor",
         keywords: "editor compose draft external editor",
       },
@@ -368,8 +368,8 @@ export function RunCommandMenuBody(props: {
         ? [
             {
               action: "subagent" as const,
-              category: "Сешн",
-              display: "Subagent-ууд харах",
+              category: "Сесс",
+              display: "Дэд агентуудыг харах",
               footer:
                 activeSubagentCount() > 0 ? `${activeSubagentCount()} идэвхтэй` : `${props.subagents().length} сүүлийн`,
               keywords: props
@@ -381,9 +381,9 @@ export function RunCommandMenuBody(props: {
         : []),
       {
         action: "slash",
-        category: "Сешн",
+        category: "Сесс",
         name: "new",
-        display: "Шинэ сешн",
+        display: "Шинэ сесс",
         footer: "/new",
         keywords: "new session clear",
       },
@@ -394,7 +394,7 @@ export function RunCommandMenuBody(props: {
             {
               action: "skill" as const,
               category: "Prompt",
-              display: "Skill-үүд",
+              display: "Ур чадварууд",
               footer: "/skills",
               keywords: `skill skills ${skills()
                 .map((item) => `${item.name} ${item.description ?? ""}`)
@@ -413,7 +413,7 @@ export function RunCommandMenuBody(props: {
             {
               action: "queued" as const,
               category: "Агент",
-              display: "Дараалалд буй prompt-уудыг удирдах",
+              display: "Дараалалд буй хүсэлтүүдийг удирдах",
               footer: `${props.queued().length} дараалалд`,
               keywords: props
                 .queued()
@@ -425,7 +425,7 @@ export function RunCommandMenuBody(props: {
       {
         action: "variant.cycle",
         category: "Агент",
-        display: "Variant эргүүлэх",
+        display: "Хувилбар солих",
         footer: props.variantCycle,
         keywords: "variant cycle",
       },
@@ -434,7 +434,7 @@ export function RunCommandMenuBody(props: {
             {
               action: "variant.list" as const,
               category: "Агент",
-              display: "Загварын variant солих",
+              display: "Загварын хувилбар солих",
               keywords: `variant variants ${props.variants().join(" ")}`,
             },
           ]
@@ -638,7 +638,7 @@ export function RunSubagentSelectBody(props: {
 
   return (
     <PanelShell
-      title="Subagent сонгох"
+      title="Дэд агент сонгох"
       query={query()}
       count={items().length}
       total={entries().length}
@@ -658,7 +658,7 @@ export function RunSubagentSelectBody(props: {
         offset={menu.offset}
         rows={menu.rows}
         limit={SUBAGENT_LIST_ROWS}
-        empty="Subagent олдсонгүй"
+        empty="Дэд агент олдсонгүй"
         border={false}
         paddingLeft={PANEL_PAD}
         paddingRight={PANEL_PAD}
@@ -735,7 +735,7 @@ export function RunQueuedPromptSelectBody(props: {
 
   return (
     <PanelShell
-      title="Дараалалд буй prompt-ууд"
+      title="Дараалалд буй хүсэлтүүд"
       query={query()}
       count={items().length}
       total={entries().length}
@@ -755,7 +755,7 @@ export function RunQueuedPromptSelectBody(props: {
         offset={menu.offset}
         rows={menu.rows}
         limit={SUBAGENT_LIST_ROWS}
-        empty="Дараалалд prompt алга"
+        empty="Дараалалд хүсэлт алга"
         border={false}
         paddingLeft={PANEL_PAD}
         paddingRight={PANEL_PAD}
@@ -812,7 +812,7 @@ export function RunSkillSelectBody(props: {
 
   return (
     <PanelShell
-      title="Skill-үүд"
+      title="Ур чадварууд"
       query={query()}
       count={items().length}
       total={entries().length}
@@ -832,7 +832,7 @@ export function RunSkillSelectBody(props: {
         offset={menu.offset}
         rows={() => PANEL_LIST_ROWS}
         limit={PANEL_LIST_ROWS}
-        empty={props.commands() ? "Skill олдсонгүй" : "Skill-үүд ачаалж байна"}
+        empty={props.commands() ? "Ур чадвар олдсонгүй" : "Ур чадварууд ачаалж байна"}
         border={false}
         paddingLeft={PANEL_PAD}
         paddingRight={PANEL_PAD}
@@ -910,7 +910,7 @@ export function RunVariantSelectBody(props: {
 
   return (
     <PanelShell
-      title="Variant сонгох"
+      title="Хувилбар сонгох"
       query={query()}
       count={items().length}
       total={entries().length}

@@ -414,9 +414,9 @@ export function createPromptState(input: PromptInput): PromptState {
         action: "editor" as const,
         name: "editor",
         display: "/editor",
-        description: "гадаад editor дээр бичих",
+        description: "гадаад засварлагчаар бичих",
       } satisfies SlashOption,
-      { kind: "slash", name: "new", display: "/new", description: "шинэ сешн эхлүүлэх" } satisfies SlashOption,
+      { kind: "slash", name: "new", display: "/new", description: "шинэ сесс эхлүүлэх" } satisfies SlashOption,
       { kind: "slash", name: "exit", display: "/exit", description: "MongolGPT хаах" } satisfies SlashOption,
     ]
     const hidden = new Set(builtins.map((item) => item.name))
@@ -981,7 +981,7 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         name: "prompt.clear",
-        title: "Prompt цэвэрлэх эсвэл гарах",
+        title: "Хүсэлтийг цэвэрлэх эсвэл гарах",
         category: "Prompt",
         run() {
           if (requestExit()) return
@@ -998,8 +998,8 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         name: "session.interrupt",
-        title: "Сешнийг таслах",
-        category: "Сешн",
+        title: "Сессийг таслах",
+        category: "Сесс",
         run() {
           if (input.onInterrupt()) return
           return false
@@ -1015,7 +1015,7 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         name: "prompt.editor",
-        title: "Editor нээх",
+        title: "Засварлагч нээх",
         category: "Prompt",
         run() {
           void openEditor()
@@ -1031,7 +1031,7 @@ export function createPromptState(input: PromptInput): PromptState {
     commands: [
       {
         name: "prompt.history.previous",
-        title: "Өмнөх prompt түүх",
+        title: "Өмнөх хүсэлтийн түүх",
         category: "Prompt",
         run(ctx: { event: KeyEvent }) {
           return historyCommand(-1, ctx.event)
@@ -1039,7 +1039,7 @@ export function createPromptState(input: PromptInput): PromptState {
       },
       {
         name: "prompt.history.next",
-        title: "Дараагийн prompt түүх",
+        title: "Дараагийн хүсэлтийн түүх",
         category: "Prompt",
         run(ctx: { event: KeyEvent }) {
           return historyCommand(1, ctx.event)
@@ -1058,7 +1058,7 @@ export function createPromptState(input: PromptInput): PromptState {
     bindings: [
       {
         key: "!",
-        desc: "Shell горим",
+        desc: "Командын горим",
         group: "Prompt",
         cmd() {
           if (shell()) return false
@@ -1076,13 +1076,13 @@ export function createPromptState(input: PromptInput): PromptState {
     bindings: [
       {
         key: "escape",
-        desc: "Shell горимоос гарах",
+        desc: "Командын горимоос гарах",
         group: "Prompt",
         cmd: () => setShellMode(false),
       },
       {
         key: "backspace",
-        desc: "Shell горимоос гарах",
+        desc: "Командын горимоос гарах",
         group: "Prompt",
         cmd() {
           if (!area || area.isDestroyed) return false
@@ -1111,7 +1111,7 @@ export function createPromptState(input: PromptInput): PromptState {
       },
       {
         name: "prompt.autocomplete.hide",
-        title: "Autocomplete нуух",
+        title: "Автоматаар бөглөхийг нуух",
         category: "Autocomplete",
         run: cancelAutocomplete,
       },

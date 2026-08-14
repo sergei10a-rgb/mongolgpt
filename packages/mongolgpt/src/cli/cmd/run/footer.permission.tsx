@@ -100,7 +100,7 @@ export function RejectField(props: {
       minHeight={1}
       maxHeight={3}
       wrapMode="word"
-      placeholder="Tell MongolGPT what to do differently"
+      placeholder="MongolGPT-д өөрөөр юу хийхийг хэлнэ үү"
       placeholderColor={props.theme.muted}
       textColor={props.theme.text}
       focusedTextColor={props.theme.text}

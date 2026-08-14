@@ -401,13 +401,13 @@ test("direct command panel renders grouped command palette", async () => {
 
     expect(frame).toContain("Командууд")
     expect(frame).toContain("Хайх")
-    expect(frame).toContain("Сешн")
+    expect(frame).toContain("Сесс")
     expect(frame).toContain("Агент")
-    expect(frame).toContain("Prompt")
-    expect(frame).toContain("Editor нээх")
+    expect(frame).toContain("Хүсэлт")
+    expect(frame).toContain("Засварлагч нээх")
     expect(frame).toContain("/editor")
     expect(frame).toContain("Загвар солих")
-    expect(frame).toContain("Skill-үүд")
+    expect(frame).toContain("Ур чадварууд")
     expect(frame).toContain("/skills")
     expect(frame.match(/Агент/g)?.length).toBe(1)
     expect(frame).not.toContain("┌")
@@ -450,7 +450,7 @@ test("direct skill panel renders searchable skill list", async () => {
     await app.renderOnce()
     const frame = app.captureCharFrame()
 
-    expect(frame).toContain("Skill-үүд")
+    expect(frame).toContain("Ур чадварууд")
     expect(frame).toContain("Хайх")
     expect(frame).toContain("internal")
     expect(frame).not.toContain("/internal")
@@ -540,7 +540,7 @@ test("direct command panel shows subagent entry when available", async () => {
     await app.renderOnce()
     const frame = app.captureCharFrame()
 
-    expect(frame).toContain("Subagent-ууд харах")
+    expect(frame).toContain("Дэд агентуудыг харах")
     expect(frame).toContain("1 идэвхтэй")
   } finally {
     app.renderer.destroy()
@@ -588,7 +588,7 @@ test("direct command panel keeps completed subagents available", async () => {
     await app.renderOnce()
     const frame = app.captureCharFrame()
 
-    expect(frame).toContain("Subagent-ууд харах")
+    expect(frame).toContain("Дэд агентуудыг харах")
     expect(frame).toContain("1 сүүлийн")
   } finally {
     app.renderer.destroy()
@@ -629,7 +629,7 @@ test("direct subagent panel renders active subagents", async () => {
     const frame = app.captureCharFrame()
     const list = panelMenu(app.renderer.root)
 
-    expect(frame).toContain("Subagent сонгох")
+    expect(frame).toContain("Дэд агент сонгох")
     expect(frame).toContain("Inspect auth flow")
     expect(frame).toContain("Write migration plan")
     expect(frame).toContain("дууссан")
@@ -667,7 +667,7 @@ test("direct queued prompt panel renders pending prompt actions", async () => {
     const frame = app.captureCharFrame()
     const list = panelMenu(app.renderer.root)
 
-    expect(frame).toContain("Дараалалд буй prompt-ууд")
+    expect(frame).toContain("Дараалалд буй хүсэлтүүд")
     expect(frame).toContain("fix the auth test")
     expect(frame).toContain("дараалалд")
     expect(frame).not.toContain("┌")
@@ -1361,7 +1361,7 @@ test("direct variant panel renders current variant selector", async () => {
     const frame = app.captureCharFrame()
     const list = panelMenu(app.renderer.root)
 
-    expect(frame).toContain("Variant сонгох")
+    expect(frame).toContain("Хувилбар сонгох")
     expect(frame).toContain("Анхдагч")
     expect(frame).toContain("high")
     expect(frame).toContain("minimal")

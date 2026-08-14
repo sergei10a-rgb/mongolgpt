@@ -269,14 +269,14 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     onCycleVariant: () => {
       if (!state.model || state.variants.length === 0) {
         return {
-          status: "variant байхгүй",
+          status: "хувилбар байхгүй",
         }
       }
 
       state.activeVariant = cycleVariant(state.activeVariant, state.variants)
       saveVariant(state.model, state.activeVariant)
       return {
-        status: state.activeVariant ? `variant ${state.activeVariant}` : "анхдагч variant",
+        status: state.activeVariant ? `хувилбар ${state.activeVariant}` : "анхдагч хувилбар",
         modelLabel: formatModelLabel(state.model, state.activeVariant, state.providers),
         variant: state.activeVariant,
       }
@@ -318,20 +318,20 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     onVariantSelect: async (variant) => {
       if (!state.model || state.variants.length === 0) {
         return {
-          status: "variant байхгүй",
+          status: "хувилбар байхгүй",
         }
       }
 
       if (variant && !state.variants.includes(variant)) {
         return {
-          status: `${variant} variant боломжгүй`,
+          status: `${variant} хувилбар боломжгүй`,
         }
       }
 
       state.activeVariant = variant
       saveVariant(state.model, state.activeVariant)
       return {
-        status: state.activeVariant ? `variant ${state.activeVariant}` : "анхдагч variant",
+        status: state.activeVariant ? `хувилбар ${state.activeVariant}` : "анхдагч хувилбар",
         modelLabel: formatModelLabel(state.model, state.activeVariant, state.providers),
         variant: state.activeVariant,
         variants: state.variants,
@@ -622,7 +622,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
                 type: "stream.patch",
                 patch: {
                   phase: "idle",
-                  status: "failed to start new session",
+                  status: "шинэ сесс эхлүүлж чадсангүй",
                 },
               })
               const commit = {
