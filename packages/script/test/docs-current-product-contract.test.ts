@@ -91,6 +91,17 @@ describe("documentation product contract", () => {
     expect(admin).toContain("refund")
   })
 
+  test("documents only the hosted SaaS deploy path and every runtime trust secret", async () => {
+    const deployment = await Bun.file(new URL("deployment.mdx", docs)).text()
+
+    expect(deployment).toContain('$env:MONGOLGPT_ENABLE_HOSTED_SERVICES="true"')
+    expect(deployment).not.toContain('$env:MONGOLGPT_ENABLE_HOSTED_SERVICES="false"')
+    expect(deployment).toContain("`MONGOLGPT_RUNTIME_SECRET`")
+    expect(deployment).toContain("`MONGOLGPT_RUNTIME_AUTH_SECRET`")
+    expect(deployment).toContain("хоёр өөр, тогтвортой CSPRNG secret")
+    expect(deployment).toContain("GET https://runtime.mgpt.mn/global/health")
+  })
+
   test("keeps repository documentation links on canonical Mongolian sources", async () => {
     const files = [install, ...(await Promise.all(productSourceRoots.map(textSourceFiles))).flat()]
     const sources = await Promise.all(files.map((file) => Bun.file(file).text()))

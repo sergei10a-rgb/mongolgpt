@@ -51,22 +51,23 @@ KV нь нэг key-д олон зэрэгцээ бичилт шаарддаг to
 
 ## Deploy-оос өмнөх шалгалт
 
-Repository-ийн үндсэн хавтаснаас:
+Нийтийн Web app-ийг зөвхөн hosted runtime, account болон auth үйлчилгээтэй хамт deploy хийнэ. Repository-ийн
+үндсэн хавтаснаас local preflight ажиллуулах бол доорх нийтлэг утгаас гадна энэ хуудсын GitHub тохиргооны
+хүснэгтэд байгаа dev credential-үүдийг ижил нэртэй environment variable-аар аюулгүй оруулсан байна.
 
 ```powershell
 $env:MONGOLGPT_DOMAIN="mgpt.mn"
 $env:CLOUDFLARE_DEFAULT_ACCOUNT_ID="<account-id>"
 $env:CLOUDFLARE_API_TOKEN="<api-token>"
+$env:MONGOLGPT_ENABLE_HOSTED_SERVICES="true"
+$env:MONGOLGPT_ENABLE_ADMIN="false"
+$env:MONGOLGPT_PAYMENT_ENVIRONMENT="disabled"
 bun run deploy:preflight -- dev
 ```
 
-Static dev staging байрлуулах:
-
-```powershell
-$env:MONGOLGPT_ENABLE_HOSTED_SERVICES="false"
-bun sst deploy --stage=dev
-bun run deploy:smoke -- dev
-```
+`MONGOLGPT_ENABLE_HOSTED_SERVICES=false` build-ийг `app.dev.mgpt.mn` дээр SaaS app гэж нийтлэхгүй. Тэр build нь
+Desktop/local bridge хөгжүүлэлтэд зориулагдсан бөгөөд account, auth, Free Auto API-гүй байна. Dev staging-ийг
+GitHub-ийн **Cloudflare deploy** workflow-оор ажиллуулах нь зөв зам.
 
 Production deploy хийхэд нэмэлт баталгаажуулалт заавал өгнө:
 
@@ -99,6 +100,7 @@ Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог х
 | Secret   | `BYOK_CREDENTIALS_KEY_V1`        | 32+ тэмдэгт тогтвортой CSPRNG key; rotation хийх хүртэл солихгүй     |
 | Secret   | `D1_BACKUP_API_TOKEN`            | Зөвхөн тухайн account-ийн D1 Edit эрхтэй backup/export token         |
 | Secret   | `MONGOLGPT_RUNTIME_SECRET`       | 32+ тэмдэгт Cloudflare Sandbox account-isolation secret              |
+| Secret   | `MONGOLGPT_RUNTIME_AUTH_SECRET`  | 32+ тэмдэгт runtime capability signing/verification secret           |
 | Secret   | `MONGOLGPT_PLAN_LIMITS`          | Free/Basic/Pro/Max plan, token, cost болон rate-limit JSON           |
 | Secret   | `ZEN_SESSION_SECRET`             | 32+ тэмдэгт тусдаа CSPRNG session secret                             |
 | Secret   | `ZEN_MODELS1`                    | Баталгаажсан Free Auto model/provider JSON; provider key-ийг агуулна |
@@ -164,6 +166,13 @@ NVIDIA API Catalog-ийн trial endpoint нь зөвхөн туршилт, үн�
 
 `D1_BACKUP_API_TOKEN`-ийг ерөнхий deploy token-оос тусад нь үүсгэнэ: **Account → D1 → Edit**, Resources дээр зөвхөн MongolGPT байрлаж буй ганц account-ийг сонгоно. Zone, DNS, Worker, R2 болон Access эрх нэмэхгүй. Token-ийг GitHub Environment secret-д хадгална. Нөөцлөлт, хадгалалтын хугацаа, сэргээх ажиллагааг [Нөөцлөлт ба сэргээх](./backup-restore) гарын авлагаас харна уу.
 
+`MONGOLGPT_RUNTIME_SECRET` болон `MONGOLGPT_RUNTIME_AUTH_SECRET` нь хоёр өөр, тогтвортой CSPRNG secret байна.
+Эхнийх нь account бүрийн cloud sandbox identity-г тусгаарлана. Хоёр дахь нь console-оос олгосон богино настай runtime
+capability-г гарын үсэг зурж Worker дээр шалгана. Аль нэгийг deploy бүрд санамсаргүй сольж болохгүй; соливол идэвхтэй
+runtime session хүчингүй болох эсвэл өмнөх sandbox identity-с тасрах эрсдэлтэй. Workflow нь
+`MONGOLGPT_RUNTIME_AUTH_SECRET`-ийг runtime Worker болон SST-ийн `MongolGPTRuntimeAuthSecret` resource-д ижил утгаар
+холбож, preflight хоёр тал зөрвөл deploy-г зогсооно.
+
 Quota service-ийн дотоод token-ийг SST deploy үеэр автоматаар үүсгэнэ. Upstash болон PlanetScale secret шаардлагагүй.
 
 `Cloudflare deploy` workflow нь preflight, typecheck, docs/web build, SST deploy, D1 migration, URL smoke check гэсэн дарааллаар ажиллана. `payment_environment`-ийг эхлээд `disabled`, sandbox merchant бэлэн болсны дараа `sandbox` гэж сонгоно. Production үед `DEPLOY <domain>` гэсэн deploy баталгаа заавал байна. Бодит мөнгөний `production` төлбөр сонгосон бол нэмэлтээр `ENABLE REAL PAYMENTS <domain>` гэсэн яг тохирох баталгаажуулалтгүй preflight зогсоно.
@@ -181,6 +190,7 @@ Hosted орчинд:
 ```txt
 GET https://mgpt.mn/api/health
 GET https://auth.mgpt.mn/health
+GET https://runtime.mgpt.mn/global/health
 GET https://pay.mgpt.mn/health
 ```
 
