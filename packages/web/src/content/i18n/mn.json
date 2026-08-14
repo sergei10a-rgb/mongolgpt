@@ -99,5 +99,13 @@
   "share.match_other": "тохирол",
   "share.result_one": "үр дүн",
   "share.result_other": "үр дүн",
-  "share.debug_key": "Дибагийн түлхүүр"
+  "share.debug_key": "Дибагийн түлхүүр",
+  "share.tool_grep": "Мөр хайх",
+  "share.tool_fetch": "Вэб татах",
+  "share.tool_read": "Файл унших",
+  "share.tool_write": "Файл бичих",
+  "share.tool_edit": "Файл засах",
+  "share.tool_glob": "Файл хайх",
+  "share.tool_task": "Дэд даалгавар",
+  "share.tool_shell": "Терминал"
 }

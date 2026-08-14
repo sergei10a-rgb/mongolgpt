@@ -431,7 +431,7 @@ export function GrepTool(props: ToolProps) {
   return (
     <>
       <div data-component="tool-title">
-        <span data-slot="name">Grep</span>
+        <span data-slot="name">{messages.tool_grep}</span>
         <span data-slot="target">&ldquo;{props.state.input.pattern}&rdquo;</span>
       </div>
       <div data-component="tool-result">
@@ -491,7 +491,7 @@ export function WebFetchTool(props: ToolProps) {
   return (
     <>
       <div data-component="tool-title">
-        <span data-slot="name">Fetch</span>
+        <span data-slot="name">{messages.tool_fetch}</span>
         <span data-slot="target">{props.state.input.url}</span>
       </div>
       <div data-component="tool-result">
@@ -517,7 +517,7 @@ export function ReadTool(props: ToolProps) {
   return (
     <>
       <div data-component="tool-title">
-        <span data-slot="name">Read</span>
+        <span data-slot="name">{messages.tool_read}</span>
         <span data-slot="target" title={props.state.input?.filePath}>
           {filePath()}
         </span>
@@ -553,7 +553,7 @@ export function WriteTool(props: ToolProps) {
   return (
     <>
       <div data-component="tool-title">
-        <span data-slot="name">Write</span>
+        <span data-slot="name">{messages.tool_write}</span>
         <span data-slot="target" title={props.state.input?.filePath}>
           {filePath()}
         </span>
@@ -587,7 +587,7 @@ export function EditTool(props: ToolProps) {
   return (
     <>
       <div data-component="tool-title">
-        <span data-slot="name">Edit</span>
+        <span data-slot="name">{messages.tool_edit}</span>
         <span data-slot="target" title={props.state.input?.filePath}>
           {filePath()}
         </span>
@@ -626,7 +626,7 @@ export function GlobTool(props: ToolProps) {
   return (
     <>
       <div data-component="tool-title">
-        <span data-slot="name">Glob</span>
+        <span data-slot="name">{messages.tool_glob}</span>
         <span data-slot="target">&ldquo;{props.state.input.pattern}&rdquo;</span>
       </div>
       <Switch>
@@ -704,7 +704,7 @@ function TaskTool(props: ToolProps) {
   return (
     <>
       <div data-component="tool-title">
-        <span data-slot="name">Task</span>
+        <span data-slot="name">{messages.tool_task}</span>
         <span data-slot="target">{props.state.input.description}</span>
       </div>
       <div data-component="tool-input">&ldquo;{props.state.input.prompt}&rdquo;</div>

@@ -3,8 +3,8 @@ import { toolDisplayMetadata, webSearchProviderLabel } from "../../src/util/tool
 
 describe("webSearchProviderLabel", () => {
   test("labels known providers", () => {
-    expect(webSearchProviderLabel("parallel")).toBe("Parallel Web Search")
-    expect(webSearchProviderLabel("exa")).toBe("Exa Web Search")
+    expect(webSearchProviderLabel("parallel")).toBe("Parallel вэб хайлт")
+    expect(webSearchProviderLabel("exa")).toBe("Exa вэб хайлт")
   })
 
   for (const [name, provider] of [
@@ -16,7 +16,7 @@ describe("webSearchProviderLabel", () => {
     ["an unexpected string", "other"],
   ] as const) {
     test(`uses the generic label for ${name}`, () => {
-      expect(webSearchProviderLabel(provider)).toBe("Web Search")
+      expect(webSearchProviderLabel(provider)).toBe("Вэб хайлт")
     })
   }
 })

@@ -590,6 +590,11 @@ export const dict = {
   "directory.error.invalidUrl": "Invalid directory in URL.",
 
   "error.chain.unknown": "Unknown error",
+  "error.chain.requestFailed": "Request failed",
+  "error.chain.connectionFailed": "Could not connect to the server",
+  "error.chain.timeout": "The request timed out",
+  "error.chain.cancelled": "The request was cancelled",
+  "error.chain.httpStatus": "The server responded with status {{status}}",
   "error.server.invalidConfiguration": "Invalid configuration",
   "error.chain.causedBy": "Caused by:",
   "error.chain.apiError": "API error",

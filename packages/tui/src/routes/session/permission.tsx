@@ -288,7 +288,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               const desc = typeof data.description === "string" ? data.description : ""
               return {
                 icon: "#",
-                title: `${Locale.titlecase(type)} task`,
+                title: `${Locale.titlecase(type)} даалгавар`,
                 body: (
                   <Show when={desc}>
                     <box paddingLeft={1}>
@@ -459,12 +459,12 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
       },
     ],
     bindings: [
-      { key: "escape", desc: "Зөвшөөрөл татгалзахыг цуцлах", group: "Permission", cmd: () => props.onCancel() },
+      { key: "escape", desc: "Зөвшөөрөл татгалзахыг цуцлах", group: "Зөвшөөрөл", cmd: () => props.onCancel() },
       ...tuiConfig.keybinds.get("app.exit"),
       {
         key: "return",
         desc: "Зөвшөөрөл татгалзахыг батлах",
-        group: "Permission",
+        group: "Зөвшөөрөл",
         cmd: () => props.onConfirm(input.plainText),
       },
     ],
@@ -567,7 +567,7 @@ function Prompt<const T extends Record<string, string>>(props: {
       {
         key: "left",
         desc: "Өмнөх зөвшөөрлийн сонголт",
-        group: "Permission",
+        group: "Зөвшөөрөл",
         cmd: () => {
           const idx = keys.indexOf(store.selected)
           const next = keys[(idx - 1 + keys.length) % keys.length]
@@ -577,7 +577,7 @@ function Prompt<const T extends Record<string, string>>(props: {
       {
         key: "h",
         desc: "Өмнөх зөвшөөрлийн сонголт",
-        group: "Permission",
+        group: "Зөвшөөрөл",
         cmd: () => {
           const idx = keys.indexOf(store.selected)
           const next = keys[(idx - 1 + keys.length) % keys.length]
@@ -587,7 +587,7 @@ function Prompt<const T extends Record<string, string>>(props: {
       {
         key: "right",
         desc: "Дараагийн зөвшөөрлийн сонголт",
-        group: "Permission",
+        group: "Зөвшөөрөл",
         cmd: () => {
           const idx = keys.indexOf(store.selected)
           const next = keys[(idx + 1) % keys.length]
@@ -597,7 +597,7 @@ function Prompt<const T extends Record<string, string>>(props: {
       {
         key: "l",
         desc: "Дараагийн зөвшөөрлийн сонголт",
-        group: "Permission",
+        group: "Зөвшөөрөл",
         cmd: () => {
           const idx = keys.indexOf(store.selected)
           const next = keys[(idx + 1) % keys.length]
@@ -607,7 +607,7 @@ function Prompt<const T extends Record<string, string>>(props: {
       {
         key: "return",
         desc: "Зөвшөөрлийн сонголт сонгох",
-        group: "Permission",
+        group: "Зөвшөөрөл",
         cmd: () => props.onSelect(store.selected),
       },
       ...(props.escapeKey
@@ -615,7 +615,7 @@ function Prompt<const T extends Record<string, string>>(props: {
             {
               key: "escape",
               desc: "Зөвшөөрөл татгалзах",
-              group: "Permission",
+              group: "Зөвшөөрөл",
               cmd: () => props.onSelect(props.escapeKey!),
             },
           ]

@@ -67,6 +67,7 @@ import { PromptDragOverlay } from "./prompt-input/drag-overlay"
 import { promptPlaceholder } from "./prompt-input/placeholder"
 import { createPromptInputTransientState } from "./prompt-input/transient-state"
 import { showToast } from "@/utils/toast"
+import { formatServerError } from "@/utils/server-errors"
 import { ImagePreview } from "@mongolgpt/ui/image-preview"
 
 export type PromptInputState = ReturnType<typeof usePrompt>
@@ -508,7 +509,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         showToast({
           variant: "error",
           title: language.t("common.requestFailed"),
-          description: error instanceof Error ? error.message : String(error),
+          description: formatServerError(error, language.t, language.t("common.requestFailed")),
         }),
     })
   }

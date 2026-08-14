@@ -29,10 +29,68 @@ export function formatServerError(error: unknown, translate?: Translator, fallba
   const unwrapped = unwrapNamedError(error)
   if (isConfigInvalidErrorLike(unwrapped)) return parseReadableConfigInvalidError(unwrapped, translate)
   if (isProviderModelNotFoundErrorLike(unwrapped)) return parseReadableProviderModelNotFoundError(unwrapped, translate)
+  if (!translate) {
+    if (error instanceof Error && error.message) return error.message
+    if (typeof error === "string" && error) return error
+    if (fallback) return fallback
+    return "Unknown error"
+  }
+
+  const status = readErrorStatus(error)
+  if (status !== undefined) {
+    return tr(translate, "error.chain.httpStatus", "The server responded with status {{status}}", { status })
+  }
+
+  const message = readErrorMessage(error)
+  if (message) {
+    const normalized = message.toLowerCase()
+    if (/timeout|timed out|deadline exceeded/.test(normalized)) {
+      return tr(translate, "error.chain.timeout", "The request timed out")
+    }
+    if (/abort|aborted|cancelled|canceled/.test(normalized)) {
+      return tr(translate, "error.chain.cancelled", "The request was cancelled")
+    }
+    if (/failed to fetch|network|econnrefused|enotfound|connection|connect to server/.test(normalized)) {
+      return tr(translate, "error.chain.connectionFailed", "Could not connect to the server")
+    }
+  }
+
+  if (fallback) return fallback
+  return message
+    ? tr(translate, "error.chain.requestFailed", "Request failed")
+    : tr(translate, "error.chain.unknown", "Unknown error")
+}
+
+function readErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message
   if (typeof error === "string" && error) return error
-  if (fallback) return fallback
-  return tr(translate, "error.chain.unknown", "Unknown error")
+  if (typeof error !== "object" || error === null) return
+  const value = error as Record<string, unknown>
+  if (typeof value.message === "string" && value.message) return value.message
+  if (typeof value.data === "object" && value.data !== null) {
+    const message = (value.data as Record<string, unknown>).message
+    if (typeof message === "string" && message) return message
+  }
+}
+
+function readErrorStatus(error: unknown): number | string | undefined {
+  const values: unknown[] = [error]
+  if (error instanceof Error && error.cause) values.push(error.cause)
+
+  for (const value of values) {
+    if (typeof value !== "object" || value === null) continue
+    const record = value as Record<string, unknown>
+    const status = record.status ?? record.statusCode
+    if (typeof status === "number" || (typeof status === "string" && status)) return status
+    if (typeof record.data === "object" && record.data !== null) {
+      const data = record.data as Record<string, unknown>
+      const nested = data.status ?? data.statusCode
+      if (typeof nested === "number" || (typeof nested === "string" && nested)) return nested
+    }
+  }
+
+  const match = readErrorMessage(error)?.match(/(?:status|http)\s*[:=]?\s*(\d{3})/i)
+  return match?.[1]
 }
 
 function unwrapNamedError(error: unknown): unknown {

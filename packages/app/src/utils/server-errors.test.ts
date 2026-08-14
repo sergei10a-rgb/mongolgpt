@@ -15,6 +15,11 @@ function fill(text: string, vars?: Record<string, string | number>) {
 function useLanguageMock() {
   const dict: Record<string, string> = {
     "error.chain.unknown": "Erro desconhecido",
+    "error.chain.requestFailed": "Falha na requisicao",
+    "error.chain.connectionFailed": "Nao foi possivel conectar ao servidor",
+    "error.chain.timeout": "A solicitacao expirou",
+    "error.chain.cancelled": "A solicitacao foi cancelada",
+    "error.chain.httpStatus": "O servidor respondeu com status {{status}}",
     "error.chain.configInvalid": "Arquivo de config em {{path}} invalido",
     "error.chain.configInvalidWithMessage": "Arquivo de config em {{path}} invalido: {{message}}",
     "error.chain.modelNotFound": "Modelo nao encontrado: {{provider}}/{{model}}",
@@ -81,14 +86,29 @@ describe("formatServerError", () => {
     expect(result).toBe("Arquivo de config em config invalido: Missing host")
   })
 
-  test("returns error messages", () => {
+  test("localizes HTTP status failures", () => {
     expect(formatServerError(new Error("Request failed with status 503"), language.t)).toBe(
-      "Request failed with status 503",
+      "O servidor respondeu com status 503",
+    )
+    expect(formatServerError(new Error("Request failed", { cause: { status: 502 } }), language.t)).toBe(
+      "O servidor respondeu com status 502",
     )
   })
 
-  test("returns provided string errors", () => {
-    expect(formatServerError("Failed to connect to server", language.t)).toBe("Failed to connect to server")
+  test("localizes network, timeout, and cancellation failures", () => {
+    expect(formatServerError("Failed to connect to server", language.t)).toBe("Nao foi possivel conectar ao servidor")
+    expect(formatServerError(new Error("request timed out"), language.t)).toBe("A solicitacao expirou")
+    expect(formatServerError(new Error("The operation was aborted"), language.t)).toBe("A solicitacao foi cancelada")
+  })
+
+  test("localizes generic failures instead of leaking raw text", () => {
+    expect(formatServerError(new Error("Unexpected upstream failure"), language.t)).toBe("Falha na requisicao")
+    expect(formatServerError("Unexpected upstream failure", language.t)).toBe("Falha na requisicao")
+  })
+
+  test("preserves raw Error and string behavior without a translator", () => {
+    expect(formatServerError(new Error("Request failed with status 503"))).toBe("Request failed with status 503")
+    expect(formatServerError("Failed to connect to server")).toBe("Failed to connect to server")
   })
 
   test("uses translated unknown fallback", () => {

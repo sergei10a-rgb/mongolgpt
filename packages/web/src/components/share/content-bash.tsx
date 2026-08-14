@@ -44,7 +44,7 @@ export function ContentBash(props: Props) {
     <div class={style.root} data-expanded={expanded() || props.expand === true ? true : undefined}>
       <div data-slot="body">
         <div data-slot="header">
-          <span>Shell</span>
+          <span>{messages.tool_shell}</span>
         </div>
         <div data-slot="content">
           <div innerHTML={commandHtml()} />
