@@ -4,6 +4,7 @@ import {
   inspectAdminProtection,
   inspectAuthHealth,
   inspectConsoleHealth,
+  inspectDeploymentEndpointConfiguration,
   inspectAnonymousHostedSession,
   inspectAppHtml,
   inspectHtmlAssets,
@@ -27,6 +28,7 @@ async function runSmoke() {
     requireHostedServices: true,
   })
   const endpoints = deploymentEndpoints(result)
+  inspectDeploymentEndpointConfiguration(endpoints, result)
   const runtimeVersion = await expectedRuntimeVersion()
   const healthContracts = new Map(
     [

@@ -5,6 +5,7 @@ import {
   inspectRuntimeTokenPreflight,
 } from "../../../script/deployment-smoke"
 import {
+  inspectDeploymentEndpointConfiguration,
   inspectAuthHealth,
   inspectAdminProtection,
   inspectConsoleHealth,
@@ -27,6 +28,16 @@ const html = (meta: string) => `<!doctype html>
 </html>`
 
 const appOrigin = "https://app.dev.mgpt.mn"
+
+const deployment = {
+  stage: "dev",
+  domain: "mgpt.mn",
+  stageDomain: "dev.mgpt.mn",
+  hostedServices: true,
+  adminEnabled: false,
+  paymentEnvironment: "disabled" as const,
+  warnings: [],
+}
 
 function corsHeaders() {
   return {
@@ -185,6 +196,42 @@ describe("inspectJsonApiPayload", () => {
     expect(() => inspectJsonApiPayload("application/problem+json", '{"status":"ok"}', "console health")).toThrow(
       "not JSON",
     )
+  })
+})
+
+describe("deployment endpoint configuration", () => {
+  test("keeps dev API health separate from app and docs HTML routes", () => {
+    expect(() =>
+      inspectDeploymentEndpointConfiguration(
+        {
+          docs: "https://docs.dev.mgpt.mn/docs",
+          app: appOrigin,
+          console: "https://dev.mgpt.mn",
+          consoleHealth: "https://dev.mgpt.mn/api/health",
+          authHealth: "https://auth.dev.mgpt.mn/health",
+          runtimeHealth: "https://runtime.dev.mgpt.mn/global/health",
+          paymentHealth: "https://pay.dev.mgpt.mn/health",
+        },
+        deployment,
+      ),
+    ).not.toThrow()
+  })
+
+  test("fails clearly when a dev API endpoint points at the app or wrong domain", () => {
+    expect(() =>
+      inspectDeploymentEndpointConfiguration(
+        {
+          docs: "https://docs.dev.mgpt.mn/docs",
+          app: appOrigin,
+          console: appOrigin,
+          consoleHealth: `${appOrigin}/api/health`,
+          authHealth: "https://auth.dev.mgpt.mn/health",
+          runtimeHealth: "https://runtime.dev.mgpt.mn/global/health",
+          paymentHealth: "https://pay.dev.mgpt.mn/health",
+        },
+        deployment,
+      ),
+    ).toThrow("console endpoint is misconfigured for dev")
   })
 })
 

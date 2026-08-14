@@ -1,3 +1,6 @@
+import { deploymentEndpoints } from "./deployment"
+import type { DeploymentPreflightResult } from "./deployment"
+
 export type AppRuntimeContract = {
   channel: "dev" | "beta" | "prod"
   mode: "local-bridge" | "hosted"
@@ -23,6 +26,33 @@ export type RuntimeHealthContract = {
   service: "mongolgpt-runtime"
   stage: string
   version: string
+}
+
+export function inspectDeploymentEndpointConfiguration(
+  endpoints: ReturnType<typeof deploymentEndpoints>,
+  result: DeploymentPreflightResult,
+) {
+  const root = `https://${result.stageDomain}`
+  const expected: Record<string, string> = {
+    docs: `https://docs.${result.stageDomain}/docs`,
+    app: `https://app.${result.stageDomain}`,
+  }
+  if (result.hostedServices) {
+    Object.assign(expected, {
+      console: root,
+      consoleHealth: `${root}/api/health`,
+      authHealth: `https://auth.${result.stageDomain}/health`,
+      runtimeHealth: `https://runtime.${result.stageDomain}/global/health`,
+      paymentHealth: `https://pay.${result.stageDomain}/health`,
+    })
+  }
+  if (result.adminEnabled) expected.admin = `https://admin.${result.stageDomain}`
+
+  for (const [name, url] of Object.entries(expected)) {
+    if (endpoints[name as keyof typeof endpoints] !== url) {
+      throw new Error(`deployment ${name} endpoint is misconfigured for ${result.stage}: expected ${url}`)
+    }
+  }
 }
 
 export function inspectHtmlContentType(contentType: string | null, label: string) {
