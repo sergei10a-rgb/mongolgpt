@@ -10,6 +10,7 @@ import { BonumAdapter, BonumWebhookVerificationError } from "@mongolgpt/console-
 import { QPayAdapter } from "@mongolgpt/console-core/payment-provider/qpay.js"
 import { PaymentProviderResponseError, type VerifiedPaymentEvent } from "@mongolgpt/console-core/payment-provider.js"
 import {
+  cancelPlatformAdminSubscriptionCheckout,
   cancelSubscriptionCheckout,
   PaymentCancellationAuthorizationError,
   PaymentCancellationConflictError,
@@ -18,6 +19,8 @@ import {
   PaymentCancellationUnsupportedError,
   SubscriptionCheckoutCancellationRequestSchema,
   SubscriptionCheckoutCancellationResultSchema,
+  PlatformAdminSubscriptionCheckoutCancellationRequestSchema,
+  type PlatformAdminSubscriptionCheckoutCancellationRequest,
   type SubscriptionCancellationOutcome,
   type SubscriptionCheckoutCancellationRequest,
 } from "@mongolgpt/console-core/payment-cancellation.js"
@@ -41,6 +44,7 @@ type Dependencies = {
   bonum?: (input: { rawBody: string; checksum: string }) => Promise<VerifiedPaymentEvent[]>
   enqueue(events: PaymentQueueEvent[]): Promise<void>
   internalToken?: string
+  adminCancellationToken?: string
   health?: {
     environment: "disabled" | "sandbox" | "production"
     catalog: boolean
@@ -52,6 +56,9 @@ type Dependencies = {
   createSubscriptionCheckout?: (input: SubscriptionCheckoutRequest) => Promise<SubscriptionCheckoutResult>
   cancelSubscriptionCheckout?: (
     input: SubscriptionCheckoutCancellationRequest,
+  ) => Promise<SubscriptionCancellationOutcome>
+  cancelPlatformAdminSubscriptionCheckout?: (
+    input: PlatformAdminSubscriptionCheckoutCancellationRequest,
   ) => Promise<SubscriptionCancellationOutcome>
 }
 
@@ -231,6 +238,40 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
         return json(result.data, 201)
       }
 
+      if (url.pathname === "/v1/admin/checkouts/subscription/cancel") {
+        if (!authorized(request, dependencies.adminCancellationToken)) {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Дотоод админ цуцлалтын зөвшөөрөл хүчингүй байна." }, 401)
+        }
+        if (request.method !== "POST") {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Зөвшөөрөгдөөгүй хүсэлт." }, 405, { Allow: "POST" })
+        }
+        if (!dependencies.cancelPlatformAdminSubscriptionCheckout) {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Админ цуцлалтын үйлчилгээ одоогоор тохируулагдаагүй байна." }, 503)
+        }
+        const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase()
+        if (contentType !== "application/json") {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Цуцлах хүсэлт JSON байх ёстой." }, 400)
+        }
+        let body: unknown
+        try {
+          body = JSON.parse(await readBoundedBody(request))
+        } catch (error) {
+          if (error instanceof RangeError) throw error
+          return json({ error: "Цуцлах хүсэлтийн JSON буруу байна." }, 400)
+        }
+        const parsed = PlatformAdminSubscriptionCheckoutCancellationRequestSchema.safeParse(body)
+        if (!parsed.success) return json({ error: "Админ цуцлалтын хүсэлтийн бүтэц буруу байна." }, 400)
+        const outcome = await dependencies.cancelPlatformAdminSubscriptionCheckout(parsed.data)
+        const result = SubscriptionCheckoutCancellationResultSchema.safeParse(outcome.result)
+        if (!result.success) throw new InvalidPaymentCheckoutResponseError()
+        if (outcome.event) await enqueueVerifiedEvents([outcome.event], dependencies)
+        return json(result.data)
+      }
+
       if (url.pathname === "/v1/checkouts/subscription/cancel") {
         if (!authorized(request, dependencies.internalToken)) {
           await request.body?.cancel().catch(() => undefined)
@@ -301,7 +342,10 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
         error: error instanceof Error ? error.name : typeof error,
       })
       if (error instanceof PaymentQueueUnavailableError) {
-        if (url.pathname === "/v1/checkouts/subscription/cancel") {
+        if (
+          url.pathname === "/v1/checkouts/subscription/cancel" ||
+          url.pathname === "/v1/admin/checkouts/subscription/cancel"
+        ) {
           return json(
             {
               error: "Нэхэмжлэх цуцлагдсан боловч төлөв шинэчлэх дараалал түр ажиллахгүй байна. Дахин шалгана уу.",
@@ -390,11 +434,19 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
       if (error instanceof RangeError && url.pathname === "/v1/checkouts/subscription") {
         return json({ error: "Төлбөрийн хүсэлт хэт том байна." }, 413)
       }
-      if (error instanceof RangeError && url.pathname === "/v1/checkouts/subscription/cancel") {
+      if (
+        error instanceof RangeError &&
+        (url.pathname === "/v1/checkouts/subscription/cancel" ||
+          url.pathname === "/v1/admin/checkouts/subscription/cancel")
+      ) {
         return json({ error: "Цуцлах хүсэлт хэт том байна." }, 413)
       }
       if (error instanceof RangeError) return text("PAYLOAD_TOO_LARGE", 413)
-      if (url.pathname === "/v1/checkouts/subscription" || url.pathname === "/v1/checkouts/subscription/cancel") {
+      if (
+        url.pathname === "/v1/checkouts/subscription" ||
+        url.pathname === "/v1/checkouts/subscription/cancel" ||
+        url.pathname === "/v1/admin/checkouts/subscription/cancel"
+      ) {
         return json({ error: "Төлбөрийн үйлчилгээний дотоод алдаа гарлаа.", code: "internal_error" }, 500)
       }
       if (error instanceof InvalidPaymentWebhookRequestError) return text("INVALID_REQUEST", 400)
@@ -477,6 +529,7 @@ function defaults() {
     qpay: qpay ? (input) => reconcileQPayCallback(input, { adapter: qpay }) : undefined,
     bonum: bonum ? (input) => verifyBonumWebhook(input, { adapter: bonum }) : undefined,
     internalToken: Resource.PaymentServiceToken.value,
+    adminCancellationToken: Resource.AdminPaymentCancellationToken.value,
     health: {
       environment: config.enabled ? config.environment : "disabled",
       catalog: Boolean(catalog),
@@ -495,6 +548,9 @@ function defaults() {
       : undefined,
     cancelSubscriptionCheckout: config.enabled
       ? (input) => cancelSubscriptionCheckout(input, { adapters: { qpay } })
+      : undefined,
+    cancelPlatformAdminSubscriptionCheckout: config.enabled
+      ? (input) => cancelPlatformAdminSubscriptionCheckout(input, { adapters: { qpay } })
       : undefined,
     async enqueue(events) {
       await Resource.PaymentQueue.sendBatch(events.map((body) => ({ body })))

@@ -1,14 +1,15 @@
 import { describe, expect, test } from "bun:test"
-import {
-  hasPlatformAdminPermission,
-  isPlatformAdminRole,
-  normalizePlatformAdminEmail,
-} from "../src/platform-admin"
+import { hasPlatformAdminPermission, isPlatformAdminRole, normalizePlatformAdminEmail } from "../src/platform-admin"
 
 describe("platform admin RBAC", () => {
-  test("keeps owner-only administrator management separate", () => {
+  test("keeps owner-only administrator management and cancellation permissions separate", () => {
     expect(hasPlatformAdminPermission("owner", "admins.manage")).toBe(true)
     expect(hasPlatformAdminPermission("administrator", "admins.manage")).toBe(false)
+    expect(hasPlatformAdminPermission("owner", "payments.cancel")).toBe(true)
+    expect(hasPlatformAdminPermission("administrator", "payments.cancel")).toBe(true)
+    expect(hasPlatformAdminPermission("finance", "payments.cancel")).toBe(false)
+    expect(hasPlatformAdminPermission("support", "payments.cancel")).toBe(false)
+    expect(hasPlatformAdminPermission("operations", "payments.cancel")).toBe(false)
     expect(hasPlatformAdminPermission("support", "billing.read")).toBe(false)
     expect(hasPlatformAdminPermission("finance", "billing.read")).toBe(true)
     expect(hasPlatformAdminPermission("operations", "system.read")).toBe(true)

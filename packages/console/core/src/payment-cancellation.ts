@@ -1,7 +1,9 @@
 import { and, Database, eq, isNull } from "./drizzle"
 import {
   PaymentCancellationStateSchema,
+  PlatformAdminSubscriptionCheckoutCancellationRequestSchema,
   SubscriptionCheckoutCancellationRequestSchema,
+  type PlatformAdminSubscriptionCheckoutCancellationRequest,
   SubscriptionCheckoutCancellationResultSchema,
   type SubscriptionCheckoutCancellationRequest,
   type SubscriptionCheckoutCancellationResult,
@@ -30,7 +32,9 @@ type CancellationAdapters = Partial<Record<Provider, PaymentCancellationAdapter>
 
 export {
   PaymentCancellationStateSchema,
+  PlatformAdminSubscriptionCheckoutCancellationRequestSchema,
   SubscriptionCheckoutCancellationRequestSchema,
+  type PlatformAdminSubscriptionCheckoutCancellationRequest,
   SubscriptionCheckoutCancellationResultSchema,
   type SubscriptionCheckoutCancellationRequest,
   type SubscriptionCheckoutCancellationResult,
@@ -98,6 +102,40 @@ export async function cancelSubscriptionCheckout(
   const reservation = await transaction((db) =>
     reserveCancellationWithDb(db, request, dependencies.adapters, requestedAt),
   )
+  return finishCancellationReservation(reservation, transaction, now, requestedAt)
+}
+
+/**
+ * This is intentionally a separate entry point from workspace-member cancellation.
+ * It accepts no payment scope; the stored checkout is the sole source of truth.
+ * The ledger account stays bound to the checkout owner for retention and account deletion;
+ * the platform administrator actor is recorded by the immutable admin audit before this call.
+ */
+export async function cancelPlatformAdminSubscriptionCheckout(
+  input: PlatformAdminSubscriptionCheckoutCancellationRequest,
+  dependencies: {
+    adapters: CancellationAdapters
+    transaction?: Transaction
+    now?: () => number
+  },
+): Promise<SubscriptionCancellationOutcome> {
+  const request = PlatformAdminSubscriptionCheckoutCancellationRequestSchema.parse(input)
+  const now = dependencies.now ?? Date.now
+  const requestedAt = now()
+  validateTimestamp(requestedAt)
+  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
+  const reservation = await transaction((db) =>
+    reserveStoredCancellationWithDb(db, request.invoiceID, request.requestKey, dependencies.adapters, requestedAt),
+  )
+  return finishCancellationReservation(reservation, transaction, now, requestedAt)
+}
+
+async function finishCancellationReservation(
+  reservation: Awaited<ReturnType<typeof reserveStoredCancellationWithDb>>,
+  transaction: Transaction,
+  now: () => number,
+  requestedAt: number,
+): Promise<SubscriptionCancellationOutcome> {
   if (reservation.kind === "already_cancelled") {
     return {
       result: SubscriptionCheckoutCancellationResultSchema.parse({
@@ -164,9 +202,28 @@ async function reserveCancellationWithDb(
     .then((rows) => rows[0])
   if (!administrator) throw new PaymentCancellationAuthorizationError()
 
+  return reserveStoredCancellationWithDb(db, input.invoiceID, input.requestKey, adapters, now, {
+    expectedWorkspaceID: input.workspaceID,
+    actorAccountID: input.accountID,
+  })
+}
+
+async function reserveStoredCancellationWithDb(
+  db: Database.TxOrDb,
+  invoiceID: string,
+  requestKey: string,
+  adapters: CancellationAdapters,
+  now: number,
+  options?: {
+    expectedWorkspaceID?: string
+    actorAccountID?: string
+  },
+) {
   const invoice = await db
     .select({
       id: PaymentCheckoutTable.id,
+      workspaceID: PaymentCheckoutTable.workspace_id,
+      accountID: PaymentCheckoutTable.account_id,
       provider: PaymentCheckoutTable.provider,
       merchant_account_id: PaymentCheckoutTable.merchant_account_id,
       external_invoice_id: PaymentCheckoutTable.external_invoice_id,
@@ -178,9 +235,10 @@ async function reserveCancellationWithDb(
     .leftJoin(PaymentInvoiceTable, eq(PaymentInvoiceTable.id, PaymentCheckoutTable.id))
     .where(
       and(
-        eq(PaymentCheckoutTable.id, input.invoiceID),
-        eq(PaymentCheckoutTable.workspace_id, input.workspaceID),
+        eq(PaymentCheckoutTable.id, invoiceID),
+        options?.expectedWorkspaceID ? eq(PaymentCheckoutTable.workspace_id, options.expectedWorkspaceID) : undefined,
         isNull(PaymentCheckoutTable.timeDeleted),
+        isNull(PaymentInvoiceTable.timeDeleted),
       ),
     )
     .limit(1)
@@ -234,8 +292,8 @@ async function reserveCancellationWithDb(
     .from(PaymentCancellationTable)
     .where(
       and(
-        eq(PaymentCancellationTable.workspace_id, input.workspaceID),
-        eq(PaymentCancellationTable.request_key, input.requestKey),
+        eq(PaymentCancellationTable.workspace_id, invoice.workspaceID),
+        eq(PaymentCancellationTable.request_key, requestKey),
       ),
     )
     .limit(1)
@@ -248,9 +306,9 @@ async function reserveCancellationWithDb(
     .insert(PaymentCancellationTable)
     .values({
       invoice_id: invoice.id,
-      workspace_id: input.workspaceID,
-      account_id: input.accountID,
-      request_key: input.requestKey,
+      workspace_id: invoice.workspaceID,
+      account_id: options?.actorAccountID ?? invoice.accountID,
+      request_key: requestKey,
       provider: invoice.provider,
       merchant_account_id: invoice.merchant_account_id,
       external_invoice_id: invoice.external_invoice_id,

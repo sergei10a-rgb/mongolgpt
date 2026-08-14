@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { resolve } from "node:path"
 import {
   AdminBillingQueryInput,
+  AdminSubscriptionCheckoutCancellationInput,
   adminBillingPeriodBounds,
   adminBillingSafeDifference,
   adminBillingSafeSum,
@@ -32,6 +33,22 @@ describe("admin billing contract", () => {
     expect(AdminBillingQueryInput.safeParse({ period: "365d" }).success).toBe(false)
     expect(AdminBillingQueryInput.safeParse({ provider: "stripe" }).success).toBe(false)
     expect(AdminBillingQueryInput.safeParse({ status: "chargeback" }).success).toBe(false)
+    expect(
+      AdminSubscriptionCheckoutCancellationInput.safeParse({
+        invoiceID: "inv_01JV5T0G9H5Q3N7S2R8M4K6WXA",
+        requestKey: "73f8cb79-fd55-4f33-b17b-c2d7452d841f",
+        reason: "Давхардсан QPay нэхэмжлэхийг админаас цуцалж байна.",
+        confirmation: "cancel",
+      }).success,
+    ).toBe(true)
+    expect(
+      AdminSubscriptionCheckoutCancellationInput.safeParse({
+        invoiceID: "inv_01JV5T0G9H5Q3N7S2R8M4K6WXA",
+        requestKey: "73f8cb79-fd55-4f33-b17b-c2d7452d841f",
+        reason: "plain English operator reason that must not be accepted",
+        confirmation: "cancel",
+      }).success,
+    ).toBe(false)
   })
 
   test("uses exact rolling UTC instants without mutating the report clock", () => {
@@ -51,7 +68,7 @@ describe("admin billing contract", () => {
     expect(() => adminBillingSafeSum(Number.MAX_SAFE_INTEGER + 1)).toThrow("хүчинтэй бүхэл тоо биш")
   })
 
-  test("keeps billing read-only, permission-gated, and based on the authoritative ledgers", async () => {
+  test("keeps reporting permission-gated and based on the authoritative ledgers", async () => {
     const billing = await source("src/lib/admin-billing.ts")
     const finance = await source("../core/src/finance-reporting.ts")
     const route = await source("src/routes/billing/index.tsx")
@@ -79,10 +96,37 @@ describe("admin billing contract", () => {
     expect(finance).toContain("basis = 'actual'")
     expect(finance).toContain("payment_provider_filter")
     expect(route).toContain("Санхүүгийн хяналт")
-    expect(route).not.toContain("action(")
+    expect(route).toContain("adminBillingQuery")
     expect(header).toContain('permissions.includes("billing.read")')
     expect(header).toContain('href="/billing"')
   })
+
+  test("adds a server-derived, audited QPay cancellation action without client payment scope", async () => {
+    const billing = await source("src/lib/admin-billing.ts")
+    const view = await source("src/component/admin-billing.tsx")
+    const worker = await source("../function/src/payment-webhook.ts")
+    const client = await source("src/lib/admin-payment-cancellation.server.ts")
+
+    expect(billing).toContain('"payments.cancel"')
+    expect(billing).toContain("requireSameOriginAdminMutation")
+    expect(billing).toContain('action: "payments.cancel.requested"')
+    expect(billing).toContain("writeAdminAudit")
+    expect(billing).toContain("requestPlatformAdminSubscriptionCheckoutCancellation")
+    expect(billing).toContain("invoice.cancellationStatus === null")
+    expect(billing).toContain('invoice.provider === "qpay"')
+    expect(billing).toContain("cancellationRequestKey")
+    expect(view).toContain("QPay нэхэмжлэх цуцлах")
+    expect(view).toContain("Цуцлах Монгол шалтгаан")
+    expect(view).toContain('name="requestKey"')
+    expect(view).toContain("invoice.cancellationRequestKey")
+    expect(view).toContain("revalidate: adminBillingQuery.key")
+    expect(view).toContain("disabled={props.pending}")
+    expect(client).toContain("AdminPaymentCancellationToken")
+    expect(client).not.toContain("PaymentServiceToken")
+    expect(worker).toContain('"/v1/admin/checkouts/subscription/cancel"')
+    expect(worker).toContain("adminCancellationToken")
+    expect(worker).toContain("PlatformAdminSubscriptionCheckoutCancellationRequestSchema")
+  }, 15_000)
 
   test("shows actual and estimated costs separately and refuses to invent an incomplete margin", async () => {
     const view = await source("src/component/admin-billing.tsx")

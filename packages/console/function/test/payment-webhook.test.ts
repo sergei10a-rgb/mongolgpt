@@ -53,6 +53,12 @@ const cancellationRequest = {
   requestKey: cancellationRequestKey,
 }
 
+const adminCancellationRequest = {
+  invoiceID,
+  requestKey: "73f8cb79-fd55-4f33-b17b-c2d7452d841f",
+  reason: "Давхардсан QPay нэхэмжлэхийг админаас цуцалж байна.",
+}
+
 const cancellationResult = {
   invoiceID,
   provider: "qpay" as const,
@@ -539,6 +545,49 @@ describe("payment webhook worker", () => {
     expect(requests).toEqual([cancellationRequest])
     expect(queued).toHaveLength(1)
     expect(queued[0]).toMatchObject({ version: 1, event: cancelled })
+  })
+
+  test("uses a dedicated token and scope-limited contract for platform-admin cancellation", async () => {
+    const requests: unknown[] = []
+    const handler = createPaymentWebhookHandler({
+      internalToken: "normal-payment-token",
+      adminCancellationToken: "admin-cancellation-token",
+      async cancelPlatformAdminSubscriptionCheckout(input) {
+        requests.push(input)
+        return { result: cancellationResult }
+      },
+      async enqueue() {},
+    })
+    const path = "https://pay.dev.mgpt.mn/v1/admin/checkouts/subscription/cancel"
+
+    const normalToken = await handler(
+      new Request(path, {
+        method: "POST",
+        headers: { authorization: "Bearer normal-payment-token", "content-type": "application/json" },
+        body: JSON.stringify(adminCancellationRequest),
+      }),
+    )
+    const invalidScope = await handler(
+      new Request(path, {
+        method: "POST",
+        headers: { authorization: "Bearer admin-cancellation-token", "content-type": "application/json" },
+        body: JSON.stringify({ ...adminCancellationRequest, workspaceID: checkoutRequest.workspaceID }),
+      }),
+    )
+    const success = await handler(
+      new Request(path, {
+        method: "POST",
+        headers: { authorization: "Bearer admin-cancellation-token", "content-type": "application/json" },
+        body: JSON.stringify(adminCancellationRequest),
+      }),
+    )
+
+    expect(normalToken.status).toBe(401)
+    expect(invalidScope.status).toBe(400)
+    expect(success.status).toBe(200)
+    const payload: unknown = await success.json()
+    expect(payload).toEqual(cancellationResult)
+    expect(requests).toEqual([adminCancellationRequest])
   })
 
   test("rejects unauthorized, malformed, oversized, and disabled cancellation requests", async () => {

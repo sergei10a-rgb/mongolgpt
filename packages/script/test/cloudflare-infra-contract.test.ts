@@ -353,7 +353,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(adminSource).toContain("httpOnlyCookieAttribute: true")
     expect(adminSource).toContain('sameSiteCookieAttribute: "strict"')
     expect(adminSource).toContain('new sst.Linkable("AdminAccessConfig"')
-    expect(adminSource).toContain("link: [database, accessConfig, bootstrapEmails]")
+    expect(adminSource).toContain(
+      "link: [database, paymentService, accessConfig, bootstrapEmails, SECRET.AdminPaymentCancellationToken]",
+    )
+    expect(adminSource).toContain('import { database, paymentService } from "./console"')
+    expect(adminSource).toContain("SECRET.AdminPaymentCancellationToken")
     expect(adminSource).toContain("MongolGPTAdminBootstrapEmails")
     expect(adminSource).not.toContain("MongolGPTAdminAccessTeamDomain")
     expect(adminSource).not.toContain("MongolGPTAdminAccessAudience")

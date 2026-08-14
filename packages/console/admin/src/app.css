@@ -534,9 +534,21 @@ td[data-action-cell] {
   width: min(280px, 65vw);
 }
 
+[data-component="payment-cancellation-action"] {
+  width: min(280px, 65vw);
+}
+
 [data-component="account-action"] summary {
   width: fit-content;
   color: #295ea8;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+[data-component="payment-cancellation-action"] summary {
+  width: fit-content;
+  color: #a2362c;
   font-size: 12px;
   font-weight: 650;
   cursor: pointer;
@@ -546,6 +558,56 @@ td[data-action-cell] {
   display: grid;
   gap: 8px;
   padding-top: 12px;
+}
+
+[data-component="payment-cancellation-action"] form {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+[data-component="payment-cancellation-action"] label {
+  color: #686d73;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+[data-component="payment-cancellation-action"] textarea {
+  width: 100%;
+  min-height: 78px;
+  padding: 8px 10px;
+  border: 1px solid #cbd0d5;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #17191c;
+  font: inherit;
+  resize: vertical;
+}
+
+[data-component="payment-cancellation-action"] textarea:focus {
+  border-color: #295ea8;
+  outline: 2px solid rgba(41, 94, 168, 0.2);
+  outline-offset: 1px;
+}
+
+[data-component="payment-cancellation-action"] [data-component="confirmation"] {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+[data-component="payment-cancellation-action"] button {
+  justify-self: start;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #a2362c;
+  border-radius: 4px;
+  background: #a2362c;
+  color: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
 }
 
 [data-component="account-action"] textarea {

@@ -12,6 +12,21 @@ export const SubscriptionCheckoutCancellationRequestSchema = z
   })
   .strict()
 
+const mongolianOperatorReason = z
+  .string()
+  .trim()
+  .min(20)
+  .max(500)
+  .refine((value) => /\p{Script=Cyrillic}/u.test(value), "Operator reason must be written in Mongolian")
+
+export const PlatformAdminSubscriptionCheckoutCancellationRequestSchema = z
+  .object({
+    invoiceID: z.string().regex(/^inv_[0-9A-HJKMNP-TV-Z]{26}$/),
+    requestKey: z.string().trim().uuid().max(64),
+    reason: mongolianOperatorReason,
+  })
+  .strict()
+
 export const SubscriptionCheckoutCancellationResultSchema = z
   .object({
     invoiceID: z.string().regex(/^inv_[0-9A-HJKMNP-TV-Z]{26}$/),
@@ -28,5 +43,8 @@ export const PaymentCancellationStateSchema = z
   .strict()
 
 export type SubscriptionCheckoutCancellationRequest = z.input<typeof SubscriptionCheckoutCancellationRequestSchema>
+export type PlatformAdminSubscriptionCheckoutCancellationRequest = z.input<
+  typeof PlatformAdminSubscriptionCheckoutCancellationRequestSchema
+>
 export type SubscriptionCheckoutCancellationResult = z.output<typeof SubscriptionCheckoutCancellationResultSchema>
 export type PaymentCancellationState = z.output<typeof PaymentCancellationStateSchema>

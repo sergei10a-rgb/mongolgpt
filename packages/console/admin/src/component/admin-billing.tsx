@@ -1,7 +1,24 @@
+import { action, json, useSubmission } from "@solidjs/router"
 import { For, Show } from "solid-js"
+import { getRequestEvent } from "solid-js/web"
 import type { FinanceMarginUnavailableReason } from "@mongolgpt/console-core/finance-reporting.js"
 import type { PlatformAdminContext } from "~/lib/admin-context"
 import { AdminHeader } from "./admin-header"
+import { cancelAdminSubscriptionCheckout } from "~/lib/admin-billing"
+import { adminBillingQuery } from "~/lib/admin-billing-query"
+import { getPlatformAdminContext } from "~/lib/admin-context"
+
+export const cancelAdminSubscriptionCheckoutAction = action(async (form: FormData) => {
+  "use server"
+  const event = getRequestEvent()
+  if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
+  const result = await cancelAdminSubscriptionCheckout(
+    getPlatformAdminContext(),
+    event.request,
+    Object.fromEntries(form.entries()),
+  )
+  return json(result, { revalidate: adminBillingQuery.key })
+}, "admin.billing.cancel")
 
 export interface AdminBillingData {
   admin: PlatformAdminContext
@@ -83,11 +100,15 @@ export interface AdminBillingData {
     timeCreated: string
     timeVerified: string | null
     timeRefunded: string | null
+    canCancel: boolean
+    cancellationRequestKey: string | null
   }[]
   generatedAt: string
 }
 
 export function AdminBillingView(props: { data: AdminBillingData }) {
+  const cancellationSubmission = useSubmission(cancelAdminSubscriptionCheckoutAction)
+  const canCancelInvoices = () => props.data.invoices.some((invoice) => invoice.canCancel)
   return (
     <>
       <AdminHeader admin={props.data.admin} active="billing" />
@@ -301,6 +322,18 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
             </div>
             <span>{props.data.invoices.length} мөр</span>
           </div>
+          <Show when={cancellationSubmission.result}>
+            {(result) => (
+              <p
+                data-component="action-message"
+                data-outcome={result().ok ? "success" : "failure"}
+                role={result().ok ? "status" : "alert"}
+                aria-live="polite"
+              >
+                {result().message}
+              </p>
+            )}
+          </Show>
           <div data-component="table-scroll">
             <table data-table="payment-invoices">
               <thead>
@@ -312,6 +345,9 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
                   <th>Дүн</th>
                   <th>Төлөв</th>
                   <th>Үүссэн</th>
+                  <Show when={canCancelInvoices()}>
+                    <th>Үйлдэл</th>
+                  </Show>
                 </tr>
               </thead>
               <tbody>
@@ -319,7 +355,7 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
                   each={props.data.invoices}
                   fallback={
                     <tr>
-                      <td colspan="7" data-empty>
+                      <td colspan={canCancelInvoices() ? 8 : 7} data-empty>
                         Сонгосон нөхцөлд нэхэмжлэх алга.
                       </td>
                     </tr>
@@ -341,6 +377,17 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
                         <span data-payment-status={invoice.status}>{paymentStatusLabel(invoice.status)}</span>
                       </td>
                       <td>{formatDate(invoice.timeCreated)}</td>
+                      <Show when={canCancelInvoices()}>
+                        <td>
+                          <Show when={invoice.canCancel && invoice.cancellationRequestKey}>
+                            <AdminCancellationAction
+                              invoiceID={invoice.id}
+                              requestKey={invoice.cancellationRequestKey!}
+                              pending={Boolean(cancellationSubmission.pending)}
+                            />
+                          </Show>
+                        </td>
+                      </Show>
                     </tr>
                   )}
                 </For>
@@ -352,6 +399,27 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
         <p data-component="report-generated">Шинэчилсэн: {formatDate(props.data.generatedAt)}</p>
       </main>
     </>
+  )
+}
+
+function AdminCancellationAction(props: { invoiceID: string; requestKey: string; pending: boolean }) {
+  return (
+    <details data-component="payment-cancellation-action">
+      <summary>QPay нэхэмжлэх цуцлах</summary>
+      <form action={cancelAdminSubscriptionCheckoutAction} method="post">
+        <input type="hidden" name="invoiceID" value={props.invoiceID} />
+        <input type="hidden" name="requestKey" value={props.requestKey} />
+        <label for={`cancel-reason-${props.invoiceID}`}>Цуцлах Монгол шалтгаан</label>
+        <textarea id={`cancel-reason-${props.invoiceID}`} name="reason" minlength="20" maxlength="500" required />
+        <label data-component="confirmation">
+          <input type="checkbox" name="confirmation" value="cancel" required />
+          Цуцлалтыг баталгаажуулж байна.
+        </label>
+        <button type="submit" disabled={props.pending}>
+          {props.pending ? "Цуцалж байна..." : "Цуцлах"}
+        </button>
+      </form>
+    </details>
   )
 }
 

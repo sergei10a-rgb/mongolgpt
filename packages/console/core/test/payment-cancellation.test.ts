@@ -3,6 +3,7 @@ import { Database as SQLite } from "bun:sqlite"
 import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import { resolve } from "node:path"
 import {
+  cancelPlatformAdminSubscriptionCheckout,
   cancelSubscriptionCheckout,
   PaymentCancellationAuthorizationError,
   PaymentCancellationConflictError,
@@ -159,6 +160,100 @@ describe("subscription checkout cancellation", () => {
         cancellation: { status: "cancelled", errorCode: null },
       },
     })
+  })
+
+  test("platform cancellation derives payment and retention scope from the stored checkout", async () => {
+    const environment = await fixture()
+    let providerCalls = 0
+    const created = await environment.createCheckout("qpay", async (input) => {
+      providerCalls++
+      expect(input).toEqual({ externalInvoiceID: "qpay_external_cancellation_test" })
+      return {
+        provider: "qpay",
+        merchantAccountID: created.merchantAccountID,
+        externalInvoiceID: input.externalInvoiceID,
+      }
+    })
+    environment.sqlite.query("update user set role = 'member' where account_id = ?").run(environment.accountID)
+
+    const result = await cancelPlatformAdminSubscriptionCheckout(
+      {
+        invoiceID: created.checkout.invoiceID,
+        requestKey: SECOND_CANCELLATION_REQUEST,
+        reason: "Давхардсан QPay нэхэмжлэхийг админаас цуцалж байна.",
+      },
+      { adapters: { qpay: created.adapter }, transaction: environment.transaction, now: () => NOW },
+    )
+
+    expect(result.result).toEqual({ invoiceID: created.checkout.invoiceID, provider: "qpay", status: "cancelled" })
+    expect(providerCalls).toBe(1)
+    expect(
+      environment.sqlite
+        .query("select workspace_id, account_id, request_key, provider, merchant_account_id from payment_cancellation")
+        .get(),
+    ).toEqual({
+      workspace_id: environment.workspaceID,
+      account_id: environment.accountID,
+      request_key: SECOND_CANCELLATION_REQUEST,
+      provider: "qpay",
+      merchant_account_id: created.merchantAccountID,
+    })
+    expect(environment.sqlite.query("select plan, amount from payment_checkout").get()).toEqual({
+      plan: "pro",
+      amount: 49_000,
+    })
+  })
+
+  test("workspace cancellation records the acting administrator without changing checkout ownership", async () => {
+    const environment = await fixture()
+    const actingAccountID = "acc_second_cancellation_admin"
+    environment.sqlite.query("insert into account (id) values (?)").run(actingAccountID)
+    environment.sqlite
+      .query("insert into user (id, workspace_id, account_id, name, role) values (?, ?, ?, ?, ?)")
+      .run("usr_second_cancellation_admin", environment.workspaceID, actingAccountID, "", "admin")
+    const created = await environment.createCheckout("qpay", async (input) => ({
+      provider: "qpay",
+      merchantAccountID: "qpay_merchant_cancellation_test",
+      externalInvoiceID: input.externalInvoiceID,
+    }))
+
+    await cancelSubscriptionCheckout(request(environment.workspaceID, actingAccountID, created.checkout.invoiceID), {
+      adapters: { qpay: created.adapter },
+      transaction: environment.transaction,
+      now: () => NOW,
+    })
+
+    expect(environment.sqlite.query("select account_id from payment_cancellation").get()).toEqual({
+      account_id: actingAccountID,
+    })
+    expect(environment.sqlite.query("select account_id from payment_checkout").get()).toEqual({
+      account_id: environment.accountID,
+    })
+  })
+
+  test("platform cancellation rejects a deleted ledger invoice before provider mutation", async () => {
+    const environment = await fixture()
+    let providerCalls = 0
+    const created = await environment.createCheckout("qpay", async () => {
+      providerCalls++
+      throw new Error("must not be called")
+    })
+    environment.sqlite
+      .query("update payment_invoice set time_deleted = ? where id = ?")
+      .run(NOW, created.checkout.invoiceID)
+
+    const error = await cancelPlatformAdminSubscriptionCheckout(
+      {
+        invoiceID: created.checkout.invoiceID,
+        requestKey: SECOND_CANCELLATION_REQUEST,
+        reason: "Устгагдсан нэхэмжлэхийг дахин цуцлахгүй гэж шалгаж байна.",
+      },
+      { adapters: { qpay: created.adapter }, transaction: environment.transaction, now: () => NOW },
+    ).catch((caught) => caught)
+
+    expect(error).toBeInstanceOf(PaymentCancellationConflictError)
+    expect(error).toMatchObject({ state: "not_cancellable" })
+    expect(providerCalls).toBe(0)
   })
 
   test("requires an active administrator and rejects unsupported Bonum cancellation before mutation", async () => {

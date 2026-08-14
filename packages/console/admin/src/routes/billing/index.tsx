@@ -1,14 +1,8 @@
 import { Title } from "@solidjs/meta"
-import { createAsync, query, useSearchParams } from "@solidjs/router"
+import { createAsync, useSearchParams } from "@solidjs/router"
 import { Show } from "solid-js"
 import { AdminBillingView } from "~/component/admin-billing"
-import { getAdminBilling } from "~/lib/admin-billing"
-import { getPlatformAdminContext } from "~/lib/admin-context"
-
-export const adminBillingQuery = query(async (input: { period?: string; provider?: string; status?: string }) => {
-  "use server"
-  return getAdminBilling(getPlatformAdminContext(), input)
-}, "admin.billing")
+import { adminBillingQuery } from "~/lib/admin-billing-query"
 
 export default function AdminBillingPage() {
   const [search] = useSearchParams()

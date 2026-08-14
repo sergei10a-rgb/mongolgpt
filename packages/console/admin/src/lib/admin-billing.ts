@@ -18,10 +18,23 @@ import {
   calculateFinanceGrossMargin,
   getFinanceMarginEvidenceWithDb,
 } from "@mongolgpt/console-core/finance-reporting.js"
-import { PaymentInvoiceTable, PlanSubscriptionTable, UsageTable } from "@mongolgpt/console-core/schema/billing.sql.js"
+import {
+  PaymentCancellationTable,
+  PaymentCheckoutTable,
+  PaymentInvoiceTable,
+  PlanSubscriptionTable,
+  UsageTable,
+} from "@mongolgpt/console-core/schema/billing.sql.js"
+import { PlatformAdminSubscriptionCheckoutCancellationRequestSchema } from "@mongolgpt/console-core/payment-cancellation-contract.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import type { PlatformAdminContext } from "./admin-context"
 import { requirePlatformAdminPermission } from "./admin-auth"
+import { AdminAuthorizationError, writeAdminAudit } from "./admin-auth"
+import { AdminMutationRequestError, requireSameOriginAdminMutation } from "./admin-mutation"
+import {
+  AdminPaymentCancellationServiceError,
+  requestPlatformAdminSubscriptionCheckoutCancellation,
+} from "./admin-payment-cancellation.server"
 
 const day = 86_400_000
 
@@ -30,6 +43,21 @@ export const AdminBillingQueryInput = z.object({
   provider: z.enum(["all", "qpay", "bonum"]).default("all"),
   status: z.enum(["all", "created", "pending", "paid", "failed", "expired", "cancelled", "refunded"]).default("all"),
 })
+
+export const AdminSubscriptionCheckoutCancellationInput =
+  PlatformAdminSubscriptionCheckoutCancellationRequestSchema.extend({
+    confirmation: z.literal("cancel"),
+  })
+
+export type AdminCancellationDependencies = {
+  writeAudit: typeof writeAdminAudit
+  cancelCheckout: typeof requestPlatformAdminSubscriptionCheckoutCancellation
+}
+
+const adminCancellationDependencies: AdminCancellationDependencies = {
+  writeAudit: writeAdminAudit,
+  cancelCheckout: requestPlatformAdminSubscriptionCheckoutCancellation,
+}
 
 export function adminBillingPeriodBounds(period: z.infer<typeof AdminBillingQueryInput>["period"], now = new Date()) {
   const days = period === "7d" ? 7 : period === "90d" ? 90 : 30
@@ -158,12 +186,16 @@ export async function getAdminBilling(context: PlatformAdminContext, raw: unknow
             amount: PaymentInvoiceTable.amount,
             currency: PaymentInvoiceTable.currency,
             status: PaymentInvoiceTable.status,
+            checkoutStatus: PaymentCheckoutTable.status,
+            cancellationStatus: PaymentCancellationTable.status,
             timeCreated: PaymentInvoiceTable.timeCreated,
             timeVerified: PaymentInvoiceTable.time_verified,
             timeRefunded: PaymentInvoiceTable.time_refunded,
           })
           .from(PaymentInvoiceTable)
           .leftJoin(WorkspaceTable, eq(WorkspaceTable.id, PaymentInvoiceTable.workspace_id))
+          .leftJoin(PaymentCheckoutTable, eq(PaymentCheckoutTable.id, PaymentInvoiceTable.id))
+          .leftJoin(PaymentCancellationTable, eq(PaymentCancellationTable.invoice_id, PaymentInvoiceTable.id))
           .where(
             and(
               gte(PaymentInvoiceTable.timeCreated, period.start),
@@ -223,16 +255,154 @@ export async function getAdminBilling(context: PlatformAdminContext, raw: unknow
         model: row.model,
         ...normalizeUsage(row),
       })),
-      invoices: recentInvoices.map((invoice) => ({
-        ...invoice,
-        workspaceName: invoice.workspaceName || "Нэргүй ажлын орон зай",
-        timeCreated: invoice.timeCreated.toISOString(),
-        timeVerified: invoice.timeVerified?.toISOString() ?? null,
-        timeRefunded: invoice.timeRefunded?.toISOString() ?? null,
-      })),
+      invoices: recentInvoices.map((invoice) => {
+        const canCancel =
+          admin.permissions.includes("payments.cancel") &&
+          invoice.provider === "qpay" &&
+          (invoice.status === "created" || invoice.status === "pending") &&
+          (invoice.checkoutStatus === "ready" || invoice.checkoutStatus === "pending") &&
+          invoice.cancellationStatus === null
+
+        return {
+          ...invoice,
+          workspaceName: invoice.workspaceName || "Нэргүй ажлын орон зай",
+          canCancel,
+          cancellationRequestKey: canCancel ? crypto.randomUUID() : null,
+          timeCreated: invoice.timeCreated.toISOString(),
+          timeVerified: invoice.timeVerified?.toISOString() ?? null,
+          timeRefunded: invoice.timeRefunded?.toISOString() ?? null,
+        }
+      }),
       generatedAt: now.toISOString(),
     }
   })
+}
+
+export async function cancelAdminSubscriptionCheckout(
+  context: PlatformAdminContext,
+  request: Request,
+  raw: unknown,
+  dependencies: AdminCancellationDependencies = adminCancellationDependencies,
+) {
+  const invoiceID =
+    typeof raw === "object" && raw !== null && "invoiceID" in raw && typeof raw.invoiceID === "string"
+      ? raw.invoiceID.slice(0, 64)
+      : undefined
+  let admin: PlatformAdminContext
+  let input: z.output<typeof AdminSubscriptionCheckoutCancellationInput>
+  try {
+    requireSameOriginAdminMutation(request)
+    admin = requirePlatformAdminPermission(context, "payments.cancel")
+    input = AdminSubscriptionCheckoutCancellationInput.parse(raw)
+  } catch (error) {
+    const failure = adminCancellationFailure(error)
+    try {
+      await dependencies.writeAudit({
+        adminID: context.id,
+        actorEmail: context.email,
+        action: "payments.cancel",
+        outcome: "denied",
+        request,
+        targetType: "payment_invoice",
+        targetID: invoiceID,
+        metadata: { reason: failure.code },
+      })
+    } catch {
+      return { ok: false as const, message: "Цуцлалтын татгалзсан хүсэлтийг аудитад бүртгэж чадсангүй." }
+    }
+    return { ok: false as const, message: failure.message }
+  }
+
+  try {
+    await dependencies.writeAudit({
+      adminID: admin.id,
+      actorEmail: admin.email,
+      action: "payments.cancel.requested",
+      outcome: "success",
+      request,
+      targetType: "payment_invoice",
+      targetID: input.invoiceID,
+      metadata: {
+        request_key: input.requestKey,
+        reason: input.reason,
+        state: "requested",
+      },
+    })
+  } catch {
+    return { ok: false as const, message: "Цуцлалтын аудит бүртгэгдсэнгүй. Хүсэлт илгээгээгүй." }
+  }
+
+  try {
+    await dependencies.cancelCheckout({
+      invoiceID: input.invoiceID,
+      requestKey: input.requestKey,
+      reason: input.reason,
+    })
+  } catch (error) {
+    const failure = adminCancellationFailure(error)
+    await dependencies
+      .writeAudit({
+        adminID: admin.id,
+        actorEmail: admin.email,
+        action: "payments.cancel",
+        outcome: failure.outcome,
+        request,
+        targetType: "payment_invoice",
+        targetID: input.invoiceID,
+        metadata: {
+          request_key: input.requestKey,
+          reason: input.reason,
+          result: failure.code,
+        },
+      })
+      .catch(() => undefined)
+    return { ok: false as const, message: failure.message }
+  }
+
+  try {
+    await dependencies.writeAudit({
+      adminID: admin.id,
+      actorEmail: admin.email,
+      action: "payments.cancel",
+      outcome: "success",
+      request,
+      targetType: "payment_invoice",
+      targetID: input.invoiceID,
+      metadata: {
+        request_key: input.requestKey,
+        reason: input.reason,
+        result: "cancelled",
+      },
+    })
+  } catch {
+    return { ok: false as const, message: "Цуцлалт хийгдсэн ч эцсийн аудит бүртгэгдсэнгүй. Шууд шалгана уу." }
+  }
+
+  return { ok: true as const, message: "QPay нэхэмжлэхийг цуцлах хүсэлтийг амжилттай дуусгалаа." }
+}
+
+function adminCancellationFailure(error: unknown) {
+  if (error instanceof AdminMutationRequestError) {
+    return {
+      outcome: "denied" as const,
+      code: `request_${error.code}`,
+      message: "Аюулгүй байдлын хүсэлтийн шалгалт амжилтгүй боллоо.",
+    }
+  }
+  if (error instanceof AdminAuthorizationError) {
+    return { outcome: "denied" as const, code: error.code, message: error.message }
+  }
+  if (error instanceof z.ZodError) {
+    return { outcome: "denied" as const, code: "invalid_input", message: "Цуцлалтын хүсэлтийн өгөгдөл буруу байна." }
+  }
+  if (error instanceof AdminPaymentCancellationServiceError) {
+    return {
+      outcome: error.status >= 400 && error.status < 500 ? ("denied" as const) : ("failure" as const),
+      code: error.code ?? `payment_service_${error.status}`,
+      message: error.message,
+    }
+  }
+  return { outcome: "failure" as const, code: "internal_error", message: "Цуцлалтын дотоод алдаа гарлаа." }
 }
 
 function normalizeUsage(

@@ -10,6 +10,7 @@ export const PlatformAdminPermissions = [
   "admins.manage",
   "users.suspend",
   "payments.refund",
+  "payments.cancel",
   "plans.manage",
 ] as const
 
@@ -27,6 +28,7 @@ const grants: Record<PlatformAdminRole, ReadonlySet<PlatformAdminPermission>> = 
     "audit.read",
     "users.suspend",
     "payments.refund",
+    "payments.cancel",
     "plans.manage",
   ]),
   support: new Set(["admin.access", "overview.read", "users.read"]),
