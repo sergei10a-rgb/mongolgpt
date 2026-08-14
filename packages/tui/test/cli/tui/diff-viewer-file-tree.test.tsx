@@ -78,10 +78,10 @@ describe("DiffViewerFileTree", () => {
     ))
 
     expect(loading).not.toContain("Loading diff...")
-    expect(loading).not.toContain("No files")
+    expect(loading).not.toContain("Файл алга")
     expect(failed).not.toContain("Failed to load diff")
-    expect(failed).not.toContain("No files")
-    expect(empty).toContain("No files")
+    expect(failed).not.toContain("Файл алга")
+    expect(empty).toContain("Файл алга")
   })
 
   test("does not render text markers for highlighted rows", async () => {

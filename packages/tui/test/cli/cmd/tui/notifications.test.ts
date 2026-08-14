@@ -85,14 +85,14 @@ function permission(id: string, sessionID = "session"): PermissionRequest {
 
 const questionNotification: TuiAttentionNotifyInput = {
   title: "Demo session",
-  message: "Question needs input",
+  message: "Асуултад оролт шаардлагатай",
   notification: { when: "blurred" },
   sound: { name: "question", when: "always" },
 }
 
 const permissionNotification: TuiAttentionNotifyInput = {
   title: "Demo session",
-  message: "Permission needs input",
+  message: "Зөвшөөрөлд оролт шаардлагатай",
   notification: { when: "blurred" },
   sound: { name: "permission", when: "always" },
 }
@@ -158,7 +158,7 @@ describe("internal notifications TUI plugin", () => {
     expect(harness.notifications).toEqual([
       {
         title: "Demo session",
-        message: "Session done",
+        message: "Сешн дууслаа",
         notification: { when: "blurred" },
         sound: { name: "done", when: "always" },
       },
@@ -183,13 +183,13 @@ describe("internal notifications TUI plugin", () => {
     expect(harness.notifications).toEqual([
       {
         title: "Subagent session",
-        message: "Question needs input",
+        message: "Асуултад оролт шаардлагатай",
         notification: false,
         sound: { name: "question", when: "always" },
       },
       {
         title: "Subagent session",
-        message: "Session done",
+        message: "Сешн дууслаа",
         notification: false,
         sound: { name: "subagent_done", when: "always" },
       },
@@ -218,7 +218,7 @@ describe("internal notifications TUI plugin", () => {
     expect(harness.notifications).toEqual([
       {
         title: "Demo session",
-        message: "Session error",
+        message: "Сешний алдаа",
         notification: { when: "blurred" },
         sound: { name: "error", when: "always" },
       },
@@ -252,13 +252,13 @@ describe("internal notifications TUI plugin", () => {
     expect(harness.notifications).toEqual([
       {
         title: "Abort session",
-        message: "Session aborted",
+        message: "Сешн таслагдлаа",
         notification: { when: "blurred" },
         sound: { name: "error", when: "always" },
       },
       {
         title: "Timeout session",
-        message: "Model stopped responding",
+        message: "Загвар хариу өгөхөө болилоо",
         notification: { when: "blurred" },
         sound: { name: "error", when: "always" },
       },

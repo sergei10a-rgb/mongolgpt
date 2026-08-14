@@ -267,7 +267,7 @@ export const SettingsImportsV2: Component = () => {
                 <div class="settings-v2-import-switches">
                   <label>
                     <Switch checked={adapter()} onChange={setAdapter} />
-                    <span>Plugin wrapper</span>
+                    <span>Plugin нийцүүлэгч</span>
                   </label>
                   <label>
                     <Switch checked={force()} onChange={setForce} />

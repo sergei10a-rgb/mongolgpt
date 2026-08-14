@@ -2307,7 +2307,7 @@ function Task(props: ToolProps) {
 }
 
 export function formatSubagentToolcalls(count: number) {
-  return `${count} tool дуудлага`
+  return `${count} хэрэгслийн дуудлага`
 }
 
 export function formatSubagentTitle(agent: string, description: string, background: boolean) {

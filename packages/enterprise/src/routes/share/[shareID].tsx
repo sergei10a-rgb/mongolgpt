@@ -133,7 +133,7 @@ export default function () {
 
   const params = useParams()
   const data = createAsync(async () => {
-    if (!params.shareID) throw new Error("Missing shareID")
+    if (!params.shareID) throw new Error("shareID байхгүй байна")
     return getData(params.shareID)
   })
 
@@ -147,8 +147,8 @@ export default function () {
         const details = error instanceof Error ? (error.stack ?? error.message) : String(error)
         return (
           <div class="min-h-screen w-full bg-background-base text-text-base flex flex-col items-center justify-center gap-4 p-6 text-center">
-            <p class="text-16-medium">Unable to render this share.</p>
-            <p class="text-14-regular text-text-weaker">Check the console for more details.</p>
+            <p class="text-16-medium">Энэ хуваалцсан контентыг харуулах боломжгүй байна.</p>
+            <p class="text-14-regular text-text-weaker">Дэлгэрэнгүй мэдээллийг консолын бүртгэлээс шалгана уу.</p>
             <pre class="text-12-mono text-left whitespace-pre-wrap break-words w-full max-w-200 bg-background-stronger rounded-md p-4">
               {details}
             </pre>
@@ -160,7 +160,7 @@ export default function () {
       <Show when={data()}>
         {(data) => {
           const match = createMemo(() => Binary.search(data().session, data().sessionID, (s) => s.id))
-          if (!match().found) throw new Error(`Session ${data().sessionID} not found`)
+          if (!match().found) throw new Error(`Сешн ${data().sessionID} олдсонгүй`)
           const info = createMemo(() => data().session[match().index])
           const ogImage = createMemo(() =>
             publicBaseUrl ? new URL("/social-share.png", publicBaseUrl).toString() : undefined,

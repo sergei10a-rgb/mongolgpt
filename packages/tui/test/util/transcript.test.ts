@@ -80,23 +80,23 @@ describe("transcript", () => {
 
     test("includes metadata when enabled", () => {
       const result = formatAssistantHeader(baseMsg, true)
-      expect(result).toBe("## Assistant (Build · claude-sonnet-4-20250514 · 5.4s)\n\n")
+      expect(result).toBe("## Туслах (Build · claude-sonnet-4-20250514 · 5.4s)\n\n")
     })
 
     test("uses model display name when available", () => {
       const result = formatAssistantHeader(baseMsg, true, providers)
-      expect(result).toBe("## Assistant (Build · Claude Sonnet 4 · 5.4s)\n\n")
+      expect(result).toBe("## Туслах (Build · Claude Sonnet 4 · 5.4s)\n\n")
     })
 
     test("excludes metadata when disabled", () => {
       const result = formatAssistantHeader(baseMsg, false)
-      expect(result).toBe("## Assistant\n\n")
+      expect(result).toBe("## Туслах\n\n")
     })
 
     test("handles missing completed time", () => {
       const msg = { ...baseMsg, time: { created: 1000000 } }
       const result = formatAssistantHeader(msg as AssistantMessage, true)
-      expect(result).toBe("## Assistant (Build · claude-sonnet-4-20250514)\n\n")
+      expect(result).toBe("## Туслах (Build · claude-sonnet-4-20250514)\n\n")
     })
 
     test("titlecases agent name", () => {
@@ -144,7 +144,7 @@ describe("transcript", () => {
         time: { start: 1000 },
       }
       const result = formatPart(part, options)
-      expect(result).toBe("_Thinking:_\n\nLet me think...\n\n")
+      expect(result).toBe("_Бодож байна:_\n\nLet me think...\n\n")
     })
 
     test("skips reasoning when thinking disabled", () => {
@@ -178,10 +178,10 @@ describe("transcript", () => {
         },
       }
       const result = formatPart(part, options)
-      expect(result).toContain("**Tool: bash**")
-      expect(result).toContain("**Input:**")
+      expect(result).toContain("**Хэрэгсэл: bash**")
+      expect(result).toContain("**Оролт:**")
       expect(result).toContain('"command": "ls"')
-      expect(result).toContain("**Output:**")
+      expect(result).toContain("**Гаралт:**")
       expect(result).toContain("file1.txt")
     })
 
@@ -204,10 +204,10 @@ describe("transcript", () => {
       }
       const result = formatPart(part, options)
       // The tool header should not be inside a code block
-      expect(result).toStartWith("**Tool: bash**\n")
+      expect(result).toStartWith("**Хэрэгсэл: bash**\n")
       // Input and output should each be in their own code blocks
-      expect(result).toContain("**Input:**\n```json")
-      expect(result).toContain("**Output:**\n```\n```hello```\n```")
+      expect(result).toContain("**Оролт:**\n```json")
+      expect(result).toContain("**Гаралт:**\n```\n```hello```\n```")
     })
 
     test("formats tool part without details when disabled", () => {
@@ -228,9 +228,9 @@ describe("transcript", () => {
         },
       }
       const result = formatPart(part, { ...options, toolDetails: false })
-      expect(result).toContain("**Tool: bash**")
-      expect(result).not.toContain("**Input:**")
-      expect(result).not.toContain("**Output:**")
+      expect(result).toContain("**Хэрэгсэл: bash**")
+      expect(result).not.toContain("**Оролт:**")
+      expect(result).not.toContain("**Гаралт:**")
     })
 
     test("formats tool error", () => {
@@ -249,7 +249,7 @@ describe("transcript", () => {
         },
       }
       const result = formatPart(part, options)
-      expect(result).toContain("**Error:**")
+      expect(result).toContain("**Алдаа:**")
       expect(result).toContain("Command failed")
     })
   })
@@ -268,7 +268,7 @@ describe("transcript", () => {
       }
       const parts: Part[] = [{ id: "p1", sessionID: "ses_123", messageID: "msg_123", type: "text", text: "Hello" }]
       const result = formatMessage(msg, parts, options)
-      expect(result).toContain("## User")
+      expect(result).toContain("## Хэрэглэгч")
       expect(result).toContain("Hello")
     })
 
@@ -289,7 +289,7 @@ describe("transcript", () => {
       }
       const parts: Part[] = [{ id: "p1", sessionID: "ses_123", messageID: "msg_123", type: "text", text: "Hi there" }]
       const result = formatMessage(msg, parts, options)
-      expect(result).toContain("## Assistant (Build · Claude Sonnet 4 · 5.4s)")
+      expect(result).toContain("## Туслах (Build · Claude Sonnet 4 · 5.4s)")
       expect(result).toContain("Hi there")
     })
   })
@@ -341,10 +341,10 @@ describe("transcript", () => {
       const result = formatTranscript(session, messages, options)
 
       expect(result).toContain("# Test Session")
-      expect(result).toContain("**Session ID:** ses_abc123")
-      expect(result).toContain("## User")
+      expect(result).toContain("**Сешний ID:** ses_abc123")
+      expect(result).toContain("## Хэрэглэгч")
       expect(result).toContain("Hello")
-      expect(result).toContain("## Assistant (Build · Claude Sonnet 4 · 0.5s)")
+      expect(result).toContain("## Туслах (Build · Claude Sonnet 4 · 0.5s)")
       expect(result).toContain("Hi!")
       expect(result).toContain("---")
     })
@@ -381,7 +381,7 @@ describe("transcript", () => {
         assistantMetadata: true,
       })
 
-      expect(result).toContain("## Assistant (Build · claude-sonnet-4-20250514 · 0.5s)")
+      expect(result).toContain("## Туслах (Build · claude-sonnet-4-20250514 · 0.5s)")
     })
 
     test("formats transcript without assistant metadata", () => {
@@ -413,7 +413,7 @@ describe("transcript", () => {
 
       const result = formatTranscript(session, messages, options)
 
-      expect(result).toContain("## Assistant\n\n")
+      expect(result).toContain("## Туслах\n\n")
       expect(result).not.toContain("Build")
       expect(result).not.toContain("claude-sonnet-4-20250514")
     })

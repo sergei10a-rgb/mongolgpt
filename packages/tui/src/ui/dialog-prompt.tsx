@@ -38,8 +38,8 @@ export function DialogPrompt(props: DialogPromptProps) {
     commands: [
       {
         name: "dialog.prompt.submit",
-        title: "Dialog prompt илгээх",
-        category: "Dialog",
+        title: "Заавар илгээх",
+        category: "Цонх",
         run: confirm,
       },
     ],

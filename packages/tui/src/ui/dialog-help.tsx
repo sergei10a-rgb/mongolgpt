@@ -27,7 +27,7 @@ export function DialogHelp() {
       </box>
       <box paddingBottom={1}>
         <text fg={theme.textMuted}>
-          Ямар ч context дээр боломжтой бүх үйлдэл, командыг харахын тулд {commandShortcut()} дарна уу.
+          Хаанаас ч боломжтой бүх үйлдэл, командыг харахын тулд {commandShortcut()} дарна уу.
         </text>
       </box>
       <box flexDirection="row" justifyContent="flex-end" paddingBottom={1}>
