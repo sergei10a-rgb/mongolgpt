@@ -212,7 +212,7 @@ export function Prompt(props: PromptProps) {
   function promptModelWarning() {
     toast.show({
       variant: "warning",
-      message: "Хүсэлт илгээхийн тулд провайдер холбоно уу",
+      message: "Хүсэлт илгээхийн тулд үйлчилгээ үзүүлэгч холбоно уу",
       duration: 3000,
     })
     if (sync.data.provider.length === 0) {

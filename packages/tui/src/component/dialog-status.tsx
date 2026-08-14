@@ -118,9 +118,9 @@ export function DialogStatus() {
           </For>
         </box>
       )}
-      <Show when={enabledFormatters().length > 0} fallback={<text fg={theme.text}>Formatter алга</text>}>
+      <Show when={enabledFormatters().length > 0} fallback={<text fg={theme.text}>Форматлагч алга</text>}>
         <box>
-          <text fg={theme.text}>{enabledFormatters().length} Formatter</text>
+          <text fg={theme.text}>{enabledFormatters().length} форматлагч</text>
           <For each={enabledFormatters()}>
             {(item) => (
               <box flexDirection="row" gap={1}>
@@ -140,9 +140,9 @@ export function DialogStatus() {
           </For>
         </box>
       </Show>
-      <Show when={plugins().length > 0} fallback={<text fg={theme.text}>Plugin алга</text>}>
+      <Show when={plugins().length > 0} fallback={<text fg={theme.text}>Плагин алга</text>}>
         <box>
-          <text fg={theme.text}>{plugins().length} Plugin</text>
+          <text fg={theme.text}>{plugins().length} плагин</text>
           <For each={plugins()}>
             {(item) => (
               <box flexDirection="row" gap={1}>

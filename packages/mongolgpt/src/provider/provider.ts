@@ -44,7 +44,7 @@ function wrapSSE(res: Response, ms: number, ctl: AbortController) {
     async pull(ctrl) {
       const part = await new Promise<Awaited<ReturnType<typeof reader.read>>>((resolve, reject) => {
         const id = setTimeout(() => {
-          const err = new ProviderError.ResponseStreamError("SSE read timed out")
+          const err = new ProviderError.ResponseStreamError("SSE унших хугацаа хэтэрлээ.")
           ctl.abort(err)
           void reader.cancel(err)
           reject(err)
@@ -239,7 +239,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           autoload: false,
           async getModel() {
             throw new Error(
-              "AZURE_RESOURCE_NAME is missing, set it using env var or reconnecting the azure provider and setting it",
+              "AZURE_RESOURCE_NAME тохируулагдаагүй байна. Үүнийг орчны хувьсагчаар тохируулах эсвэл Azure үйлчилгээ үзүүлэгчийг дахин холбоно уу.",
             )
           },
         }
@@ -723,7 +723,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           autoload: false,
           async getModel() {
             throw new Error(
-              "CLOUDFLARE_ACCOUNT_ID is missing. Set it with: export CLOUDFLARE_ACCOUNT_ID=<your-account-id>",
+              "CLOUDFLARE_ACCOUNT_ID тохируулагдаагүй байна. Үүнийг `export CLOUDFLARE_ACCOUNT_ID=<your-account-id>` командаар тохируулна уу.",
             )
           },
         }
@@ -767,7 +767,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           autoload: false,
           async getModel() {
             throw new Error(
-              `${missing.join(" and ")} missing. Set with: ${missing.map((x) => `export ${x}=<value>`).join(" && ")}`,
+              `${missing.join(" болон ")} тохируулагдаагүй байна. Дараах командаар тохируулна уу: ${missing.map((x) => `export ${x}=<value>`).join(" && ")}`,
             )
           },
         }
@@ -866,7 +866,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           autoload: false,
           async getModel() {
             throw new Error(
-              `Snowflake Cortex: missing credentials (${missing}). Provide a bearer token (OAuth, JWT, or PAT) via env var, mongolgpt auth, or provider options.`,
+              `Snowflake Cortex: шаардлагатай нэвтрэх мэдээлэл дутуу байна (${missing}). Bearer токеныг (OAuth, JWT эсвэл PAT) орчны хувьсагч, \`mongolgpt auth\` команд эсвэл үйлчилгээ үзүүлэгчийн тохиргоогоор өгнө үү.`,
             )
           },
         }
@@ -1076,8 +1076,8 @@ export class ModelNotFoundError extends Schema.TaggedErrorClass<ModelNotFoundErr
   cause: Schema.optional(Schema.Defect()),
 }) {
   override get message() {
-    const suggestions = this.suggestions?.length ? ` Did you mean: ${this.suggestions.join(", ")}?` : ""
-    return `Model not found: ${this.providerID}/${this.modelID}.${suggestions}`
+    const suggestions = this.suggestions?.length ? ` Та дараахыг хэлсэн үү: ${this.suggestions.join(", ")}?` : ""
+    return `Загвар олдсонгүй: ${this.providerID}/${this.modelID}.${suggestions}`
   }
 
   static isInstance(input: unknown): input is ModelNotFoundError {
@@ -1090,7 +1090,7 @@ export class InitError extends Schema.TaggedErrorClass<InitError>()("ProviderIni
   cause: Schema.optional(Schema.Defect()),
 }) {
   override get message() {
-    return `Failed to initialize provider: ${this.providerID}`
+    return `Үйлчилгээ үзүүлэгчийг эхлүүлж чадсангүй: ${this.providerID}`
   }
 
   static isInstance(input: unknown): input is InitError {
@@ -1100,7 +1100,7 @@ export class InitError extends Schema.TaggedErrorClass<InitError>()("ProviderIni
 
 export class NoProvidersError extends Schema.TaggedErrorClass<NoProvidersError>()("ProviderNoProvidersError", {}) {
   override get message() {
-    return "No providers are available"
+    return "Ашиглах боломжтой үйлчилгээ үзүүлэгч алга."
   }
 
   static isInstance(input: unknown): input is NoProvidersError {
@@ -1112,7 +1112,7 @@ export class NoModelsError extends Schema.TaggedErrorClass<NoModelsError>()("Pro
   providerID: ProviderV2.ID,
 }) {
   override get message() {
-    return `No models are available for provider: ${this.providerID}`
+    return `${this.providerID} үйлчилгээ үзүүлэгчид ашиглах боломжтой загвар алга.`
   }
 
   static isInstance(input: unknown): input is NoModelsError {
@@ -1746,7 +1746,7 @@ export const layer = Layer.effect(
             return model.api.npm
           }
           const item = await Npm.add(model.api.npm)
-          if (!item.entrypoint) throw new Error(`Package ${model.api.npm} has no import entrypoint`)
+          if (!item.entrypoint) throw new Error(`${model.api.npm} багцын импортлох эхлэлийн цэг олдсонгүй.`)
           return item.entrypoint
         })()
 

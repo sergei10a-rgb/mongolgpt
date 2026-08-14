@@ -48,7 +48,7 @@ export function usePromptMove(input: { projectID: () => string | undefined; sess
         { throwOnError: true },
       )
       const directory = result.data?.directory
-      if (!directory) throw new Error("Project хуулбарын хавтас буцаж ирсэнгүй")
+      if (!directory) throw new Error("Төслийн хуулбарын хавтас буцаж ирсэнгүй")
 
       // Call a location-based route to make sure it's bootstrapped
       // before moving on

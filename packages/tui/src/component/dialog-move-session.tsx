@@ -236,8 +236,8 @@ export function DialogMoveSession(props: DialogMoveSessionProps) {
       if ("data" in result.error && result.error.data.forceRequired) {
         const status = await sdk.client.vcs.status({ directory: selected.directory }).catch(() => undefined)
         const choice = await DialogWorkspaceFileChanges.show(dialog, status?.data ?? [], {
-          title: "Working copy-г устгах уу?",
-          message: "Энэ working copy-д файлын өөрчлөлт байна. Гэсэн ч устгах уу?",
+          title: "Ажлын хуулбарыг устгах уу?",
+          message: "Энэ ажлын хуулбарт файлын өөрчлөлт байна. Гэсэн ч устгах уу?",
         })
         if (choice !== "yes") {
           reopen()
@@ -255,7 +255,7 @@ export function DialogMoveSession(props: DialogMoveSessionProps) {
         if (forced.error) {
           toast.show({
             variant: "error",
-            title: "Project хуулбарыг устгаж чадсангүй",
+            title: "Төслийн хуулбарыг устгаж чадсангүй",
             message: errorMessage(forced.error),
           })
           reopen()
@@ -269,7 +269,7 @@ export function DialogMoveSession(props: DialogMoveSessionProps) {
       }
       toast.show({
         variant: "error",
-        title: "Project хуулбарыг устгаж чадсангүй",
+        title: "Төслийн хуулбарыг устгаж чадсангүй",
         message: errorMessage(result.error),
       })
       return

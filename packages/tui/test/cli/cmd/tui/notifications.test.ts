@@ -246,7 +246,10 @@ describe("internal notifications TUI plugin", () => {
     harness.emit({
       id: "event-4",
       type: "session.error",
-      properties: { sessionID: "timeout", error: { name: "UnknownError", data: { message: "SSE read timed out" } } },
+      properties: {
+        sessionID: "timeout",
+        error: { name: "UnknownError", data: { message: "SSE унших хугацаа хэтэрлээ." } },
+      },
     })
 
     expect(harness.notifications).toEqual([

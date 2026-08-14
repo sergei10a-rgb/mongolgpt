@@ -110,7 +110,7 @@ export function DialogModel(props: { providerID?: string }) {
           providers(),
           map((option) => ({
             ...option,
-            category: "Түгээмэл провайдерууд",
+            category: "Түгээмэл үйлчилгээ үзүүлэгчид",
           })),
           take(6),
         )
@@ -160,7 +160,7 @@ export function DialogModel(props: { providerID?: string }) {
       actions={[
         {
           command: "model.dialog.provider",
-          title: connected() ? "Провайдер холбох" : "Бүх провайдерыг харах",
+          title: connected() ? "Үйлчилгээ үзүүлэгч холбох" : "Бүх үйлчилгээ үзүүлэгчийг харах",
           onTrigger() {
             dialog.replace(() => <DialogProvider />)
           },

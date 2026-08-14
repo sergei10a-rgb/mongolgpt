@@ -37,8 +37,8 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
     bindings: [
       {
         key: "tab",
-        desc: "Дараагийн export сонголт руу шилжих",
-        group: "Dialog",
+        desc: "Дараагийн экспортын сонголт руу шилжих",
+        group: "Диалог",
         cmd: () => {
           const order: Array<"filename" | "thinking" | "toolDetails" | "assistantMetadata" | "openWithoutSaving"> = [
             "filename",
@@ -61,7 +61,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
       {
         key: "space",
         desc: "Гаргах сонголтыг асаах/унтраах",
-        group: "Dialog",
+        group: "Диалог",
         cmd: () => {
           if (store.active === "thinking") setStore("thinking", !store.thinking)
           if (store.active === "toolDetails") setStore("toolDetails", !store.toolDetails)

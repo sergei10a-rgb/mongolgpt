@@ -732,13 +732,13 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "provider.connect",
-        title: "Провайдер холбох",
+        title: "Үйлчилгээ үзүүлэгч холбох",
         suggested: !connected(),
         slashName: "connect",
         run: () => {
           dialog.replace(() => <DialogProviderList />)
         },
-        category: "Провайдер",
+        category: "Үйлчилгээ үзүүлэгч",
       },
       ...(sync.data.console_state.switchableOrgCount > 1
         ? [
@@ -751,7 +751,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
               run: () => {
                 dialog.replace(() => <DialogConsoleOrg />)
               },
-              category: "Провайдер",
+              category: "Үйлчилгээ үзүүлэгч",
             },
           ]
         : []),

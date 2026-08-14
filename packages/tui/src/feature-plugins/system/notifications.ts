@@ -20,7 +20,12 @@ function notify(api: TuiPluginApi, sessionID: string | undefined, message: strin
 function sessionErrorMessage(error: SessionError) {
   if (error?.name === "MessageAbortedError") return "Сешн таслагдлаа"
   const data = error?.data
-  if (data && typeof data === "object" && "message" in data && data.message === "SSE read timed out") {
+  if (
+    data &&
+    typeof data === "object" &&
+    "message" in data &&
+    (data.message === "SSE read timed out" || data.message === "SSE унших хугацаа хэтэрлээ.")
+  ) {
     return "Загвар хариу өгөхөө болилоо"
   }
   return "Сешний алдаа"

@@ -26,8 +26,8 @@ export function DialogConfirm(props: DialogConfirmProps) {
     bindings: [
       {
         key: "return",
-        desc: "Dialog сонголтыг батлах",
-        group: "Dialog",
+        desc: "Диалогийн сонголтыг батлах",
+        group: "Диалог",
         cmd: () => {
           if (store.active === "confirm") props.onConfirm?.()
           if (store.active === "cancel") props.onCancel?.()
@@ -36,16 +36,16 @@ export function DialogConfirm(props: DialogConfirmProps) {
       },
       {
         key: "left",
-        desc: "Өмнөх dialog сонголт",
-        group: "Dialog",
+        desc: "Өмнөх диалогийн сонголт",
+        group: "Диалог",
         cmd: () => {
           setStore("active", store.active === "confirm" ? "cancel" : "confirm")
         },
       },
       {
         key: "right",
-        desc: "Дараагийн dialog сонголт",
-        group: "Dialog",
+        desc: "Дараагийн диалогийн сонголт",
+        group: "Диалог",
         cmd: () => {
           setStore("active", store.active === "confirm" ? "cancel" : "confirm")
         },

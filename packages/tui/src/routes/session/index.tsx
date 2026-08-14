@@ -2471,8 +2471,8 @@ function TodoWrite(props: ToolProps) {
       <Match when={true}>
         <InlineTool
           icon="⚙"
-          pending="Todo шинэчилж байна..."
-          failure="Todo шинэчлэл амжилтгүй"
+          pending="Даалгаврыг шинэчилж байна..."
+          failure="Даалгаврын шинэчлэл амжилтгүй"
           complete={false}
           part={props.part}
         >

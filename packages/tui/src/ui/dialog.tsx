@@ -7,6 +7,7 @@ import { useToast } from "./toast"
 import { Flag } from "@mongolgpt/core/flag/flag"
 import { useBindings, useMongolGPTModeStack } from "../keymap"
 import { useClipboard } from "../context/clipboard"
+import { Locale } from "../util/locale"
 
 export function Dialog(
   props: ParentProps<{
@@ -104,8 +105,8 @@ function init() {
     bindings: [
       {
         key: "escape",
-        desc: "Close dialog",
-        group: "Dialog",
+        desc: Locale.ui.closeDialog,
+        group: "Диалог",
         cmd: () => {
           if (renderer.getSelection()) {
             renderer.clearSelection()
@@ -118,8 +119,8 @@ function init() {
       },
       {
         key: "ctrl+c",
-        desc: "Close dialog",
-        group: "Dialog",
+        desc: Locale.ui.closeDialog,
+        group: "Диалог",
         cmd: () => {
           if (renderer.getSelection()) {
             renderer.clearSelection()
@@ -186,7 +187,7 @@ export function DialogProvider(props: ParentProps) {
     const text = renderer.getSelection()?.getSelectedText()
     if (!text || !clipboard.write) return false
     void clipboard.write(text).then(
-      () => toast.show({ message: "Clipboard руу хууллаа", variant: "info" }),
+      () => toast.show({ message: "Түр санах ой руу хууллаа", variant: "info" }),
       (error) => toast.error(error),
     )
     renderer.clearSelection()

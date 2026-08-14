@@ -51,26 +51,26 @@ export function DialogRetryAction(props: DialogRetryActionProps) {
     bindings: [
       {
         key: "left",
-        desc: "Өмнөх retry сонголт",
-        group: "Dialog",
+        desc: "Өмнөх дахин оролдох сонголт",
+        group: "Диалог",
         cmd: () => setSelected((value) => (value === "action" ? "dismiss" : "action")),
       },
       {
         key: "right",
-        desc: "Дараагийн retry сонголт",
-        group: "Dialog",
+        desc: "Дараагийн дахин оролдох сонголт",
+        group: "Диалог",
         cmd: () => setSelected((value) => (value === "action" ? "dismiss" : "action")),
       },
       {
         key: "tab",
-        desc: "Дараагийн retry сонголт",
-        group: "Dialog",
+        desc: "Дараагийн дахин оролдох сонголт",
+        group: "Диалог",
         cmd: () => setSelected((value) => (value === "action" ? "dismiss" : "action")),
       },
       {
         key: "return",
-        desc: "Retry сонголтыг батлах",
-        group: "Dialog",
+        desc: "Дахин оролдох сонголтыг батлах",
+        group: "Диалог",
         cmd: () => {
           if (selected() === "action") runAction(props, dialog)
           else dismiss(props, dialog)

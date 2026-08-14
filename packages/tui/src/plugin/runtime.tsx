@@ -52,7 +52,7 @@ const emptyCommands: PluginRuntimeCommands = {
     return false
   },
   async install() {
-    return { ok: false, message: "Plugin runtime is not available." }
+    return { ok: false, message: "Плагин ажиллах орчин боломжгүй байна." }
   },
 }
 
@@ -76,6 +76,6 @@ export function PluginRuntimeProvider(props: ParentProps<{ value: PluginRuntime 
 
 export function usePluginRuntime() {
   const runtime = useContext(Context)
-  if (!runtime) throw new Error("usePluginRuntime must be used within PluginRuntimeProvider")
+  if (!runtime) throw new Error("usePluginRuntime-г PluginRuntimeProvider дотор ашиглах ёстой")
   return runtime
 }

@@ -9,6 +9,6 @@ export function LocationProvider(props: ParentProps<{ location?: LocationRef }>)
 
 export function useLocation() {
   const value = useContext(context)
-  if (!value) throw new Error("Location context must be used within a LocationProvider")
+  if (!value) throw new Error("Location context-ийг LocationProvider дотор ашиглах ёстой")
   return value
 }

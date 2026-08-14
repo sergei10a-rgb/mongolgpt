@@ -38,7 +38,7 @@ export const AzurePlugin = define({
             (evt.model.api.type !== "aisdk" || !evt.model.api.url)
           ) {
             throw new Error(
-              "AZURE_RESOURCE_NAME is missing, set it using env var or reconnecting the azure provider and setting it",
+              "AZURE_RESOURCE_NAME тохируулагдаагүй байна. Үүнийг орчны хувьсагчаар тохируулах эсвэл Azure үйлчилгээ үзүүлэгчийг дахин холбоно уу.",
             )
           }
         }

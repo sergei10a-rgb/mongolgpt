@@ -145,7 +145,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               </Match>
               <Match when={true}>
                 <box paddingLeft={1} gap={1}>
-                  <text fg={theme.textMuted}>Дараах pattern-уудыг MongolGPT дахин эхлэх хүртэл зөвшөөрнө</text>
+                  <text fg={theme.textMuted}>Дараах загваруудыг MongolGPT дахин эхлэх хүртэл зөвшөөрнө</text>
                   <box>
                     <For each={props.request.always}>
                       {(pattern) => (
@@ -347,7 +347,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                 body: (
                   <Show when={patterns.length > 0}>
                     <box paddingLeft={1} gap={1}>
-                      <text fg={theme.textMuted}>Pattern-ууд</text>
+                      <text fg={theme.textMuted}>Загварууд</text>
                       <box>
                         <For each={patterns}>{(p) => <text fg={theme.text}>{"- " + p}</text>}</For>
                       </box>

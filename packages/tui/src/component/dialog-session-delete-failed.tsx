@@ -42,11 +42,11 @@ export function DialogSessionDeleteFailed(props: {
 
   useBindings(() => ({
     bindings: [
-      { key: "return", desc: "Сэргээх сонголтыг батлах", group: "Dialog", cmd: () => void confirm() },
-      { key: "left", desc: "Эвдэрсэн сешнийг устгах", group: "Dialog", cmd: () => setStore("active", "delete") },
-      { key: "up", desc: "Эвдэрсэн сешнийг устгах", group: "Dialog", cmd: () => setStore("active", "delete") },
-      { key: "right", desc: "Эвдэрсэн сешнийг сэргээх", group: "Dialog", cmd: () => setStore("active", "restore") },
-      { key: "down", desc: "Эвдэрсэн сешнийг сэргээх", group: "Dialog", cmd: () => setStore("active", "restore") },
+      { key: "return", desc: "Сэргээх сонголтыг батлах", group: "Диалог", cmd: () => void confirm() },
+      { key: "left", desc: "Эвдэрсэн сешнийг устгах", group: "Диалог", cmd: () => setStore("active", "delete") },
+      { key: "up", desc: "Эвдэрсэн сешнийг устгах", group: "Диалог", cmd: () => setStore("active", "delete") },
+      { key: "right", desc: "Эвдэрсэн сешнийг сэргээх", group: "Диалог", cmd: () => setStore("active", "restore") },
+      { key: "down", desc: "Эвдэрсэн сешнийг сэргээх", group: "Диалог", cmd: () => setStore("active", "restore") },
     ],
   }))
 

@@ -22,21 +22,21 @@ export function cliErrorMessage(input: unknown): string | undefined {
       ? model.suggestions.filter((item): item is string => typeof item === "string")
       : []
     return [
-      `Model олдсонгүй: ${field(model, "providerID")}/${field(model, "modelID")}`,
+      `Загвар олдсонгүй: ${field(model, "providerID")}/${field(model, "modelID")}`,
       ...(suggestions.length ? ["Та үүнийг хэлсэн үү: " + suggestions.join(", ")] : []),
-      "Боломжит model-уудыг харахын тулд `mongolgpt models` ажиллуулна уу",
-      "Эсвэл config (mongolgpt.json) доторх provider/model нэрээ шалгана уу",
+      "Боломжит загваруудыг харахын тулд `mongolgpt models` ажиллуулна уу",
+      "Эсвэл тохиргооны mongolgpt.json файл дахь үйлчилгээ үзүүлэгч болон загварын нэрийг шалгана уу",
     ].join("\n")
   }
 
   const provider = configData(input, "ProviderInitError")
   if (provider)
-    return `"${field(provider, "providerID")}" provider-ийг эхлүүлж чадсангүй. Credential болон тохиргоогоо шалгана уу.`
+    return `"${field(provider, "providerID")}" үйлчилгээ үзүүлэгчийг эхлүүлж чадсангүй. Нэвтрэх мэдээлэл болон тохиргоогоо шалгана уу.`
 
   const json = configData(input, "ConfigJsonError")
   if (json) {
     const message = field(json, "message")
-    return `${field(json, "path")} дахь config файл хүчинтэй JSON(C) биш` + (message ? `: ${message}` : "")
+    return `${field(json, "path")} дахь тохиргооны файл хүчинтэй JSON(C) биш` + (message ? `: ${message}` : "")
   }
 
   const directory = configData(input, "ConfigDirectoryTypoError")
@@ -70,7 +70,7 @@ export function cliErrorMessage(input: unknown): string | undefined {
   if (tagged(input, "UICancelledError") || named(input, "UICancelledError")) return ""
   if (isRecord(input) && named(input, "MCPFailed")) {
     const name = isRecord(input.data) ? field(input.data, "name") : undefined
-    return `"${name}" MCP сервер амжилтгүй боллоо. Анхаар: MongolGPT одоогоор MCP authentication дэмжихгүй.`
+    return `"${name}" MCP сервер амжилтгүй боллоо. Анхаар: MongolGPT одоогоор MCP баталгаажуулалтыг дэмжихгүй.`
   }
   return undefined
 }
@@ -111,11 +111,11 @@ export function errorFormat(error: unknown): string {
         const ctor = error.constructor?.name
         const prefix = ctor && ctor !== "Object" ? ctor : "Error"
         const names = Object.getOwnPropertyNames(error)
-        return names.length === 0 ? `${prefix} (мессеж алга)` : `${prefix} { ${names.join(", ")} }`
+        return names.length === 0 ? `${prefix} (мэдээлэл алга)` : `${prefix} { ${names.join(", ")} }`
       }
       return json
     } catch {
-      return "Санаандгүй алдаа (serialize хийх боломжгүй)"
+      return "Санаандгүй алдаа (өгөгдөл болгон хөрвүүлэх боломжгүй)"
     }
   }
 

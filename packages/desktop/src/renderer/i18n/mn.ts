@@ -1,7 +1,7 @@
 export const dict = {
   "desktop.menu.checkForUpdates": "Шинэчлэлт шалгах...",
   "desktop.menu.installCli": "CLI суулгах...",
-  "desktop.menu.reloadWebview": "Аппын цонхыг дахин ачаалах",
+  "desktop.menu.reloadWebview": "Вэб харагдацыг дахин ачаалах",
   "desktop.menu.restart": "Дахин эхлүүлэх",
 
   "desktop.dialog.chooseFolder": "Хавтас сонгох",
@@ -11,7 +11,7 @@ export const dict = {
 
   "desktop.updater.checkFailed.title": "Шинэчлэлт шалгаж чадсангүй",
   "desktop.updater.checkFailed.message": "Шинэчлэлт шалгах үед алдаа гарлаа",
-  "desktop.updater.none.title": "Шинэчлэлт алга",
+  "desktop.updater.none.title": "Шинэчлэлт байхгүй",
   "desktop.updater.none.message": "Та MongolGPT-ийн хамгийн сүүлийн хувилбарыг ашиглаж байна",
   "desktop.updater.downloadFailed.title": "Шинэчлэлт татаж чадсангүй",
   "desktop.updater.downloadFailed.message": "Шинэчлэлтийг татах үед алдаа гарлаа",
@@ -21,7 +21,7 @@ export const dict = {
   "desktop.updater.installFailed.title": "Шинэчлэлт суулгаж чадсангүй",
   "desktop.updater.installFailed.message": "Шинэчлэлтийг суулгах үед алдаа гарлаа",
 
-  "desktop.cli.installed.title": "CLI суулгалаа",
+  "desktop.cli.installed.title": "CLI суулгагдлаа",
   "desktop.cli.installed.message":
     "CLI {{path}} дээр суулгагдлаа\n\n'mongolgpt' командыг ашиглахын тулд терминалаа дахин нээнэ үү.",
   "desktop.cli.failed.title": "Суулгалт амжилтгүй боллоо",

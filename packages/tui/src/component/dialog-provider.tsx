@@ -70,15 +70,15 @@ export function providerOptions(list: { id: string; name: string }[]): ProviderO
           anthropic: "(API key)",
           openai: "(ChatGPT Plus/Pro or API key)",
         }[provider.id],
-        category: provider.id in PROVIDER_PRIORITY ? "Түгээмэл" : "Провайдерууд",
+        category: provider.id in PROVIDER_PRIORITY ? "Түгээмэл" : "Үйлчилгээ үзүүлэгчид",
       })),
     ),
     {
       type: "custom",
       title: "Бусад",
       value: CUSTOM_PROVIDER_OPTION_VALUE,
-      description: "Custom провайдер",
-      category: "Провайдерууд",
+      description: "Өөрийн үйлчилгээ үзүүлэгч",
+      category: "Үйлчилгээ үзүүлэгчид",
     },
   ]
 }
@@ -99,10 +99,11 @@ export function createDialogProviderOptions() {
 
   async function promptCustomProviderID(): Promise<string | undefined> {
     const value = await DialogPrompt.show(dialog, "Бусад", {
-      placeholder: "Провайдер id",
+      placeholder: "Үйлчилгээ үзүүлэгчийн ID",
       description: () => (
         <text fg={theme.textMuted}>
-          Энэ нь зөвхөн credential хадгална. Ашиглахын тулд провайдерыг mongolgpt.json дотор тохируулна уу.
+          Энэ нь зөвхөн нэвтрэх мэдээллийг хадгална. Ашиглахын тулд үйлчилгээ үзүүлэгчийг mongolgpt.json дотор
+          тохируулна уу.
         </text>
       ),
     })
@@ -114,7 +115,7 @@ export function createDialogProviderOptions() {
     toast.show({
       variant: "error",
       message:
-        "Провайдерын id жижиг үсэг эсвэл тоогоор эхлэх ёстой бөгөөд зөвхөн жижиг үсэг, тоо, зураас, доогуур зураас ашиглана",
+        "Үйлчилгээ үзүүлэгчийн ID жижиг үсэг эсвэл тоогоор эхлэх ёстой бөгөөд зөвхөн жижиг үсэг, тоо, зураас, доогуур зураас ашиглана",
     })
     return promptCustomProviderID()
   }
@@ -233,7 +234,7 @@ export function createDialogProviderOptions() {
 
 export function DialogProvider() {
   const options = createDialogProviderOptions()
-  return <DialogSelect title="Провайдер холбох" options={options()} />
+  return <DialogSelect title="Үйлчилгээ үзүүлэгч холбох" options={options()} />
 }
 
 interface AutoMethodProps {
@@ -254,8 +255,8 @@ function AutoMethod(props: AutoMethodProps) {
     bindings: [
       {
         key: "c",
-        desc: "Провайдерын код хуулах",
-        group: "Dialog",
+        desc: "Үйлчилгээ үзүүлэгчийн кодыг хуулах",
+        group: "Диалог",
         cmd: () => {
           const code =
             props.authorization.instructions.match(/[A-Z0-9]{4}-[A-Z0-9]{4,5}/)?.[0] ?? props.authorization.url
@@ -412,7 +413,7 @@ function ApiMethod(props: ApiMethodProps) {
         if (props.custom && !sync.data.provider_next.all.some((provider) => provider.id === props.providerID)) {
           toast.show({
             variant: "info",
-            message: `${props.providerID}-ийн credential хадгалагдлаа. Ашиглахын тулд mongolgpt.json дотор тохируулна уу.`,
+            message: `${props.providerID}-ийн нэвтрэх мэдээлэл хадгалагдлаа. Ашиглахын тулд mongolgpt.json дотор тохируулна уу.`,
           })
           dialog.clear()
           return

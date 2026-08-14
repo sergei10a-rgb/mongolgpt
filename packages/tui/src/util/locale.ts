@@ -2,6 +2,17 @@ export function titlecase(str: string) {
   return str.replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+export const ui = {
+  closeDialog: "Диалог хаах",
+  getStarted: "Эхлэхийн тулд",
+  lspDisabled: "LSP идэвхгүй байна",
+  lspActivates: "Файл уншихад LSP идэвхжинэ",
+  next: "Дараагийн",
+  parent: "Эх сесс",
+  previous: "Өмнөх",
+  showKeyboardShortcuts: "Гарын товчлолыг харах",
+} as const
+
 export function time(input: number): string {
   const date = new Date(input)
   return date.toLocaleTimeString(undefined, { timeStyle: "short" })

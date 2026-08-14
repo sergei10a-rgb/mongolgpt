@@ -462,14 +462,14 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
           ? [
               {
                 key: "tab",
-                desc: "Дараагийн dialog үйлдэл",
-                group: "Dialog",
+                desc: "Дараагийн диалогийн үйлдэл",
+                group: "Диалог",
                 cmd: () => moveAction(1),
               },
               {
                 key: "shift+tab",
-                desc: "Өмнөх dialog үйлдэл",
-                group: "Dialog",
+                desc: "Өмнөх диалогийн үйлдэл",
+                group: "Диалог",
                 cmd: () => moveAction(-1),
               },
             ]

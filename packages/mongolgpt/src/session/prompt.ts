@@ -600,11 +600,11 @@ export const layer = Layer.effect(
       if (Exit.isSuccess(exit)) return exit.value
       const err = Cause.squash(exit.cause)
       if (Provider.ModelNotFoundError.isInstance(err)) {
-        const hint = err.suggestions?.length ? ` Did you mean: ${err.suggestions.join(", ")}?` : ""
+        const hint = err.suggestions?.length ? ` Та дараахыг хэлсэн үү: ${err.suggestions.join(", ")}?` : ""
         yield* events.publish(Session.Event.Error, {
           sessionID,
           error: new NamedError.Unknown({
-            message: `Model not found: ${err.providerID}/${err.modelID}.${hint}`,
+            message: `Загвар олдсонгүй: ${err.providerID}/${err.modelID}.${hint}`,
           }).toObject(),
         })
       }

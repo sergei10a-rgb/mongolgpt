@@ -1,6 +1,7 @@
 import type { TuiPlugin, TuiPluginApi } from "@mongolgpt/plugin/tui"
 import type { BuiltinTuiPlugin } from "../builtins"
 import { createMemo, For, Show, createSignal } from "solid-js"
+import { Locale } from "../../util/locale"
 
 const id = "internal:sidebar-lsp"
 
@@ -22,7 +23,7 @@ function View(props: { api: TuiPluginApi }) {
       </box>
       <Show when={list().length <= 2 || open()}>
         <Show when={list().length === 0}>
-          <text fg={theme().textMuted}>{off() ? "LSPs are disabled" : "LSPs will activate as files are read"}</text>
+          <text fg={theme().textMuted}>{off() ? Locale.ui.lspDisabled : Locale.ui.lspActivates}</text>
         </Show>
         <For each={list()}>
           {(item) => (

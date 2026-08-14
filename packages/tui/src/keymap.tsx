@@ -105,7 +105,7 @@ export function useMongolGPTModeStack() {
 
 export function getMongolGPTModeStack(keymap: OpenTuiKeymap) {
   const value = modeStacks.get(keymap)
-  if (!value) throw new Error("MongolGPT mode stack is not registered for this keymap")
+  if (!value) throw new Error("Энэ keymap-д MongolGPT горимын стек бүртгэгдээгүй байна")
   return value
 }
 

@@ -1144,10 +1144,26 @@ it.instance("ModelNotFoundError includes suggestions for typos", () =>
       .pipe(Effect.flip)
     expect(error.suggestions).toBeDefined()
     expect((error.suggestions ?? []).length).toBeGreaterThan(0)
-    expect(error.message).toContain("Model not found: anthropic/claude-sonet-4")
-    expect(error.message).toContain("Did you mean:")
+    expect(error.message).toContain("Загвар олдсонгүй: anthropic/claude-sonet-4")
+    expect(error.message).toContain("Та дараахыг хэлсэн үү:")
   }),
 )
+
+test("localizes provider and model lifecycle errors while preserving identifiers", () => {
+  expect(
+    new Provider.ModelNotFoundError({
+      providerID: ProviderV2.ID.make("openai"),
+      modelID: ModelV2.ID.make("gpt-missing"),
+    }).message,
+  ).toBe("Загвар олдсонгүй: openai/gpt-missing.")
+  expect(new Provider.InitError({ providerID: ProviderV2.ID.make("openai") }).message).toBe(
+    "Үйлчилгээ үзүүлэгчийг эхлүүлж чадсангүй: openai",
+  )
+  expect(new Provider.NoProvidersError().message).toBe("Ашиглах боломжтой үйлчилгээ үзүүлэгч алга.")
+  expect(new Provider.NoModelsError({ providerID: ProviderV2.ID.make("openai") }).message).toBe(
+    "openai үйлчилгээ үзүүлэгчид ашиглах боломжтой загвар алга.",
+  )
+})
 
 it.instance("ModelNotFoundError for provider includes suggestions", () =>
   Effect.gen(function* () {

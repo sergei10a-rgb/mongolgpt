@@ -33,7 +33,7 @@ function wrapSSE(res: Response, ms: number, ctl: AbortController) {
     async pull(ctrl) {
       const part = await new Promise<Awaited<ReturnType<typeof reader.read>>>((resolve, reject) => {
         const id = setTimeout(() => {
-          const err = new Error("SSE read timed out")
+          const err = new Error("SSE унших хугацаа хэтэрлээ.")
           ctl.abort(err)
           void reader.cancel(err)
           reject(err)
@@ -202,7 +202,7 @@ export const locationLayer = Layer.effect(
         if (model.api.type !== "aisdk")
           return yield* new InitError({
             providerID: model.providerID,
-            cause: new Error(`Unsupported api ${model.api.type}`),
+            cause: new Error(`Дэмжигдээгүй API төрөл: ${model.api.type}`),
           })
 
         const options = prepareOptions(model, model.api.package)
@@ -217,7 +217,7 @@ export const locationLayer = Layer.effect(
         if (!sdk)
           return yield* new InitError({
             providerID: model.providerID,
-            cause: new Error("No AISDK provider plugin returned an SDK"),
+            cause: new Error("AISDK үйлчилгээ үзүүлэгчийн нэмэлт SDK буцаасангүй."),
           })
         sdks.set(sdkKey, sdk)
         const result = yield* service.runLanguage({ model, sdk, options }).pipe(initError(model.providerID))

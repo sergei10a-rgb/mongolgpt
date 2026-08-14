@@ -248,12 +248,12 @@ export function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
       if (c.startsWith("#")) return RGBA.fromHex(c)
 
       if (chain.includes(c)) {
-        throw new Error(`Circular color reference: ${[...chain, c].join(" -> ")}`)
+        throw new Error(`Өнгөний лавлагаа тойрог үүсгэлээ: ${[...chain, c].join(" -> ")}`)
       }
 
       const next = defs[c] ?? theme.theme[c as ThemeColor]
       if (next === undefined) {
-        throw new Error(`Color reference "${c}" not found in defs or theme`)
+        throw new Error(`"${c}" өнгөний лавлагаа тодорхойлолт эсвэл сэдвээс олдсонгүй`)
       }
       return resolveColor(next, [...chain, c])
     }
