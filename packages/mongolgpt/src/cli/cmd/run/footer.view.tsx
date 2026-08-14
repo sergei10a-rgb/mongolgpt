@@ -412,7 +412,7 @@ export function RunFooterView(props: RunFooterViewProps) {
       return stateStatus()
     }
 
-    return shell() ? "Shell горим" : ""
+    return shell() ? "Командын горим" : ""
   })
   const activityMeta = createMemo(() => {
     if (!responsive().statusline.showActivityMeta || usage().length === 0) {

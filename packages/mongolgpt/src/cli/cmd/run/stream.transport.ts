@@ -550,7 +550,7 @@ function createLayer(input: StreamInput) {
             return next
           }
 
-          return yield* Effect.fail(new Error("Shell горимд үндсэн агент боломжгүй байна."))
+          return yield* Effect.fail(new Error("Командын горимд үндсэн агент боломжгүй байна."))
         })
 
         const recoverQuestion = Effect.fn("RunStreamTransport.recoverQuestion")(function* (partID: string) {

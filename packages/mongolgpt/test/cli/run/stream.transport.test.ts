@@ -1328,7 +1328,7 @@ describe("run stream transport", () => {
         expect.objectContaining({
           sessionID: "child-1",
           label: "Explore",
-          description: "Хүлээгдэж буй permission",
+          description: "Хүлээгдэж буй зөвшөөрөл",
           status: "running",
         }),
       ])

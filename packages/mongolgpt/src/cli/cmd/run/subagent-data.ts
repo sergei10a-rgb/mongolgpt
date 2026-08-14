@@ -446,7 +446,7 @@ function ensureBlockerTab(
 
     const next = {
       ...current,
-      description: kind === "permission" ? "Хүлээгдэж буй permission" : "Хүлээгдэж буй асуулт",
+      description: kind === "permission" ? "Хүлээгдэж буй зөвшөөрөл" : "Хүлээгдэж буй асуулт",
       status: "running" as const,
       title: current.title ?? title,
       lastUpdatedAt: Date.now(),
@@ -464,7 +464,7 @@ function ensureBlockerTab(
     partID: `bootstrap:${sessionID}`,
     callID: `bootstrap:${sessionID}`,
     label: text(title) ?? Locale.titlecase(kind),
-    description: kind === "permission" ? "Хүлээгдэж буй permission" : "Хүлээгдэж буй асуулт",
+    description: kind === "permission" ? "Хүлээгдэж буй зөвшөөрөл" : "Хүлээгдэж буй асуулт",
     status: "running",
     lastUpdatedAt: Date.now(),
   })

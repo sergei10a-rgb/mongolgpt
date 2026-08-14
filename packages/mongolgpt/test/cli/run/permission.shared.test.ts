@@ -107,7 +107,7 @@ describe("run permission shared", () => {
       ),
     ).toMatchObject({
       icon: "#",
-      title: "Shell команд",
+      title: "Командын мөр",
       lines: ["$ git status --short"],
     })
 

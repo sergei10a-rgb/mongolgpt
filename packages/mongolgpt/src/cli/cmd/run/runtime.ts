@@ -105,7 +105,7 @@ function createSessionResolver(fn?: CreateSession) {
   return async (ctx: BootContext, input: CreateSessionInput): Promise<ResolvedSession> => {
     const created = await fn(ctx.sdk, input)
     if (!created.id) {
-      throw new Error("Сешн үүсгэж чадсангүй")
+      throw new Error("Сесс үүсгэж чадсангүй")
     }
 
     return {
@@ -755,7 +755,7 @@ export async function runInteractiveLocalMode(input: RunLocalInput): Promise<voi
 
       session = Promise.all([input.resolveAgent(), input.session(sdk)]).then(([agent, next]) => {
         if (!next?.id) {
-          throw new Error("Сешн олдсонгүй")
+          throw new Error("Сесс олдсонгүй")
         }
 
         void input.share(sdk, next.id).catch(() => {})

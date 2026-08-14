@@ -342,7 +342,7 @@ function runWebfetch(p: ToolProps<typeof WebFetchTool>): ToolInline {
   const url = p.input.url ?? ""
   return {
     icon: "%",
-    title: url ? `Web-ээс авах ${url}` : "Web-ээс авах",
+    title: url ? `Вэбээс авах ${url}` : "Вэбээс авах",
   }
 }
 
@@ -396,7 +396,7 @@ function runTodo(p: ToolProps<typeof TodoWriteTool>): ToolInline {
 function runSkill(p: ToolProps<typeof SkillTool>): ToolInline {
   return {
     icon: "→",
-    title: `Skill "${p.input.name ?? ""}"`,
+    title: `Ур чадвар "${p.input.name ?? ""}"`,
   }
 }
 
@@ -405,13 +405,13 @@ function runPatch(p: ToolProps<typeof ApplyPatchTool>): ToolInline {
   if (files === 0) {
     return {
       icon: "%",
-      title: "Patch",
+      title: "Өөрчлөлт",
     }
   }
 
   return {
     icon: "%",
-    title: `Patch ${files} файл`,
+    title: `Өөрчлөлт ${files} файл`,
   }
 }
 
@@ -473,7 +473,7 @@ function runLsp(p: ToolProps<typeof LspTool>): ToolInline {
 function runPlanExit(p: ToolProps<typeof PlanExitTool>): ToolInline {
   return {
     icon: "→",
-    title: text(p.frame.state.title) || "Build агент руу шилжиж байна",
+    title: text(p.frame.state.title) || "Бүтээх агент руу шилжиж байна",
     mode: "block",
     body: p.frame.status === "completed" ? text(p.frame.state.output) : undefined,
   }
@@ -860,7 +860,7 @@ function scrollLspStart(p: ToolProps<typeof LspTool>): string {
 }
 
 function scrollSkillStart(p: ToolProps<typeof SkillTool>): string {
-  return `→ Skill "${p.input.name ?? ""}"`
+  return `→ Ур чадвар "${p.input.name ?? ""}"`
 }
 
 function scrollGlobStart(p: ToolProps<typeof GlobTool>): string {
@@ -901,10 +901,10 @@ function scrollListStart(p: ToolProps): string {
 function scrollWebfetchStart(p: ToolProps<typeof WebFetchTool>): string {
   const url = p.input.url ?? ""
   if (!url) {
-    return "% Web-ээс авах"
+    return "% Вэбээс авах"
   }
 
-  return `% Web-ээс авах ${url}`
+  return `% Вэбээс авах ${url}`
 }
 
 function scrollWebSearchStart(p: ToolProps<typeof WebSearchTool>): string {
@@ -969,7 +969,7 @@ function permBash(p: ToolPermissionProps<typeof BashTool>): ToolPermissionInfo {
   const cmd = p.input.command || ""
   return {
     icon: "#",
-    title: "Shell команд",
+    title: "Командын мөр",
     lines: cmd ? [`$ ${cmd}`] : p.patterns.map((item) => `- ${item}`),
   }
 }
@@ -988,7 +988,7 @@ function permWebfetch(p: ToolPermissionProps<typeof WebFetchTool>): ToolPermissi
   const url = p.input.url || ""
   return {
     icon: "%",
-    title: `Web-ээс авах ${url}`,
+    title: `Вэбээс авах ${url}`,
     lines: url ? [`URL: ${url}`] : [],
   }
 }
