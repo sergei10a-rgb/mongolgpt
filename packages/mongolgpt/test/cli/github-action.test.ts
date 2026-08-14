@@ -165,7 +165,7 @@ describe("extractResponseText", () => {
 describe("formatPromptTooLargeError", () => {
   test("formats error without files", () => {
     const result = formatPromptTooLargeError([])
-    expect(result).toBe("PROMPT_TOO_LARGE: Prompt загварын context хязгаараас давсан байна.")
+    expect(result).toBe("PROMPT_TOO_LARGE: Хүсэлтийн агуулга зөвшөөрөгдөх хязгаараас хэтэрлээ.")
   })
 
   test("formats error with files (base64 content)", () => {
@@ -177,8 +177,8 @@ describe("formatPromptTooLargeError", () => {
     ]
     const result = formatPromptTooLargeError(files)
 
-    expect(result).toStartWith("PROMPT_TOO_LARGE: Prompt загварын context хязгаараас давсан байна.")
-    expect(result).toInclude("Prompt дахь файлууд:")
+    expect(result).toStartWith("PROMPT_TOO_LARGE: Хүсэлтийн агуулга зөвшөөрөгдөх хязгаараас хэтэрлээ.")
+    expect(result).toInclude("Хүсэлтэд хавсаргасан файлууд:")
     expect(result).toInclude("screenshot.png (300 KB)")
     expect(result).toInclude("diagram.png (150 KB)")
   })

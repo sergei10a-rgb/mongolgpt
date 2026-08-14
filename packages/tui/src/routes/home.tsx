@@ -15,7 +15,7 @@ import { HomeSessionDestinationProvider } from "./home/session-destination"
 
 let once = false
 const placeholder = {
-  normal: ["Кодын TODO-г зас", "Энэ project ямар tech stack ашиглаж байна вэ?", "Эвдэрсэн тестүүдийг зас"],
+  normal: ["Кодын TODO-г зас", "Энэ төсөл ямар технологийн багц ашиглаж байна вэ?", "Эвдэрсэн тестүүдийг зас"],
   shell: ["ls -la", "git status", "pwd"],
 }
 

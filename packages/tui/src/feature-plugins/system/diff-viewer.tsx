@@ -83,9 +83,9 @@ function storedView(value: unknown): DiffView | undefined {
 }
 
 function diffSourceLabel(mode: DiffMode) {
-  if (mode === "last-turn") return "last turn"
-  if (mode === "branch") return "main branch"
-  return "working tree"
+  if (mode === "last-turn") return "сүүлийн алхам"
+  if (mode === "branch") return "үндсэн салбар"
+  return "ажлын мод"
 }
 
 function DiffViewer(props: { api: TuiPluginApi }) {
@@ -433,7 +433,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
   const commands = [
     {
       name: "diff.close",
-      title: "Close diff viewer",
+      title: "Өөрчлөлт харагчийг хаах",
       category: "VCS",
       run() {
         const returnRoute = params()?.returnRoute
@@ -447,7 +447,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.down",
-      title: "Move diff viewer down",
+      title: "Өөрчлөлт харагчийг доош хөдөлгөх",
       category: "VCS",
       run: focusRunner({
         files() {
@@ -461,7 +461,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.up",
-      title: "Move diff viewer up",
+      title: "Өөрчлөлт харагчийг дээш хөдөлгөх",
       category: "VCS",
       run: focusRunner({
         files() {
@@ -475,7 +475,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.page.down",
-      title: "Diff харагчийг нэг хуудсаар доош гүйлгэх",
+      title: "Өөрчлөлт харагчийг нэг хуудсаар доош гүйлгэх",
       category: "VCS",
       run: focusRunner({
         files() {
@@ -489,7 +489,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.page.up",
-      title: "Diff харагчийг нэг хуудсаар дээш гүйлгэх",
+      title: "Өөрчлөлт харагчийг нэг хуудсаар дээш гүйлгэх",
       category: "VCS",
       run: focusRunner({
         files() {
@@ -503,7 +503,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.toggle",
-      title: "Diff харагчийн мөрийг асаах/унтраах",
+      title: "Өөрчлөлт харагчийн мөрийг асаах/унтраах",
       category: "VCS",
       run: focusRunner({
         files() {
@@ -514,7 +514,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.expand",
-      title: "Diff харагчийн мөрийг дэлгэх",
+      title: "Өөрчлөлт харагчийн мөрийг дэлгэх",
       category: "VCS",
       run: focusRunner({
         files() {
@@ -532,7 +532,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.expand_all",
-      title: "Diff харагчийн бүх хавтсыг дэлгэх",
+      title: "Өөрчлөлт харагчийн бүх хавтсыг дэлгэх",
       category: "VCS",
       run: focusRunner({
         files() {
@@ -543,7 +543,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.collapse",
-      title: "Diff харагчийн мөрийг хураах",
+      title: "Өөрчлөлт харагчийн мөрийг хураах",
       category: "VCS",
       run: focusRunner({
         files() {
@@ -562,7 +562,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.next_hunk",
-      title: "Дараагийн diff hunk руу очих",
+      title: "Дараагийн өөрчлөлтийн хэсэг рүү очих",
       category: "VCS",
       run() {
         jumpRelativeHunk(1)
@@ -570,7 +570,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.previous_hunk",
-      title: "Өмнөх diff hunk руу очих",
+      title: "Өмнөх өөрчлөлтийн хэсэг рүү очих",
       category: "VCS",
       run() {
         jumpRelativeHunk(-1)
@@ -578,7 +578,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.next_file",
-      title: "Дараагийн diff файл руу очих",
+      title: "Дараагийн өөрчлөлттэй файл руу очих",
       category: "VCS",
       run() {
         jumpRelativePatchFile(1)
@@ -586,7 +586,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.previous_file",
-      title: "Өмнөх diff файл руу очих",
+      title: "Өмнөх өөрчлөлттэй файл руу очих",
       category: "VCS",
       run() {
         jumpRelativePatchFile(-1)
@@ -594,7 +594,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.mark_reviewed",
-      title: "Сонгосон diff файлыг хянасан төлөвт шилжүүлэх",
+      title: "Сонгосон өөрчлөлттэй файлыг хянасан төлөвт шилжүүлэх",
       category: "VCS",
       run() {
         toggleSelectedFileReviewed()
@@ -602,7 +602,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.switch_focus",
-      title: "Diff харагчийн фокус солих",
+      title: "Өөрчлөлт харагчийн идэвхтэй хэсгийг солих",
       category: "VCS",
       run() {
         if (!showFileTree()) return
@@ -615,7 +615,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.toggle_file_tree",
-      title: "Diff харагчийн файлын модыг асаах/унтраах",
+      title: "Өөрчлөлт харагчийн файлын модыг асаах/унтраах",
       category: "VCS",
       run() {
         const next = !fileTreeEnabled()
@@ -626,7 +626,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.single_patch",
-      title: "Нэг patch харагдацыг асаах/унтраах",
+      title: "Нэг өөрчлөлтийн хэсгийн харагдацыг асаах/унтраах",
       category: "VCS",
       run() {
         setSelectedHunk(undefined)
@@ -653,7 +653,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.switch_source",
-      title: "Diff харагчийн эх сурвалж солих",
+      title: "Өөрчлөлт харагчийн эх сурвалж солих",
       category: "VCS",
       run() {
         openSwitchDiffDialog()
@@ -661,7 +661,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.toggle_view",
-      title: "Diff харагчийг split/unified харагдац хооронд солих",
+      title: "Өөрчлөлтийг хувааж/нэгтгэж харах горимыг солих",
       category: "VCS",
       run() {
         if (!splitAvailable()) return
@@ -673,7 +673,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     },
     {
       name: "diff.help",
-      title: "Diff харагчийн нэмэлт shortcut харуулах",
+      title: "Өөрчлөлт харагчийн нэмэлт товчлолыг харуулах",
       category: "VCS",
       run() {
         openHelpDialog()
@@ -687,21 +687,21 @@ function DiffViewer(props: { api: TuiPluginApi }) {
       {
         title: "Ажлын мод",
         value: "git" as const,
-        description: "Одоогийн git өөрчлөлтүүдийг харуулах",
+        description: "Одоогийн Git өөрчлөлтүүдийг харуулах",
       },
       ...(vcs?.branch && vcs.default_branch && vcs.branch !== vcs.default_branch
         ? [
             {
-              title: "Үндсэн branch",
+              title: "Үндсэн салбар",
               value: "branch" as const,
-              description: "Main branch-тэй харьцуулсан өөрчлөлтүүдийг харуулах",
+              description: "Үндсэн салбартай харьцуулсан өөрчлөлтүүдийг харуулах",
             },
           ]
         : []),
       {
-        title: "Сүүлийн turn",
+        title: "Сүүлийн алхам",
         value: "last-turn" as const,
-        description: "Туслахын сүүлийн turn-ээс үүссэн өөрчлөлтүүдийг харуулах",
+        description: "Туслахын сүүлийн алхмаас үүссэн өөрчлөлтүүдийг харуулах",
       },
     ]
   })
@@ -737,10 +737,10 @@ function DiffViewer(props: { api: TuiPluginApi }) {
   useBindings(() => ({
     commands,
     bindings: [
-      { key: "j,down", cmd: "diff.down", desc: "Diff харагчийг доош хөдөлгөх" },
-      { key: "k,up", cmd: "diff.up", desc: "Diff харагчийг дээш хөдөлгөх" },
-      { key: "pagedown,ctrl+f", cmd: "diff.page.down", desc: "Diff харагчийг нэг хуудсаар доош гүйлгэх" },
-      { key: "pageup,ctrl+b", cmd: "diff.page.up", desc: "Diff харагчийг нэг хуудсаар дээш гүйлгэх" },
+      { key: "j,down", cmd: "diff.down", desc: "Өөрчлөлт харагчийг доош хөдөлгөх" },
+      { key: "k,up", cmd: "diff.up", desc: "Өөрчлөлт харагчийг дээш хөдөлгөх" },
+      { key: "pagedown,ctrl+f", cmd: "diff.page.down", desc: "Өөрчлөлт харагчийг нэг хуудсаар доош гүйлгэх" },
+      { key: "pageup,ctrl+b", cmd: "diff.page.up", desc: "Өөрчлөлт харагчийг нэг хуудсаар дээш гүйлгэх" },
       { key: "m", cmd: "diff.mark_reviewed", desc: "Сонгосон файлыг хянасан гэж тэмдэглэх" },
       ...props.api.tuiConfig.keybinds.gather(
         "diff",
@@ -753,7 +753,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
     <box position="absolute" zIndex={2500} left={0} top={0} width={dimensions().width} height={dimensions().height}>
       <PanelGroup axis="y" width="100%" height="100%">
         <Panel border="none" flexShrink={0} padding={0} paddingLeft={1}>
-          <text fg={theme().text}>Diff </text>
+          <text fg={theme().text}>Өөрчлөлт </text>
           <text fg={theme().textMuted}>{diffSourceLabel(mode())}</text>
           <box flexGrow={1} />
           <text fg={theme().textMuted}>{files().length} файл</text>
@@ -764,19 +764,19 @@ function DiffViewer(props: { api: TuiPluginApi }) {
             <Match when={diff.loading}>
               <Separator axis="x" />
               <box flexGrow={1} paddingLeft={1}>
-                <text fg={theme().textMuted}>Diff ачаалж байна...</text>
+                <text fg={theme().textMuted}>Өөрчлөлт ачаалж байна...</text>
               </box>
             </Match>
             <Match when={!diff.loading && files().length === 0}>
               <Separator axis="x" />
               <box flexGrow={1} paddingLeft={1}>
-                <text fg={theme().textMuted}>Diff алга!</text>
+                <text fg={theme().textMuted}>Өөрчлөлт алга!</text>
               </box>
             </Match>
             <Match when={!diff.loading && diff.error}>
               <Separator axis="x" />
               <box flexGrow={1} paddingLeft={1}>
-                <text fg={theme().error}>Diff ачаалж чадсангүй</text>
+                <text fg={theme().error}>Өөрчлөлтийг ачаалж чадсангүй</text>
               </box>
             </Match>
             <Match when={!diff.loading}>
@@ -834,7 +834,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
                             <Separator axis="x" start={showFileTree() ? "edge" : undefined} />
                             <Show
                               when={entry.file.patch}
-                              fallback={<text fg={theme().textMuted}>Энэ файлд patch байхгүй.</text>}
+                              fallback={<text fg={theme().textMuted}>Энэ файлд өөрчлөлтийн хэсэг байхгүй.</text>}
                             >
                               {(patch) => (
                                 <box border={patchLeftBorder()} borderColor={theme().border}>
@@ -882,7 +882,7 @@ function DiffViewer(props: { api: TuiPluginApi }) {
           <Show when={switchFocusShortcut()}>
             {(shortcut) => (
               <text fg={theme().text}>
-                {shortcut()} <span style={{ fg: theme().textMuted }}>файлын мод руу фокуслах</span>
+                {shortcut()} <span style={{ fg: theme().textMuted }}>файлын модыг идэвхжүүлэх</span>
               </text>
             )}
           </Show>
@@ -896,14 +896,14 @@ function DiffViewer(props: { api: TuiPluginApi }) {
           <Show when={nextHunkShortcut()}>
             {(shortcut) => (
               <text fg={theme().text}>
-                {shortcut()} <span style={{ fg: theme().textMuted }}>дараагийн hunk</span>
+                {shortcut()} <span style={{ fg: theme().textMuted }}>дараагийн өөрчлөлтийн хэсэг</span>
               </text>
             )}
           </Show>
           <Show when={previousHunkShortcut()}>
             {(shortcut) => (
               <text fg={theme().text}>
-                {shortcut()} <span style={{ fg: theme().textMuted }}>өмнөх hunk</span>
+                {shortcut()} <span style={{ fg: theme().textMuted }}>өмнөх өөрчлөлтийн хэсэг</span>
               </text>
             )}
           </Show>
@@ -947,22 +947,22 @@ function DiffViewerHelpDialog() {
     {
       shortcut: () => "q",
       action: "Харагч хаах",
-      description: "Diff харагчаас гарах",
+      description: "Өөрчлөлт харагчаас гарах",
     },
     {
       shortcut: useCommandShortcut("diff.switch_focus"),
       action: "Файлын мод фокуслах",
-      description: "Keyboard фокусыг файлын мод болон patch самбарын хооронд шилжүүлэх",
+      description: "Идэвхтэй хэсгийг файлын мод болон өөрчлөлтийн самбарын хооронд шилжүүлэх",
     },
     {
       shortcut: useCommandShortcut("diff.next_hunk"),
-      action: "Дараагийн hunk",
-      description: "Дараагийн diff hunk руу очих",
+      action: "Дараагийн өөрчлөлтийн хэсэг",
+      description: "Дараагийн өөрчлөлтийн хэсэг рүү очих",
     },
     {
       shortcut: useCommandShortcut("diff.previous_hunk"),
-      action: "Өмнөх hunk",
-      description: "Өмнөх diff hunk руу очих",
+      action: "Өмнөх өөрчлөлтийн хэсэг",
+      description: "Өмнөх өөрчлөлтийн хэсэг рүү очих",
     },
     {
       shortcut: useCommandShortcut("diff.next_file"),
@@ -981,18 +981,18 @@ function DiffViewerHelpDialog() {
     },
     {
       shortcut: useCommandShortcut("diff.single_patch"),
-      action: "Patch харагдац солих",
-      description: "Сонгосон нэг patch болон бүх patch-ийн хооронд шилжих",
+      action: "Өөрчлөлтийн хэсгийн харагдац солих",
+      description: "Сонгосон нэг өөрчлөлтийн хэсэг болон бүх өөрчлөлтийн хэсгийн хооронд шилжих",
     },
     {
       shortcut: useCommandShortcut("diff.switch_source"),
       action: "Эх сурвалж солих",
-      description: "Working tree, main branch эсвэл сүүлийн turn-ийн өөрчлөлтөөс сонгох",
+      description: "Ажлын мод, үндсэн салбар эсвэл сүүлийн алхмын өөрчлөлтөөс сонгох",
     },
     {
       shortcut: useCommandShortcut("diff.toggle_view"),
       action: "Харагдац солих",
-      description: "Split болон unified diff layout хооронд шилжих",
+      description: "Өөрчлөлтийг хувааж эсвэл нэгтгэж харах горимын хооронд шилжих",
     },
     {
       shortcut: useCommandShortcut("diff.expand_all"),
@@ -1010,7 +1010,7 @@ function DiffViewerHelpDialog() {
     <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
         <text attributes={TextAttributes.BOLD} fg={theme.text}>
-          Diff shortcut-ууд
+          Өөрчлөлт харагчийн товчлолууд
         </text>
         <text fg={theme.textMuted}>esc</text>
       </box>
@@ -1052,7 +1052,7 @@ const tui: TuiPlugin = async (api) => {
     commands: [
       {
         name: "diff.open",
-        title: "Diff харагч нээх",
+        title: "Өөрчлөлт харагч нээх",
         slashName: "diff",
         category: "VCS",
         namespace: "palette",

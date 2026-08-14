@@ -484,13 +484,13 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
         const { dirty, uncommittedChanges, switched } = await branchIsDirty(head, branch)
         if (switched) {
           // Agent switched branches (likely created its own branch/PR)
-          console.log("Agent өөрийн branch-ийг удирдсан тул infrastructure push/PR алгаслаа")
+          console.log("Агент өөрийн салбарыг удирдсан тул автомат push/PR-г алгаслаа")
           console.log("Хариу:", response)
         } else if (dirty) {
           const summary = await summarize(response)
           // workflow_dispatch has an actor for co-author attribution, schedule does not
           await pushToNewBranch(summary, branch, uncommittedChanges, isScheduleEvent)
-          const triggerType = isWorkflowDispatchEvent ? "workflow_dispatch" : "scheduled workflow"
+          const triggerType = isWorkflowDispatchEvent ? "workflow_dispatch" : "хуваарьт workflow"
           const pr = await createPR(
             repoData.data.default_branch,
             branch,
@@ -518,7 +518,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
           const response = await chat(`${userPrompt}\n\n${dataPrompt}`, promptFiles)
           const { dirty, uncommittedChanges, switched } = await branchIsDirty(head, prData.headRefName)
           if (switched) {
-            console.log("Agent өөрийн branch-ийг удирдсан тул infrastructure push алгаслаа")
+            console.log("Агент өөрийн салбарыг удирдсан тул автомат push-ийг алгаслаа")
           }
           if (dirty && !switched) {
             const summary = await summarize(response)
@@ -538,7 +538,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
           const response = await chat(`${userPrompt}\n\n${dataPrompt}`, promptFiles)
           const { dirty, uncommittedChanges, switched } = await branchIsDirty(head, forkBranch)
           if (switched) {
-            console.log("Agent өөрийн branch-ийг удирдсан тул infrastructure push алгаслаа")
+            console.log("Агент өөрийн салбарыг удирдсан тул автомат push-ийг алгаслаа")
           }
           if (dirty && !switched) {
             const summary = await summarize(response)
@@ -704,13 +704,13 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
         const bodyLower = body.toLowerCase()
         if (mentions.some((m) => bodyLower === m)) {
           if (reviewContext) {
-            return `Энэ code change-ийг review хийж, comment бичсэн мөрүүдэд сайжруулалт санал болго:\n\nФайл: ${reviewContext.file}\nМөрүүд: ${reviewContext.line}\n\n${reviewContext.diffHunk}`
+            return `Энэ кодын өөрчлөлтийг хянаж, сэтгэгдэл бичсэн мөрүүдэд сайжруулалт санал болго:\n\nФайл: ${reviewContext.file}\nМөрүүд: ${reviewContext.line}\n\n${reviewContext.diffHunk}`
           }
           return "Энэ хэлхээг хураангуйл"
         }
         if (mentions.some((m) => bodyLower.includes(m))) {
           if (reviewContext) {
-            return `${body}\n\nКонтекст: Та "${reviewContext.file}" файлын ${reviewContext.line}-р мөр дээрх comment-ийг review хийж байна.\n\nDiff context:\n${reviewContext.diffHunk}`
+            return `${body}\n\nНөхцөл: Та "${reviewContext.file}" файлын ${reviewContext.line}-р мөр дээрх сэтгэгдлийг хянаж байна.\n\nӨөрчлөлтийн нөхцөл:\n${reviewContext.diffHunk}`
           }
           return body
         }
@@ -934,10 +934,9 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
         return await core.getIDToken("mongolgpt-github-action")
       } catch (error) {
         console.error("OIDC token авч чадсангүй:", error instanceof Error ? error.message : error)
-        throw new Error(
-          "OIDC token татаж чадсангүй. Workflow permissions-д `id-token: write` нэмсэн эсэхээ шалгана уу.",
-          { cause: error },
-        )
+        throw new Error("OIDC token татаж чадсангүй. Workflow-ийн эрхэд `id-token: write` нэмсэн эсэхээ шалгана уу.", {
+          cause: error,
+        })
       }
     }
 
@@ -1001,14 +1000,14 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     }
 
     async function checkoutNewBranch(type: "issue" | "schedule" | "dispatch") {
-      console.log("Шинэ branch checkout хийж байна...")
+      console.log("Шинэ салбарыг нээж байна...")
       const branch = generateBranchName(type)
       await gitRun(["checkout", "-b", branch])
       return branch
     }
 
     async function checkoutLocalBranch(pr: GitHubPullRequest) {
-      console.log("Локал branch checkout хийж байна...")
+      console.log("Дотоод салбарыг нээж байна...")
 
       const branch = pr.headRefName
       const depth = Math.max(pr.commits.totalCount, 20)
@@ -1018,7 +1017,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     }
 
     async function checkoutForkBranch(pr: GitHubPullRequest) {
-      console.log("Fork branch checkout хийж байна...")
+      console.log("Fork-ийн салбарыг нээж байна...")
 
       const remoteBranch = pr.headRefName
       const localBranch = generateBranchName("pr")
@@ -1045,7 +1044,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     }
 
     async function pushToNewBranch(summary: string, branch: string, commit: boolean, isSchedule: boolean) {
-      console.log("Шинэ branch руу push хийж байна...")
+      console.log("Шинэ салбар руу push хийж байна...")
       if (commit) {
         await gitRun(["add", "."])
         if (isSchedule) {
@@ -1058,7 +1057,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     }
 
     async function pushToLocalBranch(summary: string, commit: boolean) {
-      console.log("Локал branch руу push хийж байна...")
+      console.log("Дотоод салбар руу push хийж байна...")
       if (commit) {
         await gitRun(["add", "."])
         await commitChanges(summary, actor)
@@ -1067,7 +1066,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     }
 
     async function pushToForkBranch(summary: string, pr: GitHubPullRequest, commit: boolean) {
-      console.log("Fork branch руу push хийж байна...")
+      console.log("Fork-ийн салбар руу push хийж байна...")
 
       const remoteBranch = pr.headRefName
 
@@ -1079,12 +1078,12 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     }
 
     async function branchIsDirty(originalHead: string, expectedBranch: string) {
-      console.log("Branch өөрчлөлттэй эсэхийг шалгаж байна...")
+      console.log("Салбарт өөрчлөлт орсон эсэхийг шалгаж байна...")
       // Detect if the agent switched branches during chat (e.g. created
       // its own branch, committed, and possibly pushed/created a PR).
       const current = await gitText(["rev-parse", "--abbrev-ref", "HEAD"])
       if (current !== expectedBranch) {
-        console.log(`Chat-ийн үеэр branch солигдсон байна: ${expectedBranch} гэж хүлээсэн, одоо ${current} дээр байна`)
+        console.log(`Чатын үеэр салбар солигдсон байна: ${expectedBranch} гэж хүлээсэн, одоо ${current} дээр байна`)
         return { dirty: true, uncommittedChanges: false, switched: true }
       }
 
@@ -1118,7 +1117,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
 
     async function assertPermissions() {
       // Only called for non-schedule events, so actor is defined
-      console.log(`${actor} хэрэглэгчийн permission-ийг шалгаж байна...`)
+      console.log(`${actor} хэрэглэгчийн эрхийг шалгаж байна...`)
 
       let permission
       try {
@@ -1129,13 +1128,13 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
         })
 
         permission = response.data.permission
-        console.log(`  permission: ${permission}`)
+        console.log(`  эрх: ${permission}`)
       } catch (error) {
-        console.error(`Permission шалгаж чадсангүй: ${error}`)
-        throw new Error(`${actor} хэрэглэгчийн permission-ийг шалгаж чадсангүй: ${error}`, { cause: error })
+        console.error(`Эрхийг шалгаж чадсангүй: ${error}`)
+        throw new Error(`${actor} хэрэглэгчийн эрхийг шалгаж чадсангүй: ${error}`, { cause: error })
       }
 
-      if (!["admin", "write"].includes(permission)) throw new Error(`${actor} хэрэглэгч write permission-гүй байна`)
+      if (!["admin", "write"].includes(permission)) throw new Error(`${actor} хэрэглэгч бичих эрхгүй байна`)
     }
 
     async function addReaction(commentType?: "issue" | "pr_review") {
@@ -1236,7 +1235,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     }
 
     async function createPR(base: string, branch: string, title: string, body: string): Promise<number | null> {
-      console.log("Pull request үүсгэж байна...")
+      console.log("PR үүсгэж байна...")
 
       // Check if an open PR already exists for this head→base combination
       // This handles the case where the agent created a PR via gh pr create during its run
@@ -1252,7 +1251,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
         )
 
         if (existing.data.length > 0) {
-          console.log(`${branch} branch-д PR #${existing.data[0].number} аль хэдийн байна`)
+          console.log(`${branch} салбарт PR #${existing.data[0].number} аль хэдийн байна`)
           return existing.data[0].number
         }
       } catch (e) {
@@ -1323,7 +1322,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     }
 
     async function fetchIssue() {
-      console.log("Issue-ийн prompt өгөгдөл татаж байна...")
+      console.log("Issue-ийн хүсэлтийн өгөгдлийг татаж байна...")
       const issueResult = await octoGraph<IssueQueryResponse>(
         `
 query($owner: String!, $repo: String!, $number: Int!) {
@@ -1375,13 +1374,13 @@ query($owner: String!, $repo: String!, $number: Int!) {
       return [
         "<github_action_context>",
         "Та GitHub Action хэлбэрээр ажиллаж байна. Чухал:",
-        "- Таны хариуны дараа git push болон PR үүсгэлтийг MongolGPT infrastructure АВТОМАТААР хийдэг",
-        "- GitHub token, workflow permission, PR үүсгэх боломжийн талаар анхааруулга эсвэл disclaimer бүү оруул",
-        "- PR үүсгэх эсвэл code push хийх гараар хийх алхам бүү санал болго. Энэ автоматаар хийгдэнэ",
-        "- Зөвхөн code change болон өөрийн analysis/response дээр төвлөр",
+        "- Таны хариуны дараа git push болон PR үүсгэлтийг MongolGPT-ийн автомат үйл явц АВТОМАТААР хийдэг",
+        "- GitHub token, workflow-ийн эрх, PR үүсгэх боломжийн талаар анхааруулга эсвэл тайлбар бүү оруул",
+        "- PR үүсгэх эсвэл код push хийх гараар хийх алхам бүү санал болго. Энэ автоматаар хийгдэнэ",
+        "- Зөвхөн кодын өөрчлөлт болон өөрийн дүн шинжилгээ/хариунд төвлөр",
         "</github_action_context>",
         "",
-        "Дараах өгөгдлийг context болгон унш, гэхдээ шууд үйлдэл бүү хий:",
+        "Дараах өгөгдлийг нөхцөл болгон унш, гэхдээ шууд үйлдэл бүү хий:",
         "<issue>",
         `Гарчиг: ${issue.title}`,
         `Агуулга: ${issue.body}`,
@@ -1394,7 +1393,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
     }
 
     async function fetchPR() {
-      console.log("PR-ийн prompt өгөгдөл татаж байна...")
+      console.log("PR-ийн хүсэлтийн өгөгдлийг татаж байна...")
       const prResult = await octoGraph<PullRequestQueryResponse>(
         `
 query($owner: String!, $repo: String!, $number: Int!) {
@@ -1513,20 +1512,20 @@ query($owner: String!, $repo: String!, $number: Int!) {
       return [
         "<github_action_context>",
         "Та GitHub Action хэлбэрээр ажиллаж байна. Чухал:",
-        "- Таны хариуны дараа git push болон PR үүсгэлтийг MongolGPT infrastructure АВТОМАТААР хийдэг",
-        "- GitHub token, workflow permission, PR үүсгэх боломжийн талаар анхааруулга эсвэл disclaimer бүү оруул",
-        "- PR үүсгэх эсвэл code push хийх гараар хийх алхам бүү санал болго. Энэ автоматаар хийгдэнэ",
-        "- Зөвхөн code change болон өөрийн analysis/response дээр төвлөр",
+        "- Таны хариуны дараа git push болон PR үүсгэлтийг MongolGPT-ийн автомат үйл явц АВТОМАТААР хийдэг",
+        "- GitHub token, workflow-ийн эрх, PR үүсгэх боломжийн талаар анхааруулга эсвэл тайлбар бүү оруул",
+        "- PR үүсгэх эсвэл код push хийх гараар хийх алхам бүү санал болго. Энэ автоматаар хийгдэнэ",
+        "- Зөвхөн кодын өөрчлөлт болон өөрийн дүн шинжилгээ/хариунд төвлөр",
         "</github_action_context>",
         "",
-        "Дараах өгөгдлийг context болгон унш, гэхдээ шууд үйлдэл бүү хий:",
+        "Дараах өгөгдлийг нөхцөл болгон унш, гэхдээ шууд үйлдэл бүү хий:",
         "<pull_request>",
         `Гарчиг: ${pr.title}`,
         `Агуулга: ${pr.body}`,
         `Зохиогч: ${pr.author.login}`,
         `Үүсгэсэн: ${pr.createdAt}`,
-        `Base branch: ${pr.baseRefName}`,
-        `Head branch: ${pr.headRefName}`,
+        `Үндсэн салбар: ${pr.baseRefName}`,
+        `Өөрчлөлтийн салбар: ${pr.headRefName}`,
         `Төлөв: ${pr.state}`,
         `Нэмэлт мөр: ${pr.additions}`,
         `Устгасан мөр: ${pr.deletions}`,

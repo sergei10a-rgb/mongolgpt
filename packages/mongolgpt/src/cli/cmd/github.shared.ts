@@ -24,7 +24,7 @@ export function extractResponseText(parts: SessionV1.Part[]): string | null {
 export function formatPromptTooLargeError(files: { filename: string; content: string }[]): string {
   const fileDetails =
     files.length > 0
-      ? `\n\nPrompt дахь файлууд:\n${files.map((f) => `  - ${f.filename} (${((f.content.length * 0.75) / 1024).toFixed(0)} KB)`).join("\n")}`
+      ? `\n\nХүсэлтэд хавсаргасан файлууд:\n${files.map((f) => `  - ${f.filename} (${((f.content.length * 0.75) / 1024).toFixed(0)} KB)`).join("\n")}`
       : ""
-  return `PROMPT_TOO_LARGE: Prompt загварын context хязгаараас давсан байна.${fileDetails}`
+  return `PROMPT_TOO_LARGE: Хүсэлтийн агуулга зөвшөөрөгдөх хязгаараас хэтэрлээ.${fileDetails}`
 }
