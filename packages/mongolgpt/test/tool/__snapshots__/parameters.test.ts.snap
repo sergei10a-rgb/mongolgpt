@@ -5,7 +5,7 @@ exports[`tool parameters JSON Schema (wire shape) apply_patch 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "patchText": {
-      "description": "Хийх бүх өөрчлөлтийг тодорхойлсон бүрэн patch текст",
+      "description": "Хийх бүх өөрчлөлтийг тодорхойлсон бүрэн patch-ийн текст",
       "type": "string",
     },
   },
@@ -78,11 +78,11 @@ exports[`tool parameters JSON Schema (wire shape) glob 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "path": {
-      "description": "Хайх directory. Тодорхойлоогүй бол одоогийн working directory ашиглана. ЧУХАЛ: Анхдагч directory ашиглах бол энэ талбарыг орхино уу. "undefined" эсвэл "null" бүү оруул, зүгээр л орхино уу. Өгсөн тохиолдолд хүчинтэй directory path байх ёстой.",
+      "description": "Хайх хавтас. Тодорхойлоогүй бол одоогийн ажиллаж буй хавтас ашиглана. ЧУХАЛ: Анхдагч хавтас ашиглах бол энэ талбарыг орхино уу. "undefined" эсвэл "null" бүү оруул, зүгээр л орхино уу. Өгсөн тохиолдолд хүчинтэй хавтасны зам байх ёстой.",
       "type": "string",
     },
     "pattern": {
-      "description": "Файлуудтай тулгах glob pattern",
+      "description": "Файлуудтай тулгах glob загвар",
       "type": "string",
     },
   },
@@ -98,15 +98,15 @@ exports[`tool parameters JSON Schema (wire shape) grep 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "include": {
-      "description": "Хайлтад оруулах файлын pattern (жишээ нь "*.js", "*.{ts,tsx}")",
+      "description": "Хайлтад оруулах файлын загвар (жишээ нь "*.js", "*.{ts,tsx}")",
       "type": "string",
     },
     "path": {
-      "description": "Хайх directory. Тодорхойлоогүй бол одоогийн working directory ашиглана.",
+      "description": "Хайх хавтас. Тодорхойлоогүй бол одоогийн ажиллаж буй хавтас ашиглана.",
       "type": "string",
     },
     "pattern": {
-      "description": "Файлын агуулгаас хайх regex pattern",
+      "description": "Файлын агуулгаас хайх regex илэрхийлэл",
       "type": "string",
     },
   },
@@ -141,23 +141,23 @@ exports[`tool parameters JSON Schema (wire shape) lsp 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "character": {
-      "description": "Тэмдэгтийн offset (editor дээрхтэй адил 1-ээс эхэлнэ)",
+      "description": "Тэмдэгтийн байрлал (засварлагч дээрхтэй адил 1-ээс эхэлнэ)",
       "maximum": 9007199254740991,
       "minimum": 1,
       "type": "integer",
     },
     "filePath": {
-      "description": "Файлын абсолют эсвэл relative path",
+      "description": "Файлын абсолют эсвэл харьцангуй зам",
       "type": "string",
     },
     "line": {
-      "description": "Мөрийн дугаар (editor дээрхтэй адил 1-ээс эхэлнэ)",
+      "description": "Мөрийн дугаар (засварлагч дээрхтэй адил 1-ээс эхэлнэ)",
       "maximum": 9007199254740991,
       "minimum": 1,
       "type": "integer",
     },
     "operation": {
-      "description": "Гүйцэтгэх LSP operation",
+      "description": "Гүйцэтгэх LSP үйлдэл",
       "enum": [
         "goToDefinition",
         "findReferences",
@@ -172,7 +172,7 @@ exports[`tool parameters JSON Schema (wire shape) lsp 1`] = `
       "type": "string",
     },
     "query": {
-      "description": "workspaceSymbol-д ашиглах хайлтын query. Хоосон string нь бүх symbol-ийг хүснэ.",
+      "description": "workspaceSymbol-д ашиглах хайлтын мөр. Хоосон мөр нь бүх тэмдэглэгээг хүснэ.",
       "type": "string",
     },
   },
@@ -258,7 +258,7 @@ exports[`tool parameters JSON Schema (wire shape) read 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "filePath": {
-      "description": "Унших файл эсвэл directory-ийн абсолют зам",
+      "description": "Унших файл эсвэл хавтасны абсолют зам",
       "type": "string",
     },
     "limit": {

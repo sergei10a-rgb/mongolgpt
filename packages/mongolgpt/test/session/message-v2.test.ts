@@ -1376,7 +1376,7 @@ describe("session.message-v2.fromError", () => {
     expect(result).toStrictEqual({
       name: "ContextOverflowError",
       data: {
-        message: "Input exceeds context window of this model",
+        message: "Оруулсан мэдээлэл энэ загварын контекстийн багтаамжаас хэтэрлээ.",
         responseBody: JSON.stringify(input),
       },
     })
@@ -1386,11 +1386,11 @@ describe("session.message-v2.fromError", () => {
     const cases = [
       {
         code: "insufficient_quota",
-        message: "Quota exceeded. Check your plan and billing details.",
+        message: "Хэрэглээний хязгаар дууслаа. Багц болон төлбөрийн мэдээллээ шалгана уу.",
       },
       {
         code: "usage_not_included",
-        message: "To use Codex with your ChatGPT plan, upgrade to Plus: https://chatgpt.com/explore/plus.",
+        message: "Codex-ийг ChatGPT багцаараа ашиглахын тулд Plus багц руу шинэчилнэ үү: https://chatgpt.com/explore/plus.",
       },
       {
         code: "invalid_prompt",

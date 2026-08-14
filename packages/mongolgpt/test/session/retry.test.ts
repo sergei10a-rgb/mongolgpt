@@ -169,7 +169,7 @@ describe("session.retry.retryable", () => {
     const request = MessageV2.fromError(new ProviderError.HeaderTimeoutError(10000), { providerID })
     expect(SessionV1.APIError.isInstance(request)).toBe(true)
     expect(SessionRetry.retryable(request, retryProvider)).toEqual({
-      message: "Provider response headers timed out after 10000ms",
+      message: "Үйлчилгээ үзүүлэгчийн хариуны толгой хэсгийг 10000 миллисекундийн дотор хүлээн авч чадсангүй.",
     })
   })
 
