@@ -31,12 +31,17 @@
     "openrouter-free": {
       "displayName": "OpenRouter Free",
       "api": "https://openrouter.ai/api/v1",
-      "apiKey": "replace-with-openrouter-secret"
+      "apiKey": "replace-with-openrouter-secret",
+      "providerKind": "openrouter",
+      "usageMode": "managed",
+      "productionUseApproved": false
     },
     "nvidia-nim-production": {
       "displayName": "NVIDIA NIM production subscription",
       "api": "https://integrate.api.nvidia.com/v1",
       "apiKey": "replace-with-nvidia-production-secret",
+      "providerKind": "nvidia-nim",
+      "usageMode": "managed",
       "productionUseApproved": false
     }
   }

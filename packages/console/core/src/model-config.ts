@@ -2,6 +2,8 @@ import { z } from "zod"
 
 export const ModelFormatSchema = z.enum(["anthropic", "google", "openai", "oa-compat"])
 export type ModelFormat = z.infer<typeof ModelFormatSchema>
+export const ProviderKindSchema = z.enum(["openrouter", "nvidia-nim", "openai-compatible"])
+export const ProviderUsageModeSchema = z.enum(["managed", "byok", "trial"])
 
 const unitCost = z.number().nonnegative()
 const ModelCostSchema = z.object({
@@ -48,6 +50,8 @@ const ProviderSchema = z.object({
   displayName: z.string().optional(),
   api: z.string(),
   apiKey: z.union([z.string(), z.record(z.string(), z.string())]),
+  providerKind: ProviderKindSchema.optional(),
+  usageMode: ProviderUsageModeSchema.optional(),
   productionUseApproved: z.boolean().optional(),
   format: ModelFormatSchema.optional(),
   headerModifier: z.record(z.string(), z.any()).optional(),
@@ -182,3 +186,48 @@ export const MongolGPTModelConfigurationSchema = z
       }
     }
   })
+
+export type MongolGPTModelConfiguration = z.infer<typeof MongolGPTModelConfigurationSchema>
+
+export function modelConfigurationStageIssues(value: MongolGPTModelConfiguration, stage: string) {
+  if (stage !== "production") return []
+
+  const issues = new Set<string>()
+  for (const [list, models] of [
+    ["zenModels", value.zenModels],
+    ["liteModels", value.liteModels],
+  ] as const) {
+    for (const [modelID, configured] of Object.entries(models)) {
+      for (const [index, model] of (Array.isArray(configured) ? configured : [configured]).entries()) {
+        const path = `${list}.${modelID}${Array.isArray(configured) ? `[${index}]` : ""}`
+        const enabledRoutes = model.providers.filter((route) => !route.disabled)
+
+        for (const route of enabledRoutes) {
+          const provider = value.providers[route.id]
+          if (provider?.usageMode !== "byok" && provider?.productionUseApproved !== true)
+            issues.add(`${path} provider "${route.id}" must set productionUseApproved=true`)
+        }
+
+        if (modelID !== "free-auto") continue
+
+        for (const route of enabledRoutes) {
+          const provider = value.providers[route.id]
+          if (provider && provider.usageMode !== "managed")
+            issues.add(`${path} provider "${route.id}" must set usageMode=managed`)
+        }
+
+        const fallbackID = model.fallbackProvider
+        const fallback = fallbackID ? value.providers[fallbackID] : undefined
+        if (fallback && fallback.providerKind !== "nvidia-nim")
+          issues.add(`${path} fallback provider "${fallbackID}" must set providerKind=nvidia-nim`)
+
+        for (const route of enabledRoutes.filter((route) => route.id !== fallbackID)) {
+          const provider = value.providers[route.id]
+          if (provider && provider.providerKind !== "openrouter")
+            issues.add(`${path} primary provider "${route.id}" must set providerKind=openrouter`)
+        }
+      }
+    }
+  }
+  return [...issues]
+}

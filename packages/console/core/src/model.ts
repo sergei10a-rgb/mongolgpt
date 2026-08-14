@@ -6,7 +6,12 @@ import { Identifier } from "./identifier"
 import { fn } from "./util/fn"
 import { Actor } from "./actor"
 import { Resource } from "@mongolgpt/console-resource"
-import { MongolGPTModelConfigurationSchema, MongolGPTModelSchema, type ModelFormat } from "./model-config"
+import {
+  modelConfigurationStageIssues,
+  MongolGPTModelConfigurationSchema,
+  MongolGPTModelSchema,
+  type ModelFormat,
+} from "./model-config"
 
 export namespace ZenData {
   export type Format = ModelFormat
@@ -49,7 +54,12 @@ export namespace ZenData {
         Resource.ZEN_MODELS29.value +
         Resource.ZEN_MODELS30.value,
     )
-    const { zenModels, liteModels, providers } = ModelsSchema.parse(json)
+    const configuration = ModelsSchema.parse(json)
+    const policyIssues = modelConfigurationStageIssues(configuration, Resource.App.stage)
+    if (policyIssues.length > 0) {
+      throw new Error(`Production model configuration is unsafe: ${policyIssues.join("; ")}`)
+    }
+    const { zenModels, liteModels, providers } = configuration
     const compositeProviders = Object.fromEntries(
       Object.entries(providers).map(([id, provider]) => [
         id,

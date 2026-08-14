@@ -76,10 +76,15 @@ const hosted = {
       openrouter: {
         api: "https://openrouter.ai/api/v1",
         apiKey: "unit-test-provider-key",
+        providerKind: "openrouter",
+        usageMode: "managed",
+        productionUseApproved: true,
       },
       nvidia: {
         api: "https://integrate.api.nvidia.com/v1",
         apiKey: { primary: "unit-test-nvidia-key" },
+        providerKind: "nvidia-nim",
+        usageMode: "managed",
         productionUseApproved: true,
       },
     },
@@ -610,6 +615,34 @@ describe("Cloudflare deployment preflight", () => {
         },
       }).stage,
     ).toBe("dev")
+  })
+
+  test("blocks silent Free Auto provider filtering and an inverted production route", () => {
+    const models = JSON.parse(hosted.SST_SECRET_ZEN_MODELS1)
+    models.providers.openrouter.productionUseApproved = false
+    models.providers.openrouter.usageMode = "trial"
+    models.providers.openrouter.providerKind = "nvidia-nim"
+    models.providers.nvidia.providerKind = "openrouter"
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
+            SST_SECRET_ZEN_MODELS1: JSON.stringify(models),
+          },
+        }),
+      [
+        'provider "openrouter" must set productionUseApproved=true',
+        'provider "openrouter" must set usageMode=managed',
+        'primary provider "openrouter" must set providerKind=openrouter',
+        'fallback provider "nvidia" must set providerKind=nvidia-nim',
+      ],
+    )
   })
 })
 

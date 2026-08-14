@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { ZenData } from "../src/model"
-import { isProviderAllowedForStage } from "../src/model-config"
+import { isProviderAllowedForStage, modelConfigurationStageIssues } from "../src/model-config"
 
 const model = {
   name: "MongolGPT Free Auto",
@@ -49,6 +49,62 @@ describe("MongolGPT Free Auto model contract", () => {
 
     expect(isProviderAllowedForStage(providers.primary, "production")).toBe(true)
     expect(isProviderAllowedForStage(providers.fallback, "production")).toBe(false)
+  })
+
+  test("requires an approved managed OpenRouter primary and NVIDIA NIM fallback in production", () => {
+    const valid = validate({
+      ...config(model),
+      providers: {
+        primary: {
+          api: "https://openrouter.ai/api/v1",
+          apiKey: "primary-key",
+          providerKind: "openrouter",
+          usageMode: "managed",
+          productionUseApproved: true,
+        },
+        secondary: {
+          api: "https://integrate.api.nvidia.com/v1",
+          apiKey: "secondary-key",
+          providerKind: "nvidia-nim",
+          usageMode: "managed",
+          productionUseApproved: true,
+        },
+      },
+    })
+
+    expect(modelConfigurationStageIssues(valid, "production")).toEqual([])
+    expect(modelConfigurationStageIssues(valid, "dev")).toEqual([])
+
+    const withByok = structuredClone(valid)
+    withByok.liteModels.assistant = {
+      name: "BYOK Assistant",
+      cost: { input: 0, output: 0 },
+      byokProvider: "openai",
+      maxTokensPerRequest: 32_000,
+      providers: [{ id: "openai", model: "gpt-5-mini" }],
+    }
+    withByok.providers.openai = {
+      api: "https://api.openai.com/v1",
+      apiKey: "server-fallback-key",
+      providerKind: "openai-compatible",
+      usageMode: "byok",
+    }
+    expect(modelConfigurationStageIssues(withByok, "production")).toEqual([])
+
+    const unsafe = structuredClone(valid)
+    unsafe.providers.primary.productionUseApproved = false
+    unsafe.providers.primary.usageMode = "trial"
+    unsafe.providers.primary.providerKind = "nvidia-nim"
+    unsafe.providers.secondary.providerKind = "openrouter"
+
+    expect(modelConfigurationStageIssues(unsafe, "production")).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('provider "primary" must set productionUseApproved=true'),
+        expect.stringContaining('provider "primary" must set usageMode=managed'),
+        expect.stringContaining('primary provider "primary" must set providerKind=openrouter'),
+        expect.stringContaining('fallback provider "secondary" must set providerKind=nvidia-nim'),
+      ]),
+    )
   })
 
   test("accepts an account-only production route with a fallback", () => {

@@ -1,4 +1,7 @@
-import { MongolGPTModelConfigurationSchema } from "@mongolgpt/console-core/model-config.js"
+import {
+  modelConfigurationStageIssues,
+  MongolGPTModelConfigurationSchema,
+} from "@mongolgpt/console-core/model-config.js"
 import { PaymentPlanCatalogSchema } from "@mongolgpt/console-core/payment-checkout.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 
@@ -397,6 +400,10 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
   if (!freeAuto) {
     issues.push('ZEN_MODELS1 нь zenModels дотроо "free-auto" model-той байна.')
     return
+  }
+
+  for (const issue of modelConfigurationStageIssues(result.data, stage)) {
+    issues.push(`ZEN_MODELS production policy зөрчсөн байна. ${issue}`)
   }
 
   const referencedProviders = new Set<string>()
