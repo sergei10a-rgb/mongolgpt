@@ -680,7 +680,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "mcp.list",
-        title: "MCP-үүдийг асаах/унтраах",
+        title: "MCP серверүүдийг асаах/унтраах",
         category: "Агент",
         slashName: "mcps",
         run: () => {
@@ -820,7 +820,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "app.debug",
-        title: "Debug самбарыг асаах/унтраах",
+        title: "Дебаг самбарыг асаах/унтраах",
         category: "Систем",
         run: () => {
           renderer.toggleDebugOverlay()
@@ -838,13 +838,13 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "app.heap_snapshot",
-        title: "Heap snapshot бичих",
+        title: "Санах ойн агшин зураг хадгалах",
         category: "Систем",
         run: async () => {
           const files = await props.onSnapshot?.()
           toast.show({
             variant: "info",
-            message: `Heap snapshot энд бичигдлээ: ${files?.join(", ")}`,
+            message: `Санах ойн агшин зургийг энд хадгаллаа: ${files?.join(", ")}`,
             duration: 5000,
           })
           dialog.clear()
@@ -897,7 +897,9 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       {
         name: "app.toggle.diffwrap",
         title:
-          kv.get("diff_wrap_mode", "word") === "word" ? "Diff мөр хугалалтыг унтраах" : "Diff мөр хугалалтыг асаах",
+          kv.get("diff_wrap_mode", "word") === "word"
+            ? "Ялгааны мөр хугалалтыг унтраах"
+            : "Ялгааны мөр хугалалтыг асаах",
         category: "Систем",
         run: () => {
           const current = kv.get("diff_wrap_mode", "word")

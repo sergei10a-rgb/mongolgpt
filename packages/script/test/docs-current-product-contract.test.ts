@@ -58,7 +58,7 @@ describe("documentation product contract", () => {
     expect(account).toContain("mongolgpt console login")
     expect(account).toContain("MongolGPT Free Auto")
     expect(account).toContain("Basic, Pro, Max")
-    expect(account).toContain("Production үйлчилгээ")
+    expect(account).toContain("Үйлдвэрлэлийн үйлчилгээ")
     expect(sidebar).toContain('"account"')
     expect(sidebar).not.toMatch(/["'](?:go|zen)["']/)
     expect(config.match(/"\/(?:go|zen)": "\/docs\/account"/g)).toHaveLength(2)
@@ -80,22 +80,21 @@ describe("documentation product contract", () => {
 
     expect(sidebar).toContain('label: "MongolGPT үйлчилгээ"')
     for (const page of ["faq", "privacy", "billing", "admin"]) expect(sidebar).toContain(`"${page}"`)
-    expect(faq).toContain("official hosted `app.mgpt.mn`")
-    expect(faq).toContain("hosted runtime буруу deploy")
+    expect(faq).toContain("албан ёсны `app.mgpt.mn`")
+    expect(faq).toContain("байршуулсан runtime-ийн тохиргоо буруу")
     expect(privacy).toContain("local-only session-ийг hosted storage-д заавал хадгална гэж")
     expect(billing).toContain("QPay")
     expect(billing).toContain("Bonum")
-    expect(billing).toContain("### Sandbox")
-    expect(billing).toContain("### Production")
+    expect(billing).toContain("### Туршилтын орчин")
+    expect(billing).toContain("### Үйлдвэрлэлийн орчин")
     expect(admin).toContain("## Одоогийн хязгаарлалт")
     expect(admin).toContain("refund")
   })
 
   test("keeps repository documentation links on canonical Mongolian sources", async () => {
     const files = [install, ...(await Promise.all(productSourceRoots.map(textSourceFiles))).flat()]
-    for (const file of files) {
-      expect(await Bun.file(file).text()).not.toContain("packages/web/src/content/docs/mn")
-    }
+    const sources = await Promise.all(files.map((file) => Bun.file(file).text()))
+    for (const source of sources) expect(source).not.toContain("packages/web/src/content/docs/mn")
   })
 
   test("keeps the mobile navigation state accessible", async () => {

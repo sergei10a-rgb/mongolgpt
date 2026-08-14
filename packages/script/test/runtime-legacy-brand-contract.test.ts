@@ -33,13 +33,12 @@ async function sourceText(file: URL) {
 
 describe("runtime legacy brand contract", () => {
   test("keeps retired Zen and Go product names out of active clients", async () => {
-    for (const root of roots) {
-      for (const file of await sourceFiles(root)) {
-        const source = await sourceText(file)
-        if (source === undefined) continue
-        expect(source).not.toMatch(/MongolGPT (?:Zen|Go)\b/)
-        expect(source).not.toMatch(/mongolgpt(?:Zen|Go)/)
-      }
+    const files = (await Promise.all(roots.map(sourceFiles))).flat()
+    const sources = await Promise.all(files.map(sourceText))
+    for (const source of sources) {
+      if (source === undefined) continue
+      expect(source).not.toMatch(/MongolGPT (?:Zen|Go)\b/)
+      expect(source).not.toMatch(/mongolgpt(?:Zen|Go)/)
     }
   })
 

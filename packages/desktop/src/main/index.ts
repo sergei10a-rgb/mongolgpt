@@ -296,7 +296,7 @@ const main = Effect.gen(function* () {
       const address = server.address()
       if (typeof address !== "object" || !address) {
         server.close()
-        Deferred.failSync(res, () => new Error("Failed to get port"))
+        Deferred.failSync(res, () => new Error("Порт авахад алдаа гарлаа."))
         return
       }
       const port = address.port

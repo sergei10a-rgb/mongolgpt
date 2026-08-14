@@ -87,8 +87,8 @@ test("stops health polling when sidecar startup settles", async () => {
 
 test("validates WSL IPC identifiers at the module boundary", () => {
   expect(requireWslIpcString("distro", "Debian")).toBe("Debian")
-  expect(() => requireWslIpcString("distro", "")).toThrow("Invalid distro")
-  expect(() => requireWslIpcString("server id", undefined)).toThrow("Invalid server id")
+  expect(() => requireWslIpcString("distro", "")).toThrow("WSL түгээлтийн нэр буруу байна.")
+  expect(() => requireWslIpcString("server id", undefined)).toThrow("WSL серверийн ID буруу байна.")
 })
 
 test("derives a required Windows restart from the post-install runtime probe", () => {

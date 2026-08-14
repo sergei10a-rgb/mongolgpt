@@ -125,7 +125,7 @@ describe("plan quota reservation", () => {
     if (!quota.allowed) throw new Error("expected reservation")
 
     await expect(quota.reservation.settle({ costInMicroCents: 250_001, tokens: 4_001 })).rejects.toThrow(
-      "exceeded its reservation",
+      "урьдчилан нөөцөлсөн хэмжээнээс хэтэрлээ",
     )
   })
 
@@ -173,6 +173,6 @@ describe("plan quota reservation", () => {
         weeklyTokenLimit: 100_000,
         costs: [{ input: -1, output: 1 }],
       }),
-    ).toThrow("Model cost is invalid")
+    ).toThrow("Загварын өртөг буруу байна.")
   })
 })

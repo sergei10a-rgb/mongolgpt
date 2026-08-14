@@ -22,5 +22,6 @@ export function wslTerminalArgs(distro?: string | null) {
 
 export function requireWslIpcString(name: string, value: unknown) {
   if (typeof value === "string" && value.length > 0) return value
-  throw new Error(`Invalid ${name}`)
+  const label = name === "distro" ? "WSL түгээлтийн нэр" : name === "server id" ? "WSL серверийн ID" : name
+  throw new Error(`${label} буруу байна.`)
 }

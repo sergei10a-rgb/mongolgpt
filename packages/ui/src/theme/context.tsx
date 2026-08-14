@@ -293,12 +293,11 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     const loadThemes = () => Promise.all(themeIDs().map(load)).then(() => store.themes)
 
     const onStorage = (e: StorageEvent) => {
-      if ((e.key === STORAGE_KEYS.THEME_ID || e.key === LEGACY_STORAGE_KEYS.THEME_ID) && e.newValue) {
+      if (e.key === STORAGE_KEYS.THEME_ID && e.newValue) {
         const next = normalizeThemeId(e.newValue)
         if (!next) return
         if (next !== DEFAULT_THEME_ID && !knownThemes().has(next) && !store.themes[next]) return
-        if (e.key !== STORAGE_KEYS.THEME_ID || e.newValue !== next) write(STORAGE_KEYS.THEME_ID, next)
-        if (e.key === LEGACY_STORAGE_KEYS.THEME_ID) drop(LEGACY_STORAGE_KEYS.THEME_ID)
+        if (e.newValue !== next) write(STORAGE_KEYS.THEME_ID, next)
         setStore("themeId", next)
         if (next === DEFAULT_THEME_ID) {
           clear()
@@ -309,10 +308,9 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
           cacheThemeVariants(theme, next)
         })
       }
-      if ((e.key === STORAGE_KEYS.COLOR_SCHEME || e.key === LEGACY_STORAGE_KEYS.COLOR_SCHEME) && e.newValue) {
+      if (e.key === STORAGE_KEYS.COLOR_SCHEME && e.newValue) {
         const scheme = normalizeColorScheme(e.newValue)
-        if (e.key !== STORAGE_KEYS.COLOR_SCHEME || e.newValue !== scheme) write(STORAGE_KEYS.COLOR_SCHEME, scheme)
-        if (e.key === LEGACY_STORAGE_KEYS.COLOR_SCHEME) drop(LEGACY_STORAGE_KEYS.COLOR_SCHEME)
+        if (e.newValue !== scheme) write(STORAGE_KEYS.COLOR_SCHEME, scheme)
         setStore("colorScheme", scheme)
         setStore("mode", scheme === "system" ? getSystemMode() : scheme)
       }
@@ -438,3 +436,8 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     }
   },
 })
+
+export const ThemeTesting = {
+  migrateStoredTheme,
+  migrateStoredColorScheme,
+}

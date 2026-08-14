@@ -6,11 +6,10 @@ import { localeFromRequest } from "~/lib/language"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 
 export function createRateLimiter(modelId: string, rateLimit: number | undefined, rawIp: string, request: Request) {
-  const locale = localeFromRequest(request)
-  const dict = i18n(locale)
-
   const limits = Subscription.getFreeLimits()
   const proxyHeadersVerified = hasVerifiedProxyHeaders(request, limits.checkHeaders)
+  const locale = proxyHeadersVerified ? localeFromRequest(request) : "mn"
+  const dict = i18n(locale)
   const dailyLimit = proxyHeadersVerified ? (rateLimit ?? limits.dailyRequests) : limits.dailyRequestsFallback
   const isDefaultModel = proxyHeadersVerified && !rateLimit
 
@@ -35,7 +34,12 @@ export function createRateLimiter(modelId: string, rateLimit: number | undefined
       )
       logger.debug(`rate limit lifetime: ${Number(result.lifetime ?? 0)}, daily: ${Number(result.daily ?? 0)}`)
       if (!result.allowed)
-        throw new FreeUsageLimitError(rateLimitMessage(locale, dict["zen.api.error.rateLimitExceeded"]), retryAfter)
+        throw new FreeUsageLimitError(
+          proxyHeadersVerified
+            ? rateLimitMessage(locale, dict["zen.api.error.rateLimitExceeded"])
+            : dict["zen.api.error.rateLimitExceeded"],
+          retryAfter,
+        )
     },
     track: async () => undefined,
   }

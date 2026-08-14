@@ -17,7 +17,9 @@ describe("assertAttachmentBudget", () => {
   })
 
   test("rejects the selection before files are read when its total exceeds the limit", () => {
-    expect(() => assertAttachmentBudget([{ size: MAX_ATTACHMENT_BYTES }, { size: 1 }])).toThrow("20 MB limit")
+    expect(() => assertAttachmentBudget([{ size: MAX_ATTACHMENT_BYTES }, { size: 1 }])).toThrow(
+      "20 MB-ийн хязгаараас хэтэрлээ",
+    )
   })
 
   test("reads an approved file through a bounded buffer", async () => {
@@ -37,7 +39,7 @@ describe("assertAttachmentBudget", () => {
     try {
       await writeFile(file, "")
       await truncate(file, MAX_ATTACHMENT_BYTES + 1)
-      await expect(readAttachment(file)).rejects.toThrow("20 MB limit")
+      await expect(readAttachment(file)).rejects.toThrow("20 MB-ийн хязгаараас хэтэрлээ")
     } finally {
       await rm(directory, { recursive: true, force: true })
     }
@@ -63,7 +65,7 @@ describe("picked file authorizations", () => {
     const second = authorizations.add(1, ["b.txt"])
     authorizations.release(1, first)
 
-    await expect(authorizations.read(1, first, "a.txt")).rejects.toThrow("not selected")
+    await expect(authorizations.read(1, first, "a.txt")).rejects.toThrow("сонголтын цонхоор сонгоогүй")
     expect(new TextDecoder().decode(await authorizations.read(1, second, "b.txt"))).toBe("b.txt")
   })
 
@@ -71,7 +73,7 @@ describe("picked file authorizations", () => {
     const authorizations = createPickedFileAuthorizations(read)
     const token = authorizations.add(1, ["a.txt"])
 
-    await expect(authorizations.read(2, token, "a.txt")).rejects.toThrow("not selected")
+    await expect(authorizations.read(2, token, "a.txt")).rejects.toThrow("сонголтын цонхоор сонгоогүй")
   })
 
   test("charges actual reads against the selection budget", async () => {

@@ -27,7 +27,7 @@ function source(spec: string) {
 
 function meta(item: TuiPluginStatus, width: number) {
   if (item.source === "internal") {
-    if (width >= 120) return "Суурилсан plugin"
+    if (width >= 120) return "Суурилсан плагин"
     return "Суурилсан"
   }
   const next = source(item.spec)
@@ -41,7 +41,9 @@ function Install(props: { api: TuiPluginApi }) {
 
   useBindings(() => ({
     enabled: !busy(),
-    bindings: [{ key: "tab", desc: "Суулгах хүрээг солих", group: "Plugins", cmd: () => setGlobal((value) => !value) }],
+    bindings: [
+      { key: "tab", desc: "Суулгах хүрээг солих", group: "Плагинууд", cmd: () => setGlobal((value) => !value) },
+    ],
   }))
 
   return (
@@ -84,7 +86,7 @@ function Install(props: { api: TuiPluginApi }) {
               if (out.missing) {
                 props.api.ui.toast({
                   variant: "info",
-                  message: "npm registry/auth тохиргоогоо шалгаад дахин оролдоно уу.",
+                  message: "npm бүртгэл/нэвтрэлтийн тохиргоогоо шалгаад дахин оролдоно уу.",
                 })
               }
               show(props.api)
@@ -98,7 +100,7 @@ function Install(props: { api: TuiPluginApi }) {
             if (!out.tui) {
               props.api.ui.toast({
                 variant: "info",
-                message: "Энэ package-д апп дотор ачаалах TUI target алга.",
+                message: "Энэ багцад апп дотор ачаалах TUI хэсэг алга.",
               })
               show(props.api)
               return
@@ -201,7 +203,7 @@ function View(props: { api: TuiPluginApi }) {
 
   return (
     <DialogSelect
-      title="Plugin-ууд"
+      title="Плагинууд"
       options={rows()}
       current={cur()}
       onMove={(item) => setCur(item.value)}
@@ -241,7 +243,7 @@ const tui: TuiPlugin = async (api) => {
     commands: [
       {
         name: "plugins.list",
-        title: "Plugin-ууд",
+        title: "Плагинууд",
         category: "Систем",
         namespace: "palette",
         run() {

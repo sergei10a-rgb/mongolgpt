@@ -77,7 +77,7 @@ export function createUpdaterController(input: {
     },
     check,
     async install() {
-      if (state.status !== "ready") throw new Error("Update is not ready to install")
+      if (state.status !== "ready") throw new Error("Шинэчлэлтийг суулгахад хараахан бэлэн болоогүй байна.")
       const version = state.version
       transition({ status: "installing", version })
       await input

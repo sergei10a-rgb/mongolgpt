@@ -2,6 +2,7 @@ import { TextField } from "@mongolgpt/ui/text-field"
 import * as Sentry from "@sentry/solid"
 import { Logo } from "@mongolgpt/ui/logo"
 import { Button } from "@mongolgpt/ui/button"
+import { Collapsible } from "@mongolgpt/ui/collapsible"
 import { Component, createSignal, onMount, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { usePlatform } from "@/context/platform"
@@ -284,15 +285,23 @@ export const ErrorPage: Component<ErrorPageProps> = (props) => {
           <h1 class="text-lg font-medium text-text-strong">{language.t("error.page.title")}</h1>
           <p class="text-sm text-text-weak">{language.t(errorDescriptionKey(props.error))}</p>
         </div>
-        <TextField
-          value={formattedError()}
-          readOnly
-          copyable
-          multiline
-          class="max-h-96 w-full font-mono text-xs no-scrollbar"
-          label={language.t("error.page.details.label")}
-          hideLabel
-        />
+        <Collapsible class="w-full" variant="ghost">
+          <Collapsible.Trigger class="w-full flex items-center justify-between gap-2 text-sm text-text-weak hover:text-text-strong">
+            <span>{language.t("error.page.details.label")}</span>
+            <Collapsible.Arrow />
+          </Collapsible.Trigger>
+          <Collapsible.Content class="pt-2">
+            <TextField
+              value={formattedError()}
+              readOnly
+              copyable
+              multiline
+              class="max-h-96 w-full font-mono text-xs no-scrollbar"
+              label={language.t("error.page.details.label")}
+              hideLabel
+            />
+          </Collapsible.Content>
+        </Collapsible>
         <div class="flex flex-row items-center justify-center gap-3 flex-wrap max-w-64">
           <Button size="large" onClick={platform.restart}>
             {language.t("error.page.action.restart")}

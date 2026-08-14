@@ -24,7 +24,7 @@ interface RemovalTargets {
 
 export const UninstallCommand = {
   command: "uninstall",
-  describe: "mongolgpt-ийг uninstall хийж холбоотой файлуудыг устгах",
+  describe: "mongolgpt-ийг устгаж, холбоотой файлуудыг цэвэрлэх",
   builder: (yargs: Argv) =>
     yargs
       .option("keep-config", {
@@ -36,18 +36,18 @@ export const UninstallCommand = {
       .option("keep-data", {
         alias: "d",
         type: "boolean",
-        describe: "сешний өгөгдөл болон snapshots-ийг үлдээх",
+        describe: "сешний өгөгдөл болон агшин хуулбаруудыг үлдээх",
         default: false,
       })
       .option("dry-run", {
         type: "boolean",
-        describe: "устгахгүйгээр юу устахыг харуулах",
+        describe: "устгахгүйгээр юу устахыг урьдчилан харуулах",
         default: false,
       })
       .option("force", {
         alias: "f",
         type: "boolean",
-        describe: "баталгаажуулах prompt-уудыг алгасах",
+        describe: "баталгаажуулах асуултуудыг алгасах",
         default: false,
       }),
 
@@ -55,7 +55,7 @@ export const UninstallCommand = {
     UI.empty()
     UI.println(UI.logo("  "))
     UI.empty()
-    prompts.intro("MongolGPT uninstall хийх")
+    prompts.intro("MongolGPT устгах")
 
     const method = await Installation.method()
     prompts.log.info(`Суулгалтын арга: ${method}`)
@@ -76,7 +76,7 @@ export const UninstallCommand = {
     }
 
     if (args.dryRun) {
-      prompts.log.warn("Dry run - өөрчлөлт хийгдээгүй")
+      prompts.log.warn("Туршилтын горим: өөрчлөлт хийгдээгүй")
       prompts.outro("Дууслаа")
       return
     }
@@ -120,11 +120,11 @@ async function showRemovalSummary(targets: RemovalTargets, method: Installation.
   }
 
   if (targets.binary) {
-    prompts.log.info(`  ✓ Binary файл: ${shortenPath(targets.binary)}`)
+    prompts.log.info(`  ✓ Гүйцэтгэх файл: ${shortenPath(targets.binary)}`)
   }
 
   if (targets.shellConfig) {
-    prompts.log.info(`  ✓ Shell PATH: ${shortenPath(targets.shellConfig)}`)
+    prompts.log.info(`  ✓ Shell-ийн PATH тохиргоо: ${shortenPath(targets.shellConfig)}`)
   }
 
   if (method !== "curl" && method !== "unknown") {
@@ -196,10 +196,12 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
         nothrow: true,
       })
       if (result.code !== 0) {
-        spinner.stop(`Package manager uninstall амжилтгүй: гарах код ${result.code}`, 1)
+        spinner.stop(`Багц зохицуулагчаар устгаж чадсангүй: гарах код ${result.code}`, 1)
         const text = `${result.stdout.toString("utf8")}\n${result.stderr.toString("utf8")}`
         if (method === "choco" && text.includes("not running from an elevated command shell")) {
-          prompts.log.warn(`'${cmd.join(" ")}'-г elevated command shell-ээс ажиллуулах шаардлагатай байж магадгүй`)
+          prompts.log.warn(
+            `'${cmd.join(" ")}'-г администраторын командын цонхноос ажиллуулах шаардлагатай байж магадгүй`,
+          )
         } else {
           prompts.log.warn(`Гараар ажиллуулах шаардлагатай байж магадгүй: ${cmd.join(" ")}`)
         }
@@ -211,7 +213,7 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
 
   if (method === "curl" && targets.binary) {
     UI.empty()
-    prompts.log.message("Binary-г бүрэн устгахын тулд дараахыг ажиллуулна уу:")
+    prompts.log.message("Гүйцэтгэх файлыг бүрэн устгахын тулд дараахыг ажиллуулна уу:")
     prompts.log.info(`  rm "${targets.binary}"`)
 
     const binDir = path.dirname(targets.binary)

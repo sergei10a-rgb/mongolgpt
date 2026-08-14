@@ -68,18 +68,18 @@ export function planQuotaReservationBounds(input: {
   costs: Array<ModelCost | undefined>
 }) {
   if (!Number.isSafeInteger(input.weeklyTokenLimit) || input.weeklyTokenLimit < 1) {
-    throw new TypeError("Plan weekly token limit is invalid")
+    throw new TypeError("Багцын долоо хоногийн токены хязгаар буруу байна.")
   }
   const configured = input.maxTokensPerRequest ?? input.weeklyTokenLimit
   if (!Number.isSafeInteger(configured) || configured < 1) {
-    throw new TypeError("Model request token bound is invalid")
+    throw new TypeError("Загварын хүсэлтийн токены хязгаар буруу байна.")
   }
   const tokens = Math.min(configured, input.weeklyTokenLimit)
   const rates = input.costs.flatMap((cost) => (cost ? Object.values(cost) : []))
-  if (rates.some((rate) => !Number.isFinite(rate) || rate < 0)) throw new TypeError("Model cost is invalid")
+  if (rates.some((rate) => !Number.isFinite(rate) || rate < 0)) throw new TypeError("Загварын өртөг буруу байна.")
   const highestRate = Math.max(0, ...rates)
   const costInMicroCents = Math.max(1, centsToMicroCents(highestRate * tokens * 100))
-  if (!Number.isSafeInteger(costInMicroCents)) throw new TypeError("Model request cost bound is invalid")
+  if (!Number.isSafeInteger(costInMicroCents)) throw new TypeError("Загварын хүсэлтийн өртгийн хязгаар буруу байна.")
   return { costInMicroCents, tokens }
 }
 
@@ -273,9 +273,11 @@ export async function reservePlanQuota(
         }
         settlementState.promise = client(scope, settleCommand).then((value) => {
           const parsed = responseObject(value)
-          if (parsed?.overrun === true) throw new Error("Plan quota settlement exceeded its reservation")
+          if (parsed?.overrun === true) {
+            throw new Error("Багцын хэрэглээний тооцоо урьдчилан нөөцөлсөн хэмжээнээс хэтэрлээ.")
+          }
           if (!parsed || (parsed.deactivated !== true && !validLedgerValues(parsed.values, ledgerKeys))) {
-            throw new Error("Plan quota settlement response is invalid")
+            throw new Error("Багцын хэрэглээний тооцооны хариу буруу байна.")
           }
         })
         return settlementState.promise

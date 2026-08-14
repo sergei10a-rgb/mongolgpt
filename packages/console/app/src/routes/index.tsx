@@ -95,7 +95,7 @@ export default function Home() {
                     Windows
                   </Tabs.Trigger>
                   <Tabs.Trigger value="source" data-slot="tab">
-                    source
+                    Эх код
                   </Tabs.Trigger>
                   <Tabs.Indicator />
                 </Tabs.List>

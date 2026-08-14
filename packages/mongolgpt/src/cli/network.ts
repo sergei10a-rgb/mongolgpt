@@ -6,28 +6,28 @@ import { Effect } from "effect"
 const options = {
   port: {
     type: "number" as const,
-    describe: "сонсох port",
+    describe: "сонсох порт",
     default: 0,
   },
   hostname: {
     type: "string" as const,
-    describe: "сонсох hostname",
+    describe: "сонсох хостын нэр",
     default: "127.0.0.1",
   },
   mdns: {
     type: "boolean" as const,
-    describe: "mDNS service discovery идэвхжүүлэх (hostname-ийн анхдагч утгыг 0.0.0.0 болгоно)",
+    describe: "mDNS үйлчилгээний илрүүлэлтийг идэвхжүүлэх (хостын нэрийг заагаагүй бол 0.0.0.0 ашиглана)",
     default: false,
   },
   "mdns-domain": {
     type: "string" as const,
-    describe: "mDNS service-ийн custom domain нэр (анхдагч: mongolgpt.local)",
+    describe: "mDNS үйлчилгээний өөрийн домэйн нэр (анхдагч: mongolgpt.local)",
     default: "mongolgpt.local",
   },
   cors: {
     type: "string" as const,
     array: true,
-    describe: "CORS-д зөвшөөрөх нэмэлт domain-ууд",
+    describe: "CORS-д зөвшөөрөх нэмэлт домэйнүүд",
     default: [] as string[],
   },
 }

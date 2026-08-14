@@ -141,7 +141,7 @@ export const RunCommand = effectCmd({
         default: [],
       })
       .option("command", {
-        describe: "ажиллуулах команд, аргументэд message ашиглана",
+        describe: "ажиллуулах команд; аргументэд message ашиглана",
         type: "string",
       })
       .option("continue", {
@@ -155,27 +155,27 @@ export const RunCommand = effectCmd({
         type: "string",
       })
       .option("fork", {
-        describe: "үргэлжлүүлэхээс өмнө сешнийг fork хийх (--continue эсвэл --session шаардлагатай)",
+        describe: "үргэлжлүүлэхээс өмнө сешнийг салбарлан үргэлжлүүлэх (--continue эсвэл --session шаардлагатай)",
         type: "boolean",
       })
       .option("share", {
         type: "boolean",
-        describe: "сешнийг share хийх",
+        describe: "сешнийг хуваалцах",
       })
       .option("model", {
         type: "string",
         alias: ["m"],
-        describe: "ашиглах загвар, provider/model форматтай",
+        describe: "ашиглах загвар, provider/model хэлбэрээр өгнө",
       })
       .option("agent", {
         type: "string",
-        describe: "ашиглах agent",
+        describe: "ашиглах агент",
       })
       .option("format", {
         type: "string",
         choices: ["default", "json"],
         default: "default",
-        describe: "формат: default (форматлагдсан) эсвэл json (түүхий JSON events)",
+        describe: "формат: default (форматлагдсан) эсвэл json (түүхий JSON үйл явдал)",
       })
       .option("file", {
         alias: ["f"],
@@ -207,15 +207,15 @@ export const RunCommand = effectCmd({
       })
       .option("port", {
         type: "number",
-        describe: "локал серверийн port (утга өгөөгүй бол санамсаргүй port ашиглана)",
+        describe: "локал серверийн порт (утга өгөөгүй бол санамсаргүй порт ашиглана)",
       })
       .option("variant", {
         type: "string",
-        describe: "загварын variant (provider-т хамаарах reasoning effort, жишээ: high, max, minimal)",
+        describe: "загварын хувилбар (үйлчилгээ үзүүлэгчээс хамаарах бодолтын түвшин, жишээ: high, max, minimal)",
       })
       .option("thinking", {
         type: "boolean",
-        describe: "thinking block-уудыг харуулах",
+        describe: "бодох явцын хэсгүүдийг харуулах",
       })
       .option("mini", {
         type: "boolean",
@@ -232,7 +232,7 @@ export const RunCommand = effectCmd({
       .option("replay-limit", {
         type: "number",
         hidden: true,
-        describe: "interactive replay-д харагдах түүхийг хамгийн шинэ N мессежээр хязгаарлах",
+        describe: "интерактив дахин тоглуулах түүхийг хамгийн шинэ N мессежээр хязгаарлах",
       })
       .option("dangerously-skip-permissions", {
         type: "boolean",
@@ -588,7 +588,7 @@ export const RunCommand = effectCmd({
           UI.println(
             UI.Style.TEXT_WARNING_BOLD + "!",
             UI.Style.TEXT_NORMAL,
-            `agent "${name}" not found. Falling back to default agent`,
+            `"${name}" агент олдсонгүй. Анхдагч агент руу шилжиж байна`,
           )
           return undefined
         }
@@ -596,7 +596,7 @@ export const RunCommand = effectCmd({
           UI.println(
             UI.Style.TEXT_WARNING_BOLD + "!",
             UI.Style.TEXT_NORMAL,
-            `agent "${name}" is a subagent, not a primary agent. Falling back to default agent`,
+            `"${name}" нь үндсэн агент биш, дэд агент байна. Анхдагч агент руу шилжиж байна`,
           )
           return undefined
         }
@@ -616,7 +616,7 @@ export const RunCommand = effectCmd({
           UI.println(
             UI.Style.TEXT_WARNING_BOLD + "!",
             UI.Style.TEXT_NORMAL,
-            `failed to list agents from ${args.attach}. Falling back to default agent`,
+            `${args.attach}-ээс агентуудын жагсаалтыг авч чадсангүй. Анхдагч агент руу шилжиж байна`,
           )
           return undefined
         }
@@ -626,7 +626,7 @@ export const RunCommand = effectCmd({
           UI.println(
             UI.Style.TEXT_WARNING_BOLD + "!",
             UI.Style.TEXT_NORMAL,
-            `agent "${name}" not found. Falling back to default agent`,
+            `"${name}" агент олдсонгүй. Анхдагч агент руу шилжиж байна`,
           )
           return undefined
         }
@@ -635,7 +635,7 @@ export const RunCommand = effectCmd({
           UI.println(
             UI.Style.TEXT_WARNING_BOLD + "!",
             UI.Style.TEXT_NORMAL,
-            `agent "${name}" is a subagent, not a primary agent. Falling back to default agent`,
+            `"${name}" нь үндсэн агент биш, дэд агент байна. Анхдагч агент руу шилжиж байна`,
           )
           return undefined
         }
@@ -747,7 +747,7 @@ export const RunCommand = effectCmd({
                 if (emit("reasoning", { part })) continue
                 const text = part.text.trim()
                 if (!text) continue
-                const line = `Thinking: ${text}`
+                const line = `Бодож байна: ${text}`
                 if (process.stdout.isTTY) {
                   UI.empty()
                   UI.println(`${UI.Style.TEXT_DIM}\u001b[3m${line}\u001b[0m${UI.Style.TEXT_NORMAL}`)
@@ -791,7 +791,7 @@ export const RunCommand = effectCmd({
                 UI.println(
                   UI.Style.TEXT_WARNING_BOLD + "!",
                   UI.Style.TEXT_NORMAL +
-                    `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
+                    `Зөвшөөрөл хүссэн: ${permission.permission} (${permission.patterns.join(", ")}); автоматаар татгалзаж байна`,
                 )
                 await client.permission.reply({
                   requestID: permission.id,
