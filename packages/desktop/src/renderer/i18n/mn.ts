@@ -1,7 +1,7 @@
 export const dict = {
   "desktop.menu.checkForUpdates": "Шинэчлэлт шалгах...",
   "desktop.menu.installCli": "CLI суулгах...",
-  "desktop.menu.reloadWebview": "Webview-ийг дахин ачаалах",
+  "desktop.menu.reloadWebview": "Аппын цонхыг дахин ачаалах",
   "desktop.menu.restart": "Дахин эхлүүлэх",
 
   "desktop.dialog.chooseFolder": "Хавтас сонгох",
