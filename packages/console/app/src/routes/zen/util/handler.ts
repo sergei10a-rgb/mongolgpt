@@ -16,6 +16,7 @@ import { recordPlanUsageWithDb } from "@mongolgpt/console-core/plan-usage.js"
 import { recordEstimatedModelCostWithDb } from "@mongolgpt/console-core/finance-ledger.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { ZenData } from "@mongolgpt/console-core/model.js"
+import { isProviderAllowedForStage } from "@mongolgpt/console-core/model-config.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 import { PlanData } from "@mongolgpt/console-core/plan.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
@@ -597,7 +598,9 @@ export async function handler(
       }
 
       // Prioritize trial providers
-      let allProviders = modelInfo.providers.filter((provider) => !provider.disabled)
+      let allProviders = modelInfo.providers
+        .filter((provider) => !provider.disabled)
+        .filter((provider) => isProviderAllowedForStage(zenData.providers[provider.id], Resource.App.stage))
       if (trialProviders) {
         allProviders = allProviders.map((provider) => ({
           ...provider,
@@ -636,6 +639,8 @@ export async function handler(
           })
           .filter((p) => p.priority <= topPriority)
           .flatMap((provider) => Array<typeof provider>(provider.weight).fill(provider))
+
+        if (providers.length === 0) return undefined
 
         // Use the last 4 characters of session ID to select a provider
         let h = 0

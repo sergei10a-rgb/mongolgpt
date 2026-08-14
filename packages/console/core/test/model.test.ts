@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { ZenData } from "../src/model"
+import { isProviderAllowedForStage } from "../src/model-config"
 
 const model = {
   name: "MongolGPT Free Auto",
@@ -27,6 +28,29 @@ const config = (freeAuto: Record<string, unknown>) => ({
 const validate = (input: unknown) => ZenData.validate.schema.parse(input)
 
 describe("MongolGPT Free Auto model contract", () => {
+  test("allows only explicitly approved providers in production", () => {
+    const unapproved = { productionUseApproved: false }
+    const approved = { productionUseApproved: true }
+
+    expect(isProviderAllowedForStage(unapproved, "production")).toBe(false)
+    expect(isProviderAllowedForStage(approved, "production")).toBe(true)
+  })
+
+  test("keeps non-production provider configuration usable", () => {
+    expect(isProviderAllowedForStage({}, "dev")).toBe(true)
+    expect(isProviderAllowedForStage({ productionUseApproved: false }, "test")).toBe(true)
+  })
+
+  test("does not allow an unapproved fallback to bypass production policy", () => {
+    const providers = {
+      primary: { productionUseApproved: true },
+      fallback: { productionUseApproved: false },
+    }
+
+    expect(isProviderAllowedForStage(providers.primary, "production")).toBe(true)
+    expect(isProviderAllowedForStage(providers.fallback, "production")).toBe(false)
+  })
+
   test("accepts an account-only production route with a fallback", () => {
     expect(() => validate(config(model))).not.toThrow()
   })

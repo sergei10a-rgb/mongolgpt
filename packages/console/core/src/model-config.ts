@@ -56,6 +56,15 @@ const ProviderSchema = z.object({
   budget: z.number().optional(),
 })
 
+export type MongolGPTProviderConfig = z.infer<typeof ProviderSchema>
+
+export function isProviderAllowedForStage(
+  provider: Pick<MongolGPTProviderConfig, "productionUseApproved">,
+  stage: string,
+) {
+  return stage !== "production" || provider.productionUseApproved === true
+}
+
 export const MongolGPTModelConfigurationSchema = z
   .object({
     zenModels: z.record(
