@@ -6,7 +6,7 @@ import { ID } from "@mongolgpt/schema/permission-v1"
 
 export class RejectedError extends Schema.TaggedErrorClass<RejectedError>()("PermissionRejectedError", {}) {
   override get message() {
-    return "The user rejected permission to use this specific tool call."
+    return "Хэрэглэгч энэ хэрэгслийн дуудлагад зөвшөөрөл өгөөгүй."
   }
 }
 

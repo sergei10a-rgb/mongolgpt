@@ -52,7 +52,7 @@ describe("mongolgpt run (non-interactive subprocess)", () => {
         yield* llm.reason("  considering  ", { text: "  answer  " })
         const thinking = yield* mongolgpt.run("think", { extraArgs: ["--thinking"] })
         mongolgpt.expectExit(thinking, 0)
-        expect(thinking.stdout).toBe("Thinking: considering\nanswer\n")
+        expect(thinking.stdout).toBe("Бодож байна: considering\nanswer\n")
 
         yield* llm.reason("hidden", { text: "visible" })
         const plain = yield* mongolgpt.run("think again")
@@ -250,7 +250,7 @@ describe("mongolgpt run (non-interactive subprocess)", () => {
         yield* llm.text("continued after rejection")
         const denied = yield* mongolgpt.run("request permission", { permission: { bash: "ask" } })
         mongolgpt.expectExit(denied, 0)
-        expect(denied.stderr).toContain("permission requested: bash")
+        expect(denied.stderr).toContain("Зөвшөөрөл хүссэн: bash")
         expect(denied.stdout).toBe("")
 
         yield* llm.reset
@@ -261,7 +261,7 @@ describe("mongolgpt run (non-interactive subprocess)", () => {
           extraArgs: ["--dangerously-skip-permissions"],
         })
         mongolgpt.expectExit(allowed, 0)
-        expect(allowed.stderr).not.toContain("permission requested: bash")
+        expect(allowed.stderr).not.toContain("Зөвшөөрөл хүссэн: bash")
         expect(allowed.stdout).toContain("continued after approval")
 
         yield* llm.reset

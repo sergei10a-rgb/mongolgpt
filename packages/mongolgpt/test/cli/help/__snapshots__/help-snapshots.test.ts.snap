@@ -11,13 +11,13 @@ Options:
       --print-logs   логийг stderr рүү хэвлэх                                              [boolean]
       --log-level    логийн түвшин              [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
       --pure         гадаад plugin-гүй ажиллуулах                                          [boolean]
-      --port         сонсох port                                               [number] [default: 0]
-      --hostname     сонсох hostname                                 [string] [default: "127.0.0.1"]
-      --mdns         mDNS service discovery идэвхжүүлэх (hostname-ийн анхдагч утгыг 0.0.0.0 болгоно)
-                                                                          [boolean] [default: false]
-      --mdns-domain  mDNS service-ийн custom domain нэр (анхдагч: mongolgpt.local)
+      --port         сонсох порт                                               [number] [default: 0]
+      --hostname     сонсох хостын нэр                               [string] [default: "127.0.0.1"]
+      --mdns         mDNS үйлчилгээний илрүүлэлтийг идэвхжүүлэх (хостын нэрийг заагаагүй бол 0.0.0.0
+                     ашиглана)                                            [boolean] [default: false]
+      --mdns-domain  mDNS үйлчилгээний өөрийн домэйн нэр (анхдагч: mongolgpt.local)
                                                                [string] [default: "mongolgpt.local"]
-      --cors         CORS-д зөвшөөрөх нэмэлт domain-ууд                        [array] [default: []]
+      --cors         CORS-д зөвшөөрөх нэмэлт домэйнүүд                         [array] [default: []]
       --cwd          ажлын хавтас [string] [default: "<HOME>"]"
 `;
 
@@ -84,16 +84,16 @@ Options:
       --log-level                     логийн түвшин
                                                 [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
       --pure                          гадаад plugin-гүй ажиллуулах                         [boolean]
-      --command                       ажиллуулах команд, аргументэд message ашиглана        [string]
+      --command                       ажиллуулах команд; аргументэд message ашиглана        [string]
   -c, --continue                      сүүлийн сешнийг үргэлжлүүлэх                         [boolean]
   -s, --session                       үргэлжлүүлэх сешний ID                                [string]
-      --fork                          үргэлжлүүлэхээс өмнө сешнийг fork хийх (--continue эсвэл
-                                      --session шаардлагатай)                              [boolean]
-      --share                         сешнийг share хийх                                   [boolean]
-  -m, --model                         ашиглах загвар, provider/model форматтай              [string]
-      --agent                         ашиглах agent                                         [string]
-      --format                        формат: default (форматлагдсан) эсвэл json (түүхий JSON
-                                      events)
+      --fork                          үргэлжлүүлэхээс өмнө сешнийг салбарлан үргэлжлүүлэх
+                                      (--continue эсвэл --session шаардлагатай)            [boolean]
+      --share                         сешнийг хуваалцах                                    [boolean]
+  -m, --model                         ашиглах загвар, provider/model хэлбэрээр өгнө         [string]
+      --agent                         ашиглах агент                                         [string]
+      --format                        формат: default (форматлагдсан) эсвэл json (түүхий JSON үйл
+                                      явдал)
                                           [string] [choices: "default", "json"] [default: "default"]
   -f, --file                          мессежид хавсаргах файл(ууд)                           [array]
       --title                         сешний гарчиг (утга өгөөгүй бол богиносгосон prompt ашиглана)
@@ -106,11 +106,11 @@ Options:
                                       MONGOLGPT_SERVER_USERNAME эсвэл 'mongolgpt')          [string]
       --dir                           ажиллуулах хавтас, attach хийж байвал алсын сервер дээрх зам
                                                                                             [string]
-      --port                          локал серверийн port (утга өгөөгүй бол санамсаргүй port
+      --port                          локал серверийн порт (утга өгөөгүй бол санамсаргүй порт
                                       ашиглана)                                             [number]
-      --variant                       загварын variant (provider-т хамаарах reasoning effort, жишээ:
-                                      high, max, minimal)                                   [string]
-      --thinking                      thinking block-уудыг харуулах                        [boolean]
+      --variant                       загварын хувилбар (үйлчилгээ үзүүлэгчээс хамаарах бодолтын
+                                      түвшин, жишээ: high, max, minimal)                    [string]
+      --thinking                      бодох явцын хэсгүүдийг харуулах                      [boolean]
       --dangerously-skip-permissions  шууд deny хийгдээгүй permission-уудыг автоматаар зөвшөөрөх
                                       (аюултай!)                          [boolean] [default: false]"
 `;
@@ -200,7 +200,7 @@ Options:
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt uninstall --help 1`] = `
 "mongolgpt uninstall
 
-mongolgpt-ийг uninstall хийж холбоотой файлуудыг устгах
+mongolgpt-ийг устгаж, холбоотой файлуудыг цэвэрлэх
 
 Options:
   -h, --help         тусламж харуулах                                                      [boolean]
@@ -209,9 +209,9 @@ Options:
       --log-level    логийн түвшин              [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
       --pure         гадаад plugin-гүй ажиллуулах                                          [boolean]
   -c, --keep-config  тохиргооны файлуудыг үлдээх                          [boolean] [default: false]
-  -d, --keep-data    сешний өгөгдөл болон snapshots-ийг үлдээх            [boolean] [default: false]
-      --dry-run      устгахгүйгээр юу устахыг харуулах                    [boolean] [default: false]
-  -f, --force        баталгаажуулах prompt-уудыг алгасах                  [boolean] [default: false]"
+  -d, --keep-data    сешний өгөгдөл болон агшин хуулбаруудыг үлдээх       [boolean] [default: false]
+      --dry-run      устгахгүйгээр юу устахыг урьдчилан харуулах          [boolean] [default: false]
+  -f, --force        баталгаажуулах асуултуудыг алгасах                   [boolean] [default: false]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt serve --help 1`] = `
@@ -225,13 +225,13 @@ Options:
       --print-logs   логийг stderr рүү хэвлэх                                              [boolean]
       --log-level    логийн түвшин              [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
       --pure         гадаад plugin-гүй ажиллуулах                                          [boolean]
-      --port         сонсох port                                               [number] [default: 0]
-      --hostname     сонсох hostname                                 [string] [default: "127.0.0.1"]
-      --mdns         mDNS service discovery идэвхжүүлэх (hostname-ийн анхдагч утгыг 0.0.0.0 болгоно)
-                                                                          [boolean] [default: false]
-      --mdns-domain  mDNS service-ийн custom domain нэр (анхдагч: mongolgpt.local)
+      --port         сонсох порт                                               [number] [default: 0]
+      --hostname     сонсох хостын нэр                               [string] [default: "127.0.0.1"]
+      --mdns         mDNS үйлчилгээний илрүүлэлтийг идэвхжүүлэх (хостын нэрийг заагаагүй бол 0.0.0.0
+                     ашиглана)                                            [boolean] [default: false]
+      --mdns-domain  mDNS үйлчилгээний өөрийн домэйн нэр (анхдагч: mongolgpt.local)
                                                                [string] [default: "mongolgpt.local"]
-      --cors         CORS-д зөвшөөрөх нэмэлт domain-ууд                        [array] [default: []]"
+      --cors         CORS-д зөвшөөрөх нэмэлт домэйнүүд                         [array] [default: []]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt web --help 1`] = `
@@ -245,13 +245,13 @@ Options:
       --print-logs   логийг stderr рүү хэвлэх                                              [boolean]
       --log-level    логийн түвшин              [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
       --pure         гадаад plugin-гүй ажиллуулах                                          [boolean]
-      --port         сонсох port                                               [number] [default: 0]
-      --hostname     сонсох hostname                                 [string] [default: "127.0.0.1"]
-      --mdns         mDNS service discovery идэвхжүүлэх (hostname-ийн анхдагч утгыг 0.0.0.0 болгоно)
-                                                                          [boolean] [default: false]
-      --mdns-domain  mDNS service-ийн custom domain нэр (анхдагч: mongolgpt.local)
+      --port         сонсох порт                                               [number] [default: 0]
+      --hostname     сонсох хостын нэр                               [string] [default: "127.0.0.1"]
+      --mdns         mDNS үйлчилгээний илрүүлэлтийг идэвхжүүлэх (хостын нэрийг заагаагүй бол 0.0.0.0
+                     ашиглана)                                            [boolean] [default: false]
+      --mdns-domain  mDNS үйлчилгээний өөрийн домэйн нэр (анхдагч: mongolgpt.local)
                                                                [string] [default: "mongolgpt.local"]
-      --cors         CORS-д зөвшөөрөх нэмэлт domain-ууд                        [array] [default: []]"
+      --cors         CORS-д зөвшөөрөх нэмэлт домэйнүүд                         [array] [default: []]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt models --help 1`] = `
