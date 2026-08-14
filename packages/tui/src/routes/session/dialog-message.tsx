@@ -74,7 +74,7 @@ export function DialogMessage(props: {
           },
         },
         {
-          title: "Fork",
+          title: "Салаалах",
           value: "session.fork",
           description: "шинэ сешн үүсгэх",
           onSelect: async (dialog) => {
