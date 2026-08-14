@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { readdir } from "node:fs/promises"
+import { readFile, readdir } from "node:fs/promises"
 
 const roots = [
   new URL("../../app/src/", import.meta.url),
@@ -22,11 +22,21 @@ async function sourceFiles(directory: URL): Promise<URL[]> {
   return files.flat()
 }
 
+async function sourceText(file: URL) {
+  try {
+    return await readFile(file, "utf8")
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") return undefined
+    throw error
+  }
+}
+
 describe("runtime legacy brand contract", () => {
   test("keeps retired Zen and Go product names out of active clients", async () => {
     for (const root of roots) {
       for (const file of await sourceFiles(root)) {
-        const source = await Bun.file(file).text()
+        const source = await sourceText(file)
+        if (source === undefined) continue
         expect(source).not.toMatch(/MongolGPT (?:Zen|Go)\b/)
         expect(source).not.toMatch(/mongolgpt(?:Zen|Go)/)
       }
