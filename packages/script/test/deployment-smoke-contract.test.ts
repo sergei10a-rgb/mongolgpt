@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import { inspectAnonymousRuntimeToken, inspectRuntimeTokenPreflight } from "../../../script/deployment-smoke"
+import {
+  inspectAnonymousRuntimeToken,
+  inspectHostedAuthorizeRedirect,
+  inspectRuntimeTokenPreflight,
+} from "../../../script/deployment-smoke"
 import {
   inspectAuthHealth,
   inspectAdminProtection,
@@ -359,6 +363,66 @@ describe("hosted runtime token smoke contract", () => {
       ),
       "CORS origin",
     )
+  })
+})
+
+describe("hosted authorization smoke contract", () => {
+  const requestUrl = "https://dev.mgpt.mn/auth/authorize?continue=/auth/app"
+  const authOrigin = "https://auth.dev.mgpt.mn"
+  const callback = "https://dev.mgpt.mn/auth/callback/auth/app"
+  const location = `${authOrigin}/authorize?client_id=app&redirect_uri=${encodeURIComponent(callback)}`
+
+  test("requires the console to redirect to the dedicated auth worker", () => {
+    expect(() =>
+      inspectHostedAuthorizeRedirect({
+        requestUrl,
+        responseUrl: requestUrl,
+        status: 302,
+        location,
+        authOrigin,
+      }),
+    ).not.toThrow()
+    expect(() =>
+      inspectHostedAuthorizeRedirect({
+        requestUrl,
+        responseUrl: requestUrl,
+        status: 200,
+        authOrigin,
+      }),
+    ).toThrow("expected a redirect")
+  })
+
+  test("rejects static-app and foreign authorization redirects", () => {
+    expect(() =>
+      inspectHostedAuthorizeRedirect({
+        requestUrl,
+        responseUrl: requestUrl,
+        status: 302,
+        location: `https://app.dev.mgpt.mn/authorize?client_id=app&redirect_uri=${encodeURIComponent(callback)}`,
+        authOrigin,
+      }),
+    ).toThrow("auth worker")
+    expect(() =>
+      inspectHostedAuthorizeRedirect({
+        requestUrl,
+        responseUrl: requestUrl,
+        status: 302,
+        location: `https://example.com/authorize?client_id=app&redirect_uri=${encodeURIComponent(callback)}`,
+        authOrigin,
+      }),
+    ).toThrow("auth worker")
+  })
+
+  test("requires the fixed host-only app callback", () => {
+    expect(() =>
+      inspectHostedAuthorizeRedirect({
+        requestUrl,
+        responseUrl: requestUrl,
+        status: 302,
+        location: `${authOrigin}/authorize?client_id=app&redirect_uri=${encodeURIComponent("https://example.com/callback")}`,
+        authOrigin,
+      }),
+    ).toThrow("callback is invalid")
   })
 })
 

@@ -93,6 +93,9 @@ async function check(
         if (health === "payment") inspectPaymentHealth(body, result.paymentEnvironment)
       } else if (name === "console") {
         await checkHostedRuntimeToken(url, appUrl)
+        const authHealthUrl = deploymentEndpoints(result).authHealth
+        if (!authHealthUrl) throw new Error("hosted auth endpoint is missing")
+        await checkHostedAuthorize(url, new URL(authHealthUrl).origin)
       } else if (name === "docs") {
         inspectHtmlContentType(response.headers.get("content-type"), "docs response")
         const html = await response.text()
@@ -100,22 +103,16 @@ async function check(
       } else if (name === "app") {
         inspectHtmlContentType(response.headers.get("content-type"), "app response")
         const html = await response.text()
-        const contract = inspectAppHtml(html, url)
+        const contract = inspectAppDeployment(html, url, result)
         await checkStaticAssets(url, html, "app response")
-        const expectedChannel = result.stage === "production" ? "prod" : result.stage === "dev" ? "dev" : "beta"
-        if (contract.channel !== expectedChannel) {
-          throw new Error(`app channel is ${contract.channel}; expected ${expectedChannel}`)
-        }
-        const expectedMode = result.hostedServices ? "hosted" : "local-bridge"
-        if (contract.mode !== expectedMode)
-          throw new Error(`app runtime mode is ${contract.mode}; expected ${expectedMode}`)
         if (contract.mode === "hosted") {
           const runtimeHealthUrl = deploymentEndpoints(result).runtimeHealth
           if (!runtimeHealthUrl) throw new Error("hosted app runtime endpoint is missing")
-          inspectHostedAppRuntime(contract, { channel: expectedChannel, runtimeHealthUrl })
+          inspectHostedAppRuntime(contract, { channel: appChannel(result), runtimeHealthUrl })
           await checkAgentRuntime(contract.serverUrl, result.stage, runtimeVersion)
           await checkHostedSessionBoundary(contract.serverUrl, url)
         }
+        await checkDirectAppRoute(url, result)
       } else {
         await response.body?.cancel()
       }
@@ -129,6 +126,97 @@ async function check(
   }
 
   throw new Error(`${name} smoke check failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`)
+}
+
+function inspectAppDeployment(html: string, url: string, result: DeploymentPreflightResult) {
+  const contract = inspectAppHtml(html, url)
+  const expectedChannel = appChannel(result)
+  if (contract.channel !== expectedChannel) {
+    throw new Error(`app channel is ${contract.channel}; expected ${expectedChannel}`)
+  }
+  const expectedMode = result.hostedServices ? "hosted" : "local-bridge"
+  if (contract.mode !== expectedMode) {
+    throw new Error(`app runtime mode is ${contract.mode}; expected ${expectedMode}`)
+  }
+  return contract
+}
+
+function appChannel(result: DeploymentPreflightResult) {
+  return result.stage === "production" ? "prod" : result.stage === "dev" ? "dev" : "beta"
+}
+
+async function checkDirectAppRoute(appUrl: string, result: DeploymentPreflightResult) {
+  const directUrl = new URL("/new-session", `${appUrl}/`).toString()
+  const response = await fetch(directUrl, {
+    headers: { "User-Agent": "mongolgpt-deployment-smoke" },
+    redirect: "follow",
+    signal: AbortSignal.timeout(15_000),
+  })
+  inspectResponseOrigin({
+    requestUrl: directUrl,
+    responseUrl: response.url,
+    status: response.status,
+    location: response.headers.get("location"),
+    label: "app direct navigation",
+  })
+  if (!response.ok) throw new Error(`app direct navigation HTTP ${response.status}: ${directUrl}`)
+  inspectHtmlContentType(response.headers.get("content-type"), "app direct navigation")
+  const html = await response.text()
+  inspectAppDeployment(html, directUrl, result)
+  await checkStaticAssets(directUrl, html, "app direct navigation")
+}
+
+async function checkHostedAuthorize(consoleUrl: string, authOrigin: string) {
+  const requestUrl = new URL("/auth/authorize?continue=/auth/app", `${consoleUrl}/`).toString()
+  const response = await fetch(requestUrl, {
+    headers: { "User-Agent": "mongolgpt-deployment-smoke" },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  inspectHostedAuthorizeRedirect({
+    requestUrl,
+    responseUrl: response.url,
+    status: response.status,
+    location: response.headers.get("location"),
+    authOrigin,
+  })
+  await response.body?.cancel()
+}
+
+export function inspectHostedAuthorizeRedirect(input: {
+  requestUrl: string
+  responseUrl?: string | null
+  status: number
+  location?: string | null
+  authOrigin: string
+}) {
+  const request = new URL(input.requestUrl)
+  const expectedAuth = new URL(input.authOrigin)
+  if (request.protocol !== "https:" || expectedAuth.protocol !== "https:") {
+    throw new Error("hosted authorization URLs must use HTTPS")
+  }
+  if (input.responseUrl && new URL(input.responseUrl).origin !== request.origin) {
+    throw new Error("hosted authorization response left the console origin")
+  }
+  if (input.status !== 302 || !input.location) {
+    throw new Error(`hosted authorization returned HTTP ${input.status}; expected a redirect`)
+  }
+
+  const target = new URL(input.location, request)
+  if (target.origin !== expectedAuth.origin || target.pathname !== "/authorize") {
+    throw new Error(`hosted authorization did not redirect to the auth worker: ${target}`)
+  }
+  if (target.searchParams.get("client_id") !== "app") {
+    throw new Error("hosted authorization client ID is not app")
+  }
+
+  const callbackValue = target.searchParams.get("redirect_uri")
+  if (!callbackValue) throw new Error("hosted authorization callback is missing")
+  const callback = new URL(callbackValue)
+  const expectedCallback = new URL("/auth/callback/auth/app", request.origin)
+  if (callback.toString() !== expectedCallback.toString()) {
+    throw new Error(`hosted authorization callback is invalid: ${callback}`)
+  }
 }
 
 async function checkHostedRuntimeToken(consoleUrl: string, appUrl: string) {

@@ -36,4 +36,12 @@ test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", a
   await expect.poll(() => state.pendingRequests.size, { message: "deployed app network did not settle" }).toBe(0)
 
   expectNoDeployedSmokeFailures(state)
+
+  await page.goto("/new-session", { waitUntil: "domcontentloaded" })
+  expect(new URL(page.url()).origin).toBe(appOrigin)
+  expect(new URL(page.url()).pathname).toBe("/new-session")
+  await expect(page.getByRole("heading", { name: "MongolGPT-д нэвтэрнэ үү" })).toBeVisible()
+  await expect.poll(() => state.pendingRequests.size, { message: "direct navigation network did not settle" }).toBe(0)
+
+  expectNoDeployedSmokeFailures(state)
 })
