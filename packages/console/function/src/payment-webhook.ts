@@ -45,6 +45,10 @@ type Dependencies = {
     environment: "disabled" | "sandbox" | "production"
     catalog: boolean
   }
+  productionApprovals?: {
+    realPaymentsEnabled: boolean
+    realPaymentConfirmation: boolean
+  }
   createSubscriptionCheckout?: (input: SubscriptionCheckoutRequest) => Promise<SubscriptionCheckoutResult>
   cancelSubscriptionCheckout?: (
     input: SubscriptionCheckoutCancellationRequest,
@@ -164,8 +168,13 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
         const environment =
           dependencies.health?.environment ?? (providers.qpay || providers.bonum ? "sandbox" : "disabled")
         const catalog = dependencies.health?.catalog ?? Boolean(dependencies.createSubscriptionCheckout)
+        const productionApproved = isProductionPaymentApproved(dependencies)
         const checkout =
-          catalog && Boolean(dependencies.createSubscriptionCheckout) && providers.qpay && providers.bonum
+          catalog &&
+          Boolean(dependencies.createSubscriptionCheckout) &&
+          providers.qpay &&
+          providers.bonum &&
+          productionApproved
         const cancellation = Boolean(dependencies.cancelSubscriptionCheckout) && providers.qpay
         return Response.json(
           {
@@ -193,6 +202,13 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
         if (!dependencies.createSubscriptionCheckout) {
           await request.body?.cancel().catch(() => undefined)
           return json({ error: "Төлбөрийн туршилтын орчин одоогоор тохируулагдаагүй байна." }, 503)
+        }
+        if (!isProductionPaymentApproved(dependencies)) {
+          await request.body?.cancel().catch(() => undefined)
+          return json(
+            { error: "Бодит төлбөрийн орчин хоёр тусдаа зөвшөөрөл шаарддаг.", code: "production_payment_not_approved" },
+            503,
+          )
         }
         const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase()
         if (contentType !== "application/json") {
@@ -388,6 +404,13 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
   }
 }
 
+function isProductionPaymentApproved(dependencies: Dependencies) {
+  if (dependencies.health?.environment !== "production") return true
+  return Boolean(
+    dependencies.productionApprovals?.realPaymentsEnabled && dependencies.productionApprovals.realPaymentConfirmation,
+  )
+}
+
 function checkoutConflictMessage(state: PaymentCheckoutConflictError["state"]) {
   if (state === "active_subscription") return "Энэ ажлын талбар идэвхтэй багцтай байна."
   if (state === "open_checkout") return "Өмнөх төлбөрийн нэхэмжлэх дуусаагүй байна."
@@ -457,6 +480,10 @@ function defaults() {
     health: {
       environment: config.enabled ? config.environment : "disabled",
       catalog: Boolean(catalog),
+    },
+    productionApprovals: {
+      realPaymentsEnabled: config.realPaymentsEnabled === true,
+      realPaymentConfirmation: config.realPaymentConfirmation === true,
     },
     createSubscriptionCheckout: config.enabled
       ? async (input) => {

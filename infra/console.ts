@@ -126,6 +126,10 @@ const paymentConfig = new sst.Linkable("PaymentConfig", {
   properties: {
     enabled: paymentEnvironment !== "disabled",
     environment: paymentEnvironment === "production" ? "production" : "sandbox",
+    realPaymentsEnabled: process.env.MONGOLGPT_ENABLE_REAL_PAYMENTS === "true",
+    realPaymentConfirmation:
+      paymentEnvironment === "production" &&
+      process.env.MONGOLGPT_REAL_PAYMENT_CONFIRMATION === `ENABLE REAL PAYMENTS ${domain}`,
     callbackBaseURL: `https://pay.${domain}`,
     bonumProviders: ["E_COMMERCE"],
     planCatalog: process.env.MONGOLGPT_PAYMENT_PLAN_CATALOG?.trim() || "",

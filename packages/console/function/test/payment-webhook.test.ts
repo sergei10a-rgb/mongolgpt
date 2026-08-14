@@ -207,6 +207,104 @@ describe("payment webhook worker", () => {
     expect(requests).toEqual([checkoutRequest])
   })
 
+  test("fails closed for production checkout when approvals are absent by default", async () => {
+    let calls = 0
+    const handler = createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      health: { environment: "production", catalog: true },
+      async createSubscriptionCheckout() {
+        calls++
+        return checkoutResult
+      },
+      async enqueue() {},
+    })
+
+    const response = await handler(
+      new Request("https://pay.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers: { authorization: "Bearer test-internal-token", "content-type": "application/json" },
+        body: JSON.stringify(checkoutRequest),
+      }),
+    )
+
+    expect(response.status).toBe(503)
+    const payload: unknown = await response.json()
+    expect(payload).toEqual({
+      error: "Бодит төлбөрийн орчин хоёр тусдаа зөвшөөрөл шаарддаг.",
+      code: "production_payment_not_approved",
+    })
+    expect(calls).toBe(0)
+  })
+
+  test("rejects production checkout when only one approval is present", async () => {
+    for (const productionApprovals of [
+      { realPaymentsEnabled: true, realPaymentConfirmation: false },
+      { realPaymentsEnabled: false, realPaymentConfirmation: true },
+    ]) {
+      let calls = 0
+      const handler = createPaymentWebhookHandler({
+        internalToken: "test-internal-token",
+        health: { environment: "production", catalog: true },
+        productionApprovals,
+        async createSubscriptionCheckout() {
+          calls++
+          return checkoutResult
+        },
+        async enqueue() {},
+      })
+      const response = await handler(
+        new Request("https://pay.mgpt.mn/v1/checkouts/subscription", {
+          method: "POST",
+          headers: { authorization: "Bearer test-internal-token", "content-type": "application/json" },
+          body: JSON.stringify(checkoutRequest),
+        }),
+      )
+      expect(response.status).toBe(503)
+      expect(calls).toBe(0)
+    }
+  })
+
+  test("creates production checkout only when both approvals are present", async () => {
+    const handler = createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      health: { environment: "production", catalog: true },
+      productionApprovals: { realPaymentsEnabled: true, realPaymentConfirmation: true },
+      async createSubscriptionCheckout() {
+        return checkoutResult
+      },
+      async enqueue() {},
+    })
+    const response = await handler(
+      new Request("https://pay.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers: { authorization: "Bearer test-internal-token", "content-type": "application/json" },
+        body: JSON.stringify(checkoutRequest),
+      }),
+    )
+    expect(response.status).toBe(201)
+    const payload: unknown = await response.json()
+    expect(payload).toEqual(checkoutResult)
+  })
+
+  test("keeps sandbox checkout available without production approvals", async () => {
+    const handler = createPaymentWebhookHandler({
+      internalToken: "test-internal-token",
+      health: { environment: "sandbox", catalog: true },
+      async createSubscriptionCheckout() {
+        return checkoutResult
+      },
+      async enqueue() {},
+    })
+    const response = await handler(
+      new Request("https://pay.dev.mgpt.mn/v1/checkouts/subscription", {
+        method: "POST",
+        headers: { authorization: "Bearer test-internal-token", "content-type": "application/json" },
+        body: JSON.stringify(checkoutRequest),
+      }),
+    )
+    expect(response.status).toBe(201)
+  })
+
   test("rejects malformed, unsupported, and disabled checkout requests", async () => {
     let calls = 0
     const configured = createPaymentWebhookHandler({
