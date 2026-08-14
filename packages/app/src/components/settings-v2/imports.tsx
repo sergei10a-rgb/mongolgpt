@@ -5,6 +5,7 @@ import { Tag } from "@mongolgpt/ui/v2/badge-v2"
 import { TextareaV2 } from "@mongolgpt/ui/v2/textarea-v2"
 import { TextInputV2 } from "@mongolgpt/ui/v2/text-input-v2"
 import { createMemo, createSignal, For, Show, type Component } from "solid-js"
+import { useLanguage } from "@/context/language"
 import { useServerSDK } from "@/context/server-sdk"
 import { useServerSync } from "@/context/server-sync"
 import {
@@ -26,18 +27,6 @@ type Option<T extends string> = {
   description: string
 }
 
-const TYPE_OPTIONS: Option<CompatImportType>[] = [
-  { value: "auto", label: "Автоматаар", description: "MCP, skill, plugin аль нь болохыг MongolGPT өөрөө танина" },
-  { value: "mcp", label: "MCP", description: "Claude, Cursor, Codex, Goose зэрэг MCP сервер" },
-  { value: "skill", label: "Skill", description: "SKILL.md, skill хавтас, эсвэл skill URL" },
-  { value: "plugin", label: "Plugin", description: "JS/TS plugin package эсвэл локал plugin хавтас" },
-]
-
-const SCOPE_OPTIONS: Option<CompatImportScope>[] = [
-  { value: "global", label: "Бүх төсөл", description: "MongolGPT account/local global config дээр нэмнэ" },
-  { value: "project", label: "Одоогийн төсөл", description: "Сонгосон project-ийн .mongolgpt config дээр нэмнэ" },
-]
-
 function parseLines(value: string) {
   const entries = value
     .split(/\r?\n/)
@@ -51,17 +40,17 @@ function errorMessage(error: unknown) {
   return String(error)
 }
 
-function operationTitle(operation: CompatOperation) {
+function operationTitle(operation: CompatOperation, t: (key: string) => string) {
   switch (operation.kind) {
     case "mcp":
-      return `MCP: ${operation.name ?? "server"}`
+      return `${t("settings.imports.operation.mcp")}: ${operation.name ?? t("settings.imports.operation.server")}`
     case "skill-path":
-      return "Skill path"
+      return t("settings.imports.operation.skillPath")
     case "skill-url":
-      return "Skill URL"
+      return t("settings.imports.operation.skillUrl")
     case "plugin": {
       const spec = Array.isArray(operation.spec) ? operation.spec[0] : operation.spec
-      return `Plugin: ${spec ?? operation.source}`
+      return `${t("settings.imports.operation.plugin")}: ${spec ?? operation.source}`
     }
   }
 }
@@ -77,10 +66,10 @@ function operationDetail(operation: CompatOperation) {
   return spec ?? operation.source
 }
 
-function outcomeLabel(outcome: CompatPatchOutcome) {
-  if (outcome.mode === "add") return "Нэмнэ"
-  if (outcome.mode === "replace") return "Солих"
-  return "Өөрчлөхгүй"
+function outcomeLabel(outcome: CompatPatchOutcome, t: (key: string) => string) {
+  if (outcome.mode === "add") return t("settings.imports.outcome.add")
+  if (outcome.mode === "replace") return t("settings.imports.outcome.replace")
+  return t("settings.imports.outcome.noop")
 }
 
 function buildPayload(input: {
@@ -106,8 +95,41 @@ function buildPayload(input: {
 }
 
 export const SettingsImportsV2: Component = () => {
+  const language = useLanguage()
+  const translate = (key: string) => language.t(key as Parameters<typeof language.t>[0])
   const serverSDK = useServerSDK()
   const serverSync = useServerSync()
+
+  const typeOptions = createMemo<Option<CompatImportType>[]>(() => [
+    {
+      value: "auto",
+      label: language.t("settings.imports.type.auto"),
+      description: language.t("settings.imports.type.auto.description"),
+    },
+    { value: "mcp", label: "MCP", description: language.t("settings.imports.type.mcp.description") },
+    {
+      value: "skill",
+      label: language.t("settings.imports.type.skill"),
+      description: language.t("settings.imports.type.skill.description"),
+    },
+    {
+      value: "plugin",
+      label: language.t("settings.imports.type.plugin"),
+      description: language.t("settings.imports.type.plugin.description"),
+    },
+  ])
+  const scopeOptions = createMemo<Option<CompatImportScope>[]>(() => [
+    {
+      value: "global",
+      label: language.t("settings.imports.scope.global"),
+      description: language.t("settings.imports.scope.global.description"),
+    },
+    {
+      value: "project",
+      label: language.t("settings.imports.scope.project"),
+      description: language.t("settings.imports.scope.project.description"),
+    },
+  ])
 
   const [type, setType] = createSignal<CompatImportType>("auto")
   const [scope, setScope] = createSignal<CompatImportScope>("global")
@@ -125,8 +147,8 @@ export const SettingsImportsV2: Component = () => {
 
   const defaultDirectory = createMemo(() => serverSync().data.path.directory || serverSync().data.path.worktree || "")
   const selectedDirectory = createMemo(() => projectDirectory().trim() || defaultDirectory())
-  const selectedType = createMemo(() => TYPE_OPTIONS.find((item) => item.value === type()) ?? TYPE_OPTIONS[0])
-  const selectedScope = createMemo(() => SCOPE_OPTIONS.find((item) => item.value === scope()) ?? SCOPE_OPTIONS[0])
+  const selectedType = createMemo(() => typeOptions().find((item) => item.value === type()) ?? typeOptions()[0])
+  const selectedScope = createMemo(() => scopeOptions().find((item) => item.value === scope()) ?? scopeOptions()[0])
   const payload = createMemo(() =>
     buildPayload({
       type: type(),
@@ -152,7 +174,7 @@ export const SettingsImportsV2: Component = () => {
     setError(undefined)
     const directory = scope() === "project" ? selectedDirectory() : undefined
     if (scope() === "project" && !directory) {
-      setError("Төслийн хавтас олдсонгүй. Project scope сонгосон бол хавтас оруулна уу.")
+      setError(language.t("settings.imports.error.projectDirectoryRequired"))
       return
     }
 
@@ -167,12 +189,16 @@ export const SettingsImportsV2: Component = () => {
       setResponse(next)
       setPlanKey(currentPlanKey())
       if (mode === "apply") {
-        await serverSDK().client.global.dispose().catch(() => undefined)
+        await serverSDK()
+          .client.global.dispose()
+          .catch(() => undefined)
         showToast({
           variant: "success",
           icon: "circle-check",
-          title: "Интеграц нэмэгдлээ",
-          description: `${next.outcomes.filter((item) => item.mode !== "noop").length} өөрчлөлт config-д бичигдлээ`,
+          title: language.t("settings.imports.toast.applied.title"),
+          description: language.t("settings.imports.toast.applied.description", {
+            count: next.outcomes.filter((item) => item.mode !== "noop").length,
+          }),
         })
       }
     } catch (err) {
@@ -185,19 +211,19 @@ export const SettingsImportsV2: Component = () => {
   return (
     <>
       <div class="settings-v2-tab-header">
-        <h2 class="settings-v2-tab-title">Интеграц</h2>
+        <h2 class="settings-v2-tab-title">{language.t("settings.imports.title")}</h2>
       </div>
 
       <div class="settings-v2-tab-body settings-v2-imports">
         <div class="settings-v2-section">
-          <h3 class="settings-v2-section-title">Автомат тааруулах</h3>
+          <h3 class="settings-v2-section-title">{language.t("settings.imports.section.title")}</h3>
           <SettingsListV2>
             <div class="settings-v2-import-form">
               <div class="settings-v2-import-grid">
                 <label class="settings-v2-import-field">
                   <span>Төрөл</span>
                   <SelectV2
-                    options={TYPE_OPTIONS}
+                    options={typeOptions()}
                     current={selectedType()}
                     value={(item) => item.value}
                     label={(item) => item.label}
@@ -215,7 +241,7 @@ export const SettingsImportsV2: Component = () => {
                 <label class="settings-v2-import-field">
                   <span>Хамрах хүрээ</span>
                   <SelectV2
-                    options={SCOPE_OPTIONS}
+                    options={scopeOptions()}
                     current={selectedScope()}
                     value={(item) => item.value}
                     label={(item) => item.label}
@@ -267,7 +293,7 @@ export const SettingsImportsV2: Component = () => {
                 <div class="settings-v2-import-switches">
                   <label>
                     <Switch checked={adapter()} onChange={setAdapter} />
-                    <span>Plugin нийцүүлэгч</span>
+                    <span>{language.t("settings.imports.adapter")}</span>
                   </label>
                   <label>
                     <Switch checked={force()} onChange={setForce} />
@@ -278,7 +304,7 @@ export const SettingsImportsV2: Component = () => {
 
               <div class="settings-v2-import-grid">
                 <label class="settings-v2-import-field">
-                  <span>Env</span>
+                  <span>{language.t("settings.imports.environment")}</span>
                   <TextareaV2
                     rows={3}
                     value={env()}
@@ -288,7 +314,7 @@ export const SettingsImportsV2: Component = () => {
                   />
                 </label>
                 <label class="settings-v2-import-field">
-                  <span>Header</span>
+                  <span>{language.t("settings.imports.header")}</span>
                   <TextareaV2
                     rows={3}
                     value={header()}
@@ -323,30 +349,32 @@ export const SettingsImportsV2: Component = () => {
           </SettingsListV2>
         </div>
 
-        <Show when={error()}>
-          {(message) => <div class="settings-v2-import-error">{message()}</div>}
-        </Show>
+        <Show when={error()}>{(message) => <div class="settings-v2-import-error">{message()}</div>}</Show>
 
         <Show when={response()}>
           {(result) => (
             <div class="settings-v2-section settings-v2-import-result">
               <div class="settings-v2-import-result-heading">
                 <h3 class="settings-v2-section-title">Илэрсэн өөрчлөлт</h3>
-                <Tag>{result().scope === "global" ? "Бүх төсөл" : "Project"}</Tag>
+                <Tag>
+                  {result().scope === "global"
+                    ? language.t("settings.imports.scope.global")
+                    : language.t("settings.imports.scope.project")}
+                </Tag>
               </div>
               <SettingsListV2>
                 <div class="settings-v2-import-config">
-                  <span>Config</span>
+                  <span>{language.t("settings.imports.config")}</span>
                   <code>{result().configPath}</code>
                 </div>
                 <For each={result().outcomes}>
                   {(outcome) => (
                     <div class="settings-v2-import-outcome">
                       <div class="settings-v2-import-outcome-main">
-                        <span>{operationTitle(outcome.operation)}</span>
+                        <span>{operationTitle(outcome.operation, translate)}</span>
                         <small>{operationDetail(outcome.operation)}</small>
                       </div>
-                      <Tag>{outcomeLabel(outcome)}</Tag>
+                      <Tag>{outcomeLabel(outcome, translate)}</Tag>
                     </div>
                   )}
                 </For>

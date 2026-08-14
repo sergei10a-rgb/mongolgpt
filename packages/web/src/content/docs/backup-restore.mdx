@@ -14,7 +14,7 @@ R2 lifecycle нь `d1/` prefix-тэй object-ийг 90 хоногийн дара
 Restore нь одоогийн D1 өгөгдлийг өөрчилдөг буцаахад хүндрэлтэй ажиллагаа. Maintenance mode, одоогийн bookmark/backup, яг тохирох баталгаажуулалт, хариуцсан хүний зөвшөөрөлгүй production restore бүү эхлүүл.
 :::
 
-## Backup token
+## Нөөцлөлтийн токен
 
 Cloudflare **My Profile → API Tokens → Create Custom Token** хэсэгт тусдаа token үүсгэнэ.
 
@@ -69,7 +69,7 @@ sqlite3 restore-check.db "PRAGMA integrity_check;"
 6. Maintenance mode, queue pause, `RESTORE D1 production <backup-key>` гэсэн яг баталгаажуулалт, эзэмшигчийн эцсийн зөвшөөрөл авна.
 7. Cloudflare D1 import хийж, migration болон бүх smoke/E2E шалгалтыг давуулсны дараа traffic-ийг нээнэ.
 
-## Restore drill
+## Сэргээх туршилт
 
 Улирал тутам production бус тусдаа database дээр restore drill хийнэ. Сүүлчийн backup-ийг сэргээж integrity, migration, login, subscription/payment ledger, quota, admin audit шалгалтыг ажиллуулаад сэргээх хугацаа болон алдааг тэмдэглэнэ. Production backup-ийг developer laptop дээр удаан хадгалахгүй.
 

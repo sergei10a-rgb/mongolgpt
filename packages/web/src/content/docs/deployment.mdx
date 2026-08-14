@@ -84,7 +84,7 @@ Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог х
 | Төрөл    | Нэр                             | Утга                                       |
 | -------- | ------------------------------- | ------------------------------------------ |
 | Variable | `MONGOLGPT_DOMAIN`              | `mgpt.mn`                                  |
-| Variable | `CLOUDFLARE_DEFAULT_ACCOUNT_ID` | Cloudflare account ID                      |
+| Variable | `CLOUDFLARE_DEFAULT_ACCOUNT_ID` | Cloudflare аккаунтын ID                    |
 | Secret   | `CLOUDFLARE_API_TOKEN`          | Хамгийн бага шаардлагатай эрхтэй API token |
 
 `dev` болон `production` GitHub Environment тус бүрд өөрийн OAuth, session болон model credential хадгална.
@@ -95,7 +95,7 @@ Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог х
 | Variable | `GITHUB_CLIENT_ID_CONSOLE`       | Тухайн environment-ийн GitHub OAuth App client ID                    |
 | Variable | `GOOGLE_CLIENT_ID`               | Тухайн environment-ийн Google Web OAuth client ID                    |
 | Variable | `MONGOLGPT_PAYMENT_PLAN_CATALOG` | Basic/Pro/Max багцын MNT үнэ, Монгол нэр бүхий JSON                  |
-| Secret   | `GITHUB_CLIENT_SECRET_CONSOLE`   | GitHub OAuth App client secret                                       |
+| Secret   | `GITHUB_CLIENT_SECRET_CONSOLE`   | GitHub OAuth аппын нууц түлхүүр                                      |
 | Secret   | `BYOK_CREDENTIALS_KEY_V1`        | 32+ тэмдэгт тогтвортой CSPRNG key; rotation хийх хүртэл солихгүй     |
 | Secret   | `D1_BACKUP_API_TOKEN`            | Зөвхөн тухайн account-ийн D1 Edit эрхтэй backup/export token         |
 | Secret   | `MONGOLGPT_RUNTIME_SECRET`       | 32+ тэмдэгт Cloudflare Sandbox account-isolation secret              |
@@ -106,16 +106,16 @@ Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог х
 
 QPay + Bonum sandbox төлбөр асаах environment-д дараах merchant secret-үүдийг нэмнэ.
 
-| Төрөл  | Нэр                          | Утга                                         |
-| ------ | ---------------------------- | -------------------------------------------- |
-| Secret | `QPAY_MERCHANT_ACCOUNT_ID`   | QPay sandbox merchant account ID             |
-| Secret | `QPAY_CLIENT_ID`             | QPay sandbox client ID                       |
-| Secret | `QPAY_CLIENT_SECRET`         | QPay sandbox client secret                   |
-| Secret | `QPAY_INVOICE_CODE`          | QPay sandbox invoice code                    |
-| Secret | `BONUM_MERCHANT_ACCOUNT_ID`  | Bonum sandbox merchant account ID            |
-| Secret | `BONUM_APP_SECRET`           | Bonum sandbox app secret                     |
-| Secret | `BONUM_TERMINAL_ID`          | Bonum sandbox terminal ID                    |
-| Secret | `BONUM_WEBHOOK_CHECKSUM_KEY` | Bonum webhook гарын үсэг шалгах нууц түлхүүр |
+| Төрөл  | Нэр                          | Утга                                          |
+| ------ | ---------------------------- | --------------------------------------------- |
+| Secret | `QPAY_MERCHANT_ACCOUNT_ID`   | QPay туршилтын орчны худалдааны аккаунтын ID  |
+| Secret | `QPAY_CLIENT_ID`             | QPay туршилтын орчны клиентийн ID             |
+| Secret | `QPAY_CLIENT_SECRET`         | QPay туршилтын орчны клиентийн нууц түлхүүр   |
+| Secret | `QPAY_INVOICE_CODE`          | QPay туршилтын орчны нэхэмжлэхийн код         |
+| Secret | `BONUM_MERCHANT_ACCOUNT_ID`  | Bonum туршилтын орчны худалдааны аккаунтын ID |
+| Secret | `BONUM_APP_SECRET`           | Bonum туршилтын орчны аппын нууц түлхүүр      |
+| Secret | `BONUM_TERMINAL_ID`          | Bonum туршилтын орчны терминалын ID           |
+| Secret | `BONUM_WEBHOOK_CHECKSUM_KEY` | Bonum webhook гарын үсэг шалгах нууц түлхүүр  |
 
 `MONGOLGPT_PAYMENT_PLAN_CATALOG` жишээ:
 

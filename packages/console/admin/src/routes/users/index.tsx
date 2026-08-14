@@ -84,7 +84,7 @@ export default function AdminUsersPage() {
                     name="q"
                     value={data().filters.q}
                     maxlength="100"
-                    placeholder="Имэйл эсвэл account ID"
+                    placeholder="Имэйл эсвэл аккаунтын ID"
                   />
                 </label>
                 <label>

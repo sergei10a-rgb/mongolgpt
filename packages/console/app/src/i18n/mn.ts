@@ -117,7 +117,7 @@ export const dict = {
   "pricing.cta.free": "Үнэгүй эхлэх",
   "pricing.cta.paid": "Багц сонгох",
   "pricing.note.limits":
-    "Request, token болон зардлын нарийн хязгаарыг тохиргоогоор удирдана. Таны одоогийн эрх, хэрэглээ бүртгэл дотор харагдана.",
+    "Хүсэлт, токен болон зардлын нарийн хязгаарыг тохиргоогоор удирдана. Таны одоогийн эрх, хэрэглээ бүртгэл дотор харагдана.",
   "pricing.note.payment":
     "Төлбөртэй багц QPay болон Bonum ашиглана. Төлбөрийн орчин бүрэн тохирсны дараа нэхэмжлэх үүсгэх боломж нээгдэнэ.",
 
@@ -130,7 +130,7 @@ export const dict = {
   "home.hero.title": "Монгол хэлд зориулсан хиймэл оюунт кодын агент",
   "home.hero.subtitle.a": "Үнэгүй загваруудаас ашиглах эсвэл дурын нийлүүлэгчийн загварыг холбоорой,",
   "home.hero.subtitle.b": "Claude, GPT, Gemini болон бусад загварыг дэмжинэ.",
-  "home.product.alt": "MongolGPT-ийн Монгол хэлтэй кодын session, tool болон Git хяналтын дэлгэц",
+  "home.product.alt": "MongolGPT-ийн Монгол хэлтэй кодын сесс, хэрэгсэл болон Git хяналтын дэлгэц",
 
   "home.install.ariaLabel": "Суулгах сонголтууд",
 
@@ -213,7 +213,7 @@ export const dict = {
 
   "zen.api.error.rateLimitExceeded": "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Дараа дахин оролдоно уу.",
   "zen.api.error.freeAutoWeeklyLimitExceeded":
-    "Free Auto-ийн долоо хоногийн token хязгаарт хүрлээ. {{retryIn}} дараа дахин оролдоно уу.",
+    "Free Auto-ийн долоо хоногийн токен хязгаарт хүрлээ. {{retryIn}} дараа дахин оролдоно уу.",
   "zen.api.error.organizationRequired": "MongolGPT аккаунтаа ашиглахын өмнө байгууллагаа сонгоно уу.",
   "zen.api.error.modelNotSupported": "{{model}} загварыг дэмжихгүй",
   "zen.api.error.modelFormatNotSupported": "{{model}} загвар {{format}} форматыг дэмжихгүй",

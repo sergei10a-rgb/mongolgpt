@@ -48,10 +48,10 @@ export async function verifyCliToken(token: string): Promise<CliAccount | undefi
 export async function verifyCliAccount(request: Request): Promise<{ account: CliAccount } | { response: Response }> {
   const header = request.headers.get("authorization")
   const token = header?.match(/^Bearer\s+(.+)$/i)?.[1]
-  if (!token) return { response: unauthorized("Bearer token алга") }
+  if (!token) return { response: unauthorized("Нэвтрэх токен олдсонгүй") }
 
   const account = await verifyCliToken(token)
-  if (!account) return { response: unauthorized("Account token буруу эсвэл хүчингүй болсон байна") }
+  if (!account) return { response: unauthorized("Аккаунтын токен буруу эсвэл хүчингүй болсон байна") }
   return { account }
 }
 

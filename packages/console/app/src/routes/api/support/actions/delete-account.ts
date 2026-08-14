@@ -13,9 +13,9 @@ export async function DELETE(event: APIEvent) {
 
   const body = Body.safeParse(await event.request.json().catch(() => undefined))
   if (!body.success) {
-    return Response.json({ error: "Invalid request", issues: body.error.issues }, { status: 400 })
+    return Response.json({ error: "Хүсэлт буруу байна", issues: body.error.issues }, { status: 400 })
   }
   return Account.remove(body.data.email)
-    .then(() => Response.json({ success: true, message: "Account deleted" }))
+    .then(() => Response.json({ success: true, message: "Аккаунт устгагдлаа" }))
     .catch((error) => Response.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 }))
 }

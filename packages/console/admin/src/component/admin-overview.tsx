@@ -53,7 +53,7 @@ export function AdminOverviewView(props: { data: AdminOverviewData }) {
 
         <section data-component="status-band">
           <div>
-            <span>Access хамгаалалт</span>
+            <span>Cloudflare Access нэвтрэх хамгаалалт</span>
             <strong data-status="healthy">Баталгаажсан</strong>
           </div>
           <div>

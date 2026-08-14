@@ -16,9 +16,9 @@ export async function POST(event: APIEvent) {
 
   const body = Body.safeParse(await event.request.json().catch(() => undefined))
   if (!body.success) {
-    return Response.json({ error: "Invalid request", issues: body.error.issues }, { status: 400 })
+    return Response.json({ error: "Хүсэлт буруу байна", issues: body.error.issues }, { status: 400 })
   }
   return Referral.create(body.data)
-    .then((result) => Response.json({ success: true, message: "Referral created", result }))
+    .then((result) => Response.json({ success: true, message: "Урилга үүслээ", result }))
     .catch((error) => Response.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 }))
 }
