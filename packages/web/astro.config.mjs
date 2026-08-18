@@ -101,6 +101,7 @@ export default defineConfig({
       },
       sidebar: [
         "",
+        { label: "Суулгах", link: "install" },
         "config",
         "providers",
         "network",
@@ -115,7 +116,7 @@ export default defineConfig({
         },
         {
           label: "Хэрэглээ",
-          items: ["account", "tui", "cli", "web", "ide", "share", "github", "gitlab"],
+          items: ["account", "desktop", "tui", "cli", "web", "ide", "share", "github", "gitlab"],
         },
         {
           label: "Тохируулах",

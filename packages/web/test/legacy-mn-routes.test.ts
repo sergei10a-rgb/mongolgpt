@@ -15,6 +15,12 @@ test("хуучин Монгол docs source duplicate хадгалагдаагү
 })
 
 test("хуучин Монгол docs замууд root docs руу redirect-тэй байна", () => {
+  const canonicalSlugs = readdirSync(join(docsRoot, "src", "content", "docs"))
+    .filter((name) => name.endsWith(".mdx") && name !== "index.mdx")
+    .map((name) => name.slice(0, -4))
+    .sort()
+
+  expect([...legacyMongolianDocSlugs].sort()).toEqual(canonicalSlugs)
   expect(legacyMongolianDocRedirects["/mn"]).toBe("/docs/")
   for (const slug of legacyMongolianDocSlugs) {
     expect(legacyMongolianDocRedirects[`/mn/${slug}`]).toBe(`/docs/${slug}`)

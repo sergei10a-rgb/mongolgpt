@@ -1,0 +1,110 @@
+---
+title: MongolGPT суулгах
+description: MongolGPT-ийн Windows ширээний програм, CLI болон эх кодын суулгалтын Монгол заавар.
+---
+
+MongolGPT-ийн албан ёсны суулгагч, CLI архив болон checksum файлыг зөвхөн
+[GitHub Releases](https://github.com/sergei10a-rgb/mongolgpt/releases)-ээс татна. Танихгүй домэйн, зар сурталчилгааны
+татах товч эсвэл гуравдагч талын толин сайтаас файл бүү ажиллуул.
+
+## Windows-ийн ширээний програм
+
+1. [MongolGPT Releases](https://github.com/sergei10a-rgb/mongolgpt/releases)-ийг нээнэ.
+2. Хамгийн сүүлийн тогтвортой хувилбарыг сонгоно.
+3. `mongolgpt-desktop-win-x64.exe` файл байвал татаж ажиллуулна.
+4. Суулгагчийн харуулах бүтээгдэхүүний нэр болон publisher мэдээллийг шалгана.
+5. Суулгасны дараа **MongolGPT**-ийг нээж төслийн хавтсаа сонгоно.
+
+Анхны нээлт, нэвтрэлт, provider болон локал загварын тохиргоог [ширээний програмын заавраас](./desktop) үргэлжлүүлнэ.
+
+:::caution[Windows SmartScreen]
+Хувилбарын тайлбарт гарын үсэггүй хөгжүүлэлтийн build гэж тодорхой тэмдэглэсэн үед Windows SmartScreen анхааруулж болно.
+Файлын URL, хувилбар болон checksum тохирохгүй бол хамгаалалтыг алгасалгүй файлыг устгана.
+:::
+
+## CLI суулгах
+
+Releases хуудаснаас үйлдлийн систем, процессортоо тохирох архивыг сонгоно.
+
+| Орчин               | Файлын нэрийн эхлэл      |
+| ------------------- | ------------------------ |
+| Windows x64         | `mongolgpt-windows-x64`  |
+| macOS Apple Silicon | `mongolgpt-darwin-arm64` |
+| macOS Intel         | `mongolgpt-darwin-x64`   |
+| Linux x64           | `mongolgpt-linux-x64`    |
+| Linux ARM64         | `mongolgpt-linux-arm64`  |
+
+Архивыг задалсны дараа хувилбарыг шалгана.
+
+```bash
+mongolgpt --version
+```
+
+Windows PowerShell дээр тухайн хавтсаас шууд ажиллуулах бол:
+
+```powershell
+.\mongolgpt.exe --version
+```
+
+macOS болон Linux дээр ажиллуулах эрх шаардлагатай бол:
+
+```bash
+chmod +x mongolgpt
+./mongolgpt --version
+```
+
+Командыг дурын хавтсаас ашиглахын тулд executable файлыг хэрэглэгчийн `PATH`-д бүртгэлтэй хавтас руу байрлуулна.
+CLI-ийн бүх команд, нэвтрэлт болон төслийн жишээг [CLI лавлагаанаас](./cli) харна уу.
+
+## Checksum шалгах
+
+Release-д checksum файл нийтлэгдсэн бол татсан файлын SHA-256 утгыг заавал тулгана.
+
+Windows PowerShell:
+
+```powershell
+Get-FileHash .\mongolgpt-desktop-win-x64.exe -Algorithm SHA256
+```
+
+macOS эсвэл Linux:
+
+```bash
+shasum -a 256 ./mongolgpt
+```
+
+Гарсан утга Release-ийн checksum-тэй тэмдэгт бүрээрээ таарах ёстой. Таарахгүй бол файлыг ажиллуулахгүй.
+
+## Эх кодоос ажиллуулах
+
+Энэ арга нь MongolGPT-д хөгжүүлэлт хийх эсвэл тухайн платформын бэлэн файл нийтлэгдээгүй үед зориулагдана. Bun болон Git
+урьдчилан суусан байна.
+
+```bash
+git clone https://github.com/sergei10a-rgb/mongolgpt
+cd mongolgpt
+bun install
+bun run dev
+```
+
+Windows-ийн ширээний програмыг хөгжүүлэлтийн горимоор нээх:
+
+```bash
+bun run dev:desktop
+```
+
+Суулгагч үүсгэх:
+
+```powershell
+$env:MONGOLGPT_CHANNEL="prod"
+bun --cwd packages/desktop run package:win
+```
+
+Үүссэн файлууд `packages/desktop/dist/` хавтаст байрлана. Эх кодоос үүсгэсэн build нь албан ёсны Release-тэй адил
+гарын үсэг, update сувагтай гэж үзэж болохгүй.
+
+## Дараагийн алхам
+
+- Ширээний програм: [анхны нээлт ба локал төсөл](./desktop)
+- Терминал: [CLI лавлагаа](./cli) болон [TUI ашиглах](./tui)
+- Загвар холбох: [үйлчилгээ үзүүлэгчид](./providers) болон [загварууд](./models)
+- Суулгалтын алдаа: [алдаа оношлох](./troubleshooting)
