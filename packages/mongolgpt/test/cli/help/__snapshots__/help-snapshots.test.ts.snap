@@ -182,10 +182,10 @@ Options:
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt upgrade --help 1`] = `
 "mongolgpt upgrade [target]
 
-mongolgpt-ийг хамгийн сүүлийн эсвэл тодорхой хувилбар руу upgrade хийх
+mongolgpt-ийг хамгийн сүүлийн эсвэл тодорхой хувилбар руу шинэчлэх
 
 Positionals:
-  target  upgrade хийх хувилбар, жишээ нь '0.1.48' эсвэл 'v0.1.48'                          [string]
+  target  шинэчлэх хувилбар, жишээ нь '0.1.48' эсвэл 'v0.1.48'                              [string]
 
 Options:
   -h, --help        тусламж харуулах                                                       [boolean]
