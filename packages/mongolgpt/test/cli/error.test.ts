@@ -59,9 +59,9 @@ describe("cli.error", () => {
 
     const formatted = FormatError(error)
 
-    expect(formatted).toContain("Could not reach POST https://example.invalid/auth/device/code.")
-    expect(formatted).toContain("This failed before the server returned an HTTP response.")
-    expect(formatted).toContain("Check your network, proxy, or VPN configuration and try again.")
+    expect(formatted).toContain("POST https://example.invalid/auth/device/code хаяг руу хандаж чадсангүй.")
+    expect(formatted).toContain("Сервер HTTP хариу өгөхөөс өмнө холболт амжилтгүй боллоо.")
+    expect(formatted).toContain("Сүлжээ, прокси эсвэл VPN тохиргоогоо шалгаад дахин оролдоно уу.")
   })
 
   test("formats legacy and tagged provider model errors the same way", () => {

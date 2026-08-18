@@ -60,10 +60,10 @@ export class AccountTransportError extends Schema.TaggedErrorClass<AccountTransp
 
   override get message(): string {
     return [
-      `Could not reach ${this.method} ${this.url}.`,
-      `This failed before the server returned an HTTP response.`,
+      `${this.method} ${this.url} хаяг руу хандаж чадсангүй.`,
+      `Сервер HTTP хариу өгөхөөс өмнө холболт амжилтгүй боллоо.`,
       this.description,
-      `Check your network, proxy, or VPN configuration and try again.`,
+      `Сүлжээ, прокси эсвэл VPN тохиргоогоо шалгаад дахин оролдоно уу.`,
     ]
       .filter(Boolean)
       .join("\n")

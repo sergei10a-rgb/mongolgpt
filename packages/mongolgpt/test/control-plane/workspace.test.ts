@@ -1694,7 +1694,7 @@ describe("workspace waitForSync", () => {
           yield* Effect.exit(
             workspace.waitForSync(WorkspaceV2.ID.ascending("wrk_wait_timeout"), { [sessionID]: 1 }, undefined, 25),
           ),
-          `Timed out waiting for sync fence: {"${sessionID}":1}`,
+          `Синк дуусахыг хүлээх хугацаа дууслаа: {"${sessionID}":1}`,
         )
       }),
     { git: true },

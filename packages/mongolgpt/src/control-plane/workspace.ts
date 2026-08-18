@@ -837,13 +837,13 @@ export const layer = Layer.effect(
           signal?.aborted
             ? Effect.fail(
                 new SyncAbortedError({
-                  message: signal.reason instanceof Error ? signal.reason.message : "Request aborted",
+                  message: signal.reason instanceof Error ? signal.reason.message : "Хүсэлт цуцлагдлаа",
                   cause: signal.reason,
                 }),
               )
             : Effect.fail(
                 new SyncTimeoutError({
-                  message: `Timed out waiting for sync fence: ${JSON.stringify(state)}`,
+                  message: `Синк дуусахыг хүлээх хугацаа дууслаа: ${JSON.stringify(state)}`,
                   state,
                 }),
               ),

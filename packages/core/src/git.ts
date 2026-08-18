@@ -367,7 +367,7 @@ export const layer = Layer.effect(
             new OperationError({
               operation: "create",
               directory: input.gitDirectory,
-              message: "Failed to create Git storage",
+              message: "Git хадгалах сан үүсгэж чадсангүй",
               cause,
             }),
         ),
@@ -516,7 +516,7 @@ export const layer = Layer.effect(
         return yield* new OperationError({
           operation: "list_files",
           directory: input.repository.worktree,
-          message: result.stderr.toString("utf8").trim() || "Failed to check ignored paths",
+          message: result.stderr.toString("utf8").trim() || "Git-д үл тоох замуудыг шалгаж чадсангүй",
         })
       return new Set(
         result.stdout
@@ -809,7 +809,9 @@ export const layer = Layer.effect(
         operation: "apply",
         directory: input.path,
         message:
-          result.stderr.toString("utf8").trim() || result.stdout.toString("utf8").trim() || "Failed to apply changes",
+          result.stderr.toString("utf8").trim() ||
+          result.stdout.toString("utf8").trim() ||
+          "Өөрчлөлтийг хэрэгжүүлж чадсангүй",
       })
     })
 
@@ -832,7 +834,7 @@ export const layer = Layer.effect(
         return yield* new PatchError({
           operation: "reset",
           directory: input.path,
-          message: restore.stderr.trim() || restore.text.trim() || "Failed to restore tracked changes",
+          message: restore.stderr.trim() || restore.text.trim() || "Git-д бүртгэлтэй өөрчлөлтийг сэргээж чадсангүй",
         })
       }
       if (input.untracked === "preserve") return
