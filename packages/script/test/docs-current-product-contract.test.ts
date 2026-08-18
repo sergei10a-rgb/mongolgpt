@@ -99,6 +99,10 @@ describe("documentation product contract", () => {
     expect(deployment).toContain("`MONGOLGPT_RUNTIME_SECRET`")
     expect(deployment).toContain("`MONGOLGPT_RUNTIME_AUTH_SECRET`")
     expect(deployment).toContain("хоёр өөр, тогтвортой CSPRNG secret")
+    expect(deployment).toContain("https://auth.dev.mgpt.mn/github/callback")
+    expect(deployment).toContain("https://auth.dev.mgpt.mn/google/callback")
+    expect(deployment).toContain("https://auth.mgpt.mn/github/callback")
+    expect(deployment).toContain("https://auth.mgpt.mn/google/callback")
     expect(deployment).toContain("GET https://runtime.mgpt.mn/global/health")
   })
 

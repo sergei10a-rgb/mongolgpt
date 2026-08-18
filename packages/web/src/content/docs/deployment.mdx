@@ -106,6 +106,38 @@ Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог х
 | Secret   | `ZEN_MODELS1`                    | Баталгаажсан Free Auto model/provider JSON; provider key-ийг агуулна |
 | Secret   | `ZEN_MODELS2`…`ZEN_MODELS30`     | `ZEN_MODELS1` багтахгүй үед JSON-ийн дараалсан optional хэсгүүд      |
 
+### OAuth апп бүртгэх
+
+Dev ба production орчин тусдаа credential ашиглана. Ингэснээр туршилтын callback, зөвшөөрөгдсөн хэрэглэгч болон нууц
+түлхүүр production нэвтрэлттэй холилдохгүй.
+
+GitHub-ийн [OAuth App үүсгэх албан ёсны заавраар](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app)
+**Settings → Developer settings → OAuth Apps → New OAuth App** хэсэгт dev апп үүсгэнэ.
+
+| GitHub талбар              | Dev утга                                   |
+| -------------------------- | ------------------------------------------ |
+| Application name           | `MongolGPT Dev`                            |
+| Homepage URL               | `https://app.dev.mgpt.mn`                  |
+| Authorization callback URL | `https://auth.dev.mgpt.mn/github/callback` |
+
+Үүссэн **Client ID**-г dev environment variable `GITHUB_CLIENT_ID_CONSOLE`, **Client secret**-ийг dev environment secret
+`GITHUB_CLIENT_SECRET_CONSOLE` болгон хадгална. GitHub OAuth App нэг callback URL-тэй тул production-д тусдаа `MongolGPT`
+апп үүсгэж `https://auth.mgpt.mn/github/callback` ашиглана.
+
+Google Cloud Console-ийн **APIs & Services → OAuth consent screen** хэсэгт consent screen болон dev test user-ээ тохируулаад,
+**Credentials → Create credentials → OAuth client ID → Web application** сонгоно. Google-ийн
+[web-server OAuth зааврын](https://developers.google.com/identity/protocols/oauth2/web-server) дагуу redirect URI нь scheme,
+host, path болон төгсгөлийн ташуу зураас хүртэл яг таарах ёстой.
+
+| Google талбар           | Dev утга                                   |
+| ----------------------- | ------------------------------------------ |
+| Name                    | `MongolGPT Dev`                            |
+| Authorized redirect URI | `https://auth.dev.mgpt.mn/google/callback` |
+
+Үүссэн **Client ID**-г dev environment variable `GOOGLE_CLIENT_ID` болгон хадгална. Одоогийн OpenID `form_post` урсгал
+client secret ашигладаггүй тул Google client secret-ийг repository эсвэл GitHub-д нэмэхгүй. Production client дээр
+`https://auth.mgpt.mn/google/callback` redirect URI ашиглана.
+
 QPay + Bonum sandbox төлбөр асаах environment-д дараах merchant secret-үүдийг нэмнэ.
 
 | Төрөл  | Нэр                          | Утга                                          |
