@@ -172,14 +172,14 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
       </box>
       <Show when={store.active !== "filename"}>
         <text fg={theme.textMuted} paddingBottom={1}>
-          Асаах/унтраахын тулд <span style={{ fg: theme.text }}>space</span>, батлахын тулд{" "}
-          <span style={{ fg: theme.text }}>return</span> дарна уу
+          Асаах/унтраахын тулд <span style={{ fg: theme.text }}>зай авах товч</span>, батлахын тулд{" "}
+          <span style={{ fg: theme.text }}>Enter товч</span> дарна уу
         </text>
       </Show>
       <Show when={store.active === "filename"}>
         <text fg={theme.textMuted} paddingBottom={1}>
-          Батлахын тулд <span style={{ fg: theme.text }}>return</span>, сонголтууд руу очихын тулд{" "}
-          <span style={{ fg: theme.text }}>tab</span> дарна уу
+          Батлахын тулд <span style={{ fg: theme.text }}>Enter товч</span>, сонголтууд руу очихын тулд{" "}
+          <span style={{ fg: theme.text }}>Tab товч</span> дарна уу
         </text>
       </Show>
     </box>

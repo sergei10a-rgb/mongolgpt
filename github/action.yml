@@ -6,7 +6,7 @@ branding:
 
 inputs:
   model:
-    description: "Ашиглах provider/model"
+    description: "Ашиглах үйлчилгээ үзүүлэгч болон загвар"
     required: true
 
   agent:
@@ -14,12 +14,12 @@ inputs:
     required: false
 
   share:
-    description: "MongolGPT сешнийг нийтлэх эсэх; өөрийн share backend тохируулсан үед хэрэглэнэ"
+    description: "MongolGPT сешнийг нийтлэх эсэх; өөрийн хуваалцах сервер тохируулсан үед хэрэглэнэ"
     required: false
     default: "false"
 
   share_base_url:
-    description: "Өөрийн share backend-ийн үндсэн URL"
+    description: "Өөрийн хуваалцах серверийн үндсэн URL"
     required: false
 
   prompt:
@@ -46,30 +46,30 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Get mongolgpt version
+    - name: MongolGPT хувилбарыг авах
       id: version
       shell: bash
       run: |
         VERSION=$(curl -sf https://api.github.com/repos/sergei10a-rgb/mongolgpt/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
         echo "version=${VERSION:-latest}" >> $GITHUB_OUTPUT
 
-    - name: Cache mongolgpt
+    - name: MongolGPT түр санах ойг ашиглах
       id: cache
       uses: actions/cache@v4
       with:
         path: ~/.mongolgpt/bin
         key: mongolgpt-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.version }}
 
-    - name: Install mongolgpt
+    - name: MongolGPT суулгах
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       run: curl -fsSL https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/install | bash
 
-    - name: Add mongolgpt to PATH
+    - name: MongolGPT-ийг PATH-д нэмэх
       shell: bash
       run: echo "$HOME/.mongolgpt/bin" >> $GITHUB_PATH
 
-    - name: Run mongolgpt
+    - name: MongolGPT ажиллуулах
       shell: bash
       id: run_mongolgpt
       run: mongolgpt github run

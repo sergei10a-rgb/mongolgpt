@@ -202,10 +202,10 @@ function span(state: ToolDict): string {
 function fail(ctx: ToolFrame): string {
   const error = toolError(ctx)
   if (error) {
-    return `✖ ${ctx.name} failed: ${error}`
+    return `✖ ${ctx.name} амжилтгүй боллоо: ${error}`
   }
 
-  return `✖ ${ctx.name} failed`
+  return `✖ ${ctx.name} амжилтгүй боллоо`
 }
 
 function toolError(ctx: ToolFrame): string {
@@ -241,10 +241,10 @@ function fallbackFinal(ctx: ToolFrame): string {
 
   const time = span(ctx.state)
   if (!time) {
-    return `${ctx.name} completed`
+    return `${ctx.name} дууслаа`
   }
 
-  return `${ctx.name} completed · ${time}`
+  return `${ctx.name} дууслаа · ${time}`
 }
 
 export function toolPath(input?: string, opts: { home?: boolean } = {}): string {
@@ -675,13 +675,13 @@ function scrollBashFinal(p: ToolProps<typeof BashTool>): string {
   const time = span(p.frame.state)
   if (code === undefined) {
     if (!time) {
-      return "bash дууслаа"
+      return "Командын мөрийн ажил дууслаа"
     }
 
-    return `bash дууслаа · ${time}`
+    return `Командын мөрийн ажил дууслаа · ${time}`
   }
 
-  return `bash дууслаа (exit ${code})${time ? ` · ${time}` : ""}`
+  return `Командын мөрийн ажил дууслаа (гарах код ${code})${time ? ` · ${time}` : ""}`
 }
 
 function scrollReadStart(p: ToolProps<typeof ReadTool>): string {

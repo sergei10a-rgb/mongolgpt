@@ -469,8 +469,8 @@ export function Session() {
         const copy = (url: string) =>
           clipboard
             .write?.(url)
-            .then(() => toast.show({ message: "Хуваалцах URL clipboard руу хууллаа!", variant: "success" }))
-            .catch(() => toast.show({ message: "URL-г clipboard руу хуулж чадсангүй", variant: "error" }))
+            .then(() => toast.show({ message: "Хуваалцах URL-г түр санах ой руу хууллаа!", variant: "success" }))
+            .catch(() => toast.show({ message: "URL-г түр санах ой руу хуулж чадсангүй", variant: "error" }))
         const url = session()?.share?.url
         if (url) {
           await copy(url)
@@ -478,7 +478,7 @@ export function Session() {
           return
         }
         if (!kv.get("share_consent", false)) {
-          const ok = await DialogConfirm.show(dialog, "Сешн share хийх", "Үүнийг share хийхдээ итгэлтэй байна уу?")
+          const ok = await DialogConfirm.show(dialog, "Сешн хуваалцах", "Энэ сешнийг хуваалцахдаа итгэлтэй байна уу?")
           if (ok !== true) return
           kv.set("share_consent", true)
         }
@@ -530,7 +530,7 @@ export function Session() {
       },
     },
     {
-      title: "Сешн fork хийх",
+      title: "Сешн салаалах",
       value: "session.fork",
       category: "Сешн",
       slash: {
@@ -552,7 +552,7 @@ export function Session() {
       },
     },
     {
-      title: "Сешн compact хийх",
+      title: "Сешн хураангуйлах",
       value: "session.compact",
       category: "Сешн",
       slash: {
@@ -578,7 +578,7 @@ export function Session() {
       },
     },
     {
-      title: "Сешний share-г болиулах",
+      title: "Сешн хуваалцахыг болиулах",
       value: "session.unshare",
       category: "Сешн",
       enabled: !!session()?.share?.url,
@@ -590,7 +590,7 @@ export function Session() {
           .unshare({
             sessionID: route.sessionID,
           })
-          .then(() => toast.show({ message: "Сешний share амжилттай болиуллаа", variant: "success" }))
+          .then(() => toast.show({ message: "Сешн хуваалцахыг болиуллаа", variant: "success" }))
           .catch((error) => {
             toast.show({
               message: error instanceof Error ? error.message : "Сешний хуваалцалтыг болиулж чадсангүй",
@@ -664,7 +664,7 @@ export function Session() {
       },
     },
     {
-      title: sidebarVisible() ? "Sidebar нуух" : "Sidebar харуулах",
+      title: sidebarVisible() ? "Хажуу самбар нуух" : "Хажуу самбар харуулах",
       value: "session.sidebar.toggle",
       category: "Сешн",
       run: () => {
@@ -677,7 +677,7 @@ export function Session() {
       },
     },
     {
-      title: conceal() ? "Code concealment унтраах" : "Code concealment асаах",
+      title: conceal() ? "Код нуух горимыг унтраах" : "Код нуух горимыг асаах",
       value: "session.toggle.conceal",
       category: "Сешн",
       run: () => {
@@ -686,7 +686,7 @@ export function Session() {
       },
     },
     {
-      title: showTimestamps() ? "Timestamp нуух" : "Timestamp харуулах",
+      title: showTimestamps() ? "Цагийн тэмдэг нуух" : "Цагийн тэмдэг харуулах",
       value: "session.toggle.timestamps",
       category: "Сешн",
       slash: {
@@ -725,7 +725,7 @@ export function Session() {
       },
     },
     {
-      title: "Сешний scrollbar асаах/унтраах",
+      title: "Сешний гүйлгүүрийг асаах/унтраах",
       value: "session.toggle.scrollbar",
       category: "Сешн",
       run: () => {
@@ -905,13 +905,13 @@ export function Session() {
 
         clipboard
           .write?.(text)
-          .then(() => toast.show({ message: "Мессежийг clipboard руу хууллаа!", variant: "success" }))
-          .catch(() => toast.show({ message: "Clipboard руу хуулж чадсангүй", variant: "error" }))
+          .then(() => toast.show({ message: "Мессежийг түр санах ой руу хууллаа!", variant: "success" }))
+          .catch(() => toast.show({ message: "Түр санах ой руу хуулж чадсангүй", variant: "error" }))
         dialog.clear()
       },
     },
     {
-      title: "Сешний transcript хуулах",
+      title: "Сешний ярианы тэмдэглэл хуулах",
       value: "session.copy",
       category: "Сешн",
       slash: {
@@ -933,15 +933,15 @@ export function Session() {
             },
           )
           await clipboard.write?.(transcript)
-          toast.show({ message: "Сешний transcript clipboard руу хууллаа!", variant: "success" })
+          toast.show({ message: "Сешний ярианы тэмдэглэлийг түр санах ой руу хууллаа!", variant: "success" })
         } catch {
-          toast.show({ message: "Сешний transcript хуулж чадсангүй", variant: "error" })
+          toast.show({ message: "Сешний ярианы тэмдэглэл хуулахад алдаа гарлаа", variant: "error" })
         }
         dialog.clear()
       },
     },
     {
-      title: "Сешний transcript export хийх",
+      title: "Сешний ярианы тэмдэглэлийг файл болгон гаргах",
       value: "session.export",
       category: "Сешн",
       slash: {
@@ -1007,16 +1007,16 @@ export function Session() {
               await writeExport(filepath, result)
             }
 
-            toast.show({ message: `Сешнийг ${filename} руу export хийлээ`, variant: "success" })
+            toast.show({ message: `Сешнийг ${filename} файл болгон гаргалаа`, variant: "success" })
           }
         } catch {
-          toast.show({ message: "Сешн export хийж чадсангүй", variant: "error" })
+          toast.show({ message: "Сешнийг файл болгон гаргаж чадсангүй", variant: "error" })
         }
         dialog.clear()
       },
     },
     {
-      title: "Subagent-уудыг арын горимд шилжүүлэх",
+      title: "Дэд агентуудыг арын горимд шилжүүлэх",
       value: "session.background",
       category: "Сешн",
       hidden: true,
@@ -1030,7 +1030,7 @@ export function Session() {
       },
     },
     {
-      title: "Child сешн рүү очих",
+      title: "Дэд сешн рүү очих",
       value: "session.child.first",
       category: "Сешн",
       hidden: true,
@@ -1040,7 +1040,7 @@ export function Session() {
       },
     },
     {
-      title: "Parent сешн рүү очих",
+      title: "Эх сешн рүү очих",
       value: "session.parent",
       category: "Сешн",
       hidden: true,
@@ -1057,7 +1057,7 @@ export function Session() {
       }),
     },
     {
-      title: "Дараагийн child сешн",
+      title: "Дараагийн дэд сешн",
       value: "session.child.next",
       category: "Сешн",
       hidden: true,
@@ -1068,7 +1068,7 @@ export function Session() {
       }),
     },
     {
-      title: "Өмнөх child сешн",
+      title: "Өмнөх дэд сешн",
       value: "session.child.previous",
       category: "Сешн",
       hidden: true,
@@ -1196,7 +1196,7 @@ export function Session() {
                           const handleUnrevert = async () => {
                             const confirmed = await DialogConfirm.show(
                               dialog,
-                              "Redo батлах",
+                              "Сэргээхийг батлах",
                               "Буцаасан мессежүүдийг сэргээхдээ итгэлтэй байна уу?",
                             )
                             if (confirmed) {
@@ -1496,7 +1496,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
         <box paddingTop={1} paddingLeft={3}>
           <text fg={theme.text}>
             {childShortcut()}
-            <span style={{ fg: theme.textMuted }}> subagent-ууд харах</span>
+            <span style={{ fg: theme.textMuted }}> дэд агентуудыг харах</span>
             <Show
               when={
                 sync.data.capabilities.experimentalBackgroundSubagents &&
@@ -2193,7 +2193,7 @@ function Grep(props: ToolProps) {
 
 function WebFetch(props: ToolProps) {
   return (
-    <InlineTool icon="%" pending="Web-ээс авч байна..." complete={stringValue(props.input.url)} part={props.part}>
+    <InlineTool icon="%" pending="Вэбээс авч байна..." complete={stringValue(props.input.url)} part={props.part}>
       Web-ээс авах {stringValue(props.input.url)}
     </InlineTool>
   )
@@ -2201,7 +2201,7 @@ function WebFetch(props: ToolProps) {
 
 function WebSearch(props: ToolProps) {
   return (
-    <InlineTool icon="◈" pending="Web хайж байна..." complete={stringValue(props.input.query)} part={props.part}>
+    <InlineTool icon="◈" pending="Вэбээр хайж байна..." complete={stringValue(props.input.query)} part={props.part}>
       {webSearchProviderLabel(props.metadata.provider)} "{stringValue(props.input.query)}"{" "}
       <Show when={numberValue(props.metadata.numResults)}>({numberValue(props.metadata.numResults)} үр дүн)</Show>
     </InlineTool>
@@ -2260,7 +2260,7 @@ function Task(props: ToolProps) {
     if (!description) return ""
     let content = [
       formatSubagentTitle(
-        Locale.titlecase(stringValue(props.input.subagent_type) ?? "General"),
+        Locale.titlecase(stringValue(props.input.subagent_type) ?? "Ерөнхий"),
         description,
         props.metadata.background === true,
       ),
@@ -2445,8 +2445,8 @@ function ApplyPatch(props: ToolProps) {
       <Match when={true}>
         <InlineTool
           icon="%"
-          pending="Patch-д бэлдэж байна..."
-          failure="Patch амжилтгүй"
+          pending="Нөхөөс бэлтгэж байна..."
+          failure="Нөхөөс амжилтгүй"
           complete={false}
           part={props.part}
         >
@@ -2521,7 +2521,7 @@ function Question(props: ToolProps) {
 
 function Skill(props: ToolProps) {
   return (
-    <InlineTool icon="→" pending="Skill ачаалж байна..." complete={stringValue(props.input.name)} part={props.part}>
+    <InlineTool icon="→" pending="Ур чадвар ачаалж байна..." complete={stringValue(props.input.name)} part={props.part}>
       Skill "{stringValue(props.input.name)}"
     </InlineTool>
   )

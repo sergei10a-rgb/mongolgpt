@@ -499,7 +499,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
         <box flexDirection="row" gap={2}>
           <Show when={!single()}>
             <text fg={theme.text}>
-              {"⇆"} <span style={{ fg: theme.textMuted }}>tab</span>
+              {"⇆"} <span style={{ fg: theme.textMuted }}>дараагийн хэсэг</span>
             </text>
           </Show>
           <Show when={!confirm()}>
@@ -508,14 +508,14 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
             </text>
           </Show>
           <text fg={theme.text}>
-            enter{" "}
+            Enter{" "}
             <span style={{ fg: theme.textMuted }}>
               {confirm() ? "илгээх" : multi() ? "асаах/унтраах" : single() ? "илгээх" : "батлах"}
             </span>
           </text>
 
           <text fg={theme.text}>
-            esc <span style={{ fg: theme.textMuted }}>хаах</span>
+            Esc <span style={{ fg: theme.textMuted }}>хаах</span>
           </text>
         </box>
       </box>

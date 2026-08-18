@@ -1,18 +1,19 @@
-# MongolGPT Desktop
+# MongolGPT ширээний апп
 
-The MongolGPT Desktop app, built with Electron.
+Electron дээр бүтээсэн MongolGPT ширээний апп.
 
-## Development
+## Хөгжүүлэлт
 
 ```bash
 bun install
 bun dev
 ```
 
-## Build
+## Бэлтгэх
 
-Run the `build` script to build the app's JS assets, then `package` to
-bundle the assets as an application. The resulting app will be in `dist/`.
+Аппын JavaScript файлуудыг бэлтгэхийн тулд `build`, дараа нь тэдгээрийг
+апп болгон багцлахын тулд `package` командыг ажиллуулна. Бэлэн апп `dist/`
+хавтаст үүснэ.
 
 ```bash
 bun run build && bun run package

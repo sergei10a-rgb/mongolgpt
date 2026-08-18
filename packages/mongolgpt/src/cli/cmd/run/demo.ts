@@ -52,51 +52,51 @@ function questionKind(value: string | undefined): QuestionKind | undefined {
 }
 
 const SAMPLE_MARKDOWN = [
-  "# Direct Mode Demo",
+  "# Шууд горимын үзүүлэн",
   "",
-  "This is a realistic assistant response for direct-mode formatting checks.",
-  "It mixes **bold**, _italic_, `inline code`, links, code fences, and tables in one streamed reply.",
+  "Энэ бол шууд горимын форматлалыг шалгах бодитой туслахын хариулт юм.",
+  "Нэг урсгал хариултад **тод**, _налуу_, `мөр доторх код`, холбоос, кодын блок болон хүснэгтийг хослуулсан.",
   "",
-  "## Summary",
+  "## Хураангуй",
   "",
-  "- Restored the final markdown flush so the last block is committed on idle.",
-  "- Switched markdown scrollback commits back to top-level block boundaries.",
-  "- Added footer-level regression coverage for split-footer rendering.",
+  "- Сүүлийн Markdown блок хүлээлгийн үед бүрэн харагдахаар төгсгөлийн шинэчлэлтийг сэргээв.",
+  "- Markdown-ийн гүйлгэх түүхийг дээд түвшний блокийн заагаар шинэчилдэг болгов.",
+  "- Хуваагдсан доод хэсгийн дүрслэлд регрессийн шалгалт нэмэв.",
   "",
-  "## Status",
+  "## Төлөв",
   "",
-  "| Area | Before | After | Notes |",
+  "| Хэсэг | Өмнө | Дараа | Тайлбар |",
   "| --- | --- | --- | --- |",
-  "| Direct mode | Missing final rows | Stable | Final markdown block now flushes on idle |",
-  "| Tables | Dropped in streaming mode | Visible | Block-based commits match the working OpenTUI demo |",
-  "| Tests | Partial coverage | Broader coverage | Includes a footer-level split render capture |",
+  "| Шууд горим | Төгсгөлийн мөрүүд дутуу | Тогтвортой | Сүүлийн Markdown блок хүлээлгийн үед бүрэн гарна |",
+  "| Хүснэгт | Урсгал горимд алга болдог | Харагдана | Блокт суурилсан шинэчлэлт OpenTUI үзүүлэнтэй таарна |",
+  "| Тест | Хэсэгчилсэн | Өргөн хүрээтэй | Доод хэсгийн хуваагдсан дүрслэлийн зураглал багтсан |",
   "",
-  "> This sample intentionally includes a wide table so you can spot wrapping and commit bugs quickly.",
+  "> Мөр шилжилт болон шинэчлэлтийн алдааг хурдан илрүүлэхийн тулд энэ жишээнд зориуд өргөн хүснэгт оруулсан.",
   "",
   "```ts",
   "const result = { markdown: true, tables: 2, stable: true }",
   "```",
   "",
-  "## Files",
+  "## Файлууд",
   "",
-  "| File | Change |",
+  "| Файл | Өөрчлөлт |",
   "| --- | --- |",
-  "| `scrollback.surface.ts` | Align markdown commit logic with the split-footer demo |",
-  "| `footer.ts` | Keep active surfaces across footer-height-only resizes |",
-  "| `footer.test.ts` | Capture real split-footer markdown payloads during idle completion |",
+  "| `scrollback.surface.ts` | Markdown шинэчлэлтийн логикийг хуваагдсан доод хэсгийн үзүүлэнтэй тааруулав |",
+  "| `footer.ts` | Зөвхөн доод хэсгийн өндөр өөрчлөгдөхөд идэвхтэй харагдацыг хадгална |",
+  "| `footer.test.ts` | Хүлээлгийн төгсгөлд хуваагдсан доод хэсгийн бодит Markdown агуулгыг шалгана |",
   "",
-  "Next step: run `/fmt table` if you want a tighter table-only sample.",
+  "Дараагийн алхам: зөвхөн хүснэгтийн товч жишээ харах бол `/fmt table` ажиллуулна уу.",
 ].join("\n")
 
 const SAMPLE_TABLE = [
-  "# Table Sample",
+  "# Хүснэгтийн жишээ",
   "",
-  "| Kind | Example | Notes |",
+  "| Төрөл | Жишээ | Тайлбар |",
   "| --- | --- | --- |",
-  "| Pipe | `A\\|B` | Escaped pipes should stay in one cell |",
-  "| Unicode | `漢字` | Wide characters should remain aligned |",
-  "| Wrap | `LongTokenWithoutNaturalBreaks_1234567890` | Useful for width stress |",
-  "| Status | done | Final row should still appear after idle |",
+  "| Босоо зураас | `A\\|B` | Тусгаарласан босоо зураас нэг нүдэнд үлдэнэ |",
+  "| Юникод | `漢字` | Өргөн тэмдэгтүүдийн зэрэгцүүлэлт алдагдахгүй |",
+  "| Мөр шилжилт | `LongTokenWithoutNaturalBreaks_1234567890` | Өргөний ачааллыг шалгахад тустай |",
+  "| Төлөв | дууссан | Хүлээлгийн дараа ч төгсгөлийн мөр харагдана |",
 ].join("\n")
 
 type Ref = {
@@ -592,7 +592,7 @@ async function emitBash(state: State, signal?: AbortSignal): Promise<void> {
   await wait(70, signal)
   doneTool(state, ref, {
     title: "git status",
-    output: `${process.cwd()}\ngit status\nOn branch demo\nnothing to commit, working tree clean\n`,
+    output: `${process.cwd()}\ngit status\nҮзүүлэн салбар дээр байна\ncommit хийх зүйлгүй, ажлын мод цэвэр байна\n`,
     metadata: {
       exitCode: 0,
     },
@@ -606,7 +606,7 @@ function emitWrite(state: State): void {
     content: "export const demo = 42\n",
   })
   doneTool(state, ref, {
-    title: "write",
+    title: "бичих",
     output: "",
     metadata: {},
   })
@@ -618,7 +618,7 @@ function emitEdit(state: State): void {
     filePath: file,
   })
   doneTool(state, ref, {
-    title: "edit",
+    title: "засварлах",
     output: "",
     metadata: {
       diff: "@@ -1 +1 @@\n-export const demo = 1\n+export const demo = 42\n",
@@ -632,7 +632,7 @@ function emitPatch(state: State): void {
     patchText: "*** Begin Patch\n*** End Patch",
   })
   doneTool(state, ref, {
-    title: "apply_patch",
+    title: "нөхөөс хэрэглэх",
     output: "",
     metadata: {
       files: [
@@ -647,7 +647,7 @@ function emitPatch(state: State): void {
           type: "add",
           filePath: path.join(process.cwd(), "README-demo.md"),
           relativePath: "README-demo.md",
-          diff: "@@ -0,0 +1,4 @@\n+# Demo\n+This is a generated preview file.\n",
+          diff: "@@ -0,0 +1,4 @@\n+# Үзүүлэн\n+Энэ бол үүсгэсэн урьдчилан харах файл.\n",
           deletions: 0,
         },
       ],
@@ -657,11 +657,11 @@ function emitPatch(state: State): void {
 
 function emitTask(state: State): void {
   const ref = make(state, "task", {
-    description: "reducer-ийн touchpoint-уудыг run/* дотроос хайх",
+    description: "reducer-ийн холболтын цэгүүдийг run/* дотроос хайх",
     subagent_type: "explore",
   })
   doneTool(state, ref, {
-    title: "Reducer touchpoint-ууд олдлоо",
+    title: "Reducer-ийн холболтын цэгүүд олдлоо",
     output: "",
     metadata: {
       toolcalls: 4,
@@ -692,20 +692,20 @@ function emitTask(state: State): void {
     partID: ref.part,
     callID: ref.call,
     label: "Судлах",
-    description: "reducer-ийн touchpoint-уудыг run/* дотроос хайх",
+    description: "reducer-ийн холболтын цэгүүдийг run/* дотроос хайх",
     status: "completed",
-    title: "Reducer touchpoint-ууд олдлоо",
+    title: "Reducer-ийн холболтын цэгүүд олдлоо",
     toolCalls: 4,
     commits: [
       {
         kind: "user",
-        text: "Scan run/* for reducer touchpoints",
+        text: "Reducer-ийн холболтын цэгүүдийг run/* дотроос хай",
         phase: "start",
         source: "system",
       },
       {
         kind: "reasoning",
-        text: "Thinking: tracing reducer and footer boundaries",
+        text: "Reducer болон доод хэсгийн заагийг мөрдөж байна",
         phase: "progress",
         source: "reasoning",
         messageID: "sub_demo_msg_reasoning",
@@ -713,7 +713,7 @@ function emitTask(state: State): void {
       },
       {
         kind: "tool",
-        text: "running read",
+        text: "унших хэрэгсэл ажиллаж байна",
         phase: "start",
         source: "tool",
         messageID: "sub_demo_msg_tool",
@@ -723,7 +723,7 @@ function emitTask(state: State): void {
       },
       {
         kind: "assistant",
-        text: "Footer updates flow through stream.ts into RunFooter",
+        text: "Доод хэсгийн шинэчлэл stream.ts-ээр дамжин RunFooter-т хүрнэ",
         phase: "progress",
         source: "assistant",
         messageID: "sub_demo_msg_text",
@@ -737,15 +737,15 @@ function emitTodo(state: State): void {
   const ref = make(state, "todowrite", {
     todos: [
       {
-        content: "Permission UI өдөөх",
+        content: "Зөвшөөрлийн интерфэйсийг ажиллуулах",
         status: "completed",
       },
       {
-        content: "Question UI өдөөх",
+        content: "Асуултын интерфэйсийг ажиллуулах",
         status: "in_progress",
       },
       {
-        content: "Tool formatting тааруулах",
+        content: "Хэрэгслийн форматлалыг тааруулах",
         status: "pending",
       },
     ],
@@ -764,8 +764,8 @@ function emitQuestionTool(state: State): void {
         header: "Загвар",
         question: "Ямар гаралтын загварыг шалгах вэ?",
         options: [
-          { label: "Ялгаа", description: "Diff block харуулах" },
-          { label: "Код", description: "Code block харуулах" },
+          { label: "Ялгаа", description: "Өөрчлөлтийн ялгааны блок харуулах" },
+          { label: "Код", description: "Кодын блок харуулах" },
         ],
         multiple: false,
       },
@@ -782,10 +782,10 @@ function emitQuestionTool(state: State): void {
     ],
   })
   doneTool(state, ref, {
-    title: "question",
+    title: "асуулт",
     output: "",
     metadata: {
-      answers: [["Ялгаа"], ["Хэрэглээ", "custom-note"]],
+      answers: [["Ялгаа"], ["Хэрэглээ", "тусгай тэмдэглэл"]],
     },
   })
 }
@@ -799,7 +799,7 @@ function emitPermission(state: State, kind: PermissionKind = "edit"): void {
     const ref = make(state, "bash", {
       command,
       workdir: root,
-      description: "worktree өөрчлөлтүүдийг шалгах",
+      description: "ажлын модны өөрчлөлтүүдийг шалгах",
     })
     askPermission(state, {
       ref,
@@ -830,7 +830,7 @@ function emitPermission(state: State, kind: PermissionKind = "edit"): void {
       patterns: [target],
       always: [target],
       done: {
-        title: "read",
+        title: "унших",
         output: ["1: {", '2:   "name": "mongolgpt",', '3:   "private": true', "4: }"].join("\n"),
         metadata: {},
       },
@@ -840,7 +840,7 @@ function emitPermission(state: State, kind: PermissionKind = "edit"): void {
 
   if (kind === "task") {
     const ref = make(state, "task", {
-      description: "direct-mode prompt-уудын footer spacing шалгах",
+      description: "шууд горимын хүсэлтийн доод хэсгийн зайг шалгах",
       subagent_type: "explore",
     })
     askPermission(state, {
@@ -849,7 +849,7 @@ function emitPermission(state: State, kind: PermissionKind = "edit"): void {
       patterns: ["explore"],
       always: ["*"],
       done: {
-        title: "Footer spacing шалгагдлаа",
+        title: "Доод хэсгийн зай шалгагдлаа",
         output: "",
         metadata: {
           toolcalls: 3,
@@ -878,8 +878,8 @@ function emitPermission(state: State, kind: PermissionKind = "edit"): void {
       },
       always: [`${dir}/**`],
       done: {
-        title: "read",
-        output: `1: # Гадаад demo\n2: Хуваалцсан preview файл\nЗам: ${target}`,
+        title: "унших",
+        output: `1: # Гадаад үзүүлэн\n2: Хуваалцсан урьдчилан харах файл\nЗам: ${target}`,
         metadata: {},
       },
     })
@@ -888,7 +888,7 @@ function emitPermission(state: State, kind: PermissionKind = "edit"): void {
 
   if (kind === "doom") {
     const ref = make(state, "task", {
-      description: "давтагдсан алдааны дараа formatter-г дахин оролдох",
+      description: "давтагдсан алдааны дараа форматлагчийг дахин оролдох",
       subagent_type: "general",
     })
     askPermission(state, {
@@ -917,7 +917,7 @@ function emitPermission(state: State, kind: PermissionKind = "edit"): void {
     patterns: [file],
     always: [file],
     done: {
-      title: "edit",
+      title: "засварлах",
       output: "",
       metadata: {
         diff,
@@ -932,11 +932,11 @@ function emitQuestion(state: State, kind: QuestionKind = "multi"): void {
       return [
         {
           header: "Горим",
-          question: "Spacing шалгалтад аль footer-ийг reference болгох вэ?",
+          question: "Зай, байрлалын шалгалтад аль доод хэсгийг жишиг болгох вэ?",
           options: [
-            { label: "Зөвшөөрөл", description: "Permission footer шалгах" },
-            { label: "Асуулт", description: "Энэ question footer-ийг нээлттэй байлгах" },
-            { label: "Prompt", description: "Энгийн composer руу буцах" },
+            { label: "Зөвшөөрөл", description: "Зөвшөөрлийн доод хэсгийг шалгах" },
+            { label: "Асуулт", description: "Асуултын доод хэсгийг нээлттэй байлгах" },
+            { label: "Хүсэлт", description: "Энгийн хүсэлт бичих хэсэг рүү буцах" },
           ],
           multiple: false,
           custom: false,
@@ -948,12 +948,12 @@ function emitQuestion(state: State, kind: QuestionKind = "multi"): void {
       return [
         {
           header: "Шалгалт",
-          question: "Дараа шалгах direct-mode кейсүүдээ сонгоно уу",
+          question: "Дараа шалгах шууд горимын тохиолдлуудаа сонгоно уу",
           options: [
-            { label: "Ялгаа", description: "Footer дотор edit diff харуулах" },
-            { label: "Даалгавар", description: "Бүтэцтэй task хураангуй харуулах" },
-            { label: "Хийх зүйл", description: "Todo snapshot харуулах" },
-            { label: "Алдаа", description: "Transcript-ийн алдааны мөр харуулах" },
+            { label: "Ялгаа", description: "Доод хэсэгт засварын ялгаа харуулах" },
+            { label: "Даалгавар", description: "Бүтэцтэй даалгаврын хураангуй харуулах" },
+            { label: "Хийх зүйл", description: "Хийх зүйлийн агшин зураг харуулах" },
+            { label: "Алдаа", description: "Ярианы тэмдэглэлийн алдааны мөр харуулах" },
           ],
           multiple: true,
           custom: false,
@@ -965,10 +965,10 @@ function emitQuestion(state: State, kind: QuestionKind = "multi"): void {
       return [
         {
           header: "Хариу",
-          question: "Footer preview дээр ямар custom хариу харагдах вэ?",
+          question: "Доод хэсгийн урьдчилан харах дээр ямар тусгай хариу харагдах вэ?",
           options: [
             { label: "Богино тэмдэглэл", description: "Хариуг нэг мөрт багтаах" },
-            { label: "Ороосон тэмдэглэл", description: "Wrapping шалгахын тулд урт хариу ашиглах" },
+            { label: "Ороосон тэмдэглэл", description: "Мөр шилжилтийг шалгахын тулд урт хариу ашиглах" },
           ],
           multiple: false,
           custom: true,
@@ -979,20 +979,20 @@ function emitQuestion(state: State, kind: QuestionKind = "multi"): void {
     return [
       {
         header: "Байрлал",
-        question: "Тестлэх үед аль footer view идэвхтэй үлдэх вэ?",
+        question: "Шалгах үед доод хэсгийн аль харагдац идэвхтэй үлдэх вэ?",
         options: [
-          { label: "Prompt", description: "Prompt руу буцах" },
-          { label: "Асуулт", description: "Question-ийг нээлттэй байлгах" },
+          { label: "Хүсэлт", description: "Хүсэлт бичих хэсэг рүү буцах" },
+          { label: "Асуулт", description: "Асуултыг нээлттэй байлгах" },
         ],
         multiple: false,
       },
       {
         header: "Мөрүүд",
-        question: "Formatting preview-үүд сонгоно уу",
+        question: "Форматлалын урьдчилан харагдацуудыг сонгоно уу",
         options: [
-          { label: "Ялгаа", description: "Edit diff гаргах" },
-          { label: "Даалгавар", description: "Task card гаргах" },
-          { label: "Хийх зүйл", description: "Todo card гаргах" },
+          { label: "Ялгаа", description: "Засварын ялгаа гаргах" },
+          { label: "Даалгавар", description: "Даалгаврын карт гаргах" },
+          { label: "Хийх зүйл", description: "Хийх зүйлийн карт гаргах" },
         ],
         multiple: true,
         custom: true,
@@ -1037,7 +1037,7 @@ async function emitFmt(state: State, kind: string, body: string, signal?: AbortS
   }
 
   if (kind === "reasoning") {
-    await emitReasoning(state, body || "Planning next steps [REDACTED] while preserving reducer ordering.", signal)
+    await emitReasoning(state, body || "Reducer-ийн дарааллыг хадгалан дараагийн алхмуудыг төлөвлөж байна.", signal)
     return true
   }
 
@@ -1077,14 +1077,14 @@ async function emitFmt(state: State, kind: string, body: string, signal?: AbortS
   }
 
   if (kind === "error") {
-    emitError(state, body || "demo error event")
+    emitError(state, body || "үзүүлэнгийн алдааны үйл явдал")
     return true
   }
 
   if (kind === "mix") {
     await emitText(state, SAMPLE_MARKDOWN, signal)
     await wait(50, signal)
-    await emitReasoning(state, "Formatter-ийн захын тохиолдлуудыг бодож байна [REDACTED].", signal)
+    await emitReasoning(state, "Форматлагчийн захын тохиолдлуудыг бодож байна [НУУЦАЛСАН].", signal)
     await wait(50, signal)
     await emitBash(state, signal)
     emitWrite(state)
@@ -1093,7 +1093,7 @@ async function emitFmt(state: State, kind: string, body: string, signal?: AbortS
     emitTask(state)
     emitTodo(state)
     emitQuestionTool(state)
-    emitError(state, "demo холимог scenario алдаа")
+    emitError(state, "үзүүлэнгийн холимог тохиолдлын алдаа")
     return true
   }
 
@@ -1104,7 +1104,7 @@ function intro(state: State): void {
   note(
     state.footer,
     [
-      "Interactive mode-д demo slash командууд идэвхжлээ.",
+      "Интерактив горимд үзүүлэнгийн налуу зурааст командууд идэвхжлээ.",
       `- /permission [kind] (${PERMISSIONS.join(", ")})`,
       `- /question [kind] (${QUESTIONS.join(", ")})`,
       `- /fmt <kind> (${KINDS.join(", ")})`,
@@ -1113,7 +1113,7 @@ function intro(state: State): void {
       "- /question custom",
       "- /fmt markdown",
       "- /fmt table",
-      "- /fmt text your custom text",
+      "- /fmt text өөрийн бичвэр",
     ].join("\n"),
   )
 }
@@ -1153,7 +1153,7 @@ export function createRunDemo(input: Input) {
     if (cmd === "/permission") {
       const kind = permissionKind(list[1])
       if (!kind) {
-        note(state.footer, `Pick a permission kind: ${PERMISSIONS.join(", ")}`)
+        note(state.footer, `Зөвшөөрлийн төрлийг сонгоно уу: ${PERMISSIONS.join(", ")}`)
         return true
       }
 
@@ -1164,7 +1164,7 @@ export function createRunDemo(input: Input) {
     if (cmd === "/question") {
       const kind = questionKind(list[1])
       if (!kind) {
-        note(state.footer, `Pick a question kind: ${QUESTIONS.join(", ")}`)
+        note(state.footer, `Асуултын төрлийг сонгоно уу: ${QUESTIONS.join(", ")}`)
         return true
       }
 
@@ -1176,7 +1176,7 @@ export function createRunDemo(input: Input) {
       const kind = (list[1] || "").toLowerCase()
       const body = list.slice(2).join(" ")
       if (!kind) {
-        note(state.footer, `Pick a kind: ${KINDS.join(", ")}`)
+        note(state.footer, `Төрлийг сонгоно уу: ${KINDS.join(", ")}`)
         return true
       }
 
@@ -1185,7 +1185,7 @@ export function createRunDemo(input: Input) {
         return true
       }
 
-      note(state.footer, `Unknown kind "${kind}". Use: ${KINDS.join(", ")}`)
+      note(state.footer, `Тодорхойгүй төрөл "${kind}". Ашиглах боломжтой: ${KINDS.join(", ")}`)
       return true
     }
 
@@ -1211,7 +1211,7 @@ export function createRunDemo(input: Input) {
     feed(state, event)
 
     if (input.reply === "reject") {
-      failTool(state, item.ref, input.message || "permission rejected")
+      failTool(state, item.ref, input.message || "зөвшөөрлөөс татгалзсан")
       return true
     }
 
@@ -1237,7 +1237,7 @@ export function createRunDemo(input: Input) {
     } satisfies Event
     feed(state, event)
     doneTool(state, ask.ref, {
-      title: "question",
+      title: "асуулт",
       output: "",
       metadata: {
         answers: input.answers,
@@ -1260,7 +1260,7 @@ export function createRunDemo(input: Input) {
         requestID: input.requestID,
       },
     } as Event)
-    failTool(state, ask.ref, "question rejected")
+    failTool(state, ask.ref, "асуултаас татгалзсан")
     return true
   }
 

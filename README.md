@@ -1,27 +1,27 @@
 # MongolGPT
 
-MongolGPT бол Монгол хэрэглэгчдэд эхнээсээ ойлгомжтой байх зорилготой AI coding agent платформ юм. Терминал, desktop app, IDE extension, provider, skill, plugin, connector, MCP холболтыг нэг дор ажиллуулах суурьтай.
+MongolGPT бол Монгол хэрэглэгчдэд эхнээсээ ойлгомжтой байх зорилготой AI кодын агент платформ юм. Терминал, ширээний апп, IDE өргөтгөл, үйлчилгээ үзүүлэгч, ур чадвар, нэмэлт, холбогч, MCP холболтыг нэг дор ажиллуулах суурьтай.
 
 ## Юу багтсан бэ
 
-- Монгол хэл дээр анхдагчаар нээгдэх Windows desktop app
-- Терминал дээр ажиллах `mongolgpt` AI coding agent
-- MongolGPT account болон provider login холболтын суурь
-- Claude, Codex, Goose, Hermes зэрэг agent ecosystem-ийн skill/plugin/MCP форматыг таньж MongolGPT-д тааруулах compatibility importer
-- Settings доторх `Интеграц` tab-аас command, path, URL, config оруулж plan/apply хийх workflow
-- Монгол docs, README, download/release тайлбарын суурь
+- Монгол хэл дээр анхдагчаар нээгдэх Windows ширээний апп
+- Терминал дээр ажиллах `mongolgpt` AI кодын агент
+- MongolGPT бүртгэл болон үйлчилгээ үзүүлэгчийн нэвтрэлтийн холболтын суурь
+- Claude, Codex, Goose, Hermes зэрэг агентын экосистемийн ур чадвар, нэмэлт, MCP форматыг таньж MongolGPT-д тааруулах импортлогч
+- Тохиргооны `Интеграц` хэсэгт команд, зам, URL, тохиргоо оруулж төлөвлөх, хэрэгжүүлэх урсгал
+- Монгол баримт бичиг, README, таталт болон хувилбарын тайлбарын суурь
 
-## Desktop татах
+## Ширээний апп татах
 
-Одоогоор нийтлэгдсэн desktop build нь Windows x64 installer.
+Одоогоор нийтлэгдсэн ширээний хувилбар нь Windows x64 суулгац юм.
 
 [mongolgpt-desktop-win-x64.exe татах](https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe)
 
-Бүх release:
+Бүх хувилбар:
 
 [github.com/sergei10a-rgb/mongolgpt/releases](https://github.com/sergei10a-rgb/mongolgpt/releases)
 
-Одоогийн build code signing хийгдээгүй тул Windows SmartScreen анхааруулга харуулж магадгүй.
+Одоогийн суулгац тоон гарын үсэггүй тул Windows SmartScreen анхааруулга харуулж магадгүй.
 
 ## Монгол баримт бичиг
 
@@ -31,59 +31,59 @@ MongolGPT-ийн Монгол баримт бичиг:
 
 Баримт бичгийн үндсэн эх нь `packages/web/src/content/docs/` дотор байна. Нийтлэх домэйн баталгаажаагүй байгаа тул эзэмшдэггүй туршилтын домэйн руу холбоос заагаагүй.
 
-## Local дээр ажиллуулах
+## Локал орчинд ажиллуулах
 
 ```bash
 bun install
 bun run dev
 ```
 
-Desktop development mode:
+Ширээний аппын хөгжүүлэлтийн горим:
 
 ```bash
 bun run dev:desktop
 ```
 
-Docs development mode:
+Баримт бичгийн хөгжүүлэлтийн горим:
 
 ```bash
 bun run dev:docs
 ```
 
-Windows desktop installer build хийх:
+Windows ширээний суулгац бэлтгэх:
 
 ```powershell
 $env:MONGOLGPT_CHANNEL="prod"
 bun --cwd packages/desktop run package:win
 ```
 
-Build дууссаны дараа installer энд гарна:
+Бэлтгэл дууссаны дараа суулгац энд гарна:
 
 ```text
 packages/desktop/dist/
 ```
 
-## Интеграц импортлох
+## Интеграц оруулах
 
-MongolGPT нь MCP server, skill, plugin, connector төрлийн эх сурвалжийг plan/apply хоёр алхмаар тохиргоонд нэмнэ.
+MongolGPT нь MCP сервер, ур чадвар, нэмэлт, холбогч төрлийн эх сурвалжийг төлөвлөх, хэрэгжүүлэх хоёр алхмаар тохиргоонд нэмнэ.
 
 ```bash
 mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
 mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
 ```
 
-Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, локал зам, URL эсвэл config оруулаад хэрэглэгчээр wrapper бичүүлэхгүйгээр тааруулах workflow ажиллана.
+Ширээний аппын `Тохиргоо -> Интеграц` хэсэгт команд, локал зам, URL эсвэл тохиргоо оруулахад хэрэглэгчээр хөрвүүлэгч бичүүлэхгүйгээр автоматаар тааруулна.
 
-## NPM package төлөв
+## NPM багцын төлөв
 
-`mongolgpt@0.1.1` болон бүх native binary package npm registry дээр нийтлэгдсэн. Терминал хувилбарыг npm-ээр шууд суулгаж туршиж болно:
+`mongolgpt@0.1.1` болон платформын бүх гүйцэтгэх багц npm бүртгэлд нийтлэгдсэн. Терминал хувилбарыг npm-ээр шууд суулгаж туршиж болно:
 
 ```bash
 npm install -g mongolgpt
 mongolgpt --version
 ```
 
-Source build эсвэл development mode ашиглах бол:
+Эх кодоос бэлтгэх эсвэл хөгжүүлэлтийн горим ашиглах бол:
 
 ```bash
 git clone https://github.com/sergei10a-rgb/mongolgpt
@@ -96,7 +96,7 @@ bun run dev
 
 [github.com/sergei10a-rgb/mongolgpt](https://github.com/sergei10a-rgb/mongolgpt)
 
-Энэ repository нь MongolGPT-ийн standalone source, brand, desktop build, Монгол UX, adapter layer-ийн үндсэн source юм.
+Энэ эх кодын сан нь MongolGPT-ийн бие даасан эх код, брэнд, ширээний хувилбар, Монгол хэрэглэгчийн туршлага болон тохируулагч давхаргын үндсэн сан юм.
 
 ## Лиценз
 

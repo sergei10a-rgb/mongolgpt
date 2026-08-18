@@ -1,4 +1,4 @@
-name: docs-update
+name: Баримт бичиг шинэчлэх
 
 on:
   schedule:
@@ -10,27 +10,27 @@ env:
 
 jobs:
   update-docs:
-    if: github.repository == 'sst/mongolgpt'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    if: github.repository == 'sergei10a-rgb/mongolgpt'
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: write
       pull-requests: write
     steps:
-      - name: Checkout repository
+      - name: Эх кодыг татах
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          fetch-depth: 0 # Fetch full history to access commits
+          fetch-depth: 0 # Коммитын бүрэн түүхийг ашиглана
 
-      - name: Setup Bun
+      - name: Bun тохируулах
         uses: ./.github/actions/setup-bun
 
-      - name: Get recent commits
+      - name: Сүүлийн коммитуудыг авах
         id: commits
         run: |
           COMMITS=$(git log --since="${{ env.LOOKBACK_HOURS }} hours ago" --pretty=format:"- %h %s" 2>/dev/null || echo "")
           if [ -z "$COMMITS" ]; then
-            echo "No commits in the last ${{ env.LOOKBACK_HOURS }} hours"
+            echo "Сүүлийн ${{ env.LOOKBACK_HOURS }} цагт шинэ коммит алга"
             echo "has_commits=false" >> $GITHUB_OUTPUT
           else
             echo "has_commits=true" >> $GITHUB_OUTPUT
@@ -41,32 +41,32 @@ jobs:
             } >> $GITHUB_OUTPUT
           fi
 
-      - name: Run mongolgpt
+      - name: MongolGPT ажиллуулах
         if: steps.commits.outputs.has_commits == 'true'
-        uses: sst/mongolgpt/github@2c14fc5586fe0b88e5c04732d2e846769cc35671 # latest
+        uses: ./github
         env:
           MONGOLGPT_API_KEY: ${{ secrets.MONGOLGPT_API_KEY }}
         with:
           model: mongolgpt/gpt-5.2
           agent: docs
           prompt: |
-            Review the following commits from the last ${{ env.LOOKBACK_HOURS }} hours and identify any new features that may need documentation.
+            Сүүлийн ${{ env.LOOKBACK_HOURS }} цагийн дараах коммитуудыг шалгаж, баримт бичигт нэмэх шаардлагатай шинэ боломж байгаа эсэхийг тогтоо.
 
             <recent_commits>
             ${{ steps.commits.outputs.list }}
             </recent_commits>
 
-            Steps:
-            1. For each commit that looks like a new feature or significant change:
-               - Read the changed files to understand what was added
-               - Check if the feature is already documented in packages/web/src/content/docs/*
-            2. If you find undocumented features:
-               - Update the relevant documentation files in packages/web/src/content/docs/*
-               - Follow the existing documentation style and structure
-               - Make sure to document the feature clearly with examples where appropriate
-            3. If all new features are already documented, report that no updates are needed
-            4. If you are creating a new documentation file be sure to update packages/web/astro.config.mjs too.
+            Алхмууд:
+            1. Шинэ боломж эсвэл томоохон өөрчлөлттэй төстэй коммит бүрийн хувьд:
+               - Нэмэгдсэн зүйлийг ойлгохын тулд өөрчлөгдсөн файлуудыг унш
+               - Тухайн боломж packages/web/src/content/docs/* дотор аль хэдийн баримтжуулсан эсэхийг шалга
+            2. Баримтжуулаагүй боломж олдвол:
+               - packages/web/src/content/docs/* доторх холбогдох баримт бичгийг шинэчил
+               - Одоогийн Монгол баримт бичгийн хэлбэр, бүтцийг дага
+               - Тохирох үед ойлгомжтой жишээ оруул
+            3. Бүх шинэ боломж баримтжуулсан бол өөрчлөлт шаардлагагүйг тайлагна
+            4. Шинэ баримт бичгийн файл үүсгэвэл packages/web/astro.config.mjs-ийг мөн шинэчил.
 
-            Focus on user-facing features and API changes. Skip internal refactors, bug fixes, and test updates unless they affect user-facing behavior.
-            Don't feel the need to document every little thing. It is perfectly okay to make 0 changes at all.
-            Try to keep documentation only for large features or changes that already have a good spot to be documented.
+            Хэрэглэгчид харагдах боломж болон API өөрчлөлтөд төвлөр. Хэрэглэгчийн үйлдэлд нөлөөлөхгүй дотоод шинэчлэл, алдаа засвар, тестийн өөрчлөлтийг алгас.
+            Жижиг өөрчлөлт бүрийг баримтжуулах шаардлагагүй бөгөөд огт өөрчлөлт хийхгүй байх нь зөв байж болно.
+            Зөвхөн томоохон боломж эсвэл одоогийн баримт бичигт тодорхой байртай өөрчлөлтийг нэм.

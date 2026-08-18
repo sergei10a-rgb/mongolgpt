@@ -14,6 +14,7 @@ const prefixes = {
 } as const
 
 const LENGTH = 26
+const TIMESTAMP_PERIOD = 2 ** 36
 
 // State for monotonic ID generation
 let lastTimestamp = 0
@@ -75,6 +76,14 @@ export function timestamp(id: string): number {
   const hex = id.slice(prefix.length + 1, prefix.length + 13)
   const encoded = BigInt("0x" + hex)
   return Number(encoded / BigInt(0x1000))
+}
+
+/** Reconstruct the most recent full timestamp represented by an ascending ID. */
+export function timestampAtOrBefore(id: string, reference = Date.now()): number {
+  const value = timestamp(id)
+  const cycle = Math.floor(reference / TIMESTAMP_PERIOD)
+  const candidate = cycle * TIMESTAMP_PERIOD + value
+  return candidate > reference ? candidate - TIMESTAMP_PERIOD : candidate
 }
 
 export * as Identifier from "./id"

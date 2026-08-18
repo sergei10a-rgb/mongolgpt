@@ -120,7 +120,7 @@ function activeKeyLabel(active: ActiveKey<Renderable, KeyEvent>) {
 }
 
 function activeKeyGroup(active: ActiveKey<Renderable, KeyEvent>) {
-  if (active.continues) return "System"
+  if (active.continues) return "Систем"
   return text(active.commandAttrs?.category) ?? text(active.bindingAttrs?.group) ?? UNKNOWN
 }
 
@@ -345,7 +345,7 @@ function WhichKeyPanel(props: {
       {
         name: command.home,
         title: "Эхний товчны хослол",
-        desc: "Эхний which-key binding руу очих",
+        desc: "Эхний товчны хослол руу очих",
         category: "Систем",
         run() {
           setOffset(0)
@@ -354,7 +354,7 @@ function WhichKeyPanel(props: {
       {
         name: command.end,
         title: "Сүүлийн товчны хослол",
-        desc: "Сүүлийн which-key binding руу очих",
+        desc: "Сүүлийн товчны хослол руу очих",
         category: "Систем",
         run() {
           setOffset(maxOffset())
@@ -456,7 +456,7 @@ function WhichKeyPanel(props: {
           <box height={TAB_CONTENT_GAP} flexShrink={0} />
         </Show>
         <box height={rows()} flexShrink={0} flexDirection="column">
-          <Show when={shown().length > 0} fallback={<text fg={look().muted}>Хүрэх боломжтой binding алга</text>}>
+          <Show when={shown().length > 0} fallback={<text fg={look().muted}>Хүрэх боломжтой товчны хослол алга</text>}>
             <For each={rowIndexes()}>
               {(row) => (
                 <box width="100%" flexDirection="row" justifyContent="center" gap={COLUMN_GAP}>
@@ -549,8 +549,8 @@ const tui: TuiPlugin = async (api) => {
       },
       {
         name: command.toggleLayout,
-        title: "Товчны хослолын layout солих",
-        desc: "Which-key-г dock болон overlay горимын хооронд солих",
+        title: "Товчны хослолын байрлалыг солих",
+        desc: "Товчны туслахыг доод болон давхарласан горимын хооронд солих",
         category: "Систем",
         run() {
           setMode((value) => {
@@ -562,8 +562,8 @@ const tui: TuiPlugin = async (api) => {
       },
       {
         name: command.togglePending,
-        title: "Хүлээгдэж буй товчны preview асаах/унтраах",
-        desc: "Overlay горимд хүлээгдэж буй товчны дараалалд which-key-г автоматаар харуулах",
+        title: "Хүлээгдэж буй товчны урьдчилан харахыг асаах/унтраах",
+        desc: "Давхарласан горимд хүлээгдэж буй товчны дарааллыг автоматаар харуулах",
         category: "Систем",
         run() {
           setPendingPreview((value) => {

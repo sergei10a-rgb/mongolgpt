@@ -189,9 +189,8 @@ function findBinary(startDir) {
 const resolved = envPath || (fs.existsSync(cached) ? cached : findBinary(scriptDir))
 if (!resolved) {
   console.error(
-    "It seems that your package manager failed to install the right version of the MongolGPT CLI for your platform. You can try manually installing " +
-      names.map((n) => `\"${n}\"`).join(" or ") +
-      " package",
+    "Таны package manager энэ платформд тохирох MongolGPT CLI хувилбарыг суулгаж чадсангүй. Дараах package-ийг гараар суулгаж үзнэ үү: " +
+      names.map((n) => `\"${n}\"`).join(" эсвэл "),
   )
   process.exit(1)
 }

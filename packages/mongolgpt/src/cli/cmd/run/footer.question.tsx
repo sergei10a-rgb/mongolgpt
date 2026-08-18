@@ -540,29 +540,29 @@ export function RunQuestionBody(props: {
               fallback={
                 <>
                   <text fg={props.theme.text}>
-                    enter <span style={{ fg: props.theme.muted }}>хадгалах</span>
+                    Enter <span style={{ fg: props.theme.muted }}>хадгалах</span>
                   </text>
                   <text fg={props.theme.text}>
-                    esc <span style={{ fg: props.theme.muted }}>цуцлах</span>
+                    Esc <span style={{ fg: props.theme.muted }}>цуцлах</span>
                   </text>
                 </>
               }
             >
               <Show when={!single()}>
                 <text fg={props.theme.text}>
-                  {"⇆"} <span style={{ fg: props.theme.muted }}>tab</span>
+                  {"⇆"} <span style={{ fg: props.theme.muted }}>дараагийн хэсэг</span>
                 </text>
               </Show>
               <Show when={!confirm()}>
                 <text fg={props.theme.text}>
-                  {"↑↓"} <span style={{ fg: props.theme.muted }}>select</span>
+                  {"↑↓"} <span style={{ fg: props.theme.muted }}>сонгох</span>
                 </text>
               </Show>
               <text fg={props.theme.text}>
-                enter <span style={{ fg: props.theme.muted }}>{verb()}</span>
+                Enter <span style={{ fg: props.theme.muted }}>{verb()}</span>
               </text>
               <text fg={props.theme.text}>
-                esc <span style={{ fg: props.theme.muted }}>dismiss</span>
+                Esc <span style={{ fg: props.theme.muted }}>хаах</span>
               </text>
             </Show>
           </box>
