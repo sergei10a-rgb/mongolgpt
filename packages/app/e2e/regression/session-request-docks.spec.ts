@@ -1,4 +1,5 @@
 import { base64Encode } from "@mongolgpt/core/util/encode"
+import { dict as uiMn } from "@mongolgpt/ui/i18n/mn"
 import { expect, test, type Page } from "@playwright/test"
 import { mockMongolGPTServer } from "../utils/mock-server"
 import { expectSessionTitle } from "../utils/waits"
@@ -71,7 +72,7 @@ test("shows a pending permission dock", async ({ page }) => {
   await expect(page.locator('[data-component="session-composer"]')).toHaveCount(0)
 
   const reply = page.waitForRequest((request) => request.method() === "POST")
-  await permission.getByRole("button", { name: "Нэг удаа зөвшөөрнө үү" }).click()
+  await permission.getByRole("button", { name: uiMn["ui.permission.allowOnce"], exact: true }).click()
   const request = await reply
   expect(new URL(request.url()).pathname).toBe(`/session/${sessionID}/permissions/permission-request`)
   expect(request.postDataJSON()).toEqual({ response: "once" })

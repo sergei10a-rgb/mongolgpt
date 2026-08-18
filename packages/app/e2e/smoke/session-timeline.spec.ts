@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { base64Encode } from "@mongolgpt/core/util/encode"
+import { dict as mn } from "../../src/i18n/mn"
 import { fixture, pageMessages } from "./session-timeline.fixture"
 import { trackPageErrors, expectNoSmokeErrors } from "../utils/errors"
 import { mockMongolGPTServer } from "../utils/mock-server"
@@ -736,5 +737,5 @@ async function switchTitlebarSession(page: Page, sessionID: string, title: strin
 }
 
 async function expectSessionReady(page: Page) {
-  await expectAppVisible(page.getByRole("textbox", { name: /Ask anything/i }))
+  await expectAppVisible(page.getByRole("textbox", { name: mn["prompt.placeholder.simple"], exact: true }))
 }

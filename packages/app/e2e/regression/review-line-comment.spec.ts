@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { base64Encode } from "@mongolgpt/core/util/encode"
+import { dict as mn } from "../../src/i18n/mn"
 import { mockMongolGPTServer } from "../utils/mock-server"
 import { expectAppVisible, expectSessionTitle } from "../utils/waits"
 
@@ -74,7 +75,7 @@ test("stages a submitted line comment in the prompt context", async ({ page }) =
   await review.locator('[data-slot="line-comment-action"][data-variant="primary"]').click()
 
   await expect(review.getByText("Use the existing value instead", { exact: true })).toBeVisible()
-  await page.getByRole("tab", { name: "Сесс" }).click()
+  await page.getByRole("tab", { name: new RegExp(`^${mn["session.tab.session"]}$`, "i") }).click()
   const context = page.getByText("Use the existing value instead", { exact: true }).last()
   await expect(context).toBeVisible()
   await expect(context.locator("..")).toContainText("review.ts:2")
@@ -144,7 +145,7 @@ async function openReview(page: Page) {
   await page.goto(`/${base64Encode(directory)}/session/${sessionID}`)
   await expectSessionTitle(page, title)
   const diffResponse = page.waitForResponse((response) => new URL(response.url()).pathname === "/vcs/diff")
-  await page.getByRole("tab", { name: "Өөрчлөлтүүд" }).click()
+  await page.getByRole("tab", { name: new RegExp(`^${mn["session.tab.review"]}$`, "i") }).click()
   expect(await (await diffResponse).json()).toHaveLength(1)
 
   const review = page.locator('[data-component="session-review"]')

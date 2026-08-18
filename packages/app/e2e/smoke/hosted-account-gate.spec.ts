@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test"
 import { base64Encode } from "@mongolgpt/core/util/encode"
+import { dict as mn } from "../../src/i18n/mn"
 import { fixture, pageMessages } from "./session-timeline.fixture"
 import { mockMongolGPTServer } from "../utils/mock-server"
 
@@ -40,8 +41,8 @@ test.describe("hosted MongolGPT account gate", () => {
     await expect.poll(() => tokenRequest?.method).toBe("POST")
     expect(tokenRequest).toEqual({ method: "POST", accept: "application/json", credentials: "include" })
 
-    await expect(page.getByRole("heading", { name: "MongolGPT-д нэвтэрнэ үү" })).toBeVisible()
-    await expect(page.getByText("Web хувилбарыг ашиглахын тулд MongolGPT аккаунтаараа нэвтэрнэ үү.")).toBeVisible()
+    await expect(page.getByRole("heading", { name: mn["auth.hosted.title"], exact: true })).toBeVisible()
+    await expect(page.getByText(mn["auth.hosted.description"], { exact: true })).toBeVisible()
 
     const metadata = await page.evaluate(() => ({
       language: document.documentElement.lang,
@@ -54,7 +55,7 @@ test.describe("hosted MongolGPT account gate", () => {
       server: runtimeUrl,
     })
 
-    await page.getByRole("button", { name: "Нэвтрэх" }).click()
+    await page.getByRole("button", { name: mn["auth.hosted.login"], exact: true }).click()
     await expect.poll(() => authorization?.searchParams.get("continue")).toBe("/auth/app")
     expect(authorization?.origin).toBe(publicUrl)
     expect(authorization?.pathname).toBe("/auth/authorize")
@@ -88,17 +89,17 @@ test.describe("hosted MongolGPT account gate", () => {
     })
 
     await page.goto("/")
-    await expect(page.getByText("Аккаунтыг шалгаж чадсангүй. Дахин оролдоно уу.")).toBeVisible()
+    await expect(page.getByText(mn["auth.hosted.unavailable"], { exact: true })).toBeVisible()
 
     state = "authenticated"
-    await page.getByRole("button", { name: "Дахин шалгах" }).click()
+    await page.getByRole("button", { name: mn["auth.hosted.retry"], exact: true }).click()
     await expect.poll(() => checks).toBeGreaterThanOrEqual(2)
     expect(exchangeMethod).toBe("POST")
     expect(exchangeAuthorization).toBe(`Bearer ${currentCapability.token}`)
 
     await page.goto(`/${base64Encode(fixture.directory)}/session/${fixture.sourceID}`)
     await expect(page.getByRole("heading", { name: fixture.expected.sourceTitle })).toBeVisible()
-    await expect(page.getByRole("textbox", { name: /Ask anything/i })).toBeVisible()
+    await expect(page.getByRole("textbox", { name: mn["prompt.placeholder.simple"], exact: true })).toBeVisible()
   })
 })
 
