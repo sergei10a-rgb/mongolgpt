@@ -401,14 +401,14 @@ export const layer: Layer.Layer<Service, never, Git.Service | EventV2Bridge.Serv
         const ctx = yield* InstanceState.context
         if (ctx.project.vcs !== "git") {
           return yield* new PatchApplyError({
-            message: "Patch can't be applied because the project is not git-based",
+            message: "Энэ төсөл Git дээр суурилаагүй тул кодын нөхөөс хэрэглэх боломжгүй",
             reason: "non-git",
           })
         }
         const applied = yield* git.applyPatch(ctx.directory, input.patch)
         if (applied.exitCode !== 0) {
           return yield* new PatchApplyError({
-            message: "Patch can't be applied",
+            message: "Кодын нөхөөсийг хэрэглэх боломжгүй",
             reason: "not-clean",
           })
         }

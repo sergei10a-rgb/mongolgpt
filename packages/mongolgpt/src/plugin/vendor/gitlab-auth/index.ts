@@ -193,7 +193,7 @@ async function refreshTokenIfNeeded(authData, auth, fallbackUrl) {
                 instanceUrl: refreshedAuthData.enterpriseUrl || fallbackUrl,
             };
         }
-        throw new Error('Failed to get refreshed auth data');
+        throw new Error('Шинэчилсэн нэвтрэх мэдээлэл авахад алдаа гарлаа');
     }
     // Start refresh process
     debugLog('Token expired or expiring soon, refreshing...', {
@@ -255,7 +255,7 @@ async function refreshTokenIfNeeded(authData, auth, fallbackUrl) {
             instanceUrl: refreshedAuthData.enterpriseUrl || fallbackUrl,
         };
     }
-    throw new Error('Failed to get refreshed auth data after token refresh');
+    throw new Error('Токен шинэчилсний дараа нэвтрэх мэдээлэл авахад алдаа гарлаа');
 }
 /**
  * MongolGPT GitLab Auth Plugin
@@ -327,7 +327,7 @@ export const gitlabAuthPlugin = async (_input) => {
                     {
                         type: 'text',
                         key: 'instanceUrl',
-                        message: 'GitLab instance URL',
+                        message: 'GitLab серверийн URL',
                         placeholder: resolveInstanceUrl(),
                         validate: (value) => validateInstanceUrl(value),
                     },
@@ -450,7 +450,7 @@ export const gitlabAuthPlugin = async (_input) => {
                     {
                         type: 'text',
                         key: 'instanceUrl',
-                        message: 'GitLab instance URL',
+                        message: 'GitLab серверийн URL',
                         placeholder: resolveInstanceUrl(),
                         validate: (value) => validateInstanceUrl(value),
                     },

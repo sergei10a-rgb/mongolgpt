@@ -87,7 +87,7 @@ async function startOAuthServer(): Promise<void> {
           return
         }
         if (body.error) {
-          const message = body.error_description || body.error || "OAuth error"
+          const message = body.error_description || body.error || "OAuth алдаа"
           pendingOAuth.reject(new Error(String(message)))
           pendingOAuth = undefined
           res.writeHead(200, { "Content-Type": "application/json" })
@@ -95,14 +95,14 @@ async function startOAuthServer(): Promise<void> {
           return
         }
         if (!body.access_token) {
-          pendingOAuth.reject(new Error("Missing access_token in callback"))
+          pendingOAuth.reject(new Error("Буцах хариунд access_token байхгүй байна"))
           pendingOAuth = undefined
           res.writeHead(400, { "Content-Type": "application/json" })
           res.end(JSON.stringify({ error: "missing_access_token" }))
           return
         }
         if (body.state !== pendingOAuth.state) {
-          pendingOAuth.reject(new Error("Invalid state - potential CSRF attack"))
+          pendingOAuth.reject(new Error("State буруу байна: CSRF халдлага байж болзошгүй"))
           pendingOAuth = undefined
           res.writeHead(400, { "Content-Type": "application/json" })
           res.end(JSON.stringify({ error: "invalid_state" }))
@@ -145,7 +145,7 @@ function waitForOAuthCallback(state: string): Promise<ImplicitTokenPayload> {
       () => {
         if (pendingOAuth) {
           pendingOAuth = undefined
-          reject(new Error("OAuth callback timeout - authorization took too long"))
+          reject(new Error("OAuth буцах холболтын хугацаа дууслаа: зөвшөөрөл олгох үйлдэл хэт удав"))
         }
       },
       5 * 60 * 1000,
@@ -273,7 +273,7 @@ export async function DigitalOceanAuthPlugin(input: PluginInput): Promise<Hooks>
       methods: [
         {
           type: "oauth",
-          label: "Login with DigitalOcean",
+          label: "DigitalOcean-оор нэвтрэх",
           async authorize() {
             await startOAuthServer()
             const state = generateState()
@@ -317,7 +317,7 @@ export async function DigitalOceanAuthPlugin(input: PluginInput): Promise<Hooks>
         },
         {
           type: "api",
-          label: "Paste Model Access Key",
+          label: "Загварын хандалтын түлхүүр оруулах",
         },
       ],
     },

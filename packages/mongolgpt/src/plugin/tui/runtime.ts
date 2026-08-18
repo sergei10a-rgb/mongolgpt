@@ -895,7 +895,7 @@ async function installPluginBySpec(
   if (!state) {
     return {
       ok: false,
-      message: "Plugin runtime is not ready.",
+      message: "Plugin ажиллуулах орчин хараахан бэлэн болоогүй байна.",
     }
   }
 
@@ -903,7 +903,7 @@ async function installPluginBySpec(
   if (!spec) {
     return {
       ok: false,
-      message: "Plugin package name is required",
+      message: "Plugin багцын нэр шаардлагатай",
     }
   }
 
@@ -911,7 +911,7 @@ async function installPluginBySpec(
   if (!dir.directory) {
     return {
       ok: false,
-      message: "Paths are still syncing. Try again in a moment.",
+      message: "Замуудыг синк хийж байна. Түр хүлээгээд дахин оролдоно уу.",
     }
   }
 
@@ -930,13 +930,13 @@ async function installPluginBySpec(
     if (manifest.code === "manifest_no_targets") {
       return {
         ok: false,
-        message: `"${spec}" does not expose plugin entrypoints or oc-themes in package.json`,
+        message: `"${spec}"-ийн package.json файлд plugin эхлэх цэг эсвэл oc-theme заагаагүй байна`,
       }
     }
 
     return {
       ok: false,
-      message: `Installed "${spec}" but failed to read ${manifest.file}`,
+      message: `"${spec}" суулгасан боловч ${manifest.file}-г уншиж чадсангүй`,
     }
   }
 
@@ -952,7 +952,7 @@ async function installPluginBySpec(
     if (patch.code === "invalid_json") {
       return {
         ok: false,
-        message: `Invalid JSON in ${patch.file} (${patch.parse} at line ${patch.line}, column ${patch.col})`,
+        message: `${patch.file} доторх JSON буруу байна (${patch.parse}; ${patch.line}-р мөр, ${patch.col}-р багана)`,
       }
     }
 

@@ -182,39 +182,39 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
       methods: [
         {
           type: "oauth",
-          label: "Login with GitHub Copilot",
+          label: "GitHub Copilot-оор нэвтрэх",
           prompts: [
             {
               type: "select",
               key: "deploymentType",
-              message: "Select GitHub deployment type",
+              message: "GitHub байршуулалтын төрлийг сонгоно уу",
               options: [
                 {
                   label: "GitHub.com",
                   value: "github.com",
-                  hint: "Public",
+                  hint: "Нийтийн хувилбар",
                 },
                 {
                   label: "GitHub Enterprise",
                   value: "enterprise",
-                  hint: "Data residency or self-hosted",
+                  hint: "Өгөгдөл байрлуулах эсвэл өөрийн сервер",
                 },
               ],
             },
             {
               type: "text",
               key: "enterpriseUrl",
-              message: "Enter your GitHub Enterprise URL or domain",
-              placeholder: "company.ghe.com or https://company.ghe.com",
+              message: "GitHub Enterprise URL эсвэл домэйнээ оруулна уу",
+              placeholder: "company.ghe.com эсвэл https://company.ghe.com",
               when: { key: "deploymentType", op: "eq", value: "enterprise" },
               validate: (value) => {
-                if (!value) return "URL or domain is required"
+                if (!value) return "URL эсвэл домэйн шаардлагатай"
                 try {
                   const url = value.includes("://") ? new URL(value) : new URL(`https://${value}`)
-                  if (!url.hostname) return "Please enter a valid URL or domain"
+                  if (!url.hostname) return "Зөв URL эсвэл домэйн оруулна уу"
                   return undefined
                 } catch {
-                  return "Please enter a valid URL (e.g., company.ghe.com or https://company.ghe.com)"
+                  return "Зөв URL оруулна уу (жишээ: company.ghe.com эсвэл https://company.ghe.com)"
                 }
               },
             },
@@ -257,7 +257,7 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
 
             return {
               url: deviceData.verification_uri,
-              instructions: `Enter code: ${deviceData.user_code}`,
+              instructions: `Код оруулна уу: ${deviceData.user_code}`,
               method: "auto" as const,
               async callback() {
                 while (true) {

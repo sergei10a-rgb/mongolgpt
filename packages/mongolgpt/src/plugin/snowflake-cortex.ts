@@ -65,7 +65,7 @@ async function generatePKCE(): Promise<PkceCodes> {
 }
 
 function callbackUrl() {
-  if (!oauthServerPort) throw new Error("Snowflake OAuth callback server is not running")
+  if (!oauthServerPort) throw new Error("Snowflake OAuth буцах сервер ажиллаагүй байна")
   return `http://${OAUTH_CALLBACK_HOST}:${oauthServerPort}${OAUTH_CALLBACK_PATH}`
 }
 
@@ -120,14 +120,14 @@ async function exchangeCodeForToken(account: string, code: string, pkce: PkceCod
 
   if (!response.ok) {
     const detail = await response.text().catch(() => "")
-    throw new Error(`Snowflake token exchange failed (${response.status})${detail ? `: ${detail}` : ""}`)
+    throw new Error(`Snowflake токен солилцоо амжилтгүй боллоо (${response.status})${detail ? `: ${detail}` : ""}`)
   }
 
   const token = (await response.json()) as TokenResponse
-  if (!token.access_token) throw new Error("Snowflake token response did not include access_token")
+  if (!token.access_token) throw new Error("Snowflake токены хариунд access_token байхгүй байна")
   if (!token.refresh_token) {
     throw new Error(
-      "Snowflake token response did not include refresh_token. Ensure integration issues refresh tokens and scope includes refresh_token.",
+      "Snowflake токены хариунд refresh_token байхгүй байна. Integration refresh token олгож, scope-д refresh_token орсон эсэхийг шалгана уу.",
     )
   }
   return token
@@ -149,11 +149,11 @@ async function refreshAccessToken(account: string, refreshToken: string) {
 
   if (!response.ok) {
     const detail = await response.text().catch(() => "")
-    throw new Error(`Snowflake token refresh failed (${response.status})${detail ? `: ${detail}` : ""}`)
+    throw new Error(`Snowflake токен шинэчлэхэд алдаа гарлаа (${response.status})${detail ? `: ${detail}` : ""}`)
   }
 
   const token = (await response.json()) as TokenResponse
-  if (!token.access_token) throw new Error("Snowflake refresh response did not include access_token")
+  if (!token.access_token) throw new Error("Snowflake токен шинэчлэх хариунд access_token байхгүй байна")
   return token
 }
 
@@ -166,7 +166,7 @@ async function startOAuthServer() {
 
     if (url.pathname !== OAUTH_CALLBACK_PATH) {
       res.writeHead(404)
-      res.end("Not found")
+      res.end("Хуудас олдсонгүй")
       return
     }
 
@@ -177,7 +177,7 @@ async function startOAuthServer() {
 
     // CSRF guard: validate state before processing any callback
     if (!pendingOAuth || state !== pendingOAuth.state) {
-      const message = "Invalid state - potential CSRF attack"
+      const message = "State буруу байна: CSRF халдлага байж болзошгүй"
       pendingOAuth?.reject(new Error(message))
       pendingOAuth = undefined
       res.writeHead(400, { "Content-Type": "text/html" })
@@ -197,7 +197,7 @@ async function startOAuthServer() {
     }
 
     if (!code) {
-      const message = "Missing authorization code"
+      const message = "Зөвшөөрлийн код байхгүй байна"
       current.reject(new Error(message))
       res.writeHead(400, { "Content-Type": "text/html" })
       res.end(OauthCallbackPage.error(message, { provider: "Snowflake" }))
@@ -216,7 +216,7 @@ async function startOAuthServer() {
     oauthServer!.listen(0, OAUTH_CALLBACK_HOST, () => {
       const address = oauthServer!.address()
       if (!address || typeof address === "string") {
-        reject(new Error("Unable to resolve Snowflake OAuth callback port"))
+        reject(new Error("Snowflake OAuth буцах порт тодорхойлогдсонгүй"))
         return
       }
       oauthServerPort = address.port
@@ -244,7 +244,7 @@ function waitForOAuthCallback(account: string, pkce: PkceCodes, state: string): 
       if (!pendingOAuth) return
       pendingOAuth = undefined
       stopOAuthServer()
-      reject(new Error("Snowflake OAuth callback timeout - authorization took too long"))
+      reject(new Error("Snowflake OAuth буцах холболтын хугацаа дууслаа: зөвшөөрөл олгох үйлдэл хэт удав"))
     }, OAUTH_TIMEOUT_MS)
 
     pendingOAuth = {
@@ -268,14 +268,14 @@ export async function SnowflakeCortexAuthPlugin(_input: PluginInput): Promise<Ho
     {
       type: "text" as const,
       key: "account",
-      message: "Snowflake Account Identifier",
+      message: "Snowflake бүртгэлийн танигч",
       placeholder: "myorg-myaccount",
-      validate: (value: string) => (value && value.trim().length > 0 ? undefined : "Required"),
+      validate: (value: string) => (value && value.trim().length > 0 ? undefined : "Заавал бөглөнө үү"),
     },
     {
       type: "text" as const,
       key: "role",
-      message: "Snowflake Role (optional)",
+      message: "Snowflake эрхийн нэр (заавал биш)",
       placeholder: "PUBLIC",
     },
   ]
@@ -329,7 +329,7 @@ export async function SnowflakeCortexAuthPlugin(_input: PluginInput): Promise<Ho
               accountId?: string
             }
 
-            if (!currentOauth.accountId) throw new Error("Snowflake OAuth auth is missing accountId")
+            if (!currentOauth.accountId) throw new Error("Snowflake OAuth мэдээлэлд accountId байхгүй байна")
             const accountId = currentOauth.accountId
 
             const refresh = async () => {
@@ -458,11 +458,11 @@ export async function SnowflakeCortexAuthPlugin(_input: PluginInput): Promise<Ho
       methods: [
         {
           type: "oauth",
-          label: "Login with Snowflake (External Browser)",
+          label: "Snowflake-ээр нэвтрэх (гадаад хөтөч)",
           prompts,
           async authorize(inputs = {}) {
             const account = normalizeAccount(inputs.account || "")
-            if (!account) throw new Error("Snowflake account is required")
+            if (!account) throw new Error("Snowflake бүртгэл шаардлагатай")
 
             await startOAuthServer()
             const pkce = await generatePKCE()
@@ -498,7 +498,7 @@ export async function SnowflakeCortexAuthPlugin(_input: PluginInput): Promise<Ho
         },
         {
           type: "api",
-          label: "Paste PAT or bearer token manually",
+          label: "PAT эсвэл bearer token-ийг гараар оруулах",
           prompts: prompts.filter((item) => item.key === "account"),
         },
       ],
