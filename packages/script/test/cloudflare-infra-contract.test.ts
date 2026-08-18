@@ -103,12 +103,17 @@ describe("Cloudflare hosted infrastructure contract", () => {
   test("gates every deployed app with HTTP and Chromium smoke checks", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
     const steps = parseWorkflow(source).jobs.deploy.steps
+    const deploy = steps.findIndex((step) => step.name === "Validate and deploy to Cloudflare")
     const http = steps.findIndex((step) => step.name === "Verify deployed URLs")
+    const browserSetup = steps.findIndex((step) => step.name === "Install Playwright system dependencies")
     const browser = steps.findIndex((step) => step.name === "Verify deployed app in Chromium")
     const artifact = steps.findIndex((step) => step.name === "Upload deployed browser artifacts")
 
-    expect(http).toBeGreaterThanOrEqual(0)
+    expect(deploy).toBeGreaterThanOrEqual(0)
+    expect(http).toBeGreaterThan(deploy)
+    expect(browserSetup).toBeGreaterThan(http)
     expect(browser).toBeGreaterThan(http)
+    expect(browser).toBeGreaterThan(browserSetup)
     expect(artifact).toBeGreaterThan(browser)
     expect(steps[browser]?.run).toBe("bun --cwd packages/app test:e2e:deployed")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_BASE_URL).toContain("https://app.{0}")
