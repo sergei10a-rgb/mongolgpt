@@ -6,6 +6,12 @@ import { createStore, reconcile } from "solid-js/store"
 
 export type ServerHealth = { healthy: boolean; version?: string }
 
+export function serverVersionLabel(version: string | undefined, localLabel: string) {
+  if (!version) return
+  if (version === "local") return localLabel
+  return version.startsWith("v") ? version : `v${version}`
+}
+
 interface CheckServerHealthOptions {
   timeoutMs?: number
   signal?: AbortSignal

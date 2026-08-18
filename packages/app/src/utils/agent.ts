@@ -20,6 +20,20 @@ const palette = [
   "var(--icon-warning-base)",
 ]
 
+type AgentLabelKey = "agent.builtin.build" | "agent.builtin.plan" | "agent.builtin.general"
+type TranslateAgentLabel = (key: AgentLabelKey) => string
+
+const labels: Record<string, AgentLabelKey> = {
+  build: "agent.builtin.build",
+  plan: "agent.builtin.plan",
+  general: "agent.builtin.general",
+}
+
+export function agentDisplayName(name: string, t: TranslateAgentLabel) {
+  const key = labels[name]
+  return key ? t(key) : name
+}
+
 function tone(name: string) {
   let hash = 0
   for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) >>> 0

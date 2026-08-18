@@ -1,11 +1,11 @@
 import { Show, createMemo } from "solid-js"
-import { DateTime } from "luxon"
 import { useSync } from "@/context/sync"
 import { useSDK } from "@/context/sdk"
 import { useLanguage } from "@/context/language"
 import { Icon } from "@mongolgpt/ui/icon"
 import { Mark } from "@mongolgpt/ui/logo"
 import { getDirectory, getFilename } from "@mongolgpt/core/util/path"
+import { getRelativeTime } from "@/utils/time"
 
 const MAIN_WORKTREE = "main"
 const CREATE_WORKTREE = "create"
@@ -75,9 +75,7 @@ export function NewSessionView(props: NewSessionViewProps) {
                   <div class="text-12-medium text-text-weak leading-5 min-w-0 max-w-160 break-words text-center">
                     {language.t("session.new.lastModified")}&nbsp;
                     <span class="text-text-strong">
-                      {DateTime.fromMillis(project().time.updated ?? project().time.created)
-                        .setLocale(language.intl())
-                        .toRelative()}
+                      {getRelativeTime(project().time.updated ?? project().time.created, language.t)}
                     </span>
                   </div>
                 </div>

@@ -127,9 +127,9 @@ export function Titlebar(props: { update?: TitlebarUpdate }) {
     return {
       visible: version !== undefined || installing,
       installing,
-      label: "Update",
+      label: language.t("titlebar.update"),
       ariaLabel: language.t("toast.update.action.installRestart"),
-      title: version ? `Update ${version}` : undefined,
+      title: version ? language.t("error.page.action.updateTo", { version }) : undefined,
       onInstall: () => props.update?.install(),
     }
   })

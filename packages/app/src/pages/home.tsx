@@ -67,6 +67,7 @@ import { useMarked } from "@mongolgpt/ui/context/marked"
 import { preloadMarkdown } from "@mongolgpt/session-ui/markdown-cache"
 import { archiveHomeSession } from "./home-session-archive"
 import { showToast } from "@/utils/toast"
+import { getRelativeTime } from "@/utils/time"
 
 const HOME_SESSION_LIMIT = 64
 const SHOW_HOME_SESSION_ARCHIVE = false
@@ -329,6 +330,12 @@ export function NewHome() {
     openProjectNewSession(conn, project.worktree)
   }
 
+  function openProjectPicker() {
+    const conn = focusedServer()
+    if (!conn) return
+    void chooseProject(conn)
+  }
+
   function openProjectNewSession(conn: ServerConnection.Any, directory: string) {
     const ctx = global.ensureServerCtx(conn)
     ctx.projects.open(directory)
@@ -467,7 +474,12 @@ export function NewHome() {
             >
               <Show
                 when={groups().length > 0}
-                fallback={<HomeSessionsEmpty onNewSession={newSessionProject() ? openNewSession : undefined} />}
+                fallback={
+                  <HomeSessionsEmpty
+                    onNewSession={newSessionProject() ? openNewSession : undefined}
+                    onOpenProject={!newSessionProject() && focusedServer() ? openProjectPicker : undefined}
+                  />
+                }
               >
                 <div class="flex flex-col gap-6 pt-3 pr-3">
                   <For each={groups()}>
@@ -1091,7 +1103,8 @@ function HomeSessionSearchResultRow(props: {
   onHighlight: () => void
   onSelect: (session: Session) => void
 }) {
-  const title = createMemo(() => sessionTitle(props.record.session.title) || props.record.session.id)
+  const language = useLanguage()
+  const title = createMemo(() => sessionTitle(props.record.session.title, language.t) || props.record.session.id)
   const showProjectName = () => props.showProjectName && props.record.projectName
 
   const key = () => homeSessionSearchKey(props.record)
@@ -1163,7 +1176,7 @@ function HomeSessionRow(props: {
   archiveSession: (session: Session) => Promise<void>
 }) {
   const language = useLanguage()
-  const title = createMemo(() => sessionTitle(props.record.session.title) || props.record.session.id)
+  const title = createMemo(() => sessionTitle(props.record.session.title, language.t) || props.record.session.id)
   const showProjectName = () => props.showProjectName && props.record.projectName
 
   return (
@@ -1213,20 +1226,35 @@ function HomeSessionRow(props: {
   )
 }
 
-function HomeSessionsEmpty(props: { onNewSession?: () => void }) {
+function HomeSessionsEmpty(props: { onNewSession?: () => void; onOpenProject?: () => void }) {
   const language = useLanguage()
+  const hasProject = () => !!props.onNewSession
   return (
     <div class="flex min-h-full flex-col items-center gap-4 px-6 pt-[52px] text-center">
+      <Logo class="mb-1 h-8 w-auto max-w-[150px]" />
       <div class="shrink-0 text-[13px] leading-[13px] tracking-[-0.04px] text-v2-text-text-base [font-weight:530]">
         {language.t("home.sessions.empty")}
       </div>
       <p class="mb-1 text-center text-[13px] leading-5 tracking-[-0.04px] text-v2-text-text-muted [font-weight:440]">
-        {language.t("home.sessions.empty.description")}
+        {language.t(hasProject() ? "home.sessions.empty.description" : "home.sessions.empty.noProject.description")}
       </p>
       <Show when={props.onNewSession}>
         {(onNewSession) => (
           <ButtonV2 data-action="home-new-session" variant="neutral" size="normal" icon="edit" onClick={onNewSession()}>
             {language.t("command.session.new")}
+          </ButtonV2>
+        )}
+      </Show>
+      <Show when={props.onOpenProject}>
+        {(onOpenProject) => (
+          <ButtonV2
+            data-action="home-open-project"
+            variant="neutral"
+            size="normal"
+            icon="folder-add-left"
+            onClick={onOpenProject()}
+          >
+            {language.t("command.project.open")}
           </ButtonV2>
         )}
       </Show>
@@ -1370,7 +1398,7 @@ export function LegacyHome() {
                   >
                     {project.worktree.replace(homedir(), "~")}
                     <div class="text-14-regular text-text-weak">
-                      {DateTime.fromMillis(project.time.updated ?? project.time.created).toRelative()}
+                      {getRelativeTime(project.time.updated ?? project.time.created, language.t)}
                     </div>
                   </Button>
                 )}

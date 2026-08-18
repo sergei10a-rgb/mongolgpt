@@ -1,7 +1,8 @@
-const template = "Terminal {{number}}"
+const template = "Терминал {{number}}"
 
 const numbered = [
   template,
+  "Terminal {{number}}",
   "محطة طرفية {{number}}",
   "Терминал {{number}}",
   "ターミナル {{number}}",

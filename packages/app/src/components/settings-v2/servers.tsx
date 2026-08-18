@@ -8,6 +8,7 @@ import { type Component, For, Show, createMemo } from "solid-js"
 import { createStore } from "solid-js/store"
 import { ServerRowMenu } from "@/components/server/server-row-menu"
 import { ServerHealthIndicator } from "@/components/server/server-row"
+import { serverVersionLabel } from "@/utils/server-health"
 import { useLanguage } from "@/context/language"
 import { ServerConnection, serverName } from "@/context/server"
 import { useServerManagementController } from "../dialog-select-server"
@@ -103,6 +104,7 @@ export const SettingsServersV2: Component = () => {
                 const key = ServerConnection.key(item)
                 const health = () => controller.status()[key]
                 const isDefault = () => controller.defaultKey() === key
+                const version = () => serverVersionLabel(health()?.version, language.t("workspace.type.local"))
                 return (
                   <div class="settings-v2-servers-row">
                     <div class="settings-v2-servers-lead">
@@ -110,8 +112,8 @@ export const SettingsServersV2: Component = () => {
                       <div class="settings-v2-servers-copy">
                         <span class="settings-v2-servers-name">{serverName(item)}</span>
                         <span class="settings-v2-servers-meta">
-                          <Show when={health()?.version}>v{health()?.version}</Show>
-                          <Show when={health()?.version && item.type === "http"}> • </Show>
+                          <Show when={version()}>{version()}</Show>
+                          <Show when={version() && item.type === "http"}> • </Show>
                           <Show
                             when={item.type === "http" && item.http.username}
                             fallback={<Show when={item.type === "http"}>{language.t("server.row.noUsername")}</Show>}

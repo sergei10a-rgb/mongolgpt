@@ -12,7 +12,7 @@ import {
 } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { type ServerConnection, serverName } from "@/context/server"
-import type { ServerHealth } from "@/utils/server-health"
+import { type ServerHealth, serverVersionLabel } from "@/utils/server-health"
 
 interface ServerRowProps extends ParentProps {
   conn: ServerConnection.Any
@@ -31,6 +31,7 @@ export function ServerRow(props: ServerRowProps) {
   let nameRef: HTMLSpanElement | undefined
   let versionRef: HTMLSpanElement | undefined
   const name = createMemo(() => serverName(props.conn))
+  const version = createMemo(() => serverVersionLabel(props.status?.version, language.t("workspace.type.local")))
 
   const check = () => {
     const nameTruncated = nameRef ? nameRef.scrollWidth > nameRef.clientWidth : false
@@ -54,8 +55,8 @@ export function ServerRow(props: ServerRowProps) {
   const tooltipValue = () => (
     <span class="flex items-center gap-2">
       <span>{serverName(props.conn, true)}</span>
-      <Show when={props.status?.version}>
-        <span class="text-text-invert-weak">v{props.status?.version}</span>
+      <Show when={version()}>
+        <span class="text-text-invert-weak">{version()}</span>
       </Show>
     </span>
   )
@@ -79,12 +80,12 @@ export function ServerRow(props: ServerRowProps) {
             <Show
               when={badge()}
               fallback={
-                <Show when={props.status?.version}>
+                <Show when={version()}>
                   <span
                     ref={versionRef}
                     class={`${props.versionClass ?? "text-text-weak text-14-regular truncate"} min-w-0`}
                   >
-                    v{props.status?.version}
+                    {version()}
                   </span>
                 </Show>
               }

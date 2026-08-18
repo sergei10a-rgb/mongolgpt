@@ -141,6 +141,7 @@ export const dict: Record<string, string> = {
   "ui.common.cancel": "Cancel",
   "ui.common.confirm": "Confirm",
   "ui.common.dismiss": "Dismiss",
+  "ui.common.closeTab": "Close tab",
   "ui.common.close": "Close",
   "ui.common.next": "Next",
   "ui.common.submit": "Submit",

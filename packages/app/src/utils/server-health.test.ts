@@ -1,10 +1,19 @@
 import { describe, expect, test } from "bun:test"
 import type { ServerConnection } from "@/context/server"
-import { checkServerHealth } from "./server-health"
+import { checkServerHealth, serverVersionLabel } from "./server-health"
 
 const server: ServerConnection.HttpBase = {
   url: "http://localhost:4096",
 }
+
+describe("serverVersionLabel", () => {
+  test("formats release and local development versions", () => {
+    expect(serverVersionLabel("1.2.3", "локал")).toBe("v1.2.3")
+    expect(serverVersionLabel("v1.2.3", "локал")).toBe("v1.2.3")
+    expect(serverVersionLabel("local", "локал")).toBe("локал")
+    expect(serverVersionLabel(undefined, "локал")).toBeUndefined()
+  })
+})
 
 function abortFromInput(input: RequestInfo | URL, init?: RequestInit) {
   if (init?.signal) return init.signal

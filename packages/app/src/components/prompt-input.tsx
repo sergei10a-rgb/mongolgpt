@@ -69,6 +69,7 @@ import { createPromptInputTransientState } from "./prompt-input/transient-state"
 import { showToast } from "@/utils/toast"
 import { formatServerError } from "@/utils/server-errors"
 import { ImagePreview } from "@mongolgpt/ui/image-preview"
+import { agentDisplayName } from "@/utils/agent"
 
 export type PromptInputState = ReturnType<typeof usePrompt>
 
@@ -633,7 +634,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const agentList = createMemo(() =>
     props.controls.agents.available
       .filter((agent) => !agent.hidden && agent.mode !== "primary")
-      .map((agent): AtOption => ({ type: "agent", name: agent.name, display: agent.name })),
+      .map((agent): AtOption => ({
+        type: "agent",
+        name: agent.name,
+        display: agentDisplayName(agent.name, language.t),
+      })),
   )
 
   const handleAtSelect = (option: AtOption | undefined) => {
@@ -1357,7 +1362,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const designPlaceholder = () => {
     if (store.mode === "shell") return placeholder()
-    return "Ask anything, / for commands, @ for context..."
+    return language.t("prompt.placeholder.simple")
   }
 
   const modelControlState = createMemo<ComposerModelControlState>(() => ({
@@ -1385,6 +1390,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     keybind: command.keybindParts("agent.cycle"),
     options: props.controls.agents.options,
     current: props.controls.agents.current,
+    label: (value) => agentDisplayName(value, language.t),
     style: control(),
     onSelect: (value) => {
       props.controls.agents.select(value)
@@ -1790,6 +1796,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                             size="normal"
                             options={props.controls.agents.options}
                             current={props.controls.agents.current}
+                            label={(value) => agentDisplayName(value, language.t)}
                             onSelect={(value) => {
                               props.controls.agents.select(value)
                               restoreFocus()
@@ -1930,6 +1937,7 @@ type ComposerAgentControlState = {
   keybind: string[]
   options: string[]
   current: string
+  label: (value: string) => string
   style: JSX.CSSProperties | undefined
   onSelect: (value: string | undefined) => void
 }
@@ -1968,6 +1976,7 @@ function ComposerAgentControl(props: { state: ComposerAgentControlState }) {
           size="normal"
           options={props.state.options}
           current={props.state.current}
+          label={props.state.label}
           onSelect={props.state.onSelect}
           class="max-w-[175px] justify-start text-v2-text-text-faint [&_[data-component=icon]]:text-v2-icon-icon-muted"
           valueClass="truncate pl-5 text-[13px] font-[440] leading-5 text-v2-text-text-faint"

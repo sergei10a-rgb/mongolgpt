@@ -33,32 +33,32 @@ export function formatServerError(error: unknown, translate?: Translator, fallba
     if (error instanceof Error && error.message) return error.message
     if (typeof error === "string" && error) return error
     if (fallback) return fallback
-    return "Unknown error"
+    return "Тодорхойгүй алдаа"
   }
 
   const status = readErrorStatus(error)
   if (status !== undefined) {
-    return tr(translate, "error.chain.httpStatus", "The server responded with status {{status}}", { status })
+    return tr(translate, "error.chain.httpStatus", "Сервер {{status}} төлөвтэй хариу өглөө", { status })
   }
 
   const message = readErrorMessage(error)
   if (message) {
     const normalized = message.toLowerCase()
     if (/timeout|timed out|deadline exceeded/.test(normalized)) {
-      return tr(translate, "error.chain.timeout", "The request timed out")
+      return tr(translate, "error.chain.timeout", "Хүсэлтийн хугацаа дууслаа")
     }
     if (/abort|aborted|cancelled|canceled/.test(normalized)) {
-      return tr(translate, "error.chain.cancelled", "The request was cancelled")
+      return tr(translate, "error.chain.cancelled", "Хүсэлтийг цуцаллаа")
     }
     if (/failed to fetch|network|econnrefused|enotfound|connection|connect to server/.test(normalized)) {
-      return tr(translate, "error.chain.connectionFailed", "Could not connect to the server")
+      return tr(translate, "error.chain.connectionFailed", "Сервертэй холбогдож чадсангүй")
     }
   }
 
   if (fallback) return fallback
   return message
-    ? tr(translate, "error.chain.requestFailed", "Request failed")
-    : tr(translate, "error.chain.unknown", "Unknown error")
+    ? tr(translate, "error.chain.requestFailed", "Хүсэлт амжилтгүй боллоо")
+    : tr(translate, "error.chain.unknown", "Тодорхойгүй алдаа")
 }
 
 function readErrorMessage(error: unknown) {

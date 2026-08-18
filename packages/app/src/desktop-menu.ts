@@ -97,7 +97,7 @@ export const DESKTOP_MENU: DesktopMenu[] = [
     items: [
       {
         type: "item",
-        label: "Шинэ session",
+        label: "Шинэ сешн",
         command: "session.new",
         accelerator: { macos: "Shift+Cmd+S" },
       },
@@ -148,7 +148,7 @@ export const DESKTOP_MENU: DesktopMenu[] = [
       { type: "item", label: "Файлын мод асаах/унтраах", command: "fileTree.toggle" },
       { type: "separator" },
       { type: "item", label: "Дахин ачаалах", action: "view.reload", role: "reload" },
-      { type: "item", label: "Developer tools асаах/унтраах", action: "view.toggleDevTools", role: "toggleDevTools" },
+      { type: "item", label: "Хөгжүүлэгчийн хэрэгслүүдийг нээх/хаах", action: "view.toggleDevTools", role: "toggleDevTools" },
       { type: "separator" },
       {
         type: "item",
