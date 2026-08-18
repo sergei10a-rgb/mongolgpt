@@ -88,7 +88,7 @@ describe("documentation product contract", () => {
     expect(billing).toContain("### Туршилтын орчин")
     expect(billing).toContain("### Үйлдвэрлэлийн орчин")
     expect(admin).toContain("## Одоогийн хязгаарлалт")
-    expect(admin).toContain("refund")
+    expect(admin).toContain("буцаан олголт")
   })
 
   test("documents only the hosted SaaS deploy path and every runtime trust secret", async () => {
