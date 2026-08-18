@@ -1676,7 +1676,7 @@ export function Prompt(props: PromptProps) {
                 </Match>
                 <Match when={store.mode === "shell"}>
                   <text fg={theme.text}>
-                    esc <span style={{ fg: theme.textMuted }}>shell горимоос гарах</span>
+                    esc <span style={{ fg: theme.textMuted }}>терминалын горимоос гарах</span>
                   </text>
                 </Match>
               </Switch>

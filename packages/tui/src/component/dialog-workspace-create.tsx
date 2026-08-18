@@ -61,7 +61,7 @@ async function loadWorkspaceAdapters(input: {
     return response.data
   } catch (err) {
     input.toast.show({
-      title: "Ажлын орчны adapter-уудыг ачаалж чадсангүй",
+      title: "Ажлын орчны холбогчдыг ачаалж чадсангүй",
       message: errorMessage(err),
       variant: "error",
     })

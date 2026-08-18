@@ -569,7 +569,7 @@ export const McpAddCommand = effectCmd({
       if (type === "local") {
         const command = await prompts.text({
           message: "Ажиллуулах командыг оруулна уу",
-          placeholder: "e.g., mongolgpt x @modelcontextprotocol/server-filesystem",
+          placeholder: "жишээ нь mongolgpt x @modelcontextprotocol/server-filesystem",
           validate: (x) => (x && x.length > 0 ? undefined : "Шаардлагатай"),
         })
         if (prompts.isCancel(command)) throw new UI.CancelledError()
@@ -588,7 +588,7 @@ export const McpAddCommand = effectCmd({
       if (type === "remote") {
         const url = await prompts.text({
           message: "MCP серверийн URL оруулна уу",
-          placeholder: "e.g., https://example.com/mcp",
+          placeholder: "жишээ нь https://example.com/mcp",
           validate: (x) => {
             if (!x) return "Шаардлагатай"
             if (x.length === 0) return "Шаардлагатай"

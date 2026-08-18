@@ -6,11 +6,11 @@ import { InstallationVersion } from "@mongolgpt/core/installation/version"
 
 export const UpgradeCommand = {
   command: "upgrade [target]",
-  describe: "mongolgpt-ийг хамгийн сүүлийн эсвэл тодорхой хувилбар руу upgrade хийх",
+  describe: "mongolgpt-ийг хамгийн сүүлийн эсвэл тодорхой хувилбар руу шинэчлэх",
   builder: (yargs: Argv) => {
     return yargs
       .positional("target", {
-        describe: "upgrade хийх хувилбар, жишээ нь '0.1.48' эсвэл 'v0.1.48'",
+        describe: "шинэчлэх хувилбар, жишээ нь '0.1.48' эсвэл 'v0.1.48'",
         type: "string",
       })
       .option("method", {
@@ -24,11 +24,13 @@ export const UpgradeCommand = {
     UI.empty()
     UI.println(UI.logo("  "))
     UI.empty()
-    prompts.intro("Upgrade")
+    prompts.intro("MongolGPT шинэчлэх")
     const detectedMethod = await Installation.method()
     const method = (args.method as Installation.Method) ?? detectedMethod
     if (method === "unknown") {
-      prompts.log.error(`MongolGPT ${process.execPath} дээр суусан бөгөөд package manager-аар удирдагдаж байж магадгүй`)
+      prompts.log.error(
+        `MongolGPT ${process.execPath} дээр суусан бөгөөд багцын удирдлагын хэрэгслээр удирдагдаж байж магадгүй`,
+      )
       const install = await prompts.select({
         message: "Гэсэн ч суулгах уу?",
         options: [
@@ -46,17 +48,17 @@ export const UpgradeCommand = {
     const target = args.target ? args.target.replace(/^mongolgpt-/, "").replace(/^v/, "") : await Installation.latest()
 
     if (InstallationVersion === target) {
-      prompts.log.warn(`mongolgpt upgrade алгаслаа: ${target} аль хэдийн суусан байна`)
+      prompts.log.warn(`mongolgpt шинэчлэлтийг алгаслаа: ${target} аль хэдийн суусан байна`)
       prompts.outro("Дууслаа")
       return
     }
 
     prompts.log.info(`${InstallationVersion} → ${target} руу`)
     const spinner = prompts.spinner()
-    spinner.start("Upgrade хийж байна...")
+    spinner.start("Шинэчилж байна...")
     const err = await Installation.upgrade(method, target).catch((err) => err)
     if (err) {
-      spinner.stop("Upgrade амжилтгүй", 1)
+      spinner.stop("Шинэчилж чадсангүй", 1)
       if (err instanceof Installation.UpgradeFailedError) {
         // necessary because choco only allows install/upgrade in elevated terminals
         if (method === "choco" && err.stderr.includes("not running from an elevated command shell")) {
@@ -68,7 +70,7 @@ export const UpgradeCommand = {
       prompts.outro("Дууслаа")
       return
     }
-    spinner.stop("Upgrade дууслаа")
+    spinner.stop("Шинэчилж дууслаа")
     prompts.outro("Дууслаа")
   },
 }

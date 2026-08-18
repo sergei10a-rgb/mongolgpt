@@ -541,7 +541,7 @@ const tui: TuiPlugin = async (api) => {
       {
         name: command.toggle,
         title: "Товчны хослолуудыг харуулах",
-        desc: "Which-key overlay-г асаах/унтраах",
+        desc: "Товчны туслахыг асаах/унтраах",
         category: "Систем",
         run() {
           setPinned((value) => !value)

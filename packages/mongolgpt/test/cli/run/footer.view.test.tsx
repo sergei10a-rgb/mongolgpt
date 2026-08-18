@@ -1002,13 +1002,13 @@ test("direct footer shows editable prompts and additional queued work while runn
 
     expect(spinner).toBeDefined()
     expect(frame).toContain("a-model-name-long-enough-to-force-responsive-truncation")
-    expect(frame).toContain("3 queued")
-    expect(frame).toContain("ctrl+b background")
-    expect(frame).toContain("ctrl+x q 3 queued")
-    expect(frame).toContain("ctrl+x down subagents")
-    expect(frame).toContain("ctrl+p cmd")
+    expect(frame).toContain("3 дараалалд")
+    expect(frame).toContain("ctrl+b арын горим")
+    expect(frame).toContain("ctrl+x q 3 дараалалд")
+    expect(frame).toContain("ctrl+x down дэд агент")
+    expect(frame).toContain("ctrl+p команд")
     expect(frame).toContain("a-model-name-long-enough-to-force-responsive-truncation")
-    expect(frame).toContain("subagents · ctrl+p cmd")
+    expect(frame).toContain("дэд агент · ctrl+p команд")
     expect(frame).not.toContain("1 agent")
     expect(statusline.backgroundColor.toInts()).toEqual(tinted)
     expect(mode.backgroundColor.toInts()).toEqual(accent)
@@ -1044,9 +1044,9 @@ test("direct footer separates a lone context hint from model and command hint", 
     const frame = app.captureCharFrame()
 
     expect(frame).toContain("GPT-5")
-    expect(frame).toContain("xhigh · ctrl+x down subagents · ctrl+p cmd")
-    expect(frame).not.toContain("ctrl+b background")
-    expect(frame).not.toContain("queued")
+    expect(frame).toContain("xhigh · ctrl+x down дэд агент · ctrl+p команд")
+    expect(frame).not.toContain("ctrl+b арын горим")
+    expect(frame).not.toContain("дараалалд")
   } finally {
     app.cleanup()
   }
@@ -1072,8 +1072,8 @@ test("direct footer hides the subagent hint when only completed subagents remain
     const frame = app.captureCharFrame()
 
     expect(frame).toContain("GPT-5")
-    expect(frame).toContain("xhigh · ctrl+p cmd")
-    expect(frame).not.toContain("ctrl+x down subagents")
+    expect(frame).toContain("xhigh · ctrl+p команд")
+    expect(frame).not.toContain("ctrl+x down дэд агент")
   } finally {
     app.cleanup()
   }
@@ -1119,7 +1119,7 @@ test("direct footer mode label keeps left padding without a status pill", async 
     const statusline = app
       .captureCharFrame()
       .split("\n")
-      .find((line) => line.includes("BUILD") && line.includes("cmd"))
+      .find((line) => line.includes("BUILD") && line.includes("команд"))
 
     expect(statusline).toBeDefined()
     expect(statusline?.startsWith(" BUILD ")).toBe(true)

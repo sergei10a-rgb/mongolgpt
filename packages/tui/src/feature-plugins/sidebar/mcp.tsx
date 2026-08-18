@@ -65,7 +65,7 @@ function View(props: { api: TuiPluginApi }) {
                       </Match>
                       <Match when={item.status === "disabled"}>Идэвхгүй</Match>
                       <Match when={item.status === "needs_auth"}>Нэвтрэлт шаардлагатай</Match>
-                      <Match when={item.status === "needs_client_registration"}>Client ID шаардлагатай</Match>
+                      <Match when={item.status === "needs_client_registration"}>Клиентийн ID шаардлагатай</Match>
                     </Switch>
                   </span>
                 </text>

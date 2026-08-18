@@ -17,7 +17,7 @@ interface UninstallArgs {
 }
 
 interface RemovalTargets {
-  directories: Array<{ path: string; label: string; keep: boolean }>
+  directories: Array<{ path: string; label: string; keep: boolean; keepOption?: string }>
   shellConfig: string | null
   binary: string | null
 }
@@ -66,7 +66,7 @@ export const UninstallCommand = {
 
     if (!args.force && !args.dryRun) {
       const confirm = await prompts.confirm({
-        message: "Uninstall хийхдээ итгэлтэй байна уу?",
+        message: "MongolGPT-ийг устгахдаа итгэлтэй байна уу?",
         initialValue: false,
       })
       if (!confirm || prompts.isCancel(confirm)) {
@@ -89,9 +89,9 @@ export const UninstallCommand = {
 
 async function collectRemovalTargets(args: UninstallArgs, method: Installation.Method): Promise<RemovalTargets> {
   const directories: RemovalTargets["directories"] = [
-    { path: Global.Path.data, label: "Өгөгдөл", keep: args.keepData },
-    { path: Global.Path.cache, label: "Cache", keep: false },
-    { path: Global.Path.config, label: "Тохиргоо", keep: args.keepConfig },
+    { path: Global.Path.data, label: "Өгөгдөл", keep: args.keepData, keepOption: "--keep-data" },
+    { path: Global.Path.cache, label: "Кэш", keep: false },
+    { path: Global.Path.config, label: "Тохиргоо", keep: args.keepConfig, keepOption: "--keep-config" },
     { path: Global.Path.state, label: "Төлөв", keep: false },
   ]
 
@@ -147,7 +147,8 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
 
   for (const dir of targets.directories) {
     if (dir.keep) {
-      prompts.log.step(`${dir.label}-ийг алгасаж байна (--keep-${dir.label.toLowerCase()})`)
+      const option = dir.keepOption ? ` (${dir.keepOption})` : ""
+      prompts.log.step(`${dir.label}-ийг үлдээж байна${option}`)
       continue
     }
 

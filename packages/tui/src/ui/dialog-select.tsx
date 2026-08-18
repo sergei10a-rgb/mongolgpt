@@ -374,7 +374,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         {
           name: "dialog.select.prev",
           title: "Өмнөх мөр",
-          category: "Dialog",
+          category: "Цонх",
           run() {
             setStore("input", "keyboard")
             move(-1)
@@ -383,7 +383,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         {
           name: "dialog.select.next",
           title: "Дараагийн мөр",
-          category: "Dialog",
+          category: "Цонх",
           run() {
             setStore("input", "keyboard")
             move(1)
@@ -392,7 +392,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         {
           name: "dialog.select.page_up",
           title: "Нэг хуудсаар дээш",
-          category: "Dialog",
+          category: "Цонх",
           run() {
             setStore("input", "keyboard")
             move(-10)
@@ -401,7 +401,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         {
           name: "dialog.select.page_down",
           title: "Нэг хуудсаар доош",
-          category: "Dialog",
+          category: "Цонх",
           run() {
             setStore("input", "keyboard")
             move(10)
@@ -410,7 +410,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         {
           name: "dialog.select.home",
           title: "Эхний мөр",
-          category: "Dialog",
+          category: "Цонх",
           run() {
             if (props.locked) return
             setStore("input", "keyboard")
@@ -420,7 +420,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         {
           name: "dialog.select.end",
           title: "Сүүлийн мөр",
-          category: "Dialog",
+          category: "Цонх",
           run() {
             if (props.locked) return
             setStore("input", "keyboard")
@@ -430,13 +430,13 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         {
           name: "dialog.select.submit",
           title: "Мөр сонгох",
-          category: "Dialog",
+          category: "Цонх",
           run: submit,
         },
         ...visible.map((item) => ({
           name: item.command,
           title: item.title,
-          category: "Dialog",
+          category: "Цонх",
           run() {
             if (props.locked) return
             if (isActionDisabled(item)) return

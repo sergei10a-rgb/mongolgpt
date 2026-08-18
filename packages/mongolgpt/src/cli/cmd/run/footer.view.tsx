@@ -459,13 +459,13 @@ export function RunFooterView(props: RunFooterViewProps) {
 
     const items: Array<{ kind: string; key: string; label: string }> = []
     if (foregroundSubagents() && backgroundShortcut()) {
-      items.push({ kind: "background", key: backgroundShortcut(), label: "background" })
+      items.push({ kind: "background", key: backgroundShortcut(), label: "арын горим" })
     }
     if (queuedPrompts().length > 0 && queuedShortcut()) {
-      items.push({ kind: "queued", key: queuedShortcut(), label: `${queue()} queued` })
+      items.push({ kind: "queued", key: queuedShortcut(), label: `${queue()} дараалалд` })
     }
     if (activeTabs().length > 0 && subagentShortcut()) {
-      items.push({ kind: "subagents", key: subagentShortcut(), label: "subagents" })
+      items.push({ kind: "subagents", key: subagentShortcut(), label: "дэд агент" })
     }
 
     const limit = responsive().statusline.contextHintLimit
@@ -478,11 +478,11 @@ export function RunFooterView(props: RunFooterViewProps) {
     }
 
     if (shell()) {
-      return { key: "esc", label: "normal" }
+      return { key: "esc", label: "энгийн горим" }
     }
 
     if (command()) {
-      return { key: command(), label: "cmd" }
+      return { key: command(), label: "команд" }
     }
   })
   const sectionSeparator = () => <span style={{ fg: theme().muted }}>· </span>
@@ -502,13 +502,13 @@ export function RunFooterView(props: RunFooterViewProps) {
       {
         name: "command.palette.show",
         title: "Командын цэсийг нээх",
-        category: "Prompt",
+        category: "Хүсэлт",
         run: openCommand,
       },
       {
         name: "variant.cycle",
         title: "Загварын хувилбар солих",
-        category: "Model",
+        category: "Загвар",
         run: props.onCycle,
       },
     ],
