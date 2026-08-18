@@ -9,6 +9,8 @@ describe("OAuth account access contract", () => {
     expect(source).toContain('access.reason === "suspended"')
     expect(source).toContain("authVersion: access.authVersion")
     expect(source).toContain("authVersion: z.number().int().nonnegative().optional()")
+    expect(source).toContain('throw new Error("Энэ имэйл хөгжүүлэлтийн орчинд зөвшөөрөгдөөгүй байна")')
+    expect(source).not.toContain('throw new Error("Invalid email")')
     expect(source).not.toContain("authVersion: 0,")
   })
 })

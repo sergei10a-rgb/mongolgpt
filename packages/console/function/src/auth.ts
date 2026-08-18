@@ -156,7 +156,7 @@ export default {
           Resource.App.stage !== "production" &&
           !isAllowedNonProductionEmail(email, env.MONGOLGPT_AUTH_EMAIL_DOMAINS)
         ) {
-          throw new Error("Invalid email")
+          throw new Error("Энэ имэйл хөгжүүлэлтийн орчинд зөвшөөрөгдөөгүй байна")
         }
 
         // Get account
