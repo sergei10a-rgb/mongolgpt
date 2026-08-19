@@ -219,7 +219,7 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
                   "type": "string",
                 },
                 "label": {
-                  "description": "Харуулах товч текст (1-5 үг)",
+                  "description": "Харуулах товч текст (1-5 үгтэй)",
                   "type": "string",
                 },
               },
@@ -232,7 +232,7 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
             "type": "array",
           },
           "question": {
-            "description": "Бүрэн асуулт",
+            "description": "Бүрэн хэлбэрийн асуулт",
             "type": "string",
           },
         },
