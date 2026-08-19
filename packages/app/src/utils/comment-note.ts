@@ -56,24 +56,45 @@ export function readCommentMetadata(value: unknown) {
 export function formatCommentNote(input: { path: string; selection?: FileSelection; comment: string }) {
   const start = input.selection ? Math.min(input.selection.startLine, input.selection.endLine) : undefined
   const end = input.selection ? Math.max(input.selection.startLine, input.selection.endLine) : undefined
-  const range =
+  const location =
     start === undefined || end === undefined
-      ? "this file"
+      ? `${input.path} файлын тухай`
       : start === end
-        ? `line ${start}`
-        : `lines ${start} through ${end}`
-  return `The user made the following comment regarding ${range} of ${input.path}: ${input.comment}`
+        ? `${input.path} файлын ${start}-р мөрийн тухай`
+        : `${input.path} файлын ${start}-${end}-р мөрүүдийн тухай`
+  return `Хэрэглэгч ${location} дараах санал үлдээв: ${input.comment}`
 }
 
 export function parseCommentNote(text: string) {
   const match = text.match(
+    /^Хэрэглэгч (.+?) файлын (тухай|(\d+)-р мөрийн тухай|(\d+)-(\d+)-р мөрүүдийн тухай) дараах санал үлдээв: ([\s\S]+)$/,
+  )
+  if (match) {
+    const start = match[3] ? Number(match[3]) : match[4] ? Number(match[4]) : undefined
+    const end = match[3] ? Number(match[3]) : match[5] ? Number(match[5]) : undefined
+    return {
+      path: match[1],
+      selection:
+        start !== undefined && end !== undefined
+          ? {
+              startLine: start,
+              startChar: 0,
+              endLine: end,
+              endChar: 0,
+            }
+          : undefined,
+      comment: match[6],
+    } satisfies PromptComment
+  }
+
+  const legacy = text.match(
     /^The user made the following comment regarding (this file|line (\d+)|lines (\d+) through (\d+)) of (.+?): ([\s\S]+)$/,
   )
-  if (!match) return
-  const start = match[2] ? Number(match[2]) : match[3] ? Number(match[3]) : undefined
-  const end = match[2] ? Number(match[2]) : match[4] ? Number(match[4]) : undefined
+  if (!legacy) return
+  const start = legacy[2] ? Number(legacy[2]) : legacy[3] ? Number(legacy[3]) : undefined
+  const end = legacy[2] ? Number(legacy[2]) : legacy[4] ? Number(legacy[4]) : undefined
   return {
-    path: match[5],
+    path: legacy[5],
     selection:
       start !== undefined && end !== undefined
         ? {
@@ -83,6 +104,6 @@ export function parseCommentNote(text: string) {
             endChar: 0,
           }
         : undefined,
-    comment: match[6],
+    comment: legacy[6],
   } satisfies PromptComment
 }
