@@ -33,7 +33,8 @@ export class StorageError extends Schema.TaggedErrorClass<StorageError>()("ToolO
 }) {
   override get message() {
     const detail = this.cause instanceof Error ? this.cause.message : String(this.cause)
-    return `Failed to ${this.operation} tool output${detail ? `: ${detail}` : ""}`
+    const action = this.operation === "encode" ? "кодчилж" : "бичиж"
+    return `Хэрэгслийн гаралтыг ${action} чадсангүй${detail ? `: ${detail}` : ""}`
   }
 }
 
