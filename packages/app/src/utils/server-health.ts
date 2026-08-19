@@ -1,10 +1,21 @@
 import { usePlatform } from "@/context/platform"
 import { ServerConnection } from "@/context/server"
-import { createSdkForServer } from "./server"
+import { createServerRequest } from "./server"
 import { Accessor, createEffect, onCleanup } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
 
-export type ServerHealth = { healthy: boolean; version?: string }
+export type ServerHealthFailureReason =
+  | "network"
+  | "timeout"
+  | "http-error"
+  | "html-response"
+  | "wrong-content-type"
+  | "invalid-response"
+  | "unhealthy"
+
+export type ServerHealth =
+  | { healthy: true; version?: string }
+  | { healthy: false; version?: undefined; reason: ServerHealthFailureReason }
 
 export function serverVersionLabel(version: string | undefined, localLabel: string) {
   if (!version) return
@@ -73,6 +84,54 @@ function retryable(error: unknown, signal?: AbortSignal) {
   return /network|fetch|econnreset|econnrefused|enotfound|timedout/i.test(error.message)
 }
 
+function unavailable(error: unknown): ServerHealth {
+  if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
+    return { healthy: false, reason: "timeout" }
+  }
+  return { healthy: false, reason: "network" }
+}
+
+function jsonContentType(value: string | null) {
+  const mediaType = value?.split(";", 1)[0]?.trim().toLowerCase()
+  return mediaType === "application/json" || mediaType?.endsWith("+json") === true
+}
+
+function htmlResponse(contentType: string | null, body: string) {
+  if (contentType?.toLowerCase().includes("text/html")) return true
+  return /^\s*(?:<!doctype\s+html|<html\b)/i.test(body)
+}
+
+async function fetchHealth(
+  server: ServerConnection.HttpBase,
+  fetch: typeof globalThis.fetch,
+  signal: AbortSignal | undefined,
+): Promise<ServerHealth> {
+  const response = await createServerRequest({ server, fetch })("global/health", {
+    method: "GET",
+    signal,
+    headers: { accept: "application/json" },
+  })
+  const contentType = response.headers.get("content-type")
+  const body = await response.text()
+
+  if (htmlResponse(contentType, body)) return { healthy: false, reason: "html-response" }
+  if (!jsonContentType(contentType)) return { healthy: false, reason: "wrong-content-type" }
+  if (!response.ok) return { healthy: false, reason: "http-error" }
+
+  let data: unknown
+  try {
+    data = JSON.parse(body)
+  } catch {
+    return { healthy: false, reason: "invalid-response" }
+  }
+  if (!data || typeof data !== "object" || !("healthy" in data) || typeof data.healthy !== "boolean") {
+    return { healthy: false, reason: "invalid-response" }
+  }
+  if (!data.healthy) return { healthy: false, reason: "unhealthy" }
+  const version = "version" in data && typeof data.version === "string" ? data.version : undefined
+  return { healthy: true, version }
+}
+
 export async function checkServerHealth(
   server: ServerConnection.HttpBase,
   fetch: typeof globalThis.fetch,
@@ -83,20 +142,13 @@ export async function checkServerHealth(
   const retryCount = opts?.retryCount ?? defaultRetryCount
   const retryDelayMs = opts?.retryDelayMs ?? defaultRetryDelayMs
   const next = (count: number, error: unknown) => {
-    if (count >= retryCount || !retryable(error, signal)) return Promise.resolve({ healthy: false } as const)
+    if (count >= retryCount || !retryable(error, signal)) return Promise.resolve(unavailable(error))
     return wait(retryDelayMs * (count + 1), signal)
       .then(() => attempt(count + 1))
-      .catch(() => ({ healthy: false }))
+      .catch((waitError) => unavailable(waitError))
   }
   const attempt = (count: number): Promise<ServerHealth> =>
-    createSdkForServer({
-      server,
-      fetch,
-      signal,
-    })
-      .global.health()
-      .then((x) => (x.error ? next(count, x.error) : { healthy: x.data?.healthy === true, version: x.data?.version }))
-      .catch((error) => next(count, error))
+    fetchHealth(server, fetch, signal).catch((error) => next(count, error))
   return attempt(0).finally(() => timeout?.clear?.())
 }
 

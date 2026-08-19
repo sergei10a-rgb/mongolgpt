@@ -31,13 +31,16 @@ function isLoopback(url: string) {
 }
 
 export function resolveWebRuntime(input: ResolveWebRuntimeInput): WebRuntime {
-  void input.origin
   const configured = input.serverUrl?.trim()
   const serverUrl = configured
     ? normalizeHttpUrl(configured)
     : input.dev
       ? normalizeHttpUrl(`http://${input.serverHost || "localhost"}:${input.serverPort || "4096"}`)
       : "http://localhost:4096"
+
+  if (configured && new URL(serverUrl).origin === new URL(normalizeHttpUrl(input.origin)).origin) {
+    throw new Error("MongolGPT-ийн веб аппын хаягийг API runtime болгон ашиглах боломжгүй")
+  }
 
   return {
     mode: isLoopback(serverUrl) ? "local-bridge" : "hosted",

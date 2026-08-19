@@ -65,6 +65,18 @@ describe("resolveWebRuntime", () => {
     })
   })
 
+  test("rejects the static app origin as a configured runtime", () => {
+    for (const serverUrl of ["https://app.dev.mgpt.mn", "https://app.dev.mgpt.mn/api"]) {
+      expect(() =>
+        resolveWebRuntime({
+          dev: false,
+          origin: "https://app.dev.mgpt.mn",
+          serverUrl,
+        }),
+      ).toThrow("API runtime")
+    }
+  })
+
   test("rejects unsupported runtime URL protocols", () => {
     expect(() =>
       resolveWebRuntime({

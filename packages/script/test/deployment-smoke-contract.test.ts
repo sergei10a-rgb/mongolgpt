@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
   inspectAnonymousRuntimeToken,
+  inspectAnonymousRuntimeApiResponse,
   inspectHostedAuthorizeRedirect,
   inspectRuntimeTokenPreflight,
 } from "../../../script/deployment-smoke"
@@ -68,6 +69,16 @@ function anonymousResponse(
   return new Response(JSON.stringify(body), {
     status: 401,
     headers: { ...corsHeaders(), "content-type": "application/json", ...headers },
+  })
+}
+
+function anonymousApiResponse(
+  body: unknown = { error: "Нэвтэрч орно уу." },
+  init: { status?: number; headers?: Record<string, string> } = {},
+) {
+  return new Response(typeof body === "string" ? body : JSON.stringify(body), {
+    status: init.status ?? 401,
+    headers: { ...corsHeaders(), "content-type": "application/json", ...init.headers },
   })
 }
 
@@ -409,6 +420,32 @@ describe("hosted runtime token smoke contract", () => {
         appOrigin,
       ),
       "CORS origin",
+    )
+  })
+})
+
+describe("representative hosted runtime API smoke contract", () => {
+  test("requires an anonymous JSON 401 from the runtime project route", async () => {
+    expect(await inspectAnonymousRuntimeApiResponse(anonymousApiResponse(), appOrigin)).toBeUndefined()
+    await expectFailure(
+      inspectAnonymousRuntimeApiResponse(anonymousApiResponse({ error: "wrong" }), appOrigin),
+      "fail-closed",
+    )
+  })
+
+  test("rejects a static HTML shell from the runtime project route", async () => {
+    await expectFailure(
+      inspectAnonymousRuntimeApiResponse(
+        anonymousApiResponse("<!doctype html><html><body>static app</body></html>", {
+          headers: { "content-type": "text/html" },
+        }),
+        appOrigin,
+      ),
+      "not JSON",
+    )
+    await expectFailure(
+      inspectAnonymousRuntimeApiResponse(anonymousApiResponse("<!doctype html>", { status: 200 }), appOrigin),
+      "expected 401",
     )
   })
 })

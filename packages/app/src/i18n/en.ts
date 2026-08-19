@@ -359,6 +359,8 @@ export const dict = {
 
   "app.server.unreachable": "Could not reach {{server}}",
   "app.server.retrying": "Retrying automatically...",
+  "app.server.invalidRuntime.html": "A web page answered instead of the MongolGPT API. Check the runtime address.",
+  "app.server.invalidRuntime.response": "The runtime returned an invalid API response. Check the runtime address.",
   "app.server.otherServers": "Other servers",
   "app.server.localBridge.title": "Start the MongolGPT engine",
   "app.server.localBridge.description":

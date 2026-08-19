@@ -337,6 +337,8 @@ export const dict = {
   "dialog.directory.readError": "Энэ фолдерыг унших боломжгүй байна",
   "app.server.unreachable": "{{server}}-д холбогдож чадсангүй",
   "app.server.retrying": "Автоматаар дахин оролдож байна...",
+  "app.server.invalidRuntime.html": "MongolGPT API-ийн оронд веб хуудас хариу өглөө. Runtime хаягийг шалгана уу.",
+  "app.server.invalidRuntime.response": "Runtime буруу API хариу өглөө. Runtime хаягийг шалгана уу.",
   "app.server.otherServers": "Бусад серверүүд",
   "app.server.localBridge.title": "MongolGPT хөдөлгүүрээ асаана уу",
   "app.server.localBridge.description":

@@ -16,6 +16,10 @@ export type AnonymousHostedSessionContract = {
   authenticated: false
 }
 
+export type AnonymousRuntimeApiContract = {
+  error: "Нэвтэрч орно уу."
+}
+
 export type PaymentHealthContract = {
   status: "disabled" | "ok"
   environment: "disabled" | "sandbox" | "production"
@@ -312,6 +316,18 @@ export function inspectAnonymousHostedSession(value: unknown): AnonymousHostedSe
   if (body.account !== undefined) throw new Error("anonymous hosted session exposed account data")
   exactObjectKeys(body, ["authenticated"], "hosted session response")
   return { authenticated: false }
+}
+
+export function inspectAnonymousRuntimeApi(value: unknown): AnonymousRuntimeApiContract {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("anonymous runtime API response is not an object")
+  }
+  const body = value as { error?: unknown }
+  exactObjectKeys(body, ["error"], "anonymous runtime API response")
+  if (body.error !== "Нэвтэрч орно уу.") {
+    throw new Error("anonymous runtime API response is not fail-closed")
+  }
+  return { error: "Нэвтэрч орно уу." }
 }
 
 export function inspectRuntimeHealth(

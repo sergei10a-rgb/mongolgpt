@@ -53,7 +53,7 @@ import DirectoryLayout, { DirectoryDataProvider } from "@/pages/directory-layout
 import LegacyLayout from "@/pages/layout"
 import NewLayout from "@/pages/layout-new"
 import { ErrorPage } from "./pages/error"
-import { useCheckServerHealth } from "./utils/server-health"
+import { type ServerHealth, useCheckServerHealth } from "./utils/server-health"
 import {
   legacySessionHref,
   legacySessionServer,
@@ -433,6 +433,7 @@ function ConnectionGate(props: ParentProps<{ disableHealthCheck?: boolean }>) {
   const checkServerHealth = useCheckServerHealth()
 
   const [checkMode, setCheckMode] = createSignal<"blocking" | "background">("blocking")
+  const [healthFailure, setHealthFailure] = createSignal<ServerHealth>()
 
   // performs repeated health check with a grace period for
   // non-http connections, otherwise fails instantly
@@ -445,7 +446,11 @@ function ConnectionGate(props: ParentProps<{ disableHealthCheck?: boolean }>) {
 
           while (true) {
             const res = yield* Effect.promise(() => checkServerHealth(http))
-            if (res.healthy) return true
+            if (res.healthy) {
+              setHealthFailure(undefined)
+              return true
+            }
+            setHealthFailure(res)
             if (checkMode() === "background" || type === "http") return false
           }
         }).pipe(
@@ -471,6 +476,7 @@ function ConnectionGate(props: ParentProps<{ disableHealthCheck?: boolean }>) {
         when={startupHealthCheck.latest}
         fallback={
           <ConnectionError
+            health={healthFailure()}
             onRetry={() => {
               if (checkMode() === "background") void healthCheckActions.refetch()
             }}
@@ -488,7 +494,11 @@ function ConnectionGate(props: ParentProps<{ disableHealthCheck?: boolean }>) {
   )
 }
 
-function ConnectionError(props: { onRetry?: () => void; onServerSelected?: (key: ServerConnection.Key) => void }) {
+function ConnectionError(props: {
+  health?: ServerHealth
+  onRetry?: () => void
+  onServerSelected?: (key: ServerConnection.Key) => void
+}) {
   const language = useLanguage()
   const platform = usePlatform()
   const server = useServer()
@@ -497,6 +507,13 @@ function ConnectionError(props: { onRetry?: () => void; onServerSelected?: (key:
   const localBridge = createMemo(() => platform.platform === "web" && ServerConnection.local(server.current))
   const serverToken = "\u0000server\u0000"
   const unreachable = createMemo(() => language.t("app.server.unreachable", { server: serverToken }).split(serverToken))
+  const contractError = createMemo(() => {
+    if (props.health?.healthy !== false) return
+    if (props.health.reason === "html-response") return language.t("app.server.invalidRuntime.html")
+    if (["wrong-content-type", "invalid-response"].includes(props.health.reason)) {
+      return language.t("app.server.invalidRuntime.response")
+    }
+  })
 
   const timer = setInterval(() => props.onRetry?.(), 1000)
   onCleanup(() => clearInterval(timer))
@@ -513,6 +530,9 @@ function ConnectionError(props: { onRetry?: () => void; onServerSelected?: (key:
               <span class="text-text-strong font-medium">{name()}</span>
               {unreachable()[1]}
             </p>
+            <Show when={contractError()}>
+              {(message) => <p class="mt-2 text-13-regular text-text-critical-base">{message()}</p>}
+            </Show>
             <p class="mt-1 text-12-regular text-text-weak">{language.t("app.server.retrying")}</p>
           </div>
         }

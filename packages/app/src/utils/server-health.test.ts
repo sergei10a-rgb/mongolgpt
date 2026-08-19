@@ -66,7 +66,7 @@ describe("checkServerHealth", () => {
 
     const result = await checkServerHealth(server, fetch)
 
-    expect(result).toEqual({ healthy: false })
+    expect(result).toEqual({ healthy: false, reason: "network" })
   })
 
   test("uses timeout fallback when AbortSignal.timeout is unavailable", async () => {
@@ -98,7 +98,7 @@ describe("checkServerHealth", () => {
     })
 
     expect(aborted).toBe(true)
-    expect(result).toEqual({ healthy: false })
+    expect(result).toEqual({ healthy: false, reason: "timeout" })
   })
 
   test("uses provided abort signal", async () => {
@@ -152,6 +152,44 @@ describe("checkServerHealth", () => {
     })
 
     expect(count).toBe(3)
-    expect(result).toEqual({ healthy: false })
+    expect(result).toEqual({ healthy: false, reason: "network" })
+  })
+
+  test("rejects a static HTML shell returned as health JSON", async () => {
+    const fetch = (async () =>
+      new Response("<!doctype html><html><body>MongolGPT</body></html>", {
+        status: 200,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      })) as unknown as typeof globalThis.fetch
+
+    const result = await checkServerHealth(server, fetch)
+
+    expect(result).toEqual({ healthy: false, reason: "html-response" })
+  })
+
+  test("rejects a wrong health content type", async () => {
+    const fetch = (async () =>
+      new Response(JSON.stringify({ healthy: true, version: "1.2.3" }), {
+        status: 200,
+        headers: { "content-type": "text/plain" },
+      })) as unknown as typeof globalThis.fetch
+
+    const result = await checkServerHealth(server, fetch)
+
+    expect(result).toEqual({ healthy: false, reason: "wrong-content-type" })
+  })
+
+  test("rejects invalid health JSON and schema", async () => {
+    const bodies = ["{", JSON.stringify({ status: "ok" })]
+
+    for (const body of bodies) {
+      const fetch = (async () =>
+        new Response(body, {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })) as unknown as typeof globalThis.fetch
+
+      expect(await checkServerHealth(server, fetch)).toEqual({ healthy: false, reason: "invalid-response" })
+    }
   })
 })

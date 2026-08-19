@@ -6,6 +6,7 @@ import {
   inspectConsoleHealth,
   inspectDeploymentEndpointConfiguration,
   inspectAnonymousHostedSession,
+  inspectAnonymousRuntimeApi,
   inspectAppHtml,
   inspectHtmlAssets,
   inspectHostedAppRuntime,
@@ -113,6 +114,7 @@ async function check(
           inspectHostedAppRuntime(contract, { channel: appChannel(result), runtimeHealthUrl })
           await checkAgentRuntime(contract.serverUrl, result.stage, runtimeVersion)
           await checkHostedSessionBoundary(contract.serverUrl, url)
+          await checkAnonymousRuntimeApiBoundary(contract.serverUrl, url)
         }
         await checkDirectAppRoute(url, result)
       } else {
@@ -432,6 +434,50 @@ async function checkHostedSessionBoundary(serverUrl: string, appUrl: string) {
   if (typeof body !== "object" || body === null || typeof (body as { error?: unknown }).error !== "string") {
     throw new Error(`foreign origin rejection body is invalid: ${sessionUrl}`)
   }
+}
+
+async function checkAnonymousRuntimeApiBoundary(serverUrl: string, appUrl: string) {
+  const projectUrl = new URL("/project", `${serverUrl}/`)
+  const appOrigin = new URL(appUrl).origin
+  const response = await fetch(projectUrl, {
+    headers: {
+      Accept: "application/json",
+      Origin: appOrigin,
+      "User-Agent": "mongolgpt-deployment-smoke",
+    },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  inspectResponseOrigin({
+    requestUrl: projectUrl.toString(),
+    responseUrl: response.url,
+    status: response.status,
+    location: response.headers.get("location"),
+    label: "anonymous runtime project API",
+  })
+  await inspectAnonymousRuntimeApiResponse(response, appOrigin)
+}
+
+export async function inspectAnonymousRuntimeApiResponse(response: Response, appOrigin: string) {
+  if (response.status !== 401) {
+    throw new Error(`anonymous runtime API returned HTTP ${response.status}; expected 401`)
+  }
+  if (response.headers.get("access-control-allow-origin") !== appOrigin) {
+    throw new Error("anonymous runtime API CORS origin does not match the app")
+  }
+  if (response.headers.get("access-control-allow-credentials") !== "true") {
+    throw new Error("anonymous runtime API does not allow credentialed requests")
+  }
+  if (!response.headers.get("cache-control")?.toLowerCase().includes("no-store")) {
+    throw new Error("anonymous runtime API response is cacheable")
+  }
+  inspectAnonymousRuntimeApi(
+    inspectJsonApiPayload(
+      response.headers.get("content-type"),
+      await response.text(),
+      "anonymous runtime project API response",
+    ),
+  )
 }
 
 async function checkStaticAssets(pageUrl: string, html: string, label: string) {
