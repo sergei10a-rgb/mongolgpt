@@ -2,6 +2,17 @@ import type { CommandModule } from "yargs"
 
 type Args = {}
 
+export function codeSample(operationID: string) {
+  return [
+    `import { createMongolGPTClient } from "@mongolgpt/sdk"`,
+    ``,
+    `const client = createMongolGPTClient()`,
+    `await client.${operationID}({`,
+    `  ...`,
+    `})`,
+  ].join("\n")
+}
+
 export const GenerateCommand = {
   command: "generate",
   builder: (yargs) => yargs,
@@ -17,14 +28,7 @@ export const GenerateCommand = {
         operation["x-codeSamples"] = [
           {
             lang: "js",
-            source: [
-              `import { createMongolGPTClient } from "@mongolgpt/sdk`,
-              ``,
-              `const client = createMongolGPTClient()`,
-              `await client.${operation.operationId}({`,
-              `  ...`,
-              `})`,
-            ].join("\n"),
+            source: codeSample(operation.operationId),
           },
         ]
       }
