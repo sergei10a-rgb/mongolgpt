@@ -1000,6 +1000,7 @@ export default {
         Effect.gen(function* () {
           const install = spyOn(Npm, "add").mockResolvedValue({ directory: tmp.extra.mod, entrypoint: undefined })
           const missing: string[] = []
+          const messages: string[] = []
 
           try {
             const loaded = yield* Effect.promise(() =>
@@ -1013,6 +1014,7 @@ export default {
                 ],
                 kind: "tui",
                 missing: async (item) => {
+                  messages.push(item.message)
                   if (!item.pkg) return
                   const themes = readPackageThemes(item.spec, item.pkg)
                   if (!themes.length) return
@@ -1038,6 +1040,7 @@ export default {
               },
             ])
             expect(missing).toHaveLength(0)
+            expect(messages).toEqual(["Plugin acme-plugin@1.0.0 нь tui эхлэх цэг export хийгээгүй байна"])
           } finally {
             install.mockRestore()
           }
@@ -1126,7 +1129,7 @@ export default {
               pkg: tmp.extra.file,
               json,
             }),
-          ).toThrow("outside plugin directory")
+          ).toThrow("plugin хавтсаас гадуур")
         }),
     ),
   )

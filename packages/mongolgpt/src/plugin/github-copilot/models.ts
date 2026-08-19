@@ -208,7 +208,7 @@ export async function get(
     signal: AbortSignal.timeout(5_000),
   }).then(async (res) => {
     if (!res.ok) {
-      throw new Error(`Failed to fetch models: ${res.status}`)
+      throw new Error(`Загварын жагсаалтыг авч чадсангүй: ${res.status}`)
     }
     return decodeModels(await res.json())
   })

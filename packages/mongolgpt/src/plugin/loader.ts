@@ -2,6 +2,7 @@ import {
   checkPluginCompatibility,
   createPluginEntry,
   isDeprecatedPlugin,
+  PluginDirectoryEntryMissingError,
   pluginSource,
   resolvePluginTarget,
   type PluginKind,
@@ -62,15 +63,8 @@ export namespace PluginLoader {
     retry: boolean
   }
 
-  function errorMessage(error: unknown) {
-    if (!error || typeof error !== "object") return ""
-    const message = "message" in error && typeof error.message === "string" ? error.message : ""
-    return message
-  }
-
   function isRetryableResolveError(stage: "install" | "entry" | "compatibility", error: unknown) {
-    if (stage !== "install") return false
-    return errorMessage(error).includes("missing package.json or index file")
+    return stage === "install" && error instanceof PluginDirectoryEntryMissingError
   }
 
   // Normalize a config item into the loader's internal representation.
@@ -98,7 +92,8 @@ export namespace PluginLoader {
     } catch (error) {
       return { ok: false, stage: "install", error }
     }
-    if (!target) return { ok: false, stage: "install", error: new Error(`Plugin ${plan.spec} target is empty`) }
+    if (!target)
+      return { ok: false, stage: "install", error: new Error(`Plugin ${plan.spec}-ийн зорилтот зам хоосон байна`) }
 
     // Then inspect the target for the requested server/tui entrypoint.
     let base
@@ -116,7 +111,7 @@ export namespace PluginLoader {
           source: base.source,
           target: base.target,
           pkg: base.pkg,
-          message: `Plugin ${plan.spec} does not expose a ${kind} entrypoint`,
+          message: `Plugin ${plan.spec} нь ${kind} эхлэх цэг export хийгээгүй байна`,
         },
       }
 

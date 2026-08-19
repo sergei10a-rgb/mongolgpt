@@ -51,6 +51,16 @@ export type PluginEntry = {
   entry?: string
 }
 
+export class PluginDirectoryEntryMissingError extends Error {
+  readonly directory: string
+
+  constructor(directory: string) {
+    super(`Plugin хавтас ${directory}-д package.json эсвэл index файл алга`)
+    this.name = "PluginDirectoryEntryMissingError"
+    this.directory = directory
+  }
+}
+
 const INDEX_FILES = ["index.ts", "index.tsx", "index.js", "index.mjs", "index.cjs"]
 
 export function pluginSource(spec: string): PluginSource {
@@ -91,7 +101,7 @@ function resolvePackageFile(spec: string, raw: string, kind: string, pkg: Plugin
   const root = Filesystem.resolve(pkg.dir)
   const next = Filesystem.resolve(resolved)
   if (!Filesystem.contains(root, next)) {
-    throw new Error(`Plugin ${spec} resolved ${kind} entry outside plugin directory`)
+    throw new Error(`Plugin ${spec}-ийн ${kind} эхлэх цэг plugin хавтсаас гадуур заагдлаа`)
   }
   return next
 }
@@ -188,7 +198,7 @@ export async function resolvePathPluginTarget(spec: string) {
   const index = await resolveDirectoryIndex(file)
   if (index) return pathToFileURL(index).href
 
-  throw new Error(`Plugin directory ${file} is missing package.json or index file`)
+  throw new PluginDirectoryEntryMissingError(file)
 }
 
 export async function checkPluginCompatibility(target: string, mongolgptVersion: string, pkg?: PluginPackage) {
@@ -200,7 +210,7 @@ export async function checkPluginCompatibility(target: string, mongolgptVersion:
   const range = engines.mongolgpt
   if (typeof range !== "string") return
   if (!semver.satisfies(mongolgptVersion, range)) {
-    throw new Error(`Plugin requires MongolGPT ${range} but running ${mongolgptVersion}`)
+    throw new Error(`Plugin-д MongolGPT ${range} шаардлагатай боловч ${mongolgptVersion} хувилбар ажиллаж байна`)
   }
 }
 
@@ -239,20 +249,20 @@ export function readPackageThemes(spec: string, pkg: PluginPackage) {
   const field = pkg.json["oc-themes"]
   if (field === undefined) return []
   if (!Array.isArray(field)) {
-    throw new TypeError(`Plugin ${spec} has invalid oc-themes field`)
+    throw new TypeError(`Plugin ${spec}-ийн oc-themes талбар буруу байна`)
   }
 
   const list = field.map((item) => {
     if (typeof item !== "string") {
-      throw new TypeError(`Plugin ${spec} has invalid oc-themes entry`)
+      throw new TypeError(`Plugin ${spec}-ийн oc-themes бичлэг буруу байна`)
     }
 
     const raw = item.trim()
     if (!raw) {
-      throw new TypeError(`Plugin ${spec} has empty oc-themes entry`)
+      throw new TypeError(`Plugin ${spec}-ийн oc-themes бичлэг хоосон байна`)
     }
     if (raw.startsWith("file://") || isAbsolutePath(raw)) {
-      throw new TypeError(`Plugin ${spec} oc-themes entry must be relative: ${item}`)
+      throw new TypeError(`Plugin ${spec}-ийн oc-themes бичлэг харьцангуй зам байх ёстой: ${item}`)
     }
 
     return resolvePackageFile(spec, raw, "oc-themes", pkg)
@@ -263,9 +273,9 @@ export function readPackageThemes(spec: string, pkg: PluginPackage) {
 
 export function readPluginId(id: unknown, spec: string) {
   if (id === undefined) return
-  if (typeof id !== "string") throw new TypeError(`Plugin ${spec} has invalid id type ${typeof id}`)
+  if (typeof id !== "string") throw new TypeError(`Plugin ${spec}-ийн id төрөл буруу байна: ${typeof id}`)
   const value = id.trim()
-  if (!value) throw new TypeError(`Plugin ${spec} has an empty id`)
+  if (!value) throw new TypeError(`Plugin ${spec}-ийн id хоосон байна`)
   return value
 }
 
@@ -278,26 +288,26 @@ export function readV1Plugin(
   const value = mod.default
   if (!isRecord(value)) {
     if (mode === "detect") return
-    throw new TypeError(`Plugin ${spec} must default export an object with ${kind}()`)
+    throw new TypeError(`Plugin ${spec}-ийн анхдагч export нь ${kind}() агуулсан объект байх ёстой`)
   }
   if (mode === "detect" && !("id" in value) && !("server" in value) && !("tui" in value)) return
 
   const server = "server" in value ? value.server : undefined
   const tui = "tui" in value ? value.tui : undefined
   if (server !== undefined && typeof server !== "function") {
-    throw new TypeError(`Plugin ${spec} has invalid server export`)
+    throw new TypeError(`Plugin ${spec}-ийн server export буруу байна`)
   }
   if (tui !== undefined && typeof tui !== "function") {
-    throw new TypeError(`Plugin ${spec} has invalid tui export`)
+    throw new TypeError(`Plugin ${spec}-ийн tui export буруу байна`)
   }
   if (server !== undefined && tui !== undefined) {
-    throw new TypeError(`Plugin ${spec} must default export either server() or tui(), not both`)
+    throw new TypeError(`Plugin ${spec} нь server() эсвэл tui()-ийн аль нэгийг л анхдагчаар export хийх ёстой`)
   }
   if (kind === "server" && server === undefined) {
-    throw new TypeError(`Plugin ${spec} must default export an object with server()`)
+    throw new TypeError(`Plugin ${spec}-ийн анхдагч export нь server() агуулсан объект байх ёстой`)
   }
   if (kind === "tui" && tui === undefined) {
-    throw new TypeError(`Plugin ${spec} must default export an object with tui()`)
+    throw new TypeError(`Plugin ${spec}-ийн анхдагч export нь tui() агуулсан объект байх ёстой`)
   }
 
   return value
@@ -312,12 +322,12 @@ export async function resolvePluginId(
 ) {
   if (source === "file") {
     if (id) return id
-    throw new TypeError(`Path plugin ${spec} must export id`)
+    throw new TypeError(`Замын plugin ${spec} нь id export хийх ёстой`)
   }
   if (id) return id
   const hit = pkg ?? (await readPluginPackage(target))
   if (typeof hit.json.name !== "string" || !hit.json.name.trim()) {
-    throw new TypeError(`Plugin package ${hit.pkg} is missing name`)
+    throw new TypeError(`Plugin багц ${hit.pkg}-д name талбар алга`)
   }
   return hit.json.name.trim()
 }
