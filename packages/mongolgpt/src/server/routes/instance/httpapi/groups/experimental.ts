@@ -4,7 +4,7 @@ import { MCP } from "@/mcp"
 import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
 import { Worktree } from "@/worktree"
-import { NonNegativeInt } from "@mongolgpt/core/schema"
+import { NonNegativeInt, PositiveInt } from "@mongolgpt/core/schema"
 import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "../middleware/authorization"
@@ -64,6 +64,101 @@ const AccountLoginStatus = Schema.Union([
   Schema.Struct({ _tag: Schema.Literal("error"), message: Schema.String }),
 ]).annotate({ identifier: "ExperimentalAccountLoginStatus" })
 
+const AccountOverviewIdentifier = Schema.String.check(Schema.isMinLength(5), Schema.isMaxLength(30))
+const AccountOverviewTimestamp = NonNegativeInt
+const PaidPlan = Schema.Literals(["basic", "pro", "max"])
+
+const AccountOverviewSubscription = Schema.Struct({
+  id: AccountOverviewIdentifier,
+  invoiceID: AccountOverviewIdentifier,
+  plan: PaidPlan,
+  status: Schema.Literal("active"),
+  periodStart: AccountOverviewTimestamp,
+  periodEnd: AccountOverviewTimestamp,
+})
+
+const AccountOverviewLimits = Schema.Union([
+  Schema.Struct({
+    plan: Schema.Literal("free"),
+    promoTokens: NonNegativeInt,
+    dailyRequests: PositiveInt,
+    dailyRequestsFallback: PositiveInt,
+  }),
+  Schema.Struct({
+    plan: PaidPlan,
+    weeklyCostLimitInMicroCents: PositiveInt,
+    weeklyTokenLimit: PositiveInt,
+    rollingCostLimitInMicroCents: PositiveInt,
+    rollingWindowHours: PositiveInt,
+  }),
+])
+
+const AccountOverviewQuotaDimension = Schema.Struct({
+  used: NonNegativeInt,
+  limit: PositiveInt,
+  resetAt: Schema.NullOr(AccountOverviewTimestamp),
+})
+
+const AccountOverviewQuota = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("available"),
+    weeklyCost: AccountOverviewQuotaDimension,
+    weeklyTokens: AccountOverviewQuotaDimension,
+    rollingCost: AccountOverviewQuotaDimension,
+  }),
+  Schema.Struct({
+    status: Schema.Literal("model-scoped"),
+    reason: Schema.Literal("free-auto-model-limits"),
+  }),
+  Schema.Struct({
+    status: Schema.Literal("unavailable"),
+    reason: Schema.Literal("quota-service-unavailable"),
+  }),
+])
+
+const AccountOverviewUsage = Schema.Struct({
+  scope: Schema.Literal("workspace"),
+  period: Schema.Literals(["week", "subscription"]),
+  periodStart: AccountOverviewTimestamp,
+  periodEnd: AccountOverviewTimestamp,
+  requestCount: NonNegativeInt,
+  inputTokens: NonNegativeInt,
+  outputTokens: NonNegativeInt,
+  reasoningTokens: NonNegativeInt,
+  cacheReadTokens: NonNegativeInt,
+  cacheWriteTokens: NonNegativeInt,
+  totalTokens: NonNegativeInt,
+  costInMicroCents: NonNegativeInt,
+})
+
+const AccountOverviewResponse = Schema.Struct({
+  account: Schema.Struct({
+    id: AccountOverviewIdentifier,
+    email: Schema.String.check(Schema.isMaxLength(320)),
+    status: Schema.Literal("active"),
+    createdAt: AccountOverviewTimestamp,
+  }),
+  currentWorkspaceID: Schema.NullOr(AccountOverviewIdentifier),
+  workspaces: Schema.Array(
+    Schema.Struct({
+      id: AccountOverviewIdentifier,
+      name: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+      slug: Schema.NullOr(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255))),
+      userID: AccountOverviewIdentifier,
+      role: Schema.Literals(["admin", "member"]),
+      subscription: Schema.NullOr(AccountOverviewSubscription),
+      limits: AccountOverviewLimits,
+      quota: AccountOverviewQuota,
+      usage: AccountOverviewUsage,
+    }),
+  ),
+}).annotate({ identifier: "ExperimentalAccountOverview" })
+
+export const AccountOverviewQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  workspaceID: Schema.optional(OrgID),
+})
+
 export const ConsoleSwitchPayload = Schema.Struct({
   accountID: AccountID,
   orgID: OrgID,
@@ -112,6 +207,7 @@ export const SessionListQuery = Schema.Struct({
 export const ExperimentalPaths = {
   capabilities: "/experimental/capabilities",
   account: "/experimental/account",
+  accountOverview: "/experimental/account/overview",
   accountLogin: "/experimental/account/login",
   accountLoginStatus: "/experimental/account/login/:loginID",
   console: "/experimental/console",
@@ -152,6 +248,18 @@ export const ExperimentalApi = HttpApi.make("experimental")
             summary: "Идэвхтэй локал бүртгэлийг устгах",
             description:
               "Энэ локал MongolGPT хувилбараас идэвхтэй бүртгэлийг устгана. Алсын токенуудыг хүчингүй болгохгүй.",
+          }),
+        ),
+        HttpApiEndpoint.get("accountOverview", ExperimentalPaths.accountOverview, {
+          query: AccountOverviewQuery,
+          success: described(Schema.NullOr(AccountOverviewResponse), "Идэвхтэй бүртгэлийн багц, квот болон хэрэглээ"),
+          error: [HttpApiError.InternalServerError, HttpApiError.ServiceUnavailable],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "experimental.account.overview",
+            summary: "Идэвхтэй бүртгэлийн багц, квот болон хэрэглээг авах",
+            description:
+              "Идэвхтэй MongolGPT бүртгэлийн алсын API-аар баталгаажсан ажлын орчин, багц, хэрэглээний хязгаар болон зарцуулалтын мэдээллийг авна. Нууц токен буцаахгүй.",
           }),
         ),
         HttpApiEndpoint.post("accountLogin", ExperimentalPaths.accountLogin, {
@@ -259,8 +367,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
           OpenApi.annotations({
             identifier: "tool.ids",
             summary: "Хэрэгслийн ID-нуудыг жагсаах",
-            description:
-              "Суурилуулсан болон динамикаар бүртгэсэн бүх хэрэгслийн ID-ны жагсаалтыг авна.",
+            description: "Суурилуулсан болон динамикаар бүртгэсэн бүх хэрэгслийн ID-ны жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.get("worktree", ExperimentalPaths.worktree, {
@@ -331,8 +438,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
           OpenApi.annotations({
             identifier: "experimental.session.background",
             summary: "Дэд агентуудыг арын горимд шилжүүлэх",
-            description:
-              "Сессийг саатуулж буй синхрон дэд агентуудыг салгаж, арын горимд үргэлжлүүлэн ажиллуулна.",
+            description: "Сессийг саатуулж буй синхрон дэд агентуудыг салгаж, арын горимд үргэлжлүүлэн ажиллуулна.",
           }),
         ),
         HttpApiEndpoint.get("resource", ExperimentalPaths.resource, {

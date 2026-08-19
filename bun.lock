@@ -47,6 +47,7 @@
         "@dnd-kit/helpers": "0.5.0",
         "@dnd-kit/solid": "0.5.0",
         "@kobalte/core": "catalog:",
+        "@mongolgpt/account-contract": "workspace:*",
         "@mongolgpt/core": "workspace:*",
         "@mongolgpt/sdk": "workspace:*",
         "@mongolgpt/session-ui": "workspace:*",
@@ -377,6 +378,7 @@
       "name": "@mongolgpt/desktop",
       "version": "0.1.1",
       "dependencies": {
+        "@mongolgpt/account-contract": "workspace:*",
         "@zip.js/zip.js": "2.7.62",
         "effect": "catalog:",
         "electron-context-menu": "4.1.2",
@@ -587,6 +589,7 @@
         "@fastify/rate-limit": "^10.2.0",
         "@ff-labs/fff-bun": "0.9.4",
         "@modelcontextprotocol/sdk": "1.29.0",
+        "@mongolgpt/account-contract": "workspace:*",
         "@mongolgpt/llm": "workspace:*",
         "@mongolgpt/plugin": "workspace:*",
         "@mongolgpt/protocol": "workspace:*",

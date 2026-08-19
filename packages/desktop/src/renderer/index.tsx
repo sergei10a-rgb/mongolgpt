@@ -138,6 +138,11 @@ const createPlatform = (): Platform => {
     version: pkg.version,
     account: {
       current: () => window.api.account.current(),
+      overview: (workspaceID) =>
+        window.api.account.overview(workspaceID).then((value) => {
+          if (!value) throw new Error("Бүртгэлийн төлөв олдсонгүй")
+          return value
+        }),
       login: () => window.api.account.login(),
       logout: () => window.api.account.logout(),
     },

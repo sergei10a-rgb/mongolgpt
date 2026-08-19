@@ -15,7 +15,13 @@ import { Effect, Fiber, Option, Semaphore } from "effect"
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
-import { ConsoleSwitchPayload, SessionListQuery, ToolListQuery, WorktreeApiError } from "../groups/experimental"
+import {
+  AccountOverviewQuery,
+  ConsoleSwitchPayload,
+  SessionListQuery,
+  ToolListQuery,
+  WorktreeApiError,
+} from "../groups/experimental"
 
 const LOGIN_TIMEOUT_MS = 10 * 60 * 1000
 const LOGIN_RESULT_TTL_MS = 5 * 60 * 1000
@@ -103,6 +109,18 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
       if (Option.isSome(active))
         yield* account.remove(active.value.id).pipe(Effect.mapError(() => new HttpApiError.InternalServerError({})))
       return true
+    })
+
+    const getAccountOverview = Effect.fn("ExperimentalHttpApi.accountOverview")(function* (ctx: {
+      query: typeof AccountOverviewQuery.Type
+    }) {
+      const active = yield* account.active().pipe(Effect.mapError(() => new HttpApiError.InternalServerError({})))
+      if (Option.isNone(active)) return null
+      const selected = ctx.query.workspaceID ?? active.value.active_org_id
+      const orgID = selected ? Option.some(selected) : Option.none()
+      return yield* account
+        .overview(active.value.id, orgID)
+        .pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
     })
 
     const startAccountLogin = Effect.fn("ExperimentalHttpApi.accountLogin")((ctx: { payload: { server: string } }) =>
@@ -306,6 +324,7 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
     return handlers
       .handle("account", getAccount)
       .handle("accountRemove", removeAccount)
+      .handle("accountOverview", getAccountOverview)
       .handle("accountLogin", startAccountLogin)
       .handle("accountLoginStatus", getAccountLogin)
       .handle("accountLoginCancel", cancelAccountLogin)

@@ -18,6 +18,42 @@ import { configureAccountTokenEncryptionKey } from "../../src/account/token-code
 
 configureAccountTokenEncryptionKey(new Uint8Array(32).fill(13))
 
+const accountOverview = {
+  account: {
+    id: "acc_12345",
+    email: "user@example.com",
+    status: "active" as const,
+    createdAt: 1_700_000_000_000,
+  },
+  currentWorkspaceID: "wrk_12345",
+  workspaces: [
+    {
+      id: "wrk_12345",
+      name: "Хувийн төсөл",
+      slug: null,
+      userID: "usr_12345",
+      role: "admin" as const,
+      subscription: null,
+      limits: { plan: "free" as const, promoTokens: 0, dailyRequests: 20, dailyRequestsFallback: 5 },
+      quota: { status: "model-scoped" as const, reason: "free-auto-model-limits" as const },
+      usage: {
+        scope: "workspace" as const,
+        period: "week" as const,
+        periodStart: 1_700_000_000_000,
+        periodEnd: 1_700_604_800_000,
+        requestCount: 1,
+        inputTokens: 10,
+        outputTokens: 5,
+        reasoningTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        totalTokens: 15,
+        costInMicroCents: 0,
+      },
+    },
+  ],
+}
+
 const it = testEffect(Layer.mergeAll(Session.defaultLayer, Database.defaultLayer, httpApiLayer))
 const testWorktreeMutations = process.platform === "win32" ? it.instance.skip : it.instance
 
@@ -49,6 +85,29 @@ function oauthMetadataServer() {
   )
 }
 
+function accountOverviewServer() {
+  return Effect.acquireRelease(
+    Effect.sync(() => {
+      const requests: Array<{ authorization: string | null; workspaceID: string | null }> = []
+      let status = 200
+      const server = Bun.serve({
+        port: 0,
+        fetch(request) {
+          const url = new URL(request.url)
+          if (url.pathname !== "/v1/account/overview") return new Response(null, { status: 404 })
+          requests.push({
+            authorization: request.headers.get("authorization"),
+            workspaceID: request.headers.get("x-org-id"),
+          })
+          return Response.json(status === 200 ? accountOverview : { error: "denied" }, { status })
+        },
+      })
+      return { requests, server, setStatus: (value: number) => (status = value) }
+    }),
+    ({ server }) => Effect.sync(() => server.stop(true)),
+  )
+}
+
 function json<T>(response: HttpClientResponse.HttpClientResponse) {
   return response.json.pipe(Effect.map((value) => value as T))
 }
@@ -75,7 +134,7 @@ function waitReady(input: { directory?: string; name?: string }) {
   })
 }
 
-function insertAccount() {
+function insertAccount(input: { url?: string; orgID?: string } = {}) {
   return Effect.acquireRelease(
     Effect.gen(function* () {
       const { db } = yield* Database.Service
@@ -84,9 +143,10 @@ function insertAccount() {
         .values({
           id: AccountV2.ID.make("account-test"),
           email: "test@example.com",
-          url: "https://console.example.com",
+          url: input.url ?? "https://console.example.com",
           access_token: AccountV2.AccessToken.make("access"),
           refresh_token: AccountV2.RefreshToken.make("refresh"),
+          token_expiry: Date.now() + 10 * 60 * 1000,
           time_created: Date.now(),
           time_updated: Date.now(),
         })
@@ -94,10 +154,17 @@ function insertAccount() {
         .pipe(Effect.orDie)
       yield* db
         .insert(AccountStateTable)
-        .values({ id: 1, active_account_id: AccountV2.ID.make("account-test"), active_org_id: null })
+        .values({
+          id: 1,
+          active_account_id: AccountV2.ID.make("account-test"),
+          active_org_id: input.orgID ? AccountV2.OrgID.make(input.orgID) : null,
+        })
         .onConflictDoUpdate({
           target: AccountStateTable.id,
-          set: { active_account_id: AccountV2.ID.make("account-test"), active_org_id: null },
+          set: {
+            active_account_id: AccountV2.ID.make("account-test"),
+            active_org_id: input.orgID ? AccountV2.OrgID.make(input.orgID) : null,
+          },
         })
         .run()
         .pipe(Effect.orDie)
@@ -319,8 +386,9 @@ describe("experimental HttpApi", () => {
       Effect.gen(function* () {
         const tmp = yield* TestInstance
         const directory = tmp.directory
-        const [consoleState, consoleOrgs, toolList, toolIDs, worktrees, resources] = yield* Effect.all(
+        const [accountOverview, consoleState, consoleOrgs, toolList, toolIDs, worktrees, resources] = yield* Effect.all(
           [
+            request(`${ExperimentalPaths.accountOverview}?workspaceID=wrk_12345`, directory),
             request(ExperimentalPaths.console, directory),
             request(ExperimentalPaths.consoleOrgs, directory),
             request(`${ExperimentalPaths.tool}?provider=mongolgpt&model=gpt-5`, directory),
@@ -330,6 +398,9 @@ describe("experimental HttpApi", () => {
           ],
           { concurrency: "unbounded" },
         )
+
+        expect(accountOverview.status).toBe(200)
+        expect(yield* json(accountOverview)).toBeNull()
 
         expect(consoleState.status).toBe(200)
         expect(yield* json(consoleState)).toEqual({
@@ -371,6 +442,34 @@ describe("experimental HttpApi", () => {
         },
       },
     },
+  )
+
+  it.instance(
+    "serves a schema-validated active account overview without exposing credentials",
+    () =>
+      Effect.gen(function* () {
+        const tmp = yield* TestInstance
+        const remote = yield* accountOverviewServer()
+        yield* insertAccount({ url: remote.server.url.toString(), orgID: "wrk_12345" })
+
+        const response = yield* request(`${ExperimentalPaths.accountOverview}?workspaceID=wrk_12345`, tmp.directory)
+        expect(response.status).toBe(200)
+        expect(yield* json(response)).toEqual(accountOverview)
+        expect(remote.requests).toEqual([{ authorization: "Bearer access", workspaceID: "wrk_12345" }])
+
+        const invalid = yield* request(
+          `${ExperimentalPaths.accountOverview}?workspaceID=${encodeURIComponent("wrk_bad\r\nheader")}`,
+          tmp.directory,
+        )
+        expect(invalid.status).toBe(400)
+        expect(remote.requests).toHaveLength(1)
+
+        remote.setStatus(403)
+        const unavailable = yield* request(ExperimentalPaths.accountOverview, tmp.directory)
+        expect(unavailable.status).toBe(503)
+        expect(remote.requests).toHaveLength(2)
+      }),
+    { config: { formatter: false, lsp: false } },
   )
 
   it.instance("returns declared worktree errors", () =>

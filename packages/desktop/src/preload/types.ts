@@ -1,6 +1,7 @@
 import type { DesktopMenuAction } from "@mongolgpt/app/desktop-menu"
 import type { WslServersPlatform } from "@mongolgpt/app/wsl/types"
 import type { UpdaterState } from "@mongolgpt/app/updater"
+import type { AccountOverview } from "@mongolgpt/account-contract"
 export type {
   WslDistroProbe,
   WslInstalledDistro,
@@ -30,6 +31,7 @@ export type DesktopAccount = {
 
 export type DesktopAccountAPI = {
   current: () => Promise<DesktopAccount | null>
+  overview: (workspaceID?: string) => Promise<AccountOverview | null>
   login: () => Promise<DesktopAccount>
   logout: () => Promise<void>
 }

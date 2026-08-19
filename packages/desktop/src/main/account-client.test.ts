@@ -7,6 +7,42 @@ const json = (value: unknown, status = 200) =>
 
 const server = async () => ({ url: "http://127.0.0.1:4096", username: "mongolgpt", password: "secret" })
 
+const accountOverview = {
+  account: {
+    id: "acc_12345",
+    email: "user@example.com",
+    status: "active" as const,
+    createdAt: 1_700_000_000_000,
+  },
+  currentWorkspaceID: "wrk_12345",
+  workspaces: [
+    {
+      id: "wrk_12345",
+      name: "Хувийн төсөл",
+      slug: null,
+      userID: "usr_12345",
+      role: "admin" as const,
+      subscription: null,
+      limits: { plan: "free" as const, promoTokens: 0, dailyRequests: 20, dailyRequestsFallback: 5 },
+      quota: { status: "model-scoped" as const, reason: "free-auto-model-limits" as const },
+      usage: {
+        scope: "workspace" as const,
+        period: "week" as const,
+        periodStart: 1_700_000_000_000,
+        periodEnd: 1_700_604_800_000,
+        requestCount: 1,
+        inputTokens: 10,
+        outputTokens: 5,
+        reasoningTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        totalTokens: 15,
+        costInMicroCents: 0,
+      },
+    },
+  ],
+}
+
 describe("desktop account client", () => {
   test("reads only the public active account over authenticated JSON", async () => {
     let authorization = ""
@@ -27,6 +63,33 @@ describe("desktop account client", () => {
       activeOrgID: "org-1",
     })
     expect(authorization).toBe(`Basic ${Buffer.from("mongolgpt:secret").toString("base64")}`)
+  })
+
+  test("reads a schema-validated account overview for the selected workspace", async () => {
+    let requested = ""
+    const client = createDesktopAccountClient({
+      server,
+      accountServer: "https://dev.mgpt.mn",
+      openExternal: async () => {},
+      fetch: async (input) => {
+        requested = String(input)
+        return json(accountOverview)
+      },
+    })
+
+    await expect(client.overview("  wrk_12345  ")).resolves.toEqual(accountOverview)
+    expect(requested).toBe("http://127.0.0.1:4096/experimental/account/overview?workspaceID=wrk_12345")
+  })
+
+  test("rejects malformed account overview responses in the main process", async () => {
+    const client = createDesktopAccountClient({
+      server,
+      accountServer: "https://dev.mgpt.mn",
+      openExternal: async () => {},
+      fetch: async () => json({ ...accountOverview, secret: "must-not-pass" }),
+    })
+
+    await expect(client.overview()).rejects.toThrow("буруу хариу")
   })
 
   test("opens browser login, polls to success, verifies account, and cleans the login record", async () => {

@@ -6,6 +6,7 @@ import {
   accountOnboardingRequired,
   defaultConsoleUrl,
   formatAccountLabel,
+  formatAccountOverview,
   formatOrgLine,
   formatPostLoginGuidance,
   normalizeAccountLoginUrl,
@@ -75,5 +76,52 @@ describe("console account display", () => {
   test("requires account onboarding until an active workspace exists", () => {
     expect(accountOnboardingRequired(false)).toBe(true)
     expect(accountOnboardingRequired(true)).toBe(false)
+  })
+
+  test("formats plan, quota, and usage status in Mongolian", () => {
+    const lines = formatAccountOverview({
+      account: {
+        id: "acc_12345",
+        email: "user@mgpt.mn",
+        status: "active",
+        createdAt: 1_700_000_000_000,
+      },
+      currentWorkspaceID: "wrk_12345",
+      workspaces: [
+        {
+          id: "wrk_12345",
+          name: "Миний төсөл",
+          slug: null,
+          userID: "usr_12345",
+          role: "admin",
+          subscription: null,
+          limits: { plan: "free", promoTokens: 0, dailyRequests: 20, dailyRequestsFallback: 5 },
+          quota: { status: "model-scoped", reason: "free-auto-model-limits" },
+          usage: {
+            scope: "workspace",
+            period: "week",
+            periodStart: 1_700_000_000_000,
+            periodEnd: 1_700_604_800_000,
+            requestCount: 3,
+            inputTokens: 100,
+            outputTokens: 50,
+            reasoningTokens: 10,
+            cacheReadTokens: 20,
+            cacheWriteTokens: 5,
+            totalTokens: 185,
+            costInMicroCents: 0,
+          },
+        },
+      ],
+    })
+
+    expect(lines).toEqual([
+      "Аккаунт: user@mgpt.mn",
+      "● Миний төсөл · Free · админ",
+      "  Зарцуулалт: 3 хүсэлт, 185 токен",
+      "  Өдрийн хязгаар: 20 үндсэн, 5 нөөц хүсэлт",
+      "  Хэрэглээний хязгаарыг Free Auto загвар бүрээр тооцно",
+    ])
+    expect(lines.join(" ").toLowerCase()).not.toMatch(/workspace|quota|usage/)
   })
 })

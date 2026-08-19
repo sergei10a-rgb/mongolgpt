@@ -1,4 +1,5 @@
 import type { DesktopAccount, DesktopAccountAPI, ServerReadyData } from "../preload/types"
+import { AccountOverviewSchema, type AccountOverview } from "@mongolgpt/account-contract"
 
 type Dependencies = {
   server: () => Promise<ServerReadyData>
@@ -35,6 +36,13 @@ function parseAccount(value: unknown): DesktopAccount | null {
     url: value.url,
     ...(value.activeOrgID ? { activeOrgID: value.activeOrgID } : {}),
   }
+}
+
+function parseAccountOverview(value: unknown): AccountOverview | null {
+  if (value === null) return null
+  const parsed = AccountOverviewSchema.safeParse(value)
+  if (!parsed.success) throw new Error("Дагалдах сервер бүртгэлийн төлөвийн буруу хариу буцаалаа")
+  return parsed.data
 }
 
 function parseLoginStarted(value: unknown): LoginStarted {
@@ -92,7 +100,17 @@ export function createDesktopAccountClient(dependencies: Dependencies): DesktopA
     return response.json() as Promise<unknown>
   }
 
-  const current = async (signal?: AbortSignal) => parseAccount(await request("/experimental/account", undefined, signal))
+  const current = async (signal?: AbortSignal) =>
+    parseAccount(await request("/experimental/account", undefined, signal))
+
+  const overview = async (workspaceID?: string) => {
+    if (workspaceID !== undefined && typeof workspaceID !== "string") {
+      throw new Error("Ажлын орчны ID буруу байна")
+    }
+    const selected = workspaceID?.trim()
+    const query = selected ? `?workspaceID=${encodeURIComponent(selected)}` : ""
+    return parseAccountOverview(await request(`/experimental/account/overview${query}`))
+  }
 
   const cancel = async (loginID: string, timeout: number) => {
     if (timeout <= 0) return
@@ -126,7 +144,11 @@ export function createDesktopAccountClient(dependencies: Dependencies): DesktopA
       await dependencies.openExternal(safeAuthorizationUrl(started.url))
       while (now() < deadline) {
         const status = parseLoginStatus(
-          await request(`/experimental/account/login/${encodeURIComponent(started.loginID)}`, undefined, loginController.signal),
+          await request(
+            `/experimental/account/login/${encodeURIComponent(started.loginID)}`,
+            undefined,
+            loginController.signal,
+          ),
         )
         if (status._tag === "pending") {
           await wait(pollInterval)
@@ -156,5 +178,5 @@ export function createDesktopAccountClient(dependencies: Dependencies): DesktopA
     await request("/experimental/account", { method: "DELETE" })
   }
 
-  return { current, login, logout }
+  return { current, overview, login, logout }
 }

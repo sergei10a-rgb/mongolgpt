@@ -1,7 +1,7 @@
 import { cmd } from "./cmd"
 import { Duration, Effect, Match, Option } from "effect"
 import { UI } from "../ui"
-import { Account } from "@/account/account"
+import { Account, type AccountOverview } from "@/account/account"
 import {
   AccountID,
   AccountServiceError,
@@ -71,6 +71,45 @@ export const formatOrgLine = (
   const dot = isActive ? UI.Style.TEXT_SUCCESS + "●" + UI.Style.TEXT_NORMAL : " "
   const name = isActive ? UI.Style.TEXT_HIGHLIGHT_BOLD + org.name + UI.Style.TEXT_NORMAL : org.name
   return `  ${dot} ${name}  ${dim(account.email)}  ${dim(account.url)}  ${dim(org.id)}`
+}
+
+const number = new Intl.NumberFormat("mn-MN")
+
+const planLabel = (plan: "free" | "basic" | "pro" | "max") =>
+  ({ free: "Free", basic: "Basic", pro: "Pro", max: "Max" })[plan]
+
+export function formatAccountOverview(overview: AccountOverview) {
+  const lines = [`Аккаунт: ${overview.account.email}`]
+  if (overview.workspaces.length === 0) return [...lines, "Ажлын орчин олдсонгүй"]
+
+  for (const workspace of overview.workspaces) {
+    const active = workspace.id === overview.currentWorkspaceID ? "●" : " "
+    const role = workspace.role === "admin" ? "админ" : "гишүүн"
+    lines.push(`${active} ${workspace.name} · ${planLabel(workspace.limits.plan)} · ${role}`)
+    lines.push(
+      `  Зарцуулалт: ${number.format(workspace.usage.requestCount)} хүсэлт, ${number.format(workspace.usage.totalTokens)} токен`,
+    )
+
+    if (workspace.limits.plan === "free") {
+      lines.push(
+        `  Өдрийн хязгаар: ${number.format(workspace.limits.dailyRequests)} үндсэн, ${number.format(workspace.limits.dailyRequestsFallback)} нөөц хүсэлт`,
+      )
+    } else {
+      lines.push(`  Долоо хоногийн токены хязгаар: ${number.format(workspace.limits.weeklyTokenLimit)}`)
+    }
+
+    if (workspace.quota.status === "available") {
+      lines.push(
+        `  Долоо хоногийн токен: ${number.format(workspace.quota.weeklyTokens.used)} / ${number.format(workspace.quota.weeklyTokens.limit)}`,
+      )
+    } else if (workspace.quota.status === "model-scoped") {
+      lines.push("  Хэрэглээний хязгаарыг Free Auto загвар бүрээр тооцно")
+    } else {
+      lines.push("  Хэрэглээний хязгаарын төлөвийг одоогоор авч чадсангүй")
+    }
+  }
+
+  return lines
 }
 
 const isActiveOrgChoice = (
@@ -303,6 +342,16 @@ const openEffect = Effect.fn("open")(function* () {
   yield* Prompt.outro(url + " нээгдлээ")
 })
 
+const statusEffect = Effect.fn("status")(function* () {
+  const service = yield* Account.Service
+  const active = yield* service.active()
+  if (Option.isNone(active)) return yield* println("Нэвтрээгүй байна")
+
+  const orgID = active.value.active_org_id ? Option.some(active.value.active_org_id) : Option.none()
+  const overview = yield* service.overview(active.value.id, orgID)
+  for (const line of formatAccountOverview(overview)) yield* println(line)
+})
+
 export const LoginCommand = effectCmd({
   command: "login [url]",
   describe: false,
@@ -363,6 +412,16 @@ export const OpenCommand = effectCmd({
   }),
 })
 
+export const StatusCommand = effectCmd({
+  command: "status",
+  describe: false,
+  instance: false,
+  handler: Effect.fn("Cli.account.status")(function* () {
+    UI.empty()
+    yield* Effect.orDie(statusEffect())
+  }),
+})
+
 export const ConsoleCommand = cmd({
   command: "console",
   describe: false,
@@ -387,6 +446,10 @@ export const ConsoleCommand = cmd({
       .command({
         ...OpenCommand,
         describe: "идэвхтэй console аккаунт нээх",
+      })
+      .command({
+        ...StatusCommand,
+        describe: "багц, хэрэглээний хязгаар болон зарцуулалтыг харах",
       })
       .demandCommand(),
   async handler() {},

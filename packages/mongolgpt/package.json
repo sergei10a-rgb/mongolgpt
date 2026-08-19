@@ -89,6 +89,7 @@
     "@octokit/graphql": "9.0.2",
     "@octokit/rest": "catalog:",
     "@openauthjs/openauth": "catalog:",
+    "@mongolgpt/account-contract": "workspace:*",
     "@mongolgpt/llm": "workspace:*",
     "@mongolgpt/plugin": "workspace:*",
     "@mongolgpt/protocol": "workspace:*",

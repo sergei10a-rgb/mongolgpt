@@ -51,6 +51,10 @@ export function registerIpcHandlers(deps: Deps) {
     assertTrustedAccountEvent(event)
     return deps.account.current()
   })
+  ipcMain.handle("account-overview", (event, workspaceID?: string) => {
+    assertTrustedAccountEvent(event)
+    return deps.account.overview(workspaceID)
+  })
   ipcMain.handle("account-login", (event) => {
     assertTrustedAccountEvent(event)
     return deps.account.login()

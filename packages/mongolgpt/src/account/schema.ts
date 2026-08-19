@@ -4,7 +4,11 @@ import type * as HttpClientError from "effect/unstable/http/HttpClientError"
 export const AccountID = Schema.String.pipe(Schema.brand("AccountID"))
 export type AccountID = Schema.Schema.Type<typeof AccountID>
 
-export const OrgID = Schema.String.pipe(Schema.brand("OrgID"))
+export const OrgID = Schema.String.check(
+  Schema.isMinLength(1),
+  Schema.isMaxLength(128),
+  Schema.isPattern(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
+).pipe(Schema.brand("OrgID"))
 export type OrgID = Schema.Schema.Type<typeof OrgID>
 
 export const AccessToken = Schema.String.pipe(Schema.brand("AccessToken"))

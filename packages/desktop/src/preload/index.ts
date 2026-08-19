@@ -16,6 +16,7 @@ const api: ElectronAPI = {
   awaitInitialization: () => ipcRenderer.invoke("await-initialization"),
   account: {
     current: () => ipcRenderer.invoke("account-current"),
+    overview: (workspaceID) => ipcRenderer.invoke("account-overview", workspaceID),
     login: () => ipcRenderer.invoke("account-login"),
     logout: () => ipcRenderer.invoke("account-logout"),
   },

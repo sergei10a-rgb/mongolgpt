@@ -530,6 +530,9 @@ const scenarios: Scenario[] = [
     check(body === null, "no active account should return null")
   }),
   http.protected.delete("/experimental/account", "experimental.account.remove").mutating().json(200, boolean, "status"),
+  http.protected.get("/experimental/account/overview", "experimental.account.overview").json(200, (body) => {
+    check(body === null, "no active account should return a null overview")
+  }),
   http.protected
     .post("/experimental/account/login", "experimental.account.login")
     .at((ctx) => ({ path: "/experimental/account/login", headers: ctx.headers(), body: { server: "not a URL" } }))

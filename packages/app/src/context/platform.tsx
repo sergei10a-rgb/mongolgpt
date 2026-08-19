@@ -1,4 +1,5 @@
 import { createSimpleContext } from "@mongolgpt/ui/context"
+import type { AccountOverview } from "@mongolgpt/account-contract"
 import type { AsyncStorage, SyncStorage } from "@solid-primitives/storage"
 import type { Accessor } from "solid-js"
 import type { DesktopMenuAction } from "../desktop-menu"
@@ -28,6 +29,7 @@ export type PlatformAccount = {
 
 export type PlatformAccountAPI = {
   current(): Promise<PlatformAccount | null>
+  overview(workspaceID?: string): Promise<AccountOverview>
   login(): Promise<PlatformAccount>
   logout(): Promise<void>
 }

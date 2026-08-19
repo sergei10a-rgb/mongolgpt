@@ -1,5 +1,6 @@
 import { LayerNode } from "@mongolgpt/core/effect/layer-node"
 import { httpClient } from "@mongolgpt/core/effect/layer-node-platform"
+import { AccountOverviewSchema, type AccountOverview } from "@mongolgpt/account-contract"
 import { Cache, Clock, Duration, Effect, Layer, Option, Schema, SchemaGetter, Context } from "effect"
 import { serviceUse } from "@mongolgpt/core/effect/service-use"
 import { createServer, type Server } from "node:http"
@@ -15,12 +16,13 @@ import {
 
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { AccountRepo, type AccountRow } from "./repo"
+import { resolveAccountVerificationUrl, resolveAuthServerUrl, validateAccountOAuthMetadata } from "./url"
 import {
-  resolveAccountVerificationUrl,
-  resolveAuthServerUrl,
-  validateAccountOAuthMetadata,
-} from "./url"
-import { defaultAccountDnsLookup, resolveAccountTransport, type AccountDnsLookup, type AccountTransport } from "./transport"
+  defaultAccountDnsLookup,
+  resolveAccountTransport,
+  type AccountDnsLookup,
+  type AccountTransport,
+} from "./transport"
 import {
   type AccountError,
   AccessToken,
@@ -71,6 +73,8 @@ export type AccountOrgs = {
   account: Info
   orgs: readonly Org[]
 }
+
+export type { AccountOverview } from "@mongolgpt/account-contract"
 
 export type ActiveOrg = {
   account: Info
@@ -201,6 +205,7 @@ export interface Interface {
     accountID: AccountID,
     orgID: OrgID,
   ) => Effect.Effect<Option.Option<Record<string, unknown>>, AccountError>
+  readonly overview: (accountID: AccountID, orgID: Option.Option<OrgID>) => Effect.Effect<AccountOverview, AccountError>
   readonly token: (accountID: AccountID) => Effect.Effect<Option.Option<AccessToken>, AccountError>
   readonly browserLogin: (url: string) => Effect.Effect<BrowserLogin, AccountError>
   readonly login: (url: string) => Effect.Effect<Login, AccountError>
@@ -227,9 +232,7 @@ function makeLayer(resolveDns: AccountDnsLookup, allowCustomAccountServer = fals
         )
 
       const executeRead = (target: AccountTransport, request: HttpClientRequest.HttpClientRequest) =>
-        withoutRedirects(target, httpRead.execute(request)).pipe(
-          mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"),
-        )
+        withoutRedirects(target, httpRead.execute(request)).pipe(mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"))
 
       const executeReadOk = (target: AccountTransport, request: HttpClientRequest.HttpClientRequest) =>
         withoutRedirects(target, httpReadOk.execute(request)).pipe(
@@ -245,7 +248,10 @@ function makeLayer(resolveDns: AccountDnsLookup, allowCustomAccountServer = fals
           mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"),
         )
 
-      const executeEffect = <E>(target: AccountTransport, request: Effect.Effect<HttpClientRequest.HttpClientRequest, E>) =>
+      const executeEffect = <E>(
+        target: AccountTransport,
+        request: Effect.Effect<HttpClientRequest.HttpClientRequest, E>,
+      ) =>
         request.pipe(
           Effect.flatMap((req) => withoutRedirects(target, http.execute(req))),
           mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"),
@@ -517,6 +523,35 @@ function makeLayer(resolveDns: AccountDnsLookup, allowCustomAccountServer = fals
         return Option.some(parsed.config)
       })
 
+      const overview = Effect.fn("Account.overview")(function* (accountID: AccountID, orgID: Option.Option<OrgID>) {
+        const resolved = yield* resolveAccess(accountID)
+        if (Option.isNone(resolved)) {
+          return yield* Effect.fail(new AccountServiceError({ message: "Account олдсонгүй" }))
+        }
+
+        const { account, accessToken } = resolved.value
+        const server = yield* validateRemoteAccountServer(account.url)
+        let request = HttpClientRequest.get(`${server.url}/v1/account/overview`).pipe(
+          HttpClientRequest.acceptJson,
+          HttpClientRequest.bearerToken(accessToken),
+        )
+        if (Option.isSome(orgID)) {
+          request = request.pipe(HttpClientRequest.setHeaders({ "x-org-id": orgID.value }))
+        }
+
+        const response = yield* executeReadOk(server, request)
+        const contentType = response.headers["content-type"]?.split(";", 1)[0]?.trim().toLowerCase()
+        if (contentType !== "application/json") {
+          return yield* Effect.fail(new AccountServiceError({ message: "Account төлөвийн хариу JSON биш байна" }))
+        }
+
+        const body = yield* response.json.pipe(mapAccountServiceError("Account төлөвийн хариуг уншиж чадсангүй"))
+        return yield* Effect.try({
+          try: () => AccountOverviewSchema.parse(body),
+          catch: (cause) => new AccountServiceError({ message: "Account төлөвийн хариу буруу байна", cause }),
+        })
+      })
+
       const login = Effect.fn("Account.login")(function* (server: string) {
         yield* Effect.try({
           try: assertAccountTokenEncryptionConfigured,
@@ -539,8 +574,7 @@ function makeLayer(resolveDns: AccountDnsLookup, allowCustomAccountServer = fals
           user: parsed.user_code,
           url: yield* Effect.try({
             try: () => resolveAccountVerificationUrl(normalizedServer.url, parsed.verification_uri_complete),
-            catch: (cause) =>
-              new AccountServiceError({ message: "OAuth verification URL аюулгүй биш байна", cause }),
+            catch: (cause) => new AccountServiceError({ message: "OAuth verification URL аюулгүй биш байна", cause }),
           }),
           server: normalizedServer.url,
           expiry: parsed.expires_in,
@@ -602,6 +636,7 @@ function makeLayer(resolveDns: AccountDnsLookup, allowCustomAccountServer = fals
         use: repo.use,
         orgs,
         config,
+        overview,
         token,
         browserLogin,
         login,

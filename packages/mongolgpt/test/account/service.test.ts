@@ -57,6 +57,42 @@ const encodeOrg = Schema.encodeSync(Org)
 
 const org = (id: string, name: string) => encodeOrg(new Org({ id: OrgID.make(id), name }))
 
+const accountOverview = {
+  account: {
+    id: "acc_12345",
+    email: "user@example.com",
+    status: "active" as const,
+    createdAt: 1_700_000_000_000,
+  },
+  currentWorkspaceID: "wrk_12345",
+  workspaces: [
+    {
+      id: "wrk_12345",
+      name: "Хувийн төсөл",
+      slug: null,
+      userID: "usr_12345",
+      role: "admin" as const,
+      subscription: null,
+      limits: { plan: "free" as const, promoTokens: 0, dailyRequests: 20, dailyRequestsFallback: 5 },
+      quota: { status: "model-scoped" as const, reason: "free-auto-model-limits" as const },
+      usage: {
+        scope: "workspace" as const,
+        period: "week" as const,
+        periodStart: 1_700_000_000_000,
+        periodEnd: 1_700_604_800_000,
+        requestCount: 1,
+        inputTokens: 10,
+        outputTokens: 5,
+        reasoningTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        totalTokens: 15,
+        costInMicroCents: 0,
+      },
+    },
+  ],
+}
+
 const login = () =>
   new Login({
     code: DeviceCode.make("device-code"),
@@ -466,6 +502,83 @@ it.live("config sends the selected org header", () =>
       auth: "Bearer at_1",
       org: "org-9",
     })
+  }),
+)
+
+it.live("overview sends the refreshed bearer and selected workspace, then validates the public contract", () =>
+  Effect.gen(function* () {
+    const id = AccountID.make("acc_12345")
+
+    yield* AccountRepo.Service.use((r) =>
+      r.persistAccount({
+        id,
+        email: "user@example.com",
+        url: "https://one.example.com",
+        accessToken: AccessToken.make("at_old"),
+        refreshToken: RefreshToken.make("rt_old"),
+        expiry: Date.now() - 1_000,
+        orgID: Option.some(OrgID.make("wrk_12345")),
+      }),
+    )
+
+    const seen: Array<{ url: string; auth?: string; org?: string }> = []
+    const client = HttpClient.make((req) =>
+      Effect.gen(function* () {
+        seen.push({ url: req.url, auth: req.headers.authorization, org: req.headers["x-org-id"] })
+        if (req.url === "https://one.example.com/auth/device/token") {
+          return json(req, { access_token: "at_new", refresh_token: "rt_new", expires_in: 600 })
+        }
+        if (req.url === "https://one.example.com/v1/account/overview") return json(req, accountOverview)
+        return json(req, {}, 404)
+      }),
+    )
+
+    const result = yield* Account.Service.use((s) => s.overview(id, Option.some(OrgID.make("wrk_12345")))).pipe(
+      Effect.provide(live(client)),
+    )
+
+    expect(result).toEqual(accountOverview)
+    expect(seen).toEqual([
+      { url: "https://one.example.com/auth/device/token", auth: undefined, org: undefined },
+      { url: "https://one.example.com/v1/account/overview", auth: "Bearer at_new", org: "wrk_12345" },
+    ])
+  }),
+)
+
+it.live("overview rejects non-JSON and malformed success responses", () =>
+  Effect.gen(function* () {
+    const id = AccountID.make("acc_12345")
+    yield* AccountRepo.Service.use((r) =>
+      r.persistAccount({
+        id,
+        email: "user@example.com",
+        url: "https://one.example.com",
+        accessToken: AccessToken.make("at_1"),
+        refreshToken: RefreshToken.make("rt_1"),
+        expiry: Date.now() + outsideEagerRefreshWindow,
+        orgID: Option.none(),
+      }),
+    )
+
+    const htmlClient = HttpClient.make((req) =>
+      Effect.succeed(
+        HttpClientResponse.fromWeb(
+          req,
+          new Response("<html>not an API</html>", { status: 200, headers: { "content-type": "text/html" } }),
+        ),
+      ),
+    )
+    const htmlError = yield* Effect.flip(
+      Account.Service.use((s) => s.overview(id, Option.none())).pipe(Effect.provide(live(htmlClient))),
+    )
+    expect(htmlError).toBeInstanceOf(Error)
+    expect(String(htmlError)).not.toContain("not an API")
+
+    const malformedClient = HttpClient.make((req) => Effect.succeed(json(req, { ...accountOverview, secret: "no" })))
+    const malformedError = yield* Effect.flip(
+      Account.Service.use((s) => s.overview(id, Option.none())).pipe(Effect.provide(live(malformedClient))),
+    )
+    expect(malformedError).toBeInstanceOf(Error)
   }),
 )
 
