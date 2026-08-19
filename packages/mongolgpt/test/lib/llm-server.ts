@@ -604,9 +604,16 @@ function hit(url: string, body: unknown) {
   } satisfies Hit
 }
 
+const titleRequestMarkers = [
+  "Generate a title for this conversation",
+  "Та гарчиг үүсгэгч.",
+  "Энэ ярианд гарчиг үүсгэ:",
+] as const
+
 function isTitleRequest(body: unknown): boolean {
   if (!body || typeof body !== "object") return false
-  return JSON.stringify(body).includes("Generate a title for this conversation")
+  const value = JSON.stringify(body)
+  return titleRequestMarkers.some((marker) => value.includes(marker))
 }
 
 namespace TestLLMServer {
