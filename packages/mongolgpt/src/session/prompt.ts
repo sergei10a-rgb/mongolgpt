@@ -150,7 +150,7 @@ export const layer = Layer.effect(
     })
 
     const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
-      yield* Effect.logInfo("cancel", { "session.id": sessionID })
+      yield* Effect.logInfo("Цуцаллаа", { "session.id": sessionID })
       yield* state.cancel(sessionID)
     })
 
@@ -249,7 +249,7 @@ export const layer = Layer.effect(
       const t = cleaned.length > 100 ? cleaned.substring(0, 97) + "..." : cleaned
       yield* sessions
         .setTitle({ sessionID: input.session.id, title: t })
-        .pipe(Effect.catchCause((cause) => Effect.logError("failed to generate title", { error: Cause.squash(cause) })))
+        .pipe(Effect.catchCause((cause) => Effect.logError("Гарчиг үүсгэж чадсангүй", { error: Cause.squash(cause) })))
     })
 
     const handleSubtask = Effect.fn("SessionPrompt.handleSubtask")(function* (input: {
@@ -351,7 +351,7 @@ export const layer = Layer.effect(
           Effect.catchCause((cause) => {
             const defect = Cause.squash(cause)
             error = defect instanceof Error ? defect : new Error(String(defect))
-            return Effect.logError("subtask execution failed", {
+            return Effect.logError("Дэд даалгаврыг гүйцэтгэж чадсангүй", {
               error,
               agent: task.agent,
               description: task.description,
@@ -368,7 +368,7 @@ export const layer = Layer.effect(
                   ...part,
                   state: {
                     status: "error",
-                    error: "Cancelled",
+                    error: "Цуцлагдлаа",
                     time: { start: part.state.time.start, end: Date.now() },
                     metadata: part.state.metadata,
                     input: part.state.input,
@@ -416,7 +416,7 @@ export const layer = Layer.effect(
           ...part,
           state: {
             status: "error",
-            error: error ? `Tool execution failed: ${error.message}` : "Tool execution failed",
+            error: error ? `Хэрэгслийг ажиллуулж чадсангүй: ${error.message}` : "Хэрэгслийг ажиллуулж чадсангүй",
             time: {
               start: part.state.status === "running" ? part.state.time.start : Date.now(),
               end: Date.now(),
@@ -702,7 +702,7 @@ export const layer = Layer.effect(
         if (part.type === "file") {
           if (part.source?.type === "resource") {
             const { clientName, uri } = part.source
-            yield* Effect.logInfo("mcp resource", { clientName, uri, mime: part.mime })
+            yield* Effect.logInfo("MCP нөөц", { clientName, uri, mime: part.mime })
             const pieces: Draft<SessionV1.Part>[] = [
               {
                 messageID: info.id,
@@ -770,7 +770,7 @@ export const layer = Layer.effect(
               }
             } else {
               const error = Cause.squash(exit.cause)
-              yield* Effect.logError("failed to read MCP resource", { error, clientName, uri })
+              yield* Effect.logError("MCP нөөцийг уншиж чадсангүй", { error, clientName, uri })
               const message = error instanceof Error ? error.message : String(error)
               pieces.push({
                 messageID: info.id,
@@ -806,7 +806,7 @@ export const layer = Layer.effect(
               }
               break
             case "file:": {
-              yield* Effect.logInfo("file", { mime: part.mime })
+              yield* Effect.logInfo("Файл", { mime: part.mime })
               const filepath = fileURLToPath(part.url)
               const mime = (yield* fsys.isDir(filepath)) ? "application/x-directory" : part.mime
 
@@ -889,7 +889,7 @@ export const layer = Layer.effect(
                   }
                 } else {
                   const error = Cause.squash(exit.cause)
-                  yield* Effect.logError("failed to read file", { error, filepath })
+                  yield* Effect.logError("Файл уншиж чадсангүй", { error, filepath })
                   const message = error instanceof Error ? error.message : String(error)
                   yield* events.publish(Session.Event.Error, {
                     sessionID: input.sessionID,
@@ -911,7 +911,7 @@ export const layer = Layer.effect(
                 const exit = yield* execRead(args).pipe(Effect.exit)
                 if (Exit.isFailure(exit)) {
                   const error = Cause.squash(exit.cause)
-                  yield* Effect.logError("failed to read directory", { error, filepath })
+                  yield* Effect.logError("Хавтас уншиж чадсангүй", { error, filepath })
                   const message = error instanceof Error ? error.message : String(error)
                   yield* events.publish(Session.Event.Error, {
                     sessionID: input.sessionID,
@@ -1021,7 +1021,7 @@ export const layer = Layer.effect(
 
       const parsed = decodeMessageInfo(info, { errors: "all", propertyOrder: "original" })
       if (Exit.isFailure(parsed)) {
-        yield* Effect.logError("invalid user message before save", {
+        yield* Effect.logError("Хадгалахын өмнөх хэрэглэгчийн зурвас буруу байна", {
           sessionID: input.sessionID,
           messageID: info.id,
           agent: info.agent,
@@ -1032,7 +1032,7 @@ export const layer = Layer.effect(
       for (const [index, part] of parts.entries()) {
         const p = decodeMessagePart(part, { errors: "all", propertyOrder: "original" })
         if (Exit.isSuccess(p)) continue
-        yield* Effect.logError("invalid user part before save", {
+        yield* Effect.logError("Хадгалахын өмнөх хэрэглэгчийн хэсэг буруу байна", {
           sessionID: input.sessionID,
           messageID: info.id,
           partID: part.id,
@@ -1075,7 +1075,7 @@ export const layer = Layer.effect(
       if (Option.isSome(match)) return match.value
       const msgs = yield* sessions.messages({ sessionID, limit: 1 }).pipe(Effect.orDie)
       if (msgs.length > 0) return msgs[0]
-      throw new Error("Impossible")
+      throw new Error("Боломжгүй төлөв")
     })
 
     const runLoop: (sessionID: SessionID) => Effect.Effect<SessionV1.WithParts> = Effect.fn("SessionPrompt.run")(
@@ -1087,7 +1087,7 @@ export const layer = Layer.effect(
 
         while (true) {
           yield* status.set(sessionID, { type: "busy" })
-          yield* Effect.logInfo("loop", { "session.id": sessionID, step })
+          yield* Effect.logInfo("Давталт", { "session.id": sessionID, step })
 
           let msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
             Effect.provideService(Database.Service, database),
@@ -1095,7 +1095,7 @@ export const layer = Layer.effect(
 
           const { user: lastUser, assistant: lastAssistant, finished: lastFinished, tasks } = MessageV2.latest(msgs)
 
-          if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
+          if (!lastUser) throw new Error("Зурвасын урсгалд хэрэглэгчийн зурвас олдсонгүй. Ийм зүйл гарах ёсгүй.")
 
           const lastAssistantMsg = msgs.findLast(
             (msg) => msg.info.role === "assistant" && msg.info.id === lastAssistant?.id,
@@ -1118,14 +1118,14 @@ export const layer = Layer.effect(
               (part): part is SessionV1.ToolPart => part.type === "tool" && isOrphanedInterruptedTool(part),
             )
             if (orphan) {
-              yield* Effect.logWarning("loop exit with orphaned interrupted tool", {
+              yield* Effect.logWarning("Бүрэн хаагдаагүй тасалдсан хэрэгслийн дуудлагаас болж давталт дууслаа", {
                 "session.id": sessionID,
                 messageID: lastAssistant.id,
                 tool: orphan.tool,
                 callID: orphan.callID,
               })
             }
-            yield* Effect.logInfo("exiting loop", { "session.id": sessionID })
+            yield* Effect.logInfo("Давталтаас гарч байна", { "session.id": sessionID })
             break
           }
 
@@ -1202,7 +1202,7 @@ export const layer = Layer.effect(
 
           const finalizeInterruptedAssistant = Effect.gen(function* () {
             if (msg.time.completed) return
-            msg.error ??= MessageV2.fromError(new DOMException("Aborted", "AbortError"), {
+            msg.error ??= MessageV2.fromError(new DOMException("Цуцлагдлаа", "AbortError"), {
               providerID: msg.providerID,
               aborted: true,
             })
@@ -1353,7 +1353,7 @@ export const layer = Layer.effect(
     })
 
     const command = Effect.fn("SessionPrompt.command")(function* (input: CommandInput) {
-      yield* Effect.logInfo("command", {
+      yield* Effect.logInfo("Команд", {
         "session.id": input.sessionID,
         command: input.command,
         agent: input.agent,
@@ -1537,7 +1537,7 @@ export const PromptInput = Schema.Struct({
   noReply: Schema.optional(Schema.Boolean),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
     description:
-      "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
+      "@deprecated tools болон permissions нэгтгэгдсэн; одоо зөвшөөрлийг session дээр шууд тохируулна",
   }),
   format: Schema.optional(SessionV1.Format),
   system: Schema.optional(Schema.String),

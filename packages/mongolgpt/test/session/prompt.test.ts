@@ -920,7 +920,7 @@ it.instance("failed subtask preserves metadata on error tool state", () =>
     const tool = errorTool(taskMsg.parts)
     if (!tool) return
 
-    expect(tool.state.error).toContain("Tool execution failed")
+    expect(tool.state.error).toContain("Хэрэгслийг ажиллуулж чадсангүй")
     expect(tool.state.metadata).toBeDefined()
     expect(tool.state.metadata?.sessionId).toBeDefined()
     expect(tool.state.metadata?.model).toEqual({
@@ -1819,7 +1819,7 @@ unixNoLLMServer(
           expect(exit.value.info.role).toBe("assistant")
           const tool = completedTool(exit.value.parts)
           if (tool) {
-            expect(tool.state.output).toContain("User aborted the command")
+            expect(tool.state.output).toContain("Хэрэглэгч командыг цуцалсан")
           }
         }
       }),
@@ -1863,7 +1863,7 @@ unixNoLLMServer(
           expect(exit.value.info.role).toBe("assistant")
           const tool = completedTool(exit.value.parts)
           if (tool) {
-            expect(tool.state.output).toContain("User aborted the command")
+            expect(tool.state.output).toContain("Хэрэглэгч командыг цуцалсан")
           }
         }
       }),
@@ -1946,7 +1946,7 @@ unixNoLLMServer(
       expect(Exit.isSuccess(exit)).toBe(true)
       if (Exit.isSuccess(exit)) {
         const tool = completedTool(exit.value.parts)
-        expect(tool?.state.output).toContain("User aborted the command")
+        expect(tool?.state.output).toContain("Хэрэглэгч командыг цуцалсан")
       }
 
       yield* Fiber.await(sh)
