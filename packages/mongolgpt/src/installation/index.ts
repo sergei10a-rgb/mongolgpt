@@ -134,9 +134,9 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
     })
 
     const upgradeFailure = (method: Method, result?: { code: number; stdout: string; stderr: string }) => {
-      if (method === "choco") return "not running from an elevated command shell"
-      if (result) return `Upgrade failed for ${method} (exit code ${result.code}).`
-      return `Upgrade failed for ${method}.`
+      if (method === "choco") return "командын мөрийг администратор эрхээр ажиллуулаагүй байна"
+      if (result) return `${method} аргаар шинэчилж чадсангүй (гаралтын код: ${result.code}).`
+      return `${method} аргаар шинэчилж чадсангүй.`
     }
 
     const upgradeScriptShell = Effect.fnUntraced(function* () {
@@ -310,7 +310,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
             upgradeResult = yield* run(["scoop", "install", `mongolgpt@${target}`])
             break
           default:
-            return yield* new UpgradeFailedError({ stderr: `Unknown installation method: ${m}` })
+            return yield* new UpgradeFailedError({ stderr: `Танихгүй суулгах арга: ${m}` })
         }
         if (!upgradeResult || upgradeResult.code !== 0) {
           return yield* new UpgradeFailedError({ stderr: upgradeFailure(m, upgradeResult) })

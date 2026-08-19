@@ -47,7 +47,7 @@ const textPart = (part: Record<string, unknown>) => ({
 
 const mediaPart = (part: Record<string, unknown>) => {
   if (typeof part.data !== "string" && !(part.data instanceof Uint8Array))
-    throw new Error("Native LLM request adapter only supports file parts with string or Uint8Array data")
+    throw new Error("Native LLM хүсэлтийн адаптер зөвхөн string эсвэл Uint8Array өгөгдөлтэй файлын хэсгийг дэмждэг")
   return {
     type: "media" as const,
     mediaType: typeof part.mediaType === "string" ? part.mediaType : "application/octet-stream",
@@ -70,7 +70,7 @@ const toolResult = (part: Record<string, unknown>) => {
 }
 
 const contentPart = (part: unknown) => {
-  if (!isRecord(part)) throw new Error("Native LLM request adapter only supports object content parts")
+  if (!isRecord(part)) throw new Error("Native LLM хүсэлтийн адаптер зөвхөн объект төрлийн агуулгын хэсгийг дэмждэг")
   if (part.type === "text") return textPart(part)
   if (part.type === "file") return mediaPart(part)
   if (part.type === "reasoning")
@@ -88,7 +88,7 @@ const contentPart = (part: unknown) => {
       providerMetadata: partProviderMetadata(part),
     })
   if (part.type === "tool-result") return toolResult(part)
-  throw new Error(`Native LLM request adapter does not support ${String(part.type)} content parts`)
+  throw new Error(`Native LLM хүсэлтийн адаптер ${String(part.type)} төрлийн агуулгыг дэмждэггүй`)
 }
 
 const content = (value: ModelMessage["content"]) =>
@@ -139,7 +139,7 @@ const baseURL = (input: Provider.Model | RequestInput) =>
 
 const requireBaseURL = (model: Provider.Model, url: string | undefined) => {
   if (url) return url
-  throw new Error(`Native LLM request adapter requires a base URL for ${model.providerID}/${model.id}`)
+  throw new Error(`Native LLM хүсэлтийн адаптерт ${model.providerID}/${model.id}-ийн үндсэн URL шаардлагатай`)
 }
 
 export const model = (input: Provider.Model | RequestInput, headers?: Record<string, string>) => {
@@ -167,7 +167,7 @@ export const model = (input: Provider.Model | RequestInput, headers?: Record<str
       baseURL: requireBaseURL(model, url),
     }).model(model.api.id)
   if (model.api.npm === "@openrouter/ai-sdk-provider") return OpenRouter.configure(options).model(model.api.id)
-  throw new Error(`Native LLM request adapter does not support provider package ${model.api.npm}`)
+  throw new Error(`Native LLM хүсэлтийн адаптер ${model.api.npm} үйлчилгээ үзүүлэгчийн багцыг дэмждэггүй`)
 }
 
 export const request = (input: RequestInput) => {

@@ -1793,7 +1793,7 @@ describe("ProviderTransform.message - empty image handling", () => {
     expect(result[0].content[0]).toEqual({ type: "text", text: "What is in this image?" })
     expect(result[0].content[1]).toEqual({
       type: "text",
-      text: "ERROR: Image file is empty or corrupted. Please provide a valid image.",
+      text: "АЛДАА: Зургийн файл хоосон эсвэл гэмтсэн байна. Хүчинтэй зураг оруулна уу.",
     })
   })
 
@@ -1840,7 +1840,7 @@ describe("ProviderTransform.message - empty image handling", () => {
     expect(result[0].content[1]).toEqual({ type: "image", image: `data:image/png;base64,${validBase64}` })
     expect(result[0].content[2]).toEqual({
       type: "text",
-      text: "ERROR: Image file is empty or corrupted. Please provide a valid image.",
+      text: "АЛДАА: Зургийн файл хоосон эсвэл гэмтсэн байна. Хүчинтэй зураг оруулна уу.",
     })
   })
 })

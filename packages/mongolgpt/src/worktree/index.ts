@@ -32,7 +32,7 @@ export type Info = Schema.Schema.Type<typeof Info>
 export const CreateInput = Schema.Struct({
   name: Schema.optional(Schema.String),
   startCommand: Schema.optional(
-    Schema.String.annotate({ description: "Additional startup script to run after the project's start command" }),
+    Schema.String.annotate({ description: "Төслийн эхлүүлэх командын дараа ажиллуулах нэмэлт скрипт" }),
   ),
 }).annotate({ identifier: "WorktreeCreateInput" })
 export type CreateInput = Schema.Schema.Type<typeof CreateInput>
@@ -195,7 +195,7 @@ export const layer: Layer.Layer<
 
         return { name, directory, ...(branch ? { branch } : {}) }
       }
-      return yield* new NameGenerationFailedError({ message: "Failed to generate a unique worktree name" })
+      return yield* new NameGenerationFailedError({ message: "Төслийн хуулбарт давхцахгүй нэр үүсгэж чадсангүй" })
     })
 
     const makeWorktreeInfo = Effect.fn("Worktree.makeWorktreeInfo")(function* (input?: {
@@ -204,7 +204,7 @@ export const layer: Layer.Layer<
     }) {
       const ctx = yield* InstanceState.context
       if (ctx.project.vcs !== "git") {
-        return yield* new NotGitError({ message: "Worktrees are only supported for git projects" })
+        return yield* new NotGitError({ message: "Төслийн хуулбарыг зөвхөн Git төсөлд ашиглана" })
       }
 
       const root = pathSvc.join(Global.Path.data, "worktree", ctx.project.id)
@@ -223,7 +223,7 @@ export const layer: Layer.Layer<
       )
       if (created.code !== 0) {
         return yield* new CreateFailedError({
-          message: created.stderr || created.text || "Failed to create git worktree",
+          message: created.stderr || created.text || "Git төслийн хуулбар үүсгэж чадсангүй",
         })
       }
 
@@ -238,7 +238,7 @@ export const layer: Layer.Layer<
 
       const populated = yield* git(["reset", "--hard"], { cwd: info.directory })
       if (populated.code !== 0) {
-        const message = populated.stderr || populated.text || "Failed to populate worktree"
+        const message = populated.stderr || populated.text || "Төслийн хуулбарын файлуудыг бэлтгэж чадсангүй"
         yield* Effect.logError("worktree checkout failed", { directory: info.directory, message })
         GlobalBus.emit("event", {
           directory: info.directory,
@@ -340,7 +340,9 @@ export const layer: Layer.Layer<
 
       const result = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
       if (result.code !== 0) {
-        return yield* new ListFailedError({ message: result.stderr || result.text || "Failed to read git worktrees" })
+        return yield* new ListFailedError({
+          message: result.stderr || result.text || "Git төслийн хуулбарын жагсаалтыг уншиж чадсангүй",
+        })
       }
 
       const primary = yield* canonical(ctx.project.worktree)
@@ -383,14 +385,14 @@ export const layer: Layer.Layer<
           }
         },
         catch: (error) =>
-          new RemoveFailedError({ message: errorMessage(error) || "Failed to remove git worktree directory" }),
+          new RemoveFailedError({ message: errorMessage(error) || "Git төслийн хуулбарын хавтсыг устгаж чадсангүй" }),
       })
     }
 
     const remove = Effect.fn("Worktree.remove")(function* (input: RemoveInput) {
       const ctx = yield* InstanceState.context
       if (ctx.project.vcs !== "git") {
-        return yield* new NotGitError({ message: "Worktrees are only supported for git projects" })
+        return yield* new NotGitError({ message: "Төслийн хуулбарыг зөвхөн Git төсөлд ашиглана" })
       }
 
       const directory = yield* canonical(input.directory)
@@ -400,7 +402,9 @@ export const layer: Layer.Layer<
 
       const list = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
       if (list.code !== 0) {
-        return yield* new RemoveFailedError({ message: list.stderr || list.text || "Failed to read git worktrees" })
+        return yield* new RemoveFailedError({
+          message: list.stderr || list.text || "Git төслийн хуулбарын жагсаалтыг уншиж чадсангүй",
+        })
       }
 
       const entries = parseWorktreeList(list.text)
@@ -423,14 +427,15 @@ export const layer: Layer.Layer<
         const next = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
         if (next.code !== 0) {
           return yield* new RemoveFailedError({
-            message: removed.stderr || removed.text || next.stderr || next.text || "Failed to remove git worktree",
+            message:
+              removed.stderr || removed.text || next.stderr || next.text || "Git төслийн хуулбарыг устгаж чадсангүй",
           })
         }
 
         const stale = yield* locateWorktree(parseWorktreeList(next.text), directory)
         if (stale?.path) {
           return yield* new RemoveFailedError({
-            message: removed.stderr || removed.text || "Failed to remove git worktree",
+            message: removed.stderr || removed.text || "Git төслийн хуулбарыг устгаж чадсангүй",
           })
         }
       }
@@ -442,7 +447,7 @@ export const layer: Layer.Layer<
         const deleted = yield* git(["branch", "-D", branch], { cwd: ctx.worktree })
         if (deleted.code !== 0) {
           return yield* new RemoveFailedError({
-            message: deleted.stderr || deleted.text || "Failed to delete worktree branch",
+            message: deleted.stderr || deleted.text || "Төслийн хуулбарын салбарыг устгаж чадсангүй",
           })
         }
       }
@@ -527,30 +532,32 @@ export const layer: Layer.Layer<
     const reset = Effect.fn("Worktree.reset")(function* (input: ResetInput) {
       const ctx = yield* InstanceState.context
       if (ctx.project.vcs !== "git") {
-        return yield* new NotGitError({ message: "Worktrees are only supported for git projects" })
+        return yield* new NotGitError({ message: "Төслийн хуулбарыг зөвхөн Git төсөлд ашиглана" })
       }
 
       const directory = yield* canonical(input.directory)
       const primary = yield* canonical(ctx.worktree)
       if (directory === primary) {
-        return yield* new ResetFailedError({ message: "Cannot reset the primary workspace" })
+        return yield* new ResetFailedError({ message: "Үндсэн ажлын орчныг дахин тохируулах боломжгүй" })
       }
 
       const list = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
       if (list.code !== 0) {
-        return yield* new ResetFailedError({ message: list.stderr || list.text || "Failed to read git worktrees" })
+        return yield* new ResetFailedError({
+          message: list.stderr || list.text || "Git төслийн хуулбарын жагсаалтыг уншиж чадсангүй",
+        })
       }
 
       const entry = yield* locateWorktree(parseWorktreeList(list.text), directory)
       if (!entry?.path) {
-        return yield* new ResetFailedError({ message: "Worktree not found" })
+        return yield* new ResetFailedError({ message: "Төслийн хуулбар олдсонгүй" })
       }
 
       const worktreePath = entry.path
 
       const base = yield* gitSvc.defaultBranch(ctx.worktree)
       if (!base) {
-        return yield* new ResetFailedError({ message: "Default branch not found" })
+        return yield* new ResetFailedError({ message: "Үндсэн салбар олдсонгүй" })
       }
 
       const sep = base.ref.indexOf("/")
@@ -560,48 +567,50 @@ export const layer: Layer.Layer<
         yield* gitExpect(
           ["fetch", remote, branch],
           { cwd: ctx.worktree },
-          (r) => new ResetFailedError({ message: r.stderr || r.text || `Failed to fetch ${base.ref}` }),
+          (r) => new ResetFailedError({ message: r.stderr || r.text || `${base.ref}-ийг татаж авч чадсангүй` }),
         )
       }
 
       yield* gitExpect(
         ["reset", "--hard", base.ref],
         { cwd: worktreePath },
-        (r) => new ResetFailedError({ message: r.stderr || r.text || "Failed to reset worktree to target" }),
+        (r) => new ResetFailedError({ message: r.stderr || r.text || "Төслийн хуулбарыг зорилтот төлөвт буцааж чадсангүй" }),
       )
 
       const cleanResult = yield* sweep(worktreePath)
       if (cleanResult.code !== 0) {
         return yield* new ResetFailedError({
-          message: cleanResult.stderr || cleanResult.text || "Failed to clean worktree",
+          message: cleanResult.stderr || cleanResult.text || "Төслийн хуулбарыг цэвэрлэж чадсангүй",
         })
       }
 
       yield* gitExpect(
         ["submodule", "update", "--init", "--recursive", "--force"],
         { cwd: worktreePath },
-        (r) => new ResetFailedError({ message: r.stderr || r.text || "Failed to update submodules" }),
+        (r) => new ResetFailedError({ message: r.stderr || r.text || "Дэд модулиудыг шинэчилж чадсангүй" }),
       )
 
       yield* gitExpect(
         ["submodule", "foreach", "--recursive", "git", "reset", "--hard"],
         { cwd: worktreePath },
-        (r) => new ResetFailedError({ message: r.stderr || r.text || "Failed to reset submodules" }),
+        (r) => new ResetFailedError({ message: r.stderr || r.text || "Дэд модулиудыг дахин тохируулж чадсангүй" }),
       )
 
       yield* gitExpect(
         ["submodule", "foreach", "--recursive", "git", "clean", "-fdx"],
         { cwd: worktreePath },
-        (r) => new ResetFailedError({ message: r.stderr || r.text || "Failed to clean submodules" }),
+        (r) => new ResetFailedError({ message: r.stderr || r.text || "Дэд модулиудыг цэвэрлэж чадсангүй" }),
       )
 
       const status = yield* git(["-c", "core.fsmonitor=false", "status", "--porcelain=v1"], { cwd: worktreePath })
       if (status.code !== 0) {
-        return yield* new ResetFailedError({ message: status.stderr || status.text || "Failed to read git status" })
+        return yield* new ResetFailedError({ message: status.stderr || status.text || "Git төлөвийг уншиж чадсангүй" })
       }
 
       if (status.text.trim()) {
-        return yield* new ResetFailedError({ message: `Worktree reset left local changes:\n${status.text.trim()}` })
+        return yield* new ResetFailedError({
+          message: `Төслийн хуулбарыг дахин тохируулсны дараа локал өөрчлөлт үлдлээ:\n${status.text.trim()}`,
+        })
       }
 
       yield* runStartScripts(worktreePath, { projectID: ctx.project.id }).pipe(

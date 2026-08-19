@@ -664,7 +664,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
                 models[m.id] = {
                   id: ModelV2.ID.make(m.id),
                   providerID: ProviderV2.ID.make("gitlab"),
-                  name: `Agent Platform (${m.name})`,
+                  name: `Агентын платформ (${m.name})`,
                   family: "",
                   api: {
                     id: m.id,
@@ -779,8 +779,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
 
       if (!apiToken) {
         throw new Error(
-          "CLOUDFLARE_API_TOKEN (or CF_AIG_TOKEN) is required for Cloudflare AI Gateway. " +
-            "Set it via environment variable or run `mongolgpt auth cloudflare-ai-gateway`.",
+          "Cloudflare AI Gateway-д CLOUDFLARE_API_TOKEN (эсвэл CF_AIG_TOKEN) шаардлагатай. " +
+            "Үүнийг орчны хувьсагчаар тохируулах эсвэл `mongolgpt auth cloudflare-ai-gateway` командыг ажиллуулна уу.",
         )
       }
 

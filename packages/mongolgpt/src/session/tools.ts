@@ -135,14 +135,14 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   if (hasMcpResourceServer) {
     tools[MCP_RESOURCE_TOOLS.list] = tool({
       description:
-        "Lists resources provided by connected MCP servers. Resources provide context such as files, database schemas, or application-specific information.",
+        "Холбогдсон MCP серверүүдийн нөөцийг жагсаана. Нөөцөд файл, өгөгдлийн сангийн схем, тухайн аппын мэдээлэл зэрэг контекст багтана.",
       inputSchema: jsonSchema(
         ProviderTransform.schema(input.model, {
           type: "object",
           properties: {
             server: {
               type: "string",
-              description: "Optional MCP server name. When omitted, lists resources from every connected server.",
+              description: "MCP серверийн нэр (заавал биш). Оруулахгүй бол холбогдсон бүх серверийн нөөцийг жагсаана.",
             },
           },
           additionalProperties: false,
@@ -161,8 +161,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             if (parsed.server && !resourceServers.includes(parsed.server)) {
               throw new Error(
                 resourceServers.length === 0
-                  ? `MCP server "${parsed.server}" does not support resources`
-                  : `MCP server "${parsed.server}" does not support resources. Available resource servers: ${resourceServers.join(", ")}`,
+                  ? `MCP сервер "${parsed.server}" нөөц дэмждэггүй`
+                  : `MCP сервер "${parsed.server}" нөөц дэмждэггүй. Нөөцтэй серверүүд: ${resourceServers.join(", ")}`,
               )
             }
             const permissionPatterns = parsed.server
@@ -191,7 +191,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             const content = JSON.stringify({ resources: filtered.map(formatMcpResource) }, null, 2)
             const truncated = yield* truncate.output(content, {}, input.agent)
             const output = {
-              title: parsed.server ? `MCP resources: ${parsed.server}` : "MCP resources",
+              title: parsed.server ? `MCP нөөцүүд: ${parsed.server}` : "MCP нөөцүүд",
               metadata: {
                 count: filtered.length,
                 servers: resourceServers,
@@ -217,7 +217,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
 
     tools[MCP_RESOURCE_TOOLS.listTemplates] = tool({
       description:
-        "Lists resource templates provided by connected MCP servers. Resource templates are parameterized resources that can be read after filling in their URI template.",
+        "Холбогдсон MCP серверүүдийн нөөцийн загварыг жагсаана. URI загварын утгыг бөглөсний дараа тухайн нөөцийг уншиж болно.",
       inputSchema: jsonSchema(
         ProviderTransform.schema(input.model, {
           type: "object",
@@ -225,7 +225,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             server: {
               type: "string",
               description:
-                "Optional MCP server name. When omitted, lists resource templates from every connected server.",
+                "MCP серверийн нэр (заавал биш). Оруулахгүй бол холбогдсон бүх серверийн нөөцийн загварыг жагсаана.",
             },
           },
           additionalProperties: false,
@@ -244,8 +244,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             if (parsed.server && !resourceServers.includes(parsed.server)) {
               throw new Error(
                 resourceServers.length === 0
-                  ? `MCP server "${parsed.server}" does not support resources`
-                  : `MCP server "${parsed.server}" does not support resources. Available resource servers: ${resourceServers.join(", ")}`,
+                  ? `MCP сервер "${parsed.server}" нөөц дэмждэггүй`
+                  : `MCP сервер "${parsed.server}" нөөц дэмждэггүй. Нөөцтэй серверүүд: ${resourceServers.join(", ")}`,
               )
             }
             const permissionPatterns = parsed.server
@@ -274,7 +274,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             const content = JSON.stringify({ resourceTemplates: filtered.map(formatMcpResourceTemplate) }, null, 2)
             const truncated = yield* truncate.output(content, {}, input.agent)
             const output = {
-              title: parsed.server ? `MCP resource templates: ${parsed.server}` : "MCP resource templates",
+              title: parsed.server ? `MCP нөөцийн загварууд: ${parsed.server}` : "MCP нөөцийн загварууд",
               metadata: {
                 count: filtered.length,
                 servers: resourceServers,
@@ -300,18 +300,18 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
 
     tools[MCP_RESOURCE_TOOLS.read] = tool({
       description:
-        "Read a specific resource from an MCP server using the server name and resource URI. The URI is an MCP identifier and does not need to be a file URL.",
+        "Серверийн нэр болон нөөцийн URI-г ашиглан MCP серверээс тодорхой нөөц уншина. URI нь MCP танигч тул файлын URL байх албагүй.",
       inputSchema: jsonSchema(
         ProviderTransform.schema(input.model, {
           type: "object",
           properties: {
             server: {
               type: "string",
-              description: "MCP server name exactly as returned by list_mcp_resources.",
+              description: "list_mcp_resources-ийн буцаасан MCP серверийн нэрийг яг хэвээр нь оруулна.",
             },
             uri: {
               type: "string",
-              description: "Resource URI to read. Use the exact URI string returned by list_mcp_resources.",
+              description: "Унших нөөцийн URI. list_mcp_resources-ийн буцаасан URI мөрийг яг хэвээр нь оруулна.",
             },
           },
           required: ["server", "uri"],
@@ -326,10 +326,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             const clients = yield* mcp.clients()
             const client = clients[parsed.server]
             if (!client) {
-              throw new Error(`MCP server "${parsed.server}" is not connected`)
+              throw new Error(`MCP сервер "${parsed.server}" холбогдоогүй байна`)
             }
             if (!client.getServerCapabilities()?.resources) {
-              throw new Error(`MCP server "${parsed.server}" does not support resources`)
+              throw new Error(`MCP сервер "${parsed.server}" нөөц дэмждэггүй`)
             }
             yield* plugin.trigger(
               "tool.execute.before",
@@ -344,12 +344,12 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             })
 
             const content = yield* mcp.readResource(parsed.server, parsed.uri)
-            if (!content) throw new Error(`Failed to read MCP resource: ${parsed.server}/${parsed.uri}`)
+            if (!content) throw new Error(`MCP нөөцийг уншиж чадсангүй: ${parsed.server}/${parsed.uri}`)
 
             const formatted = formatMcpResourceContent(parsed.server, parsed.uri, content)
             const truncated = yield* truncate.output(formatted.text, {}, input.agent)
             const output = {
-              title: `MCP resource: ${parsed.uri}`,
+              title: `MCP нөөц: ${parsed.uri}`,
               metadata: {
                 server: parsed.server,
                 uri: parsed.uri,
@@ -434,13 +434,13 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                 const size = base64Size(resource.blob)
                 if (!SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES.has(mime)) {
                   textParts.push(
-                    `[Binary MCP resource omitted: ${resource.uri} (${mime}, ${formatBytes(size)}) is not a supported attachment type]`,
+                    `[Хоёртын MCP нөөцийг алгасав: ${resource.uri} (${mime}, ${formatBytes(size)}) нь дэмжигдэх хавсралтын төрөл биш]`,
                   )
                   continue
                 }
                 if (size > MAX_MCP_RESOURCE_BLOB_BYTES) {
                   textParts.push(
-                    `[Binary MCP resource omitted: ${resource.uri} (${mime}, ${formatBytes(size)}) exceeds ${formatBytes(MAX_MCP_RESOURCE_BLOB_BYTES)}]`,
+                    `[Хоёртын MCP нөөцийг алгасав: ${resource.uri} (${mime}, ${formatBytes(size)}) нь ${formatBytes(MAX_MCP_RESOURCE_BLOB_BYTES)} хязгаараас хэтэрсэн]`,
                   )
                   continue
                 }
@@ -503,14 +503,14 @@ function parseReadMcpResourceArgs(value: unknown) {
 function optionalString(args: Record<string, unknown>, key: string) {
   const value = args[key]
   if (value === undefined || value === null || value === "") return undefined
-  if (typeof value !== "string") throw new Error(`${key} must be a string`)
+  if (typeof value !== "string") throw new Error(`${key} нь тэмдэгт мөр байх ёстой`)
   return value
 }
 
 function requiredString(args: Record<string, unknown>, key: string) {
   const value = optionalString(args, key)
   if (value) return value
-  throw new Error(`${key} is required`)
+  throw new Error(`${key} шаардлагатай`)
 }
 
 function formatMcpResource(resource: MCP.Resource) {
@@ -539,17 +539,17 @@ function formatMcpResourceContent(server: string, uri: string, content: { conten
       const size = base64Size(item.blob)
       if (!SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES.has(mime)) {
         text.push(
-          `[Binary MCP resource omitted: ${itemUri} (${mime}, ${formatBytes(size)}) is not a supported attachment type]`,
+          `[Хоёртын MCP нөөцийг алгасав: ${itemUri} (${mime}, ${formatBytes(size)}) нь дэмжигдэх хавсралтын төрөл биш]`,
         )
         continue
       }
       if (size > MAX_MCP_RESOURCE_BLOB_BYTES) {
         text.push(
-          `[Binary MCP resource omitted: ${itemUri} (${mime}, ${formatBytes(size)}) exceeds ${formatBytes(MAX_MCP_RESOURCE_BLOB_BYTES)}]`,
+          `[Хоёртын MCP нөөцийг алгасав: ${itemUri} (${mime}, ${formatBytes(size)}) нь ${formatBytes(MAX_MCP_RESOURCE_BLOB_BYTES)} хязгаараас хэтэрсэн]`,
         )
         continue
       }
-      text.push(`[Binary MCP resource attached: ${itemUri} (${mime})]`)
+      text.push(`[Хоёртын MCP нөөцийг хавсаргав: ${itemUri} (${mime})]`)
       attachments.push({
         type: "file",
         mime,
@@ -558,13 +558,13 @@ function formatMcpResourceContent(server: string, uri: string, content: { conten
       })
       continue
     }
-    text.push(`[MCP resource content without text or blob: ${itemUri}]`)
+    text.push(`[Текст эсвэл blob-гүй MCP нөөцийн агуулга: ${itemUri}]`)
   }
 
   return {
     contents: items.length,
     attachments,
-    text: text.join("\n\n") || `MCP resource ${uri} from ${server} returned no contents.`,
+    text: text.join("\n\n") || `${server} серверийн ${uri} MCP нөөц агуулга буцаасангүй.`,
   }
 }
 

@@ -4,7 +4,7 @@ import { FSUtil } from "@mongolgpt/core/fs-util"
 import * as Bom from "../util/bom"
 
 export const PatchSchema = Schema.Struct({
-  patchText: Schema.String.annotate({ description: "The full patch text that describes all changes to be made" }),
+  patchText: Schema.String.annotate({ description: "Хийх бүх өөрчлөлтийг тодорхойлсон нөхөөсний бүрэн текст" }),
 })
 
 export type PatchParams = Schema.Schema.Type<typeof PatchSchema>
@@ -196,7 +196,7 @@ export function parsePatch(patchText: string): { hunks: Hunk[] } {
   const endIdx = lines.findIndex((line) => line.trim() === endMarker)
 
   if (beginIdx === -1 || endIdx === -1 || beginIdx >= endIdx) {
-    throw new Error("Invalid patch format: missing Begin/End markers")
+    throw new Error("Нөхөөсний бүтэц буруу: Begin/End тэмдэглэгээ дутуу байна")
   }
 
   // Parse content between markers
@@ -352,7 +352,7 @@ function computeReplacements(
     if (chunk.change_context) {
       const contextIdx = seekSequence(originalLines, [chunk.change_context], lineIndex)
       if (contextIdx === -1) {
-        throw new Error(`Failed to find context '${chunk.change_context}' in ${filePath}`)
+        throw new Error(`${filePath} файлаас '${chunk.change_context}' контекстийг олж чадсангүй`)
       }
       lineIndex = contextIdx + 1
     }
@@ -385,7 +385,7 @@ function computeReplacements(
       replacements.push([found, pattern.length, newSlice])
       lineIndex = found + pattern.length
     } else {
-      throw new Error(`Failed to find expected lines in ${filePath}:\n${chunk.old_lines.join("\n")}`)
+      throw new Error(`${filePath} файлаас хүлээсэн мөрүүдийг олж чадсангүй:\n${chunk.old_lines.join("\n")}`)
     }
   }
 
@@ -527,14 +527,14 @@ export const applyHunksToFiles = Effect.fn("Patch.applyHunksToFiles")(function* 
       case "add": {
         yield* fs.writeWithDirs(hunk.path, hunk.contents)
         added.push(hunk.path)
-        yield* Effect.logInfo(`Added file: ${hunk.path}`)
+        yield* Effect.logInfo(`Файл нэмэв: ${hunk.path}`)
         break
       }
 
       case "delete": {
         yield* fs.remove(hunk.path)
         deleted.push(hunk.path)
-        yield* Effect.logInfo(`Deleted file: ${hunk.path}`)
+        yield* Effect.logInfo(`Файл устгав: ${hunk.path}`)
         break
       }
 
@@ -546,11 +546,11 @@ export const applyHunksToFiles = Effect.fn("Patch.applyHunksToFiles")(function* 
           yield* fs.writeWithDirs(hunk.move_path, Bom.join(fileUpdate.content, fileUpdate.bom))
           yield* fs.remove(hunk.path)
           modified.push(hunk.move_path)
-          yield* Effect.logInfo(`Moved file: ${hunk.path} -> ${hunk.move_path}`)
+          yield* Effect.logInfo(`Файл зөөв: ${hunk.path} -> ${hunk.move_path}`)
         } else {
           yield* fs.writeWithDirs(hunk.path, Bom.join(fileUpdate.content, fileUpdate.bom))
           modified.push(hunk.path)
-          yield* Effect.logInfo(`Updated file: ${hunk.path}`)
+          yield* Effect.logInfo(`Файл шинэчлэв: ${hunk.path}`)
         }
         break
       }
@@ -618,7 +618,7 @@ export const maybeParseApplyPatchVerified = Effect.fn("Patch.maybeParseApplyPatc
             if (content === undefined) {
               return {
                 type: MaybeApplyPatchVerified.CorrectnessError,
-                error: new Error(`Failed to read file for deletion: ${deletePath}`),
+                error: new Error(`Устгах файлыг уншиж чадсангүй: ${deletePath}`),
               } satisfies MaybeApplyPatchVerifiedResult
             }
             changes.set(resolvedPath, {
@@ -634,7 +634,7 @@ export const maybeParseApplyPatchVerified = Effect.fn("Patch.maybeParseApplyPatc
               .readFileString(updatePath)
               .pipe(
                 Effect.catch((cause) =>
-                  Effect.succeed(new Error(`Failed to read file ${updatePath}: ${cause}`, { cause })),
+                  Effect.succeed(new Error(`${updatePath} файлыг уншиж чадсангүй: ${cause}`, { cause })),
                 ),
               )
             if (originalText instanceof Error) {

@@ -15,6 +15,14 @@ function mimeToModality(mime: string): Modality | undefined {
   return undefined
 }
 
+const modalityLabel: Record<Modality, string> = {
+  image: "зураг",
+  audio: "аудио",
+  video: "видео",
+  pdf: "PDF",
+  text: "текст",
+}
+
 export const OUTPUT_TOKEN_MAX = 32_000
 
 // OpenAI Responses `include` value that returns the encrypted reasoning state
@@ -386,7 +394,7 @@ function unsupportedParts(msgs: ModelMessage[], model: Provider.Model): ModelMes
           if (match && (!match[2] || match[2].length === 0)) {
             return {
               type: "text" as const,
-              text: "ERROR: Image file is empty or corrupted. Please provide a valid image.",
+              text: "АЛДАА: Зургийн файл хоосон эсвэл гэмтсэн байна. Хүчинтэй зураг оруулна уу.",
             }
           }
         }
@@ -401,7 +409,7 @@ function unsupportedParts(msgs: ModelMessage[], model: Provider.Model): ModelMes
       const name = filename ? `"${filename}"` : modality
       return {
         type: "text" as const,
-        text: `ERROR: Cannot read ${name} (this model does not support ${modality} input). Inform the user.`,
+        text: `АЛДАА: ${name}-ийг унших боломжгүй. Энэ загвар ${modalityLabel[modality]} оролт дэмждэггүй. Хэрэглэгчид мэдэгдэнэ үү.`,
       }
     })
 

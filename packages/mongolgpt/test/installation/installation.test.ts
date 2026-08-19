@@ -193,7 +193,7 @@ describe("installation", () => {
       Effect.gen(function* () {
         const error = yield* Effect.flip(Installation.use.upgrade("npm", "9.9.9"))
         expect(error).toBeInstanceOf(Installation.UpgradeFailedError)
-        expect(error.stderr).toBe("Upgrade failed for npm (exit code 1).")
+        expect(error.stderr).toBe("npm аргаар шинэчилж чадсангүй (гаралтын код: 1).")
         expect(error.message).toBe(error.stderr)
         expect(error.stderr).not.toContain("secret")
         expect(error.stderr).not.toContain("command output")
@@ -213,7 +213,7 @@ describe("installation", () => {
       Effect.gen(function* () {
         const error = yield* Effect.flip(Installation.use.upgrade("curl", "9.9.9"))
         expect(error).toBeInstanceOf(Installation.UpgradeFailedError)
-        expect(error.stderr).toBe("Upgrade failed for curl (exit code 1).")
+        expect(error.stderr).toBe("curl аргаар шинэчилж чадсангүй (гаралтын код: 1).")
         expect(error.message).toBe(error.stderr)
         expect(error.stderr).not.toContain("secret")
         expect(error.stderr).not.toContain("script output")

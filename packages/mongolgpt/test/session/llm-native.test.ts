@@ -379,7 +379,7 @@ describe("session.llm-native.request", () => {
         model: { ...baseModel, api: { ...baseModel.api, npm: "unknown-provider" } },
         messages: [],
       }),
-    ).toThrow("Native LLM request adapter does not support provider package unknown-provider")
+    ).toThrow("Native LLM хүсэлтийн адаптер unknown-provider үйлчилгээ үзүүлэгчийн багцыг дэмждэггүй")
   })
 
   test("only enables native runtime for supported OpenAI API-key models", () => {

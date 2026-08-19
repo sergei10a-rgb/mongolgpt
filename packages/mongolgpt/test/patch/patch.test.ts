@@ -88,7 +88,7 @@ describe("Patch namespace", () => {
     test("should throw error for invalid patch format", () => {
       const invalidPatch = `This is not a valid patch`
 
-      expect(() => Patch.parsePatch(invalidPatch)).toThrow("Invalid patch format")
+      expect(() => Patch.parsePatch(invalidPatch)).toThrow("Нөхөөсний бүтэц буруу")
     })
   })
 
