@@ -15,7 +15,7 @@ export function getAdapter(projectID: ProjectV2.ID, type: string): WorkspaceAdap
   const builtin = BUILTIN[type]
   if (builtin) return builtin
 
-  throw new Error(`Unknown workspace adapter: ${type}`)
+  throw new Error(`Танигдаагүй ажлын талбарын adapter: ${type}`)
 }
 
 export function listAdapters(projectID: ProjectV2.ID): WorkspaceAdapterEntry[] {

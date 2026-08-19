@@ -193,7 +193,7 @@ export const layer = Layer.effect(
       )
       if (response.status < 200 || response.status >= 300) {
         return yield* new SyncHttpError({
-          message: `Workspace sync HTTP failure: ${response.status}`,
+          message: `Ажлын талбарын синк HTTP-ээр амжилтгүй боллоо: ${response.status}`,
           status: response.status,
         })
       }
@@ -336,7 +336,7 @@ export const layer = Layer.effect(
       if (response.status < 200 || response.status >= 300) {
         const body = yield* response.text
         return yield* new SyncHttpError({
-          message: `Workspace history HTTP failure: ${response.status} ${body}`,
+          message: `Ажлын талбарын түүхийг HTTP-ээр уншихад амжилтгүй боллоо: ${response.status} ${body}`,
           status: response.status,
           body,
         })
@@ -657,7 +657,7 @@ export const layer = Layer.effect(
           .pipe(Effect.orDie)
         if (rows.length === 0)
           return yield* new SessionEventsNotFoundError({
-            message: `No events found for session: ${input.sessionID}`,
+            message: `Сесстэй холбоотой event олдсонгүй: ${input.sessionID}`,
             sessionID: input.sessionID,
           })
 
@@ -681,7 +681,7 @@ export const layer = Layer.effect(
               if (response.status < 200 || response.status >= 300) {
                 const body = yield* response.text
                 return yield* new SessionWarpHttpError({
-                  message: `Failed to warp session ${input.sessionID} into workspace ${workspaceID}: HTTP ${response.status} ${body}`,
+                  message: `Сессыг ${workspaceID} ажлын талбарт шилжүүлэхэд амжилтгүй боллоо: HTTP ${response.status} ${body}`,
                   workspaceID,
                   sessionID: input.sessionID,
                   status: response.status,
@@ -701,7 +701,7 @@ export const layer = Layer.effect(
         if (response.status < 200 || response.status >= 300) {
           const body = yield* response.text
           return yield* new SessionWarpHttpError({
-            message: `Failed to steal session ${input.sessionID} into workspace ${workspaceID}: HTTP ${response.status} ${body}`,
+            message: `Сессыг ${workspaceID} ажлын талбарт шилжүүлэн авахад амжилтгүй боллоо: HTTP ${response.status} ${body}`,
             workspaceID,
             sessionID: input.sessionID,
             status: response.status,

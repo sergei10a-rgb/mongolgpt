@@ -15,7 +15,7 @@ export function spawn(cmd: string, argsOrOpts?: string[] | Process.Options, opts
     stderr: "pipe",
   }) as Child
 
-  if (!proc.stdin || !proc.stdout || !proc.stderr) throw new Error("Process output not available")
+  if (!proc.stdin || !proc.stdout || !proc.stderr) throw new Error("Процессын гаралтын урсгал боломжгүй байна")
 
   return proc
 }

@@ -295,7 +295,7 @@ export const layer = Layer.effect(
     }) {
       const parent = input.messages.findLast((m) => m.info.id === input.parentID)
       if (!parent || parent.info.role !== "user") {
-        throw new Error(`Compaction parent must be a user message: ${input.parentID}`)
+        throw new Error(`Compaction-ийн эцэг мессеж user message байх ёстой: ${input.parentID}`)
       }
       const userMessage = parent.info
       const compactionPart = parent.parts.find((part): part is SessionV1.CompactionPart => part.type === "compaction")
@@ -437,7 +437,7 @@ export const layer = Layer.effect(
             if (part.type === "compaction") continue
             const replayPart =
               part.type === "file" && MessageV2.isMedia(part.mime)
-                ? { type: "text" as const, text: `[Attached ${part.mime}: ${part.filename ?? "file"}]` }
+                ? { type: "text" as const, text: `[Хавсаргав: ${part.mime}: ${part.filename ?? "file"}]` }
                 : part
             yield* session.updatePart({
               ...replayPart,
@@ -480,9 +480,9 @@ export const layer = Layer.effect(
             })
             const text =
               (input.overflow
-                ? "The previous request exceeded the provider's size limit due to large media attachments. The conversation was compacted and media files were removed from context. If the user was asking about attached images or files, explain that the attachments were too large to process and suggest they try again with smaller or fewer files.\n\n"
+                ? "Өмнөх хүсэлт том хэмжээний media хавсралтаас болж provider-ийн хэмжээсийн хязгаарыг давлаа. Яриаг хураангуйлж, media файлуудыг context-оос хаслаа. Хэрэв хэрэглэгч хавсаргасан зураг эсвэл файл асуусан бол хавсралт боловсруулахад хэт том байсан тул жижигрүүлж дахин оролдохыг тайлбарла.\n\n"
                 : "") +
-              "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
+              "Дараагийн алхам тодорхой байвал үргэлжлүүл; хэрхэн үргэлжлүүлэхээ мэдэхгүй бол зогсоод тодруулга асуу."
             yield* session.updatePart({
               id: PartID.ascending(),
               messageID: continueMsg.id,

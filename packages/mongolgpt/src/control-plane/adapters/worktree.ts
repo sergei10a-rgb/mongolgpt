@@ -15,7 +15,7 @@ async function loadWorktree() {
 }
 
 function requireInstance(context: WorkspaceAdapterContext | undefined) {
-  if (!context?.instance) throw new Error("Worktree adapter requires an instance context")
+  if (!context?.instance) throw new Error("Төслийн хуулбарын adapter-д instance context шаардлагатай")
   return context.instance
 }
 
@@ -26,8 +26,8 @@ const provideContext = <A, E, R>(effect: Effect.Effect<A, E, R>, context: Worksp
   )
 
 export const WorktreeAdapter: WorkspaceAdapter = {
-  name: "Worktree",
-  description: "Create a git worktree",
+  name: "Төслийн хуулбар",
+  description: "Git төслийн хуулбар үүсгэх",
   async configure(info, context) {
     const { AppRuntime, Worktree } = await loadWorktree()
     const next = await AppRuntime.runPromise(

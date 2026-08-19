@@ -35,7 +35,7 @@ export function alreadyInstalled() {
 
 export async function install(ide: (typeof SUPPORTED_IDES)[number]["name"]) {
   const cmd = SUPPORTED_IDES.find((i) => i.name === ide)?.cmd
-  if (!cmd) throw new Error(`Unknown IDE: ${ide}`)
+  if (!cmd) throw new Error(`Танигдаагүй IDE: ${ide}`)
 
   const p = await Process.run([cmd, "--install-extension", "mongolgpt.mongolgpt"], {
     nothrow: true,

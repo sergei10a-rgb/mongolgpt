@@ -163,11 +163,11 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
   ) {
     // Copilot needs a tools field when replaying prior tool calls, even if no tools are currently enabled.
     tools["_noop"] = aiTool({
-      description: "Do not call this tool. It exists only for API compatibility and must never be invoked.",
+      description: "Энэ хэрэгслийг дуудаж болохгүй. Энэ нь зөвхөн API нийцтэй байдлыг хангах бөгөөд хэзээ ч ажиллуулах ёсгүй.",
       inputSchema: jsonSchema({
         type: "object",
         properties: {
-          reason: { type: "string", description: "Unused" },
+          reason: { type: "string", description: "Ашиглагдахгүй" },
         },
       }),
       execute: async () => ({ output: "", title: "", metadata: {} }),

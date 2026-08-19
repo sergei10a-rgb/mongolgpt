@@ -169,7 +169,7 @@ describe("structured-output.createStructuredOutputTool", () => {
       onSuccess: () => {},
     })
 
-    expect(tool.description).toContain("structured format")
+    expect(tool.description).toContain("бүтэцтэй форматаар")
   })
 
   test("creates tool with schema as inputSchema", () => {
@@ -230,7 +230,7 @@ describe("structured-output.createStructuredOutputTool", () => {
     })
 
     expect(capturedOutput).toEqual(testArgs)
-    expect(result.output).toBe("Structured output captured successfully.")
+    expect(result.output).toBe("Бүтэцтэй гаралтыг амжилттай авлаа.")
     expect(result.metadata.valid).toBe(true)
   })
 

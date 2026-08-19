@@ -71,15 +71,15 @@ const SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES = new Set([
   "image/webp",
 ])
 
-const STRUCTURED_OUTPUT_DESCRIPTION = `Use this tool to return your final response in the requested structured format.
+const STRUCTURED_OUTPUT_DESCRIPTION = `Энэ хэрэгслийг ашиглан эцсийн хариуг хүссэн бүтэцтэй форматаар буцаа.
 
-IMPORTANT:
-- You MUST call this tool exactly once at the end of your response
-- The input must be valid JSON matching the required schema
-- Complete all necessary research and tool calls BEFORE calling this tool
-- This tool provides your final answer - no further actions are taken after calling it`
+ЧУХАЛ:
+- Хариуныхаа төгсгөлд энэ хэрэгслийг яг нэг удаа заавал дууд
+- Оролт нь шаардлагатай schema-д тохирсон хүчинтэй JSON байх ёстой
+- Энэ хэрэгслийг дуудахаас ӨМНӨ шаардлагатай судалгаа, хэрэгслийн дуудлагыг бүгдийг дуусга
+- Энэ хэрэгсэл таны эцсийн хариуг буцаана; дуудсаны дараа өөр үйлдэл хийхгүй`
 
-const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `IMPORTANT: The user has requested structured output. You MUST use the StructuredOutput tool to provide your final response. Do NOT respond with plain text - you MUST call the StructuredOutput tool with your answer formatted according to the schema.`
+const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `ЧУХАЛ: Хэрэглэгч бүтэцтэй гаралт хүссэн. Эцсийн хариуг өгөхдөө заавал StructuredOutput хэрэгслийг ашигла. Энгийн текстээр хариулахгүй; хариуг schema-д тохируулан StructuredOutput хэрэгслийг заавал дууд.`
 
 function mcpResourceBase64Size(value: string) {
   const trimmed = value.replace(/\s/g, "")
@@ -232,7 +232,7 @@ export const layer = Layer.effect(
           model: mdl,
           sessionID: input.session.id,
           retries: 2,
-          messages: [{ role: "user", content: "Generate a title for this conversation:\n" }, ...msgs],
+          messages: [{ role: "user", content: "Энэ ярианд гарчиг үүсгэ:\n" }, ...msgs],
         })
         .pipe(
           Stream.filter(LLMEvent.is.textDelta),
@@ -443,7 +443,7 @@ export const layer = Layer.effect(
         messageID: summaryUserMsg.id,
         sessionID,
         type: "text",
-        text: "Summarize the task tool output above and continue with your task.",
+        text: "Дээрх task хэрэгслийн гаралтыг хураангуйлаад даалгавраа үргэлжлүүл.",
         synthetic: true,
       } satisfies SessionV1.TextPart)
     })
@@ -481,7 +481,7 @@ export const layer = Layer.effect(
               id: PartID.ascending(),
               messageID: userMsg.id,
               sessionID: input.sessionID,
-              text: "The following tool was executed by the user",
+              text: "Дараах хэрэгслийг хэрэглэгч ажиллуулсан",
               synthetic: true,
             }
             yield* sessions.updatePart(userPart)
@@ -528,7 +528,7 @@ export const layer = Layer.effect(
           const finish = Effect.uninterruptible(
             Effect.gen(function* () {
               if (aborted) {
-                output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
+                output += "\n\n" + ["<metadata>", "Хэрэглэгч командыг цуцалсан", "</metadata>"].join("\n")
               }
               const completed = Date.now()
               if (!msg.time.completed) {
@@ -709,7 +709,7 @@ export const layer = Layer.effect(
                 sessionID: input.sessionID,
                 type: "text",
                 synthetic: true,
-                text: `Reading MCP resource: ${part.filename} (${uri})`,
+                text: `MCP resource уншиж байна: ${part.filename} (${uri})`,
               },
             ]
             const exit = yield* mcp.readResource(clientName, uri).pipe(Effect.exit)
@@ -737,7 +737,7 @@ export const layer = Layer.effect(
                       sessionID: input.sessionID,
                       type: "text",
                       synthetic: true,
-                      text: `[Binary MCP resource omitted: ${filename ?? uri} (${mime}, ${formatMcpResourceBytes(size)}) is not a supported attachment type]`,
+                      text: `[Хоёртын MCP resource хасагдлаа: ${filename ?? uri} (${mime}, ${formatMcpResourceBytes(size)}) нь дэмжигдсэн хавсралтын төрөл биш]`,
                     })
                     continue
                   }
@@ -747,7 +747,7 @@ export const layer = Layer.effect(
                       sessionID: input.sessionID,
                       type: "text",
                       synthetic: true,
-                      text: `[Binary MCP resource omitted: ${filename ?? uri} (${mime}, ${formatMcpResourceBytes(size)}) exceeds ${formatMcpResourceBytes(MAX_MCP_RESOURCE_BLOB_BYTES)}]`,
+                      text: `[Хоёртын MCP resource хасагдлаа: ${filename ?? uri} (${mime}, ${formatMcpResourceBytes(size)}) нь ${formatMcpResourceBytes(MAX_MCP_RESOURCE_BLOB_BYTES)} хэмжээнээс их]`,
                     })
                     continue
                   }
@@ -756,7 +756,7 @@ export const layer = Layer.effect(
                     sessionID: input.sessionID,
                     type: "text",
                     synthetic: true,
-                    text: `[Binary MCP resource attached: ${filename ?? uri} (${mime})]`,
+                    text: `[Хоёртын MCP resource хавсаргав: ${filename ?? uri} (${mime})]`,
                   })
                   pieces.push({
                     messageID: info.id,
@@ -777,7 +777,7 @@ export const layer = Layer.effect(
                 sessionID: input.sessionID,
                 type: "text",
                 synthetic: true,
-                text: `Failed to read MCP resource ${part.filename}: ${message}`,
+                text: `MCP resource ${part.filename}-г уншихад амжилтгүй боллоо: ${message}`,
               })
             }
             return pieces
@@ -792,7 +792,7 @@ export const layer = Layer.effect(
                     sessionID: input.sessionID,
                     type: "text",
                     synthetic: true,
-                    text: `Called the Read tool with the following input: ${JSON.stringify({ filePath: part.filename })}`,
+                    text: `Read хэрэгслийг дараах оролтоор дуудсан: ${JSON.stringify({ filePath: part.filename })}`,
                   },
                   {
                     messageID: info.id,
@@ -858,7 +858,7 @@ export const layer = Layer.effect(
                     sessionID: input.sessionID,
                     type: "text",
                     synthetic: true,
-                    text: `Called the Read tool with the following input: ${JSON.stringify(args)}`,
+                    text: `Read хэрэгслийг дараах оролтоор дуудсан: ${JSON.stringify(args)}`,
                   },
                 ]
                 const exit = yield* provider.getModel(info.model.providerID, info.model.modelID).pipe(
@@ -900,7 +900,7 @@ export const layer = Layer.effect(
                     sessionID: input.sessionID,
                     type: "text",
                     synthetic: true,
-                    text: `Read tool failed to read ${filepath} with the following error: ${message}`,
+                    text: `Read хэрэгсэл ${filepath}-г уншихад дараах алдаа гарлаа: ${message}`,
                   })
                 }
                 return pieces
@@ -923,7 +923,7 @@ export const layer = Layer.effect(
                       sessionID: input.sessionID,
                       type: "text",
                       synthetic: true,
-                      text: `Read tool failed to read ${filepath} with the following error: ${message}`,
+                      text: `Read хэрэгсэл ${filepath}-г уншихад дараах алдаа гарлаа: ${message}`,
                     },
                   ]
                 }
@@ -933,7 +933,7 @@ export const layer = Layer.effect(
                     sessionID: input.sessionID,
                     type: "text",
                     synthetic: true,
-                    text: `Called the Read tool with the following input: ${JSON.stringify(args)}`,
+                    text: `Read хэрэгслийг дараах оролтоор дуудсан: ${JSON.stringify(args)}`,
                   },
                   {
                     messageID: info.id,
@@ -952,7 +952,7 @@ export const layer = Layer.effect(
                   sessionID: input.sessionID,
                   type: "text",
                   synthetic: true,
-                  text: `Called the Read tool with the following input: {"filePath":"${filepath}"}`,
+                  text: `Read хэрэгслийг дараах оролтоор дуудсан: {"filePath":"${filepath}"}`,
                 },
                 {
                   id: part.id,
@@ -973,7 +973,7 @@ export const layer = Layer.effect(
 
         if (part.type === "agent") {
           const perm = Permission.evaluate("task", part.name, ag.permission)
-          const hint = perm.action === "deny" ? " . Invoked by user; guaranteed to exist." : ""
+          const hint = perm.action === "deny" ? " . Хэрэглэгч дуудсан тул заавал байна." : ""
           return [
             { ...part, messageID: info.id, sessionID: input.sessionID },
             {
@@ -982,7 +982,7 @@ export const layer = Layer.effect(
               type: "text",
               synthetic: true,
               text:
-                " Use the above message and context to generate a prompt and call the task tool with subagent: " +
+                " Дээрх мессеж болон context-ийг ашиглан prompt үүсгээд дараах subagent-тай task хэрэгслийг дууд: " +
                 part.name +
                 hint,
             },
@@ -1307,7 +1307,7 @@ export const layer = Layer.effect(
               }
               if (format.type === "json_schema") {
                 handle.message.error = new SessionV1.StructuredOutputError({
-                  message: "Model did not produce structured output",
+                  message: "Загвар бүтэцтэй гаралт үүсгэсэнгүй",
                   retries: 0,
                 }).toObject()
                 yield* sessions.updateMessage(handle.message)
@@ -1609,8 +1609,8 @@ export function createStructuredOutputTool(input: {
       // AI SDK validates args against inputSchema before calling execute()
       input.onSuccess(args)
       return {
-        output: "Structured output captured successfully.",
-        title: "Structured Output",
+        output: "Бүтэцтэй гаралтыг амжилттай авлаа.",
+        title: "Бүтэцтэй гаралт",
         metadata: { valid: true },
       }
     },

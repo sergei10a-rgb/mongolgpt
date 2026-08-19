@@ -46,8 +46,8 @@ export class RunFailedError extends Error {
     const text = stderr.toString().trim()
     super(
       text
-        ? `Command failed with code ${code}: ${cmd.join(" ")}\n${text}`
-        : `Command failed with code ${code}: ${cmd.join(" ")}`,
+        ? `Команд ${code} кодтойгоор амжилтгүй боллоо: ${cmd.join(" ")}\n${text}`
+        : `Команд ${code} кодтойгоор амжилтгүй боллоо: ${cmd.join(" ")}`,
     )
     this.name = "ProcessRunFailedError"
     this.cmd = [...cmd]
@@ -60,7 +60,7 @@ export class RunFailedError extends Error {
 export type Child = ChildProcess & { exited: Promise<number> }
 
 export function spawn(cmd: string[], opts: Options = {}): Child {
-  if (cmd.length === 0) throw new Error("Command is required")
+  if (cmd.length === 0) throw new Error("Команд шаардлагатай")
   opts.abort?.throwIfAborted()
 
   const proc = launch(cmd[0], cmd.slice(1), {
@@ -127,7 +127,7 @@ export async function run(cmd: string[], opts: RunOptions = {}): Promise<Result>
     stderr: "pipe",
   })
 
-  if (!proc.stdout || !proc.stderr) throw new Error("Process output not available")
+  if (!proc.stdout || !proc.stderr) throw new Error("Процессын гаралтын урсгал боломжгүй байна")
 
   const out = await Promise.all([proc.exited, buffer(proc.stdout), buffer(proc.stderr)])
     .then(([code, stdout, stderr]) => ({

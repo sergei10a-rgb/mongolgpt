@@ -719,7 +719,7 @@ export function createBrowserCallbackServer(): Promise<BrowserCallbackServer> {
       }
 
       if (!value) {
-        const message = "Authorization code алга"
+        const message = "Authorization code алга байна"
         settle(() => rejectCode(new Error(message)))
         response
           .writeHead(400, { "Content-Type": "text/html; charset=utf-8" })

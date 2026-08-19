@@ -53,12 +53,12 @@ function statusWithFetch(
 ): RuntimeStatus {
   const providerID = input.model.providerID
   if (providerID !== "openai" && providerID !== "anthropic" && !providerID.startsWith("mongolgpt"))
-    return { type: "unsupported", reason: "provider is not openai, MongolGPT, or Anthropic" }
+    return { type: "unsupported", reason: "provider нь openai, MongolGPT эсвэл Anthropic биш байна" }
   const npm = input.model.api.npm
   if (npm !== "@ai-sdk/openai" && npm !== "@ai-sdk/openai-compatible" && npm !== "@ai-sdk/anthropic")
-    return { type: "unsupported", reason: "provider package is not OpenAI, OpenAI-compatible, or Anthropic" }
+    return { type: "unsupported", reason: "provider package нь OpenAI, OpenAI-compatible эсвэл Anthropic биш байна" }
   if (input.auth?.type === "oauth" && !(input.provider.id === "openai" && fetch)) {
-    return { type: "unsupported", reason: "OAuth auth requires a provider fetch override" }
+    return { type: "unsupported", reason: "OAuth нэвтрэлтэд provider fetch override шаардлагатай" }
   }
 
   const apiKey = typeof input.provider.options.apiKey === "string" ? input.provider.options.apiKey : input.provider.key
@@ -178,7 +178,7 @@ export function nativeTools(tools: Record<string, Tool>, input: Pick<StreamInput
         execute: (args: unknown, ctx) =>
           Effect.tryPromise({
             try: () => {
-              if (!item.execute) throw new Error(`Tool has no execute handler: ${name}`)
+              if (!item.execute) throw new Error(`Хэрэгсэлд execute handler алга: ${name}`)
               return item.execute(args, {
                 toolCallId: ctx?.id ?? name,
                 messages: input.messages,

@@ -2099,7 +2099,7 @@ noLLMServer.instance(
 
       if (msg.info.role !== "user") throw new Error("expected user message")
       const hasFailure = msg.parts.some(
-        (part) => part.type === "text" && part.synthetic && part.text.includes("Read tool failed to read"),
+        (part) => part.type === "text" && part.synthetic && part.text.includes("Read хэрэгсэл") && part.text.includes("уншихад дараах алдаа гарлаа"),
       )
       expect(hasFailure).toBe(true)
 
@@ -2141,8 +2141,8 @@ noLLMServer.instance(
       })
       const text = stored.parts.filter((part) => part.type === "text").map((part) => part.text)
 
-      expect(text[0]?.startsWith("Called the Read tool with the following input:")).toBe(true)
-      expect(text[1]?.includes("Read tool failed to read")).toBe(true)
+      expect(text[0]?.startsWith("Read хэрэгслийг дараах оролтоор дуудсан:")).toBe(true)
+      expect(text[1]?.includes("Read хэрэгсэл") && text[1]?.includes("уншихад дараах алдаа гарлаа")).toBe(true)
       expect(text[2]).toBe("after-file")
 
       yield* sessions.remove(session.id)

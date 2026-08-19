@@ -17,7 +17,7 @@ export function jsonc(text: string, filepath: string): unknown {
         const column = beforeOffset[beforeOffset.length - 1].length + 1
         const problemLine = lines[line - 1]
 
-        const error = `${printParseErrorCode(e.error)} at line ${line}, column ${column}`
+        const error = `${printParseErrorCode(e.error)}: ${line}-р мөр, ${column}-р багана`
         if (!problemLine) return error
 
         return `${error}\n   Line ${line}: ${problemLine}\n${"".padStart(column + 9)}^`
@@ -25,7 +25,7 @@ export function jsonc(text: string, filepath: string): unknown {
       .join("\n")
     throw new JsonError({
       path: filepath,
-      message: `\n--- JSONC Input ---\n${text}\n--- Errors ---\n${issues}\n--- End ---`,
+      message: `\n--- JSONC оролт ---\n${text}\n--- Алдаа ---\n${issues}\n--- Төгсгөл ---`,
     })
   }
 
@@ -46,7 +46,7 @@ export function schema<S extends EffectSchema.Decoder<unknown, never>>(
           code: "unrecognized_keys",
           keys: extra,
           path: [],
-          message: `Unrecognized key${extra.length === 1 ? "" : "s"}: ${extra.join(", ")}`,
+          message: `Танигдаагүй түлхүүр${extra.length === 1 ? "" : "үүд"}: ${extra.join(", ")}`,
         },
       ],
     })

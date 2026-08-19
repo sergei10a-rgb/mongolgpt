@@ -417,14 +417,14 @@ describe("session.llm-native.request", () => {
         provider: { ...providerInfo, id: ProviderV2.ID.make("google") },
         auth: undefined,
       }),
-    ).toEqual({ type: "unsupported", reason: "provider is not openai, MongolGPT, or Anthropic" })
+    ).toEqual({ type: "unsupported", reason: "provider нь openai, MongolGPT эсвэл Anthropic биш байна" })
     expect(
       LLMNativeRuntime.status({
         model: baseModel,
         provider: providerInfo,
         auth: { type: "oauth", refresh: "refresh", access: "access", expires: 1 },
       }),
-    ).toEqual({ type: "unsupported", reason: "OAuth auth requires a provider fetch override" })
+    ).toEqual({ type: "unsupported", reason: "OAuth нэвтрэлтэд provider fetch override шаардлагатай" })
     expect(
       LLMNativeRuntime.status({
         model: baseModel,
@@ -439,7 +439,7 @@ describe("session.llm-native.request", () => {
         provider: providerInfo,
         auth: undefined,
       }),
-    ).toEqual({ type: "unsupported", reason: "provider package is not OpenAI, OpenAI-compatible, or Anthropic" })
+    ).toEqual({ type: "unsupported", reason: "provider package нь OpenAI, OpenAI-compatible эсвэл Anthropic биш байна" })
 
     expect(
       LLMNativeRuntime.status({

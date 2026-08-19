@@ -841,7 +841,7 @@ describe("session.compaction.process", () => {
         const error = Cause.squash(exit.cause)
         expect(error).toBeInstanceOf(Error)
         if (error instanceof Error) {
-          expect(error.message).toContain(`Compaction parent must be a user message: ${reply.id}`)
+          expect(error.message).toContain(`Compaction-ийн эцэг мессеж user message байх ёстой: ${reply.id}`)
         }
       }
     }),
@@ -935,7 +935,7 @@ describe("session.compaction.process", () => {
         metadata: { compaction_continue: true },
       })
       if (last?.parts[0]?.type === "text") {
-        expect(last.parts[0].text).toContain("Continue if you have next steps")
+        expect(last.parts[0].text).toContain("Дараагийн алхам тодорхой байвал үргэлжлүүл")
       }
     }),
   )
@@ -1172,7 +1172,7 @@ describe("session.compaction.process", () => {
       expect(last?.info.role).toBe("user")
       expect(last?.parts.some((part) => part.type === "file")).toBe(false)
       expect(
-        last?.parts.some((part) => part.type === "text" && part.text.includes("Attached image/png: cat.png")),
+        last?.parts.some((part) => part.type === "text" && part.text.includes("Хавсаргав: image/png: cat.png")),
       ).toBe(true)
     }),
   )
@@ -1199,7 +1199,7 @@ describe("session.compaction.process", () => {
       expect(result).toBe("continue")
       expect(last?.info.role).toBe("user")
       if (last?.parts[0]?.type === "text") {
-        expect(last.parts[0].text).toContain("previous request exceeded the provider's size limit")
+        expect(last.parts[0].text).toContain("Өмнөх хүсэлт том хэмжээний media хавсралтаас болж provider-ийн хэмжээсийн хязгаарыг давлаа")
       }
     }),
   )
