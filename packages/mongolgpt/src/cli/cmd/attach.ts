@@ -6,7 +6,7 @@ import { ServerAuth } from "@/server/auth"
 
 export const AttachCommand = cmd({
   command: "attach <url>",
-  describe: "ажиллаж буй mongolgpt серверт холбогдох",
+  describe: "ажиллаж буй MongolGPT серверт холбогдох",
   builder: (yargs) =>
     yargs
       .positional("url", {
@@ -30,7 +30,7 @@ export const AttachCommand = cmd({
       })
       .option("fork", {
         type: "boolean",
-        describe: "үргэлжлүүлэхдээ сешнийг fork хийх (--continue эсвэл --session-тэй ашиглана)",
+        describe: "үргэлжлүүлэхдээ сешнийг салаалуулах (--continue эсвэл --session-тэй ашиглана)",
       })
       .option("password", {
         alias: ["p"],
@@ -53,15 +53,15 @@ export const AttachCommand = cmd({
       })
       .option("no-replay", {
         type: "boolean",
-        describe: "resume болон resize-ийн дараа mini сешний түүхийг дахин харуулахгүй",
+        describe: "үргэлжлүүлэлт болон цонхны хэмжээ өөрчлөгдсөний дараа жижиг сешний түүхийг дахин харуулахгүй",
       })
       .option("replay-limit", {
         type: "number",
-        describe: "mini replay-д харагдах түүхийг хамгийн шинэ N мессежээр хязгаарлах",
+        describe: "жижиг горимд дахин харуулах түүхийг хамгийн шинэ N мессежээр хязгаарлах",
       }),
   handler: async (args) => {
     if (args.replay === true) {
-      UI.error("--replay дэмжигдэхгүй; replay анхдагчаар идэвхтэй")
+      UI.error("--replay дэмжигдэхгүй; дахин харуулах горим анхдагчаар идэвхтэй")
       process.exitCode = 1
       return
     }
@@ -106,7 +106,7 @@ export const AttachCommand = cmd({
 
     const { TuiConfig } = await import("@/config/tui")
     if (args.fork && !args.continue && !args.session) {
-      UI.error("--fork нь --continue эсвэл --session шаарддаг")
+      UI.error("салаалуулахын тулд --fork-ийг --continue эсвэл --session-тэй ашиглана уу")
       process.exitCode = 1
       return
     }

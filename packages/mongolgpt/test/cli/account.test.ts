@@ -116,7 +116,7 @@ describe("console account display", () => {
     })
 
     expect(lines).toEqual([
-      "Аккаунт: user@mgpt.mn",
+      "Бүртгэл: user@mgpt.mn",
       "● Миний төсөл · Free · админ",
       "  Зарцуулалт: 3 хүсэлт, 185 токен",
       "  Өдрийн хязгаар: 20 үндсэн, 5 нөөц хүсэлт",

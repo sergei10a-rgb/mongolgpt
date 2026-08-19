@@ -15,12 +15,12 @@ const filesystem = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
 
 const FileSearchCommand = effectCmd({
   command: "search <query>",
-  describe: "query-ээр файл хайх",
+  describe: "асуулгаар файл хайх",
   builder: (yargs) =>
     yargs.positional("query", {
       type: "string",
       demandOption: true,
-      description: "хайлтын query",
+      description: "хайлтын асуулга",
     }),
   handler: Effect.fn("Cli.debug.file.search")(function* (args) {
     const results = yield* Effect.orDie(filesystem(FileSystem.Service.use((svc) => svc.find({ query: args.query }))))
@@ -66,7 +66,7 @@ const FileListCommand = effectCmd({
 
 export const FileCommand = cmd({
   command: "file",
-  describe: "файлын систем debug хийх хэрэгслүүд",
+  describe: "файлын систем оношлох хэрэгслүүд",
   builder: (yargs) =>
     yargs.command(FileReadCommand).command(FileListCommand).command(FileSearchCommand).demandCommand(),
   async handler() {},

@@ -35,6 +35,64 @@ import { initializeCliAccountTokenEncryption } from "./account/cli-token-key"
 const args = hideBin(process.argv)
 let accountTokenEncryptionInitialization: Promise<void> | undefined
 
+const yargsMessages = {
+  "Commands:": "Командууд:",
+  "Options:": "Сонголтууд:",
+  "Examples:": "Жишээнүүд:",
+  boolean: "логик",
+  count: "тоо",
+  string: "текст",
+  number: "тоо",
+  array: "жагсаалт",
+  required: "заавал",
+  default: "анхдагч",
+  "default:": "анхдагч:",
+  "choices:": "сонголтууд:",
+  "aliases:": "өөр нэр:",
+  "generated-value": "үүсгэсэн утга",
+  "Not enough non-option arguments: got %s, need at least %s": {
+    one: "Байрлалын аргумент дутуу: %s өгөгдсөн, дор хаяж %s хэрэгтэй",
+    other: "Байрлалын аргумент дутуу: %s өгөгдсөн, дор хаяж %s хэрэгтэй",
+  },
+  "Too many non-option arguments: got %s, maximum of %s": {
+    one: "Байрлалын аргумент хэт олон: %s өгөгдсөн, хамгийн ихдээ %s",
+    other: "Байрлалын аргумент хэт олон: %s өгөгдсөн, хамгийн ихдээ %s",
+  },
+  "Missing argument value: %s": {
+    one: "Аргументын утга дутуу: %s",
+    other: "Аргументуудын утга дутуу: %s",
+  },
+  "Missing required argument: %s": {
+    one: "Заавал өгөх аргумент дутуу: %s",
+    other: "Заавал өгөх аргументууд дутуу: %s",
+  },
+  "Unknown argument: %s": {
+    one: "Танихгүй аргумент: %s",
+    other: "Танихгүй аргументууд: %s",
+  },
+  "Unknown command: %s": {
+    one: "Танихгүй команд: %s",
+    other: "Танихгүй командууд: %s",
+  },
+  "Invalid values:": "Хүчингүй утгууд:",
+  "Argument: %s, Given: %s, Choices: %s": "Аргумент: %s, өгсөн утга: %s, сонголтууд: %s",
+  "Argument check failed: %s": "Аргументын шалгалт амжилтгүй: %s",
+  "Implications failed:": "Хамааралтай аргументууд дутуу:",
+  "Not enough arguments following: %s": "%s-ийн дараах аргумент дутуу",
+  "Invalid JSON config file: %s": "JSON тохиргооны файл хүчинтэй биш: %s",
+  "Path to JSON config file": "JSON тохиргооны файлын зам",
+  "Show help": "Тусламж харуулах",
+  "Show version number": "Хувилбарын дугаар харуулах",
+  "Did you mean %s?": "Та %s гэж хэлэх гэсэн үү?",
+  "Arguments %s and %s are mutually exclusive": "%s болон %s аргументыг хамтад нь ашиглах боломжгүй",
+  "Positionals:": "Байрлалын аргументууд:",
+  command: "команд",
+  deprecated: "хуучирсан",
+  "deprecated: %s": "хуучирсан: %s",
+}
+
+const helpFailurePrefixes = ["Танихгүй аргумент", "Байрлалын аргумент дутуу", "Хүчингүй утгууд:"]
+
 function show(out: string) {
   const text = out.trimStart()
   if (!text.startsWith("mongolgpt ")) {
@@ -46,6 +104,8 @@ function show(out: string) {
 }
 
 const cli = yargs(args)
+  // yargs-ийн төрөл зөвхөн string гэж заадаг ч дотоод y18n нь one/other бичлэгийг дэмждэг.
+  .updateStrings(yargsMessages as unknown as Record<string, string>)
   .parserConfiguration({ "populate--": true })
   .scriptName("mongolgpt")
   .wrap(100)
@@ -54,7 +114,7 @@ const cli = yargs(args)
   .version("version", "хувилбарын дугаар харуулах", InstallationVersion)
   .alias("version", "v")
   .option("print-logs", {
-    describe: "логийг stderr рүү хэвлэх",
+    describe: "логийг стандарт алдааны урсгал руу хэвлэх",
     type: "boolean",
   })
   .option("log-level", {
@@ -63,7 +123,7 @@ const cli = yargs(args)
     choices: ["DEBUG", "INFO", "WARN", "ERROR"],
   })
   .option("pure", {
-    describe: "гадаад plugin-гүй ажиллуулах",
+    describe: "гадаад нэмэлтгүй ажиллуулах",
     type: "boolean",
   })
   .middleware(async (opts) => {
@@ -87,7 +147,7 @@ const cli = yargs(args)
     process.env.MONGOLGPT_PID = String(process.pid)
   })
   .usage("")
-  .completion("completion", "команд автоматаар гүйцээх shell скрипт үүсгэх")
+  .completion("completion", "командыг автоматаар гүйцээх бүрхүүлийн скрипт үүсгэх")
   .command(AcpCommand)
   .command(McpCommand)
   .command(TuiThreadCommand)
@@ -113,11 +173,7 @@ const cli = yargs(args)
   .command(CompatCommand)
   .command(DbCommand)
   .fail((msg, err) => {
-    if (
-      msg?.startsWith("Unknown argument") ||
-      msg?.startsWith("Not enough non-option arguments") ||
-      msg?.startsWith("Invalid values:")
-    ) {
+    if (msg && helpFailurePrefixes.some((prefix) => msg.startsWith(prefix))) {
       if (err) throw err
       cli.showHelp(show)
     }

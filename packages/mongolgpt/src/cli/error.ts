@@ -47,7 +47,7 @@ export function FormatError(input: unknown): string | undefined {
   // MCPFailed: { name: string }
   if (NamedError.hasName(input, "MCPFailed")) {
     const data = isRecord(input) && isRecord(input.data) ? stringField(input.data, "name") : undefined
-    return `"${data}" MCP сервер амжилтгүй боллоо. Анхаар: MongolGPT одоогоор MCP authentication дэмжихгүй.`
+    return `"${data}" MCP сервер амжилтгүй боллоо. Анхаар: MongolGPT одоогоор MCP нэвтрэлтийг дэмжихгүй.`
   }
 
   // AccountServiceError, AccountTransportError: TaggedErrorClass
@@ -62,24 +62,27 @@ export function FormatError(input: unknown): string | undefined {
       ? providerModelNotFound.suggestions.filter((x) => typeof x === "string")
       : []
     return [
-      `Model олдсонгүй: ${stringField(providerModelNotFound, "providerID")}/${stringField(providerModelNotFound, "modelID")}`,
+      `Загвар олдсонгүй: ${stringField(providerModelNotFound, "providerID")}/${stringField(providerModelNotFound, "modelID")}`,
       ...(suggestions.length ? ["Та үүнийг хэлсэн үү: " + suggestions.join(", ")] : []),
-      `Боломжит model-уудыг харахын тулд \`mongolgpt models\` ажиллуулна уу`,
-      `Эсвэл config (mongolgpt.json) доторх provider/model нэрээ шалгана уу`,
+      `Боломжит загваруудыг харахын тулд \`mongolgpt models\` ажиллуулна уу`,
+      `Эсвэл тохиргооны (mongolgpt.json) үйлчилгээ үзүүлэгч/загварын нэрээ шалгана уу`,
     ].join("\n")
   }
 
   // ProviderInitError: { providerID: string }
   const providerInit = configData(input, "ProviderInitError")
   if (providerInit) {
-    return `"${stringField(providerInit, "providerID")}" provider-ийг эхлүүлж чадсангүй. Credential болон тохиргоогоо шалгана уу.`
+    return `"${stringField(providerInit, "providerID")}" үйлчилгээ үзүүлэгчийг эхлүүлж чадсангүй. Нэвтрэх мэдээлэл болон тохиргоогоо шалгана уу.`
   }
 
   // ConfigJsonError: { path: string, message?: string }
   const configJson = configData(input, "ConfigJsonError")
   if (configJson) {
     const message = stringField(configJson, "message")
-    return `${stringField(configJson, "path")} дахь config файл хүчинтэй JSON(C) биш` + (message ? `: ${message}` : "")
+    return (
+      `${stringField(configJson, "path")} дахь тохиргооны файл хүчинтэй JSON(C) биш байна` +
+      (message ? `: ${message}` : "")
+    )
   }
 
   // ConfigDirectoryTypoError: { dir: string, path: string, suggestion: string }

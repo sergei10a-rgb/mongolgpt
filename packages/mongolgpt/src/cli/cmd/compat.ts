@@ -112,7 +112,7 @@ async function runCompatImport(args: CompatImportInput, ctx: InstanceContext) {
   }
 
   if (args.dryRun) {
-    prompts.log.info(`Бичих config: ${plan.configPath}`)
+    prompts.log.info(`Бичих тохиргоо: ${plan.configPath}`)
     prompts.outro("Туршилтын горим дууслаа. Файл өөрчлөгдөөгүй.")
     return
   }
@@ -120,7 +120,7 @@ async function runCompatImport(args: CompatImportInput, ctx: InstanceContext) {
   for (const outcome of plan.outcomes) {
     logOutcome(outcome)
   }
-  prompts.outro(`Дууслаа. Config: ${plan.configPath}`)
+  prompts.outro(`Дууслаа. Тохиргоо: ${plan.configPath}`)
 }
 
 function logOutcome(outcome: CompatPatchOutcome) {

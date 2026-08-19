@@ -9,7 +9,7 @@ describe("cli.error", () => {
       {
         tag: "ConfigJsonError",
         data: { path: "/tmp/mongolgpt.jsonc", message: "Unexpected token" },
-        expected: "/tmp/mongolgpt.jsonc дахь config файл хүчинтэй JSON(C) биш: Unexpected token",
+        expected: "/tmp/mongolgpt.jsonc дахь тохиргооны файл хүчинтэй JSON(C) биш байна: Unexpected token",
       },
       {
         tag: "ConfigDirectoryTypoError",
@@ -43,9 +43,9 @@ describe("cli.error", () => {
     const data = {
       path: "/tmp/mongolgpt.jsonc",
       message:
-        '\n--- JSONC Input ---\n{\n  "model": \n}\n--- Errors ---\nValueExpected at line 3, column 1\n   Line 3: }\n          ^\n--- End ---',
+        '\n--- JSONC Input ---\n{\n  "model": \n}\n--- Errors ---\nValueExpected: 3-р мөр, 1-р багана\n   3-р мөр: }\n            ^\n--- End ---',
     }
-    const expected = `${data.path} дахь config файл хүчинтэй JSON(C) биш: ${data.message}`
+    const expected = `${data.path} дахь тохиргооны файл хүчинтэй JSON(C) биш байна: ${data.message}`
 
     expect(FormatError({ name: "ConfigJsonError", data })).toBe(expected)
     expect(FormatError({ _tag: "ConfigJsonError", ...data })).toBe(expected)
@@ -71,10 +71,10 @@ describe("cli.error", () => {
       suggestions: ["claude-sonnet-4"],
     }
     const expected = [
-      "Model олдсонгүй: anthropic/claude-sonet-4",
+      "Загвар олдсонгүй: anthropic/claude-sonet-4",
       "Та үүнийг хэлсэн үү: claude-sonnet-4",
-      "Боломжит model-уудыг харахын тулд `mongolgpt models` ажиллуулна уу",
-      "Эсвэл config (mongolgpt.json) доторх provider/model нэрээ шалгана уу",
+      "Боломжит загваруудыг харахын тулд `mongolgpt models` ажиллуулна уу",
+      "Эсвэл тохиргооны (mongolgpt.json) үйлчилгээ үзүүлэгч/загварын нэрээ шалгана уу",
     ].join("\n")
 
     expect(FormatError({ name: "ProviderModelNotFoundError", data })).toBe(expected)
@@ -83,7 +83,8 @@ describe("cli.error", () => {
 
   test("formats legacy and tagged provider init errors the same way", () => {
     const data = { providerID: "anthropic" }
-    const expected = '"anthropic" provider-ийг эхлүүлж чадсангүй. Credential болон тохиргоогоо шалгана уу.'
+    const expected =
+      '"anthropic" үйлчилгээ үзүүлэгчийг эхлүүлж чадсангүй. Нэвтрэх мэдээлэл болон тохиргоогоо шалгана уу.'
 
     expect(FormatError({ name: "ProviderInitError", data })).toBe(expected)
     expect(FormatError({ _tag: "ProviderInitError", ...data })).toBe(expected)

@@ -42,7 +42,7 @@ export function normalizeAccountLoginUrl(input: string) {
   const normalized = validateConfiguredAccountServerUrl(input)
   const url = new URL(normalized)
   if (hostedAccountHostnames.has(canonicalHostname(url)) && url.protocol !== "https:") {
-    throw new Error("MongolGPT аккаунтын албан ёсны хаяг HTTPS ашиглах ёстой")
+    throw new Error("MongolGPT бүртгэлийн албан ёсны хаяг HTTPS ашиглах ёстой")
   }
   return normalized
 }
@@ -79,7 +79,7 @@ const planLabel = (plan: "free" | "basic" | "pro" | "max") =>
   ({ free: "Free", basic: "Basic", pro: "Pro", max: "Max" })[plan]
 
 export function formatAccountOverview(overview: AccountOverview) {
-  const lines = [`Аккаунт: ${overview.account.email}`]
+  const lines = [`Бүртгэл: ${overview.account.email}`]
   if (overview.workspaces.length === 0) return [...lines, "Ажлын орчин олдсонгүй"]
 
   for (const workspace of overview.workspaces) {
@@ -131,7 +131,7 @@ const selectLoginOrg = Effect.fnUntraced(function* () {
   }
 
   const selected = yield* Prompt.select({
-    message: "Ашиглах workspace-аа сонгоно уу",
+    message: "Ашиглах ажлын орчноо сонгоно уу",
     options: orgs.map((org) => ({
       value: org,
       label: org.name,
@@ -139,12 +139,12 @@ const selectLoginOrg = Effect.fnUntraced(function* () {
     })),
   })
   if (Option.isNone(selected)) {
-    yield* Prompt.log.warn("Workspace сонголт дуусаагүй байна")
+    yield* Prompt.log.warn("Ажлын орчны сонголт дуусаагүй байна")
     return false
   }
 
   yield* service.use(active.value.id, Option.some(selected.value.id))
-  yield* Prompt.log.success(selected.value.name + " workspace идэвхжлээ")
+  yield* Prompt.log.success(selected.value.name + " ажлын орчин идэвхжлээ")
   return true
 })
 
@@ -169,7 +169,7 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
     yield* openBrowser(method.login.url)
 
     const s = Prompt.spinner()
-    yield* s.start("MongolGPT аккаунтын зөвшөөрөл хүлээж байна...")
+    yield* s.start("MongolGPT бүртгэлийн зөвшөөрөл хүлээж байна...")
 
     const result = yield* method.login.wait.pipe(
       Effect.timeout(Duration.minutes(5)),
@@ -182,7 +182,7 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
         Effect.gen(function* () {
           yield* s.stop(r.email + " нэрээр нэвтэрлээ")
           const selected = yield* selectLoginOrg()
-          if (!selected) return yield* Prompt.outro("Workspace сонгосны дараа нэвтрэлт бүрэн дуусна")
+          if (!selected) return yield* Prompt.outro("Ажлын орчин сонгосны дараа нэвтрэлт бүрэн дуусна")
           for (const message of formatPostLoginGuidance()) {
             yield* Prompt.log.info(message)
           }
@@ -222,7 +222,7 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
       Effect.gen(function* () {
         yield* s.stop(r.email + " нэрээр нэвтэрлээ")
         const selected = yield* selectLoginOrg()
-        if (!selected) return yield* Prompt.outro("Workspace сонгосны дараа нэвтрэлт бүрэн дуусна")
+        if (!selected) return yield* Prompt.outro("Ажлын орчин сонгосны дараа нэвтрэлт бүрэн дуусна")
         for (const message of formatPostLoginGuidance()) {
           yield* Prompt.log.info(message)
         }
@@ -254,9 +254,9 @@ const logoutEffect = Effect.fn("logout")(function* (email?: string) {
 
   if (email) {
     const match = accounts.find((a) => a.email === email)
-    if (!match) return yield* println("Аккаунт олдсонгүй: " + email)
+    if (!match) return yield* println("Бүртгэл олдсонгүй: " + email)
     yield* service.remove(match.id)
-    yield* Prompt.outro(email + " аккаунтаас гарлаа")
+    yield* Prompt.outro(email + " бүртгэлээс гарлаа")
     return
   }
 
@@ -273,11 +273,11 @@ const logoutEffect = Effect.fn("logout")(function* (email?: string) {
     }
   })
 
-  const selected = yield* Prompt.select({ message: "Гарах аккаунтаа сонгоно уу", options: opts })
+  const selected = yield* Prompt.select({ message: "Гарах бүртгэлээ сонгоно уу", options: opts })
   if (Option.isNone(selected)) return
 
   yield* service.remove(selected.value.id)
-  yield* Prompt.outro(selected.value.email + " аккаунтаас гарлаа")
+  yield* Prompt.outro(selected.value.email + " бүртгэлээс гарлаа")
 })
 
 interface OrgChoice {
@@ -319,7 +319,7 @@ const orgsEffect = Effect.fn("orgs")(function* () {
   const service = yield* Account.Service
 
   const groups = yield* service.orgsByAccount()
-  if (groups.length === 0) return yield* println("Аккаунт олдсонгүй")
+  if (groups.length === 0) return yield* println("Бүртгэл олдсонгүй")
   if (!groups.some((group) => group.orgs.length > 0)) return yield* println("Байгууллага олдсонгүй")
 
   const active = yield* service.active()
@@ -335,7 +335,7 @@ const orgsEffect = Effect.fn("orgs")(function* () {
 const openEffect = Effect.fn("open")(function* () {
   const service = yield* Account.Service
   const active = yield* service.active()
-  if (Option.isNone(active)) return yield* println("Идэвхтэй аккаунт алга")
+  if (Option.isNone(active)) return yield* println("Идэвхтэй бүртгэл алга")
 
   const url = active.value.url
   yield* openBrowser(url)
@@ -373,7 +373,7 @@ export const LogoutCommand = effectCmd({
   instance: false,
   builder: (yargs) =>
     yargs.positional("email", {
-      describe: "гарах аккаунтын email",
+      describe: "гарах бүртгэлийн цахим шуудан",
       type: "string",
     }),
   handler: Effect.fn("Cli.account.logout")(function* (args) {
@@ -429,11 +429,11 @@ export const ConsoleCommand = cmd({
     yargs
       .command({
         ...LoginCommand,
-        describe: "консол руу нэвтрэх",
+        describe: "удирдлагын самбарт нэвтрэх",
       })
       .command({
         ...LogoutCommand,
-        describe: "консолоос гарах",
+        describe: "удирдлагын самбараас гарах",
       })
       .command({
         ...SwitchCommand,
@@ -445,7 +445,7 @@ export const ConsoleCommand = cmd({
       })
       .command({
         ...OpenCommand,
-        describe: "идэвхтэй console аккаунт нээх",
+        describe: "идэвхтэй бүртгэлийн удирдлагын самбарыг нээх",
       })
       .command({
         ...StatusCommand,

@@ -94,7 +94,7 @@ function authState() {
 
 export const McpCommand = cmd({
   command: "mcp",
-  describe: "MCP (Model Context Protocol) серверүүдийг удирдах",
+  describe: "MCP (загварын контекстийн протокол) серверүүдийг удирдах",
   builder: (yargs) =>
     yargs
       .command(McpAddCommand)
@@ -270,7 +270,7 @@ export const McpAuthCommand = effectCmd({
           } else if (status.status === "needs_client_registration") {
             spinner.stop("Нэвтрэлт амжилтгүй", 1)
             prompts.log.error(status.error)
-            prompts.log.info("MCP серверийн config-д clientId нэмнэ үү:")
+            prompts.log.info("MCP серверийн тохиргоонд clientId нэмнэ үү:")
             prompts.log.info(`
   "mcp": {
     "${serverName}": {
@@ -455,7 +455,7 @@ export const McpAddCommand = effectCmd({
         array: true,
       })
       .option("header", {
-        describe: "алсын MCP серверийн HTTP header (KEY=VALUE)",
+        describe: "алсын MCP серверийн HTTP толгой мэдээлэл (KEY=VALUE)",
         type: "string",
         array: true,
       }),

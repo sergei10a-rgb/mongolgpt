@@ -942,7 +942,7 @@ function permGlob(p: ToolPermissionProps<typeof GlobTool>): ToolPermissionInfo {
   const pattern = p.input.pattern || p.patterns[0] || ""
   return {
     icon: "✱",
-    title: `Glob "${pattern}"`,
+    title: `Файл хайх "${pattern}"`,
     lines: pattern ? [`Хээ: ${pattern}`] : [],
   }
 }
@@ -951,7 +951,7 @@ function permGrep(p: ToolPermissionProps<typeof GrepTool>): ToolPermissionInfo {
   const pattern = p.input.pattern || p.patterns[0] || ""
   return {
     icon: "✱",
-    title: `Grep "${pattern}"`,
+    title: `Текст хайх "${pattern}"`,
     lines: pattern ? [`Хээ: ${pattern}`] : [],
   }
 }

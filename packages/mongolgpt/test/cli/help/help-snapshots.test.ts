@@ -105,6 +105,14 @@ describe("mongolgpt CLI help-text snapshots", () => {
         expect(topLevel.stderr).not.toContain("--thinking")
         expect(topLevel.stderr).not.toContain("--variant")
         expect(topLevel.stderr).not.toContain("--demo")
+        expect(topLevel.stderr).toContain("MongolGPT")
+        expect(topLevel.stderr.toLowerCase()).not.toContain("opencode")
+        expect(topLevel.stderr).toContain("Командууд:")
+        expect(topLevel.stderr).toContain("Байрлалын аргументууд:")
+        expect(topLevel.stderr).toContain("Сонголтууд:")
+        expect(topLevel.stderr).not.toContain("Commands:")
+        expect(topLevel.stderr).not.toContain("Positionals:")
+        expect(topLevel.stderr).not.toContain("Options:")
 
         const argvs: Array<readonly string[]> = [...TOP_LEVEL.map((c) => [c] as const), ...SUBCOMMANDS]
 

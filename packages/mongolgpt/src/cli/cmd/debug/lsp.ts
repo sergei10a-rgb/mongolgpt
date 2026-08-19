@@ -6,7 +6,7 @@ import { EOL } from "os"
 
 export const LSPCommand = cmd({
   command: "lsp",
-  describe: "LSP debug хийх хэрэгслүүд",
+  describe: "LSP оношилгооны хэрэгслүүд",
   builder: (yargs) =>
     yargs.command(DiagnosticsCommand).command(SymbolsCommand).command(DocumentSymbolsCommand).demandCommand(),
   async handler() {},
@@ -14,7 +14,7 @@ export const LSPCommand = cmd({
 
 const DiagnosticsCommand = effectCmd({
   command: "diagnostics <file>",
-  describe: "файлын diagnostics авах",
+  describe: "файлын оношилгоо авах",
   builder: (yargs) => yargs.positional("file", { type: "string", demandOption: true }),
   handler: Effect.fn("Cli.debug.lsp.diagnostics")(function* (args) {
     const out = yield* LSP.Service.use((lsp) =>
@@ -29,7 +29,7 @@ const DiagnosticsCommand = effectCmd({
 
 export const SymbolsCommand = effectCmd({
   command: "symbols <query>",
-  describe: "workspace symbol хайх",
+  describe: "ажлын орчны тэмдэг хайх",
   builder: (yargs) => yargs.positional("query", { type: "string", demandOption: true }),
   handler: Effect.fn("Cli.debug.lsp.symbols")(function* (args) {
     yield* Effect.logInfo("symbols")

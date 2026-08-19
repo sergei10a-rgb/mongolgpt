@@ -79,10 +79,10 @@ type ExportData = { info: SDKSession; messages: Array<{ info: Message; parts: Pa
 
 export const ImportCommand = effectCmd({
   command: "import <file>",
-  describe: "сешний өгөгдлийг JSON файл эсвэл URL-аас import хийх",
+  describe: "сешний өгөгдлийг JSON файл эсвэл URL-аас импортлох",
   builder: (yargs) =>
     yargs.positional("file", {
-      describe: "JSON файлын зам эсвэл share URL",
+      describe: "JSON файлын зам эсвэл хуваалцах URL",
       type: "string",
       demandOption: true,
     }),

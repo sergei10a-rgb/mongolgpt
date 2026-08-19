@@ -16,11 +16,11 @@ export const ModelsCommand = effectCmd({
         array: false,
       })
       .option("verbose", {
-        describe: "загварын дэлгэрэнгүй гаралт ашиглах (өртөг зэрэг мета өгөгдөл орно)",
+        describe: "загварын дэлгэрэнгүй гаралт ашиглах (өртөг зэрэг нэмэлт өгөгдөл орно)",
         type: "boolean",
       })
       .option("refresh", {
-        describe: "models.dev-ээс загварын кэшийг шинэчлэх",
+        describe: "models.dev-ээс загварын түр хадгалсан өгөгдлийг шинэчлэх",
         type: "boolean",
       }),
   handler: Effect.fn("Cli.models")(function* (args) {

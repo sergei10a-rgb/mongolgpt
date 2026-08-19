@@ -1077,7 +1077,7 @@ function createLayer(input: StreamInput) {
             })
             input.footer.append({
               kind: "error",
-              text: "resize replay failed; disabled for this session",
+              text: "Хэмжээ өөрчлөлтийн түүхийг сэргээж чадсангүй; энэ сесст идэвхгүй болголоо",
               phase: "start",
               source: "system",
             })
@@ -1109,7 +1109,7 @@ function createLayer(input: StreamInput) {
             })
             input.footer.append({
               kind: "error",
-              text: "resize replay failed; disabled for this session",
+              text: "Хэмжээ өөрчлөлтийн түүхийг сэргээж чадсангүй; энэ сесст идэвхгүй болголоо",
               phase: "start",
               source: "system",
             })

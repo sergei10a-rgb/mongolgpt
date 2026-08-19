@@ -7,13 +7,13 @@ import { effectCmd } from "../effect-cmd"
 
 const QueryCommand = effectCmd({
   command: "$0 [query]",
-  describe: "интерактив sqlite3 shell нээх эсвэл query ажиллуулах",
+  describe: "sqlite3-ийн харилцан үйлдэлт бүрхүүл нээх эсвэл асуулга ажиллуулах",
   instance: false,
   builder: (yargs: Argv) => {
     return yargs
       .positional("query", {
         type: "string",
-        describe: "ажиллуулах SQL query",
+        describe: "ажиллуулах SQL асуулга",
       })
       .option("format", {
         type: "string",
@@ -44,7 +44,7 @@ const QueryCommand = effectCmd({
 
 const PathCommand = effectCmd({
   command: "path",
-  describe: "database-ийн замыг хэвлэх",
+  describe: "өгөгдлийн сангийн замыг хэвлэх",
   instance: false,
   handler: Effect.fn("Cli.db.path")(function* () {
     console.log(Database.path())
@@ -53,7 +53,7 @@ const PathCommand = effectCmd({
 
 export const DbCommand = effectCmd({
   command: "db",
-  describe: "database хэрэгслүүд",
+  describe: "өгөгдлийн сангийн хэрэгслүүд",
   instance: false,
   builder: (yargs: Argv) => {
     return yargs.command(QueryCommand).command(PathCommand).demandCommand()

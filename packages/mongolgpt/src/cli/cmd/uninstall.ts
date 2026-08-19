@@ -24,7 +24,7 @@ interface RemovalTargets {
 
 export const UninstallCommand = {
   command: "uninstall",
-  describe: "mongolgpt-ийг устгаж, холбоотой файлуудыг цэвэрлэх",
+  describe: "MongolGPT-ийг устгаж, холбоотой файлуудыг цэвэрлэх",
   builder: (yargs: Argv) =>
     yargs
       .option("keep-config", {
@@ -124,7 +124,7 @@ async function showRemovalSummary(targets: RemovalTargets, method: Installation.
   }
 
   if (targets.shellConfig) {
-    prompts.log.info(`  ✓ Shell-ийн PATH тохиргоо: ${shortenPath(targets.shellConfig)}`)
+    prompts.log.info(`  ✓ Бүрхүүлийн PATH тохиргоо: ${shortenPath(targets.shellConfig)}`)
   }
 
   if (method !== "curl" && method !== "unknown") {

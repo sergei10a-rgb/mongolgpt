@@ -6,7 +6,7 @@ export { extractResponseText, formatPromptTooLargeError, parseGitHubRemote } fro
 
 export const GithubInstallCommand = effectCmd({
   command: "install",
-  describe: "GitHub agent суулгах",
+  describe: "GitHub агент суулгах",
   handler: () =>
     Effect.gen(function* () {
       const { githubInstall } = yield* Effect.promise(() => import("./github.handler"))
@@ -16,12 +16,12 @@ export const GithubInstallCommand = effectCmd({
 
 export const GithubRunCommand = effectCmd({
   command: "run",
-  describe: "GitHub agent ажиллуулах",
+  describe: "GitHub агент ажиллуулах",
   builder: (yargs) =>
     yargs
       .option("event", {
         type: "string",
-        describe: "agent ажиллуулах GitHub mock event",
+        describe: "агент ажиллуулах GitHub-ийн туршилтын үйл явдал",
       })
       .option("token", {
         type: "string",
@@ -36,7 +36,7 @@ export const GithubRunCommand = effectCmd({
 
 export const GithubCommand = cmd({
   command: "github",
-  describe: "GitHub agent удирдах",
+  describe: "GitHub агент удирдах",
   builder: (yargs) => yargs.command(GithubInstallCommand).command(GithubRunCommand).demandCommand(),
   async handler() {},
 })

@@ -5,14 +5,14 @@ import { cmd } from "../cmd"
 
 export const SnapshotCommand = cmd({
   command: "snapshot",
-  describe: "snapshot debug хийх хэрэгслүүд",
+  describe: "агшин зургийг оношлох хэрэгслүүд",
   builder: (yargs) => yargs.command(TrackCommand).command(PatchCommand).command(DiffCommand).demandCommand(),
   async handler() {},
 })
 
 const TrackCommand = effectCmd({
   command: "track",
-  describe: "одоогийн snapshot төлөвийг дагах",
+  describe: "одоогийн агшин зургийн төлөвийг дагах",
   handler: Effect.fn("Cli.debug.snapshot.track")(function* () {
     const out = yield* Snapshot.Service.use((svc) => svc.track())
     console.log(out)
@@ -21,7 +21,7 @@ const TrackCommand = effectCmd({
 
 const PatchCommand = effectCmd({
   command: "patch <hash>",
-  describe: "snapshot hash-ийн patch харуулах",
+  describe: "агшин зургийн хэшийн өөрчлөлтийг харуулах",
   builder: (yargs) =>
     yargs.positional("hash", {
       type: "string",
@@ -36,7 +36,7 @@ const PatchCommand = effectCmd({
 
 const DiffCommand = effectCmd({
   command: "diff <hash>",
-  describe: "snapshot hash-ийн diff харуулах",
+  describe: "агшин зургийн хэшийн ялгааг харуулах",
   builder: (yargs) =>
     yargs.positional("hash", {
       type: "string",

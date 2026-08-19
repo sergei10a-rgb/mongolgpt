@@ -18,7 +18,7 @@ import { V2Command } from "./v2"
 
 export const DebugCommand = cmd({
   command: "debug",
-  describe: "debug болон асуудал оношлох хэрэгслүүд",
+  describe: "алдаа оношлох хэрэгслүүд",
   builder: (yargs) =>
     yargs
       .command(ConfigCommand)
@@ -40,7 +40,7 @@ export const DebugCommand = cmd({
 
 const WaitCommand = effectCmd({
   command: "wait",
-  describe: "хязгааргүй хүлээх (debug хийхэд)",
+  describe: "хязгааргүй хүлээх (алдаа оношлоход)",
   handler: Effect.fn("Cli.debug.wait")(function* () {
     yield* Effect.sleep(Duration.days(1))
   }),
@@ -48,7 +48,7 @@ const WaitCommand = effectCmd({
 
 const InfoCommand = effectCmd({
   command: "info",
-  describe: "debug мэдээлэл харуулах",
+  describe: "оношилгооны мэдээлэл харуулах",
   handler: Effect.fn("Cli.debug.info")(function* () {
     const { Config } = yield* Effect.promise(() => import("@/config/config"))
     const { ConfigPlugin } = yield* Effect.promise(() => import("@/config/plugin"))
@@ -61,9 +61,9 @@ const InfoCommand = effectCmd({
     console.log(`mongolgpt хувилбар: ${InstallationVersion}`)
     console.log(`үйлдлийн систем: ${os.type()} ${os.release()} ${os.arch()}`)
     console.log(`терминал: ${terminal || "тодорхойгүй"}`)
-    console.log("plugin-ууд:")
+    console.log("нэмэлтүүд:")
     if (Flag.MONGOLGPT_PURE) {
-      console.log("гадаад plugin-ууд идэвхгүй (--pure)")
+      console.log("гадаад нэмэлтүүд идэвхгүй (--pure)")
       return
     }
     if (!config.plugin_origins?.length) {
@@ -78,7 +78,7 @@ const InfoCommand = effectCmd({
 
 const PathsCommand = cmd({
   command: "paths",
-  describe: "глобал замуудыг харуулах (data, config, cache, state)",
+  describe: "нийтлэг замуудыг харуулах (өгөгдөл, тохиргоо, түр хадгалалт, төлөв)",
   handler() {
     for (const [key, value] of Object.entries(Global.Path)) {
       console.log(key.padEnd(10), value)

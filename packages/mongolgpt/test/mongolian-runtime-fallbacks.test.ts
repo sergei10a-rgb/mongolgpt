@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 const contracts: Record<string, { expected: string[]; forbidden: string[] }> = {
   "index.ts": {
-    expected: ["команд автоматаар гүйцээх shell скрипт үүсгэх", "Гэнэтийн алдаа"],
+    expected: ["командыг автоматаар гүйцээх бүрхүүлийн скрипт үүсгэх", "Гэнэтийн алдаа"],
     forbidden: ["generate shell completion script", 'UI.error("Unexpected error"'],
   },
   "provider/transform.ts": {
@@ -109,7 +109,11 @@ const contracts: Record<string, { expected: string[]; forbidden: string[] }> = {
     forbidden: ["Enter Azure Resource Name", 'label: "API key"', "e.g. my-models"],
   },
   "plugin/cloudflare.ts": {
-    expected: ["Cloudflare аккаунтын ID-гаа оруулна уу", "Cloudflare AI Gateway-ийн ID-гаа оруулна уу", "Gateway-ийн API токен"],
+    expected: [
+      "Cloudflare аккаунтын ID-гаа оруулна уу",
+      "Cloudflare AI Gateway-ийн ID-гаа оруулна уу",
+      "Gateway-ийн API токен",
+    ],
     forbidden: ["Enter your Cloudflare Account ID", "Enter your Cloudflare AI Gateway ID", "Gateway API token"],
   },
   "session/llm/native-runtime.ts": {

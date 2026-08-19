@@ -57,7 +57,7 @@ function stdinStream() {
 
 export const AcpCommand = effectCmd({
   command: "acp",
-  describe: "ACP (Agent Client Protocol) сервер эхлүүлэх",
+  describe: "ACP (агент-клиентийн протокол) сервер эхлүүлэх",
   builder: (yargs) => {
     return withNetworkOptions(yargs).option("cwd", {
       describe: "ажлын хавтас",

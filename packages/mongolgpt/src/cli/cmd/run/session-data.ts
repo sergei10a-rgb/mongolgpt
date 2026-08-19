@@ -396,7 +396,7 @@ function syncQuestion(data: SessionData, part: ToolPart): FooterOutput | undefin
 
 function toolStatus(part: ToolPart): string {
   if (part.tool !== "task") {
-    return `running ${part.tool}`
+    return `${part.tool}-ийг ажиллуулж байна`
   }
 
   const state = part.state as {
@@ -407,7 +407,7 @@ function toolStatus(part: ToolPart): string {
   }
   const desc = state.input?.description
   if (typeof desc === "string" && desc.trim()) {
-    return `running ${desc.trim()}`
+    return `${desc.trim()}-ийг ажиллуулж байна`
   }
 
   const type = state.input?.subagent_type

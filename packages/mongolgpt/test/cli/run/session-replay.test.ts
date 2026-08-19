@@ -205,7 +205,7 @@ function shellUserMessage(id: string): SessionMessages[number] {
         sessionID: "session-1",
         messageID: id,
         type: "text",
-        text: "The following tool was executed by the user",
+        text: "Хэрэглэгч дараах хэрэгслийг ажиллуулсан",
         synthetic: true,
       },
     ],
@@ -364,7 +364,7 @@ describe("run session replay", () => {
     expect(out.patch).toEqual(
       expect.objectContaining({
         phase: "running",
-        status: "running bash",
+        status: "bash-ийг ажиллуулж байна",
       }),
     )
   })

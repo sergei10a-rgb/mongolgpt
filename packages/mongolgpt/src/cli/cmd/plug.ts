@@ -114,7 +114,7 @@ export function createPlugTask(input: PlugInput, dep: PlugDeps = defaultPlugDeps
 
       if (manifest.code === "manifest_no_targets") {
         inspect.stop("Plugin-ийн зорилтот хэсэг олдсонгүй", 1)
-        dep.log.error(`"${mod}" package.json дотор plugin эхлэх цэгийг ил гаргаагүй байна`)
+        dep.log.error(`"${mod}" package.json дотор нэмэлтийн эхлэх цэгийг ил гаргаагүй байна`)
         dep.log.info(
           'Дараахын аль нэгийг хүлээсэн: exports["./tui"], exports["./server"], server-ийн package.json main, эсвэл tui theme-д package.json["oc-themes"].',
         )
@@ -150,11 +150,11 @@ export function createPlugTask(input: PlugInput, dep: PlugDeps = defaultPlugDeps
         return false
       }
 
-      patch.stop("Plugin config шинэчилж чадсангүй", 1)
+      patch.stop("Нэмэлтийн тохиргоог шинэчилж чадсангүй", 1)
       dep.log.error(errorMessage(out.error))
       return false
     }
-    patch.stop("Plugin config шинэчлэгдлээ")
+    patch.stop("Нэмэлтийн тохиргоо шинэчлэгдлээ")
     for (const item of out.items) {
       if (item.mode === "noop") {
         dep.log.info(`${item.file} дотор аль хэдийн тохируулагдсан байна`)
@@ -181,7 +181,7 @@ export const PluginCommand = effectCmd({
     yargs
       .positional("module", {
         type: "string",
-        describe: "npm module-ийн нэр",
+        describe: "npm модулийн нэр",
       })
       .option("global", {
         alias: ["g"],

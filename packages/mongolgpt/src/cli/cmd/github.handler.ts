@@ -909,7 +909,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
               {
                 id: PartID.ascending(),
                 type: "text",
-                text: "Summarize the actions (tool calls & reasoning) you did for the user in 1-2 sentences.",
+                text: "Хэрэглэгчийн төлөө хийсэн үйлдлүүдээ (хэрэгслийн дуудлага ба бодолт) 1-2 өгүүлбэрээр хураангуйл.",
               },
             ],
           })

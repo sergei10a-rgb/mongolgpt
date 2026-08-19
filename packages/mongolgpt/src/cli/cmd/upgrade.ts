@@ -6,7 +6,7 @@ import { InstallationVersion } from "@mongolgpt/core/installation/version"
 
 export const UpgradeCommand = {
   command: "upgrade [target]",
-  describe: "mongolgpt-ийг хамгийн сүүлийн эсвэл тодорхой хувилбар руу шинэчлэх",
+  describe: "MongolGPT-ийг хамгийн сүүлийн эсвэл тодорхой хувилбар руу шинэчлэх",
   builder: (yargs: Argv) => {
     return yargs
       .positional("target", {

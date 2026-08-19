@@ -240,7 +240,7 @@ export function resolvePluginProviders(input: {
 export const ProvidersCommand = cmd({
   command: "providers",
   aliases: ["auth"],
-  describe: "AI үйлчилгээ үзүүлэгч болон итгэмжлэлүүдийг удирдах",
+  describe: "AI үйлчилгээ үзүүлэгч болон нэвтрэх мэдээллийг удирдах",
   builder: (yargs) =>
     yargs.command(ProvidersListCommand).command(ProvidersLoginCommand).command(ProvidersLogoutCommand).demandCommand(),
   async handler() {},
@@ -305,7 +305,7 @@ export const ProvidersLoginCommand = effectCmd({
   builder: (yargs: Argv) =>
     yargs
       .positional("url", {
-        describe: "MongolGPT нэвтрэлтийн үйлчилгээ үзүүлэгч",
+        describe: "MongolGPT-ийн нэвтрэх үйлчилгээ үзүүлэгч",
         type: "string",
       })
       .option("provider", {

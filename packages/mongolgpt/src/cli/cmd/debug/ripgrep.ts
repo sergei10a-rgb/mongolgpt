@@ -7,7 +7,7 @@ import { InstanceRef } from "@/effect/instance-ref"
 
 export const RipgrepCommand = cmd({
   command: "rg",
-  describe: "ripgrep debug хийх хэрэгслүүд",
+  describe: "ripgrep оношилгооны хэрэгслүүд",
   builder: (yargs) => yargs.command(FilesCommand).command(SearchCommand).demandCommand(),
   async handler() {},
 })
@@ -19,7 +19,7 @@ const FilesCommand = effectCmd({
     yargs
       .option("query", {
         type: "string",
-        description: "query-ээр файл шүүх",
+        description: "асуулгаар файл шүүх",
       })
       .option("glob", {
         type: "string",

@@ -756,7 +756,7 @@ export class RunFooter implements FooterApi {
     }
 
     if (this.prompts.size === 0) {
-      this.setNotice("input queue unavailable")
+      this.setNotice("Оролтын дарааллыг ашиглах боломжгүй байна")
       return false
     }
 
@@ -794,7 +794,7 @@ export class RunFooter implements FooterApi {
   private handleCycle = (): void => {
     const result = this.options.onCycleVariant?.()
     if (!result) {
-      this.setNotice("no variants available")
+      this.setNotice("Хувилбар байхгүй байна")
       return
     }
 
@@ -813,7 +813,7 @@ export class RunFooter implements FooterApi {
     }
 
     this.patch(patch)
-    this.setNotice(result.status ?? "variant updated")
+    this.setNotice(result.status ?? "Хувилбар шинэчлэгдлээ")
   }
 
   private handleModelSelect = (model: NonNullable<RunInput["model"]>): void => {
@@ -979,7 +979,7 @@ export class RunFooter implements FooterApi {
 
     this.clearInterruptTimer()
     this.patch({ interrupt: 0 })
-    this.setNotice("interrupting")
+    this.setNotice("Тасалж байна")
     this.options.onInterrupt?.()
     return true
   }

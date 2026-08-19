@@ -32,31 +32,31 @@ const AVAILABLE_PERMISSIONS = [
 
 const AgentCreateCommand = effectCmd({
   command: "create",
-  describe: "шинэ agent үүсгэх",
+  describe: "шинэ агент үүсгэх",
   builder: (yargs: Argv) =>
     yargs
       .option("path", {
         type: "string",
-        describe: "agent файлыг үүсгэх хавтасны зам",
+        describe: "агентийн файл үүсгэх хавтасны зам",
       })
       .option("description", {
         type: "string",
-        describe: "agent юу хийх ёстойг тайлбарлах",
+        describe: "агент юу хийх ёстойг тайлбарлах",
       })
       .option("mode", {
         type: "string",
-        describe: "agent-ийн горим",
+        describe: "агентийн горим",
         choices: ["all", "primary", "subagent"] as const,
       })
       .option("permissions", {
         type: "string",
         alias: ["tools"],
-        describe: `зөвшөөрөх permission-уудыг таслалаар тусгаарласан жагсаалт (анхдагч: бүгд). Боломжтой: "${AVAILABLE_PERMISSIONS.join(", ")}"`,
+        describe: `зөвшөөрлүүдийг таслалаар тусгаарласан жагсаалт (анхдагч: бүгд). Боломжтой: "${AVAILABLE_PERMISSIONS.join(", ")}"`,
       })
       .option("model", {
         type: "string",
         alias: ["m"],
-        describe: "ашиглах загвар, provider/model форматтай",
+        describe: "ашиглах загвар, үйлчилгээ үзүүлэгч/загварын хэлбэртэй",
       }),
   handler: Effect.fn("Cli.agent.create")(function* (args) {
     const { InstanceRef } = yield* Effect.promise(() => import("@/effect/instance-ref"))
@@ -78,7 +78,7 @@ const AgentCreateCommand = effectCmd({
 
       if (!isFullyNonInteractive) {
         UI.empty()
-        prompts.intro("Agent үүсгэх")
+        prompts.intro("Агент үүсгэх")
       }
 
       const project = ctx.project
@@ -121,7 +121,7 @@ const AgentCreateCommand = effectCmd({
       } else {
         const query = await prompts.text({
           message: "Тайлбар",
-          placeholder: "Энэ agent юу хийх ёстой вэ?",
+          placeholder: "Энэ агент юу хийх ёстой вэ?",
           validate: (x) => (x && x.length > 0 ? undefined : "Шаардлагатай"),
         })
         if (prompts.isCancel(query)) throw new UI.CancelledError()
@@ -145,7 +145,7 @@ const AgentCreateCommand = effectCmd({
         selected = perms ? perms.split(",").map((t) => t.trim()) : AVAILABLE_PERMISSIONS
       } else {
         const result = await prompts.multiselect({
-          message: "Зөвшөөрөх permission-уудыг сонгоно уу (Space дарж асааж/унтраана)",
+          message: "Зөвшөөрөх үйлдлүүдийг сонгоно уу (Space дарж асааж/унтраана)",
           options: AVAILABLE_PERMISSIONS.map((permission) => ({
             label: permission,
             value: permission,
@@ -215,10 +215,10 @@ const AgentCreateCommand = effectCmd({
 
       if (await Filesystem.exists(filePath)) {
         if (isFullyNonInteractive) {
-          console.error(`Алдаа: Agent файл аль хэдийн байна: ${filePath}`)
+          console.error(`Алдаа: Агентийн файл аль хэдийн байна: ${filePath}`)
           process.exit(1)
         }
-        prompts.log.error(`Agent файл аль хэдийн байна: ${filePath}`)
+        prompts.log.error(`Агентийн файл аль хэдийн байна: ${filePath}`)
         throw new UI.CancelledError()
       }
 
@@ -227,7 +227,7 @@ const AgentCreateCommand = effectCmd({
       if (isFullyNonInteractive) {
         console.log(filePath)
       } else {
-        prompts.log.success(`Agent үүсгэлээ: ${filePath}`)
+        prompts.log.success(`Агент үүсгэлээ: ${filePath}`)
         prompts.outro("Дууслаа")
       }
     })
@@ -236,7 +236,7 @@ const AgentCreateCommand = effectCmd({
 
 const AgentListCommand = effectCmd({
   command: "list",
-  describe: "боломжтой бүх agent-ийг жагсаах",
+  describe: "боломжтой бүх агентыг жагсаах",
   handler: Effect.fn("Cli.agent.list")(function* () {
     const { Agent } = yield* Effect.promise(() => import("../../agent/agent"))
     const agents = yield* Agent.Service.use((svc) => svc.list())
@@ -256,7 +256,7 @@ const AgentListCommand = effectCmd({
 
 export const AgentCommand = cmd({
   command: "agent",
-  describe: "agent-уудыг удирдах",
+  describe: "агентуудыг удирдах",
   builder: (yargs) => yargs.command(AgentCreateCommand).command(AgentListCommand).demandCommand(),
   async handler() {},
 })

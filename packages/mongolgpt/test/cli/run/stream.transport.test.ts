@@ -736,7 +736,7 @@ describe("run stream transport", () => {
       expect(patch).toEqual(
         expect.objectContaining({
           phase: "running",
-          status: "running bash",
+          status: "bash-ийг ажиллуулж байна",
         }),
       )
     } finally {
@@ -1138,7 +1138,7 @@ describe("run stream transport", () => {
       expect(reset).toHaveBeenCalledTimes(1)
       expect(ui.commits).toContainEqual({
         kind: "error",
-        text: "resize replay failed; disabled for this session",
+        text: "Хэмжээ өөрчлөлтийн түүхийг сэргээж чадсангүй; энэ сесст идэвхгүй болголоо",
         phase: "start",
         source: "system",
       })
@@ -1173,7 +1173,7 @@ describe("run stream transport", () => {
       expect(reset).toHaveBeenCalledTimes(1)
       expect(ui.commits).toContainEqual({
         kind: "error",
-        text: "resize replay failed; disabled for this session",
+        text: "Хэмжээ өөрчлөлтийн түүхийг сэргээж чадсангүй; энэ сесст идэвхгүй болголоо",
         phase: "start",
         source: "system",
       })

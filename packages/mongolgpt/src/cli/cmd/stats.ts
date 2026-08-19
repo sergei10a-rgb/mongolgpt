@@ -56,15 +56,15 @@ export const StatsCommand = effectCmd({
         type: "number",
       })
       .option("tools", {
-        describe: "харуулах tool-ийн тоо (анхдагч: бүгд)",
+        describe: "харуулах хэрэгслийн тоо (анхдагч: бүгд)",
         type: "number",
       })
       .option("models", {
         describe:
-          "загварын статистик харуулах (анхдагч: нуусан). Top N харуулах бол тоо өгнө, үгүй бол бүгдийг харуулна",
+          "загварын статистик харуулах (анхдагч: нуусан). Эхний N загварыг харуулах бол тоо өгнө, үгүй бол бүгдийг харуулна",
       })
       .option("project", {
-        describe: "төслөөр шүүх (анхдагч: бүх төсөл, хоосон string: одоогийн төсөл)",
+        describe: "төслөөр шүүх (анхдагч: бүх төсөл, хоосон тэмдэгт мөр: одоогийн төсөл)",
         type: "string",
       }),
   handler: Effect.fn("Cli.stats")(function* (args) {
@@ -115,7 +115,7 @@ const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* (
 
   if (projectFilter !== undefined) {
     if (projectFilter === "") {
-      if (!currentProject) throw new Error("projectFilter хоосон string үед currentProject шаардлагатай")
+      if (!currentProject) throw new Error("projectFilter хоосон тэмдэгт мөртэй үед currentProject шаардлагатай")
       filteredSessions = filteredSessions.filter((session) => session.projectID === currentProject.id)
     } else {
       filteredSessions = filteredSessions.filter((session) => session.projectID === projectFilter)
@@ -360,7 +360,7 @@ export function displayStats(stats: SessionStats, toolLimit?: number, modelLimit
     const toolsToDisplay = toolLimit ? sortedTools.slice(0, toolLimit) : sortedTools
 
     console.log("┌────────────────────────────────────────────────────────┐")
-    console.log("│                      TOOL ХЭРЭГЛЭЭ                    │")
+    console.log("│                    ХЭРЭГСЛИЙН ХЭРЭГЛЭЭ                │")
     console.log("├────────────────────────────────────────────────────────┤")
 
     const maxCount = Math.max(...toolsToDisplay.map(([, count]) => count))

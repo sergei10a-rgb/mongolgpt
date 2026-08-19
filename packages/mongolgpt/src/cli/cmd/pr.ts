@@ -10,11 +10,11 @@ export { extractShareUrl } from "@/share/url"
 
 export const PrCommand = effectCmd({
   command: "pr <number>",
-  describe: "GitHub PR branch татаж checkout хийгээд mongolgpt ажиллуулах",
+  describe: "GitHub PR-ийн салбарыг татаж шалгаад MongolGPT ажиллуулах",
   builder: (yargs) =>
     yargs.positional("number", {
       type: "number",
-      describe: "checkout хийх PR дугаар",
+      describe: "шалгах PR дугаар",
       demandOption: true,
     }),
   handler: Effect.fn("Cli.pr")(function* (args) {
@@ -29,7 +29,7 @@ export const PrCommand = effectCmd({
 
     const prNumber = args.number
     const localBranchName = `pr/${prNumber}`
-    UI.println(`PR #${prNumber} татаж checkout хийж байна...`)
+    UI.println(`PR #${prNumber}-ийн салбарыг татаж шалгаж байна...`)
 
     const checkout = yield* Effect.promise(() =>
       Process.run(["gh", "pr", "checkout", `${prNumber}`, "--branch", localBranchName, "--force"], { nothrow: true }),
@@ -67,7 +67,7 @@ export const PrCommand = effectCmd({
           yield* git.run(["remote", "add", remoteName, `https://github.com/${forkOwner}/${forkName}.git`], {
             cwd: worktree,
           })
-          UI.println(`Fork-ийн алсын эх сурвалж нэмэгдлээ: ${remoteName}`)
+          UI.println(`Салаалсан хувилбарын алсын эх сурвалж нэмэгдлээ: ${remoteName}`)
         }
 
         yield* git.run(["branch", `--set-upstream-to=${remoteName}/${prInfo.headRefName}`, localBranchName], {

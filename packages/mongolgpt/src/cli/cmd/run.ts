@@ -165,7 +165,7 @@ export const RunCommand = effectCmd({
       .option("model", {
         type: "string",
         alias: ["m"],
-        describe: "ашиглах загвар, provider/model хэлбэрээр өгнө",
+        describe: "ашиглах загвар, үйлчилгээ үзүүлэгч/загварын хэлбэрээр өгнө",
       })
       .option("agent", {
         type: "string",
@@ -175,7 +175,7 @@ export const RunCommand = effectCmd({
         type: "string",
         choices: ["default", "json"],
         default: "default",
-        describe: "формат: default (форматлагдсан) эсвэл json (түүхий JSON үйл явдал)",
+        describe: "гаралтын хэлбэр: default (форматласан) эсвэл json (түүхий JSON үйл явдал)",
       })
       .option("file", {
         alias: ["f"],
@@ -185,7 +185,7 @@ export const RunCommand = effectCmd({
       })
       .option("title", {
         type: "string",
-        describe: "сешний гарчиг (утга өгөөгүй бол богиносгосон prompt ашиглана)",
+        describe: "сешний гарчиг (утга өгөөгүй бол богиносгосон заавар ашиглана)",
       })
       .option("attach", {
         type: "string",
@@ -203,7 +203,7 @@ export const RunCommand = effectCmd({
       })
       .option("dir", {
         type: "string",
-        describe: "ажиллуулах хавтас, attach хийж байвал алсын сервер дээрх зам",
+        describe: "ажиллуулах хавтас; алсын серверт холбогдсон бол сервер дээрх зам",
       })
       .option("port", {
         type: "number",
@@ -227,7 +227,7 @@ export const RunCommand = effectCmd({
         default: true,
         hidden: true,
         describe:
-          "resume болон resize-ийн дараа интерактив сешний түүхийг дахин харуулах (--no-replay ашиглаж унтраана)",
+          "үргэлжлүүлэлт болон цонхны хэмжээ өөрчлөгдсөний дараа харилцан үйлдэлт сешний түүхийг дахин харуулах (--no-replay ашиглаж унтраана)",
       })
       .option("replay-limit", {
         type: "number",
@@ -236,7 +236,7 @@ export const RunCommand = effectCmd({
       })
       .option("dangerously-skip-permissions", {
         type: "boolean",
-        describe: "шууд deny хийгдээгүй permission-уудыг автоматаар зөвшөөрөх (аюултай!)",
+        describe: "шууд хориглоогүй зөвшөөрлүүдийг автоматаар олгох (аюултай!)",
         default: false,
       })
       .option("demo", {
@@ -408,7 +408,7 @@ export const RunCommand = effectCmd({
       }
 
       if (args.fork && !args.continue && !args.session) {
-        UI.error("--fork ашиглахад --continue эсвэл --session шаардлагатай")
+        UI.error("салаалуулахын тулд --fork-ийг --continue эсвэл --session-тэй ашиглана уу")
         process.exit(1)
       }
 

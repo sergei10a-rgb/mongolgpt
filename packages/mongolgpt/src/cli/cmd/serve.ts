@@ -6,7 +6,7 @@ import { Flag } from "@mongolgpt/core/flag/flag"
 export const ServeCommand = effectCmd({
   command: "serve",
   builder: (yargs) => withNetworkOptions(yargs),
-  describe: "headless MongolGPT сервер эхлүүлэх",
+  describe: "интерфэйсгүй MongolGPT сервер эхлүүлэх",
   // Server loads instances per-request via x-mongolgpt-directory header — no
   // need for an ambient project InstanceContext at startup.
   instance: false,

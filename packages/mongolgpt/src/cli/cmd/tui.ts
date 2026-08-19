@@ -70,7 +70,7 @@ export function resolveThreadDirectory(project?: string, envPWD = process.env.PW
 
 export const TuiThreadCommand = cmd({
   command: "$0 [project]",
-  describe: "MongolGPT TUI эхлүүлэх",
+  describe: "MongolGPT-ийн терминалын интерфэйсийг эхлүүлэх",
   builder: (yargs) =>
     withNetworkOptions(yargs)
       .positional("project", {
@@ -80,7 +80,7 @@ export const TuiThreadCommand = cmd({
       .option("model", {
         type: "string",
         alias: ["m"],
-        describe: "ашиглах загвар, provider/model форматтай",
+        describe: "ашиглах загвар, үйлчилгээ үзүүлэгч/загварын хэлбэртэй",
       })
       .option("continue", {
         alias: ["c"],
@@ -94,15 +94,15 @@ export const TuiThreadCommand = cmd({
       })
       .option("fork", {
         type: "boolean",
-        describe: "үргэлжлүүлэхдээ сешнийг fork хийх (--continue эсвэл --session-тэй ашиглана)",
+        describe: "үргэлжлүүлэхдээ сешнийг салаалуулах (--continue эсвэл --session-тэй ашиглана)",
       })
       .option("prompt", {
         type: "string",
-        describe: "ашиглах prompt",
+        describe: "ашиглах заавар",
       })
       .option("agent", {
         type: "string",
-        describe: "ашиглах agent",
+        describe: "ашиглах агент",
       })
       .option("mini", {
         type: "boolean",
@@ -115,11 +115,11 @@ export const TuiThreadCommand = cmd({
       })
       .option("no-replay", {
         type: "boolean",
-        describe: "resume болон resize-ийн дараа mini сешний түүхийг дахин харуулахгүй",
+        describe: "үргэлжлүүлэлт болон цонхны хэмжээ өөрчлөгдсөний дараа жижиг сешний түүхийг дахин харуулахгүй",
       })
       .option("replay-limit", {
         type: "number",
-        describe: "mini replay-д харагдах түүхийг хамгийн шинэ N мессежээр хязгаарлах",
+        describe: "жижиг горимд дахин харуулах түүхийг хамгийн шинэ N мессежээр хязгаарлах",
       })
       .option("demo", {
         type: "boolean",
@@ -130,13 +130,13 @@ export const TuiThreadCommand = cmd({
       const { AppRuntime } = await import("@/effect/app-runtime")
       const { ensureAccountLogin } = await import("./account")
       if (await AppRuntime.runPromise(ensureAccountLogin())) return true
-      UI.error("MongolGPT ашиглахын өмнө аккаунтаар нэвтэрнэ үү")
+      UI.error("MongolGPT ашиглахын өмнө бүртгэлээрээ нэвтэрнэ үү")
       process.exitCode = 1
       return false
     }
 
     if (args.replay === true) {
-      UI.error("--replay дэмжигдэхгүй; replay анхдагчаар идэвхтэй")
+      UI.error("--replay дэмжигдэхгүй; дахин харуулах горим анхдагчаар идэвхтэй")
       process.exitCode = 1
       return
     }
@@ -152,10 +152,7 @@ export const TuiThreadCommand = cmd({
         return
       }
 
-      if (
-        args.replayLimit !== undefined &&
-        (!Number.isInteger(args.replayLimit) || args.replayLimit <= 0)
-      ) {
+      if (args.replayLimit !== undefined && (!Number.isInteger(args.replayLimit) || args.replayLimit <= 0)) {
         UI.error("--replay-limit эерэг бүхэл тоо байх ёстой")
         process.exitCode = 1
         return
@@ -168,7 +165,7 @@ export const TuiThreadCommand = cmd({
       }
 
       if (args.fork && !args.continue && !args.session) {
-        UI.error("--fork нь --continue эсвэл --session шаарддаг")
+        UI.error("салаалуулахын тулд --fork-ийг --continue эсвэл --session-тэй ашиглана уу")
         process.exitCode = 1
         return
       }
@@ -203,7 +200,7 @@ export const TuiThreadCommand = cmd({
     }
 
     if (args.fork && !args.continue && !args.session) {
-      UI.error("--fork нь --continue эсвэл --session шаарддаг")
+      UI.error("салаалуулахын тулд --fork-ийг --continue эсвэл --session-тэй ашиглана уу")
       process.exitCode = 1
       return
     }

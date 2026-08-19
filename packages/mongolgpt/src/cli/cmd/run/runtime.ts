@@ -407,7 +407,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
   if (Flag.MONGOLGPT_SHOW_TTFD) {
     footer.append({
       kind: "system",
-      text: `startup ${Math.max(0, Math.round(performance.now() - start))}ms`,
+      text: `эхлэлт ${Math.max(0, Math.round(performance.now() - start))}мс`,
       phase: "final",
       source: "system",
     })
@@ -612,7 +612,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
               })
               footer.append({
                 kind: "system",
-                text: `new session ${state.sessionID}`,
+                text: `шинэ сешн ${state.sessionID}`,
                 phase: "final",
                 source: "system",
               })

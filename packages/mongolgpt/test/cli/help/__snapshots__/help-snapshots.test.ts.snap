@@ -3,70 +3,71 @@
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt acp --help 1`] = `
 "mongolgpt acp
 
-ACP (Agent Client Protocol) сервер эхлүүлэх
+ACP (агент-клиентийн протокол) сервер эхлүүлэх
 
-Options:
-  -h, --help         тусламж харуулах                                                      [boolean]
-  -v, --version      хувилбарын дугаар харуулах                                            [boolean]
-      --print-logs   логийг stderr рүү хэвлэх                                              [boolean]
-      --log-level    логийн түвшин              [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure         гадаад plugin-гүй ажиллуулах                                          [boolean]
-      --port         сонсох порт                                               [number] [default: 0]
-      --hostname     сонсох хостын нэр                               [string] [default: "127.0.0.1"]
-      --mdns         mDNS үйлчилгээний илрүүлэлтийг идэвхжүүлэх (хостын нэрийг заагаагүй бол 0.0.0.0
-                     ашиглана)                                            [boolean] [default: false]
+Сонголтууд:
+  -h, --help         тусламж харуулах                                                        [логик]
+  -v, --version      хувилбарын дугаар харуулах                                              [логик]
+      --print-logs   логийг стандарт алдааны урсгал руу хэвлэх                               [логик]
+      --log-level    логийн түвшин            [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure         гадаад нэмэлтгүй ажиллуулах                                             [логик]
+      --port         сонсох порт                                                  [тоо] [анхдагч: 0]
+      --hostname     сонсох хостын нэр                                [текст] [анхдагч: "127.0.0.1"]
+      --mdns         mDNS үйлчилгээг илрүүлэхийг идэвхжүүлэх (хостын нэрийг заагаагүй бол 0.0.0.0
+                     ашиглана)                                              [логик] [анхдагч: false]
       --mdns-domain  mDNS үйлчилгээний өөрийн домэйн нэр (анхдагч: mongolgpt.local)
-                                                               [string] [default: "mongolgpt.local"]
-      --cors         CORS-д зөвшөөрөх нэмэлт домэйнүүд                         [array] [default: []]
-      --cwd          ажлын хавтас [string] [default: "<HOME>"]"
+                                                                [текст] [анхдагч: "mongolgpt.local"]
+      --cors         CORS-д зөвшөөрөх нэмэлт домэйнүүд                      [жагсаалт] [анхдагч: []]
+      --cwd          ажлын хавтас
+                                [текст] [анхдагч: "<HOME>"]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt mcp --help 1`] = `
 "mongolgpt mcp
 
-MCP (Model Context Protocol) серверүүдийг удирдах
+MCP (загварын контекстийн протокол) серверүүдийг удирдах
 
-Commands:
+Командууд:
   mongolgpt mcp add [name]     MCP сервер нэмэх
-  mongolgpt mcp list           MCP серверүүд болон төлөвийг жагсаах                    [aliases: ls]
+  mongolgpt mcp list           MCP серверүүд болон төлөвийг жагсаах                    [өөр нэр: ls]
   mongolgpt mcp auth [name]    OAuth идэвхтэй MCP серверт нэвтрэх
   mongolgpt mcp logout [name]  MCP серверийн OAuth нэвтрэх мэдээллийг устгах
   mongolgpt mcp debug <name>   MCP серверийн OAuth холболтыг оношлох
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt attach --help 1`] = `
 "mongolgpt attach <url>
 
-ажиллаж буй mongolgpt серверт холбогдох
+ажиллаж буй MongolGPT серверт холбогдох
 
-Positionals:
-  url  http://localhost:4096                                                     [string] [required]
+Байрлалын аргументууд:
+  url  http://localhost:4096                                                        [текст] [заавал]
 
-Options:
-  -h, --help          тусламж харуулах                                                     [boolean]
-  -v, --version       хувилбарын дугаар харуулах                                           [boolean]
-      --print-logs    логийг stderr рүү хэвлэх                                             [boolean]
-      --log-level     логийн түвшин             [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure          гадаад plugin-гүй ажиллуулах                                         [boolean]
-      --dir           ажиллуулах хавтас                                                     [string]
-  -c, --continue      сүүлийн сешнийг үргэлжлүүлэх                                         [boolean]
-  -s, --session       үргэлжлүүлэх сешний ID                                                [string]
-      --fork          үргэлжлүүлэхдээ сешнийг fork хийх (--continue эсвэл --session-тэй ашиглана)
-                                                                                           [boolean]
-  -p, --password      үндсэн баталгаажуулалтын нууц үг (анхдагч нь MONGOLGPT_SERVER_PASSWORD)
-                                                                                            [string]
+Сонголтууд:
+  -h, --help          тусламж харуулах                                                       [логик]
+  -v, --version       хувилбарын дугаар харуулах                                             [логик]
+      --print-logs    логийг стандарт алдааны урсгал руу хэвлэх                              [логик]
+      --log-level     логийн түвшин           [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure          гадаад нэмэлтгүй ажиллуулах                                            [логик]
+      --dir           ажиллуулах хавтас                                                      [текст]
+  -c, --continue      сүүлийн сешнийг үргэлжлүүлэх                                           [логик]
+  -s, --session       үргэлжлүүлэх сешний ID                                                 [текст]
+      --fork          үргэлжлүүлэхдээ сешнийг салаалуулах (--continue эсвэл --session-тэй ашиглана)
+                                                                                             [логик]
+  -p, --password      үндсэн баталгаажуулалтын нууц үг (анхдагч нь MONGOLGPT_SERVER_PASSWORD)[текст]
   -u, --username      үндсэн баталгаажуулалтын хэрэглэгчийн нэр (анхдагч нь
-                      MONGOLGPT_SERVER_USERNAME эсвэл 'mongolgpt')                          [string]
-      --mini          жижиг интерактив интерфэйс эхлүүлэх                 [boolean] [default: false]
-      --no-replay     resume болон resize-ийн дараа mini сешний түүхийг дахин харуулахгүй  [boolean]
-      --replay-limit  mini replay-д харагдах түүхийг хамгийн шинэ N мессежээр хязгаарлах    [number]"
+                      MONGOLGPT_SERVER_USERNAME эсвэл 'mongolgpt')                           [текст]
+      --mini          жижиг интерактив интерфэйс эхлүүлэх                   [логик] [анхдагч: false]
+      --no-replay     үргэлжлүүлэлт болон цонхны хэмжээ өөрчлөгдсөний дараа жижиг сешний түүхийг
+                      дахин харуулахгүй                                                      [логик]
+      --replay-limit  жижиг горимд дахин харуулах түүхийг хамгийн шинэ N мессежээр хязгаарлах  [тоо]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt run --help 1`] = `
@@ -74,164 +75,165 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 мессежтэйгээр MongolGPT ажиллуулах
 
-Positionals:
-  message  илгээх мессеж                                                       [array] [default: []]
+Байрлалын аргументууд:
+  message  илгээх мессеж                                                    [жагсаалт] [анхдагч: []]
 
-Options:
-  -h, --help                          тусламж харуулах                                     [boolean]
-  -v, --version                       хувилбарын дугаар харуулах                           [boolean]
-      --print-logs                    логийг stderr рүү хэвлэх                             [boolean]
+Сонголтууд:
+  -h, --help                          тусламж харуулах                                       [логик]
+  -v, --version                       хувилбарын дугаар харуулах                             [логик]
+      --print-logs                    логийг стандарт алдааны урсгал руу хэвлэх              [логик]
       --log-level                     логийн түвшин
-                                                [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure                          гадаад plugin-гүй ажиллуулах                         [boolean]
-      --command                       ажиллуулах команд; аргументэд message ашиглана        [string]
-  -c, --continue                      сүүлийн сешнийг үргэлжлүүлэх                         [boolean]
-  -s, --session                       үргэлжлүүлэх сешний ID                                [string]
+                                              [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure                          гадаад нэмэлтгүй ажиллуулах                            [логик]
+      --command                       ажиллуулах команд; аргументэд message ашиглана         [текст]
+  -c, --continue                      сүүлийн сешнийг үргэлжлүүлэх                           [логик]
+  -s, --session                       үргэлжлүүлэх сешний ID                                 [текст]
       --fork                          үргэлжлүүлэхээс өмнө сешнийг салбарлан үргэлжлүүлэх
-                                      (--continue эсвэл --session шаардлагатай)            [boolean]
-      --share                         сешнийг хуваалцах                                    [boolean]
-  -m, --model                         ашиглах загвар, provider/model хэлбэрээр өгнө         [string]
-      --agent                         ашиглах агент                                         [string]
-      --format                        формат: default (форматлагдсан) эсвэл json (түүхий JSON үйл
-                                      явдал)
-                                          [string] [choices: "default", "json"] [default: "default"]
-  -f, --file                          мессежид хавсаргах файл(ууд)                           [array]
-      --title                         сешний гарчиг (утга өгөөгүй бол богиносгосон prompt ашиглана)
-                                                                                            [string]
+                                      (--continue эсвэл --session шаардлагатай)              [логик]
+      --share                         сешнийг хуваалцах                                      [логик]
+  -m, --model                         ашиглах загвар, үйлчилгээ үзүүлэгч/загварын хэлбэрээр өгнө
+                                                                                             [текст]
+      --agent                         ашиглах агент                                          [текст]
+      --format                        гаралтын хэлбэр: default (форматласан) эсвэл json (түүхий JSON
+                                      үйл явдал)
+                                        [текст] [сонголтууд: "default", "json"] [анхдагч: "default"]
+  -f, --file                          мессежид хавсаргах файл(ууд)                        [жагсаалт]
+      --title                         сешний гарчиг (утга өгөөгүй бол богиносгосон заавар ашиглана)
+                                                                                             [текст]
       --attach                        ажиллаж буй MongolGPT серверт холбогдох (жишээ:
-                                      http://localhost:4096)                                [string]
+                                      http://localhost:4096)                                 [текст]
   -p, --password                      үндсэн баталгаажуулалтын нууц үг (анхдагч нь
-                                      MONGOLGPT_SERVER_PASSWORD)                            [string]
+                                      MONGOLGPT_SERVER_PASSWORD)                             [текст]
   -u, --username                      үндсэн баталгаажуулалтын хэрэглэгчийн нэр (анхдагч нь
-                                      MONGOLGPT_SERVER_USERNAME эсвэл 'mongolgpt')          [string]
-      --dir                           ажиллуулах хавтас, attach хийж байвал алсын сервер дээрх зам
-                                                                                            [string]
+                                      MONGOLGPT_SERVER_USERNAME эсвэл 'mongolgpt')           [текст]
+      --dir                           ажиллуулах хавтас; алсын серверт холбогдсон бол сервер дээрх
+                                      зам                                                    [текст]
       --port                          локал серверийн порт (утга өгөөгүй бол санамсаргүй порт
-                                      ашиглана)                                             [number]
+                                      ашиглана)                                                [тоо]
       --variant                       загварын хувилбар (үйлчилгээ үзүүлэгчээс хамаарах бодолтын
-                                      түвшин, жишээ: high, max, minimal)                    [string]
-      --thinking                      бодох явцын хэсгүүдийг харуулах                      [boolean]
-      --dangerously-skip-permissions  шууд deny хийгдээгүй permission-уудыг автоматаар зөвшөөрөх
-                                      (аюултай!)                          [boolean] [default: false]"
+                                      түвшин, жишээ: high, max, minimal)                     [текст]
+      --thinking                      бодох явцын хэсгүүдийг харуулах                        [логик]
+      --dangerously-skip-permissions  шууд хориглоогүй зөвшөөрлүүдийг автоматаар олгох (аюултай!)
+                                                                            [логик] [анхдагч: false]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt debug --help 1`] = `
 "mongolgpt debug
 
-debug болон асуудал оношлох хэрэгслүүд
+алдаа оношлох хэрэгслүүд
 
-Commands:
+Командууд:
   mongolgpt debug config        шийдэгдсэн тохиргоог харуулах
-  mongolgpt debug lsp           LSP debug хийх хэрэгслүүд
-  mongolgpt debug rg            ripgrep debug хийх хэрэгслүүд
-  mongolgpt debug file          файлын систем debug хийх хэрэгслүүд
+  mongolgpt debug lsp           LSP оношилгооны хэрэгслүүд
+  mongolgpt debug rg            ripgrep оношилгооны хэрэгслүүд
+  mongolgpt debug file          файлын систем оношлох хэрэгслүүд
   mongolgpt debug scrap         мэдэгдэж буй бүх төслийг жагсаах
-  mongolgpt debug skill         боломжтой бүх skill-ийг жагсаах
-  mongolgpt debug snapshot      snapshot debug хийх хэрэгслүүд
-  mongolgpt debug startup       startup timing хэвлэх
-  mongolgpt debug agent <name>  agent тохиргооны дэлгэрэнгүйг харуулах
-  mongolgpt debug v2            v2 catalog болон built-in plugin-уудыг debug хийх
-  mongolgpt debug info          debug мэдээлэл харуулах
-  mongolgpt debug paths         глобал замуудыг харуулах (data, config, cache, state)
-  mongolgpt debug wait          хязгааргүй хүлээх (debug хийхэд)
+  mongolgpt debug skill         боломжтой бүх ур чадварыг жагсаах
+  mongolgpt debug snapshot      агшин зургийг оношлох хэрэгслүүд
+  mongolgpt debug startup       эхлэлийн хугацааг хэвлэх
+  mongolgpt debug agent <name>  агентийн тохиргооны дэлгэрэнгүйг харуулах
+  mongolgpt debug v2            v2 каталог болон суурилуулсан нэмэлтүүдийг оношлох
+  mongolgpt debug info          оношилгооны мэдээлэл харуулах
+  mongolgpt debug paths         нийтлэг замуудыг харуулах (өгөгдөл, тохиргоо, түр хадгалалт, төлөв)
+  mongolgpt debug wait          хязгааргүй хүлээх (алдаа оношлоход)
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt providers --help 1`] = `
 "mongolgpt providers
 
-AI үйлчилгээ үзүүлэгч болон итгэмжлэлүүдийг удирдах
+AI үйлчилгээ үзүүлэгч болон нэвтрэх мэдээллийг удирдах
 
-Commands:
+Командууд:
   mongolgpt providers list               үйлчилгээ үзүүлэгч болон итгэмжлэлүүдийг жагсаах
-                                                                                       [aliases: ls]
+                                                                                       [өөр нэр: ls]
   mongolgpt providers login [url]        үйлчилгээ үзүүлэгчид нэвтрэх
   mongolgpt providers logout [provider]  тохируулсан үйлчилгээ үзүүлэгчээс гарах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt agent --help 1`] = `
 "mongolgpt agent
 
-agent-уудыг удирдах
+агентуудыг удирдах
 
-Commands:
-  mongolgpt agent create  шинэ agent үүсгэх
-  mongolgpt agent list    боломжтой бүх agent-ийг жагсаах
+Командууд:
+  mongolgpt agent create  шинэ агент үүсгэх
+  mongolgpt agent list    боломжтой бүх агентыг жагсаах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt upgrade --help 1`] = `
 "mongolgpt upgrade [target]
 
-mongolgpt-ийг хамгийн сүүлийн эсвэл тодорхой хувилбар руу шинэчлэх
+MongolGPT-ийг хамгийн сүүлийн эсвэл тодорхой хувилбар руу шинэчлэх
 
-Positionals:
-  target  шинэчлэх хувилбар, жишээ нь '0.1.48' эсвэл 'v0.1.48'                              [string]
+Байрлалын аргументууд:
+  target  шинэчлэх хувилбар, жишээ нь '0.1.48' эсвэл 'v0.1.48'                               [текст]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
   -m, --method      ашиглах суулгалтын арга
-                          [string] [choices: "curl", "npm", "pnpm", "bun", "brew", "choco", "scoop"]"
+                        [текст] [сонголтууд: "curl", "npm", "pnpm", "bun", "brew", "choco", "scoop"]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt uninstall --help 1`] = `
 "mongolgpt uninstall
 
-mongolgpt-ийг устгаж, холбоотой файлуудыг цэвэрлэх
+MongolGPT-ийг устгаж, холбоотой файлуудыг цэвэрлэх
 
-Options:
-  -h, --help         тусламж харуулах                                                      [boolean]
-  -v, --version      хувилбарын дугаар харуулах                                            [boolean]
-      --print-logs   логийг stderr рүү хэвлэх                                              [boolean]
-      --log-level    логийн түвшин              [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure         гадаад plugin-гүй ажиллуулах                                          [boolean]
-  -c, --keep-config  тохиргооны файлуудыг үлдээх                          [boolean] [default: false]
-  -d, --keep-data    сешний өгөгдөл болон агшин хуулбаруудыг үлдээх       [boolean] [default: false]
-      --dry-run      устгахгүйгээр юу устахыг урьдчилан харуулах          [boolean] [default: false]
-  -f, --force        баталгаажуулах асуултуудыг алгасах                   [boolean] [default: false]"
+Сонголтууд:
+  -h, --help         тусламж харуулах                                                        [логик]
+  -v, --version      хувилбарын дугаар харуулах                                              [логик]
+      --print-logs   логийг стандарт алдааны урсгал руу хэвлэх                               [логик]
+      --log-level    логийн түвшин            [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure         гадаад нэмэлтгүй ажиллуулах                                             [логик]
+  -c, --keep-config  тохиргооны файлуудыг үлдээх                            [логик] [анхдагч: false]
+  -d, --keep-data    сешний өгөгдөл болон агшин хуулбаруудыг үлдээх         [логик] [анхдагч: false]
+      --dry-run      устгахгүйгээр юу устахыг урьдчилан харуулах            [логик] [анхдагч: false]
+  -f, --force        баталгаажуулах асуултуудыг алгасах                     [логик] [анхдагч: false]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt serve --help 1`] = `
 "mongolgpt serve
 
-headless MongolGPT сервер эхлүүлэх
+интерфэйсгүй MongolGPT сервер эхлүүлэх
 
-Options:
-  -h, --help         тусламж харуулах                                                      [boolean]
-  -v, --version      хувилбарын дугаар харуулах                                            [boolean]
-      --print-logs   логийг stderr рүү хэвлэх                                              [boolean]
-      --log-level    логийн түвшин              [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure         гадаад plugin-гүй ажиллуулах                                          [boolean]
-      --port         сонсох порт                                               [number] [default: 0]
-      --hostname     сонсох хостын нэр                               [string] [default: "127.0.0.1"]
-      --mdns         mDNS үйлчилгээний илрүүлэлтийг идэвхжүүлэх (хостын нэрийг заагаагүй бол 0.0.0.0
-                     ашиглана)                                            [boolean] [default: false]
+Сонголтууд:
+  -h, --help         тусламж харуулах                                                        [логик]
+  -v, --version      хувилбарын дугаар харуулах                                              [логик]
+      --print-logs   логийг стандарт алдааны урсгал руу хэвлэх                               [логик]
+      --log-level    логийн түвшин            [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure         гадаад нэмэлтгүй ажиллуулах                                             [логик]
+      --port         сонсох порт                                                  [тоо] [анхдагч: 0]
+      --hostname     сонсох хостын нэр                                [текст] [анхдагч: "127.0.0.1"]
+      --mdns         mDNS үйлчилгээг илрүүлэхийг идэвхжүүлэх (хостын нэрийг заагаагүй бол 0.0.0.0
+                     ашиглана)                                              [логик] [анхдагч: false]
       --mdns-domain  mDNS үйлчилгээний өөрийн домэйн нэр (анхдагч: mongolgpt.local)
-                                                               [string] [default: "mongolgpt.local"]
-      --cors         CORS-д зөвшөөрөх нэмэлт домэйнүүд                         [array] [default: []]"
+                                                                [текст] [анхдагч: "mongolgpt.local"]
+      --cors         CORS-д зөвшөөрөх нэмэлт домэйнүүд                      [жагсаалт] [анхдагч: []]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt web --help 1`] = `
@@ -239,19 +241,19 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 MongolGPT сервер эхлүүлж вэб интерфэйс нээх
 
-Options:
-  -h, --help         тусламж харуулах                                                      [boolean]
-  -v, --version      хувилбарын дугаар харуулах                                            [boolean]
-      --print-logs   логийг stderr рүү хэвлэх                                              [boolean]
-      --log-level    логийн түвшин              [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure         гадаад plugin-гүй ажиллуулах                                          [boolean]
-      --port         сонсох порт                                               [number] [default: 0]
-      --hostname     сонсох хостын нэр                               [string] [default: "127.0.0.1"]
-      --mdns         mDNS үйлчилгээний илрүүлэлтийг идэвхжүүлэх (хостын нэрийг заагаагүй бол 0.0.0.0
-                     ашиглана)                                            [boolean] [default: false]
+Сонголтууд:
+  -h, --help         тусламж харуулах                                                        [логик]
+  -v, --version      хувилбарын дугаар харуулах                                              [логик]
+      --print-logs   логийг стандарт алдааны урсгал руу хэвлэх                               [логик]
+      --log-level    логийн түвшин            [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure         гадаад нэмэлтгүй ажиллуулах                                             [логик]
+      --port         сонсох порт                                                  [тоо] [анхдагч: 0]
+      --hostname     сонсох хостын нэр                                [текст] [анхдагч: "127.0.0.1"]
+      --mdns         mDNS үйлчилгээг илрүүлэхийг идэвхжүүлэх (хостын нэрийг заагаагүй бол 0.0.0.0
+                     ашиглана)                                              [логик] [анхдагч: false]
       --mdns-domain  mDNS үйлчилгээний өөрийн домэйн нэр (анхдагч: mongolgpt.local)
-                                                               [string] [default: "mongolgpt.local"]
-      --cors         CORS-д зөвшөөрөх нэмэлт домэйнүүд                         [array] [default: []]"
+                                                                [текст] [анхдагч: "mongolgpt.local"]
+      --cors         CORS-д зөвшөөрөх нэмэлт домэйнүүд                      [жагсаалт] [анхдагч: []]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt models --help 1`] = `
@@ -259,17 +261,17 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 боломжтой бүх загварыг жагсаах
 
-Positionals:
-  provider  загвар шүүх үйлчилгээ үзүүлэгчийн ID                                            [string]
+Байрлалын аргументууд:
+  provider  загвар шүүх үйлчилгээ үзүүлэгчийн ID                                             [текст]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
-      --verbose     загварын дэлгэрэнгүй гаралт ашиглах (өртөг зэрэг мета өгөгдөл орно)    [boolean]
-      --refresh     models.dev-ээс загварын кэшийг шинэчлэх                                [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
+      --verbose     загварын дэлгэрэнгүй гаралт ашиглах (өртөг зэрэг нэмэлт өгөгдөл орно)    [логик]
+      --refresh     models.dev-ээс загварын түр хадгалсан өгөгдлийг шинэчлэх                 [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt stats --help 1`] = `
@@ -277,83 +279,83 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 токены хэрэглээ болон өртгийн статистик харуулах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
-      --days        сүүлийн N өдрийн статистик харуулах (анхдагч: бүх хугацаа)              [number]
-      --tools       харуулах tool-ийн тоо (анхдагч: бүгд)                                   [number]
-      --models      загварын статистик харуулах (анхдагч: нуусан). Top N харуулах бол тоо өгнө, үгүй
-                    бол бүгдийг харуулна
-      --project     төслөөр шүүх (анхдагч: бүх төсөл, хоосон string: одоогийн төсөл)        [string]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
+      --days        сүүлийн N өдрийн статистик харуулах (анхдагч: бүх хугацаа)                 [тоо]
+      --tools       харуулах хэрэгслийн тоо (анхдагч: бүгд)                                    [тоо]
+      --models      загварын статистик харуулах (анхдагч: нуусан). Эхний N загварыг харуулах бол тоо
+                    өгнө, үгүй бол бүгдийг харуулна
+      --project     төслөөр шүүх (анхдагч: бүх төсөл, хоосон тэмдэгт мөр: одоогийн төсөл)    [текст]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt export --help 1`] = `
 "mongolgpt export [sessionID]
 
-сешний өгөгдлийг JSON хэлбэрээр export хийх
+сешний өгөгдлийг JSON хэлбэрээр экспортлох
 
-Positionals:
-  sessionID  export хийх сешний ID                                                          [string]
+Байрлалын аргументууд:
+  sessionID  экспортлох сешний ID                                                            [текст]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
-      --sanitize    transcript болон файлын эмзэг өгөгдлийг нуух                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
+      --sanitize    ярианы бичлэг болон файлын эмзэг өгөгдлийг нуух                          [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt import --help 1`] = `
 "mongolgpt import <file>
 
-сешний өгөгдлийг JSON файл эсвэл URL-аас import хийх
+сешний өгөгдлийг JSON файл эсвэл URL-аас импортлох
 
-Positionals:
-  file  JSON файлын зам эсвэл share URL                                          [string] [required]
+Байрлалын аргументууд:
+  file  JSON файлын зам эсвэл хуваалцах URL                                         [текст] [заавал]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt github --help 1`] = `
 "mongolgpt github
 
-GitHub agent удирдах
+GitHub агент удирдах
 
-Commands:
-  mongolgpt github install  GitHub agent суулгах
-  mongolgpt github run      GitHub agent ажиллуулах
+Командууд:
+  mongolgpt github install  GitHub агент суулгах
+  mongolgpt github run      GitHub агент ажиллуулах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt pr --help 1`] = `
 "mongolgpt pr <number>
 
-GitHub PR branch татаж checkout хийгээд mongolgpt ажиллуулах
+GitHub PR-ийн салбарыг татаж шалгаад MongolGPT ажиллуулах
 
-Positionals:
-  number  checkout хийх PR дугаар                                                [number] [required]
+Байрлалын аргументууд:
+  number  шалгах PR дугаар                                                            [тоо] [заавал]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt session --help 1`] = `
@@ -361,16 +363,16 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 сешнүүдийг удирдах
 
-Commands:
+Командууд:
   mongolgpt session list                сешнүүдийг жагсаах
   mongolgpt session delete <sessionID>  сешн устгах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt plugin --help 1`] = `
@@ -378,38 +380,39 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 нэмэлт суулгаж тохиргоог шинэчлэх
 
-Positionals:
-  module  npm module-ийн нэр                                                     [string] [required]
+Байрлалын аргументууд:
+  module  npm модулийн нэр                                                          [текст] [заавал]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
-  -g, --global      глобал тохиргоонд суулгах                             [boolean] [default: false]
-  -f, --force       байгаа нэмэлтийн хувилбарыг солих                     [boolean] [default: false]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
+  -g, --global      глобал тохиргоонд суулгах                               [логик] [анхдагч: false]
+  -f, --force       байгаа нэмэлтийн хувилбарыг солих                       [логик] [анхдагч: false]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt db --help 1`] = `
 "mongolgpt db
 
-database хэрэгслүүд
+өгөгдлийн сангийн хэрэгслүүд
 
-Commands:
-  mongolgpt db [query]     интерактив sqlite3 shell нээх эсвэл query ажиллуулах            [default]
-  mongolgpt db path        database-ийн замыг хэвлэх
+Командууд:
+  mongolgpt db [query]     sqlite3-ийн харилцан үйлдэлт бүрхүүл нээх эсвэл асуулга ажиллуулах
+                                                                                           [анхдагч]
+  mongolgpt db path        өгөгдлийн сангийн замыг хэвлэх
 
-Positionals:
-  query  ажиллуулах SQL query                                                               [string]
+Байрлалын аргументууд:
+  query  ажиллуулах SQL асуулга                                                              [текст]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
-      --format      гаралтын формат               [string] [choices: "json", "tsv"] [default: "tsv"]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
+      --format      гаралтын формат             [текст] [сонголтууд: "json", "tsv"] [анхдагч: "tsv"]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt mcp list --help 1`] = `
@@ -417,12 +420,12 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 MCP серверүүд болон төлөвийг жагсаах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt mcp add --help 1`] = `
@@ -430,18 +433,18 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 MCP сервер нэмэх
 
-Positionals:
-  name  MCP серверийн нэр                                                                   [string]
+Байрлалын аргументууд:
+  name  MCP серверийн нэр                                                                    [текст]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
-      --url         алсын MCP серверийн URL                                                 [string]
-      --env         локал MCP серверийн орчны хувьсагч (KEY=VALUE)                           [array]
-      --header      алсын MCP серверийн HTTP header (KEY=VALUE)                              [array]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
+      --url         алсын MCP серверийн URL                                                  [текст]
+      --env         локал MCP серверийн орчны хувьсагч (KEY=VALUE)                        [жагсаалт]
+      --header      алсын MCP серверийн HTTP толгой мэдээлэл (KEY=VALUE)                  [жагсаалт]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt mcp auth --help 1`] = `
@@ -449,19 +452,19 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 OAuth идэвхтэй MCP серверт нэвтрэх
 
-Commands:
+Командууд:
   mongolgpt mcp auth list  OAuth боломжтой MCP серверүүд болон нэвтрэлтийн төлөвийг жагсаах
-                                                                                       [aliases: ls]
+                                                                                       [өөр нэр: ls]
 
-Positionals:
-  name  MCP серверийн нэр                                                                   [string]
+Байрлалын аргументууд:
+  name  MCP серверийн нэр                                                                    [текст]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt mcp logout --help 1`] = `
@@ -469,15 +472,15 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 MCP серверийн OAuth нэвтрэх мэдээллийг устгах
 
-Positionals:
-  name  MCP серверийн нэр                                                                   [string]
+Байрлалын аргументууд:
+  name  MCP серверийн нэр                                                                    [текст]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt providers list --help 1`] = `
@@ -485,12 +488,12 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 үйлчилгээ үзүүлэгч болон итгэмжлэлүүдийг жагсаах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt providers login --help 1`] = `
@@ -498,17 +501,17 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 үйлчилгээ үзүүлэгчид нэвтрэх
 
-Positionals:
-  url  MongolGPT нэвтрэлтийн үйлчилгээ үзүүлэгч                                             [string]
+Байрлалын аргументууд:
+  url  MongolGPT-ийн нэвтрэх үйлчилгээ үзүүлэгч                                              [текст]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
-  -p, --provider    нэвтрэх үйлчилгээ үзүүлэгчийн ID эсвэл нэр (сонголтыг алгасна)          [string]
-  -m, --method      нэвтрэх аргын нэр (арга сонголтыг алгасна)                              [string]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
+  -p, --provider    нэвтрэх үйлчилгээ үзүүлэгчийн ID эсвэл нэр (сонголтыг алгасна)           [текст]
+  -m, --method      нэвтрэх аргын нэр (арга сонголтыг алгасна)                               [текст]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt providers logout --help 1`] = `
@@ -516,48 +519,48 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 тохируулсан үйлчилгээ үзүүлэгчээс гарах
 
-Positionals:
-  provider  гарах үйлчилгээ үзүүлэгчийн ID эсвэл нэр                                        [string]
+Байрлалын аргументууд:
+  provider  гарах үйлчилгээ үзүүлэгчийн ID эсвэл нэр                                         [текст]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt agent create --help 1`] = `
 "mongolgpt agent create
 
-шинэ agent үүсгэх
+шинэ агент үүсгэх
 
-Options:
-  -h, --help                  тусламж харуулах                                             [boolean]
-  -v, --version               хувилбарын дугаар харуулах                                   [boolean]
-      --print-logs            логийг stderr рүү хэвлэх                                     [boolean]
-      --log-level             логийн түвшин     [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure                  гадаад plugin-гүй ажиллуулах                                 [boolean]
-      --path                  agent файлыг үүсгэх хавтасны зам                              [string]
-      --description           agent юу хийх ёстойг тайлбарлах                               [string]
-      --mode                  agent-ийн горим       [string] [choices: "all", "primary", "subagent"]
-      --permissions, --tools  зөвшөөрөх permission-уудыг таслалаар тусгаарласан жагсаалт (анхдагч:
-                              бүгд). Боломжтой: "bash, read, edit, glob, grep, webfetch, task,
-                              todowrite, websearch, lsp, skill"                             [string]
-  -m, --model                 ашиглах загвар, provider/model форматтай                      [string]"
+Сонголтууд:
+  -h, --help                  тусламж харуулах                                               [логик]
+  -v, --version               хувилбарын дугаар харуулах                                     [логик]
+      --print-logs            логийг стандарт алдааны урсгал руу хэвлэх                      [логик]
+      --log-level             логийн түвшин   [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure                  гадаад нэмэлтгүй ажиллуулах                                    [логик]
+      --path                  агентийн файл үүсгэх хавтасны зам                              [текст]
+      --description           агент юу хийх ёстойг тайлбарлах                                [текст]
+      --mode                  агентийн горим      [текст] [сонголтууд: "all", "primary", "subagent"]
+      --permissions, --tools  зөвшөөрлүүдийг таслалаар тусгаарласан жагсаалт (анхдагч: бүгд).
+                              Боломжтой: "bash, read, edit, glob, grep, webfetch, task, todowrite,
+                              websearch, lsp, skill"                                         [текст]
+  -m, --model                 ашиглах загвар, үйлчилгээ үзүүлэгч/загварын хэлбэртэй          [текст]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt agent list --help 1`] = `
 "mongolgpt agent list
 
-боломжтой бүх agent-ийг жагсаах
+боломжтой бүх агентыг жагсаах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt session list --help 1`] = `
@@ -565,14 +568,14 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 сешнүүдийг жагсаах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
-  -n, --max-count   хамгийн сүүлийн N сешнээр хязгаарлах                                    [number]
-      --format      гаралтын формат           [string] [choices: "table", "json"] [default: "table"]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
+  -n, --max-count   хамгийн сүүлийн N сешнээр хязгаарлах                                       [тоо]
+      --format      гаралтын формат         [текст] [сонголтууд: "table", "json"] [анхдагч: "table"]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt session delete --help 1`] = `
@@ -580,54 +583,54 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 
 сешн устгах
 
-Positionals:
-  sessionID  устгах сешний ID                                                    [string] [required]
+Байрлалын аргументууд:
+  sessionID  устгах сешний ID                                                       [текст] [заавал]
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt github install --help 1`] = `
 "mongolgpt github install
 
-GitHub agent суулгах
+GitHub агент суулгах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt github run --help 1`] = `
 "mongolgpt github run
 
-GitHub agent ажиллуулах
+GitHub агент ажиллуулах
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
-      --event       agent ажиллуулах GitHub mock event                                      [string]
-      --token       GitHub-ийн хувийн хандалтын токен (github_pat_********)                 [string]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
+      --event       агент ажиллуулах GitHub-ийн туршилтын үйл явдал                          [текст]
+      --token       GitHub-ийн хувийн хандалтын токен (github_pat_********)                  [текст]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt db path --help 1`] = `
 "mongolgpt db path
 
-database-ийн замыг хэвлэх
+өгөгдлийн сангийн замыг хэвлэх
 
-Options:
-  -h, --help        тусламж харуулах                                                       [boolean]
-  -v, --version     хувилбарын дугаар харуулах                                             [boolean]
-      --print-logs  логийг stderr рүү хэвлэх                                               [boolean]
-      --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]"
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;

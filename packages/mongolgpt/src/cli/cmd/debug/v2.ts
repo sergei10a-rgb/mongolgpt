@@ -8,7 +8,7 @@ import { effectCmd } from "../../effect-cmd"
 
 export const V2Command = effectCmd({
   command: "v2",
-  describe: "v2 catalog болон built-in plugin-уудыг debug хийх",
+  describe: "v2 каталог болон суурилуулсан нэмэлтүүдийг оношлох",
   instance: false,
   handler: () =>
     Effect.gen(function* () {

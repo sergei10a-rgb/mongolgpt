@@ -1175,7 +1175,7 @@ export function createPromptState(input: PromptInput): PromptState {
     }
 
     if (!next.text.trim()) {
-      input.onStatus(input.state().phase === "running" ? "одоогийн хариуг хүлээж байна" : "хоосон prompt алгаслаа")
+      input.onStatus(input.state().phase === "running" ? "одоогийн хариуг хүлээж байна" : "хоосон зааврыг алгаслаа")
       return
     }
 

@@ -44,11 +44,11 @@ const run = Effect.fn("Cli.debug.agent.body")(function* (
   if (toolID) {
     const tool = availableTools.find((item) => item.id === toolID)
     if (!tool) {
-      process.stderr.write(`${agentName} agent-д ${toolID} tool олдсонгүй` + EOL)
+      process.stderr.write(`${agentName} агентад ${toolID} хэрэгсэл олдсонгүй` + EOL)
       return yield* fail("", 1)
     }
     if (resolvedTools[toolID] === false) {
-      process.stderr.write(`${agentName} agent-д ${toolID} tool идэвхгүй байна` + EOL)
+      process.stderr.write(`${agentName} агентад ${toolID} хэрэгсэл идэвхгүй байна` + EOL)
       return yield* fail("", 1)
     }
     const params = parseToolParams(args.params)

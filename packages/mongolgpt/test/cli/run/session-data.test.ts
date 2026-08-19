@@ -538,7 +538,7 @@ describe("run session data", () => {
         tool: "glob",
         phase: "start",
         partID: "tool-1",
-        text: "running glob",
+        text: "glob-ийг ажиллуулж байна",
         toolState: "running",
       }),
       expect.objectContaining({

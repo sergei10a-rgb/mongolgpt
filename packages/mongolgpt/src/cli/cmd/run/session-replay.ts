@@ -30,7 +30,7 @@ type ReplayMessage = {
   patch?: FooterPatch
 }
 
-const SHELL_SYNTHETIC_USER_TEXT = "The following tool was executed by the user"
+const SHELL_SYNTHETIC_USER_TEXT = "Хэрэглэгч дараах хэрэгслийг ажиллуулсан"
 
 function apply(data: SessionData, event: Event, sessionID: string, thinking: boolean, limits: Record<string, number>) {
   return reduceSessionData({
