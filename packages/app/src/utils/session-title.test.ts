@@ -11,6 +11,8 @@ describe("sessionTitle", () => {
   test("localizes internal default titles", () => {
     expect(sessionTitle("New session - 2026-08-19T12:00:00.000Z", t)).toBe("Шинэ сешн")
     expect(sessionTitle("Child session - 2026-08-19T12:00:00.000Z", t)).toBe("Дэд сешн")
+    expect(sessionTitle("Шинэ сешн - 2026-08-19T12:00:00.000Z", t)).toBe("Шинэ сешн")
+    expect(sessionTitle("Дэд сешн - 2026-08-19T12:00:00.000Z", t)).toBe("Дэд сешн")
   })
 
   test("preserves generated titles", () => {
