@@ -7,10 +7,33 @@ const json = (value: unknown, status = 200) =>
     headers: { "Content-Type": "application/json; charset=utf-8" },
   })
 
+const now = new Date("2026-08-19T00:00:00.000Z")
+
+const queueHeartbeat = () =>
+  JSON.stringify({
+    version: 1,
+    id: "heartbeat-secret-id",
+    sentAt: now.getTime() - 60_000,
+    processedAt: now.getTime() - 30_000,
+  })
+
+const backup = (overrides: Record<string, unknown> = {}) => ({
+  key: "d1/dev/2026/08/18/2026-08-18T23-55-00.000Z-database.sql",
+  size: 1_024,
+  uploaded: new Date("2026-08-18T23:56:00.000Z"),
+  customMetadata: {
+    createdAt: "2026-08-18T23:55:00.000Z",
+    source: "cloudflare-d1-export",
+    stage: "dev",
+  },
+  ...overrides,
+})
+
 function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): SystemReadinessDependencies {
   return {
     stage: "dev",
     runtimeURL: "https://runtime.dev.mgpt.mn",
+    backupsEnabled: true,
     database: async () => undefined,
     auth: async () => json({ status: "ok", service: "auth" }),
     quota: async () => json({ status: "ok", service: "quota", storage: "durable-objects", queue: "cloudflare-queues" }),
@@ -25,8 +48,9 @@ function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): Sys
         cancellation: true,
       }),
     runtime: async () => json({ healthy: true, version: "0.1.1" }),
-    backups: async () => ({ objects: [{ key: "hidden" }] }),
-    now: () => new Date("2026-08-19T00:00:00.000Z"),
+    queueHeartbeat: async () => queueHeartbeat(),
+    backups: async () => ({ objects: [backup()] }),
+    now: () => now,
     ...overrides,
   }
 }
@@ -43,11 +67,12 @@ describe("MongolGPT admin system readiness", () => {
       runtime: "healthy",
       oauth: "healthy",
       quota: "healthy",
-      "usage-queue": "configured",
+      "usage-queue": "healthy",
       payments: "healthy",
       backup: "healthy",
     })
-    expect(JSON.stringify(report)).not.toContain("hidden")
+    expect(JSON.stringify(report)).not.toContain("heartbeat-secret-id")
+    expect(JSON.stringify(report)).not.toContain("database.sql")
   })
 
   test("fails individual checks closed while keeping the report available", async () => {
@@ -70,6 +95,7 @@ describe("MongolGPT admin system readiness", () => {
             cancellation: false,
           }),
         backups: async () => ({ objects: [] }),
+        queueHeartbeat: async () => null,
       }),
     )
 
@@ -81,7 +107,7 @@ describe("MongolGPT admin system readiness", () => {
       quota: "degraded",
       "usage-queue": "degraded",
       payments: "disabled",
-      backup: "configured",
+      backup: "degraded",
     })
     expect(JSON.stringify(report)).not.toContain("secret database diagnostic")
   })
@@ -97,5 +123,68 @@ describe("MongolGPT admin system readiness", () => {
     expect(report.checks.find((check) => check.id === "runtime")?.state).toBe("degraded")
     expect(report.checks.find((check) => check.id === "oauth")?.state).toBe("degraded")
     expect(JSON.stringify(report)).not.toContain("must-not-pass")
+  })
+
+  test("fails stale or malformed queue heartbeat evidence closed", async () => {
+    const evidence = [
+      "not-json",
+      JSON.stringify({
+        version: 1,
+        id: "stale",
+        sentAt: now.getTime() - 1_000_000,
+        processedAt: now.getTime() - 950_000,
+      }),
+      JSON.stringify({ version: 1, id: "reversed", sentAt: now.getTime(), processedAt: now.getTime() - 1 }),
+      JSON.stringify({
+        version: 1,
+        id: "future",
+        sentAt: now.getTime() + 180_000,
+        processedAt: now.getTime() + 180_000,
+      }),
+    ]
+
+    for (const value of evidence) {
+      const report = await collectSystemReadiness(dependencies({ queueHeartbeat: async () => value }))
+      expect(report.checks.find((check) => check.id === "usage-queue")?.state).toBe("degraded")
+    }
+  })
+
+  test("requires recent, bounded D1 export evidence for the active stage", async () => {
+    const objects = [
+      backup({
+        key: "d1/dev/2026/08/17/2026-08-17T00-00-00.000Z-database.sql",
+        uploaded: new Date("2026-08-17T00:01:00.000Z"),
+        customMetadata: {
+          createdAt: "2026-08-17T00:00:00.000Z",
+          source: "cloudflare-d1-export",
+          stage: "dev",
+        },
+      }),
+      backup({ key: "d1/production/2026/08/18/2026-08-18T23-55-00.000Z-database.sql" }),
+      backup({ size: 10 * 1024 * 1024 * 1024 + 1 }),
+      backup({ customMetadata: { createdAt: "2026-08-18T23:55:00.000Z", source: "unknown", stage: "dev" } }),
+    ]
+
+    for (const object of objects) {
+      const report = await collectSystemReadiness(dependencies({ backups: async () => ({ objects: [object] }) }))
+      expect(report.checks.find((check) => check.id === "backup")?.state).toBe("degraded")
+    }
+  })
+
+  test("reports disabled backup automation without probing R2", async () => {
+    let probed = false
+    const report = await collectSystemReadiness(
+      dependencies({
+        backupsEnabled: false,
+        backups: async () => {
+          probed = true
+          throw new Error("must not run")
+        },
+      }),
+    )
+
+    expect(probed).toBe(false)
+    expect(report.status).toBe("degraded")
+    expect(report.checks.find((check) => check.id === "backup")?.state).toBe("disabled")
   })
 })

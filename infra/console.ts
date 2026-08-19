@@ -99,11 +99,12 @@ export const usageQueue = new sst.cloudflare.Queue("UsageQueue", {
     retryDelay: "30 seconds",
   },
 })
+export const usageQueueReadiness = new sst.cloudflare.Kv("UsageQueueReadiness")
 
 usageQueue.subscribe(
   {
     handler: "packages/console/function/src/usage-queue.ts",
-    link: [database],
+    link: [database, usageQueueReadiness],
   },
   {
     batch: {
@@ -112,6 +113,17 @@ usageQueue.subscribe(
     },
   },
 )
+
+export const usageQueueHeartbeat = new sst.cloudflare.Cron("UsageQueueHeartbeat", {
+  schedules: ["*/5 * * * *"],
+  worker: {
+    handler: "packages/console/function/src/usage-queue-heartbeat.ts",
+    link: [usageQueue],
+    compatibility: {
+      date: "2026-07-15",
+    },
+  },
+})
 
 const paymentDeadLetterQueue = new sst.cloudflare.Queue("PaymentDeadLetterQueue")
 export const paymentQueue = new sst.cloudflare.Queue("PaymentQueue", {
