@@ -2,7 +2,7 @@ import windowState from "electron-window-state"
 import { resolveThemeVariant } from "@mongolgpt/ui/theme/resolve"
 import type { DesktopTheme } from "@mongolgpt/ui/theme/types"
 import mongolgptThemeJson from "../../../ui/src/theme/themes/mongolgpt.json"
-import { app, BrowserWindow, dialog, net, nativeImage, nativeTheme, protocol } from "electron"
+import { app, BrowserWindow, dialog, net, nativeImage, nativeTheme, protocol, shell } from "electron"
 import { dirname, isAbsolute, join, relative, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import type { TitlebarTheme } from "../preload/types"
@@ -10,11 +10,15 @@ import { exportDebugLogs, write as writeLog } from "./logging"
 import { getStore } from "./store"
 import { PINCH_ZOOM_ENABLED_KEY } from "./store-keys"
 import { createUnresponsiveSampler } from "./unresponsive"
+import {
+  isSafeExternalNavigation,
+  isTrustedRendererUrl,
+  rendererHost,
+  rendererProtocol,
+} from "./renderer-security"
 
 const root = dirname(fileURLToPath(import.meta.url))
 const rendererRoot = join(root, "../renderer")
-const rendererProtocol = "mongolgpt-renderer"
-const rendererHost = "renderer"
 const clipboardWritePermission = "clipboard-sanitized-write"
 const notificationPermission = "notifications"
 const rendererPermissions = new Set([clipboardWritePermission, notificationPermission])
@@ -162,6 +166,7 @@ export function createMainWindow() {
   })
 
   allowRendererPermissions(win)
+  wireNavigationPolicy(win)
   wireWindowRecovery(win, "main")
 
   win.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -380,24 +385,38 @@ function allowRendererPermissions(win: BrowserWindow) {
   })
 }
 
-function isTrustedRendererUrl(value?: string) {
-  return isRendererUrl(value)
-}
-
 function addRendererHeaders(value: string, headers: Record<string, any>) {
   upsertKeyValue(headers, "Access-Control-Allow-Origin", ["*"])
   upsertKeyValue(headers, "Access-Control-Allow-Headers", ["*"])
-  if (isRendererUrl(value, true)) upsertKeyValue(headers, documentPolicyHeader, [jsCallStacksDocumentPolicy])
+  if (isTrustedRendererHtml(value)) upsertKeyValue(headers, documentPolicyHeader, [jsCallStacksDocumentPolicy])
 }
 
-function isRendererUrl(value?: string, html = false) {
+function isTrustedRendererHtml(value?: string) {
   if (!value || !URL.canParse(value)) return false
   const url = new URL(value)
-  if (html && !url.pathname.endsWith(".html")) return false
-  if (url.protocol === `${rendererProtocol}:` && url.host === rendererHost) return true
-  const devUrl = process.env.ELECTRON_RENDERER_URL
-  if (!devUrl || !URL.canParse(devUrl)) return false
-  return url.origin === new URL(devUrl).origin
+  return url.pathname.endsWith(".html") && isTrustedRendererUrl(value)
+}
+
+function wireNavigationPolicy(win: BrowserWindow) {
+  const openExternal = (value: string) => {
+    if (!isSafeExternalNavigation(value)) {
+      writeLog("window", "blocked external navigation", { url: value }, "warn")
+      return
+    }
+    void shell.openExternal(value).catch((error) =>
+      writeLog("window", "failed to open external navigation", { url: value, error }, "error"),
+    )
+  }
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    openExternal(url)
+    return { action: "deny" }
+  })
+  win.webContents.on("will-navigate", (event, url) => {
+    if (isTrustedRendererUrl(url)) return
+    event.preventDefault()
+    openExternal(url)
+  })
 }
 
 function wireZoom(win: BrowserWindow) {
