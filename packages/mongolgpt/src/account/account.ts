@@ -555,7 +555,7 @@ type BrowserCallbackServer = {
 const browserCallbackHost = "127.0.0.1"
 const browserCallbackPath = "/auth/callback"
 
-function createBrowserCallbackServer(): Promise<BrowserCallbackServer> {
+export function createBrowserCallbackServer(): Promise<BrowserCallbackServer> {
   return new Promise((resolve, reject) => {
     let expectedState = ""
     let settled = false
@@ -587,6 +587,14 @@ function createBrowserCallbackServer(): Promise<BrowserCallbackServer> {
       const value = url.searchParams.get("code")
       const state = url.searchParams.get("state")
 
+      if (!expectedState || state !== expectedState) {
+        const message = "OAuth state буруу байна"
+        response
+          .writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
+          .end(OauthCallbackPage.error(message, { provider: "MongolGPT" }))
+        return
+      }
+
       if (error) {
         settle(() => rejectCode(new Error(error)))
         response
@@ -595,8 +603,8 @@ function createBrowserCallbackServer(): Promise<BrowserCallbackServer> {
         return
       }
 
-      if (!value || state !== expectedState) {
-        const message = value ? "OAuth state буруу байна" : "Authorization code алга"
+      if (!value) {
+        const message = "Authorization code алга"
         settle(() => rejectCode(new Error(message)))
         response
           .writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
@@ -615,7 +623,7 @@ function createBrowserCallbackServer(): Promise<BrowserCallbackServer> {
       const address = server.address()
       if (typeof address !== "object" || !address) {
         server.close()
-        reject(new Error("Could not determine OAuth callback port"))
+        reject(new Error("OAuth буцах холболтын портыг тодорхойлж чадсангүй"))
         return
       }
 
