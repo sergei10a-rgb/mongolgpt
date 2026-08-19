@@ -22,7 +22,7 @@ import { go } from "@/cli/logo"
 import type { RunSplashTheme } from "./theme"
 
 export const SPLASH_TITLE_LIMIT = 50
-export const SPLASH_TITLE_FALLBACK = "Untitled session"
+export const SPLASH_TITLE_FALLBACK = "Гарчиггүй сесс"
 
 type SplashInput = {
   title: string | undefined

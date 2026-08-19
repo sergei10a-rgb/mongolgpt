@@ -1642,7 +1642,7 @@ export function Prompt(props: PromptProps) {
             </Match>
             <Match when={move.pendingNew()}>
               <box paddingLeft={3}>
-                <text fg={theme.accent}>(шинэ working copy)</text>
+                <text fg={theme.accent}>(шинэ ажлын хуулбар)</text>
               </box>
             </Match>
             <Match when={true}>{props.hint ?? <text />}</Match>
