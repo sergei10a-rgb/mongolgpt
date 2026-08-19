@@ -332,7 +332,7 @@ const lowerOptions = Effect.fn("OpenAIChat.lowerOptions")(function* (request: LL
   const store = OpenAIOptions.store(request)
   const reasoningEffort = OpenAIOptions.reasoningEffort(request)
   if (reasoningEffort && !OpenAIOptions.isReasoningEffort(reasoningEffort))
-    return yield* invalid(`OpenAI Chat does not support reasoning effort ${reasoningEffort}`)
+    return yield* invalid(`OpenAI Chat нь reasoning effort ${reasoningEffort}-г дэмждэггүй`)
   return {
     ...(store !== undefined ? { store } : {}),
     ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
@@ -424,7 +424,7 @@ const step = (state: ParserState, event: OpenAIChatEvent) =>
         tools,
         tool.index,
         { id: tool.id ?? undefined, name: tool.function?.name ?? undefined, text: tool.function?.arguments ?? "" },
-        "OpenAI Chat tool call delta is missing id or name",
+        "OpenAI Chat хэрэгслийн дуудлагын өөрчлөлтийн хэсэгт id эсвэл name алга байна",
       )
       if (ToolStream.isError(result)) return yield* result
       tools = result.tools

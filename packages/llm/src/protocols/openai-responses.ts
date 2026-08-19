@@ -456,7 +456,7 @@ const lowerOptions = Effect.fn("OpenAIResponses.lowerOptions")(function* (reques
   const promptCacheKey = OpenAIOptions.promptCacheKey(request)
   const effort = OpenAIOptions.reasoningEffort(request)
   if (effort && !OpenAIOptions.isReasoningEffort(effort))
-    return yield* invalid(`OpenAI Responses does not support reasoning effort ${effort}`)
+    return yield* invalid(`OpenAI Responses нь reasoning effort ${effort}-г дэмждэггүй`)
   const summary = OpenAIOptions.reasoningSummary(request)
   const include = OpenAIOptions.include(request)
   const verbosity = OpenAIOptions.textVerbosity(request)
@@ -788,7 +788,7 @@ const onFunctionCallArgumentsDelta = Effect.fn("OpenAIResponses.onFunctionCallAr
     state.tools,
     event.item_id,
     event.delta,
-    "OpenAI Responses tool argument delta is missing its tool call",
+    "OpenAI Responses хэрэгслийн аргументын өөрчлөлтийн хэсэгт хэрэгслийн дуудлага алга байна",
   )
   if (ToolStream.isError(result)) return yield* result
   const events: LLMEvent[] = []
@@ -904,12 +904,12 @@ const providerError = (event: OpenAIResponsesEvent, fallback: string) => {
 
 const onResponseFailed = (state: ParserState, event: OpenAIResponsesEvent): StepResult => [
   state,
-  [providerError(event, "OpenAI Responses response failed")],
+  [providerError(event, "OpenAI Responses-ийн хариулт амжилтгүй боллоо")],
 ]
 
 const onError = (state: ParserState, event: OpenAIResponsesEvent): StepResult => [
   state,
-  [providerError(event, "OpenAI Responses stream error")],
+  [providerError(event, "OpenAI Responses stream-ийн алдаа")],
 ]
 
 const step = (state: ParserState, event: OpenAIResponsesEvent) => {
@@ -988,7 +988,7 @@ const decodeWebSocketMessage = ProviderShared.validateWith(Schema.decodeUnknownE
 const webSocketMessage = (body: OpenAIResponsesBody | Record<string, unknown>) =>
   Effect.gen(function* () {
     if (!ProviderShared.isRecord(body))
-      return yield* ProviderShared.invalidRequest("OpenAI Responses WebSocket body must be a JSON object")
+      return yield* ProviderShared.invalidRequest("OpenAI Responses WebSocket body нь JSON object байх ёстой")
     const { stream: _stream, ...message } = body
     return yield* decodeWebSocketMessage({ ...message, type: "response.create" })
   })

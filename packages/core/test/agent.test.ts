@@ -127,4 +127,43 @@ describe("AgentV2", () => {
       }
     }),
   )
+
+  it.effect("provides Mongolian descriptions and system prompts for built-in agents", () =>
+    Effect.gen(function* () {
+      const agent = yield* AgentV2.Service
+      yield* AgentPlugin.Plugin.effect(
+        host({
+          agent: agentHost(agent),
+        }),
+      ).pipe(
+        Effect.provideService(
+          Location.Service,
+          Location.Service.of(location({ directory: AbsolutePath.make("/project") })),
+        ),
+      )
+
+      const build = yield* agent.get(AgentV2.defaultID)
+      const plan = yield* agent.get(AgentV2.ID.make("plan"))
+      const general = yield* agent.get(AgentV2.ID.make("general"))
+      const explore = yield* agent.get(AgentV2.ID.make("explore"))
+      const compaction = yield* agent.get(AgentV2.ID.make("compaction"))
+      const title = yield* agent.get(AgentV2.ID.make("title"))
+      const summary = yield* agent.get(AgentV2.ID.make("summary"))
+
+      expect(build?.description).toContain("Үндсэн агент")
+      expect(build?.system).toContain("програм хангамжийн инженерийн")
+      expect(plan?.description).toContain("Төлөвлөх горим")
+      expect(general?.description).toContain("ерөнхий зориулалтын агент")
+      expect(explore?.description).toContain("Кодын санг хурдан судлах")
+      expect(explore?.system).toContain("Эцсийн хариугаа монгол хэлээр")
+      expect(compaction?.system).toContain("<previous-summary>")
+      expect(title?.system).toContain("<rules>")
+      expect(summary?.system).toContain("2-3 өгүүлбэр")
+
+      const prompts = [build?.system, explore?.system, compaction?.system, title?.system, summary?.system]
+      expect(prompts.join("\n")).not.toMatch(
+        /You are an AI coding agent|You are a file search specialist|You are a title generator|Summarize what was done/,
+      )
+    }),
+  )
 })

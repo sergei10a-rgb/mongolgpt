@@ -276,7 +276,7 @@ const lowerToolResultContent = Effect.fn("BedrockConverse.lowerToolResultContent
       filename: item.name,
     })
     if (!("image" in media))
-      return yield* ProviderShared.invalidRequest("Bedrock Converse only supports image media in tool results")
+      return yield* ProviderShared.invalidRequest("Bedrock Converse нь хэрэгслийн үр дүнд зөвхөн зургийн медиа дэмждэг")
     content.push(media)
   }
   return content
@@ -392,7 +392,7 @@ const fromRequest = Effect.fn("BedrockConverse.fromRequest")(function* (request:
   const messages = yield* lowerMessages(request, breakpoints)
   if (breakpoints.dropped > 0) {
     yield* Effect.logWarning(
-      `Bedrock Converse: dropped ${breakpoints.dropped} cache breakpoint(s); the API allows at most ${BedrockCache.BEDROCK_BREAKPOINT_CAP} per request.`,
+      `Bedrock Converse: ${breakpoints.dropped} cache breakpoint хасагдлаа; API нэг request-д хамгийн ихдээ ${BedrockCache.BEDROCK_BREAKPOINT_CAP}-ыг зөвшөөрнө.`,
     )
   }
   return {
@@ -525,7 +525,7 @@ const step = (state: ParserState, event: BedrockEvent) =>
         state.tools,
         index,
         event.contentBlockDelta.delta.toolUse.input,
-        "Bedrock Converse tool delta is missing its tool call",
+        "Bedrock Converse хэрэгслийн өөрчлөлтийн хэсэгт хэрэгслийн дуудлага алга байна",
       )
       if (ToolStream.isError(result)) return yield* result
       const events: LLMEvent[] = []
@@ -584,13 +584,13 @@ const step = (state: ParserState, event: BedrockEvent) =>
         event.internalServerException?.message ??
         event.modelStreamErrorException?.message ??
         event.serviceUnavailableException?.message ??
-        "Bedrock Converse stream error"
+        "Bedrock Converse stream-ийн алдаа"
       return [state, [LLMEvent.providerError({ message, retryable: true })]] as const
     }
 
     if (event.validationException || event.throttlingException) {
       const message =
-        event.validationException?.message ?? event.throttlingException?.message ?? "Bedrock Converse error"
+        event.validationException?.message ?? event.throttlingException?.message ?? "Bedrock Converse-ийн алдаа"
       return [
         state,
         [

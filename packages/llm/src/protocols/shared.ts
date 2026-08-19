@@ -183,10 +183,10 @@ export const wrappedSystemUpdate = Effect.fn("ProviderShared.wrappedSystemUpdate
  * Parse the streamed JSON input of a tool call. Treats an empty string as
  * `"{}"` — providers occasionally finish a tool call without ever emitting
  * input deltas (e.g. zero-arg tools). The error message is uniform across
- * routes: `Invalid JSON input for <route> tool call <name>`.
+ * routes: `<route> хэрэгслийн <name> дуудлагын JSON оролт буруу байна`.
  */
 export const parseToolInput = (route: string, name: string, raw: string) =>
-  parseJson(route, raw || "{}", `Invalid JSON input for ${route} tool call ${name}`)
+  parseJson(route, raw || "{}", `${route} хэрэгслийн ${name} дуудлагын JSON оролт буруу байна`)
 
 export const IMAGE_MIMES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const
 export const VIDEO_MIMES = ["video/mp4", "video/webm", "video/quicktime"] as const
@@ -210,31 +210,35 @@ export const validateMedia = Effect.fn("ProviderShared.validateMedia")(function*
   supportedMimes: ReadonlySet<string>,
 ) {
   const mime = part.mediaType.toLowerCase()
-  if (!supportedMimes.has(mime)) return yield* invalidRequest(`${route} does not support media type ${part.mediaType}`)
+  if (!supportedMimes.has(mime))
+    return yield* invalidRequest(`${route} нь ${part.mediaType} төрлийн media-г дэмждэггүй`)
 
   let base64: string
   if (typeof part.data !== "string") {
     if (part.data.byteLength > MAX_MEDIA_DECODED_BYTES)
-      return yield* invalidRequest(`${route} media exceeds the ${MAX_MEDIA_DECODED_BYTES} byte decoded limit`)
+      return yield* invalidRequest(`${route}-ийн media нь ${MAX_MEDIA_DECODED_BYTES} byte decoded хязгаараас хэтэрсэн`)
     base64 = Buffer.from(part.data).toString("base64")
   } else if (part.data.startsWith("data:")) {
     const match = /^data:([^;,]+);base64,([A-Za-z0-9+/]*={0,2})$/s.exec(part.data)
-    if (!match) return yield* invalidRequest(`${route} media data URL must contain valid base64`)
+    if (!match) return yield* invalidRequest(`${route}-ийн медиа өгөгдлийн URL хүчинтэй base64 агуулсан байх ёстой`)
     if (match[1]!.toLowerCase() !== mime)
-      return yield* invalidRequest(`${route} media type ${part.mediaType} does not match data URL type ${match[1]}`)
+      return yield* invalidRequest(
+        `${route}-ийн медиа төрөл ${part.mediaType} нь өгөгдлийн URL-ийн ${match[1]} төрөлтэй таарахгүй байна`,
+      )
     base64 = match[2]!
   } else {
     base64 = part.data
   }
 
   if (Buffer.byteLength(base64, "utf8") > MAX_MEDIA_ENCODED_BYTES)
-    return yield* invalidRequest(`${route} media exceeds the ${MAX_MEDIA_ENCODED_BYTES} byte encoded limit`)
+    return yield* invalidRequest(`${route}-ийн media нь ${MAX_MEDIA_ENCODED_BYTES} byte encoded хязгаараас хэтэрсэн`)
   if (!base64 || base64.length % 4 !== 0 || !base64Pattern.test(base64))
-    return yield* invalidRequest(`${route} media must contain valid base64`)
+    return yield* invalidRequest(`${route}-ийн media хүчинтэй base64 агуулсан байх ёстой`)
   const bytes = Buffer.from(base64, "base64")
   if (bytes.byteLength > MAX_MEDIA_DECODED_BYTES)
-    return yield* invalidRequest(`${route} media exceeds the ${MAX_MEDIA_DECODED_BYTES} byte decoded limit`)
-  if (bytes.toString("base64") !== base64) return yield* invalidRequest(`${route} media must contain canonical base64`)
+    return yield* invalidRequest(`${route}-ийн media нь ${MAX_MEDIA_DECODED_BYTES} byte decoded хязгаараас хэтэрсэн`)
+  if (bytes.toString("base64") !== base64)
+    return yield* invalidRequest(`${route}-ийн media canonical base64 байх ёстой`)
   return { mime, base64, dataUrl: `data:${mime};base64,${base64}`, bytes } satisfies ValidatedMedia
 })
 
@@ -261,7 +265,7 @@ export const errorText = (error: unknown) => {
   if (typeof error === "number" || typeof error === "boolean" || typeof error === "bigint") return String(error)
   if (error === null) return "null"
   if (error === undefined) return "undefined"
-  return "Unknown stream error"
+  return "Stream-ийн тодорхойгүй алдаа"
 }
 
 /**
@@ -309,7 +313,7 @@ export const matchToolChoice = <Auto, None, Required, Tool>(
     if (toolChoice.type === "auto") return cases.auto()
     if (toolChoice.type === "none") return cases.none()
     if (toolChoice.type === "required") return cases.required()
-    if (!toolChoice.name) return yield* invalidRequest(`${route} tool choice requires a tool name`)
+    if (!toolChoice.name) return yield* invalidRequest(`${route} tool choice-д tool name шаардлагатай`)
     return cases.tool(toolChoice.name)
   })
 
@@ -317,8 +321,8 @@ type ContentType = ContentPart["type"]
 
 const formatContentTypes = (types: ReadonlyArray<ContentType>) => {
   if (types.length <= 1) return types[0] ?? ""
-  if (types.length === 2) return `${types[0]} and ${types[1]}`
-  return `${types.slice(0, -1).join(", ")}, and ${types.at(-1)}`
+  if (types.length === 2) return `${types[0]} болон ${types[1]}`
+  return `${types.slice(0, -1).join(", ")} болон ${types.at(-1)}`
 }
 
 export const supportsContent = <const Type extends ContentType>(
@@ -330,7 +334,7 @@ export const unsupportedContent = (
   route: string,
   role: LLMRequest["messages"][number]["role"],
   types: ReadonlyArray<ContentType>,
-) => invalidRequest(`${route} ${role} messages only support ${formatContentTypes(types)} content for now`)
+) => invalidRequest(`${route}-ийн ${role} messages одоогоор зөвхөн ${formatContentTypes(types)} content дэмжинэ`)
 
 /**
  * Build a `validate` step from a Schema decoder. Replaces the per-route

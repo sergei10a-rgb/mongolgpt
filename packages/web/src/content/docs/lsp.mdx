@@ -27,46 +27,46 @@ mongolgpt debug config
 
 Доорх ID, команд болон файлын өргөтгөлүүдийг өөрчилж болохгүй.
 
-| LSP серверийн ID | Өргөтгөл | Шаардлага |
-| --- | --- | --- |
-| `astro` | `.astro` | Astro төсөл; серверийг автоматаар суулгаж болно |
-| `bash` | `.sh`, `.bash`, `.zsh`, `.ksh` | `bash-language-server`-ийг автоматаар суулгаж болно |
-| `biome` | `.js`, `.jsx`, `.ts`, `.tsx`, `.json`, `.css` болон бусад | Biome хамаарал эсвэл тохиргоо |
-| `clangd` | `.c`, `.cpp`, `.cc`, `.cxx`, `.c++`, `.h`, `.hpp`, `.hh`, `.hxx`, `.h++` | `clangd`; автоматаар суулгаж болно |
-| `clojure-lsp` | `.clj`, `.cljs`, `.cljc`, `.edn` | `clojure-lsp` command |
-| `csharp` | `.cs`, `.csx` | `.NET SDK` |
-| `dart` | `.dart` | `dart` command |
-| `deno` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs` | `deno` command; `deno.json` эсвэл `deno.jsonc` илрүүлнэ |
-| `dockerfile` | `.dockerfile`, `Dockerfile` | Dockerfile хэлний сервер |
-| `elixir-ls` | `.ex`, `.exs` | `elixir` command |
-| `eslint` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts`, `.vue` | Төслийн `eslint` хамаарал |
-| `fsharp` | `.fs`, `.fsi`, `.fsx`, `.fsscript` | `.NET SDK` |
-| `gleam` | `.gleam` | `gleam` command |
-| `gopls` | `.go` | `go` command |
-| `haskell-language-server` | `.hs`, `.lhs` | `haskell-language-server-wrapper` команд |
-| `jdtls` | `.java` | Java SDK 21 эсвэл шинэ |
-| `julials` | `.jl` | `julia` болон `LanguageServer.jl` |
-| `kotlin-ls` | `.kt`, `.kts` | Kotlin төсөл; серверийг автоматаар суулгаж болно |
-| `lua-ls` | `.lua` | Lua хэлний серверийг автоматаар суулгаж болно |
-| `nixd` | `.nix` | `nixd` command |
-| `ocaml-lsp` | `.ml`, `.mli` | `ocamllsp` command |
-| `oxlint` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts`, `.vue`, `.astro`, `.svelte` | Төслийн `oxlint` хамаарал |
-| `php intelephense` | `.php` | Intelephense; автоматаар суулгаж болно |
-| `prisma` | `.prisma` | `prisma` command |
-| `pyright` | `.py`, `.pyi` | Төслийн `pyright` хамаарал |
-| `razor` | `.razor`, `.cshtml` | `.NET SDK` болон C# tooling |
-| `ruby-lsp` | `.rb`, `.rake`, `.gemspec`, `.ru` | `ruby` болон `gem` command |
-| `rust` | `.rs` | `rust-analyzer` command |
-| `sourcekit-lsp` | `.swift`, `.objc`, `.objcpp` | `swift`; macOS дээр Xcode |
-| `svelte` | `.svelte` | Svelte төсөл; серверийг автоматаар суулгаж болно |
-| `terraform` | `.tf`, `.tfvars` | Terraform хэлний серверийг автоматаар суулгаж болно |
-| `texlab` | `.tex`, `.bib` | `texlab`; автоматаар суулгаж болно |
-| `tinymist` | `.typ`, `.typc` | `tinymist` command эсвэл автомат суулгалт |
-| `ty` | `.py`, `.pyi` | `ty` command; experimental тохиргоо шаардаж болно |
-| `typescript` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts` | Төслийн `typescript` хамаарал |
-| `vue` | `.vue` | Vue төсөл; серверийг автоматаар суулгаж болно |
-| `yaml-ls` | `.yaml`, `.yml` | `yaml-language-server`-ийг автоматаар суулгаж болно |
-| `zls` | `.zig`, `.zon` | `zig` command |
+| LSP серверийн ID          | Өргөтгөл                                                                                  | Шаардлага                                              |
+| ------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `astro`                   | `.astro`                                                                                  | Astro төсөл; серверийг автоматаар суулгаж болно        |
+| `bash`                    | `.sh`, `.bash`, `.zsh`, `.ksh`                                                            | `bash-language-server`-ийг автоматаар суулгаж болно    |
+| `biome`                   | `.js`, `.jsx`, `.ts`, `.tsx`, `.json`, `.css` болон бусад                                 | Biome хамаарал эсвэл тохиргоо                          |
+| `clangd`                  | `.c`, `.cpp`, `.cc`, `.cxx`, `.c++`, `.h`, `.hpp`, `.hh`, `.hxx`, `.h++`                  | `clangd`; автоматаар суулгаж болно                     |
+| `clojure-lsp`             | `.clj`, `.cljs`, `.cljc`, `.edn`                                                          | `clojure-lsp` команд                                   |
+| `csharp`                  | `.cs`, `.csx`                                                                             | `.NET SDK`                                             |
+| `dart`                    | `.dart`                                                                                   | `dart` команд                                          |
+| `deno`                    | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`                                                      | `deno` команд; `deno.json` эсвэл `deno.jsonc` илрүүлнэ |
+| `dockerfile`              | `.dockerfile`, `Dockerfile`                                                               | Dockerfile хэлний сервер                               |
+| `elixir-ls`               | `.ex`, `.exs`                                                                             | `elixir` команд                                        |
+| `eslint`                  | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts`, `.vue`                      | Төслийн `eslint` хамаарал                              |
+| `fsharp`                  | `.fs`, `.fsi`, `.fsx`, `.fsscript`                                                        | `.NET SDK`                                             |
+| `gleam`                   | `.gleam`                                                                                  | `gleam` команд                                         |
+| `gopls`                   | `.go`                                                                                     | `go` команд                                            |
+| `haskell-language-server` | `.hs`, `.lhs`                                                                             | `haskell-language-server-wrapper` команд               |
+| `jdtls`                   | `.java`                                                                                   | Java SDK 21 эсвэл шинэ                                 |
+| `julials`                 | `.jl`                                                                                     | `julia` болон `LanguageServer.jl`                      |
+| `kotlin-ls`               | `.kt`, `.kts`                                                                             | Kotlin төсөл; серверийг автоматаар суулгаж болно       |
+| `lua-ls`                  | `.lua`                                                                                    | Lua хэлний серверийг автоматаар суулгаж болно          |
+| `nixd`                    | `.nix`                                                                                    | `nixd` команд                                          |
+| `ocaml-lsp`               | `.ml`, `.mli`                                                                             | `ocamllsp` команд                                      |
+| `oxlint`                  | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts`, `.vue`, `.astro`, `.svelte` | Төслийн `oxlint` хамаарал                              |
+| `php intelephense`        | `.php`                                                                                    | Intelephense; автоматаар суулгаж болно                 |
+| `prisma`                  | `.prisma`                                                                                 | `prisma` команд                                        |
+| `pyright`                 | `.py`, `.pyi`                                                                             | Төслийн `pyright` хамаарал                             |
+| `razor`                   | `.razor`, `.cshtml`                                                                       | `.NET SDK` болон C# хэрэгслүүд                         |
+| `ruby-lsp`                | `.rb`, `.rake`, `.gemspec`, `.ru`                                                         | `ruby` болон `gem` команд                              |
+| `rust`                    | `.rs`                                                                                     | `rust-analyzer` команд                                 |
+| `sourcekit-lsp`           | `.swift`, `.objc`, `.objcpp`                                                              | `swift`; macOS дээр Xcode                              |
+| `svelte`                  | `.svelte`                                                                                 | Svelte төсөл; серверийг автоматаар суулгаж болно       |
+| `terraform`               | `.tf`, `.tfvars`                                                                          | Terraform хэлний серверийг автоматаар суулгаж болно    |
+| `texlab`                  | `.tex`, `.bib`                                                                            | `texlab`; автоматаар суулгаж болно                     |
+| `tinymist`                | `.typ`, `.typc`                                                                           | `tinymist` команд эсвэл автомат суулгалт               |
+| `ty`                      | `.py`, `.pyi`                                                                             | `ty` команд; туршилтын тохиргоо шаардаж болно          |
+| `typescript`              | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts`                              | Төслийн `typescript` хамаарал                          |
+| `vue`                     | `.vue`                                                                                    | Vue төсөл; серверийг автоматаар суулгаж болно          |
+| `yaml-ls`                 | `.yaml`, `.yml`                                                                           | `yaml-language-server`-ийг автоматаар суулгаж болно    |
+| `zls`                     | `.zig`, `.zon`                                                                            | `zig` команд                                           |
 
 Автоматаар татахыг хориглох бол MongolGPT-г эхлүүлэхээс өмнө:
 
@@ -96,13 +96,13 @@ LSP идэвхтэй үед MongolGPT дараах байдлаар ажилла
 
 Объект хэлбэр ашигласнаар тодорхой серверийг идэвхгүй болгох, суурилагдсан тохиргоог өөрчлөх, захиалгат сервер нэмэх боломжтой.
 
-| Түлхүүр | Төрөл | Утга |
-| --- | --- | --- |
-| `disabled` | Булев | `true` бол тухайн серверийг идэвхгүй болгоно |
-| `command` | Мөрийн массив | Сервер эхлүүлэх ажиллуулах файл болон аргумент |
-| `extensions` | Мөрийн массив | Тухайн сервер ажиллах файлын өргөтгөл |
-| `env` | Объект | Серверийн процесст дамжуулах орчны хувьсагч |
-| `initialization` | Объект | LSP `initialize` хүсэлтэд өгөх серверийн тусгай сонголт |
+| Түлхүүр          | Төрөл         | Утга                                                    |
+| ---------------- | ------------- | ------------------------------------------------------- |
+| `disabled`       | Булев         | `true` бол тухайн серверийг идэвхгүй болгоно            |
+| `command`        | Мөрийн массив | Сервер эхлүүлэх файл болон аргументууд                  |
+| `extensions`     | Мөрийн массив | Тухайн сервер ажиллах файлын өргөтгөл                   |
+| `env`            | Объект        | Серверийн процесст дамжуулах орчны хувьсагч             |
+| `initialization` | Объект        | LSP `initialize` хүсэлтэд өгөх серверийн тусгай сонголт |
 
 Нэг серверийг идэвхгүй болгох:
 
@@ -159,7 +159,7 @@ LSP идэвхтэй үед MongolGPT дараах байдлаар ажилла
 
 ## PHP Intelephense лиценз
 
-Intelephense-ийн нэмэлт боломж ашиглах бол лицензийн key-г өөр агуулгагүй текст файлд хадгална.
+Intelephense-ийн нэмэлт боломж ашиглах бол лицензийн түлхүүрийг өөр агуулгагүй текст файлд хадгална.
 
 - macOS/Linux: `$HOME/intelephense/license.txt`
 - Windows: `%USERPROFILE%/intelephense/license.txt`

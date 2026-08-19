@@ -121,7 +121,7 @@ describe("Anthropic Messages route", () => {
         }),
       ).pipe(Effect.flip)
 
-      expect(error.message).toContain("Anthropic Messages system messages only support text content for now")
+      expect(error.message).toContain("Anthropic Messages-ийн system messages одоогоор зөвхөн text content дэмжинэ")
     }),
   )
 
@@ -183,7 +183,7 @@ describe("Anthropic Messages route", () => {
         }),
       ).pipe(Effect.flip)
 
-      expect(error.message).toContain("system updates cannot split a local tool call from its tool result")
+      expect(error.message).toContain("системийн шинэчлэл нь локал хэрэгслийн дуудлагыг үр дүнгээс нь салгаж болохгүй")
     }),
   )
 
@@ -516,7 +516,7 @@ describe("Anthropic Messages route", () => {
         Effect.provide(fixedResponse(sseEvents({ type: "error" }))),
       )
 
-      expect(response.events).toEqual([{ type: "provider-error", message: "Anthropic Messages stream error" }])
+      expect(response.events).toEqual([{ type: "provider-error", message: "Anthropic Messages stream-ийн алдаа" }])
     }),
   )
 

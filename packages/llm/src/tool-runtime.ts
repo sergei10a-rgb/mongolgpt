@@ -22,9 +22,9 @@ export interface DispatchResult extends ToolSettlement {
 /** Execute one canonical tool call without owning provider IO or continuation. */
 export const dispatch = (tools: Tools, call: ToolCallPart): Effect.Effect<DispatchResult> => {
   const tool = tools[call.name]
-  if (!tool) return Effect.succeed(result(call, { type: "error", value: `Unknown tool: ${call.name}` }))
+  if (!tool) return Effect.succeed(result(call, { type: "error", value: `Үл мэдэгдэх хэрэгсэл: ${call.name}` }))
   if (!tool.execute)
-    return Effect.succeed(result(call, { type: "error", value: `Tool has no execute handler: ${call.name}` }))
+    return Effect.succeed(result(call, { type: "error", value: `Хэрэгсэлд ажиллуулах функц алга: ${call.name}` }))
 
   return decodeAndExecute(tool, call).pipe(
     Effect.map((value) => result(call, value)),
@@ -36,7 +36,7 @@ export const dispatch = (tools: Tools, call: ToolCallPart): Effect.Effect<Dispat
 
 const decodeAndExecute = (tool: AnyTool, call: ToolCallPart): Effect.Effect<ToolSettlement, ToolFailure> =>
   tool._decode(call.input).pipe(
-    Effect.mapError((error) => new ToolFailure({ message: `Invalid tool input: ${error.message}` })),
+    Effect.mapError((error) => new ToolFailure({ message: `Хэрэгслийн оролт буруу байна: ${error.message}` })),
     Effect.flatMap((decoded) =>
       tool.execute!(decoded, { id: call.id, name: call.name }).pipe(
         Effect.flatMap((value) =>
@@ -44,7 +44,7 @@ const decodeAndExecute = (tool: AnyTool, call: ToolCallPart): Effect.Effect<Tool
             Effect.mapError(
               (error) =>
                 new ToolFailure({
-                  message: `Tool returned an invalid value for its success schema: ${error.message}`,
+                  message: `Хэрэгсэл амжилтын схемд нийцэхгүй утга буцаалаа: ${error.message}`,
                 }),
             ),
           ),

@@ -79,7 +79,7 @@ export const updateRequest = (input: LLMRequest, patch: Partial<RequestInput>) =
 
 const GENERATE_OBJECT_TOOL_NAME = "generate_object"
 
-const GENERATE_OBJECT_TOOL_DESCRIPTION = "Return the structured result by calling this tool."
+const GENERATE_OBJECT_TOOL_DESCRIPTION = "Бүтэцтэй үр дүнг буцаахын тулд энэ хэрэгслийг дуудна уу."
 
 type GenerateObjectBase = Omit<RequestInput, "tools" | "toolChoice" | "responseFormat">
 
@@ -125,7 +125,7 @@ const runGenerateObject = Effect.fn("LLM.generateObject")(function* (
       module: "LLM",
       method: "generateObject",
       reason: new InvalidProviderOutputReason({
-        message: `generateObject: model did not call the forced \`${GENERATE_OBJECT_TOOL_NAME}\` tool`,
+        message: `generateObject: загвар албадсан \`${GENERATE_OBJECT_TOOL_NAME}\` хэрэгслийг дуудсангүй`,
       }),
     })
   const object = yield* tool._decode(call.input).pipe(
@@ -135,7 +135,7 @@ const runGenerateObject = Effect.fn("LLM.generateObject")(function* (
           module: "LLM",
           method: "generateObject",
           reason: new InvalidProviderOutputReason({
-            message: `generateObject: tool input failed schema decode: ${error.message}`,
+            message: `generateObject: хэрэгслийн оролтын schema-г тайлж чадсангүй: ${error.message}`,
           }),
         }),
     ),

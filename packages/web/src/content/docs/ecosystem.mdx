@@ -1,18 +1,18 @@
 ---
 title: Экосистем
-description: MongolGPT-ээр ашиглах баталгаажсан integration төрлүүд.
+description: MongolGPT-ээр ашиглах баталгаажсан интеграцийн төрлүүд.
 ---
 
-MongolGPT-ийн ecosystem хуудсыг одоогоор зөвхөн баталгаажсан integration төрлүүдээр харуулж байна. Албан ёсны marketplace/package registry бэлэн болоогүй тул энд гуравдагч талын rebrand хийсэн package жагсаалт тавихгүй.
+MongolGPT-ийн экосистемийн хуудсанд одоогоор зөвхөн баталгаажсан интеграцийн төрлүүдийг харуулж байна. Албан ёсны зах зээл болон багцын бүртгэл бэлэн болоогүй тул энд гуравдагч талын дахин брэндчилсэн багцын жагсаалт тавихгүй.
 
-## Баталгаатай integration төрлүүд
+## Баталгаатай интеграцийн төрлүүд
 
-| Төрөл | Одоогийн төлөв |
-| --- | --- |
-| MCP server | `mongolgpt compat import plan/apply` command болон desktop integration wizard-аар command, local path, URL, config-оос танина |
-| Skill | Claude/Codex/Goose маягийн skill folder/config-ийг таних суурь importer нэмэгдсэн |
-| Plugin | Local plugin file болон private npm package-ийг config дээр зааж ажиллуулах боломжтой |
-| Provider | BYOK болон локал provider config дэмжигдэнэ; MongolGPT бүртгэл ба Free Auto нь hosted service идэвхтэй dev/release channel-д ажиллана |
+| Төрөл              | Одоогийн төлөв                                                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MCP сервер         | `mongolgpt compat import plan/apply` команд болон ширээний програмын интеграцийн хөтчөөр команд, дотоод зам, URL, тохиргоог танина                                  |
+| Агентын ур чадвар  | Claude, Codex, Goose хэлбэрийн ур чадварын хавтас болон тохиргоог таних суурь импортлогчтой                                                                         |
+| Залгаас            | Дотоод залгаасын файл болон хувийн npm багцыг тохиргоонд зааж ажиллуулна                                                                                            |
+| Үйлчилгээ үзүүлэгч | BYOK болон дотоод үйлчилгээ үзүүлэгчийн тохируулгыг дэмжинэ; MongolGPT бүртгэл ба Free Auto нь байршуулсан үйлчилгээ идэвхтэй хөгжүүлэлт/хувилбарын сувагт ажиллана |
 
 ## Импортын урсгал
 
@@ -21,10 +21,10 @@ mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\
 mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
 ```
 
-Desktop дээр `Тохиргоо -> Интеграц` хэсгээс command, path, URL эсвэл config оруулаад шалгах болон нэмэх боломжтой.
+Desktop дээр `Тохиргоо -> Интеграц` хэсгээс тушаал, зам, URL эсвэл тохируулга оруулаад шалгах болон нэмэх боломжтой.
 
 ## Нийтлэхээс өмнөх дүрэм
 
-- Нийтлэгдээгүй npm/Homebrew/AUR/Chocolatey/Scoop package-ийг official install гэж харуулахгүй.
-- Гуравдагч талын plugin-ийг MongolGPT нэрээр rebrand хийж, бодитоор байхгүй URL/package руу заахгүй.
-- Шинэ integration нэмэхдээ эхлээд importer/adapter-аар шалгаж, дараа нь албан ёсны registry/marketplace дээр нийтэлсний дараа docs-д package install command нэмнэ.
+- Нийтлэгдээгүй npm/Homebrew/AUR/Chocolatey/Scoop багцыг албан ёсны суулгац гэж харуулахгүй.
+- Гуравдагч талын залгаасыг MongolGPT нэрээр дахин брэндчилж, бодитоор байхгүй URL эсвэл багц руу заахгүй.
+- Шинэ интеграц нэмэхдээ эхлээд импортлогч эсвэл холбогчоор шалгана. Албан ёсны бүртгэл эсвэл marketplace-д нийтлэгдсэний дараа л баримт бичигт багц суулгах команд нэмнэ.

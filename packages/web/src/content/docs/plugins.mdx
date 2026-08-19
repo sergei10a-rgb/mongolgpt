@@ -1,6 +1,6 @@
 ---
 title: Плагинууд
-description: MongolGPT-г өргөтгөхийн тулд өөрийн залгаасуудыг бичээрэй.
+description: MongolGPT-г өргөтгөх залгаас бичих.
 ---
 
 Залгаасууд нь янз бүрийн үйл явдалд холбогдож, зан төлөвийг өөрчлөх замаар MongolGPT-г өргөтгөх боломжийг олгодог. Та шинэ функц нэмэх, гадны үйлчилгээтэй нэгтгэх эсвэл MongolGPT-ийн үндсэн үйлдлийг өөрчлөхийн тулд залгаас үүсгэж болно.
@@ -116,7 +116,7 @@ export const MyPlugin = async ({ project, client, $, directory, worktree }) => {
 - `project`: Төслийн одоогийн мэдээлэл.
 - `directory`: Одоогийн ажлын лавлах.
 - `worktree`: Гит ажлын модны зам.
-- `client`: AI-тэй харилцах mongolgpt SDK үйлчлүүлэгч.
+- `client`: AI-тэй харилцах MongolGPT SDK үйлчлүүлэгч.
 - `$`: команд ажиллуулах Bun-ийн [shell API](https://bun.com/docs/runtime/shell).
 
 ---
@@ -175,7 +175,7 @@ export const MyPlugin: Plugin = async ({ project, client, $, directory, worktree
 
 - `server.connected`
 
-#### хуралдааны үйл явдал
+#### Сессийн үйл явдал
 
 - `session.created`
 - `session.compacted`
@@ -209,7 +209,7 @@ export const MyPlugin: Plugin = async ({ project, client, $, directory, worktree
 
 ## Жишээ
 
-mongolgpt-г өргөтгөхөд ашиглаж болох залгаасуудын зарим жишээ энд байна.
+MongolGPT-г өргөтгөхөд ашиглаж болох залгаасуудын зарим жишээ энд байна.
 
 ---
 
@@ -240,7 +240,7 @@ export const NotificationPlugin = async ({ project, client, $, directory, worktr
 
 ### .env хамгаалалт
 
-mongolgpt файлыг `.env` уншихаас урьдчилан сэргийлэх:
+MongolGPT-г `.env` файл уншихаас урьдчилан сэргийлэх:
 
 ```javascript title=".mongolgpt/plugins/env-protection.js"
 export const EnvProtection = async ({ project, client, $, directory, worktree }) => {
@@ -275,7 +275,7 @@ export const InjectEnvPlugin = async () => {
 
 ### Тусгай хэрэгсэл
 
-Мөн залгаасууд нь mongolgpt-д захиалгат хэрэгслийг нэмж болно:
+Мөн залгаасууд нь MongolGPT-д захиалгат хэрэгслийг нэмж болно:
 
 ```ts title=".mongolgpt/plugins/custom-tools.ts"
 import { type Plugin, tool } from "@mongolgpt/plugin"
@@ -298,13 +298,13 @@ export const CustomToolsPlugin: Plugin = async (ctx) => {
 }
 ```
 
-`tool` туслагч нь mongolgpt дуудаж болох тусгай хэрэгсэл үүсгэдэг. Энэ нь Zod схемийн функцийг авч, багажийн тодорхойлолтыг буцаана:
+`tool` туслагч нь MongolGPT дуудаж болох тусгай хэрэгсэл үүсгэнэ. Энэ нь Zod схемийн функц авч, хэрэгслийн тодорхойлолтыг буцаана:
 
 - `description`: Энэ хэрэгсэл юу хийдэг
 - `args`: Хэрэгслийн аргументуудын Zod схем
 - `execute`: Хэрэгсэл дуудагдах үед ажилладаг функц
 
-Таны захиалгат хэрэгслүүдийг суурилуулсан хэрэгслүүдийн хажуугаар mongolgpt хаягаар авах боломжтой.
+Таны захиалгат хэрэгслүүдийг суурилагдсан хэрэгслүүдийн хажуугаар MongolGPT-ээс ашиглах боломжтой.
 
 :::note
 Хэрэв залгаас хэрэгсэл нь суулгасан хэрэгсэлтэй ижил нэрийг ашигладаг бол залгаасын хэрэгсэл нь давуу эрхтэй болно.

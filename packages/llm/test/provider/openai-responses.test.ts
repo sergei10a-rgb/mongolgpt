@@ -238,7 +238,7 @@ describe("OpenAI Responses route", () => {
         { url: "wss://api.openai.test/v1/responses", headers: Headers.empty },
       ).pipe(Effect.flip)
 
-      expect(error.message).toContain("closed before opening")
+      expect(error.message).toContain("WebSocket нээхээс өмнө хаагдсан")
     }),
   )
 
@@ -1320,7 +1320,7 @@ describe("OpenAI Responses route", () => {
         }),
       ).pipe(Effect.flip)
 
-      expect(error.message).toContain("OpenAI Responses does not support media type application/pdf")
+      expect(error.message).toContain("OpenAI Responses нь application/pdf төрлийн media-г дэмждэггүй")
     }),
   )
 
@@ -1433,7 +1433,7 @@ describe("OpenAI Responses route", () => {
         Effect.provide(fixedResponse(sseEvents({ type: "error" }))),
       )
 
-      expect(response.events).toEqual([{ type: "provider-error", message: "OpenAI Responses stream error" }])
+      expect(response.events).toEqual([{ type: "provider-error", message: "OpenAI Responses stream-ийн алдаа" }])
     }),
   )
 
@@ -1443,7 +1443,9 @@ describe("OpenAI Responses route", () => {
         Effect.provide(fixedResponse(sseEvents({ type: "response.failed", response: { id: "resp_failed_3" } }))),
       )
 
-      expect(response.events).toEqual([{ type: "provider-error", message: "OpenAI Responses response failed" }])
+      expect(response.events).toEqual([
+        { type: "provider-error", message: "OpenAI Responses-ийн хариулт амжилтгүй боллоо" },
+      ])
     }),
   )
 

@@ -3,17 +3,17 @@ title: Windows ба WSL
 description: MongolGPT CLI, вэб сервер, ширээний програмыг Windows болон WSL дээр ажиллуулах.
 ---
 
-MongolGPT CLI-г Windows дээр шууд ажиллуулж болно. Linux бүрхүүлийн хэрэгсэл, зөвшөөрөл, symlink, файлын гүйцэтгэлийн асуудал гарвал [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install) ашиглах нь тохиромжтой.
+MongolGPT CLI-г Windows дээр шууд ажиллуулж болно. Linux бүрхүүлийн хэрэгсэл, зөвшөөрөл, симбол холбоос эсвэл файлын гүйцэтгэлийн асуудал гарвал [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install) ашиглах нь тохиромжтой.
 
 ## WSL суулгах
 
-Administrator эрхтэй PowerShell нээгээд:
+Администраторын эрхтэй PowerShell нээгээд:
 
 ```powershell
 wsl --install
 ```
 
-Windows-оо restart хийж, суусан Linux distribution-оо нээгээд хэрэглэгчийн нэр, нууц үгээ үүсгэнэ. Суулгалтыг шалгах:
+Windows-оо дахин асааж, суулгасан Linux түгээлтээ нээгээд хэрэглэгчийн нэр, нууц үгээ үүсгэнэ. Дараа нь суулгалтыг шалгана:
 
 ```powershell
 wsl --status
@@ -28,7 +28,7 @@ Microsoft-ийн шинэчилсэн алхмуудыг [WSL суулгах а�
 
 1. [MongolGPT Releases](https://github.com/sergei10a-rgb/mongolgpt/releases) хуудсаас WSL-ийн архитектурт тохирох Linux архивыг татна. Ихэнх Intel/AMD төхөөрөмжид `mongolgpt-linux-x64.tar.gz` тохирно.
 2. Архивыг WSL дотор задална.
-3. Binary-г хэрэглэгчийн `PATH`-д байрлуулна.
+3. Гүйцэтгэх файлыг хэрэглэгчийн `PATH`-д байрлуулна.
 
 ```bash
 mkdir -p ~/.local/bin
@@ -55,7 +55,7 @@ bun run dev
 
 ## Төслөө хаана байрлуулах вэ?
 
-Хамгийн сайн гүйцэтгэл авахын тулд repository-г WSL-ийн Linux файлын системд байрлуул.
+Хамгийн сайн гүйцэтгэл авахын тулд репозиторыг WSL-ийн Linux файлын системд байрлуулна.
 
 ```bash
 mkdir -p ~/projects
@@ -81,7 +81,7 @@ mongolgpt
 
 Windows-ийн ширээний програм ашиглаж, CLI серверээ WSL-д ажиллуулах боломжтой.
 
-1. WSL terminal-д урт нууц үг тохируулж серверээ эхлүүлнэ.
+1. WSL терминалд урт нууц үг тохируулж серверээ эхлүүлнэ.
 
    ```bash
    MONGOLGPT_SERVER_PASSWORD="урт-санамсаргүй-нууц-үг" mongolgpt serve --hostname 0.0.0.0 --port 4096

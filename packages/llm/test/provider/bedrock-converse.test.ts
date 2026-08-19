@@ -398,7 +398,9 @@ describe("Bedrock Converse route", () => {
         Effect.flip,
       )
 
-      expect(error.message).toContain("Bedrock Converse requires either route bearer auth or AWS credentials")
+      expect(error.message).toContain(
+        "Bedrock Converse-д route bearer auth эсвэл route дээр тохируулсан AWS credentials",
+      )
     }),
   )
 
@@ -562,7 +564,7 @@ describe("Bedrock Converse route", () => {
         }),
       ).pipe(Effect.flip)
 
-      expect(error.message).toContain("Bedrock Converse does not support image media type image/svg+xml")
+      expect(error.message).toContain("Bedrock Converse нь image/svg+xml төрлийн зургийн медиа дэмждэггүй")
     }),
   )
 
@@ -576,7 +578,7 @@ describe("Bedrock Converse route", () => {
         }),
       ).pipe(Effect.flip)
 
-      expect(error.message).toContain("Bedrock Converse does not support media type application/x-tar")
+      expect(error.message).toContain("Bedrock Converse нь application/x-tar медиа төрлийг дэмждэггүй")
     }),
   )
 

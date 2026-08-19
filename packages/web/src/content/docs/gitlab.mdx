@@ -37,7 +37,7 @@ MongolGPT ердийн GitLab шугам хоолойд ажилладаг. Та
          config_dir: ${CI_PROJECT_DIR}/mongolgpt-config
          auth_json: $MONGOLGPT_AUTH_JSON # MongolGPT auth JSON агуулсан хувьсагчийн нэр
          command: optional-custom-command
-         message: "Your prompt here"
+         message: "Энд хүсэлтээ бичнэ үү"
    ```
 
 Илүү их мэдээлэл авах бол энэ бүрэлдэхүүн хэсгийн хувьд [баримтуудыг шалгана уу](https://gitlab.com/explore/catalog/nagyv/gitlab-mongolgpt) ашиглана уу.
@@ -53,7 +53,7 @@ MongolGPT нь таны GitLab ажлын урсгалтай нэгддэг.
 
 ### Онцлогууд
 
-- **Гурвалсан асуудлууд**: MongolGPT-аас асуудлыг судалж, танд тайлбарлахыг хүс.
+- **Асуудал ангилах**: MongolGPT-аар асуудлыг судлуулж, шалтгаан болон шийдэх чиглэлийг тайлбарлуулна.
 - **Засаж хэрэгжүүлэх**: Асуудлыг засах эсвэл функцийг хэрэгжүүлэхийг MongolGPT-аас хүс.
   Энэ нь шинэ салбар үүсгэж, өөрчлөлттэй хамт нэгтгэх хүсэлт гаргах болно.
 - **Аюулгүй**: MongolGPT таны GitLab гүйгч дээр ажилладаг.
@@ -68,12 +68,12 @@ MongolGPT нь таны GitLab CI/CD шугаманд ажилладаг тул 
 Хамгийн сүүлийн үеийн зааварчилгааг [**GitLab баримтууд**](https://docs.gitlab.com/user/duo_agent_platform/agent_assistant/)-г үзнэ үү.
 :::
 
-1. Өөрийн GitLab орчныг тохируулна уу
-2. CI/CD-г тохируулах
-3. AI загвар нийлүүлэгч API түлхүүр аваарай
-4. Үйлчилгээний данс үүсгэх
-5. CI/CD хувьсагчдыг тохируулах
-6. Урсгалын тохиргооны файл үүсгэ, жишээ нь:
+1.  Өөрийн GitLab орчныг тохируулна уу
+2.  CI/CD-г тохируулах
+3.  AI загвар нийлүүлэгч API түлхүүр аваарай
+4.  Үйлчилгээний данс үүсгэх
+5.  CI/CD хувьсагчдыг тохируулах
+6.  Урсгалын тохиргооны файл үүсгэ, жишээ нь:
 
         <details>
 
@@ -114,7 +114,7 @@ MongolGPT нь таны GitLab CI/CD шугаманд ажилладаг тул 
 
         Контекст: $AI_FLOW_CONTEXT
         Ажил: $AI_FLOW_INPUT
-        Event: $AI_FLOW_EVENT
+        Үйл явдал: $AI_FLOW_EVENT
 
         Боломжтой GitLab хэрэгслүүдээр хүссэн ажлыг гүйцэтгэ.
         Шинжилгээг бүрэн хийж, ойлгомжтой тайлбар өг.
@@ -136,7 +136,7 @@ MongolGPT нь таны GitLab CI/CD шугаманд ажилладаг тул 
             echo "Commit хийх staged өөрчлөлт алга"
           else
             echo "$CI_WORKLOAD_REF branch-д commit хийж байна"
-            git commit --message "MongolGPT changes"
+            git commit --message "MongolGPT-ийн өөрчлөлт"
             echo "$CI_WORKLOAD_REF рүү push хийж байна"
             git push https://gitlab-ci-token:$GITLAB_TOKEN@$GITLAB_HOST/gl-demo-ultimate-dev-ai-epic-17570/test-java-project.git $CI_WORKLOAD_REF
             echo "Өөрчлөлтийг амжилттай push хийлээ"
@@ -193,4 +193,3 @@ GitLab-д MongolGPT-г хэрхэн ашиглаж болох зарим жиш�
   ```
 
   MongolGPT нэгтгэх хүсэлтийг хянаж, санал хүсэлтээ өгнө.
-

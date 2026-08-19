@@ -298,7 +298,9 @@ const serverToolResultType = (name: string): AnthropicServerToolResultType | und
 const lowerServerToolResult = Effect.fn("AnthropicMessages.lowerServerToolResult")(function* (part: ToolResultPart) {
   const wireType = serverToolResultType(part.name)
   if (!wireType)
-    return yield* invalid(`Anthropic Messages does not know how to round-trip server tool result for ${part.name}`)
+    return yield* invalid(
+      `Anthropic Messages-ийн ${part.name} серверийн хэрэгслийн үр дүнг буцаан хөрвүүлэх арга мэдэгдэхгүй байна`,
+    )
   return { type: wireType, tool_use_id: part.id, content: part.result.value } satisfies AnthropicServerToolResultBlock
 })
 
@@ -406,7 +408,9 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
   for (const [index, message] of request.messages.entries()) {
     if (message.role === "system") {
       if (splitsLocalToolResults(request.messages, index))
-        return yield* invalid("Anthropic Messages system updates cannot split a local tool call from its tool result")
+        return yield* invalid(
+          "Anthropic Messages-ийн системийн шинэчлэл нь локал хэрэгслийн дуудлагыг үр дүнгээс нь салгаж болохгүй",
+        )
       if (supportsNativeSystemUpdates(request) && canUseNativeSystemUpdate(request.messages, index)) {
         messages.push(yield* lowerNativeSystemUpdate(message, breakpoints))
         continue
@@ -461,7 +465,7 @@ const lowerMessages = Effect.fn("AnthropicMessages.lowerMessages")(function* (
           continue
         }
         return yield* invalid(
-          `Anthropic Messages assistant messages only support text, reasoning, and tool-call content for now`,
+          `Anthropic Messages-ийн assistant messages одоогоор зөвхөн text, reasoning болон tool-call content дэмжинэ`,
         )
       }
       messages.push({ role: "assistant", content })
@@ -497,7 +501,7 @@ const lowerThinking = Effect.fn("AnthropicMessages.lowerThinking")(function* (re
       : typeof thinking.budget_tokens === "number"
         ? thinking.budget_tokens
         : undefined
-  if (budget === undefined) return yield* invalid("Anthropic thinking provider option requires budgetTokens")
+  if (budget === undefined) return yield* invalid("Anthropic thinking provider option-д budgetTokens шаардлагатай")
   return { type: "enabled" as const, budget_tokens: budget }
 })
 
@@ -523,7 +527,7 @@ const fromRequest = Effect.fn("AnthropicMessages.fromRequest")(function* (reques
   const messages = yield* lowerMessages(request, breakpoints)
   if (breakpoints.dropped > 0) {
     yield* Effect.logWarning(
-      `Anthropic Messages: dropped ${breakpoints.dropped} cache breakpoint(s); the API allows at most ${ANTHROPIC_BREAKPOINT_CAP} per request.`,
+      `Anthropic Messages: ${breakpoints.dropped} cache breakpoint хасагдлаа; API нэг request-д хамгийн ихдээ ${ANTHROPIC_BREAKPOINT_CAP}-ыг зөвшөөрнө.`,
     )
   }
   return {
@@ -738,7 +742,7 @@ const onContentBlockDelta = Effect.fn("AnthropicMessages.onContentBlockDelta")(f
       state.tools,
       event.index,
       delta.partial_json,
-      "Anthropic Messages tool argument delta is missing its tool call",
+      "Anthropic Messages хэрэгслийн аргументын өөрчлөлтийн хэсэгт хэрэгслийн дуудлага алга байна",
     )
     if (ToolStream.isError(result)) return yield* result
     const events: LLMEvent[] = []
@@ -788,7 +792,7 @@ const providerErrorMessage = (event: AnthropicEvent): string => {
   const type = event.error?.type
   const message = event.error?.message
   if (type && message) return `${type}: ${message}`
-  return message || type || "Anthropic Messages stream error"
+  return message || type || "Anthropic Messages stream-ийн алдаа"
 }
 
 const onError = (state: ParserState, event: AnthropicEvent): StepResult => [

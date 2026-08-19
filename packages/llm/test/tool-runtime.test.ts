@@ -622,12 +622,12 @@ describe("LLMClient tools", () => {
 
       const toolError = events.find(LLMEvent.is.toolError)
       expect(toolError).toMatchObject({ type: "tool-error", id: "call_1", name: "missing_tool" })
-      expect(toolError?.message).toContain("Unknown tool")
+      expect(toolError?.message).toContain("Үл мэдэгдэх хэрэгсэл")
       expect(events.find(LLMEvent.is.toolResult)).toMatchObject({
         type: "tool-result",
         id: "call_1",
         name: "missing_tool",
-        result: { type: "error", value: "Unknown tool: missing_tool" },
+        result: { type: "error", value: "Үл мэдэгдэх хэрэгсэл: missing_tool" },
       })
     }),
   )
@@ -648,7 +648,7 @@ describe("LLMClient tools", () => {
 
       const toolError = events.find(LLMEvent.is.toolError)
       expect(toolError).toMatchObject({ type: "tool-error", id: "call_1", name: "get_weather" })
-      expect(toolError?.message).toContain("Invalid tool input")
+      expect(toolError?.message).toContain("Хэрэгслийн оролт буруу байна")
     }),
   )
 

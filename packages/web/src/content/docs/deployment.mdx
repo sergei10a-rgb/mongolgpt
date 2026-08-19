@@ -1,59 +1,57 @@
 ---
 title: Cloudflare байршуулалт
-description: MongolGPT-ийн Cloudflare-only staging, production, DNS, нууц утга, шалгалт болон буцаалтын гарын авлага.
+description: MongolGPT-ийн Cloudflare-д суурилсан туршилтын болон үйлдвэрлэлийн орчин, DNS, нууц утга, шалгалт болон буцаалтын гарын авлага.
 ---
 
-MongolGPT-ийн веб бүтээгдэхүүний байршуулалтын үндсэн платформ нь **Cloudflare**. Vercel болон Supabase нь launch архитектурын сонголт биш.
+MongolGPT-ийн веб бүтээгдэхүүний байршуулалтын үндсэн платформ нь **Cloudflare**. Vercel болон Supabase нь нээлтийн архитектурын сонголт биш.
 
-OpenRouter, NVIDIA NIM, Bonum болон QPay нь хиймэл оюуны загвар, төлбөрийн гадаад API болохоос MongolGPT-ийн hosting платформ биш.
+OpenRouter, NVIDIA NIM, Bonum болон QPay нь хиймэл оюуны загвар, төлбөрийн гадаад API болохоос MongolGPT-ийг байршуулах платформ биш.
 
 :::caution
-Hosted орчны үндсэн өгөгдөл D1, quota болон rate limit нь SQLite-backed Durable Objects, өндөр ачааллын usage бичилт нь Queues ашиглана. Production deploy нээлттэй боловч OAuth, model provider болон domain-ийн бодит нууц утгыг тохируулж, `deploy:preflight` болон smoke шалгалтыг заавал давуулна.
+Байршуулсан орчны үндсэн өгөгдөл D1-д, хэрэглээний хязгаар болон хүсэлтийн давтамжийн хязгаар нь SQLite-д тулгуурласан Durable Objects-д, өндөр ачааллын хэрэглээний бичилт нь Queues-д хадгалагдана. Үйлдвэрлэлийн байршуулалт нээлттэй боловч OAuth, загварын үйлчилгээ үзүүлэгч болон домэйны бодит нууц утгыг тохируулж, `deploy:preflight` болон суурь ажиллагааны шалгалтыг заавал давуулна.
 :::
 
 ## Үйлчилгээний хаягууд
 
-Production domain-ийг `mgpt.mn` гэж үзвэл:
+Үйлдвэрлэлийн домэйныг `mgpt.mn` гэж үзвэл:
 
-| Үйлчилгээ             | Хаяг                        |
-| --------------------- | --------------------------- |
-| Account болон Console | `https://mgpt.mn`           |
-| Вэб апп               | `https://app.mgpt.mn`       |
-| Монгол баримт бичиг   | `https://docs.mgpt.mn/docs` |
-| OAuth үйлчилгээ       | `https://auth.mgpt.mn`      |
-| QPay + Bonum төлбөр   | `https://pay.mgpt.mn`       |
-| Админ удирдлага       | `https://admin.mgpt.mn`     |
-| Sync API (сонголттой) | `https://api.mgpt.mn`       |
+| Үйлчилгээ                      | Хаяг                        |
+| ------------------------------ | --------------------------- |
+| Бүртгэл ба удирдлагын самбар   | `https://mgpt.mn`           |
+| Вэб апп                        | `https://app.mgpt.mn`       |
+| Монгол баримт бичиг            | `https://docs.mgpt.mn/docs` |
+| OAuth үйлчилгээ                | `https://auth.mgpt.mn`      |
+| QPay + Bonum төлбөр            | `https://pay.mgpt.mn`       |
+| Админ удирдлага                | `https://admin.mgpt.mn`     |
+| Синхрончлолын API (сонголттой) | `https://api.mgpt.mn`       |
 
-`dev` орчинд эдгээрийн domain-ийн өмнө `dev.` нэмэгдэнэ. Жишээ нь `https://app.dev.mgpt.mn`.
+`dev` орчинд үйлчилгээний дэд домэйн ба үндсэн домэйны хооронд `dev` нэмэгдэнэ. Жишээ нь `https://app.dev.mgpt.mn`.
 
-`api.<domain>` нь үндсэн launch үйлчилгээ биш. Зөвхөн `MONGOLGPT_ENABLE_SYNC_SERVICE=true` үед нэмэлт sync service-тэй хамт байршуулна.
+`api.<domain>` нь үндсэн нээлтийн үйлчилгээ биш. Зөвхөн `MONGOLGPT_ENABLE_SYNC_SERVICE=true` үед нэмэлт синхрончлолын үйлчилгээтэй хамт байршуулна.
 
 ## Cloudflare бүтэц
 
-| Хэсэг                        | Cloudflare үйлчилгээ             |
-| ---------------------------- | -------------------------------- |
-| Баримт бичиг                 | Astro Worker                     |
-| Вэб апп                      | Static Assets / Worker           |
-| Console ба Free Auto gateway | SolidStart Worker                |
-| OAuth                        | Worker + KV                      |
-| QPay + Bonum төлбөрийн гарц  | Worker + Queue + D1              |
-| Админ хамгаалалт             | Cloudflare Access + MFA          |
-| Үндсэн өгөгдөл               | D1                               |
-| Өдөр тутмын нөөц             | D1 export Workflow + private R2  |
-| Token quota, атомик тоолуур  | SQLite-backed Durable Objects    |
-| Өндөр ачааллын usage бичилт  | Queues + dead-letter Queue + D1  |
-| Бодит цагийн статистик       | Cloudflare D1 + `stats.<domain>` |
-| Мэдээллийн захидлын бүртгэл  | Cloudflare D1                    |
-| Enterprise холбогдох хүсэлт  | Cloudflare D1                    |
+| Хэсэг                                      | Cloudflare үйлчилгээ                       |
+| ------------------------------------------ | ------------------------------------------ |
+| Баримт бичиг                               | Astro Worker                               |
+| Вэб апп                                    | Static Assets / Worker                     |
+| Бүртгэлийн самбар ба Free Auto гарц        | SolidStart Worker                          |
+| OAuth                                      | Worker + KV                                |
+| QPay + Bonum төлбөрийн гарц                | Worker + Queue + D1                        |
+| Админ хамгаалалт                           | Cloudflare Access + MFA                    |
+| Үндсэн өгөгдөл                             | D1                                         |
+| Өдөр тутмын нөөц                           | D1 экспортын Workflow + нийтэд нээлтгүй R2 |
+| Токены хэрэглээний хязгаар, атомик тоолуур | SQLite-д тулгуурласан Durable Objects      |
+| Хэрэглээний өндөр ачааллын бичилт          | Queues + алдааны тусгай Queue + D1         |
+| Бодит цагийн статистик                     | Cloudflare D1 + `stats.<domain>`           |
+| Мэдээллийн захидлын бүртгэл                | Cloudflare D1                              |
+| Байгууллагын холбогдох хүсэлт              | Cloudflare D1                              |
 
-KV нь нэг key-д олон зэрэгцээ бичилт шаарддаг token болон төлбөрийн тоолуурт ашиглагдахгүй. Ийм төлөвийг Durable Objects сериал дарааллаар удирдана.
+KV нь нэг түлхүүрт олон зэрэгцээ бичилт шаарддаг токен болон төлбөрийн тоолуурт ашиглагдахгүй. Ийм төлөвийг Durable Objects дараалсан бичилтээр удирдана.
 
-## Deploy-оос өмнөх шалгалт
+## Байршуулахын өмнөх шалгалт
 
-Нийтийн Web app-ийг зөвхөн hosted runtime, account болон auth үйлчилгээтэй хамт deploy хийнэ. Repository-ийн
-үндсэн хавтаснаас local preflight ажиллуулах бол доорх нийтлэг утгаас гадна энэ хуудсын GitHub тохиргооны
-хүснэгтэд байгаа dev credential-үүдийг ижил нэртэй environment variable-аар аюулгүй оруулсан байна.
+Нийтийн веб аппыг зөвхөн байршуулсан ажиллах орчин, бүртгэл болон баталгаажуулалтын үйлчилгээтэй хамт байршуулна. Репозиторийн үндсэн хавтаснаас локал урьдчилсан шалгалт ажиллуулах бол доорх нийтлэг утгаас гадна энэ хуудсын GitHub тохиргооны хүснэгтэд байгаа хөгжүүлэлтийн нэвтрэх мэдээллийг ижил нэртэй орчны хувьсагчаар аюулгүй оруулсан байна.
 
 ```powershell
 $env:MONGOLGPT_DOMAIN="mgpt.mn"
@@ -65,11 +63,9 @@ $env:MONGOLGPT_PAYMENT_ENVIRONMENT="disabled"
 bun run deploy:preflight -- dev
 ```
 
-`MONGOLGPT_ENABLE_HOSTED_SERVICES=false` build-ийг `app.dev.mgpt.mn` дээр SaaS app гэж нийтлэхгүй. Тэр build нь
-Desktop/local bridge хөгжүүлэлтэд зориулагдсан бөгөөд account, auth, Free Auto API-гүй байна. Dev staging-ийг
-GitHub-ийн **Cloudflare deploy** workflow-оор ажиллуулах нь зөв зам.
+`MONGOLGPT_ENABLE_HOSTED_SERVICES=false` гэж бүтээсэн хувилбарыг `app.dev.mgpt.mn` дээр SaaS апп гэж нийтлэхгүй. Тэр хувилбар нь Desktop болон дотоод холбогчийн хөгжүүлэлтэд зориулагдсан бөгөөд бүртгэл, баталгаажуулалт, Free Auto API-гүй. Хөгжүүлэлтийн туршилтын орчныг GitHub-ийн **Cloudflare deploy** ажлын урсгалаар байршуулна.
 
-Production deploy хийхэд нэмэлт баталгаажуулалт заавал өгнө:
+Үйлдвэрлэлийн орчинд байршуулж эхлэхийн өмнө нэмэлт баталгаажуулалт заавал өгнө:
 
 ```powershell
 $env:MONGOLGPT_PRODUCTION_CONFIRMATION="DEPLOY mgpt.mn"
@@ -78,78 +74,70 @@ bun run deploy:preflight -- production
 
 ## GitHub тохиргоо
 
-Cloudflare Dashboard хэвийн болмогц GitHub repository-ийн `Settings` → `Secrets and variables` → `Actions` хэсэгт дараахыг тохируулна.
+Cloudflare Dashboard хэвийн болмогц GitHub репозиторийн `Settings` → `Secrets and variables` → `Actions` хэсэгт дараахыг тохируулна.
 
-Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог хадгална.
+Репозиторийн түвшинд Cloudflare-ийн нийтлэг тохиргоог хадгална.
 
-| Төрөл    | Нэр                             | Утга                                       |
-| -------- | ------------------------------- | ------------------------------------------ |
-| Хувьсагч | `MONGOLGPT_DOMAIN`              | `mgpt.mn`                                  |
-| Хувьсагч | `CLOUDFLARE_DEFAULT_ACCOUNT_ID` | Cloudflare аккаунтын ID                    |
-| Нууц утга | `CLOUDFLARE_API_TOKEN`         | Хамгийн бага шаардлагатай эрхтэй API token |
+| Төрөл     | Нэр                             | Утга                                       |
+| --------- | ------------------------------- | ------------------------------------------ |
+| Хувьсагч  | `MONGOLGPT_DOMAIN`              | `mgpt.mn`                                  |
+| Хувьсагч  | `CLOUDFLARE_DEFAULT_ACCOUNT_ID` | Cloudflare аккаунтын ID                    |
+| Нууц утга | `CLOUDFLARE_API_TOKEN`          | Хамгийн бага шаардлагатай эрхтэй API токен |
 
-`dev` болон `production` GitHub Environment тус бүрд өөрийн OAuth, session болон model credential хадгална.
+`dev` болон `production` GitHub орчин тус бүрд өөрийн OAuth, сесс болон загварын нэвтрэх мэдээллийг хадгална.
 
-| Төрөл    | Нэр                              | Утга                                                                 |
-| -------- | -------------------------------- | -------------------------------------------------------------------- |
-| Хувьсагч | `MONGOLGPT_AUTH_EMAIL_DOMAINS`   | Dev-д зөвшөөрөх яг email эсвэл domain; таслалаар тусгаарлана         |
-| Хувьсагч | `GITHUB_CLIENT_ID_CONSOLE`       | Тухайн environment-ийн GitHub OAuth App client ID                    |
-| Хувьсагч | `GOOGLE_CLIENT_ID`               | Тухайн environment-ийн Google Web OAuth client ID                    |
-| Хувьсагч | `MONGOLGPT_PAYMENT_PLAN_CATALOG` | Basic/Pro/Max багцын MNT үнэ, Монгол нэр бүхий JSON                  |
-| Нууц утга | `GITHUB_CLIENT_SECRET_CONSOLE`  | GitHub OAuth аппын нууц түлхүүр                                      |
-| Нууц утга | `BYOK_CREDENTIALS_KEY_V1`       | 32+ тэмдэгт тогтвортой CSPRNG key; rotation хийх хүртэл солихгүй     |
-| Нууц утга | `D1_BACKUP_API_TOKEN`           | Зөвхөн тухайн account-ийн D1 Edit эрхтэй backup/export token         |
-| Нууц утга | `MONGOLGPT_RUNTIME_SECRET`      | 32+ тэмдэгт Cloudflare Sandbox account-isolation secret              |
-| Нууц утга | `MONGOLGPT_RUNTIME_AUTH_SECRET` | 32+ тэмдэгт runtime capability signing/verification secret           |
-| Нууц утга | `MONGOLGPT_PLAN_LIMITS`         | Free/Basic/Pro/Max plan, token, cost болон rate-limit JSON           |
-| Нууц утга | `ZEN_SESSION_SECRET`            | 32+ тэмдэгт тусдаа CSPRNG session secret                             |
-| Нууц утга | `ZEN_MODELS1`                   | Баталгаажсан Free Auto model/provider JSON; provider key-ийг агуулна |
-| Нууц утга | `ZEN_MODELS2`…`ZEN_MODELS30`    | `ZEN_MODELS1` багтахгүй үед JSON-ийн дараалсан optional хэсгүүд      |
+| Төрөл     | Нэр                              | Утга                                                                                                  |
+| --------- | -------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Хувьсагч  | `MONGOLGPT_AUTH_EMAIL_DOMAINS`   | Хөгжүүлэлтийн орчинд зөвшөөрөх яг тохирох имэйл эсвэл домэйн; таслалаар тусгаарлана                   |
+| Хувьсагч  | `GITHUB_CLIENT_ID_CONSOLE`       | Тухайн орчны GitHub OAuth аппын клиент ID                                                             |
+| Хувьсагч  | `GOOGLE_CLIENT_ID`               | Тухайн орчны Google Web OAuth клиент ID                                                               |
+| Хувьсагч  | `MONGOLGPT_PAYMENT_PLAN_CATALOG` | Basic/Pro/Max багцын MNT үнэ, Монгол нэр бүхий JSON                                                   |
+| Нууц утга | `GITHUB_CLIENT_SECRET_CONSOLE`   | GitHub OAuth аппын нууц түлхүүр                                                                       |
+| Нууц утга | `BYOK_CREDENTIALS_KEY_V1`        | 32+ тэмдэгт тогтвортой CSPRNG түлхүүр; шинэчлэх хүртэл солихгүй                                       |
+| Нууц утга | `D1_BACKUP_API_TOKEN`            | Зөвхөн тухайн аккаунтын D1 засах эрхтэй нөөцлөлт, экспортын токен                                     |
+| Нууц утга | `MONGOLGPT_RUNTIME_SECRET`       | 32+ тэмдэгт Cloudflare Sandbox-ийн аккаунт тусгаарлах нууц утга                                       |
+| Нууц утга | `MONGOLGPT_RUNTIME_AUTH_SECRET`  | 32+ тэмдэгт ажиллах орчны эрхийн баримтад гарын үсэг зурж шалгах нууц утга                            |
+| Нууц утга | `MONGOLGPT_PLAN_LIMITS`          | Free/Basic/Pro/Max багц, токен, өртөг болон хүсэлтийн давтамжийн хязгаарын JSON                       |
+| Нууц утга | `ZEN_SESSION_SECRET`             | 32+ тэмдэгт тусдаа CSPRNG сессийн нууц утга                                                           |
+| Нууц утга | `ZEN_MODELS1`                    | Баталгаажсан Free Auto загвар ба үйлчилгээ үзүүлэгчийн JSON; үйлчилгээ үзүүлэгчийн түлхүүрийг агуулна |
+| Нууц утга | `ZEN_MODELS2`…`ZEN_MODELS30`     | `ZEN_MODELS1`-д багтахгүй үед ашиглах JSON-ийн дараалсан сонголттой хэсгүүд                           |
 
 ### OAuth апп бүртгэх
 
-Dev ба production орчин тусдаа credential ашиглана. Ингэснээр туршилтын callback, зөвшөөрөгдсөн хэрэглэгч болон нууц
-түлхүүр production нэвтрэлттэй холилдохгүй.
+Хөгжүүлэлт ба үйлдвэрлэлийн орчин тусдаа нэвтрэх мэдээлэл ашиглана. Ингэснээр туршилтын буцах дуудлага, зөвшөөрөгдсөн хэрэглэгч болон нууц түлхүүр үйлдвэрлэлийн нэвтрэлттэй холилдохгүй.
 
 GitHub-ийн [OAuth App үүсгэх албан ёсны заавраар](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app)
-**Settings → Developer settings → OAuth Apps → New OAuth App** хэсэгт dev апп үүсгэнэ.
+**Settings → Developer settings → OAuth Apps → New OAuth App** хэсэгт хөгжүүлэлтийн апп үүсгэнэ.
 
-| GitHub талбар              | Dev утга                                   |
-| -------------------------- | ------------------------------------------ |
-| Аппликэйшний нэр (`Application name`)                    | `MongolGPT Dev`                            |
-| Нүүр хуудасны URL (`Homepage URL`)                       | `https://app.dev.mgpt.mn`                  |
-| Зөвшөөрлийн буцах URL (`Authorization callback URL`)     | `https://auth.dev.mgpt.mn/github/callback` |
+| GitHub талбар                                        | Хөгжүүлэлтийн утга                         |
+| ---------------------------------------------------- | ------------------------------------------ |
+| Аппликэйшний нэр (`Application name`)                | `MongolGPT Dev`                            |
+| Нүүр хуудасны URL (`Homepage URL`)                   | `https://app.dev.mgpt.mn`                  |
+| Зөвшөөрлийн буцах URL (`Authorization callback URL`) | `https://auth.dev.mgpt.mn/github/callback` |
 
-Үүссэн **Client ID**-г dev environment variable `GITHUB_CLIENT_ID_CONSOLE`, **Client secret**-ийг dev environment secret
-`GITHUB_CLIENT_SECRET_CONSOLE` болгон хадгална. GitHub OAuth App нэг callback URL-тэй тул production-д тусдаа `MongolGPT`
-апп үүсгэж `https://auth.mgpt.mn/github/callback` ашиглана.
+Үүссэн **Client ID**-г хөгжүүлэлтийн орчны `GITHUB_CLIENT_ID_CONSOLE` хувьсагчид, **Client secret**-ийг `GITHUB_CLIENT_SECRET_CONSOLE` нууц утгад хадгална. GitHub OAuth апп нэг буцах URL-тэй тул үйлдвэрлэлийн орчинд тусдаа `MongolGPT` апп үүсгэж `https://auth.mgpt.mn/github/callback` хаягийг ашиглана.
 
-Google Cloud Console-ийн **APIs & Services → OAuth consent screen** хэсэгт consent screen болон dev test user-ээ тохируулаад,
-**Credentials → Create credentials → OAuth client ID → Web application** сонгоно. Google-ийн
-[web-server OAuth зааврын](https://developers.google.com/identity/protocols/oauth2/web-server) дагуу redirect URI нь scheme,
-host, path болон төгсгөлийн ташуу зураас хүртэл яг таарах ёстой.
+Google Cloud Console-ийн **APIs & Services → OAuth consent screen** хэсэгт зөвшөөрлийн дэлгэц болон хөгжүүлэлтийн туршилтын хэрэглэгчээ тохируулаад **Credentials → Create credentials → OAuth client ID → Web application** сонгоно. Google-ийн [веб серверийн OAuth зааврын](https://developers.google.com/identity/protocols/oauth2/web-server) дагуу буцах URI-ийн протокол, хост, зам болон төгсгөлийн ташуу зураас хүртэл яг таарах ёстой.
 
-| Google талбар           | Dev утга                                   |
-| ----------------------- | ------------------------------------------ |
-| Нэр (`Name`)                                  | `MongolGPT Dev`                            |
+| Google талбар                                       | Хөгжүүлэлтийн утга                         |
+| --------------------------------------------------- | ------------------------------------------ |
+| Нэр (`Name`)                                        | `MongolGPT Dev`                            |
 | Зөвшөөрөгдсөн буцах URI (`Authorized redirect URI`) | `https://auth.dev.mgpt.mn/google/callback` |
 
-Үүссэн **Client ID**-г dev environment variable `GOOGLE_CLIENT_ID` болгон хадгална. Одоогийн OpenID `form_post` урсгал
-client secret ашигладаггүй тул Google client secret-ийг repository эсвэл GitHub-д нэмэхгүй. Production client дээр
-`https://auth.mgpt.mn/google/callback` redirect URI ашиглана.
+Үүссэн **Client ID**-г хөгжүүлэлтийн орчны `GOOGLE_CLIENT_ID` хувьсагчид хадгална. Одоогийн OpenID `form_post` урсгал клиент нууц утга ашигладаггүй тул Google-ийн клиент нууц утгыг репозитор эсвэл GitHub-д нэмэхгүй. Үйлдвэрлэлийн клиентэд `https://auth.mgpt.mn/google/callback` буцах URI-г ашиглана.
 
-QPay + Bonum sandbox төлбөр асаах environment-д дараах merchant secret-үүдийг нэмнэ.
+QPay + Bonum-ийн туршилтын төлбөрийг идэвхжүүлэх орчинд худалдааны байгууллагын дараах нууц утгуудыг нэмнэ.
 
-| Төрөл  | Нэр                          | Утга                                          |
-| ------ | ---------------------------- | --------------------------------------------- |
-| Secret | `QPAY_MERCHANT_ACCOUNT_ID`   | QPay туршилтын орчны худалдааны аккаунтын ID  |
-| Secret | `QPAY_CLIENT_ID`             | QPay туршилтын орчны клиентийн ID             |
-| Secret | `QPAY_CLIENT_SECRET`         | QPay туршилтын орчны клиентийн нууц түлхүүр   |
-| Secret | `QPAY_INVOICE_CODE`          | QPay туршилтын орчны нэхэмжлэхийн код         |
-| Secret | `BONUM_MERCHANT_ACCOUNT_ID`  | Bonum туршилтын орчны худалдааны аккаунтын ID |
-| Secret | `BONUM_APP_SECRET`           | Bonum туршилтын орчны аппын нууц түлхүүр      |
-| Secret | `BONUM_TERMINAL_ID`          | Bonum туршилтын орчны терминалын ID           |
-| Secret | `BONUM_WEBHOOK_CHECKSUM_KEY` | Bonum webhook гарын үсэг шалгах нууц түлхүүр  |
+| Төрөл     | Нэр                          | Утга                                          |
+| --------- | ---------------------------- | --------------------------------------------- |
+| Нууц утга | `QPAY_MERCHANT_ACCOUNT_ID`   | QPay туршилтын орчны худалдааны аккаунтын ID  |
+| Нууц утга | `QPAY_CLIENT_ID`             | QPay туршилтын орчны клиентийн ID             |
+| Нууц утга | `QPAY_CLIENT_SECRET`         | QPay туршилтын орчны клиентийн нууц түлхүүр   |
+| Нууц утга | `QPAY_INVOICE_CODE`          | QPay туршилтын орчны нэхэмжлэхийн код         |
+| Нууц утга | `BONUM_MERCHANT_ACCOUNT_ID`  | Bonum туршилтын орчны худалдааны аккаунтын ID |
+| Нууц утга | `BONUM_APP_SECRET`           | Bonum туршилтын орчны аппын нууц түлхүүр      |
+| Нууц утга | `BONUM_TERMINAL_ID`          | Bonum туршилтын орчны терминалын ID           |
+| Нууц утга | `BONUM_WEBHOOK_CHECKSUM_KEY` | Bonum webhook гарын үсэг шалгах нууц түлхүүр  |
 
 `MONGOLGPT_PAYMENT_PLAN_CATALOG` жишээ:
 
@@ -161,14 +149,14 @@ QPay + Bonum sandbox төлбөр асаах environment-д дараах merchan
 }
 ```
 
-Үнэ нь бүхэл MNT дүн байна. Энэ жишээг шууд production үнэ гэж үзэхгүй; өртөг, quota болон gross margin судалгаагаар баталгаажуулсны дараа тохируулна.
+Үнэ нь бүхэл MNT дүн байна. Энэ жишээг шууд үйлдвэрлэлийн үнэ гэж үзэхгүй; өртөг, хэрэглээний хязгаар болон нийт ашгийн хувийг судалгаагаар баталгаажуулсны дараа тохируулна.
 
-Admin-ийг асаах environment-д дараах хоёр secret нэмнэ.
+Админ орчныг идэвхжүүлэх байршуулалтын орчинд дараах хоёр нууц утгыг нэмнэ.
 
-| Төрөл  | Нэр                                | Утга                                                         |
-| ------ | ---------------------------------- | ------------------------------------------------------------ |
-| Secret | `CLOUDFLARE_ACCESS_API_TOKEN`      | Зөвхөн Access application үүсгэх тусгай Cloudflare API token |
-| Secret | `MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS` | Админы зөвшөөрөгдсөн имэйлүүд; таслал эсвэл шинэ мөрөөр      |
+| Төрөл     | Нэр                                | Утга                                                    |
+| --------- | ---------------------------------- | ------------------------------------------------------- |
+| Нууц утга | `CLOUDFLARE_ACCESS_API_TOKEN`      | Зөвхөн Access апп үүсгэх тусгай Cloudflare API токен    |
+| Нууц утга | `MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS` | Админы зөвшөөрөгдсөн имэйлүүд; таслал эсвэл шинэ мөрөөр |
 
 `CLOUDFLARE_ACCESS_API_TOKEN`-ийг Cloudflare-ийн **My Profile → API Tokens → Create Custom Token** хэсэгт дараах хамгийн бага эрхээр үүсгэнэ.
 
@@ -178,44 +166,40 @@ Admin-ийг асаах environment-д дараах хоёр secret нэмнэ.
 | Аккаунт (`Account`) | `Access: Organizations, Identity Providers, and Groups`   | Засах (`Edit`) |
 | Нөөц (`Resources`)  | `Include` → MongolGPT байрлаж буй ганц Cloudflare аккаунт |                |
 
-Zone permission, DNS edit, Worker edit, D1, R2 болон KV эрх энэ тусгай token-д хэрэггүй. Ерөнхий `CLOUDFLARE_API_TOKEN`-оос тусад нь хадгална. Access token нь SST config ажиллах үед л ашиглагдах бөгөөд admin Worker-т resource, environment variable эсвэл secret хэлбэрээр холбогдохгүй.
+Бүсийн зөвшөөрөл, DNS ба Worker засах эрх, D1, R2 болон KV-ийн эрх энэ тусгай токенд хэрэггүй. Ерөнхий `CLOUDFLARE_API_TOKEN`-оос тусад нь хадгална. Access токеныг SST тохиргоо ажиллах үед л ашиглах бөгөөд админ Worker-т нөөц, орчны хувьсагч эсвэл нууц утга хэлбэрээр холбохгүй.
 
-Cloudflare Zero Trust-ийг тухайн account дээр нэг удаа эхлүүлж, team domain болон дор хаяж нэг login method/identity provider-ийг идэвхжүүлсэн байна. Үүний дараа IaC нь:
+Cloudflare Zero Trust-ийг тухайн аккаунт дээр нэг удаа эхлүүлж, багийн домэйн болон дор хаяж нэг нэвтрэх арга эсвэл таних үйлчилгээ үзүүлэгчийг идэвхжүүлсэн байна. Үүний дараа кодоор удирдах дэд бүтэц (IaC) нь:
 
-- organization-ийн одоогийн бүх тохиргоог GET-ээр авч хадгалан, Independent MFA-д TOTP, biometrics, security key аргыг idempotent PUT-ээр нэмнэ;
-- global MFA-г бусад application-д хүчээр шаардахгүй бөгөөд stack устахад organization MFA-г автоматаар сулруулахгүй;
-- `admin.<stage-domain>` self-hosted Access application үүсгэнэ;
+- байгууллагын одоогийн бүх тохиргоог GET хүсэлтээр авч хадгалан, Independent MFA-д TOTP, биометр болон аюулгүй байдлын түлхүүрийн аргыг давтан илгээхэд ижил үр дүнтэй PUT хүсэлтээр нэмнэ;
+- нийтлэг MFA-г бусад аппад хүчээр шаардахгүй бөгөөд дэд бүтцийн багц устахад байгууллагын MFA-г автоматаар сулруулахгүй;
+- `admin.<stage-domain>` өөрийн серверт байрлах Access апп үүсгэнэ;
 - зөвхөн `MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS`-ийн имэйлүүдийг allow хийнэ;
-- application болон policy түвшинд independent MFA шаардана;
-- Access audience болон team domain-ийг Cloudflare-аас автоматаар авч Worker-т холбоно;
-- HttpOnly, SameSite Strict болон binding cookie хамгаалалтыг асаана.
+- апп болон бодлогын түвшинд Independent MFA шаардана;
+- Access-ийн хүлээн авагч болон багийн домэйныг Cloudflare-аас автоматаар авч Worker-т холбоно;
+- HttpOnly, SameSite Strict болон сессийг холбосон cookie хамгаалалтыг асаана.
 
-`MONGOLGPT_ADMIN_ACCESS_TEAM_DOMAIN`, `MONGOLGPT_ADMIN_ACCESS_AUDIENCE`, `MONGOLGPT_ADMIN_MFA_ENFORCED` гэсэн гар тохиргоо ашиглахгүй. `everyone` болон `bypass` policy үүсгэхгүй.
+`MONGOLGPT_ADMIN_ACCESS_TEAM_DOMAIN`, `MONGOLGPT_ADMIN_ACCESS_AUDIENCE`, `MONGOLGPT_ADMIN_MFA_ENFORCED` гэсэн гар тохиргоо ашиглахгүй. `everyone` болон `bypass` утгатай бодлого үүсгэхгүй.
 
-Workflow нь secret-гүй verify job-ийг эхэлж ажиллуулаад, зөвхөн `main` revision болон сонгосон GitHub Environment-д deploy job нээнэ. Access token нь зөвхөн admin асаалттай deploy-д, merchant credential нь зөвхөн төлбөр асаалттай deploy-ийн SST secret sync-д ашиглагдана. Deploy step эдгээр утгыг command argument-д гаргалгүй stdin-аар тухайн SST stage-ийн encrypted secret store-д шинэчилсний дараа deploy хийнэ. GitHub Environment-ийн deployment branch дүрмийг `main`-ээр хязгаарлана. Иймээс нууц утгыг repository файл, command history эсвэл SST placeholder-д бичихгүй. `deploy:preflight` нь OAuth, session, plan/quota, Free Auto JSON, QPay/Bonum catalog ба credential, Access-ийн organization/login method/application жагсаалтыг Cloudflare resource үүсгэхээс өмнө шалгана. Энэ нь side effect-гүй Read шалгалт тул token-ийн Edit эрхийг ялгаж нотлохгүй; organization MFA PUT болон Access application create нь deploy дотор Edit эрхийг fail-closed байдлаар бодитоор батална.
+Ажлын урсгал нууц утга шаарддаггүй баталгаажуулах ажлыг эхэлж ажиллуулаад, зөвхөн `main` хувилбар болон сонгосон GitHub орчинд байршуулалтын ажлыг нээнэ. Access токеныг зөвхөн админ идэвхтэй байршуулалтад, худалдааны байгууллагын нэвтрэх мэдээллийг зөвхөн төлбөр идэвхтэй байршуулалтын SST нууц утгын шинэчлэлд ашиглана. Байршуулах алхам эдгээр утгыг командын аргументад гаргалгүй, стандарт оролтоор тухайн SST орчны шифрлэгдсэн нууц утгын санд шинэчилсний дараа байршуулна. GitHub орчны байршуулалтын салбарын дүрмийг `main`-ээр хязгаарлана. Иймээс нууц утгыг репозиторийн файл, командын түүх эсвэл SST-ийн орлуулах утгад бичихгүй. `deploy:preflight` нь OAuth, сесс, багц ба хэрэглээний хязгаар, Free Auto JSON, QPay/Bonum каталог ба нэвтрэх мэдээлэл, Access-ийн байгууллага, нэвтрэх арга, аппын жагсаалтыг Cloudflare-ийн нөөц үүсгэхээс өмнө шалгана. Энэ нь өөрчлөлт хийдэггүй унших шалгалт тул токены засах эрхийг дангаар нотлохгүй. Байгууллагын MFA-г PUT хүсэлтээр шинэчлэх болон Access апп үүсгэх алхам нь байршуулалтын үед засах эрхийг бодитоор шалгаж, эрх дутуу бол ажиллагааг зогсооно.
 
-NVIDIA API Catalog-ийн trial endpoint нь зөвхөн туршилт, үнэлгээнд зориулагдсан. Production `ZEN_MODELS` тохиргоонд `integrate.api.nvidia.com` ашиглах бол тусдаа production subscription/license-аа баталгаажуулсны дараа тухайн provider дээр `productionUseApproved: true` гэж санаатай тэмдэглэнэ. Энэ баталгаа байхгүй production deploy-ийг preflight зогсооно.
+NVIDIA API Catalog-ийн туршилтын төгсгөлийн цэг зөвхөн туршилт, үнэлгээнд зориулагдсан. Үйлдвэрлэлийн `ZEN_MODELS` тохиргоонд `integrate.api.nvidia.com` ашиглах бол үйлдвэрлэлийн зориулалтын захиалга, лицензээ тусад нь баталгаажуулсны дараа тухайн үйлчилгээ үзүүлэгч дээр `productionUseApproved: true` гэж санаатай тэмдэглэнэ. Энэ баталгаа байхгүй үйлдвэрлэлийн байршуулалтыг урьдчилсан шалгалт зогсооно.
 
-`D1_BACKUP_API_TOKEN`-ийг ерөнхий deploy token-оос тусад нь үүсгэнэ: **Account → D1 → Edit**, Resources дээр зөвхөн MongolGPT байрлаж буй ганц account-ийг сонгоно. Zone, DNS, Worker, R2 болон Access эрх нэмэхгүй. Token-ийг GitHub Environment secret-д хадгална. Нөөцлөлт, хадгалалтын хугацаа, сэргээх ажиллагааг [Нөөцлөлт ба сэргээх](./backup-restore) гарын авлагаас харна уу.
+`D1_BACKUP_API_TOKEN`-ийг ерөнхий байршуулалтын токеноос тусад нь үүсгэнэ: **Account → D1 → Edit**. Нөөцийн хэсэгт зөвхөн MongolGPT байрлаж буй ганц аккаунтыг сонгоно. Бүс, DNS, Worker, R2 болон Access эрх нэмэхгүй. Токеныг GitHub орчны нууц утгад хадгална. Нөөцлөлт, хадгалалтын хугацаа, сэргээх ажиллагааг [Нөөцлөлт ба сэргээх](./backup-restore) гарын авлагаас харна уу.
 
-`MONGOLGPT_RUNTIME_SECRET` болон `MONGOLGPT_RUNTIME_AUTH_SECRET` нь хоёр өөр, тогтвортой CSPRNG secret байна.
-Эхнийх нь account бүрийн cloud sandbox identity-г тусгаарлана. Хоёр дахь нь console-оос олгосон богино настай runtime
-capability-г гарын үсэг зурж Worker дээр шалгана. Аль нэгийг deploy бүрд санамсаргүй сольж болохгүй; соливол идэвхтэй
-runtime session хүчингүй болох эсвэл өмнөх sandbox identity-с тасрах эрсдэлтэй. Workflow нь
-`MONGOLGPT_RUNTIME_AUTH_SECRET`-ийг runtime Worker болон SST-ийн `MongolGPTRuntimeAuthSecret` resource-д ижил утгаар
-холбож, preflight хоёр тал зөрвөл deploy-г зогсооно.
+`MONGOLGPT_RUNTIME_SECRET` болон `MONGOLGPT_RUNTIME_AUTH_SECRET` нь криптографын аюулгүй санамсаргүй үүсгүүрээр бий болгосон, хоорондоо ялгаатай хоёр тогтвортой нууц утга байна.
+Эхнийх нь аккаунт бүрийн үүлэн тусгаарлагдсан орчны таних тэмдгийг салгана. Хоёр дахь нь удирдлагын үйлчилгээнээс олгосон ажиллах орчны богино настай эрхийн баримтад гарын үсэг зурж, Worker дээр шалгана. Аль нэгийг байршуулалт бүрд санамсаргүй сольж болохгүй. Соливол идэвхтэй сесс хүчингүй болох эсвэл өмнөх тусгаарлагдсан орчны таних тэмдгээс тасрах эрсдэлтэй. Ажлын урсгал `MONGOLGPT_RUNTIME_AUTH_SECRET`-ийг ажиллах орчны Worker болон SST-ийн `MongolGPTRuntimeAuthSecret` нөөцөд ижил утгаар холбож, урьдчилсан шалгалтаар хоёр тал зөрвөл байршуулалтыг зогсооно.
 
-Quota service-ийн дотоод token-ийг SST deploy үеэр автоматаар үүсгэнэ. Upstash болон PlanetScale secret шаардлагагүй.
+Хэрэглээний хязгаарын үйлчилгээний дотоод токеныг SST байршуулалтын үед автоматаар үүсгэнэ. Upstash болон PlanetScale-ийн нууц утга шаардлагагүй.
 
-`Cloudflare deploy` workflow нь preflight, typecheck, docs/web build, SST deploy, D1 migration, URL smoke check гэсэн дарааллаар ажиллана. `payment_environment`-ийг эхлээд `disabled`, sandbox merchant бэлэн болсны дараа `sandbox` гэж сонгоно. Production үед `DEPLOY <domain>` гэсэн deploy баталгаа заавал байна. Бодит мөнгөний `production` төлбөр сонгосон бол нэмэлтээр `ENABLE REAL PAYMENTS <domain>` гэсэн яг тохирох баталгаажуулалтгүй preflight зогсоно.
+`Cloudflare deploy` ажлын урсгал нь урьдчилсан шалгалт, төрлийн шалгалт, баримт бичиг ба вэбийн бүтээлт, SST байршуулалт, D1 өгөгдлийн шилжилт, URL-ийн суурь ажиллагааны шалгалт гэсэн дарааллаар ажиллана. `payment_environment`-ийг эхлээд `disabled`, туршилтын худалдааны эрх бэлэн болсны дараа `sandbox` гэж сонгоно. Үйлдвэрлэлийн үед `DEPLOY <domain>` гэсэн байршуулалтын баталгаа заавал байна. Бодит мөнгөний `production` төлбөр сонгосон бол нэмэлтээр `ENABLE REAL PAYMENTS <domain>` гэсэн яг тохирох баталгаажуулалтгүй үед урьдчилсан шалгалт зогсоно.
 
-`MONGOLGPT_ENABLE_ANALYTICS=true` бол зөвхөн `MONGOLGPT_ENABLE_HOSTED_SERVICES=true` үеийн deploy дээр `https://stats.<domain>` live stats сайтыг Cloudflare D1-backed орчноор хамт гаргана.
+`MONGOLGPT_ENABLE_ANALYTICS=true` бол зөвхөн `MONGOLGPT_ENABLE_HOSTED_SERVICES=true` үеийн байршуулалтад `https://stats.<domain>` бодит хэрэглээний статистикийн сайтыг Cloudflare D1-д тулгуурласан орчноор хамт гаргана.
 
-Stats сайтын мэдээллийн захидлын маягт бүртгэлийг үндсэн D1 сангийн `newsletter_subscriber` хүснэгтэд хадгална. EmailOctopus secret болон тусдаа newsletter database шаардахгүй.
+Статистикийн сайтын мэдээллийн захидлын маягтын бүртгэлийг үндсэн D1 сангийн `newsletter_subscriber` хүснэгтэд хадгална. EmailOctopus-ийн нууц утга болон мэдээллийн захидлын тусдаа өгөгдлийн сан шаардахгүй.
 
 Enterprise холбогдох маягтын хүсэлтийг `enterprise_inquiry` хүснэгтэд хадгална. Ингэснээр Salesforce, AWS SES эсвэл EmailOctopus түр тохируулаагүй үед ч хэрэглэгчийн хүсэлт алдагдахгүй.
 
-## Health шалгалт
+## Бэлэн байдлын шалгалт
 
 Hosted орчинд:
 
@@ -226,17 +210,17 @@ GET https://runtime.mgpt.mn/global/health
 GET https://pay.mgpt.mn/health
 ```
 
-Үндсэн үйлчилгээ амжилттай үед `status` талбар `ok` байна. Төлбөр унтраалттай deploy-д payment health нь `disabled`, sandbox/production төлбөр асаалттай үед QPay, Bonum, plan catalog, checkout болон cancellation бүгд бэлэн байж `ok` болно. Аль нэг нь дутуу бол `degraded` тул smoke deploy-ийг амжилттай гэж үзэхгүй. Health endpoint нь нууц утга, database мэдээлэл, хувилбарын дотоод дугаар задруулахгүй.
+Үндсэн үйлчилгээ бэлэн үед `status` талбар `ok` байна. Төлбөр унтраалттай байршуулалтад төлбөрийн төлөв `disabled`, `sandbox` эсвэл `production` төлбөр асаалттай үед QPay, Bonum, багцын каталог, төлбөр баталгаажуулах болон цуцлах ажиллагаа бүгд бэлэн байж `ok` болно. Аль нэг нь дутуу бол `degraded` тул суурь ажиллагааны шалгалтыг амжилттай гэж үзэхгүй. Бэлэн байдлын төгсгөлийн цэг нууц утга, өгөгдлийн сангийн мэдээлэл, хувилбарын дотоод дугаар задруулахгүй.
 
 ## Буцаах
 
-1. Асуудалтай deploy-оос өмнөх баталгаатай Git commit-ийг сонгоно.
-2. Тухайн commit-оос ижил stage руу `bun sst deploy --stage=<stage>` ажиллуулна.
+1. Асуудалтай байршуулалтаас өмнөх баталгаатай Git коммитыг сонгоно.
+2. Тухайн коммитоос ижил орчин руу `bun sst deploy --stage=<stage>` ажиллуулна.
 3. `bun run deploy:smoke -- <stage>` ажиллуулж бүх нийтэд нээлттэй URL-ийг шалгана.
-4. Өгөгдлийн migration орсон бол кодыг дангаар буцаахгүй; migration бүр тусдаа forward fix эсвэл урьдчилан бэлтгэсэн restore ажиллагаатай байна.
+4. Өгөгдлийн шилжилт орсон бол кодыг дангаар буцаахгүй. Шилжилт бүр урагш засах тусдаа өөрчлөлт эсвэл урьдчилан бэлтгэсэн сэргээх ажиллагаатай байна.
 
-Production resource нь SST дээр хамгаалагдсан бөгөөд repository устгах эсвэл stage арилгах үйлдлээр санамсаргүй устахгүй.
+Үйлдвэрлэлийн орчны нөөц SST дээр хамгаалагдсан бөгөөд репозиторийг устгах эсвэл орчныг арилгах үйлдлээр санамсаргүй устахгүй.
 
 ## Cloudflare тасалдсан үед
 
-Cloudflare Dashboard нээгдэхгүй бол DNS болон нууц үгийг олон дахин өөрчлөхөөс өмнө [Cloudflare Status](https://www.cloudflarestatus.com/) болон [status API](https://www.cloudflarestatus.com/api/v2/status.json)-г шалгана. Dashboard тасарсан үед local хөгжүүлэлт, test, build болон GitHub configuration бэлтгэх ажлаа үргэлжлүүлж болно; deploy-г үйлчилгээ хэвийн болтол түр хүлээнэ.
+Cloudflare Dashboard нээгдэхгүй бол DNS болон нууц үгийг олон дахин өөрчлөхөөс өмнө [Cloudflare-ийн төлөв](https://www.cloudflarestatus.com/) болон [төлөв шалгах API](https://www.cloudflarestatus.com/api/v2/status.json)-г шалгана. Dashboard тасарсан үед локал хөгжүүлэлт, тест, бүтээлт болон GitHub тохиргоогоо үргэлжлүүлж болно. Байршуулалтыг үйлчилгээ хэвийн болтол түр хүлээнэ.

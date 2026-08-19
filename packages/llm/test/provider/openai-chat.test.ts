@@ -413,7 +413,7 @@ describe("OpenAI Chat route", () => {
         const error = yield* LLMClient.prepare(
           LLM.request({ model, messages: [Message.user({ type: "media", ...media })] }),
         ).pipe(Effect.flip)
-        expect(error.message).toMatch(/does not support|does not match|valid base64/)
+        expect(error.message).toMatch(/дэмждэггүй|таарахгүй|base64/)
       }),
     )
 
@@ -431,7 +431,7 @@ describe("OpenAI Chat route", () => {
           ],
         }),
       ).pipe(Effect.flip)
-      expect(error.message).toContain("encoded limit")
+      expect(error.message).toContain("encoded хязгаар")
     }),
   )
 
@@ -618,7 +618,7 @@ describe("OpenAI Chat route", () => {
       const body = sseEvents(deltaChunk({ content: 123 }))
       const error = yield* LLMClient.generate(request).pipe(Effect.provide(fixedResponse(body)), Effect.flip)
 
-      expect(error.message).toContain("Invalid openai/openai-chat stream event")
+      expect(error.message).toContain("openai/openai-chat stream event буруу байна")
     }),
   )
 
@@ -629,7 +629,7 @@ describe("OpenAI Chat route", () => {
       ])
       const error = yield* LLMClient.generate(request).pipe(Effect.provide(layer), Effect.flip)
 
-      expect(error.message).toContain("Failed to read openai/openai-chat stream")
+      expect(error.message).toContain("openai/openai-chat stream уншихад алдаа гарлаа")
     }),
   )
 

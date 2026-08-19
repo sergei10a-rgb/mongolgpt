@@ -74,7 +74,9 @@ export const lower = Effect.fn("BedrockMedia.lower")(function* (part: MediaPart)
     return { image: { format: imageFormat, source: { bytes: media.base64 } } } satisfies ImageBlock
   }
   if (mime.startsWith("image/"))
-    return yield* ProviderShared.invalidRequest(`Bedrock Converse does not support image media type ${part.mediaType}`)
+    return yield* ProviderShared.invalidRequest(
+      `Bedrock Converse нь ${part.mediaType} төрлийн зургийн медиа дэмждэггүй`,
+    )
   const documentFormat = DOCUMENT_FORMATS[mime as keyof typeof DOCUMENT_FORMATS]
   if (documentFormat) {
     const media = yield* ProviderShared.validateMedia(
@@ -84,7 +86,7 @@ export const lower = Effect.fn("BedrockMedia.lower")(function* (part: MediaPart)
     )
     return documentBlock(part, documentFormat, media.base64)
   }
-  return yield* ProviderShared.invalidRequest(`Bedrock Converse does not support media type ${part.mediaType}`)
+  return yield* ProviderShared.invalidRequest(`Bedrock Converse нь ${part.mediaType} медиа төрлийг дэмждэггүй`)
 })
 
 export * as BedrockMedia from "./bedrock-media"
