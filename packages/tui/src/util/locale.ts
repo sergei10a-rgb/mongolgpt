@@ -4,6 +4,8 @@ export function titlecase(str: string) {
 
 export const ui = {
   closeDialog: "Диалог хаах",
+  directory: "Хавтас",
+  file: "Файл",
   getStarted: "Эхлэхийн тулд",
   lspDisabled: "LSP идэвхгүй байна",
   lspActivates: "Файл уншихад LSP идэвхжинэ",
