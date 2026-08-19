@@ -41,7 +41,7 @@ const browser = {
   method: {
     id: browserMethodID,
     type: "oauth",
-    label: "ChatGPT Pro/Plus (browser)",
+    label: "ChatGPT Pro/Plus (хөтөч)",
   },
   authorize: () =>
     Effect.gen(function* () {
@@ -65,7 +65,7 @@ const browser = {
           return
         }
         if (!value || url.searchParams.get("state") !== state) {
-          const message = value ? "Invalid OAuth state" : "Missing authorization code"
+          const message = value ? "OAuth төлөв буруу байна" : "Зөвшөөрлийн код дутуу байна"
           Effect.runFork(Deferred.fail(code, new Error(message)))
           response
             .writeHead(400, { "Content-Type": "text/html" })
@@ -83,7 +83,7 @@ const browser = {
       return {
         mode: "auto" as const,
         url: authorizeURL(redirect, pkce, state),
-        instructions: "Complete authorization in your browser. This window will close automatically.",
+        instructions: "Хөтөч дээрээ зөвшөөрлийг баталгаажуулна уу. Энэ цонх автоматаар хаагдана.",
         callback: Deferred.await(code).pipe(
           Effect.flatMap((value) => exchange(value, redirect, pkce)),
           Effect.map((tokens) => credential(browserMethodID, tokens)),
@@ -98,7 +98,7 @@ const headless = {
   method: {
     id: headlessMethodID,
     type: "oauth",
-    label: "ChatGPT Pro/Plus (headless)",
+    label: "ChatGPT Pro/Plus (хөтөчгүй горим)",
   },
   authorize: () =>
     Effect.gen(function* () {
@@ -114,7 +114,7 @@ const headless = {
       return {
         mode: "auto" as const,
         url: `${issuer}/codex/device`,
-        instructions: `Enter code: ${device.user_code}`,
+        instructions: `Кодыг оруулна уу: ${device.user_code}`,
         callback: Effect.gen(function* () {
           while (true) {
             const response = yield* Effect.tryPromise({
@@ -141,7 +141,7 @@ const headless = {
               )
             }
             if (response.status !== 403 && response.status !== 404) {
-              return yield* Effect.fail(new Error(`Device authorization failed: ${response.status}`))
+              return yield* Effect.fail(new Error(`Төхөөрөмжийн зөвшөөрөл амжилтгүй боллоо: ${response.status}`))
             }
             yield* Effect.sleep(interval + pollingSafetyMargin)
           }
@@ -227,7 +227,7 @@ function request<A>(url: string, init: RequestInit) {
   return Effect.tryPromise({
     try: async (signal) => {
       const response = await fetch(url, { ...init, signal })
-      if (!response.ok) throw new Error(`Request failed: ${response.status}`)
+      if (!response.ok) throw new Error(`Хүсэлт амжилтгүй боллоо: ${response.status}`)
       return response.json() as Promise<A>
     },
     catch: (cause) => cause,

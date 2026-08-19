@@ -235,7 +235,7 @@ function stopOAuthServer() {
 
 function waitForOAuthCallback(account: string, pkce: PkceCodes, state: string): Promise<TokenResponse> {
   if (pendingOAuth) {
-    pendingOAuth.reject(new Error("Superseded by a newer Snowflake authorize request"))
+    pendingOAuth.reject(new Error("Шинэ Snowflake зөвшөөрөл хүссэн тул өмнөх хүсэлтийг цуцаллаа"))
     pendingOAuth = undefined
   }
 
@@ -475,7 +475,7 @@ export async function SnowflakeCortexAuthPlugin(_input: PluginInput): Promise<Ho
             return {
               url,
               instructions:
-                "Browser дээр Snowflake нэвтрэлтийг дуусгана уу. MongolGPT OAuth callback-ийг авч bearer token-ийг автоматаар хадгална.",
+                "Хөтөч дээр Snowflake нэвтрэлтийг дуусгана уу. MongolGPT OAuth callback-ийг авч bearer token-ийг автоматаар хадгална.",
               method: "auto" as const,
               async callback() {
                 try {

@@ -159,7 +159,7 @@ async function exchangeCodeForTokens(
   })
   if (!response.ok) {
     const detail = await response.text().catch(() => "")
-    throw new Error(`xAI token exchange failed (${response.status})${detail ? `: ${detail}` : ""}`)
+    throw new Error(`xAI token солилцоо амжилтгүй боллоо (${response.status})${detail ? `: ${detail}` : ""}`)
   }
   return response.json() as Promise<TokenResponse>
 }
@@ -176,7 +176,7 @@ async function refreshAccessToken(refreshToken: string, options: XaiAuthPluginOp
   })
   if (!response.ok) {
     const detail = await response.text().catch(() => "")
-    throw new Error(`xAI token refresh failed (${response.status})${detail ? `: ${detail}` : ""}`)
+    throw new Error(`xAI token шинэчлэхэд алдаа гарлаа (${response.status})${detail ? `: ${detail}` : ""}`)
   }
   return response.json() as Promise<TokenResponse>
 }
@@ -206,11 +206,11 @@ export async function requestDeviceCode(options: XaiAuthPluginOptions = {}): Pro
   })
   if (!response.ok) {
     const detail = await response.text().catch(() => "")
-    throw new Error(`xAI device code request failed (${response.status})${detail ? `: ${detail}` : ""}`)
+    throw new Error(`xAI төхөөрөмжийн код хүсэхэд алдаа гарлаа (${response.status})${detail ? `: ${detail}` : ""}`)
   }
   const json = (await response.json()) as DeviceCodeResponse
   if (!json.device_code || !json.user_code || !json.verification_uri) {
-    throw new Error("xAI device code response is missing device_code / user_code / verification_uri")
+    throw new Error("xAI төхөөрөмжийн кодын хариунд device_code / user_code / verification_uri дутуу байна")
   }
   return json
 }
@@ -274,15 +274,15 @@ export async function pollDeviceCodeToken(
       continue
     }
     if (body.error === "access_denied" || body.error === "authorization_denied") {
-      throw new Error("xAI device authorization was denied")
+      throw new Error("xAI төхөөрөмжийн зөвшөөрлийг цуцалсан байна")
     }
     if (body.error === "expired_token") {
-      throw new Error("xAI device code expired - please re-run login")
+      throw new Error("xAI төхөөрөмжийн кодын хугацаа дууссан байна. Нэвтрэх үйлдлийг дахин ажиллуулна уу")
     }
     const detail = body.error_description ?? body.error ?? ""
-    throw new Error(`xAI device token exchange failed (${response.status})${detail ? `: ${detail}` : ""}`)
+    throw new Error(`xAI төхөөрөмжийн token солилцоо амжилтгүй боллоо (${response.status})${detail ? `: ${detail}` : ""}`)
   }
-  throw new Error("xAI device authorization timed out")
+  throw new Error("xAI төхөөрөмжийн зөвшөөрөл хүлээх хугацаа дууслаа")
 }
 
 // CORS allowlist for the loopback callback. The redirect_uri itself is
@@ -420,7 +420,7 @@ function waitForOAuthCallback(pkce: PkceCodes, state: string): Promise<TokenResp
   // it eagerly so its caller stops waiting on a state value that can never
   // match the next callback.
   if (pendingOAuth) {
-    pendingOAuth.reject(new Error("Superseded by a newer xAI authorize request"))
+    pendingOAuth.reject(new Error("Шинэ xAI зөвшөөрөл хүссэн тул өмнөх хүсэлтийг цуцаллаа"))
     pendingOAuth = undefined
   }
   return new Promise((resolve, reject) => {
@@ -428,7 +428,7 @@ function waitForOAuthCallback(pkce: PkceCodes, state: string): Promise<TokenResp
       () => {
         if (pendingOAuth) {
           pendingOAuth = undefined
-          reject(new Error("OAuth callback timeout - authorization took too long"))
+          reject(new Error("OAuth callback хүлээх хугацаа дууслаа: зөвшөөрөл олгох үйлдэл хэт удав"))
         }
       },
       5 * 60 * 1000,
@@ -549,7 +549,7 @@ export async function XaiAuthPlugin(input: PluginInput, options: XaiAuthPluginOp
       },
       methods: [
         {
-          label: "xAI Grok OAuth (SuperGrok Subscription)",
+          label: "xAI Grok OAuth (SuperGrok захиалга)",
           type: "oauth",
           authorize: async () => {
             await startOAuthServer()
@@ -562,7 +562,7 @@ export async function XaiAuthPlugin(input: PluginInput, options: XaiAuthPluginOp
 
             return {
               url: authUrl,
-              instructions: "Complete authorization in your browser. This window will close automatically.",
+              instructions: "Хөтөч дээрээ зөвшөөрлийг баталгаажуулна уу. Энэ цонх автоматаар хаагдана.",
               method: "auto" as const,
               callback: async () => {
                 try {
@@ -591,14 +591,14 @@ export async function XaiAuthPlugin(input: PluginInput, options: XaiAuthPluginOp
           // user's browser. Defends the only attack surface (the polling
           // loop) with the standard authorization_pending / slow_down
           // backoff and a hard deadline from xAI's `expires_in`.
-          label: "xAI Grok OAuth (Headless / Remote / VPS)",
+          label: "xAI Grok OAuth (алсын / VPS)",
           type: "oauth",
           authorize: async () => {
             const device = await requestDeviceCode(options)
             const browserUrl = device.verification_uri_complete ?? device.verification_uri
             return {
               url: browserUrl,
-              instructions: `Open ${device.verification_uri} on any device and enter code: ${device.user_code}`,
+              instructions: `Ямар ч төхөөрөмж дээр ${device.verification_uri}-г нээгээд кодыг оруулна уу: ${device.user_code}`,
               method: "auto" as const,
               callback: async () => {
                 try {
@@ -617,7 +617,7 @@ export async function XaiAuthPlugin(input: PluginInput, options: XaiAuthPluginOp
           },
         },
         {
-          label: "Manually enter API Key",
+          label: "API key-г гараар оруулах",
           type: "api",
         },
       ],

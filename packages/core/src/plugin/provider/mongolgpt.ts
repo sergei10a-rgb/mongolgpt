@@ -37,7 +37,7 @@ function oauth(http: HttpClient.HttpClient) {
     method: {
       id: methodID,
       type: "oauth",
-      label: "MongolGPT Console account",
+      label: "MongolGPT Console бүртгэл",
     },
     authorize: () =>
       Effect.gen(function* () {
@@ -83,7 +83,7 @@ function oauth(http: HttpClient.HttpClient) {
         return {
           mode: "auto" as const,
           url: authorizeURL(defaultAuthServer, redirect, pkce, state),
-          instructions: "Browser дээрээ зөвшөөрлөө баталгаажуулна уу. Энэ цонх автоматаар хаагдана.",
+          instructions: "Хөтөч дээрээ зөвшөөрлөө баталгаажуулна уу. Энэ цонх автоматаар хаагдана.",
           callback: Deferred.await(code).pipe(
             Effect.flatMap((value) => exchange(defaultAuthServer, value, redirect, pkce)),
             Effect.flatMap((token) => credential(http, defaultServer, token)),
@@ -141,7 +141,7 @@ export const MongolGPTPlugin = define<HttpClient.HttpClient | EventV2.Service | 
         integration.name = "MongolGPT"
       })
       draft.method.update(oauth(http))
-      draft.method.update({ integrationID: "mongolgpt", method: { type: "key", label: "API key (service account)" } })
+      draft.method.update({ integrationID: "mongolgpt", method: { type: "key", label: "API key (үйлчилгээний бүртгэл)" } })
     })
 
     connected = (yield* ctx.integration.connection.active("mongolgpt")) !== undefined

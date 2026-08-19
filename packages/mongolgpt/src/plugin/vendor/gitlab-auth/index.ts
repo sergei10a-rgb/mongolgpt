@@ -322,7 +322,7 @@ export const gitlabAuthPlugin = async (_input) => {
         methods: [
             {
                 type: 'oauth',
-                label: 'GitLab OAuth',
+                label: 'GitLab OAuth-оор нэвтрэх',
                 prompts: [
                     {
                         type: 'text',
@@ -341,7 +341,7 @@ export const gitlabAuthPlugin = async (_input) => {
                         normalizedUrl = `${url.protocol}//${url.host}`;
                     }
                     catch {
-                        throw new Error(`GitLab instance URL буруу байна: ${instanceUrl}`);
+                        throw new Error(`GitLab серверийн URL буруу байна: ${instanceUrl}`);
                     }
                     // Generate PKCE parameters
                     const { generateSecret, generateCodeChallengeFromVerifier } = await import('./pkce');
@@ -445,7 +445,7 @@ export const gitlabAuthPlugin = async (_input) => {
             },
             {
                 type: 'api',
-                label: 'GitLab Personal Access Token',
+                label: 'GitLab Personal Access Token оруулах',
                 prompts: [
                     {
                         type: 'text',

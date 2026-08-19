@@ -207,7 +207,7 @@ export async function MongolGPTAuthPlugin(input: PluginInput): Promise<Hooks> {
 
             return {
               url: authorization.url,
-              instructions: "Browser дээрээ MongolGPT нэвтрэлтийг баталгаажуулна уу. Энэ цонх автоматаар хаагдана.",
+              instructions: "Хөтөч дээрээ MongolGPT нэвтрэлтийг баталгаажуулна уу. Энэ цонх автоматаар хаагдана.",
               method: "auto" as const,
               callback: async () => {
                 try {
@@ -232,7 +232,7 @@ export async function MongolGPTAuthPlugin(input: PluginInput): Promise<Hooks> {
           },
         },
         {
-          label: "API key (service account)",
+          label: "API key (үйлчилгээний бүртгэл)",
           type: "api",
         },
       ],

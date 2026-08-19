@@ -32,7 +32,7 @@ describe("plugin.mongolgpt", () => {
     expect(hooks.auth?.provider).toBe("mongolgpt")
     expect(hooks.auth?.methods.map((method) => [method.type, method.label])).toEqual([
       ["oauth", "MongolGPT аккаунтаар нэвтрэх"],
-      ["api", "API key (service account)"],
+      ["api", "API key (үйлчилгээний бүртгэл)"],
     ])
   })
 

@@ -89,7 +89,7 @@ export class CallbackServer {
         const timeout = this.options.timeout || 60000;
         // Setup timeout
         this.timeoutHandle = setTimeout(() => {
-            this.rejectCallback?.(new Error('OAuth callback timeout'));
+            this.rejectCallback?.(new Error('OAuth callback хүлээх хугацаа дууслаа'));
             this.cleanup();
         }, timeout);
         // Return promise that resolves when callback is received
@@ -104,7 +104,7 @@ export class CallbackServer {
     getPort() {
         const address = this.server.server.address();
         if (!address || typeof address === 'string') {
-            throw new Error('Server not started or using Unix socket');
+            throw new Error('Сервер эхлээгүй эсвэл Unix socket ашиглаж байна');
         }
         return address.port;
     }

@@ -113,7 +113,7 @@ export class GitLabOAuthFlow {
         });
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Token exchange failed: ${response.status} ${response.statusText} - ${errorText}`);
+            throw new Error(`Token солилцоо амжилтгүй боллоо: ${response.status} ${response.statusText} - ${errorText}`);
         }
         const tokens = await response.json();
         return tokens;
@@ -139,7 +139,7 @@ export class GitLabOAuthFlow {
         });
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Token refresh failed: ${response.status} ${response.statusText} - ${errorText}`);
+            throw new Error(`Token шинэчлэхэд алдаа гарлаа: ${response.status} ${response.statusText} - ${errorText}`);
         }
         const tokens = await response.json();
         return tokens;

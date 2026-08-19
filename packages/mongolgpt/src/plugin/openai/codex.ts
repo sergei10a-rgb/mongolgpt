@@ -117,7 +117,7 @@ async function exchangeCodeForTokens(code: string, redirectUri: string, pkce: Pk
     }).toString(),
   })
   if (!response.ok) {
-    throw new Error(`Token exchange failed: ${response.status}`)
+    throw new Error(`Token солилцоо амжилтгүй боллоо: ${response.status}`)
   }
   return response.json()
 }
@@ -133,7 +133,7 @@ async function refreshAccessToken(refreshToken: string, issuer = ISSUER): Promis
     }).toString(),
   })
   if (!response.ok) {
-    throw new Error(`Token refresh failed: ${response.status}`)
+    throw new Error(`Token шинэчлэхэд алдаа гарлаа: ${response.status}`)
   }
   return response.json()
 }
@@ -239,7 +239,7 @@ function waitForOAuthCallback(pkce: PkceCodes, state: string): Promise<TokenResp
       () => {
         if (pendingOAuth) {
           pendingOAuth = undefined
-          reject(new Error("OAuth callback timeout - authorization took too long"))
+          reject(new Error("OAuth callback хүлээх хугацаа дууслаа: зөвшөөрөл олгох үйлдэл хэт удав"))
         }
       },
       5 * 60 * 1000,
@@ -419,7 +419,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
       },
       methods: [
         {
-          label: "ChatGPT Pro/Plus (browser)",
+          label: "ChatGPT Pro/Plus (хөтөч)",
           type: "oauth",
           authorize: async () => {
             const { redirectUri } = await startOAuthServer()
@@ -431,7 +431,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
 
             return {
               url: authUrl,
-              instructions: "Complete authorization in your browser. This window will close automatically.",
+              instructions: "Хөтөч дээрээ зөвшөөрлийг баталгаажуулна уу. Энэ цонх автоматаар хаагдана.",
               method: "auto" as const,
               callback: async () => {
                 const tokens = await callbackPromise
@@ -449,7 +449,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
           },
         },
         {
-          label: "ChatGPT Pro/Plus (headless)",
+          label: "ChatGPT Pro/Plus (хөтөчгүй горим)",
           type: "oauth",
           authorize: async () => {
             const deviceResponse = await fetch(`${ISSUER}/api/accounts/deviceauth/usercode`, {
@@ -472,7 +472,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
 
             return {
               url: `${ISSUER}/codex/device`,
-              instructions: `Enter code: ${deviceData.user_code}`,
+              instructions: `Кодыг оруулна уу: ${deviceData.user_code}`,
               method: "auto" as const,
               async callback() {
                 while (true) {
@@ -507,7 +507,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
                     })
 
                     if (!tokenResponse.ok) {
-                      throw new Error(`Token exchange failed: ${tokenResponse.status}`)
+                      throw new Error(`Token солилцоо амжилтгүй боллоо: ${tokenResponse.status}`)
                     }
 
                     const tokens: TokenResponse = await tokenResponse.json()
@@ -532,7 +532,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
           },
         },
         {
-          label: "Manually enter API Key",
+          label: "API key-г гараар оруулах",
           type: "api",
         },
       ],

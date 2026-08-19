@@ -80,9 +80,9 @@ describe("MongolGPTPlugin", () => {
         {
           id: Integration.MethodID.make("device"),
           type: "oauth",
-          label: "MongolGPT Console account",
+          label: "MongolGPT Console бүртгэл",
         },
-        { type: "key", label: "API key (service account)" },
+        { type: "key", label: "API key (үйлчилгээний бүртгэл)" },
       ])
     }),
   )

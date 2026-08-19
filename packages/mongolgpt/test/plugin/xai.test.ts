@@ -110,9 +110,9 @@ describe("plugin.xai", () => {
         await hooks.auth!.loader!(async () => ({ type: "wellknown", key: "k", token: "t" }) as any, {} as any),
       ).toEqual({})
       expect(hooks.auth!.methods.map((m) => [m.type, m.label])).toEqual([
-        ["oauth", "xAI Grok OAuth (SuperGrok Subscription)"],
-        ["oauth", "xAI Grok OAuth (Headless / Remote / VPS)"],
-        ["api", "Manually enter API Key"],
+        ["oauth", "xAI Grok OAuth (SuperGrok захиалга)"],
+        ["oauth", "xAI Grok OAuth (алсын / VPS)"],
+        ["api", "API key-г гараар оруулах"],
       ])
     })
 
@@ -327,7 +327,7 @@ describe("plugin.xai", () => {
 
       await opts.fetch!(new URL("/chat/completions", server.url), { headers: {} })
       await expect(opts.fetch!(new URL("/chat/completions", server.url), { headers: {} })).rejects.toThrow(
-        /xAI token refresh failed \(503\)/,
+        /xAI token шинэчлэхэд алдаа гарлаа \(503\)/,
       )
       await opts.fetch!(new URL("/chat/completions", server.url), { headers: {} })
       expect(tokenRequests).toBe(3)
@@ -426,7 +426,7 @@ describe("plugin.xai", () => {
       const hooks = await XaiAuthPlugin({} as any, serverOptions(server))
       const headless = hooks.auth!.methods.find(
         (m): m is Extract<typeof m, { type: "oauth" }> =>
-          m.type === "oauth" && m.label === "xAI Grok OAuth (Headless / Remote / VPS)",
+          m.type === "oauth" && m.label === "xAI Grok OAuth (алсын / VPS)",
       )!
       const result = await headless.authorize!()
 
@@ -450,7 +450,7 @@ describe("plugin.xai", () => {
       })
       const headless = (await XaiAuthPlugin({} as any, serverOptions(server))).auth!.methods.find(
         (m): m is Extract<typeof m, { type: "oauth" }> =>
-          m.type === "oauth" && m.label === "xAI Grok OAuth (Headless / Remote / VPS)",
+          m.type === "oauth" && m.label === "xAI Grok OAuth (алсын / VPS)",
       )!
       expect((await headless.authorize!()).url).toBe("https://x.ai/device")
     })
@@ -479,7 +479,7 @@ describe("plugin.xai", () => {
       ).rejects.toThrow(/429.*rate limited/)
       await expect(
         requestDeviceCode({ deviceAuthorizationUrl: new URL("/missing", server.url).toString() }),
-      ).rejects.toThrow(/missing device_code/)
+      ).rejects.toThrow(/device_code.*дутуу байна/)
     })
 
     test("pollDeviceCodeToken resolves on success and posts the device-code grant", async () => {
@@ -522,8 +522,8 @@ describe("plugin.xai", () => {
 
     test("pollDeviceCodeToken handles terminal errors and timeout", async () => {
       for (const [body, error] of [
-        [{ error: "access_denied" }, /authorization was denied/],
-        [{ error: "expired_token" }, /device code expired/],
+        [{ error: "access_denied" }, /төхөөрөмжийн зөвшөөрлийг цуцалсан/],
+        [{ error: "expired_token" }, /төхөөрөмжийн кодын хугацаа дууссан/],
         [{ error: "server_error", error_description: "oops" }, /500.*oops/],
       ] as const) {
         using server = makeServer(() => Response.json(body, { status: 500 }))
@@ -552,7 +552,7 @@ describe("plugin.xai", () => {
             tokenUrl: new URL("/oauth2/token", pending.url).toString(),
           },
         ),
-      ).rejects.toThrow(/timed out/)
+      ).rejects.toThrow(/зөвшөөрөл хүлээх хугацаа дууслаа/)
     })
 
     test("pollDeviceCodeToken normalizes bad interval and expires_in values", async () => {
@@ -612,7 +612,7 @@ describe("plugin.xai", () => {
       })
       const headless = (await XaiAuthPlugin({} as any, serverOptions(server))).auth!.methods.find(
         (m): m is Extract<typeof m, { type: "oauth" }> =>
-          m.type === "oauth" && m.label === "xAI Grok OAuth (Headless / Remote / VPS)",
+          m.type === "oauth" && m.label === "xAI Grok OAuth (алсын / VPS)",
       )!
       expect(await ((await headless.authorize!()) as any).callback()).toEqual({ type: "failed" })
     })
