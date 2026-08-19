@@ -80,7 +80,7 @@ const request = (url: string, format: Format, userAgent = browserUserAgent) =>
   HttpClientRequest.get(url).pipe(HttpClientRequest.setHeaders(headers(format, userAgent)))
 
 const assertHttpUrl = (url: URL) => {
-  if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("URL must use http:// or https://")
+  if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("URL нь http:// эсвэл https:// ашиглах ёстой")
 }
 
 const execute = (http: HttpClient.HttpClient, url: string, format: Format, userAgent = browserUserAgent) =>
@@ -90,7 +90,7 @@ const collectBody = (response: HttpClientResponse.HttpClientResponse) =>
   collectBoundedResponseBody(
     response,
     MAX_RESPONSE_BYTES,
-    () => new Error(`Response too large (exceeds ${MAX_RESPONSE_BYTES} byte limit)`),
+    () => new Error(`Хариу хэт том байна (${MAX_RESPONSE_BYTES} байтын хязгаараас хэтэрсэн)`),
   )
 
 const mimeFrom = (contentType: string) => contentType.split(";", 1)[0]?.trim().toLowerCase() ?? ""
@@ -149,14 +149,14 @@ export const layer = Layer.effectDiscard(
                 const contentType = response.headers["content-type"] || ""
                 const mime = mimeFrom(contentType)
                 if (isImageAttachment(mime))
-                  return yield* Effect.fail(new Error(`Unsupported fetched image content type: ${mime}`))
+                  return yield* Effect.fail(new Error(`Татсан зургийн агуулгын төрөл дэмжигдэхгүй: ${mime}`))
                 if (!isTextualMime(mime))
-                  return yield* Effect.fail(new Error(`Unsupported fetched file content type: ${mime}`))
+                  return yield* Effect.fail(new Error(`Татсан файлын агуулгын төрөл дэмжигдэхгүй: ${mime}`))
                 return { body: yield* collectBody(response), contentType }
               }).pipe(
                 Effect.timeoutOrElse({
                   duration: Duration.seconds(input.timeout ?? DEFAULT_TIMEOUT_SECONDS),
-                  orElse: () => Effect.fail(new Error("Request timed out")),
+                  orElse: () => Effect.fail(new Error("Хүсэлтийн хугацаа дууссан")),
                 }),
               )
               const content = new TextDecoder().decode(body)
@@ -170,7 +170,7 @@ export const layer = Layer.effectDiscard(
                 format: input.format,
                 output,
               }
-            }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to fetch ${input.url}` }))),
+            }).pipe(Effect.mapError(() => new ToolFailure({ message: `${input.url} хаягаас мэдээлэл татаж чадсангүй` }))),
         }),
       })
       .pipe(Effect.orDie)

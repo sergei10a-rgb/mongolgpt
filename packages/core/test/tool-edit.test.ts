@@ -217,7 +217,7 @@ describe("EditTool", () => {
             ),
           ).toEqual({
             type: "error",
-            value: `Unable to edit ${external}`,
+            value: `${external} файлыг засах боломжгүй`,
           })
           expect(assertions.map((input) => input.action)).toEqual(["external_directory"])
           expect(reads).toBe(0)
@@ -231,7 +231,7 @@ describe("EditTool", () => {
             ),
           ).toEqual({
             type: "error",
-            value: `Unable to edit ${external}`,
+            value: `${external} файлыг засах боломжгүй`,
           })
           expect(assertions.map((input) => input.action)).toEqual(["external_directory", "edit"])
           expect(reads).toBe(0)
@@ -265,7 +265,7 @@ describe("EditTool", () => {
                   call({ path: "secret.txt", oldString: "not present", newString: "replacement" }),
                 )
 
-                expect(matching).toEqual({ type: "error", value: "Unable to edit secret.txt" })
+                expect(matching).toEqual({ type: "error", value: "secret.txt файлыг засах боломжгүй" })
                 expect(missing).toEqual(matching)
                 expect(assertions.map((input) => input.action)).toEqual(["edit", "edit"])
                 expect(reads).toBe(0)
@@ -293,27 +293,27 @@ describe("EditTool", () => {
                   yield* executeTool(registry, call({ path: "matches.txt", oldString: "same", newString: "same" })),
                 ).toEqual({
                   type: "error",
-                  value: "No changes to apply: oldString and newString are identical.",
+                  value: "Хэрэгжүүлэх өөрчлөлт алга: oldString болон newString ижил байна.",
                 })
                 expect(
                   yield* executeTool(registry, call({ path: "matches.txt", oldString: "", newString: "after" })),
                 ).toEqual({
                   type: "error",
-                  value: "oldString must not be empty. Use write to create or overwrite a file.",
+                  value: "oldString хоосон байж болохгүй. Файл үүсгэх эсвэл дарж бичихдээ write ашиглана уу.",
                 })
                 expect(
                   yield* executeTool(registry, call({ path: "matches.txt", oldString: "missing", newString: "after" })),
                 ).toEqual({
                   type: "error",
                   value:
-                    "Could not find oldString in the file. It must match exactly, including whitespace and indentation.",
+                    "Файлаас oldString олдсонгүй. Зай болон догол мөрийг багтаасан яг тохирол байх ёстой.",
                 })
                 expect(
                   yield* executeTool(registry, call({ path: "matches.txt", oldString: "same", newString: "after" })),
                 ).toEqual({
                   type: "error",
                   value:
-                    "Found multiple exact matches for oldString. Provide more surrounding context or set replaceAll to true.",
+                    "oldString-т олон яг тохирол олдлоо. Ойролцоох контекстийг нэмэх эсвэл replaceAll-ыг true болгоно уу.",
                 })
                 expect(writes).toEqual([])
               }),
@@ -387,7 +387,7 @@ describe("EditTool", () => {
             Effect.gen(function* () {
               expect(result).toEqual({
                 type: "error",
-                value: "File changed after permission approval. Read it again before editing.",
+                value: "Зөвшөөрөл өгснөөс хойш файл өөрчлөгдсөн байна. Засахаас өмнө дахин уншина уу.",
               })
               expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("newer\n")
               expect(writes).toEqual([])

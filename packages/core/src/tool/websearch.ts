@@ -13,7 +13,7 @@ import { collectBoundedResponseBody } from "./http-body"
 import { checksum } from "../util/encode"
 
 export const name = "websearch"
-export const NO_RESULTS = "No search results found. Please try a different query."
+export const NO_RESULTS = "Хайлтын үр дүн олдсонгүй. Өөр хайлтын асуулт оруулна уу."
 export const EXA_URL = "https://mcp.exa.ai/mcp"
 export const PARALLEL_URL = "https://search.parallel.ai/mcp"
 export const MAX_NUM_RESULTS = 20
@@ -239,7 +239,7 @@ export const layer = Layer.effectDiscard(
                 provider,
                 text: text ?? NO_RESULTS,
               }
-            }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to search the web for ${input.query}` })))
+            }).pipe(Effect.mapError(() => new ToolFailure({ message: `${input.query} асуултаар вэбээс хайх боломжгүй` })))
           },
         }),
       })

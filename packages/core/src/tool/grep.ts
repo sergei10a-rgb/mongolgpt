@@ -34,7 +34,7 @@ type ModelOutput = typeof Output.Encoded
 
 /** Format raw search matches into the familiar concise model output. */
 export const toModelOutput = (output: ModelOutput) => {
-  const lines = output.length === 0 ? ["No files found"] : [`Found ${output.length} matches`]
+  const lines = output.length === 0 ? ["Файл олдсонгүй"] : [`${output.length} тохирол олдлоо`]
   let current = ""
   for (const match of output) {
     if (current !== match.entry.path) {
@@ -121,7 +121,7 @@ export const layer = Layer.effectDiscard(
                     ),
                   ),
                 )
-            }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to grep for ${input.pattern}` }))),
+            }).pipe(Effect.mapError(() => new ToolFailure({ message: `${input.pattern} загвараар хайх боломжгүй` }))),
         }),
       })
       .pipe(Effect.orDie)

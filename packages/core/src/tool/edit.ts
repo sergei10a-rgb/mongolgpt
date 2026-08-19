@@ -110,9 +110,9 @@ export const layer = Layer.effectDiscard(
                   Effect.mapError((error) =>
                     error instanceof FileMutation.StaleContentError
                       ? new ToolFailure({
-                          message: "File changed after permission approval. Read it again before editing.",
+                          message: "Зөвшөөрөл өгснөөс хойш файл өөрчлөгдсөн байна. Засахаас өмнө дахин уншина уу.",
                         })
-                      : new ToolFailure({ message: `Unable to edit ${input.path}` }),
+                      : new ToolFailure({ message: `${input.path} файлыг засах боломжгүй` }),
                   ),
                 )
 
@@ -124,12 +124,12 @@ export const layer = Layer.effectDiscard(
                 }
                 if (input.oldString === input.newString) {
                   return yield* new ToolFailure({
-                    message: "No changes to apply: oldString and newString are identical.",
+                    message: "Хэрэгжүүлэх өөрчлөлт алга: oldString болон newString ижил байна.",
                   })
                 }
                 if (input.oldString === "") {
                   return yield* new ToolFailure({
-                    message: "oldString must not be empty. Use write to create or overwrite a file.",
+                    message: "oldString хоосон байж болохгүй. Файл үүсгэх эсвэл дарж бичихдээ write ашиглана уу.",
                   })
                 }
 
@@ -164,13 +164,13 @@ export const layer = Layer.effectDiscard(
                 if (replacements === 0) {
                   return yield* new ToolFailure({
                     message:
-                      "Could not find oldString in the file. It must match exactly, including whitespace and indentation.",
+                      "Файлаас oldString олдсонгүй. Зай болон догол мөрийг багтаасан яг тохирол байх ёстой.",
                   })
                 }
                 if (replacements > 1 && input.replaceAll !== true) {
                   return yield* new ToolFailure({
                     message:
-                      "Found multiple exact matches for oldString. Provide more surrounding context or set replaceAll to true.",
+                      "oldString-т олон яг тохирол олдлоо. Ойролцоох контекстийг нэмэх эсвэл replaceAll-ыг true болгоно уу.",
                   })
                 }
 

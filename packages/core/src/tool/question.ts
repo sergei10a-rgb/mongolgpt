@@ -21,7 +21,7 @@ Usage notes:
 - If you recommend a specific option, make that the first option in the list and add "(Recommended)" at the end of the label`
 
 export const Input = Schema.Struct({
-  questions: Schema.Array(QuestionV2.Prompt).annotate({ description: "Questions to ask" }),
+  questions: Schema.Array(QuestionV2.Prompt).annotate({ description: "Асуух асуултууд" }),
 })
 
 export const Output = Schema.Struct({

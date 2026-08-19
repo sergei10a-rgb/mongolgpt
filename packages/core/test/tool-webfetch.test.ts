@@ -147,7 +147,7 @@ describe("WebFetchTool registration", () => {
 
       expect(yield* executeTool(registry, call({ url: "file:///etc/passwd", format: "text" }))).toEqual({
         type: "error",
-        value: "Unable to fetch file:///etc/passwd",
+        value: "file:///etc/passwd хаягаас мэдээлэл татаж чадсангүй",
       })
       expect(assertions).toEqual([])
       expect(requests).toEqual([])
@@ -190,7 +190,7 @@ describe("WebFetchTool registration", () => {
 
       expect(yield* executeTool(registry, call({ url, format: "markdown" }))).toEqual({
         type: "error",
-        value: `Unable to fetch ${url}`,
+        value: `${url} хаягаас мэдээлэл татаж чадсангүй`,
       })
     }),
   )
@@ -207,7 +207,7 @@ describe("WebFetchTool registration", () => {
         )
       expect(yield* executeTool(registry, call({ url: "https://1.1.1.1/declared", format: "text" }))).toEqual({
         type: "error",
-        value: "Unable to fetch https://1.1.1.1/declared",
+        value: "https://1.1.1.1/declared хаягаас мэдээлэл татаж чадсангүй",
       })
 
       respond = () =>
@@ -216,7 +216,7 @@ describe("WebFetchTool registration", () => {
         )
       expect(yield* executeTool(registry, call({ url: "https://1.1.1.1/streamed", format: "text" }))).toEqual({
         type: "error",
-        value: "Unable to fetch https://1.1.1.1/streamed",
+        value: "https://1.1.1.1/streamed хаягаас мэдээлэл татаж чадсангүй",
       })
     }),
   )
@@ -228,13 +228,13 @@ describe("WebFetchTool registration", () => {
       respond = () => Effect.succeed(new Response("png", { headers: { "content-type": "image/png" } }))
       expect(yield* executeTool(registry, call({ url: "https://1.1.1.1/image", format: "html" }))).toEqual({
         type: "error",
-        value: "Unable to fetch https://1.1.1.1/image",
+        value: "https://1.1.1.1/image хаягаас мэдээлэл татаж чадсангүй",
       })
 
       respond = () => Effect.succeed(new Response("pdf", { headers: { "content-type": "application/pdf" } }))
       expect(yield* executeTool(registry, call({ url: "https://1.1.1.1/file", format: "html" }))).toEqual({
         type: "error",
-        value: "Unable to fetch https://1.1.1.1/file",
+        value: "https://1.1.1.1/file хаягаас мэдээлэл татаж чадсангүй",
       })
     }),
   )
@@ -272,7 +272,10 @@ describe("WebFetchTool registration", () => {
       ).pipe(Effect.forkChild)
       yield* TestClock.adjust(Duration.seconds(1))
 
-      expect(yield* Fiber.join(fiber)).toEqual({ type: "error", value: "Unable to fetch https://1.1.1.1/slow" })
+      expect(yield* Fiber.join(fiber)).toEqual({
+        type: "error",
+        value: "https://1.1.1.1/slow хаягаас мэдээлэл татаж чадсангүй",
+      })
     }),
   )
 })

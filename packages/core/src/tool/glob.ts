@@ -28,7 +28,7 @@ type ModelOutput = typeof Output.Encoded
 
 /** Format raw search results into the concise line-oriented output models expect. */
 export const toModelOutput = (output: ModelOutput) => {
-  const lines = output.length === 0 ? ["No files found"] : output.map((item) => item.path)
+  const lines = output.length === 0 ? ["Файл олдсонгүй"] : output.map((item) => item.path)
   return lines.join("\n")
 }
 
@@ -88,7 +88,7 @@ export const layer = Layer.effectDiscard(
                   ),
                 )
             }).pipe(
-              Effect.mapError(() => new ToolFailure({ message: `Unable to find files matching ${input.pattern}` })),
+              Effect.mapError(() => new ToolFailure({ message: `${input.pattern} загварт тохирох файл олж чадсангүй` })),
             ),
         }),
       })
