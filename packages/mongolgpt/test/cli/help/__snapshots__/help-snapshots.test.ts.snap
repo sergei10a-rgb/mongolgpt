@@ -18,8 +18,7 @@ ACP (агент-клиентийн протокол) сервер эхлүүлэ
       --mdns-domain  mDNS үйлчилгээний өөрийн домэйн нэр (анхдагч: mongolgpt.local)
                                                                 [текст] [анхдагч: "mongolgpt.local"]
       --cors         CORS-д зөвшөөрөх нэмэлт домэйнүүд                      [жагсаалт] [анхдагч: []]
-      --cwd          ажлын хавтас
-                                [текст] [анхдагч: "<HOME>"]"
+      --cwd          ажлын хавтас [текст] [анхдагч: "<HOME>"]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt mcp --help 1`] = `
