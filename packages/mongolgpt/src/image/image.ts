@@ -17,7 +17,7 @@ export class ResizerUnavailableError extends Schema.TaggedErrorClass<ResizerUnav
   {},
 ) {
   override get message() {
-    return "Image resizer is unavailable"
+    return "Зургийн хэмжээг өөрчлөх хэрэгсэл ашиглах боломжгүй байна"
   }
 }
 
@@ -25,7 +25,7 @@ export class InvalidDataUrlError extends Schema.TaggedErrorClass<InvalidDataUrlE
   url: Schema.String,
 }) {
   override get message() {
-    return "Image URL must be a base64 data URL"
+    return "Зургийн URL нь base64 data URL байх ёстой"
   }
 }
 

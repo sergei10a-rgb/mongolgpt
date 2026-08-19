@@ -62,7 +62,7 @@ describe("util.repository", () => {
     expect(reference && isFileRepositoryReference(reference)).toBe(true)
     expect(reference && isRemoteRepositoryReference(reference)).toBe(false)
     expect(() => parseRemoteRepositoryReference(pathToFileURL(localPath).href)).toThrow(
-      "Local file repositories are not supported",
+      "Дотоод файлын репозитор дэмжигдэхгүй",
     )
     expect(() => parseRemoteRepositoryReference(pathToFileURL(localPath).href)).toThrow(UnsupportedLocalRepositoryError)
   })
@@ -85,9 +85,9 @@ describe("util.repository", () => {
 
   test("validates repository branch names", () => {
     expect(() => validateRepositoryBranch("feature/docs.v1")).not.toThrow()
-    expect(() => validateRepositoryBranch("-bad")).toThrow("Branch must contain only alphanumeric characters")
-    expect(() => validateRepositoryBranch("bad..branch")).toThrow("Branch must contain only alphanumeric characters")
-    expect(() => validateRepositoryBranch("bad branch")).toThrow("Branch must contain only alphanumeric characters")
+    expect(() => validateRepositoryBranch("-bad")).toThrow("Салбарын нэрд зөвхөн үсэг, тоо")
+    expect(() => validateRepositoryBranch("bad..branch")).toThrow("Салбарын нэрд зөвхөн үсэг, тоо")
+    expect(() => validateRepositoryBranch("bad branch")).toThrow("Салбарын нэрд зөвхөн үсэг, тоо")
     expect(() => validateRepositoryBranch("bad branch")).toThrow(InvalidRepositoryBranchError)
   })
 })

@@ -76,8 +76,8 @@ export const layer = Layer.effectDiscard(
               const fail = (path: string) => {
                 const prefix =
                   applied.length === 0
-                    ? `Unable to apply patch at ${path}`
-                    : `Patch partially applied before failing at ${path}. Applied: ${applied.map((item) => item.resource).join(", ")}`
+                    ? `Нөхөөсийг хэрэглэж чадсангүй: ${path}`
+                    : `Нөхөөсийг ${path} дээр хэрэглэх үед алдаа гарлаа. Өмнө нь хэрэглэсэн: ${applied.map((item) => item.resource).join(", ")}`
                 return new ToolFailure({ message: prefix })
               }
               return Effect.gen(function* () {

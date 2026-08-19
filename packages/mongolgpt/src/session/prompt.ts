@@ -1299,7 +1299,7 @@ export const layer = Layer.effect(
               // partial text that was cut off by the provider's filter.
               if (handle.message.finish === "content-filter") {
                 handle.message.error = new SessionV1.ContentFilterError({
-                  message: "The response was blocked by the provider's content filter",
+                  message: "Үйлчилгээ үзүүлэгчийн агуулгын шүүлтүүр хариуг хориглолоо",
                 }).toObject()
                 yield* sessions.updateMessage(handle.message)
                 yield* events.publish(Session.Event.Error, { sessionID, error: handle.message.error })

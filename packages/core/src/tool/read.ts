@@ -44,7 +44,7 @@ export const layer = Layer.effectDiscard(
             if (!("encoding" in output) || output.encoding !== "base64" || !SUPPORTED_IMAGE_MIMES.has(output.mime))
               return []
             return [
-              { type: "text", text: "Image read successfully" },
+              { type: "text", text: "Зургийг амжилттай уншлаа" },
               { type: "file", data: output.content, mime: output.mime, name: input.path },
             ]
           },
@@ -97,7 +97,7 @@ export const layer = Layer.effectDiscard(
                   error instanceof Image.DecodeError ||
                   error instanceof Image.SizeError
                     ? error.message
-                    : `Unable to read ${input.path}`
+                    : `Файлыг уншиж чадсангүй: ${input.path}`
                 return new ToolFailure({ message })
               }),
             )

@@ -404,8 +404,8 @@ export const layer = Layer.effect(
       if (result === "compact") {
         processor.message.error = new SessionV1.ContextOverflowError({
           message: replay
-            ? "Conversation history too large to compact - exceeds model context limit"
-            : "Session too large to compact - context exceeds model limit even after stripping media",
+            ? "Харилцан ярианы түүхийг шахахад хэт том байна: загварын контекстийн хязгаараас давжээ"
+            : "Сешнийг шахахад хэт том байна: медиа өгөгдлийг хассан ч загварын контекстийн хязгаараас давжээ",
         }).toObject()
         processor.message.finish = "error"
         yield* session.updateMessage(processor.message)

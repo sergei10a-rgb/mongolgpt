@@ -6,8 +6,8 @@ export async function CloudflareWorkersAuthPlugin(_input: PluginInput): Promise<
         {
           type: "text" as const,
           key: "accountId",
-          message: "Enter your Cloudflare Account ID",
-          placeholder: "e.g. 1234567890abcdef1234567890abcdef",
+          message: "Cloudflare аккаунтын ID-гаа оруулна уу",
+          placeholder: "жишээ нь 1234567890abcdef1234567890abcdef",
         },
       ]
     : []
@@ -18,7 +18,7 @@ export async function CloudflareWorkersAuthPlugin(_input: PluginInput): Promise<
       methods: [
         {
           type: "api",
-          label: "API key",
+          label: "API түлхүүр",
           prompts,
         },
       ],
@@ -33,8 +33,8 @@ export async function CloudflareAIGatewayAuthPlugin(_input: PluginInput): Promis
           {
             type: "text" as const,
             key: "accountId",
-            message: "Enter your Cloudflare Account ID",
-            placeholder: "e.g. 1234567890abcdef1234567890abcdef",
+            message: "Cloudflare аккаунтын ID-гаа оруулна уу",
+            placeholder: "жишээ нь 1234567890abcdef1234567890abcdef",
           },
         ]
       : []),
@@ -43,8 +43,8 @@ export async function CloudflareAIGatewayAuthPlugin(_input: PluginInput): Promis
           {
             type: "text" as const,
             key: "gatewayId",
-            message: "Enter your Cloudflare AI Gateway ID",
-            placeholder: "e.g. my-gateway",
+            message: "Cloudflare AI Gateway-ийн ID-гаа оруулна уу",
+            placeholder: "жишээ нь my-gateway",
           },
         ]
       : []),
@@ -56,7 +56,7 @@ export async function CloudflareAIGatewayAuthPlugin(_input: PluginInput): Promis
       methods: [
         {
           type: "api",
-          label: "Gateway API token",
+          label: "Gateway-ийн API токен",
           prompts,
         },
       ],

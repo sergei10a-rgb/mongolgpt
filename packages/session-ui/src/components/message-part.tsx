@@ -358,10 +358,10 @@ function taskAgent(
   }
 }
 
-function webSearchProviderLabel(provider: unknown) {
-  if (provider === "parallel") return "Parallel Web Search"
-  if (provider === "exa") return "Exa Web Search"
-  return "Web Search"
+function webSearchProviderLabel(i18n: UiI18n, provider: unknown) {
+  if (provider === "parallel") return i18n.t("ui.tool.websearch.parallel")
+  if (provider === "exa") return i18n.t("ui.tool.websearch.exa")
+  return i18n.t("ui.tool.websearch")
 }
 
 export function getToolInfo(
@@ -404,7 +404,7 @@ export function getToolInfo(
     case "websearch":
       return {
         icon: "window-cursor",
-        title: webSearchProviderLabel(metadata?.provider),
+        title: webSearchProviderLabel(i18n, metadata?.provider),
         subtitle: input.query,
       }
     case "task": {
@@ -1412,7 +1412,10 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
           <Match when={part().state.status === "error" && (part().state as any).error}>
             {(error) => {
               const cleaned = error().replace("Error: ", "")
-              if (part().tool === "question" && cleaned.includes("dismissed this question")) {
+              if (
+                part().tool === "question" &&
+                (cleaned.includes("энэ асуултаас татгалзлаа") || cleaned.includes("dismissed this question"))
+              ) {
                 return (
                   <div style="width: 100%; display: flex; justify-content: flex-end;">
                     <span class="text-13-regular text-text-weak cursor-default">
@@ -1425,7 +1428,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 <ToolErrorCard
                   tool={part().tool}
                   error={error()}
-                  title={part().tool === "websearch" ? webSearchProviderLabel(partMetadata().provider) : undefined}
+                  title={part().tool === "websearch" ? webSearchProviderLabel(i18n, partMetadata().provider) : undefined}
                   defaultOpen={props.defaultOpen}
                   open={controlledOpen()}
                   onOpenChange={props.onToolOpenChange ? handleToolOpenChange : undefined}
@@ -1771,12 +1774,13 @@ ToolRegistry.register({
 ToolRegistry.register({
   name: "websearch",
   render(props) {
+    const i18n = useI18n()
     const query = createMemo(() => {
       const value = props.input.query
       if (typeof value !== "string") return ""
       return value
     })
-    const title = createMemo(() => webSearchProviderLabel(props.metadata.provider))
+    const title = createMemo(() => webSearchProviderLabel(i18n, props.metadata.provider))
 
     return (
       <BasicTool

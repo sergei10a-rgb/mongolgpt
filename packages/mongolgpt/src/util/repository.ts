@@ -188,13 +188,13 @@ export function parseRemoteRepositoryReference(input: string) {
   if (!reference) {
     throw new InvalidRepositoryReferenceError({
       repository: input,
-      message: "Repository must be a git URL, host/path reference, or GitHub owner/repo shorthand",
+      message: "Репозиторын утга git URL, host/path лавлагаа эсвэл GitHub owner/repo товчилсон хэлбэртэй байх ёстой",
     })
   }
   if (!isRemoteRepositoryReference(reference)) {
     throw new UnsupportedLocalRepositoryError({
       repository: input,
-      message: "Local file repositories are not supported",
+      message: "Дотоод файлын репозитор дэмжигдэхгүй",
     })
   }
   return reference
@@ -205,7 +205,7 @@ export function validateRepositoryBranch(branch: string) {
     throw new InvalidRepositoryBranchError({
       branch,
       message:
-        "Branch must contain only alphanumeric characters, /, _, ., and -, and cannot start with - or contain ..",
+        "Салбарын нэрд зөвхөн үсэг, тоо, /, _, ., - ашиглана; - тэмдэгтээр эхэлж эсвэл .. агуулж болохгүй",
     })
   }
 }

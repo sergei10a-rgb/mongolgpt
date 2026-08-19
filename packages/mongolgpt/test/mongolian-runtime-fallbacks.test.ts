@@ -18,8 +18,12 @@ const contracts: Record<string, { expected: string[]; forbidden: string[] }> = {
     forbidden: ["No files were modified."],
   },
   "image/image.ts": {
-    expected: ["Зургийг тайлж чадсангүй"],
-    forbidden: ["Image could not be decoded"],
+    expected: [
+      "Зургийг тайлж чадсангүй",
+      "Зургийн хэмжээг өөрчлөх хэрэгсэл ашиглах боломжгүй байна",
+      "Зургийн URL нь base64 data URL байх ёстой",
+    ],
+    forbidden: ["Image could not be decoded", "Image resizer is unavailable", "Image URL must be a base64 data URL"],
   },
   "cli/cmd/run/footer.prompt.tsx": {
     expected: ["Засварлагчийг нээж чадсангүй"],
@@ -71,8 +75,46 @@ const contracts: Record<string, { expected: string[]; forbidden: string[] }> = {
     forbidden: ["Not found"],
   },
   "session/prompt.ts": {
-    expected: ["Агент олдсонгүй", "Боломжтой агентууд", "Нөөц олдсонгүй", "Команд олдсонгүй", "Боломжтой командууд"],
-    forbidden: ["Agent not found", "Available agents", "Resource not found", "Command not found", "Available commands"],
+    expected: [
+      "Агент олдсонгүй",
+      "Боломжтой агентууд",
+      "Нөөц олдсонгүй",
+      "Команд олдсонгүй",
+      "Боломжтой командууд",
+      "Үйлчилгээ үзүүлэгчийн агуулгын шүүлтүүр хариуг хориглолоо",
+    ],
+    forbidden: [
+      "Agent not found",
+      "Available agents",
+      "Resource not found",
+      "Command not found",
+      "Available commands",
+      "The response was blocked by the provider's content filter",
+    ],
+  },
+  "question/index.ts": {
+    expected: ["Хэрэглэгч энэ асуултаас татгалзлаа"],
+    forbidden: ["The user dismissed this question"],
+  },
+  "util/repository.ts": {
+    expected: ["Репозиторын утга git URL", "Дотоод файлын репозитор дэмжигдэхгүй", "Салбарын нэрд зөвхөн"],
+    forbidden: ["Repository must be", "Local file repositories are not supported", "Branch must contain only"],
+  },
+  "session/compaction.ts": {
+    expected: ["Харилцан ярианы түүхийг шахахад хэт том байна", "Сешнийг шахахад хэт том байна"],
+    forbidden: ["Conversation history too large to compact", "Session too large to compact"],
+  },
+  "plugin/azure.ts": {
+    expected: ["Azure нөөцийн нэрийг оруулна уу", "API түлхүүр", "жишээ нь my-models"],
+    forbidden: ["Enter Azure Resource Name", 'label: "API key"', "e.g. my-models"],
+  },
+  "plugin/cloudflare.ts": {
+    expected: ["Cloudflare аккаунтын ID-гаа оруулна уу", "Cloudflare AI Gateway-ийн ID-гаа оруулна уу", "Gateway-ийн API токен"],
+    forbidden: ["Enter your Cloudflare Account ID", "Enter your Cloudflare AI Gateway ID", "Gateway API token"],
+  },
+  "session/llm/native-runtime.ts": {
+    expected: ["API түлхүүр тохируулаагүй байна"],
+    forbidden: ["API key is not configured"],
   },
 }
 

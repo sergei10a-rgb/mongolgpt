@@ -1520,7 +1520,7 @@ describe("session.message-v2.fromError", () => {
     expect(result).toStrictEqual({
       name: "UnknownError",
       data: {
-        message: "The user dismissed this question",
+        message: "Хэрэглэгч энэ асуултаас татгалзлаа",
       },
     })
   })

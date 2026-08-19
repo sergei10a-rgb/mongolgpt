@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 const mongolgpt = new URL("../../mongolgpt/src/", import.meta.url)
 const tui = new URL("../../tui/src/", import.meta.url)
+const sessionUi = new URL("../../session-ui/src/", import.meta.url)
 
 describe("Монгол хэрэглэгчийн интерфэйсийн гэрээ", () => {
   test("CLI-ийн шинэчлэх, устгах болон MCP урсгалыг Монгол хэлээр үзүүлнэ", async () => {
@@ -33,6 +34,8 @@ describe("Монгол хэрэглэгчийн интерфэйсийн гэр�
     const workspace = await Bun.file(new URL("component/dialog-workspace-create.tsx", tui)).text()
     const prompt = await Bun.file(new URL("component/prompt/index.tsx", tui)).text()
     const mcpSidebar = await Bun.file(new URL("feature-plugins/sidebar/mcp.tsx", tui)).text()
+    const question = await Bun.file(new URL("routes/session/question.tsx", tui)).text()
+    const messagePart = await Bun.file(new URL("components/message-part.tsx", sessionUi)).text()
 
     expect(footer).toContain('label: "арын горим"')
     expect(footer).toContain("label: `${queue()} дараалалд`")
@@ -41,7 +44,9 @@ describe("Монгол хэрэглэгчийн интерфэйсийн гэр�
     expect(footer).toContain('label: "команд"')
     expect(footer).toContain('category: "Хүсэлт"')
     expect(footer).toContain('category: "Загвар"')
+    expect(footer).toContain('category: "Сешн"')
     expect(footer).not.toContain('category: "Model"')
+    expect(footer).not.toContain('category: "Session"')
 
     expect(dialog).toContain('category: "Цонх"')
     expect(dialog).not.toContain('category: "Dialog"')
@@ -49,5 +54,12 @@ describe("Монгол хэрэглэгчийн интерфэйсийн гэр�
     expect(workspace).toContain('title: "Ажлын орчны холбогчдыг ачаалж чадсангүй"')
     expect(prompt).toContain("терминалын горимоос гарах")
     expect(mcpSidebar).toContain("Клиентийн ID шаардлагатай")
+    expect(question).toContain('group: "Асуулт"')
+    expect(question).not.toContain('group: "Question"')
+    expect(messagePart).toContain('i18n.t("ui.tool.websearch.parallel")')
+    expect(messagePart).toContain('i18n.t("ui.tool.websearch.exa")')
+    expect(messagePart).not.toContain('return "Parallel Web Search"')
+    expect(messagePart).not.toContain('return "Exa Web Search"')
+    expect(messagePart).toContain('cleaned.includes("энэ асуултаас татгалзлаа")')
   })
 })

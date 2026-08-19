@@ -248,7 +248,7 @@ describe("ReadTool", () => {
       ).toEqual({
         type: "content",
         value: [
-          { type: "text", text: "Image read successfully" },
+          { type: "text", text: "Зургийг амжилттай уншлаа" },
           { type: "file", uri: `data:image/png;base64,${png}`, mime: "image/png", name: "pixel.png" },
         ],
       })
@@ -271,7 +271,7 @@ describe("ReadTool", () => {
         encoding: "base64",
       })
       expect(settled.output?.content).toMatchObject([
-        { type: "text", text: "Image read successfully" },
+        { type: "text", text: "Зургийг амжилттай уншлаа" },
         { type: "file", mime: "image/png", uri: `data:image/png;base64,${png}` },
       ])
     }),
@@ -310,7 +310,7 @@ describe("ReadTool", () => {
       expect(settled.result).toEqual({
         type: "content",
         value: [
-          { type: "text", text: "Image read successfully" },
+          { type: "text", text: "Зургийг амжилттай уншлаа" },
           { type: "file", uri: `data:image/png;base64,${png}`, mime: "image/png", name: "large.png" },
         ],
       })
@@ -546,7 +546,7 @@ describe("ReadTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-read", name: "read", input: { path: "README.md" } },
         }),
-      ).toEqual({ type: "error", value: "Unable to read README.md" })
+      ).toEqual({ type: "error", value: "Файлыг уншиж чадсангүй: README.md" })
       expect(readCalls).toEqual([])
     }),
   )
@@ -561,7 +561,7 @@ describe("ReadTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-missing-path", name: "read", input: { path: missingPath } },
         }),
-      ).toEqual({ type: "error", value: `Unable to read ${missingPath}` })
+      ).toEqual({ type: "error", value: `Файлыг уншиж чадсангүй: ${missingPath}` })
       expect(assertions).toEqual([])
       expect(readCalls).toEqual([])
     }),
@@ -601,7 +601,7 @@ describe("ReadTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-read-directory-denied", name: "read", input: { path: "src" } },
         }),
-      ).toEqual({ type: "error", value: "Unable to read src" })
+      ).toEqual({ type: "error", value: "Файлыг уншиж чадсангүй: src" })
       expect(listCalls).toEqual([])
     }),
   )

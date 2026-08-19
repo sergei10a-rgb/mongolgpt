@@ -904,7 +904,7 @@ describe("session.compaction.process", () => {
       expect(summary?.info.role).toBe("assistant")
       if (summary?.info.role === "assistant") {
         expect(summary.info.finish).toBe("error")
-        expect(JSON.stringify(summary.info.error)).toContain("Session too large to compact")
+        expect(JSON.stringify(summary.info.error)).toContain("Сешнийг шахахад хэт том байна")
       }
     }).pipe(withCompaction({ result: "compact" })),
   )

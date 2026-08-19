@@ -34,7 +34,7 @@ export const Event = Question.Event
 
 export class RejectedError extends Schema.TaggedErrorClass<RejectedError>()("QuestionV2.RejectedError", {}) {
   override get message() {
-    return "The user dismissed this question"
+    return "Хэрэглэгч энэ асуултаас татгалзлаа"
   }
 }
 

@@ -62,7 +62,7 @@ function statusWithFetch(
   }
 
   const apiKey = typeof input.provider.options.apiKey === "string" ? input.provider.options.apiKey : input.provider.key
-  if (!apiKey) return { type: "unsupported", reason: "API key is not configured" }
+  if (!apiKey) return { type: "unsupported", reason: "API түлхүүр тохируулаагүй байна" }
 
   return {
     type: "supported",

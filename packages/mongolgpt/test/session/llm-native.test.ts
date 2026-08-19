@@ -447,7 +447,7 @@ describe("session.llm-native.request", () => {
         provider: { ...providerInfo, options: {} },
         auth: undefined,
       }),
-    ).toEqual({ type: "unsupported", reason: "API key is not configured" })
+    ).toEqual({ type: "unsupported", reason: "API түлхүүр тохируулаагүй байна" })
   })
 
   test("enables native runtime for Anthropic API-key models", () => {

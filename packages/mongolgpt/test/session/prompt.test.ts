@@ -610,7 +610,7 @@ it.instance("loop surfaces content-filter finishes as session errors", () =>
     const errors: NonNullable<SessionV1.Assistant["error"]>[] = []
     const expected = {
       name: "ContentFilterError",
-      data: { message: "The response was blocked by the provider's content filter" },
+      data: { message: "Үйлчилгээ үзүүлэгчийн агуулгын шүүлтүүр хариуг хориглолоо" },
     } satisfies NonNullable<SessionV1.Assistant["error"]>
     const off = yield* events.listen((event) => {
       if (event.type !== Session.Event.Error.type) return Effect.void

@@ -152,7 +152,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
       {
         key: "escape",
         desc: "Хариултын засварыг цуцлах",
-        group: "Question",
+        group: "Асуулт",
         cmd: () => {
           setStore("editing", false)
         },
@@ -161,7 +161,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
       {
         key: "return",
         desc: "Хариултын засварыг илгээх",
-        group: "Question",
+        group: "Асуулт",
         cmd: () => {
           const text = textarea?.plainText?.trim() ?? ""
           const prev = store.custom[store.tab]
@@ -228,36 +228,36 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
         {
           key: "left",
           desc: "Өмнөх асуулт",
-          group: "Question",
+          group: "Асуулт",
           cmd: () => selectTab((store.tab - 1 + tabs()) % tabs()),
         },
         {
           key: "h",
           desc: "Өмнөх асуулт",
-          group: "Question",
+          group: "Асуулт",
           cmd: () => selectTab((store.tab - 1 + tabs()) % tabs()),
         },
-        { key: "right", desc: "Дараагийн асуулт", group: "Question", cmd: () => selectTab((store.tab + 1) % tabs()) },
-        { key: "l", desc: "Дараагийн асуулт", group: "Question", cmd: () => selectTab((store.tab + 1) % tabs()) },
+        { key: "right", desc: "Дараагийн асуулт", group: "Асуулт", cmd: () => selectTab((store.tab + 1) % tabs()) },
+        { key: "l", desc: "Дараагийн асуулт", group: "Асуулт", cmd: () => selectTab((store.tab + 1) % tabs()) },
         {
           key: "tab",
           desc: "Дараагийн асуулт",
-          group: "Question",
+          group: "Асуулт",
           cmd: ({ event }: { event: { shift: boolean } }) => {
             selectTab((store.tab + (event.shift ? -1 : 1) + tabs()) % tabs())
           },
         },
         ...(confirm()
           ? [
-              { key: "return", desc: "Хариулт илгээх", group: "Question", cmd: () => submit() },
-              { key: "escape", desc: "Асуултаас татгалзах", group: "Question", cmd: () => reject() },
+              { key: "return", desc: "Хариулт илгээх", group: "Асуулт", cmd: () => submit() },
+              { key: "escape", desc: "Асуултаас татгалзах", group: "Асуулт", cmd: () => reject() },
               ...tuiConfig.keybinds.get("app.exit"),
             ]
           : [
               ...Array.from({ length: max }, (_, index) => ({
                 key: String(index + 1),
                 desc: `Хариулт ${index + 1} сонгох`,
-                group: "Question",
+                group: "Асуулт",
                 cmd: () => {
                   moveTo(index)
                   selectOption()
@@ -266,29 +266,29 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
               {
                 key: "up",
                 desc: "Өмнөх хариулт",
-                group: "Question",
+                group: "Асуулт",
                 cmd: () => moveTo((store.selected - 1 + total) % total),
               },
               {
                 key: "k",
                 desc: "Өмнөх хариулт",
-                group: "Question",
+                group: "Асуулт",
                 cmd: () => moveTo((store.selected - 1 + total) % total),
               },
               {
                 key: "down",
                 desc: "Дараагийн хариулт",
-                group: "Question",
+                group: "Асуулт",
                 cmd: () => moveTo((store.selected + 1) % total),
               },
               {
                 key: "j",
                 desc: "Дараагийн хариулт",
-                group: "Question",
+                group: "Асуулт",
                 cmd: () => moveTo((store.selected + 1) % total),
               },
-              { key: "return", desc: "Хариулт сонгох", group: "Question", cmd: () => selectOption() },
-              { key: "escape", desc: "Асуултаас татгалзах", group: "Question", cmd: () => reject() },
+              { key: "return", desc: "Хариулт сонгох", group: "Асуулт", cmd: () => selectOption() },
+              { key: "escape", desc: "Асуултаас татгалзах", group: "Асуулт", cmd: () => reject() },
               ...tuiConfig.keybinds.get("app.exit"),
             ]),
       ],

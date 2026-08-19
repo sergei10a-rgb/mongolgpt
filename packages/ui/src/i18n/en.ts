@@ -118,6 +118,8 @@ export const dict: Record<string, string> = {
   "ui.tool.task": "Task",
   "ui.tool.webfetch": "Webfetch",
   "ui.tool.websearch": "Web Search",
+  "ui.tool.websearch.parallel": "Parallel Web Search",
+  "ui.tool.websearch.exa": "Exa Web Search",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "Patch",
   "ui.tool.todos": "To-dos",

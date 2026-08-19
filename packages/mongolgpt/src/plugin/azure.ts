@@ -6,8 +6,8 @@ export async function AzureAuthPlugin(_input: PluginInput): Promise<Hooks> {
     prompts.push({
       type: "text" as const,
       key: "resourceName",
-      message: "Enter Azure Resource Name",
-      placeholder: "e.g. my-models",
+      message: "Azure нөөцийн нэрийг оруулна уу",
+      placeholder: "жишээ нь my-models",
     })
   }
 
@@ -17,7 +17,7 @@ export async function AzureAuthPlugin(_input: PluginInput): Promise<Hooks> {
       methods: [
         {
           type: "api",
-          label: "API key",
+          label: "API түлхүүр",
           prompts,
         },
       ],

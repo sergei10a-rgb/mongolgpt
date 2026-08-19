@@ -526,7 +526,7 @@ export function RunFooterView(props: RunFooterViewProps) {
       {
         name: "session.background",
         title: "Дэд агентуудыг арын горимд оруулах",
-        category: "Session",
+        category: "Сешн",
         run: () => props.onBackground?.(),
       },
     ],
@@ -540,7 +540,7 @@ export function RunFooterView(props: RunFooterViewProps) {
       {
         name: "session.child.first",
         title: "Дэд агентуудыг харах",
-        category: "Session",
+        category: "Сешн",
         run: openSubagentMenu,
       },
     ],
@@ -554,7 +554,7 @@ export function RunFooterView(props: RunFooterViewProps) {
       {
         name: "session.queued_prompts",
         title: "Дараалалд буй хүсэлтүүдийг удирдах",
-        category: "Session",
+        category: "Сешн",
         run: openQueuedMenu,
       },
     ],
