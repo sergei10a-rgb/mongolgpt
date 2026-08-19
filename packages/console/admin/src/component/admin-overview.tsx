@@ -1,5 +1,6 @@
 import { For, Show } from "solid-js"
 import type { PlatformAdminContext } from "~/lib/admin-context"
+import type { SystemReadinessReport, SystemReadinessState } from "~/lib/system-readiness"
 import { AdminHeader, roleLabel } from "./admin-header"
 
 export interface AdminOverviewData {
@@ -21,6 +22,7 @@ export interface AdminOverviewData {
     time: string
   }[]
   auditVisible: boolean
+  readiness: SystemReadinessReport
   generatedAt: string
 }
 
@@ -68,6 +70,35 @@ export function AdminOverviewView(props: { data: AdminOverviewData }) {
             <span>Шинэчилсэн</span>
             <strong>{formatDate(props.data.generatedAt)}</strong>
           </div>
+        </section>
+
+        <section data-component="readiness-section" aria-labelledby="system-readiness-heading">
+          <div data-component="section-heading">
+            <div>
+              <p data-component="eyebrow">Үйлчилгээний бодит шалгалт</p>
+              <h2 id="system-readiness-heading">Системийн бэлэн байдал</h2>
+            </div>
+            <span data-readiness-overall={props.data.readiness.status}>
+              {props.data.readiness.status === "ok" ? "Бүх үндсэн үйлчилгээ бэлэн" : "Анхаарах үйлчилгээ байна"}
+            </span>
+          </div>
+          <div data-component="readiness-grid" role="list">
+            <For each={props.data.readiness.checks}>
+              {(check) => (
+                <article data-component="readiness-item" data-readiness={check.state} role="listitem">
+                  <div>
+                    <strong>{check.label}</strong>
+                    <span data-readiness-label={check.state}>{readinessLabel(check.state)}</span>
+                  </div>
+                  <p>{check.summary}</p>
+                </article>
+              )}
+            </For>
+          </div>
+          <p data-component="report-generated">
+            Орчин: <strong>{props.data.readiness.stage}</strong> · Шалгасан:{" "}
+            {formatDate(props.data.readiness.checkedAt)}
+          </p>
         </section>
 
         <section data-component="audit-section">
@@ -126,6 +157,16 @@ export function AdminOverviewView(props: { data: AdminOverviewData }) {
       </main>
     </>
   )
+}
+
+function readinessLabel(state: SystemReadinessState) {
+  return {
+    healthy: "Хэвийн",
+    configured: "Тохируулсан",
+    degraded: "Анхаарах",
+    disabled: "Идэвхгүй",
+    missing: "Дутуу",
+  }[state]
 }
 
 function Metric(props: { label: string; value: number; tone?: "warning" }) {

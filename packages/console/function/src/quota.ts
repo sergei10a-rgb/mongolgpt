@@ -9,6 +9,7 @@ import {
   type QuotaLedgerCommand,
   type QuotaLedgerStorage,
 } from "@mongolgpt/console-core/quota.js"
+import { verifyQuotaLedgerHealth } from "./quota-health"
 
 type Env = {
   QUOTA_LEDGER: DurableObjectNamespace<QuotaLedger>
@@ -81,6 +82,9 @@ function authorized(request: Request) {
 async function handler(request: Request, env: Env) {
   const url = new URL(request.url)
   if (url.pathname === "/health") {
+    const id = env.QUOTA_LEDGER.idFromName("system-health")
+    const stub = env.QUOTA_LEDGER.get(id)
+    await verifyQuotaLedgerHealth((probe) => stub.fetch(probe))
     return json({ status: "ok", service: "quota", storage: "durable-objects", queue: "cloudflare-queues" })
   }
   if (!authorized(request)) return json({ error: "Дотоод үйлчилгээний зөвшөөрөл хүчингүй байна." }, 401)

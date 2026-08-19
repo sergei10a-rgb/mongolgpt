@@ -1,8 +1,9 @@
 import type { APIEvent } from "@solidjs/start/server"
 import { hasPlatformAdminPermission } from "@mongolgpt/console-core/platform-admin.js"
 import { platformAdminFromLocals } from "~/lib/admin-context"
+import { getSystemReadiness } from "~/lib/system-readiness"
 
-export function GET(event: APIEvent) {
+export async function GET(event: APIEvent) {
   const admin = platformAdminFromLocals(event.locals)
   if (!admin || !hasPlatformAdminPermission(admin.role, "system.read")) {
     return Response.json(
@@ -18,12 +19,9 @@ export function GET(event: APIEvent) {
       },
     )
   }
+  const readiness = await getSystemReadiness()
   return Response.json(
-    {
-      status: "ok",
-      service: "mongolgpt-admin",
-      requestID: admin.requestID,
-    },
+    { service: "mongolgpt-admin", requestID: admin.requestID, ...readiness },
     {
       headers: {
         "Cache-Control": "no-store",

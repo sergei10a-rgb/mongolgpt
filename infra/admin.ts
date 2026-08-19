@@ -1,5 +1,5 @@
-import { adminOrigin, domain } from "./stage"
-import { database, paymentService } from "./console"
+import { adminOrigin, domain, runtimeOrigin } from "./stage"
+import { auth, d1Backups, database, paymentService, quotaService } from "./console"
 import { SECRET } from "./secret"
 
 class LocalCommand extends $util.CustomResource {
@@ -88,9 +88,20 @@ const accessConfig = new sst.Linkable("AdminAccessConfig", {
 export const admin = new sst.cloudflare.x.SolidStart("Admin", {
   domain: hostname,
   path: "packages/console/admin",
-  link: [database, paymentService, accessConfig, bootstrapEmails, SECRET.AdminPaymentCancellationToken],
+  link: [
+    database,
+    d1Backups,
+    auth,
+    quotaService,
+    paymentService,
+    accessConfig,
+    bootstrapEmails,
+    SECRET.AdminPaymentCancellationToken,
+  ],
   environment: {
     MONGOLGPT_ADMIN_ORIGIN: adminOrigin,
+    MONGOLGPT_RUNTIME_URL: runtimeOrigin,
+    MONGOLGPT_STAGE: $app.stage,
   },
 })
 
