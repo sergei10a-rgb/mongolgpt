@@ -69,6 +69,7 @@ import {
   inlineProviderRetryDelayMs,
   shouldFailoverProviderStatus,
 } from "./provider-retry"
+import { providerCircuit, providerCircuitKey } from "./provider-circuit"
 
 type ZenData = Awaited<ReturnType<typeof ZenData.list>>
 type RetryOptions = {
@@ -297,6 +298,7 @@ export async function handler(
           body: reqBody,
         })
       } catch (error) {
+        providerCircuit.record(providerInfo.circuitPermit, "transient-error")
         logger.metric({ "llm.error.type": "network" })
         throw error
       }
@@ -316,6 +318,15 @@ export async function handler(
           "llm.error.code": res.status,
         })
       }
+
+      providerCircuit.record(
+        providerInfo.circuitPermit,
+        res.status === 200
+          ? "success"
+          : shouldFailoverProviderStatus(res.status)
+            ? "transient-error"
+            : "permanent-error",
+      )
 
       if (shouldFailoverProviderStatus(res.status) && canFailover()) {
         await cancelProviderResponse(res)
@@ -590,11 +601,16 @@ export async function handler(
     modelTpsLimits: Record<string, { qualify: number; unqualify: number }> | undefined,
     providerBudgetUsage: Record<string, number> | undefined,
   ) {
-    const modelProvider = (() => {
+    const selected = (() => {
       // Byok is top priority b/c if user set their own API key, we should use it
       // instead of using the sticky provider for the same session
       if (authInfo?.provider?.credentials) {
-        return modelInfo.providers.find((provider) => provider.id === modelInfo.byokProvider)
+        const provider = modelInfo.providers.find((candidate) => candidate.id === modelInfo.byokProvider)
+        if (!provider) return undefined
+        const circuitPermit = providerCircuit.acquire(
+          providerCircuitKey(provider.id, { workspaceID: authInfo.workspaceID, modelID: reqModel }),
+        )
+        return circuitPermit ? { provider, circuitPermit } : undefined
       }
 
       // Prioritize trial providers
@@ -652,34 +668,54 @@ export async function handler(
         const provider = providers[index || 0]
 
         // sticky provider does not exist => use selected provider
-        if (!stickyProviderId) return provider
-        const stickProvider = allProviders.find((provider) => provider.id === stickyProviderId)
-        if (!stickProvider) return provider
-
-        // stick provider exists + selected provider is API type => use sticky provider
-        if (!provider.tpsGoal) return stickProvider
-
-        // stick provier exists + selected provider is GPU type + GPU not idle => use selected provider
-        const tps = modelTpsLimits?.[`${provider.id}/${provider.model}/${provider.tpsGoal}`] ?? {
-          qualify: 0,
-          unqualify: 0,
+        let preferred = provider
+        if (!stickyProviderId) {
+          const circuitPermit = providerCircuit.acquire(providerCircuitKey(preferred.id))
+          if (circuitPermit) return { provider: preferred, circuitPermit }
+          if (modelInfo.stickyProvider === "strict") return undefined
+          const alternate = providers.find((candidate) => candidate.id !== preferred.id)
+          if (!alternate) return undefined
+          const alternatePermit = providerCircuit.acquire(providerCircuitKey(alternate.id))
+          return alternatePermit ? { provider: alternate, circuitPermit: alternatePermit } : undefined
         }
-        if (tps.qualify <= tps.unqualify * 3) return stickProvider
+        const stickProvider = allProviders.find((provider) => provider.id === stickyProviderId)
+        if (stickProvider) {
+          // Preserve the existing sticky preference while its circuit is healthy.
+          if (!provider.tpsGoal) preferred = stickProvider
+          else {
+            const tps = modelTpsLimits?.[`${provider.id}/${provider.model}/${provider.tpsGoal}`] ?? {
+              qualify: 0,
+              unqualify: 0,
+            }
+            if (tps.qualify <= tps.unqualify * 3) preferred = stickProvider
+          }
+        }
 
-        return provider
+        const ordered = [preferred, ...providers.filter((candidate) => candidate.id !== preferred.id)]
+        for (const candidate of ordered) {
+          const circuitPermit = providerCircuit.acquire(providerCircuitKey(candidate.id))
+          if (circuitPermit) return { provider: candidate, circuitPermit }
+          if (modelInfo.stickyProvider === "strict") break
+        }
+        return undefined
       }
 
       // fallback provider
-      return allProviders.find((provider) => provider.id === modelInfo.fallbackProvider)
+      const provider = allProviders.find((candidate) => candidate.id === modelInfo.fallbackProvider)
+      if (!provider) return undefined
+      const circuitPermit = providerCircuit.acquire(providerCircuitKey(provider.id))
+      return circuitPermit ? { provider, circuitPermit } : undefined
     })()
 
-    if (!modelProvider) throw new ModelError(t("zen.api.error.noProviderAvailable"))
+    if (!selected) throw new ModelError(t("zen.api.error.noProviderAvailable"))
+    const modelProvider = selected.provider
     if (!(modelProvider.id in zenData.providers))
       throw new ModelError(t("zen.api.error.providerNotSupported", { provider: modelProvider.id }))
 
     return {
       ...modelProvider,
       ...zenData.providers[modelProvider.id],
+      circuitPermit: selected.circuitPermit,
       ...(() => {
         const providerProps = zenData.providers[modelProvider.id]
         const format = providerProps.format
