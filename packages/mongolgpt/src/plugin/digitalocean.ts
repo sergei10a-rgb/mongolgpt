@@ -122,7 +122,7 @@ async function startOAuthServer(): Promise<void> {
     }
 
     res.writeHead(404)
-    res.end("Not found")
+    res.end("Олдсонгүй")
   })
 
   await new Promise<void>((resolve, reject) => {

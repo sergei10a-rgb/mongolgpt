@@ -19,7 +19,7 @@ export default createHandler(
     <StartServer
       document={({ assets, children, scripts }) => {
         const event = getRequestEvent()
-        const locale = event ? localeFromRequest(event.request) : "en"
+        const locale = event ? localeFromRequest(event.request) : "mn"
 
         return (
           <html lang={tag(locale)} dir={dir(locale)} data-locale={locale}>

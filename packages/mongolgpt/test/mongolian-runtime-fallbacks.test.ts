@@ -34,20 +34,41 @@ const contracts: Record<string, { expected: string[]; forbidden: string[] }> = {
     forbidden: ["No active account token available for sharing"],
   },
   "plugin/xai.ts": {
-    expected: ["Зөвшөөрлийн код дутуу байна", "Төлөв буруу байна. CSRF халдлага байж болзошгүй."],
-    forbidden: ["Missing authorization code", "Invalid state - potential CSRF attack"],
+    expected: [
+      "Зөвшөөрлийн код дутуу байна",
+      "Төлөв буруу байна. CSRF халдлага байж болзошгүй.",
+      "Нэвтрэлтийг цуцаллаа",
+      "Олдсонгүй",
+    ],
+    forbidden: ["Missing authorization code", "Invalid state - potential CSRF attack", "Login cancelled", "Not found"],
   },
   "plugin/openai/codex.ts": {
     expected: [
       "Зөвшөөрлийн код дутуу байна",
       "Төлөв буруу байна. CSRF халдлага байж болзошгүй.",
       "Төхөөрөмжийн зөвшөөрлийг эхлүүлж чадсангүй",
+      "Нэвтрэлтийг цуцаллаа",
+      "Олдсонгүй",
     ],
     forbidden: [
       "Missing authorization code",
       "Invalid state - potential CSRF attack",
       "Failed to initiate device authorization",
+      "Login cancelled",
+      "Not found",
     ],
+  },
+  "plugin/digitalocean.ts": {
+    expected: ["Олдсонгүй"],
+    forbidden: ["Not found"],
+  },
+  "plugin/mongolgpt.ts": {
+    expected: ["Олдсонгүй"],
+    forbidden: ["Not found"],
+  },
+  "account/account.ts": {
+    expected: ["Олдсонгүй"],
+    forbidden: ["Not found"],
   },
   "session/prompt.ts": {
     expected: ["Агент олдсонгүй", "Боломжтой агентууд", "Нөөц олдсонгүй", "Команд олдсонгүй", "Боломжтой командууд"],

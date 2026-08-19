@@ -205,15 +205,15 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
     }
 
     if (url.pathname === "/cancel") {
-      pendingOAuth?.reject(new Error("Login cancelled"))
+      pendingOAuth?.reject(new Error("Нэвтрэлтийг цуцаллаа"))
       pendingOAuth = undefined
       res.writeHead(200)
-      res.end("Login cancelled")
+      res.end("Нэвтрэлтийг цуцаллаа")
       return
     }
 
     res.writeHead(404)
-    res.end("Not found")
+    res.end("Олдсонгүй")
   })
 
   await new Promise<void>((resolve, reject) => {

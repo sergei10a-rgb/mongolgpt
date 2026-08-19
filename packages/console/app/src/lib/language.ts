@@ -327,10 +327,7 @@ export function localeFromRequest(request: Request) {
   const fromDocsPath = fromDocsPathname(new URL(request.url).pathname)
   if (fromDocsPath) return fromDocsPath
 
-  return (
-    localeFromCookieHeader(request.headers.get("cookie")) ??
-    detectFromAcceptLanguage(request.headers.get("accept-language"))
-  )
+  return localeFromCookieHeader(request.headers.get("cookie")) ?? ("mn" satisfies Locale)
 }
 
 export function cookie(locale: Locale) {

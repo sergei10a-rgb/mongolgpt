@@ -579,7 +579,7 @@ function createBrowserCallbackServer(): Promise<BrowserCallbackServer> {
       const url = new URL(request.url ?? "/", `http://${browserCallbackHost}:${port}`)
 
       if (url.pathname !== browserCallbackPath) {
-        response.writeHead(404).end("Not found")
+        response.writeHead(404).end("Олдсонгүй")
         return
       }
 

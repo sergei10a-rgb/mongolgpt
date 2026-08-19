@@ -30,9 +30,9 @@ const getLocale = () => {
 const getRootNotFoundError = () => {
   const key = "error.dev.rootNotFound" as const
   const locale = getLocale()
-  if (locale === "zh") return zh[key] ?? en[key]
+  if (locale === "zh") return zh[key] ?? mn[key] ?? en[key]
   if (locale === "mn") return mn[key] ?? en[key]
-  return en[key]
+  return mn[key] ?? en[key]
 }
 
 const getStorage = (key: string) => {

@@ -127,6 +127,12 @@ describe("i18n parity", () => {
     }
   })
 
+  test("root startup error falls back to Mongolian", async () => {
+    const source = await Bun.file(new URL("../entry.tsx", import.meta.url)).text()
+    expect(source).toContain("return mn[key] ?? en[key]")
+    expect(source).not.toMatch(/^\s*return en\[key\]\s*$/m)
+  })
+
   test("non-English locales translate targeted unseen session keys", () => {
     for (const locale of locales) {
       for (const key of keys) {

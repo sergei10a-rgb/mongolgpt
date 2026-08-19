@@ -60,7 +60,7 @@ async function startBrowserCallbackServer(): Promise<BrowserCallbackServer> {
     server = createServer((request, response) => {
       const url = new URL(request.url ?? "/", `http://${CALLBACK_HOST}`)
       if (url.pathname !== CALLBACK_PATH) {
-        response.writeHead(404).end("Not found")
+        response.writeHead(404).end("Олдсонгүй")
         return
       }
 

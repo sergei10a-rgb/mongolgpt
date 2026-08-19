@@ -52,7 +52,7 @@ const browser = {
       const server = createServer((request, response) => {
         const url = new URL(request.url ?? "/", `http://localhost:${callbackPort}`)
         if (url.pathname !== "/auth/callback") {
-          response.writeHead(404).end("Not found")
+          response.writeHead(404).end("Олдсонгүй")
           return
         }
         const error = url.searchParams.get("error_description") ?? url.searchParams.get("error")

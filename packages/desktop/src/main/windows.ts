@@ -194,14 +194,14 @@ export function registerRendererProtocol() {
     const url = new URL(request.url)
     if (url.host !== rendererHost) {
       writeLog("protocol", "rejected host", { url: request.url }, "warn")
-      return new Response("Not found", { status: 404 })
+      return new Response("Олдсонгүй", { status: 404 })
     }
 
     const file = resolve(rendererRoot, `.${decodeURIComponent(url.pathname)}`)
     const rel = relative(rendererRoot, file)
     if (rel.startsWith("..") || isAbsolute(rel)) {
       writeLog("protocol", "rejected path", { url: request.url, file }, "warn")
-      return new Response("Not found", { status: 404 })
+      return new Response("Олдсонгүй", { status: 404 })
     }
 
     try {
@@ -222,7 +222,7 @@ export function registerRendererProtocol() {
       return addDocumentPolicy(response, file)
     } catch (error) {
       writeLog("protocol", "fetch error", { url: request.url, file, error }, "error")
-      return new Response("Not found", { status: 404 })
+      return new Response("Олдсонгүй", { status: 404 })
     }
   })
 }

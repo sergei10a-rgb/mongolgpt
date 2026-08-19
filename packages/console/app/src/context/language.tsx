@@ -7,7 +7,6 @@ import {
   type Locale,
   clearCookie,
   cookie,
-  detectFromLanguages,
   dir as localeDir,
   label as localeLabel,
   localeFromCookieHeader,
@@ -29,10 +28,7 @@ function initial() {
     if (fromCookie) return fromCookie
   }
 
-  if (typeof navigator !== "object") return "mn" satisfies Locale
-
-  const languages = navigator.languages?.length ? navigator.languages : [navigator.language]
-  return detectFromLanguages(languages)
+  return "mn" satisfies Locale
 }
 
 export const { use: useLanguage, provider: LanguageProvider } = createSimpleContext({
