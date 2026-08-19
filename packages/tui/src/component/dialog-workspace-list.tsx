@@ -13,6 +13,10 @@ import { useToast } from "../ui/toast"
 
 type WorkspaceOption = { workspace: Workspace }
 
+export function workspaceDeleteConfirmationTitle(name: string) {
+  return `${name}-г устгах уу? Баталгаажуулахын тулд устгах товчийг дахин дарна уу`
+}
+
 export function DialogWorkspaceList() {
   const dialog = useDialog()
   const route = useRoute()
@@ -41,7 +45,7 @@ export function DialogWorkspaceList() {
             removing() === workspace.id
               ? "Устгаж байна..."
               : deleting() === workspace.id
-                ? `${workspace.name}-г устгах уу? Delete-г дахин дарна уу`
+                ? workspaceDeleteConfirmationTitle(workspace.name)
                 : workspace.name,
           value: { workspace },
           footer: workspace.type,
