@@ -20,9 +20,9 @@ export const name = "write"
 export const Input = Schema.Struct({
   path: Schema.String.annotate({
     description:
-      "File path to write. Relative paths resolve within the active Location. Absolute paths inside that Location are accepted; external absolute paths require external_directory approval.",
+      "Бичих файлын зам. Relative замыг идэвхтэй Location дотор бодно. Тухайн Location доторх absolute замыг зөвшөөрнө; гаднах absolute замд external_directory зөвшөөрөл шаардлагатай.",
   }),
-  content: Schema.String.annotate({ description: "Content to write to the file" }),
+  content: Schema.String.annotate({ description: "Файлд бичих агуулга" }),
 })
 
 export const Output = Schema.Struct({
@@ -34,7 +34,7 @@ export const Output = Schema.Struct({
 export type Output = typeof Output.Type
 
 export const toModelOutput = (output: Output) =>
-  `${output.existed ? "Wrote" : "Created"} file successfully: ${output.resource}`
+  `${output.existed ? "Файлд амжилттай бичлээ" : "Файлыг амжилттай үүсгэлээ"}: ${output.resource}`
 
 /** Deferred V2 write UX integrations remain visible at the model-facing seam. */
 // TODO: Add formatter integration after V2 formatter runtime exists.
@@ -54,7 +54,7 @@ export const layer = Layer.effectDiscard(
         [name]: Tool.withPermission(
           Tool.make({
             description:
-              "Write content to one file. Relative paths resolve within the active Location. Absolute paths inside the Location are accepted. Explicit external absolute paths require external_directory approval before edit approval.",
+              "Нэг файлд агуулга бичнэ. Relative замыг идэвхтэй Location дотор бодно. Location доторх absolute замыг зөвшөөрнө. Гадагш чиглэсэн absolute замд edit зөвшөөрөхөөс өмнө external_directory зөвшөөрөл шаардлагатай.",
             input: Input,
             output: Output,
             toModelOutput: ({ output }) => [{ type: "text", text: toModelOutput(output) }],

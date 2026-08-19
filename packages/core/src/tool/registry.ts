@@ -54,11 +54,11 @@ const registryLayer = Layer.effect(
         return {
           result: {
             type: "error" as const,
-            value: advertised ? `Stale tool call: ${input.call.name}` : `Unknown tool: ${input.call.name}`,
+            value: advertised ? `Хуучирсан хэрэгслийн дуудлага: ${input.call.name}` : `Үл мэдэгдэх хэрэгсэл: ${input.call.name}`,
           },
         }
       if (advertised && registration.identity !== advertised)
-        return { result: { type: "error" as const, value: `Stale tool call: ${input.call.name}` } }
+        return { result: { type: "error" as const, value: `Хуучирсан хэрэгслийн дуудлага: ${input.call.name}` } }
       const pending = yield* settle(registration.tool, input.call, {
         sessionID: input.sessionID,
         agent: input.agent,
@@ -116,7 +116,7 @@ const registryLayer = Layer.effect(
           settle: (input) => {
             const registration = registrations.get(input.call.name)
             if (registration) return settleWith(input, registration.identity)
-            return Effect.succeed({ result: { type: "error", value: `Unknown tool: ${input.call.name}` } })
+            return Effect.succeed({ result: { type: "error", value: `Үл мэдэгдэх хэрэгсэл: ${input.call.name}` } })
           },
         }
       }),

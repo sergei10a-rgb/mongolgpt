@@ -15,19 +15,19 @@ export const MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 export const DEFAULT_TIMEOUT_SECONDS = 30
 export const MAX_TIMEOUT_SECONDS = 120
 
-export const description = `Fetch content from an HTTP or HTTPS URL and return it as text, markdown, or HTML. Markdown is the default.
+export const description = `HTTP эсвэл HTTPS URL-ээс агуулга татаж text, markdown эсвэл HTML хэлбэрээр буцаана. Анхдагч нь markdown.
 
-Use a more targeted tool when one is available. This tool is read-only. Large text results may be replaced with a preview while the complete output is retained in managed storage.`
+Илүү нарийвчилсан хэрэгсэл байвал түүнийг ашиглана. Энэ хэрэгсэл зөвхөн унших зориулалттай. Том текстийн үр дүнг урьдчилсан харагдацаар орлуулж болох ч бүрэн гаралтыг managed storage-д хадгална.`
 
 const Timeout = Schema.Number.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(MAX_TIMEOUT_SECONDS))
 
 export const Input = Schema.Struct({
-  url: Schema.String.annotate({ description: "The HTTP or HTTPS URL to fetch content from" }),
+  url: Schema.String.annotate({ description: "Агуулга татах HTTP эсвэл HTTPS URL" }),
   format: Schema.Literals(["text", "markdown", "html"])
-    .annotate({ description: "The format to return the content in. Defaults to markdown." })
+    .annotate({ description: "Агуулгыг буцаах хэлбэр. Анхдагч нь markdown." })
     .pipe(Schema.withDecodingDefault(Effect.succeed("markdown" as const))),
   timeout: Timeout.pipe(Schema.optional).annotate({
-    description: `Optional timeout in seconds (maximum: ${MAX_TIMEOUT_SECONDS})`,
+    description: `Сонголтоор өгөх timeout секундээр (дээд тал нь: ${MAX_TIMEOUT_SECONDS})`,
   }),
 })
 

@@ -16,10 +16,10 @@ const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "
 const LocationInput = Schema.Struct({
   path: Schema.String,
   offset: ReadToolFileSystem.PageInput.fields.offset.annotate({
-    description: "The 1-based directory entry or text line offset to start reading from",
+    description: "Уншиж эхлэх 1-ээс эхэлсэн хавтасны оруулга эсвэл текстийн мөрийн offset",
   }),
   limit: ReadToolFileSystem.PageInput.fields.limit.annotate({
-    description: "The maximum number of directory entries or text lines to read",
+    description: "Унших хавтасны оруулга эсвэл текстийн мөрийн дээд тоо",
   }),
 })
 const Input = LocationInput
@@ -37,7 +37,7 @@ export const layer = Layer.effectDiscard(
       .register({
         [name]: Tool.make({
           description:
-            "Read a text file or supported image, page through a large UTF-8 text file by line offset, or list a directory page. Relative paths resolve from the current location; absolute paths inside it are accepted, while external absolute paths require external_directory approval.",
+            "Текст файл эсвэл дэмждэг зураг уншина, том UTF-8 текст файлыг мөрийн offset-оор хуудсална, эсвэл хавтасны нэг хуудсыг жагсаана. Relative замыг одоогийн Location-оос бодно; доторх absolute замыг зөвшөөрнө, харин гаднах absolute замд external_directory зөвшөөрөл шаардлагатай.",
           input: Input,
           output: Output,
           toModelOutput: ({ input, output }) => {

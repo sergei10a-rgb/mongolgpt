@@ -22,12 +22,12 @@ export const name = "edit"
 export const Input = Schema.Struct({
   path: Schema.String.annotate({
     description:
-      "File path to edit. Relative paths resolve within the active Location. Absolute paths inside that Location are accepted; external absolute paths require external_directory approval.",
+      "Засах файлын зам. Relative замыг идэвхтэй Location дотор бодно. Тухайн Location доторх absolute замыг зөвшөөрнө; гаднах absolute замд external_directory зөвшөөрөл шаардлагатай.",
   }),
-  oldString: Schema.String.annotate({ description: "Exact text to replace" }),
-  newString: Schema.String.annotate({ description: "Replacement text, which must differ from oldString" }),
+  oldString: Schema.String.annotate({ description: "Орлуулах яг текст" }),
+  newString: Schema.String.annotate({ description: "oldString-оос ялгаатай байх орлуулах текст" }),
   replaceAll: Schema.Boolean.pipe(Schema.optional).annotate({
-    description: "Replace all exact occurrences of oldString (default false)",
+    description: "oldString-ийн бүх яг тохирлыг солих эсэх (анхдагч нь false)",
   }),
 })
 
@@ -70,8 +70,8 @@ const previewLines = (value: string, prefix: "+" | "-") => {
 
 export const toModelOutput = (output: Output, oldString: string, newString: string) =>
   [
-    `Edited file successfully: ${output.files[0]?.file}`,
-    `Replacements: ${output.replacements}`,
+    `Файлыг амжилттай заслаа: ${output.files[0]?.file}`,
+    `Орлуулсан тоо: ${output.replacements}`,
     "```diff",
     ...previewLines(oldString, "-"),
     ...previewLines(newString, "+"),
@@ -98,7 +98,7 @@ export const layer = Layer.effectDiscard(
         [name]: Tool.withPermission(
           Tool.make({
             description:
-              "Replace exact text in one file. Relative paths resolve within the active Location. Absolute paths inside the Location are accepted. Explicit external absolute paths require external_directory approval before edit approval.",
+              "Нэг файл дахь яг текстийг солино. Relative замыг идэвхтэй Location дотор бодно. Location доторх absolute замыг зөвшөөрнө. Гадагш чиглэсэн absolute замд edit зөвшөөрөхөөс өмнө external_directory зөвшөөрөл шаардлагатай.",
             input: Input,
             output: Output,
             toModelOutput: ({ input, output }) => [

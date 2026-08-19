@@ -90,7 +90,7 @@ export function make<
     },
     settle: (call, context) =>
       Schema.decodeUnknownEffect(config.input)(call.input).pipe(
-        Effect.mapError((error) => new ToolFailure({ message: `Invalid tool input: ${error.message}` })),
+        Effect.mapError((error) => new ToolFailure({ message: `Хэрэгслийн оролт буруу байна: ${error.message}` })),
         Effect.flatMap((input) =>
           config.execute(input, context).pipe(
             Effect.flatMap((output) =>
@@ -105,7 +105,7 @@ export function make<
                 Effect.mapError(
                   (error) =>
                     new ToolFailure({
-                      message: `Tool returned an invalid value for its output schema: ${error.message}`,
+                      message: `Хэрэгсэл гаралтын схемд тохирохгүй утга буцаалаа: ${error.message}`,
                     }),
                 ),
               ),
@@ -134,7 +134,7 @@ export function make<
 export const validateName = (name: string) =>
   /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(name)
     ? Effect.void
-    : Effect.fail(new RegistrationError({ name, message: `Invalid tool name: ${name}` }))
+    : Effect.fail(new RegistrationError({ name, message: `Хэрэгслийн нэр буруу байна: ${name}` }))
 
 export const withPermission = <Input extends SchemaType<any>, Output extends SchemaType<any>>(
   tool: Definition<Input, Output>,
@@ -151,7 +151,7 @@ export const settle = (tool: AnyTool, call: ToolCall, context: Context) => runti
 
 function runtimeOf(tool: AnyTool) {
   const runtime = runtimes.get(tool)
-  if (!runtime) throw new TypeError("Invalid Core Tool value")
+  if (!runtime) throw new TypeError("Core Tool-ийн утга буруу байна")
   return runtime
 }
 

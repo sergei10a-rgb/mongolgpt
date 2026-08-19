@@ -9,16 +9,16 @@ import { Tools } from "./tools"
 
 export const name = "question"
 
-export const description = `Use this tool when you need to ask the user questions during execution. This allows you to:
-1. Gather user preferences or requirements
-2. Clarify ambiguous instructions
-3. Get decisions on implementation choices as you work
-4. Offer choices to the user about what direction to take.
+export const description = `Ажиллах явцад хэрэглэгчээс асуулт асуух шаардлагатай үед энэ хэрэгслийг ашиглана. Үүгээр:
+1. Хэрэглэгчийн хүсэл, шаардлагыг цуглуулна
+2. Тодорхой бус зааврыг тодруулна
+3. Хэрэгжүүлэх сонголтын талаар шийдвэр авна
+4. Цааш ямар чиглэл сонгохыг хэрэглэгчид санал болгоно.
 
-Usage notes:
-- When \`custom\` is enabled (default), a "Type your own answer" option is added automatically; don't include "Other" or catch-all options
-- Answers are returned as arrays of labels; set \`multiple: true\` to allow selecting more than one
-- If you recommend a specific option, make that the first option in the list and add "(Recommended)" at the end of the label`
+Ашиглах тэмдэглэл:
+- \`custom\` идэвхтэй үед (анхдагч) "Өөрийн хариултыг бичих" сонголт автоматаар нэмэгдэнэ; "Other" эсвэл ерөнхий нөхөх сонголт бүү нэм
+- Хариултыг label-ийн массив хэлбэрээр буцаана; нэгээс олон сонголт зөвшөөрөхдөө \`multiple: true\` тохируулна
+- Тодорхой сонголт санал болговол жагсаалтын эхэнд байрлуулж, label-ийн төгсгөлд "(Recommended)" нэм`
 
 export const Input = Schema.Struct({
   questions: Schema.Array(QuestionV2.Prompt).annotate({ description: "Асуух асуултууд" }),
@@ -36,10 +36,10 @@ export const toModelOutput = (
   const formatted = questions
     .map(
       (question, index) =>
-        `"${question.question}"="${answers[index]?.length ? answers[index].join(", ") : "Unanswered"}"`,
+        `"${question.question}"="${answers[index]?.length ? answers[index].join(", ") : "Хариулаагүй"}"`,
     )
     .join(", ")
-  return `User has answered your questions: ${formatted}. You can now continue with the user's answers in mind.`
+  return `Хэрэглэгч таны асуултад хариуллаа: ${formatted}. Одоо хэрэглэгчийн хариултыг харгалзан үргэлжлүүлж болно.`
 }
 
 export const layer = Layer.effectDiscard(
@@ -67,7 +67,7 @@ export const layer = Layer.effectDiscard(
                 source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
               })
               .pipe(
-                Effect.mapError(() => new ToolFailure({ message: "Permission denied: question" })),
+                Effect.mapError(() => new ToolFailure({ message: "Зөвшөөрөл олгогдсонгүй: question" })),
                 Effect.andThen(
                   question
                     .ask({

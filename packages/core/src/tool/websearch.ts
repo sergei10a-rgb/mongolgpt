@@ -26,29 +26,29 @@ export const MAX_RESPONSE_BYTES = 256 * 1024
  * from provider-hosted web search tools, which remain route-owned and execute
  * at the model provider. Ownership of this compromise can be revisited later.
  */
-export const description = `Search the web using the session's local web search provider. Use this for current information beyond knowledge cutoff.
+export const description = `Сессийн local web search provider ашиглан вэбээс хайна. Knowledge cutoff-оос хойших шинэ мэдээлэлд үүнийг ашиглана.
 
-This is a provider-independent local tool backed by Exa or Parallel. Provider-hosted web search tools are separate and execute at the model provider.
+Энэ нь Exa эсвэл Parallel-д тулгуурласан provider-ээс үл хамаарах local хэрэгсэл. Provider-ээс зохион байгуулдаг вэб хайлтын хэрэгслүүд тусдаа бөгөөд model provider талд ажиллана.
 
-Optional controls support result count, live crawling ('fallback' or 'preferred'), search type ('auto', 'fast', or 'deep'), and maximum context characters.
+Сонголтоор үр дүнгийн тоо, live crawling ('fallback' эсвэл 'preferred'), хайлтын төрөл ('auto', 'fast' эсвэл 'deep'), context-ийн тэмдэгтийн дээд хэмжээг тохируулна.
 
-The current year is ${new Date().getFullYear()}. Use this year when searching for recent information or current events.`
+Одоогийн жил ${new Date().getFullYear()}. Сүүлийн үеийн мэдээлэл эсвэл одоогийн үйл явдал хайхдаа энэ жилийг ашиглана.`
 
 export const Input = Schema.Struct({
-  query: Schema.String.annotate({ description: "Websearch query" }),
+  query: Schema.String.annotate({ description: "Вэб хайлтын асуулга" }),
   numResults: Schema.optional(PositiveInt.check(Schema.isLessThanOrEqualTo(MAX_NUM_RESULTS))).annotate({
-    description: `Number of search results to return (default: 8, maximum: ${MAX_NUM_RESULTS})`,
+    description: `Буцаах хайлтын үр дүнгийн тоо (анхдагч: 8, дээд тал нь: ${MAX_NUM_RESULTS})`,
   }),
   livecrawl: Schema.optional(Schema.Literals(["fallback", "preferred"])).annotate({
     description:
-      "Live crawl mode - 'fallback': use live crawling as backup if cached unavailable, 'preferred': prioritize live crawling (default: 'fallback')",
+      "Live crawl горим - 'fallback': cache байхгүй үед live crawling-ийг нөөцөөр ашиглана, 'preferred': live crawling-ийг түрүүлж ашиглана (анхдагч: 'fallback')",
   }),
   type: Schema.optional(Schema.Literals(["auto", "fast", "deep"])).annotate({
-    description: "Search type - 'auto': balanced search (default), 'fast': quick results, 'deep': comprehensive search",
+    description: "Хайлтын төрөл - 'auto': тэнцвэртэй хайлт (анхдагч), 'fast': хурдан үр дүн, 'deep': дэлгэрэнгүй хайлт",
   }),
   contextMaxCharacters: Schema.optional(PositiveInt.check(Schema.isLessThanOrEqualTo(MAX_CONTEXT_CHARACTERS))).annotate(
     {
-      description: `Maximum characters for context string optimized for models (default: 10000, maximum: ${MAX_CONTEXT_CHARACTERS})`,
+      description: `Model-д тохируулсан context string-ийн тэмдэгтийн дээд хэмжээ (анхдагч: 10000, дээд тал нь: ${MAX_CONTEXT_CHARACTERS})`,
     },
   ),
 })
@@ -167,13 +167,13 @@ const callMcp = <F extends Schema.Struct.Fields>(
       const body = yield* collectBoundedResponseBody(
         response,
         MAX_RESPONSE_BYTES,
-        () => new Error(`${tool} response exceeded ${MAX_RESPONSE_BYTES} bytes`),
+        () => new Error(`${tool} хариу ${MAX_RESPONSE_BYTES} byte-ийн хязгаараас хэтэрлээ`),
       )
       return yield* parseResponse(body.toString("utf8"))
     }).pipe(
       Effect.timeoutOrElse({
         duration: Duration.seconds(25),
-        orElse: () => Effect.fail(new Error(`${tool} request timed out`)),
+        orElse: () => Effect.fail(new Error(`${tool} хүсэлтийн хугацаа дууслаа`)),
       }),
     )
   })

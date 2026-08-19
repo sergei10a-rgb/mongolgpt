@@ -13,7 +13,7 @@ export const name = "skill"
 const FILE_LIMIT = 10
 
 export const Input = Schema.Struct({
-  name: Schema.String.annotate({ description: "The name of the skill from the available skills list" }),
+  name: Schema.String.annotate({ description: "Боломжтой ур чадварын жагсаалтаас сонгох ур чадварын нэр" }),
 })
 
 export const Output = Schema.Struct({
@@ -23,24 +23,24 @@ export const Output = Schema.Struct({
 })
 
 export const description = [
-  "Load a specialized skill when the task at hand matches one of the available skills in the system context.",
+  "Одоогийн даалгавар системийн орчинд байгаа ур чадваруудын аль нэгтэй таарвал тухайн тусгай ур чадварыг ачаална.",
   "",
-  "Use this tool to inject the skill's instructions and resources into the current conversation. The output may contain detailed workflow guidance as well as references to scripts, files, etc. in the same directory as the skill.",
+  "Энэ хэрэгслээр ур чадварын заавар болон resource-уудыг одоогийн ярианд оруулна. Гаралтад ажлын урсгалын дэлгэрэнгүй заавар, мөн тухайн ур чадвартай нэг хавтас дахь script, файл зэрэгт хандах лавлагаа байж болно.",
   "",
-  "The skill name must match one of the available skills in the system context.",
+  "Ур чадварын нэр нь системийн орчинд байгаа ур чадварын аль нэгтэй яг таарсан байх ёстой.",
 ].join("\n")
 
 export const toModelOutput = (skill: SkillV2.Info, files: ReadonlyArray<string>) => {
   const directory = path.dirname(skill.location)
   return [
     `<skill_content name="${skill.name}">`,
-    `# Skill: ${skill.name}`,
+    `# Ур чадвар: ${skill.name}`,
     "",
     skill.content.trim(),
     "",
-    `Base directory for this skill: ${directory}`,
-    "Relative paths in this skill (e.g., scripts/, reference/) are relative to this base directory.",
-    "Note: file list is sampled.",
+    `Энэ ур чадварын үндсэн хавтас: ${directory}`,
+    "Энэ ур чадварын relative замууд (жишээ нь scripts/, reference/) нь дээрх үндсэн хавтастай харьцангуй.",
+    "Тайлбар: файлын жагсаалтыг түүвэрлэн харуулсан.",
     "",
     "<skill_files>",
     ...files.map((file) => `<file>${file}</file>`),

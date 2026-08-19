@@ -511,7 +511,7 @@ describe("ReadTool", () => {
             input: { path: "archive.dat", offset: 2, limit: 1 },
           },
         }),
-      ).toEqual({ type: "error", value: "Cannot read binary file: archive.dat" })
+      ).toEqual({ type: "error", value: "Хоёртын файлыг уншиж чадсангүй: archive.dat" })
       expect(readCalls).toEqual([
         { input: AbsolutePath.make(path.join(process.cwd(), "archive.dat")), page: { offset: 2, limit: 1 } },
       ])
@@ -675,7 +675,7 @@ describe("ReadTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-direct-binary", name: "read", input: { path: "late-binary" } },
         }),
-      ).toEqual({ type: "error", value: "Cannot read binary file: late-binary" })
+      ).toEqual({ type: "error", value: "Хоёртын файлыг уншиж чадсангүй: late-binary" })
     }),
   )
 })

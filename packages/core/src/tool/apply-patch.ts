@@ -16,7 +16,7 @@ export const name = "apply_patch"
 
 export const Input = Schema.Struct({
   patchText: Schema.String.annotate({
-    description: "The full patch text describing add, update, and delete operations",
+    description: "add, update, delete үйлдлийг тодорхойлсон нөхөөсний бүтэн текст",
   }),
 })
 
@@ -34,7 +34,7 @@ export type Output = typeof Output.Type
 
 export const toModelOutput = (output: Output) =>
   [
-    "Applied patch sequentially:",
+    "Нөхөөсийг дарааллаар нь хэрэглэв:",
     ...output.applied.map(
       (item) => `${item.type === "add" ? "A" : item.type === "delete" ? "D" : "M"} ${item.resource}`,
     ),
@@ -67,7 +67,7 @@ export const layer = Layer.effectDiscard(
         [name]: Tool.withPermission(
           Tool.make({
             description:
-              "Apply one patch containing add, update, and delete file operations. All targets are resolved and approved before target contents are read. Operations apply sequentially; if a later operation fails, earlier operations remain applied and the failure reports them explicitly. Moves and atomic rollback are not supported yet.",
+              "Файл нэмэх, шинэчлэх, устгах үйлдлүүдийг агуулсан нэг нөхөөс хэрэглэнэ. Зорилтот бүх замыг агуулгыг уншихаас өмнө бодож, зөвшөөрнө. Үйлдлүүд дарааллаар хэрэгжинэ; дараагийн үйлдэл амжилтгүй болсон ч өмнөх үйлдлүүд хадгалагдаж, алдаанд тодорхой дурдагдана. Одоогоор зөөх болон атомик буцаалт дэмжигдээгүй.",
             input: Input,
             output: Output,
             toModelOutput: ({ output }) => [{ type: "text", text: toModelOutput(output) }],
@@ -86,14 +86,14 @@ export const layer = Layer.effectDiscard(
                   messageID: context.assistantMessageID,
                   callID: context.toolCallID,
                 }
-                if (!input.patchText.trim()) return yield* new ToolFailure({ message: "patchText is required" })
+                if (!input.patchText.trim()) return yield* new ToolFailure({ message: "patchText заавал шаардлагатай" })
                 const hunks = yield* Effect.try({
                   try: () => Patch.parse(input.patchText),
-                  catch: (cause) => new ToolFailure({ message: `apply_patch verification failed: ${String(cause)}` }),
+                  catch: (cause) => new ToolFailure({ message: `apply_patch шалгалт амжилтгүй боллоо: ${String(cause)}` }),
                 })
-                if (hunks.length === 0) return yield* new ToolFailure({ message: "patch rejected: empty patch" })
+                if (hunks.length === 0) return yield* new ToolFailure({ message: "Нөхөөсөөс татгалзлаа: хоосон нөхөөс байна" })
                 const move = hunks.find((hunk) => hunk.type === "update" && hunk.movePath !== undefined)
-                if (move) return yield* new ToolFailure({ message: "apply_patch moves are not supported yet" })
+                if (move) return yield* new ToolFailure({ message: "apply_patch зөөх үйлдлийг одоогоор дэмжихгүй" })
 
                 const targets: Array<{ readonly hunk: Patch.Hunk; readonly target: LocationMutation.Target }> = []
                 for (const hunk of hunks)

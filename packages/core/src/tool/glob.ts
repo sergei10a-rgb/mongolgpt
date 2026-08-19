@@ -14,12 +14,12 @@ import { Tools } from "./tools"
 export const name = "glob"
 
 export const Input = Schema.Struct({
-  pattern: FileSystem.GlobInput.fields.pattern.annotate({ description: "Glob pattern to match files against" }),
+  pattern: FileSystem.GlobInput.fields.pattern.annotate({ description: "Файл тааруулах glob загвар" }),
   path: RelativePath.pipe(Schema.optional).annotate({
-    description: "Relative directory to search. Defaults to the active Location.",
+    description: "Хайх relative хавтас. Анхдагчаар идэвхтэй Location-ийг ашиглана.",
   }),
   limit: FileSystem.GlobInput.fields.limit.annotate({
-    description: "Maximum results to return",
+    description: "Буцаах үр дүнгийн дээд тоо",
   }),
 })
 
@@ -44,7 +44,7 @@ export const layer = Layer.effectDiscard(
       .register({
         [name]: Tool.make({
           description:
-            "Find files by glob pattern within the active Location. Returns concise relative file resources. Use a relative path to narrow the search and limit to bound the result count.",
+            "Идэвхтэй Location дотор glob загвараар файл олно. Товч relative файлын resource-ууд буцаана. Хайлтыг нарийсгахын тулд relative зам, үр дүнгийн тоог хязгаарлахын тулд limit ашиглана.",
           input: Input,
           output: Output,
           toModelOutput: ({ output }) => [

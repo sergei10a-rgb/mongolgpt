@@ -95,7 +95,7 @@ describe("WriteTool", () => {
             expect((yield* toolDefinitions(registry)).map((tool) => tool.name)).toEqual(["write"])
             const settled = yield* settleTool(registry, call({ path: "src/new.txt", content: "created" }))
             expect(settled).toEqual({
-              result: { type: "text", value: "Created file successfully: src/new.txt" },
+              result: { type: "text", value: "Файлыг амжилттай үүсгэлээ: src/new.txt" },
               output: {
                 structured: {
                   operation: "write",
@@ -103,7 +103,7 @@ describe("WriteTool", () => {
                   resource: "src/new.txt",
                   existed: false,
                 },
-                content: [{ type: "text", text: "Created file successfully: src/new.txt" }],
+                content: [{ type: "text", text: "Файлыг амжилттай үүсгэлээ: src/new.txt" }],
               },
             })
             expect(yield* Effect.promise(() => fs.readFile(path.join(tmp.path, "src", "new.txt"), "utf8"))).toBe(
@@ -129,7 +129,7 @@ describe("WriteTool", () => {
           ),
           Effect.andThen((settled) =>
             Effect.gen(function* () {
-              expect(settled.result).toEqual({ type: "text", value: "Wrote file successfully: existing.txt" })
+              expect(settled.result).toEqual({ type: "text", value: "Файлд амжилттай бичлээ: existing.txt" })
               expect(settled.output?.structured).toMatchObject({ resource: "existing.txt", existed: true })
               expect(yield* Effect.promise(() => fs.readFile(path.join(tmp.path, "existing.txt"), "utf8"))).toBe(
                 "after",
@@ -182,7 +182,7 @@ describe("WriteTool", () => {
         return withTool(tmp.path, (registry) => executeTool(registry, call({ path: target, content: "inside" }))).pipe(
           Effect.andThen((result) =>
             Effect.gen(function* () {
-              expect(result).toEqual({ type: "text", value: "Created file successfully: absolute.txt" })
+              expect(result).toEqual({ type: "text", value: "Файлыг амжилттай үүсгэлээ: absolute.txt" })
               expect(assertions.map((input) => input.action)).toEqual(["edit"])
               expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("inside")
             }),

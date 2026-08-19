@@ -16,16 +16,16 @@ export const name = "grep"
 
 export const Input = Schema.Struct({
   pattern: FileSystem.GrepInput.fields.pattern.annotate({
-    description: "Regex pattern to search for in file contents",
+    description: "Файлын агуулгаас хайх regex загвар",
   }),
   path: RelativePath.pipe(Schema.optional).annotate({
-    description: "Relative directory to search. Defaults to the active Location.",
+    description: "Хайх relative хавтас. Анхдагчаар идэвхтэй Location-ийг ашиглана.",
   }),
   include: FileSystem.GrepInput.fields.include.annotate({
-    description: 'File glob to include in the search (for example, "*.js" or "*.{ts,tsx}")',
+    description: 'Хайлтад оруулах файлын glob (жишээ нь, "*.js" эсвэл "*.{ts,tsx}")',
   }),
   limit: FileSystem.GrepInput.fields.limit.annotate({
-    description: "Maximum matches to return",
+    description: "Буцаах тохирлын дээд тоо",
   }),
 })
 
@@ -60,7 +60,7 @@ export const layer = Layer.effectDiscard(
       .register({
         [name]: Tool.make({
           description:
-            "Search file contents by regular expression within the active Location or an absolute managed tool-output file. Use a path to narrow the search, include to filter files by glob, and limit to bound the match count. Returns concise file resources, line numbers, and bounded line previews.",
+            "Идэвхтэй Location доторх файл эсвэл absolute managed tool-output файлаас regular expression-ээр хайна. Хайлтыг нарийсгахдаа path, glob-оор файл шүүхдээ include, тохирлын тоог хязгаарлахдаа limit ашиглана. Товч файлын resource, мөрийн дугаар, хязгаарлагдмал мөрийн урьдчилсан харагдац буцаана.",
           input: Input,
           output: Output,
           toModelOutput: ({ output }) => [

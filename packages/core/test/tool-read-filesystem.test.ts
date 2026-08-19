@@ -63,7 +63,7 @@ describe("ReadToolFileSystem", () => {
       const malformedError = yield* ReadToolFileSystem.read(fs, malformed, "malformed.txt").pipe(Effect.flip)
 
       expect(binaryError).toBeInstanceOf(ReadToolFileSystem.BinaryFileError)
-      expect(binaryError.message).toBe("Cannot read binary file: archive.dat")
+      expect(binaryError.message).toBe("Хоёртын файлыг уншиж чадсангүй: archive.dat")
       expect(malformedError).toBeInstanceOf(ReadToolFileSystem.MalformedUtf8Error)
     }),
   )
@@ -77,7 +77,7 @@ describe("ReadToolFileSystem", () => {
       const error = yield* ReadToolFileSystem.read(fs, file, "short.txt", { offset: 2 }).pipe(Effect.flip)
 
       expect(error).toBeInstanceOf(ReadToolFileSystem.OffsetOutOfRangeError)
-      expect(error.message).toBe("Offset 2 is out of range")
+      expect(error.message).toBe("Offset 2 зөвшөөрөгдөх хүрээнээс хэтэрсэн байна")
     }),
   )
 
@@ -110,7 +110,7 @@ describe("ReadToolFileSystem", () => {
 
       expect(error).toBeInstanceOf(ReadToolFileSystem.MediaIngestLimitError)
       expect(error.message).toBe(
-        `Media exceeds ${ReadToolFileSystem.MAX_MEDIA_INGEST_BYTES} byte ingestion limit: oversized.png`,
+        `Медиа ${ReadToolFileSystem.MAX_MEDIA_INGEST_BYTES} byte-ийн оруулах хязгаараас хэтэрлээ: oversized.png`,
       )
     }),
   )

@@ -12,13 +12,13 @@ export const MAX_READ_LINES = 2_000
 export const MAX_READ_BYTES = 50 * 1024
 export const MAX_MEDIA_INGEST_BYTES = 20 * 1024 * 1024
 const MAX_LINE_LENGTH = 2_000
-const MAX_LINE_SUFFIX = `... (line truncated to ${MAX_LINE_LENGTH} chars)`
+const MAX_LINE_SUFFIX = `... (мөрийг ${MAX_LINE_LENGTH} тэмдэгтээр хязгаарлав)`
 
 export class BinaryFileError extends Schema.TaggedErrorClass<BinaryFileError>()("ReadTool.BinaryFileError", {
   resource: Schema.String,
 }) {
   override get message() {
-    return `Cannot read binary file: ${this.resource}`
+    return `Хоёртын файлыг уншиж чадсангүй: ${this.resource}`
   }
 }
 
@@ -30,7 +30,7 @@ export class MediaIngestLimitError extends Schema.TaggedErrorClass<MediaIngestLi
   },
 ) {
   override get message() {
-    return `Media exceeds ${this.maximumBytes} byte ingestion limit: ${this.resource}`
+    return `Медиа ${this.maximumBytes} byte-ийн оруулах хязгаараас хэтэрлээ: ${this.resource}`
   }
 }
 
@@ -38,7 +38,7 @@ export class MalformedUtf8Error extends Schema.TaggedErrorClass<MalformedUtf8Err
   resource: Schema.String,
 }) {
   override get message() {
-    return `File is not valid UTF-8: ${this.resource}`
+    return `Файл зөв UTF-8 биш байна: ${this.resource}`
   }
 }
 
@@ -47,7 +47,7 @@ export class OffsetOutOfRangeError extends Schema.TaggedErrorClass<OffsetOutOfRa
   { offset: Schema.Number },
 ) {
   override get message() {
-    return `Offset ${this.offset} is out of range`
+    return `Offset ${this.offset} зөвшөөрөгдөх хүрээнээс хэтэрсэн байна`
   }
 }
 
@@ -56,7 +56,7 @@ export class PathKindError extends Schema.TaggedErrorClass<PathKindError>()("Rea
   expected: Schema.Literals(["a file", "a file or directory"]),
 }) {
   override get message() {
-    return `Path is not ${this.expected}: ${this.resource}`
+    return `Зам нь ${this.expected} биш байна: ${this.resource}`
   }
 }
 
