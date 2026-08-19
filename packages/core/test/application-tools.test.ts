@@ -177,7 +177,7 @@ describe("ApplicationTools", () => {
           assistantMessageID,
           call: { type: "tool-call", id: "call-removed", name: "contextual", input: { query: "hello" } },
         }),
-      ).toEqual({ result: { type: "error", value: "Unknown tool: contextual" } })
+      ).toEqual({ result: { type: "error", value: "Үл мэдэгдэх хэрэгсэл: contextual" } })
     }),
   )
 

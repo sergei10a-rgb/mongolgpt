@@ -141,7 +141,7 @@ describe("ApplyPatchTool", () => {
                 )
                 expect(settled.result).toEqual({
                   type: "text",
-                  value: "Applied patch sequentially:\nA nested/new.txt\nM update.txt\nD remove.txt",
+                  value: "Нөхөөсийг дарааллаар нь хэрэглэв:\nA nested/new.txt\nM update.txt\nD remove.txt",
                 })
                 expect(settled.output?.structured).toMatchObject({
                   applied: [
@@ -208,7 +208,7 @@ describe("ApplyPatchTool", () => {
                       "*** Begin Patch\n*** Add File: created.txt\n+created\n*** Update File: old.txt\n*** Move to: moved.txt\n@@\n-before\n+after\n*** End Patch",
                     ),
                   ),
-                ).toEqual({ type: "error", value: "apply_patch moves are not supported yet" })
+                ).toEqual({ type: "error", value: "apply_patch зөөх үйлдлийг одоогоор дэмжихгүй" })
                 expect(yield* exists(path.join(tmp.path, "created.txt"))).toBe(false)
                 expect(assertions).toEqual([])
               }),

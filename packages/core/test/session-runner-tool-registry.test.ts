@@ -172,7 +172,7 @@ describe("ToolRegistry", () => {
           ...identity,
           call: { type: "tool-call", id: "missing", name: "missing", input: {} },
         }),
-      ).toEqual({ type: "error", value: "Unknown tool: missing" })
+      ).toEqual({ type: "error", value: "Үл мэдэгдэх хэрэгсэл: missing" })
 
       yield* service.register({
         defect: Tool.make({
@@ -206,7 +206,7 @@ describe("ToolRegistry", () => {
 
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) expect(Option.getOrUndefined(Cause.findErrorOption(exit.cause))).toBe(retentionFailure)
-      expect(retentionFailure.message).toBe("Failed to write tool output: disk full")
+      expect(retentionFailure.message).toBe("Хэрэгслийн гаралтыг бичиж чадсангүй: disk full")
     }),
   )
 
@@ -295,7 +295,7 @@ describe("ToolRegistry", () => {
           ...identity,
           call: { type: "tool-call", id: "invalid-input", name: "transformed", input: { value: "yes" } },
         }),
-      ).toMatchObject({ type: "error", value: expect.stringContaining("Invalid tool input") })
+      ).toMatchObject({ type: "error", value: expect.stringContaining("Хэрэгслийн оролт буруу байна") })
       expect(executed).toEqual(["yes"])
 
       yield* service.register({
@@ -323,7 +323,7 @@ describe("ToolRegistry", () => {
           ...identity,
           call: { type: "tool-call", id: "invalid-output", name: "invalid_output", input: {} },
         }),
-      ).toMatchObject({ type: "error", value: expect.stringContaining("invalid value for its output schema") })
+      ).toMatchObject({ type: "error", value: expect.stringContaining("Хэрэгсэл гаралтын схемд тохирохгүй утга буцаалаа") })
     }),
   )
 
@@ -347,7 +347,7 @@ describe("ToolRegistry", () => {
 
       expect((yield* materialized.settle(call("echo"))).result).toEqual({
         type: "error",
-        value: "Stale tool call: echo",
+        value: "Хуучирсан хэрэгслийн дуудлага: echo",
       })
     }),
   )
@@ -361,7 +361,7 @@ describe("ToolRegistry", () => {
 
       expect((yield* materialized.settle(call("first"))).result).toEqual({
         type: "error",
-        value: "Stale tool call: first",
+        value: "Хуучирсан хэрэгслийн дуудлага: first",
       })
       expect((yield* materialized.settle(call("second"))).result).toEqual({ type: "text", value: "second" })
     }),
@@ -378,7 +378,7 @@ describe("ToolRegistry", () => {
 
       expect((yield* materialized.settle(call("echo"))).result).toEqual({
         type: "error",
-        value: "Stale tool call: echo",
+        value: "Хуучирсан хэрэгслийн дуудлага: echo",
       })
     }),
   )
@@ -393,7 +393,7 @@ describe("ToolRegistry", () => {
 
       expect((yield* materialized.settle(call("echo"))).result).toEqual({
         type: "error",
-        value: "Stale tool call: echo",
+        value: "Хуучирсан хэрэгслийн дуудлага: echo",
       })
     }),
   )
@@ -410,7 +410,7 @@ describe("ToolRegistry", () => {
 
       expect((yield* materialized.settle(call("echo"))).result).toEqual({
         type: "error",
-        value: "Stale tool call: echo",
+        value: "Хуучирсан хэрэгслийн дуудлага: echo",
       })
     }),
   )

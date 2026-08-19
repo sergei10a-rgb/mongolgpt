@@ -122,7 +122,7 @@ describe("EditTool", () => {
                 )
                 expect(settled.result).toEqual({
                   type: "text",
-                  value: "Edited file successfully: hello.txt\nReplacements: 1\n```diff\n-before\n+after\n```",
+                  value: "Файлыг амжилттай заслаа: hello.txt\nОрлуулсан тоо: 1\n```diff\n-before\n+after\n```",
                 })
                 expect(settled.output?.structured).toEqual({
                   replacements: 1,

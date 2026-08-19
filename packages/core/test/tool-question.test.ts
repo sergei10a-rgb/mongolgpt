@@ -58,7 +58,7 @@ describe("QuestionTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-question-denied", name: "question", input: { questions: [] } },
         }),
-      ).toEqual({ result: { type: "error", value: "Permission denied: question" } })
+      ).toEqual({ result: { type: "error", value: "Зөвшөөрөл олгогдсонгүй: question" } })
       expect(capturedInput()).toBeUndefined()
       deny = false
     }),
@@ -95,14 +95,14 @@ describe("QuestionTool", () => {
         result: {
           type: "text",
           value:
-            'User has answered your questions: "What should happen?"="Build", "Which environment?"="Unanswered". You can now continue with the user\'s answers in mind.',
+            'Хэрэглэгч таны асуултад хариуллаа: "What should happen?"="Build", "Which environment?"="Хариулаагүй". Одоо хэрэглэгчийн хариултыг харгалзан үргэлжлүүлж болно.',
         },
         output: {
           structured: { answers: [["Build"], []] },
           content: [
             {
               type: "text",
-              text: 'User has answered your questions: "What should happen?"="Build", "Which environment?"="Unanswered". You can now continue with the user\'s answers in mind.',
+              text: 'Хэрэглэгч таны асуултад хариуллаа: "What should happen?"="Build", "Which environment?"="Хариулаагүй". Одоо хэрэглэгчийн хариултыг харгалзан үргэлжлүүлж болно.',
             },
           ],
         },

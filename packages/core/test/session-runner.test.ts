@@ -2556,7 +2556,7 @@ describe("SessionRunnerLLM", () => {
             {
               type: "tool",
               id: "call-missing",
-              state: { status: "error", error: { message: "Unknown tool: missing" } },
+              state: { status: "error", error: { message: "Үл мэдэгдэх хэрэгсэл: missing" } },
             },
           ],
         },
