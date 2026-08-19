@@ -52,7 +52,7 @@ export function embeddedUI(disableEmbeddedWebUi: boolean) {
 }
 
 function notFound() {
-  return HttpServerResponse.jsonUnsafe({ error: "Not Found" }, { status: 404 })
+  return HttpServerResponse.jsonUnsafe({ error: "Олдсонгүй" }, { status: 404 })
 }
 
 function embeddedUIResponse(file: string, body: Uint8Array) {

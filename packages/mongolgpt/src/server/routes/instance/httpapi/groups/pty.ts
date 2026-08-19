@@ -43,96 +43,96 @@ export const PtyApi = HttpApi.make("pty")
       .add(
         HttpApiEndpoint.get("shells", PtyPaths.shells, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(ShellItem), "List of shells"),
+          success: described(Schema.Array(ShellItem), "Shell-үүдийн жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "pty.shells",
-            summary: "List available shells",
-            description: "Get a list of available shells on the system.",
+            summary: "Боломжтой shell-үүдийг жагсаах",
+            description: "Системд ашиглах боломжтой shell-үүдийн жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.get("list", PtyPaths.list, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Pty.Info), "List of sessions"),
+          success: described(Schema.Array(Pty.Info), "Сессүүдийн жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "pty.list",
-            summary: "List PTY sessions",
-            description: "Get a list of all active pseudo-terminal (PTY) sessions managed by MongolGPT.",
+            summary: "PTY сессүүдийг жагсаах",
+            description: "MongolGPT-ийн удирддаг бүх идэвхтэй псевдо-терминалын (PTY) сессийн жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.post("create", PtyPaths.create, {
           query: WorkspaceRoutingQuery,
           payload: Pty.CreateInput,
-          success: described(Pty.Info, "Created session"),
+          success: described(Pty.Info, "Сесс үүссэн"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "pty.create",
-            summary: "Create PTY session",
-            description: "Create a new pseudo-terminal (PTY) session for running shell commands and processes.",
+            summary: "PTY сесс үүсгэх",
+            description: "Shell команд болон процесс ажиллуулах шинэ псевдо-терминалын (PTY) сесс үүсгэнэ.",
           }),
         ),
         HttpApiEndpoint.get("get", PtyPaths.get, {
           params: { ptyID: PtyID },
           query: WorkspaceRoutingQuery,
-          success: described(Pty.Info, "Session info"),
+          success: described(Pty.Info, "Сессийн мэдээлэл"),
           error: PtyNotFoundError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "pty.get",
-            summary: "Get PTY session",
-            description: "Retrieve detailed information about a specific pseudo-terminal (PTY) session.",
+            summary: "PTY сесс авах",
+            description: "Тодорхой псевдо-терминалын (PTY) сессийн дэлгэрэнгүй мэдээллийг авна.",
           }),
         ),
         HttpApiEndpoint.put("update", PtyPaths.update, {
           params: { ptyID: PtyID },
           query: WorkspaceRoutingQuery,
           payload: Pty.UpdateInput,
-          success: described(Pty.Info, "Updated session"),
+          success: described(Pty.Info, "Сесс шинэчлэгдсэн"),
           error: [PtyNotFoundError, HttpApiError.BadRequest],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "pty.update",
-            summary: "Update PTY session",
-            description: "Update properties of an existing pseudo-terminal (PTY) session.",
+            summary: "PTY сесс шинэчлэх",
+            description: "Байгаа псевдо-терминалын (PTY) сессийн шинжүүдийг шинэчилнэ.",
           }),
         ),
         HttpApiEndpoint.delete("remove", PtyPaths.remove, {
           params: { ptyID: PtyID },
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Session removed"),
+          success: described(Schema.Boolean, "Сесс устсан"),
           error: PtyNotFoundError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "pty.remove",
-            summary: "Remove PTY session",
-            description: "Remove and terminate a specific pseudo-terminal (PTY) session.",
+            summary: "PTY сесс устгах",
+            description: "Тодорхой псевдо-терминалын (PTY) сессийг устгаж, дуусгана.",
           }),
         ),
         HttpApiEndpoint.post("connectToken", PtyPaths.connectToken, {
           params: { ptyID: PtyID },
           query: WorkspaceRoutingQuery,
-          success: described(PtyTicket.ConnectToken, "WebSocket connect token"),
+          success: described(PtyTicket.ConnectToken, "WebSocket холболтын токен"),
           error: [PtyForbiddenError, PtyNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "pty.connectToken",
-            summary: "Create PTY WebSocket token",
-            description: "Create a short-lived ticket for opening a PTY WebSocket connection.",
+            summary: "PTY WebSocket токен үүсгэх",
+            description: "PTY WebSocket холболт нээх богино хугацааны тасалбар үүсгэнэ.",
           }),
         ),
       )
-      .annotateMerge(OpenApi.annotations({ title: "pty", description: "Experimental HttpApi PTY routes." }))
+      .annotateMerge(OpenApi.annotations({ title: "Псевдо-терминал", description: "Туршилтын HttpApi PTY замууд." }))
       .middleware(InstanceContextMiddleware)
       .middleware(WorkspaceRoutingMiddleware)
       .middleware(Authorization),
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT-ийн туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Сонгосон инстансын замуудад зориулсан туршилтын HttpApi интерфейс.",
     }),
   )
 
@@ -143,14 +143,14 @@ export const PtyConnectApi = HttpApi.make("pty-connect").add(
       // existence, preserving the established empty-404 response ordering.
       HttpApiEndpoint.get("connect", PtyPaths.connect, {
         params: Params,
-        success: described(Schema.Boolean, "Connected session"),
+        success: described(Schema.Boolean, "Сесс холбогдсон"),
         error: [HttpApiError.Forbidden, HttpApiError.NotFound],
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "pty.connect",
-          summary: "Connect to PTY session",
+          summary: "PTY сесст холбогдох",
           description:
-            "Establish a WebSocket connection to interact with a pseudo-terminal (PTY) session in real-time.",
+            "Псевдо-терминалын (PTY) сесстэй бодит цагт харилцах WebSocket холболт үүсгэнэ.",
           transform: (operation) => ({
             ...operation,
             parameters: [
@@ -165,7 +165,7 @@ export const PtyConnectApi = HttpApi.make("pty-connect").add(
         }),
       ),
     )
-    .annotateMerge(OpenApi.annotations({ title: "pty", description: "PTY websocket route." }))
+    .annotateMerge(OpenApi.annotations({ title: "Псевдо-терминалын WebSocket", description: "PTY WebSocket зам." }))
     .middleware(InstanceContextMiddleware)
     .middleware(WorkspaceRoutingMiddleware)
     .middleware(PtyConnectAuthorization),

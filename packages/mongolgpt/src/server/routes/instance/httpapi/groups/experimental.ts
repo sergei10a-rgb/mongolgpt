@@ -190,7 +190,7 @@ const WorktreeErrorName = Schema.Union([
 export class WorktreeApiError extends Schema.ErrorClass<WorktreeApiError>("WorktreeError")(
   {
     name: WorktreeErrorName,
-    data: Schema.Struct({ message: Schema.String }),
+    data: Schema.Struct({ message: Schema.String.annotate({ description: "Төслийн хуулбарын үйлдлийн алдааны тайлбар" }) }),
   },
   { httpApiStatus: 400 },
 ) {}
@@ -372,50 +372,50 @@ export const ExperimentalApi = HttpApi.make("experimental")
         ),
         HttpApiEndpoint.get("worktree", ExperimentalPaths.worktree, {
           query: WorkspaceRoutingQuery,
-          success: described(WorktreeList, "Worktree сангуудын жагсаалт"),
+          success: described(WorktreeList, "Төслийн хуулбаруудын жагсаалт"),
           error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.list",
-            summary: "Worktree-үүдийг жагсаах",
-            description: "Одоогийн төслийн тусгаарласан бүх worktree-г жагсаана.",
+            summary: "Төслийн хуулбаруудыг жагсаах",
+            description: "Одоогийн төслийн тусгаарласан бүх төслийн хуулбарыг жагсаана.",
           }),
         ),
         HttpApiEndpoint.post("worktreeCreate", ExperimentalPaths.worktree, {
           disableCodecs: true,
           query: WorkspaceRoutingQuery,
           payload: [HttpApiSchema.NoContent, Worktree.CreateInput],
-          success: described(Worktree.Info, "Worktree үүсгэсэн"),
+          success: described(Worktree.Info, "Төслийн хуулбар үүссэн"),
           error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.create",
-            summary: "Worktree үүсгэх",
-            description: "Одоогийн төсөлд шинэ git worktree үүсгэж, тохируулсан эхлүүлэх скриптүүдийг ажиллуулна.",
+            summary: "Төслийн хуулбар үүсгэх",
+            description: "Одоогийн төсөлд шинэ git төслийн хуулбар үүсгэж, тохируулсан эхлүүлэх скриптүүдийг ажиллуулна.",
           }),
         ),
         HttpApiEndpoint.delete("worktreeRemove", ExperimentalPaths.worktree, {
           query: WorkspaceRoutingQuery,
           payload: Worktree.RemoveInput,
-          success: described(Schema.Boolean, "Worktree-г устгасан"),
+          success: described(Schema.Boolean, "Төслийн хуулбарыг устгасан"),
           error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.remove",
-            summary: "Worktree устгах",
-            description: "Git worktree болон түүний салбарыг устгана.",
+            summary: "Төслийн хуулбарыг устгах",
+            description: "Git төслийн хуулбар болон түүнд харьяалагдах салбарыг устгана.",
           }),
         ),
         HttpApiEndpoint.post("worktreeReset", ExperimentalPaths.worktreeReset, {
           query: WorkspaceRoutingQuery,
           payload: Worktree.ResetInput,
-          success: described(Schema.Boolean, "Worktree-г анхны төлөвт оруулсан"),
+          success: described(Schema.Boolean, "Төслийн хуулбарыг анхны төлөвт оруулсан"),
           error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.reset",
-            summary: "Worktree-г анхны төлөвт оруулах",
-            description: "Worktree салбарыг үндсэн өгөгдмөл салбарын төлөвт оруулна.",
+            summary: "Төслийн хуулбарыг анхны төлөвт оруулах",
+            description: "Төслийн хуулбарын салбарыг үндсэн өгөгдмөл салбарын төлөвт оруулна.",
           }),
         ),
         HttpApiEndpoint.get("session", ExperimentalPaths.session, {

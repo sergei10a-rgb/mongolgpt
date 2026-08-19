@@ -145,6 +145,9 @@ export type InvalidRequestError = {
 export type MoveSessionError = {
   name: "MoveSessionError"
   data: {
+    /**
+     * Сесс зөөх үйлдлийн алдааны тайлбар
+     */
     message: string
   }
 }
@@ -657,15 +660,15 @@ export type Pty = {
 
 export type Todo = {
   /**
-   * Brief description of the task
+   * Даалгаврын товч тайлбар
    */
   content: string
   /**
-   * Current status of the task: pending, in_progress, completed, cancelled
+   * Даалгаврын одоогийн төлөв: pending, in_progress, completed, cancelled
    */
   status: string
   /**
-   * Priority level of the task: high, medium, low
+   * Даалгаврын ач холбогдол: high, medium, low
    */
   priority: string
 }
@@ -694,26 +697,26 @@ export type SessionStatus =
 
 export type QuestionOption = {
   /**
-   * Display text (1-5 words, concise)
+   * Харуулах товч текст (1-5 үгтэй)
    */
   label: string
   /**
-   * Explanation of choice
+   * Сонголтын тайлбар
    */
   description: string
 }
 
 export type QuestionInfo = {
   /**
-   * Complete question
+   * Бүрэн хэлбэрийн асуулт
    */
   question: string
   /**
-   * Very short label (max 30 chars)
+   * Маш товч гарчиг (30 тэмдэгтээс ихгүй)
    */
   header: string
   /**
-   * Available choices
+   * Боломжит сонголтууд
    */
   options: Array<QuestionOption>
   multiple?: boolean
@@ -1335,7 +1338,7 @@ export type GlobalEvent = {
           id: string
           sessionID: string
           /**
-           * Questions to ask
+           * Асуух асуултууд
            */
           questions: Array<QuestionV2Info>
           tool?: QuestionV2Tool
@@ -1446,7 +1449,7 @@ export type GlobalEvent = {
         type: "tui.session.select"
         properties: {
           /**
-           * Session ID to navigate to
+           * Шилжиж очих сессийн ID
            */
           sessionID: string
         }
@@ -1512,7 +1515,7 @@ export type GlobalEvent = {
           id: string
           sessionID: string
           /**
-           * Questions to ask
+           * Асуух асуултууд
            */
           questions: Array<QuestionInfo>
           tool?: QuestionTool
@@ -1639,12 +1642,12 @@ export type GlobalEvent = {
 }
 
 /**
- * Log level
+ * Логийн түвшин
  */
 export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR"
 
 /**
- * Server configuration for mongolgpt serve and web commands
+ * mongolgpt serve болон web командын серверийн тохиргоо
  */
 export type ServerConfig = {
   port?: number
@@ -1700,7 +1703,7 @@ export type AgentConfig = {
     [key: string]: unknown
   }
   /**
-   * Hex color code (e.g., #FF5733) or theme color (e.g., primary)
+   * Hex өнгөний код (жишээ нь #FF5733) эсвэл өнгөний сэдвийн утга (жишээ нь primary)
    */
   color?: string | "primary" | "secondary" | "accent" | "success" | "warning" | "error" | "info"
   steps?: number
@@ -1747,11 +1750,11 @@ export type ProviderConfig = {
     enterpriseUrl?: string
     setCacheKey?: boolean
     /**
-     * Timeout in milliseconds for full requests to this provider. Set to false to disable timeout.
+     * Энэ үйлчилгээ үзүүлэгчид илгээх бүтэн хүсэлтийн хүлээлгийн хугацаа, миллисекундээр. false утга өгвөл хүлээлгийн хугацааг идэвхгүй болгоно.
      */
     timeout?: number | false
     /**
-     * Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout.
+     * Хариуны толгой хэсгийг хүлээх хугацаа, миллисекундээр. Үйлчилгээ үзүүлэгчийн холболт өгөгдмөл утга тохируулж болно. false утга өгвөл хүлээлгийн хугацааг идэвхгүй болгоно.
      */
     headerTimeout?: number | false
     chunkTimeout?: number
@@ -1806,7 +1809,7 @@ export type ProviderConfig = {
         [key: string]: string
       }
       /**
-       * Variant-specific configuration
+       * Хувилбар тус бүрийн тохиргоо
        */
       variants?: {
         [key: string]: {
@@ -1820,11 +1823,11 @@ export type ProviderConfig = {
 
 export type McpLocalConfig = {
   /**
-   * Type of MCP server connection
+   * MCP сервертэй холбогдох төрөл
    */
   type: "local"
   /**
-   * Command and arguments to run the MCP server
+   * MCP серверийг ажиллуулах команд болон аргументууд
    */
   command: Array<string>
   cwd?: string
@@ -1845,11 +1848,11 @@ export type McpOAuthConfig = {
 
 export type McpRemoteConfig = {
   /**
-   * Type of MCP server connection
+   * MCP сервертэй холбогдох төрөл
    */
   type: "remote"
   /**
-   * URL of the remote MCP server
+   * Алсын MCP серверийн URL
    */
   url: string
   enabled?: boolean
@@ -1857,14 +1860,14 @@ export type McpRemoteConfig = {
     [key: string]: string
   }
   /**
-   * OAuth authentication configuration for the MCP server. Set to false to disable OAuth auto-detection.
+   * MCP серверийн OAuth нэвтрэлтийн тохиргоо. OAuth-г автоматаар танихыг зогсоохын тулд false утга тохируулна.
    */
   oauth?: McpOAuthConfig | false
   timeout?: number
 }
 
 /**
- * @deprecated Always uses stretch layout.
+ * @deprecated Үргэлж stretch байрлал ашиглана.
  */
 export type LayoutConfig = "auto" | "stretch"
 
@@ -1920,7 +1923,7 @@ export type Config = {
   share?: "manual" | "auto" | "disabled"
   autoshare?: boolean
   /**
-   * Automatically update to the latest version. Set to true to auto-update, false to disable, or 'notify' to show update notifications
+   * Хамгийн сүүлийн хувилбар руу автоматаар шинэчилнэ. true нь автоматаар шинэчлэх, false нь идэвхгүй болгох, 'notify' нь шинэчлэлтийн мэдэгдэл харуулах утгатай
    */
   autoupdate?: boolean | "notify"
   disabled_providers?: Array<string>
@@ -1956,7 +1959,7 @@ export type Config = {
         }
   }
   /**
-   * Enable or configure formatters. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.
+   * Форматлагчдыг идэвхжүүлэх эсвэл тохируулна. Орхих буюу false бол идэвхгүй, true бол суурилагдсан форматлагчдыг идэвхжүүлнэ, объект бол нэмэлт тохиргоотойгоор идэвхжүүлнэ.
    */
   formatter?:
     | boolean
@@ -1971,7 +1974,7 @@ export type Config = {
         }
       }
   /**
-   * Enable or configure LSP servers. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.
+   * LSP серверүүдийг идэвхжүүлэх эсвэл тохируулна. Орхих буюу false бол идэвхгүй, true бол суурилагдсан серверүүдийг идэвхжүүлнэ, объект бол нэмэлт тохиргоотойгоор идэвхжүүлнэ.
    */
   lsp?:
     | boolean
@@ -2192,8 +2195,119 @@ export type CompatImportResponse = {
 }
 
 export type CompatImportError = {
+  /**
+   * Нийцтэй байдлын импортын алдааны тайлбар
+   */
   message: string
 }
+
+export type ExperimentalAccount = {
+  id: string
+  email: string
+  url: string
+  activeOrgID?: string
+}
+
+export type EffectHttpApiErrorInternalServerError = {
+  _tag: "InternalServerError"
+}
+
+export type ExperimentalAccountOverview = {
+  account: {
+    id: string
+    email: string
+    status: "active"
+    createdAt: number
+  }
+  currentWorkspaceID: string
+  workspaces: Array<{
+    id: string
+    name: string
+    slug: string
+    userID: string
+    role: "admin" | "member"
+    subscription: {
+      id: string
+      invoiceID: string
+      plan: "basic" | "pro" | "max"
+      status: "active"
+      periodStart: number
+      periodEnd: number
+    }
+    limits:
+      | {
+          plan: "free"
+          promoTokens: number
+          dailyRequests: number
+          dailyRequestsFallback: number
+        }
+      | {
+          plan: "basic" | "pro" | "max"
+          weeklyCostLimitInMicroCents: number
+          weeklyTokenLimit: number
+          rollingCostLimitInMicroCents: number
+          rollingWindowHours: number
+        }
+    quota:
+      | {
+          status: "available"
+          weeklyCost: {
+            used: number
+            limit: number
+            resetAt: number
+          }
+          weeklyTokens: {
+            used: number
+            limit: number
+            resetAt: number
+          }
+          rollingCost: {
+            used: number
+            limit: number
+            resetAt: number
+          }
+        }
+      | {
+          status: "model-scoped"
+          reason: "free-auto-model-limits"
+        }
+      | {
+          status: "unavailable"
+          reason: "quota-service-unavailable"
+        }
+    usage: {
+      scope: "workspace"
+      period: "week" | "subscription"
+      periodStart: number
+      periodEnd: number
+      requestCount: number
+      inputTokens: number
+      outputTokens: number
+      reasoningTokens: number
+      cacheReadTokens: number
+      cacheWriteTokens: number
+      totalTokens: number
+      costInMicroCents: number
+    }
+  }>
+}
+
+export type EffectHttpApiErrorServiceUnavailable = {
+  _tag: "ServiceUnavailable"
+}
+
+export type ExperimentalAccountLoginStatus =
+  | {
+      _tag: "pending"
+    }
+  | {
+      _tag: "success"
+      email: string
+    }
+  | {
+      _tag: "error"
+      message: string
+    }
 
 export type ExperimentalCapabilities = {
   backgroundSubagents: boolean
@@ -2203,10 +2317,6 @@ export type ConsoleState = {
   consoleManagedProviders: Array<string>
   activeOrgName?: string
   switchableOrgCount: number
-}
-
-export type EffectHttpApiErrorInternalServerError = {
-  _tag: "InternalServerError"
 }
 
 export type ToolListItem = {
@@ -2229,6 +2339,9 @@ export type WorktreeError = {
     | "WorktreeResetFailedError"
     | "WorktreeListFailedError"
   data: {
+    /**
+     * Төслийн хуулбарын үйлдлийн алдааны тайлбар
+     */
     message: string
   }
 }
@@ -2236,7 +2349,7 @@ export type WorktreeError = {
 export type WorktreeCreateInput = {
   name?: string
   /**
-   * Additional startup script to run after the project's start command
+   * Төслийн эхлүүлэх командын дараа ажиллуулах нэмэлт скрипт
    */
   startCommand?: string
 }
@@ -2400,6 +2513,9 @@ export type VcsFileDiff = {
 export type VcsApplyError = {
   name: "VcsApplyError"
   data: {
+    /**
+     * VCS patch хэрэглэх үеийн алдааны тайлбар
+     */
     message: string
     reason: "non-git" | "not-clean"
   }
@@ -2481,6 +2597,9 @@ export type McpStatus =
   | McpStatusNeedsClientRegistration
 
 export type McpUnsupportedOAuthError = {
+  /**
+   * Дэмжигдээгүй OAuth үйлдлийн алдааны тайлбар
+   */
   error: string
 }
 
@@ -2522,7 +2641,7 @@ export type QuestionRequest = {
   id: string
   sessionID: string
   /**
-   * Questions to ask
+   * Асуух асуултууд
    */
   questions: Array<QuestionInfo>
   tool?: QuestionTool
@@ -2604,6 +2723,9 @@ export type ProviderAuthError1 = {
   data: {
     providerID?: string
     field?: string
+    /**
+     * Үйлчилгээ үзүүлэгчийн баталгаажуулалтын алдааны тайлбар
+     */
     message?: string
     kind?: string
   }
@@ -2715,7 +2837,7 @@ export type EventTuiSessionSelect = {
   type: "tui.session.select"
   properties: {
     /**
-     * Session ID to navigate to
+     * Шилжиж очих сессийн ID
      */
     sessionID: string
   }
@@ -2735,6 +2857,9 @@ export type Workspace = {
 export type WorkspaceCreateError = {
   name: "WorkspaceCreateError"
   data: {
+    /**
+     * Төслийн хуулбар үүсгэх үед гарсан алдааны тайлбар
+     */
     message: string
   }
 }
@@ -2742,6 +2867,9 @@ export type WorkspaceCreateError = {
 export type WorkspaceWarpError = {
   name: "WorkspaceWarpError"
   data: {
+    /**
+     * Сесс шилжүүлэх үед гарсан алдааны тайлбар
+     */
     message: string
   }
 }
@@ -3079,7 +3207,7 @@ export type EventTuiSessionSelect2 = {
   type: "tui.session.select"
   properties: {
     /**
-     * Session ID to navigate to
+     * Шилжиж очих сессийн ID
      */
     sessionID: string
   }
@@ -3198,26 +3326,26 @@ export type PermissionV2Reply = "once" | "always" | "reject"
 
 export type QuestionV2Option = {
   /**
-   * Display text (1-5 words, concise)
+   * Харуулах товч текст (1-5 үгтэй)
    */
   label: string
   /**
-   * Explanation of choice
+   * Сонголтын тайлбар
    */
   description: string
 }
 
 export type QuestionV2Info = {
   /**
-   * Complete question
+   * Бүрэн хэлбэрийн асуулт
    */
   question: string
   /**
-   * Very short label (max 30 chars)
+   * Маш товч гарчиг (30 тэмдэгтээс ихгүй)
    */
   header: string
   /**
-   * Available choices
+   * Боломжит сонголтууд
    */
   options: Array<QuestionV2Option>
   multiple?: boolean
@@ -3241,7 +3369,7 @@ export type ProjectIcon = {
 
 export type ProjectCommands = {
   /**
-   * Startup script to run when creating a new workspace (worktree)
+   * Шинэ ажлын орчин (worktree) үүсгэх үед ажиллуулах эхлүүлэх скрипт.
    */
   start?: string
 }
@@ -5683,7 +5811,7 @@ export type QuestionV2Asked = {
     id: string
     sessionID: string
     /**
-     * Questions to ask
+     * Асуух асуултууд
      */
     questions: Array<QuestionV2Info>
     tool?: QuestionV2Tool
@@ -5894,7 +6022,7 @@ export type TuiSessionSelect = {
   location?: LocationRef
   data: {
     /**
-     * Session ID to navigate to
+     * Шилжиж очих сессийн ID
      */
     sessionID: string
   }
@@ -6012,7 +6140,7 @@ export type QuestionAsked = {
     id: string
     sessionID: string
     /**
-     * Questions to ask
+     * Асуух асуултууд
      */
     questions: Array<QuestionInfo>
     tool?: QuestionTool
@@ -6178,7 +6306,7 @@ export type QuestionV2Request = {
   id: string
   sessionID: string
   /**
-   * Questions to ask
+   * Асуух асуултууд
    */
   questions: Array<QuestionV2Info>
   tool?: QuestionV2Tool
@@ -6186,7 +6314,7 @@ export type QuestionV2Request = {
 
 export type QuestionV2Reply = {
   /**
-   * User answers in order of questions (each answer is an array of selected labels)
+   * Асуултын дарааллын дагуух хэрэглэгчийн хариултууд (хариулт бүр сонгосон шошгын массив байна)
    */
   answers: Array<QuestionV2Answer>
 }
@@ -6882,7 +7010,7 @@ export type EventQuestionV2Asked = {
     id: string
     sessionID: string
     /**
-     * Questions to ask
+     * Асуух асуултууд
      */
     questions: Array<QuestionV2Info>
     tool?: QuestionV2Tool
@@ -7021,7 +7149,7 @@ export type EventQuestionAsked = {
     id: string
     sessionID: string
     /**
-     * Questions to ask
+     * Асуух асуултууд
      */
     questions: Array<QuestionInfo>
     tool?: QuestionTool
@@ -7174,7 +7302,7 @@ export type AuthRemoveData = {
 
 export type AuthRemoveErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -7183,7 +7311,7 @@ export type AuthRemoveError = AuthRemoveErrors[keyof AuthRemoveErrors]
 
 export type AuthRemoveResponses = {
   /**
-   * Successfully removed authentication credentials
+   * Баталгаажуулалтын мэдээллийг амжилттай устгалаа
    */
   200: boolean
 }
@@ -7201,7 +7329,7 @@ export type AuthSetData = {
 
 export type AuthSetErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -7210,7 +7338,7 @@ export type AuthSetError = AuthSetErrors[keyof AuthSetErrors]
 
 export type AuthSetResponses = {
   /**
-   * Successfully set authentication credentials
+   * Баталгаажуулалтын мэдээллийг амжилттай тохирууллаа
    */
   200: boolean
 }
@@ -7220,15 +7348,15 @@ export type AuthSetResponse = AuthSetResponses[keyof AuthSetResponses]
 export type AppLogData = {
   body?: {
     /**
-     * Service name for the log entry
+     * Лог бичлэгийн үйлчилгээний нэр
      */
     service: string
     /**
-     * Log level
+     * Логийн түвшин
      */
     level: "debug" | "info" | "error" | "warn"
     /**
-     * Log message
+     * Логийн мессеж
      */
     message: string
     extra?: {
@@ -7245,7 +7373,7 @@ export type AppLogData = {
 
 export type AppLogErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -7254,7 +7382,7 @@ export type AppLogError = AppLogErrors[keyof AppLogErrors]
 
 export type AppLogResponses = {
   /**
-   * Log entry written successfully
+   * Лог бичлэгийг амжилттай үүсгэлээ
    */
   200: boolean
 }
@@ -7274,7 +7402,7 @@ export type ExperimentalControlPlaneMoveSessionData = {
 
 export type ExperimentalControlPlaneMoveSessionErrors = {
   /**
-   * MoveSessionError | InvalidRequestError
+   * Сесс шилжүүлэх алдаа | Хүчингүй хүсэлт
    */
   400: MoveSessionError | InvalidRequestError
 }
@@ -7284,7 +7412,7 @@ export type ExperimentalControlPlaneMoveSessionError =
 
 export type ExperimentalControlPlaneMoveSessionResponses = {
   /**
-   * Session moved
+   * Сессийг зөөвөрлөлөө
    */
   204: void
 }
@@ -7301,7 +7429,7 @@ export type GlobalHealthData = {
 
 export type GlobalHealthErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -7310,7 +7438,7 @@ export type GlobalHealthError = GlobalHealthErrors[keyof GlobalHealthErrors]
 
 export type GlobalHealthResponses = {
   /**
-   * Health information
+   * Эрүүл мэндийн мэдээлэл
    */
   200: {
     healthy: true
@@ -7329,7 +7457,7 @@ export type GlobalEventData = {
 
 export type GlobalEventErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -7338,7 +7466,7 @@ export type GlobalEventError = GlobalEventErrors[keyof GlobalEventErrors]
 
 export type GlobalEventResponses = {
   /**
-   * Event stream
+   * Үйл явдлын урсгал
    */
   200: GlobalEvent
 }
@@ -7354,7 +7482,7 @@ export type GlobalConfigGetData = {
 
 export type GlobalConfigGetErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -7363,7 +7491,7 @@ export type GlobalConfigGetError = GlobalConfigGetErrors[keyof GlobalConfigGetEr
 
 export type GlobalConfigGetResponses = {
   /**
-   * Get global config info
+   * Глобал тохиргооны мэдээлэл авах
    */
   200: Config
 }
@@ -7379,7 +7507,7 @@ export type GlobalConfigUpdateData = {
 
 export type GlobalConfigUpdateErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -7388,7 +7516,7 @@ export type GlobalConfigUpdateError = GlobalConfigUpdateErrors[keyof GlobalConfi
 
 export type GlobalConfigUpdateResponses = {
   /**
-   * Successfully updated global config
+   * Глобал тохиргоог амжилттай шинэчиллээ
    */
   200: Config
 }
@@ -7404,7 +7532,7 @@ export type GlobalDisposeData = {
 
 export type GlobalDisposeErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -7413,7 +7541,7 @@ export type GlobalDisposeError = GlobalDisposeErrors[keyof GlobalDisposeErrors]
 
 export type GlobalDisposeResponses = {
   /**
-   * Global disposed
+   * Глобал инстанцуудыг цэвэрлэлээ
    */
   200: boolean
 }
@@ -7431,7 +7559,7 @@ export type GlobalUpgradeData = {
 
 export type GlobalUpgradeErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -7440,7 +7568,7 @@ export type GlobalUpgradeError = GlobalUpgradeErrors[keyof GlobalUpgradeErrors]
 
 export type GlobalUpgradeResponses = {
   /**
-   * Upgrade result
+   * Шинэчлэлийн үр дүн
    */
   200:
     | {
@@ -7467,7 +7595,7 @@ export type EventSubscribeData = {
 
 export type EventSubscribeResponses = {
   /**
-   * Event stream
+   * Үйл явдлын урсгал
    */
   200: Event
 }
@@ -7486,7 +7614,7 @@ export type ConfigGetData = {
 
 export type ConfigGetErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -7495,7 +7623,7 @@ export type ConfigGetError = ConfigGetErrors[keyof ConfigGetErrors]
 
 export type ConfigGetResponses = {
   /**
-   * Get config info
+   * Тохиргооны мэдээлэл авах
    */
   200: Config
 }
@@ -7514,7 +7642,7 @@ export type ConfigUpdateData = {
 
 export type ConfigUpdateErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -7523,7 +7651,7 @@ export type ConfigUpdateError = ConfigUpdateErrors[keyof ConfigUpdateErrors]
 
 export type ConfigUpdateResponses = {
   /**
-   * Successfully updated config
+   * Тохиргоог амжилттай шинэчилсэн
    */
   200: Config
 }
@@ -7542,7 +7670,7 @@ export type ConfigProvidersData = {
 
 export type ConfigProvidersErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -7551,7 +7679,7 @@ export type ConfigProvidersError = ConfigProvidersErrors[keyof ConfigProvidersEr
 
 export type ConfigProvidersResponses = {
   /**
-   * List of providers
+   * Провайдеруудын жагсаалт
    */
   200: {
     providers: Array<Provider>
@@ -7575,7 +7703,7 @@ export type CompatImportPlanData = {
 
 export type CompatImportPlanErrors = {
   /**
-   * CompatImportError | InvalidRequestError
+   * Нийцтэй импортын алдаа | Хүчингүй хүсэлт
    */
   400: CompatImportError | InvalidRequestError
 }
@@ -7584,7 +7712,7 @@ export type CompatImportPlanError = CompatImportPlanErrors[keyof CompatImportPla
 
 export type CompatImportPlanResponses = {
   /**
-   * MongolGPT compatibility import plan
+   * MongolGPT-ийн нийцтэй байдлын импортын төлөвлөгөө
    */
   200: CompatImportResponse
 }
@@ -7603,7 +7731,7 @@ export type CompatImportApplyData = {
 
 export type CompatImportApplyErrors = {
   /**
-   * CompatImportError | InvalidRequestError
+   * Нийцтэй импортын алдаа | Хүчингүй хүсэлт
    */
   400: CompatImportError | InvalidRequestError
 }
@@ -7612,12 +7740,222 @@ export type CompatImportApplyError = CompatImportApplyErrors[keyof CompatImportA
 
 export type CompatImportApplyResponses = {
   /**
-   * MongolGPT compatibility import result
+   * MongolGPT-ийн нийцтэй байдлын импортын үр дүн
    */
   200: CompatImportResponse
 }
 
 export type CompatImportApplyResponse = CompatImportApplyResponses[keyof CompatImportApplyResponses]
+
+export type ExperimentalAccountRemoveData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/account"
+}
+
+export type ExperimentalAccountRemoveErrors = {
+  /**
+   * Буруу хүсэлт
+   */
+  400: BadRequestError
+  /**
+   * Серверийн дотоод алдаа
+   */
+  500: EffectHttpApiErrorInternalServerError
+}
+
+export type ExperimentalAccountRemoveError = ExperimentalAccountRemoveErrors[keyof ExperimentalAccountRemoveErrors]
+
+export type ExperimentalAccountRemoveResponses = {
+  /**
+   * Локал бүртгэлийг устгасан
+   */
+  200: boolean
+}
+
+export type ExperimentalAccountRemoveResponse =
+  ExperimentalAccountRemoveResponses[keyof ExperimentalAccountRemoveResponses]
+
+export type ExperimentalAccountGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/account"
+}
+
+export type ExperimentalAccountGetErrors = {
+  /**
+   * Буруу хүсэлт
+   */
+  400: BadRequestError
+  /**
+   * Серверийн дотоод алдаа
+   */
+  500: EffectHttpApiErrorInternalServerError
+}
+
+export type ExperimentalAccountGetError = ExperimentalAccountGetErrors[keyof ExperimentalAccountGetErrors]
+
+export type ExperimentalAccountGetResponses = {
+  /**
+   * Идэвхтэй локал бүртгэл
+   */
+  200: ExperimentalAccount
+}
+
+export type ExperimentalAccountGetResponse = ExperimentalAccountGetResponses[keyof ExperimentalAccountGetResponses]
+
+export type ExperimentalAccountOverviewData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    workspaceID?: string
+  }
+  url: "/experimental/account/overview"
+}
+
+export type ExperimentalAccountOverviewErrors = {
+  /**
+   * Буруу хүсэлт
+   */
+  400: BadRequestError
+  /**
+   * Серверийн дотоод алдаа
+   */
+  500: EffectHttpApiErrorInternalServerError
+  /**
+   * ServiceUnavailable
+   */
+  503: EffectHttpApiErrorServiceUnavailable
+}
+
+export type ExperimentalAccountOverviewError =
+  ExperimentalAccountOverviewErrors[keyof ExperimentalAccountOverviewErrors]
+
+export type ExperimentalAccountOverviewResponses = {
+  /**
+   * Идэвхтэй бүртгэлийн багц, квот болон хэрэглээ
+   */
+  200: ExperimentalAccountOverview
+}
+
+export type ExperimentalAccountOverviewResponse =
+  ExperimentalAccountOverviewResponses[keyof ExperimentalAccountOverviewResponses]
+
+export type ExperimentalAccountLoginData = {
+  body?: {
+    server: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/account/login"
+}
+
+export type ExperimentalAccountLoginErrors = {
+  /**
+   * Буруу хүсэлт | Хүчингүй хүсэлт
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type ExperimentalAccountLoginError = ExperimentalAccountLoginErrors[keyof ExperimentalAccountLoginErrors]
+
+export type ExperimentalAccountLoginResponses = {
+  /**
+   * Хөтчөөр нэвтрэх үйлдэл эхэлсэн
+   */
+  200: {
+    loginID: string
+    url: string
+  }
+}
+
+export type ExperimentalAccountLoginResponse =
+  ExperimentalAccountLoginResponses[keyof ExperimentalAccountLoginResponses]
+
+export type ExperimentalAccountLoginCancelData = {
+  body?: never
+  path: {
+    loginID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/account/login/{loginID}"
+}
+
+export type ExperimentalAccountLoginCancelErrors = {
+  /**
+   * Буруу хүсэлт
+   */
+  400: BadRequestError
+  /**
+   * Олдсонгүй
+   */
+  404: NotFoundError
+}
+
+export type ExperimentalAccountLoginCancelError =
+  ExperimentalAccountLoginCancelErrors[keyof ExperimentalAccountLoginCancelErrors]
+
+export type ExperimentalAccountLoginCancelResponses = {
+  /**
+   * Хөтчийн нэвтрэлтийг цуцалсан
+   */
+  200: boolean
+}
+
+export type ExperimentalAccountLoginCancelResponse =
+  ExperimentalAccountLoginCancelResponses[keyof ExperimentalAccountLoginCancelResponses]
+
+export type ExperimentalAccountLoginStatusData = {
+  body?: never
+  path: {
+    loginID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/account/login/{loginID}"
+}
+
+export type ExperimentalAccountLoginStatusErrors = {
+  /**
+   * Буруу хүсэлт
+   */
+  400: BadRequestError
+  /**
+   * Олдсонгүй
+   */
+  404: NotFoundError
+}
+
+export type ExperimentalAccountLoginStatusError =
+  ExperimentalAccountLoginStatusErrors[keyof ExperimentalAccountLoginStatusErrors]
+
+export type ExperimentalAccountLoginStatusResponses = {
+  /**
+   * Хөтчийн нэвтрэлтийн төлөв
+   */
+  200: ExperimentalAccountLoginStatus
+}
+
+export type ExperimentalAccountLoginStatusResponse =
+  ExperimentalAccountLoginStatusResponses[keyof ExperimentalAccountLoginStatusResponses]
 
 export type ExperimentalCapabilitiesGetData = {
   body?: never
@@ -7631,7 +7969,7 @@ export type ExperimentalCapabilitiesGetData = {
 
 export type ExperimentalCapabilitiesGetErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -7641,7 +7979,7 @@ export type ExperimentalCapabilitiesGetError =
 
 export type ExperimentalCapabilitiesGetResponses = {
   /**
-   * Experimental capabilities
+   * Туршилтын боломжууд
    */
   200: ExperimentalCapabilities
 }
@@ -7661,11 +7999,11 @@ export type ExperimentalConsoleGetData = {
 
 export type ExperimentalConsoleGetErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
   /**
-   * InternalServerError
+   * Серверийн дотоод алдаа
    */
   500: EffectHttpApiErrorInternalServerError
 }
@@ -7674,7 +8012,7 @@ export type ExperimentalConsoleGetError = ExperimentalConsoleGetErrors[keyof Exp
 
 export type ExperimentalConsoleGetResponses = {
   /**
-   * Active Console provider metadata
+   * Идэвхтэй Console үйлчилгээ үзүүлэгчийн мета өгөгдөл
    */
   200: ConsoleState
 }
@@ -7693,11 +8031,11 @@ export type ExperimentalConsoleListOrgsData = {
 
 export type ExperimentalConsoleListOrgsErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
   /**
-   * InternalServerError
+   * Серверийн дотоод алдаа
    */
   500: EffectHttpApiErrorInternalServerError
 }
@@ -7707,7 +8045,7 @@ export type ExperimentalConsoleListOrgsError =
 
 export type ExperimentalConsoleListOrgsResponses = {
   /**
-   * Switchable Console orgs
+   * Сольж болох Console байгууллагууд
    */
   200: {
     orgs: Array<{
@@ -7739,7 +8077,7 @@ export type ExperimentalConsoleSwitchOrgData = {
 
 export type ExperimentalConsoleSwitchOrgResponses = {
   /**
-   * Switch success
+   * Солих үйлдэл амжилттай
    */
   200: boolean
 }
@@ -7761,7 +8099,7 @@ export type ToolListData = {
 
 export type ToolListErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -7770,7 +8108,7 @@ export type ToolListError = ToolListErrors[keyof ToolListErrors]
 
 export type ToolListResponses = {
   /**
-   * Tools
+   * Хэрэгслүүд
    */
   200: ToolList
 }
@@ -7789,7 +8127,7 @@ export type ToolIdsData = {
 
 export type ToolIdsErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -7798,7 +8136,7 @@ export type ToolIdsError = ToolIdsErrors[keyof ToolIdsErrors]
 
 export type ToolIdsResponses = {
   /**
-   * Tool IDs
+   * Хэрэгслийн ID-нууд
    */
   200: ToolIds
 }
@@ -7817,7 +8155,7 @@ export type WorktreeRemoveData = {
 
 export type WorktreeRemoveErrors = {
   /**
-   * WorktreeError | InvalidRequestError
+   * Төслийн хуулбарын алдаа | Хүчингүй хүсэлт
    */
   400: WorktreeError | InvalidRequestError
 }
@@ -7826,7 +8164,7 @@ export type WorktreeRemoveError = WorktreeRemoveErrors[keyof WorktreeRemoveError
 
 export type WorktreeRemoveResponses = {
   /**
-   * Worktree removed
+   * Төслийн хуулбарыг устгасан
    */
   200: boolean
 }
@@ -7845,7 +8183,7 @@ export type WorktreeListData = {
 
 export type WorktreeListErrors = {
   /**
-   * WorktreeError | InvalidRequestError
+   * Төслийн хуулбарын алдаа | Хүчингүй хүсэлт
    */
   400: WorktreeError | InvalidRequestError
 }
@@ -7854,7 +8192,7 @@ export type WorktreeListError = WorktreeListErrors[keyof WorktreeListErrors]
 
 export type WorktreeListResponses = {
   /**
-   * List of worktree directories
+   * Төслийн хуулбаруудын жагсаалт
    */
   200: Array<string>
 }
@@ -7873,7 +8211,7 @@ export type WorktreeCreateData = {
 
 export type WorktreeCreateErrors = {
   /**
-   * WorktreeError | InvalidRequestError
+   * Төслийн хуулбарын алдаа | Хүчингүй хүсэлт
    */
   400: WorktreeError | InvalidRequestError
 }
@@ -7882,7 +8220,7 @@ export type WorktreeCreateError = WorktreeCreateErrors[keyof WorktreeCreateError
 
 export type WorktreeCreateResponses = {
   /**
-   * Worktree created
+   * Төслийн хуулбар үүссэн
    */
   200: Worktree
 }
@@ -7901,7 +8239,7 @@ export type WorktreeResetData = {
 
 export type WorktreeResetErrors = {
   /**
-   * WorktreeError | InvalidRequestError
+   * Төслийн хуулбарын алдаа | Хүчингүй хүсэлт
    */
   400: WorktreeError | InvalidRequestError
 }
@@ -7910,7 +8248,7 @@ export type WorktreeResetError = WorktreeResetErrors[keyof WorktreeResetErrors]
 
 export type WorktreeResetResponses = {
   /**
-   * Worktree reset
+   * Төслийн хуулбарыг анхны төлөвт оруулсан
    */
   200: boolean
 }
@@ -7935,7 +8273,7 @@ export type ExperimentalSessionListData = {
 
 export type ExperimentalSessionListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -7944,7 +8282,7 @@ export type ExperimentalSessionListError = ExperimentalSessionListErrors[keyof E
 
 export type ExperimentalSessionListResponses = {
   /**
-   * List of sessions
+   * Сессүүдийн жагсаалт
    */
   200: Array<GlobalSession>
 }
@@ -7965,7 +8303,7 @@ export type ExperimentalSessionBackgroundData = {
 
 export type ExperimentalSessionBackgroundErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -7975,7 +8313,7 @@ export type ExperimentalSessionBackgroundError =
 
 export type ExperimentalSessionBackgroundResponses = {
   /**
-   * Backgrounded subagents
+   * Арын горимд шилжүүлсэн дэд агентууд
    */
   200: boolean
 }
@@ -7995,7 +8333,7 @@ export type ExperimentalResourceListData = {
 
 export type ExperimentalResourceListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8004,7 +8342,7 @@ export type ExperimentalResourceListError = ExperimentalResourceListErrors[keyof
 
 export type ExperimentalResourceListResponses = {
   /**
-   * MCP resources
+   * MCP нөөцүүд
    */
   200: {
     [key: string]: McpResource
@@ -8027,7 +8365,7 @@ export type FindTextData = {
 
 export type FindTextErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8036,7 +8374,7 @@ export type FindTextError = FindTextErrors[keyof FindTextErrors]
 
 export type FindTextResponses = {
   /**
-   * Matches
+   * Хайлтын үр дүн
    */
   200: Array<{
     path: {
@@ -8075,7 +8413,7 @@ export type FindFilesData = {
 
 export type FindFilesErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8084,7 +8422,7 @@ export type FindFilesError = FindFilesErrors[keyof FindFilesErrors]
 
 export type FindFilesResponses = {
   /**
-   * File paths
+   * Файлын замууд
    */
   200: Array<string>
 }
@@ -8104,7 +8442,7 @@ export type FindSymbolsData = {
 
 export type FindSymbolsErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8113,7 +8451,7 @@ export type FindSymbolsError = FindSymbolsErrors[keyof FindSymbolsErrors]
 
 export type FindSymbolsResponses = {
   /**
-   * Symbols
+   * Тэмдэгтүүд
    */
   200: Array<Symbol>
 }
@@ -8133,7 +8471,7 @@ export type FileListData = {
 
 export type FileListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8142,7 +8480,7 @@ export type FileListError = FileListErrors[keyof FileListErrors]
 
 export type FileListResponses = {
   /**
-   * Files and directories
+   * Файл ба сангууд
    */
   200: Array<FileNode>
 }
@@ -8162,7 +8500,7 @@ export type FileReadData = {
 
 export type FileReadErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8171,7 +8509,7 @@ export type FileReadError = FileReadErrors[keyof FileReadErrors]
 
 export type FileReadResponses = {
   /**
-   * File content
+   * Файлын агуулга
    */
   200: FileContent
 }
@@ -8190,7 +8528,7 @@ export type FileStatusData = {
 
 export type FileStatusErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8199,7 +8537,7 @@ export type FileStatusError = FileStatusErrors[keyof FileStatusErrors]
 
 export type FileStatusResponses = {
   /**
-   * File status
+   * Файлын төлөв
    */
   200: Array<File>
 }
@@ -8218,7 +8556,7 @@ export type InstanceDisposeData = {
 
 export type InstanceDisposeErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8227,7 +8565,7 @@ export type InstanceDisposeError = InstanceDisposeErrors[keyof InstanceDisposeEr
 
 export type InstanceDisposeResponses = {
   /**
-   * Instance disposed
+   * Инстансыг устгасан
    */
   200: boolean
 }
@@ -8246,7 +8584,7 @@ export type PathGetData = {
 
 export type PathGetErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8255,7 +8593,7 @@ export type PathGetError = PathGetErrors[keyof PathGetErrors]
 
 export type PathGetResponses = {
   /**
-   * Path
+   * Зам
    */
   200: Path
 }
@@ -8274,7 +8612,7 @@ export type VcsGetData = {
 
 export type VcsGetErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8283,7 +8621,7 @@ export type VcsGetError = VcsGetErrors[keyof VcsGetErrors]
 
 export type VcsGetResponses = {
   /**
-   * VCS info
+   * VCS мэдээлэл
    */
   200: VcsInfo
 }
@@ -8302,7 +8640,7 @@ export type VcsStatusData = {
 
 export type VcsStatusErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8311,7 +8649,7 @@ export type VcsStatusError = VcsStatusErrors[keyof VcsStatusErrors]
 
 export type VcsStatusResponses = {
   /**
-   * VCS status
+   * VCS төлөв
    */
   200: Array<VcsFileStatus>
 }
@@ -8332,7 +8670,7 @@ export type VcsDiffData = {
 
 export type VcsDiffErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8341,7 +8679,7 @@ export type VcsDiffError = VcsDiffErrors[keyof VcsDiffErrors]
 
 export type VcsDiffResponses = {
   /**
-   * VCS diff
+   * VCS-ийн ялгаа
    */
   200: Array<VcsFileDiff>
 }
@@ -8360,7 +8698,7 @@ export type VcsDiffRawData = {
 
 export type VcsDiffRawErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8369,7 +8707,7 @@ export type VcsDiffRawError = VcsDiffRawErrors[keyof VcsDiffRawErrors]
 
 export type VcsDiffRawResponses = {
   /**
-   * Raw VCS diff
+   * VCS-ийн боловсруулаагүй ялгаа
    */
   200: string
 }
@@ -8390,7 +8728,7 @@ export type VcsApplyData = {
 
 export type VcsApplyErrors = {
   /**
-   * VcsApplyError | InvalidRequestError
+   * VCS өөрчлөлт хэрэглэх алдаа | Хүчингүй хүсэлт
    */
   400: VcsApplyError | InvalidRequestError
 }
@@ -8399,7 +8737,7 @@ export type VcsApplyError2 = VcsApplyErrors[keyof VcsApplyErrors]
 
 export type VcsApplyResponses = {
   /**
-   * VCS patch applied
+   * VCS patch-ийг хэрэглэсэн
    */
   200: {
     applied: boolean
@@ -8420,7 +8758,7 @@ export type CommandListData = {
 
 export type CommandListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8429,7 +8767,7 @@ export type CommandListError = CommandListErrors[keyof CommandListErrors]
 
 export type CommandListResponses = {
   /**
-   * List of commands
+   * Командуудын жагсаалт
    */
   200: Array<Command>
 }
@@ -8448,7 +8786,7 @@ export type AppAgentsData = {
 
 export type AppAgentsErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8457,7 +8795,7 @@ export type AppAgentsError = AppAgentsErrors[keyof AppAgentsErrors]
 
 export type AppAgentsResponses = {
   /**
-   * List of agents
+   * Агентуудын жагсаалт
    */
   200: Array<Agent>
 }
@@ -8476,7 +8814,7 @@ export type AppSkillsData = {
 
 export type AppSkillsErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8485,7 +8823,7 @@ export type AppSkillsError = AppSkillsErrors[keyof AppSkillsErrors]
 
 export type AppSkillsResponses = {
   /**
-   * List of skills
+   * Ур чадваруудын жагсаалт
    */
   200: Array<{
     name: string
@@ -8509,7 +8847,7 @@ export type LspStatusData = {
 
 export type LspStatusErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8518,7 +8856,7 @@ export type LspStatusError = LspStatusErrors[keyof LspStatusErrors]
 
 export type LspStatusResponses = {
   /**
-   * LSP server status
+   * LSP серверийн төлөв
    */
   200: Array<LspStatus>
 }
@@ -8537,7 +8875,7 @@ export type FormatterStatusData = {
 
 export type FormatterStatusErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8546,7 +8884,7 @@ export type FormatterStatusError = FormatterStatusErrors[keyof FormatterStatusEr
 
 export type FormatterStatusResponses = {
   /**
-   * Formatter status
+   * Форматлагчийн төлөв
    */
   200: Array<FormatterStatus>
 }
@@ -8565,7 +8903,7 @@ export type McpStatusData = {
 
 export type McpStatusErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8574,7 +8912,7 @@ export type McpStatusError = McpStatusErrors[keyof McpStatusErrors]
 
 export type McpStatusResponses = {
   /**
-   * MCP server status
+   * MCP серверүүдийн төлөв
    */
   200: {
     [key: string]: McpStatus
@@ -8598,7 +8936,7 @@ export type McpAddData = {
 
 export type McpAddErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -8607,7 +8945,7 @@ export type McpAddError = McpAddErrors[keyof McpAddErrors]
 
 export type McpAddResponses = {
   /**
-   * MCP server added successfully
+   * MCP серверийг амжилттай нэмлээ
    */
   200: {
     [key: string]: McpStatus
@@ -8630,11 +8968,11 @@ export type McpAuthRemoveData = {
 
 export type McpAuthRemoveErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
   /**
-   * McpServerNotFoundError
+   * MCP сервер олдсонгүй
    */
   404: McpServerNotFoundError
 }
@@ -8643,7 +8981,7 @@ export type McpAuthRemoveError = McpAuthRemoveErrors[keyof McpAuthRemoveErrors]
 
 export type McpAuthRemoveResponses = {
   /**
-   * OAuth credentials removed
+   * OAuth мэдээллийг устгалаа
    */
   200: {
     success: true
@@ -8666,11 +9004,11 @@ export type McpAuthStartData = {
 
 export type McpAuthStartErrors = {
   /**
-   * McpUnsupportedOAuthError | InvalidRequestError
+   * MCP сервер OAuth дэмждэггүй | Хүчингүй хүсэлт
    */
   400: McpUnsupportedOAuthError | InvalidRequestError
   /**
-   * McpServerNotFoundError
+   * MCP сервер олдсонгүй
    */
   404: McpServerNotFoundError
 }
@@ -8679,7 +9017,7 @@ export type McpAuthStartError = McpAuthStartErrors[keyof McpAuthStartErrors]
 
 export type McpAuthStartResponses = {
   /**
-   * OAuth flow started
+   * OAuth урсгалыг эхлүүллээ
    */
   200: {
     authorizationUrl: string
@@ -8705,11 +9043,11 @@ export type McpAuthCallbackData = {
 
 export type McpAuthCallbackErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * McpServerNotFoundError
+   * MCP сервер олдсонгүй
    */
   404: McpServerNotFoundError
 }
@@ -8718,7 +9056,7 @@ export type McpAuthCallbackError = McpAuthCallbackErrors[keyof McpAuthCallbackEr
 
 export type McpAuthCallbackResponses = {
   /**
-   * OAuth authentication completed
+   * OAuth баталгаажуулалтыг дуусгалаа
    */
   200: McpStatus
 }
@@ -8739,11 +9077,11 @@ export type McpAuthAuthenticateData = {
 
 export type McpAuthAuthenticateErrors = {
   /**
-   * McpUnsupportedOAuthError | InvalidRequestError
+   * MCP сервер OAuth дэмждэггүй | Хүчингүй хүсэлт
    */
   400: McpUnsupportedOAuthError | InvalidRequestError
   /**
-   * McpServerNotFoundError
+   * MCP сервер олдсонгүй
    */
   404: McpServerNotFoundError
 }
@@ -8752,7 +9090,7 @@ export type McpAuthAuthenticateError = McpAuthAuthenticateErrors[keyof McpAuthAu
 
 export type McpAuthAuthenticateResponses = {
   /**
-   * OAuth authentication completed
+   * OAuth баталгаажуулалтыг дуусгалаа
    */
   200: McpStatus
 }
@@ -8773,11 +9111,11 @@ export type McpConnectData = {
 
 export type McpConnectErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
   /**
-   * McpServerNotFoundError
+   * MCP сервер олдсонгүй
    */
   404: McpServerNotFoundError
 }
@@ -8786,7 +9124,7 @@ export type McpConnectError = McpConnectErrors[keyof McpConnectErrors]
 
 export type McpConnectResponses = {
   /**
-   * MCP server connected successfully
+   * MCP сервертэй амжилттай холбогдлоо
    */
   200: boolean
 }
@@ -8807,11 +9145,11 @@ export type McpDisconnectData = {
 
 export type McpDisconnectErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
   /**
-   * McpServerNotFoundError
+   * MCP сервер олдсонгүй
    */
   404: McpServerNotFoundError
 }
@@ -8820,7 +9158,7 @@ export type McpDisconnectError = McpDisconnectErrors[keyof McpDisconnectErrors]
 
 export type McpDisconnectResponses = {
   /**
-   * MCP server disconnected successfully
+   * MCP серверээс амжилттай саллаа
    */
   200: boolean
 }
@@ -8839,7 +9177,7 @@ export type ProjectListData = {
 
 export type ProjectListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8848,7 +9186,7 @@ export type ProjectListError = ProjectListErrors[keyof ProjectListErrors]
 
 export type ProjectListResponses = {
   /**
-   * List of projects
+   * Төслүүдийн жагсаалт
    */
   200: Array<Project>
 }
@@ -8867,7 +9205,7 @@ export type ProjectCurrentData = {
 
 export type ProjectCurrentErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8876,7 +9214,7 @@ export type ProjectCurrentError = ProjectCurrentErrors[keyof ProjectCurrentError
 
 export type ProjectCurrentResponses = {
   /**
-   * Current project information
+   * Одоогийн төслийн мэдээлэл
    */
   200: Project
 }
@@ -8895,7 +9233,7 @@ export type ProjectInitGitData = {
 
 export type ProjectInitGitErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8904,7 +9242,7 @@ export type ProjectInitGitError = ProjectInitGitErrors[keyof ProjectInitGitError
 
 export type ProjectInitGitResponses = {
   /**
-   * Project information after git initialization
+   * git эхлүүлсний дараах төслийн мэдээлэл
    */
   200: Project
 }
@@ -8929,11 +9267,11 @@ export type ProjectUpdateData = {
 
 export type ProjectUpdateErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * ProjectNotFoundError
+   * Төсөл олдсонгүй
    */
   404: ProjectNotFoundError
 }
@@ -8942,7 +9280,7 @@ export type ProjectUpdateError = ProjectUpdateErrors[keyof ProjectUpdateErrors]
 
 export type ProjectUpdateResponses = {
   /**
-   * Updated project information
+   * Шинэчилсэн төслийн мэдээлэл
    */
   200: Project
 }
@@ -8963,7 +9301,7 @@ export type ProjectDirectoriesData = {
 
 export type ProjectDirectoriesErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -8972,7 +9310,7 @@ export type ProjectDirectoriesError = ProjectDirectoriesErrors[keyof ProjectDire
 
 export type ProjectDirectoriesResponses = {
   /**
-   * Project directories
+   * Төслийн сангууд
    */
   200: ProjectDirectories
 }
@@ -8995,7 +9333,7 @@ export type ExperimentalProjectCopyGenerateNameData = {
 
 export type ExperimentalProjectCopyGenerateNameErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -9005,7 +9343,7 @@ export type ExperimentalProjectCopyGenerateNameError =
 
 export type ExperimentalProjectCopyGenerateNameResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     name: string
@@ -9027,7 +9365,7 @@ export type PtyShellsData = {
 
 export type PtyShellsErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -9036,7 +9374,7 @@ export type PtyShellsError = PtyShellsErrors[keyof PtyShellsErrors]
 
 export type PtyShellsResponses = {
   /**
-   * List of shells
+   * Shell-үүдийн жагсаалт
    */
   200: Array<{
     path: string
@@ -9059,7 +9397,7 @@ export type PtyListData = {
 
 export type PtyListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -9068,7 +9406,7 @@ export type PtyListError = PtyListErrors[keyof PtyListErrors]
 
 export type PtyListResponses = {
   /**
-   * List of sessions
+   * Сессүүдийн жагсаалт
    */
   200: Array<Pty>
 }
@@ -9095,7 +9433,7 @@ export type PtyCreateData = {
 
 export type PtyCreateErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -9104,7 +9442,7 @@ export type PtyCreateError = PtyCreateErrors[keyof PtyCreateErrors]
 
 export type PtyCreateResponses = {
   /**
-   * Created session
+   * Сесс үүссэн
    */
   200: Pty
 }
@@ -9125,11 +9463,11 @@ export type PtyRemoveData = {
 
 export type PtyRemoveErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
   /**
-   * PtyNotFoundError
+   * PTY сесс олдсонгүй
    */
   404: PtyNotFoundError
 }
@@ -9138,7 +9476,7 @@ export type PtyRemoveError = PtyRemoveErrors[keyof PtyRemoveErrors]
 
 export type PtyRemoveResponses = {
   /**
-   * Session removed
+   * Сесс устсан
    */
   200: boolean
 }
@@ -9159,11 +9497,11 @@ export type PtyGetData = {
 
 export type PtyGetErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
   /**
-   * PtyNotFoundError
+   * PTY сесс олдсонгүй
    */
   404: PtyNotFoundError
 }
@@ -9172,7 +9510,7 @@ export type PtyGetError = PtyGetErrors[keyof PtyGetErrors]
 
 export type PtyGetResponses = {
   /**
-   * Session info
+   * Сессийн мэдээлэл
    */
   200: Pty
 }
@@ -9199,11 +9537,11 @@ export type PtyUpdateData = {
 
 export type PtyUpdateErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * PtyNotFoundError
+   * PTY сесс олдсонгүй
    */
   404: PtyNotFoundError
 }
@@ -9212,7 +9550,7 @@ export type PtyUpdateError = PtyUpdateErrors[keyof PtyUpdateErrors]
 
 export type PtyUpdateResponses = {
   /**
-   * Updated session
+   * Сесс шинэчлэгдсэн
    */
   200: Pty
 }
@@ -9233,15 +9571,15 @@ export type PtyConnectTokenData = {
 
 export type PtyConnectTokenErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
   /**
-   * PtyForbiddenError
+   * PTY-д хандах эрхгүй
    */
   403: PtyForbiddenError
   /**
-   * PtyNotFoundError
+   * PTY сесс олдсонгүй
    */
   404: PtyNotFoundError
 }
@@ -9250,7 +9588,7 @@ export type PtyConnectTokenError = PtyConnectTokenErrors[keyof PtyConnectTokenEr
 
 export type PtyConnectTokenResponses = {
   /**
-   * WebSocket connect token
+   * WebSocket холболтын токен
    */
   200: PtyTicketConnectToken
 }
@@ -9269,7 +9607,7 @@ export type QuestionListData = {
 
 export type QuestionListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -9278,7 +9616,7 @@ export type QuestionListError = QuestionListErrors[keyof QuestionListErrors]
 
 export type QuestionListResponses = {
   /**
-   * List of pending questions
+   * Хүлээгдэж буй асуултуудын жагсаалт
    */
   200: Array<QuestionRequest>
 }
@@ -9288,7 +9626,7 @@ export type QuestionListResponse = QuestionListResponses[keyof QuestionListRespo
 export type QuestionReplyData = {
   body?: {
     /**
-     * User answers in order of questions (each answer is an array of selected labels)
+     * Асуултуудын дарааллын дагуух хэрэглэгчийн хариултууд (хариулт бүр нь сонгосон шошгуудын массив байна)
      */
     answers: Array<QuestionAnswer>
   }
@@ -9304,11 +9642,11 @@ export type QuestionReplyData = {
 
 export type QuestionReplyErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * QuestionNotFoundError
+   * Асуултын хүсэлт олдсонгүй
    */
   404: QuestionNotFoundError
 }
@@ -9317,7 +9655,7 @@ export type QuestionReplyError = QuestionReplyErrors[keyof QuestionReplyErrors]
 
 export type QuestionReplyResponses = {
   /**
-   * Question answered successfully
+   * Асуултад амжилттай хариулсан
    */
   200: boolean
 }
@@ -9338,11 +9676,11 @@ export type QuestionRejectData = {
 
 export type QuestionRejectErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * QuestionNotFoundError
+   * Асуултын хүсэлт олдсонгүй
    */
   404: QuestionNotFoundError
 }
@@ -9351,7 +9689,7 @@ export type QuestionRejectError = QuestionRejectErrors[keyof QuestionRejectError
 
 export type QuestionRejectResponses = {
   /**
-   * Question rejected successfully
+   * Асуултыг амжилттай татгалзсан
    */
   200: boolean
 }
@@ -9370,7 +9708,7 @@ export type PermissionListData = {
 
 export type PermissionListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -9379,7 +9717,7 @@ export type PermissionListError = PermissionListErrors[keyof PermissionListError
 
 export type PermissionListResponses = {
   /**
-   * List of pending permissions
+   * Хүлээгдэж буй зөвшөөрлүүдийн жагсаалт
    */
   200: Array<PermissionRequest>
 }
@@ -9403,11 +9741,11 @@ export type PermissionReplyData = {
 
 export type PermissionReplyErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * PermissionNotFoundError
+   * Зөвшөөрлийн хүсэлт олдсонгүй
    */
   404: PermissionNotFoundError
 }
@@ -9416,7 +9754,7 @@ export type PermissionReplyError = PermissionReplyErrors[keyof PermissionReplyEr
 
 export type PermissionReplyResponses = {
   /**
-   * Permission processed successfully
+   * Зөвшөөрлийг амжилттай боловсруулсан
    */
   200: boolean
 }
@@ -9435,7 +9773,7 @@ export type ProviderListData = {
 
 export type ProviderListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -9444,7 +9782,7 @@ export type ProviderListError = ProviderListErrors[keyof ProviderListErrors]
 
 export type ProviderListResponses = {
   /**
-   * List of providers
+   * Провайдеруудын жагсаалт
    */
   200: {
     all: Array<Provider>
@@ -9469,7 +9807,7 @@ export type ProviderAuthData = {
 
 export type ProviderAuthErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -9478,7 +9816,7 @@ export type ProviderAuthError2 = ProviderAuthErrors[keyof ProviderAuthErrors]
 
 export type ProviderAuthResponses = {
   /**
-   * Provider auth methods
+   * Провайдерын нэвтрэлтийн аргууд
    */
   200: {
     [key: string]: Array<ProviderAuthMethod>
@@ -9490,7 +9828,7 @@ export type ProviderAuthResponse = ProviderAuthResponses[keyof ProviderAuthRespo
 export type ProviderOauthAuthorizeData = {
   body?: {
     /**
-     * Auth method index
+     * Нэвтрэх аргын индекс
      */
     method: number
     inputs?: {
@@ -9509,7 +9847,7 @@ export type ProviderOauthAuthorizeData = {
 
 export type ProviderOauthAuthorizeErrors = {
   /**
-   * ProviderAuthError | InvalidRequestError
+   * Үйлчилгээ үзүүлэгчийн нэвтрэлтийн алдаа | Хүчингүй хүсэлт
    */
   400: ProviderAuthError1 | InvalidRequestError
 }
@@ -9518,7 +9856,7 @@ export type ProviderOauthAuthorizeError = ProviderOauthAuthorizeErrors[keyof Pro
 
 export type ProviderOauthAuthorizeResponses = {
   /**
-   * Authorization URL and method
+   * Зөвшөөрлийн URL болон арга
    */
   200: ProviderAuthAuthorization
 }
@@ -9528,7 +9866,7 @@ export type ProviderOauthAuthorizeResponse = ProviderOauthAuthorizeResponses[key
 export type ProviderOauthCallbackData = {
   body?: {
     /**
-     * Auth method index
+     * Нэвтрэх аргын индекс
      */
     method: number
     code?: string
@@ -9545,7 +9883,7 @@ export type ProviderOauthCallbackData = {
 
 export type ProviderOauthCallbackErrors = {
   /**
-   * ProviderAuthError | InvalidRequestError
+   * Үйлчилгээ үзүүлэгчийн нэвтрэлтийн алдаа | Хүчингүй хүсэлт
    */
   400: ProviderAuthError1 | InvalidRequestError
 }
@@ -9554,7 +9892,7 @@ export type ProviderOauthCallbackError = ProviderOauthCallbackErrors[keyof Provi
 
 export type ProviderOauthCallbackResponses = {
   /**
-   * OAuth callback processed successfully
+   * OAuth буцах дуудлагыг амжилттай боловсруулсан
    */
   200: boolean
 }
@@ -9579,7 +9917,7 @@ export type SessionListData = {
 
 export type SessionListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -9588,7 +9926,7 @@ export type SessionListError = SessionListErrors[keyof SessionListErrors]
 
 export type SessionListResponses = {
   /**
-   * List of sessions
+   * Сессүүдийн жагсаалт
    */
   200: Array<Session>
 }
@@ -9621,7 +9959,7 @@ export type SessionCreateData = {
 
 export type SessionCreateErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -9630,7 +9968,7 @@ export type SessionCreateError = SessionCreateErrors[keyof SessionCreateErrors]
 
 export type SessionCreateResponses = {
   /**
-   * Successfully created session
+   * Сессийг амжилттай үүсгэсэн
    */
   200: Session
 }
@@ -9649,7 +9987,7 @@ export type SessionStatusData = {
 
 export type SessionStatusErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -9658,7 +9996,7 @@ export type SessionStatusError = SessionStatusErrors[keyof SessionStatusErrors]
 
 export type SessionStatusResponses = {
   /**
-   * Get session status
+   * Сессийн төлөв авах
    */
   200: {
     [key: string]: SessionStatus
@@ -9681,11 +10019,11 @@ export type SessionDeleteData = {
 
 export type SessionDeleteErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -9694,7 +10032,7 @@ export type SessionDeleteError = SessionDeleteErrors[keyof SessionDeleteErrors]
 
 export type SessionDeleteResponses = {
   /**
-   * Successfully deleted session
+   * Сессийг амжилттай устгасан
    */
   200: boolean
 }
@@ -9715,11 +10053,11 @@ export type SessionGetData = {
 
 export type SessionGetErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -9728,7 +10066,7 @@ export type SessionGetError = SessionGetErrors[keyof SessionGetErrors]
 
 export type SessionGetResponses = {
   /**
-   * Get session
+   * Сесс авах
    */
   200: Session
 }
@@ -9758,11 +10096,11 @@ export type SessionUpdateData = {
 
 export type SessionUpdateErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -9771,7 +10109,7 @@ export type SessionUpdateError = SessionUpdateErrors[keyof SessionUpdateErrors]
 
 export type SessionUpdateResponses = {
   /**
-   * Successfully updated session
+   * Сессийг амжилттай шинэчилсэн
    */
   200: Session
 }
@@ -9792,11 +10130,11 @@ export type SessionChildrenData = {
 
 export type SessionChildrenErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -9805,7 +10143,7 @@ export type SessionChildrenError = SessionChildrenErrors[keyof SessionChildrenEr
 
 export type SessionChildrenResponses = {
   /**
-   * List of children
+   * Салаалсан сессүүдийн жагсаалт
    */
   200: Array<Session>
 }
@@ -9826,11 +10164,11 @@ export type SessionTodoData = {
 
 export type SessionTodoErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -9839,7 +10177,7 @@ export type SessionTodoError = SessionTodoErrors[keyof SessionTodoErrors]
 
 export type SessionTodoResponses = {
   /**
-   * Todo list
+   * Хийх зүйлсийн жагсаалт
    */
   200: Array<Todo>
 }
@@ -9861,7 +10199,7 @@ export type SessionDiffData = {
 
 export type SessionDiffErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -9870,7 +10208,7 @@ export type SessionDiffError = SessionDiffErrors[keyof SessionDiffErrors]
 
 export type SessionDiffResponses = {
   /**
-   * Successfully retrieved diff
+   * Файлын ялгааг амжилттай авсан
    */
   200: Array<SnapshotFileDiff>
 }
@@ -9893,11 +10231,11 @@ export type SessionMessagesData = {
 
 export type SessionMessagesErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -9906,7 +10244,7 @@ export type SessionMessagesError = SessionMessagesErrors[keyof SessionMessagesEr
 
 export type SessionMessagesResponses = {
   /**
-   * List of messages
+   * Мессежүүдийн жагсаалт
    */
   200: Array<{
     info: Message
@@ -9945,11 +10283,11 @@ export type SessionPromptData = {
 
 export type SessionPromptErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -9958,7 +10296,7 @@ export type SessionPromptError = SessionPromptErrors[keyof SessionPromptErrors]
 
 export type SessionPromptResponses = {
   /**
-   * Created message
+   * Мессеж үүссэн
    */
   200: {
     info: AssistantMessage
@@ -9983,15 +10321,15 @@ export type SessionDeleteMessageData = {
 
 export type SessionDeleteMessageErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
   /**
-   * SessionBusyError
+   * Сесс ажиллаж байна
    */
   409: SessionBusyError
 }
@@ -10000,7 +10338,7 @@ export type SessionDeleteMessageError = SessionDeleteMessageErrors[keyof Session
 
 export type SessionDeleteMessageResponses = {
   /**
-   * Successfully deleted message
+   * Мессежийг амжилттай устгасан
    */
   200: boolean
 }
@@ -10022,11 +10360,11 @@ export type SessionMessageData = {
 
 export type SessionMessageErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -10035,7 +10373,7 @@ export type SessionMessageError = SessionMessageErrors[keyof SessionMessageError
 
 export type SessionMessageResponses = {
   /**
-   * Message
+   * Мессеж
    */
   200: {
     info: Message
@@ -10061,11 +10399,11 @@ export type SessionForkData = {
 
 export type SessionForkErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -10074,7 +10412,7 @@ export type SessionForkError = SessionForkErrors[keyof SessionForkErrors]
 
 export type SessionForkResponses = {
   /**
-   * 200
+   * Салаалсан сесс
    */
   200: Session
 }
@@ -10095,7 +10433,7 @@ export type SessionAbortData = {
 
 export type SessionAbortErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -10104,7 +10442,7 @@ export type SessionAbortError = SessionAbortErrors[keyof SessionAbortErrors]
 
 export type SessionAbortResponses = {
   /**
-   * Aborted session
+   * Сессийг зогсоосон
    */
   200: boolean
 }
@@ -10129,11 +10467,11 @@ export type SessionInitData = {
 
 export type SessionInitErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -10142,7 +10480,7 @@ export type SessionInitError = SessionInitErrors[keyof SessionInitErrors]
 
 export type SessionInitResponses = {
   /**
-   * 200
+   * Сессийг эхлүүлсэн
    */
   200: boolean
 }
@@ -10163,15 +10501,15 @@ export type SessionUnshareData = {
 
 export type SessionUnshareErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
   /**
-   * InternalServerError
+   * Серверийн дотоод алдаа
    */
   500: EffectHttpApiErrorInternalServerError
 }
@@ -10180,7 +10518,7 @@ export type SessionUnshareError = SessionUnshareErrors[keyof SessionUnshareError
 
 export type SessionUnshareResponses = {
   /**
-   * Successfully unshared session
+   * Сессийн хуваалцалтыг амжилттай цуцалсан
    */
   200: Session
 }
@@ -10201,15 +10539,15 @@ export type SessionShareData = {
 
 export type SessionShareErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
   /**
-   * InternalServerError
+   * Серверийн дотоод алдаа
    */
   500: EffectHttpApiErrorInternalServerError
 }
@@ -10218,7 +10556,7 @@ export type SessionShareError = SessionShareErrors[keyof SessionShareErrors]
 
 export type SessionShareResponses = {
   /**
-   * Successfully shared session
+   * Сессийг амжилттай хуваалцсан
    */
   200: Session
 }
@@ -10243,11 +10581,11 @@ export type SessionSummarizeData = {
 
 export type SessionSummarizeErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -10256,7 +10594,7 @@ export type SessionSummarizeError = SessionSummarizeErrors[keyof SessionSummariz
 
 export type SessionSummarizeResponses = {
   /**
-   * Summarized session
+   * Сессийг хураангуйлсан
    */
   200: boolean
 }
@@ -10292,11 +10630,11 @@ export type SessionPromptAsyncData = {
 
 export type SessionPromptAsyncErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -10305,7 +10643,7 @@ export type SessionPromptAsyncError = SessionPromptAsyncErrors[keyof SessionProm
 
 export type SessionPromptAsyncResponses = {
   /**
-   * Prompt accepted
+   * Промптыг хүлээн авсан
    */
   204: void
 }
@@ -10341,11 +10679,11 @@ export type SessionCommandData = {
 
 export type SessionCommandErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -10354,7 +10692,7 @@ export type SessionCommandError = SessionCommandErrors[keyof SessionCommandError
 
 export type SessionCommandResponses = {
   /**
-   * Created message
+   * Мессеж үүссэн
    */
   200: {
     info: AssistantMessage
@@ -10386,15 +10724,15 @@ export type SessionShellData = {
 
 export type SessionShellErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
   /**
-   * SessionBusyError
+   * Сесс ажиллаж байна
    */
   409: SessionBusyError
 }
@@ -10403,7 +10741,7 @@ export type SessionShellError = SessionShellErrors[keyof SessionShellErrors]
 
 export type SessionShellResponses = {
   /**
-   * Created message
+   * Мессеж үүссэн
    */
   200: {
     info: Message
@@ -10430,15 +10768,15 @@ export type SessionRevertData = {
 
 export type SessionRevertErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
   /**
-   * SessionBusyError
+   * Сесс ажиллаж байна
    */
   409: SessionBusyError
 }
@@ -10447,7 +10785,7 @@ export type SessionRevertError = SessionRevertErrors[keyof SessionRevertErrors]
 
 export type SessionRevertResponses = {
   /**
-   * Updated session
+   * Сесс шинэчлэгдсэн
    */
   200: Session
 }
@@ -10468,15 +10806,15 @@ export type SessionUnrevertData = {
 
 export type SessionUnrevertErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
   /**
-   * SessionBusyError
+   * Сесс ажиллаж байна
    */
   409: SessionBusyError
 }
@@ -10485,7 +10823,7 @@ export type SessionUnrevertError = SessionUnrevertErrors[keyof SessionUnrevertEr
 
 export type SessionUnrevertResponses = {
   /**
-   * Updated session
+   * Сесс шинэчлэгдсэн
    */
   200: Session
 }
@@ -10509,11 +10847,11 @@ export type PermissionRespondData = {
 
 export type PermissionRespondErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError | PermissionNotFoundError
+   * Олдсонгүй | Зөвшөөрлийн хүсэлт олдсонгүй
    */
   404: NotFoundError | PermissionNotFoundError
 }
@@ -10522,7 +10860,7 @@ export type PermissionRespondError = PermissionRespondErrors[keyof PermissionRes
 
 export type PermissionRespondResponses = {
   /**
-   * Permission processed successfully
+   * Зөвшөөрлийг амжилттай боловсруулсан
    */
   200: boolean
 }
@@ -10545,11 +10883,11 @@ export type PartDeleteData = {
 
 export type PartDeleteErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -10558,7 +10896,7 @@ export type PartDeleteError = PartDeleteErrors[keyof PartDeleteErrors]
 
 export type PartDeleteResponses = {
   /**
-   * Successfully deleted part
+   * Хэсгийг амжилттай устгасан
    */
   200: boolean
 }
@@ -10581,11 +10919,11 @@ export type PartUpdateData = {
 
 export type PartUpdateErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -10594,7 +10932,7 @@ export type PartUpdateError = PartUpdateErrors[keyof PartUpdateErrors]
 
 export type PartUpdateResponses = {
   /**
-   * Successfully updated part
+   * Хэсгийг амжилттай шинэчилсэн
    */
   200: Part
 }
@@ -10613,7 +10951,7 @@ export type SyncStartData = {
 
 export type SyncStartErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -10622,7 +10960,7 @@ export type SyncStartError = SyncStartErrors[keyof SyncStartErrors]
 
 export type SyncStartResponses = {
   /**
-   * Workspace sync started
+   * Ажлын орчны синхрончлол эхэлсэн
    */
   200: boolean
 }
@@ -10652,7 +10990,7 @@ export type SyncReplayData = {
 
 export type SyncReplayErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -10661,7 +10999,7 @@ export type SyncReplayError = SyncReplayErrors[keyof SyncReplayErrors]
 
 export type SyncReplayResponses = {
   /**
-   * Replayed sync events
+   * Синхрончлолын үйл явдлыг дахин тоглуулсан
    */
   200: {
     sessionID: string
@@ -10684,7 +11022,7 @@ export type SyncStealData = {
 
 export type SyncStealErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -10693,7 +11031,7 @@ export type SyncStealError = SyncStealErrors[keyof SyncStealErrors]
 
 export type SyncStealResponses = {
   /**
-   * Session stolen into workspace
+   * Сессийг ажлын орчинд шилжүүлсэн
    */
   200: {
     sessionID: string
@@ -10716,7 +11054,7 @@ export type SyncHistoryListData = {
 
 export type SyncHistoryListErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -10725,7 +11063,7 @@ export type SyncHistoryListError = SyncHistoryListErrors[keyof SyncHistoryListEr
 
 export type SyncHistoryListResponses = {
   /**
-   * Sync events
+   * Синхрончлолын үйл явдлууд
    */
   200: Array<{
     id: string
@@ -10754,7 +11092,7 @@ export type TuiAppendPromptData = {
 
 export type TuiAppendPromptErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -10763,7 +11101,7 @@ export type TuiAppendPromptError = TuiAppendPromptErrors[keyof TuiAppendPromptEr
 
 export type TuiAppendPromptResponses = {
   /**
-   * Prompt processed successfully
+   * Промптыг амжилттай боловсруулсан
    */
   200: boolean
 }
@@ -10782,7 +11120,7 @@ export type TuiOpenHelpData = {
 
 export type TuiOpenHelpErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -10791,7 +11129,7 @@ export type TuiOpenHelpError = TuiOpenHelpErrors[keyof TuiOpenHelpErrors]
 
 export type TuiOpenHelpResponses = {
   /**
-   * Help dialog opened successfully
+   * Тусламжийн цонхыг амжилттай нээсэн
    */
   200: boolean
 }
@@ -10810,7 +11148,7 @@ export type TuiOpenSessionsData = {
 
 export type TuiOpenSessionsErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -10819,7 +11157,7 @@ export type TuiOpenSessionsError = TuiOpenSessionsErrors[keyof TuiOpenSessionsEr
 
 export type TuiOpenSessionsResponses = {
   /**
-   * Session dialog opened successfully
+   * Сессийн цонхыг амжилттай нээсэн
    */
   200: boolean
 }
@@ -10838,7 +11176,7 @@ export type TuiOpenThemesData = {
 
 export type TuiOpenThemesErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -10847,7 +11185,7 @@ export type TuiOpenThemesError = TuiOpenThemesErrors[keyof TuiOpenThemesErrors]
 
 export type TuiOpenThemesResponses = {
   /**
-   * Theme dialog opened successfully
+   * Загварын цонхыг амжилттай нээсэн
    */
   200: boolean
 }
@@ -10866,7 +11204,7 @@ export type TuiOpenModelsData = {
 
 export type TuiOpenModelsErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -10875,7 +11213,7 @@ export type TuiOpenModelsError = TuiOpenModelsErrors[keyof TuiOpenModelsErrors]
 
 export type TuiOpenModelsResponses = {
   /**
-   * Model dialog opened successfully
+   * Моделийн цонхыг амжилттай нээсэн
    */
   200: boolean
 }
@@ -10894,7 +11232,7 @@ export type TuiSubmitPromptData = {
 
 export type TuiSubmitPromptErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -10903,7 +11241,7 @@ export type TuiSubmitPromptError = TuiSubmitPromptErrors[keyof TuiSubmitPromptEr
 
 export type TuiSubmitPromptResponses = {
   /**
-   * Prompt submitted successfully
+   * Промптыг амжилттай илгээсэн
    */
   200: boolean
 }
@@ -10922,7 +11260,7 @@ export type TuiClearPromptData = {
 
 export type TuiClearPromptErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -10931,7 +11269,7 @@ export type TuiClearPromptError = TuiClearPromptErrors[keyof TuiClearPromptError
 
 export type TuiClearPromptResponses = {
   /**
-   * Prompt cleared successfully
+   * Промптыг амжилттай цэвэрлэсэн
    */
   200: boolean
 }
@@ -10952,7 +11290,7 @@ export type TuiExecuteCommandData = {
 
 export type TuiExecuteCommandErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -10961,7 +11299,7 @@ export type TuiExecuteCommandError = TuiExecuteCommandErrors[keyof TuiExecuteCom
 
 export type TuiExecuteCommandResponses = {
   /**
-   * Command executed successfully
+   * Командыг амжилттай гүйцэтгэсэн
    */
   200: boolean
 }
@@ -10985,7 +11323,7 @@ export type TuiShowToastData = {
 
 export type TuiShowToastErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -10994,7 +11332,7 @@ export type TuiShowToastError = TuiShowToastErrors[keyof TuiShowToastErrors]
 
 export type TuiShowToastResponses = {
   /**
-   * Toast notification shown successfully
+   * Toast мэдэгдлийг амжилттай харуулсан
    */
   200: boolean
 }
@@ -11013,7 +11351,7 @@ export type TuiPublishData = {
 
 export type TuiPublishErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -11022,7 +11360,7 @@ export type TuiPublishError = TuiPublishErrors[keyof TuiPublishErrors]
 
 export type TuiPublishResponses = {
   /**
-   * Event published successfully
+   * Үйл явдлыг амжилттай нийтэлсэн
    */
   200: boolean
 }
@@ -11032,7 +11370,7 @@ export type TuiPublishResponse = TuiPublishResponses[keyof TuiPublishResponses]
 export type TuiSelectSessionData = {
   body?: {
     /**
-     * Session ID to navigate to
+     * Шилжиж очих сессийн ID
      */
     sessionID: string
   }
@@ -11046,11 +11384,11 @@ export type TuiSelectSessionData = {
 
 export type TuiSelectSessionErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -11059,7 +11397,7 @@ export type TuiSelectSessionError = TuiSelectSessionErrors[keyof TuiSelectSessio
 
 export type TuiSelectSessionResponses = {
   /**
-   * Session selected successfully
+   * Сессийг амжилттай сонгосон
    */
   200: boolean
 }
@@ -11078,7 +11416,7 @@ export type TuiControlNextData = {
 
 export type TuiControlNextErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -11087,7 +11425,7 @@ export type TuiControlNextError = TuiControlNextErrors[keyof TuiControlNextError
 
 export type TuiControlNextResponses = {
   /**
-   * Next TUI request
+   * Дараагийн TUI хүсэлт
    */
   200: {
     path: string
@@ -11109,7 +11447,7 @@ export type TuiControlResponseData = {
 
 export type TuiControlResponseErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -11118,7 +11456,7 @@ export type TuiControlResponseError = TuiControlResponseErrors[keyof TuiControlR
 
 export type TuiControlResponseResponses = {
   /**
-   * Response submitted successfully
+   * Хариуг амжилттай илгээсэн
    */
   200: boolean
 }
@@ -11137,7 +11475,7 @@ export type ExperimentalWorkspaceAdapterListData = {
 
 export type ExperimentalWorkspaceAdapterListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -11147,7 +11485,7 @@ export type ExperimentalWorkspaceAdapterListError =
 
 export type ExperimentalWorkspaceAdapterListResponses = {
   /**
-   * Workspace adapters
+   * Ажлын орчны адаптерууд
    */
   200: Array<{
     type: string
@@ -11171,7 +11509,7 @@ export type ExperimentalWorkspaceListData = {
 
 export type ExperimentalWorkspaceListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -11180,7 +11518,7 @@ export type ExperimentalWorkspaceListError = ExperimentalWorkspaceListErrors[key
 
 export type ExperimentalWorkspaceListResponses = {
   /**
-   * Workspaces
+   * Ажлын орчнууд
    */
   200: Array<Workspace>
 }
@@ -11205,7 +11543,7 @@ export type ExperimentalWorkspaceCreateData = {
 
 export type ExperimentalWorkspaceCreateErrors = {
   /**
-   * WorkspaceCreateError | BadRequest | InvalidRequestError
+   * Ажлын орчин үүсгэх алдаа | Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: WorkspaceCreateError | EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -11215,7 +11553,7 @@ export type ExperimentalWorkspaceCreateError =
 
 export type ExperimentalWorkspaceCreateResponses = {
   /**
-   * Workspace created
+   * Ажлын орчин үүссэн
    */
   200: Workspace
 }
@@ -11235,7 +11573,7 @@ export type ExperimentalWorkspaceSyncListData = {
 
 export type ExperimentalWorkspaceSyncListErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -11245,7 +11583,7 @@ export type ExperimentalWorkspaceSyncListError =
 
 export type ExperimentalWorkspaceSyncListResponses = {
   /**
-   * Workspace list synced
+   * Ажлын орчны жагсаалт синхрончлогдсон
    */
   204: void
 }
@@ -11265,7 +11603,7 @@ export type ExperimentalWorkspaceStatusData = {
 
 export type ExperimentalWorkspaceStatusErrors = {
   /**
-   * Bad request
+   * Буруу хүсэлт
    */
   400: BadRequestError
 }
@@ -11275,7 +11613,7 @@ export type ExperimentalWorkspaceStatusError =
 
 export type ExperimentalWorkspaceStatusResponses = {
   /**
-   * Workspace status
+   * Ажлын орчны төлөв
    */
   200: Array<WorkspaceEventConnectionStatus>
 }
@@ -11297,7 +11635,7 @@ export type ExperimentalWorkspaceRemoveData = {
 
 export type ExperimentalWorkspaceRemoveErrors = {
   /**
-   * BadRequest | InvalidRequestError
+   * Буруу хүсэлт | Хүчингүй хүсэлт
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
@@ -11307,7 +11645,7 @@ export type ExperimentalWorkspaceRemoveError =
 
 export type ExperimentalWorkspaceRemoveResponses = {
   /**
-   * Workspace removed
+   * Ажлын орчин устсан
    */
   200: Workspace
 }
@@ -11331,11 +11669,11 @@ export type ExperimentalWorkspaceWarpData = {
 
 export type ExperimentalWorkspaceWarpErrors = {
   /**
-   * WorkspaceWarpError | VcsApplyError | InvalidRequestError
+   * Ажлын орчинд шилжүүлэх алдаа | VCS өөрчлөлт хэрэглэх алдаа | Хүчингүй хүсэлт
    */
   400: WorkspaceWarpError | VcsApplyError | InvalidRequestError
   /**
-   * NotFoundError
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -11344,7 +11682,7 @@ export type ExperimentalWorkspaceWarpError = ExperimentalWorkspaceWarpErrors[key
 
 export type ExperimentalWorkspaceWarpResponses = {
   /**
-   * Session warped
+   * Сессийг шилжүүлсэн
    */
   204: void
 }
@@ -11361,11 +11699,11 @@ export type V2HealthGetData = {
 
 export type V2HealthGetErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -11374,7 +11712,7 @@ export type V2HealthGetError = V2HealthGetErrors[keyof V2HealthGetErrors]
 
 export type V2HealthGetResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     healthy: true
@@ -11397,11 +11735,11 @@ export type V2LocationGetData = {
 
 export type V2LocationGetErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -11431,11 +11769,11 @@ export type V2AgentListData = {
 
 export type V2AgentListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -11444,7 +11782,7 @@ export type V2AgentListError = V2AgentListErrors[keyof V2AgentListErrors]
 
 export type V2AgentListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -11466,7 +11804,7 @@ export type V2SessionListData = {
     project?: string
     subpath?: string
     /**
-     * Opaque pagination cursor returned as cursor.previous or cursor.next in the previous response.
+     * Өмнөх хариуд cursor.previous эсвэл cursor.next хэлбэрээр буцсан, доторх утга нь ил биш хуудаслалтын заагч.
      */
     cursor?: string
   }
@@ -11475,11 +11813,11 @@ export type V2SessionListData = {
 
 export type V2SessionListErrors = {
   /**
-   * InvalidCursorError | InvalidRequestError
+   * Хүчингүй заагч | Хүчингүй хүсэлт
    */
   400: InvalidCursorError | InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -11509,11 +11847,11 @@ export type V2SessionCreateData = {
 
 export type V2SessionCreateErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -11522,7 +11860,7 @@ export type V2SessionCreateError = V2SessionCreateErrors[keyof V2SessionCreateEr
 
 export type V2SessionCreateResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: SessionV2Info
@@ -11540,11 +11878,11 @@ export type V2SessionActiveData = {
 
 export type V2SessionActiveErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -11553,7 +11891,7 @@ export type V2SessionActiveError = V2SessionActiveErrors[keyof V2SessionActiveEr
 
 export type V2SessionActiveResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: {
@@ -11575,15 +11913,15 @@ export type V2SessionGetData = {
 
 export type V2SessionGetErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
 }
@@ -11592,7 +11930,7 @@ export type V2SessionGetError = V2SessionGetErrors[keyof V2SessionGetErrors]
 
 export type V2SessionGetResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: SessionV2Info
@@ -11614,15 +11952,15 @@ export type V2SessionSwitchAgentData = {
 
 export type V2SessionSwitchAgentErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
 }
@@ -11631,7 +11969,7 @@ export type V2SessionSwitchAgentError = V2SessionSwitchAgentErrors[keyof V2Sessi
 
 export type V2SessionSwitchAgentResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -11651,15 +11989,15 @@ export type V2SessionSwitchModelData = {
 
 export type V2SessionSwitchModelErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
 }
@@ -11668,7 +12006,7 @@ export type V2SessionSwitchModelError = V2SessionSwitchModelErrors[keyof V2Sessi
 
 export type V2SessionSwitchModelResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -11691,19 +12029,19 @@ export type V2SessionPromptData = {
 
 export type V2SessionPromptErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
   /**
-   * ConflictError
+   * Зөрчилтэй хүсэлт
    */
   409: ConflictError
 }
@@ -11712,7 +12050,7 @@ export type V2SessionPromptError = V2SessionPromptErrors[keyof V2SessionPromptEr
 
 export type V2SessionPromptResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: SessionInputAdmitted
@@ -11732,19 +12070,19 @@ export type V2SessionCompactData = {
 
 export type V2SessionCompactErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
   /**
-   * ServiceUnavailableError
+   * Үйлчилгээ түр боломжгүй
    */
   503: ServiceUnavailableError
 }
@@ -11753,7 +12091,7 @@ export type V2SessionCompactError = V2SessionCompactErrors[keyof V2SessionCompac
 
 export type V2SessionCompactResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -11771,19 +12109,19 @@ export type V2SessionWaitData = {
 
 export type V2SessionWaitErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
   /**
-   * ServiceUnavailableError
+   * Үйлчилгээ түр боломжгүй
    */
   503: ServiceUnavailableError
 }
@@ -11792,7 +12130,7 @@ export type V2SessionWaitError = V2SessionWaitErrors[keyof V2SessionWaitErrors]
 
 export type V2SessionWaitResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -11813,19 +12151,19 @@ export type V2SessionRevertStageData = {
 
 export type V2SessionRevertStageErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * MessageNotFoundError | SessionNotFoundError
+   * Мессеж олдсонгүй | Сесс олдсонгүй
    */
   404: MessageNotFoundError | SessionNotFoundError
   /**
-   * UnknownError
+   * Үл мэдэгдэх алдаа
    */
   500: UnknownError1
 }
@@ -11834,7 +12172,7 @@ export type V2SessionRevertStageError = V2SessionRevertStageErrors[keyof V2Sessi
 
 export type V2SessionRevertStageResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: RevertState
@@ -11854,19 +12192,19 @@ export type V2SessionRevertClearData = {
 
 export type V2SessionRevertClearErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
   /**
-   * UnknownError
+   * Үл мэдэгдэх алдаа
    */
   500: UnknownError1
 }
@@ -11875,7 +12213,7 @@ export type V2SessionRevertClearError = V2SessionRevertClearErrors[keyof V2Sessi
 
 export type V2SessionRevertClearResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -11893,15 +12231,15 @@ export type V2SessionRevertCommitData = {
 
 export type V2SessionRevertCommitErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
 }
@@ -11910,7 +12248,7 @@ export type V2SessionRevertCommitError = V2SessionRevertCommitErrors[keyof V2Ses
 
 export type V2SessionRevertCommitResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -11928,19 +12266,19 @@ export type V2SessionContextData = {
 
 export type V2SessionContextErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
   /**
-   * UnknownError
+   * Үл мэдэгдэх алдаа
    */
   500: UnknownError1
 }
@@ -11949,7 +12287,7 @@ export type V2SessionContextError = V2SessionContextErrors[keyof V2SessionContex
 
 export type V2SessionContextResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: Array<SessionMessage>
@@ -11972,15 +12310,15 @@ export type V2SessionHistoryData = {
 
 export type V2SessionHistoryErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
 }
@@ -12009,15 +12347,15 @@ export type V2SessionEventsData = {
 
 export type V2SessionEventsErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
 }
@@ -12026,7 +12364,7 @@ export type V2SessionEventsError = V2SessionEventsErrors[keyof V2SessionEventsEr
 
 export type V2SessionEventsResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     id: string
@@ -12048,15 +12386,15 @@ export type V2SessionInterruptData = {
 
 export type V2SessionInterruptErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
 }
@@ -12065,7 +12403,7 @@ export type V2SessionInterruptError = V2SessionInterruptErrors[keyof V2SessionIn
 
 export type V2SessionInterruptResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -12084,15 +12422,15 @@ export type V2SessionMessageData = {
 
 export type V2SessionMessageErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError | MessageNotFoundError
+   * Сесс олдсонгүй | Мессеж олдсонгүй
    */
   404: MessageNotFoundError | SessionNotFoundError
 }
@@ -12101,7 +12439,7 @@ export type V2SessionMessageError = V2SessionMessageErrors[keyof V2SessionMessag
 
 export type V2SessionMessageResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: SessionMessage
@@ -12119,7 +12457,7 @@ export type V2SessionMessagesData = {
     limit?: number
     order?: "asc" | "desc"
     /**
-     * Opaque pagination cursor returned as cursor.previous or cursor.next in the previous response. Do not combine with order.
+     * Өмнөх хариунд cursor.previous эсвэл cursor.next хэлбэрээр буцсан, доторх утга нь ил биш хуудаслалтын заагч. Үүнийг order параметртэй хамт ашиглаж болохгүй.
      */
     cursor?: string
   }
@@ -12128,19 +12466,19 @@ export type V2SessionMessagesData = {
 
 export type V2SessionMessagesErrors = {
   /**
-   * InvalidCursorError | InvalidRequestError
+   * Хүчингүй заагч | Хүчингүй хүсэлт
    */
   400: InvalidCursorError | InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
   /**
-   * UnknownError
+   * Үл мэдэгдэх алдаа
    */
   500: UnknownError1
 }
@@ -12170,15 +12508,15 @@ export type V2ModelListData = {
 
 export type V2ModelListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * ServiceUnavailableError
+   * Үйлчилгээ түр боломжгүй
    */
   503: ServiceUnavailableError
 }
@@ -12187,7 +12525,7 @@ export type V2ModelListError = V2ModelListErrors[keyof V2ModelListErrors]
 
 export type V2ModelListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -12211,15 +12549,15 @@ export type V2ProviderListData = {
 
 export type V2ProviderListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * ServiceUnavailableError
+   * Үйлчилгээ түр боломжгүй
    */
   503: ServiceUnavailableError
 }
@@ -12228,7 +12566,7 @@ export type V2ProviderListError = V2ProviderListErrors[keyof V2ProviderListError
 
 export type V2ProviderListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -12254,19 +12592,19 @@ export type V2ProviderGetData = {
 
 export type V2ProviderGetErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * ProviderNotFoundError
+   * Үйлчилгээ үзүүлэгч олдсонгүй
    */
   404: ProviderNotFoundError
   /**
-   * ServiceUnavailableError
+   * Үйлчилгээ түр боломжгүй
    */
   503: ServiceUnavailableError
 }
@@ -12275,7 +12613,7 @@ export type V2ProviderGetError = V2ProviderGetErrors[keyof V2ProviderGetErrors]
 
 export type V2ProviderGetResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -12299,11 +12637,11 @@ export type V2IntegrationListData = {
 
 export type V2IntegrationListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12312,7 +12650,7 @@ export type V2IntegrationListError = V2IntegrationListErrors[keyof V2Integration
 
 export type V2IntegrationListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -12338,11 +12676,11 @@ export type V2IntegrationGetData = {
 
 export type V2IntegrationGetErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12351,7 +12689,7 @@ export type V2IntegrationGetError = V2IntegrationGetErrors[keyof V2IntegrationGe
 
 export type V2IntegrationGetResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -12380,11 +12718,11 @@ export type V2IntegrationConnectKeyData = {
 
 export type V2IntegrationConnectKeyErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12393,7 +12731,7 @@ export type V2IntegrationConnectKeyError = V2IntegrationConnectKeyErrors[keyof V
 
 export type V2IntegrationConnectKeyResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -12422,11 +12760,11 @@ export type V2IntegrationConnectOauthData = {
 
 export type V2IntegrationConnectOauthErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12435,7 +12773,7 @@ export type V2IntegrationConnectOauthError = V2IntegrationConnectOauthErrors[key
 
 export type V2IntegrationConnectOauthResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -12462,11 +12800,11 @@ export type V2IntegrationAttemptCancelData = {
 
 export type V2IntegrationAttemptCancelErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12475,7 +12813,7 @@ export type V2IntegrationAttemptCancelError = V2IntegrationAttemptCancelErrors[k
 
 export type V2IntegrationAttemptCancelResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -12499,11 +12837,11 @@ export type V2IntegrationAttemptStatusData = {
 
 export type V2IntegrationAttemptStatusErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12512,7 +12850,7 @@ export type V2IntegrationAttemptStatusError = V2IntegrationAttemptStatusErrors[k
 
 export type V2IntegrationAttemptStatusResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -12541,11 +12879,11 @@ export type V2IntegrationAttemptCompleteData = {
 
 export type V2IntegrationAttemptCompleteErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12555,7 +12893,7 @@ export type V2IntegrationAttemptCompleteError =
 
 export type V2IntegrationAttemptCompleteResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -12579,11 +12917,11 @@ export type V2CredentialRemoveData = {
 
 export type V2CredentialRemoveErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12592,7 +12930,7 @@ export type V2CredentialRemoveError = V2CredentialRemoveErrors[keyof V2Credentia
 
 export type V2CredentialRemoveResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -12617,11 +12955,11 @@ export type V2CredentialUpdateData = {
 
 export type V2CredentialUpdateErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12630,7 +12968,7 @@ export type V2CredentialUpdateError = V2CredentialUpdateErrors[keyof V2Credentia
 
 export type V2CredentialUpdateResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -12651,11 +12989,11 @@ export type V2PermissionRequestListData = {
 
 export type V2PermissionRequestListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12664,7 +13002,7 @@ export type V2PermissionRequestListError = V2PermissionRequestListErrors[keyof V
 
 export type V2PermissionRequestListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -12685,11 +13023,11 @@ export type V2PermissionSavedListData = {
 
 export type V2PermissionSavedListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12698,7 +13036,7 @@ export type V2PermissionSavedListError = V2PermissionSavedListErrors[keyof V2Per
 
 export type V2PermissionSavedListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: Array<PermissionSavedInfo>
@@ -12718,11 +13056,11 @@ export type V2PermissionSavedRemoveData = {
 
 export type V2PermissionSavedRemoveErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12731,7 +13069,7 @@ export type V2PermissionSavedRemoveError = V2PermissionSavedRemoveErrors[keyof V
 
 export type V2PermissionSavedRemoveResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -12749,15 +13087,15 @@ export type V2SessionPermissionListData = {
 
 export type V2SessionPermissionListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
 }
@@ -12766,7 +13104,7 @@ export type V2SessionPermissionListError = V2SessionPermissionListErrors[keyof V
 
 export type V2SessionPermissionListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: Array<PermissionV2Request>
@@ -12796,15 +13134,15 @@ export type V2SessionPermissionCreateData = {
 
 export type V2SessionPermissionCreateErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
 }
@@ -12813,7 +13151,7 @@ export type V2SessionPermissionCreateError = V2SessionPermissionCreateErrors[key
 
 export type V2SessionPermissionCreateResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: {
@@ -12838,15 +13176,15 @@ export type V2SessionPermissionGetData = {
 
 export type V2SessionPermissionGetErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError | PermissionNotFoundError
+   * Сесс олдсонгүй | Зөвшөөрлийн хүсэлт олдсонгүй
    */
   404: PermissionNotFoundError | SessionNotFoundError
 }
@@ -12855,7 +13193,7 @@ export type V2SessionPermissionGetError = V2SessionPermissionGetErrors[keyof V2S
 
 export type V2SessionPermissionGetResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: PermissionV2Request
@@ -12879,15 +13217,15 @@ export type V2SessionPermissionReplyData = {
 
 export type V2SessionPermissionReplyErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError | PermissionNotFoundError
+   * Сесс олдсонгүй | Зөвшөөрлийн хүсэлт олдсонгүй
    */
   404: PermissionNotFoundError | SessionNotFoundError
 }
@@ -12896,7 +13234,7 @@ export type V2SessionPermissionReplyError = V2SessionPermissionReplyErrors[keyof
 
 export type V2SessionPermissionReplyResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -12918,11 +13256,11 @@ export type V2FsReadData = {
 
 export type V2FsReadErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12931,7 +13269,7 @@ export type V2FsReadError = V2FsReadErrors[keyof V2FsReadErrors]
 
 export type V2FsReadResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: Blob | File
 }
@@ -12953,11 +13291,11 @@ export type V2FsListData = {
 
 export type V2FsListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -12966,7 +13304,7 @@ export type V2FsListError = V2FsListErrors[keyof V2FsListErrors]
 
 export type V2FsListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -12993,11 +13331,11 @@ export type V2FsFindData = {
 
 export type V2FsFindErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -13006,7 +13344,7 @@ export type V2FsFindError = V2FsFindErrors[keyof V2FsFindErrors]
 
 export type V2FsFindResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -13030,11 +13368,11 @@ export type V2CommandListData = {
 
 export type V2CommandListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -13043,7 +13381,7 @@ export type V2CommandListError = V2CommandListErrors[keyof V2CommandListErrors]
 
 export type V2CommandListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -13067,11 +13405,11 @@ export type V2SkillListData = {
 
 export type V2SkillListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -13080,7 +13418,7 @@ export type V2SkillListError = V2SkillListErrors[keyof V2SkillListErrors]
 
 export type V2SkillListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -13099,11 +13437,11 @@ export type V2EventSubscribeData = {
 
 export type V2EventSubscribeErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -13112,7 +13450,7 @@ export type V2EventSubscribeError = V2EventSubscribeErrors[keyof V2EventSubscrib
 
 export type V2EventSubscribeResponses = {
   /**
-   * Event stream
+   * Үйл явдлын урсгал
    */
   200: V2Event
 }
@@ -13133,11 +13471,11 @@ export type V2PtyListData = {
 
 export type V2PtyListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -13146,7 +13484,7 @@ export type V2PtyListError = V2PtyListErrors[keyof V2PtyListErrors]
 
 export type V2PtyListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -13178,11 +13516,11 @@ export type V2PtyCreateData = {
 
 export type V2PtyCreateErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -13191,7 +13529,7 @@ export type V2PtyCreateError = V2PtyCreateErrors[keyof V2PtyCreateErrors]
 
 export type V2PtyCreateResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -13217,15 +13555,15 @@ export type V2PtyRemoveData = {
 
 export type V2PtyRemoveErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * PtyNotFoundError
+   * PTY сесс олдсонгүй
    */
   404: PtyNotFoundError
 }
@@ -13234,7 +13572,7 @@ export type V2PtyRemoveError = V2PtyRemoveErrors[keyof V2PtyRemoveErrors]
 
 export type V2PtyRemoveResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -13257,15 +13595,15 @@ export type V2PtyGetData = {
 
 export type V2PtyGetErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * PtyNotFoundError
+   * PTY сесс олдсонгүй
    */
   404: PtyNotFoundError
 }
@@ -13274,7 +13612,7 @@ export type V2PtyGetError = V2PtyGetErrors[keyof V2PtyGetErrors]
 
 export type V2PtyGetResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -13306,15 +13644,15 @@ export type V2PtyUpdateData = {
 
 export type V2PtyUpdateErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * PtyNotFoundError
+   * PTY сесс олдсонгүй
    */
   404: PtyNotFoundError
 }
@@ -13323,7 +13661,7 @@ export type V2PtyUpdateError = V2PtyUpdateErrors[keyof V2PtyUpdateErrors]
 
 export type V2PtyUpdateResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -13349,19 +13687,19 @@ export type V2PtyConnectTokenData = {
 
 export type V2PtyConnectTokenErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * ForbiddenError
+   * Хандах эрхгүй
    */
   403: ForbiddenError
   /**
-   * PtyNotFoundError
+   * PTY сесс олдсонгүй
    */
   404: PtyNotFoundError
 }
@@ -13370,7 +13708,7 @@ export type V2PtyConnectTokenError = V2PtyConnectTokenErrors[keyof V2PtyConnectT
 
 export type V2PtyConnectTokenResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -13396,19 +13734,19 @@ export type V2PtyConnectData = {
 
 export type V2PtyConnectErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * ForbiddenError
+   * Хандах эрхгүй
    */
   403: ForbiddenError
   /**
-   * PtyNotFoundError
+   * PTY сесс олдсонгүй
    */
   404: PtyNotFoundError
 }
@@ -13417,7 +13755,7 @@ export type V2PtyConnectError = V2PtyConnectErrors[keyof V2PtyConnectErrors]
 
 export type V2PtyConnectResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: boolean
 }
@@ -13438,11 +13776,11 @@ export type V2QuestionRequestListData = {
 
 export type V2QuestionRequestListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -13451,7 +13789,7 @@ export type V2QuestionRequestListError = V2QuestionRequestListErrors[keyof V2Que
 
 export type V2QuestionRequestListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -13472,15 +13810,15 @@ export type V2SessionQuestionListData = {
 
 export type V2SessionQuestionListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * Сесс олдсонгүй
    */
   404: SessionNotFoundError
 }
@@ -13489,7 +13827,7 @@ export type V2SessionQuestionListError = V2SessionQuestionListErrors[keyof V2Ses
 
 export type V2SessionQuestionListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     data: Array<QuestionV2Request>
@@ -13510,15 +13848,15 @@ export type V2SessionQuestionReplyData = {
 
 export type V2SessionQuestionReplyErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError | QuestionNotFoundError
+   * Сесс олдсонгүй | Асуултын хүсэлт олдсонгүй
    */
   404: QuestionNotFoundError | SessionNotFoundError
 }
@@ -13527,7 +13865,7 @@ export type V2SessionQuestionReplyError = V2SessionQuestionReplyErrors[keyof V2S
 
 export type V2SessionQuestionReplyResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -13546,15 +13884,15 @@ export type V2SessionQuestionRejectData = {
 
 export type V2SessionQuestionRejectErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError | QuestionNotFoundError
+   * Сесс олдсонгүй | Асуултын хүсэлт олдсонгүй
    */
   404: QuestionNotFoundError | SessionNotFoundError
 }
@@ -13563,7 +13901,7 @@ export type V2SessionQuestionRejectError = V2SessionQuestionRejectErrors[keyof V
 
 export type V2SessionQuestionRejectResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -13584,11 +13922,11 @@ export type V2ReferenceListData = {
 
 export type V2ReferenceListErrors = {
   /**
-   * InvalidRequestError
+   * Хүчингүй хүсэлт
    */
   400: InvalidRequestError
   /**
-   * UnauthorizedError
+   * Танин баталгаажаагүй
    */
   401: UnauthorizedError
 }
@@ -13597,7 +13935,7 @@ export type V2ReferenceListError = V2ReferenceListErrors[keyof V2ReferenceListEr
 
 export type V2ReferenceListResponses = {
   /**
-   * Success
+   * Амжилттай
    */
   200: {
     location: LocationInfo
@@ -13626,7 +13964,7 @@ export type V2ProjectCopyRemoveData = {
 
 export type V2ProjectCopyRemoveErrors = {
   /**
-   * ProjectCopyError | InvalidRequestError
+   * Төслийн хуулбарын алдаа | Хүчингүй хүсэлт
    */
   400: ProjectCopyError | InvalidRequestError
 }
@@ -13635,7 +13973,7 @@ export type V2ProjectCopyRemoveError = V2ProjectCopyRemoveErrors[keyof V2Project
 
 export type V2ProjectCopyRemoveResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -13662,7 +14000,7 @@ export type V2ProjectCopyCreateData = {
 
 export type V2ProjectCopyCreateErrors = {
   /**
-   * ProjectCopyError | InvalidRequestError
+   * Төслийн хуулбарын алдаа | Хүчингүй хүсэлт
    */
   400: ProjectCopyError | InvalidRequestError
 }
@@ -13694,7 +14032,7 @@ export type V2ProjectCopyRefreshData = {
 
 export type V2ProjectCopyRefreshErrors = {
   /**
-   * ProjectCopyError | InvalidRequestError
+   * Төслийн хуулбарын алдаа | Хүчингүй хүсэлт
    */
   400: ProjectCopyError | InvalidRequestError
 }
@@ -13703,7 +14041,7 @@ export type V2ProjectCopyRefreshError = V2ProjectCopyRefreshErrors[keyof V2Proje
 
 export type V2ProjectCopyRefreshResponses = {
   /**
-   * <No Content>
+   * Агуулгагүй
    */
   204: void
 }
@@ -13726,11 +14064,11 @@ export type PtyConnectData = {
 
 export type PtyConnectErrors = {
   /**
-   * Forbidden
+   * Хандах эрхгүй
    */
   403: EffectHttpApiErrorForbidden
   /**
-   * Not found
+   * Олдсонгүй
    */
   404: NotFoundError
 }
@@ -13739,7 +14077,7 @@ export type PtyConnectError = PtyConnectErrors[keyof PtyConnectErrors]
 
 export type PtyConnectResponses = {
   /**
-   * Connected session
+   * Сесс холбогдсон
    */
   200: boolean
 }

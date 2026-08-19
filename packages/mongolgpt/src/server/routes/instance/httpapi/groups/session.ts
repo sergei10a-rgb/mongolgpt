@@ -110,344 +110,344 @@ export const SessionApi = HttpApi.make("session")
       .add(
         HttpApiEndpoint.get("list", SessionPaths.list, {
           query: ListQuery,
-          success: described(Schema.Array(Session.Info), "List of sessions"),
+          success: described(Schema.Array(Session.Info), "Сессүүдийн жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.list",
-            summary: "List sessions",
-            description: "Get a list of all MongolGPT sessions, sorted by most recently updated.",
+            summary: "Сессүүдийг жагсаах",
+            description: "Шинэчлэгдсэн хугацаагаар нь эрэмбэлсэн бүх MongolGPT сессийн жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.get("status", SessionPaths.status, {
           query: WorkspaceRoutingQuery,
-          success: described(StatusMap, "Get session status"),
+          success: described(StatusMap, "Сессийн төлөв авах"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.status",
-            summary: "Get session status",
-            description: "Retrieve the current status of all sessions, including active, idle, and completed states.",
+            summary: "Сессийн төлөв авах",
+            description: "Идэвхтэй, сул болон дууссан төлөвийг багтаасан бүх сессийн одоогийн төлөвийг авна.",
           }),
         ),
         HttpApiEndpoint.get("get", SessionPaths.get, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
-          success: described(Session.Info, "Get session"),
+          success: described(Session.Info, "Сесс авах"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.get",
-            summary: "Get session",
-            description: "Retrieve detailed information about a specific MongolGPT session.",
+            summary: "Сесс авах",
+            description: "Тодорхой MongolGPT сессийн дэлгэрэнгүй мэдээллийг авна.",
           }),
         ),
         HttpApiEndpoint.get("children", SessionPaths.children, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Session.Info), "List of children"),
+          success: described(Schema.Array(Session.Info), "Салаалсан сессүүдийн жагсаалт"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.children",
-            summary: "Get session children",
-            description: "Retrieve all child sessions that were forked from the specified parent session.",
+            summary: "Салаалсан сессүүдийг авах",
+            description: "Заасан эцэг сессээс салаалсан бүх хүүхэд сессийг авна.",
           }),
         ),
         HttpApiEndpoint.get("todo", SessionPaths.todo, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Todo.Info), "Todo list"),
+          success: described(Schema.Array(Todo.Info), "Хийх зүйлсийн жагсаалт"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.todo",
-            summary: "Get session todos",
-            description: "Retrieve the todo list associated with a specific session, showing tasks and action items.",
+            summary: "Сессийн хийх зүйлсийг авах",
+            description: "Тодорхой сесстэй холбоотой, даалгавар болон хийх үйлдлүүдийг харуулсан жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.get("diff", SessionPaths.diff, {
           params: { sessionID: SessionID },
           query: DiffQuery,
-          success: described(Schema.Array(Snapshot.FileDiff), "Successfully retrieved diff"),
+          success: described(Schema.Array(Snapshot.FileDiff), "Файлын ялгааг амжилттай авсан"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.diff",
-            summary: "Get message diff",
-            description: "Get the file changes (diff) that resulted from a specific user message in the session.",
+            summary: "Мессежийн өөрчлөлтийг авах",
+            description: "Сессийн тодорхой хэрэглэгчийн мессежийн үр дүнд гарсан файлын өөрчлөлтийг (diff) авна.",
           }),
         ),
         HttpApiEndpoint.get("messages", SessionPaths.messages, {
           params: { sessionID: SessionID },
           query: MessagesQuery,
-          success: described(Schema.Array(SessionV1.WithParts), "List of messages"),
+          success: described(Schema.Array(SessionV1.WithParts), "Мессежүүдийн жагсаалт"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.messages",
-            summary: "Get session messages",
-            description: "Retrieve all messages in a session, including user prompts and AI responses.",
+            summary: "Сессийн мессежүүдийг авах",
+            description: "Хэрэглэгчийн промпт болон AI-ийн хариуг багтаасан сессийн бүх мессежийг авна.",
           }),
         ),
         HttpApiEndpoint.get("message", SessionPaths.message, {
           params: { sessionID: SessionID, messageID: MessageID },
           query: WorkspaceRoutingQuery,
-          success: described(SessionV1.WithParts, "Message"),
+          success: described(SessionV1.WithParts, "Мессеж"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.message",
-            summary: "Get message",
-            description: "Retrieve a specific message from a session by its message ID.",
+            summary: "Мессеж авах",
+            description: "Сессээс мессежийн ID-аар тодорхой мессежийг авна.",
           }),
         ),
         HttpApiEndpoint.post("create", SessionPaths.create, {
           query: WorkspaceRoutingQuery,
           payload: [HttpApiSchema.NoContent, Session.CreateInput],
-          success: described(Session.Info, "Successfully created session"),
+          success: described(Session.Info, "Сессийг амжилттай үүсгэсэн"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.create",
-            summary: "Create session",
+            summary: "Сесс үүсгэх",
             description:
-              "Create a new MongolGPT session for interacting with AI assistants and managing conversations.",
+              "AI туслахтай харилцаж, харилцан яриаг удирдах шинэ MongolGPT сесс үүсгэнэ.",
           }),
         ),
         HttpApiEndpoint.delete("remove", SessionPaths.remove, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Successfully deleted session"),
+          success: described(Schema.Boolean, "Сессийг амжилттай устгасан"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.delete",
-            summary: "Delete session",
-            description: "Delete a session and permanently remove all associated data, including messages and history.",
+            summary: "Сесс устгах",
+            description: "Сессийг устгаж, мессеж болон түүх зэрэг холбоотой бүх өгөгдлийг бүрмөсөн арилгана.",
           }),
         ),
         HttpApiEndpoint.patch("update", SessionPaths.update, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
           payload: UpdatePayload,
-          success: described(Session.Info, "Successfully updated session"),
+          success: described(Session.Info, "Сессийг амжилттай шинэчилсэн"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.update",
-            summary: "Update session",
-            description: "Update properties of an existing session, such as title or other metadata.",
+            summary: "Сесс шинэчлэх",
+            description: "Байгаа сессийн гарчиг болон бусад мета өгөгдөл зэрэг шинжийг шинэчилнэ.",
           }),
         ),
         HttpApiEndpoint.post("fork", SessionPaths.fork, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
           payload: [HttpApiSchema.NoContent, ForkPayload],
-          success: described(Session.Info, "200"),
+          success: described(Session.Info, "Салаалсан сесс"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.fork",
-            summary: "Fork session",
-            description: "Create a new session by forking an existing session at a specific message point.",
+            summary: "Сесс салаалуулах",
+            description: "Байгаа сессийг тодорхой мессежийн цэг дээр салаалж шинэ сесс үүсгэнэ.",
           }),
         ),
         HttpApiEndpoint.post("abort", SessionPaths.abort, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Aborted session"),
+          success: described(Schema.Boolean, "Сессийг зогсоосон"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.abort",
-            summary: "Abort session",
-            description: "Abort an active session and stop any ongoing AI processing or command execution.",
+            summary: "Сесс зогсоох",
+            description: "Идэвхтэй сессийг зогсоож, үргэлжилж буй AI боловсруулалт эсвэл командын гүйцэтгэлийг дуусгана.",
           }),
         ),
         HttpApiEndpoint.post("init", SessionPaths.init, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
           payload: InitPayload,
-          success: described(Schema.Boolean, "200"),
+          success: described(Schema.Boolean, "Сессийг эхлүүлсэн"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.init",
-            summary: "Initialize session",
+            summary: "Сесс эхлүүлэх",
             description:
-              "Analyze the current application and create an AGENTS.md file with project-specific agent configurations.",
+              "Одоогийн аппликэйшнийг шинжилж, төсөлд зориулсан агентын тохиргоо бүхий AGENTS.md файл үүсгэнэ.",
           }),
         ),
         HttpApiEndpoint.post("share", SessionPaths.share, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
-          success: described(Session.Info, "Successfully shared session"),
+          success: described(Session.Info, "Сессийг амжилттай хуваалцсан"),
           error: [HttpApiError.InternalServerError, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.share",
-            summary: "Share session",
-            description: "Create a shareable link for a session, allowing others to view the conversation.",
+            summary: "Сесс хуваалцах",
+            description: "Бусад хүн харилцан яриаг үзэх боломжтой, сесс хуваалцах холбоос үүсгэнэ.",
           }),
         ),
         HttpApiEndpoint.delete("unshare", SessionPaths.share, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
-          success: described(Session.Info, "Successfully unshared session"),
+          success: described(Session.Info, "Сессийн хуваалцалтыг амжилттай цуцалсан"),
           error: [HttpApiError.InternalServerError, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.unshare",
-            summary: "Unshare session",
-            description: "Remove the shareable link for a session, making it private again.",
+            summary: "Сессийн хуваалцалтыг цуцлах",
+            description: "Сессийн хуваалцах холбоосыг устгаж, сессийг дахин хувийн болгоно.",
           }),
         ),
         HttpApiEndpoint.post("summarize", SessionPaths.summarize, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
           payload: SummarizePayload,
-          success: described(Schema.Boolean, "Summarized session"),
+          success: described(Schema.Boolean, "Сессийг хураангуйлсан"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.summarize",
-            summary: "Summarize session",
-            description: "Generate a concise summary of the session using AI compaction to preserve key information.",
+            summary: "Сессийг хураангуйлах",
+            description: "Гол мэдээллийг хадгалах зорилгоор AI-ийн хураангуйлах аргыг ашиглан сессийн товч хураангуй үүсгэнэ.",
           }),
         ),
         HttpApiEndpoint.post("prompt", SessionPaths.prompt, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
           payload: PromptPayload,
-          success: described(SessionV1.WithParts, "Created message"),
+          success: described(SessionV1.WithParts, "Мессеж үүссэн"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.prompt",
-            summary: "Send message",
-            description: "Create and send a new message to a session, streaming the AI response.",
+            summary: "Мессеж илгээх",
+            description: "Сесст шинэ мессеж үүсгэж илгээн, AI-ийн хариуг урсгалаар дамжуулна.",
           }),
         ),
         HttpApiEndpoint.post("promptAsync", SessionPaths.promptAsync, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
           payload: PromptPayload,
-          success: described(HttpApiSchema.NoContent, "Prompt accepted"),
+          success: described(HttpApiSchema.NoContent, "Промптыг хүлээн авсан"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.prompt_async",
-            summary: "Send async message",
+            summary: "Асинхрон мессеж илгээх",
             description:
-              "Create and send a new message to a session asynchronously, starting the session if needed and returning immediately.",
+              "Сесст асинхроноор шинэ мессеж үүсгэж илгээнэ; шаардлагатай бол сессийг эхлүүлээд шууд буцаана.",
           }),
         ),
         HttpApiEndpoint.post("command", SessionPaths.command, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
           payload: CommandPayload,
-          success: described(SessionV1.WithParts, "Created message"),
+          success: described(SessionV1.WithParts, "Мессеж үүссэн"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.command",
-            summary: "Send command",
-            description: "Send a new command to a session for execution by the AI assistant.",
+            summary: "Команд илгээх",
+            description: "AI туслахаар гүйцэтгүүлэх шинэ командыг сесст илгээнэ.",
           }),
         ),
         HttpApiEndpoint.post("shell", SessionPaths.shell, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
           payload: ShellPayload,
-          success: described(SessionV1.WithParts, "Created message"),
+          success: described(SessionV1.WithParts, "Мессеж үүссэн"),
           error: [HttpApiError.BadRequest, ApiNotFoundError, SessionBusyError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.shell",
-            summary: "Run shell command",
-            description: "Execute a shell command within the session context and return the AI's response.",
+            summary: "Shell команд ажиллуулах",
+            description: "Сессийн орчинд shell командыг гүйцэтгэж, AI-ийн хариуг буцаана.",
           }),
         ),
         HttpApiEndpoint.post("revert", SessionPaths.revert, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
           payload: RevertPayload,
-          success: described(Session.Info, "Updated session"),
+          success: described(Session.Info, "Сесс шинэчлэгдсэн"),
           error: [HttpApiError.BadRequest, ApiNotFoundError, SessionBusyError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.revert",
-            summary: "Revert message",
+            summary: "Мессеж буцаах",
             description:
-              "Revert a specific message in a session, undoing its effects and restoring the previous state.",
+              "Сессийн тодорхой мессежийг буцааж, нөлөөг нь цуцлан өмнөх төлөвийг сэргээнэ.",
           }),
         ),
         HttpApiEndpoint.post("unrevert", SessionPaths.unrevert, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
-          success: described(Session.Info, "Updated session"),
+          success: described(Session.Info, "Сесс шинэчлэгдсэн"),
           error: [HttpApiError.BadRequest, ApiNotFoundError, SessionBusyError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.unrevert",
-            summary: "Restore reverted messages",
-            description: "Restore all previously reverted messages in a session.",
+            summary: "Буцаасан мессежүүдийг сэргээх",
+            description: "Сессэд өмнө нь буцаасан бүх мессежийг сэргээнэ.",
           }),
         ),
         HttpApiEndpoint.post("permissionRespond", SessionPaths.permissions, {
           params: { sessionID: SessionID, permissionID: PermissionV1.ID },
           query: WorkspaceRoutingQuery,
           payload: PermissionResponsePayload,
-          success: described(Schema.Boolean, "Permission processed successfully"),
+          success: described(Schema.Boolean, "Зөвшөөрлийг амжилттай боловсруулсан"),
           error: [HttpApiError.BadRequest, ApiNotFoundError, PermissionNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "permission.respond",
-            summary: "Respond to permission",
-            description: "Approve or deny a permission request from the AI assistant.",
+            summary: "Зөвшөөрлийн хүсэлтэд хариулах",
+            description: "AI туслахын зөвшөөрлийн хүсэлтийг зөвшөөрөх эсвэл татгалзана.",
             deprecated: true,
           }),
         ),
         HttpApiEndpoint.delete("deleteMessage", SessionPaths.deleteMessage, {
           params: { sessionID: SessionID, messageID: MessageID },
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Successfully deleted message"),
+          success: described(Schema.Boolean, "Мессежийг амжилттай устгасан"),
           error: [HttpApiError.BadRequest, ApiNotFoundError, SessionBusyError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.deleteMessage",
-            summary: "Delete message",
+            summary: "Мессеж устгах",
             description:
-              "Permanently delete a specific message and all of its parts from a session without reverting file changes.",
+              "Файлын өөрчлөлтийг буцаахгүйгээр тодорхой мессеж болон түүний бүх хэсгийг сессээс бүрмөсөн устгана.",
           }),
         ),
         HttpApiEndpoint.delete("deletePart", SessionPaths.deletePart, {
           params: { sessionID: SessionID, messageID: MessageID, partID: PartID },
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Successfully deleted part"),
+          success: described(Schema.Boolean, "Хэсгийг амжилттай устгасан"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "part.delete",
-            description: "Delete a part from a message.",
+            description: "Мессежээс хэсгийг устгана.",
           }),
         ),
         HttpApiEndpoint.patch("updatePart", SessionPaths.updatePart, {
           params: { sessionID: SessionID, messageID: MessageID, partID: PartID },
           query: WorkspaceRoutingQuery,
           payload: SessionV1.Part,
-          success: described(SessionV1.Part, "Successfully updated part"),
+          success: described(SessionV1.Part, "Хэсгийг амжилттай шинэчилсэн"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "part.update",
-            description: "Update a part in a message.",
+            description: "Мессежийн хэсгийг шинэчилнэ.",
           }),
         ),
       )
       .annotateMerge(
         OpenApi.annotations({
-          title: "session",
-          description: "Experimental HttpApi session routes.",
+          title: "Сесс",
+          description: "Туршилтын HttpApi сессийн замууд.",
         }),
       )
       .middleware(InstanceContextMiddleware)
@@ -456,8 +456,8 @@ export const SessionApi = HttpApi.make("session")
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT-ийн туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Сонгосон инстансын замуудад зориулсан туршилтын HttpApi интерфейс.",
     }),
   )

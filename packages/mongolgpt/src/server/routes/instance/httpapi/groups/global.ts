@@ -74,12 +74,12 @@ export const GlobalApi = HttpApi.make("global").add(
   HttpApiGroup.make("global")
     .add(
       HttpApiEndpoint.get("health", GlobalPaths.health, {
-        success: described(GlobalHealth, "Health information"),
+        success: described(GlobalHealth, "Эрүүл мэндийн мэдээлэл"),
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "global.health",
-          summary: "Get health",
-          description: "Get health information about the MongolGPT server.",
+          summary: "Эрүүл мэндийн төлөв авах",
+          description: "MongolGPT серверийн эрүүл мэндийн мэдээллийг авна.",
         }),
       ),
       HttpApiEndpoint.get("event", GlobalPaths.event, {
@@ -87,50 +87,50 @@ export const GlobalApi = HttpApi.make("global").add(
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "global.event",
-          summary: "Get global events",
-          description: "Subscribe to global events from the MongolGPT system using server-sent events.",
+          summary: "Глобал үйл явдлууд авах",
+          description: "Серверээс илгээсэн үйл явдлаар MongolGPT системийн глобал үйл явдлуудад бүртгүүлнэ.",
         }),
       ),
       HttpApiEndpoint.get("configGet", GlobalPaths.config, {
-        success: described(ConfigV1.Info, "Get global config info"),
+        success: described(ConfigV1.Info, "Глобал тохиргооны мэдээлэл авах"),
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "global.config.get",
-          summary: "Get global configuration",
-          description: "Retrieve the current global MongolGPT configuration settings and preferences.",
+          summary: "Глобал тохиргоо авах",
+          description: "Одоогийн глобал MongolGPT тохиргоо болон тохируулгуудыг авна.",
         }),
       ),
       HttpApiEndpoint.patch("configUpdate", GlobalPaths.config, {
         payload: ConfigV1.Info,
-        success: described(ConfigV1.Info, "Successfully updated global config"),
+        success: described(ConfigV1.Info, "Глобал тохиргоог амжилттай шинэчиллээ"),
         error: HttpApiError.BadRequest,
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "global.config.update",
-          summary: "Update global configuration",
-          description: "Update global MongolGPT configuration settings and preferences.",
+          summary: "Глобал тохиргоо шинэчлэх",
+          description: "Глобал MongolGPT тохиргоо болон тохируулгуудыг шинэчилнэ.",
         }),
       ),
       HttpApiEndpoint.post("dispose", GlobalPaths.dispose, {
-        success: described(Schema.Boolean, "Global disposed"),
+        success: described(Schema.Boolean, "Глобал инстанцуудыг цэвэрлэлээ"),
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "global.dispose",
-          summary: "Dispose instance",
-          description: "Clean up and dispose all MongolGPT instances, releasing all resources.",
+          summary: "Инстанцуудыг цэвэрлэх",
+          description: "Бүх MongolGPT инстанцыг цэвэрлэж, бүх нөөцийг чөлөөлнө.",
         }),
       ),
       HttpApiEndpoint.post("upgrade", GlobalPaths.upgrade, {
         payload: [HttpApiSchema.NoContent, GlobalUpgradeInput],
-        success: described(GlobalUpgradeResult, "Upgrade result"),
+        success: described(GlobalUpgradeResult, "Шинэчлэлийн үр дүн"),
         error: HttpApiError.BadRequest,
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "global.upgrade",
-          summary: "Upgrade MongolGPT",
-          description: "Upgrade MongolGPT to the specified version or latest if not specified.",
+          summary: "MongolGPT шинэчлэх",
+          description: "MongolGPT-ийг заасан хувилбар руу, хувилбар заагаагүй бол хамгийн сүүлийн хувилбар руу шинэчилнэ.",
         }),
       ),
     )
-    .annotateMerge(OpenApi.annotations({ title: "global", description: "Global server routes." })),
+    .annotateMerge(OpenApi.annotations({ title: "Ерөнхий серверийн үйлдэл", description: "Ерөнхий серверийн маршрутууд." })),
 )

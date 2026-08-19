@@ -74,9 +74,49 @@ const QueryParameterSchemas: Record<string, OpenApiSchema> = {
 }
 
 const LegacyComponentDescriptions: Record<string, string> = {
-  LogLevel: "Log level",
-  ServerConfig: "Server configuration for mongolgpt serve and web commands",
-  LayoutConfig: "@deprecated Always uses stretch layout.",
+  LogLevel: "Логийн түвшин",
+  ServerConfig: "mongolgpt serve болон web командын серверийн тохиргоо",
+  LayoutConfig: "@deprecated Үргэлж stretch байрлал ашиглана.",
+}
+
+const ResponseDescriptionTranslations: Record<string, string> = {
+  "Bad request": "Буруу хүсэлт",
+  "Not found": "Олдсонгүй",
+  Success: "Амжилттай",
+  "<No Content>": "Агуулгагүй",
+  "Event stream": "Үйл явдлын урсгал",
+  "Raw VCS diff": "VCS-ийн боловсруулаагүй ялгаа",
+  Path: "Зам",
+  BadRequest: "Буруу хүсэлт",
+  InvalidRequestError: "Хүчингүй хүсэлт",
+  UnauthorizedError: "Танин баталгаажаагүй",
+  Forbidden: "Хандах эрхгүй",
+  ForbiddenError: "Хандах эрхгүй",
+  ConflictError: "Зөрчилтэй хүсэлт",
+  InternalServerError: "Серверийн дотоод алдаа",
+  ServiceUnavailableError: "Үйлчилгээ түр боломжгүй",
+  UnknownError: "Үл мэдэгдэх алдаа",
+  NotFoundError: "Олдсонгүй",
+  ProviderNotFoundError: "Үйлчилгээ үзүүлэгч олдсонгүй",
+  ProjectNotFoundError: "Төсөл олдсонгүй",
+  SessionNotFoundError: "Сесс олдсонгүй",
+  MessageNotFoundError: "Мессеж олдсонгүй",
+  PermissionNotFoundError: "Зөвшөөрлийн хүсэлт олдсонгүй",
+  QuestionNotFoundError: "Асуултын хүсэлт олдсонгүй",
+  PtyNotFoundError: "PTY сесс олдсонгүй",
+  PtyForbiddenError: "PTY-д хандах эрхгүй",
+  McpServerNotFoundError: "MCP сервер олдсонгүй",
+  McpUnsupportedOAuthError: "MCP сервер OAuth дэмждэггүй",
+  InvalidCursorError: "Хүчингүй заагч",
+  SessionBusyError: "Сесс ажиллаж байна",
+  WorktreeError: "Төслийн хуулбарын алдаа",
+  VcsApplyError: "VCS өөрчлөлт хэрэглэх алдаа",
+  WorkspaceCreateError: "Ажлын орчин үүсгэх алдаа",
+  WorkspaceWarpError: "Ажлын орчинд шилжүүлэх алдаа",
+  ProjectCopyError: "Төслийн хуулбарын алдаа",
+  ProviderAuthError: "Үйлчилгээ үзүүлэгчийн нэвтрэлтийн алдаа",
+  CompatImportError: "Нийцтэй импортын алдаа",
+  MoveSessionError: "Сесс шилжүүлэх алдаа",
 }
 
 function matchLegacyOpenApi(input: Record<string, unknown>) {
@@ -156,7 +196,7 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
         // HttpApi has no first-class SSE response schema, and these handlers are
         // raw/streaming routes. Document the actual wire protocol explicitly.
         operation.responses!["200"] = {
-          description: "Event stream",
+          description: "Үйл явдлын урсгал",
           content: {
             "text/event-stream": {
               schema:
@@ -169,6 +209,9 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
           },
         }
       }
+      for (const response of Object.values(operation.responses ?? {})) {
+        if (response.description) response.description = localizeResponseDescription(response.description)
+      }
       const route = `${method.toUpperCase()} ${path}`
       for (const param of operation.parameters ?? []) normalizeParameter(param, route)
     }
@@ -179,6 +222,14 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
 
 function isV2ApiPath(path: string) {
   return path === "/api" || path.startsWith("/api/")
+}
+
+function localizeResponseDescription(description: string) {
+  if (ResponseDescriptionTranslations[description]) return ResponseDescriptionTranslations[description]
+  return description
+    .split(" | ")
+    .map((item) => ResponseDescriptionTranslations[item] ?? item)
+    .join(" | ")
 }
 
 function addLegacyErrorSchemas(spec: OpenApiSpec) {
@@ -345,10 +396,10 @@ function rewriteRefs(input: unknown, from: string, to: string): void {
 
 function normalizeLegacyErrorResponses(operation: OpenApiOperation) {
   if (operation.responses?.["400"] && isLegacyBadRequestResponse(operation.responses["400"])) {
-    operation.responses["400"] = legacyErrorResponse("Bad request", "BadRequestError")
+    operation.responses["400"] = legacyErrorResponse("Буруу хүсэлт", "BadRequestError")
   }
   if (operation.responses?.["404"] && isBuiltInErrorResponse(operation.responses["404"], "NotFound")) {
-    operation.responses["404"] = legacyErrorResponse("Not found", "NotFoundError")
+    operation.responses["404"] = legacyErrorResponse("Олдсонгүй", "NotFoundError")
   }
 }
 
@@ -529,9 +580,9 @@ function normalizeParameter(param: OpenApiParameter, route: string) {
 
 export const PublicApi = MongolGPTHttpApi.annotateMerge(
   OpenApi.annotations({
-    title: "mongolgpt",
+    title: "MongolGPT",
     version: "1.0.0",
-    description: "MongolGPT API",
+    description: "MongolGPT-ийн API",
     transform: matchLegacyOpenApi,
   }),
 )

@@ -60,7 +60,7 @@ describe("global HttpApi", () => {
       )
 
       expect(response.status).toBe(400)
-      expect(yield* response.json).toEqual({ success: false, error: "Invalid request body" })
+      expect(yield* response.json).toEqual({ success: false, error: "Хүсэлтийн өгөгдөл буруу байна." })
     }),
   )
 })

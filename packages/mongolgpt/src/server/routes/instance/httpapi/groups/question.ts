@@ -11,7 +11,7 @@ import { described } from "./metadata"
 const root = "/question"
 const ReplyPayload = Schema.Struct({
   answers: Schema.Array(Question.Answer).annotate({
-    description: "User answers in order of questions (each answer is an array of selected labels)",
+    description: "Асуултуудын дарааллын дагуух хэрэглэгчийн хариултууд (хариулт бүр нь сонгосон шошгуудын массив байна)",
   }),
 })
 
@@ -21,44 +21,44 @@ export const QuestionApi = HttpApi.make("question")
       .add(
         HttpApiEndpoint.get("list", root, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Question.Request), "List of pending questions"),
+          success: described(Schema.Array(Question.Request), "Хүлээгдэж буй асуултуудын жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "question.list",
-            summary: "List pending questions",
-            description: "Get all pending question requests across all sessions.",
+            summary: "Хүлээгдэж буй асуултуудыг жагсаах",
+            description: "Бүх сессийн хүлээгдэж буй асуултын хүсэлтүүдийг авна.",
           }),
         ),
         HttpApiEndpoint.post("reply", `${root}/:requestID/reply`, {
           params: { requestID: QuestionID },
           query: WorkspaceRoutingQuery,
           payload: ReplyPayload,
-          success: described(Schema.Boolean, "Question answered successfully"),
+          success: described(Schema.Boolean, "Асуултад амжилттай хариулсан"),
           error: [HttpApiError.BadRequest, QuestionNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "question.reply",
-            summary: "Reply to question request",
-            description: "Provide answers to a question request from the AI assistant.",
+            summary: "Асуултын хүсэлтэд хариулах",
+            description: "AI туслахын асуултын хүсэлтэд хариулт өгнө.",
           }),
         ),
         HttpApiEndpoint.post("reject", `${root}/:requestID/reject`, {
           params: { requestID: QuestionID },
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Question rejected successfully"),
+          success: described(Schema.Boolean, "Асуултыг амжилттай татгалзсан"),
           error: [HttpApiError.BadRequest, QuestionNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "question.reject",
-            summary: "Reject question request",
-            description: "Reject a question request from the AI assistant.",
+            summary: "Асуултын хүсэлтээс татгалзах",
+            description: "AI туслахын асуултын хүсэлтээс татгалзана.",
           }),
         ),
       )
       .annotateMerge(
         OpenApi.annotations({
-          title: "question",
-          description: "Question routes.",
+          title: "Асуулт",
+          description: "Асуултын замууд.",
         }),
       )
       .middleware(InstanceContextMiddleware)
@@ -69,6 +69,6 @@ export const QuestionApi = HttpApi.make("question")
     OpenApi.annotations({
       title: "MongolGPT HttpApi",
       version: "0.0.1",
-      description: "Effect HttpApi surface for instance routes.",
+      description: "Инстансын замуудад зориулсан Effect HttpApi интерфейс.",
     }),
   )

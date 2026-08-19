@@ -24,7 +24,7 @@ export class ProviderAuthApiError extends Schema.ErrorClass<ProviderAuthApiError
     data: Schema.Struct({
       providerID: Schema.optional(ProviderV2.ID),
       field: Schema.optional(Schema.String),
-      message: Schema.optional(Schema.String),
+      message: Schema.optional(Schema.String.annotate({ description: "Үйлчилгээ үзүүлэгчийн баталгаажуулалтын алдааны тайлбар" })),
       kind: Schema.optional(Schema.String),
     }),
   },
@@ -37,55 +37,56 @@ export const ProviderApi = HttpApi.make("provider")
       .add(
         HttpApiEndpoint.get("list", root, {
           query: WorkspaceRoutingQuery,
-          success: described(Provider.ListResult, "List of providers"),
+          success: described(Provider.ListResult, "Провайдеруудын жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "provider.list",
-            summary: "List providers",
-            description: "Get a list of all available AI providers, including both available and connected ones.",
+            summary: "Провайдеруудыг жагсаах",
+            description: "Боломжтой болон холбогдсон бүх AI провайдерын жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.get("auth", `${root}/auth`, {
           query: WorkspaceRoutingQuery,
-          success: described(ProviderAuth.Methods, "Provider auth methods"),
+          success: described(ProviderAuth.Methods, "Провайдерын нэвтрэлтийн аргууд"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "provider.auth",
-            summary: "Get provider auth methods",
-            description: "Retrieve available authentication methods for all AI providers.",
+            summary: "Провайдерын нэвтрэлтийн аргуудыг авах",
+            description: "Бүх AI провайдерт ашиглах боломжтой нэвтрэлтийн аргуудыг авна.",
           }),
         ),
         HttpApiEndpoint.post("authorize", `${root}/:providerID/oauth/authorize`, {
           params: { providerID: ProviderV2.ID },
           query: WorkspaceRoutingQuery,
           payload: ProviderAuth.AuthorizeInput,
-          success: described(Schema.UndefinedOr(ProviderAuth.Authorization), "Authorization URL and method"),
+          success: described(Schema.UndefinedOr(ProviderAuth.Authorization), "Зөвшөөрлийн URL болон арга"),
           error: ProviderAuthApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "provider.oauth.authorize",
-            summary: "Start OAuth authorization",
-            description: "Start the OAuth authorization flow for a provider.",
+            summary: "OAuth зөвшөөрөл олголтыг эхлүүлэх",
+            description: "Провайдерт зориулсан OAuth зөвшөөрөл олголтын урсгалыг эхлүүлнэ.",
           }),
         ),
         HttpApiEndpoint.post("callback", `${root}/:providerID/oauth/callback`, {
           params: { providerID: ProviderV2.ID },
           query: WorkspaceRoutingQuery,
           payload: ProviderAuth.CallbackInput,
-          success: described(Schema.Boolean, "OAuth callback processed successfully"),
+          success: described(Schema.Boolean, "OAuth буцах дуудлагыг амжилттай боловсруулсан"),
           error: ProviderAuthApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "provider.oauth.callback",
-            summary: "Handle OAuth callback",
-            description: "Handle the OAuth callback from a provider after user authorization.",
+            summary: "OAuth буцах дуудлагыг боловсруулах",
+            description:
+              "Хэрэглэгч зөвшөөрөл өгсний дараа үйлчилгээ үзүүлэгчээс ирсэн OAuth буцах дуудлагыг боловсруулна.",
           }),
         ),
       )
       .annotateMerge(
         OpenApi.annotations({
-          title: "provider",
-          description: "Experimental HttpApi provider routes.",
+          title: "Үйлчилгээ үзүүлэгч",
+          description: "Туршилтын HttpApi провайдерын замууд.",
         }),
       )
       .middleware(InstanceContextMiddleware)
@@ -94,8 +95,8 @@ export const ProviderApi = HttpApi.make("provider")
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT-ийн туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Инстансын сонгосон замуудыг хамарсан туршилтын HttpApi интерфейс.",
     }),
   )

@@ -17,13 +17,13 @@ export const EventApi = HttpApi.make("event").add(
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "event.subscribe",
-          summary: "Subscribe to events",
-          description: "Get events",
+          summary: "Үйл явдлуудад бүртгүүлэх",
+          description: "Үйл явдлуудыг хүлээн авах",
         }),
       ),
     )
     .middleware(InstanceContextMiddleware)
     .middleware(WorkspaceRoutingMiddleware)
     .middleware(Authorization)
-    .annotateMerge(OpenApi.annotations({ title: "event", description: "Instance event stream route." })),
+    .annotateMerge(OpenApi.annotations({ title: "Үйл явдал", description: "Инстанцын үйл явдлын урсгалын маршрут." })),
 )

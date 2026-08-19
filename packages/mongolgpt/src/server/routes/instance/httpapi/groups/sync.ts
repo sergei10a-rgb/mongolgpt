@@ -48,56 +48,56 @@ export const SyncApi = HttpApi.make("sync")
       .add(
         HttpApiEndpoint.post("start", SyncPaths.start, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Workspace sync started"),
+          success: described(Schema.Boolean, "Ажлын орчны синхрончлол эхэлсэн"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "sync.start",
-            summary: "Start workspace sync",
-            description: "Start sync loops for workspaces in the current project that have active sessions.",
+            summary: "Ажлын орчны синхрончлол эхлүүлэх",
+            description: "Идэвхтэй сесстэй, одоогийн төсөлд буй ажлын орчнуудын синхрончлолын давталтыг эхлүүлнэ.",
           }),
         ),
         HttpApiEndpoint.post("replay", SyncPaths.replay, {
           query: WorkspaceRoutingQuery,
           payload: ReplayPayload,
-          success: described(ReplayResponse, "Replayed sync events"),
+          success: described(ReplayResponse, "Синхрончлолын үйл явдлыг дахин тоглуулсан"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "sync.replay",
-            summary: "Replay sync events",
-            description: "Validate and replay a complete sync event history.",
+            summary: "Синхрончлолын үйл явдлыг дахин тоглуулах",
+            description: "Синхрончлолын үйл явдлын бүрэн түүхийг шалгаж, дахин тоглуулна.",
           }),
         ),
         HttpApiEndpoint.post("steal", SyncPaths.steal, {
           query: WorkspaceRoutingQuery,
           payload: SessionPayload,
-          success: described(SessionPayload, "Session stolen into workspace"),
+          success: described(SessionPayload, "Сессийг ажлын орчинд шилжүүлсэн"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "sync.steal",
-            summary: "Steal session into workspace",
-            description: "Update a session to belong to the current workspace through the sync event system.",
+            summary: "Сессийг ажлын орчинд шилжүүлэх",
+            description: "Синхрончлолын үйл явдлын системээр сессийг одоогийн ажлын орчинд харьяалуулна.",
           }),
         ),
         HttpApiEndpoint.post("history", SyncPaths.history, {
           query: WorkspaceRoutingQuery,
           payload: HistoryPayload,
-          success: described(Schema.Array(HistoryEvent), "Sync events"),
+          success: described(Schema.Array(HistoryEvent), "Синхрончлолын үйл явдлууд"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "sync.history.list",
-            summary: "List sync events",
+            summary: "Синхрончлолын үйл явдлуудыг жагсаах",
             description:
-              "List sync events for all aggregates. Keys are aggregate IDs the client already knows about, values are the last known sequence ID. Events with seq > value are returned for those aggregates. Aggregates not listed in the input get their full history.",
+              "Бүх агрегатын синхрончлолын үйл явдлыг жагсаана. Түлхүүрүүд нь клиентэд аль хэдийн мэдэгдэж буй агрегатын ID, утгууд нь хамгийн сүүлд мэдэгдэж буй дарааллын ID байна. Тухайн агрегатын seq утга нь value утгаас их байх нөхцөлийг хангасан үйл явдлуудыг буцаана. Оролтод жагсаагдаагүй агрегатын бүрэн түүхийг буцаана.",
           }),
         ),
       )
       .annotateMerge(
         OpenApi.annotations({
-          title: "sync",
-          description: "Experimental HttpApi sync routes.",
+          title: "Синхрончлол",
+          description: "Туршилтын HttpApi синхрончлолын замууд.",
         }),
       )
       .middleware(InstanceContextMiddleware)
@@ -106,8 +106,8 @@ export const SyncApi = HttpApi.make("sync")
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT-ийн туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Сонгосон инстансын замуудад зориулсан туршилтын HttpApi интерфейс.",
     }),
   )

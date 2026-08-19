@@ -15,41 +15,41 @@ export const ConfigApi = HttpApi.make("config")
       .add(
         HttpApiEndpoint.get("get", root, {
           query: WorkspaceRoutingQuery,
-          success: described(ConfigV1.Info, "Get config info"),
+          success: described(ConfigV1.Info, "Тохиргооны мэдээлэл авах"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "config.get",
-            summary: "Get configuration",
-            description: "Retrieve the current MongolGPT configuration settings and preferences.",
+            summary: "Тохиргоог авах",
+            description: "Одоогийн MongolGPT тохиргоо болон сонголтуудыг авна.",
           }),
         ),
         HttpApiEndpoint.patch("update", root, {
           query: WorkspaceRoutingQuery,
           payload: ConfigV1.Info,
-          success: described(ConfigV1.Info, "Successfully updated config"),
+          success: described(ConfigV1.Info, "Тохиргоог амжилттай шинэчилсэн"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "config.update",
-            summary: "Update configuration",
-            description: "Update MongolGPT configuration settings and preferences.",
+            summary: "Тохиргоог шинэчлэх",
+            description: "MongolGPT тохиргоо болон сонголтуудыг шинэчилнэ.",
           }),
         ),
         HttpApiEndpoint.get("providers", `${root}/providers`, {
           query: WorkspaceRoutingQuery,
-          success: described(Provider.ConfigProvidersResult, "List of providers"),
+          success: described(Provider.ConfigProvidersResult, "Провайдеруудын жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "config.providers",
-            summary: "List config providers",
-            description: "Get a list of all configured AI providers and their default models.",
+            summary: "Тохируулсан провайдеруудыг жагсаах",
+            description: "Тохируулсан бүх AI провайдер болон тэдгээрийн өгөгдмөл загварын жагсаалтыг авна.",
           }),
         ),
       )
       .annotateMerge(
         OpenApi.annotations({
-          title: "config",
-          description: "Experimental HttpApi config routes.",
+          title: "Тохиргоо",
+          description: "Туршилтын HttpApi тохиргооны замууд.",
         }),
       )
       .middleware(InstanceContextMiddleware)
@@ -58,8 +58,8 @@ export const ConfigApi = HttpApi.make("config")
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT-ийн туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Инстансын сонгосон замуудыг хамарсан туршилтын HttpApi интерфейс.",
     }),
   )

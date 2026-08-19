@@ -9,13 +9,13 @@ export const compatHandlers = HttpApiBuilder.group(InstanceHttpApi, "compat", (h
   Effect.gen(function* () {
     const plan = Effect.fn("CompatHttpApi.plan")(function* (ctx: { payload: typeof CompatImportPayload.Type }) {
       const instance = yield* InstanceRef
-      if (!instance) return yield* new CompatImportError({ message: "Instance context олдсонгүй" })
+      if (!instance) return yield* new CompatImportError({ message: "Төслийн орчин олдсонгүй" })
       return yield* compat(() => planCompatImport(ctx.payload, instance, { writeAdapters: false }))
     })
 
     const apply = Effect.fn("CompatHttpApi.apply")(function* (ctx: { payload: typeof CompatImportPayload.Type }) {
       const instance = yield* InstanceRef
-      if (!instance) return yield* new CompatImportError({ message: "Instance context олдсонгүй" })
+      if (!instance) return yield* new CompatImportError({ message: "Төслийн орчин олдсонгүй" })
       return yield* compat(() => applyCompatImport(ctx.payload, instance))
     })
 

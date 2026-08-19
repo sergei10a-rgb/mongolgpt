@@ -1,4 +1,4 @@
-﻿import { TuiEvent } from "@/server/tui-event"
+import { TuiEvent } from "@/server/tui-event"
 import { TuiRequest as TuiRequestPayload } from "@/server/shared/tui-control"
 import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
@@ -56,153 +56,153 @@ export const TuiApi = HttpApi.make("tui")
         HttpApiEndpoint.post("appendPrompt", TuiPaths.appendPrompt, {
           query: WorkspaceRoutingQuery,
           payload: TuiEvent.PromptAppend.data,
-          success: described(Schema.Boolean, "Prompt processed successfully"),
+          success: described(Schema.Boolean, "Промптыг амжилттай боловсруулсан"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.appendPrompt",
-            summary: "Append TUI prompt",
-            description: "Append prompt to the TUI.",
+            summary: "TUI промпт нэмэх",
+            description: "TUI-д промпт нэмнэ.",
           }),
         ),
         HttpApiEndpoint.post("openHelp", TuiPaths.openHelp, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Help dialog opened successfully"),
+          success: described(Schema.Boolean, "Тусламжийн цонхыг амжилттай нээсэн"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.openHelp",
-            summary: "Open help dialog",
-            description: "Open the help dialog in the TUI to display user assistance information.",
+            summary: "Тусламжийн цонх нээх",
+            description: "Хэрэглэгчид туслах мэдээллийг харуулахын тулд TUI дахь тусламжийн цонхыг нээнэ.",
           }),
         ),
         HttpApiEndpoint.post("openSessions", TuiPaths.openSessions, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Session dialog opened successfully"),
+          success: described(Schema.Boolean, "Сессийн цонхыг амжилттай нээсэн"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.openSessions",
-            summary: "Open sessions dialog",
-            description: "Open the session dialog.",
+            summary: "Сессийн цонх нээх",
+            description: "Сессийн цонхыг нээнэ.",
           }),
         ),
         HttpApiEndpoint.post("openThemes", TuiPaths.openThemes, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Theme dialog opened successfully"),
+          success: described(Schema.Boolean, "Загварын цонхыг амжилттай нээсэн"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.openThemes",
-            summary: "Open themes dialog",
-            description: "Open the theme dialog.",
+            summary: "Загварын цонх нээх",
+            description: "Загварын цонхыг нээнэ.",
           }),
         ),
         HttpApiEndpoint.post("openModels", TuiPaths.openModels, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Model dialog opened successfully"),
+          success: described(Schema.Boolean, "Моделийн цонхыг амжилттай нээсэн"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.openModels",
-            summary: "Open models dialog",
-            description: "Open the model dialog.",
+            summary: "Моделийн цонх нээх",
+            description: "Моделийн цонхыг нээнэ.",
           }),
         ),
         HttpApiEndpoint.post("submitPrompt", TuiPaths.submitPrompt, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Prompt submitted successfully"),
+          success: described(Schema.Boolean, "Промптыг амжилттай илгээсэн"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.submitPrompt",
-            summary: "Submit TUI prompt",
-            description: "Submit the prompt.",
+            summary: "TUI промпт илгээх",
+            description: "Промптыг илгээнэ.",
           }),
         ),
         HttpApiEndpoint.post("clearPrompt", TuiPaths.clearPrompt, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Prompt cleared successfully"),
+          success: described(Schema.Boolean, "Промптыг амжилттай цэвэрлэсэн"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.clearPrompt",
-            summary: "Clear TUI prompt",
-            description: "Clear the prompt.",
+            summary: "TUI промпт цэвэрлэх",
+            description: "Промптыг цэвэрлэнэ.",
           }),
         ),
         HttpApiEndpoint.post("executeCommand", TuiPaths.executeCommand, {
           query: WorkspaceRoutingQuery,
           payload: CommandPayload,
-          success: described(Schema.Boolean, "Command executed successfully"),
+          success: described(Schema.Boolean, "Командыг амжилттай гүйцэтгэсэн"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.executeCommand",
-            summary: "Execute TUI command",
-            description: "Execute a TUI command.",
+            summary: "TUI команд гүйцэтгэх",
+            description: "TUI командыг гүйцэтгэнэ.",
           }),
         ),
         HttpApiEndpoint.post("showToast", TuiPaths.showToast, {
           query: WorkspaceRoutingQuery,
           payload: TuiEvent.ToastShow.data,
-          success: described(Schema.Boolean, "Toast notification shown successfully"),
+          success: described(Schema.Boolean, "Toast мэдэгдлийг амжилттай харуулсан"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.showToast",
-            summary: "Show TUI toast",
-            description: "Show a toast notification in the TUI.",
+            summary: "TUI toast харуулах",
+            description: "TUI-д toast мэдэгдэл харуулна.",
           }),
         ),
         HttpApiEndpoint.post("publish", TuiPaths.publish, {
           query: WorkspaceRoutingQuery,
           payload: TuiPublishPayload,
-          success: described(Schema.Boolean, "Event published successfully"),
+          success: described(Schema.Boolean, "Үйл явдлыг амжилттай нийтэлсэн"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.publish",
-            summary: "Publish TUI event",
-            description: "Publish a TUI event.",
+            summary: "TUI үйл явдал нийтлэх",
+            description: "TUI үйл явдал нийтэлнэ.",
           }),
         ),
         HttpApiEndpoint.post("selectSession", TuiPaths.selectSession, {
           query: WorkspaceRoutingQuery,
           payload: TuiEvent.SessionSelect.data,
-          success: described(Schema.Boolean, "Session selected successfully"),
+          success: described(Schema.Boolean, "Сессийг амжилттай сонгосон"),
           error: [HttpApiError.BadRequest, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.selectSession",
-            summary: "Select session",
-            description: "Navigate the TUI to display the specified session.",
+            summary: "Сесс сонгох",
+            description: "Заасан сессийг харуулахаар TUI-г шилжүүлнэ.",
           }),
         ),
         HttpApiEndpoint.get("controlNext", TuiPaths.controlNext, {
           query: WorkspaceRoutingQuery,
-          success: described(TuiRequestPayload, "Next TUI request"),
+          success: described(TuiRequestPayload, "Дараагийн TUI хүсэлт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.control.next",
-            summary: "Get next TUI request",
-            description: "Retrieve the next TUI request from the queue for processing.",
+            summary: "Дараагийн TUI хүсэлтийг авах",
+            description: "Боловсруулах дараагийн TUI хүсэлтийг дарааллаас авна.",
           }),
         ),
         HttpApiEndpoint.post("controlResponse", TuiPaths.controlResponse, {
           query: WorkspaceRoutingQuery,
           payload: Schema.Unknown,
-          success: described(Schema.Boolean, "Response submitted successfully"),
+          success: described(Schema.Boolean, "Хариуг амжилттай илгээсэн"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tui.control.response",
-            summary: "Submit TUI response",
-            description: "Submit a response to the TUI request queue to complete a pending request.",
+            summary: "TUI-д хариу илгээх",
+            description: "Хүлээгдэж буй хүсэлтийг дуусгахын тулд TUI хүсэлтийн дараалалд хариу илгээнэ.",
           }),
         ),
       )
-      .annotateMerge(OpenApi.annotations({ title: "tui", description: "Experimental HttpApi TUI routes." }))
+      .annotateMerge(OpenApi.annotations({ title: "Терминалын интерфейс", description: "Туршилтын HttpApi TUI замууд." }))
       .middleware(InstanceContextMiddleware)
       .middleware(WorkspaceRoutingMiddleware)
       .middleware(Authorization),
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT-ийн туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Сонгосон инстансын замуудад зориулсан туршилтын HttpApi интерфейс.",
     }),
   )

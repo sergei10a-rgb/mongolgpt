@@ -20,12 +20,12 @@ export const ProjectCopyApi = HttpApi.make("projectCopyName").add(
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "experimental.projectCopy.generateName",
-          summary: "Generate project copy name",
-          description: "Generate a short name for a project copy from task context.",
+          summary: "Төслийн хуулбарын нэр үүсгэх",
+          description: "Даалгаврын агуулгад үндэслэн төслийн хуулбарт богино нэр үүсгэнэ.",
         }),
       ),
     )
-    .annotateMerge(OpenApi.annotations({ title: "projectCopy", description: "Project copy naming routes." }))
+    .annotateMerge(OpenApi.annotations({ title: "Төслийн хуулбар", description: "Төслийн хуулбарын нэр үүсгэх замууд." }))
     .middleware(InstanceContextMiddleware)
     .middleware(WorkspaceRoutingMiddleware)
     .middleware(Authorization),

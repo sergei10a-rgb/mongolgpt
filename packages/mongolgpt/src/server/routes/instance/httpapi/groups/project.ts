@@ -21,63 +21,63 @@ export const ProjectApi = HttpApi.make("project")
       .add(
         HttpApiEndpoint.get("list", root, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Project.Info), "List of projects"),
+          success: described(Schema.Array(Project.Info), "Төслүүдийн жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "project.list",
-            summary: "List all projects",
-            description: "Get a list of projects that have been opened with MongolGPT.",
+            summary: "Бүх төслийг жагсаах",
+            description: "MongolGPT-ээр нээсэн төслүүдийн жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.get("current", `${root}/current`, {
           query: WorkspaceRoutingQuery,
-          success: described(Project.Info, "Current project information"),
+          success: described(Project.Info, "Одоогийн төслийн мэдээлэл"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "project.current",
-            summary: "Get current project",
-            description: "Retrieve the currently active project that MongolGPT is working with.",
+            summary: "Одоогийн төслийг авах",
+            description: "MongolGPT-ийн ажиллаж буй идэвхтэй төслийг авна.",
           }),
         ),
         HttpApiEndpoint.post("initGit", `${root}/git/init`, {
           query: WorkspaceRoutingQuery,
-          success: described(Project.Info, "Project information after git initialization"),
+          success: described(Project.Info, "git эхлүүлсний дараах төслийн мэдээлэл"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "project.initGit",
-            summary: "Initialize git repository",
-            description: "Create a git repository for the current project and return the refreshed project info.",
+            summary: "git репозиторыг эхлүүлэх",
+            description: "Одоогийн төсөлд git репозитор үүсгээд шинэчилсэн төслийн мэдээллийг буцаана.",
           }),
         ),
         HttpApiEndpoint.patch("update", `${root}/:projectID`, {
           params: { projectID: ProjectV2.ID },
           query: WorkspaceRoutingQuery,
           payload: UpdatePayload,
-          success: described(Project.Info, "Updated project information"),
+          success: described(Project.Info, "Шинэчилсэн төслийн мэдээлэл"),
           error: [HttpApiError.BadRequest, ProjectNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "project.update",
-            summary: "Update project",
-            description: "Update project properties such as name, icon, and commands.",
+            summary: "Төслийг шинэчлэх",
+            description: "Төслийн нэр, дүрс, команд зэрэг шинж чанарыг шинэчилнэ.",
           }),
         ),
         HttpApiEndpoint.get("directories", `${root}/:projectID/directories`, {
           params: { projectID: ProjectV2.ID },
           query: WorkspaceRoutingQuery,
-          success: described(ProjectV2.Directories, "Project directories"),
+          success: described(ProjectV2.Directories, "Төслийн сангууд"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "project.directories",
-            summary: "List project directories",
-            description: "List known local absolute directories for a project.",
+            summary: "Төслийн сангуудыг жагсаах",
+            description: "Төсөлд бүртгэлтэй локал абсолют сангуудыг жагсаана.",
           }),
         ),
       )
       .annotateMerge(
         OpenApi.annotations({
-          title: "project",
-          description: "Experimental HttpApi project routes.",
+          title: "Төсөл",
+          description: "Туршилтын HttpApi төслийн замууд.",
         }),
       )
       .middleware(InstanceContextMiddleware)
@@ -86,8 +86,8 @@ export const ProjectApi = HttpApi.make("project")
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT-ийн туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Инстансын сонгосон замуудыг хамарсан туршилтын HttpApi интерфейс.",
     }),
   )

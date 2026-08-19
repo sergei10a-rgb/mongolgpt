@@ -169,7 +169,7 @@ describe("mcp HttpApi", () => {
 
             expect(response).toEqual({
               status: 400,
-              body: JSON.stringify({ error: "MCP server demo does not support OAuth" }),
+              body: JSON.stringify({ error: "MCP сервер demo OAuth дэмждэггүй" }),
             })
           }),
         )
@@ -214,7 +214,7 @@ describe("mcp HttpApi", () => {
           expect(yield* json(response)).toEqual({
             _tag: "McpServerNotFoundError",
             name: "missing",
-            message: "MCP server not found: missing",
+            message: "MCP сервер олдсонгүй: missing",
           })
         }
       }),

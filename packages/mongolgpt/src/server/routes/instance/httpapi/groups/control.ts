@@ -15,16 +15,16 @@ const LogQuery = Schema.Struct({
 })
 
 export const LogInput = Schema.Struct({
-  service: Schema.String.annotate({ description: "Service name for the log entry" }),
+  service: Schema.String.annotate({ description: "Лог бичлэгийн үйлчилгээний нэр" }),
   level: Schema.Union([
     Schema.Literal("debug"),
     Schema.Literal("info"),
     Schema.Literal("error"),
     Schema.Literal("warn"),
-  ]).annotate({ description: "Log level" }),
-  message: Schema.String.annotate({ description: "Log message" }),
+  ]).annotate({ description: "Логийн түвшин" }),
+  message: Schema.String.annotate({ description: "Логийн мессеж" }),
   extra: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)).annotate({
-    description: "Additional metadata for the log entry",
+    description: "Лог бичлэгийн нэмэлт мета өгөгдөл",
   }),
 })
 
@@ -39,38 +39,38 @@ export const ControlApi = HttpApi.make("control").add(
       HttpApiEndpoint.put("authSet", ControlPaths.auth, {
         params: AuthParams,
         payload: Auth.Info,
-        success: described(Schema.Boolean, "Successfully set authentication credentials"),
+        success: described(Schema.Boolean, "Баталгаажуулалтын мэдээллийг амжилттай тохирууллаа"),
         error: HttpApiError.BadRequest,
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "auth.set",
-          summary: "Set auth credentials",
-          description: "Set authentication credentials",
+          summary: "Баталгаажуулалтын мэдээлэл тохируулах",
+          description: "Баталгаажуулалтын мэдээллийг тохируулна",
         }),
       ),
       HttpApiEndpoint.delete("authRemove", ControlPaths.auth, {
         params: AuthParams,
-        success: described(Schema.Boolean, "Successfully removed authentication credentials"),
+        success: described(Schema.Boolean, "Баталгаажуулалтын мэдээллийг амжилттай устгалаа"),
         error: HttpApiError.BadRequest,
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "auth.remove",
-          summary: "Remove auth credentials",
-          description: "Remove authentication credentials",
+          summary: "Баталгаажуулалтын мэдээлэл устгах",
+          description: "Баталгаажуулалтын мэдээллийг устгана",
         }),
       ),
       HttpApiEndpoint.post("log", ControlPaths.log, {
         query: LogQuery,
         payload: LogInput,
-        success: described(Schema.Boolean, "Log entry written successfully"),
+        success: described(Schema.Boolean, "Лог бичлэгийг амжилттай үүсгэлээ"),
         error: HttpApiError.BadRequest,
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "app.log",
-          summary: "Write log",
-          description: "Write a log entry to the server logs with specified level and metadata.",
+          summary: "Лог бичлэг үүсгэх",
+          description: "Заасан түвшин болон мета өгөгдөлтэй лог бичлэгийг серверийн логт үүсгэнэ.",
         }),
       ),
     )
-    .annotateMerge(OpenApi.annotations({ title: "control", description: "Control plane routes." })),
+    .annotateMerge(OpenApi.annotations({ title: "Удирдлага", description: "Удирдлагын хавтгайн маршрутууд." })),
 )

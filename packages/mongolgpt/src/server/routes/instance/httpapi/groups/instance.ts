@@ -1,4 +1,4 @@
-﻿import { Agent } from "@/agent/agent"
+import { Agent } from "@/agent/agent"
 import { Command } from "@/command"
 import { Format } from "@/format"
 import { LSP } from "@/lsp/lsp"
@@ -33,7 +33,7 @@ export class ApiVcsApplyError extends Schema.ErrorClass<ApiVcsApplyError>("VcsAp
   {
     name: Schema.Literal("VcsApplyError"),
     data: Schema.Struct({
-      message: Schema.String,
+      message: Schema.String.annotate({ description: "VCS patch хэрэглэх үеийн алдааны тайлбар" }),
       reason: Schema.Literals(["non-git", "not-clean"]),
     }),
   },
@@ -61,12 +61,12 @@ export const InstanceApi = HttpApi.make("instance")
       .add(
         HttpApiEndpoint.post("dispose", InstancePaths.dispose, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Instance disposed"),
+          success: described(Schema.Boolean, "Инстансыг устгасан"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "instance.dispose",
-            summary: "Dispose instance",
-            description: "Clean up and dispose the current MongolGPT instance, releasing all resources.",
+            summary: "Инстансыг устгах",
+            description: "Одоогийн MongolGPT инстансыг цэвэрлэн устгаж, бүх нөөцийг чөлөөлнө.",
           }),
         ),
         HttpApiEndpoint.get("path", InstancePaths.path, {
@@ -75,40 +75,40 @@ export const InstanceApi = HttpApi.make("instance")
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "path.get",
-            summary: "Get paths",
+            summary: "Замуудыг авах",
             description:
-              "Retrieve the current working directory and related path information for the MongolGPT instance.",
+              "MongolGPT инстансын одоогийн ажлын сан болон холбогдох замын мэдээллийг авна.",
           }),
         ),
         HttpApiEndpoint.get("vcs", InstancePaths.vcs, {
           query: WorkspaceRoutingQuery,
-          success: described(Vcs.Info, "VCS info"),
+          success: described(Vcs.Info, "VCS мэдээлэл"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "vcs.get",
-            summary: "Get VCS info",
+            summary: "VCS мэдээллийг авах",
             description:
-              "Retrieve version control system (VCS) information for the current project, such as git branch.",
+              "Одоогийн төслийн хувилбарын хяналтын системийн (VCS) мэдээлэл, тухайлбал git салбарыг авна.",
           }),
         ),
         HttpApiEndpoint.get("vcsStatus", InstancePaths.vcsStatus, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Vcs.FileStatus), "VCS status"),
+          success: described(Schema.Array(Vcs.FileStatus), "VCS төлөв"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "vcs.status",
-            summary: "Get VCS status",
-            description: "Retrieve changed files in the current working tree without patches.",
+            summary: "VCS төлөвийг авах",
+            description: "Одоогийн ажлын модонд өөрчлөгдсөн файлуудыг patch-гүйгээр авна.",
           }),
         ),
         HttpApiEndpoint.get("vcsDiff", InstancePaths.vcsDiff, {
           query: VcsDiffQuery,
-          success: described(Schema.Array(Vcs.FileDiff), "VCS diff"),
+          success: described(Schema.Array(Vcs.FileDiff), "VCS-ийн ялгаа"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "vcs.diff",
-            summary: "Get VCS diff",
-            description: "Retrieve the current git diff for the working tree or against the default branch.",
+            summary: "VCS-ийн ялгааг авах",
+            description: "Ажлын модны одоогийн git diff эсвэл өгөгдмөл салбартай харьцуулсан ялгааг авна.",
           }),
         ),
         HttpApiEndpoint.get("vcsDiffRaw", InstancePaths.vcsDiffRaw, {
@@ -120,77 +120,77 @@ export const InstanceApi = HttpApi.make("instance")
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "vcs.diff.raw",
-            summary: "Get raw VCS diff",
-            description: "Retrieve a raw patch for current uncommitted changes.",
+            summary: "Түүхий VCS-ийн ялгааг авах",
+            description: "Одоогоор баталгаажуулж хадгалаагүй өөрчлөлтийн боловсруулаагүй нөхөөсийг авна.",
           }),
         ),
         HttpApiEndpoint.post("vcsApply", InstancePaths.vcsApply, {
           query: WorkspaceRoutingQuery,
           payload: Vcs.ApplyInput,
-          success: described(Vcs.ApplyResult, "VCS patch applied"),
+          success: described(Vcs.ApplyResult, "VCS patch-ийг хэрэглэсэн"),
           error: ApiVcsApplyError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "vcs.apply",
-            summary: "Apply VCS patch",
-            description: "Apply a raw patch to the current working tree.",
+            summary: "VCS patch хэрэглэх",
+            description: "Одоогийн ажлын модонд түүхий patch хэрэглэнэ.",
           }),
         ),
         HttpApiEndpoint.get("command", InstancePaths.command, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Command.Info), "List of commands"),
+          success: described(Schema.Array(Command.Info), "Командуудын жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "command.list",
-            summary: "List commands",
-            description: "Get a list of all available commands in the MongolGPT system.",
+            summary: "Командуудыг жагсаах",
+            description: "MongolGPT системд ашиглах боломжтой бүх командын жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.get("agent", InstancePaths.agent, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Agent.Info), "List of agents"),
+          success: described(Schema.Array(Agent.Info), "Агентуудын жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "app.agents",
-            summary: "List agents",
-            description: "Get a list of all available AI agents in the MongolGPT system.",
+            summary: "Агентуудыг жагсаах",
+            description: "MongolGPT системд ашиглах боломжтой бүх AI агентын жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.get("skill", InstancePaths.skill, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Skill.Info), "List of skills"),
+          success: described(Schema.Array(Skill.Info), "Ур чадваруудын жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "app.skills",
-            summary: "List skills",
-            description: "Get a list of all available skills in the MongolGPT system.",
+            summary: "Ур чадваруудыг жагсаах",
+            description: "MongolGPT системд ашиглах боломжтой бүх ур чадварын жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.get("lsp", InstancePaths.lsp, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(LSP.Status), "LSP server status"),
+          success: described(Schema.Array(LSP.Status), "LSP серверийн төлөв"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "lsp.status",
-            summary: "Get LSP status",
-            description: "Get LSP server status",
+            summary: "LSP төлөвийг авах",
+            description: "LSP серверийн төлөвийг авна.",
           }),
         ),
         HttpApiEndpoint.get("formatter", InstancePaths.formatter, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Format.Status), "Formatter status"),
+          success: described(Schema.Array(Format.Status), "Форматлагчийн төлөв"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "formatter.status",
-            summary: "Get formatter status",
-            description: "Get formatter status",
+            summary: "Форматлагчийн төлөвийг авах",
+            description: "Форматлагчийн төлөвийг авна.",
           }),
         ),
       )
       .annotateMerge(
         OpenApi.annotations({
-          title: "instance",
-          description: "Experimental HttpApi instance read routes.",
+          title: "Инстанс",
+          description: "Туршилтын HttpApi инстанс унших замууд.",
         }),
       )
       .middleware(InstanceContextMiddleware)
@@ -199,8 +199,8 @@ export const InstanceApi = HttpApi.make("instance")
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT-ийн туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Инстансын сонгосон замуудыг хамарсан туршилтын HttpApi интерфейс.",
     }),
   )

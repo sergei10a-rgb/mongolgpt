@@ -195,8 +195,8 @@ describe("workspace HttpApi", () => {
       expect(adapters.status).toBe(200)
       expect(yield* adapters.json).toContainEqual({
         type: "worktree",
-        name: "Worktree",
-        description: "Create a git worktree",
+        name: "Төслийн хуулбар",
+        description: "Git төслийн хуулбар үүсгэх",
       })
 
       expect(workspaces.status).toBe(200)

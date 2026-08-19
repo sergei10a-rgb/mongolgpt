@@ -99,7 +99,7 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
       if (method === "unknown") {
         return {
           status: 400,
-          body: { success: false as const, error: "Unknown installation method" },
+          body: { success: false as const, error: "Танихгүй суулгах арга" },
         }
       }
       const target = ctx.payload.target || (yield* installation.latest(method))
@@ -132,14 +132,14 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
       const body = yield* Effect.orDie(ctx.request.text)
       const json = parseBody(body)
       if (json === undefined) {
-        return HttpServerResponse.jsonUnsafe({ success: false, error: "Invalid request body" }, { status: 400 })
+        return HttpServerResponse.jsonUnsafe({ success: false, error: "Хүсэлтийн өгөгдөл буруу байна." }, { status: 400 })
       }
       const payload = yield* Schema.decodeUnknownEffect(GlobalUpgradeInput)(json).pipe(
         Effect.map((payload) => ({ valid: true as const, payload })),
         Effect.catch(() => Effect.succeed({ valid: false as const })),
       )
       if (!payload.valid) {
-        return HttpServerResponse.jsonUnsafe({ success: false, error: "Invalid request body" }, { status: 400 })
+        return HttpServerResponse.jsonUnsafe({ success: false, error: "Хүсэлтийн өгөгдөл буруу байна." }, { status: 400 })
       }
       const result = yield* upgrade({ payload: payload.payload })
       return HttpServerResponse.jsonUnsafe(result.body, { status: result.status })

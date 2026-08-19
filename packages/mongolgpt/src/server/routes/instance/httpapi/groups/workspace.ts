@@ -1,4 +1,4 @@
-﻿import { Workspace } from "@/control-plane/workspace"
+import { Workspace } from "@/control-plane/workspace"
 import { WorkspaceAdapterEntry } from "@/control-plane/types"
 import { Schema, Struct } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi"
@@ -21,7 +21,7 @@ export class ApiWorkspaceWarpError extends Schema.ErrorClass<ApiWorkspaceWarpErr
   {
     name: Schema.Literal("WorkspaceWarpError"),
     data: Schema.Struct({
-      message: Schema.String,
+      message: Schema.String.annotate({ description: "Сесс шилжүүлэх үед гарсан алдааны тайлбар" }),
     }),
   },
   { httpApiStatus: 400 },
@@ -31,7 +31,7 @@ export class ApiWorkspaceCreateError extends Schema.ErrorClass<ApiWorkspaceCreat
   {
     name: Schema.Literal("WorkspaceCreateError"),
     data: Schema.Struct({
-      message: Schema.String,
+      message: Schema.String.annotate({ description: "Төслийн хуулбар үүсгэх үед гарсан алдааны тайлбар" }),
     }),
   },
   { httpApiStatus: 400 },
@@ -52,90 +52,91 @@ export const WorkspaceApi = HttpApi.make("workspace")
       .add(
         HttpApiEndpoint.get("adapters", WorkspacePaths.adapters, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(WorkspaceAdapterEntry), "Workspace adapters"),
+          success: described(Schema.Array(WorkspaceAdapterEntry), "Ажлын орчны адаптерууд"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.workspace.adapter.list",
-            summary: "List workspace adapters",
-            description: "List all available workspace adapters for the current project.",
+            summary: "Ажлын орчны адаптеруудыг жагсаах",
+            description: "Одоогийн төсөлд ашиглах боломжтой бүх ажлын орчны адаптерийг жагсаана.",
           }),
         ),
         HttpApiEndpoint.get("list", WorkspacePaths.list, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Workspace.Info), "Workspaces"),
+          success: described(Schema.Array(Workspace.Info), "Ажлын орчнууд"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.workspace.list",
-            summary: "List workspaces",
-            description: "List all workspaces.",
+            summary: "Ажлын орчнуудыг жагсаах",
+            description: "Бүх ажлын орчныг жагсаана.",
           }),
         ),
         HttpApiEndpoint.post("create", WorkspacePaths.list, {
           query: WorkspaceRoutingQuery,
           payload: CreatePayload,
-          success: described(Workspace.Info, "Workspace created"),
+          success: described(Workspace.Info, "Ажлын орчин үүссэн"),
           error: [ApiWorkspaceCreateError, HttpApiError.BadRequest],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.workspace.create",
-            summary: "Create workspace",
-            description: "Create a workspace for the current project.",
+            summary: "Ажлын орчин үүсгэх",
+            description: "Одоогийн төсөлд зориулж ажлын орчин үүсгэнэ.",
           }),
         ),
         HttpApiEndpoint.post("syncList", WorkspacePaths.syncList, {
           query: WorkspaceRoutingQuery,
-          success: described(HttpApiSchema.NoContent, "Workspace list synced"),
+          success: described(HttpApiSchema.NoContent, "Ажлын орчны жагсаалт синхрончлогдсон"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.workspace.syncList",
-            summary: "Sync workspace list",
-            description: "Register missing workspaces returned by workspace adapters.",
+            summary: "Ажлын орчны жагсаалтыг синхрончлох",
+            description: "Ажлын орчны адаптеруудаас ирсэн бүртгэлгүй ажлын орчнуудыг бүртгэнэ.",
           }),
         ),
         HttpApiEndpoint.get("status", WorkspacePaths.status, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Workspace.ConnectionStatus), "Workspace status"),
+          success: described(Schema.Array(Workspace.ConnectionStatus), "Ажлын орчны төлөв"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.workspace.status",
-            summary: "Workspace status",
-            description: "Get connection status for workspaces in the current project.",
+            summary: "Ажлын орчны төлөв",
+            description: "Одоогийн төслийн ажлын орчнуудын холболтын төлөвийг авна.",
           }),
         ),
         HttpApiEndpoint.delete("remove", WorkspacePaths.remove, {
           params: { id: Workspace.Info.fields.id },
           query: WorkspaceRoutingQuery,
-          success: described(Schema.UndefinedOr(Workspace.Info), "Workspace removed"),
+          success: described(Schema.UndefinedOr(Workspace.Info), "Ажлын орчин устсан"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.workspace.remove",
-            summary: "Remove workspace",
-            description: "Remove an existing workspace.",
+            summary: "Ажлын орчин устгах",
+            description: "Байгаа ажлын орчныг устгана.",
           }),
         ),
         HttpApiEndpoint.post("warp", WorkspacePaths.warp, {
           query: WorkspaceRoutingQuery,
           payload: WarpPayload,
-          success: described(HttpApiSchema.NoContent, "Session warped"),
+          success: described(HttpApiSchema.NoContent, "Сессийг шилжүүлсэн"),
           error: [ApiWorkspaceWarpError, ApiVcsApplyError, ApiNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.workspace.warp",
-            summary: "Warp session into workspace",
-            description: "Move a session's sync history into the target workspace, or detach it to the local project.",
+            summary: "Сессийг ажлын орчинд шилжүүлэх",
+            description:
+              "Сессийн синхрончлолын түүхийг зорилтот ажлын орчинд шилжүүлэх, эсвэл салгаж локал төсөлд буцаана.",
           }),
         ),
       )
-      .annotateMerge(OpenApi.annotations({ title: "workspace", description: "Experimental HttpApi workspace routes." }))
+      .annotateMerge(OpenApi.annotations({ title: "Төслийн хуулбарын орчин", description: "Туршилтын HttpApi төслийн хуулбарын орчны замууд." }))
       .middleware(InstanceContextMiddleware)
       .middleware(WorkspaceRoutingMiddleware)
       .middleware(Authorization),
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT-ийн туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Сонгосон инстансын замуудад зориулсан туршилтын HttpApi интерфейс.",
     }),
   )

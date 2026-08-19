@@ -10,7 +10,7 @@ export class ApiMoveSessionError extends Schema.ErrorClass<ApiMoveSessionError>(
   {
     name: Schema.Literal("MoveSessionError"),
     data: Schema.Struct({
-      message: Schema.String,
+      message: Schema.String.annotate({ description: "Сесс зөөх үйлдлийн алдааны тайлбар" }),
     }),
   },
   { httpApiStatus: 400 },
@@ -21,15 +21,15 @@ export const ControlPlaneApi = HttpApi.make("controlPlane").add(
     .add(
       HttpApiEndpoint.post("moveSession", `${root}/move-session`, {
         payload: MoveSessionPayload,
-        success: described(HttpApiSchema.NoContent, "Session moved"),
+        success: described(HttpApiSchema.NoContent, "Сессийг зөөвөрлөлөө"),
         error: ApiMoveSessionError,
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "experimental.controlPlane.moveSession",
-          summary: "Move session",
-          description: "Move a session to another project directory, optionally transferring local changes.",
+          summary: "Сесс зөөх",
+          description: "Сессийг өөр төслийн лавлах руу зөөж, шаардлагатай бол дотоод өөрчлөлтүүдийг хамт шилжүүлнэ.",
         }),
       ),
     )
-    .annotateMerge(OpenApi.annotations({ title: "controlPlane", description: "Control-plane orchestration routes." })),
+    .annotateMerge(OpenApi.annotations({ title: "Удирдлагын хавтгайн зохицуулалт", description: "Удирдлагын хавтгайн зохицуулалтын маршрутууд." })),
 )

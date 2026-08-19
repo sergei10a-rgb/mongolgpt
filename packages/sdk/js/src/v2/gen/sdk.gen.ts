@@ -34,6 +34,18 @@ import type {
   EventTuiPromptAppend,
   EventTuiSessionSelect,
   EventTuiToastShow,
+  ExperimentalAccountGetErrors,
+  ExperimentalAccountGetResponses,
+  ExperimentalAccountLoginCancelErrors,
+  ExperimentalAccountLoginCancelResponses,
+  ExperimentalAccountLoginErrors,
+  ExperimentalAccountLoginResponses,
+  ExperimentalAccountLoginStatusErrors,
+  ExperimentalAccountLoginStatusResponses,
+  ExperimentalAccountOverviewErrors,
+  ExperimentalAccountOverviewResponses,
+  ExperimentalAccountRemoveErrors,
+  ExperimentalAccountRemoveResponses,
   ExperimentalCapabilitiesGetErrors,
   ExperimentalCapabilitiesGetResponses,
   ExperimentalConsoleGetErrors,
@@ -458,9 +470,9 @@ class HeyApiRegistry<T> {
 
 export class Auth extends HeyApiClient {
   /**
-   * Remove auth credentials
+   * Баталгаажуулалтын мэдээлэл устгах
    *
-   * Remove authentication credentials
+   * Баталгаажуулалтын мэдээллийг устгана
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -477,9 +489,9 @@ export class Auth extends HeyApiClient {
   }
 
   /**
-   * Set auth credentials
+   * Баталгаажуулалтын мэдээлэл тохируулах
    *
-   * Set authentication credentials
+   * Баталгаажуулалтын мэдээллийг тохируулна
    */
   public set<ThrowOnError extends boolean = false>(
     parameters: {
@@ -514,9 +526,9 @@ export class Auth extends HeyApiClient {
 
 export class App extends HeyApiClient {
   /**
-   * Write log
+   * Лог бичлэг үүсгэх
    *
-   * Write a log entry to the server logs with specified level and metadata.
+   * Заасан түвшин болон мета өгөгдөлтэй лог бичлэгийг серверийн логт үүсгэнэ.
    */
   public log<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -559,9 +571,9 @@ export class App extends HeyApiClient {
   }
 
   /**
-   * List agents
+   * Агентуудыг жагсаах
    *
-   * Get a list of all available AI agents in the MongolGPT system.
+   * MongolGPT системд ашиглах боломжтой бүх AI агентын жагсаалтыг авна.
    */
   public agents<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -589,9 +601,9 @@ export class App extends HeyApiClient {
   }
 
   /**
-   * List skills
+   * Ур чадваруудыг жагсаах
    *
-   * Get a list of all available skills in the MongolGPT system.
+   * MongolGPT системд ашиглах боломжтой бүх ур чадварын жагсаалтыг авна.
    */
   public skills<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -621,9 +633,9 @@ export class App extends HeyApiClient {
 
 export class ControlPlane extends HeyApiClient {
   /**
-   * Move session
+   * Сесс зөөх
    *
-   * Move a session to another project directory, optionally transferring local changes.
+   * Сессийг өөр төслийн лавлах руу зөөж, шаардлагатай бол дотоод өөрчлөлтүүдийг хамт шилжүүлнэ.
    */
   public moveSession<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -662,11 +674,230 @@ export class ControlPlane extends HeyApiClient {
   }
 }
 
+export class Account extends HeyApiClient {
+  /**
+   * Идэвхтэй локал бүртгэлийг устгах
+   *
+   * Энэ локал MongolGPT хувилбараас идэвхтэй бүртгэлийг устгана. Алсын токенуудыг хүчингүй болгохгүй.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      ExperimentalAccountRemoveResponses,
+      ExperimentalAccountRemoveErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/account",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Идэвхтэй локал бүртгэлийг авах
+   *
+   * Идэвхтэй локал бүртгэлийн нийтэд харуулах таних мэдээлэл болон идэвхтэй байгууллагын ID-г авна. Токеныг хэзээ ч буцаахгүй.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalAccountGetResponses,
+      ExperimentalAccountGetErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/account",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Идэвхтэй бүртгэлийн багц, квот болон хэрэглээг авах
+   *
+   * Идэвхтэй MongolGPT бүртгэлийн алсын API-аар баталгаажсан ажлын орчин, багц, хэрэглээний хязгаар болон зарцуулалтын мэдээллийг авна. Нууц токен буцаахгүй.
+   */
+  public overview<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      workspaceID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "workspaceID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalAccountOverviewResponses,
+      ExperimentalAccountOverviewErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/account/overview",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Хөтчөөр бүртгэлд нэвтрэх үйлдлийг эхлүүлэх
+   *
+   * Локал хөтөч дээр OAuth нэвтрэлтийг эхлүүлж, зөвшөөрлийн URL болон түр нэвтрэлтийн ID-г буцаана.
+   */
+  public login<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      server?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "server" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      ExperimentalAccountLoginResponses,
+      ExperimentalAccountLoginErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/account/login",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Хөтчөөр бүртгэлд нэвтрэх үйлдлийг цуцлах
+   *
+   * Хүлээгдэж буй локал хөтчийн OAuth нэвтрэлтийг цуцалж устгана.
+   */
+  public loginCancel<ThrowOnError extends boolean = false>(
+    parameters: {
+      loginID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "loginID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      ExperimentalAccountLoginCancelResponses,
+      ExperimentalAccountLoginCancelErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/account/login/{loginID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Хөтчийн нэвтрэлтийн төлөвийг авах
+   *
+   * Хөтчийн түр нэвтрэлтийн төлөвийг авна. Дууссан төлөвийн бичлэг богино хугацааны дараа хүчингүй болно.
+   */
+  public loginStatus<ThrowOnError extends boolean = false>(
+    parameters: {
+      loginID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "loginID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalAccountLoginStatusResponses,
+      ExperimentalAccountLoginStatusErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/account/login/{loginID}",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Capabilities extends HeyApiClient {
   /**
-   * Get experimental capabilities
+   * Туршилтын боломжуудыг авах
    *
-   * Get experimental features enabled on the MongolGPT server.
+   * MongolGPT сервер дээр идэвхжсэн туршилтын боломжуудыг авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -700,9 +931,9 @@ export class Capabilities extends HeyApiClient {
 
 export class Console extends HeyApiClient {
   /**
-   * Get active Console provider metadata
+   * Идэвхтэй Console үйлчилгээ үзүүлэгчийн мета өгөгдлийг авах
    *
-   * Get the active Console org name and the set of provider IDs managed by that Console org.
+   * Идэвхтэй Console байгууллагын нэр болон тус байгууллагын удирддаг үйлчилгээ үзүүлэгчийн ID-нуудыг авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -734,9 +965,9 @@ export class Console extends HeyApiClient {
   }
 
   /**
-   * List switchable Console orgs
+   * Сольж болох Console байгууллагуудыг жагсаах
    *
-   * Get the available Console orgs across logged-in accounts, including the current active org.
+   * Нэвтэрсэн бүртгэлүүдэд байгаа Console байгууллагуудыг одоогийн идэвхтэй байгууллагын хамт авна.
    */
   public listOrgs<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -768,9 +999,9 @@ export class Console extends HeyApiClient {
   }
 
   /**
-   * Switch active Console org
+   * Идэвхтэй Console байгууллагыг солих
    *
-   * Persist a new active Console account/org selection for the current local MongolGPT state.
+   * Одоогийн локал MongolGPT төлөвт Console бүртгэл болон байгууллагын шинэ идэвхтэй сонголтыг хадгална.
    */
   public switchOrg<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -809,9 +1040,9 @@ export class Console extends HeyApiClient {
 
 export class Session extends HeyApiClient {
   /**
-   * List sessions
+   * Сессүүдийг жагсаах
    *
-   * Get a list of all MongolGPT sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.
+   * Төслүүдийн бүх MongolGPT сессийг хамгийн сүүлд шинэчлэгдсэн дарааллаар авна. Архивласан сессүүдийг өгөгдмөлөөр оруулахгүй.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -855,9 +1086,9 @@ export class Session extends HeyApiClient {
   }
 
   /**
-   * Background subagents
+   * Дэд агентуудыг арын горимд шилжүүлэх
    *
-   * Detach any synchronous subagents currently blocking the session and continue them in the background.
+   * Сессийг саатуулж буй синхрон дэд агентуудыг салгаж, арын горимд үргэлжлүүлэн ажиллуулна.
    */
   public background<ThrowOnError extends boolean = false>(
     parameters: {
@@ -893,9 +1124,9 @@ export class Session extends HeyApiClient {
 
 export class Resource extends HeyApiClient {
   /**
-   * Get MCP resources
+   * MCP нөөцүүдийг авах
    *
-   * Get all available MCP resources from connected servers. Optionally filter by name.
+   * Холбогдсон серверүүдийн бүх MCP нөөцийг авна. Нэрээр нь шүүж болно.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -929,9 +1160,9 @@ export class Resource extends HeyApiClient {
 
 export class ProjectCopy extends HeyApiClient {
   /**
-   * Generate project copy name
+   * Төслийн хуулбарын нэр үүсгэх
    *
-   * Generate a short name for a project copy from task context.
+   * Даалгаврын агуулгад үндэслэн төслийн хуулбарт богино нэр үүсгэнэ.
    */
   public generateName<ThrowOnError extends boolean = false>(
     parameters: {
@@ -974,9 +1205,9 @@ export class ProjectCopy extends HeyApiClient {
 
 export class Adapter extends HeyApiClient {
   /**
-   * List workspace adapters
+   * Ажлын орчны адаптеруудыг жагсаах
    *
-   * List all available workspace adapters for the current project.
+   * Одоогийн төсөлд ашиглах боломжтой бүх ажлын орчны адаптерийг жагсаана.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1010,9 +1241,9 @@ export class Adapter extends HeyApiClient {
 
 export class Workspace extends HeyApiClient {
   /**
-   * List workspaces
+   * Ажлын орчнуудыг жагсаах
    *
-   * List all workspaces.
+   * Бүх ажлын орчныг жагсаана.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1044,9 +1275,9 @@ export class Workspace extends HeyApiClient {
   }
 
   /**
-   * Create workspace
+   * Ажлын орчин үүсгэх
    *
-   * Create a workspace for the current project.
+   * Одоогийн төсөлд зориулж ажлын орчин үүсгэнэ.
    */
   public create<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1091,9 +1322,9 @@ export class Workspace extends HeyApiClient {
   }
 
   /**
-   * Sync workspace list
+   * Ажлын орчны жагсаалтыг синхрончлох
    *
-   * Register missing workspaces returned by workspace adapters.
+   * Ажлын орчны адаптеруудаас ирсэн бүртгэлгүй ажлын орчнуудыг бүртгэнэ.
    */
   public syncList<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1125,9 +1356,9 @@ export class Workspace extends HeyApiClient {
   }
 
   /**
-   * Workspace status
+   * Ажлын орчны төлөв
    *
-   * Get connection status for workspaces in the current project.
+   * Одоогийн төслийн ажлын орчнуудын холболтын төлөвийг авна.
    */
   public status<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1159,9 +1390,9 @@ export class Workspace extends HeyApiClient {
   }
 
   /**
-   * Remove workspace
+   * Ажлын орчин устгах
    *
-   * Remove an existing workspace.
+   * Байгаа ажлын орчныг устгана.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -1195,9 +1426,9 @@ export class Workspace extends HeyApiClient {
   }
 
   /**
-   * Warp session into workspace
+   * Сессийг ажлын орчинд шилжүүлэх
    *
-   * Move a session's sync history into the target workspace, or detach it to the local project.
+   * Сессийн синхрончлолын түүхийг зорилтот ажлын орчинд шилжүүлэх, эсвэл салгаж локал төсөлд буцаана.
    */
   public warp<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1251,6 +1482,11 @@ export class Experimental extends HeyApiClient {
     return (this._controlPlane ??= new ControlPlane({ client: this.client }))
   }
 
+  private _account?: Account
+  get account(): Account {
+    return (this._account ??= new Account({ client: this.client }))
+  }
+
   private _capabilities?: Capabilities
   get capabilities(): Capabilities {
     return (this._capabilities ??= new Capabilities({ client: this.client }))
@@ -1284,9 +1520,9 @@ export class Experimental extends HeyApiClient {
 
 export class Config extends HeyApiClient {
   /**
-   * Get global configuration
+   * Глобал тохиргоо авах
    *
-   * Retrieve the current global MongolGPT configuration settings and preferences.
+   * Одоогийн глобал MongolGPT тохиргоо болон тохируулгуудыг авна.
    */
   public get<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<GlobalConfigGetResponses, GlobalConfigGetErrors, ThrowOnError>({
@@ -1296,9 +1532,9 @@ export class Config extends HeyApiClient {
   }
 
   /**
-   * Update global configuration
+   * Глобал тохиргоо шинэчлэх
    *
-   * Update global MongolGPT configuration settings and preferences.
+   * Глобал MongolGPT тохиргоо болон тохируулгуудыг шинэчилнэ.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1322,9 +1558,9 @@ export class Config extends HeyApiClient {
 
 export class Global extends HeyApiClient {
   /**
-   * Get health
+   * Эрүүл мэндийн төлөв авах
    *
-   * Get health information about the MongolGPT server.
+   * MongolGPT серверийн эрүүл мэндийн мэдээллийг авна.
    */
   public health<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<GlobalHealthResponses, GlobalHealthErrors, ThrowOnError>({
@@ -1334,9 +1570,9 @@ export class Global extends HeyApiClient {
   }
 
   /**
-   * Get global events
+   * Глобал үйл явдлууд авах
    *
-   * Subscribe to global events from the MongolGPT system using server-sent events.
+   * Серверээс илгээсэн үйл явдлаар MongolGPT системийн глобал үйл явдлуудад бүртгүүлнэ.
    */
   public event<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).sse.get<GlobalEventResponses, GlobalEventErrors, ThrowOnError>({
@@ -1346,9 +1582,9 @@ export class Global extends HeyApiClient {
   }
 
   /**
-   * Dispose instance
+   * Инстанцуудыг цэвэрлэх
    *
-   * Clean up and dispose all MongolGPT instances, releasing all resources.
+   * Бүх MongolGPT инстанцыг цэвэрлэж, бүх нөөцийг чөлөөлнө.
    */
   public dispose<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).post<GlobalDisposeResponses, GlobalDisposeErrors, ThrowOnError>({
@@ -1358,9 +1594,9 @@ export class Global extends HeyApiClient {
   }
 
   /**
-   * Upgrade MongolGPT
+   * MongolGPT шинэчлэх
    *
-   * Upgrade MongolGPT to the specified version or latest if not specified.
+   * MongolGPT-ийг заасан хувилбар руу, хувилбар заагаагүй бол хамгийн сүүлийн хувилбар руу шинэчилнэ.
    */
   public upgrade<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1389,9 +1625,9 @@ export class Global extends HeyApiClient {
 
 export class Event extends HeyApiClient {
   /**
-   * Subscribe to events
+   * Үйл явдлуудад бүртгүүлэх
    *
-   * Get events
+   * Үйл явдлуудыг хүлээн авах
    */
   public subscribe<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1421,9 +1657,9 @@ export class Event extends HeyApiClient {
 
 export class Config2 extends HeyApiClient {
   /**
-   * Get configuration
+   * Тохиргоог авах
    *
-   * Retrieve the current MongolGPT configuration settings and preferences.
+   * Одоогийн MongolGPT тохиргоо болон сонголтуудыг авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1451,9 +1687,9 @@ export class Config2 extends HeyApiClient {
   }
 
   /**
-   * Update configuration
+   * Тохиргоог шинэчлэх
    *
-   * Update MongolGPT configuration settings and preferences.
+   * MongolGPT тохиргоо болон сонголтуудыг шинэчилнэ.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1488,9 +1724,9 @@ export class Config2 extends HeyApiClient {
   }
 
   /**
-   * List config providers
+   * Тохируулсан провайдеруудыг жагсаах
    *
-   * Get a list of all configured AI providers and their default models.
+   * Тохируулсан бүх AI провайдер болон тэдгээрийн өгөгдмөл загварын жагсаалтыг авна.
    */
   public providers<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1520,9 +1756,9 @@ export class Config2 extends HeyApiClient {
 
 export class Import extends HeyApiClient {
   /**
-   * Plan compatibility import
+   * Нийцтэй байдлын импорт төлөвлөх
    *
-   * Plan how a foreign skill, plugin, or MCP configuration will be adapted into MongolGPT.
+   * Гаднын ур чадвар, залгаас эсвэл MCP тохиргоог MongolGPT-д хэрхэн тохируулахыг төлөвлөнө.
    */
   public plan<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1557,9 +1793,9 @@ export class Import extends HeyApiClient {
   }
 
   /**
-   * Apply compatibility import
+   * Нийцтэй байдлын импорт хэрэгжүүлэх
    *
-   * Apply a planned compatibility import to the active MongolGPT instance configuration.
+   * Төлөвлөсөн нийцтэй байдлын импортыг идэвхтэй MongolGPT инстанцын тохиргоонд хэрэгжүүлнэ.
    */
   public apply<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1603,9 +1839,9 @@ export class Compat extends HeyApiClient {
 
 export class Tool extends HeyApiClient {
   /**
-   * List tools
+   * Хэрэгслүүдийг жагсаах
    *
-   * Get a list of available tools with their JSON schema parameters for a specific provider and model combination.
+   * Тодорхой үйлчилгээ үзүүлэгч болон загварын хослолд ашиглах боломжтой хэрэгслүүдийг JSON схемийн параметрийн хамт авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters: {
@@ -1637,9 +1873,9 @@ export class Tool extends HeyApiClient {
   }
 
   /**
-   * List tool IDs
+   * Хэрэгслийн ID-нуудыг жагсаах
    *
-   * Get a list of all available tool IDs, including both built-in tools and dynamically registered tools.
+   * Суурилуулсан болон динамикаар бүртгэсэн бүх хэрэгслийн ID-ны жагсаалтыг авна.
    */
   public ids<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1669,9 +1905,9 @@ export class Tool extends HeyApiClient {
 
 export class Worktree extends HeyApiClient {
   /**
-   * Remove worktree
+   * Төслийн хуулбарыг устгах
    *
-   * Remove a git worktree and delete its branch.
+   * Git төслийн хуулбар болон түүнд харьяалагдах салбарыг устгана.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1706,9 +1942,9 @@ export class Worktree extends HeyApiClient {
   }
 
   /**
-   * List worktrees
+   * Төслийн хуулбаруудыг жагсаах
    *
-   * List all sandbox worktrees for the current project.
+   * Одоогийн төслийн тусгаарласан бүх төслийн хуулбарыг жагсаана.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1736,9 +1972,9 @@ export class Worktree extends HeyApiClient {
   }
 
   /**
-   * Create worktree
+   * Төслийн хуулбар үүсгэх
    *
-   * Create a new git worktree for the current project and run any configured startup scripts.
+   * Одоогийн төсөлд шинэ git төслийн хуулбар үүсгэж, тохируулсан эхлүүлэх скриптүүдийг ажиллуулна.
    */
   public create<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1773,9 +2009,9 @@ export class Worktree extends HeyApiClient {
   }
 
   /**
-   * Reset worktree
+   * Төслийн хуулбарыг анхны төлөвт оруулах
    *
-   * Reset a worktree branch to the primary default branch.
+   * Төслийн хуулбарын салбарыг үндсэн өгөгдмөл салбарын төлөвт оруулна.
    */
   public reset<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1812,9 +2048,9 @@ export class Worktree extends HeyApiClient {
 
 export class Find extends HeyApiClient {
   /**
-   * Find text
+   * Текст хайх
    *
-   * Search for text patterns across files in the project using ripgrep.
+   * ripgrep ашиглан төслийн файлуудаас текстийн загвар хайна.
    */
   public text<ThrowOnError extends boolean = false>(
     parameters: {
@@ -1844,9 +2080,9 @@ export class Find extends HeyApiClient {
   }
 
   /**
-   * Find files
+   * Файл хайх
    *
-   * Search for files or directories by name or pattern in the project directory.
+   * Төслийн сангаас нэр эсвэл загвараар файл, сан хайна.
    */
   public files<ThrowOnError extends boolean = false>(
     parameters: {
@@ -1882,9 +2118,9 @@ export class Find extends HeyApiClient {
   }
 
   /**
-   * Find symbols
+   * Тэмдэгт хайх
    *
-   * Search for workspace symbols like functions, classes, and variables using LSP.
+   * LSP ашиглан ажлын талбарын функц, класс, хувьсагч зэрэг тэмдэгтийг хайна.
    */
   public symbols<ThrowOnError extends boolean = false>(
     parameters: {
@@ -1916,9 +2152,9 @@ export class Find extends HeyApiClient {
 
 export class File extends HeyApiClient {
   /**
-   * List files
+   * Файлуудыг жагсаах
    *
-   * List files and directories in a specified path.
+   * Заасан зам дахь файл болон сангуудыг жагсаана.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters: {
@@ -1948,9 +2184,9 @@ export class File extends HeyApiClient {
   }
 
   /**
-   * Read file
+   * Файл унших
    *
-   * Read the content of a specified file.
+   * Заасан файлын агуулгыг уншина.
    */
   public read<ThrowOnError extends boolean = false>(
     parameters: {
@@ -1980,9 +2216,9 @@ export class File extends HeyApiClient {
   }
 
   /**
-   * Get file status
+   * Файлын төлөвийг авах
    *
-   * Get the git status of all files in the project.
+   * Төслийн бүх файлын git төлөвийг авна.
    */
   public status<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2012,9 +2248,9 @@ export class File extends HeyApiClient {
 
 export class Instance extends HeyApiClient {
   /**
-   * Dispose instance
+   * Инстансыг устгах
    *
-   * Clean up and dispose the current MongolGPT instance, releasing all resources.
+   * Одоогийн MongolGPT инстансыг цэвэрлэн устгаж, бүх нөөцийг чөлөөлнө.
    */
   public dispose<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2044,9 +2280,9 @@ export class Instance extends HeyApiClient {
 
 export class Path extends HeyApiClient {
   /**
-   * Get paths
+   * Замуудыг авах
    *
-   * Retrieve the current working directory and related path information for the MongolGPT instance.
+   * MongolGPT инстансын одоогийн ажлын сан болон холбогдох замын мэдээллийг авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2076,9 +2312,9 @@ export class Path extends HeyApiClient {
 
 export class Diff extends HeyApiClient {
   /**
-   * Get raw VCS diff
+   * Түүхий VCS-ийн ялгааг авах
    *
-   * Retrieve a raw patch for current uncommitted changes.
+   * Одоогоор баталгаажуулж хадгалаагүй өөрчлөлтийн боловсруулаагүй нөхөөсийг авна.
    */
   public raw<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2108,9 +2344,9 @@ export class Diff extends HeyApiClient {
 
 export class Vcs extends HeyApiClient {
   /**
-   * Get VCS info
+   * VCS мэдээллийг авах
    *
-   * Retrieve version control system (VCS) information for the current project, such as git branch.
+   * Одоогийн төслийн хувилбарын хяналтын системийн (VCS) мэдээлэл, тухайлбал git салбарыг авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2138,9 +2374,9 @@ export class Vcs extends HeyApiClient {
   }
 
   /**
-   * Get VCS status
+   * VCS төлөвийг авах
    *
-   * Retrieve changed files in the current working tree without patches.
+   * Одоогийн ажлын модонд өөрчлөгдсөн файлуудыг patch-гүйгээр авна.
    */
   public status<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2168,9 +2404,9 @@ export class Vcs extends HeyApiClient {
   }
 
   /**
-   * Get VCS diff
+   * VCS-ийн ялгааг авах
    *
-   * Retrieve the current git diff for the working tree or against the default branch.
+   * Ажлын модны одоогийн git diff эсвэл өгөгдмөл салбартай харьцуулсан ялгааг авна.
    */
   public diff<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2202,9 +2438,9 @@ export class Vcs extends HeyApiClient {
   }
 
   /**
-   * Apply VCS patch
+   * VCS patch хэрэглэх
    *
-   * Apply a raw patch to the current working tree.
+   * Одоогийн ажлын модонд түүхий patch хэрэглэнэ.
    */
   public apply<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2246,9 +2482,9 @@ export class Vcs extends HeyApiClient {
 
 export class Command extends HeyApiClient {
   /**
-   * List commands
+   * Командуудыг жагсаах
    *
-   * Get a list of all available commands in the MongolGPT system.
+   * MongolGPT системд ашиглах боломжтой бүх командын жагсаалтыг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2278,9 +2514,9 @@ export class Command extends HeyApiClient {
 
 export class Lsp extends HeyApiClient {
   /**
-   * Get LSP status
+   * LSP төлөвийг авах
    *
-   * Get LSP server status
+   * LSP серверийн төлөвийг авна.
    */
   public status<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2310,9 +2546,9 @@ export class Lsp extends HeyApiClient {
 
 export class Formatter extends HeyApiClient {
   /**
-   * Get formatter status
+   * Форматлагчийн төлөвийг авах
    *
-   * Get formatter status
+   * Форматлагчийн төлөвийг авна.
    */
   public status<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2342,9 +2578,9 @@ export class Formatter extends HeyApiClient {
 
 export class Auth2 extends HeyApiClient {
   /**
-   * Remove MCP OAuth
+   * MCP OAuth мэдээлэл устгах
    *
-   * Remove OAuth credentials for an MCP server.
+   * MCP серверийн OAuth мэдээллийг устгана.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2374,9 +2610,9 @@ export class Auth2 extends HeyApiClient {
   }
 
   /**
-   * Start MCP OAuth
+   * MCP OAuth эхлүүлэх
    *
-   * Start OAuth authentication flow for a Model Context Protocol (MCP) server.
+   * Model Context Protocol (MCP) серверийн OAuth баталгаажуулалтын урсгалыг эхлүүлнэ.
    */
   public start<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2406,9 +2642,9 @@ export class Auth2 extends HeyApiClient {
   }
 
   /**
-   * Complete MCP OAuth
+   * MCP OAuth дуусгах
    *
-   * Complete OAuth authentication for a Model Context Protocol (MCP) server using the authorization code.
+   * Model Context Protocol (MCP) серверийн OAuth баталгаажуулалтыг зөвшөөрлийн код ашиглан дуусгана.
    */
   public callback<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2445,9 +2681,9 @@ export class Auth2 extends HeyApiClient {
   }
 
   /**
-   * Authenticate MCP OAuth
+   * MCP OAuth-оор баталгаажуулах
    *
-   * Start OAuth flow and wait for callback (opens browser).
+   * OAuth урсгалыг эхлүүлж, буцах хариуг хүлээнэ (хөтөч нээнэ).
    */
   public authenticate<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2481,9 +2717,9 @@ export class Auth2 extends HeyApiClient {
 
 export class Mcp extends HeyApiClient {
   /**
-   * Get MCP status
+   * MCP-ийн төлөв авах
    *
-   * Get the status of all Model Context Protocol (MCP) servers.
+   * Бүх Model Context Protocol (MCP) серверийн төлөвийг авна.
    */
   public status<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2511,9 +2747,9 @@ export class Mcp extends HeyApiClient {
   }
 
   /**
-   * Add MCP server
+   * MCP сервер нэмэх
    *
-   * Dynamically add a new Model Context Protocol (MCP) server to the system.
+   * Шинэ Model Context Protocol (MCP) серверийг системд динамикаар нэмнэ.
    */
   public add<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2550,7 +2786,7 @@ export class Mcp extends HeyApiClient {
   }
 
   /**
-   * Connect an MCP server.
+   * MCP сервертэй холбогдоно.
    */
   public connect<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2580,7 +2816,7 @@ export class Mcp extends HeyApiClient {
   }
 
   /**
-   * Disconnect an MCP server.
+   * MCP серверээс сална.
    */
   public disconnect<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2617,9 +2853,9 @@ export class Mcp extends HeyApiClient {
 
 export class Project extends HeyApiClient {
   /**
-   * List all projects
+   * Бүх төслийг жагсаах
    *
-   * Get a list of projects that have been opened with MongolGPT.
+   * MongolGPT-ээр нээсэн төслүүдийн жагсаалтыг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2647,9 +2883,9 @@ export class Project extends HeyApiClient {
   }
 
   /**
-   * Get current project
+   * Одоогийн төслийг авах
    *
-   * Retrieve the currently active project that MongolGPT is working with.
+   * MongolGPT-ийн ажиллаж буй идэвхтэй төслийг авна.
    */
   public current<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2677,9 +2913,9 @@ export class Project extends HeyApiClient {
   }
 
   /**
-   * Initialize git repository
+   * git репозиторыг эхлүүлэх
    *
-   * Create a git repository for the current project and return the refreshed project info.
+   * Одоогийн төсөлд git репозитор үүсгээд шинэчилсэн төслийн мэдээллийг буцаана.
    */
   public initGit<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2707,9 +2943,9 @@ export class Project extends HeyApiClient {
   }
 
   /**
-   * Update project
+   * Төслийг шинэчлэх
    *
-   * Update project properties such as name, icon, and commands.
+   * Төслийн нэр, дүрс, команд зэрэг шинж чанарыг шинэчилнэ.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2750,9 +2986,9 @@ export class Project extends HeyApiClient {
   }
 
   /**
-   * List project directories
+   * Төслийн сангуудыг жагсаах
    *
-   * List known local absolute directories for a project.
+   * Төсөлд бүртгэлтэй локал абсолют сангуудыг жагсаана.
    */
   public directories<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2784,9 +3020,9 @@ export class Project extends HeyApiClient {
 
 export class Pty extends HeyApiClient {
   /**
-   * List available shells
+   * Боломжтой shell-үүдийг жагсаах
    *
-   * Get a list of available shells on the system.
+   * Системд ашиглах боломжтой shell-үүдийн жагсаалтыг авна.
    */
   public shells<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2814,9 +3050,9 @@ export class Pty extends HeyApiClient {
   }
 
   /**
-   * List PTY sessions
+   * PTY сессүүдийг жагсаах
    *
-   * Get a list of all active pseudo-terminal (PTY) sessions managed by MongolGPT.
+   * MongolGPT-ийн удирддаг бүх идэвхтэй псевдо-терминалын (PTY) сессийн жагсаалтыг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2844,9 +3080,9 @@ export class Pty extends HeyApiClient {
   }
 
   /**
-   * Create PTY session
+   * PTY сесс үүсгэх
    *
-   * Create a new pseudo-terminal (PTY) session for running shell commands and processes.
+   * Shell команд болон процесс ажиллуулах шинэ псевдо-терминалын (PTY) сесс үүсгэнэ.
    */
   public create<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2891,9 +3127,9 @@ export class Pty extends HeyApiClient {
   }
 
   /**
-   * Remove PTY session
+   * PTY сесс устгах
    *
-   * Remove and terminate a specific pseudo-terminal (PTY) session.
+   * Тодорхой псевдо-терминалын (PTY) сессийг устгаж, дуусгана.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2923,9 +3159,9 @@ export class Pty extends HeyApiClient {
   }
 
   /**
-   * Get PTY session
+   * PTY сесс авах
    *
-   * Retrieve detailed information about a specific pseudo-terminal (PTY) session.
+   * Тодорхой псевдо-терминалын (PTY) сессийн дэлгэрэнгүй мэдээллийг авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2955,9 +3191,9 @@ export class Pty extends HeyApiClient {
   }
 
   /**
-   * Update PTY session
+   * PTY сесс шинэчлэх
    *
-   * Update properties of an existing pseudo-terminal (PTY) session.
+   * Байгаа псевдо-терминалын (PTY) сессийн шинжүүдийг шинэчилнэ.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2999,9 +3235,9 @@ export class Pty extends HeyApiClient {
   }
 
   /**
-   * Create PTY WebSocket token
+   * PTY WebSocket токен үүсгэх
    *
-   * Create a short-lived ticket for opening a PTY WebSocket connection.
+   * PTY WebSocket холболт нээх богино хугацааны тасалбар үүсгэнэ.
    */
   public connectToken<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3031,9 +3267,9 @@ export class Pty extends HeyApiClient {
   }
 
   /**
-   * Connect to PTY session
+   * PTY сесст холбогдох
    *
-   * Establish a WebSocket connection to interact with a pseudo-terminal (PTY) session in real-time.
+   * Псевдо-терминалын (PTY) сесстэй бодит цагт харилцах WebSocket холболт үүсгэнэ.
    */
   public connect<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3069,9 +3305,9 @@ export class Pty extends HeyApiClient {
 
 export class Question extends HeyApiClient {
   /**
-   * List pending questions
+   * Хүлээгдэж буй асуултуудыг жагсаах
    *
-   * Get all pending question requests across all sessions.
+   * Бүх сессийн хүлээгдэж буй асуултын хүсэлтүүдийг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3099,9 +3335,9 @@ export class Question extends HeyApiClient {
   }
 
   /**
-   * Reply to question request
+   * Асуултын хүсэлтэд хариулах
    *
-   * Provide answers to a question request from the AI assistant.
+   * AI туслахын асуултын хүсэлтэд хариулт өгнө.
    */
   public reply<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3138,9 +3374,9 @@ export class Question extends HeyApiClient {
   }
 
   /**
-   * Reject question request
+   * Асуултын хүсэлтээс татгалзах
    *
-   * Reject a question request from the AI assistant.
+   * AI туслахын асуултын хүсэлтээс татгалзана.
    */
   public reject<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3172,9 +3408,9 @@ export class Question extends HeyApiClient {
 
 export class Permission extends HeyApiClient {
   /**
-   * List pending permissions
+   * Хүлээгдэж буй зөвшөөрлүүдийг жагсаах
    *
-   * Get all pending permission requests across all sessions.
+   * Бүх сессийн хүлээгдэж буй зөвшөөрлийн хүсэлтүүдийг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3202,9 +3438,9 @@ export class Permission extends HeyApiClient {
   }
 
   /**
-   * Respond to permission request
+   * Зөвшөөрлийн хүсэлтэд хариу өгөх
    *
-   * Approve or deny a permission request from the AI assistant.
+   * AI туслахаас ирсэн зөвшөөрлийн хүсэлтийг зөвшөөрөх эсвэл татгалзана.
    */
   public reply<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3243,9 +3479,9 @@ export class Permission extends HeyApiClient {
   }
 
   /**
-   * Respond to permission
+   * Зөвшөөрлийн хүсэлтэд хариулах
    *
-   * Approve or deny a permission request from the AI assistant.
+   * AI туслахын зөвшөөрлийн хүсэлтийг зөвшөөрөх эсвэл татгалзана.
    *
    * @deprecated
    */
@@ -3288,9 +3524,9 @@ export class Permission extends HeyApiClient {
 
 export class Oauth extends HeyApiClient {
   /**
-   * Start OAuth authorization
+   * OAuth зөвшөөрөл олголтыг эхлүүлэх
    *
-   * Start the OAuth authorization flow for a provider.
+   * Провайдерт зориулсан OAuth зөвшөөрөл олголтын урсгалыг эхлүүлнэ.
    */
   public authorize<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3335,9 +3571,9 @@ export class Oauth extends HeyApiClient {
   }
 
   /**
-   * Handle OAuth callback
+   * OAuth буцах дуудлагыг боловсруулах
    *
-   * Handle the OAuth callback from a provider after user authorization.
+   * Хэрэглэгч зөвшөөрөл өгсний дараа үйлчилгээ үзүүлэгчээс ирсэн OAuth буцах дуудлагыг боловсруулна.
    */
   public callback<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3382,9 +3618,9 @@ export class Oauth extends HeyApiClient {
 
 export class Provider extends HeyApiClient {
   /**
-   * List providers
+   * Провайдеруудыг жагсаах
    *
-   * Get a list of all available AI providers, including both available and connected ones.
+   * Боломжтой болон холбогдсон бүх AI провайдерын жагсаалтыг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3412,9 +3648,9 @@ export class Provider extends HeyApiClient {
   }
 
   /**
-   * Get provider auth methods
+   * Провайдерын нэвтрэлтийн аргуудыг авах
    *
-   * Retrieve available authentication methods for all AI providers.
+   * Бүх AI провайдерт ашиглах боломжтой нэвтрэлтийн аргуудыг авна.
    */
   public auth<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3449,9 +3685,9 @@ export class Provider extends HeyApiClient {
 
 export class Session2 extends HeyApiClient {
   /**
-   * List sessions
+   * Сессүүдийг жагсаах
    *
-   * Get a list of all MongolGPT sessions, sorted by most recently updated.
+   * Шинэчлэгдсэн хугацаагаар нь эрэмбэлсэн бүх MongolGPT сессийн жагсаалтыг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3491,9 +3727,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Create session
+   * Сесс үүсгэх
    *
-   * Create a new MongolGPT session for interacting with AI assistants and managing conversations.
+   * AI туслахтай харилцаж, харилцан яриаг удирдах шинэ MongolGPT сесс үүсгэнэ.
    */
   public create<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3546,9 +3782,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Get session status
+   * Сессийн төлөв авах
    *
-   * Retrieve the current status of all sessions, including active, idle, and completed states.
+   * Идэвхтэй, сул болон дууссан төлөвийг багтаасан бүх сессийн одоогийн төлөвийг авна.
    */
   public status<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3576,9 +3812,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Delete session
+   * Сесс устгах
    *
-   * Delete a session and permanently remove all associated data, including messages and history.
+   * Сессийг устгаж, мессеж болон түүх зэрэг холбоотой бүх өгөгдлийг бүрмөсөн арилгана.
    */
   public delete<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3608,9 +3844,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Get session
+   * Сесс авах
    *
-   * Retrieve detailed information about a specific MongolGPT session.
+   * Тодорхой MongolGPT сессийн дэлгэрэнгүй мэдээллийг авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3640,9 +3876,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Update session
+   * Сесс шинэчлэх
    *
-   * Update properties of an existing session, such as title or other metadata.
+   * Байгаа сессийн гарчиг болон бусад мета өгөгдөл зэрэг шинжийг шинэчилнэ.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3689,9 +3925,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Get session children
+   * Салаалсан сессүүдийг авах
    *
-   * Retrieve all child sessions that were forked from the specified parent session.
+   * Заасан эцэг сессээс салаалсан бүх хүүхэд сессийг авна.
    */
   public children<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3721,9 +3957,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Get session todos
+   * Сессийн хийх зүйлсийг авах
    *
-   * Retrieve the todo list associated with a specific session, showing tasks and action items.
+   * Тодорхой сесстэй холбоотой, даалгавар болон хийх үйлдлүүдийг харуулсан жагсаалтыг авна.
    */
   public todo<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3753,9 +3989,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Get message diff
+   * Мессежийн өөрчлөлтийг авах
    *
-   * Get the file changes (diff) that resulted from a specific user message in the session.
+   * Сессийн тодорхой хэрэглэгчийн мессежийн үр дүнд гарсан файлын өөрчлөлтийг (diff) авна.
    */
   public diff<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3787,9 +4023,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Get session messages
+   * Сессийн мессежүүдийг авах
    *
-   * Retrieve all messages in a session, including user prompts and AI responses.
+   * Хэрэглэгчийн промпт болон AI-ийн хариуг багтаасан сессийн бүх мессежийг авна.
    */
   public messages<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3823,9 +4059,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Send message
+   * Мессеж илгээх
    *
-   * Create and send a new message to a session, streaming the AI response.
+   * Сесст шинэ мессеж үүсгэж илгээн, AI-ийн хариуг урсгалаар дамжуулна.
    */
   public prompt<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3883,9 +4119,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Delete message
+   * Мессеж устгах
    *
-   * Permanently delete a specific message and all of its parts from a session without reverting file changes.
+   * Файлын өөрчлөлтийг буцаахгүйгээр тодорхой мессеж болон түүний бүх хэсгийг сессээс бүрмөсөн устгана.
    */
   public deleteMessage<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3921,9 +4157,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Get message
+   * Мессеж авах
    *
-   * Retrieve a specific message from a session by its message ID.
+   * Сессээс мессежийн ID-аар тодорхой мессежийг авна.
    */
   public message<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3955,9 +4191,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Fork session
+   * Сесс салаалуулах
    *
-   * Create a new session by forking an existing session at a specific message point.
+   * Байгаа сессийг тодорхой мессежийн цэг дээр салаалж шинэ сесс үүсгэнэ.
    */
   public fork<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3994,9 +4230,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Abort session
+   * Сесс зогсоох
    *
-   * Abort an active session and stop any ongoing AI processing or command execution.
+   * Идэвхтэй сессийг зогсоож, үргэлжилж буй AI боловсруулалт эсвэл командын гүйцэтгэлийг дуусгана.
    */
   public abort<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4026,9 +4262,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Initialize session
+   * Сесс эхлүүлэх
    *
-   * Analyze the current application and create an AGENTS.md file with project-specific agent configurations.
+   * Одоогийн аппликэйшнийг шинжилж, төсөлд зориулсан агентын тохиргоо бүхий AGENTS.md файл үүсгэнэ.
    */
   public init<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4069,9 +4305,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Unshare session
+   * Сессийн хуваалцалтыг цуцлах
    *
-   * Remove the shareable link for a session, making it private again.
+   * Сессийн хуваалцах холбоосыг устгаж, сессийг дахин хувийн болгоно.
    */
   public unshare<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4101,9 +4337,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Share session
+   * Сесс хуваалцах
    *
-   * Create a shareable link for a session, allowing others to view the conversation.
+   * Бусад хүн харилцан яриаг үзэх боломжтой, сесс хуваалцах холбоос үүсгэнэ.
    */
   public share<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4133,9 +4369,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Summarize session
+   * Сессийг хураангуйлах
    *
-   * Generate a concise summary of the session using AI compaction to preserve key information.
+   * Гол мэдээллийг хадгалах зорилгоор AI-ийн хураангуйлах аргыг ашиглан сессийн товч хураангуй үүсгэнэ.
    */
   public summarize<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4176,9 +4412,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Send async message
+   * Асинхрон мессеж илгээх
    *
-   * Create and send a new message to a session asynchronously, starting the session if needed and returning immediately.
+   * Сесст асинхроноор шинэ мессеж үүсгэж илгээнэ; шаардлагатай бол сессийг эхлүүлээд шууд буцаана.
    */
   public promptAsync<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4236,9 +4472,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Send command
+   * Команд илгээх
    *
-   * Send a new command to a session for execution by the AI assistant.
+   * AI туслахаар гүйцэтгүүлэх шинэ командыг сесст илгээнэ.
    */
   public command<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4294,9 +4530,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Run shell command
+   * Shell команд ажиллуулах
    *
-   * Execute a shell command within the session context and return the AI's response.
+   * Сессийн орчинд shell командыг гүйцэтгэж, AI-ийн хариуг буцаана.
    */
   public shell<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4342,9 +4578,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Revert message
+   * Мессеж буцаах
    *
-   * Revert a specific message in a session, undoing its effects and restoring the previous state.
+   * Сессийн тодорхой мессежийг буцааж, нөлөөг нь цуцлан өмнөх төлөвийг сэргээнэ.
    */
   public revert<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4383,9 +4619,9 @@ export class Session2 extends HeyApiClient {
   }
 
   /**
-   * Restore reverted messages
+   * Буцаасан мессежүүдийг сэргээх
    *
-   * Restore all previously reverted messages in a session.
+   * Сессэд өмнө нь буцаасан бүх мессежийг сэргээнэ.
    */
   public unrevert<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4417,7 +4653,7 @@ export class Session2 extends HeyApiClient {
 
 export class Part extends HeyApiClient {
   /**
-   * Delete a part from a message.
+   * Мессежээс хэсгийг устгана.
    */
   public delete<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4451,7 +4687,7 @@ export class Part extends HeyApiClient {
   }
 
   /**
-   * Update a part in a message.
+   * Мессежийн хэсгийг шинэчилнэ.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4494,9 +4730,9 @@ export class Part extends HeyApiClient {
 
 export class History extends HeyApiClient {
   /**
-   * List sync events
+   * Синхрончлолын үйл явдлуудыг жагсаах
    *
-   * List sync events for all aggregates. Keys are aggregate IDs the client already knows about, values are the last known sequence ID. Events with seq > value are returned for those aggregates. Aggregates not listed in the input get their full history.
+   * Бүх агрегатын синхрончлолын үйл явдлыг жагсаана. Түлхүүрүүд нь клиентэд аль хэдийн мэдэгдэж буй агрегатын ID, утгууд нь хамгийн сүүлд мэдэгдэж буй дарааллын ID байна. Тухайн агрегатын seq утга нь value утгаас их байх нөхцөлийг хангасан үйл явдлуудыг буцаана. Оролтод жагсаагдаагүй агрегатын бүрэн түүхийг буцаана.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4535,9 +4771,9 @@ export class History extends HeyApiClient {
 
 export class Sync extends HeyApiClient {
   /**
-   * Start workspace sync
+   * Ажлын орчны синхрончлол эхлүүлэх
    *
-   * Start sync loops for workspaces in the current project that have active sessions.
+   * Идэвхтэй сесстэй, одоогийн төсөлд буй ажлын орчнуудын синхрончлолын давталтыг эхлүүлнэ.
    */
   public start<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4565,9 +4801,9 @@ export class Sync extends HeyApiClient {
   }
 
   /**
-   * Replay sync events
+   * Синхрончлолын үйл явдлыг дахин тоглуулах
    *
-   * Validate and replay a complete sync event history.
+   * Синхрончлолын үйл явдлын бүрэн түүхийг шалгаж, дахин тоглуулна.
    */
   public replay<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4620,9 +4856,9 @@ export class Sync extends HeyApiClient {
   }
 
   /**
-   * Steal session into workspace
+   * Сессийг ажлын орчинд шилжүүлэх
    *
-   * Update a session to belong to the current workspace through the sync event system.
+   * Синхрончлолын үйл явдлын системээр сессийг одоогийн ажлын орчинд харьяалуулна.
    */
   public steal<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4664,9 +4900,9 @@ export class Sync extends HeyApiClient {
 
 export class Control extends HeyApiClient {
   /**
-   * Get next TUI request
+   * Дараагийн TUI хүсэлтийг авах
    *
-   * Retrieve the next TUI request from the queue for processing.
+   * Боловсруулах дараагийн TUI хүсэлтийг дарааллаас авна.
    */
   public next<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4694,9 +4930,9 @@ export class Control extends HeyApiClient {
   }
 
   /**
-   * Submit TUI response
+   * TUI-д хариу илгээх
    *
-   * Submit a response to the TUI request queue to complete a pending request.
+   * Хүлээгдэж буй хүсэлтийг дуусгахын тулд TUI хүсэлтийн дараалалд хариу илгээнэ.
    */
   public response<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4733,9 +4969,9 @@ export class Control extends HeyApiClient {
 
 export class Tui extends HeyApiClient {
   /**
-   * Append TUI prompt
+   * TUI промпт нэмэх
    *
-   * Append prompt to the TUI.
+   * TUI-д промпт нэмнэ.
    */
   public appendPrompt<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4770,9 +5006,9 @@ export class Tui extends HeyApiClient {
   }
 
   /**
-   * Open help dialog
+   * Тусламжийн цонх нээх
    *
-   * Open the help dialog in the TUI to display user assistance information.
+   * Хэрэглэгчид туслах мэдээллийг харуулахын тулд TUI дахь тусламжийн цонхыг нээнэ.
    */
   public openHelp<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4800,9 +5036,9 @@ export class Tui extends HeyApiClient {
   }
 
   /**
-   * Open sessions dialog
+   * Сессийн цонх нээх
    *
-   * Open the session dialog.
+   * Сессийн цонхыг нээнэ.
    */
   public openSessions<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4830,9 +5066,9 @@ export class Tui extends HeyApiClient {
   }
 
   /**
-   * Open themes dialog
+   * Загварын цонх нээх
    *
-   * Open the theme dialog.
+   * Загварын цонхыг нээнэ.
    */
   public openThemes<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4860,9 +5096,9 @@ export class Tui extends HeyApiClient {
   }
 
   /**
-   * Open models dialog
+   * Моделийн цонх нээх
    *
-   * Open the model dialog.
+   * Моделийн цонхыг нээнэ.
    */
   public openModels<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4890,9 +5126,9 @@ export class Tui extends HeyApiClient {
   }
 
   /**
-   * Submit TUI prompt
+   * TUI промпт илгээх
    *
-   * Submit the prompt.
+   * Промптыг илгээнэ.
    */
   public submitPrompt<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4920,9 +5156,9 @@ export class Tui extends HeyApiClient {
   }
 
   /**
-   * Clear TUI prompt
+   * TUI промпт цэвэрлэх
    *
-   * Clear the prompt.
+   * Промптыг цэвэрлэнэ.
    */
   public clearPrompt<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4950,9 +5186,9 @@ export class Tui extends HeyApiClient {
   }
 
   /**
-   * Execute TUI command
+   * TUI команд гүйцэтгэх
    *
-   * Execute a TUI command.
+   * TUI командыг гүйцэтгэнэ.
    */
   public executeCommand<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4987,9 +5223,9 @@ export class Tui extends HeyApiClient {
   }
 
   /**
-   * Show TUI toast
+   * TUI toast харуулах
    *
-   * Show a toast notification in the TUI.
+   * TUI-д toast мэдэгдэл харуулна.
    */
   public showToast<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5030,9 +5266,9 @@ export class Tui extends HeyApiClient {
   }
 
   /**
-   * Publish TUI event
+   * TUI үйл явдал нийтлэх
    *
-   * Publish a TUI event.
+   * TUI үйл явдал нийтэлнэ.
    */
   public publish<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5067,9 +5303,9 @@ export class Tui extends HeyApiClient {
   }
 
   /**
-   * Select session
+   * Сесс сонгох
    *
-   * Navigate the TUI to display the specified session.
+   * Заасан сессийг харуулахаар TUI-г шилжүүлнэ.
    */
   public selectSession<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5111,9 +5347,9 @@ export class Tui extends HeyApiClient {
 
 export class Health extends HeyApiClient {
   /**
-   * Check server health
+   * Серверийн төлөвийг шалгах
    *
-   * Check whether the API server is ready to accept requests.
+   * API сервер хүсэлт хүлээн авахад бэлэн эсэхийг шалгана.
    */
   public get<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<V2HealthGetResponses, V2HealthGetErrors, ThrowOnError>({
@@ -5125,9 +5361,9 @@ export class Health extends HeyApiClient {
 
 export class Location extends HeyApiClient {
   /**
-   * Get location
+   * Байршлын мэдээлэл авах
    *
-   * Resolve the requested location or the server default location.
+   * Хүссэн байршил эсвэл серверийн анхдагч байршлыг тодорхойлно.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5149,9 +5385,9 @@ export class Location extends HeyApiClient {
 
 export class Agent extends HeyApiClient {
   /**
-   * List agents
+   * Агентуудыг жагсаах
    *
-   * Retrieve currently registered agents.
+   * Одоогоор бүртгэлтэй агентуудыг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5173,9 +5409,9 @@ export class Agent extends HeyApiClient {
 
 export class Revert extends HeyApiClient {
   /**
-   * Stage session revert
+   * Сессийн буцаалтыг бэлтгэх
    *
-   * Stage or move a reversible session boundary and optionally apply its file changes.
+   * Буцаах боломжтой сессийн заагийг бэлтгэх эсвэл зөөж, хүсвэл файлын өөрчлөлтийг хэрэглэнэ.
    */
   public stage<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5214,7 +5450,7 @@ export class Revert extends HeyApiClient {
   }
 
   /**
-   * Clear staged revert
+   * Бэлтгэсэн буцаалтыг цэвэрлэх
    */
   public clear<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5235,7 +5471,7 @@ export class Revert extends HeyApiClient {
   }
 
   /**
-   * Commit staged revert
+   * Бэлтгэсэн буцаалтыг баталгаажуулах
    */
   public commit<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5258,9 +5494,9 @@ export class Revert extends HeyApiClient {
 
 export class Permission2 extends HeyApiClient {
   /**
-   * List session permission requests
+   * Сессийн зөвшөөрлийн хүсэлтүүдийг жагсаах
    *
-   * Retrieve pending permission requests owned by a session.
+   * Тухайн сесст хамаарах хүлээгдэж буй зөвшөөрлийн хүсэлтүүдийг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5281,9 +5517,9 @@ export class Permission2 extends HeyApiClient {
   }
 
   /**
-   * Create permission request
+   * Зөвшөөрлийн хүсэлт үүсгэх
    *
-   * Evaluate and, when approval is required, create a permission request for a session.
+   * Үнэлгээ хийж, зөвшөөрөл шаардлагатай бол тухайн сесст зөвшөөрлийн хүсэлт үүсгэнэ.
    */
   public create<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5334,9 +5570,9 @@ export class Permission2 extends HeyApiClient {
   }
 
   /**
-   * Get permission request
+   * Зөвшөөрлийн хүсэлт авах
    *
-   * Retrieve a pending permission request owned by a session.
+   * Тухайн сесст хамаарах хүлээгдэж буй зөвшөөрлийн хүсэлтийг авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5368,9 +5604,9 @@ export class Permission2 extends HeyApiClient {
   }
 
   /**
-   * Reply to pending permission request
+   * Хүлээгдэж буй зөвшөөрлийн хүсэлтэд хариулах
    *
-   * Respond to a pending permission request owned by a session.
+   * Тухайн сесст хамаарах хүлээгдэж буй зөвшөөрлийн хүсэлтэд хариулна.
    */
   public reply<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5413,9 +5649,9 @@ export class Permission2 extends HeyApiClient {
 
 export class Question2 extends HeyApiClient {
   /**
-   * List session question requests
+   * Сессийн асуултын хүсэлтүүдийг жагсаах
    *
-   * Retrieve pending question requests owned by a session.
+   * Тухайн сесст хамаарах хүлээгдэж буй асуултын хүсэлтүүдийг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5436,9 +5672,9 @@ export class Question2 extends HeyApiClient {
   }
 
   /**
-   * Reply to pending question request
+   * Хүлээгдэж буй асуултын хүсэлтэд хариулах
    *
-   * Answer a pending question request owned by a session.
+   * Тухайн сесст хамаарах хүлээгдэж буй асуултын хүсэлтэд хариулна.
    */
   public reply<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5477,9 +5713,9 @@ export class Question2 extends HeyApiClient {
   }
 
   /**
-   * Reject pending question request
+   * Хүлээгдэж буй асуултын хүсэлтийг татгалзах
    *
-   * Reject a pending question request owned by a session.
+   * Тухайн сесст хамаарах хүлээгдэж буй асуултын хүсэлтийг татгалзана.
    */
   public reject<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5513,9 +5749,9 @@ export class Question2 extends HeyApiClient {
 
 export class Session3 extends HeyApiClient {
   /**
-   * List sessions
+   * Сессүүдийг жагсаах
    *
-   * Retrieve sessions in the requested order. Items keep that order across pages; use cursor.next or cursor.previous to move through the ordered list.
+   * Сессүүдийг хүссэн эрэмбээр авна. Хуудсуудын хооронд зүйлс энэ эрэмбээ хадгална; эрэмбэлсэн жагсаалтаар шилжихдээ cursor.next эсвэл cursor.previous ашиглана.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5555,9 +5791,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Create session
+   * Сесс үүсгэх
    *
-   * Create a session at the requested location.
+   * Хүссэн байршилд сесс үүсгэнэ.
    */
   public create<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5594,9 +5830,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * List active sessions
+   * Идэвхтэй сессүүдийг жагсаах
    *
-   * Retrieve foreground Session drains currently owned by this MongolGPT process. Sessions absent from the result are inactive.
+   * Энэ MongolGPT процессын эзэмшиж буй, үндсэн горимд одоо ажиллаж байгаа сессийн гүйцэтгэлүүдийг авна. Үр дүнд ороогүй сессүүд идэвхгүй байна.
    */
   public active<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<V2SessionActiveResponses, V2SessionActiveErrors, ThrowOnError>({
@@ -5606,9 +5842,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Get session
+   * Сесс авах
    *
-   * Retrieve a session by ID.
+   * ID-аар сесс авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5625,9 +5861,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Switch session agent
+   * Сессийн агент солих
    *
-   * Switch the agent used by subsequent provider turns.
+   * Үйлчилгээ үзүүлэгчтэй хийх дараагийн харилцан үйлдэлд ашиглах агентыг солино.
    */
   public switchAgent<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5664,9 +5900,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Switch session model
+   * Сессийн модел солих
    *
-   * Switch the model used by subsequent provider turns.
+   * Үйлчилгээ үзүүлэгчтэй хийх дараагийн харилцан үйлдэлд ашиглах моделийг солино.
    */
   public switchModel<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5703,9 +5939,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Send message
+   * Мессеж илгээх
    *
-   * Durably admit one session input and schedule agent-loop execution unless resume is false.
+   * Нэг сессийн оролтыг найдвартай бүртгэж, resume параметр false биш бол агентын гүйцэтгэлийн давталтыг товлоно.
    */
   public prompt<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5744,9 +5980,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Compact session
+   * Сессийг хураангуйлах
    *
-   * Compact a session conversation.
+   * Сессийн харилцан яриаг хураангуйлна.
    */
   public compact<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5763,9 +5999,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Wait for session
+   * Сесс хүлээх
    *
-   * Wait for a session agent loop to become idle.
+   * Сессийн агентын гүйцэтгэлийн давталт сул зогсолтын төлөвт орохыг хүлээнэ.
    */
   public wait<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5782,9 +6018,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Get session context
+   * Сессийн контекст авах
    *
-   * Retrieve the active context messages for a session (all messages after the last compaction).
+   * Сессийн идэвхтэй контекст мессежүүдийг авна (сүүлийн хураангуйлалтын дараах бүх мессеж).
    */
   public context<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5801,9 +6037,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Get session history
+   * Сессийн түүх авах
    *
-   * Read one finite page of public durable Session events after an exclusive aggregate sequence. Newly committed events may appear on later pages.
+   * Нэгтгэлийн дарааллын заагийн дараах нийтэд нээлттэй, хадгалагдсан сессийн үйл явдлуудын нэг хязгаартай хуудсыг уншина. Шинээр баталгаажсан үйл явдлууд дараагийн хуудсуудад гарч болно.
    */
   public history<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5833,9 +6069,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Subscribe to session events
+   * Сессийн үйл явдлуудад бүртгүүлэх
    *
-   * Replay durable events after an aggregate sequence, then continue with new durable events.
+   * Нэгтгэлийн дарааллын заагийн дараах хадгалагдсан үйл явдлуудыг дахин тоглуулаад, дараа нь шинэ хадгалагдсан үйл явдлуудыг үргэлжлүүлэн дамжуулна.
    */
   public events<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5863,9 +6099,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Interrupt session execution
+   * Сессийн гүйцэтгэлийг таслах
    *
-   * Interrupt active execution owned by this MongolGPT process. Idle interruption is a no-op.
+   * Энэ MongolGPT процессын эзэмшиж буй идэвхтэй гүйцэтгэлийг тасална. Сул зогсолтын сессийг таслахад ямар ч үйлдэл хийхгүй.
    */
   public interrupt<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5882,9 +6118,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Get session message
+   * Сессийн мессеж авах
    *
-   * Retrieve one projected message owned by the Session.
+   * Сесст хамаарах нэг проекцолсон мессежийг авна.
    */
   public message<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5912,9 +6148,9 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
-   * Get session messages
+   * Сессийн мессежүүдийг авах
    *
-   * Retrieve projected messages for a session. Items keep the requested order across pages; use cursor.next or cursor.previous to move through the ordered timeline.
+   * Сессийн проекцолсон мессежүүдийг авна. Зүйлс хуудсуудын хооронд хүссэн дарааллаа хадгална; эрэмбэлэгдсэн дарааллаар шилжихдээ cursor.next эсвэл cursor.previous ашиглана.
    */
   public messages<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5963,9 +6199,9 @@ export class Session3 extends HeyApiClient {
 
 export class Model extends HeyApiClient {
   /**
-   * List models
+   * Моделийн жагсаалт авах
    *
-   * Retrieve available models ordered by release date.
+   * Боломжтой моделуудыг гарсан огноогоор нь эрэмбэлэн авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5987,9 +6223,9 @@ export class Model extends HeyApiClient {
 
 export class Provider2 extends HeyApiClient {
   /**
-   * List providers
+   * Провайдеруудын жагсаалт авах
    *
-   * Retrieve active AI providers so clients can show provider availability and configuration.
+   * Идэвхтэй AI провайдеруудын боломж, тохиргоог клиент шалгахын тулд мэдээллийг нь авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6009,9 +6245,9 @@ export class Provider2 extends HeyApiClient {
   }
 
   /**
-   * Get provider
+   * Провайдерын мэдээлэл авах
    *
-   * Retrieve a single AI provider so clients can inspect its availability and endpoint settings.
+   * Нэг AI үйлчилгээ үзүүлэгчийн боломж болон төгсгөлийн цэгийн тохиргоог клиент шалгахын тулд мэдээллийг нь авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6044,9 +6280,9 @@ export class Provider2 extends HeyApiClient {
 
 export class Connect extends HeyApiClient {
   /**
-   * Connect with key
+   * Түлхүүрээр холбох
    *
-   * Run a key authentication method and store the resulting credential.
+   * Түлхүүрээр нэвтрэлт танилтыг хийж, үүссэн нэвтрэх мэдээллийг хадгална.
    */
   public key<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6090,9 +6326,9 @@ export class Connect extends HeyApiClient {
   }
 
   /**
-   * Begin OAuth connection
+   * OAuth холболт эхлүүлэх
    *
-   * Start an OAuth attempt and return the authorization details.
+   * OAuth оролдлогыг эхлүүлж, зөвшөөрөл олгоход шаардлагатай мэдээллийг буцаана.
    */
   public oauth<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6142,9 +6378,9 @@ export class Connect extends HeyApiClient {
 
 export class Attempt extends HeyApiClient {
   /**
-   * Cancel OAuth connection
+   * OAuth холболтыг цуцлах
    *
-   * Cancel an OAuth attempt and release its resources.
+   * OAuth оролдлогыг цуцалж, түүнд ашигласан нөөцийг чөлөөлнө.
    */
   public cancel<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6179,9 +6415,9 @@ export class Attempt extends HeyApiClient {
   }
 
   /**
-   * Get OAuth attempt status
+   * OAuth оролдлогын төлөв авах
    *
-   * Poll the current status of an OAuth attempt.
+   * OAuth оролдлогын одоогийн төлөвийг шалган буцаана.
    */
   public status<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6216,9 +6452,9 @@ export class Attempt extends HeyApiClient {
   }
 
   /**
-   * Complete OAuth connection
+   * OAuth холболтыг дуусгах
    *
-   * Complete a code-based OAuth attempt and store the resulting credential.
+   * Кодод суурилсан OAuth оролдлогыг дуусгаж, үүссэн нэвтрэх мэдээллийг хадгална.
    */
   public complete<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6262,9 +6498,9 @@ export class Attempt extends HeyApiClient {
 
 export class Integration extends HeyApiClient {
   /**
-   * List integrations
+   * Интеграцын жагсаалт авах
    *
-   * Retrieve available integrations and their authentication methods.
+   * Боломжтой интеграцууд болон тэдгээрийн нэвтрэлт танилтын аргуудыг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6284,9 +6520,9 @@ export class Integration extends HeyApiClient {
   }
 
   /**
-   * Get integration
+   * Интеграцын мэдээлэл авах
    *
-   * Retrieve one integration and its authentication methods.
+   * Нэг интеграц болон түүний нэвтрэлт танилтын аргуудыг авна.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6329,9 +6565,9 @@ export class Integration extends HeyApiClient {
 
 export class Credential extends HeyApiClient {
   /**
-   * Remove credential
+   * Нэвтрэх мэдээллийг устгах
    *
-   * Remove a stored integration credential.
+   * Хадгалсан интеграцын нэвтрэх мэдээллийг устгана.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6364,9 +6600,9 @@ export class Credential extends HeyApiClient {
   }
 
   /**
-   * Update credential
+   * Нэвтрэх мэдээллийг шинэчлэх
    *
-   * Update a stored credential label.
+   * Хадгалсан нэвтрэх мэдээллийн шошгыг шинэчилнэ.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6406,9 +6642,9 @@ export class Credential extends HeyApiClient {
 
 export class Request extends HeyApiClient {
   /**
-   * List pending permission requests
+   * Хүлээгдэж буй зөвшөөрлийн хүсэлтүүдийг жагсаах
    *
-   * Retrieve pending permission requests for a location.
+   * Тухайн байршилд хүлээгдэж буй зөвшөөрлийн хүсэлтүүдийг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6434,9 +6670,9 @@ export class Request extends HeyApiClient {
 
 export class Saved extends HeyApiClient {
   /**
-   * List saved permissions
+   * Хадгалсан зөвшөөрлүүдийг жагсаах
    *
-   * Retrieve saved permissions, optionally filtered by project.
+   * Хадгалсан зөвшөөрлүүдийг авна. Төслөөр шүүж болно.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6457,9 +6693,9 @@ export class Saved extends HeyApiClient {
   }
 
   /**
-   * Remove saved permission
+   * Хадгалсан зөвшөөрлийг устгах
    *
-   * Remove a saved permission by ID.
+   * ID-аар заасан хадгалсан зөвшөөрлийг устгана.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6494,9 +6730,9 @@ export class Permission3 extends HeyApiClient {
 
 export class Fs extends HeyApiClient {
   /**
-   * Read file
+   * Файл унших
    *
-   * Serve one file relative to the requested location.
+   * Хүссэн байршилтай харьцуулсан замаар нэг файлыг дамжуулна.
    */
   public read<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6516,9 +6752,9 @@ export class Fs extends HeyApiClient {
   }
 
   /**
-   * List directory
+   * Хавтас жагсаах
    *
-   * List direct children of one directory relative to the requested location.
+   * Хүссэн байршилтай харьцуулсан замаар нэг хавтасны шууд доторх зүйлсийг жагсаана.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6549,9 +6785,9 @@ export class Fs extends HeyApiClient {
   }
 
   /**
-   * Find files
+   * Файл хайх
    *
-   * Find recursively ranked filesystem entries relative to the requested location.
+   * Хүссэн байршилтай харьцуулсан замаар файлын системийн зүйлсийг рекурсивээр хайж эрэмбэлнэ.
    */
   public find<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6588,9 +6824,9 @@ export class Fs extends HeyApiClient {
 
 export class Command2 extends HeyApiClient {
   /**
-   * List commands
+   * Командуудыг жагсаах
    *
-   * Retrieve currently registered commands.
+   * Одоогоор бүртгэлтэй командуудыг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6612,9 +6848,9 @@ export class Command2 extends HeyApiClient {
 
 export class Skill extends HeyApiClient {
   /**
-   * List skills
+   * Ур чадваруудыг жагсаах
    *
-   * Retrieve currently registered skills.
+   * Одоогоор бүртгэлтэй ур чадваруудыг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6636,9 +6872,9 @@ export class Skill extends HeyApiClient {
 
 export class Event2 extends HeyApiClient {
   /**
-   * Subscribe to events
+   * Үйл явдалд бүртгүүлэх
    *
-   * Subscribe to native event payloads for the server.
+   * Серверийн дотоод үйл явдлын өгөгдлийг хүлээн авахаар бүртгүүлнэ.
    */
   public subscribe<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).sse.get<V2EventSubscribeResponses, V2EventSubscribeErrors, ThrowOnError>({
@@ -6650,9 +6886,9 @@ export class Event2 extends HeyApiClient {
 
 export class Pty2 extends HeyApiClient {
   /**
-   * List PTY sessions
+   * PTY сессүүдийн жагсаалт авах
    *
-   * List PTY sessions for a location, including exited sessions retained until removal.
+   * Байршлын PTY сессүүдийг жагсааж, дууссан ч устгах хүртэл хадгалагдсан сессүүдийг мөн оруулна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6672,9 +6908,9 @@ export class Pty2 extends HeyApiClient {
   }
 
   /**
-   * Create PTY session
+   * PTY сесс үүсгэх
    *
-   * Create a pseudo-terminal session for a location.
+   * Байршилд зориулсан псевдо-терминалын сесс үүсгэнэ.
    */
   public create<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6720,9 +6956,9 @@ export class Pty2 extends HeyApiClient {
   }
 
   /**
-   * Remove PTY session
+   * PTY сесс устгах
    *
-   * Terminate and remove one PTY session.
+   * Нэг PTY сессийг дуусгаж, устгана.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6753,9 +6989,9 @@ export class Pty2 extends HeyApiClient {
   }
 
   /**
-   * Get PTY session
+   * PTY сессийн мэдээлэл авах
    *
-   * Get one PTY session, including its exit code once exited.
+   * Нэг PTY сессийн мэдээллийг авч, дууссан бол гаралтын кодыг нь мөн буцаана.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6786,9 +7022,9 @@ export class Pty2 extends HeyApiClient {
   }
 
   /**
-   * Update PTY session
+   * PTY сесс шинэчлэх
    *
-   * Update the title or viewport size of one PTY session.
+   * Нэг PTY сессийн гарчиг эсвэл харах талбарын хэмжээг шинэчилнэ.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6831,9 +7067,9 @@ export class Pty2 extends HeyApiClient {
   }
 
   /**
-   * Create PTY WebSocket token
+   * PTY WebSocket токен үүсгэх
    *
-   * Create a short-lived single-use ticket for opening a PTY WebSocket connection.
+   * PTY WebSocket холболт нээхэд зориулсан богино хугацаатай, нэг удаагийн тасалбар үүсгэнэ.
    */
   public connectToken<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6864,9 +7100,9 @@ export class Pty2 extends HeyApiClient {
   }
 
   /**
-   * Connect to PTY session
+   * PTY сесст холбогдох
    *
-   * Establish a WebSocket connection streaming PTY output and accepting terminal input.
+   * PTY-ийн гаралтыг дамжуулж, терминалын оролтыг хүлээн авах WebSocket холболт үүсгэнэ.
    */
   public connect<ThrowOnError extends boolean = false>(
     parameters: {
@@ -6902,9 +7138,9 @@ export class Pty2 extends HeyApiClient {
 
 export class Request2 extends HeyApiClient {
   /**
-   * List pending question requests
+   * Хүлээгдэж буй асуултын хүсэлтүүдийг жагсаах
    *
-   * Retrieve pending question requests for a location.
+   * Тухайн байршилд хүлээгдэж буй асуултын хүсэлтүүдийг авна.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -6937,9 +7173,9 @@ export class Question3 extends HeyApiClient {
 
 export class Reference extends HeyApiClient {
   /**
-   * List references
+   * Лавлахуудыг жагсаах
    *
-   * List references available in the requested location.
+   * Хүссэн байршилд ашиглах боломжтой лавлахуудыг жагсаана.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {

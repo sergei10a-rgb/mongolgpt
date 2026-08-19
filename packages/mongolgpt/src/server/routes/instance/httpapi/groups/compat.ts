@@ -83,7 +83,7 @@ export const CompatImportResponse = Schema.Struct({
 }).annotate({ identifier: "CompatImportResponse" })
 
 export class CompatImportError extends Schema.ErrorClass<CompatImportError>("CompatImportError")(
-  { message: Schema.String },
+  { message: Schema.String.annotate({ description: "Нийцтэй байдлын импортын алдааны тайлбар" }) },
   { httpApiStatus: 400 },
 ) {}
 
@@ -99,32 +99,32 @@ export const CompatApi = HttpApi.make("compat")
         HttpApiEndpoint.post("plan", CompatPaths.plan, {
           query: WorkspaceRoutingQuery,
           payload: CompatImportPayload,
-          success: described(CompatImportResponse, "MongolGPT compatibility import plan"),
+          success: described(CompatImportResponse, "MongolGPT-ийн нийцтэй байдлын импортын төлөвлөгөө"),
           error: CompatImportError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "compat.import.plan",
-            summary: "Plan compatibility import",
-            description: "Plan how a foreign skill, plugin, or MCP configuration will be adapted into MongolGPT.",
+            summary: "Нийцтэй байдлын импорт төлөвлөх",
+            description: "Гаднын ур чадвар, залгаас эсвэл MCP тохиргоог MongolGPT-д хэрхэн тохируулахыг төлөвлөнө.",
           }),
         ),
         HttpApiEndpoint.post("apply", CompatPaths.apply, {
           query: WorkspaceRoutingQuery,
           payload: CompatImportPayload,
-          success: described(CompatImportResponse, "MongolGPT compatibility import result"),
+          success: described(CompatImportResponse, "MongolGPT-ийн нийцтэй байдлын импортын үр дүн"),
           error: CompatImportError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "compat.import.apply",
-            summary: "Apply compatibility import",
-            description: "Apply a planned compatibility import to the active MongolGPT instance configuration.",
+            summary: "Нийцтэй байдлын импорт хэрэгжүүлэх",
+            description: "Төлөвлөсөн нийцтэй байдлын импортыг идэвхтэй MongolGPT инстанцын тохиргоонд хэрэгжүүлнэ.",
           }),
         ),
       )
       .annotateMerge(
         OpenApi.annotations({
-          title: "compat",
-          description: "MongolGPT-native compatibility import routes.",
+          title: "Нийцтэй байдлын импорт",
+          description: "MongolGPT-д зориулсан нийцтэй байдлын импортын маршрутууд.",
         }),
       )
       .middleware(InstanceContextMiddleware)
@@ -133,8 +133,9 @@ export const CompatApi = HttpApi.make("compat")
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT compatibility HttpApi",
+      title: "MongolGPT-ийн нийцтэй байдлын HttpApi",
       version: "0.0.1",
-      description: "Typed routes for importing foreign AI-agent skills, plugins, and MCP connectors into MongolGPT.",
+      description:
+        "Гаднын AI агентын ур чадвар, залгаас болон MCP холбогчийг MongolGPT-д импортлох төрөл тодорхойлсон замууд.",
     }),
   )

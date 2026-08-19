@@ -86,7 +86,7 @@ await Bun.write("./src/v2/gen/types.gen.ts", historyTypesPatched)
 
 const generatedSdk = await Bun.file("./src/v2/gen/sdk.gen.ts").text()
 const historySdkPatched = generatedSdk.replace(
-  /(Get session history[\s\S]*?parameters: \{\s*sessionID: string[;,]\s*limit\?: )string([;,]\s*after\?: )string/,
+  /(public history<[^\n]+>\(parameters: \{\s*sessionID: string[;,]\s*limit\?: )string([;,]\s*after\?: )string/,
   "$1number$2number",
 )
 if (historySdkPatched === generatedSdk) {

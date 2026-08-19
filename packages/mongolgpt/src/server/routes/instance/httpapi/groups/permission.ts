@@ -20,32 +20,32 @@ export const PermissionApi = HttpApi.make("permission")
       .add(
         HttpApiEndpoint.get("list", root, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(PermissionV1.Request), "List of pending permissions"),
+          success: described(Schema.Array(PermissionV1.Request), "Хүлээгдэж буй зөвшөөрлүүдийн жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "permission.list",
-            summary: "List pending permissions",
-            description: "Get all pending permission requests across all sessions.",
+            summary: "Хүлээгдэж буй зөвшөөрлүүдийг жагсаах",
+            description: "Бүх сессийн хүлээгдэж буй зөвшөөрлийн хүсэлтүүдийг авна.",
           }),
         ),
         HttpApiEndpoint.post("reply", `${root}/:requestID/reply`, {
           params: { requestID: PermissionV1.ID },
           query: WorkspaceRoutingQuery,
           payload: ReplyPayload,
-          success: described(Schema.Boolean, "Permission processed successfully"),
+          success: described(Schema.Boolean, "Зөвшөөрлийг амжилттай боловсруулсан"),
           error: [HttpApiError.BadRequest, PermissionNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "permission.reply",
-            summary: "Respond to permission request",
-            description: "Approve or deny a permission request from the AI assistant.",
+            summary: "Зөвшөөрлийн хүсэлтэд хариу өгөх",
+            description: "AI туслахаас ирсэн зөвшөөрлийн хүсэлтийг зөвшөөрөх эсвэл татгалзана.",
           }),
         ),
       )
       .annotateMerge(
         OpenApi.annotations({
-          title: "permission",
-          description: "Experimental HttpApi permission routes.",
+          title: "Зөвшөөрөл",
+          description: "Туршилтын HttpApi зөвшөөрлийн замууд.",
         }),
       )
       .middleware(InstanceContextMiddleware)
@@ -54,8 +54,8 @@ export const PermissionApi = HttpApi.make("permission")
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT-ийн туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Инстансын сонгосон замуудыг хамарсан туршилтын HttpApi интерфейс.",
     }),
   )

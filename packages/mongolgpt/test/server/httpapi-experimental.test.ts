@@ -484,7 +484,7 @@ describe("experimental HttpApi", () => {
       expect(response.status).toBe(400)
       expect(yield* json(response)).toEqual({
         name: "WorktreeNotGitError",
-        data: { message: "Worktree-ийг зөвхөн Git төсөлд ашиглана" },
+        data: { message: "Төслийн хуулбарыг зөвхөн Git төсөлд ашиглана" },
       })
     }),
   )

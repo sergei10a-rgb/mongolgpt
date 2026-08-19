@@ -37,7 +37,7 @@ export const workspaceHandlers = HttpApiBuilder.group(InstanceHttpApi, "workspac
             const die = cause.reasons.find(Cause.isDieReason)
             const fail = cause.reasons.find(Cause.isFailReason)
             const reason: unknown = die?.defect ?? fail?.error
-            const message = reason instanceof Error ? reason.message : "Workspace creation failed"
+            const message = reason instanceof Error ? reason.message : "Ажлын талбар үүсгэж чадсангүй"
             return Effect.fail(
               new ApiWorkspaceCreateError({
                 name: "WorkspaceCreateError",
