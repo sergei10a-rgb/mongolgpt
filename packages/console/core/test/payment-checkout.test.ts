@@ -383,4 +383,18 @@ describe("subscription payment checkout", () => {
       checkout: null,
     })
   })
+
+  test("does not expose a future subscription as currently active", async () => {
+    const { sqlite, db, workspaceID } = await fixture()
+    sqlite
+      .query(
+        "insert into plan_subscription (id, workspace_id, invoice_id, plan, status, time_period_start, time_period_end) values (?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run("sub_checkout_future", workspaceID, "inv_checkout_future", "max", "active", NOW + 1_000, NOW + 86_400_000)
+
+    expect(await getSubscriptionBillingOverviewWithDb(db, workspaceID, NOW)).toEqual({
+      subscription: null,
+      checkout: null,
+    })
+  })
 })

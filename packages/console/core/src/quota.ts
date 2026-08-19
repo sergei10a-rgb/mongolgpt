@@ -136,6 +136,14 @@ export function planQuotaScope(workspaceID: string, invoiceID: string) {
   return `plan:${workspaceID}:${invoiceID}`
 }
 
+export function planQuotaCounterKeys(userID: string) {
+  return {
+    weeklyCost: `user/${userID}/weekly-cost`,
+    weeklyTokens: `user/${userID}/weekly-tokens`,
+    rollingCost: `user/${userID}/rolling-cost`,
+  }
+}
+
 export interface QuotaLedgerStorage {
   get<T>(key: string): Promise<T | undefined>
   put<T>(key: string, value: T): Promise<void>

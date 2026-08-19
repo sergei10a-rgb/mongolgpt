@@ -185,6 +185,7 @@ export async function getSubscriptionBillingOverviewWithDb(
           eq(PlanSubscriptionTable.workspaceID, workspace),
           eq(PlanSubscriptionTable.status, "active"),
           isNull(PlanSubscriptionTable.timeDeleted),
+          lte(PlanSubscriptionTable.timePeriodStart, new Date(now)),
           gt(PlanSubscriptionTable.timePeriodEnd, new Date(now)),
         ),
       )

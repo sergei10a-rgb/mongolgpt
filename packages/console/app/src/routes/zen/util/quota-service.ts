@@ -27,6 +27,10 @@ export async function ledgerCommand(scope: string, command: QuotaLedgerCommand) 
   })
 }
 
+export async function readLedgerCounters(scope: string, keys: readonly string[]) {
+  return numberRecord(await ledgerCommand(scope, { type: "read", keys: [...keys] }))
+}
+
 export async function enqueueUsageEvent(event: UsageQueueEvent) {
   await callQuotaService("/v1/usage", event)
 }

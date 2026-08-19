@@ -1,5 +1,5 @@
 import type { QuotaLedgerCommand } from "@mongolgpt/console-core/quota.js"
-import { planQuotaScope } from "@mongolgpt/console-core/quota.js"
+import { planQuotaCounterKeys, planQuotaScope } from "@mongolgpt/console-core/quota.js"
 import { centsToMicroCents } from "@mongolgpt/console-core/util/price.js"
 import { ledgerCommand } from "./quota-service"
 
@@ -48,9 +48,6 @@ export type PlanQuotaAllowed = {
 export type PlanQuotaResult = PlanQuotaDenied | PlanQuotaAllowed
 export type PlanQuotaLedgerClient = (scope: string, command: QuotaLedgerCommand) => Promise<unknown>
 
-const WEEKLY_COST = "weekly-cost"
-const WEEKLY_TOKENS = "weekly-tokens"
-const ROLLING_COST = "rolling-cost"
 const SECOND = 1_000
 const MINUTE = 60
 
@@ -81,10 +78,6 @@ export function planQuotaReservationBounds(input: {
   const costInMicroCents = Math.max(1, centsToMicroCents(highestRate * tokens * 100))
   if (!Number.isSafeInteger(costInMicroCents)) throw new TypeError("Загварын хүсэлтийн өртгийн хязгаар буруу байна.")
   return { costInMicroCents, tokens }
-}
-
-function counterKey(userID: string, dimension: string) {
-  return `user/${userID}/${dimension}`
 }
 
 function timestamp(value: DateLike) {
@@ -183,11 +176,7 @@ export async function reservePlanQuota(
     rollingUpdated !== undefined && rollingUpdated >= rollingThreshold
       ? rollingUpdated + rollingWindowMs
       : now + rollingWindowMs
-  const keys = {
-    weeklyCost: counterKey(input.userID, WEEKLY_COST),
-    weeklyTokens: counterKey(input.userID, WEEKLY_TOKENS),
-    rollingCost: counterKey(input.userID, ROLLING_COST),
-  }
+  const keys = planQuotaCounterKeys(input.userID)
   const ledgerKeys = [keys.weeklyCost, keys.weeklyTokens, keys.rollingCost] as const
   const amounts = {
     cost: Math.max(1, validAmount(input.reservation.costInMicroCents)),
