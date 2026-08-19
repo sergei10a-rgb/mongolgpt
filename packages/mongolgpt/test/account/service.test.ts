@@ -605,6 +605,7 @@ it.live("poll stores the account and first org on success", () =>
 
     expect(res._tag).toBe("PollSuccess")
     if (res._tag === "PollSuccess") {
+      expect(String(res.id)).toBe("user-1")
       expect(res.email).toBe("user@example.com")
     }
 

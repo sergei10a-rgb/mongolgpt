@@ -112,7 +112,7 @@ describe("desktop account client", () => {
         }
         if (url.pathname === "/experimental/account/login/login-1" && init?.method !== "DELETE") {
           polls += 1
-          return json(polls === 1 ? { _tag: "pending" } : { _tag: "success", email: "user@example.com" })
+          return json(polls === 1 ? { _tag: "pending" } : { _tag: "success", id: "user-1", email: "user@example.com" })
         }
         if (url.pathname === "/experimental/account") {
           return json({ id: "user-1", email: "user@example.com", url: "https://dev.mgpt.mn" })
@@ -136,6 +136,51 @@ describe("desktop account client", () => {
     })
 
     await expect(client.current()).rejects.toThrow("JSON-ийн оронд")
+  })
+
+  test("rejects login when the completed account ID does not match the active sidecar account", async () => {
+    const client = createDesktopAccountClient({
+      server,
+      accountServer: "https://dev.mgpt.mn",
+      openExternal: async () => {},
+      sleep: async () => {},
+      fetch: async (input, init) => {
+        const url = input instanceof URL ? input : new URL(String(input))
+        if (url.pathname === "/experimental/account/login" && init?.method === "POST") {
+          return json({ loginID: "login-1", url: "https://auth.dev.mgpt.mn/authorize" })
+        }
+        if (url.pathname === "/experimental/account/login/login-1" && init?.method !== "DELETE") {
+          return json({ _tag: "success", id: "account-expected", email: "user@example.com" })
+        }
+        if (url.pathname === "/experimental/account") {
+          return json({ id: "account-stale", email: "user@example.com", url: "https://dev.mgpt.mn" })
+        }
+        return json(true)
+      },
+    })
+
+    await expect(client.login()).rejects.toThrow("баталгаажуулж чадсангүй")
+  })
+
+  test("rejects a completed login response without a canonical account ID", async () => {
+    const client = createDesktopAccountClient({
+      server,
+      accountServer: "https://dev.mgpt.mn",
+      openExternal: async () => {},
+      sleep: async () => {},
+      fetch: async (input, init) => {
+        const url = input instanceof URL ? input : new URL(String(input))
+        if (url.pathname === "/experimental/account/login" && init?.method === "POST") {
+          return json({ loginID: "login-1", url: "https://auth.dev.mgpt.mn/authorize" })
+        }
+        if (url.pathname === "/experimental/account/login/login-1" && init?.method !== "DELETE") {
+          return json({ _tag: "success", email: "user@example.com" })
+        }
+        return json(true)
+      },
+    })
+
+    await expect(client.login()).rejects.toThrow("төлөвийн хариу танигдсангүй")
   })
 
   test("refuses to open a non-HTTPS remote authorization URL", async () => {

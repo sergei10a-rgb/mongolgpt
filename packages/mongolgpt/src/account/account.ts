@@ -451,7 +451,7 @@ function makeLayer(resolveDns: AccountDnsLookup, allowCustomAccountServer = fals
             orgID: initialOrg(remoteOrgs),
           })
 
-          return new PollSuccess({ email: account.email })
+          return new PollSuccess({ id: account.id, email: account.email })
         }).pipe(Effect.ensuring(Effect.promise(() => callback.close())))
 
         return { url: authorization.url, wait }
@@ -624,7 +624,7 @@ function makeLayer(resolveDns: AccountDnsLookup, allowCustomAccountServer = fals
           orgID: initialOrg(remoteOrgs),
         })
 
-        return new PollSuccess({ email: account.email })
+        return new PollSuccess({ id: account.id, email: account.email })
       })
 
       return Service.of({

@@ -28,7 +28,10 @@ const LOGIN_RESULT_TTL_MS = 5 * 60 * 1000
 const LOGIN_ERROR_MESSAGE = "Нэвтрэх үйлдэл амжилтгүй боллоо"
 const LOGIN_TIMEOUT_MESSAGE = "Нэвтрэх хугацаа дууссан"
 
-type LoginStatus = { _tag: "pending" } | { _tag: "success"; email: string } | { _tag: "error"; message: string }
+type LoginStatus =
+  | { _tag: "pending" }
+  | { _tag: "success"; id: string; email: string }
+  | { _tag: "error"; message: string }
 
 type LoginRecord = {
   status: LoginStatus
@@ -139,7 +142,7 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
 
           const wait = browser.wait.pipe(
             Effect.flatMap((result) => config.invalidate().pipe(Effect.as(result))),
-            Effect.map((result) => ({ _tag: "success", email: result.email }) as const),
+            Effect.map((result) => ({ _tag: "success", id: result.id, email: result.email }) as const),
             Effect.timeout(LOGIN_TIMEOUT_MS),
             Effect.catchTag("TimeoutError", () =>
               Effect.succeed({ _tag: "error", message: LOGIN_TIMEOUT_MESSAGE } as const),

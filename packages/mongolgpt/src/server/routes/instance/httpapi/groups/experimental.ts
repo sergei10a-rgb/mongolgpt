@@ -60,7 +60,7 @@ const AccountLoginStarted = Schema.Struct({
 
 const AccountLoginStatus = Schema.Union([
   Schema.Struct({ _tag: Schema.Literal("pending") }),
-  Schema.Struct({ _tag: Schema.Literal("success"), email: Schema.String }),
+  Schema.Struct({ _tag: Schema.Literal("success"), id: Schema.String, email: Schema.String }),
   Schema.Struct({ _tag: Schema.Literal("error"), message: Schema.String }),
 ]).annotate({ identifier: "ExperimentalAccountLoginStatus" })
 

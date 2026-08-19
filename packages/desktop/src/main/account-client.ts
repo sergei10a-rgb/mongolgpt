@@ -14,7 +14,10 @@ type Dependencies = {
 }
 
 type LoginStarted = { loginID: string; url: string }
-type LoginStatus = { _tag: "pending" } | { _tag: "success"; email: string } | { _tag: "error"; message: string }
+type LoginStatus =
+  | { _tag: "pending" }
+  | { _tag: "success"; id: string; email: string }
+  | { _tag: "error"; message: string }
 
 const jsonContentType = (value: string | null) => value?.toLowerCase().includes("application/json") === true
 
@@ -57,8 +60,8 @@ function parseLoginStatus(value: unknown): LoginStatus {
     throw new Error("Нэвтрэх төлөвийн хариу буруу байна")
   }
   if (value._tag === "pending") return { _tag: "pending" }
-  if (value._tag === "success" && typeof value.email === "string") {
-    return { _tag: "success", email: value.email }
+  if (value._tag === "success" && typeof value.id === "string" && typeof value.email === "string") {
+    return { _tag: "success", id: value.id, email: value.email }
   }
   if (value._tag === "error" && typeof value.message === "string") {
     return { _tag: "error", message: value.message }
@@ -157,7 +160,7 @@ export function createDesktopAccountClient(dependencies: Dependencies): DesktopA
         if (status._tag === "error") throw new Error(status.message)
 
         const account = await current(loginController.signal)
-        if (!account || account.email !== status.email) {
+        if (!account || account.id !== status.id || account.email !== status.email) {
           throw new Error("Нэвтэрсэн бүртгэлийг баталгаажуулж чадсангүй")
         }
         return account
