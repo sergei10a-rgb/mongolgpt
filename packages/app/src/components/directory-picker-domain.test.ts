@@ -152,6 +152,28 @@ test("resolves directory autocomplete from the current browser root", async () =
   expect(directories).toEqual(["/repo", "/repo/src"])
 })
 
+test("lists child directories when the picker opens without a search", async () => {
+  const sdk = {
+    client: {
+      file: {
+        list: (input: { directory: string }) => {
+          expect(input.directory).toBe("/home/luke")
+          return Promise.resolve({
+            data: [
+              { name: "Documents", absolute: "/home/luke/Documents", type: "directory" },
+              { name: "notes.txt", absolute: "/home/luke/notes.txt", type: "file" },
+              { name: "Projects", absolute: "/home/luke/Projects", type: "directory" },
+            ],
+          })
+        },
+      },
+    },
+  } as unknown as Parameters<typeof createDirectorySearch>[0]["sdk"]
+  const search = createDirectorySearch({ sdk, home: () => "/home/luke", base: () => "/home/luke" })
+
+  expect(await search("")).toEqual(["/home/luke/Documents", "/home/luke/Projects"])
+})
+
 test("identifies the next directory level to preload", () => {
   expect(
     preloadTreeDirectories("src/", [
