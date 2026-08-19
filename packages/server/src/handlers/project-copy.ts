@@ -56,13 +56,13 @@ function badRequest<A, R>(effect: Effect.Effect<A, ProjectCopy.Error, R>) {
 
 function message(error: ProjectCopy.Error) {
   if (error instanceof ProjectCopy.SourceDirectoryNotFoundError)
-    return `Project copy source not found: ${error.directory}`
+    return `Төслийг хуулах эх үүсвэр олдсонгүй: ${error.directory}`
   if (error instanceof ProjectCopy.DestinationExistsError)
-    return `Project copy destination already exists: ${error.directory}`
+    return `Төслийн хуулбарын очих зам аль хэдийн байна: ${error.directory}`
   if (error instanceof ProjectCopy.DirectoryUnavailableError)
-    return `Project copy directory unavailable: ${error.directory}`
-  if (error instanceof ProjectCopy.InvalidDirectoryError) return `Invalid project copy directory: ${error.directory}`
+    return `Төслийн хуулбарын хавтас ашиглах боломжгүй: ${error.directory}`
+  if (error instanceof ProjectCopy.InvalidDirectoryError) return `Төслийн хуулбарын хавтас буруу байна: ${error.directory}`
   if (error instanceof ProjectCopy.StrategyUnavailableError)
-    return `Project copy strategy unavailable: ${error.strategy}`
+    return `Төслийг хуулах арга ашиглах боломжгүй: ${error.strategy}`
   return error.message
 }

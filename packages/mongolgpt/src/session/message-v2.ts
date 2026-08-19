@@ -355,7 +355,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
               state: "output-error",
               toolCallId: part.callID,
               input: part.state.input,
-              errorText: "[Tool execution was interrupted]",
+              errorText: "[Хэрэгслийн гүйцэтгэл тасалдсан]",
               ...(part.metadata?.providerExecuted ? { providerExecuted: true } : {}),
               ...(differentModel ? {} : { callProviderMetadata: providerMeta(part.metadata) }),
             })
@@ -448,7 +448,7 @@ export const page = Effect.fn("MessageV2.page")(function* (input: {
       .where(eq(SessionTable.id, input.sessionID))
       .get()
       .pipe(Effect.orDie)
-    if (!row) return yield* new NotFoundError({ message: `Session not found: ${input.sessionID}` })
+    if (!row) return yield* new NotFoundError({ message: `Сесс олдсонгүй: ${input.sessionID}` })
     return {
       items: [] as WithParts[],
       more: false,
@@ -512,7 +512,7 @@ export const get = Effect.fn("MessageV2.get")(function* (input: { sessionID: Ses
     .where(and(eq(MessageTable.id, input.messageID), eq(MessageTable.session_id, input.sessionID)))
     .get()
     .pipe(Effect.orDie)
-  if (!row) return yield* new NotFoundError({ message: `Message not found: ${input.messageID}` })
+  if (!row) return yield* new NotFoundError({ message: `Мессеж олдсонгүй: ${input.messageID}` })
   return {
     info: info(row),
     parts: yield* parts(input.messageID),
@@ -626,7 +626,7 @@ export function fromError(
     case (e as SystemError)?.code === "ECONNRESET":
       return new APIError(
         {
-          message: "Connection reset by server",
+          message: "Сервертэй холболт тасарсан",
           isRetryable: true,
           metadata: {
             code: (e as SystemError).code ?? "",
@@ -642,7 +642,7 @@ export function fromError(
       }
       return new APIError(
         {
-          message: "Response decompression failed",
+          message: "Хариуг задлах явцад алдаа гарлаа",
           isRetryable: true,
           metadata: {
             code: (e as FetchDecompressionError).code,

@@ -51,7 +51,7 @@ export const authorizationLayer = Layer.effect(
         yield* HttpEffect.appendPreResponseHandler((_request, response) =>
           Effect.succeed(HttpServerResponse.setHeader(response, "www-authenticate", WWW_AUTHENTICATE)),
         )
-        return yield* new UnauthorizedError({ message: "Authentication required" })
+        return yield* new UnauthorizedError({ message: "Нэвтрэлт шаардлагатай" })
       }),
     )
   }),

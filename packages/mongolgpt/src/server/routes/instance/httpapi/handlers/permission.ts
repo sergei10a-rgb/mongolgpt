@@ -28,7 +28,7 @@ export const permissionHandlers = HttpApiBuilder.group(InstanceHttpApi, "permiss
             Effect.fail(
               new PermissionNotFoundError({
                 requestID: String(error.requestID),
-                message: `Permission request not found: ${error.requestID}`,
+                message: `Зөвшөөрлийн хүсэлт олдсонгүй: ${error.requestID}`,
               }),
             ),
           ),

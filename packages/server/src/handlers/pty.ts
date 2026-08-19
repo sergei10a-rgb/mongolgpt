@@ -65,7 +65,7 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
                 () =>
                   new PtyNotFoundError({
                     ptyID: ctx.params.ptyID,
-                    message: `PTY session not found: ${ctx.params.ptyID}`,
+                    message: `PTY сесс олдсонгүй: ${ctx.params.ptyID}`,
                   }),
               ),
             ),
@@ -88,7 +88,7 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
                   () =>
                     new PtyNotFoundError({
                       ptyID: ctx.params.ptyID,
-                      message: `PTY session not found: ${ctx.params.ptyID}`,
+                      message: `PTY сесс олдсонгүй: ${ctx.params.ptyID}`,
                     }),
                 ),
               ),
@@ -105,7 +105,7 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
               () =>
                 new PtyNotFoundError({
                   ptyID: ctx.params.ptyID,
-                  message: `PTY session not found: ${ctx.params.ptyID}`,
+                  message: `PTY сесс олдсонгүй: ${ctx.params.ptyID}`,
                 }),
             ),
           )
@@ -122,7 +122,7 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
             request.headers[PTY_CONNECT_TOKEN_HEADER] !== PTY_CONNECT_TOKEN_HEADER_VALUE ||
             !isAllowedRequestOrigin(request.headers.origin, request.headers.host, cors)
           )
-            return yield* new ForbiddenError({ message: "Invalid PTY connect token request" })
+            return yield* new ForbiddenError({ message: "PTY холболтын токены хүсэлт буруу байна" })
           const pty = yield* Pty.Service
           yield* pty.get(ctx.params.ptyID).pipe(
             Effect.catchTag(
@@ -130,7 +130,7 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
               () =>
                 new PtyNotFoundError({
                   ptyID: ctx.params.ptyID,
-                  message: `PTY session not found: ${ctx.params.ptyID}`,
+                  message: `PTY сесс олдсонгүй: ${ctx.params.ptyID}`,
                 }),
             ),
           )
@@ -186,9 +186,9 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
             .pipe(
               Effect.catchTags({
                 "Pty.NotFoundError": () =>
-                  closeAccepted(new Socket.CloseEvent(4404, "session not found")).pipe(Effect.as(undefined)),
+                  closeAccepted(new Socket.CloseEvent(4404, "сесс олдсонгүй")).pipe(Effect.as(undefined)),
                 "Pty.ExitedError": () =>
-                  closeAccepted(new Socket.CloseEvent(4404, "session exited")).pipe(Effect.as(undefined)),
+                  closeAccepted(new Socket.CloseEvent(4404, "сесс дууссан")).pipe(Effect.as(undefined)),
               }),
             )
           if (!attachment) return HttpServerResponse.empty()

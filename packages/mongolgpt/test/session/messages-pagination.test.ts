@@ -192,7 +192,7 @@ describe("MessageV2.page", () => {
       const fake = "non-existent-session" as SessionID
       const error = yield* Effect.flip(MessageV2.page({ sessionID: fake, limit: 10 }))
       expect(error).toBeInstanceOf(NotFoundError)
-      expect(error.message).toBe(`Session not found: ${fake}`)
+      expect(error.message).toBe(`Сесс олдсонгүй: ${fake}`)
     }),
   )
 
@@ -476,7 +476,7 @@ describe("MessageV2.get", () => {
         const messageID = MessageID.ascending()
         const error = yield* Effect.flip(MessageV2.get({ sessionID, messageID }))
         expect(error).toBeInstanceOf(NotFoundError)
-        expect(error.message).toBe(`Message not found: ${messageID}`)
+        expect(error.message).toBe(`Мессеж олдсонгүй: ${messageID}`)
       }),
     ),
   )
@@ -490,7 +490,7 @@ describe("MessageV2.get", () => {
 
       const error = yield* Effect.flip(MessageV2.get({ sessionID: b.id, messageID: id }))
       expect(error).toBeInstanceOf(NotFoundError)
-      expect(error.message).toBe(`Message not found: ${id}`)
+      expect(error.message).toBe(`Мессеж олдсонгүй: ${id}`)
       const result = yield* MessageV2.get({ sessionID: a.id, messageID: id })
       expect(result.info.id).toBe(id)
 
@@ -570,7 +570,7 @@ describe("Session.messages", () => {
       const fake = "non-existent-session" as SessionID
       const error = yield* Effect.flip(session.messages({ sessionID: fake }))
       expect(error).toBeInstanceOf(NotFoundError)
-      expect(error.message).toBe(`Session not found: ${fake}`)
+      expect(error.message).toBe(`Сесс олдсонгүй: ${fake}`)
     }),
   )
 })
@@ -592,7 +592,7 @@ describe("Session.findMessage", () => {
       const fake = "non-existent-session" as SessionID
       const error = yield* Effect.flip(session.findMessage(fake, () => true))
       expect(error).toBeInstanceOf(NotFoundError)
-      expect(error.message).toBe(`Session not found: ${fake}`)
+      expect(error.message).toBe(`Сесс олдсонгүй: ${fake}`)
     }),
   )
 })

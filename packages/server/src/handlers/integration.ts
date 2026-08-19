@@ -10,7 +10,7 @@ const authorize = <A, R>(effect: Effect.Effect<A, Integration.AuthorizationError
     Effect.mapError(
       () =>
         new InvalidRequestError({
-          message: "Authentication failed",
+          message: "Баталгаажуулалт амжилтгүй боллоо",
           kind: "integration_authorization",
         }),
     ),
@@ -80,8 +80,8 @@ export const IntegrationHandler = HttpApiBuilder.group(Api, "server.integration"
                 new InvalidRequestError({
                   message:
                     error._tag === "Integration.CodeRequired"
-                      ? "Authorization code is required"
-                      : "Authentication failed",
+                      ? "Зөвшөөрлийн код шаардлагатай"
+                      : "Баталгаажуулалт амжилтгүй боллоо",
                   kind:
                     error._tag === "Integration.CodeRequired"
                       ? "integration_code_required"

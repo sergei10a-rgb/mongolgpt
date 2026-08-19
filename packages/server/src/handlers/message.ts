@@ -32,10 +32,10 @@ export const MessageHandler = HttpApiBuilder.group(Api, "server.message", (handl
       "session.messages",
       Effect.fn(function* (ctx) {
         if (ctx.query.cursor && ctx.query.order !== undefined)
-          return yield* new InvalidCursorError({ message: "Cursor cannot be combined with order" })
+          return yield* new InvalidCursorError({ message: "Курсорыг эрэмбийн тохиргоотой хамт ашиглах боломжгүй" })
         const decoded = yield* Effect.try({
           try: () => (ctx.query.cursor ? cursor.decode(ctx.query.cursor) : undefined),
-          catch: () => new InvalidCursorError({ message: "Invalid cursor" }),
+          catch: () => new InvalidCursorError({ message: "Курсор буруу байна" }),
         })
         const order = decoded?.order ?? ctx.query.order ?? "desc"
         const messages = yield* session
@@ -50,7 +50,7 @@ export const MessageHandler = HttpApiBuilder.group(Api, "server.message", (handl
               Effect.fail(
                 new SessionNotFoundError({
                   sessionID: error.sessionID,
-                  message: `Session not found: ${error.sessionID}`,
+                  message: `Сесс олдсонгүй: ${error.sessionID}`,
                 }),
               ),
             ),
@@ -60,7 +60,10 @@ export const MessageHandler = HttpApiBuilder.group(Api, "server.message", (handl
                 Effect.annotateLogs({ ref, sessionID: error.sessionID, messageID: error.messageID }),
                 Effect.andThen(
                   Effect.fail(
-                    new UnknownError({ message: "Unexpected server error. Check server logs for details.", ref }),
+                    new UnknownError({
+                      message: "Серверт гэнэтийн алдаа гарлаа. Дэлгэрэнгүйг серверийн бүртгэлээс шалгана уу.",
+                      ref,
+                    }),
                   ),
                 ),
               )

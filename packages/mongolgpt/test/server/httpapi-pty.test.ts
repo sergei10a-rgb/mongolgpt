@@ -112,7 +112,7 @@ describe("pty HttpApi bridge", () => {
     expect(await missing.json()).toEqual({
       _tag: "PtyNotFoundError",
       ptyID: info.id,
-      message: `PTY session not found: ${info.id}`,
+      message: `PTY сесс олдсонгүй: ${info.id}`,
     })
 
     const missingUpdate = await app().request(PtyPaths.update.replace(":ptyID", info.id), {
@@ -124,7 +124,7 @@ describe("pty HttpApi bridge", () => {
     expect(await missingUpdate.json()).toEqual({
       _tag: "PtyNotFoundError",
       ptyID: info.id,
-      message: `PTY session not found: ${info.id}`,
+      message: `PTY сесс олдсонгүй: ${info.id}`,
     })
 
     const missingRemove = await app().request(PtyPaths.remove.replace(":ptyID", info.id), { method: "DELETE", headers })
@@ -132,7 +132,7 @@ describe("pty HttpApi bridge", () => {
     expect(await missingRemove.json()).toEqual({
       _tag: "PtyNotFoundError",
       ptyID: info.id,
-      message: `PTY session not found: ${info.id}`,
+      message: `PTY сесс олдсонгүй: ${info.id}`,
     })
   })
 
@@ -203,7 +203,7 @@ describe("pty HttpApi bridge", () => {
     const expected = {
       _tag: "PtyNotFoundError",
       ptyID: missingID,
-      message: `PTY session not found: ${missingID}`,
+      message: `PTY сесс олдсонгүй: ${missingID}`,
     }
 
     const found = await app().request(PtyPaths.get.replace(":ptyID", missingID), { headers })
@@ -235,7 +235,7 @@ describe("pty HttpApi bridge", () => {
     expect(forbidden.status).toBe(403)
     expect(await forbidden.json()).toEqual({
       _tag: "PtyForbiddenError",
-      message: "Invalid PTY connect token request",
+      message: "PTY холболтын токены хүсэлт буруу байна",
     })
 
     const missing = await app().request(PtyPaths.connectToken.replace(":ptyID", missingID), {
@@ -249,7 +249,7 @@ describe("pty HttpApi bridge", () => {
     expect(await missing.json()).toEqual({
       _tag: "PtyNotFoundError",
       ptyID: missingID,
-      message: `PTY session not found: ${missingID}`,
+      message: `PTY сесс олдсонгүй: ${missingID}`,
     })
   })
   ;(process.platform === "win32" ? effectIt.live.skip : effectIt.live)(

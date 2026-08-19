@@ -8,7 +8,7 @@ import { PermissionNotFoundError, SessionNotFoundError } from "@mongolgpt/protoc
 import { response } from "../location"
 
 function missingRequest(id: PermissionV2.ID) {
-  return new PermissionNotFoundError({ requestID: id, message: `Permission request not found: ${id}` })
+  return new PermissionNotFoundError({ requestID: id, message: `Зөвшөөрлийн хүсэлт олдсонгүй: ${id}` })
 }
 
 export const PermissionHandler = HttpApiBuilder.group(Api, "server.permission", (handlers) =>
@@ -42,7 +42,7 @@ export const PermissionHandler = HttpApiBuilder.group(Api, "server.permission", 
                   (error) =>
                     new SessionNotFoundError({
                       sessionID: error.sessionID,
-                      message: `Session not found: ${error.sessionID}`,
+                      message: `Сесс олдсонгүй: ${error.sessionID}`,
                     }),
                 ),
               ),

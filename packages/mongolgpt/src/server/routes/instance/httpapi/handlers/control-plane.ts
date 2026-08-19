@@ -17,7 +17,7 @@ export const controlPlaneHandlers = HttpApiBuilder.group(RootHttpApi, "controlPl
           (error) =>
             new ApiMoveSessionError({
               name: "MoveSessionError",
-              data: { message: message(error) },
+              data: { message: moveSessionErrorMessage(error) },
             }),
         ),
       )
@@ -27,11 +27,11 @@ export const controlPlaneHandlers = HttpApiBuilder.group(RootHttpApi, "controlPl
   }),
 )
 
-function message(error: MoveSession.Error) {
-  if (error instanceof SessionV2.NotFoundError) return `Session not found: ${error.sessionID}`
+export function moveSessionErrorMessage(error: MoveSession.Error) {
+  if (error instanceof SessionV2.NotFoundError) return `Сесс олдсонгүй: ${error.sessionID}`
   if (error instanceof MoveSession.DestinationProjectMismatchError)
-    return "Destination directory belongs to another project"
+    return "Очих хавтас өөр төсөлд харьяалагдаж байна"
   if (error instanceof MoveSession.ApplyChangesError)
-    return `Unable to apply your changes in the destination directory. The files may conflict with existing changes.`
+    return "Таны өөрчлөлтийг очих хавтаст хэрэгжүүлж чадсангүй. Файлууд одоо байгаа өөрчлөлттэй зөрчилдөж болзошгүй."
   return error.message
 }

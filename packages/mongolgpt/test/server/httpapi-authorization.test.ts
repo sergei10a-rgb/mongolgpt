@@ -168,7 +168,7 @@ describe("HttpApi authorization middleware", () => {
 
       expect(response.status).toBe(401)
       expect(response.headers["www-authenticate"] ?? "").toContain("Basic")
-      expect(body).toEqual({ _tag: "UnauthorizedError", message: "Authentication required" })
+      expect(body).toEqual({ _tag: "UnauthorizedError", message: "Нэвтрэлт шаардлагатай" })
     }),
   )
 })

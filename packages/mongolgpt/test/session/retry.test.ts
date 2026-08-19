@@ -245,7 +245,7 @@ describe("session.retry.retryable", () => {
   test("retries ZlibError decompression failures", () => {
     const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
       new SessionV1.APIError({
-        message: "Response decompression failed",
+        message: "Хариуг задлах явцад алдаа гарлаа",
         isRetryable: true,
         metadata: { code: "ZlibError" },
       }).toObject(),
@@ -253,7 +253,7 @@ describe("session.retry.retryable", () => {
 
     const retryable = SessionRetry.retryable(error, retryProvider)
     expect(retryable).toBeDefined()
-    expect(retryable).toEqual({ message: "Response decompression failed" })
+    expect(retryable).toEqual({ message: "Хариуг задлах явцад алдаа гарлаа" })
   })
 
   test("maps Free Auto limits to the current plan picker", () => {
@@ -394,7 +394,7 @@ describe("session.message-v2.fromError", () => {
       expect(SessionV1.APIError.isInstance(result)).toBe(true)
       if (!SessionV1.APIError.isInstance(result)) throw new Error("expected APIError")
       expect(result.data.isRetryable).toBe(true)
-      expect(result.data.message).toBe("Connection reset by server")
+      expect(result.data.message).toBe("Сервертэй холболт тасарсан")
       expect(result.data.metadata?.code).toBe("ECONNRESET")
       expect(result.data.metadata?.message).toInclude("socket connection")
     },
@@ -404,7 +404,7 @@ describe("session.message-v2.fromError", () => {
   test("ECONNRESET socket error is retryable", () => {
     const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
       new SessionV1.APIError({
-        message: "Connection reset by server",
+        message: "Сервертэй холболт тасарсан",
         isRetryable: true,
         metadata: { code: "ECONNRESET", message: "The socket connection was closed unexpectedly" },
       }).toObject(),
@@ -412,7 +412,7 @@ describe("session.message-v2.fromError", () => {
 
     const retryable = SessionRetry.retryable(error, retryProvider)
     expect(retryable).toBeDefined()
-    expect(retryable).toEqual({ message: "Connection reset by server" })
+    expect(retryable).toEqual({ message: "Сервертэй холболт тасарсан" })
   })
 
   test("marks OpenAI 404 status codes as retryable", () => {

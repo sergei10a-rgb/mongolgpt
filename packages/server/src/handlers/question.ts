@@ -6,7 +6,7 @@ import { QuestionNotFoundError } from "@mongolgpt/protocol/errors"
 import { response } from "../location"
 
 function missingRequest(id: QuestionV2.ID) {
-  return new QuestionNotFoundError({ requestID: id, message: `Question request not found: ${id}` })
+  return new QuestionNotFoundError({ requestID: id, message: `Асуултын хүсэлт олдсонгүй: ${id}` })
 }
 
 export const QuestionHandler = HttpApiBuilder.group(Api, "server.question", (handlers) =>

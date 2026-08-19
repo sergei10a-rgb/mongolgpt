@@ -34,7 +34,7 @@ export const sessionLocationLayer = Layer.effect(
           Effect.mapError(
             () =>
               new InvalidRequestError({
-                message: "Invalid session ID",
+                message: "Сессийн ID буруу байна",
                 field: "sessionID",
               }),
           ),
@@ -48,7 +48,7 @@ export const sessionLocationLayer = Layer.effect(
         if (!row)
           return yield* new SessionNotFoundError({
             sessionID,
-            message: `Session not found: ${sessionID}`,
+            message: `Сесс олдсонгүй: ${sessionID}`,
           })
 
         return yield* effect.pipe(

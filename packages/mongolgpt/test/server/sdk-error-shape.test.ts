@@ -41,11 +41,11 @@ describe("v2 SDK error shape", () => {
     expect(caught).toBeInstanceOf(Error)
     const err = caught as Error
     const cause = err.cause as { body?: any; status?: number }
-    expect(err.message).toContain("Session not found")
+    expect(err.message).toContain("Сесс олдсонгүй")
     expect(cause.status).toBe(404)
     expect(cause.body).toMatchObject({
       name: "NotFoundError",
-      data: { message: expect.stringContaining("Session not found") },
+      data: { message: expect.stringContaining("Сесс олдсонгүй") },
     })
   })
 

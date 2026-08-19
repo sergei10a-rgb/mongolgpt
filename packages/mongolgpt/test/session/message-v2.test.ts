@@ -1246,13 +1246,13 @@ describe("session.message-v2.toModelMessage", () => {
             type: "tool-result",
             toolCallId: "call-pending",
             toolName: "bash",
-            output: { type: "error-text", value: "[Tool execution was interrupted]" },
+            output: { type: "error-text", value: "[Хэрэгслийн гүйцэтгэл тасалдсан]" },
           },
           {
             type: "tool-result",
             toolCallId: "call-running",
             toolName: "read",
-            output: { type: "error-text", value: "[Tool execution was interrupted]" },
+            output: { type: "error-text", value: "[Хэрэгслийн гүйцэтгэл тасалдсан]" },
           },
         ],
       },
@@ -1537,7 +1537,7 @@ describe("session.message-v2.fromError", () => {
 
     expect(SessionV1.APIError.isInstance(result)).toBe(true)
     expect((result as SessionV1.APIError).data.isRetryable).toBe(true)
-    expect((result as SessionV1.APIError).data.message).toInclude("decompression")
+    expect((result as SessionV1.APIError).data.message).toBe("Хариуг задлах явцад алдаа гарлаа")
   })
 
   test("classifies ZlibError as AbortedError when abort context is provided", () => {

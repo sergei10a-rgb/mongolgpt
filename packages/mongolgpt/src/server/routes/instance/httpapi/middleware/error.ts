@@ -31,7 +31,7 @@ export const errorLayer = HttpRouter.middleware<{ handles: unknown }>()((effect)
         Effect.as(
           HttpServerResponse.jsonUnsafe(
             new NamedError.Unknown({
-              message: "Unexpected server error. Check server logs for details.",
+              message: "Серверт гэнэтийн алдаа гарлаа. Дэлгэрэнгүйг серверийн бүртгэлээс шалгана уу.",
               ref,
             }).toObject(),
             { status: 500 },

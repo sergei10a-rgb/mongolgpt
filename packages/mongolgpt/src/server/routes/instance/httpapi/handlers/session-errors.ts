@@ -13,7 +13,7 @@ export function mapBusy<A, R>(self: Effect.Effect<A, Session.BusyError, R>) {
       Effect.fail(
         new ApiError.SessionBusyError({
           sessionID: error.sessionID,
-          message: `Session is busy: ${error.sessionID}`,
+          message: `Сесс завгүй байна: ${error.sessionID}`,
         }),
       ),
     ),

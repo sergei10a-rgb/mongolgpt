@@ -253,7 +253,7 @@ describe("session HttpApi", () => {
         expect(Cause.squash(exit.cause)).toMatchObject({
           _tag: "SessionBusyError",
           sessionID,
-          message: `Session is busy: ${sessionID}`,
+          message: `Сесс завгүй байна: ${sessionID}`,
         })
       }
     }),
@@ -268,7 +268,7 @@ describe("session HttpApi", () => {
         const missingSession = SessionID.descending()
         const missingSessionBody = {
           name: "NotFoundError",
-          data: { message: `Session not found: ${missingSession}` },
+          data: { message: `Сесс олдсонгүй: ${missingSession}` },
         }
 
         const get = yield* request(pathFor(SessionPaths.get, { sessionID: missingSession }), { headers })
@@ -318,7 +318,7 @@ describe("session HttpApi", () => {
         expect(message.status).toBe(404)
         expect(yield* responseJson(message)).toEqual({
           name: "NotFoundError",
-          data: { message: `Message not found: ${missingMessage}` },
+          data: { message: `Мессеж олдсонгүй: ${missingMessage}` },
         })
       }),
     { git: true, config: { formatter: false, lsp: false } },
@@ -471,7 +471,7 @@ describe("session HttpApi", () => {
         expect(invalidSessionCursor.status).toBe(400)
         expect(yield* responseJson(invalidSessionCursor)).toMatchObject({
           _tag: "InvalidCursorError",
-          message: "Invalid cursor",
+          message: "Курсор буруу байна",
         })
 
         const invalidWorkspace = yield* request(`/api/session?workspace=bad`, { headers })
@@ -516,14 +516,14 @@ describe("session HttpApi", () => {
         expect(messageCursorWithOrder.status).toBe(400)
         expect(yield* responseJson(messageCursorWithOrder)).toMatchObject({
           _tag: "InvalidCursorError",
-          message: "Cursor cannot be combined with order",
+          message: "Курсорыг эрэмбийн тохиргоотой хамт ашиглах боломжгүй",
         })
 
         const invalidMessageCursor = yield* request(`/api/session/${session.id}/message?cursor=invalid`, { headers })
         expect(invalidMessageCursor.status).toBe(400)
         expect(yield* responseJson(invalidMessageCursor)).toMatchObject({
           _tag: "InvalidCursorError",
-          message: "Invalid cursor",
+          message: "Курсор буруу байна",
         })
       }),
     { git: true, config: { formatter: false, lsp: false } },
@@ -539,7 +539,7 @@ describe("session HttpApi", () => {
         const expected = {
           _tag: "SessionNotFoundError",
           sessionID: missing,
-          message: `Session not found: ${missing}`,
+          message: `Сесс олдсонгүй: ${missing}`,
         }
 
         const messages = yield* request(`/api/session/${missing}/message`, { headers })
@@ -621,7 +621,7 @@ describe("session HttpApi", () => {
         expect(conflict.status).toBe(409)
         expect(yield* responseJson(conflict)).toEqual({
           _tag: "ConflictError",
-          message: "Prompt message ID conflicts with an existing durable record: msg_http_prompt",
+          message: "Оролтын мессежийн ID хадгалагдсан бичлэгтэй давхцаж байна: msg_http_prompt",
           resource: "msg_http_prompt",
         })
 
@@ -656,7 +656,7 @@ describe("session HttpApi", () => {
         expect(compact.status).toBe(503)
         expect(yield* responseJson(compact)).toEqual({
           _tag: "ServiceUnavailableError",
-          message: "Session compact is not available yet",
+          message: "Сессийн compact үйлдэл хараахан боломжгүй байна",
           service: "session.compact",
         })
 
@@ -664,7 +664,7 @@ describe("session HttpApi", () => {
         expect(wait.status).toBe(503)
         expect(yield* responseJson(wait)).toEqual({
           _tag: "ServiceUnavailableError",
-          message: "Session wait is not available yet",
+          message: "Сессийн wait үйлдэл хараахан боломжгүй байна",
           service: "session.wait",
         })
       }),
@@ -686,7 +686,7 @@ describe("session HttpApi", () => {
         expect(messages.status).toBe(500)
         expect(messagesBody).toMatchObject({
           _tag: "UnknownError",
-          message: "Unexpected server error. Check server logs for details.",
+          message: "Серверт гэнэтийн алдаа гарлаа. Дэлгэрэнгүйг серверийн бүртгэлээс шалгана уу.",
         })
         expect((messagesBody as { ref?: unknown }).ref).toMatch(/^err_[0-9a-f-]{8}$/)
         expect(JSON.stringify(messagesBody)).not.toContain("assistant")
@@ -698,7 +698,7 @@ describe("session HttpApi", () => {
         expect(context.status).toBe(500)
         expect(contextBody).toMatchObject({
           _tag: "UnknownError",
-          message: "Unexpected server error. Check server logs for details.",
+          message: "Серверт гэнэтийн алдаа гарлаа. Дэлгэрэнгүйг серверийн бүртгэлээс шалгана уу.",
         })
         expect((contextBody as { ref?: unknown }).ref).toMatch(/^err_[0-9a-f-]{8}$/)
         expect(JSON.stringify(contextBody)).not.toContain("assistant")
@@ -1018,7 +1018,7 @@ describe("session HttpApi", () => {
         expect(yield* responseJson(permission)).toEqual({
           _tag: "PermissionNotFoundError",
           requestID: permissionID,
-          message: `Permission request not found: ${permissionID}`,
+          message: `Зөвшөөрлийн хүсэлт олдсонгүй: ${permissionID}`,
         })
       }),
     { git: true, config: { formatter: false, lsp: false } },

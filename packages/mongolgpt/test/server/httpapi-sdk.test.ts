@@ -446,7 +446,7 @@ describe("HttpApi SDK", () => {
         const sessionID = "ses_missing"
         const expected = {
           name: "NotFoundError",
-          data: { message: `Session not found: ${sessionID}` },
+          data: { message: `Сесс олдсонгүй: ${sessionID}` },
         }
         const missing = yield* capture(() => sdk.session.get({ sessionID }))
         const thrown = yield* captureThrown(() => sdk.session.get({ sessionID }, { throwOnError: true }))
@@ -483,7 +483,7 @@ describe("HttpApi SDK", () => {
             fetch,
           }),
         )
-        expect(errorMessage(thrown)).toBe(`Session not found: ${sessionID}`)
+        expect(errorMessage(thrown)).toBe(`Сесс олдсонгүй: ${sessionID}`)
         return errorMessage(thrown)
       }),
     ),

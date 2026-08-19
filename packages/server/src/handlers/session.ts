@@ -27,7 +27,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
           const query =
             ctx.query.cursor !== undefined
               ? yield* SessionsCursor.parse(ctx.query.cursor).pipe(
-                  Effect.mapError(() => new InvalidCursorError({ message: "Invalid cursor" })),
+                  Effect.mapError(() => new InvalidCursorError({ message: "Курсор буруу байна" })),
                 )
               : ctx.query
           const sessions = yield* session.list({
@@ -97,7 +97,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                 (error) =>
                   new SessionNotFoundError({
                     sessionID: error.sessionID,
-                    message: `Session not found: ${error.sessionID}`,
+                    message: `Сесс олдсонгүй: ${error.sessionID}`,
                   }),
               ),
             ),
@@ -112,7 +112,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
               Effect.fail(
                 new SessionNotFoundError({
                   sessionID: error.sessionID,
-                  message: `Session not found: ${error.sessionID}`,
+                  message: `Сесс олдсонгүй: ${error.sessionID}`,
                 }),
               ),
             ),
@@ -128,7 +128,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
               Effect.fail(
                 new SessionNotFoundError({
                   sessionID: error.sessionID,
-                  message: `Session not found: ${error.sessionID}`,
+                  message: `Сесс олдсонгүй: ${error.sessionID}`,
                 }),
               ),
             ),
@@ -153,14 +153,14 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                   Effect.fail(
                     new SessionNotFoundError({
                       sessionID: error.sessionID,
-                      message: `Session not found: ${error.sessionID}`,
+                      message: `Сесс олдсонгүй: ${error.sessionID}`,
                     }),
                   ),
                 ),
                 Effect.catchTag("Session.PromptConflictError", (error) =>
                   Effect.fail(
                     new ConflictError({
-                      message: `Prompt message ID conflicts with an existing durable record: ${error.messageID}`,
+                      message: `Оролтын мессежийн ID хадгалагдсан бичлэгтэй давхцаж байна: ${error.messageID}`,
                       resource: error.messageID,
                     }),
                   ),
@@ -177,14 +177,14 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
               Effect.fail(
                 new SessionNotFoundError({
                   sessionID: error.sessionID,
-                  message: `Session not found: ${error.sessionID}`,
+                  message: `Сесс олдсонгүй: ${error.sessionID}`,
                 }),
               ),
             ),
             Effect.catchTag("Session.OperationUnavailableError", (error) =>
               Effect.fail(
                 new ServiceUnavailableError({
-                  message: `Session ${error.operation} is not available yet`,
+                  message: `Сессийн ${error.operation} үйлдэл хараахан боломжгүй байна`,
                   service: `session.${error.operation}`,
                 }),
               ),
@@ -201,14 +201,14 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
               Effect.fail(
                 new SessionNotFoundError({
                   sessionID: error.sessionID,
-                  message: `Session not found: ${error.sessionID}`,
+                  message: `Сесс олдсонгүй: ${error.sessionID}`,
                 }),
               ),
             ),
             Effect.catchTag("Session.OperationUnavailableError", (error) =>
               Effect.fail(
                 new ServiceUnavailableError({
-                  message: `Session ${error.operation} is not available yet`,
+                  message: `Сессийн ${error.operation} үйлдэл хараахан боломжгүй байна`,
                   service: `session.${error.operation}`,
                 }),
               ),
@@ -227,7 +227,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                 (error) =>
                   new SessionNotFoundError({
                     sessionID: error.sessionID,
-                    message: `Session not found: ${error.sessionID}`,
+                    message: `Сесс олдсонгүй: ${error.sessionID}`,
                   }),
               ),
               Effect.catchTag(
@@ -236,7 +236,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                   new MessageNotFoundError({
                     sessionID: error.sessionID,
                     messageID: error.messageID,
-                    message: `Message not found: ${error.messageID}`,
+                    message: `Мессеж олдсонгүй: ${error.messageID}`,
                   }),
               ),
               Effect.catchTag("Snapshot.Error", (error) => {
@@ -245,7 +245,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                   Effect.andThen(
                     Effect.fail(
                       new UnknownError({
-                        message: "Unexpected server error. Check server logs for details.",
+                        message: "Серверт гэнэтийн алдаа гарлаа. Дэлгэрэнгүйг серверийн бүртгэлээс шалгана уу.",
                         ref,
                       }),
                     ),
@@ -265,7 +265,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
               (error) =>
                 new SessionNotFoundError({
                   sessionID: error.sessionID,
-                  message: `Session not found: ${error.sessionID}`,
+                  message: `Сесс олдсонгүй: ${error.sessionID}`,
                 }),
             ),
             Effect.catchTag("Snapshot.Error", (error) => {
@@ -274,7 +274,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                 Effect.andThen(
                   Effect.fail(
                     new UnknownError({
-                      message: "Unexpected server error. Check server logs for details.",
+                      message: "Серверт гэнэтийн алдаа гарлаа. Дэлгэрэнгүйг серверийн бүртгэлээс шалгана уу.",
                       ref,
                     }),
                   ),
@@ -294,7 +294,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
               (error) =>
                 new SessionNotFoundError({
                   sessionID: error.sessionID,
-                  message: `Session not found: ${error.sessionID}`,
+                  message: `Сесс олдсонгүй: ${error.sessionID}`,
                 }),
             ),
           )
@@ -310,7 +310,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                 Effect.fail(
                   new SessionNotFoundError({
                     sessionID: error.sessionID,
-                    message: `Session not found: ${error.sessionID}`,
+                    message: `Сесс олдсонгүй: ${error.sessionID}`,
                   }),
                 ),
               ),
@@ -320,7 +320,10 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                   Effect.annotateLogs({ ref, sessionID: error.sessionID, messageID: error.messageID }),
                   Effect.andThen(
                     Effect.fail(
-                      new UnknownError({ message: "Unexpected server error. Check server logs for details.", ref }),
+                      new UnknownError({
+                        message: "Серверт гэнэтийн алдаа гарлаа. Дэлгэрэнгүйг серверийн бүртгэлээс шалгана уу.",
+                        ref,
+                      }),
                     ),
                   ),
                 )
@@ -348,7 +351,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                 (error) =>
                   new SessionNotFoundError({
                     sessionID: error.sessionID,
-                    message: `Session not found: ${error.sessionID}`,
+                    message: `Сесс олдсонгүй: ${error.sessionID}`,
                   }),
               ),
             )
@@ -377,7 +380,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
           return yield* new MessageNotFoundError({
             sessionID: ctx.params.sessionID,
             messageID: ctx.params.messageID,
-            message: `Message not found: ${ctx.params.messageID}`,
+            message: `Мессеж олдсонгүй: ${ctx.params.messageID}`,
           })
         }),
       )

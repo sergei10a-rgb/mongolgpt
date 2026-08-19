@@ -1,18 +1,22 @@
 import { NodeHttpServer } from "@effect/platform-node"
-import { describe, expect } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { Context, Effect, Layer, Option, Ref } from "effect"
 import { HttpBody, HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { MoveSession } from "@mongolgpt/core/control-plane/move-session"
 import { AbsolutePath } from "@mongolgpt/core/schema"
 import { SessionV2 } from "@mongolgpt/core/session"
+import { ProjectV2 } from "@mongolgpt/core/project"
 import { Auth } from "../../src/auth"
 import { Config } from "../../src/config/config"
 import { Installation } from "../../src/installation"
 import { ServerAuth } from "../../src/server/auth"
 import { RootHttpApi } from "../../src/server/routes/instance/httpapi/api"
 import { controlHandlers } from "../../src/server/routes/instance/httpapi/handlers/control"
-import { controlPlaneHandlers } from "../../src/server/routes/instance/httpapi/handlers/control-plane"
+import {
+  controlPlaneHandlers,
+  moveSessionErrorMessage,
+} from "../../src/server/routes/instance/httpapi/handlers/control-plane"
 import { globalHandlers } from "../../src/server/routes/instance/httpapi/handlers/global"
 import { authorizationLayer } from "../../src/server/routes/instance/httpapi/middleware/authorization"
 import { schemaErrorLayer } from "../../src/server/routes/instance/httpapi/middleware/schema-error"
@@ -49,6 +53,23 @@ const apiLayer = HttpRouter.serve(
 const it = testEffect(apiLayer)
 
 describe("control-plane HttpApi", () => {
+  test("session move алдааг Монгол мэдээлэл болгоно", () => {
+    expect(moveSessionErrorMessage(new SessionV2.NotFoundError({ sessionID: SessionV2.ID.make("ses_missing") }))).toBe(
+      "Сесс олдсонгүй: ses_missing",
+    )
+    expect(
+      moveSessionErrorMessage(
+        new MoveSession.DestinationProjectMismatchError({
+          expected: ProjectV2.ID.make("project-source"),
+          actual: ProjectV2.ID.make("project-destination"),
+        }),
+      ),
+    ).toBe("Очих хавтас өөр төсөлд харьяалагдаж байна")
+    expect(moveSessionErrorMessage(new MoveSession.ApplyChangesError({ message: "internal" }))).toBe(
+      "Таны өөрчлөлтийг очих хавтаст хэрэгжүүлж чадсангүй. Файлууд одоо байгаа өөрчлөлттэй зөрчилдөж болзошгүй.",
+    )
+  })
+
   it.live("moves a session through the root control-plane route", () =>
     Effect.gen(function* () {
       const response = yield* HttpClientRequest.post("/experimental/control-plane/move-session").pipe(

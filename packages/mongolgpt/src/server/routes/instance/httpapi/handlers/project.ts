@@ -42,7 +42,7 @@ export const projectHandlers = HttpApiBuilder.group(InstanceHttpApi, "project", 
           Effect.fail(
             new ProjectNotFoundError({
               projectID: error.projectID,
-              message: `Project not found: ${error.projectID}`,
+              message: `Төсөл олдсонгүй: ${error.projectID}`,
             }),
           ),
         ),

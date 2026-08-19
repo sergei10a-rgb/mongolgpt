@@ -272,7 +272,7 @@ describe("provider HttpApi", () => {
       expect(yield* response.json).toEqual({
         _tag: "ProviderNotFoundError",
         providerID: "missing",
-        message: "Provider not found: missing",
+        message: "Үйлчилгээ үзүүлэгч олдсонгүй: missing",
       })
     }),
     projectOptions,

@@ -367,7 +367,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
           Effect.fail(
             new PermissionNotFoundError({
               requestID: String(error.requestID),
-              message: `Permission request not found: ${error.requestID}`,
+              message: `Зөвшөөрлийн хүсэлт олдсонгүй: ${error.requestID}`,
             }),
           ),
         ),

@@ -23,7 +23,7 @@ export const ProviderHandler = HttpApiBuilder.group(Api, "server.provider", (han
           if (!provider)
             return yield* new ProviderNotFoundError({
               providerID: ctx.params.providerID,
-              message: `Provider not found: ${ctx.params.providerID}`,
+              message: `Үйлчилгээ үзүүлэгч олдсонгүй: ${ctx.params.providerID}`,
             })
           return yield* response(Effect.succeed(provider))
         }),

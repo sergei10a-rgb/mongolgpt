@@ -88,7 +88,7 @@ export const ptyHandlers = HttpApiBuilder.group(InstanceHttpApi, "pty", (handler
           (error) =>
             new ApiError.PtyNotFoundError({
               ptyID: error.ptyID,
-              message: `PTY session not found: ${error.ptyID}`,
+              message: `PTY сесс олдсонгүй: ${error.ptyID}`,
             }),
         ),
         Effect.flatMap((info) =>
@@ -96,7 +96,7 @@ export const ptyHandlers = HttpApiBuilder.group(InstanceHttpApi, "pty", (handler
             ? Effect.succeed(info)
             : new ApiError.PtyNotFoundError({
                 ptyID: ctx.params.ptyID,
-                message: `PTY session not found: ${ctx.params.ptyID}`,
+                message: `PTY сесс олдсонгүй: ${ctx.params.ptyID}`,
               }),
         ),
       )
@@ -120,7 +120,7 @@ export const ptyHandlers = HttpApiBuilder.group(InstanceHttpApi, "pty", (handler
           (error) =>
             new ApiError.PtyNotFoundError({
               ptyID: error.ptyID,
-              message: `PTY session not found: ${error.ptyID}`,
+              message: `PTY сесс олдсонгүй: ${error.ptyID}`,
             }),
         ),
       )
@@ -134,7 +134,7 @@ export const ptyHandlers = HttpApiBuilder.group(InstanceHttpApi, "pty", (handler
           (error) =>
             new ApiError.PtyNotFoundError({
               ptyID: error.ptyID,
-              message: `PTY session not found: ${error.ptyID}`,
+              message: `PTY сесс олдсонгүй: ${error.ptyID}`,
             }),
         ),
       )
@@ -144,7 +144,7 @@ export const ptyHandlers = HttpApiBuilder.group(InstanceHttpApi, "pty", (handler
     const connectToken = Effect.fn("PtyHttpApi.connectToken")(function* (ctx: { params: { ptyID: PtyID } }) {
       const request = yield* HttpServerRequest.HttpServerRequest
       if (request.headers[PTY_CONNECT_TOKEN_HEADER] !== PTY_CONNECT_TOKEN_HEADER_VALUE || !validOrigin(request, cors))
-        return yield* new ApiError.PtyForbiddenError({ message: "Invalid PTY connect token request" })
+        return yield* new ApiError.PtyForbiddenError({ message: "PTY холболтын токены хүсэлт буруу байна" })
       yield* get(ctx)
       return yield* tickets.issue({ ptyID: ctx.params.ptyID, ...(yield* ticketScope) })
     })

@@ -189,19 +189,19 @@ describe("instance HttpApi", () => {
       expect(yield* Effect.promise(() => permission.json())).toEqual({
         _tag: "PermissionNotFoundError",
         requestID: permissionID,
-        message: `Permission request not found: ${permissionID}`,
+        message: `Зөвшөөрлийн хүсэлт олдсонгүй: ${permissionID}`,
       })
       expect(questionReply.status).toBe(404)
       expect(yield* Effect.promise(() => questionReply.json())).toEqual({
         _tag: "QuestionNotFoundError",
         requestID: questionReplyID,
-        message: `Question request not found: ${questionReplyID}`,
+        message: `Асуултын хүсэлт олдсонгүй: ${questionReplyID}`,
       })
       expect(questionReject.status).toBe(404)
       expect(yield* Effect.promise(() => questionReject.json())).toEqual({
         _tag: "QuestionNotFoundError",
         requestID: questionRejectID,
-        message: `Question request not found: ${questionRejectID}`,
+        message: `Асуултын хүсэлт олдсонгүй: ${questionRejectID}`,
       })
     }),
   )
@@ -225,7 +225,7 @@ describe("instance HttpApi", () => {
       expect(yield* Effect.promise(() => response.json())).toEqual({
         _tag: "ProjectNotFoundError",
         projectID,
-        message: `Project not found: ${projectID}`,
+        message: `Төсөл олдсонгүй: ${projectID}`,
       })
     }),
   )
