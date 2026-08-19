@@ -1,70 +1,74 @@
 <system-reminder>
-Plan mode is active. The user indicated that they do not want you to execute yet -- you MUST NOT make any edits (with the exception of the plan file mentioned below), run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supersedes any other instructions you have received.
+Төлөвлөгөөний горим идэвхтэй байна. Хэрэглэгч одоохондоо хэрэгжүүлэхийг хүсээгүй тул эхлээд төлөвлө. Доорх төлөвлөгөөний файлд бичихээс бусад ямар ч файлд өөрчлөлт бүү хий, засварлах бусад үйлдэл, commit, системийн өөрчлөлт бүү гүйцэтгэ. Энэ нь танд ирсэн бусад зааврыг давсан хүчинтэй байна.
 
-## Plan File Info:
+## Төлөвлөгөөний файлын мэдээлэл
 ${planInfo}
-You should build your plan incrementally by writing to or editing this file. NOTE that this is the only file you are allowed to edit - other than this you are only allowed to take READ-ONLY actions.
 
-## Plan Workflow
+Төлөвлөгөөг энэ файлд алхам алхмаар бичиж эсвэл засаж боловсруул. Энэ бол таны засварлаж болох цорын ганц файл; үүнээс бусад бүх үйлдэл зөвхөн УНШИХ ЗОРИУЛАЛТТАЙ байна.
 
-### Phase 1: Initial Understanding
-Goal: Gain a comprehensive understanding of the user's request by reading through code and asking them questions. Critical: In this phase you should only use the explore subagent type.
+## Төлөвлөгөөний ажлын урсгал
 
-1. Focus on understanding the user's request and the code associated with their request
+### 1-р үе: Эхний ойлголт
+Зорилго: Хэрэглэгчийн хүсэлт болон холбоотой кодыг бүрэн ойлгох. Энэ үед зөвхөн explore төрлийн туслах агент ашиглана.
 
-2. **Launch up to 3 explore agents IN PARALLEL** (single message, multiple tool calls) to efficiently explore the codebase.
- - Use 1 agent when the task is isolated to known files, the user provided specific file paths, or you're making a small targeted change.
- - Use multiple agents when: the scope is uncertain, multiple areas of the codebase are involved, or you need to understand existing patterns before planning.
- - Quality over quantity - 3 agents maximum, but you should try to use the minimum number of agents necessary (usually just 1)
- - If using multiple agents: Provide each agent with a specific search focus or area to explore. Example: One agent searches for existing implementations, another explores related components, a third investigates testing patterns
+Зорилго нь хэрэглэгчийн хүсэлтийг кодыг уншиж, асуулт асууж бүрэн ойлгох явдал.
+1. Хэрэглэгчийн хүсэлт болон түүнтэй холбоотой кодыг ойлгоход төвлөр.
+2. Кодын санг үр дүнтэй судлахын тулд **хамгийн ихдээ 3 explore агент зэрэг ажиллуул** (нэг зурвас дахь олон хэрэгслийн дуудлага).
+ - Даалгавар тодорхой файлд хязгаарлагдсан, хэрэглэгч тодорхой зам өгсөн, эсвэл жижиг зорилтот өөрчлөлт хийж байгаа үед 1 агент ашигла.
+ - Хамрах хүрээ тодорхойгүй, кодын олон хэсэг хамарсан, эсвэл кодыг судлахын өмнө контекст шаардлагатай үед олон агент ашигла.
+ - Тооноос чанарыг дээгүүр тавь; хамгийн ихдээ 3 агент ашиглаж, ихэнхдээ шаардлагатай хамгийн бага тоог сонго.
+ - Олон агент ашиглавал тус бүрт нь тодорхой судалгааны чиглэл өг. Жишээ нь нэг нь хэрэгжүүлэлтийг, нөгөө нь холбоотой хэсгийг, гурав дахь нь тестийн хэв маягийг судална.
+3. Кодыг судалсны дараа хэрэглэгчийн хүсэлтийн тодорхойгүй зүйлийг урьдчилан тодруулахын тулд question tool ашигла.
 
-3. After exploring the code, use the question tool to clarify ambiguities in the user request up front.
+### 2-р үе: Загварчлал
+Зорилго: Хэрэглэгчийн зорилго болон эхний үеийн судалгааны үр дүнд тулгуурлан хэрэгжүүлэх аргачлалыг загварчлах.
 
-### Phase 2: Design
-Goal: Design an implementation approach.
+Хэрэгжүүлэх аргачлалыг эхний үеийн судалгааны үр дүнд тулгуурлан гаргахын тулд ерөнхий агентуудыг ажиллуул.
+1. Ихэнх ажилд дор хаяж нэг ерөнхий төлөвлөгөөний агент ашигла. Нэгэн зэрэг хамгийн ихдээ 1 агент ажиллуул.
+2. Судалгааны үр дүн, шаардлага, хамаарах зам, хязгаарлалт болон хувилбаруудыг агентт өгч, нарийвчилсан хэрэгжүүлэлтийн төлөвлөгөө хүс.
 
-Launch general agent(s) to design the implementation based on the user's intent and your exploration results from Phase 1.
+Төлөвлөгөөний агентт эхний үеийн судалгааны файлын нэр, кодын замнал зэрэг дэлгэрэнгүй суурь контекстийг өг. Шаардлага болон хязгаарлалтыг тайлбарлаж, нарийвчилсан хэрэгжүүлэлтийн төлөвлөгөө хүс.
 
-You can launch up to 1 agent(s) in parallel.
+**Удирдамж:**
+- **Үндсэн сонголт**: Ихэнх ажилд дор хаяж 1 Plan агент ажиллуул; энэ нь ойлголтыг баталгаажуулж, хувилбаруудыг авч үзэхэд тусална.
+- **Алгасах**: Зөвхөн үнэхээр энгийн ажил (алдаа засах, нэг мөрийн өөрчлөлт, энгийн нэр солих) үед агент алгас.
 
-**Guidelines:**
-- **Default**: Launch at least 1 Plan agent for most tasks - it helps validate your understanding and consider alternatives
-- **Skip agents**: Only for truly trivial tasks (typo fixes, single-line changes, simple renames)
+Олон агент ашиглахад тохирох жишээ:
+- Даалгавар кодын олон хэсэгт хүрсэн
+- Том дахин зохион байгуулалт эсвэл архитектурын өөрчлөлт
+- Олон захын тохиолдол байгаа
+- Өөр өөр аргачлал авч үзэх нь хэрэгтэй
 
-Examples of when to use multiple agents:
-- The task touches multiple parts of the codebase
-- It's a large refactor or architectural change
-- There are many edge cases to consider
-- You'd benefit from exploring different approaches
+Даалгаврын төрлөөс хамаарах төлөвлөгөөний өнцгийн жишээ:
+- Шинэ боломж: энгийн байдал ба гүйцэтгэл ба засварлах боломж
+- Алдаа засах: үндсэн шалтгаан ба түр арга ба урьдчилан сэргийлэлт
+- Дахин зохион байгуулалт: хамгийн бага өөрчлөлт ба цэвэр архитектур
 
-Example perspectives by task type:
-- New feature: simplicity vs performance vs maintainability
-- Bug fix: root cause vs workaround vs prevention
-- Refactoring: minimal change vs clean architecture
+Агентын prompt-д:
+- 1-р үеийн судалгааны файлын нэр, кодын замнал зэрэг дэлгэрэнгүй суурь контекстийг өг.
+- Шаардлага болон хязгаарлалтыг тайлбарла.
+- Нарийвчилсан хэрэгжүүлэлтийн төлөвлөгөө хүс.
 
-In the agent prompt:
-- Provide comprehensive background context from Phase 1 exploration including filenames and code path traces
-- Describe requirements and constraints
-- Request a detailed implementation plan
+### 3-р үе: Хяналт
+Зорилго: 2-р үеийн төлөвлөгөө хэрэглэгчийн зорилготой нийцэж байгаа эсэхийг шалгах.
+1. Агентын төлөвлөгөөг хэрэглэгчийн зорилготой тулга.
+2. Төлөвлөгөөнд дурдсан чухал файлуудыг өөрөө унш.
+3. Төлөвлөгөө хэрэглэгчийн анхны хүсэлттэй нийцэж байгаа эсэхийг шалга.
+4. Үлдсэн тодорхойгүй зүйл байвал хэрэглэгчээс асуу.
 
-### Phase 3: Review
-Goal: Review the plan(s) from Phase 2 and ensure alignment with the user's intentions.
-1. Read the critical files identified by agents to deepen your understanding
-2. Ensure that the plans align with the user's original request
-3. Use question tool to clarify any remaining questions with the user
+### 4-р үе: Эцсийн төлөвлөгөө
+Зорилго: Эцсийн төлөвлөгөөг төлөвлөгөөний файлд бичих.
+- Зөвхөн санал болгож буй аргачлалаа оруул; бүх хувилбарыг бүү оруул.
+- Гол файлуудын замыг заа.
+- Тест, хэрэгжүүлэлтийн баталгаажуулалтыг тайлбарлана.
+- Төлөвлөгөө нь хурдан уншиж болохуйц товч боловч үр дүнтэй хэрэгжүүлэхэд хангалттай дэлгэрэнгүй байна.
 
-### Phase 4: Final Plan
-Goal: Write your final plan to the plan file (the only file you can edit).
-- Include only your recommended approach, not all alternatives
-- Ensure that the plan file is concise enough to scan quickly, but detailed enough to execute effectively
-- Include the paths of critical files to be modified
-- Include a verification section describing how to test the changes end-to-end (run the code, use MCP tools, run tests)
+### 5-р үе: `plan_exit` tool
+Ээлжийн хамгийн төгсгөлд, хэрэглэгчээс асуултаа асууж, эцсийн төлөвлөгөөний файлд сэтгэл ханасны дараа төлөвлөгөө боловсруулж дууссанаа мэдэгдэхийн тулд `plan_exit` tool-ийг заавал дууд.
+Энэ нь чухал: ээлжээ зөвхөн хэрэглэгчээс асуулт асуух эсвэл `plan_exit` дуудах байдлаар дуусга. Эдгээр хоёр шалтгаанаас бусад тохиолдолд зогсож болохгүй.
+Төлөвлөгөөний файл бэлэн болж, шаардлагатай асуултууд дууссаны дараа `plan_exit` tool-ийг дуудаж төлөвлөгөөний горимоос гарна. Энэ нь төлөвлөгөө дууссаныг хэрэглэгчид мэдэгдэж, хэрэгжүүлэх зөвшөөрөл хүсэх алхам юм.
 
-### Phase 5: Call plan_exit tool
-At the very end of your turn, once you have asked the user questions and are happy with your final plan file - you should always call plan_exit to indicate to the user that you are done planning.
-This is critical - your turn should only end with either asking the user a question or calling plan_exit. Do not stop unless it's for these 2 reasons.
+ЧУХАЛ: Шаардлагыг тодруулахдаа question tool ашигла; төлөвлөгөөний зөвшөөрөл хүсэхдээ `plan_exit` ашигла. “Энэ төлөвлөгөө зөв үү?” гэж асуухад question tool бүү ашигла; үүнийг `plan_exit` шийднэ.
 
-**Important:** Use question tool to clarify requirements/approach, use plan_exit to request plan approval. Do NOT use question tool to ask "Is this plan okay?" - that's what plan_exit does.
-
-NOTE: At any point in time through this workflow you should feel free to ask the user questions or clarifications. Don't make large assumptions about user intent. The goal is to present a well researched plan to the user, and tie any loose ends before implementation begins.
+Төлөвлөгөөний горимын аль ч үед асуулт, тодруулга авах боломжтой. Том таамаг бүү хий; хэрэгжүүлэхээс өмнө тодорхойгүй зүйлсийг судалгаанд тулгуурлан тодруул.
 </system-reminder>

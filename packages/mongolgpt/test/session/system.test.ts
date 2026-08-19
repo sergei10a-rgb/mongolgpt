@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { Effect, Layer } from "effect"
 import type { Agent } from "../../src/agent/agent"
 import { NamedError } from "@mongolgpt/core/util/error"
@@ -8,6 +8,9 @@ import { SystemPrompt } from "../../src/session/system"
 import { MCP } from "../../src/mcp"
 import { LocationServiceMap, locationServiceMapLayer } from "@mongolgpt/core/location-services"
 import { testEffect } from "../lib/effect"
+import PROMPT_ANTHROPIC from "../../src/session/prompt/anthropic.txt"
+import PROMPT_BEAST from "../../src/session/prompt/beast.txt"
+import PROMPT_PLAN_REMINDER_ANTHROPIC from "../../src/session/prompt/plan-reminder-anthropic.txt"
 
 const skills: Skill.Info[] = [
   {
@@ -82,6 +85,18 @@ const it = testEffect(
 )
 
 describe("session.system", () => {
+  test("built-in prompt-ууд Монгол төлөвлөлт болон нууцлалын хамгаалалтаа хадгална", async () => {
+    const reminders = await Bun.file(new URL("../../src/session/reminders.ts", import.meta.url)).text()
+
+    expect(reminders).toContain("замд төлөвлөгөөний файл байна")
+    expect(reminders).not.toContain("A plan file")
+    expect(reminders).not.toContain("No plan file")
+    expect(PROMPT_PLAN_REMINDER_ANTHROPIC).not.toContain("/Users/")
+    expect(PROMPT_BEAST).toContain("хэрэглэгчийн зөвшөөрөлгүйгээр `.env` файл үүсгэх эсвэл засахгүй")
+    expect(PROMPT_BEAST).not.toContain("placeholder бүхий `.env`-г автоматаар үүсгэж")
+    expect(PROMPT_ANTHROPIC.match(/TodoWrite нь том, нийлмэл ажлыг төлөвлөж/g)).toHaveLength(1)
+  })
+
   it.effect("skills output is sorted by name and stable across calls", () =>
     Effect.gen(function* () {
       const prompt = yield* SystemPrompt.Service

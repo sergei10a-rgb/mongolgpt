@@ -59,7 +59,7 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
       sessionID: userMessage.info.sessionID,
       type: "text",
       text: exists
-        ? `${BUILD_SWITCH}\n\nA plan file exists at ${plan}. You should execute on the plan defined within it`
+        ? `${BUILD_SWITCH}\n\n${plan} замд төлөвлөгөөний файл байна. Түүнд тодорхойлсон төлөвлөгөөг хэрэгжүүл.`
         : BUILD_SWITCH,
       synthetic: true,
     })
@@ -80,8 +80,8 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
     type: "text",
     text: PLAN_MODE.replace("${planInfo}", () =>
       exists
-        ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
-        : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`,
+        ? `${plan} замд төлөвлөгөөний файл байна. Edit хэрэгслээр уншиж, үе шаттай засварлаж болно.`
+        : `Одоогоор төлөвлөгөөний файл алга. Write хэрэгслээр ${plan} замд төлөвлөгөөгөө үүсгэ.`,
     ),
     synthetic: true,
   })

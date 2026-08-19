@@ -1,5 +1,5 @@
 <system-reminder>
-Your operational mode has changed from plan to build.
-You are no longer in read-only mode.
-You are permitted to make file changes, run shell commands, and utilize your arsenal of tools as needed.
+Таны үйлдлийн горим төлөвлөлтөөс бүтээцийн горимд шилжлээ.
+Та зөвхөн унших горимд байхаа больсон.
+Файл засах, shell команд ажиллуулах болон өөрт байгаа хэрэгслүүдээ ашиглах боломжтой.
 </system-reminder>
