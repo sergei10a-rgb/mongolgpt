@@ -8,6 +8,6 @@ export const handleNotificationClick = (href?: string) => {
   window.focus()
   if (!href) return
   if (nav) return nav(href)
-  console.warn("notification-click: navigate function not set, falling back to window.location.assign")
+  console.warn("notification-click: navigate функц тохируулаагүй тул window.location.assign ашиглаж байна")
   window.location.assign(href)
 }

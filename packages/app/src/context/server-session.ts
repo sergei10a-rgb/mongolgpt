@@ -263,7 +263,7 @@ export function createServerSession(client: MongolGPTClient, options?: { retry?:
     const seen = new Set([session.id])
     let root = session
     while (root.parentID) {
-      if (seen.has(root.parentID)) throw new Error(`Session parent cycle: ${root.parentID}`)
+      if (seen.has(root.parentID)) throw new Error(`Сешний эцэг холбоосын мөчлөг илэрлээ: ${root.parentID}`)
       seen.add(root.parentID)
       const parent = data.info[root.parentID]
       if (!parent) return

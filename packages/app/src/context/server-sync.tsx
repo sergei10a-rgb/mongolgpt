@@ -85,7 +85,7 @@ export type QueryOptionsApi = ReturnType<typeof makeQueryOptionsApi>
 export function createServerSyncContextInner(serverSDK: ServerSDK) {
   const language = useLanguage()
   const owner = getOwner()
-  if (!owner) throw new Error("ServerSync must be created within owner")
+  if (!owner) throw new Error("ServerSync-ийг эзэмшигчийн хүрээнд үүсгэх шаардлагатай")
 
   const sdkCache = new Map<string, MongolGPTClient>()
   const booting = new Map<string, Promise<void>>()
@@ -291,7 +291,7 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
               sessionMeta.set(key, { limit })
             })
             .catch((err) => {
-              console.error("Failed to load sessions", err)
+              console.error("Сешнүүдийг ачаалж чадсангүй", err)
               const project = getFilename(directory)
               showToast({
                 variant: "error",

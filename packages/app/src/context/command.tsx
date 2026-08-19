@@ -274,7 +274,7 @@ export const { use: useCommand, provider: CommandProvider } = createSimpleContex
           if (seen.has(opt.id)) {
             if (import.meta.env.DEV && !warnedDuplicates.has(opt.id)) {
               warnedDuplicates.add(opt.id)
-              console.warn(`[command] duplicate command id "${opt.id}" registered; keeping first entry`)
+              console.warn(`[command] давхардсан командын ID "${opt.id}" бүртгэгдлээ; эхний бүртгэлийг хадгаллаа`)
             }
             continue
           }

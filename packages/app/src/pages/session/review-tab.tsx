@@ -57,7 +57,7 @@ export function SessionReviewTab(props: SessionReviewTabProps) {
       .client.file.read({ path })
       .then((x) => x.data)
       .catch((error) => {
-        console.debug("[session-review] failed to read file", { path, error })
+        console.debug("[session-review] Файл уншиж чадсангүй", { path, error })
         return undefined
       })
   }

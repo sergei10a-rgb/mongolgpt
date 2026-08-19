@@ -1045,7 +1045,7 @@ export default function LegacyLayout(props: ParentProps) {
       commands.push({
         id: `project.${number}`,
         category: language.t("command.category.project"),
-        title: `Open Project {number}`,
+        title: `Төсөл ${number}-ыг нээх`,
         keybind: `mod+${number}`,
         disabled: layout.projects.list().length <= index,
         hidden: true,

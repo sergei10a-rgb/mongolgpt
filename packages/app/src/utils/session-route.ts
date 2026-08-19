@@ -12,7 +12,7 @@ export function legacySessionHref(directory: string, sessionID: string) {
 
 export function requireServerKey(segment: string | undefined) {
   const key = decode64(segment)
-  if (!key || base64Encode(key) !== segment) throw new Error("Invalid server route")
+  if (!key || base64Encode(key) !== segment) throw new Error("Серверийн холбоосын зам буруу байна")
   return ServerConnection.Key.make(key)
 }
 
@@ -40,7 +40,7 @@ export async function rootSession<T extends SessionParent>(session: T, get: (ses
   const seen = new Set([session.id])
   let current = session
   while (current.parentID) {
-    if (seen.has(current.parentID)) throw new Error(`Session parent cycle: ${current.parentID}`)
+    if (seen.has(current.parentID)) throw new Error(`Сешний эцэг холбоосын мөчлөг илэрлээ: ${current.parentID}`)
     seen.add(current.parentID)
     current = await get(current.parentID)
   }

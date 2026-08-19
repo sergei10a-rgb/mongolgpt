@@ -353,7 +353,7 @@ export async function bootstrapDirectory(input: {
     await waitForPaint()
     const slowErrs = errors(await runAll(slow))
     if (slowErrs.length > 0) {
-      console.error("Failed to finish bootstrap instance", slowErrs[0])
+      console.error("Ажиллах орчны эхлүүлэлтийг дуусгаж чадсангүй", slowErrs[0])
       const project = getFilename(input.directory)
       showToast({
         variant: "error",

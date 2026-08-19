@@ -395,7 +395,7 @@ export default function Page() {
               .client.vcs.diff({ mode })
               .then((result) => list(result.data))
               .catch((error) => {
-                console.debug("[session-review] failed to load vcs diff", { mode, error })
+                console.debug("[session-review] VCS diff ачаалж чадсангүй", { mode, error })
                 return []
               })
         : skipToken,

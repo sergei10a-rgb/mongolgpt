@@ -137,7 +137,7 @@ export const { use: useNotification, provider: NotificationProvider } = createSi
 
     const ensure = (key: ServerConnection.Key) => {
       const conn = global.servers.list().find((item) => ServerConnection.key(item) === key)
-      if (!conn) throw new Error(`Notification server not found: ${key}`)
+      if (!conn) throw new Error(`Мэдэгдлийн сервер олдсонгүй: ${key}`)
       const ctx = global.ensureServerCtx(conn)
       const existing = states.get(ctx.sdk.scope)
       if (existing) return existing.state

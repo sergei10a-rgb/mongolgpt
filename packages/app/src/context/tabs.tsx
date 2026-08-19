@@ -158,7 +158,7 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
       },
       draft(draftID: string) {
         const tab = store.find((item) => item.type === "draft" && item.draftID === draftID)
-        if (!tab || tab.type !== "draft") throw new Error(`Draft not found: ${draftID}`)
+        if (!tab || tab.type !== "draft") throw new Error(`Ноорог олдсонгүй: ${draftID}`)
         return tab
       },
       newDraft(draft: Omit<DraftTab, "type" | "draftID">, prompt?: string) {

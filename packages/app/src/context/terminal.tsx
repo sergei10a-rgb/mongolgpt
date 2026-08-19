@@ -220,7 +220,7 @@ function createWorkspaceTerminalSession(
           const currentIndex = store.all.findIndex((item) => item.id === pty.id)
           if (currentIndex >= 0) setStore("all", currentIndex, previous)
         }
-        console.error("Failed to update terminal", error)
+        console.error("Терминалыг шинэчилж чадсангүй", error)
       })
   }
 
@@ -233,7 +233,7 @@ function createWorkspaceTerminalSession(
         title: pty.title,
       })
       .catch((error: unknown) => {
-        console.error("Failed to clone terminal", error)
+        console.error("Терминалыг хуулж чадсангүй", error)
         return undefined
       })
     if (!next?.data) return
@@ -284,7 +284,7 @@ function createWorkspaceTerminalSession(
           setStore("active", id)
         })
         .catch((error: unknown) => {
-          console.error("Failed to create terminal", error)
+          console.error("Терминал үүсгэж чадсангүй", error)
         })
     },
     update(pty: Partial<LocalPTY> & { id: string }) {
@@ -354,7 +354,7 @@ function createWorkspaceTerminalSession(
       }
 
       await sdk.client.pty.remove({ ptyID: id }).catch((error: unknown) => {
-        console.error("Failed to close terminal", error)
+        console.error("Терминалыг хааж чадсангүй", error)
       })
     },
     move(id: string, to: number) {

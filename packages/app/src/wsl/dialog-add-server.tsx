@@ -614,7 +614,7 @@ export function DialogAddWslServer(props: DialogWslServerProps = {}) {
 }
 
 function requestError(language: ReturnType<typeof useLanguage>, err: unknown) {
-  console.error("WSL servers request failed", err instanceof Error ? (err.stack ?? err.message) : String(err))
+  console.error("WSL серверийн хүсэлт амжилтгүй боллоо", err instanceof Error ? (err.stack ?? err.message) : String(err))
   showToast({
     variant: "error",
     title: language.t("common.requestFailed"),

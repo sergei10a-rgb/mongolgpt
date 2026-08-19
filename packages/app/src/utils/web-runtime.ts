@@ -14,7 +14,7 @@ type ResolveWebRuntimeInput = {
 function normalizeHttpUrl(input: string) {
   const url = new URL(input.trim())
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("MongolGPT runtime URL must use http or https")
+    throw new Error("MongolGPT-ийн ажиллах орчны URL нь http эсвэл https протокол ашиглах ёстой")
   }
   return url.toString().replace(/\/+$/, "")
 }

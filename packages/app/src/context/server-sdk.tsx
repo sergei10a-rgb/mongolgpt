@@ -180,7 +180,7 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
               if (isStreamClosed(error, attempt?.signal)) return
               if (streamErrorLogged) return
               streamErrorLogged = true
-              console.error("[global-sdk] event stream error", {
+              console.error("[global-sdk] үйл явдлын урсгалын алдаа", {
                 url: server.http.url,
                 fetch: eventFetch ? "platform" : "webview",
                 error,
@@ -205,7 +205,7 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
         } catch (error) {
           if (!isStreamClosed(error, attempt?.signal) && !streamErrorLogged) {
             streamErrorLogged = true
-            console.error("[global-sdk] event stream failed", {
+            console.error("[global-sdk] үйл явдлын урсгал бүтэлгүйтлээ", {
               url: server.http.url,
               fetch: eventFetch ? "platform" : "webview",
               error,

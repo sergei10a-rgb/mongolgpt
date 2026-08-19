@@ -55,7 +55,7 @@ describe("migrateLegacySessionStateKeys", () => {
 
   test("rejects invalid identity fragments", () => {
     expect(() => ScopedKey.from(ServerScope.local, "bad\0directory")).toThrow(
-      "Scoped key part cannot contain null bytes",
+      "Хамрах хүрээтэй түлхүүрийн хэсэг нь null байт агуулж болохгүй",
     )
   })
 })

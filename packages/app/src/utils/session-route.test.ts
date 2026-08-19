@@ -42,7 +42,7 @@ describe("session routes", () => {
   })
 
   test("rejects malformed server keys", () => {
-    expect(() => requireServerKey("not-base64")).toThrow("Invalid server route")
+    expect(() => requireServerKey("not-base64")).toThrow("Серверийн холбоосын зам буруу байна")
   })
 
   test("builds the legacy directory-keyed route", () => {
@@ -61,7 +61,7 @@ describe("session routes", () => {
     expect(
       await rootSession(sessions.child, async (id) => {
         const session = sessions[id]
-        if (!session) throw new Error(`Missing session: ${id}`)
+        if (!session) throw new Error(`Сешн олдсонгүй: ${id}`)
         return session
       }),
     ).toBe(sessions.root)
@@ -73,7 +73,9 @@ describe("session routes", () => {
       parent: { id: "parent", parentID: "child" },
     }
 
-    expect(rootSession(sessions.child, async (id) => sessions[id]!)).rejects.toThrow("Session parent cycle: child")
+    expect(rootSession(sessions.child, async (id) => sessions[id]!)).rejects.toThrow(
+      "Сешний эцэг холбоосын мөчлөг илэрлээ: child",
+    )
   })
 
   test("ignores a resolved lineage retained from the previous route", () => {

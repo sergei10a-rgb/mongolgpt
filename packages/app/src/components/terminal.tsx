@@ -139,7 +139,7 @@ const persistTerminal = (input: {
     try {
       return input.addon.serialize()
     } catch {
-      debugTerminal("failed to serialize terminal buffer")
+      debugTerminal("Терминалын буферийг сериалчилж чадсангүй")
       return ""
     }
   })()
@@ -213,7 +213,7 @@ export const Terminal = (props: TerminalProps) => {
       try {
         fn()
       } catch (err) {
-        debugTerminal("cleanup failed", err)
+        debugTerminal("Цэвэрлэгээ бүтэлгүйтлээ", err)
       }
     }
   }
@@ -225,7 +225,7 @@ export const Terminal = (props: TerminalProps) => {
         size: { cols, rows },
       })
       .catch((err) => {
-        debugTerminal("failed to sync terminal size", err)
+        debugTerminal("Терминалын хэмжээг синк хийж чадсангүй", err)
       })
   }
 
@@ -477,7 +477,7 @@ export const Terminal = (props: TerminalProps) => {
           .get({ ptyID: id }, { throwOnError: false })
           .then((result) => result.response.status === 404)
           .catch((err) => {
-            debugTerminal("failed to inspect terminal session", err)
+            debugTerminal("Терминалын сессийг шалгаж чадсангүй", err)
             return false
           })
 
@@ -498,8 +498,10 @@ export const Terminal = (props: TerminalProps) => {
         if (result.response.status === 200 && result.data?.ticket) return result.data.ticket
         if (result.response.status === 404 || result.response.status === 405) return
         if (result.response.status === 403)
-          throw new Error("PTY connect ticket rejected by origin or CSRF checks. Check the server CORS config.")
-        throw new Error(`PTY connect ticket failed with ${result.response.status}`)
+          throw new Error(
+            "PTY холболтын тасалбарыг origin эсвэл CSRF шалгалтаар зөвшөөрсөнгүй. Серверийн CORS тохиргоог шалгана уу.",
+          )
+        throw new Error(`PTY холболтын тасалбарын хүсэлт ${result.response.status} төлөвөөр бүтэлгүйтлээ`)
       }
 
       const retry = (err: unknown) => {
@@ -569,7 +571,7 @@ export const Terminal = (props: TerminalProps) => {
                 seek = next
               }
             } catch (err) {
-              debugTerminal("invalid websocket control frame", err)
+              debugTerminal("WebSocket-ийн удирдлагын frame буруу байна", err)
             }
             return
           }

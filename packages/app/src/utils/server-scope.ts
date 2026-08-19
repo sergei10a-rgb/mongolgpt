@@ -8,19 +8,19 @@ export type ScopedKey = string & { readonly __brand: "ScopedKey" }
 const separator = "\u0000"
 
 function fragment(label: string, value: string) {
-  if (value.includes(separator)) throw new Error(`${label} cannot contain null bytes`)
+  if (value.includes(separator)) throw new Error(`${label} нь null байт агуулж болохгүй`)
   return value
 }
 
 function compose(scope: ServerScope, parts: string[]) {
-  return [fragment("Server scope", scope), ...parts.map((part) => fragment("Scoped key part", part))].join(separator)
+  return [fragment("Серверийн хамрах хүрээ", scope), ...parts.map((part) => fragment("Хамрах хүрээтэй түлхүүрийн хэсэг", part))].join(separator)
 }
 
 export const ServerScope = {
   local: "local" as ServerScope,
   fromServerKey(key: ServerConnection.Key, canonicalLocalServer?: ServerConnection.Key) {
     return fragment(
-      "Server scope",
+      "Серверийн хамрах хүрээ",
       key === "sidecar" || key === canonicalLocalServer ? ServerScope.local : key,
     ) as ServerScope
   },
@@ -28,10 +28,10 @@ export const ServerScope = {
 
 export const SessionRouteKey = {
   fromRoute(dir: string | undefined, sessionID?: string) {
-    return fragment("Session route", `${dir ?? ""}${sessionID ? "/" + sessionID : ""}`) as SessionRouteKey
+    return fragment("Сешний маршрут", `${dir ?? ""}${sessionID ? "/" + sessionID : ""}`) as SessionRouteKey
   },
   fromLegacy(key: string) {
-    return fragment("Legacy session route", key) as SessionRouteKey
+    return fragment("Хуучин сешний маршрут", key) as SessionRouteKey
   },
 }
 
@@ -46,7 +46,7 @@ export const SessionStateKey = {
   scope(key: string) {
     const split = key.indexOf(separator)
     if (split === -1) return ServerScope.local
-    return fragment("Stored server scope", key.slice(0, split)) as ServerScope
+    return fragment("Хадгалсан серверийн хамрах хүрээ", key.slice(0, split)) as ServerScope
   },
 }
 

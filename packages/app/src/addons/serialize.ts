@@ -528,7 +528,7 @@ export class SerializeAddon implements ITerminalAddon {
    */
   public serialize(options?: ISerializeOptions): string {
     if (!this._terminal) {
-      throw new Error("Cannot use addon until it has been loaded")
+      throw new Error("Нэмэлтийг ачаалахаас өмнө ашиглах боломжгүй")
     }
 
     const buffer = getTerminalBuffers(this._terminal)
@@ -562,7 +562,7 @@ export class SerializeAddon implements ITerminalAddon {
    */
   public serializeAsText(options?: { scrollback?: number; trimWhitespace?: boolean }): string {
     if (!this._terminal) {
-      throw new Error("Cannot use addon until it has been loaded")
+      throw new Error("Нэмэлтийг ачаалахаас өмнө ашиглах боломжгүй")
     }
 
     const buffer = getTerminalBuffers(this._terminal)

@@ -79,10 +79,9 @@ export async function requestCompatImport(input: {
         ? String((data as { message?: unknown }).message)
         : typeof data === "string" && data
           ? data
-          : `Compat import failed with HTTP ${response.status}`
+          : `Тохирлын импорт HTTP ${response.status} төлөвөөр бүтэлгүйтлээ`
     throw new Error(message)
   }
 
   return data as CompatImportResponse
 }
-
