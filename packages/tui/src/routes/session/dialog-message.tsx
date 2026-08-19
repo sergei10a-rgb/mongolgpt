@@ -56,7 +56,7 @@ export function DialogMessage(props: {
         {
           title: "Хуулах",
           value: "message.copy",
-          description: "мессежийн текстийг clipboard руу",
+          description: "мессежийн текстийг түр санах ой руу",
           onSelect: async (dialog) => {
             const msg = message()
             if (!msg) return

@@ -80,7 +80,7 @@ function EditBody(props: { request: PermissionRequest }) {
       </Show>
       <Show when={!diff()}>
         <box paddingLeft={1}>
-          <text fg={theme.textMuted}>Diff өгөгдсөнгүй</text>
+          <text fg={theme.textMuted}>Өөрчлөлт өгөгдсөнгүй</text>
         </box>
       </Show>
     </box>
@@ -230,7 +230,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                 body: (
                   <Show when={pattern}>
                     <box paddingLeft={1}>
-                      <text fg={theme.textMuted}>{"Pattern: " + pattern}</text>
+                      <text fg={theme.textMuted}>{"Загвар: " + pattern}</text>
                     </box>
                   </Show>
                 ),
@@ -245,7 +245,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                 body: (
                   <Show when={pattern}>
                     <box paddingLeft={1}>
-                      <text fg={theme.textMuted}>{"Pattern: " + pattern}</text>
+                      <text fg={theme.textMuted}>{"Загвар: " + pattern}</text>
                     </box>
                   </Show>
                 ),
@@ -272,7 +272,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               const command = typeof data.command === "string" ? data.command : ""
               return {
                 icon: "#",
-                title: "Shell команд",
+                title: "Терминалын команд",
                 body: (
                   <Show when={command}>
                     <box paddingLeft={1}>
@@ -322,7 +322,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                 body: (
                   <Show when={query}>
                     <box paddingLeft={1}>
-                      <text fg={theme.textMuted}>{"Query: " + query}</text>
+                      <text fg={theme.textMuted}>{"Хайлт: " + query}</text>
                     </box>
                   </Show>
                 ),
@@ -371,10 +371,10 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
 
             return {
               icon: "⚙",
-              title: `${permission} tool дуудах`,
+              title: `${permission} хэрэгсэл дуудах`,
               body: (
                 <box paddingLeft={1}>
-                  <text fg={theme.textMuted}>{"Tool: " + permission}</text>
+                  <text fg={theme.textMuted}>{"Хэрэгсэл: " + permission}</text>
                 </box>
               ),
             }
@@ -555,7 +555,7 @@ function Prompt<const T extends Record<string, string>>(props: {
       },
       {
         name: "permission.prompt.fullscreen",
-        title: "Зөвшөөрлийн fullscreen горимыг асаах/унтраах",
+        title: "Зөвшөөрлийн бүтэн дэлгэцийн горимыг асаах/унтраах",
         category: "Зөвшөөрөл",
         run() {
           if (!props.fullscreen) return
@@ -625,7 +625,7 @@ function Prompt<const T extends Record<string, string>>(props: {
     ],
   }))
 
-  const hint = createMemo(() => (store.expanded ? "жижигрүүлэх" : "fullscreen"))
+  const hint = createMemo(() => (store.expanded ? "жижигрүүлэх" : "бүтэн дэлгэц"))
   useRenderer()
 
   const content = () => (

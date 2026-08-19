@@ -114,7 +114,7 @@ export function DialogMoveSession(props: DialogMoveSessionProps) {
     const data = directoryData()
     const current = currentRoot()?.directory
     if (directories.loading && !data && !current)
-      return [{ title: "Project хавтаснуудыг ачаалж байна...", value: undefined }]
+      return [{ title: "Төслийн хавтаснуудыг ачаалж байна...", value: undefined }]
     const roots = [...(data ?? [])]
     if (current && !roots.some((item) => item.directory === current)) roots.unshift({ directory: current })
     roots.sort((a, b) => {
@@ -124,7 +124,7 @@ export function DialogMoveSession(props: DialogMoveSessionProps) {
       if (!a.strategy && !b.strategy) return a.directory.length - b.directory.length
       return 0
     })
-    if (roots.length === 0) return [{ title: "Project хавтас олдсонгүй", value: undefined }]
+    if (roots.length === 0) return [{ title: "Төслийн хавтас олдсонгүй", value: undefined }]
 
     const subdirectories = sync.data.session
       .filter((session) => session.projectID === props.projectID && session.path && ![".", "/"].includes(session.path))
@@ -304,7 +304,7 @@ export function DialogMoveSession(props: DialogMoveSessionProps) {
           showError() ? (
             <box paddingLeft={4} paddingRight={4}>
               <text fg={theme.error} attributes={TextAttributes.BOLD}>
-                Project хавтаснуудыг ачаалж чадсангүй
+                Төслийн хавтаснуудыг ачаалж чадсангүй
               </text>
               <text fg={theme.textMuted}>{errorMessage(loadError())}</text>
             </box>

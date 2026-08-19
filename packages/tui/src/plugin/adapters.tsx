@@ -305,7 +305,7 @@ export function createTuiApiAdapters(input: Input): Omit<TuiPluginApi, "lifecycl
     renderer: input.renderer,
     slots: {
       register() {
-        throw new Error("slots.register is only available in plugin context")
+        throw new Error("slots.register үйлдлийг зөвхөн нэмэлтийн орчинд ашиглах боломжтой")
       },
     },
     plugins: {
@@ -324,7 +324,7 @@ export function createTuiApiAdapters(input: Input): Omit<TuiPluginApi, "lifecycl
       async install() {
         return {
           ok: false,
-          message: "plugins.install is only available in plugin context",
+          message: "plugins.install үйлдлийг зөвхөн нэмэлтийн орчинд ашиглах боломжтой",
         }
       },
     },
@@ -342,7 +342,7 @@ export function createTuiApiAdapters(input: Input): Omit<TuiPluginApi, "lifecycl
         return input.theme.set(name)
       },
       async install(_jsonPath) {
-        throw new Error("theme.install is only available in plugin context")
+        throw new Error("theme.install үйлдлийг зөвхөн нэмэлтийн орчинд ашиглах боломжтой")
       },
       mode() {
         return input.theme.mode()

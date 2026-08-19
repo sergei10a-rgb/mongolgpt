@@ -73,7 +73,7 @@ export function usePromptWorkspace(sessionID?: string) {
 
     const workspace =
       selection.type === "none"
-        ? { id: null, name: "локал project" }
+        ? { id: null, name: "энэ төхөөрөмжийн төсөл" }
         : selection.type === "existing"
           ? { id: selection.workspaceID, name: selection.workspaceName }
           : await create(selection)
@@ -94,7 +94,7 @@ export function usePromptWorkspace(sessionID?: string) {
   }
 
   function showNotice(name: string) {
-    setNotice(`${name} руу warp хийлээ`)
+    setNotice(`${name} руу шилжүүллээ`)
     setTimeout(() => setNotice(undefined), 4000)
   }
 
