@@ -1,9 +1,9 @@
 ---
 title: Windows ба WSL
-description: MongolGPT CLI, web сервер, ширээний програмыг Windows болон WSL дээр ажиллуулах.
+description: MongolGPT CLI, вэб сервер, ширээний програмыг Windows болон WSL дээр ажиллуулах.
 ---
 
-MongolGPT CLI-г Windows дээр шууд ажиллуулж болно. Linux shell хэрэгсэл, permission, symlink, файлын гүйцэтгэлийн асуудал гарвал [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install) ашиглах нь тохиромжтой.
+MongolGPT CLI-г Windows дээр шууд ажиллуулж болно. Linux бүрхүүлийн хэрэгсэл, зөвшөөрөл, symlink, файлын гүйцэтгэлийн асуудал гарвал [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install) ашиглах нь тохиромжтой.
 
 ## WSL суулгах
 
@@ -24,7 +24,7 @@ Microsoft-ийн шинэчилсэн алхмуудыг [WSL суулгах а�
 
 ## MongolGPT CLI суулгах
 
-### Release binary ашиглах
+### Бэлэн хувилбар ашиглах
 
 1. [MongolGPT Releases](https://github.com/sergei10a-rgb/mongolgpt/releases) хуудсаас WSL-ийн архитектурт тохирох Linux архивыг татна. Ихэнх Intel/AMD төхөөрөмжид `mongolgpt-linux-x64.tar.gz` тохирно.
 2. Архивыг WSL дотор задална.
@@ -38,7 +38,7 @@ export PATH="$HOME/.local/bin:$PATH"
 mongolgpt --version
 ```
 
-`~/.local/bin` дараагийн terminal session-д танигдахгүй бол `export PATH=...` мөрийг `~/.bashrc` эсвэл ашиглаж буй shell-ийн profile-д нэмнэ.
+`~/.local/bin` дараагийн терминалын сесст танигдахгүй бол `export PATH=...` мөрийг `~/.bashrc` эсвэл ашиглаж буй бүрхүүлийн профайлд нэмнэ.
 
 ### Эх кодоос ажиллуулах
 
@@ -51,7 +51,7 @@ bun install
 bun run dev
 ```
 
-Энэ нь repository-ийн development хувилбарыг ажиллуулна. Өдөр тутмын хэрэглээнд GitHub Release binary сонгох нь хялбар.
+Энэ нь репозиторын хөгжүүлэлтийн хувилбарыг ажиллуулна. Өдөр тутмын хэрэглээнд GitHub Releases дэх бэлэн хувилбарыг сонгох нь хялбар.
 
 ## Төслөө хаана байрлуулах вэ?
 
@@ -79,7 +79,7 @@ mongolgpt
 
 ## Windows-ийн ширээний програмыг WSL серверт холбох
 
-Windows desktop app ашиглаж, CLI server-ээ WSL-д ажиллуулах боломжтой.
+Windows-ийн ширээний програм ашиглаж, CLI серверээ WSL-д ажиллуулах боломжтой.
 
 1. WSL terminal-д урт нууц үг тохируулж серверээ эхлүүлнэ.
 
@@ -87,7 +87,7 @@ Windows desktop app ашиглаж, CLI server-ээ WSL-д ажиллуулах 
    MONGOLGPT_SERVER_PASSWORD="урт-санамсаргүй-нууц-үг" mongolgpt serve --hostname 0.0.0.0 --port 4096
    ```
 
-2. Windows desktop app-ийн server сонгогчид `http://localhost:4096` нэмнэ.
+2. Windows-ийн ширээний програмын сервер сонгогчид `http://localhost:4096` нэмнэ.
 3. Хэрэглэгчийн нэрийг `mongolgpt`, нууц үгийг дээрх утгаар оруулна.
 
 `localhost` ажиллахгүй бол WSL IP-г олно.
@@ -115,8 +115,8 @@ Windows хөтчөөс `http://localhost:4096` хаягийг нээнэ. Аюу
 - **`mongolgpt: command not found`:** `~/.local/bin` нь `PATH`-д байгаа эсэхийг шалга.
 - **Хандах эрхгүй (`Permission denied`):** `chmod +x mongolgpt` эсвэл `install -m 755 ...` ажиллуул.
 - **Файл унших удаан:** төслөө `/mnt/c`-ээс `~/projects` рүү шилжүүлж турш.
-- **Windows browser холбогдохгүй:** server `0.0.0.0` дээр сонсож байгаа эсэх, порт, Windows Firewall-аа шалга.
+- **Windows-ийн хөтөч холбогдохгүй:** сервер `0.0.0.0` дээр сонсож байгаа эсэх, порт, Windows Firewall-аа шалга.
 - **Git-ийн line ending зөрнө:** WSL доторх repository-д Linux Git ашиглаж, багийн `.gitattributes` дүрмийг дага.
-- **CLI ба desktop өөр сесс харуулна:** хоёулаа ижил server URL-д холбогдсон эсэхийг шалга.
+- **CLI ба ширээний програм өөр сесс харуулна:** хоёулаа ижил серверийн URL-д холбогдсон эсэхийг шалга.
 
 Нэмэлт оношилгоог [алдаа оношлох ба FAQ](../troubleshooting) хуудаснаас үзнэ үү.

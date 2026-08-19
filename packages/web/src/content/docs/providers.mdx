@@ -5,10 +5,10 @@ description: MongolGPT дахь дурын LLM үйлчилгээ үзүүлэг
 
 MongolGPT нь **75+ LLM үйлчилгээ үзүүлэгчийг** дэмжихийн тулд [AI SDK](https://ai-sdk.dev/) болон [Models.dev](https://models.dev) ашигладаг бөгөөд локал загвар ажиллуулахыг дэмждэг.
 
-Нэгдсэн бүртгэлээр нэвтэрсэн хэрэглэгч production service идэвхтэй үед **MongolGPT Free Auto**-г ашиглана. Үүнээс гадна хэрэглэгч өөрийн provider-ийн API key, OAuth эрх эсвэл локал endpoint-ийг хүссэн үедээ нэмж болно. Дэлгэрэнгүйг [бүртгэл, Free Auto ба багцын заавраас](../account) үзнэ үү.
+Нэгдсэн бүртгэлээр нэвтэрсэн хэрэглэгч үйлдвэрлэлийн үйлчилгээ идэвхтэй үед **MongolGPT Free Auto**-г ашиглана. Үүнээс гадна хэрэглэгч өөрийн үйлчилгээ үзүүлэгчийн API key, OAuth эрх эсвэл локал endpoint-ийг хүссэн үедээ нэмж болно. Дэлгэрэнгүйг [бүртгэл, Free Auto ба багцын заавраас](../account) үзнэ үү.
 
 :::caution
-Free Auto болон төлбөртэй багцууд production-д албан ёсоор нээгдтэл зөвхөн dev орчинд туршина. Туршилтын эсвэл хувь хүний үнэгүй API эрхийг нийтийн model gateway болгон ашиглахгүй.
+Free Auto болон төлбөртэй багцууд үйлдвэрлэлийн орчинд албан ёсоор нээгдтэл зөвхөн хөгжүүлэлтийн орчинд туршина. Туршилтын эсвэл хувь хүний үнэгүй API эрхийг нийтийн загварын гарц болгон ашиглахгүй.
 :::
 
 Үйлчилгээ үзүүлэгч нэмэхийн тулд та:
@@ -85,7 +85,7 @@ Free Auto болон төлбөртэй багцууд production-д албан 
 
 ## MongolGPT бүртгэл ба Free Auto
 
-Free Auto нь тусдаа API key хуулж оруулах provider биш. Web, Desktop эсвэл CLI-д MongolGPT бүртгэлээр нэвтэрсний дараа model gateway production-д идэвхтэй бол `mongolgpt/free-auto` загвар автоматаар бэлэн болно.
+Free Auto нь тусдаа API key хуулж оруулах үйлчилгээ үзүүлэгч биш. Вэб, ширээний програм эсвэл CLI-д MongolGPT бүртгэлээр нэвтэрсний дараа загварын гарц үйлдвэрлэлийн орчинд идэвхтэй бол `mongolgpt/free-auto` загвар автоматаар бэлэн болно.
 
 ```bash
 mongolgpt console login
@@ -501,7 +501,7 @@ MongolGPT-ийн өмнөх хувилбарууд нь эдгээр залга�
 
 ### Cloudflare AI Gateway
 
-Cloudflare AI Gateway нь нэг endpoint-оор OpenAI, Anthropic, Cloudflare Workers AI зэрэг provider-д хандана. [Unified Billing](https://developers.cloudflare.com/ai-gateway/features/unified-billing/) ашиглавал provider бүрийн API key-г тусад нь өгөх шаардлагагүй байж болно.
+Cloudflare AI Gateway нь нэг endpoint-оор OpenAI, Anthropic, Cloudflare Workers AI зэрэг үйлчилгээ үзүүлэгчид хандана. [Unified Billing](https://developers.cloudflare.com/ai-gateway/features/unified-billing/) ашиглавал үйлчилгээ үзүүлэгч бүрийн API key-г тусад нь өгөх шаардлагагүй байж болно.
 
 1. [Cloudflare хяналтын самбар](https://dash.cloudflare.com/) руу очиж, **AI** > **AI Gateway** руу очиж, шинэ гарц үүсгэнэ үү. Өөрийн **Бүртгэл ID** болон **Gateway ID**-г анхаарна уу.
 
@@ -1141,7 +1141,7 @@ Google Vertex AI-г MongolGPT-тэй ашиглахын тулд:
 
 [Hugging Face Inference Providers](https://huggingface.co/docs/inference-providers) нь 17+ үйлчилгээ үзүүлэгчээр дамжуулан нээлттэй загваруудад хандах боломж олгоно.
 
-1. Inference provider дуудах эрхтэй token үүсгэхийн тулд [Hugging Face token тохиргоо](https://huggingface.co/settings/tokens/new?ownUserPermissions=inference.serverless.write&tokenType=fineGrained) руу орно.
+1. Загвар ажиллуулах үйлчилгээ үзүүлэгчийг дуудах эрхтэй token үүсгэхийн тулд [Hugging Face token тохиргоо](https://huggingface.co/settings/tokens/new?ownUserPermissions=inference.serverless.write&tokenType=fineGrained) руу орно.
 
 2. `/connect` командыг ажиллуулаад **Hugging Face** гэж хайна уу.
 
@@ -1813,7 +1813,7 @@ SAP AI Core нь нэгдсэн платформоор дамжуулан OpenAI
 
 ### STACKIT
 
-STACKIT AI Model Serving нь AI загваруудад зориулсан бүрэн удирдлагатай бүрэн эрхт хостинг орчныг бүрдүүлж, Llama, Mistral, Qwen зэрэг LLM-д анхаарлаа хандуулж, Европын дэд бүтцэд хамгийн их мэдээллийн бүрэн эрхээр хангадаг.
+STACKIT AI Model Serving нь AI загваруудад зориулсан бүрэн удирдлагатай байршуулалтын орчныг бүрдүүлж, Llama, Mistral, Qwen зэрэг LLM-д анхаарлаа хандуулж, Европын дэд бүтцэд мэдээллийн бүрэн эрхийг хангадаг.
 
 1. [STACKIT портал](https://portal.stackit.cloud) руу очиж, **AI Model Serving** руу очиж, төсөлдөө auth token үүсгэнэ үү.
 
@@ -1902,7 +1902,7 @@ STACKIT AI Model Serving нь AI загваруудад зориулсан бү�
 
 ### Snowflake Cortex
 
-[Snowflake Cortex](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-rest-api) нь OpenAI-compatible API-гаар Claude, OpenAI GPT-5 болон бусад model-д хандах боломж олгоно. Inference нь Snowflake-ийн орчинд ажиллаж, Snowflake credit-ээр тооцогдоно. Model бүрийн үнийг [Snowflake Service Consumption Table](https://www.snowflake.com/legal-files/CreditConsumptionTable.pdf)-ээс шалгана уу.
+[Snowflake Cortex](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-rest-api) нь OpenAI-compatible API-гаар Claude, OpenAI GPT-5 болон бусад загварт хандах боломж олгоно. Загварын тооцоолол Snowflake-ийн орчинд ажиллаж, Snowflake credit-ээр тооцогдоно. Загвар бүрийн үнийг [Snowflake Service Consumption Table](https://www.snowflake.com/legal-files/CreditConsumptionTable.pdf)-ээс шалгана уу.
 
 Танд Snowflake данс байхгүй юу? [Үнэгүй туршилтанд бүртгүүлнэ үү](https://signup.snowflake.com/?utm_source=mongolgpt&utm_medium=docs&utm_campaign=cortex-provider).
 
@@ -1921,7 +1921,7 @@ MongolGPT нь баталгаажуулалтын хоёр аргыг дэмжд
    /connect
    ```
 
-2. **Snowflake (External Browser) ашиглан нэвтрэх**-г сонгоно.
+2. **Snowflake (External Browser) ашиглан нэвтрэх**-ийг сонгоно.
 
    ```txt
    ┌ Баталгаажуулалтын аргыг сонгоно уу
@@ -2031,7 +2031,7 @@ export SNOWFLAKE_CORTEX_TOKEN=your-pat-or-jwt
 
 ### Venice AI
 
-1. [Venice AI console](https://venice.ai) руу орж account болон API key үүсгэнэ.
+1. [Venice AI консол](https://venice.ai) руу орж бүртгэл болон API key үүсгэнэ.
 
 2. `/connect` командыг ажиллуулаад **Venice AI** гэж хайна уу.
 

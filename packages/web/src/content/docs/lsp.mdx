@@ -3,11 +3,11 @@ title: LSP серверүүд
 description: MongolGPT-д Language Server Protocol оношлогоо тохируулах заавар.
 ---
 
-MongolGPT нь Language Server Protocol (LSP) серверийн diagnostic-ийг агентын контекстэд ашиглаж чадна. LSP нь локал ажиллагаа бөгөөд MongolGPT account, hosted backend эсвэл production domain шаарддаггүй.
+MongolGPT нь Language Server Protocol (LSP) серверийн оношилгоог агентын контекстэд ашиглаж чадна. LSP нь локал ажиллагаа тул MongolGPT-ийн бүртгэл, байршуулсан арын үйлчилгээ эсвэл үйлдвэрлэлийн домэйн шаарддаггүй.
 
 ## Түргэн эхлэх
 
-LSP анхдагчаар идэвхгүй. Бүх суурилуулсан LSP integration-ийг идэвхжүүлэхийн тулд:
+LSP анхдагчаар идэвхгүй байна. Суурилагдсан бүх LSP интеграцчиллыг идэвхжүүлэхийн тулд:
 
 ```json title="mongolgpt.json"
 {
@@ -15,7 +15,7 @@ LSP анхдагчаар идэвхгүй. Бүх суурилуулсан LSP i
 }
 ```
 
-MongolGPT-г дахин эхлүүлээд дэмжигдсэн өргөтгөлтэй файл нээнэ. Тухайн language server-ийн шаардлагатай runtime эсвэл command `PATH`-д байх ёстой.
+MongolGPT-г дахин эхлүүлээд дэмжигдсэн өргөтгөлтэй файл нээнэ. Тухайн хэлний серверт шаардлагатай ажиллуулах орчин эсвэл команд `PATH`-д байх ёстой.
 
 ```bash
 mongolgpt debug config
@@ -25,13 +25,13 @@ mongolgpt debug config
 
 ## Суурилуулсан серверүүд
 
-Доорх ID, command болон файлын өргөтгөлийг орчуулж өөрчилж болохгүй.
+Доорх ID, команд болон файлын өргөтгөлүүдийг өөрчилж болохгүй.
 
-| LSP server ID | Өргөтгөл | Шаардлага |
+| LSP серверийн ID | Өргөтгөл | Шаардлага |
 | --- | --- | --- |
-| `astro` | `.astro` | Astro төсөл; server-ийг автоматаар суулгаж болно |
+| `astro` | `.astro` | Astro төсөл; серверийг автоматаар суулгаж болно |
 | `bash` | `.sh`, `.bash`, `.zsh`, `.ksh` | `bash-language-server`-ийг автоматаар суулгаж болно |
-| `biome` | `.js`, `.jsx`, `.ts`, `.tsx`, `.json`, `.css` болон бусад | Biome dependency эсвэл config |
+| `biome` | `.js`, `.jsx`, `.ts`, `.tsx`, `.json`, `.css` болон бусад | Biome хамаарал эсвэл тохиргоо |
 | `clangd` | `.c`, `.cpp`, `.cc`, `.cxx`, `.c++`, `.h`, `.hpp`, `.hh`, `.hxx`, `.h++` | `clangd`; автоматаар суулгаж болно |
 | `clojure-lsp` | `.clj`, `.cljs`, `.cljc`, `.edn` | `clojure-lsp` command |
 | `csharp` | `.cs`, `.csx` | `.NET SDK` |
@@ -39,36 +39,36 @@ mongolgpt debug config
 | `deno` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs` | `deno` command; `deno.json` эсвэл `deno.jsonc` илрүүлнэ |
 | `dockerfile` | `.dockerfile`, `Dockerfile` | Dockerfile хэлний сервер |
 | `elixir-ls` | `.ex`, `.exs` | `elixir` command |
-| `eslint` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts`, `.vue` | Төслийн `eslint` dependency |
+| `eslint` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts`, `.vue` | Төслийн `eslint` хамаарал |
 | `fsharp` | `.fs`, `.fsi`, `.fsx`, `.fsscript` | `.NET SDK` |
 | `gleam` | `.gleam` | `gleam` command |
 | `gopls` | `.go` | `go` command |
-| `haskell-language-server` | `.hs`, `.lhs` | `haskell-language-server-wrapper` command |
+| `haskell-language-server` | `.hs`, `.lhs` | `haskell-language-server-wrapper` команд |
 | `jdtls` | `.java` | Java SDK 21 эсвэл шинэ |
 | `julials` | `.jl` | `julia` болон `LanguageServer.jl` |
-| `kotlin-ls` | `.kt`, `.kts` | Kotlin төсөл; server-ийг автоматаар суулгаж болно |
-| `lua-ls` | `.lua` | Lua language server-ийг автоматаар суулгаж болно |
+| `kotlin-ls` | `.kt`, `.kts` | Kotlin төсөл; серверийг автоматаар суулгаж болно |
+| `lua-ls` | `.lua` | Lua хэлний серверийг автоматаар суулгаж болно |
 | `nixd` | `.nix` | `nixd` command |
 | `ocaml-lsp` | `.ml`, `.mli` | `ocamllsp` command |
-| `oxlint` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts`, `.vue`, `.astro`, `.svelte` | Төслийн `oxlint` dependency |
+| `oxlint` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts`, `.vue`, `.astro`, `.svelte` | Төслийн `oxlint` хамаарал |
 | `php intelephense` | `.php` | Intelephense; автоматаар суулгаж болно |
 | `prisma` | `.prisma` | `prisma` command |
-| `pyright` | `.py`, `.pyi` | Төслийн `pyright` dependency |
+| `pyright` | `.py`, `.pyi` | Төслийн `pyright` хамаарал |
 | `razor` | `.razor`, `.cshtml` | `.NET SDK` болон C# tooling |
 | `ruby-lsp` | `.rb`, `.rake`, `.gemspec`, `.ru` | `ruby` болон `gem` command |
 | `rust` | `.rs` | `rust-analyzer` command |
 | `sourcekit-lsp` | `.swift`, `.objc`, `.objcpp` | `swift`; macOS дээр Xcode |
-| `svelte` | `.svelte` | Svelte төсөл; server-ийг автоматаар суулгаж болно |
-| `terraform` | `.tf`, `.tfvars` | Terraform language server-ийг автоматаар суулгаж болно |
+| `svelte` | `.svelte` | Svelte төсөл; серверийг автоматаар суулгаж болно |
+| `terraform` | `.tf`, `.tfvars` | Terraform хэлний серверийг автоматаар суулгаж болно |
 | `texlab` | `.tex`, `.bib` | `texlab`; автоматаар суулгаж болно |
 | `tinymist` | `.typ`, `.typc` | `tinymist` command эсвэл автомат суулгалт |
 | `ty` | `.py`, `.pyi` | `ty` command; experimental тохиргоо шаардаж болно |
-| `typescript` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts` | Төслийн `typescript` dependency |
-| `vue` | `.vue` | Vue төсөл; server-ийг автоматаар суулгаж болно |
+| `typescript` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.mts`, `.cts` | Төслийн `typescript` хамаарал |
+| `vue` | `.vue` | Vue төсөл; серверийг автоматаар суулгаж болно |
 | `yaml-ls` | `.yaml`, `.yml` | `yaml-language-server`-ийг автоматаар суулгаж болно |
 | `zls` | `.zig`, `.zon` | `zig` command |
 
-Автомат download-ийг хориглох бол MongolGPT-г эхлүүлэхээс өмнө:
+Автоматаар татахыг хориглох бол MongolGPT-г эхлүүлэхээс өмнө:
 
 ```bash
 export MONGOLGPT_DISABLE_LSP_DOWNLOAD=true
@@ -80,31 +80,31 @@ Windows PowerShell дээр:
 $env:MONGOLGPT_DISABLE_LSP_DOWNLOAD = "true"
 ```
 
-Энэ үед шаардлагатай language server-ийг өөрөө суулгаж `PATH`-д оруулна.
+Энэ тохиолдолд шаардлагатай хэлний серверийг өөрөө суулгаж, `PATH`-д нэмнэ.
 
 ## Ажиллах зарчим
 
-LSP идэвхтэй үед MongolGPT:
+LSP идэвхтэй үед MongolGPT дараах байдлаар ажиллана:
 
-1. Нээсэн файлын өргөтгөлийг идэвхтэй server бүрийн `extensions` утгатай тулгана.
-2. Тохирох server ажиллаагүй бол эхлүүлнэ.
-3. Diagnostic-ийг агентын дараагийн алхамд ашиглах боломжтой болгоно.
+1. Нээсэн файлын өргөтгөлийг идэвхтэй сервер бүрийн `extensions` утгатай тулгана.
+2. Тохирох сервер ажиллаагүй бол эхлүүлнэ.
+3. Оношилгоог агентын дараагийн алхамд ашиглах боломжтой болгоно.
 
-Language server их санах ой ашиглах, төслийн төлөвтэй синхрончлогдохгүй байх, эсвэл agent loop-ийг удаашруулах тохиолдол бий. Төсөлд найдвартай `lint` эсвэл `typecheck` command байвал түүнийг `AGENTS.md`-д баримтжуулах нь заримдаа илүү тогтвортой.
+Хэлний сервер их санах ой ашиглах, төслийн төлөвтэй синхрончлогдохгүй байх, эсвэл агентын давталтыг удаашруулах тохиолдол бий. Төсөлд найдвартай `lint` эсвэл `typecheck` команд байвал түүнийг `AGENTS.md`-д баримтжуулах нь заримдаа илүү тогтвортой байдаг.
 
 ## Нарийвчилсан тохиргоо
 
-Object хэлбэр ашигласнаар тодорхой server-ийг идэвхгүй болгох, built-in тохиргоог override хийх, custom server нэмэх боломжтой.
+Объект хэлбэр ашигласнаар тодорхой серверийг идэвхгүй болгох, суурилагдсан тохиргоог өөрчлөх, захиалгат сервер нэмэх боломжтой.
 
-| Key | Төрөл | Утга |
+| Түлхүүр | Төрөл | Утга |
 | --- | --- | --- |
-| `disabled` | boolean | `true` бол тухайн server-ийг идэвхгүй болгоно |
-| `command` | string array | Server эхлүүлэх executable болон argument |
-| `extensions` | string array | Тухайн server ажиллах файлын өргөтгөл |
-| `env` | object | Server process-д дамжуулах орчны хувьсагч |
-| `initialization` | object | LSP `initialize` request-д өгөх server-specific сонголт |
+| `disabled` | Булев | `true` бол тухайн серверийг идэвхгүй болгоно |
+| `command` | Мөрийн массив | Сервер эхлүүлэх ажиллуулах файл болон аргумент |
+| `extensions` | Мөрийн массив | Тухайн сервер ажиллах файлын өргөтгөл |
+| `env` | Объект | Серверийн процесст дамжуулах орчны хувьсагч |
+| `initialization` | Объект | LSP `initialize` хүсэлтэд өгөх серверийн тусгай сонголт |
 
-Нэг server-ийг идэвхгүй болгох:
+Нэг серверийг идэвхгүй болгох:
 
 ```json title="mongolgpt.json"
 {
@@ -116,7 +116,7 @@ Object хэлбэр ашигласнаар тодорхой server-ийг идэ
 }
 ```
 
-Custom server нэмэх:
+Захиалгат сервер нэмэх:
 
 ```json title="mongolgpt.json"
 {
@@ -137,7 +137,7 @@ Custom server нэмэх:
 }
 ```
 
-Бүх LSP server-ийг идэвхгүй болгох:
+Бүх LSP серверийг идэвхгүй болгох:
 
 ```json title="mongolgpt.json"
 {
@@ -147,15 +147,15 @@ Custom server нэмэх:
 
 ## Алдаа шийдэх
 
-Diagnostic харагдахгүй бол:
+Оношилгоо харагдахгүй бол:
 
 1. `mongolgpt debug config` гаралтад `lsp` идэвхтэй эсэхийг шалгана.
-2. Файлын өргөтгөл table дахь утгатай яг таарч байгаа эсэхийг шалгана.
-3. Шаардлагатай runtime, dependency эсвэл language server command-ийг terminal-аас ажиллуулж үзнэ.
+2. Файлын өргөтгөл хүснэгтэд буй утгатай яг таарч байгаа эсэхийг шалгана.
+3. Шаардлагатай ажиллуулах орчин, хамаарал эсвэл хэлний серверийн командыг терминалаас ажиллуулж үзнэ.
 4. `MONGOLGPT_DISABLE_LSP_DOWNLOAD` санамсаргүй тохирсон эсэхийг шалгана.
-5. Config өөрчилсний дараа MongolGPT-г дахин эхлүүлнэ.
+5. Тохиргоо өөрчилсний дараа MongolGPT-г дахин эхлүүлнэ.
 
-Server тогтмол унах эсвэл их нөөц ашиглавал тухайн ID-г `disabled: true` болгож, төслийн `lint`/`typecheck` command-ийг ашиглана. Ерөнхий оношлогоог [алдаа шийдэх заавраас](../troubleshooting) харна уу.
+Сервер тогтмол зогсох эсвэл их нөөц ашиглавал тухайн ID-г `disabled: true` болгож, төслийн `lint`/`typecheck` командыг ашиглана. Ерөнхий оношилгоог [алдаа шийдэх заавраас](../troubleshooting) харна уу.
 
 ## PHP Intelephense лиценз
 
