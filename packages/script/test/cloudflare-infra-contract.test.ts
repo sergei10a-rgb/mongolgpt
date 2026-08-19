@@ -83,6 +83,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const deployStep = workflow.jobs.deploy.steps.find((step) => step.name === "Validate and deploy to Cloudflare")
 
     expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"')
+    expect(source).toContain("MONGOLGPT_ENABLE_D1_BACKUPS: ${{ inputs.stage == 'production' && 'true' || 'false' }}")
     expect(source).not.toContain("inputs.hosted_services")
     expect(buildStep?.env).toEqual({
       MONGOLGPT_CHANNEL: "${{ inputs.stage == 'production' && 'prod' || 'dev' }}",
@@ -296,9 +297,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
   })
 
   test("backs up D1 daily to a private, expiring R2 bucket", async () => {
-    const [consoleSource, secretSource, workflowSource, scheduleSource] = await Promise.all(
+    const [consoleSource, stageSource, configSource, secretSource, workflowSource, scheduleSource] = await Promise.all(
       [
         "../../../infra/console.ts",
+        "../../../infra/stage.ts",
+        "../../../sst.config.ts",
         "../../../infra/secret.ts",
         "../../console/function/src/d1-backup-workflow.ts",
         "../../console/function/src/d1-backup-schedule.ts",
@@ -315,6 +318,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(consoleSource).toContain("maxAge: D1_BACKUP_RETENTION_SECONDS")
     expect(consoleSource).toContain("maxAge: D1_BACKUP_MULTIPART_ABORT_SECONDS")
     expect(consoleSource).toContain('new sst.cloudflare.Workflow("D1BackupWorkflow"')
+    expect(consoleSource).toContain("const d1BackupAutomation = enableD1Backups")
     expect(consoleSource).toContain('className: "D1BackupWorkflow"')
     expect(consoleSource).toContain("link: [d1Backups, SECRET.D1BackupApiToken]")
     expect(consoleSource).toContain('new sst.cloudflare.Cron("D1BackupSchedule"')
@@ -322,6 +326,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(consoleSource).not.toContain("public: true")
     expect(secretSource).toContain('D1BackupApiToken: new sst.Secret("D1BackupApiToken")')
     expect(hostedSstSecretNames).toContain("D1BackupApiToken")
+    expect(stageSource).toContain('enableD1Backups = process.env.MONGOLGPT_ENABLE_D1_BACKUPS === "true"')
+    expect(configSource).toContain("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_D1_BACKUPS=true")
     expect(workflowSource).toContain("startD1Export")
     expect(workflowSource).toContain("storeCompletedD1Export")
     expect(scheduleSource).toContain('successRetention: "30 days"')
@@ -377,7 +383,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('flag("MONGOLGPT_ENABLE_ADMIN")')
     expect(configSource).toContain('admin ? { command: "1.0.1" }')
     expect(configSource).toContain('await import("./infra/admin.js")')
-    expect(configSource).toContain("Production hosted launch requires MONGOLGPT_ENABLE_ADMIN=true.")
+    expect(configSource).toContain("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_ADMIN=true")
     expect(configSource).not.toContain("MONGOLGPT_ADMIN_MFA_ENFORCED")
     expect(mfaScriptSource).toContain("configureCloudflareAccessMfa")
     expect(mfaScriptSource).not.toContain("CLOUDFLARE_API_TOKEN")

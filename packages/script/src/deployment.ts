@@ -8,6 +8,7 @@ import { Subscription } from "@mongolgpt/console-core/subscription.js"
 const booleanVariables = [
   "MONGOLGPT_ENABLE_HOSTED_SERVICES",
   "MONGOLGPT_ENABLE_ANALYTICS",
+  "MONGOLGPT_ENABLE_D1_BACKUPS",
   "MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS",
   "MONGOLGPT_ENABLE_LEGACY_STRIPE",
   "MONGOLGPT_ENABLE_MONITORING",
@@ -57,6 +58,7 @@ export type DeploymentPreflightResult = {
   stageDomain: string
   hostedServices: boolean
   adminEnabled: boolean
+  backupsEnabled: boolean
   paymentEnvironment: "disabled" | "sandbox" | "production"
   warnings: string[]
 }
@@ -87,6 +89,7 @@ export function preflightDeployment(input: {
 
   const hostedServices = enabled(env.MONGOLGPT_ENABLE_HOSTED_SERVICES)
   const adminEnabled = enabled(env.MONGOLGPT_ENABLE_ADMIN)
+  const backupsEnabled = enabled(env.MONGOLGPT_ENABLE_D1_BACKUPS)
   const paymentEnvironment = validatePaymentEnvironment(env.MONGOLGPT_PAYMENT_ENVIRONMENT, issues)
   const requireDeploymentSecrets = input.requireDeploymentSecrets !== false
   const optionalServices = [
@@ -112,11 +115,20 @@ export function preflightDeployment(input: {
   if (adminEnabled && !hostedServices) {
     issues.push("MONGOLGPT_ENABLE_ADMIN нь hosted services асаалттай үед л true байж болно.")
   }
+  if (backupsEnabled && !hostedServices) {
+    issues.push("MONGOLGPT_ENABLE_D1_BACKUPS нь байршуулсан үйлчилгээнүүд асаалттай үед л true байж болно.")
+  }
   if (paymentEnvironment !== "disabled" && !hostedServices) {
     issues.push("MONGOLGPT_PAYMENT_ENVIRONMENT нь hosted services асаалттай үед л sandbox эсвэл production байж болно.")
   }
   if (hostedServices && stage === "production" && !adminEnabled) {
     issues.push("Production hosted launch-д MONGOLGPT_ENABLE_ADMIN=true заавал байна.")
+  }
+  if (hostedServices && stage === "production" && !backupsEnabled) {
+    issues.push("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_D1_BACKUPS=true заавал байна.")
+  }
+  if (hostedServices && !backupsEnabled) {
+    warnings.push("Энэ орчинд өдөр тутмын D1 нөөцлөлтийн автомат ажиллагаа идэвхгүй байна.")
   }
 
   if (adminEnabled && requireDeploymentSecrets) {
@@ -146,7 +158,7 @@ export function preflightDeployment(input: {
     ) {
       issues.push("MONGOLGPT_RUNTIME_AUTH_SECRET болон SST_SECRET_MongolGPTRuntimeAuthSecret ижил утгатай байна.")
     }
-    requireValue("D1_BACKUP_API_TOKEN", deploymentSecret(env, "D1BackupApiToken"), issues)
+    if (backupsEnabled) requireValue("D1_BACKUP_API_TOKEN", deploymentSecret(env, "D1BackupApiToken"), issues)
     requireValue("GITHUB_CLIENT_ID_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"), issues)
     requireValue("GITHUB_CLIENT_SECRET_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"), issues)
     requireValue("GOOGLE_CLIENT_ID", deploymentSecret(env, "GOOGLE_CLIENT_ID"), issues)
@@ -183,6 +195,7 @@ export function preflightDeployment(input: {
     stageDomain: stage === "production" ? domain : `${stage}.${domain}`,
     hostedServices,
     adminEnabled,
+    backupsEnabled,
     paymentEnvironment,
     warnings,
   }
@@ -416,7 +429,9 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
         for (const route of modelConfig.providers) {
           referencedProviders.add(route.id)
           if (placeholderValue(route.model)) {
-            issues.push(`ZEN_MODELS дэх "${listName}.${modelID}" үйлчилгээ үзүүлэгчийн чиглэл бодит загварын ID-тай байна.`)
+            issues.push(
+              `ZEN_MODELS дэх "${listName}.${modelID}" үйлчилгээ үзүүлэгчийн чиглэл бодит загварын ID-тай байна.`,
+            )
           }
         }
       }

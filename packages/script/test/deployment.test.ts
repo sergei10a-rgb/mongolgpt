@@ -45,6 +45,7 @@ const planLimits = {
 }
 const hosted = {
   ...byok,
+  MONGOLGPT_ENABLE_D1_BACKUPS: "true",
   MONGOLGPT_RUNTIME_SECRET: "test-runtime-secret-with-at-least-32-characters",
   MONGOLGPT_RUNTIME_AUTH_SECRET: "test-runtime-auth-secret-with-at-least-32-characters",
   SST_SECRET_MongolGPTRuntimeAuthSecret: "test-runtime-auth-secret-with-at-least-32-characters",
@@ -117,6 +118,7 @@ describe("Cloudflare deployment preflight", () => {
       stageDomain: "dev.mgpt.mn",
       hostedServices: false,
       adminEnabled: false,
+      backupsEnabled: false,
       paymentEnvironment: "disabled",
     })
     expect(deploymentEndpoints(result)).toEqual({
@@ -230,6 +232,7 @@ describe("Cloudflare deployment preflight", () => {
       ...cloudflare,
       MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
       MONGOLGPT_ENABLE_ADMIN: "true",
+      MONGOLGPT_ENABLE_D1_BACKUPS: "true",
       MONGOLGPT_PAYMENT_ENVIRONMENT: "production",
       MONGOLGPT_PAYMENT_PLAN_CATALOG: paymentCatalog,
       MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
@@ -340,6 +343,43 @@ describe("Cloudflare deployment preflight", () => {
           },
         }),
       ["D1_BACKUP_API_TOKEN"],
+    )
+  })
+
+  test("allows hosted dev deploys to skip backup automation and its production token", () => {
+    const result = preflightDeployment({
+      stage: "dev",
+      env: {
+        ...cloudflare,
+        ...hosted,
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+        MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+        SST_SECRET_D1BackupApiToken: "",
+      },
+    })
+
+    expect(result.backupsEnabled).toBe(false)
+    expect(result.warnings).toContain("Энэ орчинд өдөр тутмын D1 нөөцлөлтийн автомат ажиллагаа идэвхгүй байна.")
+  })
+
+  test("requires backup automation for production hosted launch", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+            CLOUDFLARE_ACCESS_API_TOKEN: "access-token",
+            SST_SECRET_MongolGPTAdminBootstrapEmails: "admin@mgpt.mn",
+            MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
+          },
+        }),
+      ["Үйлдвэрлэлийн үйлчилгээ байршуулалтад", "MONGOLGPT_ENABLE_D1_BACKUPS=true"],
     )
   })
 

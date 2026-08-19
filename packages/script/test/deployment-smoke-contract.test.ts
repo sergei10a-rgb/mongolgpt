@@ -36,6 +36,7 @@ const deployment = {
   stageDomain: "dev.mgpt.mn",
   hostedServices: true,
   adminEnabled: false,
+  backupsEnabled: false,
   paymentEnvironment: "disabled" as const,
   warnings: [],
 }

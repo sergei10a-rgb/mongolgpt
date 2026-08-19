@@ -52,6 +52,7 @@ env:
   MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
   MONGOLGPT_ENABLE_ADMIN: ${{ inputs.admin }}
   MONGOLGPT_ENABLE_ANALYTICS: ${{ inputs.analytics }}
+  MONGOLGPT_ENABLE_D1_BACKUPS: ${{ inputs.stage == 'production' && 'true' || 'false' }}
   MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false"
   MONGOLGPT_ENABLE_LEGACY_STRIPE: "false"
   MONGOLGPT_ENABLE_MONITORING: "false"

@@ -4,20 +4,27 @@ export default $config({
   app(input) {
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const admin = flag("MONGOLGPT_ENABLE_ADMIN")
+    const d1Backups = flag("MONGOLGPT_ENABLE_D1_BACKUPS")
     const monitoring = hostedServices && flag("MONGOLGPT_ENABLE_MONITORING")
     const analytics = flag("MONGOLGPT_ENABLE_ANALYTICS")
     const unsupported = ["MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS", "MONGOLGPT_ENABLE_LEGACY_STRIPE"].filter(flag)
     if (unsupported.length) {
-      throw new Error(`Cloudflare-only launch profile does not support: ${unsupported.join(", ")}`)
+      throw new Error(`Cloudflare-д суурилсан байршуулалтын горим дараахыг дэмжихгүй: ${unsupported.join(", ")}`)
     }
     if (analytics && !hostedServices) {
-      throw new Error("MONGOLGPT_ENABLE_ANALYTICS requires MONGOLGPT_ENABLE_HOSTED_SERVICES=true.")
+      throw new Error("MONGOLGPT_ENABLE_ANALYTICS нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true үед л ажиллана.")
     }
     if (admin && !hostedServices) {
-      throw new Error("MONGOLGPT_ENABLE_ADMIN requires MONGOLGPT_ENABLE_HOSTED_SERVICES=true.")
+      throw new Error("MONGOLGPT_ENABLE_ADMIN нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true үед л ажиллана.")
+    }
+    if (d1Backups && !hostedServices) {
+      throw new Error("MONGOLGPT_ENABLE_D1_BACKUPS нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true үед л ажиллана.")
     }
     if (input?.stage === "production" && hostedServices && !admin) {
-      throw new Error("Production hosted launch requires MONGOLGPT_ENABLE_ADMIN=true.")
+      throw new Error("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_ADMIN=true заавал байна.")
+    }
+    if (input?.stage === "production" && hostedServices && !d1Backups) {
+      throw new Error("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_D1_BACKUPS=true заавал байна.")
     }
     return {
       name: "mongolgpt",
@@ -75,6 +82,6 @@ export default $config({
 function flag(name: string) {
   const value = process.env[name]
   if (value === undefined || value === "") return false
-  if (value !== "true" && value !== "false") throw new Error(`${name} must be exactly true or false.`)
+  if (value !== "true" && value !== "false") throw new Error(`${name} нь зөвхөн true эсвэл false байна.`)
   return value === "true"
 }

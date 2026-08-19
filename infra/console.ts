@@ -3,6 +3,7 @@ import {
   docsOrigin,
   domain,
   enableBusinessIntegrations,
+  enableD1Backups,
   enableMonitoring,
   enableShareService,
   publicOrigin,
@@ -57,27 +58,34 @@ new cloudflare.R2BucketLifecycle(
   { dependsOn: [d1Backups.nodes.bucket] },
 )
 
-export const d1BackupWorkflow = new sst.cloudflare.Workflow("D1BackupWorkflow", {
-  handler: "packages/console/function/src/d1-backup-workflow.ts",
-  className: "D1BackupWorkflow",
-  link: [d1Backups, SECRET.D1BackupApiToken],
-  environment: {
-    CLOUDFLARE_ACCOUNT_ID: sst.cloudflare.DEFAULT_ACCOUNT_ID,
-    D1_DATABASE_ID: database.databaseId,
-    MONGOLGPT_STAGE: $app.stage,
-  },
-})
+const d1BackupAutomation = enableD1Backups
+  ? (() => {
+      const workflow = new sst.cloudflare.Workflow("D1BackupWorkflow", {
+        handler: "packages/console/function/src/d1-backup-workflow.ts",
+        className: "D1BackupWorkflow",
+        link: [d1Backups, SECRET.D1BackupApiToken],
+        environment: {
+          CLOUDFLARE_ACCOUNT_ID: sst.cloudflare.DEFAULT_ACCOUNT_ID,
+          D1_DATABASE_ID: database.databaseId,
+          MONGOLGPT_STAGE: $app.stage,
+        },
+      })
+      const schedule = new sst.cloudflare.Cron("D1BackupSchedule", {
+        schedules: [D1_BACKUP_SCHEDULE],
+        worker: {
+          handler: "packages/console/function/src/d1-backup-schedule.ts",
+          link: [workflow],
+          compatibility: {
+            date: "2026-07-15",
+          },
+        },
+      })
+      return { schedule, workflow }
+    })()
+  : undefined
 
-export const d1BackupSchedule = new sst.cloudflare.Cron("D1BackupSchedule", {
-  schedules: [D1_BACKUP_SCHEDULE],
-  worker: {
-    handler: "packages/console/function/src/d1-backup-schedule.ts",
-    link: [d1BackupWorkflow],
-    compatibility: {
-      date: "2026-07-15",
-    },
-  },
-})
+export const d1BackupWorkflow = d1BackupAutomation?.workflow
+export const d1BackupSchedule = d1BackupAutomation?.schedule
 
 ////////////////
 // QUOTA AND USAGE
