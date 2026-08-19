@@ -1,60 +1,61 @@
 <!--
-  Built-in skill. Name and description are registered in code at
+  Суурилагдсан чадвар. Нэр болон тайлбарыг кодод бүртгэсэн:
   packages/core/src/plugin/skill.ts
-  and CUSTOMIZE_MONGOLGPT_SKILL_DESCRIPTION). The body below becomes the
-  skill's content.
+  мөн CUSTOMIZE_MONGOLGPT_SKILL_DESCRIPTION. Доорх хэсэг нь чадварын
+  агуулга болно.
 -->
 
-# Customizing MongolGPT
+# MongolGPT-г тохируулах
 
-MongolGPT validates its own config strictly and refuses to start when a field
-is wrong. The shapes below cover the common surface area, but they are a
-**summary, not the source of truth**.
+MongolGPT өөрийн тохиргоог хатуу шалгадаг бөгөөд аль нэг талбар буруу байвал
+эхлүүлэхээс татгалзана. Доорх хэлбэрүүд нийтлэг хэрэглээг хамардаг боловч
+**эх сурвалж биш, хураангуй** юм.
 
-## Full schema reference
+## Бүрэн схемийн лавлагаа
 
-The authoritative list of every config option — with field types, enums,
-defaults, and descriptions — lives in the published JSON Schema:
+Бүх тохиргооны сонголтын эрх бүхий жагсаалт — талбарын төрөл, сонголтын утгууд, анхдагч утга,
+тайлбарын хамт — нийтлэгдсэн JSON схемд байна:
 
 **<https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json>**
 
-If a field is not documented in this skill, or you need to confirm an exact
-shape before writing config, **fetch that URL and read the schema directly**
-rather than guessing. MongolGPT hard-fails on invalid config, so the cost of a
-wrong shape is a broken startup.
+Хэрэв энэ чадварт талбар тайлбарлагдаагүй эсвэл тохиргоо бичихийн өмнө яг хэлбэрийг
+баталгаажуулах шаардлагатай бол таамаглахын оронд **тэр URL-г авч схемийг
+шууд унш**. MongolGPT буруу тохиргоо дээр шууд зогсдог тул буруу хэлбэрийн өртөг
+нь эхлэлт эвдрэх явдал юм.
 
-Independently, every `mongolgpt.json` should declare
-`"$schema": "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json"` so the user's editor catches
-mistakes as they type.
+Мөн `mongolgpt.json` бүр хэрэглэгчийн засварлагч бичиж байх үед алдааг илрүүлэхийн
+тулд дараахыг зарлах ёстой:
+`"$schema": "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json"`.
 
-## Applying changes
+## Өөрчлөлт хэрэгжүүлэх
 
-Config is loaded once when MongolGPT starts and is not hot-reloaded. After
-saving changes to `mongolgpt.json`, an agent file, a skill, a plugin, or any
-other config-time file, **tell the user to quit and restart MongolGPT** for
-the changes to take effect. The running session will keep using the
-already-loaded config until then.
+Тохиргоо нь MongolGPT эхлэхэд нэг удаа ачаалагддаг бөгөөд шууд дахин ачаалагдахгүй.
+`mongolgpt.json`, агентын файл, чадвар, нэмэлт эсвэл тохиргоо ачаалах үеийн өөр файлд өөрчлөлт
+хадгалсны дараа **өөрчлөлт хэрэгжихийн тулд MongolGPT-г бүрэн хааж дахин
+эхлүүлэхийг хэрэглэгчид хэл**. Ажиллаж буй харилцаа нь аль хэдийн ачаалсан
+тохиргоогоо үргэлжлүүлэн ашиглана.
 
-## Where files live
+## Файлууд хаана байрлах вэ
 
-| Scope                         | Path                                                                                                                           |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Project config                | `./mongolgpt.json`, `./mongolgpt.jsonc`, or `.mongolgpt/mongolgpt.json` (MongolGPT walks up from the cwd to the worktree root) |
-| Global config                 | `~/.config/mongolgpt/mongolgpt.json` (NOT `~/.mongolgpt/`)                                                                     |
-| Project agents                | `.mongolgpt/agent/<name>.md` or `.mongolgpt/agents/<name>.md`                                                                  |
-| Global agents                 | `~/.config/mongolgpt/agent(s)/<name>.md`                                                                                       |
-| Project commands              | `.mongolgpt/command/<name>.md` or `.mongolgpt/commands/<name>.md`                                                              |
-| Global commands               | `~/.config/mongolgpt/command(s)/<name>.md`                                                                                     |
-| Project skills                | `.mongolgpt/skill(s)/<name>/SKILL.md`                                                                                          |
-| Global skills                 | `~/.config/mongolgpt/skill(s)/<name>/SKILL.md`                                                                                 |
-| External skills (auto-loaded) | `~/.claude/skills/<name>/SKILL.md`, `~/.agents/skills/<name>/SKILL.md`                                                         |
+| Хамрах хүрээ | Зам |
+| --- | --- |
+| Төслийн тохиргоо | `./mongolgpt.json`, `./mongolgpt.jsonc`, эсвэл `.mongolgpt/mongolgpt.json` (MongolGPT одоогийн ажлын хавтсаас ажлын модны үндэс хүртэл дээш хайна) |
+| Ерөнхий тохиргоо | `~/.config/mongolgpt/mongolgpt.json` ( `~/.mongolgpt/` БИШ) |
+| Төслийн агентууд | `.mongolgpt/agent/<name>.md` эсвэл `.mongolgpt/agents/<name>.md` |
+| Ерөнхий агентууд | `~/.config/mongolgpt/agent(s)/<name>.md` |
+| Төслийн командууд | `.mongolgpt/command/<name>.md` эсвэл `.mongolgpt/commands/<name>.md` |
+| Ерөнхий командууд | `~/.config/mongolgpt/command(s)/<name>.md` |
+| Төслийн чадварууд | `.mongolgpt/skill(s)/<name>/SKILL.md` |
+| Ерөнхий чадварууд | `~/.config/mongolgpt/skill(s)/<name>/SKILL.md` |
+| Гаднын чадварууд (автоматаар ачаалагдана) | `~/.claude/skills/<name>/SKILL.md`, `~/.agents/skills/<name>/SKILL.md` |
 
-Configs from each scope are deep-merged. Project overrides global. Unknown
-top-level keys in `mongolgpt.json` are rejected with `ConfigInvalidError`.
+Хамрах хүрээ бүрийн тохиргоог гүн нийлүүлнэ. Төслийн тохиргоо ерөнхий тохиргоог дарна.
+`mongolgpt.json`-ийн танигдаагүй дээд түвшний түлхүүрүүд
+`ConfigInvalidError`-оор татгалзагдана.
 
 ## mongolgpt.json
 
-Every field is optional.
+Бүх талбар заавал биш.
 
 ```json
 {
@@ -78,12 +79,12 @@ Every field is optional.
   "references": {
     "docs": {
       "path": "../docs",
-      "description": "Use for product behavior and documentation conventions"
+      "description": "Бүтээгдэхүүний үйлдэл болон баримт бичгийн хэвшилд ашиглана"
     },
     "sdk": {
       "repository": "owner/sdk",
       "branch": "main",
-      "description": "Use for SDK implementation details",
+      "description": "SDK-ийн хэрэгжүүлэлтийн дэлгэрэнгүйд ашиглана",
       "hidden": true
     }
   },
@@ -147,101 +148,98 @@ Every field is optional.
 }
 ```
 
-Shape notes worth being explicit about:
+Хэлбэрийн чухал тэмдэглэл:
 
-- `model` always carries a provider prefix: `"anthropic/claude-sonnet-4-6"`.
-- `skills` is an object with `paths` and/or `urls`, not an array.
-- `references` is an object keyed by alias. Each value is a local path, Git repository, or string shorthand.
-- `agent` is an object keyed by agent name, not an array.
-- `command` is an object keyed by command name, not an array.
-- `plugin` is an array of strings or `[name, options]` tuples, not an object.
-- `mcp[name].command` is an array of strings, never a single string. `type` is required.
-- `permission` is either a string action or an object keyed by tool name.
+- `model` үргэлж үйлчилгээ үзүүлэгчийн угтвартай: `"anthropic/claude-sonnet-4-6"`.
+- `skills` нь `paths` болон/эсвэл `urls`-тай түлхүүр-утгын бүтэц болохоос жагсаалт биш.
+- `references` нь товчилсон нэрээр түлхүүрлэсэн бүтэц. Утга бүр дотоод зам, Git репо эсвэл тэмдэгт мөрийн товчилсон хэлбэр байна.
+- `agent` нь агентын нэрээр түлхүүрлэсэн бүтэц болохоос жагсаалт биш.
+- `command` нь командын нэрээр түлхүүрлэсэн бүтэц болохоос жагсаалт биш.
+- `plugin` нь тэмдэгт мөр эсвэл `[name, options]` хослолуудын жагсаалт болохоос түлхүүр-утгын бүтэц биш.
+- `mcp[name].command` нь хэзээ ч ганц тэмдэгт мөр биш, тэмдэгт мөрүүдийн жагсаалт байна. `type` заавал хэрэгтэй.
+- `permission` нь тэмдэгт мөрөөр өгсөн үйлдэл эсвэл хэрэгслийн нэрээр түлхүүрлэсэн бүтэц байна.
 
-## Skills
+## Чадварууд
 
-MongolGPT's skill loader scans for `**/SKILL.md` inside skill directories. The
-file is named `SKILL.md` exactly, and lives in its own folder named after the
-skill:
+MongolGPT-ийн чадвар ачаалагч чадварын хавтас доторх `**/SKILL.md`-г хайна.
+Файлын нэр яг `SKILL.md` байх бөгөөд чадварын нэртэй өөрийн хавтас дотор байрлана:
 
 ```
 .mongolgpt/skills/my-skill/SKILL.md
 ```
 
-Frontmatter:
+Толгойн мета мэдээлэл:
 
 ```markdown
 ---
 name: my-skill
-description: One sentence covering what this skill does AND when to trigger it. Front-load the literal keywords or filenames the user is likely to say.
+description: Энэ чадвар юу хийдэг болон хэзээ идэвхжүүлэхийг хамарсан нэг өгүүлбэр. Хэрэглэгчийн хэлэх магадлалтай бодит түлхүүр үг эсвэл файлын нэрийг эхэнд байрлуул.
 ---
 
-# My Skill
+# Миний чадвар
 
-(skill body in markdown: instructions, examples, references)
+(Markdown хэлбэрийн чадварын үндсэн агуулга: заавар, жишээ, лавлагаа)
 ```
 
-- `name` is required, lowercase hyphen-separated, up to 64 chars, and matches the folder name.
-- `description` is effectively required: skills without one are filtered out and never surfaced to the model. Cover both _what_ the skill does and _when_ to use it. Write in third person ("Use when...", not "I help with..."). Front-load concrete trigger keywords and filenames; gate with "Use ONLY when..." if the skill should stay quiet on adjacent topics.
-- Optional: `license`, `compatibility`, `metadata` (string-string map).
+- `name` заавал байна, жижиг үсэг ба зураасаар холбогдсон, 64 тэмдэгтээс ихгүй бөгөөд хавтасны нэртэй таарна.
+- `description` нь практик дээр заавал шаардлагатай: тайлбаргүй чадвар шүүгдэж, загварт хэзээ ч харагдахгүй. Чадвар юу хийдэг, хэзээ ашиглахыг хоёуланг нь бич. Гуравдагч биеэр бич ("Би ...-д тусална" биш, "... үед ашигла"). Хэрэглэгчийн хэлэх магадлалтай бодит өдөөгч түлхүүр үг болон файлын нэрийг эхэнд байрлуул; ойролцоо сэдэв дээр дуугүй байх ёстой бол "ЗӨВХӨН ... үед ашигла" гэж хязгаарла.
+- Заавал биш: `license`, `compatibility`, `metadata` (тэмдэгт мөрийн түлхүүр-утгын зураглал).
 
-Register skills from non-default locations via `skills.paths` (scanned
-recursively for `**/SKILL.md`) and `skills.urls` (each URL serves a list of
-skills).
+Анхдагч бус байрлалаас чадвар бүртгэхийн тулд `skills.paths` ( `**/SKILL.md`-г дэд хавтас бүрээс хайна) болон `skills.urls` (URL бүр чадварын жагсаалт өгнө)-г ашигла.
 
-## References
+## Лавлагаанууд
 
-References make local directories and Git repositories outside the active
-project available as supporting context. Configure them under `references`,
-keyed by the alias used in `@` autocomplete:
+Лавлагаа нь идэвхтэй төслөөс гаднах дотоод хавтас болон Git репог
+дэмжих орчин болгон ашиглах боломж олгоно. `@` автоматаар нөхөхөд ашиглах
+товчилсон нэрээр түлхүүрлэн `references` дотор тохируул:
 
 ```json
 {
   "references": {
     "docs": {
       "path": "../product-docs",
-      "description": "Use for product behavior and terminology"
+      "description": "Бүтээгдэхүүний үйлдэл болон нэр томьёонд ашиглана"
     },
     "effect": {
       "repository": "Effect-TS/effect",
       "branch": "main",
-      "description": "Use for Effect implementation details"
+      "description": "Effect-ийн хэрэгжүүлэлтийн дэлгэрэнгүйд ашиглана"
     }
   }
 }
 ```
 
-Local `path` values may be relative to the declaring config, absolute, or use
-`~/`. Git `repository` values accept Git URLs, host/path references, and GitHub
-`owner/repo` shorthand; `branch` is optional. Both forms support optional
-`description` and `hidden` fields.
+Дотоод `path` нь зарласан тохиргооны файлтай харьцангуй, бүрэн эсвэл `~/`-оор эхэлсэн зам байж болно.
+Git `repository` нь Git URL, хост/замын лавлагаа болон GitHub-ийн
+`owner/repo` товчилсон хэлбэрийг зөвшөөрнө; `branch` заавал биш. Хоёр хэлбэрт
+`description`, `hidden` заавал биш.
 
-- Only references with a `description` are advertised to agents in system context.
-- `hidden: true` removes a reference from TUI `@` autocomplete only. It remains available to agents and by direct path.
-- Reference directories are automatically allowed through the external-directory boundary; normal read/edit/tool permissions still apply.
-- String shorthand is supported: use `"docs": "../docs"` for local paths or `"effect": "Effect-TS/effect"` for Git repositories.
+- Зөвхөн `description`-тай лавлагааг агентын системийн орчинд зарлана.
+- `hidden: true` нь лавлагааг зөвхөн TUI-ийн `@` автоматаар нөхөхөөс нуух бөгөөд агент болон шууд замаар ашиглах боломжтой хэвээр.
+- Лавлагааны хавтас нь гаднын хавтасны хязгаараар автоматаар зөвшөөрөгдөнө; ердийн унших/засах/хэрэгсэл ашиглах зөвшөөрөл хэвээр үйлчилнэ.
+- Тэмдэгт мөрийн товчилсон хэлбэр дэмжинэ: дотоод замд `"docs": "../docs"`, Git репод `"effect": "Effect-TS/effect"` ашигла.
 
-## Agents
+## Агентууд
 
-Two ways to define an agent. Use the file form for anything non-trivial.
+Агент тодорхойлох хоёр арга бий. Энгийн бус зүйлд файл хэлбэрийг ашигла.
 
-### Inline (in `mongolgpt.json`)
+### Мөр дотор (`mongolgpt.json`-д)
 
 ```json
 {
   "agent": {
     "my-reviewer": {
-      "description": "Reviews PRs for style violations.",
+      "description": "PR-үүдийг хэв маягийн зөрчлийн хувьд шалгана.",
       "mode": "subagent",
       "model": "anthropic/claude-sonnet-4-6",
       "permission": { "edit": "deny", "bash": "ask" },
-      "prompt": "You are a strict PR reviewer..."
+      "prompt": "Та PR-ийг хатуу шалгадаг хянагч."
     }
   }
 }
 ```
 
-### File
+### Файл хэлбэрээр
 
 ```
 .mongolgpt/agent/my-reviewer.md      OR     .mongolgpt/agents/my-reviewer.md
@@ -249,7 +247,7 @@ Two ways to define an agent. Use the file form for anything non-trivial.
 
 ```markdown
 ---
-description: Reviews PRs for style violations.
+description: PR-үүдийг хэв маягийн зөрчлийн хувьд шалгана.
 mode: subagent
 model: anthropic/claude-sonnet-4-6
 permission:
@@ -257,75 +255,74 @@ permission:
   bash: ask
 ---
 
-You are a strict PR reviewer. Focus on...
+Та PR-ийг хатуу шалгадаг хянагч. Гол анхаарлаа ...-д төвлөрүүл.
 ```
 
-The file body becomes the agent's `prompt`. Do not also put `prompt:` in the
-frontmatter.
+Файлын үндсэн агуулга нь агентын `prompt` болно. Толгойн мета мэдээлэлд `prompt:`-ийг давхар бүү тавь.
 
-`mode` is one of `"primary"`, `"subagent"`, `"all"`.
+`mode` нь `"primary"`, `"subagent"`, `"all"`-ын нэг байна.
 
-Allowed top-level frontmatter fields: `name, model, variant, description, mode,
-hidden, color, steps, options, permission, disable, temperature, top_p`. Any
-unknown field is silently routed into `options`.
+Толгойн мета мэдээллийн дээд түвшинд зөвшөөрөгдөх талбарууд: `name`, `model`,
+`variant`, `description`, `mode`, `hidden`, `color`, `steps`, `options`,
+`permission`, `disable`, `temperature`, `top_p`. Танигдаагүй талбар бүрийг
+чимээгүйгээр `options` дотор оруулна.
 
-To disable a built-in agent: `agent: { build: { disable: true } }`, or in a
-file, `disable: true` in frontmatter.
+Суурилагдсан агентыг идэвхгүй болгохдоо `agent: { build: { disable: true } }`
+эсвэл файлын толгойн мета мэдээлэлд `disable: true` тавь.
 
-`default_agent` must point to a non-hidden, primary-mode agent.
+`default_agent` нь нуугдсан биш, үндсэн горимын агент руу заах ёстой.
 
-### Built-in agents
+### Суурилагдсан агентууд
 
-MongolGPT ships with `build`, `plan`, `general`, `explore`. Hidden internal agents:
-`compaction`, `title`, `summary`. To override a built-in's fields, define the
-same key in `agent: { <name>: { ... } }`.
+MongolGPT нь `build`, `plan`, `general`, `explore`-г нийлүүлж өгнө. Дотооддоо
+нуусан агентууд: `compaction`, `title`, `summary`. Суурилагдсан агентын талбарыг
+өөрчлөхдөө `agent: { <name>: { ... } }` дотор ижил түлхүүрийг тодорхойл.
 
-## Commands
+## Командууд
 
-MongolGPT's command loader scans for `**/*.md` inside command directories. The
-file is named after the command, and lives directly inside the `command` folder:
+MongolGPT-ийн команд ачаалагч командын хавтас доторх `**/*.md`-г хайна.
+Файлын нэр командын нэртэй адил бөгөөд `command` хавтасны шууд дотор байна:
 
 ```
 .mongolgpt/command/deploy.md
 ```
 
-Frontmatter:
+Толгойн мета мэдээлэл:
 
 ```markdown
 ---
-description: One sentence describing what the command does.
+description: Команд юу хийдгийг тайлбарласан нэг өгүүлбэр.
 agent: build
 model: anthropic/claude-sonnet-4-6
 ---
 
-(command body in markdown: the prompt MongolGPT runs, with $ARGUMENTS for the user's input)
+(Markdown хэлбэрийн командын үндсэн агуулга: MongolGPT-ийн ажиллуулах заавар; хэрэглэгчийн оролтыг авахын тулд $ARGUMENTS ашиглана)
 ```
 
-- `template` is the command body — everything below the frontmatter — and is required: it is the prompt MongolGPT runs when the command is invoked. Do not also put a `template:` key in the frontmatter.
-- `$ARGUMENTS` is replaced with everything the user typed after the command; `$1`, `$2`, … pull individual positional arguments.
-- Optional: `description`, `agent`, `model`, `variant`, `subtask`.
+- `template` нь толгойн мета мэдээллийн доорх бүх зүйл буюу команд дуудагдахад MongolGPT ажиллуулах заавар бөгөөд заавал байна. Толгойн мета мэдээлэлд `template:` түлхүүрийг давхар бүү тавь.
+- `$ARGUMENTS` нь командын дараа хэрэглэгчийн бичсэн бүх зүйлээр солигдоно; `$1`, `$2`, … нь байрлалын тус тусын аргументыг авна.
+- Заавал биш: `description`, `agent`, `model`, `variant`, `subtask`.
 
-## Plugins
+## Нэмэлтүүд
 
-`plugin:` is an array. Each entry is one of:
+`plugin:` нь жагсаалт. Бичлэг бүр дараахын аль нэг байна:
 
 ```json
 "plugin": [
-  "mongolgpt-gemini-auth",            // npm spec, latest
-  "mongolgpt-foo@1.2.3",              // npm spec, pinned
-  "./local-plugin.ts",               // file path, relative to the declaring config
-  "file:///abs/path/plugin.js",      // file URL
-  ["mongolgpt-bar", { "key": "val" }] // tuple form with options
+  "mongolgpt-gemini-auth",            // npm-ийн тодорхойлолт, хамгийн сүүлийн хувилбар
+  "mongolgpt-foo@1.2.3",              // npm-ийн тодорхойлолт, тогтоосон хувилбар
+  "./local-plugin.ts",               // зарласан тохиргоотой харьцангуй файлын зам
+  "file:///abs/path/plugin.js",      // файлын URL
+  ["mongolgpt-bar", { "key": "val" }] // сонголттой tuple хэлбэр
 ]
 ```
 
-Auto-discovered plugins (no config entry needed): any `*.ts` or `*.js` file in
-`.mongolgpt/plugin/` or `.mongolgpt/plugins/`.
+Автоматаар илрүүлэх нэмэлт (тохиргоонд бичлэг шаардлагагүй): `.mongolgpt/plugin/` эсвэл
+`.mongolgpt/plugins/` доторх дурын `*.ts` эсвэл `*.js` файл.
 
-A plugin module exports `default` (or any named export) of type
-`Plugin = (input: PluginInput, options?) => Promise<Hooks>`. The export is a
-function, not a plain object literal, and the function returns an object
-(return `{}` if there is nothing to register).
+Нэмэлтийн модуль нь `default` экспорт эсвэл дурын нэрлэсэн экспортоор
+`Plugin = (input: PluginInput, options?) => Promise<Hooks>` төрлийн функцийг гаргана. Экспорт нь энгийн
+түлхүүр-утгын тогтмол бүтэц биш функц байх бөгөөд бүртгэх зүйлгүй бол `{}` буцаана.
 
 ```ts
 import type { Plugin } from "@mongolgpt/plugin"
@@ -333,19 +330,19 @@ import type { Plugin } from "@mongolgpt/plugin"
 export default (async ({ client, project, directory, $ }) => {
   return {
     config: (cfg) => {
-      // cfg is the live merged config; mutate fields here.
+      // cfg нь тухайн үеийн нийлүүлсэн тохиргоо; талбаруудыг энд өөрчил.
     },
     "tool.execute.before": async (input, output) => {
-      // mutate output.args before the tool runs
+      // хэрэгсэл ажиллахаас өмнө output.args-ийг өөрчил
     },
   }
 }) satisfies Plugin
 ```
 
-Hook surface (mutate `output` in place; return `void`):
+Холболтын цэгийн хүрээ (`output`-ийг газар дээр нь өөрчил; `void` буцаа):
 
-- `event(input)`: every bus event
-- `config(cfg)`: once on init with the merged config
+- `event(input)`: event bus-ийн бүх үйл явдал
+- `config(cfg)`: эхлүүлэх үед нийлүүлсэн тохиргоотой нэг удаа
 - `chat.message`, `chat.params`, `chat.headers`
 - `tool.execute.before`, `tool.execute.after`
 - `tool.definition`
@@ -356,13 +353,12 @@ Hook surface (mutate `output` in place; return `void`):
   `experimental.session.compacting`, `experimental.compaction.autocontinue`,
   `experimental.text.complete`
 
-Special object-shaped (not callbacks): `tool: { my_tool: { ... } }`,
+Тусгай түлхүүр-утгын бүтэцтэй хэлбэр (буцаан дуудах функц биш): `tool: { my_tool: { ... } }`,
 `auth: { ... }`, `provider: { ... }`.
 
-## MCP servers
+## MCP серверүүд
 
-`mcp:` is an object keyed by server name. Each server is discriminated by
-`type`:
+`mcp:` нь серверийн нэрээр түлхүүрлэсэн бүтэц. Сервер бүр `type`-ээр ялгагдана:
 
 ```json
 {
@@ -384,12 +380,12 @@ Special object-shaped (not callbacks): `tool: { my_tool: { ... } }`,
 }
 ```
 
-`command` is an array of strings. `type` is required. Use `enabled: false` to
-disable a server inherited from a parent config. String values such as header
-tokens support `{env:VAR}` interpolation (and `{file:path}`); the shell-style
-`${VAR}` is not substituted.
+`command` нь тэмдэгт мөрүүдийн жагсаалт. `type` талбар заавал байна. Эцэг тохиргооноос өвлөсөн серверийг
+идэвхгүй болгохдоо `enabled: false` ашигла. Толгойн токен зэрэг тэмдэгт мөрийн утга
+`{env:VAR}` болон `{file:path}` орлуулгыг дэмжинэ; командын бүрхүүлийн маягийн `${VAR}`-г
+орлуулахгүй.
 
-## Permissions
+## Зөвшөөрлүүд
 
 ```json
 "permission": {
@@ -399,54 +395,42 @@ tokens support `{env:VAR}` interpolation (and `{file:path}`); the shell-style
 }
 ```
 
-Actions: `"allow"`, `"ask"`, `"deny"`.
+Үйлдэл: `"allow"`, `"ask"`, `"deny"`.
 
-Per-tool value forms: `"allow"` shorthand (treated as `{"*": "allow"}`), or an
-object `{ pattern: action }`. Within an object, **insertion order matters**.
-MongolGPT evaluates the LAST matching rule, so put broad rules first and narrow
-rules last.
+Хэрэгсэл тус бүрийн утга: `"allow"` товчилсон хэлбэр (`{"*": "allow"}` гэж үзнэ), эсвэл
+`{ pattern: action }` бүтэц. Бүтэц доторх оруулсан дараалал чухал. MongolGPT нь
+**хамгийн сүүлд таарсан дүрмийг** үнэлдэг тул өргөн дүрмийг эхэнд, нарийн дүрмийг
+сүүлд байрлуул.
 
-`permission: "allow"` (a string at the top level) is shorthand for "allow
-everything" and is rarely what the user wants.
+`permission: "allow"` нь дээд түвшинд "бүгдийг зөвшөөр" гэсэн товчилсон хэлбэр бөгөөд
+хэрэглэгчийн хүсэх хэлбэр ховор.
 
-Known permission keys: `read, edit, glob, grep, list, bash, task,
+Мэдэгдэж буй зөвшөөрлийн түлхүүрүүд: `read, edit, glob, grep, list, bash, task,
 external_directory, todowrite, question, webfetch, websearch, lsp, doom_loop,
-skill`. Some of these (`todowrite,
-question, webfetch, websearch, doom_loop`) only accept a flat
-action, not a per-pattern object.
+skill`. Эдгээрийн зарим (`todowrite, question, webfetch, websearch, doom_loop`)
+нь хэв шинжээр задалсан объект биш, зөвхөн дан үйлдэл зөвшөөрнө.
 
-`external_directory` patterns are filesystem paths (use `~/`, absolute paths,
-or globs like `~/projects/**`).
+`external_directory`-ийн хэв шинж нь файлын системийн зам (`~/`, бүрэн зам,
+эсвэл `~/projects/**` зэрэг glob хэв шинж) байна.
 
-Per-agent `permission:` overrides top-level `permission:`. Plan Mode lives on
-the `plan` agent's permission ruleset (`edit: deny *`).
+Агент тус бүрийн `permission:` нь дээд түвшний `permission:`-ийг дарна. Төлөвлөгөөний горим нь
+`plan` агентын зөвшөөрлийн дүрмийн багц (`edit: deny *`) дээр байрлана.
 
-## Escape hatches
+## Аврах тохиргоонууд
 
-When a user's config is broken and MongolGPT won't start, these env vars help:
+Хэрэглэгчийн тохиргоо эвдэрч, MongolGPT эхлэхгүй бол эдгээр орчны хувьсагч тусална:
 
-- `MONGOLGPT_DISABLE_PROJECT_CONFIG=1`: skip the project's local `mongolgpt.json`
-  and start from globals only. Run from the project directory, MongolGPT loads,
-  the user edits the broken file, then they restart without the flag.
-- `MONGOLGPT_CONFIG=/path/to/file.json`: load an additional explicit config.
-- `MONGOLGPT_CONFIG_CONTENT='{"$schema":"https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json"}'`:
-  inject inline JSON as a final local-scope merge.
-- `MONGOLGPT_DISABLE_DEFAULT_PLUGINS=1`: skip default plugins.
-- `MONGOLGPT_PURE=1`: skip external plugins entirely.
-- `MONGOLGPT_DISABLE_EXTERNAL_SKILLS=1`,
-  `MONGOLGPT_DISABLE_CLAUDE_CODE_SKILLS=1`: skip the external skill scans under
-  `~/.claude/` and `~/.agents/`.
+- `MONGOLGPT_DISABLE_PROJECT_CONFIG=1`: тухайн төслийн дотоод `mongolgpt.json`-г алгасаж зөвхөн ерөнхий тохиргооноос эхэл. Төслийн хавтсаас ажиллуулахад MongolGPT ачаалагдана, хэрэглэгч эвдэрсэн файлыг засна, дараа нь туггүй дахин эхлүүлнэ.
+- `MONGOLGPT_CONFIG=/path/to/file.json`: нэмэлтээр заасан тохиргоог ачаал.
+- `MONGOLGPT_CONFIG_CONTENT='{"$schema":"https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json"}'`: мөр доторх JSON-г дотоод хамрах хүрээний нийлүүлэлтийн хамгийн сүүлийн давхарга болгон оруул.
+- `MONGOLGPT_DISABLE_DEFAULT_PLUGINS=1`: анхдагч нэмэлтүүдийг алгас.
+- `MONGOLGPT_PURE=1`: гаднын нэмэлтүүдийг бүхэлд нь алгас.
+- `MONGOLGPT_DISABLE_EXTERNAL_SKILLS=1`, `MONGOLGPT_DISABLE_CLAUDE_CODE_SKILLS=1`: `~/.claude/` болон `~/.agents/` доорх гаднын чадварын хайлтыг алгас.
 
-## When proposing edits
+## Өөрчлөлт санал болгох үед
 
-- Validate against the schema before writing. If you are unsure of a field's
-  exact shape, or the field is not covered in this skill, fetch
-  `https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json` and read the schema rather than guessing.
-- Preserve `$schema` and any existing fields the user did not ask to change.
-- For agent, command, skill, and plugin definitions, prefer creating new files
-  in the correct location over inlining everything in `mongolgpt.json`.
-- If the user's existing config is malformed, point them at the env-var escape
-  hatches above so they can edit from inside MongolGPT without breaking their
-  session.
-- After saving any config change, remind the user to quit and restart MongolGPT
-  — running sessions keep using the already-loaded config.
+- Бичихийн өмнө схемтэй тулгаж баталгаажуул. Талбарын яг хэлбэрт эргэлзэж эсвэл энэ чадварт хамрагдаагүй бол таамаглахын оронд `https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json`-г авч схемийг унш.
+- `$schema` болон хэрэглэгч өөрчлөхийг хүсээгүй байгаа талбарыг хадгал.
+- Агент, команд, чадвар, нэмэлтийн тодорхойлолтод бүхнийг `mongolgpt.json` дотор мөрөөр оруулахаас илүү зөв байрлалд шинэ файл үүсгэхийг илүүд үз.
+- Хэрэглэгчийн байгаа тохиргоо буруу хэлбэртэй бол ажлын харилцаагаа эвдэлгүй засахын тулд орчны хувьсагчтай аврах тохиргоонуудыг зааж өг.
+- Тохиргоо өөрчилсний дараа MongolGPT-г бүрэн хааж дахин эхлүүлэхийг сануул — ажиллаж буй харилцаа аль хэдийн ачаалсан тохиргоогоо ашигласаар байна.

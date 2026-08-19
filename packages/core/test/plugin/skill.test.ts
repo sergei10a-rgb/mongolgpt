@@ -25,7 +25,7 @@ describe("SkillPlugin.Plugin", () => {
       expect(yield* skill.list()).toContainEqual(
         expect.objectContaining({
           name: "customize-mongolgpt",
-          description: expect.stringContaining("MongolGPT's own configuration"),
+          description: expect.stringContaining("MongolGPT-ийн өөрийн тохиргоо"),
         }),
       )
     }),

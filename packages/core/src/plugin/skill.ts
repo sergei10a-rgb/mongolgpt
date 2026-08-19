@@ -20,7 +20,7 @@ export const Plugin = define({
           skill: SkillV2.Info.make({
             name: "customize-mongolgpt",
             description:
-              "Use ONLY when the user is editing or creating MongolGPT's own configuration: mongolgpt.json, mongolgpt.jsonc, files under .mongolgpt/, or files under ~/.config/mongolgpt/. Also use when creating or fixing MongolGPT agents, subagents, commands, skills, plugins, MCP servers, or permission rules. Do not use for the user's own application code, or for any project that is not configuring MongolGPT itself.",
+              "ЗӨВХӨН хэрэглэгч MongolGPT-ийн өөрийн тохиргоо болох mongolgpt.json, mongolgpt.jsonc, .mongolgpt/ доторх файл эсвэл ~/.config/mongolgpt/ доторх файлыг үүсгэх, засах үед ашиглана. Мөн MongolGPT-ийн agent, subagent, command, skill, plugin, MCP server эсвэл permission дүрмийг үүсгэх, засах үед ашиглана. Хэрэглэгчийн өөрийн application code болон MongolGPT-ийг тохируулахтай холбоогүй төсөлд бүү ашигла.",
             location: AbsolutePath.make("/builtin/customize-mongolgpt.md"),
             content: CustomizeMongolGPTContent,
           }),
