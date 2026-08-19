@@ -56,7 +56,7 @@ describe("acp config options", () => {
       }),
     ).toEqual({
       id: "model",
-      name: "Model",
+      name: "Модел",
       category: "model",
       type: "select",
       currentValue: "anthropic/claude/sonnet-4",
@@ -80,7 +80,7 @@ describe("acp config options", () => {
     if (option.type !== "select") throw new Error("expected select option")
     expect(option.options).toContainEqual({
       value: "anthropic/claude/sonnet-4/high",
-      name: "Anthropic/Claude Sonnet 4 (High)",
+      name: "Anthropic/Claude Sonnet 4 (Өндөр)",
     })
     expect(option.options).not.toContainEqual({
       value: "anthropic/claude/sonnet-4/default",
@@ -91,15 +91,15 @@ describe("acp config options", () => {
   test("builds effort option from variants and falls back to default when current variant is invalid", () => {
     expect(buildEffortSelectOption({ variants: ["low", "default", "high"], currentVariant: "missing" })).toEqual({
       id: "effort",
-      name: "Effort",
-      description: "Available effort levels for this model",
+      name: "Бодолтын түвшин",
+      description: "Энэ моделийн бодолтын түвшнийг сонгоно.",
       category: "thought_level",
       type: "select",
       currentValue: "default",
       options: [
-        { value: "low", name: "Low" },
-        { value: "default", name: "Default" },
-        { value: "high", name: "High" },
+        { value: "low", name: "Бага" },
+        { value: "default", name: "Өгөгдмөл" },
+        { value: "high", name: "Өндөр" },
       ],
     })
   })
@@ -125,7 +125,7 @@ describe("acp config options", () => {
       }),
     ).toEqual({
       id: "mode",
-      name: "Session Mode",
+      name: "Сессийн горим",
       category: "mode",
       type: "select",
       currentValue: "build",
@@ -224,6 +224,8 @@ describe("acp config options", () => {
   })
 
   test("formats variant names for display", () => {
-    expect(formatVariantName("very_high-effort")).toBe("Very High Effort")
+    expect(formatVariantName("very_high-effort")).toBe("Маш өндөр чармайлт")
+    expect(formatVariantName("minimal")).toBe("Хамгийн бага")
+    expect(formatVariantName("custom-fast")).toBe("Custom Fast")
   })
 })

@@ -203,23 +203,23 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
       "items": {
         "properties": {
           "header": {
-            "description": "Very short label (max 30 chars)",
+            "description": "Маш товч гарчиг (30 тэмдэгтээс ихгүй)",
             "type": "string",
           },
           "multiple": {
-            "description": "Allow selecting multiple choices",
+            "description": "Олон сонголт сонгохыг зөвшөөрөх",
             "type": "boolean",
           },
           "options": {
-            "description": "Available choices",
+            "description": "Боломжит сонголтууд",
             "items": {
               "properties": {
                 "description": {
-                  "description": "Explanation of choice",
+                  "description": "Сонголтын тайлбар",
                   "type": "string",
                 },
                 "label": {
-                  "description": "Display text (1-5 words, concise)",
+                  "description": "Харуулах товч текст (1-5 үг)",
                   "type": "string",
                 },
               },
@@ -232,7 +232,7 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
             "type": "array",
           },
           "question": {
-            "description": "Complete question",
+            "description": "Бүрэн асуулт",
             "type": "string",
           },
         },
@@ -344,15 +344,15 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
       "items": {
         "properties": {
           "content": {
-            "description": "Brief description of the task",
+            "description": "Даалгаврын товч тайлбар",
             "type": "string",
           },
           "priority": {
-            "description": "Priority level of the task: high, medium, low",
+            "description": "Даалгаврын ач холбогдол: high, medium, low",
             "type": "string",
           },
           "status": {
-            "description": "Current status of the task: pending, in_progress, completed, cancelled",
+            "description": "Даалгаврын одоогийн төлөв: pending, in_progress, completed, cancelled",
             "type": "string",
           },
         },

@@ -36,7 +36,7 @@ export function buildModelSelectOption(input: {
 }): SessionConfigOption {
   return {
     id: "model",
-    name: "Model",
+    name: "Модел",
     category: "model",
     type: "select",
     currentValue: formatCurrentModelId({
@@ -57,8 +57,8 @@ export function buildEffortSelectOption(input: {
 
   return {
     id: "effort",
-    name: "Effort",
-    description: "Available effort levels for this model",
+    name: "Бодолтын түвшин",
+    description: "Энэ моделийн бодолтын түвшнийг сонгоно.",
     category: "thought_level",
     type: "select",
     currentValue: selectVariant(input.currentVariant, input.variants),
@@ -75,7 +75,7 @@ export function buildModeSelectOption(input: {
 }): SessionConfigOption {
   return {
     id: "mode",
-    name: "Session Mode",
+    name: "Сессийн горим",
     category: "mode",
     type: "select",
     currentValue: input.currentModeId,
@@ -157,10 +157,38 @@ export function formatCurrentModelId(input: {
 }
 
 export function formatVariantName(variant: string) {
-  return variant
+  const known: Record<string, string> = {
+    default: "Өгөгдмөл",
+    minimal: "Хамгийн бага",
+    low: "Бага",
+    medium: "Дунд",
+    high: "Өндөр",
+    xhigh: "Маш өндөр",
+    "very-high": "Маш өндөр",
+    max: "Дээд",
+    auto: "Автомат",
+    none: "Үгүй",
+  }
+  const normalized = variant.toLowerCase().replaceAll("_", "-")
+  if (known[normalized]) return known[normalized]
+
+  const words: Record<string, string> = {
+    very: "маш",
+    high: "өндөр",
+    low: "бага",
+    medium: "дунд",
+    minimal: "хамгийн бага",
+    max: "дээд",
+    effort: "чармайлт",
+    reasoning: "бодолт",
+    thinking: "бодолт",
+  }
+  const label = variant
     .split(/[_-]/)
-    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : part))
+    .filter(Boolean)
+    .map((part) => words[part.toLowerCase()] ?? part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ")
+  return label ? label.charAt(0).toUpperCase() + label.slice(1) : label
 }
 
 function buildModelSelectOptions(
