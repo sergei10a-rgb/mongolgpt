@@ -41,7 +41,7 @@ function migrateFile(datPath: string, filename: string) {
   try {
     data = JSON.parse(readFileSync(datPath, "utf-8"))
   } catch (err) {
-    log.warn("tauri migration: failed to parse", filename, err)
+    log.warn("tauri шилжилт: задлан уншиж чадсангүй", filename, err)
     return
   }
 
@@ -63,20 +63,20 @@ function migrateFile(datPath: string, filename: string) {
     migrated.push(key)
   }
 
-  log.log("tauri migration: migrated", filename, "→", storeName, { migrated, skipped })
+  log.log("tauri шилжилт: шилжүүллээ", filename, "→", storeName, { migrated, skipped })
 }
 
 export function migrate() {
   if (getStore().get(TAURI_MIGRATED_KEY)) {
-    log.log("tauri migration: already done, skipping")
+    log.log("tauri шилжилт: аль хэдийн хийгдсэн тул алгаслаа")
     return
   }
 
   const dir = tauriDir(tauriAppId())
-  log.log("tauri migration: starting", { dir })
+  log.log("tauri шилжилт: эхэлж байна", { dir })
 
   if (!existsSync(dir)) {
-    log.log("tauri migration: no tauri data directory found, nothing to migrate")
+    log.log("tauri шилжилт: өгөгдлийн хавтас олдсонгүй, шилжүүлэх зүйл алга")
     getStore().set(TAURI_MIGRATED_KEY, true)
     return
   }
@@ -86,6 +86,6 @@ export function migrate() {
     migrateFile(join(dir, filename), filename)
   }
 
-  log.log("tauri migration: complete")
+  log.log("tauri шилжилт: дууслаа")
   getStore().set(TAURI_MIGRATED_KEY, true)
 }

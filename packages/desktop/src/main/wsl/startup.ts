@@ -5,7 +5,7 @@ export function wslServerIdsToStartOnInitialize(servers: { id: string }[]) {
 export function expectMongolGPTVersion(installed: string | null, expected: string, distro = "Debian") {
   if (installed === expected) return
   throw new Error(
-    `MongolGPT update finished but ${distro} still reports ${installed ?? "no version"}; expected ${expected}`,
+    `MongolGPT шинэчлэлт дууссан ч ${distro} ${installed ?? "хувилбаргүй"} гэж мэдээлсээр байна; хүлээсэн хувилбар ${expected}`,
   )
 }
 

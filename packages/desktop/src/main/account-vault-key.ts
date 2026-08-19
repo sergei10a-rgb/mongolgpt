@@ -51,7 +51,7 @@ export function loadOrCreateAccountVaultKey(options: {
   let encodedKey: string
   try {
     const ciphertext = decodeBase64(envelope.ciphertext)
-    if (ciphertext === undefined) throw new Error("invalid ciphertext")
+    if (ciphertext === undefined) throw new Error("Шифрлэсэн өгөгдөл буруу байна")
     encodedKey = options.safeStorage.decryptString(ciphertext)
   } catch {
     throw new Error("Хадгалсан түлхүүрийг тайлж чадсангүй")

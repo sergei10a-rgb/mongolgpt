@@ -43,18 +43,18 @@ function probe(shell: string, mode: "-il" | "-l"): Probe {
   const err = out.error as NodeJS.ErrnoException | undefined
   if (err) {
     if (err.code === "ETIMEDOUT") return { type: "Timeout" }
-    console.log(`[server] Shell env probe failed for ${shell} ${mode}: ${err.message}`)
+    console.log(`[server] Shell орчны шалгалт амжилтгүй боллоо: ${shell} ${mode}: ${err.message}`)
     return { type: "Unavailable" }
   }
 
   if (out.status !== 0) {
-    console.log(`[server] Shell env probe exited with non-zero status for ${shell} ${mode}`)
+    console.log(`[server] Shell орчны шалгалт тэгээс өөр төлөвтэй дууслаа: ${shell} ${mode}`)
     return { type: "Unavailable" }
   }
 
   const env = parseShellEnv(out.stdout)
   if (Object.keys(env).length === 0) {
-    console.log(`[server] Shell env probe returned empty env for ${shell} ${mode}`)
+    console.log(`[server] Shell орчны шалгалт хоосон орчин буцаалаа: ${shell} ${mode}`)
     return { type: "Unavailable" }
   }
 
@@ -69,27 +69,27 @@ export function isNushell(shell: string) {
 
 export function loadShellEnv(shell: string, logger: ShellEnvLogger) {
   if (isNushell(shell)) {
-    logger.log(`[server] Skipping shell env probe for nushell: ${shell}`)
+    logger.log(`[server] nushell-ийн shell орчны шалгалтыг алгаслаа: ${shell}`)
     return null
   }
 
   const interactive = probe(shell, "-il")
   if (interactive.type === "Loaded") {
-    logger.log(`[server] Loaded shell environment with -il (${Object.keys(interactive.value).length} vars)`)
+    logger.log(`[server] Shell орчныг -il горимоор ачааллаа (${Object.keys(interactive.value).length} хувьсагч)`)
     return interactive.value
   }
   if (interactive.type === "Timeout") {
-    logger.log(`[server] Interactive shell env probe timed out: ${shell}`)
+    logger.log(`[server] Интерактив shell орчны шалгалтын хугацаа дууслаа: ${shell}`)
     return null
   }
 
   const login = probe(shell, "-l")
   if (login.type === "Loaded") {
-    logger.log(`[server] Loaded shell environment with -l (${Object.keys(login.value).length} vars)`)
+    logger.log(`[server] Shell орчныг -l горимоор ачааллаа (${Object.keys(login.value).length} хувьсагч)`)
     return login.value
   }
 
-  logger.log(`[server] Falling back to app environment: ${shell}`)
+  logger.log(`[server] Аппын орчинд буцаж ашиглаж байна: ${shell}`)
   return null
 }
 

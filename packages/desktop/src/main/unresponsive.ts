@@ -27,7 +27,7 @@ export function createUnresponsiveSampler(win: BrowserWindow, name: string) {
   const collect = async () => {
     if (!active()) return
     const stack = await win.webContents.mainFrame.collectJavaScriptCallStack().catch((error) => {
-      writeLog("window", "failed to collect unresponsive sample", { window: name, error }, "error")
+      writeLog("window", "Хариу өгөхгүй цонхны мэдээллийг цуглуулж чадсангүй", { window: name, error }, "error")
       return undefined
     })
     if (!active()) return
@@ -44,11 +44,11 @@ export function createUnresponsiveSampler(win: BrowserWindow, name: string) {
     const entries = [...samples.entries()].sort((a, b) => b[1] - a[1])
     const total = entries.reduce((sum, entry) => sum + entry[1], 0)
     const message = [
-      "renderer unresponsive samples",
-      `Window: ${name}`,
-      `URL: ${win.isDestroyed() ? "<destroyed>" : win.webContents.getURL()}`,
+      "Дүрслэгч хариу өгөхгүй байсан үеийн мэдээлэл",
+      `Цонх: ${name}`,
+      `URL: ${win.isDestroyed() ? "<устсан>" : win.webContents.getURL()}`,
       ...entries.map((entry) => `<${entry[1]}> ${entry[0]}`),
-      `Total Samples: ${total}`,
+      `Нийт дээж: ${total}`,
     ].join("\n")
     writeLog("window", message, undefined, "error")
     samples.clear()

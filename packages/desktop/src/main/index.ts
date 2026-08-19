@@ -66,7 +66,7 @@ function useEnvProxy() {
     // Electron 41.2 runs Node 24.14.1; latest @types/node@24 is 24.12.2.
     ;(http as any).setGlobalProxyFromEnv()
   } catch (error) {
-    logger.warn("failed to load proxy environment", error)
+    logger.warn("Прокси орчныг ачаалж чадсангүй", error)
   }
 }
 
@@ -145,9 +145,9 @@ const main = Effect.gen(function* () {
   const wslServers = createWslServersController(
     app.getVersion(),
     async (distro) => {
-      logger.log("spawning wsl sidecar", { distro })
+      logger.log("WSL дагалдах серверийг эхлүүлж байна", { distro })
       return spawnWslSidecar(distro, {
-        onLine: (line) => logger.log("wsl sidecar", { distro, stream: line.stream, text: line.text }),
+        onLine: (line) => logger.log("WSL дагалдах сервер", { distro, stream: line.stream, text: line.text }),
       })
     },
     {
@@ -171,10 +171,10 @@ const main = Effect.gen(function* () {
   try {
     setDefaultCACertificates([...new Set([...getCACertificates("default"), ...getCACertificates("system")])])
   } catch (error) {
-    logger.warn("failed to load system certificates", error)
+    logger.warn("Системийн сертификатуудыг ачаалж чадсангүй", error)
   }
 
-  logger.log("app starting", {
+  logger.log("Апп эхэлж байна", {
     version: app.getVersion(),
     packaged: app.isPackaged,
     onboardingTest: Boolean(onboardingTestRoot),
@@ -197,7 +197,7 @@ const main = Effect.gen(function* () {
   app.on("second-instance", (_event: Event, argv: string[]) => {
     const urls = argv.filter((arg: string) => arg.startsWith("mongolgpt://"))
     if (urls.length) {
-      logger.log("deep link received via second-instance", { urls })
+      logger.log("Deep link-ийг second-instance-ээр хүлээн авлаа", { urls })
       emitDeepLinks(urls)
     }
     if (mainWindow) {
@@ -208,7 +208,7 @@ const main = Effect.gen(function* () {
 
   app.on("open-url", (event: Event, url: string) => {
     event.preventDefault()
-    logger.log("deep link received via open-url", { url })
+    logger.log("Deep link-ийг open-url-ээр хүлээн авлаа", { url })
     emitDeepLinks([url])
   })
 
@@ -221,11 +221,11 @@ const main = Effect.gen(function* () {
   })
 
   app.on("child-process-gone", (_event, details) => {
-    writeLog("utility", "child process gone", { details }, "error")
+    writeLog("utility", "Дэд процесс дууслаа", { details }, "error")
   })
 
   app.on("render-process-gone", (_event, webContents, details) => {
-    writeLog("window", "app render process gone", { url: webContents.getURL(), details }, "error")
+    writeLog("window", "Аппын дүрслэх процесс дууслаа", { url: webContents.getURL(), details }, "error")
   })
 
   setRelaunchHandler(() => {
@@ -257,9 +257,9 @@ const main = Effect.gen(function* () {
     relaunch,
     awaitInitialization: Effect.fnUntraced(
       function* () {
-        logger.log("awaiting server ready")
+        logger.log("Сервер бэлэн болохыг хүлээж байна")
         const res = yield* Deferred.await(serverReady)
-        logger.log("server ready", { url: res.url })
+        logger.log("Сервер бэлэн боллоо", { url: res.url })
         return res
       },
       (e) => Effect.runPromise(e),
@@ -277,7 +277,7 @@ const main = Effect.gen(function* () {
     showUpdater: () => showUpdaterDialog(updater, true),
     setBackgroundColor: (color) => setBackgroundColor(color),
     exportDebugLogs: () => exportDebugLogs(),
-    recordFatalRendererError: (error) => writeLog("renderer", "fatal renderer error", { ...error }, "error"),
+    recordFatalRendererError: (error) => writeLog("renderer", "Дүрслэх процессын ноцтой алдаа", { ...error }, "error"),
   })
   registerWslIpcHandlers(wslServers)
   void updater.start()
@@ -287,7 +287,7 @@ const main = Effect.gen(function* () {
   yield* Effect.promise(() => startNetLog()).pipe(
     Effect.catch((error) =>
       Effect.sync(() => {
-        logger.warn("failed to start net log", error)
+        logger.warn("Сүлжээний логийг эхлүүлж чадсангүй", error)
       }),
     ),
   )
@@ -320,12 +320,12 @@ const main = Effect.gen(function* () {
   const password = randomUUID()
 
   const loadingTask = yield* Effect.gen(function* () {
-    logger.log("sidecar connection started", { url })
+    logger.log("Дагалдах серверийн холболт эхэллээ", { url })
 
     ensureLoopbackNoProxy()
     useEnvProxy()
 
-    logger.log("spawning sidecar", { url })
+    logger.log("Дагалдах серверийг эхлүүлж байна", { url })
     const { listener, health } = yield* Effect.tryPromise({
       try: async () => {
         const secureStore = getStore("mongolgpt.secure")
@@ -353,7 +353,7 @@ const main = Effect.gen(function* () {
             accountVaultKey,
             onStdout: (message) => writeLog("server", "stdout", { message }),
             onStderr: (message) => writeLog("server", "stderr", { message }, "warn"),
-            onExit: (code) => writeLog("utility", "sidecar exited", { code }, "warn"),
+            onExit: (code) => writeLog("utility", "Дагалдах сервер дууслаа", { code }, "warn"),
           })
         } finally {
           accountVaultKey.fill(0)
@@ -369,19 +369,19 @@ const main = Effect.gen(function* () {
     })
 
     if (process.platform === "win32") {
-      void wslServers.initialize().catch((error) => logger.error("wsl server initialization failed", error))
+      void wslServers.initialize().catch((error) => logger.error("WSL серверийг эхлүүлж чадсангүй", error))
     }
 
     yield* Effect.promise(() => health.wait).pipe(
       Effect.timeout("30 seconds"),
       Effect.catch((e) =>
         Effect.sync(() => {
-          logger.error("sidecar health check failed", e.toString())
+          logger.error("Дагалдах серверийн эрүүл мэндийн шалгалт амжилтгүй боллоо", e.toString())
         }),
       ),
     )
 
-    logger.log("loading task finished")
+    logger.log("Ачаалах ажил дууслаа")
   }).pipe(forwardInitializationFailure(serverReady), Effect.forkChild)
 
   yield* Fiber.await(loadingTask)

@@ -23,7 +23,7 @@ test("starts every configured WSL server on initialization", () => {
 test("rejects an update that did not install the desktop version", () => {
   expect(() => expectMongolGPTVersion("1.16.2", "1.16.2")).not.toThrow()
   expect(() => expectMongolGPTVersion("1.14.35", "1.16.2")).toThrow(
-    "MongolGPT update finished but Debian still reports 1.14.35; expected 1.16.2",
+    "MongolGPT шинэчлэлт дууссан ч Debian 1.14.35 гэж мэдээлсээр байна; хүлээсэн хувилбар 1.16.2",
   )
 })
 

@@ -38,25 +38,25 @@ export function initCrashReporter() {
   mkdirSync(dir, { recursive: true })
   app.setPath("crashDumps", dir)
   crashReporter.start({ uploadToServer: false, compress: true })
-  write("crash", "crash reporter started", { path: dir })
+  write("crash", "Гэмтлийн мэдээлэгч эхэллээ", { path: dir })
 }
 
 export async function startNetLog() {
   if (netLog.currentlyLogging) return
   netLogPath = join(run, "network.netlog")
   await netLog.startLogging(netLogPath, { captureMode: "default", maxFileSize: NET_LOG_SIZE })
-  write("network", "net log started", { path: netLogPath })
+  write("network", "Сүлжээний лог эхэллээ", { path: netLogPath })
 }
 
 export async function exportDebugLogs() {
   const restartNetLog = netLog.currentlyLogging
   if (restartNetLog) {
-    await netLog.stopLogging().catch((error) => write("network", "failed to stop net log", { error }))
+    await netLog.stopLogging().catch((error) => write("network", "Сүлжээний логийг зогсоож чадсангүй", { error }))
   }
 
   const output = join(app.getPath("downloads"), `mongolgpt-debug-${stamp()}.zip`)
   try {
-    write("main", "exporting debug logs", { output })
+    write("main", "Алдаа оношлох логийг экспортолж байна", { output })
     await writeZip(output, [
       { name: "manifest.json", data: Buffer.from(JSON.stringify(manifest(), null, 2)) },
       ...collect(root, "desktop"),
@@ -67,7 +67,7 @@ export async function exportDebugLogs() {
     return output
   } finally {
     if (restartNetLog) {
-      await startNetLog().catch((error) => write("network", "failed to restart net log", { error }))
+      await startNetLog().catch((error) => write("network", "Сүлжээний логийг дахин эхлүүлж чадсангүй", { error }))
     }
   }
 }

@@ -152,7 +152,7 @@ export function createWslServersController(
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : String(error)
-        logger?.error("wsl MongolGPT check failed", { id, distro, message })
+        logger?.error("WSL MongolGPT шалгалт амжилтгүй боллоо", { id, distro, message })
       })
   }
 
@@ -166,7 +166,7 @@ export function createWslServersController(
           })
           .catch((error) => {
             const message = error instanceof Error ? error.message : String(error)
-            logger?.error("wsl MongolGPT check failed", {
+            logger?.error("WSL MongolGPT шалгалт амжилтгүй боллоо", {
               id: item.config.id,
               distro: item.config.distro,
               message,
@@ -202,7 +202,7 @@ export function createWslServersController(
     await stopServerInternal(id)
     if (!isCurrentStartAttempt(id, attempt)) return
     setRuntime(id, { kind: "starting" })
-    logger?.log("wsl sidecar starting", { id, distro: item.config.distro })
+    logger?.log("WSL дагалдах сервер эхэлж байна", { id, distro: item.config.distro })
     try {
       const sidecar = await spawnSidecar(item.config.distro)
       if (!isCurrentStartAttempt(id, attempt)) {
@@ -225,10 +225,10 @@ export function createWslServersController(
         sidecars.delete(id)
         const message = startupFailure(code, signal)
         setRuntime(id, { kind: "failed", message })
-        logger?.error("wsl sidecar exited", { id, distro: item.config.distro, code, signal })
+        logger?.error("WSL дагалдах сервер дууслаа", { id, distro: item.config.distro, code, signal })
       })
       refreshMongolGPTCheckBackground(id, item.config.distro)
-      logger?.log("wsl sidecar ready", { id, distro: item.config.distro, url: sidecar.url })
+      logger?.log("WSL дагалдах сервер бэлэн боллоо", { id, distro: item.config.distro, url: sidecar.url })
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       if (!isCurrentStartAttempt(id, attempt)) return
@@ -236,7 +236,7 @@ export function createWslServersController(
       // Without this, an Ubuntu-style silent failure leaves no trace in
       // main.log — the controller captures the message in its state but
       // nothing surfaces unless the user opens the WSL servers dialog.
-      logger?.error("wsl sidecar failed to start", { id, distro: item.config.distro, message })
+      logger?.error("WSL дагалдах серверийг эхлүүлж чадсангүй", { id, distro: item.config.distro, message })
     }
   }
 

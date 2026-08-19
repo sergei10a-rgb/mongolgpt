@@ -198,14 +198,14 @@ export function registerRendererProtocol() {
   protocol.handle(rendererProtocol, async (request) => {
     const url = new URL(request.url)
     if (url.host !== rendererHost) {
-      writeLog("protocol", "rejected host", { url: request.url }, "warn")
+      writeLog("protocol", "Зөвшөөрөөгүй host", { url: request.url }, "warn")
       return new Response("Олдсонгүй", { status: 404 })
     }
 
     const file = resolve(rendererRoot, `.${decodeURIComponent(url.pathname)}`)
     const rel = relative(rendererRoot, file)
     if (rel.startsWith("..") || isAbsolute(rel)) {
-      writeLog("protocol", "rejected path", { url: request.url, file }, "warn")
+      writeLog("protocol", "Зөвшөөрөөгүй зам", { url: request.url, file }, "warn")
       return new Response("Олдсонгүй", { status: 404 })
     }
 
@@ -214,7 +214,7 @@ export function registerRendererProtocol() {
       if (response.status >= 400) {
         writeLog(
           "protocol",
-          "fetch failed",
+          "Татаж чадсангүй",
           {
             url: request.url,
             file,
@@ -226,7 +226,7 @@ export function registerRendererProtocol() {
       }
       return addDocumentPolicy(response, file)
     } catch (error) {
-      writeLog("protocol", "fetch error", { url: request.url, file, error }, "error")
+      writeLog("protocol", "Татах явцад алдаа гарлаа", { url: request.url, file, error }, "error")
       return new Response("Олдсонгүй", { status: 404 })
     }
   })
@@ -250,7 +250,7 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
   const handle = async (button: string | undefined, wait: boolean) => {
     if (button === recoveryButtons.exportLogs) {
       const sampling = sampler.stopAndFlush()
-      await exportDebugLogs().catch((error) => writeLog("main", "failed to export debug logs", { error }, "error"))
+      await exportDebugLogs().catch((error) => writeLog("main", "Алдаа оношлох логийг экспортолж чадсангүй", { error }, "error"))
       if (wait && sampling) sampler.start()
       return true
     }
@@ -299,7 +299,7 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
   ) => {
     writeLog(
       "window",
-      "renderer load failed",
+      "Дүрслэгчийг ачаалж чадсангүй",
       {
         window: name,
         event,
@@ -330,7 +330,7 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
     sampler.stopAndFlush()
     writeLog(
       "window",
-      "renderer process gone",
+      "Дүрслэх процесс дууслаа",
       { window: name, currentURL: win.webContents.getURL(), details },
       "error",
     )
@@ -341,7 +341,7 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
     )
   })
   win.on("unresponsive", () => {
-    writeLog("window", "renderer unresponsive", { window: name, currentURL: win.webContents.getURL() }, "error")
+    writeLog("window", "Дүрслэгч хариу өгөхгүй байна", { window: name, currentURL: win.webContents.getURL() }, "error")
     sampler.start()
     void show(
       "MongolGPT хариу өгөхгүй байна",
@@ -350,7 +350,7 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
     )
   })
   win.on("responsive", () => {
-    writeLog("window", "renderer responsive", { window: name, currentURL: win.webContents.getURL() }, "error")
+    writeLog("window", "Дүрслэгч дахин хариу өгч байна", { window: name, currentURL: win.webContents.getURL() }, "error")
     sampler.stopAndFlush()
   })
   win.webContents.on("console-message", (_event, level, message, line, sourceId) => {
@@ -359,7 +359,7 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
     }
   })
   win.webContents.on("preload-error", (_event, preloadPath, error) => {
-    writeLog("preload", "preload error", { window: name, preloadPath, error }, "error")
+    writeLog("preload", "Урьдчилан ачаалалтын алдаа", { window: name, preloadPath, error }, "error")
   })
 }
 
@@ -400,11 +400,11 @@ function isTrustedRendererHtml(value?: string) {
 function wireNavigationPolicy(win: BrowserWindow) {
   const openExternal = (value: string) => {
     if (!isSafeExternalNavigation(value)) {
-      writeLog("window", "blocked external navigation", { url: value }, "warn")
+      writeLog("window", "Гадаад шилжилтийг хаалаа", { url: value }, "warn")
       return
     }
     void shell.openExternal(value).catch((error) =>
-      writeLog("window", "failed to open external navigation", { url: value, error }, "error"),
+      writeLog("window", "Гадаад шилжилтийг нээж чадсангүй", { url: value, error }, "error"),
     )
   }
 

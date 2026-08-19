@@ -142,7 +142,7 @@ function useSystemCertificates() {
       ...new Set([...nodeTls.getCACertificates("default"), ...nodeTls.getCACertificates("system")]),
     ])
   } catch (error) {
-    console.warn("failed to load system certificates", error)
+    console.warn("Системийн сертификатуудыг ачаалж чадсангүй", error)
   }
 }
 
@@ -150,7 +150,7 @@ function useEnvProxy() {
   try {
     ;(http as NodeHttpWithEnvProxy).setGlobalProxyFromEnv()
   } catch (error) {
-    console.warn("failed to load proxy environment", error)
+    console.warn("Прокси орчныг ачаалж чадсангүй", error)
   }
 }
 
