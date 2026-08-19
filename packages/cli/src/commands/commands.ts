@@ -27,7 +27,7 @@ export const Commands = Spec.make(typeof MONGOLGPT_CLI_NAME === "string" ? MONGO
     }),
     Spec.make("debug", {
       description: "Дибаг болон асуудал оношлох хэрэгслүүд",
-      commands: [Spec.make("agents", { description: "Бүх agent-ийг жагсаах" })],
+      commands: [Spec.make("agents", { description: "Бүх агентуудыг жагсаах" })],
     }),
     Spec.make("migrate", { description: "v1 өгөгдлийг v2 руу шилжүүлэх" }),
     Spec.make("service", {
@@ -38,7 +38,7 @@ export const Commands = Spec.make(typeof MONGOLGPT_CLI_NAME === "string" ? MONGO
         Spec.make("status", { description: "Арын серверийн төлөвийг харуулах" }),
         Spec.make("stop", { description: "Арын серверийг зогсоох" }),
         Spec.make("password", {
-          description: "Серверийн password авах эсвэл тохируулах",
+          description: "Серверийн нууц үгийг авах эсвэл тохируулах",
           params: { value: Argument.string("value").pipe(Argument.optional) },
         }),
       ],

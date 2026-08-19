@@ -9,17 +9,17 @@ NC='\033[0m' # No Color
 
 usage() {
     cat <<EOF
-MongolGPT Installer
+MongolGPT суулгагч
 
-Usage: install.sh [options]
+Хэрэглээ: install.sh [сонголтууд]
 
-Options:
-    -h, --help              Display this help message
-    -v, --version <version> Install a specific version (e.g., 1.0.180)
-    -b, --binary <path>     Install from a local binary instead of downloading
-        --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
+Сонголтууд:
+    -h, --help              Энэ тусламжийг харуулах
+    -v, --version <хувилбар> Тодорхой хувилбар суулгах (жишээ нь 1.0.180)
+    -b, --binary <зам>      Татаж авахын оронд дотоод гүйцэтгэх файлаас суулгах
+        --no-modify-path    Shell тохиргооны файлуудыг өөрчлөхгүй (.zshrc, .bashrc гэх мэт)
 
-Examples:
+Жишээ:
     curl -fsSL https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/install | bash
     curl -fsSL https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/install | bash -s -- --version 1.0.180
     ./install --binary /path/to/mongolgpt
@@ -455,11 +455,7 @@ if [ -n "${GITHUB_ACTIONS-}" ] && [ "${GITHUB_ACTIONS}" == "true" ]; then
 fi
 
 echo -e ""
-echo -e "${MUTED}                    ${NC}             ▄     "
-echo -e "${MUTED}█▀▀█ █▀▀█ █▀▀█ █▀▀▄ ${NC}█▀▀▀ █▀▀█ █▀▀█ █▀▀█"
-echo -e "${MUTED}█░░█ █░░█ █▀▀▀ █░░█ ${NC}█░░░ █░░█ █░░█ █▀▀▀"
-echo -e "${MUTED}▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ ${NC}▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀"
-echo -e ""
+echo -e "${MUTED}Mongol${NC}GPT"
 echo -e ""
 echo -e "${MUTED}MongolGPT үнэгүй загваруудтай. Эхлэхийн тулд:${NC}"
 echo -e ""

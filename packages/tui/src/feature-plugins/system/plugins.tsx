@@ -191,7 +191,7 @@ function View(props: { api: TuiPluginApi }) {
         if (!ok) {
           props.api.ui.toast({
             variant: "error",
-            message: `${item.id} plugin-ийг шинэчилж чадсангүй`,
+            message: `${item.id} плагиныг шинэчилж чадсангүй`,
           })
         }
         setList(props.api.plugins.list())

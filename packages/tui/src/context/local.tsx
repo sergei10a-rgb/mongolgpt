@@ -96,7 +96,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (!agents().some((x) => x.name === name))
             return toast.show({
               variant: "warning",
-              message: `Agent олдсонгүй: ${name}`,
+              message: `Агент олдсонгүй: ${name}`,
               duration: 3000,
             })
           setAgentStore("current", name)
