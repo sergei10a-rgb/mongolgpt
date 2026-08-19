@@ -365,8 +365,15 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(adminSource).toContain("httpOnlyCookieAttribute: true")
     expect(adminSource).toContain('sameSiteCookieAttribute: "strict"')
     expect(adminSource).toContain('new sst.Linkable("AdminAccessConfig"')
-    expect(adminSource).toContain('import { auth, d1Backups, database, paymentService, quotaService } from "./console"')
-    for (const resource of ["database", "d1Backups", "auth", "quotaService", "paymentService", "accessConfig"]) {
+    for (const resource of [
+      "database",
+      "d1Backups",
+      "auth",
+      "quotaService",
+      "paymentService",
+      "usageQueueReadiness",
+      "accessConfig",
+    ]) {
       expect(adminSource).toContain(`    ${resource},`)
     }
     expect(adminSource).toContain("MONGOLGPT_RUNTIME_URL: runtimeOrigin")
