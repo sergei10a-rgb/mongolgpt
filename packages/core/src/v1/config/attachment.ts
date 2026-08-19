@@ -5,21 +5,21 @@ import { PositiveInt } from "../../schema"
 
 export const Image = Schema.Struct({
   auto_resize: Schema.optional(Schema.Boolean).annotate({
-    description: "Resize images before sending them to the model when they exceed configured limits (default: true)",
+    description: "Зураг тохируулсан хязгаараас хэтэрсэн үед загварт илгээхээс өмнө хэмжээг өөрчлөх (анхдагч: true)",
   }),
   max_width: Schema.optional(PositiveInt).annotate({
-    description: "Maximum image width before resizing or rejecting the attachment (default: 2000)",
+    description: "Хэмжээг өөрчлөх эсвэл хавсралтыг хүлээн авахаас татгалзахаас өмнөх зургийн хамгийн их өргөн (анхдагч: 2000)",
   }),
   max_height: Schema.optional(PositiveInt).annotate({
-    description: "Maximum image height before resizing or rejecting the attachment (default: 2000)",
+    description: "Хэмжээг өөрчлөх эсвэл хавсралтыг хүлээн авахаас татгалзахаас өмнөх зургийн хамгийн их өндөр (анхдагч: 2000)",
   }),
   max_base64_bytes: Schema.optional(PositiveInt).annotate({
-    description: "Maximum base64 payload bytes for an image attachment (default: 5242880)",
+    description: "Зургийн хавсралтын base64 өгөгдлийн дээд хэмжээ, байтаар (анхдагч: 5242880)",
   }),
 }).annotate({ identifier: "ImageAttachmentConfig" })
 export type Image = Schema.Schema.Type<typeof Image>
 
 export const Info = Schema.Struct({
-  image: Schema.optional(Image).annotate({ description: "Image attachment configuration" }),
+  image: Schema.optional(Image).annotate({ description: "Зураг хавсаргах тохиргоо" }),
 }).annotate({ identifier: "AttachmentConfig" })
 export type Info = Schema.Schema.Type<typeof Info>

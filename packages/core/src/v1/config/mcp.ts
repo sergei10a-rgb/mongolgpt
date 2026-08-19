@@ -4,57 +4,57 @@ import { Schema } from "effect"
 import { PositiveInt } from "../../schema"
 
 export const Local = Schema.Struct({
-  type: Schema.Literal("local").annotate({ description: "Type of MCP server connection" }),
+  type: Schema.Literal("local").annotate({ description: "MCP сервертэй холбогдох төрөл" }),
   command: Schema.mutable(Schema.Array(Schema.String)).annotate({
-    description: "Command and arguments to run the MCP server",
+    description: "MCP серверийг ажиллуулах команд болон аргументууд",
   }),
   cwd: Schema.optional(Schema.String).annotate({
-    description: "Working directory for the MCP server process. Relative paths resolve from the workspace directory.",
+    description: "MCP серверийн процессын ажиллах хавтас. Харьцангуй замыг ажлын талбарын хавтаснаас тооцно.",
   }),
   environment: Schema.optional(Schema.Record(Schema.String, Schema.String)).annotate({
-    description: "Environment variables to set when running the MCP server",
+    description: "MCP серверийг ажиллуулах үед тохируулах орчны хувьсагчид",
   }),
   enabled: Schema.optional(Schema.Boolean).annotate({
-    description: "Enable or disable the MCP server on startup",
+    description: "Эхлүүлэх үед MCP серверийг идэвхжүүлэх эсвэл идэвхгүй болгох",
   }),
   timeout: Schema.optional(PositiveInt).annotate({
-    description: "Timeout in ms for MCP server requests. Defaults to 5000 (5 seconds) if not specified.",
+    description: "MCP серверийн хүсэлтийн хүлээлгийн хугацаа, миллисекундээр. Заагаагүй бол 5000 (5 секунд) байна.",
   }),
 }).annotate({ identifier: "McpLocalConfig" })
 export type Local = Schema.Schema.Type<typeof Local>
 
 export const OAuth = Schema.Struct({
   clientId: Schema.optional(Schema.String).annotate({
-    description: "OAuth client ID. If not provided, dynamic client registration (RFC 7591) will be attempted.",
+    description: "OAuth клиентын ID. Заагаагүй бол динамик клиент бүртгэл (RFC 7591)-ийг оролдоно.",
   }),
   clientSecret: Schema.optional(Schema.String).annotate({
-    description: "OAuth client secret (if required by the authorization server)",
+    description: "OAuth клиентийн нууц түлхүүр (зөвшөөрлийн сервер шаардсан тохиолдолд)",
   }),
-  scope: Schema.optional(Schema.String).annotate({ description: "OAuth scopes to request during authorization" }),
+  scope: Schema.optional(Schema.String).annotate({ description: "Зөвшөөрөл авах үед хүсэх OAuth хамрах хүрээ" }),
   callbackPort: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))).annotate({
     description:
-      "Port for the local OAuth callback server (default: 19876). Shorthand for redirectUri when only the port needs changing. Ignored if redirectUri is set.",
+      "OAuth буцах хүсэлтийг хүлээн авах локал серверийн порт (анхдагч: 19876). Зөвхөн портыг өөрчлөх үед redirectUri-ийн товчилсон тохиргоо болно. redirectUri тохируулсан бол үл хэрэгсэнэ.",
   }),
   redirectUri: Schema.optional(Schema.String).annotate({
-    description: "OAuth redirect URI (default: http://127.0.0.1:19876/mcp/oauth/callback).",
+    description: "OAuth redirect URI (анхдагч: http://127.0.0.1:19876/mcp/oauth/callback).",
   }),
 }).annotate({ identifier: "McpOAuthConfig" })
 export type OAuth = Schema.Schema.Type<typeof OAuth>
 
 export const Remote = Schema.Struct({
-  type: Schema.Literal("remote").annotate({ description: "Type of MCP server connection" }),
-  url: Schema.String.annotate({ description: "URL of the remote MCP server" }),
+  type: Schema.Literal("remote").annotate({ description: "MCP сервертэй холбогдох төрөл" }),
+  url: Schema.String.annotate({ description: "Алсын MCP серверийн URL" }),
   enabled: Schema.optional(Schema.Boolean).annotate({
-    description: "Enable or disable the MCP server on startup",
+    description: "Эхлүүлэх үед MCP серверийг идэвхжүүлэх эсвэл идэвхгүй болгох",
   }),
   headers: Schema.optional(Schema.Record(Schema.String, Schema.String)).annotate({
-    description: "Headers to send with the request",
+    description: "Хүсэлтийн хамт илгээх HTTP толгой талбарууд",
   }),
   oauth: Schema.optional(Schema.Union([OAuth, Schema.Literal(false)])).annotate({
-    description: "OAuth authentication configuration for the MCP server. Set to false to disable OAuth auto-detection.",
+    description: "MCP серверийн OAuth нэвтрэлтийн тохиргоо. OAuth-г автоматаар танихыг зогсоохын тулд false утга тохируулна.",
   }),
   timeout: Schema.optional(PositiveInt).annotate({
-    description: "Timeout in ms for MCP server requests. Defaults to 5000 (5 seconds) if not specified.",
+    description: "MCP серверийн хүсэлтийн хүлээлгийн хугацаа, миллисекундээр. Заагаагүй бол 5000 (5 секунд) байна.",
   }),
 }).annotate({ identifier: "McpRemoteConfig" })
 export type Remote = Schema.Schema.Type<typeof Remote>

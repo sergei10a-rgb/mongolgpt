@@ -90,13 +90,14 @@ export function parseRemote(input: string): RemoteReference {
   if (!reference) {
     throw new InvalidReferenceError({
       repository: input,
-      message: "Repository must be a git URL, host/path reference, or GitHub owner/repo shorthand",
+      message:
+        "Репозиторийн хаяг нь Git URL, host/path хэлбэрийн хаяг эсвэл GitHub-ийн owner/repo товчлолын аль нэг байх ёстой",
     })
   }
   if (!isRemote(reference)) {
     throw new UnsupportedLocalRepositoryError({
       repository: input,
-      message: "Local file repositories are not supported",
+      message: "Дотоод файлын репозиторыг дэмжихгүй",
     })
   }
   return reference
@@ -106,7 +107,8 @@ export function validateBranch(branch: string): void {
   if (/^[A-Za-z0-9/_.-]+$/.test(branch) && !branch.startsWith("-") && !branch.includes("..")) return
   throw new InvalidBranchError({
     branch,
-    message: "Branch must contain only alphanumeric characters, /, _, ., and -, and cannot start with - or contain ..",
+    message:
+      "Салбарын нэр зөвхөн үсэг, тоо, /, _, ., - тэмдэгт агуулсан байх ёстой бөгөөд - тэмдэгтээр эхлэх эсвэл .. агуулж болохгүй",
   })
 }
 

@@ -27,70 +27,70 @@ export const WellKnown = Schema.Struct({
 
 const LogLevelRef = Schema.Literals(["DEBUG", "INFO", "WARN", "ERROR"]).annotate({
   identifier: "LogLevel",
-  description: "Log level",
+  description: "Логийн түвшин",
 })
 
 export const Info = Schema.Struct({
   $schema: Schema.optional(Schema.String).annotate({
-    description: "JSON schema reference for configuration validation",
+    description: "Тохиргоог шалгахад ашиглах JSON schema-ийн лавлагаа",
   }),
-  shell: Schema.optional(Schema.String).annotate({ description: "Default shell to use for terminal and bash tool" }),
-  logLevel: Schema.optional(LogLevelRef).annotate({ description: "Log level" }),
+  shell: Schema.optional(Schema.String).annotate({ description: "Терминал болон bash хэрэгсэлд ашиглах өгөгдмөл командын бүрхүүл" }),
+  logLevel: Schema.optional(LogLevelRef).annotate({ description: "Логийн түвшин" }),
   server: Schema.optional(ConfigServerV1.Server).annotate({
-    description: "Server configuration for mongolgpt serve and web commands",
+    description: "mongolgpt serve болон web командын серверийн тохиргоо",
   }),
   command: Schema.optional(Schema.Record(Schema.String, ConfigCommandV1.Info)).annotate({
     description: `Командын тохиргоо. Дэлгэрэнгүй: ${documentationRepositoryUrl}/commands.mdx`,
   }),
-  skills: Schema.optional(ConfigSkillsV1.Info).annotate({ description: "Additional skill folder paths" }),
+  skills: Schema.optional(ConfigSkillsV1.Info).annotate({ description: "Ур чадварын нэмэлт хавтасны замууд" }),
   references: Schema.optional(ConfigReference.Info).annotate({
-    description: "Named git or local directory references",
+    description: "Нэрлэсэн git эсвэл локал хавтасны лавлагаанууд",
   }),
   reference: Schema.optional(ConfigReference.Info).annotate({
-    description: "@deprecated Use 'references' field instead. Named git or local directory references",
+    description: "@deprecated Оронд нь 'references' талбарыг ашиглана уу. Нэрлэсэн git эсвэл локал хавтасны лавлагаанууд",
   }),
   watcher: Schema.optional(Schema.Struct({ ignore: Schema.optional(Schema.mutable(Schema.Array(Schema.String))) })),
   snapshot: Schema.optional(Schema.Boolean).annotate({
     description:
-      "Enable or disable snapshot tracking. When false, filesystem snapshots are not recorded and undoing or reverting will not undo/redo file changes. Defaults to true.",
+      "Snapshot хөтлөлтийг идэвхжүүлэх эсвэл идэвхгүй болгоно. false үед файлын системийн snapshot хадгалагдахгүй бөгөөд буцаах үйлдэл файлд хийсэн өөрчлөлтийг буцаахгүй. Анхдагч утга нь true.",
   }),
   plugin: Schema.optional(Schema.mutable(Schema.Array(ConfigPluginV1.Spec))),
   share: Schema.optional(Schema.Literals(["manual", "auto", "disabled"])).annotate({
     description:
-      "Control sharing behavior:'manual' allows manual sharing via commands, 'auto' enables automatic sharing, 'disabled' disables all sharing",
+      "Хуваалцах үйлдлийг удирдана: 'manual' нь командаар гараар хуваалцахыг, 'auto' нь автоматаар хуваалцахыг зөвшөөрнө, 'disabled' нь бүх хуваалцах үйлдлийг идэвхгүй болгоно",
   }),
   autoshare: Schema.optional(Schema.Boolean).annotate({
-    description: "@deprecated Use 'share' field instead. Share newly created sessions automatically",
+    description: "@deprecated Оронд нь 'share' талбарыг ашиглана уу. Шинээр үүссэн сессүүдийг автоматаар хуваалцана",
   }),
   autoupdate: Schema.optional(Schema.Union([Schema.Boolean, Schema.Literal("notify")])).annotate({
     description:
-      "Automatically update to the latest version. Set to true to auto-update, false to disable, or 'notify' to show update notifications",
+      "Хамгийн сүүлийн хувилбар руу автоматаар шинэчилнэ. true нь автоматаар шинэчлэх, false нь идэвхгүй болгох, 'notify' нь шинэчлэлтийн мэдэгдэл харуулах утгатай",
   }),
   disabled_providers: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
-    description: "Disable providers that are loaded automatically",
+    description: "Автоматаар ачаалагддаг үйлчилгээ үзүүлэгчдийг идэвхгүй болгоно",
   }),
   enabled_providers: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
-    description: "When set, ONLY these providers will be enabled. All other providers will be ignored",
+    description: "Тохируулсан үед зөвхөн эдгээр үйлчилгээ үзүүлэгч идэвхжинэ. Бусад бүх үйлчилгээ үзүүлэгчийг үл тооно",
   }),
   model: Schema.optional(Schema.String).annotate({
-    description: "Model to use in the format of provider/model, eg anthropic/claude-2",
+    description: "Ашиглах загварыг provider/model хэлбэрээр заана. Жишээ нь anthropic/claude-2",
   }),
   small_model: Schema.optional(Schema.String).annotate({
-    description: "Small model to use for tasks like title generation in the format of provider/model",
+    description: "Гарчиг үүсгэх зэрэг ажлуудад ашиглах жижиг загварыг provider/model хэлбэрээр заана",
   }),
   default_agent: Schema.optional(Schema.String).annotate({
     description:
-      "Default agent to use when none is specified. Must be a primary agent. Falls back to 'build' if not set or if the specified agent is invalid.",
+      "Агент заагаагүй үед ашиглах анхдагч агент. Үндсэн агент байх ёстой. Тохируулаагүй эсвэл заасан агент буруу бол 'build' агент руу шилжинэ.",
   }),
   username: Schema.optional(Schema.String).annotate({
-    description: "Custom username to display in conversations instead of system username",
+    description: "Харилцан ярианд системийн хэрэглэгчийн нэрийн оронд харуулах өөрийн хэрэглэгчийн нэр",
   }),
   mode: Schema.optional(
     Schema.StructWithRest(
       Schema.Struct({ build: Schema.optional(ConfigAgentV1.Info), plan: Schema.optional(ConfigAgentV1.Info) }),
       [Schema.Record(Schema.String, ConfigAgentV1.Info)],
     ),
-  ).annotate({ description: "@deprecated Use `agent` field instead." }),
+  ).annotate({ description: "@deprecated Оронд нь `agent` талбарыг ашиглана уу." }),
   agent: Schema.optional(
     Schema.StructWithRest(
       Schema.Struct({
@@ -106,82 +106,82 @@ export const Info = Schema.Struct({
     ),
   ).annotate({ description: `Агентын тохиргоо. Дэлгэрэнгүй: ${documentationRepositoryUrl}/agents.mdx` }),
   provider: Schema.optional(Schema.Record(Schema.String, ConfigProviderV1.Info)).annotate({
-    description: "Custom provider configurations and model overrides",
+    description: "Өөрийн үйлчилгээ үзүүлэгчийн тохиргоо болон загвар тус бүрийн нэмэлт тохиргоо",
   }),
   mcp: Schema.optional(
     Schema.Record(Schema.String, Schema.Union([ConfigMCPV1.Info, Schema.Struct({ enabled: Schema.Boolean })])),
-  ).annotate({ description: "MCP (Model Context Protocol) server configurations" }),
+  ).annotate({ description: "MCP (Model Context Protocol) серверийн тохиргоонууд" }),
   formatter: Schema.optional(ConfigFormatterV1.Info).annotate({
     description:
-      "Enable or configure formatters. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.",
+      "Форматлагчдыг идэвхжүүлэх эсвэл тохируулна. Орхих буюу false бол идэвхгүй, true бол суурилагдсан форматлагчдыг идэвхжүүлнэ, объект бол нэмэлт тохиргоотойгоор идэвхжүүлнэ.",
   }),
   lsp: Schema.optional(ConfigLSPV1.Info).annotate({
     description:
-      "Enable or configure LSP servers. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.",
+      "LSP серверүүдийг идэвхжүүлэх эсвэл тохируулна. Орхих буюу false бол идэвхгүй, true бол суурилагдсан серверүүдийг идэвхжүүлнэ, объект бол нэмэлт тохиргоотойгоор идэвхжүүлнэ.",
   }),
   instructions: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
-    description: "Additional instruction files or patterns to include",
+    description: "Нэмэх зааврын файлууд эсвэл файлын хэвүүд",
   }),
-  layout: Schema.optional(ConfigLayoutV1.Layout).annotate({ description: "@deprecated Always uses stretch layout." }),
+  layout: Schema.optional(ConfigLayoutV1.Layout).annotate({ description: "@deprecated Үргэлж stretch байрлал ашиглана." }),
   permission: Schema.optional(ConfigPermissionV1.Info),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   attachment: Schema.optional(ConfigAttachmentV1.Info).annotate({
-    description: "Attachment processing configuration, including image size limits and resizing behavior",
+    description: "Хавсралт боловсруулах тохиргоо, үүнд зургийн хэмжээний хязгаар болон хэмжээг өөрчлөх үйлдэл багтана",
   }),
   enterprise: Schema.optional(
-    Schema.Struct({ url: Schema.optional(Schema.String).annotate({ description: "Enterprise URL" }) }),
+    Schema.Struct({ url: Schema.optional(Schema.String).annotate({ description: "Enterprise-ийн URL" }) }),
   ),
   tool_output: Schema.optional(
     Schema.Struct({
       max_lines: Schema.optional(PositiveInt).annotate({
-        description: "Maximum lines of tool output before it is truncated and saved to disk (default: 2000)",
+        description: "Хэрэгслийн гаралт таслагдаж дискэнд хадгалагдахаас өмнөх мөрийн дээд тоо (анхдагч: 2000)",
       }),
       max_bytes: Schema.optional(PositiveInt).annotate({
-        description: "Maximum bytes of tool output before it is truncated and saved to disk (default: 51200)",
+        description: "Хэрэгслийн гаралт таслагдаж дискэнд хадгалагдахаас өмнөх байтын дээд хэмжээ (анхдагч: 51200)",
       }),
     }),
   ).annotate({
     description:
-      "Thresholds for truncating tool output. When output exceeds either limit, the full text is written to the truncation directory and a preview is returned.",
+      "Хэрэгслийн гаралтыг таслах хязгаарууд. Гаралт аль нэг хязгаараас хэтэрвэл бүтэн текстийг тасалсан гаралтын хавтаст хадгалж, урьдчилж харах хэсгийг буцаана.",
   }),
   compaction: Schema.optional(
     Schema.Struct({
       auto: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable automatic compaction when context is full (default: true)",
+        description: "Контекст дүүрсэн үед автоматаар нягтруулахыг идэвхжүүлнэ (анхдагч: true)",
       }),
       prune: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable pruning of old tool outputs (default: false)",
+        description: "Хуучин хэрэгслийн гаралтыг цэвэрлэхийг идэвхжүүлнэ (анхдагч: false)",
       }),
       tail_turns: Schema.optional(NonNegativeInt).annotate({
         description:
-          "Number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction (default: 2)",
+          "Нягтруулах үед өөрчлөлтгүй хадгалах сүүлийн хэрэглэгчийн ээлжийн тоо. Үүнд дараах туслах болон хэрэгслийн хариунууд мөн багтана (анхдагч: 2)",
       }),
       preserve_recent_tokens: Schema.optional(NonNegativeInt).annotate({
-        description: "Maximum number of tokens from recent turns to preserve verbatim after compaction",
+        description: "Нягтруулсны дараа сүүлийн ээлжүүдээс өөрчлөлтгүй хадгалах токены дээд тоо",
       }),
       reserved: Schema.optional(NonNegativeInt).annotate({
-        description: "Token buffer for compaction. Leaves enough window to avoid overflow during compaction.",
+        description: "Нягтруулалтад үлдээх токены нөөц. Нягтруулах үед хэтрэлтээс сэргийлэх хангалттай контекстийн багтаамж үлдээнэ.",
       }),
     }),
   ),
   experimental: Schema.optional(
     Schema.Struct({
       disable_paste_summary: Schema.optional(Schema.Boolean),
-      batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Enable the batch tool" }),
+      batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Багц хэрэгслийг идэвхжүүлнэ" }),
       openTelemetry: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable OpenTelemetry spans for AI SDK calls (using the 'experimental_telemetry' flag)",
+        description: "AI SDK дуудлагад OpenTelemetry span идэвхжүүлнэ ('experimental_telemetry' тугийг ашиглана)",
       }),
       primary_tools: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
-        description: "Tools that should only be available to primary agents.",
+        description: "Зөвхөн үндсэн агентуудад ашиглах боломжтой хэрэгслүүд.",
       }),
       continue_loop_on_deny: Schema.optional(Schema.Boolean).annotate({
-        description: "Continue the agent loop when a tool call is denied",
+        description: "Хэрэгсэл дуудах хүсэлтийг татгалзсан үед агентын давталтыг үргэлжлүүлнэ",
       }),
       mcp_timeout: Schema.optional(PositiveInt).annotate({
-        description: "Timeout in milliseconds for model context protocol (MCP) requests",
+        description: "Model Context Protocol (MCP) хүсэлтийн миллисекундээр илэрхийлсэн хүлээлгийн хугацаа",
       }),
       policies: Schema.optional(Schema.mutable(Schema.Array(ConfigExperimental.Policy))).annotate({
-        description: "Policy statements applied to supported resources, such as provider access",
+        description: "Үйлчилгээ үзүүлэгчийн хандалт зэрэг дэмжигдсэн нөөцөд хэрэгжүүлэх бодлогын дүрмүүд",
       }),
     }),
   ),

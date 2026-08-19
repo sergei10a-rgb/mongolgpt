@@ -13,28 +13,28 @@ const AgentSchema = Schema.StructWithRest(
   Schema.Struct({
     model: Schema.optional(Schema.String),
     variant: Schema.optional(Schema.String).annotate({
-      description: "Default model variant for this agent (applies only when using the agent's configured model).",
+      description: "Энэ агентын өгөгдмөл загварын хувилбар (зөвхөн агентын тохируулсан загварыг ашиглах үед үйлчилнэ).",
     }),
     temperature: Schema.optional(Schema.Finite),
     top_p: Schema.optional(Schema.Finite),
     prompt: Schema.optional(Schema.String),
     tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
-      description: "@deprecated Use 'permission' field instead",
+      description: "@deprecated 'permission' талбарыг ашиглана уу",
     }),
     disable: Schema.optional(Schema.Boolean),
-    description: Schema.optional(Schema.String).annotate({ description: "Description of when to use the agent" }),
+    description: Schema.optional(Schema.String).annotate({ description: "Агентыг ямар үед ашиглах тухай тайлбар" }),
     mode: Schema.optional(Schema.Literals(["subagent", "primary", "all"])),
     hidden: Schema.optional(Schema.Boolean).annotate({
-      description: "Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)",
+      description: "Энэ дэд агентыг @ автоматаар гүйцээх цэснээс нуух (өгөгдмөл: false, зөвхөн mode: subagent үед үйлчилнэ)",
     }),
     options: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
     color: Schema.optional(Color).annotate({
-      description: "Hex color code (e.g., #FF5733) or theme color (e.g., primary)",
+      description: "Hex өнгөний код (жишээ нь #FF5733) эсвэл өнгөний сэдвийн утга (жишээ нь primary)",
     }),
     steps: Schema.optional(PositiveInt).annotate({
-      description: "Maximum number of agentic iterations before forcing text-only response",
+      description: "Зөвхөн текстээр хариу өгөхөөс өмнөх агентын давталтын дээд тоо",
     }),
-    maxSteps: Schema.optional(PositiveInt).annotate({ description: "@deprecated Use 'steps' field instead." }),
+    maxSteps: Schema.optional(PositiveInt).annotate({ description: "@deprecated 'steps' талбарыг ашиглана уу." }),
     permission: Schema.optional(ConfigPermissionV1.Info),
   }),
   [Schema.Record(Schema.String, Schema.Any)],

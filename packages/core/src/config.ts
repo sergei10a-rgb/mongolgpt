@@ -28,79 +28,79 @@ import { ConfigMigrateV1 } from "./v1/config/migrate"
 
 export class Info extends Schema.Class<Info>("Config.Info")({
   $schema: Schema.optional(Schema.String).annotate({
-    description: "JSON schema reference for configuration validation",
+    description: "Тохиргоог шалгахад ашиглах JSON схемийн лавлагаа",
   }),
   shell: Schema.String.pipe(Schema.optional).annotate({
-    description: "Default shell to use for terminal and shell tool execution",
+    description: "Терминал болон бүрхүүлийн хэрэгслийг ажиллуулахад ашиглах анхдагч бүрхүүл",
   }),
   model: Schema.String.pipe(Schema.optional).annotate({
-    description: "Default model to use when no session or agent model is selected",
+    description: "Сесс эсвэл агентын модел сонгоогүй үед ашиглах анхдагч модел",
   }),
   default_agent: Schema.String.pipe(Schema.optional).annotate({
-    description: "Default primary agent to use when no session agent is selected",
+    description: "Сессийн агент сонгоогүй үед ашиглах анхдагч үндсэн агент",
   }),
   autoupdate: Schema.Union([Schema.Boolean, Schema.Literal("notify")])
     .pipe(Schema.optional)
     .annotate({
-      description: "Automatically update or notify when a new version is available",
+      description: "Шинэ хувилбар гарахад автоматаар шинэчлэх эсвэл мэдэгдэл харуулах",
     }),
   share: Schema.Literals(["manual", "auto", "disabled"]).pipe(Schema.optional).annotate({
-    description: "Control whether sessions may be shared manually, automatically, or not at all",
+    description: "Сессийг гараар, автоматаар эсвэл огт хуваалцахгүй байх горимыг удирдана",
   }),
   enterprise: Schema.Struct({
     url: Schema.String.pipe(Schema.optional),
   })
     .pipe(Schema.optional)
     .annotate({
-      description: "Enterprise sharing service configuration",
+      description: "Байгууллагын хуваалцах үйлчилгээний тохиргоо",
     }),
   username: Schema.String.pipe(Schema.optional).annotate({
-    description: "Username displayed in conversations and used for telemetry identity",
+    description: "Харилцан ярианд харагдах бөгөөд телеметрийн таних мэдээлэлд ашиглах хэрэглэгчийн нэр",
   }),
   permissions: Permission.Ruleset.pipe(Schema.optional).annotate({
-    description: "Ordered tool permission rules applied to agent tool use",
+    description: "Агент хэрэгсэл ашиглахад үйлчлэх эрэмбэлсэн зөвшөөрлийн дүрмүүд",
   }),
   agents: Schema.Record(Schema.String, ConfigAgent.Info).pipe(Schema.optional).annotate({
-    description: "Named built-in agent overrides and custom agent definitions",
+    description: "Нэр өгсөн суурилагдсан агентын өөрчлөлтүүд болон тусгай агентын тодорхойлолтууд",
   }),
   snapshots: Schema.Boolean.pipe(Schema.optional).annotate({
-    description: "Enable snapshots used for undo and revert behavior",
+    description: "Буцаах үйлдэлд ашиглах төлөвийн агшнуудыг идэвхжүүлнэ",
   }),
   watcher: ConfigWatcher.Info.pipe(Schema.optional).annotate({
-    description: "Filesystem watcher configuration",
+    description: "Файлын системийн ажиглагчийн тохиргоо",
   }),
   formatter: ConfigFormatter.Info.pipe(Schema.optional).annotate({
-    description: "Enable built-in formatters or configure formatter overrides",
+    description: "Суурилагдсан форматлагчийг идэвхжүүлэх эсвэл форматлагчийн өөрчлөлтийг тохируулна",
   }),
   lsp: ConfigLSP.Info.pipe(Schema.optional).annotate({
-    description: "Enable built-in language servers or configure server overrides",
+    description: "Суурилагдсан хэлний серверийг идэвхжүүлэх эсвэл серверийн өөрчлөлтийг тохируулна",
   }),
   attachments: ConfigAttachments.Info.pipe(Schema.optional).annotate({
-    description: "Attachment processing configuration",
+    description: "Хавсралт боловсруулах тохиргоо",
   }),
   tool_output: ConfigToolOutput.Info.pipe(Schema.optional).annotate({
-    description: "Tool output truncation thresholds",
+    description: "Хэрэгслийн гаралтыг тайрах хязгаарууд",
   }),
   mcp: ConfigMCP.Info.pipe(Schema.optional).annotate({
-    description: "MCP server configuration",
+    description: "MCP серверийн тохиргоо",
   }),
   compaction: ConfigCompaction.Info.pipe(Schema.optional).annotate({
-    description: "Conversation compaction behavior",
+    description: "Харилцан яриаг хураангуйлан нягтруулах тохиргоо",
   }),
   skills: Schema.String.pipe(Schema.Array, Schema.optional).annotate({
-    description: "Additional paths or URLs to discover skills from",
+    description: "Ур чадвар илрүүлэх нэмэлт зам эсвэл URL-ууд",
   }),
   commands: Schema.Record(Schema.String, ConfigCommand.Info).pipe(Schema.optional).annotate({
-    description: "Named slash command definitions",
+    description: "Нэр өгсөн налуу зурааст командын тодорхойлолтууд",
   }),
   instructions: Schema.String.pipe(Schema.Array, Schema.optional).annotate({
-    description: "Additional paths or URLs supplying ambient instructions",
+    description: "Нэмэлт заавар өгөх зам эсвэл URL-ууд",
   }),
   references: ConfigReference.Info.pipe(Schema.optional).annotate({
-    description: "Named local directories or Git repositories available as external context",
+    description: "Гадаад контекст болгон ашиглах нэр өгсөн дотоод сангууд эсвэл Git репозиториуд",
   }),
   plugins: ConfigPlugin.Plugins.pipe(Schema.optional).annotate({
-    description: "Ordered external plugin packages to load",
+    description: "Ачаалах гадаад залгаасын багцуудын дараалал",
   }),
   experimental: ConfigExperimental.Experimental.pipe(Schema.optional),
   providers: Schema.Record(Schema.String, ConfigProvider.Info).pipe(Schema.optional),

@@ -65,11 +65,11 @@ export const Model = Schema.Struct({
       Schema.String,
       Schema.StructWithRest(
         Schema.Struct({
-          disabled: Schema.optional(Schema.Boolean).annotate({ description: "Disable this variant for the model" }),
+          disabled: Schema.optional(Schema.Boolean).annotate({ description: "Энэ загварын хувилбарыг идэвхгүй болгох" }),
         }),
         [Schema.Record(Schema.String, Schema.Any)],
       ),
-    ).annotate({ description: "Variant-specific configuration" }),
+    ).annotate({ description: "Хувилбар тус бүрийн тохиргоо" }),
   ),
 })
 
@@ -87,30 +87,30 @@ export const Info = Schema.Struct({
         apiKey: Schema.optional(Schema.String),
         baseURL: Schema.optional(Schema.String),
         enterpriseUrl: Schema.optional(Schema.String).annotate({
-          description: "GitHub Enterprise URL for copilot authentication",
+          description: "Copilot танин баталгаажуулалтад ашиглах GitHub Enterprise URL",
         }),
         setCacheKey: Schema.optional(Schema.Boolean).annotate({
-          description: "Enable promptCacheKey for this provider (default false)",
+          description: "Энэ үйлчилгээ үзүүлэгчид promptCacheKey-г идэвхжүүлэх (өгөгдмөл: false)",
         }),
         timeout: Schema.optional(
           Schema.Union([PositiveInt, Schema.Literal(false)]).annotate({
-            description: "Timeout in milliseconds for full requests to this provider. Set to false to disable timeout.",
+            description: "Энэ үйлчилгээ үзүүлэгчид илгээх бүтэн хүсэлтийн хүлээлгийн хугацаа, миллисекундээр. false утга өгвөл хүлээлгийн хугацааг идэвхгүй болгоно.",
           }),
         ).annotate({
-          description: "Timeout in milliseconds for full requests to this provider. Set to false to disable timeout.",
+          description: "Энэ үйлчилгээ үзүүлэгчид илгээх бүтэн хүсэлтийн хүлээлгийн хугацаа, миллисекундээр. false утга өгвөл хүлээлгийн хугацааг идэвхгүй болгоно.",
         }),
         headerTimeout: Schema.optional(
           Schema.Union([PositiveInt, Schema.Literal(false)]).annotate({
             description:
-              "Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout.",
+              "Хариуны толгой хэсгийг хүлээх хугацаа, миллисекундээр. Үйлчилгээ үзүүлэгчийн холболт өгөгдмөл утга тохируулж болно. false утга өгвөл хүлээлгийн хугацааг идэвхгүй болгоно.",
           }),
         ).annotate({
           description:
-            "Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout.",
+            "Хариуны толгой хэсгийг хүлээх хугацаа, миллисекундээр. Үйлчилгээ үзүүлэгчийн холболт өгөгдмөл утга тохируулж болно. false утга өгвөл хүлээлгийн хугацааг идэвхгүй болгоно.",
         }),
         chunkTimeout: Schema.optional(PositiveInt).annotate({
           description:
-            "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted.",
+            "Энэ үйлчилгээ үзүүлэгчийн дамжуулж буй SSE хэсгүүдийн хооронд зөвшөөрөх хугацаа, миллисекундээр. Энэ хугацаанд ямар ч хэсэг ирэхгүй бол хүсэлтийг цуцална.",
         }),
       }),
       [Schema.Record(Schema.String, Schema.Any)],
