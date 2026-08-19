@@ -603,7 +603,7 @@
               }
             }
           ],
-          "description": "Debug самбарыг асаах/унтраах"
+          "description": "Дибагийн самбарыг асаах/унтраах"
         },
         "app_console": {
           "anyOf": [
@@ -999,7 +999,7 @@
               }
             }
           ],
-          "description": "Heap snapshot бичих"
+          "description": "Овоолгын агшны зургийг бичих"
         },
         "app_toggle_animations": {
           "anyOf": [
@@ -1593,7 +1593,7 @@
               }
             }
           ],
-          "description": "Diff мөр боолтыг асаах/унтраах"
+          "description": "Өөрчлөлтийн мөр хуваалтыг асаах/унтраах"
         },
         "app_toggle_paste_summary": {
           "anyOf": [
@@ -2385,7 +2385,7 @@
               }
             }
           ],
-          "description": "Тусламжийн dialog нээх"
+          "description": "Тусламжийн харилцах цонх нээх"
         },
         "docs_open": {
           "anyOf": [
@@ -2781,7 +2781,7 @@
               }
             }
           ],
-          "description": "Diff харагч нээх"
+          "description": "Өөрчлөлт харагч нээх"
         },
         "diff_close": {
           "anyOf": [
@@ -2979,7 +2979,7 @@
               }
             }
           ],
-          "description": "Diff харагч хаах"
+          "description": "Өөрчлөлт харагч хаах"
         },
         "diff_toggle": {
           "anyOf": [
@@ -3177,7 +3177,7 @@
               }
             }
           ],
-          "description": "Diff харагчийн мөрийг нээх/хаах"
+          "description": "Өөрчлөлт харагчийн мөрийг нээх/хаах"
         },
         "diff_expand": {
           "anyOf": [
@@ -3375,7 +3375,7 @@
               }
             }
           ],
-          "description": "Diff харагчийн мөрийг дэлгэх"
+          "description": "Өөрчлөлт харагчийн мөрийг дэлгэх"
         },
         "diff_expand_all": {
           "anyOf": [
@@ -3573,7 +3573,7 @@
               }
             }
           ],
-          "description": "Diff харагчийн бүх хавтсыг дэлгэх"
+          "description": "Өөрчлөлт харагчийн бүх хавтсыг дэлгэх"
         },
         "diff_collapse": {
           "anyOf": [
@@ -3771,7 +3771,7 @@
               }
             }
           ],
-          "description": "Diff харагчийн мөрийг хураах"
+          "description": "Өөрчлөлт харагчийн мөрийг хураах"
         },
         "diff_switch_focus": {
           "anyOf": [
@@ -3969,7 +3969,7 @@
               }
             }
           ],
-          "description": "Diff харагчийн фокус солих"
+          "description": "Өөрчлөлт харагчийн идэвхтэй хэсгийг солих"
         },
         "diff_next_hunk": {
           "anyOf": [
@@ -4167,7 +4167,7 @@
               }
             }
           ],
-          "description": "Дараагийн diff hunk руу очих"
+          "description": "Дараагийн өөрчлөлтийн хэсэг рүү очих"
         },
         "diff_previous_hunk": {
           "anyOf": [
@@ -4365,7 +4365,7 @@
               }
             }
           ],
-          "description": "Өмнөх diff hunk руу очих"
+          "description": "Өмнөх өөрчлөлтийн хэсэг рүү очих"
         },
         "diff_next_file": {
           "anyOf": [
@@ -4563,7 +4563,7 @@
               }
             }
           ],
-          "description": "Дараагийн diff файл руу очих"
+          "description": "Дараагийн өөрчлөлтийн файл руу очих"
         },
         "diff_previous_file": {
           "anyOf": [
@@ -4761,7 +4761,7 @@
               }
             }
           ],
-          "description": "Өмнөх diff файл руу очих"
+          "description": "Өмнөх өөрчлөлтийн файл руу очих"
         },
         "diff_toggle_file_tree": {
           "anyOf": [
@@ -4959,7 +4959,7 @@
               }
             }
           ],
-          "description": "Diff харагчийн файлын модыг асаах/унтраах"
+          "description": "Өөрчлөлт харагчийн файлын модыг асаах/унтраах"
         },
         "diff_single_patch": {
           "anyOf": [
@@ -5157,7 +5157,7 @@
               }
             }
           ],
-          "description": "Нэг patch харагдацыг асаах/унтраах"
+          "description": "Нэг өөрчлөлтийн хэсгийн харагдацыг асаах/унтраах"
         },
         "diff_switch_source": {
           "anyOf": [
@@ -5355,7 +5355,7 @@
               }
             }
           ],
-          "description": "Diff эх сурвалж солих"
+          "description": "Өөрчлөлтийн эх сурвалж солих"
         },
         "diff_toggle_view": {
           "anyOf": [
@@ -5553,7 +5553,7 @@
               }
             }
           ],
-          "description": "Diff харагдацыг split/unified хооронд солих"
+          "description": "Өөрчлөлтийг хувааж/нэгтгэж харах горимыг солих"
         },
         "diff_help": {
           "anyOf": [
@@ -5751,7 +5751,7 @@
               }
             }
           ],
-          "description": "Diff харагчийн нэмэлт shortcut харуулах"
+          "description": "Өөрчлөлт харагчийн нэмэлт товчны хослолыг харуулах"
         },
         "editor_open": {
           "anyOf": [
@@ -5949,7 +5949,7 @@
               }
             }
           ],
-          "description": "Гадаад editor нээх"
+          "description": "Гадаад засварлагч нээх"
         },
         "theme_list": {
           "anyOf": [
@@ -6147,7 +6147,7 @@
               }
             }
           ],
-          "description": "Боломжит theme-үүдийг жагсаах"
+          "description": "Боломжит өнгөний сэдвүүдийг жагсаах"
         },
         "theme_switch_mode": {
           "anyOf": [
@@ -6345,7 +6345,7 @@
               }
             }
           ],
-          "description": "Гэрэл/бараан theme горим солих"
+          "description": "Гэрэл/бараан өнгөний сэдэв солих"
         },
         "theme_mode_lock": {
           "anyOf": [
@@ -6543,7 +6543,7 @@
               }
             }
           ],
-          "description": "Theme горимыг түгжих эсвэл тайлах"
+          "description": "Өнгөний сэдвийн горимыг түгжих эсвэл тайлах"
         },
         "sidebar_toggle": {
           "anyOf": [
@@ -6939,7 +6939,7 @@
               }
             }
           ],
-          "description": "Сешний scrollbar-ыг асаах/унтраах"
+          "description": "Сешний гүйлгүүрийг асаах/унтраах"
         },
         "status_view": {
           "anyOf": [
@@ -7335,7 +7335,7 @@
               }
             }
           ],
-          "description": "Сешнийг editor руу export хийх"
+          "description": "Сешнийг засварлагч руу экспортлох"
         },
         "session_copy": {
           "anyOf": [
@@ -7533,7 +7533,7 @@
               }
             }
           ],
-          "description": "Сешний transcript хуулах"
+          "description": "Сешний бичлэгийг хуулах"
         },
         "session_move": {
           "anyOf": [
@@ -9711,7 +9711,7 @@
               }
             }
           ],
-          "description": "Синхрон subagent-уудыг арын горимд шилжүүлэх"
+          "description": "Синхрон дэд агентуудыг арын горимд шилжүүлэх"
         },
         "session_compact": {
           "anyOf": [
@@ -10305,7 +10305,7 @@
               }
             }
           ],
-          "description": "Ерөнхий tool output-ыг асаах/унтраах"
+          "description": "Ерөнхий хэрэгслийн гаралтыг асаах/унтраах"
         },
         "session_queued_prompts": {
           "anyOf": [
@@ -10503,7 +10503,7 @@
               }
             }
           ],
-          "description": "Дараалалд буй prompt-уудыг удирдах"
+          "description": "Дараалалд буй хүсэлтүүдийг удирдах"
         },
         "session_child_first": {
           "anyOf": [
@@ -10701,7 +10701,7 @@
               }
             }
           ],
-          "description": "Эхний child сешн рүү очих"
+          "description": "Эхний дэд сешн рүү очих"
         },
         "session_child_cycle": {
           "anyOf": [
@@ -10899,7 +10899,7 @@
               }
             }
           ],
-          "description": "Дараагийн child сешн рүү очих"
+          "description": "Дараагийн дэд сешн рүү очих"
         },
         "session_child_cycle_reverse": {
           "anyOf": [
@@ -11097,7 +11097,7 @@
               }
             }
           ],
-          "description": "Өмнөх child сешн рүү очих"
+          "description": "Өмнөх дэд сешн рүү очих"
         },
         "session_parent": {
           "anyOf": [
@@ -11295,7 +11295,7 @@
               }
             }
           ],
-          "description": "Parent сешн рүү очих"
+          "description": "Эцэг сешн рүү очих"
         },
         "session_pin_toggle": {
           "anyOf": [
@@ -11493,7 +11493,7 @@
               }
             }
           ],
-          "description": "Сешний жагсаалтад сешнийг pin/unpin хийх"
+          "description": "Сешний жагсаалтад сешнийг тогтоох/чөлөөлөх"
         },
         "session_quick_switch_1": {
           "anyOf": [
@@ -11691,7 +11691,7 @@
               }
             }
           ],
-          "description": "Quick slot 1 дэх сешн рүү шилжих"
+          "description": "Шуурхай байрлал 1-ийн сешн рүү шилжих"
         },
         "session_quick_switch_2": {
           "anyOf": [
@@ -11889,7 +11889,7 @@
               }
             }
           ],
-          "description": "Quick slot 2 дахь сешн рүү шилжих"
+          "description": "Шуурхай байрлал 2-ын сешн рүү шилжих"
         },
         "session_quick_switch_3": {
           "anyOf": [
@@ -12087,7 +12087,7 @@
               }
             }
           ],
-          "description": "Quick slot 3 дахь сешн рүү шилжих"
+          "description": "Шуурхай байрлал 3-ын сешн рүү шилжих"
         },
         "session_quick_switch_4": {
           "anyOf": [
@@ -12285,7 +12285,7 @@
               }
             }
           ],
-          "description": "Quick slot 4 дэх сешн рүү шилжих"
+          "description": "Шуурхай байрлал 4-ийн сешн рүү шилжих"
         },
         "session_quick_switch_5": {
           "anyOf": [
@@ -12483,7 +12483,7 @@
               }
             }
           ],
-          "description": "Quick slot 5 дахь сешн рүү шилжих"
+          "description": "Шуурхай байрлал 5-ын сешн рүү шилжих"
         },
         "session_quick_switch_6": {
           "anyOf": [
@@ -12681,7 +12681,7 @@
               }
             }
           ],
-          "description": "Quick slot 6 дахь сешн рүү шилжих"
+          "description": "Шуурхай байрлал 6-ын сешн рүү шилжих"
         },
         "session_quick_switch_7": {
           "anyOf": [
@@ -12879,7 +12879,7 @@
               }
             }
           ],
-          "description": "Quick slot 7 дахь сешн рүү шилжих"
+          "description": "Шуурхай байрлал 7-ын сешн рүү шилжих"
         },
         "session_quick_switch_8": {
           "anyOf": [
@@ -13077,7 +13077,7 @@
               }
             }
           ],
-          "description": "Quick slot 8 дахь сешн рүү шилжих"
+          "description": "Шуурхай байрлал 8-ын сешн рүү шилжих"
         },
         "session_quick_switch_9": {
           "anyOf": [
@@ -13275,7 +13275,7 @@
               }
             }
           ],
-          "description": "Quick slot 9 дэх сешн рүү шилжих"
+          "description": "Шуурхай байрлал 9-ийн сешн рүү шилжих"
         },
         "stash_delete": {
           "anyOf": [
@@ -13473,7 +13473,7 @@
               }
             }
           ],
-          "description": "Stash бичлэг устгах"
+          "description": "Хадгалсан хүсэлтийн бичлэг устгах"
         },
         "model_provider_list": {
           "anyOf": [
@@ -13671,7 +13671,7 @@
               }
             }
           ],
-          "description": "Загварын dialog-оос provider жагсаалт нээх"
+          "description": "Загварын харилцах цонхноос үйлчилгээ үзүүлэгчдийн жагсаалт нээх"
         },
         "model_favorite_toggle": {
           "anyOf": [
@@ -13869,7 +13869,7 @@
               }
             }
           ],
-          "description": "Загварын favorite төлөв солих"
+          "description": "Загварын дуртай төлөвийг солих"
         },
         "model_list": {
           "anyOf": [
@@ -15255,7 +15255,7 @@
               }
             }
           ],
-          "description": "Provider холбох"
+          "description": "Үйлчилгээ үзүүлэгч холбох"
         },
         "console_org_switch": {
           "anyOf": [
@@ -16245,7 +16245,7 @@
               }
             }
           ],
-          "description": "Загварын variant-уудаар эргүүлэх"
+          "description": "Загварын хувилбаруудаар эргүүлэх"
         },
         "variant_list": {
           "anyOf": [
@@ -16443,7 +16443,7 @@
               }
             }
           ],
-          "description": "Загварын variant-уудыг жагсаах"
+          "description": "Загварын хувилбаруудыг жагсаах"
         },
         "messages_page_up": {
           "anyOf": [
@@ -19413,7 +19413,7 @@
               }
             }
           ],
-          "description": "Зурвас дахь code block нуух горимыг асаах/унтраах"
+          "description": "Зурвас дахь кодын хэсэг нуух горимыг асаах/унтраах"
         },
         "tool_details": {
           "anyOf": [
@@ -19611,7 +19611,7 @@
               }
             }
           ],
-          "description": "Tool дэлгэрэнгүй харагдацыг асаах/унтраах"
+          "description": "Хэрэгслийн дэлгэрэнгүй харагдацыг асаах/унтраах"
         },
         "display_thinking": {
           "anyOf": [
@@ -19809,7 +19809,7 @@
               }
             }
           ],
-          "description": "Бодолтын block харагдацыг асаах/унтраах"
+          "description": "Бодолтын хэсгийн харагдацыг асаах/унтраах"
         },
         "prompt_submit": {
           "anyOf": [
@@ -20007,7 +20007,7 @@
               }
             }
           ],
-          "description": "Prompt илгээх"
+          "description": "Хүсэлт илгээх"
         },
         "prompt_editor_context_clear": {
           "anyOf": [
@@ -20205,7 +20205,7 @@
               }
             }
           ],
-          "description": "Editor context цэвэрлэх"
+          "description": "Засварлагчийн агуулгыг цэвэрлэх"
         },
         "prompt_skills": {
           "anyOf": [
@@ -20403,7 +20403,7 @@
               }
             }
           ],
-          "description": "Skill сонгогч нээх"
+          "description": "Ур чадвар сонгогч нээх"
         },
         "prompt_stash": {
           "anyOf": [
@@ -20601,7 +20601,7 @@
               }
             }
           ],
-          "description": "Prompt stash хийх"
+          "description": "Хүсэлтийг хадгалах"
         },
         "prompt_stash_pop": {
           "anyOf": [
@@ -20799,7 +20799,7 @@
               }
             }
           ],
-          "description": "Stash хийсэн prompt сэргээх"
+          "description": "Хадгалсан хүсэлтийг сэргээх"
         },
         "prompt_stash_list": {
           "anyOf": [
@@ -20997,7 +20997,7 @@
               }
             }
           ],
-          "description": "Stash хийсэн prompt-уудыг жагсаах"
+          "description": "Хадгалсан хүсэлтүүдийг жагсаах"
         },
         "workspace_set": {
           "anyOf": [
@@ -21591,7 +21591,7 @@
               }
             }
           ],
-          "description": "Clipboard-оос наах"
+          "description": "Түр санах ойгоос наах"
         },
         "input_submit": {
           "anyOf": [
@@ -22185,7 +22185,7 @@
               }
             }
           ],
-          "description": "Оролт дахь cursor-ыг зүүн тийш хөдөлгөх"
+          "description": "Оролт дахь заагчийг зүүн тийш хөдөлгөх"
         },
         "input_move_right": {
           "anyOf": [
@@ -22383,7 +22383,7 @@
               }
             }
           ],
-          "description": "Оролт дахь cursor-ыг баруун тийш хөдөлгөх"
+          "description": "Оролт дахь заагчийг баруун тийш хөдөлгөх"
         },
         "input_move_up": {
           "anyOf": [
@@ -22581,7 +22581,7 @@
               }
             }
           ],
-          "description": "Оролт дахь cursor-ыг дээш хөдөлгөх"
+          "description": "Оролт дахь заагчийг дээш хөдөлгөх"
         },
         "input_move_down": {
           "anyOf": [
@@ -22779,7 +22779,7 @@
               }
             }
           ],
-          "description": "Оролт дахь cursor-ыг доош хөдөлгөх"
+          "description": "Оролт дахь заагчийг доош хөдөлгөх"
         },
         "input_select_left": {
           "anyOf": [
@@ -25353,7 +25353,7 @@
               }
             }
           ],
-          "description": "Оролтын buffer-ийн эхэнд очих"
+          "description": "Оролтын түр санах ойн эхэнд очих"
         },
         "input_buffer_end": {
           "anyOf": [
@@ -25551,7 +25551,7 @@
               }
             }
           ],
-          "description": "Оролтын buffer-ийн төгсгөлд очих"
+          "description": "Оролтын түр санах ойн төгсгөлд очих"
         },
         "input_select_buffer_home": {
           "anyOf": [
@@ -25749,7 +25749,7 @@
               }
             }
           ],
-          "description": "Оролтын buffer-ийн эхлэл хүртэл сонгох"
+          "description": "Оролтын түр санах ойн эхлэл хүртэл сонгох"
         },
         "input_select_buffer_end": {
           "anyOf": [
@@ -25947,7 +25947,7 @@
               }
             }
           ],
-          "description": "Оролтын buffer-ийн төгсгөл хүртэл сонгох"
+          "description": "Оролтын түр санах ойн төгсгөл хүртэл сонгох"
         },
         "input_delete_line": {
           "anyOf": [
@@ -26739,7 +26739,7 @@
               }
             }
           ],
-          "description": "Оролтод backspace хийх"
+          "description": "Оролтын өмнөх тэмдэгтийг устгах"
         },
         "input_delete": {
           "anyOf": [
@@ -29313,7 +29313,7 @@
               }
             }
           ],
-          "description": "Dialog-ийн өмнөх мөр рүү шилжих"
+          "description": "Харилцах цонхны өмнөх мөр рүү шилжих"
         },
         "dialog.select.next": {
           "anyOf": [
@@ -29511,7 +29511,7 @@
               }
             }
           ],
-          "description": "Dialog-ийн дараагийн мөр рүү шилжих"
+          "description": "Харилцах цонхны дараагийн мөр рүү шилжих"
         },
         "dialog.select.page_up": {
           "anyOf": [
@@ -29709,7 +29709,7 @@
               }
             }
           ],
-          "description": "Dialog дотор нэг хуудсаар дээш шилжих"
+          "description": "Харилцах цонхонд нэг хуудсаар дээш шилжих"
         },
         "dialog.select.page_down": {
           "anyOf": [
@@ -29907,7 +29907,7 @@
               }
             }
           ],
-          "description": "Dialog дотор нэг хуудсаар доош шилжих"
+          "description": "Харилцах цонхонд нэг хуудсаар доош шилжих"
         },
         "dialog.select.home": {
           "anyOf": [
@@ -30105,7 +30105,7 @@
               }
             }
           ],
-          "description": "Dialog-ийн эхний мөр рүү очих"
+          "description": "Харилцах цонхны эхний мөр рүү очих"
         },
         "dialog.select.end": {
           "anyOf": [
@@ -30303,7 +30303,7 @@
               }
             }
           ],
-          "description": "Dialog-ийн сүүлийн мөр рүү очих"
+          "description": "Харилцах цонхны сүүлийн мөр рүү очих"
         },
         "dialog.select.submit": {
           "anyOf": [
@@ -30501,7 +30501,7 @@
               }
             }
           ],
-          "description": "Сонгосон dialog мөрийг илгээх"
+          "description": "Сонгосон харилцах цонхны мөрийг илгээх"
         },
         "dialog.prompt.submit": {
           "anyOf": [
@@ -30699,7 +30699,7 @@
               }
             }
           ],
-          "description": "Dialog prompt илгээх"
+          "description": "Харилцах цонхны хүсэлтийг илгээх"
         },
         "dialog.mcp.toggle": {
           "anyOf": [
@@ -30897,7 +30897,7 @@
               }
             }
           ],
-          "description": "MCP dialog дотор MCP асаах/унтраах"
+          "description": "MCP харилцах цонхонд MCP асаах/унтраах"
         },
         "dialog.move_session.new": {
           "anyOf": [
@@ -31095,7 +31095,7 @@
               }
             }
           ],
-          "description": "Шинэ project хуулбар"
+          "description": "Шинэ төслийн хуулбар үүсгэх"
         },
         "dialog.move_session.delete": {
           "anyOf": [
@@ -31293,7 +31293,7 @@
               }
             }
           ],
-          "description": "Project хуулбар устгах"
+          "description": "Төслийн хуулбарыг устгах"
         },
         "dialog.move_session.refresh": {
           "anyOf": [
@@ -31491,7 +31491,7 @@
               }
             }
           ],
-          "description": "Project хуулбаруудыг шинэчлэх"
+          "description": "Төслийн хуулбаруудыг шинэчлэх"
         },
         "prompt.autocomplete.prev": {
           "anyOf": [
@@ -31689,7 +31689,7 @@
               }
             }
           ],
-          "description": "Autocomplete-ийн өмнөх мөр рүү шилжих"
+          "description": "Автоматаар бөглөх жагсаалтын өмнөх мөр рүү шилжих"
         },
         "prompt.autocomplete.next": {
           "anyOf": [
@@ -31887,7 +31887,7 @@
               }
             }
           ],
-          "description": "Autocomplete-ийн дараагийн мөр рүү шилжих"
+          "description": "Автоматаар бөглөх жагсаалтын дараагийн мөр рүү шилжих"
         },
         "prompt.autocomplete.hide": {
           "anyOf": [
@@ -32085,7 +32085,7 @@
               }
             }
           ],
-          "description": "Autocomplete нуух"
+          "description": "Автоматаар бөглөх жагсаалтыг нуух"
         },
         "prompt.autocomplete.select": {
           "anyOf": [
@@ -32283,7 +32283,7 @@
               }
             }
           ],
-          "description": "Autocomplete мөр сонгох"
+          "description": "Автоматаар бөглөх мөр сонгох"
         },
         "prompt.autocomplete.complete": {
           "anyOf": [
@@ -32481,7 +32481,7 @@
               }
             }
           ],
-          "description": "Autocomplete мөрийг гүйцээх"
+          "description": "Автоматаар бөглөх мөрийг гүйцээх"
         },
         "permission.prompt.fullscreen": {
           "anyOf": [
@@ -32679,7 +32679,7 @@
               }
             }
           ],
-          "description": "Permission prompt-ыг fullscreen болгох/болих"
+          "description": "Зөвшөөрлийн хүсэлтийг бүтэн дэлгэцээр харуулах/болих"
         },
         "plugins.toggle": {
           "anyOf": [
@@ -32877,7 +32877,7 @@
               }
             }
           ],
-          "description": "Plugin асаах/унтраах"
+          "description": "Нэмэлтийг асаах/унтраах"
         },
         "dialog.plugins.install": {
           "anyOf": [
@@ -33075,7 +33075,7 @@
               }
             }
           ],
-          "description": "Plugin dialog-оос plugin суулгах"
+          "description": "Нэмэлтийн харилцах цонхноос нэмэлт суулгах"
         },
         "terminal_suspend": {
           "anyOf": [
@@ -33273,7 +33273,7 @@
               }
             }
           ],
-          "description": "Terminal түр зогсоох"
+          "description": "Терминалыг түр зогсоох"
         },
         "terminal_title_toggle": {
           "anyOf": [
@@ -33471,7 +33471,7 @@
               }
             }
           ],
-          "description": "Terminal гарчгийг асаах/унтраах"
+          "description": "Терминалын гарчгийг асаах/унтраах"
         },
         "tips_toggle": {
           "anyOf": [
@@ -33867,7 +33867,7 @@
               }
             }
           ],
-          "description": "Plugin manager dialog нээх"
+          "description": "Нэмэлтийн удирдлагын харилцах цонх нээх"
         },
         "plugin_install": {
           "anyOf": [
@@ -34065,7 +34065,7 @@
               }
             }
           ],
-          "description": "Plugin суулгах"
+          "description": "Нэмэлт суулгах"
         },
         "which_key_toggle": {
           "anyOf": [
@@ -34461,7 +34461,7 @@
               }
             }
           ],
-          "description": "Which-key layout солих"
+          "description": "Which-key байрлал солих"
         },
         "which_key_pending_toggle": {
           "anyOf": [
@@ -34659,7 +34659,7 @@
               }
             }
           ],
-          "description": "Which-key pending preview асаах/унтраах"
+          "description": "Which-key хүлээгдэж буй урьдчилан харахыг асаах/унтраах"
         },
         "which_key_group_previous": {
           "anyOf": [
@@ -36045,7 +36045,7 @@
               }
             }
           ],
-          "description": "Эхний which-key binding руу очих"
+          "description": "Эхний which-key товчны хослол руу очих"
         },
         "which_key_end": {
           "anyOf": [
@@ -36243,11 +36243,11 @@
               }
             }
           ],
-          "description": "Сүүлийн which-key binding руу очих"
+          "description": "Сүүлийн which-key товчны хослол руу очих"
         }
       },
       "additionalProperties": false,
-      "description": "TUI keybinding өөрчлөлтүүд"
+      "description": "TUI товчны хослолын өөрчлөлтүүд"
     },
     "plugin": {
       "type": "array",
@@ -36280,7 +36280,7 @@
     },
     "leader_timeout": {
       "exclusiveMinimum": 0,
-      "description": "Leader key timeout in milliseconds",
+      "description": "Удирдах товчны хүлээлгийн хугацаа (миллисекунд)",
       "type": "integer",
       "maximum": 9007199254740991
     },
@@ -36358,7 +36358,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Attention notification and sound settings"
+      "description": "Анхааруулга болон дууны тохиргоо"
     },
     "prompt": {
       "type": "object",
@@ -36367,7 +36367,7 @@
           "exclusiveMinimum": 0,
           "type": "integer",
           "maximum": 9007199254740991,
-          "description": "Prompt textarea max height"
+          "description": "Хүсэлт оруулах талбарын дээд өндөр"
         },
         "max_width": {
           "anyOf": [
@@ -36383,11 +36383,11 @@
               ]
             }
           ],
-          "description": "Home prompt max width: a positive integer for a fixed cap, or 'auto' to scale with terminal width"
+          "description": "Нүүрийн хүсэлт оруулах талбарын дээд өргөн: тогтмол хязгаарт эерэг бүхэл тоо, эсвэл терминалын өргөнд тааруулахын тулд 'auto'"
         }
       },
       "additionalProperties": false,
-      "description": "Prompt size settings"
+      "description": "Хүсэлт оруулах талбарын хэмжээний тохиргоо"
     },
     "scroll_speed": {
       "minimum": 0.001,
@@ -36414,21 +36414,21 @@
           ]
         }
       ],
-      "description": "TUI scroll speed"
+      "description": "TUI гүйлгэх хурд"
     },
     "scroll_acceleration": {
       "type": "object",
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enable scroll acceleration"
+          "description": "Гүйлгэх хурдасгуурыг идэвхжүүлэх"
         }
       },
       "required": [
         "enabled"
       ],
       "additionalProperties": false,
-      "description": "Scroll acceleration settings"
+      "description": "Гүйлгэх хурдасгуурын тохиргоо"
     },
     "diff_style": {
       "type": "string",
@@ -36436,11 +36436,11 @@
         "auto",
         "stacked"
       ],
-      "description": "Control diff rendering style: 'auto' adapts to terminal width, 'stacked' always shows single column"
+      "description": "Өөрчлөлтийн ялгааг харуулах хэлбэр: 'auto' нь терминалын өргөнд таарна, 'stacked' нь үргэлж нэг баганаар харуулна"
     },
     "mouse": {
       "type": "boolean",
-      "description": "Enable or disable mouse capture (default: true)"
+      "description": "Хулганы удирдлагыг асаах эсвэл унтраах (анхдагч: true)"
     }
   },
   "additionalProperties": false,

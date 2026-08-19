@@ -4,29 +4,29 @@
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "JSON schema reference for configuration validation"
+      "description": "Тохиргоог шалгахад ашиглах JSON схемийн лавлагаа"
     },
     "defs": {
       "type": "object",
-      "description": "Color definitions that can be referenced in the theme",
+      "description": "Сэдэвт лавлаж болох өнгөний тодорхойлолтууд",
       "patternProperties": {
         "^[a-zA-Z][a-zA-Z0-9_]*$": {
           "oneOf": [
             {
               "type": "string",
               "pattern": "^#[0-9a-fA-F]{6}$",
-              "description": "Hex color value"
+              "description": "Hex өнгөний утга"
             },
             {
               "type": "integer",
               "minimum": 0,
               "maximum": 255,
-              "description": "ANSI color code (0-255)"
+              "description": "ANSI өнгөний код (0-255)"
             },
             {
               "type": "string",
               "enum": ["none"],
-              "description": "No color (uses terminal default)"
+              "description": "Өнгөгүй (терминалын өгөгдмөл өнгийг ашиглана)"
             }
           ]
         }
@@ -35,7 +35,7 @@
     },
     "theme": {
       "type": "object",
-      "description": "Theme color definitions",
+      "description": "Сэдвийн өнгөний тодорхойлолтууд",
       "properties": {
         "primary": { "$ref": "#/definitions/colorValue" },
         "secondary": { "$ref": "#/definitions/colorValue" },
@@ -101,23 +101,23 @@
         {
           "type": "string",
           "pattern": "^#[0-9a-fA-F]{6}$",
-          "description": "Hex color value (same for dark and light)"
+          "description": "Hex өнгөний утга (бараан болон цайвар горимд ижил)"
         },
         {
           "type": "integer",
           "minimum": 0,
           "maximum": 255,
-          "description": "ANSI color code (0-255, same for dark and light)"
+          "description": "ANSI өнгөний код (0-255, бараан болон цайвар горимд ижил)"
         },
         {
           "type": "string",
           "enum": ["none"],
-          "description": "No color (uses terminal default)"
+          "description": "Өнгөгүй (терминалын өгөгдмөл өнгийг ашиглана)"
         },
         {
           "type": "string",
           "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
-          "description": "Reference to another color in the theme or defs"
+          "description": "Сэдэв эсвэл defs доторх өөр өнгийн лавлагаа"
         },
         {
           "type": "object",
@@ -127,23 +127,23 @@
                 {
                   "type": "string",
                   "pattern": "^#[0-9a-fA-F]{6}$",
-                  "description": "Hex color value for dark mode"
+                  "description": "Бараан горимын Hex өнгөний утга"
                 },
                 {
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 255,
-                  "description": "ANSI color code for dark mode"
+                  "description": "Бараан горимын ANSI өнгөний код"
                 },
                 {
                   "type": "string",
                   "enum": ["none"],
-                  "description": "No color (uses terminal default)"
+                  "description": "Өнгөгүй (терминалын өгөгдмөл өнгийг ашиглана)"
                 },
                 {
                   "type": "string",
                   "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
-                  "description": "Reference to another color for dark mode"
+                  "description": "Бараан горимын өөр өнгийн лавлагаа"
                 }
               ]
             },
@@ -152,30 +152,30 @@
                 {
                   "type": "string",
                   "pattern": "^#[0-9a-fA-F]{6}$",
-                  "description": "Hex color value for light mode"
+                  "description": "Цайвар горимын Hex өнгөний утга"
                 },
                 {
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 255,
-                  "description": "ANSI color code for light mode"
+                  "description": "Цайвар горимын ANSI өнгөний код"
                 },
                 {
                   "type": "string",
                   "enum": ["none"],
-                  "description": "No color (uses terminal default)"
+                  "description": "Өнгөгүй (терминалын өгөгдмөл өнгийг ашиглана)"
                 },
                 {
                   "type": "string",
                   "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
-                  "description": "Reference to another color for light mode"
+                  "description": "Цайвар горимын өөр өнгийн лавлагаа"
                 }
               ]
             }
           },
           "required": ["dark", "light"],
           "additionalProperties": false,
-          "description": "Separate colors for dark and light modes"
+          "description": "Бараан болон цайвар горимын тусдаа өнгөнүүд"
         }
       ]
     }

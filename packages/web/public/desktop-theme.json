@@ -1,163 +1,163 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/desktop-theme.json",
-  "title": "MongolGPT Desktop Theme",
-  "description": "A theme definition for the MongolGPT desktop application",
+  "title": "MongolGPT Desktop сэдэв",
+  "description": "MongolGPT Desktop програмын сэдвийн тодорхойлолт",
   "type": "object",
   "required": ["name", "id", "light", "dark"],
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "JSON Schema reference"
+      "description": "JSON схемийн лавлагаа"
     },
     "name": {
       "type": "string",
-      "description": "Human-readable theme name"
+      "description": "Хүнд уншихад ойлгомжтой сэдвийн нэр"
     },
     "id": {
       "type": "string",
-      "description": "Unique theme identifier (slug)",
+      "description": "Сэдвийн давтагдашгүй танигч (slug)",
       "pattern": "^[a-z0-9-]+$"
     },
     "light": {
       "$ref": "#/definitions/ThemeVariant",
-      "description": "Light mode color variant"
+      "description": "Цайвар горимын өнгөний хувилбар"
     },
     "dark": {
       "$ref": "#/definitions/ThemeVariant",
-      "description": "Dark mode color variant"
+      "description": "Бараан горимын өнгөний хувилбар"
     }
   },
   "definitions": {
     "HexColor": {
       "type": "string",
       "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
-      "description": "A hex color value like #fff, #ffff, #ffffff, or #ffffffff"
+      "description": "#fff, #ffff, #ffffff эсвэл #ffffffff хэлбэрийн Hex өнгөний утга"
     },
     "ColorValue": {
       "type": "string",
       "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|var\\(--[a-z0-9-]+\\))$",
-      "description": "Either a hex color value (#rgb/#rgba/#rrggbb/#rrggbbaa) or a CSS variable reference"
+      "description": "Hex өнгөний утга (#rgb/#rgba/#rrggbb/#rrggbbaa) эсвэл CSS хувьсагчийн лавлагаа"
     },
     "ThemeSeedColors": {
       "type": "object",
-      "description": "The legacy semantic seed set used to generate a theme",
+      "description": "Сэдэв үүсгэхэд ашигладаг хуучин утгын үрийн багц",
       "additionalProperties": false,
       "required": ["neutral", "primary", "success", "warning", "error", "info", "interactive", "diffAdd", "diffDelete"],
       "properties": {
         "neutral": {
           "$ref": "#/definitions/HexColor",
-          "description": "Base neutral color for generating the gray scale"
+          "description": "Саарал өнгийн шатлал үүсгэх үндсэн саармаг өнгө"
         },
         "primary": {
           "$ref": "#/definitions/HexColor",
-          "description": "Primary brand/accent color"
+          "description": "Үндсэн брэндийн/тодотголын өнгө"
         },
         "success": {
           "$ref": "#/definitions/HexColor",
-          "description": "Success state color (typically green)"
+          "description": "Амжилтын төлөвийн өнгө (ихэвчлэн ногоон)"
         },
         "warning": {
           "$ref": "#/definitions/HexColor",
-          "description": "Warning state color (typically yellow/orange)"
+          "description": "Анхааруулгын төлөвийн өнгө (ихэвчлэн шар/улбар шар)"
         },
         "error": {
           "$ref": "#/definitions/HexColor",
-          "description": "Error/critical state color (typically red)"
+          "description": "Алдаа/ноцтой төлөвийн өнгө (ихэвчлэн улаан)"
         },
         "info": {
           "$ref": "#/definitions/HexColor",
-          "description": "Informational state color (typically purple/blue)"
+          "description": "Мэдээллийн төлөвийн өнгө (ихэвчлэн нил ягаан/цэнхэр)"
         },
         "interactive": {
           "$ref": "#/definitions/HexColor",
-          "description": "Interactive element color (links, buttons)"
+          "description": "Харилцан үйлдлийн элементийн өнгө (холбоос, товчлуур)"
         },
         "diffAdd": {
           "$ref": "#/definitions/HexColor",
-          "description": "Color for diff additions"
+          "description": "Ялгааны нэмэгдсэн хэсгийн өнгө"
         },
         "diffDelete": {
           "$ref": "#/definitions/HexColor",
-          "description": "Color for diff deletions"
+          "description": "Ялгааны хасагдсан хэсгийн өнгө"
         }
       }
     },
     "ThemePaletteColors": {
       "type": "object",
-      "description": "A compact semantic palette used to derive the full theme programmatically",
+      "description": "Бүрэн сэдвийг программын аргаар үүсгэхэд ашигладаг авсаархан утгын палитр",
       "additionalProperties": false,
       "required": ["neutral", "ink", "primary", "success", "warning", "error", "info"],
       "properties": {
         "neutral": {
           "$ref": "#/definitions/HexColor",
-          "description": "Base neutral color for generating the gray scale"
+          "description": "Саарал өнгийн шатлал үүсгэх үндсэн саармаг өнгө"
         },
         "ink": {
           "$ref": "#/definitions/HexColor",
-          "description": "Foreground or chrome color used to derive text and border tones"
+          "description": "Текст болон хүрээний өнгөний аясыг үүсгэх урд талын эсвэл хүрээний өнгө"
         },
         "primary": {
           "$ref": "#/definitions/HexColor",
-          "description": "Primary brand color used for brand surfaces and strong emphasis"
+          "description": "Брэндийн гадаргуу болон хүчтэй тодотголд ашиглах үндсэн брэндийн өнгө"
         },
         "success": {
           "$ref": "#/definitions/HexColor",
-          "description": "Success state color"
+          "description": "Амжилтын төлөвийн өнгө"
         },
         "warning": {
           "$ref": "#/definitions/HexColor",
-          "description": "Warning state color"
+          "description": "Анхааруулгын төлөвийн өнгө"
         },
         "error": {
           "$ref": "#/definitions/HexColor",
-          "description": "Error or critical state color"
+          "description": "Алдаа эсвэл ноцтой төлөвийн өнгө"
         },
         "info": {
           "$ref": "#/definitions/HexColor",
-          "description": "Informational state color"
+          "description": "Мэдээллийн төлөвийн өнгө"
         },
         "accent": {
           "$ref": "#/definitions/HexColor",
-          "description": "Optional extra expressive accent for syntax and rich content"
+          "description": "Синтакс болон баялаг агуулгад ашиглах нэмэлт тодотголын өнгө"
         },
         "interactive": {
           "$ref": "#/definitions/HexColor",
-          "description": "Optional dedicated interactive color; falls back to primary"
+          "description": "Зориулалтын харилцан үйлдлийн нэмэлт өнгө; заагаагүй бол primary-г ашиглана"
         },
         "diffAdd": {
           "$ref": "#/definitions/HexColor",
-          "description": "Optional diff-add seed; falls back to a softened success color"
+          "description": "Ялгааны нэмэгдсэн хэсгийн нэмэлт үр; заагаагүй бол зөөлрүүлсэн success өнгийг ашиглана"
         },
         "diffDelete": {
           "$ref": "#/definitions/HexColor",
-          "description": "Optional diff-delete seed; falls back to error"
+          "description": "Ялгааны хасагдсан хэсгийн нэмэлт үр; заагаагүй бол error-г ашиглана"
         }
       }
     },
     "ThemeVariant": {
       "type": "object",
-      "description": "A theme variant (light or dark) with either a compact palette or legacy seeds and optional overrides",
+      "description": "Авсаархан палитр эсвэл хуучин үрийн багцтай, нэмэлт хүчингүй болгогчтой сэдвийн хувилбар (цайвар эсвэл бараан)",
       "oneOf": [{ "required": ["seeds"] }, { "required": ["palette"] }],
       "properties": {
         "seeds": {
           "$ref": "#/definitions/ThemeSeedColors",
-          "description": "Legacy seed colors used to generate the full palette"
+          "description": "Бүрэн палитр үүсгэхэд ашигладаг хуучин үрийн өнгөнүүд"
         },
         "palette": {
           "$ref": "#/definitions/ThemePaletteColors",
-          "description": "Compact palette used to derive the full token set"
+          "description": "Бүх токеныг үүсгэхэд ашигладаг авсаархан палитр"
         },
         "overrides": {
           "type": "object",
-          "description": "Optional direct overrides for any CSS variable (without -- prefix)",
+          "description": "Дурын CSS хувьсагчийг шууд хүчингүй болгох нэмэлт утгууд (-- угтваргүй)",
           "additionalProperties": {
             "$ref": "#/definitions/ColorValue"
           }
         },
         "v2Overrides": {
           "type": "object",
-          "description": "Optional direct overrides for any v2 CSS variable (without -- prefix)",
+          "description": "Дурын v2 CSS хувьсагчийг шууд хүчингүй болгох нэмэлт утгууд (-- угтваргүй)",
           "additionalProperties": {
             "type": "string"
           }

@@ -10,7 +10,7 @@
         "WARN",
         "ERROR"
       ],
-      "description": "Log level"
+      "description": "Логийн түвшин"
     },
     "ServerConfig": {
       "type": "object",
@@ -19,26 +19,26 @@
           "exclusiveMinimum": 0,
           "type": "integer",
           "maximum": 9007199254740991,
-          "description": "Port to listen on"
+          "description": "Серверийн хүсэлт хүлээн авах порт"
         },
         "hostname": {
           "type": "string",
-          "description": "Hostname to listen on"
+          "description": "Серверийн хүсэлт хүлээн авах хостын нэр"
         },
         "mdns": {
           "type": "boolean",
-          "description": "Enable mDNS service discovery"
+          "description": "mDNS үйлчилгээний илрүүлэлтийг идэвхжүүлэх"
         },
         "mdnsDomain": {
           "type": "string",
-          "description": "Custom domain name for mDNS service (default: mongolgpt.local)"
+          "description": "mDNS үйлчилгээнд ашиглах өөрийн домэйн нэр (анхдагч: mongolgpt.local)"
         },
         "cors": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Additional domains to allow for CORS"
+          "description": "CORS-д зөвшөөрөх нэмэлт домэйнууд"
         }
       },
       "additionalProperties": false
@@ -175,7 +175,7 @@
         },
         "variant": {
           "type": "string",
-          "description": "Default model variant for this agent (applies only when using the agent's configured model)."
+          "description": "Энэ агентын өгөгдмөл загварын хувилбар (зөвхөн агентын тохируулсан загварыг ашиглах үед үйлчилнэ)."
         },
         "temperature": {
           "type": "number"
@@ -191,14 +191,14 @@
           "additionalProperties": {
             "type": "boolean"
           },
-          "description": "@deprecated Use 'permission' field instead"
+          "description": "@deprecated 'permission' талбарыг ашиглана уу"
         },
         "disable": {
           "type": "boolean"
         },
         "description": {
           "type": "string",
-          "description": "Description of when to use the agent"
+          "description": "Агентыг ямар үед ашиглах тухай тайлбар"
         },
         "mode": {
           "type": "string",
@@ -210,7 +210,7 @@
         },
         "hidden": {
           "type": "boolean",
-          "description": "Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)"
+          "description": "Энэ дэд агентыг @ автоматаар гүйцээх цэснээс нуух (өгөгдмөл: false, зөвхөн mode: subagent үед үйлчилнэ)"
         },
         "options": {
           "type": "object"
@@ -234,19 +234,19 @@
               ]
             }
           ],
-          "description": "Hex color code (e.g., #FF5733) or theme color (e.g., primary)"
+          "description": "Hex өнгөний код (жишээ нь #FF5733) эсвэл өнгөний сэдвийн утга (жишээ нь primary)"
         },
         "steps": {
           "exclusiveMinimum": 0,
           "type": "integer",
           "maximum": 9007199254740991,
-          "description": "Maximum number of agentic iterations before forcing text-only response"
+          "description": "Зөвхөн текстээр хариу өгөхөөс өмнөх агентын давталтын дээд тоо"
         },
         "maxSteps": {
           "exclusiveMinimum": 0,
           "type": "integer",
           "maximum": 9007199254740991,
-          "description": "@deprecated Use 'steps' field instead."
+          "description": "@deprecated 'steps' талбарыг ашиглана уу."
         },
         "permission": {
           "$ref": "#/$defs/PermissionConfig"
@@ -297,11 +297,11 @@
             },
             "enterpriseUrl": {
               "type": "string",
-              "description": "GitHub Enterprise URL for copilot authentication"
+              "description": "Copilot танин баталгаажуулалтад ашиглах GitHub Enterprise URL"
             },
             "setCacheKey": {
               "type": "boolean",
-              "description": "Enable promptCacheKey for this provider (default false)"
+              "description": "Энэ үйлчилгээ үзүүлэгчид promptCacheKey-г идэвхжүүлэх (өгөгдмөл: false)"
             },
             "timeout": {
               "anyOf": [
@@ -317,7 +317,7 @@
                   ]
                 }
               ],
-              "description": "Timeout in milliseconds for full requests to this provider. Set to false to disable timeout."
+              "description": "Энэ үйлчилгээ үзүүлэгчид илгээх бүтэн хүсэлтийн хүлээлгийн хугацаа, миллисекундээр. false утга өгвөл хүлээлгийн хугацааг идэвхгүй болгоно."
             },
             "headerTimeout": {
               "anyOf": [
@@ -333,13 +333,13 @@
                   ]
                 }
               ],
-              "description": "Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout."
+              "description": "Хариуны толгой хэсгийг хүлээх хугацаа, миллисекундээр. Үйлчилгээ үзүүлэгчийн холболт өгөгдмөл утга тохируулж болно. false утга өгвөл хүлээлгийн хугацааг идэвхгүй болгоно."
             },
             "chunkTimeout": {
               "exclusiveMinimum": 0,
               "type": "integer",
               "maximum": 9007199254740991,
-              "description": "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted."
+              "description": "Энэ үйлчилгээ үзүүлэгчийн дамжуулж буй SSE хэсгүүдийн хооронд зөвшөөрөх хугацаа, миллисекундээр. Энэ хугацаанд ямар ч хэсэг ирэхгүй бол хүсэлтийг цуцална."
             }
           }
         },
@@ -534,11 +534,11 @@
                   "properties": {
                     "disabled": {
                       "type": "boolean",
-                      "description": "Disable this variant for the model"
+                      "description": "Энэ загварын хувилбарыг идэвхгүй болгох"
                     }
                   }
                 },
-                "description": "Variant-specific configuration"
+                "description": "Хувилбар тус бүрийн тохиргоо"
               }
             },
             "additionalProperties": false
@@ -555,35 +555,35 @@
           "enum": [
             "local"
           ],
-          "description": "Type of MCP server connection"
+          "description": "MCP сервертэй холбогдох төрөл"
         },
         "command": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Command and arguments to run the MCP server"
+          "description": "MCP серверийг ажиллуулах команд болон аргументууд"
         },
         "cwd": {
           "type": "string",
-          "description": "Working directory for the MCP server process. Relative paths resolve from the workspace directory."
+          "description": "MCP серверийн процессын ажиллах хавтас. Харьцангуй замыг ажлын талбарын хавтаснаас тооцно."
         },
         "environment": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Environment variables to set when running the MCP server"
+          "description": "MCP серверийг ажиллуулах үед тохируулах орчны хувьсагчид"
         },
         "enabled": {
           "type": "boolean",
-          "description": "Enable or disable the MCP server on startup"
+          "description": "Эхлүүлэх үед MCP серверийг идэвхжүүлэх эсвэл идэвхгүй болгох"
         },
         "timeout": {
           "exclusiveMinimum": 0,
           "type": "integer",
           "maximum": 9007199254740991,
-          "description": "Timeout in ms for MCP server requests. Defaults to 5000 (5 seconds) if not specified."
+          "description": "MCP серверийн хүсэлтийн хүлээлгийн хугацаа, миллисекундээр. Заагаагүй бол 5000 (5 секунд) байна."
         }
       },
       "required": [
@@ -597,25 +597,25 @@
       "properties": {
         "clientId": {
           "type": "string",
-          "description": "OAuth client ID. If not provided, dynamic client registration (RFC 7591) will be attempted."
+          "description": "OAuth клиентын ID. Заагаагүй бол динамик клиент бүртгэл (RFC 7591)-ийг оролдоно."
         },
         "clientSecret": {
           "type": "string",
-          "description": "OAuth client secret (if required by the authorization server)"
+          "description": "OAuth клиентийн нууц түлхүүр (зөвшөөрлийн сервер шаардсан тохиолдолд)"
         },
         "scope": {
           "type": "string",
-          "description": "OAuth scopes to request during authorization"
+          "description": "Зөвшөөрөл авах үед хүсэх OAuth хамрах хүрээ"
         },
         "callbackPort": {
           "minimum": 1,
           "maximum": 65535,
           "type": "integer",
-          "description": "Port for the local OAuth callback server (default: 19876). Shorthand for redirectUri when only the port needs changing. Ignored if redirectUri is set."
+          "description": "OAuth буцах хүсэлтийг хүлээн авах локал серверийн порт (анхдагч: 19876). Зөвхөн портыг өөрчлөх үед redirectUri-ийн товчилсон тохиргоо болно. redirectUri тохируулсан бол үл хэрэгсэнэ."
         },
         "redirectUri": {
           "type": "string",
-          "description": "OAuth redirect URI (default: http://127.0.0.1:19876/mcp/oauth/callback)."
+          "description": "OAuth redirect URI (анхдагч: http://127.0.0.1:19876/mcp/oauth/callback)."
         }
       },
       "additionalProperties": false
@@ -628,22 +628,22 @@
           "enum": [
             "remote"
           ],
-          "description": "Type of MCP server connection"
+          "description": "MCP сервертэй холбогдох төрөл"
         },
         "url": {
           "type": "string",
-          "description": "URL of the remote MCP server"
+          "description": "Алсын MCP серверийн URL"
         },
         "enabled": {
           "type": "boolean",
-          "description": "Enable or disable the MCP server on startup"
+          "description": "Эхлүүлэх үед MCP серверийг идэвхжүүлэх эсвэл идэвхгүй болгох"
         },
         "headers": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Headers to send with the request"
+          "description": "Хүсэлтийн хамт илгээх HTTP толгой талбарууд"
         },
         "oauth": {
           "anyOf": [
@@ -657,13 +657,13 @@
               ]
             }
           ],
-          "description": "OAuth authentication configuration for the MCP server. Set to false to disable OAuth auto-detection."
+          "description": "MCP серверийн OAuth нэвтрэлтийн тохиргоо. OAuth-г автоматаар танихыг зогсоохын тулд false утга тохируулна."
         },
         "timeout": {
           "exclusiveMinimum": 0,
           "type": "integer",
           "maximum": 9007199254740991,
-          "description": "Timeout in ms for MCP server requests. Defaults to 5000 (5 seconds) if not specified."
+          "description": "MCP серверийн хүсэлтийн хүлээлгийн хугацаа, миллисекундээр. Заагаагүй бол 5000 (5 секунд) байна."
         }
       },
       "required": [
@@ -684,25 +684,25 @@
       "properties": {
         "auto_resize": {
           "type": "boolean",
-          "description": "Resize images before sending them to the model when they exceed configured limits (default: true)"
+          "description": "Зураг тохируулсан хязгаараас хэтэрсэн үед загварт илгээхээс өмнө хэмжээг өөрчлөх (анхдагч: true)"
         },
         "max_width": {
           "exclusiveMinimum": 0,
           "type": "integer",
           "maximum": 9007199254740991,
-          "description": "Maximum image width before resizing or rejecting the attachment (default: 2000)"
+          "description": "Хэмжээг өөрчлөх эсвэл хавсралтыг хүлээн авахаас татгалзахаас өмнөх зургийн хамгийн их өргөн (анхдагч: 2000)"
         },
         "max_height": {
           "exclusiveMinimum": 0,
           "type": "integer",
           "maximum": 9007199254740991,
-          "description": "Maximum image height before resizing or rejecting the attachment (default: 2000)"
+          "description": "Хэмжээг өөрчлөх эсвэл хавсралтыг хүлээн авахаас татгалзахаас өмнөх зургийн хамгийн их өндөр (анхдагч: 2000)"
         },
         "max_base64_bytes": {
           "exclusiveMinimum": 0,
           "type": "integer",
           "maximum": 9007199254740991,
-          "description": "Maximum base64 payload bytes for an image attachment (default: 5242880)"
+          "description": "Зургийн хавсралтын base64 өгөгдлийн дээд хэмжээ, байтаар (анхдагч: 5242880)"
         }
       },
       "additionalProperties": false
@@ -712,7 +712,7 @@
       "properties": {
         "image": {
           "$ref": "#/$defs/ImageAttachmentConfig",
-          "description": "Image attachment configuration"
+          "description": "Зураг хавсаргах тохиргоо"
         }
       },
       "additionalProperties": false
@@ -756,19 +756,19 @@
       "properties": {
         "$schema": {
           "type": "string",
-          "description": "JSON schema reference for configuration validation"
+          "description": "Тохиргоог шалгахад ашиглах JSON schema-ийн лавлагаа"
         },
         "shell": {
           "type": "string",
-          "description": "Default shell to use for terminal and bash tool"
+          "description": "Терминал болон bash хэрэгсэлд ашиглах өгөгдмөл командын бүрхүүл"
         },
         "logLevel": {
           "$ref": "#/$defs/LogLevel",
-          "description": "Log level"
+          "description": "Логийн түвшин"
         },
         "server": {
           "$ref": "#/$defs/ServerConfig",
-          "description": "Server configuration for mongolgpt serve and web commands"
+          "description": "mongolgpt serve болон web командын серверийн тохиргоо"
         },
         "command": {
           "type": "object",
@@ -810,18 +810,18 @@
               "items": {
                 "type": "string"
               },
-              "description": "Additional paths to skill folders"
+              "description": "Ур чадварын хавтаснуудын нэмэлт замууд"
             },
             "urls": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "URLs to fetch skills from (e.g., https://example.com/.well-known/skills/)"
+              "description": "Ур чадвар татаж авах URL-ууд (жишээ нь: https://example.com/.well-known/skills/)"
             }
           },
           "additionalProperties": false,
-          "description": "Additional skill folder paths"
+          "description": "Ур чадварын нэмэлт хавтасны замууд"
         },
         "references": {
           "type": "object",
@@ -838,7 +838,7 @@
               }
             ]
           },
-          "description": "Named git or local directory references"
+          "description": "Нэрлэсэн git эсвэл локал хавтасны лавлагаанууд"
         },
         "reference": {
           "type": "object",
@@ -855,7 +855,7 @@
               }
             ]
           },
-          "description": "@deprecated Use 'references' field instead. Named git or local directory references"
+          "description": "@deprecated Оронд нь 'references' талбарыг ашиглана уу. Нэрлэсэн git эсвэл локал хавтасны лавлагаанууд"
         },
         "watcher": {
           "type": "object",
@@ -871,7 +871,7 @@
         },
         "snapshot": {
           "type": "boolean",
-          "description": "Enable or disable snapshot tracking. When false, filesystem snapshots are not recorded and undoing or reverting will not undo/redo file changes. Defaults to true."
+          "description": "Snapshot хөтлөлтийг идэвхжүүлэх эсвэл идэвхгүй болгоно. false үед файлын системийн snapshot хадгалагдахгүй бөгөөд буцаах үйлдэл файлд хийсэн өөрчлөлтийг буцаахгүй. Анхдагч утга нь true."
         },
         "plugin": {
           "type": "array",
@@ -903,11 +903,11 @@
             "auto",
             "disabled"
           ],
-          "description": "Control sharing behavior:'manual' allows manual sharing via commands, 'auto' enables automatic sharing, 'disabled' disables all sharing"
+          "description": "Хуваалцах үйлдлийг удирдана: 'manual' нь командаар гараар хуваалцахыг, 'auto' нь автоматаар хуваалцахыг зөвшөөрнө, 'disabled' нь бүх хуваалцах үйлдлийг идэвхгүй болгоно"
         },
         "autoshare": {
           "type": "boolean",
-          "description": "@deprecated Use 'share' field instead. Share newly created sessions automatically"
+          "description": "@deprecated Оронд нь 'share' талбарыг ашиглана уу. Шинээр үүссэн сессүүдийг автоматаар хуваалцана"
         },
         "autoupdate": {
           "anyOf": [
@@ -921,39 +921,39 @@
               ]
             }
           ],
-          "description": "Automatically update to the latest version. Set to true to auto-update, false to disable, or 'notify' to show update notifications"
+          "description": "Хамгийн сүүлийн хувилбар руу автоматаар шинэчилнэ. true нь автоматаар шинэчлэх, false нь идэвхгүй болгох, 'notify' нь шинэчлэлтийн мэдэгдэл харуулах утгатай"
         },
         "disabled_providers": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Disable providers that are loaded automatically"
+          "description": "Автоматаар ачаалагддаг үйлчилгээ үзүүлэгчдийг идэвхгүй болгоно"
         },
         "enabled_providers": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "When set, ONLY these providers will be enabled. All other providers will be ignored"
+          "description": "Тохируулсан үед зөвхөн эдгээр үйлчилгээ үзүүлэгч идэвхжинэ. Бусад бүх үйлчилгээ үзүүлэгчийг үл тооно"
         },
         "model": {
           "type": "string",
-          "description": "Model to use in the format of provider/model, eg anthropic/claude-2",
+          "description": "Ашиглах загварыг provider/model хэлбэрээр заана. Жишээ нь anthropic/claude-2",
           "$ref": "https://models.dev/model-schema.json#/$defs/Model"
         },
         "small_model": {
           "type": "string",
-          "description": "Small model to use for tasks like title generation in the format of provider/model",
+          "description": "Гарчиг үүсгэх зэрэг ажлуудад ашиглах жижиг загварыг provider/model хэлбэрээр заана",
           "$ref": "https://models.dev/model-schema.json#/$defs/Model"
         },
         "default_agent": {
           "type": "string",
-          "description": "Default agent to use when none is specified. Must be a primary agent. Falls back to 'build' if not set or if the specified agent is invalid."
+          "description": "Агент заагаагүй үед ашиглах анхдагч агент. Үндсэн агент байх ёстой. Тохируулаагүй эсвэл заасан агент буруу бол 'build' агент руу шилжинэ."
         },
         "username": {
           "type": "string",
-          "description": "Custom username to display in conversations instead of system username"
+          "description": "Харилцан ярианд системийн хэрэглэгчийн нэрийн оронд харуулах өөрийн хэрэглэгчийн нэр"
         },
         "mode": {
           "type": "object",
@@ -968,7 +968,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/AgentConfig"
           },
-          "description": "@deprecated Use `agent` field instead."
+          "description": "@deprecated Оронд нь `agent` талбарыг ашиглана уу."
         },
         "agent": {
           "type": "object",
@@ -1005,7 +1005,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/ProviderConfig"
           },
-          "description": "Custom provider configurations and model overrides"
+          "description": "Өөрийн үйлчилгээ үзүүлэгчийн тохиргоо болон загвар тус бүрийн нэмэлт тохиргоо"
         },
         "mcp": {
           "type": "object",
@@ -1035,7 +1035,7 @@
               }
             ]
           },
-          "description": "MCP (Model Context Protocol) server configurations"
+          "description": "MCP (Model Context Protocol) серверийн тохиргоонууд"
         },
         "formatter": {
           "anyOf": [
@@ -1073,7 +1073,7 @@
               }
             }
           ],
-          "description": "Enable or configure formatters. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides."
+          "description": "Форматлагчдыг идэвхжүүлэх эсвэл тохируулна. Орхих буюу false бол идэвхгүй, true бол суурилагдсан форматлагчдыг идэвхжүүлнэ, объект бол нэмэлт тохиргоотойгоор идэвхжүүлнэ."
         },
         "lsp": {
           "anyOf": [
@@ -1136,18 +1136,18 @@
               }
             }
           ],
-          "description": "Enable or configure LSP servers. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides."
+          "description": "LSP серверүүдийг идэвхжүүлэх эсвэл тохируулна. Орхих буюу false бол идэвхгүй, true бол суурилагдсан серверүүдийг идэвхжүүлнэ, объект бол нэмэлт тохиргоотойгоор идэвхжүүлнэ."
         },
         "instructions": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Additional instruction files or patterns to include"
+          "description": "Нэмэх зааврын файлууд эсвэл файлын хэвүүд"
         },
         "layout": {
           "$ref": "#/$defs/LayoutConfig",
-          "description": "@deprecated Always uses stretch layout."
+          "description": "@deprecated Үргэлж stretch байрлал ашиглана."
         },
         "permission": {
           "$ref": "#/$defs/PermissionConfig"
@@ -1160,14 +1160,14 @@
         },
         "attachment": {
           "$ref": "#/$defs/AttachmentConfig",
-          "description": "Attachment processing configuration, including image size limits and resizing behavior"
+          "description": "Хавсралт боловсруулах тохиргоо, үүнд зургийн хэмжээний хязгаар болон хэмжээг өөрчлөх үйлдэл багтана"
         },
         "enterprise": {
           "type": "object",
           "properties": {
             "url": {
               "type": "string",
-              "description": "Enterprise URL"
+              "description": "Enterprise-ийн URL"
             }
           },
           "additionalProperties": false
@@ -1179,46 +1179,46 @@
               "exclusiveMinimum": 0,
               "type": "integer",
               "maximum": 9007199254740991,
-              "description": "Maximum lines of tool output before it is truncated and saved to disk (default: 2000)"
+              "description": "Хэрэгслийн гаралт таслагдаж дискэнд хадгалагдахаас өмнөх мөрийн дээд тоо (анхдагч: 2000)"
             },
             "max_bytes": {
               "exclusiveMinimum": 0,
               "type": "integer",
               "maximum": 9007199254740991,
-              "description": "Maximum bytes of tool output before it is truncated and saved to disk (default: 51200)"
+              "description": "Хэрэгслийн гаралт таслагдаж дискэнд хадгалагдахаас өмнөх байтын дээд хэмжээ (анхдагч: 51200)"
             }
           },
           "additionalProperties": false,
-          "description": "Thresholds for truncating tool output. When output exceeds either limit, the full text is written to the truncation directory and a preview is returned."
+          "description": "Хэрэгслийн гаралтыг таслах хязгаарууд. Гаралт аль нэг хязгаараас хэтэрвэл бүтэн текстийг тасалсан гаралтын хавтаст хадгалж, урьдчилж харах хэсгийг буцаана."
         },
         "compaction": {
           "type": "object",
           "properties": {
             "auto": {
               "type": "boolean",
-              "description": "Enable automatic compaction when context is full (default: true)"
+              "description": "Контекст дүүрсэн үед автоматаар нягтруулахыг идэвхжүүлнэ (анхдагч: true)"
             },
             "prune": {
               "type": "boolean",
-              "description": "Enable pruning of old tool outputs (default: false)"
+              "description": "Хуучин хэрэгслийн гаралтыг цэвэрлэхийг идэвхжүүлнэ (анхдагч: false)"
             },
             "tail_turns": {
               "minimum": 0,
               "type": "integer",
               "maximum": 9007199254740991,
-              "description": "Number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction (default: 2)"
+              "description": "Нягтруулах үед өөрчлөлтгүй хадгалах сүүлийн хэрэглэгчийн ээлжийн тоо. Үүнд дараах туслах болон хэрэгслийн хариунууд мөн багтана (анхдагч: 2)"
             },
             "preserve_recent_tokens": {
               "minimum": 0,
               "type": "integer",
               "maximum": 9007199254740991,
-              "description": "Maximum number of tokens from recent turns to preserve verbatim after compaction"
+              "description": "Нягтруулсны дараа сүүлийн ээлжүүдээс өөрчлөлтгүй хадгалах токены дээд тоо"
             },
             "reserved": {
               "minimum": 0,
               "type": "integer",
               "maximum": 9007199254740991,
-              "description": "Token buffer for compaction. Leaves enough window to avoid overflow during compaction."
+              "description": "Нягтруулалтад үлдээх токены нөөц. Нягтруулах үед хэтрэлтээс сэргийлэх хангалттай контекстийн багтаамж үлдээнэ."
             }
           },
           "additionalProperties": false
@@ -1231,35 +1231,35 @@
             },
             "batch_tool": {
               "type": "boolean",
-              "description": "Enable the batch tool"
+              "description": "Багц хэрэгслийг идэвхжүүлнэ"
             },
             "openTelemetry": {
               "type": "boolean",
-              "description": "Enable OpenTelemetry spans for AI SDK calls (using the 'experimental_telemetry' flag)"
+              "description": "AI SDK дуудлагад OpenTelemetry span идэвхжүүлнэ ('experimental_telemetry' тугийг ашиглана)"
             },
             "primary_tools": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Tools that should only be available to primary agents."
+              "description": "Зөвхөн үндсэн агентуудад ашиглах боломжтой хэрэгслүүд."
             },
             "continue_loop_on_deny": {
               "type": "boolean",
-              "description": "Continue the agent loop when a tool call is denied"
+              "description": "Хэрэгсэл дуудах хүсэлтийг татгалзсан үед агентын давталтыг үргэлжлүүлнэ"
             },
             "mcp_timeout": {
               "exclusiveMinimum": 0,
               "type": "integer",
               "maximum": 9007199254740991,
-              "description": "Timeout in milliseconds for model context protocol (MCP) requests"
+              "description": "Model Context Protocol (MCP) хүсэлтийн миллисекундээр илэрхийлсэн хүлээлгийн хугацаа"
             },
             "policies": {
               "type": "array",
               "items": {
                 "$ref": "#/$defs/ConfigV2.Experimental.Policy"
               },
-              "description": "Policy statements applied to supported resources, such as provider access"
+              "description": "Үйлчилгээ үзүүлэгчийн хандалт зэрэг дэмжигдсэн нөөцөд хэрэгжүүлэх бодлогын дүрмүүд"
             }
           },
           "additionalProperties": false
