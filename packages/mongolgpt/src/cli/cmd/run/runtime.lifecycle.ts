@@ -127,7 +127,7 @@ function footerLabels(input: Pick<RunInput, "agent" | "model" | "variant">): Foo
   if (!input.model) {
     return {
       agentLabel,
-      modelLabel: "Model default",
+      modelLabel: "Өгөгдмөл загвар",
     }
   }
 

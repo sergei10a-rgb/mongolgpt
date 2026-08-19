@@ -78,7 +78,7 @@ describe("run entry body", () => {
     expect(reasoning).toEqual({
       type: "code",
       filetype: "markdown",
-      content: "_Thinking:_ plan next steps",
+      content: "_Бодол:_ plan next steps",
     })
     expect(
       entryCanStream(

@@ -982,7 +982,7 @@ export function createPromptState(input: PromptInput): PromptState {
       {
         name: "prompt.clear",
         title: "Хүсэлтийг цэвэрлэх эсвэл гарах",
-        category: "Prompt",
+        category: "Хүсэлт",
         run() {
           if (requestExit()) return
           return false
@@ -1016,7 +1016,7 @@ export function createPromptState(input: PromptInput): PromptState {
       {
         name: "prompt.editor",
         title: "Засварлагч нээх",
-        category: "Prompt",
+        category: "Хүсэлт",
         run() {
           void openEditor()
         },
@@ -1032,7 +1032,7 @@ export function createPromptState(input: PromptInput): PromptState {
       {
         name: "prompt.history.previous",
         title: "Өмнөх хүсэлтийн түүх",
-        category: "Prompt",
+        category: "Хүсэлт",
         run(ctx: { event: KeyEvent }) {
           return historyCommand(-1, ctx.event)
         },
@@ -1040,7 +1040,7 @@ export function createPromptState(input: PromptInput): PromptState {
       {
         name: "prompt.history.next",
         title: "Дараагийн хүсэлтийн түүх",
-        category: "Prompt",
+        category: "Хүсэлт",
         run(ctx: { event: KeyEvent }) {
           return historyCommand(1, ctx.event)
         },
@@ -1059,7 +1059,7 @@ export function createPromptState(input: PromptInput): PromptState {
       {
         key: "!",
         desc: "Командын горим",
-        group: "Prompt",
+        group: "Хүсэлт",
         cmd() {
           if (shell()) return false
           if (!area || area.isDestroyed) return false
@@ -1077,13 +1077,13 @@ export function createPromptState(input: PromptInput): PromptState {
       {
         key: "escape",
         desc: "Командын горимоос гарах",
-        group: "Prompt",
+        group: "Хүсэлт",
         cmd: () => setShellMode(false),
       },
       {
         key: "backspace",
         desc: "Командын горимоос гарах",
-        group: "Prompt",
+        group: "Хүсэлт",
         cmd() {
           if (!area || area.isDestroyed) return false
           if (area.cursorOffset !== 0) return false

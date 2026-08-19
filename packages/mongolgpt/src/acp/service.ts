@@ -91,7 +91,7 @@ export function make(input: {
   const initialize = Effect.fn("ACP.initialize")(function* (params: InitializeRequest) {
     const started = performance.now()
     const authMethod: AuthMethod = {
-      description: "Run `mongolgpt auth login` in the terminal",
+      description: "Терминалд `mongolgpt auth login` командыг ажиллуулна уу",
       name: "MongolGPT-ээр нэвтрэх",
       id: AuthMethodID,
     }

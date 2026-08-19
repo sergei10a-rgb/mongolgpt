@@ -393,7 +393,7 @@ export function RunCommandMenuBody(props: {
         ? [
             {
               action: "skill" as const,
-              category: "Prompt",
+              category: "Хүсэлт",
               display: "Ур чадварууд",
               footer: "/skills",
               keywords: `skill skills ${skills()
