@@ -859,6 +859,23 @@ export const dict = {
 
   "app.name.desktop": "MongolGPT Desktop",
 
+  "settings.section.account": "MongolGPT",
+  "settings.account.tab": "Account",
+  "settings.account.title": "MongolGPT account",
+  "settings.account.identity": "Account",
+  "settings.account.service": "Account service: {{host}}",
+  "settings.account.loading": "Checking your account...",
+  "settings.account.loadingDescription": "Reading the account connected to this app.",
+  "settings.account.loadError": "Could not check your account",
+  "settings.account.loadErrorDescription": "Check your connection and try again.",
+  "settings.account.retry": "Try again",
+  "settings.account.signedOut": "Not signed in",
+  "settings.account.signedOutDescription": "Sign in to use Free Auto and sync account access across clients.",
+  "settings.account.login": "Sign in",
+  "settings.account.loggingIn": "Signing in...",
+  "settings.account.logout": "Sign out",
+  "settings.account.loggingOut": "Signing out...",
+
   "settings.section.desktop": "Desktop",
   "settings.section.server": "Server",
   "settings.tab.general": "General",

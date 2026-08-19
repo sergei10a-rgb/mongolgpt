@@ -15,7 +15,12 @@ import {
 
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { AccountRepo, type AccountRow } from "./repo"
-import { normalizeServerUrl, resolveAuthServerUrl } from "./url"
+import {
+  resolveAccountVerificationUrl,
+  resolveAuthServerUrl,
+  validateAccountOAuthMetadata,
+} from "./url"
+import { defaultAccountDnsLookup, resolveAccountTransport, type AccountDnsLookup, type AccountTransport } from "./transport"
 import {
   type AccountError,
   AccessToken,
@@ -37,6 +42,7 @@ import {
   PollSuccess,
   UserCode,
 } from "./schema"
+import { assertAccountTokenEncryptionConfigured } from "./token-codec"
 
 export {
   AccountID,
@@ -155,8 +161,9 @@ const eagerRefreshThresholdMs = Duration.toMillis(eagerRefreshThreshold)
 const isTokenFresh = (tokenExpiry: number | null, now: number) =>
   tokenExpiry != null && tokenExpiry > now + eagerRefreshThresholdMs
 
-const initialOrg = (orgs: readonly Org[]) =>
-  orgs.length === 1 ? Option.some(orgs[0].id) : Option.none<OrgID>()
+const initialOrg = (orgs: readonly Org[]) => (orgs.length === 1 ? Option.some(orgs[0].id) : Option.none<OrgID>())
+
+export type { AccountDnsLookup } from "./transport"
 
 const mapAccountServiceError =
   (message = "Account үйлчилгээний үйлдэл амжилтгүй боллоо") =>
@@ -204,183 +211,379 @@ export class Service extends Context.Service<Service, Interface>()("@mongolgpt/A
 
 export const use = serviceUse(Service)
 
-export const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient.HttpClient> = Layer.effect(
-  Service,
-  Effect.gen(function* () {
-    const repo = yield* AccountRepo.Service
-    const http = yield* HttpClient.HttpClient
-    const httpRead = withTransientReadRetry(http)
-    const httpOk = HttpClient.filterStatusOk(http)
-    const httpReadOk = HttpClient.filterStatusOk(httpRead)
+function makeLayer(resolveDns: AccountDnsLookup, allowCustomAccountServer = false) {
+  return Layer.effect(
+    Service,
+    Effect.gen(function* () {
+      const repo = yield* AccountRepo.Service
+      const http = yield* HttpClient.HttpClient
+      const httpRead = withTransientReadRetry(http)
+      const httpOk = HttpClient.filterStatusOk(http)
+      const httpReadOk = HttpClient.filterStatusOk(httpRead)
+      const withoutRedirects = <A, E, R>(target: AccountTransport, effect: Effect.Effect<A, E, R>) =>
+        effect.pipe(
+          Effect.provideService(FetchHttpClient.Fetch, target.fetch as typeof globalThis.fetch),
+          Effect.provideService(FetchHttpClient.RequestInit, { redirect: "manual" }),
+        )
 
-    const executeRead = (request: HttpClientRequest.HttpClientRequest) =>
-      httpRead.execute(request).pipe(mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"))
+      const executeRead = (target: AccountTransport, request: HttpClientRequest.HttpClientRequest) =>
+        withoutRedirects(target, httpRead.execute(request)).pipe(
+          mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"),
+        )
 
-    const executeReadOk = (request: HttpClientRequest.HttpClientRequest) =>
-      httpReadOk.execute(request).pipe(mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"))
+      const executeReadOk = (target: AccountTransport, request: HttpClientRequest.HttpClientRequest) =>
+        withoutRedirects(target, httpReadOk.execute(request)).pipe(
+          mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"),
+        )
 
-    const executeEffectOk = <E>(request: Effect.Effect<HttpClientRequest.HttpClientRequest, E>) =>
-      request.pipe(
-        Effect.flatMap((req) => httpOk.execute(req)),
-        mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"),
-      )
+      const executeEffectOk = <E>(
+        target: AccountTransport,
+        request: Effect.Effect<HttpClientRequest.HttpClientRequest, E>,
+      ) =>
+        request.pipe(
+          Effect.flatMap((req) => withoutRedirects(target, httpOk.execute(req))),
+          mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"),
+        )
 
-    const executeEffect = <E>(request: Effect.Effect<HttpClientRequest.HttpClientRequest, E>) =>
-      request.pipe(
-        Effect.flatMap((req) => http.execute(req)),
-        mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"),
-      )
+      const executeEffect = <E>(target: AccountTransport, request: Effect.Effect<HttpClientRequest.HttpClientRequest, E>) =>
+        request.pipe(
+          Effect.flatMap((req) => withoutRedirects(target, http.execute(req))),
+          mapAccountServiceError("HTTP хүсэлт амжилтгүй боллоо"),
+        )
 
-    const refreshToken = Effect.fnUntraced(function* (row: AccountRow) {
-      const now = yield* Clock.currentTimeMillis
+      const refreshToken = Effect.fnUntraced(function* (row: AccountRow) {
+        const now = yield* Clock.currentTimeMillis
+        const server = yield* validateRemoteAccountServer(row.url)
 
-      const response = yield* executeEffectOk(
-        HttpClientRequest.post(`${row.url}/auth/device/token`).pipe(
-          HttpClientRequest.acceptJson,
-          HttpClientRequest.schemaBodyJson(TokenRefreshRequest)(
-            new TokenRefreshRequest({
-              grant_type: "refresh_token",
-              refresh_token: row.refresh_token,
-              client_id: clientId,
-            }),
+        const response = yield* executeEffectOk(
+          server,
+          HttpClientRequest.post(`${server.url}/auth/device/token`).pipe(
+            HttpClientRequest.acceptJson,
+            HttpClientRequest.schemaBodyJson(TokenRefreshRequest)(
+              new TokenRefreshRequest({
+                grant_type: "refresh_token",
+                refresh_token: row.refresh_token,
+                client_id: clientId,
+              }),
+            ),
           ),
-        ),
-      )
+        )
 
-      const parsed = yield* HttpClientResponse.schemaBodyJson(TokenRefresh)(response).pipe(
-        mapAccountServiceError("Хариуг уншиж чадсангүй"),
-      )
+        const parsed = yield* HttpClientResponse.schemaBodyJson(TokenRefresh)(response).pipe(
+          mapAccountServiceError("Хариуг уншиж чадсангүй"),
+        )
 
-      const expiry = Option.some(now + Duration.toMillis(parsed.expires_in))
+        const expiry = Option.some(now + Duration.toMillis(parsed.expires_in))
 
-      yield* repo.persistToken({
-        accountID: row.id,
-        accessToken: parsed.access_token,
-        refreshToken: parsed.refresh_token,
-        expiry,
+        yield* repo.persistToken({
+          accountID: row.id,
+          accessToken: parsed.access_token,
+          refreshToken: parsed.refresh_token,
+          expiry,
+        })
+
+        return parsed.access_token
       })
 
-      return parsed.access_token
-    })
+      const refreshTokenCache = yield* Cache.make<AccountID, AccessToken, AccountError>({
+        capacity: Number.POSITIVE_INFINITY,
+        timeToLive: Duration.zero,
+        lookup: Effect.fnUntraced(function* (accountID) {
+          const maybeAccount = yield* repo.getRow(accountID)
+          if (Option.isNone(maybeAccount)) {
+            return yield* Effect.fail(new AccountServiceError({ message: "Token шинэчлэх үед account олдсонгүй" }))
+          }
 
-    const refreshTokenCache = yield* Cache.make<AccountID, AccessToken, AccountError>({
-      capacity: Number.POSITIVE_INFINITY,
-      timeToLive: Duration.zero,
-      lookup: Effect.fnUntraced(function* (accountID) {
-        const maybeAccount = yield* repo.getRow(accountID)
-        if (Option.isNone(maybeAccount)) {
-          return yield* Effect.fail(new AccountServiceError({ message: "Token шинэчлэх үед account олдсонгүй" }))
+          const account = maybeAccount.value
+          const now = yield* Clock.currentTimeMillis
+          if (isTokenFresh(account.token_expiry, now)) {
+            return account.access_token
+          }
+
+          return yield* refreshToken(account)
+        }),
+      })
+
+      const resolveToken = Effect.fnUntraced(function* (row: AccountRow) {
+        const now = yield* Clock.currentTimeMillis
+        if (isTokenFresh(row.token_expiry, now)) {
+          return row.access_token
         }
+
+        return yield* Cache.get(refreshTokenCache, row.id)
+      })
+
+      const resolveAccess = Effect.fnUntraced(function* (accountID: AccountID) {
+        const maybeAccount = yield* repo.getRow(accountID)
+        if (Option.isNone(maybeAccount)) return Option.none()
 
         const account = maybeAccount.value
-        const now = yield* Clock.currentTimeMillis
-        if (isTokenFresh(account.token_expiry, now)) {
-          return account.access_token
-        }
+        const accessToken = yield* resolveToken(account)
+        return Option.some({ account, accessToken })
+      })
 
-        return yield* refreshToken(account)
-      }),
-    })
+      const fetchOrgs = Effect.fnUntraced(function* (url: string, accessToken: AccessToken) {
+        const server = yield* validateRemoteAccountServer(url)
+        const response = yield* executeReadOk(
+          server,
+          HttpClientRequest.get(`${server.url}/api/orgs`).pipe(
+            HttpClientRequest.acceptJson,
+            HttpClientRequest.bearerToken(accessToken),
+          ),
+        )
 
-    const resolveToken = Effect.fnUntraced(function* (row: AccountRow) {
-      const now = yield* Clock.currentTimeMillis
-      if (isTokenFresh(row.token_expiry, now)) {
-        return row.access_token
-      }
+        return yield* HttpClientResponse.schemaBodyJson(Schema.Array(Org))(response).pipe(
+          mapAccountServiceError("Хариуг уншиж чадсангүй"),
+        )
+      })
 
-      return yield* Cache.get(refreshTokenCache, row.id)
-    })
+      const fetchUser = Effect.fnUntraced(function* (url: string, accessToken: AccessToken) {
+        const server = yield* validateRemoteAccountServer(url)
+        const response = yield* executeReadOk(
+          server,
+          HttpClientRequest.get(`${server.url}/api/user`).pipe(
+            HttpClientRequest.acceptJson,
+            HttpClientRequest.bearerToken(accessToken),
+          ),
+        )
 
-    const resolveAccess = Effect.fnUntraced(function* (accountID: AccountID) {
-      const maybeAccount = yield* repo.getRow(accountID)
-      if (Option.isNone(maybeAccount)) return Option.none()
+        return yield* HttpClientResponse.schemaBodyJson(User)(response).pipe(
+          mapAccountServiceError("Хариуг уншиж чадсангүй"),
+        )
+      })
 
-      const account = maybeAccount.value
-      const accessToken = yield* resolveToken(account)
-      return Option.some({ account, accessToken })
-    })
+      const validateRemoteAccountServer = Effect.fnUntraced(function* (server: string) {
+        return yield* Effect.tryPromise({
+          try: () => resolveAccountTransport(server, { resolveDns, allowCustomAccountServer }),
+          catch: (cause) => new AccountServiceError({ message: "Account серверийн URL аюулгүй биш байна", cause }),
+        })
+      })
 
-    const fetchOrgs = Effect.fnUntraced(function* (url: string, accessToken: AccessToken) {
-      const response = yield* executeReadOk(
-        HttpClientRequest.get(`${url}/api/orgs`).pipe(
-          HttpClientRequest.acceptJson,
-          HttpClientRequest.bearerToken(accessToken),
-        ),
-      )
-
-      return yield* HttpClientResponse.schemaBodyJson(Schema.Array(Org))(response).pipe(
-        mapAccountServiceError("Хариуг уншиж чадсангүй"),
-      )
-    })
-
-    const fetchUser = Effect.fnUntraced(function* (url: string, accessToken: AccessToken) {
-      const response = yield* executeReadOk(
-        HttpClientRequest.get(`${url}/api/user`).pipe(
-          HttpClientRequest.acceptJson,
-          HttpClientRequest.bearerToken(accessToken),
-        ),
-      )
-
-      return yield* HttpClientResponse.schemaBodyJson(User)(response).pipe(
-        mapAccountServiceError("Хариуг уншиж чадсангүй"),
-      )
-    })
-
-    const browserLogin = Effect.fn("Account.browserLogin")(function* (server: string) {
-      const normalizedServer = normalizeServerUrl(server)
-      const authServer = resolveAuthServerUrl(server)
-
-      const metadataResponse = yield* executeReadOk(
-        HttpClientRequest.get(`${authServer}/.well-known/oauth-authorization-server`).pipe(
-          HttpClientRequest.acceptJson,
-        ),
-      )
-      yield* HttpClientResponse.schemaBodyJson(OpenAuthWellKnown)(metadataResponse).pipe(
-        mapAccountServiceError("OpenAuth metadata уншиж чадсангүй"),
-      )
-
-      const callback = yield* Effect.tryPromise({
-        try: () => createBrowserCallbackServer(),
-        catch: (cause) => cause,
-      }).pipe(mapAccountServiceError("Browser OAuth callback server эхлүүлж чадсангүй"))
-
-      const client = createClient({ clientID: clientId, issuer: authServer })
-      const authorization = yield* Effect.tryPromise({
-        try: () => client.authorize(callback.redirect, "code", { pkce: true }),
-        catch: (cause) => cause,
-      }).pipe(mapAccountServiceError("Browser OAuth зөвшөөрлийн URL үүсгэж чадсангүй"))
-      callback.setState(authorization.challenge.state)
-
-      const wait = Effect.gen(function* () {
-        const code = yield* Effect.tryPromise({
-          try: () => callback.code,
-          catch: (cause) => cause,
-        }).pipe(mapAccountServiceError("Browser OAuth callback амжилтгүй боллоо"))
-
-        const exchanged = yield* Effect.tryPromise({
-          try: () => client.exchange(code, callback.redirect, authorization.challenge.verifier),
-          catch: (cause) => cause,
-        }).pipe(mapAccountServiceError("Browser OAuth token солилцоо амжилтгүй боллоо"))
-
-        if (exchanged.err) {
-          return yield* Effect.fail(
-            new AccountServiceError({ message: "Browser OAuth token солилцоо амжилтгүй боллоо", cause: exchanged.err }),
-          )
-        }
-
-        const accessToken = AccessToken.make(exchanged.tokens.access)
-        const refreshToken = RefreshToken.make(exchanged.tokens.refresh)
-        const [account, remoteOrgs] = yield* Effect.all(
-          [fetchUser(normalizedServer, accessToken), fetchOrgs(normalizedServer, accessToken)],
+      const browserLogin = Effect.fn("Account.browserLogin")(function* (server: string) {
+        yield* Effect.try({
+          try: assertAccountTokenEncryptionConfigured,
+          catch: (cause) => new AccountServiceError({ message: "Account token хамгаалалт бэлэн биш байна", cause }),
+        })
+        const [accountServer, authServer] = yield* Effect.all(
+          [validateRemoteAccountServer(server), validateRemoteAccountServer(resolveAuthServerUrl(server))],
           { concurrency: 2 },
         )
 
-        const expiry = (yield* Clock.currentTimeMillis) + exchanged.tokens.expiresIn * 1000
+        const metadataResponse = yield* executeReadOk(
+          authServer,
+          HttpClientRequest.get(`${authServer.url}/.well-known/oauth-authorization-server`).pipe(
+            HttpClientRequest.acceptJson,
+          ),
+        )
+        const metadata = yield* HttpClientResponse.schemaBodyJson(OpenAuthWellKnown)(metadataResponse).pipe(
+          mapAccountServiceError("OpenAuth metadata уншиж чадсангүй"),
+        )
+        yield* Effect.try({
+          try: () => validateAccountOAuthMetadata(authServer.url, metadata),
+          catch: (cause) => new AccountServiceError({ message: "OpenAuth metadata аюулгүй биш байна", cause }),
+        })
+
+        const callback = yield* Effect.tryPromise({
+          try: () => createBrowserCallbackServer(),
+          catch: (cause) => cause,
+        }).pipe(mapAccountServiceError("Browser OAuth callback server эхлүүлж чадсангүй"))
+
+        const authOrigin = new URL(authServer.url).origin
+        const safeOAuthFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+          const target = input instanceof Request ? input.url : String(input)
+          const transport = await Effect.runPromise(validateRemoteAccountServer(target))
+          if (new URL(transport.url).origin !== authOrigin)
+            throw new Error("OAuth хүсэлт auth серверийн origin-оос гарлаа")
+          const response = await transport.fetch(input, { ...init, redirect: "manual" })
+          if (response.status >= 300 && response.status < 400)
+            throw new Error("OAuth redirect хариуг дагахаас татгалзлаа")
+          return response
+        }
+        const client = createClient({ clientID: clientId, issuer: authServer.url, fetch: safeOAuthFetch })
+        const authorization = yield* Effect.tryPromise({
+          try: () => client.authorize(callback.redirect, "code", { pkce: true }),
+          catch: (cause) => cause,
+        }).pipe(mapAccountServiceError("Browser OAuth зөвшөөрлийн URL үүсгэж чадсангүй"))
+        callback.setState(authorization.challenge.state)
+
+        const wait = Effect.gen(function* () {
+          const code = yield* Effect.tryPromise({
+            try: () => callback.code,
+            catch: (cause) => cause,
+          }).pipe(mapAccountServiceError("Browser OAuth callback амжилтгүй боллоо"))
+
+          const exchanged = yield* Effect.tryPromise({
+            try: () => client.exchange(code, callback.redirect, authorization.challenge.verifier),
+            catch: (cause) => cause,
+          }).pipe(mapAccountServiceError("Browser OAuth token солилцоо амжилтгүй боллоо"))
+
+          if (exchanged.err) {
+            return yield* Effect.fail(
+              new AccountServiceError({
+                message: "Browser OAuth token солилцоо амжилтгүй боллоо",
+                cause: exchanged.err,
+              }),
+            )
+          }
+
+          const accessToken = AccessToken.make(exchanged.tokens.access)
+          const refreshToken = RefreshToken.make(exchanged.tokens.refresh)
+          const [account, remoteOrgs] = yield* Effect.all(
+            [fetchUser(accountServer.url, accessToken), fetchOrgs(accountServer.url, accessToken)],
+            { concurrency: 2 },
+          )
+
+          const expiry = (yield* Clock.currentTimeMillis) + exchanged.tokens.expiresIn * 1000
+
+          yield* repo.persistAccount({
+            id: account.id,
+            email: account.email,
+            url: accountServer.url,
+            accessToken,
+            refreshToken,
+            expiry,
+            orgID: initialOrg(remoteOrgs),
+          })
+
+          return new PollSuccess({ email: account.email })
+        }).pipe(Effect.ensuring(Effect.promise(() => callback.close())))
+
+        return { url: authorization.url, wait }
+      })
+
+      const token = Effect.fn("Account.token")((accountID: AccountID) =>
+        resolveAccess(accountID).pipe(Effect.map(Option.map((r) => r.accessToken))),
+      )
+
+      const activeOrg = Effect.fn("Account.activeOrg")(function* () {
+        const activeAccount = yield* repo.active()
+        if (Option.isNone(activeAccount)) return Option.none<ActiveOrg>()
+
+        const account = activeAccount.value
+        if (!account.active_org_id) return Option.none<ActiveOrg>()
+
+        const accountOrgs = yield* orgs(account.id)
+        const org = accountOrgs.find((item) => item.id === account.active_org_id)
+        if (!org) return Option.none<ActiveOrg>()
+
+        return Option.some({ account, org })
+      })
+
+      const orgsByAccount = Effect.fn("Account.orgsByAccount")(function* () {
+        const accounts = yield* repo.list()
+        return yield* Effect.forEach(
+          accounts,
+          (account) =>
+            orgs(account.id).pipe(
+              Effect.catch(() => Effect.succeed([] as readonly Org[])),
+              Effect.map((orgs) => ({ account, orgs })),
+            ),
+          { concurrency: 3 },
+        )
+      })
+
+      const orgs = Effect.fn("Account.orgs")(function* (accountID: AccountID) {
+        const resolved = yield* resolveAccess(accountID)
+        if (Option.isNone(resolved)) return []
+
+        const { account, accessToken } = resolved.value
+
+        return yield* fetchOrgs(account.url, accessToken)
+      })
+
+      const config = Effect.fn("Account.config")(function* (accountID: AccountID, orgID: OrgID) {
+        const resolved = yield* resolveAccess(accountID)
+        if (Option.isNone(resolved)) return Option.none()
+
+        const { account, accessToken } = resolved.value
+        const server = yield* validateRemoteAccountServer(account.url)
+
+        const response = yield* executeRead(
+          server,
+          HttpClientRequest.get(`${server.url}/api/config`).pipe(
+            HttpClientRequest.acceptJson,
+            HttpClientRequest.bearerToken(accessToken),
+            HttpClientRequest.setHeaders({ "x-org-id": orgID }),
+          ),
+        )
+
+        if (response.status === 404) return Option.none()
+
+        const ok = yield* HttpClientResponse.filterStatusOk(response).pipe(mapAccountServiceError())
+
+        const parsed = yield* HttpClientResponse.schemaBodyJson(RemoteConfig)(ok).pipe(
+          mapAccountServiceError("Хариуг уншиж чадсангүй"),
+        )
+        return Option.some(parsed.config)
+      })
+
+      const login = Effect.fn("Account.login")(function* (server: string) {
+        yield* Effect.try({
+          try: assertAccountTokenEncryptionConfigured,
+          catch: (cause) => new AccountServiceError({ message: "Account token хамгаалалт бэлэн биш байна", cause }),
+        })
+        const normalizedServer = yield* validateRemoteAccountServer(server)
+        const response = yield* executeEffectOk(
+          normalizedServer,
+          HttpClientRequest.post(`${normalizedServer.url}/auth/device/code`).pipe(
+            HttpClientRequest.acceptJson,
+            HttpClientRequest.schemaBodyJson(ClientId)(new ClientId({ client_id: clientId })),
+          ),
+        )
+
+        const parsed = yield* HttpClientResponse.schemaBodyJson(DeviceAuth)(response).pipe(
+          mapAccountServiceError("Хариуг уншиж чадсангүй"),
+        )
+        return new Login({
+          code: parsed.device_code,
+          user: parsed.user_code,
+          url: yield* Effect.try({
+            try: () => resolveAccountVerificationUrl(normalizedServer.url, parsed.verification_uri_complete),
+            catch: (cause) =>
+              new AccountServiceError({ message: "OAuth verification URL аюулгүй биш байна", cause }),
+          }),
+          server: normalizedServer.url,
+          expiry: parsed.expires_in,
+          interval: parsed.interval,
+        })
+      })
+
+      const poll = Effect.fn("Account.poll")(function* (input: Login) {
+        const server = yield* validateRemoteAccountServer(input.server)
+        const response = yield* executeEffect(
+          server,
+          HttpClientRequest.post(`${server.url}/auth/device/token`).pipe(
+            HttpClientRequest.acceptJson,
+            HttpClientRequest.schemaBodyJson(DeviceTokenRequest)(
+              new DeviceTokenRequest({
+                grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+                device_code: input.code,
+                client_id: clientId,
+              }),
+            ),
+          ),
+        )
+
+        const parsed = yield* HttpClientResponse.schemaBodyJson(DeviceToken)(response).pipe(
+          mapAccountServiceError("Хариуг уншиж чадсангүй"),
+        )
+
+        if (parsed instanceof DeviceTokenError) return parsed.toPollResult()
+        const accessToken = parsed.access_token
+
+        const user = fetchUser(server.url, accessToken)
+        const orgs = fetchOrgs(server.url, accessToken)
+
+        const [account, remoteOrgs] = yield* Effect.all([user, orgs], { concurrency: 2 })
+
+        const now = yield* Clock.currentTimeMillis
+        const expiry = now + Duration.toMillis(parsed.expires_in)
+        const refreshToken = parsed.refresh_token
 
         yield* repo.persistAccount({
           id: account.id,
           email: account.email,
-          url: normalizedServer,
+          url: server.url,
           accessToken,
           refreshToken,
           expiry,
@@ -388,156 +591,33 @@ export const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient
         })
 
         return new PollSuccess({ email: account.email })
-      }).pipe(Effect.ensuring(Effect.promise(() => callback.close())))
-
-      return { url: authorization.url, wait }
-    })
-
-    const token = Effect.fn("Account.token")((accountID: AccountID) =>
-      resolveAccess(accountID).pipe(Effect.map(Option.map((r) => r.accessToken))),
-    )
-
-    const activeOrg = Effect.fn("Account.activeOrg")(function* () {
-      const activeAccount = yield* repo.active()
-      if (Option.isNone(activeAccount)) return Option.none<ActiveOrg>()
-
-      const account = activeAccount.value
-      if (!account.active_org_id) return Option.none<ActiveOrg>()
-
-      const accountOrgs = yield* orgs(account.id)
-      const org = accountOrgs.find((item) => item.id === account.active_org_id)
-      if (!org) return Option.none<ActiveOrg>()
-
-      return Option.some({ account, org })
-    })
-
-    const orgsByAccount = Effect.fn("Account.orgsByAccount")(function* () {
-      const accounts = yield* repo.list()
-      return yield* Effect.forEach(
-        accounts,
-        (account) =>
-          orgs(account.id).pipe(
-            Effect.catch(() => Effect.succeed([] as readonly Org[])),
-            Effect.map((orgs) => ({ account, orgs })),
-          ),
-        { concurrency: 3 },
-      )
-    })
-
-    const orgs = Effect.fn("Account.orgs")(function* (accountID: AccountID) {
-      const resolved = yield* resolveAccess(accountID)
-      if (Option.isNone(resolved)) return []
-
-      const { account, accessToken } = resolved.value
-
-      return yield* fetchOrgs(account.url, accessToken)
-    })
-
-    const config = Effect.fn("Account.config")(function* (accountID: AccountID, orgID: OrgID) {
-      const resolved = yield* resolveAccess(accountID)
-      if (Option.isNone(resolved)) return Option.none()
-
-      const { account, accessToken } = resolved.value
-
-      const response = yield* executeRead(
-        HttpClientRequest.get(`${account.url}/api/config`).pipe(
-          HttpClientRequest.acceptJson,
-          HttpClientRequest.bearerToken(accessToken),
-          HttpClientRequest.setHeaders({ "x-org-id": orgID }),
-        ),
-      )
-
-      if (response.status === 404) return Option.none()
-
-      const ok = yield* HttpClientResponse.filterStatusOk(response).pipe(mapAccountServiceError())
-
-      const parsed = yield* HttpClientResponse.schemaBodyJson(RemoteConfig)(ok).pipe(
-        mapAccountServiceError("Хариуг уншиж чадсангүй"),
-      )
-      return Option.some(parsed.config)
-    })
-
-    const login = Effect.fn("Account.login")(function* (server: string) {
-      const normalizedServer = normalizeServerUrl(server)
-      const response = yield* executeEffectOk(
-        HttpClientRequest.post(`${normalizedServer}/auth/device/code`).pipe(
-          HttpClientRequest.acceptJson,
-          HttpClientRequest.schemaBodyJson(ClientId)(new ClientId({ client_id: clientId })),
-        ),
-      )
-
-      const parsed = yield* HttpClientResponse.schemaBodyJson(DeviceAuth)(response).pipe(
-        mapAccountServiceError("Хариуг уншиж чадсангүй"),
-      )
-      return new Login({
-        code: parsed.device_code,
-        user: parsed.user_code,
-        url: `${normalizedServer}${parsed.verification_uri_complete}`,
-        server: normalizedServer,
-        expiry: parsed.expires_in,
-        interval: parsed.interval,
-      })
-    })
-
-    const poll = Effect.fn("Account.poll")(function* (input: Login) {
-      const response = yield* executeEffect(
-        HttpClientRequest.post(`${input.server}/auth/device/token`).pipe(
-          HttpClientRequest.acceptJson,
-          HttpClientRequest.schemaBodyJson(DeviceTokenRequest)(
-            new DeviceTokenRequest({
-              grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-              device_code: input.code,
-              client_id: clientId,
-            }),
-          ),
-        ),
-      )
-
-      const parsed = yield* HttpClientResponse.schemaBodyJson(DeviceToken)(response).pipe(
-        mapAccountServiceError("Хариуг уншиж чадсангүй"),
-      )
-
-      if (parsed instanceof DeviceTokenError) return parsed.toPollResult()
-      const accessToken = parsed.access_token
-
-      const user = fetchUser(input.server, accessToken)
-      const orgs = fetchOrgs(input.server, accessToken)
-
-      const [account, remoteOrgs] = yield* Effect.all([user, orgs], { concurrency: 2 })
-
-      const now = yield* Clock.currentTimeMillis
-      const expiry = now + Duration.toMillis(parsed.expires_in)
-      const refreshToken = parsed.refresh_token
-
-      yield* repo.persistAccount({
-        id: account.id,
-        email: account.email,
-        url: input.server,
-        accessToken,
-        refreshToken,
-        expiry,
-        orgID: initialOrg(remoteOrgs),
       })
 
-      return new PollSuccess({ email: account.email })
-    })
+      return Service.of({
+        active: repo.active,
+        activeOrg,
+        list: repo.list,
+        orgsByAccount,
+        remove: repo.remove,
+        use: repo.use,
+        orgs,
+        config,
+        token,
+        browserLogin,
+        login,
+        poll,
+      })
+    }),
+  )
+}
 
-    return Service.of({
-      active: repo.active,
-      activeOrg,
-      list: repo.list,
-      orgsByAccount,
-      remove: repo.remove,
-      use: repo.use,
-      orgs,
-      config,
-      token,
-      browserLogin,
-      login,
-      poll,
-    })
-  }),
-)
+export const layer: Layer.Layer<Service, never, AccountRepo.Service | HttpClient.HttpClient> =
+  makeLayer(defaultAccountDnsLookup)
+
+export const layerWithDnsResolver = (
+  resolveDns: AccountDnsLookup,
+  options: { allowCustomAccountServer?: boolean } = {},
+) => makeLayer(resolveDns, options.allowCustomAccountServer)
 
 export const defaultLayer = layer.pipe(Layer.provide(AccountRepo.defaultLayer), Layer.provide(FetchHttpClient.layer))
 

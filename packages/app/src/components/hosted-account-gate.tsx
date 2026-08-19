@@ -9,33 +9,45 @@ type HostedAccount = { id: string; email: string }
 type HostedSession = { authenticated: true; account: HostedAccount; expiresAt: number } | { authenticated: false }
 
 export function hostedSessionUrl(runtimeUrl: string) {
-  return new URL("/auth/session", `${runtimeUrl.replace(/\/+$/, "")}/`).toString()
+  return new URL("/auth/session", requiredHostedOrigin(runtimeUrl)).toString()
 }
 
 export function hostedRuntimeTokenUrl(publicOrigin: string) {
-  return new URL("/auth/runtime-token", `${publicOrigin.replace(/\/+$/, "")}/`).toString()
+  return new URL("/auth/runtime-token", requiredHostedOrigin(publicOrigin)).toString()
 }
 
 export function hostedLoginUrl(publicOrigin: string) {
-  const url = new URL("/auth/authorize", `${publicOrigin.replace(/\/+$/, "")}/`)
+  const url = new URL("/auth/authorize", requiredHostedOrigin(publicOrigin))
   url.searchParams.set("continue", "/auth/app")
   return url.toString()
 }
 
+export function hostedLogoutUrl(publicOrigin: string) {
+  return new URL("/auth/logout", requiredHostedOrigin(publicOrigin)).toString()
+}
+
 export function hostedAccountGateEnabled(mode: string | undefined, runtimeUrl: string | undefined) {
   if (mode === "local-bridge") return false
-  if (mode === "hosted") return true
-  if (!runtimeUrl?.trim()) return false
+  return hostedRemoteOrigin(runtimeUrl) !== undefined
+}
+
+export function hostedRemoteOrigin(value: string | undefined) {
+  if (!value?.trim()) return
   try {
-    const hostname = new URL(runtimeUrl).hostname
-    return hostname !== "localhost" && hostname !== "127.0.0.1" && hostname !== "::1"
+    const url = new URL(value)
+    if (url.protocol !== "https:" || url.username || url.password) return
+    const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "")
+    if (privateHostname(hostname)) return
+    return url.origin
   } catch {
-    return false
+    return
   }
 }
 
 export async function loadHostedSession(runtimeUrl: string, publicOrigin: string): Promise<HostedSession> {
-  const capabilityResponse = await fetch(hostedRuntimeTokenUrl(publicOrigin), {
+  const runtimeOrigin = requiredHostedOrigin(runtimeUrl)
+  const accountOrigin = requiredHostedOrigin(publicOrigin)
+  const capabilityResponse = await fetch(hostedRuntimeTokenUrl(accountOrigin), {
     method: "POST",
     credentials: "include",
     headers: { Accept: "application/json" },
@@ -45,7 +57,7 @@ export async function loadHostedSession(runtimeUrl: string, publicOrigin: string
   const capability = await jsonResponse(capabilityResponse)
   if (!isRuntimeCapability(capability)) throw new Error("Hosted runtime token response was invalid")
 
-  const sessionResponse = await fetch(hostedSessionUrl(runtimeUrl), {
+  const sessionResponse = await fetch(hostedSessionUrl(runtimeOrigin), {
     method: "POST",
     credentials: "include",
     headers: {
@@ -124,6 +136,42 @@ function expiresAt(value: unknown, maximum?: number): value is number {
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function requiredHostedOrigin(value: string) {
+  const origin = hostedRemoteOrigin(value)
+  if (!origin) throw new Error("Hosted account origin was invalid")
+  return origin
+}
+
+function privateHostname(hostname: string) {
+  if (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".local") ||
+    hostname === "::" ||
+    hostname === "::1" ||
+    hostname.startsWith("fc") ||
+    hostname.startsWith("fd") ||
+    /^fe[89ab]/.test(hostname) ||
+    hostname.startsWith("::ffff:")
+  ) {
+    return true
+  }
+
+  const octets = hostname.split(".").map(Number)
+  if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false
+  const [a, b] = octets as [number, number, number, number]
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    a >= 224
+  )
 }
 
 export function HostedAccountGate(props: ParentProps) {

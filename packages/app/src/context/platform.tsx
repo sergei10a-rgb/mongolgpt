@@ -19,6 +19,19 @@ type SaveFilePickerOptions = { title?: string; defaultPath?: string }
 type PlatformName = "web" | "desktop"
 type DesktopOS = "macos" | "windows" | "linux"
 
+export type PlatformAccount = {
+  id: string
+  email: string
+  url: string
+  activeOrgID?: string
+}
+
+export type PlatformAccountAPI = {
+  current(): Promise<PlatformAccount | null>
+  login(): Promise<PlatformAccount>
+  logout(): Promise<void>
+}
+
 export type FatalRendererErrorLog = {
   error: string
   url: string
@@ -69,6 +82,9 @@ type PlatformBase = {
 
   /** Fetch override */
   fetch?: typeof fetch
+
+  /** Shared MongolGPT account bridge for hosted web and desktop clients. */
+  account?: PlatformAccountAPI
 
   /** Get the configured default server URL (platform-specific) */
   getDefaultServer?(): Promise<ServerConnection.Key | null>

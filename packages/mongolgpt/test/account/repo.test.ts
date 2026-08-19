@@ -1,21 +1,58 @@
 import { expect } from "bun:test"
 import { Effect, Layer, Option } from "effect"
-import { sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 import { AccountRepo } from "../../src/account/repo"
 import { AccessToken, AccountID, OrgID, RefreshToken } from "../../src/account/schema"
+import { createAccountTokenCodec } from "../../src/account/token-codec"
+import { AccountTable } from "@mongolgpt/core/account/sql"
 import { Database } from "@mongolgpt/core/database/database"
 import { testEffect } from "../lib/effect"
 
-const truncate = Layer.effectDiscard(
+const truncateBase = Layer.effectDiscard(
   Effect.gen(function* () {
     const { db } = yield* Database.Service
     yield* db.run(sql`DELETE FROM account_state`)
     yield* db.run(sql`DELETE FROM account`)
   }),
-).pipe(Layer.provide(Database.defaultLayer))
+)
 
-const it = testEffect(Layer.merge(AccountRepo.defaultLayer, truncate))
+const truncate = truncateBase.pipe(Layer.provide(Database.defaultLayer))
+
+const encryptedCodec = createAccountTokenCodec(new Uint8Array(32).fill(7))
+const it = testEffect(
+  Layer.merge(Layer.provideMerge(AccountRepo.layerWithTokenCodec(encryptedCodec), Database.defaultLayer), truncate),
+)
+
+it.live("encrypted repository keeps account tokens out of plaintext SQLite", () =>
+  Effect.gen(function* () {
+    const id = AccountID.make("encrypted-user")
+    const accessToken = AccessToken.make("plaintext-access-token")
+    const refreshToken = RefreshToken.make("plaintext-refresh-token")
+    yield* AccountRepo.Service.use((repo) =>
+      repo.persistAccount({
+        id,
+        email: "encrypted@example.com",
+        url: "https://control.example.com",
+        accessToken,
+        refreshToken,
+        expiry: Date.now() + 3_600_000,
+        orgID: Option.none(),
+      }),
+    )
+
+    const { db } = yield* Database.Service
+    const stored = yield* db.select().from(AccountTable).where(eq(AccountTable.id, id)).get()
+    expect(stored?.access_token).toStartWith("mgpt:v1:")
+    expect(stored?.refresh_token).toStartWith("mgpt:v1:")
+    expect(stored?.access_token).not.toContain(accessToken)
+    expect(stored?.refresh_token).not.toContain(refreshToken)
+
+    const decoded = Option.getOrThrow(yield* AccountRepo.use.getRow(id))
+    expect(decoded.access_token).toBe(accessToken)
+    expect(decoded.refresh_token).toBe(refreshToken)
+  }),
+)
 
 it.live("list returns empty when no accounts exist", () =>
   Effect.gen(function* () {

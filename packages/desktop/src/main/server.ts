@@ -23,6 +23,7 @@ const SIDECAR_STOP_TIMEOUT = 6_000
 
 type SpawnLocalServerOptions = {
   userDataPath: string
+  accountVaultKey: Uint8Array
   onStdout?: (message: string) => void
   onStderr?: (message: string) => void
   onExit?: (code: number) => void
@@ -134,6 +135,7 @@ export async function spawnLocalServer(
       port,
       password,
       userDataPath: options.userDataPath,
+      accountVaultKey: options.accountVaultKey,
     })
   }).catch((error) => {
     if (!exited) child.kill()

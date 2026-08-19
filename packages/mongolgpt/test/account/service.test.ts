@@ -1,7 +1,7 @@
 import { expect } from "bun:test"
-import { Duration, Effect, Layer, Option, Schema } from "effect"
+import { Duration, Effect, Exit, Layer, Option, Schema } from "effect"
 import { sql } from "drizzle-orm"
-import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http"
+import { FetchHttpClient, HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http"
 
 import { AccountRepo } from "../../src/account/repo"
 import { Account } from "../../src/account/account"
@@ -18,6 +18,9 @@ import {
 } from "../../src/account/schema"
 import { Database } from "@mongolgpt/core/database/database"
 import { testEffect } from "../lib/effect"
+import { configureAccountTokenEncryptionKey } from "../../src/account/token-codec"
+
+configureAccountTokenEncryptionKey(new Uint8Array(32).fill(11))
 
 const truncate = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -31,9 +34,15 @@ const it = testEffect(Layer.merge(AccountRepo.defaultLayer, truncate))
 
 const insideEagerRefreshWindow = Duration.toMillis(Duration.minutes(1))
 const outsideEagerRefreshWindow = Duration.toMillis(Duration.minutes(10))
+const publicDns: Account.AccountDnsLookup = async () => [{ address: "93.184.216.34", family: 4 }]
 
 const live = (client: HttpClient.HttpClient) =>
-  Account.layer.pipe(Layer.provide(Layer.succeed(HttpClient.HttpClient, client)))
+  Account.layerWithDnsResolver(publicDns, { allowCustomAccountServer: true }).pipe(
+    Layer.provide(Layer.succeed(HttpClient.HttpClient, client)),
+  )
+const browserLive = Account.layerWithDnsResolver(publicDns, { allowCustomAccountServer: true }).pipe(
+  Layer.provide(FetchHttpClient.layer),
+)
 
 const json = (req: Parameters<typeof HttpClientResponse.fromWeb>[0], body: unknown, status = 200) =>
   HttpClientResponse.fromWeb(
@@ -67,6 +76,107 @@ const deviceTokenClient = (body: unknown, status = 400) =>
 
 const poll = (body: unknown, status = 400) =>
   Account.Service.use((s) => s.poll(login())).pipe(Effect.provide(live(deviceTokenClient(body, status))))
+
+it.live("browser login refuses token endpoint redirects", () =>
+  Effect.acquireUseRelease(
+    Effect.sync(() =>
+      Bun.serve({
+        port: 0,
+        fetch(request) {
+          const url = new URL(request.url)
+          if (url.pathname === "/.well-known/oauth-authorization-server") {
+            return Response.json({
+              issuer: url.origin,
+              authorization_endpoint: `${url.origin}/authorize`,
+              token_endpoint: `${url.origin}/token`,
+            })
+          }
+          if (url.pathname === "/token") return Response.redirect(`${url.origin}/redirected-token`, 302)
+          if (url.pathname === "/redirected-token") {
+            return Response.json({ access_token: "redirected", refresh_token: "redirected", expires_in: 60 })
+          }
+          if (url.pathname === "/api/user") return Response.json({ id: "redirected", email: "redirected@example.com" })
+          if (url.pathname === "/api/orgs") return Response.json([])
+          return new Response(null, { status: 404 })
+        },
+      }),
+    ),
+    (server) =>
+      Effect.gen(function* () {
+        const pending = yield* Account.use
+          .browserLogin(`http://127.0.0.1:${server.port}`)
+          .pipe(Effect.provide(browserLive))
+        const authorization = new URL(pending.url)
+        const redirect = authorization.searchParams.get("redirect_uri")
+        const state = authorization.searchParams.get("state")
+        expect(redirect).not.toBeNull()
+        expect(state).not.toBeNull()
+
+        const callback = new URL(redirect as string)
+        callback.searchParams.set("code", "test-code")
+        callback.searchParams.set("state", state as string)
+        const response = yield* Effect.promise(() => fetch(callback))
+        expect(response.status).toBe(200)
+
+        const result = yield* Effect.exit(pending.wait)
+        expect(Exit.isFailure(result)).toBe(true)
+      }),
+    (server) => Effect.sync(() => server.stop(true)),
+  ),
+)
+
+it.live("browser login ignores a wrong-state error callback and accepts the matching callback", () =>
+  Effect.acquireUseRelease(
+    Effect.sync(() =>
+      Bun.serve({
+        port: 0,
+        fetch(request) {
+          const url = new URL(request.url)
+          if (url.pathname === "/.well-known/oauth-authorization-server") {
+            return Response.json({
+              issuer: url.origin,
+              authorization_endpoint: `${url.origin}/authorize`,
+              token_endpoint: `${url.origin}/token`,
+            })
+          }
+          if (url.pathname === "/token") {
+            return Response.json({ access_token: "access", refresh_token: "refresh", expires_in: 60 })
+          }
+          if (url.pathname === "/api/user") return Response.json({ id: "user", email: "user@example.com" })
+          if (url.pathname === "/api/orgs") return Response.json([])
+          return new Response(null, { status: 404 })
+        },
+      }),
+    ),
+    (server) =>
+      Effect.gen(function* () {
+        const pending = yield* Account.use
+          .browserLogin(`http://127.0.0.1:${server.port}`)
+          .pipe(Effect.provide(browserLive))
+        const authorization = new URL(pending.url)
+        const redirect = authorization.searchParams.get("redirect_uri")
+        const state = authorization.searchParams.get("state")
+        expect(redirect).not.toBeNull()
+        expect(state).not.toBeNull()
+
+        const rejected = new URL(redirect as string)
+        rejected.searchParams.set("error", "access_denied")
+        rejected.searchParams.set("state", "wrong-state")
+        const rejectedResponse = yield* Effect.promise(() => fetch(rejected))
+        expect(rejectedResponse.status).toBe(400)
+
+        const accepted = new URL(redirect as string)
+        accepted.searchParams.set("code", "test-code")
+        accepted.searchParams.set("state", state as string)
+        const acceptedResponse = yield* Effect.promise(() => fetch(accepted))
+        expect(acceptedResponse.status).toBe(200)
+
+        const result = yield* pending.wait
+        expect(result.email).toBe("user@example.com")
+      }),
+    (server) => Effect.sync(() => server.stop(true)),
+  ),
+)
 
 it.live("login normalizes trailing slashes in the provided server URL", () =>
   Effect.gen(function* () {

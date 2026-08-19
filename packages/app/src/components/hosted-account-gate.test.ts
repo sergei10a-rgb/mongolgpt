@@ -35,6 +35,15 @@ describe("hosted account gate helpers", () => {
     expect(hostedAccountGateEnabled("hosted", "https://runtime.dev.mgpt.mn")).toBe(true)
     expect(hostedAccountGateEnabled("local-bridge", "https://runtime.dev.mgpt.mn")).toBe(false)
     expect(hostedAccountGateEnabled(undefined, "http://127.0.0.1:4096")).toBe(false)
+    expect(hostedAccountGateEnabled("hosted", "http://runtime.dev.mgpt.mn")).toBe(false)
+    expect(hostedAccountGateEnabled("hosted", "https://[::1]:4096")).toBe(false)
+    expect(hostedAccountGateEnabled("hosted", "https://192.168.1.20")).toBe(false)
+  })
+
+  test("rejects unsafe hosted endpoint origins", () => {
+    expect(() => hostedSessionUrl("http://runtime.dev.mgpt.mn")).toThrow("invalid")
+    expect(() => hostedRuntimeTokenUrl("https://localhost")).toThrow("invalid")
+    expect(() => hostedLoginUrl("https://user:password@dev.mgpt.mn")).toThrow("invalid")
   })
 })
 

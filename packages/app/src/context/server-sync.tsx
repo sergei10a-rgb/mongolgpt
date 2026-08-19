@@ -464,6 +464,11 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
     queryOptions: queryOptionsApi,
     // bootstrap,
     updateConfig: updateConfigMutation.mutateAsync,
+    refreshGlobal: async () => {
+      await configQuery.refetch()
+      await providerQuery.refetch()
+      await bootstrap.refetch()
+    },
     project: projectApi,
     session,
     mcp: {

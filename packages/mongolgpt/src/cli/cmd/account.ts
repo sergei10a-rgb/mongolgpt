@@ -11,7 +11,12 @@ import {
   type AccountError,
   type PollResult,
 } from "@/account/schema"
-import { defaultConsoleUrl, normalizeServerUrl } from "@/account/url"
+import {
+  defaultConsoleUrl,
+  isLoopbackAccountServer,
+  normalizeServerUrl,
+  validateConfiguredAccountServerUrl,
+} from "@/account/url"
 import { resolveProductServiceUrls } from "@mongolgpt/core/product"
 import { effectCmd } from "../effect-cmd"
 import * as Prompt from "../effect/prompt"
@@ -34,7 +39,7 @@ export { defaultConsoleUrl }
 const canonicalHostname = (url: URL) => url.hostname.toLowerCase().replace(/\.$/, "")
 
 export function normalizeAccountLoginUrl(input: string) {
-  const normalized = normalizeServerUrl(input)
+  const normalized = validateConfiguredAccountServerUrl(input)
   const url = new URL(normalized)
   if (hostedAccountHostnames.has(canonicalHostname(url)) && url.protocol !== "https:") {
     throw new Error("MongolGPT аккаунтын албан ёсны хаяг HTTPS ашиглах ёстой")
@@ -42,8 +47,7 @@ export function normalizeAccountLoginUrl(input: string) {
   return normalized
 }
 
-export const accountDeviceFallbackAllowed = (input: string) =>
-  !hostedAccountHostnames.has(canonicalHostname(new URL(normalizeServerUrl(input))))
+export const accountDeviceFallbackAllowed = (input: string) => isLoopbackAccountServer(normalizeServerUrl(input))
 
 export const formatAccountLabel = (account: { email: string; url: string }, isActive: boolean) =>
   `${account.email} ${dim(account.url)}${activeSuffix(isActive)}`

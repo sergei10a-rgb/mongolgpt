@@ -22,13 +22,17 @@ describe("console account display", () => {
     expect(accountDeviceFallbackAllowed("https://mgpt.mn./custom-prefix")).toBe(false)
   })
 
-  test("keeps device-code compatibility for custom account services", () => {
-    expect(accountDeviceFallbackAllowed("https://accounts.example.com")).toBe(true)
+  test("keeps device-code compatibility for loopback development only", () => {
+    expect(accountDeviceFallbackAllowed("https://accounts.example.com")).toBe(false)
+    expect(accountDeviceFallbackAllowed("http://localhost:3000")).toBe(true)
   })
 
   test("rejects insecure official account service URLs", () => {
     expect(() => normalizeAccountLoginUrl("http://mgpt.mn")).toThrow("HTTPS")
-    expect(normalizeAccountLoginUrl("http://accounts.example.com/path/")).toBe("http://accounts.example.com/path")
+    expect(() => normalizeAccountLoginUrl("http://accounts.example.com/path/")).toThrow("HTTPS")
+    expect(() => normalizeAccountLoginUrl("https://accounts.example.com/path/")).toThrow("албан ёсны")
+    expect(normalizeAccountLoginUrl("https://mgpt.mn/console")).toBe("https://mgpt.mn")
+    expect(normalizeAccountLoginUrl("http://localhost:3000/path/")).toBe("http://localhost:3000/path")
   })
 
   test("includes the account url in account labels", () => {

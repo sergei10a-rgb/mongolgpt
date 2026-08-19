@@ -1,4 +1,4 @@
-import { Component } from "solid-js"
+import { Component, Show } from "solid-js"
 import { Dialog } from "@mongolgpt/ui/dialog"
 import { Tabs } from "@mongolgpt/ui/tabs"
 import { Icon } from "@mongolgpt/ui/icon"
@@ -9,6 +9,7 @@ import { SettingsKeybinds } from "./settings-keybinds"
 import { SettingsProviders } from "./settings-providers"
 import { SettingsModels } from "./settings-models"
 import { SettingsServers } from "./settings-servers"
+import { SettingsAccount } from "./settings-account"
 
 export const DialogSettings: Component = () => {
   const language = useLanguage()
@@ -21,6 +22,15 @@ export const DialogSettings: Component = () => {
           <div class="flex flex-col justify-between h-full w-full gap-4">
             <div class="flex flex-col gap-3 w-full pt-3">
               <div class="flex flex-col gap-3">
+                <Show when={platform.account}>
+                  <div class="flex flex-col gap-1.5">
+                    <Tabs.SectionTitle>{language.t("settings.section.account")}</Tabs.SectionTitle>
+                    <Tabs.Trigger value="account">
+                      <Icon name="status" />
+                      {language.t("settings.account.tab")}
+                    </Tabs.Trigger>
+                  </div>
+                </Show>
                 <div class="flex flex-col gap-1.5">
                   <Tabs.SectionTitle>{language.t("settings.section.desktop")}</Tabs.SectionTitle>
                   <div class="flex flex-col gap-1.5 w-full">
@@ -60,6 +70,11 @@ export const DialogSettings: Component = () => {
             </div>
           </div>
         </Tabs.List>
+        <Show when={platform.account}>
+          <Tabs.Content value="account" class="no-scrollbar">
+            <SettingsAccount />
+          </Tabs.Content>
+        </Show>
         <Tabs.Content value="general" class="no-scrollbar">
           <SettingsGeneral />
         </Tabs.Content>

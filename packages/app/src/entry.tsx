@@ -10,6 +10,7 @@ import { dict as zh } from "@/i18n/zh"
 import { handleNotificationClick } from "@/utils/notification-click"
 import { authFromToken } from "@/utils/server"
 import { resolveDefaultServerUrl, resolveWebRuntime } from "@/utils/web-runtime"
+import { createHostedAccountPlatform } from "@/components/hosted-account-platform"
 import pkg from "../package.json"
 import { ServerConnection } from "./context/server"
 
@@ -129,6 +130,11 @@ const clearAuthToken = () => {
 const platform: Platform = {
   platform: "web",
   version: pkg.version,
+  account: createHostedAccountPlatform({
+    mode: import.meta.env.VITE_MONGOLGPT_RUNTIME_MODE,
+    runtimeUrl: import.meta.env.VITE_MONGOLGPT_SERVER_URL,
+    publicOrigin: import.meta.env.VITE_MONGOLGPT_PUBLIC_URL,
+  }),
   openLink,
   back,
   forward,

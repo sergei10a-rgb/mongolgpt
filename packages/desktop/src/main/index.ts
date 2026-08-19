@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto"
+import { randomBytes, randomUUID } from "node:crypto"
 import { mkdirSync, rmSync } from "node:fs"
 import * as http from "node:http"
 import { createServer } from "node:net"
@@ -6,19 +6,22 @@ import { homedir, tmpdir } from "node:os"
 import { join } from "node:path"
 import { getCACertificates, setDefaultCACertificates } from "node:tls"
 import type { Event } from "electron"
-import { app, BrowserWindow } from "electron"
+import { app, BrowserWindow, safeStorage, shell } from "electron"
 
 import { Deferred, Effect, Fiber } from "effect"
 import contextMenu from "electron-context-menu"
 
 import type { ServerReadyData } from "../preload/types"
 import { checkAppExists, resolveAppPath } from "./apps"
-import { CHANNEL } from "./constants"
+import { createDesktopAccountClient } from "./account-client"
+import { loadOrCreateAccountVaultKey } from "./account-vault-key"
+import { ACCOUNT_SERVER_URL, CHANNEL } from "./constants"
 import { registerIpcHandlers, sendDeepLinks, sendMenuCommand } from "./ipc"
 import { forwardInitializationFailure } from "./initialization"
 import { exportDebugLogs, initCrashReporter, initLogging, startNetLog, write as writeLog } from "./logging"
 import { parseMarkdown } from "./markdown"
 import { createMenu } from "./menu"
+import { getStore } from "./store"
 import {
   getDefaultServerUrl,
   preferAppEnv,
@@ -103,10 +106,12 @@ function ensureLoopbackNoProxy() {
 const main = Effect.gen(function* () {
   contextMenu({ showSaveImageAs: true, showLookUpSelection: false, showSearchWithGoogle: false })
 
-  // on macOS apps run in `/` which can cause issues with ripgrep
-  try {
-    process.chdir(homedir())
-  } catch {}
+  // macOS apps start in `/`, which can cause issues with ripgrep.
+  if (process.platform === "darwin") {
+    try {
+      process.chdir(homedir())
+    } catch {}
+  }
 
   process.env.MONGOLGPT_DISABLE_EMBEDDED_WEB_UI = "true"
   process.env.MONGOLGPT_DISABLE_EMBEDDED_WEB_UI = "true"
@@ -120,7 +125,6 @@ const main = Effect.gen(function* () {
     ;["data", "config", "cache", "state", "desktop", "session"].forEach((dir) =>
       mkdirSync(join(root, dir), { recursive: true }),
     )
-    process.env.MONGOLGPT_DB = ":memory:"
     process.env.MONGOLGPT_DB = ":memory:"
     process.env.XDG_DATA_HOME = join(root, "data")
     process.env.XDG_CONFIG_HOME = join(root, "config")
@@ -235,6 +239,11 @@ const main = Effect.gen(function* () {
   }
 
   const serverReady = Deferred.makeUnsafe<ServerReadyData, unknown>()
+  const account = createDesktopAccountClient({
+    server: () => Effect.runPromise(Deferred.await(serverReady)),
+    accountServer: ACCOUNT_SERVER_URL,
+    openExternal: (url) => shell.openExternal(url),
+  })
 
   yield* Effect.promise(() => app.whenReady())
 
@@ -255,6 +264,7 @@ const main = Effect.gen(function* () {
       },
       (e) => Effect.runPromise(e),
     ),
+    account,
     consumeInitialDeepLinks: () => pendingDeepLinks.splice(0),
     getDefaultServerUrl: () => getDefaultServerUrl(),
     setDefaultServerUrl: (url) => setDefaultServerUrl(url),
@@ -316,14 +326,41 @@ const main = Effect.gen(function* () {
     useEnvProxy()
 
     logger.log("spawning sidecar", { url })
-    const { listener, health } = yield* Effect.promise(() =>
-      spawnLocalServer(hostname, port, password, {
-        userDataPath: app.getPath("userData"),
-        onStdout: (message) => writeLog("server", "stdout", { message }),
-        onStderr: (message) => writeLog("server", "stderr", { message }, "warn"),
-        onExit: (code) => writeLog("utility", "sidecar exited", { code }, "warn"),
-      }),
-    )
+    const { listener, health } = yield* Effect.tryPromise({
+      try: async () => {
+        const secureStore = getStore("mongolgpt.secure")
+        const accountVaultKey = loadOrCreateAccountVaultKey({
+          storage: {
+            get: (key) => {
+              const value = secureStore.get(key)
+              return typeof value === "string" ? value : undefined
+            },
+            set: (key, value) => secureStore.set(key, value),
+          },
+          safeStorage: {
+            isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
+            getSelectedStorageBackend:
+              process.platform === "linux" ? () => safeStorage.getSelectedStorageBackend() : undefined,
+            encryptString: (value) => safeStorage.encryptString(value),
+            decryptString: (value) => safeStorage.decryptString(Buffer.from(value)),
+          },
+          randomness: { randomBytes },
+        })
+
+        try {
+          return await spawnLocalServer(hostname, port, password, {
+            userDataPath: app.getPath("userData"),
+            accountVaultKey,
+            onStdout: (message) => writeLog("server", "stdout", { message }),
+            onStderr: (message) => writeLog("server", "stderr", { message }, "warn"),
+            onExit: (code) => writeLog("utility", "sidecar exited", { code }, "warn"),
+          })
+        } finally {
+          accountVaultKey.fill(0)
+        }
+      },
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    })
     server = listener
     yield* Deferred.succeed(serverReady, {
       url,

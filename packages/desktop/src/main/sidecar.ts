@@ -18,6 +18,7 @@ type StartCommand = {
   port: number
   password: string
   userDataPath: string
+  accountVaultKey: Uint8Array
 }
 
 type StopCommand = { type: "stop" }
@@ -38,6 +39,7 @@ type Listener = {
 }
 
 type ServerModule = {
+  configureAccountTokenEncryptionKey(key: Uint8Array): void
   Server: {
     listen(options: {
       port: number
@@ -68,7 +70,15 @@ async function start(command: StartCommand) {
     ensureLoopbackNoProxy()
     useSystemCertificates()
     useEnvProxy()
-    const { Server } = await loadServerModule()
+    const { Server } = await (async () => {
+      try {
+        const serverModule = await loadServerModule()
+        serverModule.configureAccountTokenEncryptionKey(command.accountVaultKey)
+        return serverModule
+      } finally {
+        command.accountVaultKey.fill(0)
+      }
+    })()
 
     listener = await Server.listen({
       port: command.port,
@@ -98,7 +108,10 @@ function prepareSidecarEnv(password: string, userDataPath: string) {
   Object.assign(process.env, {
     MONGOLGPT_SERVER_USERNAME: "mongolgpt",
     MONGOLGPT_SERVER_PASSWORD: password,
-    XDG_STATE_HOME: process.env.XDG_STATE_HOME ?? userDataPath,
+    XDG_DATA_HOME: join(userDataPath, "data"),
+    XDG_CONFIG_HOME: join(userDataPath, "config"),
+    XDG_CACHE_HOME: join(userDataPath, "cache"),
+    XDG_STATE_HOME: join(userDataPath, "state"),
   })
 }
 
@@ -150,12 +163,14 @@ function parseCommand(value: unknown): SidecarCommand | undefined {
   if (typeof command.port !== "number") return
   if (typeof command.password !== "string") return
   if (typeof command.userDataPath !== "string") return
+  if (!(command.accountVaultKey instanceof Uint8Array) || command.accountVaultKey.byteLength !== 32) return
   return {
     type: "start",
     hostname: command.hostname,
     port: command.port,
     password: command.password,
     userDataPath: command.userDataPath,
+    accountVaultKey: command.accountVaultKey,
   }
 }
 

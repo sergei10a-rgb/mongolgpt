@@ -14,6 +14,11 @@ const api: ElectronAPI = {
   killSidecar: () => ipcRenderer.invoke("kill-sidecar"),
   installCli: () => ipcRenderer.invoke("install-cli"),
   awaitInitialization: () => ipcRenderer.invoke("await-initialization"),
+  account: {
+    current: () => ipcRenderer.invoke("account-current"),
+    login: () => ipcRenderer.invoke("account-login"),
+    logout: () => ipcRenderer.invoke("account-logout"),
+  },
   wslServers: {
     getState: () => ipcRenderer.invoke("wsl-servers-get-state"),
     subscribe: (cb) => {

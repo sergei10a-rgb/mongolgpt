@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 
-import { defaultAuthUrl, defaultConsoleUrl, normalizeServerUrl, resolveAuthServerUrl } from "../../src/account/url"
+import {
+  defaultAuthUrl,
+  defaultConsoleUrl,
+  isBlockedAccountAddress,
+  normalizeServerUrl,
+  resolveAccountVerificationUrl,
+  resolveAuthServerUrl,
+  validateAccountOAuthMetadata,
+  validateAccountServerUrl,
+  validateConfiguredAccountServerUrl,
+} from "../../src/account/url"
 
 describe("account url helpers", () => {
   const previousAuthUrl = process.env.MONGOLGPT_AUTH_URL
@@ -34,5 +44,68 @@ describe("account url helpers", () => {
   test("keeps explicit auth issuer URLs", () => {
     expect(resolveAuthServerUrl("https://example.com/auth/dev")).toBe("https://example.com/auth/dev")
     expect(resolveAuthServerUrl("https://auth.example.com")).toBe("https://auth.example.com")
+  })
+
+  test("allows HTTPS and local development account servers only", () => {
+    expect(validateAccountServerUrl("https://accounts.example.com/console")).toBe("https://accounts.example.com")
+    expect(validateAccountServerUrl("http://127.0.0.1:3000/console")).toBe("http://127.0.0.1:3000")
+    expect(() => validateAccountServerUrl("http://accounts.example.com")).toThrow("HTTPS")
+    expect(() => validateAccountServerUrl("https://user:secret@accounts.example.com")).toThrow("нэвтрэх мэдээлэл")
+    expect(() => validateAccountServerUrl("https://10.0.0.1")).toThrow("private")
+  })
+
+  test("resolves device verification URLs without leaving the account origin", () => {
+    expect(resolveAccountVerificationUrl("https://accounts.example.com/api", "/device?user_code=ABCD")).toBe(
+      "https://accounts.example.com/device?user_code=ABCD",
+    )
+    expect(resolveAccountVerificationUrl("https://accounts.example.com/api", "verify?user_code=ABCD")).toBe(
+      "https://accounts.example.com/api/verify?user_code=ABCD",
+    )
+    expect(
+      resolveAccountVerificationUrl(
+        "https://accounts.example.com",
+        "https://accounts.example.com/device?user_code=ABCD",
+      ),
+    ).toBe("https://accounts.example.com/device?user_code=ABCD")
+    expect(() => resolveAccountVerificationUrl("https://accounts.example.com", "https://evil.example/device")).toThrow(
+      "ижил origin",
+    )
+    expect(() => resolveAccountVerificationUrl("https://accounts.example.com", " ")).toThrow("хоосон")
+  })
+
+  test("trusts only configured MongolGPT account origins by default", () => {
+    expect(validateConfiguredAccountServerUrl("https://mgpt.mn/console")).toBe("https://mgpt.mn")
+    expect(validateConfiguredAccountServerUrl("https://dev.mgpt.mn/console")).toBe("https://dev.mgpt.mn")
+    expect(validateConfiguredAccountServerUrl("http://localhost:3000/custom-prefix")).toBe(
+      "http://localhost:3000/custom-prefix",
+    )
+    expect(() => validateConfiguredAccountServerUrl("https://accounts.example.com")).toThrow("албан ёсны")
+  })
+
+  test("rejects private and reserved DNS results", () => {
+    expect(isBlockedAccountAddress("127.0.0.1")).toBe(true)
+    expect(isBlockedAccountAddress("169.254.169.254")).toBe(true)
+    expect(isBlockedAccountAddress("10.20.30.40")).toBe(true)
+    expect(isBlockedAccountAddress("1.1.1.1")).toBe(false)
+    expect(isBlockedAccountAddress("::ffff:127.0.0.1")).toBe(true)
+    expect(isBlockedAccountAddress("::ffff:10.0.0.1")).toBe(true)
+    expect(isBlockedAccountAddress("::ffff:8.8.8.8")).toBe(false)
+  })
+
+  test("requires OAuth metadata endpoints to use the issuer origin", () => {
+    expect(() =>
+      validateAccountOAuthMetadata("https://auth.example.com", {
+        issuer: "https://auth.example.com",
+        authorization_endpoint: "https://auth.example.com/authorize",
+        token_endpoint: "https://auth.example.com/token",
+      }),
+    ).not.toThrow()
+    expect(() =>
+      validateAccountOAuthMetadata("https://auth.example.com", {
+        issuer: "https://auth.example.com",
+        authorization_endpoint: "https://evil.example.com/authorize",
+        token_endpoint: "https://auth.example.com/token",
+      }),
+    ).toThrow("ижил origin")
   })
 })

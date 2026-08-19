@@ -1,4 +1,4 @@
-import { Component } from "solid-js"
+import { Component, Show } from "solid-js"
 import { Dialog } from "@mongolgpt/ui/v2/dialog-v2"
 import { TabsV2 } from "@mongolgpt/ui/v2/tabs-v2"
 import { Icon } from "@mongolgpt/ui/icon"
@@ -11,6 +11,7 @@ import { SettingsModelsV2 } from "./models"
 import "./settings-v2.css"
 import { SettingsServersV2 } from "./servers"
 import { SettingsImportsV2 } from "./imports"
+import { SettingsAccountV2 } from "../settings-account"
 
 export const DialogSettings: Component<{
   sessionID?: string
@@ -25,6 +26,15 @@ export const DialogSettings: Component<{
           <div class="flex flex-col justify-between h-full w-full">
             <div class="flex flex-col gap-3 w-full">
               <div class="flex flex-col gap-3">
+                <Show when={platform.account}>
+                  <div class="flex flex-col gap-1.5">
+                    <TabsV2.SectionTitle>{language.t("settings.section.account")}</TabsV2.SectionTitle>
+                    <TabsV2.Trigger value="account">
+                      <Icon name="status" />
+                      {language.t("settings.account.tab")}
+                    </TabsV2.Trigger>
+                  </div>
+                </Show>
                 <div class="flex flex-col gap-1.5">
                   <TabsV2.SectionTitle>{language.t("settings.section.desktop")}</TabsV2.SectionTitle>
                   <div class="flex flex-col gap-1.5 w-full">
@@ -56,7 +66,7 @@ export const DialogSettings: Component<{
                     </TabsV2.Trigger>
                     <TabsV2.Trigger value="imports">
                       <Icon name="mcp" />
-                      Интеграц
+                      {language.t("settings.imports.title")}
                     </TabsV2.Trigger>
                   </div>
                 </div>
@@ -68,6 +78,11 @@ export const DialogSettings: Component<{
             </div>
           </div>
         </TabsV2.List>
+        <Show when={platform.account}>
+          <TabsV2.Content value="account" class="settings-v2-panel">
+            <SettingsAccountV2 />
+          </TabsV2.Content>
+        </Show>
         <TabsV2.Content value="general" class="settings-v2-panel">
           <SettingsGeneralV2 sessionID={props.sessionID} />
         </TabsV2.Content>

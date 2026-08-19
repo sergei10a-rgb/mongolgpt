@@ -136,6 +136,11 @@ const createPlatform = (): Platform => {
     platform: "desktop",
     os,
     version: pkg.version,
+    account: {
+      current: () => window.api.account.current(),
+      login: () => window.api.account.login(),
+      logout: () => window.api.account.logout(),
+    },
 
     async openDirectoryPickerDialog(opts) {
       return window.api.openDirectoryPicker({

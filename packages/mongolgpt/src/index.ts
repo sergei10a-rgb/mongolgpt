@@ -30,8 +30,10 @@ import { errorMessage } from "./util/error"
 import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 import { CompatCommand } from "./cli/cmd/compat"
+import { initializeCliAccountTokenEncryption } from "./account/cli-token-key"
 
 const args = hideBin(process.argv)
+let accountTokenEncryptionInitialization: Promise<void> | undefined
 
 function show(out: string) {
   const text = out.trimStart()
@@ -65,6 +67,9 @@ const cli = yargs(args)
     type: "boolean",
   })
   .middleware(async (opts) => {
+    accountTokenEncryptionInitialization ??= initializeCliAccountTokenEncryption()
+    await accountTokenEncryptionInitialization.catch(() => undefined)
+
     if (opts.printLogs) {
       process.env.MONGOLGPT_PRINT_LOGS = "1"
     }

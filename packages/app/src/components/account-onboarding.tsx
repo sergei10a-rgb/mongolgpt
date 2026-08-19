@@ -2,7 +2,7 @@ import { Button } from "@mongolgpt/ui/button"
 import { useDialog } from "@mongolgpt/ui/context/dialog"
 import { Dialog } from "@mongolgpt/ui/dialog"
 import { ProviderIcon } from "@mongolgpt/ui/provider-icon"
-import { type Accessor, createEffect, Match, Show, Switch } from "solid-js"
+import { type Accessor, createEffect, createResource, Match, Show, Switch } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useLanguage } from "@/context/language"
 import { usePlatform } from "@/context/platform"
@@ -15,22 +15,36 @@ import { DialogCustomProvider } from "./dialog-custom-provider"
 
 export function AccountOnboardingGate() {
   const dialog = useDialog()
+  const language = useLanguage()
   const platform = usePlatform()
   const server = useServer()
   const sync = useServerSync()
   const [state, setState, , storageReady] = persisted(
-    Persist.global("account-onboarding.v1"),
+    Persist.global("account-onboarding.v2"),
     createStore({ completed: false }),
   )
   const [gate, setGate] = createStore({ shown: false })
+  const [account, { mutate: setAccount, refetch: refetchAccount }] = createResource(
+    () => platform.account?.current() ?? null,
+  )
 
-  const connected = () => sync().data.provider.connected.includes("mongolgpt")
+  const connected = () => account.latest !== null && account.latest !== undefined
   const ready = () =>
     platform.platform === "desktop" &&
+    platform.account !== undefined &&
     ServerConnection.local(server.current) &&
     storageReady() &&
+    !account.loading &&
     sync().data.ready &&
     sync().data.provider.all.has("mongolgpt")
+
+  const login = async () => {
+    if (!platform.account) throw new Error(language.t("onboarding.account.loginError"))
+    const loggedIn = await platform.account.login()
+    setAccount(loggedIn)
+    const [, providerRefresh] = await Promise.allSettled([Promise.resolve(refetchAccount()), sync().refreshGlobal()])
+    return providerRefresh.status === "fulfilled"
+  }
 
   createEffect(() => {
     const stage = accountOnboardingStage({ ready: ready(), connected: connected(), completed: state.completed })
@@ -40,6 +54,12 @@ export function AccountOnboardingGate() {
       () => (
         <DialogAccountOnboarding
           connected={connected}
+          accountStatusError={() => account.error !== undefined}
+          onLogin={login}
+          onRetryAccount={async () => {
+            await refetchAccount()
+          }}
+          onRetrySync={() => sync().refreshGlobal()}
           nvidiaAvailable={() => sync().data.provider.all.has("nvidia")}
           onComplete={() => {
             setState("completed", true)
@@ -56,18 +76,59 @@ export function AccountOnboardingGate() {
 
 function DialogAccountOnboarding(props: {
   connected: Accessor<boolean>
+  accountStatusError: Accessor<boolean>
+  onLogin: () => Promise<boolean>
+  onRetryAccount: () => Promise<void>
+  onRetrySync: () => Promise<void>
   nvidiaAvailable: Accessor<boolean>
   onComplete: () => void
 }) {
   const dialog = useDialog()
   const language = useLanguage()
-  const [state, setState] = createStore({ connected: false, nvidiaConnected: false })
+  const [state, setState] = createStore({
+    connected: false,
+    nvidiaConnected: false,
+    loginPending: false,
+    retryPending: false,
+    syncPending: false,
+    syncError: false,
+    error: "",
+  })
   const connected = () => state.connected || props.connected()
 
-  const login = () => {
-    dialog.push(() => (
-      <DialogConnectProvider provider="mongolgpt" back="close" onConnected={() => setState("connected", true)} />
-    ))
+  const login = async () => {
+    setState({ loginPending: true, error: "" })
+    try {
+      const synced = await props.onLogin()
+      setState({ connected: true, syncError: !synced })
+    } catch {
+      setState("error", language.t("onboarding.account.loginError"))
+    } finally {
+      setState("loginPending", false)
+    }
+  }
+
+  const retrySync = async () => {
+    setState("syncPending", true)
+    try {
+      await props.onRetrySync()
+      setState("syncError", false)
+    } catch {
+      setState("syncError", true)
+    } finally {
+      setState("syncPending", false)
+    }
+  }
+
+  const retryAccount = async () => {
+    setState({ retryPending: true, error: "" })
+    try {
+      await props.onRetryAccount()
+    } catch {
+      setState("error", language.t("onboarding.account.statusError"))
+    } finally {
+      setState("retryPending", false)
+    }
   }
 
   const connectNvidia = () => {
@@ -93,9 +154,25 @@ function DialogAccountOnboarding(props: {
                   <p class="text-14-regular text-text-base">{language.t("onboarding.account.description")}</p>
                 </div>
               </div>
-              <Button class="self-start" size="large" variant="primary" onClick={login}>
-                {language.t("onboarding.account.login")}
-              </Button>
+              <Show when={state.error || props.accountStatusError()}>
+                <p class="text-13-regular text-icon-critical-base">
+                  {state.error || language.t("onboarding.account.statusError")}
+                </p>
+              </Show>
+              <div class="flex flex-wrap items-center gap-2">
+                <Button size="large" variant="primary" onClick={login} disabled={state.loginPending}>
+                  {state.loginPending
+                    ? language.t("onboarding.account.loggingIn")
+                    : language.t("onboarding.account.login")}
+                </Button>
+                <Show when={props.accountStatusError()}>
+                  <Button size="large" variant="secondary" onClick={retryAccount} disabled={state.retryPending}>
+                    {state.retryPending
+                      ? language.t("onboarding.account.retrying")
+                      : language.t("onboarding.account.retry")}
+                  </Button>
+                </Show>
+              </div>
             </div>
           </Match>
           <Match when={connected()}>
@@ -104,6 +181,17 @@ function DialogAccountOnboarding(props: {
                 <div class="text-16-medium text-text-strong">{language.t("onboarding.providers.heading")}</div>
                 <p class="text-14-regular text-text-base">{language.t("onboarding.providers.description")}</p>
               </div>
+
+              <Show when={state.syncError}>
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="text-13-regular text-icon-critical-base">{language.t("onboarding.account.syncError")}</p>
+                  <Button size="normal" variant="secondary" onClick={retrySync} disabled={state.syncPending}>
+                    {state.syncPending
+                      ? language.t("onboarding.account.syncing")
+                      : language.t("onboarding.account.syncRetry")}
+                  </Button>
+                </div>
+              </Show>
 
               <div class="flex flex-col border-y border-border-weak-base">
                 <div class="flex min-h-16 items-center justify-between gap-4 py-3">

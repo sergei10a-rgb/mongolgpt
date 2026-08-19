@@ -526,6 +526,29 @@ const scenarios: Scenario[] = [
     .get("/pty/{ptyID}/connect", "pty.connect")
     .at((ctx) => ({ path: route("/pty/{ptyID}/connect", { ptyID: "pty_httpapi_missing" }), headers: ctx.headers() }))
     .status(404, undefined, "none"),
+  http.protected.get("/experimental/account", "experimental.account.get").json(200, (body) => {
+    check(body === null, "no active account should return null")
+  }),
+  http.protected.delete("/experimental/account", "experimental.account.remove").mutating().json(200, boolean, "status"),
+  http.protected
+    .post("/experimental/account/login", "experimental.account.login")
+    .at((ctx) => ({ path: "/experimental/account/login", headers: ctx.headers(), body: { server: "not a URL" } }))
+    .status(400, undefined, "none"),
+  http.protected
+    .get("/experimental/account/login/{loginID}", "experimental.account.loginStatus")
+    .at((ctx) => ({
+      path: route("/experimental/account/login/{loginID}", { loginID: "login_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404, undefined, "none"),
+  http.protected
+    .delete("/experimental/account/login/{loginID}", "experimental.account.loginCancel")
+    .mutating()
+    .at((ctx) => ({
+      path: route("/experimental/account/login/{loginID}", { loginID: "login_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404, undefined, "none"),
   http.protected.get("/experimental/console", "experimental.console.get").json(),
   http.protected.get("/experimental/console/orgs", "experimental.console.listOrgs").json(),
   http.protected

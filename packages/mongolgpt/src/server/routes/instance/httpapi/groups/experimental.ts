@@ -42,6 +42,28 @@ const ConsoleOrgList = Schema.Struct({
   orgs: Schema.Array(ConsoleOrgOption),
 })
 
+const AccountPublic = Schema.Struct({
+  id: Schema.String,
+  email: Schema.String,
+  url: Schema.String,
+  activeOrgID: Schema.optionalKey(Schema.String),
+}).annotate({ identifier: "ExperimentalAccount" })
+
+const AccountLoginPayload = Schema.Struct({
+  server: Schema.String,
+})
+
+const AccountLoginStarted = Schema.Struct({
+  loginID: Schema.String,
+  url: Schema.String,
+})
+
+const AccountLoginStatus = Schema.Union([
+  Schema.Struct({ _tag: Schema.Literal("pending") }),
+  Schema.Struct({ _tag: Schema.Literal("success"), email: Schema.String }),
+  Schema.Struct({ _tag: Schema.Literal("error"), message: Schema.String }),
+]).annotate({ identifier: "ExperimentalAccountLoginStatus" })
+
 export const ConsoleSwitchPayload = Schema.Struct({
   accountID: AccountID,
   orgID: OrgID,
@@ -89,6 +111,9 @@ export const SessionListQuery = Schema.Struct({
 
 export const ExperimentalPaths = {
   capabilities: "/experimental/capabilities",
+  account: "/experimental/account",
+  accountLogin: "/experimental/account/login",
+  accountLoginStatus: "/experimental/account/login/:loginID",
   console: "/experimental/console",
   consoleOrgs: "/experimental/console/orgs",
   consoleSwitch: "/experimental/console/switch",
@@ -105,161 +130,226 @@ export const ExperimentalApi = HttpApi.make("experimental")
   .add(
     HttpApiGroup.make("experimental")
       .add(
+        HttpApiEndpoint.get("account", ExperimentalPaths.account, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.NullOr(AccountPublic), "Идэвхтэй локал бүртгэл"),
+          error: HttpApiError.InternalServerError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "experimental.account.get",
+            summary: "Идэвхтэй локал бүртгэлийг авах",
+            description:
+              "Идэвхтэй локал бүртгэлийн нийтэд харуулах таних мэдээлэл болон идэвхтэй байгууллагын ID-г авна. Токеныг хэзээ ч буцаахгүй.",
+          }),
+        ),
+        HttpApiEndpoint.delete("accountRemove", ExperimentalPaths.account, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Локал бүртгэлийг устгасан"),
+          error: HttpApiError.InternalServerError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "experimental.account.remove",
+            summary: "Идэвхтэй локал бүртгэлийг устгах",
+            description:
+              "Энэ локал MongolGPT хувилбараас идэвхтэй бүртгэлийг устгана. Алсын токенуудыг хүчингүй болгохгүй.",
+          }),
+        ),
+        HttpApiEndpoint.post("accountLogin", ExperimentalPaths.accountLogin, {
+          query: WorkspaceRoutingQuery,
+          payload: AccountLoginPayload,
+          success: described(AccountLoginStarted, "Хөтчөөр нэвтрэх үйлдэл эхэлсэн"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "experimental.account.login",
+            summary: "Хөтчөөр бүртгэлд нэвтрэх үйлдлийг эхлүүлэх",
+            description:
+              "Локал хөтөч дээр OAuth нэвтрэлтийг эхлүүлж, зөвшөөрлийн URL болон түр нэвтрэлтийн ID-г буцаана.",
+          }),
+        ),
+        HttpApiEndpoint.get("accountLoginStatus", ExperimentalPaths.accountLoginStatus, {
+          params: { loginID: Schema.String },
+          query: WorkspaceRoutingQuery,
+          success: described(AccountLoginStatus, "Хөтчийн нэвтрэлтийн төлөв"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "experimental.account.loginStatus",
+            summary: "Хөтчийн нэвтрэлтийн төлөвийг авах",
+            description:
+              "Хөтчийн түр нэвтрэлтийн төлөвийг авна. Дууссан төлөвийн бичлэг богино хугацааны дараа хүчингүй болно.",
+          }),
+        ),
+        HttpApiEndpoint.delete("accountLoginCancel", ExperimentalPaths.accountLoginStatus, {
+          params: { loginID: Schema.String },
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Хөтчийн нэвтрэлтийг цуцалсан"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "experimental.account.loginCancel",
+            summary: "Хөтчөөр бүртгэлд нэвтрэх үйлдлийг цуцлах",
+            description: "Хүлээгдэж буй локал хөтчийн OAuth нэвтрэлтийг цуцалж устгана.",
+          }),
+        ),
         HttpApiEndpoint.get("capabilities", ExperimentalPaths.capabilities, {
           query: WorkspaceRoutingQuery,
-          success: described(CapabilitiesResponse, "Experimental capabilities"),
+          success: described(CapabilitiesResponse, "Туршилтын боломжууд"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.capabilities.get",
-            summary: "Get experimental capabilities",
-            description: "Get experimental features enabled on the MongolGPT server.",
+            summary: "Туршилтын боломжуудыг авах",
+            description: "MongolGPT сервер дээр идэвхжсэн туршилтын боломжуудыг авна.",
           }),
         ),
         HttpApiEndpoint.get("console", ExperimentalPaths.console, {
           query: WorkspaceRoutingQuery,
-          success: described(ConsoleStateResponse, "Active Console provider metadata"),
+          success: described(ConsoleStateResponse, "Идэвхтэй Console үйлчилгээ үзүүлэгчийн мета өгөгдөл"),
           error: HttpApiError.InternalServerError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.console.get",
-            summary: "Get active Console provider metadata",
-            description: "Get the active Console org name and the set of provider IDs managed by that Console org.",
+            summary: "Идэвхтэй Console үйлчилгээ үзүүлэгчийн мета өгөгдлийг авах",
+            description:
+              "Идэвхтэй Console байгууллагын нэр болон тус байгууллагын удирддаг үйлчилгээ үзүүлэгчийн ID-нуудыг авна.",
           }),
         ),
         HttpApiEndpoint.get("consoleOrgs", ExperimentalPaths.consoleOrgs, {
           query: WorkspaceRoutingQuery,
-          success: described(ConsoleOrgList, "Switchable Console orgs"),
+          success: described(ConsoleOrgList, "Сольж болох Console байгууллагууд"),
           error: HttpApiError.InternalServerError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.console.listOrgs",
-            summary: "List switchable Console orgs",
-            description: "Get the available Console orgs across logged-in accounts, including the current active org.",
+            summary: "Сольж болох Console байгууллагуудыг жагсаах",
+            description:
+              "Нэвтэрсэн бүртгэлүүдэд байгаа Console байгууллагуудыг одоогийн идэвхтэй байгууллагын хамт авна.",
           }),
         ),
         HttpApiEndpoint.post("consoleSwitch", ExperimentalPaths.consoleSwitch, {
           query: WorkspaceRoutingQuery,
           payload: ConsoleSwitchPayload,
-          success: described(Schema.Boolean, "Switch success"),
+          success: described(Schema.Boolean, "Солих үйлдэл амжилттай"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.console.switchOrg",
-            summary: "Switch active Console org",
-            description: "Persist a new active Console account/org selection for the current local MongolGPT state.",
+            summary: "Идэвхтэй Console байгууллагыг солих",
+            description:
+              "Одоогийн локал MongolGPT төлөвт Console бүртгэл болон байгууллагын шинэ идэвхтэй сонголтыг хадгална.",
           }),
         ),
         HttpApiEndpoint.get("tool", ExperimentalPaths.tool, {
           query: ToolListQuery,
-          success: described(ToolList, "Tools"),
+          success: described(ToolList, "Хэрэгслүүд"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tool.list",
-            summary: "List tools",
+            summary: "Хэрэгслүүдийг жагсаах",
             description:
-              "Get a list of available tools with their JSON schema parameters for a specific provider and model combination.",
+              "Тодорхой үйлчилгээ үзүүлэгч болон загварын хослолд ашиглах боломжтой хэрэгслүүдийг JSON схемийн параметрийн хамт авна.",
           }),
         ),
         HttpApiEndpoint.get("toolIDs", ExperimentalPaths.toolIDs, {
           query: WorkspaceRoutingQuery,
-          success: described(ToolIDs, "Tool IDs"),
+          success: described(ToolIDs, "Хэрэгслийн ID-нууд"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "tool.ids",
-            summary: "List tool IDs",
+            summary: "Хэрэгслийн ID-нуудыг жагсаах",
             description:
-              "Get a list of all available tool IDs, including both built-in tools and dynamically registered tools.",
+              "Суурилуулсан болон динамикаар бүртгэсэн бүх хэрэгслийн ID-ны жагсаалтыг авна.",
           }),
         ),
         HttpApiEndpoint.get("worktree", ExperimentalPaths.worktree, {
           query: WorkspaceRoutingQuery,
-          success: described(WorktreeList, "List of worktree directories"),
+          success: described(WorktreeList, "Worktree сангуудын жагсаалт"),
           error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.list",
-            summary: "List worktrees",
-            description: "List all sandbox worktrees for the current project.",
+            summary: "Worktree-үүдийг жагсаах",
+            description: "Одоогийн төслийн тусгаарласан бүх worktree-г жагсаана.",
           }),
         ),
         HttpApiEndpoint.post("worktreeCreate", ExperimentalPaths.worktree, {
           disableCodecs: true,
           query: WorkspaceRoutingQuery,
           payload: [HttpApiSchema.NoContent, Worktree.CreateInput],
-          success: described(Worktree.Info, "Worktree created"),
+          success: described(Worktree.Info, "Worktree үүсгэсэн"),
           error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.create",
-            summary: "Create worktree",
-            description: "Create a new git worktree for the current project and run any configured startup scripts.",
+            summary: "Worktree үүсгэх",
+            description: "Одоогийн төсөлд шинэ git worktree үүсгэж, тохируулсан эхлүүлэх скриптүүдийг ажиллуулна.",
           }),
         ),
         HttpApiEndpoint.delete("worktreeRemove", ExperimentalPaths.worktree, {
           query: WorkspaceRoutingQuery,
           payload: Worktree.RemoveInput,
-          success: described(Schema.Boolean, "Worktree removed"),
+          success: described(Schema.Boolean, "Worktree-г устгасан"),
           error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.remove",
-            summary: "Remove worktree",
-            description: "Remove a git worktree and delete its branch.",
+            summary: "Worktree устгах",
+            description: "Git worktree болон түүний салбарыг устгана.",
           }),
         ),
         HttpApiEndpoint.post("worktreeReset", ExperimentalPaths.worktreeReset, {
           query: WorkspaceRoutingQuery,
           payload: Worktree.ResetInput,
-          success: described(Schema.Boolean, "Worktree reset"),
+          success: described(Schema.Boolean, "Worktree-г анхны төлөвт оруулсан"),
           error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.reset",
-            summary: "Reset worktree",
-            description: "Reset a worktree branch to the primary default branch.",
+            summary: "Worktree-г анхны төлөвт оруулах",
+            description: "Worktree салбарыг үндсэн өгөгдмөл салбарын төлөвт оруулна.",
           }),
         ),
         HttpApiEndpoint.get("session", ExperimentalPaths.session, {
           query: SessionListQuery,
-          success: described(Schema.Array(Session.GlobalInfo), "List of sessions"),
+          success: described(Schema.Array(Session.GlobalInfo), "Сессүүдийн жагсаалт"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.session.list",
-            summary: "List sessions",
+            summary: "Сессүүдийг жагсаах",
             description:
-              "Get a list of all MongolGPT sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.",
+              "Төслүүдийн бүх MongolGPT сессийг хамгийн сүүлд шинэчлэгдсэн дарааллаар авна. Архивласан сессүүдийг өгөгдмөлөөр оруулахгүй.",
           }),
         ),
         HttpApiEndpoint.post("sessionBackground", ExperimentalPaths.sessionBackground, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Boolean, "Backgrounded subagents"),
+          success: described(Schema.Boolean, "Арын горимд шилжүүлсэн дэд агентууд"),
           error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.session.background",
-            summary: "Background subagents",
+            summary: "Дэд агентуудыг арын горимд шилжүүлэх",
             description:
-              "Detach any synchronous subagents currently blocking the session and continue them in the background.",
+              "Сессийг саатуулж буй синхрон дэд агентуудыг салгаж, арын горимд үргэлжлүүлэн ажиллуулна.",
           }),
         ),
         HttpApiEndpoint.get("resource", ExperimentalPaths.resource, {
           query: WorkspaceRoutingQuery,
-          success: described(Schema.Record(Schema.String, MCP.Resource), "MCP resources"),
+          success: described(Schema.Record(Schema.String, MCP.Resource), "MCP нөөцүүд"),
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "experimental.resource.list",
-            summary: "Get MCP resources",
-            description: "Get all available MCP resources from connected servers. Optionally filter by name.",
+            summary: "MCP нөөцүүдийг авах",
+            description: "Холбогдсон серверүүдийн бүх MCP нөөцийг авна. Нэрээр нь шүүж болно.",
           }),
         ),
       )
       .annotateMerge(
         OpenApi.annotations({
-          title: "experimental",
-          description: "Experimental HttpApi read-only routes.",
+          title: "Туршилтын API",
+          description: "Туршилтын HttpApi замууд.",
         }),
       )
       .middleware(InstanceContextMiddleware)
@@ -268,8 +358,8 @@ export const ExperimentalApi = HttpApi.make("experimental")
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "MongolGPT experimental HttpApi",
+      title: "MongolGPT туршилтын HttpApi",
       version: "0.0.1",
-      description: "Experimental HttpApi surface for selected instance routes.",
+      description: "Сонгосон инстансын замуудад зориулсан туршилтын HttpApi интерфэйс.",
     }),
   )

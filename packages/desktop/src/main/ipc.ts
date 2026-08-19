@@ -5,11 +5,12 @@ import { app, BrowserWindow, Notification, clipboard, dialog, ipcMain, shell } f
 import type { IpcMainEvent, IpcMainInvokeEvent } from "electron"
 import type { DesktopMenuAction } from "@mongolgpt/app/desktop-menu"
 
-import type { FatalRendererError, ServerReadyData, TitlebarTheme } from "../preload/types"
+import type { DesktopAccountAPI, FatalRendererError, ServerReadyData, TitlebarTheme } from "../preload/types"
 import { runDesktopMenuAction } from "./desktop-menu-actions"
 import { assertAttachmentBudget, createPickedFileAuthorizations } from "./attachment-picker"
 import { getStore } from "./store"
 import { getPinchZoomEnabled, setPinchZoomEnabled, setTitlebar, updateTitlebar } from "./windows"
+import { assertTrustedRendererSource, isSafeExternalNavigation } from "./renderer-security"
 import type { UpdaterController } from "./updater-controller"
 import { createUpdaterSubscriptions } from "./updater-subscriptions"
 
@@ -24,6 +25,7 @@ type Deps = {
   killSidecar: () => Promise<void> | void
   relaunch: () => void
   awaitInitialization: () => Promise<ServerReadyData>
+  account: DesktopAccountAPI
   consumeInitialDeepLinks: () => Promise<string[]> | string[]
   getDefaultServerUrl: () => Promise<string | null> | string | null
   setDefaultServerUrl: (url: string | null) => Promise<void> | void
@@ -45,7 +47,22 @@ export function registerIpcHandlers(deps: Deps) {
 
   ipcMain.handle("kill-sidecar", () => deps.killSidecar())
   ipcMain.handle("await-initialization", () => deps.awaitInitialization())
-  ipcMain.handle("consume-initial-deep-links", () => deps.consumeInitialDeepLinks())
+  ipcMain.handle("account-current", (event) => {
+    assertTrustedAccountEvent(event)
+    return deps.account.current()
+  })
+  ipcMain.handle("account-login", (event) => {
+    assertTrustedAccountEvent(event)
+    return deps.account.login()
+  })
+  ipcMain.handle("account-logout", (event) => {
+    assertTrustedAccountEvent(event)
+    return deps.account.logout()
+  })
+  ipcMain.handle("consume-initial-deep-links", (event) => {
+    assertTrustedRendererEvent(event)
+    return deps.consumeInitialDeepLinks()
+  })
   ipcMain.handle("get-default-server-url", () => deps.getDefaultServerUrl())
   ipcMain.handle("set-default-server-url", (_event: IpcMainInvokeEvent, url: string | null) =>
     deps.setDefaultServerUrl(url),
@@ -76,7 +93,8 @@ export function registerIpcHandlers(deps: Deps) {
   ipcMain.handle("record-fatal-renderer-error", (_event: IpcMainInvokeEvent, error: FatalRendererError) =>
     deps.recordFatalRendererError(error),
   )
-  ipcMain.handle("store-get", (_event: IpcMainInvokeEvent, name: string, key: string) => {
+  ipcMain.handle("store-get", (event: IpcMainInvokeEvent, name: string, key: string) => {
+    assertTrustedRendererEvent(event)
     try {
       const store = getStore(name)
       const value = store.get(key)
@@ -86,20 +104,25 @@ export function registerIpcHandlers(deps: Deps) {
       return null
     }
   })
-  ipcMain.handle("store-set", (_event: IpcMainInvokeEvent, name: string, key: string, value: string) => {
+  ipcMain.handle("store-set", (event: IpcMainInvokeEvent, name: string, key: string, value: string) => {
+    assertTrustedRendererEvent(event)
     getStore(name).set(key, value)
   })
-  ipcMain.handle("store-delete", (_event: IpcMainInvokeEvent, name: string, key: string) => {
+  ipcMain.handle("store-delete", (event: IpcMainInvokeEvent, name: string, key: string) => {
+    assertTrustedRendererEvent(event)
     getStore(name).delete(key)
   })
-  ipcMain.handle("store-clear", (_event: IpcMainInvokeEvent, name: string) => {
+  ipcMain.handle("store-clear", (event: IpcMainInvokeEvent, name: string) => {
+    assertTrustedRendererEvent(event)
     getStore(name).clear()
   })
-  ipcMain.handle("store-keys", (_event: IpcMainInvokeEvent, name: string) => {
+  ipcMain.handle("store-keys", (event: IpcMainInvokeEvent, name: string) => {
+    assertTrustedRendererEvent(event)
     const store = getStore(name)
     return Object.keys(store.store)
   })
-  ipcMain.handle("store-length", (_event: IpcMainInvokeEvent, name: string) => {
+  ipcMain.handle("store-length", (event: IpcMainInvokeEvent, name: string) => {
+    assertTrustedRendererEvent(event)
     const store = getStore(name)
     return Object.keys(store.store).length
   })
@@ -163,7 +186,9 @@ export function registerIpcHandlers(deps: Deps) {
     },
   )
 
-  ipcMain.on("open-link", (_event: IpcMainEvent, url: string) => {
+  ipcMain.on("open-link", (event: IpcMainEvent, url: string) => {
+    assertTrustedRendererEvent(event)
+    if (!isSafeExternalNavigation(url)) return
     void shell.openExternal(url)
   })
 
@@ -231,6 +256,15 @@ export function registerIpcHandlers(deps: Deps) {
       relaunch: deps.relaunch,
     })
   })
+}
+
+function assertTrustedAccountEvent(event: IpcMainInvokeEvent) {
+  assertTrustedRendererEvent(event)
+}
+
+function assertTrustedRendererEvent(event: IpcMainInvokeEvent | IpcMainEvent) {
+  const frame = event.senderFrame
+  assertTrustedRendererSource(frame?.url, Boolean(frame && frame === frame.top))
 }
 
 export function sendMenuCommand(win: BrowserWindow, id: string) {

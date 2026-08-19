@@ -21,6 +21,19 @@ export type ServerReadyData = {
   password: string | null
 }
 
+export type DesktopAccount = {
+  id: string
+  email: string
+  url: string
+  activeOrgID?: string
+}
+
+export type DesktopAccountAPI = {
+  current: () => Promise<DesktopAccount | null>
+  login: () => Promise<DesktopAccount>
+  logout: () => Promise<void>
+}
+
 export type WslServersAPI = WslServersPlatform
 export type UpdaterAPI = {
   subscribe: (cb: (state: UpdaterState) => void) => Promise<() => void>
@@ -44,6 +57,7 @@ export type ElectronAPI = {
   killSidecar: () => Promise<void>
   installCli: () => Promise<string>
   awaitInitialization: () => Promise<ServerReadyData>
+  account: DesktopAccountAPI
   wslServers: WslServersAPI
   updater: UpdaterAPI
   consumeInitialDeepLinks: () => Promise<string[]>

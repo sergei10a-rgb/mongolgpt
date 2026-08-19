@@ -5,3 +5,5 @@ const raw = import.meta.env.VITE_MONGOLGPT_CHANNEL ?? import.meta.env.MONGOLGPT_
 export const CHANNEL: Channel = raw === "dev" || raw === "beta" || raw === "prod" ? raw : "dev"
 
 export const UPDATER_ENABLED = app.isPackaged && CHANNEL !== "dev"
+export const ACCOUNT_SERVER_URL =
+  process.env.MONGOLGPT_CONSOLE_URL?.trim() || (CHANNEL === "prod" ? "https://mgpt.mn" : "https://dev.mgpt.mn")

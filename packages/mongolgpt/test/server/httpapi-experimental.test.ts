@@ -8,12 +8,15 @@ import { Session } from "@/session/session"
 import { SessionTable } from "@mongolgpt/core/session/sql"
 import { Database } from "@mongolgpt/core/database/database"
 import { AccountV2 } from "@mongolgpt/core/account"
-import { AccountTable } from "@mongolgpt/core/account/sql"
+import { AccountStateTable, AccountTable } from "@mongolgpt/core/account/sql"
 import { Worktree } from "../../src/worktree"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { httpApiLayer, requestInDirectory } from "./httpapi-layer"
+import { configureAccountTokenEncryptionKey } from "../../src/account/token-codec"
+
+configureAccountTokenEncryptionKey(new Uint8Array(32).fill(13))
 
 const it = testEffect(Layer.mergeAll(Session.defaultLayer, Database.defaultLayer, httpApiLayer))
 const testWorktreeMutations = process.platform === "win32" ? it.instance.skip : it.instance
@@ -24,6 +27,26 @@ function request(path: string, directory: string, init: RequestInit = {}) {
 
 function createSession(input?: Session.CreateInput) {
   return Session.use.create(input)
+}
+
+function oauthMetadataServer() {
+  return Effect.acquireRelease(
+    Effect.sync(() =>
+      Bun.serve({
+        port: 0,
+        fetch(request) {
+          const url = new URL(request.url)
+          if (url.pathname !== "/.well-known/oauth-authorization-server") return new Response(null, { status: 404 })
+          return Response.json({
+            issuer: url.origin,
+            authorization_endpoint: `${url.origin}/authorize`,
+            token_endpoint: `${url.origin}/token`,
+          })
+        },
+      }),
+    ),
+    (server) => Effect.sync(() => server.stop(true)),
+  )
 }
 
 function json<T>(response: HttpClientResponse.HttpClientResponse) {
@@ -66,6 +89,15 @@ function insertAccount() {
           refresh_token: AccountV2.RefreshToken.make("refresh"),
           time_created: Date.now(),
           time_updated: Date.now(),
+        })
+        .run()
+        .pipe(Effect.orDie)
+      yield* db
+        .insert(AccountStateTable)
+        .values({ id: 1, active_account_id: AccountV2.ID.make("account-test"), active_org_id: null })
+        .onConflictDoUpdate({
+          target: AccountStateTable.id,
+          set: { active_account_id: AccountV2.ID.make("account-test"), active_org_id: null },
         })
         .run()
         .pipe(Effect.orDie)
@@ -136,6 +168,151 @@ afterEach(async () => {
 })
 
 describe("experimental HttpApi", () => {
+  it.instance(
+    "returns and removes only the active account's public state",
+    () =>
+      Effect.gen(function* () {
+        const tmp = yield* TestInstance
+        yield* insertAccount()
+
+        const account = yield* request(ExperimentalPaths.account, tmp.directory)
+        expect(account.status).toBe(200)
+        expect(yield* json(account)).toEqual({
+          id: "account-test",
+          email: "test@example.com",
+          url: "https://console.example.com",
+        })
+
+        const removed = yield* request(ExperimentalPaths.account, tmp.directory, { method: "DELETE" })
+        expect(removed.status).toBe(200)
+        expect(yield* json(removed)).toBe(true)
+
+        const afterRemove = yield* request(ExperimentalPaths.account, tmp.directory)
+        expect(afterRemove.status).toBe(200)
+        expect(yield* json(afterRemove)).toBeNull()
+      }),
+    { config: { formatter: false, lsp: false } },
+  )
+
+  it.instance(
+    "starts and cancels a loopback browser login without exposing credentials",
+    () =>
+      Effect.gen(function* () {
+        const tmp = yield* TestInstance
+        const oauth = yield* oauthMetadataServer()
+        const started = yield* request(ExperimentalPaths.accountLogin, tmp.directory, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ server: oauth.url.toString() }),
+        })
+
+        expect(started.status).toBe(200)
+        const body = yield* json<{ loginID: string; url: string }>(started)
+        expect(body.loginID).toMatch(/^[0-9a-f-]{36}$/)
+        expect(body.url).toContain("/authorize")
+
+        const duplicate = yield* request(ExperimentalPaths.accountLogin, tmp.directory, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ server: oauth.url.toString() }),
+        })
+        expect(duplicate.status).toBe(400)
+
+        const pending = yield* request(`${ExperimentalPaths.accountLogin}/${body.loginID}`, tmp.directory)
+        expect(pending.status).toBe(200)
+        expect(yield* json(pending)).toEqual({ _tag: "pending" })
+
+        const cancelled = yield* request(`${ExperimentalPaths.accountLogin}/${body.loginID}`, tmp.directory, {
+          method: "DELETE",
+        })
+        expect(cancelled.status).toBe(200)
+        expect(yield* json(cancelled)).toBe(true)
+
+        const afterCancel = yield* request(`${ExperimentalPaths.accountLogin}/${body.loginID}`, tmp.directory)
+        expect(afterCancel.status).toBe(404)
+      }),
+    { config: { formatter: false, lsp: false } },
+  )
+
+  it.instance(
+    "rejects insecure and unconfigured remote account servers",
+    () =>
+      Effect.gen(function* () {
+        const tmp = yield* TestInstance
+        const response = yield* request(ExperimentalPaths.accountLogin, tmp.directory, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ server: "http://accounts.example.com" }),
+        })
+        expect(response.status).toBe(400)
+
+        const unconfigured = yield* request(ExperimentalPaths.accountLogin, tmp.directory, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ server: "https://accounts.example.com" }),
+        })
+        expect(unconfigured.status).toBe(400)
+      }),
+    { config: { formatter: false, lsp: false } },
+  )
+
+  it.instance(
+    "keeps browser login running after the start request completes",
+    () =>
+      Effect.gen(function* () {
+        const tmp = yield* TestInstance
+        const oauth = yield* oauthMetadataServer()
+        const started = yield* request(ExperimentalPaths.accountLogin, tmp.directory, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ server: oauth.url.toString() }),
+        })
+
+        expect(started.status).toBe(200)
+        const body = yield* json<{ loginID: string; url: string }>(started)
+        const authorization = new URL(body.url)
+        const redirect = authorization.searchParams.get("redirect_uri")
+        const state = authorization.searchParams.get("state")
+        expect(redirect).toStartWith("http://127.0.0.1:")
+        expect(state).not.toBeNull()
+
+        const denied = new URL(redirect!)
+        denied.searchParams.set("error", "access_denied")
+        denied.searchParams.set("state", state!)
+        const callback = yield* Effect.tryPromise(() => fetch(denied))
+        expect(callback.status).toBe(400)
+
+        const terminal = yield* Effect.gen(function* () {
+          for (let attempt = 0; attempt < 50; attempt++) {
+            const response = yield* request(`${ExperimentalPaths.accountLogin}/${body.loginID}`, tmp.directory)
+            expect(response.status).toBe(200)
+            const status = yield* json<{ _tag: "pending" } | { _tag: "error"; message: string }>(response)
+            if (status._tag !== "pending") return status
+            yield* Effect.sleep("20 millis")
+          }
+          return yield* Effect.fail(new Error("browser login did not reach a terminal state"))
+        })
+
+        expect(terminal).toEqual({ _tag: "error", message: "Нэвтрэх үйлдэл амжилтгүй боллоо" })
+      }),
+    { config: { formatter: false, lsp: false } },
+  )
+
+  it.instance(
+    "does not expose unknown browser login records",
+    () =>
+      Effect.gen(function* () {
+        const tmp = yield* TestInstance
+        const status = yield* request(`${ExperimentalPaths.accountLogin}/missing`, tmp.directory)
+        expect(status.status).toBe(404)
+        const cancelled = yield* request(`${ExperimentalPaths.accountLogin}/missing`, tmp.directory, {
+          method: "DELETE",
+        })
+        expect(cancelled.status).toBe(404)
+      }),
+    { config: { formatter: false, lsp: false } },
+  )
+
   it.instance(
     "serves read-only experimental endpoints through the default server app",
     () =>
@@ -208,7 +385,7 @@ describe("experimental HttpApi", () => {
       expect(response.status).toBe(400)
       expect(yield* json(response)).toEqual({
         name: "WorktreeNotGitError",
-        data: { message: "Worktrees are only supported for git projects" },
+        data: { message: "Worktree-ийг зөвхөн Git төсөлд ашиглана" },
       })
     }),
   )
