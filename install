@@ -41,7 +41,7 @@ while [[ $# -gt 0 ]]; do
                 requested_version="$2"
                 shift 2
             else
-                echo -e "${RED}Error: --version requires a version argument${NC}"
+                echo -e "${RED}Алдаа: --version-д хувилбарын утга шаардлагатай${NC}"
                 exit 1
             fi
             ;;
@@ -50,7 +50,7 @@ while [[ $# -gt 0 ]]; do
                 binary_path="$2"
                 shift 2
             else
-                echo -e "${RED}Error: --binary requires a path argument${NC}"
+                echo -e "${RED}Алдаа: --binary-д гүйцэтгэх файлын зам шаардлагатай${NC}"
                 exit 1
             fi
             ;;
@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         *)
-            echo -e "${ORANGE}Warning: Unknown option '$1'${NC}" >&2
+            echo -e "${ORANGE}Анхааруулга: Үл мэдэгдэх сонголт '$1'${NC}" >&2
             shift
             ;;
     esac
@@ -71,7 +71,7 @@ mkdir -p "$INSTALL_DIR"
 # If --binary is provided, skip all download/detection logic
 if [ -n "$binary_path" ]; then
     if [ ! -f "$binary_path" ]; then
-        echo -e "${RED}Error: Binary not found at ${binary_path}${NC}"
+        echo -e "${RED}Алдаа: ${binary_path} замд гүйцэтгэх файл олдсонгүй${NC}"
         exit 1
     fi
     specific_version="local"
@@ -104,7 +104,7 @@ else
       linux-x64|linux-arm64|darwin-x64|darwin-arm64|windows-x64)
         ;;
       *)
-        echo -e "${RED}Unsupported OS/Arch: $os/$arch${NC}"
+        echo -e "${RED}Дэмжигдээгүй үйлдлийн систем эсвэл архитектур: $os/$arch${NC}"
         exit 1
         ;;
     esac
@@ -170,12 +170,12 @@ else
 
     if [ "$os" = "linux" ]; then
         if ! command -v tar >/dev/null 2>&1; then
-             echo -e "${RED}Error: 'tar' is required but not installed.${NC}"
+             echo -e "${RED}Алдаа: 'tar' шаардлагатай боловч суулгагдаагүй байна.${NC}"
              exit 1
         fi
     else
         if ! command -v unzip >/dev/null 2>&1; then
-            echo -e "${RED}Error: 'unzip' is required but not installed.${NC}"
+            echo -e "${RED}Алдаа: 'unzip' шаардлагатай боловч суулгагдаагүй байна.${NC}"
             exit 1
         fi
     fi
@@ -188,7 +188,7 @@ else
         specific_version="${specific_version#v}"
 
         if [ -z "$specific_version" ]; then
-            echo -e "${RED}Failed to fetch version information${NC}"
+            echo -e "${RED}Хувилбарын мэдээллийг татаж чадсангүй${NC}"
             exit 1
         fi
     else
@@ -207,8 +207,8 @@ else
             fi
         done
         if [ -z "$release_tag" ]; then
-            echo -e "${RED}Error: Release mongolgpt-v${requested_version} not found${NC}"
-            echo -e "${MUTED}Available releases: https://github.com/sergei10a-rgb/mongolgpt/releases${NC}"
+            echo -e "${RED}Алдаа: mongolgpt-v${requested_version} хувилбар олдсонгүй${NC}"
+            echo -e "${MUTED}Гарсан хувилбарууд: https://github.com/sergei10a-rgb/mongolgpt/releases${NC}"
             exit 1
         fi
         url="https://github.com/sergei10a-rgb/mongolgpt/releases/download/${release_tag}/$filename"
@@ -237,9 +237,9 @@ check_version() {
         installed_version=$(mongolgpt --version 2>/dev/null || echo "")
 
         if [[ "$installed_version" != "$specific_version" ]]; then
-            print_message info "${MUTED}Installed version: ${NC}$installed_version."
+            print_message info "${MUTED}Суулгасан хувилбар: ${NC}$installed_version."
         else
-            print_message info "${MUTED}Version ${NC}$specific_version${MUTED} already installed"
+            print_message info "${MUTED}$specific_version хувилбар аль хэдийн суусан байна${NC}"
             exit 0
         fi
     fi
@@ -336,7 +336,7 @@ download_with_progress() {
 }
 
 download_and_install() {
-    print_message info "\n${MUTED}Installing ${NC}mongolgpt ${MUTED}version: ${NC}$specific_version"
+    print_message info "\n${MUTED}Суулгаж байна: ${NC}mongolgpt ${MUTED}хувилбар: ${NC}$specific_version"
     local tmp_dir="${TMPDIR:-/tmp}/mongolgpt_install_$$"
     mkdir -p "$tmp_dir"
 
@@ -357,7 +357,7 @@ download_and_install() {
 }
 
 install_from_binary() {
-    print_message info "\n${MUTED}Installing ${NC}mongolgpt ${MUTED}from: ${NC}$binary_path"
+    print_message info "\n${MUTED}Суулгаж байна: ${NC}mongolgpt ${MUTED}эх үүсвэр: ${NC}$binary_path"
     cp "$binary_path" "${INSTALL_DIR}/mongolgpt"
     chmod 755 "${INSTALL_DIR}/mongolgpt"
 }
@@ -375,13 +375,13 @@ add_to_path() {
     local command=$2
 
     if grep -Fxq "$command" "$config_file"; then
-        print_message info "Command already exists in $config_file, skipping write."
+        print_message info "$config_file дотор команд аль хэдийн байна, бичихийг алгаслаа."
     elif [[ -w $config_file ]]; then
         echo -e "\n# mongolgpt" >> "$config_file"
         echo "$command" >> "$config_file"
-        print_message info "${MUTED}Successfully added ${NC}mongolgpt ${MUTED}to \$PATH in ${NC}$config_file"
+        print_message info "${MUTED}mongolgpt-ийг ${NC}\$PATH ${MUTED}хувьсагчид амжилттай нэмлээ: ${NC}$config_file"
     else
-        print_message warning "Manually add the directory to $config_file (or similar):"
+        print_message warning "$config_file (эсвэл түүнтэй адил файлд) уг хавтсыг гараар нэмнэ үү:"
         print_message info "  $command"
     fi
 }
@@ -421,7 +421,7 @@ if [[ "$no_modify_path" != "true" ]]; then
     done
 
     if [[ -z $config_file ]]; then
-        print_message warning "No config file found for $current_shell. You may need to manually add to PATH:"
+        print_message warning "$current_shell-д тохирох тохиргооны файл олдсонгүй. PATH-д дараахыг гараар нэмэх шаардлагатай байж болно:"
         print_message info "  export PATH=$INSTALL_DIR:\$PATH"
     elif [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
         case $current_shell in
@@ -442,7 +442,7 @@ if [[ "$no_modify_path" != "true" ]]; then
             ;;
             *)
                 export PATH=$INSTALL_DIR:$PATH
-                print_message warning "Manually add the directory to $config_file (or similar):"
+                print_message warning "$config_file (эсвэл түүнтэй адил файлд) уг хавтсыг гараар нэмнэ үү:"
                 print_message info "  export PATH=$INSTALL_DIR:\$PATH"
             ;;
         esac
@@ -451,7 +451,7 @@ fi
 
 if [ -n "${GITHUB_ACTIONS-}" ] && [ "${GITHUB_ACTIONS}" == "true" ]; then
     echo "$INSTALL_DIR" >> $GITHUB_PATH
-    print_message info "Added $INSTALL_DIR to \$GITHUB_PATH"
+    print_message info "$INSTALL_DIR-ийг \$GITHUB_PATH-д нэмлээ"
 fi
 
 echo -e ""
@@ -461,10 +461,10 @@ echo -e "${MUTED}█░░█ █░░█ █▀▀▀ █░░█ ${NC}█░
 echo -e "${MUTED}▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ ${NC}▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀"
 echo -e ""
 echo -e ""
-echo -e "${MUTED}MongolGPT includes free models, to start:${NC}"
+echo -e "${MUTED}MongolGPT үнэгүй загваруудтай. Эхлэхийн тулд:${NC}"
 echo -e ""
-echo -e "cd <project>  ${MUTED}# Open directory${NC}"
-echo -e "mongolgpt      ${MUTED}# Run command${NC}"
+echo -e "cd <төслийн-хавтас>  ${MUTED}# Хавтас нээх${NC}"
+echo -e "mongolgpt      ${MUTED}# Команд ажиллуулах${NC}"
 echo -e ""
 echo -e "${MUTED}Дэлгэрэнгүй баримт: ${NC}https://docs.mgpt.mn/docs/"
 echo -e ""
