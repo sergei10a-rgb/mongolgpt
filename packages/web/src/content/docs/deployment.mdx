@@ -18,7 +18,7 @@ Production domain-ийг `mgpt.mn` гэж үзвэл:
 | Үйлчилгээ             | Хаяг                        |
 | --------------------- | --------------------------- |
 | Account болон Console | `https://mgpt.mn`           |
-| Web app               | `https://app.mgpt.mn`       |
+| Вэб апп               | `https://app.mgpt.mn`       |
 | Монгол баримт бичиг   | `https://docs.mgpt.mn/docs` |
 | OAuth үйлчилгээ       | `https://auth.mgpt.mn`      |
 | QPay + Bonum төлбөр   | `https://pay.mgpt.mn`       |
@@ -34,10 +34,10 @@ Production domain-ийг `mgpt.mn` гэж үзвэл:
 | Хэсэг                        | Cloudflare үйлчилгээ             |
 | ---------------------------- | -------------------------------- |
 | Баримт бичиг                 | Astro Worker                     |
-| Web app                      | Static Assets / Worker           |
+| Вэб апп                      | Static Assets / Worker           |
 | Console ба Free Auto gateway | SolidStart Worker                |
 | OAuth                        | Worker + KV                      |
-| QPay + Bonum gateway         | Worker + Queue + D1              |
+| QPay + Bonum төлбөрийн гарц  | Worker + Queue + D1              |
 | Админ хамгаалалт             | Cloudflare Access + MFA          |
 | Үндсэн өгөгдөл               | D1                               |
 | Өдөр тутмын нөөц             | D1 export Workflow + private R2  |
@@ -84,27 +84,27 @@ Repository түвшинд Cloudflare-ийн нийтлэг тохиргоог х
 
 | Төрөл    | Нэр                             | Утга                                       |
 | -------- | ------------------------------- | ------------------------------------------ |
-| Variable | `MONGOLGPT_DOMAIN`              | `mgpt.mn`                                  |
-| Variable | `CLOUDFLARE_DEFAULT_ACCOUNT_ID` | Cloudflare аккаунтын ID                    |
-| Secret   | `CLOUDFLARE_API_TOKEN`          | Хамгийн бага шаардлагатай эрхтэй API token |
+| Хувьсагч | `MONGOLGPT_DOMAIN`              | `mgpt.mn`                                  |
+| Хувьсагч | `CLOUDFLARE_DEFAULT_ACCOUNT_ID` | Cloudflare аккаунтын ID                    |
+| Нууц утга | `CLOUDFLARE_API_TOKEN`         | Хамгийн бага шаардлагатай эрхтэй API token |
 
 `dev` болон `production` GitHub Environment тус бүрд өөрийн OAuth, session болон model credential хадгална.
 
 | Төрөл    | Нэр                              | Утга                                                                 |
 | -------- | -------------------------------- | -------------------------------------------------------------------- |
-| Variable | `MONGOLGPT_AUTH_EMAIL_DOMAINS`   | Dev-д зөвшөөрөх яг email эсвэл domain; таслалаар тусгаарлана         |
-| Variable | `GITHUB_CLIENT_ID_CONSOLE`       | Тухайн environment-ийн GitHub OAuth App client ID                    |
-| Variable | `GOOGLE_CLIENT_ID`               | Тухайн environment-ийн Google Web OAuth client ID                    |
-| Variable | `MONGOLGPT_PAYMENT_PLAN_CATALOG` | Basic/Pro/Max багцын MNT үнэ, Монгол нэр бүхий JSON                  |
-| Secret   | `GITHUB_CLIENT_SECRET_CONSOLE`   | GitHub OAuth аппын нууц түлхүүр                                      |
-| Secret   | `BYOK_CREDENTIALS_KEY_V1`        | 32+ тэмдэгт тогтвортой CSPRNG key; rotation хийх хүртэл солихгүй     |
-| Secret   | `D1_BACKUP_API_TOKEN`            | Зөвхөн тухайн account-ийн D1 Edit эрхтэй backup/export token         |
-| Secret   | `MONGOLGPT_RUNTIME_SECRET`       | 32+ тэмдэгт Cloudflare Sandbox account-isolation secret              |
-| Secret   | `MONGOLGPT_RUNTIME_AUTH_SECRET`  | 32+ тэмдэгт runtime capability signing/verification secret           |
-| Secret   | `MONGOLGPT_PLAN_LIMITS`          | Free/Basic/Pro/Max plan, token, cost болон rate-limit JSON           |
-| Secret   | `ZEN_SESSION_SECRET`             | 32+ тэмдэгт тусдаа CSPRNG session secret                             |
-| Secret   | `ZEN_MODELS1`                    | Баталгаажсан Free Auto model/provider JSON; provider key-ийг агуулна |
-| Secret   | `ZEN_MODELS2`…`ZEN_MODELS30`     | `ZEN_MODELS1` багтахгүй үед JSON-ийн дараалсан optional хэсгүүд      |
+| Хувьсагч | `MONGOLGPT_AUTH_EMAIL_DOMAINS`   | Dev-д зөвшөөрөх яг email эсвэл domain; таслалаар тусгаарлана         |
+| Хувьсагч | `GITHUB_CLIENT_ID_CONSOLE`       | Тухайн environment-ийн GitHub OAuth App client ID                    |
+| Хувьсагч | `GOOGLE_CLIENT_ID`               | Тухайн environment-ийн Google Web OAuth client ID                    |
+| Хувьсагч | `MONGOLGPT_PAYMENT_PLAN_CATALOG` | Basic/Pro/Max багцын MNT үнэ, Монгол нэр бүхий JSON                  |
+| Нууц утга | `GITHUB_CLIENT_SECRET_CONSOLE`  | GitHub OAuth аппын нууц түлхүүр                                      |
+| Нууц утга | `BYOK_CREDENTIALS_KEY_V1`       | 32+ тэмдэгт тогтвортой CSPRNG key; rotation хийх хүртэл солихгүй     |
+| Нууц утга | `D1_BACKUP_API_TOKEN`           | Зөвхөн тухайн account-ийн D1 Edit эрхтэй backup/export token         |
+| Нууц утга | `MONGOLGPT_RUNTIME_SECRET`      | 32+ тэмдэгт Cloudflare Sandbox account-isolation secret              |
+| Нууц утга | `MONGOLGPT_RUNTIME_AUTH_SECRET` | 32+ тэмдэгт runtime capability signing/verification secret           |
+| Нууц утга | `MONGOLGPT_PLAN_LIMITS`         | Free/Basic/Pro/Max plan, token, cost болон rate-limit JSON           |
+| Нууц утга | `ZEN_SESSION_SECRET`            | 32+ тэмдэгт тусдаа CSPRNG session secret                             |
+| Нууц утга | `ZEN_MODELS1`                   | Баталгаажсан Free Auto model/provider JSON; provider key-ийг агуулна |
+| Нууц утга | `ZEN_MODELS2`…`ZEN_MODELS30`    | `ZEN_MODELS1` багтахгүй үед JSON-ийн дараалсан optional хэсгүүд      |
 
 ### OAuth апп бүртгэх
 
@@ -116,9 +116,9 @@ GitHub-ийн [OAuth App үүсгэх албан ёсны заавраар](http
 
 | GitHub талбар              | Dev утга                                   |
 | -------------------------- | ------------------------------------------ |
-| Application name           | `MongolGPT Dev`                            |
-| Homepage URL               | `https://app.dev.mgpt.mn`                  |
-| Authorization callback URL | `https://auth.dev.mgpt.mn/github/callback` |
+| Аппликэйшний нэр (`Application name`)                    | `MongolGPT Dev`                            |
+| Нүүр хуудасны URL (`Homepage URL`)                       | `https://app.dev.mgpt.mn`                  |
+| Зөвшөөрлийн буцах URL (`Authorization callback URL`)     | `https://auth.dev.mgpt.mn/github/callback` |
 
 Үүссэн **Client ID**-г dev environment variable `GITHUB_CLIENT_ID_CONSOLE`, **Client secret**-ийг dev environment secret
 `GITHUB_CLIENT_SECRET_CONSOLE` болгон хадгална. GitHub OAuth App нэг callback URL-тэй тул production-д тусдаа `MongolGPT`
@@ -131,8 +131,8 @@ host, path болон төгсгөлийн ташуу зураас хүртэл 
 
 | Google талбар           | Dev утга                                   |
 | ----------------------- | ------------------------------------------ |
-| Name                    | `MongolGPT Dev`                            |
-| Authorized redirect URI | `https://auth.dev.mgpt.mn/google/callback` |
+| Нэр (`Name`)                                  | `MongolGPT Dev`                            |
+| Зөвшөөрөгдсөн буцах URI (`Authorized redirect URI`) | `https://auth.dev.mgpt.mn/google/callback` |
 
 Үүссэн **Client ID**-г dev environment variable `GOOGLE_CLIENT_ID` болгон хадгална. Одоогийн OpenID `form_post` урсгал
 client secret ашигладаггүй тул Google client secret-ийг repository эсвэл GitHub-д нэмэхгүй. Production client дээр
