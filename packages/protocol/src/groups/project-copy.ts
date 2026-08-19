@@ -53,4 +53,4 @@ export const ProjectCopyGroup = HttpApiGroup.make("server.projectCopy")
       .annotateMerge(locationQueryOpenApi)
       .annotateMerge(OpenApi.annotations({ identifier: "v2.projectCopy.refresh" })),
   )
-  .annotateMerge(OpenApi.annotations({ title: "projectCopy", description: "Project copy management routes." }))
+  .annotateMerge(OpenApi.annotations({ title: "төслийн хуулбар", description: "Төслийн хуулбарыг удирдах маршрутууд." }))

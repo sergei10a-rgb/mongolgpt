@@ -25,10 +25,10 @@ import { SessionEvent } from "@mongolgpt/schema/session-event"
 const SessionsQueryFields = {
   workspace: Workspace.ID.pipe(Schema.optional),
   limit: Schema.NumberFromString.pipe(Schema.decodeTo(PositiveInt), Schema.optional).annotate({
-    description: "Maximum number of sessions to return. Defaults to the newest 50 sessions.",
+    description: "Буцаах сессийн дээд тоо. Анхдагчаар хамгийн сүүлийн 50 сессийг авна.",
   }),
   order: Schema.optional(Schema.Union([Schema.Literal("asc"), Schema.Literal("desc")])).annotate({
-    description: "Session order for the first page. Use desc for newest first or asc for oldest first.",
+    description: "Эхний хуудасны сессийн эрэмбэ. Шинэ сессийг эхэнд харуулахын тулд desc, хуучныг эхэнд харуулахын тулд asc ашиглана.",
   }),
   search: Schema.optional(Schema.String),
 }
@@ -92,7 +92,7 @@ export const SessionHistoryQuery = Schema.Struct({
 })
 
 const SessionsQueryCursor = SessionsCursor.annotate({
-  description: "Opaque pagination cursor returned as cursor.previous or cursor.next in the previous response.",
+  description: "Өмнөх хариуд cursor.previous эсвэл cursor.next хэлбэрээр буцсан, доторх утга нь ил биш хуудаслалтын заагч.",
 })
 
 export const SessionsQuery = Schema.Struct({
@@ -119,9 +119,9 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "v2.session.list",
-          summary: "List sessions",
+          summary: "Сессүүдийг жагсаах",
           description:
-            "Retrieve sessions in the requested order. Items keep that order across pages; use cursor.next or cursor.previous to move through the ordered list.",
+            "Сессүүдийг хүссэн эрэмбээр авна. Хуудсуудын хооронд зүйлс энэ эрэмбээ хадгална; эрэмбэлсэн жагсаалтаар шилжихдээ cursor.next эсвэл cursor.previous ашиглана.",
         }),
       ),
     )
@@ -137,8 +137,8 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "v2.session.create",
-          summary: "Create session",
-          description: "Create a session at the requested location.",
+          summary: "Сесс үүсгэх",
+          description: "Хүссэн байршилд сесс үүсгэнэ.",
         }),
       ),
     )
@@ -148,9 +148,9 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "v2.session.active",
-          summary: "List active sessions",
+          summary: "Идэвхтэй сессүүдийг жагсаах",
           description:
-            "Retrieve foreground Session drains currently owned by this MongolGPT process. Sessions absent from the result are inactive.",
+            "Энэ MongolGPT процессын эзэмшиж буй, үндсэн горимд одоо ажиллаж байгаа сессийн гүйцэтгэлүүдийг авна. Үр дүнд ороогүй сессүүд идэвхгүй байна.",
         }),
       ),
     )
@@ -164,8 +164,8 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.get",
-            summary: "Get session",
-            description: "Retrieve a session by ID.",
+            summary: "Сесс авах",
+            description: "ID-аар сесс авна.",
           }),
         ),
     )
@@ -180,8 +180,8 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.switchAgent",
-            summary: "Switch session agent",
-            description: "Switch the agent used by subsequent provider turns.",
+            summary: "Сессийн агент солих",
+            description: "Үйлчилгээ үзүүлэгчтэй хийх дараагийн харилцан үйлдэлд ашиглах агентыг солино.",
           }),
         ),
     )
@@ -196,8 +196,8 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.switchModel",
-            summary: "Switch session model",
-            description: "Switch the model used by subsequent provider turns.",
+            summary: "Сессийн модел солих",
+            description: "Үйлчилгээ үзүүлэгчтэй хийх дараагийн харилцан үйлдэлд ашиглах моделийг солино.",
           }),
         ),
     )
@@ -217,8 +217,9 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.prompt",
-            summary: "Send message",
-            description: "Durably admit one session input and schedule agent-loop execution unless resume is false.",
+            summary: "Мессеж илгээх",
+            description:
+              "Нэг сессийн оролтыг найдвартай бүртгэж, resume параметр false биш бол агентын гүйцэтгэлийн давталтыг товлоно.",
           }),
         ),
     )
@@ -232,8 +233,8 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.compact",
-            summary: "Compact session",
-            description: "Compact a session conversation.",
+            summary: "Сессийг хураангуйлах",
+            description: "Сессийн харилцан яриаг хураангуйлна.",
           }),
         ),
     )
@@ -247,8 +248,8 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.wait",
-            summary: "Wait for session",
-            description: "Wait for a session agent loop to become idle.",
+            summary: "Сесс хүлээх",
+            description: "Сессийн агентын гүйцэтгэлийн давталт сул зогсолтын төлөвт орохыг хүлээнэ.",
           }),
         ),
     )
@@ -263,8 +264,8 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.revert.stage",
-            summary: "Stage session revert",
-            description: "Stage or move a reversible session boundary and optionally apply its file changes.",
+            summary: "Сессийн буцаалтыг бэлтгэх",
+            description: "Буцаах боломжтой сессийн заагийг бэлтгэх эсвэл зөөж, хүсвэл файлын өөрчлөлтийг хэрэглэнэ.",
           }),
         ),
     )
@@ -275,7 +276,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         error: [SessionNotFoundError, UnknownError],
       })
         .middleware(sessionLocationMiddleware)
-        .annotateMerge(OpenApi.annotations({ identifier: "v2.session.revert.clear", summary: "Clear staged revert" })),
+        .annotateMerge(OpenApi.annotations({ identifier: "v2.session.revert.clear", summary: "Бэлтгэсэн буцаалтыг цэвэрлэх" })),
     )
     .add(
       HttpApiEndpoint.post("session.revert.commit", "/api/session/:sessionID/revert/commit", {
@@ -285,7 +286,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(
-          OpenApi.annotations({ identifier: "v2.session.revert.commit", summary: "Commit staged revert" }),
+          OpenApi.annotations({ identifier: "v2.session.revert.commit", summary: "Бэлтгэсэн буцаалтыг баталгаажуулах" }),
         ),
     )
     .add(
@@ -298,8 +299,8 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.context",
-            summary: "Get session context",
-            description: "Retrieve the active context messages for a session (all messages after the last compaction).",
+            summary: "Сессийн контекст авах",
+            description: "Сессийн идэвхтэй контекст мессежүүдийг авна (сүүлийн хураангуйлалтын дараах бүх мессеж).",
           }),
         ),
     )
@@ -317,9 +318,9 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.history",
-            summary: "Get session history",
+            summary: "Сессийн түүх авах",
             description:
-              "Read one finite page of public durable Session events after an exclusive aggregate sequence. Newly committed events may appear on later pages.",
+              "Нэгтгэлийн дарааллын заагийн дараах нийтэд нээлттэй, хадгалагдсан сессийн үйл явдлуудын нэг хязгаартай хуудсыг уншина. Шинээр баталгаажсан үйл явдлууд дараагийн хуудсуудад гарч болно.",
           }),
         ),
     )
@@ -336,8 +337,9 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.events",
-            summary: "Subscribe to session events",
-            description: "Replay durable events after an aggregate sequence, then continue with new durable events.",
+            summary: "Сессийн үйл явдлуудад бүртгүүлэх",
+            description:
+              "Нэгтгэлийн дарааллын заагийн дараах хадгалагдсан үйл явдлуудыг дахин тоглуулаад, дараа нь шинэ хадгалагдсан үйл явдлуудыг үргэлжлүүлэн дамжуулна.",
           }),
         ),
     )
@@ -351,8 +353,8 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.interrupt",
-            summary: "Interrupt session execution",
-            description: "Interrupt active execution owned by this MongolGPT process. Idle interruption is a no-op.",
+            summary: "Сессийн гүйцэтгэлийг таслах",
+            description: "Энэ MongolGPT процессын эзэмшиж буй идэвхтэй гүйцэтгэлийг тасална. Сул зогсолтын сессийг таслахад ямар ч үйлдэл хийхгүй.",
           }),
         ),
     )
@@ -366,14 +368,14 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.message",
-            summary: "Get session message",
-            description: "Retrieve one projected message owned by the Session.",
+            summary: "Сессийн мессеж авах",
+            description: "Сесст хамаарах нэг проекцолсон мессежийг авна.",
           }),
         ),
     )
     .annotateMerge(
       OpenApi.annotations({
-        title: "sessions",
-        description: "Experimental session routes.",
+        title: "сессүүд",
+        description: "Туршилтын сессийн маршрутууд.",
       }),
     )

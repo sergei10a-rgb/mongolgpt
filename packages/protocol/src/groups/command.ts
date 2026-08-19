@@ -14,14 +14,14 @@ export const CommandGroup = HttpApiGroup.make("server.command")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.command.list",
-          summary: "List commands",
-          description: "Retrieve currently registered commands.",
+          summary: "Командуудыг жагсаах",
+          description: "Одоогоор бүртгэлтэй командуудыг авна.",
         }),
       ),
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "commands",
-      description: "Experimental command routes.",
+      title: "командууд",
+      description: "Туршилтын командын маршрутууд.",
     }),
   )

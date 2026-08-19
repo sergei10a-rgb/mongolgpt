@@ -13,8 +13,8 @@ export const AgentGroup = HttpApiGroup.make("server.agent").add(
     .annotateMerge(
       OpenApi.annotations({
         identifier: "v2.agent.list",
-        summary: "List agents",
-        description: "Retrieve currently registered agents.",
+        summary: "Агентуудыг жагсаах",
+        description: "Одоогоор бүртгэлтэй агентуудыг авна.",
       }),
     ),
 )

@@ -28,8 +28,8 @@ export const makePermissionGroup = <
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.permission.request.list",
-            summary: "List pending permission requests",
-            description: "Retrieve pending permission requests for a location.",
+            summary: "Хүлээгдэж буй зөвшөөрлийн хүсэлтүүдийг жагсаах",
+            description: "Тухайн байршилд хүлээгдэж буй зөвшөөрлийн хүсэлтүүдийг авна.",
           }),
         ),
     )
@@ -40,8 +40,8 @@ export const makePermissionGroup = <
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "v2.permission.saved.list",
-          summary: "List saved permissions",
-          description: "Retrieve saved permissions, optionally filtered by project.",
+          summary: "Хадгалсан зөвшөөрлүүдийг жагсаах",
+          description: "Хадгалсан зөвшөөрлүүдийг авна. Төслөөр шүүж болно.",
         }),
       ),
     )
@@ -52,8 +52,8 @@ export const makePermissionGroup = <
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "v2.permission.saved.remove",
-          summary: "Remove saved permission",
-          description: "Remove a saved permission by ID.",
+          summary: "Хадгалсан зөвшөөрлийг устгах",
+          description: "ID-аар заасан хадгалсан зөвшөөрлийг устгана.",
         }),
       ),
     )
@@ -80,8 +80,8 @@ export const makePermissionGroup = <
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.permission.create",
-            summary: "Create permission request",
-            description: "Evaluate and, when approval is required, create a permission request for a session.",
+            summary: "Зөвшөөрлийн хүсэлт үүсгэх",
+            description: "Үнэлгээ хийж, зөвшөөрөл шаардлагатай бол тухайн сесст зөвшөөрлийн хүсэлт үүсгэнэ.",
           }),
         ),
     )
@@ -95,8 +95,8 @@ export const makePermissionGroup = <
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.permission.list",
-            summary: "List session permission requests",
-            description: "Retrieve pending permission requests owned by a session.",
+            summary: "Сессийн зөвшөөрлийн хүсэлтүүдийг жагсаах",
+            description: "Тухайн сесст хамаарах хүлээгдэж буй зөвшөөрлийн хүсэлтүүдийг авна.",
           }),
         ),
     )
@@ -110,8 +110,8 @@ export const makePermissionGroup = <
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.permission.get",
-            summary: "Get permission request",
-            description: "Retrieve a pending permission request owned by a session.",
+            summary: "Зөвшөөрлийн хүсэлт авах",
+            description: "Тухайн сесст хамаарах хүлээгдэж буй зөвшөөрлийн хүсэлтийг авна.",
           }),
         ),
     )
@@ -129,9 +129,9 @@ export const makePermissionGroup = <
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.permission.reply",
-            summary: "Reply to pending permission request",
-            description: "Respond to a pending permission request owned by a session.",
+            summary: "Хүлээгдэж буй зөвшөөрлийн хүсэлтэд хариулах",
+            description: "Тухайн сесст хамаарах хүлээгдэж буй зөвшөөрлийн хүсэлтэд хариулна.",
           }),
         ),
     )
-    .annotateMerge(OpenApi.annotations({ title: "permissions", description: "Experimental permission routes." }))
+    .annotateMerge(OpenApi.annotations({ title: "зөвшөөрлүүд", description: "Туршилтын зөвшөөрлийн маршрутууд." }))

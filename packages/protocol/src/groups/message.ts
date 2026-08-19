@@ -8,15 +8,15 @@ export const SessionMessagesQuery = Schema.Struct({
   limit: Schema.optional(
     Schema.NumberFromString.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1), Schema.isLessThanOrEqualTo(200)),
   ).annotate({
-    description: "Maximum number of messages to return. When omitted, the endpoint returns its default page size.",
+    description: "Буцаах мессежийн дээд тоо. Заагаагүй бол энэ төгсгөлийн цэг өгөгдмөл хуудасны хэмжээг ашиглана.",
   }),
   order: Schema.optional(Schema.Union([Schema.Literal("asc"), Schema.Literal("desc")])).annotate({
-    description: "Message order for the first page. Use desc for newest first or asc for oldest first.",
+    description: "Эхний хуудасны мессежийн дараалал. Шинээс нь эхлүүлэх бол desc, хуучнаас нь эхлүүлэх бол asc ашиглана.",
   }),
   cursor: Schema.optional(
     Schema.String.annotate({
       description:
-        "Opaque pagination cursor returned as cursor.previous or cursor.next in the previous response. Do not combine with order.",
+        "Өмнөх хариунд cursor.previous эсвэл cursor.next хэлбэрээр буцсан, доторх утга нь ил биш хуудаслалтын заагч. Үүнийг order параметртэй хамт ашиглаж болохгүй.",
     }),
   ),
 }).annotate({ identifier: "SessionMessagesQuery" })
@@ -37,15 +37,15 @@ export const MessageGroup = HttpApiGroup.make("server.message")
     }).annotateMerge(
       OpenApi.annotations({
         identifier: "v2.session.messages",
-        summary: "Get session messages",
+        summary: "Сессийн мессежүүдийг авах",
         description:
-          "Retrieve projected messages for a session. Items keep the requested order across pages; use cursor.next or cursor.previous to move through the ordered timeline.",
+          "Сессийн проекцолсон мессежүүдийг авна. Зүйлс хуудсуудын хооронд хүссэн дарааллаа хадгална; эрэмбэлэгдсэн дарааллаар шилжихдээ cursor.next эсвэл cursor.previous ашиглана.",
       }),
     ),
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "messages",
-      description: "Experimental message routes.",
+      title: "мессежүүд",
+      description: "Туршилтын мессежийн маршрутууд.",
     }),
   )

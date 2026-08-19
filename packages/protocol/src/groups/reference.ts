@@ -14,14 +14,14 @@ export const ReferenceGroup = HttpApiGroup.make("server.reference")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.reference.list",
-          summary: "List references",
-          description: "List references available in the requested location.",
+          summary: "Лавлахуудыг жагсаах",
+          description: "Хүссэн байршилд ашиглах боломжтой лавлахуудыг жагсаана.",
         }),
       ),
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "reference",
-      description: "Location-scoped project references.",
+      title: "лавлахууд",
+      description: "Байршлаар хязгаарлагдсан төслийн лавлахууд.",
     }),
   )

@@ -28,8 +28,8 @@ export const PtyGroup = HttpApiGroup.make("server.pty")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.pty.list",
-          summary: "List PTY sessions",
-          description: "List PTY sessions for a location, including exited sessions retained until removal.",
+          summary: "PTY сессүүдийн жагсаалт авах",
+          description: "Байршлын PTY сессүүдийг жагсааж, дууссан ч устгах хүртэл хадгалагдсан сессүүдийг мөн оруулна.",
         }),
       ),
   )
@@ -43,8 +43,8 @@ export const PtyGroup = HttpApiGroup.make("server.pty")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.pty.create",
-          summary: "Create PTY session",
-          description: "Create a pseudo-terminal session for a location.",
+          summary: "PTY сесс үүсгэх",
+          description: "Байршилд зориулсан псевдо-терминалын сесс үүсгэнэ.",
         }),
       ),
   )
@@ -59,8 +59,8 @@ export const PtyGroup = HttpApiGroup.make("server.pty")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.pty.get",
-          summary: "Get PTY session",
-          description: "Get one PTY session, including its exit code once exited.",
+          summary: "PTY сессийн мэдээлэл авах",
+          description: "Нэг PTY сессийн мэдээллийг авч, дууссан бол гаралтын кодыг нь мөн буцаана.",
         }),
       ),
   )
@@ -76,8 +76,8 @@ export const PtyGroup = HttpApiGroup.make("server.pty")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.pty.update",
-          summary: "Update PTY session",
-          description: "Update the title or viewport size of one PTY session.",
+          summary: "PTY сесс шинэчлэх",
+          description: "Нэг PTY сессийн гарчиг эсвэл харах талбарын хэмжээг шинэчилнэ.",
         }),
       ),
   )
@@ -92,8 +92,8 @@ export const PtyGroup = HttpApiGroup.make("server.pty")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.pty.remove",
-          summary: "Remove PTY session",
-          description: "Terminate and remove one PTY session.",
+          summary: "PTY сесс устгах",
+          description: "Нэг PTY сессийг дуусгаж, устгана.",
         }),
       ),
   )
@@ -108,8 +108,8 @@ export const PtyGroup = HttpApiGroup.make("server.pty")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.pty.connectToken",
-          summary: "Create PTY WebSocket token",
-          description: "Create a short-lived single-use ticket for opening a PTY WebSocket connection.",
+          summary: "PTY WebSocket токен үүсгэх",
+          description: "PTY WebSocket холболт нээхэд зориулсан богино хугацаатай, нэг удаагийн тасалбар үүсгэнэ.",
         }),
       ),
   )
@@ -123,8 +123,8 @@ export const PtyGroup = HttpApiGroup.make("server.pty")
     }).annotateMerge(
       OpenApi.annotations({
         identifier: "v2.pty.connect",
-        summary: "Connect to PTY session",
-        description: "Establish a WebSocket connection streaming PTY output and accepting terminal input.",
+        summary: "PTY сесст холбогдох",
+        description: "PTY-ийн гаралтыг дамжуулж, терминалын оролтыг хүлээн авах WebSocket холболт үүсгэнэ.",
         transform: (operation) => ({
           ...operation,
           parameters: [
@@ -139,4 +139,4 @@ export const PtyGroup = HttpApiGroup.make("server.pty")
       }),
     ),
   )
-  .annotateMerge(OpenApi.annotations({ title: "pty", description: "Experimental location-scoped PTY routes." }))
+  .annotateMerge(OpenApi.annotations({ title: "pty", description: "Байршлаар хязгаарлагдсан туршилтын PTY маршрутууд." }))

@@ -44,7 +44,7 @@ export const ToastShow = Event.define({
     message: Schema.String,
     variant: Schema.Literals(["info", "success", "warning", "error"]),
     duration: PositiveInt.pipe(Schema.withDecodingDefault(Effect.succeed(DEFAULT_TOAST_DURATION))).annotate({
-      description: "Duration in milliseconds",
+      description: "Үргэлжлэх хугацаа, миллисекундээр",
     }),
   },
 })
@@ -52,7 +52,7 @@ export const ToastShow = Event.define({
 export const SessionSelect = Event.define({
   type: "tui.session.select",
   schema: {
-    sessionID: SessionID.annotate({ description: "Session ID to navigate to" }),
+    sessionID: SessionID.annotate({ description: "Шилжиж очих сессийн ID" }),
   },
 })
 

@@ -7,8 +7,8 @@ export const HealthGroup = HttpApiGroup.make("server.health").add(
   }).annotateMerge(
     OpenApi.annotations({
       identifier: "v2.health.get",
-      summary: "Check server health",
-      description: "Check whether the API server is ready to accept requests.",
+      summary: "Серверийн төлөвийг шалгах",
+      description: "API сервер хүсэлт хүлээн авахад бэлэн эсэхийг шалгана.",
     }),
   ),
 )

@@ -17,8 +17,8 @@ export const IntegrationGroup = HttpApiGroup.make("server.integration")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.integration.list",
-          summary: "List integrations",
-          description: "Retrieve available integrations and their authentication methods.",
+          summary: "Интеграцын жагсаалт авах",
+          description: "Боломжтой интеграцууд болон тэдгээрийн нэвтрэлт танилтын аргуудыг авна.",
         }),
       ),
   )
@@ -32,8 +32,8 @@ export const IntegrationGroup = HttpApiGroup.make("server.integration")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.integration.get",
-          summary: "Get integration",
-          description: "Retrieve one integration and its authentication methods.",
+          summary: "Интеграцын мэдээлэл авах",
+          description: "Нэг интеграц болон түүний нэвтрэлт танилтын аргуудыг авна.",
         }),
       ),
   )
@@ -52,8 +52,8 @@ export const IntegrationGroup = HttpApiGroup.make("server.integration")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.integration.connect.key",
-          summary: "Connect with key",
-          description: "Run a key authentication method and store the resulting credential.",
+          summary: "Түлхүүрээр холбох",
+          description: "Түлхүүрээр нэвтрэлт танилтыг хийж, үүссэн нэвтрэх мэдээллийг хадгална.",
         }),
       ),
   )
@@ -73,8 +73,8 @@ export const IntegrationGroup = HttpApiGroup.make("server.integration")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.integration.connect.oauth",
-          summary: "Begin OAuth connection",
-          description: "Start an OAuth attempt and return the authorization details.",
+          summary: "OAuth холболт эхлүүлэх",
+          description: "OAuth оролдлогыг эхлүүлж, зөвшөөрөл олгоход шаардлагатай мэдээллийг буцаана.",
         }),
       ),
   )
@@ -88,8 +88,8 @@ export const IntegrationGroup = HttpApiGroup.make("server.integration")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.integration.attempt.status",
-          summary: "Get OAuth attempt status",
-          description: "Poll the current status of an OAuth attempt.",
+          summary: "OAuth оролдлогын төлөв авах",
+          description: "OAuth оролдлогын одоогийн төлөвийг шалган буцаана.",
         }),
       ),
   )
@@ -105,8 +105,8 @@ export const IntegrationGroup = HttpApiGroup.make("server.integration")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.integration.attempt.complete",
-          summary: "Complete OAuth connection",
-          description: "Complete a code-based OAuth attempt and store the resulting credential.",
+          summary: "OAuth холболтыг дуусгах",
+          description: "Кодод суурилсан OAuth оролдлогыг дуусгаж, үүссэн нэвтрэх мэдээллийг хадгална.",
         }),
       ),
   )
@@ -120,11 +120,11 @@ export const IntegrationGroup = HttpApiGroup.make("server.integration")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.integration.attempt.cancel",
-          summary: "Cancel OAuth connection",
-          description: "Cancel an OAuth attempt and release its resources.",
+          summary: "OAuth холболтыг цуцлах",
+          description: "OAuth оролдлогыг цуцалж, түүнд ашигласан нөөцийг чөлөөлнө.",
         }),
       ),
   )
   .annotateMerge(
-    OpenApi.annotations({ title: "integrations", description: "Integration discovery and authentication routes." }),
+    OpenApi.annotations({ title: "интеграцууд", description: "Интеграц илрүүлэх болон нэвтрэлт танилтын маршрутууд." }),
   )

@@ -25,12 +25,12 @@ export const makeQuestionGroup = <
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.question.request.list",
-            summary: "List pending question requests",
-            description: "Retrieve pending question requests for a location.",
+            summary: "Хүлээгдэж буй асуултын хүсэлтүүдийг жагсаах",
+            description: "Тухайн байршилд хүлээгдэж буй асуултын хүсэлтүүдийг авна.",
           }),
         ),
     )
-    .annotateMerge(OpenApi.annotations({ title: "questions", description: "Experimental question routes." }))
+    .annotateMerge(OpenApi.annotations({ title: "асуултууд", description: "Туршилтын асуултын маршрутууд." }))
     // Effect applies group middleware only to endpoints already added; session endpoints use session placement below.
     .middleware(locationMiddleware)
     .add(
@@ -43,8 +43,8 @@ export const makeQuestionGroup = <
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.question.list",
-            summary: "List session question requests",
-            description: "Retrieve pending question requests owned by a session.",
+            summary: "Сессийн асуултын хүсэлтүүдийг жагсаах",
+            description: "Тухайн сесст хамаарах хүлээгдэж буй асуултын хүсэлтүүдийг авна.",
           }),
         ),
     )
@@ -59,8 +59,8 @@ export const makeQuestionGroup = <
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.question.reply",
-            summary: "Reply to pending question request",
-            description: "Answer a pending question request owned by a session.",
+            summary: "Хүлээгдэж буй асуултын хүсэлтэд хариулах",
+            description: "Тухайн сесст хамаарах хүлээгдэж буй асуултын хүсэлтэд хариулна.",
           }),
         ),
     )
@@ -74,11 +74,11 @@ export const makeQuestionGroup = <
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.question.reject",
-            summary: "Reject pending question request",
-            description: "Reject a pending question request owned by a session.",
+            summary: "Хүлээгдэж буй асуултын хүсэлтийг татгалзах",
+            description: "Тухайн сесст хамаарах хүлээгдэж буй асуултын хүсэлтийг татгалзана.",
           }),
         ),
     )
     .annotateMerge(
-      OpenApi.annotations({ title: "session questions", description: "Experimental session question routes." }),
+      OpenApi.annotations({ title: "сессийн асуултууд", description: "Туршилтын сессийн асуултын маршрутууд." }),
     )

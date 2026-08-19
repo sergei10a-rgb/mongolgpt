@@ -17,7 +17,7 @@ export const Icon = Schema.Struct({
 export interface Icon extends Schema.Schema.Type<typeof Icon> {}
 export const Commands = Schema.Struct({
   start: optional(
-    Schema.String.annotate({ description: "Startup script to run when creating a new workspace (worktree)" }),
+    Schema.String.annotate({ description: "Шинэ ажлын орчин (worktree) үүсгэх үед ажиллуулах эхлүүлэх скрипт." }),
   ),
 }).annotate({ identifier: "Project.Commands" })
 export interface Commands extends Schema.Schema.Type<typeof Commands> {}

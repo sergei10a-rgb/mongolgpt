@@ -55,9 +55,9 @@ const makeApiFromGroup = <
     .add(ProjectCopyGroup.middleware(locationMiddleware))
     .annotateMerge(
       OpenApi.annotations({
-        title: "mongolgpt HttpApi",
+        title: "MongolGPT HttpApi",
         version: "0.0.1",
-        description: "Experimental HttpApi surface for selected instance routes.",
+        description: "Сонгосон инстансын маршрутуудад зориулсан туршилтын HttpApi интерфейс.",
       }),
     )
     .middleware(Authorization)

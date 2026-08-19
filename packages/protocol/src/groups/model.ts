@@ -16,14 +16,14 @@ export const ModelGroup = HttpApiGroup.make("server.model")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.model.list",
-          summary: "List models",
-          description: "Retrieve available models ordered by release date.",
+          summary: "Моделийн жагсаалт авах",
+          description: "Боломжтой моделуудыг гарсан огноогоор нь эрэмбэлэн авна.",
         }),
       ),
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "models",
-      description: "Experimental model routes.",
+      title: "моделууд",
+      description: "Туршилтын моделийн маршрутууд.",
     }),
   )

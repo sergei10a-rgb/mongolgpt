@@ -37,12 +37,12 @@ const make = <const Definitions extends ReadonlyArray<Definition>>(definitions: 
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "v2.event.subscribe",
-            summary: "Subscribe to events",
-            description: "Subscribe to native event payloads for the server.",
+            summary: "Үйл явдалд бүртгүүлэх",
+            description: "Серверийн дотоод үйл явдлын өгөгдлийг хүлээн авахаар бүртгүүлнэ.",
           }),
         ),
       )
-      .annotateMerge(OpenApi.annotations({ title: "events", description: "Experimental event stream route." })),
+      .annotateMerge(OpenApi.annotations({ title: "үйл явдлууд", description: "Туршилтын үйл явдлын урсгалын маршрут." })),
   }
 }
 

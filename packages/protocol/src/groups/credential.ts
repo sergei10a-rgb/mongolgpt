@@ -15,8 +15,8 @@ export const CredentialGroup = HttpApiGroup.make("server.credential")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.credential.update",
-          summary: "Update credential",
-          description: "Update a stored credential label.",
+          summary: "Нэвтрэх мэдээллийг шинэчлэх",
+          description: "Хадгалсан нэвтрэх мэдээллийн шошгыг шинэчилнэ.",
         }),
       ),
   )
@@ -30,8 +30,8 @@ export const CredentialGroup = HttpApiGroup.make("server.credential")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.credential.remove",
-          summary: "Remove credential",
-          description: "Remove a stored integration credential.",
+          summary: "Нэвтрэх мэдээллийг устгах",
+          description: "Хадгалсан интеграцын нэвтрэх мэдээллийг устгана.",
         }),
       ),
   )

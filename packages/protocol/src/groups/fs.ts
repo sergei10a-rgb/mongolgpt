@@ -27,8 +27,8 @@ export const FileSystemGroup = HttpApiGroup.make("server.fs")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.fs.read",
-          summary: "Read file",
-          description: "Serve one file relative to the requested location.",
+          summary: "Файл унших",
+          description: "Хүссэн байршилтай харьцуулсан замаар нэг файлыг дамжуулна.",
         }),
       ),
   )
@@ -41,8 +41,8 @@ export const FileSystemGroup = HttpApiGroup.make("server.fs")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.fs.list",
-          summary: "List directory",
-          description: "List direct children of one directory relative to the requested location.",
+          summary: "Хавтас жагсаах",
+          description: "Хүссэн байршилтай харьцуулсан замаар нэг хавтасны шууд доторх зүйлсийг жагсаана.",
         }),
       ),
   )
@@ -55,14 +55,14 @@ export const FileSystemGroup = HttpApiGroup.make("server.fs")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.fs.find",
-          summary: "Find files",
-          description: "Find recursively ranked filesystem entries relative to the requested location.",
+          summary: "Файл хайх",
+          description: "Хүссэн байршилтай харьцуулсан замаар файлын системийн зүйлсийг рекурсивээр хайж эрэмбэлнэ.",
         }),
       ),
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "filesystem",
-      description: "Experimental location-scoped filesystem routes.",
+      title: "файлын систем",
+      description: "Байршлаар хязгаарласан туршилтын файлын системийн маршрутууд.",
     }),
   )

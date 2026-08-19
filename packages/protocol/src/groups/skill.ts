@@ -14,14 +14,14 @@ export const SkillGroup = HttpApiGroup.make("server.skill")
       .annotateMerge(
         OpenApi.annotations({
           identifier: "v2.skill.list",
-          summary: "List skills",
-          description: "Retrieve currently registered skills.",
+          summary: "Ур чадваруудыг жагсаах",
+          description: "Одоогоор бүртгэлтэй ур чадваруудыг авна.",
         }),
       ),
   )
   .annotateMerge(
     OpenApi.annotations({
-      title: "skills",
-      description: "Experimental skill routes.",
+      title: "ур чадварууд",
+      description: "Туршилтын ур чадварын маршрутууд.",
     }),
   )
