@@ -16,6 +16,8 @@ const config: D1BackupConfig = {
   stage: "dev",
 }
 
+const maxBackupBytes = 10 * 1024 * 1024 * 1024
+
 async function expectRejection(promise: Promise<unknown>, message: string) {
   let rejected: unknown
   try {
@@ -103,7 +105,13 @@ describe("Cloudflare D1 backup", () => {
   })
 
   test("retries incomplete exports and rejects API, SSRF, and size failures", async () => {
-    const bucket: BackupBucket = { put: async () => ({ etag: "unused", size: 1 }) }
+    let putCalls = 0
+    const bucket: BackupBucket = {
+      put: async () => {
+        putCalls++
+        return { etag: "unused", size: 1 }
+      },
+    }
     await expectRejection(
       storeCompletedD1Export({
         config,
@@ -112,7 +120,7 @@ describe("Cloudflare D1 backup", () => {
         bucket,
         fetcher: async () => Response.json({ success: true, result: { status: "active" } }),
       }),
-      "not ready",
+      "бэлэн болоогүй",
     )
     await expectRejection(
       startD1Export(config, async () =>
@@ -135,7 +143,7 @@ describe("Cloudflare D1 backup", () => {
             },
           }),
       }),
-      "not allowed",
+      "зөвшөөрөгдөөгүй",
     )
     await expectRejection(
       storeCompletedD1Export({
@@ -157,14 +165,129 @@ describe("Cloudflare D1 backup", () => {
           })
         },
       }),
-      "size is invalid",
+      "хэмжээ буруу байна",
+    )
+    expect(putCalls).toBe(0)
+  })
+
+  test("fails closed when a chunked response exceeds the byte cap", async () => {
+    let putCalls = 0
+    const bucket: BackupBucket = {
+      async put(_key, value) {
+        putCalls++
+        const reader = value.getReader()
+        while (!(await reader.read()).done) {}
+        return { etag: "unused", size: 1 }
+      },
+    }
+    const chunkedBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- avoids allocating a 10 GiB test chunk
+        controller.enqueue({ byteLength: maxBackupBytes - 1 } as Uint8Array)
+        // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- synthetic overflow chunk
+        controller.enqueue({ byteLength: 2 } as Uint8Array)
+        controller.close()
+      },
+    })
+
+    await expectRejection(
+      storeCompletedD1Export({
+        config,
+        bookmark: "bookmark-1",
+        scheduledTime: 1,
+        bucket,
+        fetcher: async (input) => {
+          const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+          if (url.startsWith("https://backup.example")) {
+            // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- fetch response test double
+            return {
+              ok: true,
+              status: 200,
+              url,
+              headers: new Headers({ "content-length": "1" }),
+              body: chunkedBody,
+            } as Response
+          }
+          return Response.json({
+            success: true,
+            result: {
+              status: "complete",
+              result: { filename: "backup.sql", signed_url: "https://backup.example/export" },
+            },
+          })
+        },
+      }),
+      "хязгаараас хэтэрлээ",
+    )
+    expect(putCalls).toBe(1)
+  })
+
+  test("accepts an exact-cap stream and rejects an oversized R2 receipt", async () => {
+    const exactBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- avoids allocating a 10 GiB test chunk
+        controller.enqueue({ byteLength: maxBackupBytes } as Uint8Array)
+        controller.close()
+      },
+    })
+    const exactBucket: BackupBucket = {
+      async put(_key, value) {
+        const reader = value.getReader()
+        while (!(await reader.read()).done) {}
+        return { etag: "etag-exact", size: maxBackupBytes }
+      },
+    }
+    const fetcher = async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+      if (url.startsWith("https://backup.example")) {
+        // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- fetch response test double
+        return { ok: true, status: 200, url, headers: new Headers(), body: exactBody } as Response
+      }
+      return Response.json({
+        success: true,
+        result: { status: "complete", result: { filename: "backup.sql", signed_url: "https://backup.example/export" } },
+      })
+    }
+    expect(
+      await storeCompletedD1Export({
+        config,
+        bookmark: "bookmark-1",
+        scheduledTime: 1,
+        bucket: exactBucket,
+        fetcher,
+      }),
+    ).toMatchObject({ etag: "etag-exact", size: maxBackupBytes })
+
+    const oversizedReceiptBucket: BackupBucket = {
+      put: async () => ({ etag: "etag-too-large", size: maxBackupBytes + 1 }),
+    }
+    await expectRejection(
+      storeCompletedD1Export({
+        config,
+        bookmark: "bookmark-1",
+        scheduledTime: 1,
+        bucket: oversizedReceiptBucket,
+        fetcher: async (input) => {
+          const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+          if (url.startsWith("https://backup.example"))
+            return new Response("sql", { headers: { "content-length": "3" } })
+          return Response.json({
+            success: true,
+            result: {
+              status: "complete",
+              result: { filename: "backup.sql", signed_url: "https://backup.example/export" },
+            },
+          })
+        },
+      }),
+      "баталгаажуулсангүй",
     )
   })
 
   test("normalizes object keys and validates event timestamps", () => {
     expect(backupObjectKey("Production", 0, "dump")).toBe("d1/production/1970/01/01/1970-01-01T00-00-00.000Z-dump.sql")
     expect(scheduledBackupTime(undefined, new Date(1234))).toBe(1234)
-    expect(() => scheduledBackupTime(Number.NaN, new Date(1234))).toThrow("scheduled time")
+    expect(() => scheduledBackupTime(Number.NaN, new Date(1234))).toThrow("товлосон хугацаа")
     expect(() => backupObjectKey("../dev", 0, "dump.sql")).toThrow("stage")
   })
 

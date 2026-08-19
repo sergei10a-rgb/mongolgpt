@@ -41,7 +41,7 @@ type ExportProgress = {
 export async function startD1Export(config: D1BackupConfig, fetcher: Fetcher = fetch) {
   validateConfig(config)
   const progress = await requestExport(config, { output_format: "polling" }, fetcher)
-  if (!progress.bookmark) throw new Error("D1 export response is missing a bookmark")
+  if (!progress.bookmark) throw new Error("D1 export-ийн хариуд bookmark алга байна")
   return progress.bookmark
 }
 
@@ -57,29 +57,45 @@ export async function storeCompletedD1Export(input: {
   const fetcher = input.fetcher ?? fetch
   const progress = await requestExport(input.config, { current_bookmark: bookmark }, fetcher)
   if (progress.status === "error" || progress.error) {
-    throw new Error(`D1 export failed${progress.error ? `: ${safeMessage(progress.error)}` : ""}`)
+    throw new Error(`D1 export амжилтгүй боллоо${progress.error ? `: ${safeMessage(progress.error)}` : ""}`)
   }
   if (!progress.signedUrl || !progress.filename || (progress.status && progress.status !== "complete")) {
-    throw new Error("D1 export is not ready")
+    throw new Error("D1 export бэлэн болоогүй байна")
   }
 
   const signedUrl = validateSignedDownloadUrl(progress.signedUrl)
   const key = backupObjectKey(input.config.stage, input.scheduledTime, progress.filename)
   const dump = await fetcher(signedUrl, { method: "GET", redirect: "error" })
-  if (!dump.ok || !dump.body) throw new Error(`D1 export download failed with HTTP ${dump.status}`)
+  if (!dump.ok || !dump.body) throw new Error(`D1 export татаж авахад амжилтгүй боллоо, HTTP ${dump.status}`)
   if (dump.url) validateSignedDownloadUrl(dump.url)
   validateContentLength(dump.headers.get("content-length"))
+  const cappedDump = capBackupStream(dump.body)
 
-  const stored = await input.bucket.put(key, dump.body, {
-    httpMetadata: { contentType: "application/sql" },
-    customMetadata: {
-      createdAt: new Date(input.scheduledTime).toISOString(),
-      source: "cloudflare-d1-export",
-      stage: input.config.stage,
-    },
-  })
-  if (!stored || !Number.isSafeInteger(stored.size) || stored.size <= 0 || !stored.etag) {
-    throw new Error("R2 did not confirm the D1 backup object")
+  let stored: Awaited<ReturnType<BackupBucket["put"]>>
+  try {
+    stored = await input.bucket.put(key, cappedDump.stream, {
+      httpMetadata: { contentType: "application/sql" },
+      customMetadata: {
+        createdAt: new Date(input.scheduledTime).toISOString(),
+        source: "cloudflare-d1-export",
+        stage: input.config.stage,
+      },
+    })
+  } catch (error) {
+    if (cappedDump.exceeded()) {
+      throw new Error("D1 export татаж авах хэмжээ зөвшөөрөгдөх дээд хязгаараас хэтэрлээ", { cause: error })
+    }
+    throw error
+  }
+  if (
+    cappedDump.exceeded() ||
+    !stored ||
+    !Number.isSafeInteger(stored.size) ||
+    stored.size <= 0 ||
+    stored.size > MAX_BACKUP_BYTES ||
+    !stored.etag
+  ) {
+    throw new Error("R2 D1 нөөц хуулбарын объектыг баталгаажуулсангүй")
   }
   return { key, etag: stored.etag, size: stored.size }
 }
@@ -87,10 +103,10 @@ export async function storeCompletedD1Export(input: {
 export function backupObjectKey(stage: string, scheduledTime: number, filename: string) {
   const normalizedStage = validateStage(stage)
   if (!Number.isSafeInteger(scheduledTime) || scheduledTime < 0 || scheduledTime > 8_640_000_000_000_000) {
-    throw new TypeError("D1 backup timestamp is invalid")
+    throw new TypeError("D1 нөөц хуулбарын timestamp буруу байна")
   }
   const date = new Date(scheduledTime)
-  if (Number.isNaN(date.getTime())) throw new TypeError("D1 backup timestamp is invalid")
+  if (Number.isNaN(date.getTime())) throw new TypeError("D1 нөөц хуулбарын timestamp буруу байна")
   const [day] = date.toISOString().split("T")
   const timestamp = date.toISOString().replaceAll(":", "-")
   return `${D1_BACKUP_PREFIX}${normalizedStage}/${day.replaceAll("-", "/")}/${timestamp}-${safeFilename(filename)}`
@@ -98,11 +114,11 @@ export function backupObjectKey(stage: string, scheduledTime: number, filename: 
 
 export function scheduledBackupTime(payloadTime: unknown, eventTime: Date) {
   if (!(eventTime instanceof Date) || Number.isNaN(eventTime.getTime())) {
-    throw new TypeError("D1 backup event time is invalid")
+    throw new TypeError("D1 нөөц хуулбарын event-ийн хугацаа буруу байна")
   }
   if (payloadTime === undefined) return eventTime.getTime()
   if (typeof payloadTime !== "number" || !Number.isSafeInteger(payloadTime) || payloadTime < 0) {
-    throw new TypeError("D1 backup scheduled time is invalid")
+    throw new TypeError("D1 нөөц хуулбарын товлосон хугацаа буруу байна")
   }
   return payloadTime
 }
@@ -116,15 +132,15 @@ async function requestExport(config: D1BackupConfig, payload: Record<string, str
     },
     body: JSON.stringify(payload),
   })
-  if (!response.ok) throw new Error(`Cloudflare D1 export API returned HTTP ${response.status}`)
+  if (!response.ok) throw new Error(`Cloudflare D1 export API HTTP ${response.status} буцаалаа`)
   const body = await response.text()
-  if (body.length > MAX_API_RESPONSE_BYTES) throw new Error("Cloudflare D1 export response is too large")
+  if (body.length > MAX_API_RESPONSE_BYTES) throw new Error("Cloudflare D1 export-ийн хариу хэт том байна")
 
   let parsed: unknown
   try {
     parsed = JSON.parse(body)
   } catch {
-    throw new Error("Cloudflare D1 export response is not valid JSON")
+    throw new Error("Cloudflare D1 export-ийн хариу зөв JSON биш байна")
   }
   if (!record(parsed) || parsed.success !== true || !record(parsed.result)) {
     throw new Error(apiErrorMessage(parsed))
@@ -132,7 +148,9 @@ async function requestExport(config: D1BackupConfig, payload: Record<string, str
 
   const result = parsed.result
   if (result.success === false || result.status === "error") {
-    throw new Error(`D1 export failed${typeof result.error === "string" ? `: ${safeMessage(result.error)}` : ""}`)
+    throw new Error(
+      `D1 export амжилтгүй боллоо${typeof result.error === "string" ? `: ${safeMessage(result.error)}` : ""}`,
+    )
   }
   const completed = record(result.result) ? result.result : result
   return {
@@ -149,9 +167,9 @@ function exportUrl(config: D1BackupConfig) {
 }
 
 function validateConfig(config: D1BackupConfig) {
-  if (!/^[a-f0-9]{32}$/i.test(config.accountId)) throw new TypeError("Cloudflare account ID is invalid")
+  if (!/^[a-f0-9]{32}$/i.test(config.accountId)) throw new TypeError("Cloudflare account ID буруу байна")
   if (!/^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/i.test(config.databaseId)) {
-    throw new TypeError("Cloudflare D1 database ID is invalid")
+    throw new TypeError("Cloudflare D1 database ID буруу байна")
   }
   requiredString(config.apiToken, "Cloudflare D1 backup token", 512)
   validateStage(config.stage)
@@ -159,20 +177,20 @@ function validateConfig(config: D1BackupConfig) {
 
 function validateStage(value: string) {
   const stage = requiredString(value, "MongolGPT stage", 63).toLowerCase()
-  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(stage)) throw new TypeError("MongolGPT stage is invalid")
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(stage)) throw new TypeError("MongolGPT stage буруу байна")
   return stage
 }
 
 function validateSignedDownloadUrl(value: string) {
-  if (value.length > 8192) throw new Error("D1 export download URL is too long")
+  if (value.length > 8192) throw new Error("D1 export татах URL хэт урт байна")
   let url: URL
   try {
     url = new URL(value)
   } catch {
-    throw new Error("D1 export download URL is invalid")
+    throw new Error("D1 export татах URL буруу байна")
   }
   if (url.protocol !== "https:" || url.username || url.password || privateHostname(url.hostname)) {
-    throw new Error("D1 export download URL is not allowed")
+    throw new Error("D1 export татах URL зөвшөөрөгдөөгүй байна")
   }
   return url.toString()
 }
@@ -199,8 +217,30 @@ function validateContentLength(value: string | null) {
   if (value === null) return
   const length = Number(value)
   if (!Number.isSafeInteger(length) || length <= 0 || length > MAX_BACKUP_BYTES) {
-    throw new Error("D1 export download size is invalid")
+    throw new Error("D1 export татах хэмжээ буруу байна")
   }
+}
+
+function capBackupStream(body: ReadableStream<Uint8Array>) {
+  let bytes = 0
+  let exceeded = false
+  const stream = body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        if (
+          !Number.isSafeInteger(chunk.byteLength) ||
+          chunk.byteLength < 0 ||
+          bytes > MAX_BACKUP_BYTES - chunk.byteLength
+        ) {
+          exceeded = true
+          throw new Error("D1 export татаж авах хэмжээ зөвшөөрөгдөх дээд хязгаараас хэтэрлээ")
+        }
+        bytes += chunk.byteLength
+        controller.enqueue(chunk)
+      },
+    }),
+  )
+  return { stream, exceeded: () => exceeded }
 }
 
 function safeFilename(value: string) {
@@ -214,16 +254,16 @@ function safeFilename(value: string) {
 }
 
 function apiErrorMessage(value: unknown) {
-  if (!record(value) || !Array.isArray(value.errors)) return "Cloudflare D1 export response is invalid"
+  if (!record(value) || !Array.isArray(value.errors)) return "Cloudflare D1 export-ийн хариу буруу байна"
   const first = value.errors.find(record)
-  if (!first) return "Cloudflare D1 export request failed"
+  if (!first) return "Cloudflare D1 export-ийн хүсэлт амжилтгүй боллоо"
   const code = typeof first.code === "number" ? ` (${first.code})` : ""
   const message = typeof first.message === "string" ? `: ${safeMessage(first.message)}` : ""
-  return `Cloudflare D1 export request failed${code}${message}`
+  return `Cloudflare D1 export-ийн хүсэлт амжилтгүй боллоо${code}${message}`
 }
 
 function requiredString(value: unknown, label: string, maximum: number) {
-  if (typeof value !== "string" || !value.trim() || value.length > maximum) throw new TypeError(`${label} is invalid`)
+  if (typeof value !== "string" || !value.trim() || value.length > maximum) throw new TypeError(`${label} буруу байна`)
   return value.trim()
 }
 
