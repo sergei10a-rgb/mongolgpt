@@ -1,9 +1,9 @@
+import { AccountOverviewSchema } from "@mongolgpt/account-contract"
 import {
   AccountOverviewNotFoundError,
   AccountOverviewSuspendedError,
   AccountOverviewWorkspaceAccessError,
 } from "@mongolgpt/console-core/account-overview.js"
-import { AccountOverviewSchema } from "@mongolgpt/console-core/account-overview-contract.js"
 import { canonicalHttpsOrigin } from "../../auth/helpers"
 import { z } from "zod"
 

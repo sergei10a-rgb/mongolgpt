@@ -1,5 +1,7 @@
-import { PlanNames } from "./schema/billing.sql"
 import { z } from "zod"
+
+export const PlanNames = ["basic", "pro", "max"] as const
+export type PlanName = (typeof PlanNames)[number]
 
 const timestamp = z.number().int().nonnegative()
 const identifier = z.string().trim().min(5).max(30)

@@ -1,3 +1,4 @@
+import { PlanNames } from "@mongolgpt/account-contract"
 import { sql } from "drizzle-orm"
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core"
@@ -10,7 +11,7 @@ export const UserRole = ["admin", "member"] as const
 export const PlatformAdminRoles = ["owner", "administrator", "support", "finance", "operations"] as const
 export const PlatformAdminStatuses = ["active", "suspended"] as const
 export const AdminAuditOutcomes = ["success", "denied", "failure"] as const
-export const PlanNames = ["basic", "pro", "max"] as const
+export { PlanNames }
 export const PaymentProviders = ["qpay", "bonum"] as const
 export const PaymentPurposes = ["subscription", "credit"] as const
 export const PaymentInvoiceStatuses = [

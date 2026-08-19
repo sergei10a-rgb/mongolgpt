@@ -17,6 +17,7 @@
     "@jsx-email/render": "1.1.1",
     "@kobalte/core": "catalog:",
     "@openauthjs/openauth": "catalog:",
+    "@mongolgpt/account-contract": "workspace:*",
     "@mongolgpt/console-core": "workspace:*",
     "@mongolgpt/console-mail": "workspace:*",
     "@mongolgpt/console-resource": "workspace:*",

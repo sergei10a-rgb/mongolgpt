@@ -8,6 +8,7 @@
   "dependencies": {
     "@aws-sdk/client-sts": "3.782.0",
     "@jsx-email/render": "1.1.1",
+    "@mongolgpt/account-contract": "workspace:*",
     "@mongolgpt/console-mail": "workspace:*",
     "@mongolgpt/console-resource": "workspace:*",
     "aws4fetch": "1.0.20",
