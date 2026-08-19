@@ -218,7 +218,7 @@ export const layer = Layer.effect(
 
       const token = yield* account.token(active.value.id)
       if (Option.isNone(token)) {
-        throw new Error("No active account token available for sharing")
+        throw new Error("Хуваалцахад ашиглах идэвхтэй бүртгэлийн токен алга")
       }
 
       headers.authorization = `Bearer ${token.value}`

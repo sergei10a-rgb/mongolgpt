@@ -130,8 +130,9 @@ export function parseReadableConfigInvalidError(errorInput: ConfigInvalidError, 
     })
     .filter(Boolean)
   const msg = issues.length ? issues.join("\n") : detail
-  if (!msg) return tr(translator, "error.chain.configInvalid", `Config file at ${file} is invalid`, { path: file })
-  return tr(translator, "error.chain.configInvalidWithMessage", `Config file at ${file} is invalid: ${msg}`, {
+  if (!msg)
+    return tr(translator, "error.chain.configInvalid", `${file} дээрх тохиргооны файл буруу байна`, { path: file })
+  return tr(translator, "error.chain.configInvalidWithMessage", `${file} дээрх тохиргооны файл буруу байна: ${msg}`, {
     path: file,
     message: msg,
   })
@@ -141,13 +142,19 @@ function parseReadableProviderModelNotFoundError(errorInput: ProviderModelNotFou
   const p = errorInput.data.providerID.trim()
   const m = errorInput.data.modelID.trim()
   const list = (errorInput.data.suggestions ?? []).map((v) => v.trim()).filter(Boolean)
-  const body = tr(translator, "error.chain.modelNotFound", `Model not found: ${p}/${m}`, { provider: p, model: m })
-  const tail = tr(translator, "error.chain.checkConfig", "Config-оо шалгана уу (mongolgpt.json) provider/model нэрс")
+  const body = tr(translator, "error.chain.modelNotFound", `Загвар олдсонгүй: ${p}/${m}`, { provider: p, model: m })
+  const tail = tr(
+    translator,
+    "error.chain.checkConfig",
+    "Өөрийн тохиргооны (mongolgpt.json) үйлчилгээ үзүүлэгч/загварын нэрийг шалгана уу",
+  )
   if (list.length) {
     const suggestions = list.slice(0, 5).join(", ")
-    return [body, tr(translator, "error.chain.didYouMean", `Did you mean: ${suggestions}`, { suggestions }), tail].join(
-      "\n",
-    )
+    return [
+      body,
+      tr(translator, "error.chain.didYouMean", `Та: ${suggestions} гэсэн үг үү`, { suggestions }),
+      tail,
+    ].join("\n")
   }
   return [body, tail].join("\n")
 }

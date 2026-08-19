@@ -38,6 +38,22 @@ function useLanguageMock() {
 const language = useLanguageMock()
 
 describe("parseReadableConfigInvalidError", () => {
+  test("uses Mongolian fallbacks without a translator", () => {
+    expect(
+      parseReadableConfigInvalidError({
+        name: "ConfigInvalidError",
+        data: { path: "mongolgpt.json" },
+      }),
+    ).toBe("mongolgpt.json дээрх тохиргооны файл буруу байна")
+
+    expect(
+      parseReadableConfigInvalidError({
+        name: "ConfigInvalidError",
+        data: { path: "mongolgpt.json", message: "утга дутуу" },
+      }),
+    ).toBe("mongolgpt.json дээрх тохиргооны файл буруу байна: утга дутуу")
+  })
+
   test("formats issues with file path", () => {
     const error = {
       name: "ConfigInvalidError",
@@ -147,6 +163,25 @@ describe("formatServerError", () => {
 
     expect(formatServerError(error, language.t)).toBe(
       ["Modelo nao encontrado: x/y", "Voce quis dizer: x/y2, x/y3", "Revise provider/model no config"].join("\n"),
+    )
+  })
+
+  test("uses Mongolian provider/model fallbacks without a translator", () => {
+    const error = {
+      name: "ProviderModelNotFoundError",
+      data: {
+        providerID: "openrouter",
+        modelID: "free-auto",
+        suggestions: ["openrouter/auto"],
+      },
+    } satisfies ProviderModelNotFoundError
+
+    expect(formatServerError(error)).toBe(
+      [
+        "Загвар олдсонгүй: openrouter/free-auto",
+        "Та: openrouter/auto гэсэн үг үү",
+        "Өөрийн тохиргооны (mongolgpt.json) үйлчилгээ үзүүлэгч/загварын нэрийг шалгана уу",
+      ].join("\n"),
     )
   })
 

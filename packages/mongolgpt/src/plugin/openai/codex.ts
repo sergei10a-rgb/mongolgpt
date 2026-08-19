@@ -175,7 +175,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
       }
 
       if (!code) {
-        const errorMsg = "Missing authorization code"
+        const errorMsg = "Зөвшөөрлийн код дутуу байна"
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
         res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
@@ -184,7 +184,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
       }
 
       if (!pendingOAuth || state !== pendingOAuth.state) {
-        const errorMsg = "Invalid state - potential CSRF attack"
+        const errorMsg = "Төлөв буруу байна. CSRF халдлага байж болзошгүй."
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
         res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
@@ -461,7 +461,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
               body: JSON.stringify({ client_id: CLIENT_ID }),
             })
 
-            if (!deviceResponse.ok) throw new Error("Failed to initiate device authorization")
+            if (!deviceResponse.ok) throw new Error("Төхөөрөмжийн зөвшөөрлийг эхлүүлж чадсангүй")
 
             const deviceData = (await deviceResponse.json()) as {
               device_auth_id: string

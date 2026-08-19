@@ -313,8 +313,8 @@ export const layer = Layer.effect(
       const taskAgent = yield* agents.get(task.agent)
       if (!taskAgent) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${task.agent}".${hint}` })
+        const hint = available.length ? ` Боломжтой агентууд: ${available.join(", ")}` : ""
+        const error = new NamedError.Unknown({ message: `Агент олдсонгүй: "${task.agent}".${hint}` })
         yield* events.publish(Session.Event.Error, { sessionID, error: error.toObject() })
         throw error
       }
@@ -461,8 +461,8 @@ export const layer = Layer.effect(
             const agent = yield* agents.get(input.agent)
             if (!agent) {
               const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-              const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-              const error = new NamedError.Unknown({ message: `Agent not found: "${input.agent}".${hint}` })
+              const hint = available.length ? ` Боломжтой агентууд: ${available.join(", ")}` : ""
+              const error = new NamedError.Unknown({ message: `Агент олдсонгүй: "${input.agent}".${hint}` })
               yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
               throw error
             }
@@ -637,8 +637,8 @@ export const layer = Layer.effect(
       const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
       if (!ag) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+        const hint = available.length ? ` Боломжтой агентууд: ${available.join(", ")}` : ""
+        const error = new NamedError.Unknown({ message: `Агент олдсонгүй: "${agentName}".${hint}` })
         yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
@@ -715,7 +715,7 @@ export const layer = Layer.effect(
             const exit = yield* mcp.readResource(clientName, uri).pipe(Effect.exit)
             if (Exit.isSuccess(exit)) {
               const content = exit.value
-              if (!content) throw new Error(`Resource not found: ${clientName}/${uri}`)
+              if (!content) throw new Error(`Нөөц олдсонгүй: ${clientName}/${uri}`)
               const items = Array.isArray(content.contents) ? content.contents : [content.contents]
               for (const c of items) {
                 if (!c || typeof c !== "object") continue
@@ -1170,8 +1170,8 @@ export const layer = Layer.effect(
           const agent = yield* agents.get(lastUser.agent)
           if (!agent) {
             const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-            const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-            const error = new NamedError.Unknown({ message: `Agent not found: "${lastUser.agent}".${hint}` })
+            const hint = available.length ? ` Боломжтой агентууд: ${available.join(", ")}` : ""
+            const error = new NamedError.Unknown({ message: `Агент олдсонгүй: "${lastUser.agent}".${hint}` })
             yield* events.publish(Session.Event.Error, { sessionID, error: error.toObject() })
             throw error
           }
@@ -1361,8 +1361,8 @@ export const layer = Layer.effect(
       const cmd = yield* commands.get(input.command)
       if (!cmd) {
         const available = (yield* commands.list()).map((c) => c.name)
-        const hint = available.length ? ` Available commands: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Command not found: "${input.command}".${hint}` })
+        const hint = available.length ? ` Боломжтой командууд: ${available.join(", ")}` : ""
+        const error = new NamedError.Unknown({ message: `Команд олдсонгүй: "${input.command}".${hint}` })
         yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
@@ -1422,8 +1422,8 @@ export const layer = Layer.effect(
       const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
       if (!agent) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+        const hint = available.length ? ` Боломжтой агентууд: ${available.join(", ")}` : ""
+        const error = new NamedError.Unknown({ message: `Агент олдсонгүй: "${agentName}".${hint}` })
         yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }

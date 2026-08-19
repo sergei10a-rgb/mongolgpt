@@ -340,7 +340,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
       }
 
       if (!code) {
-        const errorMsg = "Missing authorization code"
+        const errorMsg = "Зөвшөөрлийн код дутуу байна"
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
         res.writeHead(400, { "Content-Type": "text/html" })
@@ -349,7 +349,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
       }
 
       if (!pendingOAuth || state !== pendingOAuth.state) {
-        const errorMsg = "Invalid state - potential CSRF attack"
+        const errorMsg = "Төлөв буруу байна. CSRF халдлага байж болзошгүй."
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
         res.writeHead(400, { "Content-Type": "text/html" })

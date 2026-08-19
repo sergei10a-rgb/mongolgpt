@@ -835,7 +835,7 @@ export function createPromptState(input: PromptInput): PromptState {
       })
     } catch {
       restore(current)
-      input.onStatus("failed to open editor")
+      input.onStatus("Засварлагчийг нээж чадсангүй")
     }
   }
 

@@ -46,7 +46,7 @@ export const layer = Layer.effect(
     const decode = Schema.decodeUnknownSync(Info)
 
     const query = <A, E>(effect: Effect.Effect<A, E>) =>
-      effect.pipe(Effect.mapError((cause) => new AccountRepoError({ message: "Database operation failed", cause })))
+      effect.pipe(Effect.mapError((cause) => new AccountRepoError({ message: "Өгөгдлийн сантай ажиллахад алдаа гарлаа", cause })))
 
     const current = Effect.fnUntraced(function* () {
       const state = yield* db.select().from(AccountStateTable).where(eq(AccountStateTable.id, ACCOUNT_STATE_ID)).get()

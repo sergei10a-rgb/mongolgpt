@@ -235,7 +235,7 @@ export function createServerSession(client: MongolGPTClient, options?: { retry?:
     if (pending) return pending
     const active = generation(sessionID)
     const request = client.session.get({ sessionID }).then((result) => {
-      if (!result.data) throw new Error(`Session not found: ${sessionID}`)
+      if (!result.data) throw new Error(`Сесс олдсонгүй: ${sessionID}`)
       if (generations.get(sessionID) !== active) return result.data
       return remember(result.data)
     })

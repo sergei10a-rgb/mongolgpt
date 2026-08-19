@@ -31,7 +31,7 @@ export class InvalidDataUrlError extends Schema.TaggedErrorClass<InvalidDataUrlE
 
 export class DecodeError extends Schema.TaggedErrorClass<DecodeError>()("ImageDecodeError", {}) {
   override get message() {
-    return "Image could not be decoded"
+    return "Зургийг тайлж чадсангүй"
   }
 }
 

@@ -82,7 +82,7 @@ const cli = yargs(args)
     process.env.MONGOLGPT_PID = String(process.pid)
   })
   .usage("")
-  .completion("completion", "generate shell completion script")
+  .completion("completion", "команд автоматаар гүйцээх shell скрипт үүсгэх")
   .command(AcpCommand)
   .command(McpCommand)
   .command(TuiThreadCommand)
@@ -135,7 +135,7 @@ try {
   const formatted = FormatError(e)
   if (formatted) UI.error(formatted)
   if (formatted === undefined) {
-    UI.error("Unexpected error" + EOL)
+    UI.error("Гэнэтийн алдаа" + EOL)
     process.stderr.write(errorMessage(e) + EOL)
   }
   process.exitCode = 1

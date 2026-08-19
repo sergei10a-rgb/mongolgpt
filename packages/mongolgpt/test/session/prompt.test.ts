@@ -2347,7 +2347,7 @@ noLLMServer.instance(
         expect(err).not.toBeInstanceOf(TypeError)
         expect(NamedError.Unknown.isInstance(err)).toBe(true)
         if (NamedError.Unknown.isInstance(err)) {
-          expect(err.data.message).toContain('Agent not found: "nonexistent-agent-xyz"')
+          expect(err.data.message).toContain('Агент олдсонгүй: "nonexistent-agent-xyz"')
         }
       }
     }),
@@ -2403,7 +2403,7 @@ noLLMServer.instance(
         expect(err).not.toBeInstanceOf(TypeError)
         expect(NamedError.Unknown.isInstance(err)).toBe(true)
         if (NamedError.Unknown.isInstance(err)) {
-          expect(err.data.message).toContain('Command not found: "nonexistent-command-xyz"')
+          expect(err.data.message).toContain('Команд олдсонгүй: "nonexistent-command-xyz"')
           expect(err.data.message).toContain("init")
         }
       }

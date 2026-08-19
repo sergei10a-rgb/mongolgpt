@@ -513,7 +513,7 @@ function generateUnifiedDiff(oldContent: string, newContent: string): string {
 // Apply hunks to filesystem
 export const applyHunksToFiles = Effect.fn("Patch.applyHunksToFiles")(function* (hunks: Hunk[]) {
   if (hunks.length === 0) {
-    return yield* Effect.fail(new Error("No files were modified."))
+    return yield* Effect.fail(new Error("Ямар ч файл өөрчлөгдсөнгүй."))
   }
 
   const fs = yield* FSUtil.Service

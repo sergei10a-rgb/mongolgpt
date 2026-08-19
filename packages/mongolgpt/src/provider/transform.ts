@@ -256,7 +256,7 @@ function normalizeMessages(
           content: [
             {
               type: "text",
-              text: "Done.",
+              text: "Дууслаа.",
             },
           ],
         })
