@@ -25,7 +25,7 @@ export const GithubRunCommand = effectCmd({
       })
       .option("token", {
         type: "string",
-        describe: "GitHub personal access token (github_pat_********)",
+        describe: "GitHub-ийн хувийн хандалтын токен (github_pat_********)",
       }),
   handler: (args) =>
     Effect.gen(function* () {

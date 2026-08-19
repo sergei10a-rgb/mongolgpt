@@ -103,11 +103,11 @@ export default function Home() {
                   <Tabs.Content as="pre" data-slot="panel" value="windows">
                     <button data-copy data-slot="command" onClick={handleCopyClick}>
                       <span data-slot="command-script">
-                        <span>download </span>
-                        <span data-slot="protocol">https://</span>
+                        <span data-slot="protocol">Invoke-WebRequest -Uri https://</span>
                         <span data-slot="highlight">
                           github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe
                         </span>
+                        <span> -OutFile mongolgpt-desktop-win-x64.exe</span>
                       </span>
                       <CopyStatus />
                     </button>

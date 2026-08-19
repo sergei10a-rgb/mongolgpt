@@ -616,7 +616,7 @@ Options:
       --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
       --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
       --event       agent ажиллуулах GitHub mock event                                      [string]
-      --token       GitHub personal access token (github_pat_********)                      [string]"
+      --token       GitHub-ийн хувийн хандалтын токен (github_pat_********)                 [string]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt db path --help 1`] = `
