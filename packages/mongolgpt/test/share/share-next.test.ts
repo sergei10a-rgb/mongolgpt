@@ -9,6 +9,7 @@ import { SessionProjector } from "@mongolgpt/core/session/projector"
 
 import { AccessToken, AccountID, OrgID, RefreshToken } from "../../src/account/schema"
 import { AccountRepo } from "../../src/account/repo"
+import { configureAccountTokenEncryptionKey } from "../../src/account/token-codec"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Session } from "@/session/session"
 import type { SessionID } from "../../src/session/schema"
@@ -22,6 +23,7 @@ import { pollWithTimeout, testEffect } from "../lib/effect"
 
 const env = LayerNodeTree.compile(LayerNode.group([CrossSpawnSpawner.node]))
 const it = testEffect(env)
+configureAccountTokenEncryptionKey(new Uint8Array(32).fill(17))
 
 const json = (req: Parameters<typeof HttpClientResponse.fromWeb>[0], body: unknown, status = 200) =>
   HttpClientResponse.fromWeb(
