@@ -96,6 +96,7 @@ async function check(
         if (health === "payment") inspectPaymentHealth(body, result.paymentEnvironment)
       } else if (name === "console") {
         await checkHostedRuntimeToken(url, appUrl)
+        await checkHostedAccountOverview(url, appUrl)
         const authHealthUrl = deploymentEndpoints(result).authHealth
         if (!authHealthUrl) throw new Error("hosted auth endpoint is missing")
         await checkHostedAuthorize(url, new URL(authHealthUrl).origin)
@@ -271,7 +272,7 @@ export function inspectRuntimeTokenPreflight(response: Response, appOrigin: stri
   if (response.status !== 204) {
     throw new Error(`runtime token preflight returned HTTP ${response.status}; expected 204`)
   }
-  inspectRuntimeTokenCors(response, appOrigin)
+  inspectCredentialedCors(response, appOrigin, "runtime token")
   if (response.headers.get("access-control-allow-methods") !== "POST, OPTIONS") {
     throw new Error("runtime token preflight methods are not exact")
   }
@@ -287,7 +288,7 @@ export async function inspectAnonymousRuntimeToken(response: Response, appOrigin
   if (response.status !== 401) {
     throw new Error(`anonymous runtime token request returned HTTP ${response.status}; expected 401`)
   }
-  inspectRuntimeTokenCors(response, appOrigin)
+  inspectCredentialedCors(response, appOrigin, "runtime token")
   const body = inspectJsonApiPayload(
     response.headers.get("content-type"),
     await response.text(),
@@ -305,22 +306,103 @@ export async function inspectAnonymousRuntimeToken(response: Response, appOrigin
   }
 }
 
-function inspectRuntimeTokenCors(response: Response, appOrigin: string) {
+async function checkHostedAccountOverview(consoleUrl: string, appUrl: string) {
+  const overviewUrl = new URL("/v1/account/overview", `${consoleUrl}/`)
+  const appOrigin = new URL(appUrl).origin
+  const preflight = await fetch(overviewUrl, {
+    method: "OPTIONS",
+    headers: {
+      Origin: appOrigin,
+      "Access-Control-Request-Method": "GET",
+      "Access-Control-Request-Headers": "authorization, x-org-id",
+      "User-Agent": "mongolgpt-deployment-smoke",
+    },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  inspectResponseOrigin({
+    requestUrl: overviewUrl.toString(),
+    responseUrl: preflight.url,
+    status: preflight.status,
+    location: preflight.headers.get("location"),
+    label: "account overview preflight",
+  })
+  inspectAccountOverviewPreflight(preflight, appOrigin)
+
+  const anonymous = await fetch(overviewUrl, {
+    credentials: "omit",
+    headers: {
+      Accept: "application/json",
+      Origin: appOrigin,
+      "User-Agent": "mongolgpt-deployment-smoke",
+    },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  inspectResponseOrigin({
+    requestUrl: overviewUrl.toString(),
+    responseUrl: anonymous.url,
+    status: anonymous.status,
+    location: anonymous.headers.get("location"),
+    label: "anonymous account overview",
+  })
+  await inspectAnonymousAccountOverview(anonymous, appOrigin)
+}
+
+export function inspectAccountOverviewPreflight(response: Response, appOrigin: string) {
+  if (response.status !== 204) {
+    throw new Error(`account overview preflight returned HTTP ${response.status}; expected 204`)
+  }
+  inspectCredentialedCors(response, appOrigin, "account overview")
+  if (response.headers.get("access-control-allow-methods") !== "GET, OPTIONS") {
+    throw new Error("account overview preflight methods are not exact")
+  }
+  if (response.headers.get("access-control-allow-headers") !== "Authorization, X-Org-ID") {
+    throw new Error("account overview preflight headers are not exact")
+  }
+  if (response.headers.get("access-control-max-age") !== "600") {
+    throw new Error("account overview preflight max age is not exact")
+  }
+}
+
+export async function inspectAnonymousAccountOverview(response: Response, appOrigin: string) {
+  if (response.status !== 401) {
+    throw new Error(`anonymous account overview returned HTTP ${response.status}; expected 401`)
+  }
+  inspectCredentialedCors(response, appOrigin, "account overview")
+  const body = inspectJsonApiPayload(
+    response.headers.get("content-type"),
+    await response.text(),
+    "anonymous account overview response",
+  )
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    Array.isArray(body) ||
+    Object.keys(body).length !== 2 ||
+    (body as { error?: unknown }).error !== "unauthorized" ||
+    (body as { message?: unknown }).message !== "MongolGPT бүртгэлээр нэвтэрнэ үү."
+  ) {
+    throw new Error("anonymous account overview response is not fail-closed")
+  }
+}
+
+function inspectCredentialedCors(response: Response, appOrigin: string, label: string) {
   if (response.headers.get("access-control-allow-origin") !== appOrigin) {
-    throw new Error("runtime token CORS origin does not match the app")
+    throw new Error(`${label} CORS origin does not match the app`)
   }
   if (response.headers.get("access-control-allow-credentials") !== "true") {
-    throw new Error("runtime token CORS credentials are not enabled")
+    throw new Error(`${label} CORS credentials are not enabled`)
   }
   if (response.headers.get("cache-control")?.toLowerCase().includes("no-store") !== true) {
-    throw new Error("runtime token response is cacheable")
+    throw new Error(`${label} response is cacheable`)
   }
   const vary = response.headers
     .get("vary")
     ?.split(",")
     .map((value) => value.trim().toLowerCase())
   if (!vary?.includes("origin")) {
-    throw new Error("runtime token response does not vary by Origin")
+    throw new Error(`${label} response does not vary by Origin`)
   }
 }
 

@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test"
 
 const baseURL = process.env.PLAYWRIGHT_DEPLOYED_BASE_URL
 if (!baseURL) throw new Error("PLAYWRIGHT_DEPLOYED_BASE_URL is required")
+const publicURL = process.env.PLAYWRIGHT_DEPLOYED_PUBLIC_URL
+if (!publicURL) throw new Error("PLAYWRIGHT_DEPLOYED_PUBLIC_URL is required")
+if (new URL(publicURL).protocol !== "https:") throw new Error("PLAYWRIGHT_DEPLOYED_PUBLIC_URL must use HTTPS")
 
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
 

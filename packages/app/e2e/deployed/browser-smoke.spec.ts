@@ -5,7 +5,10 @@ test.describe.configure({ mode: "serial" })
 
 test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", async ({ page }) => {
   const appOrigin = new URL(process.env.PLAYWRIGHT_DEPLOYED_BASE_URL!).origin
+  const publicOrigin = new URL(process.env.PLAYWRIGHT_DEPLOYED_PUBLIC_URL!).origin
   const state = observeDeployedPage(page, appOrigin)
+
+  expect(publicOrigin).not.toBe(appOrigin)
 
   await page.goto("/", { waitUntil: "domcontentloaded" })
   expect(new URL(page.url()).origin).toBe(appOrigin)
@@ -33,6 +36,23 @@ test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", a
 
   await expect(page.getByRole("heading", { name: "MongolGPT-д нэвтэрнэ үү" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Нэвтрэх" })).toBeVisible()
+  const accountOverview = await page.evaluate(async (url) => {
+    const response = await fetch(url, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    })
+    return {
+      status: response.status,
+      contentType: response.headers.get("content-type"),
+      body: await response.text(),
+    }
+  }, new URL("/v1/account/overview", `${publicOrigin}/`).toString())
+  expect(accountOverview.status).toBe(401)
+  expect(accountOverview.contentType?.split(";", 1)[0].trim().toLowerCase()).toBe("application/json")
+  expect(JSON.parse(accountOverview.body)).toEqual({
+    error: "unauthorized",
+    message: "MongolGPT бүртгэлээр нэвтэрнэ үү.",
+  })
   await expect.poll(() => state.pendingRequests.size, { message: "deployed app network did not settle" }).toBe(0)
 
   expectNoDeployedSmokeFailures(state)

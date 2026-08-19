@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
+  inspectAccountOverviewPreflight,
+  inspectAnonymousAccountOverview,
   inspectAnonymousRuntimeToken,
   inspectAnonymousRuntimeApiResponse,
   inspectHostedAuthorizeRedirect,
@@ -80,6 +82,19 @@ function anonymousApiResponse(
   return new Response(typeof body === "string" ? body : JSON.stringify(body), {
     status: init.status ?? 401,
     headers: { ...corsHeaders(), "content-type": "application/json", ...init.headers },
+  })
+}
+
+function accountOverviewPreflightResponse(headers: Record<string, string> = {}) {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      ...corsHeaders(),
+      "access-control-allow-methods": "GET, OPTIONS",
+      "access-control-allow-headers": "Authorization, X-Org-ID",
+      "access-control-max-age": "600",
+      ...headers,
+    },
   })
 }
 
@@ -447,6 +462,41 @@ describe("representative hosted runtime API smoke contract", () => {
     await expectFailure(
       inspectAnonymousRuntimeApiResponse(anonymousApiResponse("<!doctype html>", { status: 200 }), appOrigin),
       "expected 401",
+    )
+  })
+})
+
+describe("hosted account overview smoke contract", () => {
+  test("requires the exact credentialed preflight contract", () => {
+    expect(() => inspectAccountOverviewPreflight(accountOverviewPreflightResponse(), appOrigin)).not.toThrow()
+    expect(() =>
+      inspectAccountOverviewPreflight(
+        accountOverviewPreflightResponse({ "access-control-allow-origin": "*" }),
+        appOrigin,
+      ),
+    ).toThrow("CORS origin")
+    expect(() =>
+      inspectAccountOverviewPreflight(
+        accountOverviewPreflightResponse({ "access-control-allow-methods": "GET" }),
+        appOrigin,
+      ),
+    ).toThrow("methods")
+  })
+
+  test("requires an anonymous JSON 401 instead of a static app shell", async () => {
+    expect(await inspectAnonymousAccountOverview(anonymousResponse(), appOrigin)).toBeUndefined()
+    await expectFailure(
+      inspectAnonymousAccountOverview(anonymousResponse({ error: "wrong" }), appOrigin),
+      "fail-closed",
+    )
+    await expectFailure(
+      inspectAnonymousAccountOverview(
+        anonymousResponse("<!doctype html><html><body>static app</body></html>", {
+          "content-type": "text/html",
+        }),
+        appOrigin,
+      ),
+      "not JSON",
     )
   })
 })

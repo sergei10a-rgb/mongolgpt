@@ -1,7 +1,7 @@
 import { expect, type Page, type Request } from "@playwright/test"
 
 const blockedDocumentTypes = new Set(["document", "script", "stylesheet", "font"])
-const apiLikePath = /^\/(api|auth|session|model)(\/|$)/
+const apiLikePath = /^\/(api|auth|session|model|v1)(\/|$)/
 const backendResourceTypes = new Set(["fetch", "xhr"])
 const observedResourceTypes = new Set([...blockedDocumentTypes, ...backendResourceTypes])
 
