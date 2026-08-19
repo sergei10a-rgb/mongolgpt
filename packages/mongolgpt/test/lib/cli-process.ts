@@ -147,7 +147,7 @@ export type AcpHandle = {
   readonly receive: Effect.Effect<unknown>
   // Closes stdin. ACP exits cleanly on stdin EOF; the scope finalizer also
   // calls this, so tests only need it when asserting exit behavior.
-  readonly close: () => void
+  readonly close: () => Promise<void>
   readonly exited: Promise<number>
 }
 
@@ -411,7 +411,9 @@ export function withCliFixture<A, E>(
           // window to exit, then SIGTERM. The Effect.timeoutOrElse expresses
           // exactly that race without raw setTimeout or Promise.race.
           Effect.gen(function* () {
-            yield* Effect.sync(() => p.stdin.end())
+            yield* Effect.promise(async () => {
+              await p.stdin.end()
+            })
             yield* Effect.promise(() => p.exited).pipe(
               Effect.timeoutOrElse({
                 duration: Duration.seconds(2),
@@ -461,9 +463,11 @@ export function withCliFixture<A, E>(
             if (typeof ret !== "number") await ret
           }),
         receive: Queue.take(responses),
-        // proc.stdin.end() is idempotent in Bun; no try/catch needed.
-        close: () => proc.stdin.end(),
-        exited: proc.exited as Promise<number>,
+        // Await the pipe flush so EOF is observable before tests await exit.
+        close: async () => {
+          await proc.stdin.end()
+        },
+        exited: proc.exited,
       } satisfies AcpHandle
     })
 

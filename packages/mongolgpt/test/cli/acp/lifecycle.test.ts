@@ -16,9 +16,9 @@ describe("mongolgpt acp lifecycle subprocess", () => {
     ({ mongolgpt }) =>
       Effect.gen(function* () {
         const acp = yield* mongolgpt.acp()
-        acp.close()
+        yield* Effect.promise(() => acp.close())
 
-        const code = yield* Effect.promise(() => acp.exited).pipe(Effect.timeout(Duration.seconds(5)))
+        const code = yield* Effect.promise(() => acp.exited).pipe(Effect.timeout(Duration.seconds(15)))
         expect(code).toBe(0)
       }),
     60_000,

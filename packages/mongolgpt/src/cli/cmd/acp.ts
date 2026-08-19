@@ -6,6 +6,55 @@ import { createMongolGPTClient } from "@mongolgpt/sdk/v2"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { ACPProfile } from "@/acp/profile"
 
+function stdinStream() {
+  let resolveEnded!: () => void
+  let rejectEnded!: (error: unknown) => void
+  const ended = new Promise<void>((resolve, reject) => {
+    resolveEnded = resolve
+    rejectEnded = reject
+  })
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      let settled = false
+      const cleanup = () => {
+        process.stdin.off("data", onData)
+        process.stdin.off("end", onEnd)
+        process.stdin.off("close", onEnd)
+        process.stdin.off("error", onError)
+      }
+      const onData = (chunk: Buffer) => {
+        if (!settled) controller.enqueue(new Uint8Array(chunk))
+      }
+      const onEnd = () => {
+        if (settled) return
+        settled = true
+        cleanup()
+        controller.close()
+        resolveEnded()
+      }
+      const onError = (error: Error) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        controller.error(error)
+        rejectEnded(error)
+      }
+
+      process.stdin.on("data", onData)
+      process.stdin.once("end", onEnd)
+      process.stdin.once("close", onEnd)
+      process.stdin.once("error", onError)
+
+      // A client may close the pipe before this command finishes its cold start.
+      // Node does not replay the `end` event for listeners registered afterwards.
+      if (process.stdin.readableEnded || process.stdin.destroyed) onEnd()
+    },
+  })
+
+  return { stream, ended }
+}
+
 export const AcpCommand = effectCmd({
   command: "acp",
   describe: "ACP (Agent Client Protocol) сервер эхлүүлэх",
@@ -24,50 +73,38 @@ export const AcpCommand = effectCmd({
     const opts = yield* resolveNetworkOptions(args)
     const server = yield* Effect.promise(() => ACPProfile.measure("cli.acp.server.listen", () => Server.listen(opts)))
 
-    const sdk = createMongolGPTClient({
-      baseUrl: `http://${server.hostname}:${server.port}`,
-      headers: ServerAuth.headers(),
-    })
+    yield* Effect.gen(function* () {
+      const sdk = createMongolGPTClient({
+        baseUrl: `http://${server.hostname}:${server.port}`,
+        headers: ServerAuth.headers(),
+      })
 
-    const input = new WritableStream<Uint8Array>({
-      write(chunk) {
-        return new Promise<void>((resolve, reject) => {
-          process.stdout.write(chunk, (err) => {
-            if (err) {
-              reject(err)
-            } else {
-              resolve()
-            }
+      const input = new WritableStream<Uint8Array>({
+        write(chunk) {
+          return new Promise<void>((resolve, reject) => {
+            process.stdout.write(chunk, (err) => {
+              if (err) {
+                reject(err)
+              } else {
+                resolve()
+              }
+            })
           })
-        })
-      },
-    })
-    const output = new ReadableStream<Uint8Array>({
-      start(controller) {
-        process.stdin.on("data", (chunk: Buffer) => {
-          controller.enqueue(new Uint8Array(chunk))
-        })
-        process.stdin.on("end", () => controller.close())
-        process.stdin.on("error", (err) => controller.error(err))
-      },
-    })
+        },
+      })
+      const stdin = stdinStream()
 
-    const stream = ndJsonStream(input, output)
-    const agent = ACP.init({ sdk })
+      const stream = ndJsonStream(input, stdin.stream)
+      const agent = ACP.init({ sdk })
 
-    new AgentSideConnection((conn) => {
-      ACPProfile.mark("cli.acp.connection.create")
-      return agent.create(conn)
-    }, stream)
+      new AgentSideConnection((conn) => {
+        ACPProfile.mark("cli.acp.connection.create")
+        return agent.create(conn)
+      }, stream)
 
-    yield* Effect.logInfo("холболт тохирууллаа")
-    process.stdin.resume()
-    yield* Effect.promise(
-      () =>
-        new Promise<void>((resolve, reject) => {
-          process.stdin.on("end", () => resolve())
-          process.stdin.on("error", reject)
-        }),
-    )
+      yield* Effect.logInfo("холболт тохирууллаа")
+      process.stdin.resume()
+      yield* Effect.promise(() => stdin.ended)
+    }).pipe(Effect.ensuring(Effect.promise(() => server.stop(true)).pipe(Effect.ignore)))
   }),
 })
