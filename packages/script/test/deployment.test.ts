@@ -526,7 +526,11 @@ describe("Cloudflare deployment preflight", () => {
             }),
           },
         }),
-      ["provider route", '"primary" provider бодит API key', '"primary" provider бодит API endpoint'],
+      [
+        "үйлчилгээ үзүүлэгчийн чиглэл",
+        '"primary" үйлчилгээ үзүүлэгч бодит API түлхүүр',
+        '"primary" үйлчилгээ үзүүлэгч бодит API төгсгөлийн цэг',
+      ],
     )
   })
 
@@ -555,7 +559,11 @@ describe("Cloudflare deployment preflight", () => {
             SST_SECRET_ZEN_MODELS1: JSON.stringify(models),
           },
         }),
-      ["liteModels.assistant", '"sample" provider бодит API key', '"sample" provider бодит API endpoint'],
+      [
+        "liteModels.assistant",
+        '"sample" үйлчилгээ үзүүлэгч бодит API түлхүүр',
+        '"sample" үйлчилгээ үзүүлэгч бодит API төгсгөлийн цэг',
+      ],
     )
   })
 
@@ -580,7 +588,7 @@ describe("Cloudflare deployment preflight", () => {
             }),
           },
         }),
-      ["runtime model schema", "rate limit"],
+      ["ажиллах орчны загварын схем", "хүсэлтийн хязгаарыг"],
     )
   })
 
@@ -637,10 +645,10 @@ describe("Cloudflare deployment preflight", () => {
           },
         }),
       [
-        'provider "openrouter" must set productionUseApproved=true',
-        'provider "openrouter" must set usageMode=managed',
-        'primary provider "openrouter" must set providerKind=openrouter',
-        'fallback provider "nvidia" must set providerKind=nvidia-nim',
+        '"openrouter" үйлчилгээ үзүүлэгчийг productionUseApproved=true',
+        '"openrouter" үйлчилгээ үзүүлэгчийг usageMode=managed',
+        'үндсэн үйлчилгээ үзүүлэгч "openrouter"-ийг providerKind=openrouter',
+        'нөөц үйлчилгээ үзүүлэгч "nvidia"-ийг providerKind=nvidia-nim',
       ],
     )
   })

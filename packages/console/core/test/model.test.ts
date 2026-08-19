@@ -99,10 +99,10 @@ describe("MongolGPT Free Auto model contract", () => {
 
     expect(modelConfigurationStageIssues(unsafe, "production")).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('provider "primary" must set productionUseApproved=true'),
-        expect.stringContaining('provider "primary" must set usageMode=managed'),
-        expect.stringContaining('primary provider "primary" must set providerKind=openrouter'),
-        expect.stringContaining('fallback provider "secondary" must set providerKind=nvidia-nim'),
+        expect.stringContaining('"primary" үйлчилгээ үзүүлэгчийг productionUseApproved=true гэж тохируулах ёстой'),
+        expect.stringContaining('"primary" үйлчилгээ үзүүлэгчийг usageMode=managed гэж тохируулах ёстой'),
+        expect.stringContaining('үндсэн үйлчилгээ үзүүлэгч "primary"-ийг providerKind=openrouter гэж тохируулах ёстой'),
+        expect.stringContaining('нөөц үйлчилгээ үзүүлэгч "secondary"-ийг providerKind=nvidia-nim гэж тохируулах ёстой'),
       ]),
     )
   })
@@ -129,9 +129,9 @@ describe("MongolGPT Free Auto model contract", () => {
           ),
         }),
       ),
-    ).toThrow(/enabled provider route/)
+    ).toThrow(/идэвхтэй нийлүүлэгчийн чиглэлийг заасан байх ёстой/)
     expect(() => validate(config({ ...model, providers: [...model.providers, model.providers[0]] }))).toThrow(
-      /must be unique within the model/,
+      /нийлүүлэгчийн чиглэл тухайн загвар дотор давхардаж болохгүй/,
     )
   })
 
@@ -158,7 +158,7 @@ describe("MongolGPT Free Auto model contract", () => {
           },
         },
       }),
-    ).toThrow(/providers map/)
+    ).toThrow(/providers жагсаалтад/)
   })
 
   test("rejects undefined providers in lite model routes", () => {
@@ -174,12 +174,12 @@ describe("MongolGPT Free Auto model contract", () => {
           },
         },
       }),
-    ).toThrow(/providers map/)
+    ).toThrow(/providers жагсаалтад/)
   })
 
   test("rejects blank model ids in every provider route", () => {
     expect(() => validate(config({ ...model, providers: [{ id: "primary", model: "  " }] }))).toThrow(
-      /model id must not be empty/,
+      /загварын id хоосон байж болохгүй/,
     )
   })
 

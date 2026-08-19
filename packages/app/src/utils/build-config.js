@@ -5,7 +5,7 @@ function httpUrl(input) {
   if (!value) return undefined
   const url = new URL(value)
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("MongolGPT runtime URL must use http or https")
+    throw new Error("MongolGPT-ийн ажиллах орчны URL нь http эсвэл https протокол ашиглах ёстой")
   }
   return url.toString().replace(/\/+$/, "")
 }
@@ -44,10 +44,10 @@ export function resolveRuntimeMetadata(env = process.env) {
   const configured = httpUrl(env.VITE_MONGOLGPT_SERVER_URL)
   const hosted = hostedWeb(env)
   if (hosted && (!appUrl || local(appUrl) || new URL(appUrl).protocol !== "https:")) {
-    throw new Error("MongolGPT hosted Web build requires a non-local HTTPS app URL")
+    throw new Error("MongolGPT-ийн байршуулсан веб хувилбарт локал бус HTTPS аппын URL шаардлагатай")
   }
   if (hosted && (!publicUrl || local(publicUrl) || new URL(publicUrl).protocol !== "https:")) {
-    throw new Error("MongolGPT hosted Web build requires a non-local HTTPS public URL")
+    throw new Error("MongolGPT-ийн байршуулсан веб хувилбарт локал бус, нийтэд нээлттэй HTTPS URL шаардлагатай")
   }
   if (
     hosted &&
@@ -60,7 +60,7 @@ export function resolveRuntimeMetadata(env = process.env) {
       new URL(configured).hash !== "" ||
       new URL(configured).protocol !== "https:")
   ) {
-    throw new Error("MongolGPT hosted Web build requires a non-local HTTPS runtime URL")
+    throw new Error("MongolGPT-ийн байршуулсан веб хувилбарт локал бус HTTPS ажиллах орчны URL шаардлагатай")
   }
 
   const serverUrl = configured ?? httpUrl(fallback)

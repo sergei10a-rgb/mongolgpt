@@ -55,7 +55,7 @@ export async function loadHostedSession(runtimeUrl: string, publicOrigin: string
 
   if (capabilityResponse.status === 401) return { authenticated: false }
   const capability = await jsonResponse(capabilityResponse)
-  if (!isRuntimeCapability(capability)) throw new Error("Hosted runtime token response was invalid")
+  if (!isRuntimeCapability(capability)) throw new Error("Байршуулсан ажиллах орчны токены хариу буруу байна")
 
   const sessionResponse = await fetch(hostedSessionUrl(runtimeOrigin), {
     method: "POST",
@@ -66,7 +66,8 @@ export async function loadHostedSession(runtimeUrl: string, publicOrigin: string
     },
   })
 
-  if (sessionResponse.status === 401) throw new Error("Hosted runtime rejected a fresh capability")
+  if (sessionResponse.status === 401)
+    throw new Error("Байршуулсан ажиллах орчин шинэ эрхийн токеныг хүлээж авсангүй")
   const session = await jsonResponse(sessionResponse)
   if (
     !record(session) ||
@@ -77,21 +78,21 @@ export async function loadHostedSession(runtimeUrl: string, publicOrigin: string
     session.account.id !== capability.account.id ||
     !expiresAt(session.expiresAt, capability.expiresAt)
   ) {
-    throw new Error("Hosted runtime session response was invalid")
+    throw new Error("Байршуулсан ажиллах орчны сешний хариу буруу байна")
   }
 
   return { authenticated: true, account: capability.account, expiresAt: session.expiresAt }
 }
 
 async function jsonResponse(response: Response): Promise<unknown> {
-  if (!response.ok) throw new Error(`Hosted auth check failed (${response.status})`)
+  if (!response.ok) throw new Error(`Байршуулсан нэвтрэлтийн шалгалт амжилтгүй боллоо (${response.status})`)
   if (response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() !== "application/json") {
-    throw new Error("Hosted auth response was not JSON")
+    throw new Error("Байршуулсан нэвтрэлтийн хариу JSON форматтай биш байна")
   }
   try {
     return await response.json()
   } catch {
-    throw new Error("Hosted auth response was invalid JSON")
+    throw new Error("Байршуулсан нэвтрэлтийн JSON хариу буруу байна")
   }
 }
 
@@ -140,7 +141,7 @@ function record(value: unknown): value is Record<string, unknown> {
 
 function requiredHostedOrigin(value: string) {
   const origin = hostedRemoteOrigin(value)
-  if (!origin) throw new Error("Hosted account origin was invalid")
+  if (!origin) throw new Error("Байршуулсан аккаунтын үндсэн хаяг буруу байна")
   return origin
 }
 

@@ -68,7 +68,7 @@ describe("resolveRuntimeMetadata", () => {
         VITE_MONGOLGPT_APP_URL: "https://app.dev.mgpt.mn",
         VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
       }),
-    ).toThrow("requires a non-local HTTPS runtime URL")
+    ).toThrow("локал бус HTTPS ажиллах орчны URL шаардлагатай")
   })
 
   test("fails a hosted Web build pointed at loopback", () => {
@@ -79,7 +79,7 @@ describe("resolveRuntimeMetadata", () => {
         VITE_MONGOLGPT_PUBLIC_URL: "https://beta.mgpt.mn",
         VITE_MONGOLGPT_SERVER_URL: "http://[::1]:4096",
       }),
-    ).toThrow("requires a non-local HTTPS runtime URL")
+    ).toThrow("локал бус HTTPS ажиллах орчны URL шаардлагатай")
   })
 
   test("fails a hosted Web build pointed at an alternate loopback address", () => {
@@ -90,7 +90,7 @@ describe("resolveRuntimeMetadata", () => {
         VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
         VITE_MONGOLGPT_SERVER_URL: "https://127.12.34.56:4096",
       }),
-    ).toThrow("requires a non-local HTTPS runtime URL")
+    ).toThrow("локал бус HTTPS ажиллах орчны URL шаардлагатай")
   })
 
   test("fails a hosted Web build pointed at a non-TLS remote runtime", () => {
@@ -101,7 +101,7 @@ describe("resolveRuntimeMetadata", () => {
         VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
         VITE_MONGOLGPT_SERVER_URL: "http://runtime.dev.mgpt.mn",
       }),
-    ).toThrow("requires a non-local HTTPS runtime URL")
+    ).toThrow("локал бус HTTPS ажиллах орчны URL шаардлагатай")
   })
 
   test("fails a hosted Web build pointed at its static app origin", () => {
@@ -112,7 +112,7 @@ describe("resolveRuntimeMetadata", () => {
         VITE_MONGOLGPT_PUBLIC_URL: "https://mgpt.mn",
         VITE_MONGOLGPT_SERVER_URL: "https://app.mgpt.mn/",
       }),
-    ).toThrow("requires a non-local HTTPS runtime URL")
+    ).toThrow("локал бус HTTPS ажиллах орчны URL шаардлагатай")
   })
 
   test("fails a hosted Web build pointed at a runtime path", () => {
@@ -129,7 +129,7 @@ describe("resolveRuntimeMetadata", () => {
           VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
           VITE_MONGOLGPT_SERVER_URL: serverUrl,
         }),
-      ).toThrow("requires a non-local HTTPS runtime URL")
+      ).toThrow("локал бус HTTPS ажиллах орчны URL шаардлагатай")
     }
   })
 
@@ -141,7 +141,7 @@ describe("resolveRuntimeMetadata", () => {
         VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
         VITE_MONGOLGPT_SERVER_URL: "https://app.dev.mgpt.mn/api",
       }),
-    ).toThrow("requires a non-local HTTPS runtime URL")
+    ).toThrow("локал бус HTTPS ажиллах орчны URL шаардлагатай")
   })
 
   test("fails a hosted Web build with a local app URL", () => {
@@ -152,7 +152,7 @@ describe("resolveRuntimeMetadata", () => {
         VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
         VITE_MONGOLGPT_SERVER_URL: "https://runtime.dev.mgpt.mn",
       }),
-    ).toThrow("requires a non-local HTTPS app URL")
+    ).toThrow("локал бус HTTPS аппын URL шаардлагатай")
   })
 
   test("fails a legacy hosted Web build without an explicit app URL", () => {
@@ -162,7 +162,7 @@ describe("resolveRuntimeMetadata", () => {
         VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
         VITE_MONGOLGPT_SERVER_URL: "https://runtime.dev.mgpt.mn",
       }),
-    ).toThrow("requires a non-local HTTPS app URL")
+    ).toThrow("локал бус HTTPS аппын URL шаардлагатай")
   })
 
   test("fails a hosted Web build without a secure public account URL", () => {
@@ -173,6 +173,6 @@ describe("resolveRuntimeMetadata", () => {
         VITE_MONGOLGPT_PUBLIC_URL: "http://dev.mgpt.mn",
         VITE_MONGOLGPT_SERVER_URL: "https://runtime.dev.mgpt.mn",
       }),
-    ).toThrow("requires a non-local HTTPS public URL")
+    ).toThrow("локал бус, нийтэд нээлттэй HTTPS URL шаардлагатай")
   })
 })

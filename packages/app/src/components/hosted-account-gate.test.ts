@@ -41,9 +41,9 @@ describe("hosted account gate helpers", () => {
   })
 
   test("rejects unsafe hosted endpoint origins", () => {
-    expect(() => hostedSessionUrl("http://runtime.dev.mgpt.mn")).toThrow("invalid")
-    expect(() => hostedRuntimeTokenUrl("https://localhost")).toThrow("invalid")
-    expect(() => hostedLoginUrl("https://user:password@dev.mgpt.mn")).toThrow("invalid")
+    expect(() => hostedSessionUrl("http://runtime.dev.mgpt.mn")).toThrow("буруу байна")
+    expect(() => hostedRuntimeTokenUrl("https://localhost")).toThrow("буруу байна")
+    expect(() => hostedLoginUrl("https://user:password@dev.mgpt.mn")).toThrow("буруу байна")
   })
 })
 
@@ -102,10 +102,10 @@ describe("hosted auth exchange", () => {
       if (request.url === hostedRuntimeTokenUrl(publicUrl)) return json({ token: "secret-token", expiresAt, account })
       return json({ authenticated: true, account: { ...account, id: "different" }, expiresAt })
     })
-    await expect(loadHostedSession(runtimeUrl, publicUrl)).rejects.toThrow("invalid")
+    await expect(loadHostedSession(runtimeUrl, publicUrl)).rejects.toThrow("буруу байна")
 
     setFetch(async () => new Response("<!doctype html>", { status: 200, headers: { "content-type": "text/html" } }))
-    await expect(loadHostedSession(runtimeUrl, publicUrl)).rejects.toThrow("JSON")
+    await expect(loadHostedSession(runtimeUrl, publicUrl)).rejects.toThrow("JSON форматтай биш")
 
     setFetch(async () => new Response("error", { status: 500, headers: { "content-type": "text/html" } }))
     await expect(loadHostedSession(runtimeUrl, publicUrl)).rejects.toThrow("500")
@@ -121,7 +121,7 @@ describe("hosted auth exchange", () => {
       if (request === 1) return json({ token: "secret-token", expiresAt, account })
       return json({ authenticated: false }, 401)
     })
-    await expect(loadHostedSession(runtimeUrl, publicUrl)).rejects.toThrow("fresh capability")
+    await expect(loadHostedSession(runtimeUrl, publicUrl)).rejects.toThrow("шинэ эрхийн токен")
   })
 })
 

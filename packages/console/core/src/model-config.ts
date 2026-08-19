@@ -31,8 +31,8 @@ export const MongolGPTModelSchema = z.object({
   freeMaxTokensPerRequest: z.number().int().positive().optional(),
   providers: z.array(
     z.object({
-      id: z.string().trim().min(1, "Model provider id must not be empty"),
-      model: z.string().trim().min(1, "Provider route model id must not be empty"),
+      id: z.string().trim().min(1, "Загварын нийлүүлэгчийн id хоосон байж болохгүй"),
+      model: z.string().trim().min(1, "Нийлүүлэгчийн чиглэлийн загварын id хоосон байж болохгүй"),
       priority: z.number().optional(),
       tpmLimit: z.number().optional(),
       tpsGoal: z.number().optional(),
@@ -96,14 +96,14 @@ export const MongolGPTModelConfigurationSchema = z
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: [...path, "providers", routeIndex, "id"],
-                message: `Provider route "${route.id}" must be unique within the model`,
+                message: `"${route.id}" нийлүүлэгчийн чиглэл тухайн загвар дотор давхардаж болохгүй`,
               })
             providerIDs.add(route.id)
             if (!value.providers[route.id])
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 path: [...path, "providers", routeIndex, "id"],
-                message: `Provider route "${route.id}" must reference the providers map`,
+                message: `"${route.id}" нийлүүлэгчийн чиглэл providers жагсаалтад заасан байх ёстой`,
               })
           }
 
@@ -111,7 +111,7 @@ export const MongolGPTModelConfigurationSchema = z
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: [...path, "fallbackProvider"],
-              message: "fallbackProvider must reference a route configured for the model",
+              message: "fallbackProvider нь тухайн загварт тохируулсан чиглэлийг заасан байх ёстой",
             })
           if (
             model.fallbackProvider &&
@@ -120,49 +120,49 @@ export const MongolGPTModelConfigurationSchema = z
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: [...path, "fallbackProvider"],
-              message: "fallbackProvider must reference an enabled provider route",
+              message: "fallbackProvider нь идэвхтэй нийлүүлэгчийн чиглэлийг заасан байх ёстой",
             })
 
           if (modelID !== "free-auto" && !model.maxTokensPerRequest)
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: [...path, "maxTokensPerRequest"],
-              message: "Managed model must define maxTokensPerRequest for atomic quota reservation",
+              message: "Удирдлагатай загварт квотыг атомар нөөцлөх maxTokensPerRequest утга заасан байх ёстой",
             })
 
           if (modelID !== "free-auto") continue
 
           if (model.allowAnonymous !== false)
-            ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: "Free Auto must require authentication" })
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: "Free Auto нь нэвтрэлт шаарддаг байх ёстой" })
           if (model.freeForAuthenticated !== true)
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path,
-              message: "Free Auto must use authenticated free billing",
+              message: "Free Auto нь нэвтэрсэн хэрэглэгчийн үнэгүй тооцооллыг ашиглах ёстой",
             })
           if (model.trialProvider)
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path,
-              message: "Free Auto cannot depend on a hosted trial provider",
+              message: "Free Auto нь байршуулсан туршилтын нийлүүлэгчээс хамаарах боломжгүй",
             })
           if (!model.rateLimit)
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path,
-              message: "Free Auto must define a per-account rate limit",
+              message: "Free Auto нь бүртгэл тус бүрийн хүсэлтийн хязгаарыг заасан байх ёстой",
             })
           if (!model.freeWeeklyTokenLimit)
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path,
-              message: "Free Auto must define a weekly token limit",
+              message: "Free Auto нь долоо хоногийн токены хязгаарыг заасан байх ёстой",
             })
           if (!model.freeMaxTokensPerRequest)
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path,
-              message: "Free Auto must define a per-request billable token upper bound",
+              message: "Free Auto нь нэг хүсэлтэд тооцох токены дээд хязгаарыг заасан байх ёстой",
             })
           if (
             model.freeMaxTokensPerRequest &&
@@ -172,15 +172,15 @@ export const MongolGPTModelConfigurationSchema = z
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path,
-              message: "Free Auto per-request token upper bound cannot exceed its weekly token limit",
+              message: "Free Auto-ийн нэг хүсэлтийн токены дээд хязгаар долоо хоногийн хязгаараас их байж болохгүй",
             })
           if (new Set(model.providers.filter((provider) => !provider.disabled).map((provider) => provider.id)).size < 2)
-            ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: "Free Auto must define a fallback route" })
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: "Free Auto нь нөөц чиглэл заасан байх ёстой" })
           if (!model.fallbackProvider || !model.providers.some((provider) => provider.id === model.fallbackProvider))
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path,
-              message: "Free Auto fallbackProvider must reference a configured provider",
+              message: "Free Auto-ийн fallbackProvider нь тохируулсан нийлүүлэгчийг заасан байх ёстой",
             })
         }
       }
@@ -205,7 +205,7 @@ export function modelConfigurationStageIssues(value: MongolGPTModelConfiguration
         for (const route of enabledRoutes) {
           const provider = value.providers[route.id]
           if (provider?.usageMode !== "byok" && provider?.productionUseApproved !== true)
-            issues.add(`${path} provider "${route.id}" must set productionUseApproved=true`)
+            issues.add(`${path}-ийн "${route.id}" үйлчилгээ үзүүлэгчийг productionUseApproved=true гэж тохируулах ёстой`)
         }
 
         if (modelID !== "free-auto") continue
@@ -213,18 +213,18 @@ export function modelConfigurationStageIssues(value: MongolGPTModelConfiguration
         for (const route of enabledRoutes) {
           const provider = value.providers[route.id]
           if (provider && provider.usageMode !== "managed")
-            issues.add(`${path} provider "${route.id}" must set usageMode=managed`)
+            issues.add(`${path}-ийн "${route.id}" үйлчилгээ үзүүлэгчийг usageMode=managed гэж тохируулах ёстой`)
         }
 
         const fallbackID = model.fallbackProvider
         const fallback = fallbackID ? value.providers[fallbackID] : undefined
         if (fallback && fallback.providerKind !== "nvidia-nim")
-          issues.add(`${path} fallback provider "${fallbackID}" must set providerKind=nvidia-nim`)
+          issues.add(`${path}-ийн нөөц үйлчилгээ үзүүлэгч "${fallbackID}"-ийг providerKind=nvidia-nim гэж тохируулах ёстой`)
 
         for (const route of enabledRoutes.filter((route) => route.id !== fallbackID)) {
           const provider = value.providers[route.id]
           if (provider && provider.providerKind !== "openrouter")
-            issues.add(`${path} primary provider "${route.id}" must set providerKind=openrouter`)
+            issues.add(`${path}-ийн үндсэн үйлчилгээ үзүүлэгч "${route.id}"-ийг providerKind=openrouter гэж тохируулах ёстой`)
         }
       }
     }

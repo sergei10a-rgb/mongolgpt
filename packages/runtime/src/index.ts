@@ -43,7 +43,7 @@ const handler = createRuntimeHandler<RuntimeEnvironment>({
       transport: "rpc",
     }),
   report: (error) => {
-    console.error("MongolGPT runtime request failed", {
+    console.error("MongolGPT runtime хүсэлт амжилтгүй боллоо", {
       name: error instanceof Error ? error.name : "UnknownError",
     })
   },

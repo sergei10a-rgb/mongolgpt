@@ -308,8 +308,8 @@ async function enforceRateLimit(env: RuntimeVariables, accountID: string) {
 export async function deriveRuntimeIdentity(accountID: string, secret: string) {
   const account = accountID.trim()
   const runtimeSecret = secret.trim()
-  if (!account) throw new Error("Account ID is required")
-  if (runtimeSecret.length < 32) throw new Error("Runtime secret must contain at least 32 characters")
+  if (!account) throw new Error("Аккаунтын ID шаардлагатай")
+  if (runtimeSecret.length < 32) throw new Error("Ажиллах орчны нууц утга хамгийн багадаа 32 тэмдэгттэй байх ёстой")
 
   const key = await crypto.subtle.importKey(
     "raw",
@@ -378,7 +378,7 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string) {
       return concurrent
     })
 
-  if (!(await waitForServer(started))) throw new Error("MongolGPT server process exited before becoming ready")
+  if (!(await waitForServer(started))) throw new Error("MongolGPT сервер бэлэн болохоосоо өмнө зогслоо")
 }
 
 async function waitForServer(process: RuntimeProcess) {

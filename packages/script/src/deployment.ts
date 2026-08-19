@@ -260,7 +260,7 @@ function validatePlanConfiguration(value: string | undefined, issues: string[]) 
     .slice(0, 3)
     .map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`)
     .join("; ")
-  issues.push(`MONGOLGPT_PLAN_LIMITS plan/quota schema-д нийцэхгүй байна. ${details}`)
+  issues.push(`MONGOLGPT_PLAN_LIMITS нь төлөвлөгөө, квотын схемд нийцэхгүй байна. ${details}`)
 }
 
 function validatePaymentConfiguration(input: {
@@ -318,11 +318,11 @@ function validatePaymentConfiguration(input: {
   if (paymentSstSecretNames.some((name) => values[name] === "disabled" || placeholderValue(values[name]))) return
 
   if (!validQPayCredentials(values)) {
-    input.issues.push("QPay merchant credential provider-ийн schema-д нийцэхгүй байна.")
+    input.issues.push("QPay худалдааны байгууллагын нэвтрэх мэдээлэл шаардлагатай бүтцэд нийцэхгүй байна.")
   }
 
   if (!validBonumCredentials(values)) {
-    input.issues.push("Bonum merchant credential provider-ийн schema-д нийцэхгүй байна.")
+    input.issues.push("Bonum худалдааны байгууллагын нэвтрэх мэдээлэл шаардлагатай бүтцэд нийцэхгүй байна.")
   }
 }
 
@@ -392,18 +392,18 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
       .slice(0, 3)
       .map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`)
       .join("; ")
-    issues.push(`ZEN_MODELS1 runtime model schema-д нийцэхгүй байна. ${details}`)
+    issues.push(`ZEN_MODELS1 нь ажиллах орчны загварын схемд нийцэхгүй байна. ${details}`)
     return
   }
 
   const freeAuto = result.data.zenModels["free-auto"]
   if (!freeAuto) {
-    issues.push('ZEN_MODELS1 нь zenModels дотроо "free-auto" model-той байна.')
+    issues.push('ZEN_MODELS1 нь zenModels дотроо "free-auto" загвартай байна.')
     return
   }
 
   for (const issue of modelConfigurationStageIssues(result.data, stage)) {
-    issues.push(`ZEN_MODELS production policy зөрчсөн байна. ${issue}`)
+    issues.push(`ZEN_MODELS-ийн үйлдвэрлэлийн бодлого зөрчигдлөө. ${issue}`)
   }
 
   const referencedProviders = new Set<string>()
@@ -416,7 +416,7 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
         for (const route of modelConfig.providers) {
           referencedProviders.add(route.id)
           if (placeholderValue(route.model)) {
-            issues.push(`ZEN_MODELS дэх "${listName}.${modelID}" provider route бодит model ID-тэй байна.`)
+            issues.push(`ZEN_MODELS дэх "${listName}.${modelID}" үйлчилгээ үзүүлэгчийн чиглэл бодит загварын ID-тай байна.`)
           }
         }
       }
@@ -430,24 +430,24 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
     const api = provider.api.trim()
     const keys = typeof provider.apiKey === "string" ? [provider.apiKey] : Object.values(provider.apiKey)
     if (keys.length === 0 || keys.some((key) => !key.trim() || placeholderValue(key))) {
-      issues.push(`ZEN_MODELS дэх "${providerID}" provider бодит API key-тэй байна.`)
+      issues.push(`ZEN_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгч бодит API түлхүүртэй байна.`)
     }
 
     try {
       const url = new URL(api)
       if (url.protocol !== "https:") {
-        issues.push(`ZEN_MODELS дэх "${providerID}" provider-ийн API HTTPS байна.`)
+        issues.push(`ZEN_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгчийн API нь HTTPS байна.`)
       }
       if (placeholderValue(api) || reservedProviderHostname(url.hostname)) {
-        issues.push(`ZEN_MODELS дэх "${providerID}" provider бодит API endpoint-тэй байна.`)
+        issues.push(`ZEN_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгч бодит API төгсгөлийн цэгтэй байна.`)
       }
       if (stage === "production" && nvidiaApiCatalogHostname(url.hostname) && provider.productionUseApproved !== true) {
         issues.push(
-          `ZEN_MODELS дэх "${providerID}" NVIDIA API Catalog provider production subscription/license баталгаажсан productionUseApproved=true тохиргоотой байна.`,
+          `ZEN_MODELS дэх "${providerID}" NVIDIA API Catalog үйлчилгээ үзүүлэгч нь үйлдвэрлэлийн захиалга, лиценз баталгаажсан productionUseApproved=true тохиргоотой байна.`,
         )
       }
     } catch {
-      issues.push(`ZEN_MODELS дэх "${providerID}" provider-ийн API URL хүчинтэй байна.`)
+      issues.push(`ZEN_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгчийн API URL хүчинтэй байна.`)
     }
   }
 }
