@@ -172,9 +172,41 @@
 @media (max-width: 639px) {
   .settings-v2[data-component="tabs-v2"][data-variant="settings"][data-orientation="vertical"]
     [data-slot="tabs-v2-list"] {
-    width: 144px;
-    min-width: 144px;
+    width: 56px;
+    min-width: 56px;
     padding-inline: 8px;
+  }
+
+  .settings-v2 [data-slot="tabs-v2-section-title"],
+  .settings-v2 .settings-v2-nav-label,
+  .settings-v2 .settings-v2-nav-footer {
+    display: none;
+  }
+
+  .settings-v2[data-component="tabs-v2"][data-variant="settings"][data-orientation="vertical"]
+    [data-slot="tabs-v2-trigger"],
+  .settings-v2[data-component="tabs-v2"][data-variant="settings"][data-orientation="vertical"]
+    [data-slot="tabs-v2-trigger-content"] {
+    width: 100%;
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .settings-v2-tab-header {
+    padding: 24px 20px 20px;
+  }
+
+  .settings-v2-tab-title {
+    line-height: 1.2;
+  }
+
+  .settings-v2-tab-body {
+    gap: 28px;
+    padding: 0 20px 24px;
+  }
+
+  [data-component="settings-v2-list"] {
+    padding-inline: 12px;
   }
 }
 

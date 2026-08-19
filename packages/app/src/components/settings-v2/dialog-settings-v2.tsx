@@ -29,22 +29,34 @@ export const DialogSettings: Component<{
                 <Show when={platform.account}>
                   <div class="flex flex-col gap-1.5">
                     <TabsV2.SectionTitle>{language.t("settings.section.account")}</TabsV2.SectionTitle>
-                    <TabsV2.Trigger value="account">
+                    <TabsV2.Trigger
+                      value="account"
+                      aria-label={language.t("settings.account.tab")}
+                      title={language.t("settings.account.tab")}
+                    >
                       <Icon name="status" />
-                      {language.t("settings.account.tab")}
+                      <span class="settings-v2-nav-label">{language.t("settings.account.tab")}</span>
                     </TabsV2.Trigger>
                   </div>
                 </Show>
                 <div class="flex flex-col gap-1.5">
                   <TabsV2.SectionTitle>{language.t("settings.section.desktop")}</TabsV2.SectionTitle>
                   <div class="flex flex-col gap-1.5 w-full">
-                    <TabsV2.Trigger value="general">
+                    <TabsV2.Trigger
+                      value="general"
+                      aria-label={language.t("settings.tab.general")}
+                      title={language.t("settings.tab.general")}
+                    >
                       <Icon name="sliders" />
-                      {language.t("settings.tab.general")}
+                      <span class="settings-v2-nav-label">{language.t("settings.tab.general")}</span>
                     </TabsV2.Trigger>
-                    <TabsV2.Trigger value="shortcuts">
+                    <TabsV2.Trigger
+                      value="shortcuts"
+                      aria-label={language.t("settings.tab.shortcuts")}
+                      title={language.t("settings.tab.shortcuts")}
+                    >
                       <Icon name="keyboard" />
-                      {language.t("settings.tab.shortcuts")}
+                      <span class="settings-v2-nav-label">{language.t("settings.tab.shortcuts")}</span>
                     </TabsV2.Trigger>
                   </div>
                 </div>
@@ -52,21 +64,37 @@ export const DialogSettings: Component<{
                 <div class="flex flex-col gap-1.5">
                   <TabsV2.SectionTitle>{language.t("settings.section.server")}</TabsV2.SectionTitle>
                   <div class="flex flex-col gap-1.5 w-full">
-                    <TabsV2.Trigger value="servers">
+                    <TabsV2.Trigger
+                      value="servers"
+                      aria-label={language.t("status.popover.tab.servers")}
+                      title={language.t("status.popover.tab.servers")}
+                    >
                       <Icon name="server" />
-                      {language.t("status.popover.tab.servers")}
+                      <span class="settings-v2-nav-label">{language.t("status.popover.tab.servers")}</span>
                     </TabsV2.Trigger>
-                    <TabsV2.Trigger value="providers">
+                    <TabsV2.Trigger
+                      value="providers"
+                      aria-label={language.t("settings.providers.title")}
+                      title={language.t("settings.providers.title")}
+                    >
                       <Icon name="providers" />
-                      {language.t("settings.providers.title")}
+                      <span class="settings-v2-nav-label">{language.t("settings.providers.title")}</span>
                     </TabsV2.Trigger>
-                    <TabsV2.Trigger value="models">
+                    <TabsV2.Trigger
+                      value="models"
+                      aria-label={language.t("settings.models.title")}
+                      title={language.t("settings.models.title")}
+                    >
                       <Icon name="models" />
-                      {language.t("settings.models.title")}
+                      <span class="settings-v2-nav-label">{language.t("settings.models.title")}</span>
                     </TabsV2.Trigger>
-                    <TabsV2.Trigger value="imports">
+                    <TabsV2.Trigger
+                      value="imports"
+                      aria-label={language.t("settings.imports.title")}
+                      title={language.t("settings.imports.title")}
+                    >
                       <Icon name="mcp" />
-                      {language.t("settings.imports.title")}
+                      <span class="settings-v2-nav-label">{language.t("settings.imports.title")}</span>
                     </TabsV2.Trigger>
                   </div>
                 </div>

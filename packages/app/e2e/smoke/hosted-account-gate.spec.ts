@@ -8,10 +8,11 @@ const runtimeUrl = process.env.PLAYWRIGHT_HOSTED_RUNTIME_URL ?? "https://runtime
 const publicUrl = process.env.PLAYWRIGHT_HOSTED_PUBLIC_URL ?? "https://dev.e2e.mgpt.test"
 const tokenUrl = new URL("/auth/runtime-token", `${publicUrl}/`).toString()
 const sessionUrl = new URL("/auth/session", `${runtimeUrl}/`).toString()
-const capability = () => ({
+const overviewUrl = new URL("/v1/account/overview", `${publicUrl}/`).toString()
+const capability = (accountID = "account_e2e") => ({
   token: "e2e-runtime-token",
   expiresAt: Date.now() + 60_000,
-  account: { id: "account_e2e", email: "e2e@mgpt.mn" },
+  account: { id: accountID, email: "e2e@mgpt.mn" },
 })
 
 test.describe("hosted MongolGPT account gate", () => {
@@ -101,7 +102,148 @@ test.describe("hosted MongolGPT account gate", () => {
     await expect(page.getByRole("heading", { name: fixture.expected.sourceTitle })).toBeVisible()
     await expect(page.getByRole("textbox", { name: mn["prompt.placeholder.simple"], exact: true })).toBeVisible()
   })
+
+  test("shows plan, quota, and usage in account settings and recovers from an overview failure", async ({ page }) => {
+    await mockRuntime(page)
+    await configureHostedProject(page)
+    await page.context().addCookies([
+      {
+        name: "mongolgpt_session",
+        value: "e2e-session",
+        domain: new URL(publicUrl).hostname,
+        path: "/",
+        secure: true,
+        sameSite: "None",
+      },
+    ])
+
+    let currentCapability = capability("acc_e2e_account")
+    let overviewRequests = 0
+    let overviewAccept = ""
+    let overviewMethod = ""
+    let overviewCookie = ""
+    let overviewAuthorization = ""
+    await page.route(tokenUrl, async (route) => {
+      currentCapability = capability("acc_e2e_account")
+      await session(route, 200, currentCapability)
+    })
+    await page.route(sessionUrl, (route) =>
+      session(route, 200, {
+        authenticated: true,
+        account: { id: currentCapability.account.id },
+        expiresAt: currentCapability.expiresAt,
+      }),
+    )
+    await page.route(overviewUrl, async (route) => {
+      overviewRequests += 1
+      const headers = await route.request().allHeaders()
+      overviewAccept = headers.accept ?? ""
+      overviewMethod = route.request().method()
+      overviewCookie = headers.cookie ?? ""
+      overviewAuthorization = headers.authorization ?? ""
+      if (overviewRequests === 1) return session(route, 503, { error: "temporarily_unavailable" })
+      return session(route, 200, accountOverview(currentCapability.account.id))
+    })
+
+    await page.goto("/")
+    await page.getByRole("button", { name: mn["sidebar.settings"], exact: true }).click()
+    await page.getByRole("tab", { name: mn["settings.account.tab"], exact: true }).click()
+
+    await expect(page.getByText(currentCapability.account.email, { exact: true })).toBeVisible()
+    await expect(page.getByText(mn["settings.account.overviewLoadError"], { exact: true })).toBeVisible()
+    await page.getByRole("button", { name: mn["settings.account.retry"], exact: true }).click()
+
+    await expect.poll(() => overviewRequests).toBe(2)
+    expect(overviewMethod).toBe("GET")
+    expect(overviewAccept).toBe("application/json")
+    expect(overviewCookie).toContain("mongolgpt_session=e2e-session")
+    expect(overviewAuthorization).toBe("")
+    await expect(page.getByText("MongolGPT баг", { exact: true })).toBeVisible()
+    await expect(page.getByText(mn["settings.account.currentWorkspace"], { exact: true })).toBeVisible()
+    await expect(page.getByText(mn["settings.account.plan.pro"], { exact: true })).toBeVisible()
+    await expect(page.getByText("3 хүсэлт · 123,456 токен", { exact: true })).toBeVisible()
+    await expect(page.getByText("Долоо хоногийн хэрэглээ: 123,456 / 1,000,000 токен", { exact: true })).toBeVisible()
+    await expect(page.getByText("Долоо хоногийн өртгийн хязгаар: 10%", { exact: true })).toBeVisible()
+    await expect(page.getByText("24 цагийн өртгийн хязгаар: 10%", { exact: true })).toBeVisible()
+    await page.setViewportSize({ width: 390, height: 844 })
+    const accountTab = page.getByRole("tab", { name: mn["settings.account.tab"], exact: true })
+    await expect(accountTab).toHaveAttribute("title", mn["settings.account.tab"])
+    await accountTab.focus()
+    await expect(accountTab).toBeFocused()
+    await expect(page.getByText("MongolGPT баг", { exact: true })).toBeVisible()
+    await expect(page.getByText("Долоо хоногийн хэрэглээ: 123,456 / 1,000,000 токен", { exact: true })).toBeVisible()
+    const overflow = await page.evaluate(() => {
+      const dialog = document.querySelector(
+        '[data-component="dialog-v2"][data-variant="settings"] [data-slot="dialog-container"]',
+      )
+      const panel = document.querySelector(".settings-v2-panel")
+      if (!(dialog instanceof HTMLElement) || !(panel instanceof HTMLElement)) {
+        throw new Error("Settings dialog or panel was not found")
+      }
+      return {
+        viewport: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        dialog: dialog.scrollWidth - dialog.clientWidth,
+        panel: panel.scrollWidth - panel.clientWidth,
+      }
+    })
+    expect(overflow.viewport).toBeLessThanOrEqual(1)
+    expect(overflow.dialog).toBeLessThanOrEqual(1)
+    expect(overflow.panel).toBeLessThanOrEqual(1)
+  })
 })
+
+function accountOverview(accountID: string) {
+  const periodStart = 1_786_656_000_000
+  const periodEnd = 1_787_260_800_000
+  return {
+    account: { id: accountID, email: "e2e@mgpt.mn", status: "active", createdAt: 1_700_000_000_000 },
+    currentWorkspaceID: "wrk_e2e_workspace",
+    workspaces: [
+      {
+        id: "wrk_e2e_workspace",
+        name: "MongolGPT баг",
+        slug: "mongolgpt-team",
+        userID: "usr_e2e_user",
+        role: "admin",
+        subscription: {
+          id: "sub_e2e_active",
+          invoiceID: "inv_e2e_paid",
+          plan: "pro",
+          status: "active",
+          periodStart,
+          periodEnd,
+        },
+        limits: {
+          plan: "pro",
+          weeklyCostLimitInMicroCents: 500_000,
+          weeklyTokenLimit: 1_000_000,
+          rollingCostLimitInMicroCents: 100_000,
+          rollingWindowHours: 24,
+        },
+        quota: {
+          status: "available",
+          weeklyCost: { used: 50_000, limit: 500_000, resetAt: periodEnd },
+          weeklyTokens: { used: 123_456, limit: 1_000_000, resetAt: periodEnd },
+          rollingCost: { used: 10_000, limit: 100_000, resetAt: null },
+        },
+        usage: {
+          scope: "workspace",
+          period: "subscription",
+          periodStart,
+          periodEnd,
+          requestCount: 3,
+          inputTokens: 100_000,
+          outputTokens: 20_000,
+          reasoningTokens: 3_000,
+          cacheReadTokens: 456,
+          cacheWriteTokens: 0,
+          totalTokens: 123_456,
+          costInMicroCents: 50_000,
+        },
+      },
+    ],
+  }
+}
 
 async function mockRuntime(page: Page) {
   await mockMongolGPTServer(page, {
