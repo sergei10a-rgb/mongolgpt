@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from "@playwright/test"
+import { expect, test, type Locator, type Page, type Route } from "@playwright/test"
 import { base64Encode } from "@mongolgpt/core/util/encode"
 import { dict as mn } from "../../src/i18n/mn"
 import { fixture, pageMessages } from "./session-timeline.fixture"
@@ -9,8 +9,8 @@ const publicUrl = process.env.PLAYWRIGHT_HOSTED_PUBLIC_URL ?? "https://dev.e2e.m
 const tokenUrl = new URL("/auth/runtime-token", `${publicUrl}/`).toString()
 const sessionUrl = new URL("/auth/session", `${runtimeUrl}/`).toString()
 const overviewUrl = new URL("/v1/account/overview", `${publicUrl}/`).toString()
-const capability = (accountID = "account_e2e") => ({
-  token: "e2e-runtime-token",
+const capability = (accountID = "account_e2e", token = "e2e-runtime-token") => ({
+  token,
   expiresAt: Date.now() + 60_000,
   account: { id: accountID, email: "e2e@mgpt.mn" },
 })
@@ -68,12 +68,14 @@ test.describe("hosted MongolGPT account gate", () => {
 
     let state: "unavailable" | "authenticated" = "unavailable"
     let checks = 0
-    let currentCapability = capability()
+    let issued = 0
+    const capabilities = new Map<string, ReturnType<typeof capability>>()
     let exchangeMethod = ""
     let exchangeAuthorization = ""
     await page.route(tokenUrl, async (route) => {
-      currentCapability = capability()
-      await session(route, 200, currentCapability)
+      const current = capability("account_e2e", `e2e-runtime-token-${++issued}`)
+      capabilities.set(current.token, current)
+      await session(route, 200, current)
     })
     await page.route(sessionUrl, (route) => {
       checks += 1
@@ -82,10 +84,12 @@ test.describe("hosted MongolGPT account gate", () => {
       }
       exchangeMethod = route.request().method()
       exchangeAuthorization = route.request().headers().authorization ?? ""
+      const current = capabilities.get(exchangeAuthorization.replace(/^Bearer\s+/, ""))
+      if (!current) return session(route, 401, { authenticated: false })
       return session(route, 200, {
         authenticated: true,
-        account: { id: currentCapability.account.id },
-        expiresAt: currentCapability.expiresAt,
+        account: { id: current.account.id },
+        expiresAt: current.expiresAt,
       })
     })
 
@@ -96,11 +100,14 @@ test.describe("hosted MongolGPT account gate", () => {
     await page.getByRole("button", { name: mn["auth.hosted.retry"], exact: true }).click()
     await expect.poll(() => checks).toBeGreaterThanOrEqual(2)
     expect(exchangeMethod).toBe("POST")
-    expect(exchangeAuthorization).toBe(`Bearer ${currentCapability.token}`)
+    expect(capabilities.has(exchangeAuthorization.replace(/^Bearer\s+/, ""))).toBe(true)
 
     await page.goto(`/${base64Encode(fixture.directory)}/session/${fixture.sourceID}`)
-    await expect(page.getByRole("heading", { name: fixture.expected.sourceTitle })).toBeVisible()
-    await expect(page.getByRole("textbox", { name: mn["prompt.placeholder.simple"], exact: true })).toBeVisible()
+    await expectVisibleOrAppError(page, page.getByRole("heading", { name: fixture.expected.sourceTitle }))
+    await expectVisibleOrAppError(
+      page,
+      page.getByRole("textbox", { name: mn["prompt.placeholder.simple"], exact: true }),
+    )
   })
 
   test("shows plan, quota, and usage in account settings and recovers from an overview failure", async ({ page }) => {
@@ -283,4 +290,18 @@ function session(route: Route, status: number, body: unknown, contentType = "app
     },
     body: contentType === "application/json" ? JSON.stringify(body) : String(body),
   })
+}
+
+async function expectVisibleOrAppError(page: Page, target: Locator) {
+  const error = page.getByRole("heading", { name: mn["error.page.title"], exact: true })
+  const outcome = await Promise.race([
+    target.waitFor({ state: "visible" }).then(() => "visible" as const),
+    error.waitFor({ state: "visible" }).then(() => "error" as const),
+  ])
+  if (outcome === "visible") return
+
+  const label = mn["error.page.details.label"]
+  await page.getByRole("button", { name: label, exact: true }).click()
+  const details = await page.getByRole("textbox", { name: label, exact: true }).inputValue()
+  throw new Error(`MongolGPT app crash: ${details}`)
 }
