@@ -11,7 +11,7 @@ export const ModelsCommand = effectCmd({
   builder: (yargs) =>
     yargs
       .positional("provider", {
-        describe: "загвар шүүх provider ID",
+        describe: "загвар шүүх үйлчилгээ үзүүлэгчийн ID",
         type: "string",
         array: false,
       })

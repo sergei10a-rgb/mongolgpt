@@ -172,7 +172,7 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
 
   if (method.type === "api") {
     const key = yield* Prompt.password({
-      message: "API key-ээ оруулна уу",
+      message: "API түлхүүрээ оруулна уу",
       validate: (x) => (x && x.length > 0 ? undefined : "Шаардлагатай"),
     })
     const apiKey = yield* promptValue(key)
@@ -399,14 +399,14 @@ export const ProvidersLoginCommand = effectCmd({
           value: x.id,
           hint: {
             mongolgpt: "санал болгох",
-            openai: "ChatGPT Plus/Pro or API key",
+            openai: "ChatGPT Plus/Pro эсвэл API түлхүүр",
           }[x.id],
         })),
       ),
       ...pluginProviders.map((x) => ({
         label: x.name,
         value: x.id,
-        hint: "plugin",
+        hint: "нэмэлт",
       })),
     ]
 
@@ -417,13 +417,13 @@ export const ProvidersLoginCommand = effectCmd({
       const byName = options.find((x) => x.label.toLowerCase() === input.toLowerCase())
       const match = byID ?? byName
       if (!match) {
-        return yield* fail(`Provider танигдсангүй: "${input}"`)
+        return yield* fail(`Үйлчилгээ үзүүлэгч танигдсангүй: "${input}"`)
       }
       provider = match.value
     } else {
       provider = yield* promptValue(
         yield* Prompt.autocomplete({
-          message: "Provider сонгоно уу",
+          message: "Үйлчилгээ үзүүлэгч сонгоно уу",
           maxItems: 8,
           options: [...options, { value: "other", label: "Бусад" }],
         }),
@@ -439,8 +439,8 @@ export const ProvidersLoginCommand = effectCmd({
     if (provider === "other") {
       provider = (yield* promptValue(
         yield* Prompt.text({
-          message: "Provider ID оруулна уу",
-          validate: (x) => (x && x.match(/^[0-9a-z-]+$/) ? undefined : "зөвхөн a-z, 0-9 болон hyphen"),
+          message: "Үйлчилгээ үзүүлэгчийн ID оруулна уу",
+          validate: (x) => (x && x.match(/^[0-9a-z-]+$/) ? undefined : "зөвхөн a-z, 0-9 болон зураас (-)"),
         }),
       )).replace(/^@ai-sdk\//, "")
 
@@ -451,7 +451,7 @@ export const ProvidersLoginCommand = effectCmd({
       }
 
       yield* Prompt.log.warn(
-        `Энэ нь зөвхөн ${provider}-ийн credential хадгална. Үүнийг mongolgpt.json дотор тохируулах шаардлагатай, жишээг docs-оос үзнэ үү.`,
+        `Энэ нь зөвхөн ${provider}-ийн итгэмжлэлийг хадгална. Үүнийг mongolgpt.json дотор тохируулах шаардлагатай. Жишээг баримт бичгээс үзнэ үү.`,
       )
     }
 
@@ -459,19 +459,19 @@ export const ProvidersLoginCommand = effectCmd({
       yield* Prompt.log.info(
         "Amazon Bedrock нэвтрэлтийн дараалал:\n" +
           "  1. Bearer token (AWS_BEARER_TOKEN_BEDROCK эсвэл /connect)\n" +
-          "  2. AWS credential chain (profile, access keys, IAM roles, EKS IRSA)\n\n" +
-          "mongolgpt.json option-ууд (profile, region, endpoint) эсвэл\n" +
+          "  2. AWS-ийн итгэмжлэлийн дараалал (profile, access key, IAM role, EKS IRSA)\n\n" +
+          "mongolgpt.json тохиргоонууд (profile, region, endpoint) эсвэл\n" +
           "AWS орчны хувьсагчаар тохируулна (AWS_PROFILE, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_WEB_IDENTITY_TOKEN_FILE).",
       )
     }
 
     if (provider === "mongolgpt") {
       const authUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || productServiceUrls.auth
-      yield* Prompt.log.info(`API key-ээ ${authUrl} дээр үүсгэнэ үү`)
+      yield* Prompt.log.info(`API түлхүүрээ ${authUrl} дээр үүсгэнэ үү`)
     }
 
     if (provider === "vercel") {
-      yield* Prompt.log.info("API key-ээ https://vercel.link/ai-gateway-token дээр үүсгэж болно")
+      yield* Prompt.log.info("API түлхүүрээ https://vercel.link/ai-gateway-token дээр үүсгэж болно")
     }
 
     if (["cloudflare", "cloudflare-ai-gateway"].includes(provider)) {
@@ -481,7 +481,7 @@ export const ProvidersLoginCommand = effectCmd({
     }
 
     const key = yield* Prompt.password({
-      message: "API key-ээ оруулна уу",
+      message: "API түлхүүрээ оруулна уу",
       validate: (x) => (x && x.length > 0 ? undefined : "Шаардлагатай"),
     })
     const apiKey = yield* promptValue(key)
@@ -525,12 +525,12 @@ export const ProvidersLogoutCommand = effectCmd({
         )?.value
       : yield* promptValue(
           yield* Prompt.autocomplete({
-            message: "Provider сонгоно уу",
+            message: "Үйлчилгээ үзүүлэгч сонгоно уу",
             maxItems: 8,
             options,
           }),
         )
-    if (!provider) return yield* fail(`Тохируулсан provider танигдсангүй: "${args.provider}"`)
+    if (!provider) return yield* fail(`Тохируулсан үйлчилгээ үзүүлэгч танигдсангүй: "${args.provider}"`)
     yield* Effect.orDie(authSvc.remove(provider))
     yield* Prompt.outro("Амжилттай гарлаа")
   }),

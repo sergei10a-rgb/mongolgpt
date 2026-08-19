@@ -67,8 +67,8 @@ export function providerOptions(list: { id: string; name: string }[]): ProviderO
         providerID: provider.id,
         description: {
           mongolgpt: "(Санал болгосон)",
-          anthropic: "(API key)",
-          openai: "(ChatGPT Plus/Pro or API key)",
+          anthropic: "(API түлхүүр)",
+          openai: "(ChatGPT Plus/Pro эсвэл API түлхүүр)",
         }[provider.id],
         category: provider.id in PROVIDER_PRIORITY ? "Түгээмэл" : "Үйлчилгээ үзүүлэгчид",
       })),

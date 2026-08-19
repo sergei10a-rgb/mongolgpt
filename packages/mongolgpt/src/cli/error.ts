@@ -85,7 +85,7 @@ export function FormatError(input: unknown): string | undefined {
   // ConfigDirectoryTypoError: { dir: string, path: string, suggestion: string }
   const configDirectoryTypo = configData(input, "ConfigDirectoryTypoError")
   if (configDirectoryTypo) {
-    return `${stringField(configDirectoryTypo, "path")} дахь "${stringField(configDirectoryTypo, "dir")}" хавтас хүчинтэй биш. Хавтсыг "${stringField(configDirectoryTypo, "suggestion")}" гэж нэрлэ, эсвэл устгана уу. Энэ нь түгээмэл typo.`
+    return `${stringField(configDirectoryTypo, "path")} дахь "${stringField(configDirectoryTypo, "dir")}" хавтас хүчинтэй биш. Хавтсыг "${stringField(configDirectoryTypo, "suggestion")}" гэж нэрлэ, эсвэл устгана уу. Энэ нь түгээмэл бичгийн алдаа.`
   }
 
   // ConfigFrontmatterError: { message: string }
@@ -100,8 +100,8 @@ export function FormatError(input: unknown): string | undefined {
     const url = stringField(remoteAuth, "url")
     const remote = stringField(remoteAuth, "remote")
     return [
-      `Remote config${remote ? ` (${remote})` : ""} ачаалж чадсангүй: сервер JSON-ийн оронд login page буцаалаа.`,
-      `Authentication алга эсвэл хугацаа нь дууссан байна (endpoint нь SSO эсвэл identity-aware proxy-ийн ард байх магадлалтай).`,
+      `Алсын тохиргоо${remote ? ` (${remote})` : ""} ачаалж чадсангүй: сервер JSON-ийн оронд нэвтрэх хуудас буцаалаа.`,
+      "Нэвтрэх баталгаажуулалт байхгүй эсвэл хугацаа нь дууссан байна (үйлчилгээний хаяг SSO эсвэл хэрэглэгч таних хамгаалалттай проксийн ард байж болзошгүй).",
       ...(url ? [`Дахин нэвтрэхийн тулд \`mongolgpt auth login ${url}\` ажиллуулна уу.`] : []),
     ].join("\n")
   }

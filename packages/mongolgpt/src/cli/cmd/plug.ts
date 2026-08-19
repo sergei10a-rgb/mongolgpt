@@ -176,7 +176,7 @@ export function createPlugTask(input: PlugInput, dep: PlugDeps = defaultPlugDeps
 export const PluginCommand = effectCmd({
   command: "plugin <module>",
   aliases: ["plug"],
-  describe: "plugin суулгаж тохиргоог шинэчлэх",
+  describe: "нэмэлт суулгаж тохиргоог шинэчлэх",
   builder: (yargs) =>
     yargs
       .positional("module", {
@@ -193,18 +193,18 @@ export const PluginCommand = effectCmd({
         alias: ["f"],
         type: "boolean",
         default: false,
-        describe: "байгаа plugin хувилбарыг солих",
+        describe: "байгаа нэмэлтийн хувилбарыг солих",
       }),
   handler: Effect.fn("Cli.plug")(function* (args) {
     const mod = String(args.module ?? "").trim()
     if (!mod) {
-      UI.error("module шаардлагатай")
+      UI.error("модулийн нэр шаардлагатай")
       process.exitCode = 1
       return
     }
 
     UI.empty()
-    intro(`Plugin суулгах: ${mod}`)
+    intro(`Нэмэлт суулгах: ${mod}`)
 
     const run = createPlugTask({
       mod,

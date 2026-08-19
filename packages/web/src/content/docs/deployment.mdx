@@ -172,11 +172,11 @@ Admin-ийг асаах environment-д дараах хоёр secret нэмнэ.
 
 `CLOUDFLARE_ACCESS_API_TOKEN`-ийг Cloudflare-ийн **My Profile → API Tokens → Create Custom Token** хэсэгт дараах хамгийн бага эрхээр үүсгэнэ.
 
-| Хамрах хүрээ | Үйлчилгээ                                               | Эрх  |
-| ------------ | ------------------------------------------------------- | ---- |
-| Account      | Access: Apps and Policies                               | Edit |
-| Account      | Access: Organizations, Identity Providers, and Groups   | Edit |
-| Resources    | Include → MongolGPT байрлаж буй ганц Cloudflare account |      |
+| Хамрах хүрээ        | Үйлчилгээ                                                 | Эрх            |
+| ------------------- | --------------------------------------------------------- | -------------- |
+| Аккаунт (`Account`) | `Access: Apps and Policies`                               | Засах (`Edit`) |
+| Аккаунт (`Account`) | `Access: Organizations, Identity Providers, and Groups`   | Засах (`Edit`) |
+| Нөөц (`Resources`)  | `Include` → MongolGPT байрлаж буй ганц Cloudflare аккаунт |                |
 
 Zone permission, DNS edit, Worker edit, D1, R2 болон KV эрх энэ тусгай token-д хэрэггүй. Ерөнхий `CLOUDFLARE_API_TOKEN`-оос тусад нь хадгална. Access token нь SST config ажиллах үед л ашиглагдах бөгөөд admin Worker-т resource, environment variable эсвэл secret хэлбэрээр холбогдохгүй.
 

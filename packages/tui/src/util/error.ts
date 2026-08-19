@@ -41,7 +41,7 @@ export function cliErrorMessage(input: unknown): string | undefined {
 
   const directory = configData(input, "ConfigDirectoryTypoError")
   if (directory) {
-    return `${field(directory, "path")} дахь "${field(directory, "dir")}" хавтас хүчинтэй биш. Хавтсыг "${field(directory, "suggestion")}" гэж нэрлэ, эсвэл устгана уу. Энэ нь түгээмэл typo.`
+    return `${field(directory, "path")} дахь "${field(directory, "dir")}" хавтас хүчинтэй биш. Хавтсыг "${field(directory, "suggestion")}" гэж нэрлэ, эсвэл устгана уу. Энэ нь түгээмэл бичгийн алдаа.`
   }
 
   const frontmatter = configData(input, "ConfigFrontmatterError")

@@ -16,18 +16,18 @@ export type CompatImportArgs = CompatImportInput
 
 export const CompatCommand = cmd({
   command: "compat",
-  describe: "Бусад AI агентын skill, plugin, MCP connector-ийг MongolGPT-д тааруулах",
+  describe: "Бусад AI агентын ур чадвар, нэмэлт, MCP холбогчийг MongolGPT-д тааруулах",
   builder: (yargs) => yargs.command(CompatImportCommand).demandCommand(),
   async handler() {},
 })
 
 export const CompatImportCommand = effectCmd({
   command: ["import [source]", "add [source]", "install [source]"],
-  describe: "Эх сурвалжийг таньж MongolGPT config руу хөрвүүлж нэмэх",
+  describe: "Эх сурвалжийг таньж MongolGPT тохиргоо руу хөрвүүлж нэмэх",
   builder: (yargs) =>
     yargs
       .positional("source", {
-        describe: "Файл, хавтас, URL, npm package эсвэл ажиллуулах команд",
+        describe: "Файл, хавтас, URL, npm багц эсвэл ажиллуулах команд",
         type: "string",
       })
       .option("type", {
@@ -45,7 +45,7 @@ export const CompatImportCommand = effectCmd({
         default: "global" as const,
       })
       .option("project", {
-        describe: "Одоогийн төсөл дотор хадгалах shortcut",
+        describe: "Одоогийн төсөл дотор хадгалах товчлол",
         type: "boolean",
       })
       .option("dry-run", {
@@ -57,7 +57,7 @@ export const CompatImportCommand = effectCmd({
         type: "string",
       })
       .option("url", {
-        describe: "Алсын MCP URL эсвэл skill index URL",
+        describe: "Алсын MCP URL эсвэл ур чадварын индексийн URL",
         type: "string",
       })
       .option("env", {
@@ -66,7 +66,7 @@ export const CompatImportCommand = effectCmd({
         array: true,
       })
       .option("header", {
-        describe: "Алсын MCP HTTP header KEY=VALUE",
+        describe: "Алсын MCP HTTP толгой KEY=VALUE",
         type: "string",
         array: true,
       })
@@ -75,19 +75,19 @@ export const CompatImportCommand = effectCmd({
         type: "boolean",
       })
       .option("adapter", {
-        describe: "JS plugin-ийг MongolGPT adapter-аар тааруулах",
+        describe: "JS нэмэлтийг MongolGPT нийцүүлэгчээр тааруулах",
         type: "boolean",
         default: true,
       })
       .example(
         'mongolgpt compat add --name higgsfield --mcp-command "npx -y @higgsfield/mcp"',
-        "Claude-д зориулсан MCP командыг MongolGPT MCP config болгох",
+        "Claude-д зориулсан MCP командыг MongolGPT MCP тохиргоо болгох",
       )
       .example(
         "mongolgpt compat import ~/.config/Claude/claude_desktop_config.json",
-        "Claude Desktop MCP config-ийг MongolGPT руу хөрвүүлэх",
+        "Claude Desktop MCP тохиргоог MongolGPT руу хөрвүүлэх",
       )
-      .example("mongolgpt compat add ./my-skill --type skill", "Skill хавтсыг MongolGPT-д бүртгэх"),
+      .example("mongolgpt compat add ./my-skill --type skill", "Ур чадварын хавтсыг MongolGPT-д бүртгэх"),
   handler: Effect.fn("Cli.compat.import")(function* (args) {
     const ctx = yield* InstanceRef
     if (!ctx) return yield* Effect.die("InstanceRef олдсонгүй")
@@ -113,7 +113,7 @@ async function runCompatImport(args: CompatImportInput, ctx: InstanceContext) {
 
   if (args.dryRun) {
     prompts.log.info(`Бичих config: ${plan.configPath}`)
-    prompts.outro("Dry run дууслаа. Файл өөрчлөгдөөгүй.")
+    prompts.outro("Туршилтын горим дууслаа. Файл өөрчлөгдөөгүй.")
     return
   }
 

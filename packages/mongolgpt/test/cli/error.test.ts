@@ -15,7 +15,7 @@ describe("cli.error", () => {
         tag: "ConfigDirectoryTypoError",
         data: { path: "/tmp/mongolgpt.jsonc", dir: ".mongolgpt", suggestion: "mongolgpt" },
         expected:
-          '/tmp/mongolgpt.jsonc дахь ".mongolgpt" хавтас хүчинтэй биш. Хавтсыг "mongolgpt" гэж нэрлэ, эсвэл устгана уу. Энэ нь түгээмэл typo.',
+          '/tmp/mongolgpt.jsonc дахь ".mongolgpt" хавтас хүчинтэй биш. Хавтсыг "mongolgpt" гэж нэрлэ, эсвэл устгана уу. Энэ нь түгээмэл бичгийн алдаа.',
       },
       {
         tag: "ConfigFrontmatterError",

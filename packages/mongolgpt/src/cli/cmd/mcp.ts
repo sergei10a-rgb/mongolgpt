@@ -258,7 +258,7 @@ export const McpAuthCommand = effectCmd({
 
     yield* MCP.Service.use((mcp) =>
       mcp.authenticate(serverName, (url) => {
-        spinner.stop("Browser дээрээ зөвшөөрөл олгоно уу:")
+        spinner.stop("Хөтөч дээрээ зөвшөөрөл олгоно уу:")
         prompts.log.info(url)
         spinner.start("Зөвшөөрөл хүлээж байна...")
       }),
@@ -608,20 +608,20 @@ export const McpAddCommand = effectCmd({
 
         if (useOAuth) {
           const hasClientId = await prompts.confirm({
-            message: "Урьдчилан бүртгэсэн client ID байгаа юу?",
+            message: "Урьдчилан бүртгэсэн OAuth клиентийн ID байгаа юу?",
             initialValue: false,
           })
           if (prompts.isCancel(hasClientId)) throw new UI.CancelledError()
 
           if (hasClientId) {
             const clientId = await prompts.text({
-              message: "Client ID оруулна уу",
+              message: "OAuth клиентийн ID оруулна уу",
               validate: (x) => (x && x.length > 0 ? undefined : "Шаардлагатай"),
             })
             if (prompts.isCancel(clientId)) throw new UI.CancelledError()
 
             const hasSecret = await prompts.confirm({
-              message: "Client secret байгаа юу?",
+              message: "OAuth клиентийн нууц байгаа юу?",
               initialValue: false,
             })
             if (prompts.isCancel(hasSecret)) throw new UI.CancelledError()
@@ -629,7 +629,7 @@ export const McpAddCommand = effectCmd({
             let clientSecret: string | undefined
             if (hasSecret) {
               const secret = await prompts.password({
-                message: "Client secret оруулна уу",
+                message: "OAuth клиентийн нууцыг оруулна уу",
               })
               if (prompts.isCancel(secret)) throw new UI.CancelledError()
               clientSecret = secret
@@ -731,10 +731,10 @@ export const McpDebugCommand = effectCmd({
         }
       }
       if (entry?.clientInfo) {
-        prompts.log.info(`  Client ID: ${entry.clientInfo.clientId}`)
+        prompts.log.info(`  OAuth клиентийн ID: ${entry.clientInfo.clientId}`)
         if (entry.clientInfo.clientSecretExpiresAt) {
           const expiresDate = new Date(entry.clientInfo.clientSecretExpiresAt * 1000)
-          prompts.log.info(`  Client secret дуусах хугацаа: ${expiresDate.toISOString()}`)
+          prompts.log.info(`  OAuth клиентийн нууцын дуусах хугацаа: ${expiresDate.toISOString()}`)
         }
       }
 
@@ -813,16 +813,16 @@ export const McpDebugCommand = effectCmd({
               // Check if dynamic registration would be attempted
               const clientInfo = await authProvider.clientInformation()
               if (clientInfo) {
-                prompts.log.info(`Client ID байна: ${clientInfo.client_id}`)
+                prompts.log.info(`OAuth клиентийн ID байна: ${clientInfo.client_id}`)
               } else {
-                prompts.log.info("Client ID алга - dynamic registration оролдоно")
+                prompts.log.info("OAuth клиентийн ID алга. Динамик бүртгэл оролдоно")
               }
             } else {
               prompts.log.error(`Холболтын алдаа: ${error instanceof Error ? error.message : String(error)}`)
             }
           }
         } else if (response.status >= 200 && response.status < 300) {
-          prompts.log.success("Сервер амжилттай хариуллаа (auth шаардлагагүй эсвэл аль хэдийн нэвтэрсэн)")
+          prompts.log.success("Сервер амжилттай хариуллаа (нэвтрэлт шаардлагагүй эсвэл аль хэдийн нэвтэрсэн)")
           const body = await response.text()
           try {
             const json = JSON.parse(body)

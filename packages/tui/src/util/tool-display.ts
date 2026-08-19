@@ -1,6 +1,6 @@
 export function webSearchProviderLabel(provider: unknown) {
-  if (provider === "parallel") return "Parallel вэб хайлт"
-  if (provider === "exa") return "Exa вэб хайлт"
+  if (provider === "parallel") return "Parallel үйлчилгээгээр вэб хайх"
+  if (provider === "exa") return "Exa үйлчилгээгээр вэб хайх"
   return "Вэб хайлт"
 }
 

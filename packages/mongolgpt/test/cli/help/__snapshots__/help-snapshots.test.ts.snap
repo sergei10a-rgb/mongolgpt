@@ -237,7 +237,7 @@ Options:
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt web --help 1`] = `
 "mongolgpt web
 
-MongolGPT сервер эхлүүлж web интерфэйс нээх
+MongolGPT сервер эхлүүлж вэб интерфэйс нээх
 
 Options:
   -h, --help         тусламж харуулах                                                      [boolean]
@@ -260,7 +260,7 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 боломжтой бүх загварыг жагсаах
 
 Positionals:
-  provider  загвар шүүх provider ID                                                         [string]
+  provider  загвар шүүх үйлчилгээ үзүүлэгчийн ID                                            [string]
 
 Options:
   -h, --help        тусламж харуулах                                                       [boolean]
@@ -376,7 +376,7 @@ Options:
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt plugin --help 1`] = `
 "mongolgpt plugin <module>
 
-plugin суулгаж тохиргоог шинэчлэх
+нэмэлт суулгаж тохиргоог шинэчлэх
 
 Positionals:
   module  npm module-ийн нэр                                                     [string] [required]
@@ -388,7 +388,7 @@ Options:
       --log-level   логийн түвшин               [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
       --pure        гадаад plugin-гүй ажиллуулах                                           [boolean]
   -g, --global      глобал тохиргоонд суулгах                             [boolean] [default: false]
-  -f, --force       байгаа plugin хувилбарыг солих                        [boolean] [default: false]"
+  -f, --force       байгаа нэмэлтийн хувилбарыг солих                     [boolean] [default: false]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt db --help 1`] = `

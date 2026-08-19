@@ -256,8 +256,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           const value = currentModel()
           if (!value) {
             return {
-              provider: "Provider холбоно уу",
-              model: "Provider сонгогдоогүй байна",
+              provider: "Үйлчилгээ үзүүлэгч холбоно уу",
+              model: "Үйлчилгээ үзүүлэгч сонгогдоогүй байна",
               reasoning: false,
             }
           }
@@ -289,7 +289,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (!favorites.length) {
             toast.show({
               variant: "info",
-              message: "Энэ shortcut-ыг ашиглахын тулд favorite model нэмнэ үү",
+              message: "Энэ товчлолыг ашиглахын тулд дуртай загвар нэмнэ үү",
               duration: 3000,
             })
             return
@@ -318,7 +318,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           batch(() => {
             if (!isModelValid(model)) {
               toast.show({
-                message: `${model.providerID}/${model.modelID} model хүчинтэй биш`,
+                message: `${model.providerID}/${model.modelID} загвар хүчингүй байна`,
                 variant: "warning",
                 duration: 3000,
               })
@@ -337,7 +337,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           batch(() => {
             if (!isModelValid(model)) {
               toast.show({
-                message: `${model.providerID}/${model.modelID} model хүчинтэй биш`,
+                message: `${model.providerID}/${model.modelID} загвар хүчингүй байна`,
                 variant: "warning",
                 duration: 3000,
               })
@@ -524,7 +524,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       if (isModelValid(value.model)) return
       toast.show({
         variant: "warning",
-        message: `${value.name} agent-ийн тохируулсан ${value.model.providerID}/${value.model.modelID} model хүчинтэй биш`,
+        message: `${value.name} агентын тохируулсан ${value.model.providerID}/${value.model.modelID} загвар хүчингүй байна`,
         duration: 3000,
       })
     })

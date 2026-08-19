@@ -31,7 +31,7 @@ function getNetworkIPs() {
 export const WebCommand = effectCmd({
   command: "web",
   builder: (yargs) => withNetworkOptions(yargs),
-  describe: "MongolGPT сервер эхлүүлж web интерфэйс нээх",
+  describe: "MongolGPT сервер эхлүүлж вэб интерфэйс нээх",
   // Server loads instances per-request via x-mongolgpt-directory header — no
   // ambient project InstanceContext needed at startup.
   instance: false,

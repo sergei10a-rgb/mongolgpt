@@ -79,7 +79,7 @@ const getAvailableTools = Effect.fn("Cli.debug.agent.getAvailableTools")(functio
             return fail(`Загвар олдсонгүй: ${error.providerID}/${error.modelID}`)
           }
           if (error instanceof Provider.NoModelsError) return fail(`${error.providerID} provider-д загвар олдсонгүй`)
-          return fail("Provider олдсонгүй")
+          return fail("Үйлчилгээ үзүүлэгч олдсонгүй")
         },
       }),
     ))
@@ -145,7 +145,7 @@ const createToolContext = Effect.fn("Cli.debug.agent.createToolContext")(functio
               }
               if (error instanceof Provider.NoModelsError)
                 return fail(`${error.providerID} provider-д загвар олдсонгүй`)
-              return fail("Provider олдсонгүй")
+              return fail("Үйлчилгээ үзүүлэгч олдсонгүй")
             },
           }),
         )

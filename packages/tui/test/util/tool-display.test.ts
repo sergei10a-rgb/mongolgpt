@@ -3,8 +3,8 @@ import { toolDisplayMetadata, webSearchProviderLabel } from "../../src/util/tool
 
 describe("webSearchProviderLabel", () => {
   test("labels known providers", () => {
-    expect(webSearchProviderLabel("parallel")).toBe("Parallel вэб хайлт")
-    expect(webSearchProviderLabel("exa")).toBe("Exa вэб хайлт")
+    expect(webSearchProviderLabel("parallel")).toBe("Parallel үйлчилгээгээр вэб хайх")
+    expect(webSearchProviderLabel("exa")).toBe("Exa үйлчилгээгээр вэб хайх")
   })
 
   for (const [name, provider] of [

@@ -41,7 +41,7 @@ export async function openEditor(input: { value: string; renderer: CliRenderer; 
       child.on("error", reject)
       child.on("exit", (code, signal) => {
         if (code === 0) return resolve()
-        reject(new Error(`Editor ${signal ? `${signal} signal` : `${code} code`}-той гарлаа`))
+        reject(new Error(`Засварлагч ${signal ? `"${signal}" дохиогоор` : `${code} гаралтын кодоор`} хаагдлаа`))
       })
     })
     return (await readFile(file, "utf8")) || undefined

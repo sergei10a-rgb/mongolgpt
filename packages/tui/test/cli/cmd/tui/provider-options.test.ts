@@ -14,6 +14,18 @@ describe("providerOptions", () => {
     expect(providerOptions([{ id: "mistral", name: "Mistral" }])[0]?.category).toBe("Үйлчилгээ үзүүлэгчид")
   })
 
+  test("uses Mongolian provider credential hints", () => {
+    const options = providerOptions([
+      { id: "openai", name: "OpenAI" },
+      { id: "anthropic", name: "Anthropic" },
+    ])
+
+    expect(options.find((option) => option.value === "openai")?.description).toBe(
+      "(ChatGPT Plus/Pro эсвэл API түлхүүр)",
+    )
+    expect(options.find((option) => option.value === "anthropic")?.description).toBe("(API түлхүүр)")
+  })
+
   test("keeps popular providers first and sorts the rest alphabetically", () => {
     expect(
       providerOptions([
