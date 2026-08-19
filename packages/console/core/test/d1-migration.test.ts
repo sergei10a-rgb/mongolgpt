@@ -27,7 +27,7 @@ describe("D1 migration", () => {
       .query("select name from sqlite_schema where type = 'table' and name not like 'sqlite_%' order by name")
       .values()
 
-    expect(tables).toHaveLength(37)
+    expect(tables).toHaveLength(38)
     expect(tables).toContainEqual(["account"])
     expect(tables).toContainEqual(["account_deletion"])
     expect(tables).toContainEqual(["admin_audit_log"])
@@ -41,6 +41,7 @@ describe("D1 migration", () => {
     expect(tables).toContainEqual(["payment_checkout"])
     expect(tables).toContainEqual(["payment_cancellation"])
     expect(tables).toContainEqual(["payment_invoice"])
+    expect(tables).toContainEqual(["payment_recovery"])
     expect(tables).toContainEqual(["plan_subscription"])
     expect(tables).toContainEqual(["platform_admin"])
     expect(tables).toContainEqual(["workspace"])
@@ -227,6 +228,69 @@ describe("D1 migration", () => {
            values (?, ?, 'failed', 1, ?, ?, ?)`,
         )
         .run("adl_invalid_error", "acc_invalid_error", 1, 1, ""),
+    ).toThrow()
+  })
+
+  test("enforces payment recovery identity, retry, and lifecycle constraints", async () => {
+    const database = new Database(":memory:")
+    database.exec(await migrationSql())
+    const insert = database.query(
+      `insert into payment_recovery
+        (id, message_hash, provider, merchant_account_id, external_event_id, external_invoice_id,
+         payload_hash, event, status, attempts, last_error_code, time_next_attempt, time_lease_expires)
+       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+
+    expect(() =>
+      insert.run(
+        "prc_invalid_pending",
+        "a".repeat(64),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "pending",
+        0,
+        null,
+        1,
+        null,
+      ),
+    ).toThrow()
+    expect(() =>
+      insert.run(
+        "prc_invalid_attempts",
+        "b".repeat(64),
+        "qpay",
+        "merchant",
+        "event",
+        "invoice",
+        "c".repeat(64),
+        "{}",
+        "pending",
+        7,
+        null,
+        1,
+        null,
+      ),
+    ).toThrow()
+    expect(() =>
+      insert.run(
+        "prc_invalid_processing",
+        "d".repeat(64),
+        "qpay",
+        "merchant",
+        "event",
+        "invoice",
+        "e".repeat(64),
+        "{}",
+        "processing",
+        1,
+        "stale_error",
+        null,
+        2,
+      ),
     ).toThrow()
   })
 

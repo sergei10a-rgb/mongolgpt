@@ -252,6 +252,25 @@ const contract = {
     "timeUpdated",
     "timeDeleted",
   ],
+  PaymentRecoveryTable: [
+    "id",
+    "message_hash",
+    "provider",
+    "merchant_account_id",
+    "external_event_id",
+    "external_invoice_id",
+    "payload_hash",
+    "event",
+    "status",
+    "attempts",
+    "last_error_code",
+    "time_next_attempt",
+    "time_lease_expires",
+    "time_resolved",
+    "timeCreated",
+    "timeUpdated",
+    "timeDeleted",
+  ],
   UsageTable: [
     "id",
     "workspaceID",
@@ -437,6 +456,7 @@ describe("D1 schema contract", () => {
     expect(d1.PaymentCancellationStatuses).toEqual(["requested", "unknown", "cancelled", "failed"])
     expect(d1.PaymentEventTypes).toEqual(["pending", "paid", "failed", "expired", "cancelled", "refunded"])
     expect(d1.PaymentEventOutcomes).toEqual(["applied", "noop", "rejected"])
+    expect(d1.PaymentRecoveryStatuses).toEqual(["pending", "processing", "resolved", "manual_review"])
     expect(d1.PlanSubscriptionStatuses).toEqual(["active", "expired", "cancelled", "refunded"])
     expect(d1.NewsletterSubscriberStatus).toEqual(["active", "unsubscribed"])
     expect(d1.NewsletterSubscriberSource).toEqual(["console", "stats"])

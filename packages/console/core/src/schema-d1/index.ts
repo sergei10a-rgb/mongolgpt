@@ -37,6 +37,7 @@ export const PaymentCheckoutStatuses = [
 export const PaymentCancellationStatuses = ["requested", "unknown", "cancelled", "failed"] as const
 export const PaymentEventTypes = ["pending", "paid", "failed", "expired", "cancelled", "refunded"] as const
 export const PaymentEventOutcomes = ["applied", "noop", "rejected"] as const
+export const PaymentRecoveryStatuses = ["pending", "processing", "resolved", "manual_review"] as const
 export const PlanSubscriptionStatuses = ["active", "expired", "cancelled", "refunded"] as const
 export const FinanceCurrencies = ["MNT", "USD"] as const
 export const FinanceCostCategories = ["model_cost", "payment_fee", "tax", "adjustment"] as const
@@ -676,6 +677,90 @@ export const PaymentEventTable = sqliteTable(
       sql`${table.to_status} in ('created', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')`,
     ),
     check("payment_event_payload_hash_check", sql`length(${table.payload_hash}) = 64`),
+  ],
+)
+
+export const PaymentRecoveryTable = sqliteTable(
+  "payment_recovery",
+  {
+    id: id(),
+    message_hash: text("message_hash", { length: 64 }).notNull(),
+    provider: text("provider", { enum: PaymentProviders }),
+    merchant_account_id: text("merchant_account_id", { length: 255 }),
+    external_event_id: text("external_event_id", { length: 255 }),
+    external_invoice_id: text("external_invoice_id", { length: 255 }),
+    payload_hash: text("payload_hash", { length: 64 }),
+    event: text("event", { mode: "json" }).$type<unknown>(),
+    status: text("status", { enum: PaymentRecoveryStatuses }).notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    last_error_code: text("last_error_code", { length: 64 }),
+    time_next_attempt: utc("time_next_attempt"),
+    time_lease_expires: utc("time_lease_expires"),
+    time_resolved: utc("time_resolved"),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    uniqueIndex("payment_recovery_message_hash").on(table.message_hash),
+    uniqueIndex("payment_recovery_merchant_external_event").on(
+      table.provider,
+      table.merchant_account_id,
+      table.external_event_id,
+    ),
+    index("payment_recovery_status_next_attempt").on(table.status, table.time_next_attempt),
+    index("payment_recovery_status_lease_expires").on(table.status, table.time_lease_expires),
+    check("payment_recovery_message_hash_check", sql`length(${table.message_hash}) = 64`),
+    check("payment_recovery_provider_check", sql`${table.provider} is null or ${table.provider} in ('qpay', 'bonum')`),
+    check(
+      "payment_recovery_payload_hash_check",
+      sql`${table.payload_hash} is null or length(${table.payload_hash}) = 64`,
+    ),
+    check("payment_recovery_event_json_check", sql`${table.event} is null or json_valid(${table.event})`),
+    check(
+      "payment_recovery_identity_check",
+      sql`(${table.event} is null
+          and ${table.provider} is null
+          and ${table.merchant_account_id} is null
+          and ${table.external_event_id} is null
+          and ${table.external_invoice_id} is null
+          and ${table.payload_hash} is null)
+        or (${table.event} is not null
+          and ${table.provider} is not null
+          and ${table.merchant_account_id} is not null
+          and ${table.external_event_id} is not null
+          and ${table.external_invoice_id} is not null
+          and ${table.payload_hash} is not null)`,
+    ),
+    check(
+      "payment_recovery_status_check",
+      sql`${table.status} in ('pending', 'processing', 'resolved', 'manual_review')`,
+    ),
+    check("payment_recovery_attempts_check", sql`${table.attempts} >= 0 and ${table.attempts} <= 6`),
+    check(
+      "payment_recovery_state_check",
+      sql`(${table.status} = 'pending'
+          and ${table.event} is not null
+          and ${table.time_next_attempt} is not null
+          and ${table.time_lease_expires} is null
+          and ${table.time_resolved} is null)
+        or (${table.status} = 'processing'
+          and ${table.event} is not null
+          and ${table.time_next_attempt} is null
+          and ${table.time_lease_expires} is not null
+          and ${table.time_resolved} is null
+          and ${table.last_error_code} is null)
+        or (${table.status} = 'resolved'
+          and ${table.event} is not null
+          and ${table.time_next_attempt} is null
+          and ${table.time_lease_expires} is null
+          and ${table.time_resolved} is not null
+          and ${table.last_error_code} is null)
+        or (${table.status} = 'manual_review'
+          and ${table.time_next_attempt} is null
+          and ${table.time_lease_expires} is null
+          and ${table.time_resolved} is null
+          and length(trim(${table.last_error_code})) between 1 and 64)`,
+    ),
   ],
 )
 

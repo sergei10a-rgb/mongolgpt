@@ -211,6 +211,30 @@ paymentQueue.subscribe(
   },
 )
 
+paymentDeadLetterQueue.subscribe(
+  {
+    handler: "packages/console/function/src/payment-dead-letter.ts",
+    link: [database],
+  },
+  {
+    batch: {
+      size: 10,
+      window: "5 seconds",
+    },
+  },
+)
+
+export const paymentRecovery = new sst.cloudflare.Cron("PaymentRecovery", {
+  schedules: ["*/5 * * * *"],
+  worker: {
+    handler: "packages/console/function/src/payment-recovery.ts",
+    link: [database, quotaService, SECRET.QuotaServiceToken],
+    compatibility: {
+      date: "2026-07-15",
+    },
+  },
+})
+
 export const subscriptionExpiration = new sst.cloudflare.Cron("SubscriptionExpiration", {
   schedules: ["*/5 * * * *"],
   worker: {

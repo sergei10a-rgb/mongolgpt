@@ -19,6 +19,8 @@ export {
   PaymentEventOutcomes,
   PaymentEventTable,
   PaymentEventTypes,
+  PaymentRecoveryStatuses,
+  PaymentRecoveryTable,
   PaymentCheckoutStatuses,
   PaymentCheckoutTable,
   PaymentCancellationStatuses,
