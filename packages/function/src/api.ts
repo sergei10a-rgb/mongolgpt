@@ -18,7 +18,7 @@ export class SyncServer extends DurableObject<Env> {
     super(ctx, env)
   }
   async fetch() {
-    console.log("SyncServer subscribe")
+    console.log("SyncServer-д бүртгүүлж байна")
 
     const webSocketPair = new WebSocketPair()
     const [client, server] = Object.values(webSocketPair)
@@ -36,10 +36,10 @@ export class SyncServer extends DurableObject<Env> {
     })
   }
 
-  async webSocketMessage(_ws, _message) {}
+  async webSocketMessage(_ws: WebSocket, _message: string | ArrayBuffer) {}
 
-  async webSocketClose(ws, code, _reason, _wasClean) {
-    ws.close(code, "Durable Object is closing WebSocket")
+  async webSocketClose(ws: WebSocket, code: number, _reason: string, _wasClean: boolean) {
+    ws.close(code, "Durable Object WebSocket-ийг хааж байна")
   }
 
   async publish(key: string, content: any) {
@@ -49,7 +49,7 @@ export class SyncServer extends DurableObject<Env> {
       !key.startsWith(`session/message/${sessionID}/`) &&
       !key.startsWith(`session/part/${sessionID}/`)
     )
-      return new Response("Error: Invalid key", { status: 400 })
+      return new Response("Алдаа: түлхүүр буруу байна", { status: 400 })
 
     // store message
     await this.env.Bucket.put(`share/${key}.json`, JSON.stringify(content), {
@@ -59,7 +59,7 @@ export class SyncServer extends DurableObject<Env> {
     })
     await this.ctx.storage.put(key, content)
     const clients = this.ctx.getWebSockets()
-    console.log("SyncServer publish", key, "to", clients.length, "subscribers")
+    console.log("SyncServer нийтэлж байна", key, "хүлээн авагчийн тоо", clients.length)
     for (const client of clients) {
       client.send(JSON.stringify({ key, content }))
     }
@@ -84,7 +84,7 @@ export class SyncServer extends DurableObject<Env> {
   }
 
   public async assertSecret(secret: string) {
-    if (secret !== (await this.getSecret())) throw new Error("Invalid secret")
+    if (secret !== (await this.getSecret())) throw new Error("Нууц утга буруу байна")
   }
 
   private async getSecret() {
@@ -145,7 +145,7 @@ export default new Hono<{ Bindings: Env }>()
     const body = await c.req.json<{ sessionShortName: string; adminSecret: string }>()
     const sessionShortName = body.sessionShortName
     const adminSecret = body.adminSecret
-    if (adminSecret !== Resource.ADMIN_SECRET.value) throw new Error("Invalid admin secret")
+    if (adminSecret !== Resource.ADMIN_SECRET.value) throw new Error("Admin нууц утга буруу байна")
     const id = c.env.SYNC_SERVER.idFromName(sessionShortName)
     const stub = c.env.SYNC_SERVER.get(id)
     await stub.clear()
@@ -168,38 +168,43 @@ export default new Hono<{ Bindings: Env }>()
   .get("/share_poll", async (c) => {
     const upgradeHeader = c.req.header("Upgrade")
     if (!upgradeHeader || upgradeHeader !== "websocket") {
-      return c.text("Error: Upgrade header is required", { status: 426 })
+      return c.text("Алдаа: Upgrade header шаардлагатай", { status: 426 })
     }
     const id = c.req.query("id")
     console.log("share_poll", id)
-    if (!id) return c.text("Error: Share ID is required", { status: 400 })
+    if (!id) return c.text("Алдаа: хуваалцах ID шаардлагатай", { status: 400 })
     const stub = c.env.SYNC_SERVER.get(c.env.SYNC_SERVER.idFromName(id))
     return stub.fetch(c.req.raw)
   })
   .get("/share_data", async (c) => {
     const id = c.req.query("id")
     console.log("share_data", id)
-    if (!id) return c.text("Error: Share ID is required", { status: 400 })
+    if (!id) return c.text("Алдаа: хуваалцах ID шаардлагатай", { status: 400 })
     const stub = c.env.SYNC_SERVER.get(c.env.SYNC_SERVER.idFromName(id))
-    const data = await stub.getData()
+    const data = (await (stub as any).getData()) as Array<{ key: string; content: unknown }>
 
-    let info
-    const messages: Record<string, any> = {}
+    let info: Record<string, unknown> | undefined
+    const messages: Record<string, { messageID?: string; parts: unknown[]; [key: string]: unknown }> = {}
     data.forEach((d) => {
       const [root, type] = d.key.split("/")
       if (root !== "session") return
       if (type === "info") {
-        info = d.content
+        info = d.content as Record<string, unknown>
         return
       }
       if (type === "message") {
-        messages[d.content.id] = {
+        const messageContent = d.content as { id?: string; [key: string]: unknown }
+        const messageId = messageContent.id ?? ""
+        messages[messageId] = {
           parts: [],
-          ...d.content,
+          ...messageContent,
         }
       }
       if (type === "part") {
-        messages[d.content.messageID].parts.push(d.content)
+        const part = d.content as { messageID?: string; [key: string]: unknown }
+        const messageId = part.messageID
+        if (!messageId) return
+        messages[messageId].parts.push(part)
       }
     })
 
@@ -254,7 +259,7 @@ export default new Hono<{ Bindings: Env }>()
 
     if (!response.ok) {
       console.error(await response.text())
-      return c.json({ error: "Discord bot message failed" }, { status: 502 })
+      return c.json({ error: "Discord bot-ын зурвас амжилтгүй боллоо" }, { status: 502 })
     }
 
     return c.json({ ok: true })
@@ -269,7 +274,7 @@ export default new Hono<{ Bindings: Env }>()
 
     // get Authorization header
     const token = c.req.header("Authorization")?.replace(/^Bearer /, "")
-    if (!token) return c.json({ error: "Authorization header is required" }, { status: 401 })
+    if (!token) return c.json({ error: "Authorization header шаардлагатай" }, { status: 401 })
 
     // verify token
     const JWKS = createRemoteJWKSet(new URL(JWKS_URL))
@@ -280,19 +285,20 @@ export default new Hono<{ Bindings: Env }>()
         audience: EXPECTED_AUDIENCE,
       })
       const sub = payload.sub // e.g. 'repo:my-org/my-repo:ref:refs/heads/main'
+      if (!sub) return c.json({ error: "Token буруу эсвэл хугацаа нь дууссан" }, { status: 403 })
       const parts = sub.split(":")[1].split("/")
       owner = parts[0]
       repo = parts[1]
     } catch (err) {
-      console.error("Token verification failed:", err)
-      return c.json({ error: "Invalid or expired token" }, { status: 403 })
+      console.error("Token баталгаажуулж чадсангүй:", err)
+      return c.json({ error: "Token буруу эсвэл хугацаа нь дууссан" }, { status: 403 })
     }
 
     // Create app JWT token
-    const auth = createAppAuth({
+    const auth = (createAppAuth as any)({
       appId: Resource.GITHUB_APP_ID.value,
       privateKey: Resource.GITHUB_APP_PRIVATE_KEY.value,
-    })
+    }) as unknown as (input: { type: "app" } | { type: "installation"; installationId: number }) => Promise<{ token: string }>
     const appAuth = await auth({ type: "app" })
 
     // Lookup installation
@@ -322,13 +328,14 @@ export default new Hono<{ Bindings: Env }>()
       // get Authorization header
       const authHeader = c.req.header("Authorization")
       const token = authHeader?.replace(/^Bearer /, "")
-      if (!token) throw new Error("Authorization header is required")
+      if (!token) throw new Error("Authorization header шаардлагатай")
 
       // Verify permissions
       const userClient = new Octokit({ auth: token })
-      const { data: repoData } = await userClient.repos.get({ owner, repo })
-      if (!repoData.permissions.admin && !repoData.permissions.push && !repoData.permissions.maintain)
-        throw new Error("User does not have write permissions")
+    const { data: repoData } = await userClient.repos.get({ owner, repo })
+      const permissions = repoData.permissions
+      if (!permissions?.admin && !permissions?.push && !permissions?.maintain)
+        throw new Error("Хэрэглэгчид бичих зөвшөөрөл алга")
 
       // Get installation token
       const auth = createAppAuth({
@@ -366,11 +373,12 @@ export default new Hono<{ Bindings: Env }>()
   .get("/get_github_app_installation", async (c) => {
     const owner = c.req.query("owner")
     const repo = c.req.query("repo")
+    if (!owner || !repo) return c.json({ error: "owner болон repo шаардлагатай" }, { status: 400 })
 
-    const auth = createAppAuth({
+    const auth = (createAppAuth as any)({
       appId: Resource.GITHUB_APP_ID.value,
       privateKey: Resource.GITHUB_APP_PRIVATE_KEY.value,
-    })
+    }) as unknown as (input: { type: "app" } | { type: "installation"; installationId: number }) => Promise<{ token: string }>
     const appAuth = await auth({ type: "app" })
 
     // Lookup installation
@@ -389,4 +397,4 @@ export default new Hono<{ Bindings: Env }>()
 
     return c.json({ installation })
   })
-  .all("*", (c) => c.text("Not Found"))
+  .all("*", (c) => c.text("Олдсонгүй"))
