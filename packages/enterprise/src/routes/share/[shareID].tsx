@@ -51,7 +51,7 @@ class SessionDataMissingError extends NamedError {
   }
 
   schema(): never {
-    throw new Error("SessionDataMissingError does not expose a schema")
+    throw new Error("SessionDataMissingError нь схем гаргадаггүй")
   }
 
   toObject() {

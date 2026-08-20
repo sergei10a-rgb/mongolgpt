@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { Share } from "../../src/core/share"
-import { Storage } from "../../src/core/storage"
 import { Identifier } from "@mongolgpt/core/util/identifier"
+import type { Share as ShareTypes } from "../../src/core/share"
+
+process.env.NODE_ENV = "test"
+process.env.MONGOLGPT_STORAGE_ADAPTER = "memory"
+const [{ Share }, { Storage }] = await Promise.all([import("../../src/core/share"), import("../../src/core/storage")])
 
 describe.concurrent("core.share", () => {
   test("should create a share", async () => {
@@ -26,7 +29,7 @@ describe.concurrent("core.share", () => {
     const sessionID = Identifier.descending()
     const share = await Share.create({ sessionID })
 
-    const data: Share.Data[] = [
+    const data: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part1", sessionID, messageID: "msg1", type: "text", text: "Hello" },
@@ -38,7 +41,7 @@ describe.concurrent("core.share", () => {
       data,
     })
 
-    const snapshot = await Storage.read<{ data: Share.Data[] }>(["share_snapshot", share.id])
+    const snapshot = await Storage.read<{ data: ShareTypes.Data[] }>(["share_snapshot", share.id])
     expect(snapshot?.data).toHaveLength(1)
 
     await Share.remove({ id: share.id, secret: share.secret })
@@ -48,14 +51,14 @@ describe.concurrent("core.share", () => {
     const sessionID = Identifier.descending()
     const share = await Share.create({ sessionID })
 
-    const data1: Share.Data[] = [
+    const data1: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part1", sessionID, messageID: "msg1", type: "text", text: "Hello" },
       },
     ]
 
-    const data2: Share.Data[] = [
+    const data2: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part2", sessionID, messageID: "msg1", type: "text", text: "World" },
@@ -72,7 +75,7 @@ describe.concurrent("core.share", () => {
       data: data2,
     })
 
-    const snapshot = await Storage.read<{ data: Share.Data[] }>(["share_snapshot", share.id])
+    const snapshot = await Storage.read<{ data: ShareTypes.Data[] }>(["share_snapshot", share.id])
     expect(snapshot?.data).toHaveLength(2)
 
     await Share.remove({ id: share.id, secret: share.secret })
@@ -82,7 +85,7 @@ describe.concurrent("core.share", () => {
     const sessionID = Identifier.descending()
     const share = await Share.create({ sessionID })
 
-    const data: Share.Data[] = [
+    const data: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part1", sessionID, messageID: "msg1", type: "text", text: "Hello" },
@@ -111,21 +114,21 @@ describe.concurrent("core.share", () => {
     const sessionID = Identifier.descending()
     const share = await Share.create({ sessionID })
 
-    const data1: Share.Data[] = [
+    const data1: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part1", sessionID, messageID: "msg1", type: "text", text: "Hello" },
       },
     ]
 
-    const data2: Share.Data[] = [
+    const data2: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part2", sessionID, messageID: "msg2", type: "text", text: "World" },
       },
     ]
 
-    const data3: Share.Data[] = [
+    const data3: ShareTypes.Data[] = [
       { type: "part", data: { id: "part3", sessionID, messageID: "msg3", type: "text", text: "!" } },
     ]
 
@@ -157,14 +160,14 @@ describe.concurrent("core.share", () => {
     const sessionID = Identifier.descending()
     const share = await Share.create({ sessionID })
 
-    const data1: Share.Data[] = [
+    const data1: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part1", sessionID, messageID: "msg1", type: "text", text: "Hello" },
       },
     ]
 
-    const data2: Share.Data[] = [
+    const data2: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part1", sessionID, messageID: "msg1", type: "text", text: "Hello Updated" },
@@ -205,7 +208,7 @@ describe.concurrent("core.share", () => {
   test("should migrate legacy event data into the snapshot", async () => {
     const sessionID = Identifier.descending()
     const share = await Share.create({ sessionID })
-    const data: Share.Data[] = [
+    const data: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part1", sessionID, messageID: "msg1", type: "text", text: "Hello" },
@@ -216,7 +219,7 @@ describe.concurrent("core.share", () => {
     await Storage.write(["share_event", share.id, Identifier.descending()], data)
 
     const result = await Share.data(share.id)
-    const snapshot = await Storage.read<{ data: Share.Data[] }>(["share_snapshot", share.id])
+    const snapshot = await Storage.read<{ data: ShareTypes.Data[] }>(["share_snapshot", share.id])
 
     expect(result).toHaveLength(1)
     expect(snapshot?.data).toHaveLength(1)
@@ -228,7 +231,7 @@ describe.concurrent("core.share", () => {
     const sessionID = Identifier.descending()
     const share = await Share.create({ sessionID })
 
-    const data: Share.Data[] = [
+    const data: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part1", sessionID, messageID: "msg1", type: "text", text: "Test" },
@@ -240,14 +243,14 @@ describe.concurrent("core.share", () => {
         share: { id: share.id, secret: "invalid-secret" },
         data,
       })
-    }).toThrow()
+    }).toThrow(`Хуваалцсан сешний нууц утга буруу байна: ${share.id}`)
 
     await Share.remove({ id: share.id, secret: share.secret })
   })
 
   test("should throw error for non-existent share", async () => {
     const sessionID = Identifier.descending()
-    const data: Share.Data[] = [
+    const data: ShareTypes.Data[] = [
       {
         type: "part",
         data: { id: "part1", sessionID, messageID: "msg1", type: "text", text: "Test" },
@@ -259,14 +262,14 @@ describe.concurrent("core.share", () => {
         share: { id: "non-existent-id", secret: "some-secret" },
         data,
       })
-    }).toThrow()
+    }).toThrow("Хуваалцсан сешн олдсонгүй: non-existent-id")
   })
 
   test("should handle different data types", async () => {
     const sessionID = Identifier.descending()
     const share = await Share.create({ sessionID })
 
-    const data: Share.Data[] = [
+    const data: ShareTypes.Data[] = [
       { type: "session", data: { id: sessionID, status: "running" } as any },
       { type: "message", data: { id: "msg1", sessionID } as any },
       {

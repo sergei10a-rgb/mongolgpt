@@ -24,7 +24,7 @@ app
         info: {
           title: "MongolGPT Enterprise API",
           version: "1.0.0",
-          description: "MongolGPT Enterprise API endpoints",
+          description: "MongolGPT Enterprise API-ийн хандалтын цэгүүд",
         },
         openapi: "3.1.1",
       },
@@ -33,11 +33,11 @@ app
   .post(
     "/share",
     describeRoute({
-      description: "Create a share",
+      description: "Хуваалцсан сешн үүсгэх",
       operationId: "share.create",
       responses: {
         200: {
-          description: "Success",
+          description: "Амжилттай",
           content: {
             "application/json": {
               schema: resolver(
@@ -70,11 +70,11 @@ app
   .post(
     "/share/:shareID/sync",
     describeRoute({
-      description: "Sync share data",
+      description: "Хуваалцсан өгөгдлийг синк хийх",
       operationId: "share.sync",
       responses: {
         200: {
-          description: "Success",
+          description: "Амжилттай",
           content: {
             "application/json": {
               schema: resolver(z.object({})),
@@ -98,11 +98,11 @@ app
   .get(
     "/share/:shareID/data",
     describeRoute({
-      description: "Get share data",
+      description: "Хуваалцсан өгөгдлийг авах",
       operationId: "share.data",
       responses: {
         200: {
-          description: "Success",
+          description: "Амжилттай",
           content: {
             "application/json": {
               schema: resolver(z.array(Share.Data)),
@@ -121,11 +121,11 @@ app
   .delete(
     "/share/:shareID",
     describeRoute({
-      description: "Remove a share",
+      description: "Хуваалцсан сешнийг устгах",
       operationId: "share.remove",
       responses: {
         200: {
-          description: "Success",
+          description: "Амжилттай",
           content: {
             "application/json": {
               schema: resolver(z.object({})),
@@ -149,12 +149,12 @@ app
     const actual = Buffer.from(authorization ?? "")
     const secret = Buffer.from(expected)
     if (actual.length !== secret.length || !timingSafeEqual(actual, secret))
-      return c.json({ error: "Unauthorized" }, 401)
+      return c.json({ error: "Зөвшөөрөлгүй" }, 401)
 
     const body = z.object({ shareID: z.string().min(1) }).safeParse(await c.req.json().catch(() => undefined))
-    if (!body.success) return c.json({ error: "Invalid request", issues: body.error.issues }, 400)
+    if (!body.success) return c.json({ error: "Хүсэлт буруу байна", issues: body.error.issues }, 400)
     return Share.removeAdmin({ id: body.data.shareID })
-      .then(() => c.json({ success: true, message: "Share removed" }))
+      .then(() => c.json({ success: true, message: "Хуваалцсан сешнийг устгалаа" }))
       .catch((error) => c.json({ error: error instanceof Error ? error.message : String(error) }, 400))
   })
 

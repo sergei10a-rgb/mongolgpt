@@ -215,17 +215,17 @@ export namespace Share {
   export const Errors = {
     NotFound: class extends Error {
       constructor(public id: string) {
-        super(`Share not found: ${id}`)
+        super(`Хуваалцсан сешн олдсонгүй: ${id}`)
       }
     },
     InvalidSecret: class extends Error {
       constructor(public id: string) {
-        super(`Share secret invalid: ${id}`)
+        super(`Хуваалцсан сешний нууц утга буруу байна: ${id}`)
       }
     },
     AlreadyExists: class extends Error {
       constructor(public id: string) {
-        super(`Share already exists: ${id}`)
+        super(`Хуваалцсан сешн аль хэдийн байна: ${id}`)
       }
     },
   }
