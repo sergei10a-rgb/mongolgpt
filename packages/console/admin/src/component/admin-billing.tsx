@@ -484,7 +484,7 @@ function marginUnavailableReasonLabel(reason: FinanceMarginUnavailableReason) {
       unvalued_model_costs: "Зарим USD өртөг MNT-д үнэлэгдээгүй",
       missing_payment_settlements: "Зарим төлбөрийн тооцоо нийлүүлэлтийн баримт дутуу",
       ambiguous_payment_settlements: "Давхардсан тооцоо нийлүүлэлтийн баримт шалгах шаардлагатай",
-    }[reason] ?? reason
+    }[reason] ?? `Шалтгаан тодорхойгүй (${reason})`
   )
 }
 
@@ -512,6 +512,6 @@ function paymentStatusLabel(status: string) {
       expired: "Хугацаа дууссан",
       cancelled: "Цуцлагдсан",
       refunded: "Буцаасан",
-    }[status] ?? status
+    }[status] ?? `Тодорхойгүй төлөв (${status})`
   )
 }

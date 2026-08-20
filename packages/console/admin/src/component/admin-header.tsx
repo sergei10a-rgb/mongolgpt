@@ -47,6 +47,6 @@ export function roleLabel(role: string) {
       support: "Хэрэглэгчийн тусламж",
       finance: "Санхүү",
       operations: "Системийн ажиллагаа",
-    }[role] ?? role
+    }[role] ?? `Тодорхойгүй эрх (${role})`
   )
 }

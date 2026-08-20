@@ -139,6 +139,8 @@ describe("admin billing contract", () => {
     expect(view).toContain("Тооцоолоогүй")
     expect(view).toContain("Зарим хэрэглээний бодит өртөг дутуу")
     expect(view).toContain("Зарим төлбөрийн тооцоо нийлүүлэлтийн баримт дутуу")
+    expect(view).toContain("Шалтгаан тодорхойгүй")
+    expect(view).toContain("Тодорхойгүй төлөв")
     expect(view).toContain('currency: "MNT"')
     expect(view).toContain('currency: "USD"')
     expect(view).not.toContain("opencode")

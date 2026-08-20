@@ -7,6 +7,7 @@ describe("MongolGPT admin overview contract", () => {
       await Promise.all([
         Bun.file(resolve(import.meta.dir, "../src/component/admin-overview.tsx")).text(),
         Bun.file(resolve(import.meta.dir, "../src/component/admin-header.tsx")).text(),
+        Bun.file(resolve(import.meta.dir, "../src/lib/system-readiness.ts")).text(),
       ])
     ).join("\n")
 
@@ -18,6 +19,9 @@ describe("MongolGPT admin overview contract", () => {
     expect(view).toContain('healthy: "Хэвийн"')
     expect(view).toContain("Зөвхөн харах горим")
     expect(view).toContain('owner: "Эзэмшигч"')
+    expect(view).toContain("Тодорхойгүй эрх")
+    expect(view).toContain("Тодорхойгүй үр дүн")
+    expect(view).toContain('|| "тодорхойгүй"')
     expect(view).not.toContain(">Platform role<")
     expect(view).not.toContain(">Audit бүртгэл")
     expect(view).not.toContain("Lookup user")

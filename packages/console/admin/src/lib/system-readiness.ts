@@ -124,7 +124,7 @@ export async function getSystemReadiness() {
     QuotaService: WorkerBinding
     UsageQueueReadiness: { get(key: string): Promise<string | null> }
   }
-  const stage = process.env.MONGOLGPT_STAGE?.trim() || "unknown"
+  const stage = process.env.MONGOLGPT_STAGE?.trim() || "тодорхойгүй"
   const runtimeURL = process.env.MONGOLGPT_RUNTIME_URL?.trim() || ""
   const backupsEnabled = process.env.MONGOLGPT_D1_BACKUPS_ENABLED === "true"
   const timeout = () => AbortSignal.timeout(4_000)

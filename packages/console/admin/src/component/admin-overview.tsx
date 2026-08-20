@@ -184,7 +184,7 @@ function outcomeLabel(outcome: string) {
       success: "Амжилттай",
       denied: "Татгалзсан",
       failure: "Алдаатай",
-    }[outcome] ?? outcome
+    }[outcome] ?? `Тодорхойгүй үр дүн (${outcome})`
   )
 }
 

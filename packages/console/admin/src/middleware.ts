@@ -48,7 +48,7 @@ export default createMiddleware({
       if (error instanceof AdminAuthorizationError) {
         return protectedResponse(event.request, 403, error.message)
       }
-      console.error("MongolGPT admin request failed safely", {
+      console.error("MongolGPT админы хүсэлт аюулгүйгээр амжилтгүй боллоо", {
         name: error instanceof Error ? error.name : "UnknownError",
       })
       return protectedResponse(event.request, 503, "Админ үйлчилгээ түр боломжгүй байна.")

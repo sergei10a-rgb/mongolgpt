@@ -171,7 +171,7 @@ function parseTeamDomain(value: string) {
     const exactOrigin = value === url.origin || value === `${url.origin}/`
     const cloudflareTeam = url.hostname.endsWith(".cloudflareaccess.com") && url.hostname !== "cloudflareaccess.com"
     if (url.protocol !== "https:" || !cloudflareTeam || !exactOrigin || url.username || url.password || url.port) {
-      throw new Error("invalid origin")
+      throw new Error("Гарал үүсэл буруу байна.")
     }
     return url
   } catch {
