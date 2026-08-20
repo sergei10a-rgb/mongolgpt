@@ -76,6 +76,9 @@ describe("Cloudflare D1 статистик", () => {
       provider: "nvidia",
       tokens: 37,
     })
+    expect(
+      home.usage["All Users"]["1D"].some((point) => point.segments.some((segment) => segment.model === "Бусад")),
+    ).toBe(true)
     expect(home.market.ALL[0]).toMatchObject({ total: 37 })
     expect(home.country.ALL[0]).toMatchObject({ country: "MN", continent: "AS", tokens: 37 })
     expect(lab?.totals).toMatchObject({ sessions: 1, tokens: 37, models: 1 })

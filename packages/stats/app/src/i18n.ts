@@ -18,7 +18,7 @@ import { dict as uk } from "./i18n/uk"
 import { dict as zh } from "./i18n/zh"
 import { dict as zht } from "./i18n/zht"
 
-const en = {
+export const en = {
   "app.title": "AI Model Usage Rankings | MongolGPT Data",
   "app.description":
     "Explore MongolGPT Go usage across AI models, including token volume, rankings, market share, token pricing, session cost, cache ratio, and geo breakdowns.",

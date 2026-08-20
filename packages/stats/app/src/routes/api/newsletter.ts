@@ -26,7 +26,7 @@ export async function POST(event: { request: Request }) {
     return json({ success: true })
   } catch (error) {
     if (error instanceof InvalidNewsletterSubscriptionError) return json({ error: error.message }, 400)
-    console.error("Newsletter subscription failed", error instanceof Error ? error.name : typeof error)
+    console.error("Мэдээллийн товхимолд бүртгүүлж чадсангүй", error instanceof Error ? error.name : typeof error)
     return json({ error: "Түр алдаа гарлаа. Дараа дахин оролдоно уу." }, 503)
   }
 }

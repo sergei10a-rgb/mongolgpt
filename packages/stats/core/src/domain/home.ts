@@ -562,7 +562,7 @@ function buildUsagePoints(
       date: bucket.label,
       segments: [
         ...segments.map((item) => ({ model: item.model, value: usagePointValue(item.value, metric) })),
-        { model: "Other", value: usagePointValue(Math.max(totalValue - knownValue, 0), metric) },
+        { model: "Бусад", value: usagePointValue(Math.max(totalValue - knownValue, 0), metric) },
       ],
     }
   })
@@ -607,7 +607,7 @@ function buildMarketShare(rows: ProviderMetricRow[], product: UsageProduct, rang
 
     const authors = total.slice(0, 8)
     const knownTokens = authors.reduce((sum, item) => sum + item.tokens, 0)
-    const withOther = [...authors, { provider: "Other", tokens: Math.max(totalTokens - knownTokens, 0) }].filter(
+    const withOther = [...authors, { provider: "Бусад", tokens: Math.max(totalTokens - knownTokens, 0) }].filter(
       (item) => item.tokens > 0,
     )
 
@@ -616,7 +616,7 @@ function buildMarketShare(rows: ProviderMetricRow[], product: UsageProduct, rang
         date: bucket.label,
         total: totalTokens,
         authors: withOther.map((item) => ({
-          author: item.provider === "Other" ? "Other" : formatProvider(item.provider),
+          author: item.provider === "Бусад" ? "Бусад" : formatProvider(item.provider),
           share: round((item.tokens / totalTokens) * 100, 1),
           tokens: item.tokens,
         })),
@@ -711,10 +711,10 @@ function buildModelUsage(rows: StatMetricRow[], window: DateWindow, range: Usage
 
 function buildModelTokenMix(aggregate: ModelAggregate): ModelMixEntry[] {
   const items = [
-    { label: "Input", tokens: aggregate.inputTokens },
-    { label: "Output", tokens: aggregate.outputTokens },
-    { label: "Reasoning", tokens: aggregate.reasoningTokens },
-    { label: "Cached", tokens: aggregate.cacheReadTokens },
+    { label: "Оролт", tokens: aggregate.inputTokens },
+    { label: "Гаралт", tokens: aggregate.outputTokens },
+    { label: "Бодолт", tokens: aggregate.reasoningTokens },
+    { label: "Кэш", tokens: aggregate.cacheReadTokens },
   ].filter((item) => item.tokens > 0)
   const total = items.reduce((sum, item) => sum + item.tokens, 0)
   if (total === 0) return []
