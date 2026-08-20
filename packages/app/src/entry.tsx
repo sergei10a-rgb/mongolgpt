@@ -113,6 +113,9 @@ const runtime = resolveWebRuntime({
   serverPort: import.meta.env.VITE_MONGOLGPT_SERVER_PORT,
   serverUrl: import.meta.env.VITE_MONGOLGPT_SERVER_URL,
 })
+const runtimeMode = import.meta.env.VITE_MONGOLGPT_RUNTIME_MODE ?? runtime.mode
+const runtimeUrl = import.meta.env.VITE_MONGOLGPT_SERVER_URL?.trim() || runtime.serverUrl
+const publicOrigin = import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim() || hostedPublicOriginFallback(location.origin)
 const defaultServer = resolveDefaultServerUrl({
   runtime,
   storedUrl: readDefaultServerUrl(),
@@ -131,9 +134,9 @@ const platform: Platform = {
   platform: "web",
   version: pkg.version,
   account: createHostedAccountPlatform({
-    mode: import.meta.env.VITE_MONGOLGPT_RUNTIME_MODE,
-    runtimeUrl: import.meta.env.VITE_MONGOLGPT_SERVER_URL,
-    publicOrigin: import.meta.env.VITE_MONGOLGPT_PUBLIC_URL,
+    mode: runtimeMode,
+    runtimeUrl,
+    publicOrigin,
   }),
   openLink,
   back,
@@ -191,4 +194,12 @@ if (root instanceof HTMLElement) {
     ),
     root,
   )
+}
+
+function hostedPublicOriginFallback(appOrigin: string) {
+  const parsed = new URL(appOrigin)
+  const host = parsed.hostname
+  const parts = host.split(".")
+  if (parts[0] !== "app" || parts.length < 2) return appOrigin
+  return `${parsed.protocol}://${parts.slice(1).join(".")}${parsed.port ? `:${parsed.port}` : ""}`
 }

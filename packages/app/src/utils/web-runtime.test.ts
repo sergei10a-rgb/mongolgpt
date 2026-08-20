@@ -2,15 +2,28 @@ import { describe, expect, test } from "bun:test"
 import { resolveDefaultServerUrl, resolveWebRuntime } from "./web-runtime"
 
 describe("resolveWebRuntime", () => {
-  test("uses the local bridge for a deployed static app without a hosted runtime", () => {
+  test("infers hosted runtime from app domain when no runtime is configured", () => {
     expect(
       resolveWebRuntime({
         dev: false,
         origin: "https://app.dev.mgpt.mn",
       }),
     ).toEqual({
-      mode: "local-bridge",
-      serverUrl: "http://localhost:4096",
+      mode: "hosted",
+      serverUrl: "https://runtime.dev.mgpt.mn",
+    })
+  })
+
+  test("switches default localhost runtime to inferred hosted runtime on deployed app origins", () => {
+    expect(
+      resolveWebRuntime({
+        dev: false,
+        origin: "https://app.dev.mgpt.mn",
+        serverUrl: "http://localhost:4096",
+      }),
+    ).toEqual({
+      mode: "hosted",
+      serverUrl: "https://runtime.dev.mgpt.mn",
     })
   })
 
@@ -32,7 +45,7 @@ describe("resolveWebRuntime", () => {
     expect(
       resolveWebRuntime({
         dev: false,
-        origin: "https://app.dev.mgpt.mn",
+        origin: "http://localhost:5173",
         serverUrl: "http://[::1]:4096",
       }),
     ).toEqual({
@@ -43,7 +56,7 @@ describe("resolveWebRuntime", () => {
     expect(
       resolveWebRuntime({
         dev: false,
-        origin: "https://app.dev.mgpt.mn",
+        origin: "http://localhost:5173",
         serverUrl: "http://127.12.34.56:4096",
       }),
     ).toEqual({

@@ -178,12 +178,14 @@ function privateHostname(hostname: string) {
 export function HostedAccountGate(props: ParentProps) {
   const language = useLanguage()
   const dialog = useDialog()
+  const derivedRuntimeUrl = hostedRuntimeUrlFallback()
+  const derivedPublicOrigin = hostedPublicOriginFallback()
   const enabled = hostedAccountGateEnabled(
-    import.meta.env.VITE_MONGOLGPT_RUNTIME_MODE,
-    import.meta.env.VITE_MONGOLGPT_SERVER_URL,
+    import.meta.env.VITE_MONGOLGPT_RUNTIME_MODE ?? (derivedRuntimeUrl ? "hosted" : "local-bridge"),
+    derivedRuntimeUrl,
   )
-  const runtimeUrl = import.meta.env.VITE_MONGOLGPT_SERVER_URL?.trim()
-  const publicOrigin = import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim()
+  const runtimeUrl = derivedRuntimeUrl
+  const publicOrigin = derivedPublicOrigin
   const [shown, setShown] = createSignal(false)
   const [session, actions] = createResource(
     () => (enabled && runtimeUrl && publicOrigin ? ([runtimeUrl, publicOrigin] as const) : undefined),
@@ -274,4 +276,41 @@ export function HostedAccountGate(props: ParentProps) {
       {props.children}
     </Show>
   )
+}
+
+function hostedRuntimeUrlFallback() {
+  if (import.meta.env.VITE_MONGOLGPT_SERVER_URL?.trim()) return import.meta.env.VITE_MONGOLGPT_SERVER_URL.trim()
+  if (!isSafeOrigin()) return
+  const parsed = new URL(location.origin)
+  if (parsed.protocol !== "https:") return
+  const host = parsed.hostname
+  const parts = host.split(".")
+  if (parts[0] !== "app" || parts.length < 2) return
+  const runtimeHost = `runtime.${parts.slice(1).join(".")}`
+  const port = parsed.port ? `:${parsed.port}` : ""
+  return `${parsed.protocol}//${runtimeHost}${port}`.replace(/\/+$/, "")
+}
+
+function hostedPublicOriginFallback() {
+  if (import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim()) return import.meta.env.VITE_MONGOLGPT_PUBLIC_URL.trim()
+  if (!isSafeOrigin()) return
+  return hostedPublicOriginFromLocation(location.origin)
+}
+
+function isSafeOrigin() {
+  return (
+    typeof location === "object" &&
+    typeof location.origin === "string" &&
+    location.origin.length > 0 &&
+    !(new URL(location.origin).hostname === "localhost" || new URL(location.origin).hostname === "127.0.0.1")
+  )
+}
+
+function hostedPublicOriginFromLocation(appOrigin: string) {
+  const parsed = new URL(appOrigin)
+  const host = parsed.hostname
+  const parts = host.split(".")
+  if (parts[0] !== "app" || parts.length < 2) return appOrigin
+  const publicHost = parts.slice(1).join(".")
+  return `${parsed.protocol}://${publicHost}${parsed.port ? `:${parsed.port}` : ""}`
 }
