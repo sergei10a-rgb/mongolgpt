@@ -16,7 +16,7 @@ const samples = [
   {
     tool: "apply_patch",
     error:
-      "apply_patch verification failed: Failed to find expected lines in /Users/davidhill/Documents/Local/mongolgpt/packages/ui/src/components/session-turn.tsx",
+      "apply_patch шалгалт амжилтгүй: /Users/davidhill/Documents/Local/mongolgpt/packages/ui/src/components/session-turn.tsx файлаас хүлээсэн мөрүүдийг олж чадсангүй",
   },
   {
     tool: "bash",

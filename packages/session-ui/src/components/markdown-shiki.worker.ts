@@ -42,7 +42,7 @@ self.onmessage = (event: MessageEvent<MarkdownWorkerRequest>) => {
 async function highlight(request: Extract<MarkdownWorkerRequest, { type: "highlight" }>) {
   try {
     const instance = await highlighter
-    if (!instance) throw new Error("Shiki worker is not initialized")
+    if (!instance) throw new Error("Shiki код тодруулагч эхлүүлэгдээгүй байна")
     const language = request.language in bundledLanguages ? request.language : "text"
     if (!instance.getLoadedLanguages().includes(language))
       await instance.loadLanguage(bundledLanguages[language as BundledLanguage])

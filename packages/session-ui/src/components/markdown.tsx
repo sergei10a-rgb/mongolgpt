@@ -77,7 +77,7 @@ async function code(text: string, language: string | undefined, key: string, com
       !(error instanceof MarkdownWorkerSupersededError) &&
       !(error instanceof MarkdownWorkerUnavailableError)
     )
-      console.error("Markdown highlighting worker failed", error)
+      console.error("Markdown код тодруулагч ажиллаж чадсангүй", error)
     return { language: name, generation: 0, stable: [], unstable: [[text, ""] as MarkdownToken] }
   }
 }

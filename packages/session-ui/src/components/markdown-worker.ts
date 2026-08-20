@@ -115,8 +115,8 @@ function getWorker() {
     worker?.terminate()
     worker = undefined
   }
-  worker.onerror = (event) => fail(event.message || "Markdown highlighting worker failed")
-  worker.onmessageerror = () => fail("Markdown worker response failed")
+  worker.onerror = (event) => fail(event.message || "Markdown код тодруулагч ажиллаж чадсангүй")
+  worker.onmessageerror = () => fail("Markdown код тодруулагчийн хариу амжилтгүй боллоо")
   worker.postMessage({ type: "init", theme: MongolGPTTheme } satisfies MarkdownWorkerRequest)
   return worker
 }
