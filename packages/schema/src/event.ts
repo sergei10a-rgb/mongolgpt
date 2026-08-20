@@ -85,7 +85,7 @@ export function latest(definitions: ReadonlyArray<Definition>) {
         if (definition.durable.version > existing.durable.version) result.set(definition.type, definition)
         return result
       }
-      if (definition !== existing) throw new Error(`Duplicate latest event definition for ${definition.type}`)
+      if (definition !== existing) throw new Error(`${definition.type}-ийн хамгийн сүүлийн event тодорхойлолт давхардлаа`)
       return result
     }, new Map<string, Definition>()),
   )
@@ -100,7 +100,7 @@ export function durable<const Definitions extends ReadonlyArray<Definition>>(def
     definitions.reduce((result, definition) => {
       if (!definition.durable) return result
       const key = versionedType(definition.type, definition.durable.version)
-      if (result.has(key)) throw new Error(`Duplicate durable event definition for ${key}`)
+      if (result.has(key)) throw new Error(`${key}-ийн хадгалагддаг event тодорхойлолт давхардлаа`)
       result.set(key, definition)
       return result
     }, new Map<string, Definitions[number]>()),

@@ -1,27 +1,27 @@
 # @mongolgpt/slack
 
-Slack bot integration for mongolgpt that creates threaded conversations.
+Хэлхээ бүрт тусдаа MongolGPT сешн үүсгэн ажилладаг Slack bot-ийн интеграц.
 
-## Setup
+## Тохируулах
 
-1. Create a Slack app at https://api.slack.com/apps
-2. Enable Socket Mode
-3. Add the following OAuth scopes:
+1. https://api.slack.com/apps хаягаар Slack app үүсгэнэ.
+2. Socket Mode-ийг идэвхжүүлнэ.
+3. Дараах OAuth scope-уудыг нэмнэ:
    - `chat:write`
    - `app_mentions:read`
    - `channels:history`
    - `groups:history`
-4. Install the app to your workspace
-5. Set environment variables in `.env`:
+4. App-ийг workspace-дээ суулгана.
+5. `.env` файлд орчны хувьсагчдыг тохируулна:
    - `SLACK_BOT_TOKEN` - Bot User OAuth Token
-   - `SLACK_SIGNING_SECRET` - Signing Secret from Basic Information
-   - `SLACK_APP_TOKEN` - App-Level Token from Basic Information
+   - `SLACK_SIGNING_SECRET` - Basic Information хэсгийн Signing Secret
+   - `SLACK_APP_TOKEN` - Basic Information хэсгийн App-Level Token
 
-## Usage
+## Ашиглах
 
 ```bash
-# Edit .env with your Slack app credentials
+# .env файлд Slack app-ийн нууц утгуудыг тохируулна
 bun dev
 ```
 
-The bot will respond to messages in channels where it's added, creating separate mongolgpt sessions for each thread.
+Bot нэмэгдсэн сувгуудад ирсэн зурваст хариулж, хэлхээ бүрт тусдаа MongolGPT сешн үүсгэнэ.

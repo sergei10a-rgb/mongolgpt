@@ -3,8 +3,8 @@ import { mkdir, rm } from "node:fs/promises"
 
 export const FolderWorkspacePlugin: Plugin = async ({ experimental_workspace }) => {
   experimental_workspace.register("folder", {
-    name: "Folder",
-    description: "Create a blank folder",
+    name: "Хавтас",
+    description: "Хоосон хавтас үүсгэнэ",
     configure(config) {
       const rand = "" + Math.random()
 

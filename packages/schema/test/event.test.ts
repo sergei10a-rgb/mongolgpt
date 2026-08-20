@@ -34,4 +34,17 @@ describe("public event schemas", () => {
 
     expect(Event.durable([definition]).get("test.durable.1")).toBe(definition)
   })
+
+  test("duplicate event definitions report Mongolian diagnostics", () => {
+    const first = Event.define({ type: "test.duplicate", schema: {} })
+    const second = Event.define({ type: "test.duplicate", schema: {} })
+    expect(() => Event.latest([first, second])).toThrow("хамгийн сүүлийн event тодорхойлолт давхардлаа")
+
+    const durable = Event.define({
+      type: "test.duplicate-durable",
+      durable: { aggregate: "id", version: 1 },
+      schema: {},
+    })
+    expect(() => Event.durable([durable, durable])).toThrow("хадгалагддаг event тодорхойлолт давхардлаа")
+  })
 })

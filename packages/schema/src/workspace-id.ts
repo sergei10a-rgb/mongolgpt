@@ -9,7 +9,7 @@ export const WorkspaceID = Schema.String.check(Schema.isStartsWith("wrk")).pipe(
     return {
       ascending: (id?: string) => {
         if (!id) return create()
-        if (!id.startsWith("wrk")) throw new Error(`ID ${id} does not start with wrk`)
+        if (!id.startsWith("wrk")) throw new Error(`ID ${id} нь wrk угтвараар эхлэхгүй байна`)
         return schema.make(id)
       },
       create,

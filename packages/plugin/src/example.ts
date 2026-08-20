@@ -5,12 +5,12 @@ export const ExamplePlugin: Plugin = async (_ctx) => {
   return {
     tool: {
       mytool: tool({
-        description: "This is a custom tool",
+        description: "Энэ бол тусгай хэрэгсэл",
         args: {
           foo: tool.schema.string().describe("foo"),
         },
         async execute(args) {
-          return `Hello ${args.foo}!`
+          return `Сайн байна уу, ${args.foo}!`
         },
       }),
     },
