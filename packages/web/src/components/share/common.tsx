@@ -16,7 +16,7 @@ export function useShareMessages() {
   if (value) {
     return value
   }
-  throw new Error("ShareI18nProvider is required")
+  throw new Error("ShareI18nProvider шаардлагатай")
 }
 
 export function normalizeLocale(locale: string) {
@@ -62,7 +62,7 @@ export function AnchorIcon(props: AnchorProps) {
 
           navigator.clipboard
             .writeText(`${origin}${pathname}${search}${hash}`)
-            .catch((err) => console.error("Copy failed", err))
+            .catch((err) => console.error("Хуулж чадсангүй", err))
 
           setCopied(true)
           setTimeout(() => setCopied(false), 3000)

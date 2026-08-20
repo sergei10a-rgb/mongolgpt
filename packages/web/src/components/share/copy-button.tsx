@@ -13,7 +13,7 @@ export function CopyButton(props: CopyButtonProps) {
 
   function handleCopyClick() {
     if (props.text) {
-      navigator.clipboard.writeText(props.text).catch((err) => console.error("Copy failed", err))
+      navigator.clipboard.writeText(props.text).catch((err) => console.error("Хуулж чадсангүй", err))
 
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)

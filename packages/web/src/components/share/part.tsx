@@ -66,7 +66,7 @@ export function Part(props: PartProps) {
               const { origin, pathname, search } = window.location
               navigator.clipboard
                 .writeText(`${origin}${pathname}${search}${hash}`)
-                .catch((err) => console.error("Copy failed", err))
+                .catch((err) => console.error("Хуулж чадсангүй", err))
 
               setCopied(true)
               setTimeout(() => setCopied(false), 3000)

@@ -102,7 +102,7 @@ export function ContentDiff(props: Props) {
         }
       }
     } catch (error) {
-      console.error("Failed to parse patch:", error)
+      console.error("Өөрчлөлтийн нөхөөсийг задлан уншиж чадсангүй:", error)
       return []
     }
 

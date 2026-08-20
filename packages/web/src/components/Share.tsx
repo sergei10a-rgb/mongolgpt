@@ -87,7 +87,7 @@ export default function Share(props: {
     }
 
     if (!apiUrl) {
-      console.error("API URL not found in environment variables")
+      console.error("Орчны хувьсагчдаас API URL олдсонгүй")
       setConnectionStatus(["error", props.messages.error_api_url_not_found])
       return
     }
@@ -142,13 +142,13 @@ export default function Share(props: {
             })
           }
         } catch (error) {
-          console.error("Error parsing WebSocket message:", error)
+          console.error("WebSocket зурвасыг задлахад алдаа гарлаа:", error)
         }
       }
 
       // Handle errors
       socket.onerror = (error) => {
-        console.error("WebSocket error:", error)
+        console.error("WebSocket-ийн алдаа:", error)
         setConnectionStatus(["error", props.messages.error_connection_failed])
       }
 
@@ -586,7 +586,7 @@ export function fromV1(v1: Message.Info): MessageWithParts {
                     metadata,
                   }
                 }
-                throw new Error("unknown tool invocation state")
+                throw new Error("Хэрэгслийн дуудлагын төлөв танигдсангүй")
               })(),
             },
           ] as unknown as MessageV2.Part[]
@@ -640,5 +640,5 @@ export function fromV1(v1: Message.Info): MessageWithParts {
     } as MessageWithParts
   }
 
-  throw new Error("unknown message type")
+  throw new Error("Зурвасын төрөл танигдсангүй")
 }
