@@ -198,6 +198,14 @@ export function requirePlatformAdminPermission(context: PlatformAdminContext, pe
   throw new AdminAuthorizationError("forbidden", "Энэ үйлдлийг хийх админы эрх хүрэлцэхгүй байна.")
 }
 
+export function requirePlatformAdminOwner(context: PlatformAdminContext) {
+  requirePlatformAdminPermission(context, "admins.manage")
+  if (context.role !== "owner") {
+    throw new AdminAuthorizationError("forbidden", "Энэ үйлдлийг зөвхөн платформын эзэмшигч хийж болно.")
+  }
+  return context
+}
+
 export async function writeAdminAudit(input: AdminAuditInput) {
   await Database.use((tx) => writeAdminAuditWithDb(tx, input))
 }

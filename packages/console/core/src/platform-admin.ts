@@ -17,6 +17,10 @@ export const PlatformAdminPermissions = [
 export type PlatformAdminRole = (typeof PlatformAdminRoles)[number]
 export type PlatformAdminPermission = (typeof PlatformAdminPermissions)[number]
 
+// Owners are bootstrap-controlled and can never be assigned through the operator UI.
+export const PlatformAdminAssignableRoles = ["administrator", "support", "finance", "operations"] as const
+export type PlatformAdminAssignableRole = (typeof PlatformAdminAssignableRoles)[number]
+
 const grants: Record<PlatformAdminRole, ReadonlySet<PlatformAdminPermission>> = {
   owner: new Set(PlatformAdminPermissions),
   administrator: new Set([
@@ -38,6 +42,10 @@ const grants: Record<PlatformAdminRole, ReadonlySet<PlatformAdminPermission>> = 
 
 export function isPlatformAdminRole(value: unknown): value is PlatformAdminRole {
   return typeof value === "string" && PlatformAdminRoles.some((role) => role === value)
+}
+
+export function isPlatformAdminAssignableRole(value: unknown): value is PlatformAdminAssignableRole {
+  return typeof value === "string" && PlatformAdminAssignableRoles.some((role) => role === value)
 }
 
 export function hasPlatformAdminPermission(role: PlatformAdminRole, permission: PlatformAdminPermission) {

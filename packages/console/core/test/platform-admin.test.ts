@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { hasPlatformAdminPermission, isPlatformAdminRole, normalizePlatformAdminEmail } from "../src/platform-admin"
+import {
+  hasPlatformAdminPermission,
+  isPlatformAdminAssignableRole,
+  isPlatformAdminRole,
+  normalizePlatformAdminEmail,
+} from "../src/platform-admin"
 
 describe("platform admin RBAC", () => {
   test("keeps owner-only administrator management and cancellation permissions separate", () => {
@@ -19,6 +24,13 @@ describe("platform admin RBAC", () => {
     expect(isPlatformAdminRole("owner")).toBe(true)
     expect(isPlatformAdminRole("admin")).toBe(false)
     expect(isPlatformAdminRole("member")).toBe(false)
+  })
+
+  test("allows the operator UI to assign only non-owner roles", () => {
+    expect(isPlatformAdminAssignableRole("administrator")).toBe(true)
+    expect(isPlatformAdminAssignableRole("support")).toBe(true)
+    expect(isPlatformAdminAssignableRole("owner")).toBe(false)
+    expect(isPlatformAdminAssignableRole("member")).toBe(false)
   })
 
   test("normalizes administrator email addresses", () => {

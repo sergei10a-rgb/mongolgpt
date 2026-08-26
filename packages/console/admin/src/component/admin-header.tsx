@@ -2,7 +2,7 @@ import { A } from "@solidjs/router"
 import { Show } from "solid-js"
 import type { PlatformAdminContext } from "~/lib/admin-context"
 
-export function AdminHeader(props: { admin: PlatformAdminContext; active: "overview" | "users" | "billing" }) {
+export function AdminHeader(props: { admin: PlatformAdminContext; active: "overview" | "users" | "billing" | "admins" }) {
   return (
     <header data-component="admin-header">
       <div data-component="admin-branding">
@@ -27,6 +27,11 @@ export function AdminHeader(props: { admin: PlatformAdminContext; active: "overv
           <Show when={props.admin.permissions.includes("billing.read")}>
             <A href="/billing" data-active={props.active === "billing" ? "true" : undefined}>
               Санхүү
+            </A>
+          </Show>
+          <Show when={props.admin.permissions.includes("admins.manage") && props.admin.role === "owner"}>
+            <A href="/admins" data-active={props.active === "admins" ? "true" : undefined}>
+              Оператор
             </A>
           </Show>
         </nav>

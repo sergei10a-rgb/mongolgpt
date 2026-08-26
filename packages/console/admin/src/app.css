@@ -130,7 +130,8 @@ a {
 
 main[data-page="admin-overview"],
 main[data-page="admin-users"],
-main[data-page="admin-billing"] {
+main[data-page="admin-billing"],
+main[data-page="admin-operators"] {
   width: min(1240px, calc(100% - 48px));
   margin: 0 auto;
   padding: 40px 0 64px;
@@ -450,6 +451,105 @@ h2 {
   margin-bottom: 28px;
   padding-block: 16px;
   border-block: 1px solid #dfe2e5;
+}
+
+[data-component="operator-create"] {
+  margin-bottom: 40px;
+}
+
+[data-component="operator-create"] form {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 220px auto;
+  align-items: end;
+  gap: 10px;
+  padding-top: 16px;
+}
+
+[data-component="operator-create"] label,
+[data-component="operator-action"] label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: #686d73;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+[data-component="operator-create"] input,
+[data-component="operator-create"] select,
+[data-component="operator-action"] select {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #cbd0d5;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #17191c;
+  font: inherit;
+  font-size: 12px;
+}
+
+[data-component="operator-create"] button,
+[data-component="operator-action"] button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #17191c;
+  border-radius: 4px;
+  background: #17191c;
+  color: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+[data-component="operator-create"] input:focus,
+[data-component="operator-create"] select:focus,
+[data-component="operator-action"] select:focus {
+  border-color: #295ea8;
+  outline: 2px solid rgba(41, 94, 168, 0.2);
+  outline-offset: 1px;
+}
+
+[data-component="operator-directory"] {
+  margin-top: 8px;
+}
+
+[data-component="operator-action"] {
+  width: min(260px, 65vw);
+}
+
+[data-component="operator-action"] summary {
+  width: fit-content;
+  color: #295ea8;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+[data-component="operator-action"] > div,
+[data-component="operator-action"] form {
+  display: grid;
+  gap: 8px;
+}
+
+[data-component="operator-action"] > div {
+  padding-top: 12px;
+}
+
+[data-component="operator-action"] button {
+  justify-self: start;
+}
+
+[data-component="operator-action"] button[data-variant="danger"] {
+  border-color: #a2362c;
+  background: #a2362c;
+}
+
+[data-component="operator-create"] button:disabled,
+[data-component="operator-action"] button:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 [data-component="user-filters"] label,
@@ -823,12 +923,14 @@ td[data-empty] {
   }
 
   [data-component="user-filters"],
-  [data-component="billing-filters"] {
+  [data-component="billing-filters"],
+  [data-component="operator-create"] form {
     grid-template-columns: minmax(220px, 1fr) 1fr 1fr;
   }
 
   [data-component="user-filters"] button,
-  [data-component="billing-filters"] button {
+  [data-component="billing-filters"] button,
+  [data-component="operator-create"] button {
     grid-column: 1 / -1;
     justify-self: start;
   }
@@ -863,7 +965,8 @@ td[data-empty] {
 
   main[data-page="admin-overview"],
   main[data-page="admin-users"],
-  main[data-page="admin-billing"] {
+  main[data-page="admin-billing"],
+  main[data-page="admin-operators"] {
     width: calc(100% - 28px);
     padding-top: 28px;
   }
@@ -914,12 +1017,14 @@ td[data-empty] {
   }
 
   [data-component="user-filters"],
-  [data-component="billing-filters"] {
+  [data-component="billing-filters"],
+  [data-component="operator-create"] form {
     grid-template-columns: 1fr;
   }
 
   [data-component="user-filters"] button,
-  [data-component="billing-filters"] button {
+  [data-component="billing-filters"] button,
+  [data-component="operator-create"] button {
     grid-column: auto;
     width: 100%;
   }
@@ -961,6 +1066,9 @@ td[data-empty] {
   [data-component="user-filters"] input,
   [data-component="user-filters"] select,
   [data-component="billing-filters"] select,
+  [data-component="operator-create"] input,
+  [data-component="operator-create"] select,
+  [data-component="operator-action"] select,
   [data-component="account-action"] textarea,
   [data-component="pagination"] a {
     border-color: #34383d;
@@ -999,6 +1107,9 @@ td[data-empty] {
   [data-component="user-filters"] input,
   [data-component="user-filters"] select,
   [data-component="billing-filters"] select,
+  [data-component="operator-create"] input,
+  [data-component="operator-create"] select,
+  [data-component="operator-action"] select,
   [data-component="account-action"] textarea {
     color: #d8dcdf;
   }
