@@ -548,7 +548,7 @@ const verifyPartialFlushOnInterruption = (kind: FragmentKind) =>
       {
         type: "assistant",
         finish: "error",
-        error: { type: "unknown", message: "Provider turn interrupted" },
+        error: { type: "unknown", message: "Загварын үйлчилгээний ээлж тасалдлаа" },
         content: [
           kind === "tool input"
             ? { type: "tool", id: fragmentID(kind, "interrupted"), state: { status: "error" } }
@@ -1101,7 +1101,7 @@ describe("SessionRunnerLLM", () => {
       currentModel = compactModel
       requests.length = 0
       responses = [
-        fragmentFixture("text", "text-summary", ["## Goal\n- Preserve the task"]).completeEvents,
+        fragmentFixture("text", "text-summary", ["## Зорилго\n- Ажлын зорилгыг хадгал"]).completeEvents,
         fragmentFixture("text", "text-final", ["Continued"]).completeEvents,
       ]
       yield* session.prompt({
@@ -1112,22 +1112,22 @@ describe("SessionRunnerLLM", () => {
       yield* session.resume(sessionID)
 
       expect(requests).toHaveLength(2)
-      expect(userTexts(requests[0])[0]).toContain("## Goal")
+      expect(userTexts(requests[0])[0]).toContain("## Зорилго")
       expect(userTexts(requests[1])).toHaveLength(1)
-      expect(userTexts(requests[1])[0]).toContain("<summary>\n## Goal\n- Preserve the task\n</summary>")
-      expect(userTexts(requests[1])[0]).toContain(`[User]: ${"Recent exact request ".repeat(180)}`)
+      expect(userTexts(requests[1])[0]).toContain("<summary>\n## Зорилго\n- Ажлын зорилгыг хадгал\n</summary>")
+      expect(userTexts(requests[1])[0]).toContain(`[Хэрэглэгч]: ${"Recent exact request ".repeat(180)}`)
 
       const context = yield* (yield* SessionStore.Service).context(sessionID)
       expect(context.map((message) => message.type)).toEqual(["compaction", "assistant"])
       expect(context[0]).toMatchObject({
         type: "compaction",
-        summary: "## Goal\n- Preserve the task",
+        summary: "## Зорилго\n- Ажлын зорилгыг хадгал",
       })
 
       requests.length = 0
       executions.length = 0
       responses = [
-        fragmentFixture("text", "text-summary-2", ["## Goal\n- Preserve the updated task"]).completeEvents,
+        fragmentFixture("text", "text-summary-2", ["## Зорилго\n- Шинэчилсэн зорилгыг хадгал"]).completeEvents,
         fragmentFixture("text", "text-final-2", ["Continued again"]).completeEvents,
       ]
       yield* session.prompt({
@@ -1139,12 +1139,12 @@ describe("SessionRunnerLLM", () => {
 
       expect(requests).toHaveLength(2)
       expect(userTexts(requests[0])[0]).toContain(
-        "<previous-summary>\n## Goal\n- Preserve the task\n</previous-summary>",
+        "<previous-summary>\n## Зорилго\n- Ажлын зорилгыг хадгал\n</previous-summary>",
       )
       expect(userTexts(requests[0])[0]).toContain("Recent exact request")
       expect((yield* (yield* SessionStore.Service).context(sessionID))[0]).toMatchObject({
         type: "compaction",
-        summary: "## Goal\n- Preserve the updated task",
+        summary: "## Зорилго\n- Шинэчилсэн зорилгыг хадгал",
       })
     }),
   )
@@ -1157,17 +1157,17 @@ describe("SessionRunnerLLM", () => {
           LLMEvent.stepStart({ index: 0 }),
           LLMEvent.providerError({ message: "prompt too long", classification: "context-overflow" }),
         ],
-        fragmentFixture("text", "text-summary", ["## Goal\n- Recover overflow"]).completeEvents,
+        fragmentFixture("text", "text-summary", ["## Зорилго\n- Контекст хэтрэлтийг сэргээ"]).completeEvents,
         fragmentFixture("text", "text-final", ["Recovered"]).completeEvents,
       ]
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Continue" }), resume: false })
       yield* session.resume(sessionID)
 
       expect(requests).toHaveLength(3)
-      expect(userTexts(requests[1])[0]).toContain("## Goal")
-      expect(userTexts(requests[2])[0]).toContain("<summary>\n## Goal\n- Recover overflow\n</summary>")
+      expect(userTexts(requests[1])[0]).toContain("## Зорилго")
+      expect(userTexts(requests[2])[0]).toContain("<summary>\n## Зорилго\n- Контекст хэтрэлтийг сэргээ\n</summary>")
       expect(yield* session.context(sessionID)).toMatchObject([
-        { type: "compaction", summary: "## Goal\n- Recover overflow" },
+        { type: "compaction", summary: "## Зорилго\n- Контекст хэтрэлтийг сэргээ" },
         { type: "assistant", finish: "stop" },
       ])
       yield* replaySessionProjection(sessionID)
@@ -1187,7 +1187,7 @@ describe("SessionRunnerLLM", () => {
       ]
       responses = [
         overflow(),
-        fragmentFixture("text", "text-summary", ["## Goal\n- Recover once"]).completeEvents,
+        fragmentFixture("text", "text-summary", ["## Зорилго\n- Нэг удаа сэргээ"]).completeEvents,
         overflow(),
       ]
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Continue" }), resume: false })
@@ -1215,7 +1215,7 @@ describe("SessionRunnerLLM", () => {
         }),
       )
       responses = [
-        fragmentFixture("text", "text-summary", ["## Goal\n- Recover raw overflow"]).completeEvents,
+        fragmentFixture("text", "text-summary", ["## Зорилго\n- Шууд контекст хэтрэлтийг сэргээ"]).completeEvents,
         fragmentFixture("text", "text-final", ["Recovered"]).completeEvents,
       ]
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Continue" }), resume: false })
@@ -1223,7 +1223,7 @@ describe("SessionRunnerLLM", () => {
 
       expect(requests).toHaveLength(3)
       expect(yield* session.context(sessionID)).toMatchObject([
-        { type: "compaction", summary: "## Goal\n- Recover raw overflow" },
+        { type: "compaction", summary: "## Зорилго\n- Шууд контекст хэтрэлтийг сэргээ" },
         { type: "assistant", finish: "stop" },
       ])
     }),
@@ -1254,7 +1254,7 @@ describe("SessionRunnerLLM", () => {
       const session = yield* setupOverflowRecovery
       responses = [
         [LLMEvent.providerError({ message: "prompt too long", classification: "context-overflow" })],
-        fragmentFixture("text", "text-summary", ["## Goal\n- Interrupted"]).completeEvents,
+        fragmentFixture("text", "text-summary", ["## Зорилго\n- Тасалдсан"]).completeEvents,
       ]
       const firstGate = yield* Deferred.make<void>()
       const summaryGate = yield* Deferred.make<void>()
@@ -2251,7 +2251,7 @@ describe("SessionRunnerLLM", () => {
             {
               type: "tool",
               id: "call-interrupted",
-              state: { status: "error", error: { type: "unknown", message: "Tool execution interrupted" } },
+              state: { status: "error", error: { type: "unknown", message: "Хэрэгслийн ажиллуулах үйлдэл тасалдлаа" } },
             },
           ],
         },
@@ -2661,7 +2661,7 @@ describe("SessionRunnerLLM", () => {
             {
               type: "tool",
               id: "call-question",
-              state: { status: "error", error: { type: "unknown", message: "Tool execution interrupted" } },
+              state: { status: "error", error: { type: "unknown", message: "Хэрэгслийн ажиллуулах үйлдэл тасалдлаа" } },
             },
           ],
         },
@@ -2733,7 +2733,7 @@ describe("SessionRunnerLLM", () => {
             {
               type: "tool",
               id: "call-before-interrupt",
-              state: { status: "error", error: { type: "unknown", message: "Tool execution interrupted" } },
+              state: { status: "error", error: { type: "unknown", message: "Хэрэгслийн ажиллуулах үйлдэл тасалдлаа" } },
             },
           ],
         },
@@ -2805,7 +2805,7 @@ describe("SessionRunnerLLM", () => {
             {
               type: "tool",
               id: "call-await-interrupt",
-              state: { status: "error", error: { type: "unknown", message: "Tool execution interrupted" } },
+              state: { status: "error", error: { type: "unknown", message: "Хэрэгслийн ажиллуулах үйлдэл тасалдлаа" } },
             },
           ],
         },
@@ -3176,7 +3176,7 @@ describe("SessionRunnerLLM", () => {
       response = [LLMEvent.textStart({ id: "text-1" }), LLMEvent.textStart({ id: "text-1" })]
 
       expect(yield* session.resume(sessionID).pipe(Effect.catchDefect(Effect.succeed))).toBe(
-        "Duplicate text start: text-1",
+        "Текстийн эхлэлт давхардав: text-1",
       )
     }),
   )
@@ -3220,7 +3220,7 @@ describe("SessionRunnerLLM", () => {
       response = [LLMEvent.toolInputDelta({ id: "call-1", name: "read", text: "{}" })]
 
       expect(yield* session.resume(sessionID).pipe(Effect.catchDefect(Effect.succeed))).toBe(
-        "Tool input delta before start: call-1",
+        "Хэрэгслийн оролтын өөрчлөлт эхлэлээс өмнө ирлээ: call-1",
       )
     }),
   )

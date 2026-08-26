@@ -201,7 +201,7 @@ describe("SessionRunnerModel", () => {
         modelID: "test-model",
         variant: "unknown",
       })
-      expect(failure.message).toBe("Variant unavailable for test-provider/test-model: unknown")
+      expect(failure.message).toBe("test-provider/test-model загварын хувилбар ашиглах боломжгүй байна: unknown")
     }),
   )
 
@@ -325,7 +325,7 @@ describe("SessionRunnerModel", () => {
         modelID: "test-model",
         api: "aisdk:@ai-sdk/google",
       })
-      expect(failure.message).toBe("Unsupported API for test-provider/test-model: aisdk:@ai-sdk/google")
+      expect(failure.message).toBe("test-provider/test-model загварт дэмжигдээгүй API: aisdk:@ai-sdk/google")
     }),
   )
 

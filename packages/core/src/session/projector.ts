@@ -114,7 +114,7 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
     const decodeRow = (row: typeof SessionMessageTable.$inferSelect) =>
       decodeMessage({ ...row.data, id: row.id, type: row.type })
     const updateMessage = (message: SessionMessage.Message) => {
-      if (event.durable === undefined) return Effect.die("Durable Session event is missing aggregate sequence")
+      if (event.durable === undefined) return Effect.die("Тогтвортой сессийн үйл явдлын нэгтгэсэн дараалал алга байна")
       const encoded = encodeMessage(message)
       const { id, type, ...data } = encoded
       return db
@@ -191,7 +191,7 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
 }
 
 function insertMessage(db: DatabaseService, event: SessionEvent.Event, message: SessionMessage.Message) {
-  if (event.durable === undefined) return Effect.die("Durable Session event is missing aggregate sequence")
+  if (event.durable === undefined) return Effect.die("Тогтвортой сессийн үйл явдлын нэгтгэсэн дараалал алга байна")
   const encoded = encodeMessage(message)
   const { id, type, ...data } = encoded
   return db
@@ -349,7 +349,7 @@ export const layer = Layer.effectDiscard(
     )
     yield* events.project(SessionEvent.Prompted, (event) =>
       Effect.gen(function* () {
-        if (event.durable === undefined) return yield* Effect.die("Durable Session event is missing aggregate sequence")
+        if (event.durable === undefined) return yield* Effect.die("Тогтвортой сессийн үйл явдлын нэгтгэсэн дараалал алга байна")
         yield* SessionInput.projectPrompted(db, {
           id: event.data.messageID,
           sessionID: event.data.sessionID,
@@ -363,7 +363,7 @@ export const layer = Layer.effectDiscard(
     )
     yield* events.project(SessionEvent.PromptAdmitted, (event) =>
       Effect.gen(function* () {
-        if (event.durable === undefined) return yield* Effect.die("Durable Session event is missing aggregate sequence")
+        if (event.durable === undefined) return yield* Effect.die("Тогтвортой сессийн үйл явдлын нэгтгэсэн дараалал алга байна")
         yield* SessionInput.projectAdmitted(db, {
           admittedSeq: event.durable.seq,
           id: event.data.messageID,
@@ -425,7 +425,7 @@ export const layer = Layer.effectDiscard(
           )
           .get()
           .pipe(Effect.orDie)
-        if (!boundary) return yield* Effect.die(`Revert boundary message not found: ${event.data.messageID}`)
+        if (!boundary) return yield* Effect.die(`Буцаах заагийн мессеж олдсонгүй: ${event.data.messageID}`)
         yield* db
           .delete(SessionMessageTable)
           .where(

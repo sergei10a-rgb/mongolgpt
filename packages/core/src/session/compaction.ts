@@ -13,42 +13,42 @@ const DEFAULT_BUFFER = 20_000
 const DEFAULT_KEEP_TOKENS = 8_000
 const TOOL_OUTPUT_MAX_CHARS = 2_000
 const SUMMARY_OUTPUT_TOKENS = 4_096
-const SUMMARY_TEMPLATE = `Output exactly the Markdown structure shown inside <template> and keep the section order unchanged. Do not include the <template> tags in your response.
+const SUMMARY_TEMPLATE = `<template> дотор үзүүлсэн Markdown бүтцийг яг хэвээр нь гаргаж, хэсгүүдийн дарааллыг бүү өөрчил. Хариултдаа <template> тэмдэглэгээг бүү оруул.
 <template>
-## Goal
-- [single-sentence task summary]
+## Зорилго
+- [ажлын нэг өгүүлбэртэй хураангуй]
 
-## Constraints & Preferences
-- [user constraints, preferences, specs, or "(none)"]
+## Хязгаарлалт ба сонголт
+- [хэрэглэгчийн хязгаарлалт, сонголт, шаардлага эсвэл "(байхгүй)"]
 
-## Progress
-### Done
-- [completed work or "(none)"]
+## Явц
+### Дууссан
+- [дууссан ажил эсвэл "(байхгүй)"]
 
-### In Progress
-- [current work or "(none)"]
+### Хийгдэж буй
+- [одоогийн ажил эсвэл "(байхгүй)"]
 
-### Blocked
-- [blockers or "(none)"]
+### Саатсан
+- [саад болсон зүйлс эсвэл "(байхгүй)"]
 
-## Key Decisions
-- [decision and why, or "(none)"]
+## Гол шийдвэрүүд
+- [шийдвэр болон шалтгаан эсвэл "(байхгүй)"]
 
-## Next Steps
-- [ordered next actions or "(none)"]
+## Дараагийн алхмууд
+- [дарааллаар хийх дараагийн ажлууд эсвэл "(байхгүй)"]
 
-## Critical Context
-- [important technical facts, errors, open questions, or "(none)"]
+## Чухал контекст
+- [чухал техникийн баримт, алдаа, нээлттэй асуулт эсвэл "(байхгүй)"]
 
-## Relevant Files
-- [file or directory path: why it matters, or "(none)"]
+## Холбогдох файлууд
+- [файл эсвэл хавтасны зам: яагаад хамаатай эсвэл "(байхгүй)"]
 </template>
 
-Rules:
-- Keep every section, even when empty.
-- Use terse bullets, not prose paragraphs.
-- Preserve exact file paths, commands, error strings, and identifiers when known.
-- Do not mention the summary process or that context was compacted.`
+Дүрэм:
+- Хоосон байсан ч бүх хэсгийг хадгал.
+- Урт догол мөрийн оронд товч жагсаалт ашигла.
+- Мэдэгдэж буй файлын зам, команд, алдааны мөр болон танигчийг яг хэвээр нь хадгал.
+- Хураангуй үүсгэсэн үйл явц эсвэл контекстийг хураангуйлсан талаар бүү дурд.`
 
 type Entry = {
   readonly seq: number
@@ -79,40 +79,43 @@ type Input = {
 const estimate = (value: unknown) => Token.estimate(JSON.stringify(value))
 
 const truncate = (value: string) =>
-  value.length <= TOOL_OUTPUT_MAX_CHARS ? value : `${value.slice(0, TOOL_OUTPUT_MAX_CHARS)}\n[truncated]`
+  value.length <= TOOL_OUTPUT_MAX_CHARS ? value : `${value.slice(0, TOOL_OUTPUT_MAX_CHARS)}\n[богиносгов]`
 
 export const serializeToolContent = (content: SessionMessage.ToolStateCompleted["content"]) =>
   content
     .map((item) =>
-      item.type === "text" ? item.text : `[Attached ${item.mime}${item.name === undefined ? "" : `: ${item.name}`}]`,
+      item.type === "text" ? item.text : `[Хавсралт ${item.mime}${item.name === undefined ? "" : `: ${item.name}`}]`,
     )
     .join("\n")
 
 const serialize = (message: SessionMessage.Message) => {
   if (message.type === "user") {
-    const files = message.files?.map((file) => `[Attached ${file.mime}: ${file.name ?? file.uri}]`) ?? []
-    return [`[User]: ${message.text}`, ...files].join("\n")
+    const files = message.files?.map((file) => `[Хавсралт ${file.mime}: ${file.name ?? file.uri}]`) ?? []
+    return [`[Хэрэглэгч]: ${message.text}`, ...files].join("\n")
   }
   if (message.type === "assistant") {
     return message.content
       .flatMap((part) => {
-        if (part.type === "text") return [`[Assistant]: ${part.text}`]
-        if (part.type === "reasoning") return part.text ? [`[Assistant reasoning]: ${part.text}`] : []
+        if (part.type === "text") return [`[Туслах]: ${part.text}`]
+        if (part.type === "reasoning") return part.text ? [`[Туслахын үндэслэл]: ${part.text}`] : []
         const input = typeof part.state.input === "string" ? part.state.input : JSON.stringify(part.state.input)
         if (part.state.status === "completed")
           return [
-            `[Assistant tool call]: ${part.name}(${input})`,
-            `[Tool result]: ${truncate(serializeToolContent(part.state.content))}`,
+            `[Туслахын хэрэгслийн дуудлага]: ${part.name}(${input})`,
+            `[Хэрэгслийн үр дүн]: ${truncate(serializeToolContent(part.state.content))}`,
           ]
         if (part.state.status === "error")
-          return [`[Assistant tool call]: ${part.name}(${input})`, `[Tool error]: ${part.state.error.message}`]
-        return [`[Assistant tool call]: ${part.name}(${input})`]
+          return [
+            `[Туслахын хэрэгслийн дуудлага]: ${part.name}(${input})`,
+            `[Хэрэгслийн алдаа]: ${part.state.error.message}`,
+          ]
+        return [`[Туслахын хэрэгслийн дуудлага]: ${part.name}(${input})`]
       })
       .join("\n")
   }
-  if (message.type === "system") return `[System update]: ${message.text}`
-  if (message.type === "synthetic") return `[Synthetic context]: ${message.text}`
-  if (message.type === "shell") return `[Shell]: ${message.command}\n${truncate(message.output)}`
+  if (message.type === "system") return `[Системийн шинэчлэл]: ${message.text}`
+  if (message.type === "synthetic") return `[Үүсгэсэн контекст]: ${message.text}`
+  if (message.type === "shell") return `[Терминал]: ${message.command}\n${truncate(message.output)}`
   return ""
 }
 
@@ -166,8 +169,8 @@ const select = (
 export const buildPrompt = (input: { readonly previousSummary?: string; readonly context: readonly string[] }) =>
   [
     input.previousSummary
-      ? `Update the anchored summary below using the conversation history above.\nPreserve still-true details, remove stale details, and merge in the new facts.\n<previous-summary>\n${input.previousSummary}\n</previous-summary>`
-      : "Create a new anchored summary from the conversation history.",
+      ? `Доорх суурь хураангуйг дээрх харилцан ярианы түүхээр шинэчил.\nҮнэн хэвээр байгаа мэдээллийг хадгалж, хуучирсныг устган, шинэ баримтыг нэгтгэ.\n<previous-summary>\n${input.previousSummary}\n</previous-summary>`
+      : "Харилцан ярианы түүхээс шинэ суурь хураангуй үүсгэ.",
     SUMMARY_TEMPLATE,
     ...input.context,
   ].join("\n\n")

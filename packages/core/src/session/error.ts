@@ -7,7 +7,7 @@ export class MessageDecodeError extends Schema.TaggedErrorClass<MessageDecodeErr
   messageID: SessionMessage.ID,
 }) {
   override get message() {
-    return `Failed to decode message ${this.messageID} in session ${this.sessionID}`
+    return `Сессийн ${this.sessionID} доторх ${this.messageID} мессежийг тайлж чадсангүй`
   }
 }
 
@@ -19,6 +19,6 @@ export class ContextSnapshotDecodeError extends Schema.TaggedErrorClass<ContextS
   },
 ) {
   override get message() {
-    return `Failed to decode context snapshot for session ${this.sessionID}: ${this.details}`
+    return `Сессийн ${this.sessionID}-ийн орчны төлөвийн агшныг тайлж чадсангүй: ${this.details}`
   }
 }

@@ -108,7 +108,7 @@ export const layer = Layer.effect(
     const compaction = SessionCompaction.make({ events, llm, config: yield* config.entries() })
     const getSession = Effect.fn("SessionRunner.getSession")(function* (sessionID: SessionSchema.ID) {
       const session = yield* store.get(sessionID)
-      if (!session) return yield* Effect.die(`Session not found: ${sessionID}`)
+      if (!session) return yield* Effect.die(`Сесс олдсонгүй: ${sessionID}`)
       return session
     })
 
@@ -127,7 +127,7 @@ export const layer = Layer.effect(
             timestamp: yield* DateTime.now,
             assistantMessageID: message.id,
             callID: tool.id,
-            error: { type: "unknown", message: "Tool execution interrupted" },
+            error: { type: "unknown", message: "Хэрэгслийн ажиллуулах үйлдэл тасалдлаа" },
             provider: {
               executed: tool.provider?.executed === true,
               ...(tool.provider?.metadata === undefined ? {} : { metadata: tool.provider.metadata }),
@@ -237,7 +237,9 @@ export const layer = Layer.effect(
             yield* publish(event)
             if (event.type !== "tool-call" || event.providerExecuted) return
             if (!toolMaterialization) {
-              yield* withPublication(publisher.failUnsettledTools("Tools are disabled after the maximum agent steps"))
+              yield* withPublication(
+                publisher.failUnsettledTools("Агентын алхмын дээд хязгаарт хүрсэн тул хэрэгслүүдийг идэвхгүй болголоо"),
+              )
               return
             }
             needsContinuation = true
@@ -284,14 +286,16 @@ export const layer = Layer.effect(
           if (overflowFailure) yield* publish(overflowFailure)
           const llmFailure = failure instanceof LLMError ? failure : undefined
           if (llmFailure && !publisher.hasProviderError()) {
-            yield* withPublication(publisher.failUnsettledTools("Provider did not return a tool result", true))
+            yield* withPublication(
+              publisher.failUnsettledTools("Загварын үйлчилгээ хэрэгслийн үр дүн буцаасангүй", true),
+            )
             yield* withPublication(publisher.failAssistant(llmFailure.reason.message))
           }
           if (stream._tag === "Failure" && Cause.hasInterrupts(stream.cause)) yield* FiberSet.clear(toolFibers)
           const settled = yield* restore(awaitToolFibers(toolFibers)).pipe(Effect.exit)
           if (settled._tag === "Failure" && isQuestionRejected(settled.cause)) {
             yield* FiberSet.clear(toolFibers)
-            yield* withPublication(publisher.failUnsettledTools("Tool execution interrupted"))
+            yield* withPublication(publisher.failUnsettledTools("Хэрэгслийн ажиллуулах үйлдэл тасалдлаа"))
             return yield* Effect.interrupt
           }
           if (
@@ -299,9 +303,9 @@ export const layer = Layer.effect(
             (settled._tag === "Failure" && Cause.hasInterrupts(settled.cause))
           ) {
             yield* FiberSet.clear(toolFibers)
-            yield* withPublication(publisher.failUnsettledTools("Tool execution interrupted"))
+            yield* withPublication(publisher.failUnsettledTools("Хэрэгслийн ажиллуулах үйлдэл тасалдлаа"))
             if (publisher.hasActiveAssistant())
-              yield* withPublication(publisher.failAssistant("Provider turn interrupted"))
+              yield* withPublication(publisher.failAssistant("Загварын үйлчилгээний ээлж тасалдлаа"))
           }
           if (settled._tag === "Failure" && !Cause.hasInterrupts(settled.cause)) {
             const failure = Cause.squash(settled.cause)
@@ -331,9 +335,11 @@ export const layer = Layer.effect(
             )
           }
           if (publisher.hasProviderError())
-            yield* withPublication(publisher.failUnsettledTools("Tool execution interrupted"))
+            yield* withPublication(publisher.failUnsettledTools("Хэрэгслийн ажиллуулах үйлдэл тасалдлаа"))
           if (stream._tag === "Success" && !publisher.hasProviderError())
-            yield* withPublication(publisher.failUnsettledTools("Provider did not return a tool result", true))
+            yield* withPublication(
+              publisher.failUnsettledTools("Загварын үйлчилгээ хэрэгслийн үр дүн буцаасангүй", true),
+            )
           if (stream._tag === "Failure") return yield* Effect.failCause(stream.cause)
           if (settled._tag === "Failure" && Cause.hasInterrupts(settled.cause))
             return yield* Effect.failCause(settled.cause)
@@ -353,7 +359,9 @@ export const layer = Layer.effect(
           Effect.fnUntraced(function* (defect) {
             if (!(defect instanceof TurnTransitionError)) return yield* Effect.die(defect)
             if (defect.transition._tag === "ContinueAfterOverflowCompaction")
-              return yield* Effect.die("Post-compaction provider attempt cannot recover another overflow")
+              return yield* Effect.die(
+                "Хураангуйлсны дараах загварын үйлчилгээний оролдлого дахин хэтрэлтийг сэргээж чадахгүй",
+              )
             yield* Effect.yieldNow
             return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step)
           }),

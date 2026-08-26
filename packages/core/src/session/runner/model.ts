@@ -22,7 +22,7 @@ export class ModelNotSelectedError extends Schema.TaggedErrorClass<ModelNotSelec
   },
 ) {
   override get message() {
-    return `No model is available for session ${this.sessionID}`
+    return `${this.sessionID} сешнд ашиглах загвар алга байна`
   }
 }
 
@@ -34,7 +34,7 @@ export class ModelUnavailableError extends Schema.TaggedErrorClass<ModelUnavaila
   },
 ) {
   override get message() {
-    return `Model unavailable: ${this.providerID}/${this.modelID}`
+    return `Загвар ашиглах боломжгүй байна: ${this.providerID}/${this.modelID}`
   }
 }
 
@@ -47,7 +47,7 @@ export class VariantUnavailableError extends Schema.TaggedErrorClass<VariantUnav
   },
 ) {
   override get message() {
-    return `Variant unavailable for ${this.providerID}/${this.modelID}: ${this.variant}`
+    return `${this.providerID}/${this.modelID} загварын хувилбар ашиглах боломжгүй байна: ${this.variant}`
   }
 }
 
@@ -60,7 +60,7 @@ export class UnsupportedApiError extends Schema.TaggedErrorClass<UnsupportedApiE
   },
 ) {
   override get message() {
-    return `Unsupported API for ${this.providerID}/${this.modelID}: ${this.api}`
+    return `${this.providerID}/${this.modelID} загварт дэмжигдээгүй API: ${this.api}`
   }
 }
 
