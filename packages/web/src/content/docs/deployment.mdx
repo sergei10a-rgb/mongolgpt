@@ -85,6 +85,21 @@ Cloudflare Dashboard хэвийн болмогц GitHub репозиторийн
 | Хувьсагч  | `CLOUDFLARE_DEFAULT_ACCOUNT_ID` | Cloudflare аккаунтын ID                    |
 | Нууц утга | `CLOUDFLARE_API_TOKEN`          | Хамгийн бага шаардлагатай эрхтэй API токен |
 
+### Cloudflare байршуулалтын токен
+
+Cloudflare-ийн **My Profile → API Tokens → Create Token** хэсэгт **Edit Cloudflare Workers** загварыг сонгоно. Энэ загварын Workers Scripts, Workers KV Storage, Workers R2 Storage, Workers Routes болон унших суурь эрхүүдийг хэвээр үлдээгээд дараах дөрвөн эрхийг нэмнэ.
+
+| Хамрах хүрээ        | Үйлчилгээ   | Эрх            |
+| ------------------- | ----------- | -------------- |
+| Аккаунт (`Account`) | `D1`        | Засах (`Edit`) |
+| Аккаунт (`Account`) | `Queues`    | Засах (`Edit`) |
+| Аккаунт (`Account`) | `Containers` | Засах (`Edit`) |
+| Бүс (`Zone`)        | `DNS`       | Засах (`Edit`) |
+
+Аккаунтын нөөцөд MongolGPT байрлах ганц аккаунтыг, бүсийн нөөцөд зөвхөн `mgpt.mn`-ийг сонгоно. Токеныг `MongolGPT deploy` гэх мэт зориулалт нь ойлгомжтой нэрээр үүсгэж, утгыг репозиторийн `CLOUDFLARE_API_TOKEN` нууц утгад хадгална. IP шүүлтүүр тавих бол GitHub-hosted runner-ийн өөрчлөгддөг хаягийг зөвшөөрөх боломжгүй тул байршуулалт хаагдахыг тооцно.
+
+Энэ нь Cloudflare Access болон D1 нөөцлөлтийн токен биш. Админы Access-д `CLOUDFLARE_ACCESS_API_TOKEN`, үйлдвэрлэлийн D1 экспортод `D1_BACKUP_API_TOKEN` гэсэн тусдаа хамгийн бага эрхтэй токен хэрэглэнэ. Эрхийн нэр өөрчлөгдсөн эсэхийг [Cloudflare-ийн токены эрхийн жагсаалт](https://developers.cloudflare.com/fundamentals/api/reference/permissions/), SST-ийн суурь шаардлагыг [SST Cloudflare credentials](https://sst.dev/docs/cloudflare/#credentials)-аас тулгаж шалгана.
+
 `dev` болон `production` GitHub орчин тус бүрд өөрийн OAuth, сесс болон загварын нэвтрэх мэдээллийг хадгална.
 
 | Төрөл     | Нэр                              | Утга                                                                                                  |
