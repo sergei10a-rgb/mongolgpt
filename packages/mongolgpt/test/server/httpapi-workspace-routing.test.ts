@@ -408,7 +408,7 @@ describe("HttpApi workspace routing middleware", () => {
       const response = yield* HttpClient.get(`/probe?workspace=${workspaceID}`)
 
       expect(response.status).toBe(503)
-      expect(yield* response.text).toBe(`broken sync connection for workspace: ${workspaceID}`)
+      expect(yield* response.text).toBe(`Workspace-ийн sync холболт тасарсан байна: ${workspaceID}`)
     }),
   )
 

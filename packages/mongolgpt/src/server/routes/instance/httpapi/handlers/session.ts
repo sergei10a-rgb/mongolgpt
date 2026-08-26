@@ -314,7 +314,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       yield* promptSvc.prompt({ ...ctx.payload, sessionID: ctx.params.sessionID }).pipe(
         Effect.catchCause((cause) =>
           Effect.gen(function* () {
-            yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
+            yield* Effect.logError("prompt_async ажилласангүй", { sessionID: ctx.params.sessionID, cause })
             yield* events.publish(Session.Event.Error, {
               sessionID: ctx.params.sessionID,
               error: new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),

@@ -120,7 +120,7 @@ function proxyRemote(
   return Effect.gen(function* () {
     const syncing = yield* Workspace.Service.use((svc) => svc.isSyncing(workspace.id))
     if (!syncing) {
-      return HttpServerResponse.text(`broken sync connection for workspace: ${workspace.id}`, {
+      return HttpServerResponse.text(`Workspace-ийн sync холболт тасарсан байна: ${workspace.id}`, {
         status: 503,
         contentType: "text/plain; charset=utf-8",
       })

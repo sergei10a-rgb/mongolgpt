@@ -23,7 +23,7 @@ import { TestLLMServer } from "../../lib/llm-server"
 import fs from "fs/promises"
 import path from "path"
 import { array, boolean, check, isRecord, message, object, stable } from "./assertions"
-import { controlledPtyInput, http, route } from "./dsl"
+import { controlledPtyCommand, controlledPtyInput, http, route } from "./dsl"
 import {
   cleanupExercisePaths,
   exerciseConfigDirectory,
@@ -488,7 +488,7 @@ const scenarios: Scenario[] = [
       (body, ctx) => {
         object(body)
         check(body.title === "HTTP API PTY", "PTY create should return requested title")
-        check(body.command === "/bin/sh", "PTY create should use controlled shell command")
+        check(body.command === controlledPtyCommand, "PTY create should use controlled shell command")
         check(body.cwd === ctx.directory, "PTY create should default cwd to scenario directory")
       },
       "status",
@@ -1628,33 +1628,33 @@ const scenarios: Scenario[] = [
         const session = yield* ctx.session({ title: "Summarize session" })
         yield* ctx.message(session.id, { text: "summarize this work" })
         const summary = [
-          "## Goal",
-          "- Exercise session summarize.",
+          "## Зорилго",
+          "- Сешн хураангуйлах ажиллагааг шалгах.",
           "",
-          "## Constraints & Preferences",
-          "- Use fake LLM.",
+          "## Хязгаарлалт ба сонголт",
+          "- Туршилтын LLM ашиглах.",
           "",
-          "## Progress",
-          "### Done",
-          "- Summary generated.",
+          "## Явц",
+          "### Дууссан",
+          "- Хураангуй үүсгэсэн.",
           "",
-          "### In Progress",
-          "- (none)",
+          "### Хийгдэж буй",
+          "- (байхгүй)",
           "",
-          "### Blocked",
-          "- (none)",
+          "### Саатсан",
+          "- (байхгүй)",
           "",
-          "## Key Decisions",
-          "- Keep route local.",
+          "## Гол шийдвэрүүд",
+          "- Замыг локал хэвээр хадгалах.",
           "",
-          "## Next Steps",
-          "- (none)",
+          "## Дараагийн алхмууд",
+          "- (байхгүй)",
           "",
-          "## Critical Context",
-          "- Test fixture.",
+          "## Чухал контекст",
+          "- Туршилтын өгөгдөл.",
           "",
-          "## Relevant Files",
-          "- test/server/httpapi-exercise/index.ts: scenario",
+          "## Холбогдох файлууд",
+          "- test/server/httpapi-exercise/index.ts: туршилтын хувилбар",
         ].join("\n")
         yield* ctx.llmText(summary)
         yield* ctx.llmText(summary)

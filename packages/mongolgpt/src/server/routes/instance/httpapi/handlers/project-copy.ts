@@ -62,7 +62,7 @@ export const projectCopyHandlers = HttpApiBuilder.group(InstanceHttpApi, "projec
     return handlers.handle("generateName", (ctx) =>
       generateName(ctx.payload.context).pipe(
         Effect.catchCause((cause) =>
-          Effect.logWarning("project copy name generation failed", {
+          Effect.logWarning("Төслийн хуулбарын нэр үүсгэж чадсангүй", {
             projectID: ctx.params.projectID,
             cause,
           }).pipe(Effect.as(Slug.create())),

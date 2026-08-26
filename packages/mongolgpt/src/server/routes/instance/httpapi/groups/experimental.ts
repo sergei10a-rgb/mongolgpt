@@ -190,7 +190,9 @@ const WorktreeErrorName = Schema.Union([
 export class WorktreeApiError extends Schema.ErrorClass<WorktreeApiError>("WorktreeError")(
   {
     name: WorktreeErrorName,
-    data: Schema.Struct({ message: Schema.String.annotate({ description: "Төслийн хуулбарын үйлдлийн алдааны тайлбар" }) }),
+    data: Schema.Struct({
+      message: Schema.String.annotate({ description: "Төслийн хуулбарын үйлдлийн алдааны тайлбар" }),
+    }),
   },
   { httpApiStatus: 400 },
 ) {}
@@ -391,7 +393,8 @@ export const ExperimentalApi = HttpApi.make("experimental")
           OpenApi.annotations({
             identifier: "worktree.create",
             summary: "Төслийн хуулбар үүсгэх",
-            description: "Одоогийн төсөлд шинэ git төслийн хуулбар үүсгэж, тохируулсан эхлүүлэх скриптүүдийг ажиллуулна.",
+            description:
+              "Одоогийн төсөлд шинэ git төслийн хуулбар үүсгэж, тохируулсан эхлүүлэх скриптүүдийг ажиллуулна.",
           }),
         ),
         HttpApiEndpoint.delete("worktreeRemove", ExperimentalPaths.worktree, {

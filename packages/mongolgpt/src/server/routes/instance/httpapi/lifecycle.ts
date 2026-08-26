@@ -48,7 +48,7 @@ export const disposeMiddleware: HttpMiddleware.HttpMiddleware = (effect) =>
     if (!marked) return response
     disposeAfterResponse.delete(request.source)
     yield* Effect.uninterruptible(marked.bridge.run(marked.store.dispose(marked.ctx))).pipe(
-      Effect.catchCause((cause) => Effect.logWarning("instance disposal failed", { cause })),
+      Effect.catchCause((cause) => Effect.logWarning("Ажиллах орчныг хааж чадсангүй", { cause })),
     )
     return response
   })
