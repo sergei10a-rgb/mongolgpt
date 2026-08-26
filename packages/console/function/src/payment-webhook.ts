@@ -64,21 +64,21 @@ type Dependencies = {
 
 class PaymentQueueUnavailableError extends Error {
   constructor() {
-    super("Payment queue unavailable")
+    super("Төлбөрийн дараалал ашиглах боломжгүй байна")
     this.name = "PaymentQueueUnavailableError"
   }
 }
 
 class InvalidPaymentWebhookRequestError extends Error {
   constructor() {
-    super("Invalid payment webhook request")
+    super("Төлбөрийн webhook хүсэлт буруу байна")
     this.name = "InvalidPaymentWebhookRequestError"
   }
 }
 
 class InvalidPaymentCheckoutResponseError extends Error {
   constructor() {
-    super("Invalid payment checkout response")
+    super("Төлбөрийн хүсэлтийн хариу буруу байна")
     this.name = "InvalidPaymentCheckoutResponseError"
   }
 }
@@ -115,7 +115,7 @@ function authorized(request: Request, token: string | undefined) {
 }
 
 async function enqueueVerifiedEvents(events: VerifiedPaymentEvent[], dependencies: Dependencies) {
-  if (events.length < 1 || events.length > 2) throw new Error("Payment verifier returned an invalid event count")
+  if (events.length < 1 || events.length > 2) throw new Error("Төлбөр шалгагч буруу үйл явдлын тоо буцаалаа")
   try {
     await dependencies.enqueue(events.map((event) => createPaymentQueueEvent(event)))
   } catch {
@@ -137,7 +137,7 @@ async function readBoundedBody(request: Request) {
     const bytes = Number(declared)
     if (!Number.isSafeInteger(bytes) || bytes < 0 || bytes > MAX_WEBHOOK_BYTES) {
       await request.body?.cancel().catch(() => undefined)
-      throw new RangeError("Webhook body is too large")
+      throw new RangeError("Webhook-ийн агуулга хэт том байна")
     }
   }
   if (!request.body) return ""
@@ -153,7 +153,7 @@ async function readBoundedBody(request: Request) {
       bytes += part.value.byteLength
       if (bytes > MAX_WEBHOOK_BYTES) {
         await reader.cancel().catch(() => undefined)
-        throw new RangeError("Webhook body is too large")
+        throw new RangeError("Webhook-ийн агуулга хэт том байна")
       }
       body += decoder.decode(part.value, { stream: true })
     }
@@ -336,7 +336,7 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
 
       return text("NOT_FOUND", 404)
     } catch (error) {
-      console.error("Payment webhook request failed", {
+      console.error("Төлбөрийн webhook хүсэлт амжилтгүй боллоо", {
         path: url.pathname,
         ray: request.headers.get("cf-ray") ?? "unknown",
         error: error instanceof Error ? error.name : typeof error,

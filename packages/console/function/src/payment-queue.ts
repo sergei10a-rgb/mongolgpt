@@ -51,7 +51,7 @@ export function createPaymentQueueConsumer(apply: ApplyPayment = applyPaymentWit
       for (const message of batch.messages) {
         const parsed = PaymentQueueEventSchema.safeParse(message.body)
         if (!parsed.success) {
-          console.error("Payment queue message validation failed")
+          console.error("Төлбөрийн дарааллын мессежийн шалгалт амжилтгүй боллоо")
           message.retry()
           continue
         }
@@ -60,7 +60,7 @@ export function createPaymentQueueConsumer(apply: ApplyPayment = applyPaymentWit
           await apply(parsed.data)
           message.ack()
         } catch (error) {
-          console.error("Payment queue event failed", {
+          console.error("Төлбөрийн дарааллын үйл явдал амжилтгүй боллоо", {
             provider: parsed.data.event.provider,
             externalEventID: parsed.data.event.externalEventID,
             error: error instanceof Error ? error.name : typeof error,

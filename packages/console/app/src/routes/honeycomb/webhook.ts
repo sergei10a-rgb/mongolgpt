@@ -77,7 +77,7 @@ const postDiscordMessage = async (payload: z.infer<typeof honeycombWebhookPayloa
 export async function POST(input: APIEvent) {
   const token = input.request.headers.get("X-Honeycomb-Webhook-Token")
   if (!safeEqual(token ?? "", Resource.HoneycombWebhookSecret.value)) {
-    console.debug("Invalid Honeycomb webhook token")
+    console.debug("Honeycomb webhook-ийн токен буруу байна")
     return Response.json({ message: "invalid token" }, { status: 401 })
   }
 
@@ -86,12 +86,12 @@ export async function POST(input: APIEvent) {
   const parsed = honeycombWebhookPayload.safeParse(body)
 
   if (!parsed.success) {
-    console.error("Invalid Honeycomb webhook payload", parsed.error.issues.length)
+    console.error("Honeycomb webhook-ийн өгөгдөл буруу байна", parsed.error.issues.length)
     return Response.json({ message: "invalid payload" }, { status: 400 })
   }
 
   if (parsed.data.status !== "TRIGGERED") {
-    console.debug("Skipping resolved alert Honeycomb webhook")
+    console.debug("Шийдэгдсэн Honeycomb дохиоллын webhook-ийг алгасаж байна")
     return Response.json({ message: "ignored" }, { status: 200 })
   }
 
