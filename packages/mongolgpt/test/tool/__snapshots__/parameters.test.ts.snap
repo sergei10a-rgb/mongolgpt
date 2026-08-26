@@ -388,7 +388,7 @@ exports[`tool parameters JSON Schema (wire shape) webfetch 1`] = `
       "type": "string",
     },
     "timeout": {
-      "description": "Optional timeout in seconds (max 120)",
+      "description": "Хүсэлтийн хүлээлгийн хугацаа секундээр (заавал биш, дээд тал нь 120)",
       "type": "number",
     },
     "url": {

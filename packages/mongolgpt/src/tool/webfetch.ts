@@ -18,7 +18,9 @@ export const Parameters = Schema.Struct({
       default: "markdown",
     })
     .pipe(Schema.withDecodingDefault(Effect.succeed("markdown" as const))),
-  timeout: Schema.optional(Schema.Number).annotate({ description: "Optional timeout in seconds (max 120)" }),
+  timeout: Schema.optional(Schema.Number).annotate({
+    description: "Хүсэлтийн хүлээлгийн хугацаа секундээр (заавал биш, дээд тал нь 120)",
+  }),
 })
 
 export const WebFetchTool = Tool.define(

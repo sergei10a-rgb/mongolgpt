@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from "async_hooks"
 
 export class NotFound extends Error {
   constructor(public override readonly name: string) {
-    super(`No context found for ${name}`)
+    super(`${name} контекст олдсонгүй`)
   }
 }
 

@@ -42,7 +42,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
         Effect.flatMap((res) => res.arrayBuffer),
         Effect.flatMap((body) => fs.writeWithDirs(dest, new Uint8Array(body))),
         Effect.as(true),
-        Effect.catch((err) => Effect.logError("failed to download", { url: url, error: err }).pipe(Effect.as(false))),
+        Effect.catch((err) => Effect.logError("Татаж авч чадсангүй", { url: url, error: err }).pipe(Effect.as(false))),
       )
     })
 
@@ -51,14 +51,14 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
       const index = new URL("index.json", base).href
       const host = base.slice(0, -1)
 
-      yield* Effect.logInfo("fetching index", { url: index })
+      yield* Effect.logInfo("Индексийг авч байна", { url: index })
 
       const data = yield* HttpClientRequest.get(index).pipe(
         HttpClientRequest.acceptJson,
         http.execute,
         Effect.flatMap(HttpClientResponse.schemaBodyJson(Index)),
         Effect.catch((err) =>
-          Effect.logError("failed to fetch index", { url: index, error: err }).pipe(Effect.as(null)),
+          Effect.logError("Индексийг авч чадсангүй", { url: index, error: err }).pipe(Effect.as(null)),
         ),
       )
 
@@ -67,7 +67,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
       const missing = data.skills.filter((skill) => !skill.files.includes("SKILL.md"))
       yield* Effect.forEach(
         missing,
-        (skill) => Effect.logWarning("skill entry missing SKILL.md", { url: index, skill: skill.name }),
+        (skill) => Effect.logWarning("Ур чадварын бичлэгт SKILL.md алга байна", { url: index, skill: skill.name }),
         { discard: true },
       )
       const list = data.skills.filter((skill) => skill.files.includes("SKILL.md"))
@@ -119,7 +119,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
                   }),
                 )
               }).pipe(
-                Effect.catch((error) => Effect.logError("failed to refresh skill", { skill: skill.name, error })),
+                Effect.catch((error) => Effect.logError("Ур чадварыг шинэчилж чадсангүй", { skill: skill.name, error })),
                 Effect.ensuring(fs.remove(staging, { recursive: true, force: true }).pipe(Effect.ignore)),
               )
             }

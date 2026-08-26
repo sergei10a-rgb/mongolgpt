@@ -229,11 +229,11 @@ export const layer = Layer.effect(
           Effect.orElseSucceed(() => 0),
         )
         for (let i = migration; i < MIGRATIONS.length; i++) {
-          yield* Effect.logInfo("running migration", { index: i })
+          yield* Effect.logInfo("Өгөгдлийн шилжүүлэлтийг ажиллуулж байна", { index: i })
           const step = MIGRATIONS[i]!
           const exit = yield* Effect.exit(step(dir, fs, git))
           if (Exit.isFailure(exit)) {
-            yield* Effect.logError("failed to run migration", { index: i, cause: exit.cause })
+            yield* Effect.logError("Өгөгдлийн шилжүүлэлтийг ажиллуулж чадсангүй", { index: i, cause: exit.cause })
             break
           }
           yield* fs.writeWithDirs(marker, String(i + 1))

@@ -153,7 +153,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
             },
           )
           if (result.code === 0) return
-          yield* Effect.logWarning("failed to add snapshot files", {
+          yield* Effect.logWarning("Агшин хуулбарын файлуудыг нэмж чадсангүй", {
             exitCode: result.code,
             stderr: result.stderr,
           })
@@ -246,7 +246,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
             { concurrency: 2 },
           )
           if (diff.code !== 0 || other.code !== 0) {
-            yield* Effect.logWarning("failed to list snapshot files", {
+            yield* Effect.logWarning("Агшин хуулбарын файлуудын жагсаалтыг авч чадсангүй", {
               diffCode: diff.code,
               diffStderr: diff.stderr,
               otherCode: other.code,
@@ -267,7 +267,9 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
           // Remove newly-ignored files from snapshot index to prevent re-adding
           if (ignored.size > 0) {
             const ignoredFiles = Array.from(ignored)
-            yield* Effect.logInfo("removing gitignored files from snapshot", { count: ignoredFiles.length })
+            yield* Effect.logInfo("Git-ээр үл тоосон файлуудыг агшин хуулбараас хасаж байна", {
+              count: ignoredFiles.length,
+            })
             yield* drop(ignoredFiles)
           }
 
@@ -304,13 +306,13 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
               if (!(yield* exists(state.gitdir))) return
               const result = yield* git(args(["gc", `--prune=${prune}`]), { cwd: state.directory })
               if (result.code !== 0) {
-                yield* Effect.logWarning("cleanup failed", {
+                yield* Effect.logWarning("Цэвэрлэгээ амжилтгүй боллоо", {
                   exitCode: result.code,
                   stderr: result.stderr,
                 })
                 return
               }
-              yield* Effect.logInfo("cleanup", { prune })
+              yield* Effect.logInfo("Цэвэрлэж байна", { prune })
             }),
           )
         })
@@ -335,12 +337,12 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
                 yield* git(["--git-dir", state.gitdir, "config", "index.threads", "true"])
                 yield* git(["--git-dir", state.gitdir, "config", "core.untrackedCache", "true"])
                 yield* seed()
-                yield* Effect.logInfo("initialized")
+                yield* Effect.logInfo("Эхлүүллээ")
               }
               yield* add()
               const result = yield* git(args(["write-tree"]), { cwd: state.directory })
               const hash = result.text.trim()
-              yield* Effect.logInfo("tracking", { hash, cwd: state.directory, git: state.gitdir })
+              yield* Effect.logInfo("Хянаж байна", { hash, cwd: state.directory, git: state.gitdir })
               return hash
             }),
           )
@@ -357,7 +359,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
                 },
               )
               if (result.code !== 0) {
-                yield* Effect.logWarning("failed to get diff", { hash, exitCode: result.code })
+                yield* Effect.logWarning("Өөрчлөлтийн ялгааг авч чадсангүй", { hash, exitCode: result.code })
                 return { hash, files: [] }
               }
               const files = result.text
@@ -382,21 +384,21 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
         const restore = Effect.fnUntraced(function* (snapshot: string) {
           return yield* locked(
             Effect.gen(function* () {
-              yield* Effect.logInfo("restore", { commit: snapshot })
+              yield* Effect.logInfo("Сэргээж байна", { commit: snapshot })
               const result = yield* git([...core, ...args(["read-tree", snapshot])], { cwd: state.worktree })
               if (result.code === 0) {
                 const checkout = yield* git([...core, ...args(["checkout-index", "-a", "-f"])], {
                   cwd: state.worktree,
                 })
                 if (checkout.code === 0) return
-                yield* Effect.logError("failed to restore snapshot", {
+                yield* Effect.logError("Агшин хуулбарыг сэргээж чадсангүй", {
                   snapshot,
                   exitCode: checkout.code,
                   stderr: checkout.stderr,
                 })
                 return
               }
-              yield* Effect.logError("failed to restore snapshot", {
+              yield* Effect.logError("Агшин хуулбарыг сэргээж чадсангүй", {
                 snapshot,
                 exitCode: result.code,
                 stderr: result.stderr,
@@ -423,7 +425,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
               }
 
               const single = Effect.fnUntraced(function* (op: (typeof ops)[number]) {
-                yield* Effect.logInfo("reverting", { file: op.file, hash: op.hash })
+                yield* Effect.logInfo("Буцааж байна", { file: op.file, hash: op.hash })
                 const result = yield* git([...core, ...args(["checkout", op.hash, "--", op.file])], {
                   cwd: state.worktree,
                 })
@@ -432,13 +434,16 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
                   cwd: state.worktree,
                 })
                 if (tree.code === 0 && tree.text.trim()) {
-                  yield* Effect.logInfo("file existed in snapshot but checkout failed, keeping", {
+                  yield* Effect.logInfo("Файл агшин хуулбарт байсан ч checkout амжилтгүй боллоо, хадгалж байна", {
                     file: op.file,
                     hash: op.hash,
                   })
                   return
                 }
-                yield* Effect.logInfo("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
+                yield* Effect.logInfo("Файл агшин хуулбарт байгаагүй тул устгаж байна", {
+                  file: op.file,
+                  hash: op.hash,
+                })
                 yield* remove(op.file)
               })
 
@@ -471,7 +476,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
                 )
 
                 if (tree.code !== 0) {
-                  yield* Effect.logInfo("batched ls-tree failed, falling back to single-file revert", {
+                  yield* Effect.logInfo("Багцалсан ls-tree амжилтгүй боллоо, нэг файлын буцаалтад шилжиж байна", {
                     hash: first.hash,
                     files: run.length,
                   })
@@ -491,7 +496,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
                 )
                 const list = run.filter((item) => have.has(item.rel))
                 if (list.length) {
-                  yield* Effect.logInfo("reverting", { hash: first.hash, files: list.length })
+                  yield* Effect.logInfo("Буцааж байна", { hash: first.hash, files: list.length })
                   const result = yield* git(
                     [...core, ...args(["checkout", first.hash, "--", ...list.map((item) => item.file)])],
                     {
@@ -499,7 +504,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
                     },
                   )
                   if (result.code !== 0) {
-                    yield* Effect.logInfo("batched checkout failed, falling back to single-file revert", {
+                    yield* Effect.logInfo("Багцалсан checkout амжилтгүй боллоо, нэг файлын буцаалтад шилжиж байна", {
                       hash: first.hash,
                       files: list.length,
                     })
@@ -513,7 +518,10 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
 
                 for (const op of run) {
                   if (have.has(op.rel)) continue
-                  yield* Effect.logInfo("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
+                  yield* Effect.logInfo("Файл агшин хуулбарт байгаагүй тул устгаж байна", {
+                    file: op.file,
+                    hash: op.hash,
+                  })
                   yield* remove(op.file)
                 }
 
@@ -531,7 +539,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
                 cwd: state.worktree,
               })
               if (result.code !== 0) {
-                yield* Effect.logWarning("failed to get diff", {
+                yield* Effect.logWarning("Өөрчлөлтийн ялгааг авч чадсангүй", {
                   hash,
                   exitCode: result.code,
                   stderr: result.stderr,
@@ -610,7 +618,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
                   )
                   if (batch.exitCode !== 0) {
                     yield* Effect.logInfo(
-                      "git cat-file --batch failed during snapshot diff, falling back to per-file git show",
+                      "Агшин хуулбарын ялгааг тооцоход git cat-file --batch амжилтгүй боллоо, файл бүрийн git show руу шилжиж байна",
                       {
                         stderr: batch.stderr.toString("utf8"),
                         refs: refs.length,
@@ -759,7 +767,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Serv
         })
 
         yield* cleanup().pipe(
-          Effect.catchCause((cause) => Effect.logError("cleanup loop failed", { cause: Cause.pretty(cause) })),
+          Effect.catchCause((cause) => Effect.logError("Цэвэрлэгээний давталт амжилтгүй боллоо", { cause: Cause.pretty(cause) })),
           Effect.repeat(Schedule.spaced(Duration.hours(1))),
           Effect.delay(Duration.minutes(1)),
           Effect.forkScoped,

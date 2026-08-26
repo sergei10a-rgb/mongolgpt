@@ -6,7 +6,7 @@ export function withTimeout<T>(promise: Promise<T>, ms: number, label?: string):
     }),
     new Promise<never>((_, reject) => {
       timeout = setTimeout(() => {
-        reject(new Error(label ?? `Operation timed out after ${ms}ms`))
+        reject(new Error(label ?? `${ms} мс-ийн дараа үйлдлийн хугацаа дууслаа`))
       }, ms)
     }),
   ])

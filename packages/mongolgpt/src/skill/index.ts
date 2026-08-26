@@ -31,7 +31,7 @@ const SKILL_PATTERN = "**/SKILL.md"
 // actual schemas instead of guesses.
 const CUSTOMIZE_MONGOLGPT_SKILL_NAME = "customize-mongolgpt"
 const CUSTOMIZE_MONGOLGPT_SKILL_DESCRIPTION =
-  "Use ONLY when the user is editing or creating MongolGPT's own configuration: mongolgpt.json, mongolgpt.jsonc, files under .mongolgpt/, or files under ~/.config/mongolgpt/. Also use when creating or fixing MongolGPT agents, subagents, skills, plugins, MCP servers, or permission rules. Do not use for the user's own application code, or for any project that is not configuring MongolGPT itself."
+  "ЗӨВХӨН хэрэглэгч MongolGPT-ийн өөрийн mongolgpt.json, mongolgpt.jsonc тохиргоо, .mongolgpt/ эсвэл ~/.config/mongolgpt/ доторх файлыг үүсгэж, засаж байгаа үед ашигла. Мөн MongolGPT агент, дэд агент, ур чадвар, нэмэлт, MCP сервер эсвэл зөвшөөрлийн дүрэм үүсгэж, засах үед ашигла. Хэрэглэгчийн өөрийн програмын кодод болон MongolGPT-ийг тохируулахгүй бусад төсөлд бүү ашигла."
 const CUSTOMIZE_MONGOLGPT_SKILL_BODY = SkillPlugin.CustomizeMongolGPTContent
 
 export const Info = Schema.Struct({
@@ -114,7 +114,7 @@ const add = Effect.fnUntraced(function* (state: State, match: string, events: Ev
           : `Ур чадварыг задлан шинжилж чадсангүй: ${match}`
         const { Session } = yield* Effect.promise(() => import("@/session/session"))
         yield* events.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-        yield* Effect.logError("failed to load skill", { skill: match, error: err })
+        yield* Effect.logError("Ур чадварыг ачаалж чадсангүй", { skill: match, error: err })
         return undefined
       }),
     ),
@@ -125,7 +125,7 @@ const add = Effect.fnUntraced(function* (state: State, match: string, events: Ev
   if (!isSkillFrontmatter(md.data)) return
 
   if (state.skills[md.data.name]) {
-    yield* Effect.logWarning("duplicate skill name", {
+    yield* Effect.logWarning("Ур чадварын нэр давхардсан", {
       name: md.data.name,
       existing: state.skills[md.data.name].location,
       duplicate: match,
@@ -160,7 +160,7 @@ const scan = Effect.fnUntraced(function* (
   }).pipe(
     Effect.catch((error) => {
       if (!opts?.scope) return Effect.die(error)
-      return Effect.logError(`failed to scan ${opts.scope} skills`, { dir: root, error: error }).pipe(
+      return Effect.logError(`${opts.scope} хүрээний ур чадваруудыг шалгаж чадсангүй`, { dir: root, error }).pipe(
         Effect.as([] as string[]),
       )
     }),
@@ -214,7 +214,7 @@ const discoverSkills = Effect.fnUntraced(function* (
     const expanded = item.startsWith("~/") ? path.join(global.home, item.slice(2)) : item
     const dir = path.isAbsolute(expanded) ? expanded : path.join(directory, expanded)
     if (!(yield* fsys.isDir(dir))) {
-      yield* Effect.logWarning("skill path not found", { path: dir })
+      yield* Effect.logWarning("Ур чадварын зам олдсонгүй", { path: dir })
       continue
     }
 
@@ -349,7 +349,7 @@ export function fmt(list: Info[], opts: { verbose: boolean }) {
   }
 
   return [
-    "## Available Skills",
+    "## Боломжтой ур чадварууд",
     ...described
       .toSorted((a, b) => a.name.localeCompare(b.name))
       .map((skill) => `- **${skill.name}**: ${skill.description}`),
