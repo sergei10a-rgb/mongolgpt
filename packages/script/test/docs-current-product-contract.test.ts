@@ -37,6 +37,25 @@ async function textSourceFiles(directory: URL): Promise<URL[]> {
   return files.flat()
 }
 
+function documentationRoute(file: URL): string {
+  const relative = decodeURIComponent(file.href.slice(docs.href.length))
+  const slug = relative.replace(/\.mdx?$/, "").replace(/(^|\/)index$/, "")
+  return `/docs/${slug ? `${slug}/` : ""}`
+}
+
+function markdownLinks(source: string): { href: string; line: number }[] {
+  const prose = source
+    .replace(/^```[\s\S]*?^```/gm, (block) => block.replace(/[^\r\n]/g, " "))
+    .replace(/^~~~[\s\S]*?^~~~/gm, (block) => block.replace(/[^\r\n]/g, " "))
+
+  return [...prose.matchAll(/\[[^\]]*\]\(([^\s)]+)(?:\s+["'][^"']*["'])?\)/g)]
+    .filter((match) => match.index === 0 || prose[match.index - 1] !== "!")
+    .map((match) => ({
+      href: match[1],
+      line: prose.slice(0, match.index).split(/\r?\n/).length,
+    }))
+}
+
 describe("documentation product contract", () => {
   test("keeps retired managed-product names and endpoints out of published docs", async () => {
     for (const file of await markdownFiles(docs)) {
@@ -111,6 +130,30 @@ describe("documentation product contract", () => {
     const files = [install, ...(await Promise.all(productSourceRoots.map(textSourceFiles))).flat()]
     const sources = await Promise.all(files.map((file) => Bun.file(file).text()))
     for (const source of sources) expect(source).not.toContain("packages/web/src/content/docs/mn")
+  })
+
+  test("keeps every local documentation link on an existing Mongolian route", async () => {
+    const files = await markdownFiles(docs)
+    const routes = new Set(files.flatMap((file) => {
+      const route = documentationRoute(file)
+      return route === "/docs/" ? [route, "/docs"] : [route, route.slice(0, -1)]
+    }))
+    const broken: string[] = []
+
+    for (const file of files) {
+      const source = await Bun.file(file).text()
+      for (const link of markdownLinks(source)) {
+        if (/^(?:[a-z][a-z\d+.-]*:|#)/i.test(link.href)) continue
+        if (link.href.startsWith("/") && !link.href.startsWith("/docs")) continue
+
+        const target = new URL(link.href, `https://mgpt.mn${documentationRoute(file)}`).pathname
+        if (routes.has(target)) continue
+        const name = decodeURIComponent(file.href.slice(docs.href.length))
+        broken.push(`${name}:${link.line} -> ${link.href} (${target})`)
+      }
+    }
+
+    expect(broken).toEqual([])
   })
 
   test("keeps the mobile navigation state accessible", async () => {
