@@ -356,6 +356,57 @@ jobs:
         env:
           MONGOLGPT_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
 
+      - name: Smoke-test packaged Windows desktop
+        if: matrix.settings.target == 'x86_64-pc-windows-msvc'
+        shell: pwsh
+        working-directory: packages/desktop
+        timeout-minutes: 3
+        run: |
+          $apps = @(Get-ChildItem -LiteralPath "dist\win-unpacked" -Filter "*.exe" |
+            Where-Object { $_.Name -notmatch "mongolgpt-cli" })
+          if ($apps.Count -ne 1) {
+            throw "Expected one packaged desktop executable, found $($apps.Count)."
+          }
+
+          $marker = Join-Path $env:RUNNER_TEMP "mongolgpt-desktop-smoke.json"
+          Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue
+          $env:MONGOLGPT_TEST_ONBOARDING = "1"
+          $env:MONGOLGPT_DESKTOP_SMOKE_FILE = $marker
+          $process = Start-Process -FilePath $apps[0].FullName -WorkingDirectory $apps[0].DirectoryName -PassThru -WindowStyle Hidden
+
+          try {
+            $deadline = (Get-Date).AddSeconds(90)
+            while (!(Test-Path -LiteralPath $marker) -and (Get-Date) -lt $deadline) {
+              $process.Refresh()
+              if ($process.HasExited) {
+                throw "Packaged desktop exited before reporting ready (code $($process.ExitCode))."
+              }
+              Start-Sleep -Milliseconds 500
+            }
+
+            if (!(Test-Path -LiteralPath $marker)) {
+              throw "Packaged desktop did not report ready within 90 seconds."
+            }
+
+            $result = Get-Content -Raw -LiteralPath $marker | ConvertFrom-Json
+            if ($result.status -ne "ready" -or $result.url -notlike "mongolgpt://renderer/*") {
+              throw "Packaged desktop returned an invalid smoke result: $(Get-Content -Raw -LiteralPath $marker)"
+            }
+
+            if (!$process.WaitForExit(30000)) {
+              throw "Packaged desktop reported ready but did not exit cleanly."
+            }
+            if ($process.ExitCode -ne 0) {
+              throw "Packaged desktop exited with code $($process.ExitCode)."
+            }
+          } finally {
+            $process.Refresh()
+            if (!$process.HasExited) {
+              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            }
+            Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue
+          }
+
       - name: Create macOS .app.tar.gz
         if: runner.os == 'macOS' && needs.version.outputs.release
         working-directory: packages/desktop/dist

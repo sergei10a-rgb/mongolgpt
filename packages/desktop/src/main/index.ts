@@ -21,6 +21,7 @@ import { forwardInitializationFailure } from "./initialization"
 import { exportDebugLogs, initCrashReporter, initLogging, startNetLog, write as writeLog } from "./logging"
 import { parseMarkdown } from "./markdown"
 import { createMenu } from "./menu"
+import { desktopSmokeFile, waitForRendererReady, writeDesktopSmokeResult } from "./release-smoke"
 import { getStore } from "./store"
 import {
   getDefaultServerUrl,
@@ -53,6 +54,7 @@ const APP_IDS: Record<string, string> = {
   prod: "org.mongolgpt.desktop",
 }
 const TEST_ONBOARDING = process.env.MONGOLGPT_TEST_ONBOARDING === "1" || process.env.OPENCODE_TEST_ONBOARDING === "1"
+const DESKTOP_SMOKE_FILE = desktopSmokeFile()
 const jsCallStackFeature = "DocumentPolicyIncludeJSCallStacksInCrashReports"
 
 let logger: ReturnType<typeof initLogging>
@@ -280,10 +282,12 @@ const main = Effect.gen(function* () {
     recordFatalRendererError: (error) => writeLog("renderer", "Дүрслэх процессын ноцтой алдаа", { ...error }, "error"),
   })
   registerWslIpcHandlers(wslServers)
-  void updater.start()
-  const updateTimer = setInterval(() => void updater.check(), 10 * 60 * 1000)
-  updateTimer.unref()
-  app.once("will-quit", () => clearInterval(updateTimer))
+  if (!DESKTOP_SMOKE_FILE) {
+    void updater.start()
+    const updateTimer = setInterval(() => void updater.check(), 10 * 60 * 1000)
+    updateTimer.unref()
+    app.once("will-quit", () => clearInterval(updateTimer))
+  }
   yield* Effect.promise(() => startNetLog()).pipe(
     Effect.catch((error) =>
       Effect.sync(() => {
@@ -372,21 +376,44 @@ const main = Effect.gen(function* () {
       void wslServers.initialize().catch((error) => logger.error("WSL серверийг эхлүүлж чадсангүй", error))
     }
 
-    yield* Effect.promise(() => health.wait).pipe(
-      Effect.timeout("30 seconds"),
-      Effect.catch((e) =>
-        Effect.sync(() => {
-          logger.error("Дагалдах серверийн эрүүл мэндийн шалгалт амжилтгүй боллоо", e.toString())
-        }),
-      ),
-    )
+    const healthCheck = Effect.promise(() => health.wait).pipe(Effect.timeout("30 seconds"))
+    if (DESKTOP_SMOKE_FILE) {
+      yield* healthCheck
+    } else {
+      yield* healthCheck.pipe(
+        Effect.catch((e) =>
+          Effect.sync(() => {
+            logger.error("Дагалдах серверийн эрүүл мэндийн шалгалт амжилтгүй боллоо", e.toString())
+          }),
+        ),
+      )
+    }
 
     logger.log("Ачаалах ажил дууслаа")
   }).pipe(forwardInitializationFailure(serverReady), Effect.forkChild)
 
-  yield* Fiber.await(loadingTask)
+  if (DESKTOP_SMOKE_FILE) yield* Fiber.join(loadingTask)
+  else yield* Fiber.await(loadingTask)
 
   mainWindow = createMainWindow()
+  if (DESKTOP_SMOKE_FILE) {
+    const smokeWindow = mainWindow
+    if (!smokeWindow) {
+      yield* Effect.fail(new Error("Desktop smoke шалгалтад үндсэн цонх үүссэнгүй."))
+      return
+    }
+    const rendererUrl = yield* Effect.tryPromise({
+      try: () => waitForRendererReady(smokeWindow.webContents),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    })
+    yield* Effect.try({
+      try: () => writeDesktopSmokeResult(DESKTOP_SMOKE_FILE, { version: app.getVersion(), url: rendererUrl }),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    })
+    yield* Effect.promise(stopSidecars)
+    app.exit(0)
+    return
+  }
   if (mainWindow) {
     createMenu({
       trigger: (id) => {
