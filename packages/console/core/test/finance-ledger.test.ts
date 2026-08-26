@@ -49,7 +49,7 @@ describe("immutable finance ledger", () => {
     await expect(recordFinanceFxRateWithDb(db, rate)).resolves.toMatchObject({ kind: "created" })
     await expect(recordFinanceFxRateWithDb(db, rate)).resolves.toMatchObject({ kind: "duplicate" })
     await expect(recordFinanceFxRateWithDb(db, { ...rate, rateMicromntPerUSD: 3_500_000_000 })).rejects.toThrow(
-      "Finance FX rate replay conflicts",
+      "Санхүүгийн FX ханшийг дахин боловсруулахад хадгалсан ханштай зөрчилдлөө",
     )
     expect(sqlite.query("select count(*) as count from finance_fx_rate").get()).toEqual({ count: 1 })
   })
@@ -129,7 +129,7 @@ describe("immutable finance ledger", () => {
     await expect(recordFinanceCostEntryWithDb(db, entry)).resolves.toMatchObject({ kind: "created" })
     await expect(recordFinanceCostEntryWithDb(db, entry)).resolves.toMatchObject({ kind: "duplicate" })
     await expect(recordFinanceCostEntryWithDb(db, { ...entry, originalAmount: 26 })).rejects.toThrow(
-      "Finance cost entry replay conflicts",
+      "Санхүүгийн зардлын бүртгэлийг дахин тоглуулахад хадгалсан бүртгэлтэй зөрчилдлөө",
     )
     expect(
       sqlite.query("select fx_rate_id, amount_mnt_micros from finance_cost_entry where id = ?").get(entry.id),
@@ -156,7 +156,7 @@ describe("immutable finance ledger", () => {
     await expect(recordFinanceCostValuationWithDb(db, valuation)).resolves.toMatchObject({ kind: "created" })
     await expect(recordFinanceCostValuationWithDb(db, valuation)).resolves.toMatchObject({ kind: "duplicate" })
     await expect(recordFinanceCostValuationWithDb(db, { ...valuation, method: "manual" })).rejects.toThrow(
-      "Finance cost valuation replay conflicts",
+      "Санхүүгийн зардлын үнэлгээг дахин тоглуулахад хадгалсан үнэлгээтэй зөрчилдлөө",
     )
 
     await recordFinanceFxRateWithDb(db, {
@@ -178,7 +178,7 @@ describe("immutable finance ledger", () => {
       payloadHash: hash("6"),
     }
     await expect(recordFinanceCostValuationWithDb(db, { ...correction, version: 3 })).rejects.toThrow(
-      "Finance cost valuation version must be 2",
+      "Санхүүгийн зардлын үнэлгээний хувилбар 2 байх ёстой",
     )
     await expect(recordFinanceCostValuationWithDb(db, correction)).resolves.toMatchObject({ kind: "created" })
 
@@ -224,7 +224,7 @@ describe("immutable finance ledger", () => {
       effectiveAt,
     }
 
-    await expect(recordFinanceCostEntryWithDb(db, base)).rejects.toThrow("missing FX rate")
+    await expect(recordFinanceCostEntryWithDb(db, base)).rejects.toThrow("байхгүй FX ханшийг зааж байна")
     await expect(
       recordFinanceCostEntryWithDb(db, {
         ...base,
@@ -236,7 +236,7 @@ describe("immutable finance ledger", () => {
         fxRateID: undefined,
         idempotencyKey: "manual:too-large",
       }),
-    ).rejects.toThrow("safe micro-MNT range")
+    ).rejects.toThrow("аюулгүй micro-MNT хязгаараас хэтэрлээ")
   })
 
   test("does not charge MongolGPT for BYOK or zero-cost usage", async () => {

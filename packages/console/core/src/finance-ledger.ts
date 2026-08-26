@@ -62,14 +62,14 @@ export const RecordFinanceCostEntrySchema = z
       context.addIssue({
         code: "custom",
         path: ["originalAmount"],
-        message: "MNT amount exceeds the safe micro-MNT range",
+        message: "MNT дүн аюулгүй micro-MNT хязгаараас хэтэрлээ",
       })
     }
     if (input.originalCurrency === "MNT" && input.fxRateID) {
       context.addIssue({
         code: "custom",
         path: ["fxRateID"],
-        message: "MNT cost entries cannot reference an FX rate",
+        message: "MNT зардлын бүртгэл FX ханш заах боломжгүй",
       })
     }
     if (input.sourceType === "usage") {
@@ -77,14 +77,14 @@ export const RecordFinanceCostEntrySchema = z
         context.addIssue({
           code: "custom",
           path: ["usageID"],
-          message: "Usage cost entries require a matching usage source reference",
+          message: "Хэрэглээний зардлын бүртгэлд тохирох хэрэглээний эх сурвалжийн лавлагаа шаардлагатай",
         })
       }
       if (input.category !== "model_cost" || !input.provider || !input.model) {
         context.addIssue({
           code: "custom",
           path: ["category"],
-          message: "Usage cost entries require a model cost, provider, and model",
+          message: "Хэрэглээний зардлын бүртгэлд загварын зардал, нийлүүлэгч, загвар шаардлагатай",
         })
       }
     }
@@ -92,14 +92,14 @@ export const RecordFinanceCostEntrySchema = z
       context.addIssue({
         code: "custom",
         path: ["paymentInvoiceID"],
-        message: "Payment settlement costs require an invoice or payment event",
+        message: "Төлбөрийн тооцооны зардал нэхэмжлэх эсвэл төлбөрийн үйл явдалтай байх ёстой",
       })
     }
     if (input.category === "model_cost" && !input.provider) {
       context.addIssue({
         code: "custom",
         path: ["provider"],
-        message: "Model costs require a provider",
+        message: "Загварын зардалд нийлүүлэгч шаардлагатай",
       })
     }
   })
@@ -136,7 +136,7 @@ export async function recordFinanceFxRateWithDb(db: Database.TxOrDb, input: Reco
     .onConflictDoNothing()
 
   const stored = await findFxRate(db, rate)
-  if (!stored) throw new Error("Finance FX rate uniqueness conflict")
+  if (!stored) throw new Error("Санхүүгийн FX ханшийн давхцлын зөрчил гарлаа")
   assertFxRateReplay(stored, rate)
   return {
     kind: resultChanges(inserted) === 0 ? ("duplicate" as const) : ("created" as const),
@@ -177,7 +177,7 @@ export async function recordFinanceCostEntryWithDb(db: Database.TxOrDb, input: R
     .onConflictDoNothing()
 
   const stored = await findCostEntry(db, entry)
-  if (!stored) throw new Error("Finance cost entry uniqueness conflict")
+  if (!stored) throw new Error("Санхүүгийн зардлын бүртгэлийн давхцлын зөрчил гарлаа")
   assertCostEntryReplay(stored, entry, valuation)
   return {
     kind: resultChanges(inserted) === 0 ? ("duplicate" as const) : ("created" as const),
@@ -196,9 +196,9 @@ export async function recordFinanceCostValuationWithDb(db: Database.TxOrDb, inpu
     .from(FinanceCostEntryTable)
     .where(eq(FinanceCostEntryTable.id, valuation.costEntryID))
     .then((rows) => rows[0])
-  if (!costEntry) throw new Error("Finance cost valuation references a missing cost entry")
+  if (!costEntry) throw new Error("Санхүүгийн зардлын үнэлгээ байхгүй зардлын бүртгэл зааж байна")
   if (costEntry.original_currency !== "USD" || costEntry.fx_rate_id !== null || costEntry.amount_mnt_micros !== null) {
-    throw new Error("Finance cost valuation requires an unvalued USD cost entry")
+    throw new Error("Санхүүгийн зардлын үнэлгээнд үнэлэгдээгүй USD зардлын бүртгэл шаардлагатай")
   }
 
   const rate = await db
@@ -206,9 +206,9 @@ export async function recordFinanceCostValuationWithDb(db: Database.TxOrDb, inpu
     .from(FinanceFxRateTable)
     .where(eq(FinanceFxRateTable.id, valuation.fxRateID))
     .then((rows) => rows[0])
-  if (!rate) throw new Error("Finance cost valuation references a missing FX rate")
+  if (!rate) throw new Error("Санхүүгийн зардлын үнэлгээ байхгүй FX ханшийг зааж байна")
   if (rate.base_currency !== "USD" || rate.quote_currency !== "MNT") {
-    throw new Error("Finance cost valuation references an incompatible FX rate")
+    throw new Error("Санхүүгийн зардлын үнэлгээ үл тохирох FX ханшийг зааж байна")
   }
 
   const amountMntMicros = valueUsdInMntMicros(costEntry.original_amount, rate.rate_micromnt_per_usd)
@@ -227,7 +227,7 @@ export async function recordFinanceCostValuationWithDb(db: Database.TxOrDb, inpu
     .then((rows) => rows[0])
   const expectedVersion = (latest?.version ?? 0) + 1
   if (valuation.version !== expectedVersion) {
-    throw new Error(`Finance cost valuation version must be ${expectedVersion}`)
+    throw new Error(`Санхүүгийн зардлын үнэлгээний хувилбар ${expectedVersion} байх ёстой`)
   }
 
   const inserted = await db
@@ -245,7 +245,7 @@ export async function recordFinanceCostValuationWithDb(db: Database.TxOrDb, inpu
     .onConflictDoNothing()
 
   const recorded = await findCostValuation(db, valuation)
-  if (!recorded) throw new Error("Finance cost valuation uniqueness conflict")
+  if (!recorded) throw new Error("Санхүүгийн зардлын үнэлгээний давхцлын зөрчил гарлаа")
   assertCostValuationReplay(recorded, valuation, amountMntMicros)
   return {
     kind: resultChanges(inserted) === 0 ? ("duplicate" as const) : ("created" as const),
@@ -312,9 +312,9 @@ async function resolveMntValuation(db: Database.TxOrDb, entry: z.infer<typeof Re
     .from(FinanceFxRateTable)
     .where(eq(FinanceFxRateTable.id, entry.fxRateID))
     .then((rows) => rows[0])
-  if (!rate) throw new Error("Finance cost entry references a missing FX rate")
+  if (!rate) throw new Error("Санхүүгийн зардлын бүртгэл байхгүй FX ханшийг зааж байна")
   if (rate.base_currency !== "USD" || rate.quote_currency !== "MNT") {
-    throw new Error("Finance cost entry references an incompatible FX rate")
+    throw new Error("Санхүүгийн зардлын бүртгэл үл тохирох FX ханшийг зааж байна")
   }
   return valueUsdInMntMicros(entry.originalAmount, rate.rate_micromnt_per_usd)
 }
@@ -388,7 +388,7 @@ function assertFxRateReplay(
     stored.payload_hash !== replay.payloadHash ||
     stored.time_effective.getTime() !== replay.effectiveAt
   ) {
-    throw new Error("Finance FX rate replay conflicts with the stored rate")
+    throw new Error("Санхүүгийн FX ханшийг дахин боловсруулахад хадгалсан ханштай зөрчилдлөө")
   }
 }
 
@@ -417,7 +417,7 @@ function assertCostEntryReplay(
     stored.payload_hash !== replay.payloadHash ||
     stored.time_effective.getTime() !== replay.effectiveAt
   ) {
-    throw new Error("Finance cost entry replay conflicts with the stored entry")
+    throw new Error("Санхүүгийн зардлын бүртгэлийг дахин тоглуулахад хадгалсан бүртгэлтэй зөрчилдлөө")
   }
 }
 
@@ -435,7 +435,7 @@ function assertCostValuationReplay(
     stored.idempotency_key !== replay.idempotencyKey ||
     stored.payload_hash !== replay.payloadHash
   ) {
-    throw new Error("Finance cost valuation replay conflicts with the stored valuation")
+    throw new Error("Санхүүгийн зардлын үнэлгээг дахин тоглуулахад хадгалсан үнэлгээтэй зөрчилдлөө")
   }
 }
 
@@ -446,7 +446,7 @@ function valueUsdInMntMicros(amountMicrocents: number, rateMicromntPerUSD: numbe
 
 function safeNumber(value: bigint) {
   if (value <= 0n || value > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error("Finance MNT valuation exceeds the safe integer range")
+    throw new Error("Санхүүгийн MNT үнэлгээ аюулгүй бүхэл тооны хязгаараас хэтэрлээ")
   }
   return Number(value)
 }

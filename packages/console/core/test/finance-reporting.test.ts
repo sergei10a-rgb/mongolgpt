@@ -452,7 +452,7 @@ describe("finance margin reporting", () => {
           },
         },
       }),
-    ).toThrow("exceeds the safe integer range")
+    ).toThrow("аюулгүй бүхэл тооны хязгаараас хэтэрлээ")
   })
 
   test("rejects an inverted report period", async () => {
@@ -462,6 +462,6 @@ describe("finance margin reporting", () => {
         start: reportEnd,
         end: reportStart,
       }),
-    ).rejects.toThrow("Finance report start must not be after its end")
+    ).rejects.toThrow("Санхүүгийн тайлангийн эхлэх хугацаа дуусах хугацаанаас хойш байж болохгүй")
   })
 })

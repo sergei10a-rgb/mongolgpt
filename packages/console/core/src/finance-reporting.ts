@@ -18,7 +18,7 @@ export const FinanceMarginEvidenceInput = z
   })
   .strict()
   .refine((input) => input.start.getTime() <= input.end.getTime(), {
-    message: "Finance report start must not be after its end",
+    message: "Санхүүгийн тайлангийн эхлэх хугацаа дуусах хугацаанаас хойш байж болохгүй",
     path: ["start"],
   })
 
@@ -360,14 +360,14 @@ export function calculateFinanceGrossMargin(input: {
 
 function aggregateNonnegativeInteger(value: unknown) {
   const parsed = aggregateSignedInteger(value)
-  if (parsed < 0) throw new Error("Finance report aggregate must not be negative")
+  if (parsed < 0) throw new Error("Санхүүгийн тайлангийн нийлбэр сөрөг байж болохгүй")
   return parsed
 }
 
 function aggregateSignedInteger(value: unknown) {
   if (value === null || value === undefined) return 0
   const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN
-  if (!Number.isSafeInteger(parsed)) throw new Error("Finance report aggregate is not a safe integer")
+  if (!Number.isSafeInteger(parsed)) throw new Error("Санхүүгийн тайлангийн нийлбэр аюулгүй бүхэл тоо биш байна")
   return parsed
 }
 
@@ -385,7 +385,7 @@ function subtractSafeIntegers(left: number, right: number) {
 
 function safeNumber(value: bigint) {
   if (value < BigInt(Number.MIN_SAFE_INTEGER) || value > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error("Finance report aggregate exceeds the safe integer range")
+    throw new Error("Санхүүгийн тайлангийн нийлбэр аюулгүй бүхэл тооны хязгаараас хэтэрлээ")
   }
   return Number(value)
 }

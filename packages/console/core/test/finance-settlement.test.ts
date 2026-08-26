@@ -107,7 +107,7 @@ describe("provider payment settlement ledger", () => {
         feeAmountMNT: 1_100,
         netAmountMNT: 98_800,
       }),
-    ).rejects.toThrow("Finance payment settlement replay conflicts")
+    ).rejects.toThrow("Санхүүгийн төлбөрийн тооцоог дахин тоглуулахад хадгалсан тооцоотой зөрчилдлөө")
 
     expect(
       sqlite
@@ -246,11 +246,11 @@ describe("provider payment settlement ledger", () => {
     }
 
     await expect(recordFinancePaymentSettlementWithDb(db, { ...settlement, netAmountMNT: 1 })).rejects.toThrow(
-      "Settlement amounts do not balance",
+      "Тооцооны дүнгүүд тэнцэхгүй байна",
     )
     await expect(
       recordFinancePaymentSettlementWithDb(db, { ...settlement, merchantAccountID: "wrong_merchant" }),
-    ).rejects.toThrow("does not match the invoice")
+    ).rejects.toThrow("Санхүүгийн төлбөрийн тооцоо нэхэмжлэлтэй таарахгүй байна")
     await recordFinancePaymentSettlementWithDb(db, settlement)
 
     expect(() =>

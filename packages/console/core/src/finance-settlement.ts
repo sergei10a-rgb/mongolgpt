@@ -46,7 +46,7 @@ export const RecordFinancePaymentSettlementSchema = z
       context.addIssue({
         code: "custom",
         path: ["grossAmountMNT"],
-        message: "Settlement gross amount does not match its kind",
+        message: "Тооцооны нийт дүн тухайн төрөлтэйгөө таарахгүй байна",
       })
     }
 
@@ -55,7 +55,7 @@ export const RecordFinancePaymentSettlementSchema = z
       context.addIssue({
         code: "custom",
         path: ["netAmountMNT"],
-        message: "Settlement amounts do not balance",
+        message: "Тооцооны дүнгүүд тэнцэхгүй байна",
       })
     }
   })
@@ -72,24 +72,24 @@ export async function recordFinancePaymentSettlementWithDb(
     .from(PaymentInvoiceTable)
     .where(eq(PaymentInvoiceTable.id, settlement.paymentInvoiceID))
     .then((rows) => rows[0])
-  if (!invoice) throw new Error("Finance payment settlement references a missing invoice")
+  if (!invoice) throw new Error("Санхүүгийн төлбөрийн тооцоо байхгүй нэхэмжлэл зааж байна")
   if (
     invoice.workspace_id !== settlement.workspaceID ||
     invoice.provider !== settlement.provider ||
     invoice.merchant_account_id !== settlement.merchantAccountID ||
     invoice.currency !== settlement.currency
   ) {
-    throw new Error("Finance payment settlement does not match the invoice")
+    throw new Error("Санхүүгийн төлбөрийн тооцоо нэхэмжлэлтэй таарахгүй байна")
   }
   if (settlement.kind !== "adjustment" && Math.abs(settlement.grossAmountMNT) !== invoice.amount) {
-    throw new Error("Finance payment settlement gross amount does not match the invoice")
+    throw new Error("Санхүүгийн төлбөрийн тооцооны нийт дүн нэхэмжлэлтэй таарахгүй байна")
   }
   if (
     (settlement.kind === "payment" && !["paid", "refunded"].includes(invoice.status)) ||
     (settlement.kind === "refund" && invoice.status !== "refunded") ||
     (settlement.kind === "adjustment" && !["paid", "refunded"].includes(invoice.status))
   ) {
-    throw new Error("Finance payment settlement requires a verified invoice state")
+    throw new Error("Санхүүгийн төлбөрийн тооцоонд баталгаажсан нэхэмжлэлийн төлөв шаардлагатай")
   }
 
   if (settlement.paymentEventID) {
@@ -98,7 +98,7 @@ export async function recordFinancePaymentSettlementWithDb(
       .from(PaymentEventTable)
       .where(eq(PaymentEventTable.id, settlement.paymentEventID))
       .then((rows) => rows[0])
-    if (!event) throw new Error("Finance payment settlement references a missing payment event")
+    if (!event) throw new Error("Санхүүгийн төлбөрийн тооцоо байхгүй төлбөрийн үйл явдлыг зааж байна")
     const expectedEventType =
       settlement.kind === "payment" ? "paid" : settlement.kind === "refund" ? "refunded" : undefined
     if (
@@ -109,7 +109,7 @@ export async function recordFinancePaymentSettlementWithDb(
       event.outcome === "rejected" ||
       (expectedEventType && event.type !== expectedEventType)
     ) {
-      throw new Error("Finance payment settlement does not match the payment event")
+      throw new Error("Санхүүгийн төлбөрийн тооцоо төлбөрийн үйл явдалтай таарахгүй байна")
     }
   }
 
@@ -136,7 +136,7 @@ export async function recordFinancePaymentSettlementWithDb(
     .onConflictDoNothing()
 
   const stored = await findPaymentSettlement(db, settlement)
-  if (!stored) throw new Error("Finance payment settlement uniqueness conflict")
+  if (!stored) throw new Error("Санхүүгийн төлбөрийн тооцооны давхцлын зөрчил гарлаа")
   assertPaymentSettlementReplay(stored, settlement)
 
   const costs = []
@@ -226,7 +226,7 @@ function assertPaymentSettlementReplay(
     stored.payload_hash !== replay.payloadHash ||
     stored.time_effective.getTime() !== replay.effectiveAt
   ) {
-    throw new Error("Finance payment settlement replay conflicts with the stored settlement")
+    throw new Error("Санхүүгийн төлбөрийн тооцоог дахин тоглуулахад хадгалсан тооцоотой зөрчилдлөө")
   }
 }
 
