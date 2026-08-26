@@ -15,7 +15,7 @@ async function callQuotaService(path: string, body: unknown) {
   const payload = (await response.json().catch(() => ({}))) as JsonObject
   if (!response.ok) {
     const detail = typeof payload.error === "string" ? payload.error : `HTTP ${response.status}`
-    throw new Error(`Quota үйлчилгээний хүсэлт амжилтгүй: ${detail}`)
+    throw new Error(`Хязгаарын үйлчилгээний хүсэлт амжилтгүй: ${detail}`)
   }
   return payload
 }
@@ -52,12 +52,12 @@ export function numberRecord(value: unknown) {
     !value.values ||
     typeof value.values !== "object"
   ) {
-    throw new Error("Quota үйлчилгээ буруу counter хариу буцаалаа.")
+    throw new Error("Хязгаарын үйлчилгээ буруу тоолуурын хариу буцаалаа.")
   }
   return Object.fromEntries(
     Object.entries(value.values).map(([key, item]) => {
       const parsed = Number(item)
-      if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error("Quota counter-ийн утга буруу байна.")
+      if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error("Хязгаарын тоолуурын утга буруу байна.")
       return [key, parsed]
     }),
   )
@@ -65,7 +65,7 @@ export function numberRecord(value: unknown) {
 
 export function claimResult(value: unknown) {
   if (!value || typeof value !== "object" || !("allowed" in value) || typeof value.allowed !== "boolean") {
-    throw new Error("Quota үйлчилгээ буруу claim хариу буцаалаа.")
+    throw new Error("Хязгаарын үйлчилгээ нөөцлөх хүсэлтийн буруу хариу буцаалаа.")
   }
   return value as JsonObject & { allowed: boolean }
 }

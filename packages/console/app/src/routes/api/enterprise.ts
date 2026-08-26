@@ -43,7 +43,7 @@ export async function POST(event: APIEvent) {
   } catch (error) {
     if (error instanceof InvalidEnterpriseInquiryError) return json({ error: error.message }, 400)
     if (error instanceof SyntaxError) return json({ error: dict["enterprise.form.error.allFieldsRequired"] }, 400)
-    console.error("Enterprise inquiry persistence failed", error instanceof Error ? error.name : typeof error)
+    console.error("Байгууллагын хүсэлтийг хадгалахад алдаа гарлаа", error instanceof Error ? error.name : typeof error)
     return json({ error: dict["enterprise.form.error.internalServer"] }, 500)
   }
 }

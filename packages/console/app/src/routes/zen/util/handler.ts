@@ -1377,7 +1377,7 @@ export async function handler(
         return { costInMicroCents: cost }
       } catch (error) {
         // The D1 primary-key makes a late Queue delivery and this synchronous fallback idempotent.
-        console.error("Usage queue unavailable; falling back to D1", { usageID, error })
+        console.error("Хэрэглээний дарааллыг ашиглах боломжгүй тул D1 рүү шилжиж байна", { usageID, error })
       }
     }
 

@@ -55,7 +55,7 @@ export async function accountOverviewRequest(
   const parsedWorkspaceID = workspaceID.optional().safeParse(requestedWorkspaceID)
   if (!parsedWorkspaceID.success) {
     return Response.json(
-      { error: "invalid_request", message: "Account overview хүсэлтийн workspace буруу байна." },
+      { error: "invalid_request", message: "Бүртгэлийн тойм хүсэлтийн ажлын талбар буруу байна." },
       { status: 400, headers },
     )
   }
