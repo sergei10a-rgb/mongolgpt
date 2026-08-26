@@ -18,9 +18,9 @@ type Reply = "once" | "always" | "reject"
 type Connection = Partial<Pick<AgentSideConnection, "requestPermission" | "writeTextFile">>
 
 const permissionOptions: PermissionOption[] = [
-  { optionId: "once", kind: "allow_once", name: "Allow once" },
-  { optionId: "always", kind: "allow_always", name: "Always allow" },
-  { optionId: "reject", kind: "reject_once", name: "Reject" },
+  { optionId: "once", kind: "allow_once", name: "Нэг удаа зөвшөөрөх" },
+  { optionId: "always", kind: "allow_always", name: "Үргэлж зөвшөөрөх" },
+  { optionId: "reject", kind: "reject_once", name: "Татгалзах" },
 ]
 
 export class Handler {

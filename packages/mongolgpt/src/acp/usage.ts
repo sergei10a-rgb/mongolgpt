@@ -154,7 +154,9 @@ export const layer = Layer.effect(
             contextLimitLoader.providers(input.directory).pipe(
               Effect.map((providers) => findContextLimit(providers, input.providerID, input.modelID)),
               Effect.catch((error) =>
-                Effect.logError("failed to get providers for usage context limit", { error: error }).pipe(
+                Effect.logError("Хэрэглээний контекстийн хязгаарыг тооцох үйлчилгээ үзүүлэгчдийг авч чадсангүй", {
+                  error: error,
+                }).pipe(
                   Effect.as(undefined),
                 ),
               ),
@@ -182,7 +184,7 @@ export const layer = Layer.effect(
         .messages({ sessionID: input.sessionID, directory: input.directory })
         .pipe(
           Effect.catch((error) =>
-            Effect.logError("failed to fetch messages for usage update", { error: error }).pipe(Effect.as(undefined)),
+            Effect.logError("Хэрэглээг шинэчлэх зурвасуудыг татаж чадсангүй", { error: error }).pipe(Effect.as(undefined)),
           ),
         )
       if (!messages) return

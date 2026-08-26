@@ -703,7 +703,7 @@ export function createBrowserCallbackServer(): Promise<BrowserCallbackServer> {
       const state = url.searchParams.get("state")
 
       if (!expectedState || state !== expectedState) {
-        const message = "OAuth state буруу байна"
+        const message = "OAuth төлөв буруу байна"
         response
           .writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
           .end(OauthCallbackPage.error(message, { provider: "MongolGPT" }))
@@ -719,7 +719,7 @@ export function createBrowserCallbackServer(): Promise<BrowserCallbackServer> {
       }
 
       if (!value) {
-        const message = "Authorization code алга байна"
+        const message = "Зөвшөөрлийн код алга байна"
         settle(() => rejectCode(new Error(message)))
         response
           .writeHead(400, { "Content-Type": "text/html; charset=utf-8" })

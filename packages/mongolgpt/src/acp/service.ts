@@ -330,7 +330,7 @@ export function make(input: {
       "session",
     ).pipe(
       Effect.catch((error) =>
-        Effect.logError("failed to abort ACP backing session", { error: error, sessionID: current.id }),
+        Effect.logError("ACP суурь сессийг цуцалж чадсангүй", { error: error, sessionID: current.id }),
       ),
     )
   })
@@ -625,7 +625,7 @@ function makeUsageService(sdk: MongolGPTClient) {
     ).pipe(
       Effect.map((messages) => messages as readonly UsageService.SessionMessage[]),
       Effect.catch((error) =>
-        Effect.logError("failed to fetch messages for usage update", { error: error }).pipe(Effect.as(undefined)),
+        Effect.logError("Хэрэглээг шинэчлэх зурвасуудыг татаж чадсангүй", { error: error }).pipe(Effect.as(undefined)),
       ),
     )
     if (!messages) return
@@ -1057,7 +1057,7 @@ function fromUnknownError(error: unknown, service?: string): Error {
   if (isAuthRequired(error)) {
     return new ACPError.AuthRequiredError({ providerId: findProviderID(error) })
   }
-  return new ACPError.ServiceFailureError({ safeMessage: "MongolGPT service амжилтгүй боллоо", service })
+  return new ACPError.ServiceFailureError({ safeMessage: "MongolGPT үйлчилгээ амжилтгүй боллоо", service })
 }
 
 function isACPError(error: unknown): error is Error {
