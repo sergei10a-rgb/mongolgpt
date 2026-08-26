@@ -467,17 +467,17 @@ export const layer = Layer.effect(
       const fields = { server: name, logger: params.logger, level: params.level, data: params.data }
       switch (params.level) {
         case "debug":
-          return Effect.logDebug("MCP server log", fields)
+          return Effect.logDebug("MCP серверийн бүртгэл", fields)
         case "info":
         case "notice":
-          return Effect.logInfo("MCP server log", fields)
+          return Effect.logInfo("MCP серверийн бүртгэл", fields)
         case "warning":
-          return Effect.logWarning("MCP server log", fields)
+          return Effect.logWarning("MCP серверийн бүртгэл", fields)
         case "error":
         case "critical":
         case "alert":
         case "emergency":
-          return Effect.logError("MCP server log", fields)
+          return Effect.logError("MCP серверийн бүртгэл", fields)
       }
     }
 
@@ -499,7 +499,7 @@ export const layer = Layer.effect(
           ([key, mcp]) =>
             Effect.gen(function* () {
               if (!isMcpConfigured(mcp)) {
-                yield* Effect.logError("Ignoring MCP config entry without type", { key })
+                yield* Effect.logError("Төрөлгүй MCP тохиргооны мөрийг алгаслаа", { key })
                 return
               }
 

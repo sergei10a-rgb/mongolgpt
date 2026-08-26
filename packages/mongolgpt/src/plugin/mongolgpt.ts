@@ -77,7 +77,7 @@ async function startBrowserCallbackServer(): Promise<BrowserCallbackServer> {
       }
 
       if (!value || state !== expectedState) {
-        const message = value ? "OAuth state буруу байна" : "Authorization code алга"
+        const message = value ? "OAuth төлөв буруу байна" : "Зөвшөөрлийн код алга"
         reject(new Error(message))
         response
           .writeHead(400, { "Content-Type": "text/html; charset=utf-8" })

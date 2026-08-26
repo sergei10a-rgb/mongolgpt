@@ -106,7 +106,7 @@ function getLegacyPlugins(mod: Record<string, unknown>) {
     if (seen.has(entry)) continue
     seen.add(entry)
     const plugin = getServerPlugin(entry)
-    if (!plugin) throw new TypeError("Plugin export is not a function")
+    if (!plugin) throw new TypeError("Нэмэлтээс экспортолсон утга функц биш байна")
     result.push(plugin)
   }
 
@@ -174,7 +174,7 @@ export const layer = Layer.effect(
             try: () => plugin(input),
             catch: errorMessage,
           }).pipe(
-            Effect.tapError((error) => Effect.logError("failed to load internal plugin", { name: plugin.name, error })),
+            Effect.tapError((error) => Effect.logError("Дотоод нэмэлтийг ачаалж чадсангүй", { name: plugin.name, error })),
             Effect.option,
           )
           if (init._tag === "Some") hooks.push(init.value)
@@ -199,21 +199,21 @@ export const layer = Layer.effect(
 
                 if (stage === "install") {
                   const parsed = parsePluginSpecifier(spec)
-                  publishPluginError(`Failed to install plugin ${parsed.pkg}@${parsed.version}: ${message}`)
+                  publishPluginError(`Нэмэлт ${parsed.pkg}@${parsed.version}-ийг суулгаж чадсангүй: ${message}`)
                   return
                 }
 
                 if (stage === "compatibility") {
-                  publishPluginError(`Plugin ${spec} skipped: ${message}`)
+                  publishPluginError(`Нэмэлт ${spec}-ийг алгаслаа: ${message}`)
                   return
                 }
 
                 if (stage === "entry") {
-                  publishPluginError(`Failed to load plugin ${spec}: ${message}`)
+                  publishPluginError(`Нэмэлт ${spec}-ийг ачаалж чадсангүй: ${message}`)
                   return
                 }
 
-                publishPluginError(`Failed to load plugin ${spec}: ${message}`)
+                publishPluginError(`Нэмэлт ${spec}-ийг ачаалж чадсангүй: ${message}`)
               },
             },
           }),
@@ -230,12 +230,12 @@ export const layer = Layer.effect(
               return message
             },
           }).pipe(
-            Effect.tapError((error) => Effect.logError("failed to load plugin", { path: load.spec, error })),
+            Effect.tapError((error) => Effect.logError("Нэмэлтийг ачаалах үед алдаа гарлаа", { path: load.spec, error })),
             Effect.catch(() => {
               // TODO: make proper events for this
               // events.publish(Session.Event.Error, {
               //   error: new NamedError.Unknown({
-              //     message: `Failed to load plugin ${load.spec}: ${message}`,
+              //     message: `Нэмэлт ${load.spec}-ийг ачаалж чадсангүй: ${message}`,
               //   }).toObject(),
               // })
               return Effect.void
@@ -249,7 +249,7 @@ export const layer = Layer.effect(
             try: () => Promise.resolve((hook as any).config?.(cfg)),
             catch: errorMessage,
           }).pipe(
-            Effect.tapError((error) => Effect.logError("plugin config hook failed", { error })),
+            Effect.tapError((error) => Effect.logError("Нэмэлтийн тохиргооны функц амжилтгүй боллоо", { error })),
             Effect.ignore,
           )
         }
@@ -272,7 +272,7 @@ export const layer = Layer.effect(
                 try: () => Promise.resolve(hook.dispose?.()),
                 catch: errorMessage,
               }).pipe(
-                Effect.tapError((error) => Effect.logError("plugin dispose hook failed", { error })),
+                Effect.tapError((error) => Effect.logError("Нэмэлтийг хаах функц амжилтгүй боллоо", { error })),
                 Effect.ignore,
               ),
             { discard: true },

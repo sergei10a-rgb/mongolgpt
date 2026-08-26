@@ -1040,7 +1040,7 @@ export default {
               },
             ])
             expect(missing).toHaveLength(0)
-            expect(messages).toEqual(["Plugin acme-plugin@1.0.0 нь tui эхлэх цэг export хийгээгүй байна"])
+            expect(messages).toEqual(["Нэмэлт acme-plugin@1.0.0 нь tui эхлэх цэг export хийгээгүй байна"])
           } finally {
             install.mockRestore()
           }
@@ -1129,7 +1129,7 @@ export default {
               pkg: tmp.extra.file,
               json,
             }),
-          ).toThrow("plugin хавтсаас гадуур")
+          ).toThrow("нэмэлтийн хавтсаас гадуур")
         }),
     ),
   )

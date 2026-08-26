@@ -364,7 +364,7 @@ async function readThemeFiles(spec: string, pkg?: PluginPackage) {
   return Promise.resolve()
     .then(() => readPackageThemes(spec, pkg))
     .catch((error) => {
-      warn("invalid tui plugin oc-themes", {
+      warn("TUI нэмэлтийн oc-themes тохиргоо буруу байна", {
         path: spec,
         pkg: pkg.pkg,
         error,
@@ -379,7 +379,12 @@ async function syncPluginThemes(plugin: PluginEntry) {
   const install = createThemeInstaller(plugin.load.origin, plugin.load.plugin_root, plugin.load.spec, plugin)
   for (const file of plugin.load.theme_files) {
     await install(file).catch((error) => {
-      warn("failed to sync tui plugin oc-themes", { path: plugin.load.spec, id: plugin.id, theme: file, error })
+      warn("TUI нэмэлтийн oc-themes-ийг синхрончилж чадсангүй", {
+        path: plugin.load.spec,
+        id: plugin.id,
+        theme: file,
+        error,
+      })
     })
   }
 }
@@ -430,7 +435,7 @@ function createPluginScope(load: PluginLoad, id: string, disposeTimeoutMs: numbe
     for (const item of queue) {
       const left = until - Date.now()
       if (left <= 0) {
-        fail("timed out cleaning up tui plugin", {
+        fail("TUI нэмэлтийг цэвэрлэх хугацаа дууслаа", {
           path: load.spec,
           id,
           timeout: disposeTimeoutMs,
@@ -441,7 +446,7 @@ function createPluginScope(load: PluginLoad, id: string, disposeTimeoutMs: numbe
       const out = await runCleanup(item.fn, left)
       if (out.type === "ok") continue
       if (out.type === "timeout") {
-        fail("timed out cleaning up tui plugin", {
+        fail("TUI нэмэлтийг цэвэрлэх хугацаа дууслаа", {
           path: load.spec,
           id,
           timeout: disposeTimeoutMs,
@@ -450,7 +455,7 @@ function createPluginScope(load: PluginLoad, id: string, disposeTimeoutMs: numbe
       }
 
       if (out.type === "error") {
-        fail("failed to clean up tui plugin", {
+        fail("TUI нэмэлтийг цэвэрлэж чадсангүй", {
           path: load.spec,
           id,
           error: out.error,
@@ -529,7 +534,7 @@ async function activatePluginEntry(state: RuntimeState, plugin: PluginEntry, per
       return true
     })
     .catch((error) => {
-      fail("failed to initialize tui plugin", {
+      fail("TUI нэмэлтийг эхлүүлж чадсангүй", {
         path: plugin.load.spec,
         id: plugin.id,
         error,
@@ -651,7 +656,7 @@ function pluginApi(runtime: RuntimeState, plugin: PluginEntry, scope: PluginScop
 
 function addPluginEntry(state: RuntimeState, plugin: PluginEntry) {
   if (state.plugins_by_id.has(plugin.id)) {
-    fail("duplicate tui plugin id", {
+    fail("TUI нэмэлтийн id давхардлаа", {
       id: plugin.id,
       path: plugin.load.spec,
     })
@@ -683,7 +688,7 @@ async function resolveExternalPlugins(list: ConfigPlugin.Origin[], wait: () => P
       const mod = await Promise.resolve()
         .then(() => readV1Plugin(loaded.mod as Record<string, unknown>, loaded.spec, "tui") as TuiPluginModule)
         .catch((error) => {
-          fail("failed to load tui plugin", {
+          fail("TUI нэмэлтийг ачаалж чадсангүй", {
             path: loaded.spec,
             target: loaded.entry,
             retry,
@@ -700,7 +705,7 @@ async function resolveExternalPlugins(list: ConfigPlugin.Origin[], wait: () => P
         readPluginId(mod.id, loaded.spec),
         loaded.pkg,
       ).catch((error) => {
-        fail("failed to load tui plugin", { path: loaded.spec, target: loaded.target, retry, error })
+        fail("TUI нэмэлтийг ачаалж чадсангүй", { path: loaded.spec, target: loaded.target, retry, error })
         return
       })
       if (!id) return
@@ -729,7 +734,7 @@ async function resolveExternalPlugins(list: ConfigPlugin.Origin[], wait: () => P
           ? loaded.pkg.json.name.trim()
           : undefined
       const id = await resolvePluginId(loaded.source, loaded.spec, loaded.target, name, loaded.pkg).catch((error) => {
-        fail("failed to load tui plugin", { path: loaded.spec, target: loaded.target, retry, error })
+        fail("TUI нэмэлтийг ачаалж чадсангүй", { path: loaded.spec, target: loaded.target, retry, error })
         return
       })
       if (!id) return
@@ -750,23 +755,23 @@ async function resolveExternalPlugins(list: ConfigPlugin.Origin[], wait: () => P
     report: {
       start() {},
       missing(candidate, retry, message) {
-        warn("tui plugin has no entrypoint", { path: candidate.plan.spec, retry, message })
+        warn("TUI нэмэлтэд эхлэх цэг алга", { path: candidate.plan.spec, retry, message })
       },
       error(candidate, retry, stage, error, resolved) {
         const spec = candidate.plan.spec
         if (stage === "install") {
-          fail("failed to resolve tui plugin", { path: spec, retry, error })
+          fail("TUI нэмэлтийг тодорхойлж чадсангүй", { path: spec, retry, error })
           return
         }
         if (stage === "compatibility") {
-          fail("tui plugin incompatible", { path: spec, retry, error })
+          fail("TUI нэмэлт нийцэхгүй байна", { path: spec, retry, error })
           return
         }
         if (stage === "entry") {
-          fail("failed to resolve tui plugin entry", { path: spec, retry, error })
+          fail("TUI нэмэлтийн эхлэх цэгийг тодорхойлж чадсангүй", { path: spec, retry, error })
           return
         }
-        fail("failed to load tui plugin", { path: spec, target: resolved?.entry, retry, error })
+        fail("TUI нэмэлтийг ачаалж чадсангүй", { path: spec, target: resolved?.entry, retry, error })
       },
     },
   })
@@ -856,7 +861,7 @@ async function addPluginBySpec(state: RuntimeState | undefined, raw: string) {
     return true
   }
   const ready = await resolveExternalPlugins([cfg], () => TuiConfig.waitForDependencies()).catch((error) => {
-    fail("failed to add tui plugin", { path: next, error })
+    fail("TUI нэмэлтийг нэмж чадсангүй", { path: next, error })
     return [] as PluginLoad[]
   })
   if (!ready.length) {
@@ -865,7 +870,7 @@ async function addPluginBySpec(state: RuntimeState | undefined, raw: string) {
 
   const first = ready[0]
   if (!first) {
-    fail("failed to add tui plugin", { path: next })
+    fail("TUI нэмэлтийг нэмж чадсангүй", { path: next })
     return false
   }
   if (state.plugins_by_id.has(first.id)) {
@@ -882,7 +887,7 @@ async function addPluginBySpec(state: RuntimeState | undefined, raw: string) {
 
   if (ok) state.pending.delete(spec)
   if (!ok) {
-    fail("failed to add tui plugin", { path: next })
+    fail("TUI нэмэлтийг нэмж чадсангүй", { path: next })
   }
   return ok
 }
@@ -895,7 +900,7 @@ async function installPluginBySpec(
   if (!state) {
     return {
       ok: false,
-      message: "Plugin ажиллуулах орчин хараахан бэлэн болоогүй байна.",
+      message: "Нэмэлтийн ажиллах орчин хараахан бэлэн болоогүй байна.",
     }
   }
 
@@ -903,7 +908,7 @@ async function installPluginBySpec(
   if (!spec) {
     return {
       ok: false,
-      message: "Plugin багцын нэр шаардлагатай",
+      message: "Нэмэлтийн багцын нэр шаардлагатай",
     }
   }
 
@@ -930,7 +935,7 @@ async function installPluginBySpec(
     if (manifest.code === "manifest_no_targets") {
       return {
         ok: false,
-        message: `"${spec}"-ийн package.json файлд plugin эхлэх цэг эсвэл oc-theme заагаагүй байна`,
+        message: `"${spec}"-ийн package.json файлд нэмэлтийн эхлэх цэг эсвэл oc-theme заагаагүй байна`,
       }
     }
 
@@ -994,7 +999,7 @@ export async function init(input: {
   const cwd = process.cwd()
   if (loaded) {
     if (dir !== cwd) {
-      throw new Error(`TuiPluginRuntime.init() called with a different working directory. expected=${dir} got=${cwd}`)
+      throw new Error(`TuiPluginRuntime.init() өөр ажлын хавтастай дуудагдлаа. хүлээсэн=${dir} авсан=${cwd}`)
     }
     return loaded
   }
@@ -1029,14 +1034,14 @@ export async function dispose() {
   const task = loaded
   loaded = undefined
   dir = ""
-  if (task) await task.catch((error) => fail("failed to finish loading tui plugins during disposal", { error }))
+  if (task) await task.catch((error) => fail("Хаах үед TUI нэмэлтүүдийг ачаалж дуусгаж чадсангүй", { error }))
   const state = runtime
   runtime = undefined
   if (!state) return
   const queue = [...state.plugins].reverse()
   for (const plugin of queue) {
     await deactivatePluginEntry(state, plugin, false).catch((error) =>
-      fail("failed to dispose tui plugin", { id: plugin.id, error }),
+      fail("TUI нэмэлтийг хааж чадсангүй", { id: plugin.id, error }),
     )
   }
   try {
@@ -1116,7 +1121,7 @@ async function load(input: {
     }
     next.view.update({ status: listPluginStatus(next) })
   } catch (error) {
-    fail("failed to load tui plugins", { directory: cwd, error })
+    fail("TUI нэмэлтүүдийг ачаалж чадсангүй", { directory: cwd, error })
   }
 }
 

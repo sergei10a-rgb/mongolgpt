@@ -37,7 +37,7 @@ describe("plugin.openai.ws", () => {
         headers: {},
         timeout: 20,
       }),
-    ).rejects.toThrow("WebSocket connect timed out")
+    ).rejects.toThrow("WebSocket холболтын хугацаа дууслаа")
   })
 
   test("surfaces websocket upgrade rejection messages", async () => {
@@ -63,8 +63,8 @@ describe("plugin.openai.ws", () => {
       onConnectionInvalid: (error) => invalid.push(error.message),
     })
 
-    expect((await readTextError(response.text())).message).toContain("idle timeout sending websocket request")
-    expect(invalid).toEqual(["idle timeout sending websocket request"])
+    expect((await readTextError(response.text())).message).toContain("WebSocket хүсэлт илгээх идэвхгүй хугацаа дууслаа")
+    expect(invalid).toEqual(["WebSocket хүсэлт илгээх идэвхгүй хугацаа дууслаа"])
   })
 
   test("streams websocket events as SSE and handles response.done", async () => {
@@ -113,11 +113,11 @@ describe("plugin.openai.ws", () => {
     })
 
     expect((await readTextError(response.text())).message).toContain(
-      "WebSocket closed before response.completed (code 1009: message too big: payload too large)",
+      "WebSocket response.completed-ээс өмнө хаагдлаа (код 1009: мессеж хэт том: payload too large)",
     )
     expect(invalid[0]).toBeInstanceOf(ProviderError.ResponseStreamError)
     expect(invalid.map((error) => error.message)).toEqual([
-      "WebSocket closed before response.completed (code 1009: message too big: payload too large)",
+      "WebSocket response.completed-ээс өмнө хаагдлаа (код 1009: мессеж хэт том: payload too large)",
     ])
   })
 
@@ -136,8 +136,8 @@ describe("plugin.openai.ws", () => {
       onConnectionInvalid: (error) => invalid.push(error.message),
     })
 
-    expect((await readTextError(response.text())).message).toContain("Unexpected binary WebSocket frame")
-    expect(invalid).toEqual(["Unexpected binary WebSocket frame"])
+    expect((await readTextError(response.text())).message).toContain("Хоёртын өгөгдөлтэй WebSocket фрэйм хүлээн авлаа")
+    expect(invalid).toEqual(["Хоёртын өгөгдөлтэй WebSocket фрэйм хүлээн авлаа"])
   })
 })
 
@@ -271,7 +271,7 @@ describe("plugin.openai.ws-pool", () => {
     const first = await fetch(server.url, streamRequest())
     const firstText = first.text()
     fetch.remove("session-1")
-    expect((await readTextError(firstText)).message).toContain("WebSocket closed before response.completed")
+    expect((await readTextError(firstText)).message).toContain("WebSocket response.completed-ээс өмнө хаагдлаа")
 
     const second = await fetch(server.url, streamRequest())
 
@@ -500,7 +500,7 @@ describe("plugin.openai.ws-pool", () => {
     })
 
     const first = await fetch(server.url, streamRequest())
-    expect((await readTextError(first.text())).message).toContain("WebSocket closed before response.completed")
+    expect((await readTextError(first.text())).message).toContain("WebSocket response.completed-ээс өмнө хаагдлаа")
     const second = await fetch(server.url, streamRequest())
 
     expect(await second.text()).toBe("http")
@@ -522,7 +522,7 @@ describe("plugin.openai.ws-pool", () => {
     })
 
     const first = await fetch(server.url, streamRequest())
-    expect((await readTextError(first.text())).message).toContain("idle timeout waiting for websocket")
+    expect((await readTextError(first.text())).message).toContain("WebSocket хүлээх идэвхгүй хугацаа дууслаа")
     const second = await fetch(server.url, streamRequest())
     const third = await fetch(server.url, streamRequest())
 
@@ -547,7 +547,7 @@ describe("plugin.openai.ws-pool", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 250))
     const first = await fetch(server.url, streamRequest())
-    expect((await readTextError(first.text())).message).toContain("idle timeout waiting for websocket")
+    expect((await readTextError(first.text())).message).toContain("WebSocket хүлээх идэвхгүй хугацаа дууслаа")
     await new Promise((resolve) => setTimeout(resolve, 300))
 
     const second = await fetch(server.url, streamRequest())
@@ -575,12 +575,12 @@ describe("plugin.openai.ws-pool", () => {
     const first = await fetch(server.url, streamRequest())
     const firstSocket = await firstAttempt
     firstSocket.terminate()
-    expect((await readTextError(first.text())).message).toContain("WebSocket closed before response.completed")
+    expect((await readTextError(first.text())).message).toContain("WebSocket response.completed-ээс өмнө хаагдлаа")
     const secondAttempt = new Promise<WebSocket>((resolve) => attempts.push(resolve))
     const second = await fetch(server.url, streamRequest())
     const secondSocket = await secondAttempt
     secondSocket.terminate()
-    expect((await readTextError(second.text())).message).toContain("WebSocket closed before response.completed")
+    expect((await readTextError(second.text())).message).toContain("WebSocket response.completed-ээс өмнө хаагдлаа")
     const third = await fetch(server.url, streamRequest())
 
     expect(await third.text()).toBe("http")
@@ -609,11 +609,11 @@ describe("plugin.openai.ws-pool", () => {
     })
 
     const first = await fetch(server.url, streamRequest())
-    expect((await readTextError(first.text())).message).toContain("WebSocket closed before response.completed")
+    expect((await readTextError(first.text())).message).toContain("WebSocket response.completed-ээс өмнө хаагдлаа")
     const second = await fetch(server.url, streamRequest())
     expect(await second.text()).toContain("data: [DONE]")
     const third = await fetch(server.url, streamRequest())
-    expect((await readTextError(third.text())).message).toContain("WebSocket closed before response.completed")
+    expect((await readTextError(third.text())).message).toContain("WebSocket response.completed-ээс өмнө хаагдлаа")
     const fourth = await fetch(server.url, streamRequest())
 
     expect(await fourth.text()).toContain("data: [DONE]")
@@ -702,7 +702,7 @@ describe("plugin.openai.ws-pool", () => {
     })
 
     const first = await fetch(server.url, streamRequest())
-    expect((await readTextError(first.text())).message).toContain("WebSocket closed before response.completed")
+    expect((await readTextError(first.text())).message).toContain("WebSocket response.completed-ээс өмнө хаагдлаа")
     const second = await fetch(server.url, streamRequest())
     const third = await fetch(server.url, streamRequest())
 

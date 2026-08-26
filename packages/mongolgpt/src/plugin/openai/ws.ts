@@ -93,7 +93,7 @@ export function connectResponsesWebSocket(options: ConnectResponsesWebSocketOpti
           cleanup()
           socket.on("error", () => {})
           socket.terminate()
-          reject(new Error("WebSocket connect timed out"))
+          reject(new Error("WebSocket холболтын хугацаа дууслаа"))
         }, options.timeout)
       : undefined
 
@@ -118,7 +118,7 @@ export function connectResponsesWebSocket(options: ConnectResponsesWebSocketOpti
 
     function onClose(code: number, reason: Buffer) {
       cleanup()
-      reject(new Error(closeMessage("WebSocket closed before open", code, reason)))
+      reject(new Error(closeMessage("WebSocket нээгдэхээс өмнө хаагдлаа", code, reason)))
     }
 
     function onAbort() {
@@ -180,7 +180,7 @@ export function streamResponsesWebSocket(options: StreamResponsesWebSocketOption
   async function onMessage(data: WebSocket.RawData, isBinary: boolean) {
     if (completed) return
     if (isBinary) {
-      invalidate(new ProviderError.ResponseStreamError("Unexpected binary WebSocket frame"))
+      invalidate(new ProviderError.ResponseStreamError("Хоёртын өгөгдөлтэй WebSocket фрэйм хүлээн авлаа"))
       return
     }
 
@@ -247,7 +247,7 @@ export function streamResponsesWebSocket(options: StreamResponsesWebSocketOption
       ),
     )
     emitted = true
-    resetIdleTimeout("idle timeout waiting for websocket")
+    resetIdleTimeout("WebSocket хүлээх идэвхгүй хугацаа дууслаа")
 
     if (!event) return
 
@@ -273,7 +273,7 @@ export function streamResponsesWebSocket(options: StreamResponsesWebSocketOption
   function onClose(code: number, reason: Buffer) {
     if (completed) return
     invalidate(
-      new ProviderError.ResponseStreamError(closeMessage("WebSocket closed before response.completed", code, reason)),
+      new ProviderError.ResponseStreamError(closeMessage("WebSocket response.completed-ээс өмнө хаагдлаа", code, reason)),
     )
   }
 
@@ -307,10 +307,10 @@ export function streamResponsesWebSocket(options: StreamResponsesWebSocketOption
       socket.off("close", onClose)
     }
     const { stream: _stream, background: _background, ...payload } = options.body
-    resetIdleTimeout("idle timeout sending websocket request")
+    resetIdleTimeout("WebSocket хүсэлт илгээх идэвхгүй хугацаа дууслаа")
     socket.send(JSON.stringify({ type: "response.create", ...payload }), (error) => {
       if (completed) return
-      resetIdleTimeout("idle timeout waiting for websocket")
+      resetIdleTimeout("WebSocket хүлээх идэвхгүй хугацаа дууслаа")
       if (error) invalidate(new ProviderError.ResponseStreamError(error.message, { cause: error }))
     })
   }
@@ -362,18 +362,18 @@ function parseWrappedError(event: Record<string, unknown> | undefined, body: str
 function cancelError(reason: unknown) {
   if (isAbortError(reason)) return reason
   if (reason instanceof Error) return reason
-  return new DOMException(typeof reason === "string" ? reason : "Aborted", "AbortError")
+  return new DOMException(typeof reason === "string" ? reason : "Цуцалсан", "AbortError")
 }
 
 function abortError(signal: AbortSignal | undefined) {
   const reason = signal?.reason
   if (isAbortError(reason)) return reason
-  return new DOMException(reason instanceof Error ? reason.message : "Aborted", "AbortError")
+  return new DOMException(reason instanceof Error ? reason.message : "Цуцалсан", "AbortError")
 }
 
 function closeMessage(message: string, code: number, reason: Buffer) {
-  const details = [`code ${code}`]
-  if (code === 1009) details.push("message too big")
+  const details = [`код ${code}`]
+  if (code === 1009) details.push("мессеж хэт том")
   if (reason.length > 0) details.push(reason.toString())
   return `${message} (${details.join(": ")})`
 }

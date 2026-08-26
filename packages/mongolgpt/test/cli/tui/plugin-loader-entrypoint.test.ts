@@ -309,7 +309,7 @@ test("does not use npm package main for tui entry", async () => {
     await expect(fs.readFile(tmp.extra.marker, "utf8")).rejects.toThrow()
     expect(TuiPluginRuntime.list().some((item) => item.spec === tmp.extra.spec)).toBe(false)
     expect(error).not.toHaveBeenCalled()
-    expect(warn.mock.calls.some((call) => String(call[0]).includes("tui plugin has no entrypoint"))).toBe(true)
+    expect(warn.mock.calls.some((call) => String(call[0]).includes("TUI нэмэлтэд эхлэх цэг алга"))).toBe(true)
   } finally {
     await TuiPluginRuntime.dispose()
     install.mockRestore()

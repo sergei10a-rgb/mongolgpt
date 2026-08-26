@@ -111,7 +111,7 @@ export namespace PluginLoader {
           source: base.source,
           target: base.target,
           pkg: base.pkg,
-          message: `Plugin ${plan.spec} нь ${kind} эхлэх цэг export хийгээгүй байна`,
+          message: `Нэмэлт ${plan.spec} нь ${kind} эхлэх цэг export хийгээгүй байна`,
         },
       }
 
@@ -135,7 +135,7 @@ export namespace PluginLoader {
     } catch (error) {
       return { ok: false, error }
     }
-    if (!mod) return { ok: false, error: new Error(`Plugin ${row.spec} module is empty`) }
+    if (!mod) return { ok: false, error: new Error(`Нэмэлт ${row.spec}-ийн модуль хоосон байна`) }
     return { ok: true, value: { ...row, mod } }
   }
 

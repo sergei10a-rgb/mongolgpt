@@ -1235,7 +1235,7 @@ it.instance(
 
         const serverStatus = (addResult.status as any)["hanging-server"] ?? addResult.status
         expect(serverStatus.status).toBe("failed")
-        expect(serverStatus.error).toContain("timed out")
+        expect(serverStatus.error).toContain("үйлдлийн хугацаа дууслаа")
         // Transport must be closed to avoid orphaned child process
         expect(transportCloseCount).toBeGreaterThanOrEqual(1)
       }),
