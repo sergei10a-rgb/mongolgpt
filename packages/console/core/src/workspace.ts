@@ -25,7 +25,7 @@ export namespace Workspace {
           .from(AccountTable)
           .where(and(eq(AccountTable.id, account.properties.accountID), isNull(AccountTable.timeDeleted)))
           .then((rows) => rows[0])
-        if (!active) throw new Error("Account is not active")
+        if (!active) throw new Error("Бүртгэл идэвхгүй байна")
 
         await tx.insert(WorkspaceTable).values({
           id: workspaceID,

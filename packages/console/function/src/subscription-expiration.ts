@@ -7,11 +7,11 @@ const MAX_BATCHES = 10
 type ExpireBatch = (now: number, limit: number) => Promise<number>
 
 export async function runSubscriptionExpiration(now: number, expire: ExpireBatch = expirePlanSubscriptions) {
-  return drainExpirationBatches("Subscription", now, expire)
+  return drainExpirationBatches("Захиалгын", now, expire)
 }
 
 export async function runPaymentCheckoutExpiration(now: number, expire: ExpireBatch = expireOpenPaymentCheckouts) {
-  return drainExpirationBatches("Payment checkout", now, expire)
+  return drainExpirationBatches("Төлбөрийн хүсэлтийн", now, expire)
 }
 
 export async function runBillingExpiration(
@@ -24,14 +24,14 @@ export async function runBillingExpiration(
 }
 
 async function drainExpirationBatches(name: string, now: number, expire: ExpireBatch) {
-  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError(`${name} expiration time is invalid`)
+  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError(`${name} хугацаа буруу байна`)
 
   let processed = 0
   let batches = 0
   while (batches < MAX_BATCHES) {
     const count = await expire(now, BATCH_SIZE)
     if (!Number.isSafeInteger(count) || count < 0 || count > BATCH_SIZE) {
-      throw new Error(`${name} expiration batch result is invalid`)
+      throw new Error(`${name} хугацаа дуусгах багцын үр дүн буруу байна`)
     }
     processed += count
     batches++
@@ -43,6 +43,6 @@ async function drainExpirationBatches(name: string, now: number, expire: ExpireB
 export default {
   async scheduled(controller: { scheduledTime: number }) {
     const result = await runBillingExpiration(controller.scheduledTime)
-    console.log("Billing expiration completed", result)
+    console.log("Төлбөрийн хугацаа дуусгах ажил дууслаа", result)
   },
 }

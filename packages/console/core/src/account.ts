@@ -47,7 +47,7 @@ export namespace Account {
         .innerJoin(AccountTable, eq(AccountTable.id, AuthTable.accountID))
         .where(and(eq(AuthTable.provider, "email"), eq(AuthTable.subject, email), isNull(AccountTable.timeDeleted)))
         .then((rows) => rows[0])
-      if (!account) throw new Error("Account not found")
+      if (!account) throw new Error("Бүртгэл олдсонгүй")
 
       return removeByID(tx, { accountID: account.id, now: new Date() })
     })

@@ -90,7 +90,7 @@ export async function processEligibleAccountDeletions(
   const now = timestamp(input.now)
   const limit = input.limit ?? 50
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
-    throw new TypeError("Account deletion batch limit is invalid")
+    throw new TypeError("Бүртгэл устгах багцын хязгаар буруу байна")
   }
   const use = dependencies.use ?? ((callback) => Database.use(callback))
   const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
@@ -179,7 +179,7 @@ export async function purgeCompletedAccountDeletions(
   const now = timestamp(input.now)
   const limit = input.limit ?? 50
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
-    throw new TypeError("Account deletion purge batch limit is invalid")
+    throw new TypeError("Бүртгэл устгах цэвэрлэгээний багцын хязгаар буруу байна")
   }
   const use = dependencies.use ?? ((callback) => Database.use(callback))
   const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
@@ -415,6 +415,6 @@ function state(row: typeof AccountDeletionTable.$inferSelect, changed: boolean) 
 }
 
 function timestamp(value: number) {
-  if (!Number.isSafeInteger(value) || value < 0) throw new TypeError("Account deletion time is invalid")
+  if (!Number.isSafeInteger(value) || value < 0) throw new TypeError("Бүртгэл устгах хугацаа буруу байна")
   return value
 }

@@ -106,7 +106,7 @@ export default {
         },
         body: JSON.stringify(telemetryEvents),
       })
-      if (!honeycomb.ok) console.error("Honeycomb ingest failed", honeycomb.status, honeycomb.statusText)
+      if (!honeycomb.ok) console.error("Honeycomb-д оруулахад амжилтгүй боллоо", honeycomb.status, honeycomb.statusText)
     }
   },
 }

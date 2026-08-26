@@ -16,7 +16,7 @@ import { AccountTable } from "./schema/account.sql"
 export namespace User {
   const assertNotSelf = (id: string) => {
     if (Actor.userID() !== id) return
-    throw new Error(`Expected not self actor, got self actor`)
+    throw new Error("Өөрийн actor биш байх ёстой боловч өөрийн actor ирлээ")
   }
 
   export const list = fn(z.void(), () =>
@@ -144,10 +144,10 @@ export namespace User {
 
         const { InviteEmail } = await import("@mongolgpt/console-mail/InviteEmail.jsx")
         const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL
-        if (!consoleUrl) throw new Error("MONGOLGPT_CONSOLE_URL is required before sending invite email")
+        if (!consoleUrl) throw new Error("Урилгын и-мэйл илгээхээс өмнө MONGOLGPT_CONSOLE_URL тохируулсан байх ёстой")
         await AWS.sendEmail({
           to: email,
-          subject: `You've been invited to join the ${emailInfo.workspaceName} workspace on MongolGPT`,
+          subject: `MongolGPT-ийн ${emailInfo.workspaceName} ажлын талбарт таныг урьж байна`,
           body: render(
             // @ts-ignore
             InviteEmail({
@@ -173,7 +173,7 @@ export namespace User {
         .from(AccountTable)
         .where(and(eq(AccountTable.id, account.properties.accountID), isNull(AccountTable.timeDeleted)))
         .then((rows) => rows[0])
-      if (!active) throw new Error("Account is not active")
+      if (!active) throw new Error("Бүртгэл идэвхгүй байна")
 
       const invitations = await tx
         .select({

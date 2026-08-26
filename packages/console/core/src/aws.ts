@@ -27,7 +27,7 @@ export namespace AWS {
     }),
     async (input) => {
       const from = input.from ?? process.env.MONGOLGPT_SES_FROM_EMAIL
-      if (!from) throw new Error("MONGOLGPT_SES_FROM_EMAIL is required before sending email")
+      if (!from) throw new Error("И-мэйл илгээхээс өмнө MONGOLGPT_SES_FROM_EMAIL тохируулсан байх ёстой")
 
       const res = await createClient().fetch("https://email.us-east-1.amazonaws.com/v2/email/outbound-emails", {
         method: "POST",
@@ -62,7 +62,7 @@ export namespace AWS {
         }),
       })
       if (!res.ok) {
-        throw new Error(`Failed to send email: ${res.statusText}`)
+        throw new Error(`И-мэйл илгээж чадсангүй: ${res.statusText}`)
       }
     },
   )

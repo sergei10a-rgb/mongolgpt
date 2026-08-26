@@ -43,7 +43,7 @@ export class D1BackupWorkflow extends WorkflowEntrypoint<Environment, Parameters
       },
       () => storeCompletedD1Export({ config, bookmark, scheduledTime, bucket: resources.D1Backups }),
     )
-    console.log("D1 backup stored", receipt)
+    console.log("D1 нөөц хуулбар хадгалагдлаа", receipt)
     return receipt
   }
 }

@@ -17,11 +17,11 @@ export async function recordPlanUsageWithDb(
 ) {
   const now = input.now ?? new Date()
   if (!Number.isSafeInteger(input.costInMicroCents) || input.costInMicroCents < 0) {
-    throw new TypeError("Plan usage cost is invalid")
+    throw new TypeError("Багцын хэрэглээний өртөг буруу байна")
   }
-  if (!Number.isSafeInteger(input.tokens) || input.tokens < 0) throw new TypeError("Plan usage tokens are invalid")
+  if (!Number.isSafeInteger(input.tokens) || input.tokens < 0) throw new TypeError("Багцын хэрэглээний токены тоо буруу байна")
   if (!Number.isSafeInteger(input.rollingWindowHours) || input.rollingWindowHours < 1) {
-    throw new TypeError("Plan rolling window is invalid")
+    throw new TypeError("Багцын гулсах хугацааны цонх буруу байна")
   }
 
   const entitlement = await db

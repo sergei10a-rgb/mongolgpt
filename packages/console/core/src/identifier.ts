@@ -29,7 +29,7 @@ export namespace Identifier {
   export function create(prefix: keyof typeof prefixes, given?: string): string {
     if (given) {
       if (given.startsWith(prefixes[prefix])) return given
-      throw new Error(`ID ${given} does not start with ${prefixes[prefix]}`)
+      throw new Error(`ID ${given} нь ${prefixes[prefix]}-ээр эхлэхгүй байна`)
     }
     return [prefixes[prefix], ulid()].join("_")
   }

@@ -57,7 +57,7 @@ export namespace ZenData {
     const configuration = ModelsSchema.parse(json)
     const policyIssues = modelConfigurationStageIssues(configuration, Resource.App.stage)
     if (policyIssues.length > 0) {
-      throw new Error(`Production model configuration is unsafe: ${policyIssues.join("; ")}`)
+      throw new Error(`Үйлдвэрлэлийн загварын тохиргоо аюулгүй биш байна: ${policyIssues.join("; ")}`)
     }
     const { zenModels, liteModels, providers } = configuration
     const compositeProviders = Object.fromEntries(

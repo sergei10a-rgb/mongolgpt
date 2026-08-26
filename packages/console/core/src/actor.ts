@@ -62,14 +62,14 @@ export namespace Actor {
   export function assert<T extends Info["type"]>(type: T) {
     const actor = use()
     if (actor.type !== type) {
-      throw new Error(`Expected actor type ${type}, got ${actor.type}`)
+      throw new Error(`actor-ийн хүлээсэн төрөл ${type}, ирсэн төрөл ${actor.type}`)
     }
     return actor as Extract<Info, { type: T }>
   }
 
   export const assertAdmin = () => {
     if (userRole() === "admin") return
-    throw new Error(`Action not allowed. Ask your workspace admin to perform this action.`)
+    throw new Error("Энэ үйлдлийг хийх эрхгүй байна. Ажлын талбарын админаар гүйцэтгүүлнэ үү.")
   }
 
   export function workspace() {
@@ -77,7 +77,7 @@ export namespace Actor {
     if ("workspaceID" in actor.properties) {
       return actor.properties.workspaceID
     }
-    throw new Error(`actor of type "${actor.type}" is not associated with a workspace`)
+    throw new Error(`"${actor.type}" төрлийн actor ажлын талбартай холбогдоогүй байна`)
   }
 
   export function account() {
@@ -85,7 +85,7 @@ export namespace Actor {
     if ("accountID" in actor.properties) {
       return actor.properties.accountID
     }
-    throw new Error(`actor of type "${actor.type}" is not associated with an account`)
+    throw new Error(`"${actor.type}" төрлийн actor бүртгэлтэй холбогдоогүй байна`)
   }
 
   export function userID() {

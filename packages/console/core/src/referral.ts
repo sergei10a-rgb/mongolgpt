@@ -24,7 +24,7 @@ export namespace Referral {
         .from(LiteTable)
         .where(and(eq(LiteTable.workspaceID, workspaceID), isNull(LiteTable.timeDeleted)))
         .then((rows) => rows[0])
-      if (!lite) throw new Error("Legacy Lite subscription is required to apply this referral reward")
+      if (!lite) throw new Error("Энэ урилгын урамшууллыг хэрэгжүүлэхэд хуучин Lite захиалга шаардлагатай")
 
       await tx
         .update(LiteTable)
@@ -72,7 +72,7 @@ export namespace Referral {
         .then((rows) => rows[0])
       if (created) return { code: created.code }
 
-      throw new Error("Failed to generate referral code")
+      throw new Error("Урилгын код үүсгэж чадсангүй")
     })
   }
 
@@ -210,8 +210,8 @@ export namespace Referral {
           ),
         )
         .then((rows) => rows[0])
-      if (!reward) throw new Error("Referral reward not found")
-      if (reward.timeApplied) throw new Error("Referral reward already applied")
+      if (!reward) throw new Error("Урилгын урамшуулал олдсонгүй")
+      if (reward.timeApplied) throw new Error("Урилгын урамшууллыг аль хэдийн хэрэгжүүлсэн байна")
 
       const update = await tx
         .update(ReferralRewardTable)
@@ -226,7 +226,7 @@ export namespace Referral {
             isNull(ReferralRewardTable.timeDeleted),
           ),
         )
-      if (update.meta.changes === 0) throw new Error("Referral reward already applied")
+      if (update.meta.changes === 0) throw new Error("Урилгын урамшууллыг аль хэдийн хэрэгжүүлсэн байна")
 
       await subtractLiteUsage(workspaceID, reward.amount)
 
@@ -318,14 +318,14 @@ export namespace Referral {
         .innerJoin(WorkspaceTable, eq(WorkspaceTable.id, ReferralCodeTable.workspaceID))
         .where(and(eq(ReferralCodeTable.code, referralCode), isNull(WorkspaceTable.timeDeleted)))
         .then((rows) => rows[0])
-      if (!code) throw new Error("Referral code invalid")
+      if (!code) throw new Error("Урилгын код буруу байна")
 
       const existingReferral = await tx
         .select({ id: ReferralTable.id })
         .from(ReferralTable)
         .where(and(eq(ReferralTable.inviteeAccountID, input.accountID), isNull(ReferralTable.timeDeleted)))
         .then((rows) => rows[0])
-      if (existingReferral) throw new Error("Referral already redeemed")
+      if (existingReferral) throw new Error("Урилгыг аль хэдийн ашигласан байна")
 
       const selfReferral = await tx
         .select({ id: UserTable.id })
@@ -338,7 +338,7 @@ export namespace Referral {
           ),
         )
         .then((rows) => rows[0])
-      if (selfReferral) throw new Error("Self-referral is not allowed")
+      if (selfReferral) throw new Error("Өөртөө урилга өгөх боломжгүй")
 
       const workspaceIDs = await tx
         .select({ workspaceID: UserTable.workspaceID })
@@ -382,28 +382,30 @@ export namespace Referral {
         .from(ReferralTable)
         .where(and(eq(ReferralTable.inviteeAccountID, input.accountID), isNull(ReferralTable.timeDeleted)))
         .then((rows) => rows[0])
-      if (!referral) throw new Error("Referral not created")
-      if (referral.id !== referralID) throw new Error("Referral already redeemed")
+      if (!referral) throw new Error("Урилга үүссэнгүй")
+      if (referral.id !== referralID) throw new Error("Урилгыг аль хэдийн ашигласан байна")
     })
   }
 
   export async function create(input: { inviterWorkspaceID: string; inviteeWorkspaceID: string }) {
     return Database.transaction(async (tx) => {
-      if (input.inviterWorkspaceID === input.inviteeWorkspaceID) throw new Error("Self-referral workspace mismatch")
+      if (input.inviterWorkspaceID === input.inviteeWorkspaceID) {
+        throw new Error("Өөрийн ажлын талбарт урилга хийх боломжгүй")
+      }
 
       const inviterWorkspace = await tx
         .select({ id: WorkspaceTable.id })
         .from(WorkspaceTable)
         .where(and(eq(WorkspaceTable.id, input.inviterWorkspaceID), isNull(WorkspaceTable.timeDeleted)))
         .then((rows) => rows[0])
-      if (!inviterWorkspace) throw new Error(`Inviter workspace not found: ${input.inviterWorkspaceID}`)
+      if (!inviterWorkspace) throw new Error(`Уригчийн ажлын талбар олдсонгүй: ${input.inviterWorkspaceID}`)
 
       const inviteeWorkspace = await tx
         .select({ id: WorkspaceTable.id })
         .from(WorkspaceTable)
         .where(and(eq(WorkspaceTable.id, input.inviteeWorkspaceID), isNull(WorkspaceTable.timeDeleted)))
         .then((rows) => rows[0])
-      if (!inviteeWorkspace) throw new Error(`Invitee workspace not found: ${input.inviteeWorkspaceID}`)
+      if (!inviteeWorkspace) throw new Error(`Уригдагчийн ажлын талбар олдсонгүй: ${input.inviteeWorkspaceID}`)
 
       const invitee = await tx
         .select({ accountID: UserTable.accountID, userID: UserTable.id, liteID: LiteTable.id })
@@ -424,7 +426,7 @@ export namespace Referral {
           ),
         )
         .then((rows) => rows[0])
-      if (!invitee?.accountID) throw new Error(`Invitee Lite workspace owner not found: ${input.inviteeWorkspaceID}`)
+      if (!invitee?.accountID) throw new Error(`Уригдагчийн Lite ажлын талбарын эзэмшигч олдсонгүй: ${input.inviteeWorkspaceID}`)
 
       const inviterUser = await tx
         .select({ id: UserTable.id })
@@ -437,7 +439,7 @@ export namespace Referral {
           ),
         )
         .then((rows) => rows[0])
-      if (inviterUser) throw new Error(`Self-referral is not allowed: ${invitee.accountID}`)
+      if (inviterUser) throw new Error(`Өөртөө урилга өгөх боломжгүй: ${invitee.accountID}`)
 
       const existingReferral = await tx
         .select({ id: ReferralTable.id, workspaceID: ReferralTable.workspaceID })
@@ -445,7 +447,7 @@ export namespace Referral {
         .where(and(eq(ReferralTable.inviteeAccountID, invitee.accountID), isNull(ReferralTable.timeDeleted)))
         .then((rows) => rows[0])
       if (existingReferral && existingReferral.workspaceID !== input.inviterWorkspaceID) {
-        throw new Error(`Referral already belongs to ${existingReferral.workspaceID}: ${existingReferral.id}`)
+        throw new Error(`Урилга аль хэдийн ${existingReferral.workspaceID} ажлын талбарт харьяалагдаж байна: ${existingReferral.id}`)
       }
 
       const referralID = existingReferral?.id ?? Identifier.create("referral")
@@ -464,8 +466,8 @@ export namespace Referral {
           .from(ReferralTable)
           .where(and(eq(ReferralTable.inviteeAccountID, invitee.accountID), isNull(ReferralTable.timeDeleted)))
           .then((rows) => rows[0])
-        if (!referral) throw new Error(`Referral not created: ${invitee.accountID}`)
-        if (referral.id !== referralID) throw new Error(`Referral already redeemed: ${referral.id}`)
+        if (!referral) throw new Error(`Урилга үүссэнгүй: ${invitee.accountID}`)
+        if (referral.id !== referralID) throw new Error(`Урилгыг аль хэдийн ашигласан байна: ${referral.id}`)
       }
 
       const rewardInsert = await tx
@@ -486,9 +488,9 @@ export namespace Referral {
             isNull(ReferralRewardTable.timeDeleted),
           ),
         )
-      if (rewards.length !== 2) throw new Error(`Referral rewards not created: ${referralID}`)
+      if (rewards.length !== 2) throw new Error(`Урилгын урамшууллууд үүссэнгүй: ${referralID}`)
       if (rewards.some((reward) => reward.amount !== REWARD_AMOUNT)) {
-        throw new Error(`Referral reward amount mismatch: ${referralID}`)
+        throw new Error(`Урилгын урамшууллын дүн зөрж байна: ${referralID}`)
       }
 
       return {
@@ -516,7 +518,7 @@ export namespace Referral {
           ),
         )
         .then((rows) => rows[0])
-      if (!invitee?.accountID) throw new Error("Referral invitee account missing")
+      if (!invitee?.accountID) throw new Error("Урилгын хүлээн авагчийн бүртгэл алга")
 
       const referral = await tx
         .select({ id: ReferralTable.id, workspaceID: ReferralTable.workspaceID })

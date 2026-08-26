@@ -9,7 +9,7 @@ export type D1BackupWorkflowBinding = {
 
 export async function triggerScheduledD1Backup(scheduledTime: number, workflow: D1BackupWorkflowBinding) {
   if (!Number.isSafeInteger(scheduledTime) || scheduledTime < 0) {
-    throw new TypeError("D1 backup scheduled time is invalid")
+    throw new TypeError("D1 нөөц хуулбарын товлосон хугацаа буруу байна")
   }
   const instance = await workflow.create({
     params: { scheduledTime },
@@ -18,7 +18,7 @@ export async function triggerScheduledD1Backup(scheduledTime: number, workflow: 
       errorRetention: "30 days",
     },
   })
-  if (!instance.id) throw new Error("Cloudflare did not return a D1 backup workflow instance ID")
+  if (!instance.id) throw new Error("Cloudflare D1 нөөц хуулбарын ажлын урсгалын ажилбарын ID буцаасангүй")
   return { instanceId: instance.id, scheduledTime }
 }
 
@@ -28,6 +28,6 @@ const resources = Resource as unknown as { D1BackupWorkflow: D1BackupWorkflowBin
 export default {
   async scheduled(controller: { scheduledTime: number }) {
     const result = await triggerScheduledD1Backup(controller.scheduledTime, resources.D1BackupWorkflow)
-    console.log("D1 backup workflow scheduled", result)
+    console.log("D1 нөөц хуулбарын ажлын урсгал товлогдлоо", result)
   },
 }

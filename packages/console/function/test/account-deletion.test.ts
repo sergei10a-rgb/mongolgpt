@@ -36,8 +36,8 @@ describe("account deletion retention cron", () => {
     expect(invalidBatch).toBeInstanceOf(Error)
     if (!(invalidTime instanceof Error) || !(invalidBatch instanceof Error))
       throw new Error("Expected validation errors")
-    expect(invalidTime.message).toContain("time is invalid")
-    expect(invalidBatch.message).toContain("batch result is invalid")
+    expect(invalidTime.message).toContain("хугацаа буруу байна")
+    expect(invalidBatch.message).toContain("багцын үр дүн буруу байна")
   })
 
   test("purges completed operational rows in bounded batches", async () => {

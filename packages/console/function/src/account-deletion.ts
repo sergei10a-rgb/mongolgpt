@@ -13,7 +13,7 @@ export async function runAccountDeletionRetention(
   now: number,
   processBatch: ProcessBatch = processEligibleAccountDeletions,
 ) {
-  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Account deletion retention time is invalid")
+  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Бүртгэл устгалын хадгалалтын хугацаа буруу байна")
 
   let processed = 0
   let failed = 0
@@ -25,7 +25,7 @@ export async function runAccountDeletionRetention(
       counts.some((count) => !Number.isSafeInteger(count) || count < 0) ||
       result.processed + result.failed + result.skipped > BATCH_SIZE
     ) {
-      throw new Error("Account deletion retention batch result is invalid")
+      throw new Error("Бүртгэл устгалын хадгалалтын багцын үр дүн буруу байна")
     }
     processed += result.processed
     failed += result.failed
@@ -36,7 +36,7 @@ export async function runAccountDeletionRetention(
 }
 
 export async function runAccountDeletionPurge(now: number, purgeBatch: PurgeBatch = purgeCompletedAccountDeletions) {
-  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Account deletion purge time is invalid")
+  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Бүртгэл устгалын цэвэрлэгээний хугацаа буруу байна")
 
   let purged = 0
   let skipped = 0
@@ -47,7 +47,7 @@ export async function runAccountDeletionPurge(now: number, purgeBatch: PurgeBatc
       counts.some((count) => !Number.isSafeInteger(count) || count < 0) ||
       result.purged + result.skipped > BATCH_SIZE
     ) {
-      throw new Error("Account deletion purge batch result is invalid")
+      throw new Error("Бүртгэл устгалын цэвэрлэгээний багцын үр дүн буруу байна")
     }
     purged += result.purged
     skipped += result.skipped
@@ -60,6 +60,6 @@ export default {
   async scheduled(controller: { scheduledTime: number }) {
     const retention = await runAccountDeletionRetention(controller.scheduledTime)
     const purge = await runAccountDeletionPurge(controller.scheduledTime)
-    console.log("Account deletion retention completed", { retention, purge })
+    console.log("Бүртгэл устгалын хадгалалт дууслаа", { retention, purge })
   },
 }

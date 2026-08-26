@@ -298,7 +298,7 @@ function fresh(value: number | null, updated: Date | null, threshold: number) {
 }
 
 function counter(values: Record<string, number>, key: string) {
-  if (!(key in values)) throw new TypeError("Quota counter дутуу байна")
+  if (!(key in values)) throw new TypeError("Хязгаарын тоолуур дутуу байна")
   return number(values[key])
 }
 

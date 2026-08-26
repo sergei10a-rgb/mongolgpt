@@ -27,8 +27,8 @@ describe("plan subscription expiration cron", () => {
     expect(invalidTime).toBeInstanceOf(TypeError)
     expect(invalidBatch).toBeInstanceOf(Error)
     if (!(invalidTime instanceof Error) || !(invalidBatch instanceof Error)) throw new Error("Expected validation errors")
-    expect(invalidTime.message).toContain("time is invalid")
-    expect(invalidBatch.message).toContain("batch result is invalid")
+    expect(invalidTime.message).toContain("хугацаа буруу байна")
+    expect(invalidBatch.message).toContain("багцын үр дүн буруу байна")
   })
 
   test("drains plan and checkout expiry without sharing mutable counters", async () => {
@@ -54,6 +54,6 @@ describe("plan subscription expiration cron", () => {
     const error = await runPaymentCheckoutExpiration(1_000, async () => 101).catch((caught) => caught)
     expect(error).toBeInstanceOf(Error)
     if (!(error instanceof Error)) throw new Error("Expected a validation error")
-    expect(error.message).toContain("Payment checkout expiration batch result is invalid")
+    expect(error.message).toContain("Төлбөрийн хүсэлтийн хугацаа дуусгах багцын үр дүн буруу байна")
   })
 })
