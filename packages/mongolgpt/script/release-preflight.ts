@@ -31,7 +31,8 @@ const binaryPackages = [
   "mongolgpt-windows-x64-baseline",
 ] as const
 
-const packages = [...binaryPackages, "mongolgpt"]
+const cliPackages = [...binaryPackages, "mongolgpt"]
+const npmPackages = [...cliPackages, "@mongolgpt/sdk", "@mongolgpt/plugin", "@mongolgpt/ui"]
 
 function readJson(file: string) {
   return JSON.parse(fs.readFileSync(file, "utf8")) as { name?: string; version?: string }
@@ -49,7 +50,7 @@ function checkLocalDist() {
   assert(fs.existsSync(dist), `dist directory missing: ${dist}`)
   const versions = new Set<string>()
 
-  for (const name of packages) {
+  for (const name of cliPackages) {
     const dir = path.join(dist, name)
     const pkgFile = path.join(dir, "package.json")
     assert(fs.existsSync(pkgFile), `missing ${pkgFile}`)
@@ -71,7 +72,7 @@ function checkLocalDist() {
 
 async function npmMissing(version: string) {
   const missing: string[] = []
-  for (const name of packages) {
+  for (const name of npmPackages) {
     const result = await $`npm view ${name}@${version} version --silent`.quiet().nothrow()
     if (result.exitCode !== 0) missing.push(name)
   }
@@ -112,7 +113,7 @@ async function githubMissing(version: string) {
 }
 
 const version = checkLocalDist()
-console.log(`local dist ok: ${packages.length} packages @ ${version}`)
+console.log(`local dist ok: ${cliPackages.length} packages @ ${version}`)
 
 if (checkNpm) {
   const missing = await npmMissing(version)
