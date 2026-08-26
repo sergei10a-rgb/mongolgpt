@@ -15,10 +15,10 @@ type Summary = typeof Summary.Type
 
 const render = (skills: ReadonlyArray<Summary>) =>
   [
-    "Skills provide specialized instructions and workflows for specific tasks.",
-    "Use the skill tool to load a skill when a task matches its description.",
+    "Ур чадварууд нь тодорхой даалгаварт зориулсан тусгай заавар, ажлын урсгалыг өгнө.",
+    "Даалгавар нь тайлбартай нь тохирвол ур чадварын хэрэгслээр тухайн ур чадварыг ачаална уу.",
     ...(skills.length === 0
-      ? ["No skills are currently available."]
+      ? ["Одоогоор ашиглах ур чадвар алга."]
       : [
           "<available_skills>",
           ...skills.flatMap((skill) => [
@@ -61,10 +61,10 @@ export const layer = Layer.effect(
           baseline: render,
           update: (_previous, current) =>
             [
-              "The available skills have changed. This list supersedes the previous available skills list.",
+              "Ашиглах ур чадварууд өөрчлөгдлөө. Энэ жагсаалт өмнөх жагсаалтыг орлоно.",
               render(current),
             ].join("\n"),
-          removed: () => "Skill guidance is no longer available. Do not use any previously listed skill.",
+          removed: () => "Ур чадварын заавар цаашид ашиглах боломжгүй. Өмнө жагсаасан ур чадварыг бүү ашигла.",
         })
       }),
     })

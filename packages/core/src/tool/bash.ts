@@ -55,7 +55,7 @@ const modelOutput = (output: Output) => {
 }
 
 const isTimeout = (error: AppProcess.AppProcessError) =>
-  error.cause instanceof Error && error.cause.message === "Timed out"
+  error.cause instanceof Error && ["Хугацаа хэтэрлээ", "Timed out"].includes(error.cause.message)
 
 /**
  * Minimal V2 core shell boundary. Keep parity debt visible without pulling the

@@ -90,7 +90,7 @@ export const layer = Layer.effect(
         Effect.flatMap((body) => fs.writeWithDirs(destination, new Uint8Array(body))),
         Effect.as(true),
         Effect.catch((error) =>
-          Effect.logError("failed to download skill file", { url, error }).pipe(Effect.as(false)),
+          Effect.logError("Ур чадварын файлыг татаж чадсангүй", { url, error }).pipe(Effect.as(false)),
         ),
       )
     })
@@ -105,7 +105,7 @@ export const layer = Layer.effect(
           http.execute,
           Effect.flatMap(HttpClientResponse.schemaBodyJson(Index)),
           Effect.catch((error) =>
-            Effect.logError("failed to fetch skill index", { url: index, error }).pipe(Effect.as(undefined)),
+            Effect.logError("Ур чадварын индексийг татаж чадсангүй", { url: index, error }).pipe(Effect.as(undefined)),
           ),
         )
         if (!data) return []
@@ -194,7 +194,9 @@ export const layer = Layer.effect(
                     }),
                   )
                 }).pipe(
-                  Effect.catch((error) => Effect.logError("failed to refresh skill", { skill: skill.name, error })),
+                  Effect.catch((error) =>
+                    Effect.logError("Ур чадварыг шинэчилж чадсангүй", { skill: skill.name, error }),
+                  ),
                   Effect.ensuring(fs.remove(staging, { recursive: true, force: true }).pipe(Effect.ignore)),
                 )
               }

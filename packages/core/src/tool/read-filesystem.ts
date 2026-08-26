@@ -56,7 +56,8 @@ export class PathKindError extends Schema.TaggedErrorClass<PathKindError>()("Rea
   expected: Schema.Literals(["a file", "a file or directory"]),
 }) {
   override get message() {
-    return `Зам нь ${this.expected} биш байна: ${this.resource}`
+    const expected = this.expected === "a file" ? "файл" : "файл эсвэл хавтас"
+    return `Зам нь ${expected} биш байна: ${this.resource}`
   }
 }
 

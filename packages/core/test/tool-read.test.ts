@@ -359,7 +359,7 @@ describe("ReadTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-truncated-image", name: "read", input: { path: "truncated.png" } },
         }),
-      ).toEqual({ type: "error", value: "Image could not be decoded: truncated.png" })
+      ).toEqual({ type: "error", value: "Зургийг тайлж уншиж чадсангүй: truncated.png" })
     }),
   )
 
@@ -394,7 +394,7 @@ describe("ReadTool", () => {
       })
 
       expect(result.type).toBe("error")
-      if (result.type === "error") expect(result.value).toContain("exceeding configured limits 4x2000")
+      if (result.type === "error") expect(result.value).toContain("тохируулсан 4x2000")
     }),
   )
 
@@ -466,7 +466,7 @@ describe("ReadTool", () => {
       })
 
       expect(result.type).toBe("error")
-      if (result.type === "error") expect(result.value).toContain("/1 bytes")
+      if (result.type === "error") expect(result.value).toContain("/1 байтын")
     }),
   )
 

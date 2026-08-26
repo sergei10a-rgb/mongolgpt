@@ -45,8 +45,8 @@ describe("SkillGuidance", () => {
 
       expect(initialized.baseline).toBe(
         [
-          "Skills provide specialized instructions and workflows for specific tasks.",
-          "Use the skill tool to load a skill when a task matches its description.",
+          "Ур чадварууд нь тодорхой даалгаварт зориулсан тусгай заавар, ажлын урсгалыг өгнө.",
+          "Даалгавар нь тайлбартай нь тохирвол ур чадварын хэрэгслээр тухайн ур чадварыг ачаална уу.",
           "<available_skills>",
           "  <skill>",
           "    <name>effect</name>",
@@ -63,7 +63,7 @@ describe("SkillGuidance", () => {
           .pipe(Effect.flatMap((context) => SystemContext.reconcile(context, initialized.snapshot))),
       ).toMatchObject({
         _tag: "Updated",
-        text: expect.stringContaining("No skills are currently available."),
+        text: expect.stringContaining("Одоогоор ашиглах ур чадвар алга."),
       })
     }).pipe(Effect.provide(layer(() => skills)))
   })

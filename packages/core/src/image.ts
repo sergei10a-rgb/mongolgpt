@@ -14,7 +14,7 @@ export class DecodeError extends Schema.TaggedErrorClass<DecodeError>()("Image.D
   resource: Schema.String,
 }) {
   override get message() {
-    return `Image could not be decoded: ${this.resource}`
+    return `Зургийг тайлж уншиж чадсангүй: ${this.resource}`
   }
 }
 
@@ -28,7 +28,7 @@ export class SizeError extends Schema.TaggedErrorClass<SizeError>()("Image.SizeE
   maxBytes: Schema.Number,
 }) {
   override get message() {
-    return `Image ${this.resource} is ${this.width}x${this.height} with base64 size ${this.bytes}, exceeding configured limits ${this.maxWidth}x${this.maxHeight}/${this.maxBytes} bytes`
+    return `Зураг ${this.resource} нь ${this.width}x${this.height} хэмжээтэй, base64 хэмжээ нь ${this.bytes} байт бөгөөд тохируулсан ${this.maxWidth}x${this.maxHeight}/${this.maxBytes} байтын хязгаараас хэтэрлээ`
   }
 }
 
