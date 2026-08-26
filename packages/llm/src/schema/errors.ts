@@ -55,7 +55,7 @@ export class NoRouteReason extends Schema.Class<NoRouteReason>("LLM.Error.NoRout
   }
 
   get message() {
-    return `No LLM route for ${this.provider}/${this.model} using ${this.route}`
+    return `${this.provider}/${this.model} загварт ${this.route} чиглэл олдсонгүй`
   }
 }
 

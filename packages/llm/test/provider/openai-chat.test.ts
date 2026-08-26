@@ -618,7 +618,7 @@ describe("OpenAI Chat route", () => {
       const body = sseEvents(deltaChunk({ content: 123 }))
       const error = yield* LLMClient.generate(request).pipe(Effect.provide(fixedResponse(body)), Effect.flip)
 
-      expect(error.message).toContain("openai/openai-chat stream event буруу байна")
+      expect(error.message).toContain("openai/openai-chat урсгалын үйл явдал буруу байна")
     }),
   )
 
@@ -629,7 +629,7 @@ describe("OpenAI Chat route", () => {
       ])
       const error = yield* LLMClient.generate(request).pipe(Effect.provide(layer), Effect.flip)
 
-      expect(error.message).toContain("openai/openai-chat stream уншихад алдаа гарлаа")
+      expect(error.message).toContain("openai/openai-chat урсгалыг уншихад алдаа гарлаа")
     }),
   )
 

@@ -40,7 +40,7 @@ const signRequest = (input: {
     },
     catch: (error) =>
       ProviderShared.invalidRequest(
-        `Bedrock Converse SigV4 signing failed: ${error instanceof Error ? error.message : String(error)}`,
+        `Bedrock Converse SigV4 гарын үсэг зурах үед алдаа гарлаа: ${error instanceof Error ? error.message : String(error)}`,
       ),
   })
 
@@ -50,7 +50,7 @@ export const sigV4 = (credentials: Credentials | undefined) =>
     return Effect.gen(function* () {
       if (!credentials) {
         return yield* ProviderShared.invalidRequest(
-          "Bedrock Converse requires either route bearer auth or AWS credentials configured on the route",
+          "Bedrock Converse-д route-ийн bearer баталгаажуулалт эсвэл route дээр тохируулсан AWS нэвтрэх мэдээллийн аль нэг шаардлагатай",
         )
       }
       const headersForSigning = Headers.set(input.headers, "content-type", "application/json")

@@ -46,7 +46,7 @@ const consumeFrames = (route: string) => (state: FrameBufferState, chunk: Uint8A
         catch: (error) =>
           ProviderShared.eventError(
             route,
-            `Failed to decode Bedrock Converse event-stream frame: ${
+            `Bedrock Converse event-stream хүрээг тайлахад алдаа гарлаа: ${
               error instanceof Error ? error.message : String(error)
             }`,
           ),
@@ -65,7 +65,7 @@ const consumeFrames = (route: string) => (state: FrameBufferState, chunk: Uint8A
       const parsed = (yield* ProviderShared.parseJson(
         route,
         payload,
-        "Failed to parse Bedrock Converse event-stream payload",
+        "Bedrock Converse event-stream өгөгдлийг задлахад алдаа гарлаа",
       )) as Record<string, unknown>
       delete parsed.p
       out.push({ [eventType]: parsed })

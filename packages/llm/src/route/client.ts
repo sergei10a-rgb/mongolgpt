@@ -92,9 +92,9 @@ type RouteMappedModelInput = RouteModelInput | RouteRoutedModelInput
 
 const makeRouteModel = (route: AnyRoute, mapped: RouteMappedModelInput) => {
   const provider = route.provider ?? ("provider" in mapped ? mapped.provider : undefined)
-  if (!provider) throw new Error(`Route.model(${route.id}) requires a provider`)
+  if (!provider) throw new Error(`Route.model(${route.id})-д provider тохиргоо шаардлагатай`)
   if (!endpointBaseURL(route.endpoint))
-    throw new Error(`Route.model(${route.id}) requires an endpoint baseURL — configure it on the route first`)
+    throw new Error(`Route.model(${route.id})-д endpoint-ийн baseURL шаардлагатай; эхлээд route дээр тохируулна уу`)
   return Model.make({
     ...mapped,
     provider,
@@ -227,7 +227,7 @@ function makeFromTransport<Body, Prepared, Frame, Event, State>(
       Effect.mapError(() =>
         ProviderShared.eventError(
           input.id,
-          `Invalid ${route} stream event`,
+          `${route} урсгалын үйл явдал буруу байна`,
           typeof frame === "string" ? frame : ProviderShared.encodeJson(frame),
         ),
       ),
@@ -283,7 +283,7 @@ function makeFromTransport<Body, Prepared, Frame, Event, State>(
             protocol.stream.step,
             protocol.stream.onHalt ? { onHalt: protocol.stream.onHalt } : undefined,
           ),
-          Stream.catchCause((cause) => Stream.fail(streamError(route, `Failed to read ${route} stream`, cause))),
+          Stream.catchCause((cause) => Stream.fail(streamError(route, `${route} урсгалыг уншихад алдаа гарлаа`, cause))),
         )
       },
     } satisfies Route<Body, Prepared>

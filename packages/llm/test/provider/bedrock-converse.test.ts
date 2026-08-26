@@ -399,7 +399,7 @@ describe("Bedrock Converse route", () => {
       )
 
       expect(error.message).toContain(
-        "Bedrock Converse-д route bearer auth эсвэл route дээр тохируулсан AWS credentials",
+        "Bedrock Converse-д route-ийн bearer баталгаажуулалт эсвэл route дээр тохируулсан AWS нэвтрэх мэдээллийн аль нэг шаардлагатай",
       )
     }),
   )

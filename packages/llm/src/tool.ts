@@ -100,35 +100,34 @@ type DynamicToolConfig = {
 }
 
 /**
- * Constructs a tool. Two input modes:
+ * Хэрэгсэл үүсгэнэ. Оролтын хоёр горимтой:
  *
- * 1. **Typed** — pass Effect `parameters` and `success` Schemas; inputs and
- *    outputs are statically typed and decoded/encoded automatically.
+ * 1. **Төрөлжсөн** — Effect-ийн `parameters` болон `success` Schema-г дамжуулна;
+ *    оролт, гаралт нь статик төрөлтэй бөгөөд автоматаар тайлагдаж, кодлогдоно.
  *
  *    ```ts
  *    Tool.make({
- *      description: "Get current weather",
+ *      description: "Одоогийн цаг агаарыг авах",
  *      parameters: Schema.Struct({ city: Schema.String }),
  *      success: Schema.Struct({ temperature: Schema.Number }),
  *      execute: ({ city }) => Effect.succeed({ temperature: 22 }),
  *    })
  *    ```
  *
- * 2. **Dynamic** — pass raw JSON Schema as `jsonSchema`. Use this when the
- *    schema comes from an external source (MCP server, plugin manifest,
- *    dynamic config) and is not known at compile time. Inputs are typed as
- *    `unknown`; the handler is responsible for any validation it needs.
+ * 2. **Динамик** — эх JSON Schema-г `jsonSchema` хэлбэрээр дамжуулна. Schema нь
+ *    гаднын эх сурвалжаас (MCP сервер, плагиний manifest, динамик тохиргоо) ирдэг,
+ *    хөрвүүлэх үед тодорхойгүй тохиолдолд ашиглана. Оролтын төрөл `unknown`;
+ *    шаардлагатай шалгалтыг гүйцэтгэгч өөрөө хариуцна.
  *
  *    ```ts
  *    Tool.make({
- *      description: "Look something up",
+ *      description: "Ямар нэг зүйл хайх",
  *      jsonSchema: { type: "object", properties: { ... } },
  *      execute: (params) => Effect.succeed(...),
  *    })
  *    ```
  *
- * In both modes the produced tool flows through `toDefinitions(...)`
- * identically.
+ * Аль ч горимд үүссэн хэрэгсэл `toDefinitions(...)`-оор ижил дамжина.
  */
 export function make<Parameters extends ToolSchema<any>, Success extends ToolSchema<any>>(config: {
   readonly description: string

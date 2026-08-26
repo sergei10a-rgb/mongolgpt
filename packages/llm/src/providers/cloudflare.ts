@@ -35,7 +35,7 @@ export type WorkersAIOptions = WorkersAIURL & RouteDefaultsInput & ProviderAuthO
 
 export const aiGatewayBaseURL = (input: GatewayURL) => {
   if (input.baseURL) return input.baseURL
-  if (!input.accountId) throw new Error("CloudflareAIGateway.configure requires accountId unless baseURL is supplied")
+  if (!input.accountId) throw new Error("baseURL өгөөгүй бол CloudflareAIGateway.configure-д accountId шаардлагатай")
   return `https://gateway.ai.cloudflare.com/v1/${encodeURIComponent(input.accountId)}/${encodeURIComponent(input.gatewayId?.trim() || "default")}/compat`
 }
 
@@ -52,7 +52,7 @@ const aiGatewayAuth = (input: AIGatewayOptions) => {
 
 export const workersAIBaseURL = (input: WorkersAIURL) => {
   if (input.baseURL) return input.baseURL
-  if (!input.accountId) throw new Error("CloudflareWorkersAI.configure requires accountId unless baseURL is supplied")
+  if (!input.accountId) throw new Error("baseURL өгөөгүй бол CloudflareWorkersAI.configure-д accountId шаардлагатай")
   return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(input.accountId)}/ai/v1`
 }
 

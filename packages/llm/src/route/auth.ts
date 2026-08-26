@@ -6,7 +6,7 @@ export class MissingCredentialError extends Error {
   readonly _tag = "MissingCredentialError"
 
   constructor(readonly source: string) {
-    super(`Missing auth credential: ${source}`)
+    super(`Баталгаажуулалтын нэвтрэх мэдээлэл дутуу байна: ${source}`)
   }
 }
 
@@ -142,7 +142,7 @@ const toLLMError = (error: AuthError): LLMError => {
       reason:
         error instanceof MissingCredentialError
           ? new AuthenticationReason({ message: error.message, kind: "missing" })
-          : new InvalidRequestReason({ message: `Failed to resolve auth config: ${error.message}` }),
+          : new InvalidRequestReason({ message: `Баталгаажуулалтын тохиргоог шийдвэрлэж чадсангүй: ${error.message}` }),
     })
   }
   return error

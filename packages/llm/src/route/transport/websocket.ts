@@ -53,7 +53,7 @@ const waitOpen = (ws: globalThis.WebSocket, input: WebSocketRequest) => {
   if (ws.readyState === globalThis.WebSocket.OPEN) return Effect.void
   if (ws.readyState === globalThis.WebSocket.CLOSING || ws.readyState === globalThis.WebSocket.CLOSED) {
     return Effect.fail(
-      transportError("open", `WebSocket closed before opening (state ${ws.readyState})`, {
+      transportError("open", `WebSocket нээхээс өмнө хаагдсан (төлөв ${ws.readyState})`, {
         url: input.url,
         kind: "open",
       }),
@@ -79,7 +79,7 @@ const waitOpen = (ws: globalThis.WebSocket, input: WebSocketRequest) => {
       cleanup()
       resume(
         Effect.fail(
-          transportError("open", `Failed to open WebSocket: ${eventMessage(event)}`, { url: input.url, kind: "open" }),
+          transportError("open", `WebSocket нээж чадсангүй: ${eventMessage(event)}`, { url: input.url, kind: "open" }),
         ),
       )
     }
@@ -87,7 +87,7 @@ const waitOpen = (ws: globalThis.WebSocket, input: WebSocketRequest) => {
       cleanup()
       resume(
         Effect.fail(
-          transportError("open", `WebSocket closed before opening with code ${event.code}`, {
+          transportError("open", `WebSocket нээгдэхээс өмнө ${event.code} кодтой хаагдсан`, {
             url: input.url,
             kind: "open",
           }),
@@ -113,10 +113,10 @@ const webSocketUrl = (value: string) =>
         url.protocol = "ws:"
         return url.toString()
       }
-      throw new Error(`Unsupported WebSocket URL protocol ${url.protocol}`)
+      throw new Error(`WebSocket URL-ийн ${url.protocol} протокол дэмжигдэхгүй`)
     },
     catch: (error) =>
-      transportError("prepare", error instanceof Error ? error.message : "Invalid WebSocket URL", {
+      transportError("prepare", error instanceof Error ? error.message : "WebSocket URL буруу байна", {
         url: value,
         kind: "websocket",
       }),
@@ -127,7 +127,7 @@ export const open = (input: WebSocketRequest) =>
     try: () =>
       new (globalThis.WebSocket as unknown as WebSocketConstructorWithHeaders)(input.url, { headers: input.headers }),
     catch: (error) =>
-      transportError("open", error instanceof Error ? error.message : "Failed to construct WebSocket", {
+      transportError("open", error instanceof Error ? error.message : "WebSocket үүсгэж чадсангүй", {
         url: input.url,
         kind: "open",
       }),
@@ -150,7 +150,10 @@ export const fromWebSocket = (
       Queue.failCauseUnsafe(
         messages,
         Cause.fail(
-          transportError("message", "Unsupported WebSocket message payload", { url: input.url, kind: "message" }),
+          transportError("message", "WebSocket мессежийн өгөгдөл дэмжигдэхгүй", {
+            url: input.url,
+            kind: "message",
+          }),
         ),
       )
     }
@@ -158,7 +161,7 @@ export const fromWebSocket = (
       Queue.failCauseUnsafe(
         messages,
         Cause.fail(
-          transportError("message", `WebSocket error: ${eventMessage(event)}`, { url: input.url, kind: "message" }),
+          transportError("message", `WebSocket-ийн алдаа: ${eventMessage(event)}`, { url: input.url, kind: "message" }),
         ),
       )
     }
@@ -167,7 +170,7 @@ export const fromWebSocket = (
       Queue.failCauseUnsafe(
         messages,
         Cause.fail(
-          transportError("message", `WebSocket closed with code ${event.code}`, { url: input.url, kind: "close" }),
+          transportError("message", `WebSocket ${event.code} кодтой хаагдсан`, { url: input.url, kind: "close" }),
         ),
       )
     }
@@ -186,7 +189,7 @@ export const fromWebSocket = (
         Effect.try({
           try: () => ws.send(message),
           catch: (error) =>
-            transportError("sendText", error instanceof Error ? error.message : "Failed to send WebSocket message", {
+            transportError("sendText", error instanceof Error ? error.message : "WebSocket зурвас илгээж чадсангүй", {
               url: input.url,
               kind: "write",
             }),
@@ -241,7 +244,7 @@ export const json = <Body, Message>(input: JsonInput<Body, Message>): JsonTransp
     const webSocket = runtime.webSocket
     if (!webSocket) {
       return Stream.fail(
-        transportError("json", "WebSocket JSON transport requires WebSocketExecutor.Service", {
+        transportError("json", "WebSocket JSON дамжуулалтад WebSocketExecutor.Service шаардлагатай", {
           url: prepared.url,
           kind: "websocket",
         }),

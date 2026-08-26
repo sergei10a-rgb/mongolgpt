@@ -35,7 +35,9 @@ const bodyWithOverlay = <Body>(body: Body, request: LLMRequest, encodeBody: (bod
       const overlaid = mergeJsonRecords(body, request.http.body) ?? {}
       return { jsonBody: overlaid, bodyText: ProviderShared.encodeJson(overlaid) }
     }
-    return yield* ProviderShared.invalidRequest("http.body can only overlay JSON object request bodies")
+    return yield* ProviderShared.invalidRequest(
+      "http.body нь зөвхөн JSON объект хэлбэрийн хүсэлтийн агуулгыг давхарлан өөрчилж болно",
+    )
   })
 
 export const jsonRequestParts = <Body>(input: JsonRequestInput<Body>) =>
@@ -91,7 +93,7 @@ export const httpJson = <Body, Frame>(input: HttpJsonInput<Body, Frame>): HttpJs
                 Stream.mapError((error) =>
                   ProviderShared.eventError(
                     `${request.model.provider}/${request.model.route.id}`,
-                    `Failed to read ${request.model.provider}/${request.model.route.id} stream`,
+                    `${request.model.provider}/${request.model.route.id} урсгалыг уншихад алдаа гарлаа`,
                     ProviderShared.errorText(error),
                   ),
                 ),

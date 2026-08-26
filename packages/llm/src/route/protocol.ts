@@ -11,11 +11,11 @@ import type { LLMError, LLMEvent, LLMRequest, ProtocolID } from "../schema"
  *
  * Examples:
  *
- * - `OpenAIChat.protocol` — chat completions style
+ * - `OpenAIChat.protocol` — chat completions маягийн API
  * - `OpenAIResponses.protocol` — responses API
- * - `AnthropicMessages.protocol` — messages API with content blocks
- * - `Gemini.protocol` — generateContent
- * - `BedrockConverse.protocol` — Converse with binary event-stream framing
+ * - `AnthropicMessages.protocol` — content block бүхий messages API
+ * - `Gemini.protocol` — generateContent API
+ * - `BedrockConverse.protocol` — binary event-stream framing бүхий Converse API
  *
  * A `Protocol` is **not** a deployment. It does not know which URL, which
  * headers, or which auth scheme to use. Those are deployment concerns owned

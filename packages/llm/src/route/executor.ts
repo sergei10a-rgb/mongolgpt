@@ -202,8 +202,8 @@ const responseBody = (body: string | void, request: HttpClientRequest.HttpClient
 }
 
 const providerMessage = (status: number, body: { readonly body?: string }) => {
-  if (body.body && body.body.length <= 500) return `Provider request failed with HTTP ${status}: ${body.body}`
-  return `Provider request failed with HTTP ${status}`
+  if (body.body && body.body.length <= 500) return `Нийлүүлэгчийн хүсэлт HTTP ${status} төлөвтэй амжилтгүй боллоо: ${body.body}`
+  return `Нийлүүлэгчийн хүсэлт HTTP ${status} төлөвтэй амжилтгүй боллоо`
 }
 
 const responseHttp = (input: {
@@ -325,18 +325,18 @@ const toHttpError = (redactedNames: ReadonlyArray<string | RegExp>) => (error: u
     return transportError({ message: error.message, kind: "Timeout" })
   }
   if (!HttpClientError.isHttpClientError(error)) {
-    return transportError({ message: "HTTP transport failed" })
+    return transportError({ message: "HTTP дамжуулалт амжилтгүй боллоо" })
   }
   const request = "request" in error ? error.request : undefined
   if (error.reason._tag === "TransportError") {
     return transportError({
-      message: error.reason.description ?? "HTTP transport failed",
+      message: error.reason.description ?? "HTTP дамжуулалт амжилтгүй боллоо",
       kind: error.reason._tag,
       request,
     })
   }
   return transportError({
-    message: `HTTP transport failed: ${error.reason._tag}`,
+    message: `HTTP дамжуулалт амжилтгүй боллоо: ${error.reason._tag}`,
     kind: error.reason._tag,
     request,
   })
