@@ -231,7 +231,7 @@ export function withCliFixture<A, E>(
       const result = yield* appProc.run(command, { timeout: Duration.millis(timeoutMs) }).pipe(
         Effect.catchTag("AppProcessError", (err) =>
           Effect.sync(() => {
-            timedOut = err.cause instanceof Error && err.cause.message === "Timed out"
+            timedOut = err.cause instanceof Error && ["Хугацаа хэтэрлээ", "Timed out"].includes(err.cause.message)
             return {
               command: err.command,
               exitCode: err.exitCode ?? -1,
