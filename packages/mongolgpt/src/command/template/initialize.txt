@@ -8,8 +8,8 @@ $ARGUMENTS
 ## Хэрхэн судлах вэ
 
 Хамгийн их мэдээлэлтэй эх сурвалжийг эхэлж унш:
-- `README*`, root manifest, workspace config, lockfile
-- build, test, lint, formatter, typecheck, codegen config
+- `README*`, үндсэн manifest, workspace config, lockfile
+- build, test, lint, formatter, typecheck, codegen-ийн config
 - CI workflow болон pre-commit / task runner config
 - одоо байгаа зааврын файл (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`, `.cursorrules`, `.github/copilot-instructions.md`)
 - `mongolgpt.json` зэрэг repository доторх MongolGPT config
@@ -24,7 +24,7 @@ Config болон docs-ийг уншсаны дараа архитектур т�
 - хөгжүүлэгчийн яг ажиллуулах command, ялангуяа шууд ойлгомжгүй command
 - нэг test, нэг package, эсвэл төвлөрсөн verification алхмыг хэрхэн ажиллуулах
 - дараалал чухал үед мөрдөх command-ийн дараалал, жишээ нь `lint -> typecheck -> test`
-- monorepo эсвэл олон package-ийн зааг, үндсэн хавтасны эзэмшил, бодит app/library entrypoint
+- monorepo эсвэл олон package-ийн зааг, үндсэн хавтасны эзэмшил, бодит app/library-ийн entrypoint
 - framework эсвэл toolchain-ийн онцлог: generated code, migration, codegen, build artifact, тусгай env ачаалалт, dev server, infra deploy урсгал
 - үндсэн тохиргооноос ялгаатай, зөвхөн энэ repository-д мөрдөх style эсвэл workflow convention
 - test-ийн онцлог: fixture, integration test-ийн урьдчилсан нөхцөл, snapshot workflow, шаардлагатай service, тогтворгүй эсвэл өндөр өртөгтэй suite
