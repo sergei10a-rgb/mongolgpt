@@ -272,7 +272,7 @@ describe("util.effect-flock", () => {
         .pipe(Effect.exit)
 
       expect(Exit.isFailure(result)).toBe(true)
-      expect(Exit.isFailure(result) ? Cause.pretty(result.cause) : "").toContain("missing")
+      expect(Exit.isFailure(result) ? Cause.pretty(result.cause) : "").toContain("мета өгөгдөл олдсонгүй")
       yield* Effect.promise(() => fs.rm(tmp, { recursive: true, force: true }))
     }),
   )
@@ -300,7 +300,7 @@ describe("util.effect-flock", () => {
         .pipe(Effect.exit)
 
       expect(Exit.isFailure(result)).toBe(true)
-      expect(Exit.isFailure(result) ? Cause.pretty(result.cause) : "").toContain("token mismatch")
+      expect(Exit.isFailure(result) ? Cause.pretty(result.cause) : "").toContain("token тохирохгүй байна")
       expect(yield* Effect.promise(() => exists(lockDir))).toBe(true)
       yield* Effect.promise(() => fs.rm(tmp, { recursive: true, force: true }))
     }),

@@ -233,17 +233,17 @@ export namespace EffectFlock {
         Effect.gen(function* () {
           const raw = yield* fs.readFileString(handle.metaPath).pipe(
             Effect.catch((err) => {
-              if (isPathGone(err)) return Effect.die(new ReleaseError({ detail: "metadata missing" }))
+              if (isPathGone(err)) return Effect.die(new ReleaseError({ detail: "мета өгөгдөл олдсонгүй" }))
               return Effect.die(err)
             }),
           )
 
           const parsed = yield* Effect.try({
             try: () => decodeMeta(raw),
-            catch: (cause) => new ReleaseError({ detail: "metadata invalid", cause }),
+            catch: (cause) => new ReleaseError({ detail: "мета өгөгдөл буруу байна", cause }),
           }).pipe(Effect.orDie)
 
-          if (parsed.token !== handle.token) return yield* Effect.die(new ReleaseError({ detail: "token mismatch" }))
+          if (parsed.token !== handle.token) return yield* Effect.die(new ReleaseError({ detail: "token тохирохгүй байна" }))
 
           yield* forceRemove(handle.lockDir)
         })

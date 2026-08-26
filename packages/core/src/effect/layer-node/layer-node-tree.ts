@@ -27,7 +27,7 @@ export function hoist<A, E, T extends LayerNode.Tag>(
     if (node.tag === tag) {
       const existing = hoisted.get(node.name)
       if (existing && existing !== node) {
-        throw new Error(`Tag ${tag} has conflicting implementations for ${node.name}`)
+        throw new Error(`${tag} шошгонд ${node.name}-д зориулсан зөрчилтэй хэрэгжүүлэлтүүд байна`)
       }
       hoisted.set(node.name, node)
       const empty = LayerNode.group([])
@@ -41,7 +41,7 @@ export function hoist<A, E, T extends LayerNode.Tag>(
     if (visiting.has(node)) {
       const start = stack.indexOf(node)
       throw new Error(
-        `Cycle detected in layer tree: ${[...stack.slice(start), node].map((item) => item.name).join(" -> ")}`,
+        `Давхаргын модонд мөчлөг илэрлээ: ${[...stack.slice(start), node].map((item) => item.name).join(" -> ")}`,
       )
     }
     visiting.add(node)
@@ -69,7 +69,7 @@ export function compile<A, E>(
 ): Layer.Layer<A, E> {
   const cache = new Map<AnyNode, RuntimeLayer>()
   const compileNode = (node: AnyNode): RuntimeLayer => {
-    if (node.kind === "unbound") throw new Error(`Unbound layer node: ${node.name}`)
+    if (node.kind === "unbound") throw new Error(`Холбогдоогүй давхаргын зангилаа: ${node.name}`)
     const cached = cache.get(node)
     if (cached) return cached
     const dependencies = node.dependencies.flatMap(flatten).map(compileNode)
@@ -91,12 +91,12 @@ export function bind<A, E, T extends LayerNode.Tag | undefined>(
   source: AnyNode,
   replacement: AnyNode,
 ): LayerNode.Node<A, E, T> {
-  if (source.kind !== "unbound") throw new Error(`Cannot bind non-unbound layer node: ${source.name}`)
+  if (source.kind !== "unbound") throw new Error(`Аль хэдийн холбогдсон давхаргын зангилааг дахин холбож болохгүй: ${source.name}`)
   if (source.name !== replacement.name) {
-    throw new Error(`Cannot bind ${source.name} to ${replacement.name}`)
+    throw new Error(`${source.name}-г ${replacement.name}-тэй холбож болохгүй`)
   }
   if (source.tag !== replacement.tag) {
-    throw new Error(`Cannot bind ${source.name} across tags`)
+    throw new Error(`${source.name}-г шошгуудын хооронд холбож болохгүй`)
   }
   const visited = new Map<AnyNode, AnyNode>()
   const visit = (node: AnyNode): AnyNode => {

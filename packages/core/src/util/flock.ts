@@ -17,7 +17,7 @@ export namespace Flock {
   }
 
   const root = () => {
-    if (!global) throw new Error("Flock global not set")
+    if (!global) throw new Error("Flock-ийн үндсэн төлөв тохируулагдаагүй байна")
     return path.join(global.state, "locks")
   }
 
@@ -76,7 +76,7 @@ export namespace Flock {
   function sleep(ms: number, signal?: AbortSignal) {
     return new Promise<void>((resolve, reject) => {
       if (signal?.aborted) {
-        reject(signal.reason ?? new Error("Aborted"))
+        reject(signal.reason ?? new Error("Цуцлагдсан"))
         return
       }
 
@@ -92,7 +92,7 @@ export namespace Flock {
           clearTimeout(timer)
         }
         signal?.removeEventListener("abort", abort)
-        reject(signal?.reason ?? new Error("Aborted"))
+        reject(signal?.reason ?? new Error("Цуцлагдсан"))
       }
 
       signal?.addEventListener("abort", abort, { once: true })
@@ -212,12 +212,12 @@ export namespace Flock {
 
     await writeFile(heartbeatPath, "", { flag: "wx" }).catch(async () => {
       await rm(lockDir, { recursive: true, force: true })
-      throw new Error("Lock acquired but heartbeat already existed (possible compromise).")
+      throw new Error("Түгжээг авсан ч амьд төлөвийн файл аль хэдийн байна (зөрчил гарсан байж болзошгүй).")
     })
 
     await writeFile(metaPath, JSON.stringify(meta, null, 2), { flag: "wx" }).catch(async () => {
       await rm(lockDir, { recursive: true, force: true })
-      throw new Error("Lock acquired but meta.json already existed (possible compromise).")
+      throw new Error("Түгжээг авсан ч meta.json аль хэдийн байна (зөрчил гарсан байж болзошгүй).")
     })
 
     let timer: NodeJS.Timeout | undefined
@@ -249,16 +249,16 @@ export namespace Flock {
         .catch((err) => {
           const errCode = code(err)
           if (errCode === "ENOENT" || errCode === "ENOTDIR") {
-            throw new Error("Refusing to release: lock is compromised (metadata missing).")
+            throw new Error("Суллахаас татгалзлаа: түгжээний бүрэн бүтэн байдал алдагдсан (мета өгөгдөл байхгүй).")
           }
           if (err instanceof SyntaxError) {
-            throw new Error("Refusing to release: lock is compromised (metadata invalid).")
+            throw new Error("Суллахаас татгалзлаа: түгжээний бүрэн бүтэн байдал алдагдсан (мета өгөгдөл буруу).")
           }
           throw err
         })
       // Token check prevents deleting a lock that was re-acquired by another process.
       if (current.token !== token) {
-        throw new Error("Refusing to release: lock token mismatch (not the owner).")
+        throw new Error("Суллахаас татгалзлаа: түгжээний токен таарахгүй байна (эзэмшигч биш).")
       }
 
       await rm(lockDir, { recursive: true, force: true })
@@ -290,7 +290,7 @@ export namespace Flock {
       }
 
       if (mono() > stop) {
-        throw new Error(`Timed out waiting for lock: ${input.key}`)
+        throw new Error(`Түгжээг хүлээх хугацаа дууслаа: ${input.key}`)
       }
 
       attempt += 1

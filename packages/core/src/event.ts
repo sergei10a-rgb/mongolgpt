@@ -50,7 +50,10 @@ export class InvalidDurableEventError extends Schema.TaggedErrorClass<InvalidDur
 const decodeSerializedEvent = (event: SerializedEvent): Payload => {
   const definition = Durable.get(event.type)
   if (!definition?.durable) {
-    throw new InvalidDurableEventError({ type: event.type, message: `Unknown durable event type ${event.type}` })
+    throw new InvalidDurableEventError({
+      type: event.type,
+      message: `Үл мэдэгдэх тогтвортой үйл явдлын төрөл: ${event.type}`,
+    })
   }
   return {
     id: event.id,
@@ -221,7 +224,7 @@ export const layerWith = (options?: LayerOptions) =>
               yield* Effect.die(
                 new InvalidDurableEventError({
                   type: event.type,
-                  message: `Expected string aggregate field ${durable.aggregate}`,
+                  message: `${durable.aggregate} нэгтгэлийн талбар тэмдэгт мөр байх ёстой`,
                 }),
               )
             } else {
@@ -229,7 +232,7 @@ export const layerWith = (options?: LayerOptions) =>
                 yield* Effect.die(
                   new InvalidDurableEventError({
                     type: event.type,
-                    message: `Aggregate mismatch: expected ${input.aggregateID}, got ${aggregateID}`,
+                    message: `Нэгтгэл тохирсонгүй: хүлээсэн ${input.aggregateID}, авсан ${aggregateID}`,
                   }),
                 )
               }
@@ -255,7 +258,7 @@ export const layerWith = (options?: LayerOptions) =>
                             yield* Effect.die(
                               new InvalidDurableEventError({
                                 type: event.type,
-                                message: `Replay owner mismatch for aggregate ${aggregateID}: expected ${row.ownerID}, got ${input.ownerID ?? "none"}`,
+                                message: `${aggregateID} нэгтгэлийг дахин тоглуулах эзэмшигч тохирсонгүй: хүлээсэн ${row.ownerID}, авсан ${input.ownerID ?? "байхгүй"}`,
                               }),
                             )
                           }
@@ -284,7 +287,7 @@ export const layerWith = (options?: LayerOptions) =>
                             yield* Effect.die(
                               new InvalidDurableEventError({
                                 type: event.type,
-                                message: `Replay diverged at aggregate ${aggregateID} sequence ${input.seq}`,
+                                message: `${aggregateID} нэгтгэлийн ${input.seq} дарааллыг дахин тоглуулах явц зөрлөө`,
                               }),
                             )
                           }
@@ -296,7 +299,7 @@ export const layerWith = (options?: LayerOptions) =>
                             yield* Effect.die(
                               new InvalidDurableEventError({
                                 type: event.type,
-                                message: `Sequence mismatch for aggregate ${aggregateID}: expected ${latest + 1}, got ${seq}`,
+                                message: `${aggregateID} нэгтгэлийн дараалал тохирсонгүй: хүлээсэн ${latest + 1}, авсан ${seq}`,
                               }),
                             )
                           }
@@ -310,7 +313,7 @@ export const layerWith = (options?: LayerOptions) =>
                             yield* Effect.die(
                               new InvalidDurableEventError({
                                 type: event.type,
-                                message: `Event ${event.id} already exists at aggregate ${stored.aggregateID} sequence ${stored.seq}`,
+                                message: `${event.id} үйл явдал ${stored.aggregateID} нэгтгэлийн ${stored.seq} дараалал дээр аль хэдийн байна`,
                               }),
                             )
                           const committed = {
@@ -372,7 +375,7 @@ export const layerWith = (options?: LayerOptions) =>
             return yield* Effect.die(
               new InvalidDurableEventError({
                 type: event.type,
-                message: "Local commit hooks require a durable event",
+                message: "Дотоод commit hook-д тогтвортой үйл явдал шаардлагатай",
               }),
             )
           if (definition?.durable) {
@@ -399,7 +402,7 @@ export const layerWith = (options?: LayerOptions) =>
         Effect.suspend(() => observer(event)).pipe(
           Effect.catchCauseIf(
             (cause) => !Cause.hasInterrupts(cause),
-            (cause) => Effect.logError("Event listener failed", { eventID: event.id, eventType: event.type, cause }),
+            (cause) => Effect.logError("Үйл явдлын сонсогч ажилласангүй", { eventID: event.id, eventType: event.type, cause }),
           ),
         )
 
@@ -446,7 +449,10 @@ export const layerWith = (options?: LayerOptions) =>
           const definition = Durable.get(event.type)
           if (!definition?.durable) {
             yield* Effect.die(
-              new InvalidDurableEventError({ type: event.type, message: `Unknown durable event type ${event.type}` }),
+              new InvalidDurableEventError({
+                type: event.type,
+                message: `Үл мэдэгдэх тогтвортой үйл явдлын төрөл: ${event.type}`,
+              }),
             )
           } else {
             const payload = {
@@ -488,7 +494,7 @@ export const layerWith = (options?: LayerOptions) =>
             yield* Effect.die(
               new InvalidDurableEventError({
                 type: events[0]?.type ?? "unknown",
-                message: "Replay events must belong to the same aggregate",
+                message: "Дахин тоглуулах үйл явдлууд нэг нэгтгэлд харьяалагдах ёстой",
               }),
             )
           }
@@ -499,7 +505,7 @@ export const layerWith = (options?: LayerOptions) =>
               yield* Effect.die(
                 new InvalidDurableEventError({
                   type: event.type,
-                  message: `Replay sequence mismatch at index ${index}: expected ${seq}, got ${event.seq}`,
+                  message: `${index} индекс дэх дахин тоглуулах дараалал тохирсонгүй: хүлээсэн ${seq}, авсан ${event.seq}`,
                 }),
               )
             }

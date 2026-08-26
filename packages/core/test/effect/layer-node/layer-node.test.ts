@@ -71,7 +71,7 @@ describe("layer node", () => {
     const unbound = LayerNode.unbound(Value, tags.values.app)
     const greeting = make({ service: Greeting, layer: greetingLayer, deps: [unbound] })
     const tree = LayerNode.group([greeting])
-    expect(() => LayerNodeTree.compile(tree)).toThrow("Unbound layer node: test/LayerNodeValue")
+    expect(() => LayerNodeTree.compile(tree)).toThrow("Холбогдоогүй давхаргын зангилаа: test/LayerNodeValue")
     const bound = LayerNodeTree.bind(tree, unbound, value)
     const layer = LayerNodeTree.compile(bound) as Layer.Layer<Greeting>
     const program = Effect.map(Greeting, (item) => item.value).pipe(Effect.provide(layer))
@@ -198,7 +198,7 @@ describe("layer node", () => {
     })
 
     expect(() => LayerNodeTree.hoist(LayerNode.group([left, right]), tags.values.global)).toThrow(
-      "Tag global has conflicting implementations for test/GraphDatabase",
+      "global шошгонд test/GraphDatabase-д зориулсан зөрчилтэй хэрэгжүүлэлтүүд байна",
     )
   })
 

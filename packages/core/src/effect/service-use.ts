@@ -29,7 +29,7 @@ export const serviceUse = <Identifier, Shape>(tag: Context.Service<Identifier, S
           tag.use((service) => {
             // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- Proxy keys are checked at runtime.
             const method = service[key as keyof Shape]
-            if (typeof method !== "function") return Effect.die(new Error(`Service method not found: ${key}`))
+            if (typeof method !== "function") return Effect.die(new Error(`Үйлчилгээний арга олдсонгүй: ${key}`))
             // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- ServiceUse exposes only Effect-returning methods.
             return (method as (...args: unknown[]) => Effect.Effect<unknown, unknown, unknown>)(...args)
           })
