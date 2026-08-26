@@ -62,7 +62,7 @@ function oauth(http: HttpClient.HttpClient) {
             return
           }
           if (!value || url.searchParams.get("state") !== state) {
-            const message = value ? "OAuth state буруу байна" : "Authorization code алга"
+            const message = value ? "OAuth төлөв буруу байна" : "Зөвшөөрлийн код алга"
             Effect.runFork(Deferred.fail(code, new Error(message)))
             response
               .writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
@@ -130,7 +130,9 @@ export const MongolGPTPlugin = define<HttpClient.HttpClient | EventV2.Service | 
       providers = credential
         ? yield* fetchProviders(http, credential).pipe(
             Effect.catch((cause) =>
-              Effect.logWarning("failed to load MongolGPT provider config", { cause }).pipe(Effect.as(undefined)),
+              Effect.logWarning("MongolGPT үйлчилгээ үзүүлэгчийн тохиргоог ачаалж чадсангүй", { cause }).pipe(
+                Effect.as(undefined),
+              ),
             ),
           )
         : undefined

@@ -53,7 +53,7 @@ export function createOpenaiCompatible(options: OpenaiCompatibleProviderSettings
   const baseURL = withoutTrailingSlash(options.baseURL ?? "https://api.openai.com/v1")
 
   if (!baseURL) {
-    throw new Error("baseURL is required")
+    throw new Error("baseURL тохируулах шаардлагатай")
   }
 
   // Merge headers: defaults first, then user overrides

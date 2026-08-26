@@ -471,7 +471,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
                 throw new InvalidResponseDataError({
                   data: delta,
                   message:
-                    "Multiple reasoning_opaque values received in a single response. Only one thinking part per response is supported.",
+                    "Нэг хариунд олон reasoning_opaque утга ирлээ. Нэг хариунд зөвхөн нэг бодолтын хэсэг дэмжигдэнэ.",
                 })
               }
               reasoningOpaque = delta.reasoning_opaque
@@ -541,14 +541,14 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
                   if (toolCallDelta.id == null) {
                     throw new InvalidResponseDataError({
                       data: toolCallDelta,
-                      message: `Expected 'id' to be a string.`,
+                      message: `'id' нь тэмдэгт мөр байх ёстой.`,
                     })
                   }
 
                   if (toolCallDelta.function?.name == null) {
                     throw new InvalidResponseDataError({
                       data: toolCallDelta,
-                      message: `Expected 'function.name' to be a string.`,
+                      message: `'function.name' нь тэмдэгт мөр байх ёстой.`,
                     })
                   }
 

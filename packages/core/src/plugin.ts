@@ -41,7 +41,7 @@ export const layer = Layer.effect(
     let host: Parameters<PluginRuntime["effect"]>[0]
 
     const add = Effect.fn("Plugin.add")(function* (id: ID, effect: PluginRuntime["effect"]) {
-      if (loading.has(id)) return yield* Effect.die(`Plugin load cycle detected for ${id}`)
+      if (loading.has(id)) return yield* Effect.die(`Нэмэлтийг ачаалах мөчлөг илэрлээ: ${id}`)
 
       yield* locks.withLock(id)(
         Effect.sync(() => {
@@ -83,7 +83,7 @@ export const layer = Layer.effect(
     })
 
     const remove = Effect.fn("Plugin.remove")(function* (id: ID) {
-      if (loading.has(id)) return yield* Effect.die(`Cannot remove plugin ${id} while it is loading`)
+      if (loading.has(id)) return yield* Effect.die(`Ачаалж байх үед ${id} нэмэлтийг устгаж болохгүй`)
 
       yield* locks.withLock(id)(
         State.batch(

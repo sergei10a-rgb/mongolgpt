@@ -53,13 +53,13 @@ export async function convertToOpenAIResponsesInput({
           case "remove": {
             warnings.push({
               type: "other",
-              message: "system messages are removed for this model",
+              message: "Энэ загварт зориулсан системийн мессежүүдийг хаслаа",
             })
             break
           }
           default: {
             const _exhaustiveCheck: never = systemMessageMode
-            throw new Error(`Unsupported system message mode: ${_exhaustiveCheck}`)
+            throw new Error(`Дэмжигдээгүй системийн мессежийн горим: ${_exhaustiveCheck}`)
           }
         }
         break
@@ -106,7 +106,7 @@ export async function convertToOpenAIResponsesInput({
                   }
                 } else {
                   throw new UnsupportedFunctionalityError({
-                    functionality: `file part media type ${part.mediaType}`,
+                    functionality: `Файлын хэсгийн медиа төрөл ${part.mediaType}`,
                   })
                 }
               }
@@ -175,7 +175,7 @@ export async function convertToOpenAIResponsesInput({
               } else {
                 warnings.push({
                   type: "other",
-                  message: `Results for OpenAI tool ${part.toolName} are not sent to the API when store is false`,
+                  message: `store нь false үед OpenAI-ийн ${part.toolName} хэрэгслийн үр дүнг API руу илгээхгүй`,
                 })
               }
 
@@ -220,7 +220,7 @@ export async function convertToOpenAIResponsesInput({
                   } else if (reasoningMessage !== undefined) {
                     warnings.push({
                       type: "other",
-                      message: `Cannot append empty reasoning part to existing reasoning sequence. Skipping reasoning part: ${JSON.stringify(part)}.`,
+                      message: `Одоо байгаа үндэслэлийн дараалалд хоосон хэсэг нэмэх боломжгүй. Үндэслэлийн хэсгийг алгаслаа: ${JSON.stringify(part)}.`,
                     })
                   }
 
@@ -239,7 +239,7 @@ export async function convertToOpenAIResponsesInput({
               } else {
                 warnings.push({
                   type: "other",
-                  message: `Non-OpenAI reasoning parts are not supported. Skipping reasoning part: ${JSON.stringify(part)}.`,
+                  message: `OpenAI-ийн бус үндэслэлийн хэсгүүдийг дэмжихгүй. Үндэслэлийн хэсгийг алгаслаа: ${JSON.stringify(part)}.`,
                 })
               }
               break
@@ -298,7 +298,7 @@ export async function convertToOpenAIResponsesInput({
               contentValue = output.value
               break
             case "execution-denied":
-              contentValue = output.reason ?? "Tool execution denied."
+              contentValue = output.reason ?? "Хэрэгслийн гүйцэтгэлийг хориглолоо."
               break
             case "content":
             case "json":
@@ -319,7 +319,7 @@ export async function convertToOpenAIResponsesInput({
 
       default: {
         const _exhaustiveCheck: never = role
-        throw new Error(`Unsupported role: ${_exhaustiveCheck}`)
+        throw new Error(`Дэмжигдээгүй үүрэг: ${_exhaustiveCheck}`)
       }
     }
   }

@@ -254,7 +254,7 @@ export const layer = Layer.effect(
       return yield* new OperationError({
         operation,
         directory,
-        message: result.stderr.trim() || result.text.trim() || `Git ${operation} failed`,
+        message: result.stderr.trim() || result.text.trim() || `Git ${operation} ажиллагаа амжилтгүй боллоо`,
       })
     })
 
@@ -278,7 +278,7 @@ export const layer = Layer.effect(
       return yield* new OperationError({
         operation: "clone",
         directory: input.directory,
-        message: "Cloned repository could not be opened",
+        message: "Клондсон репозиторыг нээж чадсангүй",
       })
     })
 
@@ -352,7 +352,7 @@ export const layer = Layer.effect(
       return yield* new OperationError({
         operation: operationName,
         directory: repository.worktree,
-        message: result.stderr.toString("utf8").trim() || text.trim() || `Git ${operationName} failed`,
+        message: result.stderr.toString("utf8").trim() || text.trim() || `Git ${operationName} ажиллагаа амжилтгүй боллоо`,
       })
     })
 
@@ -399,7 +399,7 @@ export const layer = Layer.effect(
             new OperationError({
               operation: "create",
               directory: input.gitDirectory,
-              message: "Failed to configure shared Git objects",
+              message: "Git-ийн хуваалцсан объектуудыг тохируулж чадсангүй",
               cause,
             }),
         ),
@@ -415,7 +415,7 @@ export const layer = Layer.effect(
               new OperationError({
                 operation: "create",
                 directory: input.gitDirectory,
-                message: "Failed to configure shared Git objects",
+                message: "Git-ийн хуваалцсан объектуудыг тохируулж чадсангүй",
                 cause,
               }),
           ),
@@ -630,7 +630,7 @@ export const layer = Layer.effect(
         return yield* new OperationError({
           operation: "restore",
           directory: repository.worktree,
-          message: `Invalid tree entry for ${file}`,
+          message: `Git tree-ийн бичлэг буруу байна: ${file}`,
         })
       return { mode: match[1], object: match[2] }
     })
@@ -705,7 +705,7 @@ export const layer = Layer.effect(
                       new OperationError({
                         operation: "restore",
                         directory: input.repository.worktree,
-                        message: `Failed to remove ${file}`,
+                        message: `Файлыг устгаж чадсангүй: ${file}`,
                         cause,
                       }),
                   ),
@@ -740,7 +740,7 @@ export const layer = Layer.effect(
         return yield* new PatchError({
           operation: "capture",
           directory: input.path,
-          message: tracked.stderr.trim() || tracked.text.trim() || "Failed to capture tracked changes",
+          message: tracked.stderr.trim() || tracked.text.trim() || "Git-д бүртгэлтэй өөрчлөлтүүдийг хадгалж чадсангүй",
         })
       }
 
@@ -756,7 +756,8 @@ export const layer = Layer.effect(
         return yield* new PatchError({
           operation: "capture",
           directory: input.path,
-          message: untracked.stderr.trim() || untracked.text.trim() || "Failed to list untracked changes",
+          message:
+            untracked.stderr.trim() || untracked.text.trim() || "Git-д бүртгэгдээгүй өөрчлөлтүүдийг жагсааж чадсангүй",
         })
       }
 
@@ -777,7 +778,9 @@ export const layer = Layer.effect(
                     operation: "capture",
                     directory: input.path,
                     message:
-                      result.stderr.trim() || result.text.trim() || `Failed to capture untracked change: ${file}`,
+                      result.stderr.trim() ||
+                      result.text.trim() ||
+                      `Git-д бүртгэгдээгүй өөрчлөлтийг хадгалж чадсангүй: ${file}`,
                   }),
                 ),
           ),
@@ -850,7 +853,7 @@ export const layer = Layer.effect(
       return yield* new PatchError({
         operation: "reset",
         directory: input.path,
-        message: clean.stderr.trim() || clean.text.trim() || "Failed to clean untracked changes",
+        message: clean.stderr.trim() || clean.text.trim() || "Git-д бүртгэгдээгүй өөрчлөлтүүдийг цэвэрлэж чадсангүй",
       })
     })
 
@@ -869,7 +872,8 @@ export const layer = Layer.effect(
           ),
         )
       if (result.exitCode === 0) return result.stdout.toString("utf8")
-      const message = result.stderr.toString("utf8").trim() || result.stdout.toString("utf8").trim() || "Git failed"
+      const message =
+        result.stderr.toString("utf8").trim() || result.stdout.toString("utf8").trim() || "Git үйлдэл амжилтгүй боллоо"
       return yield* new WorktreeError({
         operation,
         directory: worktreeDirectory,
@@ -893,7 +897,7 @@ export const layer = Layer.effect(
       return yield* new WorktreeError({
         operation: "create",
         directory: input.directory,
-        message: "Created worktree could not be opened",
+        message: "Үүсгэсэн төслийн хуулбарыг нээж чадсангүй",
       })
     })
 

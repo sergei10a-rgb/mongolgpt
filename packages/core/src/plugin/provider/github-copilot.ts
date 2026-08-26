@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { ModelV2 } from "../../model"
-import { define } from "../internal"
+import type { Plugin } from "../internal"
 import { ProviderV2 } from "../../provider"
 
 function shouldUseResponses(modelID: string) {
@@ -11,7 +11,7 @@ function shouldUseResponses(modelID: string) {
   return Number(match[1]) >= 5 && !modelID.startsWith("gpt-5-mini")
 }
 
-export const GithubCopilotPlugin = define({
+export const GithubCopilotPlugin = {
   id: "github-copilot",
   effect: Effect.fn(function* (ctx) {
     yield* ctx.catalog.transform(
@@ -45,4 +45,4 @@ export const GithubCopilotPlugin = define({
       }),
     )
   }),
-})
+} satisfies Plugin<never>

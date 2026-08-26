@@ -58,7 +58,7 @@ export function convertToOpenAICompatibleChatMessages(prompt: LanguageModelV3Pro
                   }
                 } else {
                   throw new UnsupportedFunctionalityError({
-                    functionality: `file part media type ${part.mediaType}`,
+                    functionality: `Файлын хэсгийн медиа төрөл ${part.mediaType}`,
                   })
                 }
               }
@@ -139,7 +139,7 @@ export function convertToOpenAICompatibleChatMessages(prompt: LanguageModelV3Pro
               contentValue = output.value
               break
             case "execution-denied":
-              contentValue = output.reason ?? "Tool execution denied."
+              contentValue = output.reason ?? "Хэрэгслийн гүйцэтгэлийг хориглолоо."
               break
             case "content":
             case "json":
@@ -161,7 +161,7 @@ export function convertToOpenAICompatibleChatMessages(prompt: LanguageModelV3Pro
 
       default: {
         const _exhaustiveCheck: never = role
-        throw new Error(`Unsupported role: ${_exhaustiveCheck}`)
+        throw new Error(`Дэмжигдээгүй үүрэг: ${_exhaustiveCheck}`)
       }
     }
   }
