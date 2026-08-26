@@ -6,6 +6,7 @@ import {
   enableD1Backups,
   enableMonitoring,
   enableShareService,
+  enableTurnstile,
   publicOrigin,
   runtimeOrigin,
   shareOrigin,
@@ -277,6 +278,20 @@ export const accountDeletionRetention = new sst.cloudflare.Cron("AccountDeletion
 const GITHUB_CLIENT_ID_CONSOLE = new sst.Secret("GITHUB_CLIENT_ID_CONSOLE")
 const GITHUB_CLIENT_SECRET_CONSOLE = new sst.Secret("GITHUB_CLIENT_SECRET_CONSOLE")
 const GOOGLE_CLIENT_ID = new sst.Secret("GOOGLE_CLIENT_ID")
+const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA"
+const TURNSTILE_TEST_SECRET_KEY = "1x0000000000000000000000000000000AA"
+const turnstileSiteKey =
+  process.env.MONGOLGPT_TURNSTILE_SITE_KEY?.trim() || ($app.stage === "production" ? "" : TURNSTILE_TEST_SITE_KEY)
+if (enableTurnstile && !turnstileSiteKey) {
+  throw new Error("Turnstile идэвхтэй үед MONGOLGPT_TURNSTILE_SITE_KEY заавал байна.")
+}
+if ($app.stage === "production" && /^[123]x0{10,}/.test(turnstileSiteKey)) {
+  throw new Error("Production орчинд Cloudflare Turnstile-ийн test site key ашиглахгүй.")
+}
+const TURNSTILE_SECRET_KEY =
+  $app.stage === "production"
+    ? new sst.Secret("TurnstileSecretKey")
+    : new sst.Secret("TurnstileSecretKey", TURNSTILE_TEST_SECRET_KEY)
 const devCloudflareSecrets = $dev
   ? [
       new sst.Secret("CLOUDFLARE_DEFAULT_ACCOUNT_ID", process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID),
@@ -290,6 +305,8 @@ export const auth = new sst.cloudflare.Worker("AuthApi", {
   url: true,
   environment: {
     MONGOLGPT_AUTH_EMAIL_DOMAINS: process.env.MONGOLGPT_AUTH_EMAIL_DOMAINS ?? "",
+    MONGOLGPT_CONSOLE_ORIGIN: publicOrigin,
+    MONGOLGPT_TURNSTILE_ENABLED: enableTurnstile ? "true" : "false",
   },
   link: [
     database,
@@ -297,6 +314,7 @@ export const auth = new sst.cloudflare.Worker("AuthApi", {
     GITHUB_CLIENT_ID_CONSOLE,
     GITHUB_CLIENT_SECRET_CONSOLE,
     GOOGLE_CLIENT_ID,
+    TURNSTILE_SECRET_KEY,
     ...devCloudflareSecrets,
   ],
 })
@@ -410,6 +428,8 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     VITE_MONGOLGPT_COMMUNITY_URL: "https://github.com/sergei10a-rgb/mongolgpt/discussions",
     MONGOLGPT_CONSOLE_URL: publicOrigin,
     MONGOLGPT_FREE_WORKSPACE_IDS: process.env.MONGOLGPT_FREE_WORKSPACE_IDS ?? "",
+    MONGOLGPT_TURNSTILE_ENABLED: enableTurnstile ? "true" : "false",
+    MONGOLGPT_TURNSTILE_SITE_KEY: turnstileSiteKey,
   },
 })
 

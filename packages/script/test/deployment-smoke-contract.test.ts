@@ -4,7 +4,9 @@ import {
   inspectAnonymousAccountOverview,
   inspectAnonymousRuntimeToken,
   inspectAnonymousRuntimeApiResponse,
+  inspectHostedAuthorizeChallenge,
   inspectHostedAuthorizeRedirect,
+  inspectHostedTurnstileRejection,
   inspectRuntimeTokenPreflight,
 } from "../../../script/deployment-smoke"
 import {
@@ -40,6 +42,7 @@ const deployment = {
   adminEnabled: false,
   backupsEnabled: false,
   monitoringEnabled: true,
+  turnstileEnabled: true,
   paymentEnvironment: "disabled" as const,
   warnings: [],
 }
@@ -508,7 +511,64 @@ describe("hosted authorization smoke contract", () => {
   const callback = "https://dev.mgpt.mn/auth/callback/auth/app"
   const location = `${authOrigin}/authorize?client_id=app&redirect_uri=${encodeURIComponent(callback)}`
 
-  test("requires the console to redirect to the dedicated auth worker", () => {
+  const challenge = `<!doctype html>
+    <html lang="mn"><head>
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+    </head><body>
+      <form action="https://auth.dev.mgpt.mn/authorize" method="post">
+        <input type="hidden" name="client_id" value="app">
+        <input type="hidden" name="redirect_uri" value="https://dev.mgpt.mn/auth/callback/auth/app">
+        <input type="hidden" name="response_type" value="code">
+        <input type="hidden" name="state" value="12345678-1234-1234-1234-123456789012">
+        <div data-sitekey="1x00000000000000000000AA" data-action="mongolgpt_login"></div>
+      </form>
+    </body></html>`
+  const challengeInput = {
+    requestUrl,
+    authOrigin,
+    responseUrl: requestUrl,
+    status: 200,
+    contentType: "text/html; charset=utf-8",
+    cacheControl: "no-store",
+    contentSecurityPolicy:
+      "default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action https://auth.dev.mgpt.mn; object-src 'none'",
+    frameOptions: "DENY",
+    body: challenge,
+  }
+
+  test("requires a local Mongolian Turnstile challenge when protection is enabled", () => {
+    expect(() => inspectHostedAuthorizeChallenge(challengeInput)).not.toThrow()
+    expect(() => inspectHostedAuthorizeChallenge({ ...challengeInput, status: 302, location })).toThrow(
+      "expected a local HTML challenge",
+    )
+    expect(() =>
+      inspectHostedAuthorizeChallenge({ ...challengeInput, body: challenge.replace("mongolgpt_login", "other") }),
+    ).toThrow("action is invalid")
+    expect(() =>
+      inspectHostedAuthorizeChallenge({
+        ...challengeInput,
+        contentSecurityPolicy: "default-src 'self'",
+      }),
+    ).toThrow("CSP is missing")
+  })
+
+  test("rejects direct auth worker authorization without a Turnstile token", () => {
+    const direct = {
+      requestUrl: `${authOrigin}/authorize?client_id=app&redirect_uri=${encodeURIComponent(callback)}&response_type=code&state=direct`,
+      responseUrl: `${authOrigin}/authorize`,
+      status: 403,
+      cacheControl: "no-store",
+      body: {
+        error: "turnstile_required",
+        message: "Нэвтрэхийн өмнө Cloudflare Turnstile баталгаажуулалт шаардлагатай.",
+      },
+    }
+    expect(() => inspectHostedTurnstileRejection(direct)).not.toThrow()
+    expect(() => inspectHostedTurnstileRejection({ ...direct, status: 302, location })).toThrow("expected 403")
+    expect(() => inspectHostedTurnstileRejection({ ...direct, body: { error: "other" } })).toThrow("shape")
+  })
+
+  test("requires the console to redirect to the dedicated auth worker when Turnstile is disabled", () => {
     expect(() =>
       inspectHostedAuthorizeRedirect({
         requestUrl,

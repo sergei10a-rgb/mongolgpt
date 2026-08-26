@@ -31,21 +31,22 @@ OpenRouter, NVIDIA NIM, Bonum болон QPay нь хиймэл оюуны за�
 
 ## Cloudflare бүтэц
 
-| Хэсэг                                      | Cloudflare үйлчилгээ                       |
-| ------------------------------------------ | ------------------------------------------ |
-| Баримт бичиг                               | Astro Worker                               |
-| Вэб апп                                    | Static Assets / Worker                     |
-| Бүртгэлийн самбар ба Free Auto гарц        | SolidStart Worker                          |
-| OAuth                                      | Worker + KV                                |
-| QPay + Bonum төлбөрийн гарц                | Worker + Queue + D1                        |
-| Админ хамгаалалт                           | Cloudflare Access + MFA                    |
-| Үндсэн өгөгдөл                             | D1                                         |
-| Өдөр тутмын нөөц                           | D1 экспортын Workflow + нийтэд нээлтгүй R2 |
-| Токены хэрэглээний хязгаар, атомик тоолуур | SQLite-д тулгуурласан Durable Objects      |
-| Хэрэглээний өндөр ачааллын бичилт          | Queues + алдааны тусгай Queue + D1         |
-| Бодит цагийн статистик                     | Cloudflare D1 + `stats.<domain>`           |
-| Мэдээллийн захидлын бүртгэл                | Cloudflare D1                              |
-| Байгууллагын холбогдох хүсэлт              | Cloudflare D1                              |
+| Хэсэг                                      | Cloudflare үйлчилгээ                        |
+| ------------------------------------------ | ------------------------------------------- |
+| Баримт бичиг                               | Astro Worker                                |
+| Вэб апп                                    | Static Assets / Worker                      |
+| Бүртгэлийн самбар ба Free Auto гарц        | SolidStart Worker                           |
+| OAuth                                      | Worker + KV                                 |
+| OAuth bot хамгаалалт                       | Cloudflare Turnstile + серверийн Siteverify |
+| QPay + Bonum төлбөрийн гарц                | Worker + Queue + D1                         |
+| Админ хамгаалалт                           | Cloudflare Access + MFA                     |
+| Үндсэн өгөгдөл                             | D1                                          |
+| Өдөр тутмын нөөц                           | D1 экспортын Workflow + нийтэд нээлтгүй R2  |
+| Токены хэрэглээний хязгаар, атомик тоолуур | SQLite-д тулгуурласан Durable Objects       |
+| Хэрэглээний өндөр ачааллын бичилт          | Queues + алдааны тусгай Queue + D1          |
+| Бодит цагийн статистик                     | Cloudflare D1 + `stats.<domain>`            |
+| Мэдээллийн захидлын бүртгэл                | Cloudflare D1                               |
+| Байгууллагын холбогдох хүсэлт              | Cloudflare D1                               |
 
 KV нь нэг түлхүүрт олон зэрэгцээ бичилт шаарддаг токен болон төлбөрийн тоолуурт ашиглагдахгүй. Ийм төлөвийг Durable Objects дараалсан бичилтээр удирдана.
 
@@ -91,8 +92,10 @@ Cloudflare Dashboard хэвийн болмогц GitHub репозиторийн
 | Хувьсагч  | `MONGOLGPT_AUTH_EMAIL_DOMAINS`   | Хөгжүүлэлтийн орчинд зөвшөөрөх яг тохирох имэйл эсвэл домэйн; таслалаар тусгаарлана                   |
 | Хувьсагч  | `GITHUB_CLIENT_ID_CONSOLE`       | Тухайн орчны GitHub OAuth аппын клиент ID                                                             |
 | Хувьсагч  | `GOOGLE_CLIENT_ID`               | Тухайн орчны Google Web OAuth клиент ID                                                               |
+| Хувьсагч  | `MONGOLGPT_TURNSTILE_SITE_KEY`   | Тухайн орчны Cloudflare Turnstile widget-ийн нийтэд нээлттэй site key                                 |
 | Хувьсагч  | `MONGOLGPT_PAYMENT_PLAN_CATALOG` | Basic/Pro/Max багцын MNT үнэ, Монгол нэр бүхий JSON                                                   |
 | Нууц утга | `GITHUB_CLIENT_SECRET_CONSOLE`   | GitHub OAuth аппын нууц түлхүүр                                                                       |
+| Нууц утга | `TURNSTILE_SECRET_KEY`           | Тухайн Turnstile widget-ийн сервер талд ашиглах нууц түлхүүр                                          |
 | Нууц утга | `BYOK_CREDENTIALS_KEY_V1`        | 32+ тэмдэгт тогтвортой CSPRNG түлхүүр; шинэчлэх хүртэл солихгүй                                       |
 | Нууц утга | `D1_BACKUP_API_TOKEN`            | Үйлдвэрлэлийн орчинд заавал; зөвхөн тухайн аккаунтын D1 засах эрхтэй нөөцлөлт, экспортын токен        |
 | Нууц утга | `MONGOLGPT_RUNTIME_SECRET`       | 32+ тэмдэгт Cloudflare Sandbox-ийн аккаунт тусгаарлах нууц утга                                       |
@@ -125,6 +128,14 @@ Google Cloud Console-ийн **APIs & Services → OAuth consent screen** хэс�
 | Зөвшөөрөгдсөн буцах URI (`Authorized redirect URI`) | `https://auth.dev.mgpt.mn/google/callback` |
 
 Үүссэн **Client ID**-г хөгжүүлэлтийн орчны `GOOGLE_CLIENT_ID` хувьсагчид хадгална. Одоогийн OpenID `form_post` урсгал клиент нууц утга ашигладаггүй тул Google-ийн клиент нууц утгыг репозитор эсвэл GitHub-д нэмэхгүй. Үйлдвэрлэлийн клиентэд `https://auth.mgpt.mn/google/callback` буцах URI-г ашиглана.
+
+### Turnstile хамгаалалт бүртгэх
+
+Cloudflare Dashboard-ийн **Turnstile → Add widget** хэсэгт үйлдвэрлэлийн widget үүсгэж, hostname-д зөвхөн `mgpt.mn`-ийг зөвшөөрнө. OAuth эхлэх `https://mgpt.mn/auth/authorize` хуудас site key-г browser-т ашиглана. Widget-ээс гарсан нэг удаагийн богино настай токен болон тогтсон OAuth хүсэлтийг form-ийн `POST` хүсэлтээр Auth Worker руу шууд илгээнэ. Auth Worker Cloudflare Siteverify-ээр токеныг шалгаад `action`, hostname, client, callback болон state бүгд зөв үед л OpenAuth урсгалыг эхлүүлнэ. Токен URL, browser history эсвэл access log-д орохгүй. `auth.<domain>/authorize` хаягт шууд `GET` хийх эсвэл токенгүй `POST` илгээвэл `403` хариу өгч хаана.
+
+Үүссэн **Site key**-г үйлдвэрлэлийн GitHub орчны `MONGOLGPT_TURNSTILE_SITE_KEY` хувьсагчид, **Secret key**-г `TURNSTILE_SECRET_KEY` нууц утгад хадгална. Secret key-г source, browser bundle, лог эсвэл командын аргументад бичихгүй. `dev` байршуулалт болон автомат тест Cloudflare-ийн албан ёсны always-pass test key-г автоматаар ашиглана; production урьдчилсан шалгалт test key-г зориуд хориглож, бодит widget-ийн хоёр key дутуу бол байршуулалтыг зогсооно.
+
+Web, Desktop болон CLI-ийн анхны нэвтрэлт бүгд browser OAuth ашигладаг тул энэ хамгаалалт гурван клиентэд ижил үйлчилнэ. Turnstile идэвхтэй орчинд шинэ OAuth урсгал бүр ижил хамгаалалтаар шалгагдана.
 
 QPay + Bonum-ийн туршилтын төлбөрийг идэвхжүүлэх орчинд худалдааны байгууллагын дараах нууц утгуудыг нэмнэ.
 
@@ -213,6 +224,8 @@ GET https://pay.mgpt.mn/health
 Үндсэн үйлчилгээ бэлэн үед `status` талбар `ok` байна. Төлбөр унтраалттай байршуулалтад төлбөрийн төлөв `disabled`, `sandbox` эсвэл `production` төлбөр асаалттай үед QPay, Bonum, багцын каталог, төлбөр баталгаажуулах болон цуцлах ажиллагаа бүгд бэлэн байж `ok` болно. Аль нэг нь дутуу бол `degraded` тул суурь ажиллагааны шалгалтыг амжилттай гэж үзэхгүй. Бэлэн байдлын төгсгөлийн цэг нууц утга, өгөгдлийн сангийн мэдээлэл, хувилбарын дотоод дугаар задруулахгүй.
 
 GitHub-ийн байршуулалтын ажлын урсгал `MONGOLGPT_ENABLE_MONITORING=true` гэж Cloudflare-ийн үйлчилгээний автомат хяналтыг асаана. Cloudflare Cron таван минут тутам дээрх дөрвөн хаягийг шалгаж, зөвхөн үйлчилгээний нэр, HTTP төлөв, хариулах хугацаа, алдааны ерөнхий ангилал бүхий нотолгоог Cloudflare KV-д 20 минут хадгална. Хариуны агуулга, токен, хэрэглэгчийн мэдээллийг хадгалахгүй. Админ самбарын **Системийн бэлэн байдал** хэсэг 15 минутаас хуучин, буруу орчны эсвэл алдаатай нотолгоог `degraded` гэж харуулна. Үйлдвэрлэлийн hosted байршуулалт мониторинг унтраалттай бол урьдчилсан шалгалтаар хаагдана.
+
+Үйлдвэрлэлийн hosted байршуулалт `MONGOLGPT_ENABLE_TURNSTILE=true`-гүй, бодит site key эсвэл secret key дутуу, эсвэл Cloudflare-ийн test key ашигласан бол урьдчилсан шалгалтаар хаагдана. Siteverify түр тасарвал OAuth эхлэлийг нээлттэй орхихгүй, Монгол тайлбартай түр алдааны хуудас харуулж хамгаалалттайгаар зогсооно.
 
 ## Буцаах
 

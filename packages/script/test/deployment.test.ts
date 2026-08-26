@@ -47,9 +47,12 @@ const hosted = {
   ...byok,
   MONGOLGPT_ENABLE_D1_BACKUPS: "true",
   MONGOLGPT_ENABLE_MONITORING: "true",
+  MONGOLGPT_ENABLE_TURNSTILE: "true",
+  MONGOLGPT_TURNSTILE_SITE_KEY: "0x4AAAAAAABBBBBBBBCCCCCCCC",
   MONGOLGPT_RUNTIME_SECRET: "test-runtime-secret-with-at-least-32-characters",
   MONGOLGPT_RUNTIME_AUTH_SECRET: "test-runtime-auth-secret-with-at-least-32-characters",
   SST_SECRET_MongolGPTRuntimeAuthSecret: "test-runtime-auth-secret-with-at-least-32-characters",
+  SST_SECRET_TurnstileSecretKey: "0x4AAAAAAABBBBBBBBCCCCCCCCDDDDDDDD",
   SST_SECRET_D1BackupApiToken: "test-d1-backup-token",
   SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: "github-client-id",
   SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "github-client-secret",
@@ -121,6 +124,7 @@ describe("Cloudflare deployment preflight", () => {
       adminEnabled: false,
       backupsEnabled: false,
       monitoringEnabled: false,
+      turnstileEnabled: false,
       paymentEnvironment: "disabled",
     })
     expect(deploymentEndpoints(result)).toEqual({
@@ -236,6 +240,8 @@ describe("Cloudflare deployment preflight", () => {
       MONGOLGPT_ENABLE_ADMIN: "true",
       MONGOLGPT_ENABLE_D1_BACKUPS: "true",
       MONGOLGPT_ENABLE_MONITORING: "true",
+      MONGOLGPT_ENABLE_TURNSTILE: "true",
+      MONGOLGPT_TURNSTILE_SITE_KEY: hosted.MONGOLGPT_TURNSTILE_SITE_KEY,
       MONGOLGPT_PAYMENT_ENVIRONMENT: "production",
       MONGOLGPT_PAYMENT_PLAN_CATALOG: paymentCatalog,
       MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
@@ -403,6 +409,45 @@ describe("Cloudflare deployment preflight", () => {
           },
         }),
       ["Үйлдвэрлэлийн үйлчилгээ байршуулалтад", "MONGOLGPT_ENABLE_MONITORING=true"],
+    )
+  })
+
+  test("requires real Cloudflare Turnstile keys for a production hosted launch", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_ENABLE_TURNSTILE: "false",
+            CLOUDFLARE_ACCESS_API_TOKEN: "access-token",
+            SST_SECRET_MongolGPTAdminBootstrapEmails: "admin@mgpt.mn",
+            MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
+          },
+        }),
+      ["MONGOLGPT_ENABLE_TURNSTILE=true"],
+    )
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+            SST_SECRET_TurnstileSecretKey: "1x0000000000000000000000000000000AA",
+            CLOUDFLARE_ACCESS_API_TOKEN: "access-token",
+            SST_SECRET_MongolGPTAdminBootstrapEmails: "admin@mgpt.mn",
+            MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
+          },
+        }),
+      ["test key-г production орчинд ашиглахгүй"],
     )
   })
 

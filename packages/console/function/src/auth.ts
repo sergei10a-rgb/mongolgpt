@@ -18,12 +18,20 @@ import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { AuthTable } from "@mongolgpt/console-core/schema/auth.sql.js"
 import { Identifier } from "@mongolgpt/console-core/identifier.js"
+import {
+  readTurnstileAuthorizationSubmission,
+  turnstileAuthorizationRequest,
+  turnstileRetryUrl,
+  verifyTurnstile,
+} from "@mongolgpt/console-core/turnstile.js"
 import { isAllowedNonProductionEmail } from "./auth-allowlist"
 import { resolveOAuthAccountIdentity } from "./auth-identity"
 
 type Env = {
   AuthStorage: KVNamespace
   MONGOLGPT_AUTH_EMAIL_DOMAINS?: string
+  MONGOLGPT_CONSOLE_ORIGIN?: string
+  MONGOLGPT_TURNSTILE_ENABLED?: string
 }
 
 export const subjects = createSubjects({
@@ -46,7 +54,8 @@ const MY_THEME: Theme = {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    if (new URL(request.url).pathname === "/health") {
+    const requestUrl = new URL(request.url)
+    if (requestUrl.pathname === "/health") {
       return Response.json(
         { status: "ok", service: "auth" },
         {
@@ -55,6 +64,45 @@ export default {
           },
         },
       )
+    }
+
+    if (requestUrl.pathname === "/authorize" && env.MONGOLGPT_TURNSTILE_ENABLED === "true") {
+      if (request.method !== "POST") return turnstileRequired()
+      const submission = await readTurnstileAuthorizationSubmission(request)
+      if (!submission || !env.MONGOLGPT_CONSOLE_ORIGIN) return turnstileRequired()
+
+      let authorizationUrl: URL
+      try {
+        authorizationUrl = turnstileAuthorizationRequest({
+          authUrl: requestUrl.toString(),
+          consoleOrigin: env.MONGOLGPT_CONSOLE_ORIGIN,
+          submission,
+        })
+      } catch {
+        return turnstileRequired()
+      }
+
+      const verification = await verifyTurnstile({
+        token: submission.token,
+        secret: Resource.TurnstileSecretKey.value,
+        expectedHostname: new URL(env.MONGOLGPT_CONSOLE_ORIGIN).hostname,
+        remoteIp: request.headers.get("cf-connecting-ip") ?? undefined,
+      })
+      if (!verification.ok) {
+        const retry = turnstileRetryUrl({
+          consoleOrigin: env.MONGOLGPT_CONSOLE_ORIGIN,
+          submission,
+          reason: verification.reason,
+        })
+        return new Response(null, {
+          status: 303,
+          headers: { location: retry.toString(), "cache-control": "no-store" },
+        })
+      }
+
+      const headers = new Headers(request.headers)
+      for (const name of ["content-length", "content-type", "origin", "referer"]) headers.delete(name)
+      request = new Request(authorizationUrl, { method: "GET", headers })
     }
 
     const result = await issuer({
@@ -254,4 +302,14 @@ export default {
     }).fetch(request, env, ctx)
     return result
   },
+}
+
+function turnstileRequired() {
+  return Response.json(
+    {
+      error: "turnstile_required",
+      message: "Нэвтрэхийн өмнө Cloudflare Turnstile баталгаажуулалт шаардлагатай.",
+    },
+    { status: 403, headers: { "cache-control": "no-store" } },
+  )
 }

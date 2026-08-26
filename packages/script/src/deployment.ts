@@ -12,6 +12,7 @@ const booleanVariables = [
   "MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS",
   "MONGOLGPT_ENABLE_LEGACY_STRIPE",
   "MONGOLGPT_ENABLE_MONITORING",
+  "MONGOLGPT_ENABLE_TURNSTILE",
   "MONGOLGPT_ENABLE_SHARE_SERVICE",
   "MONGOLGPT_ENABLE_SYNC_SERVICE",
   "MONGOLGPT_ENABLE_ADMIN",
@@ -37,6 +38,7 @@ export const hostedSstSecretNames = [
   "GOOGLE_CLIENT_ID",
   "MONGOLGPT_PLAN_LIMITS",
   "MongolGPTRuntimeAuthSecret",
+  "TurnstileSecretKey",
   "ZEN_SESSION_SECRET",
   "MongolGPTAdminBootstrapEmails",
   ...paymentSstSecretNames,
@@ -60,6 +62,7 @@ export type DeploymentPreflightResult = {
   adminEnabled: boolean
   backupsEnabled: boolean
   monitoringEnabled: boolean
+  turnstileEnabled: boolean
   paymentEnvironment: "disabled" | "sandbox" | "production"
   warnings: string[]
 }
@@ -92,6 +95,7 @@ export function preflightDeployment(input: {
   const adminEnabled = enabled(env.MONGOLGPT_ENABLE_ADMIN)
   const backupsEnabled = enabled(env.MONGOLGPT_ENABLE_D1_BACKUPS)
   const monitoringEnabled = enabled(env.MONGOLGPT_ENABLE_MONITORING)
+  const turnstileEnabled = enabled(env.MONGOLGPT_ENABLE_TURNSTILE)
   const paymentEnvironment = validatePaymentEnvironment(env.MONGOLGPT_PAYMENT_ENVIRONMENT, issues)
   const requireDeploymentSecrets = input.requireDeploymentSecrets !== false
   const optionalServices = [
@@ -99,6 +103,7 @@ export function preflightDeployment(input: {
     "MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS",
     "MONGOLGPT_ENABLE_LEGACY_STRIPE",
     "MONGOLGPT_ENABLE_MONITORING",
+    "MONGOLGPT_ENABLE_TURNSTILE",
     "MONGOLGPT_ENABLE_SHARE_SERVICE",
     "MONGOLGPT_ENABLE_SYNC_SERVICE",
   ] as const
@@ -132,11 +137,24 @@ export function preflightDeployment(input: {
   if (hostedServices && stage === "production" && !monitoringEnabled) {
     issues.push("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_MONITORING=true заавал байна.")
   }
+  if (hostedServices && stage === "production" && !turnstileEnabled) {
+    issues.push("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_TURNSTILE=true заавал байна.")
+  }
   if (hostedServices && !backupsEnabled) {
     warnings.push("Энэ орчинд өдөр тутмын D1 нөөцлөлтийн автомат ажиллагаа идэвхгүй байна.")
   }
   if (hostedServices && !monitoringEnabled) {
     warnings.push("Энэ орчинд Cloudflare-ийн үйлчилгээний автомат хяналт идэвхгүй байна.")
+  }
+  if (hostedServices && !turnstileEnabled) {
+    warnings.push("Энэ орчинд OAuth нэвтрэх эхлэл Cloudflare Turnstile хамгаалалтгүй байна.")
+  }
+
+  if (hostedServices && turnstileEnabled) {
+    validateTurnstileKey("MONGOLGPT_TURNSTILE_SITE_KEY", env.MONGOLGPT_TURNSTILE_SITE_KEY, stage, issues)
+    if (requireDeploymentSecrets) {
+      validateTurnstileKey("TurnstileSecretKey", deploymentSecret(env, "TurnstileSecretKey"), stage, issues)
+    }
   }
 
   if (adminEnabled && requireDeploymentSecrets) {
@@ -205,6 +223,7 @@ export function preflightDeployment(input: {
     adminEnabled,
     backupsEnabled,
     monitoringEnabled,
+    turnstileEnabled,
     paymentEnvironment,
     warnings,
   }
@@ -259,6 +278,21 @@ function validateSecretKey(name: string, value: string | undefined, issues: stri
     return
   }
   if (secret.length < 32) issues.push(`${name} хамгийн багадаа 32 тэмдэгттэй байна.`)
+}
+
+function validateTurnstileKey(name: string, value: string | undefined, stage: string, issues: string[]) {
+  const key = value?.trim() ?? ""
+  if (!key) {
+    issues.push(`${name} дутуу байна.`)
+    return
+  }
+  if (key === "disabled" || placeholderValue(key) || !/^[A-Za-z0-9_-]{20,128}$/.test(key)) {
+    issues.push(`${name} хүчинтэй Cloudflare Turnstile key байна.`)
+    return
+  }
+  if (stage === "production" && /^[123]x0{10,}/.test(key)) {
+    issues.push(`${name}-д Cloudflare-ийн test key-г production орчинд ашиглахгүй.`)
+  }
 }
 
 function validatePlanConfiguration(value: string | undefined, issues: string[]) {

@@ -85,6 +85,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"')
     expect(source).toContain("MONGOLGPT_ENABLE_D1_BACKUPS: ${{ inputs.stage == 'production' && 'true' || 'false' }}")
     expect(source).toContain('MONGOLGPT_ENABLE_MONITORING: "true"')
+    expect(source).toContain('MONGOLGPT_ENABLE_TURNSTILE: "true"')
+    expect(source).toContain("vars.MONGOLGPT_TURNSTILE_SITE_KEY")
+    expect(source).toContain("secrets.TURNSTILE_SECRET_KEY")
     expect(source).not.toContain("inputs.hosted_services")
     expect(buildStep?.env).toEqual({
       MONGOLGPT_CHANNEL: "${{ inputs.stage == 'production' && 'prod' || 'dev' }}",
@@ -364,6 +367,52 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(await Bun.file(new URL("../../console/app/src/routes/honeycomb/webhook.ts", import.meta.url)).exists()).toBe(
       false,
     )
+  })
+
+  test("protects the shared browser OAuth entry with server-verified Cloudflare Turnstile", async () => {
+    const [
+      consoleSource,
+      stageSource,
+      deploymentSource,
+      routeSource,
+      pageSource,
+      authSource,
+      turnstileSource,
+      clientSource,
+    ] = await Promise.all(
+      [
+        "../../../infra/console.ts",
+        "../../../infra/stage.ts",
+        "../src/deployment.ts",
+        "../../console/app/src/routes/auth/authorize.ts",
+        "../../console/app/src/routes/auth/turnstile.ts",
+        "../../console/function/src/auth.ts",
+        "../../console/core/src/turnstile.ts",
+        "../../core/src/plugin/provider/mongolgpt.ts",
+      ].map((path) => Bun.file(new URL(path, import.meta.url)).text()),
+    )
+
+    expect(stageSource).toContain('enableTurnstile = process.env.MONGOLGPT_ENABLE_TURNSTILE === "true"')
+    expect(consoleSource).toContain('new sst.Secret("TurnstileSecretKey")')
+    expect(consoleSource).toContain("MONGOLGPT_TURNSTILE_SITE_KEY: turnstileSiteKey")
+    expect(consoleSource).toContain("TURNSTILE_TEST_SECRET_KEY")
+    expect(hostedSstSecretNames).toContain("TurnstileSecretKey")
+    expect(deploymentSource).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
+    expect(deploymentSource).toContain("test key-г production орчинд ашиглахгүй")
+    expect(routeSource).toContain('"content-security-policy"')
+    expect(turnstileSource).toContain("https://challenges.cloudflare.com/turnstile/v0/siteverify")
+    expect(turnstileSource).toContain("result.data.action !== TURNSTILE_ACTION")
+    expect(turnstileSource).toContain("expectedHostname")
+    expect(turnstileSource).not.toMatch(/console\.(?:log|debug)\([^\n]*(?:token|secret)/i)
+    expect(consoleSource).toContain("MONGOLGPT_CONSOLE_ORIGIN: publicOrigin")
+    expect(routeSource).toContain("renderTurnstileChallenge")
+    expect(pageSource).toContain('method="post"')
+    expect(authSource).toContain("readTurnstileAuthorizationSubmission")
+    expect(authSource).toContain("verifyTurnstile")
+    expect(authSource).toContain('error: "turnstile_required"')
+    expect(routeSource).toContain('clientID === "mongolgpt-cli"')
+    expect(clientSource).toContain("url: authorizeURL(defaultServer, redirect, pkce, state)")
+    expect(turnstileSource).toContain('input.submission.clientID === "mongolgpt-cli"')
   })
 
   test("creates a fail-closed Cloudflare Access admin application through IaC", async () => {

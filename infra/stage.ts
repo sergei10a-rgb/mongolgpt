@@ -6,6 +6,7 @@ export const enableBusinessIntegrations = process.env.MONGOLGPT_ENABLE_BUSINESS_
 export const enableAnalytics = process.env.MONGOLGPT_ENABLE_ANALYTICS === "true"
 export const enableD1Backups = process.env.MONGOLGPT_ENABLE_D1_BACKUPS === "true"
 export const enableMonitoring = process.env.MONGOLGPT_ENABLE_MONITORING === "true"
+export const enableTurnstile = process.env.MONGOLGPT_ENABLE_TURNSTILE === "true"
 export const enableShareService = process.env.MONGOLGPT_ENABLE_SHARE_SERVICE === "true"
 export const enableSyncService = process.env.MONGOLGPT_ENABLE_SYNC_SERVICE === "true"
 export const enableAdmin = process.env.MONGOLGPT_ENABLE_ADMIN === "true"

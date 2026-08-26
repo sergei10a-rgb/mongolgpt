@@ -82,7 +82,7 @@ function oauth(http: HttpClient.HttpClient) {
         yield* Effect.addFinalizer(() => Effect.sync(() => server.close()))
         return {
           mode: "auto" as const,
-          url: authorizeURL(defaultAuthServer, redirect, pkce, state),
+          url: authorizeURL(defaultServer, redirect, pkce, state),
           instructions: "Хөтөч дээрээ зөвшөөрлөө баталгаажуулна уу. Энэ цонх автоматаар хаагдана.",
           callback: Deferred.await(code).pipe(
             Effect.flatMap((value) => exchange(defaultAuthServer, value, redirect, pkce)),
@@ -314,15 +314,16 @@ function base64UrlEncode(buffer: ArrayBuffer) {
   return Buffer.from(buffer).toString("base64url")
 }
 
-function authorizeURL(authServer: string, redirect: string, pkce: Pkce, state: string) {
-  return `${authServer}/authorize?${new URLSearchParams({
+function authorizeURL(consoleServer: string, redirect: string, pkce: Pkce, state: string) {
+  const query = new URLSearchParams({
     response_type: "code",
     client_id: clientID,
     redirect_uri: redirect,
     code_challenge: pkce.challenge,
     code_challenge_method: "S256",
     state,
-  })}`
+  })
+  return `${consoleServer.replace(/\/+$/, "")}/auth/authorize?${query.toString()}`
 }
 
 function credential(http: HttpClient.HttpClient, server: string, token: typeof Token.Type) {

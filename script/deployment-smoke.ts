@@ -99,7 +99,7 @@ async function check(
         await checkHostedAccountOverview(url, appUrl)
         const authHealthUrl = deploymentEndpoints(result).authHealth
         if (!authHealthUrl) throw new Error("hosted auth endpoint is missing")
-        await checkHostedAuthorize(url, new URL(authHealthUrl).origin)
+        await checkHostedAuthorize(url, new URL(authHealthUrl).origin, result.turnstileEnabled)
       } else if (name === "docs") {
         inspectHtmlContentType(response.headers.get("content-type"), "docs response")
         const html = await response.text()
@@ -171,13 +171,29 @@ async function checkDirectAppRoute(appUrl: string, result: DeploymentPreflightRe
   await checkStaticAssets(directUrl, html, "app direct navigation")
 }
 
-async function checkHostedAuthorize(consoleUrl: string, authOrigin: string) {
+async function checkHostedAuthorize(consoleUrl: string, authOrigin: string, turnstileEnabled: boolean) {
   const requestUrl = new URL("/auth/authorize?continue=/auth/app", `${consoleUrl}/`).toString()
   const response = await fetch(requestUrl, {
     headers: { "User-Agent": "mongolgpt-deployment-smoke" },
     redirect: "manual",
     signal: AbortSignal.timeout(15_000),
   })
+  if (turnstileEnabled) {
+    inspectHostedAuthorizeChallenge({
+      requestUrl,
+      authOrigin,
+      responseUrl: response.url,
+      status: response.status,
+      location: response.headers.get("location"),
+      contentType: response.headers.get("content-type"),
+      cacheControl: response.headers.get("cache-control"),
+      contentSecurityPolicy: response.headers.get("content-security-policy"),
+      frameOptions: response.headers.get("x-frame-options"),
+      body: await response.text(),
+    })
+    await checkHostedTurnstileRejection(consoleUrl, authOrigin)
+    return
+  }
   inspectHostedAuthorizeRedirect({
     requestUrl,
     responseUrl: response.url,
@@ -186,6 +202,123 @@ async function checkHostedAuthorize(consoleUrl: string, authOrigin: string) {
     authOrigin,
   })
   await response.body?.cancel()
+}
+
+async function checkHostedTurnstileRejection(consoleUrl: string, authOrigin: string) {
+  const direct = new URL("/authorize", `${authOrigin}/`)
+  direct.search = new URLSearchParams({
+    client_id: "app",
+    redirect_uri: new URL("/auth/callback/auth/app", `${consoleUrl}/`).toString(),
+    response_type: "code",
+    state: "deployment-smoke-direct-auth",
+  }).toString()
+  const response = await fetch(direct, {
+    headers: { Accept: "application/json", "User-Agent": "mongolgpt-deployment-smoke" },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  const body = inspectJsonApiPayload(
+    response.headers.get("content-type"),
+    await response.text(),
+    "direct auth gate response",
+  )
+  inspectHostedTurnstileRejection({
+    requestUrl: direct.toString(),
+    responseUrl: response.url,
+    status: response.status,
+    location: response.headers.get("location"),
+    cacheControl: response.headers.get("cache-control"),
+    body,
+  })
+}
+
+export function inspectHostedTurnstileRejection(input: {
+  requestUrl: string
+  responseUrl?: string | null
+  status: number
+  location?: string | null
+  cacheControl?: string | null
+  body: unknown
+}) {
+  const request = new URL(input.requestUrl)
+  if (input.responseUrl && new URL(input.responseUrl).origin !== request.origin) {
+    throw new Error("direct auth gate response left the auth origin")
+  }
+  if (input.status !== 403 || input.location) {
+    throw new Error(`direct auth gate returned HTTP ${input.status}; expected 403`)
+  }
+  if (input.cacheControl !== "no-store") throw new Error("direct auth gate response must not be cached")
+  if (typeof input.body !== "object" || input.body === null || Array.isArray(input.body)) {
+    throw new Error("direct auth gate response is not an object")
+  }
+  const body = input.body as { error?: unknown; message?: unknown }
+  if (Object.keys(body).sort().join(",") !== "error,message") {
+    throw new Error("direct auth gate response shape is invalid")
+  }
+  if (
+    body.error !== "turnstile_required" ||
+    body.message !== "Нэвтрэхийн өмнө Cloudflare Turnstile баталгаажуулалт шаардлагатай."
+  ) {
+    throw new Error("direct auth gate did not fail closed")
+  }
+}
+
+export function inspectHostedAuthorizeChallenge(input: {
+  requestUrl: string
+  authOrigin: string
+  responseUrl?: string | null
+  status: number
+  location?: string | null
+  contentType?: string | null
+  cacheControl?: string | null
+  contentSecurityPolicy?: string | null
+  frameOptions?: string | null
+  body: string
+}) {
+  const request = new URL(input.requestUrl)
+  const expectedAuth = new URL(input.authOrigin)
+  if (request.protocol !== "https:") throw new Error("hosted authorization URL must use HTTPS")
+  if (input.responseUrl && new URL(input.responseUrl).origin !== request.origin) {
+    throw new Error("hosted authorization challenge left the console origin")
+  }
+  if (input.status !== 200 || input.location) {
+    throw new Error(`hosted authorization challenge returned HTTP ${input.status}; expected a local HTML challenge`)
+  }
+  inspectHtmlContentType(input.contentType ?? null, "hosted authorization challenge")
+  if (input.cacheControl !== "no-store") throw new Error("hosted authorization challenge must not be cached")
+  if (input.frameOptions !== "DENY") throw new Error("hosted authorization challenge can be framed")
+
+  const csp = input.contentSecurityPolicy ?? ""
+  for (const required of [
+    "script-src https://challenges.cloudflare.com",
+    "frame-src https://challenges.cloudflare.com",
+    `form-action ${expectedAuth.origin}`,
+    "object-src 'none'",
+  ]) {
+    if (!csp.includes(required)) throw new Error(`hosted authorization challenge CSP is missing ${required}`)
+  }
+
+  if (!/<html\s+lang=["']mn["']/i.test(input.body)) {
+    throw new Error("hosted authorization challenge is not Mongolian")
+  }
+  if (!/https:\/\/challenges\.cloudflare\.com\/turnstile\/v0\/api\.js/i.test(input.body)) {
+    throw new Error("hosted authorization challenge is missing the Cloudflare widget")
+  }
+  if (!/data-sitekey=["'][A-Za-z0-9_-]{20,64}["']/i.test(input.body)) {
+    throw new Error("hosted authorization challenge site key is missing")
+  }
+  if (!/data-action=["']mongolgpt_login["']/i.test(input.body)) {
+    throw new Error("hosted authorization challenge action is invalid")
+  }
+  const formAction = input.body.match(/<form[^>]+action=["']([^"']+)["'][^>]+method=["']post["']/i)?.[1]
+  if (!formAction || new URL(formAction).toString() !== `${expectedAuth.origin}/authorize`) {
+    throw new Error("hosted authorization challenge form is invalid")
+  }
+  for (const field of ["client_id", "redirect_uri", "response_type", "state"]) {
+    if (!new RegExp(`<input[^>]+name=["']${field}["'][^>]+value=["'][^"']+["']`, "i").test(input.body)) {
+      throw new Error(`hosted authorization challenge ${field} is missing`)
+    }
+  }
 }
 
 export function inspectHostedAuthorizeRedirect(input: {
