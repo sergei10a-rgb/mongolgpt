@@ -30,11 +30,11 @@ describe("provider credentials", () => {
 
     await expectFailure(
       () => ProviderCredentials.decrypt({ ...input, workspaceID: "wrk_other", credentials }),
-      "could not be decrypted",
+      "шифрийг тайлж чадсангүй",
     )
     await expectFailure(
       () => ProviderCredentials.decrypt({ ...input, provider: "anthropic", credentials }),
-      "could not be decrypted",
+      "шифрийг тайлж чадсангүй",
     )
   })
 
@@ -43,7 +43,7 @@ describe("provider credentials", () => {
 
     await expectFailure(
       () => ProviderCredentials.decrypt({ ...input, keyMaterial: "wrong-key", credentials }),
-      "could not be decrypted",
+      "шифрийг тайлж чадсангүй",
     )
   })
 
@@ -54,11 +54,11 @@ describe("provider credentials", () => {
   test("rejects malformed encrypted envelopes", async () => {
     await expectFailure(
       () => ProviderCredentials.decrypt({ ...input, credentials: "mgp-byok:v2:bad:envelope" }),
-      "envelope is invalid",
+      "багц буруу байна",
     )
     await expectFailure(
       () => ProviderCredentials.decrypt({ ...input, credentials: "mgp-byok:v1:k1:missing" }),
-      "envelope is invalid",
+      "багц буруу байна",
     )
   })
 
@@ -72,7 +72,7 @@ describe("provider credentials", () => {
           provider: input.provider,
           credentials: credentials.replace(":k1:", ":retired:"),
         }),
-      "could not be decrypted",
+      "шифрийг тайлж чадсангүй",
     )
   })
 })

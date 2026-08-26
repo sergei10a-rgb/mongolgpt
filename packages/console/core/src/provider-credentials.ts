@@ -51,7 +51,7 @@ export namespace ProviderCredentials {
     if (!encrypted(input.credentials)) return input.credentials
 
     if (!supported(input.credentials)) {
-      throw new Error("Provider credential envelope is invalid")
+      throw new Error("Нийлүүлэгчийн нэвтрэх мэдээллийн багц буруу байна")
     }
     const parts = input.credentials.split(":")
     const keyID = parts[2]
@@ -68,7 +68,7 @@ export namespace ProviderCredentials {
       )
       return decoder.decode(plaintext)
     } catch {
-      throw new Error("Provider credentials could not be decrypted")
+      throw new Error("Нийлүүлэгчийн нэвтрэх мэдээллийн шифрийг тайлж чадсангүй")
     }
   }
 }
@@ -78,7 +78,7 @@ function additionalData(keyID: string, workspaceID: string, provider: string) {
 }
 
 async function key(keyID: string, keyMaterial = keyring(keyID)) {
-  if (!keyMaterial) throw new Error("Provider credential encryption key is not configured")
+  if (!keyMaterial) throw new Error("Нийлүүлэгчийн нэвтрэх мэдээлэл шифрлэх түлхүүр тохируулагдаагүй байна")
   return crypto.subtle.importKey(
     "raw",
     await crypto.subtle.digest("SHA-256", encoder.encode(keyMaterial)),
@@ -91,7 +91,7 @@ async function key(keyID: string, keyMaterial = keyring(keyID)) {
 // Keep previous key IDs here until every row has been rewrapped with the active key.
 function keyring(keyID: string) {
   if (keyID === "k1") return Resource.ByokCredentialsKeyV1.value
-  throw new Error("Provider credential encryption key is not available")
+  throw new Error("Нийлүүлэгчийн нэвтрэх мэдээлэл шифрлэх түлхүүр ашиглах боломжгүй байна")
 }
 
 function encode(value: Uint8Array) {

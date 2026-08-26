@@ -153,7 +153,7 @@ export class BonumWebhookVerificationError extends Error {
   readonly code: "signature" | "payload" | "binding"
 
   constructor(code: "signature" | "payload" | "binding") {
-    super(`Bonum webhook ${code} verification failed`)
+    super(`Bonum webhook-ийн ${code} баталгаажуулалт амжилтгүй боллоо`)
     this.name = "BonumWebhookVerificationError"
     this.code = code
   }
@@ -346,7 +346,7 @@ export class BonumAdapter implements PaymentProviderAdapter {
     if (expiresAt === undefined) return undefined
     const seconds = Math.ceil((expiresAt - this.now()) / 1_000)
     if (seconds < 1 || seconds > this.config.maxExpirySeconds) {
-      throw new Error("Bonum invoice expiry is outside the configured safety window")
+      throw new Error("Bonum нэхэмжлэхийн дуусах хугацаа тохируулсан аюулгүй хязгаараас гадуур байна")
     }
     return seconds
   }

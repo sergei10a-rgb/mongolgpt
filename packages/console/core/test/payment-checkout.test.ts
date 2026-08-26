@@ -204,7 +204,7 @@ describe("subscription payment checkout", () => {
     ).catch((error) => error)
     expect(replayError).toBeInstanceOf(Error)
     if (!(replayError instanceof Error)) throw new Error("Expected a replay conflict")
-    expect(replayError.message).toContain("request replay conflicts")
+    expect(replayError.message).toContain("хүсэлтийг дахин илгээхэд")
     const conflict = await createSubscriptionCheckout(request(workspaceID, accountID, REQUEST_B), dependencies).catch(
       (error) => error,
     )
@@ -305,7 +305,7 @@ describe("subscription payment checkout", () => {
     )
     expect(transitionError).toBeInstanceOf(Error)
     if (!(transitionError instanceof Error)) throw new Error("Expected an invalid transition")
-    expect(transitionError.message).toContain("does not match verified event")
+    expect(transitionError.message).toContain("баталгаажсан үйл явдалтай таарахгүй байна")
   })
 
   test("repairs an expired or cancelled checkout when a verified payment arrives late", async () => {

@@ -8,9 +8,9 @@ import { UserTable } from "./schema/user.sql"
 const DEFAULT_PERIOD_MONTHS = 1
 
 export function addUtcCalendarMonths(timestamp: number, months: number) {
-  if (!Number.isSafeInteger(timestamp) || timestamp < 0) throw new TypeError("Subscription timestamp is invalid")
+  if (!Number.isSafeInteger(timestamp) || timestamp < 0) throw new TypeError("Захиалгын цагийн тэмдэг буруу байна")
   if (!Number.isSafeInteger(months) || months < 1 || months > 12) {
-    throw new TypeError("Subscription period is invalid")
+    throw new TypeError("Захиалгын хугацаа буруу байна")
   }
 
   const source = new Date(timestamp)
@@ -34,7 +34,7 @@ export function createPlanSubscriptionPaymentEffect(options: { now?: () => numbe
     await syncPaymentCheckoutStatusWithDb(db, invoice.id, event.type, event.occurredAt)
     if (invoice.purpose !== "subscription") return
     if (event.type === "paid") {
-      if (!invoice.plan) throw new Error("Subscription invoice has no plan")
+      if (!invoice.plan) throw new Error("Захиалгын нэхэмжлэлд багц алга")
       await activatePlanSubscription(db, {
         workspaceID: invoice.workspace_id,
         invoiceID: invoice.id,
@@ -58,8 +58,8 @@ export function createPlanSubscriptionPaymentEffect(options: { now?: () => numbe
 export const applyPlanSubscriptionPaymentEffect = createPlanSubscriptionPaymentEffect()
 
 export async function expirePlanSubscriptionsWithDb(db: Database.TxOrDb, now = Date.now(), limit = 100) {
-  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Expiration timestamp is invalid")
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) throw new TypeError("Expiration limit is invalid")
+  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Дуусах хугацааны цагийн тэмдэг буруу байна")
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) throw new TypeError("Дуусах хугацааны хязгаар буруу байна")
 
   const expired = await db
     .select()
@@ -124,7 +124,7 @@ async function activatePlanSubscription(
       .where(and(eq(PlanSubscriptionTable.id, current.id), eq(PlanSubscriptionTable.status, "active")))
     await clearWorkspacePlan(db, current.workspaceID, current.invoiceID)
   } else if (current) {
-    throw new Error("Workspace already has an active plan subscription")
+    throw new Error("Ажлын талбарт аль хэдийн идэвхтэй багцын захиалга байна")
   }
 
   const periodStart = Math.min(input.paidAt, input.now)
@@ -166,7 +166,7 @@ async function activatePlanSubscription(
     .select({ id: UserTable.id })
     .from(UserTable)
     .where(and(eq(UserTable.workspaceID, input.workspaceID), isNull(UserTable.timeDeleted)))
-  if (users.length === 0) throw new Error("Subscription workspace has no active users")
+  if (users.length === 0) throw new Error("Захиалгын ажлын талбарт идэвхтэй хэрэглэгч алга")
 
   await db
     .insert(SubscriptionTable)
@@ -207,7 +207,7 @@ async function refundPlanSubscription(
     )
     .limit(1)
     .then((rows) => rows[0])
-  if (!subscription) throw new Error("Paid invoice has no plan subscription")
+  if (!subscription) throw new Error("Төлөгдсөн нэхэмжлэлд багцын захиалга алга")
 
   await db
     .update(PlanSubscriptionTable)
@@ -260,6 +260,6 @@ async function requireBilling(db: Database.TxOrDb, workspaceID: string) {
     .where(eq(BillingTable.workspaceID, workspaceID))
     .limit(1)
     .then((rows) => rows[0])
-  if (!billing) throw new Error("Subscription workspace has no billing record")
+  if (!billing) throw new Error("Захиалгын ажлын талбарт төлбөрийн бүртгэл алга")
   return billing
 }

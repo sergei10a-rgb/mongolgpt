@@ -176,7 +176,7 @@ describe("paid plan subscription entitlement", () => {
       )
 
     await expect(applyPaid(1)).resolves.toMatchObject({ kind: "applied" })
-    await expect(applyPaid(2)).rejects.toThrow("already has an active plan subscription")
+    await expect(applyPaid(2)).rejects.toThrow("аль хэдийн идэвхтэй багцын захиалга байна")
     expect(
       sqlite.query("select status from payment_invoice where external_invoice_id = ?").get("bonum_entitlement_2"),
     ).toEqual({ status: "created" })

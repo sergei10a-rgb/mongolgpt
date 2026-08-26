@@ -47,21 +47,21 @@ export type SubscriptionCancellationOutcome = {
 
 export class PaymentCancellationAuthorizationError extends Error {
   constructor() {
-    super("Payment cancellation requires an active workspace administrator")
+    super("Төлбөр цуцлахад ажлын талбарын идэвхтэй администратор шаардлагатай")
     this.name = "PaymentCancellationAuthorizationError"
   }
 }
 
 export class PaymentCancellationUnsupportedError extends Error {
   constructor(readonly provider: Provider) {
-    super(`${provider} invoice cancellation is not supported`)
+    super(`${provider} нэхэмжлэх цуцлах үйлдлийг дэмжихгүй байна`)
     this.name = "PaymentCancellationUnsupportedError"
   }
 }
 
 export class PaymentCancellationUnavailableError extends Error {
   constructor(readonly provider: Provider) {
-    super(`${provider} invoice cancellation is unavailable`)
+    super(`${provider} нэхэмжлэх цуцлах үйлдлийг ашиглах боломжгүй байна`)
     this.name = "PaymentCancellationUnavailableError"
   }
 }
@@ -70,7 +70,7 @@ export class PaymentCancellationConflictError extends Error {
   constructor(
     readonly state: "settled" | "not_cancellable" | "request_in_progress" | "result_unknown" | "request_failed",
   ) {
-    super(`Payment cancellation conflict: ${state}`)
+    super(`Төлбөр цуцлахад зөрчил гарлаа: ${state}`)
     this.name = "PaymentCancellationConflictError"
   }
 }
@@ -80,7 +80,7 @@ export class PaymentCancellationOperationError extends Error {
     readonly state: "failed" | "unknown",
     readonly code: string,
   ) {
-    super(`Payment cancellation ${state}: ${code}`)
+    super(`Төлбөр цуцлах ${state} төлөвтэй байна: ${code}`)
     this.name = "PaymentCancellationOperationError"
   }
 }
@@ -279,7 +279,7 @@ async function reserveStoredCancellationWithDb(
   const adapter = adapters[invoice.provider]
   if (!adapter) throw new PaymentCancellationUnavailableError(invoice.provider)
   if (adapter.provider !== invoice.provider || adapter.merchantAccountID !== invoice.merchant_account_id) {
-    throw new Error("Payment cancellation adapter binding does not match invoice")
+    throw new Error("Төлбөр цуцлах адаптерийн тохиргоо нэхэмжлэхтэй таарахгүй байна")
   }
   const checkoutCancellable = invoice.checkoutStatus === "ready" || invoice.checkoutStatus === "pending"
   const invoiceCancellable = invoice.invoiceStatus === "created" || invoice.invoiceStatus === "pending"
@@ -299,7 +299,7 @@ async function reserveStoredCancellationWithDb(
     .limit(1)
     .then((rows) => rows[0])
   if (requestReplay && requestReplay.invoiceID !== invoice.id) {
-    throw new Error("Payment cancellation request replay conflicts with another invoice")
+    throw new Error("Төлбөр цуцлах хүсэлтийг дахин илгээхэд өөр нэхэмжлэхтэй зөрчилдөж байна")
   }
 
   const inserted = await db
@@ -319,7 +319,7 @@ async function reserveStoredCancellationWithDb(
     .onConflictDoNothing()
   if (resultChanges(inserted) !== 1) {
     const concurrent = await findCancellation(db, invoice.id)
-    if (!concurrent) throw new Error("Payment cancellation reservation conflict")
+    if (!concurrent) throw new Error("Төлбөр цуцлах нөөцлөлт зөрчилдлөө")
     if (concurrent.status === "cancelled") return { kind: "replay" as const, cancellation: concurrent }
     throw new PaymentCancellationConflictError(
       concurrent.status === "requested"
@@ -340,13 +340,13 @@ async function completeCancellationWithDb(
 ) {
   const cancellation = await requireCancellation(db, invoiceID)
   if (cancellation.status === "cancelled") return cancellation
-  if (cancellation.status !== "requested") throw new Error("Payment cancellation is no longer in progress")
+  if (cancellation.status !== "requested") throw new Error("Төлбөр цуцлах үйлдэл цааш үргэлжлэх боломжгүй болсон")
   if (
     receipt.provider !== cancellation.provider ||
     receipt.merchantAccountID !== cancellation.merchant_account_id ||
     receipt.externalInvoiceID !== cancellation.external_invoice_id
   ) {
-    throw new Error("Payment cancellation receipt binding does not match reservation")
+    throw new Error("Төлбөр цуцалсан баримтын мэдээлэл нөөцлөлттэй таарахгүй байна")
   }
 
   const changed = await db
@@ -358,7 +358,7 @@ async function completeCancellationWithDb(
     })
     .where(and(eq(PaymentCancellationTable.invoice_id, invoiceID), eq(PaymentCancellationTable.status, "requested")))
     .returning({ invoiceID: PaymentCancellationTable.invoice_id })
-  if (changed.length !== 1) throw new Error("Payment cancellation changed concurrently")
+  if (changed.length !== 1) throw new Error("Төлбөр цуцлах мэдээлэл зэрэг өөрчлөгдсөн байна")
   return requireCancellation(db, invoiceID)
 }
 
@@ -383,7 +383,7 @@ async function cancellationOutcome(
   cancellation: typeof PaymentCancellationTable.$inferSelect,
 ): Promise<SubscriptionCancellationOutcome> {
   if (cancellation.status !== "cancelled" || !cancellation.time_completed) {
-    throw new Error("Payment cancellation result is incomplete")
+    throw new Error("Төлбөр цуцлалтын үр дүн бүрэн бус байна")
   }
   const occurredAt = cancellation.time_completed.getTime()
   const normalized = {
@@ -426,7 +426,7 @@ function classifyCancellationFailure(error: unknown) {
 
 function validateTimestamp(value: number, lowerBound = 0) {
   if (!Number.isSafeInteger(value) || value < lowerBound)
-    throw new TypeError("Payment cancellation timestamp is invalid")
+    throw new TypeError("Төлбөр цуцлах цагийн тэмдэг буруу байна")
 }
 
 function findCancellation(db: Database.TxOrDb, invoiceID: string) {
@@ -440,7 +440,7 @@ function findCancellation(db: Database.TxOrDb, invoiceID: string) {
 
 async function requireCancellation(db: Database.TxOrDb, invoiceID: string) {
   const cancellation = await findCancellation(db, invoiceID)
-  if (!cancellation) throw new Error("Payment cancellation reservation disappeared")
+  if (!cancellation) throw new Error("Төлбөр цуцлах нөөцлөлт олдсонгүй")
   return cancellation
 }
 

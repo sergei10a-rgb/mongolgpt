@@ -48,7 +48,7 @@ export class PaymentCheckoutConflictError extends Error {
     readonly state: "active_subscription" | "open_checkout" | "request_in_progress" | "request_closed",
     readonly invoiceID?: string,
   ) {
-    super(`Payment checkout conflict: ${state}`)
+    super(`Төлбөрийн хүсэлтэд зөрчил гарлаа: ${state}`)
     this.name = "PaymentCheckoutConflictError"
   }
 }
@@ -58,14 +58,14 @@ export class PaymentCheckoutCreationError extends Error {
     readonly state: "failed" | "unknown",
     readonly code: string,
   ) {
-    super(`Payment checkout creation ${state}: ${code}`)
+    super(`Төлбөрийн хүсэлт үүсгэх үйлдэл ${state} төлөвтэй байна: ${code}`)
     this.name = "PaymentCheckoutCreationError"
   }
 }
 
 export class PaymentCheckoutAuthorizationError extends Error {
   constructor() {
-    super("Payment checkout requires an active workspace administrator")
+    super("Төлбөрийн хүсэлт үүсгэхэд ажлын талбарын идэвхтэй администратор шаардлагатай")
     this.name = "PaymentCheckoutAuthorizationError"
   }
 }
@@ -84,17 +84,17 @@ export async function createSubscriptionCheckout(
 ): Promise<SubscriptionCheckoutResult> {
   const request = SubscriptionCheckoutRequestSchema.parse(input)
   const catalog = PaymentPlanCatalogSchema.parse(dependencies.catalog)
-  if (request.provider !== dependencies.adapter.provider) throw new TypeError("Payment provider does not match request")
+  if (request.provider !== dependencies.adapter.provider) throw new TypeError("Төлбөрийн нийлүүлэгч хүсэлттэй таарахгүй байна")
 
   const now = dependencies.now ?? Date.now
   const createdAt = now()
-  if (!Number.isSafeInteger(createdAt) || createdAt < 0) throw new TypeError("Payment checkout timestamp is invalid")
+  if (!Number.isSafeInteger(createdAt) || createdAt < 0) throw new TypeError("Төлбөрийн хүсэлтийн цагийн тэмдэг буруу байна")
   const invoiceTtlMs = dependencies.invoiceTtlMs ?? DEFAULT_INVOICE_TTL_MS
   if (!Number.isSafeInteger(invoiceTtlMs) || invoiceTtlMs < 60_000 || invoiceTtlMs > 86_400_000) {
-    throw new TypeError("Payment checkout expiry is invalid")
+    throw new TypeError("Төлбөрийн хүсэлтийн дуусах хугацаа буруу байна")
   }
   const expiresAt = createdAt + invoiceTtlMs
-  if (!Number.isSafeInteger(expiresAt)) throw new TypeError("Payment checkout expiry is invalid")
+  if (!Number.isSafeInteger(expiresAt)) throw new TypeError("Төлбөрийн хүсэлтийн дуусах хугацаа буруу байна")
 
   const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
   const plan = catalog[request.plan]
@@ -168,7 +168,7 @@ export async function getSubscriptionBillingOverviewWithDb(
   now = Date.now(),
 ): Promise<SubscriptionBillingOverview> {
   const workspace = internalIdentifier.regex(/^wrk_/).parse(workspaceID)
-  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Payment overview timestamp is invalid")
+  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Төлбөрийн тоймын цагийн тэмдэг буруу байна")
 
   const [subscription, checkout] = await Promise.all([
     db
@@ -288,7 +288,7 @@ export async function syncPaymentCheckoutStatusWithDb(
   status: (typeof PaymentEventTypes)[number],
   occurredAt: number,
 ) {
-  if (!Number.isSafeInteger(occurredAt) || occurredAt < 0) throw new TypeError("Payment event timestamp is invalid")
+  if (!Number.isSafeInteger(occurredAt) || occurredAt < 0) throw new TypeError("Төлбөрийн үйл явдлын цагийн тэмдэг буруу байна")
   const current = await db
     .select({ status: PaymentCheckoutTable.status })
     .from(PaymentCheckoutTable)
@@ -303,7 +303,7 @@ export async function syncPaymentCheckoutStatusWithDb(
       : status === "paid"
         ? ["ready", "pending", "failed", "expired", "cancelled", "paid"].includes(current.status)
         : current.status === "ready" || current.status === "pending" || current.status === status
-  if (!allowed) throw new Error("Payment checkout status does not match verified event")
+  if (!allowed) throw new Error("Төлбөрийн хүсэлтийн төлөв баталгаажсан үйл явдалтай таарахгүй байна")
 
   const timestamp = new Date(occurredAt)
   const changed = await db
@@ -318,7 +318,7 @@ export async function syncPaymentCheckoutStatusWithDb(
     })
     .where(and(eq(PaymentCheckoutTable.id, invoiceID), eq(PaymentCheckoutTable.status, current.status)))
     .returning({ id: PaymentCheckoutTable.id })
-  if (changed.length !== 1) throw new Error("Payment checkout changed concurrently")
+  if (changed.length !== 1) throw new Error("Төлбөрийн хүсэлтийн мэдээлэл зэрэг өөрчлөгдсөн байна")
   return true
 }
 
@@ -422,7 +422,7 @@ async function reserveSubscriptionCheckoutWithDb(
     .limit(1)
     .then((rows) => rows[0])
   if (open) return { kind: "conflict" as const, invoice: open }
-  throw new Error("Payment checkout reservation failed without a conflicting invoice")
+  throw new Error("Зөрчилтэй нэхэмжлэх байхгүй боловч төлбөрийн хүсэлтийн нөөцлөлт амжилтгүй боллоо")
 }
 
 async function completeSubscriptionCheckoutWithDb(
@@ -434,9 +434,9 @@ async function completeSubscriptionCheckoutWithDb(
   const checkout = PaymentInvoiceCheckoutSchema.parse(input)
   const intent = await requireInvoice(db, invoiceID)
   if (intent.status === "ready" && intent.checkout && paymentCheckoutEqual(intent.checkout, checkout)) return intent
-  if (intent.status !== "creating") throw new Error("Payment checkout is no longer being created")
+  if (intent.status !== "creating") throw new Error("Төлбөрийн хүсэлт үүсэж байгаа төлөвтөө байхаа больсон")
   if (checkout.provider !== intent.provider || checkout.merchantAccountID !== intent.merchant_account_id) {
-    throw new Error("Payment checkout provider binding does not match reservation")
+    throw new Error("Төлбөрийн хүсэлтийн нийлүүлэгчийн холболт нөөцлөлттэй таарахгүй байна")
   }
 
   await recordPaymentInvoiceWithDb(db, {
@@ -463,7 +463,7 @@ async function completeSubscriptionCheckoutWithDb(
     })
     .where(and(eq(PaymentCheckoutTable.id, intent.id), eq(PaymentCheckoutTable.status, "creating")))
     .returning({ id: PaymentCheckoutTable.id })
-  if (changed.length !== 1) throw new Error("Payment checkout changed concurrently")
+  if (changed.length !== 1) throw new Error("Төлбөрийн хүсэлтийн мэдээлэл зэрэг өөрчлөгдсөн байна")
   return requireInvoice(db, intent.id)
 }
 
@@ -527,7 +527,7 @@ async function expireLedgerInvoiceWithDb(db: Database.TxOrDb, invoiceID: string,
 
 function checkoutResult(invoice: typeof PaymentCheckoutTable.$inferSelect): SubscriptionCheckoutResult {
   if (!invoice.plan || !invoice.time_expires || !invoice.checkout) {
-    throw new Error("Payment checkout record is incomplete")
+    throw new Error("Төлбөрийн хүсэлтийн бүртгэл бүрэн бус байна")
   }
   return SubscriptionCheckoutResultSchema.parse({
     invoiceID: invoice.id,
@@ -554,7 +554,7 @@ function assertCheckoutReplay(
     stored.amount !== replay.amount ||
     stored.currency !== "MNT"
   ) {
-    throw new Error("Payment checkout request replay conflicts with the stored invoice")
+    throw new Error("Төлбөрийн хүсэлтийг дахин илгээхэд хадгалсан нэхэмжлэхтэй зөрчилдөж байна")
   }
 }
 
@@ -573,9 +573,9 @@ function classifyCreationFailure(error: unknown) {
 }
 
 function validateSweepInput(now: number, limit: number) {
-  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Payment expiration timestamp is invalid")
+  if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Төлбөр дуусах хугацааны цагийн тэмдэг буруу байна")
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) {
-    throw new TypeError("Payment expiration limit is invalid")
+    throw new TypeError("Төлбөр дуусах хугацааны хязгаар буруу байна")
   }
 }
 
@@ -586,7 +586,7 @@ async function requireInvoice(db: Database.TxOrDb, invoiceID: string) {
     .where(eq(PaymentCheckoutTable.id, invoiceID))
     .limit(1)
     .then((rows) => rows[0])
-  if (!invoice) throw new Error("Payment checkout invoice disappeared")
+  if (!invoice) throw new Error("Төлбөрийн хүсэлтийн нэхэмжлэх олдсонгүй")
   return invoice
 }
 

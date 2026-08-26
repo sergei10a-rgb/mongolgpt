@@ -82,7 +82,7 @@ export const MNTAmountSchema = z
   .transform((value, context) => {
     const amount = typeof value === "number" ? value : Number(value.split(".", 1)[0])
     if (!Number.isSafeInteger(amount) || amount < 0) {
-      context.addIssue({ code: "custom", message: "Payment provider returned an invalid MNT amount" })
+      context.addIssue({ code: "custom", message: "Төлбөрийн нийлүүлэгч буруу MNT дүн буцаалаа" })
       return z.NEVER
     }
     return amount

@@ -173,7 +173,7 @@ describe("QPay Merchant V2 adapter", () => {
           }),
         ),
       ),
-    ).toContain("was not present in the verified invoice")
+    ).toContain("callback хүсэлтийн төлбөр баталгаажсан нэхэмжлэх дотор алга")
 
     const amount = mockFetch([{ body: token }, { body: paidCheck }])
     expect(
@@ -187,7 +187,7 @@ describe("QPay Merchant V2 adapter", () => {
           }),
         ),
       ),
-    ).toContain("amount or currency does not match")
+    ).toContain("төлбөрийн дүн эсвэл валют нэхэмжлэхтэй таарахгүй байна")
 
     const hiddenSettlement = mockFetch([
       { body: token },
@@ -219,7 +219,7 @@ describe("QPay Merchant V2 adapter", () => {
           }),
         ),
       ),
-    ).toContain("does not match the verified settled payment")
+    ).toContain("callback хүсэлтийн төлбөр баталгаажсан төлөгдсөн төлбөртэй таарахгүй байна")
   })
 
   test("rejects a configured callback endpoint with caller-controlled query data", () => {

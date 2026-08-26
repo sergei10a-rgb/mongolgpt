@@ -307,7 +307,7 @@ describe("Bonum Ecommerce Gateway adapter", () => {
         expiresAt: now + 86_401_000,
       }),
     )
-    expect(String(expiryError)).toContain("outside the configured safety window")
+    expect(String(expiryError)).toContain("тохируулсан аюулгүй хязгаараас гадуур байна")
     expect(expiry.calls).toHaveLength(0)
   })
 

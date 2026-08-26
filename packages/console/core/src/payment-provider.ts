@@ -52,7 +52,7 @@ export class PaymentProviderResponseError extends Error {
     status: number
     retryable?: boolean
   }) {
-    super(`${input.provider} ${input.operation} failed with HTTP ${input.status}`)
+    super(`${input.provider} ${input.operation} үйлдэл HTTP ${input.status} төлөвтэй амжилтгүй боллоо`)
     this.name = "PaymentProviderResponseError"
     this.provider = input.provider
     this.operation = input.operation
@@ -107,7 +107,7 @@ export async function cancelPaymentProviderResponse(response: Response) {
 export function stableJson(value: unknown): string {
   if (value === null || typeof value !== "object") {
     const encoded = JSON.stringify(value)
-    if (encoded === undefined) throw new TypeError("Payment provider payload is not JSON serializable")
+    if (encoded === undefined) throw new TypeError("Төлбөрийн нийлүүлэгчийн өгөгдлийг JSON болгон хувиргах боломжгүй байна")
     return encoded
   }
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`
@@ -123,7 +123,7 @@ async function readLimitedBody(
   response: Response,
   maxBytes: number,
 ) {
-  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) throw new TypeError("Payment response limit is invalid")
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) throw new TypeError("Төлбөрийн хариуны хязгаар буруу байна")
   const declared = response.headers.get("content-length")
   if (declared !== null) {
     const bytes = Number(declared)

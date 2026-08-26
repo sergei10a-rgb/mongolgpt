@@ -55,7 +55,7 @@ export type FindPaymentInvoice = (
 
 export class PaymentIngressNotFoundError extends Error {
   constructor() {
-    super("Payment invoice not found")
+    super("Төлбөрийн нэхэмжлэх олдсонгүй")
     this.name = "PaymentIngressNotFoundError"
   }
 }

@@ -103,7 +103,7 @@ const PaymentCheckResponseSchema = z
   .passthrough()
   .superRefine((input, context) => {
     if (input.count !== input.rows.length) {
-      context.addIssue({ code: "custom", message: "QPay returned an incomplete payment page" })
+      context.addIssue({ code: "custom", message: "QPay бүрэн бус төлбөрийн хуудас буцаалаа" })
     }
   })
 
@@ -185,23 +185,23 @@ export class QPayAdapter implements PaymentReconciliationAdapter, PaymentCancell
       ),
     )
     if (request.callbackPaymentID && !response.rows.some((row) => row.payment_id === request.callbackPaymentID)) {
-      throw new Error("QPay callback payment was not present in the verified invoice")
+      throw new Error("QPay callback хүсэлтийн төлбөр баталгаажсан нэхэмжлэх дотор алга")
     }
 
     const settled = response.rows.filter((row) => row.payment_status === "PAID" || row.payment_status === "REFUNDED")
-    if (settled.length > 1) throw new Error("QPay invoice has ambiguous settled payments")
+    if (settled.length > 1) throw new Error("QPay нэхэмжлэхэд аль төлбөр нь төлөгдсөн нь тодорхойгүй байна")
 
     const row = settled[0]
     if (!row) return [await this.pendingEvent(request, response)]
     if (request.callbackPaymentID && row.payment_id !== request.callbackPaymentID) {
-      throw new Error("QPay callback payment does not match the verified settled payment")
+      throw new Error("QPay callback хүсэлтийн төлбөр баталгаажсан төлөгдсөн төлбөртэй таарахгүй байна")
     }
     if (row.payment_amount !== request.expectedAmount || row.payment_currency !== request.currency) {
-      throw new Error("QPay verified payment amount or currency does not match the invoice")
+      throw new Error("QPay баталгаажсан төлбөрийн дүн эсвэл валют нэхэмжлэхтэй таарахгүй байна")
     }
 
     const occurredAt = Date.parse(row.payment_date)
-    if (!Number.isSafeInteger(occurredAt) || occurredAt < 0) throw new Error("QPay returned an invalid payment date")
+    if (!Number.isSafeInteger(occurredAt) || occurredAt < 0) throw new Error("QPay буруу төлбөрийн огноо буцаалаа")
     const payloadHash = await sha256Hex(stableJson(row))
     const paid = parseVerifiedPaymentEvent({
       provider: this.provider,

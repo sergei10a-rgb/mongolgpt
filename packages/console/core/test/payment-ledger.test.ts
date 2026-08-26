@@ -138,7 +138,7 @@ describe("provider-neutral payment ledger", () => {
     await expect(recordPaymentInvoiceWithDb(db, invoice)).resolves.toMatchObject({ kind: "created" })
     await expect(recordPaymentInvoiceWithDb(db, invoice)).resolves.toMatchObject({ kind: "duplicate" })
     await expect(recordPaymentInvoiceWithDb(db, { ...invoice, amount: 59_000 })).rejects.toThrow(
-      "Payment invoice replay conflicts",
+      "Төлбөрийн нэхэмжлэх хүсэлтийг дахин илгээхэд хадгалсан нэхэмжлэхтэй зөрчилдөж байна",
     )
     expect(sqlite.query("select count(*) as count from payment_invoice").get()).toEqual({ count: 1 })
   })
@@ -349,7 +349,7 @@ describe("provider-neutral payment ledger", () => {
           occurredAt: 6,
         }),
       ),
-    ).rejects.toThrow("amount or currency does not match")
+    ).rejects.toThrow("Төлбөрийн үйл явдлын дүн эсвэл валют нэхэмжлэхтэй таарахгүй байна")
 
     expect(sqlite.query("select status from payment_invoice").get()).toEqual({ status: "created" })
     expect(sqlite.query("select count(*) as count from payment_event").get()).toEqual({ count: 0 })

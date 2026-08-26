@@ -34,14 +34,14 @@ export const RecordPaymentInvoiceSchema = z
       context.addIssue({
         code: "custom",
         path: ["plan"],
-        message: "Subscription invoice requires a plan",
+        message: "Захиалгын нэхэмжлэхэд багц шаардлагатай",
       })
     }
     if (input.purpose === "credit" && input.plan) {
       context.addIssue({
         code: "custom",
         path: ["plan"],
-        message: "Credit invoice cannot include a plan",
+        message: "Кредит нэхэмжлэл дотор багц байж болохгүй",
       })
     }
   })
@@ -67,28 +67,28 @@ export const ApplyPaymentEventSchema = z
       context.addIssue({
         code: "custom",
         path: ["externalPaymentID"],
-        message: `${input.type} event requires an external payment ID`,
+        message: `${input.type} үйл явдалд гадаад төлбөрийн ID шаардлагатай`,
       })
     }
     if (settlement && input.amount === undefined) {
       context.addIssue({
         code: "custom",
         path: ["amount"],
-        message: `${input.type} event requires an amount`,
+        message: `${input.type} үйл явдалд дүн шаардлагатай`,
       })
     }
     if (settlement && input.currency === undefined) {
       context.addIssue({
         code: "custom",
         path: ["currency"],
-        message: `${input.type} event requires a currency`,
+        message: `${input.type} үйл явдалд валют шаардлагатай`,
       })
     }
     if ((input.amount === undefined) !== (input.currency === undefined)) {
       context.addIssue({
         code: "custom",
         path: input.amount === undefined ? ["amount"] : ["currency"],
-        message: "Payment event amount and currency must be provided together",
+        message: "Төлбөрийн үйл явдлын дүн болон валютыг хамтад нь өгнө",
       })
     }
   })
@@ -133,7 +133,7 @@ export async function recordPaymentInvoiceWithDb(db: Database.TxOrDb, input: Rec
       ),
     )
     .then((rows) => rows[0])
-  if (!stored) throw new Error("Payment invoice insert did not persist")
+  if (!stored) throw new Error("Төлбөрийн нэхэмжлэх нэмэгдсэнгүй")
 
   if (resultChanges(inserted) === 0) {
     assertInvoiceReplay(stored, invoice)
@@ -164,16 +164,16 @@ export async function applyPaymentEventWithDb(
       ),
     )
     .then((rows) => rows[0])
-  if (!invoice) throw new Error("Payment invoice not found")
+  if (!invoice) throw new Error("Төлбөрийн нэхэмжлэх олдсонгүй")
   if (
     invoice.external_payment_id &&
     event.externalPaymentID &&
     invoice.external_payment_id !== event.externalPaymentID
   ) {
-    throw new Error("Payment event references a different external payment")
+    throw new Error("Төлбөрийн үйл явдал өөр гадаад төлбөрийг зааж байна")
   }
   if (event.amount !== undefined && (event.amount !== invoice.amount || event.currency !== invoice.currency)) {
-    throw new Error("Payment event amount or currency does not match the invoice")
+    throw new Error("Төлбөрийн үйл явдлын дүн эсвэл валют нэхэмжлэхтэй таарахгүй байна")
   }
 
   const replay = await findPaymentEvent(db, event.provider, event.merchantAccountID, event.externalEventID)
@@ -211,7 +211,7 @@ export async function applyPaymentEventWithDb(
 
   if (resultChanges(inserted) === 0) {
     const concurrent = await findPaymentEvent(db, event.provider, event.merchantAccountID, event.externalEventID)
-    if (!concurrent) throw new Error("Payment event uniqueness conflict")
+    if (!concurrent) throw new Error("Төлбөрийн үйл явдлын давхардлын зөрчил гарлаа")
     assertEventReplay(concurrent, event)
     return {
       kind: "duplicate" as const,
@@ -242,7 +242,7 @@ export async function applyPaymentEventWithDb(
     })
     .where(and(eq(PaymentInvoiceTable.id, invoice.id), eq(PaymentInvoiceTable.status, invoice.status)))
 
-  if (resultChanges(updated) !== 1) throw new Error("Payment invoice changed concurrently")
+  if (resultChanges(updated) !== 1) throw new Error("Төлбөрийн нэхэмжлэх зэрэг өөрчлөгдсөн байна")
 
   const current = await requirePaymentInvoice(db, invoice.id)
   await effect?.({
@@ -308,7 +308,7 @@ async function requirePaymentInvoice(db: Database.TxOrDb, id: string) {
     .from(PaymentInvoiceTable)
     .where(eq(PaymentInvoiceTable.id, id))
     .then((rows) => rows[0])
-  if (!invoice) throw new Error("Payment invoice disappeared")
+  if (!invoice) throw new Error("Төлбөрийн нэхэмжлэх олдсонгүй")
   return invoice
 }
 
@@ -326,7 +326,7 @@ function assertInvoiceReplay(
     stored.currency !== replay.currency ||
     expiresAt !== replay.expiresAt
   ) {
-    throw new Error("Payment invoice replay conflicts with the stored invoice")
+    throw new Error("Төлбөрийн нэхэмжлэх хүсэлтийг дахин илгээхэд хадгалсан нэхэмжлэхтэй зөрчилдөж байна")
   }
 }
 
@@ -344,6 +344,6 @@ function assertEventReplay(
     stored.payload_hash !== replay.payloadHash ||
     stored.time_occurred.getTime() !== replay.occurredAt
   ) {
-    throw new Error("Payment event replay conflicts with the stored event")
+    throw new Error("Төлбөрийн үйл явдлыг дахин илгээхэд хадгалсан үйл явдалтай зөрчилдөж байна")
   }
 }
