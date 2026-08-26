@@ -18,7 +18,7 @@ const emailSignup = action(async (formData: FormData) => {
     return true
   } catch (error) {
     if (error instanceof InvalidNewsletterSubscriptionError) throw new Error(error.message)
-    console.error("Newsletter subscription failed", error instanceof Error ? error.name : typeof error)
+    console.error("Мэдээллийн товхимолд бүртгүүлэхэд алдаа гарлаа", error instanceof Error ? error.name : typeof error)
     throw new Error("Бүртгэл түр амжилтгүй боллоо. Дараа дахин оролдоно уу.")
   }
 })

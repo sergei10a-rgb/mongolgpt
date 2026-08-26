@@ -73,7 +73,7 @@ export const createPlanCheckout = action(async (workspaceID: string, plan: strin
             invoiceID: error.invoiceID,
           }
         }
-        console.error("Subscription checkout action failed", {
+        console.error("Захиалгын төлбөрийн хүсэлт үүсгэх үйлдэл амжилтгүй боллоо", {
           workspaceID: Actor.workspace(),
           error: error instanceof Error ? error.name : typeof error,
         })
@@ -103,7 +103,7 @@ export const cancelPlanCheckout = action(async (workspaceID: string, invoiceID: 
         if (error instanceof PaymentServiceClientError) {
           return { ok: false as const, error: error.message, code: error.code }
         }
-        console.error("Subscription checkout cancellation action failed", {
+        console.error("Захиалгын төлбөрийн хүсэлт цуцлах үйлдэл амжилтгүй боллоо", {
           workspaceID: Actor.workspace(),
           error: error instanceof Error ? error.name : typeof error,
         })

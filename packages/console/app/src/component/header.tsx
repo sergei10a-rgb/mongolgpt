@@ -30,7 +30,7 @@ const fetchSvgContent = async (svgPath: string): Promise<string> => {
     const svgText = await response.text()
     return svgText
   } catch (err) {
-    console.error("Failed to fetch SVG content:", err)
+    console.error("SVG агуулгыг авахад алдаа гарлаа:", err)
     throw err
   }
 }
@@ -95,7 +95,7 @@ export function Header(props: { hideGetStarted?: boolean }) {
       const wordmarkSvg = await fetchSvgContent(wordmarkSvgPath)
       await navigator.clipboard.writeText(wordmarkSvg)
     } catch (err) {
-      console.error("Failed to copy wordmark to clipboard:", err)
+      console.error("Нэрийн логог түр санах ойд хуулахад алдаа гарлаа:", err)
     }
   }
 
@@ -106,7 +106,7 @@ export function Header(props: { hideGetStarted?: boolean }) {
       const logoSvg = await fetchSvgContent(logoSvgPath)
       await navigator.clipboard.writeText(logoSvg)
     } catch (err) {
-      console.error("Failed to copy logo to clipboard:", err)
+      console.error("Логог түр санах ойд хуулахад алдаа гарлаа:", err)
     }
   }
 

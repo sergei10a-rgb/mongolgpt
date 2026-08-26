@@ -38,7 +38,7 @@ export async function createReferralFromCookie() {
     accountID: Actor.account(),
     referralCode,
   }).catch((error) => {
-    console.error("Referral create failed", error)
+    console.error("Урилга үүсгэхэд алдаа гарлаа", error)
   })
   event?.response.headers.append("set-cookie", clearReferralCookie())
 }

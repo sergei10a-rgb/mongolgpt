@@ -129,7 +129,7 @@ export async function validateAuthSession() {
 export const getActor = async (workspace?: string): Promise<Actor.Info> => {
   "use server"
   const evt = getRequestEvent()
-  if (!evt) throw new Error("No request event")
+  if (!evt) throw new Error("RequestEvent олдсонгүй")
   if (evt.locals.actor) return evt.locals.actor
   evt.locals.actor = (async () => {
     const auth = await validateAuthSession()

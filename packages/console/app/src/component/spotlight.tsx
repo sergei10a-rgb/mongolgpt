@@ -507,7 +507,7 @@ export default function Spotlight(props: SpotlightProps) {
       }
 
       if (!navigator.gpu) {
-        console.warn("WebGPU is not supported in this browser")
+        console.warn("Энэ хөтөч WebGPU-г дэмжихгүй байна")
         return
       }
 
@@ -515,7 +515,7 @@ export default function Spotlight(props: SpotlightProps) {
         powerPreference: "high-performance",
       })
       if (!adapter) {
-        console.warn("Failed to get WebGPU adapter")
+        console.warn("WebGPU адаптер авч чадсангүй")
         return
       }
 
@@ -534,7 +534,7 @@ export default function Spotlight(props: SpotlightProps) {
 
       const context = canvas.getContext("webgpu")
       if (!context) {
-        console.warn("Failed to get WebGPU context")
+        console.warn("WebGPU контекст авч чадсангүй")
         return
       }
       contextRef = context
@@ -727,7 +727,7 @@ export default function Spotlight(props: SpotlightProps) {
 
           animationIdRef = requestAnimationFrame(loop)
         } catch (error) {
-          console.warn("WebGPU rendering error:", error)
+          console.warn("WebGPU дүрслэхэд алдаа гарлаа:", error)
           return
         }
       }

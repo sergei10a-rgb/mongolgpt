@@ -61,7 +61,7 @@ export default function Enterprise() {
       const data = (await response.json().catch(() => null)) as { error?: string } | null
       setError(data?.error ?? i18n.t("enterprise.form.error.internalServer"))
     } catch (error) {
-      console.error("Failed to submit form:", error)
+      console.error("Маягт илгээхэд алдаа гарлаа:", error)
       setError(i18n.t("enterprise.form.error.internalServer"))
     } finally {
       setIsSubmitting(false)
