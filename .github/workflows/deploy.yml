@@ -107,7 +107,9 @@ jobs:
           VITE_MONGOLGPT_APP_URL: ${{ inputs.stage == 'production' && format('https://app.{0}', vars.MONGOLGPT_DOMAIN) || format('https://app.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
           VITE_MONGOLGPT_PUBLIC_URL: ${{ inputs.stage == 'production' && format('https://{0}', vars.MONGOLGPT_DOMAIN) || format('https://{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
           VITE_MONGOLGPT_SERVER_URL: ${{ inputs.stage == 'production' && format('https://runtime.{0}', vars.MONGOLGPT_DOMAIN) || format('https://runtime.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
-        run: bun --cwd packages/app build
+        run: |
+          bun --cwd packages/app build
+          bun --cwd packages/app verify:hosted-artifact
 
   deploy:
     needs: verify

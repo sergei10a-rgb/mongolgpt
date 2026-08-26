@@ -25,7 +25,7 @@ export const webApp = new sst.cloudflare.StaticSiteV2("WebApp", {
   domain: `app.${domain}`,
   path: "packages/app",
   build: {
-    command: "bun turbo build",
+    command: "bun run build:hosted",
     output: "./dist",
   },
   environment: {

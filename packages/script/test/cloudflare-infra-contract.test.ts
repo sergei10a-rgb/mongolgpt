@@ -94,6 +94,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
       VITE_MONGOLGPT_SERVER_URL:
         "${{ inputs.stage == 'production' && format('https://runtime.{0}', vars.MONGOLGPT_DOMAIN) || format('https://runtime.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}",
     })
+    expect(buildStep?.run).toContain("bun --cwd packages/app verify:hosted-artifact")
+    const site = await Bun.file(new URL("../../../infra/site.ts", import.meta.url)).text()
+    expect(site).toContain('command: "bun run build:hosted"')
     expect(workflow.jobs.deploy.condition).toBe(
       "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
     )

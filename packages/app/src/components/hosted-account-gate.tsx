@@ -3,6 +3,7 @@ import { useDialog } from "@mongolgpt/ui/context/dialog"
 import { Dialog } from "@mongolgpt/ui/dialog"
 import { type ParentProps, createEffect, createResource, createSignal, onCleanup, Show } from "solid-js"
 import { useLanguage } from "@/context/language"
+import { resolveWebRuntime, type WebRuntime } from "@/utils/web-runtime"
 import { Splash } from "@mongolgpt/ui/logo"
 
 type HostedAccount = { id: string; email: string }
@@ -178,12 +179,10 @@ function privateHostname(hostname: string) {
 export function HostedAccountGate(props: ParentProps) {
   const language = useLanguage()
   const dialog = useDialog()
-  const derivedRuntimeUrl = hostedRuntimeUrlFallback()
+  const runtime = hostedRuntimeFallback()
+  const derivedRuntimeUrl = runtime?.serverUrl
   const derivedPublicOrigin = hostedPublicOriginFallback()
-  const enabled = hostedAccountGateEnabled(
-    import.meta.env.VITE_MONGOLGPT_RUNTIME_MODE ?? (derivedRuntimeUrl ? "hosted" : "local-bridge"),
-    derivedRuntimeUrl,
-  )
+  const enabled = hostedAccountGateEnabled(runtime?.mode, derivedRuntimeUrl)
   const runtimeUrl = derivedRuntimeUrl
   const publicOrigin = derivedPublicOrigin
   const [shown, setShown] = createSignal(false)
@@ -278,17 +277,15 @@ export function HostedAccountGate(props: ParentProps) {
   )
 }
 
-function hostedRuntimeUrlFallback() {
-  if (import.meta.env.VITE_MONGOLGPT_SERVER_URL?.trim()) return import.meta.env.VITE_MONGOLGPT_SERVER_URL.trim()
-  if (!isSafeOrigin()) return
-  const parsed = new URL(location.origin)
-  if (parsed.protocol !== "https:") return
-  const host = parsed.hostname
-  const parts = host.split(".")
-  if (parts[0] !== "app" || parts.length < 2) return
-  const runtimeHost = `runtime.${parts.slice(1).join(".")}`
-  const port = parsed.port ? `:${parsed.port}` : ""
-  return `${parsed.protocol}//${runtimeHost}${port}`.replace(/\/+$/, "")
+function hostedRuntimeFallback(): WebRuntime | undefined {
+  if (typeof location !== "object" || typeof location.origin !== "string" || !location.origin) return undefined
+  return resolveWebRuntime({
+    dev: import.meta.env.DEV,
+    origin: location.origin,
+    serverHost: import.meta.env.VITE_MONGOLGPT_SERVER_HOST,
+    serverPort: import.meta.env.VITE_MONGOLGPT_SERVER_PORT,
+    serverUrl: import.meta.env.VITE_MONGOLGPT_SERVER_URL,
+  })
 }
 
 function hostedPublicOriginFallback() {

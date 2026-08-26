@@ -113,8 +113,8 @@ const runtime = resolveWebRuntime({
   serverPort: import.meta.env.VITE_MONGOLGPT_SERVER_PORT,
   serverUrl: import.meta.env.VITE_MONGOLGPT_SERVER_URL,
 })
-const runtimeMode = import.meta.env.VITE_MONGOLGPT_RUNTIME_MODE ?? runtime.mode
-const runtimeUrl = import.meta.env.VITE_MONGOLGPT_SERVER_URL?.trim() || runtime.serverUrl
+const runtimeMode = runtime.mode
+const runtimeUrl = runtime.serverUrl
 const publicOrigin = import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim() || hostedPublicOriginFallback(location.origin)
 const defaultServer = resolveDefaultServerUrl({
   runtime,

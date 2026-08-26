@@ -17,6 +17,8 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
+    "build:hosted": "bun turbo build && bun run verify:hosted-artifact",
+    "verify:hosted-artifact": "bun ../../script/verify-hosted-web-artifact.ts dist/index.html",
     "serve": "vite preview",
     "test": "bun run test:unit && bun run test:browser",
     "test:unit": "bun test --conditions=browser --only-failures --preload ./happydom.ts ./src",
