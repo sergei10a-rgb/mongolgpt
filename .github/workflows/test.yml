@@ -29,8 +29,12 @@ jobs:
         settings:
           - name: linux
             host: ubuntu-24.04
+            test_concurrency: ""
+            timeout_minutes: 20
           - name: windows
             host: windows-2025
+            test_concurrency: --concurrency=2
+            timeout_minutes: 30
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
@@ -64,8 +68,9 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Run unit tests
-        timeout-minutes: 20
-        run: GITHUB_ACTIONS=false bun turbo test
+        # Windows runners become unreliable when the two largest suites compete for child-process and filesystem IO.
+        timeout-minutes: ${{ matrix.settings.timeout_minutes }}
+        run: GITHUB_ACTIONS=false bun turbo test ${{ matrix.settings.test_concurrency }}
         env:
           MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
 
