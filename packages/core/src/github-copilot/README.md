@@ -1,5 +1,5 @@
-This is a temporary package used primarily for GitHub Copilot compatibility.
+Энэ нь голчлон GitHub Copilot-той нийцтэй ажиллахад зориулсан түр багц юм.
 
-These DO NOT apply for openai-compatible providers or majority of providers supporting completions/responses apis. THIS IS ONLY FOR GITHUB COPILOT!!!
+Эндэх хэрэгжүүлэлт нь OpenAI-тай нийцтэй нийлүүлэгчид болон completions/responses API дэмждэг бусад ихэнх нийлүүлэгчид хамаарахгүй. ЭНЭ НЬ ЗӨВХӨН GITHUB COPILOT-Д ЗОРИУЛСАН.
 
-Avoid making edits to these files
+Эдгээр файлд засвар хийхээс зайлсхий.

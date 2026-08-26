@@ -1,21 +1,21 @@
-# Core Tool Architecture
+# Core хэрэгслийн архитектур
 
-This folder owns Core's one local tool representation, process and Location registration, effective lookup, and settlement.
+Энэ хавтас нь Core-ийн дотоод хэрэгслийн нэгдсэн төлөөлөл, процесс болон `Location` бүртгэл, хүчинтэй хэрэгслийн хайлт, гүйцэтгэлийг эцэслэх үйлдлийг хариуцна.
 
-## Representations
+## Төлөөллүүд
 
-- `tool.ts` defines the opaque canonical `Tool.make({ description, input, output, execute, toModelOutput })` value. Application tools and shipped built-ins use the same type.
-- `application-tools.ts` stores process-scoped application registrations.
-- `tools.ts` exposes the registration-only `Tools.Service` view used by Location producers.
-- `registry.ts` stores only canonical tools, overlays Location registrations over application registrations, derives definitions, invokes tools, and applies generic output bounding.
+- `tool.ts` нь дотоод бүтцийг нь шууд задлан харах боломжгүй каноник `Tool.make({ description, input, output, execute, toModelOutput })` утгыг тодорхойлно. Програмын хэрэгсэл болон MongolGPT-тэй хамт ирдэг суурь хэрэгслүүд ижил төрлийг ашиглана.
+- `application-tools.ts` нь процессын хүрээний програмын бүртгэлүүдийг хадгална.
+- `tools.ts` нь `Location` үүсгэгчдийн ашигладаг, зөвхөн бүртгэл хийх зориулалттай `Tools.Service` харагдацыг ил гаргана.
+- `registry.ts` нь зөвхөн каноник хэрэгслүүдийг хадгална. Мөн `Location` бүртгэлийг програмын бүртгэлийн дээр давхарлаж, тодорхойлолт үүсгэн, хэрэгсэл дуудаж, гаралтын ерөнхий хязгаарлалтыг хэрэглэнэ.
 
-Do not add a second executable entry type, registry-owned executor, authorization callback, output-path callback, or legacy normalization path.
+Гүйцэтгэж болох хоёр дахь бүртгэлийн төрөл, бүртгэл өөрөө эзэмших гүйцэтгэгч, зөвшөөрлийн callback, гаралтын замын callback эсвэл хуучин хэвийн болголтын зам нэмж болохгүй.
 
-## Construction
+## Үүсгэлт
 
-Tool schemas and projection use `input` and `output` terminology. A tool value is opaque: its codecs, executor, definition derivation, and catalog permission declaration are private runtime details.
+Хэрэгслийн схем болон проекц нь `input`, `output` нэршлийг хэрэглэнэ. Хэрэгслийн утгын дотоод бүтэц ил биш: кодлогч, гүйцэтгэгч, тодорхойлолт үүсгэх дүрэм болон каталогийн зөвшөөрлийн зарлал нь зөвхөн ажиллах үеийн дотоод хэрэгжүүлэлт байна.
 
-Location-scoped built-in layers acquire `PermissionV2.Service` and every other required Location service while the layer is constructed. The executor captures those services. Permission sources are always constructed from the canonical invocation context:
+`Location`-ийн хүрээнд ажиллах суурь давхаргууд үүсэх үедээ `PermissionV2.Service` болон шаардлагатай бусад `Location` үйлчилгээг авна. Гүйцэтгэгч эдгээр үйлчилгээг өөртөө хадгална. Зөвшөөрлийн эх үүсвэрийг үргэлж каноник дуудлагын контекстоос үүсгэнэ:
 
 ```ts
 const source = {
@@ -25,35 +25,35 @@ const source = {
 }
 ```
 
-Leaves own resolution, permission, and side-effect ordering. Translate only expected typed errors into `ToolFailure`; do not use `catchCause`, because interruption and defects must survive.
+Төгсгөлийн хэрэгжүүлэлт нь шийдвэрлэлт, зөвшөөрөл болон гаж нөлөөний дарааллыг өөрөө хариуцна. Зөвхөн хүлээгдэж буй төрөлжсөн алдааг `ToolFailure` болгон хөрвүүл. Тасалдал болон системийн гэмтэл нэвт дамжих ёстой тул `catchCause` бүү ашигла.
 
-## Registration
+## Бүртгэл
 
-Built-ins register through `Tools.Service.register({ [name]: tool })`. Application tools register through `ApplicationTools.Service.register(...)`, exposed publicly as `mongolgpt.tools.register(...)`.
+Суурь хэрэгслүүд `Tools.Service.register({ [name]: tool })`-ээр бүртгүүлнэ. Програмын хэрэгслүүд `ApplicationTools.Service.register(...)`-ээр бүртгүүлж, нийтэд `mongolgpt.tools.register(...)` хэлбэрээр ил гарна.
 
-Both are scoped:
+Хоёулаа тодорхой хамрах хүрээтэй:
 
-- The latest active same-placement registration wins.
-- Closing any registration removes only that registration and reveals the next active one.
-- Location registrations take precedence over application registrations.
-- An invocation captures the effective tool once settlement starts.
+- Ижил байрлалын хамгийн сүүлд идэвхжсэн бүртгэл хүчинтэй байна.
+- Ямар нэг бүртгэлийг хаахад зөвхөн тухайн бүртгэл устаж, дараагийн идэвхтэй бүртгэл ил гарна.
+- `Location` бүртгэл програмын бүртгэлээс давуу эрхтэй.
+- Дуудлага эцэслэх шатандаа орох үед хүчинтэй хэрэгслийг нэг удаа хадгалж авна.
 
-`ApplicationTools.Service` is process-scoped and shared by all Locations. `ToolRegistry.Service` is Location-scoped. Do not make the registry process-global or construct a separate application-tool service for each Location.
+`ApplicationTools.Service` нь процессын хүрээнд ажиллаж, бүх `Location`-д хуваалцагдана. `ToolRegistry.Service` нь `Location`-ийн хүрээнд ажиллана. Бүртгэлийг бүх процесс даяарх болгож болохгүй, мөн `Location` бүрд тусдаа програмын хэрэгслийн үйлчилгээ үүсгэж болохгүй.
 
-## Permissions
+## Зөвшөөрөл
 
-The registry has no `PermissionV2.Service` dependency and performs no execution authorization. An internal built-in-only operation attaches a permission action solely to preserve whole-tool definition filtering; it is not part of public `Tool.make`. Most tools default to their registered name; `edit`, `write`, and `apply_patch` declare the shared `edit` action.
+Бүртгэл нь `PermissionV2.Service`-ээс хамаарахгүй бөгөөд гүйцэтгэлийн зөвшөөрөл шалгахгүй. Зөвхөн дотоод суурь хэрэгсэлд зориулсан үйлдэл нь хэрэгслийн тодорхойлолтыг бүхэлд нь шүүх боломжийг хадгалах зорилгоор зөвшөөрлийн үйлдэл холбодог; энэ нь нийтэд ил `Tool.make`-ийн хэсэг биш. Ихэнх хэрэгсэл бүртгүүлсэн нэрээ анхдагчаар ашиглана; `edit`, `write`, `apply_patch` нь хамтын `edit` үйлдлийг зарлана.
 
-Definition filtering is catalog visibility, not execution authorization. A call still executes the captured leaf policy if it reaches settlement.
+Тодорхойлолтын шүүлт нь каталогт харагдах эсэхийг л шийдэхээс гүйцэтгэлийн зөвшөөрөл биш. Дуудлага эцэслэх шатанд хүрсэн бол хадгалсан төгсгөлийн дүрмийн дагуу гүйцэтгэгдэнэ.
 
-## Output
+## Гаралт
 
-Built-ins return complete validated domain output. `ToolRegistry.Materialization.settle` is the only execution and generic model-output bounding boundary and owns managed retention paths.
+Суурь хэрэгслүүд бүрэн баталгаажсан хэрэглээний түвшний гаралт буцаана. `ToolRegistry.Materialization.settle` нь гүйцэтгэл болон загварт өгөх гаралтын ерөнхий хязгаарлалтыг хийдэг цорын ганц зааг бөгөөд системийн удирдлагатай хадгалах замуудыг хариуцна.
 
-Producer capture limits are separate. For example, Bash keeps `AppProcess.maxOutputBytes` and accurately reports stdout/stderr capture loss, but it does not run model-output truncation or return a managed `outputPath`.
+Үүсгэгчийн гаралт барих хязгаар тусдаа байна. Жишээлбэл, Bash нь `AppProcess.maxOutputBytes`-ийг мөрдөж, stdout/stderr гаралтаас хасагдсан хэмжээг зөв мэдээлнэ. Гэхдээ загварт өгөх гаралтыг тайрахгүй, системийн удирдлагатай `outputPath` буцаахгүй.
 
-## Current Gaps
+## Одоогийн дутуу хэсгүүд
 
-- Plugin boot has not been redesigned to register canonical tools through `Tools.Service`; do not redesign it as part of leaf migrations.
-- MCP and future Session-scoped registrations still need an explicit canonical registration design.
-- The public Session result shape currently exposes managed `outputPaths`; full storage encapsulation requires a future opaque managed-output reference design.
+- Нэмэлтийг эхлүүлэх урсгалыг `Tools.Service`-ээр каноник хэрэгсэл бүртгэдэг болгон дахин загвараагүй. Төгсгөлийн хэрэгжүүлэлтүүдийг шилжүүлэх ажлын хүрээнд үүнийг давхар дахин загварчилж болохгүй.
+- MCP болон ирээдүйн сессийн хүрээний бүртгэлүүдэд тодорхой каноник бүртгэлийн загвар шаардлагатай хэвээр.
+- Нийтийн сессийн үр дүнгийн хэлбэр одоогоор системийн удирдлагатай `outputPaths`-ийг ил гаргадаг. Хадгалалтыг бүрэн далдлахын тулд ирээдүйд дотоод бүтэц нь ил биш, удирдлагатай гаралтын лавлагааны загвар хэрэгтэй.

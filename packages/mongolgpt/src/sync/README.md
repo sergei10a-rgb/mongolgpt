@@ -1,56 +1,56 @@
-tl;dr All of these APIs work, are properly type-checked, and are sync events are backwards compatible with `Bus`:
+Товчхондоо: эдгээр бүх API ажиллаж, төрөл нь зөв шалгагдана. Мөн синхрон үйл явдлууд `Bus`-тэй болон хуучин хувилбаруудтай нийцтэй байна:
 
 ```ts
-// The schema from `Updated` typechecks the object correctly
+// `Updated`-ийн схем нь объектын төрлийг зөв шалгана
 SyncEvent.run(Updated, { sessionID: id, info: { title: "foo" } })
 
-// `subscribeAll` passes a generic sync event
+// `subscribeAll` нь ерөнхий синхрон үйл явдал дамжуулна
 SyncEvent.subscribeAll((event) => {
-  // These will be type-checked correctly
+  // Эдгээрийн төрөл зөв шалгагдана
   event.id
   event.seq
-  // This will be unknown because we are listening for all events,
-  // and this API is only used to record them
+  // Бид бүх үйл явдлыг сонсож байгаа тул энэ нь unknown байна;
+  // энэ API-г зөвхөн үйл явдал бүртгэхэд ашигладаг
   event.data
 })
 
-// This works, but you shouldn't publish sync event like this (should fail in the future)
+// Энэ нь ажиллана, гэхдээ синхрон үйл явдлыг ингэж publish хийж болохгүй (цаашид алдаа гардаг болно)
 Bus.publish(Updated, { sessionID: id, info: { title: "foo" } })
 
-// Update event is fully type-checked
+// Шинэчлэлтийн үйл явдлын төрөл бүрэн шалгагдана
 Bus.subscribe(Updated, (event) => event.properties.info.title)
 
-// Update event is fully type-checked
+// Шинэчлэлтийн үйл явдлын төрөл бүрэн шалгагдана
 client.subscribe("session.updated", (evt) => evt.properties.info.title)
 ```
 
-# Goal
+# Зорилго
 
-## Syncing with only one writer
+## Зөвхөн нэг бичигчтэй синхрончлол
 
-This system defines a basic event sourcing system for session replayability. The goal is to allow for one device to control and modify the session, and allow multiple other devices to "sync" session data. The sync works by getting a log of events to replay and replaying them locally.
+Энэ систем нь сессийг дахин тоглуулах боломжтой болгох, үйл явдалд суурилсан төлөв хадгалалтын (`event sourcing`) үндсэн системийг тодорхойлно. Нэг төхөөрөмж сессийг удирдаж өөрчлөх бөгөөд бусад төхөөрөмжүүд сессийн өгөгдлийг синхрончилно. Синхрончлол нь үйл явдлын бүртгэлийг авч, дотоодод дахин тоглуулах замаар ажиллана.
 
-Because only one device is allowed to write, we don't need any kind of sophisticated distributed system clocks or causal ordering. We implement total ordering with a simple sequence id (a number) and increment it by one every time we generate an event.
+Зөвхөн нэг төхөөрөмж бичих эрхтэй тул нарийн тархмал системийн цаг эсвэл шалтгаант дараалал шаардлагагүй. Бид энгийн дарааллын `id` (тоо)-гаар бүрэн дараалал тогтоож, үйл явдал үүсгэх бүрд нэгээр нэмэгдүүлнэ.
 
-## Bus event integration and backwards compatibility
+## Bus үйл явдлын холболт ба хуучин хувилбаруудтай нийцэл
 
-This initial implementation aims to be fully backwards compatible. We should be able to land this without any visible changes to the user.
+Эхний хэрэгжүүлэлт нь хуучин хувилбаруудтай бүрэн нийцтэй байх зорилготой. Хэрэглэгчид харагдах ямар ч өөрчлөлтгүйгээр үүнийг нэвтрүүлэх боломжтой байх ёстой.
 
-An existing `Bus` abstraction to send events already exists. We already send events like `session.created` through the system. We should not duplicate this.
+Үйл явдал түгээдэг `Bus` хийсвэрлэл аль хэдийн бий. Бид `session.created` зэрэг үйл явдлыг системээр дамжуулан илгээдэг. Үүнийг давхардуулж болохгүй.
 
-The difference in event sourcing is events are sent _before_ the mutation happens, and "projectors" handle the effects and perform the mutations. This difference is subtle, and a necessary change for syncing to work.
+Үйл явдалд суурилсан төлөв хадгалалтын ялгаа нь төлөв өөрчлөгдөхөөс _өмнө_ үйл явдал илгээгдэж, хэрэгжүүлэгчид (`projector`) нөлөөг боловсруулан өөрчлөлтийг гүйцэтгэдэгт оршино. Энэ нь синхрончлол ажиллахад зайлшгүй шаардлагатай.
 
-So the goal is:
+Тиймээс зорилго нь:
 
-- Introduce a new syncing abstraction to handle event sourcing and projectors
-- Seamlessly integrate these new events into the same existing `Bus` abstraction
-- Maintain full backwards compatibility to reduce risk
+- Үйл явдалд суурилсан төлөв хадгалалт болон хэрэгжүүлэгчийг хариуцах шинэ синхрончлолын хийсвэрлэл нэвтрүүлэх
+- Шинэ үйл явдлуудыг одоо байгаа `Bus` хийсвэрлэлд саадгүй холбох
+- Эрсдэлийг бууруулахын тулд хуучин хувилбаруудтай бүрэн нийцлийг хадгалах
 
-## My approach
+## Миний аргачлал
 
-This directory introduces a new abstraction: `SyncEvent`. This handles all of the event sourcing.
+Энэ хавтас шинэ хийсвэрлэл болох `SyncEvent`-ийг нэвтрүүлнэ. Энэ нь үйл явдалд суурилсан төлөв хадгалалтыг бүхэлд нь хариуцна.
 
-There are now "sync events" which are different than "bus events". Bus events are defined like this:
+Одоо `Bus` үйл явдлаас ялгаатай синхрон үйл явдлууд бий. `Bus` үйл явдлыг ингэж тодорхойлно:
 
 ```ts
 const Diff = BusEvent.define(
@@ -62,9 +62,9 @@ const Diff = BusEvent.define(
 )
 ```
 
-You can do `Bus.publish(Diff, { ... })` to push these events, and `Bus.subscribe(Diff, handler)` to listen to them.
+Эдгээр үйл явдлыг илгээхдээ `Bus.publish(Diff, { ... })`, сонсохдоо `Bus.subscribe(Diff, handler)` ашиглаж болно.
 
-Sync events are a lower-level abstraction which are similar, but also handle the requirements for recording and replaying. Defining them looks like this:
+Синхрон үйл явдал нь төстэй боловч бүртгэх болон дахин тоглуулах шаардлагыг мөн хариуцдаг доод түвшний хийсвэрлэл юм. Тодорхойлох хэлбэр нь:
 
 ```ts
 const Created = SyncEvent.define({
@@ -78,71 +78,71 @@ const Created = SyncEvent.define({
 })
 ```
 
-Not too different, except they track a version and an "aggregate" field (will explain that later).
+Их ялгаагүй, зөвхөн `version` болон `aggregate` талбарыг хянадаг (үүнийг доор тайлбарлана).
 
-You do this to run an event, which is kind of like `Bus.publish` except that it runs through the event sourcing system:
+Үйл явдлыг ажиллуулахдаа үүнийг хэрэглэнэ. Энэ нь `Bus.publish`-тэй төстэй боловч үйл явдалд суурилсан төлөв хадгалалтын системээр дамжина:
 
 ```
 SyncEvent.run(Created, { ... })
 ```
 
-The data passed as the second argument is properly type-checked based on the schema defined in `Created`.
+Хоёр дахь аргументаар дамжуулсан өгөгдлийн төрлийг `Created` доторх схемээр шалгана.
 
-Importantly, **sync events automatically re-publish as bus events**. This makes them backwards compatible, and allows the `Bus` to still be the single abstraction that the system uses to listen for individual events.
+Чухал нь, **синхрон үйл явдлууд `Bus` үйл явдал хэлбэрээр автоматаар дахин түгээгдэнэ**. Ингэснээр хуучин хувилбаруудтай нийцэж, систем тусдаа үйл явдлыг сонсохдоо `Bus`-ийг цорын ганц хийсвэрлэл болгон ашиглана.
 
-**We have upgraded many of the session events to be sync events** (all of the ones that mutate the db). Sync and bus events are largely compatible. Here are the differences:
+**Бид сессийн олон үйл явдлыг синхрон үйл явдал болгож шинэчилсэн** (өгөгдлийн санд өөрчлөлт хийдэг бүх үйл явдал). Синхрон болон `Bus` үйл явдал ихэнхдээ нийцтэй. Ялгаа нь:
 
-### Event shape
+### Үйл явдлын хэлбэр
 
-- The shape of the events are slightly different. A sync event has the `type`, `id`, `seq`, `aggregateID`, and `data` fields. A bus event has the `type` and `properties` fields. `data` and `properties` are largely the same thing. This conversion is automatically handled when the sync system re-published the event through the bus.
+- Үйл явдлын хэлбэр бага зэрэг ялгаатай. Синхрон үйл явдал `type`, `id`, `seq`, `aggregateID`, `data` талбартай. `Bus` үйл явдал `type`, `properties` талбартай. `data` болон `properties` нь үндсэндээ ижил утгатай. Синхрончлолын систем үйл явдлыг `Bus`-аар дахин түгээх үед хөрвүүлэлтийг автоматаар хийнэ.
 
-The reason for this is because sync events need to track more information. I chose not to copy the `properties` naming to more clearly disambiguate the event types.
+Синхрон үйл явдал илүү их мэдээлэл хянах шаардлагатай. Үйл явдлын төрлүүдийг тодорхой ялгахын тулд `properties` нэршлийг хуулж ашиглаагүй.
 
-### Event flow
+### Үйл явдлын урсгал
 
-There is no way to subscribe to individual sync events in `SyncEvent`. You can use `subscribeAll` to receive _all_ of the events, which is needed for clients that want to record them.
+`SyncEvent` дотор нэг синхрон үйл явдалд тусад нь бүртгүүлэн сонсох арга байхгүй. Бүх үйл явдлыг хүлээн авахад `subscribeAll` ашиглана. Энэ нь үйл явдал бүртгэх шаардлагатай клиентэд хэрэгтэй.
 
-To listen for individual events, use `Bus.subscribe`. You can pass in a sync event definition to it: `Bus.subscribe(Created, handler)`. This is fully supported.
+Тусдаа үйл явдал сонсохдоо `Bus.subscribe` ашигла. Түүнд синхрон үйл явдлын тодорхойлолт дамжуулж болно: `Bus.subscribe(Created, handler)`. Энэ нь бүрэн дэмжигдэнэ.
 
-You should never "publish" a sync event however: `Bus.publish(Created, ...)`. I would like to force this to be a type error in the future. You should never be touching the db directly, and should not be manually handling these events.
+Гэхдээ синхрон үйл явдлыг `Bus`-аар хэзээ ч шууд түгээж болохгүй: `Bus.publish(Created, ...)`. Ирээдүйд үүнийг төрлийн алдаа болгохыг зорьж байна. Мөн өгөгдлийн санд шууд хүрч, эдгээр үйл явдлыг гараар боловсруулж болохгүй.
 
-### Backwards compatibility
+### Хуучин хувилбаруудтай нийцэл
 
-The system install projectors in `server/projectors.js`. It calls `SyncEvent.init` to do this. It also installs a hook for dynamically converting an event at runtime (`convertEvent`).
+Систем хэрэгжүүлэгчдийг (`projector`) `server/projectors.js` дотор суулгана. Үүний тулд `SyncEvent.init` дуудна. Мөн ажиллах үед үйл явдлыг динамикаар хөрвүүлэх `convertEvent` hook суулгана.
 
-This allows you to "reshape" an event from the sync system before it's published to the bus. This should be avoided, but might be necessary for temporary backwards compat.
+Ингэснээр синхрончлолын системийн үйл явдлыг `Bus`-д түгээхээс өмнө хэлбэрийг нь өөрчилж болно. Үүнээс зайлсхийх ёстой ч түр зуур хуучин хувилбартай нийцүүлэхэд шаардлагатай байж болно.
 
-The only time we use this is the `session.updated` event. Previously this event contained the entire session object. The sync event only contains the fields updated. We convert the event to contain the full object for backwards compatibility (but ideally we'd remove this).
+Үүнийг ашигладаг цорын ганц тохиолдол нь `session.updated` үйл явдал юм. Өмнө нь энэ үйл явдал сессийн бүтэн объектыг агуулдаг байсан. Синхрон үйл явдал зөвхөн өөрчлөгдсөн талбаруудыг агуулна. Хуучин хувилбаруудтай нийцүүлэхийн тулд үүнийг бүтэн объекттой хэлбэрт хөрвүүлдэг боловч цаашид арилгах нь зүйтэй.
 
-It's very important that types are correct when working with events. Event definitions have a `schema` which carries the definition of the event shape. Examples:
+Үйл явдалтай ажиллах үед төрөл зөв байх нь маш чухал. Үйл явдлын тодорхойлолт нь хэлбэрээ заасан `schema`-тай. Жишээ нь:
 
 ```ts
-// The schema from `Updated` typechecks the object correctly
+// `Updated`-ийн схем нь объектын төрлийг зөв шалгана
 SyncEvent.run(Updated, { sessionID: id, info: { title: "foo" } })
 
-// `subscribeAll` passes a generic sync event
+// `subscribeAll` нь ерөнхий синхрон үйл явдал дамжуулна
 SyncEvent.subscribeAll((event) => {
-  // These will be type-checked correctly
+  // Эдгээрийн төрөл зөв шалгагдана
   event.id
   event.seq
-  // This will be unknown because we are listening for all events,
-  // and this API is only used to record them
+  // Бид бүх үйл явдлыг сонсож байгаа тул энэ нь unknown байна;
+  // энэ API-г зөвхөн үйл явдал бүртгэхэд ашигладаг
   event.data
 })
 
-// This works, but you shouldn't publish sync event like this (should fail in the future)
+// Энэ нь ажиллана, гэхдээ синхрон үйл явдлыг ингэж publish хийж болохгүй (цаашид алдаа гардаг болно)
 Bus.publish(Updated, { sessionID: id, info: { title: "foo" } })
 
-// Update event is fully type-checked
+// Шинэчлэлтийн үйл явдлын төрөл бүрэн шалгагдана
 Bus.subscribe(Updated, (event) => event.properties.info.title)
 
-// Update event is fully type-checked
+// Шинэчлэлтийн үйл явдлын төрөл бүрэн шалгагдана
 client.subscribe("session.updated", (evt) => evt.properties.info.title)
 ```
 
-The last two examples look similar to `SyncEvent.run`, but they were the cause of a lot of grief. Those are existing APIs that we can't break, but we are passing in the new sync event definitions to these APIs, which sometimes have a different event shape.
+Сүүлийн хоёр жишээ `SyncEvent.run`-тэй төстэй харагдавч олон асуудлын шалтгаан болсон. Эдгээр нь эвдэж болохгүй одоогийн API-ууд боловч шинэ синхрон үйл явдлын тодорхойлолтыг эдгээр API-д дамжуулахад үйл явдлын хэлбэр заримдаа өөр байдаг.
 
-I previously mentioned the runtime conversion of events, but we still need to the types to work! To do that, the `define` API supports an optional `busSchema` prop to give it the schema for backwards compatibility. For example this is the full definition of `Session.Update`:
+Өмнө нь үйл явдлын ажиллах үеийн хөрвүүлэлтийг дурдсан ч төрлийн шалгалт мөн ажиллах ёстой. Үүний тулд `define` API нь хуучин хувилбаруудтай нийцэх схем өгөх сонголтот `busSchema` шинжийг дэмждэг. Жишээлбэл, `Session.Update`-ийн бүрэн тодорхойлолт:
 
 ```ts
 const Update = SyncEvent.define({
@@ -160,20 +160,20 @@ const Update = SyncEvent.define({
 })
 ```
 
-_Important_: the conversion done in `convertEvent` is not automatically type-checked with `busSchema`. It's very important they match, but because we need this at type-checking time this needs to live here.
+_Чухал_: `convertEvent` дотор хийсэн хөрвүүлэлтийг `busSchema`-тай автоматаар төрлийн шалгалтад оруулахгүй. Хоорондоо таарах нь маш чухал бөгөөд төрлийн шалгалтын үед хэрэгтэй мэдээлэл тул энд байрлах ёстой.
 
-Internally, the way this works is `busSchema` is stored on a `properties` field which is what the bus system expects. Doing this made everything with `Bus` "just work". This is why you can pass a sync event to the bus APIs.
+Дотооддоо `busSchema` нь `Bus` системийн хүлээдэг `properties` талбарт хадгалагдана. Ингэснээр `Bus`-тэй холбоотой бүх зүйл нэмэлт тохируулгагүй ажиллана. Тиймээс `Bus` API-ууд руу синхрон үйл явдал дамжуулж болно.
 
-_Alternatives_
+_Хувилбарууд_
 
-These are some other paths I explored:
+Миний судалсан бусад хувилбарууд:
 
-- Providing a way to subscribe to individual sync events, and change all the instances of `Bus.subscribe` in our code to it. Then you are directly only working with sync events always.
-  - Two big problems. First, `Bus` is instance-scoped, and we'd need to make the sync event system instance-scoped too for backwards compat. If we didn't, those listeners would get calls for events they weren't expecting.
-  - Second, we can't change consumers of our SDK. So they still have to use the old events, and we might as well stick with them for consistency
-- Directly add sync event support to bus system
-  - I explored adding sync events to the bus, but due to backwards compat, it only made it more complicated (still need to support both shapes)
-- I explored a `convertSchema` function to convert the event schema at runtime so we didn't need `busSchema`
-  - Fatal flaw: we need type-checking done earlier. We can't do this at run-time. This worked for consumers of our SDK (because it gets generated TS types from the converted schema) but breaks for our internal usage of `Bus.subscribe` calls
+- Тусдаа синхрон үйл явдалд бүртгүүлэн сонсох арга гаргаж, код дахь бүх `Bus.subscribe` хэрэглээг түүн рүү өөрчлөх. Ингэвэл үргэлж зөвхөн синхрон үйл явдалтай шууд ажиллана.
+  - Хоёр том асуудалтай. Нэгдүгээрт, `Bus` нь нэг `instance`-ийн хүрээтэй тул хуучин хувилбаруудтай нийцүүлэхийн төлөө синхрон үйл явдлын системийг мөн ижил хүрээтэй болгох хэрэгтэй. Ингэхгүй бол сонсогчид хүлээгээгүй үйл явдлын дуудлага авна.
+  - Хоёрдугаарт, SDK хэрэглэгчдийг өөрчилж болохгүй. Тиймээс тэд хуучин үйл явдлуудыг ашигласаар байх бөгөөд нийцтэй байдлын төлөө бид мөн тэдгээрийг ашиглах нь зөв.
+- `Bus` системд синхрон үйл явдлын дэмжлэгийг шууд нэмэх.
+  - Үүнийг судалсан боловч хуучин хувилбаруудтай нийцүүлэхийн тулд хоёр хэлбэрийг хоёуланг нь дэмжих шаардлагатай тул улам төвөгтэй болсон.
+- `busSchema` хэрэггүй болгохын тулд үйл явдлын схемийг ажиллах үед хөрвүүлэх `convertSchema` функц ашиглах.
+  - Ноцтой дутагдал: төрлийн шалгалтыг үүнээс өмнө хийх шаардлагатай. SDK хэрэглэгчдийн хувьд ажилласан (хөрвүүлсэн схемээс үүсгэсэн TS төрөл авдаг) боловч `Bus.subscribe`-ийн дотоод хэрэглээг эвдэнэ.
 
-I explored many other permutations of the above solutions. What we have today I think is the best balance of backwards compatibility while opening a path forward for the new events.
+Дээрх шийдлүүдийн өөр олон хувилбарыг судалсан. Одоогийн шийдэл нь хуучин хувилбаруудтай нийцлийг хадгалж, шинэ үйл явдлуудад цаашдын зам нээх хамгийн зөв тэнцвэр гэж үзэж байна.

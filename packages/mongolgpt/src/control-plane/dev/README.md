@@ -1,19 +1,19 @@
-This is a plugin to simulate a remote environment locally. Add this to `.mongolgpt/mongolgpt.jsonc`:
+Энэ нэмэлт нь алсын орчныг дотоод орчинд дуурайлган ажиллуулна. Үүнийг `.mongolgpt/mongolgpt.jsonc` файлд нэм:
 
 ```json
   "plugin": ["../packages/mongolgpt/src/control-plane/dev/debug-workspace-plugin.ts"],
 ```
 
-In a separate terminal, run a separate MongolGPT server. This will act like a remote server and the local instance will proxy all requests to it:
+Өөр терминалд тусдаа MongolGPT сервер ажиллуул. Энэ нь алсын серверийн үүрэг гүйцэтгэж, дотоод MongolGPT бүх хүсэлтийг түүн рүү дамжуулна:
 
 ```
 ./packages/mongolgpt/script/run-workspace-server
 ```
 
-With the plugin install, you can now run MongolGPT and create a `debug` workspace type. This will create a "remote" workspace which talks to the second workspace server started above.
+Нэмэлтийг суулгасны дараа MongolGPT-ийг ажиллуулж, `debug` төрлийн ажлын талбар үүсгэж болно. Ингэснээр дээр эхлүүлсэн хоёр дахь сервертэй харилцах "алсын" ажлын талбар үүснэ.
 
-How this works:
+Ингэж ажиллана:
 
-- The workspace server needs to know the workspace id and port to run. It waits for this information to be written to a file and starts the server when the data is written.
-- The debug plugin writes this information in the `create` call to the workspace. So create a `debug` workspace will always kick off a new external server.
-- The server script watches for file changes, so whenver you create a new `debug` workspace it will restart with the new information. This means that there is only ever one working `debug` workspace at a time; when you create a new one all previous sessions will show that it can't connect because previous debug workspaces do not exist.
+- Ажлын талбарын сервер ажиллахын тулд ажлын талбарын `id` болон портыг мэдэх шаардлагатай. Сервер энэ мэдээллийг файлд бичигдэхийг хүлээгээд, өгөгдөл бэлэн болмогц эхэлнэ.
+- Дибаг нэмэлт нь ажлын талбарын `create` дуудлагын үеэр энэ мэдээллийг бичнэ. Тиймээс `debug` ажлын талбар үүсгэх бүрд шинэ гадаад сервер эхэлнэ.
+- Серверийн скрипт файлын өөрчлөлтийг ажигладаг. Шинэ `debug` ажлын талбар үүсгэх бүрд сервер шинэ мэдээллээр дахин эхэлнэ. Иймээс нэг мөчид зөвхөн нэг `debug` ажлын талбар ажиллана; шинээр үүсгэсний дараа өмнөх сессүүд хуучин дибаг ажлын талбарт холбогдож чадахгүй.

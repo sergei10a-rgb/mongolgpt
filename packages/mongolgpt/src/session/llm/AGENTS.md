@@ -1,90 +1,67 @@
-# Session LLM Runtime Boundaries
+# Сессийн LLM ажиллах орчны заагууд
 
-`../llm.ts` is the MongolGPT session LLM service. It owns MongolGPT concerns: auth, config, model/provider resolution, plugins, permissions, telemetry headers, and runtime selection. It is the only file in this area that should know about the full session request shape.
+`../llm.ts` нь MongolGPT-ийн сессийн LLM үйлчилгээ юм. Нэвтрэлт, тохиргоо, загвар ба нийлүүлэгчийг тодорхойлох, нэмэлт, зөвшөөрөл, телеметрийн толгой мэдээлэл болон ажиллах орчны сонголтыг хариуцна. Энэ хэсэгт сессийн хүсэлтийн бүрэн хэлбэрийг мэддэг цорын ганц файл юм.
 
-This folder contains adapters behind that service boundary:
+Энэ хавтас үйлчилгээний заагийн цаадах тохируулагчдыг агуулна:
 
-- `ai-sdk.ts` converts AI SDK `fullStream` parts into `@mongolgpt/llm` `LLMEvent`s. This is the default runtime path.
-- `native-request.ts` converts MongolGPT's normalized session input into a native `@mongolgpt/llm` `LLMRequest`. It does not execute requests.
-- `native-runtime.ts` is the opt-in native runtime adapter. It decides whether a selected model is supported, builds the native request, bridges MongolGPT tools into native executable tools, and delegates transport to `LLMClient` / `RequestExecutor`.
+- `ai-sdk.ts` нь AI SDK-ийн `fullStream` хэсгүүдийг `@mongolgpt/llm`-ийн `LLMEvent` үйл явдлууд болгон хөрвүүлнэ. Энэ нь анхдагч ажиллах зам юм.
+- `native-request.ts` нь MongolGPT-ийн хэвийн болгосон сессийн оролтыг `@mongolgpt/llm`-ийн шууд `LLMRequest` хүсэлт болгон хөрвүүлнэ. Хүсэлтийг өөрөө гүйцэтгэхгүй.
+- `native-runtime.ts` нь хэрэглэгчийн зөвшөөрлөөр идэвхждэг шууд ажиллах орчны тохируулагч юм. Сонгосон загвар дэмжигдсэн эсэхийг шийдэж, шууд хүсэлт үүсгэн, MongolGPT хэрэгслүүдийг гүйцэтгэж болох хэрэгсэл болгон холбож, дамжуулалтыг `LLMClient` / `RequestExecutor`-т шилжүүлнэ.
 
-## File Structure
+## Файлын бүтэц
 
 ```txt
 src/session/
-  llm.ts                    session-owned orchestration and runtime selection
+  llm.ts                    сессийн эзэмшдэг зохион байгуулалт ба ажиллах орчны сонголт
   llm/
-    AGENTS.md               boundary notes for the adapter layer
-    ai-sdk.ts               AI SDK fullStream -> @mongolgpt/llm LLMEvent adapter
-    native-request.ts       mongolgpt/AI SDK-shaped input -> @mongolgpt/llm LLMRequest
-    native-runtime.ts       native runtime gate, tool bridge, and LLMClient handoff
+    AGENTS.md               тохируулагч давхаргын заагийн тэмдэглэл
+    ai-sdk.ts               AI SDK fullStream -> @mongolgpt/llm LLMEvent тохируулагч
+    native-request.ts       MongolGPT/AI SDK хэлбэрийн оролт -> @mongolgpt/llm LLMRequest
+    native-runtime.ts       шууд орчны шалгуур, хэрэгслийн гүүр ба LLMClient-д шилжүүлэх хэсэг
 ```
 
-Integration points:
+Холболтын цэгүүд:
 
-- `../llm.ts` imports `LLMClient` from `@mongolgpt/llm/route`; native execution is the only path that calls it directly.
-- `../llm.ts` imports `LLMAISDK` from `./llm/ai-sdk`; the AI SDK path still calls `streamText(...)` locally, then adapts `result.fullStream` into shared `LLMEvent`s.
-- `../llm.ts` imports `LLMNativeRuntime` from `./llm/native-runtime`; this is the runtime-selection seam. Unsupported native requests return a reason and fall back to AI SDK.
-- `native-runtime.ts` imports `LLMNative` from `./native-request`; this keeps request lowering separate from transport and tool execution.
-- `native-request.ts` is the only adapter file that should construct `LLM.request(...)`, `LLM.model(...)`, `Message.*`, `SystemPart`, `ToolCallPart`, `ToolResultPart`, or `ToolDefinition` values from `@mongolgpt/llm`.
-- `ai-sdk.ts` and `native-runtime.ts` both emit `@mongolgpt/llm` `LLMEvent`s so downstream session processing does not care which runtime handled the request.
+- `../llm.ts` нь `@mongolgpt/llm/route`-оос `LLMClient` импортолно; шууд гүйцэтгэлийн зам л үүнийг шууд дуудна.
+- `../llm.ts` нь `./llm/ai-sdk`-оос `LLMAISDK` импортолно; AI SDK зам нь `streamText(...)`-ийг дотооддоо дуудаж, дараа нь `result.fullStream`-ийг нийтлэг `LLMEvent` үйл явдлууд болгон хөрвүүлнэ.
+- `../llm.ts` нь `./llm/native-runtime`-оос `LLMNativeRuntime` импортолно; энэ нь ажиллах орчны сонголтын зааг юм. Дэмжигдээгүй шууд хүсэлт шалтгаанаа буцааж, AI SDK нөөц зам руу шилжинэ.
+- `native-runtime.ts` нь `./native-request`-оос `LLMNative` импортолно; ингэснээр хүсэлтийн хэлбэр бууруулах ажиллагаа дамжуулалт болон хэрэгслийн гүйцэтгэлээс тусдаа байна.
+- `native-request.ts` нь `@mongolgpt/llm`-ээс `LLM.request(...)`, `LLM.model(...)`, `Message.*`, `SystemPart`, `ToolCallPart`, `ToolResultPart`, `ToolDefinition` утга үүсгэх ёстой цорын ганц тохируулагч файл юм.
+- `ai-sdk.ts` болон `native-runtime.ts` хоёулаа `@mongolgpt/llm`-ийн `LLMEvent` үйл явдлуудыг гаргана. Тиймээс доод түвшний сесс боловсруулалт хүсэлтийг аль ажиллах орчин хариуцсаныг мэдэх шаардлагагүй.
 
-Keep new integration code on one of these seams. Avoid importing session services into `native-request.ts`; pass normalized data through `RequestInput` instead.
+Шинэ холболтын кодыг эдгээр заагийн аль нэгэнд байрлуул. `native-request.ts` дотор сессийн үйлчилгээ импортлохоос зайлсхий; оронд нь хэвийн болгосон өгөгдлийг `RequestInput`-ээр дамжуул.
 
-## Runtime selection
+## Ажиллах орчны сонголт
 
-Both runtimes converge on the same `LLMEvent` stream consumed by the session processor. The gate is per-request: a single session can route some calls through native and fall back for others.
+Хоёр ажиллах орчин хоёулаа сесс боловсруулагчийн хэрэглэдэг ижил `LLMEvent` урсгалд нийлнэ. Сонголтын шалгуур хүсэлт бүр дээр ажиллана: нэг сессийн зарим дуудлага шууд замаар, зарим нь нөөц замаар явж болно.
 
 ```txt
-                             ╭───────────────────╮
-╭───────────────────────────▶│ session processor │
-│                            ╰─────────┬─────────╯
-│                                      │
-│                                      │
-│                                      │
-│                                      ▼
-│                         ╭─────────────────────────╮
-│                         │ LLM.Service (../llm.ts) │
-│                         ╰────────────┬────────────╯
-│                                      │
-│                                      │
-│                                      │
-│                                      ▼
-│                                ╭───────────╮
-│                              ╭─╯           ╰─╮
-│                              │  native gate  │
-│                              ╰─╮           ╭─╯
-│                                ╰─────┬─────╯
-│                                      │
-│                     ╭────── no ──────┴─────── yes ────────╮
-│                     │                                     │
-│                     ▼                                     ▼
-│       ╭───────────────────────────╮             ╭───────────────────╮
-│       │          AI SDK           │             │ native-runtime.ts │
-│       │ streamText / generateText │             ╰────────┬──────────╯
-│       ╰─────────────┬─────────────╯                      │
-│                     │                                    │
-│                 ╭───╯                                    │
-│                 │                                        │
-│                 ▼                                        ▼
-│     ╭───────────────────────╮             ╭────────────────────────────╮
-│     │       ai-sdk.ts       │             │     native-request.ts      │
-│     │ fullStream → LLMEvent │             │ session input → LLMRequest │
-│     ╰──────────┬────────────╯             ╰──────────────┬─────────────╯
-│                │                                         │
-│                │                                     ╭───╯
-│                │                                     │
-│                ▼                                     ▼
-│       ╭─────────────────╮             ╭─────────────────────────────╮
-╰───────┤ LLMEvent stream │◀────────────┤ LLMClient · RequestExecutor │
-        ╰─────────────────╯             ╰─────────────────────────────╯
+Сесс боловсруулагч
+        |
+        v
+LLM.Service (../llm.ts)
+        |
+        v
+Шууд замын шалгуур
+   | үгүй                     | тийм
+   v                          v
+AI SDK                   native-runtime.ts
+streamText/generateText          |
+   |                             v
+   v                     native-request.ts
+ai-sdk.ts                сессийн оролт -> LLMRequest
+fullStream -> LLMEvent           |
+   |                             v
+   +-----------> LLMEvent урсгал <--- LLMClient/RequestExecutor
+                         |
+                         +-----> Сесс боловсруулагч
 ```
 
-`native-runtime.ts` evaluates the gate and either bridges into `@mongolgpt/llm` or returns control so `llm.ts` can take the AI SDK path. Tool execution stays MongolGPT-owned in both branches; only request lowering and transport differ.
+`native-runtime.ts` сонголтын шалгуурыг үнэлээд `@mongolgpt/llm` рүү холбох эсвэл `llm.ts`-д удирдлагыг буцаан AI SDK замыг сонгуулна. Хоёр салаанд хэрэгслийн гүйцэтгэл MongolGPT-ийн эзэмшилд хэвээр; зөвхөн хүсэлтийн хэлбэр бууруулах ажиллагаа болон дамжуулалт ялгаатай.
 
-Safety boundary:
+Аюулгүй ажиллагааны зааг:
 
-- AI SDK remains the default.
-- `MONGOLGPT_EXPERIMENTAL_NATIVE_LLM=true` or the umbrella `MONGOLGPT_EXPERIMENTAL=true` opts in. Native is not a global replacement.
-- Native execution currently supports OpenAI, MongolGPT-managed OpenAI-compatible, and Anthropic API-key paths backed by `@ai-sdk/openai`, `@ai-sdk/openai-compatible`, or `@ai-sdk/anthropic` catalog entries.
-- Unsupported providers, OpenAI OAuth, and missing API-key cases fall back to AI SDK.
+- AI SDK анхдагч зам хэвээр байна.
+- `MONGOLGPT_EXPERIMENTAL_NATIVE_LLM=true` эсвэл хамрах хүрээний `MONGOLGPT_EXPERIMENTAL=true` тохируулга шууд замыг зөвшөөрнө. Шууд зам нь бүх системийг орлох нийтлэг горим биш.
+- Шууд гүйцэтгэл одоогоор `@ai-sdk/openai`, `@ai-sdk/openai-compatible` эсвэл `@ai-sdk/anthropic` каталогийн бүртгэлээр дэмжигдсэн OpenAI, MongolGPT-ийн удирддаг OpenAI-тай нийцтэй болон Anthropic API түлхүүрийн замуудыг дэмжинэ.
+- Дэмжигдээгүй нийлүүлэгч, OpenAI OAuth болон API түлхүүргүй тохиолдол AI SDK нөөц зам руу шилжинэ.

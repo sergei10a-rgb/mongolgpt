@@ -1,31 +1,31 @@
-# OpenAI Responses WebSocket
+# OpenAI Responses WebSocket-ийн тохиргоо
 
-Enabled by default on `local`, `dev`, and `beta`. On `latest` and `prod`, set `MONGOLGPT_EXPERIMENTAL_WEBSOCKETS=true`.
+`local`, `dev`, `beta` орчинд анхдагчаар идэвхтэй. `latest` болон `prod` орчинд `MONGOLGPT_EXPERIMENTAL_WEBSOCKETS=true` тохируул.
 
-## Flow
+## Урсгал
 
-1. A streamed `POST /responses` request arrives.
-2. If it has no `session-id` or `x-session-affinity` header, use HTTP.
-3. Title requests use HTTP.
-4. If that session's socket is busy or already in fallback mode, use HTTP.
-5. Otherwise, reuse its open socket or open a new one.
-6. Send `response.create` and return WebSocket events as SSE.
+1. Урсгалтай `POST /responses` хүсэлт ирнэ.
+2. `session-id` эсвэл `x-session-affinity` толгой мэдээлэл байхгүй бол HTTP ашиглана.
+3. Гарчгийн хүсэлтэд HTTP ашиглана.
+4. Тухайн сессийн сокет завгүй эсвэл аль хэдийн нөөц горимд байгаа бол HTTP ашиглана.
+5. Үгүй бол нээлттэй сокетыг дахин ашиглах эсвэл шинээр нээнэ.
+6. `response.create` илгээж, WebSocket үйл явдлуудыг SSE хэлбэрээр буцаана.
 
-## Lifetime
+## Амьдралын мөчлөг
 
-- Connect timeout: 15 seconds.
-- Idle timeout: 5 minutes.
-- After a completed response, keep the socket for reuse.
-- Reuse a socket for up to 55 minutes, then replace it on the next request.
+- Холболтын хүлээлтийн хугацаа: 15 секунд.
+- Идэвхгүй хүлээлтийн хугацаа: 5 минут.
+- Хариу дууссаны дараа сокетыг дахин ашиглахаар хадгална.
+- Сокетыг 55 минут хүртэл дахин ашиглаад, дараагийн хүсэлтээр солино.
 
-## Retries
+## Дахин оролдлого
 
-- Retry WebSocket stream/setup failures up to 5 times, then use HTTP for that session until the pool entry is idle-pruned.
-- `websocket_connection_limit_reached` consumes the same retry budget and HTTP fallback.
-- If a WebSocket fails after its first event, fail it as retryable rather than replaying partial output in transport.
-- Abort or cancel closes the socket.
+- WebSocket-ийн урсгал эсвэл тохиргооны алдааг 5 хүртэл удаа дахин оролдоно. Дараа нь холболтын сангийн бичлэг идэвхгүй болж цэвэрлэгдэх хүртэл тухайн сесст HTTP ашиглана.
+- `websocket_connection_limit_reached` алдаа мөн ижил дахин оролдох хязгаар болон HTTP нөөц замыг хэрэглэнэ.
+- WebSocket эхний үйл явдлаа илгээсний дараа алдаа гарвал хэсэгчилсэн гаралтыг дамжуулалтын түвшинд дахин тоглуулахгүй, дахин оролдож болох алдаа болгон дуусгана.
+- `Abort` эсвэл `cancel` хийхэд сокет хаагдана.
 
-## Next Steps
+## Дараагийн алхмууд
 
-- `previous_response_id` continuation.
-- Optional second WebSocket for concurrent requests in one session. Currently these use HTTP.
+- `previous_response_id`-аар үргэлжлүүлэх боломж.
+- Нэг сесс доторх зэрэгцээ хүсэлтэд зориулсан хоёр дахь WebSocket. Одоогоор ийм хүсэлтүүд HTTP ашиглана.

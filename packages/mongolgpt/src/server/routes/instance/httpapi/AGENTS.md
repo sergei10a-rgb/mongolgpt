@@ -1,6 +1,6 @@
-# HttpApi Route Patterns
+# HttpApi замын загвар
 
-Use `HttpApiBuilder.group(...)` for normal HTTP endpoints, including streaming HTTP responses such as server-sent events. Handlers should yield stable services once while building the handler layer, then close over those services in endpoint implementations.
+Серверээс илгээх үйл явдал (SSE) зэрэг урсгалт HTTP хариутай энгийн API төгсгөлийн цэгүүдийг `HttpApiBuilder.group(...)`-ээр үүсгэ. Боловсруулагчийн давхаргыг үүсгэхдээ тогтвортой үйлчилгээнүүдийг нэг удаа `yield` хийж аваад, төгсгөлийн цэгийн хэрэгжүүлэлтэд closure хэлбэрээр хадгал.
 
 ```ts
 export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", (handlers) =>
@@ -12,9 +12,9 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
 )
 ```
 
-For SSE endpoints, stay in `HttpApiBuilder.group(...)` and return `HttpServerResponse.stream(...)` from the handler. Annotate the endpoint success schema with `HttpApiSchema.asText({ contentType: "text/event-stream" })` so OpenAPI documents the stream content type.
+SSE төгсгөлийн цэгийг мөн `HttpApiBuilder.group(...)` дотор үүсгэж, боловсруулагчаас `HttpServerResponse.stream(...)` буцаа. Амжилттай хариуны схемийг `HttpApiSchema.asText({ contentType: "text/event-stream" })`-ээр тэмдэглэснээр OpenAPI баримт бичигт урсгалын агуулгын төрөл зөв тусна.
 
-Use `HttpApiBuilder.group(...)` with `handleRaw(...)` for declared endpoints that need the raw request or response, including WebSocket upgrade routes. This keeps endpoint middleware, routing context, and OpenAPI metadata on one typed route tree.
+WebSocket upgrade зам зэрэг боловсруулаагүй хүсэлт эсвэл хариу шаарддаг зарлагдсан төгсгөлийн цэгт `handleRaw(...)`-тай `HttpApiBuilder.group(...)` ашигла. Ингэснээр төгсгөлийн цэгийн middleware, чиглүүлэлтийн контекст болон OpenAPI мета өгөгдөл нэг төрөлжсөн замын модонд хадгалагдана.
 
 ```ts
 export const ptyConnectHandlers = HttpApiBuilder.group(PtyConnectApi, "pty-connect", (handlers) =>
@@ -26,14 +26,14 @@ export const ptyConnectHandlers = HttpApiBuilder.group(PtyConnectApi, "pty-conne
 )
 ```
 
-Use raw `HttpRouter.use(...)` only for routes outside the declared API surface, such as a catch-all UI fallback.
+Боловсруулаагүй `HttpRouter.use(...)`-ийг зөвхөн UI-ийн бүх хүсэлтийг барих нөөц зам зэрэг зарлагдсан API-ийн гаднах замд ашигла.
 
-Avoid `Effect.provide(SomeLayer)` inside request handlers or raw route callbacks. Stable layers should be provided once at the application/layer boundary, not rebuilt or scoped per request.
+Хүсэлт боловсруулагч эсвэл боловсруулаагүй замын callback дотор `Effect.provide(SomeLayer)` ашиглахаас зайлсхий. Тогтвортой давхаргыг хүсэлт бүрд дахин үүсгэхгүй; програмын давхаргын зааг дээр нэг удаа `provide` хийж хамрах хүрээг нь тогтоо.
 
-Avoid `HttpRouter.provideRequest(...)` unless the dependency is intentionally request-level. Prefer `HttpRouter.use(...)` for stable app services.
+Хамаарал нь зориудаар нэг хүсэлтийн хүрээнийх биш бол `HttpRouter.provideRequest(...)` ашиглахаас зайлсхий. Тогтвортой програмын үйлчилгээнд `HttpRouter.use(...)`-ийг илүүд үз.
 
-Use `Effect.provideService(...)` in middleware only for request-derived context, such as `WorkspaceRouteContext`, `InstanceRef`, or `WorkspaceRef`. Do not use it to smuggle stable services through request effects when they can be yielded at layer construction.
+Middleware дотор `Effect.provideService(...)`-ийг зөвхөн `WorkspaceRouteContext`, `InstanceRef`, `WorkspaceRef` зэрэг хүсэлтээс үүссэн контекстэд ашигла. Давхарга үүсэх үед `yield` хийж авч болох тогтвортой үйлчилгээг хүсэлтийн effect-ээр далд дамжуулахад үүнийг бүү ашигла.
 
-Public JSON errors should be explicit `Schema.ErrorClass` contracts declared on each endpoint. Use built-in `HttpApiError.*` classes only when their empty/tagged body is the intended wire shape; for SDK-visible errors with messages, define an API error schema such as `ApiNotFoundError` and fail with that exact declared error. Keep domain and storage services free of HttpApi types, and translate expected domain errors at the handler boundary.
+Нийтийн JSON алдаа нь төгсгөлийн цэг бүр дээр зарласан тодорхой `Schema.ErrorClass` гэрээтэй байх ёстой. Дотоод `HttpApiError.*` классыг зөвхөн хоосон эсвэл тэмдэглэгдсэн бие нь дамжуулалтын хэлбэр болдог үед ашигла. Мессежтэй, SDK-д харагдах алдаанд `ApiNotFoundError` шиг API алдааны схем тодорхойлоод яг тэр зарласан алдаагаар дуусга. Домэйн болон хадгалалтын үйлчилгээг HttpApi төрлөөс ангид байлгаж, хүлээгдэж буй домэйны алдааг боловсруулагчийн зааг дээр хөрвүүл.
 
-When adding middleware, declare endpoint-contract middleware on the owning `HttpApiGroup` and provide its implementation layer at the assembly boundary in `server.ts`. Keep router middleware for truly raw fallback routes or global transport policy.
+Middleware нэмэхдээ төгсгөлийн цэгийн гэрээний middleware-ийг эзэмшигч `HttpApiGroup` дээр зарлаж, хэрэгжүүлэлтийн давхаргыг `server.ts`-ийн угсралтын зааг дээр `provide` хий. Router middleware-ийг зөвхөн боловсруулаагүй нөөц зам эсвэл бүх дамжуулалтад үйлчлэх дүрэмд үлдээ.
