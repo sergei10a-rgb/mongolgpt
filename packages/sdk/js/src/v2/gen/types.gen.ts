@@ -2302,6 +2302,7 @@ export type ExperimentalAccountLoginStatus =
     }
   | {
       _tag: "success"
+      id: string
       email: string
     }
   | {
