@@ -15,6 +15,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./cloudflare-access": "./src/cloudflare-access.ts",
+    "./d1-restore": "./src/d1-restore.ts",
     "./deployment": "./src/deployment.ts",
     "./deployment-smoke-contract": "./src/deployment-smoke-contract.ts",
     "./release-integrity": "./src/release-integrity.ts"

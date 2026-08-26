@@ -1,0 +1,78 @@
+name: D1 restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Сэргээх орчин"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - production
+      target_kind:
+        description: "Сэргээх цэгийн төрөл"
+        required: true
+        type: choice
+        default: timestamp
+        options:
+          - timestamp
+          - bookmark
+      target:
+        description: "ISO 8601 хугацаа эсвэл D1 bookmark"
+        required: true
+        type: string
+      confirmation:
+        description: "RESTORE D1 <stage> <normalized-target> гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: d1-restore-${{ inputs.stage }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: ${{ inputs.stage }}
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      D1_BACKUP_API_TOKEN: ${{ secrets.D1_BACKUP_API_TOKEN }}
+      MONGOLGPT_STAGE: ${{ inputs.stage }}
+      MONGOLGPT_D1_RESTORE_CONFIRMATION: ${{ inputs.confirmation }}
+      MONGOLGPT_D1_RESTORE_TARGET_KIND: ${{ inputs.target_kind }}
+      MONGOLGPT_D1_RESTORE_TARGET: ${{ inputs.target }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify restore safety contract
+        run: bun --cwd packages/script test test/d1-restore.test.ts
+
+      - name: Restore D1 to the approved point
+        run: |
+          target_flag="--${MONGOLGPT_D1_RESTORE_TARGET_KIND}"
+          bun sst shell --stage="$MONGOLGPT_STAGE" -- \
+            bun script/d1-restore.ts \
+              "$target_flag" "$MONGOLGPT_D1_RESTORE_TARGET" \
+              --execute \
+              --receipt "$RUNNER_TEMP/d1-restore-receipt.json"
+
+      - name: Upload restore receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: d1-restore-${{ inputs.stage }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 90
+          path: ${{ runner.temp }}/d1-restore-receipt.json
