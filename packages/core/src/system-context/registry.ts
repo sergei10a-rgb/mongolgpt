@@ -29,7 +29,7 @@ export const layer = Layer.effect(
             return [true, [...current, entry]]
           }).pipe(
             Effect.flatMap((added) =>
-              added ? Effect.void : Effect.die(`Duplicate system context entry key: ${entry.key}`),
+              added ? Effect.void : Effect.die(`Системийн контекстийн entry key давхардлаа: ${entry.key}`),
             ),
             Effect.as(entry),
           ),

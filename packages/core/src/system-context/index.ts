@@ -84,7 +84,7 @@ export class InitializationBlocked extends Schema.TaggedErrorClass<Initializatio
   { keys: Schema.Array(Key) },
 ) {
   override get message() {
-    return `System context initialization blocked by unavailable sources: ${this.keys.join(", ")}`
+    return `Боломжгүй эх сурвалжуудын улмаас системийн контекстийг эхлүүлэхийг хориглолоо: ${this.keys.join(", ")}`
   }
 }
 
@@ -92,7 +92,7 @@ export class DuplicateKeyError extends Schema.TaggedErrorClass<DuplicateKeyError
   key: Key,
 }) {
   override get message() {
-    return `Duplicate system context key: ${this.key}`
+    return `Системийн контекстийн түлхүүр давхардаж байна: ${this.key}`
   }
 }
 
@@ -144,11 +144,11 @@ export function make<A>(source: Source<A>): SystemContext {
           if (isUnavailable(value)) return value
           const snapshot = (): SourceSnapshot => ({
             value: encode(value),
-            ...(source.removed ? { removed: requireText(source.key, "removal", source.removed(value)) } : {}),
+            ...(source.removed ? { removed: requireText(source.key, "хасалтын", source.removed(value)) } : {}),
           })
           return {
             baseline: (): Rendered => ({
-              text: requireText(source.key, "baseline", source.baseline(value)),
+              text: requireText(source.key, "суурь", source.baseline(value)),
               snapshot: snapshot(),
             }),
             compare: (previous): Compared =>
@@ -160,7 +160,7 @@ export function make<A>(source: Source<A>): SystemContext {
                     : {
                         _tag: "Updated",
                         render: () => ({
-                          text: requireText(source.key, "update", source.update(decoded, value)),
+                          text: requireText(source.key, "шинэчлэлтийн", source.update(decoded, value)),
                           snapshot: snapshot(),
                         }),
                       },
@@ -260,7 +260,7 @@ function reconcileObservation(
     }
     const compared = comparisons.get(entry.key)
     if (!compared || compared._tag === "Incompatible")
-      throw new Error(`Missing comparison for system context source ${entry.key}`)
+      throw new Error(`Системийн контекстийн ${entry.key} эх сурвалжийн харьцуулалт алга`)
     if (compared._tag === "Unchanged") {
       snapshot[entry.key] = stored
       continue
@@ -272,7 +272,7 @@ function reconcileObservation(
   for (const key of Object.keys(previous).sort()) {
     if (keys.has(Key.make(key))) continue
     const removed = previous[key].removed
-    if (removed === undefined) throw new Error(`Missing removal rendering for system context source ${key}`)
+    if (removed === undefined) throw new Error(`Системийн контекстийн ${key} эх сурвалжийн хасалтын дүрслэл алга`)
     updates.push(removed)
   }
   if (updates.length === 0) return { _tag: "Unchanged" }
@@ -307,7 +307,7 @@ function isUnavailable(value: unknown): value is Unavailable {
 }
 
 function requireText(key: Key, kind: string, text: string) {
-  if (text.length === 0) throw new Error(`System context source ${key} rendered an empty ${kind}`)
+  if (text.length === 0) throw new Error(`Системийн контекстийн ${key} эх сурвалж хоосон ${kind} дүрслэл үүсгэлээ`)
   return text
 }
 

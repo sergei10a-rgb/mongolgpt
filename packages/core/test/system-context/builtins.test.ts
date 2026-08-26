@@ -61,15 +61,15 @@ describe("SystemContextBuiltIns", () => {
 
       expect(initialized.baseline).toBe(
         [
-          "Here is some useful information about the environment you are running in:",
+          "Таны ажиллаж буй орчны хэрэгтэй мэдээлэл:",
           "<env>",
-          `  Working directory: ${directory}`,
-          `  Workspace root folder: ${projectDirectory}`,
-          "  Is directory a git repo: yes",
-          `  Platform: ${process.platform}`,
+          `  Ажиллаж буй хавтас: ${directory}`,
+          `  Ажлын орчны үндсэн хавтас: ${projectDirectory}`,
+          "  Хавтас нь git репозитор мөн үү: yes",
+          `  Платформ: ${process.platform}`,
           "</env>",
           "",
-          `Today's date: ${localDate(timestamp)}`,
+          `Өнөөдрийн огноо: ${localDate(timestamp)}`,
         ].join("\n"),
       )
     }),
@@ -86,7 +86,7 @@ describe("SystemContextBuiltIns", () => {
 
       expect(refreshed).toMatchObject({
         _tag: "Updated",
-        text: `Today's date is now: ${localDate(timestamp + 24 * 60 * 60 * 1000)}`,
+        text: `Өнөөдрийн огноо одоо: ${localDate(timestamp + 24 * 60 * 60 * 1000)}`,
       })
     }),
   )
@@ -109,15 +109,15 @@ describe("SystemContextBuiltIns", () => {
 
       expect((yield* SystemContext.initialize(yield* context.load())).baseline).toBe(
         [
-          "Here is some useful information about the environment you are running in:",
+          "Таны ажиллаж буй орчны хэрэгтэй мэдээлэл:",
           "<env>",
-          `  Working directory: ${directory}`,
-          `  Workspace root folder: ${projectDirectory}`,
-          "  Is directory a git repo: yes",
-          `  Platform: ${process.platform}`,
+          `  Ажиллаж буй хавтас: ${directory}`,
+          `  Ажлын орчны үндсэн хавтас: ${projectDirectory}`,
+          "  Хавтас нь git репозитор мөн үү: yes",
+          `  Платформ: ${process.platform}`,
           "</env>",
           "",
-          `Today's date: ${localDate(timestamp)}`,
+          `Өнөөдрийн огноо: ${localDate(timestamp)}`,
           "",
           `Instructions from: ${instructionFile}\nBe precise.`,
         ].join("\n"),

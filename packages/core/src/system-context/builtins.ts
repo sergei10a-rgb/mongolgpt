@@ -15,10 +15,10 @@ const builtIns = Layer.effectDiscard(
     const registry = yield* SystemContextRegistry.Service
     const environment = [
       "<env>",
-      `  Working directory: ${location.directory}`,
-      `  Workspace root folder: ${location.project.directory}`,
-      `  Is directory a git repo: ${location.vcs?.type === "git" ? "yes" : "no"}`,
-      `  Platform: ${process.platform}`,
+      `  Ажиллаж буй хавтас: ${location.directory}`,
+      `  Ажлын орчны үндсэн хавтас: ${location.project.directory}`,
+      `  Хавтас нь git репозитор мөн үү: ${location.vcs?.type === "git" ? "yes" : "no"}`,
+      `  Платформ: ${process.platform}`,
       "</env>",
     ].join("\n")
     const context = SystemContext.combine([
@@ -27,15 +27,15 @@ const builtIns = Layer.effectDiscard(
         codec: Schema.toCodecJson(Schema.String),
         load: Effect.succeed(environment),
         baseline: (environment) =>
-          ["Here is some useful information about the environment you are running in:", environment].join("\n"),
-        update: (_previous, environment) => ["The environment you are running in is now:", environment].join("\n"),
+          ["Таны ажиллаж буй орчны хэрэгтэй мэдээлэл:", environment].join("\n"),
+        update: (_previous, environment) => ["Таны ажиллаж буй орчин одоо:", environment].join("\n"),
       }),
       SystemContext.make({
         key: SystemContext.Key.make("core/date"),
         codec: Schema.toCodecJson(Schema.String),
         load: DateTime.nowAsDate.pipe(Effect.map((date) => date.toDateString())),
-        baseline: (date) => `Today's date: ${date}`,
-        update: (_previous, date) => `Today's date is now: ${date}`,
+        baseline: (date) => `Өнөөдрийн огноо: ${date}`,
+        update: (_previous, date) => `Өнөөдрийн огноо одоо: ${date}`,
       }),
     ])
 
