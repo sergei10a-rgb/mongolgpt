@@ -65,6 +65,8 @@ describe("SessionV2.create", () => {
       const second = yield* session.create({ location })
 
       expect(second.id).not.toBe(first.id)
+      expect(first.title).toMatch(/^Шинэ сешн - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+      expect(second.title).toMatch(/^Шинэ сешн - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
       expect(yield* session.list()).toHaveLength(2)
     }),
   )

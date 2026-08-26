@@ -48,8 +48,8 @@ import { SessionMessage } from "@mongolgpt/schema/session-message"
 
 const runtime = makeRuntime(Database.Service, Database.defaultLayer)
 
-const parentTitlePrefix = "New session - "
-const childTitlePrefix = "Child session - "
+const parentTitlePrefix = "Шинэ сешн - "
+const childTitlePrefix = "Дэд сешн - "
 
 export function isDefaultTitle(title: string) {
   return new RegExp(
@@ -627,7 +627,7 @@ export const layer: Layer.Layer<
         yield* events.publish(SessionV1.Event.Deleted, { sessionID, info: session })
         yield* events.remove(sessionID)
       } catch (error) {
-        yield* Effect.logError("failed to remove session", { sessionID, error })
+        yield* Effect.logError("сешнийг устгаж чадсангүй", { sessionID, error })
       }
     })
 

@@ -64,8 +64,22 @@ describe("session.created event", () => {
       expect(receivedInfo.directory).toBe(info.directory)
       expect(receivedInfo.path).toBe(info.path)
       expect(receivedInfo.title).toBe(info.title)
+      expect(info.title).toMatch(/^Шинэ сешн - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
 
       yield* session.remove(info.id)
+    }),
+  )
+
+  it.instance("uses a Mongolian generated title for child sessions", () =>
+    Effect.gen(function* () {
+      const session = yield* SessionNs.Service
+      const parent = yield* session.create({})
+      const child = yield* session.create({ parentID: parent.id })
+
+      expect(child.title).toMatch(/^Дэд сешн - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+
+      yield* session.remove(child.id)
+      yield* session.remove(parent.id)
     }),
   )
 
