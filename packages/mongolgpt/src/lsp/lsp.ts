@@ -149,7 +149,7 @@ export const layer = Layer.effect(
         const servers: Record<string, LSPServer.Info> = {}
 
         if (!cfg.lsp) {
-          yield* Effect.logInfo("all LSPs are disabled")
+          yield* Effect.logInfo("Бүх LSP сервер идэвхгүй байна")
         } else {
           for (const server of Object.values(LSPServer)) {
             servers[server.id] = server
@@ -161,7 +161,7 @@ export const layer = Layer.effect(
             for (const [name, item] of Object.entries(cfg.lsp)) {
               const existing = servers[name]
               if (item.disabled) {
-                yield* Effect.logInfo(`LSP server ${name} is disabled`)
+                yield* Effect.logInfo(`LSP сервер ${name} идэвхгүй байна`)
                 delete servers[name]
                 continue
               }
@@ -181,7 +181,7 @@ export const layer = Layer.effect(
             }
           }
 
-          yield* Effect.logInfo("enabled LSP servers", {
+          yield* Effect.logInfo("Идэвхтэй LSP серверүүд", {
             serverIds: Object.values(servers)
               .map((server) => server.id)
               .join(", "),
@@ -342,7 +342,7 @@ export const layer = Layer.effect(
     })
 
     const touchFile = Effect.fn("LSP.touchFile")(function* (input: string, diagnostics?: "document" | "full") {
-      yield* Effect.logInfo("touching file", { file: input })
+      yield* Effect.logInfo("Файлын мэдээллийг шинэчилж байна", { file: input })
       const clients = yield* getClients(input)
       yield* Effect.promise(() =>
         Promise.all(

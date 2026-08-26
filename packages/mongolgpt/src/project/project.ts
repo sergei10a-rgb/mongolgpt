@@ -205,13 +205,13 @@ export const layer = Layer.effect(
         })
         .pipe(
           Effect.catchCause((cause) =>
-            Effect.logWarning("project directory persistence failed", { projectID: input.projectID, cause }),
+            Effect.logWarning("Төслийн хавтасны төлөвийг хадгалж чадсангүй", { projectID: input.projectID, cause }),
           ),
         )
     })
 
     const fromDirectory = Effect.fn("Project.fromDirectory")(function* (directory: string) {
-      yield* Effect.logInfo("fromDirectory", { directory })
+      yield* Effect.logInfo("Хавтсаас төслийг тодорхойлж байна", { directory })
 
       const data = yield* projectV2.resolve(AbsolutePath.make(directory))
       const worktree = data.id === ProjectV2.ID.make("global") && !data.vcs ? "/" : data.directory

@@ -31,7 +31,7 @@ export const layer = Layer.effect(
 
     const run = Effect.gen(function* () {
       const ctx = yield* InstanceState.context
-      yield* Effect.logInfo("bootstrapping", { directory: ctx.directory })
+      yield* Effect.logInfo("Төслийн ажиллах орчныг бэлтгэж байна", { directory: ctx.directory })
       // everything depends on config so eager load it for nice traces
       yield* config.get()
       // Plugin can mutate config so it has to be initialized before anything else.
@@ -40,7 +40,7 @@ export const layer = Layer.effect(
       // its per-instance state scope. We just await materialization here.
       yield* Effect.forEach(
         [lsp, shareNext, format, vcs, snapshot, project],
-        (s) => s.init().pipe(Effect.catchCause((cause) => Effect.logWarning("init failed", { cause }))),
+        (s) => s.init().pipe(Effect.catchCause((cause) => Effect.logWarning("Эхлүүлж чадсангүй", { cause }))),
         { concurrency: "unbounded", discard: true },
       ).pipe(Effect.withSpan("InstanceBootstrap.init"))
     }).pipe(Effect.withSpan("InstanceBootstrap"))

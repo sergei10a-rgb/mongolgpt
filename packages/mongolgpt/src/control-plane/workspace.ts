@@ -275,7 +275,7 @@ export const layer = Layer.effect(
 
         const response = yield* http.execute(input.remote({ workspace, target })).pipe(
           Effect.catch((error) =>
-            Effect.logWarning("workspace target request failed", {
+            Effect.logWarning("Ажлын талбарын алсын хүсэлт амжилтгүй боллоо", {
               workspaceID: workspace.id,
               error: errorData(error),
             }).pipe(Effect.as(undefined)),
@@ -284,7 +284,7 @@ export const layer = Layer.effect(
         if (!response) return input.fallback
         if (response.status < 200 || response.status >= 300) {
           const body = yield* response.text.pipe(Effect.catch(() => Effect.succeed("")))
-          yield* Effect.logWarning("workspace target request failed", {
+          yield* Effect.logWarning("Ажлын талбарын алсын хүсэлт амжилтгүй боллоо", {
             workspaceID: workspace.id,
             status: response.status,
             body,
@@ -296,7 +296,7 @@ export const layer = Layer.effect(
         return yield* body.pipe(
           Effect.map((result) => result as A),
           Effect.catch((error) =>
-            Effect.logWarning("workspace target response decode failed", {
+            Effect.logWarning("Ажлын талбарын алсын хариуг задлан уншиж чадсангүй", {
               workspaceID: workspace.id,
               error: errorData(error),
             }).pipe(Effect.as(input.fallback)),
@@ -378,7 +378,7 @@ export const layer = Layer.effect(
           Effect.catch((err) =>
             Effect.gen(function* () {
               setStatus(space.id, "error")
-              yield* Effect.logWarning("failed to connect to global sync", {
+              yield* Effect.logWarning("Төв синхрончлолд холбогдож чадсангүй", {
                 workspace: space.name,
                 error: errorData(err),
               })
@@ -402,7 +402,7 @@ export const layer = Layer.effect(
                 const failed = yield* events.replay(payload.syncEvent, { publish: true, ownerID: space.id }).pipe(
                   Effect.as(false),
                   Effect.catchCause((error) =>
-                    Effect.logWarning("failed to replay global event", error).pipe(
+                    Effect.logWarning("Төвийн үйл явдлыг дахин тоглуулж чадсангүй", error).pipe(
                       Effect.annotateLogs({ workspaceID: space.id }),
                       Effect.as(true),
                     ),
@@ -420,7 +420,7 @@ export const layer = Layer.effect(
                   payload: event.payload,
                 })
               } catch (error) {
-                yield* Effect.logWarning("failed to emit global event", {
+                yield* Effect.logWarning("Төвийн үйл явдлыг түгээж чадсангүй", {
                   workspaceID: space.id,
                   error: errorData(error),
                 })
@@ -445,7 +445,7 @@ export const layer = Layer.effect(
         Effect.catch((error) =>
           Effect.gen(function* () {
             setStatus(space.id, "error")
-            yield* Effect.logWarning("workspace target failed", {
+            yield* Effect.logWarning("Ажлын талбарын ажиллах чиглэлийг тодорхойлж чадсангүй", {
               workspaceID: space.id,
               error: errorData(error),
             })
@@ -474,7 +474,7 @@ export const layer = Layer.effect(
           Effect.catch((error) =>
             Effect.gen(function* () {
               setStatus(space.id, "error")
-              yield* Effect.logWarning("workspace listener failed", {
+              yield* Effect.logWarning("Ажлын талбарын синхрончлолын сонсогч ажилласангүй", {
                 workspaceID: space.id,
                 error: errorData(error),
               })
@@ -573,7 +573,7 @@ export const layer = Layer.effect(
             if (target.type === "remote") {
               yield* syncHistory(previous, target.url, target.headers).pipe(
                 Effect.catch((error) =>
-                  Effect.logWarning("session warp final source sync failed", {
+                  Effect.logWarning("Сессийг шилжүүлэхийн өмнө эх үүсвэрийг синхрончилж чадсангүй", {
                     workspaceID: previous.id,
                     sessionID: input.sessionID,
                     error: errorData(error),
@@ -731,7 +731,9 @@ export const layer = Layer.effect(
         ([type, adapter]) =>
           WorkspaceAdapterRuntime.list(adapter).pipe(
             Effect.catchCause((error) =>
-              Effect.logWarning("workspace adapter list failed", { type, error }).pipe(Effect.as([])),
+              Effect.logWarning("Ажлын талбарын холбогчоос жагсаалт авч чадсангүй", { type, error }).pipe(
+                Effect.as([]),
+              ),
             ),
           ),
         { concurrency: "unbounded" },
@@ -807,7 +809,7 @@ export const layer = Layer.effect(
         Effect.gen(function* () {
           yield* WorkspaceAdapterRuntime.remove(info)
         }),
-        () => Effect.logError("adapter not available when removing workspace", { type: row.type }),
+        () => Effect.logError("Ажлын талбарыг устгах холбогч олдсонгүй", { type: row.type }),
       )
 
       yield* db.delete(WorkspaceTable).where(eq(WorkspaceTable.id, id)).run().pipe(Effect.orDie)

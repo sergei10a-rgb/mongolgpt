@@ -1213,13 +1213,13 @@ export function describeCompatOperation(operation: Operation) {
     case "mcp":
       return `MCP "${operation.name}" (${operation.config.type === "remote" ? operation.config.url : operation.config.command.join(" ")})`
     case "skill-path":
-      return `skill path "${operation.value}"`
+      return `ур чадварын зам "${operation.value}"`
     case "skill-url":
-      return `skill URL "${operation.value}"`
+      return `ур чадварын URL "${operation.value}"`
     case "plugin":
       if (operation.adapter) {
-        return `plugin adapter "${operation.adapter.original}" -> "${pluginSpecString(operation.spec)}"`
+        return `залгаасны тааруулагч "${operation.adapter.original}" -> "${pluginSpecString(operation.spec)}"`
       }
-      return `plugin "${Array.isArray(operation.spec) ? operation.spec[0] : operation.spec}"`
+      return `залгаас "${Array.isArray(operation.spec) ? operation.spec[0] : operation.spec}"`
   }
 }

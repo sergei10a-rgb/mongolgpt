@@ -44,7 +44,7 @@ export class SizeError extends Schema.TaggedErrorClass<SizeError>()("ImageSizeEr
   max_height: Schema.Number,
 }) {
   override get message() {
-    return `Image ${this.width}x${this.height} with base64 size ${this.bytes} exceeds configured limits and could not be resized below ${this.max_width}x${this.max_height}/${this.max} bytes`
+    return `${this.width}x${this.height} хэмжээтэй, base64 өгөгдөл нь ${this.bytes} байт зураг тохируулсан хязгаараас хэтэрсэн бөгөөд ${this.max_width}x${this.max_height}/${this.max} байтаас бага болгож чадсангүй`
   }
 }
 
@@ -67,7 +67,7 @@ export const layer = Layer.effect(
           path.isAbsolute(photonWasm) ? photonWasm : fileURLToPath(new URL(photonWasm, import.meta.url))
       }).pipe(
         Effect.andThen(() => Effect.tryPromise(() => import("@silvia-odwyer/photon-node"))),
-        Effect.tapError((error) => Effect.logWarning("failed to load photon", { error })),
+        Effect.tapError((error) => Effect.logWarning("Photon-ийг ачаалж чадсангүй", { error })),
         Effect.mapError(() => new ResizerUnavailableError()),
       ),
     )
@@ -91,7 +91,7 @@ export const layer = Layer.effect(
       const decoded = yield* Effect.try({
         try: () => photon.PhotonImage.new_from_byteslice(Buffer.from(base64, "base64")),
         catch: () => new DecodeError(),
-      }).pipe(Effect.tapError((error) => Effect.logWarning("failed to decode image", { error })))
+      }).pipe(Effect.tapError((error) => Effect.logWarning("Зургийн өгөгдлийг тайлж чадсангүй", { error })))
 
       try {
         const originalWidth = decoded.get_width()
@@ -136,7 +136,7 @@ export const layer = Layer.effect(
           resized.free()
 
           if (candidate) {
-            yield* Effect.logInfo("using resized image", {
+            yield* Effect.logInfo("Хэмжээг өөрчилсөн зургийг ашиглаж байна", {
               from_mime: input.mime,
               to_mime: candidate.mime,
               from: `${originalWidth}x${originalHeight}`,

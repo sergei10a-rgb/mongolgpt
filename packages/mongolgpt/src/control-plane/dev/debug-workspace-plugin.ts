@@ -21,7 +21,7 @@ async function waitForHealth(port: number) {
     await sleep(250)
   }
 
-  throw new Error(`Timed out waiting for debug server health check at ${url}`)
+  throw new Error(`${url} дээрх debug серверийн төлөвийн шалгалтыг хүлээх хугацаа дууслаа`)
 }
 
 let PORT: number | undefined
@@ -45,8 +45,8 @@ async function writeDebugData(port: number, id: string, env: Record<string, stri
 
 export const DebugWorkspacePlugin: Plugin = async ({ experimental_workspace }) => {
   experimental_workspace.register("debug", {
-    name: "Debug",
-    description: "Create a debugging server",
+    name: "Дибаг",
+    description: "Дибаг хийх сервер үүсгэх",
     configure(config) {
       return config
     },

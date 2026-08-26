@@ -34,7 +34,7 @@ function generateID(prefix: keyof typeof prefixes, direction: "descending" | "as
   }
 
   if (!given.startsWith(prefixes[prefix])) {
-    throw new Error(`ID ${given} does not start with ${prefixes[prefix]}`)
+    throw new Error(`ID ${given} нь ${prefixes[prefix]} угтвараар эхлэхгүй байна`)
   }
   return given
 }

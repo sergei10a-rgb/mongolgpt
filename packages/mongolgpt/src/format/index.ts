@@ -72,13 +72,13 @@ export const layer = Layer.effect(
 
         function formatFile(filepath: string) {
           return Effect.gen(function* () {
-            yield* Effect.logInfo("formatting", { file: filepath })
+            yield* Effect.logInfo("Форматлаж байна", { file: filepath })
             const formatters = yield* Effect.promise(() => getFormatter(path.extname(filepath)))
 
             if (!formatters.length) return false
 
             for (const { item, cmd } of formatters) {
-              yield* Effect.logInfo("running", { command: cmd })
+              yield* Effect.logInfo("Ажиллуулж байна", { command: cmd })
               const replaced = cmd.map((x) => x.replace("$FILE", filepath))
               const dir = yield* InstanceState.directory
               const result = yield* appProcess
@@ -94,8 +94,8 @@ export const layer = Layer.effect(
                 )
                 .pipe(
                   Effect.catch((error) =>
-                    Effect.logError("failed to format file", {
-                      error: "spawn failed",
+                    Effect.logError("Файлыг форматлаж чадсангүй", {
+                      error: "Процесс эхлүүлэхэд алдаа гарлаа",
                       command: cmd,
                       ...item.environment,
                       file: filepath,
@@ -104,7 +104,7 @@ export const layer = Layer.effect(
                   ),
                 )
               if (result && result.exitCode !== 0) {
-                yield* Effect.logError("failed", {
+                yield* Effect.logError("Форматлахад алдаа гарлаа", {
                   command: cmd,
                   ...item.environment,
                 })
@@ -118,8 +118,8 @@ export const layer = Layer.effect(
         const cfg = yield* config.get()
 
         if (!cfg.formatter) {
-          yield* Effect.logInfo("all formatters are disabled")
-          yield* Effect.logInfo("init")
+          yield* Effect.logInfo("Бүх форматлагч идэвхгүй байна")
+          yield* Effect.logInfo("Эхлүүлж байна")
           return {
             formatters,
             isEnabled,
@@ -157,7 +157,7 @@ export const layer = Layer.effect(
           }
         }
 
-        yield* Effect.logInfo("init")
+        yield* Effect.logInfo("Эхлүүлж байна")
 
         return {
           formatters,

@@ -239,7 +239,10 @@ export const layer: Layer.Layer<
       const populated = yield* git(["reset", "--hard"], { cwd: info.directory })
       if (populated.code !== 0) {
         const message = populated.stderr || populated.text || "Төслийн хуулбарын файлуудыг бэлтгэж чадсангүй"
-        yield* Effect.logError("worktree checkout failed", { directory: info.directory, message })
+        yield* Effect.logError("Git ажлын модны файлуудыг бэлтгэж чадсангүй", {
+          directory: info.directory,
+          message,
+        })
         GlobalBus.emit("event", {
           directory: info.directory,
           project: ctx.project.id,
@@ -254,7 +257,7 @@ export const layer: Layer.Layer<
         Effect.catch((error) =>
           Effect.gen(function* () {
             const message = errorMessage(error)
-            yield* Effect.logError("worktree bootstrap failed", { directory: info.directory, message })
+            yield* Effect.logError("Git ажлын модыг эхлүүлж чадсангүй", { directory: info.directory, message })
             GlobalBus.emit("event", {
               directory: info.directory,
               project: ctx.project.id,
@@ -283,7 +286,7 @@ export const layer: Layer.Layer<
     const createFromInfo = Effect.fn("Worktree.createFromInfo")(function* (info: Info, startCommand?: string) {
       yield* setup(info)
       yield* boot(info, startCommand).pipe(
-        Effect.catchCause((cause) => Effect.logError("worktree bootstrap failed", { cause })),
+        Effect.catchCause((cause) => Effect.logError("Git ажлын модыг эхлүүлж чадсангүй", { cause })),
         Effect.forkIn(scope),
       )
     })
@@ -481,7 +484,11 @@ export const layer: Layer.Layer<
       if (!text) return true
       const result = yield* runStartCommand(directory, text)
       if (result.code === 0) return true
-      yield* Effect.logError("worktree start command failed", { kind, directory, message: result.stderr })
+      yield* Effect.logError("Git ажлын модыг эхлүүлэх команд амжилтгүй боллоо", {
+        kind,
+        directory,
+        message: result.stderr,
+      })
       return false
     })
 
@@ -614,7 +621,7 @@ export const layer: Layer.Layer<
       }
 
       yield* runStartScripts(worktreePath, { projectID: ctx.project.id }).pipe(
-        Effect.catchCause((cause) => Effect.logError("worktree start task failed", { cause })),
+        Effect.catchCause((cause) => Effect.logError("Git ажлын модыг эхлүүлэх ажил амжилтгүй боллоо", { cause })),
         Effect.forkIn(scope),
       )
 
