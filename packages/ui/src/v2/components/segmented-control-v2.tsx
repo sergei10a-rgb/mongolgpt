@@ -26,7 +26,7 @@ const SegmentedControlContext = createContext<SegmentedControlContextValue>()
 
 function useSegmentedControlContext() {
   const ctx = useContext(SegmentedControlContext)
-  if (!ctx) throw new Error("SegmentedControlItemV2 must be used inside SegmentedControlV2")
+  if (!ctx) throw new Error("SegmentedControlItemV2-ыг SegmentedControlV2 дотор ашиглах ёстой")
   return ctx
 }
 

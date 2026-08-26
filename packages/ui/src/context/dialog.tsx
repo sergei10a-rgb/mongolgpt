@@ -172,10 +172,10 @@ export function useDialog() {
   const owner = getOwner()
 
   if (!owner) {
-    throw new Error("useDialog must be used within a DialogProvider")
+    throw new Error("useDialog-ийг DialogProvider дотор ашиглах ёстой")
   }
   if (!ctx) {
-    throw new Error("useDialog must be used within a DialogProvider")
+    throw new Error("useDialog-ийг DialogProvider дотор ашиглах ёстой")
   }
 
   return {

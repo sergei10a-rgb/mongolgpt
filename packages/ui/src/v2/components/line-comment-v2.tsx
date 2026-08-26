@@ -120,7 +120,7 @@ export function LineCommentEditorV2(props: LineCommentEditorV2Props) {
             }}
             data-slot="line-comment-v2-textarea"
             rows={local.rows ?? 3}
-            placeholder={local.placeholder ?? "Add context for this change"}
+            placeholder={local.placeholder ?? "Энэ өөрчлөлтийн тайлбарыг нэмнэ үү"}
             value={local.value}
             onInput={(e) => local.onInput(e.currentTarget.value)}
             onKeyDown={(e) => {

@@ -13,9 +13,9 @@ function greyHex(primitives: Record<string, V2ColorValue>, step: number) {
 
 function resolveGreyRef(value: V2ColorValue, primitives: Record<string, V2ColorValue>) {
   const step = value.match(/^var\(--v2-grey-(\d+)\)$/)?.[1]
-  if (!step) throw new Error(`Expected grey primitive ref, got ${value}`)
+  if (!step) throw new Error(`Саарал өнгийн суурь утгын холбоос хүлээсэн ч ${value} ирлээ`)
   const hex = greyHex(primitives, Number(step))
-  if (!hex) throw new Error(`Missing grey primitive v2-grey-${step}`)
+  if (!hex) throw new Error(`v2-grey-${step} саарал өнгийн суурь утга олдсонгүй`)
   return hex
 }
 

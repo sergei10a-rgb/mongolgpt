@@ -92,7 +92,7 @@ html[data-theme="${themeId}"] {
 export async function loadThemeFromUrl(url: string): Promise<DesktopTheme> {
   const response = await fetch(url)
   if (!response.ok) {
-    throw new Error(`Failed to load theme from ${url}: ${response.statusText}`)
+    throw new Error(`${url}-аас өнгөний сэдэв ачаалж чадсангүй: ${response.statusText}`)
   }
   return response.json()
 }

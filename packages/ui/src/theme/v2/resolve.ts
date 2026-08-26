@@ -102,7 +102,7 @@ function readPalette(variant: ThemeVariant): PaletteInput {
       diffDelete: seeds.diffDelete,
     }
   }
-  throw new Error("Theme variant requires `palette` or `seeds`")
+  throw new Error("Өнгөний сэдвийн хувилбарт `palette` эсвэл `seeds` шаардлагатай")
 }
 
 /** Build v2 primitive ramps (100 = lightest). Alpha ramps are static in `v2/styles/colors.css`. */

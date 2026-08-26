@@ -45,7 +45,7 @@ export function TuiStartupProvider(props: { value: TuiStartup; children: JSX.Ele
 
 function required<T>(context: ReturnType<typeof createContext<T>>, name: string) {
   const value = useContext(context)
-  if (!value) throw new Error(`${name} is missing`)
+  if (!value) throw new Error(`${name} олдсонгүй`)
   return value
 }
 

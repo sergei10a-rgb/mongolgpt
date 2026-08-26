@@ -35,7 +35,7 @@ export function createSlots() {
         { theme: api.theme },
         {
           onPluginError(event) {
-            console.error("[tui.slot] plugin error", {
+            console.error("[tui.slot] плагиний алдаа", {
               plugin: event.pluginId,
               slot: event.slot,
               phase: event.phase,

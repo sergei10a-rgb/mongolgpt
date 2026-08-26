@@ -171,7 +171,7 @@ const context = createContext<{
 
 function use() {
   const ctx = useContext(context)
-  if (!ctx) throw new Error("useContext must be used within a Session component")
+  if (!ctx) throw new Error("useContext-ийг Session компонент дотор ашиглах ёстой")
   return ctx
 }
 

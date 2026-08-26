@@ -473,7 +473,7 @@ interface ThemeColors {
 function getColors(variant: ThemeVariant): ThemeColors {
   const input = variant as { palette?: unknown; seeds?: unknown }
   if (input.palette && input.seeds) {
-    throw new Error("Theme variant cannot define both `palette` and `seeds`")
+    throw new Error("Өнгөний сэдвийн хувилбарт `palette` болон `seeds`-ийг зэрэг тодорхойлж болохгүй")
   }
 
   if (variant.palette) {
@@ -510,7 +510,7 @@ function getColors(variant: ThemeVariant): ThemeColors {
     }
   }
 
-  throw new Error("Theme variant requires `palette` or `seeds`")
+  throw new Error("Өнгөний сэдвийн хувилбарт `palette` эсвэл `seeds` шаардлагатай")
 }
 
 function generateNeutralAlphaScale(neutralScale: HexColor[], isDark: boolean): HexColor[] {

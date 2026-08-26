@@ -20,8 +20,8 @@ function pick(mod: Record<string, unknown>, name?: string) {
   return () => {
     return (
       <div data-component="storybook-missing">
-        <div>Missing component export.</div>
-        <div style="opacity:0.7;font-size:12px">Exports: {Object.keys(mod).join(", ") || "(none)"}</div>
+        <div>Компонентийн экспорт олдсонгүй.</div>
+        <div style="opacity:0.7;font-size:12px">Экспортууд: {Object.keys(mod).join(", ") || "(байхгүй)"}</div>
       </div>
     )
   }

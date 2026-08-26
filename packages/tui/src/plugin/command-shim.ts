@@ -13,7 +13,7 @@ type LegacyKeybinds = TuiPluginApi["tuiConfig"]["keybinds"]
 
 function warnCommandShim(api: string, replacement: string) {
   // Warn v1 plugins about deprecated `api.command`; remove this shim path in v2.
-  console.warn("[tui.plugin] deprecated TUI plugin API", { api, replacement })
+  console.warn("[tui.plugin] TUI плагиний API хуучирсан", { api, replacement })
 }
 
 function createCommandShimDialog(dialog: CommandShimDialog): LegacyDialog {

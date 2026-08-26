@@ -24,7 +24,7 @@ export const { use: useKV, provider: KVProvider } = createSimpleContext({
         setStore(x)
       })
       .catch((error) => {
-        console.error("Failed to read KV state", { error })
+        console.error("KV төлөв уншиж чадсангүй", { error })
       })
       .finally(() => {
         setReady(true)
@@ -57,7 +57,7 @@ export const { use: useKV, provider: KVProvider } = createSimpleContext({
         write = write
           .then(() => Flock.withLock(lock, () => writeJsonAtomic(file, snapshot)))
           .catch((error) => {
-            console.error("Failed to write KV state", { error })
+            console.error("KV төлөв бичиж чадсангүй", { error })
           })
       },
     }

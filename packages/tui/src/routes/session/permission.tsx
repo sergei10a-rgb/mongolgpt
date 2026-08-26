@@ -226,7 +226,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               const pattern = typeof data.pattern === "string" ? data.pattern : ""
               return {
                 icon: "✱",
-                title: `Glob "${pattern}"`,
+                title: `Файл хайх "${pattern}"`,
                 body: (
                   <Show when={pattern}>
                     <box paddingLeft={1}>
@@ -241,7 +241,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               const pattern = typeof data.pattern === "string" ? data.pattern : ""
               return {
                 icon: "✱",
-                title: `Grep "${pattern}"`,
+                title: `Текст хайх "${pattern}"`,
                 body: (
                   <Show when={pattern}>
                     <box paddingLeft={1}>
@@ -303,7 +303,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               const url = typeof data.url === "string" ? data.url : ""
               return {
                 icon: "%",
-                title: `WebFetch ${url}`,
+                title: `Вэбээс авах ${url}`,
                 body: (
                   <Show when={url}>
                     <box paddingLeft={1}>

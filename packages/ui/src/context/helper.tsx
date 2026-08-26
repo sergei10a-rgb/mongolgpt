@@ -31,7 +31,7 @@ export function createSimpleContext<T, Props extends Record<string, any>>(
     },
     use() {
       const value = useContext(ctx)
-      if (!value) throw new Error(`${input.name} context must be used within a context provider`)
+      if (!value) throw new Error(`${input.name} контекстыг контекст нийлүүлэгчийн дотор ашиглах ёстой`)
       return value
     },
   }

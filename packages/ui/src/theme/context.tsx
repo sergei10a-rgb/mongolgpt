@@ -346,11 +346,11 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     const setTheme = (id: string) => {
       const next = normalizeThemeId(id)
       if (!next) {
-        console.warn(`Theme "${id}" not found`)
+        console.warn(`Өнгөний сэдэв "${id}" олдсонгүй`)
         return
       }
       if (next !== DEFAULT_THEME_ID && !knownThemes().has(next) && !store.themes[next]) {
-        console.warn(`Theme "${id}" not found`)
+        console.warn(`Өнгөний сэдэв "${id}" олдсонгүй`)
         return
       }
       setStore("themeId", next)

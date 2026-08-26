@@ -9,12 +9,12 @@ function getAudio() {
   try {
     const next = Audio.create({ autoStart: false })
     next.on("error", (error: Error, context: AudioErrorContext) => {
-      console.debug("tui audio error", { error, context })
+      console.debug("TUI аудионы алдаа", { error, context })
     })
     audio = next
     return next
   } catch (error) {
-    console.debug("failed to create tui audio", { error })
+    console.debug("TUI аудио үүсгэж чадсангүй", { error })
     audio = null
     return null
   }
@@ -28,7 +28,7 @@ export function loadSoundFile(file: string) {
   const task = readFile(file)
     .then((bytes) => current.loadSound(bytes))
     .catch((error) => {
-      console.debug("failed to load tui sound", { file, error })
+      console.debug("TUI дууг ачаалж чадсангүй", { file, error })
       return null
     })
   sounds.set(file, task)

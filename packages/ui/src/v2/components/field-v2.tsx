@@ -32,7 +32,7 @@ const FieldContext = createContext<FieldContextValue>()
 function useField() {
   const ctx = useContext(FieldContext)
   if (!ctx) {
-    throw new Error("Field subcomponents must be used within <Field>")
+    throw new Error("Field-ийн дэд компонентуудыг <Field> дотор ашиглах ёстой")
   }
   return ctx
 }
