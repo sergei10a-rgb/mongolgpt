@@ -84,6 +84,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
     expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"')
     expect(source).toContain("MONGOLGPT_ENABLE_D1_BACKUPS: ${{ inputs.stage == 'production' && 'true' || 'false' }}")
+    expect(source).toContain('MONGOLGPT_ENABLE_MONITORING: "true"')
     expect(source).not.toContain("inputs.hosted_services")
     expect(buildStep?.env).toEqual({
       MONGOLGPT_CHANNEL: "${{ inputs.stage == 'production' && 'prod' || 'dev' }}",
@@ -139,11 +140,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
   test("does not create business integration secrets when the feature is disabled", () => {
     expect(businessIntegrationSecretNames(false)).toEqual([])
-    expect(businessIntegrationSecretNames(true)).toEqual([
-      "DISCORD_INCIDENT_WEBHOOK_URL",
-      "AWS_SES_ACCESS_KEY_ID",
-      "AWS_SES_SECRET_ACCESS_KEY",
-    ])
+    expect(businessIntegrationSecretNames(true)).toEqual(["AWS_SES_ACCESS_KEY_ID", "AWS_SES_SECRET_ACCESS_KEY"])
   })
 
   test("does not bind legacy Stripe credentials to the hosted console", async () => {
@@ -338,6 +335,37 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(scheduleSource).toContain('errorRetention: "30 days"')
   })
 
+  test("uses Cloudflare Cron and KV for service monitoring without Honeycomb or Discord", async () => {
+    const [consoleSource, adminSource, configSource, secretSource, monitorSource] = await Promise.all(
+      [
+        "../../../infra/console.ts",
+        "../../../infra/admin.ts",
+        "../../../sst.config.ts",
+        "../../../infra/secret.ts",
+        "../../console/function/src/service-monitor.ts",
+      ].map((path) => Bun.file(new URL(path, import.meta.url)).text()),
+    )
+
+    expect(consoleSource).toContain('new sst.cloudflare.Kv("ServiceMonitorState")')
+    expect(consoleSource).toContain('new sst.cloudflare.Cron("ServiceMonitor"')
+    expect(consoleSource).toContain('schedules: ["*/5 * * * *"]')
+    expect(consoleSource).toContain('handler: "packages/console/function/src/service-monitor.ts"')
+    expect(consoleSource).toContain("link: [serviceMonitorState]")
+    expect(adminSource).toContain("serviceMonitorState")
+    expect(adminSource).toContain("MONGOLGPT_MONITORING_ENABLED")
+    expect(configSource).toContain("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_MONITORING=true")
+    expect(configSource).not.toContain("honeycomb:")
+    expect(configSource).not.toContain('import("./infra/monitoring.js")')
+    expect(secretSource).not.toMatch(/Honeycomb|HONEYCOMB/)
+    expect(monitorSource).toContain("SERVICE_MONITOR_STATE_KEY")
+    expect(monitorSource).toContain("SERVICE_MONITOR_TTL_SECONDS")
+    expect(monitorSource).not.toMatch(/Honeycomb|Discord|api[_-]?key|authorization/i)
+    expect(await Bun.file(new URL("../../../infra/monitoring.ts", import.meta.url)).exists()).toBe(false)
+    expect(await Bun.file(new URL("../../console/app/src/routes/honeycomb/webhook.ts", import.meta.url)).exists()).toBe(
+      false,
+    )
+  })
+
   test("creates a fail-closed Cloudflare Access admin application through IaC", async () => {
     const [adminSource, stageSource, configSource, accessSource, mfaScriptSource] = await Promise.all(
       [
@@ -375,6 +403,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
       "quotaService",
       "paymentService",
       "usageQueueReadiness",
+      "serviceMonitorState",
       "accessConfig",
     ]) {
       expect(adminSource).toContain(`    ${resource},`)

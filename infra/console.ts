@@ -100,6 +100,7 @@ export const usageQueue = new sst.cloudflare.Queue("UsageQueue", {
   },
 })
 export const usageQueueReadiness = new sst.cloudflare.Kv("UsageQueueReadiness")
+export const serviceMonitorState = new sst.cloudflare.Kv("ServiceMonitorState")
 
 usageQueue.subscribe(
   {
@@ -373,13 +374,6 @@ const businessIntegrationSecrets = businessIntegrationSecretNames(enableBusiness
   (name) => new sst.Secret(name),
 )
 
-const logProcessor = enableMonitoring
-  ? new sst.cloudflare.Worker("LogProcessor", {
-      handler: "packages/console/function/src/log-processor.ts",
-      link: [SECRET.HoneycombApiKey],
-    })
-  : undefined
-
 export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
   domain,
   path: "packages/console/app",
@@ -396,7 +390,6 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     SECRET.ByokCredentialsKeyV1,
     AUTH_API_URL,
     SECRET.SupportApiKey,
-    SECRET.HoneycombWebhookSecret,
     MONGOLGPT_PLAN_PRICE,
     ZEN_LITE_PRICE,
     new sst.Secret("MONGOLGPT_PLAN_LIMITS"),
@@ -418,18 +411,24 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     MONGOLGPT_CONSOLE_URL: publicOrigin,
     MONGOLGPT_FREE_WORKSPACE_IDS: process.env.MONGOLGPT_FREE_WORKSPACE_IDS ?? "",
   },
-  transform: {
-    server: logProcessor
-      ? {
-          transform: {
-            worker: {
-              tailConsumers: [{ service: logProcessor.nodes.worker.scriptName }],
-            },
-          },
-        }
-      : {},
-  },
 })
+
+export const serviceMonitor = enableMonitoring
+  ? new sst.cloudflare.Cron("ServiceMonitor", {
+      schedules: ["*/5 * * * *"],
+      worker: {
+        handler: "packages/console/function/src/service-monitor.ts",
+        link: [serviceMonitorState],
+        environment: {
+          MONGOLGPT_STAGE: $app.stage,
+          MONGOLGPT_STAGE_DOMAIN: domain,
+        },
+        compatibility: {
+          date: "2026-07-15",
+        },
+      },
+    })
+  : undefined
 
 ////////////////
 // HELPERS

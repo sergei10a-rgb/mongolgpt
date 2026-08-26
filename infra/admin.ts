@@ -1,5 +1,13 @@
-import { adminOrigin, domain, enableD1Backups, runtimeOrigin } from "./stage"
-import { auth, d1Backups, database, paymentService, quotaService, usageQueueReadiness } from "./console"
+import { adminOrigin, domain, enableD1Backups, enableMonitoring, runtimeOrigin } from "./stage"
+import {
+  auth,
+  d1Backups,
+  database,
+  paymentService,
+  quotaService,
+  serviceMonitorState,
+  usageQueueReadiness,
+} from "./console"
 import { SECRET } from "./secret"
 
 class LocalCommand extends $util.CustomResource {
@@ -95,6 +103,7 @@ export const admin = new sst.cloudflare.x.SolidStart("Admin", {
     quotaService,
     paymentService,
     usageQueueReadiness,
+    serviceMonitorState,
     accessConfig,
     bootstrapEmails,
     SECRET.AdminPaymentCancellationToken,
@@ -104,6 +113,7 @@ export const admin = new sst.cloudflare.x.SolidStart("Admin", {
     MONGOLGPT_RUNTIME_URL: runtimeOrigin,
     MONGOLGPT_STAGE: $app.stage,
     MONGOLGPT_D1_BACKUPS_ENABLED: enableD1Backups ? "true" : "false",
+    MONGOLGPT_MONITORING_ENABLED: enableMonitoring ? "true" : "false",
   },
 })
 

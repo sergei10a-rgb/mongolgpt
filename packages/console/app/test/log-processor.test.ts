@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
-import { ipPrefix, sanitizeMetric } from "../../function/src/log-processor"
+import { ipPrefix, sanitizeMetric } from "../../function/src/telemetry-sanitizer"
 
-describe("log processor telemetry privacy", () => {
+describe("telemetry privacy", () => {
   test("keeps allowlisted metadata and removes secrets or content", () => {
     const metric = sanitizeMetric({
       workspace: "wrk_test",

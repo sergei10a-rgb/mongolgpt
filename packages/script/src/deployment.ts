@@ -59,6 +59,7 @@ export type DeploymentPreflightResult = {
   hostedServices: boolean
   adminEnabled: boolean
   backupsEnabled: boolean
+  monitoringEnabled: boolean
   paymentEnvironment: "disabled" | "sandbox" | "production"
   warnings: string[]
 }
@@ -90,6 +91,7 @@ export function preflightDeployment(input: {
   const hostedServices = enabled(env.MONGOLGPT_ENABLE_HOSTED_SERVICES)
   const adminEnabled = enabled(env.MONGOLGPT_ENABLE_ADMIN)
   const backupsEnabled = enabled(env.MONGOLGPT_ENABLE_D1_BACKUPS)
+  const monitoringEnabled = enabled(env.MONGOLGPT_ENABLE_MONITORING)
   const paymentEnvironment = validatePaymentEnvironment(env.MONGOLGPT_PAYMENT_ENVIRONMENT, issues)
   const requireDeploymentSecrets = input.requireDeploymentSecrets !== false
   const optionalServices = [
@@ -127,8 +129,14 @@ export function preflightDeployment(input: {
   if (hostedServices && stage === "production" && !backupsEnabled) {
     issues.push("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_D1_BACKUPS=true заавал байна.")
   }
+  if (hostedServices && stage === "production" && !monitoringEnabled) {
+    issues.push("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_MONITORING=true заавал байна.")
+  }
   if (hostedServices && !backupsEnabled) {
     warnings.push("Энэ орчинд өдөр тутмын D1 нөөцлөлтийн автомат ажиллагаа идэвхгүй байна.")
+  }
+  if (hostedServices && !monitoringEnabled) {
+    warnings.push("Энэ орчинд Cloudflare-ийн үйлчилгээний автомат хяналт идэвхгүй байна.")
   }
 
   if (adminEnabled && requireDeploymentSecrets) {
@@ -196,6 +204,7 @@ export function preflightDeployment(input: {
     hostedServices,
     adminEnabled,
     backupsEnabled,
+    monitoringEnabled,
     paymentEnvironment,
     warnings,
   }

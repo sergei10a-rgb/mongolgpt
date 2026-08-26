@@ -17,6 +17,21 @@ const queueHeartbeat = () =>
     processedAt: now.getTime() - 30_000,
   })
 
+const monitorEvidence = (overrides: Record<string, unknown> = {}) =>
+  JSON.stringify({
+    version: 1,
+    stage: "dev",
+    checkedAt: now.getTime() - 60_000,
+    status: "ok",
+    checks: ["console", "auth", "runtime", "payments"].map((service) => ({
+      service,
+      ok: true,
+      httpStatus: 200,
+      latencyMs: 25,
+    })),
+    ...overrides,
+  })
+
 const backup = (overrides: Record<string, unknown> = {}) => ({
   key: "d1/dev/2026/08/18/2026-08-18T23-55-00.000Z-database.sql",
   size: 1_024,
@@ -34,6 +49,7 @@ function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): Sys
     stage: "dev",
     runtimeURL: "https://runtime.dev.mgpt.mn",
     backupsEnabled: true,
+    monitoringEnabled: true,
     database: async () => undefined,
     auth: async () => json({ status: "ok", service: "auth" }),
     quota: async () => json({ status: "ok", service: "quota", storage: "durable-objects", queue: "cloudflare-queues" }),
@@ -49,6 +65,7 @@ function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): Sys
       }),
     runtime: async () => json({ healthy: true, version: "0.1.1" }),
     queueHeartbeat: async () => queueHeartbeat(),
+    monitorEvidence: async () => monitorEvidence(),
     backups: async () => ({ objects: [backup()] }),
     now: () => now,
     ...overrides,
@@ -69,6 +86,7 @@ describe("MongolGPT admin system readiness", () => {
       quota: "healthy",
       "usage-queue": "healthy",
       payments: "healthy",
+      monitoring: "healthy",
       backup: "healthy",
     })
     expect(JSON.stringify(report)).not.toContain("heartbeat-secret-id")
@@ -107,6 +125,7 @@ describe("MongolGPT admin system readiness", () => {
       quota: "degraded",
       "usage-queue": "degraded",
       payments: "disabled",
+      monitoring: "healthy",
       backup: "degraded",
     })
     expect(JSON.stringify(report)).not.toContain("secret database diagnostic")
@@ -169,6 +188,48 @@ describe("MongolGPT admin system readiness", () => {
       const report = await collectSystemReadiness(dependencies({ backups: async () => ({ objects: [object] }) }))
       expect(report.checks.find((check) => check.id === "backup")?.state).toBe("degraded")
     }
+  })
+
+  test("fails stale, malformed, wrong-stage, or degraded monitoring evidence closed", async () => {
+    const evidence = [
+      "not-json",
+      monitorEvidence({ checkedAt: now.getTime() - 1_000_000 }),
+      monitorEvidence({ stage: "production" }),
+      monitorEvidence({
+        status: "degraded",
+        checks: [
+          { service: "console", ok: false, httpStatus: 503, latencyMs: 25, failure: "http" },
+          ...["auth", "runtime", "payments"].map((service) => ({
+            service,
+            ok: true,
+            httpStatus: 200,
+            latencyMs: 25,
+          })),
+        ],
+      }),
+    ]
+
+    for (const value of evidence) {
+      const report = await collectSystemReadiness(dependencies({ monitorEvidence: async () => value }))
+      expect(report.checks.find((check) => check.id === "monitoring")?.state).toBe("degraded")
+    }
+  })
+
+  test("reports disabled monitoring without reading its KV state", async () => {
+    let probed = false
+    const report = await collectSystemReadiness(
+      dependencies({
+        monitoringEnabled: false,
+        monitorEvidence: async () => {
+          probed = true
+          throw new Error("must not run")
+        },
+      }),
+    )
+
+    expect(probed).toBe(false)
+    expect(report.status).toBe("degraded")
+    expect(report.checks.find((check) => check.id === "monitoring")?.state).toBe("disabled")
   })
 
   test("reports disabled backup automation without probing R2", async () => {

@@ -39,6 +39,7 @@ const deployment = {
   hostedServices: true,
   adminEnabled: false,
   backupsEnabled: false,
+  monitoringEnabled: true,
   paymentEnvironment: "disabled" as const,
   warnings: [],
 }

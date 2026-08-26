@@ -1,6 +1,3 @@
-import { Resource } from "@mongolgpt/console-resource"
-import type { TraceItem } from "@cloudflare/workers-types"
-
 const allowedMetricKeys = new Set([
   "cf.continent",
   "cf.country",
@@ -52,74 +49,6 @@ const allowedMetricKeys = new Set([
   "cost.total",
 ])
 
-export default {
-  async tail(events: TraceItem[]) {
-    for (const event of events) {
-      if (!event.event) continue
-      if (!("request" in event.event)) continue
-      if (event.event.request.method !== "POST") continue
-
-      const url = new URL(event.event.request.url)
-      if (
-        url.pathname !== "/zen/v1/chat/completions" &&
-        url.pathname !== "/zen/v1/messages" &&
-        url.pathname !== "/zen/v1/responses" &&
-        !url.pathname.startsWith("/zen/v1/models/") &&
-        url.pathname !== "/zen/go/v1/chat/completions" &&
-        url.pathname !== "/zen/go/v1/messages" &&
-        url.pathname !== "/zen/go/v1/responses" &&
-        !url.pathname.startsWith("/zen/go/v1/models/")
-      )
-        continue
-
-      let data = sanitizeMetric({
-        "cf.continent": event.event.request.cf?.continent,
-        "cf.country": event.event.request.cf?.country,
-        "cf.region": event.event.request.cf?.region,
-        "cf.timezone": event.event.request.cf?.timezone,
-        duration: event.wallTime,
-        request_length: parseInt(event.event.request.headers["content-length"] ?? "0"),
-        status: event.event.response?.status ?? 0,
-        "ip.prefix": ipPrefix(event.event.request.headers["x-real-ip"]),
-      })
-      const time = new Date(event.eventTimestamp ?? Date.now()).toISOString()
-      const telemetryEvents = [
-        ...event.logs.flatMap((log) =>
-          log.message.flatMap((message: string) => {
-            if (!message.startsWith("_metric:")) return []
-            const metric = parseMetric(message)
-            if (!metric) return []
-            data = { ...data, ...metric }
-            if ("llm.error.code" in metric) {
-              return [{ time, data: { ...data, event_type: "llm.error" } }]
-            }
-            return []
-          }),
-        ),
-        { time, data: { ...data, event_type: "completions" } },
-      ]
-      const honeycomb = await fetch("https://api.honeycomb.io/1/batch/zen", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Honeycomb-Team": Resource.HONEYCOMB_API_KEY.value,
-        },
-        body: JSON.stringify(telemetryEvents),
-      })
-      if (!honeycomb.ok) console.error("Honeycomb-д оруулахад амжилтгүй боллоо", honeycomb.status, honeycomb.statusText)
-    }
-  },
-}
-
-function parseMetric(message: string) {
-  try {
-    const metric = sanitizeMetric(JSON.parse(message.slice(8)))
-    return Object.keys(metric).length ? metric : undefined
-  } catch {
-    return undefined
-  }
-}
-
 export function sanitizeMetric(input: unknown) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {}
   return Object.fromEntries(
@@ -153,7 +82,7 @@ export function ipPrefix(ip: string | undefined) {
 
   const missing = compressed ? 8 - head.length - tail.length : 0
   if (compressed && missing < 1) return undefined
-  const full = compressed ? [...head, ...new Array(missing).fill("0"), ...tail] : head
+  const full = compressed ? [...head, ...Array.from({ length: missing }, () => "0"), ...tail] : head
   if (full.length !== 8) return undefined
 
   const prefix = full

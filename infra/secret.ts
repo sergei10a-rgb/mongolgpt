@@ -12,8 +12,6 @@ if (!byokCredentialsKeyV1 || byokCredentialsKeyV1.length < 32) {
 export const SECRET = {
   R2AccessKey: new sst.Secret("R2AccessKey", "unknown"),
   R2SecretKey: new sst.Secret("R2SecretKey", "unknown"),
-  HoneycombApiKey: new sst.Secret("HONEYCOMB_API_KEY", "disabled"),
-  HoneycombWebhookSecret: new random.RandomPassword("HoneycombWebhookSecret", { length: 24 }),
   SupportApiKey: new sst.Secret("SUPPORT_API_KEY", "disabled"),
   QuotaServiceToken: new random.RandomPassword("QuotaServiceToken", { length: 48 }),
   PaymentServiceToken: new random.RandomPassword("PaymentServiceToken", { length: 48 }),

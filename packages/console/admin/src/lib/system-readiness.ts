@@ -1,6 +1,11 @@
 import { Database } from "@mongolgpt/console-core/drizzle/index.js"
 import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
 import {
+  SERVICE_MONITOR_MAX_AGE_MS,
+  SERVICE_MONITOR_STATE_KEY,
+  ServiceMonitorEvidenceSchema,
+} from "@mongolgpt/console-core/service-monitor.js"
+import {
   USAGE_QUEUE_READINESS_KEY,
   USAGE_QUEUE_READINESS_MAX_AGE_MS,
   UsageQueueHeartbeatEvidenceSchema,
@@ -11,7 +16,7 @@ import { z } from "zod"
 export type SystemReadinessState = "healthy" | "configured" | "degraded" | "disabled" | "missing"
 
 export interface SystemReadinessCheck {
-  id: "database" | "runtime" | "oauth" | "quota" | "usage-queue" | "payments" | "backup"
+  id: "database" | "runtime" | "oauth" | "quota" | "usage-queue" | "payments" | "monitoring" | "backup"
   label: string
   state: SystemReadinessState
   summary: string
@@ -40,12 +45,14 @@ export interface SystemReadinessDependencies {
   stage: string
   runtimeURL: string
   backupsEnabled: boolean
+  monitoringEnabled: boolean
   database(): Promise<void>
   auth(): Promise<Response>
   quota(): Promise<Response>
   payments(): Promise<Response>
   runtime(): Promise<Response>
   queueHeartbeat(): Promise<string | null>
+  monitorEvidence(): Promise<string | null>
   backups(): Promise<{ objects: unknown[] }>
   now(): Date
 }
@@ -116,23 +123,27 @@ export async function getSystemReadiness() {
     D1Backups: Resource.D1Backups,
     PaymentService: Resource.PaymentService,
     QuotaService: Resource.QuotaService,
+    ServiceMonitorState: Resource.ServiceMonitorState,
     UsageQueueReadiness: Resource.UsageQueueReadiness,
   } satisfies {
     AuthApi: WorkerBinding
     D1Backups: BackupBucket
     PaymentService: WorkerBinding
     QuotaService: WorkerBinding
+    ServiceMonitorState: { get(key: string): Promise<string | null> }
     UsageQueueReadiness: { get(key: string): Promise<string | null> }
   }
   const stage = process.env.MONGOLGPT_STAGE?.trim() || "тодорхойгүй"
   const runtimeURL = process.env.MONGOLGPT_RUNTIME_URL?.trim() || ""
   const backupsEnabled = process.env.MONGOLGPT_D1_BACKUPS_ENABLED === "true"
+  const monitoringEnabled = process.env.MONGOLGPT_MONITORING_ENABLED === "true"
   const timeout = () => AbortSignal.timeout(4_000)
 
   return collectSystemReadiness({
     stage,
     runtimeURL,
     backupsEnabled,
+    monitoringEnabled,
     database: () =>
       Database.use(async (tx) => {
         await tx.select({ id: AccountTable.id }).from(AccountTable).limit(1)
@@ -159,6 +170,7 @@ export async function getSystemReadiness() {
         signal: timeout(),
       }),
     queueHeartbeat: () => resources.UsageQueueReadiness.get(USAGE_QUEUE_READINESS_KEY),
+    monitorEvidence: () => resources.ServiceMonitorState.get(SERVICE_MONITOR_STATE_KEY),
     backups: () =>
       resources.D1Backups.list({
         prefix: `d1/${stage.toLowerCase()}/`,
@@ -172,7 +184,7 @@ export async function getSystemReadiness() {
 export async function collectSystemReadiness(
   dependencies: SystemReadinessDependencies,
 ): Promise<SystemReadinessReport> {
-  const [database, runtime, auth, quota, payments, queueHeartbeat, backups] = await Promise.all([
+  const [database, runtime, auth, quota, payments, queueHeartbeat, monitorEvidence, backups] = await Promise.all([
     probe(() => dependencies.database()),
     dependencies.runtimeURL
       ? probeJson(() => dependencies.runtime(), runtimeHealthSchema)
@@ -181,6 +193,9 @@ export async function collectSystemReadiness(
     probeJson(() => dependencies.quota(), quotaHealthSchema),
     probeJson(() => dependencies.payments(), paymentHealthSchema),
     probe(() => dependencies.queueHeartbeat()),
+    dependencies.monitoringEnabled
+      ? probe(() => dependencies.monitorEvidence())
+      : Promise.resolve({ ok: false as const }),
     dependencies.backupsEnabled ? probe(() => dependencies.backups()) : Promise.resolve({ ok: false as const }),
   ])
   const now = dependencies.now()
@@ -202,6 +217,7 @@ export async function collectSystemReadiness(
       : degraded("quota", "Квотын бүртгэл", "Квотын үйлчилгээний бэлэн байдлын шалгалт амжилтгүй боллоо."),
     queueCheck(queueHeartbeat, now),
     paymentCheck(payments),
+    monitoringCheck(monitorEvidence, dependencies.stage, dependencies.monitoringEnabled, now),
     backupCheck(backups, dependencies.stage, dependencies.backupsEnabled, now),
   ]
 
@@ -211,6 +227,43 @@ export async function collectSystemReadiness(
     checks,
     checkedAt: now.toISOString(),
   }
+}
+
+function monitoringCheck(
+  result: ProbeResult<string | null>,
+  stage: string,
+  enabled: boolean,
+  now: Date,
+): SystemReadinessCheck {
+  if (!enabled) {
+    return {
+      id: "monitoring",
+      label: "Үйлчилгээний хяналт",
+      state: "disabled",
+      summary: "Cloudflare-ийн үйлчилгээний автомат хяналт идэвхгүй байна.",
+    }
+  }
+  if (!result.ok || !result.value || result.value.length > 16 * 1024) {
+    return degraded("monitoring", "Үйлчилгээний хяналт", "Шинэ хяналтын нотолгоо олдсонгүй.")
+  }
+  let value: unknown
+  try {
+    value = JSON.parse(result.value)
+  } catch {
+    return degraded("monitoring", "Үйлчилгээний хяналт", "Хяналтын нотолгооны бүтэц буруу байна.")
+  }
+  const parsed = ServiceMonitorEvidenceSchema.safeParse(value)
+  if (!parsed.success || parsed.data.stage.toLowerCase() !== stage.toLowerCase()) {
+    return degraded("monitoring", "Үйлчилгээний хяналт", "Хяналтын нотолгооны бүтэц буруу байна.")
+  }
+  const age = now.getTime() - parsed.data.checkedAt
+  if (age < -FUTURE_CLOCK_SKEW_MS || age > SERVICE_MONITOR_MAX_AGE_MS) {
+    return degraded("monitoring", "Үйлчилгээний хяналт", "Хяналтын нотолгооны хугацаа хэтэрсэн байна.")
+  }
+  if (parsed.data.status !== "ok") {
+    return degraded("monitoring", "Үйлчилгээний хяналт", "Нэг буюу хэд хэдэн нийтийн үйлчилгээ хариу өгөхгүй байна.")
+  }
+  return ready("monitoring", "Үйлчилгээний хяналт", "Нийтийн үйлчилгээнүүдийн автомат шалгалт хэвийн байна.")
 }
 
 function paymentCheck(result: ProbeResult<z.output<typeof paymentHealthSchema>>): SystemReadinessCheck {

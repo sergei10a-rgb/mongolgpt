@@ -5,7 +5,7 @@ export default $config({
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const admin = flag("MONGOLGPT_ENABLE_ADMIN")
     const d1Backups = flag("MONGOLGPT_ENABLE_D1_BACKUPS")
-    const monitoring = hostedServices && flag("MONGOLGPT_ENABLE_MONITORING")
+    const monitoring = flag("MONGOLGPT_ENABLE_MONITORING")
     const analytics = flag("MONGOLGPT_ENABLE_ANALYTICS")
     const unsupported = ["MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS", "MONGOLGPT_ENABLE_LEGACY_STRIPE"].filter(flag)
     if (unsupported.length) {
@@ -20,11 +20,17 @@ export default $config({
     if (d1Backups && !hostedServices) {
       throw new Error("MONGOLGPT_ENABLE_D1_BACKUPS нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true үед л ажиллана.")
     }
+    if (monitoring && !hostedServices) {
+      throw new Error("MONGOLGPT_ENABLE_MONITORING нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true үед л ажиллана.")
+    }
     if (input?.stage === "production" && hostedServices && !admin) {
       throw new Error("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_ADMIN=true заавал байна.")
     }
     if (input?.stage === "production" && hostedServices && !d1Backups) {
       throw new Error("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_D1_BACKUPS=true заавал байна.")
+    }
+    if (input?.stage === "production" && hostedServices && !monitoring) {
+      throw new Error("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_MONITORING=true заавал байна.")
     }
     return {
       name: "mongolgpt",
@@ -35,7 +41,6 @@ export default $config({
         ? {
             random: "4.19.2",
             ...(admin ? { command: "1.0.1" } : {}),
-            ...(monitoring ? { honeycomb: "0.49.0" } : {}),
           }
         : {},
     }
@@ -60,10 +65,6 @@ export default $config({
     const admin = adminEnabled ? await import("./infra/admin.js") : undefined
     const stats = stage.enableAnalytics ? await import("./infra/stats.js") : undefined
     const enterprise = stage.enableShareService ? await import("./infra/enterprise.js") : undefined
-    if (stage.enableMonitoring && ($app.stage === "production" || $app.stage === "vimtor")) {
-      await import("./infra/monitoring.js")
-    }
-
     return {
       StatWorkerUrl: stat.url,
       StatsUrl: stats?.app.url ?? "",
