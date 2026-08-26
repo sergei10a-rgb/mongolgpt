@@ -119,7 +119,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       // catchCause (not tapErrorCause + orElseSucceed) because JSONC parsing and validation
       // can sync-throw — those become defects, which orElseSucceed wouldn't catch.
       Effect.catchCause((cause) =>
-        Effect.logWarning("skipping invalid tui config", {
+        Effect.logWarning("Буруу TUI тохиргоог алгаслаа", {
           path: configFilepath,
           reason: FormatError(Cause.squash(cause)) ?? FormatUnknownError(Cause.squash(cause)),
         }).pipe(Effect.as({} as Info)),
@@ -133,14 +133,14 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       // broken-config path degrades gracefully rather than crashing TUI startup.
       const text = yield* afs.readFileStringSafe(filepath).pipe(
         Effect.catchCause((cause) =>
-          Effect.logWarning("failed to read tui config", {
+          Effect.logWarning("TUI тохиргоог уншиж чадсангүй", {
             path: filepath,
             reason: FormatError(Cause.squash(cause)) ?? FormatUnknownError(Cause.squash(cause)),
           }).pipe(Effect.as(undefined)),
         ),
       )
       if (!text) return {} as Info
-      yield* Effect.logInfo("loading tui config", { path: filepath })
+      yield* Effect.logInfo("TUI тохиргоог ачаалж байна", { path: filepath })
       return yield* load(text, filepath)
     })
 
@@ -149,7 +149,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       const data = yield* loadFile(file)
       if (Object.keys(data).length) {
         appliedOrder += 1
-        yield* Effect.logInfo("applying tui config", { path: file, order: appliedOrder })
+        yield* Effect.logInfo("TUI тохиргоог хэрэглэж байна", { path: file, order: appliedOrder })
       }
       acc.result = mergeDeep(acc.result, data)
       if (!data.plugin?.length) return
@@ -187,7 +187,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
   if (Flag.MONGOLGPT_TUI_CONFIG) {
     const configFile = Flag.MONGOLGPT_TUI_CONFIG
     yield* mergeFile(acc, configFile)
-    yield* Effect.logDebug("loaded custom tui config", { path: configFile })
+    yield* Effect.logDebug("Захиалгат TUI тохиргоог ачааллаа", { path: configFile })
   }
 
   // 3. Project tui files, applied root-first so the closest file wins.

@@ -26,7 +26,7 @@ export async function parse(filePath: string) {
     throw new FrontmatterError(
       {
         path: filePath,
-        message: `${filePath}: Failed to parse YAML frontmatter: ${err instanceof Error ? err.message : String(err)}`,
+        message: `${filePath}: YAML толгой мэдээллийг задлахад алдаа гарлаа: ${err instanceof Error ? err.message : String(err)}`,
       },
       { cause: err },
     )

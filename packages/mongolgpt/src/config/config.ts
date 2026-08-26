@@ -196,10 +196,10 @@ export const layer = Layer.effect(
           HttpClientRequest.get(url).pipe(HttpClientRequest.acceptJson, HttpClientRequest.setHeaders(headers ?? {})),
         )
         .pipe(
-          Effect.catch((error) => Effect.die(new Error(`failed to fetch remote config from ${url}: ${String(error)}`))),
+          Effect.catch((error) => Effect.die(new Error(`Алсын тохиргоог ${url}-ээс татаж чадсангүй: ${String(error)}`))),
         )
       const body = yield* response.text.pipe(
-        Effect.catch((error) => Effect.die(new Error(`failed to read remote config from ${url}: ${String(error)}`))),
+        Effect.catch((error) => Effect.die(new Error(`Алсын тохиргоог ${url}-ээс уншиж чадсангүй: ${String(error)}`))),
       )
       // An auth proxy can answer with an HTML login page at HTTP 200 (passes filterStatusOk); treat it as a re-auth error, not a decode failure.
       const contentType = (response.headers["content-type"] ?? "").toLowerCase()
@@ -207,7 +207,9 @@ export const layer = Layer.effect(
         return yield* Effect.die(new RemoteAuthError({ url: loginOrigin, remote: url }))
       }
       return yield* Schema.decodeEffect(Schema.fromJsonString(schema))(body).pipe(
-        Effect.catch((error) => Effect.die(new Error(`failed to decode remote config from ${url}: ${String(error)}`))),
+        Effect.catch((error) =>
+          Effect.die(new Error(`Алсын тохиргоог ${url}-ээс задлан уншиж чадсангүй: ${String(error)}`)),
+        ),
       )
     })
 
@@ -238,7 +240,7 @@ export const layer = Layer.effect(
     })
 
     const loadFile = Effect.fnUntraced(function* (filepath: string, env?: Record<string, string>) {
-      yield* Effect.logInfo("loading", { path: filepath })
+      yield* Effect.logInfo("Ачаалж байна", { path: filepath })
       const text = yield* readConfigFile(filepath)
       if (!text) return {} as Info
       return yield* loadConfig(text, { path: filepath }, env)
@@ -282,7 +284,7 @@ export const layer = Layer.effect(
     const [cachedGlobal, invalidateGlobal] = yield* Effect.cachedInvalidateWithTTL(
       loadGlobal().pipe(
         Effect.tapError((error) =>
-          Effect.logError("failed to load global config, using defaults", { error: String(error) }),
+          Effect.logError("Үндсэн тохиргоог ачаалж чадсангүй, өгөгдмөл тохиргоог ашиглаж байна", { error: String(error) }),
         ),
         Effect.orElseSucceed((): Info => ({})),
       ),
@@ -358,7 +360,7 @@ export const layer = Layer.effect(
             const url = key.replace(/\/+$/, "")
             authEnv[value.key] = value.token
             const wellknownURL = `${url}/.well-known/mongolgpt`
-            yield* Effect.logDebug("fetching remote config", { url: wellknownURL })
+            yield* Effect.logDebug("Алсын тохиргоог татаж байна", { url: wellknownURL })
             const wellknown = yield* fetchRemoteJson(wellknownURL, undefined, ConfigV1.WellKnown, url)
             const remote = yield* Effect.promise(() =>
               substituteWellKnownRemoteConfig({
@@ -370,12 +372,12 @@ export const layer = Layer.effect(
             )
             const fetchedConfig = remote
               ? yield* Effect.gen(function* () {
-                  yield* Effect.logDebug("fetching remote config", { url: remote.url })
+                  yield* Effect.logDebug("Алсын тохиргоог татаж байна", { url: remote.url })
                   const data = yield* fetchRemoteJson(remote.url, remote.headers, Schema.Json, url)
                   if (isRecord(data) && isRecord(data.config)) return data.config
                   if (isRecord(data)) return data
                   return yield* Effect.die(
-                    new Error(`failed to decode remote config from ${remote.url}: expected object`),
+                    new Error(`Алсын тохиргоог ${remote.url}-ээс задлан уншиж чадсангүй: объект байх ёстой`),
                   )
                 })
               : {}
@@ -391,7 +393,7 @@ export const layer = Layer.effect(
               authEnv,
             )
             yield* merge(source, next, "global")
-            yield* Effect.logDebug("loaded remote config from well-known", { url })
+            yield* Effect.logDebug("Алсын тохиргоог стандарт таних хаягаас ачааллаа", { url })
           }
         }
 
@@ -400,7 +402,7 @@ export const layer = Layer.effect(
 
         if (Flag.MONGOLGPT_CONFIG) {
           yield* merge(Flag.MONGOLGPT_CONFIG, yield* loadFile(Flag.MONGOLGPT_CONFIG, authEnv))
-          yield* Effect.logDebug("loaded custom config", { path: Flag.MONGOLGPT_CONFIG })
+          yield* Effect.logDebug("Захиалгат тохиргоог ачааллаа", { path: Flag.MONGOLGPT_CONFIG })
         }
 
         if (!Flag.MONGOLGPT_DISABLE_PROJECT_CONFIG) {
@@ -420,7 +422,7 @@ export const layer = Layer.effect(
         const directories = yield* ConfigPaths.directories(ctx.directory, ctx.worktree)
 
         if (Flag.MONGOLGPT_CONFIG_DIR) {
-          yield* Effect.logDebug("loading config from MONGOLGPT_CONFIG_DIR", { path: Flag.MONGOLGPT_CONFIG_DIR })
+          yield* Effect.logDebug("Тохиргоог MONGOLGPT_CONFIG_DIR-ээс ачаалж байна", { path: Flag.MONGOLGPT_CONFIG_DIR })
         }
 
         const deps: Fiber.Fiber<void>[] = []
@@ -432,7 +434,7 @@ export const layer = Layer.effect(
               : ["mongolgpt.json", "mongolgpt.jsonc"]
             for (const file of files) {
               const source = path.join(dir, file)
-              yield* Effect.logDebug(`loading config from ${source}`)
+              yield* Effect.logDebug(`Тохиргоо ачаалж байна: ${source}`)
               yield* merge(source, yield* loadFile(source, authEnv))
               result.agent ??= {}
               result.mode ??= {}
@@ -455,7 +457,10 @@ export const layer = Layer.effect(
               Effect.exit,
               Effect.tap((exit) =>
                 Exit.isFailure(exit)
-                  ? Effect.logWarning("background dependency install failed", { dir, error: String(exit.cause) })
+                  ? Effect.logWarning("Дэвсгэр горимд хамаарал суулгаж чадсангүй", {
+                      dir,
+                      error: String(exit.cause),
+                    })
                   : Effect.void,
               ),
               Effect.asVoid,
@@ -479,7 +484,7 @@ export const layer = Layer.effect(
             source,
           })
           yield* merge(source, next, "local")
-          yield* Effect.logDebug("loaded custom config from MONGOLGPT_CONFIG_CONTENT")
+          yield* Effect.logDebug("MONGOLGPT_CONFIG_CONTENT-оос захиалгат тохиргоог ачааллаа")
         }
 
         const activeAccount = Option.getOrUndefined(
@@ -513,7 +518,7 @@ export const layer = Layer.effect(
           }).pipe(
             Effect.withSpan("Config.loadActiveOrgConfig"),
             Effect.catch((err) =>
-              Effect.logDebug("failed to fetch remote account config", {
+              Effect.logDebug("Алсын аккаунтын тохиргоог татаж чадсангүй", {
                 error: err instanceof Error ? err.message : String(err),
               }),
             ),
@@ -553,7 +558,7 @@ export const layer = Layer.effect(
           try {
             result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.MONGOLGPT_PERMISSION))
           } catch (err) {
-            yield* Effect.logWarning("MONGOLGPT_PERMISSION contains invalid JSON, skipping", { err })
+            yield* Effect.logWarning("MONGOLGPT_PERMISSION буруу JSON агуулж байна, алгаслаа", { err })
           }
         }
 
@@ -574,7 +579,7 @@ export const layer = Layer.effect(
           try {
             result.username = os.userInfo().username || "user"
           } catch (err) {
-            yield* Effect.logWarning("failed to read system username, using fallback", { err })
+            yield* Effect.logWarning("Системийн хэрэглэгчийн нэрийг уншиж чадсангүй, нөөц утгыг ашиглаж байна", { err })
             result.username = "user"
           }
         }

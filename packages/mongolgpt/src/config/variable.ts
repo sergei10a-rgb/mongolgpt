@@ -68,12 +68,12 @@ export async function substitute(input: SubstituteInput) {
       await Filesystem.readText(resolvedPath).catch((error: NodeJS.ErrnoException) => {
         if (missing === "empty") return ""
 
-        const errMsg = `bad file reference: "${token}"`
+        const errMsg = `Файлын буруу холбоос: "${token}"`
         if (error.code === "ENOENT") {
           throw new InvalidError(
             {
               path: configSource,
-              message: errMsg + ` ${resolvedPath} does not exist`,
+              message: errMsg + ` ${resolvedPath} зам байхгүй байна`,
             },
             { cause: error },
           )

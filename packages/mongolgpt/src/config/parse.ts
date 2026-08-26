@@ -20,7 +20,7 @@ export function jsonc(text: string, filepath: string): unknown {
         const error = `${printParseErrorCode(e.error)}: ${line}-р мөр, ${column}-р багана`
         if (!problemLine) return error
 
-        return `${error}\n   Line ${line}: ${problemLine}\n${"".padStart(column + 9)}^`
+        return `${error}\n   ${line}-р мөр: ${problemLine}\n${"".padStart(column + 11)}^`
       })
       .join("\n")
     throw new JsonError({
