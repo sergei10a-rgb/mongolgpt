@@ -141,7 +141,7 @@ export const layer = Layer.effect(
         s.queue.set(sessionID, next)
         yield* flush(sessionID).pipe(
           Effect.delay(1000),
-          Effect.catchCause((cause) => Effect.logError("share flush failed", { sessionID: sessionID, cause: cause })),
+          Effect.catchCause((cause) => Effect.logError("Хуваалцах мэдээллийг илгээж чадсангүй", { sessionID: sessionID, cause: cause })),
           Effect.forkIn(s.scope),
         )
       })
@@ -172,7 +172,7 @@ export const layer = Layer.effect(
             if (event.type !== def.type || event.location?.directory !== _ctx.directory) return Effect.void
             return fn(event.data as EventV2.Data<D>).pipe(
               Effect.catchCause((cause) =>
-                Effect.logError("share subscriber failed", { type: def.type, cause: cause }),
+                Effect.logError("Хуваалцах мэдээллийн сонсогч ажилласангүй", { type: def.type, cause: cause }),
               ),
             )
           })
@@ -268,7 +268,7 @@ export const layer = Layer.effect(
       )
 
       if (res.status >= 400) {
-        yield* Effect.logWarning("failed to sync share", {
+        yield* Effect.logWarning("Хуваалцсан сессийг синхрончилж чадсангүй", {
           sessionID: sessionID,
           shareID: share.id,
           status: res.status,
@@ -277,7 +277,7 @@ export const layer = Layer.effect(
     })
 
     const full = Effect.fn("ShareNext.full")(function* (sessionID: SessionID) {
-      yield* Effect.logInfo("full sync", { sessionID: sessionID })
+      yield* Effect.logInfo("Бүрэн синхрончилж байна", { sessionID: sessionID })
       const info = yield* session.get(sessionID)
       const diffs = yield* session.diff(sessionID)
       const messages = yield* session.messages({ sessionID })
@@ -314,7 +314,7 @@ export const layer = Layer.effect(
 
     const create = Effect.fn("ShareNext.create")(function* (sessionID: SessionID) {
       if (disabled) return { id: "", url: "", secret: "" }
-      yield* Effect.logInfo("creating share", { sessionID: sessionID })
+      yield* Effect.logInfo("Хуваалцах холбоос үүсгэж байна", { sessionID: sessionID })
       const req = yield* request()
       const result = yield* HttpClientRequest.post(`${req.baseUrl}${req.api.create}`).pipe(
         HttpClientRequest.setHeaders(req.headers),
@@ -334,7 +334,9 @@ export const layer = Layer.effect(
       const s = yield* InstanceState.get(state)
       s.shared.set(sessionID, result)
       yield* full(sessionID).pipe(
-        Effect.catchCause((cause) => Effect.logError("share full sync failed", { sessionID: sessionID, cause: cause })),
+        Effect.catchCause((cause) =>
+          Effect.logError("Хуваалцсан сессийг бүрэн синхрончилж чадсангүй", { sessionID: sessionID, cause }),
+        ),
         Effect.forkIn(s.scope),
       )
       return result
@@ -342,7 +344,7 @@ export const layer = Layer.effect(
 
     const remove = Effect.fn("ShareNext.remove")(function* (sessionID: SessionID) {
       if (disabled) return
-      yield* Effect.logInfo("removing share", { sessionID: sessionID })
+      yield* Effect.logInfo("Хуваалцах холбоосыг устгаж байна", { sessionID: sessionID })
       const s = yield* InstanceState.get(state)
       const share = yield* getCached(sessionID)
       if (!share) {

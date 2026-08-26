@@ -1050,7 +1050,7 @@ describe("session.compaction.process", () => {
         expect(part?.type).toBe("compaction")
         expect(part?.tail_start_id).toBeUndefined()
         expect(captured).toContain("recent image turn")
-        expect(captured).toContain("Attached image/png: big.png")
+        expect(captured).toContain("Хавсралт image/png: big.png")
       }).pipe(withCompaction({ llm: stub.layer, config: cfg({ tail_turns: 1, preserve_recent_tokens: 100 }) }))
     },
     { git: true },
@@ -1408,7 +1408,7 @@ describe("session.compaction.process", () => {
         expect(captured).toContain("older context")
         expect(captured).not.toContain("keep this turn")
         expect(captured).not.toContain("and this one too")
-        expect(captured).not.toContain("What did we do so far?")
+        expect(captured).not.toContain("Одоогоор бид юу хийсэн бэ?")
       }).pipe(withCompaction({ llm: stub.layer }))
     },
     { git: true },
@@ -1449,8 +1449,8 @@ describe("session.compaction.process", () => {
         expect(captured).toContain("<previous-summary>")
         expect(captured).toContain("summary one")
         expect(captured.match(/summary one/g)?.length).toBe(1)
-        expect(captured).toContain("## Constraints & Preferences")
-        expect(captured).toContain("## Progress")
+        expect(captured).toContain("## Хязгаарлалт ба сонголт")
+        expect(captured).toContain("## Явц")
       }).pipe(withCompaction({ llm: stub.layer }))
     },
     { git: true },

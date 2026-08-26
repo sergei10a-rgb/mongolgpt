@@ -175,12 +175,12 @@ describe("session.retry.retryable", () => {
 
   test("retries websocket stream transport errors", () => {
     const request = MessageV2.fromError(
-      new ProviderError.ResponseStreamError("WebSocket closed before response.completed (code 1006: Connection ended)"),
+      new ProviderError.ResponseStreamError("WebSocket response.completed-ээс өмнө хаагдлаа (код 1006: Connection ended)"),
       { providerID },
     )
     expect(SessionV1.APIError.isInstance(request)).toBe(true)
     expect(SessionRetry.retryable(request, retryProvider)).toEqual({
-      message: "WebSocket closed before response.completed (code 1006: Connection ended)",
+      message: "WebSocket response.completed-ээс өмнө хаагдлаа (код 1006: Connection ended)",
     })
   })
 

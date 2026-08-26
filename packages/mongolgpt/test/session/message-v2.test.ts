@@ -312,8 +312,8 @@ describe("session.message-v2.toModelMessage", () => {
             filename: "img.png",
             data: "https://example.com/img.png",
           },
-          { type: "text", text: "What did we do so far?" },
-          { type: "text", text: "The following tool was executed by the user" },
+          { type: "text", text: "Одоогоор бид юу хийсэн бэ?" },
+          { type: "text", text: "Хэрэглэгч дараах хэрэгслийг ажиллуулсан" },
         ],
       },
     ])
@@ -589,7 +589,7 @@ describe("session.message-v2.toModelMessage", () => {
       {
         role: "user",
         content: [
-          { type: "text", text: "Attached media from tool result:" },
+          { type: "text", text: "Хэрэгслийн үр дүнгээс хавсаргасан медиа:" },
           {
             type: "file",
             mediaType: "application/pdf",
@@ -744,7 +744,7 @@ describe("session.message-v2.toModelMessage", () => {
             type: "tool-result",
             toolCallId: "call-1",
             toolName: "bash",
-            output: { type: "text", value: "[Old tool result content cleared]" },
+            output: { type: "text", value: "[Хуучин хэрэгслийн үр дүнгийн агуулгыг цэвэрлэв]" },
           },
         ],
       },
@@ -813,7 +813,7 @@ describe("session.message-v2.toModelMessage", () => {
             toolName: "bash",
             output: {
               type: "text",
-              value: "abcd\n[Tool output truncated for compaction: omitted 6 chars]",
+              value: "abcd\n[Хураангуйлахын тулд хэрэгслийн гаралтыг богиносгов: 6 тэмдэгтийг хасав]",
             },
           },
         ],

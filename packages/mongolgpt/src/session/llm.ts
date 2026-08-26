@@ -83,7 +83,7 @@ const live: Layer.Layer<
     const flags = yield* RuntimeFlags.Service
 
     const run = Effect.fn("LLM.run")(function* (input: StreamRequest) {
-      yield* Effect.logInfo("stream", {
+      yield* Effect.logInfo("LLM урсгалыг эхлүүлж байна", {
         providerID: input.model.providerID,
         modelID: input.model.id,
         "session.id": input.sessionID,
@@ -127,7 +127,7 @@ const live: Layer.Layer<
         workflowModel.toolExecutor = async (toolName, argsJson, _requestID) => {
           const t = prepared.tools[toolName]
           if (!t || !t.execute) {
-            return { result: "", error: `Unknown tool: ${toolName}` }
+            return { result: "", error: `Үл мэдэгдэх хэрэгсэл: ${toolName}` }
           }
           try {
             const result = await t.execute!(JSON.parse(argsJson), {
@@ -241,7 +241,7 @@ const live: Layer.Layer<
           abort: input.abort,
         })
         if (native.type === "supported") {
-          yield* Effect.logInfo("llm runtime selected", {
+          yield* Effect.logInfo("LLM ажиллах орчин сонгогдлоо", {
             "llm.runtime": "native",
             "llm.provider": input.model.providerID,
             "llm.model": input.model.id,
@@ -251,13 +251,13 @@ const live: Layer.Layer<
             stream: native.stream,
           }
         }
-        yield* Effect.logInfo("llm runtime selected", {
+        yield* Effect.logInfo("LLM ажиллах орчин сонгогдлоо", {
           "llm.runtime": "ai-sdk",
           "llm.provider": input.model.providerID,
           "llm.model": input.model.id,
           "llm.native_unsupported_reason": native.reason,
         })
-        yield* Effect.logInfo("native runtime unavailable; falling back to ai-sdk", {
+        yield* Effect.logInfo("Шууд ажиллах орчин боломжгүй тул ai-sdk ашиглаж байна", {
           providerID: input.model.providerID,
           modelID: input.model.id,
           "session.id": input.sessionID,
@@ -268,7 +268,7 @@ const live: Layer.Layer<
         })
       }
 
-      yield* Effect.logInfo("llm runtime selected", {
+      yield* Effect.logInfo("LLM ажиллах орчин сонгогдлоо", {
         "llm.runtime": "ai-sdk",
         "llm.provider": input.model.providerID,
         "llm.model": input.model.id,
@@ -280,7 +280,7 @@ const live: Layer.Layer<
         result: streamText({
           onError(error) {
             bridge.fork(
-              Effect.logError("stream error", {
+              Effect.logError("LLM урсгалын алдаа", {
                 providerID: input.model.providerID,
                 modelID: input.model.id,
                 "session.id": input.sessionID,

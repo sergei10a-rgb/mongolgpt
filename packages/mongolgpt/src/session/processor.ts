@@ -404,7 +404,7 @@ export const layer = Layer.effect(
               output:
                 omitted === 0
                   ? rawOutput.output
-                  : `${rawOutput.output}\n\n[${omitted} image${omitted === 1 ? "" : "s"} omitted: could not be resized below the image size limit.]`,
+                  : `${rawOutput.output}\n\n[${omitted} зураг хасагдлаа: зургийн хэмжээг зөвшөөрөгдсөн хязгаараас доош багасгаж чадсангүй.]`,
               attachments: attachments.length ? attachments : undefined,
             }
             yield* completeToolCall(value.id, output)

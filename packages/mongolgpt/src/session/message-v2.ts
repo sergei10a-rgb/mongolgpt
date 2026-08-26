@@ -44,13 +44,13 @@ interface FetchDecompressionError extends Error {
   path: string
 }
 
-export const SYNTHETIC_ATTACHMENT_PROMPT = "Attached media from tool result:"
+export const SYNTHETIC_ATTACHMENT_PROMPT = "Хэрэгслийн үр дүнгээс хавсаргасан медиа:"
 export { isMedia }
 
 function truncateToolOutput(text: string, maxChars?: number) {
   if (!maxChars || text.length <= maxChars) return text
   const omitted = text.length - maxChars
-  return `${text.slice(0, maxChars)}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
+  return `${text.slice(0, maxChars)}\n[Хураангуйлахын тулд хэрэгслийн гаралтыг богиносгов: ${omitted} тэмдэгтийг хасав]`
 }
 
 export const Event = {
@@ -214,7 +214,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
           if (options?.stripMedia && isMedia(part.mime)) {
             userMessage.parts.push({
               type: "text",
-              text: `[Attached ${part.mime}: ${part.filename ?? "file"}]`,
+              text: `[Хавсралт ${part.mime}: ${part.filename ?? "файл"}]`,
             })
           } else {
             userMessage.parts.push({
@@ -229,13 +229,13 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         if (part.type === "compaction") {
           userMessage.parts.push({
             type: "text",
-            text: "What did we do so far?",
+            text: "Одоогоор бид юу хийсэн бэ?",
           })
         }
         if (part.type === "subtask") {
           userMessage.parts.push({
             type: "text",
-            text: "The following tool was executed by the user",
+            text: "Хэрэглэгч дараах хэрэгслийг ажиллуулсан",
           })
         }
       }
@@ -292,7 +292,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
           toolNames.add(part.tool)
           if (part.state.status === "completed") {
             const outputText = part.state.time.compacted
-              ? "[Old tool result content cleared]"
+              ? "[Хуучин хэрэгслийн үр дүнгийн агуулгыг цэвэрлэв]"
               : truncateToolOutput(part.state.output, options?.toolOutputMaxChars)
             const attachments = part.state.time.compacted || options?.stripMedia ? [] : (part.state.attachments ?? [])
 
