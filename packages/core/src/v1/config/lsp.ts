@@ -70,7 +70,7 @@ export const requiresExtensionsForCustomServers = Schema.makeFilter<
     if (ids.has(id)) return true
     return "extensions" in config && Boolean(config.extensions)
   })
-  return ok ? undefined : "For custom LSP servers, 'extensions' array is required."
+  return ok ? undefined : "Өөрийн LSP серверт 'extensions' жагсаалт заавал шаардлагатай."
 })
 
 export const Info = Schema.Union([Schema.Boolean, Schema.Record(Schema.String, Entry)])

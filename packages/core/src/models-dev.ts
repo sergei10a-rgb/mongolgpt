@@ -261,7 +261,7 @@ export const layer = Layer.effect(
           yield* events.publish(Event.Refreshed, {})
         }),
       ).pipe(
-        Effect.tapCause((cause) => Effect.logError("Failed to fetch models.dev", { cause: cause })),
+        Effect.tapCause((cause) => Effect.logError("models.dev-ээс загвар татаж чадсангүй", { cause: cause })),
         Effect.ignore,
       )
     })

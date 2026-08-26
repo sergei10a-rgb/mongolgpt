@@ -44,7 +44,7 @@ describe("ConfigLSPV1.Info refinement", () => {
   })
 
   describe("rejected inputs", () => {
-    const expectedMessage = "For custom LSP servers, 'extensions' array is required."
+    const expectedMessage = "Өөрийн LSP серверт 'extensions' жагсаалт заавал шаардлагатай."
 
     test("custom server WITHOUT extensions fails via Effect decode", () => {
       expect(() => decodeEffect({ "my-lsp": { command: ["my-lsp-bin"] } })).toThrow(expectedMessage)

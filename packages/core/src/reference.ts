@@ -97,7 +97,7 @@ export const layer = Layer.effect(
             )
             yield* cache.ensure({ reference: repository, branch: source.branch, refresh: true }).pipe(
               Effect.catchCause((cause) =>
-                Effect.logWarning("failed to materialize reference", {
+                Effect.logWarning("Лавлагааг үүсгэж чадсангүй", {
                   name,
                   repository: source.repository,
                   cause,

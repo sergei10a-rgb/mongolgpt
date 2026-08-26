@@ -139,7 +139,7 @@ export const layer = Layer.effect(
           }),
         )
       }).pipe(
-        Effect.catch((cause) => Effect.logWarning("failed to capture snapshot", { cause }).pipe(Effect.as(undefined))),
+        Effect.catch((cause) => Effect.logWarning("Төлөвийн агшныг авч чадсангүй", { cause }).pipe(Effect.as(undefined))),
       )
     })
 

@@ -14,7 +14,7 @@ export class CorrectedError extends Schema.TaggedErrorClass<CorrectedError>()("P
   feedback: Schema.String,
 }) {
   override get message() {
-    return `The user rejected permission to use this specific tool call with the following feedback: ${this.feedback}`
+    return `Хэрэглэгч энэ хэрэгслийн дуудлагыг дараах тайлбартайгаар зөвшөөрсөнгүй: ${this.feedback}`
   }
 }
 
@@ -22,7 +22,7 @@ export class DeniedError extends Schema.TaggedErrorClass<DeniedError>()("Permiss
   ruleset: Schema.Any,
 }) {
   override get message() {
-    return `The user has specified a rule which prevents you from using this specific tool call. Here are some of the relevant rules ${JSON.stringify(this.ruleset)}`
+    return `Хэрэглэгч энэ хэрэгслийн дуудлагыг хориглосон дүрэм тохируулсан байна. Холбогдох дүрмүүд: ${JSON.stringify(this.ruleset)}`
   }
 }
 

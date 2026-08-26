@@ -111,15 +111,15 @@ export const refreshAfterBoot = Effect.gen(function* () {
   const location = yield* Location.Service
   const copies = yield* Service
   yield* Effect.gen(function* () {
-    yield* Effect.logInfo("project copy refresh started", { projectID: location.project.id })
+    yield* Effect.logInfo("Төслийн хуулбарыг шинэчилж эхэллээ", { projectID: location.project.id })
     const result = yield* copies.refresh({ projectID: location.project.id })
-    yield* Effect.logInfo("project copy refresh done", {
+    yield* Effect.logInfo("Төслийн хуулбарыг шинэчилж дууслаа", {
       projectID: location.project.id,
       updated: result.updated,
       removed: result.removed,
     })
   }).pipe(
-    Effect.catchCause((cause) => Effect.logWarning("project copy refresh failed", { cause })),
+    Effect.catchCause((cause) => Effect.logWarning("Төслийн хуулбарыг шинэчилж чадсангүй", { cause })),
     Effect.forkScoped,
     Effect.asVoid,
   )

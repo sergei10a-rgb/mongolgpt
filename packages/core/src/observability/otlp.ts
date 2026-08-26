@@ -24,7 +24,7 @@ function resourceAttributes() {
     return Object.fromEntries(
       value.split(",").map((entry) => {
         const index = entry.indexOf("=")
-        if (index < 1) throw new Error("Invalid OTEL_RESOURCE_ATTRIBUTES entry")
+        if (index < 1) throw new Error("OTEL_RESOURCE_ATTRIBUTES-ийн буруу бичлэг")
         return [decodeURIComponent(entry.slice(0, index)), decodeURIComponent(entry.slice(index + 1))]
       }),
     )
