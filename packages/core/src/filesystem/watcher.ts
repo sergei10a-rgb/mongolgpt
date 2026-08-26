@@ -62,7 +62,7 @@ export const layer = Layer.effect(
     const backend = getBackend()
     const location = yield* Location.Service
     if (!backend) {
-      yield* Effect.logError("watcher backend not supported", {
+      yield* Effect.logError("Файл хянах суурь хэрэгжүүлэлт дэмжигдэхгүй байна", {
         directory: location.directory,
         platform: process.platform,
       })
@@ -98,7 +98,7 @@ export const layer = Layer.effect(
         Effect.timeout(SUBSCRIBE_TIMEOUT_MS),
         Effect.catchCause((cause) => {
           pending.then((subscription) => subscription.unsubscribe()).catch(() => {})
-          return Effect.logError("failed to subscribe", { directory, cause: Cause.pretty(cause) })
+          return Effect.logError("Бүртгүүлж чадсангүй", { directory, cause: Cause.pretty(cause) })
         }),
       )
     }
@@ -126,7 +126,7 @@ export const layer = Layer.effect(
     return Service.of({})
   }).pipe(
     Effect.catchCause((cause) => {
-      return Effect.logError("failed to init watcher service", { cause: Cause.pretty(cause) }).pipe(
+      return Effect.logError("Файл хянах үйлчилгээг эхлүүлж чадсангүй", { cause: Cause.pretty(cause) }).pipe(
         Effect.as(Service.of({})),
       )
     }),

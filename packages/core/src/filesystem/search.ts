@@ -48,7 +48,7 @@ export const ripgrepLayer = Layer.effect(
       .pipe(
         Effect.asVoid,
         Effect.catchCause((cause) =>
-          Effect.logError("failed to build file search index", {
+          Effect.logError("Файл хайлтын индекс үүсгэж чадсангүй", {
             directory: location.directory,
             cause: Cause.pretty(cause),
           }),
@@ -141,10 +141,10 @@ export const fffLayer = Layer.effect(
         }),
       catch: (cause) => cause,
     }).pipe(
-      Effect.catch((error) => Effect.logWarning("failed to initialize fff", { error }).pipe(Effect.as(undefined))),
+      Effect.catch((error) => Effect.logWarning("fff-г эхлүүлж чадсангүй", { error }).pipe(Effect.as(undefined))),
     )
     if (!result?.ok) {
-      if (result) yield* Effect.logWarning("failed to initialize fff", { error: result.error })
+      if (result) yield* Effect.logWarning("fff-г эхлүүлж чадсангүй", { error: result.error })
       return Service.of({
         find: () => Effect.succeed([]),
         glob: () => Effect.succeed([]),

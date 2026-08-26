@@ -68,7 +68,7 @@ const flatten = (command: ChildProcess.Command) => {
   }
 
   walk(command)
-  if (commands.length === 0) throw new Error("flatten produced empty commands array")
+  if (commands.length === 0) throw new Error("Командуудыг задлахад хоосон массив үүслээ")
   const [head, ...tail] = commands
   return {
     commands: [head, ...tail] as Arr.NonEmptyReadonlyArray<ChildProcess.StandardCommand>,
@@ -318,7 +318,7 @@ export const make = Effect.gen(function* () {
   ) =>
     Effect.suspend(() => {
       if (proc.kill(signal)) return Effect.void
-      return Effect.fail(toPlatformError("kill", new Error("Failed to kill child process"), command))
+      return Effect.fail(toPlatformError("kill", new Error("Дэд процессыг зогсоож чадсангүй"), command))
     })
 
   const timeout =
@@ -419,7 +419,7 @@ export const make = Effect.gen(function* () {
               return Effect.fail(
                 toPlatformError(
                   "exitCode",
-                  new Error(`Process interrupted due to receipt of signal: '${signal}'`),
+                  new Error(`Процесс '${signal}' сигнал хүлээн авсны улмаас тасалдлаа`),
                   command,
                 ),
               )

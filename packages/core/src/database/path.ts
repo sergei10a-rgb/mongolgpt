@@ -14,7 +14,7 @@ function isWindowsStoragePath(input: string) {
 function absolute(input: string) {
   const result = storagePath(input)
   if (!nodePath.posix.isAbsolute(result) && !(process.platform === "win32" && isWindowsStoragePath(result))) {
-    throw new Error(`Path is not absolute: ${input}`)
+    throw new Error(`Зам бүрэн зам биш байна: ${input}`)
   }
   return result
 }

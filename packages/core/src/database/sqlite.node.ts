@@ -62,7 +62,7 @@ const make = (options: Config) =>
         } catch (cause) {
           return Effect.fail(
             new SqlError({
-              reason: classifySqliteError(cause, { message: "Failed to execute statement", operation: "execute" }),
+              reason: classifySqliteError(cause, { message: "SQL үйлдлийг гүйцэтгэж чадсангүй", operation: "execute" }),
             }),
           )
         }
@@ -80,7 +80,7 @@ const make = (options: Config) =>
         } catch (cause) {
           return Effect.fail(
             new SqlError({
-              reason: classifySqliteError(cause, { message: "Failed to execute statement", operation: "execute" }),
+              reason: classifySqliteError(cause, { message: "SQL үйлдлийг гүйцэтгэж чадсангүй", operation: "execute" }),
             }),
           )
         }
@@ -100,14 +100,14 @@ const make = (options: Config) =>
         return this.execute(query, params, transformRows)
       },
       executeStream() {
-        return Stream.die("executeStream not implemented")
+        return Stream.die("executeStream хэрэгжээгүй байна")
       },
       loadExtension: (path) =>
         Effect.try({
           try: () => native.loadExtension(path),
           catch: (cause) =>
             new SqlError({
-              reason: classifySqliteError(cause, { message: "Failed to load extension", operation: "loadExtension" }),
+              reason: classifySqliteError(cause, { message: "Өргөтгөлийг ачаалж чадсангүй", operation: "loadExtension" }),
             }),
         }),
     })

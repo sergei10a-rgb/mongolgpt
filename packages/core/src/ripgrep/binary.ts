@@ -74,7 +74,7 @@ export namespace RipgrepBinary {
               ])
           if (result.code !== 0)
             throw new Error(
-              result.stderr.trim() || result.stdout.trim() || `ripgrep extraction failed with code ${result.code}`,
+              result.stderr.trim() || result.stdout.trim() || `ripgrep задлахад алдаа гарлаа, код ${result.code}`,
             )
         }
 
@@ -82,7 +82,7 @@ export namespace RipgrepBinary {
           const result = yield* run("tar", ["-xzf", archive, "-C", dir])
           if (result.code !== 0)
             throw new Error(
-              result.stderr.trim() || result.stdout.trim() || `ripgrep extraction failed with code ${result.code}`,
+              result.stderr.trim() || result.stdout.trim() || `ripgrep задлахад алдаа гарлаа, код ${result.code}`,
             )
         }
 
@@ -91,7 +91,7 @@ export namespace RipgrepBinary {
           `ripgrep-${VERSION}-${config.platform}`,
           process.platform === "win32" ? "rg.exe" : "rg",
         )
-        if (!(yield* fs.isFile(extracted))) throw new Error(`ripgrep archive did not contain executable: ${extracted}`)
+        if (!(yield* fs.isFile(extracted))) throw new Error(`ripgrep-ийн архивд ажиллуулах файл алга: ${extracted}`)
 
         yield* fs.copyFile(extracted, target)
         if (process.platform !== "win32") yield* fs.chmod(target, 0o755)
@@ -108,7 +108,7 @@ export namespace RipgrepBinary {
 
             const platformKey = `${process.arch}-${process.platform}` as keyof typeof PLATFORM
             const config = PLATFORM[platformKey]
-            if (!config) throw new Error(`unsupported platform for ripgrep: ${platformKey}`)
+            if (!config) throw new Error(`ripgrep-д дэмжигдээгүй платформ: ${platformKey}`)
 
             const filename = `ripgrep-${VERSION}-${config.platform}.${config.extension}`
             const url = `https://github.com/BurntSushi/ripgrep/releases/download/${VERSION}/${filename}`
@@ -118,14 +118,14 @@ export namespace RipgrepBinary {
               Effect.gen(function* () {
                 if (yield* fs.isFile(target).pipe(Effect.orDie)) return target
 
-                yield* Effect.logInfo("downloading ripgrep", { url })
+                yield* Effect.logInfo("ripgrep татаж байна", { url })
                 yield* fs.ensureDir(Global.Path.bin).pipe(Effect.orDie)
                 const bytes = yield* HttpClientRequest.get(url).pipe(
                   http.execute,
                   Effect.flatMap((response) => response.arrayBuffer),
                   Effect.mapError((cause) => (cause instanceof Error ? cause : new Error(String(cause)))),
                 )
-                if (bytes.byteLength === 0) throw new Error(`failed to download ripgrep from ${url}`)
+                if (bytes.byteLength === 0) throw new Error(`ripgrep-ийг ${url}-аас татаж чадсангүй`)
 
                 yield* fs.writeWithDirs(archive, new Uint8Array(bytes))
                 yield* extract(archive, config, target)

@@ -66,9 +66,9 @@ const baseLayer = Layer.effect(
     const resolve = Effect.fnUntraced(function* (input?: RelativePath) {
       const absolute = path.resolve(location.directory, input ?? ".")
       if (!FSUtil.contains(location.directory, absolute))
-        return yield* Effect.die(new Error("Path escapes the location"))
+        return yield* Effect.die(new Error("Зам зөвшөөрөгдсөн байршлаас гарсан байна"))
       const real = yield* fs.realPath(absolute).pipe(Effect.orDie)
-      if (!FSUtil.contains(root, real)) return yield* Effect.die(new Error("Path escapes the location"))
+      if (!FSUtil.contains(root, real)) return yield* Effect.die(new Error("Зам зөвшөөрөгдсөн байршлаас гарсан байна"))
       return { absolute, real, directory: location.directory, root }
     })
     return Service.of({
@@ -78,7 +78,7 @@ const baseLayer = Layer.effect(
       read: Effect.fn("FileSystem.read")(function* (input) {
         const target = yield* resolve(input.path)
         const info = yield* fs.stat(target.real).pipe(Effect.orDie)
-        if (info.type !== "File") return yield* Effect.die(new Error("Path is not a file"))
+        if (info.type !== "File") return yield* Effect.die(new Error("Зам файл биш байна"))
         return {
           content: yield* fs.readFile(target.real).pipe(Effect.orDie),
           mime: FSUtil.mimeType(target.real),
@@ -87,7 +87,7 @@ const baseLayer = Layer.effect(
       list: Effect.fn("FileSystem.list")(function* (input = {}) {
         const target = yield* resolve(input.path)
         const info = yield* fs.stat(target.real).pipe(Effect.orDie)
-        if (info.type !== "Directory") return yield* Effect.die(new Error("Path is not a directory"))
+        if (info.type !== "Directory") return yield* Effect.die(new Error("Зам хавтас биш байна"))
         return yield* fs.readDirectoryEntries(target.real).pipe(
           Effect.orDie,
           Effect.map((items) =>

@@ -106,7 +106,7 @@ describe("DatabaseMigration", () => {
           yield* DatabaseMigration.apply(db)
         }),
       ),
-    ).rejects.toThrow("Database is not empty and has no session table")
+    ).rejects.toThrow("Өгөгдлийн сан хоосон биш боловч session хүснэгтгүй байна")
   })
 
   test("backfills existing Context Epoch rows to the build agent", async () => {

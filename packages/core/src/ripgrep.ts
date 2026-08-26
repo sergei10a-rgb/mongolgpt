@@ -136,7 +136,7 @@ export const layer = Layer.effect(
             return yield* new InvalidPatternError({ pattern: input.pattern, message: stderr.trim() })
           }
           if (code !== 0 && code !== 1 && code !== 2) {
-            return yield* failure(stderr.trim() || `ripgrep failed with code ${code}`)
+            return yield* failure(stderr.trim() || `ripgrep ажиллахад алдаа гарлаа, код ${code}`)
           }
           return { items: code === 1 ? [] : rows, truncated: false, partial: code === 2 }
         }),
@@ -146,7 +146,7 @@ export const layer = Layer.effect(
         Effect.mapError((cause) =>
           cause instanceof Error || cause instanceof InvalidPatternError
             ? cause
-            : failure("ripgrep execution failed", cause),
+            : failure("ripgrep ажиллуулахад алдаа гарлаа", cause),
         ),
       )
     }
@@ -231,10 +231,10 @@ export const layer = Layer.effect(
           ],
           parse: (line) =>
             (Buffer.byteLength(line, "utf8") > MAX_RECORD_BYTES
-              ? Effect.fail(failure(`Ripgrep JSON record exceeded ${MAX_RECORD_BYTES} bytes`))
+              ? Effect.fail(failure(`Ripgrep JSON бичлэг ${MAX_RECORD_BYTES} байтаас хэтэрлээ`))
               : Effect.try({
                   try: () => JSON.parse(line) as unknown,
-                  catch: (cause) => failure("Invalid ripgrep JSON output", cause),
+                  catch: (cause) => failure("ripgrep-ийн JSON гаралт буруу байна", cause),
                 })
             ).pipe(
               Effect.flatMap((json) => {
@@ -246,7 +246,7 @@ export const layer = Layer.effect(
                     path: { text: match.data.path.text.replace(/^\.[\\/]/, "") },
                     submatches: match.data.submatches.slice(0, MAX_SUBMATCHES),
                   })),
-                  Effect.mapError((cause) => failure("Invalid ripgrep match output", cause)),
+                  Effect.mapError((cause) => failure("ripgrep-ийн таарсан үр дүнгийн гаралт буруу байна", cause)),
                 )
               }),
             ),

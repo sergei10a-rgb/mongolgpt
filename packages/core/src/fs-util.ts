@@ -17,7 +17,7 @@ export namespace FSUtil {
   }) {
     override get message() {
       const detail = this.cause instanceof Error ? this.cause.message : this.cause && String(this.cause)
-      return `Filesystem operation failed: ${this.method}${detail ? `: ${detail}` : ""}`
+      return `Файлын системийн ажиллагаа амжилтгүй боллоо: ${this.method}${detail ? `: ${detail}` : ""}`
     }
   }
 

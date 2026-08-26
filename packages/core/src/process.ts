@@ -14,8 +14,8 @@ export class AppProcessError extends Schema.TaggedErrorClass<AppProcessError>()(
   override get message() {
     const detail =
       this.stderr?.trim() || (this.cause instanceof Error ? this.cause.message : this.cause && String(this.cause))
-    const status = this.exitCode === undefined ? "" : ` (exit ${this.exitCode})`
-    return `Command failed${status}: ${this.command}${detail ? `: ${detail}` : ""}`
+    const status = this.exitCode === undefined ? "" : ` (гарах код ${this.exitCode})`
+    return `Команд амжилтгүй боллоо${status}: ${this.command}${detail ? `: ${detail}` : ""}`
   }
 }
 
@@ -93,7 +93,7 @@ const wrapError = (description: string, cause: unknown): AppProcessError =>
 export const abortError = (signal: AbortSignal): Error => {
   const reason = signal.reason
   if (reason instanceof Error) return reason
-  const err = new Error("Aborted")
+  const err = new Error("Цуцлагдлаа")
   err.name = "AbortError"
   return err
 }
@@ -183,7 +183,7 @@ export const layer = Layer.effect(
       const timed = options?.timeout
         ? Effect.timeoutOrElse(collect, {
             duration: options.timeout,
-            orElse: () => Effect.fail(new AppProcessError({ command: description, cause: new Error("Timed out") })),
+            orElse: () => Effect.fail(new AppProcessError({ command: description, cause: new Error("Хугацаа хэтэрлээ") })),
           })
         : collect
       const aborted = options?.signal
@@ -201,7 +201,7 @@ export const layer = Layer.effect(
       if (command._tag !== "StandardCommand") {
         return yield* new AppProcessError({
           command: describeCommand(command),
-          cause: new Error("stdin option only supports StandardCommand; received PipedCommand"),
+          cause: new Error("stdin тохиргоо зөвхөн StandardCommand дэмжинэ; PipedCommand хүлээн авлаа"),
         })
       }
       const next = ChildProcess.make(command.command, command.args, {

@@ -132,7 +132,7 @@ export function available() {
 }
 
 export function create(_opts: Init): Result<Picker> {
-  return { ok: false, error: "fff unavailable on node runtime" }
+  return { ok: false, error: "fff нь Node runtime дээр боломжгүй" }
 }
 
 export * as Fff from "./fff.node"
