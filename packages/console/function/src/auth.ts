@@ -25,7 +25,7 @@ import {
   verifyTurnstile,
 } from "@mongolgpt/console-core/turnstile.js"
 import { isAllowedNonProductionEmail } from "./auth-allowlist"
-import { resolveOAuthAccountIdentity } from "./auth-identity"
+import { resolveActiveOAuthAccountIdentity } from "./auth-identity"
 
 type Env = {
   AuthStorage: KVNamespace
@@ -215,6 +215,7 @@ export default {
               .select({
                 provider: AuthTable.provider,
                 accountID: AuthTable.accountID,
+                timeDeleted: AuthTable.timeDeleted,
               })
               .from(AuthTable)
               .where(
@@ -224,12 +225,7 @@ export default {
                 ),
               ),
           )
-          const idByProvider = matches.find((x) => x.provider === response.provider)?.accountID
-          const idByEmail = matches.find((x) => x.provider === "email")?.accountID
-          let accountID = resolveOAuthAccountIdentity({
-            providerAccountID: idByProvider,
-            emailAccountID: idByEmail,
-          })
+          let accountID = resolveActiveOAuthAccountIdentity(matches, response.provider)
 
           // Create the account only after identity resolution has succeeded.
           if (!accountID) {
@@ -257,6 +253,7 @@ export default {
               .onConflictDoUpdate({
                 target: [AuthTable.provider, AuthTable.subject],
                 set: {
+                  accountID,
                   timeDeleted: null,
                 },
               }),

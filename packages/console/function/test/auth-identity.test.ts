@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import { OAuthIdentityConflictError, resolveOAuthAccountIdentity } from "../src/auth-identity"
+import {
+  OAuthIdentityConflictError,
+  resolveActiveOAuthAccountIdentity,
+  resolveOAuthAccountIdentity,
+} from "../src/auth-identity"
 
 describe("OAuth account identity resolution", () => {
   test.each([
@@ -24,5 +28,40 @@ describe("OAuth account identity resolution", () => {
     }).toThrow(OAuthIdentityConflictError)
 
     expect(writes).toBe(0)
+  })
+
+  test("ignores soft-deleted identities during account resolution", () => {
+    expect(
+      resolveActiveOAuthAccountIdentity(
+        [
+          { provider: "github", accountID: "account-deleted", timeDeleted: 1 },
+          { provider: "email", accountID: "account-active", timeDeleted: null },
+        ],
+        "github",
+      ),
+    ).toBe("account-active")
+
+    expect(
+      resolveActiveOAuthAccountIdentity(
+        [
+          { provider: "github", accountID: "account-deleted-provider", timeDeleted: 1 },
+          { provider: "email", accountID: "account-deleted-email", timeDeleted: 2 },
+        ],
+        "github",
+      ),
+    ).toBeUndefined()
+  })
+
+  test("still fails closed when active provider and email identities conflict", () => {
+    expect(() =>
+      resolveActiveOAuthAccountIdentity(
+        [
+          { provider: "github", accountID: "account-provider", timeDeleted: null },
+          { provider: "email", accountID: "account-email", timeDeleted: null },
+          { provider: "email", accountID: "account-deleted", timeDeleted: 1 },
+        ],
+        "github",
+      ),
+    ).toThrow(OAuthIdentityConflictError)
   })
 })

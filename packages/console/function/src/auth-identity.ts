@@ -3,6 +3,12 @@ export type OAuthIdentityResolution = {
   emailAccountID?: string
 }
 
+export type OAuthIdentityMatch = {
+  provider: string
+  accountID: string
+  timeDeleted: unknown
+}
+
 export class OAuthIdentityConflictError extends Error {
   constructor() {
     super("MongolGPT нэвтрэх эрхийн мэдээлэл зөрчилтэй байна.")
@@ -19,4 +25,15 @@ export function resolveOAuthAccountIdentity({
   }
 
   return providerAccountID ?? emailAccountID
+}
+
+export function resolveActiveOAuthAccountIdentity(
+  matches: readonly OAuthIdentityMatch[],
+  provider: string,
+): string | undefined {
+  const active = matches.filter((match) => match.timeDeleted === null)
+  return resolveOAuthAccountIdentity({
+    providerAccountID: active.find((match) => match.provider === provider)?.accountID,
+    emailAccountID: active.find((match) => match.provider === "email")?.accountID,
+  })
 }
