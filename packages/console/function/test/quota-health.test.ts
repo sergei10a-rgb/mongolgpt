@@ -17,15 +17,15 @@ describe("quota service health", () => {
   test("rejects HTTP success with invalid content type or schema", async () => {
     await expectFailure(
       verifyQuotaLedgerHealth(async () => new Response('{"values":{"system/health":0}}')),
-      "response",
+      "хариу",
     )
     await expectFailure(
       verifyQuotaLedgerHealth(async () => Response.json({ values: {} })),
-      "values",
+      "утгууд",
     )
     await expectFailure(
       verifyQuotaLedgerHealth(async () => Response.json({ values: { "system/health": -1 } })),
-      "counter",
+      "тоолуур",
     )
   })
 })

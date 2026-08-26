@@ -16,6 +16,6 @@ export async function deactivatePlanQuota(workspaceID: string, invoiceID: string
   })
   const payload = (await response.json().catch(() => ({}))) as { deactivated?: unknown }
   if (!response.ok || payload.deactivated !== true) {
-    throw new Error("Plan quota scope-ийг хааж чадсангүй")
+    throw new Error("Багцын хэрэглээний хязгаарын хамрах хүрээг хааж чадсангүй")
   }
 }

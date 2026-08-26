@@ -191,13 +191,13 @@ function reservationStorageKey(id: string) {
 
 function safeAdd(left: number, right: number) {
   const result = left + right
-  if (!Number.isSafeInteger(result) || result < 0) throw new Error("Quota ledger counter overflow")
+  if (!Number.isSafeInteger(result) || result < 0) throw new Error("Хязгаарын бүртгэлийн тоолуурын хязгаар хэтэрлээ")
   return result
 }
 
 function uniqueCounterKeys(entries: ReadonlyArray<{ counterKey: string }>) {
   const keys = new Set(entries.map((entry) => entry.counterKey))
-  if (keys.size !== entries.length) throw new Error("Quota reservation contains duplicate counters")
+  if (keys.size !== entries.length) throw new Error("Хязгаарын нөөцлөлт давхар тоолуур агуулж байна")
 }
 
 function isBatchReservation(reservation: Reservation): reservation is BatchReservation {
@@ -341,7 +341,7 @@ export async function executeQuotaLedgerCommand(
     const counter = await readCounter(storage, command.counterKey, now)
     if (existing && existing.expiresAt > now) {
       if (isBatchReservation(existing) || !sameSingleReservation(existing, command)) {
-        throw new Error("Quota reservation scope mismatch")
+        throw new Error("Хязгаарын нөөцлөлтийн хүрээ таарахгүй байна")
       }
       return { allowed: true, value: counter.value }
     }
@@ -376,7 +376,7 @@ export async function executeQuotaLedgerCommand(
     )
     if (existing && existing.expiresAt > now) {
       if (!isBatchReservation(existing) || !sameBatchReservation(existing, command.entries)) {
-        throw new Error("Quota reservation scope mismatch")
+        throw new Error("Хязгаарын нөөцлөлтийн хүрээ таарахгүй байна")
       }
       return {
         allowed: true,
@@ -449,12 +449,12 @@ export async function executeQuotaLedgerCommand(
       return { deactivated: true, values: await current() }
     }
     if (!isBatchReservation(reservation) || !sameBatchSettlement(reservation, command.entries)) {
-      throw new Error("Quota reservation scope mismatch")
+      throw new Error("Хязгаарын нөөцлөлтийн хүрээ таарахгүй байна")
     }
 
     const overrun = command.entries.find((entry) => {
       const reserved = reservation.entries.find((item) => item.counterKey === entry.counterKey)
-      if (!reserved) throw new Error("Quota reservation scope mismatch")
+      if (!reserved) throw new Error("Хязгаарын нөөцлөлтийн хүрээ таарахгүй байна")
       return entry.actual > reserved.amount
     })
     if (overrun) {
@@ -471,7 +471,7 @@ export async function executeQuotaLedgerCommand(
     const values: Record<string, number> = {}
     for (const entry of command.entries) {
       const reserved = reservation.entries.find((item) => item.counterKey === entry.counterKey)
-      if (!reserved) throw new Error("Quota reservation scope mismatch")
+      if (!reserved) throw new Error("Хязгаарын нөөцлөлтийн хүрээ таарахгүй байна")
       const counter = await readCounter(storage, entry.counterKey, now)
       const value = safeAdd(Math.max(0, counter.value - reserved.amount), entry.actual)
       await writeCounter(storage, entry.counterKey, value, entry.expiresAt)
@@ -489,7 +489,7 @@ export async function executeQuotaLedgerCommand(
     return { value: counter.value }
   }
   if (isBatchReservation(reservation) || reservation.counterKey !== command.counterKey) {
-    throw new Error("Quota reservation scope mismatch")
+    throw new Error("Хязгаарын нөөцлөлтийн хүрээ таарахгүй байна")
   }
 
   if (command.actual > reservation.amount) {

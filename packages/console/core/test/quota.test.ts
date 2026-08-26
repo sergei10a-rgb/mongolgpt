@@ -155,7 +155,7 @@ describe("Cloudflare quota ledger", () => {
         },
         1_000,
       ),
-    ).rejects.toThrow("scope mismatch")
+    ).rejects.toThrow("нөөцлөлтийн хүрээ таарахгүй байна")
 
     await expect(
       executeQuotaLedgerCommand(storage, { type: "reserve-many", reservationID: secondID, entries }, 1_000),

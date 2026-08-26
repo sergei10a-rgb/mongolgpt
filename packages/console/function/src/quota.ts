@@ -44,7 +44,7 @@ export class QuotaLedger extends DurableObject<Env> {
   async fetch(request: Request) {
     if (request.method !== "POST") return json({ error: "Зөвшөөрөгдөөгүй хүсэлт." }, 405)
     const parsed = QuotaLedgerCommandSchema.safeParse(await request.json().catch(() => undefined))
-    if (!parsed.success) return json({ error: "Quota командын бүтэц буруу байна." }, 400)
+    if (!parsed.success) return json({ error: "Хязгаарын командын бүтэц буруу байна." }, 400)
 
     const result = await this.ctx.storage.transaction((transaction) =>
       executeQuotaLedgerCommand(transaction as unknown as QuotaLedgerStorage, parsed.data),
@@ -92,7 +92,7 @@ async function handler(request: Request, env: Env) {
 
   if (url.pathname === "/v1/ledger") {
     const parsed = QuotaLedgerRequestSchema.safeParse(await request.json().catch(() => undefined))
-    if (!parsed.success) return json({ error: "Quota хүсэлтийн бүтэц буруу байна." }, 400)
+    if (!parsed.success) return json({ error: "Хязгаарын хүсэлтийн бүтэц буруу байна." }, 400)
     const id = env.QUOTA_LEDGER.idFromName(parsed.data.scope)
     const stub = env.QUOTA_LEDGER.get(id)
     return stub.fetch(
@@ -106,7 +106,7 @@ async function handler(request: Request, env: Env) {
 
   if (url.pathname === "/v1/usage") {
     const parsed = UsageQueueEventSchema.safeParse(await request.json().catch(() => undefined))
-    if (!parsed.success) return json({ error: "Usage event-ийн бүтэц буруу байна." }, 400)
+    if (!parsed.success) return json({ error: "Хэрэглээний үйл явдлын бүтэц буруу байна." }, 400)
     await Resource.UsageQueue.send(parsed.data)
     return json({ queued: true }, 202)
   }
@@ -119,8 +119,8 @@ export default {
     try {
       return await handler(request, env)
     } catch (error) {
-      console.error("Quota service request failed", error)
-      return json({ error: "Quota үйлчилгээ түр алдаатай байна." }, 500)
+      console.error("Хязгаарын үйлчилгээний хүсэлт амжилтгүй боллоо", error)
+      return json({ error: "Хязгаарын үйлчилгээ түр алдаатай байна." }, 500)
     }
   },
 }

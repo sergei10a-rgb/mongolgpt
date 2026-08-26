@@ -59,7 +59,7 @@ export async function persistUsageQueueEventWithDb(db: Database.TxOrDb, input: U
       .from(UsageTable)
       .where(and(eq(UsageTable.workspaceID, event.workspaceID), eq(UsageTable.id, event.id)))
       .then((rows) => rows[0])
-    if (!stored) throw new Error(`Usage event ${event.id} uniqueness conflict`)
+    if (!stored) throw new Error(`Хэрэглээний үйл явдал ${event.id}-ийн давхардлын зөрчил гарлаа`)
     assertUsageReplay(stored, event)
     await recordEstimatedModelCostWithDb(db, {
       workspaceID: event.workspaceID,
@@ -135,7 +135,7 @@ export async function persistUsageQueueEventWithDb(db: Database.TxOrDb, input: U
     .where(and(eq(UserTable.workspaceID, event.workspaceID), eq(UserTable.id, event.userID)))
 
   if (resultChanges(billing) !== 1 || resultChanges(user) !== 1) {
-    throw new Error(`Usage event ${event.id} references a missing billing or user row`)
+    throw new Error(`Хэрэглээний үйл явдал ${event.id} байхгүй төлбөр тооцоо эсвэл хэрэглэгчийн мөрийг зааж байна`)
   }
   return "inserted" as const
 }
@@ -167,6 +167,6 @@ function assertUsageReplay(stored: typeof UsageTable.$inferSelect, replay: Usage
     stored.sessionID !== (usage.sessionID ?? null) ||
     stored.enrichment?.plan !== usage.enrichment?.plan
   ) {
-    throw new Error(`Usage event ${replay.id} replay conflicts with the stored usage`)
+    throw new Error(`Хэрэглээний үйл явдал ${replay.id}-ийг дахин илгээхэд хадгалсан хэрэглээтэй зөрчилдөж байна`)
   }
 }

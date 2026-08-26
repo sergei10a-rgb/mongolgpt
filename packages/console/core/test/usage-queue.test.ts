@@ -112,7 +112,7 @@ describe("Cloudflare usage queue persistence", () => {
         ...event,
         usage: { ...event.usage, outputTokens: event.usage.outputTokens + 1 },
       }),
-    ).rejects.toThrow("replay conflicts with the stored usage")
+    ).rejects.toThrow("дахин илгээхэд хадгалсан хэрэглээтэй зөрчилдөж байна")
   })
 
   test("rolls back both usage and finance cost when account projection is missing", async () => {
@@ -120,7 +120,7 @@ describe("Cloudflare usage queue persistence", () => {
     sqlite.query('delete from "user" where id = ? and workspace_id = ?').run(event.userID, event.workspaceID)
 
     await expect(transaction((db) => persistUsageQueueEventWithDb(db, event))).rejects.toThrow(
-      "references a missing billing or user row",
+      "байхгүй төлбөр тооцоо эсвэл хэрэглэгчийн мөрийг зааж байна",
     )
     expect(sqlite.query("select count(*) as count from usage").get()).toEqual({ count: 0 })
     expect(sqlite.query("select count(*) as count from finance_cost_entry").get()).toEqual({ count: 0 })
