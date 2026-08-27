@@ -221,7 +221,7 @@ jobs:
           runtime_secrets="$RUNNER_TEMP/mongolgpt-runtime-secrets.json"
           trap 'rm -f "$runtime_secrets"' EXIT
           node -e 'require("node:fs").writeFileSync(process.argv[1], JSON.stringify({ MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET, MONGOLGPT_RUNTIME_AUTH_SECRET: process.env.MONGOLGPT_RUNTIME_AUTH_SECRET }))' "$runtime_secrets"
-          bun --cwd packages/runtime wrangler deploy --config="wrangler.$stage.jsonc" --secrets-file="$runtime_secrets"
+          bun --cwd packages/runtime script/deploy.ts "$stage" --secrets-file="$runtime_secrets"
           bun sst unlock --stage=${{ inputs.stage }} || true
           bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs
           bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate
@@ -278,6 +278,7 @@ jobs:
           PLAYWRIGHT_DEPLOYED_BASE_URL: ${{ inputs.stage == 'production' && format('https://app.{0}', vars.MONGOLGPT_DOMAIN) || format('https://app.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
           PLAYWRIGHT_DEPLOYED_PUBLIC_URL: ${{ inputs.stage == 'production' && format('https://{0}', vars.MONGOLGPT_DOMAIN) || format('https://{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
           PLAYWRIGHT_DEPLOYED_RUNTIME_URL: ${{ inputs.stage == 'production' && format('https://runtime.{0}', vars.MONGOLGPT_DOMAIN) || format('https://runtime.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
+          MONGOLGPT_SMOKE_AUTH_COOKIE: ${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}
         run: bun --cwd packages/app test:e2e:deployed
         timeout-minutes: 10
 

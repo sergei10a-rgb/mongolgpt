@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { issueRuntimeCapability, runtimeGatewayHeader, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
+import { createRuntimeDeployCommand, parseRuntimeDeployStage } from "../script/deploy"
 import {
   createRuntimeHandler,
   deriveRuntimeIdentity,
@@ -509,8 +510,9 @@ describe("runtime deployment contract", () => {
       version?: unknown
     }
     expect(typeof packageJSON.version).toBe("string")
+    if (typeof packageJSON.version !== "string") throw new Error("runtime package version must be a string")
 
-    for (const stage of ["dev", "production"]) {
+    for (const stage of ["dev", "production"] as const) {
       const parsed: unknown = Bun.JSONC.parse(
         await Bun.file(new URL(`../wrangler.${stage}.jsonc`, import.meta.url)).text(),
       )
@@ -551,16 +553,32 @@ describe("runtime deployment contract", () => {
         expect.objectContaining({
           MONGOLGPT_APP_ORIGIN: stage === "dev" ? appOrigin : "https://app.mgpt.mn",
           MONGOLGPT_CONSOLE_URL: stage === "dev" ? consoleOrigin : "https://mgpt.mn",
-          MONGOLGPT_RUNTIME_VERSION: packageJSON.version,
           STAGE: stage,
         }),
       )
+      expect(parsed.vars).not.toHaveProperty("MONGOLGPT_RUNTIME_VERSION")
+
+      const command = createRuntimeDeployCommand({
+        stage,
+        version: packageJSON.version,
+        args: ["--dry-run"],
+        bunExecutable: "bun",
+      })
+      expect(command.slice(0, 4)).toEqual(["bun", "x", "wrangler", "deploy"])
+      expect(command).toContain("--dry-run")
+      expect(command.at(-2)).toBe("--var")
+      expect(command.at(-1)).toBe(`MONGOLGPT_RUNTIME_VERSION:${packageJSON.version}`)
+      expect(command.find((value) => value.startsWith("--config="))).toEndWith(`wrangler.${stage}.jsonc`)
       if (stage === "dev") {
         expect(parsed.routes).toEqual([{ pattern: "runtime.dev.mgpt.mn", custom_domain: true }])
       }
     }
 
-    expect(packageJSON.scripts?.["deploy:dev"]).toBe("wrangler deploy --config wrangler.dev.jsonc")
-    expect(packageJSON.scripts?.["deploy:production"]).toBe("wrangler deploy --config wrangler.production.jsonc")
+    expect(packageJSON.scripts?.["deploy:dev"]).toBe("bun script/deploy.ts dev")
+    expect(packageJSON.scripts?.["deploy:production"]).toBe("bun script/deploy.ts production")
+    expect(parseRuntimeDeployStage("dev")).toBe("dev")
+    expect(parseRuntimeDeployStage("production")).toBe("production")
+    expect(() => parseRuntimeDeployStage("staging")).toThrow()
+    expect(() => createRuntimeDeployCommand({ stage: "dev", version: " " })).toThrow()
   })
 })

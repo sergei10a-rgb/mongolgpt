@@ -8,8 +8,8 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsgo --noEmit",
-    "deploy:dev": "wrangler deploy --config wrangler.dev.jsonc",
-    "deploy:production": "wrangler deploy --config wrangler.production.jsonc"
+    "deploy:dev": "bun script/deploy.ts dev",
+    "deploy:production": "bun script/deploy.ts production"
   },
   "dependencies": {
     "@cloudflare/sandbox": "0.12.3",

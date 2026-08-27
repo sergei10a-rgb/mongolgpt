@@ -7,7 +7,7 @@ test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", a
   const appOrigin = new URL(process.env.PLAYWRIGHT_DEPLOYED_BASE_URL!).origin
   const publicOrigin = new URL(process.env.PLAYWRIGHT_DEPLOYED_PUBLIC_URL!).origin
   const runtimeOrigin = new URL(process.env.PLAYWRIGHT_DEPLOYED_RUNTIME_URL!).origin
-  const state = observeDeployedPage(page, appOrigin)
+  const state = observeDeployedPage(page, appOrigin, [publicOrigin, runtimeOrigin])
 
   expect(publicOrigin).not.toBe(appOrigin)
   expect(runtimeOrigin).not.toBe(appOrigin)

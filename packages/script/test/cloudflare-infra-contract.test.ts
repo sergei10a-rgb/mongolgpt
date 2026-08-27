@@ -152,7 +152,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(workflow.jobs.deploy.condition).toBe(
       "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
     )
-    expect(deployStep?.run).toContain("wrangler deploy")
+    expect(deployStep?.run).toContain('bun --cwd packages/runtime script/deploy.ts "$stage"')
     expect(deployStep?.run).toContain("bun sst deploy --stage=${{ inputs.stage }} --target Database")
   })
 
@@ -182,7 +182,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
       MONGOLGPT_SMOKE_AUTH_COOKIE: "${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}",
     })
     expect(steps[browser]?.run).toBe("bun --cwd packages/app test:e2e:deployed")
-    expect(steps[browser]?.env?.MONGOLGPT_SMOKE_AUTH_COOKIE).toBeUndefined()
+    expect(steps[browser]?.env?.MONGOLGPT_SMOKE_AUTH_COOKIE).toBe("${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_BASE_URL).toContain("https://app.{0}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_PUBLIC_URL).toContain("https://{0}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RUNTIME_URL).toContain("https://runtime.{0}")
@@ -382,13 +382,17 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const binary = run.indexOf("packages/mongolgpt build --single")
     const copy = run.indexOf("cp packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt")
     const secrets = run.indexOf("MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET")
-    const runtime = run.indexOf("wrangler deploy")
+    const runtime = run.indexOf('packages/runtime script/deploy.ts "$stage"')
     expect(binary).toBeGreaterThanOrEqual(0)
     expect(copy).toBeGreaterThan(binary)
     expect(secrets).toBeGreaterThan(copy)
     expect(runtime).toBeGreaterThan(secrets)
     expect(sst).toBeGreaterThan(runtime)
     expect(run).toContain('--secrets-file="$runtime_secrets"')
+
+    const runtimeDeploySource = await Bun.file(new URL("../../runtime/script/deploy.ts", import.meta.url)).text()
+    expect(runtimeDeploySource).toContain('new URL("../package.json", import.meta.url)')
+    expect(runtimeDeploySource).toContain("MONGOLGPT_RUNTIME_VERSION:${version}")
   })
 
   test("migrates D1 before publishing schema-dependent hosted services", async () => {

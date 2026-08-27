@@ -1,17 +1,29 @@
-import { expect, type Page, type Request } from "@playwright/test"
+import { expect, type BrowserContext, type Page, type Request } from "@playwright/test"
 
 const blockedDocumentTypes = new Set(["document", "script", "stylesheet", "font"])
 const apiLikePath = /^\/(api|auth|session|model|v1)(\/|$)/
 const backendResourceTypes = new Set(["fetch", "xhr"])
 const observedResourceTypes = new Set([...blockedDocumentTypes, ...backendResourceTypes])
+const smokeAuthCookieName = "__Host-mongolgpt-auth"
 
-export function observeDeployedPage(page: Page, appOrigin: string) {
+type ObservedApiResponse = {
+  origin: string
+  method: string
+  pathname: string
+  status: number
+  contentType: string
+  cacheControl: string
+}
+
+export function observeDeployedPage(page: Page, appOrigin: string, apiOrigins: string[] = []) {
   const pageErrors: string[] = []
   const consoleErrors: string[] = []
   const failedRequests: string[] = []
   const suspiciousRequests: string[] = []
   const htmlResponses: string[] = []
+  const observedApiResponses: ObservedApiResponse[] = []
   const pendingRequests = new Set<Request>()
+  const allowedApiOrigins = new Set(apiOrigins)
 
   page.on("pageerror", (error) => {
     pageErrors.push(error.stack ?? error.message)
@@ -47,28 +59,56 @@ export function observeDeployedPage(page: Page, appOrigin: string) {
 
   page.on("response", (response) => {
     const request = response.request()
-    if (new URL(request.url()).origin !== appOrigin) return
+    const url = new URL(request.url())
+    const pathname = url.pathname
+    const origin = url.origin
+    const contentType = (response.headers()["content-type"] ?? "").split(";", 1)[0].trim().toLowerCase()
+    const cacheControl = (response.headers()["cache-control"] ?? "").trim().toLowerCase()
 
-    const pathname = new URL(request.url()).pathname
-    if (request.resourceType() === "document" && response.status() >= 400) {
-      failedRequests.push(`document:${response.status()} ${request.url()}`)
+    if (origin === appOrigin) {
+      if (request.resourceType() === "document" && response.status() >= 400) {
+        failedRequests.push(`document:${response.status()} ${request.url()}`)
+      }
+
+      if (
+        request.resourceType() !== "document" &&
+        response.status() >= 400 &&
+        blockedDocumentTypes.has(request.resourceType())
+      ) {
+        failedRequests.push(`${request.resourceType()}:${response.status()} ${request.url()}`)
+      }
+
+      if (apiLikePath.test(pathname) && contentType.includes("text/html")) {
+        htmlResponses.push(`${response.status()} ${request.url()}`)
+      }
+      return
     }
 
     if (
-      request.resourceType() !== "document" &&
-      response.status() >= 400 &&
-      blockedDocumentTypes.has(request.resourceType())
+      allowedApiOrigins.has(origin) &&
+      apiLikePath.test(pathname) &&
+      backendResourceTypes.has(request.resourceType())
     ) {
-      failedRequests.push(`${request.resourceType()}:${response.status()} ${request.url()}`)
-    }
-
-    const contentType = response.headers()["content-type"] ?? ""
-    if (apiLikePath.test(pathname) && contentType.toLowerCase().includes("text/html")) {
-      htmlResponses.push(`${response.status()} ${request.url()}`)
+      observedApiResponses.push({
+        origin,
+        method: request.method(),
+        pathname,
+        status: response.status(),
+        contentType,
+        cacheControl,
+      })
     }
   })
 
-  return { pageErrors, consoleErrors, failedRequests, suspiciousRequests, htmlResponses, pendingRequests }
+  return {
+    pageErrors,
+    consoleErrors,
+    failedRequests,
+    suspiciousRequests,
+    htmlResponses,
+    observedApiResponses,
+    pendingRequests,
+  }
 }
 
 export function expectNoDeployedSmokeFailures(state: ReturnType<typeof observeDeployedPage>) {
@@ -85,4 +125,47 @@ function isBenignConsoleError(text: string) {
 
 export function isVisibleMongolianText(text: string) {
   return /[\u0410-\u042f\u0430-\u044f\u04e8\u04e9\u04ae\u04af]/u.test(text) && text.trim().length > 20
+}
+
+export async function installSmokeAuthCookie(context: BrowserContext, publicOrigin: string) {
+  const rawCookie = process.env.MONGOLGPT_SMOKE_AUTH_COOKIE
+  if (!rawCookie) {
+    if (process.env.CI)
+      throw new Error("MONGOLGPT_SMOKE_AUTH_COOKIE is required in CI for the authenticated deployed smoke test")
+    return false
+  }
+
+  const cookie = parseSmokeAuthCookie(rawCookie, publicOrigin)
+  try {
+    await context.addCookies([cookie])
+  } catch {
+    throw new Error("MONGOLGPT_SMOKE_AUTH_COOKIE could not be installed in the deployed browser session")
+  }
+  return true
+}
+
+export function parseSmokeAuthCookie(rawCookie: string, publicOrigin: string) {
+  const publicUrl = new URL(publicOrigin)
+  if (publicUrl.protocol !== "https:") throw new Error("PLAYWRIGHT_DEPLOYED_PUBLIC_URL must use HTTPS")
+  if (rawCookie.length > 4_096 || rawCookie.trim() !== rawCookie) {
+    throw new Error("MONGOLGPT_SMOKE_AUTH_COOKIE is malformed")
+  }
+
+  const prefix = `${smokeAuthCookieName}=`
+  if (!rawCookie.startsWith(prefix)) {
+    throw new Error(`MONGOLGPT_SMOKE_AUTH_COOKIE must contain only the ${smokeAuthCookieName} cookie`)
+  }
+  const value = rawCookie.slice(prefix.length)
+  if (value.length < 16 || !/^[\x21-\x7e]+$/.test(value) || /[;,"\\]/.test(value)) {
+    throw new Error("MONGOLGPT_SMOKE_AUTH_COOKIE is malformed")
+  }
+
+  return {
+    name: smokeAuthCookieName,
+    value,
+    url: publicUrl.origin,
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax" as const,
+  }
 }
