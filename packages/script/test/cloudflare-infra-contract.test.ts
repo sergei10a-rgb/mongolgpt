@@ -76,6 +76,32 @@ function parseWorkflowJob(input: unknown, name: string): WorkflowJob {
 }
 
 describe("Cloudflare hosted infrastructure contract", () => {
+  test("checks the repository Cloudflare token without deploying resources", async () => {
+    const source = await Bun.file(
+      new URL("../../../.github/workflows/cloudflare-preflight.yml", import.meta.url),
+    ).text()
+    const parsed: unknown = Bun.YAML.parse(source)
+    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs) || !record(parsed.jobs.verify)) {
+      throw new Error("Cloudflare token preflight workflow is invalid")
+    }
+    const job = parseWorkflowJob(parsed.jobs.verify, "verify")
+    const check = job.steps.find((step) => step.name === "Verify Cloudflare deploy token without changing resources")
+
+    expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
+    expect(job.condition).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
+    expect(check?.run).toBe("bun run cloudflare:preflight")
+    expect(check?.env).toEqual({
+      MONGOLGPT_DOMAIN: "${{ vars.MONGOLGPT_DOMAIN }}",
+      CLOUDFLARE_DEFAULT_ACCOUNT_ID: "${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}",
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+    })
+    expect(source).not.toContain("environment:")
+    expect(source).not.toContain("sst deploy")
+    expect(source).not.toContain("wrangler deploy")
+    expect(source).not.toContain("GITHUB_CLIENT_SECRET_CONSOLE")
+    expect(source).not.toContain("MONGOLGPT_GATEWAY_MODELS")
+  })
+
   test("bootstraps only real dev OAuth before the authenticated deployment gate", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/bootstrap-dev-auth.yml", import.meta.url)).text()
     const parsed: unknown = Bun.YAML.parse(source)

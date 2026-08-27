@@ -11,6 +11,7 @@
     "dev:web": "bun --cwd packages/app dev",
     "dev:docs": "bun --cwd packages/web dev",
     "build:docs": "bun --cwd packages/web build",
+    "cloudflare:preflight": "bun script/cloudflare-preflight.ts",
     "deploy:preflight": "bun script/deployment-preflight.ts",
     "deploy:smoke": "bun script/deployment-smoke.ts",
     "db:migrate": "bun --cwd packages/console/core drizzle-kit migrate --config=drizzle.remote.config.ts",
