@@ -3,6 +3,12 @@ import type { IpcMainInvokeEvent } from "electron"
 import type { WslServersController } from "./servers"
 import { requireWslIpcString } from "./policy"
 import type { WslServersState } from "../../preload/types"
+import { trustRendererIpc } from "../renderer-security"
+
+const handle = <Args extends unknown[], Result>(
+  channel: string,
+  listener: (event: IpcMainInvokeEvent, ...args: Args) => Result,
+) => ipcMain.handle(channel, trustRendererIpc(listener))
 
 export function registerWslIpcHandlers(controller: WslServersController) {
   if (process.platform !== "win32") {
@@ -23,7 +29,7 @@ export function registerWslIpcHandlers(controller: WslServersController) {
     subscriptions.clear()
   })
 
-  ipcMain.handle("wsl-servers-subscribe", (event) => {
+  handle("wsl-servers-subscribe", (event) => {
     const id = event.sender.id
     if (subscriptions.has(id)) return
     subscriptions.set(
@@ -38,33 +44,33 @@ export function registerWslIpcHandlers(controller: WslServersController) {
     )
     event.sender.once("destroyed", () => unsubscribe(id))
   })
-  ipcMain.handle("wsl-servers-unsubscribe", (event) => unsubscribe(event.sender.id))
-  ipcMain.handle("wsl-servers-get-state", () => controller.getState())
-  ipcMain.handle("wsl-servers-probe-runtime", () => controller.probeRuntime())
-  ipcMain.handle("wsl-servers-refresh-distros", () => controller.refreshDistros())
-  ipcMain.handle("wsl-servers-install-wsl", () => controller.installWsl())
-  ipcMain.handle("wsl-servers-install-distro", (_event: IpcMainInvokeEvent, name: string) =>
+  handle("wsl-servers-unsubscribe", (event) => unsubscribe(event.sender.id))
+  handle("wsl-servers-get-state", () => controller.getState())
+  handle("wsl-servers-probe-runtime", () => controller.probeRuntime())
+  handle("wsl-servers-refresh-distros", () => controller.refreshDistros())
+  handle("wsl-servers-install-wsl", () => controller.installWsl())
+  handle("wsl-servers-install-distro", (_event, name: string) =>
     controller.installDistro(requireWslIpcString("distro", name)),
   )
-  ipcMain.handle("wsl-servers-probe-distro", (_event: IpcMainInvokeEvent, name: string) =>
+  handle("wsl-servers-probe-distro", (_event, name: string) =>
     controller.probeDistro(requireWslIpcString("distro", name)),
   )
-  ipcMain.handle("wsl-servers-probe-mongolgpt", (_event: IpcMainInvokeEvent, name: string) =>
+  handle("wsl-servers-probe-mongolgpt", (_event, name: string) =>
     controller.probeMongolGPT(requireWslIpcString("distro", name)),
   )
-  ipcMain.handle("wsl-servers-install-mongolgpt", (_event: IpcMainInvokeEvent, name: string) =>
+  handle("wsl-servers-install-mongolgpt", (_event, name: string) =>
     controller.installMongolGPT(requireWslIpcString("distro", name)),
   )
-  ipcMain.handle("wsl-servers-open-terminal", (_event: IpcMainInvokeEvent, name: string) =>
+  handle("wsl-servers-open-terminal", (_event, name: string) =>
     controller.openTerminal(requireWslIpcString("distro", name)),
   )
-  ipcMain.handle("wsl-servers-add", (_event: IpcMainInvokeEvent, distro: string) =>
+  handle("wsl-servers-add", (_event, distro: string) =>
     controller.addServer(requireWslIpcString("distro", distro)),
   )
-  ipcMain.handle("wsl-servers-remove", (_event: IpcMainInvokeEvent, id: string) =>
+  handle("wsl-servers-remove", (_event, id: string) =>
     controller.removeServer(requireWslIpcString("server id", id)),
   )
-  ipcMain.handle("wsl-servers-start", (_event: IpcMainInvokeEvent, id: string) =>
+  handle("wsl-servers-start", (_event, id: string) =>
     controller.startServer(requireWslIpcString("server id", id)),
   )
 }
@@ -88,20 +94,20 @@ function registerUnavailableWslIpcHandlers() {
     job: null,
   })
 
-  ipcMain.handle("wsl-servers-subscribe", (event) => {
+  handle("wsl-servers-subscribe", (event) => {
     event.sender.send("wsl-servers-event", { type: "state", state: state() })
   })
-  ipcMain.handle("wsl-servers-unsubscribe", () => undefined)
-  ipcMain.handle("wsl-servers-get-state", () => state())
-  ipcMain.handle("wsl-servers-probe-runtime", unavailable)
-  ipcMain.handle("wsl-servers-refresh-distros", unavailable)
-  ipcMain.handle("wsl-servers-install-wsl", unavailable)
-  ipcMain.handle("wsl-servers-install-distro", unavailable)
-  ipcMain.handle("wsl-servers-probe-distro", unavailable)
-  ipcMain.handle("wsl-servers-probe-mongolgpt", unavailable)
-  ipcMain.handle("wsl-servers-install-mongolgpt", unavailable)
-  ipcMain.handle("wsl-servers-open-terminal", unavailable)
-  ipcMain.handle("wsl-servers-add", unavailable)
-  ipcMain.handle("wsl-servers-remove", unavailable)
-  ipcMain.handle("wsl-servers-start", unavailable)
+  handle("wsl-servers-unsubscribe", () => undefined)
+  handle("wsl-servers-get-state", () => state())
+  handle("wsl-servers-probe-runtime", unavailable)
+  handle("wsl-servers-refresh-distros", unavailable)
+  handle("wsl-servers-install-wsl", unavailable)
+  handle("wsl-servers-install-distro", unavailable)
+  handle("wsl-servers-probe-distro", unavailable)
+  handle("wsl-servers-probe-mongolgpt", unavailable)
+  handle("wsl-servers-install-mongolgpt", unavailable)
+  handle("wsl-servers-open-terminal", unavailable)
+  handle("wsl-servers-add", unavailable)
+  handle("wsl-servers-remove", unavailable)
+  handle("wsl-servers-start", unavailable)
 }

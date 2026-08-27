@@ -10,7 +10,7 @@ import { runDesktopMenuAction } from "./desktop-menu-actions"
 import { assertAttachmentBudget, createPickedFileAuthorizations } from "./attachment-picker"
 import { getStore } from "./store"
 import { getPinchZoomEnabled, setPinchZoomEnabled, setTitlebar, updateTitlebar } from "./windows"
-import { assertTrustedRendererSource, isSafeExternalNavigation } from "./renderer-security"
+import { isSafeExternalNavigation, trustRendererIpc } from "./renderer-security"
 import type { UpdaterController } from "./updater-controller"
 import { createUpdaterSubscriptions } from "./updater-subscriptions"
 
@@ -43,42 +43,31 @@ type Deps = {
 
 export function registerIpcHandlers(deps: Deps) {
   const updaterSubscriptions = createUpdaterSubscriptions()
+  const handle = <Args extends unknown[], Result>(
+    channel: string,
+    listener: (event: IpcMainInvokeEvent, ...args: Args) => Result,
+  ) => ipcMain.handle(channel, trustRendererIpc(listener))
+  const on = <Args extends unknown[]>(
+    channel: string,
+    listener: (event: IpcMainEvent, ...args: Args) => void,
+  ) => ipcMain.on(channel, trustRendererIpc(listener))
   app.once("will-quit", updaterSubscriptions.clear)
 
-  ipcMain.handle("kill-sidecar", () => deps.killSidecar())
-  ipcMain.handle("await-initialization", () => deps.awaitInitialization())
-  ipcMain.handle("account-current", (event) => {
-    assertTrustedAccountEvent(event)
-    return deps.account.current()
-  })
-  ipcMain.handle("account-overview", (event, workspaceID?: string) => {
-    assertTrustedAccountEvent(event)
-    return deps.account.overview(workspaceID)
-  })
-  ipcMain.handle("account-login", (event) => {
-    assertTrustedAccountEvent(event)
-    return deps.account.login()
-  })
-  ipcMain.handle("account-logout", (event) => {
-    assertTrustedAccountEvent(event)
-    return deps.account.logout()
-  })
-  ipcMain.handle("consume-initial-deep-links", (event) => {
-    assertTrustedRendererEvent(event)
-    return deps.consumeInitialDeepLinks()
-  })
-  ipcMain.handle("get-default-server-url", () => deps.getDefaultServerUrl())
-  ipcMain.handle("set-default-server-url", (_event: IpcMainInvokeEvent, url: string | null) =>
-    deps.setDefaultServerUrl(url),
-  )
-  ipcMain.handle("get-display-backend", () => deps.getDisplayBackend())
-  ipcMain.handle("set-display-backend", (_event: IpcMainInvokeEvent, backend: string | null) =>
-    deps.setDisplayBackend(backend),
-  )
-  ipcMain.handle("parse-markdown", (_event: IpcMainInvokeEvent, markdown: string) => deps.parseMarkdown(markdown))
-  ipcMain.handle("check-app-exists", (_event: IpcMainInvokeEvent, appName: string) => deps.checkAppExists(appName))
-  ipcMain.handle("resolve-app-path", (_event: IpcMainInvokeEvent, appName: string) => deps.resolveAppPath(appName))
-  ipcMain.handle("updater-subscribe", (event) => {
+  handle("kill-sidecar", () => deps.killSidecar())
+  handle("await-initialization", () => deps.awaitInitialization())
+  handle("account-current", () => deps.account.current())
+  handle("account-overview", (_event, workspaceID?: string) => deps.account.overview(workspaceID))
+  handle("account-login", () => deps.account.login())
+  handle("account-logout", () => deps.account.logout())
+  handle("consume-initial-deep-links", () => deps.consumeInitialDeepLinks())
+  handle("get-default-server-url", () => deps.getDefaultServerUrl())
+  handle("set-default-server-url", (_event, url: string | null) => deps.setDefaultServerUrl(url))
+  handle("get-display-backend", () => deps.getDisplayBackend())
+  handle("set-display-backend", (_event, backend: string | null) => deps.setDisplayBackend(backend))
+  handle("parse-markdown", (_event, markdown: string) => deps.parseMarkdown(markdown))
+  handle("check-app-exists", (_event, appName: string) => deps.checkAppExists(appName))
+  handle("resolve-app-path", (_event, appName: string) => deps.resolveAppPath(appName))
+  handle("updater-subscribe", (event) => {
     const id = event.sender.id
     updaterSubscriptions.set(
       id,
@@ -89,16 +78,15 @@ export function registerIpcHandlers(deps: Deps) {
     )
     event.sender.once("destroyed", () => updaterSubscriptions.delete(id))
   })
-  ipcMain.handle("updater-unsubscribe", (event) => updaterSubscriptions.delete(event.sender.id))
-  ipcMain.handle("updater-check", () => deps.updater.check())
-  ipcMain.handle("updater-install", () => deps.updater.install())
-  ipcMain.handle("set-background-color", (_event: IpcMainInvokeEvent, color: string) => deps.setBackgroundColor(color))
-  ipcMain.handle("export-debug-logs", () => deps.exportDebugLogs())
-  ipcMain.handle("record-fatal-renderer-error", (_event: IpcMainInvokeEvent, error: FatalRendererError) =>
+  handle("updater-unsubscribe", (event) => updaterSubscriptions.delete(event.sender.id))
+  handle("updater-check", () => deps.updater.check())
+  handle("updater-install", () => deps.updater.install())
+  handle("set-background-color", (_event, color: string) => deps.setBackgroundColor(color))
+  handle("export-debug-logs", () => deps.exportDebugLogs())
+  handle("record-fatal-renderer-error", (_event, error: FatalRendererError) =>
     deps.recordFatalRendererError(error),
   )
-  ipcMain.handle("store-get", (event: IpcMainInvokeEvent, name: string, key: string) => {
-    assertTrustedRendererEvent(event)
+  handle("store-get", (_event, name: string, key: string) => {
     try {
       const store = getStore(name)
       const value = store.get(key)
@@ -108,32 +96,27 @@ export function registerIpcHandlers(deps: Deps) {
       return null
     }
   })
-  ipcMain.handle("store-set", (event: IpcMainInvokeEvent, name: string, key: string, value: string) => {
-    assertTrustedRendererEvent(event)
+  handle("store-set", (_event, name: string, key: string, value: string) => {
     getStore(name).set(key, value)
   })
-  ipcMain.handle("store-delete", (event: IpcMainInvokeEvent, name: string, key: string) => {
-    assertTrustedRendererEvent(event)
+  handle("store-delete", (_event, name: string, key: string) => {
     getStore(name).delete(key)
   })
-  ipcMain.handle("store-clear", (event: IpcMainInvokeEvent, name: string) => {
-    assertTrustedRendererEvent(event)
+  handle("store-clear", (_event, name: string) => {
     getStore(name).clear()
   })
-  ipcMain.handle("store-keys", (event: IpcMainInvokeEvent, name: string) => {
-    assertTrustedRendererEvent(event)
+  handle("store-keys", (_event, name: string) => {
     const store = getStore(name)
     return Object.keys(store.store)
   })
-  ipcMain.handle("store-length", (event: IpcMainInvokeEvent, name: string) => {
-    assertTrustedRendererEvent(event)
+  handle("store-length", (_event, name: string) => {
     const store = getStore(name)
     return Object.keys(store.store).length
   })
 
-  ipcMain.handle(
+  handle(
     "open-directory-picker",
-    async (_event: IpcMainInvokeEvent, opts?: { multiple?: boolean; title?: string; defaultPath?: string }) => {
+    async (_event, opts?: { multiple?: boolean; title?: string; defaultPath?: string }) => {
       const result = await dialog.showOpenDialog({
         properties: ["openDirectory", ...(opts?.multiple ? ["multiSelections" as const] : []), "createDirectory"],
         title: opts?.title ?? "Хавтас сонгох",
@@ -144,10 +127,10 @@ export function registerIpcHandlers(deps: Deps) {
     },
   )
 
-  ipcMain.handle(
+  handle(
     "open-file-picker",
     async (
-      event: IpcMainInvokeEvent,
+      event,
       opts?: { multiple?: boolean; title?: string; defaultPath?: string; extensions?: string[] },
     ) => {
       const result = await dialog.showOpenDialog({
@@ -170,17 +153,17 @@ export function registerIpcHandlers(deps: Deps) {
     },
   )
 
-  ipcMain.handle("read-picked-file", async (event: IpcMainInvokeEvent, token: string, filePath: string) => {
+  handle("read-picked-file", async (event, token: string, filePath: string) => {
     return pickedFiles.read(event.sender.id, token, filePath)
   })
 
-  ipcMain.handle("release-picked-files", (event: IpcMainInvokeEvent, token: string) => {
+  handle("release-picked-files", (event, token: string) => {
     pickedFiles.release(event.sender.id, token)
   })
 
-  ipcMain.handle(
+  handle(
     "save-file-picker",
-    async (_event: IpcMainInvokeEvent, opts?: { title?: string; defaultPath?: string }) => {
+    async (_event, opts?: { title?: string; defaultPath?: string }) => {
       const result = await dialog.showSaveDialog({
         title: opts?.title ?? "Файл хадгалах",
         defaultPath: opts?.defaultPath,
@@ -190,13 +173,12 @@ export function registerIpcHandlers(deps: Deps) {
     },
   )
 
-  ipcMain.on("open-link", (event: IpcMainEvent, url: string) => {
-    assertTrustedRendererEvent(event)
+  on("open-link", (_event, url: string) => {
     if (!isSafeExternalNavigation(url)) return
     void shell.openExternal(url)
   })
 
-  ipcMain.handle("open-path", async (_event: IpcMainInvokeEvent, path: string, app?: string) => {
+  handle("open-path", async (_event, path: string, app?: string) => {
     if (!app) return shell.openPath(path)
     await new Promise<void>((resolve, reject) => {
       const [cmd, args] =
@@ -205,7 +187,7 @@ export function registerIpcHandlers(deps: Deps) {
     })
   })
 
-  ipcMain.handle("read-clipboard-image", () => {
+  handle("read-clipboard-image", () => {
     const image = clipboard.readImage()
     if (image.isEmpty()) return null
     const buffer = image.toPNG().buffer
@@ -213,62 +195,53 @@ export function registerIpcHandlers(deps: Deps) {
     return { buffer, width: size.width, height: size.height }
   })
 
-  ipcMain.on("show-notification", (_event: IpcMainEvent, title: string, body?: string) => {
+  on("show-notification", (_event, title: string, body?: string) => {
     new Notification({ title, body }).show()
   })
 
-  ipcMain.handle("get-window-count", () => BrowserWindow.getAllWindows().length)
+  handle("get-window-count", () => BrowserWindow.getAllWindows().length)
 
-  ipcMain.handle("get-window-focused", (event: IpcMainInvokeEvent) => {
+  handle("get-window-focused", (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     return win?.isFocused() ?? false
   })
 
-  ipcMain.handle("set-window-focus", (event: IpcMainInvokeEvent) => {
+  handle("set-window-focus", (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     win?.focus()
   })
 
-  ipcMain.handle("show-window", (event: IpcMainInvokeEvent) => {
+  handle("show-window", (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     win?.show()
   })
 
-  ipcMain.on("relaunch", () => {
+  on("relaunch", () => {
     deps.relaunch()
   })
 
-  ipcMain.handle("get-zoom-factor", (event: IpcMainInvokeEvent) => event.sender.getZoomFactor())
-  ipcMain.handle("set-zoom-factor", (event: IpcMainInvokeEvent, factor: number) => {
+  handle("get-zoom-factor", (event) => event.sender.getZoomFactor())
+  handle("set-zoom-factor", (event, factor: number) => {
     event.sender.setZoomFactor(factor)
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return
     updateTitlebar(win)
   })
-  ipcMain.handle("get-pinch-zoom-enabled", () => getPinchZoomEnabled())
-  ipcMain.handle("set-pinch-zoom-enabled", (_event: IpcMainInvokeEvent, enabled: boolean) => {
+  handle("get-pinch-zoom-enabled", () => getPinchZoomEnabled())
+  handle("set-pinch-zoom-enabled", (_event, enabled: boolean) => {
     setPinchZoomEnabled(enabled)
   })
-  ipcMain.handle("set-titlebar", (event: IpcMainInvokeEvent, theme: TitlebarTheme) => {
+  handle("set-titlebar", (event, theme: TitlebarTheme) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return
     setTitlebar(win, theme)
   })
-  ipcMain.handle("run-desktop-menu-action", (event: IpcMainInvokeEvent, action: DesktopMenuAction) => {
+  handle("run-desktop-menu-action", (event, action: DesktopMenuAction) => {
     runDesktopMenuAction(BrowserWindow.fromWebContents(event.sender), action, {
       checkForUpdates: () => void deps.showUpdater(),
       relaunch: deps.relaunch,
     })
   })
-}
-
-function assertTrustedAccountEvent(event: IpcMainInvokeEvent) {
-  assertTrustedRendererEvent(event)
-}
-
-function assertTrustedRendererEvent(event: IpcMainInvokeEvent | IpcMainEvent) {
-  const frame = event.senderFrame
-  assertTrustedRendererSource(frame?.url, Boolean(frame && frame === frame.top))
 }
 
 export function sendMenuCommand(win: BrowserWindow, id: string) {

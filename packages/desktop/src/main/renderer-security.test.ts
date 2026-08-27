@@ -4,7 +4,14 @@ import {
   assertTrustedRendererSource,
   isSafeExternalNavigation,
   isTrustedRendererUrl,
+  trustRendererIpc,
 } from "./renderer-security"
+
+function rendererEvent(url: string, mainFrame = true) {
+  const frame: { url: string; top: unknown } = { url, top: null }
+  frame.top = mainFrame ? frame : {}
+  return { senderFrame: frame }
+}
 
 describe("desktop renderer security", () => {
   test("trusts only the packaged renderer origin", () => {
@@ -25,6 +32,31 @@ describe("desktop renderer security", () => {
     expect(() => assertTrustedRendererSource("mongolgpt-renderer://renderer/index.html", true)).not.toThrow()
     expect(() => assertTrustedRendererSource("mongolgpt-renderer://renderer/index.html", false)).toThrow("Итгэлгүй")
     expect(() => assertTrustedRendererSource("https://attacker.test", true)).toThrow("Итгэлгүй")
+  })
+
+  test("checks renderer trust before invoking privileged IPC handlers", () => {
+    let called = false
+    const handler = trustRendererIpc((_event, value: string) => {
+      called = true
+      return value
+    })
+
+    expect(handler(rendererEvent("mongolgpt-renderer://renderer/index.html"), "ok")).toBe("ok")
+    called = false
+    expect(() => handler(rendererEvent("https://attacker.test"), "blocked")).toThrow("Итгэлгүй")
+    expect(called).toBe(false)
+    expect(() => handler(rendererEvent("mongolgpt-renderer://renderer/index.html", false), "blocked")).toThrow(
+      "Итгэлгүй",
+    )
+  })
+
+  test("registers desktop and WSL IPC only through the trusted wrappers", async () => {
+    const ipc = await Bun.file(new URL("./ipc.ts", import.meta.url)).text()
+    const wsl = await Bun.file(new URL("./wsl/ipc.ts", import.meta.url)).text()
+
+    expect(ipc.match(/ipcMain\.handle\(/g)).toHaveLength(1)
+    expect(ipc.match(/ipcMain\.on\(/g)).toHaveLength(1)
+    expect(wsl.match(/ipcMain\.handle\(/g)).toHaveLength(1)
   })
 
   test("allows only web links to leave the desktop window", () => {

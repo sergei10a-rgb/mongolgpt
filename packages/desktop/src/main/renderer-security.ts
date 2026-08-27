@@ -14,6 +14,27 @@ export function assertTrustedRendererSource(value: string | undefined, mainFrame
   throw new Error("Итгэлгүй renderer-ийн хүсэлтийг хориглолоо")
 }
 
+export type TrustedRendererEvent = {
+  readonly senderFrame?: {
+    readonly url: string
+    readonly top: unknown
+  } | null
+}
+
+export function assertTrustedRendererEvent(event: TrustedRendererEvent) {
+  const frame = event.senderFrame
+  assertTrustedRendererSource(frame?.url, Boolean(frame && frame === frame.top))
+}
+
+export function trustRendererIpc<Event extends TrustedRendererEvent, Args extends unknown[], Result>(
+  listener: (event: Event, ...args: Args) => Result,
+) {
+  return (event: Event, ...args: Args) => {
+    assertTrustedRendererEvent(event)
+    return listener(event, ...args)
+  }
+}
+
 export function isSafeExternalNavigation(value: string) {
   if (!URL.canParse(value)) return false
   const protocol = new URL(value).protocol
