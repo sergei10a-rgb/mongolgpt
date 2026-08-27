@@ -2,7 +2,12 @@ import type { APIEvent } from "@solidjs/start/server"
 import { and, Database, eq, gt, gte, isNull, lte, sql } from "@mongolgpt/console-core/drizzle/index.js"
 import { KeyTable } from "@mongolgpt/console-core/schema/key.sql.js"
 import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
-import { BillingTable, PlanSubscriptionTable, SubscriptionTable, UsageTable } from "@mongolgpt/console-core/schema/billing.sql.js"
+import {
+  BillingTable,
+  PlanSubscriptionTable,
+  SubscriptionTable,
+  UsageTable,
+} from "@mongolgpt/console-core/schema/billing.sql.js"
 import { centsToMicroCents } from "@mongolgpt/console-core/util/price.js"
 import { getWeekBounds } from "@mongolgpt/console-core/util/date.js"
 import { Identifier } from "@mongolgpt/console-core/identifier.js"
@@ -55,9 +60,9 @@ import { authenticatedRateLimitIdentity, sanitizeProviderRequestHeaders } from "
 import { freeAutoReservationUpperBound, reserveFreeAutoQuota } from "./free-auto-quota"
 import { planQuotaReservationBounds, reservePlanQuota } from "./plan-quota"
 import {
-  canFailoverProvider,
   cancelProviderResponse,
   inlineProviderRetryDelayMs,
+  runProviderAttempt,
   shouldFailoverProviderStatus,
 } from "./provider-retry"
 import { providerCircuit, providerCircuitKey } from "./provider-circuit"
@@ -128,6 +133,7 @@ export async function handler(
   type AuthInfo = Awaited<ReturnType<typeof authenticate>>
   type ModelInfo = Awaited<ReturnType<typeof validateModel>>
   type ProviderInfo = Awaited<ReturnType<typeof selectProvider>>
+  type ProviderRequestResult = { providerInfo: ProviderInfo; res: Response; startTimestamp: number }
   type CostInfo = ReturnType<typeof calculateCost>
   type Limits = Awaited<ReturnType<typeof Subscription.getLimits>>
 
@@ -202,7 +208,9 @@ export async function handler(
     )
     const providerBudgetUsage = await providerBudgetTracker?.check()
 
-    const retriableRequest = async (retry: RetryOptions = { excludeProviders: [], retryCount: 0 }) => {
+    const retriableRequest = async (
+      retry: RetryOptions = { excludeProviders: [], retryCount: 0 },
+    ): Promise<ProviderRequestResult> => {
       const providerInfo = selectProvider(
         model,
         catalog,
@@ -255,81 +263,73 @@ export async function handler(
         request_length: requestLength,
         request_retry: retry.retryCount,
       })
-      const canFailover = () =>
-        canFailoverProvider({
-          retryCount: retry.retryCount,
+      return runProviderAttempt({
+        retry,
+        policy: {
           maxRetries: MAX_FAILOVER_RETRIES,
           stickyProvider: modelInfo.stickyProvider,
           fallbackProvider: modelInfo.fallbackProvider,
           currentProvider: providerInfo.id,
-        })
-      let res: Response
-      try {
-        res = await fetchWith429Retry(reqUrl, {
-          method: "POST",
-          headers: (() => {
-            const headers = sanitizeProviderRequestHeaders(input.request.headers)
-            providerInfo.modifyHeaders(headers, providerInfo.apiKey, stickyId)
-            Object.entries(providerInfo.headerModifier ?? {}).forEach(([k, v]) => {
-              if (v === "$ip") return headers.set(k, ip)
-              if (v === "$caller") return headers.set(k, stickyId)
-              if (v === "$session") return headers.set(k, sessionId)
-              if (v === "$model") return headers.set(k, model)
-              if (v === "$request") return headers.set(k, requestId)
-              if (v === "$project") return headers.set(k, projectId)
-              if (v === "$workspace" && authInfo?.workspaceID) return headers.set(k, authInfo.workspaceID)
-              headers.set(k, v)
+        },
+        request: () =>
+          fetchWith429Retry(reqUrl, {
+            method: "POST",
+            headers: (() => {
+              const headers = sanitizeProviderRequestHeaders(input.request.headers)
+              providerInfo.modifyHeaders(headers, providerInfo.apiKey, stickyId)
+              Object.entries(providerInfo.headerModifier ?? {}).forEach(([k, v]) => {
+                if (v === "$ip") return headers.set(k, ip)
+                if (v === "$caller") return headers.set(k, stickyId)
+                if (v === "$session") return headers.set(k, sessionId)
+                if (v === "$model") return headers.set(k, model)
+                if (v === "$request") return headers.set(k, requestId)
+                if (v === "$project") return headers.set(k, projectId)
+                if (v === "$workspace" && authInfo?.workspaceID) return headers.set(k, authInfo.workspaceID)
+                headers.set(k, v)
+              })
+              headers.delete("host")
+              headers.delete("content-length")
+              headers.delete("x-mongolgpt-request")
+              headers.delete("x-mongolgpt-session")
+              headers.delete("x-mongolgpt-project")
+              headers.delete("x-mongolgpt-client")
+              return headers
+            })(),
+            body: reqBody,
+          }),
+        onNetworkError() {
+          providerCircuit.record(providerInfo.circuitPermit, "transient-error")
+          logger.metric({ "llm.error.type": "network" })
+        },
+        onResponse(res) {
+          if (providerInfo.id.startsWith("console.")) {
+            const resEndpointId = res.headers.get("x-mongolgpt-endpoint-id")
+            const resEndpointModelId = res.headers.get("x-mongolgpt-upstream-model-id")
+            if (resEndpointId && resEndpointModelId)
+              logger.metric({
+                provider: resEndpointId,
+                "provider.model": resEndpointModelId,
+              })
+          }
+
+          if (res.status !== 200) {
+            logger.metric({
+              "llm.error.code": res.status,
             })
-            headers.delete("host")
-            headers.delete("content-length")
-            headers.delete("x-mongolgpt-request")
-            headers.delete("x-mongolgpt-session")
-            headers.delete("x-mongolgpt-project")
-            headers.delete("x-mongolgpt-client")
-            return headers
-          })(),
-          body: reqBody,
-        })
-      } catch (error) {
-        providerCircuit.record(providerInfo.circuitPermit, "transient-error")
-        logger.metric({ "llm.error.type": "network" })
-        throw error
-      }
+          }
 
-      if (providerInfo.id.startsWith("console.")) {
-        const resEndpointId = res.headers.get("x-mongolgpt-endpoint-id")
-        const resEndpointModelId = res.headers.get("x-mongolgpt-upstream-model-id")
-        if (resEndpointId && resEndpointModelId)
-          logger.metric({
-            provider: resEndpointId,
-            "provider.model": resEndpointModelId,
-          })
-      }
-
-      if (res.status !== 200) {
-        logger.metric({
-          "llm.error.code": res.status,
-        })
-      }
-
-      providerCircuit.record(
-        providerInfo.circuitPermit,
-        res.status === 200
-          ? "success"
-          : shouldFailoverProviderStatus(res.status)
-            ? "transient-error"
-            : "permanent-error",
-      )
-
-      if (shouldFailoverProviderStatus(res.status) && canFailover()) {
-        await cancelProviderResponse(res)
-        return retriableRequest({
-          excludeProviders: [...retry.excludeProviders, providerInfo.id],
-          retryCount: retry.retryCount + 1,
-        })
-      }
-
-      return { providerInfo, res, startTimestamp }
+          providerCircuit.record(
+            providerInfo.circuitPermit,
+            res.status === 200
+              ? "success"
+              : shouldFailoverProviderStatus(res.status)
+                ? "transient-error"
+                : "permanent-error",
+          )
+        },
+        failover: retriableRequest,
+        complete: (res) => ({ providerInfo, res, startTimestamp }),
+      })
     }
 
     const { providerInfo, res, startTimestamp } = await retriableRequest()
@@ -567,7 +567,8 @@ export async function handler(
   }
 
   function validateModel(catalog: GatewayCatalogData, reqModel: string) {
-    if (!(reqModel in catalog.models)) throw new ModelError(t("gateway.api.error.modelNotSupported", { model: reqModel }))
+    if (!(reqModel in catalog.models))
+      throw new ModelError(t("gateway.api.error.modelNotSupported", { model: reqModel }))
 
     const modelId = reqModel
     const modelData = Array.isArray(catalog.models[modelId])
@@ -747,9 +748,7 @@ export async function handler(
     }
 
     const data = await (async () => {
-      const key = gatewayApiKey
-        ? await loadAuthData(modelInfo, { type: "key", value: gatewayApiKey })
-        : undefined
+      const key = gatewayApiKey ? await loadAuthData(modelInfo, { type: "key", value: gatewayApiKey }) : undefined
       if (key) return key
 
       const account = await verifyGatewayAccount(input.request, gatewayApiKey)
