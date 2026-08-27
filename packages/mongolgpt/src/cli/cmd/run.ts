@@ -950,11 +950,18 @@ export const RunCommand = effectCmd({
 
       if (args.attach) {
         const sdk = attachSDK(directory)
-        if (requestedProviderID === "mongolgpt") {
+        const configuredModel = requestedProviderID
+          ? undefined
+          : await sdk.config
+              .get()
+              .then((response) => response.data?.model)
+              .catch(() => undefined)
+        const attachedProviderID = requestedProviderID ?? pick(configuredModel)?.providerID
+        if (attachedProviderID === "mongolgpt") {
           const account = await sdk.experimental.account.get().catch(() => undefined)
           if (
             !attachedManagedModelAccountReady({
-              providerID: requestedProviderID,
+              providerID: attachedProviderID,
               activeOrgID: account?.data?.activeOrgID,
             })
           ) {
