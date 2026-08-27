@@ -4,6 +4,7 @@ import {
   d1Backups,
   database,
   paymentService,
+  mongolGPTPlanLimits,
   quotaService,
   serviceMonitorState,
   usageQueueReadiness,
@@ -107,6 +108,7 @@ export const admin = new sst.cloudflare.x.SolidStart("Admin", {
     accessConfig,
     bootstrapEmails,
     SECRET.AdminPaymentCancellationToken,
+    mongolGPTPlanLimits,
   ],
   environment: {
     MONGOLGPT_ADMIN_ORIGIN: adminOrigin,

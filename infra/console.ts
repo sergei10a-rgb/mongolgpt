@@ -391,6 +391,7 @@ const bucketNew = new sst.cloudflare.Bucket("ZenDataNew")
 const businessIntegrationSecrets = businessIntegrationSecretNames(enableBusinessIntegrations).map(
   (name) => new sst.Secret(name),
 )
+export const mongolGPTPlanLimits = new sst.Secret("MONGOLGPT_PLAN_LIMITS")
 
 export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
   domain,
@@ -410,7 +411,7 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     SECRET.SupportApiKey,
     MONGOLGPT_PLAN_PRICE,
     ZEN_LITE_PRICE,
-    new sst.Secret("MONGOLGPT_PLAN_LIMITS"),
+    mongolGPTPlanLimits,
     new sst.Secret("ZEN_SESSION_SECRET"),
     ...ZEN_MODELS,
     ...businessIntegrationSecrets,

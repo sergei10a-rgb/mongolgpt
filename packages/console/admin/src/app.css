@@ -139,6 +139,60 @@ main[data-page="admin-operators"] {
   padding: 40px 0 64px;
 }
 
+main[data-page="admin-plans"] {
+  width: min(1240px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 40px 0 64px;
+}
+
+[data-component="plan-state"],
+[data-component="plan-form"],
+[data-component="plan-history"] {
+  margin-top: 24px;
+}
+
+[data-component="plan-state"] {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2fr);
+  gap: 24px;
+  padding: 18px 0;
+  border-block: 1px solid #dfe2e5;
+}
+
+[data-component="plan-state"] dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+  margin: 0;
+}
+
+[data-component="plan-state"] dt,
+[data-component="plan-form"] p,
+[data-component="plan-rollback"] small {
+  color: #686d73;
+  font-size: 12px;
+}
+
+[data-component="plan-state"] dd { margin: 4px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+
+[data-component="plan-form"] { display: grid; gap: 20px; }
+[data-component="plan-form"] fieldset { min-width: 0; margin: 0; padding: 16px; border: 1px solid #dfe2e5; border-radius: 6px; }
+[data-component="plan-form"] legend { padding: 0 5px; font-size: 15px; font-weight: 700; }
+[data-component="plan-form"] fieldset > p { margin: 4px 0 14px; }
+[data-component="plan-field-grid"] { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+[data-component="plan-field-grid"] label, [data-component="plan-note"] { display: grid; gap: 6px; min-width: 0; color: #4e545b; font-size: 12px; font-weight: 650; }
+[data-component="plan-field-grid"] input, [data-component="plan-note"] textarea, [data-component="plan-rollback"] input, [data-component="plan-rollback"] textarea { width: 100%; min-width: 0; padding: 8px 9px; border: 1px solid #cbd0d5; border-radius: 4px; background: #fff; color: #17191c; font: inherit; }
+[data-component="plan-note"] textarea { resize: vertical; }
+[data-component="plan-submit"] { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+[data-component="plan-submit"] p { max-width: 680px; margin: 0; }
+table[data-table="plans"] tr[data-active="true"] { background: #f2f8f5; }
+[data-component="plan-rollback"] { min-width: 190px; }
+[data-component="plan-rollback"] summary { cursor: pointer; color: #18644f; font-weight: 650; }
+[data-component="plan-rollback"] form { display: grid; gap: 7px; margin-top: 10px; }
+[data-component="plan-rollback"] label { font-size: 12px; font-weight: 650; }
+
+@media (max-width: 980px) { [data-component="plan-field-grid"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 [data-component="page-heading"],
 [data-component="section-heading"] {
   display: flex;
@@ -1031,6 +1085,11 @@ td[data-workspace] small {
     padding-top: 28px;
   }
 
+  main[data-page="admin-plans"] {
+    width: calc(100% - 28px);
+    padding-top: 28px;
+  }
+
   [data-component="page-heading"] {
     align-items: flex-start;
     flex-direction: column;
@@ -1093,6 +1152,27 @@ td[data-workspace] small {
     width: 100%;
   }
 
+  [data-component="plan-state"] {
+    grid-template-columns: 1fr;
+  }
+
+  [data-component="plan-field-grid"] {
+    grid-template-columns: 1fr;
+  }
+
+  [data-component="plan-state"] dl {
+    grid-template-columns: 1fr;
+  }
+
+  [data-component="plan-submit"] {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  [data-component="plan-submit"] button {
+    width: 100%;
+  }
+
   [data-component="pagination"] {
     justify-content: stretch;
   }
@@ -1141,6 +1221,24 @@ td[data-workspace] small {
   [data-component="pagination"] a {
     border-color: #34383d;
     background: #191c1f;
+  }
+
+  [data-component="plan-form"] fieldset,
+  [data-component="plan-state"] {
+    border-color: #34383d;
+  }
+
+  [data-component="plan-field-grid"] input,
+  [data-component="plan-note"] textarea,
+  [data-component="plan-rollback"] input,
+  [data-component="plan-rollback"] textarea {
+    border-color: #34383d;
+    background: #191c1f;
+    color: #d8dcdf;
+  }
+
+  table[data-table="plans"] tr[data-active="true"] {
+    background: #132821;
   }
 
   [data-component="admin-nav"] a:hover,
