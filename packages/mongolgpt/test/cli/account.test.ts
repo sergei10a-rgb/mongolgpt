@@ -4,6 +4,7 @@ import stripAnsi from "strip-ansi"
 import {
   accountDeviceFallbackAllowed,
   accountOnboardingRequired,
+  attachedManagedModelAccountReady,
   defaultConsoleUrl,
   formatAccountLabel,
   formatAccountOverview,
@@ -79,12 +80,20 @@ describe("console account display", () => {
     expect(accountOnboardingRequired(true)).toBe(false)
   })
 
-  test("requires login for local managed-model runs without blocking BYOK or attached servers", () => {
+  test("requires login for managed-model runs, including attached servers, without blocking BYOK", () => {
     expect(managedModelAccountLoginRequired({ providerID: "mongolgpt" })).toBe(true)
-    expect(managedModelAccountLoginRequired({ providerID: "mongolgpt", attached: true })).toBe(false)
+    expect(managedModelAccountLoginRequired({ providerID: "mongolgpt", attached: true })).toBe(true)
     expect(managedModelAccountLoginRequired({ providerID: "openrouter" })).toBe(false)
     expect(managedModelAccountLoginRequired({ providerID: "ollama" })).toBe(false)
     expect(managedModelAccountLoginRequired({})).toBe(false)
+  })
+
+  test("accepts an attached managed model only when the remote server has an active workspace", () => {
+    expect(attachedManagedModelAccountReady({ providerID: "mongolgpt" })).toBe(false)
+    expect(attachedManagedModelAccountReady({ providerID: "mongolgpt", activeOrgID: "   " })).toBe(false)
+    expect(attachedManagedModelAccountReady({ providerID: "mongolgpt", activeOrgID: "workspace-1" })).toBe(true)
+    expect(attachedManagedModelAccountReady({ providerID: "ollama" })).toBe(true)
+    expect(attachedManagedModelAccountReady({ providerID: "openrouter" })).toBe(true)
   })
 
   test("formats plan, quota, and usage status in Mongolian", () => {

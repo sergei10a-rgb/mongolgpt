@@ -318,6 +318,26 @@ describe("mongolgpt run (non-interactive subprocess)", () => {
     60_000,
   )
 
+  cliIt.live(
+    "attach mode requires the remote server account before using Free Auto",
+    ({ llm, mongolgpt }) =>
+      Effect.gen(function* () {
+        const server = yield* mongolgpt.serve()
+        const result = yield* mongolgpt.run("say hi", {
+          model: "mongolgpt/free-auto",
+          extraArgs: ["--attach", server.url, "--"],
+          timeoutMs: 30_000,
+        })
+
+        expect(result.exitCode).not.toBe(0)
+        expect(result.timedOut).toBe(false)
+        expect(result.stdout).toBe("")
+        expect(result.stderr).toContain("MongolGPT бүртгэлээр нэвтэрч")
+        expect(yield* llm.inputs).toEqual([])
+      }),
+    45_000,
+  )
+
   cliIt.concurrent(
     "attach mode rejects local directories before prompt admission",
     ({ home, mongolgpt }) =>

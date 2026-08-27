@@ -27,6 +27,18 @@ async function capability(now: number) {
 }
 
 describe("hosted runtime credential", () => {
+  test("recognizes the account-authenticated runtime placeholder only in hosted mode", () => {
+    process.env.MONGOLGPT_RUNTIME_MODE = "hosted"
+    expect(HostedCredential.isRuntimePlaceholder(HostedCredential.EnvironmentName, HostedCredential.Placeholder)).toBe(
+      true,
+    )
+    expect(HostedCredential.isRuntimePlaceholder("OTHER_KEY", HostedCredential.Placeholder)).toBe(false)
+    delete process.env.MONGOLGPT_RUNTIME_MODE
+    expect(HostedCredential.isRuntimePlaceholder(HostedCredential.EnvironmentName, HostedCredential.Placeholder)).toBe(
+      false,
+    )
+  })
+
   test("keeps the capability in memory and resolves only the harmless runtime placeholder", async () => {
     const now = Math.floor(Date.now() / 1000)
     const token = await capability(now)

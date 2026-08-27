@@ -21,12 +21,16 @@ export function capture(value: string | undefined, now = Date.now()) {
 }
 
 export function resolve(name: string, value: string | undefined, now = Date.now()) {
-  if (name !== EnvironmentName || value !== Placeholder || !enabled()) return value
+  if (!isRuntimePlaceholder(name, value)) return value
   if (!current || current.expiresAt <= now) {
     current = undefined
     return undefined
   }
   return current.token
+}
+
+export function isRuntimePlaceholder(name: string, value: string | undefined) {
+  return name === EnvironmentName && value === Placeholder && enabled()
 }
 
 export function clear() {

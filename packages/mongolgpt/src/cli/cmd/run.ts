@@ -254,24 +254,31 @@ export const RunCommand = effectCmd({
     const agentSvc = yield* Agent.Service
     const flags = yield* RuntimeFlags.Service
     const localInstance = yield* InstanceRef
+    const requestedProviderID = args.model ? pick(args.model)?.providerID : undefined
     const accountProviderID = args.attach
       ? undefined
-      : args.model
-        ? pick(args.model)?.providerID
-        : yield* Effect.gen(function* () {
-            const { Provider } = yield* Effect.promise(() => import("@/provider/provider"))
-            const providerSvc = yield* Provider.Service
-            return yield* providerSvc.defaultModel().pipe(
-              Effect.map((model) => model.providerID as string),
-              Effect.catch(() => Effect.succeed(undefined)),
-            )
-          })
-    const { ensureManagedModelAccountLogin } = yield* Effect.promise(() => import("./account"))
-    const accountReady = yield* ensureManagedModelAccountLogin({
-      providerID: accountProviderID,
-      attached: Boolean(args.attach),
-      interactive: args.format !== "json" && Boolean(process.stdin.isTTY && process.stdout.isTTY),
-    }).pipe(Effect.catch(() => fail("MongolGPT бүртгэлийн төлөвийг шалгаж чадсангүй. Түр хүлээгээд дахин оролдоно уу")))
+      : requestedProviderID ??
+        (yield* Effect.gen(function* () {
+          const { Provider } = yield* Effect.promise(() => import("@/provider/provider"))
+          const providerSvc = yield* Provider.Service
+          return yield* providerSvc.defaultModel().pipe(
+            Effect.map((model) => model.providerID as string),
+            Effect.catch(() => Effect.succeed(undefined)),
+          )
+        }))
+    const { attachedManagedModelAccountReady, ensureManagedModelAccountLogin } = yield* Effect.promise(() =>
+      import("./account"),
+    )
+    const accountReady = args.attach
+      ? true
+      : yield* ensureManagedModelAccountLogin({
+          providerID: accountProviderID,
+          interactive: args.format !== "json" && Boolean(process.stdin.isTTY && process.stdout.isTTY),
+        }).pipe(
+          Effect.catch(() =>
+            fail("MongolGPT бүртгэлийн төлөвийг шалгаж чадсангүй. Түр хүлээгээд дахин оролдоно уу"),
+          ),
+        )
     if (!accountReady) {
       return yield* fail("MongolGPT managed загвар ашиглахын өмнө `mongolgpt account login` командаар нэвтэрнэ үү")
     }
@@ -943,6 +950,19 @@ export const RunCommand = effectCmd({
 
       if (args.attach) {
         const sdk = attachSDK(directory)
+        if (requestedProviderID === "mongolgpt") {
+          const account = await sdk.experimental.account.get().catch(() => undefined)
+          if (
+            !attachedManagedModelAccountReady({
+              providerID: requestedProviderID,
+              activeOrgID: account?.data?.activeOrgID,
+            })
+          ) {
+            die(
+              "MongolGPT Free Auto ашиглахын өмнө холбогдсон сервер дээр MongolGPT бүртгэлээр нэвтэрч, ажлын орчноо сонгоно уу",
+            )
+          }
+        }
         return await execute(sdk)
       }
 

@@ -6,7 +6,11 @@ import { Integration } from "@mongolgpt/core/integration"
 import { ModelV2 } from "@mongolgpt/core/model"
 import { PluginV2 } from "@mongolgpt/core/plugin"
 import { PluginHost } from "@mongolgpt/core/plugin/host"
-import { MongolGPTPlugin, selectSoleOrganization } from "@mongolgpt/core/plugin/provider/mongolgpt"
+import {
+  isAccountBackedCredential,
+  MongolGPTPlugin,
+  selectSoleOrganization,
+} from "@mongolgpt/core/plugin/provider/mongolgpt"
 import { ProviderV2 } from "@mongolgpt/core/provider"
 import { testEffect } from "../lib/effect"
 import { PluginTestLayer } from "./fixture"
@@ -71,6 +75,46 @@ describe("MongolGPTPlugin", () => {
         { id: "org-2", name: "Two" },
       ]),
     ).toBeUndefined()
+  })
+
+  test("distinguishes an account OAuth credential from service keys and incomplete logins", () => {
+    expect(isAccountBackedCredential(Credential.Key.make({ type: "key", key: "service" }))).toBe(false)
+    expect(
+      isAccountBackedCredential(
+        Credential.OAuth.make({
+          type: "oauth",
+          methodID: Integration.MethodID.make("device"),
+          access: "access",
+          refresh: "refresh",
+          expires: Date.now() + 60_000,
+          metadata: { accountID: "account-1" },
+        }),
+      ),
+    ).toBe(false)
+    expect(
+      isAccountBackedCredential(
+        Credential.OAuth.make({
+          type: "oauth",
+          methodID: Integration.MethodID.make("device"),
+          access: "access",
+          refresh: "refresh",
+          expires: Date.now() + 60_000,
+          metadata: { accountID: "account-1", orgID: "   " },
+        }),
+      ),
+    ).toBe(false)
+    expect(
+      isAccountBackedCredential(
+        Credential.OAuth.make({
+          type: "oauth",
+          methodID: Integration.MethodID.make("device"),
+          access: "access",
+          refresh: "refresh",
+          expires: Date.now() + 60_000,
+          metadata: { accountID: "account-1", orgID: "workspace-1" },
+        }),
+      ),
+    ).toBe(true)
   })
 
   it.effect("registers account and service account methods", () =>
@@ -210,6 +254,7 @@ describe("MongolGPTPlugin", () => {
           const provider = ProviderV2.Info.make({
             ...ProviderV2.Info.empty(ProviderV2.ID.mongolgpt),
             api: { type: "aisdk", package: "test-provider" },
+            request: { headers: {}, body: { apiKey: "public" } },
           })
           const model = ModelV2.Info.make({
             ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("paid")),
@@ -300,10 +345,48 @@ describe("MongolGPTPlugin", () => {
           catalog.model.update(provider.id, model.id, (draft) => {
             draft.cost = [...model.cost]
           })
+          const free = ModelV2.Info.make({
+            ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("free-auto")),
+            api: { id: ModelV2.ID.make("free-auto"), type: "aisdk", package: "test-provider" },
+            cost: cost(0),
+          })
+          catalog.model.update(provider.id, free.id, (draft) => {
+            draft.cost = [...free.cost]
+          })
         })
         yield* addPlugin()
         expect(required(yield* catalog.provider.get(ProviderV2.ID.mongolgpt)).request.body.apiKey).toBeUndefined()
         expect(required(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("paid"))).enabled).toBe(true)
+        expect(required(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("free-auto"))).enabled).toBe(
+          false,
+        )
+      }),
+    ),
+  )
+
+  it.effect("keeps free models available inside the account-authenticated hosted runtime", () =>
+    withEnv({ MONGOLGPT_API_KEY: "runtime", MONGOLGPT_RUNTIME_MODE: "hosted" }, () =>
+      Effect.gen(function* () {
+        const catalog = yield* Catalog.Service
+        yield* catalog.transform((catalog) => {
+          const provider = ProviderV2.Info.make({
+            ...ProviderV2.Info.empty(ProviderV2.ID.mongolgpt),
+            api: { type: "aisdk", package: "test-provider" },
+          })
+          const model = ModelV2.Info.make({
+            ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("free-auto")),
+            api: { id: ModelV2.ID.make("free-auto"), type: "aisdk", package: "test-provider" },
+            cost: cost(0),
+          })
+          catalog.provider.update(provider.id, () => {})
+          catalog.model.update(provider.id, model.id, (draft) => {
+            draft.cost = [...model.cost]
+          })
+        })
+        yield* addPlugin()
+        expect(required(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("free-auto"))).enabled).toBe(
+          true,
+        )
       }),
     ),
   )
@@ -365,10 +448,21 @@ describe("MongolGPTPlugin", () => {
           catalog.model.update(provider.id, model.id, (draft) => {
             draft.cost = [...model.cost]
           })
+          const free = ModelV2.Info.make({
+            ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("free-auto")),
+            api: { id: ModelV2.ID.make("free-auto"), type: "aisdk", package: "test-provider" },
+            cost: cost(0),
+          })
+          catalog.model.update(provider.id, free.id, (draft) => {
+            draft.cost = [...free.cost]
+          })
         })
         yield* addPlugin()
         expect(required(yield* catalog.provider.get(ProviderV2.ID.mongolgpt)).request.body.apiKey).toBe("configured")
         expect(required(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("paid"))).enabled).toBe(true)
+        expect(required(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("free-auto"))).enabled).toBe(
+          false,
+        )
       }),
     ),
   )

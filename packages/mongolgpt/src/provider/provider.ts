@@ -11,6 +11,8 @@ import { Plugin } from "../plugin"
 import { serviceUse } from "@mongolgpt/core/effect/service-use"
 import { type LanguageModelV3 } from "@ai-sdk/provider"
 import { ModelsDev } from "@mongolgpt/core/models-dev"
+import { HostedCredential } from "@mongolgpt/core/hosted-credential"
+import { isManagedFreeModel } from "@mongolgpt/core/managed-model"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { InstallationVersion } from "@mongolgpt/core/installation/version"
@@ -147,6 +149,7 @@ type CustomLoader = (provider: Info) => Effect.Effect<{
 type CustomDep = {
   auth: (id: string) => Effect.Effect<Auth.Info | undefined>
   config: () => Effect.Effect<ConfigV1.Info>
+  consoleManaged: (id: string) => Effect.Effect<boolean>
   env: () => Effect.Effect<Record<string, string | undefined>>
   get: (key: string) => Effect.Effect<string | undefined>
 }
@@ -178,6 +181,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       }),
     mongolgpt: Effect.fnUntraced(function* (input: Info) {
       const env = yield* dep.env()
+      const config = yield* dep.config()
       const hasKey = iife(() => {
         if (input.env.some((item) => env[item])) return true
         return false
@@ -185,10 +189,20 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const ok =
         hasKey ||
         Boolean(yield* dep.auth(input.id)) ||
-        Boolean((yield* dep.config()).provider?.["mongolgpt"]?.options?.apiKey)
+        Boolean(config.provider?.["mongolgpt"]?.options?.apiKey)
+      const accountBacked =
+        (yield* dep.consoleManaged("mongolgpt")) ||
+        HostedCredential.isRuntimePlaceholder(
+          HostedCredential.EnvironmentName,
+          env[HostedCredential.EnvironmentName],
+        )
 
       if (!ok) {
         for (const key of Object.keys(input.models)) delete input.models[key]
+      } else if (!accountBacked) {
+        for (const [key, model] of Object.entries(input.models)) {
+          if (isManagedFreeModel(model)) delete input.models[key]
+        }
       }
 
       return {
@@ -1330,6 +1344,8 @@ export const layer = Layer.effect(
         const dep = {
           auth: (id: string) => auth.get(id).pipe(Effect.orDie),
           config: () => config.get(),
+          consoleManaged: (id: string) =>
+            config.getConsoleState().pipe(Effect.map((state) => state.consoleManagedProviders.includes(id))),
           env: () => env.all(),
           get: (key: string) => env.get(key),
         }

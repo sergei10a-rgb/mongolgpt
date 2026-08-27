@@ -61,7 +61,10 @@ export const formatPostLoginGuidance = () => [
 export const accountOnboardingRequired = (hasActiveWorkspace: boolean) => !hasActiveWorkspace
 
 export const managedModelAccountLoginRequired = (input: { providerID?: string; attached?: boolean }) =>
-  !input.attached && input.providerID === "mongolgpt"
+  input.providerID === "mongolgpt"
+
+export const attachedManagedModelAccountReady = (input: { providerID?: string; activeOrgID?: string }) =>
+  input.providerID !== "mongolgpt" || Boolean(input.activeOrgID?.trim())
 
 const formatOrgChoiceLabel = (account: { email: string }, org: { name: string }, isActive: boolean) =>
   `${org.name} (${account.email})${activeSuffix(isActive)}`

@@ -75,6 +75,14 @@ const paid = (providers: Record<string, { models: Record<string, { cost: { input
   return Object.values(item.models).filter((model) => model.cost.input > 0).length
 }
 
+const free = (
+  providers: Record<string, { models: Record<string, { cost: { input: number; output: number } }> }>,
+) => {
+  const item = providers[ProviderV2.ID.make("mongolgpt")]
+  if (!item) return 0
+  return Object.values(item.models).filter((model) => model.cost.input === 0 && model.cost.output === 0).length
+}
+
 const mongolgptProviderConfig = {
   name: "MongolGPT",
   npm: "@ai-sdk/openai-compatible",
@@ -1901,10 +1909,11 @@ it.effect("mongolgpt loader keeps paid models when config apiKey is present", ()
         .pipe(Effect.provide(InstanceLayer.layer), Effect.provide(CrossSpawnSpawner.defaultLayer))
 
     const none = paid(yield* listIn(noneDir))
-    const keyedCount = paid(yield* listIn(keyedDir))
+    const keyed = yield* listIn(keyedDir)
 
     expect(none).toBe(0)
-    expect(keyedCount).toBeGreaterThan(0)
+    expect(paid(keyed)).toBeGreaterThan(0)
+    expect(free(keyed)).toBe(0)
   }).pipe(provideMultiInstance),
 )
 
@@ -1948,9 +1957,24 @@ it.effect("mongolgpt loader keeps paid models when auth exists", () =>
         }),
     )
 
-    const keyedCount = paid(yield* listIn(keyedDir))
+    const keyed = yield* listIn(keyedDir)
 
     expect(none).toBe(0)
-    expect(keyedCount).toBeGreaterThan(0)
+    expect(paid(keyed)).toBeGreaterThan(0)
+    expect(free(keyed)).toBe(0)
+  }).pipe(provideMultiInstance),
+)
+
+it.effect("mongolgpt loader keeps Free Auto inside the account-authenticated hosted runtime", () =>
+  Effect.gen(function* () {
+    yield* setProcessEnv("MONGOLGPT_RUNTIME_MODE", "hosted")
+    yield* setProcessEnv("MONGOLGPT_API_KEY", "runtime")
+    const directory = yield* tmpdirScoped({ config: { provider: { mongolgpt: mongolgptProviderConfig } } })
+    const providers = yield* Provider.use
+      .list()
+      .pipe(provideInstanceEffect(directory))
+      .pipe(Effect.provide(InstanceLayer.layer), Effect.provide(CrossSpawnSpawner.defaultLayer))
+
+    expect(free(providers)).toBeGreaterThan(0)
   }).pipe(provideMultiInstance),
 )
