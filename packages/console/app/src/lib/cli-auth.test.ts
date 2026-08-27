@@ -14,15 +14,15 @@ await mock.module("@mongolgpt/console-core/account-access.js", () => ({
   },
 }))
 
-const { selectZenWorkspace, verifyZenAccount } = await import("./cli-auth")
+const { selectGatewayWorkspace, verifyGatewayAccount } = await import("./cli-auth")
 
 const secret = "runtime-auth-secret-with-at-least-thirty-two-characters"
 const request = (token: string) =>
-  new Request("https://console.mgpt.mn/zen/v1/chat/completions", {
+  new Request("https://console.mgpt.mn/gateway/v1/chat/completions", {
     headers: { authorization: `Bearer ${token}` },
   })
 
-describe("Zen workspace authentication contract", () => {
+describe("Gateway workspace authentication contract", () => {
   test("accepts a valid console-audience runtime capability", async () => {
     const token = await issueRuntimeCapability({
       accountID: "acc_runtime_test",
@@ -32,7 +32,7 @@ describe("Zen workspace authentication contract", () => {
     })
     const verified = await verifyRuntimeCapability({ token, audience: "https://console.mgpt.mn", secret })
     expect(verified).toMatchObject({ sub: "acc_runtime_test", authVersion: 1 })
-    expect(await verifyZenAccount(request(token), token)).toEqual({
+    expect(await verifyGatewayAccount(request(token), token)).toEqual({
       accountID: "acc_runtime_test",
       authVersion: 1,
       kind: "runtime",
@@ -58,29 +58,29 @@ describe("Zen workspace authentication contract", () => {
       audience: "https://console.mgpt.mn",
       secret,
     })
-    expect(await verifyZenAccount(request(browserToken), browserToken)).toBeUndefined()
-    expect(await verifyZenAccount(request(wrongSecretToken), wrongSecretToken)).toBeUndefined()
-    expect(await verifyZenAccount(request(revokedToken), revokedToken)).toBeUndefined()
+    expect(await verifyGatewayAccount(request(browserToken), browserToken)).toBeUndefined()
+    expect(await verifyGatewayAccount(request(wrongSecretToken), wrongSecretToken)).toBeUndefined()
+    expect(await verifyGatewayAccount(request(revokedToken), revokedToken)).toBeUndefined()
   })
 
   test("runtime account automatically selects its sole active workspace", () => {
-    expect(selectZenWorkspace({ kind: "runtime" }, ["wrk_one"], null)).toEqual({ workspaceID: "wrk_one" })
+    expect(selectGatewayWorkspace({ kind: "runtime" }, ["wrk_one"], null)).toEqual({ workspaceID: "wrk_one" })
   })
 
   test("runtime account rejects an ambiguous workspace selection", () => {
-    expect(selectZenWorkspace({ kind: "runtime" }, ["wrk_one", "wrk_two"], null)).toEqual({
+    expect(selectGatewayWorkspace({ kind: "runtime" }, ["wrk_one", "wrk_two"], null)).toEqual({
       error: "workspace_ambiguous",
     })
   })
 
   test("runtime account must prove requested workspace membership", () => {
-    expect(selectZenWorkspace({ kind: "runtime" }, ["wrk_one"], "wrk_other")).toEqual({
+    expect(selectGatewayWorkspace({ kind: "runtime" }, ["wrk_one"], "wrk_other")).toEqual({
       error: "workspace_forbidden",
     })
   })
 
   test("CLI account keeps the existing explicit workspace requirement", () => {
-    expect(selectZenWorkspace({ kind: "cli" }, ["wrk_one"], null)).toEqual({ error: "workspace_required" })
-    expect(selectZenWorkspace({ kind: "cli" }, ["wrk_one"], "wrk_one")).toEqual({ workspaceID: "wrk_one" })
+    expect(selectGatewayWorkspace({ kind: "cli" }, ["wrk_one"], null)).toEqual({ error: "workspace_required" })
+    expect(selectGatewayWorkspace({ kind: "cli" }, ["wrk_one"], "wrk_one")).toEqual({ workspaceID: "wrk_one" })
   })
 })

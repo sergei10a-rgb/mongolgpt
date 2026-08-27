@@ -1,6 +1,6 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { handler } from "~/routes/zen/util/handler"
-import { parseOpenAiVariant } from "~/routes/zen/util/variant"
+import { handler } from "~/routes/gateway/util/handler"
+import { parseOpenAiVariant } from "~/routes/gateway/util/variant"
 
 export function POST(input: APIEvent) {
   return handler(input, {

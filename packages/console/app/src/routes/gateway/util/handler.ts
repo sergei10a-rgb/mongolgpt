@@ -50,7 +50,7 @@ import { createModelTpmLimiter } from "./modelTpmLimiter"
 import { createModelTpsLimiter } from "./modelTpsLimiter"
 import { createProviderBudgetTracker } from "./providerBudgetTracker"
 import { enqueueBatchedUsage, HOT_WORKSPACES } from "./usageBatcher"
-import { resolveZenWorkspace, verifyZenAccount } from "~/lib/cli-auth"
+import { resolveGatewayWorkspace, verifyGatewayAccount } from "~/lib/cli-auth"
 import { authenticatedRateLimitIdentity, sanitizeProviderRequestHeaders } from "./request-security"
 import { freeAutoReservationUpperBound, reserveFreeAutoQuota } from "./free-auto-quota"
 import { planQuotaReservationBounds, reservePlanQuota } from "./plan-quota"
@@ -152,8 +152,8 @@ export async function handler(
     const isStream = opts.parseIsStream(url, body)
     const rawIp = input.request.headers.get("x-real-ip") ?? ""
     const ip = rawIp.includes(":") ? rawIp.split(":").slice(0, 4).join(":") : rawIp
-    const rawZenApiKey = opts.parseApiKey(input.request.headers)
-    const zenApiKey = rawZenApiKey === "public" ? undefined : rawZenApiKey
+    const rawGatewayApiKey = opts.parseApiKey(input.request.headers)
+    const gatewayApiKey = rawGatewayApiKey === "public" ? undefined : rawGatewayApiKey
     const sessionId = input.request.headers.get("x-mongolgpt-session") ?? ""
     const requestId = input.request.headers.get("x-mongolgpt-request") ?? ""
     const ocClient = input.request.headers.get("x-mongolgpt-client") ?? ""
@@ -171,7 +171,7 @@ export async function handler(
     })
     const zenData = ZenData.list(opts.modelList)
     const modelInfo = validateModel(zenData, model)
-    const authInfo = await authenticate(modelInfo, zenApiKey)
+    const authInfo = await authenticate(modelInfo, gatewayApiKey)
     const trialLimiter = await createTrialLimiter(modelInfo.trialProvider, ip, limits.free)
     const trialProviders = await trialLimiter?.check()
     const rateLimiter = modelInfo.allowAnonymous
@@ -181,7 +181,7 @@ export async function handler(
           modelInfo.rateLimit,
           authenticatedRateLimitIdentity(
             authInfo ? { workspaceID: authInfo.workspaceID, userID: authInfo.user.id } : undefined,
-            zenApiKey,
+            gatewayApiKey,
           ),
           input.request,
         )
@@ -740,19 +740,21 @@ export async function handler(
     }
   }
 
-  async function authenticate(modelInfo: ModelInfo, zenApiKey?: string) {
-    if (!zenApiKey) {
+  async function authenticate(modelInfo: ModelInfo, gatewayApiKey?: string) {
+    if (!gatewayApiKey) {
       if (modelInfo.allowAnonymous) return
       throw new AuthError(t("zen.api.error.missingApiKey"))
     }
 
     const data = await (async () => {
-      const key = zenApiKey ? await loadAuthData(modelInfo, { type: "key", value: zenApiKey }) : undefined
+      const key = gatewayApiKey
+        ? await loadAuthData(modelInfo, { type: "key", value: gatewayApiKey })
+        : undefined
       if (key) return key
 
-      const account = await verifyZenAccount(input.request, zenApiKey)
+      const account = await verifyGatewayAccount(input.request, gatewayApiKey)
       if (!account) return undefined
-      const workspace = await resolveZenWorkspace(account, input.request.headers.get("x-org-id"))
+      const workspace = await resolveGatewayWorkspace(account, input.request.headers.get("x-org-id"))
       if (!("workspaceID" in workspace)) {
         if (workspace.error === "workspace_ambiguous") throw new AuthError(t("zen.api.error.organizationRequired"))
         if (workspace.error === "workspace_required") throw new AuthError(t("zen.api.error.organizationRequired"))

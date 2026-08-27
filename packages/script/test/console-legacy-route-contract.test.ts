@@ -46,16 +46,15 @@ describe("hosted console legacy route contract", () => {
     expect(schema).toContain('LegacyPlanCodes = ["20", "100", "200"] as const')
   })
 
-  test("replaces Go and Zen storefronts with locale-aware pricing redirects", async () => {
-    for (const name of ["go", "zen"]) {
-      const redirect = await Bun.file(new URL(`${name}/index.tsx`, routes)).text()
-      expect(redirect).toContain('language.route("/pricing")')
-      expect(redirect).not.toContain("use server")
-      expect(await Bun.file(new URL(`${name}/index.css`, routes)).exists()).toBe(false)
-    }
+  test("removes the retired Go and Zen routes and publishes the current gateway route", async () => {
+    const sitemap = await Bun.file(new URL("script/generate-sitemap.ts", consoleApp)).text()
 
-    expect(await Bun.file(new URL("zen/v1/models.ts", routes)).exists()).toBe(true)
-    expect(await Bun.file(new URL("zen/go/v1/models.ts", routes)).exists()).toBe(true)
+    expect(await Bun.file(new URL("go/index.tsx", routes)).exists()).toBe(false)
+    expect(await Bun.file(new URL("go/index.css", routes)).exists()).toBe(false)
+    expect(await Bun.file(new URL("gateway/v1/models.ts", routes)).exists()).toBe(true)
+    expect(await Bun.file(new URL("zen/v1/models.ts", routes)).exists()).toBe(false)
+    expect(sitemap).not.toContain('{ path: "/go"')
+    expect(sitemap).not.toContain('{ path: "/zen"')
   })
 
   test("publishes config-backed Free, Basic, Pro, and Max pricing", async () => {
@@ -99,7 +98,7 @@ describe("hosted console legacy route contract", () => {
     const models = await Bun.file(new URL("src/routes/workspace/[id]/model-section.tsx", consoleApp)).text()
     const usage = await Bun.file(new URL("src/routes/workspace/[id]/usage/usage-section.tsx", consoleApp)).text()
     const graph = await Bun.file(new URL("src/routes/workspace/[id]/usage/graph-section.tsx", consoleApp)).text()
-    const gateway = await Bun.file(new URL("src/routes/zen/util/handler.ts", consoleApp)).text()
+    const gateway = await Bun.file(new URL("src/routes/gateway/util/handler.ts", consoleApp)).text()
     const members = await Bun.file(new URL("src/routes/workspace/[id]/members/member-section.tsx", consoleApp)).text()
     const localeDirectory = new URL("src/i18n/", consoleApp)
     const localeFiles = (await readdir(localeDirectory)).filter((name) => name.endsWith(".ts") && name !== "index.ts")

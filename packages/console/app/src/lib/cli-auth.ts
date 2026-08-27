@@ -34,7 +34,7 @@ export type CliAccount = {
   authVersion: number
 }
 
-export type ZenAccount = Pick<CliAccount, "accountID" | "authVersion"> & {
+export type GatewayAccount = Pick<CliAccount, "accountID" | "authVersion"> & {
   kind: "cli" | "runtime"
 }
 
@@ -54,7 +54,7 @@ export async function verifyCliToken(token: string): Promise<CliAccount | undefi
   }
 }
 
-export async function verifyZenAccount(request: Request, token?: string): Promise<ZenAccount | undefined> {
+export async function verifyGatewayAccount(request: Request, token?: string): Promise<GatewayAccount | undefined> {
   if (!token) return undefined
   const runtime = await verifyRuntimeAccount(request, token)
   if (runtime) return runtime
@@ -63,7 +63,7 @@ export async function verifyZenAccount(request: Request, token?: string): Promis
   return account ? { accountID: account.accountID, authVersion: account.authVersion, kind: "cli" } : undefined
 }
 
-async function verifyRuntimeAccount(request: Request, token: string): Promise<ZenAccount | undefined> {
+async function verifyRuntimeAccount(request: Request, token: string): Promise<GatewayAccount | undefined> {
   try {
     const capability = await verifyRuntimeCapability({
       token,
@@ -85,15 +85,15 @@ async function verifyRuntimeAccount(request: Request, token: string): Promise<Ze
   }
 }
 
-export type ZenWorkspaceResult =
+export type GatewayWorkspaceResult =
   | { workspaceID: string }
   | { error: "workspace_required" | "workspace_ambiguous" | "workspace_forbidden" }
 
-export function selectZenWorkspace(
-  account: Pick<ZenAccount, "kind">,
+export function selectGatewayWorkspace(
+  account: Pick<GatewayAccount, "kind">,
   workspaceIDs: readonly string[],
   requestedWorkspaceID: string | null,
-): ZenWorkspaceResult {
+): GatewayWorkspaceResult {
   if (requestedWorkspaceID) {
     return workspaceIDs.includes(requestedWorkspaceID)
       ? { workspaceID: requestedWorkspaceID }
@@ -104,10 +104,10 @@ export function selectZenWorkspace(
   return { error: workspaceIDs.length === 0 ? "workspace_forbidden" : "workspace_ambiguous" }
 }
 
-export async function resolveZenWorkspace(
-  account: ZenAccount,
+export async function resolveGatewayWorkspace(
+  account: GatewayAccount,
   requestedWorkspaceID: string | null,
-): Promise<ZenWorkspaceResult> {
+): Promise<GatewayWorkspaceResult> {
   const workspaces = await Database.use((tx) =>
     tx
       .select({ id: WorkspaceTable.id })
@@ -125,7 +125,11 @@ export async function resolveZenWorkspace(
       .orderBy(WorkspaceTable.id),
   )
 
-  return selectZenWorkspace(account, [...new Set(workspaces.map((workspace) => workspace.id))], requestedWorkspaceID)
+  return selectGatewayWorkspace(
+    account,
+    [...new Set(workspaces.map((workspace) => workspace.id))],
+    requestedWorkspaceID,
+  )
 }
 
 export async function verifyCliAccount(request: Request): Promise<{ account: CliAccount } | { response: Response }> {

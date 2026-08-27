@@ -28,7 +28,7 @@ export function rebrandHostedProviders(providers: Record<string, Provider>, cons
     ...hosted,
     id: "mongolgpt",
     name: "MongolGPT",
-    api: `${base}/zen/v1`,
+    api: `${base}/gateway/v1`,
     npm: hosted?.npm ?? "@ai-sdk/openai-compatible",
     env: ["MONGOLGPT_API_KEY"],
     models: {

@@ -80,7 +80,7 @@ describe("documentation product contract", () => {
     expect(account).toContain("Үйлдвэрлэлийн үйлчилгээ")
     expect(sidebar).toContain('"account"')
     expect(sidebar).not.toMatch(/["'](?:go|zen)["']/)
-    expect(config.match(/"\/(?:go|zen)": "\/docs\/account"/g)).toHaveLength(2)
+    expect(config).not.toMatch(/"\/(?:go|zen)": "\/docs\/account"/)
     expect(legacy).toContain('"/mn": "/docs/"')
     expect(legacy).not.toMatch(/["'](?:go|zen)["']/)
     expect(await Bun.file(new URL("go.mdx", docs)).exists()).toBe(false)

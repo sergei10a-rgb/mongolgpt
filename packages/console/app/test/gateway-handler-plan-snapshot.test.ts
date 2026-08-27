@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test"
 
-const source = await Bun.file(new URL("../src/routes/zen/util/handler.ts", import.meta.url)).text()
+const source = await Bun.file(new URL("../src/routes/gateway/util/handler.ts", import.meta.url)).text()
 
-describe("zen handler plan configuration snapshot", () => {
+describe("gateway handler plan configuration snapshot", () => {
   test("captures the runtime plan configuration once and passes it through quota paths", () => {
     expect(source.match(/await Subscription\.getLimits\(\)/g)).toHaveLength(1)
     expect(source).toContain("createTrialLimiter(modelInfo.trialProvider, ip, limits.free)")

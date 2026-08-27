@@ -65,7 +65,7 @@ describe("plugin.mongolgpt", () => {
     )
 
     expect(opts.apiKey).toBe(OAUTH_DUMMY_KEY)
-    await opts.fetch!(new URL("/zen/v1/chat/completions", server.url), {
+    await opts.fetch!(new URL("/gateway/v1/chat/completions", server.url), {
       headers: { Authorization: `Bearer ${OAUTH_DUMMY_KEY}`, "x-keep": "yes" },
     })
 

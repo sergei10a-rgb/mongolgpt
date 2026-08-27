@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import type { ZenData } from "@mongolgpt/console-core/model.js"
-import type { ProviderHelper } from "../src/routes/zen/util/provider/provider"
-import { anthropicHelper } from "../src/routes/zen/util/provider/anthropic"
-import { googleHelper } from "../src/routes/zen/util/provider/google"
-import { oaCompatHelper } from "../src/routes/zen/util/provider/openai-compatible"
-import { openaiHelper } from "../src/routes/zen/util/provider/openai"
+import type { ProviderHelper } from "../src/routes/gateway/util/provider/provider"
+import { anthropicHelper } from "../src/routes/gateway/util/provider/anthropic"
+import { googleHelper } from "../src/routes/gateway/util/provider/google"
+import { oaCompatHelper } from "../src/routes/gateway/util/provider/openai-compatible"
+import { openaiHelper } from "../src/routes/gateway/util/provider/openai"
 
 const providers = {
   anthropic: anthropicHelper({ reqModel: "claude-haiku-4-5", providerModel: "claude-haiku-4-5" }),

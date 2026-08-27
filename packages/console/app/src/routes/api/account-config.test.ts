@@ -6,10 +6,10 @@ describe("account-scoped MongolGPT config", () => {
     const config = createAccountConfig({ origin: "https://mgpt.mn", workspaceID: "workspace-1" })
     const provider = config.provider.mongolgpt
 
-    expect(provider.api).toBe("https://mgpt.mn/zen/v1")
+    expect(provider.api).toBe("https://mgpt.mn/gateway/v1")
     expect(provider.options).toEqual({
       apiKey: "{env:MONGOLGPT_CONSOLE_TOKEN}",
-      baseURL: "https://mgpt.mn/zen/v1",
+      baseURL: "https://mgpt.mn/gateway/v1",
       headers: { "x-org-id": "workspace-1" },
     })
     expect(provider.models["free-auto"]).toMatchObject({

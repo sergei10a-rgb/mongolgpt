@@ -2,7 +2,7 @@ import { getAccountOverview } from "@mongolgpt/console-core/account-overview.js"
 import type { APIEvent } from "@solidjs/start/server"
 import { validateAuthSession } from "~/context/auth"
 import { verifyCliToken } from "~/lib/cli-auth"
-import { readLedgerCounters } from "../../zen/util/quota-service"
+import { readLedgerCounters } from "../../gateway/util/quota-service"
 import { resolveAccountOverviewIdentity } from "./overview-auth"
 import { accountOverviewPreflight, accountOverviewRequest } from "./overview-handler"
 

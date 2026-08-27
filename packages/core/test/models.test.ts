@@ -157,7 +157,7 @@ describe("ModelsDev Service", () => {
       expect(result.mongolgpt).toMatchObject({
         id: "mongolgpt",
         name: "MongolGPT",
-        api: "https://mgpt.mn/zen/v1",
+        api: "https://mgpt.mn/gateway/v1",
         env: ["MONGOLGPT_API_KEY"],
         models: {
           "free-auto": {
@@ -176,7 +176,7 @@ describe("ModelsDev Service", () => {
     Effect.sync(() => {
       const result = ModelsDev.rebrandHostedProviders(fixture, "https://dev.mgpt.mn")
 
-      expect(result.mongolgpt.api).toBe("https://dev.mgpt.mn/zen/v1")
+      expect(result.mongolgpt.api).toBe("https://dev.mgpt.mn/gateway/v1")
       expect(result.mongolgpt.npm).toBe("@ai-sdk/openai-compatible")
       expect(result.mongolgpt.models["free-auto"]?.tool_call).toBe(true)
     }),

@@ -8,6 +8,8 @@ const roots = [
   new URL("../../mongolgpt/src/", import.meta.url),
 ]
 
+const apiRoots = [...roots, new URL("../../core/src/", import.meta.url)]
+
 async function sourceFiles(directory: URL): Promise<URL[]> {
   const entries = await readdir(directory, { withFileTypes: true })
   const files = await Promise.all(
@@ -41,6 +43,26 @@ describe("runtime legacy brand contract", () => {
       expect(source).not.toContain("mongolgpt-go")
       expect(source).not.toContain("opencode-go")
     }
+  })
+
+  test("keeps retired Zen API paths out of active clients", async () => {
+    const files = (await Promise.all(apiRoots.map(sourceFiles))).flat()
+    const sources = await Promise.all([
+      ...files.map(sourceText),
+      sourceText(new URL("../../console/app/src/routes/api/account-config.ts", import.meta.url)),
+    ])
+
+    for (const source of sources) {
+      if (source === undefined) continue
+      expect(source).not.toContain("/zen/v1")
+    }
+
+    const models = await Bun.file(new URL("../../core/src/models-dev.ts", import.meta.url)).text()
+    const accountConfig = await Bun.file(
+      new URL("../../console/app/src/routes/api/account-config.ts", import.meta.url),
+    ).text()
+    expect(models).toContain("/gateway/v1")
+    expect(accountConfig).toContain("/gateway/v1")
   })
 
   test("routes managed Free Auto limits through current pricing", async () => {

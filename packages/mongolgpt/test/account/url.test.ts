@@ -35,6 +35,8 @@ describe("account url helpers", () => {
 
   test("keeps custom API path prefixes", () => {
     expect(normalizeServerUrl("https://example.com/mongolgpt-api/")).toBe("https://example.com/mongolgpt-api")
+    expect(normalizeServerUrl("https://example.com/go")).toBe("https://example.com/go")
+    expect(normalizeServerUrl("https://example.com/zen")).toBe("https://example.com/zen")
   })
 
   test("resolves the production auth issuer from the console origin", () => {

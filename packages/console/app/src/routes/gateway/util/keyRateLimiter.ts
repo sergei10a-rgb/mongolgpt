@@ -6,10 +6,10 @@ import { localeFromRequest } from "~/lib/language"
 export function createRateLimiter(
   modelId: string,
   rateLimit: number | undefined,
-  zenApiKey: string | undefined,
+  gatewayApiKey: string | undefined,
   request: Request,
 ) {
-  if (!zenApiKey) return
+  if (!gatewayApiKey) return
   const locale = localeFromRequest(request)
   const dict = i18n(locale)
 
@@ -22,7 +22,7 @@ export function createRateLimiter(
 
   return {
     check: async () => {
-      const identifier = await hashIdentifier(zenApiKey)
+      const identifier = await hashIdentifier(gatewayApiKey)
       const key = buildRateLimitKey("key", identifier, interval)
       const result = claimResult(
         await ledgerCommand(`key:${identifier}`, {

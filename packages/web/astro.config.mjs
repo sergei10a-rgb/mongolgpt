@@ -18,8 +18,6 @@ export default defineConfig({
   site: config.url,
   base: "/docs",
   redirects: {
-    "/go": "/docs/account",
-    "/zen": "/docs/account",
     ...legacyMongolianDocRedirects,
   },
   outDir: staticDocs ? "./dist/docs" : "./dist",

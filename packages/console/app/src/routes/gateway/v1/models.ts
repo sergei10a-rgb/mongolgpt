@@ -6,8 +6,8 @@ import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { ModelTable } from "@mongolgpt/console-core/schema/model.sql.js"
-import { buildOptionsResponse, buildModelsResponse } from "~/routes/zen/util/modelsHandler"
-import { resolveZenWorkspace, verifyZenAccount } from "~/lib/cli-auth"
+import { buildOptionsResponse, buildModelsResponse } from "~/routes/gateway/util/modelsHandler"
+import { resolveGatewayWorkspace, verifyGatewayAccount } from "~/lib/cli-auth"
 
 export async function OPTIONS(_input: APIEvent) {
   return buildOptionsResponse()
@@ -58,9 +58,9 @@ async function authenticatedWorkspace(request: Request, authorization: string): 
   )
   if (workspaceID) return workspaceID
 
-  const account = await verifyZenAccount(request, token)
+  const account = await verifyGatewayAccount(request, token)
   if (!account) return undefined
-  const workspace = await resolveZenWorkspace(account, request.headers.get("x-org-id"))
+  const workspace = await resolveGatewayWorkspace(account, request.headers.get("x-org-id"))
   return "workspaceID" in workspace ? workspace.workspaceID : undefined
 }
 

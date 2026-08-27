@@ -27,7 +27,7 @@ function loggerCalls() {
   return result
 }
 
-describe("Zen handler telemetry security", () => {
+describe("Gateway handler telemetry security", () => {
   test("logs metadata only and never content-bearing values", () => {
     const calls = loggerCalls()
     expect(calls.length).toBeGreaterThan(0)
@@ -42,7 +42,7 @@ describe("Zen handler telemetry security", () => {
       /\berror\s*\.\s*(?:message|cause)\b/,
       /\bJSON\s*\.\s*stringify\b/,
       /\b(?:api_key|user_id)\s*:/,
-      /\b(?:rawZenApiKey|zenApiKey|data\.apiKey|data\.user\.id)\b/,
+      /\b(?:rawGatewayApiKey|gatewayApiKey|data\.apiKey|data\.user\.id)\b/,
       /["'`](?:error\.response|error\.message|error\.cause2?|request_body|response_body|stream_part)["'`]/,
     ]
 
@@ -65,6 +65,12 @@ describe("Zen handler telemetry security", () => {
     expect(source).toContain('import { config } from "~/config"')
     expect(source).toContain("config.baseUrl")
     expect(source).not.toMatch(/https?:\/\//)
+  })
+
+  test("requires MongolGPT credentials for account-backed routes", () => {
+    expect(source).toContain("if (!gatewayApiKey)")
+    expect(source).toContain("const account = await verifyGatewayAccount(input.request, gatewayApiKey)")
+    expect(source).toContain("if (!authInfo) throw new AuthError")
   })
 
   test("never selects a deleted BYOK credential", () => {

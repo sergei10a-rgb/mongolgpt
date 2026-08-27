@@ -17,12 +17,12 @@ const limits = {
   dailyRequestsFallback: 3,
   promoTokens: 100,
   checkHeaders: {
-    "x-zen-proxy": "trusted",
+    "x-mongolgpt-gateway-proxy": "trusted",
   },
 }
 let freeLimitReads = 0
 
-mock.module("../src/routes/zen/util/quota-service", () => ({
+mock.module("../src/routes/gateway/util/quota-service", () => ({
   buildRateLimitKey: (kind: string, identifier: string, interval?: string) =>
     `ratelimit:${kind}:${identifier}${interval ? `:${interval}` : ""}`,
   hashIdentifier: async () => "hashed-secret",
@@ -33,7 +33,7 @@ mock.module("../src/routes/zen/util/quota-service", () => ({
   claimResult: (value: unknown) => value,
 }))
 
-mock.module("../src/routes/zen/util/logger", () => ({
+mock.module("../src/routes/gateway/util/logger", () => ({
   logger: {
     debug: () => undefined,
   },
@@ -81,9 +81,9 @@ mock.module("@mongolgpt/console-core/schema/ip.sql.js", () => ({
   },
 }))
 
-const ipLimiterModule = await import("../src/routes/zen/util/ipRateLimiter")
-const keyLimiterModule = await import("../src/routes/zen/util/keyRateLimiter")
-const trialLimiterModule = await import("../src/routes/zen/util/trialLimiter")
+const ipLimiterModule = await import("../src/routes/gateway/util/ipRateLimiter")
+const keyLimiterModule = await import("../src/routes/gateway/util/keyRateLimiter")
+const trialLimiterModule = await import("../src/routes/gateway/util/trialLimiter")
 
 beforeEach(() => {
   quotaState.result = { allowed: true, daily: 0, lifetime: 0 }
@@ -94,10 +94,10 @@ beforeEach(() => {
   freeLimitReads = 0
 })
 
-describe("zen limiters", () => {
+describe("gateway limiters", () => {
   test("ip limiter falls back deterministically when trusted proxy headers are missing", async () => {
     quotaState.result = { allowed: false, daily: 3, lifetime: 0 }
-    const request = new Request("https://example.com/zen", {
+    const request = new Request("https://example.com/gateway", {
       headers: {
         "accept-language": "en",
       },
@@ -116,10 +116,10 @@ describe("zen limiters", () => {
 
   test("ip limiter uses verified proxy headers for model-specific limits and Mongolian errors", async () => {
     quotaState.result = { allowed: false, daily: 2, lifetime: 0 }
-    const request = new Request("https://example.com/zen", {
+    const request = new Request("https://example.com/gateway", {
       headers: {
         "accept-language": "mn",
-        "x-zen-proxy": "trusted edge",
+        "x-mongolgpt-gateway-proxy": "trusted edge",
       },
     })
 
@@ -134,10 +134,10 @@ describe("zen limiters", () => {
 
   test("ip limiter tracks lifetime usage only for verified default traffic", async () => {
     quotaState.result = { allowed: true, daily: 1, lifetime: 1, isNew: true }
-    const request = new Request("https://example.com/zen", {
+    const request = new Request("https://example.com/gateway", {
       headers: {
         "accept-language": "en",
-        "x-zen-proxy": "trusted edge",
+        "x-mongolgpt-gateway-proxy": "trusted edge",
       },
     })
 
@@ -152,8 +152,8 @@ describe("zen limiters", () => {
 
   test("injected free limits avoid an additional runtime configuration read", async () => {
     dbState.rows = [{ usage: 0 }]
-    const request = new Request("https://example.com/zen", {
-      headers: { "x-zen-proxy": "trusted edge" },
+    const request = new Request("https://example.com/gateway", {
+      headers: { "x-mongolgpt-gateway-proxy": "trusted edge" },
     })
     const limiter = await ipLimiterModule.createRateLimiter("gpt-5", undefined, "203.0.113.7", request, limits)
     await limiter.check()
@@ -164,7 +164,7 @@ describe("zen limiters", () => {
 
   test("key limiter returns clear Mongolian copy without exposing the key", async () => {
     quotaState.result = { allowed: false, value: 5 }
-    const request = new Request("https://example.com/zen", {
+    const request = new Request("https://example.com/gateway", {
       headers: {
         "accept-language": "mn",
       },

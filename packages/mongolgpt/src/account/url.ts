@@ -97,7 +97,7 @@ const configuredAccountServers = () => [
   resolveProductServiceUrls("beta").auth,
 ]
 
-const accountUiPaths = new Set(["/auth", "/console", "/go", "/workspace", "/zen"])
+const accountUiPaths = new Set(["/auth", "/console", "/workspace"])
 
 export const resolveAuthServerUrl = (input: string): string => {
   const override = process.env.MONGOLGPT_AUTH_URL

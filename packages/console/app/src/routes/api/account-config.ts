@@ -7,7 +7,7 @@ export function selectAccountWorkspace(rows: ReadonlyArray<{ workspaceID: string
 }
 
 export function createAccountConfig(input: { origin: string; workspaceID: string }) {
-  const api = `${input.origin.replace(/\/+$/, "")}/zen/v1`
+  const api = `${input.origin.replace(/\/+$/, "")}/gateway/v1`
   return {
     provider: {
       mongolgpt: {
