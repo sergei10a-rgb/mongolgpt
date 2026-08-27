@@ -152,6 +152,12 @@ export const fffLayer = Layer.effect(
       })
     }
     yield* Effect.addFinalizer(() => Effect.sync(() => result.value.destroy()).pipe(Effect.ignore))
+    const scan = yield* Effect.promise(() => result.value.waitForScan(10_000))
+    if (!scan.ok) {
+      yield* Effect.logWarning("fff-ийн анхны файл индексжүүлэлт амжилтгүй боллоо", { error: scan.error })
+    } else if (!scan.value) {
+      yield* Effect.logWarning("fff-ийн анхны файл индексжүүлэлт 10 секундэд дууссангүй")
+    }
     return Service.of({
       glob: (input) =>
         Effect.sync(() => {
