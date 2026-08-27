@@ -418,6 +418,23 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(build).toContain("bun run --cwd packages/web verify:static-artifact")
   })
 
+  test("deploys dev docs independently without account, model, or payment secrets", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy-dev-docs.yml", import.meta.url)).text()
+    expect(record(Bun.YAML.parse(source))).toBe(true)
+
+    expect(source).toContain("workflow_dispatch:")
+    expect(source).not.toMatch(/^\s+push:/m)
+    expect(source).toContain('environment: dev')
+    expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "false"')
+    expect(source).toContain('DEPLOY DEV DOCS docs.dev.mgpt.mn')
+    expect(source).toContain('MONGOLGPT_STATIC_DOCS=true bun run build:docs')
+    expect(source).toContain('bun run --cwd packages/web verify:static-artifact')
+    expect(source).toContain('bun sst deploy --stage=dev --target Website --print-logs')
+    expect(source).toContain('bun script/deployment-smoke.ts --docs-only dev')
+    expect(source).not.toContain('--target WebApp')
+    expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|RUNTIME|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/)
+  })
+
   test("deploys the authenticated Sandbox runtime before publishing the hosted app", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
     const workflow = parseWorkflow(source)

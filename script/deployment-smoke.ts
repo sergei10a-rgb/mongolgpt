@@ -34,9 +34,29 @@ if (import.meta.main) {
     console.log("Authenticated deployment smoke identity is configured.")
   } else if (process.argv[2] === "--auth-bootstrap") {
     await runAuthBootstrapSmoke(process.argv[3])
+  } else if (process.argv[2] === "--docs-only") {
+    await runDocsSmoke(process.argv[3])
   } else {
     await runSmoke()
   }
+}
+
+export async function runDocsSmoke(stage = process.env.SST_STAGE ?? "dev") {
+  if (stage !== "dev") throw new Error("Docs-only smoke нь зөвхөн dev орчинд ажиллана.")
+  if (process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES === "true") {
+    throw new Error("Docs-only smoke нь hosted service тохиргоо ашиглахгүй.")
+  }
+
+  const result = preflightDeployment({
+    stage,
+    env: process.env,
+    requireCloudflareCredentials: false,
+    requireDeploymentSecrets: false,
+  })
+  const endpoints = deploymentEndpoints(result)
+  inspectDeploymentEndpointConfiguration(endpoints, result)
+  await check("docs", endpoints.docs, undefined, result, endpoints.app, "")
+  console.log("Dev docs-only smoke check passed.")
 }
 
 export async function runAuthBootstrapSmoke(stage = process.env.SST_STAGE ?? "dev") {

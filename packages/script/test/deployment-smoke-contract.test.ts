@@ -11,6 +11,7 @@ import {
   inspectNoStoreResponse,
   inspectRuntimeTokenPreflight,
   runAuthBootstrapSmoke,
+  runDocsSmoke,
 } from "../../../script/deployment-smoke"
 import {
   inspectDeploymentEndpointConfiguration,
@@ -47,6 +48,17 @@ const html = (meta: string) => `<!doctype html>
 
 const appOrigin = "https://app.dev.mgpt.mn"
 
+async function caught(promise: Promise<unknown>) {
+  return promise.then(
+    () => undefined,
+    (error: unknown) => (error instanceof Error ? error : new Error(String(error))),
+  )
+}
+
+function mockedFetch(handler: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>): typeof fetch {
+  return Object.assign(handler, { preconnect: globalThis.fetch.preconnect })
+}
+
 const deployment = {
   stage: "dev",
   domain: "mgpt.mn",
@@ -62,7 +74,7 @@ const deployment = {
 
 describe("dev OAuth bootstrap smoke", () => {
   test("refuses every non-dev stage before making network requests", async () => {
-    await expect(runAuthBootstrapSmoke("production")).rejects.toThrow("зөвхөн dev")
+    expect((await caught(runAuthBootstrapSmoke("production")))?.message).toContain("зөвхөн dev")
   })
 
   test("exercises the anonymous account and OAuth boundaries", async () => {
@@ -103,7 +115,7 @@ describe("dev OAuth bootstrap smoke", () => {
       </body></html>`
 
     Object.assign(process.env, configured)
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const mockFetch = mockedFetch(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = new Request(input, init)
       const url = new URL(request.url)
       const key = `${request.method} ${url.origin}${url.pathname}`
@@ -152,10 +164,11 @@ describe("dev OAuth bootstrap smoke", () => {
         )
       }
       throw new Error(`Unexpected bootstrap request: ${key}`)
-    }) as typeof fetch
+    })
+    globalThis.fetch = mockFetch
 
     try {
-      await expect(runAuthBootstrapSmoke("dev")).resolves.toBeUndefined()
+      await runAuthBootstrapSmoke("dev")
     } finally {
       globalThis.fetch = originalFetch
       for (const [key, value] of previous) {
@@ -174,6 +187,84 @@ describe("dev OAuth bootstrap smoke", () => {
       "GET https://dev.mgpt.mn/v1/account/overview",
       "GET https://dev.mgpt.mn/auth/authorize",
       "GET https://auth.dev.mgpt.mn/authorize",
+    ])
+  })
+})
+
+describe("dev docs-only smoke", () => {
+  test("refuses production and hosted-service configuration", async () => {
+    expect((await caught(runDocsSmoke("production")))?.message).toContain("зөвхөн dev")
+
+    const previous = process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES
+    process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES = "true"
+    try {
+      expect((await caught(runDocsSmoke("dev")))?.message).toContain("hosted service")
+    } finally {
+      if (previous === undefined) delete process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES
+      else process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES = previous
+    }
+  })
+
+  test("checks canonical docs, its asset, and the domain root redirect", async () => {
+    const configured = {
+      MONGOLGPT_DOMAIN: "mgpt.mn",
+      MONGOLGPT_ENABLE_HOSTED_SERVICES: "false",
+      MONGOLGPT_ENABLE_ADMIN: "false",
+      MONGOLGPT_ENABLE_ANALYTICS: "false",
+      MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+      MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false",
+      MONGOLGPT_ENABLE_LEGACY_STRIPE: "false",
+      MONGOLGPT_ENABLE_MONITORING: "false",
+      MONGOLGPT_ENABLE_TURNSTILE: "false",
+      MONGOLGPT_ENABLE_SHARE_SERVICE: "false",
+      MONGOLGPT_ENABLE_SYNC_SERVICE: "false",
+      MONGOLGPT_ENABLE_REAL_PAYMENTS: "false",
+      MONGOLGPT_PAYMENT_ENVIRONMENT: "disabled",
+      MONGOLGPT_SMOKE_RETRIES: "1",
+      MONGOLGPT_SMOKE_DELAY_MS: "1",
+    } satisfies Record<string, string>
+    const previous = new Map(Object.keys(configured).map((key) => [key, process.env[key]]))
+    const originalFetch = globalThis.fetch
+    const requests: string[] = []
+
+    Object.assign(process.env, configured)
+    const mockFetch = mockedFetch(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init)
+      const url = new URL(request.url)
+      requests.push(url.toString())
+      if (url.toString() === "https://docs.dev.mgpt.mn/docs") {
+        return new Response(
+          '<!doctype html><html lang="mn"><head><link rel="stylesheet" href="/docs/_astro/docs.css"></head><body></body></html>',
+          { headers: { "content-type": "text/html; charset=utf-8" } },
+        )
+      }
+      if (url.toString() === "https://docs.dev.mgpt.mn/docs/_astro/docs.css") {
+        return new Response("body { color: black; }", { headers: { "content-type": "text/css" } })
+      }
+      if (url.toString() === "https://docs.dev.mgpt.mn/") {
+        return new Response(
+          '<!doctype html><html lang="mn"><head><meta http-equiv="refresh" content="0;url=/docs/"><link rel="canonical" href="/docs/"></head></html>',
+          { headers: { "content-type": "text/html; charset=utf-8" } },
+        )
+      }
+      throw new Error(`Unexpected docs smoke request: ${url}`)
+    })
+    globalThis.fetch = mockFetch
+
+    try {
+      await runDocsSmoke("dev")
+    } finally {
+      globalThis.fetch = originalFetch
+      for (const [key, value] of previous) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+
+    expect(requests).toEqual([
+      "https://docs.dev.mgpt.mn/docs",
+      "https://docs.dev.mgpt.mn/docs/_astro/docs.css",
+      "https://docs.dev.mgpt.mn/",
     ])
   })
 })

@@ -8,6 +8,7 @@
     "dev": "astro dev",
     "dev:remote": "astro dev",
     "start": "astro dev",
+    "test": "bun test",
     "build": "astro build",
     "verify:static-artifact": "bun script/verify-static-artifact.ts",
     "preview": "astro preview",

@@ -1,0 +1,75 @@
+name: Deploy dev docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "DEPLOY DEV DOCS docs.dev.mgpt.mn гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-deploy-dev-docs
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+  MONGOLGPT_ENABLE_HOSTED_SERVICES: "false"
+  MONGOLGPT_ENABLE_ADMIN: "false"
+  MONGOLGPT_ENABLE_ANALYTICS: "false"
+  MONGOLGPT_ENABLE_D1_BACKUPS: "false"
+  MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false"
+  MONGOLGPT_ENABLE_LEGACY_STRIPE: "false"
+  MONGOLGPT_ENABLE_MONITORING: "false"
+  MONGOLGPT_ENABLE_TURNSTILE: "false"
+  MONGOLGPT_ENABLE_SHARE_SERVICE: "false"
+  MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
+  MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"
+  MONGOLGPT_PAYMENT_ENVIRONMENT: disabled
+
+jobs:
+  deploy:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: dev
+    env:
+      CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+    steps:
+      - name: Validate exact dev docs confirmation
+        env:
+          DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$DEPLOY_CONFIRMATION" != "DEPLOY DEV DOCS docs.dev.mgpt.mn" ]; then
+            echo "Dev docs deploy баталгаажуулалт буруу байна."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify static docs artifact
+        run: |
+          bun run --cwd packages/web test
+          bun run --cwd packages/script test
+          MONGOLGPT_STATIC_DOCS=true bun run build:docs
+          bun run --cwd packages/web verify:static-artifact
+
+      - name: Deploy only dev docs to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          bun run deploy:preflight -- dev
+          bun sst unlock --stage=dev || true
+          bun sst deploy --stage=dev --target Website --print-logs
+
+      - name: Verify live dev docs
+        run: bun script/deployment-smoke.ts --docs-only dev
