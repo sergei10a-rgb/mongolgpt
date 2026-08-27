@@ -1,4 +1,8 @@
 import { CloudflareAccessPreflightError, preflightCloudflareAccess } from "@mongolgpt/script/cloudflare-access"
+import {
+  CloudflareDeploymentPreflightError,
+  preflightCloudflareDeploymentAccess,
+} from "@mongolgpt/script/cloudflare-deployment"
 import { DeploymentPreflightError, deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/deployment"
 
 try {
@@ -7,6 +11,11 @@ try {
     env: process.env,
     requireHostedServices: true,
   })
+  const cloudflare = await preflightCloudflareDeploymentAccess({
+    accountId: process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID ?? "",
+    token: process.env.CLOUDFLARE_API_TOKEN ?? "",
+    domain: result.domain,
+  })
   const access = result.adminEnabled
     ? await preflightCloudflareAccess({
         accountId: process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID ?? "",
@@ -14,7 +23,7 @@ try {
       })
     : undefined
   console.log("Cloudflare deployment preflight амжилттай.")
-  console.log(JSON.stringify({ ...result, access, endpoints: deploymentEndpoints(result) }, null, 2))
+  console.log(JSON.stringify({ ...result, cloudflare, access, endpoints: deploymentEndpoints(result) }, null, 2))
 } catch (error) {
   if (error instanceof DeploymentPreflightError) {
     console.error(error.message)
@@ -22,6 +31,10 @@ try {
   }
   if (error instanceof CloudflareAccessPreflightError) {
     console.error(`Cloudflare Access урьдчилсан шалгалт амжилтгүй боллоо: ${error.message}`)
+    process.exit(1)
+  }
+  if (error instanceof CloudflareDeploymentPreflightError) {
+    console.error(`Cloudflare deploy token-ийн урьдчилсан шалгалт амжилтгүй боллоо: ${error.message}`)
     process.exit(1)
   }
   throw error
