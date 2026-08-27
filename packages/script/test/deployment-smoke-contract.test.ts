@@ -220,6 +220,7 @@ describe("dev docs-only smoke", () => {
       MONGOLGPT_ENABLE_SYNC_SERVICE: "false",
       MONGOLGPT_ENABLE_REAL_PAYMENTS: "false",
       MONGOLGPT_PAYMENT_ENVIRONMENT: "disabled",
+      MONGOLGPT_DEPLOY_DOCS_ONLY: "true",
       MONGOLGPT_SMOKE_RETRIES: "1",
       MONGOLGPT_SMOKE_DELAY_MS: "1",
     } satisfies Record<string, string>

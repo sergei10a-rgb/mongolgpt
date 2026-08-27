@@ -52,6 +52,7 @@ export async function runDocsSmoke(stage = process.env.SST_STAGE ?? "dev") {
     env: process.env,
     requireCloudflareCredentials: false,
     requireDeploymentSecrets: false,
+    scope: "docs-only",
   })
   const endpoints = deploymentEndpoints(result)
   inspectDeploymentEndpointConfiguration(endpoints, result)

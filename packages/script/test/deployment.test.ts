@@ -656,7 +656,7 @@ describe("Cloudflare deployment preflight", () => {
   test("allows docs-only preflight only for static dev infrastructure", () => {
     const result = preflightDeployment({
       stage: "dev",
-      env: cloudflare,
+      env: { ...cloudflare, MONGOLGPT_DEPLOY_DOCS_ONLY: "true" },
       requireHostedServices: false,
       scope: "docs-only",
     })
@@ -667,7 +667,7 @@ describe("Cloudflare deployment preflight", () => {
       () =>
         preflightDeployment({
           stage: "production",
-          env: cloudflare,
+          env: { ...cloudflare, MONGOLGPT_DEPLOY_DOCS_ONLY: "true" },
           requireHostedServices: false,
           scope: "docs-only",
         }),
@@ -681,12 +681,21 @@ describe("Cloudflare deployment preflight", () => {
             ...cloudflare,
             ...hosted,
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_DEPLOY_DOCS_ONLY: "true",
             MONGOLGPT_AUTH_EMAIL_DOMAINS: "smoke@mgpt.mn",
           },
           requireDeploymentSecrets: false,
           scope: "docs-only",
         }),
       ["MONGOLGPT_ENABLE_HOSTED_SERVICES=false"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: { ...cloudflare, MONGOLGPT_DEPLOY_DOCS_ONLY: "true" },
+        }),
+      ["зөвхөн docs-only scope"],
     )
   })
 

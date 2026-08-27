@@ -420,6 +420,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
   test("deploys dev docs independently without account, model, or payment secrets", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy-dev-docs.yml", import.meta.url)).text()
+    const sstSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
+    const docsSource = await Bun.file(new URL("../../../infra/docs.ts", import.meta.url)).text()
+    const siteSource = await Bun.file(new URL("../../../infra/site.ts", import.meta.url)).text()
     const rootPackage: unknown = await Bun.file(new URL("../../../package.json", import.meta.url)).json()
     expect(record(Bun.YAML.parse(source))).toBe(true)
     if (!record(rootPackage) || !record(rootPackage.dependencies)) {
@@ -430,6 +433,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).not.toMatch(/^\s+push:/m)
     expect(source).toContain('environment: dev')
     expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "false"')
+    expect(source).toContain('MONGOLGPT_DEPLOY_DOCS_ONLY: "true"')
     expect(source).toContain('DEPLOY DEV DOCS docs.dev.mgpt.mn')
     expect(source).toContain('MONGOLGPT_STATIC_DOCS=true bun run build:docs')
     expect(source).toContain('bun run --cwd packages/web verify:static-artifact')
@@ -439,6 +443,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).not.toContain('--target WebApp')
     expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|RUNTIME|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/)
     expect(rootPackage.dependencies["@mongolgpt/account-contract"]).toBe("workspace:*")
+    expect(sstSource).toContain('if (docsOnly) {')
+    expect(sstSource).toContain('await import("./infra/docs.js")')
+    expect(sstSource.indexOf('if (docsOnly) {')).toBeLessThan(sstSource.indexOf('await import("./infra/site.js")'))
+    expect(docsSource).toContain('new sst.cloudflare.StaticSiteV2("Website"')
+    expect(docsSource).not.toContain('StaticSiteV2("WebApp"')
+    expect(siteSource).toContain('new sst.cloudflare.StaticSiteV2("WebApp"')
   })
 
   test("deploys the authenticated Sandbox runtime before publishing the hosted app", async () => {

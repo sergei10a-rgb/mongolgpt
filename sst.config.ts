@@ -5,6 +5,7 @@ export default $config({
     const { requireDeploymentStage } = await import("./packages/script/src/deployment-stage.js")
     const stage = requireDeploymentStage(input?.stage)
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
+    const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
     const admin = flag("MONGOLGPT_ENABLE_ADMIN")
     const d1Backups = flag("MONGOLGPT_ENABLE_D1_BACKUPS")
     const monitoring = flag("MONGOLGPT_ENABLE_MONITORING")
@@ -12,6 +13,12 @@ export default $config({
     const unsupported = ["MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS", "MONGOLGPT_ENABLE_LEGACY_STRIPE"].filter(flag)
     if (unsupported.length) {
       throw new Error(`Cloudflare-д суурилсан байршуулалтын горим дараахыг дэмжихгүй: ${unsupported.join(", ")}`)
+    }
+    if (docsOnly && stage !== "dev") {
+      throw new Error("MONGOLGPT_DEPLOY_DOCS_ONLY-г зөвхөн dev орчинд ашиглана.")
+    }
+    if (docsOnly && hostedServices) {
+      throw new Error("MONGOLGPT_DEPLOY_DOCS_ONLY нь hosted services унтраалттай байхыг шаардана.")
     }
     if (analytics && !hostedServices) {
       throw new Error("MONGOLGPT_ENABLE_ANALYTICS нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true үед л ажиллана.")
@@ -49,9 +56,18 @@ export default $config({
   },
   async run() {
     const stage = await import("./infra/stage.js")
-    const site = await import("./infra/site.js")
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
+    const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
     const adminEnabled = stage.enableAdmin
+    if (docsOnly) {
+      const docs = await import("./infra/docs.js")
+      return {
+        DocsUrl: docs.docsUrl,
+        DocsWorkerUrl: docs.website.url,
+        HostedServices: false,
+      }
+    }
+    const site = await import("./infra/site.js")
     if (!hostedServices) {
       return {
         DocsUrl: site.docsUrl,

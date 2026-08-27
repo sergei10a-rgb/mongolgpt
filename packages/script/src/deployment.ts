@@ -20,6 +20,7 @@ const booleanVariables = [
   "MONGOLGPT_ENABLE_SYNC_SERVICE",
   "MONGOLGPT_ENABLE_ADMIN",
   "MONGOLGPT_ENABLE_REAL_PAYMENTS",
+  "MONGOLGPT_DEPLOY_DOCS_ONLY",
 ] as const
 
 export const modelSecretNames = Array.from({ length: 30 }, (_, index) => `MONGOLGPT_GATEWAY_MODELS${index + 1}`)
@@ -103,6 +104,13 @@ export function preflightDeployment(input: {
   }
 
   const hostedServices = enabled(env.MONGOLGPT_ENABLE_HOSTED_SERVICES)
+  const deployDocsOnly = enabled(env.MONGOLGPT_DEPLOY_DOCS_ONLY)
+  if (scope === "docs-only" && !deployDocsOnly) {
+    issues.push("Docs-only scope нь MONGOLGPT_DEPLOY_DOCS_ONLY=true байхыг шаардана.")
+  }
+  if (scope !== "docs-only" && deployDocsOnly) {
+    issues.push("MONGOLGPT_DEPLOY_DOCS_ONLY-г зөвхөн docs-only scope-той ашиглана.")
+  }
   if (scope === "docs-only" && hostedServices) {
     issues.push("Docs-only scope нь MONGOLGPT_ENABLE_HOSTED_SERVICES=false байхыг шаардана.")
   }

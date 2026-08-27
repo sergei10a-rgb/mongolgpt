@@ -1,25 +1,11 @@
-import { appOrigin, docsOrigin, domain, publicOrigin, runtimeOrigin } from "./stage"
+import { docsUrl } from "./docs"
+import { appOrigin, domain, publicOrigin, runtimeOrigin } from "./stage"
+
+export { docsUrl, website } from "./docs"
 
 const supportUrl = `${publicOrigin}/support`
 const hostedServices = process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES === "true"
 const channel = $app.stage === "production" ? "prod" : $app.stage === "dev" ? "dev" : "beta"
-export const docsUrl = docsOrigin
-
-export const website = new sst.cloudflare.StaticSiteV2("Website", {
-  domain: `docs.${domain}`,
-  path: "packages/web",
-  build: {
-    command: "MONGOLGPT_STATIC_DOCS=true bun run build",
-    output: "./dist",
-  },
-  environment: {
-    SST_STAGE: $app.stage,
-    MONGOLGPT_STATIC_DOCS: "true",
-    MONGOLGPT_PUBLIC_URL: publicOrigin,
-    MONGOLGPT_CONSOLE_URL: publicOrigin,
-    MONGOLGPT_SUPPORT_URL: supportUrl,
-  },
-})
 
 export const webApp = new sst.cloudflare.StaticSiteV2("WebApp", {
   domain: `app.${domain}`,
