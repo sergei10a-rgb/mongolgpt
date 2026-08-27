@@ -177,6 +177,20 @@ QPay + Bonum-ийн туршилтын төлбөрийг идэвхжүүлэх
 
 Үнэ нь бүхэл MNT дүн байна. Энэ жишээг шууд үйлдвэрлэлийн үнэ гэж үзэхгүй; өртөг, хэрэглээний хязгаар болон нийт ашгийн хувийг судалгаагаар баталгаажуулсны дараа тохируулна.
 
+### Төлбөрийн sandbox smoke шалгалт
+
+QPay болон Bonum-ийн туршилтын худалдааны эрхийг авсны дараа нууц утгуудыг зөвхөн тухайн shell-ийн орчны хувьсагчид ачаална. Репозиторийн файл, командын аргумент эсвэл screenshot-д утгыг нь оруулахгүй. Дараа нь:
+
+```powershell
+$env:MONGOLGPT_PAYMENT_SANDBOX_ENVIRONMENT="sandbox"
+$env:MONGOLGPT_PAYMENT_SANDBOX_PROVIDER="all"
+$env:MONGOLGPT_PAYMENT_SANDBOX_CALLBACK_BASE_URL="https://pay.dev.mgpt.mn"
+$env:MONGOLGPT_PAYMENT_SANDBOX_SMOKE_CONFIRM="RUN_SANDBOX_SMOKE"
+bun --cwd packages/console/core run payment-sandbox-smoke
+```
+
+Шалгалт зөвхөн sandbox төгсгөлийн цэг ашиглаж 1 MNT дүнтэй нэхэмжлэх үүсгэнэ. QPay нэхэмжлэхийн `pending` төлвийг баталгаажуулаад амжилт, алдааны аль ч үед цуцална. Одоогийн Bonum gateway cancellation API өгөөгүй тул Bonum checkout-ийг төлөхгүй орхиж, таван минутын богино хугацаагаар автоматаар дуусгана. `production` орчин, production callback host эсвэл confirmation дутуу үед command сүлжээний үйлдэл хийхээс өмнө хаалттай зогсоно.
+
 Админ орчныг идэвхжүүлэх байршуулалтын орчинд дараах хоёр нууц утгыг нэмнэ.
 
 | Төрөл     | Нэр                                | Утга                                                    |
