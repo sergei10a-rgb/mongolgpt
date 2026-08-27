@@ -28,6 +28,7 @@
   "main": "./out/main/index.js",
   "dependencies": {
     "@mongolgpt/account-contract": "workspace:*",
+    "@mongolgpt/local-bridge": "workspace:*",
     "@zip.js/zip.js": "2.7.62",
     "effect": "catalog:",
     "electron-context-menu": "4.1.2",

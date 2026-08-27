@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { describeDeepLink, describeDeepLinks } from "./deep-link-security"
+import { describeDeepLink, describeDeepLinks, isLocalBridgePairingDeepLink } from "./deep-link-security"
 
 describe("desktop deep-link logging", () => {
   test("keeps only the action and strips sensitive query and fragment payloads", () => {
@@ -18,5 +18,13 @@ describe("desktop deep-link logging", () => {
       describeDeepLinks(["mongolgpt://account/login?token=secret", "https://attacker.test/path?secret=1"]),
     ).toEqual(["account/login", "invalid"])
     expect(describeDeepLink("not a url")).toBe("invalid")
+  })
+
+  test("routes only the exact local bridge pairing action to the main process", () => {
+    expect(isLocalBridgePairingDeepLink("mongolgpt://bridge/pair?v=1&state=secret")).toBe(true)
+    expect(isLocalBridgePairingDeepLink("mongolgpt://bridge/other?v=1")).toBe(false)
+    expect(isLocalBridgePairingDeepLink("mongolgpt://account/login?token=secret")).toBe(false)
+    expect(isLocalBridgePairingDeepLink("https://app.dev.mgpt.mn/bridge/pair")).toBe(false)
+    expect(isLocalBridgePairingDeepLink("not a url")).toBe(false)
   })
 })

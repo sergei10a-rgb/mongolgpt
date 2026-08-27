@@ -5,23 +5,25 @@ import { createServer } from "node:net"
 import { homedir, tmpdir } from "node:os"
 import { join } from "node:path"
 import { getCACertificates, setDefaultCACertificates } from "node:tls"
-import type { Event } from "electron"
-import { app, BrowserWindow, safeStorage, shell } from "electron"
+import type { Event, MessageBoxOptions } from "electron"
+import { app, BrowserWindow, dialog, safeStorage, shell } from "electron"
 
 import { Deferred, Effect, Fiber } from "effect"
 import contextMenu from "electron-context-menu"
 
-import type { ServerReadyData } from "../preload/types"
+import type { DesktopAccountAPI, ServerReadyData } from "../preload/types"
 import { checkAppExists, resolveAppPath } from "./apps"
 import { createDesktopAccountClient } from "./account-client"
 import { loadOrCreateAccountVaultKey } from "./account-vault-key"
-import { ACCOUNT_SERVER_URL, CHANNEL } from "./constants"
-import { describeDeepLink, describeDeepLinks } from "./deep-link-security"
+import { ACCOUNT_SERVER_URL, CHANNEL, WEB_APP_ORIGIN } from "./constants"
+import { describeDeepLink, describeDeepLinks, isLocalBridgePairingDeepLink } from "./deep-link-security"
 import { registerIpcHandlers, sendDeepLinks, sendMenuCommand } from "./ipc"
 import { forwardInitializationFailure } from "./initialization"
 import { exportDebugLogs, initCrashReporter, initLogging, startNetLog, write as writeLog } from "./logging"
 import { parseMarkdown } from "./markdown"
 import { createMenu } from "./menu"
+import { createLocalBridgeGateway } from "./local-bridge-gateway"
+import { createDesktopLocalBridgePairingController, DesktopLocalBridgePairingError } from "./local-bridge-pairing"
 import { desktopSmokeFile, waitForRendererReady, writeDesktopSmokeResult } from "./release-smoke"
 import { getStore } from "./store"
 import {
@@ -63,6 +65,10 @@ let mainWindow: BrowserWindow | null = null
 let server: SidecarListener | null = null
 
 const pendingDeepLinks: string[] = []
+const pendingLocalBridgePairings: string[] = []
+const MAX_PENDING_LOCAL_BRIDGE_PAIRINGS = 8
+let localBridgePairingHandler: ((url: string) => Promise<void>) | undefined
+let localBridgePairingQueue = Promise.resolve()
 
 function useEnvProxy() {
   try {
@@ -77,6 +83,25 @@ function emitDeepLinks(urls: string[]) {
   if (urls.length === 0) return
   pendingDeepLinks.push(...urls)
   if (mainWindow) sendDeepLinks(mainWindow, urls)
+}
+
+function queueLocalBridgePairing(url: string) {
+  const handler = localBridgePairingHandler
+  if (!handler) {
+    pendingLocalBridgePairings.push(url)
+    if (pendingLocalBridgePairings.length > MAX_PENDING_LOCAL_BRIDGE_PAIRINGS) pendingLocalBridgePairings.shift()
+    return
+  }
+  localBridgePairingQueue = localBridgePairingQueue.then(() => handler(url)).catch(() => undefined)
+}
+
+function routeDeepLinks(urls: string[]) {
+  const renderer: string[] = []
+  for (const url of urls) {
+    if (isLocalBridgePairingDeepLink(url)) queueLocalBridgePairing(url)
+    else renderer.push(url)
+  }
+  emitDeepLinks(renderer)
 }
 
 async function killSidecar() {
@@ -160,8 +185,11 @@ const main = Effect.gen(function* () {
       },
     },
   )
+  let localBridgeGateway: ReturnType<typeof createLocalBridgeGateway> | undefined
   const stopSidecars = async () => {
-    await killSidecar()
+    const gateway = localBridgeGateway
+    localBridgeGateway = undefined
+    await Promise.all([killSidecar(), gateway?.stop() ?? Promise.resolve()])
     wslServers.stopAll()
   }
   const relaunch = () => {
@@ -201,7 +229,7 @@ const main = Effect.gen(function* () {
     const urls = argv.filter((arg: string) => arg.startsWith("mongolgpt://"))
     if (urls.length) {
       logger.log("Deep link-ийг second-instance-ээр хүлээн авлаа", { actions: describeDeepLinks(urls) })
-      emitDeepLinks(urls)
+      routeDeepLinks(urls)
     }
     if (mainWindow) {
       mainWindow.show()
@@ -212,7 +240,7 @@ const main = Effect.gen(function* () {
   app.on("open-url", (event: Event, url: string) => {
     event.preventDefault()
     logger.log("Deep link-ийг open-url-ээр хүлээн авлаа", { action: describeDeepLink(url) })
-    emitDeepLinks([url])
+    routeDeepLinks([url])
   })
 
   app.on("before-quit", () => {
@@ -242,11 +270,27 @@ const main = Effect.gen(function* () {
   }
 
   const serverReady = Deferred.makeUnsafe<ServerReadyData, unknown>()
-  const account = createDesktopAccountClient({
+  const bridge = createLocalBridgeGateway({
+    sidecar: () => Effect.runPromise(Deferred.await(serverReady)),
+  })
+  localBridgeGateway = bridge
+  const baseAccount = createDesktopAccountClient({
     server: () => Effect.runPromise(Deferred.await(serverReady)),
     accountServer: ACCOUNT_SERVER_URL,
     openExternal: (url) => shell.openExternal(url),
   })
+  const account: DesktopAccountAPI = {
+    current: baseAccount.current,
+    overview: baseAccount.overview,
+    login: async () => {
+      bridge.revokeAll()
+      return baseAccount.login()
+    },
+    logout: async () => {
+      bridge.revokeAll()
+      await baseAccount.logout()
+    },
+  }
 
   yield* Effect.promise(() => app.whenReady())
 
@@ -254,6 +298,51 @@ const main = Effect.gen(function* () {
   app.setAsDefaultProtocolClient("mongolgpt")
   registerRendererProtocol()
   setDockIcon()
+  const showDesktopMessage = (options: MessageBoxOptions) =>
+    mainWindow ? dialog.showMessageBox(mainWindow, options) : dialog.showMessageBox(options)
+  const pairing = createDesktopLocalBridgePairingController({
+    allowedOrigins: [WEB_APP_ORIGIN],
+    currentAccount: account.current,
+    authorize: bridge.authorize,
+    openExternal: (url) => shell.openExternal(url),
+    confirm: async (request) => {
+      const result = await showDesktopMessage({
+        type: "question",
+        title: "MongolGPT Web холболт",
+        message: "MongolGPT Web-ийг энэ компьютертэй холбох уу?",
+        detail: `${request.origin} хаягийн веб аппад энэ компьютер дээрх төсөл, файл, терминал болон локал загварт хандах эрх олгоно.`,
+        buttons: ["Холбох", "Цуцлах"],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true,
+      })
+      return result.response === 0
+    },
+  })
+  localBridgePairingHandler = async (url) => {
+    try {
+      const result = await pairing.handle(url)
+      logger.log("Дотоод холболтын хүсэлтийг боловсрууллаа", { status: result.status })
+    } catch (error) {
+      const pairingError = error instanceof DesktopLocalBridgePairingError ? error : undefined
+      logger.warn("Дотоод холболтын хүсэлт амжилтгүй боллоо", {
+        code: pairingError?.code ?? "operation_failed",
+      })
+      await showDesktopMessage({
+        type: "error",
+        title: "Дотоод холболтын алдаа",
+        message: pairingError?.message ?? "Дотоод холболтыг дуусгаж чадсангүй",
+        buttons: ["Хаах"],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      })
+    }
+  }
+  for (const url of pendingLocalBridgePairings.splice(0)) queueLocalBridgePairing(url)
+  if (process.platform !== "darwin") {
+    routeDeepLinks(process.argv.filter((arg) => arg.startsWith("mongolgpt://")))
+  }
   const updater = setupAutoUpdater(stopSidecars)
   registerIpcHandlers({
     killSidecar: () => killSidecar(),

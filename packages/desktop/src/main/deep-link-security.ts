@@ -12,3 +12,12 @@ export function describeDeepLink(value: string) {
 export function describeDeepLinks(values: readonly string[]) {
   return values.map(describeDeepLink)
 }
+
+export function isLocalBridgePairingDeepLink(value: string) {
+  try {
+    const url = new URL(value)
+    return url.protocol === "mongolgpt:" && url.hostname === "bridge" && url.pathname === "/pair"
+  } catch {
+    return false
+  }
+}
