@@ -27,7 +27,7 @@ describe("D1 migration", () => {
       .query("select name from sqlite_schema where type = 'table' and name not like 'sqlite_%' order by name")
       .values()
 
-    expect(tables).toHaveLength(40)
+    expect(tables).toHaveLength(42)
     expect(tables).toContainEqual(["account"])
     expect(tables).toContainEqual(["account_deletion"])
     expect(tables).toContainEqual(["admin_audit_log"])
@@ -46,6 +46,8 @@ describe("D1 migration", () => {
     expect(tables).toContainEqual(["plan_config_active"])
     expect(tables).toContainEqual(["plan_config_version"])
     expect(tables).toContainEqual(["platform_admin"])
+    expect(tables).toContainEqual(["support_ticket"])
+    expect(tables).toContainEqual(["support_message"])
     expect(tables).toContainEqual(["workspace"])
   })
 
@@ -65,6 +67,34 @@ describe("D1 migration", () => {
     ).toThrow("admin_audit_log is immutable")
     expect(() => database.query("delete from admin_audit_log where id = ?").run("aud_01")).toThrow(
       "admin_audit_log is immutable",
+    )
+  })
+
+  test("enforces support ticket and immutable message constraints", async () => {
+    const database = new Database(":memory:")
+    database.exec(await migrationSql())
+    expect(() =>
+      database
+        .query(
+          "insert into support_ticket (id, account_id, requester_email, subject, category, status, priority, lock_version, last_message_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .run("spt_invalid", "acc_01", "Owner@MGPT.MN", "Тусламж", "technical", "open", "normal", 0, 1),
+    ).toThrow()
+    database
+      .query(
+        "insert into support_ticket (id, account_id, requester_email, subject, category, status, priority, lock_version, last_message_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run(`spt_${"0".repeat(26)}`, "acc_01", "owner@mgpt.mn", "Тусламж", "technical", "open", "normal", 0, 1)
+    database
+      .query(
+        "insert into support_message (id, ticket_id, author_type, account_id, body, internal, time_created) values (?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run(`spm_${"1".repeat(26)}`, `spt_${"0".repeat(26)}`, "customer", "acc_01", "Сайн байна уу", 0, 1)
+    expect(() =>
+      database.query("update support_message set body = ? where id = ?").run("changed", `spm_${"1".repeat(26)}`),
+    ).toThrow("support_message is immutable")
+    expect(() => database.query("delete from support_message where id = ?").run(`spm_${"1".repeat(26)}`)).toThrow(
+      "support_message is immutable",
     )
   })
 

@@ -50,6 +50,10 @@ export const NewsletterSubscriberStatus = ["active", "unsubscribed"] as const
 export const NewsletterSubscriberSource = ["console", "stats"] as const
 export const EnterpriseInquiryStatus = ["new", "reviewing", "resolved", "spam"] as const
 export const EnterpriseInquirySource = ["enterprise"] as const
+export const SupportTicketCategories = ["account", "billing", "technical", "feedback", "other"] as const
+export const SupportTicketStatuses = ["open", "pending_user", "pending_support", "resolved", "closed"] as const
+export const SupportTicketPriorities = ["normal", "high", "urgent"] as const
+export const SupportMessageAuthorTypes = ["customer", "admin"] as const
 export const LegacyPlanCodes = ["20", "100", "200"] as const
 /** @deprecated Legacy maintenance scripts only. */
 export const BlackPlans = LegacyPlanCodes
@@ -361,6 +365,82 @@ export const UserTable = sqliteTable(
     index("user_global_account_id").on(table.accountID),
     index("user_global_email").on(table.email),
     check("user_role_check", sql`${table.role} in ('admin', 'member')`),
+  ],
+)
+
+export const SupportTicketTable = sqliteTable(
+  "support_ticket",
+  {
+    id: ulid("id").notNull(),
+    account_id: ulid("account_id").notNull(),
+    requester_email: text("requester_email", { length: 254 }).notNull(),
+    workspace_id: ulid("workspace_id"),
+    subject: text("subject", { length: 160 }).notNull(),
+    category: text("category", { enum: SupportTicketCategories }).notNull(),
+    status: text("status", { enum: SupportTicketStatuses }).notNull().default("open"),
+    priority: text("priority", { enum: SupportTicketPriorities }).notNull().default("normal"),
+    assigned_admin_id: ulid("assigned_admin_id"),
+    lock_version: integer("lock_version").notNull().default(0),
+    last_message_at: utc("last_message_at").notNull(),
+    time_resolved: utc("time_resolved"),
+    time_closed: utc("time_closed"),
+    time_created: utc("time_created").notNull().defaultNow(),
+    time_updated: utc("time_updated").notNull().defaultNow(),
+    time_deleted: utc("time_deleted"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    index("support_ticket_account_last_message").on(table.account_id, table.last_message_at),
+    index("support_ticket_workspace_last_message").on(table.workspace_id, table.last_message_at),
+    index("support_ticket_status_priority_last_message").on(table.status, table.priority, table.last_message_at),
+    check("support_ticket_id_check", sql`length(${table.id}) = 30 and substr(${table.id}, 1, 4) = 'spt_'`),
+    check(
+      "support_ticket_requester_email_check",
+      sql`${table.requester_email} = lower(trim(${table.requester_email})) and length(${table.requester_email}) between 3 and 254`,
+    ),
+    check("support_ticket_subject_check", sql`length(trim(${table.subject})) between 1 and 160`),
+    check(
+      "support_ticket_category_check",
+      sql`${table.category} in ('account', 'billing', 'technical', 'feedback', 'other')`,
+    ),
+    check(
+      "support_ticket_status_check",
+      sql`${table.status} in ('open', 'pending_user', 'pending_support', 'resolved', 'closed')`,
+    ),
+    check("support_ticket_priority_check", sql`${table.priority} in ('normal', 'high', 'urgent')`),
+    check("support_ticket_lock_version_check", sql`${table.lock_version} >= 0`),
+    check(
+      "support_ticket_status_time_check",
+      sql`(${table.status} in ('open', 'pending_user', 'pending_support') and ${table.time_resolved} is null and ${table.time_closed} is null)
+        or (${table.status} = 'resolved' and ${table.time_resolved} is not null and ${table.time_closed} is null)
+        or (${table.status} = 'closed' and ${table.time_resolved} is not null and ${table.time_closed} is not null and ${table.time_closed} >= ${table.time_resolved})`,
+    ),
+  ],
+)
+
+export const SupportMessageTable = sqliteTable(
+  "support_message",
+  {
+    id: ulid("id").notNull(),
+    ticket_id: ulid("ticket_id").notNull(),
+    author_type: text("author_type", { enum: SupportMessageAuthorTypes }).notNull(),
+    account_id: ulid("account_id"),
+    admin_id: ulid("admin_id"),
+    body: text("body", { length: 5_000 }).notNull(),
+    internal: integer("internal", { mode: "boolean" }).notNull().default(false),
+    time_created: utc("time_created").notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    index("support_message_ticket_time").on(table.ticket_id, table.time_created),
+    check("support_message_id_check", sql`length(${table.id}) = 30 and substr(${table.id}, 1, 4) = 'spm_'`),
+    check("support_message_body_check", sql`length(trim(${table.body})) between 1 and 5000`),
+    check("support_message_author_type_check", sql`${table.author_type} in ('customer', 'admin')`),
+    check(
+      "support_message_author_check",
+      sql`(${table.author_type} = 'customer' and ${table.account_id} is not null and ${table.admin_id} is null and ${table.internal} = 0)
+        or (${table.author_type} = 'admin' and ${table.account_id} is null and ${table.admin_id} is not null)`,
+    ),
   ],
 )
 
