@@ -138,7 +138,7 @@ describe("ModelsDev Service", () => {
     }),
   )
 
-  it.live("rebrands inherited hosted providers and points them at MongolGPT", () =>
+  it.live("discards legacy hosted providers instead of inheriting them into MongolGPT", () =>
     Effect.sync(() => {
       const providers = {
         ...fixture,
@@ -168,6 +168,7 @@ describe("ModelsDev Service", () => {
           },
         },
       })
+      expect(result.mongolgpt.models["acme-1"]).toBeUndefined()
       expect(result["mongolgpt-go"]).toBeUndefined()
     }),
   )

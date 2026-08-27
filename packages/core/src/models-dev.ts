@@ -23,7 +23,7 @@ const hostedServer = env("MONGOLGPT_CONSOLE_URL")?.trim() || productServiceUrls.
 export function rebrandHostedProviders(providers: Record<string, Provider>, consoleUrl = hostedServer) {
   const result = { ...providers }
   const base = consoleUrl.replace(/\/+$/, "")
-  const hosted = result.mongolgpt ?? result.opencode
+  const hosted = result.mongolgpt
   result.mongolgpt = {
     ...hosted,
     id: "mongolgpt",
