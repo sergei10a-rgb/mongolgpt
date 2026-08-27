@@ -73,7 +73,7 @@ const hosted = {
   SST_SECRET_MONGOLGPT_PLAN_LIMITS: JSON.stringify(planLimits),
   SST_SECRET_ZEN_SESSION_SECRET: "test-session-secret-with-at-least-32-characters",
   SST_SECRET_ZEN_MODELS1: JSON.stringify({
-    zenModels: {
+    models: {
       "free-auto": {
         name: "MongolGPT Free Auto",
         cost: { input: 0, output: 0 },
@@ -89,7 +89,7 @@ const hosted = {
         ],
       },
     },
-    liteModels: {},
+    lightweightModels: {},
     providers: {
       openrouter: {
         api: "https://openrouter.ai/api/v1",
@@ -643,7 +643,7 @@ describe("Cloudflare deployment preflight", () => {
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
             MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
             SST_SECRET_ZEN_MODELS1: JSON.stringify({
-              zenModels: {
+              models: {
                 "free-auto": {
                   name: "MongolGPT Free Auto",
                   cost: { input: 0, output: 0 },
@@ -659,7 +659,7 @@ describe("Cloudflare deployment preflight", () => {
                   ],
                 },
               },
-              liteModels: {},
+              lightweightModels: {},
               providers: {
                 primary: {
                   api: "https://api.example.invalid/v1",
@@ -683,7 +683,7 @@ describe("Cloudflare deployment preflight", () => {
 
   test("rejects placeholder credentials used only by a non-Free-Auto route", () => {
     const models = JSON.parse(hosted.SST_SECRET_ZEN_MODELS1)
-    models.liteModels.assistant = {
+    models.lightweightModels.assistant = {
       name: "Assistant",
       cost: { input: 0, output: 0 },
       maxTokensPerRequest: 32_000,
@@ -707,7 +707,7 @@ describe("Cloudflare deployment preflight", () => {
           },
         }),
       [
-        "liteModels.assistant",
+        "lightweightModels.assistant",
         '"sample" үйлчилгээ үзүүлэгч бодит API түлхүүр',
         '"sample" үйлчилгээ үзүүлэгч бодит API төгсгөлийн цэг',
       ],
@@ -726,9 +726,9 @@ describe("Cloudflare deployment preflight", () => {
             MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
             SST_SECRET_ZEN_MODELS1: JSON.stringify({
               ...JSON.parse(hosted.SST_SECRET_ZEN_MODELS1),
-              zenModels: {
+              models: {
                 "free-auto": {
-                  ...JSON.parse(hosted.SST_SECRET_ZEN_MODELS1).zenModels["free-auto"],
+                  ...JSON.parse(hosted.SST_SECRET_ZEN_MODELS1).models["free-auto"],
                   rateLimit: undefined,
                 },
               },

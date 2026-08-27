@@ -16,3 +16,5 @@
 10. Апп болон CLI орчинд `MONGOLGPT_ENABLE_HOSTED_SERVICES=1`, `MONGOLGPT_CONSOLE_URL`, `MONGOLGPT_AUTH_URL`-ийг өөрийн production хаягаар тохируулна.
 
 `allowAnonymous: false` болон `freeForAuthenticated: true` нь Free Auto-г зөвхөн MongolGPT бүртгэлээр нэвтэрсэн хэрэглэгчид үнэ төлбөргүй тооцох гэрээ юм. NVIDIA-ийн байршуулсан туршилтын API эрхийг нийтийн Free Auto backend болгон ашиглаж болохгүй; зохих үйлдвэрлэлийн лиценз эсвэл тусдаа гэрээ шаардлагатай.
+
+Шинэ тохиргоо `models`, `lightweightModels`, `providers` гэсэн үндсэн талбаруудтай. Хуучин deployment-ийг таслахгүй байхын тулд `zenModels`, `liteModels` талбарыг parser нэг шилжилтийн хугацаанд уншиж шинэ хэлбэрт дотроо хөрвүүлнэ; шинэ эсвэл шинэчилсэн тохиргоонд хуучин талбар ашиглахгүй.

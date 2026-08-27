@@ -1,5 +1,5 @@
 {
-  "zenModels": {
+  "models": {
     "free-auto": {
       "name": "MongolGPT Free Auto",
       "cost": {
@@ -26,7 +26,7 @@
       ]
     }
   },
-  "liteModels": {},
+  "lightweightModels": {},
   "providers": {
     "openrouter-free": {
       "displayName": "OpenRouter Free",

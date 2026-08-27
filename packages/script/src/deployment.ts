@@ -452,9 +452,9 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
     return
   }
 
-  const freeAuto = result.data.zenModels["free-auto"]
+  const freeAuto = result.data.models["free-auto"]
   if (!freeAuto) {
-    issues.push('ZEN_MODELS1 нь zenModels дотроо "free-auto" загвартай байна.')
+    issues.push('ZEN_MODELS1 нь models дотроо "free-auto" загвартай байна.')
     return
   }
 
@@ -464,8 +464,8 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
 
   const referencedProviders = new Set<string>()
   for (const [listName, models] of [
-    ["zenModels", result.data.zenModels],
-    ["liteModels", result.data.liteModels],
+    ["models", result.data.models],
+    ["lightweightModels", result.data.lightweightModels],
   ] as const) {
     for (const [modelID, configured] of Object.entries(models)) {
       for (const modelConfig of Array.isArray(configured) ? configured : [configured]) {

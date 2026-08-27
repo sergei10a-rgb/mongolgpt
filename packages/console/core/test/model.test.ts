@@ -18,8 +18,8 @@ const model = {
 }
 
 const config = (freeAuto: Record<string, unknown>) => ({
-  zenModels: { "free-auto": freeAuto },
-  liteModels: {},
+  models: { "free-auto": freeAuto },
+  lightweightModels: {},
   providers: {
     primary: { api: "https://primary.example/v1", apiKey: "primary-key" },
     secondary: { api: "https://secondary.example/v1", apiKey: "secondary-key" },
@@ -76,7 +76,7 @@ describe("MongolGPT Free Auto model contract", () => {
     expect(modelConfigurationStageIssues(valid, "dev")).toEqual([])
 
     const withByok = structuredClone(valid)
-    withByok.liteModels.assistant = {
+    withByok.lightweightModels.assistant = {
       name: "BYOK Assistant",
       cost: { input: 0, output: 0 },
       byokProvider: "openai",
@@ -109,6 +109,20 @@ describe("MongolGPT Free Auto model contract", () => {
 
   test("accepts an account-only production route with a fallback", () => {
     expect(() => validate(config(model))).not.toThrow()
+  })
+
+  test("normalizes the retired model-list keys without exposing them at runtime", () => {
+    const current = config(model)
+    const normalized = validate({
+      zenModels: current.models,
+      liteModels: current.lightweightModels,
+      providers: current.providers,
+    })
+
+    expect(normalized.models["free-auto"]).toBeDefined()
+    expect(normalized.lightweightModels).toEqual({})
+    expect(normalized).not.toHaveProperty("zenModels")
+    expect(normalized).not.toHaveProperty("liteModels")
   })
 
   test("rejects anonymous or trial-backed Free Auto routes", () => {
@@ -146,11 +160,11 @@ describe("MongolGPT Free Auto model contract", () => {
     expect(() => validate(config({ ...model, freeMaxTokensPerRequest: 100_001 }))).toThrow()
   })
 
-  test("rejects undefined providers in zen model routes", () => {
+  test("rejects undefined providers in gateway model routes", () => {
     expect(() =>
       validate({
         ...config(model),
-        zenModels: {
+        models: {
           paid: {
             name: "Paid",
             cost: { input: 1, output: 1 },
@@ -161,12 +175,12 @@ describe("MongolGPT Free Auto model contract", () => {
     ).toThrow(/providers жагсаалтад/)
   })
 
-  test("rejects undefined providers in lite model routes", () => {
+  test("rejects undefined providers in lightweight model routes", () => {
     expect(() =>
       validate({
         ...config(model),
-        zenModels: {},
-        liteModels: {
+        models: {},
+        lightweightModels: {
           lite: {
             name: "Lite",
             cost: { input: 1, output: 1 },
@@ -187,7 +201,7 @@ describe("MongolGPT Free Auto model contract", () => {
     expect(() =>
       validate({
         ...config(model),
-        zenModels: {
+        models: {
           paid: {
             name: "Paid",
             cost: { input: 0.000001, output: 0.000002 },
@@ -202,7 +216,7 @@ describe("MongolGPT Free Auto model contract", () => {
     expect(() =>
       validate({
         ...config(model),
-        zenModels: {
+        models: {
           paid: {
             name: "Paid",
             cost: { input: 0.000001, output: 0.000002 },

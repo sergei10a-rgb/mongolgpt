@@ -21,7 +21,7 @@ export namespace GatewayCatalog {
     return input
   })
 
-  export const list = fn(z.enum(["lite", "full"]), (modelList) => {
+  export const list = fn(z.enum(["lightweight", "full"]), (modelList) => {
     const json = JSON.parse(
       Resource.ZEN_MODELS1.value +
         Resource.ZEN_MODELS2.value +
@@ -59,7 +59,7 @@ export namespace GatewayCatalog {
     if (policyIssues.length > 0) {
       throw new Error(`Үйлдвэрлэлийн загварын тохиргоо аюулгүй биш байна: ${policyIssues.join("; ")}`)
     }
-    const { zenModels, liteModels, providers } = configuration
+    const { models, lightweightModels, providers } = configuration
     const compositeProviders = Object.fromEntries(
       Object.entries(providers).map(([id, provider]) => [
         id,
@@ -116,7 +116,7 @@ export namespace GatewayCatalog {
         }
 
         return Object.fromEntries(
-          Object.entries(modelList === "lite" ? liteModels : zenModels).map(([modelId, model]) => {
+          Object.entries(modelList === "lightweight" ? lightweightModels : models).map(([modelId, model]) => {
             const n = Array.isArray(model)
               ? model.map((m) => ({ ...m, ...normalize(m) }))
               : { ...model, ...normalize(model) }

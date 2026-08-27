@@ -62,6 +62,29 @@ const ProviderSchema = z.object({
 
 export type MongolGPTProviderConfig = z.infer<typeof ProviderSchema>
 
+const ModelMapSchema = z.record(
+  z.string(),
+  z.union([MongolGPTModelSchema, z.array(MongolGPTModelSchema.extend({ formatFilter: ModelFormatSchema }))]),
+)
+
+const GatewayModelConfigurationSchema = z.object({
+  models: ModelMapSchema,
+  lightweightModels: ModelMapSchema,
+  providers: z.record(z.string(), ProviderSchema),
+})
+
+const LegacyModelConfigurationSchema = z
+  .object({
+    zenModels: ModelMapSchema,
+    liteModels: ModelMapSchema,
+    providers: z.record(z.string(), ProviderSchema),
+  })
+  .transform(({ zenModels, liteModels, providers }) => ({
+    models: zenModels,
+    lightweightModels: liteModels,
+    providers,
+  }))
+
 export function isProviderAllowedForStage(
   provider: Pick<MongolGPTProviderConfig, "productionUseApproved">,
   stage: string,
@@ -70,21 +93,11 @@ export function isProviderAllowedForStage(
 }
 
 export const MongolGPTModelConfigurationSchema = z
-  .object({
-    zenModels: z.record(
-      z.string(),
-      z.union([MongolGPTModelSchema, z.array(MongolGPTModelSchema.extend({ formatFilter: ModelFormatSchema }))]),
-    ),
-    liteModels: z.record(
-      z.string(),
-      z.union([MongolGPTModelSchema, z.array(MongolGPTModelSchema.extend({ formatFilter: ModelFormatSchema }))]),
-    ),
-    providers: z.record(z.string(), ProviderSchema),
-  })
+  .union([GatewayModelConfigurationSchema, LegacyModelConfigurationSchema])
   .superRefine((value, ctx) => {
     for (const [list, models] of [
-      ["zenModels", value.zenModels],
-      ["liteModels", value.liteModels],
+      ["models", value.models],
+      ["lightweightModels", value.lightweightModels],
     ] as const) {
       for (const [modelID, configured] of Object.entries(models)) {
         for (const [index, model] of (Array.isArray(configured) ? configured : [configured]).entries()) {
@@ -194,8 +207,8 @@ export function modelConfigurationStageIssues(value: MongolGPTModelConfiguration
 
   const issues = new Set<string>()
   for (const [list, models] of [
-    ["zenModels", value.zenModels],
-    ["liteModels", value.liteModels],
+    ["models", value.models],
+    ["lightweightModels", value.lightweightModels],
   ] as const) {
     for (const [modelID, configured] of Object.entries(models)) {
       for (const [index, model] of (Array.isArray(configured) ? configured : [configured]).entries()) {
