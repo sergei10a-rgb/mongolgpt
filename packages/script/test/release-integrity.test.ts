@@ -54,11 +54,17 @@ describe("release integrity contract", () => {
     const preflight = readFileSync(resolve(root, "packages/mongolgpt/script/release-preflight.ts"), "utf8")
 
     expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}")
-    expect(publish.indexOf("packages/ui/script/publish.ts")).toBeLessThan(
-      publish.indexOf("release-preflight.ts --npm"),
-    )
+    expect(publish.indexOf("packages/ui/script/publish.ts")).toBeLessThan(publish.indexOf("release-preflight.ts --npm"))
     for (const name of ["@mongolgpt/sdk", "@mongolgpt/plugin", "@mongolgpt/ui"]) {
       expect(preflight).toContain(`"${name}"`)
     }
+  })
+
+  test("uploads Windows and Desktop assets to the release tag created by the version job", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
+    const canonicalUpload = 'gh release upload "${{ needs.version.outputs.tag }}"'
+
+    expect(workflow.split(canonicalUpload).length - 1).toBe(2)
+    expect(workflow).not.toContain('gh release upload "v${{ needs.version.outputs.version }}"')
   })
 })
