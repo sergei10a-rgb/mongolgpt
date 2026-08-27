@@ -140,6 +140,33 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(steps[artifact]?.with?.path).toContain("packages/app/e2e/playwright-report-deployed")
   })
 
+  test("verifies real sandbox payment adapters without exposing them to production", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
+    const steps = parseWorkflow(source).jobs.deploy.steps
+    const http = steps.findIndex((step) => step.name === "Verify deployed URLs")
+    const payment = steps.findIndex((step) => step.name === "Verify sandbox payment providers")
+    const step = steps[payment]
+
+    expect(payment).toBeGreaterThan(http)
+    expect(step?.condition).toBe("inputs.payment_environment == 'sandbox'")
+    expect(step?.run).toBe("bun --cwd packages/console/core payment-sandbox-smoke")
+    expect(step?.env).toEqual({
+      MONGOLGPT_PAYMENT_SANDBOX_SMOKE_CONFIRM: "RUN_SANDBOX_SMOKE",
+      MONGOLGPT_PAYMENT_SANDBOX_ENVIRONMENT: "sandbox",
+      MONGOLGPT_PAYMENT_SANDBOX_PROVIDER: "all",
+      MONGOLGPT_PAYMENT_SANDBOX_CALLBACK_BASE_URL:
+        "${{ format('https://pay.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}",
+      QPAY_MERCHANT_ACCOUNT_ID: "${{ secrets.QPAY_MERCHANT_ACCOUNT_ID }}",
+      QPAY_CLIENT_ID: "${{ secrets.QPAY_CLIENT_ID }}",
+      QPAY_CLIENT_SECRET: "${{ secrets.QPAY_CLIENT_SECRET }}",
+      QPAY_INVOICE_CODE: "${{ secrets.QPAY_INVOICE_CODE }}",
+      BONUM_MERCHANT_ACCOUNT_ID: "${{ secrets.BONUM_MERCHANT_ACCOUNT_ID }}",
+      BONUM_APP_SECRET: "${{ secrets.BONUM_APP_SECRET }}",
+      BONUM_TERMINAL_ID: "${{ secrets.BONUM_TERMINAL_ID }}",
+      BONUM_WEBHOOK_CHECKSUM_KEY: "${{ secrets.BONUM_WEBHOOK_CHECKSUM_KEY }}",
+    })
+  })
+
   test("keeps the complete ordered QuotaLedger SQLite migration history", () => {
     expect(quotaServiceMigrations).toEqual([
       {
