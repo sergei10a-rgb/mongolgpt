@@ -16,6 +16,7 @@ export const ServerRowMenu: Component<{
   const language = useLanguage()
   const key = ServerConnection.key(props.server)
   const builtin = ServerConnection.builtin(props.server)
+  const ephemeral = () => props.server.type === "http" && props.server.ephemeral === true
   const isDefault = () => props.controller.defaultKey() === key
 
   return (
@@ -32,17 +33,19 @@ export const ServerRowMenu: Component<{
           <MenuV2.Group>
             <MenuV2.GroupLabel>{language.t("settings.section.server")}</MenuV2.GroupLabel>
             <MenuV2.Item
-              disabled={builtin || props.server.type !== "http"}
-              onSelect={() => props.onEdit(props.server as ServerConnection.Http)}
+              disabled={builtin || ephemeral() || props.server.type !== "http"}
+              onSelect={() => {
+                if (props.server.type === "http") props.onEdit(props.server)
+              }}
             >
               {language.t("dialog.server.menu.edit")}
             </MenuV2.Item>
-            <Show when={props.controller.canDefault() && !isDefault()}>
+            <Show when={!ephemeral() && props.controller.canDefault() && !isDefault()}>
               <MenuV2.Item onSelect={() => props.controller.setDefault(key)}>
                 {language.t("dialog.server.menu.default")}
               </MenuV2.Item>
             </Show>
-            <Show when={props.controller.canDefault() && isDefault()}>
+            <Show when={!ephemeral() && props.controller.canDefault() && isDefault()}>
               <MenuV2.Item onSelect={() => props.controller.setDefault(null)}>
                 {language.t("dialog.server.menu.defaultRemove")}
               </MenuV2.Item>

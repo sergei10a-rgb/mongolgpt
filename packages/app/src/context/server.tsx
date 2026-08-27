@@ -1,5 +1,5 @@
 import { createSimpleContext } from "@mongolgpt/ui/context"
-import { type Accessor, batch, createMemo } from "solid-js"
+import { type Accessor, batch, createMemo, createSignal, onCleanup } from "solid-js"
 import { createStore, type SetStoreFunction, type Store } from "solid-js/store"
 import { Persist, persisted } from "@/utils/persist"
 import { ServerScope } from "@/utils/server-scope"
@@ -144,6 +144,32 @@ export function resolveServerList(input: {
   return [...deduped.values()]
 }
 
+export function overlayEphemeralServers(
+  servers: Array<ServerConnection.Any>,
+  ephemeral: Array<ServerConnection.Http>,
+): Array<ServerConnection.Any> {
+  const deduped = new Map<ServerConnection.Key, ServerConnection.Any>(
+    servers.map((server) => [ServerConnection.key(server), server]),
+  )
+
+  for (const conn of ephemeral) {
+    const key = ServerConnection.key(conn)
+    const existing = deduped.get(key)
+    deduped.set(
+      key,
+      existing
+        ? {
+            ...existing,
+            ...conn,
+            http: { ...existing.http, ...conn.http },
+          }
+        : conn,
+    )
+  }
+
+  return [...deduped.values()]
+}
+
 export namespace ServerConnection {
   type Base = { displayName?: string; label?: string }
 
@@ -158,6 +184,7 @@ export namespace ServerConnection {
     type: "http"
     http: HttpBase
     authToken?: boolean
+    ephemeral?: boolean
   } & Base
 
   export type Sidecar = {
@@ -240,9 +267,13 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
 
     const url = (x: StoredServer) => (typeof x === "string" ? x : "type" in x ? x.http.url : x.url)
 
-    const allServers = createMemo((): Array<ServerConnection.Any> => {
-      return resolveServerList({ stored: store.list, props: props.servers })
-    })
+    const [ephemeral, setEphemeral] = createSignal<Array<ServerConnection.Http>>([])
+    const ephemeralTimers = new Map<ServerConnection.Key, ReturnType<typeof setTimeout>>()
+
+    const allServers = createMemo(
+      (): Array<ServerConnection.Any> =>
+        overlayEphemeralServers(resolveServerList({ stored: store.list, props: props.servers }), ephemeral()),
+    )
 
     const [state, setState] = createStore({
       active: props.defaultServer,
@@ -255,8 +286,14 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
     function add(input: ServerConnection.Http) {
       const url_ = normalizeServerUrl(input.http.url)
       if (!url_) return
-      const conn: ServerConnection.Http = { ...input, authToken: undefined, http: { ...input.http, url: url_ } }
+      const conn: ServerConnection.Http = {
+        ...input,
+        authToken: undefined,
+        ephemeral: undefined,
+        http: { ...input.http, url: url_ },
+      }
       return batch(() => {
+        removeEphemeral(ServerConnection.key(conn), false)
         const existing = store.list.findIndex((x) => url(x) === url_)
         if (existing !== -1) {
           setStore("list", existing, conn)
@@ -268,14 +305,53 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
       })
     }
 
+    function removeEphemeral(key: ServerConnection.Key, updateActive = true) {
+      const timer = ephemeralTimers.get(key)
+      if (timer) clearTimeout(timer)
+      ephemeralTimers.delete(key)
+      const remaining = ephemeral().filter((conn) => ServerConnection.key(conn) !== key)
+      if (remaining.length === ephemeral().length) return
+      setEphemeral(remaining)
+      if (!updateActive || state.active !== key) return
+      const currentStillExists = allServers().some((conn) => ServerConnection.key(conn) === key)
+      if (!currentStillExists) setState("active", nextServerAfterRemoval(allServers(), key, props.defaultServer))
+    }
+
+    function addEphemeral(input: ServerConnection.Http, expiresAt: number): ServerConnection.Http | undefined {
+      const url_ = normalizeServerUrl(input.http.url)
+      if (!url_ || !Number.isSafeInteger(expiresAt) || expiresAt <= Date.now()) return undefined
+      const conn: ServerConnection.Http = {
+        ...input,
+        authToken: undefined,
+        ephemeral: true,
+        http: { ...input.http, url: url_ },
+      }
+      const key = ServerConnection.key(conn)
+      const existingTimer = ephemeralTimers.get(key)
+      if (existingTimer) clearTimeout(existingTimer)
+      setEphemeral((list) => [...list.filter((item) => ServerConnection.key(item) !== key), conn])
+      setState("active", key)
+      ephemeralTimers.set(
+        key,
+        setTimeout(() => removeEphemeral(key), Math.min(expiresAt - Date.now(), 2_147_483_647)),
+      )
+      return conn
+    }
+
     function remove(key: ServerConnection.Key) {
       const next = nextServerAfterRemoval(allServers(), key, props.defaultServer)
       const list = store.list.filter((x) => url(x) !== key)
       batch(() => {
+        removeEphemeral(key, false)
         setStore("list", list)
         if (state.active === key) setState("active", next)
       })
     }
+
+    onCleanup(() => {
+      for (const timer of ephemeralTimers.values()) clearTimeout(timer)
+      ephemeralTimers.clear()
+    })
 
     const isReady = createMemo(() => ready() && !!state.active)
 
@@ -311,6 +387,7 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
       },
       setActive,
       add,
+      addEphemeral,
       remove,
       scope,
       projects: {

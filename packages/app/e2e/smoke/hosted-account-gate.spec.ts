@@ -201,6 +201,64 @@ test.describe("hosted MongolGPT account gate", () => {
     expect(overflow.dialog).toBeLessThanOrEqual(1)
     expect(overflow.panel).toBeLessThanOrEqual(1)
   })
+
+  test("starts a secure Desktop pairing from the Mongolian server settings", async ({ page }) => {
+    await mockRuntime(page)
+    await configureHostedProject(page)
+    const current = capability("account_bridge_e2e")
+    await page.route(tokenUrl, (route) => session(route, 200, current))
+    await page.route(sessionUrl, (route) =>
+      session(route, 200, {
+        authenticated: true,
+        account: { id: current.account.id },
+        expiresAt: current.expiresAt,
+      }),
+    )
+    await page.addInitScript(() => {
+      window.addEventListener(
+        "click",
+        (event) => {
+          const link = event.target instanceof Element ? event.target.closest("a") : null
+          if (!(link instanceof HTMLAnchorElement) || !link.href.startsWith("mongolgpt://")) return
+          event.preventDefault()
+          event.stopImmediatePropagation()
+          ;(window as Window & { __mongolgptPairingURL?: string }).__mongolgptPairingURL = link.href
+        },
+        true,
+      )
+    })
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto("/")
+    await page.getByRole("button", { name: mn["sidebar.settings"], exact: true }).click()
+    await page.getByRole("tab", { name: mn["status.popover.tab.servers"], exact: true }).click()
+    const connect = page.getByRole("button", { name: mn["dialog.server.bridge.button"], exact: true })
+    await expect(connect).toBeVisible()
+    await connect.click()
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => (window as Window & { __mongolgptPairingURL?: string }).__mongolgptPairingURL ?? null),
+      )
+      .not.toBeNull()
+    const captured = await page.evaluate(
+      () => (window as Window & { __mongolgptPairingURL?: string }).__mongolgptPairingURL!,
+    )
+    const pairing = new URL(captured)
+    expect(pairing.protocol).toBe("mongolgpt:")
+    expect(pairing.host).toBe("bridge")
+    expect(pairing.pathname).toBe("/pair")
+    expect(pairing.searchParams.get("account_id")).toBe(current.account.id)
+
+    const pendingRaw = await page.evaluate(() => localStorage.getItem("mongolgpt.local-bridge.pending-v1"))
+    expect(pendingRaw).not.toBeNull()
+    const pending: unknown = JSON.parse(pendingRaw!)
+    if (!isBridgePending(pending)) throw new Error("Bridge pairing state was not stored safely")
+    expect(pending.accountID).toBe(current.account.id)
+    expect(pairing.searchParams.get("state")).toBe(pending.state)
+    expect(captured).not.toContain(pending.verifier)
+    expect(await connect.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
+  })
 })
 
 function accountOverview(accountID: string) {
@@ -303,6 +361,25 @@ function session(route: Route, status: number, body: unknown, contentType = "app
     },
     body: contentType === "application/json" ? JSON.stringify(body) : String(body),
   })
+}
+
+function isBridgePending(value: unknown): value is {
+  verifier: string
+  state: string
+  accountID: string
+  expiresAt: number
+} {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false
+  return (
+    "verifier" in value &&
+    typeof value.verifier === "string" &&
+    "state" in value &&
+    typeof value.state === "string" &&
+    "accountID" in value &&
+    typeof value.accountID === "string" &&
+    "expiresAt" in value &&
+    typeof value.expiresAt === "number"
+  )
 }
 
 async function expectVisibleOrAppError(page: Page, target: Locator) {

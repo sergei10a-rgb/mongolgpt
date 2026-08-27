@@ -5,6 +5,7 @@ import {
   createServerProjects,
   migrateCanonicalLocalServerState,
   nextServerAfterRemoval,
+  overlayEphemeralServers,
   resolveServerList,
   ServerConnection,
 } from "./server"
@@ -58,6 +59,42 @@ describe("resolveServerList", () => {
       password: "saved",
     })
     expect(list[0]?.type === "http" ? list[0].authToken : true).toBeUndefined()
+  })
+})
+
+describe("overlayEphemeralServers", () => {
+  test("keeps bridge credentials in the runtime overlay without mutating persisted input", () => {
+    const stored = [{ type: "http" as const, http: { url: "http://127.0.0.1:4321" } }]
+    const serialized = JSON.stringify(stored)
+    const secret = "A".repeat(43)
+    const list = overlayEphemeralServers(stored, [
+      {
+        type: "http",
+        ephemeral: true,
+        displayName: "MongolGPT Desktop",
+        http: { url: "http://127.0.0.1:4321", username: "bridge", password: secret },
+      },
+    ])
+
+    expect(list).toHaveLength(1)
+    expect(list[0]?.http.password).toBe(secret)
+    expect(list[0]?.type === "http" ? list[0].ephemeral : false).toBe(true)
+    expect(JSON.stringify(stored)).toBe(serialized)
+    expect(JSON.stringify(stored)).not.toContain(secret)
+  })
+
+  test("does not disturb stable server order while overlaying a matching connection", () => {
+    const remote = { type: "http" as const, http: { url: "https://api.example.test" } }
+    const local = { type: "http" as const, http: { url: "http://127.0.0.1:4321" } }
+    const list = overlayEphemeralServers(
+      [remote, local],
+      [{ type: "http", ephemeral: true, http: { ...local.http, username: "bridge", password: "B".repeat(43) } }],
+    )
+
+    expect(list.map(ServerConnection.key)).toEqual([
+      ServerConnection.Key.make("https://api.example.test"),
+      ServerConnection.Key.make("http://127.0.0.1:4321"),
+    ])
   })
 })
 

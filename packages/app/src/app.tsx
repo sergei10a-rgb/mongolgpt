@@ -64,6 +64,7 @@ import {
 import { isSessionNotFoundError } from "./utils/server-errors"
 import { AccountOnboardingGate } from "@/components/account-onboarding"
 import { HostedAccountGate } from "@/components/hosted-account-gate"
+import { LocalBridgeCallback } from "@/components/local-bridge-callback"
 import { documentationUrl } from "@/product"
 
 import Session from "@/pages/session"
@@ -615,6 +616,7 @@ export function AppInterface(props: {
       canonicalLocalServer={props.canonicalLocalServer}
       servers={props.servers}
     >
+      <LocalBridgeCallback />
       <GlobalProvider>
         <SettingsProvider>
           <ConnectionGate disableHealthCheck={props.disableHealthCheck}>

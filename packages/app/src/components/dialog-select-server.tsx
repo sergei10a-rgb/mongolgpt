@@ -9,7 +9,7 @@ import { TextField } from "@mongolgpt/ui/text-field"
 import { useMutation } from "@tanstack/solid-query"
 import { showToast } from "@/utils/toast"
 import { useNavigate } from "@solidjs/router"
-import { createEffect, createMemo, createResource, Show } from "solid-js"
+import { createEffect, createMemo, createResource, createSignal, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { ServerHealthIndicator, ServerRow } from "@/components/server/server-row"
 import { useGlobal } from "@/context/global"
@@ -19,6 +19,7 @@ import { normalizeServerUrl, ServerConnection, useServer } from "@/context/serve
 import { type ServerHealth, useCheckServerHealth } from "@/utils/server-health"
 import { useSettings } from "@/context/settings"
 import { useTabs } from "@/context/tabs"
+import { createBrowserLocalBridgeClient } from "@/utils/local-bridge-client"
 
 const DEFAULT_USERNAME = "mongolgpt"
 
@@ -199,6 +200,7 @@ export function useServerManagementController(options: { onSelect?: () => void; 
   const { defaultKey, canDefault, setDefault } = useDefaultServer()
   const { previewStatus } = useServerPreview()
   const checkServerHealth = useCheckServerHealth()
+  const [bridgeBusy, setBridgeBusy] = createSignal(false)
   const [store, setStore] = createStore({
     addServer: {
       url: "",
@@ -241,6 +243,29 @@ export function useServerManagementController(options: { onSelect?: () => void; 
       error: "",
       status: undefined,
     })
+  }
+
+  const startLocalBridge = async () => {
+    if (bridgeBusy() || platform.platform !== "web" || !platform.account) return
+    setBridgeBusy(true)
+    try {
+      const account = await platform.account.current()
+      if (!account) throw new Error(language.t("dialog.server.bridge.accountRequired"))
+      await createBrowserLocalBridgeClient().begin(account.id)
+      showToast({
+        variant: "success",
+        title: language.t("dialog.server.bridge.started.title"),
+        description: language.t("dialog.server.bridge.started.description"),
+      })
+    } catch (error) {
+      showToast({
+        variant: "error",
+        title: language.t("dialog.server.bridge.failed.title"),
+        description: error instanceof Error ? error.message : language.t("dialog.server.bridge.failed.description"),
+      })
+    } finally {
+      setBridgeBusy(false)
+    }
   }
 
   const addMutation = useMutation(() => ({
@@ -545,6 +570,9 @@ export function useServerManagementController(options: { onSelect?: () => void; 
     resetForm,
     submitForm,
     handleRemove,
+    canLocalBridge: () => platform.platform === "web" && !!platform.account,
+    bridgeBusy,
+    startLocalBridge,
     handleFormChange: () => (isAddMode() ? handleAddChange : handleEditChange),
     handleFormNameChange: () => (isAddMode() ? handleAddNameChange : handleEditNameChange),
     handleFormUsernameChange: () => (isAddMode() ? handleAddUsernameChange : handleEditUsernameChange),
@@ -575,6 +603,7 @@ export function ServerConnectionList(props: { controller: ReturnType<typeof useS
       >
         {(i) => {
           const key = ServerConnection.key(i)
+          const ephemeral = i.type === "http" && i.ephemeral === true
           return (
             <div class="flex items-center gap-3 min-w-0 flex-1 w-full group/item">
               <div class="flex flex-col h-full items-center w-5">
@@ -611,27 +640,31 @@ export function ServerConnectionList(props: { controller: ReturnType<typeof useS
                     />
                     <DropdownMenu.Portal>
                       <DropdownMenu.Content class="mt-1">
-                        <DropdownMenu.Item
-                          onSelect={() => {
-                            if (i.type !== "http") return
-                            props.controller.startEdit(i)
-                          }}
-                        >
-                          <DropdownMenu.ItemLabel>{language.t("dialog.server.menu.edit")}</DropdownMenu.ItemLabel>
-                        </DropdownMenu.Item>
-                        <Show when={props.controller.canDefault() && props.controller.defaultKey() !== key}>
-                          <DropdownMenu.Item onSelect={() => props.controller.setDefault(key)}>
-                            <DropdownMenu.ItemLabel>{language.t("dialog.server.menu.default")}</DropdownMenu.ItemLabel>
+                        <Show when={!ephemeral}>
+                          <DropdownMenu.Item
+                            onSelect={() => {
+                              if (i.type !== "http") return
+                              props.controller.startEdit(i)
+                            }}
+                          >
+                            <DropdownMenu.ItemLabel>{language.t("dialog.server.menu.edit")}</DropdownMenu.ItemLabel>
                           </DropdownMenu.Item>
+                          <Show when={props.controller.canDefault() && props.controller.defaultKey() !== key}>
+                            <DropdownMenu.Item onSelect={() => props.controller.setDefault(key)}>
+                              <DropdownMenu.ItemLabel>
+                                {language.t("dialog.server.menu.default")}
+                              </DropdownMenu.ItemLabel>
+                            </DropdownMenu.Item>
+                          </Show>
+                          <Show when={props.controller.canDefault() && props.controller.defaultKey() === key}>
+                            <DropdownMenu.Item onSelect={() => props.controller.setDefault(null)}>
+                              <DropdownMenu.ItemLabel>
+                                {language.t("dialog.server.menu.defaultRemove")}
+                              </DropdownMenu.ItemLabel>
+                            </DropdownMenu.Item>
+                          </Show>
+                          <DropdownMenu.Separator />
                         </Show>
-                        <Show when={props.controller.canDefault() && props.controller.defaultKey() === key}>
-                          <DropdownMenu.Item onSelect={() => props.controller.setDefault(null)}>
-                            <DropdownMenu.ItemLabel>
-                              {language.t("dialog.server.menu.defaultRemove")}
-                            </DropdownMenu.ItemLabel>
-                          </DropdownMenu.Item>
-                        </Show>
-                        <DropdownMenu.Separator />
                         <DropdownMenu.Item
                           onSelect={() => props.controller.handleRemove(ServerConnection.key(i))}
                           class="text-text-on-critical-base hover:bg-surface-critical-weak"
@@ -648,7 +681,21 @@ export function ServerConnectionList(props: { controller: ReturnType<typeof useS
         }}
       </List>
 
-      <div class="shrink-0 pb-5">
+      <div class="shrink-0 pb-5 flex flex-wrap items-center gap-2">
+        <Show when={props.controller.canLocalBridge()}>
+          <Button
+            variant="primary"
+            icon="link"
+            size="large"
+            disabled={props.controller.bridgeBusy()}
+            onClick={() => void props.controller.startLocalBridge()}
+            class="py-1.5 pl-1.5 pr-3 flex items-center gap-1.5"
+          >
+            {props.controller.bridgeBusy()
+              ? language.t("dialog.server.bridge.connecting")
+              : language.t("dialog.server.bridge.button")}
+          </Button>
+        </Show>
         <Button
           variant="secondary"
           icon="plus-small"

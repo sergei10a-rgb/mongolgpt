@@ -57,6 +57,7 @@
     "@kobalte/core": "catalog:",
     "@mongolgpt/account-contract": "workspace:*",
     "@mongolgpt/core": "workspace:*",
+    "@mongolgpt/local-bridge": "workspace:*",
     "@mongolgpt/sdk": "workspace:*",
     "@mongolgpt/session-ui": "workspace:*",
     "@mongolgpt/ui": "workspace:*",

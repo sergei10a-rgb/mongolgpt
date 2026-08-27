@@ -1,4 +1,5 @@
 import { Tag } from "@mongolgpt/ui/v2/badge-v2"
+import { ButtonV2 } from "@mongolgpt/ui/v2/button-v2"
 import { Icon as IconV2 } from "@mongolgpt/ui/v2/icon"
 import { IconButtonV2 } from "@mongolgpt/ui/v2/icon-button-v2"
 import { TextInputV2 } from "@mongolgpt/ui/v2/text-input-v2"
@@ -86,6 +87,18 @@ export const SettingsServersV2: Component = () => {
       </div>
 
       <div class="settings-v2-tab-body settings-v2-servers">
+        <Show when={controller.canLocalBridge()}>
+          <ButtonV2
+            variant="neutral"
+            icon="link"
+            disabled={controller.bridgeBusy()}
+            onClick={() => void controller.startLocalBridge()}
+          >
+            {controller.bridgeBusy()
+              ? language.t("dialog.server.bridge.connecting")
+              : language.t("dialog.server.bridge.button")}
+          </ButtonV2>
+        </Show>
         <Show
           when={filtered().length > 0 || wslServers().length > 0}
           fallback={
