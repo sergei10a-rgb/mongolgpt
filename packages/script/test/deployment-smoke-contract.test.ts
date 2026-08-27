@@ -61,6 +61,118 @@ describe("dev OAuth bootstrap smoke", () => {
   test("refuses every non-dev stage before making network requests", async () => {
     await expect(runAuthBootstrapSmoke("production")).rejects.toThrow("зөвхөн dev")
   })
+
+  test("exercises the anonymous account and OAuth boundaries", async () => {
+    const configured = {
+      MONGOLGPT_DOMAIN: "mgpt.mn",
+      MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+      MONGOLGPT_ENABLE_ADMIN: "false",
+      MONGOLGPT_ENABLE_ANALYTICS: "false",
+      MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+      MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false",
+      MONGOLGPT_ENABLE_LEGACY_STRIPE: "false",
+      MONGOLGPT_ENABLE_MONITORING: "false",
+      MONGOLGPT_ENABLE_TURNSTILE: "true",
+      MONGOLGPT_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+      MONGOLGPT_ENABLE_SHARE_SERVICE: "false",
+      MONGOLGPT_ENABLE_SYNC_SERVICE: "false",
+      MONGOLGPT_ENABLE_REAL_PAYMENTS: "false",
+      MONGOLGPT_PAYMENT_ENVIRONMENT: "disabled",
+      MONGOLGPT_AUTH_EMAIL_DOMAINS: "smoke@mgpt.mn",
+      MONGOLGPT_SMOKE_RETRIES: "1",
+      MONGOLGPT_SMOKE_DELAY_MS: "1",
+    } satisfies Record<string, string>
+    const previous = new Map(Object.keys(configured).map((key) => [key, process.env[key]]))
+    const originalFetch = globalThis.fetch
+    const requests: string[] = []
+
+    const challenge = `<!doctype html>
+      <html lang="mn"><head>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+      </head><body>
+        <form action="https://auth.dev.mgpt.mn/authorize" method="post">
+          <input type="hidden" name="client_id" value="app">
+          <input type="hidden" name="redirect_uri" value="https://dev.mgpt.mn/auth/callback/auth/app">
+          <input type="hidden" name="response_type" value="code">
+          <input type="hidden" name="state" value="12345678-1234-1234-1234-123456789012">
+          <div data-sitekey="1x00000000000000000000AA" data-action="mongolgpt_login"></div>
+        </form>
+      </body></html>`
+
+    Object.assign(process.env, configured)
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init)
+      const url = new URL(request.url)
+      const key = `${request.method} ${url.origin}${url.pathname}`
+      requests.push(key)
+
+      if (key === "GET https://dev.mgpt.mn/api/health") {
+        return Response.json({ status: "ok", service: "console" }, { headers: { "cache-control": "no-store" } })
+      }
+      if (key === "GET https://auth.dev.mgpt.mn/health") {
+        return Response.json({ status: "ok", service: "auth" }, { headers: { "cache-control": "no-store" } })
+      }
+      if (key === "GET https://dev.mgpt.mn/") {
+        return new Response("<!doctype html><title>MongolGPT</title>", {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        })
+      }
+      if (key === "OPTIONS https://dev.mgpt.mn/auth/runtime-token") return preflightResponse()
+      if (key === "POST https://dev.mgpt.mn/auth/runtime-token") return anonymousResponse()
+      if (key === "OPTIONS https://dev.mgpt.mn/v1/account/overview") return accountOverviewPreflightResponse()
+      if (key === "GET https://dev.mgpt.mn/v1/account/overview") return anonymousResponse()
+      if (key === "GET https://dev.mgpt.mn/auth/authorize") {
+        expect([...url.searchParams.entries()]).toEqual([["continue", "/auth/app"]])
+        return new Response(challenge, {
+          headers: {
+            "cache-control": "no-store",
+            "content-security-policy":
+              "default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action https://auth.dev.mgpt.mn; object-src 'none'",
+            "content-type": "text/html; charset=utf-8",
+            "x-frame-options": "DENY",
+          },
+        })
+      }
+      if (key === "GET https://auth.dev.mgpt.mn/authorize") {
+        expect([...url.searchParams.entries()]).toEqual([
+          ["client_id", "app"],
+          ["redirect_uri", "https://dev.mgpt.mn/auth/callback/auth/app"],
+          ["response_type", "code"],
+          ["state", "deployment-smoke-direct-auth"],
+        ])
+        return Response.json(
+          {
+            error: "turnstile_required",
+            message: "Нэвтрэхийн өмнө Cloudflare Turnstile баталгаажуулалт шаардлагатай.",
+          },
+          { status: 403, headers: { "cache-control": "no-store" } },
+        )
+      }
+      throw new Error(`Unexpected bootstrap request: ${key}`)
+    }) as typeof fetch
+
+    try {
+      await expect(runAuthBootstrapSmoke("dev")).resolves.toBeUndefined()
+    } finally {
+      globalThis.fetch = originalFetch
+      for (const [key, value] of previous) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+
+    expect(requests).toEqual([
+      "GET https://dev.mgpt.mn/api/health",
+      "GET https://auth.dev.mgpt.mn/health",
+      "GET https://dev.mgpt.mn/",
+      "OPTIONS https://dev.mgpt.mn/auth/runtime-token",
+      "POST https://dev.mgpt.mn/auth/runtime-token",
+      "OPTIONS https://dev.mgpt.mn/v1/account/overview",
+      "GET https://dev.mgpt.mn/v1/account/overview",
+      "GET https://dev.mgpt.mn/auth/authorize",
+      "GET https://auth.dev.mgpt.mn/authorize",
+    ])
+  })
 })
 
 function corsHeaders() {
