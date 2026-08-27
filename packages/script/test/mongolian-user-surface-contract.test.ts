@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
 
 const mongolgpt = new URL("../../mongolgpt/src/", import.meta.url)
+const app = new URL("../../app/src/", import.meta.url)
+const consoleApp = new URL("../../console/app/src/", import.meta.url)
 const tui = new URL("../../tui/src/", import.meta.url)
 const sessionUi = new URL("../../session-ui/src/", import.meta.url)
 
@@ -58,6 +60,8 @@ describe("Монгол хэрэглэгчийн интерфэйсийн гэр�
   test("CLI footer болон TUI-ийн командын тайлбар Монгол байна", async () => {
     const footer = await Bun.file(new URL("cli/cmd/run/footer.view.tsx", mongolgpt)).text()
     const scrollback = await Bun.file(new URL("cli/cmd/run/scrollback.writer.tsx", mongolgpt)).text()
+    const appMongolian = await Bun.file(new URL("i18n/mn.ts", app)).text()
+    const consoleMongolian = await Bun.file(new URL("i18n/mn.ts", consoleApp)).text()
     const sidebarFooter = await Bun.file(new URL("feature-plugins/sidebar/footer.tsx", tui)).text()
     const dialog = await Bun.file(new URL("ui/dialog-select.tsx", tui)).text()
     const whichKey = await Bun.file(new URL("feature-plugins/system/which-key.tsx", tui)).text()
@@ -89,6 +93,14 @@ describe("Монгол хэрэглэгчийн интерфэйсийн гэр�
     expect(scrollback).not.toContain("# Questions")
     expect(sidebarFooter).toContain("MongolGPT бүртгэлээр нэвтэрсний дараа Free Auto төлбөргүй идэвхжинэ.")
     expect(sidebarFooter).not.toContain("MongolGPT үнэгүй загваруудтай тул шууд эхэлж болно.")
+    expect(appMongolian).toContain("MongolGPT бүртгэлээр нэвтэрсний дараа Free Auto төлбөргүй идэвхжинэ.")
+    expect(appMongolian).not.toContain("MongolGPT үнэгүй загваруудыг багтаасан тул та шууд эхлэх боломжтой.")
+    expect(consoleMongolian).toContain(
+      "Заавал биш. MongolGPT бүртгэлээр нэвтэрсний дараа Free Auto-г төлбөргүй ашиглаж болно.",
+    )
+    expect(consoleMongolian).not.toContain(
+      "Заавал биш. MongolGPT-ийн Free Auto багцаар үнэгүй загваруудаас шууд эхэлж болно.",
+    )
 
     expect(dialog).toContain('category: "Цонх"')
     expect(dialog).not.toContain('category: "Dialog"')

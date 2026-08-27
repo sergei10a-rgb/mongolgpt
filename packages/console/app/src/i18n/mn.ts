@@ -173,7 +173,7 @@ export const dict = {
   "home.faq.a2.before": "Эхлэх хамгийн хялбар арга нь",
   "home.faq.a2.link": "танилцуулгыг унших",
   "home.faq.q3": "MongolGPT ашиглахад хиймэл оюуны нэмэлт захиалга хэрэгтэй юу?",
-  "home.faq.a3.p1": "Заавал биш. MongolGPT-ийн Free Auto багцаар үнэгүй загваруудаас шууд эхэлж болно.",
+  "home.faq.a3.p1": "Заавал биш. MongolGPT бүртгэлээр нэвтэрсний дараа Free Auto-г төлбөргүй ашиглаж болно.",
   "home.faq.a3.p2.beforePlans": "Илүү өндөр хязгаар эсвэл төлбөртэй загвар хэрэгтэй бол",
   "home.faq.a3.p2.plansLink": "Basic, Pro эсвэл Max багц",
   "home.faq.a3.p2.afterPlans": " сонгоно.",

@@ -171,7 +171,7 @@ export const dict = {
   "home.faq.a2.before": "The easiest way to get started is to read the",
   "home.faq.a2.link": "intro",
   "home.faq.q3": "Do I need extra AI subscriptions to use MongolGPT?",
-  "home.faq.a3.p1": "Not necessarily. You can start with free models through MongolGPT Free Auto.",
+  "home.faq.a3.p1": "Not necessarily. Sign in to your MongolGPT account to use Free Auto at no cost.",
   "home.faq.a3.p2.beforePlans": "For higher limits or paid models, choose a",
   "home.faq.a3.p2.plansLink": "Basic, Pro, or Max plan",
   "home.faq.a3.p2.afterPlans": ".",

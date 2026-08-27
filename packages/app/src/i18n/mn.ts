@@ -777,7 +777,7 @@ export const dict = {
   "sidebar.workspaces.enable": "Ажлын талбаруудыг идэвхжүүлэх",
   "sidebar.workspaces.disable": "Ажлын талбаруудыг идэвхгүй болгох",
   "sidebar.gettingStarted.title": "Эхлэх",
-  "sidebar.gettingStarted.line1": "MongolGPT үнэгүй загваруудыг багтаасан тул та шууд эхлэх боломжтой.",
+  "sidebar.gettingStarted.line1": "MongolGPT бүртгэлээр нэвтэрсний дараа Free Auto төлбөргүй идэвхжинэ.",
   "sidebar.gettingStarted.line2": "Claude, GPT, Gemini зэрэг загвар ашиглахын тулд үйлчилгээ үзүүлэгч холбоно уу.",
   "sidebar.project.recentSessions": "Сүүлийн сешнүүд",
   "sidebar.project.viewAllSessions": "Бүх сешнүүдийг үзэх",
