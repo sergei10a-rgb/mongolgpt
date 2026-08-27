@@ -14,5 +14,9 @@
       color: var(--color-danger);
       text-decoration: none;
     }
+
+    [data-slot="item"][data-kind="support"] {
+      color: var(--color-text);
+    }
   }
 }
