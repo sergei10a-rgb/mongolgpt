@@ -1,5 +1,5 @@
 import path from "path"
-import { Context, Effect, Layer, Stream } from "effect"
+import { Context, Effect, Layer, Schedule, Stream } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -29,11 +29,22 @@ export namespace RipgrepBinary {
 
   export class Service extends Context.Service<Service, Interface>()("@mongolgpt/RipgrepBinary") {}
 
+  export const downloadHttpClient = (client: HttpClient.HttpClient) =>
+    HttpClient.filterStatusOk(
+      client.pipe(
+        HttpClient.retryTransient({
+          retryOn: "errors-and-responses",
+          times: 2,
+          schedule: Schedule.exponential(200).pipe(Schedule.jittered),
+        }),
+      ),
+    )
+
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
       const fs = yield* FSUtil.Service
-      const http = HttpClient.filterStatusOk(yield* HttpClient.HttpClient)
+      const http = downloadHttpClient(yield* HttpClient.HttpClient)
       const spawner = yield* ChildProcessSpawner
       const flock = yield* EffectFlock.Service
 
