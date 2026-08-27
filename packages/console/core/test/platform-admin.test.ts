@@ -18,6 +18,11 @@ describe("platform admin RBAC", () => {
     expect(hasPlatformAdminPermission("support", "billing.read")).toBe(false)
     expect(hasPlatformAdminPermission("finance", "billing.read")).toBe(true)
     expect(hasPlatformAdminPermission("operations", "system.read")).toBe(true)
+    expect(hasPlatformAdminPermission("support", "support.read")).toBe(true)
+    expect(hasPlatformAdminPermission("support", "support.manage")).toBe(true)
+    expect(hasPlatformAdminPermission("administrator", "support.read")).toBe(true)
+    expect(hasPlatformAdminPermission("administrator", "support.manage")).toBe(true)
+    expect(hasPlatformAdminPermission("finance", "support.manage")).toBe(false)
   })
 
   test("recognizes only declared platform roles", () => {

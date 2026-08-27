@@ -12,6 +12,8 @@ export const PlatformAdminPermissions = [
   "payments.refund",
   "payments.cancel",
   "plans.manage",
+  "support.read",
+  "support.manage",
 ] as const
 
 export type PlatformAdminRole = (typeof PlatformAdminRoles)[number]
@@ -34,8 +36,10 @@ const grants: Record<PlatformAdminRole, ReadonlySet<PlatformAdminPermission>> = 
     "payments.refund",
     "payments.cancel",
     "plans.manage",
+    "support.read",
+    "support.manage",
   ]),
-  support: new Set(["admin.access", "overview.read", "users.read"]),
+  support: new Set(["admin.access", "overview.read", "users.read", "support.read", "support.manage"]),
   finance: new Set(["admin.access", "overview.read", "billing.read"]),
   operations: new Set(["admin.access", "overview.read", "system.read"]),
 }

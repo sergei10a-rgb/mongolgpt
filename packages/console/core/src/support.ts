@@ -1,13 +1,18 @@
-import { and, asc, count, desc, eq, gte, isNull, lt, notInArray, or } from "drizzle-orm"
+import { and, asc, count, desc, eq, gte, isNotNull, isNull, lt, notInArray, or } from "drizzle-orm"
 import { ulid } from "ulid"
 import { z } from "zod"
 import { Database } from "./drizzle"
+import { hasPlatformAdminPermission } from "./platform-admin"
 import { AccountTable } from "./schema/account.sql"
+import { PlatformAdminTable } from "./schema/admin.sql"
 import { SupportMessageTable, SupportTicketTable } from "./schema/support.sql"
 import { UserTable } from "./schema/user.sql"
 
 const CategorySchema = z.enum(["account", "billing", "technical", "feedback", "other"])
 const TicketIDSchema = z.string().regex(/^spt_[0-9A-HJKMNP-TV-Z]{26}$/)
+const AdminIDSchema = z.string().regex(/^adm_[0-9A-HJKMNP-TV-Z]{26}$/)
+const StatusSchema = z.enum(["open", "pending_user", "pending_support", "resolved", "closed"])
+const PrioritySchema = z.enum(["normal", "high", "urgent"])
 
 export const SupportTicketInputSchema = z
   .object({
@@ -58,6 +63,52 @@ export class SupportError extends Error {
   }
 }
 
+export const AdminSupportQueueInputSchema = z
+  .object({
+    status: StatusSchema.optional(),
+    priority: PrioritySchema.optional(),
+    assignment: z.enum(["assigned", "unassigned", "mine"]).optional(),
+    accountID: z.string().trim().min(1).max(30).optional(),
+    cursor: z.string().max(80).optional(),
+    limit: z.union([z.literal(25), z.literal(50)]).default(25),
+  })
+  .strict()
+
+export const AdminSupportMutationInputSchema = z.discriminatedUnion("operation", [
+  z
+    .object({
+      operation: z.literal("reply"),
+      ticketID: TicketIDSchema,
+      expectedLockVersion: z.number().int().nonnegative(),
+      message: z.string().trim().min(1).max(5_000),
+    })
+    .strict(),
+  z
+    .object({
+      operation: z.literal("note"),
+      ticketID: TicketIDSchema,
+      expectedLockVersion: z.number().int().nonnegative(),
+      message: z.string().trim().min(1).max(5_000),
+    })
+    .strict(),
+  z
+    .object({
+      operation: z.literal("update"),
+      ticketID: TicketIDSchema,
+      expectedLockVersion: z.number().int().nonnegative(),
+      status: StatusSchema.optional(),
+      priority: PrioritySchema.optional(),
+      assignedAdminID: AdminIDSchema.nullable().optional(),
+    })
+    .strict()
+    .refine(
+      (value) => value.status !== undefined || value.priority !== undefined || value.assignedAdminID !== undefined,
+      "Өөрчлөх утга шаардлагатай.",
+    ),
+])
+
+export type AdminSupportMutationInput = z.input<typeof AdminSupportMutationInputSchema>
+
 const CustomerTicketColumns = {
   id: SupportTicketTable.id,
   requester_email: SupportTicketTable.requester_email,
@@ -72,6 +123,12 @@ const CustomerTicketColumns = {
   time_closed: SupportTicketTable.time_closed,
   time_created: SupportTicketTable.time_created,
   time_updated: SupportTicketTable.time_updated,
+} as const
+
+const AdminTicketColumns = {
+  ...CustomerTicketColumns,
+  account_id: SupportTicketTable.account_id,
+  assigned_admin_id: SupportTicketTable.assigned_admin_id,
 } as const
 
 export function redactSupportSecrets(value: string) {
@@ -139,17 +196,15 @@ export async function createSupportTicketWithDb(db: Database.TxOrDb, raw: Suppor
       time_updated: now,
     }
     await tx.insert(SupportTicketTable).values(ticket)
-    await tx
-      .insert(SupportMessageTable)
-      .values({
-        id: `spm_${ulid()}`,
-        ticket_id: ticket.id,
-        author_type: "customer",
-        account_id: input.accountID,
-        body,
-        internal: false,
-        time_created: now,
-      })
+    await tx.insert(SupportMessageTable).values({
+      id: `spm_${ulid()}`,
+      ticket_id: ticket.id,
+      author_type: "customer",
+      account_id: input.accountID,
+      body,
+      internal: false,
+      time_created: now,
+    })
     return SupportTicketResultSchema.parse({ id: ticket.id, status: ticket.status, lockVersion: 0 })
   })
 }
@@ -289,23 +344,221 @@ export async function replyToSupportTicketWithDb(db: Database.TxOrDb, raw: Suppo
       )
       .returning({ lock_version: SupportTicketTable.lock_version })
     if (updated.length !== 1) throw new SupportError("conflict", "Хүсэлт өөрчлөгдсөн байна. Дахин ачаална уу.")
-    await tx
-      .insert(SupportMessageTable)
-      .values({
-        id: `spm_${ulid()}`,
-        ticket_id: ticket.id,
-        author_type: "customer",
-        account_id: input.accountID,
-        body,
-        internal: false,
-        time_created: now,
-      })
+    await tx.insert(SupportMessageTable).values({
+      id: `spm_${ulid()}`,
+      ticket_id: ticket.id,
+      author_type: "customer",
+      account_id: input.accountID,
+      body,
+      internal: false,
+      time_created: now,
+    })
     return SupportTicketResultSchema.parse({
       id: ticket.id,
       status: "pending_support",
       lockVersion: updated[0].lock_version,
     })
   })
+}
+
+export async function listAdminSupportTickets(
+  input: z.input<typeof AdminSupportQueueInputSchema> & { adminID: string },
+) {
+  return Database.use((db) => listAdminSupportTicketsWithDb(db, input))
+}
+
+export async function listAdminSupportTicketsWithDb(
+  db: Database.TxOrDb,
+  raw: z.input<typeof AdminSupportQueueInputSchema> & { adminID: string },
+) {
+  const input = parse(AdminSupportQueueInputSchema.extend({ adminID: AdminIDSchema }), raw)
+  const cursor = input.cursor ? parseCursor(input.cursor) : undefined
+  const rows = await db
+    .select(AdminTicketColumns)
+    .from(SupportTicketTable)
+    .where(
+      and(
+        isNull(SupportTicketTable.time_deleted),
+        input.status ? eq(SupportTicketTable.status, input.status) : undefined,
+        input.priority ? eq(SupportTicketTable.priority, input.priority) : undefined,
+        input.accountID ? eq(SupportTicketTable.account_id, input.accountID) : undefined,
+        input.assignment === "assigned" ? isNotNull(SupportTicketTable.assigned_admin_id) : undefined,
+        input.assignment === "unassigned" ? isNull(SupportTicketTable.assigned_admin_id) : undefined,
+        input.assignment === "mine" ? eq(SupportTicketTable.assigned_admin_id, input.adminID) : undefined,
+        cursor
+          ? or(
+              lt(SupportTicketTable.last_message_at, cursor.time),
+              and(eq(SupportTicketTable.last_message_at, cursor.time), lt(SupportTicketTable.id, cursor.id)),
+            )
+          : undefined,
+      ),
+    )
+    .orderBy(desc(SupportTicketTable.last_message_at), desc(SupportTicketTable.id))
+    .limit(input.limit + 1)
+  const items = rows.slice(0, input.limit)
+  return {
+    items,
+    nextCursor:
+      rows.length > input.limit ? `${items.at(-1)?.last_message_at.getTime()}:${items.at(-1)?.id}` : undefined,
+  }
+}
+
+export async function getAdminSupportTicket(input: { ticketID: string }) {
+  return Database.use((db) => getAdminSupportTicketWithDb(db, input))
+}
+
+export async function getAdminSupportTicketWithDb(db: Database.TxOrDb, raw: { ticketID: string }) {
+  const input = parse(z.object({ ticketID: TicketIDSchema }).strict(), raw)
+  const ticket = await db
+    .select(AdminTicketColumns)
+    .from(SupportTicketTable)
+    .where(and(eq(SupportTicketTable.id, input.ticketID), isNull(SupportTicketTable.time_deleted)))
+    .limit(1)
+    .then((rows) => rows[0])
+  if (!ticket) throw new SupportError("not_found", "Тусламжийн хүсэлт олдсонгүй.")
+  const messages = await db
+    .select({
+      id: SupportMessageTable.id,
+      author_type: SupportMessageTable.author_type,
+      account_id: SupportMessageTable.account_id,
+      admin_id: SupportMessageTable.admin_id,
+      body: SupportMessageTable.body,
+      internal: SupportMessageTable.internal,
+      time_created: SupportMessageTable.time_created,
+    })
+    .from(SupportMessageTable)
+    .where(eq(SupportMessageTable.ticket_id, ticket.id))
+    .orderBy(asc(SupportMessageTable.time_created), asc(SupportMessageTable.id))
+    .limit(200)
+  return { ticket, messages }
+}
+
+export async function mutateAdminSupportTicket(input: AdminSupportMutationInput & { adminID: string }) {
+  return Database.transaction((db) => mutateAdminSupportTicketWithDb(db, input))
+}
+
+export async function mutateAdminSupportTicketWithDb(
+  db: Database.TxOrDb,
+  raw: AdminSupportMutationInput & { adminID: string },
+) {
+  const { adminID, ...mutation } = raw
+  const input = {
+    ...parse(AdminSupportMutationInputSchema, mutation),
+    ...parse(z.object({ adminID: AdminIDSchema }).strict(), { adminID }),
+  }
+  const now = new Date()
+  return db.transaction(async (tx) => {
+    const ticket = await tx
+      .select()
+      .from(SupportTicketTable)
+      .where(and(eq(SupportTicketTable.id, input.ticketID), isNull(SupportTicketTable.time_deleted)))
+      .limit(1)
+      .then((rows) => rows[0])
+    if (!ticket) throw new SupportError("not_found", "Тусламжийн хүсэлт олдсонгүй.")
+    if (ticket.lock_version !== input.expectedLockVersion)
+      throw new SupportError("conflict", "Хүсэлт өөрчлөгдсөн байна. Дахин ачаална уу.")
+
+    if (input.operation === "update" && input.assignedAdminID !== undefined && input.assignedAdminID !== null) {
+      await requireActiveAdmin(tx, input.assignedAdminID)
+    }
+    if (input.operation === "reply" || input.operation === "note") {
+      const total = await tx
+        .select({ value: count() })
+        .from(SupportMessageTable)
+        .where(eq(SupportMessageTable.ticket_id, ticket.id))
+      if ((total[0]?.value ?? 0) >= 200)
+        throw new SupportError("rate_limit", "Энэ хүсэлтийн зурвасын дээд хязгаарт хүрсэн байна.")
+    }
+
+    let status = ticket.status
+    let priority = ticket.priority
+    let assignedAdminID = ticket.assigned_admin_id
+    let timeResolved = ticket.time_resolved
+    let timeClosed = ticket.time_closed
+    let customerVisibleActivity = false
+    if (input.operation === "reply") {
+      if (ticket.status === "resolved" || ticket.status === "closed")
+        throw new SupportError("closed", "Хаагдсан хүсэлтэд хариу нэмэх боломжгүй.")
+      status = "pending_user"
+      customerVisibleActivity = true
+    } else if (input.operation === "update") {
+      priority = input.priority ?? priority
+      assignedAdminID = input.assignedAdminID === undefined ? assignedAdminID : input.assignedAdminID
+      if (input.status !== undefined && input.status !== ticket.status) {
+        const next = input.status
+        if (!canTransitionSupportStatus(ticket.status, next))
+          throw new SupportError("invalid", "Хүсэлтийн төлөвийг энэ дарааллаар өөрчлөх боломжгүй.")
+        status = next
+        if (next === "resolved") {
+          timeResolved = now
+          timeClosed = null
+        } else if (next === "closed") {
+          timeResolved = ticket.time_resolved
+          timeClosed = now
+        }
+      }
+    }
+
+    const updated = await tx
+      .update(SupportTicketTable)
+      .set({
+        status,
+        priority,
+        assigned_admin_id: assignedAdminID,
+        lock_version: ticket.lock_version + 1,
+        last_message_at: customerVisibleActivity ? now : ticket.last_message_at,
+        time_resolved: timeResolved,
+        time_closed: timeClosed,
+        time_updated: now,
+      })
+      .where(
+        and(
+          eq(SupportTicketTable.id, ticket.id),
+          eq(SupportTicketTable.lock_version, input.expectedLockVersion),
+          isNull(SupportTicketTable.time_deleted),
+        ),
+      )
+      .returning({ lockVersion: SupportTicketTable.lock_version })
+    if (updated.length !== 1) throw new SupportError("conflict", "Хүсэлт өөрчлөгдсөн байна. Дахин ачаална уу.")
+
+    if (input.operation === "reply" || input.operation === "note") {
+      await tx.insert(SupportMessageTable).values({
+        id: `spm_${ulid()}`,
+        ticket_id: ticket.id,
+        author_type: "admin",
+        admin_id: input.adminID,
+        body: redacted(input.message, "Зурвас"),
+        internal: input.operation === "note",
+        time_created: now,
+      })
+    }
+    return { id: ticket.id, status, priority, assignedAdminID, lockVersion: updated[0].lockVersion }
+  })
+}
+
+function canTransitionSupportStatus(from: z.output<typeof StatusSchema>, to: z.output<typeof StatusSchema>) {
+  if (from === "open") return to === "pending_user" || to === "pending_support" || to === "resolved"
+  if (from === "pending_user") return to === "pending_support" || to === "resolved"
+  if (from === "pending_support") return to === "pending_user" || to === "resolved"
+  return from === "resolved" && to === "closed"
+}
+
+async function requireActiveAdmin(db: Database.TxOrDb, adminID: string) {
+  const admin = await db
+    .select({ id: PlatformAdminTable.id, role: PlatformAdminTable.role })
+    .from(PlatformAdminTable)
+    .where(
+      and(
+        eq(PlatformAdminTable.id, adminID),
+        eq(PlatformAdminTable.status, "active"),
+        isNull(PlatformAdminTable.timeDeleted),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0])
+  if (!admin || !hasPlatformAdminPermission(admin.role, "support.manage")) {
+    throw new SupportError("invalid", "Оноох админ тусламжийн хүсэлт хариуцах эрхгүй байна.")
+  }
 }
 
 async function requireActiveAccount(db: Database.TxOrDb, accountID: string) {

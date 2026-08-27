@@ -6,9 +6,12 @@ import {
   SupportError,
   createSupportTicketWithDb,
   getAccountSupportTicketWithDb,
+  getAdminSupportTicketWithDb,
+  listAdminSupportTicketsWithDb,
   listAccountSupportTicketsWithDb,
   redactSupportSecrets,
   replyToSupportTicketWithDb,
+  mutateAdminSupportTicketWithDb,
 } from "../src/support"
 import { Database } from "../src/drizzle"
 import * as schema from "../src/schema-d1"
@@ -59,6 +62,12 @@ function addMember(accountID: string, workspaceID = "wrk_one") {
   sqlite
     .query("insert into user (id, workspace_id, account_id, name, role) values (?, ?, ?, ?, ?)")
     .run(`usr_${accountID}`, workspaceID, accountID, "Хэрэглэгч", "member")
+}
+
+function addAdmin(id: string, role: "support" | "finance" = "support") {
+  sqlite
+    .query("insert into platform_admin (id, email, role, status) values (?, ?, ?, 'active')")
+    .run(id, `${id.toLowerCase()}@mgpt.mn`, role)
 }
 
 describe("Support core", () => {
@@ -195,5 +204,130 @@ describe("Support core", () => {
   test("error нь Mongolian code-тай байна", () => {
     const error = new SupportError("forbidden", "Хандах эрхгүй байна.")
     expect(error).toMatchObject({ code: "forbidden", message: "Хандах эрхгүй байна." })
+  })
+
+  test("admin queue, state machine, internal note, assignment, cap болон redaction-ийг мөрдөнө", async () => {
+    const admin = `adm_${"A".repeat(26)}`
+    const secondAdmin = `adm_${"B".repeat(26)}`
+    const financeAdmin = `adm_${"D".repeat(26)}`
+    addAdmin(admin)
+    addAdmin(secondAdmin)
+    addAdmin(financeAdmin, "finance")
+    const first = await ticket("acc_one")
+    const second = await ticket("acc_two", { subject: "Өөр хүсэлт" })
+    await expect(
+      mutateAdminSupportTicketWithDb(db, {
+        operation: "update",
+        ticketID: first.id,
+        expectedLockVersion: 0,
+        assignedAdminID: financeAdmin,
+        adminID: admin,
+      }),
+    ).rejects.toMatchObject({ code: "invalid" })
+    await mutateAdminSupportTicketWithDb(db, {
+      operation: "update",
+      ticketID: first.id,
+      expectedLockVersion: 0,
+      priority: "urgent",
+      assignedAdminID: admin,
+      adminID: admin,
+    })
+    const mine = await listAdminSupportTicketsWithDb(db, {
+      adminID: admin,
+      assignment: "mine",
+      priority: "urgent",
+      limit: 25,
+    })
+    expect(mine.items.map((item) => item.id)).toEqual([first.id])
+    const accountTwo = await listAdminSupportTicketsWithDb(db, { adminID: admin, accountID: "acc_two", limit: 25 })
+    expect(accountTwo.items.map((item) => item.id)).toEqual([second.id])
+    await expect(listAdminSupportTicketsWithDb(db, { adminID: admin, cursor: "broken" })).rejects.toMatchObject({
+      code: "invalid",
+    })
+    const reply = await mutateAdminSupportTicketWithDb(db, {
+      operation: "reply",
+      ticketID: first.id,
+      expectedLockVersion: 1,
+      message: "Bearer hidden-secret-value",
+      adminID: admin,
+    })
+    expect(reply.status).toBe("pending_user")
+    const noted = await mutateAdminSupportTicketWithDb(db, {
+      operation: "note",
+      ticketID: first.id,
+      expectedLockVersion: 2,
+      message: "token=super-secret-value",
+      adminID: admin,
+    })
+    const customer = await getAccountSupportTicketWithDb(db, { accountID: "acc_one", ticketID: first.id })
+    expect(customer.messages).toHaveLength(2)
+    expect(customer.messages.some((message) => message.body.includes("super-secret-value"))).toBe(false)
+    const detail = await getAdminSupportTicketWithDb(db, { ticketID: first.id })
+    expect(detail.messages).toHaveLength(3)
+    expect(detail.messages.at(-1)?.internal).toBe(true)
+    await expect(
+      mutateAdminSupportTicketWithDb(db, {
+        operation: "update",
+        ticketID: first.id,
+        expectedLockVersion: 2,
+        status: "resolved",
+        adminID: admin,
+      }),
+    ).rejects.toMatchObject({ code: "conflict" })
+    const resolved = await mutateAdminSupportTicketWithDb(db, {
+      operation: "update",
+      ticketID: first.id,
+      expectedLockVersion: noted.lockVersion,
+      status: "resolved",
+      adminID: admin,
+    })
+    expect(resolved.status).toBe("resolved")
+    expect(
+      sqlite.query("select time_resolved, time_closed from support_ticket where id = ?").get(first.id),
+    ).toMatchObject({ time_resolved: expect.any(Number), time_closed: null })
+    await expect(
+      mutateAdminSupportTicketWithDb(db, {
+        operation: "reply",
+        ticketID: first.id,
+        expectedLockVersion: resolved.lockVersion,
+        message: "Хаагдсан",
+        adminID: admin,
+      }),
+    ).rejects.toMatchObject({ code: "closed" })
+    const closed = await mutateAdminSupportTicketWithDb(db, {
+      operation: "update",
+      ticketID: first.id,
+      expectedLockVersion: resolved.lockVersion,
+      status: "closed",
+      adminID: admin,
+    })
+    expect(closed.status).toBe("closed")
+    expect(
+      sqlite.query("select time_resolved, time_closed from support_ticket where id = ?").get(first.id),
+    ).toMatchObject({ time_resolved: expect.any(Number), time_closed: expect.any(Number) })
+    await expect(
+      mutateAdminSupportTicketWithDb(db, {
+        operation: "update",
+        ticketID: second.id,
+        expectedLockVersion: 0,
+        status: "closed",
+        adminID: admin,
+      }),
+    ).rejects.toMatchObject({ code: "invalid" })
+    for (let index = 0; index < 199; index++)
+      sqlite
+        .query(
+          "insert into support_message (id, ticket_id, author_type, admin_id, body, internal, time_created) values (?, ?, 'admin', ?, ?, 1, ?)",
+        )
+        .run(`spm_${String(index).padStart(26, "C")}`, second.id, admin, `Тэмдэглэл ${index}`, Date.now() + index)
+    await expect(
+      mutateAdminSupportTicketWithDb(db, {
+        operation: "note",
+        ticketID: second.id,
+        expectedLockVersion: 0,
+        message: "Илүү",
+        adminID: admin,
+      }),
+    ).rejects.toMatchObject({ code: "rate_limit" })
   })
 })
