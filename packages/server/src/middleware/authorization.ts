@@ -5,6 +5,7 @@ export { Authorization } from "@mongolgpt/protocol/middleware/authorization"
 import { hasPtyConnectTicketURL } from "@mongolgpt/protocol/groups/pty"
 import { Effect, Encoding, Layer, Redacted } from "effect"
 import { HttpEffect, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
+import { HostedCredential } from "@mongolgpt/core/hosted-credential"
 
 const AUTH_TOKEN_QUERY = "auth_token"
 const WWW_AUTHENTICATE = 'Basic realm="Secure Area"'
@@ -47,7 +48,10 @@ export const authorizationLayer = Layer.effect(
         // credential checks here; the connect handler consumes and validates the ticket.
         if (hasPtyConnectTicketURL(new URL(request.url, "http://localhost"))) return yield* effect
         const credential = yield* credentialFromRequest(request)
-        if (ServerAuth.authorized(credential, config)) return yield* effect
+        if (ServerAuth.authorized(credential, config)) {
+          HostedCredential.capture(request.headers[HostedCredential.Header])
+          return yield* effect
+        }
         yield* HttpEffect.appendPreResponseHandler((_request, response) =>
           Effect.succeed(HttpServerResponse.setHeader(response, "www-authenticate", WWW_AUTHENTICATE)),
         )

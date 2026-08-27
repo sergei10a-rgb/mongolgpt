@@ -154,12 +154,35 @@ describe("ModelsDev Service", () => {
 
       expect(result.opencode).toBeUndefined()
       expect(result["opencode-go"]).toBeUndefined()
-      expect(result.mongolgpt).toMatchObject({ id: "mongolgpt", name: "MongolGPT", api: "https://mgpt.mn/zen/v1" })
+      expect(result.mongolgpt).toMatchObject({
+        id: "mongolgpt",
+        name: "MongolGPT",
+        api: "https://mgpt.mn/zen/v1",
+        env: ["MONGOLGPT_API_KEY"],
+        models: {
+          "free-auto": {
+            id: "free-auto",
+            name: "MongolGPT Free Auto",
+            cost: { input: 0, output: 0 },
+            limit: { context: 128_000, output: 16_384 },
+          },
+        },
+      })
       expect(result["mongolgpt-go"]).toMatchObject({
         id: "mongolgpt-go",
         name: "MongolGPT (хуучин холболт)",
         api: "https://mgpt.mn/zen/go/v1",
       })
+    }),
+  )
+
+  it.live("synthesizes the first-party Free Auto provider without an inherited hosted catalog", () =>
+    Effect.sync(() => {
+      const result = ModelsDev.rebrandHostedProviders(fixture, "https://dev.mgpt.mn")
+
+      expect(result.mongolgpt.api).toBe("https://dev.mgpt.mn/zen/v1")
+      expect(result.mongolgpt.npm).toBe("@ai-sdk/openai-compatible")
+      expect(result.mongolgpt.models["free-auto"]?.tool_call).toBe(true)
     }),
   )
 

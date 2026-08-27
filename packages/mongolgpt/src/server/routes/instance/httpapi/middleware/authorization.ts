@@ -4,6 +4,7 @@ import { HttpEffect, HttpRouter, HttpServerRequest, HttpServerResponse } from "e
 import { HttpApiError, HttpApiMiddleware } from "effect/unstable/httpapi"
 import { hasPtyConnectTicketURL } from "@/server/shared/pty-ticket"
 import { isPublicUIPath } from "@/server/shared/public-ui"
+import { HostedCredential } from "@mongolgpt/core/hosted-credential"
 export {
   Authorization as ServerAuthorization,
   authorizationLayer as serverAuthorizationLayer,
@@ -41,6 +42,7 @@ function validateCredential<A, E, R>(
   effect: Effect.Effect<A, E, R>,
   credential: ServerAuth.DecodedCredentials,
   config: ServerAuth.Info,
+  gatewayToken?: string,
 ) {
   return Effect.gen(function* () {
     if (!ServerAuth.required(config)) return yield* effect
@@ -50,6 +52,7 @@ function validateCredential<A, E, R>(
       )
       return yield* new HttpApiError.Unauthorized({})
     }
+    HostedCredential.capture(gatewayToken)
     return yield* effect
   })
 }
@@ -86,6 +89,7 @@ function validateRawCredential<A, E, R>(
   effect: Effect.Effect<A, E, R>,
   credential: ServerAuth.DecodedCredentials,
   config: ServerAuth.Info,
+  gatewayToken?: string,
 ) {
   if (!ServerAuth.required(config)) return effect
   if (!ServerAuth.authorized(credential, config))
@@ -95,6 +99,7 @@ function validateRawCredential<A, E, R>(
         headers: { "www-authenticate": WWW_AUTHENTICATE },
       }),
     )
+  HostedCredential.capture(gatewayToken)
   return effect
 }
 
@@ -109,7 +114,9 @@ export const authorizationRouterMiddleware = HttpRouter.middleware()(
         const url = new URL(request.url, "http://localhost")
         if (isPublicUIPath(request.method, url.pathname)) return yield* effect
         return yield* credentialFromURL(url, request).pipe(
-          Effect.flatMap((credential) => validateRawCredential(effect, credential, config)),
+          Effect.flatMap((credential) =>
+            validateRawCredential(effect, credential, config, request.headers[HostedCredential.Header]),
+          ),
         )
       })
   }),
@@ -124,7 +131,9 @@ export const authorizationLayer = Layer.effect(
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest
         return yield* credentialFromRequest(request).pipe(
-          Effect.flatMap((credential) => validateCredential(effect, credential, config)),
+          Effect.flatMap((credential) =>
+            validateCredential(effect, credential, config, request.headers[HostedCredential.Header]),
+          ),
         )
       }),
     )
@@ -142,7 +151,9 @@ export const ptyConnectAuthorizationLayer = Layer.effect(
         const url = new URL(request.url, "http://localhost")
         if (hasPtyConnectTicketURL(url)) return yield* effect
         return yield* credentialFromURL(url, request).pipe(
-          Effect.flatMap((credential) => validateCredential(effect, credential, config)),
+          Effect.flatMap((credential) =>
+            validateCredential(effect, credential, config, request.headers[HostedCredential.Header]),
+          ),
         )
       }),
     )

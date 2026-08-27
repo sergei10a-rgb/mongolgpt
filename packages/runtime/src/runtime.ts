@@ -1,4 +1,4 @@
-import { verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
+import { issueRuntimeCapability, runtimeGatewayHeader, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
 
 const PORT = 4096
 const PROCESS_ID = "mongolgpt-server"
@@ -41,6 +41,7 @@ export interface RuntimeSandbox {
 
 export interface RuntimeVariables {
   MONGOLGPT_APP_ORIGIN: string
+  MONGOLGPT_CONSOLE_URL: string
   MONGOLGPT_RUNTIME_AUTH_SECRET: string
   MONGOLGPT_RUNTIME_BURST_LIMITER: RuntimeRateLimiter
   MONGOLGPT_RUNTIME_RATE_LIMITER: RuntimeRateLimiter
@@ -63,6 +64,7 @@ type Authentication = {
   account: {
     id: string
   }
+  authVersion: number
   expiresAt: number
 }
 
@@ -76,8 +78,10 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
 ) {
   return async (request: Request, env: Environment) => {
     const appOrigin = configuredOrigin(env.MONGOLGPT_APP_ORIGIN)
+    const consoleOrigin = configuredOrigin(env.MONGOLGPT_CONSOLE_URL)
     const configured = Boolean(
       appOrigin &&
+        consoleOrigin &&
         env.STAGE?.trim() &&
         env.MONGOLGPT_RUNTIME_VERSION?.trim() &&
         env.MONGOLGPT_RUNTIME_AUTH_SECRET?.trim().length >= 32 &&
@@ -107,7 +111,9 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
       return request.headers.get("origin") === appOrigin && appOrigin ? cors(response, appOrigin) : response
     }
 
-    if (!configured || !appOrigin) return json({ error: "Runtime үйлчилгээний тохиргоо бүрэн биш байна." }, 503)
+    if (!configured || !appOrigin || !consoleOrigin) {
+      return json({ error: "Runtime үйлчилгээний тохиргоо бүрэн биш байна." }, 503)
+    }
 
     if (request.method === "OPTIONS") {
       if (request.headers.get("origin") !== appOrigin) return json({ error: "Хориотой origin байна." }, 403)
@@ -149,11 +155,18 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
       const body = await boundedRequestBody(request)
       const identity = await deriveRuntimeIdentity(authentication.account.id, env.MONGOLGPT_RUNTIME_SECRET)
       const sandbox = dependencies.sandbox(env, identity.sandboxID)
-      await ensureServer(sandbox, identity.password)
+      await ensureServer(sandbox, identity.password, consoleOrigin)
       if (authentication.expiresAt <= Date.now()) {
         return cors(json({ error: "Runtime сессийн хугацаа дууссан байна. Дахин нэвтэрнэ үү." }, 401), appOrigin)
       }
-      const internal = internalRequest(request, identity.password, directory, body)
+      const gatewayToken = await issueRuntimeCapability({
+        accountID: authentication.account.id,
+        authVersion: authentication.authVersion,
+        audience: consoleOrigin,
+        secret: env.MONGOLGPT_RUNTIME_AUTH_SECRET,
+        ttlSeconds: 90,
+      })
+      const internal = internalRequest(request, identity.password, directory, body, gatewayToken)
 
       if (request.headers.get("upgrade")?.toLowerCase() === "websocket") {
         const response = await sandbox.wsConnect(internal, PORT)
@@ -259,6 +272,7 @@ async function authenticate(token: string, request: Request, secret: string): Pr
     })
     return {
       account: { id: capability.sub },
+      authVersion: capability.authVersion,
       expiresAt: capability.exp * 1000,
     }
   } catch {
@@ -352,7 +366,7 @@ export function hostedDirectory(raw: string | null) {
   return segments.length ? `${WORKSPACE_ROOT}/${segments.join("/")}` : WORKSPACE_ROOT
 }
 
-async function ensureServer(sandbox: RuntimeSandbox, password: string) {
+async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOrigin: string) {
   const existing = await sandbox.getProcess(PROCESS_ID)
   if (existing && (await waitForServer(existing))) return
 
@@ -370,6 +384,10 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string) {
         MONGOLGPT_SERVER_PASSWORD: password,
         MONGOLGPT_DISABLE_SHARE: "true",
         MONGOLGPT_AUTO_SHARE: "false",
+        MONGOLGPT_RUNTIME_MODE: "hosted",
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_CONSOLE_URL: consoleOrigin,
+        MONGOLGPT_API_KEY: "runtime",
       },
     })
     .catch(async (error) => {
@@ -392,7 +410,13 @@ async function waitForServer(process: RuntimeProcess) {
   return true
 }
 
-function internalRequest(request: Request, password: string, directory: string, body: Uint8Array | undefined) {
+function internalRequest(
+  request: Request,
+  password: string,
+  directory: string,
+  body: Uint8Array | undefined,
+  gatewayToken: string,
+) {
   const headers = new Headers(request.headers)
   for (const name of [
     "cookie",
@@ -407,11 +431,13 @@ function internalRequest(request: Request, password: string, directory: string, 
     "x-forwarded-host",
     "x-forwarded-proto",
     "x-real-ip",
+    runtimeGatewayHeader,
   ]) {
     headers.delete(name)
   }
   headers.set("authorization", `Basic ${btoa(`${SERVER_USERNAME}:${password}`)}`)
   headers.set("x-mongolgpt-directory", encodeURIComponent(directory))
+  headers.set(runtimeGatewayHeader, gatewayToken)
   const requestBody = body ? Uint8Array.from(body) : undefined
   return new Request(request, requestBody ? { headers, body: requestBody } : { headers })
 }

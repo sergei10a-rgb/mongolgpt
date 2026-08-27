@@ -57,7 +57,7 @@ import { createModelTpmLimiter } from "./modelTpmLimiter"
 import { createModelTpsLimiter } from "./modelTpsLimiter"
 import { createProviderBudgetTracker } from "./providerBudgetTracker"
 import { enqueueBatchedUsage, HOT_WORKSPACES } from "./usageBatcher"
-import { verifyCliToken } from "~/lib/cli-auth"
+import { resolveZenWorkspace, verifyZenAccount } from "~/lib/cli-auth"
 import { authenticatedRateLimitIdentity, sanitizeProviderRequestHeaders } from "./request-security"
 import { freeAutoReservationUpperBound, reserveFreeAutoQuota } from "./free-auto-quota"
 import { planQuotaReservationBounds, reservePlanQuota } from "./plan-quota"
@@ -761,17 +761,21 @@ export async function handler(
     }
 
     const data = await (async () => {
-      const key = await loadAuthData(modelInfo, { type: "key", value: zenApiKey })
+      const key = zenApiKey ? await loadAuthData(modelInfo, { type: "key", value: zenApiKey }) : undefined
       if (key) return key
 
-      const account = await verifyCliToken(zenApiKey)
-      if (!account) return
-      const workspaceID = input.request.headers.get("x-org-id")
-      if (!workspaceID) throw new AuthError(t("zen.api.error.organizationRequired"))
+      const account = await verifyZenAccount(input.request, zenApiKey)
+      if (!account) return undefined
+      const workspace = await resolveZenWorkspace(account, input.request.headers.get("x-org-id"))
+      if (!("workspaceID" in workspace)) {
+        if (workspace.error === "workspace_ambiguous") throw new AuthError(t("zen.api.error.organizationRequired"))
+        if (workspace.error === "workspace_required") throw new AuthError(t("zen.api.error.organizationRequired"))
+        return undefined
+      }
       return loadAuthData(modelInfo, {
         type: "account",
         accountID: account.accountID,
-        workspaceID,
+        workspaceID: workspace.workspaceID,
       })
     })()
 

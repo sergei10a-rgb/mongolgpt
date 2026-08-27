@@ -11,6 +11,7 @@ import {
   serverAuthorizationLayer,
 } from "../../src/server/routes/instance/httpapi/middleware/authorization"
 import { testEffect } from "../lib/effect"
+import { HostedCredential } from "@mongolgpt/core/hosted-credential"
 
 const Api = HttpApi.make("test-authorization").add(
   HttpApiGroup.make("test")
@@ -102,6 +103,57 @@ describe("HttpApi authorization middleware", () => {
       expect(badPassword.headers["www-authenticate"] ?? "").toContain("Basic")
       expect(good.status).toBe(200)
     }),
+  )
+
+  itSecret.live("captures a short hosted gateway capability only after basic auth succeeds", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => {
+        const previous = {
+          mode: process.env.MONGOLGPT_RUNTIME_MODE,
+          key: process.env.MONGOLGPT_API_KEY,
+        }
+        process.env.MONGOLGPT_RUNTIME_MODE = "hosted"
+        process.env.MONGOLGPT_API_KEY = HostedCredential.Placeholder
+        HostedCredential.clear()
+        return previous
+      }),
+      () =>
+        Effect.gen(function* () {
+          const now = Math.floor(Date.now() / 1000)
+          const capability = [
+            Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"),
+            Buffer.from(JSON.stringify({ exp: now + 90 })).toString("base64url"),
+            "test-signature",
+          ].join(".")
+
+          const rejected = yield* getProbe({
+            authorization: basic("mongolgpt", "wrong"),
+            [HostedCredential.Header]: capability,
+          })
+          expect(rejected.status).toBe(401)
+          expect(
+            HostedCredential.resolve("MONGOLGPT_API_KEY", HostedCredential.Placeholder, now * 1000),
+          ).toBeUndefined()
+
+          const accepted = yield* getProbe({
+            authorization: basic("mongolgpt", "secret"),
+            [HostedCredential.Header]: capability,
+          })
+          expect(accepted.status).toBe(200)
+          expect(HostedCredential.resolve("MONGOLGPT_API_KEY", HostedCredential.Placeholder, now * 1000)).toBe(
+            capability,
+          )
+          expect(process.env.MONGOLGPT_API_KEY).toBe(HostedCredential.Placeholder)
+        }),
+      (previous) =>
+        Effect.sync(() => {
+          HostedCredential.clear()
+          if (previous.mode === undefined) delete process.env.MONGOLGPT_RUNTIME_MODE
+          else process.env.MONGOLGPT_RUNTIME_MODE = previous.mode
+          if (previous.key === undefined) delete process.env.MONGOLGPT_API_KEY
+          else process.env.MONGOLGPT_API_KEY = previous.key
+        }),
+    ),
   )
 
   itKitSecret.live("respects configured basic auth username", () =>

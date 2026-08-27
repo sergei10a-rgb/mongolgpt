@@ -23,17 +23,23 @@ const hostedServer = env("MONGOLGPT_CONSOLE_URL")?.trim() || productServiceUrls.
 export function rebrandHostedProviders(providers: Record<string, Provider>, consoleUrl = hostedServer) {
   const result = { ...providers }
   const base = consoleUrl.replace(/\/+$/, "")
-  if (!result.mongolgpt && result.opencode) {
-    result.mongolgpt = {
-      ...result.opencode,
-      id: "mongolgpt",
-      name: "MongolGPT",
-      api: `${base}/zen/v1`,
-    }
+  const hosted = result.mongolgpt ?? result.opencode
+  result.mongolgpt = {
+    ...hosted,
+    id: "mongolgpt",
+    name: "MongolGPT",
+    api: `${base}/zen/v1`,
+    npm: hosted?.npm ?? "@ai-sdk/openai-compatible",
+    env: ["MONGOLGPT_API_KEY"],
+    models: {
+      ...hosted?.models,
+      "free-auto": freeAutoModel,
+    },
   }
-  if (!result["mongolgpt-go"] && result["opencode-go"]) {
+  const hostedGo = result["mongolgpt-go"] ?? result["opencode-go"]
+  if (hostedGo) {
     result["mongolgpt-go"] = {
-      ...result["opencode-go"],
+      ...hostedGo,
       id: "mongolgpt-go",
       name: "MongolGPT (хуучин холболт)",
       api: `${base}/zen/go/v1`,
@@ -143,6 +149,20 @@ export const Provider = Schema.Struct({
 })
 
 export type Provider = Schema.Schema.Type<typeof Provider>
+
+const freeAutoModel = {
+  id: "free-auto",
+  name: "MongolGPT Free Auto",
+  family: "auto",
+  release_date: "2026-08-27",
+  attachment: false,
+  reasoning: true,
+  temperature: true,
+  tool_call: true,
+  cost: { input: 0, output: 0 },
+  limit: { context: 128_000, output: 16_384 },
+  modalities: { input: ["text"], output: ["text"] },
+} satisfies Model
 
 export const Event = ModelsDev.Event
 

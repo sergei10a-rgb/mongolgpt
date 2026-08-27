@@ -6,6 +6,8 @@ const MAX_FUTURE_IAT_SECONDS = 5
 const encoder = new TextEncoder()
 const decoder = new TextDecoder("utf-8", { fatal: true })
 
+export const runtimeGatewayHeader = "x-mongolgpt-runtime-gateway-token"
+
 export type RuntimeCapability = {
   sub: string
   authVersion: number
@@ -199,7 +201,7 @@ async function sign(value: string, secret: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.sign("HMAC", await key(secret, ["sign"]), encoder.encode(value)))
 }
 
-function key(secret: string, usages: KeyUsage[]): Promise<CryptoKey> {
+function key(secret: string, usages: Array<"sign" | "verify">): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, usages)
 }
 

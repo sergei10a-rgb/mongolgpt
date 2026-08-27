@@ -20,6 +20,7 @@ import { Credential } from "./credential"
 import { State } from "./state"
 import { EventV2 } from "./event"
 import { IntegrationConnection } from "./integration/connection"
+import { HostedCredential } from "./hosted-credential"
 
 export const ID = Integration.ID
 export type ID = Integration.ID
@@ -384,7 +385,7 @@ export const locationLayer = Layer.effect(
         }),
         resolve: Effect.fn("Integration.connection.resolve")(function* (connection) {
           if (connection.type === "env") {
-            const key = process.env[connection.name]
+            const key = HostedCredential.resolve(connection.name, process.env[connection.name])
             return key ? Credential.Key.make({ type: "key", key }) : undefined
           }
           const credential = yield* credentials.get(connection.id)

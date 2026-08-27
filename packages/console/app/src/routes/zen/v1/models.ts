@@ -7,7 +7,7 @@ import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { ModelTable } from "@mongolgpt/console-core/schema/model.sql.js"
 import { buildOptionsResponse, buildModelsResponse } from "~/routes/zen/util/modelsHandler"
-import { verifyCliToken } from "~/lib/cli-auth"
+import { resolveZenWorkspace, verifyZenAccount } from "~/lib/cli-auth"
 
 export async function OPTIONS(_input: APIEvent) {
   return buildOptionsResponse()
@@ -58,24 +58,10 @@ async function authenticatedWorkspace(request: Request, authorization: string): 
   )
   if (workspaceID) return workspaceID
 
-  const account = await verifyCliToken(token)
-  const requested = request.headers.get("x-org-id")
-  if (!account || !requested) return undefined
-  return Database.use((tx) =>
-    tx
-      .select({ id: WorkspaceTable.id })
-      .from(UserTable)
-      .innerJoin(WorkspaceTable, and(eq(WorkspaceTable.id, UserTable.workspaceID), isNull(WorkspaceTable.timeDeleted)))
-      .where(
-        and(
-          eq(UserTable.accountID, account.accountID),
-          eq(UserTable.workspaceID, requested),
-          isNull(UserTable.timeDeleted),
-        ),
-      )
-      .limit(1)
-      .then((rows) => rows[0]?.id),
-  )
+  const account = await verifyZenAccount(request, token)
+  if (!account) return undefined
+  const workspace = await resolveZenWorkspace(account, request.headers.get("x-org-id"))
+  return "workspaceID" in workspace ? workspace.workspaceID : undefined
 }
 
 function unauthorized() {

@@ -26,6 +26,9 @@ describe("MongolGPT account access wiring", () => {
 
     expect(cli).toContain("AccountAccess.verify")
     expect(cli).toContain("authVersion")
+    expect(cli).toContain("verifyRuntimeCapability")
+    expect(cli).toContain("MongolGPTRuntimeAuthSecret")
+    expect(cli).toContain("workspace_ambiguous")
     expect(refresh).toContain("await input.verifyToken(parsed.data.access_token)")
     expect(refresh).toContain('"invalid_grant"')
   })
@@ -38,7 +41,7 @@ describe("MongolGPT account access wiring", () => {
     expect(handler).toContain('eq(AccountTable.status, "active")')
     expect(models).toContain("authenticatedWorkspace")
     expect(models).toContain("AccountTable.status")
-    expect(models).toContain("verifyCliToken(token)")
+    expect(models).toContain("verifyZenAccount(request, token)")
     expect(models).toContain("status: 401")
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { issueRuntimeCapability } from "@mongolgpt/runtime-auth"
+import { issueRuntimeCapability, runtimeGatewayHeader, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
 import {
   createRuntimeHandler,
   deriveRuntimeIdentity,
@@ -10,6 +10,7 @@ import {
 } from "../src/runtime"
 
 const appOrigin = "https://app.dev.mgpt.mn"
+const consoleOrigin = "https://dev.mgpt.mn"
 const runtimeOrigin = "https://runtime.dev.mgpt.mn"
 const secret = "runtime-secret-that-is-longer-than-thirty-two-characters"
 const authSecret = "runtime-auth-secret-that-is-longer-than-thirty-two-characters"
@@ -25,6 +26,7 @@ function environment(): Environment {
   return {
     Sandbox: "binding",
     MONGOLGPT_APP_ORIGIN: appOrigin,
+    MONGOLGPT_CONSOLE_URL: consoleOrigin,
     MONGOLGPT_RUNTIME_AUTH_SECRET: authSecret,
     MONGOLGPT_RUNTIME_BURST_LIMITER: limiter,
     MONGOLGPT_RUNTIME_RATE_LIMITER: limiter,
@@ -128,6 +130,12 @@ describe("MongolGPT Cloudflare runtime", () => {
     const versionless = await handler(hostedRequest("/global/health"), missingVersion)
     expect(versionless.status).toBe(503)
     expect(await versionless.json()).toMatchObject({ healthy: false })
+
+    const missingConsole = environment()
+    missingConsole.MONGOLGPT_CONSOLE_URL = ""
+    const consoleless = await handler(hostedRequest("/global/health"), missingConsole)
+    expect(consoleless.status).toBe(503)
+    expect(await consoleless.json()).toMatchObject({ healthy: false })
 
     const missingStage = environment()
     missingStage.STAGE = "  "
@@ -378,6 +386,7 @@ describe("MongolGPT Cloudflare runtime", () => {
           authorization: `Bearer ${token}`,
           "content-type": "application/json",
           "x-mongolgpt-directory": encodeURIComponent("projects/demo"),
+          [runtimeGatewayHeader]: "browser-controlled-value",
         },
         body: "{}",
       }),
@@ -389,10 +398,26 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(ids[0]).not.toContain("acc_123")
     expect(runtime.started).toHaveLength(1)
     expect(runtime.started[0]?.options.env.MONGOLGPT_SERVER_PASSWORD).toHaveLength(43)
+    expect(runtime.started[0]?.options.env).toMatchObject({
+      MONGOLGPT_RUNTIME_MODE: "hosted",
+      MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+      MONGOLGPT_CONSOLE_URL: consoleOrigin,
+      MONGOLGPT_API_KEY: "runtime",
+    })
+    expect(Object.values(runtime.started[0]?.options.env ?? {})).not.toContain(token)
     expect(runtime.requests).toHaveLength(1)
     expect(runtime.requests[0]?.headers.get("cookie")).toBeNull()
     expect(runtime.requests[0]?.headers.get("authorization")).toStartWith("Basic ")
     expect(runtime.requests[0]?.headers.get("authorization")).not.toContain(token)
+    const gatewayToken = runtime.requests[0]?.headers.get(runtimeGatewayHeader)
+    expect(gatewayToken).toBeString()
+    expect(gatewayToken).not.toBe("browser-controlled-value")
+    const gateway = await verifyRuntimeCapability({
+      token: gatewayToken!,
+      audience: consoleOrigin,
+      secret: authSecret,
+    })
+    expect(gateway).toMatchObject({ sub: "acc_123", authVersion: 1, aud: consoleOrigin })
     expect(decodeURIComponent(runtime.requests[0]?.headers.get("x-mongolgpt-directory") ?? "")).toBe(
       "/workspace/projects/demo",
     )
@@ -524,6 +549,7 @@ describe("runtime deployment contract", () => {
       expect(parsed.vars).toEqual(
         expect.objectContaining({
           MONGOLGPT_APP_ORIGIN: stage === "dev" ? appOrigin : "https://app.mgpt.mn",
+          MONGOLGPT_CONSOLE_URL: stage === "dev" ? consoleOrigin : "https://mgpt.mn",
           MONGOLGPT_RUNTIME_VERSION: packageJSON.version,
           STAGE: stage,
         }),
