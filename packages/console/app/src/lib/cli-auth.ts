@@ -34,9 +34,9 @@ export type CliAccount = {
   authVersion: number
 }
 
-export type GatewayAccount = Pick<CliAccount, "accountID" | "authVersion"> & {
-  kind: "cli" | "runtime"
-}
+export type GatewayAccount =
+  | (Pick<CliAccount, "accountID" | "authVersion"> & { kind: "cli" })
+  | (Pick<CliAccount, "accountID" | "authVersion"> & { kind: "runtime"; workspaceID: string })
 
 export async function verifyCliToken(token: string): Promise<CliAccount | undefined> {
   const verified = await authClient.verify(token).catch(() => undefined)
@@ -79,6 +79,7 @@ async function verifyRuntimeAccount(request: Request, token: string): Promise<Ga
       accountID: capability.sub,
       authVersion: capability.authVersion,
       kind: "runtime",
+      workspaceID: capability.workspaceID,
     }
   } catch {
     return undefined
@@ -90,18 +91,24 @@ export type GatewayWorkspaceResult =
   | { error: "workspace_required" | "workspace_ambiguous" | "workspace_forbidden" }
 
 export function selectGatewayWorkspace(
-  account: Pick<GatewayAccount, "kind">,
+  account: Pick<GatewayAccount, "kind"> & { workspaceID?: string },
   workspaceIDs: readonly string[],
   requestedWorkspaceID: string | null,
 ): GatewayWorkspaceResult {
+  if (account.kind === "runtime") {
+    if (!account.workspaceID || (requestedWorkspaceID && requestedWorkspaceID !== account.workspaceID)) {
+      return { error: "workspace_forbidden" }
+    }
+    return workspaceIDs.includes(account.workspaceID)
+      ? { workspaceID: account.workspaceID }
+      : { error: "workspace_forbidden" }
+  }
   if (requestedWorkspaceID) {
     return workspaceIDs.includes(requestedWorkspaceID)
       ? { workspaceID: requestedWorkspaceID }
       : { error: "workspace_forbidden" }
   }
-  if (account.kind === "cli") return { error: "workspace_required" }
-  if (workspaceIDs.length === 1) return { workspaceID: workspaceIDs[0] }
-  return { error: workspaceIDs.length === 0 ? "workspace_forbidden" : "workspace_ambiguous" }
+  return { error: workspaceIDs.length === 0 ? "workspace_forbidden" : "workspace_required" }
 }
 
 export async function resolveGatewayWorkspace(

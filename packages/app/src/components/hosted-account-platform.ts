@@ -5,7 +5,10 @@ import {
   hostedLoginUrl,
   hostedLogoutUrl,
   hostedRemoteOrigin,
+  isHostedSessionReady,
   loadHostedSession,
+  readHostedWorkspaceID,
+  writeHostedWorkspaceID,
 } from "./hosted-account-gate"
 
 type HostedAccountPlatformInput = {
@@ -15,6 +18,7 @@ type HostedAccountPlatformInput = {
   navigate?: (url: string) => void
   loadSession?: typeof loadHostedSession
   fetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  storage?: Pick<Storage, "getItem" | "setItem" | "removeItem">
 }
 
 const accountOverviewUnavailable = () => new Error("Бүртгэлийн төлөвийг авах боломжгүй байна")
@@ -32,15 +36,28 @@ export function createHostedAccountPlatform(input: HostedAccountPlatformInput): 
   const loadSession = input.loadSession ?? loadHostedSession
   const fetcher = input.fetch ?? fetch
   const pendingNavigation = () => new Promise<never>(() => {})
+  const selectedWorkspace = () => readHostedWorkspaceID(accountUrl, input.storage)
+  const session = async (workspaceID = selectedWorkspace()) => {
+    let current = await loadSession(runtimeOrigin, accountUrl, workspaceID)
+    if ("workspaceRequired" in current && current.forbidden && workspaceID) {
+      writeHostedWorkspaceID(accountUrl, undefined, input.storage)
+      current = await loadSession(runtimeOrigin, accountUrl)
+    }
+    return current
+  }
 
   return {
     current: async () => {
-      const session = await loadSession(runtimeOrigin, accountUrl)
-      if (!session.authenticated) return null
-      return { ...session.account, url: accountUrl }
+      const current = await session()
+      if (!current.authenticated) return null
+      if (!isHostedSessionReady(current)) return { ...current.account, url: accountUrl }
+      if (selectedWorkspace() !== current.workspace.id) {
+        writeHostedWorkspaceID(accountUrl, current.workspace.id, input.storage)
+      }
+      return { ...current.account, url: accountUrl, activeOrgID: current.workspace.id }
     },
     overview: async (workspaceID) => {
-      const organizationID = workspaceID?.trim()
+      const organizationID = workspaceID?.trim() || selectedWorkspace()
       let response: Response
       try {
         response = await fetcher(`${accountUrl}/v1/account/overview`, {
@@ -75,7 +92,20 @@ export function createHostedAccountPlatform(input: HostedAccountPlatformInput): 
       navigate(hostedLoginUrl(accountUrl))
       return pendingNavigation()
     },
+    switchWorkspace: async (workspaceID) => {
+      const requested = workspaceID.trim()
+      if (!requested.startsWith("wrk_") || requested.length < 5 || requested.length > 30) {
+        throw new Error("Ажлын талбарын ID буруу байна")
+      }
+      const current = await loadSession(runtimeOrigin, accountUrl, requested)
+      if (!isHostedSessionReady(current) || current.workspace.id !== requested) {
+        throw new Error("Ажлын талбарт шилжиж чадсангүй")
+      }
+      writeHostedWorkspaceID(accountUrl, requested, input.storage)
+      return { ...current.account, url: accountUrl, activeOrgID: requested }
+    },
     logout: async () => {
+      writeHostedWorkspaceID(accountUrl, undefined, input.storage)
       navigate(hostedLogoutUrl(accountUrl))
       await pendingNavigation()
     },

@@ -2,14 +2,17 @@ import { afterEach, describe, expect, test } from "bun:test"
 import {
   hostedAccountGateEnabled,
   hostedLoginUrl,
+  readHostedWorkspaceID,
   hostedRuntimeTokenUrl,
   hostedSessionUrl,
   loadHostedSession,
+  writeHostedWorkspaceID,
 } from "./hosted-account-gate"
 
 const runtimeUrl = "https://runtime.dev.mgpt.mn/"
 const publicUrl = "https://dev.mgpt.mn/"
 const account = { id: "account_123", email: "user@example.com" }
+const workspace = { id: "wrk_123", name: "MongolGPT баг" }
 const expiresAt = Date.now() + 60_000
 const originalFetch = globalThis.fetch
 const originalLocalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage")
@@ -53,14 +56,15 @@ describe("hosted auth exchange", () => {
     setFetch(async (input, init) => {
       requests.push(new Request(input, init))
       if (requests.length === 1) {
-        return json({ token: "secret-token", expiresAt, account })
+        return json({ token: "secret-token", expiresAt, account, workspace })
       }
-      return json({ authenticated: true, account: { id: account.id }, expiresAt })
+      return json({ authenticated: true, account: { id: account.id }, workspace: { id: workspace.id }, expiresAt })
     })
 
     await expect(loadHostedSession(runtimeUrl, publicUrl)).resolves.toEqual({
       authenticated: true,
       account,
+      workspace,
       expiresAt,
     })
     expect(requests[0]?.url).toBe(hostedRuntimeTokenUrl(publicUrl))
@@ -87,9 +91,14 @@ describe("hosted auth exchange", () => {
     }
     setFetch(async (_, init) => {
       if (init?.headers && new Headers(init.headers).has("authorization")) {
-        return json({ authenticated: true, account: { id: account.id }, expiresAt })
+        return json({
+          authenticated: true,
+          account: { id: account.id },
+          workspace: { id: workspace.id },
+          expiresAt,
+        })
       }
-      return json({ token: "secret-token", expiresAt, account })
+      return json({ token: "secret-token", expiresAt, account, workspace })
     })
 
     await loadHostedSession(runtimeUrl, publicUrl)
@@ -99,8 +108,15 @@ describe("hosted auth exchange", () => {
   test("fails closed for account mismatch, HTML, and error statuses", async () => {
     setFetch(async (input, init) => {
       const request = new Request(input, init)
-      if (request.url === hostedRuntimeTokenUrl(publicUrl)) return json({ token: "secret-token", expiresAt, account })
-      return json({ authenticated: true, account: { ...account, id: "different" }, expiresAt })
+      if (request.url === hostedRuntimeTokenUrl(publicUrl)) {
+        return json({ token: "secret-token", expiresAt, account, workspace })
+      }
+      return json({
+        authenticated: true,
+        account: { id: "different" },
+        workspace: { id: workspace.id },
+        expiresAt,
+      })
     })
     await expect(loadHostedSession(runtimeUrl, publicUrl)).rejects.toThrow("буруу байна")
 
@@ -118,10 +134,64 @@ describe("hosted auth exchange", () => {
     let request = 0
     setFetch(async () => {
       request += 1
-      if (request === 1) return json({ token: "secret-token", expiresAt, account })
+      if (request === 1) return json({ token: "secret-token", expiresAt, account, workspace })
       return json({ authenticated: false }, 401)
     })
     await expect(loadHostedSession(runtimeUrl, publicUrl)).rejects.toThrow("шинэ эрхийн токен")
+  })
+
+  test("selects a workspace without exposing the runtime capability", async () => {
+    const requests: Request[] = []
+    setFetch(async (input, init) => {
+      requests.push(new Request(input, init))
+      if (requests.length === 1) return json({ token: "secret-token", expiresAt, account, workspace })
+      return json({ authenticated: true, account: { id: account.id }, workspace: { id: workspace.id }, expiresAt })
+    })
+
+    await expect(loadHostedSession(runtimeUrl, publicUrl, workspace.id)).resolves.toMatchObject({ workspace })
+    expect(requests[0]?.headers.get("x-org-id")).toBe(workspace.id)
+    expect(requests[1]?.headers.get("x-org-id")).toBeNull()
+  })
+
+  test("returns an authenticated workspace choice for required and forbidden workspaces", async () => {
+    const response = { account, workspaces: [workspace] }
+    setFetch(async () => json({ error: "workspace_required", message: "Сонгоно уу", ...response }, 409))
+    await expect(loadHostedSession(runtimeUrl, publicUrl)).resolves.toEqual({
+      authenticated: true,
+      account,
+      workspaceRequired: true,
+      forbidden: false,
+      workspaces: [workspace],
+    })
+
+    setFetch(async () => json({ error: "workspace_forbidden", message: "Эрхгүй", ...response }, 403))
+    await expect(loadHostedSession(runtimeUrl, publicUrl, "wrk_old")).resolves.toEqual({
+      authenticated: true,
+      account,
+      workspaceRequired: true,
+      forbidden: true,
+      workspaces: [workspace],
+    })
+  })
+
+  test("persists only a scoped workspace identifier", () => {
+    const values = new Map<string, string>()
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    }
+
+    writeHostedWorkspaceID(publicUrl, workspace.id, storage)
+    expect(readHostedWorkspaceID(publicUrl, storage)).toBe(workspace.id)
+    expect(readHostedWorkspaceID("https://mgpt.mn", storage)).toBeUndefined()
+    expect([...values.values()]).toEqual([workspace.id])
+
+    writeHostedWorkspaceID(publicUrl, undefined, storage)
+    expect(readHostedWorkspaceID(publicUrl, storage)).toBeUndefined()
+
+    values.set("mongolgpt.hosted.workspace.v1:https://dev.mgpt.mn", "wrk_")
+    expect(readHostedWorkspaceID(publicUrl, storage)).toBeUndefined()
   })
 })
 

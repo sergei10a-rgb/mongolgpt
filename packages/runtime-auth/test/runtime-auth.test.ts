@@ -8,6 +8,7 @@ const now = 1_700_000_000
 
 const capability = {
   accountID: "acc_123",
+  workspaceID: "wrk_123",
   authVersion: 4,
   audience,
   secret,
@@ -52,6 +53,7 @@ describe("runtime capability", () => {
     expect(issued.split(".")).toHaveLength(3)
     expect(verified).toEqual({
       sub: "acc_123",
+      workspaceID: "wrk_123",
       authVersion: 4,
       aud: audience,
       iat: now,
@@ -96,6 +98,7 @@ describe("runtime capability", () => {
       { alg: "HS256", typ: "JWT" },
       {
         sub: "acc_123",
+        workspaceID: "wrk_123",
         authVersion: 4,
         aud: audience,
         iat: now,
@@ -112,6 +115,7 @@ describe("runtime capability", () => {
       { alg: "HS256", typ: "JWT" },
       {
         sub: "acc_123",
+        workspaceID: "wrk_123",
         authVersion: 4,
         aud: audience,
         iat: now,
@@ -144,6 +148,7 @@ describe("runtime capability", () => {
       { alg: "none", typ: "JWT" },
       {
         sub: "acc_123",
+        workspaceID: "wrk_123",
         authVersion: 4,
         aud: audience,
         iat: now,
@@ -160,6 +165,7 @@ describe("runtime capability", () => {
       { alg: "HS256", typ: "JWT" },
       {
         sub: "acc_123",
+        workspaceID: "wrk_123",
         authVersion: 4,
         aud: audience,
         iat: now,
@@ -180,5 +186,11 @@ describe("runtime capability", () => {
     await expect(verifyRuntimeCapability({ token: issued, audience, secret: "short", now })).rejects.toBeInstanceOf(
       RuntimeCapabilityError,
     )
+  })
+
+  test("requires a canonical workspace claim", async () => {
+    for (const workspaceID of ["", "workspace_123", "wrk_", " wrk_123", `wrk_${"x".repeat(27)}`]) {
+      await expect(token({ workspaceID })).rejects.toBeInstanceOf(RuntimeCapabilityError)
+    }
   })
 })

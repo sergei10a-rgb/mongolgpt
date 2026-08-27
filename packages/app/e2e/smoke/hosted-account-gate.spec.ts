@@ -13,6 +13,7 @@ const capability = (accountID = "account_e2e", token = "e2e-runtime-token") => (
   token,
   expiresAt: Date.now() + 60_000,
   account: { id: accountID, email: "e2e@mgpt.mn" },
+  workspace: { id: "wrk_e2e_workspace", name: "MongolGPT баг" },
 })
 
 test.describe("hosted MongolGPT account gate", () => {
@@ -89,6 +90,7 @@ test.describe("hosted MongolGPT account gate", () => {
       return session(route, 200, {
         authenticated: true,
         account: { id: current.account.id },
+        workspace: { id: current.workspace.id },
         expiresAt: current.expiresAt,
       })
     })
@@ -108,6 +110,62 @@ test.describe("hosted MongolGPT account gate", () => {
       page,
       page.getByRole("textbox", { name: mn["prompt.placeholder.simple"], exact: true }),
     )
+  })
+
+  test("requires and verifies a workspace choice before opening the hosted app", async ({ page }) => {
+    await mockRuntime(page)
+    await configureHostedProject(page)
+    const account = { id: "account_multi_e2e", email: "multi@mgpt.mn" }
+    const workspaces = [
+      { id: "wrk_personal", name: "Хувийн workspace" },
+      { id: "wrk_research", name: "Судалгааны баг" },
+    ]
+    const capabilities = new Map<string, ReturnType<typeof capability>>()
+    const requested: Array<string | undefined> = []
+
+    await page.route(tokenUrl, async (route) => {
+      const workspaceID = route.request().headers()["x-org-id"]
+      requested.push(workspaceID)
+      if (!workspaceID) {
+        return session(route, 409, {
+          error: "workspace_required",
+          message: "Ашиглах ажлын талбараа сонгоно уу.",
+          account,
+          workspaces,
+        })
+      }
+      const workspace = workspaces.find((item) => item.id === workspaceID)
+      if (!workspace) return session(route, 403, { account, workspaces })
+      const current = { ...capability(account.id, `token-${workspace.id}`), workspace }
+      capabilities.set(current.token, current)
+      return session(route, 200, current)
+    })
+    await page.route(sessionUrl, (route) => {
+      const token =
+        route
+          .request()
+          .headers()
+          .authorization?.replace(/^Bearer\s+/, "") ?? ""
+      const current = capabilities.get(token)
+      if (!current) return session(route, 401, { authenticated: false })
+      return session(route, 200, {
+        authenticated: true,
+        account: { id: current.account.id },
+        workspace: { id: current.workspace.id },
+        expiresAt: current.expiresAt,
+      })
+    })
+
+    await page.goto("/")
+    await expect(page.getByText(mn["onboarding.workspace.description"], { exact: true })).toBeVisible()
+    const researchRow = page.getByText("Судалгааны баг", { exact: true }).locator("..")
+    await researchRow.getByRole("button", { name: mn["onboarding.workspace.select"], exact: true }).click()
+
+    await expect(page.getByRole("heading", { name: mn["auth.hosted.title"], exact: true })).toBeHidden()
+    await expect.poll(() => requested.includes("wrk_research")).toBe(true)
+    await expect
+      .poll(() => page.evaluate((origin) => localStorage.getItem(`mongolgpt.hosted.workspace.v1:${origin}`), publicUrl))
+      .toBe("wrk_research")
   })
 
   test("shows plan, quota, and usage in account settings and recovers from an overview failure", async ({ page }) => {
@@ -138,6 +196,7 @@ test.describe("hosted MongolGPT account gate", () => {
       session(route, 200, {
         authenticated: true,
         account: { id: currentCapability.account.id },
+        workspace: { id: currentCapability.workspace.id },
         expiresAt: currentCapability.expiresAt,
       }),
     )
@@ -211,6 +270,7 @@ test.describe("hosted MongolGPT account gate", () => {
       session(route, 200, {
         authenticated: true,
         account: { id: current.account.id },
+        workspace: { id: current.workspace.id },
         expiresAt: current.expiresAt,
       }),
     )

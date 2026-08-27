@@ -10,6 +10,7 @@ export const runtimeGatewayHeader = "x-mongolgpt-runtime-gateway-token"
 
 export type RuntimeCapability = {
   sub: string
+  workspaceID: string
   authVersion: number
   aud: string
   iat: number
@@ -20,6 +21,7 @@ export type RuntimeCapability = {
 
 export type IssueRuntimeCapabilityInput = {
   accountID: string
+  workspaceID: string
   authVersion: number
   audience: string
   secret: string
@@ -52,6 +54,7 @@ export async function issueRuntimeCapability(input: IssueRuntimeCapabilityInput)
   const now = clock(input.now)
   const capability: RuntimeCapability = {
     sub: accountID(input.accountID),
+    workspaceID: workspaceID(input.workspaceID),
     authVersion: authVersion(input.authVersion),
     aud: runtimeAudience(input.audience),
     iat: now,
@@ -114,6 +117,19 @@ function accountID(value: unknown): string {
   return value
 }
 
+function workspaceID(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    value.length < 5 ||
+    value.length > 30 ||
+    value.trim() !== value ||
+    !value.startsWith("wrk_")
+  ) {
+    throw invalidCapability()
+  }
+  return value
+}
+
 function authVersion(value: unknown): number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) throw invalidCapability()
   return value
@@ -169,10 +185,11 @@ function validHeader(value: unknown): value is typeof HEADER {
 }
 
 function capabilityClaims(value: unknown): RuntimeCapability {
-  if (!object(value) || Object.keys(value).length !== 7) throw invalidCapability()
+  if (!object(value) || Object.keys(value).length !== 8) throw invalidCapability()
   const capability = value
   if (
     !Object.prototype.hasOwnProperty.call(capability, "sub") ||
+    !Object.prototype.hasOwnProperty.call(capability, "workspaceID") ||
     !Object.prototype.hasOwnProperty.call(capability, "authVersion") ||
     !Object.prototype.hasOwnProperty.call(capability, "aud") ||
     !Object.prototype.hasOwnProperty.call(capability, "iat") ||
@@ -188,6 +205,7 @@ function capabilityClaims(value: unknown): RuntimeCapability {
   if (expiresAt <= issuedAt) throw invalidCapability()
   return {
     sub: accountID(capability.sub),
+    workspaceID: workspaceID(capability.workspaceID),
     authVersion: authVersion(capability.authVersion),
     aud: runtimeAudience(capability.aud),
     iat: issuedAt,

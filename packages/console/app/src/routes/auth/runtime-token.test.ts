@@ -8,10 +8,13 @@ const secret = "runtime-auth-secret-with-at-least-thirty-two-characters"
 const now = 1_700_000_000
 const account = { id: "acc_123", email: "user@mgpt.mn", authVersion: 4 }
 
-function request(method = "POST", origin = appUrl) {
+function request(method = "POST", origin = appUrl, workspaceID?: string) {
   return new Request("https://dev.mgpt.mn/auth/runtime-token", {
     method,
-    headers: origin ? { origin } : undefined,
+    headers: {
+      ...(origin ? { origin } : {}),
+      ...(workspaceID ? { "x-org-id": workspaceID } : {}),
+    },
   })
 }
 
@@ -20,8 +23,10 @@ function handler(input: {
   accounts?: Record<string, typeof account>
   suspended?: boolean
   runtime?: string
+  workspaceID?: string
+  workspaces?: readonly { id: string; name: string }[]
 }) {
-  return runtimeTokenRequest(request(), {
+  return runtimeTokenRequest(request("POST", appUrl, input.workspaceID), {
     appUrl,
     runtimeUrl: input.runtime ?? runtimeUrl,
     secret,
@@ -30,6 +35,7 @@ function handler(input: {
       data: { current: input.current, account: input.accounts },
       suspended: input.suspended ?? false,
     }),
+    workspaces: async () => input.workspaces ?? [{ id: "wrk_primary", name: "Үндсэн баг" }],
   })
 }
 
@@ -46,8 +52,10 @@ describe("hosted runtime capability route", () => {
     if (!runtimeTokenBody(body)) throw new Error("Runtime token response shape is invalid")
     expect(body.expiresAt).toBe((now + 90) * 1000)
     expect(body.account).toEqual({ id: account.id, email: account.email })
+    expect(body.workspace).toEqual({ id: "wrk_primary", name: "Үндсэн баг" })
     expect(await verifyRuntimeCapability({ token: body.token, audience: runtimeUrl, secret, now })).toMatchObject({
       sub: account.id,
+      workspaceID: "wrk_primary",
       authVersion: 4,
       exp: now + 90,
     })
@@ -60,6 +68,7 @@ describe("hosted runtime capability route", () => {
         runtimeUrl,
         secret,
         session: async () => ({ data: {}, suspended: false }),
+        workspaces: async () => [],
       })
       expect(response.status).toBe(403)
       expect(response.headers.get("access-control-allow-origin")).toBeNull()
@@ -72,7 +81,7 @@ describe("hosted runtime capability route", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe(appUrl)
     expect(response.headers.get("access-control-allow-credentials")).toBe("true")
     expect(response.headers.get("access-control-allow-methods")).toBe("POST, OPTIONS")
-    expect(response.headers.get("access-control-allow-headers")).toBe("Content-Type")
+    expect(response.headers.get("access-control-allow-headers")).toBe("Content-Type, X-Org-ID")
   })
 
   test("distinguishes anonymous, suspended, and another active current account", async () => {
@@ -101,12 +110,53 @@ describe("hosted runtime capability route", () => {
       message: "MongolGPT runtime серверийн хаяг тохируулагдаагүй байна.",
     })
   })
+
+  test("requires an explicit server-verified workspace when the account has multiple memberships", async () => {
+    const workspaces = [
+      { id: "wrk_first", name: "Нэгдүгээр баг" },
+      { id: "wrk_second", name: "Хоёрдугаар баг" },
+    ]
+    const selection = await handler({ current: account.id, accounts: { [account.id]: account }, workspaces })
+    expect(selection.status).toBe(409)
+    expect(await selection.json()).toMatchObject({
+      error: "workspace_required",
+      account: { id: account.id },
+      workspaces,
+    })
+
+    const selected = await handler({
+      current: account.id,
+      accounts: { [account.id]: account },
+      workspaces,
+      workspaceID: "wrk_second",
+    })
+    expect(selected.status).toBe(200)
+    const body: unknown = await selected.json()
+    if (!runtimeTokenBody(body)) throw new Error("Runtime token response shape is invalid")
+    expect(body.workspace).toEqual(workspaces[1])
+    expect(await verifyRuntimeCapability({ token: body.token, audience: runtimeUrl, secret, now })).toMatchObject({
+      workspaceID: "wrk_second",
+    })
+  })
+
+  test("rejects malformed and unauthorized workspace selections", async () => {
+    const base = {
+      current: account.id,
+      accounts: { [account.id]: account },
+      workspaces: [{ id: "wrk_primary", name: "Үндсэн баг" }],
+    }
+    expect((await handler({ ...base, workspaceID: "not-a-workspace" })).status).toBe(400)
+    const forbidden = await handler({ ...base, workspaceID: "wrk_foreign" })
+    expect(forbidden.status).toBe(403)
+    expect(await forbidden.json()).toMatchObject({ error: "workspace_forbidden" })
+  })
 })
 
 function runtimeTokenBody(value: unknown): value is {
   token: string
   expiresAt: number
   account: { id: string; email: string }
+  workspace: { id: string; name: string }
 } {
   return (
     record(value) &&
@@ -114,7 +164,10 @@ function runtimeTokenBody(value: unknown): value is {
     typeof value.expiresAt === "number" &&
     record(value.account) &&
     typeof value.account.id === "string" &&
-    typeof value.account.email === "string"
+    typeof value.account.email === "string" &&
+    record(value.workspace) &&
+    typeof value.workspace.id === "string" &&
+    typeof value.workspace.name === "string"
   )
 }
 

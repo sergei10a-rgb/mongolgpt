@@ -64,6 +64,9 @@ type Authentication = {
   account: {
     id: string
   }
+  workspace: {
+    id: string
+  }
   authVersion: number
   expiresAt: number
 }
@@ -153,7 +156,11 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
 
     try {
       const body = await boundedRequestBody(request)
-      const identity = await deriveRuntimeIdentity(authentication.account.id, env.MONGOLGPT_RUNTIME_SECRET)
+      const identity = await deriveRuntimeIdentity(
+        authentication.account.id,
+        authentication.workspace.id,
+        env.MONGOLGPT_RUNTIME_SECRET,
+      )
       const sandbox = dependencies.sandbox(env, identity.sandboxID)
       await ensureServer(sandbox, identity.password, consoleOrigin)
       if (authentication.expiresAt <= Date.now()) {
@@ -161,12 +168,20 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
       }
       const gatewayToken = await issueRuntimeCapability({
         accountID: authentication.account.id,
+        workspaceID: authentication.workspace.id,
         authVersion: authentication.authVersion,
         audience: consoleOrigin,
         secret: env.MONGOLGPT_RUNTIME_AUTH_SECRET,
         ttlSeconds: 90,
       })
-      const internal = internalRequest(request, identity.password, directory, body, gatewayToken)
+      const internal = internalRequest(
+        request,
+        identity.password,
+        directory,
+        body,
+        gatewayToken,
+        authentication.workspace.id,
+      )
 
       if (request.headers.get("upgrade")?.toLowerCase() === "websocket") {
         const response = await sandbox.wsConnect(internal, PORT)
@@ -223,6 +238,7 @@ async function session(request: Request, secret: string, appOrigin: string) {
         {
           authenticated: true,
           account: authentication.account,
+          workspace: authentication.workspace,
           expiresAt: authentication.expiresAt,
         },
         200,
@@ -244,6 +260,7 @@ async function session(request: Request, secret: string, appOrigin: string) {
       {
         authenticated: true,
         account: authentication.account,
+        workspace: authentication.workspace,
         expiresAt: authentication.expiresAt,
       },
       200,
@@ -272,6 +289,7 @@ async function authenticate(token: string, request: Request, secret: string): Pr
     })
     return {
       account: { id: capability.sub },
+      workspace: { id: capability.workspaceID },
       authVersion: capability.authVersion,
       expiresAt: capability.exp * 1000,
     }
@@ -319,10 +337,14 @@ async function enforceRateLimit(env: RuntimeVariables, accountID: string) {
   }
 }
 
-export async function deriveRuntimeIdentity(accountID: string, secret: string) {
+export async function deriveRuntimeIdentity(accountID: string, workspaceID: string, secret: string) {
   const account = accountID.trim()
+  const workspace = workspaceID.trim()
   const runtimeSecret = secret.trim()
   if (!account) throw new Error("Аккаунтын ID шаардлагатай")
+  if (!workspace.startsWith("wrk_") || workspace.length < 5 || workspace.length > 30) {
+    throw new Error("Ажлын талбарын ID буруу байна")
+  }
   if (runtimeSecret.length < 32) throw new Error("Ажиллах орчны нууц утга хамгийн багадаа 32 тэмдэгттэй байх ёстой")
 
   const key = await crypto.subtle.importKey(
@@ -333,12 +355,12 @@ export async function deriveRuntimeIdentity(accountID: string, secret: string) {
     ["sign"],
   )
   const [sandboxBytes, passwordBytes] = await Promise.all([
-    crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`sandbox:${account}`)),
-    crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`password:${account}`)),
+    crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`sandbox:${account}:${workspace}`)),
+    crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`password:${account}:${workspace}`)),
   ])
 
   return {
-    sandboxID: `account-${hex(new Uint8Array(sandboxBytes)).slice(0, 40)}`,
+    sandboxID: `workspace-${hex(new Uint8Array(sandboxBytes)).slice(0, 40)}`,
     password: base64Url(new Uint8Array(passwordBytes)),
   }
 }
@@ -416,6 +438,7 @@ function internalRequest(
   directory: string,
   body: Uint8Array | undefined,
   gatewayToken: string,
+  workspaceID: string,
 ) {
   const headers = new Headers(request.headers)
   for (const name of [
@@ -431,12 +454,14 @@ function internalRequest(
     "x-forwarded-host",
     "x-forwarded-proto",
     "x-real-ip",
+    "x-org-id",
     runtimeGatewayHeader,
   ]) {
     headers.delete(name)
   }
   headers.set("authorization", `Basic ${btoa(`${SERVER_USERNAME}:${password}`)}`)
   headers.set("x-mongolgpt-directory", encodeURIComponent(directory))
+  headers.set("x-org-id", workspaceID)
   headers.set(runtimeGatewayHeader, gatewayToken)
   const requestBody = body ? Uint8Array.from(body) : undefined
   return new Request(request, requestBody ? { headers, body: requestBody } : { headers })

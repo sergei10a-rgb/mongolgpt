@@ -3,6 +3,7 @@ import { createHostedAccountPlatform } from "./hosted-account-platform"
 
 const runtimeUrl = "https://runtime.dev.mgpt.mn"
 const publicOrigin = "https://dev.mgpt.mn"
+const workspace = { id: "wrk_12345", name: "Миний workspace" }
 
 describe("hosted account platform", () => {
   const overview = {
@@ -72,6 +73,7 @@ describe("hosted account platform", () => {
       loadSession: async () => ({
         authenticated: true,
         account: { id: "account_123", email: "user@example.com" },
+        workspace,
         expiresAt: Date.now() + 60_000,
       }),
     })
@@ -80,7 +82,79 @@ describe("hosted account platform", () => {
       id: "account_123",
       email: "user@example.com",
       url: publicOrigin,
+      activeOrgID: workspace.id,
     })
+  })
+
+  test("validates a workspace switch with the server before persisting it", async () => {
+    const values = new Map<string, string>()
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    }
+    const selected: Array<string | undefined> = []
+    const api = createHostedAccountPlatform({
+      mode: "hosted",
+      runtimeUrl,
+      publicOrigin,
+      storage,
+      loadSession: async (_runtime, _public, workspaceID) => {
+        selected.push(workspaceID)
+        return {
+          authenticated: true,
+          account: { id: "account_123", email: "user@example.com" },
+          workspace: { id: workspaceID ?? workspace.id, name: "Шинэ workspace" },
+          expiresAt: Date.now() + 60_000,
+        }
+      },
+    })
+
+    await expect(api?.switchWorkspace?.("  wrk_new  ")).resolves.toMatchObject({ activeOrgID: "wrk_new" })
+    expect(selected).toEqual(["wrk_new"])
+    await expect(api?.current()).resolves.toMatchObject({ activeOrgID: "wrk_new" })
+    expect(selected).toEqual(["wrk_new", "wrk_new"])
+  })
+
+  test("recovers from a revoked stored workspace and rejects a mismatched switch", async () => {
+    const values = new Map([[`mongolgpt.hosted.workspace.v1:${publicOrigin}`, "wrk_revoked"]])
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    }
+    const selected: Array<string | undefined> = []
+    const api = createHostedAccountPlatform({
+      mode: "hosted",
+      runtimeUrl,
+      publicOrigin,
+      storage,
+      loadSession: async (_runtime, _public, workspaceID) => {
+        selected.push(workspaceID)
+        if (workspaceID === "wrk_revoked") {
+          return {
+            authenticated: true,
+            account: { id: "account_123", email: "user@example.com" },
+            workspaceRequired: true,
+            forbidden: true,
+            workspaces: [workspace],
+          }
+        }
+        return {
+          authenticated: true,
+          account: { id: "account_123", email: "user@example.com" },
+          workspace,
+          expiresAt: Date.now() + 60_000,
+        }
+      },
+    })
+
+    await expect(api?.current()).resolves.toMatchObject({ activeOrgID: workspace.id })
+    expect(selected).toEqual(["wrk_revoked", undefined])
+    expect([...values.values()]).toEqual([workspace.id])
+
+    await expect(api?.switchWorkspace?.("wrk_different")).rejects.toThrow("шилжиж чадсангүй")
+    expect([...values.values()]).toEqual([workspace.id])
   })
 
   test("keeps an unauthenticated hosted session signed out", async () => {

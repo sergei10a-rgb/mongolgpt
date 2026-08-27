@@ -17,6 +17,7 @@ afterEach(() => {
 async function capability(now: number) {
   return issueRuntimeCapability({
     accountID: "account-1",
+    workspaceID: "wrk_123",
     authVersion: 3,
     audience: "https://dev.mgpt.mn",
     secret,

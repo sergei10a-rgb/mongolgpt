@@ -26,34 +26,39 @@ describe("Gateway workspace authentication contract", () => {
   test("accepts a valid console-audience runtime capability", async () => {
     const token = await issueRuntimeCapability({
       accountID: "acc_runtime_test",
+      workspaceID: "wrk_runtimetest",
       authVersion: 1,
       audience: "https://console.mgpt.mn",
       secret,
     })
     const verified = await verifyRuntimeCapability({ token, audience: "https://console.mgpt.mn", secret })
-    expect(verified).toMatchObject({ sub: "acc_runtime_test", authVersion: 1 })
+    expect(verified).toMatchObject({ sub: "acc_runtime_test", workspaceID: "wrk_runtimetest", authVersion: 1 })
     expect(await verifyGatewayAccount(request(token), token)).toEqual({
       accountID: "acc_runtime_test",
       authVersion: 1,
       kind: "runtime",
+      workspaceID: "wrk_runtimetest",
     })
   })
 
   test("rejects browser-audience, wrong-secret, and revoked runtime capabilities", async () => {
     const browserToken = await issueRuntimeCapability({
       accountID: "acc_runtime_test",
+      workspaceID: "wrk_runtimetest",
       authVersion: 1,
       audience: "https://runtime.mgpt.mn",
       secret,
     })
     const wrongSecretToken = await issueRuntimeCapability({
       accountID: "acc_runtime_test",
+      workspaceID: "wrk_runtimetest",
       authVersion: 1,
       audience: "https://console.mgpt.mn",
       secret: "different-runtime-auth-secret-with-at-least-thirty-two-characters",
     })
     const revokedToken = await issueRuntimeCapability({
       accountID: "acc_runtime_test",
+      workspaceID: "wrk_runtimetest",
       authVersion: 9,
       audience: "https://console.mgpt.mn",
       secret,
@@ -63,18 +68,17 @@ describe("Gateway workspace authentication contract", () => {
     expect(await verifyGatewayAccount(request(revokedToken), revokedToken)).toBeUndefined()
   })
 
-  test("runtime account automatically selects its sole active workspace", () => {
-    expect(selectGatewayWorkspace({ kind: "runtime" }, ["wrk_one"], null)).toEqual({ workspaceID: "wrk_one" })
-  })
-
-  test("runtime account rejects an ambiguous workspace selection", () => {
-    expect(selectGatewayWorkspace({ kind: "runtime" }, ["wrk_one", "wrk_two"], null)).toEqual({
-      error: "workspace_ambiguous",
+  test("runtime account selects only the workspace bound into its capability", () => {
+    expect(selectGatewayWorkspace({ kind: "runtime", workspaceID: "wrk_one" }, ["wrk_one", "wrk_two"], null)).toEqual({
+      workspaceID: "wrk_one",
     })
   })
 
-  test("runtime account must prove requested workspace membership", () => {
-    expect(selectGatewayWorkspace({ kind: "runtime" }, ["wrk_one"], "wrk_other")).toEqual({
+  test("runtime account rejects header pivots and revoked workspace membership", () => {
+    expect(selectGatewayWorkspace({ kind: "runtime", workspaceID: "wrk_one" }, ["wrk_one"], "wrk_other")).toEqual({
+      error: "workspace_forbidden",
+    })
+    expect(selectGatewayWorkspace({ kind: "runtime", workspaceID: "wrk_one" }, ["wrk_two"], null)).toEqual({
       error: "workspace_forbidden",
     })
   })

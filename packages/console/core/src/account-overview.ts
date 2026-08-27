@@ -49,6 +49,39 @@ export class AccountOverviewWorkspaceAccessError extends Error {
   }
 }
 
+const accountIDSchema = z.string().trim().min(5).max(30).regex(/^acc_/)
+
+export type AccountWorkspace = {
+  id: string
+  name: string
+}
+
+export function listActiveAccountWorkspaces(accountID: string): Promise<AccountWorkspace[]> {
+  return Database.use((db) => listActiveAccountWorkspacesWithDb(db, accountID))
+}
+
+export async function listActiveAccountWorkspacesWithDb(
+  db: Database.TxOrDb,
+  rawAccountID: string,
+): Promise<AccountWorkspace[]> {
+  const accountID = accountIDSchema.parse(rawAccountID)
+  const account = await db
+    .select({ status: AccountTable.status })
+    .from(AccountTable)
+    .where(and(eq(AccountTable.id, accountID), isNull(AccountTable.timeDeleted)))
+    .limit(1)
+    .then((rows) => rows[0])
+  if (!account) throw new AccountOverviewNotFoundError()
+  if (account.status === "suspended") throw new AccountOverviewSuspendedError()
+
+  return db
+    .select({ id: WorkspaceTable.id, name: WorkspaceTable.name })
+    .from(UserTable)
+    .innerJoin(WorkspaceTable, eq(WorkspaceTable.id, UserTable.workspaceID))
+    .where(and(eq(UserTable.accountID, accountID), isNull(UserTable.timeDeleted), isNull(WorkspaceTable.timeDeleted)))
+    .orderBy(WorkspaceTable.name, WorkspaceTable.id)
+}
+
 export function getAccountOverview(input: z.input<typeof inputSchema>, dependencies: AccountOverviewDependencies = {}) {
   return Database.use((db) => getAccountOverviewWithDb(db, input, dependencies))
 }

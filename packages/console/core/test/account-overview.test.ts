@@ -6,6 +6,7 @@ import {
   AccountOverviewSuspendedError,
   AccountOverviewWorkspaceAccessError,
   getAccountOverviewWithDb,
+  listActiveAccountWorkspacesWithDb,
   type AccountOverviewDependencies,
 } from "../src/account-overview"
 import { Database } from "../src/drizzle"
@@ -193,6 +194,14 @@ async function fixture() {
 }
 
 describe("account overview", () => {
+  test("lists only active workspace memberships for runtime selection", async () => {
+    const { db } = await fixture()
+    expect(await listActiveAccountWorkspacesWithDb(db, ACCOUNT_ID)).toEqual([
+      { id: PAID_WORKSPACE, name: "Багийн орчин" },
+      { id: FREE_WORKSPACE, name: "Хувийн орчин" },
+    ])
+  })
+
   test("returns isolated workspace plan, live quota, and real usage without leaking internal free headers", async () => {
     const { db } = await fixture()
     const overview = await getAccountOverviewWithDb(

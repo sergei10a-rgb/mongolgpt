@@ -44,6 +44,7 @@ function record(value: unknown): value is Record<string, unknown> {
 async function capability(input: Partial<Parameters<typeof issueRuntimeCapability>[0]> = {}) {
   return issueRuntimeCapability({
     accountID: "acc_123",
+    workspaceID: "wrk_123",
     authVersion: 1,
     audience: runtimeOrigin,
     secret: authSecret,
@@ -210,6 +211,7 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(body).toEqual({
       authenticated: true,
       account: { id: "acc_123" },
+      workspace: { id: "wrk_123" },
       expiresAt: (now + 90) * 1000,
     })
     const cookie = response.headers.get("set-cookie")
@@ -246,7 +248,11 @@ describe("MongolGPT Cloudflare runtime", () => {
     )
     expect(session.status).toBe(200)
     const sessionBody: unknown = await session.json()
-    expect(sessionBody).toMatchObject({ authenticated: true, account: { id: "acc_123" } })
+    expect(sessionBody).toMatchObject({
+      authenticated: true,
+      account: { id: "acc_123" },
+      workspace: { id: "wrk_123" },
+    })
 
     const http = await handler(
       hostedRequest("/project", { headers: { cookie: `__Host-mongolgpt-runtime=${token}` } }),
@@ -371,7 +377,7 @@ describe("MongolGPT Cloudflare runtime", () => {
     )
   })
 
-  test("starts an account-isolated server and proxies with internal credentials", async () => {
+  test("starts a workspace-isolated server and proxies with internal credentials", async () => {
     const runtime = sandbox()
     const ids: string[] = []
     const handler = createRuntimeHandler<Environment>({
@@ -388,6 +394,7 @@ describe("MongolGPT Cloudflare runtime", () => {
           authorization: `Bearer ${token}`,
           "content-type": "application/json",
           "x-mongolgpt-directory": encodeURIComponent("projects/demo"),
+          "x-org-id": "wrk_browser_controlled",
           [runtimeGatewayHeader]: "browser-controlled-value",
         },
         body: "{}",
@@ -396,7 +403,7 @@ describe("MongolGPT Cloudflare runtime", () => {
     )
 
     expect(response.status).toBe(200)
-    expect(ids[0]).toStartWith("account-")
+    expect(ids[0]).toStartWith("workspace-")
     expect(ids[0]).not.toContain("acc_123")
     expect(runtime.started).toHaveLength(1)
     expect(runtime.started[0]?.options.env.MONGOLGPT_SERVER_PASSWORD).toHaveLength(43)
@@ -419,7 +426,13 @@ describe("MongolGPT Cloudflare runtime", () => {
       audience: consoleOrigin,
       secret: authSecret,
     })
-    expect(gateway).toMatchObject({ sub: "acc_123", authVersion: 1, aud: consoleOrigin })
+    expect(gateway).toMatchObject({
+      sub: "acc_123",
+      workspaceID: "wrk_123",
+      authVersion: 1,
+      aud: consoleOrigin,
+    })
+    expect(runtime.requests[0]?.headers.get("x-org-id")).toBe("wrk_123")
     expect(decodeURIComponent(runtime.requests[0]?.headers.get("x-mongolgpt-directory") ?? "")).toBe(
       "/workspace/projects/demo",
     )
@@ -482,14 +495,18 @@ describe("MongolGPT Cloudflare runtime", () => {
 
 describe("runtime account and path isolation", () => {
   test("derives stable but separate sandbox and password identities", async () => {
-    const first = await deriveRuntimeIdentity("acc_123", secret)
-    const repeated = await deriveRuntimeIdentity("acc_123", secret)
-    const other = await deriveRuntimeIdentity("acc_456", secret)
+    const first = await deriveRuntimeIdentity("acc_123", "wrk_123", secret)
+    const repeated = await deriveRuntimeIdentity("acc_123", "wrk_123", secret)
+    const otherAccount = await deriveRuntimeIdentity("acc_456", "wrk_123", secret)
+    const otherWorkspace = await deriveRuntimeIdentity("acc_123", "wrk_456", secret)
 
     expect(first).toEqual(repeated)
-    expect(first.sandboxID).not.toBe(other.sandboxID)
-    expect(first.password).not.toBe(other.password)
+    expect(first.sandboxID).not.toBe(otherAccount.sandboxID)
+    expect(first.password).not.toBe(otherAccount.password)
+    expect(first.sandboxID).not.toBe(otherWorkspace.sandboxID)
+    expect(first.password).not.toBe(otherWorkspace.password)
     expect(first.sandboxID).not.toContain("acc_123")
+    expect(first.sandboxID).not.toContain("wrk_123")
   })
 
   test("confines directories to the account workspace", () => {
