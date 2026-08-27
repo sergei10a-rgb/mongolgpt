@@ -13,6 +13,7 @@ describe("authenticated gateway model catalog", () => {
     expect(response.status).toBe(200)
     expect(response.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS")
     expect(response.headers.get("access-control-allow-headers")).toContain("Authorization")
+    expect(response.headers.get("access-control-allow-headers")).toContain("X-Org-ID")
     expect(response.headers.get("cache-control")).toBe("no-store")
   })
 

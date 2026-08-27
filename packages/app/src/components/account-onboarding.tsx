@@ -2,10 +2,10 @@ import { Button } from "@mongolgpt/ui/button"
 import { useDialog } from "@mongolgpt/ui/context/dialog"
 import { Dialog } from "@mongolgpt/ui/dialog"
 import { ProviderIcon } from "@mongolgpt/ui/provider-icon"
-import { type Accessor, createEffect, createResource, Match, Show, Switch } from "solid-js"
+import { type Accessor, createEffect, createResource, For, Match, Show, Switch } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useLanguage } from "@/context/language"
-import { usePlatform } from "@/context/platform"
+import { usePlatform, type PlatformAccount } from "@/context/platform"
 import { ServerConnection, useServer } from "@/context/server"
 import { useServerSync } from "@/context/server-sync"
 import { Persist, persisted } from "@/utils/persist"
@@ -27,8 +27,22 @@ export function AccountOnboardingGate() {
   const [account, { mutate: setAccount, refetch: refetchAccount }] = createResource(
     () => platform.account?.current() ?? null,
   )
+  const [overview, { refetch: refetchOverview }] = createResource(
+    () => {
+      const api = platform.account
+      const current = account()
+      if (!api?.switchWorkspace || !current || current.activeOrgID) return undefined
+      return { api, accountID: current.id }
+    },
+    async ({ api, accountID }) => {
+      const value = await api.overview()
+      if (value.account.id !== accountID) throw new Error("Аккаунтын мэдээлэл зөрүүтэй байна")
+      return value
+    },
+  )
 
-  const connected = () => account.latest !== null && account.latest !== undefined
+  const signedIn = () => account() !== null && account() !== undefined
+  const connected = () => Boolean(account()?.activeOrgID?.trim())
   const ready = () =>
     platform.platform === "desktop" &&
     platform.account !== undefined &&
@@ -43,21 +57,43 @@ export function AccountOnboardingGate() {
     const loggedIn = await platform.account.login()
     setAccount(loggedIn)
     const [, providerRefresh] = await Promise.allSettled([Promise.resolve(refetchAccount()), sync().refreshGlobal()])
+    return { connected: Boolean(loggedIn.activeOrgID?.trim()), synced: providerRefresh.status === "fulfilled" }
+  }
+
+  const switchWorkspace = async (workspaceID: string) => {
+    if (!platform.account?.switchWorkspace) throw new Error(language.t("onboarding.workspace.selectError"))
+    const selected = await platform.account.switchWorkspace(workspaceID)
+    if (!selected.activeOrgID?.trim()) throw new Error(language.t("onboarding.workspace.selectError"))
+    setAccount(selected)
+    const [, providerRefresh] = await Promise.allSettled([Promise.resolve(refetchAccount()), sync().refreshGlobal()])
     return providerRefresh.status === "fulfilled"
   }
 
   createEffect(() => {
-    const stage = accountOnboardingStage({ ready: ready(), connected: connected(), completed: state.completed })
+    const stage = accountOnboardingStage({
+      ready: ready(),
+      signedIn: signedIn(),
+      connected: connected(),
+      completed: state.completed,
+    })
     if (!stage || gate.shown) return
     setGate("shown", true)
     void dialog.show(
       () => (
         <DialogAccountOnboarding
+          account={() => account()}
           connected={connected}
           accountStatusError={() => account.error !== undefined}
+          workspaceOverview={() => overview()}
+          workspaceLoading={() => overview.loading}
+          workspaceStatusError={() => overview.error !== undefined || platform.account?.switchWorkspace === undefined}
           onLogin={login}
+          onSwitchWorkspace={switchWorkspace}
           onRetryAccount={async () => {
             await refetchAccount()
+          }}
+          onRetryWorkspaces={async () => {
+            await refetchOverview()
           }}
           onRetrySync={() => sync().refreshGlobal()}
           nvidiaAvailable={() => sync().data.provider.all.has("nvidia")}
@@ -75,10 +111,21 @@ export function AccountOnboardingGate() {
 }
 
 function DialogAccountOnboarding(props: {
+  account: Accessor<PlatformAccount | null | undefined>
   connected: Accessor<boolean>
   accountStatusError: Accessor<boolean>
-  onLogin: () => Promise<boolean>
+  workspaceOverview: Accessor<
+    | {
+        workspaces: ReadonlyArray<{ id: string; name: string }>
+      }
+    | undefined
+  >
+  workspaceLoading: Accessor<boolean>
+  workspaceStatusError: Accessor<boolean>
+  onLogin: () => Promise<{ connected: boolean; synced: boolean }>
+  onSwitchWorkspace: (workspaceID: string) => Promise<boolean>
   onRetryAccount: () => Promise<void>
+  onRetryWorkspaces: () => Promise<void>
   onRetrySync: () => Promise<void>
   nvidiaAvailable: Accessor<boolean>
   onComplete: () => void
@@ -90,21 +137,35 @@ function DialogAccountOnboarding(props: {
     nvidiaConnected: false,
     loginPending: false,
     retryPending: false,
+    workspacePending: "",
     syncPending: false,
     syncError: false,
     error: "",
   })
+  const signedIn = () => props.account() !== null && props.account() !== undefined
   const connected = () => state.connected || props.connected()
 
   const login = async () => {
     setState({ loginPending: true, error: "" })
     try {
-      const synced = await props.onLogin()
-      setState({ connected: true, syncError: !synced })
+      const result = await props.onLogin()
+      setState({ connected: result.connected, syncError: !result.synced })
     } catch {
       setState("error", language.t("onboarding.account.loginError"))
     } finally {
       setState("loginPending", false)
+    }
+  }
+
+  const switchWorkspace = async (workspaceID: string) => {
+    setState({ workspacePending: workspaceID, error: "" })
+    try {
+      const synced = await props.onSwitchWorkspace(workspaceID)
+      setState({ connected: true, syncError: !synced })
+    } catch {
+      setState("error", language.t("onboarding.workspace.selectError"))
+    } finally {
+      setState("workspacePending", "")
     }
   }
 
@@ -132,20 +193,20 @@ function DialogAccountOnboarding(props: {
   }
 
   const connectNvidia = () => {
-    dialog.push(() => (
+    void dialog.push(() => (
       <DialogConnectProvider provider="nvidia" back="close" onConnected={() => setState("nvidiaConnected", true)} />
     ))
   }
 
   const connectLocal = () => {
-    dialog.push(() => <DialogCustomProvider back="close" />)
+    void dialog.push(() => <DialogCustomProvider back="close" />)
   }
 
   return (
     <Dialog title={language.t("onboarding.account.title")} transition>
       <div class="flex flex-col gap-6 px-2.5 pb-3">
         <Switch>
-          <Match when={!connected()}>
+          <Match when={!signedIn()}>
             <div class="px-2.5 pb-8 flex flex-col gap-6">
               <div class="flex items-center gap-4">
                 <ProviderIcon id="mongolgpt" class="size-8 shrink-0 icon-strong-base" />
@@ -173,6 +234,64 @@ function DialogAccountOnboarding(props: {
                   </Button>
                 </Show>
               </div>
+            </div>
+          </Match>
+          <Match when={signedIn() && !connected()}>
+            <div class="px-2.5 pb-6 flex flex-col gap-5">
+              <div class="flex flex-col gap-1">
+                <div class="text-16-medium text-text-strong">{language.t("onboarding.workspace.heading")}</div>
+                <p class="text-14-regular text-text-base">{language.t("onboarding.workspace.description")}</p>
+              </div>
+
+              <Show when={state.error || props.workspaceStatusError()}>
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="text-13-regular text-icon-critical-base" role="alert">
+                    {state.error || language.t("onboarding.workspace.loadError")}
+                  </p>
+                  <Button
+                    size="normal"
+                    variant="secondary"
+                    onClick={() => void props.onRetryWorkspaces()}
+                    disabled={state.retryPending}
+                  >
+                    {language.t("onboarding.account.retry")}
+                  </Button>
+                </div>
+              </Show>
+
+              <Show
+                when={!props.workspaceLoading()}
+                fallback={
+                  <p class="text-14-regular text-text-weak" role="status" aria-live="polite">
+                    {language.t("onboarding.workspace.loading")}
+                  </p>
+                }
+              >
+                <Show
+                  when={props.workspaceOverview()?.workspaces.length}
+                  fallback={<p class="text-14-regular text-text-weak">{language.t("onboarding.workspace.empty")}</p>}
+                >
+                  <div class="flex flex-col border-y border-border-weak-base">
+                    <For each={props.workspaceOverview()?.workspaces ?? []}>
+                      {(workspace) => (
+                        <div class="flex min-h-16 items-center justify-between gap-4 border-b border-border-weak-base py-3 last:border-none">
+                          <span class="min-w-0 break-words text-14-medium text-text-strong">{workspace.name}</span>
+                          <Button
+                            size="normal"
+                            variant="secondary"
+                            onClick={() => void switchWorkspace(workspace.id)}
+                            disabled={state.workspacePending !== ""}
+                          >
+                            {state.workspacePending === workspace.id
+                              ? language.t("onboarding.workspace.selecting")
+                              : language.t("onboarding.workspace.select")}
+                          </Button>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+              </Show>
             </div>
           </Match>
           <Match when={connected()}>

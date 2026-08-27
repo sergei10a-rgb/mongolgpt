@@ -94,6 +94,9 @@ function accountOverviewServer() {
         port: 0,
         fetch(request) {
           const url = new URL(request.url)
+          if (url.pathname === "/api/orgs") {
+            return Response.json([{ id: "wrk_12345", name: "Хувийн төсөл" }])
+          }
           if (url.pathname !== "/v1/account/overview") return new Response(null, { status: 404 })
           requests.push({
             authorization: request.headers.get("authorization"),
@@ -494,15 +497,23 @@ describe("experimental HttpApi", () => {
     () =>
       Effect.gen(function* () {
         const tmp = yield* TestInstance
-        const accountID = yield* insertAccount()
+        const remote = yield* accountOverviewServer()
+        const accountID = yield* insertAccount({ url: remote.server.url.toString() })
         const switched = yield* request(ExperimentalPaths.consoleSwitch, tmp.directory, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ accountID, orgID: "org-test" }),
+          body: JSON.stringify({ accountID, orgID: "wrk_12345" }),
         })
 
         expect(switched.status).toBe(200)
         expect(yield* json(switched)).toBe(true)
+
+        const denied = yield* request(ExperimentalPaths.consoleSwitch, tmp.directory, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ accountID, orgID: "wrk_denied" }),
+        })
+        expect(denied.status).toBe(400)
       }),
     { config: { formatter: false, lsp: false } },
   )

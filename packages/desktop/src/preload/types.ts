@@ -32,6 +32,7 @@ export type DesktopAccount = {
 export type DesktopAccountAPI = {
   current: () => Promise<DesktopAccount | null>
   overview: (workspaceID?: string) => Promise<AccountOverview | null>
+  switchWorkspace: (workspaceID: string) => Promise<DesktopAccount>
   login: () => Promise<DesktopAccount>
   logout: () => Promise<void>
 }

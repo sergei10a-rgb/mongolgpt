@@ -143,6 +143,7 @@ const createPlatform = (): Platform => {
           if (!value) throw new Error("Бүртгэлийн төлөв олдсонгүй")
           return value
         }),
+      switchWorkspace: (workspaceID) => window.api.account.switchWorkspace(workspaceID),
       login: () => window.api.account.login(),
       logout: () => window.api.account.logout(),
     },

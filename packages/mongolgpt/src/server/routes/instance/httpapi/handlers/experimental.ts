@@ -235,9 +235,16 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
     const switchConsole = Effect.fn("ExperimentalHttpApi.consoleSwitch")(function* (ctx: {
       payload: typeof ConsoleSwitchPayload.Type
     }) {
+      const orgs = yield* account
+        .orgs(ctx.payload.accountID)
+        .pipe(Effect.catch(() => Effect.fail(new HttpApiError.BadRequest({}))))
+      if (!orgs.some((org) => org.id === ctx.payload.orgID)) {
+        return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      }
       yield* account
         .use(ctx.payload.accountID, Option.some(ctx.payload.orgID))
         .pipe(Effect.catch(() => Effect.fail(new HttpApiError.BadRequest({}))))
+      yield* config.invalidate()
       return true
     })
 

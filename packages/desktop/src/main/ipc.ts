@@ -57,6 +57,7 @@ export function registerIpcHandlers(deps: Deps) {
   handle("await-initialization", () => deps.awaitInitialization())
   handle("account-current", () => deps.account.current())
   handle("account-overview", (_event, workspaceID?: string) => deps.account.overview(workspaceID))
+  handle("account-switch-workspace", (_event, workspaceID: string) => deps.account.switchWorkspace(workspaceID))
   handle("account-login", () => deps.account.login())
   handle("account-logout", () => deps.account.logout())
   handle("consume-initial-deep-links", () => deps.consumeInitialDeepLinks())

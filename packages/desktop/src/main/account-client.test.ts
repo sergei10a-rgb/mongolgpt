@@ -81,6 +81,63 @@ describe("desktop account client", () => {
     expect(requested).toBe("http://127.0.0.1:4096/experimental/account/overview?workspaceID=wrk_12345")
   })
 
+  test("switches only to a workspace confirmed by the account service", async () => {
+    const calls: string[] = []
+    let activeOrgID: string | undefined
+    const client = createDesktopAccountClient({
+      server,
+      accountServer: "https://dev.mgpt.mn",
+      openExternal: async () => {},
+      fetch: async (input, init) => {
+        const url = input instanceof URL ? input : new URL(String(input))
+        calls.push(`${init?.method ?? "GET"} ${url.pathname}${url.search}`)
+        if (url.pathname === "/experimental/account") {
+          return json({
+            id: "acc_12345",
+            email: "user@example.com",
+            url: "https://dev.mgpt.mn",
+            ...(activeOrgID ? { activeOrgID } : {}),
+          })
+        }
+        if (url.pathname === "/experimental/account/overview") return json(accountOverview)
+        if (url.pathname === "/experimental/console/switch") {
+          expect(JSON.parse(String(init?.body))).toEqual({ accountID: "acc_12345", orgID: "wrk_12345" })
+          activeOrgID = "wrk_12345"
+          return json(true)
+        }
+        return json(null, 404)
+      },
+    })
+
+    await expect(client.switchWorkspace("  wrk_12345  ")).resolves.toMatchObject({
+      id: "acc_12345",
+      activeOrgID: "wrk_12345",
+    })
+    expect(calls).toContain("GET /experimental/account/overview?workspaceID=wrk_12345")
+    expect(calls).toContain("POST /experimental/console/switch")
+  })
+
+  test("refuses a workspace missing from the authenticated overview", async () => {
+    let switchCalls = 0
+    const client = createDesktopAccountClient({
+      server,
+      accountServer: "https://dev.mgpt.mn",
+      openExternal: async () => {},
+      fetch: async (input) => {
+        const url = input instanceof URL ? input : new URL(String(input))
+        if (url.pathname === "/experimental/account") {
+          return json({ id: "acc_12345", email: "user@example.com", url: "https://dev.mgpt.mn" })
+        }
+        if (url.pathname === "/experimental/account/overview") return json(accountOverview)
+        switchCalls++
+        return json(true)
+      },
+    })
+
+    await expect(client.switchWorkspace("wrk_denied")).rejects.toThrow("ашиглах эрхгүй")
+    expect(switchCalls).toBe(0)
+  })
+
   test("rejects malformed account overview responses in the main process", async () => {
     const client = createDesktopAccountClient({
       server,

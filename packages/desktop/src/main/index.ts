@@ -282,6 +282,10 @@ const main = Effect.gen(function* () {
   const account: DesktopAccountAPI = {
     current: baseAccount.current,
     overview: baseAccount.overview,
+    switchWorkspace: async (workspaceID) => {
+      bridge.revokeAll()
+      return baseAccount.switchWorkspace(workspaceID)
+    },
     login: async () => {
       bridge.revokeAll()
       return baseAccount.login()

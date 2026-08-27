@@ -115,6 +115,31 @@ export function createDesktopAccountClient(dependencies: Dependencies): DesktopA
     return parseAccountOverview(await request(`/experimental/account/overview${query}`))
   }
 
+  const switchWorkspace = async (workspaceID: string) => {
+    const selected = workspaceID.trim()
+    if (!selected) throw new Error("Ажлын орчны ID буруу байна")
+
+    const account = await current()
+    if (!account) throw new Error("MongolGPT бүртгэлээр нэвтрээгүй байна")
+
+    const available = await overview(selected)
+    if (!available?.workspaces.some((workspace) => workspace.id === selected)) {
+      throw new Error("Энэ ажлын орчныг ашиглах эрхгүй байна")
+    }
+
+    const switched = await request("/experimental/console/switch", {
+      method: "POST",
+      body: JSON.stringify({ accountID: account.id, orgID: selected }),
+    })
+    if (switched !== true) throw new Error("Ажлын орчныг идэвхжүүлж чадсангүй")
+
+    const currentAccount = await current()
+    if (!currentAccount || currentAccount.id !== account.id || currentAccount.activeOrgID !== selected) {
+      throw new Error("Идэвхтэй ажлын орчныг баталгаажуулж чадсангүй")
+    }
+    return currentAccount
+  }
+
   const cancel = async (loginID: string, timeout: number) => {
     if (timeout <= 0) return
     const controller = new AbortController()
@@ -181,5 +206,5 @@ export function createDesktopAccountClient(dependencies: Dependencies): DesktopA
     await request("/experimental/account", { method: "DELETE" })
   }
 
-  return { current, overview, login, logout }
+  return { current, overview, switchWorkspace, login, logout }
 }

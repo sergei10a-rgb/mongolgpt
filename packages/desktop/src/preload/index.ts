@@ -17,6 +17,7 @@ const api: ElectronAPI = {
   account: {
     current: () => ipcRenderer.invoke("account-current"),
     overview: (workspaceID) => ipcRenderer.invoke("account-overview", workspaceID),
+    switchWorkspace: (workspaceID) => ipcRenderer.invoke("account-switch-workspace", workspaceID),
     login: () => ipcRenderer.invoke("account-login"),
     logout: () => ipcRenderer.invoke("account-logout"),
   },

@@ -1,4 +1,5 @@
 import { Config } from "effect"
+import { InstallationLocal } from "../installation/version"
 
 export function truthy(key: string) {
   const value = env(key)?.toLowerCase()
@@ -7,6 +8,10 @@ export function truthy(key: string) {
 
 export function env(key: string) {
   return process.env[key]
+}
+
+export function enabledByDefault(key: string, fallback = true) {
+  return env(key) === undefined ? fallback : truthy(key)
 }
 
 const copy = env("MONGOLGPT_EXPERIMENTAL_DISABLE_COPY_ON_SELECT")
@@ -29,7 +34,7 @@ export const Flag = {
   MONGOLGPT_SHOW_TTFD: truthy("MONGOLGPT_SHOW_TTFD"),
   MONGOLGPT_DISABLE_AUTOCOMPACT: truthy("MONGOLGPT_DISABLE_AUTOCOMPACT"),
   MONGOLGPT_DISABLE_MODELS_FETCH: truthy("MONGOLGPT_DISABLE_MODELS_FETCH"),
-  MONGOLGPT_ENABLE_HOSTED_SERVICES: truthy("MONGOLGPT_ENABLE_HOSTED_SERVICES"),
+  MONGOLGPT_ENABLE_HOSTED_SERVICES: enabledByDefault("MONGOLGPT_ENABLE_HOSTED_SERVICES", !InstallationLocal),
   MONGOLGPT_DISABLE_MOUSE: truthy("MONGOLGPT_DISABLE_MOUSE"),
   MONGOLGPT_FAKE_VCS: env("MONGOLGPT_FAKE_VCS"),
   MONGOLGPT_SERVER_PASSWORD: env("MONGOLGPT_SERVER_PASSWORD"),

@@ -3,6 +3,7 @@ import { ProviderIcon } from "@mongolgpt/ui/provider-icon"
 import { ButtonV2 } from "@mongolgpt/ui/v2/button-v2"
 import type { AccountOverview } from "@mongolgpt/account-contract"
 import { createMemo, createResource, createSignal, For, Show, type Component } from "solid-js"
+import { createStore } from "solid-js/store"
 import { useLanguage } from "@/context/language"
 import { usePlatform, type PlatformAccount } from "@/context/platform"
 import { useServerSync } from "@/context/server-sync"
@@ -107,6 +108,7 @@ function useSettingsAccount() {
   const serverSync = useServerSync()
   const [pending, setPending] = createSignal<"login" | "logout" | "retry" | "overview-retry">()
   const [operationError, setOperationError] = createSignal(false)
+  const [workspaceState, setWorkspaceState] = createStore({ pending: "", error: false })
   const [account, actions] = createResource(
     () => platform.account,
     (api) => api.current(),
@@ -176,6 +178,21 @@ function useSettingsAccount() {
       setPending()
     }
   }
+  const switchWorkspace = async (workspaceID: string) => {
+    const api = platform.account
+    if (!api?.switchWorkspace) return
+    setWorkspaceState({ pending: workspaceID, error: false })
+    try {
+      const current = await api.switchWorkspace(workspaceID)
+      actions.mutate(current)
+      overviewActions.mutate(accountOverviewForAccount(current.id, await api.overview(workspaceID)))
+      await refreshProviders()
+    } catch {
+      setWorkspaceState("error", true)
+    } finally {
+      setWorkspaceState("pending", "")
+    }
+  }
 
   return {
     account,
@@ -188,6 +205,11 @@ function useSettingsAccount() {
     logout,
     retry,
     retryOverview,
+    switchWorkspace,
+    canSwitchWorkspace: () => platform.account?.switchWorkspace !== undefined,
+    workspaceSwitchError: () => workspaceState.error,
+    workspaceSwitchPending: (workspaceID: string) => workspaceState.pending === workspaceID,
+    workspaceSwitching: () => workspaceState.pending !== "",
     loginPending: () => pending() === "login",
     logoutPending: () => pending() === "logout",
     language,
@@ -345,10 +367,54 @@ function WorkspacePlan(props: { plan: AccountWorkspace["limits"]["plan"] }) {
   return <span class="shrink-0 text-12-medium text-text-strong">{language.t(PLAN_KEYS[props.plan])}</span>
 }
 
+function WorkspaceActionsV1(props: { state: SettingsAccountState; workspace: AccountWorkspace; current: boolean }) {
+  return (
+    <div class="flex shrink-0 items-center gap-2">
+      <WorkspacePlan plan={props.workspace.limits.plan} />
+      <Show when={!props.current && props.state.canSwitchWorkspace()}>
+        <Button
+          size="normal"
+          variant="secondary"
+          disabled={props.state.workspaceSwitching()}
+          onClick={() => void props.state.switchWorkspace(props.workspace.id)}
+        >
+          {props.state.workspaceSwitchPending(props.workspace.id)
+            ? props.state.language.t("settings.account.workspaceSwitching")
+            : props.state.language.t("settings.account.workspaceSwitch")}
+        </Button>
+      </Show>
+    </div>
+  )
+}
+
+function WorkspaceActionsV2(props: { state: SettingsAccountState; workspace: AccountWorkspace; current: boolean }) {
+  return (
+    <div class="flex shrink-0 items-center gap-2">
+      <WorkspacePlan plan={props.workspace.limits.plan} />
+      <Show when={!props.current && props.state.canSwitchWorkspace()}>
+        <ButtonV2
+          variant="neutral"
+          disabled={props.state.workspaceSwitching()}
+          onClick={() => void props.state.switchWorkspace(props.workspace.id)}
+        >
+          {props.state.workspaceSwitchPending(props.workspace.id)
+            ? props.state.language.t("settings.account.workspaceSwitching")
+            : props.state.language.t("settings.account.workspaceSwitch")}
+        </ButtonV2>
+      </Show>
+    </div>
+  )
+}
+
 function AccountOverviewV1(props: { state: SettingsAccountState }) {
   return (
     <div class="mt-6 flex flex-col gap-1 max-w-[720px]">
       <h3 class="pb-2 text-14-medium text-text-strong">{props.state.language.t("settings.account.overview")}</h3>
+      <Show when={props.state.workspaceSwitchError()}>
+        <p class="pb-2 text-13-regular text-icon-critical-base" role="alert">
+          {props.state.language.t("settings.account.workspaceSwitchError")}
+        </p>
+      </Show>
       <SettingsList>
         <Show
           when={!props.state.overviewLoading()}
@@ -413,7 +479,7 @@ function AccountOverviewV1(props: { state: SettingsAccountState }) {
                             <WorkspaceTitle name={workspace.name} current={view.current} />
                             <WorkspaceDetails overview={value} workspace={workspace} />
                           </div>
-                          <WorkspacePlan plan={view.plan} />
+                          <WorkspaceActionsV1 state={props.state} workspace={workspace} current={view.current} />
                         </div>
                       )
                     }}
@@ -432,6 +498,11 @@ function AccountOverviewV2(props: { state: SettingsAccountState }) {
   return (
     <div class="settings-v2-section">
       <h3 class="settings-v2-section-title">{props.state.language.t("settings.account.overview")}</h3>
+      <Show when={props.state.workspaceSwitchError()}>
+        <p class="text-13-regular text-icon-critical-base" role="alert">
+          {props.state.language.t("settings.account.workspaceSwitchError")}
+        </p>
+      </Show>
       <SettingsListV2>
         <Show
           when={!props.state.overviewLoading()}
@@ -501,7 +572,7 @@ function AccountOverviewV2(props: { state: SettingsAccountState }) {
                           title={<WorkspaceTitle name={workspace.name} current={view.current} />}
                           description={<WorkspaceDetails overview={value} workspace={workspace} />}
                         >
-                          <WorkspacePlan plan={view.plan} />
+                          <WorkspaceActionsV2 state={props.state} workspace={workspace} current={view.current} />
                         </SettingsRowV2>
                       )
                     }}

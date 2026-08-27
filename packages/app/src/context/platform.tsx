@@ -30,6 +30,7 @@ export type PlatformAccount = {
 export type PlatformAccountAPI = {
   current(): Promise<PlatformAccount | null>
   overview(workspaceID?: string): Promise<AccountOverview>
+  switchWorkspace?(workspaceID: string): Promise<PlatformAccount>
   login(): Promise<PlatformAccount>
   logout(): Promise<void>
 }
