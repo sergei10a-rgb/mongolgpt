@@ -15,9 +15,11 @@ import {
 import {
   inspectDeploymentEndpointConfiguration,
   inspectAuthenticatedAccountOverview,
+  inspectAuthenticatedFreeAutoResponse,
   inspectAuthenticatedFreeAutoProvider,
   inspectAuthenticatedRuntimeProjects,
   inspectAuthenticatedRuntimeSession,
+  inspectAuthenticatedRuntimeSessionCreate,
   inspectAuthenticatedRuntimeToken,
   inspectAuthHealth,
   inspectAdminProtection,
@@ -830,6 +832,61 @@ describe("authenticated hosted Free Auto smoke contract", () => {
     expect(() => inspectAuthenticatedFreeAutoProvider({ ...authenticatedProviders, connected: [] })).toThrow(
       "not connected",
     )
+  })
+
+  test("requires a real isolated session and an authenticated Free Auto model response", () => {
+    expect(inspectAuthenticatedRuntimeSessionCreate({ id: "ses_smoke", directory: "/workspace" })).toEqual({
+      sessionID: "ses_smoke",
+    })
+    expect(() => inspectAuthenticatedRuntimeSessionCreate({ id: "ses_smoke", directory: "C:\\Users\\owner" })).toThrow(
+      "isolated workspace",
+    )
+
+    const response = {
+      info: {
+        id: "msg_smoke",
+        sessionID: "ses_smoke",
+        role: "assistant",
+        providerID: "mongolgpt",
+        modelID: "free-auto",
+        time: { created: 1, completed: 2 },
+        cost: 0,
+        tokens: { input: 8, output: 2, reasoning: 0, cache: { read: 0, write: 0 } },
+        finish: "stop",
+      },
+      parts: [
+        {
+          id: "prt_smoke",
+          sessionID: "ses_smoke",
+          messageID: "msg_smoke",
+          type: "text",
+          text: "MONGOLGPT_SMOKE_READY",
+        },
+      ],
+    }
+    expect(inspectAuthenticatedFreeAutoResponse(response, "ses_smoke")).toEqual({
+      providerID: "mongolgpt",
+      modelID: "free-auto",
+      output: "MONGOLGPT_SMOKE_READY",
+    })
+    expect(() =>
+      inspectAuthenticatedFreeAutoResponse(
+        { ...response, info: { ...response.info, providerID: "opencode" } },
+        "ses_smoke",
+      ),
+    ).toThrow("identity")
+    expect(() =>
+      inspectAuthenticatedFreeAutoResponse(
+        { ...response, parts: [{ ...response.parts[0], text: "өөр хариу" }] },
+        "ses_smoke",
+      ),
+    ).toThrow("smoke marker")
+    expect(() =>
+      inspectAuthenticatedFreeAutoResponse(
+        { ...response, info: { ...response.info, tokens: { ...response.info.tokens, output: 0 } } },
+        "ses_smoke",
+      ),
+    ).toThrow("usage evidence")
   })
 })
 

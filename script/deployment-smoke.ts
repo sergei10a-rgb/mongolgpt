@@ -3,8 +3,10 @@ import type { DeploymentPreflightResult } from "@mongolgpt/script/deployment"
 import {
   inspectAdminProtection,
   inspectAuthenticatedAccountOverview,
+  inspectAuthenticatedFreeAutoResponse,
   inspectAuthenticatedFreeAutoProvider,
   inspectAuthenticatedRuntimeProjects,
+  inspectAuthenticatedRuntimeSessionCreate,
   inspectAuthenticatedRuntimeSession,
   inspectAuthenticatedRuntimeToken,
   inspectAuthHealth,
@@ -842,37 +844,24 @@ async function authenticatedHostedFlow(input: {
     await authenticatedJson(overviewResponse, appOrigin, "authenticated account overview"),
   )
 
-  const tokenUrl = new URL("/auth/runtime-token", `${input.consoleUrl}/`)
-  const tokenResponse = await authenticatedFetch(tokenUrl, appOrigin, {
-    method: "POST",
-    headers: { Cookie: input.authCookie },
+  const runtimeSession = await exchangeRuntimeSession({
+    consoleUrl: input.consoleUrl,
+    runtimeUrl: input.runtimeUrl,
+    appOrigin,
+    authCookie: input.authCookie,
+    account: overview,
   })
-  const capability = inspectAuthenticatedRuntimeToken(
-    await authenticatedJson(tokenResponse, appOrigin, "authenticated runtime token"),
-    { accountID: overview.accountID, email: overview.email },
-  )
-
   const sessionUrl = new URL("/auth/session", `${input.runtimeUrl}/`)
-  const exchangeResponse = await authenticatedFetch(sessionUrl, appOrigin, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${capability.token}` },
-  })
-  inspectAuthenticatedRuntimeSession(
-    await authenticatedJson(exchangeResponse, appOrigin, "authenticated runtime session exchange"),
-    { accountID: overview.accountID, maximumExpiresAt: capability.expiresAt },
-  )
-  const runtimeCookie = inspectRuntimeSessionCookie(exchangeResponse.headers.get("set-cookie"), capability.token)
-
   const sessionResponse = await authenticatedFetch(sessionUrl, appOrigin, {
-    headers: { Cookie: runtimeCookie },
+    headers: { Cookie: runtimeSession.cookie },
   })
   inspectAuthenticatedRuntimeSession(
     await authenticatedJson(sessionResponse, appOrigin, "authenticated runtime session"),
-    { accountID: overview.accountID, maximumExpiresAt: capability.expiresAt },
+    { accountID: overview.accountID, maximumExpiresAt: runtimeSession.expiresAt },
   )
 
   const runtimeHeaders = {
-    Cookie: runtimeCookie,
+    Cookie: runtimeSession.cookie,
     "x-mongolgpt-directory": "/workspace",
   }
   const projectUrl = new URL("/project", `${input.runtimeUrl}/`)
@@ -889,15 +878,102 @@ async function authenticatedHostedFlow(input: {
   inspectAuthenticatedFreeAutoProvider(
     await authenticatedJson(providerResponse, appOrigin, "authenticated runtime provider response"),
   )
+
+  const modelSession = await exchangeRuntimeSession({
+    consoleUrl: input.consoleUrl,
+    runtimeUrl: input.runtimeUrl,
+    appOrigin,
+    authCookie: input.authCookie,
+    account: overview,
+  })
+  const modelHeaders = {
+    Cookie: modelSession.cookie,
+    "x-mongolgpt-directory": "/workspace",
+  }
+  const createUrl = new URL("/session", `${input.runtimeUrl}/`)
+  const createResponse = await authenticatedFetch(createUrl, appOrigin, {
+    method: "POST",
+    headers: { ...modelHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "MongolGPT deploy smoke" }),
+  })
+  const created = inspectAuthenticatedRuntimeSessionCreate(
+    await authenticatedJson(createResponse, appOrigin, "authenticated runtime session create response"),
+  )
+
+  const promptResult = await (async () => {
+    const promptUrl = new URL(`/session/${encodeURIComponent(created.sessionID)}/message`, `${input.runtimeUrl}/`)
+    const promptResponse = await authenticatedFetch(promptUrl, appOrigin, {
+      method: "POST",
+      headers: { ...modelHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: { providerID: "mongolgpt", modelID: "free-auto" },
+        parts: [{ type: "text", text: "Зөвхөн MONGOLGPT_SMOKE_READY гэж хариул." }],
+      }),
+      timeout: 60_000,
+    })
+    inspectAuthenticatedFreeAutoResponse(
+      await authenticatedJson(promptResponse, appOrigin, "authenticated Free Auto response"),
+      created.sessionID,
+    )
+  })().then(
+    () => ({ ok: true as const }),
+    (error: unknown) => ({ ok: false as const, error }),
+  )
+
+  const deleteUrl = new URL(`/session/${encodeURIComponent(created.sessionID)}`, `${input.runtimeUrl}/`)
+  const deleteResponse = await authenticatedFetch(deleteUrl, appOrigin, {
+    method: "DELETE",
+    headers: modelHeaders,
+  })
+  const deleted = await authenticatedJson(deleteResponse, appOrigin, "authenticated runtime session cleanup")
+  if (deleted !== true) throw new Error("authenticated runtime session cleanup did not delete the smoke session")
+  if (!promptResult.ok) throw promptResult.error
+}
+
+async function exchangeRuntimeSession(input: {
+  consoleUrl: string
+  runtimeUrl: string
+  appOrigin: string
+  authCookie: string
+  account: { accountID: string; email: string }
+}) {
+  const tokenUrl = new URL("/auth/runtime-token", `${input.consoleUrl}/`)
+  const tokenResponse = await authenticatedFetch(tokenUrl, input.appOrigin, {
+    method: "POST",
+    headers: { Cookie: input.authCookie },
+  })
+  const capability = inspectAuthenticatedRuntimeToken(
+    await authenticatedJson(tokenResponse, input.appOrigin, "authenticated runtime token"),
+    input.account,
+  )
+  const sessionUrl = new URL("/auth/session", `${input.runtimeUrl}/`)
+  const exchangeResponse = await authenticatedFetch(sessionUrl, input.appOrigin, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${capability.token}` },
+  })
+  inspectAuthenticatedRuntimeSession(
+    await authenticatedJson(exchangeResponse, input.appOrigin, "authenticated runtime session exchange"),
+    { accountID: input.account.accountID, maximumExpiresAt: capability.expiresAt },
+  )
+  return {
+    cookie: inspectRuntimeSessionCookie(exchangeResponse.headers.get("set-cookie"), capability.token),
+    expiresAt: capability.expiresAt,
+  }
 }
 
 async function authenticatedFetch(
   url: URL,
   appOrigin: string,
-  input: { method?: "GET" | "POST"; headers?: Record<string, string>; timeout?: number } = {},
+  input: {
+    method?: "GET" | "POST" | "DELETE"
+    headers?: Record<string, string>
+    body?: string
+    timeout?: number
+  } = {},
 ) {
   const response = await fetch(url, {
     method: input.method ?? "GET",
+    body: input.body,
     headers: {
       Accept: "application/json",
       Origin: appOrigin,

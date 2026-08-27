@@ -159,6 +159,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
   test("gates every deployed app with HTTP and Chromium smoke checks", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
+    const smokeSource = await Bun.file(new URL("../../../script/deployment-smoke.ts", import.meta.url)).text()
     const steps = parseWorkflow(source).jobs.deploy.steps
     const auth = steps.findIndex((step) => step.name === "Validate authenticated smoke identity")
     const deploy = steps.findIndex((step) => step.name === "Validate and deploy to Cloudflare")
@@ -178,6 +179,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(steps[auth]?.env).toEqual({
       MONGOLGPT_SMOKE_AUTH_COOKIE: "${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}",
     })
+    expect(smokeSource).toContain('model: { providerID: "mongolgpt", modelID: "free-auto" }')
+    expect(smokeSource).toContain("MONGOLGPT_SMOKE_READY")
+    expect(smokeSource).toContain('method: "DELETE"')
     expect(steps[deploy]?.env?.MONGOLGPT_SMOKE_AUTH_COOKIE).toBeUndefined()
     expect(steps[http]?.env).toEqual({
       MONGOLGPT_SMOKE_AUTH_COOKIE: "${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}",

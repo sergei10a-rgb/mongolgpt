@@ -569,6 +569,61 @@ export function inspectAuthenticatedFreeAutoProvider(value: unknown) {
   return { providerID: "mongolgpt" as const, modelID: "free-auto" as const }
 }
 
+export function inspectAuthenticatedRuntimeSessionCreate(value: unknown) {
+  const session = record(value, "authenticated runtime session create response")
+  if (typeof session.id !== "string" || !/^ses_[A-Za-z0-9_-]+$/.test(session.id)) {
+    throw new Error("authenticated runtime session create response has no valid session id")
+  }
+  if (session.directory !== "/workspace") {
+    throw new Error("authenticated runtime session was not created in the isolated workspace")
+  }
+  return { sessionID: session.id }
+}
+
+export function inspectAuthenticatedFreeAutoResponse(value: unknown, sessionID: string) {
+  const response = record(value, "authenticated Free Auto response")
+  exactObjectKeys(response, ["info", "parts"], "authenticated Free Auto response")
+  const info = record(response.info, "authenticated Free Auto response info")
+  if (
+    info.sessionID !== sessionID ||
+    info.role !== "assistant" ||
+    info.providerID !== "mongolgpt" ||
+    info.modelID !== "free-auto" ||
+    info.error !== undefined
+  ) {
+    throw new Error("authenticated Free Auto response identity is invalid")
+  }
+  const time = record(info.time, "authenticated Free Auto response time")
+  const tokens = record(info.tokens, "authenticated Free Auto response usage")
+  if (
+    typeof time.completed !== "number" ||
+    !Number.isFinite(time.completed) ||
+    typeof info.finish !== "string" ||
+    !info.finish.trim() ||
+    typeof info.cost !== "number" ||
+    !Number.isFinite(info.cost) ||
+    info.cost < 0 ||
+    typeof tokens.output !== "number" ||
+    !Number.isInteger(tokens.output) ||
+    tokens.output < 1
+  ) {
+    throw new Error("authenticated Free Auto response has no completed usage evidence")
+  }
+  if (!Array.isArray(response.parts)) throw new Error("authenticated Free Auto response parts are invalid")
+  const output = response.parts
+    .filter(
+      (part): part is Record<string, unknown> => typeof part === "object" && part !== null && !Array.isArray(part),
+    )
+    .filter((part) => part.type === "text" && part.sessionID === sessionID && part.messageID === info.id)
+    .map((part) => (typeof part.text === "string" ? part.text : ""))
+    .join("\n")
+    .trim()
+  if (!output.includes("MONGOLGPT_SMOKE_READY")) {
+    throw new Error("authenticated Free Auto response did not contain the smoke marker")
+  }
+  return { providerID: "mongolgpt" as const, modelID: "free-auto" as const, output }
+}
+
 function record(value: unknown, label: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${label} is not an object`)
