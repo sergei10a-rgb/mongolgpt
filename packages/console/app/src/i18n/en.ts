@@ -153,10 +153,18 @@ export const dict = {
 
   "home.growth.title": "Монгол-first AI coding agent",
   "home.growth.body":
-    "With over <strong>{{stars}}</strong> GitHub stars, <strong>{{contributors}}</strong> contributors, and over <strong>{{commits}}</strong> commits, MongolGPT is used and trusted by over <strong>{{monthlyUsers}}</strong> developers every month.",
-  "home.growth.githubStars": "GitHub Stars",
-  "home.growth.contributors": "Contributors",
-  "home.growth.monthlyDevs": "Monthly Devs",
+    "MongolGPT brings one account, multiple clients, your own keys, and local models into one product.",
+  "home.growth.githubStars": "shared account",
+  "home.growth.contributors": "web · desktop · CLI",
+  "home.growth.monthlyDevs": "providers and local models",
+  "home.growth.productBody":
+    "Sign in once across the web, desktop, and CLI clients, then use Free Auto, your own API keys, and local models from one MongolGPT product.",
+  "home.growth.accountValue": "1",
+  "home.growth.accountLabel": "shared account",
+  "home.growth.clientsValue": "3",
+  "home.growth.clientsLabel": "web · desktop · CLI",
+  "home.growth.providersValue": "75+",
+  "home.growth.providersLabel": "providers and local models",
 
   "home.privacy.title": "Built for privacy first",
   "home.privacy.body":

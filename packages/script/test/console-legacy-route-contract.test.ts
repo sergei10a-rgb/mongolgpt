@@ -92,6 +92,7 @@ describe("hosted console legacy route contract", () => {
 
   test("keeps retired Zen marketing and OpenCode media out of active console surfaces", async () => {
     const home = await Bun.file(new URL("src/routes/index.tsx", consoleApp)).text()
+    const config = await Bun.file(new URL("src/config.ts", consoleApp)).text()
     const download = await Bun.file(new URL("src/routes/download/index.tsx", consoleApp)).text()
     const logout = await Bun.file(new URL("src/routes/auth/logout.ts", consoleApp)).text()
     const workspace = await Bun.file(new URL("src/routes/workspace/[id].tsx", consoleApp)).text()
@@ -109,6 +110,15 @@ describe("hosted console legacy route contract", () => {
     expect(home).not.toContain("mongolgpt-min.mp4")
     expect(home).not.toContain("home.zenCta")
     expect(home).not.toContain('language.route("/zen")')
+    expect(home).toContain('i18n.t("home.growth.productBody")')
+    expect(home).toContain('i18n.t("home.growth.accountLabel")')
+    expect(home).toContain('i18n.t("home.growth.clientsLabel")')
+    expect(home).toContain('i18n.t("home.growth.providersLabel")')
+    expect(home).not.toContain("config.stats")
+    expect(home).not.toContain("createAsync(() => github())")
+    expect(config).not.toContain("monthlyUsers")
+    expect(config).not.toContain("contributors")
+    expect(config).not.toContain("commits")
 
     expect(download).toContain('language.route("/docs/providers/")')
     expect(download).toContain('language.route("/pricing")')

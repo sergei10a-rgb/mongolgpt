@@ -155,10 +155,18 @@ export const dict = {
 
   "home.growth.title": "Монгол хэлд зориулсан хиймэл оюунт кодын агент",
   "home.growth.body":
-    "GitHub дээр <strong>{{stars}}</strong>-аас олон од, <strong>{{contributors}}</strong> хувь нэмэр оруулагч, <strong>{{commits}}</strong>-аас олон коммиттой MongolGPT-ийг сар бүр <strong>{{monthlyUsers}}</strong>-аас олон хөгжүүлэгч ашиглаж, итгэл хүлээлгэдэг.",
-  "home.growth.githubStars": "GitHub од",
-  "home.growth.contributors": "Хувь нэмэр оруулагч",
-  "home.growth.monthlyDevs": "Сарын идэвхтэй хөгжүүлэгч",
+    "MongolGPT нь нэг бүртгэл, олон клиент, өөрийн түлхүүр болон дотоод загварын сонголтыг нэг дор нэгтгэнэ.",
+  "home.growth.githubStars": "нэгдсэн бүртгэл",
+  "home.growth.contributors": "вэб · компьютер · CLI",
+  "home.growth.monthlyDevs": "нийлүүлэгч ба дотоод загвар",
+  "home.growth.productBody":
+    "Нэг MongolGPT бүртгэлээр вэб, компьютерийн апп болон CLI-д нэвтэрч, Free Auto, өөрийн API түлхүүр болон дотоод загвараа нэг бүтээгдэхүүнээс ашиглана.",
+  "home.growth.accountValue": "1",
+  "home.growth.accountLabel": "нэгдсэн бүртгэл",
+  "home.growth.clientsValue": "3",
+  "home.growth.clientsLabel": "вэб · компьютер · CLI",
+  "home.growth.providersValue": "75+",
+  "home.growth.providersLabel": "нийлүүлэгч ба дотоод загвар",
 
   "home.privacy.title": "Нууцлалыг нэн тэргүүнд тавьсан",
   "home.privacy.body":

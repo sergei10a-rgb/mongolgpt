@@ -3,14 +3,13 @@ import { Title, Meta } from "@solidjs/meta"
 //import { HttpHeader } from "@solidjs/start"
 import productSession from "../asset/lander/mongolgpt-product-session.png"
 import { IconCopy, IconCheck } from "../component/icon"
-import { A, createAsync } from "@solidjs/router"
+import { A } from "@solidjs/router"
 import { EmailSignup } from "~/component/email-signup"
 import { Tabs } from "@kobalte/core/tabs"
 import { Faq } from "~/component/faq"
 import { Header } from "~/component/header"
 import { Footer } from "~/component/footer"
 import { Legal } from "~/component/legal"
-import { github } from "~/lib/github"
 import { config } from "~/config"
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
@@ -28,7 +27,6 @@ function CopyStatus() {
 export default function Home() {
   const i18n = useI18n()
   const language = useLanguage()
-  const _githubData = createAsync(() => github())
   const handleCopyClick = (event: Event) => {
     const button = event.currentTarget as HTMLButtonElement
     const text = button.textContent
@@ -198,14 +196,7 @@ export default function Home() {
               <h3>{i18n.t("home.growth.title")}</h3>
               <div>
                 <span>[*]</span>
-                <p
-                  innerHTML={i18n.t("home.growth.body", {
-                    stars: config.github.starsFormatted.full,
-                    contributors: config.stats.contributors,
-                    commits: config.stats.commits,
-                    monthlyUsers: config.stats.monthlyUsers,
-                  })}
-                />
+                <p>{i18n.t("home.growth.productBody")}</p>
               </div>
 
               <div data-component="growth-stats">
@@ -258,7 +249,7 @@ export default function Home() {
                   </div>
                   <span>
                     <figure>{i18n.t("common.figure", { n: 1 })}</figure>{" "}
-                    <strong>{config.github.starsFormatted.compact}</strong> {i18n.t("home.growth.githubStars")}
+                    <strong>{i18n.t("home.growth.accountValue")}</strong> {i18n.t("home.growth.accountLabel")}
                   </span>
                 </div>
 
@@ -561,8 +552,8 @@ export default function Home() {
                     </svg>
                   </div>
                   <span>
-                    <figure>{i18n.t("common.figure", { n: 2 })}</figure> <strong>{config.stats.contributors}</strong>{" "}
-                    {i18n.t("home.growth.contributors")}
+                    <figure>{i18n.t("common.figure", { n: 2 })}</figure>{" "}
+                    <strong>{i18n.t("home.growth.clientsValue")}</strong> {i18n.t("home.growth.clientsLabel")}
                   </span>
                 </div>
 
@@ -604,8 +595,8 @@ export default function Home() {
                     </svg>
                   </div>
                   <span>
-                    <figure>{i18n.t("common.figure", { n: 3 })}</figure> <strong>{config.stats.monthlyUsers}</strong>{" "}
-                    {i18n.t("home.growth.monthlyDevs")}
+                    <figure>{i18n.t("common.figure", { n: 3 })}</figure>{" "}
+                    <strong>{i18n.t("home.growth.providersValue")}</strong> {i18n.t("home.growth.providersLabel")}
                   </span>
                 </div>
               </div>

@@ -23,11 +23,4 @@ export const config = {
     support: supportUrl,
     discord: import.meta.env.VITE_MONGOLGPT_COMMUNITY_URL?.trim() || `${repositoryUrl}/discussions`,
   },
-
-  // Static stats (used on landing page)
-  stats: {
-    contributors: "1",
-    commits: "5",
-    monthlyUsers: "0",
-  },
 } as const
