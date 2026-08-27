@@ -31,6 +31,8 @@ Compatibility importer test:
 bun --cwd packages/mongolgpt test test/compat/import.test.ts
 ```
 
+CLI release archive matrix нь `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `windows-x64`, `windows-arm64` binary-уудыг хамарна.
+
 HTTP API coverage:
 
 ```bash

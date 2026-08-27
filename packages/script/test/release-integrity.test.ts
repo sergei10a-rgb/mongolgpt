@@ -38,6 +38,11 @@ describe("release integrity contract", () => {
     expect(lines.every((line) => /^[0-9a-f]{64}  [^\\/]+$/.test(line))).toBe(true)
   })
 
+  test("includes the Windows ARM64 CLI archive in the public release contract", () => {
+    expect(CLI_RELEASE_ASSETS).toContain("mongolgpt-windows-arm64.zip")
+    expect(RELEASE_ARTIFACTS).toContain("mongolgpt-windows-arm64.zip")
+  })
+
   test("fails closed when a CLI or Desktop artifact is absent", () => {
     expect(() => createSha256Sums(files.filter((file) => file.name !== CLI_RELEASE_ASSETS[0]))).toThrow(
       CLI_RELEASE_ASSETS[0],

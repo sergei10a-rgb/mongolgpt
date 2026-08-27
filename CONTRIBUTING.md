@@ -69,7 +69,7 @@ bun dev .
 ./packages/mongolgpt/dist/mongolgpt-<platform>/bin/mongolgpt
 ```
 
-`<platform>` хэсгийг өөрийн platform-аар солино. Жишээ нь `darwin-arm64`, `linux-x64`.
+`<platform>` хэсгийг өөрийн platform-аар солино. Жишээ нь `darwin-arm64`, `linux-x64`, `windows-arm64`.
 
 Гол package-ууд:
 
