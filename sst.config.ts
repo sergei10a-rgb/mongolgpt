@@ -1,7 +1,10 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
+import { requireDeploymentStage } from "./packages/script/src/deployment-stage"
+
 export default $config({
   app(input) {
+    const stage = requireDeploymentStage(input?.stage)
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const admin = flag("MONGOLGPT_ENABLE_ADMIN")
     const d1Backups = flag("MONGOLGPT_ENABLE_D1_BACKUPS")
@@ -23,19 +26,19 @@ export default $config({
     if (monitoring && !hostedServices) {
       throw new Error("MONGOLGPT_ENABLE_MONITORING нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true үед л ажиллана.")
     }
-    if (input?.stage === "production" && hostedServices && !admin) {
+    if (stage === "production" && hostedServices && !admin) {
       throw new Error("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_ADMIN=true заавал байна.")
     }
-    if (input?.stage === "production" && hostedServices && !d1Backups) {
+    if (stage === "production" && hostedServices && !d1Backups) {
       throw new Error("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_D1_BACKUPS=true заавал байна.")
     }
-    if (input?.stage === "production" && hostedServices && !monitoring) {
+    if (stage === "production" && hostedServices && !monitoring) {
       throw new Error("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_MONITORING=true заавал байна.")
     }
     return {
       name: "mongolgpt",
-      removal: input?.stage === "production" ? "retain" : "remove",
-      protect: ["production"].includes(input?.stage),
+      removal: stage === "production" ? "retain" : "remove",
+      protect: stage === "production",
       home: "cloudflare",
       providers: hostedServices
         ? {

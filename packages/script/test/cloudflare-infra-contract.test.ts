@@ -76,6 +76,13 @@ function parseWorkflowJob(input: unknown, name: string): WorkflowJob {
 }
 
 describe("Cloudflare hosted infrastructure contract", () => {
+  test("rejects non-canonical SST stages before deriving domains or protection", async () => {
+    const configSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
+    expect(configSource).toContain('import { requireDeploymentStage } from "./packages/script/src/deployment-stage"')
+    expect(configSource).toContain("const stage = requireDeploymentStage(input?.stage)")
+    expect(configSource).not.toContain('input?.stage === "production"')
+  })
+
   test("never publishes the public web app without hosted services", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
     const workflow = parseWorkflow(source)

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { DeploymentPreflightError, deploymentEndpoints, preflightDeployment } from "../src/deployment"
+import { inspectDeploymentStage, requireDeploymentStage } from "../src/deployment-stage"
 
 const cloudflare = {
   MONGOLGPT_DOMAIN: "mgpt.mn",
@@ -126,6 +127,13 @@ const payment = {
 }
 
 describe("Cloudflare deployment preflight", () => {
+  test("rejects stage names that SST would interpret differently", () => {
+    expect(inspectDeploymentStage("dev")).toEqual({ stage: "dev", issue: undefined })
+    expect(inspectDeploymentStage("DEV").stage).toBe("dev")
+    expect(() => requireDeploymentStage("DEV")).toThrow("жижиг латин үсэг")
+    expectIssues(() => preflightDeployment({ stage: "DEV", env: cloudflare }), ["Deployment stage"])
+  })
+
   test("accepts a static dev deployment and derives its endpoints", () => {
     const result = preflightDeployment({ stage: "dev", env: cloudflare })
 

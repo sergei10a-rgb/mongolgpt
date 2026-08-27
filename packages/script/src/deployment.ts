@@ -4,6 +4,7 @@ import {
 } from "@mongolgpt/console-core/model-config.js"
 import { PaymentPlanCatalogSchema } from "@mongolgpt/console-core/payment-checkout.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
+import { inspectDeploymentStage } from "./deployment-stage"
 
 const booleanVariables = [
   "MONGOLGPT_ENABLE_HOSTED_SERVICES",
@@ -76,12 +77,11 @@ export function preflightDeployment(input: {
 }): DeploymentPreflightResult {
   const issues: string[] = []
   const warnings: string[] = []
-  const stage = input.stage.trim().toLowerCase()
+  const inspectedStage = inspectDeploymentStage(input.stage)
+  const stage = inspectedStage.stage
   const env = input.env
 
-  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(stage)) {
-    issues.push("Deployment stage нь жижиг латин үсэг, тоо, дундах зураасаас бүрдэх ёстой.")
-  }
+  if (inspectedStage.issue) issues.push(inspectedStage.issue)
 
   const domain = validateDomain(env.MONGOLGPT_DOMAIN, issues)
   for (const name of booleanVariables) validateBoolean(name, env[name], issues)
