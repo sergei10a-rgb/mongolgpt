@@ -8,14 +8,16 @@ import { DeploymentPreflightError, deploymentEndpoints, preflightDeployment } fr
 try {
   const authBootstrap = process.argv.includes("--auth-bootstrap")
   const docsOnly = process.argv.includes("--docs-only")
-  if (authBootstrap && docsOnly) {
-    throw new DeploymentPreflightError(["--auth-bootstrap болон --docs-only scope-ийг хамтад нь ашиглахгүй."])
+  const appOnly = process.argv.includes("--app-only")
+  if ([authBootstrap, docsOnly, appOnly].filter(Boolean).length > 1) {
+    throw new DeploymentPreflightError(["--auth-bootstrap, --docs-only, --app-only scope-үүдийг хамтад нь ашиглахгүй."])
   }
-  const scope = authBootstrap ? "auth-bootstrap" : docsOnly ? "docs-only" : "full"
+  const scope = authBootstrap ? "auth-bootstrap" : docsOnly ? "docs-only" : appOnly ? "app-only" : "full"
   const result = preflightDeployment({
     stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
     env: process.env,
     requireHostedServices: scope !== "docs-only",
+    requireDeploymentSecrets: scope === "app-only" ? false : undefined,
     scope,
   })
   const cloudflare = await preflightCloudflareDeploymentAccess({

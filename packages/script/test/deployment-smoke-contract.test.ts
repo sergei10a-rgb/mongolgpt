@@ -11,6 +11,7 @@ import {
   inspectNoStoreResponse,
   inspectRuntimeTokenPreflight,
   inspectStaticAppBackendRejection,
+  runAppSmoke,
   runAuthBootstrapSmoke,
   runDocsSmoke,
 } from "../../../script/deployment-smoke"
@@ -120,6 +121,80 @@ describe("static app backend boundary", () => {
     expect((await caught(inspectStaticAppBackendRejection(wrongCode, "/v1/account/overview")))?.message).toContain(
       "wrong error contract",
     )
+  })
+})
+
+describe("dev app-only smoke", () => {
+  test("checks hosted provenance, assets, SPA navigation, and backend rejection without calling the runtime", async () => {
+    const releaseSha = "a".repeat(40)
+    const configured = {
+      MONGOLGPT_DOMAIN: "mgpt.mn",
+      MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+      MONGOLGPT_DEPLOY_APP_ONLY: "true",
+      MONGOLGPT_ENABLE_ADMIN: "false",
+      MONGOLGPT_ENABLE_ANALYTICS: "false",
+      MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+      MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false",
+      MONGOLGPT_ENABLE_LEGACY_STRIPE: "false",
+      MONGOLGPT_ENABLE_MONITORING: "false",
+      MONGOLGPT_ENABLE_TURNSTILE: "false",
+      MONGOLGPT_ENABLE_SHARE_SERVICE: "false",
+      MONGOLGPT_ENABLE_SYNC_SERVICE: "false",
+      MONGOLGPT_ENABLE_REAL_PAYMENTS: "false",
+      MONGOLGPT_PAYMENT_ENVIRONMENT: "disabled",
+      MONGOLGPT_RELEASE_SHA: releaseSha,
+      MONGOLGPT_SMOKE_RETRIES: "1",
+      MONGOLGPT_SMOKE_DELAY_MS: "1",
+    } satisfies Record<string, string>
+    const previous = new Map(Object.keys(configured).map((key) => [key, process.env[key]]))
+    const originalFetch = globalThis.fetch
+    const requests: string[] = []
+    const document = html(`
+      <title>MongolGPT</title>
+      <meta name="mongolgpt-channel" content="dev">
+      <meta name="mongolgpt-runtime-mode" content="hosted">
+      <meta name="mongolgpt-server-url" content="https://runtime.dev.mgpt.mn">
+      <meta name="mongolgpt-release-sha" content="${releaseSha}">
+    `)
+
+    Object.assign(process.env, configured)
+    globalThis.fetch = mockedFetch(async (input: RequestInfo | URL) => {
+      const url = new URL(input instanceof Request ? input.url : input)
+      requests.push(url.toString())
+      if (url.pathname === "/" || url.pathname === "/new-session") {
+        return new Response(document, { headers: { "content-type": "text/html; charset=utf-8" } })
+      }
+      if (url.pathname === "/assets/index-abc123.js") {
+        return new Response("export {}", { headers: { "content-type": "text/javascript; charset=utf-8" } })
+      }
+      if (["/api/health", "/global/health", "/v1/account/overview"].includes(url.pathname)) {
+        return Response.json(
+          { code: "STATIC_APP_API_ROUTE", message: "MongolGPT веб аппын хаяг дээр API ажиллахгүй." },
+          { status: 404, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" } },
+        )
+      }
+      throw new Error(`Unexpected app-only smoke request: ${url}`)
+    })
+
+    try {
+      await runAppSmoke("dev")
+    } finally {
+      globalThis.fetch = originalFetch
+      for (const [key, value] of previous) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+
+    expect(requests).toEqual([
+      "https://app.dev.mgpt.mn/",
+      "https://app.dev.mgpt.mn/assets/index-abc123.js",
+      "https://app.dev.mgpt.mn/new-session",
+      "https://app.dev.mgpt.mn/assets/index-abc123.js",
+      "https://app.dev.mgpt.mn/api/health",
+      "https://app.dev.mgpt.mn/global/health",
+      "https://app.dev.mgpt.mn/v1/account/overview",
+    ])
   })
 })
 

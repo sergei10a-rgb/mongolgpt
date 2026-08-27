@@ -6,6 +6,7 @@ export default $config({
     const stage = requireDeploymentStage(input?.stage)
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
+    const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
     const admin = flag("MONGOLGPT_ENABLE_ADMIN")
     const d1Backups = flag("MONGOLGPT_ENABLE_D1_BACKUPS")
     const monitoring = flag("MONGOLGPT_ENABLE_MONITORING")
@@ -16,6 +17,15 @@ export default $config({
     }
     if (docsOnly && stage !== "dev") {
       throw new Error("MONGOLGPT_DEPLOY_DOCS_ONLY-г зөвхөн dev орчинд ашиглана.")
+    }
+    if (appOnly && stage !== "dev") {
+      throw new Error("MONGOLGPT_DEPLOY_APP_ONLY-г зөвхөн dev орчинд ашиглана.")
+    }
+    if (docsOnly && appOnly) {
+      throw new Error("MONGOLGPT_DEPLOY_DOCS_ONLY болон MONGOLGPT_DEPLOY_APP_ONLY-г хамтад нь ашиглахгүй.")
+    }
+    if (appOnly && !hostedServices) {
+      throw new Error("MONGOLGPT_DEPLOY_APP_ONLY нь hosted services асаалттай байхыг шаардана.")
     }
     if (docsOnly && hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_DOCS_ONLY нь hosted services унтраалттай байхыг шаардана.")
@@ -46,7 +56,7 @@ export default $config({
       removal: stage === "production" ? "retain" : "remove",
       protect: stage === "production",
       home: "cloudflare",
-      providers: hostedServices
+      providers: hostedServices && !appOnly
         ? {
             random: "4.19.2",
             ...(admin ? { command: "1.0.1" } : {}),
@@ -58,6 +68,7 @@ export default $config({
     const stage = await import("./infra/stage.js")
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
+    const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
     const adminEnabled = stage.enableAdmin
     if (docsOnly) {
       const docs = await import("./infra/docs.js")
@@ -65,6 +76,13 @@ export default $config({
         DocsUrl: docs.docsUrl,
         DocsWorkerUrl: docs.website.url,
         HostedServices: false,
+      }
+    }
+    if (appOnly) {
+      const site = await import("./infra/site.js")
+      return {
+        WebAppUrl: site.webApp.url,
+        HostedServices: true,
       }
     }
     const site = await import("./infra/site.js")

@@ -21,6 +21,7 @@ const booleanVariables = [
   "MONGOLGPT_ENABLE_ADMIN",
   "MONGOLGPT_ENABLE_REAL_PAYMENTS",
   "MONGOLGPT_DEPLOY_DOCS_ONLY",
+  "MONGOLGPT_DEPLOY_APP_ONLY",
 ] as const
 
 export const modelSecretNames = Array.from({ length: 30 }, (_, index) => `MONGOLGPT_GATEWAY_MODELS${index + 1}`)
@@ -77,7 +78,7 @@ export function preflightDeployment(input: {
   requireCloudflareCredentials?: boolean
   requireDeploymentSecrets?: boolean
   requireHostedServices?: boolean
-  scope?: "full" | "auth-bootstrap" | "docs-only"
+  scope?: "full" | "auth-bootstrap" | "docs-only" | "app-only"
 }): DeploymentPreflightResult {
   const issues: string[] = []
   const warnings: string[] = []
@@ -92,6 +93,9 @@ export function preflightDeployment(input: {
   if (scope === "docs-only" && stage !== "dev") {
     issues.push("Docs-only scope-ийг зөвхөн dev орчинд ашиглана.")
   }
+  if (scope === "app-only" && stage !== "dev") {
+    issues.push("App-only scope-ийг зөвхөн dev орчинд ашиглана.")
+  }
 
   if (inspectedStage.issue) issues.push(inspectedStage.issue)
 
@@ -105,6 +109,10 @@ export function preflightDeployment(input: {
 
   const hostedServices = enabled(env.MONGOLGPT_ENABLE_HOSTED_SERVICES)
   const deployDocsOnly = enabled(env.MONGOLGPT_DEPLOY_DOCS_ONLY)
+  const deployAppOnly = enabled(env.MONGOLGPT_DEPLOY_APP_ONLY)
+  if (deployDocsOnly && deployAppOnly) {
+    issues.push("MONGOLGPT_DEPLOY_DOCS_ONLY болон MONGOLGPT_DEPLOY_APP_ONLY-г хамтад нь ашиглахгүй.")
+  }
   if (scope === "docs-only" && !deployDocsOnly) {
     issues.push("Docs-only scope нь MONGOLGPT_DEPLOY_DOCS_ONLY=true байхыг шаардана.")
   }
@@ -113,6 +121,15 @@ export function preflightDeployment(input: {
   }
   if (scope === "docs-only" && hostedServices) {
     issues.push("Docs-only scope нь MONGOLGPT_ENABLE_HOSTED_SERVICES=false байхыг шаардана.")
+  }
+  if (scope === "app-only" && !deployAppOnly) {
+    issues.push("App-only scope нь MONGOLGPT_DEPLOY_APP_ONLY=true байхыг шаардана.")
+  }
+  if (scope !== "app-only" && deployAppOnly) {
+    issues.push("MONGOLGPT_DEPLOY_APP_ONLY-г зөвхөн app-only scope-той ашиглана.")
+  }
+  if (scope === "app-only" && !hostedServices) {
+    issues.push("App-only scope нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true байхыг шаардана.")
   }
   const adminEnabled = enabled(env.MONGOLGPT_ENABLE_ADMIN)
   const backupsEnabled = enabled(env.MONGOLGPT_ENABLE_D1_BACKUPS)
@@ -129,6 +146,15 @@ export function preflightDeployment(input: {
     "MONGOLGPT_ENABLE_SHARE_SERVICE",
     "MONGOLGPT_ENABLE_SYNC_SERVICE",
   ] as const
+  if (scope === "app-only") {
+    for (const name of [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_D1_BACKUPS"] as const) {
+      if (enabled(env[name])) issues.push(`${name} нь app-only deploy үед false байна.`)
+    }
+    if (paymentEnvironment !== "disabled") {
+      issues.push("MONGOLGPT_PAYMENT_ENVIRONMENT нь app-only deploy үед disabled байна.")
+    }
+    warnings.push("Зөвхөн hosted web app Worker deploy хийнэ; backend resource өөрчлөхгүй.")
+  }
   if (!hostedServices) {
     for (const name of optionalServices) {
       if (enabled(env[name])) issues.push(`${name} нь hosted service унтраалттай үед true байж болохгүй.`)
@@ -191,7 +217,7 @@ export function preflightDeployment(input: {
     issues.push("Legacy Stripe billing хаалттай. MongolGPT-ийн төлбөр Bonum + QPay adapter-аар хэрэгжинэ.")
   }
 
-  if (hostedServices && stage !== "production") {
+  if (hostedServices && stage !== "production" && scope !== "app-only") {
     requireValue("MONGOLGPT_AUTH_EMAIL_DOMAINS", env.MONGOLGPT_AUTH_EMAIL_DOMAINS, issues)
   }
   if (hostedServices && requireDeploymentSecrets) {

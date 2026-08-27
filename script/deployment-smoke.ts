@@ -38,6 +38,8 @@ if (import.meta.main) {
     await runAuthBootstrapSmoke(process.argv[3])
   } else if (process.argv[2] === "--docs-only") {
     await runDocsSmoke(process.argv[3])
+  } else if (process.argv[2] === "--app-only") {
+    await runAppSmoke(process.argv[3])
   } else {
     await runSmoke()
   }
@@ -60,6 +62,26 @@ export async function runDocsSmoke(stage = process.env.SST_STAGE ?? "dev") {
   inspectDeploymentEndpointConfiguration(endpoints, result)
   await check("docs", endpoints.docs, undefined, result, endpoints.app, "")
   console.log("Dev docs-only smoke check passed.")
+}
+
+export async function runAppSmoke(stage = process.env.SST_STAGE ?? "dev") {
+  if (stage !== "dev") throw new Error("App-only smoke нь зөвхөн dev орчинд ажиллана.")
+  if (process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES !== "true") {
+    throw new Error("App-only smoke нь hosted service тохиргоо шаардана.")
+  }
+
+  const result = preflightDeployment({
+    stage,
+    env: process.env,
+    requireCloudflareCredentials: false,
+    requireDeploymentSecrets: false,
+    requireHostedServices: true,
+    scope: "app-only",
+  })
+  const endpoints = deploymentEndpoints(result)
+  inspectDeploymentEndpointConfiguration(endpoints, result)
+  await check("app", endpoints.app, undefined, result, endpoints.app, "", { staticAppOnly: true })
+  console.log("Dev app-only smoke check passed.")
 }
 
 export async function runAuthBootstrapSmoke(stage = process.env.SST_STAGE ?? "dev") {
@@ -131,6 +153,7 @@ async function check(
   result: DeploymentPreflightResult,
   appUrl: string,
   runtimeVersion: string,
+  options: { staticAppOnly?: boolean } = {},
 ) {
   const retries = positiveInteger(process.env.MONGOLGPT_SMOKE_RETRIES, 8)
   const delay = positiveInteger(process.env.MONGOLGPT_SMOKE_DELAY_MS, 10_000)
@@ -191,9 +214,11 @@ async function check(
           const runtimeHealthUrl = deploymentEndpoints(result).runtimeHealth
           if (!runtimeHealthUrl) throw new Error("hosted app runtime endpoint is missing")
           inspectHostedAppRuntime(contract, { channel: appChannel(result), runtimeHealthUrl })
-          await checkAgentRuntime(contract.serverUrl, result.stage, runtimeVersion)
-          await checkHostedSessionBoundary(contract.serverUrl, url)
-          await checkAnonymousRuntimeApiBoundary(contract.serverUrl, url)
+          if (!options.staticAppOnly) {
+            await checkAgentRuntime(contract.serverUrl, result.stage, runtimeVersion)
+            await checkHostedSessionBoundary(contract.serverUrl, url)
+            await checkAnonymousRuntimeApiBoundary(contract.serverUrl, url)
+          }
         }
         await checkDirectAppRoute(url, result)
         await checkStaticAppBackendBoundary(url)

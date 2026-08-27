@@ -699,6 +699,76 @@ describe("Cloudflare deployment preflight", () => {
     )
   })
 
+  test("allows app-only preflight only for the hosted dev Worker", () => {
+    const result = preflightDeployment({
+      stage: "dev",
+      env: {
+        ...cloudflare,
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_DEPLOY_APP_ONLY: "true",
+      },
+      requireDeploymentSecrets: false,
+      requireHostedServices: true,
+      scope: "app-only",
+    })
+    expect(result.hostedServices).toBe(true)
+    expect(deploymentEndpoints(result).app).toBe("https://app.dev.mgpt.mn")
+    expect(result.warnings).toContain("Зөвхөн hosted web app Worker deploy хийнэ; backend resource өөрчлөхгүй.")
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_DEPLOY_APP_ONLY: "true",
+          },
+          requireDeploymentSecrets: false,
+          scope: "app-only",
+        }),
+      ["App-only scope-ийг зөвхөн dev"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: { ...cloudflare, MONGOLGPT_DEPLOY_APP_ONLY: "true" },
+          requireDeploymentSecrets: false,
+          scope: "app-only",
+        }),
+      ["MONGOLGPT_ENABLE_HOSTED_SERVICES=true"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_DEPLOY_APP_ONLY: "true",
+            MONGOLGPT_ENABLE_MONITORING: "true",
+          },
+          requireDeploymentSecrets: false,
+          scope: "app-only",
+        }),
+      ["MONGOLGPT_ENABLE_MONITORING нь app-only deploy үед false"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_DEPLOY_APP_ONLY: "true",
+          },
+          requireDeploymentSecrets: false,
+        }),
+      ["зөвхөн app-only scope"],
+    )
+  })
+
   test("rejects retired gateway secrets without canonical replacements", () => {
     const {
       SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: sessionSecret,

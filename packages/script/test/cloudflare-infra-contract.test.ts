@@ -467,6 +467,41 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(siteSource).toContain("transform: {")
   })
 
+  test("deploys only the dev hosted app Worker without backend credentials", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy-dev-app.yml", import.meta.url)).text()
+    const sstSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
+    const parsed: unknown = Bun.YAML.parse(source)
+    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs) || !record(parsed.jobs.deploy)) {
+      throw new Error("Dev app-only workflow is invalid")
+    }
+    const job = parseWorkflowJob(parsed.jobs.deploy, "deploy")
+    const confirmation = job.steps.find((step) => step.name === "Validate exact dev app confirmation")
+    const deploy = job.steps.find((step) => step.name === "Deploy only dev app to Cloudflare")
+    const smoke = job.steps.find((step) => step.name === "Verify live dev app boundary")
+
+    expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
+    expect(parsed.jobs.deploy.environment).toBe("dev")
+    expect(job.condition).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
+    expect(confirmation?.env).toEqual({ DEPLOY_CONFIRMATION: "${{ inputs.confirmation }}" })
+    expect(confirmation?.run).toContain('if [ "$DEPLOY_CONFIRMATION" != "DEPLOY DEV APP app.dev.mgpt.mn" ]; then')
+    expect(source).not.toMatch(/^\s+push:/m)
+    expect(source).not.toContain("production")
+    expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"')
+    expect(source).toContain("VITE_MONGOLGPT_SERVER_URL: https://runtime.dev.mgpt.mn")
+    expect(record(parsed.env) ? parsed.env.MONGOLGPT_DEPLOY_APP_ONLY : undefined).toBeUndefined()
+    expect(deploy?.env?.MONGOLGPT_DEPLOY_APP_ONLY).toBe("true")
+    expect(smoke?.env?.MONGOLGPT_DEPLOY_APP_ONLY).toBe("true")
+    expect(deploy?.run).toContain("bun run deploy:preflight -- dev --app-only")
+    expect(deploy?.run).toContain("bun sst deploy --stage=dev --target WebApp --print-logs")
+    expect(smoke?.run).toBe("bun script/deployment-smoke.ts --app-only dev")
+    expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|RUNTIME_SECRET|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/)
+    expect(source).not.toContain("--target Database")
+    expect(source).not.toContain("--target Website")
+    expect(sstSource).toContain('const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")')
+    expect(sstSource).toContain("if (appOnly) {")
+    expect(sstSource).toContain('WebAppUrl: site.webApp.url')
+  })
+
   test("deploys the authenticated Sandbox runtime before publishing the hosted app", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
     const workflow = parseWorkflow(source)
