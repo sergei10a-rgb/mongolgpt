@@ -30,6 +30,11 @@ requested_version=${VERSION:-}
 no_modify_path=false
 binary_path=""
 install_name="$APP"
+release_tag=""
+
+valid_release_version() {
+    [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]
+}
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -188,20 +193,25 @@ else
     fi
 
     if [ -z "$requested_version" ]; then
-        url="https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/$filename"
         latest_release=$(curl -fsSL https://api.github.com/repos/sergei10a-rgb/mongolgpt/releases/latest || true)
         tag_name=$(echo "$latest_release" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+        release_tag="$tag_name"
         specific_version="${tag_name#mongolgpt-}"
         specific_version="${specific_version#v}"
 
-        if [ -z "$specific_version" ]; then
+        if [ "$release_tag" != "mongolgpt-v${specific_version}" ] || ! valid_release_version "$specific_version"; then
             echo -e "${RED}Хувилбарын мэдээллийг татаж чадсангүй${NC}"
             exit 1
         fi
+        url="https://github.com/sergei10a-rgb/mongolgpt/releases/download/${release_tag}/$filename"
     else
         # Strip leading product/prefix markers if present
         requested_version="${requested_version#mongolgpt-}"
         requested_version="${requested_version#v}"
+        if ! valid_release_version "$requested_version"; then
+            echo -e "${RED}Алдаа: Хувилбарын формат буруу байна: ${requested_version}${NC}"
+            exit 1
+        fi
         specific_version=$requested_version
 
         # Verify the release exists before downloading
@@ -305,7 +315,7 @@ download_with_progress() {
     trap "trap - RETURN; rm -f \"$tracefile\"; printf '\033[?25h' >&4; exec 4>&-" RETURN
 
     (
-        curl --trace-ascii "$tracefile" -s -L -o "$output" "$url"
+        curl --trace-ascii "$tracefile" -s -f -L -o "$output" "$url"
     ) &
     local curl_pid=$!
 
@@ -342,20 +352,144 @@ download_with_progress() {
     return $ret
 }
 
-download_and_install() {
-    print_message info "\n${MUTED}Суулгаж байна: ${NC}mongolgpt ${MUTED}хувилбар: ${NC}$specific_version"
-    local tmp_dir="${TMPDIR:-/tmp}/mongolgpt_install_$$"
-    mkdir -p "$tmp_dir"
+checksum_for_file() {
+    local archive_path="$1"
 
-    if [[ "$os" == "windows" ]] || ! [ -t 2 ] || ! download_with_progress "$url" "$tmp_dir/$filename"; then
-        # Fallback to standard curl on Windows, non-TTY environments, or if custom progress fails
-        curl -# -L -o "$tmp_dir/$filename" "$url"
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$archive_path" | awk '{print tolower($1)}'
+        return 0
     fi
 
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$archive_path" | awk '{print tolower($1)}'
+        return 0
+    fi
+
+    if command -v openssl >/dev/null 2>&1; then
+        openssl dgst -sha256 "$archive_path" | sed 's/^.*= //' | tr '[:upper:]' '[:lower:]'
+        return 0
+    fi
+
+    if command -v certutil.exe >/dev/null 2>&1 || command -v certutil >/dev/null 2>&1; then
+        local certutil_bin="certutil.exe"
+        if ! command -v certutil.exe >/dev/null 2>&1; then
+            certutil_bin="certutil"
+        fi
+
+        local cert_path="$archive_path"
+        if command -v cygpath >/dev/null 2>&1; then
+            cert_path=$(cygpath -w "$archive_path")
+        fi
+
+        "$certutil_bin" -hashfile "$cert_path" SHA256 \
+            | tr -d ' \r' \
+            | grep -E '^[0-9a-fA-F]{64}$' \
+            | sed -n '1p' \
+            | tr '[:upper:]' '[:lower:]'
+        return 0
+    fi
+
+    return 1
+}
+
+verify_download_integrity() {
+    local archive_path="$1"
+    local checksum_path="$2"
+
+    if [ ! -f "$checksum_path" ]; then
+        echo -e "${RED}Алдаа: Release checksum файл олдсонгүй.${NC}"
+        exit 1
+    fi
+
+    local expected_hashes
+    expected_hashes=$(
+        awk -v file="$filename" \
+            'NF == 2 && length($1) == 64 && $1 ~ /^[0-9a-fA-F]+$/ && $2 == file { print tolower($1) }' \
+            "$checksum_path"
+    )
+    if [ -z "$expected_hashes" ]; then
+        echo -e "${RED}Алдаа: ${filename} архивын checksum бичлэг release дотор алга байна.${NC}"
+        exit 1
+    fi
+
+    local expected_hash_count
+    expected_hash_count=$(printf "%s\n" "$expected_hashes" | sed '/^$/d' | wc -l | tr -d '[:space:]')
+    if [ "$expected_hash_count" != "1" ]; then
+        echo -e "${RED}Алдаа: ${filename} архивын checksum бичлэг тодорхой бус байна.${NC}"
+        exit 1
+    fi
+
+    local expected_hash
+    expected_hash=$(printf "%s\n" "$expected_hashes" | sed -n '1p')
+
+    local actual_hash=""
+    if ! actual_hash=$(checksum_for_file "$archive_path"); then
+        echo -e "${RED}Алдаа: SHA-256 баталгаажуулах хэрэгсэл олдсонгүй. sha256sum, shasum, openssl эсвэл certutil шаардлагатай.${NC}"
+        exit 1
+    fi
+
+    actual_hash=$(printf "%s" "$actual_hash" | tr -d '\r\n[:space:]' | tr '[:upper:]' '[:lower:]')
+    if ! printf "%s" "$actual_hash" | grep -Eq '^[0-9a-f]{64}$'; then
+        echo -e "${RED}Алдаа: SHA-256 checksum баталгаажуулж чадсангүй.${NC}"
+        exit 1
+    fi
+
+    if [ "$actual_hash" != "$expected_hash" ]; then
+        echo -e "${RED}Алдаа: Татсан архивын checksum release дээрх SHA256SUMS-тэй таарахгүй байна.${NC}"
+        exit 1
+    fi
+}
+
+legacy_release_checksum() {
+    [ "$release_tag" = "mongolgpt-v0.1.1" ] || return 1
+
+    case "$filename" in
+        mongolgpt-darwin-arm64.zip) echo "0a64287398cedbfb3b6213a5cd5ca523ed0ca2457277545c67f89c45b6426397" ;;
+        mongolgpt-darwin-x64-baseline.zip) echo "83e1ba9182f4a4b19326e9e8bd93cc740d223e555c31ba60ed7f4526dbc87bd9" ;;
+        mongolgpt-darwin-x64.zip) echo "4f6f80662787073ff2eb822aebde181bdfd9673aa72ff72035daf2a4f2170580" ;;
+        mongolgpt-linux-arm64-musl.tar.gz) echo "b0d579de90bc9987b5c295e7e2c7eb9fa40a7ced1aa3d9e4f446d0f2a9960cec" ;;
+        mongolgpt-linux-arm64.tar.gz) echo "8d450551aa18afbf01100176974c3db9b5fa6e29dba3885070127f4ecb721e03" ;;
+        mongolgpt-linux-x64-baseline-musl.tar.gz) echo "c2d97c9908b9b4948e2d8ba52f84fca25bba438e24b5a037e386a8c3d0500b0d" ;;
+        mongolgpt-linux-x64-baseline.tar.gz) echo "3baa7379df50af70f06a5f51e9a8e315b1b69083ae8e67b19adb41bfe3d4a201" ;;
+        mongolgpt-linux-x64-musl.tar.gz) echo "bfd64e9372cdba3f8b5f4a51f5c1c19386771453272268f8ed5334e8166d40f1" ;;
+        mongolgpt-linux-x64.tar.gz) echo "a6906f984dd0dedba431c886e7d88412c8d925a9c52474a3a7bfe5e7df3d111f" ;;
+        mongolgpt-windows-arm64.zip) echo "43da990f7ed71e6fbda5c910125126207e54536a29435c138f56dd55a6a62b75" ;;
+        mongolgpt-windows-x64-baseline.zip) echo "2675f67a68085de5d97f54c39b66a9fd7ceb29e4106ffeb806fd3276b84fa042" ;;
+        mongolgpt-windows-x64.zip) echo "3cfe43da00faeab5d7e2625405f07bb7b1cf946b30a5e6bbe02af32118c3c429" ;;
+        *) return 1 ;;
+    esac
+}
+
+download_and_install() {
+    print_message info "\n${MUTED}Суулгаж байна: ${NC}mongolgpt ${MUTED}хувилбар: ${NC}$specific_version"
+    local tmp_dir
+    tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/mongolgpt_install.XXXXXXXXXX")
+    local archive_path="$tmp_dir/$filename"
+    local checksum_path="$tmp_dir/SHA256SUMS"
+    local checksum_url="https://github.com/sergei10a-rgb/mongolgpt/releases/download/${release_tag}/SHA256SUMS"
+    mkdir -p "$tmp_dir"
+
+    if [[ "$os" == "windows" ]] || ! [ -t 2 ] || ! download_with_progress "$url" "$archive_path"; then
+        # Fallback to standard curl on Windows, non-TTY environments, or if custom progress fails
+        curl -# -f -L -o "$archive_path" "$url"
+    fi
+
+    if ! curl -# -f -L -o "$checksum_path" "$checksum_url"; then
+        local legacy_checksum=""
+        legacy_checksum=$(legacy_release_checksum || true)
+        if [ -z "$legacy_checksum" ]; then
+            echo -e "${RED}Алдаа: Release checksum файлыг татаж чадсангүй.${NC}"
+            exit 1
+        fi
+        # v0.1.1 predates the checksum asset; pin its GitHub-published archive digests for a safe migration.
+        printf "%s  %s\n" "$legacy_checksum" "$filename" > "$checksum_path"
+    fi
+    verify_download_integrity "$archive_path" "$checksum_path"
+
     if [ "$os" = "linux" ]; then
-        tar -xzf "$tmp_dir/$filename" -C "$tmp_dir"
+        tar -xzf "$archive_path" -C "$tmp_dir"
     else
-        unzip -q "$tmp_dir/$filename" -d "$tmp_dir"
+        unzip -q "$archive_path" -d "$tmp_dir"
     fi
 
     mv "$tmp_dir/$install_name" "$INSTALL_DIR/$install_name"
