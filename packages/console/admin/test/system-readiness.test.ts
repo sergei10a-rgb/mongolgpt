@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { collectSystemReadiness, type SystemReadinessDependencies } from "../src/lib/system-readiness"
+import {
+  collectD1BackupEvidence,
+  collectSystemReadiness,
+  type D1BackupBucket,
+  type SystemReadinessDependencies,
+} from "../src/lib/system-readiness"
 
 const json = (value: unknown, status = 200) =>
   Response.json(value, {
@@ -8,6 +13,7 @@ const json = (value: unknown, status = 200) =>
   })
 
 const now = new Date("2026-08-19T00:00:00.000Z")
+const databaseID = "01234567-89ab-cdef-0123-456789abcdef"
 
 const queueHeartbeat = () =>
   JSON.stringify({
@@ -35,18 +41,67 @@ const monitorEvidence = (overrides: Record<string, unknown> = {}) =>
 const backup = (overrides: Record<string, unknown> = {}) => ({
   key: "d1/dev/2026/08/18/2026-08-18T23-55-00.000Z-database.sql",
   size: 1_024,
+  etag: "sql-etag-1",
   uploaded: new Date("2026-08-18T23:56:00.000Z"),
+  httpMetadata: { contentType: "application/sql" },
   customMetadata: {
     createdAt: "2026-08-18T23:55:00.000Z",
     source: "cloudflare-d1-export",
     stage: "dev",
+    databaseId: databaseID,
+    manifestVersion: "1",
   },
   ...overrides,
 })
 
+const backupEvidence = (
+  artifactOverrides: Record<string, unknown> = {},
+  manifestOverrides: Record<string, unknown> = {},
+) => {
+  const artifact = backup(artifactOverrides)
+  const manifest = {
+    version: 1,
+    kind: "mongolgpt-d1-backup",
+    source: "cloudflare-d1-export",
+    stage: "dev",
+    databaseId: databaseID,
+    bookmark: "00000001-00000002-00000003-00000004",
+    createdAt: "2026-08-18T23:55:00.000Z",
+    artifact: {
+      key: artifact.key,
+      size: artifact.size,
+      etag: artifact.etag,
+      contentType: "application/sql",
+    },
+    ...manifestOverrides,
+  }
+  const manifestBody = JSON.stringify(manifest)
+  const manifestKey = `${artifact.key}.manifest.json`
+  return {
+    manifestKey,
+    manifestBody,
+    manifestObject: {
+      key: manifestKey,
+      size: new TextEncoder().encode(manifestBody).byteLength,
+      etag: "manifest-etag-1",
+      uploaded: new Date("2026-08-18T23:57:00.000Z"),
+      httpMetadata: { contentType: "application/json" },
+      customMetadata: {
+        createdAt: manifest.createdAt,
+        source: "mongolgpt-d1-backup-manifest",
+        stage: manifest.stage,
+        databaseId: manifest.databaseId,
+        version: String(manifest.version),
+      },
+    },
+    artifactObject: artifact,
+  }
+}
+
 function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): SystemReadinessDependencies {
   return {
     stage: "dev",
+    databaseID,
     runtimeURL: "https://runtime.dev.mgpt.mn",
     backupsEnabled: true,
     monitoringEnabled: true,
@@ -66,7 +121,7 @@ function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): Sys
     runtime: async () => json({ healthy: true, version: "0.1.1" }),
     queueHeartbeat: async () => queueHeartbeat(),
     monitorEvidence: async () => monitorEvidence(),
-    backups: async () => ({ objects: [backup()] }),
+    backups: async () => [backupEvidence()],
     now: () => now,
     ...overrides,
   }
@@ -112,7 +167,7 @@ describe("MongolGPT admin system readiness", () => {
             checkout: false,
             cancellation: false,
           }),
-        backups: async () => ({ objects: [] }),
+        backups: async () => [],
         queueHeartbeat: async () => null,
       }),
     )
@@ -185,9 +240,88 @@ describe("MongolGPT admin system readiness", () => {
     ]
 
     for (const object of objects) {
-      const report = await collectSystemReadiness(dependencies({ backups: async () => ({ objects: [object] }) }))
+      const report = await collectSystemReadiness(dependencies({ backups: async () => [backupEvidence(object)] }))
       expect(report.checks.find((check) => check.id === "backup")?.state).toBe("degraded")
     }
+  })
+
+  test("requires an exact manifest, R2 object, and active database binding", async () => {
+    const candidates = [
+      backupEvidence({}, { stage: "production" }),
+      backupEvidence({}, { databaseId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" }),
+      {
+        ...backupEvidence(),
+        artifactObject: { ...(backupEvidence().artifactObject as Record<string, unknown>), etag: "different-etag" },
+      },
+      backupEvidence({ httpMetadata: { contentType: "text/plain" } }),
+      { ...backupEvidence(), manifestBody: "not-json" },
+      { ...backupEvidence(), artifactObject: null },
+    ]
+
+    for (const candidate of candidates) {
+      const report = await collectSystemReadiness(dependencies({ backups: async () => [candidate] }))
+      expect(report.checks.find((check) => check.id === "backup")?.state).toBe("degraded")
+      expect(JSON.stringify(report)).not.toContain(databaseID)
+      expect(JSON.stringify(report)).not.toContain("00000001-00000002")
+    }
+  })
+
+  test("paginates manifest discovery and re-reads the committed SQL object with head", async () => {
+    const committed = backupEvidence()
+    const listCalls: Array<{ cursor?: string; include?: string[] }> = []
+    const headCalls: string[] = []
+    const bucket: D1BackupBucket = {
+      async list(options) {
+        listCalls.push({ cursor: options?.cursor, include: options?.include })
+        if (!options?.cursor) return { objects: [], truncated: true, cursor: "page-2" }
+        return { objects: [committed.manifestObject], truncated: false }
+      },
+      async get(key) {
+        if (key !== committed.manifestKey) return null
+        return {
+          ...(committed.manifestObject as {
+            key: string
+            etag: string
+            size: number
+            uploaded: Date
+            httpMetadata: Record<string, unknown>
+            customMetadata: Record<string, string>
+          }),
+          text: async () => committed.manifestBody,
+        }
+      },
+      async head(key) {
+        headCalls.push(key)
+        return committed.artifactObject
+      },
+    }
+
+    const evidence = await collectD1BackupEvidence(bucket, "dev", databaseID)
+    expect(evidence).toHaveLength(1)
+    expect(listCalls).toEqual([
+      { cursor: undefined, include: ["httpMetadata", "customMetadata"] },
+      { cursor: "page-2", include: ["httpMetadata", "customMetadata"] },
+    ])
+    expect(headCalls).toEqual([(committed.artifactObject as { key: string }).key])
+  })
+
+  test("fails closed on repeated pagination cursors and missing manifest bodies", async () => {
+    const committed = backupEvidence()
+    const repeatedCursor: D1BackupBucket = {
+      list: async () => ({ objects: [], truncated: true, cursor: "same" }),
+      get: async () => null,
+      head: async () => null,
+    }
+    const paginationError = await collectD1BackupEvidence(repeatedCursor, "dev", databaseID).catch((error) => error)
+    if (!(paginationError instanceof Error)) throw new Error("Expected pagination error")
+    expect(paginationError.message).toContain("cursor")
+
+    const missingBody: D1BackupBucket = {
+      list: async () => ({ objects: [committed.manifestObject], truncated: false }),
+      get: async () => null,
+      head: async () => committed.artifactObject,
+    }
+    expect(await collectD1BackupEvidence(missingBody, "dev", databaseID)).toEqual([])
   })
 
   test("fails stale, malformed, wrong-stage, or degraded monitoring evidence closed", async () => {

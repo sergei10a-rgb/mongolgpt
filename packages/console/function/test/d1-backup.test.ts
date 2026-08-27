@@ -51,8 +51,11 @@ describe("Cloudflare D1 backup", () => {
     const puts: Array<{ key: string; body: string; options: unknown }> = []
     const bucket: BackupBucket = {
       async put(key, value, options) {
-        puts.push({ key, body: await new Response(value).text(), options })
-        return { etag: "etag-1", size: 24 }
+        const body = await new Response(value).text()
+        puts.push({ key, body, options })
+        return key.endsWith(".manifest.json")
+          ? { etag: "manifest-etag-1", size: new TextEncoder().encode(body).byteLength }
+          : { etag: "etag-1", size: 24 }
       },
     }
     let call = 0
@@ -87,21 +90,49 @@ describe("Cloudflare D1 backup", () => {
       key: "d1/dev/2026/08/02/2026-08-02T00-20-00.000Z-mongolgpt-backup.sql",
       etag: "etag-1",
       size: 24,
+      manifestKey: "d1/dev/2026/08/02/2026-08-02T00-20-00.000Z-mongolgpt-backup.sql.manifest.json",
+      manifestEtag: "manifest-etag-1",
+      manifestSize: expect.any(Number),
     })
-    expect(puts).toEqual([
-      {
-        key: receipt.key,
-        body: "-- valid sqlite export\n",
-        options: {
-          httpMetadata: { contentType: "application/sql" },
-          customMetadata: {
-            createdAt: "2026-08-02T00:20:00.000Z",
-            source: "cloudflare-d1-export",
-            stage: "dev",
-          },
+    expect(puts).toHaveLength(2)
+    expect(puts[0]).toEqual({
+      key: receipt.key,
+      body: "-- valid sqlite export\n",
+      options: {
+        httpMetadata: { contentType: "application/sql" },
+        customMetadata: {
+          createdAt: "2026-08-02T00:20:00.000Z",
+          source: "cloudflare-d1-export",
+          stage: "dev",
+          databaseId: config.databaseId,
+          manifestVersion: "1",
         },
       },
-    ])
+    })
+    expect(puts[1]).toMatchObject({
+      key: receipt.manifestKey,
+      options: {
+        httpMetadata: { contentType: "application/json" },
+        customMetadata: {
+          createdAt: "2026-08-02T00:20:00.000Z",
+          source: "mongolgpt-d1-backup-manifest",
+          stage: "dev",
+          databaseId: config.databaseId,
+          version: "1",
+        },
+      },
+    })
+    expect(JSON.parse(puts[1].body)).toEqual({
+      version: 1,
+      kind: "mongolgpt-d1-backup",
+      source: "cloudflare-d1-export",
+      stage: "dev",
+      databaseId: config.databaseId,
+      bookmark: "bookmark-1",
+      createdAt: "2026-08-02T00:20:00.000Z",
+      artifact: { key: receipt.key, size: 24, etag: "etag-1", contentType: "application/sql" },
+    })
+    expect(receipt.manifestSize).toBe(new TextEncoder().encode(puts[1].body).byteLength)
   })
 
   test("retries incomplete exports and rejects API, SSRF, and size failures", async () => {
@@ -231,10 +262,17 @@ describe("Cloudflare D1 backup", () => {
       },
     })
     const exactBucket: BackupBucket = {
-      async put(_key, value) {
+      async put(key, value) {
         const reader = value.getReader()
-        while (!(await reader.read()).done) {}
-        return { etag: "etag-exact", size: maxBackupBytes }
+        let bytes = 0
+        while (true) {
+          const chunk = await reader.read()
+          if (chunk.done) break
+          bytes += chunk.value.byteLength
+        }
+        return key.endsWith(".manifest.json")
+          ? { etag: "manifest-etag-exact", size: bytes }
+          : { etag: "etag-exact", size: maxBackupBytes }
       },
     }
     const fetcher = async (input: RequestInfo | URL) => {
@@ -282,6 +320,43 @@ describe("Cloudflare D1 backup", () => {
       }),
       "баталгаажуулсангүй",
     )
+  })
+
+  test("fails closed when the manifest commit marker cannot be stored", async () => {
+    let puts = 0
+    const bucket: BackupBucket = {
+      async put(key, value) {
+        puts++
+        if (!key.endsWith(".manifest.json")) {
+          await new Response(value).arrayBuffer()
+          return { etag: "etag-sql", size: 3 }
+        }
+        return null
+      },
+    }
+    await expectRejection(
+      storeCompletedD1Export({
+        config,
+        bookmark: "bookmark-1",
+        scheduledTime: 1,
+        bucket,
+        fetcher: async (input) => {
+          const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
+          if (url.startsWith("https://backup.example")) {
+            return new Response("sql", { headers: { "content-length": "3" } })
+          }
+          return Response.json({
+            success: true,
+            result: {
+              status: "complete",
+              result: { filename: "backup.sql", signed_url: "https://backup.example/export" },
+            },
+          })
+        },
+      }),
+      "manifest-ийг баталгаажуулсангүй",
+    )
+    expect(puts).toBe(2)
   })
 
   test("normalizes object keys and validates event timestamps", () => {

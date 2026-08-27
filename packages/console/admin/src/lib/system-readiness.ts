@@ -1,4 +1,10 @@
 import { Database } from "@mongolgpt/console-core/drizzle/index.js"
+import {
+  D1_BACKUP_MANIFEST_MAX_BYTES,
+  D1_BACKUP_MANIFEST_SUFFIX,
+  d1BackupManifestKey,
+  parseD1BackupManifest,
+} from "@mongolgpt/console-core/d1-backup-manifest.js"
 import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
 import {
   SERVICE_MONITOR_MAX_AGE_MS,
@@ -33,16 +39,35 @@ type WorkerBinding = {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
 }
 
-type BackupBucket = {
+export type D1BackupBucket = {
   list(options?: {
     prefix?: string
     limit?: number
+    cursor?: string
     include?: ("httpMetadata" | "customMetadata")[]
-  }): Promise<{ objects: unknown[] }>
+  }): Promise<{ objects: unknown[]; truncated: boolean; cursor?: string }>
+  get(key: string): Promise<{
+    key: string
+    etag: string
+    size: number
+    uploaded: Date
+    httpMetadata?: Record<string, unknown>
+    customMetadata?: Record<string, string>
+    text(): Promise<string>
+  } | null>
+  head(key: string): Promise<unknown>
+}
+
+export type BackupEvidence = {
+  manifestKey: string
+  manifestBody: string
+  manifestObject: unknown
+  artifactObject: unknown
 }
 
 export interface SystemReadinessDependencies {
   stage: string
+  databaseID: string
   runtimeURL: string
   backupsEnabled: boolean
   monitoringEnabled: boolean
@@ -53,7 +78,7 @@ export interface SystemReadinessDependencies {
   runtime(): Promise<Response>
   queueHeartbeat(): Promise<string | null>
   monitorEvidence(): Promise<string | null>
-  backups(): Promise<{ objects: unknown[] }>
+  backups(): Promise<BackupEvidence[]>
   now(): Date
 }
 
@@ -103,23 +128,25 @@ const backupObjectSchema = z
       .positive()
       .max(10 * 1024 * 1024 * 1024),
     uploaded: z.coerce.date(),
-    customMetadata: z
-      .object({
-        createdAt: z.string().datetime(),
-        source: z.literal("cloudflare-d1-export"),
-        stage: z.string().trim().min(1).max(63),
-      })
-      .strict(),
+    etag: z.string().trim().min(1).max(1024),
+    httpMetadata: z
+      .object({ contentType: z.string().trim().min(1).max(255).optional() })
+      .passthrough()
+      .default({}),
+    customMetadata: z.record(z.string(), z.string()).default({}),
   })
   .passthrough()
 
 const FUTURE_CLOCK_SKEW_MS = 2 * 60 * 1_000
 const D1_BACKUP_MAX_AGE_MS = 36 * 60 * 60 * 1_000
 const D1_BACKUP_MAX_UPLOAD_DELAY_MS = 24 * 60 * 60 * 1_000
+const D1_BACKUP_MAX_LIST_PAGES = 10
+const D1_BACKUP_MAX_MANIFEST_CANDIDATES = 20
 
 export async function getSystemReadiness() {
   const resources = {
     AuthApi: Resource.AuthApi,
+    Database: Resource.Database,
     D1Backups: Resource.D1Backups,
     PaymentService: Resource.PaymentService,
     QuotaService: Resource.QuotaService,
@@ -127,7 +154,8 @@ export async function getSystemReadiness() {
     UsageQueueReadiness: Resource.UsageQueueReadiness,
   } satisfies {
     AuthApi: WorkerBinding
-    D1Backups: BackupBucket
+    Database: { databaseId: string }
+    D1Backups: D1BackupBucket
     PaymentService: WorkerBinding
     QuotaService: WorkerBinding
     ServiceMonitorState: { get(key: string): Promise<string | null> }
@@ -141,6 +169,7 @@ export async function getSystemReadiness() {
 
   return collectSystemReadiness({
     stage,
+    databaseID: resources.Database.databaseId,
     runtimeURL,
     backupsEnabled,
     monitoringEnabled,
@@ -171,12 +200,7 @@ export async function getSystemReadiness() {
       }),
     queueHeartbeat: () => resources.UsageQueueReadiness.get(USAGE_QUEUE_READINESS_KEY),
     monitorEvidence: () => resources.ServiceMonitorState.get(SERVICE_MONITOR_STATE_KEY),
-    backups: () =>
-      resources.D1Backups.list({
-        prefix: `d1/${stage.toLowerCase()}/`,
-        limit: 1_000,
-        include: ["customMetadata"],
-      }),
+    backups: () => collectD1BackupEvidence(resources.D1Backups, stage, resources.Database.databaseId),
     now: () => new Date(),
   })
 }
@@ -218,7 +242,7 @@ export async function collectSystemReadiness(
     queueCheck(queueHeartbeat, now),
     paymentCheck(payments),
     monitoringCheck(monitorEvidence, dependencies.stage, dependencies.monitoringEnabled, now),
-    backupCheck(backups, dependencies.stage, dependencies.backupsEnabled, now),
+    backupCheck(backups, dependencies.stage, dependencies.databaseID, dependencies.backupsEnabled, now),
   ]
 
   return {
@@ -308,8 +332,9 @@ function queueCheck(result: ProbeResult<string | null>, now: Date): SystemReadin
 }
 
 function backupCheck(
-  result: ProbeResult<{ objects: unknown[] }>,
+  result: ProbeResult<BackupEvidence[]>,
   stage: string,
+  databaseID: string,
   enabled: boolean,
   now: Date,
 ): SystemReadinessCheck {
@@ -322,33 +347,140 @@ function backupCheck(
     }
   }
   if (!result.ok) return degraded("backup", "D1 нөөц хуулбар", "R2 нөөц хадгалалтын шалгалт амжилтгүй боллоо.")
-  const prefix = `d1/${stage.toLowerCase()}/`
-  const latest = result.value.objects
-    .map((object) => backupObjectSchema.safeParse(object))
-    .filter((entry) => entry.success)
-    .map((entry) => entry.data)
-    .filter((object) => validBackupEvidence(object, prefix, stage))
-    .sort((left, right) => right.uploaded.getTime() - left.uploaded.getTime())[0]
+  const latest = result.value
+    .map((evidence) => validBackupEvidence(evidence, stage, databaseID))
+    .filter((evidence) => evidence !== undefined)
+    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0]
   if (!latest) {
     return degraded("backup", "D1 нөөц хуулбар", "Хүчинтэй D1 нөөц хуулбарын нотолгоо R2-д алга байна.")
   }
-  const age = now.getTime() - latest.uploaded.getTime()
+  const age = now.getTime() - latest.createdAt.getTime()
   if (age < -FUTURE_CLOCK_SKEW_MS || age > D1_BACKUP_MAX_AGE_MS) {
     return degraded("backup", "D1 нөөц хуулбар", "Сүүлийн D1 нөөц хуулбарын хугацаа хэтэрсэн байна.")
   }
   return ready("backup", "D1 нөөц хуулбар", "Шинэ D1 нөөц хуулбар R2-д баталгаажлаа.")
 }
 
-function validBackupEvidence(object: z.output<typeof backupObjectSchema>, prefix: string, stage: string) {
-  if (object.customMetadata.stage.toLowerCase() !== stage.toLowerCase()) return false
-  const createdAt = new Date(object.customMetadata.createdAt)
-  if (Number.isNaN(createdAt.getTime())) return false
-  const [day] = createdAt.toISOString().split("T")
-  const timestamp = createdAt.toISOString().replaceAll(":", "-")
-  const expectedPrefix = `${prefix}${day.replaceAll("-", "/")}/${timestamp}-`
-  if (!object.key.startsWith(expectedPrefix)) return false
-  const uploadDelay = object.uploaded.getTime() - createdAt.getTime()
-  return uploadDelay >= -FUTURE_CLOCK_SKEW_MS && uploadDelay <= D1_BACKUP_MAX_UPLOAD_DELAY_MS
+function validBackupEvidence(evidence: BackupEvidence, stage: string, databaseID: string) {
+  const manifestObject = backupObjectSchema.safeParse(evidence.manifestObject)
+  const artifactObject = backupObjectSchema.safeParse(evidence.artifactObject)
+  if (!manifestObject.success || !artifactObject.success) return undefined
+  if (evidence.manifestKey !== manifestObject.data.key) return undefined
+  if (manifestObject.data.size !== new TextEncoder().encode(evidence.manifestBody).byteLength) return undefined
+
+  let manifest
+  try {
+    manifest = parseD1BackupManifest(evidence.manifestBody, {
+      stage: stage.toLowerCase(),
+      databaseId: databaseID,
+    })
+  } catch {
+    return undefined
+  }
+  if (evidence.manifestKey !== d1BackupManifestKey(manifest.artifact.key)) return undefined
+  if (manifestObject.data.httpMetadata.contentType !== "application/json") return undefined
+  if (
+    manifestObject.data.customMetadata.createdAt !== manifest.createdAt ||
+    manifestObject.data.customMetadata.source !== "mongolgpt-d1-backup-manifest" ||
+    manifestObject.data.customMetadata.stage !== manifest.stage ||
+    manifestObject.data.customMetadata.databaseId?.toLowerCase() !== manifest.databaseId.toLowerCase() ||
+    manifestObject.data.customMetadata.version !== String(manifest.version)
+  ) {
+    return undefined
+  }
+
+  const artifact = artifactObject.data
+  if (
+    artifact.key !== manifest.artifact.key ||
+    artifact.size !== manifest.artifact.size ||
+    artifact.etag !== manifest.artifact.etag ||
+    artifact.httpMetadata.contentType !== manifest.artifact.contentType ||
+    artifact.customMetadata.createdAt !== manifest.createdAt ||
+    artifact.customMetadata.source !== manifest.source ||
+    artifact.customMetadata.stage !== manifest.stage ||
+    artifact.customMetadata.databaseId?.toLowerCase() !== manifest.databaseId.toLowerCase() ||
+    artifact.customMetadata.manifestVersion !== String(manifest.version)
+  ) {
+    return undefined
+  }
+
+  const createdAt = new Date(manifest.createdAt)
+  const artifactDelay = artifact.uploaded.getTime() - createdAt.getTime()
+  const manifestDelay = manifestObject.data.uploaded.getTime() - artifact.uploaded.getTime()
+  if (
+    artifactDelay < -FUTURE_CLOCK_SKEW_MS ||
+    artifactDelay > D1_BACKUP_MAX_UPLOAD_DELAY_MS ||
+    manifestDelay < -FUTURE_CLOCK_SKEW_MS ||
+    manifestDelay > D1_BACKUP_MAX_UPLOAD_DELAY_MS
+  ) {
+    return undefined
+  }
+  return { createdAt }
+}
+
+export async function collectD1BackupEvidence(bucket: D1BackupBucket, stage: string, databaseID: string) {
+  const objects: unknown[] = []
+  const seenCursors = new Set<string>()
+  let cursor: string | undefined
+  let complete = false
+
+  for (let page = 0; page < D1_BACKUP_MAX_LIST_PAGES; page++) {
+    const result = await bucket.list({
+      prefix: `d1/${stage.toLowerCase()}/`,
+      limit: 1_000,
+      cursor,
+      include: ["httpMetadata", "customMetadata"],
+    })
+    objects.push(...result.objects)
+    if (!result.truncated) {
+      complete = true
+      break
+    }
+    const next = result.cursor?.trim()
+    if (!next || seenCursors.has(next)) throw new Error("R2 D1 нөөц хуулбарын жагсаалтын cursor буруу байна")
+    seenCursors.add(next)
+    cursor = next
+  }
+  if (!complete) throw new Error("R2 D1 нөөц хуулбарын жагсаалт зөвшөөрөгдөх хуудасны хязгаараас хэтэрлээ")
+
+  const manifests = objects
+    .map((object) => backupObjectSchema.safeParse(object))
+    .filter((object) => object.success)
+    .map((object) => object.data)
+    .filter(
+      (object) =>
+        object.key.endsWith(D1_BACKUP_MANIFEST_SUFFIX) &&
+        object.size > 0 &&
+        object.size <= D1_BACKUP_MANIFEST_MAX_BYTES,
+    )
+    .sort((left, right) => right.key.localeCompare(left.key))
+    .slice(0, D1_BACKUP_MAX_MANIFEST_CANDIDATES)
+
+  const evidence = await Promise.all(
+    manifests.map(async (listed) => {
+      try {
+        const stored = await bucket.get(listed.key)
+        if (!stored || stored.key !== listed.key || stored.etag !== listed.etag || stored.size !== listed.size) {
+          return undefined
+        }
+        if (stored.size <= 0 || stored.size > D1_BACKUP_MANIFEST_MAX_BYTES) return undefined
+        const body = await stored.text()
+        if (new TextEncoder().encode(body).byteLength !== stored.size) return undefined
+        const manifest = parseD1BackupManifest(body, { stage: stage.toLowerCase(), databaseId: databaseID })
+        const artifact = await bucket.head(manifest.artifact.key)
+        if (!artifact) return undefined
+        return {
+          manifestKey: stored.key,
+          manifestBody: body,
+          manifestObject: stored,
+          artifactObject: artifact,
+        } satisfies BackupEvidence
+      } catch {
+        return undefined
+      }
+    }),
+  )
+  return evidence.filter((item) => item !== undefined)
 }
 
 async function probe<T>(operation: () => Promise<T>): Promise<ProbeResult<T>> {

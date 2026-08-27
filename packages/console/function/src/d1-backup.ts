@@ -1,6 +1,12 @@
+import {
+  createD1BackupManifest,
+  D1_BACKUP_MANIFEST_MAX_BYTES,
+  D1_BACKUP_MAX_BYTES,
+  d1BackupManifestKey,
+} from "@mongolgpt/console-core/d1-backup-manifest.js"
+
 const CLOUDFLARE_API_ROOT = "https://api.cloudflare.com/client/v4"
 const MAX_API_RESPONSE_BYTES = 64 * 1024
-const MAX_BACKUP_BYTES = 10 * 1024 * 1024 * 1024
 
 export const D1_BACKUP_PREFIX = "d1/"
 
@@ -26,6 +32,9 @@ export type BackupReceipt = {
   key: string
   etag: string
   size: number
+  manifestKey: string
+  manifestEtag: string
+  manifestSize: number
 }
 
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -78,7 +87,9 @@ export async function storeCompletedD1Export(input: {
       customMetadata: {
         createdAt: new Date(input.scheduledTime).toISOString(),
         source: "cloudflare-d1-export",
-        stage: input.config.stage,
+        stage: input.config.stage.toLowerCase(),
+        databaseId: input.config.databaseId,
+        manifestVersion: "1",
       },
     })
   } catch (error) {
@@ -92,12 +103,58 @@ export async function storeCompletedD1Export(input: {
     !stored ||
     !Number.isSafeInteger(stored.size) ||
     stored.size <= 0 ||
-    stored.size > MAX_BACKUP_BYTES ||
+    stored.size > D1_BACKUP_MAX_BYTES ||
     !stored.etag
   ) {
     throw new Error("R2 D1 нөөц хуулбарын объектыг баталгаажуулсангүй")
   }
-  return { key, etag: stored.etag, size: stored.size }
+  const manifest = createD1BackupManifest({
+    version: 1,
+    kind: "mongolgpt-d1-backup",
+    source: "cloudflare-d1-export",
+    stage: input.config.stage.toLowerCase(),
+    databaseId: input.config.databaseId,
+    bookmark,
+    createdAt: new Date(input.scheduledTime).toISOString(),
+    artifact: {
+      key,
+      etag: stored.etag,
+      size: stored.size,
+      contentType: "application/sql",
+    },
+  })
+  const manifestKey = d1BackupManifestKey(key)
+  const manifestBody = JSON.stringify(manifest)
+  const manifestBytes = new TextEncoder().encode(manifestBody)
+  if (manifestBytes.byteLength > D1_BACKUP_MANIFEST_MAX_BYTES) {
+    throw new Error("D1 нөөц хуулбарын manifest хэт том байна")
+  }
+  const manifestStored = await input.bucket.put(manifestKey, byteStream(manifestBytes), {
+    httpMetadata: { contentType: "application/json" },
+    customMetadata: {
+      createdAt: manifest.createdAt,
+      source: "mongolgpt-d1-backup-manifest",
+      stage: manifest.stage,
+      databaseId: manifest.databaseId,
+      version: String(manifest.version),
+    },
+  })
+  if (
+    !manifestStored ||
+    manifestStored.size !== manifestBytes.byteLength ||
+    !manifestStored.etag ||
+    manifestStored.size <= 0
+  ) {
+    throw new Error("R2 D1 нөөц хуулбарын manifest-ийг баталгаажуулсангүй")
+  }
+  return {
+    key,
+    etag: stored.etag,
+    size: stored.size,
+    manifestKey,
+    manifestEtag: manifestStored.etag,
+    manifestSize: manifestStored.size,
+  }
 }
 
 export function backupObjectKey(stage: string, scheduledTime: number, filename: string) {
@@ -216,7 +273,7 @@ function privateHostname(value: string) {
 function validateContentLength(value: string | null) {
   if (value === null) return
   const length = Number(value)
-  if (!Number.isSafeInteger(length) || length <= 0 || length > MAX_BACKUP_BYTES) {
+  if (!Number.isSafeInteger(length) || length <= 0 || length > D1_BACKUP_MAX_BYTES) {
     throw new Error("D1 export татах хэмжээ буруу байна")
   }
 }
@@ -230,7 +287,7 @@ function capBackupStream(body: ReadableStream<Uint8Array>) {
         if (
           !Number.isSafeInteger(chunk.byteLength) ||
           chunk.byteLength < 0 ||
-          bytes > MAX_BACKUP_BYTES - chunk.byteLength
+          bytes > D1_BACKUP_MAX_BYTES - chunk.byteLength
         ) {
           exceeded = true
           throw new Error("D1 export татаж авах хэмжээ зөвшөөрөгдөх дээд хязгаараас хэтэрлээ")
@@ -241,6 +298,15 @@ function capBackupStream(body: ReadableStream<Uint8Array>) {
     }),
   )
   return { stream, exceeded: () => exceeded }
+}
+
+function byteStream(value: Uint8Array) {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(value)
+      controller.close()
+    },
+  })
 }
 
 function safeFilename(value: string) {
