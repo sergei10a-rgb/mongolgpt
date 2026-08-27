@@ -325,18 +325,6 @@ export const auth = new sst.cloudflare.Worker("AuthApi", {
 ////////////////
 
 const disabledBillingValue = "disabled"
-const ZEN_LITE_PRICE = new sst.Linkable("ZEN_LITE_PRICE", {
-  properties: {
-    product: disabledBillingValue,
-    price: disabledBillingValue,
-    priceInr: 0,
-    firstMonth50Coupon: disabledBillingValue,
-    firstMonth100Coupon: disabledBillingValue,
-    threeMonths100Coupon: disabledBillingValue,
-    sixMonths100Coupon: disabledBillingValue,
-    twelveMonths100Coupon: disabledBillingValue,
-  },
-})
 const MONGOLGPT_PLAN_PRICE = new sst.Linkable("MONGOLGPT_PLAN_PRICE", {
   properties: {
     product: disabledBillingValue,
@@ -411,7 +399,6 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     AUTH_API_URL,
     SECRET.SupportApiKey,
     MONGOLGPT_PLAN_PRICE,
-    ZEN_LITE_PRICE,
     mongolGPTPlanLimits,
     new sst.Secret("MONGOLGPT_GATEWAY_SESSION_SECRET", ""),
     ...MONGOLGPT_GATEWAY_MODELS,

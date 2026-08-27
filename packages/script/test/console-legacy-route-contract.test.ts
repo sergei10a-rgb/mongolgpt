@@ -51,6 +51,7 @@ describe("hosted console legacy route contract", () => {
 
     expect(await Bun.file(new URL("go/index.tsx", routes)).exists()).toBe(false)
     expect(await Bun.file(new URL("go/index.css", routes)).exists()).toBe(false)
+    expect(await Bun.file(new URL("workspace/[id]/go/index.tsx", routes)).exists()).toBe(false)
     expect(await Bun.file(new URL("gateway/v1/models.ts", routes)).exists()).toBe(true)
     expect(await Bun.file(new URL("zen/v1/models.ts", routes)).exists()).toBe(false)
     expect(sitemap).not.toContain('{ path: "/go"')
@@ -101,6 +102,10 @@ describe("hosted console legacy route contract", () => {
     const graph = await Bun.file(new URL("src/routes/workspace/[id]/usage/graph-section.tsx", consoleApp)).text()
     const gateway = await Bun.file(new URL("src/routes/gateway/util/handler.ts", consoleApp)).text()
     const members = await Bun.file(new URL("src/routes/workspace/[id]/members/member-section.tsx", consoleApp)).text()
+    const icons = await Bun.file(new URL("src/component/icon.tsx", consoleApp)).text()
+    const infra = await Bun.file(new URL("../../../infra/console.ts", import.meta.url)).text()
+    const updateLimits = await Bun.file(new URL("../../console/core/script/update-limits.ts", import.meta.url)).text()
+    const promoteLimits = await Bun.file(new URL("../../console/core/script/promote-limits.ts", import.meta.url)).text()
     const localeDirectory = new URL("src/i18n/", consoleApp)
     const localeFiles = (await readdir(localeDirectory)).filter((name) => name.endsWith(".ts") && name !== "index.ts")
 
@@ -139,6 +144,20 @@ describe("hosted console legacy route contract", () => {
     expect(gateway).not.toContain('consolePath("/go")')
     expect(gateway).toContain("GatewayCatalog")
     expect(gateway).not.toContain("ZenData")
+    expect(infra).not.toContain("ZEN_LITE_PRICE")
+    expect(updateLimits).toContain("MONGOLGPT_PLAN_LIMITS")
+    expect(promoteLimits).toContain("MONGOLGPT_PLAN_LIMITS")
+    expect(updateLimits).not.toContain("ZEN_LIMITS")
+    expect(promoteLimits).not.toContain("ZEN_LIMITS")
+    expect(icons).not.toContain("IconZen")
+    expect(icons).not.toContain("IconGo")
+    expect(await Bun.file(new URL("../mail/emails/templates/static/zen-logo.png", consoleApp)).exists()).toBe(false)
+    expect(await Bun.file(new URL("src/lib/referral-invite.ts", consoleApp)).exists()).toBe(false)
+    expect(await Bun.file(new URL("src/routes/api/support/actions/create-referral.ts", consoleApp)).exists()).toBe(
+      false,
+    )
+    expect(await Bun.file(new URL("../../console/core/src/referral.ts", import.meta.url)).exists()).toBe(false)
+    expect(await Bun.file(new URL("../../console/core/src/lite.ts", import.meta.url)).exists()).toBe(false)
 
     for (const name of localeFiles) {
       const locale = await Bun.file(new URL(name, localeDirectory)).text()

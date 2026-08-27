@@ -1,6 +1,5 @@
 import { createMiddleware } from "@solidjs/start/middleware"
 import { LOCALE_HEADER, cookie, fromPathname, strip } from "~/lib/language"
-import { normalizeReferralCode, referralCookie } from "~/lib/referral-invite"
 
 export default createMiddleware({
   onRequest(event) {
@@ -13,8 +12,5 @@ export default createMiddleware({
       event.request = request
       event.response.headers.append("set-cookie", cookie(locale))
     }
-
-    const referralCode = normalizeReferralCode(url.searchParams.get("ref"))
-    if (referralCode) event.response.headers.append("set-cookie", referralCookie(referralCode))
   },
 })

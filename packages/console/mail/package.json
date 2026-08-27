@@ -15,7 +15,8 @@
   "$schema": "https://json.schemastore.org/package.json",
   "private": true,
   "scripts": {
-    "dev": "email preview emails/templates"
+    "dev": "email preview emails/templates",
+    "test": "bun test"
   },
   "type": "module",
   "license": "MIT"

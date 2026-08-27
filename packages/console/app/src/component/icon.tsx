@@ -1,29 +1,5 @@
 import { JSX } from "solid-js"
 
-export function IconZen(_props: JSX.SvgSVGAttributes<SVGSVGElement>) {
-  return (
-    <svg width="84" height="30" viewBox="0 0 84 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M24 24H6V18H18V12H24V24ZM6 18H0V12H6V18Z" fill="currentColor" fill-opacity="0.2" />
-      <path d="M6 24H24V30H0V18H6V24ZM18 18H6V12H18V18ZM24 12H18V6H0V0H24V12Z" fill="currentColor" />
-      <path d="M54 18V24H36V18H54Z" fill="currentColor" fill-opacity="0.2" />
-      <path d="M54 18H36V24H54V30H30V0H54V18ZM36 12H48V6H36V12Z" fill="currentColor" />
-      <path d="M78 30H66V12H78V30Z" fill="currentColor" fill-opacity="0.2" />
-      <path d="M78 6H66V30H60V0H78V6ZM84 30H78V6H84V30Z" fill="currentColor" />
-    </svg>
-  )
-}
-
-export function IconGo(_props: JSX.SvgSVGAttributes<SVGSVGElement>) {
-  return (
-    <svg width="54" height="30" viewBox="0 0 54 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M24 30H0V0H24V6H6V24H18V18H12V12H24V30Z" fill="currentColor" />
-      <path d="M12 18H18V24H6V12H12V18Z" fill="currentColor" fill-opacity="0.2" />
-      <path d="M48 12V24H36V12H48Z" fill="currentColor" fill-opacity="0.2" />
-      <path d="M54 30H30V0H54V30ZM36 24H48V6H36V24Z" fill="currentColor" />
-    </svg>
-  )
-}
-
 export function IconCopy(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
     <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

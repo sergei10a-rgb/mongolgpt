@@ -1,6 +1,10 @@
 import { z } from "zod"
 import { Database, desc } from "@mongolgpt/console-core/drizzle/index.js"
-import { PlanConfig, PlanConfigConflictError, PlanConfigInvalidActiveError } from "@mongolgpt/console-core/plan-config.js"
+import {
+  PlanConfig,
+  PlanConfigConflictError,
+  PlanConfigInvalidActiveError,
+} from "@mongolgpt/console-core/plan-config.js"
 import { PlanConfigVersionTable } from "@mongolgpt/console-core/schema/plan-config.sql.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 import type { PlatformAdminContext } from "./admin-context"
@@ -12,8 +16,7 @@ import {
 } from "./admin-auth"
 import { AdminMutationRequestError, requireSameOriginAdminMutation } from "./admin-mutation"
 
-const safeInteger = (maximum: number) =>
-  z.coerce.number().finite().int().safe().nonnegative().max(maximum)
+const safeInteger = (maximum: number) => z.coerce.number().finite().int().safe().nonnegative().max(maximum)
 const positiveInteger = (maximum: number) => safeInteger(maximum).positive()
 const cyrillicNote = z
   .string()
@@ -36,19 +39,6 @@ const freeSchema = z
   })
   .strict()
 
-const liteSchema = z
-  .object({
-    rollingLimit: positiveInteger(100_000_000),
-    rollingWindow: positiveInteger(168),
-    weeklyLimit: positiveInteger(1_000_000_000),
-    monthlyLimit: positiveInteger(4_000_000_000),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    if (value.monthlyLimit < value.weeklyLimit)
-      ctx.addIssue({ code: "custom", path: ["monthlyLimit"], message: "Сарын Lite хязгаар долоо хоногийнхоос бага байж болохгүй." })
-  })
-
 const paidSchema = z
   .object({
     weeklyCostLimit: positiveInteger(100_000_000),
@@ -63,13 +53,29 @@ const paidSchema = z
   .strict()
   .superRefine((value, ctx) => {
     if (value.monthlyCostLimit < value.weeklyCostLimit)
-      ctx.addIssue({ code: "custom", path: ["monthlyCostLimit"], message: "Сарын зардал долоо хоногийнхоос бага байж болохгүй." })
+      ctx.addIssue({
+        code: "custom",
+        path: ["monthlyCostLimit"],
+        message: "Сарын зардал долоо хоногийнхоос бага байж болохгүй.",
+      })
     if (value.monthlyTokenLimit < value.weeklyTokenLimit)
-      ctx.addIssue({ code: "custom", path: ["monthlyTokenLimit"], message: "Сарын token долоо хоногийнхоос бага байж болохгүй." })
+      ctx.addIssue({
+        code: "custom",
+        path: ["monthlyTokenLimit"],
+        message: "Сарын token долоо хоногийнхоос бага байж болохгүй.",
+      })
     if (value.monthlyRequestLimit < value.weeklyRequestLimit)
-      ctx.addIssue({ code: "custom", path: ["monthlyRequestLimit"], message: "Сарын хүсэлт долоо хоногийнхоос бага байж болохгүй." })
+      ctx.addIssue({
+        code: "custom",
+        path: ["monthlyRequestLimit"],
+        message: "Сарын хүсэлт долоо хоногийнхоос бага байж болохгүй.",
+      })
     if (value.rollingCostLimit > value.weeklyCostLimit)
-      ctx.addIssue({ code: "custom", path: ["rollingCostLimit"], message: "Rolling зардал долоо хоногийн зардлаас их байж болохгүй." })
+      ctx.addIssue({
+        code: "custom",
+        path: ["rollingCostLimit"],
+        message: "Rolling зардал долоо хоногийн зардлаас их байж болохгүй.",
+      })
   })
 
 const updateInput = z
@@ -79,19 +85,37 @@ const updateInput = z
     expectedActiveStateRevision: activeRevision,
     note: cyrillicNote,
     free: freeSchema,
-    lite: liteSchema,
     plans: z.object({ basic: paidSchema, pro: paidSchema, max: paidSchema }).strict(),
   })
   .strict()
   .superRefine((value, ctx) => {
-    for (const key of ["weeklyCostLimit", "weeklyTokenLimit", "weeklyRequestLimit", "monthlyCostLimit", "monthlyTokenLimit", "monthlyRequestLimit", "rollingCostLimit"] as const) {
+    for (const key of [
+      "weeklyCostLimit",
+      "weeklyTokenLimit",
+      "weeklyRequestLimit",
+      "monthlyCostLimit",
+      "monthlyTokenLimit",
+      "monthlyRequestLimit",
+      "rollingCostLimit",
+    ] as const) {
       if (value.plans.basic[key] > value.plans.pro[key] || value.plans.pro[key] > value.plans.max[key]) {
-        ctx.addIssue({ code: "custom", path: ["plans", "basic", key], message: "Basic, Pro, Max шатлал өсөх дарааллаар байна." })
+        ctx.addIssue({
+          code: "custom",
+          path: ["plans", "basic", key],
+          message: "Basic, Pro, Max шатлал өсөх дарааллаар байна.",
+        })
         break
       }
     }
-    if (value.plans.basic.rollingWindow > value.plans.pro.rollingWindow || value.plans.pro.rollingWindow > value.plans.max.rollingWindow) {
-      ctx.addIssue({ code: "custom", path: ["plans", "basic", "rollingWindow"], message: "Basic, Pro, Max rolling хугацаа өсөх дарааллаар байна." })
+    if (
+      value.plans.basic.rollingWindow > value.plans.pro.rollingWindow ||
+      value.plans.pro.rollingWindow > value.plans.max.rollingWindow
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["plans", "basic", "rollingWindow"],
+        message: "Basic, Pro, Max rolling хугацаа өсөх дарааллаар байна.",
+      })
     }
   })
 
@@ -110,6 +134,7 @@ export const AdminPlanMutationInput = z.discriminatedUnion("operation", [updateI
 
 export interface AdminPlansDependencies {
   transaction: typeof Database.transaction
+  getRuntimeLimitsWithDb: typeof PlanConfig.getRuntimeLimitsWithDb
   createVersionWithDb: typeof PlanConfig.createVersionWithDb
   cloneVersionForRollbackWithDb: typeof PlanConfig.cloneVersionForRollbackWithDb
   activateVersionWithDb: typeof PlanConfig.activateVersionWithDb
@@ -119,6 +144,7 @@ export interface AdminPlansDependencies {
 
 const productionDependencies: AdminPlansDependencies = {
   transaction: Database.transaction,
+  getRuntimeLimitsWithDb: PlanConfig.getRuntimeLimitsWithDb,
   createVersionWithDb: PlanConfig.createVersionWithDb,
   cloneVersionForRollbackWithDb: PlanConfig.cloneVersionForRollbackWithDb,
   activateVersionWithDb: PlanConfig.activateVersionWithDb,
@@ -131,7 +157,12 @@ export async function listAdminPlans(context: PlatformAdminContext) {
   return Database.use(async (db) => {
     const [active, latest, versions] = await Promise.all([
       PlanConfig.getActiveWithDb(db),
-      db.select({ revision: PlanConfigVersionTable.revision }).from(PlanConfigVersionTable).orderBy(desc(PlanConfigVersionTable.revision)).limit(1).then((rows) => rows[0]),
+      db
+        .select({ revision: PlanConfigVersionTable.revision })
+        .from(PlanConfigVersionTable)
+        .orderBy(desc(PlanConfigVersionTable.revision))
+        .limit(1)
+        .then((rows) => rows[0]),
       db.select().from(PlanConfigVersionTable).orderBy(desc(PlanConfigVersionTable.revision)).limit(20),
     ])
     const bootstrap = PlanConfig.StoredLimitsSchema.parse(stripCheckHeaders(Subscription.getBootstrapLimits()))
@@ -139,8 +170,24 @@ export async function listAdminPlans(context: PlatformAdminContext) {
       admin,
       latestRevision: latest?.revision ?? 0,
       active: active
-        ? { source: "d1" as const, versionID: active.version.id, revision: active.version.revision, stateRevision: active.state.revision, note: active.version.note, timeCreated: iso(active.version.time_created), limits: active.limits }
-        : { source: "bootstrap" as const, versionID: null, revision: 0, stateRevision: null, note: null, timeCreated: null, limits: bootstrap },
+        ? {
+            source: "d1" as const,
+            versionID: active.version.id,
+            revision: active.version.revision,
+            stateRevision: active.state.revision,
+            note: active.version.note,
+            timeCreated: iso(active.version.time_created),
+            limits: active.limits,
+          }
+        : {
+            source: "bootstrap" as const,
+            versionID: null,
+            revision: 0,
+            stateRevision: null,
+            note: null,
+            timeCreated: null,
+            limits: bootstrap,
+          },
       versions: versions.map((version) => ({
         id: version.id,
         revision: version.revision,
@@ -166,10 +213,23 @@ export async function mutateAdminPlans(
     const admin = requirePlatformAdminPermission(context, "plans.manage")
     const input = AdminPlanMutationInput.parse(nestPlanInput(raw))
     const result = await dependencies.transaction(async (tx) => {
-      const version =
-        input.operation === "update"
-          ? await dependencies.createVersionWithDb(tx, { limits: inputLimits(input), createdBy: admin.id, note: input.note, expectedRevision: input.expectedRevision })
-          : await dependencies.cloneVersionForRollbackWithDb(tx, { sourceVersionID: input.sourceVersionID, createdBy: admin.id, note: input.note, expectedRevision: input.expectedRevision })
+      const version = await (async () => {
+        if (input.operation === "update") {
+          const currentLimits = await dependencies.getRuntimeLimitsWithDb(tx)
+          return dependencies.createVersionWithDb(tx, {
+            limits: inputLimits(input, currentLimits.lite),
+            createdBy: admin.id,
+            note: input.note,
+            expectedRevision: input.expectedRevision,
+          })
+        }
+        return dependencies.cloneVersionForRollbackWithDb(tx, {
+          sourceVersionID: input.sourceVersionID,
+          createdBy: admin.id,
+          note: input.note,
+          expectedRevision: input.expectedRevision,
+        })
+      })()
       const activation = await dependencies.activateVersionWithDb(tx, {
         versionID: version.id,
         updatedBy: admin.id,
@@ -197,7 +257,14 @@ export async function mutateAdminPlans(
       }
       return { versionID: version.id, revision: version.revision }
     })
-    return { ok: true as const, message: input.operation === "update" ? "Төлөвлөгөөний шинэ хувилбар идэвхжлээ." : "Сонгосон хувилбараас шинэ буцаалтын хувилбар үүсгэж идэвхжүүллээ.", ...result }
+    return {
+      ok: true as const,
+      message:
+        input.operation === "update"
+          ? "Төлөвлөгөөний шинэ хувилбар идэвхжлээ."
+          : "Сонгосон хувилбараас шинэ буцаалтын хувилбар үүсгэж идэвхжүүллээ.",
+      ...result,
+    }
   } catch (error) {
     const failure = mutationFailure(error)
     try {
@@ -211,14 +278,20 @@ export async function mutateAdminPlans(
         metadata: { operation, reason: failure.code },
       })
     } catch {
-      return { ok: false as const, message: "Өөрчлөлт хийгдээгүй. Аудитын бүртгэл бичигдээгүй тул үйлдлийг баталгаажуулсангүй." }
+      return {
+        ok: false as const,
+        message: "Өөрчлөлт хийгдээгүй. Аудитын бүртгэл бичигдээгүй тул үйлдлийг баталгаажуулсангүй.",
+      }
     }
     return { ok: false as const, message: failure.message }
   }
 }
 
-function inputLimits(input: z.output<typeof updateInput>) {
-  return PlanConfig.StoredLimitsSchema.parse({ free: input.free, lite: input.lite, plans: input.plans })
+function inputLimits(
+  input: z.output<typeof updateInput>,
+  legacyLite: z.output<typeof Subscription.LimitsSchema>["lite"],
+) {
+  return PlanConfig.StoredLimitsSchema.parse({ free: input.free, lite: legacyLite, plans: input.plans })
 }
 
 function stripCheckHeaders(limits: z.output<typeof Subscription.LimitsSchema>) {
@@ -227,13 +300,15 @@ function stripCheckHeaders(limits: z.output<typeof Subscription.LimitsSchema>) {
 }
 
 function rawOperation(raw: unknown) {
-  return typeof raw === "object" && raw !== null && "operation" in raw && raw.operation === "rollback" ? "rollback" : "update"
+  return typeof raw === "object" && raw !== null && "operation" in raw && raw.operation === "rollback"
+    ? "rollback"
+    : "update"
 }
 
 function nestPlanInput(raw: unknown) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw
   const flat = raw as Record<string, unknown>
-  if (flat.free || flat.lite || flat.plans) return raw
+  if (flat.free || flat.plans) return raw
   const get = (key: string) => flat[key]
   if (get("operation") === "rollback") {
     return {
@@ -246,25 +321,64 @@ function nestPlanInput(raw: unknown) {
     }
   }
   const paid = (tier: "basic" | "pro" | "max") => ({
-    weeklyCostLimit: get(`${tier}.weeklyCostLimit`), weeklyTokenLimit: get(`${tier}.weeklyTokenLimit`), weeklyRequestLimit: get(`${tier}.weeklyRequestLimit`),
-    monthlyCostLimit: get(`${tier}.monthlyCostLimit`), monthlyTokenLimit: get(`${tier}.monthlyTokenLimit`), monthlyRequestLimit: get(`${tier}.monthlyRequestLimit`),
-    rollingCostLimit: get(`${tier}.rollingCostLimit`), rollingWindow: get(`${tier}.rollingWindow`),
+    weeklyCostLimit: get(`${tier}.weeklyCostLimit`),
+    weeklyTokenLimit: get(`${tier}.weeklyTokenLimit`),
+    weeklyRequestLimit: get(`${tier}.weeklyRequestLimit`),
+    monthlyCostLimit: get(`${tier}.monthlyCostLimit`),
+    monthlyTokenLimit: get(`${tier}.monthlyTokenLimit`),
+    monthlyRequestLimit: get(`${tier}.monthlyRequestLimit`),
+    rollingCostLimit: get(`${tier}.rollingCostLimit`),
+    rollingWindow: get(`${tier}.rollingWindow`),
   })
   return {
-    operation: get("operation"), expectedRevision: get("expectedRevision"), expectedActiveStateRevision: get("expectedActiveStateRevision"), note: get("note"), sourceVersionID: get("sourceVersionID"), confirmation: get("confirmation"),
-    free: { promoTokens: get("free.promoTokens"), dailyRequests: get("free.dailyRequests"), dailyRequestsFallback: get("free.dailyRequestsFallback") },
-    lite: { rollingLimit: get("lite.rollingLimit"), rollingWindow: get("lite.rollingWindow"), weeklyLimit: get("lite.weeklyLimit"), monthlyLimit: get("lite.monthlyLimit") },
+    operation: get("operation"),
+    expectedRevision: get("expectedRevision"),
+    expectedActiveStateRevision: get("expectedActiveStateRevision"),
+    note: get("note"),
+    sourceVersionID: get("sourceVersionID"),
+    confirmation: get("confirmation"),
+    free: {
+      promoTokens: get("free.promoTokens"),
+      dailyRequests: get("free.dailyRequests"),
+      dailyRequestsFallback: get("free.dailyRequestsFallback"),
+    },
     plans: { basic: paid("basic"), pro: paid("pro"), max: paid("max") },
   }
 }
 
 function mutationFailure(error: unknown) {
-  if (error instanceof AdminMutationRequestError) return { outcome: "denied" as const, code: `request_${error.code}`, message: "Аюулгүй байдлын хүсэлтийн шалгалт амжилтгүй боллоо." }
-  if (error instanceof AdminAuthorizationError) return { outcome: "denied" as const, code: error.code, message: error.message }
-  if (error instanceof z.ZodError) return { outcome: "denied" as const, code: "invalid_input", message: "Төлөвлөгөөний утга, шатлал, тайлбар эсвэл баталгаажуулалт буруу байна." }
-  if (error instanceof PlanConfigConflictError) return { outcome: "failure" as const, code: "conflict", message: "Төлөвлөгөө зэрэг өөрчлөгдсөн байна. Хуудсыг шинэчлээд дахин оролдоно уу." }
-  if (error instanceof PlanConfigInvalidActiveError) return { outcome: "failure" as const, code: "invalid_plan_config", message: "Төлөвлөгөөний хувилбар хүчинтэй биш байна." }
-  if (error instanceof AdminPlanAuditWriteError) return { outcome: "failure" as const, code: "audit_write_failed", message: "Өөрчлөлт хийгдээгүй. Аудитын бүртгэл баталгаажаагүй тул үйлдлийг цуцаллаа." }
+  if (error instanceof AdminMutationRequestError)
+    return {
+      outcome: "denied" as const,
+      code: `request_${error.code}`,
+      message: "Аюулгүй байдлын хүсэлтийн шалгалт амжилтгүй боллоо.",
+    }
+  if (error instanceof AdminAuthorizationError)
+    return { outcome: "denied" as const, code: error.code, message: error.message }
+  if (error instanceof z.ZodError)
+    return {
+      outcome: "denied" as const,
+      code: "invalid_input",
+      message: "Төлөвлөгөөний утга, шатлал, тайлбар эсвэл баталгаажуулалт буруу байна.",
+    }
+  if (error instanceof PlanConfigConflictError)
+    return {
+      outcome: "failure" as const,
+      code: "conflict",
+      message: "Төлөвлөгөө зэрэг өөрчлөгдсөн байна. Хуудсыг шинэчлээд дахин оролдоно уу.",
+    }
+  if (error instanceof PlanConfigInvalidActiveError)
+    return {
+      outcome: "failure" as const,
+      code: "invalid_plan_config",
+      message: "Төлөвлөгөөний хувилбар хүчинтэй биш байна.",
+    }
+  if (error instanceof AdminPlanAuditWriteError)
+    return {
+      outcome: "failure" as const,
+      code: "audit_write_failed",
+      message: "Өөрчлөлт хийгдээгүй. Аудитын бүртгэл баталгаажаагүй тул үйлдлийг цуцаллаа.",
+    }
   return { outcome: "failure" as const, code: "internal_error", message: "Төлөвлөгөөг өөрчлөх үед алдаа гарлаа." }
 }
 

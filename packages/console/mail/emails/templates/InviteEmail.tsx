@@ -45,7 +45,7 @@ export const InviteEmail = ({
           <Section style={frame}>
             <Row>
               <Column>
-                <A href={new URL("zen", consoleUrl).toString()}>
+                <A href={new URL("/", consoleUrl).toString()}>
                   <Img height="32" alt="MongolGPT лого" src={`${assetsUrl}/logo.png`} />
                 </A>
               </Column>

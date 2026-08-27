@@ -10,8 +10,12 @@ const secrets = await $`bun sst secret list --fallback`.cwd(root).text()
 
 // read value
 const lines = secrets.split("\n")
-const oldValue = lines.find((line) => line.startsWith("ZEN_LIMITS"))?.split("=")[1] ?? "{}"
-if (!oldValue) throw new Error("ZEN_LIMITS not found")
+const oldValue = lines
+  .find((line) => line.startsWith("MONGOLGPT_PLAN_LIMITS="))
+  ?.split("=")
+  .slice(1)
+  .join("=")
+if (!oldValue) throw new Error("MONGOLGPT_PLAN_LIMITS олдсонгүй")
 
 // store the prettified json to a temp file
 const filename = `limits-${Date.now()}.json`
@@ -26,5 +30,5 @@ Subscription.validate(JSON.parse(newValue))
 
 // update the secret
 const envFile = Bun.file(path.join(os.tmpdir(), `limits-${Date.now()}.env`))
-await envFile.write(`ZEN_LIMITS="${newValue.replace(/"/g, '\\"')}"`)
+await envFile.write(`MONGOLGPT_PLAN_LIMITS="${newValue.replace(/"/g, '\\"')}"`)
 await $`bun sst secret load ${envFile.name} --fallback`.cwd(root)
