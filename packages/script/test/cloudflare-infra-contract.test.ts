@@ -429,6 +429,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain('DEPLOY DEV DOCS docs.dev.mgpt.mn')
     expect(source).toContain('MONGOLGPT_STATIC_DOCS=true bun run build:docs')
     expect(source).toContain('bun run --cwd packages/web verify:static-artifact')
+    expect(source).toContain('bun run deploy:preflight -- dev --docs-only')
     expect(source).toContain('bun sst deploy --stage=dev --target Website --print-logs')
     expect(source).toContain('bun script/deployment-smoke.ts --docs-only dev')
     expect(source).not.toContain('--target WebApp')

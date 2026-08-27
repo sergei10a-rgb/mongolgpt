@@ -6,11 +6,17 @@ import {
 import { DeploymentPreflightError, deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/deployment"
 
 try {
+  const authBootstrap = process.argv.includes("--auth-bootstrap")
+  const docsOnly = process.argv.includes("--docs-only")
+  if (authBootstrap && docsOnly) {
+    throw new DeploymentPreflightError(["--auth-bootstrap болон --docs-only scope-ийг хамтад нь ашиглахгүй."])
+  }
+  const scope = authBootstrap ? "auth-bootstrap" : docsOnly ? "docs-only" : "full"
   const result = preflightDeployment({
     stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
     env: process.env,
-    requireHostedServices: true,
-    scope: process.argv.includes("--auth-bootstrap") ? "auth-bootstrap" : "full",
+    requireHostedServices: scope !== "docs-only",
+    scope,
   })
   const cloudflare = await preflightCloudflareDeploymentAccess({
     accountId: process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID ?? "",

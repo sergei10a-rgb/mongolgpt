@@ -653,6 +653,43 @@ describe("Cloudflare deployment preflight", () => {
     )
   })
 
+  test("allows docs-only preflight only for static dev infrastructure", () => {
+    const result = preflightDeployment({
+      stage: "dev",
+      env: cloudflare,
+      requireHostedServices: false,
+      scope: "docs-only",
+    })
+    expect(result.hostedServices).toBe(false)
+    expect(deploymentEndpoints(result).docs).toBe("https://docs.dev.mgpt.mn/docs")
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: cloudflare,
+          requireHostedServices: false,
+          scope: "docs-only",
+        }),
+      ["Docs-only scope-ийг зөвхөн dev"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "smoke@mgpt.mn",
+          },
+          requireDeploymentSecrets: false,
+          scope: "docs-only",
+        }),
+      ["MONGOLGPT_ENABLE_HOSTED_SERVICES=false"],
+    )
+  })
+
   test("rejects retired gateway secrets without canonical replacements", () => {
     const {
       SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: sessionSecret,

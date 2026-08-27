@@ -76,7 +76,7 @@ export function preflightDeployment(input: {
   requireCloudflareCredentials?: boolean
   requireDeploymentSecrets?: boolean
   requireHostedServices?: boolean
-  scope?: "full" | "auth-bootstrap"
+  scope?: "full" | "auth-bootstrap" | "docs-only"
 }): DeploymentPreflightResult {
   const issues: string[] = []
   const warnings: string[] = []
@@ -87,6 +87,9 @@ export function preflightDeployment(input: {
 
   if (scope === "auth-bootstrap" && stage !== "dev") {
     issues.push("OAuth bootstrap scope-ийг зөвхөн dev орчинд ашиглана.")
+  }
+  if (scope === "docs-only" && stage !== "dev") {
+    issues.push("Docs-only scope-ийг зөвхөн dev орчинд ашиглана.")
   }
 
   if (inspectedStage.issue) issues.push(inspectedStage.issue)
@@ -100,6 +103,9 @@ export function preflightDeployment(input: {
   }
 
   const hostedServices = enabled(env.MONGOLGPT_ENABLE_HOSTED_SERVICES)
+  if (scope === "docs-only" && hostedServices) {
+    issues.push("Docs-only scope нь MONGOLGPT_ENABLE_HOSTED_SERVICES=false байхыг шаардана.")
+  }
   const adminEnabled = enabled(env.MONGOLGPT_ENABLE_ADMIN)
   const backupsEnabled = enabled(env.MONGOLGPT_ENABLE_D1_BACKUPS)
   const monitoringEnabled = enabled(env.MONGOLGPT_ENABLE_MONITORING)
