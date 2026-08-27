@@ -553,6 +553,15 @@
         "@typescript/native-preview": "catalog:",
       },
     },
+    "packages/local-bridge": {
+      "name": "@mongolgpt/local-bridge",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/mongolgpt": {
       "name": "mongolgpt",
       "version": "0.1.1",
@@ -1846,6 +1855,8 @@
     "@mongolgpt/httpapi-codegen": ["@mongolgpt/httpapi-codegen@workspace:packages/httpapi-codegen"],
 
     "@mongolgpt/llm": ["@mongolgpt/llm@workspace:packages/llm"],
+
+    "@mongolgpt/local-bridge": ["@mongolgpt/local-bridge@workspace:packages/local-bridge"],
 
     "@mongolgpt/plugin": ["@mongolgpt/plugin@workspace:packages/plugin"],
 

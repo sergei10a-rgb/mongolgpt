@@ -16,6 +16,7 @@ import { checkAppExists, resolveAppPath } from "./apps"
 import { createDesktopAccountClient } from "./account-client"
 import { loadOrCreateAccountVaultKey } from "./account-vault-key"
 import { ACCOUNT_SERVER_URL, CHANNEL } from "./constants"
+import { describeDeepLink, describeDeepLinks } from "./deep-link-security"
 import { registerIpcHandlers, sendDeepLinks, sendMenuCommand } from "./ipc"
 import { forwardInitializationFailure } from "./initialization"
 import { exportDebugLogs, initCrashReporter, initLogging, startNetLog, write as writeLog } from "./logging"
@@ -199,7 +200,7 @@ const main = Effect.gen(function* () {
   app.on("second-instance", (_event: Event, argv: string[]) => {
     const urls = argv.filter((arg: string) => arg.startsWith("mongolgpt://"))
     if (urls.length) {
-      logger.log("Deep link-ийг second-instance-ээр хүлээн авлаа", { urls })
+      logger.log("Deep link-ийг second-instance-ээр хүлээн авлаа", { actions: describeDeepLinks(urls) })
       emitDeepLinks(urls)
     }
     if (mainWindow) {
@@ -210,7 +211,7 @@ const main = Effect.gen(function* () {
 
   app.on("open-url", (event: Event, url: string) => {
     event.preventDefault()
-    logger.log("Deep link-ийг open-url-ээр хүлээн авлаа", { url })
+    logger.log("Deep link-ийг open-url-ээр хүлээн авлаа", { action: describeDeepLink(url) })
     emitDeepLinks([url])
   })
 
