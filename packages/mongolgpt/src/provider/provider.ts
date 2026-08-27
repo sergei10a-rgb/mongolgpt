@@ -1083,6 +1083,26 @@ export function defaultModelIDs<T extends { models: Record<string, { id: string 
   return mapValues(providers, (item) => sort(Object.values(item.models))[0].id)
 }
 
+export function filterManagedModelsForAccount<
+  T extends {
+    models: Record<
+      string,
+      { id: string; cost?: { input: number; output: number } | readonly { input: number; output: number }[] }
+    >
+  },
+>(catalog: T, connected?: { models: Record<string, unknown> }): T | undefined {
+  const models = Object.fromEntries(
+    Object.entries(catalog.models).filter(
+      ([modelID, model]) => !isManagedFreeModel(model) || connected?.models[modelID] !== undefined,
+    ),
+  )
+  if (Object.keys(models).length === 0) return undefined
+  return {
+    ...catalog,
+    models,
+  }
+}
+
 export class ModelNotFoundError extends Schema.TaggedErrorClass<ModelNotFoundError>()("ProviderModelNotFoundError", {
   providerID: ProviderV2.ID,
   modelID: ModelV2.ID,

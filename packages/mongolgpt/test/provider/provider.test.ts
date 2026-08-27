@@ -104,6 +104,29 @@ const mongolgptProviderConfig = {
   },
 }
 
+test("managed catalog models are visible only when the account-backed provider exposes them", () => {
+  const catalog = {
+    models: {
+      "free-auto": { id: "free-auto", cost: { input: 0, output: 0 } },
+      paid: { id: "paid", cost: { input: 1, output: 1 } },
+    },
+  }
+
+  expect(Object.keys(Provider.filterManagedModelsForAccount(catalog)?.models ?? {})).toEqual(["paid"])
+  expect(
+    Provider.filterManagedModelsForAccount({
+      models: { "free-auto": catalog.models["free-auto"] },
+    }),
+  ).toBeUndefined()
+  expect(
+    Object.keys(
+      Provider.filterManagedModelsForAccount(catalog, {
+        models: { "free-auto": {} },
+      })?.models ?? {},
+    ),
+  ).toEqual(["free-auto", "paid"])
+})
+
 const languageBaseURL = (language: unknown) => (language as { config: { baseURL: string } }).config.baseURL
 
 const it = testEffect(Layer.mergeAll(Provider.defaultLayer, Env.defaultLayer, Plugin.defaultLayer))

@@ -47,6 +47,12 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         if ((enabled ? enabled.has(key) : true) && !disabled.has(key)) filtered[key] = value
       }
       const connected = yield* provider.list()
+      const catalog = filtered[ProviderV2.ID.mongolgpt]
+      if (catalog) {
+        const visible = Provider.filterManagedModelsForAccount(catalog, connected[ProviderV2.ID.mongolgpt])
+        if (!visible) delete filtered[ProviderV2.ID.mongolgpt]
+        else filtered[ProviderV2.ID.mongolgpt] = visible
+      }
       const providers = Object.assign(
         mapValues(filtered, (item) => Provider.fromModelsDevProvider(item)),
         connected,
