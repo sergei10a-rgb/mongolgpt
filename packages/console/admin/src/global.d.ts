@@ -6,3 +6,9 @@ export declare module "@solidjs/start/server" {
     locals: Record<string, unknown>
   }
 }
+
+declare module "solid-js/web" {
+  interface RequestEvent {
+    locals: Record<string | number | symbol, any>
+  }
+}
