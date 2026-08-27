@@ -602,6 +602,7 @@ export const dict = {
   "error.page.circular": "[Circular]",
   "error.page.report.prefix": "Please report this error to the MongolGPT team",
   "error.page.report.discord": "on Discord",
+  "error.page.report.support": "in MongolGPT Support",
   "error.page.version": "Version: {{version}}",
 
   "error.dev.rootNotFound":

@@ -1,6 +1,6 @@
 import { appOrigin, docsOrigin, domain, publicOrigin, runtimeOrigin } from "./stage"
 
-const supportUrl = "https://github.com/sergei10a-rgb/mongolgpt/issues"
+const supportUrl = `${publicOrigin}/support`
 const hostedServices = process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES === "true"
 const channel = $app.stage === "production" ? "prod" : $app.stage === "dev" ? "dev" : "beta"
 export const docsUrl = docsOrigin

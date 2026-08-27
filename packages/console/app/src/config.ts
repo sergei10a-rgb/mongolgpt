@@ -1,12 +1,13 @@
 export const repositoryUrl = "https://github.com/sergei10a-rgb/mongolgpt"
-export const repositorySupportUrl = `${repositoryUrl}/issues`
+const publicUrl = import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim() || repositoryUrl
+export const supportUrl = import.meta.env.VITE_MONGOLGPT_SUPPORT_URL?.trim() || "/support"
 
 /**
  * Application-wide constants and configuration
  */
 export const config = {
   // Base URL
-  baseUrl: import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim() || repositoryUrl,
+  baseUrl: publicUrl,
 
   // GitHub
   github: {
@@ -19,7 +20,7 @@ export const config = {
 
   // Social links
   social: {
-    twitter: repositorySupportUrl,
+    support: supportUrl,
     discord: import.meta.env.VITE_MONGOLGPT_COMMUNITY_URL?.trim() || `${repositoryUrl}/discussions`,
   },
 

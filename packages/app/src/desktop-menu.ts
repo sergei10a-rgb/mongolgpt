@@ -212,16 +212,8 @@ export const DESKTOP_MENU: DesktopMenu[] = [
       { type: "item", label: "Тусламж ба асуудал мэдээлэх", href: supportUrl },
       { type: "item", label: "Лог экспортлох...", command: "logs.export" },
       { type: "separator" },
-      {
-        type: "item",
-        label: "Санал хүсэлт илгээх",
-        href: "https://github.com/sergei10a-rgb/mongolgpt/issues/new?template=feature_request.yml",
-      },
-      {
-        type: "item",
-        label: "Алдаа мэдээлэх",
-        href: "https://github.com/sergei10a-rgb/mongolgpt/issues/new?template=bug_report.yml",
-      },
+      { type: "item", label: "Санал хүсэлт илгээх", href: supportUrl },
+      { type: "item", label: "Алдаа мэдээлэх", href: supportUrl },
     ],
   },
 ]

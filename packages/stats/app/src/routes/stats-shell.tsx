@@ -12,9 +12,8 @@ export const githubLink = {
   apiHref: "https://api.github.com/repos/sergei10a-rgb/mongolgpt",
   fallbackStars: "150K",
 }
-const supportUrl = `${githubLink.href}/issues`
+const supportUrl = `${baseUrl.replace(/\/+$/, "")}/support`
 const communityUrl = import.meta.env.VITE_MONGOLGPT_COMMUNITY_URL?.trim() || `${githubLink.href}/discussions`
-const contactEmail = import.meta.env.VITE_MONGOLGPT_CONTACT_EMAIL?.trim()
 export const themePreferences = ["dark", "light", "system"] as const
 export const themeStorageKey = "mongolgpt:stats-theme"
 export type ThemePreference = (typeof themePreferences)[number]
@@ -238,7 +237,7 @@ export function Footer(props: {
     { href: "/legal/privacy-policy", label: i18n.t("footer.privacy") },
   ]
   const connect = [
-    { href: contactEmail ? `mailto:${contactEmail}` : supportUrl, label: i18n.t("footer.contact") },
+    { href: supportUrl, label: i18n.t("footer.contact") },
     { href: communityUrl, label: i18n.t("footer.community") },
     { href: "https://x.com/mongolgpt", label: "X" },
     { href: githubLink.href, label: i18n.t("header.github") },

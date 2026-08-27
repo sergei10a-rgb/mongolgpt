@@ -24,6 +24,7 @@ export const dict = {
   "footer.feishu": "Feishu",
   "footer.discord": "Discord",
   "footer.x": "X",
+  "footer.support": "Support",
 
   "legal.brand": "Brand",
   "legal.privacy": "Privacy",

@@ -5,6 +5,9 @@ import { Icon } from "@astrojs/starlight/components"
 const { lang, editUrl, lastUpdated, entry } = Astro.locals.starlightRoute
 const template = entry.data.template
 const issueLink = Astro.locals.t("app.footer.issueLink", "Алдаа мэдээлэх")
+const supportUrl =
+  import.meta.env.MONGOLGPT_SUPPORT_URL?.trim() ||
+  `${import.meta.env.MONGOLGPT_CONSOLE_URL?.trim() || "https://mgpt.mn"}/support`
 
 const github = config.social?.find((item) => item.icon === "github")
 ---
@@ -22,14 +25,10 @@ const github = config.social?.find((item) => item.icon === "github")
               </a>
             )
           }
-          {
-            github && (
-              <a href={`${github.href}/issues/new`} target="_blank" rel="noopener noreferrer" class="sl-flex">
-                <Icon name={github.icon} size="1em" />
-                {issueLink}
-              </a>
-            )
-          }
+          <a href={supportUrl} target="_blank" rel="noopener noreferrer" class="sl-flex">
+            <Icon name="comment" size="1em" />
+            {issueLink}
+          </a>
         </div>
         <div>
           <p>&copy; <a target="_blank" rel="noopener noreferrer" href={github?.href}>MongolGPT</a></p>

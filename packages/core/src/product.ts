@@ -19,6 +19,7 @@ export function resolveProductServiceUrls(channel: string) {
   if (channel === "latest" || channel === "production" || channel === "prod") {
     return {
       console: "https://mgpt.mn",
+      support: "https://mgpt.mn/support",
       auth: "https://auth.mgpt.mn",
       app: "https://app.mgpt.mn",
       docs: "https://docs.mgpt.mn/docs",
@@ -28,6 +29,7 @@ export function resolveProductServiceUrls(channel: string) {
   if (channel === "dev" || channel === "main" || channel === "beta") {
     return {
       console: "https://dev.mgpt.mn",
+      support: "https://dev.mgpt.mn/support",
       auth: "https://auth.dev.mgpt.mn",
       app: "https://app.dev.mgpt.mn",
       docs: "https://docs.dev.mgpt.mn/docs",
@@ -36,6 +38,7 @@ export function resolveProductServiceUrls(channel: string) {
 
   return {
     console: localConsoleUrl,
+    support: `${localConsoleUrl}/support`,
     auth: localAuthUrl,
     app: localWebAppUrl,
     docs: "http://localhost:4321/docs",
@@ -43,3 +46,4 @@ export function resolveProductServiceUrls(channel: string) {
 }
 
 export const productServiceUrls = resolveProductServiceUrls(InstallationChannel)
+export const productSupportUrl = productServiceUrls.support

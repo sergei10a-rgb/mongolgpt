@@ -41,7 +41,7 @@ export function Footer() {
         <a href={community().link}>{i18n.t(community().key)}</a>
       </div>
       <div data-slot="cell">
-        <a href={config.social.twitter}>{i18n.t("footer.x")}</a>
+        <a href={config.social.support}>{i18n.t("footer.support")}</a>
       </div>
     </footer>
   )

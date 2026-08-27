@@ -1,8 +1,8 @@
-import { release } from "node:os"
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
 import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
 import { createSignal, For, Show } from "solid-js"
 import { getScrollAcceleration } from "../util/scroll"
+import { buildSupportReport } from "../util/support-report"
 import { useClipboard } from "../context/clipboard"
 import { InstallationVersion } from "@mongolgpt/core/installation/version"
 import { useExit } from "../context/exit"
@@ -42,10 +42,10 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
 
   const message = props.error.message || "Тодорхойгүй алдаа гарлаа."
   const stack = props.error.stack || "Стек мөр алга."
-  const issueURL = buildIssueURL(message, stack)
+  const supportReport = buildSupportReport(message, stack)
 
   const copyReport = () => {
-    void clipboard.write?.(issueURL.toString()).then(() => setCopied(true))
+    void clipboard.write?.(supportReport).then(() => setCopied(true))
   }
 
   const actions = [
@@ -108,7 +108,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
         {/* Headline */}
         <box flexDirection="column" alignItems="center" flexShrink={0}>
           <text attributes={TextAttributes.BOLD} fg={colors.text}>
-            mongolgpt гацлаа
+            MongolGPT гацлаа
           </text>
           <Show when={showSubtext()}>
             <text fg={colors.muted}>Санаандгүй алдаа сешнийг зогсоолоо.</text>
@@ -189,8 +189,8 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
           <box flexDirection="column" alignItems="center" flexShrink={0}>
             <text fg={colors.muted}>
               {copied()
-                ? "Тайланг хууллаа. Шинэ GitHub issue дотор наана уу."
-                : "Үүнийг засахад туслахын тулд тайланг хуулж GitHub issue нээнэ үү."}
+                ? "Тайланг хууллаа. MongolGPT Тусламж хэсэгт шинэ хүсэлт нээгээд наана уу."
+                : "Тайланг хуулж MongolGPT Тусламж хэсэгт илгээнэ үү."}
             </text>
             <text fg={colors.muted}>mongolgpt {InstallationVersion}</text>
           </box>
@@ -198,62 +198,4 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
       </box>
     </box>
   )
-}
-
-function buildIssueURL(message: string, stack: string) {
-  // Field keys match the ids in .github/ISSUE_TEMPLATE/bug-report.yml so the issue
-  // form opens pre-filled. Populating os/terminal/reproduce keeps the report past
-  // the contributing-guidelines compliance check, which pushes for system info.
-  const url = new URL("https://github.com/sergei10a-rgb/mongolgpt/issues/new?template=bug-report.yml")
-  url.searchParams.set("title", `TUI crash: ${message}`)
-  url.searchParams.set("mongolgpt-version", InstallationVersion)
-  url.searchParams.set("os", describeOS())
-  url.searchParams.set("terminal", describeTerminal())
-  url.searchParams.set(
-    "reproduce",
-    "mongolgpt crash дэлгэцээс автоматаар илгээсэн тайлан. Боломжтой бол гацах үед юу хийж байснаа тайлбарлана уу.",
-  )
-
-  // Budget the stack against the fully URL-encoded length (not the raw length) so
-  // the final link stays under GitHub's practical limit; flag truncation so a
-  // clipped trace is obvious. searchParams.set handles encoding without throwing,
-  // so measuring url.toString() is both correct and safe on any input.
-  const MAX_URL_LENGTH = 6000
-  const marker = "\n... (таслав)"
-  const head = `mongolgpt TUI санаандгүй алдаагаар гацлаа.\n\n**Алдаа:** ${message}\n\n**Стек мөр:**\n`
-  const setBody = (body: string) => url.searchParams.set("description", head + "```\n" + body + "\n```")
-
-  setBody(stack)
-  if (url.toString().length <= MAX_URL_LENGTH) return url
-
-  // Largest raw stack prefix whose encoded URL (with the marker) still fits.
-  let lo = 0
-  let hi = stack.length
-  while (lo < hi) {
-    const mid = Math.ceil((lo + hi) / 2)
-    setBody(stack.slice(0, mid) + marker)
-    if (url.toString().length <= MAX_URL_LENGTH) lo = mid
-    else hi = mid - 1
-  }
-  setBody(stack.slice(0, lo) + marker)
-  return url
-}
-
-function describeOS() {
-  const name =
-    process.platform === "darwin"
-      ? "macOS"
-      : process.platform === "win32"
-        ? "Windows"
-        : process.platform === "linux"
-          ? "Linux"
-          : process.platform
-  return `${name} ${release()} (${process.arch})`
-}
-
-function describeTerminal() {
-  const program = process.env.TERM_PROGRAM || process.env.TERM || "unknown"
-  const version = process.env.TERM_PROGRAM_VERSION ? ` ${process.env.TERM_PROGRAM_VERSION}` : ""
-  const multiplexer = process.env.TMUX ? " in tmux" : process.env.STY ? " in screen" : ""
-  return `${program}${version}${multiplexer}`
 }

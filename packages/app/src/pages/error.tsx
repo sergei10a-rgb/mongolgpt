@@ -363,8 +363,8 @@ export const ErrorPage: Component<ErrorPageProps> = (props) => {
               class="flex items-center text-text-interactive-base gap-1"
               onClick={() => platform.openLink(supportUrl)}
             >
-              <div>{language.t("error.page.report.discord")}</div>
-              <Icon name="discord" class="text-text-interactive-base" />
+              <div>{language.t("error.page.report.support")}</div>
+              <Icon name="help" class="text-text-interactive-base" />
             </button>
           </div>
           <Show when={platform.version}>

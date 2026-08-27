@@ -108,6 +108,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(buildStep?.run).toContain("bun --cwd packages/app verify:hosted-artifact")
     const site = await Bun.file(new URL("../../../infra/site.ts", import.meta.url)).text()
     expect(site).toContain('command: "bun run build:hosted"')
+    expect(site).toContain("const supportUrl = `${publicOrigin}/support`")
+    expect(site).not.toContain("github.com/sergei10a-rgb/mongolgpt/issues")
     expect(workflow.jobs.deploy.condition).toBe(
       "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
     )
