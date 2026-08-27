@@ -1,0 +1,127 @@
+name: Bootstrap dev OAuth
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "BOOTSTRAP DEV AUTH dev.mgpt.mn гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-bootstrap-dev-auth
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+  MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
+  MONGOLGPT_ENABLE_ADMIN: "false"
+  MONGOLGPT_ENABLE_ANALYTICS: "false"
+  MONGOLGPT_ENABLE_D1_BACKUPS: "false"
+  MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false"
+  MONGOLGPT_ENABLE_LEGACY_STRIPE: "false"
+  MONGOLGPT_ENABLE_MONITORING: "false"
+  MONGOLGPT_ENABLE_TURNSTILE: "true"
+  MONGOLGPT_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
+  MONGOLGPT_ENABLE_SHARE_SERVICE: "false"
+  MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
+  MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"
+  MONGOLGPT_PAYMENT_ENVIRONMENT: disabled
+
+jobs:
+  bootstrap:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: dev
+    env:
+      MONGOLGPT_AUTH_EMAIL_DOMAINS: ${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}
+      CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+    steps:
+      - name: Validate exact dev bootstrap confirmation
+        env:
+          BOOTSTRAP_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$BOOTSTRAP_CONFIRMATION" != "BOOTSTRAP DEV AUTH dev.mgpt.mn" ]; then
+            echo "Dev OAuth bootstrap баталгаажуулалт буруу байна."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify bootstrap contracts
+        run: |
+          bun typecheck
+          bun run --cwd packages/script test
+          bun run --cwd packages/console/app test
+
+      - name: Bootstrap real dev OAuth infrastructure
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_RUNTIME_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_SECRET }}
+          MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+          SST_SECRET_ByokCredentialsKeyV1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}
+          SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: ${{ vars.GITHUB_CLIENT_ID_CONSOLE }}
+          SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: ${{ secrets.GITHUB_CLIENT_SECRET_CONSOLE }}
+          SST_SECRET_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          SST_SECRET_MONGOLGPT_PLAN_LIMITS: ${{ secrets.MONGOLGPT_PLAN_LIMITS }}
+          SST_SECRET_MongolGPTRuntimeAuthSecret: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+          SST_SECRET_TurnstileSecretKey: "1x0000000000000000000000000000000AA"
+          SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: ${{ secrets.MONGOLGPT_GATEWAY_SESSION_SECRET }}
+          SST_SECRET_ZEN_SESSION_SECRET: ${{ secrets.ZEN_SESSION_SECRET }}
+          SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: ${{ secrets.MONGOLGPT_GATEWAY_MODELS1 }}
+        run: |
+          bun run deploy:preflight -- dev
+          stage="dev"
+          set_required_secret() {
+            name="$1"
+            variable="SST_SECRET_${name}"
+            value="${!variable}"
+            if [ -z "$value" ]; then
+              echo "Bootstrap secret дутуу байна: $name"
+              exit 1
+            fi
+            printf '%s' "$value" | bun sst secret set "$name" --stage="$stage"
+          }
+          set_optional_secret() {
+            name="$1"
+            variable="SST_SECRET_${name}"
+            value="${!variable}"
+            if [ -z "$value" ]; then value=" "; fi
+            printf '%s' "$value" | bun sst secret set "$name" --stage="$stage"
+          }
+          for name in \
+            ByokCredentialsKeyV1 \
+            GITHUB_CLIENT_ID_CONSOLE \
+            GITHUB_CLIENT_SECRET_CONSOLE \
+            GOOGLE_CLIENT_ID \
+            MONGOLGPT_PLAN_LIMITS \
+            MongolGPTRuntimeAuthSecret \
+            TurnstileSecretKey \
+            MONGOLGPT_GATEWAY_MODELS1; do
+            set_required_secret "$name"
+          done
+          set_optional_secret MONGOLGPT_GATEWAY_SESSION_SECRET
+          set_optional_secret ZEN_SESSION_SECRET
+          for index in $(seq 2 30); do
+            printf ' ' | bun sst secret set "MONGOLGPT_GATEWAY_MODELS${index}" --stage="$stage"
+          done
+          for index in $(seq 1 30); do
+            printf ' ' | bun sst secret set "ZEN_MODELS${index}" --stage="$stage"
+          done
+          bun sst unlock --stage="$stage" || true
+          bun sst deploy --stage="$stage" --target Database --print-logs
+          bun sst shell --stage="$stage" -- bun run db:migrate
+          bun sst deploy --stage="$stage" --target AuthApi --target Console --print-logs
+
+      - name: Verify real dev OAuth bootstrap
+        run: bun script/deployment-smoke.ts --auth-bootstrap dev

@@ -125,6 +125,16 @@ Cloudflare-ийн **Миний бүртгэл (`My Profile`) → API токен 
 
 `MONGOLGPT_SMOKE_AUTH_COOKIE`-г нэргүй эсвэл хиймэл нэвтрэлтийн замаар үүсгэхгүй. Тухайн орчны allowlist-д орсон, төлбөртэй багцгүй тусгай хэрэглэгчээр хэвийн GitHub эсвэл Google OAuth нэвтрэлт хийсний дараа browser developer tools-ийн **Application → Cookies** хэсгээс `__Host-mongolgpt-auth`-ийн утгыг авч, `__Host-mongolgpt-auth=<утга>` хэлбэрээр тухайн GitHub environment-ийн secret-д хадгална. `Path`, `Secure`, `HttpOnly`, `SameSite` зэрэг атрибут болон `Cookie:` толгойг хамт хуулж болохгүй. Нууц утгыг SST, Worker, browser E2E эсвэл artifact-д дамжуулахгүй; зөвхөн байршуулалтын өмнөх бүтцийн шалгалт болон байршуулалтын дараах authenticated smoke алхам уншина. Сесс хүчингүй болсон үед тусгай хэрэглэгчээр дахин OAuth нэвтэрч энэ secret-ийг шинэчилнэ.
 
+Анхны `dev` байршуулалтад OAuth хост хараахан байхгүй учраас бодит cookie-г урьдчилан авах боломжгүй. Энэ үед дараах нэг удаагийн дарааллыг хэрэглэнэ:
+
+1. `dev` GitHub environment-д cookie-оос бусад Cloudflare, GitHub/Google OAuth, сесс, багцын хязгаар болон Free Auto загварын тохиргоог бүрэн оруулна.
+2. GitHub Actions-ийн **Bootstrap dev OAuth** ажлын урсгалыг нээгээд `BOOTSTRAP DEV AUTH dev.mgpt.mn` гэж яг бичиж ажиллуулна. Энэ урсгал зөвхөн D1, өгөгдлийн шилжилт, Auth API болон Console-ийг `dev` орчинд босгоно.
+3. Allowlist-д орсон тусгай Free хэрэглэгчээр хэвийн OAuth нэвтэрч `__Host-mongolgpt-auth` cookie-г дээрх хэлбэрээр авна.
+4. Cookie-г `dev` environment-ийн `MONGOLGPT_SMOKE_AUTH_COOKIE` secret-д хадгална.
+5. Үндсэн **Cloudflare deploy** урсгалыг `dev` дээр ажиллуулж runtime, Free Auto account gate болон browser E2E-г бүхэлд нь батална.
+
+Bootstrap амжилттай болсон нь бүтээгдэхүүний deploy амжилттай болсон гэсэн үг биш. Энэ урсгал runtime, Free Auto model call, subscription эсвэл production орчныг байршуулдаггүй бөгөөд `production` дээр ажиллах боломжгүй. Үндсэн deploy-ийн бодит нэвтэрсэн MongolGPT account-ын шалгалтыг хэзээ ч орлохгүй.
+
 `MONGOLGPT_PLAN_LIMITS` нь paid багц бүрд 7 хамгаалалтыг заавал тодорхойлно: 7 хоногийн өртөг, токен,
 хүсэлт; сарын өртөг, токен, хүсэлт; мөн гулсах хугацааны өртөг. Өртгийн утга нь загвар нийлүүлэгчийн
 тооцооны ам.доллар, `rollingWindow` нь цагаар өгөгдөнө. Дараах нь зөвхөн бүтцийн жишээ бөгөөд launch-ийн

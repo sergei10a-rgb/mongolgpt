@@ -29,9 +29,34 @@ if (import.meta.main) {
   if (process.argv[2] === "--validate-auth-cookie") {
     inspectSmokeAuthCookie(process.env.MONGOLGPT_SMOKE_AUTH_COOKIE)
     console.log("Authenticated deployment smoke identity is configured.")
+  } else if (process.argv[2] === "--auth-bootstrap") {
+    await runAuthBootstrapSmoke(process.argv[3])
   } else {
     await runSmoke()
   }
+}
+
+export async function runAuthBootstrapSmoke(stage = process.env.SST_STAGE ?? "dev") {
+  if (stage !== "dev") throw new Error("OAuth bootstrap smoke нь зөвхөн dev орчинд ажиллана.")
+
+  const result = preflightDeployment({
+    stage,
+    env: process.env,
+    requireCloudflareCredentials: false,
+    requireDeploymentSecrets: false,
+    requireHostedServices: true,
+  })
+  const endpoints = deploymentEndpoints(result)
+  inspectDeploymentEndpointConfiguration(endpoints, result)
+  if (!endpoints.console || !endpoints.consoleHealth || !endpoints.authHealth) {
+    throw new Error("OAuth bootstrap smoke endpoint-үүд дутуу байна.")
+  }
+
+  const runtimeVersion = await expectedRuntimeVersion()
+  await check("consoleHealth", endpoints.consoleHealth, "console", result, endpoints.app, runtimeVersion)
+  await check("authHealth", endpoints.authHealth, "auth", result, endpoints.app, runtimeVersion)
+  await check("console", endpoints.console, undefined, result, endpoints.app, runtimeVersion)
+  console.log("Dev OAuth bootstrap smoke check passed.")
 }
 
 async function runSmoke() {

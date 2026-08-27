@@ -10,6 +10,7 @@ import {
   inspectHostedTurnstileRejection,
   inspectNoStoreResponse,
   inspectRuntimeTokenPreflight,
+  runAuthBootstrapSmoke,
 } from "../../../script/deployment-smoke"
 import {
   inspectDeploymentEndpointConfiguration,
@@ -55,6 +56,12 @@ const deployment = {
   paymentEnvironment: "disabled" as const,
   warnings: [],
 }
+
+describe("dev OAuth bootstrap smoke", () => {
+  test("refuses every non-dev stage before making network requests", async () => {
+    await expect(runAuthBootstrapSmoke("production")).rejects.toThrow("зөвхөн dev")
+  })
+})
 
 function corsHeaders() {
   return {

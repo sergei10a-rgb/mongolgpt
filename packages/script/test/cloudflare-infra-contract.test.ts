@@ -76,6 +76,45 @@ function parseWorkflowJob(input: unknown, name: string): WorkflowJob {
 }
 
 describe("Cloudflare hosted infrastructure contract", () => {
+  test("bootstraps only real dev OAuth before the authenticated deployment gate", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/bootstrap-dev-auth.yml", import.meta.url)).text()
+    const parsed: unknown = Bun.YAML.parse(source)
+    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs)) {
+      throw new Error("Dev OAuth bootstrap workflow is invalid")
+    }
+    const rawJob = parsed.jobs.bootstrap
+    if (!record(rawJob)) throw new Error("Dev OAuth bootstrap job is missing")
+    const job = parseWorkflowJob(rawJob, "bootstrap")
+    const confirmation = job.steps.find((step) => step.name === "Validate exact dev bootstrap confirmation")
+    const deploy = job.steps.find((step) => step.name === "Bootstrap real dev OAuth infrastructure")
+    const smoke = job.steps.find((step) => step.name === "Verify real dev OAuth bootstrap")
+
+    expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
+    expect(rawJob.environment).toBe("dev")
+    expect(job.condition).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
+    expect(confirmation?.env).toEqual({ BOOTSTRAP_CONFIRMATION: "${{ inputs.confirmation }}" })
+    expect(confirmation?.run).toContain('if [ "$BOOTSTRAP_CONFIRMATION" != "BOOTSTRAP DEV AUTH dev.mgpt.mn" ]; then')
+    expect(confirmation?.run).not.toContain("${{ inputs.confirmation }}")
+
+    expect(source).not.toContain("production")
+    expect(source).not.toContain("MONGOLGPT_SMOKE_AUTH_COOKIE")
+    expect(source).not.toContain("deploy:smoke")
+    expect(source).not.toContain("wrangler deploy")
+    expect(source).toContain('MONGOLGPT_ENABLE_ADMIN: "false"')
+    expect(source).toContain('MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"')
+    expect(source).toContain("MONGOLGPT_PAYMENT_ENVIRONMENT: disabled")
+
+    const run = deploy?.run ?? ""
+    const database = run.indexOf('bun sst deploy --stage="$stage" --target Database')
+    const migration = run.indexOf('bun sst shell --stage="$stage" -- bun run db:migrate')
+    const oauth = run.indexOf('bun sst deploy --stage="$stage" --target AuthApi --target Console --print-logs')
+    expect(database).toBeGreaterThanOrEqual(0)
+    expect(migration).toBeGreaterThan(database)
+    expect(oauth).toBeGreaterThan(migration)
+    expect(smoke?.run).toBe("bun script/deployment-smoke.ts --auth-bootstrap dev")
+    expect(job.steps.indexOf(smoke!)).toBeGreaterThan(job.steps.indexOf(deploy!))
+  })
+
   test("rejects non-canonical SST stages before deriving domains or protection", async () => {
     const configSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
     expect(configSource).toContain('await import("./packages/script/src/deployment-stage.js")')
