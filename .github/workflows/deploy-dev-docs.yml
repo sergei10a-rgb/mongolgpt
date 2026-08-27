@@ -30,7 +30,6 @@ env:
   MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
   MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"
   MONGOLGPT_PAYMENT_ENVIRONMENT: disabled
-  MONGOLGPT_DEPLOY_DOCS_ONLY: "true"
 
 jobs:
   deploy:
@@ -67,10 +66,13 @@ jobs:
       - name: Deploy only dev docs to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_DEPLOY_DOCS_ONLY: "true"
         run: |
           bun run deploy:preflight -- dev --docs-only
           bun sst unlock --stage=dev || true
           bun sst deploy --stage=dev --target Website --print-logs
 
       - name: Verify live dev docs
+        env:
+          MONGOLGPT_DEPLOY_DOCS_ONLY: "true"
         run: bun script/deployment-smoke.ts --docs-only dev

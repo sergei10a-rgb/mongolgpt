@@ -424,16 +424,22 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const docsSource = await Bun.file(new URL("../../../infra/docs.ts", import.meta.url)).text()
     const siteSource = await Bun.file(new URL("../../../infra/site.ts", import.meta.url)).text()
     const rootPackage: unknown = await Bun.file(new URL("../../../package.json", import.meta.url)).json()
-    expect(record(Bun.YAML.parse(source))).toBe(true)
-    if (!record(rootPackage) || !record(rootPackage.dependencies)) {
-      throw new Error("Root package dependencies are missing")
+    const parsed: unknown = Bun.YAML.parse(source)
+    if (!record(parsed) || !record(parsed.jobs) || !record(rootPackage) || !record(rootPackage.dependencies)) {
+      throw new Error("Dev docs workflow or root package dependencies are missing")
     }
+    const job = parseWorkflowJob(parsed.jobs.deploy, "deploy")
+    const deploy = job.steps.find((step) => step.name === "Deploy only dev docs to Cloudflare")
+    const smoke = job.steps.find((step) => step.name === "Verify live dev docs")
 
     expect(source).toContain("workflow_dispatch:")
     expect(source).not.toMatch(/^\s+push:/m)
     expect(source).toContain('environment: dev')
     expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "false"')
     expect(source).toContain('MONGOLGPT_DEPLOY_DOCS_ONLY: "true"')
+    expect(record(parsed.env) ? parsed.env.MONGOLGPT_DEPLOY_DOCS_ONLY : undefined).toBeUndefined()
+    expect(deploy?.env?.MONGOLGPT_DEPLOY_DOCS_ONLY).toBe("true")
+    expect(smoke?.env?.MONGOLGPT_DEPLOY_DOCS_ONLY).toBe("true")
     expect(source).toContain('DEPLOY DEV DOCS docs.dev.mgpt.mn')
     expect(source).toContain('MONGOLGPT_STATIC_DOCS=true bun run build:docs')
     expect(source).toContain('bun run --cwd packages/web verify:static-artifact')
