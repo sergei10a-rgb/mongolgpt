@@ -131,6 +131,7 @@ a {
 main[data-page="admin-overview"],
 main[data-page="admin-users"],
 main[data-page="admin-billing"],
+main[data-page="admin-audit"],
 main[data-page="admin-operators"] {
   width: min(1240px, calc(100% - 48px));
   margin: 0 auto;
@@ -443,7 +444,8 @@ h2 {
 }
 
 [data-component="user-filters"],
-[data-component="billing-filters"] {
+[data-component="billing-filters"],
+[data-component="audit-filters"] {
   display: grid;
   grid-template-columns: minmax(240px, 1fr) 180px 170px auto;
   align-items: end;
@@ -553,7 +555,8 @@ h2 {
 }
 
 [data-component="user-filters"] label,
-[data-component="billing-filters"] label {
+[data-component="billing-filters"] label,
+[data-component="audit-filters"] label {
   min-width: 0;
   display: grid;
   gap: 6px;
@@ -561,6 +564,7 @@ h2 {
 
 [data-component="user-filters"] label > span,
 [data-component="billing-filters"] label > span,
+[data-component="audit-filters"] label > span,
 [data-component="account-action"] label {
   color: #686d73;
   font-size: 11px;
@@ -570,6 +574,8 @@ h2 {
 [data-component="user-filters"] input,
 [data-component="user-filters"] select,
 [data-component="billing-filters"] select,
+[data-component="audit-filters"] input,
+[data-component="audit-filters"] select,
 [data-component="account-action"] textarea {
   width: 100%;
   min-height: 38px;
@@ -584,6 +590,7 @@ h2 {
 
 [data-component="user-filters"] button,
 [data-component="billing-filters"] button,
+[data-component="audit-filters"] button,
 [data-component="account-action"] button {
   min-height: 38px;
   padding: 0 12px;
@@ -600,6 +607,8 @@ h2 {
 [data-component="user-filters"] input:focus,
 [data-component="user-filters"] select:focus,
 [data-component="billing-filters"] select:focus,
+[data-component="audit-filters"] input:focus,
+[data-component="audit-filters"] select:focus,
 [data-component="account-action"] textarea:focus {
   border-color: #295ea8;
   outline: 2px solid rgba(41, 94, 168, 0.2);
@@ -608,6 +617,26 @@ h2 {
 
 [data-component="user-directory"] {
   margin-top: 8px;
+}
+
+[data-component="audit-directory"] {
+  margin-top: 8px;
+}
+
+td[data-audit-action] code,
+td[data-audit-target] code {
+  max-width: 260px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+td[data-audit-target] span {
+  display: block;
+  margin-bottom: 4px;
+  color: #686d73;
+  font-size: 10px;
 }
 
 [data-component="section-heading"] > span {
@@ -924,12 +953,14 @@ td[data-empty] {
 
   [data-component="user-filters"],
   [data-component="billing-filters"],
+  [data-component="audit-filters"],
   [data-component="operator-create"] form {
     grid-template-columns: minmax(220px, 1fr) 1fr 1fr;
   }
 
   [data-component="user-filters"] button,
   [data-component="billing-filters"] button,
+  [data-component="audit-filters"] button,
   [data-component="operator-create"] button {
     grid-column: 1 / -1;
     justify-self: start;
@@ -966,6 +997,7 @@ td[data-empty] {
   main[data-page="admin-overview"],
   main[data-page="admin-users"],
   main[data-page="admin-billing"],
+  main[data-page="admin-audit"],
   main[data-page="admin-operators"] {
     width: calc(100% - 28px);
     padding-top: 28px;
@@ -1018,12 +1050,14 @@ td[data-empty] {
 
   [data-component="user-filters"],
   [data-component="billing-filters"],
+  [data-component="audit-filters"],
   [data-component="operator-create"] form {
     grid-template-columns: 1fr;
   }
 
   [data-component="user-filters"] button,
   [data-component="billing-filters"] button,
+  [data-component="audit-filters"] button,
   [data-component="operator-create"] button {
     grid-column: auto;
     width: 100%;
@@ -1066,6 +1100,8 @@ td[data-empty] {
   [data-component="user-filters"] input,
   [data-component="user-filters"] select,
   [data-component="billing-filters"] select,
+  [data-component="audit-filters"] input,
+  [data-component="audit-filters"] select,
   [data-component="operator-create"] input,
   [data-component="operator-create"] select,
   [data-component="operator-action"] select,
@@ -1107,6 +1143,8 @@ td[data-empty] {
   [data-component="user-filters"] input,
   [data-component="user-filters"] select,
   [data-component="billing-filters"] select,
+  [data-component="audit-filters"] input,
+  [data-component="audit-filters"] select,
   [data-component="operator-create"] input,
   [data-component="operator-create"] select,
   [data-component="operator-action"] select,
