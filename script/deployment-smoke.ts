@@ -28,6 +28,7 @@ import {
   inspectStaticAssetContentType,
   inspectRuntimeHealth,
 } from "@mongolgpt/script/deployment-smoke-contract"
+import { isStaticAppBackendPath } from "../packages/app/src/utils/static-app-router"
 
 if (import.meta.main) {
   if (process.argv[2] === "--validate-auth-cookie") {
@@ -195,6 +196,7 @@ async function check(
           await checkAnonymousRuntimeApiBoundary(contract.serverUrl, url)
         }
         await checkDirectAppRoute(url, result)
+        await checkStaticAppBackendBoundary(url)
       } else {
         await response.body?.cancel()
       }
@@ -276,6 +278,38 @@ async function checkDirectAppRoute(appUrl: string, result: DeploymentPreflightRe
   const html = await response.text()
   inspectAppDeployment(html, directUrl, result)
   await checkStaticAssets(directUrl, html, "app direct navigation")
+}
+
+async function checkStaticAppBackendBoundary(appUrl: string) {
+  for (const path of ["/api/health", "/global/health", "/v1/account/overview"]) {
+    if (!isStaticAppBackendPath(path)) throw new Error(`static app backend path is not reserved: ${path}`)
+    const requestUrl = new URL(path, `${appUrl}/`).toString()
+    const response = await fetch(requestUrl, {
+      headers: { Accept: "application/json", "User-Agent": "mongolgpt-deployment-smoke" },
+      redirect: "manual",
+      signal: AbortSignal.timeout(15_000),
+    })
+    inspectResponseOrigin({
+      requestUrl,
+      responseUrl: response.url,
+      status: response.status,
+      location: response.headers.get("location"),
+      label: "static app backend boundary",
+    })
+    await inspectStaticAppBackendRejection(response, path)
+  }
+}
+
+export async function inspectStaticAppBackendRejection(response: Response, path: string) {
+  if (response.status !== 404) throw new Error(`static app ${path} HTTP ${response.status}; expected 404`)
+  inspectNoStoreResponse(response, `static app ${path}`)
+  if (response.headers.get("x-content-type-options")?.toLowerCase() !== "nosniff") {
+    throw new Error(`static app ${path} x-content-type-options is not nosniff`)
+  }
+  const body = inspectJsonApiPayload(response.headers.get("content-type"), await response.text(), `static app ${path}`)
+  if (!body || typeof body !== "object" || !("code" in body) || body.code !== "STATIC_APP_API_ROUTE") {
+    throw new Error(`static app ${path} returned the wrong error contract`)
+  }
 }
 
 async function checkHostedAuthorize(consoleUrl: string, authOrigin: string, turnstileEnabled: boolean) {

@@ -1,7 +1,7 @@
 import { expect, type BrowserContext, type Page, type Request } from "@playwright/test"
+import { isStaticAppBackendPath } from "../../src/utils/static-app-router"
 
 const blockedDocumentTypes = new Set(["document", "script", "stylesheet", "font"])
-const apiLikePath = /^\/(api|auth|session|model|v1)(\/|$)/
 const backendResourceTypes = new Set(["fetch", "xhr"])
 const observedResourceTypes = new Set([...blockedDocumentTypes, ...backendResourceTypes])
 const smokeAuthCookieName = "__Host-mongolgpt-auth"
@@ -41,7 +41,7 @@ export function observeDeployedPage(page: Page, appOrigin: string, apiOrigins: s
 
     const url = new URL(request.url())
     if (url.origin !== appOrigin) return
-    if (!backendResourceTypes.has(request.resourceType()) && !apiLikePath.test(url.pathname)) return
+    if (!backendResourceTypes.has(request.resourceType()) && !isStaticAppBackendPath(url.pathname)) return
     suspiciousRequests.push(`${request.resourceType()} ${request.method()} ${request.url()}`)
   })
 
@@ -78,7 +78,7 @@ export function observeDeployedPage(page: Page, appOrigin: string, apiOrigins: s
         failedRequests.push(`${request.resourceType()}:${response.status()} ${request.url()}`)
       }
 
-      if (apiLikePath.test(pathname) && contentType.includes("text/html")) {
+      if (isStaticAppBackendPath(pathname) && contentType.includes("text/html")) {
         htmlResponses.push(`${response.status()} ${request.url()}`)
       }
       return
@@ -86,7 +86,7 @@ export function observeDeployedPage(page: Page, appOrigin: string, apiOrigins: s
 
     if (
       allowedApiOrigins.has(origin) &&
-      apiLikePath.test(pathname) &&
+      isStaticAppBackendPath(pathname) &&
       backendResourceTypes.has(request.resourceType())
     ) {
       observedApiResponses.push({

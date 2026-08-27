@@ -23,4 +23,9 @@ export const webApp = new sst.cloudflare.StaticSiteV2("WebApp", {
     MONGOLGPT_CHANNEL: channel,
     ...(hostedServices ? { VITE_MONGOLGPT_SERVER_URL: runtimeOrigin } : {}),
   },
+  transform: {
+    server: (args) => {
+      args.handler = "packages/app/cloudflare-router.ts"
+    },
+  },
 })

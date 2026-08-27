@@ -463,6 +463,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(docsSource).toContain("const docsSiteOrigin = new URL(docsOrigin).origin")
     expect(docsSource).toContain("MONGOLGPT_PUBLIC_URL: docsSiteOrigin")
     expect(siteSource).toContain('new sst.cloudflare.StaticSiteV2("WebApp"')
+    expect(siteSource).toContain('args.handler = "packages/app/cloudflare-router.ts"')
+    expect(siteSource).toContain("transform: {")
   })
 
   test("deploys the authenticated Sandbox runtime before publishing the hosted app", async () => {

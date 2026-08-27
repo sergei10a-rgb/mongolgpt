@@ -10,6 +10,7 @@ import {
   inspectHostedTurnstileRejection,
   inspectNoStoreResponse,
   inspectRuntimeTokenPreflight,
+  inspectStaticAppBackendRejection,
   runAuthBootstrapSmoke,
   runDocsSmoke,
 } from "../../../script/deployment-smoke"
@@ -72,6 +73,55 @@ const deployment = {
   paymentEnvironment: "disabled" as const,
   warnings: [],
 }
+
+describe("static app backend boundary", () => {
+  test("requires a non-cacheable JSON 404 instead of the SPA shell", async () => {
+    const response = Response.json(
+      {
+        code: "STATIC_APP_API_ROUTE",
+        message: "MongolGPT веб аппын хаяг дээр API ажиллахгүй.",
+      },
+      {
+        status: 404,
+        headers: {
+          "cache-control": "no-store",
+          "x-content-type-options": "nosniff",
+        },
+      },
+    )
+    expect(await inspectStaticAppBackendRejection(response, "/api/health")).toBeUndefined()
+  })
+
+  test("rejects HTML, cacheable, and ambiguous error responses", async () => {
+    const htmlResponse = new Response("<!doctype html><title>MongolGPT</title>", {
+      status: 404,
+      headers: {
+        "cache-control": "no-store",
+        "content-type": "text/html; charset=utf-8",
+        "x-content-type-options": "nosniff",
+      },
+    })
+    expect((await caught(inspectStaticAppBackendRejection(htmlResponse, "/api/health")))?.message).toContain(
+      "not JSON",
+    )
+
+    const cacheable = Response.json(
+      { code: "STATIC_APP_API_ROUTE" },
+      { status: 404, headers: { "cache-control": "public", "x-content-type-options": "nosniff" } },
+    )
+    expect((await caught(inspectStaticAppBackendRejection(cacheable, "/global/health")))?.message).toContain(
+      "cacheable",
+    )
+
+    const wrongCode = Response.json(
+      { code: "NOT_FOUND" },
+      { status: 404, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" } },
+    )
+    expect((await caught(inspectStaticAppBackendRejection(wrongCode, "/v1/account/overview")))?.message).toContain(
+      "wrong error contract",
+    )
+  })
+})
 
 describe("dev OAuth bootstrap smoke", () => {
   test("refuses every non-dev stage before making network requests", async () => {
