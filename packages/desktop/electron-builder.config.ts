@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
 
 import type { Configuration } from "electron-builder"
+import { updaterChannel } from "./src/shared/updater-channel"
 
 const execFileAsync = promisify(execFile)
 const packageDir = path.dirname(fileURLToPath(import.meta.url))
@@ -83,7 +84,7 @@ const getBase = (appId: string): Configuration => ({
       sign: signWindows,
     },
     target: ["nsis"],
-    verifyUpdateCodeSignature: false,
+    verifyUpdateCodeSignature: true,
   },
   nsis: {
     oneClick: true,
@@ -125,7 +126,12 @@ function getConfig() {
         appId,
         productName: "MongolGPT Beta",
         protocols: { name: "MongolGPT Beta", schemes: ["mongolgpt"] },
-        publish: { provider: "github", owner: "sergei10a-rgb", repo: "mongolgpt", channel: "beta" },
+        publish: {
+          provider: "github",
+          owner: "sergei10a-rgb",
+          repo: "mongolgpt",
+          channel: updaterChannel(channel),
+        },
         rpm: { packageName: "mongolgpt-beta" },
       }
     }
@@ -135,7 +141,12 @@ function getConfig() {
         appId,
         productName: "MongolGPT",
         protocols: { name: "MongolGPT", schemes: ["mongolgpt"] },
-        publish: { provider: "github", owner: "sergei10a-rgb", repo: "mongolgpt", channel: "latest" },
+        publish: {
+          provider: "github",
+          owner: "sergei10a-rgb",
+          repo: "mongolgpt",
+          channel: updaterChannel(channel),
+        },
         deb: { fpm: [legacyDesktopEntryFpm] },
         rpm: { packageName: "mongolgpt", fpm: [legacyDesktopEntryFpm] },
       }

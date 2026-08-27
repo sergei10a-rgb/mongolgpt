@@ -5,9 +5,9 @@ const legacyDesktopEntry = "resources/linux/mongolgpt-desktop.desktop"
 const portablePath = (value: string) => value.replaceAll("\\", "/")
 
 const channels = [
-  { channel: "dev", appId: "org.mongolgpt.desktop.dev" },
-  { channel: "beta", appId: "org.mongolgpt.desktop.beta" },
-  { channel: "prod", appId: "org.mongolgpt.desktop" },
+  { channel: "dev", appId: "org.mongolgpt.desktop.dev", updater: undefined },
+  { channel: "beta", appId: "org.mongolgpt.desktop.beta", updater: "beta" },
+  { channel: "prod", appId: "org.mongolgpt.desktop", updater: "latest" },
 ] as const
 
 for (const channel of channels) {
@@ -25,6 +25,16 @@ for (const channel of channels) {
     expect(config.extraMetadata?.desktopName).toBe(`${channel.appId}.desktop`)
     expect(config.linux?.executableName).toBe(channel.appId)
     expect(config.linux?.desktop?.entry?.StartupWMClass).toBe(channel.appId)
+    expect(config.win?.verifyUpdateCodeSignature).toBe(true)
+    if (!channel.updater) expect(config.publish).toBeUndefined()
+    else {
+      expect(config.publish).toMatchObject({
+        provider: "github",
+        owner: "sergei10a-rgb",
+        repo: "mongolgpt",
+        channel: channel.updater,
+      })
+    }
   })
 }
 

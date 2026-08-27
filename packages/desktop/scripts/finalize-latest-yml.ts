@@ -3,6 +3,7 @@
 import { $ } from "bun"
 import path from "path"
 import { releaseTag } from "../../script/src/release-integrity"
+import { releaseUpdaterChannel, updaterMetadataFiles } from "../src/shared/updater-channel"
 
 const dir = process.env.LATEST_YML_DIR!
 if (!dir) throw new Error("LATEST_YML_DIR is required")
@@ -13,6 +14,7 @@ if (!repo) throw new Error("GH_REPO is required")
 const version = process.env.MONGOLGPT_VERSION
 if (!version) throw new Error("MONGOLGPT_VERSION is required")
 const tag = releaseTag(version)
+const metadata = updaterMetadataFiles(releaseUpdaterChannel(process.env.MONGOLGPT_CHANNEL))
 
 type FileEntry = {
   url: string
@@ -81,11 +83,11 @@ async function read(subdir: string, filename: string): Promise<LatestYml | undef
 const output: Record<string, string> = {}
 
 // Windows: merge arm64 + x64 into single file
-const winX64 = await read("latest-yml-x86_64-pc-windows-msvc", "latest.yml")
-const winArm64 = await read("latest-yml-aarch64-pc-windows-msvc", "latest.yml")
+const winX64 = await read("latest-yml-x86_64-pc-windows-msvc", metadata.windows)
+const winArm64 = await read("latest-yml-aarch64-pc-windows-msvc", metadata.windows)
 if (winX64 || winArm64) {
   const base = winArm64 ?? winX64!
-  output["latest.yml"] = serialize({
+  output[metadata.windows] = serialize({
     version: base.version,
     files: [...(winArm64?.files ?? []), ...(winX64?.files ?? [])],
     releaseDate: base.releaseDate,
@@ -93,19 +95,19 @@ if (winX64 || winArm64) {
 }
 
 // Linux x64: pass through
-const linuxX64 = await read("latest-yml-x86_64-unknown-linux-gnu", "latest-linux.yml")
-if (linuxX64) output["latest-linux.yml"] = serialize(linuxX64)
+const linuxX64 = await read("latest-yml-x86_64-unknown-linux-gnu", metadata.linuxX64)
+if (linuxX64) output[metadata.linuxX64] = serialize(linuxX64)
 
 // Linux arm64: pass through
-const linuxArm64 = await read("latest-yml-aarch64-unknown-linux-gnu", "latest-linux-arm64.yml")
-if (linuxArm64) output["latest-linux-arm64.yml"] = serialize(linuxArm64)
+const linuxArm64 = await read("latest-yml-aarch64-unknown-linux-gnu", metadata.linuxArm64)
+if (linuxArm64) output[metadata.linuxArm64] = serialize(linuxArm64)
 
 // macOS: merge arm64 + x64 into single file
-const macX64 = await read("latest-yml-x86_64-apple-darwin", "latest-mac.yml")
-const macArm64 = await read("latest-yml-aarch64-apple-darwin", "latest-mac.yml")
+const macX64 = await read("latest-yml-x86_64-apple-darwin", metadata.mac)
+const macArm64 = await read("latest-yml-aarch64-apple-darwin", metadata.mac)
 if (macX64 || macArm64) {
   const base = macArm64 ?? macX64!
-  output["latest-mac.yml"] = serialize({
+  output[metadata.mac] = serialize({
     version: base.version,
     files: [...(macArm64?.files ?? []), ...(macX64?.files ?? [])],
     releaseDate: base.releaseDate,
@@ -122,4 +124,4 @@ for (const [filename, content] of Object.entries(output)) {
   console.log(`uploaded ${filename}`)
 }
 
-console.log("finalized latest yml files")
+console.log(`finalized ${releaseUpdaterChannel(process.env.MONGOLGPT_CHANNEL)} yml files`)

@@ -59,7 +59,7 @@ jobs:
           MONGOLGPT_BUMP: ${{ inputs.bump }}
           MONGOLGPT_VERSION: ${{ inputs.version }}
           MONGOLGPT_API_KEY: ${{ secrets.MONGOLGPT_API_KEY }}
-          GH_REPO: ${{ (github.ref_name == 'beta' && 'sergei10a-rgb/mongolgpt-beta') || github.repository }}
+          GH_REPO: ${{ github.repository }}
     outputs:
       version: ${{ steps.version.outputs.version }}
       release: ${{ steps.version.outputs.release }}
@@ -453,7 +453,7 @@ jobs:
         if: needs.version.outputs.release
         with:
           name: latest-yml-${{ matrix.settings.target }}
-          path: packages/desktop/dist/latest*.yml
+          path: packages/desktop/dist/*.yml
 
   publish:
     needs:
@@ -562,6 +562,7 @@ jobs:
         env:
           MONGOLGPT_VERSION: ${{ needs.version.outputs.version }}
           MONGOLGPT_RELEASE: ${{ needs.version.outputs.release }}
+          MONGOLGPT_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'latest' }}
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
           GH_REPO: ${{ needs.version.outputs.repo }}

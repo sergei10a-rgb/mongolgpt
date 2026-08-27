@@ -88,5 +88,8 @@ describe("release integrity contract", () => {
 
     expect(workflow.split(canonicalUpload).length - 1).toBe(2)
     expect(workflow).not.toContain('gh release upload "v${{ needs.version.outputs.version }}"')
+    expect(workflow).not.toContain("sergei10a-rgb/mongolgpt-beta")
+    expect(workflow).toContain("path: packages/desktop/dist/*.yml")
+    expect(workflow).toContain("MONGOLGPT_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'latest' }}")
   })
 })

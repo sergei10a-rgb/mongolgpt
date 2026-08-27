@@ -4,6 +4,7 @@ import { $ } from "bun"
 import path from "node:path"
 import { parseArgs } from "node:util"
 import { releaseTag } from "../../script/src/release-integrity"
+import { releaseUpdaterChannel, updaterMetadataFiles } from "../src/shared/updater-channel"
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
@@ -23,6 +24,7 @@ if (!releaseId) throw new Error("MONGOLGPT_RELEASE is required")
 const version = process.env.MONGOLGPT_VERSION
 if (!version) throw new Error("MONGOLGPT_VERSION is required")
 const tag = releaseTag(version)
+const metadata = updaterMetadataFiles(releaseUpdaterChannel(process.env.MONGOLGPT_CHANNEL))
 
 const dir = process.env.LATEST_YML_DIR
 if (!dir) throw new Error("LATEST_YML_DIR is required")
@@ -147,15 +149,15 @@ const alias = (data: Record<string, { url: string; signature: string }>, key: st
   data[key] = data[src]
 }
 
-const winx = await read("latest-yml-x86_64-pc-windows-msvc", "latest.yml")
-const wina = await read("latest-yml-aarch64-pc-windows-msvc", "latest.yml")
-const macx = await read("latest-yml-x86_64-apple-darwin", "latest-mac.yml")
-const maca = await read("latest-yml-aarch64-apple-darwin", "latest-mac.yml")
-const linx = await read("latest-yml-x86_64-unknown-linux-gnu", "latest-linux.yml")
-const lina = await read("latest-yml-aarch64-unknown-linux-gnu", "latest-linux-arm64.yml")
+const winx = await read("latest-yml-x86_64-pc-windows-msvc", metadata.windows)
+const wina = await read("latest-yml-aarch64-pc-windows-msvc", metadata.windows)
+const macx = await read("latest-yml-x86_64-apple-darwin", metadata.mac)
+const maca = await read("latest-yml-aarch64-apple-darwin", metadata.mac)
+const linx = await read("latest-yml-x86_64-unknown-linux-gnu", metadata.linuxX64)
+const lina = await read("latest-yml-aarch64-unknown-linux-gnu", metadata.linuxArm64)
 
 const yver = winx?.version ?? wina?.version ?? macx?.version ?? maca?.version ?? linx?.version ?? lina?.version
-if (yver && yver !== version) throw new Error(`latest.yml version mismatch: expected ${version}, got ${yver}`)
+if (yver && yver !== version) throw new Error(`updater metadata version mismatch: expected ${version}, got ${yver}`)
 
 const out: Record<string, { url: string; signature: string }> = {}
 
@@ -197,7 +199,7 @@ const platforms = Object.fromEntries(
     .map((key) => [key, out[key]]),
 )
 
-if (!Object.keys(platforms).length) throw new Error("No updater files found in latest.yml artifacts")
+if (!Object.keys(platforms).length) throw new Error("No updater files found in channel metadata artifacts")
 
 const data = {
   version,
