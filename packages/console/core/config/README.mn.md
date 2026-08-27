@@ -17,4 +17,4 @@
 
 `allowAnonymous: false` болон `freeForAuthenticated: true` нь Free Auto-г зөвхөн MongolGPT бүртгэлээр нэвтэрсэн хэрэглэгчид үнэ төлбөргүй тооцох гэрээ юм. NVIDIA-ийн байршуулсан туршилтын API эрхийг нийтийн Free Auto backend болгон ашиглаж болохгүй; зохих үйлдвэрлэлийн лиценз эсвэл тусдаа гэрээ шаардлагатай.
 
-Шинэ тохиргоо `models`, `lightweightModels`, `providers` гэсэн үндсэн талбаруудтай. Хуучин deployment-ийг таслахгүй байхын тулд `zenModels`, `liteModels` талбарыг parser нэг шилжилтийн хугацаанд уншиж шинэ хэлбэрт дотроо хөрвүүлнэ; шинэ эсвэл шинэчилсэн тохиргоонд хуучин талбар ашиглахгүй.
+Тохиргоо `models`, `lightweightModels`, `providers` гэсэн үндсэн талбаруудтай. Gateway зөвхөн `MONGOLGPT_GATEWAY_MODELS1`…`MONGOLGPT_GATEWAY_MODELS30` нууц утгыг уншина; retired нэр эсвэл хуучин талбар дутуу тохиргоог нуухгүйгээр хаалттай зогсооно.

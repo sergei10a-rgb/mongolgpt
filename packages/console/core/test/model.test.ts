@@ -111,18 +111,15 @@ describe("MongolGPT Free Auto model contract", () => {
     expect(() => validate(config(model))).not.toThrow()
   })
 
-  test("normalizes the retired model-list keys without exposing them at runtime", () => {
+  test("rejects the retired model-list keys", () => {
     const current = config(model)
-    const normalized = validate({
-      zenModels: current.models,
-      liteModels: current.lightweightModels,
-      providers: current.providers,
-    })
-
-    expect(normalized.models["free-auto"]).toBeDefined()
-    expect(normalized.lightweightModels).toEqual({})
-    expect(normalized).not.toHaveProperty("zenModels")
-    expect(normalized).not.toHaveProperty("liteModels")
+    expect(() =>
+      validate({
+        zenModels: current.models,
+        liteModels: current.lightweightModels,
+        providers: current.providers,
+      }),
+    ).toThrow()
   })
 
   test("rejects anonymous or trial-backed Free Auto routes", () => {

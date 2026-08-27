@@ -77,7 +77,6 @@ jobs:
           SST_SECRET_MongolGPTRuntimeAuthSecret: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
           SST_SECRET_TurnstileSecretKey: "1x0000000000000000000000000000000AA"
           SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: ${{ secrets.MONGOLGPT_GATEWAY_SESSION_SECRET }}
-          SST_SECRET_ZEN_SESSION_SECRET: ${{ secrets.ZEN_SESSION_SECRET }}
           SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: ${{ secrets.MONGOLGPT_GATEWAY_MODELS1 }}
         run: |
           bun run deploy:preflight -- dev
@@ -92,13 +91,6 @@ jobs:
             fi
             printf '%s' "$value" | bun sst secret set "$name" --stage="$stage"
           }
-          set_optional_secret() {
-            name="$1"
-            variable="SST_SECRET_${name}"
-            value="${!variable}"
-            if [ -z "$value" ]; then value=" "; fi
-            printf '%s' "$value" | bun sst secret set "$name" --stage="$stage"
-          }
           for name in \
             ByokCredentialsKeyV1 \
             GITHUB_CLIENT_ID_CONSOLE \
@@ -107,16 +99,12 @@ jobs:
             MONGOLGPT_PLAN_LIMITS \
             MongolGPTRuntimeAuthSecret \
             TurnstileSecretKey \
+            MONGOLGPT_GATEWAY_SESSION_SECRET \
             MONGOLGPT_GATEWAY_MODELS1; do
             set_required_secret "$name"
           done
-          set_optional_secret MONGOLGPT_GATEWAY_SESSION_SECRET
-          set_optional_secret ZEN_SESSION_SECRET
           for index in $(seq 2 30); do
             printf ' ' | bun sst secret set "MONGOLGPT_GATEWAY_MODELS${index}" --stage="$stage"
-          done
-          for index in $(seq 1 30); do
-            printf ' ' | bun sst secret set "ZEN_MODELS${index}" --stage="$stage"
           done
           bun sst unlock --stage="$stage" || true
           bun sst deploy --stage="$stage" --target Database --print-logs

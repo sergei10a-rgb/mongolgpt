@@ -122,7 +122,7 @@ Cloudflare-ийн **Миний бүртгэл (`My Profile`) → API токен 
 | Нууц утга | `MONGOLGPT_GATEWAY_MODELS1`                              | Баталгаажсан Free Auto загвар ба үйлчилгээ үзүүлэгчийн JSON; үйлчилгээ үзүүлэгчийн түлхүүрийг агуулна |
 | Нууц утга | `MONGOLGPT_GATEWAY_MODELS2`…`MONGOLGPT_GATEWAY_MODELS30` | `MONGOLGPT_GATEWAY_MODELS1`-д багтахгүй үед ашиглах JSON-ийн дараалсан сонголттой хэсгүүд             |
 
-Шилжилтийн хугацаанд хуучин `ZEN_SESSION_SECRET`, `ZEN_MODELS1`…`ZEN_MODELS30` утгуудыг зөвхөн fallback-аар уншина. Шинэ нэр рүү ижил утгыг хуулж баталгаажуулах хүртэл session secret-ийг сольж болохгүй; шинэ тохиргоонд зөвхөн `MONGOLGPT_GATEWAY_*` нэр ашиглана.
+Session болон model gateway нь зөвхөн `MONGOLGPT_GATEWAY_SESSION_SECRET`, `MONGOLGPT_GATEWAY_MODELS1`…`MONGOLGPT_GATEWAY_MODELS30` нэрийг уншина. Аль нэг canonical нууц утга дутуу бол байршуулалт fallback хийхгүйгээр хаалттай зогсоно.
 
 `MONGOLGPT_SMOKE_AUTH_COOKIE`-г нэргүй эсвэл хиймэл нэвтрэлтийн замаар үүсгэхгүй. Тухайн орчны allowlist-д орсон, төлбөртэй багцгүй тусгай хэрэглэгчээр хэвийн GitHub эсвэл Google OAuth нэвтрэлт хийсний дараа browser developer tools-ийн **Application → Cookies** хэсгээс `__Host-mongolgpt-auth`-ийн утгыг авч, `__Host-mongolgpt-auth=<утга>` хэлбэрээр тухайн GitHub environment-ийн secret-д хадгална. `Path`, `Secure`, `HttpOnly`, `SameSite` зэрэг атрибут болон `Cookie:` толгойг хамт хуулж болохгүй. Нууц утгыг SST, Worker, browser E2E эсвэл artifact-д дамжуулахгүй; зөвхөн байршуулалтын өмнөх бүтцийн шалгалт болон байршуулалтын дараах authenticated smoke алхам уншина. Сесс хүчингүй болсон үед тусгай хэрэглэгчээр дахин OAuth нэвтэрч энэ secret-ийг шинэчилнэ.
 

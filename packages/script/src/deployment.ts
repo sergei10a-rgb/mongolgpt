@@ -21,7 +21,6 @@ const booleanVariables = [
 ] as const
 
 export const modelSecretNames = Array.from({ length: 30 }, (_, index) => `MONGOLGPT_GATEWAY_MODELS${index + 1}`)
-export const legacyModelSecretNames = Array.from({ length: 30 }, (_, index) => `ZEN_MODELS${index + 1}`)
 export const paymentSstSecretNames = [
   "QPayMerchantAccountID",
   "QPayClientID",
@@ -42,11 +41,9 @@ export const hostedSstSecretNames = [
   "MongolGPTRuntimeAuthSecret",
   "TurnstileSecretKey",
   "MONGOLGPT_GATEWAY_SESSION_SECRET",
-  "ZEN_SESSION_SECRET",
   "MongolGPTAdminBootstrapEmails",
   ...paymentSstSecretNames,
   ...modelSecretNames,
-  ...legacyModelSecretNames,
 ] as const
 
 type Environment = Record<string, string | undefined>
@@ -195,10 +192,10 @@ export function preflightDeployment(input: {
     validatePlanConfiguration(deploymentSecret(env, "MONGOLGPT_PLAN_LIMITS"), issues)
     validateSecretKey(
       "MONGOLGPT_GATEWAY_SESSION_SECRET",
-      preferredDeploymentSecret(env, "MONGOLGPT_GATEWAY_SESSION_SECRET", "ZEN_SESSION_SECRET"),
+      deploymentSecret(env, "MONGOLGPT_GATEWAY_SESSION_SECRET"),
       issues,
     )
-    validateModelConfiguration(preferredModelConfiguration(env), issues, stage)
+    validateModelConfiguration(modelConfiguration(env), issues, stage)
   }
   validatePaymentConfiguration({
     env,
@@ -274,15 +271,8 @@ function deploymentSecret(env: Environment, name: string) {
   return env[`SST_SECRET_${name}`] ?? env[name]
 }
 
-function preferredDeploymentSecret(env: Environment, canonical: string, legacy: string) {
-  const value = deploymentSecret(env, canonical)
-  return value?.trim() ? value : deploymentSecret(env, legacy)
-}
-
-function preferredModelConfiguration(env: Environment) {
-  const canonical = modelSecretNames.map((name) => deploymentSecret(env, name) ?? "").join("")
-  if (canonical.trim()) return canonical
-  return legacyModelSecretNames.map((name) => deploymentSecret(env, name) ?? "").join("")
+function modelConfiguration(env: Environment) {
+  return modelSecretNames.map((name) => deploymentSecret(env, name) ?? "").join("")
 }
 
 function validateSecretKey(name: string, value: string | undefined, issues: string[]) {

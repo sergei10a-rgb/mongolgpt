@@ -575,26 +575,28 @@ describe("Cloudflare deployment preflight", () => {
     )
   })
 
-  test("accepts the legacy gateway secrets only as a migration fallback", () => {
+  test("rejects retired gateway secrets without canonical replacements", () => {
     const {
       SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: sessionSecret,
       SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: modelConfig,
       ...withoutCanonicalGatewaySecrets
     } = hosted
 
-    expect(() =>
-      preflightDeployment({
-        stage: "dev",
-        env: {
-          ...cloudflare,
-          ...withoutCanonicalGatewaySecrets,
-          MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
-          MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
-          SST_SECRET_ZEN_SESSION_SECRET: sessionSecret,
-          SST_SECRET_ZEN_MODELS1: modelConfig,
-        },
-      }),
-    ).not.toThrow()
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...withoutCanonicalGatewaySecrets,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_ZEN_SESSION_SECRET: sessionSecret,
+            SST_SECRET_ZEN_MODELS1: modelConfig,
+          },
+        }),
+      ["MONGOLGPT_GATEWAY_SESSION_SECRET", "MONGOLGPT_GATEWAY_MODELS1"],
+    )
   })
 
   test("rejects malformed or unsafe plan quota configuration", () => {

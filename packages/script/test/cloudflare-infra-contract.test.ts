@@ -313,7 +313,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy).toBeGreaterThan(secretSync)
   })
 
-  test("migrates gateway secrets without rotating sessions or dropping the old stage", async () => {
+  test("uses only canonical MongolGPT gateway secrets", async () => {
     const [consoleSource, authSource, catalogSource, workflowSource] = await Promise.all([
       Bun.file(new URL("../../../infra/console.ts", import.meta.url)).text(),
       Bun.file(new URL("../../console/app/src/context/auth.ts", import.meta.url)).text(),
@@ -322,15 +322,15 @@ describe("Cloudflare hosted infrastructure contract", () => {
     ])
 
     expect(consoleSource).toContain('new sst.Secret("MONGOLGPT_GATEWAY_SESSION_SECRET", "")')
-    expect(consoleSource).toContain('new sst.Secret("ZEN_SESSION_SECRET", "")')
+    expect(consoleSource).not.toContain('new sst.Secret("ZEN_SESSION_SECRET", "")')
     expect(consoleSource).toContain('new sst.Secret("MONGOLGPT_GATEWAY_MODELS1", "")')
-    expect(consoleSource).toContain('new sst.Secret("ZEN_MODELS1", "")')
-    expect(authSource).toContain(
-      "canonicalSessionSecret.trim() ? canonicalSessionSecret : Resource.ZEN_SESSION_SECRET.value",
-    )
-    expect(catalogSource).toContain("canonical.trim() ? canonical : legacy")
+    expect(consoleSource).not.toContain('new sst.Secret("ZEN_MODELS1", "")')
+    expect(authSource).toContain("password: Resource.MONGOLGPT_GATEWAY_SESSION_SECRET.value")
+    expect(authSource).not.toContain("ZEN_SESSION_SECRET")
+    expect(catalogSource).not.toContain("ZEN_MODELS")
     expect(workflowSource).toContain("SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET")
     expect(workflowSource).toContain("SST_SECRET_MONGOLGPT_GATEWAY_MODELS1")
+    expect(workflowSource).not.toContain("SST_SECRET_ZEN_")
   })
 
   test("keeps SST configuration free of forbidden top-level imports", async () => {
