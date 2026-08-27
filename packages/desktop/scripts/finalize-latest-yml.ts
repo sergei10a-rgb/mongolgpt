@@ -2,6 +2,7 @@
 
 import { $ } from "bun"
 import path from "path"
+import { releaseTag } from "../../script/src/release-integrity"
 
 const dir = process.env.LATEST_YML_DIR!
 if (!dir) throw new Error("LATEST_YML_DIR is required")
@@ -11,6 +12,7 @@ if (!repo) throw new Error("GH_REPO is required")
 
 const version = process.env.MONGOLGPT_VERSION
 if (!version) throw new Error("MONGOLGPT_VERSION is required")
+const tag = releaseTag(version)
 
 type FileEntry = {
   url: string
@@ -111,7 +113,6 @@ if (macX64 || macArm64) {
 }
 
 // Upload to release
-const tag = `v${version}`
 const tmp = process.env.RUNNER_TEMP ?? "/tmp"
 
 for (const [filename, content] of Object.entries(output)) {

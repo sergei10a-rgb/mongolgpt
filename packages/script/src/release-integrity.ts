@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto"
 
 export const RELEASE_CHECKSUM_ASSET = "SHA256SUMS"
+const releaseVersionPattern = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
+
+export function releaseTag(version: string) {
+  if (version !== version.trim() || !releaseVersionPattern.test(version)) {
+    throw new Error(`invalid MongolGPT release version: ${version}`)
+  }
+  return `mongolgpt-v${version}`
+}
 
 export const CLI_RELEASE_ASSETS = [
   "mongolgpt-linux-arm64.tar.gz",

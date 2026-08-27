@@ -3,6 +3,7 @@
 import { $ } from "bun"
 import path from "node:path"
 import { parseArgs } from "node:util"
+import { releaseTag } from "../../script/src/release-integrity"
 
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
@@ -21,6 +22,7 @@ if (!releaseId) throw new Error("MONGOLGPT_RELEASE is required")
 
 const version = process.env.MONGOLGPT_VERSION
 if (!version) throw new Error("MONGOLGPT_VERSION is required")
+const tag = releaseTag(version)
 
 const dir = process.env.LATEST_YML_DIR
 if (!dir) throw new Error("LATEST_YML_DIR is required")
@@ -107,7 +109,7 @@ function pick(list: Item[], exts: string[]) {
 
 function link(raw: string) {
   if (raw.startsWith("https://") || raw.startsWith("http://")) return raw
-  return `https://github.com/${repo}/releases/download/mongolgpt-v${version}/${raw}`
+  return `https://github.com/${repo}/releases/download/${tag}/${raw}`
 }
 
 async function sign(url: string, key: string) {
@@ -207,8 +209,6 @@ const data = {
 const tmp = process.env.RUNNER_TEMP ?? "/tmp"
 const file = path.join(tmp, "latest.json")
 await Bun.write(file, JSON.stringify(data, null, 2))
-
-const tag = `v${version}`
 
 if (dryRun) {
   console.log(`dry-run: wrote latest.json for ${tag} to ${file}`)

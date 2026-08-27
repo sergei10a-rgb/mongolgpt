@@ -6,13 +6,18 @@ import { fileURLToPath } from "url"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import { createSha256Sums, RELEASE_ARTIFACTS, RELEASE_CHECKSUM_ASSET } from "../packages/script/src/release-integrity"
+import {
+  createSha256Sums,
+  releaseTag,
+  RELEASE_ARTIFACTS,
+  RELEASE_CHECKSUM_ASSET,
+} from "../packages/script/src/release-integrity"
 
 console.log("=== publishing ===\n")
 
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
-const tag = `mongolgpt-v${Script.version}`
+const tag = releaseTag(Script.version)
 
 const pkgjsons = await Array.fromAsync(
   new Bun.Glob("**/package.json").scan({

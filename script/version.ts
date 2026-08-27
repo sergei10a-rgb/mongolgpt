@@ -2,10 +2,11 @@
 
 import { Script } from "@mongolgpt/script"
 import { $ } from "bun"
+import { releaseTag } from "../packages/script/src/release-integrity"
 
 const output = [`version=${Script.version}`]
 const sha = process.env.GITHUB_SHA ?? (await $`git rev-parse HEAD`.text()).trim()
-const tag = `mongolgpt-v${Script.version}`
+const tag = releaseTag(Script.version)
 
 if (!Script.preview) {
   await $`bun script/changelog.ts --to ${sha}`.cwd(process.cwd())
@@ -22,8 +23,7 @@ if (!Script.preview) {
   output.push(`tag=${release.tagName}`)
 } else if (Script.channel === "beta") {
   await $`gh release create ${tag} -d --title "MongolGPT v${Script.version}" --repo ${process.env.GH_REPO}`
-  const release =
-    await $`gh release view ${tag} --json tagName,databaseId --repo ${process.env.GH_REPO}`.json()
+  const release = await $`gh release view ${tag} --json tagName,databaseId --repo ${process.env.GH_REPO}`.json()
   output.push(`release=${release.databaseId}`)
   output.push(`tag=${release.tagName}`)
 }

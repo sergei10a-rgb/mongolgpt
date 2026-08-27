@@ -7,6 +7,7 @@ import {
   RELEASE_CHECKSUM_ASSET,
   RELEASE_ARTIFACTS,
   createSha256Sums,
+  releaseTag,
   validateReleaseChecksumContract,
 } from "../src/release-integrity"
 
@@ -14,6 +15,22 @@ const files = RELEASE_ARTIFACTS.map((name) => ({ name, bytes: new TextEncoder().
 const root = resolve(import.meta.dirname, "../../..")
 
 describe("release integrity contract", () => {
+  test("uses one validated MongolGPT release tag namespace", () => {
+    expect(releaseTag("0.1.2")).toBe("mongolgpt-v0.1.2")
+    expect(releaseTag("0.1.2-beta.1")).toBe("mongolgpt-v0.1.2-beta.1")
+    expect(() => releaseTag("v0.1.2")).toThrow("invalid MongolGPT release version")
+    expect(() => releaseTag(" 0.1.2")).toThrow("invalid MongolGPT release version")
+
+    for (const file of [
+      "script/version.ts",
+      "script/publish.ts",
+      "packages/desktop/scripts/finalize-latest-yml.ts",
+      "packages/desktop/scripts/finalize-latest-json.ts",
+    ]) {
+      expect(readFileSync(resolve(root, file), "utf8")).toContain("releaseTag(")
+    }
+  })
+
   test("creates stable lowercase basenames in sorted order", () => {
     const text = createSha256Sums([...files].reverse())
     const lines = text.trimEnd().split("\n")
