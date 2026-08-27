@@ -14,6 +14,8 @@ describe("MongolGPT account access wiring", () => {
 
     expect(auth).toContain("resolveSessionAccess")
     expect(auth).toContain("AccountTable.auth_version")
+    expect(auth).toContain("MONGOLGPT_GATEWAY_SESSION_SECRET")
+    expect(auth).toContain("ZEN_SESSION_SECRET")
     expect(auth).toContain('redirect("/auth/suspended")')
     expect(callback).toContain("verified.subject.properties.authVersion ?? 0")
     expect(status).toContain("account_suspended")

@@ -1,9 +1,8 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
-import { requireDeploymentStage } from "./packages/script/src/deployment-stage"
-
 export default $config({
-  app(input) {
+  async app(input) {
+    const { requireDeploymentStage } = await import("./packages/script/src/deployment-stage.js")
     const stage = requireDeploymentStage(input?.stage)
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const admin = flag("MONGOLGPT_ENABLE_ADMIN")

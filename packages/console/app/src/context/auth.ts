@@ -46,8 +46,9 @@ export interface AuthSession {
 }
 
 export function useAuthSession() {
+  const canonicalSessionSecret = Resource.MONGOLGPT_GATEWAY_SESSION_SECRET.value
   return useSession<AuthSession>({
-    password: Resource.ZEN_SESSION_SECRET.value,
+    password: canonicalSessionSecret.trim() ? canonicalSessionSecret : Resource.ZEN_SESSION_SECRET.value,
     name: import.meta.env.PROD ? "__Host-mongolgpt-auth" : "auth",
     maxAge: 60 * 60 * 24 * 365,
     cookie: {

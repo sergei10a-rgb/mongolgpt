@@ -71,8 +71,8 @@ const hosted = {
   SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "github-client-secret",
   SST_SECRET_GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
   SST_SECRET_MONGOLGPT_PLAN_LIMITS: JSON.stringify(planLimits),
-  SST_SECRET_ZEN_SESSION_SECRET: "test-session-secret-with-at-least-32-characters",
-  SST_SECRET_ZEN_MODELS1: JSON.stringify({
+  SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: "test-session-secret-with-at-least-32-characters",
+  SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: JSON.stringify({
     models: {
       "free-auto": {
         name: "MongolGPT Free Auto",
@@ -569,10 +569,32 @@ describe("Cloudflare deployment preflight", () => {
         "GITHUB_CLIENT_SECRET_CONSOLE",
         "GOOGLE_CLIENT_ID",
         "MONGOLGPT_PLAN_LIMITS",
-        "ZEN_SESSION_SECRET",
-        "ZEN_MODELS1",
+        "MONGOLGPT_GATEWAY_SESSION_SECRET",
+        "MONGOLGPT_GATEWAY_MODELS1",
       ],
     )
+  })
+
+  test("accepts the legacy gateway secrets only as a migration fallback", () => {
+    const {
+      SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: sessionSecret,
+      SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: modelConfig,
+      ...withoutCanonicalGatewaySecrets
+    } = hosted
+
+    expect(() =>
+      preflightDeployment({
+        stage: "dev",
+        env: {
+          ...cloudflare,
+          ...withoutCanonicalGatewaySecrets,
+          MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+          MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+          SST_SECRET_ZEN_SESSION_SECRET: sessionSecret,
+          SST_SECRET_ZEN_MODELS1: modelConfig,
+        },
+      }),
+    ).not.toThrow()
   })
 
   test("rejects malformed or unsafe plan quota configuration", () => {
@@ -642,7 +664,7 @@ describe("Cloudflare deployment preflight", () => {
             ...hosted,
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
             MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
-            SST_SECRET_ZEN_MODELS1: JSON.stringify({
+            SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: JSON.stringify({
               models: {
                 "free-auto": {
                   name: "MongolGPT Free Auto",
@@ -682,7 +704,7 @@ describe("Cloudflare deployment preflight", () => {
   })
 
   test("rejects placeholder credentials used only by a non-Free-Auto route", () => {
-    const models = JSON.parse(hosted.SST_SECRET_ZEN_MODELS1)
+    const models = JSON.parse(hosted.SST_SECRET_MONGOLGPT_GATEWAY_MODELS1)
     models.lightweightModels.assistant = {
       name: "Assistant",
       cost: { input: 0, output: 0 },
@@ -703,7 +725,7 @@ describe("Cloudflare deployment preflight", () => {
             ...hosted,
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
             MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
-            SST_SECRET_ZEN_MODELS1: JSON.stringify(models),
+            SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: JSON.stringify(models),
           },
         }),
       [
@@ -724,11 +746,11 @@ describe("Cloudflare deployment preflight", () => {
             ...hosted,
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
             MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
-            SST_SECRET_ZEN_MODELS1: JSON.stringify({
-              ...JSON.parse(hosted.SST_SECRET_ZEN_MODELS1),
+            SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: JSON.stringify({
+              ...JSON.parse(hosted.SST_SECRET_MONGOLGPT_GATEWAY_MODELS1),
               models: {
                 "free-auto": {
-                  ...JSON.parse(hosted.SST_SECRET_ZEN_MODELS1).models["free-auto"],
+                  ...JSON.parse(hosted.SST_SECRET_MONGOLGPT_GATEWAY_MODELS1).models["free-auto"],
                   rateLimit: undefined,
                 },
               },
@@ -740,7 +762,7 @@ describe("Cloudflare deployment preflight", () => {
   })
 
   test("blocks NVIDIA API Catalog trial routes from production", () => {
-    const models = JSON.parse(hosted.SST_SECRET_ZEN_MODELS1)
+    const models = JSON.parse(hosted.SST_SECRET_MONGOLGPT_GATEWAY_MODELS1)
     models.providers.nvidia.productionUseApproved = false
 
     expectIssues(
@@ -752,7 +774,7 @@ describe("Cloudflare deployment preflight", () => {
             ...hosted,
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
             MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
-            SST_SECRET_ZEN_MODELS1: JSON.stringify(models),
+            SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: JSON.stringify(models),
           },
         }),
       ["NVIDIA API Catalog", "productionUseApproved=true"],
@@ -766,14 +788,14 @@ describe("Cloudflare deployment preflight", () => {
           ...hosted,
           MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
           MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
-          SST_SECRET_ZEN_MODELS1: JSON.stringify(models),
+          SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: JSON.stringify(models),
         },
       }).stage,
     ).toBe("dev")
   })
 
   test("blocks silent Free Auto provider filtering and an inverted production route", () => {
-    const models = JSON.parse(hosted.SST_SECRET_ZEN_MODELS1)
+    const models = JSON.parse(hosted.SST_SECRET_MONGOLGPT_GATEWAY_MODELS1)
     models.providers.openrouter.productionUseApproved = false
     models.providers.openrouter.usageMode = "trial"
     models.providers.openrouter.providerKind = "nvidia-nim"
@@ -788,7 +810,7 @@ describe("Cloudflare deployment preflight", () => {
             ...hosted,
             MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
             MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
-            SST_SECRET_ZEN_MODELS1: JSON.stringify(models),
+            SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: JSON.stringify(models),
           },
         }),
       [

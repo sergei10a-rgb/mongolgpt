@@ -22,38 +22,71 @@ export namespace GatewayCatalog {
   })
 
   export const list = fn(z.enum(["lightweight", "full"]), (modelList) => {
-    const json = JSON.parse(
-      Resource.ZEN_MODELS1.value +
-        Resource.ZEN_MODELS2.value +
-        Resource.ZEN_MODELS3.value +
-        Resource.ZEN_MODELS4.value +
-        Resource.ZEN_MODELS5.value +
-        Resource.ZEN_MODELS6.value +
-        Resource.ZEN_MODELS7.value +
-        Resource.ZEN_MODELS8.value +
-        Resource.ZEN_MODELS9.value +
-        Resource.ZEN_MODELS10.value +
-        Resource.ZEN_MODELS11.value +
-        Resource.ZEN_MODELS12.value +
-        Resource.ZEN_MODELS13.value +
-        Resource.ZEN_MODELS14.value +
-        Resource.ZEN_MODELS15.value +
-        Resource.ZEN_MODELS16.value +
-        Resource.ZEN_MODELS17.value +
-        Resource.ZEN_MODELS18.value +
-        Resource.ZEN_MODELS19.value +
-        Resource.ZEN_MODELS20.value +
-        Resource.ZEN_MODELS21.value +
-        Resource.ZEN_MODELS22.value +
-        Resource.ZEN_MODELS23.value +
-        Resource.ZEN_MODELS24.value +
-        Resource.ZEN_MODELS25.value +
-        Resource.ZEN_MODELS26.value +
-        Resource.ZEN_MODELS27.value +
-        Resource.ZEN_MODELS28.value +
-        Resource.ZEN_MODELS29.value +
-        Resource.ZEN_MODELS30.value,
-    )
+    const canonical = [
+      Resource.MONGOLGPT_GATEWAY_MODELS1.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS2.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS3.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS4.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS5.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS6.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS7.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS8.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS9.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS10.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS11.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS12.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS13.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS14.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS15.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS16.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS17.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS18.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS19.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS20.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS21.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS22.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS23.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS24.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS25.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS26.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS27.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS28.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS29.value,
+      Resource.MONGOLGPT_GATEWAY_MODELS30.value,
+    ].join("")
+    const legacy = [
+      Resource.ZEN_MODELS1.value,
+      Resource.ZEN_MODELS2.value,
+      Resource.ZEN_MODELS3.value,
+      Resource.ZEN_MODELS4.value,
+      Resource.ZEN_MODELS5.value,
+      Resource.ZEN_MODELS6.value,
+      Resource.ZEN_MODELS7.value,
+      Resource.ZEN_MODELS8.value,
+      Resource.ZEN_MODELS9.value,
+      Resource.ZEN_MODELS10.value,
+      Resource.ZEN_MODELS11.value,
+      Resource.ZEN_MODELS12.value,
+      Resource.ZEN_MODELS13.value,
+      Resource.ZEN_MODELS14.value,
+      Resource.ZEN_MODELS15.value,
+      Resource.ZEN_MODELS16.value,
+      Resource.ZEN_MODELS17.value,
+      Resource.ZEN_MODELS18.value,
+      Resource.ZEN_MODELS19.value,
+      Resource.ZEN_MODELS20.value,
+      Resource.ZEN_MODELS21.value,
+      Resource.ZEN_MODELS22.value,
+      Resource.ZEN_MODELS23.value,
+      Resource.ZEN_MODELS24.value,
+      Resource.ZEN_MODELS25.value,
+      Resource.ZEN_MODELS26.value,
+      Resource.ZEN_MODELS27.value,
+      Resource.ZEN_MODELS28.value,
+      Resource.ZEN_MODELS29.value,
+      Resource.ZEN_MODELS30.value,
+    ].join("")
+    const json = JSON.parse(canonical.trim() ? canonical : legacy)
     const configuration = ModelsSchema.parse(json)
     const policyIssues = modelConfigurationStageIssues(configuration, Resource.App.stage)
     if (policyIssues.length > 0) {

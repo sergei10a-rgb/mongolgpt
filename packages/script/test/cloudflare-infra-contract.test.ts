@@ -78,7 +78,7 @@ function parseWorkflowJob(input: unknown, name: string): WorkflowJob {
 describe("Cloudflare hosted infrastructure contract", () => {
   test("rejects non-canonical SST stages before deriving domains or protection", async () => {
     const configSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
-    expect(configSource).toContain('import { requireDeploymentStage } from "./packages/script/src/deployment-stage"')
+    expect(configSource).toContain('await import("./packages/script/src/deployment-stage.js")')
     expect(configSource).toContain("const stage = requireDeploymentStage(input?.stage)")
     expect(configSource).not.toContain('input?.stage === "production"')
   })
@@ -261,6 +261,33 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(preflight).toBeGreaterThanOrEqual(0)
     expect(secretSync).toBeGreaterThan(preflight)
     expect(deploy).toBeGreaterThan(secretSync)
+  })
+
+  test("migrates gateway secrets without rotating sessions or dropping the old stage", async () => {
+    const [consoleSource, authSource, catalogSource, workflowSource] = await Promise.all([
+      Bun.file(new URL("../../../infra/console.ts", import.meta.url)).text(),
+      Bun.file(new URL("../../console/app/src/context/auth.ts", import.meta.url)).text(),
+      Bun.file(new URL("../../console/core/src/model.ts", import.meta.url)).text(),
+      Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text(),
+    ])
+
+    expect(consoleSource).toContain('new sst.Secret("MONGOLGPT_GATEWAY_SESSION_SECRET", "")')
+    expect(consoleSource).toContain('new sst.Secret("ZEN_SESSION_SECRET", "")')
+    expect(consoleSource).toContain('new sst.Secret("MONGOLGPT_GATEWAY_MODELS1", "")')
+    expect(consoleSource).toContain('new sst.Secret("ZEN_MODELS1", "")')
+    expect(authSource).toContain(
+      "canonicalSessionSecret.trim() ? canonicalSessionSecret : Resource.ZEN_SESSION_SECRET.value",
+    )
+    expect(catalogSource).toContain("canonical.trim() ? canonical : legacy")
+    expect(workflowSource).toContain("SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET")
+    expect(workflowSource).toContain("SST_SECRET_MONGOLGPT_GATEWAY_MODELS1")
+  })
+
+  test("keeps SST configuration free of forbidden top-level imports", async () => {
+    const source = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
+    expect(source).not.toMatch(/^import\s/m)
+    expect(source).toContain("async app(input)")
+    expect(source).toContain('await import("./packages/script/src/deployment-stage.js")')
   })
 
   test("overwrites stale payment secrets when payment is disabled", async () => {

@@ -20,7 +20,8 @@ const booleanVariables = [
   "MONGOLGPT_ENABLE_REAL_PAYMENTS",
 ] as const
 
-export const modelSecretNames = Array.from({ length: 30 }, (_, index) => `ZEN_MODELS${index + 1}`)
+export const modelSecretNames = Array.from({ length: 30 }, (_, index) => `MONGOLGPT_GATEWAY_MODELS${index + 1}`)
+export const legacyModelSecretNames = Array.from({ length: 30 }, (_, index) => `ZEN_MODELS${index + 1}`)
 export const paymentSstSecretNames = [
   "QPayMerchantAccountID",
   "QPayClientID",
@@ -40,10 +41,12 @@ export const hostedSstSecretNames = [
   "MONGOLGPT_PLAN_LIMITS",
   "MongolGPTRuntimeAuthSecret",
   "TurnstileSecretKey",
+  "MONGOLGPT_GATEWAY_SESSION_SECRET",
   "ZEN_SESSION_SECRET",
   "MongolGPTAdminBootstrapEmails",
   ...paymentSstSecretNames,
   ...modelSecretNames,
+  ...legacyModelSecretNames,
 ] as const
 
 type Environment = Record<string, string | undefined>
@@ -190,12 +193,12 @@ export function preflightDeployment(input: {
     requireValue("GOOGLE_CLIENT_ID", deploymentSecret(env, "GOOGLE_CLIENT_ID"), issues)
     validateSecretKey("BYOK_CREDENTIALS_KEY_V1", deploymentSecret(env, "ByokCredentialsKeyV1"), issues)
     validatePlanConfiguration(deploymentSecret(env, "MONGOLGPT_PLAN_LIMITS"), issues)
-    validateSecretKey("ZEN_SESSION_SECRET", deploymentSecret(env, "ZEN_SESSION_SECRET"), issues)
-    validateModelConfiguration(
-      modelSecretNames.map((name) => deploymentSecret(env, name) ?? "").join(""),
+    validateSecretKey(
+      "MONGOLGPT_GATEWAY_SESSION_SECRET",
+      preferredDeploymentSecret(env, "MONGOLGPT_GATEWAY_SESSION_SECRET", "ZEN_SESSION_SECRET"),
       issues,
-      stage,
     )
+    validateModelConfiguration(preferredModelConfiguration(env), issues, stage)
   }
   validatePaymentConfiguration({
     env,
@@ -269,6 +272,17 @@ function requireValue(name: string, value: string | undefined, issues: string[])
 
 function deploymentSecret(env: Environment, name: string) {
   return env[`SST_SECRET_${name}`] ?? env[name]
+}
+
+function preferredDeploymentSecret(env: Environment, canonical: string, legacy: string) {
+  const value = deploymentSecret(env, canonical)
+  return value?.trim() ? value : deploymentSecret(env, legacy)
+}
+
+function preferredModelConfiguration(env: Environment) {
+  const canonical = modelSecretNames.map((name) => deploymentSecret(env, name) ?? "").join("")
+  if (canonical.trim()) return canonical
+  return legacyModelSecretNames.map((name) => deploymentSecret(env, name) ?? "").join("")
 }
 
 function validateSecretKey(name: string, value: string | undefined, issues: string[]) {
@@ -430,7 +444,7 @@ function validatePaymentCatalog(value: string | undefined, issues: string[]) {
 function validateModelConfiguration(value: string | undefined, issues: string[], stage: string) {
   const raw = value?.trim()
   if (!raw) {
-    issues.push("ZEN_MODELS1 дутуу байна.")
+    issues.push("MONGOLGPT_GATEWAY_MODELS1 дутуу байна.")
     return
   }
 
@@ -438,7 +452,7 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
   try {
     parsed = JSON.parse(raw)
   } catch {
-    issues.push("ZEN_MODELS1 хүчинтэй JSON биш байна.")
+    issues.push("MONGOLGPT_GATEWAY_MODELS1 хүчинтэй JSON биш байна.")
     return
   }
 
@@ -448,18 +462,18 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
       .slice(0, 3)
       .map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`)
       .join("; ")
-    issues.push(`ZEN_MODELS1 нь ажиллах орчны загварын схемд нийцэхгүй байна. ${details}`)
+    issues.push(`MONGOLGPT_GATEWAY_MODELS1 нь ажиллах орчны загварын схемд нийцэхгүй байна. ${details}`)
     return
   }
 
   const freeAuto = result.data.models["free-auto"]
   if (!freeAuto) {
-    issues.push('ZEN_MODELS1 нь models дотроо "free-auto" загвартай байна.')
+    issues.push('MONGOLGPT_GATEWAY_MODELS1 нь models дотроо "free-auto" загвартай байна.')
     return
   }
 
   for (const issue of modelConfigurationStageIssues(result.data, stage)) {
-    issues.push(`ZEN_MODELS-ийн үйлдвэрлэлийн бодлого зөрчигдлөө. ${issue}`)
+    issues.push(`MONGOLGPT_GATEWAY_MODELS-ийн үйлдвэрлэлийн бодлого зөрчигдлөө. ${issue}`)
   }
 
   const referencedProviders = new Set<string>()
@@ -473,7 +487,7 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
           referencedProviders.add(route.id)
           if (placeholderValue(route.model)) {
             issues.push(
-              `ZEN_MODELS дэх "${listName}.${modelID}" үйлчилгээ үзүүлэгчийн чиглэл бодит загварын ID-тай байна.`,
+              `MONGOLGPT_GATEWAY_MODELS дэх "${listName}.${modelID}" үйлчилгээ үзүүлэгчийн чиглэл бодит загварын ID-тай байна.`,
             )
           }
         }
@@ -488,24 +502,26 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
     const api = provider.api.trim()
     const keys = typeof provider.apiKey === "string" ? [provider.apiKey] : Object.values(provider.apiKey)
     if (keys.length === 0 || keys.some((key) => !key.trim() || placeholderValue(key))) {
-      issues.push(`ZEN_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгч бодит API түлхүүртэй байна.`)
+      issues.push(`MONGOLGPT_GATEWAY_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгч бодит API түлхүүртэй байна.`)
     }
 
     try {
       const url = new URL(api)
       if (url.protocol !== "https:") {
-        issues.push(`ZEN_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгчийн API нь HTTPS байна.`)
+        issues.push(`MONGOLGPT_GATEWAY_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгчийн API нь HTTPS байна.`)
       }
       if (placeholderValue(api) || reservedProviderHostname(url.hostname)) {
-        issues.push(`ZEN_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгч бодит API төгсгөлийн цэгтэй байна.`)
+        issues.push(
+          `MONGOLGPT_GATEWAY_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгч бодит API төгсгөлийн цэгтэй байна.`,
+        )
       }
       if (stage === "production" && nvidiaApiCatalogHostname(url.hostname) && provider.productionUseApproved !== true) {
         issues.push(
-          `ZEN_MODELS дэх "${providerID}" NVIDIA API Catalog үйлчилгээ үзүүлэгч нь үйлдвэрлэлийн захиалга, лиценз баталгаажсан productionUseApproved=true тохиргоотой байна.`,
+          `MONGOLGPT_GATEWAY_MODELS дэх "${providerID}" NVIDIA API Catalog үйлчилгээ үзүүлэгч нь үйлдвэрлэлийн захиалга, лиценз баталгаажсан productionUseApproved=true тохиргоотой байна.`,
         )
       }
     } catch {
-      issues.push(`ZEN_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгчийн API URL хүчинтэй байна.`)
+      issues.push(`MONGOLGPT_GATEWAY_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгчийн API URL хүчинтэй байна.`)
     }
   }
 }
