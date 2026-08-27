@@ -4,8 +4,8 @@ import { Resource } from "@mongolgpt/console-resource"
 import { Subscription } from "./subscription"
 
 export namespace LiteData {
-  export const getLimits = fn(z.void(), () => {
-    return Subscription.getLimits()["lite"]
+  export const getLimits = fn(z.void(), async () => {
+    return (await Subscription.getLimits())["lite"]
   })
 
   export const productID = fn(z.void(), () => Resource.ZEN_LITE_PRICE.product)

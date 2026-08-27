@@ -262,7 +262,7 @@ export namespace Referral {
     )
     if (!row) return null
 
-    const limits = LiteData.getLimits()
+    const limits = await LiteData.getLimits()
     return {
       rollingUsage: usagePreviewItem(
         Subscription.analyzeRollingUsage({
@@ -426,7 +426,8 @@ export namespace Referral {
           ),
         )
         .then((rows) => rows[0])
-      if (!invitee?.accountID) throw new Error(`Уригдагчийн Lite ажлын талбарын эзэмшигч олдсонгүй: ${input.inviteeWorkspaceID}`)
+      if (!invitee?.accountID)
+        throw new Error(`Уригдагчийн Lite ажлын талбарын эзэмшигч олдсонгүй: ${input.inviteeWorkspaceID}`)
 
       const inviterUser = await tx
         .select({ id: UserTable.id })
@@ -447,7 +448,9 @@ export namespace Referral {
         .where(and(eq(ReferralTable.inviteeAccountID, invitee.accountID), isNull(ReferralTable.timeDeleted)))
         .then((rows) => rows[0])
       if (existingReferral && existingReferral.workspaceID !== input.inviterWorkspaceID) {
-        throw new Error(`Урилга аль хэдийн ${existingReferral.workspaceID} ажлын талбарт харьяалагдаж байна: ${existingReferral.id}`)
+        throw new Error(
+          `Урилга аль хэдийн ${existingReferral.workspaceID} ажлын талбарт харьяалагдаж байна: ${existingReferral.id}`,
+        )
       }
 
       const referralID = existingReferral?.id ?? Identifier.create("referral")

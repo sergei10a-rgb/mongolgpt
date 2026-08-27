@@ -230,6 +230,47 @@ export const AdminAuditLogTable = sqliteTable(
   ],
 )
 
+export const PlanConfigVersionTable = sqliteTable(
+  "plan_config_version",
+  {
+    id: id(),
+    revision: integer("revision").notNull(),
+    limits: text("limits", { mode: "json" }).$type<unknown>().notNull(),
+    created_by: ulid("created_by").notNull(),
+    source_version_id: ulid("source_version_id"),
+    note: text("note", { length: 500 }),
+    time_created: utc("time_created").notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    uniqueIndex("plan_config_version_revision").on(table.revision),
+    index("plan_config_version_time_created").on(table.time_created),
+    index("plan_config_version_source_version").on(table.source_version_id),
+    check("plan_config_version_revision_check", sql`${table.revision} > 0`),
+    check("plan_config_version_limits_json_check", sql`json_valid(${table.limits})`),
+    check(
+      "plan_config_version_note_check",
+      sql`${table.note} is null or length(trim(${table.note})) between 1 and 500`,
+    ),
+  ],
+)
+
+export const PlanConfigActiveTable = sqliteTable(
+  "plan_config_active",
+  {
+    id: integer("id").primaryKey(),
+    active_version_id: ulid("active_version_id").notNull(),
+    revision: integer("revision").notNull().default(0),
+    updated_by: ulid("updated_by").notNull(),
+    time_updated: utc("time_updated").notNull().defaultNow(),
+  },
+  (table) => [
+    index("plan_config_active_version").on(table.active_version_id),
+    check("plan_config_active_singleton_check", sql`${table.id} = 1`),
+    check("plan_config_active_revision_check", sql`${table.revision} >= 0`),
+  ],
+)
+
 export const BenchmarkTable = sqliteTable(
   "benchmark",
   {

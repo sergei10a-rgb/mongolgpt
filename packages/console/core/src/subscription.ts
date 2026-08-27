@@ -40,13 +40,17 @@ export namespace Subscription {
     return input
   })
 
-  export const getLimits = fn(z.void(), () => {
-    const json = JSON.parse(Resource.MONGOLGPT_PLAN_LIMITS.value)
-    return LimitsSchema.parse(json)
+  export const getBootstrapLimits = fn(z.void(), () => {
+    return LimitsSchema.parse(JSON.parse(Resource.MONGOLGPT_PLAN_LIMITS.value))
   })
 
-  export const getFreeLimits = fn(z.void(), () => {
-    return getLimits()["free"]
+  export const getLimits = fn(z.void(), async () => {
+    const { PlanConfig } = await import("./plan-config")
+    return PlanConfig.getRuntimeLimits()
+  })
+
+  export const getFreeLimits = fn(z.void(), async () => {
+    return (await getLimits())["free"]
   })
 
   export const analyzeRollingUsage = fn(

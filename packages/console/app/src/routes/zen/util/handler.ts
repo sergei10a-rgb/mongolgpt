@@ -18,7 +18,6 @@ import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { ZenData } from "@mongolgpt/console-core/model.js"
 import { isProviderAllowedForStage } from "@mongolgpt/console-core/model-config.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
-import { PlanData } from "@mongolgpt/console-core/plan.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { ModelTable } from "@mongolgpt/console-core/schema/model.sql.js"
 import { ProviderTable } from "@mongolgpt/console-core/schema/provider.sql.js"
@@ -50,7 +49,6 @@ import { createRateLimiter as createIpRateLimiter } from "./ipRateLimiter"
 import { createRateLimiter as createKeyRateLimiter } from "./keyRateLimiter"
 import { createTrialLimiter } from "./trialLimiter"
 import { createStickyTracker } from "./stickyProviderTracker"
-import { LiteData } from "@mongolgpt/console-core/lite.js"
 import { Resource } from "@mongolgpt/console-resource"
 import { i18n, type Key } from "~/i18n"
 import { localeFromRequest } from "~/lib/language"
@@ -138,6 +136,7 @@ export async function handler(
   type ModelInfo = Awaited<ReturnType<typeof validateModel>>
   type ProviderInfo = Awaited<ReturnType<typeof selectProvider>>
   type CostInfo = ReturnType<typeof calculateCost>
+  type Limits = Awaited<ReturnType<typeof Subscription.getLimits>>
 
   const MAX_FAILOVER_RETRIES = 3
   const MAX_429_RETRIES = 3
@@ -167,6 +166,7 @@ export async function handler(
     const ocClient = input.request.headers.get("x-mongolgpt-client") ?? ""
     const projectId = input.request.headers.get("x-mongolgpt-project") ?? ""
     const userAgent = input.request.headers.get("user-agent") ?? ""
+    const limits = await Subscription.getLimits()
     logger.metric({
       is_stream: isStream,
       session: sessionId,
@@ -179,10 +179,10 @@ export async function handler(
     const zenData = ZenData.list(opts.modelList)
     const modelInfo = validateModel(zenData, model)
     const authInfo = await authenticate(modelInfo, zenApiKey)
-    const trialLimiter = createTrialLimiter(modelInfo.trialProvider, ip)
+    const trialLimiter = await createTrialLimiter(modelInfo.trialProvider, ip, limits.free)
     const trialProviders = await trialLimiter?.check()
     const rateLimiter = modelInfo.allowAnonymous
-      ? createIpRateLimiter(modelInfo.id, modelInfo.rateLimit, ip, input.request)
+      ? await createIpRateLimiter(modelInfo.id, modelInfo.rateLimit, ip, input.request, limits.free)
       : createKeyRateLimiter(
           modelInfo.id,
           modelInfo.rateLimit,
@@ -196,9 +196,9 @@ export async function handler(
     const stickyId = sessionId ? sessionId : (authInfo?.workspaceID ?? ip)
     const stickyTracker = createStickyTracker(modelInfo.id, modelInfo.stickyProvider, stickyId)
     const stickyProvider = await stickyTracker?.get()
-    const billingSource = validateBilling(authInfo, modelInfo)
+    const billingSource = validateBilling(authInfo, modelInfo, limits)
     quota.freeAuto = await reserveFreeAutoWeeklyUsage(authInfo, modelInfo)
-    quota.plan = await reservePaidPlanUsage(billingSource, authInfo, modelInfo)
+    quota.plan = await reservePaidPlanUsage(billingSource, authInfo, modelInfo, limits)
     logger.metric({ source: billingSource })
     const modelTpmLimiter = createModelTpmLimiter(modelInfo.providers)
     const modelTpmLimits = await modelTpmLimiter?.check()
@@ -373,7 +373,7 @@ export async function handler(
           tokens: usageTokenTotal(usageInfo),
         }
         try {
-          await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
+          await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo, limits)
         } finally {
           await settleRequestQuota(actual)
         }
@@ -443,7 +443,16 @@ export async function handler(
                     tokens: usageTokenTotal(usageInfo),
                   }
                   try {
-                    await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
+                    await trackUsage(
+                      sessionId,
+                      billingSource,
+                      authInfo,
+                      modelInfo,
+                      providerInfo,
+                      usageInfo,
+                      costInfo,
+                      limits,
+                    )
                   } finally {
                     await settleRequestQuota(actual)
                   }
@@ -986,13 +995,18 @@ export async function handler(
     return reservation
   }
 
-  async function reservePaidPlanUsage(billingSource: BillingSource, authInfo: AuthInfo, modelInfo: ModelInfo) {
+  async function reservePaidPlanUsage(
+    billingSource: BillingSource,
+    authInfo: AuthInfo,
+    modelInfo: ModelInfo,
+    limits: Limits,
+  ) {
     if (billingSource !== "plan") return
     const entitlement = authInfo!.planEntitlement!
-    const limits = PlanData.getLimits({ plan: entitlement.plan })
+    const planLimits = limits.plans[entitlement.plan]
     const reservation = planQuotaReservationBounds({
-      weeklyTokenLimit: limits.weeklyTokenLimit,
-      monthlyTokenLimit: limits.monthlyTokenLimit,
+      weeklyTokenLimit: planLimits.weeklyTokenLimit,
+      monthlyTokenLimit: planLimits.monthlyTokenLimit,
       maxTokensPerRequest: modelInfo.maxTokensPerRequest,
       costs: [modelInfo.cost, modelInfo.cost200K],
     })
@@ -1003,7 +1017,7 @@ export async function handler(
       now: new Date(),
       timePeriodStart: entitlement.timePeriodStart,
       usage: authInfo!.planUsage ?? undefined,
-      limits,
+      limits: planLimits,
       reservation,
     })
     if (result.allowed) return result.reservation
@@ -1042,7 +1056,7 @@ export async function handler(
     )
   }
 
-  function validateBilling(authInfo: AuthInfo, modelInfo: ModelInfo): BillingSource {
+  function validateBilling(authInfo: AuthInfo, modelInfo: ModelInfo, limits: Limits): BillingSource {
     if (!authInfo) return "anonymous"
     if (authInfo.provider?.credentials) return "byok"
     if (modelInfo.freeForAuthenticated) return "free"
@@ -1053,11 +1067,11 @@ export async function handler(
       try {
         const sub = authInfo.planUsage
         const plan = authInfo.planEntitlement.plan
-        const limits = PlanData.getLimits({ plan })
+        const planLimits = limits.plans[plan]
 
         if (sub?.fixedUsage && sub.timeFixedUpdated) {
           const result = Subscription.analyzeWeeklyUsage({
-            limit: limits.weeklyCostLimit,
+            limit: planLimits.weeklyCostLimit,
             usage: sub.fixedUsage,
             timeUpdated: sub.timeFixedUpdated,
           })
@@ -1072,7 +1086,7 @@ export async function handler(
 
         if (sub?.weeklyTokens && sub.timeWeeklyTokensUpdated) {
           const result = Subscription.analyzeWeeklyTokens({
-            limit: limits.weeklyTokenLimit,
+            limit: planLimits.weeklyTokenLimit,
             usage: sub.weeklyTokens,
             timeUpdated: sub.timeWeeklyTokensUpdated,
           })
@@ -1087,7 +1101,7 @@ export async function handler(
 
         if (sub?.weeklyRequests && sub.timeWeeklyRequestsUpdated) {
           const result = Subscription.analyzeWeeklyTokens({
-            limit: limits.weeklyRequestLimit,
+            limit: planLimits.weeklyRequestLimit,
             usage: sub.weeklyRequests,
             timeUpdated: sub.timeWeeklyRequestsUpdated,
           })
@@ -1102,7 +1116,7 @@ export async function handler(
 
         if (sub?.monthlyCost && sub.timeMonthlyCostUpdated) {
           const result = Subscription.analyzeMonthlyUsage({
-            limit: limits.monthlyCostLimit,
+            limit: planLimits.monthlyCostLimit,
             usage: sub.monthlyCost,
             timeUpdated: sub.timeMonthlyCostUpdated,
             timeSubscribed: authInfo.planEntitlement.timePeriodStart,
@@ -1118,12 +1132,12 @@ export async function handler(
 
         for (const monthly of [
           {
-            limit: limits.monthlyTokenLimit,
+            limit: planLimits.monthlyTokenLimit,
             usage: sub?.monthlyTokens,
             timeUpdated: sub?.timeMonthlyTokensUpdated,
           },
           {
-            limit: limits.monthlyRequestLimit,
+            limit: planLimits.monthlyRequestLimit,
             usage: sub?.monthlyRequests,
             timeUpdated: sub?.timeMonthlyRequestsUpdated,
           },
@@ -1146,8 +1160,8 @@ export async function handler(
 
         if (sub?.rollingUsage && sub.timeRollingUpdated) {
           const result = Subscription.analyzeRollingUsage({
-            limit: limits.rollingCostLimit,
-            window: limits.rollingWindow,
+            limit: planLimits.rollingCostLimit,
+            window: planLimits.rollingWindow,
             usage: sub.rollingUsage,
             timeUpdated: sub.timeRollingUpdated,
           })
@@ -1171,7 +1185,7 @@ export async function handler(
       try {
         const consoleGoUrl = consolePath(`/workspace/${encodeURIComponent(authInfo.workspaceID)}/billing`)
         const sub = authInfo.lite
-        const liteData = LiteData.getLimits()
+        const liteData = limits.lite
 
         // Check weekly limit
         if (sub.weeklyUsage && sub.timeWeeklyUpdated) {
@@ -1372,6 +1386,7 @@ export async function handler(
     providerInfo: ProviderInfo,
     usageInfo: UsageInfo,
     costInfo: CostInfo,
+    limits: Limits,
   ) {
     const { inputTokens, outputTokens, reasoningTokens, cacheReadTokens, cacheWrite5mTokens, cacheWrite1hTokens } =
       usageInfo
@@ -1508,95 +1523,94 @@ export async function handler(
 
       if (billingSource === "plan") {
         const plan = authInfo.planEntitlement!.plan
-        const limits = PlanData.getLimits({ plan })
+        const planLimits = limits.plans[plan]
         return recordPlanUsageWithDb(db, {
           workspaceID: authInfo.workspaceID,
           userID: authInfo.user.id,
           entitlementID: authInfo.planEntitlement!.id,
           costInMicroCents: cost,
           tokens: totalTokens,
-          rollingWindowHours: limits.rollingWindow,
+          rollingWindowHours: planLimits.rollingWindow,
           now,
         })
       }
 
-      await Promise.all(
-        (() => {
-          if (billingSource === "lite") {
-            const lite = LiteData.getLimits()
-            const week = getWeekBounds(now)
-            const weekStartMs = week.start.getTime()
-            const month = getMonthlyBounds(now, authInfo.lite!.timeCreated)
-            const monthStartMs = month.start.getTime()
-            const rollingWindowMs = lite.rollingWindow * 3600 * 1000
-            return [
-              db
-                .update(LiteTable)
-                .set({
-                  monthlyUsage: sql`
+      const updates = await (async () => {
+        if (billingSource === "lite") {
+          const lite = limits.lite
+          const week = getWeekBounds(now)
+          const weekStartMs = week.start.getTime()
+          const month = getMonthlyBounds(now, authInfo.lite!.timeCreated)
+          const monthStartMs = month.start.getTime()
+          const rollingWindowMs = lite.rollingWindow * 3600 * 1000
+          return [
+            db
+              .update(LiteTable)
+              .set({
+                monthlyUsage: sql`
               CASE
                 WHEN ${LiteTable.timeMonthlyUpdated} >= ${monthStartMs} THEN COALESCE(${LiteTable.monthlyUsage}, 0) + ${cost}
                 ELSE ${cost}
               END
             `,
-                  timeMonthlyUpdated: now,
-                  weeklyUsage: sql`
+                timeMonthlyUpdated: now,
+                weeklyUsage: sql`
               CASE
                 WHEN ${LiteTable.timeWeeklyUpdated} >= ${weekStartMs} THEN COALESCE(${LiteTable.weeklyUsage}, 0) + ${cost}
                 ELSE ${cost}
               END
             `,
-                  timeWeeklyUpdated: now,
-                  rollingUsage: sql`
+                timeWeeklyUpdated: now,
+                rollingUsage: sql`
               CASE
                 WHEN ${LiteTable.timeRollingUpdated} >= ${nowMs - rollingWindowMs} THEN COALESCE(${LiteTable.rollingUsage}, 0) + ${cost}
                 ELSE ${cost}
               END
             `,
-                  timeRollingUpdated: sql`
+                timeRollingUpdated: sql`
               CASE
                 WHEN ${LiteTable.timeRollingUpdated} >= ${nowMs - rollingWindowMs} THEN ${LiteTable.timeRollingUpdated}
                 ELSE ${nowMs}
               END
             `,
-                })
-                .where(and(eq(LiteTable.workspaceID, authInfo.workspaceID), eq(LiteTable.userID, authInfo.user.id))),
-            ]
-          }
+              })
+              .where(and(eq(LiteTable.workspaceID, authInfo.workspaceID), eq(LiteTable.userID, authInfo.user.id))),
+          ]
+        }
 
-          const workspaceDelta = queueEligible ? queuedWorkspaceCost : cost
-          const userDelta = cost
-          const balanceDelta = billingSource === "free" || billingSource === "byok" ? 0 : workspaceDelta
+        const workspaceDelta = queueEligible ? queuedWorkspaceCost : cost
+        const userDelta = cost
+        const balanceDelta = billingSource === "free" || billingSource === "byok" ? 0 : workspaceDelta
 
-          return [
-            db
-              .update(BillingTable)
-              .set({
-                balance: sql`${BillingTable.balance} - ${balanceDelta}`,
-                monthlyUsage: sql`
+        return [
+          db
+            .update(BillingTable)
+            .set({
+              balance: sql`${BillingTable.balance} - ${balanceDelta}`,
+              monthlyUsage: sql`
               CASE
                 WHEN ${BillingTable.timeMonthlyUsageUpdated} >= ${currentMonthStart.getTime()} THEN COALESCE(${BillingTable.monthlyUsage}, 0) + ${workspaceDelta}
                 ELSE ${workspaceDelta}
               END
             `,
-                timeMonthlyUsageUpdated: now,
-              })
-              .where(eq(BillingTable.workspaceID, authInfo.workspaceID)),
-            db
-              .update(UserTable)
-              .set({
-                monthlyUsage: sql`
+              timeMonthlyUsageUpdated: now,
+            })
+            .where(eq(BillingTable.workspaceID, authInfo.workspaceID)),
+          db
+            .update(UserTable)
+            .set({
+              monthlyUsage: sql`
               CASE
                 WHEN ${UserTable.timeMonthlyUsageUpdated} >= ${currentMonthStart.getTime()} THEN COALESCE(${UserTable.monthlyUsage}, 0) + ${userDelta}
                 ELSE ${userDelta}
               END
             `,
-                timeMonthlyUsageUpdated: now,
-              })
-              .where(and(eq(UserTable.workspaceID, authInfo.workspaceID), eq(UserTable.id, authInfo.user.id))),
-          ]
-        })(),
-      )
+              timeMonthlyUsageUpdated: now,
+            })
+            .where(and(eq(UserTable.workspaceID, authInfo.workspaceID), eq(UserTable.id, authInfo.user.id))),
+        ]
+      })()
+      await Promise.all(updates)
       return true
     })
 

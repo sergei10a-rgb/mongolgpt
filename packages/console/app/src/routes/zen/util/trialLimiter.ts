@@ -3,12 +3,14 @@ import { IpTable } from "@mongolgpt/console-core/schema/ip.sql.js"
 import { UsageInfo } from "./provider/provider"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 
-export function createTrialLimiter(trialProviders: string[] | undefined, ip: string) {
+type FreeLimits = Awaited<ReturnType<typeof Subscription.getFreeLimits>>
+
+export async function createTrialLimiter(trialProviders: string[] | undefined, ip: string, freeLimits?: FreeLimits) {
   if (!trialProviders) return
   const identifier = ip.trim()
   if (!identifier) return
 
-  const limit = Subscription.getFreeLimits().promoTokens
+  const limit = (freeLimits ?? (await Subscription.getFreeLimits())).promoTokens
 
   let _isTrial: boolean
 

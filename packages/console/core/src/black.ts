@@ -9,8 +9,8 @@ export namespace BlackData {
     z.object({
       plan: z.enum(LegacyPlanCodes),
     }),
-    ({ plan }) => {
-      const limits = PlanData.getLimits({ plan: PlanData.fromLegacyCode({ code: plan }) })
+    async ({ plan }) => {
+      const limits = await PlanData.getLimits({ plan: PlanData.fromLegacyCode({ code: plan }) })
       return {
         fixedLimit: limits.weeklyCostLimit,
         rollingLimit: limits.rollingCostLimit,

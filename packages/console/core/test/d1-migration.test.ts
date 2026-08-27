@@ -27,7 +27,7 @@ describe("D1 migration", () => {
       .query("select name from sqlite_schema where type = 'table' and name not like 'sqlite_%' order by name")
       .values()
 
-    expect(tables).toHaveLength(38)
+    expect(tables).toHaveLength(40)
     expect(tables).toContainEqual(["account"])
     expect(tables).toContainEqual(["account_deletion"])
     expect(tables).toContainEqual(["admin_audit_log"])
@@ -43,6 +43,8 @@ describe("D1 migration", () => {
     expect(tables).toContainEqual(["payment_invoice"])
     expect(tables).toContainEqual(["payment_recovery"])
     expect(tables).toContainEqual(["plan_subscription"])
+    expect(tables).toContainEqual(["plan_config_active"])
+    expect(tables).toContainEqual(["plan_config_version"])
     expect(tables).toContainEqual(["platform_admin"])
     expect(tables).toContainEqual(["workspace"])
   })
@@ -63,6 +65,43 @@ describe("D1 migration", () => {
     ).toThrow("admin_audit_log is immutable")
     expect(() => database.query("delete from admin_audit_log where id = ?").run("aud_01")).toThrow(
       "admin_audit_log is immutable",
+    )
+  })
+
+  test("enforces plan configuration singleton, revision, JSON, and immutability constraints", async () => {
+    const database = new Database(":memory:")
+    database.exec(await migrationSql())
+    expect(() =>
+      database
+        .query("insert into plan_config_version (id, revision, limits, created_by) values (?, ?, ?, ?)")
+        .run("pcv_zero", 0, "{}", "adm_01"),
+    ).toThrow()
+    expect(() =>
+      database
+        .query("insert into plan_config_version (id, revision, limits, created_by) values (?, ?, ?, ?)")
+        .run("pcv_bad_json", 1, "{", "adm_01"),
+    ).toThrow()
+    database
+      .query("insert into plan_config_version (id, revision, limits, created_by) values (?, ?, ?, ?)")
+      .run("pcv_01", 1, "{}", "adm_01")
+    expect(() =>
+      database
+        .query("insert into plan_config_version (id, revision, limits, created_by) values (?, ?, ?, ?)")
+        .run("pcv_dup", 1, "{}", "adm_01"),
+    ).toThrow()
+    expect(() =>
+      database
+        .query("insert into plan_config_active (id, active_version_id, revision, updated_by) values (?, ?, ?, ?)")
+        .run(2, "pcv_01", 0, "adm_01"),
+    ).toThrow()
+    database
+      .query("insert into plan_config_active (id, active_version_id, revision, updated_by) values (?, ?, ?, ?)")
+      .run(1, "pcv_01", 0, "adm_01")
+    expect(() =>
+      database.query("update plan_config_version set note = ? where id = ?").run("changed", "pcv_01"),
+    ).toThrow("plan_config_version is immutable")
+    expect(() => database.query("delete from plan_config_version where id = ?").run("pcv_01")).toThrow(
+      "plan_config_version is immutable",
     )
   })
 

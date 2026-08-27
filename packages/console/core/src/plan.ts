@@ -9,7 +9,7 @@ export namespace PlanData {
     z.object({
       plan: z.enum(PlanNames),
     }),
-    ({ plan }) => Subscription.getLimits().plans[plan],
+    async ({ plan }) => (await Subscription.getLimits()).plans[plan],
   )
 
   export const productID = fn(z.void(), () => Resource.MONGOLGPT_PLAN_PRICE.product)

@@ -1,6 +1,5 @@
 import { AccountOverviewSchema, PlanNames, type AccountOverview } from "@mongolgpt/account-contract"
 import { and, Database, eq, gt, gte, isNull, lt, lte, sql } from "./drizzle"
-import { PlanData } from "./plan"
 import { planQuotaCounterKeys, planQuotaScope } from "./quota"
 import { AccountTable } from "./schema/account.sql"
 import { PlanSubscriptionTable, SubscriptionTable, UsageTable } from "./schema/billing.sql"
@@ -24,8 +23,8 @@ type PlanLimits = z.output<typeof Subscription.LimitsSchema>["plans"][(typeof Pl
 type FreeLimits = z.output<typeof Subscription.LimitsSchema>["free"]
 
 export type AccountOverviewDependencies = {
-  getFreeLimits?: () => FreeLimits
-  getPlanLimits?: (plan: (typeof PlanNames)[number]) => PlanLimits
+  getFreeLimits?: () => FreeLimits | Promise<FreeLimits>
+  getPlanLimits?: (plan: (typeof PlanNames)[number]) => PlanLimits | Promise<PlanLimits>
   readPlanQuota?: (input: { scope: string; keys: readonly string[] }) => Promise<Record<string, number>>
 }
 
@@ -131,8 +130,12 @@ export async function getAccountOverviewWithDb(
     throw new AccountOverviewWorkspaceAccessError()
   }
   const currentWorkspaceID = input.currentWorkspaceID ?? (memberships.length === 1 ? memberships[0].id : null)
-  const freeLimits = (dependencies.getFreeLimits ?? Subscription.getFreeLimits)()
-  const getPlanLimits = dependencies.getPlanLimits ?? ((plan) => PlanData.getLimits({ plan }))
+  const runtimeLimits =
+    dependencies.getFreeLimits && dependencies.getPlanLimits ? undefined : await Subscription.getLimits()
+  const freeLimits = dependencies.getFreeLimits ? await dependencies.getFreeLimits() : runtimeLimits!.free
+  const getPlanLimits = dependencies.getPlanLimits
+    ? dependencies.getPlanLimits
+    : async (plan: (typeof PlanNames)[number]) => runtimeLimits!.plans[plan]
   const week = getWeekBounds(current)
   const workspaces = await Promise.all(
     memberships.map(async (item) => {
@@ -170,7 +173,7 @@ export async function getAccountOverviewWithDb(
         }
       }
 
-      const limits = getPlanLimits(active.plan)
+      const limits = await getPlanLimits(active.plan)
       const month = getMonthlyBounds(current, new Date(active.periodStart))
       return {
         id: item.id,

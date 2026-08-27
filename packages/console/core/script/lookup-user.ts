@@ -11,7 +11,7 @@ import {
 } from "../src/schema/billing.sql.js"
 import { WorkspaceTable } from "../src/schema/workspace.sql.js"
 import { KeyTable } from "../src/schema/key.sql.js"
-import { PlanData } from "../src/plan.js"
+import { Subscription } from "../src/subscription.js"
 import { centsToMicroCents } from "../src/util/price.js"
 import { getWeekBounds } from "../src/util/date.js"
 import { ModelTable } from "../src/schema/model.sql.js"
@@ -116,6 +116,7 @@ async function printWorkspace(workspaceID: string) {
   )
 
   printHeader(`Workspace "${workspace.name}" (${workspace.id})`)
+  const limits = await Subscription.getLimits()
 
   await printTable("Users", (tx) =>
     tx
@@ -139,21 +140,23 @@ async function printWorkspace(workspaceID: string) {
       .leftJoin(AuthTable, and(eq(UserTable.accountID, AuthTable.accountID), eq(AuthTable.provider, "email")))
       .leftJoin(SubscriptionTable, eq(SubscriptionTable.userID, UserTable.id))
       .where(eq(UserTable.workspaceID, workspace.id))
-      .then((rows) =>
-        rows.map((row) => {
-          const subStatus = getSubscriptionStatus(row)
-          return {
-            email: (row.timeDeleted ? "❌ " : "") + (row.authEmail ?? row.inviteEmail),
-            role: row.role,
-            timeSeen: formatDate(row.timeSeen),
-            monthly: formatMonthlyUsage(row.monthlyUsage, row.monthlyLimit),
-            subscribed: formatDate(row.timeSubscriptionCreated),
-            subWeekly: subStatus.weekly,
-            subRolling: subStatus.rolling,
-            rateLimited: subStatus.rateLimited,
-            retryIn: subStatus.retryIn,
-          }
-        }),
+      .then(async (rows) =>
+        Promise.all(
+          rows.map(async (row) => {
+            const subStatus = getSubscriptionStatus(row, limits)
+            return {
+              email: (row.timeDeleted ? "❌ " : "") + (row.authEmail ?? row.inviteEmail),
+              role: row.role,
+              timeSeen: formatDate(row.timeSeen),
+              monthly: formatMonthlyUsage(row.monthlyUsage, row.monthlyLimit),
+              subscribed: formatDate(row.timeSubscriptionCreated),
+              subWeekly: subStatus.weekly,
+              subRolling: subStatus.rolling,
+              rateLimited: subStatus.rateLimited,
+              retryIn: subStatus.retryIn,
+            }
+          }),
+        ),
       ),
   )
 
@@ -310,27 +313,30 @@ function formatRetryTime(seconds: number) {
   return `${minutes}min`
 }
 
-function getSubscriptionStatus(row: {
-  subscription: {
-    plan: (typeof PlanNames)[number]
-  } | null
-  timeSubscriptionCreated: Date | null
-  fixedUsage: number | null
-  rollingUsage: number | null
-  timeFixedUpdated: Date | null
-  timeRollingUpdated: Date | null
-}) {
+function getSubscriptionStatus(
+  row: {
+    subscription: {
+      plan: (typeof PlanNames)[number]
+    } | null
+    timeSubscriptionCreated: Date | null
+    fixedUsage: number | null
+    rollingUsage: number | null
+    timeFixedUpdated: Date | null
+    timeRollingUpdated: Date | null
+  },
+  limits: Awaited<ReturnType<typeof Subscription.getLimits>>,
+) {
   if (!row.timeSubscriptionCreated || !row.subscription) {
     return { weekly: null, rolling: null, rateLimited: null, retryIn: null }
   }
 
-  const limits = PlanData.getLimits({ plan: row.subscription.plan })
+  const planLimits = limits.plans[row.subscription.plan]
   const now = new Date()
   const week = getWeekBounds(now)
 
-  const fixedLimit = limits.weeklyCostLimit ? centsToMicroCents(limits.weeklyCostLimit * 100) : null
-  const rollingLimit = limits.rollingCostLimit ? centsToMicroCents(limits.rollingCostLimit * 100) : null
-  const rollingWindowMs = (limits.rollingWindow ?? 5) * 3600 * 1000
+  const fixedLimit = planLimits.weeklyCostLimit ? centsToMicroCents(planLimits.weeklyCostLimit * 100) : null
+  const rollingLimit = planLimits.rollingCostLimit ? centsToMicroCents(planLimits.rollingCostLimit * 100) : null
+  const rollingWindowMs = (planLimits.rollingWindow ?? 5) * 3600 * 1000
 
   // Calculate current weekly usage (reset if outside current week)
   const currentWeekly =
@@ -355,8 +361,8 @@ function getSubscriptionStatus(row: {
   }
 
   return {
-    weekly: fixedLimit !== null ? `${formatMicroCents(currentWeekly)} / $${limits.weeklyCostLimit}` : null,
-    rolling: rollingLimit !== null ? `${formatMicroCents(currentRolling)} / $${limits.rollingCostLimit}` : null,
+    weekly: fixedLimit !== null ? `${formatMicroCents(currentWeekly)} / $${planLimits.weeklyCostLimit}` : null,
+    rolling: rollingLimit !== null ? `${formatMicroCents(currentRolling)} / $${planLimits.rollingCostLimit}` : null,
     rateLimited: isWeeklyLimited || isRollingLimited ? "yes" : "no",
     retryIn,
   }

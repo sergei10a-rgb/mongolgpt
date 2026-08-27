@@ -5,8 +5,16 @@ import { i18n } from "~/i18n"
 import { localeFromRequest } from "~/lib/language"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 
-export function createRateLimiter(modelId: string, rateLimit: number | undefined, rawIp: string, request: Request) {
-  const limits = Subscription.getFreeLimits()
+type FreeLimits = Awaited<ReturnType<typeof Subscription.getFreeLimits>>
+
+export async function createRateLimiter(
+  modelId: string,
+  rateLimit: number | undefined,
+  rawIp: string,
+  request: Request,
+  freeLimits?: FreeLimits,
+) {
+  const limits = freeLimits ?? (await Subscription.getFreeLimits())
   const proxyHeadersVerified = hasVerifiedProxyHeaders(request, limits.checkHeaders)
   const locale = proxyHeadersVerified ? localeFromRequest(request) : "mn"
   const dict = i18n(locale)

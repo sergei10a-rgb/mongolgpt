@@ -20,6 +20,7 @@ const limits = {
     "x-zen-proxy": "trusted",
   },
 }
+let freeLimitReads = 0
 
 mock.module("../src/routes/zen/util/quota-service", () => ({
   buildRateLimitKey: (kind: string, identifier: string, interval?: string) =>
@@ -40,7 +41,10 @@ mock.module("../src/routes/zen/util/logger", () => ({
 
 mock.module("@mongolgpt/console-core/subscription.js", () => ({
   Subscription: {
-    getFreeLimits: () => limits,
+    getFreeLimits: () => {
+      freeLimitReads++
+      return limits
+    },
   },
 }))
 
@@ -87,6 +91,7 @@ beforeEach(() => {
   dbState.rows = []
   dbState.inserted = []
   dbState.duplicateUpdates = []
+  freeLimitReads = 0
 })
 
 describe("zen limiters", () => {
@@ -98,7 +103,7 @@ describe("zen limiters", () => {
       },
     })
 
-    const limiter = ipLimiterModule.createRateLimiter("gpt-5", 99, " 203.0.113.7 ", request)
+    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", 99, " 203.0.113.7 ", request)
 
     await expect(limiter.check()).rejects.toMatchObject({
       message: "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Дараа дахин оролдоно уу.",
@@ -118,7 +123,7 @@ describe("zen limiters", () => {
       },
     })
 
-    const limiter = ipLimiterModule.createRateLimiter("gpt-5", 2, "", request)
+    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", 2, "", request)
 
     await expect(limiter.check()).rejects.toMatchObject({
       message: "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Түр хүлээгээд дахин оролдоно уу.",
@@ -136,13 +141,25 @@ describe("zen limiters", () => {
       },
     })
 
-    const limiter = ipLimiterModule.createRateLimiter("gpt-5", undefined, "203.0.113.7", request)
+    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", undefined, "203.0.113.7", request)
     await limiter.check()
     await limiter.track()
 
     expect(quotaState.calls).toHaveLength(1)
     expect(String(quotaState.calls[0]?.command.dailyKey)).toContain("203.0.113.7")
     expect(String(quotaState.calls[0]?.command.lifetimeKey)).toContain("203.0.113.7")
+  })
+
+  test("injected free limits avoid an additional runtime configuration read", async () => {
+    dbState.rows = [{ usage: 0 }]
+    const request = new Request("https://example.com/zen", {
+      headers: { "x-zen-proxy": "trusted edge" },
+    })
+    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", undefined, "203.0.113.7", request, limits)
+    await limiter.check()
+    const trial = await trialLimiterModule.createTrialLimiter(["provider-a"], "203.0.113.9", limits)
+    await trial?.check()
+    expect(freeLimitReads).toBe(0)
   })
 
   test("key limiter returns clear Mongolian copy without exposing the key", async () => {
@@ -163,7 +180,7 @@ describe("zen limiters", () => {
 
   test("trial limiter trims identifiers and records actual implementation usage totals", async () => {
     dbState.rows = [{ usage: 10 }]
-    const limiter = trialLimiterModule.createTrialLimiter(["provider-a"], " 203.0.113.9 ")
+    const limiter = await trialLimiterModule.createTrialLimiter(["provider-a"], " 203.0.113.9 ")
 
     await expect(limiter?.check()).resolves.toEqual(["provider-a"])
     await limiter?.track({
