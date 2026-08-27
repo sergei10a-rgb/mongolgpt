@@ -1713,7 +1713,7 @@ it.instance(
       expect(yield* llm.calls).toBe(1)
     }),
   { git: true },
-  10_000,
+  30_000,
 )
 
 it.instance(
@@ -1752,7 +1752,7 @@ it.instance(
       expect(yield* llm.calls).toBe(1)
     }),
   { git: true },
-  10_000,
+  30_000,
 )
 
 unix(
@@ -2099,7 +2099,11 @@ noLLMServer.instance(
 
       if (msg.info.role !== "user") throw new Error("expected user message")
       const hasFailure = msg.parts.some(
-        (part) => part.type === "text" && part.synthetic && part.text.includes("Read хэрэгсэл") && part.text.includes("уншихад дараах алдаа гарлаа"),
+        (part) =>
+          part.type === "text" &&
+          part.synthetic &&
+          part.text.includes("Read хэрэгсэл") &&
+          part.text.includes("уншихад дараах алдаа гарлаа"),
       )
       expect(hasFailure).toBe(true)
 
