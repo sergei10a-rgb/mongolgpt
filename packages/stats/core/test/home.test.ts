@@ -71,13 +71,13 @@ describe("Cloudflare D1 статистик", () => {
     const lab = await Effect.runPromise(getStatsLabData("nvidia"))
     const model = await Effect.runPromise(getStatsModelData("free-auto", "nvidia"))
 
-    expect(home.leaderboard["All Users"]["1W"][0]).toMatchObject({
+    expect(home.leaderboard["1W"][0]).toMatchObject({
       model: "free-auto",
       provider: "nvidia",
       tokens: 37,
     })
     expect(
-      home.usage["All Users"]["1D"].some((point) => point.segments.some((segment) => segment.model === "Бусад")),
+      home.usage["1D"].some((point) => point.segments.some((segment) => segment.model === "Бусад")),
     ).toBe(true)
     expect(home.market.ALL[0]).toMatchObject({ total: 37 })
     expect(home.country.ALL[0]).toMatchObject({ country: "MN", continent: "AS", tokens: 37 })

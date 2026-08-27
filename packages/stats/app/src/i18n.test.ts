@@ -5,8 +5,6 @@ const intentionalEnglish = new Set<Key>([
   "header.github",
   "footer.youtube",
   "footer.copyright",
-  "product.zen",
-  "product.go",
   "model.pdf",
 ])
 
@@ -29,5 +27,14 @@ describe("Stats-ийн Монгол хэлний каталог", () => {
       if (intentionalEnglish.has(key)) continue
       expect(mongolian[key]).not.toBe(en[key])
     }
+  })
+
+  test("Хоосон төлвийн тайлбар нь зөвхөн огнооны хүрээг заана", () => {
+    const mongolian = dict("mn")
+
+    expect(en["home.noUsageDescription"]).toBe("No model rows matched this date range.")
+    expect(en["home.noLeaderboardDescription"]).toBe("No model rows matched this date range.")
+    expect(mongolian["home.noUsageDescription"]).toBe("Энэ хугацаанд тохирох загварын мөр олдсонгүй.")
+    expect(mongolian["home.noLeaderboardDescription"]).toBe("Энэ хугацаанд тохирох загварын мөр олдсонгүй.")
   })
 })

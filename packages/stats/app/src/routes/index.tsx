@@ -45,8 +45,6 @@ import {
   type ThemePreference,
 } from "./stats-shell"
 
-const products = ["All Users", "Zen", "Go"] as const
-const tokenProducts = ["Zen", "Go"] as const
 const ranges = ["1D", "1W", "2W", "1M", "2M"] as const
 const statsUnfurlPath = "banner.jpg"
 const usageColors = [
@@ -66,18 +64,10 @@ const marketColors = ["#ed6aff", "#a684ff", "#7c86ff", "#51a2ff", "#00d3f2", "#0
 const geoMapWidth = 960
 const geoMapHeight = 430
 
-type UsageProduct = (typeof products)[number]
-type TokenProduct = (typeof tokenProducts)[number]
 type UsageRange = (typeof ranges)[number]
 type IsoCountryCode = readonly [string, string, string]
 type WorldCountryProperties = GeoJsonProperties & { name?: string }
 type WorldTopology = Topology<{ countries: GeometryCollection<WorldCountryProperties> }>
-
-function productLabel(product: UsageProduct | TokenProduct, i18n: ReturnType<typeof useI18n>) {
-  if (product === "All Users") return i18n.t("product.allUsers")
-  if (product === "Zen") return i18n.t("product.zen")
-  return i18n.t("product.go")
-}
 
 function rangeLabel(range: UsageRange, i18n: ReturnType<typeof useI18n>) {
   if (range === "1D") return i18n.t("range.1D")
@@ -387,12 +377,11 @@ function formatUpdatedAtLabel(value: { date: string; time: string }) {
 
 function TopModelsSection(props: { data: StatsHomeData["usage"]; leaderboard: StatsHomeData["leaderboard"] }) {
   const i18n = useI18n()
-  const [product, setProduct] = createSignal<UsageProduct>("Go")
   const [range, setRange] = createSignal<UsageRange>("2M")
-  const [sheet, setSheet] = createSignal<"product" | "range">()
+  const [sheet, setSheet] = createSignal<boolean>(false)
   const [activeModel, setActiveModel] = createSignal<string>()
-  const data = createMemo(() => props.data[product()][range()])
-  const leaderboard = createMemo(() => props.leaderboard[product()][range()])
+  const data = createMemo(() => props.data[range()])
+  const leaderboard = createMemo(() => props.leaderboard[range()])
 
   createEffect(() => {
     if (!sheet()) return
@@ -402,7 +391,7 @@ function TopModelsSection(props: { data: StatsHomeData["usage"]; leaderboard: St
     document.documentElement.style.overflow = "hidden"
     document.body.style.overflow = "hidden"
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSheet(undefined)
+      if (event.key === "Escape") setSheet(false)
     }
     document.addEventListener("keydown", onKeyDown)
     onCleanup(() => {
@@ -441,39 +430,25 @@ function TopModelsSection(props: { data: StatsHomeData["usage"]; leaderboard: St
         <Leaderboard data={leaderboard()} activeModel={activeModel()} onActiveModelChange={setActiveModel} />
       </Show>
       <div data-slot="chart-footer" hidden>
-        <StatsFilters product={product()} range={range()} onProductSelect={setProduct} onRangeSelect={setRange} />
+        <StatsFilters range={range()} onRangeSelect={setRange} />
         <div data-slot="top-models-mobile-controls">
-          <MobileFilterButton
-            label={i18n.t("home.productFilter")}
-            value={productLabel(product(), i18n)}
-            expanded={sheet() === "product"}
-            onClick={() => setSheet(sheet() === "product" ? undefined : "product")}
-          />
           <MobileFilterButton
             label={i18n.t("home.dateRange")}
             value={rangeLabel(range(), i18n)}
-            expanded={sheet() === "range"}
-            onClick={() => setSheet(sheet() === "range" ? undefined : "range")}
+            expanded={sheet()}
+            onClick={() => setSheet(!sheet())}
           />
         </div>
       </div>
       <Show when={sheet()}>
-        {(kind) => (
-          <MobileFilterSheet
-            kind={kind()}
-            product={product()}
-            range={range()}
-            onProductSelect={(value) => {
-              setProduct(value)
-              setSheet(undefined)
-            }}
-            onRangeSelect={(value) => {
-              setRange(value)
-              setSheet(undefined)
-            }}
-            onClose={() => setSheet(undefined)}
-          />
-        )}
+        <MobileFilterSheet
+          range={range()}
+          onRangeSelect={(value) => {
+            setRange(value)
+            setSheet(false)
+          }}
+          onClose={() => setSheet(false)}
+        />
       </Show>
     </section>
   )
@@ -495,59 +470,30 @@ function MobileFilterButton(props: { label: string; value: string; expanded: boo
 }
 
 function MobileFilterSheet(props: {
-  kind: "product" | "range"
-  product: UsageProduct
   range: UsageRange
-  onProductSelect: (product: UsageProduct) => void
   onRangeSelect: (range: UsageRange) => void
   onClose: () => void
 }) {
   const i18n = useI18n()
   return (
     <div data-component="mobile-filter-sheet" role="presentation" onClick={props.onClose}>
-      <div
-        data-slot="filter-sheet-panel"
-        role="radiogroup"
-        aria-label={props.kind === "product" ? i18n.t("home.productFilter") : i18n.t("home.dateRange")}
-      >
-        <Show
-          when={props.kind === "product"}
-          fallback={
-            <For each={ranges}>
-              {(item) => (
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={props.range === item}
-                  data-active={props.range === item ? "true" : undefined}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    props.onRangeSelect(item)
-                  }}
-                >
-                  {rangeLabel(item, i18n)}
-                </button>
-              )}
-            </For>
-          }
-        >
-          <For each={products}>
-            {(item) => (
-              <button
-                type="button"
-                role="radio"
-                aria-checked={props.product === item}
-                data-active={props.product === item ? "true" : undefined}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  props.onProductSelect(item)
-                }}
-              >
-                {productLabel(item, i18n)}
-              </button>
-            )}
-          </For>
-        </Show>
+      <div data-slot="filter-sheet-panel" role="radiogroup" aria-label={i18n.t("home.dateRange")}>
+        <For each={ranges}>
+          {(item) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={props.range === item}
+              data-active={props.range === item ? "true" : undefined}
+              onClick={(event) => {
+                event.stopPropagation()
+                props.onRangeSelect(item)
+              }}
+            >
+              {rangeLabel(item, i18n)}
+            </button>
+          )}
+        </For>
       </div>
     </div>
   )
@@ -561,23 +507,10 @@ function ChevronDown() {
   )
 }
 
-function StatsFilters(props: {
-  product: UsageProduct
-  range: UsageRange
-  onProductSelect: (product: UsageProduct) => void
-  onRangeSelect: (range: UsageRange) => void
-}) {
+function StatsFilters(props: { range: UsageRange; onRangeSelect: (range: UsageRange) => void }) {
   const i18n = useI18n()
   return (
     <>
-      <FilterPills
-        items={products}
-        selected={props.product}
-        label={i18n.t("home.productFilter")}
-        variant="product"
-        formatLabel={(item) => productLabel(item, i18n)}
-        onSelect={props.onProductSelect}
-      />
       <FilterPills
         items={ranges}
         selected={props.range}
@@ -594,7 +527,7 @@ function FilterPills<T extends string>(props: {
   items: readonly T[]
   selected: T
   label: string
-  variant: "product" | "range"
+  variant: "range"
   formatLabel?: (item: T) => string
   onSelect: (item: T) => void
 }) {
@@ -810,7 +743,7 @@ function TopModelsChart(props: {
 function UniqueUsersSection(props: { data: StatsHomeData["users"] }) {
   const i18n = useI18n()
   const [activeModel, setActiveModel] = createSignal<string>()
-  const data = createMemo(() => props.data.Go["2M"])
+  const data = createMemo(() => props.data["2M"])
 
   return (
     <section id="unique-users" data-section="unique-users">
@@ -1593,9 +1526,8 @@ function marketDateParts(label: string) {
 
 function TokenCostSection(props: { data: StatsHomeData["tokenCost"]; catalog: ModelCatalog | null }) {
   const i18n = useI18n()
-  const [product, setProduct] = createSignal<TokenProduct>("Go")
   const [activeIndex, setActiveIndex] = createSignal(2)
-  const data = createMemo(() => priceTokenCostFromCatalog(props.data[product()], props.catalog))
+  const data = createMemo(() => priceTokenCostFromCatalog(props.data, props.catalog))
   const visible = createMemo(() => data().slice(0, 13))
   const selectedIndex = createMemo(() => Math.min(activeIndex(), Math.max(visible().length - 1, 0)))
 
@@ -1616,14 +1548,6 @@ function TokenCostSection(props: { data: StatsHomeData["tokenCost"]; catalog: Mo
         <TokenCostChart data={visible()} activeIndex={selectedIndex()} onActiveIndexChange={setActiveIndex} />
       </Show>
       <div data-slot="token-footer" hidden>
-        <FilterPills
-          items={tokenProducts}
-          selected={product()}
-          label={i18n.t("home.productFilter")}
-          variant="product"
-          formatLabel={(item) => productLabel(item, i18n)}
-          onSelect={setProduct}
-        />
         <LiveIndicator />
       </div>
     </section>
@@ -1680,9 +1604,8 @@ function TokenCostChart(props: {
 
 function CacheRatioSection(props: { data: StatsHomeData["cacheRatio"] }) {
   const i18n = useI18n()
-  const [product, setProduct] = createSignal<TokenProduct>("Go")
   const [activeIndex, setActiveIndex] = createSignal(2)
-  const data = createMemo(() => props.data[product()])
+  const data = createMemo(() => props.data)
   const visible = createMemo(() => data().slice(0, 16))
   const selectedIndex = createMemo(() => Math.min(activeIndex(), Math.max(visible().length - 1, 0)))
 
@@ -1701,14 +1624,6 @@ function CacheRatioSection(props: { data: StatsHomeData["cacheRatio"] }) {
         <CacheRatioChart data={visible()} activeIndex={selectedIndex()} onActiveIndexChange={setActiveIndex} />
       </Show>
       <div data-slot="token-footer" hidden>
-        <FilterPills
-          items={tokenProducts}
-          selected={product()}
-          label={i18n.t("home.productFilter")}
-          variant="product"
-          formatLabel={(item) => productLabel(item, i18n)}
-          onSelect={setProduct}
-        />
         <LiveIndicator />
       </div>
     </section>
@@ -1810,9 +1725,8 @@ function MetricBar(props: { value: number; max: number; active: boolean }) {
 
 function SessionCostSection(props: { data: StatsHomeData["sessionCost"] }) {
   const i18n = useI18n()
-  const [product, setProduct] = createSignal<TokenProduct>("Go")
   const [activeIndex, setActiveIndex] = createSignal(2)
-  const data = createMemo(() => props.data[product()])
+  const data = createMemo(() => props.data)
   const visible = createMemo(() => data().slice(0, 16))
   const selectedIndex = createMemo(() => Math.min(activeIndex(), Math.max(visible().length - 1, 0)))
 
@@ -1833,14 +1747,6 @@ function SessionCostSection(props: { data: StatsHomeData["sessionCost"] }) {
         <SessionCostChart data={visible()} activeIndex={selectedIndex()} onActiveIndexChange={setActiveIndex} />
       </Show>
       <div data-slot="token-footer" hidden>
-        <FilterPills
-          items={tokenProducts}
-          selected={product()}
-          label={i18n.t("home.productFilter")}
-          variant="product"
-          formatLabel={(item) => productLabel(item, i18n)}
-          onSelect={setProduct}
-        />
         <LiveIndicator />
       </div>
     </section>
