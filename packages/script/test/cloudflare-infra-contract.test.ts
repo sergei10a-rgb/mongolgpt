@@ -420,7 +420,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
   test("deploys dev docs independently without account, model, or payment secrets", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy-dev-docs.yml", import.meta.url)).text()
+    const rootPackage: unknown = await Bun.file(new URL("../../../package.json", import.meta.url)).json()
     expect(record(Bun.YAML.parse(source))).toBe(true)
+    if (!record(rootPackage) || !record(rootPackage.dependencies)) {
+      throw new Error("Root package dependencies are missing")
+    }
 
     expect(source).toContain("workflow_dispatch:")
     expect(source).not.toMatch(/^\s+push:/m)
@@ -434,6 +438,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain('bun script/deployment-smoke.ts --docs-only dev')
     expect(source).not.toContain('--target WebApp')
     expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|RUNTIME|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/)
+    expect(rootPackage.dependencies["@mongolgpt/account-contract"]).toBe("workspace:*")
   })
 
   test("deploys the authenticated Sandbox runtime before publishing the hosted app", async () => {

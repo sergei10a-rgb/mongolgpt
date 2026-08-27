@@ -5,6 +5,7 @@
     "": {
       "name": "mongolgpt",
       "dependencies": {
+        "@mongolgpt/account-contract": "workspace:*",
         "@mongolgpt/plugin": "workspace:*",
         "@mongolgpt/script": "workspace:*",
         "@mongolgpt/sdk": "workspace:*",
