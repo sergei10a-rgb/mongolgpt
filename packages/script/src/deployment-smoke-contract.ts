@@ -110,6 +110,25 @@ function meta(html: string, name: string) {
   return undefined
 }
 
+function metaHttpEquiv(html: string, value: string) {
+  const tags = html.match(/<meta\b[^>]*>/gi) ?? []
+  for (const tag of tags) {
+    if (attribute(tag, "http-equiv")?.toLowerCase() === value.toLowerCase()) return attribute(tag, "content")
+  }
+  return undefined
+}
+
+function canonicalHref(html: string) {
+  const tags = html.match(/<link\b[^>]*>/gi) ?? []
+  for (const tag of tags) {
+    const rel = attribute(tag, "rel")
+      ?.split(/\s+/)
+      .map((value) => value.toLowerCase())
+    if (rel?.includes("canonical")) return attribute(tag, "href")
+  }
+  return undefined
+}
+
 function normalizeHttpUrl(input: string, label: string) {
   let url: URL
   try {
@@ -173,6 +192,41 @@ export function inspectResponseOrigin(input: {
   if (actual.origin !== expected.origin) {
     throw new Error(`${input.label} response left the expected origin: ${actual.origin} != ${expected.origin}`)
   }
+}
+
+export function inspectDocsRootRedirect(input: {
+  docsUrl: string
+  status: number
+  contentType: string | null
+  location?: string | null
+  body: string
+}) {
+  const canonical = new URL(input.docsUrl)
+  canonical.pathname = `${canonical.pathname.replace(/\/+$/, "")}/`
+  canonical.search = ""
+  canonical.hash = ""
+  const root = new URL("/", canonical)
+
+  if (input.status >= 300 && input.status < 400) {
+    if (!input.location) throw new Error("docs root redirected without a Location header")
+    const target = new URL(input.location, root)
+    if (target.toString() !== canonical.toString()) {
+      throw new Error(`docs root redirect target is invalid: ${target}`)
+    }
+    return canonical.toString()
+  }
+
+  if (input.status !== 200) throw new Error(`docs root returned HTTP ${input.status}; expected redirect or 200`)
+  inspectHtmlContentType(input.contentType, "docs root response")
+  const refresh = metaHttpEquiv(input.body, "refresh")?.match(/^\s*0\s*;\s*url=(.+?)\s*$/i)?.[1]
+  const href = canonicalHref(input.body)
+  if (!refresh || new URL(refresh, root).toString() !== canonical.toString()) {
+    throw new Error("docs root HTML refresh target is invalid")
+  }
+  if (!href || new URL(href, root).toString() !== canonical.toString()) {
+    throw new Error("docs root canonical link is invalid")
+  }
+  return canonical.toString()
 }
 
 export function inspectAdminProtection(input: {

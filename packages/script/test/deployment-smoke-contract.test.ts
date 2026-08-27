@@ -14,6 +14,7 @@ import {
 } from "../../../script/deployment-smoke"
 import {
   inspectDeploymentEndpointConfiguration,
+  inspectDocsRootRedirect,
   inspectAuthenticatedAccountOverview,
   inspectAuthenticatedFreeAutoResponse,
   inspectAuthenticatedFreeAutoProvider,
@@ -535,6 +536,42 @@ describe("static asset contracts", () => {
 })
 
 describe("redirect origin contracts", () => {
+  test("accepts only the canonical same-origin docs root target", () => {
+    const docsUrl = "https://docs.dev.mgpt.mn/docs"
+    const body =
+      '<!doctype html><html lang="mn"><head><meta http-equiv="refresh" content="0;url=/docs/"><link rel="canonical" href="/docs/"></head></html>'
+
+    expect(
+      inspectDocsRootRedirect({ docsUrl, status: 200, contentType: "text/html; charset=utf-8", body }),
+    ).toBe("https://docs.dev.mgpt.mn/docs/")
+    expect(
+      inspectDocsRootRedirect({
+        docsUrl,
+        status: 301,
+        contentType: null,
+        location: "/docs/",
+        body: "",
+      }),
+    ).toBe("https://docs.dev.mgpt.mn/docs/")
+    expect(() =>
+      inspectDocsRootRedirect({
+        docsUrl,
+        status: 200,
+        contentType: "text/html",
+        body: body.replaceAll("/docs/", "https://example.com/docs/"),
+      }),
+    ).toThrow("target is invalid")
+    expect(() =>
+      inspectDocsRootRedirect({
+        docsUrl,
+        status: 302,
+        contentType: null,
+        location: "https://example.com/docs/",
+        body: "",
+      }),
+    ).toThrow("target is invalid")
+  })
+
   test("rejects a response that lands on the wrong host after redirect", () => {
     expect(
       inspectResponseOrigin({

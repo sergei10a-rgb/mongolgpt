@@ -10,7 +10,11 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings"
 import { spawnSync } from "child_process"
 import { readdirSync, readFileSync, writeFileSync } from "fs"
 import { join } from "path"
-import { legacyMongolianDocRedirects, normalizeStaticRedirectHtmlDocument } from "./legacy-mn-redirects.mjs"
+import {
+  legacyMongolianDocRedirects,
+  normalizeStaticRedirectHtmlDocument,
+  writeStaticDocsEntrypointRedirects,
+} from "./legacy-mn-redirects.mjs"
 
 const staticDocs = process.env.MONGOLGPT_STATIC_DOCS === "true"
 
@@ -166,7 +170,10 @@ function configSchema() {
       "astro:build:done": async () => {
         console.log("MongolGPT тохиргооны schema үүсгэж байна")
         spawnSync("../mongolgpt/script/schema.ts", ["./dist/config.json", "./dist/tui.json"])
-        if (staticDocs) normalizeStaticRedirectHtml("./dist/docs")
+        if (staticDocs) {
+          normalizeStaticRedirectHtml("./dist/docs")
+          writeStaticDocsEntrypointRedirects("./dist")
+        }
       },
     },
   }

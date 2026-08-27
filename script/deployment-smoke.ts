@@ -12,6 +12,7 @@ import {
   inspectAuthHealth,
   inspectConsoleHealth,
   inspectDeploymentEndpointConfiguration,
+  inspectDocsRootRedirect,
   inspectAnonymousHostedSession,
   inspectAnonymousRuntimeApi,
   inspectAppHtml,
@@ -157,6 +158,7 @@ async function check(
         inspectHtmlContentType(response.headers.get("content-type"), "docs response")
         const html = await response.text()
         await checkStaticAssets(url, html, "docs response")
+        await checkDocsRoot(url)
       } else if (name === "app") {
         inspectHtmlContentType(response.headers.get("content-type"), "app response")
         const html = await response.text()
@@ -184,6 +186,29 @@ async function check(
   }
 
   throw new Error(`${name} smoke check failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`)
+}
+
+async function checkDocsRoot(docsUrl: string) {
+  const rootUrl = new URL("/", docsUrl).toString()
+  const response = await fetch(rootUrl, {
+    headers: { "User-Agent": "mongolgpt-deployment-smoke" },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  inspectResponseOrigin({
+    requestUrl: rootUrl,
+    responseUrl: response.url,
+    status: response.status,
+    location: response.headers.get("location"),
+    label: "docs root",
+  })
+  inspectDocsRootRedirect({
+    docsUrl,
+    status: response.status,
+    contentType: response.headers.get("content-type"),
+    location: response.headers.get("location"),
+    body: await response.text(),
+  })
 }
 
 function inspectAppDeployment(html: string, url: string, result: DeploymentPreflightResult) {

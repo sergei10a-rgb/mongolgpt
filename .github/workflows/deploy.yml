@@ -111,7 +111,9 @@ jobs:
           bun run --cwd packages/console/admin build
 
       - name: Build docs
-        run: bun run build:docs
+        run: |
+          MONGOLGPT_STATIC_DOCS=true bun run build:docs
+          bun run --cwd packages/web verify:static-artifact
 
       - name: Build web app
         env:

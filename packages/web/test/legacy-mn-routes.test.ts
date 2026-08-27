@@ -1,10 +1,14 @@
 import { expect, test } from "bun:test"
-import { existsSync, readdirSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
   legacyMongolianDocRedirects,
   legacyMongolianDocSlugs,
   normalizeStaticRedirectHtmlDocument,
+  staticDocsEntrypointRedirects,
+  staticRedirectHtmlDocument,
+  writeStaticDocsEntrypointRedirects,
 } from "../legacy-mn-redirects.mjs"
 
 const docsRoot = join(import.meta.dir, "..")
@@ -39,4 +43,28 @@ test("static redirect HTML нь Монгол хэлтэй бүрэн document б
   expect(normalizeStaticRedirectHtmlDocument("<!doctype html><html><body>Canonical</body></html>")).toBe(
     "<!doctype html><html><body>Canonical</body></html>",
   )
+})
+
+test("static Cloudflare artifact нь root болон legacy замуудыг canonical docs руу шилжүүлнэ", () => {
+  expect(staticDocsEntrypointRedirects["/"]).toBe("/docs/")
+  expect(staticDocsEntrypointRedirects["/mn"]).toBe("/docs/")
+  expect(staticDocsEntrypointRedirects["/mn/providers"]).toBe("/docs/providers")
+  expect(() => staticRedirectHtmlDocument("https://example.com")).toThrow()
+  expect(() => staticRedirectHtmlDocument("//example.com")).toThrow()
+
+  const root = mkdtempSync(join(tmpdir(), "mongolgpt-docs-entrypoints-"))
+  try {
+    writeStaticDocsEntrypointRedirects(root)
+
+    const homepage = readFileSync(join(root, "index.html"), "utf8")
+    const legacyHomepage = readFileSync(join(root, "mn", "index.html"), "utf8")
+    const legacyProvider = readFileSync(join(root, "mn", "providers", "index.html"), "utf8")
+
+    expect(homepage).toContain('lang="mn"')
+    expect(homepage).toContain('content="0;url=/docs/"')
+    expect(legacyHomepage).toContain('content="0;url=/docs/"')
+    expect(legacyProvider).toContain('content="0;url=/docs/providers"')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
