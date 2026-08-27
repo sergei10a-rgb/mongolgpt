@@ -18,6 +18,9 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+  MONGOLGPT_PUBLIC_URL: https://docs.dev.mgpt.mn
+  MONGOLGPT_CONSOLE_URL: https://dev.mgpt.mn
+  MONGOLGPT_SUPPORT_URL: https://dev.mgpt.mn/support
   MONGOLGPT_ENABLE_HOSTED_SERVICES: "false"
   MONGOLGPT_ENABLE_ADMIN: "false"
   MONGOLGPT_ENABLE_ANALYTICS: "false"

@@ -436,6 +436,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).not.toMatch(/^\s+push:/m)
     expect(source).toContain('environment: dev')
     expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "false"')
+    expect(source).toContain("MONGOLGPT_PUBLIC_URL: https://docs.dev.mgpt.mn")
+    expect(source).toContain("MONGOLGPT_CONSOLE_URL: https://dev.mgpt.mn")
+    expect(source).toContain("MONGOLGPT_SUPPORT_URL: https://dev.mgpt.mn/support")
     expect(source).toContain('MONGOLGPT_DEPLOY_DOCS_ONLY: "true"')
     expect(record(parsed.env) ? parsed.env.MONGOLGPT_DEPLOY_DOCS_ONLY : undefined).toBeUndefined()
     expect(deploy?.env?.MONGOLGPT_DEPLOY_DOCS_ONLY).toBe("true")
@@ -454,6 +457,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(sstSource.indexOf('if (docsOnly) {')).toBeLessThan(sstSource.indexOf('await import("./infra/site.js")'))
     expect(docsSource).toContain('new sst.cloudflare.StaticSiteV2("Website"')
     expect(docsSource).not.toContain('StaticSiteV2("WebApp"')
+    expect(docsSource).toContain("const docsSiteOrigin = new URL(docsOrigin).origin")
+    expect(docsSource).toContain("MONGOLGPT_PUBLIC_URL: docsSiteOrigin")
     expect(siteSource).toContain('new sst.cloudflare.StaticSiteV2("WebApp"')
   })
 

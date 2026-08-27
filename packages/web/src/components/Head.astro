@@ -17,7 +17,7 @@ const shareSlug = base === "" ? "s" : `${base}/s`
 const isShare = slug === shareSlug || slug.startsWith(`${shareSlug}/`)
 const isHome = slug === "" || slug === base
 
-let ogImage = `${config.url}/social-share.png`;
+const ogImage = new URL(`${config.base}/social-share.png`, config.url).href
 ---
 
 { isHome && (

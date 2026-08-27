@@ -20,7 +20,7 @@ const staticDocs = process.env.MONGOLGPT_STATIC_DOCS === "true"
 
 export default defineConfig({
   site: config.url,
-  base: "/docs",
+  base: config.base,
   redirects: {
     ...legacyMongolianDocRedirects,
   },
@@ -64,7 +64,7 @@ export default defineConfig({
           tag: "link",
           attrs: {
             rel: "icon",
-            href: "/favicon-v3.ico",
+            href: `${config.base}/favicon-v3.ico`,
             sizes: "32x32",
           },
         },
@@ -73,7 +73,7 @@ export default defineConfig({
           attrs: {
             rel: "icon",
             type: "image/png",
-            href: "/favicon-96x96-v3.png",
+            href: `${config.base}/favicon-96x96-v3.png`,
             sizes: "96x96",
           },
         },
@@ -81,7 +81,7 @@ export default defineConfig({
           tag: "link",
           attrs: {
             rel: "apple-touch-icon",
-            href: "/apple-touch-icon-v3.png",
+            href: `${config.base}/apple-touch-icon-v3.png`,
             sizes: "180x180",
           },
         },

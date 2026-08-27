@@ -94,7 +94,7 @@ if (!data.info) {
   })
 }
 
-const ogImage = `${config.url}/social-share.png`
+const ogImage = new URL(`${config.base}/social-share.png`, config.url).href
 ---
 <StarlightPage
   hasSidebar={false}

@@ -1,9 +1,11 @@
 const localUrl = `http://localhost:${process.env.PORT || "4321"}`
 const url = process.env.MONGOLGPT_PUBLIC_URL?.trim() || localUrl
 const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || "http://localhost:3000"
+const base = "/docs"
 
 export default {
   url,
+  base,
   console: consoleUrl,
   email: process.env.MONGOLGPT_CONTACT_EMAIL?.trim() || "",
   github: "https://github.com/sergei10a-rgb/mongolgpt",

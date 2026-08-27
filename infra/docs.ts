@@ -1,6 +1,7 @@
 import { docsOrigin, domain, publicOrigin } from "./stage"
 
 const supportUrl = `${publicOrigin}/support`
+const docsSiteOrigin = new URL(docsOrigin).origin
 export const docsUrl = docsOrigin
 
 export const website = new sst.cloudflare.StaticSiteV2("Website", {
@@ -13,7 +14,7 @@ export const website = new sst.cloudflare.StaticSiteV2("Website", {
   environment: {
     SST_STAGE: $app.stage,
     MONGOLGPT_STATIC_DOCS: "true",
-    MONGOLGPT_PUBLIC_URL: publicOrigin,
+    MONGOLGPT_PUBLIC_URL: docsSiteOrigin,
     MONGOLGPT_CONSOLE_URL: publicOrigin,
     MONGOLGPT_SUPPORT_URL: supportUrl,
   },
