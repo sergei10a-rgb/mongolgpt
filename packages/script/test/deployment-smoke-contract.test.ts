@@ -602,6 +602,33 @@ describe("hosted authorization smoke contract", () => {
       inspectHostedAuthorizeChallenge({ ...challengeInput, body: challenge.replace("mongolgpt_login", "other") }),
     ).toThrow("action is invalid")
     expect(() =>
+      inspectHostedAuthorizeChallenge({ ...challengeInput, body: challenge.replace('value="app"', 'value="other"') }),
+    ).toThrow("client ID is invalid")
+    expect(() =>
+      inspectHostedAuthorizeChallenge({
+        ...challengeInput,
+        body: challenge.replace(
+          '<input type="hidden" name="client_id" value="app">',
+          '<input type="hidden" name="client_id" value="app"><input name="client_id" value="other">',
+        ),
+      }),
+    ).toThrow("client ID is invalid")
+    expect(() =>
+      inspectHostedAuthorizeChallenge({
+        ...challengeInput,
+        body: challenge.replace(callback, "https://example.com/callback"),
+      }),
+    ).toThrow("callback is invalid")
+    expect(() =>
+      inspectHostedAuthorizeChallenge({ ...challengeInput, body: challenge.replace('value="code"', 'value="token"') }),
+    ).toThrow("response type is invalid")
+    expect(() =>
+      inspectHostedAuthorizeChallenge({
+        ...challengeInput,
+        body: challenge.replace("12345678-1234-1234-1234-123456789012", "short"),
+      }),
+    ).toThrow("state is invalid")
+    expect(() =>
       inspectHostedAuthorizeChallenge({
         ...challengeInput,
         contentSecurityPolicy: "default-src 'self'",

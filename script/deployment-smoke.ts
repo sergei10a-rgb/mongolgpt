@@ -315,11 +315,38 @@ export function inspectHostedAuthorizeChallenge(input: {
   if (!formAction || new URL(formAction).toString() !== `${expectedAuth.origin}/authorize`) {
     throw new Error("hosted authorization challenge form is invalid")
   }
-  for (const field of ["client_id", "redirect_uri", "response_type", "state"]) {
-    if (!new RegExp(`<input[^>]+name=["']${field}["'][^>]+value=["'][^"']+["']`, "i").test(input.body)) {
-      throw new Error(`hosted authorization challenge ${field} is missing`)
-    }
+  const clientID = hiddenInputValue(input.body, "client_id")
+  if (clientID !== "app") throw new Error("hosted authorization challenge client ID is invalid")
+  const redirectURI = hiddenInputValue(input.body, "redirect_uri")
+  const expectedCallback = new URL("/auth/callback/auth/app", request.origin).toString()
+  if (redirectURI !== expectedCallback) throw new Error("hosted authorization challenge callback is invalid")
+  const responseType = hiddenInputValue(input.body, "response_type")
+  if (responseType !== "code") throw new Error("hosted authorization challenge response type is invalid")
+  const state = hiddenInputValue(input.body, "state")
+  if (!state || !/^[A-Za-z0-9_-]{32,256}$/.test(state)) {
+    throw new Error("hosted authorization challenge state is invalid")
   }
+}
+
+function hiddenInputValue(body: string, name: string) {
+  const values: string[] = []
+  for (const match of body.matchAll(/<input\b[^>]*>/gi)) {
+    const tag = match[0]
+    if (htmlAttribute(tag, "name") !== name) continue
+    const value = htmlAttribute(tag, "value")
+    if (value !== undefined) values.push(value)
+  }
+  return values.length === 1 ? values[0] : undefined
+}
+
+function htmlAttribute(tag: string, name: string) {
+  const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, "i"))
+  return match?.[2]
+    ?.replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&")
 }
 
 export function inspectHostedAuthorizeRedirect(input: {
