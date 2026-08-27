@@ -22,11 +22,11 @@ describe("MongolGPT account access wiring", () => {
 
   test("revalidates CLI bearer and refresh tokens", async () => {
     const cli = await source("lib/cli-auth.ts")
-    const refresh = await source("routes/auth/device/token.ts")
+    const refresh = await source("routes/auth/device/token-handler.ts")
 
     expect(cli).toContain("AccountAccess.verify")
     expect(cli).toContain("authVersion")
-    expect(refresh).toContain("await verifyCliToken(payload.access_token)")
+    expect(refresh).toContain("await input.verifyToken(parsed.data.access_token)")
     expect(refresh).toContain('"invalid_grant"')
   })
 

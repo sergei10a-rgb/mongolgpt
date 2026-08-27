@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
+import * as coreDrizzle from "@mongolgpt/console-core/drizzle/index.js"
 
 const quotaState = {
   result: { allowed: true, daily: 0, lifetime: 0 } as Record<string, unknown>,
@@ -44,6 +45,7 @@ mock.module("@mongolgpt/console-core/subscription.js", () => ({
 }))
 
 mock.module("@mongolgpt/console-core/drizzle/index.js", () => ({
+  ...coreDrizzle,
   Database: {
     use: (fn: (tx: any) => Promise<unknown>) =>
       fn({
