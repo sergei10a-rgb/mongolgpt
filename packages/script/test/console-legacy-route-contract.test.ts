@@ -61,6 +61,7 @@ describe("hosted console legacy route contract", () => {
   test("publishes config-backed Free, Basic, Pro, and Max pricing", async () => {
     const pricing = await Bun.file(new URL("pricing/index.tsx", routes)).text()
     const header = await Bun.file(new URL("src/component/header.tsx", consoleApp)).text()
+    const mongolian = await Bun.file(new URL("src/i18n/mn.ts", consoleApp)).text()
     const billing = await Bun.file(
       new URL("src/routes/workspace/[id]/billing/subscription-section.tsx", consoleApp),
     ).text()
@@ -80,6 +81,11 @@ describe("hosted console legacy route contract", () => {
     expect(header).not.toContain('language.route("/data")')
     expect(header).not.toContain("zen?: boolean")
     expect(header).not.toContain("go?: boolean")
+
+    expect(mongolian).toContain('"download.section.terminal": "MongolGPT терминал"')
+    expect(mongolian).toContain('"download.section.desktop": "MongolGPT компьютерийн апп (туршилтын хувилбар)"')
+    expect(mongolian).not.toContain("MongolGPT Terminal")
+    expect(mongolian).not.toContain("MongolGPT Desktop")
 
     expect(billing).toContain('const planOrder = ["basic", "pro", "max"] as const')
     expect(billing).toContain('const providerNames = { qpay: "QPay", bonum: "Bonum" } as const')

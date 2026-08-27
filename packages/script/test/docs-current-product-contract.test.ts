@@ -88,11 +88,14 @@ describe("documentation product contract", () => {
   })
 
   test("publishes dedicated Mongolian service, privacy, billing, and admin guidance", async () => {
-    const [faq, privacy, billing, admin, config] = await Promise.all([
+    const [faq, privacy, billing, admin, deployment, backup, acp, config] = await Promise.all([
       Bun.file(new URL("faq.mdx", docs)).text(),
       Bun.file(new URL("privacy.mdx", docs)).text(),
       Bun.file(new URL("billing.mdx", docs)).text(),
       Bun.file(new URL("admin.mdx", docs)).text(),
+      Bun.file(new URL("deployment.mdx", docs)).text(),
+      Bun.file(new URL("backup-restore.mdx", docs)).text(),
+      Bun.file(new URL("acp.mdx", docs)).text(),
       Bun.file(astro).text(),
     ])
     const sidebar = config.slice(config.indexOf("sidebar:"), config.indexOf("components:"))
@@ -101,6 +104,8 @@ describe("documentation product contract", () => {
     for (const page of ["faq", "privacy", "billing", "admin"]) expect(sidebar).toContain(`"${page}"`)
     expect(faq).toContain("албан ёсны `app.mgpt.mn`")
     expect(faq).toContain("байршуулсан ажиллах орчны тохиргоо буруу")
+    expect(faq).not.toContain("device code")
+    expect(faq).not.toContain("fail-closed")
     expect(privacy).toContain("зөвхөн дотоодод ажиллах сессийг байршуулсан хадгалалтад заавал хадгална гэж")
     expect(billing).toContain("QPay")
     expect(billing).toContain("Bonum")
@@ -108,6 +113,11 @@ describe("documentation product contract", () => {
     expect(billing).toContain("### Үйлдвэрлэлийн орчин")
     expect(admin).toContain("## Одоогийн хязгаарлалт")
     expect(admin).toContain("буцаан олголт")
+    expect(deployment).toContain("Тохиргоо (`Settings`)")
+    expect(deployment).toContain("Токен үүсгэх (`Create Token`)")
+    expect(backup).toContain("Тусгай токен үүсгэх (`Create Custom Token`)")
+    expect(backup).toContain("Оруулах (`Include`)")
+    expect(acp).toContain("### JetBrains IDE-үүд")
   })
 
   test("documents only the hosted SaaS deploy path and every runtime trust secret", async () => {

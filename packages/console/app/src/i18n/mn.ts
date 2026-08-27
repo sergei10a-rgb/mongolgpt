@@ -449,13 +449,13 @@ export const dict = {
 
   "download.title": "MongolGPT | Татах",
   "download.meta.description":
-    "Windows x64-д зориулсан MongolGPT Desktop-ийг татах эсвэл MongolGPT-ийг эх кодоос бүтээх",
+    "Windows x64-д зориулсан MongolGPT компьютерийн аппыг татах эсвэл MongolGPT-ийг эх кодоос бүтээх",
   "download.hero.title": "MongolGPT татах",
   "download.hero.subtitle":
     "Windows x64-д зориулсан компьютерийн хувилбар нийтлэгдсэн. Бусад багцын бүртгэлд хараахан нийтлээгүй байна.",
   "download.hero.button": "{{os}}-д зориулсан хувилбарыг татах",
-  "download.section.terminal": "MongolGPT Terminal",
-  "download.section.desktop": "MongolGPT Desktop (туршилтын хувилбар)",
+  "download.section.terminal": "MongolGPT терминал",
+  "download.section.desktop": "MongolGPT компьютерийн апп (туршилтын хувилбар)",
   "download.section.extensions": "MongolGPT өргөтгөлүүд",
   "download.section.integrations": "MongolGPT холболтууд",
   "download.action.download": "Татах",
