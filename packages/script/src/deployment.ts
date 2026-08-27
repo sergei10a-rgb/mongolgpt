@@ -5,6 +5,7 @@ import {
 } from "@mongolgpt/console-core/model-config.js"
 import { PaymentPlanCatalogSchema } from "@mongolgpt/console-core/payment-checkout.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
+import { inspectOAuthProviderConfiguration } from "@mongolgpt/console-core/oauth-provider-config.js"
 import { inspectDeploymentStage } from "./deployment-stage"
 
 const booleanVariables = [
@@ -75,12 +76,18 @@ export function preflightDeployment(input: {
   requireCloudflareCredentials?: boolean
   requireDeploymentSecrets?: boolean
   requireHostedServices?: boolean
+  scope?: "full" | "auth-bootstrap"
 }): DeploymentPreflightResult {
   const issues: string[] = []
   const warnings: string[] = []
   const inspectedStage = inspectDeploymentStage(input.stage)
   const stage = inspectedStage.stage
   const env = input.env
+  const scope = input.scope ?? "full"
+
+  if (scope === "auth-bootstrap" && stage !== "dev") {
+    issues.push("OAuth bootstrap scope-ийг зөвхөн dev орчинд ашиглана.")
+  }
 
   if (inspectedStage.issue) issues.push(inspectedStage.issue)
 
@@ -186,9 +193,13 @@ export function preflightDeployment(input: {
       issues.push("MONGOLGPT_RUNTIME_AUTH_SECRET болон SST_SECRET_MongolGPTRuntimeAuthSecret ижил утгатай байна.")
     }
     if (backupsEnabled) requireValue("D1_BACKUP_API_TOKEN", deploymentSecret(env, "D1BackupApiToken"), issues)
-    requireValue("GITHUB_CLIENT_ID_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"), issues)
-    requireValue("GITHUB_CLIENT_SECRET_CONSOLE", deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"), issues)
-    requireValue("GOOGLE_CLIENT_ID", deploymentSecret(env, "GOOGLE_CLIENT_ID"), issues)
+    const oauth = inspectOAuthProviderConfiguration({
+      stage,
+      githubClientID: deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"),
+      githubClientSecret: deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"),
+      googleClientID: deploymentSecret(env, "GOOGLE_CLIENT_ID"),
+    })
+    issues.push(...oauth.issues)
     validateSecretKey("BYOK_CREDENTIALS_KEY_V1", deploymentSecret(env, "ByokCredentialsKeyV1"), issues)
     validatePlanConfiguration(deploymentSecret(env, "MONGOLGPT_PLAN_LIMITS"), issues)
     validateSecretKey(
@@ -196,7 +207,7 @@ export function preflightDeployment(input: {
       deploymentSecret(env, "MONGOLGPT_GATEWAY_SESSION_SECRET"),
       issues,
     )
-    validateModelConfiguration(modelConfiguration(env), issues, stage)
+    if (scope === "full") validateModelConfiguration(modelConfiguration(env), issues, stage)
   }
   validatePaymentConfiguration({
     env,

@@ -276,9 +276,9 @@ export const accountDeletionRetention = new sst.cloudflare.Cron("AccountDeletion
 // AUTH
 ////////////////
 
-const GITHUB_CLIENT_ID_CONSOLE = new sst.Secret("GITHUB_CLIENT_ID_CONSOLE")
-const GITHUB_CLIENT_SECRET_CONSOLE = new sst.Secret("GITHUB_CLIENT_SECRET_CONSOLE")
-const GOOGLE_CLIENT_ID = new sst.Secret("GOOGLE_CLIENT_ID")
+const GITHUB_CLIENT_ID_CONSOLE = new sst.Secret("GITHUB_CLIENT_ID_CONSOLE", "")
+const GITHUB_CLIENT_SECRET_CONSOLE = new sst.Secret("GITHUB_CLIENT_SECRET_CONSOLE", "")
+const GOOGLE_CLIENT_ID = new sst.Secret("GOOGLE_CLIENT_ID", "")
 const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA"
 const TURNSTILE_TEST_SECRET_KEY = "1x0000000000000000000000000000000AA"
 const turnstileSiteKey =

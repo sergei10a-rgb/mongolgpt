@@ -10,6 +10,7 @@ try {
     stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
     env: process.env,
     requireHostedServices: true,
+    scope: process.argv.includes("--auth-bootstrap") ? "auth-bootstrap" : "full",
   })
   const cloudflare = await preflightCloudflareDeploymentAccess({
     accountId: process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID ?? "",

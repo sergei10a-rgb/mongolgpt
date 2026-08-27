@@ -129,6 +129,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain('MONGOLGPT_ENABLE_ADMIN: "false"')
     expect(source).toContain('MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"')
     expect(source).toContain("MONGOLGPT_PAYMENT_ENVIRONMENT: disabled")
+    expect(source).toContain("deploy:preflight -- dev --auth-bootstrap")
+    expect(source).toContain("set_optional_secret GITHUB_CLIENT_ID_CONSOLE")
+    expect(source).toContain("set_optional_secret GITHUB_CLIENT_SECRET_CONSOLE")
+    expect(source).toContain("set_optional_secret GOOGLE_CLIENT_ID")
+    expect(source).not.toContain("SST_SECRET_MONGOLGPT_GATEWAY_MODELS1")
 
     const run = deploy?.run ?? ""
     const database = run.indexOf('bun sst deploy --stage="$stage" --target Database')
@@ -355,6 +360,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(consoleSource).toContain('new sst.Secret("MONGOLGPT_GATEWAY_SESSION_SECRET", "")')
     expect(consoleSource).not.toContain('new sst.Secret("ZEN_SESSION_SECRET", "")')
     expect(consoleSource).toContain('new sst.Secret("MONGOLGPT_GATEWAY_MODELS1", "")')
+    expect(consoleSource).toContain('new sst.Secret("GITHUB_CLIENT_ID_CONSOLE", "")')
+    expect(consoleSource).toContain('new sst.Secret("GITHUB_CLIENT_SECRET_CONSOLE", "")')
+    expect(consoleSource).toContain('new sst.Secret("GOOGLE_CLIENT_ID", "")')
     expect(consoleSource).not.toContain('new sst.Secret("ZEN_MODELS1", "")')
     expect(authSource).toContain("password: Resource.MONGOLGPT_GATEWAY_SESSION_SECRET.value")
     expect(authSource).not.toContain("ZEN_SESSION_SECRET")

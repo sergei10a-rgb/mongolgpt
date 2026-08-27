@@ -26,6 +26,7 @@ import {
 } from "@mongolgpt/console-core/turnstile.js"
 import { isAllowedNonProductionEmail } from "./auth-allowlist"
 import { resolveActiveOAuthAccountIdentity } from "./auth-identity"
+import { inspectOAuthProviderConfiguration } from "@mongolgpt/console-core/oauth-provider-config.js"
 
 type Env = {
   AuthStorage: KVNamespace
@@ -33,6 +34,18 @@ type Env = {
   MONGOLGPT_CONSOLE_ORIGIN?: string
   MONGOLGPT_TURNSTILE_ENABLED?: string
 }
+
+const OAuthSuccessResponseSchema = z.discriminatedUnion("provider", [
+  z.object({ provider: z.literal("github"), tokenset: z.object({ access: z.string().min(1) }) }),
+  z.object({
+    provider: z.literal("google"),
+    id: z.object({ email_verified: z.boolean(), sub: z.string().min(1), email: z.string().email() }),
+  }),
+])
+const GitHubEmailsSchema = z.array(
+  z.object({ email: z.string().email(), primary: z.boolean(), verified: z.boolean() }),
+)
+const GitHubUserSchema = z.object({ id: z.union([z.string().min(1), z.number().int().nonnegative()]) })
 
 export const subjects = createSubjects({
   account: z.object({
@@ -55,14 +68,28 @@ const MY_THEME: Theme = {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const requestUrl = new URL(request.url)
+    const oauth = inspectOAuthProviderConfiguration({
+      stage: Resource.App.stage,
+      githubClientID: Resource.GITHUB_CLIENT_ID_CONSOLE.value,
+      githubClientSecret: Resource.GITHUB_CLIENT_SECRET_CONSOLE.value,
+      googleClientID: Resource.GOOGLE_CLIENT_ID.value,
+    })
     if (requestUrl.pathname === "/health") {
       return Response.json(
-        { status: "ok", service: "auth" },
+        { status: oauth.issues.length === 0 ? "ok" : "unavailable", service: "auth" },
         {
+          status: oauth.issues.length === 0 ? 200 : 503,
           headers: {
             "Cache-Control": "no-store",
           },
         },
+      )
+    }
+
+    if (oauth.issues.length > 0) {
+      return Response.json(
+        { error: "oauth_unavailable", message: "Нэвтрэх үйлчилгээ түр ашиглах боломжгүй байна." },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
       )
     }
 
@@ -108,15 +135,23 @@ export default {
     const result = await issuer({
       theme: MY_THEME,
       providers: {
-        github: GithubProvider({
-          clientID: Resource.GITHUB_CLIENT_ID_CONSOLE.value,
-          clientSecret: Resource.GITHUB_CLIENT_SECRET_CONSOLE.value,
-          scopes: ["read:user", "user:email"],
-        }),
-        google: GoogleOidcProvider({
-          clientID: Resource.GOOGLE_CLIENT_ID.value,
-          scopes: ["openid", "email"],
-        }),
+        ...(oauth.github
+          ? {
+              github: GithubProvider({
+                clientID: Resource.GITHUB_CLIENT_ID_CONSOLE.value,
+                clientSecret: Resource.GITHUB_CLIENT_SECRET_CONSOLE.value,
+                scopes: ["read:user", "user:email"],
+              }),
+            }
+          : {}),
+        ...(oauth.google
+          ? {
+              google: GoogleOidcProvider({
+                clientID: Resource.GOOGLE_CLIENT_ID.value,
+                scopes: ["openid", "email"],
+              }),
+            }
+          : {}),
         //        email: CodeProvider({
         //          async request(req, state, form, error) {
         //            console.log(state)
@@ -167,34 +202,32 @@ export default {
       }),
       subjects,
       async success(ctx, response) {
+        const oauthResponse = OAuthSuccessResponseSchema.parse(response)
         let subject: string | undefined
         let email: string | undefined
 
-        if (response.provider === "github") {
-          const emails = (await fetch("https://api.github.com/user/emails", {
-            headers: {
-              Authorization: `Bearer ${response.tokenset.access}`,
-              "User-Agent": "mongolgpt",
-              Accept: "application/vnd.github+json",
-            },
-          }).then((x) => x.json())) as any
-          const user = (await fetch("https://api.github.com/user", {
-            headers: {
-              Authorization: `Bearer ${response.tokenset.access}`,
-              "User-Agent": "mongolgpt",
-              Accept: "application/vnd.github+json",
-            },
-          }).then((x) => x.json())) as any
+        if (oauthResponse.provider === "github") {
+          const headers = {
+            Authorization: `Bearer ${oauthResponse.tokenset.access}`,
+            "User-Agent": "mongolgpt",
+            Accept: "application/vnd.github+json",
+          }
+          const emails = GitHubEmailsSchema.parse(
+            await fetch("https://api.github.com/user/emails", { headers }).then((response) => response.json()),
+          )
+          const user = GitHubUserSchema.parse(
+            await fetch("https://api.github.com/user", { headers }).then((response) => response.json()),
+          )
           subject = user.id.toString()
 
-          const primaryEmail = emails.find((x: any) => x.primary)
+          const primaryEmail = emails.find((entry) => entry.primary)
           if (!primaryEmail) throw new Error("GitHub хэрэглэгчийн үндсэн имэйл олдсонгүй")
           if (!primaryEmail.verified) throw new Error("GitHub хэрэглэгчийн үндсэн имэйл баталгаажаагүй байна")
           email = primaryEmail.email
-        } else if (response.provider === "google") {
-          if (!response.id.email_verified) throw new Error("Google имэйл баталгаажаагүй байна")
-          subject = response.id.sub as string
-          email = response.id.email as string
+        } else if (oauthResponse.provider === "google") {
+          if (!oauthResponse.id.email_verified) throw new Error("Google имэйл баталгаажаагүй байна")
+          subject = oauthResponse.id.sub
+          email = oauthResponse.id.email
         } else throw new Error("Нэвтрэх үйлчилгээ үзүүлэгчийг дэмжихгүй байна")
 
         if (!email) throw new Error("Имэйл олдсонгүй")
@@ -220,12 +253,12 @@ export default {
               .from(AuthTable)
               .where(
                 or(
-                  and(eq(AuthTable.provider, response.provider), eq(AuthTable.subject, subject)),
+                  and(eq(AuthTable.provider, oauthResponse.provider), eq(AuthTable.subject, subject)),
                   and(eq(AuthTable.provider, "email"), eq(AuthTable.subject, email)),
                 ),
               ),
           )
-          let accountID = resolveActiveOAuthAccountIdentity(matches, response.provider)
+          let accountID = resolveActiveOAuthAccountIdentity(matches, oauthResponse.provider)
 
           // Create the account only after identity resolution has succeeded.
           if (!accountID) {
@@ -240,7 +273,7 @@ export default {
                 {
                   id: Identifier.create("auth"),
                   accountID,
-                  provider: response.provider,
+                  provider: oauthResponse.provider,
                   subject,
                 },
                 {

@@ -77,9 +77,8 @@ jobs:
           SST_SECRET_MongolGPTRuntimeAuthSecret: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
           SST_SECRET_TurnstileSecretKey: "1x0000000000000000000000000000000AA"
           SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: ${{ secrets.MONGOLGPT_GATEWAY_SESSION_SECRET }}
-          SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: ${{ secrets.MONGOLGPT_GATEWAY_MODELS1 }}
         run: |
-          bun run deploy:preflight -- dev
+          bun run deploy:preflight -- dev --auth-bootstrap
           stage="dev"
           set_required_secret() {
             name="$1"
@@ -91,21 +90,24 @@ jobs:
             fi
             printf '%s' "$value" | bun sst secret set "$name" --stage="$stage"
           }
+          set_optional_secret() {
+            name="$1"
+            variable="SST_SECRET_${name}"
+            value="${!variable}"
+            if [ -z "$value" ]; then value=" "; fi
+            printf '%s' "$value" | bun sst secret set "$name" --stage="$stage"
+          }
           for name in \
             ByokCredentialsKeyV1 \
-            GITHUB_CLIENT_ID_CONSOLE \
-            GITHUB_CLIENT_SECRET_CONSOLE \
-            GOOGLE_CLIENT_ID \
             MONGOLGPT_PLAN_LIMITS \
             MongolGPTRuntimeAuthSecret \
             TurnstileSecretKey \
-            MONGOLGPT_GATEWAY_SESSION_SECRET \
-            MONGOLGPT_GATEWAY_MODELS1; do
+            MONGOLGPT_GATEWAY_SESSION_SECRET; do
             set_required_secret "$name"
           done
-          for index in $(seq 2 30); do
-            printf ' ' | bun sst secret set "MONGOLGPT_GATEWAY_MODELS${index}" --stage="$stage"
-          done
+          set_optional_secret GITHUB_CLIENT_ID_CONSOLE
+          set_optional_secret GITHUB_CLIENT_SECRET_CONSOLE
+          set_optional_secret GOOGLE_CLIENT_ID
           bun sst unlock --stage="$stage" || true
           bun sst deploy --stage="$stage" --target Database --print-logs
           bun sst shell --stage="$stage" -- bun run db:migrate

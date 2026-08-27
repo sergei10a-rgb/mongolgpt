@@ -575,6 +575,84 @@ describe("Cloudflare deployment preflight", () => {
     )
   })
 
+  test("allows GitHub-only dev OAuth bootstrap without a model catalog", () => {
+    const {
+      SST_SECRET_GOOGLE_CLIENT_ID: _google,
+      SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: _models,
+      ...githubOnly
+    } = hosted
+
+    const result = preflightDeployment({
+      stage: "dev",
+      scope: "auth-bootstrap",
+      env: {
+        ...cloudflare,
+        ...githubOnly,
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+      },
+    })
+
+    expect(result.stage).toBe("dev")
+  })
+
+  test("allows Google-only dev OAuth bootstrap without GitHub credentials", () => {
+    const {
+      SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: _githubID,
+      SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: _githubSecret,
+      SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: _models,
+      ...googleOnly
+    } = hosted
+
+    const result = preflightDeployment({
+      stage: "dev",
+      scope: "auth-bootstrap",
+      env: {
+        ...cloudflare,
+        ...googleOnly,
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+      },
+    })
+
+    expect(result.stage).toBe("dev")
+  })
+
+  test("keeps the model catalog mandatory for a full dev deploy", () => {
+    const { SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: _models, ...withoutModels } = hosted
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...withoutModels,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+          },
+        }),
+      ["MONGOLGPT_GATEWAY_MODELS1"],
+    )
+  })
+
+  test("rejects auth bootstrap outside dev", () => {
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          scope: "auth-bootstrap",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
+          },
+        }),
+      ["зөвхөн dev"],
+    )
+  })
+
   test("rejects retired gateway secrets without canonical replacements", () => {
     const {
       SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: sessionSecret,
