@@ -33,7 +33,7 @@ jobs:
             timeout_minutes: 20
           - name: windows
             host: windows-2025
-            test_concurrency: --concurrency=2
+            test_concurrency: --concurrency=1
             timeout_minutes: 30
     runs-on: ${{ matrix.settings.host }}
     defaults:
@@ -68,7 +68,7 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Run unit tests
-        # Windows runners become unreliable when the two largest suites compete for child-process and filesystem IO.
+        # Windows runners become unreliable when package suites compete for child-process and filesystem IO.
         timeout-minutes: ${{ matrix.settings.timeout_minutes }}
         run: GITHUB_ACTIONS=false bun turbo test ${{ matrix.settings.test_concurrency }}
         env:
