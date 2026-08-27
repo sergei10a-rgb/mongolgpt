@@ -8,6 +8,10 @@ export namespace Subscription {
   const PlanLimitSchema = z.object({
     weeklyCostLimit: z.number().int().positive(),
     weeklyTokenLimit: z.number().int().positive(),
+    weeklyRequestLimit: z.number().int().positive(),
+    monthlyCostLimit: z.number().int().positive(),
+    monthlyTokenLimit: z.number().int().positive(),
+    monthlyRequestLimit: z.number().int().positive(),
     rollingCostLimit: z.number().int().positive(),
     rollingWindow: z.number().int().positive(),
   })
@@ -171,6 +175,38 @@ export namespace Subscription {
         }
       }
 
+      return {
+        status: "rate-limited" as const,
+        resetInSec: Math.ceil((month.end.getTime() - now.getTime()) / 1000),
+        usagePercent: 100,
+      }
+    },
+  )
+
+  export const analyzeMonthlyCount = fn(
+    z.object({
+      limit: z.number().int().positive(),
+      usage: z.number().int().nonnegative(),
+      timeUpdated: z.date(),
+      timeSubscribed: z.date(),
+    }),
+    ({ limit, usage, timeUpdated, timeSubscribed }) => {
+      const now = new Date()
+      const month = getMonthlyBounds(now, timeSubscribed)
+      if (timeUpdated < month.start) {
+        return {
+          status: "ok" as const,
+          resetInSec: Math.ceil((month.end.getTime() - now.getTime()) / 1000),
+          usagePercent: 0,
+        }
+      }
+      if (usage < limit) {
+        return {
+          status: "ok" as const,
+          resetInSec: Math.ceil((month.end.getTime() - now.getTime()) / 1000),
+          usagePercent: Math.floor(Math.min(100, (usage / limit) * 100)),
+        }
+      }
       return {
         status: "rate-limited" as const,
         resetInSec: Math.ceil((month.end.getTime() - now.getTime()) / 1000),

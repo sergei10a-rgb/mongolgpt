@@ -75,10 +75,18 @@ describe("Zen handler telemetry security", () => {
 
   test("rechecks plan entitlement inside the usage transaction", () => {
     expect(source).toContain("await Database.transaction(async (db) =>")
-    expect(source).toContain("await recordPlanUsageWithDb(db, {")
+    expect(source).toContain("return recordPlanUsageWithDb(db, {")
     expect(source).toContain("entitlementID: authInfo.planEntitlement!.id")
+    expect(source).toContain("if (!planUsageRecorded)")
+    expect(source).toContain("throw new PlanUsageLimitError(")
     expect(source).toMatch(
       /lte\(PlanSubscriptionTable\.timePeriodStart, now\)[\s\S]*gt\(PlanSubscriptionTable\.timePeriodEnd, now\)/,
     )
+  })
+
+  test("settles measured usage even when persistence fails and releases explicit provider rejections", () => {
+    expect(source).toContain("finally {\n          await settleRequestQuota(actual)")
+    expect(source).toContain("if (!usage && res.status >= 400) await releaseRequestQuota()")
+    expect(source).toContain("return settleRequestQuota({ costInMicroCents: 0, tokens: 0 })")
   })
 })

@@ -67,6 +67,9 @@ export function accountWorkspaceView(overview: AccountOverview, workspace: Accou
       : {
           kind: "paid" as const,
           weeklyTokenLimit: workspace.limits.weeklyTokenLimit,
+          weeklyRequestLimit: workspace.limits.weeklyRequestLimit,
+          monthlyTokenLimit: workspace.limits.monthlyTokenLimit,
+          monthlyRequestLimit: workspace.limits.monthlyRequestLimit,
           rollingWindowHours: workspace.limits.rollingWindowHours,
         }
 
@@ -76,6 +79,10 @@ export function accountWorkspaceView(overview: AccountOverview, workspace: Accou
           kind: "available" as const,
           weeklyTokens: workspace.quota.weeklyTokens,
           weeklyCost: workspace.quota.weeklyCost,
+          weeklyRequests: workspace.quota.weeklyRequests,
+          monthlyCost: workspace.quota.monthlyCost,
+          monthlyTokens: workspace.quota.monthlyTokens,
+          monthlyRequests: workspace.quota.monthlyRequests,
           rollingCost: workspace.quota.rollingCost,
         }
       : workspace.quota.status === "model-scoped"
@@ -214,7 +221,12 @@ function WorkspaceDetails(props: { overview: AccountOverview; workspace: Account
         fallback: number(value.dailyRequestsFallback),
       })
     }
-    return language.t("settings.account.limit.paid", { tokens: number(value.weeklyTokenLimit) })
+    return language.t("settings.account.limit.paid", {
+      weeklyTokens: number(value.weeklyTokenLimit),
+      weeklyRequests: number(value.weeklyRequestLimit),
+      monthlyTokens: number(value.monthlyTokenLimit),
+      monthlyRequests: number(value.monthlyRequestLimit),
+    })
   })
   const quota = createMemo(() => {
     const value = view().quota
@@ -232,11 +244,47 @@ function WorkspaceDetails(props: { overview: AccountOverview; workspace: Account
     if (value.kind !== "available" || value.weeklyTokens.resetAt === null) return ""
     return formatAccountDate(value.weeklyTokens.resetAt, language.intl())
   })
+  const monthlyResetAt = createMemo(() => {
+    const value = view().quota
+    if (value.kind !== "available" || value.monthlyTokens.resetAt === null) return ""
+    return formatAccountDate(value.monthlyTokens.resetAt, language.intl())
+  })
   const weeklyCost = createMemo(() => {
     const value = view().quota
     if (value.kind !== "available") return ""
     return language.t("settings.account.quota.weeklyCost", {
       percent: percent(value.weeklyCost.used, value.weeklyCost.limit),
+    })
+  })
+  const weeklyRequests = createMemo(() => {
+    const value = view().quota
+    if (value.kind !== "available") return ""
+    return language.t("settings.account.quota.weeklyRequests", {
+      used: number(value.weeklyRequests.used),
+      limit: number(value.weeklyRequests.limit),
+    })
+  })
+  const monthlyTokens = createMemo(() => {
+    const value = view().quota
+    if (value.kind !== "available") return ""
+    return language.t("settings.account.quota.monthlyTokens", {
+      used: number(value.monthlyTokens.used),
+      limit: number(value.monthlyTokens.limit),
+    })
+  })
+  const monthlyRequests = createMemo(() => {
+    const value = view().quota
+    if (value.kind !== "available") return ""
+    return language.t("settings.account.quota.monthlyRequests", {
+      used: number(value.monthlyRequests.used),
+      limit: number(value.monthlyRequests.limit),
+    })
+  })
+  const monthlyCost = createMemo(() => {
+    const value = view().quota
+    if (value.kind !== "available") return ""
+    return language.t("settings.account.quota.monthlyCost", {
+      percent: percent(value.monthlyCost.used, value.monthlyCost.limit),
     })
   })
   const rollingCost = createMemo(() => {
@@ -267,11 +315,26 @@ function WorkspaceDetails(props: { overview: AccountOverview; workspace: Account
       <Show when={weeklyCost()} keyed>
         {(value) => <span>{value}</span>}
       </Show>
+      <Show when={weeklyRequests()} keyed>
+        {(value) => <span>{value}</span>}
+      </Show>
+      <Show when={monthlyTokens()} keyed>
+        {(value) => <span>{value}</span>}
+      </Show>
+      <Show when={monthlyRequests()} keyed>
+        {(value) => <span>{value}</span>}
+      </Show>
+      <Show when={monthlyCost()} keyed>
+        {(value) => <span>{value}</span>}
+      </Show>
       <Show when={rollingCost()} keyed>
         {(value) => <span>{value}</span>}
       </Show>
       <Show when={resetAt()} keyed>
         {(value) => <span>{language.t("settings.account.quota.resetAt", { date: value })}</span>}
+      </Show>
+      <Show when={monthlyResetAt()} keyed>
+        {(value) => <span>{language.t("settings.account.quota.monthlyResetAt", { date: value })}</span>}
       </Show>
     </div>
   )

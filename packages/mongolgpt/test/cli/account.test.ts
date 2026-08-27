@@ -118,10 +118,75 @@ describe("console account display", () => {
     expect(lines).toEqual([
       "Бүртгэл: user@mgpt.mn",
       "● Миний төсөл · Free · админ",
-      "  Зарцуулалт: 3 хүсэлт, 185 токен",
+      "  Ажлын орчны хэрэглээ: 3 хүсэлт, 185 токен",
       "  Өдрийн хязгаар: 20 үндсэн, 5 нөөц хүсэлт",
       "  Хэрэглээний хязгаарыг Free Auto загвар бүрээр тооцно",
     ])
     expect(lines.join(" ").toLowerCase()).not.toMatch(/workspace|quota|usage/)
+  })
+
+  test("separates workspace usage from the signed-in user's paid quota", () => {
+    const resetAt = 1_700_604_800_000
+    const lines = formatAccountOverview({
+      account: { id: "acc_12345", email: "user@mgpt.mn", status: "active", createdAt: 1_700_000_000_000 },
+      currentWorkspaceID: "wrk_12345",
+      workspaces: [
+        {
+          id: "wrk_12345",
+          name: "Багийн төсөл",
+          slug: "team",
+          userID: "usr_12345",
+          role: "admin",
+          subscription: {
+            id: "sub_12345",
+            invoiceID: "inv_12345",
+            plan: "pro",
+            status: "active",
+            periodStart: 1_700_000_000_000,
+            periodEnd: resetAt,
+          },
+          limits: {
+            plan: "pro",
+            weeklyCostLimitInMicroCents: 500_000,
+            weeklyTokenLimit: 1_000_000,
+            weeklyRequestLimit: 1_000,
+            monthlyCostLimitInMicroCents: 2_000_000,
+            monthlyTokenLimit: 4_000_000,
+            monthlyRequestLimit: 4_000,
+            rollingCostLimitInMicroCents: 100_000,
+            rollingWindowHours: 24,
+          },
+          quota: {
+            status: "available",
+            scope: "user",
+            weeklyCost: { used: 10_000, limit: 500_000, resetAt },
+            weeklyTokens: { used: 125_000, limit: 1_000_000, resetAt },
+            weeklyRequests: { used: 125, limit: 1_000, resetAt },
+            monthlyCost: { used: 40_000, limit: 2_000_000, resetAt },
+            monthlyTokens: { used: 500_000, limit: 4_000_000, resetAt },
+            monthlyRequests: { used: 500, limit: 4_000, resetAt },
+            rollingCost: { used: 5_000, limit: 100_000, resetAt: null },
+          },
+          usage: {
+            scope: "workspace",
+            period: "subscription",
+            periodStart: 1_700_000_000_000,
+            periodEnd: resetAt,
+            requestCount: 3_000,
+            inputTokens: 1_000_000,
+            outputTokens: 500_000,
+            reasoningTokens: 0,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            totalTokens: 1_500_000,
+            costInMicroCents: 100_000,
+          },
+        },
+      ],
+    })
+
+    expect(lines).toContain("  Ажлын орчны хэрэглээ: 3,000 хүсэлт, 1,500,000 токен")
+    expect(lines).toContain("  Таны 7 хоногийн хүсэлт: 125 / 1,000")
+    expect(lines).toContain("  Таны сарын токен: 500,000 / 4,000,000")
   })
 })

@@ -88,6 +88,10 @@ const AccountOverviewLimits = Schema.Union([
     plan: PaidPlan,
     weeklyCostLimitInMicroCents: PositiveInt,
     weeklyTokenLimit: PositiveInt,
+    weeklyRequestLimit: PositiveInt,
+    monthlyCostLimitInMicroCents: PositiveInt,
+    monthlyTokenLimit: PositiveInt,
+    monthlyRequestLimit: PositiveInt,
     rollingCostLimitInMicroCents: PositiveInt,
     rollingWindowHours: PositiveInt,
   }),
@@ -102,8 +106,13 @@ const AccountOverviewQuotaDimension = Schema.Struct({
 const AccountOverviewQuota = Schema.Union([
   Schema.Struct({
     status: Schema.Literal("available"),
+    scope: Schema.Literal("user"),
     weeklyCost: AccountOverviewQuotaDimension,
     weeklyTokens: AccountOverviewQuotaDimension,
+    weeklyRequests: AccountOverviewQuotaDimension,
+    monthlyCost: AccountOverviewQuotaDimension,
+    monthlyTokens: AccountOverviewQuotaDimension,
+    monthlyRequests: AccountOverviewQuotaDimension,
     rollingCost: AccountOverviewQuotaDimension,
   }),
   Schema.Struct({

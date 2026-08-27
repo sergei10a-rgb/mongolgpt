@@ -72,13 +72,22 @@ describe("settings account overview", () => {
         plan: "pro",
         weeklyCostLimitInMicroCents: 500_000,
         weeklyTokenLimit: 1_000_000,
+        weeklyRequestLimit: 1_000,
+        monthlyCostLimitInMicroCents: 2_000_000,
+        monthlyTokenLimit: 4_000_000,
+        monthlyRequestLimit: 4_000,
         rollingCostLimitInMicroCents: 100_000,
         rollingWindowHours: 24,
       },
       quota: {
         status: "available",
+        scope: "user",
         weeklyCost: { used: 10_000, limit: 500_000, resetAt: 1_700_604_800_000 },
         weeklyTokens: { used: 125_000, limit: 1_000_000, resetAt: 1_700_604_800_000 },
+        weeklyRequests: { used: 125, limit: 1_000, resetAt: 1_700_604_800_000 },
+        monthlyCost: { used: 40_000, limit: 2_000_000, resetAt: 1_702_592_000_000 },
+        monthlyTokens: { used: 500_000, limit: 4_000_000, resetAt: 1_702_592_000_000 },
+        monthlyRequests: { used: 500, limit: 4_000, resetAt: 1_702_592_000_000 },
         rollingCost: { used: 5_000, limit: 100_000, resetAt: null },
       },
     })
@@ -86,11 +95,22 @@ describe("settings account overview", () => {
 
     expect(value.current).toBe(false)
     expect(value.plan).toBe("pro")
-    expect(value.limit).toEqual({ kind: "paid", weeklyTokenLimit: 1_000_000, rollingWindowHours: 24 })
+    expect(value.limit).toEqual({
+      kind: "paid",
+      weeklyTokenLimit: 1_000_000,
+      weeklyRequestLimit: 1_000,
+      monthlyTokenLimit: 4_000_000,
+      monthlyRequestLimit: 4_000,
+      rollingWindowHours: 24,
+    })
     expect(value.quota).toEqual({
       kind: "available",
       weeklyCost: { used: 10_000, limit: 500_000, resetAt: 1_700_604_800_000 },
       weeklyTokens: { used: 125_000, limit: 1_000_000, resetAt: 1_700_604_800_000 },
+      weeklyRequests: { used: 125, limit: 1_000, resetAt: 1_700_604_800_000 },
+      monthlyCost: { used: 40_000, limit: 2_000_000, resetAt: 1_702_592_000_000 },
+      monthlyTokens: { used: 500_000, limit: 4_000_000, resetAt: 1_702_592_000_000 },
+      monthlyRequests: { used: 500, limit: 4_000, resetAt: 1_702_592_000_000 },
       rollingCost: { used: 5_000, limit: 100_000, resetAt: null },
     })
   })

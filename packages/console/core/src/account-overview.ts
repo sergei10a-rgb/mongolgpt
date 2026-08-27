@@ -7,7 +7,7 @@ import { PlanSubscriptionTable, SubscriptionTable, UsageTable } from "./schema/b
 import { UserTable } from "./schema/user.sql"
 import { WorkspaceTable } from "./schema/workspace.sql"
 import { Subscription } from "./subscription"
-import { getWeekBounds } from "./util/date"
+import { getMonthlyBounds, getWeekBounds } from "./util/date"
 import { centsToMicroCents } from "./util/price"
 import { z } from "zod"
 
@@ -91,6 +91,14 @@ export async function getAccountOverviewWithDb(
       fixedUpdated: SubscriptionTable.timeFixedUpdated,
       weeklyTokens: SubscriptionTable.weeklyTokens,
       weeklyTokensUpdated: SubscriptionTable.timeWeeklyTokensUpdated,
+      weeklyRequests: SubscriptionTable.weeklyRequests,
+      weeklyRequestsUpdated: SubscriptionTable.timeWeeklyRequestsUpdated,
+      monthlyCost: SubscriptionTable.monthlyCost,
+      monthlyCostUpdated: SubscriptionTable.timeMonthlyCostUpdated,
+      monthlyTokens: SubscriptionTable.monthlyTokens,
+      monthlyTokensUpdated: SubscriptionTable.timeMonthlyTokensUpdated,
+      monthlyRequests: SubscriptionTable.monthlyRequests,
+      monthlyRequestsUpdated: SubscriptionTable.timeMonthlyRequestsUpdated,
       rollingUsage: SubscriptionTable.rollingUsage,
       rollingUpdated: SubscriptionTable.timeRollingUpdated,
     })
@@ -163,6 +171,7 @@ export async function getAccountOverviewWithDb(
       }
 
       const limits = getPlanLimits(active.plan)
+      const month = getMonthlyBounds(current, new Date(active.periodStart))
       return {
         id: item.id,
         name: item.name,
@@ -174,10 +183,23 @@ export async function getAccountOverviewWithDb(
           plan: active.plan,
           weeklyCostLimitInMicroCents: costLimit(limits.weeklyCostLimit),
           weeklyTokenLimit: limits.weeklyTokenLimit,
+          weeklyRequestLimit: limits.weeklyRequestLimit,
+          monthlyCostLimitInMicroCents: costLimit(limits.monthlyCostLimit),
+          monthlyTokenLimit: limits.monthlyTokenLimit,
+          monthlyRequestLimit: limits.monthlyRequestLimit,
           rollingCostLimitInMicroCents: costLimit(limits.rollingCostLimit),
           rollingWindowHours: limits.rollingWindow,
         },
-        quota: await paidQuota(item, active.invoiceID, limits, now, week.end.getTime(), dependencies.readPlanQuota),
+        quota: await paidQuota(
+          item,
+          active.invoiceID,
+          limits,
+          now,
+          week.end.getTime(),
+          month.start.getTime(),
+          month.end.getTime(),
+          dependencies.readPlanQuota,
+        ),
         usage,
       }
     }),
@@ -252,6 +274,14 @@ async function paidQuota(
     fixedUpdated: Date | null
     weeklyTokens: number | null
     weeklyTokensUpdated: Date | null
+    weeklyRequests: number | null
+    weeklyRequestsUpdated: Date | null
+    monthlyCost: number | null
+    monthlyCostUpdated: Date | null
+    monthlyTokens: number | null
+    monthlyTokensUpdated: Date | null
+    monthlyRequests: number | null
+    monthlyRequestsUpdated: Date | null
     rollingUsage: number | null
     rollingUpdated: Date | null
   },
@@ -259,6 +289,8 @@ async function paidQuota(
   limits: PlanLimits,
   now: number,
   weekEnd: number,
+  monthStart: number,
+  monthEnd: number,
   read: AccountOverviewDependencies["readPlanQuota"],
 ) {
   if (!read) return { status: "unavailable" as const, reason: "quota-service-unavailable" as const }
@@ -273,6 +305,22 @@ async function paidQuota(
       fresh(item.weeklyTokens, item.weeklyTokensUpdated, weekStart),
       counter(live, keys.weeklyTokens),
     )
+    const weeklyRequests = Math.max(
+      fresh(item.weeklyRequests, item.weeklyRequestsUpdated, weekStart),
+      counter(live, keys.weeklyRequests),
+    )
+    const monthlyCost = Math.max(
+      fresh(item.monthlyCost, item.monthlyCostUpdated, monthStart),
+      counter(live, keys.monthlyCost),
+    )
+    const monthlyTokens = Math.max(
+      fresh(item.monthlyTokens, item.monthlyTokensUpdated, monthStart),
+      counter(live, keys.monthlyTokens),
+    )
+    const monthlyRequests = Math.max(
+      fresh(item.monthlyRequests, item.monthlyRequestsUpdated, monthStart),
+      counter(live, keys.monthlyRequests),
+    )
     const rollingCost = Math.max(
       fresh(item.rollingUsage, item.rollingUpdated, rollingStart),
       counter(live, keys.rollingCost),
@@ -283,8 +331,13 @@ async function paidQuota(
         : null
     return {
       status: "available" as const,
+      scope: "user" as const,
       weeklyCost: { used: weeklyCost, limit: costLimit(limits.weeklyCostLimit), resetAt: weekEnd },
       weeklyTokens: { used: weeklyTokens, limit: limits.weeklyTokenLimit, resetAt: weekEnd },
+      weeklyRequests: { used: weeklyRequests, limit: limits.weeklyRequestLimit, resetAt: weekEnd },
+      monthlyCost: { used: monthlyCost, limit: costLimit(limits.monthlyCostLimit), resetAt: monthEnd },
+      monthlyTokens: { used: monthlyTokens, limit: limits.monthlyTokenLimit, resetAt: monthEnd },
+      monthlyRequests: { used: monthlyRequests, limit: limits.monthlyRequestLimit, resetAt: monthEnd },
       rollingCost: { used: rollingCost, limit: costLimit(limits.rollingCostLimit), resetAt: rollingReset },
     }
   } catch {

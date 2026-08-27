@@ -59,7 +59,8 @@ export const applyPlanSubscriptionPaymentEffect = createPlanSubscriptionPaymentE
 
 export async function expirePlanSubscriptionsWithDb(db: Database.TxOrDb, now = Date.now(), limit = 100) {
   if (!Number.isSafeInteger(now) || now < 0) throw new TypeError("Дуусах хугацааны цагийн тэмдэг буруу байна")
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) throw new TypeError("Дуусах хугацааны хязгаар буруу байна")
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000)
+    throw new TypeError("Дуусах хугацааны хязгаар буруу байна")
 
   const expired = await db
     .select()
@@ -184,9 +185,17 @@ async function activatePlanSubscription(
         rollingUsage: null,
         fixedUsage: null,
         weeklyTokens: null,
+        weeklyRequests: null,
+        monthlyCost: null,
+        monthlyTokens: null,
+        monthlyRequests: null,
         timeRollingUpdated: null,
         timeFixedUpdated: null,
         timeWeeklyTokensUpdated: null,
+        timeWeeklyRequestsUpdated: null,
+        timeMonthlyCostUpdated: null,
+        timeMonthlyTokensUpdated: null,
+        timeMonthlyRequestsUpdated: null,
       },
     })
 }

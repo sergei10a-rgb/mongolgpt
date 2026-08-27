@@ -168,17 +168,21 @@ test.describe("hosted MongolGPT account gate", () => {
     await expect(page.getByText("MongolGPT баг", { exact: true })).toBeVisible()
     await expect(page.getByText(mn["settings.account.currentWorkspace"], { exact: true })).toBeVisible()
     await expect(page.getByText(mn["settings.account.plan.pro"], { exact: true })).toBeVisible()
-    await expect(page.getByText("3 хүсэлт · 123,456 токен", { exact: true })).toBeVisible()
-    await expect(page.getByText("Долоо хоногийн хэрэглээ: 123,456 / 1,000,000 токен", { exact: true })).toBeVisible()
-    await expect(page.getByText("Долоо хоногийн өртгийн хязгаар: 10%", { exact: true })).toBeVisible()
-    await expect(page.getByText("24 цагийн өртгийн хязгаар: 10%", { exact: true })).toBeVisible()
+    await expect(page.getByText("Ажлын орчны хэрэглээ: 3 хүсэлт · 123,456 токен", { exact: true })).toBeVisible()
+    await expect(page.getByText("Таны 7 хоногийн токен: 123,456 / 1,000,000", { exact: true })).toBeVisible()
+    await expect(page.getByText("Таны 7 хоногийн хүсэлт: 100 / 1,000", { exact: true })).toBeVisible()
+    await expect(page.getByText("Таны сарын токен: 500,000 / 4,000,000", { exact: true })).toBeVisible()
+    await expect(page.getByText("Таны сарын хүсэлт: 500 / 4,000", { exact: true })).toBeVisible()
+    await expect(page.getByText("Таны 7 хоногийн өртгийн хязгаар: 10%", { exact: true })).toBeVisible()
+    await expect(page.getByText("Таны сарын өртгийн хязгаар: 10%", { exact: true })).toBeVisible()
+    await expect(page.getByText("Таны 24 цагийн өртгийн хязгаар: 10%", { exact: true })).toBeVisible()
     await page.setViewportSize({ width: 390, height: 844 })
     const accountTab = page.getByRole("tab", { name: mn["settings.account.tab"], exact: true })
     await expect(accountTab).toHaveAttribute("title", mn["settings.account.tab"])
     await accountTab.focus()
     await expect(accountTab).toBeFocused()
     await expect(page.getByText("MongolGPT баг", { exact: true })).toBeVisible()
-    await expect(page.getByText("Долоо хоногийн хэрэглээ: 123,456 / 1,000,000 токен", { exact: true })).toBeVisible()
+    await expect(page.getByText("Таны 7 хоногийн токен: 123,456 / 1,000,000", { exact: true })).toBeVisible()
     const overflow = await page.evaluate(() => {
       const dialog = document.querySelector(
         '[data-component="dialog-v2"][data-variant="settings"] [data-slot="dialog-container"]',
@@ -224,13 +228,22 @@ function accountOverview(accountID: string) {
           plan: "pro",
           weeklyCostLimitInMicroCents: 500_000,
           weeklyTokenLimit: 1_000_000,
+          weeklyRequestLimit: 1_000,
+          monthlyCostLimitInMicroCents: 2_000_000,
+          monthlyTokenLimit: 4_000_000,
+          monthlyRequestLimit: 4_000,
           rollingCostLimitInMicroCents: 100_000,
           rollingWindowHours: 24,
         },
         quota: {
           status: "available",
+          scope: "user",
           weeklyCost: { used: 50_000, limit: 500_000, resetAt: periodEnd },
           weeklyTokens: { used: 123_456, limit: 1_000_000, resetAt: periodEnd },
+          weeklyRequests: { used: 100, limit: 1_000, resetAt: periodEnd },
+          monthlyCost: { used: 200_000, limit: 2_000_000, resetAt: periodEnd },
+          monthlyTokens: { used: 500_000, limit: 4_000_000, resetAt: periodEnd },
+          monthlyRequests: { used: 500, limit: 4_000, resetAt: periodEnd },
           rollingCost: { used: 10_000, limit: 100_000, resetAt: null },
         },
         usage: {

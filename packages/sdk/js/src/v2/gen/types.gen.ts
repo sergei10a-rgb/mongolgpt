@@ -2245,18 +2245,43 @@ export type ExperimentalAccountOverview = {
           plan: "basic" | "pro" | "max"
           weeklyCostLimitInMicroCents: number
           weeklyTokenLimit: number
+          weeklyRequestLimit: number
+          monthlyCostLimitInMicroCents: number
+          monthlyTokenLimit: number
+          monthlyRequestLimit: number
           rollingCostLimitInMicroCents: number
           rollingWindowHours: number
         }
     quota:
       | {
           status: "available"
+          scope: "user"
           weeklyCost: {
             used: number
             limit: number
             resetAt: number
           }
           weeklyTokens: {
+            used: number
+            limit: number
+            resetAt: number
+          }
+          weeklyRequests: {
+            used: number
+            limit: number
+            resetAt: number
+          }
+          monthlyCost: {
+            used: number
+            limit: number
+            resetAt: number
+          }
+          monthlyTokens: {
+            used: number
+            limit: number
+            resetAt: number
+          }
+          monthlyRequests: {
             used: number
             limit: number
             resetAt: number

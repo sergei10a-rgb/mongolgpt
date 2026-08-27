@@ -31,6 +31,10 @@ const paidLimits = z
     plan: z.enum(PlanNames),
     weeklyCostLimitInMicroCents: z.number().int().positive(),
     weeklyTokenLimit: z.number().int().positive(),
+    weeklyRequestLimit: z.number().int().positive(),
+    monthlyCostLimitInMicroCents: z.number().int().positive(),
+    monthlyTokenLimit: z.number().int().positive(),
+    monthlyRequestLimit: z.number().int().positive(),
     rollingCostLimitInMicroCents: z.number().int().positive(),
     rollingWindowHours: z.number().int().positive(),
   })
@@ -48,8 +52,13 @@ const quota = z.discriminatedUnion("status", [
   z
     .object({
       status: z.literal("available"),
+      scope: z.literal("user"),
       weeklyCost: quotaDimension,
       weeklyTokens: quotaDimension,
+      weeklyRequests: quotaDimension,
+      monthlyCost: quotaDimension,
+      monthlyTokens: quotaDimension,
+      monthlyRequests: quotaDimension,
       rollingCost: quotaDimension,
     })
     .strict(),

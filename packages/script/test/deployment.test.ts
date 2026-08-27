@@ -26,18 +26,30 @@ const planLimits = {
     basic: {
       weeklyCostLimit: 1,
       weeklyTokenLimit: 100_000,
+      weeklyRequestLimit: 100,
+      monthlyCostLimit: 4,
+      monthlyTokenLimit: 400_000,
+      monthlyRequestLimit: 400,
       rollingCostLimit: 1,
       rollingWindow: 5,
     },
     pro: {
       weeklyCostLimit: 5,
       weeklyTokenLimit: 500_000,
+      weeklyRequestLimit: 500,
+      monthlyCostLimit: 20,
+      monthlyTokenLimit: 2_000_000,
+      monthlyRequestLimit: 2_000,
       rollingCostLimit: 2,
       rollingWindow: 5,
     },
     max: {
       weeklyCostLimit: 10,
       weeklyTokenLimit: 1_000_000,
+      weeklyRequestLimit: 1_000,
+      monthlyCostLimit: 40,
+      monthlyTokenLimit: 4_000_000,
+      monthlyRequestLimit: 4_000,
       rollingCostLimit: 4,
       rollingWindow: 5,
     },
@@ -575,6 +587,25 @@ describe("Cloudflare deployment preflight", () => {
           },
         }),
       ["MONGOLGPT_PLAN_LIMITS", "dailyRequestsFallback"],
+    )
+
+    const { monthlyRequestLimit: _missingMonthlyRequestLimit, ...unsafeBasic } = planLimits.plans.basic
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_MONGOLGPT_PLAN_LIMITS: JSON.stringify({
+              ...planLimits,
+              plans: { ...planLimits.plans, basic: unsafeBasic },
+            }),
+          },
+        }),
+      ["MONGOLGPT_PLAN_LIMITS", "monthlyRequestLimit"],
     )
 
     expectIssues(

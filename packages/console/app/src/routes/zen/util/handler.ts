@@ -368,11 +368,15 @@ export async function handler(
         await trialLimiter?.track(usageInfo)
         await modelTpmLimiter?.track(providerInfo.id, providerInfo.model, usageInfo)
         await providerBudgetTracker?.track(providerInfo.id, costInfo.totalCostInCent)
-        await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
-        await settleRequestQuota({
+        const actual = {
           costInMicroCents: centsToMicroCents(costInfo.totalCostInCent),
           tokens: usageTokenTotal(usageInfo),
-        })
+        }
+        try {
+          await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
+        } finally {
+          await settleRequestQuota(actual)
+        }
         json.cost = calculateOccurredCost(billingSource, costInfo)
       }
       if (json.error?.message) {
@@ -386,7 +390,8 @@ export async function handler(
       const body = JSON.stringify(responseConverter(json))
       const responseLength = contentByteLength(body)
       logger.metric({ response_length: responseLength })
-      await settleRequestQuota()
+      if (!usage && res.status >= 400) await releaseRequestQuota()
+      else await settleRequestQuota()
       return new Response(body, {
         status: resStatus,
         statusText: res.statusText,
@@ -433,11 +438,15 @@ export async function handler(
                     usageInfo,
                   )
                   await providerBudgetTracker?.track(providerInfo.id, costInfo.totalCostInCent)
-                  await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
-                  await settleRequestQuota({
+                  const actual = {
                     costInMicroCents: centsToMicroCents(costInfo.totalCostInCent),
                     tokens: usageTokenTotal(usageInfo),
-                  })
+                  }
+                  try {
+                    await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo)
+                  } finally {
+                    await settleRequestQuota(actual)
+                  }
                   const cost = calculateOccurredCost(billingSource, costInfo)
                   c.enqueue(encoder.encode(buildCostChunk(opts.format, cost)))
                 }
@@ -483,11 +492,13 @@ export async function handler(
         }
 
         return pump().catch(async (error) => {
+          // Partial streams have no trustworthy usage total; retain the reservation to prevent cancel-after-output bypass.
           await settleRequestQuota()
           c.error(error)
         })
       },
       async cancel() {
+        // A client can cancel after receiving output, so an unmeasured cancellation must remain conservatively reserved.
         await settleRequestQuota()
       },
     })
@@ -497,6 +508,7 @@ export async function handler(
       headers: resHeaders,
     })
   } catch (error) {
+    // Measured usage is already settled idempotently; otherwise retain the reservation for an indeterminate provider call.
     await settleRequestQuota()
     logger.metric({
       "error.type": error instanceof Error ? error.constructor.name : "UnknownError",
@@ -841,9 +853,17 @@ export async function handler(
             rollingUsage: SubscriptionTable.rollingUsage,
             fixedUsage: SubscriptionTable.fixedUsage,
             weeklyTokens: SubscriptionTable.weeklyTokens,
+            weeklyRequests: SubscriptionTable.weeklyRequests,
+            monthlyCost: SubscriptionTable.monthlyCost,
+            monthlyTokens: SubscriptionTable.monthlyTokens,
+            monthlyRequests: SubscriptionTable.monthlyRequests,
             timeRollingUpdated: SubscriptionTable.timeRollingUpdated,
             timeFixedUpdated: SubscriptionTable.timeFixedUpdated,
             timeWeeklyTokensUpdated: SubscriptionTable.timeWeeklyTokensUpdated,
+            timeWeeklyRequestsUpdated: SubscriptionTable.timeWeeklyRequestsUpdated,
+            timeMonthlyCostUpdated: SubscriptionTable.timeMonthlyCostUpdated,
+            timeMonthlyTokensUpdated: SubscriptionTable.timeMonthlyTokensUpdated,
+            timeMonthlyRequestsUpdated: SubscriptionTable.timeMonthlyRequestsUpdated,
           },
           lite: {
             id: LiteTable.id,
@@ -972,6 +992,7 @@ export async function handler(
     const limits = PlanData.getLimits({ plan: entitlement.plan })
     const reservation = planQuotaReservationBounds({
       weeklyTokenLimit: limits.weeklyTokenLimit,
+      monthlyTokenLimit: limits.monthlyTokenLimit,
       maxTokensPerRequest: modelInfo.maxTokensPerRequest,
       costs: [modelInfo.cost, modelInfo.cost200K],
     })
@@ -980,6 +1001,7 @@ export async function handler(
       invoiceID: entitlement.invoiceID,
       userID: authInfo!.user.id,
       now: new Date(),
+      timePeriodStart: entitlement.timePeriodStart,
       usage: authInfo!.planUsage ?? undefined,
       limits,
       reservation,
@@ -1005,6 +1027,10 @@ export async function handler(
         },
       ),
     ]).then(() => undefined)
+  }
+
+  function releaseRequestQuota() {
+    return settleRequestQuota({ costInMicroCents: 0, tokens: 0 })
   }
 
   function freeAutoWeeklyLimitError(retryAfter: number) {
@@ -1049,6 +1075,65 @@ export async function handler(
             limit: limits.weeklyTokenLimit,
             usage: sub.weeklyTokens,
             timeUpdated: sub.timeWeeklyTokensUpdated,
+          })
+          if (result.status === "rate-limited")
+            throw new PlanUsageLimitError(
+              t("zen.api.error.subscriptionQuotaExceeded", {
+                retryIn: formatRetryTime(result.resetInSec, locale),
+              }),
+              result.resetInSec,
+            )
+        }
+
+        if (sub?.weeklyRequests && sub.timeWeeklyRequestsUpdated) {
+          const result = Subscription.analyzeWeeklyTokens({
+            limit: limits.weeklyRequestLimit,
+            usage: sub.weeklyRequests,
+            timeUpdated: sub.timeWeeklyRequestsUpdated,
+          })
+          if (result.status === "rate-limited")
+            throw new PlanUsageLimitError(
+              t("zen.api.error.subscriptionQuotaExceeded", {
+                retryIn: formatRetryTime(result.resetInSec, locale),
+              }),
+              result.resetInSec,
+            )
+        }
+
+        if (sub?.monthlyCost && sub.timeMonthlyCostUpdated) {
+          const result = Subscription.analyzeMonthlyUsage({
+            limit: limits.monthlyCostLimit,
+            usage: sub.monthlyCost,
+            timeUpdated: sub.timeMonthlyCostUpdated,
+            timeSubscribed: authInfo.planEntitlement.timePeriodStart,
+          })
+          if (result.status === "rate-limited")
+            throw new PlanUsageLimitError(
+              t("zen.api.error.subscriptionQuotaExceeded", {
+                retryIn: formatRetryTime(result.resetInSec, locale),
+              }),
+              result.resetInSec,
+            )
+        }
+
+        for (const monthly of [
+          {
+            limit: limits.monthlyTokenLimit,
+            usage: sub?.monthlyTokens,
+            timeUpdated: sub?.timeMonthlyTokensUpdated,
+          },
+          {
+            limit: limits.monthlyRequestLimit,
+            usage: sub?.monthlyRequests,
+            timeUpdated: sub?.timeMonthlyRequestsUpdated,
+          },
+        ]) {
+          if (!monthly.usage || !monthly.timeUpdated) continue
+          const result = Subscription.analyzeMonthlyCount({
+            limit: monthly.limit,
+            usage: monthly.usage,
+            timeUpdated: monthly.timeUpdated,
+            timeSubscribed: authInfo.planEntitlement.timePeriodStart,
           })
           if (result.status === "rate-limited")
             throw new PlanUsageLimitError(
@@ -1381,7 +1466,7 @@ export async function handler(
       }
     }
 
-    await Database.transaction(async (db) => {
+    const planUsageRecorded = await Database.transaction(async (db) => {
       const inserted = await db
         .insert(UsageTable)
         .values({
@@ -1409,7 +1494,7 @@ export async function handler(
           enrichment,
         })
         .onConflictDoNothing()
-      if (inserted.meta.changes === 0) return
+      if (inserted.meta.changes === 0) return true
 
       await recordEstimatedModelCostWithDb(db, {
         workspaceID: authInfo.workspaceID,
@@ -1424,7 +1509,7 @@ export async function handler(
       if (billingSource === "plan") {
         const plan = authInfo.planEntitlement!.plan
         const limits = PlanData.getLimits({ plan })
-        await recordPlanUsageWithDb(db, {
+        return recordPlanUsageWithDb(db, {
           workspaceID: authInfo.workspaceID,
           userID: authInfo.user.id,
           entitlementID: authInfo.planEntitlement!.id,
@@ -1433,7 +1518,6 @@ export async function handler(
           rollingWindowHours: limits.rollingWindow,
           now,
         })
-        return
       }
 
       await Promise.all(
@@ -1513,7 +1597,17 @@ export async function handler(
           ]
         })(),
       )
+      return true
     })
+
+    if (!planUsageRecorded) {
+      throw new PlanUsageLimitError(
+        t("zen.api.error.subscriptionQuotaExceeded", {
+          retryIn: formatRetryTime(MINUTE_IN_SECONDS, locale),
+        }),
+        MINUTE_IN_SECONDS,
+      )
+    }
 
     return { costInMicroCents: cost }
   }

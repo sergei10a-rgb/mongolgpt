@@ -1,6 +1,7 @@
 import type { QuotaLedgerCommand } from "@mongolgpt/console-core/quota.js"
 import { planQuotaCounterKeys, planQuotaScope } from "@mongolgpt/console-core/quota.js"
 import { centsToMicroCents } from "@mongolgpt/console-core/util/price.js"
+import { getMonthlyBounds, getWeekBounds } from "@mongolgpt/console-core/util/date.js"
 import { ledgerCommand } from "./quota-service"
 
 type DateLike = Date | number | null | undefined
@@ -10,6 +11,14 @@ export type PlanQuotaUsage = {
   timeFixedUpdated?: DateLike
   weeklyTokens?: number | null
   timeWeeklyTokensUpdated?: DateLike
+  weeklyRequests?: number | null
+  timeWeeklyRequestsUpdated?: DateLike
+  monthlyCost?: number | null
+  timeMonthlyCostUpdated?: DateLike
+  monthlyTokens?: number | null
+  timeMonthlyTokensUpdated?: DateLike
+  monthlyRequests?: number | null
+  timeMonthlyRequestsUpdated?: DateLike
   rollingUsage?: number | null
   timeRollingUpdated?: DateLike
 }
@@ -19,10 +28,15 @@ export type PlanQuotaInput = {
   invoiceID: string
   userID: string
   now: Date
+  timePeriodStart: Date
   usage?: PlanQuotaUsage
   limits: {
     weeklyCostLimit: number
     weeklyTokenLimit: number
+    weeklyRequestLimit: number
+    monthlyCostLimit: number
+    monthlyTokenLimit: number
+    monthlyRequestLimit: number
     rollingCostLimit: number
     rollingWindow: number
   }
@@ -61,17 +75,21 @@ type ModelCost = {
 
 export function planQuotaReservationBounds(input: {
   weeklyTokenLimit: number
+  monthlyTokenLimit: number
   maxTokensPerRequest?: number
   costs: Array<ModelCost | undefined>
 }) {
   if (!Number.isSafeInteger(input.weeklyTokenLimit) || input.weeklyTokenLimit < 1) {
     throw new TypeError("Багцын долоо хоногийн токены хязгаар буруу байна.")
   }
-  const configured = input.maxTokensPerRequest ?? input.weeklyTokenLimit
+  if (!Number.isSafeInteger(input.monthlyTokenLimit) || input.monthlyTokenLimit < 1) {
+    throw new TypeError("Багцын сарын токены хязгаар буруу байна.")
+  }
+  const configured = input.maxTokensPerRequest ?? Math.min(input.weeklyTokenLimit, input.monthlyTokenLimit)
   if (!Number.isSafeInteger(configured) || configured < 1) {
     throw new TypeError("Загварын хүсэлтийн токены хязгаар буруу байна.")
   }
-  const tokens = Math.min(configured, input.weeklyTokenLimit)
+  const tokens = Math.min(configured, input.weeklyTokenLimit, input.monthlyTokenLimit)
   const rates = input.costs.flatMap((cost) => (cost ? Object.values(cost) : []))
   if (rates.some((rate) => !Number.isFinite(rate) || rate < 0)) throw new TypeError("Загварын өртөг буруу байна.")
   const highestRate = Math.max(0, ...rates)
@@ -92,15 +110,6 @@ function nonnegativeInteger(value: unknown) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined
 }
 
-function nextMonday(now: Date) {
-  const start = new Date(now)
-  const offset = (start.getUTCDay() + 6) % 7
-  start.setUTCDate(start.getUTCDate() - offset)
-  start.setUTCHours(0, 0, 0, 0)
-  start.setUTCDate(start.getUTCDate() + 7)
-  return start.getTime()
-}
-
 function secondsUntil(deadline: number, now: number) {
   return Math.max(1, Math.ceil((deadline - now) / SECOND))
 }
@@ -113,7 +122,9 @@ function usageValue(value: number | null | undefined, updated: DateLike, thresho
 }
 
 function validLimit(value: number) {
-  return Number.isFinite(value) && value > 0 ? centsToMicroCents(value * 100) : 0
+  if (!Number.isFinite(value) || value <= 0) return 0
+  const result = centsToMicroCents(value * 100)
+  return Number.isSafeInteger(result) && result > 0 ? result : 0
 }
 
 function validAmount(value: number) {
@@ -133,12 +144,16 @@ function validLedgerValues(value: unknown, expectedKeys: readonly string[]) {
 
 function blockedRetryAfter(
   blockedKey: unknown,
-  keys: { weeklyCost: string; weeklyTokens: string; rollingCost: string },
+  keys: ReturnType<typeof planQuotaCounterKeys>,
   now: number,
   weekEnd: number,
+  monthEnd: number,
   rollingReset: number,
 ) {
-  if (blockedKey === keys.weeklyCost || blockedKey === keys.weeklyTokens) return secondsUntil(weekEnd, now)
+  if (blockedKey === keys.weeklyCost || blockedKey === keys.weeklyTokens || blockedKey === keys.weeklyRequests)
+    return secondsUntil(weekEnd, now)
+  if (blockedKey === keys.monthlyCost || blockedKey === keys.monthlyTokens || blockedKey === keys.monthlyRequests)
+    return secondsUntil(monthEnd, now)
   if (blockedKey === keys.rollingCost) return secondsUntil(rollingReset, now)
   return MINUTE
 }
@@ -153,12 +168,23 @@ export async function reservePlanQuota(
 ): Promise<PlanQuotaResult> {
   const now = input.now.getTime()
   if (!Number.isSafeInteger(now) || now < 0) return { allowed: false, retryAfter: MINUTE, deactivated: false }
+  const periodStart = input.timePeriodStart.getTime()
   if (
+    !Number.isSafeInteger(periodStart) ||
+    periodStart < 0 ||
+    periodStart > now ||
     !Number.isSafeInteger(input.limits.weeklyTokenLimit) ||
     input.limits.weeklyTokenLimit < 1 ||
+    !Number.isSafeInteger(input.limits.weeklyRequestLimit) ||
+    input.limits.weeklyRequestLimit < 1 ||
+    !Number.isSafeInteger(input.limits.monthlyTokenLimit) ||
+    input.limits.monthlyTokenLimit < 1 ||
+    !Number.isSafeInteger(input.limits.monthlyRequestLimit) ||
+    input.limits.monthlyRequestLimit < 1 ||
     !Number.isSafeInteger(input.limits.rollingWindow) ||
     input.limits.rollingWindow < 1 ||
     validLimit(input.limits.weeklyCostLimit) < 1 ||
+    validLimit(input.limits.monthlyCostLimit) < 1 ||
     validLimit(input.limits.rollingCostLimit) < 1 ||
     nonnegativeInteger(input.reservation.costInMicroCents) === undefined ||
     nonnegativeInteger(input.reservation.tokens) === undefined
@@ -166,10 +192,14 @@ export async function reservePlanQuota(
     return { allowed: false, retryAfter: MINUTE, deactivated: false }
   }
 
-  const weekEnd = nextMonday(input.now)
+  const week = getWeekBounds(input.now)
+  const month = getMonthlyBounds(input.now, input.timePeriodStart)
+  const weekStart = week.start.getTime()
+  const weekEnd = week.end.getTime()
+  const monthStart = month.start.getTime()
+  const monthEnd = month.end.getTime()
   const rollingWindowMs = Math.max(1, input.limits.rollingWindow * 60 * 60 * 1_000)
   const existing = input.usage
-  const weekStart = weekEnd - 7 * 24 * 60 * 60 * 1_000
   const rollingThreshold = now - rollingWindowMs
   const rollingUpdated = timestamp(existing?.timeRollingUpdated)
   const rollingReset =
@@ -177,7 +207,15 @@ export async function reservePlanQuota(
       ? rollingUpdated + rollingWindowMs
       : now + rollingWindowMs
   const keys = planQuotaCounterKeys(input.userID)
-  const ledgerKeys = [keys.weeklyCost, keys.weeklyTokens, keys.rollingCost] as const
+  const ledgerKeys = [
+    keys.weeklyCost,
+    keys.weeklyTokens,
+    keys.weeklyRequests,
+    keys.monthlyCost,
+    keys.monthlyTokens,
+    keys.monthlyRequests,
+    keys.rollingCost,
+  ] as const
   const amounts = {
     cost: Math.max(1, validAmount(input.reservation.costInMicroCents)),
     tokens: Math.max(1, validAmount(input.reservation.tokens)),
@@ -196,6 +234,34 @@ export async function reservePlanQuota(
       amount: amounts.tokens,
       limit: Math.max(1, input.limits.weeklyTokenLimit),
       expiresAt: weekEnd,
+    },
+    {
+      counterKey: keys.weeklyRequests,
+      persistedUsage: usageValue(existing?.weeklyRequests, existing?.timeWeeklyRequestsUpdated, weekStart),
+      amount: 1,
+      limit: input.limits.weeklyRequestLimit,
+      expiresAt: weekEnd,
+    },
+    {
+      counterKey: keys.monthlyCost,
+      persistedUsage: usageValue(existing?.monthlyCost, existing?.timeMonthlyCostUpdated, monthStart),
+      amount: amounts.cost,
+      limit: validLimit(input.limits.monthlyCostLimit),
+      expiresAt: monthEnd,
+    },
+    {
+      counterKey: keys.monthlyTokens,
+      persistedUsage: usageValue(existing?.monthlyTokens, existing?.timeMonthlyTokensUpdated, monthStart),
+      amount: amounts.tokens,
+      limit: input.limits.monthlyTokenLimit,
+      expiresAt: monthEnd,
+    },
+    {
+      counterKey: keys.monthlyRequests,
+      persistedUsage: usageValue(existing?.monthlyRequests, existing?.timeMonthlyRequestsUpdated, monthStart),
+      amount: 1,
+      limit: input.limits.monthlyRequestLimit,
+      expiresAt: monthEnd,
     },
     {
       counterKey: keys.rollingCost,
@@ -234,7 +300,7 @@ export async function reservePlanQuota(
       retryAfter:
         parsed.deactivated === true
           ? 0
-          : blockedRetryAfter(parsed.blockedKey, keys, now, weekEnd, Math.max(now + SECOND, rollingReset)),
+          : blockedRetryAfter(parsed.blockedKey, keys, now, weekEnd, monthEnd, Math.max(now + SECOND, rollingReset)),
       deactivated: parsed.deactivated === true,
     }
   }
@@ -253,6 +319,10 @@ export async function reservePlanQuota(
           entries: [
             { counterKey: keys.weeklyCost, actual: settledCost, expiresAt: weekEnd },
             { counterKey: keys.weeklyTokens, actual: settledTokens, expiresAt: weekEnd },
+            { counterKey: keys.weeklyRequests, actual: 1, expiresAt: weekEnd },
+            { counterKey: keys.monthlyCost, actual: settledCost, expiresAt: monthEnd },
+            { counterKey: keys.monthlyTokens, actual: settledTokens, expiresAt: monthEnd },
+            { counterKey: keys.monthlyRequests, actual: 1, expiresAt: monthEnd },
             {
               counterKey: keys.rollingCost,
               actual: settledCost,

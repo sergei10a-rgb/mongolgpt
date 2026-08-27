@@ -105,6 +105,26 @@ describe("Subscription.analyzeMonthlyUsage", () => {
   })
 })
 
+describe("Subscription.analyzeMonthlyCount", () => {
+  test("uses the subscription-anchored month for token and request counters", () => {
+    setSystemTime(new Date("2026-03-20T10:00:00Z"))
+    const result = Subscription.analyzeMonthlyCount({
+      limit: 1_000,
+      usage: 500,
+      timeUpdated: new Date("2026-03-18T00:00:00Z"),
+      timeSubscribed: new Date("2026-01-15T08:00:00Z"),
+    })
+
+    expect(result).toEqual({
+      status: "ok",
+      resetInSec: Math.ceil(
+        (new Date("2026-04-15T08:00:00Z").getTime() - new Date("2026-03-20T10:00:00Z").getTime()) / 1000,
+      ),
+      usagePercent: 50,
+    })
+  })
+})
+
 describe("Subscription.LimitsSchema", () => {
   const limits = {
     free: {
@@ -120,9 +140,36 @@ describe("Subscription.LimitsSchema", () => {
       monthlyLimit: 10,
     },
     plans: {
-      basic: { weeklyCostLimit: 1, weeklyTokenLimit: 100_000, rollingCostLimit: 1, rollingWindow: 5 },
-      pro: { weeklyCostLimit: 5, weeklyTokenLimit: 500_000, rollingCostLimit: 2, rollingWindow: 5 },
-      max: { weeklyCostLimit: 10, weeklyTokenLimit: 1_000_000, rollingCostLimit: 4, rollingWindow: 5 },
+      basic: {
+        weeklyCostLimit: 1,
+        weeklyTokenLimit: 100_000,
+        weeklyRequestLimit: 100,
+        monthlyCostLimit: 4,
+        monthlyTokenLimit: 400_000,
+        monthlyRequestLimit: 400,
+        rollingCostLimit: 1,
+        rollingWindow: 5,
+      },
+      pro: {
+        weeklyCostLimit: 5,
+        weeklyTokenLimit: 500_000,
+        weeklyRequestLimit: 500,
+        monthlyCostLimit: 20,
+        monthlyTokenLimit: 2_000_000,
+        monthlyRequestLimit: 2_000,
+        rollingCostLimit: 2,
+        rollingWindow: 5,
+      },
+      max: {
+        weeklyCostLimit: 10,
+        weeklyTokenLimit: 1_000_000,
+        weeklyRequestLimit: 1_000,
+        monthlyCostLimit: 40,
+        monthlyTokenLimit: 4_000_000,
+        monthlyRequestLimit: 4_000,
+        rollingCostLimit: 4,
+        rollingWindow: 5,
+      },
     },
   }
 

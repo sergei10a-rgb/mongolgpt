@@ -87,7 +87,7 @@ export function formatAccountOverview(overview: AccountOverview) {
     const role = workspace.role === "admin" ? "админ" : "гишүүн"
     lines.push(`${active} ${workspace.name} · ${planLabel(workspace.limits.plan)} · ${role}`)
     lines.push(
-      `  Зарцуулалт: ${number.format(workspace.usage.requestCount)} хүсэлт, ${number.format(workspace.usage.totalTokens)} токен`,
+      `  Ажлын орчны хэрэглээ: ${number.format(workspace.usage.requestCount)} хүсэлт, ${number.format(workspace.usage.totalTokens)} токен`,
     )
 
     if (workspace.limits.plan === "free") {
@@ -95,12 +95,26 @@ export function formatAccountOverview(overview: AccountOverview) {
         `  Өдрийн хязгаар: ${number.format(workspace.limits.dailyRequests)} үндсэн, ${number.format(workspace.limits.dailyRequestsFallback)} нөөц хүсэлт`,
       )
     } else {
-      lines.push(`  Долоо хоногийн токены хязгаар: ${number.format(workspace.limits.weeklyTokenLimit)}`)
+      lines.push(
+        `  7 хоногийн хязгаар: ${number.format(workspace.limits.weeklyTokenLimit)} токен, ${number.format(workspace.limits.weeklyRequestLimit)} хүсэлт`,
+      )
+      lines.push(
+        `  Сарын хязгаар: ${number.format(workspace.limits.monthlyTokenLimit)} токен, ${number.format(workspace.limits.monthlyRequestLimit)} хүсэлт`,
+      )
     }
 
     if (workspace.quota.status === "available") {
       lines.push(
-        `  Долоо хоногийн токен: ${number.format(workspace.quota.weeklyTokens.used)} / ${number.format(workspace.quota.weeklyTokens.limit)}`,
+        `  Таны 7 хоногийн токен: ${number.format(workspace.quota.weeklyTokens.used)} / ${number.format(workspace.quota.weeklyTokens.limit)}`,
+      )
+      lines.push(
+        `  Таны 7 хоногийн хүсэлт: ${number.format(workspace.quota.weeklyRequests.used)} / ${number.format(workspace.quota.weeklyRequests.limit)}`,
+      )
+      lines.push(
+        `  Таны сарын токен: ${number.format(workspace.quota.monthlyTokens.used)} / ${number.format(workspace.quota.monthlyTokens.limit)}`,
+      )
+      lines.push(
+        `  Таны сарын хүсэлт: ${number.format(workspace.quota.monthlyRequests.used)} / ${number.format(workspace.quota.monthlyRequests.limit)}`,
       )
     } else if (workspace.quota.status === "model-scoped") {
       lines.push("  Хэрэглээний хязгаарыг Free Auto загвар бүрээр тооцно")

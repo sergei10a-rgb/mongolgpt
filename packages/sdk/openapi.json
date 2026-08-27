@@ -22841,6 +22841,22 @@
                           "type": "integer",
                           "exclusiveMinimum": 0
                         },
+                        "weeklyRequestLimit": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "monthlyCostLimitInMicroCents": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "monthlyTokenLimit": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "monthlyRequestLimit": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
                         "rollingCostLimitInMicroCents": {
                           "type": "integer",
                           "exclusiveMinimum": 0
@@ -22854,6 +22870,10 @@
                         "plan",
                         "weeklyCostLimitInMicroCents",
                         "weeklyTokenLimit",
+                        "weeklyRequestLimit",
+                        "monthlyCostLimitInMicroCents",
+                        "monthlyTokenLimit",
+                        "monthlyRequestLimit",
                         "rollingCostLimitInMicroCents",
                         "rollingWindowHours"
                       ],
@@ -22869,6 +22889,10 @@
                         "status": {
                           "type": "string",
                           "enum": ["available"]
+                        },
+                        "scope": {
+                          "type": "string",
+                          "enum": ["user"]
                         },
                         "weeklyCost": {
                           "type": "object",
@@ -22908,6 +22932,82 @@
                           "required": ["used", "limit", "resetAt"],
                           "additionalProperties": false
                         },
+                        "weeklyRequests": {
+                          "type": "object",
+                          "properties": {
+                            "used": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "limit": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "resetAt": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": ["used", "limit", "resetAt"],
+                          "additionalProperties": false
+                        },
+                        "monthlyCost": {
+                          "type": "object",
+                          "properties": {
+                            "used": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "limit": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "resetAt": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": ["used", "limit", "resetAt"],
+                          "additionalProperties": false
+                        },
+                        "monthlyTokens": {
+                          "type": "object",
+                          "properties": {
+                            "used": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "limit": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "resetAt": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": ["used", "limit", "resetAt"],
+                          "additionalProperties": false
+                        },
+                        "monthlyRequests": {
+                          "type": "object",
+                          "properties": {
+                            "used": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "limit": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "resetAt": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": ["used", "limit", "resetAt"],
+                          "additionalProperties": false
+                        },
                         "rollingCost": {
                           "type": "object",
                           "properties": {
@@ -22928,7 +23028,17 @@
                           "additionalProperties": false
                         }
                       },
-                      "required": ["status", "weeklyCost", "weeklyTokens", "rollingCost"],
+                      "required": [
+                        "status",
+                        "scope",
+                        "weeklyCost",
+                        "weeklyTokens",
+                        "weeklyRequests",
+                        "monthlyCost",
+                        "monthlyTokens",
+                        "monthlyRequests",
+                        "rollingCost"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -23071,11 +23181,14 @@
                 "type": "string",
                 "enum": ["success"]
               },
+              "id": {
+                "type": "string"
+              },
               "email": {
                 "type": "string"
               }
             },
-            "required": ["_tag", "email"],
+            "required": ["_tag", "id", "email"],
             "additionalProperties": false
           },
           {

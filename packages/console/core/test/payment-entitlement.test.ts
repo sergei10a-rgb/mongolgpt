@@ -311,8 +311,19 @@ describe("paid plan subscription entitlement", () => {
       ),
     ).resolves.toBe(true)
     expect(
-      sqlite.query("select fixed_usage, weekly_tokens from subscription where user_id = ?").get("usr_entitlement_late"),
-    ).toEqual({ fixed_usage: 125, weekly_tokens: 500 })
+      sqlite
+        .query(
+          "select fixed_usage, weekly_tokens, weekly_requests, monthly_cost, monthly_tokens, monthly_requests from subscription where user_id = ?",
+        )
+        .get("usr_entitlement_late"),
+    ).toEqual({
+      fixed_usage: 125,
+      weekly_tokens: 500,
+      weekly_requests: 1,
+      monthly_cost: 125,
+      monthly_tokens: 500,
+      monthly_requests: 1,
+    })
 
     await transaction((tx) =>
       applyPaymentEventWithDb(
@@ -341,5 +352,181 @@ describe("paid plan subscription entitlement", () => {
       ),
     ).resolves.toBe(false)
     expect(sqlite.query("select count(*) as count from subscription").get()).toEqual({ count: 0 })
+  })
+
+  test("tracks weekly and anchored monthly counters, then resets monthly values on the next billing cycle", async () => {
+    const { sqlite, workspaceID, transaction } = await fixture()
+    const anchor = Date.UTC(2026, 6, 20, 8)
+    sqlite
+      .query(
+        `insert into plan_subscription
+          (id, workspace_id, invoice_id, plan, status, time_period_start, time_period_end)
+         values (?, ?, ?, 'pro', 'active', ?, ?)`,
+      )
+      .run("sub_monthly_anchor", workspaceID, "inv_monthly_anchor", anchor, Date.UTC(2026, 9, 20, 8))
+    sqlite
+      .query("insert into subscription (id, workspace_id, user_id) values (?, ?, ?)")
+      .run("sub_usage_monthly_anchor", workspaceID, "usr_entitlement_admin")
+    const firstUsageAt = Date.UTC(2026, 7, 18, 12)
+    const secondUsageAt = Date.UTC(2026, 7, 25, 12)
+
+    await transaction((tx) =>
+      recordPlanUsageWithDb(tx, {
+        workspaceID,
+        userID: "usr_entitlement_admin",
+        entitlementID: "sub_monthly_anchor",
+        costInMicroCents: 125,
+        tokens: 500,
+        rollingWindowHours: 5,
+        now: new Date(firstUsageAt),
+      }),
+    )
+    await transaction((tx) =>
+      recordPlanUsageWithDb(tx, {
+        workspaceID,
+        userID: "usr_entitlement_admin",
+        entitlementID: "sub_monthly_anchor",
+        costInMicroCents: 200,
+        tokens: 600,
+        rollingWindowHours: 5,
+        now: new Date(secondUsageAt),
+      }),
+    )
+
+    expect(
+      sqlite
+        .query(
+          `select
+             fixed_usage,
+             weekly_tokens,
+             weekly_requests,
+             monthly_cost,
+             monthly_tokens,
+             monthly_requests
+           from subscription
+           where user_id = ?`,
+        )
+        .get("usr_entitlement_admin"),
+    ).toEqual({
+      fixed_usage: 200,
+      weekly_tokens: 600,
+      weekly_requests: 1,
+      monthly_cost: 200,
+      monthly_tokens: 600,
+      monthly_requests: 1,
+    })
+  })
+
+  test("clears the new persisted counters when a replacement entitlement activates after expiry", async () => {
+    const { sqlite, db, workspaceID, merchantAccountID, transaction } = await fixture()
+    const firstPaidAt = Date.UTC(2026, 6, 20, 8)
+    const firstInvoice = await recordPaymentInvoiceWithDb(db, {
+      id: "inv_entitlement_reset_first",
+      workspaceID,
+      provider: "bonum",
+      merchantAccountID,
+      externalInvoiceID: "bonum_entitlement_reset_first",
+      purpose: "subscription",
+      plan: "basic",
+      amount: 19_000,
+    })
+    await transaction((tx) =>
+      applyPaymentEventWithDb(
+        tx,
+        {
+          provider: "bonum",
+          merchantAccountID,
+          externalEventID: "bonum_entitlement_reset_first_paid",
+          externalInvoiceID: firstInvoice.invoice.external_invoice_id,
+          externalPaymentID: "bonum_payment_reset_first",
+          amount: 19_000,
+          currency: "MNT",
+          type: "paid",
+          payloadHash: hash("a"),
+          occurredAt: firstPaidAt,
+        },
+        createPlanSubscriptionPaymentEffect({ now: () => firstPaidAt + 1_000 }),
+      ),
+    )
+    const firstEntitlement = sqlite
+      .query("select id, time_period_start, time_period_end from plan_subscription where invoice_id = ?")
+      .get(firstInvoice.invoice.id) as { id: string; time_period_start: number; time_period_end: number }
+
+    await transaction((tx) =>
+      recordPlanUsageWithDb(tx, {
+        workspaceID,
+        userID: "usr_entitlement_admin",
+        entitlementID: firstEntitlement.id,
+        costInMicroCents: 125,
+        tokens: 500,
+        rollingWindowHours: 5,
+        now: new Date(firstPaidAt + 2_000),
+      }),
+    )
+
+    const secondInvoice = await recordPaymentInvoiceWithDb(db, {
+      id: "inv_entitlement_reset_second",
+      workspaceID,
+      provider: "bonum",
+      merchantAccountID,
+      externalInvoiceID: "bonum_entitlement_reset_second",
+      purpose: "subscription",
+      plan: "pro",
+      amount: 39_000,
+    })
+    const secondPaidAt = firstEntitlement.time_period_end + 1_000
+    await transaction((tx) =>
+      applyPaymentEventWithDb(
+        tx,
+        {
+          provider: "bonum",
+          merchantAccountID,
+          externalEventID: "bonum_entitlement_reset_second_paid",
+          externalInvoiceID: secondInvoice.invoice.external_invoice_id,
+          externalPaymentID: "bonum_payment_reset_second",
+          amount: 39_000,
+          currency: "MNT",
+          type: "paid",
+          payloadHash: hash("b"),
+          occurredAt: secondPaidAt,
+        },
+        createPlanSubscriptionPaymentEffect({ now: () => secondPaidAt + 1_000 }),
+      ),
+    )
+
+    expect(
+      sqlite
+        .query(
+          `select
+             fixed_usage,
+             weekly_tokens,
+             weekly_requests,
+             monthly_cost,
+             monthly_tokens,
+             monthly_requests,
+             time_fixed_updated,
+             time_weekly_tokens_updated,
+             time_weekly_requests_updated,
+             time_monthly_cost_updated,
+             time_monthly_tokens_updated,
+             time_monthly_requests_updated
+           from subscription
+           where user_id = ?`,
+        )
+        .get("usr_entitlement_admin"),
+    ).toEqual({
+      fixed_usage: null,
+      weekly_tokens: null,
+      weekly_requests: null,
+      monthly_cost: null,
+      monthly_tokens: null,
+      monthly_requests: null,
+      time_fixed_updated: null,
+      time_weekly_tokens_updated: null,
+      time_weekly_requests_updated: null,
+      time_monthly_cost_updated: null,
+      time_monthly_tokens_updated: null,
+      time_monthly_requests_updated: null,
+    })
   })
 })

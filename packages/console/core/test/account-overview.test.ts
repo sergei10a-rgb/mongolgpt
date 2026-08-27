@@ -28,6 +28,10 @@ const limits: AccountOverviewDependencies = {
   getPlanLimits: (plan) => ({
     weeklyCostLimit: plan === "basic" ? 2 : 5,
     weeklyTokenLimit: plan === "basic" ? 100_000 : 500_000,
+    weeklyRequestLimit: plan === "basic" ? 300 : 1_000,
+    monthlyCostLimit: plan === "basic" ? 20 : 50,
+    monthlyTokenLimit: plan === "basic" ? 900_000 : 2_500_000,
+    monthlyRequestLimit: plan === "basic" ? 2_000 : 6_000,
     rollingCostLimit: plan === "basic" ? 1 : 2,
     rollingWindow: 5,
   }),
@@ -87,11 +91,26 @@ async function fixture() {
   sqlite
     .query(
       `insert into subscription
-        (id, workspace_id, user_id, fixed_usage, weekly_tokens, rolling_usage,
-          time_fixed_updated, time_weekly_tokens_updated, time_rolling_updated)
-        values (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, workspace_id, user_id, fixed_usage, weekly_tokens, weekly_requests,
+          monthly_cost, monthly_tokens, monthly_requests, rolling_usage,
+          time_fixed_updated, time_weekly_tokens_updated, time_weekly_requests_updated,
+          time_monthly_cost_updated, time_monthly_tokens_updated, time_monthly_requests_updated,
+          time_rolling_updated)
+        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run("sub_overview_usage", PAID_WORKSPACE, PAID_USER, 100, 200, 300, NOW - 1_000, NOW - 1_000, NOW - 1_000)
+    .run(
+      "sub_overview_usage",
+      PAID_WORKSPACE,
+      PAID_USER,
+      100,
+      200,
+      230,
+      1_000,
+      1_500,
+      1_800,
+      300,
+      ...Array(7).fill(NOW - 1_000),
+    )
 
   const insertUsage = sqlite.query(
     `insert into usage
@@ -188,7 +207,7 @@ describe("account overview", () => {
         ...limits,
         readPlanQuota: async ({ scope, keys }) => {
           expect(scope).toBe("plan:wrk_overview_paid:inv_overview_paid")
-          return Object.fromEntries(keys.map((key, index) => [key, [150, 180, 350][index]]))
+          return Object.fromEntries(keys.map((key, index) => [key, [150, 180, 220, 900, 1_400, 1_700, 350][index]]))
         },
       },
     )
@@ -203,13 +222,22 @@ describe("account overview", () => {
       plan: "basic",
       weeklyCostLimitInMicroCents: 200_000_000,
       weeklyTokenLimit: 100_000,
+      weeklyRequestLimit: 300,
+      monthlyCostLimitInMicroCents: 2_000_000_000,
+      monthlyTokenLimit: 900_000,
+      monthlyRequestLimit: 2_000,
       rollingCostLimitInMicroCents: 100_000_000,
       rollingWindowHours: 5,
     })
     expect(paid?.quota).toMatchObject({
       status: "available",
+      scope: "user",
       weeklyCost: { used: 150, limit: 200_000_000 },
       weeklyTokens: { used: 200, limit: 100_000 },
+      weeklyRequests: { used: 230, limit: 300 },
+      monthlyCost: { used: 1_000, limit: 2_000_000_000 },
+      monthlyTokens: { used: 1_500, limit: 900_000 },
+      monthlyRequests: { used: 1_800, limit: 2_000 },
       rollingCost: { used: 350, limit: 100_000_000 },
     })
     expect(paid?.usage).toMatchObject({

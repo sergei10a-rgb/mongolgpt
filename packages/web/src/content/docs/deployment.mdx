@@ -89,12 +89,12 @@ Cloudflare Dashboard хэвийн болмогц GitHub репозиторийн
 
 Cloudflare-ийн **My Profile → API Tokens → Create Token** хэсэгт **Edit Cloudflare Workers** загварыг сонгоно. Энэ загварын Workers Scripts, Workers KV Storage, Workers R2 Storage, Workers Routes болон унших суурь эрхүүдийг хэвээр үлдээгээд дараах дөрвөн эрхийг нэмнэ.
 
-| Хамрах хүрээ        | Үйлчилгээ   | Эрх            |
-| ------------------- | ----------- | -------------- |
-| Аккаунт (`Account`) | `D1`        | Засах (`Edit`) |
-| Аккаунт (`Account`) | `Queues`    | Засах (`Edit`) |
+| Хамрах хүрээ        | Үйлчилгээ    | Эрх            |
+| ------------------- | ------------ | -------------- |
+| Аккаунт (`Account`) | `D1`         | Засах (`Edit`) |
+| Аккаунт (`Account`) | `Queues`     | Засах (`Edit`) |
 | Аккаунт (`Account`) | `Containers` | Засах (`Edit`) |
-| Бүс (`Zone`)        | `DNS`       | Засах (`Edit`) |
+| Бүс (`Zone`)        | `DNS`        | Засах (`Edit`) |
 
 Аккаунтын нөөцөд MongolGPT байрлах ганц аккаунтыг, бүсийн нөөцөд зөвхөн `mgpt.mn`-ийг сонгоно. Токеныг `MongolGPT deploy` гэх мэт зориулалт нь ойлгомжтой нэрээр үүсгэж, утгыг репозиторийн `CLOUDFLARE_API_TOKEN` нууц утгад хадгална. IP шүүлтүүр тавих бол GitHub-hosted runner-ийн өөрчлөгддөг хаягийг зөвшөөрөх боломжгүй тул байршуулалт хаагдахыг тооцно.
 
@@ -119,6 +119,60 @@ Cloudflare-ийн **My Profile → API Tokens → Create Token** хэсэгт **
 | Нууц утга | `ZEN_SESSION_SECRET`             | 32+ тэмдэгт тусдаа CSPRNG сессийн нууц утга                                                           |
 | Нууц утга | `ZEN_MODELS1`                    | Баталгаажсан Free Auto загвар ба үйлчилгээ үзүүлэгчийн JSON; үйлчилгээ үзүүлэгчийн түлхүүрийг агуулна |
 | Нууц утга | `ZEN_MODELS2`…`ZEN_MODELS30`     | `ZEN_MODELS1`-д багтахгүй үед ашиглах JSON-ийн дараалсан сонголттой хэсгүүд                           |
+
+`MONGOLGPT_PLAN_LIMITS` нь paid багц бүрд 7 хамгаалалтыг заавал тодорхойлно: 7 хоногийн өртөг, токен,
+хүсэлт; сарын өртөг, токен, хүсэлт; мөн гулсах хугацааны өртөг. Өртгийн утга нь загвар нийлүүлэгчийн
+тооцооны ам.доллар, `rollingWindow` нь цагаар өгөгдөнө. Дараах нь зөвхөн бүтцийн жишээ бөгөөд launch-ийн
+үнэ, бодит хэрэглээний судалгаагаар тоонуудыг тусад нь батална.
+
+```json
+{
+  "free": {
+    "promoTokens": 0,
+    "dailyRequests": 20,
+    "dailyRequestsFallback": 5,
+    "checkHeaders": { "x-mongolgpt-proxy": "replace-with-32-plus-random-characters" }
+  },
+  "lite": {
+    "rollingLimit": 1,
+    "rollingWindow": 5,
+    "weeklyLimit": 5,
+    "monthlyLimit": 10
+  },
+  "plans": {
+    "basic": {
+      "weeklyCostLimit": 1,
+      "weeklyTokenLimit": 100000,
+      "weeklyRequestLimit": 100,
+      "monthlyCostLimit": 4,
+      "monthlyTokenLimit": 400000,
+      "monthlyRequestLimit": 400,
+      "rollingCostLimit": 1,
+      "rollingWindow": 5
+    },
+    "pro": {
+      "weeklyCostLimit": 5,
+      "weeklyTokenLimit": 500000,
+      "weeklyRequestLimit": 500,
+      "monthlyCostLimit": 20,
+      "monthlyTokenLimit": 2000000,
+      "monthlyRequestLimit": 2000,
+      "rollingCostLimit": 2,
+      "rollingWindow": 5
+    },
+    "max": {
+      "weeklyCostLimit": 10,
+      "weeklyTokenLimit": 1000000,
+      "weeklyRequestLimit": 1000,
+      "monthlyCostLimit": 40,
+      "monthlyTokenLimit": 4000000,
+      "monthlyRequestLimit": 4000,
+      "rollingCostLimit": 4,
+      "rollingWindow": 5
+    }
+  }
+}
+```
 
 ### OAuth апп бүртгэх
 

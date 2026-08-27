@@ -140,6 +140,10 @@ export function planQuotaCounterKeys(userID: string) {
   return {
     weeklyCost: `user/${userID}/weekly-cost`,
     weeklyTokens: `user/${userID}/weekly-tokens`,
+    weeklyRequests: `user/${userID}/weekly-requests`,
+    monthlyCost: `user/${userID}/monthly-cost`,
+    monthlyTokens: `user/${userID}/monthly-tokens`,
+    monthlyRequests: `user/${userID}/monthly-requests`,
     rollingCost: `user/${userID}/rolling-cost`,
   }
 }
