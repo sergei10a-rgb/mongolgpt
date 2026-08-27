@@ -4,17 +4,6 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-07-18",
   "compatibility_flags": ["nodejs_compat"],
-  "routes": [
-    {
-      "pattern": "runtime.mgpt.mn",
-      "custom_domain": true,
-    },
-  ],
-  "vars": {
-    "MONGOLGPT_APP_ORIGIN": "https://app.mgpt.mn",
-    "MONGOLGPT_CONSOLE_URL": "https://mgpt.mn",
-    "STAGE": "production",
-  },
   "secrets": {
     "required": ["MONGOLGPT_RUNTIME_SECRET", "MONGOLGPT_RUNTIME_AUTH_SECRET"],
   },

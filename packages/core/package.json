@@ -58,6 +58,7 @@
     "drizzle-kit": "catalog:"
   },
   "dependencies": {
+    "@mongolgpt/account-contract": "workspace:*",
     "@ai-sdk/alibaba": "1.0.17",
     "@ai-sdk/amazon-bedrock": "4.0.112",
     "@ai-sdk/anthropic": "3.0.82",

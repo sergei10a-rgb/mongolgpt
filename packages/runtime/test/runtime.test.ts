@@ -549,29 +549,32 @@ describe("runtime deployment contract", () => {
       )
 
       expect(parsed.name).toBe(stage === "dev" ? "mongolgpt-runtime-dev" : "mongolgpt-runtime-production")
-      expect(parsed.vars).toEqual(
-        expect.objectContaining({
-          MONGOLGPT_APP_ORIGIN: stage === "dev" ? appOrigin : "https://app.mgpt.mn",
-          MONGOLGPT_CONSOLE_URL: stage === "dev" ? consoleOrigin : "https://mgpt.mn",
-          STAGE: stage,
-        }),
-      )
-      expect(parsed.vars).not.toHaveProperty("MONGOLGPT_RUNTIME_VERSION")
+      expect(parsed).not.toHaveProperty("routes")
+      expect(parsed).not.toHaveProperty("vars")
 
       const command = createRuntimeDeployCommand({
         stage,
+        rootDomain: "mgpt.mn",
         version: packageJSON.version,
         args: ["--dry-run"],
         bunExecutable: "bun",
       })
       expect(command.slice(0, 4)).toEqual(["bun", "x", "wrangler", "deploy"])
       expect(command).toContain("--dry-run")
-      expect(command.at(-2)).toBe("--var")
-      expect(command.at(-1)).toBe(`MONGOLGPT_RUNTIME_VERSION:${packageJSON.version}`)
       expect(command.find((value) => value.startsWith("--config="))).toEndWith(`wrangler.${stage}.jsonc`)
-      if (stage === "dev") {
-        expect(parsed.routes).toEqual([{ pattern: "runtime.dev.mgpt.mn", custom_domain: true }])
-      }
+      const stageDomain = stage === "dev" ? "dev.mgpt.mn" : "mgpt.mn"
+      expect(command.slice(-10)).toEqual([
+        "--domain",
+        `runtime.${stageDomain}`,
+        "--var",
+        `MONGOLGPT_RUNTIME_VERSION:${packageJSON.version}`,
+        "--var",
+        `MONGOLGPT_APP_ORIGIN:https://app.${stageDomain}`,
+        "--var",
+        `MONGOLGPT_CONSOLE_URL:https://${stageDomain}`,
+        "--var",
+        `STAGE:${stage}`,
+      ])
     }
 
     expect(packageJSON.scripts?.["deploy:dev"]).toBe("bun script/deploy.ts dev")
@@ -579,6 +582,7 @@ describe("runtime deployment contract", () => {
     expect(parseRuntimeDeployStage("dev")).toBe("dev")
     expect(parseRuntimeDeployStage("production")).toBe("production")
     expect(() => parseRuntimeDeployStage("staging")).toThrow()
-    expect(() => createRuntimeDeployCommand({ stage: "dev", version: " " })).toThrow()
+    expect(() => createRuntimeDeployCommand({ stage: "dev", rootDomain: "mgpt.mn", version: " " })).toThrow()
+    expect(() => createRuntimeDeployCommand({ stage: "dev", rootDomain: "MGPT.MN", version: "0.1.1" })).toThrow()
   })
 })

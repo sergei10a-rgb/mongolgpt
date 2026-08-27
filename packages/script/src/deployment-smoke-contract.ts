@@ -1,3 +1,4 @@
+import { resolveHostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import { deploymentEndpoints } from "./deployment"
 import type { DeploymentPreflightResult } from "./deployment"
 
@@ -48,21 +49,24 @@ export function inspectDeploymentEndpointConfiguration(
   endpoints: ReturnType<typeof deploymentEndpoints>,
   result: DeploymentPreflightResult,
 ) {
-  const root = `https://${result.stageDomain}`
+  const urls = resolveHostedServiceUrls(result.domain, result.stage)
+  if (urls.stageDomain !== result.stageDomain) {
+    throw new Error(`deployment stage domain is misconfigured for ${result.stage}`)
+  }
   const expected: Record<string, string> = {
-    docs: `https://docs.${result.stageDomain}/docs`,
-    app: `https://app.${result.stageDomain}`,
+    docs: urls.docs,
+    app: urls.app,
   }
   if (result.hostedServices) {
     Object.assign(expected, {
-      console: root,
-      consoleHealth: `${root}/api/health`,
-      authHealth: `https://auth.${result.stageDomain}/health`,
-      runtimeHealth: `https://runtime.${result.stageDomain}/global/health`,
-      paymentHealth: `https://pay.${result.stageDomain}/health`,
+      console: urls.console,
+      consoleHealth: `${urls.console}/api/health`,
+      authHealth: `${urls.auth}/health`,
+      runtimeHealth: `${urls.runtime}/global/health`,
+      paymentHealth: `${urls.payment}/health`,
     })
   }
-  if (result.adminEnabled) expected.admin = `https://admin.${result.stageDomain}`
+  if (result.adminEnabled) expected.admin = urls.admin
 
   for (const [name, url] of Object.entries(expected)) {
     if (endpoints[name as keyof typeof endpoints] !== url) {

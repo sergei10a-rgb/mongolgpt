@@ -7,6 +7,7 @@ import {
   enableMonitoring,
   enableShareService,
   enableTurnstile,
+  paymentOrigin,
   publicOrigin,
   runtimeOrigin,
   shareOrigin,
@@ -152,7 +153,7 @@ const paymentConfig = new sst.Linkable("PaymentConfig", {
     realPaymentConfirmation:
       paymentEnvironment === "production" &&
       process.env.MONGOLGPT_REAL_PAYMENT_CONFIRMATION === `ENABLE REAL PAYMENTS ${domain}`,
-    callbackBaseURL: `https://pay.${domain}`,
+    callbackBaseURL: paymentOrigin,
     bonumProviders: ["E_COMMERCE"],
     planCatalog: process.env.MONGOLGPT_PAYMENT_PLAN_CATALOG?.trim() || "",
   },

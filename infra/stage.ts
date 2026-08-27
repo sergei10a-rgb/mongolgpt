@@ -1,7 +1,11 @@
+import { resolveHostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
+
 const rootDomain = process.env.MONGOLGPT_DOMAIN?.trim()
 if (!rootDomain) throw new Error("Дэд бүтцийг байршуулахад MONGOLGPT_DOMAIN заавал байна")
 
-export const domain = $app.stage === "production" ? rootDomain : `${$app.stage}.${rootDomain}`
+const serviceUrls = resolveHostedServiceUrls(rootDomain, $app.stage)
+
+export const domain = serviceUrls.stageDomain
 export const enableBusinessIntegrations = process.env.MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS === "true"
 export const enableAnalytics = process.env.MONGOLGPT_ENABLE_ANALYTICS === "true"
 export const enableD1Backups = process.env.MONGOLGPT_ENABLE_D1_BACKUPS === "true"
@@ -11,9 +15,10 @@ export const enableShareService = process.env.MONGOLGPT_ENABLE_SHARE_SERVICE ===
 export const enableSyncService = process.env.MONGOLGPT_ENABLE_SYNC_SERVICE === "true"
 export const enableAdmin = process.env.MONGOLGPT_ENABLE_ADMIN === "true"
 
-export const publicOrigin = `https://${domain}`
-export const appOrigin = `https://app.${domain}`
-export const docsOrigin = `https://docs.${domain}/docs`
-export const runtimeOrigin = `https://runtime.${domain}`
-export const shareOrigin = `https://share.${domain}`
-export const adminOrigin = `https://admin.${domain}`
+export const publicOrigin = serviceUrls.console
+export const appOrigin = serviceUrls.app
+export const docsOrigin = serviceUrls.docs
+export const runtimeOrigin = serviceUrls.runtime
+export const paymentOrigin = serviceUrls.payment
+export const shareOrigin = serviceUrls.share
+export const adminOrigin = serviceUrls.admin

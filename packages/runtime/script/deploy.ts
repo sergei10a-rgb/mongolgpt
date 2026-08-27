@@ -1,3 +1,4 @@
+import { resolveHostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import { fileURLToPath } from "node:url"
 
 export type RuntimeDeployStage = "dev" | "production"
@@ -11,12 +12,14 @@ export function parseRuntimeDeployStage(value: string | undefined): RuntimeDeplo
 
 export function createRuntimeDeployCommand(input: {
   stage: RuntimeDeployStage
+  rootDomain: string
   version: string
   args?: string[]
   bunExecutable?: string
 }) {
   const version = input.version.trim()
   if (!version) throw new Error("Runtime package version дутуу байна.")
+  const urls = resolveHostedServiceUrls(input.rootDomain, input.stage)
 
   const config = fileURLToPath(new URL(`../wrangler.${input.stage}.jsonc`, import.meta.url))
   return [
@@ -26,8 +29,16 @@ export function createRuntimeDeployCommand(input: {
     "deploy",
     ...(input.args ?? []),
     `--config=${config}`,
+    "--domain",
+    new URL(urls.runtime).hostname,
     "--var",
     `MONGOLGPT_RUNTIME_VERSION:${version}`,
+    "--var",
+    `MONGOLGPT_APP_ORIGIN:${urls.app}`,
+    "--var",
+    `MONGOLGPT_CONSOLE_URL:${urls.console}`,
+    "--var",
+    `STAGE:${input.stage}`,
   ]
 }
 
@@ -44,13 +55,21 @@ export async function runRuntimeDeploy(argv = process.argv.slice(2)) {
     throw new Error("Runtime package version дутуу байна.")
   }
 
-  const child = Bun.spawn(createRuntimeDeployCommand({ stage, version: packageJSON.version, args }), {
-    cwd: runtimeRoot,
-    env: process.env,
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-  })
+  const child = Bun.spawn(
+    createRuntimeDeployCommand({
+      stage,
+      rootDomain: process.env.MONGOLGPT_DOMAIN ?? "",
+      version: packageJSON.version,
+      args,
+    }),
+    {
+      cwd: runtimeRoot,
+      env: process.env,
+      stdin: "inherit",
+      stdout: "inherit",
+      stderr: "inherit",
+    },
+  )
   return child.exited
 }
 

@@ -1,3 +1,4 @@
+import { resolveHostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import { InstallationChannel } from "./installation/version"
 
 export const repositoryUrl = "https://github.com/sergei10a-rgb/mongolgpt"
@@ -5,8 +6,7 @@ export const releasesUrl = `${repositoryUrl}/releases`
 export const repositorySupportUrl = `${repositoryUrl}/issues`
 export const documentationRepositoryUrl = `${repositoryUrl}/tree/main/packages/web/src/content/docs`
 export const installScriptUrl = "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/install"
-export const schemaBaseUrl =
-  "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public"
+export const schemaBaseUrl = "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public"
 export const configSchemaUrl = `${schemaBaseUrl}/config.json`
 export const tuiSchemaUrl = `${schemaBaseUrl}/tui.json`
 export const themeSchemaUrl = `${schemaBaseUrl}/theme.json`
@@ -17,23 +17,11 @@ export const localWebAppUrl = "http://localhost:4444"
 
 export function resolveProductServiceUrls(channel: string) {
   if (channel === "latest" || channel === "production" || channel === "prod") {
-    return {
-      console: "https://mgpt.mn",
-      support: "https://mgpt.mn/support",
-      auth: "https://auth.mgpt.mn",
-      app: "https://app.mgpt.mn",
-      docs: "https://docs.mgpt.mn/docs",
-    }
+    return clientServiceUrls("production")
   }
 
   if (channel === "dev" || channel === "main" || channel === "beta") {
-    return {
-      console: "https://dev.mgpt.mn",
-      support: "https://dev.mgpt.mn/support",
-      auth: "https://auth.dev.mgpt.mn",
-      app: "https://app.dev.mgpt.mn",
-      docs: "https://docs.dev.mgpt.mn/docs",
-    }
+    return clientServiceUrls("dev")
   }
 
   return {
@@ -42,6 +30,17 @@ export function resolveProductServiceUrls(channel: string) {
     auth: localAuthUrl,
     app: localWebAppUrl,
     docs: "http://localhost:4321/docs",
+  }
+}
+
+function clientServiceUrls(stage: "dev" | "production") {
+  const urls = resolveHostedServiceUrls("mgpt.mn", stage)
+  return {
+    console: urls.console,
+    support: urls.support,
+    auth: urls.auth,
+    app: urls.app,
+    docs: urls.docs,
   }
 }
 

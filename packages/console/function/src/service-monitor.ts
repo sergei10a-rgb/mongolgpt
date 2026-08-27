@@ -1,3 +1,4 @@
+import { resolveHostedServiceUrls, type HostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import {
   SERVICE_MONITOR_SERVICES,
   SERVICE_MONITOR_STATE_KEY,
@@ -63,7 +64,7 @@ export async function runServiceMonitor(config: MonitorConfig, state: StateStore
   const timer = options.timer ?? Date.now
   const checkedAt = now()
   const checks = await Promise.all(
-    monitorTargets(normalized.stage, normalized.stageDomain).map((target) =>
+    monitorTargets(normalized.stage, normalized.urls).map((target) =>
       checkTarget(target, normalized.stage, fetcher, timer),
     ),
   )
@@ -80,21 +81,21 @@ export async function runServiceMonitor(config: MonitorConfig, state: StateStore
   return evidence
 }
 
-function monitorTargets(stage: string, stageDomain: string): Target[] {
+function monitorTargets(stage: string, urls: HostedServiceUrls): Target[] {
   return [
     {
       service: "console",
-      url: `https://${stageDomain}/api/health`,
+      url: `${urls.console}/api/health`,
       accepts: (value) => consoleHealthSchema.safeParse(value).success,
     },
     {
       service: "auth",
-      url: `https://auth.${stageDomain}/health`,
+      url: `${urls.auth}/health`,
       accepts: (value) => authHealthSchema.safeParse(value).success,
     },
     {
       service: "runtime",
-      url: `https://runtime.${stageDomain}/global/health`,
+      url: `${urls.runtime}/global/health`,
       accepts: (value, expectedStage) => {
         const parsed = runtimeHealthSchema.safeParse(value)
         return parsed.success && parsed.data.stage === expectedStage
@@ -102,7 +103,7 @@ function monitorTargets(stage: string, stageDomain: string): Target[] {
     },
     {
       service: "payments",
-      url: `https://pay.${stageDomain}/health`,
+      url: `${urls.payment}/health`,
       accepts: (value) => {
         const parsed = paymentHealthSchema.safeParse(value)
         return parsed.success && parsed.data.status !== "degraded"
@@ -177,7 +178,14 @@ function normalizeConfig(config: MonitorConfig) {
   if (stage !== "production" && !stageDomain.startsWith(`${stage}.`)) {
     throw new TypeError("Monitor stage болон domain зөрж байна.")
   }
-  return { stage, stageDomain }
+  const rootDomain = stage === "production" ? stageDomain : stageDomain.slice(stage.length + 1)
+  try {
+    const urls = resolveHostedServiceUrls(rootDomain, stage)
+    if (urls.stageDomain !== stageDomain) throw new Error("stage domain mismatch")
+    return { stage, stageDomain, urls }
+  } catch {
+    throw new TypeError("Monitor stage болон domain зөрж байна.")
+  }
 }
 
 function failed(

@@ -71,12 +71,22 @@ jobs:
     if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      app_url: ${{ steps.service-urls.outputs.app_url }}
+      channel: ${{ steps.service-urls.outputs.channel }}
+      payment_url: ${{ steps.service-urls.outputs.payment_url }}
+      public_url: ${{ steps.service-urls.outputs.public_url }}
+      runtime_url: ${{ steps.service-urls.outputs.runtime_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+
+      - name: Resolve hosted service URLs
+        id: service-urls
+        run: bun script/deployment-service-urls.ts "${{ inputs.stage }}"
 
       - name: Typecheck
         run: bun typecheck
@@ -105,10 +115,10 @@ jobs:
 
       - name: Build web app
         env:
-          MONGOLGPT_CHANNEL: ${{ inputs.stage == 'production' && 'prod' || 'dev' }}
-          VITE_MONGOLGPT_APP_URL: ${{ inputs.stage == 'production' && format('https://app.{0}', vars.MONGOLGPT_DOMAIN) || format('https://app.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
-          VITE_MONGOLGPT_PUBLIC_URL: ${{ inputs.stage == 'production' && format('https://{0}', vars.MONGOLGPT_DOMAIN) || format('https://{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
-          VITE_MONGOLGPT_SERVER_URL: ${{ inputs.stage == 'production' && format('https://runtime.{0}', vars.MONGOLGPT_DOMAIN) || format('https://runtime.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
+          MONGOLGPT_CHANNEL: ${{ steps.service-urls.outputs.channel }}
+          VITE_MONGOLGPT_APP_URL: ${{ steps.service-urls.outputs.app_url }}
+          VITE_MONGOLGPT_PUBLIC_URL: ${{ steps.service-urls.outputs.public_url }}
+          VITE_MONGOLGPT_SERVER_URL: ${{ steps.service-urls.outputs.runtime_url }}
         run: |
           bun --cwd packages/app build
           bun --cwd packages/app verify:hosted-artifact
@@ -239,7 +249,7 @@ jobs:
           MONGOLGPT_PAYMENT_SANDBOX_SMOKE_CONFIRM: RUN_SANDBOX_SMOKE
           MONGOLGPT_PAYMENT_SANDBOX_ENVIRONMENT: sandbox
           MONGOLGPT_PAYMENT_SANDBOX_PROVIDER: all
-          MONGOLGPT_PAYMENT_SANDBOX_CALLBACK_BASE_URL: ${{ format('https://pay.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
+          MONGOLGPT_PAYMENT_SANDBOX_CALLBACK_BASE_URL: ${{ needs.verify.outputs.payment_url }}
           QPAY_MERCHANT_ACCOUNT_ID: ${{ secrets.QPAY_MERCHANT_ACCOUNT_ID }}
           QPAY_CLIENT_ID: ${{ secrets.QPAY_CLIENT_ID }}
           QPAY_CLIENT_SECRET: ${{ secrets.QPAY_CLIENT_SECRET }}
@@ -275,9 +285,9 @@ jobs:
       - name: Verify deployed app in Chromium
         env:
           CI: true
-          PLAYWRIGHT_DEPLOYED_BASE_URL: ${{ inputs.stage == 'production' && format('https://app.{0}', vars.MONGOLGPT_DOMAIN) || format('https://app.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
-          PLAYWRIGHT_DEPLOYED_PUBLIC_URL: ${{ inputs.stage == 'production' && format('https://{0}', vars.MONGOLGPT_DOMAIN) || format('https://{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
-          PLAYWRIGHT_DEPLOYED_RUNTIME_URL: ${{ inputs.stage == 'production' && format('https://runtime.{0}', vars.MONGOLGPT_DOMAIN) || format('https://runtime.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
+          PLAYWRIGHT_DEPLOYED_BASE_URL: ${{ needs.verify.outputs.app_url }}
+          PLAYWRIGHT_DEPLOYED_PUBLIC_URL: ${{ needs.verify.outputs.public_url }}
+          PLAYWRIGHT_DEPLOYED_RUNTIME_URL: ${{ needs.verify.outputs.runtime_url }}
           MONGOLGPT_SMOKE_AUTH_COOKIE: ${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}
         run: bun --cwd packages/app test:e2e:deployed
         timeout-minutes: 10

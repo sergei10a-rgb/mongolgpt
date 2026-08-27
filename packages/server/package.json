@@ -13,6 +13,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "@mongolgpt/account-contract": "workspace:*",
     "@mongolgpt/core": "workspace:*",
     "@mongolgpt/protocol": "workspace:*",
     "drizzle-orm": "catalog:",

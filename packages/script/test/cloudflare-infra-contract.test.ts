@@ -136,14 +136,15 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("secrets.TURNSTILE_SECRET_KEY")
     expect(source).not.toContain("inputs.hosted_services")
     expect(buildStep?.env).toEqual({
-      MONGOLGPT_CHANNEL: "${{ inputs.stage == 'production' && 'prod' || 'dev' }}",
-      VITE_MONGOLGPT_APP_URL:
-        "${{ inputs.stage == 'production' && format('https://app.{0}', vars.MONGOLGPT_DOMAIN) || format('https://app.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}",
-      VITE_MONGOLGPT_PUBLIC_URL:
-        "${{ inputs.stage == 'production' && format('https://{0}', vars.MONGOLGPT_DOMAIN) || format('https://{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}",
-      VITE_MONGOLGPT_SERVER_URL:
-        "${{ inputs.stage == 'production' && format('https://runtime.{0}', vars.MONGOLGPT_DOMAIN) || format('https://runtime.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}",
+      MONGOLGPT_CHANNEL: "${{ steps.service-urls.outputs.channel }}",
+      VITE_MONGOLGPT_APP_URL: "${{ steps.service-urls.outputs.app_url }}",
+      VITE_MONGOLGPT_PUBLIC_URL: "${{ steps.service-urls.outputs.public_url }}",
+      VITE_MONGOLGPT_SERVER_URL: "${{ steps.service-urls.outputs.runtime_url }}",
     })
+    const serviceUrls = workflow.jobs.verify.steps.find((step) => step.name === "Resolve hosted service URLs")
+    expect(serviceUrls?.run).toBe('bun script/deployment-service-urls.ts "${{ inputs.stage }}"')
+    expect(source).not.toContain("format('https://app.{0}'")
+    expect(source).not.toContain("format('https://runtime.{0}'")
     expect(buildStep?.run).toContain("bun --cwd packages/app verify:hosted-artifact")
     const site = await Bun.file(new URL("../../../infra/site.ts", import.meta.url)).text()
     expect(site).toContain('command: "bun run build:hosted"')
@@ -183,9 +184,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     })
     expect(steps[browser]?.run).toBe("bun --cwd packages/app test:e2e:deployed")
     expect(steps[browser]?.env?.MONGOLGPT_SMOKE_AUTH_COOKIE).toBe("${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}")
-    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_BASE_URL).toContain("https://app.{0}")
-    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_PUBLIC_URL).toContain("https://{0}")
-    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RUNTIME_URL).toContain("https://runtime.{0}")
+    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_BASE_URL).toBe("${{ needs.verify.outputs.app_url }}")
+    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_PUBLIC_URL).toBe("${{ needs.verify.outputs.public_url }}")
+    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RUNTIME_URL).toBe("${{ needs.verify.outputs.runtime_url }}")
     expect(steps[artifact]?.condition).toBe("always()")
     expect(steps[artifact]?.uses).toContain("actions/upload-artifact@")
     expect(steps[artifact]?.with?.path).toContain("packages/app/e2e/test-results-deployed")
@@ -202,12 +203,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(payment).toBeGreaterThan(http)
     expect(step?.condition).toBe("inputs.payment_environment == 'sandbox'")
     expect(step?.run).toBe("bun --cwd packages/console/core payment-sandbox-smoke")
+    expect(step?.env?.MONGOLGPT_PAYMENT_SANDBOX_CALLBACK_BASE_URL).toBe("${{ needs.verify.outputs.payment_url }}")
     expect(step?.env).toEqual({
       MONGOLGPT_PAYMENT_SANDBOX_SMOKE_CONFIRM: "RUN_SANDBOX_SMOKE",
       MONGOLGPT_PAYMENT_SANDBOX_ENVIRONMENT: "sandbox",
       MONGOLGPT_PAYMENT_SANDBOX_PROVIDER: "all",
-      MONGOLGPT_PAYMENT_SANDBOX_CALLBACK_BASE_URL:
-        "${{ format('https://pay.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}",
+      MONGOLGPT_PAYMENT_SANDBOX_CALLBACK_BASE_URL: "${{ needs.verify.outputs.payment_url }}",
       QPAY_MERCHANT_ACCOUNT_ID: "${{ secrets.QPAY_MERCHANT_ACCOUNT_ID }}",
       QPAY_CLIENT_ID: "${{ secrets.QPAY_CLIENT_ID }}",
       QPAY_CLIENT_SECRET: "${{ secrets.QPAY_CLIENT_SECRET }}",
@@ -392,7 +393,17 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
     const runtimeDeploySource = await Bun.file(new URL("../../runtime/script/deploy.ts", import.meta.url)).text()
     expect(runtimeDeploySource).toContain('new URL("../package.json", import.meta.url)')
+    expect(runtimeDeploySource).toContain("resolveHostedServiceUrls(input.rootDomain, input.stage)")
     expect(runtimeDeploySource).toContain("MONGOLGPT_RUNTIME_VERSION:${version}")
+
+    const stageSource = await Bun.file(new URL("../../../infra/stage.ts", import.meta.url)).text()
+    expect(stageSource).toContain("resolveHostedServiceUrls(rootDomain, $app.stage)")
+    for (const stage of ["dev", "production"]) {
+      const config = await Bun.file(new URL(`../../runtime/wrangler.${stage}.jsonc`, import.meta.url)).text()
+      expect(config).not.toContain("mgpt.mn")
+      expect(config).not.toContain('"routes"')
+      expect(config).not.toContain('"vars"')
+    }
   })
 
   test("migrates D1 before publishing schema-dependent hosted services", async () => {

@@ -241,6 +241,7 @@
         "@ai-sdk/anthropic": "3.0.82",
         "@ai-sdk/openai": "3.0.48",
         "@ai-sdk/openai-compatible": "2.0.37",
+        "@mongolgpt/account-contract": "workspace:*",
         "@mongolgpt/console-core": "workspace:*",
         "@mongolgpt/console-resource": "workspace:*",
         "@openauthjs/openauth": "0.0.0-20250322224806",
@@ -313,6 +314,7 @@
         "@effect/sql-sqlite-bun": "catalog:",
         "@ff-labs/fff-bun": "0.9.4",
         "@lydell/node-pty": "catalog:",
+        "@mongolgpt/account-contract": "workspace:*",
         "@mongolgpt/effect-drizzle-sqlite": "workspace:*",
         "@mongolgpt/effect-sqlite-node": "workspace:*",
         "@mongolgpt/llm": "workspace:*",
@@ -745,6 +747,7 @@
       },
       "devDependencies": {
         "@cloudflare/workers-types": "catalog:",
+        "@mongolgpt/account-contract": "workspace:*",
         "@tsconfig/node22": "22.0.2",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
@@ -776,6 +779,7 @@
     "packages/script": {
       "name": "@mongolgpt/script",
       "dependencies": {
+        "@mongolgpt/account-contract": "workspace:*",
         "@mongolgpt/console-core": "workspace:*",
         "semver": "^7.6.3",
       },
@@ -818,6 +822,7 @@
       "name": "@mongolgpt/server",
       "version": "0.1.1",
       "dependencies": {
+        "@mongolgpt/account-contract": "workspace:*",
         "@mongolgpt/core": "workspace:*",
         "@mongolgpt/protocol": "workspace:*",
         "drizzle-orm": "catalog:",

@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
+    "@mongolgpt/account-contract": "workspace:*",
     "@tsconfig/node22": "22.0.2",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",

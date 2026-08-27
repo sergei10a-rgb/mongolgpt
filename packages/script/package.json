@@ -4,6 +4,7 @@
   "private": true,
   "license": "MIT",
   "dependencies": {
+    "@mongolgpt/account-contract": "workspace:*",
     "@mongolgpt/console-core": "workspace:*",
     "semver": "^7.6.3"
   },
@@ -18,6 +19,7 @@
     "./cloudflare-deployment": "./src/cloudflare-deployment.ts",
     "./d1-restore": "./src/d1-restore.ts",
     "./deployment": "./src/deployment.ts",
+    "./deployment-service-urls": "./src/deployment-service-urls.ts",
     "./deployment-smoke-contract": "./src/deployment-smoke-contract.ts",
     "./release-integrity": "./src/release-integrity.ts"
   },

@@ -1,3 +1,4 @@
+import { resolveHostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import { BonumAdapter } from "../src/payment-provider/bonum"
 import { QPayAdapter } from "../src/payment-provider/qpay"
 import type {
@@ -14,6 +15,9 @@ const MAX_REFERENCE_LENGTH = 24
 const INVOICE_AMOUNT_MNT = 1
 const BONUM_EXPIRY_MS = 5 * 60 * 1_000
 const DEFAULT_TIMEOUT_MS = 30_000
+const SANDBOX_CALLBACK_ORIGINS: readonly string[] = ["dev", "staging", "sandbox"].map(
+  (stage) => resolveHostedServiceUrls("mgpt.mn", stage).payment,
+)
 
 type Provider = (typeof PROVIDERS)[number]
 type QPaySmokeAdapter = Pick<
@@ -157,20 +161,19 @@ function parseCallbackBaseURL(value: string | undefined) {
   } catch {
     throw new Error("Sandbox callback base URL хүчинтэй URL байх ёстой")
   }
-  const host = url.hostname.toLowerCase()
+  if (url.protocol !== "https:") {
+    throw new Error("Sandbox callback base URL нь HTTPS байх ёстой")
+  }
   if (
-    url.protocol !== "https:" ||
     url.username ||
     url.password ||
     url.port ||
     url.pathname !== "/" ||
     url.search ||
     url.hash ||
-    !["pay.dev.mgpt.mn", "pay.staging.mgpt.mn", "pay.sandbox.mgpt.mn"].includes(host)
+    !SANDBOX_CALLBACK_ORIGINS.includes(url.origin)
   ) {
-    throw new Error(
-      "Sandbox callback base URL нь HTTPS pay.dev.mgpt.mn, pay.staging.mgpt.mn эсвэл pay.sandbox.mgpt.mn байна",
-    )
+    throw new Error(`Sandbox callback base URL нь ${SANDBOX_CALLBACK_ORIGINS.join(", ")} хаягийн нэг байна`)
   }
   return url.origin
 }

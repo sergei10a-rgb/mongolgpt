@@ -1,3 +1,4 @@
+import { resolveHostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import {
   modelConfigurationStageIssues,
   MongolGPTModelConfigurationSchema,
@@ -215,10 +216,11 @@ export function preflightDeployment(input: {
   }
 
   if (issues.length) throw new DeploymentPreflightError(issues)
+  const serviceUrls = resolveHostedServiceUrls(domain, stage)
   return {
     stage,
     domain,
-    stageDomain: stage === "production" ? domain : `${stage}.${domain}`,
+    stageDomain: serviceUrls.stageDomain,
     hostedServices,
     adminEnabled,
     backupsEnabled,
@@ -230,20 +232,22 @@ export function preflightDeployment(input: {
 }
 
 export function deploymentEndpoints(result: DeploymentPreflightResult) {
-  const root = `https://${result.stageDomain}`
+  const urls = resolveHostedServiceUrls(result.domain, result.stage)
+  if (urls.stageDomain !== result.stageDomain)
+    throw new Error("Deployment stage domain shared contract-той зөрж байна.")
   return {
-    docs: `https://docs.${result.stageDomain}/docs`,
-    app: `https://app.${result.stageDomain}`,
+    docs: urls.docs,
+    app: urls.app,
     ...(result.hostedServices
       ? {
-          console: root,
-          consoleHealth: `${root}/api/health`,
-          authHealth: `https://auth.${result.stageDomain}/health`,
-          runtimeHealth: `https://runtime.${result.stageDomain}/global/health`,
-          paymentHealth: `https://pay.${result.stageDomain}/health`,
+          console: urls.console,
+          consoleHealth: `${urls.console}/api/health`,
+          authHealth: `${urls.auth}/health`,
+          runtimeHealth: `${urls.runtime}/global/health`,
+          paymentHealth: `${urls.payment}/health`,
         }
       : {}),
-    ...(result.adminEnabled ? { admin: `https://admin.${result.stageDomain}` } : {}),
+    ...(result.adminEnabled ? { admin: urls.admin } : {}),
   }
 }
 
