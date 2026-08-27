@@ -85,6 +85,7 @@ async function check(
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
       }
       if (health && health !== "admin") {
+        inspectNoStoreResponse(response, `${health} health response`)
         const body = inspectJsonApiPayload(
           response.headers.get("content-type"),
           await response.text(),
@@ -638,17 +639,42 @@ async function checkHostedSessionBoundary(serverUrl: string, appUrl: string) {
     location: rejected.headers.get("location"),
     label: "foreign origin hosted session",
   })
-  if (rejected.status !== 403) {
-    throw new Error(`foreign hosted session origin returned HTTP ${rejected.status}; expected 403: ${sessionUrl}`)
+  await inspectForeignOriginRuntimeRejection(rejected)
+}
+
+export async function inspectForeignOriginRuntimeRejection(response: Response) {
+  if (response.status !== 403) {
+    throw new Error(`foreign origin runtime rejection returned HTTP ${response.status}; expected 403`)
   }
+  if (response.headers.has("access-control-allow-origin") || response.headers.has("access-control-allow-credentials")) {
+    throw new Error("foreign origin runtime rejection exposed CORS access")
+  }
+  if (response.headers.get("x-content-type-options") !== "nosniff") {
+    throw new Error("foreign origin runtime rejection allows content sniffing")
+  }
+  inspectNoStoreResponse(response, "foreign origin runtime rejection")
   const body = inspectJsonApiPayload(
-    rejected.headers.get("content-type"),
-    await rejected.text(),
-    `foreign origin rejection (${sessionUrl})`,
+    response.headers.get("content-type"),
+    await response.text(),
+    "foreign origin runtime rejection",
   )
-  if (typeof body !== "object" || body === null || typeof (body as { error?: unknown }).error !== "string") {
-    throw new Error(`foreign origin rejection body is invalid: ${sessionUrl}`)
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    Array.isArray(body) ||
+    Object.keys(body).length !== 1 ||
+    (body as { error?: unknown }).error !== "MongolGPT веб апп-аас хүсэлт илгээнэ үү."
+  ) {
+    throw new Error("foreign origin runtime rejection is not fail-closed")
   }
+}
+
+export function inspectNoStoreResponse(response: Response, label: string) {
+  const directives = response.headers
+    .get("cache-control")
+    ?.split(",")
+    .map((value) => value.trim().toLowerCase())
+  if (!directives?.includes("no-store")) throw new Error(`${label} is cacheable`)
 }
 
 async function checkAnonymousRuntimeApiBoundary(serverUrl: string, appUrl: string) {

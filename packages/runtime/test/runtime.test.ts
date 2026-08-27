@@ -174,6 +174,13 @@ describe("MongolGPT Cloudflare runtime", () => {
     )
 
     expect(response.status).toBe(403)
+    expect(response.headers.get("content-type")).toBe("application/json; charset=utf-8")
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff")
+    expect(response.headers.has("access-control-allow-origin")).toBe(false)
+    expect(response.headers.has("access-control-allow-credentials")).toBe(false)
+    const body: unknown = await response.json()
+    expect(body).toEqual({ error: "MongolGPT веб апп-аас хүсэлт илгээнэ үү." })
     expect(sandboxes).toBe(0)
   })
 

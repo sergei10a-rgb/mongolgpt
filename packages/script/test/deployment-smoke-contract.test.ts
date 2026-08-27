@@ -4,9 +4,11 @@ import {
   inspectAnonymousAccountOverview,
   inspectAnonymousRuntimeToken,
   inspectAnonymousRuntimeApiResponse,
+  inspectForeignOriginRuntimeRejection,
   inspectHostedAuthorizeChallenge,
   inspectHostedAuthorizeRedirect,
   inspectHostedTurnstileRejection,
+  inspectNoStoreResponse,
   inspectRuntimeTokenPreflight,
 } from "../../../script/deployment-smoke"
 import {
@@ -86,6 +88,21 @@ function anonymousApiResponse(
   return new Response(typeof body === "string" ? body : JSON.stringify(body), {
     status: init.status ?? 401,
     headers: { ...corsHeaders(), "content-type": "application/json", ...init.headers },
+  })
+}
+
+function foreignOriginResponse(
+  body: unknown = { error: "MongolGPT веб апп-аас хүсэлт илгээнэ үү." },
+  init: { status?: number; headers?: Record<string, string> } = {},
+) {
+  return new Response(typeof body === "string" ? body : JSON.stringify(body), {
+    status: init.status ?? 403,
+    headers: {
+      "cache-control": "no-store",
+      "content-type": "application/json",
+      "x-content-type-options": "nosniff",
+      ...init.headers,
+    },
   })
 }
 
@@ -467,6 +484,46 @@ describe("representative hosted runtime API smoke contract", () => {
       inspectAnonymousRuntimeApiResponse(anonymousApiResponse("<!doctype html>", { status: 200 }), appOrigin),
       "expected 401",
     )
+  })
+})
+
+describe("foreign origin runtime rejection smoke contract", () => {
+  test("requires an exact non-cacheable response without CORS access", async () => {
+    expect(await inspectForeignOriginRuntimeRejection(foreignOriginResponse())).toBeUndefined()
+    await expectFailure(
+      inspectForeignOriginRuntimeRejection(
+        foreignOriginResponse({ error: "MongolGPT веб апп-аас хүсэлт илгээнэ үү.", token: "must-not-exist" }),
+      ),
+      "fail-closed",
+    )
+    await expectFailure(
+      inspectForeignOriginRuntimeRejection(
+        foreignOriginResponse(undefined, { headers: { "access-control-allow-origin": "*" } }),
+      ),
+      "CORS access",
+    )
+    await expectFailure(
+      inspectForeignOriginRuntimeRejection(
+        foreignOriginResponse(undefined, { headers: { "cache-control": "public" } }),
+      ),
+      "cacheable",
+    )
+    await expectFailure(
+      inspectForeignOriginRuntimeRejection(
+        foreignOriginResponse(undefined, { headers: { "x-content-type-options": "" } }),
+      ),
+      "content sniffing",
+    )
+  })
+
+  test("requires health and security-sensitive JSON responses to disable caching", () => {
+    expect(() => inspectNoStoreResponse(foreignOriginResponse(), "runtime health response")).not.toThrow()
+    expect(() =>
+      inspectNoStoreResponse(
+        foreignOriginResponse(undefined, { headers: { "cache-control": "max-age=0, private" } }),
+        "runtime health response",
+      ),
+    ).toThrow("cacheable")
   })
 })
 
