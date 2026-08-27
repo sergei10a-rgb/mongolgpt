@@ -6,7 +6,7 @@ import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { ModelTable } from "@mongolgpt/console-core/schema/model.sql.js"
-import { buildOptionsResponse, buildModelsResponse } from "~/routes/gateway/util/modelsHandler"
+import { buildAuthenticatedModelsResponse, buildOptionsResponse } from "~/routes/gateway/util/modelsHandler"
 import { resolveGatewayWorkspace, verifyGatewayAccount } from "~/lib/cli-auth"
 
 export async function OPTIONS(_input: APIEvent) {
@@ -14,30 +14,21 @@ export async function OPTIONS(_input: APIEvent) {
 }
 
 export async function GET(input: APIEvent) {
-  const authorization = input.request.headers.get("authorization")
-  const workspaceID = authorization ? await authenticatedWorkspace(input.request, authorization) : undefined
-  if (authorization && !workspaceID) return unauthorized()
-  const disabledModels = workspaceID
-    ? await Database.use((tx) =>
+  return buildAuthenticatedModelsResponse(input.request, {
+    authenticate: authenticatedWorkspace,
+    disabled: (workspaceID) =>
+      Database.use((tx) =>
         tx
           .select({ model: ModelTable.model })
           .from(ModelTable)
           .where(and(eq(ModelTable.workspaceID, workspaceID), isNull(ModelTable.timeDeleted)))
           .then((rows) => rows.map((row) => row.model)),
-      )
-    : []
-
-  const models = Object.keys(GatewayCatalog.list("full").models)
-    .filter((id) => !id.endsWith(":global"))
-    .filter((id) => !disabledModels.includes(id))
-
-  return buildModelsResponse(models)
+      ),
+    models: () => Object.keys(GatewayCatalog.list("full").models),
+  })
 }
 
-async function authenticatedWorkspace(request: Request, authorization: string): Promise<string | undefined> {
-  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1]
-  if (!token) return undefined
-
+async function authenticatedWorkspace(request: Request, token: string): Promise<string | undefined> {
   const workspaceID = await Database.use((tx) =>
     tx
       .select({ id: KeyTable.workspaceID })
@@ -62,22 +53,4 @@ async function authenticatedWorkspace(request: Request, authorization: string): 
   if (!account) return undefined
   const workspace = await resolveGatewayWorkspace(account, request.headers.get("x-org-id"))
   return "workspaceID" in workspace ? workspace.workspaceID : undefined
-}
-
-function unauthorized() {
-  return Response.json(
-    {
-      error: {
-        type: "authentication_error",
-        message: "MongolGPT нэвтрэх эрх буруу эсвэл хүчингүй болсон байна.",
-      },
-    },
-    {
-      status: 401,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "no-store",
-      },
-    },
-  )
 }

@@ -38,6 +38,7 @@ describe("MongolGPT account access wiring", () => {
   test("gates model calls and model listing by active account state", async () => {
     const handler = await source("routes/gateway/util/handler.ts")
     const models = await source("routes/gateway/v1/models.ts")
+    const modelsHandler = await source("routes/gateway/util/modelsHandler.ts")
     const modelConfig = await source("../../core/src/model-config.ts")
 
     expect(handler).toContain("AccountTable.status")
@@ -51,6 +52,10 @@ describe("MongolGPT account access wiring", () => {
     expect(modelConfig).toContain('modelID !== "free-auto"')
     expect(modelConfig).toContain("model.allowAnonymous !== false")
     expect(modelConfig).toContain("model.freeForAuthenticated !== true")
-    expect(models).toContain("status: 401")
+    expect(models).toContain("buildAuthenticatedModelsResponse(input.request")
+    expect(modelsHandler).toContain('request.headers.get("authorization")')
+    expect(modelsHandler).toContain("authorization?.match(/^Bearer")
+    expect(modelsHandler).toContain("if (!token) return buildModelsUnauthorizedResponse()")
+    expect(modelsHandler).toContain("status: 401")
   })
 })
