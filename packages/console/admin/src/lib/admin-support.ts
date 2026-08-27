@@ -1,4 +1,4 @@
-import { Database } from "@mongolgpt/console-core/drizzle/index.js"
+import { and, asc, Database, eq, isNull } from "@mongolgpt/console-core/drizzle/index.js"
 import {
   AdminSupportMutationInputSchema,
   AdminSupportQueueInputSchema,
@@ -7,6 +7,8 @@ import {
   listAdminSupportTicketsWithDb,
   mutateAdminSupportTicketWithDb,
 } from "@mongolgpt/console-core/support.js"
+import { hasPlatformAdminPermission } from "@mongolgpt/console-core/platform-admin.js"
+import { PlatformAdminTable } from "@mongolgpt/console-core/schema/admin.sql.js"
 import { z } from "zod"
 import type { PlatformAdminContext } from "./admin-context"
 import {
@@ -48,13 +50,30 @@ export async function listAdminSupportQueue(context: PlatformAdminContext, raw: 
   const input = AdminSupportQueueInputSchema.parse(raw)
   return Database.use(async (db) => {
     const queue = await listAdminSupportTicketsWithDb(db, { ...input, adminID: admin.id })
-    return { admin, ...queue }
+    return {
+      admin,
+      filters: input,
+      canManage: admin.permissions.includes("support.manage"),
+      ...queue,
+    }
   })
 }
 
 export async function getAdminSupportTicketDetail(context: PlatformAdminContext, ticketIDValue: string) {
   requirePlatformAdminPermission(context, "support.read")
   return Database.use((db) => getAdminSupportTicketWithDb(db, { ticketID: ticketID.parse(ticketIDValue) }))
+}
+
+export async function listAssignableSupportAdmins(context: PlatformAdminContext) {
+  requirePlatformAdminPermission(context, "support.read")
+  return Database.use(async (db) => {
+    const admins = await db
+      .select({ id: PlatformAdminTable.id, email: PlatformAdminTable.email, role: PlatformAdminTable.role })
+      .from(PlatformAdminTable)
+      .where(and(eq(PlatformAdminTable.status, "active"), isNull(PlatformAdminTable.timeDeleted)))
+      .orderBy(asc(PlatformAdminTable.email))
+    return admins.filter((admin) => hasPlatformAdminPermission(admin.role, "support.manage"))
+  })
 }
 
 export async function mutateAdminSupport(
@@ -91,7 +110,7 @@ export async function mutateAdminSupport(
           lock_version: result.lockVersion,
         },
       })
-      return { ok: true as const, ticket: result }
+      return { ok: true as const, ticket: result, message: successMessage(input.operation) }
     })
   } catch (error) {
     const failure = mutationFailure(error)
@@ -114,6 +133,12 @@ export async function mutateAdminSupport(
     }
     return { ok: false as const, message: failure.message }
   }
+}
+
+function successMessage(operation: "reply" | "note" | "update") {
+  if (operation === "reply") return "Хэрэглэгчид харагдах хариуг илгээлээ."
+  if (operation === "note") return "Зөвхөн дотоодод харагдах тэмдэглэлийг хадгаллаа."
+  return "Тусламжийн хүсэлтийн мэдээллийг шинэчиллээ."
 }
 
 function rawTicketID(raw: unknown) {

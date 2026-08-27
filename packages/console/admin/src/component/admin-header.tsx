@@ -4,7 +4,7 @@ import type { PlatformAdminContext } from "~/lib/admin-context"
 
 export function AdminHeader(props: {
   admin: PlatformAdminContext
-  active: "overview" | "users" | "workspaces" | "billing" | "plans" | "audit" | "admins"
+  active: "overview" | "users" | "workspaces" | "billing" | "plans" | "support" | "audit" | "admins"
 }) {
   return (
     <header data-component="admin-header">
@@ -42,6 +42,11 @@ export function AdminHeader(props: {
           <Show when={props.admin.permissions.includes("plans.manage")}>
             <A href="/plans" data-active={props.active === "plans" ? "true" : undefined}>
               Төлөвлөгөө
+            </A>
+          </Show>
+          <Show when={props.admin.permissions.includes("support.read")}>
+            <A href="/support" data-active={props.active === "support" ? "true" : undefined}>
+              Тусламж
             </A>
           </Show>
           <Show when={props.admin.permissions.includes("audit.read")}>
