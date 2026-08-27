@@ -57,6 +57,7 @@ describe("Монгол хэрэглэгчийн интерфэйсийн гэр�
 
   test("CLI footer болон TUI-ийн командын тайлбар Монгол байна", async () => {
     const footer = await Bun.file(new URL("cli/cmd/run/footer.view.tsx", mongolgpt)).text()
+    const scrollback = await Bun.file(new URL("cli/cmd/run/scrollback.writer.tsx", mongolgpt)).text()
     const dialog = await Bun.file(new URL("ui/dialog-select.tsx", tui)).text()
     const whichKey = await Bun.file(new URL("feature-plugins/system/which-key.tsx", tui)).text()
     const workspace = await Bun.file(new URL("component/dialog-workspace-create.tsx", tui)).text()
@@ -81,6 +82,10 @@ describe("Монгол хэрэглэгчийн интерфэйсийн гэр�
     expect(footer).toContain('category: "Сешн"')
     expect(footer).not.toContain('category: "Model"')
     expect(footer).not.toContain('category: "Session"')
+    expect(scrollback).toContain("# Хийх зүйлс")
+    expect(scrollback).toContain("# Асуултууд")
+    expect(scrollback).not.toContain("# Todos")
+    expect(scrollback).not.toContain("# Questions")
 
     expect(dialog).toContain('category: "Цонх"')
     expect(dialog).not.toContain('category: "Dialog"')

@@ -324,7 +324,7 @@ test("holds markdown code blocks until final commit and keeps newline ownership"
 test("renders todo and question summaries without boilerplate footer copy", async () => {
   const cases = [
     {
-      title: "# Todos",
+      title: "# Хийх зүйлс",
       include: [
         "[✓] List files under `run/`",
         "[•] Count functions in each `run/` file",
@@ -366,7 +366,7 @@ test("renders todo and question summaries without boilerplate footer copy", asyn
       }),
     },
     {
-      title: "# Questions",
+      title: "# Асуултууд",
       include: ["What should I work on in the codebase next?", "Bug fix"],
       exclude: ["Asked", "questions completed"],
       start: toolCommit({

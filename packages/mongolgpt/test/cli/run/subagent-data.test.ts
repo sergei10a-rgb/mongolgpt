@@ -29,10 +29,10 @@ function visible(commits: Array<Parameters<typeof entryBody>[0]>) {
       }
 
       if (body.snapshot.kind === "todo") {
-        return ["# Todos"]
+        return ["# Хийх зүйлс"]
       }
 
-      return ["# Questions"]
+      return ["# Асуултууд"]
     }
 
     return [body.content]
