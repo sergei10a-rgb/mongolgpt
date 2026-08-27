@@ -130,6 +130,7 @@ a {
 
 main[data-page="admin-overview"],
 main[data-page="admin-users"],
+main[data-page="admin-workspaces"],
 main[data-page="admin-billing"],
 main[data-page="admin-audit"],
 main[data-page="admin-operators"] {
@@ -444,6 +445,7 @@ h2 {
 }
 
 [data-component="user-filters"],
+[data-component="workspace-filters"],
 [data-component="billing-filters"],
 [data-component="audit-filters"] {
   display: grid;
@@ -555,6 +557,7 @@ h2 {
 }
 
 [data-component="user-filters"] label,
+[data-component="workspace-filters"] label,
 [data-component="billing-filters"] label,
 [data-component="audit-filters"] label {
   min-width: 0;
@@ -563,6 +566,7 @@ h2 {
 }
 
 [data-component="user-filters"] label > span,
+[data-component="workspace-filters"] label > span,
 [data-component="billing-filters"] label > span,
 [data-component="audit-filters"] label > span,
 [data-component="account-action"] label {
@@ -573,6 +577,8 @@ h2 {
 
 [data-component="user-filters"] input,
 [data-component="user-filters"] select,
+[data-component="workspace-filters"] input,
+[data-component="workspace-filters"] select,
 [data-component="billing-filters"] select,
 [data-component="audit-filters"] input,
 [data-component="audit-filters"] select,
@@ -589,6 +595,7 @@ h2 {
 }
 
 [data-component="user-filters"] button,
+[data-component="workspace-filters"] button,
 [data-component="billing-filters"] button,
 [data-component="audit-filters"] button,
 [data-component="account-action"] button {
@@ -606,6 +613,8 @@ h2 {
 
 [data-component="user-filters"] input:focus,
 [data-component="user-filters"] select:focus,
+[data-component="workspace-filters"] input:focus,
+[data-component="workspace-filters"] select:focus,
 [data-component="billing-filters"] select:focus,
 [data-component="audit-filters"] input:focus,
 [data-component="audit-filters"] select:focus,
@@ -616,6 +625,11 @@ h2 {
 }
 
 [data-component="user-directory"] {
+  margin-top: 8px;
+}
+
+[data-component="workspace-directory"],
+[data-component="workspace-detail"] {
   margin-top: 8px;
 }
 
@@ -926,6 +940,17 @@ td[data-empty] {
   color: #a2362c;
 }
 
+td[data-workspace] small {
+  margin-top: 5px;
+  color: #686d73;
+  font-size: 10px;
+}
+
+[data-account-status="pending"] {
+  background: #f0f2f3;
+  color: #4e545b;
+}
+
 @media (max-width: 980px) {
   [data-component="metrics"] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -952,6 +977,7 @@ td[data-empty] {
   }
 
   [data-component="user-filters"],
+  [data-component="workspace-filters"],
   [data-component="billing-filters"],
   [data-component="audit-filters"],
   [data-component="operator-create"] form {
@@ -959,6 +985,7 @@ td[data-empty] {
   }
 
   [data-component="user-filters"] button,
+  [data-component="workspace-filters"] button,
   [data-component="billing-filters"] button,
   [data-component="audit-filters"] button,
   [data-component="operator-create"] button {
@@ -996,6 +1023,7 @@ td[data-empty] {
 
   main[data-page="admin-overview"],
   main[data-page="admin-users"],
+  main[data-page="admin-workspaces"],
   main[data-page="admin-billing"],
   main[data-page="admin-audit"],
   main[data-page="admin-operators"] {
@@ -1049,6 +1077,7 @@ td[data-empty] {
   }
 
   [data-component="user-filters"],
+  [data-component="workspace-filters"],
   [data-component="billing-filters"],
   [data-component="audit-filters"],
   [data-component="operator-create"] form {
@@ -1056,6 +1085,7 @@ td[data-empty] {
   }
 
   [data-component="user-filters"] button,
+  [data-component="workspace-filters"] button,
   [data-component="billing-filters"] button,
   [data-component="audit-filters"] button,
   [data-component="operator-create"] button {
@@ -1099,6 +1129,8 @@ td[data-empty] {
   [data-component="read-only"],
   [data-component="user-filters"] input,
   [data-component="user-filters"] select,
+  [data-component="workspace-filters"] input,
+  [data-component="workspace-filters"] select,
   [data-component="billing-filters"] select,
   [data-component="audit-filters"] input,
   [data-component="audit-filters"] select,
@@ -1142,6 +1174,8 @@ td[data-empty] {
   [data-component="finance-status"] strong,
   [data-component="user-filters"] input,
   [data-component="user-filters"] select,
+  [data-component="workspace-filters"] input,
+  [data-component="workspace-filters"] select,
   [data-component="billing-filters"] select,
   [data-component="audit-filters"] input,
   [data-component="audit-filters"] select,
