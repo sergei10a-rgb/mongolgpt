@@ -2,6 +2,11 @@ import { deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/depl
 import type { DeploymentPreflightResult } from "@mongolgpt/script/deployment"
 import {
   inspectAdminProtection,
+  inspectAuthenticatedAccountOverview,
+  inspectAuthenticatedFreeAutoProvider,
+  inspectAuthenticatedRuntimeProjects,
+  inspectAuthenticatedRuntimeSession,
+  inspectAuthenticatedRuntimeToken,
   inspectAuthHealth,
   inspectConsoleHealth,
   inspectDeploymentEndpointConfiguration,
@@ -14,13 +19,23 @@ import {
   inspectJsonApiPayload,
   inspectPaymentHealth,
   inspectResponseOrigin,
+  inspectRuntimeSessionCookie,
+  inspectSmokeAuthCookie,
   inspectStaticAssetContentType,
   inspectRuntimeHealth,
 } from "@mongolgpt/script/deployment-smoke-contract"
 
-if (import.meta.main) await runSmoke()
+if (import.meta.main) {
+  if (process.argv[2] === "--validate-auth-cookie") {
+    inspectSmokeAuthCookie(process.env.MONGOLGPT_SMOKE_AUTH_COOKIE)
+    console.log("Authenticated deployment smoke identity is configured.")
+  } else {
+    await runSmoke()
+  }
+}
 
 async function runSmoke() {
+  const smokeAuthCookie = inspectSmokeAuthCookie(process.env.MONGOLGPT_SMOKE_AUTH_COOKIE)
   const result = preflightDeployment({
     stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
     env: process.env,
@@ -44,6 +59,16 @@ async function runSmoke() {
   for (const [name, url] of Object.entries(endpoints)) {
     await check(name, url, healthContracts.get(url), result, endpoints.app, runtimeVersion)
   }
+
+  if (!endpoints.console || !endpoints.runtimeHealth) {
+    throw new Error("Hosted authentication smoke endpoints are missing.")
+  }
+  await checkAuthenticatedHostedFlow({
+    consoleUrl: endpoints.console,
+    appUrl: endpoints.app,
+    runtimeUrl: new URL(endpoints.runtimeHealth).origin,
+    authCookie: smokeAuthCookie,
+  })
 
   console.log("Cloudflare deployment smoke check passed.")
 }
@@ -746,6 +771,131 @@ export async function inspectAnonymousRuntimeApiResponse(response: Response, app
       "anonymous runtime project API response",
     ),
   )
+}
+
+async function checkAuthenticatedHostedFlow(input: {
+  consoleUrl: string
+  appUrl: string
+  runtimeUrl: string
+  authCookie: string
+}) {
+  const retries = positiveInteger(process.env.MONGOLGPT_SMOKE_RETRIES, 8)
+  const delay = positiveInteger(process.env.MONGOLGPT_SMOKE_DELAY_MS, 10_000)
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await authenticatedHostedFlow(input)
+      console.log("OK authenticated account, hosted runtime, and Free Auto")
+      return
+    } catch (error) {
+      lastError = error
+      console.warn(
+        `WAIT authenticated hosted flow (${attempt}/${retries}): ${error instanceof Error ? error.message : String(error)}`,
+      )
+      if (attempt < retries) await Bun.sleep(delay)
+    }
+  }
+
+  throw new Error(
+    `authenticated hosted smoke check failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+  )
+}
+
+async function authenticatedHostedFlow(input: {
+  consoleUrl: string
+  appUrl: string
+  runtimeUrl: string
+  authCookie: string
+}) {
+  const appOrigin = new URL(input.appUrl).origin
+  const overviewUrl = new URL("/v1/account/overview", `${input.consoleUrl}/`)
+  const overviewResponse = await authenticatedFetch(overviewUrl, appOrigin, {
+    headers: { Cookie: input.authCookie },
+  })
+  const overview = inspectAuthenticatedAccountOverview(
+    await authenticatedJson(overviewResponse, appOrigin, "authenticated account overview"),
+  )
+
+  const tokenUrl = new URL("/auth/runtime-token", `${input.consoleUrl}/`)
+  const tokenResponse = await authenticatedFetch(tokenUrl, appOrigin, {
+    method: "POST",
+    headers: { Cookie: input.authCookie },
+  })
+  const capability = inspectAuthenticatedRuntimeToken(
+    await authenticatedJson(tokenResponse, appOrigin, "authenticated runtime token"),
+    { accountID: overview.accountID, email: overview.email },
+  )
+
+  const sessionUrl = new URL("/auth/session", `${input.runtimeUrl}/`)
+  const exchangeResponse = await authenticatedFetch(sessionUrl, appOrigin, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${capability.token}` },
+  })
+  inspectAuthenticatedRuntimeSession(
+    await authenticatedJson(exchangeResponse, appOrigin, "authenticated runtime session exchange"),
+    { accountID: overview.accountID, maximumExpiresAt: capability.expiresAt },
+  )
+  const runtimeCookie = inspectRuntimeSessionCookie(exchangeResponse.headers.get("set-cookie"), capability.token)
+
+  const sessionResponse = await authenticatedFetch(sessionUrl, appOrigin, {
+    headers: { Cookie: runtimeCookie },
+  })
+  inspectAuthenticatedRuntimeSession(
+    await authenticatedJson(sessionResponse, appOrigin, "authenticated runtime session"),
+    { accountID: overview.accountID, maximumExpiresAt: capability.expiresAt },
+  )
+
+  const runtimeHeaders = {
+    Cookie: runtimeCookie,
+    "x-mongolgpt-directory": "/workspace",
+  }
+  const projectUrl = new URL("/project", `${input.runtimeUrl}/`)
+  const projectResponse = await authenticatedFetch(projectUrl, appOrigin, {
+    headers: runtimeHeaders,
+    timeout: 85_000,
+  })
+  inspectAuthenticatedRuntimeProjects(
+    await authenticatedJson(projectResponse, appOrigin, "authenticated runtime project response"),
+  )
+
+  const providerUrl = new URL("/provider", `${input.runtimeUrl}/`)
+  const providerResponse = await authenticatedFetch(providerUrl, appOrigin, { headers: runtimeHeaders })
+  inspectAuthenticatedFreeAutoProvider(
+    await authenticatedJson(providerResponse, appOrigin, "authenticated runtime provider response"),
+  )
+}
+
+async function authenticatedFetch(
+  url: URL,
+  appOrigin: string,
+  input: { method?: "GET" | "POST"; headers?: Record<string, string>; timeout?: number } = {},
+) {
+  const response = await fetch(url, {
+    method: input.method ?? "GET",
+    headers: {
+      Accept: "application/json",
+      Origin: appOrigin,
+      "User-Agent": "mongolgpt-deployment-smoke",
+      ...input.headers,
+    },
+    redirect: "manual",
+    signal: AbortSignal.timeout(input.timeout ?? 15_000),
+  })
+  inspectResponseOrigin({
+    requestUrl: url.toString(),
+    responseUrl: response.url,
+    status: response.status,
+    location: response.headers.get("location"),
+    label: "authenticated hosted request",
+  })
+  return response
+}
+
+async function authenticatedJson(response: Response, appOrigin: string, label: string) {
+  if (response.status !== 200) throw new Error(`${label} returned HTTP ${response.status}; expected 200`)
+  inspectCredentialedCors(response, appOrigin, label)
+  return inspectJsonApiPayload(response.headers.get("content-type"), await response.text(), label)
 }
 
 async function checkStaticAssets(pageUrl: string, html: string, label: string) {

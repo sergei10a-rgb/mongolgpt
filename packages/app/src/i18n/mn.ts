@@ -213,10 +213,10 @@ export const dict = {
   "onboarding.account.syncing": "Шинэчилж байна...",
   "onboarding.providers.heading": "Эхлэх аргаа сонгоно уу",
   "onboarding.providers.description":
-    "Free Auto анхдагчаар бэлэн. Орон нутгийн загвар болон өөрийн түлхүүртэй үйлчилгээ үзүүлэгч нэмэх нь сонголттой.",
+    "MongolGPT бүртгэлээр нэвтэрсний дараа Free Auto идэвхжинэ. Орон нутгийн загвар болон өөрийн түлхүүртэй үйлчилгээ үзүүлэгч нэмэх нь сонголттой.",
   "onboarding.providers.freeAuto.title": "MongolGPT Free Auto",
   "onboarding.providers.freeAuto.description":
-    "Боломжтой загвар руу автоматаар чиглүүлж, таны бүртгэлийн хязгаарыг мөрдөнө.",
+    "Нэвтэрсэн MongolGPT бүртгэлийн боломжтой загвар руу автоматаар чиглүүлж, хэрэглээний хязгаарыг мөрдөнө.",
   "onboarding.providers.nvidia.title": "Өөрийн түлхүүртэй NVIDIA NIM",
   "onboarding.providers.nvidia.description": "Хувийн хөгжүүлэлт, туршилт, үнэлгээнд ашиглах нэмэлт сонголт.",
   "onboarding.providers.local.title": "Орон нутгийн эсвэл OpenAI-тэй нийцтэй загвар",

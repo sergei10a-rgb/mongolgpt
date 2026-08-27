@@ -252,6 +252,7 @@ describe("MongolGPT Cloudflare runtime", () => {
       environment(),
     )
     expect(http.status).toBe(200)
+    expect(http.headers.get("cache-control")).toBe("no-store")
     expect(runtime.requests).toHaveLength(1)
 
     const websocket = await handler(

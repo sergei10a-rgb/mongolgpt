@@ -13,6 +13,11 @@ import {
 } from "../../../script/deployment-smoke"
 import {
   inspectDeploymentEndpointConfiguration,
+  inspectAuthenticatedAccountOverview,
+  inspectAuthenticatedFreeAutoProvider,
+  inspectAuthenticatedRuntimeProjects,
+  inspectAuthenticatedRuntimeSession,
+  inspectAuthenticatedRuntimeToken,
   inspectAuthHealth,
   inspectAdminProtection,
   inspectConsoleHealth,
@@ -24,6 +29,8 @@ import {
   inspectJsonApiPayload,
   inspectPaymentHealth,
   inspectResponseOrigin,
+  inspectRuntimeSessionCookie,
+  inspectSmokeAuthCookie,
   inspectStaticAssetContentType,
   inspectRuntimeHealth,
 } from "../src/deployment-smoke-contract"
@@ -117,6 +124,43 @@ function accountOverviewPreflightResponse(headers: Record<string, string> = {}) 
       ...headers,
     },
   })
+}
+
+const authenticatedOverview = {
+  account: {
+    id: "acc_smoke",
+    email: "smoke@mgpt.mn",
+    status: "active",
+    createdAt: 1_700_000_000_000,
+  },
+  currentWorkspaceID: "wrk_smoke",
+  workspaces: [
+    {
+      id: "wrk_smoke",
+      name: "Smoke",
+      slug: null,
+      userID: "usr_smoke",
+      role: "admin",
+      subscription: null,
+      limits: { plan: "free", promoTokens: 0, dailyRequests: 20, dailyRequestsFallback: 5 },
+      quota: { status: "model-scoped", reason: "free-auto-model-limits" },
+      usage: {},
+    },
+  ],
+}
+
+const authenticatedProviders = {
+  all: [
+    {
+      id: "mongolgpt",
+      name: "MongolGPT",
+      models: {
+        "free-auto": { id: "free-auto", name: "MongolGPT Free Auto" },
+      },
+    },
+  ],
+  default: { mongolgpt: "free-auto" },
+  connected: ["mongolgpt"],
 }
 
 describe("inspectAppHtml", () => {
@@ -558,6 +602,114 @@ describe("hosted account overview smoke contract", () => {
         appOrigin,
       ),
       "not JSON",
+    )
+  })
+})
+
+describe("authenticated hosted Free Auto smoke contract", () => {
+  const now = 1_800_000_000_000
+  const expiresAt = now + 90_000
+  const token = "runtime.header.signature"
+
+  test("accepts only a host-only console session cookie without attributes", () => {
+    const cookie = "__Host-mongolgpt-auth=opaque-session-value-123456"
+    expect(inspectSmokeAuthCookie(cookie)).toBe(cookie)
+    expect(() => inspectSmokeAuthCookie(undefined)).toThrow("дутуу")
+    expect(() => inspectSmokeAuthCookie("auth=opaque-session-value-123456")).toThrow("__Host-mongolgpt-auth")
+    expect(() => inspectSmokeAuthCookie(`${cookie}; Path=/`)).toThrow("зөвхөн cookie-ийн нэр")
+    expect(() => inspectSmokeAuthCookie(`${cookie}\r\nX-Leak: yes`)).toThrow()
+  })
+
+  test("requires an active Free account with a current workspace", () => {
+    expect(inspectAuthenticatedAccountOverview(authenticatedOverview)).toEqual({
+      accountID: "acc_smoke",
+      email: "smoke@mgpt.mn",
+      workspaceID: "wrk_smoke",
+    })
+    expect(() =>
+      inspectAuthenticatedAccountOverview({
+        ...authenticatedOverview,
+        workspaces: [
+          {
+            ...authenticatedOverview.workspaces[0],
+            subscription: { id: "sub_paid" },
+            limits: { plan: "basic" },
+          },
+        ],
+      }),
+    ).toThrow("Free plan")
+    expect(() =>
+      inspectAuthenticatedAccountOverview({ ...authenticatedOverview, currentWorkspaceID: "wrk_missing" }),
+    ).toThrow("does not include")
+  })
+
+  test("binds the short-lived runtime capability and host-only cookie to the smoke account", () => {
+    expect(
+      inspectAuthenticatedRuntimeToken(
+        { token, expiresAt, account: { id: "acc_smoke", email: "smoke@mgpt.mn" } },
+        { accountID: "acc_smoke", email: "smoke@mgpt.mn" },
+        now,
+      ),
+    ).toEqual({ token, expiresAt, accountID: "acc_smoke" })
+    expect(() =>
+      inspectAuthenticatedRuntimeToken(
+        { token, expiresAt, account: { id: "acc_other", email: "smoke@mgpt.mn" } },
+        { accountID: "acc_smoke", email: "smoke@mgpt.mn" },
+        now,
+      ),
+    ).toThrow("does not match")
+    expect(() =>
+      inspectAuthenticatedRuntimeToken(
+        { token, expiresAt: now + 126_000, account: { id: "acc_smoke", email: "smoke@mgpt.mn" } },
+        { accountID: "acc_smoke", email: "smoke@mgpt.mn" },
+        now,
+      ),
+    ).toThrow("expiry")
+
+    const setCookie = `__Host-mongolgpt-runtime=${token}; Max-Age=90; Path=/; Secure; HttpOnly; SameSite=Strict`
+    expect(inspectRuntimeSessionCookie(setCookie, token)).toBe(`__Host-mongolgpt-runtime=${token}`)
+    expect(() => inspectRuntimeSessionCookie(`${setCookie}; Domain=mgpt.mn`, token)).toThrow("host-only")
+  })
+
+  test("requires the runtime session to keep the same account and expiry", () => {
+    expect(
+      inspectAuthenticatedRuntimeSession(
+        { authenticated: true, account: { id: "acc_smoke" }, expiresAt },
+        { accountID: "acc_smoke", maximumExpiresAt: expiresAt },
+        now,
+      ),
+    ).toEqual({ authenticated: true, accountID: "acc_smoke", expiresAt })
+    expect(() =>
+      inspectAuthenticatedRuntimeSession(
+        { authenticated: true, account: { id: "acc_other" }, expiresAt },
+        { accountID: "acc_smoke", maximumExpiresAt: expiresAt },
+        now,
+      ),
+    ).toThrow("does not match")
+  })
+
+  test("requires a real project API array and the rebranded Free Auto provider", () => {
+    expect(inspectAuthenticatedRuntimeProjects([])).toBe(0)
+    expect(inspectAuthenticatedRuntimeProjects([{ id: "project_smoke" }])).toBe(1)
+    expect(() => inspectAuthenticatedRuntimeProjects("<!doctype html>")).toThrow("not an array")
+    expect(inspectAuthenticatedFreeAutoProvider(authenticatedProviders)).toEqual({
+      providerID: "mongolgpt",
+      modelID: "free-auto",
+    })
+    expect(() =>
+      inspectAuthenticatedFreeAutoProvider({
+        ...authenticatedProviders,
+        all: [{ id: "opencode", name: "OpenCode", models: {} }],
+      }),
+    ).toThrow("legacy")
+    expect(() =>
+      inspectAuthenticatedFreeAutoProvider({
+        ...authenticatedProviders,
+        all: [{ id: "mongolgpt", name: "MongolGPT", models: {} }],
+      }),
+    ).toThrow("Free Auto")
+    expect(() => inspectAuthenticatedFreeAutoProvider({ ...authenticatedProviders, connected: [] })).toThrow(
+      "not connected",
     )
   })
 })

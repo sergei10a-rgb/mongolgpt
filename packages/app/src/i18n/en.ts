@@ -224,9 +224,10 @@ export const dict = {
   "onboarding.account.syncing": "Refreshing...",
   "onboarding.providers.heading": "Choose how to start",
   "onboarding.providers.description":
-    "Free Auto is ready by default. Local models and providers using your own key remain optional.",
+    "Free Auto becomes available after you sign in to your MongolGPT account. Local models and providers using your own key remain optional.",
   "onboarding.providers.freeAuto.title": "MongolGPT Free Auto",
-  "onboarding.providers.freeAuto.description": "Uses the available free model route and applies your account quota.",
+  "onboarding.providers.freeAuto.description":
+    "Uses the available free model route and quota for your signed-in MongolGPT account.",
   "onboarding.providers.nvidia.title": "NVIDIA NIM with your own key",
   "onboarding.providers.nvidia.description": "Optional access for personal development and evaluation.",
   "onboarding.providers.local.title": "Local or OpenAI-compatible model",

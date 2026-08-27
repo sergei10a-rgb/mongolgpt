@@ -508,6 +508,7 @@ function json(value: unknown, status = 200, input: HeadersInit = {}) {
 
 function cors(response: Response, origin: string, preflight = false) {
   const headers = new Headers(response.headers)
+  if (!headers.has("cache-control")) headers.set("cache-control", "no-store")
   headers.set("access-control-allow-origin", origin)
   headers.set("access-control-allow-credentials", "true")
   headers.set("vary", appendVary(headers.get("vary"), "Origin"))

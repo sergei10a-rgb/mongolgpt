@@ -32,6 +32,18 @@ export type RuntimeHealthContract = {
   version: string
 }
 
+export type AuthenticatedSmokeAccount = {
+  accountID: string
+  email: string
+  workspaceID: string
+}
+
+export type AuthenticatedRuntimeToken = {
+  token: string
+  expiresAt: number
+  accountID: string
+}
+
 export function inspectDeploymentEndpointConfiguration(
   endpoints: ReturnType<typeof deploymentEndpoints>,
   result: DeploymentPreflightResult,
@@ -409,4 +421,163 @@ export function inspectPaymentHealth(
     throw new Error("enabled payment service is not fully ready")
   }
   return { status: "ok", environment: expectedEnvironment }
+}
+
+export function inspectSmokeAuthCookie(value: string | undefined) {
+  if (!value) throw new Error("MONGOLGPT_SMOKE_AUTH_COOKIE дутуу байна.")
+  if (value.length > 4_096 || value.trim() !== value) {
+    throw new Error("MONGOLGPT_SMOKE_AUTH_COOKIE-ийн урт эсвэл захын хоосон тэмдэг буруу байна.")
+  }
+  if (!value.startsWith("__Host-mongolgpt-auth=")) {
+    throw new Error("MONGOLGPT_SMOKE_AUTH_COOKIE нь __Host-mongolgpt-auth cookie байна.")
+  }
+
+  const token = value.slice("__Host-mongolgpt-auth=".length)
+  if (token.length < 16 || !/^[\x21-\x7e]+$/.test(token) || /[;,"\\]/.test(token)) {
+    throw new Error("MONGOLGPT_SMOKE_AUTH_COOKIE нь зөвхөн cookie-ийн нэр ба нууц утгыг агуулна.")
+  }
+  return value
+}
+
+export function inspectAuthenticatedAccountOverview(value: unknown): AuthenticatedSmokeAccount {
+  const body = record(value, "authenticated account overview")
+  exactObjectKeys(body, ["account", "currentWorkspaceID", "workspaces"], "authenticated account overview")
+  const account = record(body.account, "authenticated account")
+  if (
+    typeof account.id !== "string" ||
+    !/^acc_[A-Za-z0-9_-]+$/.test(account.id) ||
+    typeof account.email !== "string" ||
+    account.email.length > 320 ||
+    account.email.trim() !== account.email ||
+    account.status !== "active"
+  ) {
+    throw new Error("authenticated account overview does not contain an active account")
+  }
+  if (typeof body.currentWorkspaceID !== "string" || !/^wrk_[A-Za-z0-9_-]+$/.test(body.currentWorkspaceID)) {
+    throw new Error("authenticated account overview has no current workspace")
+  }
+  if (!Array.isArray(body.workspaces)) throw new Error("authenticated account overview workspaces are invalid")
+
+  const workspace = body.workspaces.find(
+    (item): item is Record<string, unknown> =>
+      typeof item === "object" && item !== null && !Array.isArray(item) && item.id === body.currentWorkspaceID,
+  )
+  if (!workspace) throw new Error("authenticated account overview does not include the current workspace")
+  const limits = record(workspace.limits, "authenticated account workspace limits")
+  if (limits.plan !== "free" || workspace.subscription !== null) {
+    throw new Error("authenticated smoke identity must use the Free plan")
+  }
+
+  return {
+    accountID: account.id,
+    email: account.email,
+    workspaceID: body.currentWorkspaceID,
+  }
+}
+
+export function inspectAuthenticatedRuntimeToken(
+  value: unknown,
+  expected: { accountID: string; email: string },
+  now = Date.now(),
+): AuthenticatedRuntimeToken {
+  const body = record(value, "authenticated runtime token")
+  exactObjectKeys(body, ["account", "expiresAt", "token"], "authenticated runtime token")
+  const account = record(body.account, "authenticated runtime token account")
+  exactObjectKeys(account, ["email", "id"], "authenticated runtime token account")
+  if (account.id !== expected.accountID || account.email !== expected.email) {
+    throw new Error("authenticated runtime token account does not match the smoke account")
+  }
+  if (typeof body.token !== "string" || body.token.length > 4_096 || !/^[A-Za-z0-9._-]+$/.test(body.token)) {
+    throw new Error("authenticated runtime token is invalid")
+  }
+  if (!shortLivedExpiry(body.expiresAt, now)) {
+    throw new Error("authenticated runtime token expiry is invalid")
+  }
+  return { token: body.token, expiresAt: body.expiresAt, accountID: expected.accountID }
+}
+
+export function inspectRuntimeSessionCookie(value: string | null, token: string) {
+  if (!value) throw new Error("authenticated runtime session did not set a cookie")
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const match = value.match(
+    new RegExp(`^__Host-mongolgpt-runtime=${escaped}; Max-Age=([1-9]\\d*); Path=/; Secure; HttpOnly; SameSite=Strict$`),
+  )
+  const maxAge = Number(match?.[1])
+  if (!Number.isInteger(maxAge) || maxAge < 1 || maxAge > 90 || value.includes("Domain=")) {
+    throw new Error("authenticated runtime session cookie is not host-only and short-lived")
+  }
+  return `__Host-mongolgpt-runtime=${token}`
+}
+
+export function inspectAuthenticatedRuntimeSession(
+  value: unknown,
+  expected: { accountID: string; maximumExpiresAt: number },
+  now = Date.now(),
+) {
+  const body = record(value, "authenticated runtime session")
+  exactObjectKeys(body, ["account", "authenticated", "expiresAt"], "authenticated runtime session")
+  const account = record(body.account, "authenticated runtime session account")
+  exactObjectKeys(account, ["id"], "authenticated runtime session account")
+  if (body.authenticated !== true || account.id !== expected.accountID) {
+    throw new Error("authenticated runtime session account does not match the smoke account")
+  }
+  if (!shortLivedExpiry(body.expiresAt, now) || body.expiresAt > expected.maximumExpiresAt) {
+    throw new Error("authenticated runtime session expiry is invalid")
+  }
+  return { authenticated: true as const, accountID: expected.accountID, expiresAt: body.expiresAt }
+}
+
+export function inspectAuthenticatedRuntimeProjects(value: unknown) {
+  if (!Array.isArray(value)) throw new Error("authenticated runtime project response is not an array")
+  for (const item of value) {
+    const project = record(item, "authenticated runtime project")
+    if (typeof project.id !== "string" || !project.id.trim()) {
+      throw new Error("authenticated runtime project has no id")
+    }
+  }
+  return value.length
+}
+
+export function inspectAuthenticatedFreeAutoProvider(value: unknown) {
+  const body = record(value, "authenticated runtime provider response")
+  exactObjectKeys(body, ["all", "connected", "default"], "authenticated runtime provider response")
+  if (!Array.isArray(body.all) || !Array.isArray(body.connected)) {
+    throw new Error("authenticated runtime provider response has invalid lists")
+  }
+  record(body.default, "authenticated runtime default models")
+  if (!body.connected.includes("mongolgpt")) {
+    throw new Error("authenticated runtime is not connected to the MongolGPT provider")
+  }
+
+  const providers = body.all.map((item) => record(item, "authenticated runtime provider"))
+  if (providers.some((provider) => ["opencode", "opencode-go", "mongolgpt-go"].includes(String(provider.id)))) {
+    throw new Error("authenticated runtime provider response exposes a legacy hosted provider")
+  }
+  const provider = providers.find((item) => item.id === "mongolgpt")
+  if (!provider || provider.name !== "MongolGPT") {
+    throw new Error("authenticated runtime provider response has no MongolGPT provider")
+  }
+  const models = record(provider.models, "authenticated MongolGPT provider models")
+  const freeAuto = record(models["free-auto"], "authenticated Free Auto model")
+  if (freeAuto.id !== "free-auto" || freeAuto.name !== "MongolGPT Free Auto") {
+    throw new Error("authenticated runtime provider response has no Free Auto model")
+  }
+  return { providerID: "mongolgpt" as const, modelID: "free-auto" as const }
+}
+
+function record(value: unknown, label: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${label} is not an object`)
+  }
+  return value as Record<string, unknown>
+}
+
+function shortLivedExpiry(value: unknown, now: number): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    Number.isFinite(value) &&
+    value > now &&
+    value <= now + 125_000
+  )
 }

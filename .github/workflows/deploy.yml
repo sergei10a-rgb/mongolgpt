@@ -133,6 +133,11 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      - name: Validate authenticated smoke identity
+        env:
+          MONGOLGPT_SMOKE_AUTH_COOKIE: ${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}
+        run: bun script/deployment-smoke.ts --validate-auth-cookie
+
       - name: Validate and deploy to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -254,6 +259,8 @@ jobs:
           bun sst deploy --stage=${{ inputs.stage }} --print-logs
 
       - name: Verify deployed URLs
+        env:
+          MONGOLGPT_SMOKE_AUTH_COOKIE: ${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}
         run: bun run deploy:smoke -- ${{ inputs.stage }}
 
       - name: Verify sandbox payment providers

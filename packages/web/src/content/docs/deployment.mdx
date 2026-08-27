@@ -117,10 +117,13 @@ Cloudflare-ийн **Миний бүртгэл (`My Profile`) → API токен 
 | Нууц утга | `MONGOLGPT_RUNTIME_AUTH_SECRET`                          | 32+ тэмдэгт ажиллах орчны эрхийн баримтад гарын үсэг зурж шалгах нууц утга                            |
 | Нууц утга | `MONGOLGPT_PLAN_LIMITS`                                  | Free/Basic/Pro/Max багц, токен, өртөг болон хүсэлтийн давтамжийн хязгаарын JSON                       |
 | Нууц утга | `MONGOLGPT_GATEWAY_SESSION_SECRET`                       | 32+ тэмдэгт тусдаа CSPRNG сессийн нууц утга                                                           |
+| Нууц утга | `MONGOLGPT_SMOKE_AUTH_COOKIE`                            | Тусгай Free хэрэглэгчийн `__Host-mongolgpt-auth=<утга>` OAuth сесс; зөвхөн deploy smoke-д ашиглана    |
 | Нууц утга | `MONGOLGPT_GATEWAY_MODELS1`                              | Баталгаажсан Free Auto загвар ба үйлчилгээ үзүүлэгчийн JSON; үйлчилгээ үзүүлэгчийн түлхүүрийг агуулна |
 | Нууц утга | `MONGOLGPT_GATEWAY_MODELS2`…`MONGOLGPT_GATEWAY_MODELS30` | `MONGOLGPT_GATEWAY_MODELS1`-д багтахгүй үед ашиглах JSON-ийн дараалсан сонголттой хэсгүүд             |
 
 Шилжилтийн хугацаанд хуучин `ZEN_SESSION_SECRET`, `ZEN_MODELS1`…`ZEN_MODELS30` утгуудыг зөвхөн fallback-аар уншина. Шинэ нэр рүү ижил утгыг хуулж баталгаажуулах хүртэл session secret-ийг сольж болохгүй; шинэ тохиргоонд зөвхөн `MONGOLGPT_GATEWAY_*` нэр ашиглана.
+
+`MONGOLGPT_SMOKE_AUTH_COOKIE`-г нэргүй эсвэл хиймэл нэвтрэлтийн замаар үүсгэхгүй. Тухайн орчны allowlist-д орсон, төлбөртэй багцгүй тусгай хэрэглэгчээр хэвийн GitHub эсвэл Google OAuth нэвтрэлт хийсний дараа browser developer tools-ийн **Application → Cookies** хэсгээс `__Host-mongolgpt-auth`-ийн утгыг авч, `__Host-mongolgpt-auth=<утга>` хэлбэрээр тухайн GitHub environment-ийн secret-д хадгална. `Path`, `Secure`, `HttpOnly`, `SameSite` зэрэг атрибут болон `Cookie:` толгойг хамт хуулж болохгүй. Нууц утгыг SST, Worker, browser E2E эсвэл artifact-д дамжуулахгүй; зөвхөн байршуулалтын өмнөх бүтцийн шалгалт болон байршуулалтын дараах authenticated smoke алхам уншина. Сесс хүчингүй болсон үед тусгай хэрэглэгчээр дахин OAuth нэвтэрч энэ secret-ийг шинэчилнэ.
 
 `MONGOLGPT_PLAN_LIMITS` нь paid багц бүрд 7 хамгаалалтыг заавал тодорхойлно: 7 хоногийн өртөг, токен,
 хүсэлт; сарын өртөг, токен, хүсэлт; мөн гулсах хугацааны өртөг. Өртгийн утга нь загвар нийлүүлэгчийн
@@ -287,7 +290,7 @@ NVIDIA API Catalog-ийн туршилтын төгсгөлийн цэг зөв�
 
 Хэрэглээний хязгаарын үйлчилгээний дотоод токеныг SST байршуулалтын үед автоматаар үүсгэнэ. Upstash болон PlanetScale-ийн нууц утга шаардлагагүй.
 
-`Cloudflare deploy` ажлын урсгал нь урьдчилсан шалгалт, төрлийн шалгалт, баримт бичиг ба вэбийн бүтээлт, SST байршуулалт, D1 өгөгдлийн шилжилт, URL-ийн суурь ажиллагааны шалгалт гэсэн дарааллаар ажиллана. `payment_environment`-ийг эхлээд `disabled`, туршилтын худалдааны эрх бэлэн болсны дараа `sandbox` гэж сонгоно. Үйлдвэрлэлийн үед `DEPLOY <domain>` гэсэн байршуулалтын баталгаа заавал байна. Бодит мөнгөний `production` төлбөр сонгосон бол нэмэлтээр `ENABLE REAL PAYMENTS <domain>` гэсэн яг тохирох баталгаажуулалтгүй үед урьдчилсан шалгалт зогсоно.
+`Cloudflare deploy` ажлын урсгал нь урьдчилсан шалгалт, төрлийн шалгалт, баримт бичиг ба вэбийн бүтээлт, authenticated smoke identity шалгалт, SST байршуулалт, D1 өгөгдлийн шилжилт, нийтэд нээлттэй болон нэвтэрсэн ажиллагааны smoke шалгалт гэсэн дарааллаар ажиллана. Нэвтэрсэн шалгалт нь Free төлөвлөгөөтэй account ба workspace, богино наст runtime capability, host-only runtime cookie, project API болон `MongolGPT Free Auto` provider/model-ийг бодитоор батална. `payment_environment`-ийг эхлээд `disabled`, туршилтын худалдааны эрх бэлэн болсны дараа `sandbox` гэж сонгоно. Үйлдвэрлэлийн үед `DEPLOY <domain>` гэсэн байршуулалтын баталгаа заавал байна. Бодит мөнгөний `production` төлбөр сонгосон бол нэмэлтээр `ENABLE REAL PAYMENTS <domain>` гэсэн яг тохирох баталгаажуулалтгүй үед урьдчилсан шалгалт зогсоно.
 
 `MONGOLGPT_ENABLE_ANALYTICS=true` бол зөвхөн `MONGOLGPT_ENABLE_HOSTED_SERVICES=true` үеийн байршуулалтад `https://stats.<domain>` бодит хэрэглээний статистикийн сайтыг Cloudflare D1-д тулгуурласан орчноор хамт гаргана.
 
