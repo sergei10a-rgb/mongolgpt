@@ -35,6 +35,29 @@ export function configuredAppUrl(value: string | undefined) {
   }
 }
 
+export function configuredConsoleRequestUrl(requestUrl: string, configuredConsoleUrl: string | undefined) {
+  let request: URL
+  try {
+    request = new URL(requestUrl)
+  } catch {
+    return undefined
+  }
+  if (request.username || request.password) return undefined
+
+  const configuredRaw = configuredConsoleUrl?.trim()
+  if (configuredRaw) {
+    const configured = configuredAppUrl(configuredRaw)
+    if (!configured) return undefined
+    const configuredSource = new URL(configuredRaw)
+    if (configuredSource.pathname !== "/" || configuredSource.search || configuredSource.hash) return undefined
+    return request.origin === configured.origin ? request : undefined
+  }
+
+  const loopback = request.hostname === "localhost" || request.hostname === "127.0.0.1" || request.hostname === "::1"
+  if (!loopback || (request.protocol !== "http:" && request.protocol !== "https:")) return undefined
+  return request
+}
+
 export function canonicalHttpsOrigin(value: string | undefined) {
   const raw = value?.trim()
   if (!raw) return undefined

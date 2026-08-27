@@ -1,4 +1,4 @@
-import { isHostedAppOrigin } from "@mongolgpt/account-contract/service-urls"
+import { resolveHostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import { Context } from "effect"
 
 export type CorsOptions = { readonly cors?: ReadonlyArray<string> }
@@ -14,7 +14,8 @@ export function isAllowedCorsOrigin(input: string | undefined, opts?: CorsOption
   if (input.startsWith("oc://renderer")) return true
   if (input === "tauri://localhost" || input === "http://tauri.localhost" || input === "https://tauri.localhost")
     return true
-  if (isHostedAppOrigin(input, "mgpt.mn")) return true
+  if (input === resolveHostedServiceUrls("mgpt.mn", "production").app) return true
+  if (input === resolveHostedServiceUrls("mgpt.mn", "dev").app) return true
   return opts?.cors?.includes(input) ?? false
 }
 

@@ -3,6 +3,7 @@ import {
   authCallbackTarget,
   canonicalHttpsOrigin,
   configuredAppUrl,
+  configuredConsoleRequestUrl,
   currentAuthAccount,
   safeAuthContinue,
 } from "./helpers"
@@ -45,6 +46,34 @@ describe("configuredAppUrl", () => {
 
   test("allows plain HTTP only for local development", () => {
     expect(configuredAppUrl("http://127.0.0.1:3000")?.toString()).toBe("http://127.0.0.1:3000/")
+  })
+})
+
+describe("configuredConsoleRequestUrl", () => {
+  test("accepts only the exact configured hosted console origin", () => {
+    expect(
+      configuredConsoleRequestUrl(
+        "https://dev.mgpt.mn/auth/authorize?continue=%2Fauth%2Fapp",
+        "https://dev.mgpt.mn",
+      )?.pathname,
+    ).toBe("/auth/authorize")
+    expect(
+      configuredConsoleRequestUrl("https://alias.dev.mgpt.mn/auth/authorize", "https://dev.mgpt.mn"),
+    ).toBeUndefined()
+    expect(
+      configuredConsoleRequestUrl("https://dev.mgpt.mn/auth/callback?code=one", "https://dev.mgpt.mn/path"),
+    ).toBeUndefined()
+    expect(
+      configuredConsoleRequestUrl("https://dev.mgpt.mn/auth/callback?code=one", "https://dev.mgpt.mn/#fragment"),
+    ).toBeUndefined()
+  })
+
+  test("fails closed without hosted configuration but keeps loopback development", () => {
+    expect(configuredConsoleRequestUrl("https://dev.mgpt.mn/auth/callback", undefined)).toBeUndefined()
+    expect(configuredConsoleRequestUrl("http://127.0.0.1:3000/auth/callback", "not-a-url")).toBeUndefined()
+    expect(configuredConsoleRequestUrl("http://127.0.0.1:3000/auth/callback", undefined)?.origin).toBe(
+      "http://127.0.0.1:3000",
+    )
   })
 })
 

@@ -4,17 +4,18 @@ import {
   turnstileAuthorizationRequest,
 } from "@mongolgpt/console-core/turnstile.js"
 import { AuthClient } from "~/context/auth"
-import { safeAuthContinue } from "./helpers"
+import { configuredConsoleRequestUrl, safeAuthContinue } from "./helpers"
 import { renderTurnstileChallenge } from "./turnstile"
 
 export async function GET(input: APIEvent) {
-  const url = new URL(input.request.url)
+  const url = configuredConsoleRequestUrl(input.request.url, import.meta.env.MONGOLGPT_CONSOLE_URL)
+  if (!url) return invalidAuthorizationRequest()
   const cont = safeAuthContinue(url.searchParams.get("continue"))
   const clientID = url.searchParams.get("client_id")
   if (clientID && clientID !== "mongolgpt-cli") return invalidAuthorizationRequest()
   let target: string
   try {
-    target = clientID === "mongolgpt-cli" ? cliAuthorizationTarget(url) : await authorizationTarget(input.request, cont)
+    target = clientID === "mongolgpt-cli" ? cliAuthorizationTarget(url) : await authorizationTarget(url, cont)
   } catch {
     return invalidAuthorizationRequest()
   }
@@ -42,8 +43,8 @@ function cliAuthorizationTarget(url: URL) {
   }).toString()
 }
 
-async function authorizationTarget(request: Request, cont: string) {
-  const callbackUrl = new URL(`./callback${cont}`, request.url)
+async function authorizationTarget(requestUrl: URL, cont: string) {
+  const callbackUrl = new URL(`./callback${cont}`, requestUrl)
   const result = await AuthClient.authorize(callbackUrl.toString(), "code")
   return result.url
 }

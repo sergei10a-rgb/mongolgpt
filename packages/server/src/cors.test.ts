@@ -5,13 +5,21 @@ describe("MongolGPT browser origin policy", () => {
   test("allows only the owned public app hosts", () => {
     expect(isAllowedCorsOrigin("https://app.mgpt.mn")).toBe(true)
     expect(isAllowedCorsOrigin("https://app.dev.mgpt.mn")).toBe(true)
-    expect(isAllowedCorsOrigin("https://app.beta.mgpt.mn")).toBe(true)
-    expect(isAllowedCorsOrigin("https://app.vimtor.mgpt.mn")).toBe(true)
 
+    expect(isAllowedCorsOrigin("https://app.beta.mgpt.mn")).toBe(false)
+    expect(isAllowedCorsOrigin("https://app.preview-12.mgpt.mn")).toBe(false)
     expect(isAllowedCorsOrigin("https://docs.mgpt.mn")).toBe(false)
     expect(isAllowedCorsOrigin("https://evil.mgpt.mn")).toBe(false)
     expect(isAllowedCorsOrigin("https://app.preview.evil.mgpt.mn")).toBe(false)
     expect(isAllowedCorsOrigin("https://app.mgpt.mn.evil.example")).toBe(false)
     expect(isAllowedCorsOrigin("https://app.mongolgpt.ai")).toBe(false)
+  })
+
+  test("requires an explicit override for other development origins", () => {
+    expect(
+      isAllowedCorsOrigin("https://app.preview-12.mgpt.mn", {
+        cors: ["https://app.preview-12.mgpt.mn"],
+      }),
+    ).toBe(true)
   })
 })

@@ -4,12 +4,18 @@ import { AuthClient } from "~/context/auth"
 import { useAuthSession } from "~/context/auth"
 import { i18n } from "~/i18n"
 import { localeFromRequest, route } from "~/lib/language"
-import { authCallbackTarget } from "./helpers"
+import { authCallbackTarget, configuredConsoleRequestUrl } from "./helpers"
 
 export async function GET(input: APIEvent) {
-  const url = new URL(input.request.url)
   const locale = localeFromRequest(input.request)
   const dict = i18n(locale)
+  const url = configuredConsoleRequestUrl(input.request.url, import.meta.env.MONGOLGPT_CONSOLE_URL)
+  if (!url) {
+    return Response.json(
+      { error: dict["auth.callback.error.codeMissing"] },
+      { status: 400, headers: { "cache-control": "no-store" } },
+    )
+  }
 
   try {
     const code = url.searchParams.get("code")
