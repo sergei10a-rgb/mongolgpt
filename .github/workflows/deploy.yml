@@ -252,6 +252,7 @@ jobs:
           CI: true
           PLAYWRIGHT_DEPLOYED_BASE_URL: ${{ inputs.stage == 'production' && format('https://app.{0}', vars.MONGOLGPT_DOMAIN) || format('https://app.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
           PLAYWRIGHT_DEPLOYED_PUBLIC_URL: ${{ inputs.stage == 'production' && format('https://{0}', vars.MONGOLGPT_DOMAIN) || format('https://{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
+          PLAYWRIGHT_DEPLOYED_RUNTIME_URL: ${{ inputs.stage == 'production' && format('https://runtime.{0}', vars.MONGOLGPT_DOMAIN) || format('https://runtime.{0}.{1}', inputs.stage, vars.MONGOLGPT_DOMAIN) }}
         run: bun --cwd packages/app test:e2e:deployed
         timeout-minutes: 10
 

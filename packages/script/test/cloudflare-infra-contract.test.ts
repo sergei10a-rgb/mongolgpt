@@ -133,6 +133,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(steps[browser]?.run).toBe("bun --cwd packages/app test:e2e:deployed")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_BASE_URL).toContain("https://app.{0}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_PUBLIC_URL).toContain("https://{0}")
+    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RUNTIME_URL).toContain("https://runtime.{0}")
     expect(steps[artifact]?.condition).toBe("always()")
     expect(steps[artifact]?.uses).toContain("actions/upload-artifact@")
     expect(steps[artifact]?.with?.path).toContain("packages/app/e2e/test-results-deployed")
