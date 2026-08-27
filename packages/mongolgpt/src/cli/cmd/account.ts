@@ -60,6 +60,9 @@ export const formatPostLoginGuidance = () => [
 
 export const accountOnboardingRequired = (hasActiveWorkspace: boolean) => !hasActiveWorkspace
 
+export const managedModelAccountLoginRequired = (input: { providerID?: string; attached?: boolean }) =>
+  !input.attached && input.providerID === "mongolgpt"
+
 const formatOrgChoiceLabel = (account: { email: string }, org: { name: string }, isActive: boolean) =>
   `${org.name} (${account.email})${activeSuffix(isActive)}`
 
@@ -259,6 +262,20 @@ export const ensureAccountLogin = Effect.fn("Cli.account.ensureLogin")(function*
   yield* loginEffect(defaultConsoleUrl)
   const current = yield* service.active()
   return Option.isSome(current) && Boolean(current.value.active_org_id)
+})
+
+export const ensureManagedModelAccountLogin = Effect.fn("Cli.account.ensureManagedModelLogin")(function* (input: {
+  providerID?: string
+  attached?: boolean
+  interactive?: boolean
+}) {
+  if (!managedModelAccountLoginRequired(input)) return true
+
+  const service = yield* Account.Service
+  const active = yield* service.active()
+  if (Option.isSome(active) && Boolean(active.value.active_org_id)) return true
+  if (!input.interactive) return false
+  return yield* ensureAccountLogin()
 })
 
 const logoutEffect = Effect.fn("logout")(function* (email?: string) {

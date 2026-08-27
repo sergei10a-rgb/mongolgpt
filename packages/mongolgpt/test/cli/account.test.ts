@@ -9,6 +9,7 @@ import {
   formatAccountOverview,
   formatOrgLine,
   formatPostLoginGuidance,
+  managedModelAccountLoginRequired,
   normalizeAccountLoginUrl,
 } from "../../src/cli/cmd/account"
 
@@ -76,6 +77,14 @@ describe("console account display", () => {
   test("requires account onboarding until an active workspace exists", () => {
     expect(accountOnboardingRequired(false)).toBe(true)
     expect(accountOnboardingRequired(true)).toBe(false)
+  })
+
+  test("requires login for local managed-model runs without blocking BYOK or attached servers", () => {
+    expect(managedModelAccountLoginRequired({ providerID: "mongolgpt" })).toBe(true)
+    expect(managedModelAccountLoginRequired({ providerID: "mongolgpt", attached: true })).toBe(false)
+    expect(managedModelAccountLoginRequired({ providerID: "openrouter" })).toBe(false)
+    expect(managedModelAccountLoginRequired({ providerID: "ollama" })).toBe(false)
+    expect(managedModelAccountLoginRequired({})).toBe(false)
   })
 
   test("formats plan, quota, and usage status in Mongolian", () => {

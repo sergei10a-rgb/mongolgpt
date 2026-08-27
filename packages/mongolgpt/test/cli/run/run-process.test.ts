@@ -62,6 +62,24 @@ describe("mongolgpt run (non-interactive subprocess)", () => {
     60_000,
   )
 
+  cliIt.concurrent(
+    "requires MongolGPT account login before using the managed Free Auto model",
+    ({ llm, mongolgpt }) =>
+      Effect.gen(function* () {
+        const result = yield* mongolgpt.run("say hi", {
+          model: "mongolgpt/free-auto",
+          timeoutMs: 30_000,
+        })
+
+        expect(result.exitCode).not.toBe(0)
+        expect(result.timedOut).toBe(false)
+        expect(result.stdout).toBe("")
+        expect(result.stderr).toContain("mongolgpt account login")
+        expect(yield* llm.inputs).toEqual([])
+      }),
+    45_000,
+  )
+
   // Regression for #27371: an unknown model used to hang the process forever
   // waiting on a session.status === idle event that never arrived. The fix
   // makes the SDK call surface an error promptly so the process exits nonzero.

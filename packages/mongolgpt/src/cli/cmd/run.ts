@@ -19,7 +19,7 @@ import { pathToFileURL } from "url"
 import { open } from "node:fs/promises"
 import { Effect } from "effect"
 import { UI } from "../ui"
-import { effectCmd } from "../effect-cmd"
+import { effectCmd, fail } from "../effect-cmd"
 import { EOL } from "os"
 import { Filesystem } from "@/util/filesystem"
 import { createMongolGPTClient, type MongolGPTClient, type ToolPart } from "@mongolgpt/sdk/v2"
@@ -254,6 +254,27 @@ export const RunCommand = effectCmd({
     const agentSvc = yield* Agent.Service
     const flags = yield* RuntimeFlags.Service
     const localInstance = yield* InstanceRef
+    const accountProviderID = args.attach
+      ? undefined
+      : args.model
+        ? pick(args.model)?.providerID
+        : yield* Effect.gen(function* () {
+            const { Provider } = yield* Effect.promise(() => import("@/provider/provider"))
+            const providerSvc = yield* Provider.Service
+            return yield* providerSvc.defaultModel().pipe(
+              Effect.map((model) => model.providerID as string),
+              Effect.catch(() => Effect.succeed(undefined)),
+            )
+          })
+    const { ensureManagedModelAccountLogin } = yield* Effect.promise(() => import("./account"))
+    const accountReady = yield* ensureManagedModelAccountLogin({
+      providerID: accountProviderID,
+      attached: Boolean(args.attach),
+      interactive: args.format !== "json" && Boolean(process.stdin.isTTY && process.stdout.isTTY),
+    }).pipe(Effect.catch(() => fail("MongolGPT бүртгэлийн төлөвийг шалгаж чадсангүй. Түр хүлээгээд дахин оролдоно уу")))
+    if (!accountReady) {
+      return yield* fail("MongolGPT managed загвар ашиглахын өмнө `mongolgpt account login` командаар нэвтэрнэ үү")
+    }
     yield* Effect.promise(async () => {
       const rawMessage = [...args.message, ...(args["--"] || [])].join(" ")
       const interactive = args.mini
