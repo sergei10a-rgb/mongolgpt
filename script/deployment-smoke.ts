@@ -17,6 +17,7 @@ import {
   inspectAnonymousRuntimeApi,
   inspectAppHtml,
   inspectHtmlAssets,
+  inspectHostedAppRelease,
   inspectHostedAppRuntime,
   inspectHtmlContentType,
   inspectJsonApiPayload,
@@ -242,7 +243,14 @@ function inspectAppDeployment(html: string, url: string, result: DeploymentPrefl
   if (contract.mode !== expectedMode) {
     throw new Error(`app runtime mode is ${contract.mode}; expected ${expectedMode}`)
   }
+  if (result.hostedServices) inspectHostedAppRelease(html, requiredReleaseSha())
   return contract
+}
+
+function requiredReleaseSha() {
+  const value = process.env.MONGOLGPT_RELEASE_SHA?.trim()
+  if (!value) throw new Error("MONGOLGPT_RELEASE_SHA дутуу байна.")
+  return value
 }
 
 function appChannel(result: DeploymentPreflightResult) {

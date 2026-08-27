@@ -48,6 +48,7 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_RELEASE_SHA: ${{ github.sha }}
   MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
   MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
   MONGOLGPT_ENABLE_ADMIN: ${{ inputs.admin }}
@@ -120,6 +121,7 @@ jobs:
           MONGOLGPT_CHANNEL: ${{ steps.service-urls.outputs.channel }}
           VITE_MONGOLGPT_APP_URL: ${{ steps.service-urls.outputs.app_url }}
           VITE_MONGOLGPT_PUBLIC_URL: ${{ steps.service-urls.outputs.public_url }}
+          VITE_MONGOLGPT_RELEASE_SHA: ${{ github.sha }}
           VITE_MONGOLGPT_SERVER_URL: ${{ steps.service-urls.outputs.runtime_url }}
         run: |
           bun --cwd packages/app build
@@ -290,6 +292,7 @@ jobs:
           PLAYWRIGHT_DEPLOYED_BASE_URL: ${{ needs.verify.outputs.app_url }}
           PLAYWRIGHT_DEPLOYED_PUBLIC_URL: ${{ needs.verify.outputs.public_url }}
           PLAYWRIGHT_DEPLOYED_RUNTIME_URL: ${{ needs.verify.outputs.runtime_url }}
+          PLAYWRIGHT_DEPLOYED_RELEASE_SHA: ${{ github.sha }}
           MONGOLGPT_SMOKE_AUTH_COOKIE: ${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}
         run: bun --cwd packages/app test:e2e:deployed
         timeout-minutes: 10

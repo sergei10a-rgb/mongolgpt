@@ -377,6 +377,21 @@ export function inspectHostedAppRuntime(
   }
 }
 
+export function inspectHostedAppRelease(html: string, expectedSha: string) {
+  const expected = expectedSha.trim().toLowerCase()
+  if (!/^[0-9a-f]{40}$/.test(expected)) {
+    throw new Error("expected hosted app release SHA is not a Git commit")
+  }
+  const actual = meta(html, "mongolgpt-release-sha")
+  if (!actual || !/^[0-9a-f]{40}$/.test(actual)) {
+    throw new Error("hosted app release SHA metadata is missing or invalid")
+  }
+  if (actual !== expected) {
+    throw new Error(`hosted app release is ${actual}; expected ${expected}`)
+  }
+  return actual
+}
+
 export function inspectAnonymousHostedSession(value: unknown): AnonymousHostedSessionContract {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error("hosted session response is not an object")

@@ -30,6 +30,7 @@ import {
   inspectAppHtml,
   inspectHtmlAssets,
   inspectHostedAppRuntime,
+  inspectHostedAppRelease,
   inspectHtmlContentType,
   inspectJsonApiPayload,
   inspectPaymentHealth,
@@ -467,6 +468,27 @@ describe("inspectAppHtml", () => {
         }),
       ).toThrow("exact root URL")
     }
+  })
+})
+
+describe("inspectHostedAppRelease", () => {
+  const sha = "0123456789abcdef0123456789abcdef01234567"
+
+  test("accepts only the exact deployed Git revision", () => {
+    expect(inspectHostedAppRelease(html(`<meta name="mongolgpt-release-sha" content="${sha}">`), sha)).toBe(sha)
+  })
+
+  test("rejects missing, malformed, and stale provenance", () => {
+    expect(() => inspectHostedAppRelease(html(""), sha)).toThrow("missing")
+    expect(() => inspectHostedAppRelease(html('<meta name="mongolgpt-release-sha" content="latest">'), sha)).toThrow(
+      "invalid",
+    )
+    expect(() =>
+      inspectHostedAppRelease(
+        html('<meta name="mongolgpt-release-sha" content="fedcba9876543210fedcba9876543210fedcba98">'),
+        sha,
+      ),
+    ).toThrow("expected")
   })
 })
 

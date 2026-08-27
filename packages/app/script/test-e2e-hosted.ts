@@ -15,6 +15,7 @@ process.env.VITE_MONGOLGPT_SERVER_URL =
   process.env.PLAYWRIGHT_HOSTED_RUNTIME_URL ?? "https://runtime.e2e.mgpt.test:4443"
 process.env.VITE_MONGOLGPT_APP_URL = "https://app.dev.e2e.mgpt.test"
 process.env.VITE_MONGOLGPT_PUBLIC_URL = process.env.PLAYWRIGHT_HOSTED_PUBLIC_URL ?? "https://dev.e2e.mgpt.test"
+process.env.VITE_MONGOLGPT_RELEASE_SHA = "0123456789abcdef0123456789abcdef01234567"
 process.env.MONGOLGPT_CHANNEL = "dev"
 const executablePath = installedChromium()
 if (!process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH && executablePath) {

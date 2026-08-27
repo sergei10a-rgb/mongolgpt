@@ -35,6 +35,7 @@ export default defineConfig({
             VITE_MONGOLGPT_SERVER_URL: runtimeUrl,
             VITE_MONGOLGPT_APP_URL: "https://app.dev.e2e.mgpt.test",
             VITE_MONGOLGPT_PUBLIC_URL: publicUrl,
+            VITE_MONGOLGPT_RELEASE_SHA: "0123456789abcdef0123456789abcdef01234567",
             MONGOLGPT_CHANNEL: "dev",
           },
         },

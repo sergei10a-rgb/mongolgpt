@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
-import { resolveChannel, resolveRuntimeMetadata } from "./build-config.js"
+import { resolveChannel, resolveReleaseSha, resolveRuntimeMetadata } from "./build-config.js"
+
+const releaseSha = "0123456789abcdef0123456789abcdef01234567"
 
 describe("resolveChannel", () => {
   test("accepts the SST Vite environment key", () => {
@@ -174,5 +176,25 @@ describe("resolveRuntimeMetadata", () => {
         VITE_MONGOLGPT_SERVER_URL: "https://runtime.dev.mgpt.mn",
       }),
     ).toThrow("локал бус, нийтэд нээлттэй HTTPS URL шаардлагатай")
+  })
+})
+
+describe("resolveReleaseSha", () => {
+  test("marks local builds without inventing deployment provenance", () => {
+    expect(resolveReleaseSha({})).toBe("local")
+  })
+
+  test("normalizes a real Git commit for hosted deployment", () => {
+    expect(resolveReleaseSha({ VITE_MONGOLGPT_RELEASE_SHA: releaseSha.toUpperCase() })).toBe(releaseSha)
+  })
+
+  test("requires exact Git provenance for hosted builds", () => {
+    const hosted = {
+      MONGOLGPT_CHANNEL: "dev",
+      VITE_MONGOLGPT_APP_URL: "https://app.dev.mgpt.mn",
+      VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn",
+    }
+    expect(() => resolveReleaseSha(hosted)).toThrow("Git release SHA")
+    expect(() => resolveReleaseSha({ ...hosted, VITE_MONGOLGPT_RELEASE_SHA: "latest" })).toThrow("40 тэмдэгт")
   })
 })

@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly VITE_MONGOLGPT_PUBLIC_URL?: string
   readonly VITE_MONGOLGPT_RUNTIME_MODE?: "local-bridge" | "hosted"
   readonly VITE_MONGOLGPT_CHANNEL?: "dev" | "beta" | "prod"
+  readonly VITE_MONGOLGPT_RELEASE_SHA?: string
 
   readonly VITE_SENTRY_DSN?: string
   readonly VITE_SENTRY_ENVIRONMENT?: string

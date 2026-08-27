@@ -170,6 +170,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
       MONGOLGPT_CHANNEL: "${{ steps.service-urls.outputs.channel }}",
       VITE_MONGOLGPT_APP_URL: "${{ steps.service-urls.outputs.app_url }}",
       VITE_MONGOLGPT_PUBLIC_URL: "${{ steps.service-urls.outputs.public_url }}",
+      VITE_MONGOLGPT_RELEASE_SHA: "${{ github.sha }}",
       VITE_MONGOLGPT_SERVER_URL: "${{ steps.service-urls.outputs.runtime_url }}",
     })
     const serviceUrls = workflow.jobs.verify.steps.find((step) => step.name === "Resolve hosted service URLs")
@@ -179,6 +180,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(buildStep?.run).toContain("bun --cwd packages/app verify:hosted-artifact")
     const site = await Bun.file(new URL("../../../infra/site.ts", import.meta.url)).text()
     expect(site).toContain('command: "bun run build:hosted"')
+    expect(site).toContain('VITE_MONGOLGPT_RELEASE_SHA: process.env.MONGOLGPT_RELEASE_SHA ?? ""')
     expect(site).toContain("const supportUrl = `${publicOrigin}/support`")
     expect(site).not.toContain("github.com/sergei10a-rgb/mongolgpt/issues")
     expect(workflow.jobs.deploy.condition).toBe(
@@ -222,6 +224,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_BASE_URL).toBe("${{ needs.verify.outputs.app_url }}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_PUBLIC_URL).toBe("${{ needs.verify.outputs.public_url }}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RUNTIME_URL).toBe("${{ needs.verify.outputs.runtime_url }}")
+    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RELEASE_SHA).toBe("${{ github.sha }}")
     expect(steps[artifact]?.condition).toBe("always()")
     expect(steps[artifact]?.uses).toContain("actions/upload-artifact@")
     expect(steps[artifact]?.with?.path).toContain("packages/app/e2e/test-results-deployed")

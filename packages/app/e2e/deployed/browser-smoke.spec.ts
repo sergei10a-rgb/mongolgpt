@@ -7,11 +7,13 @@ test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", a
   const appOrigin = new URL(process.env.PLAYWRIGHT_DEPLOYED_BASE_URL!).origin
   const publicOrigin = new URL(process.env.PLAYWRIGHT_DEPLOYED_PUBLIC_URL!).origin
   const runtimeOrigin = new URL(process.env.PLAYWRIGHT_DEPLOYED_RUNTIME_URL!).origin
+  const releaseSha = process.env.PLAYWRIGHT_DEPLOYED_RELEASE_SHA!
   const state = observeDeployedPage(page, appOrigin, [publicOrigin, runtimeOrigin])
 
   expect(publicOrigin).not.toBe(appOrigin)
   expect(runtimeOrigin).not.toBe(appOrigin)
   expect(runtimeOrigin).not.toBe(publicOrigin)
+  expect(releaseSha).toMatch(/^[0-9a-f]{40}$/)
 
   await page.goto("/", { waitUntil: "domcontentloaded" })
   expect(new URL(page.url()).origin).toBe(appOrigin)
@@ -34,6 +36,7 @@ test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", a
   expect(snapshot.title).toContain("MongolGPT")
   expect(snapshot.lang).toBe("mn")
   expect(snapshot.readyState).not.toBe("loading")
+  expect(await page.locator('meta[name="mongolgpt-release-sha"]').getAttribute("content")).toBe(releaseSha)
   expect(isVisibleMongolianText(snapshot.text)).toBe(true)
   expect(snapshot.text.length).toBeGreaterThan(80)
 

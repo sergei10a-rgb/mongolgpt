@@ -35,6 +35,20 @@ export function resolveChannel(env = process.env) {
   return "dev"
 }
 
+export function resolveReleaseSha(env = process.env) {
+  const value = env.VITE_MONGOLGPT_RELEASE_SHA?.trim()
+  if (!value) {
+    if (hostedWeb(env)) {
+      throw new Error("MongolGPT-ийн байршуулсан веб хувилбарт Git release SHA шаардлагатай")
+    }
+    return "local"
+  }
+  if (!/^[0-9a-f]{40}$/i.test(value)) {
+    throw new Error("MongolGPT release SHA нь 40 тэмдэгт Git commit hash байна")
+  }
+  return value.toLowerCase()
+}
+
 export function resolveRuntimeMetadata(env = process.env) {
   const appUrl = env.VITE_MONGOLGPT_APP_URL ? httpUrl(env.VITE_MONGOLGPT_APP_URL) : undefined
   const publicUrl = env.VITE_MONGOLGPT_PUBLIC_URL ? httpUrl(env.VITE_MONGOLGPT_PUBLIC_URL) : undefined
