@@ -9,7 +9,7 @@ import { usePlatform, type PlatformAccount } from "@/context/platform"
 import { ServerConnection, useServer } from "@/context/server"
 import { useServerSync } from "@/context/server-sync"
 import { Persist, persisted } from "@/utils/persist"
-import { accountOnboardingStage } from "./account-onboarding-state"
+import { accountOnboardingStage, desktopAccountOnboardingReady } from "./account-onboarding-state"
 import { DialogConnectProvider } from "./dialog-connect-provider"
 import { DialogCustomProvider } from "./dialog-custom-provider"
 
@@ -44,13 +44,14 @@ export function AccountOnboardingGate() {
   const signedIn = () => account() !== null && account() !== undefined
   const connected = () => Boolean(account()?.activeOrgID?.trim())
   const ready = () =>
-    platform.platform === "desktop" &&
-    platform.account !== undefined &&
-    ServerConnection.local(server.current) &&
-    storageReady() &&
-    !account.loading &&
-    sync().data.ready &&
-    sync().data.provider.all.has("mongolgpt")
+    desktopAccountOnboardingReady({
+      platform: platform.platform,
+      accountAvailable: platform.account !== undefined,
+      localServer: ServerConnection.local(server.current),
+      storageReady: storageReady(),
+      accountLoading: account.loading,
+      syncReady: sync().data.ready,
+    })
 
   const login = async () => {
     if (!platform.account) throw new Error(language.t("onboarding.account.loginError"))

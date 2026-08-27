@@ -1,5 +1,23 @@
 export type AccountOnboardingStage = "account" | "workspace" | "providers"
 
+export function desktopAccountOnboardingReady(input: {
+  platform: string
+  accountAvailable: boolean
+  localServer: boolean
+  storageReady: boolean
+  accountLoading: boolean
+  syncReady: boolean
+}) {
+  return (
+    input.platform === "desktop" &&
+    input.accountAvailable &&
+    input.localServer &&
+    input.storageReady &&
+    !input.accountLoading &&
+    input.syncReady
+  )
+}
+
 export function accountOnboardingStage(input: {
   ready: boolean
   signedIn: boolean
