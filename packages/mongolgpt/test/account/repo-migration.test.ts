@@ -61,7 +61,10 @@ test("atomically migrates existing plaintext account tokens", async () => {
 test("migrates plaintext while keeping a corrupt encrypted account removable", async () => {
   await using tmp = await tmpdir()
   const encrypted = codec.protect("corrupt-access")
-  const corrupt = `${encrypted.slice(0, -1)}${encrypted.endsWith("A") ? "B" : "A"}`
+  const [nonce, tag, encodedCiphertext] = encrypted.slice("mgpt:v1:".length).split(":")
+  const ciphertext = Buffer.from(encodedCiphertext, "base64url")
+  ciphertext[0] = ciphertext[0] ^ 1
+  const corrupt = `mgpt:v1:${nonce}:${tag}:${ciphertext.toString("base64url")}`
   await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
