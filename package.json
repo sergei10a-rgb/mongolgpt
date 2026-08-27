@@ -61,14 +61,14 @@
       "opentui-spinner": "0.0.7",
       "@solid-primitives/storage": "4.3.3",
       "@tailwindcss/vite": "4.1.11",
-      "diff": "8.0.2",
-      "dompurify": "3.3.1",
+      "diff": "8.0.3",
+      "dompurify": "3.4.13",
       "drizzle-kit": "1.0.0-rc.2",
       "drizzle-orm": "1.0.0-rc.2",
       "effect": "4.0.0-beta.83",
       "ai": "6.0.168",
       "cross-spawn": "7.0.6",
-      "hono": "4.10.7",
+      "hono": "4.12.34",
       "hono-openapi": "1.1.2",
       "fuzzysort": "3.1.0",
       "luxon": "3.6.1",
@@ -141,7 +141,8 @@
     "@opentui/keymap": "catalog:",
     "@opentui/solid": "catalog:",
     "@types/bun": "catalog:",
-    "@types/node": "catalog:"
+    "@types/node": "catalog:",
+    "hono": "4.12.34"
   },
   "patchedDependencies": {
     "@astrojs/starlight@0.34.3": "patches/@astrojs%2Fstarlight@0.34.3.patch",
