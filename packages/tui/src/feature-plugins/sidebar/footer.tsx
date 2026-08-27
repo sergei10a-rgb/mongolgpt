@@ -53,7 +53,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
                 ✕
               </text>
             </box>
-            <text fg={theme().textMuted}>MongolGPT үнэгүй загваруудтай тул шууд эхэлж болно.</text>
+            <text fg={theme().textMuted}>MongolGPT бүртгэлээр нэвтэрсний дараа Free Auto төлбөргүй идэвхжинэ.</text>
             <text fg={theme().textMuted}>
               Claude, GPT, Gemini зэрэг бусад загвар ашиглахын тулд 75+ үйлчилгээ үзүүлэгчээс холбоно уу
             </text>
