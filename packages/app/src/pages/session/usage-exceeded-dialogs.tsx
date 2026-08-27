@@ -8,17 +8,15 @@ import { useDialog } from "@mongolgpt/ui/context"
 import { DialogUsageExceeded } from "@/components/dialog-usage-exceeded"
 import { useI18n } from "@mongolgpt/ui/context"
 
-const USAGE_PROMPT_FREE_TIER_LAST_SEEN_AT = "go_upsell_last_seen_at"
-const USAGE_PROMPT_FREE_TIER_DONT_SHOW = "go_upsell_dont_show"
-const USAGE_PROMPT_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT = "go_upsell_account_rate_limit_last_seen_at"
-const USAGE_PROMPT_ACCOUNT_RATE_LIMIT_DONT_SHOW = "go_upsell_account_rate_limit_dont_show"
+const USAGE_PROMPT_FREE_TIER_LAST_SEEN_AT = "mongolgpt_usage_prompt_free_tier_last_seen_at"
+const USAGE_PROMPT_FREE_TIER_DONT_SHOW = "mongolgpt_usage_prompt_free_tier_dont_show"
+const USAGE_PROMPT_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT = "mongolgpt_usage_prompt_account_limit_last_seen_at"
+const USAGE_PROMPT_ACCOUNT_RATE_LIMIT_DONT_SHOW = "mongolgpt_usage_prompt_account_limit_dont_show"
 const USAGE_PROMPT_WINDOW = 86_400_000 // 24 hrs
-const MANAGED_PROVIDERS = new Set(["mongolgpt", "mongolgpt-go"])
-
 function usagePromptKeys(status: SessionStatus) {
   if (status.type !== "retry" || !status.action) return
   const { action } = status
-  if (!MANAGED_PROVIDERS.has(action.provider)) return
+  if (action.provider !== "mongolgpt") return
   if (action.reason === "free_tier_limit") {
     return {
       lastSeenAt: USAGE_PROMPT_FREE_TIER_LAST_SEEN_AT,

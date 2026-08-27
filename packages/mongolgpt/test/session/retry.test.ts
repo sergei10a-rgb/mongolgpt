@@ -14,7 +14,6 @@ import { SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { testEffect } from "../lib/effect"
 import { ProviderV2 } from "@mongolgpt/core/provider"
-import { localConsoleUrl } from "@mongolgpt/core/product"
 
 const providerID = ProviderV2.ID.make("test")
 const retryProvider = "test"
@@ -282,85 +281,6 @@ describe("session.retry.retryable", () => {
     })
   })
 
-  test("maps legacy subscription limits to workspace billing", () => {
-    const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
-      new SessionV1.APIError({
-        message: "Subscription quota exceeded. You can continue using free models.",
-        isRetryable: true,
-        statusCode: 429,
-        responseHeaders: {
-          "retry-after": "19380",
-        },
-        responseBody: JSON.stringify({
-          type: "error",
-          error: {
-            type: "GoUsageLimitError",
-            message: "Subscription quota exceeded. You can continue using free models.",
-          },
-          metadata: {
-            workspace: "wrk_01K6XGM22R6FM8JVABE9XDQXGH",
-            limitName: "5 hour",
-          },
-        }),
-      }).toObject(),
-    )
-
-    expect(SessionRetry.retryable(error, "mongolgpt-go")).toEqual({
-      message: `Багцын хэрэглээний хязгаарт хүрлээ. 5 цаг 23 минут дараа шинэчлэгдэнэ. Багцын эрх болон төлбөрийн тохиргоогоо шалгана уу. - ${localConsoleUrl}/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/billing`,
-      action: {
-        reason: "account_rate_limit",
-        provider: "mongolgpt-go",
-        title: "Багцын хэрэглээний хязгаарт хүрлээ",
-        message:
-          "Багцын хэрэглээний хязгаарт хүрлээ. 5 цаг 23 минут дараа шинэчлэгдэнэ. Багцын эрх болон төлбөрийн тохиргоогоо шалгана уу.",
-        label: "төлбөрийн тохиргоо",
-        link: `${localConsoleUrl}/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/billing`,
-      },
-    })
-  })
-
-  test("maps legacy subscription limits without limit metadata", () => {
-    const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
-      new SessionV1.APIError({
-        message: "Subscription quota exceeded. You can continue using free models.",
-        isRetryable: true,
-        statusCode: 429,
-        responseHeaders: {
-          "retry-after": "900",
-        },
-        responseBody: JSON.stringify({
-          type: "error",
-          error: {
-            type: "GoUsageLimitError",
-            message: "Subscription quota exceeded. You can continue using free models.",
-          },
-          metadata: {
-            workspace: "wrk_01K6XGM22R6FM8JVABE9XDQXGH",
-          },
-        }),
-      }).toObject(),
-    )
-
-    expect(SessionRetry.retryable(error, "mongolgpt-go")?.action?.message).toBe(
-      "Багцын хэрэглээний хязгаарт хүрлээ. 15 минут дараа шинэчлэгдэнэ. Багцын эрх болон төлбөрийн тохиргоогоо шалгана уу.",
-    )
-  })
-
-  test("falls back to pricing when a legacy limit omits the workspace", () => {
-    const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
-      new SessionV1.APIError({
-        message: "Subscription quota exceeded.",
-        isRetryable: true,
-        statusCode: 429,
-        responseBody: JSON.stringify({
-          type: "error",
-          error: { type: "GoUsageLimitError", message: "Subscription quota exceeded." },
-        }),
-      }).toObject(),
-    )
-
-    expect(SessionRetry.retryable(error, "mongolgpt-go")?.action?.link).toBe(SessionRetry.PRICING_URL)
-  })
 })
 
 describe("session.message-v2.fromError", () => {

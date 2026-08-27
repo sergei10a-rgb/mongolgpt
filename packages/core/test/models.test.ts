@@ -168,11 +168,7 @@ describe("ModelsDev Service", () => {
           },
         },
       })
-      expect(result["mongolgpt-go"]).toMatchObject({
-        id: "mongolgpt-go",
-        name: "MongolGPT (хуучин холболт)",
-        api: "https://mgpt.mn/zen/go/v1",
-      })
+      expect(result["mongolgpt-go"]).toBeUndefined()
     }),
   )
 
@@ -183,6 +179,19 @@ describe("ModelsDev Service", () => {
       expect(result.mongolgpt.api).toBe("https://dev.mgpt.mn/zen/v1")
       expect(result.mongolgpt.npm).toBe("@ai-sdk/openai-compatible")
       expect(result.mongolgpt.models["free-auto"]?.tool_call).toBe(true)
+    }),
+  )
+
+  it.live("removes both legacy Go providers from the catalog", () =>
+    Effect.sync(() => {
+      const result = ModelsDev.rebrandHostedProviders({
+        ...fixture,
+        "opencode-go": { ...fixture.acme, id: "opencode-go" },
+        "mongolgpt-go": { ...fixture.acme, id: "mongolgpt-go" },
+      })
+
+      expect(result["opencode-go"]).toBeUndefined()
+      expect(result["mongolgpt-go"]).toBeUndefined()
     }),
   )
 

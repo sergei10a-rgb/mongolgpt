@@ -8,18 +8,18 @@ import {
 import { extend, useRenderer } from "@opentui/solid"
 import { onCleanup, onMount } from "solid-js"
 import { tint, useTheme } from "../context/theme"
-import { GoUpsellArtPainter } from "./bg-pulse-render"
+import { UsagePulseArtPainter } from "./bg-pulse-render"
 
-type GoUpsellArtOptions = RenderableOptions<FrameBufferRenderable> & {
+type UsagePulseArtOptions = RenderableOptions<FrameBufferRenderable> & {
   backgroundPanel?: RGBA
   primary?: RGBA
   logoBase?: RGBA
 }
 
-class GoUpsellArtRenderable extends FrameBufferRenderable {
-  private painter = new GoUpsellArtPainter()
+class UsagePulseArtRenderable extends FrameBufferRenderable {
+  private painter = new UsagePulseArtPainter()
 
-  constructor(ctx: RenderContext, options: GoUpsellArtOptions = {}) {
+  constructor(ctx: RenderContext, options: UsagePulseArtOptions = {}) {
     const width = typeof options.width === "number" ? options.width : 1
     const height = typeof options.height === "number" ? options.height : 1
     super(ctx, {
@@ -62,11 +62,11 @@ class GoUpsellArtRenderable extends FrameBufferRenderable {
 
 declare module "@opentui/solid" {
   interface OpenTUIComponents {
-    go_upsell_art: typeof GoUpsellArtRenderable
+    usage_pulse_art: typeof UsagePulseArtRenderable
   }
 }
 
-extend({ go_upsell_art: GoUpsellArtRenderable })
+extend({ usage_pulse_art: UsagePulseArtRenderable })
 
 export function BgPulse() {
   const { theme } = useTheme()
@@ -87,7 +87,7 @@ export function BgPulse() {
   })
 
   return (
-    <go_upsell_art
+    <usage_pulse_art
       width="100%"
       height="100%"
       backgroundPanel={theme.backgroundPanel}

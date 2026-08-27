@@ -89,38 +89,6 @@ export function retryable(error: Err, provider: string) {
         },
       }
     }
-    if (error.data.responseBody?.includes("GoUsageLimitError")) {
-      const body = parseJSON(error.data.responseBody)
-      const workspace = str(body?.metadata?.workspace)
-      const retryAfter = num(error.data.responseHeaders?.["retry-after"])
-      const resetIn = iife(() => {
-        if (retryAfter === undefined) return ""
-        const seconds = Math.max(0, Math.ceil(retryAfter))
-        const days = Math.floor(seconds / 86_400)
-        const hours = Math.floor((seconds % 86_400) / 3_600)
-        const minutes = Math.ceil((seconds % 3_600) / 60)
-        const unit = (value: number, name: string) => `${value} ${name}`
-
-        if (days > 0) return hours > 0 ? `${unit(days, "өдөр")} ${unit(hours, "цаг")}` : unit(days, "өдөр")
-        if (hours > 0) return minutes > 0 ? `${unit(hours, "цаг")} ${unit(minutes, "минут")}` : unit(hours, "цаг")
-        return minutes > 0 ? unit(minutes, "минут") : "нэг минутаас бага хугацаа"
-      })
-
-      const message = `Багцын хэрэглээний хязгаарт хүрлээ. ${resetIn} дараа шинэчлэгдэнэ. Багцын эрх болон төлбөрийн тохиргоогоо шалгана уу.`
-
-      const link = workspace ? `${consoleUrl}/workspace/${workspace}/billing` : PRICING_URL
-      return {
-        message: `${message} - ${link}`,
-        action: {
-          reason: "account_rate_limit",
-          provider,
-          title: "Багцын хэрэглээний хязгаарт хүрлээ",
-          message,
-          label: "төлбөрийн тохиргоо",
-          link,
-        },
-      }
-    }
     return {
       message: error.data.message.includes("Overloaded") ? "Үйлчилгээ түр ачаалалтай байна" : error.data.message,
     }
@@ -153,17 +121,6 @@ export function retryable(error: Err, provider: string) {
     return { message: "Хүсэлтийн давтамжийн хязгаарт хүрлээ" }
   }
   return undefined
-}
-
-function str(value: unknown) {
-  if (value === undefined || value === null) return ""
-  return String(value)
-}
-
-function num(value: unknown) {
-  const parsed = Number.parseFloat(str(value))
-  if (Number.isNaN(parsed)) return undefined
-  return parsed
 }
 
 function parseJSON(value: unknown) {

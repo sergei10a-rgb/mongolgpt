@@ -104,7 +104,6 @@ export const dict = {
   "dialog.provider.tag.recommended": "Önerilen",
   "dialog.provider.mongolgpt.note": "Claude, GPT, Gemini ve daha fazlasını içeren seçilmiş modeller",
   "dialog.provider.mongolgpt.tagline": "Güvenilir optimize edilmiş modeller",
-  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Pro ve Max dahil Claude modellerine doğrudan erişim",
   "dialog.provider.copilot.note": "GitHub Copilot üzerinden kodlama yardımı için yapay zekâ modelleri",
   "dialog.provider.openai.note": "Hızlı ve yetenekli genel yapay zekâ görevleri için GPT modelleri",

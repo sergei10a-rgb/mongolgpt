@@ -17,18 +17,14 @@ import { useBindings } from "../keymap"
 import { useClipboard } from "../context/clipboard"
 import { productServiceUrls } from "@mongolgpt/core/product"
 
-const mongolgptConsoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
 const mongolgptAuthUrl = process.env.MONGOLGPT_AUTH_URL?.trim() || productServiceUrls.auth
-const mongolgptPricingUrl =
-  process.env.MONGOLGPT_PRICING_URL?.trim() || process.env.MONGOLGPT_GO_URL?.trim() || `${mongolgptConsoleUrl}/pricing`
 
 const PROVIDER_PRIORITY: Record<string, number> = {
   mongolgpt: 0,
-  "mongolgpt-go": 1,
-  openai: 2,
-  "github-copilot": 3,
-  anthropic: 4,
-  google: 5,
+  openai: 1,
+  "github-copilot": 2,
+  anthropic: 3,
+  google: 4,
 }
 
 const CUSTOM_PROVIDER_OPTION_VALUE = "__mongolgpt_custom_provider__"
@@ -54,7 +50,6 @@ export function providerOptions(list: { id: string; name: string }[]): ProviderO
   return [
     ...pipe(
       list,
-      (providers) => providers.filter((provider) => provider.id !== "mongolgpt-go"),
       sortBy(
         (x) => PROVIDER_PRIORITY[x.id] ?? 99,
         (x) => x.name.toLowerCase(),
@@ -382,17 +377,6 @@ function ApiMethod(props: ApiMethodProps) {
               </text>
               <text fg={theme.text}>
                 Түлхүүр авахын тулд <span style={{ fg: theme.primary }}>{mongolgptAuthUrl}</span> руу орно уу
-              </text>
-            </box>
-          ),
-          "mongolgpt-go": (
-            <box gap={1}>
-              <text fg={theme.textMuted}>
-                Энэ хуучин provider ID-г зөвхөн өмнөх тохиргооны нийцтэй байдлыг хадгалахад ашиглана. Шинэ холболтод
-                MongolGPT аккаунтаа ашиглана уу.
-              </text>
-              <text fg={theme.text}>
-                Багц болон хэрэглээгээ <span style={{ fg: theme.primary }}>{mongolgptPricingUrl}</span> хаягаас удирдана
               </text>
             </box>
           ),

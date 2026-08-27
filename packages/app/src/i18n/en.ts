@@ -107,7 +107,6 @@ export const dict = {
   "dialog.provider.tag.recommended": "Recommended",
   "dialog.provider.mongolgpt.note": "Curated models including Claude, GPT, Gemini and more",
   "dialog.provider.mongolgpt.tagline": "Reliable optimized models",
-  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Direct access to Claude models, including Pro and Max",
   "dialog.provider.copilot.note": "AI models for coding assistance via GitHub Copilot",
   "dialog.provider.openai.note": "GPT models for fast, capable general AI tasks",

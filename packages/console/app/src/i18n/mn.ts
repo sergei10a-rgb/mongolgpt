@@ -225,12 +225,6 @@ export const dict = {
   "zen.api.error.providerFailure": "Нийлүүлэгчийн алдаа{{provider}}: {{message}}",
   "zen.api.error.internalServer": "Серверийн дотоод алдаа гарлаа. Түр хүлээгээд дахин оролдоно уу.",
   "zen.api.error.subscriptionQuotaExceeded": "Захиалгын эрх дууслаа. {{retryIn}} дараа дахин оролдоно уу.",
-  "zen.api.error.goSubscriptionRollingLimitExceeded":
-    "Таван цагийн хэрэглээний хязгаарт хүрлээ. {{retryIn}} дараа шинэчлэгдэнэ. Энэ загварыг одоо үргэлжлүүлэн ашиглахын тулд үлдэгдлээсээ төлөхийг идэвхжүүлнэ үү: {{consoleGoUrl}}",
-  "zen.api.error.goSubscriptionWeeklyLimitExceeded":
-    "Долоо хоногийн хэрэглээний хязгаарт хүрлээ. {{retryIn}} дараа шинэчлэгдэнэ. Энэ загварыг одоо үргэлжлүүлэн ашиглахын тулд үлдэгдлээсээ төлөхийг идэвхжүүлнэ үү: {{consoleGoUrl}}",
-  "zen.api.error.goSubscriptionMonthlyLimitExceeded":
-    "Сарын хэрэглээний хязгаарт хүрлээ. {{retryIn}} дараа шинэчлэгдэнэ. Энэ загварыг одоо үргэлжлүүлэн ашиглахын тулд үлдэгдлээсээ төлөхийг идэвхжүүлнэ үү: {{consoleGoUrl}}",
   "zen.api.error.noPaymentMethod": "Төлбөрийн хэрэгсэл алга. Эндээс нэмнэ үү: {{billingUrl}}",
   "zen.api.error.insufficientBalance":
     "Үлдэгдэл хүрэлцэхгүй байна. Төлбөр тооцоогоо эндээс удирдана уу: {{billingUrl}}",

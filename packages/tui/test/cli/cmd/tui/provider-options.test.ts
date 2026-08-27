@@ -43,14 +43,10 @@ describe("providerOptions", () => {
     expect(new Set(values).size).toBe(values.length)
   })
 
-  test("hides the retired managed provider from new connections", () => {
-    const values = providerOptions([
-      { id: "mongolgpt", name: "MongolGPT" },
-      { id: "mongolgpt-go", name: "MongolGPT (хуучин холболт)" },
-    ]).map((option) => option.value)
-
-    expect(values).toContain("mongolgpt")
-    expect(values).not.toContain("mongolgpt-go")
+  test("keeps the current managed provider available for new connections", () => {
+    expect(providerOptions([{ id: "mongolgpt", name: "MongolGPT" }]).map((option) => option.value)).toContain(
+      "mongolgpt",
+    )
   })
 
   test("normalizes and validates custom provider ids", () => {

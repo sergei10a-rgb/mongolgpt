@@ -6,7 +6,6 @@ const roots = [
   new URL("../../ui/src/", import.meta.url),
   new URL("../../tui/src/", import.meta.url),
   new URL("../../mongolgpt/src/", import.meta.url),
-  new URL("../../core/src/", import.meta.url),
 ]
 
 async function sourceFiles(directory: URL): Promise<URL[]> {
@@ -39,10 +38,12 @@ describe("runtime legacy brand contract", () => {
       if (source === undefined) continue
       expect(source).not.toMatch(/MongolGPT (?:Zen|Go)\b/)
       expect(source).not.toMatch(/mongolgpt(?:Zen|Go)/)
+      expect(source).not.toContain("mongolgpt-go")
+      expect(source).not.toContain("opencode-go")
     }
   })
 
-  test("routes managed usage limits through current pricing and billing", async () => {
+  test("routes managed Free Auto limits through current pricing", async () => {
     const retry = await Bun.file(new URL("../../mongolgpt/src/session/retry.ts", import.meta.url)).text()
     const appPrompt = await Bun.file(
       new URL("../../app/src/pages/session/usage-exceeded-dialogs.tsx", import.meta.url),
@@ -52,9 +53,9 @@ describe("runtime legacy brand contract", () => {
     ).text()
 
     expect(retry).toContain("`${consoleUrl}/pricing`")
-    expect(retry).toContain("`${consoleUrl}/workspace/${workspace}/billing`")
+    expect(retry).not.toContain("GoUsageLimitError")
     expect(retry).not.toContain("`${consoleUrl}/go`")
     expect(appPrompt).not.toContain('DialogConnectProvider provider="mongolgpt-go"')
-    expect(providerDialog).toContain('provider.id !== "mongolgpt-go"')
+    expect(providerDialog).not.toContain("mongolgpt-go")
   })
 })

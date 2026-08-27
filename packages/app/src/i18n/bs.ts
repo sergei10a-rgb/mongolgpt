@@ -100,7 +100,6 @@ export const dict = {
   "dialog.provider.tag.recommended": "Preporučeno",
   "dialog.provider.mongolgpt.note": "Kurirani modeli uključujući Claude, GPT, Gemini i druge",
   "dialog.provider.mongolgpt.tagline": "Pouzdani optimizovani modeli",
-  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Direktan pristup Claude modelima, uključujući Pro i Max",
   "dialog.provider.copilot.note": "AI modeli za pomoć pri kodiranju putem GitHub Copilot",
   "dialog.provider.openai.note": "GPT modeli za brze, sposobne opšte AI zadatke",

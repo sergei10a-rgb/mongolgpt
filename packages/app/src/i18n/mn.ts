@@ -100,7 +100,6 @@ export const dict = {
   "dialog.provider.tag.recommended": "Санал болгосон",
   "dialog.provider.mongolgpt.note": "Claude, GPT, Gemini гэх мэт сонгомол загварууд",
   "dialog.provider.mongolgpt.tagline": "Найдвартай оновчтой загварууд",
-  "dialog.provider.mongolgptLegacy.tagline": "Өмнөх хувилбарын холболт",
   "dialog.provider.anthropic.note": "Pro болон Max зэрэг Claude загваруудад шууд хандах",
   "dialog.provider.copilot.note": "GitHub Copilot-ээр дамжуулан кодлоход туслах AI загварууд",
   "dialog.provider.openai.note": "Хурдан, чадвартай ерөнхий AI даалгаварт зориулсан GPT загварууд",

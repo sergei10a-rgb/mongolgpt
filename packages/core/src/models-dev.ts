@@ -36,17 +36,9 @@ export function rebrandHostedProviders(providers: Record<string, Provider>, cons
       "free-auto": freeAutoModel,
     },
   }
-  const hostedGo = result["mongolgpt-go"] ?? result["opencode-go"]
-  if (hostedGo) {
-    result["mongolgpt-go"] = {
-      ...hostedGo,
-      id: "mongolgpt-go",
-      name: "MongolGPT (хуучин холболт)",
-      api: `${base}/zen/go/v1`,
-    }
-  }
   delete result.opencode
   delete result["opencode-go"]
+  delete result["mongolgpt-go"]
   return result
 }
 

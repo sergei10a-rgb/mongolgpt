@@ -92,7 +92,6 @@ export const dict = {
   "dialog.provider.tag.recommended": "Recommandé",
   "dialog.provider.mongolgpt.note": "Modèles sélectionnés incluant Claude, GPT, Gemini et plus",
   "dialog.provider.mongolgpt.tagline": "Modèles optimisés et fiables",
-  "dialog.provider.mongolgptLegacy.tagline": "Legacy managed provider",
   "dialog.provider.anthropic.note": "Connectez-vous avec Claude Pro/Max ou une clé API",
   "dialog.provider.copilot.note": "Connectez-vous avec Copilot ou une clé API",
   "dialog.provider.openai.note": "Connectez-vous avec ChatGPT Pro/Plus ou une clé API",

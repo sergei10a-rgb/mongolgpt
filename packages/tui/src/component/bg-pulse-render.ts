@@ -71,7 +71,7 @@ const LOGO_TEMPLATE: LogoTemplateCell[] = LOGO_LINES.flatMap((line, y) =>
 
 export type Rgb = [number, number, number]
 
-export type GoUpsellArtRenderOptions = {
+export type UsagePulseArtRenderOptions = {
   deltaTime?: number
   rgb?: boolean
   cache?: boolean
@@ -120,7 +120,7 @@ function sameRgb(a: Rgb, b: Rgb) {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
 }
 
-export class GoUpsellArtPainter {
+export class UsagePulseArtPainter {
   private panelRgb: Rgb = [0, 0, 0]
   private primaryRgb: Rgb = [255, 255, 255]
   private logoBaseRgb: Rgb = [180, 180, 180]
@@ -167,7 +167,7 @@ export class GoUpsellArtPainter {
     return true
   }
 
-  render(frameBuffer: OptimizedBuffer, options: GoUpsellArtRenderOptions = {}) {
+  render(frameBuffer: OptimizedBuffer, options: UsagePulseArtRenderOptions = {}) {
     const rgb = options.rgb === true
     this.elapsed = (this.elapsed + (options.deltaTime ?? 0)) % PERIOD
     this.rebuildGeometry(frameBuffer, rgb)

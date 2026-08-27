@@ -2,15 +2,9 @@ import type { APIEvent } from "@solidjs/start/server"
 import { and, Database, eq, gt, gte, isNull, lte, sql } from "@mongolgpt/console-core/drizzle/index.js"
 import { KeyTable } from "@mongolgpt/console-core/schema/key.sql.js"
 import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
-import {
-  BillingTable,
-  LiteTable,
-  PlanSubscriptionTable,
-  SubscriptionTable,
-  UsageTable,
-} from "@mongolgpt/console-core/schema/billing.sql.js"
+import { BillingTable, PlanSubscriptionTable, SubscriptionTable, UsageTable } from "@mongolgpt/console-core/schema/billing.sql.js"
 import { centsToMicroCents } from "@mongolgpt/console-core/util/price.js"
-import { getMonthlyBounds, getWeekBounds } from "@mongolgpt/console-core/util/date.js"
+import { getWeekBounds } from "@mongolgpt/console-core/util/date.js"
 import { Identifier } from "@mongolgpt/console-core/identifier.js"
 import { recordPlanUsageWithDb } from "@mongolgpt/console-core/plan-usage.js"
 import { recordEstimatedModelCostWithDb } from "@mongolgpt/console-core/finance-ledger.js"
@@ -31,7 +25,6 @@ import {
   ModelError,
   RateLimitError,
   FreeUsageLimitError,
-  GoUsageLimitError,
   PlanUsageLimitError,
 } from "./error"
 import {
@@ -74,7 +67,7 @@ type RetryOptions = {
   excludeProviders: string[]
   retryCount: number
 }
-type BillingSource = "anonymous" | "free" | "byok" | "plan" | "lite" | "balance"
+type BillingSource = "anonymous" | "free" | "byok" | "plan" | "balance"
 type AuthCredential = { type: "key"; value: string } | { type: "account"; accountID: string; workspaceID: string }
 
 function resolve(text: string, params?: Record<string, string | number>) {
@@ -125,7 +118,7 @@ export async function handler(
   input: APIEvent,
   opts: {
     format: ZenData.Format
-    modelList: "lite" | "full"
+    modelList: "full"
     parseApiKey: (headers: Headers) => string | undefined
     parseModel: (url: string, body: any) => string
     parseVariant: (url: string, body: any) => string | undefined
@@ -542,7 +535,6 @@ export async function handler(
     if (
       error instanceof RateLimitError ||
       error instanceof FreeUsageLimitError ||
-      error instanceof GoUsageLimitError ||
       error instanceof PlanUsageLimitError
     ) {
       const headers = new Headers()
@@ -556,13 +548,7 @@ export async function handler(
             type: error.constructor.name,
             message: error.message,
           },
-          metadata:
-            error instanceof GoUsageLimitError
-              ? {
-                  workspace: error.workspace,
-                  limitName: error.limitName,
-                }
-              : {},
+          metadata: {},
         }),
         { status: 429, headers },
       )
@@ -794,10 +780,6 @@ export async function handler(
           return {
             subscription: data.planEntitlement.plan,
           }
-        if (data.billing.lite)
-          return {
-            subscription: "lite",
-          }
         return {}
       })(),
     })
@@ -809,7 +791,6 @@ export async function handler(
       user: data.user,
       planEntitlement: data.planEntitlement,
       planUsage: data.planUsage,
-      lite: data.lite,
       provider: data.provider,
       isFree: freeWorkspaceIDs.has(data.workspaceID),
       isDisabled: !!data.timeDisabled,
@@ -846,7 +827,6 @@ export async function handler(
             reloadTrigger: BillingTable.reloadTrigger,
             timeReloadLockedTill: BillingTable.timeReloadLockedTill,
             subscription: BillingTable.subscription,
-            lite: BillingTable.lite,
           },
           user: {
             id: UserTable.id,
@@ -877,16 +857,6 @@ export async function handler(
             timeMonthlyCostUpdated: SubscriptionTable.timeMonthlyCostUpdated,
             timeMonthlyTokensUpdated: SubscriptionTable.timeMonthlyTokensUpdated,
             timeMonthlyRequestsUpdated: SubscriptionTable.timeMonthlyRequestsUpdated,
-          },
-          lite: {
-            id: LiteTable.id,
-            timeCreated: LiteTable.timeCreated,
-            rollingUsage: LiteTable.rollingUsage,
-            weeklyUsage: LiteTable.weeklyUsage,
-            monthlyUsage: LiteTable.monthlyUsage,
-            timeRollingUpdated: LiteTable.timeRollingUpdated,
-            timeWeeklyUpdated: LiteTable.timeWeeklyUpdated,
-            timeMonthlyUpdated: LiteTable.timeMonthlyUpdated,
           },
           provider: {
             credentials: ProviderTable.credentials,
@@ -935,14 +905,6 @@ export async function handler(
             eq(SubscriptionTable.workspaceID, UserTable.workspaceID),
             eq(SubscriptionTable.userID, UserTable.id),
             isNull(SubscriptionTable.timeDeleted),
-          ),
-        )
-        .leftJoin(
-          LiteTable,
-          and(
-            eq(LiteTable.workspaceID, UserTable.workspaceID),
-            eq(LiteTable.userID, UserTable.id),
-            isNull(LiteTable.timeDeleted),
           ),
         )
         .where(and(account, isNull(UserTable.timeDeleted), isNull(WorkspaceTable.timeDeleted)))
@@ -1184,78 +1146,6 @@ export async function handler(
       }
     }
 
-    // Validate lite subscription billing
-    if (opts.modelList === "lite" && authInfo.billing.lite && authInfo.lite) {
-      try {
-        const consoleGoUrl = consolePath(`/workspace/${encodeURIComponent(authInfo.workspaceID)}/billing`)
-        const sub = authInfo.lite
-        const liteData = limits.lite
-
-        // Check weekly limit
-        if (sub.weeklyUsage && sub.timeWeeklyUpdated) {
-          const result = Subscription.analyzeWeeklyUsage({
-            limit: liteData.weeklyLimit,
-            usage: sub.weeklyUsage,
-            timeUpdated: sub.timeWeeklyUpdated,
-          })
-          if (result.status === "rate-limited")
-            throw new GoUsageLimitError(
-              t("zen.api.error.goSubscriptionWeeklyLimitExceeded", {
-                retryIn: formatRetryTime(result.resetInSec, locale),
-                consoleGoUrl,
-              }),
-              authInfo.workspaceID,
-              "weekly",
-              result.resetInSec,
-            )
-        }
-
-        // Check monthly limit
-        if (sub.monthlyUsage && sub.timeMonthlyUpdated) {
-          const result = Subscription.analyzeMonthlyUsage({
-            limit: liteData.monthlyLimit,
-            usage: sub.monthlyUsage,
-            timeUpdated: sub.timeMonthlyUpdated,
-            timeSubscribed: sub.timeCreated,
-          })
-          if (result.status === "rate-limited")
-            throw new GoUsageLimitError(
-              t("zen.api.error.goSubscriptionMonthlyLimitExceeded", {
-                retryIn: formatRetryTime(result.resetInSec, locale),
-                consoleGoUrl,
-              }),
-              authInfo.workspaceID,
-              "monthly",
-              result.resetInSec,
-            )
-        }
-
-        // Check rolling limit
-        if (sub.rollingUsage && sub.timeRollingUpdated) {
-          const result = Subscription.analyzeRollingUsage({
-            limit: liteData.rollingLimit,
-            window: liteData.rollingWindow,
-            usage: sub.rollingUsage,
-            timeUpdated: sub.timeRollingUpdated,
-          })
-          if (result.status === "rate-limited")
-            throw new GoUsageLimitError(
-              t("zen.api.error.goSubscriptionRollingLimitExceeded", {
-                retryIn: formatRetryTime(result.resetInSec, locale),
-                consoleGoUrl,
-              }),
-              authInfo.workspaceID,
-              "5 hour",
-              result.resetInSec,
-            )
-        }
-
-        return "lite"
-      } catch (e) {
-        if (!authInfo.billing.lite.useBalance) throw e
-      }
-    }
-
     // Validate pay as you go billing
     const billing = authInfo.billing
     const workspacePath = `/workspace/${encodeURIComponent(authInfo.workspaceID)}`
@@ -1302,7 +1192,6 @@ export async function handler(
   }
 
   function validateModelSettings(billingSource: BillingSource, authInfo: AuthInfo) {
-    if (billingSource === "lite") return
     if (billingSource === "anonymous") return
     if (authInfo!.isDisabled) throw new ModelError(t("zen.api.error.modelDisabled"))
   }
@@ -1439,12 +1328,10 @@ export async function handler(
     const enrichment = (() => {
       if (billingSource === "plan") return { plan: authInfo.planEntitlement!.plan }
       if (billingSource === "byok") return { plan: "byok" as const }
-      if (billingSource === "lite") return { plan: "legacy-lite" as const }
       if (billingSource === "balance") return { plan: "balance" as const }
       return undefined
     })()
-    const queueEligible =
-      billingSource !== "plan" && billingSource !== "lite" && HOT_WORKSPACES.has(authInfo.workspaceID)
+    const queueEligible = billingSource !== "plan" && HOT_WORKSPACES.has(authInfo.workspaceID)
     const queuedWorkspaceCost = billingSource === "free" || billingSource === "byok" ? 0 : cost
 
     if (queueEligible) {
@@ -1540,48 +1427,6 @@ export async function handler(
       }
 
       const updates = await (async () => {
-        if (billingSource === "lite") {
-          const lite = limits.lite
-          const week = getWeekBounds(now)
-          const weekStartMs = week.start.getTime()
-          const month = getMonthlyBounds(now, authInfo.lite!.timeCreated)
-          const monthStartMs = month.start.getTime()
-          const rollingWindowMs = lite.rollingWindow * 3600 * 1000
-          return [
-            db
-              .update(LiteTable)
-              .set({
-                monthlyUsage: sql`
-              CASE
-                WHEN ${LiteTable.timeMonthlyUpdated} >= ${monthStartMs} THEN COALESCE(${LiteTable.monthlyUsage}, 0) + ${cost}
-                ELSE ${cost}
-              END
-            `,
-                timeMonthlyUpdated: now,
-                weeklyUsage: sql`
-              CASE
-                WHEN ${LiteTable.timeWeeklyUpdated} >= ${weekStartMs} THEN COALESCE(${LiteTable.weeklyUsage}, 0) + ${cost}
-                ELSE ${cost}
-              END
-            `,
-                timeWeeklyUpdated: now,
-                rollingUsage: sql`
-              CASE
-                WHEN ${LiteTable.timeRollingUpdated} >= ${nowMs - rollingWindowMs} THEN COALESCE(${LiteTable.rollingUsage}, 0) + ${cost}
-                ELSE ${cost}
-              END
-            `,
-                timeRollingUpdated: sql`
-              CASE
-                WHEN ${LiteTable.timeRollingUpdated} >= ${nowMs - rollingWindowMs} THEN ${LiteTable.timeRollingUpdated}
-                ELSE ${nowMs}
-              END
-            `,
-              })
-              .where(and(eq(LiteTable.workspaceID, authInfo.workspaceID), eq(LiteTable.userID, authInfo.user.id))),
-          ]
-        }
-
         const workspaceDelta = queueEligible ? queuedWorkspaceCost : cost
         const userDelta = cost
         const balanceDelta = billingSource === "free" || billingSource === "byok" ? 0 : workspaceDelta
