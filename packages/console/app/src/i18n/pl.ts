@@ -161,21 +161,21 @@ export const dict = {
   "home.faq.a8.p3":
     ", co oznacza, że każdy może go używać, modyfikować i wspierać jego rozwój. Każdy ze społeczności może zgłaszać błędy, przesyłać pull requesty i rozszerzać funkcjonalność.",
 
-  "zen.api.error.rateLimitExceeded": "Przekroczono limit zapytań. Spróbuj ponownie później.",
-  "zen.api.error.modelNotSupported": "Model {{model}} nie jest obsługiwany",
-  "zen.api.error.modelFormatNotSupported": "Model {{model}} nie jest obsługiwany dla formatu {{format}}",
-  "zen.api.error.noProviderAvailable": "Brak dostępnego dostawcy",
-  "zen.api.error.providerNotSupported": "Dostawca {{provider}} nie jest obsługiwany",
-  "zen.api.error.missingApiKey": "Brak klucza API.",
-  "zen.api.error.invalidApiKey": "Nieprawidłowy klucz API.",
-  "zen.api.error.subscriptionQuotaExceeded": "Przekroczono limit subskrypcji. Spróbuj ponownie za {{retryIn}}.",
-  "zen.api.error.noPaymentMethod": "Brak metody płatności. Dodaj metodę płatności tutaj: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "Niewystarczające saldo. Zarządzaj swoimi płatnościami tutaj: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.rateLimitExceeded": "Przekroczono limit zapytań. Spróbuj ponownie później.",
+  "gateway.api.error.modelNotSupported": "Model {{model}} nie jest obsługiwany",
+  "gateway.api.error.modelFormatNotSupported": "Model {{model}} nie jest obsługiwany dla formatu {{format}}",
+  "gateway.api.error.noProviderAvailable": "Brak dostępnego dostawcy",
+  "gateway.api.error.providerNotSupported": "Dostawca {{provider}} nie jest obsługiwany",
+  "gateway.api.error.missingApiKey": "Brak klucza API.",
+  "gateway.api.error.invalidApiKey": "Nieprawidłowy klucz API.",
+  "gateway.api.error.subscriptionQuotaExceeded": "Przekroczono limit subskrypcji. Spróbuj ponownie za {{retryIn}}.",
+  "gateway.api.error.noPaymentMethod": "Brak metody płatności. Dodaj metodę płatności tutaj: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "Niewystarczające saldo. Zarządzaj swoimi płatnościami tutaj: {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "Twoja przestrzeń robocza osiągnęła miesięczny limit wydatków w wysokości ${{amount}}. Zarządzaj swoimi limitami tutaj: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "Osiągnąłeś swój miesięczny limit wydatków w wysokości ${{amount}}. Zarządzaj swoimi limitami tutaj: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "Model jest wyłączony",
+  "gateway.api.error.modelDisabled": "Model jest wyłączony",
   "workspace.nav.usage": "Użycie",
   "workspace.nav.apiKeys": "Klucze API",
   "workspace.nav.members": "Członkowie",

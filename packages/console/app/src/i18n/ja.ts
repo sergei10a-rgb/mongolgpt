@@ -160,22 +160,22 @@ export const dict = {
   "home.faq.a8.p3":
     "のもとで公開されており、誰でも使用、変更、開発への参加ができます。コミュニティの誰でもissueを起こしたり、pull requestを送ったり、機能を拡張できます。",
 
-  "zen.api.error.rateLimitExceeded": "レート制限を超えました。後でもう一度お試しください。",
-  "zen.api.error.modelNotSupported": "モデル {{model}} はサポートされていません",
-  "zen.api.error.modelFormatNotSupported": "フォーマット {{format}} ではモデル {{model}} はサポートされていません",
-  "zen.api.error.noProviderAvailable": "利用可能なプロバイダーがありません",
-  "zen.api.error.providerNotSupported": "プロバイダー {{provider}} はサポートされていません",
-  "zen.api.error.missingApiKey": "APIキーがありません。",
-  "zen.api.error.invalidApiKey": "無効なAPIキーです。",
-  "zen.api.error.subscriptionQuotaExceeded":
+  "gateway.api.error.rateLimitExceeded": "レート制限を超えました。後でもう一度お試しください。",
+  "gateway.api.error.modelNotSupported": "モデル {{model}} はサポートされていません",
+  "gateway.api.error.modelFormatNotSupported": "フォーマット {{format}} ではモデル {{model}} はサポートされていません",
+  "gateway.api.error.noProviderAvailable": "利用可能なプロバイダーがありません",
+  "gateway.api.error.providerNotSupported": "プロバイダー {{provider}} はサポートされていません",
+  "gateway.api.error.missingApiKey": "APIキーがありません。",
+  "gateway.api.error.invalidApiKey": "無効なAPIキーです。",
+  "gateway.api.error.subscriptionQuotaExceeded":
     "サブスクリプションの制限を超えました。{{retryIn}} 後に再試行してください。",
-  "zen.api.error.noPaymentMethod": "お支払い方法がありません。こちらからお支払い方法を追加してください: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "残高が不足しています。こちらから請求を管理してください: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.noPaymentMethod": "お支払い方法がありません。こちらからお支払い方法を追加してください: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "残高が不足しています。こちらから請求を管理してください: {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "ワークスペースが月額の利用上限 ${{amount}} に達しました。こちらから上限を管理してください: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "月額の利用上限 ${{amount}} に達しました。こちらから上限を管理してください: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "モデルが無効です",
+  "gateway.api.error.modelDisabled": "モデルが無効です",
   "workspace.nav.usage": "利用",
   "workspace.nav.apiKeys": "APIキー",
   "workspace.nav.members": "メンバー",

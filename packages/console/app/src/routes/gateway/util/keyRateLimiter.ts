@@ -34,7 +34,7 @@ export function createRateLimiter(
         }),
       )
       if (!result.allowed)
-        throw new RateLimitError(rateLimitMessage(locale, dict["zen.api.error.rateLimitExceeded"]), 60)
+        throw new RateLimitError(rateLimitMessage(locale, dict["gateway.api.error.rateLimitExceeded"]), 60)
     },
     track: async () => undefined,
   }

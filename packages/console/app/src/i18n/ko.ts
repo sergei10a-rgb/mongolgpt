@@ -161,21 +161,21 @@ export const dict = {
   "home.faq.a8.p3":
     "를 따릅니다. 즉, 누구나 사용, 수정 또는 개발에 기여할 수 있습니다. 커뮤니티의 누구든지 이슈를 등록하고, 풀 리퀘스트를 제출하고, 기능을 확장할 수 있습니다.",
 
-  "zen.api.error.rateLimitExceeded": "속도 제한을 초과했습니다. 나중에 다시 시도해 주세요.",
-  "zen.api.error.modelNotSupported": "{{model}} 모델은 지원되지 않습니다",
-  "zen.api.error.modelFormatNotSupported": "{{model}} 모델은 {{format}} 형식에 대해 지원되지 않습니다",
-  "zen.api.error.noProviderAvailable": "사용 가능한 제공자가 없습니다",
-  "zen.api.error.providerNotSupported": "{{provider}} 제공자는 지원되지 않습니다",
-  "zen.api.error.missingApiKey": "API 키가 누락되었습니다.",
-  "zen.api.error.invalidApiKey": "유효하지 않은 API 키입니다.",
-  "zen.api.error.subscriptionQuotaExceeded": "구독 할당량을 초과했습니다. {{retryIn}} 후 다시 시도해 주세요.",
-  "zen.api.error.noPaymentMethod": "결제 수단이 없습니다. 결제 수단을 추가하세요: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "잔액이 부족합니다. 결제 관리를 여기서 하세요: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.rateLimitExceeded": "속도 제한을 초과했습니다. 나중에 다시 시도해 주세요.",
+  "gateway.api.error.modelNotSupported": "{{model}} 모델은 지원되지 않습니다",
+  "gateway.api.error.modelFormatNotSupported": "{{model}} 모델은 {{format}} 형식에 대해 지원되지 않습니다",
+  "gateway.api.error.noProviderAvailable": "사용 가능한 제공자가 없습니다",
+  "gateway.api.error.providerNotSupported": "{{provider}} 제공자는 지원되지 않습니다",
+  "gateway.api.error.missingApiKey": "API 키가 누락되었습니다.",
+  "gateway.api.error.invalidApiKey": "유효하지 않은 API 키입니다.",
+  "gateway.api.error.subscriptionQuotaExceeded": "구독 할당량을 초과했습니다. {{retryIn}} 후 다시 시도해 주세요.",
+  "gateway.api.error.noPaymentMethod": "결제 수단이 없습니다. 결제 수단을 추가하세요: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "잔액이 부족합니다. 결제 관리를 여기서 하세요: {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "워크스페이스의 월간 지출 한도인 ${{amount}}에 도달했습니다. 한도 관리를 여기서 하세요: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "월간 지출 한도인 ${{amount}}에 도달했습니다. 한도 관리를 여기서 하세요: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "모델이 비활성화되었습니다",
+  "gateway.api.error.modelDisabled": "모델이 비활성화되었습니다",
   "workspace.nav.usage": "사용량",
   "workspace.nav.apiKeys": "API 키",
   "workspace.nav.members": "멤버",

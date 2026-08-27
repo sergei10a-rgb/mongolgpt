@@ -1,5 +1,5 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { ZenData } from "@mongolgpt/console-core/model.js"
+import { GatewayCatalog } from "@mongolgpt/console-core/model.js"
 import { and, Database, eq, isNull } from "@mongolgpt/console-core/drizzle/index.js"
 import { KeyTable } from "@mongolgpt/console-core/schema/key.sql.js"
 import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
@@ -27,7 +27,7 @@ export async function GET(input: APIEvent) {
       )
     : []
 
-  const models = Object.keys(ZenData.list("full").models)
+  const models = Object.keys(GatewayCatalog.list("full").models)
     .filter((id) => !id.endsWith(":global"))
     .filter((id) => !disabledModels.includes(id))
 

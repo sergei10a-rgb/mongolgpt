@@ -159,21 +159,21 @@ export const dict = {
   "home.faq.a8.p3":
     " ซึ่งหมายความว่าใครๆ ก็สามารถใช้ แก้ไข หรือร่วมพัฒนาได้ ทุกคนในชุมชนสามารถเปิด issue, ส่ง pull request และขยายฟังก์ชันการทำงานได้",
 
-  "zen.api.error.rateLimitExceeded": "เกินขีดจำกัดอัตราการใช้งาน กรุณาลองใหม่ในภายหลัง",
-  "zen.api.error.modelNotSupported": "ไม่รองรับโมเดล {{model}}",
-  "zen.api.error.modelFormatNotSupported": "ไม่รองรับโมเดล {{model}} สำหรับรูปแบบ {{format}}",
-  "zen.api.error.noProviderAvailable": "ไม่มีผู้ให้บริการที่พร้อมใช้งาน",
-  "zen.api.error.providerNotSupported": "ไม่รองรับผู้ให้บริการ {{provider}}",
-  "zen.api.error.missingApiKey": "ไม่มี API key",
-  "zen.api.error.invalidApiKey": "API key ไม่ถูกต้อง",
-  "zen.api.error.subscriptionQuotaExceeded": "โควต้าการสมัครสมาชิกเกินขีดจำกัด ลองใหม่ในอีก {{retryIn}}",
-  "zen.api.error.noPaymentMethod": "ไม่มีวิธีการชำระเงิน เพิ่มวิธีการชำระเงินที่นี่: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "ยอดเงินคงเหลือไม่เพียงพอ จัดการการเรียกเก็บเงินของคุณที่นี่: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.rateLimitExceeded": "เกินขีดจำกัดอัตราการใช้งาน กรุณาลองใหม่ในภายหลัง",
+  "gateway.api.error.modelNotSupported": "ไม่รองรับโมเดล {{model}}",
+  "gateway.api.error.modelFormatNotSupported": "ไม่รองรับโมเดล {{model}} สำหรับรูปแบบ {{format}}",
+  "gateway.api.error.noProviderAvailable": "ไม่มีผู้ให้บริการที่พร้อมใช้งาน",
+  "gateway.api.error.providerNotSupported": "ไม่รองรับผู้ให้บริการ {{provider}}",
+  "gateway.api.error.missingApiKey": "ไม่มี API key",
+  "gateway.api.error.invalidApiKey": "API key ไม่ถูกต้อง",
+  "gateway.api.error.subscriptionQuotaExceeded": "โควต้าการสมัครสมาชิกเกินขีดจำกัด ลองใหม่ในอีก {{retryIn}}",
+  "gateway.api.error.noPaymentMethod": "ไม่มีวิธีการชำระเงิน เพิ่มวิธีการชำระเงินที่นี่: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "ยอดเงินคงเหลือไม่เพียงพอ จัดการการเรียกเก็บเงินของคุณที่นี่: {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "Workspace ของคุณถึงขีดจำกัดการใช้จ่ายรายเดือนที่ ${{amount}} แล้ว จัดการขีดจำกัดของคุณที่นี่: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "คุณถึงขีดจำกัดการใช้จ่ายรายเดือนที่ ${{amount}} แล้ว จัดการขีดจำกัดของคุณที่นี่: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "โมเดลถูกปิดใช้งาน",
+  "gateway.api.error.modelDisabled": "โมเดลถูกปิดใช้งาน",
   "workspace.nav.usage": "การใช้งาน",
   "workspace.nav.apiKeys": "API Keys",
   "workspace.nav.members": "สมาชิก",

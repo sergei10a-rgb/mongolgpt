@@ -44,8 +44,8 @@ export async function createRateLimiter(
       if (!result.allowed)
         throw new FreeUsageLimitError(
           proxyHeadersVerified
-            ? rateLimitMessage(locale, dict["zen.api.error.rateLimitExceeded"])
-            : dict["zen.api.error.rateLimitExceeded"],
+            ? rateLimitMessage(locale, dict["gateway.api.error.rateLimitExceeded"])
+            : dict["gateway.api.error.rateLimitExceeded"],
           retryAfter,
         )
     },

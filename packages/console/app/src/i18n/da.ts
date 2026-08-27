@@ -161,21 +161,21 @@ export const dict = {
   "home.faq.a8.p3":
     ", hvilket betyder at alle kan bruge, ændre eller bidrage til udviklingen. Alle i communityet kan oprette issues, indsende pull requests og udvide funktionalitet.",
 
-  "zen.api.error.rateLimitExceeded": "Hastighedsgrænse overskredet. Prøv venligst igen senere.",
-  "zen.api.error.modelNotSupported": "Model {{model}} understøttes ikke",
-  "zen.api.error.modelFormatNotSupported": "Model {{model}} understøttes ikke for format {{format}}",
-  "zen.api.error.noProviderAvailable": "Ingen udbyder tilgængelig",
-  "zen.api.error.providerNotSupported": "Udbyder {{provider}} understøttes ikke",
-  "zen.api.error.missingApiKey": "Manglende API-nøgle.",
-  "zen.api.error.invalidApiKey": "Ugyldig API-nøgle.",
-  "zen.api.error.subscriptionQuotaExceeded": "Abonnementskvote overskredet. Prøv igen om {{retryIn}}.",
-  "zen.api.error.noPaymentMethod": "Ingen betalingsmetode. Tilføj en betalingsmetode her: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "Utilstrækkelig saldo. Administrer din fakturering her: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.rateLimitExceeded": "Hastighedsgrænse overskredet. Prøv venligst igen senere.",
+  "gateway.api.error.modelNotSupported": "Model {{model}} understøttes ikke",
+  "gateway.api.error.modelFormatNotSupported": "Model {{model}} understøttes ikke for format {{format}}",
+  "gateway.api.error.noProviderAvailable": "Ingen udbyder tilgængelig",
+  "gateway.api.error.providerNotSupported": "Udbyder {{provider}} understøttes ikke",
+  "gateway.api.error.missingApiKey": "Manglende API-nøgle.",
+  "gateway.api.error.invalidApiKey": "Ugyldig API-nøgle.",
+  "gateway.api.error.subscriptionQuotaExceeded": "Abonnementskvote overskredet. Prøv igen om {{retryIn}}.",
+  "gateway.api.error.noPaymentMethod": "Ingen betalingsmetode. Tilføj en betalingsmetode her: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "Utilstrækkelig saldo. Administrer din fakturering her: {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "Dit workspace har nået sin månedlige forbrugsgrænse på ${{amount}}. Administrer dine grænser her: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "Du har nået din månedlige forbrugsgrænse på ${{amount}}. Administrer dine grænser her: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "Modellen er deaktiveret",
+  "gateway.api.error.modelDisabled": "Modellen er deaktiveret",
   "workspace.nav.usage": "Brug",
   "workspace.nav.apiKeys": "API-nøgler",
   "workspace.nav.members": "Medlemmer",

@@ -127,6 +127,8 @@ describe("hosted console legacy route contract", () => {
     expect(gateway).toContain('consolePath("/pricing")')
     expect(gateway).toContain("/billing`)")
     expect(gateway).not.toContain('consolePath("/go")')
+    expect(gateway).toContain("GatewayCatalog")
+    expect(gateway).not.toContain("ZenData")
 
     for (const name of localeFiles) {
       const locale = await Bun.file(new URL(name, localeDirectory)).text()
@@ -135,7 +137,7 @@ describe("hosted console legacy route contract", () => {
         (key) =>
           key.startsWith("temp.") ||
           key.startsWith("go.") ||
-          (key.startsWith("zen.") && !key.startsWith("zen.api.error.")) ||
+          key.startsWith("zen.") ||
           key.startsWith("home.zenCta.") ||
           key.startsWith("workspace.referral.") ||
           (key.startsWith("workspace.lite.") && !key.startsWith("workspace.lite.time.")) ||

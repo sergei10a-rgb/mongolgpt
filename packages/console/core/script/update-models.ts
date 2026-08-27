@@ -3,7 +3,7 @@
 import { $ } from "bun"
 import path from "path"
 import os from "os"
-import { ZenData } from "../src/model"
+import { GatewayCatalog } from "../src/model"
 
 const root = path.resolve(process.cwd(), "..", "..", "..")
 const models = await $`bun sst secret list --stage frank`.cwd(root).text()
@@ -30,7 +30,7 @@ console.log("tempFile", tempFile.name)
 // open temp file in vim and read the file on close
 await $`vim ${tempFile.name}`
 const newValue = JSON.stringify(JSON.parse(await tempFile.text()))
-ZenData.validate(JSON.parse(newValue))
+GatewayCatalog.validate(JSON.parse(newValue))
 
 // update the secret
 const chunk = Math.ceil(newValue.length / PARTS)

@@ -22,8 +22,8 @@ const allowedMongolianIdenticalKeys = new Set<keyof typeof en>([
   "home.what.copilot.title",
   "home.what.chatgptPlus.title",
   "home.faq.a8.mitLicense",
-  "zen.api.error.providerFailure",
-  "zen.api.error.internalServer",
+  "gateway.api.error.providerFailure",
+  "gateway.api.error.internalServer",
   "workspace.usage.subscription",
   "workspace.usage.byok",
   "workspace.billing.alipay",
@@ -48,8 +48,8 @@ test("бүх хэлний docs холбоос Монгол каноник зам
 })
 
 test("locale dictionaries return English and Mongolian billing/error copy", () => {
-  expect(i18n("en")["zen.api.error.missingApiKey"]).toBe("Missing API key.")
-  expect(i18n("mn")["zen.api.error.missingApiKey"]).toBe("API түлхүүр дутуу байна.")
+  expect(i18n("en")["gateway.api.error.missingApiKey"]).toBe("Missing API key.")
+  expect(i18n("mn")["gateway.api.error.missingApiKey"]).toBe("API түлхүүр дутуу байна.")
   expect(Object.keys(mn).sort()).toEqual(Object.keys(en).sort())
 })
 

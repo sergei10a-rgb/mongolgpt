@@ -9,7 +9,7 @@ import { Identifier } from "@mongolgpt/console-core/identifier.js"
 import { recordPlanUsageWithDb } from "@mongolgpt/console-core/plan-usage.js"
 import { recordEstimatedModelCostWithDb } from "@mongolgpt/console-core/finance-ledger.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
-import { ZenData } from "@mongolgpt/console-core/model.js"
+import { GatewayCatalog } from "@mongolgpt/console-core/model.js"
 import { isProviderAllowedForStage } from "@mongolgpt/console-core/model-config.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
@@ -62,7 +62,7 @@ import {
 } from "./provider-retry"
 import { providerCircuit, providerCircuitKey } from "./provider-circuit"
 
-type ZenData = Awaited<ReturnType<typeof ZenData.list>>
+type GatewayCatalogData = Awaited<ReturnType<typeof GatewayCatalog.list>>
 type RetryOptions = {
   excludeProviders: string[]
   retryCount: number
@@ -117,7 +117,7 @@ function formatRetryTime(seconds: number, locale: string) {
 export async function handler(
   input: APIEvent,
   opts: {
-    format: ZenData.Format
+    format: GatewayCatalog.Format
     modelList: "full"
     parseApiKey: (headers: Headers) => string | undefined
     parseModel: (url: string, body: any) => string
@@ -169,8 +169,8 @@ export async function handler(
       "model.variant": variant,
       "model.tier": opts.modelList,
     })
-    const zenData = ZenData.list(opts.modelList)
-    const modelInfo = validateModel(zenData, model)
+    const catalog = GatewayCatalog.list(opts.modelList)
+    const modelInfo = validateModel(catalog, model)
     const authInfo = await authenticate(modelInfo, gatewayApiKey)
     const trialLimiter = await createTrialLimiter(modelInfo.trialProvider, ip, limits.free)
     const trialProviders = await trialLimiter?.check()
@@ -198,14 +198,14 @@ export async function handler(
     const modelTpsLimiter = createModelTpsLimiter(modelInfo.providers)
     const modelTpsLimits = await modelTpsLimiter?.check()
     const providerBudgetTracker = createProviderBudgetTracker(
-      modelInfo.providers.map((provider) => ({ ...zenData.providers[provider.id], ...provider })),
+      modelInfo.providers.map((provider) => ({ ...catalog.providers[provider.id], ...provider })),
     )
     const providerBudgetUsage = await providerBudgetTracker?.check()
 
     const retriableRequest = async (retry: RetryOptions = { excludeProviders: [], retryCount: 0 }) => {
       const providerInfo = selectProvider(
         model,
-        zenData,
+        catalog,
         authInfo,
         modelInfo,
         stickyId,
@@ -373,7 +373,7 @@ export async function handler(
         json.cost = calculateOccurredCost(billingSource, costInfo)
       }
       if (json.error?.message) {
-        json.error.message = t("zen.api.error.providerFailure", {
+        json.error.message = t("gateway.api.error.providerFailure", {
           provider: providerInfo.displayName ? ` (${providerInfo.displayName})` : "",
           message: json.error.message,
         })
@@ -559,24 +559,24 @@ export async function handler(
         type: "error",
         error: {
           type: "error",
-          message: t("zen.api.error.internalServer"),
+          message: t("gateway.api.error.internalServer"),
         },
       }),
       { status: 500 },
     )
   }
 
-  function validateModel(zenData: ZenData, reqModel: string) {
-    if (!(reqModel in zenData.models)) throw new ModelError(t("zen.api.error.modelNotSupported", { model: reqModel }))
+  function validateModel(catalog: GatewayCatalogData, reqModel: string) {
+    if (!(reqModel in catalog.models)) throw new ModelError(t("gateway.api.error.modelNotSupported", { model: reqModel }))
 
     const modelId = reqModel
-    const modelData = Array.isArray(zenData.models[modelId])
-      ? zenData.models[modelId].find((model) => opts.format === model.formatFilter)
-      : zenData.models[modelId]
+    const modelData = Array.isArray(catalog.models[modelId])
+      ? catalog.models[modelId].find((model) => opts.format === model.formatFilter)
+      : catalog.models[modelId]
 
     if (!modelData)
       throw new ModelError(
-        t("zen.api.error.modelFormatNotSupported", {
+        t("gateway.api.error.modelFormatNotSupported", {
           model: reqModel,
           format: opts.format,
         }),
@@ -584,7 +584,7 @@ export async function handler(
 
     if (modelData.trialEnded)
       throw new ModelError(
-        `${t("zen.api.error.trialEnded", {
+        `${t("gateway.api.error.trialEnded", {
           model: modelData.name,
           link: consolePath("/pricing"),
         })}`,
@@ -597,7 +597,7 @@ export async function handler(
 
   function selectProvider(
     reqModel: string,
-    zenData: ZenData,
+    catalog: GatewayCatalogData,
     authInfo: AuthInfo,
     modelInfo: ModelInfo,
     stickyId: string,
@@ -623,7 +623,7 @@ export async function handler(
       // Prioritize trial providers
       let allProviders = modelInfo.providers
         .filter((provider) => !provider.disabled)
-        .filter((provider) => isProviderAllowedForStage(zenData.providers[provider.id], Resource.App.stage))
+        .filter((provider) => isProviderAllowedForStage(catalog.providers[provider.id], Resource.App.stage))
       if (trialProviders) {
         allProviders = allProviders.map((provider) => ({
           ...provider,
@@ -638,7 +638,7 @@ export async function handler(
           .filter((provider) => !retry.excludeProviders.includes(provider.id))
           .filter((provider) => {
             if (provider.budgetMode !== "fill") return true
-            const budget = zenData.providers[provider.id]?.budget
+            const budget = catalog.providers[provider.id]?.budget
             if (budget === undefined) return false
             return (providerBudgetUsage?.[provider.id] ?? 0) < centsToMicroCents(budget * 100)
           })
@@ -714,17 +714,17 @@ export async function handler(
       return circuitPermit ? { provider, circuitPermit } : undefined
     })()
 
-    if (!selected) throw new ModelError(t("zen.api.error.noProviderAvailable"))
+    if (!selected) throw new ModelError(t("gateway.api.error.noProviderAvailable"))
     const modelProvider = selected.provider
-    if (!(modelProvider.id in zenData.providers))
-      throw new ModelError(t("zen.api.error.providerNotSupported", { provider: modelProvider.id }))
+    if (!(modelProvider.id in catalog.providers))
+      throw new ModelError(t("gateway.api.error.providerNotSupported", { provider: modelProvider.id }))
 
     return {
       ...modelProvider,
-      ...zenData.providers[modelProvider.id],
+      ...catalog.providers[modelProvider.id],
       circuitPermit: selected.circuitPermit,
       ...(() => {
-        const providerProps = zenData.providers[modelProvider.id]
+        const providerProps = catalog.providers[modelProvider.id]
         const format = providerProps.format
         const opts = {
           reqModel,
@@ -743,7 +743,7 @@ export async function handler(
   async function authenticate(modelInfo: ModelInfo, gatewayApiKey?: string) {
     if (!gatewayApiKey) {
       if (modelInfo.allowAnonymous) return
-      throw new AuthError(t("zen.api.error.missingApiKey"))
+      throw new AuthError(t("gateway.api.error.missingApiKey"))
     }
 
     const data = await (async () => {
@@ -756,8 +756,8 @@ export async function handler(
       if (!account) return undefined
       const workspace = await resolveGatewayWorkspace(account, input.request.headers.get("x-org-id"))
       if (!("workspaceID" in workspace)) {
-        if (workspace.error === "workspace_ambiguous") throw new AuthError(t("zen.api.error.organizationRequired"))
-        if (workspace.error === "workspace_required") throw new AuthError(t("zen.api.error.organizationRequired"))
+        if (workspace.error === "workspace_ambiguous") throw new AuthError(t("gateway.api.error.organizationRequired"))
+        if (workspace.error === "workspace_required") throw new AuthError(t("gateway.api.error.organizationRequired"))
         return undefined
       }
       return loadAuthData(modelInfo, {
@@ -767,13 +767,13 @@ export async function handler(
       })
     })()
 
-    if (!data) throw new AuthError(t("zen.api.error.invalidApiKey"))
+    if (!data) throw new AuthError(t("gateway.api.error.invalidApiKey"))
     if (
       modelInfo.id.startsWith("alpha-") &&
       Resource.App.stage === "production" &&
       !freeWorkspaceIDs.has(data.workspaceID)
     )
-      throw new AuthError(t("zen.api.error.modelNotSupported", { model: modelInfo.id }))
+      throw new AuthError(t("gateway.api.error.modelNotSupported", { model: modelInfo.id }))
 
     logger.metric({
       workspace: data.workspaceID,
@@ -918,7 +918,7 @@ export async function handler(
 
   async function reserveFreeAutoWeeklyUsage(authInfo: AuthInfo, modelInfo: ModelInfo) {
     if (!modelInfo.freeForAuthenticated || !modelInfo.freeWeeklyTokenLimit || !modelInfo.freeMaxTokensPerRequest) return
-    if (!authInfo) throw new AuthError(t("zen.api.error.missingApiKey"))
+    if (!authInfo) throw new AuthError(t("gateway.api.error.missingApiKey"))
 
     const week = getWeekBounds(new Date())
     const usage = await Database.use((db) =>
@@ -992,7 +992,7 @@ export async function handler(
 
     const retryAfter = Math.max(MINUTE_IN_SECONDS, result.retryAfter)
     throw new PlanUsageLimitError(
-      t("zen.api.error.subscriptionQuotaExceeded", {
+      t("gateway.api.error.subscriptionQuotaExceeded", {
         retryIn: formatRetryTime(retryAfter, locale),
       }),
       retryAfter,
@@ -1017,7 +1017,7 @@ export async function handler(
 
   function freeAutoWeeklyLimitError(retryAfter: number) {
     return new FreeUsageLimitError(
-      t("zen.api.error.freeAutoWeeklyLimitExceeded", {
+      t("gateway.api.error.freeAutoWeeklyLimitExceeded", {
         retryIn: formatRetryTime(retryAfter, locale),
       }),
       retryAfter,
@@ -1045,7 +1045,7 @@ export async function handler(
           })
           if (result.status === "rate-limited")
             throw new PlanUsageLimitError(
-              t("zen.api.error.subscriptionQuotaExceeded", {
+              t("gateway.api.error.subscriptionQuotaExceeded", {
                 retryIn: formatRetryTime(result.resetInSec, locale),
               }),
               result.resetInSec,
@@ -1060,7 +1060,7 @@ export async function handler(
           })
           if (result.status === "rate-limited")
             throw new PlanUsageLimitError(
-              t("zen.api.error.subscriptionQuotaExceeded", {
+              t("gateway.api.error.subscriptionQuotaExceeded", {
                 retryIn: formatRetryTime(result.resetInSec, locale),
               }),
               result.resetInSec,
@@ -1075,7 +1075,7 @@ export async function handler(
           })
           if (result.status === "rate-limited")
             throw new PlanUsageLimitError(
-              t("zen.api.error.subscriptionQuotaExceeded", {
+              t("gateway.api.error.subscriptionQuotaExceeded", {
                 retryIn: formatRetryTime(result.resetInSec, locale),
               }),
               result.resetInSec,
@@ -1091,7 +1091,7 @@ export async function handler(
           })
           if (result.status === "rate-limited")
             throw new PlanUsageLimitError(
-              t("zen.api.error.subscriptionQuotaExceeded", {
+              t("gateway.api.error.subscriptionQuotaExceeded", {
                 retryIn: formatRetryTime(result.resetInSec, locale),
               }),
               result.resetInSec,
@@ -1119,7 +1119,7 @@ export async function handler(
           })
           if (result.status === "rate-limited")
             throw new PlanUsageLimitError(
-              t("zen.api.error.subscriptionQuotaExceeded", {
+              t("gateway.api.error.subscriptionQuotaExceeded", {
                 retryIn: formatRetryTime(result.resetInSec, locale),
               }),
               result.resetInSec,
@@ -1135,7 +1135,7 @@ export async function handler(
           })
           if (result.status === "rate-limited")
             throw new PlanUsageLimitError(
-              t("zen.api.error.subscriptionQuotaExceeded", {
+              t("gateway.api.error.subscriptionQuotaExceeded", {
                 retryIn: formatRetryTime(result.resetInSec, locale),
               }),
               result.resetInSec,
@@ -1154,8 +1154,8 @@ export async function handler(
     const billingUrl = consolePath(`${workspacePath}/billing`)
     const membersUrl = consolePath(`${workspacePath}/members`)
     if (!billing.paymentMethodID && billing.balance <= 0)
-      throw new CreditsError(t("zen.api.error.noPaymentMethod", { billingUrl }))
-    if (billing.balance <= 0) throw new CreditsError(t("zen.api.error.insufficientBalance", { billingUrl }))
+      throw new CreditsError(t("gateway.api.error.noPaymentMethod", { billingUrl }))
+    if (billing.balance <= 0) throw new CreditsError(t("gateway.api.error.insufficientBalance", { billingUrl }))
 
     const now = new Date()
     const currentYear = now.getUTCFullYear()
@@ -1169,7 +1169,7 @@ export async function handler(
       currentMonth === billing.timeMonthlyUsageUpdated.getUTCMonth()
     )
       throw new MonthlyLimitError(
-        t("zen.api.error.workspaceMonthlyLimitReached", {
+        t("gateway.api.error.workspaceMonthlyLimitReached", {
           amount: billing.monthlyLimit,
           billingUrl,
         }),
@@ -1184,7 +1184,7 @@ export async function handler(
       currentMonth === authInfo.user.timeMonthlyUsageUpdated.getUTCMonth()
     )
       throw new UserLimitError(
-        t("zen.api.error.userMonthlyLimitReached", {
+        t("gateway.api.error.userMonthlyLimitReached", {
           amount: authInfo.user.monthlyLimit,
           membersUrl,
         }),
@@ -1195,7 +1195,7 @@ export async function handler(
 
   function validateModelSettings(billingSource: BillingSource, authInfo: AuthInfo) {
     if (billingSource === "anonymous") return
-    if (authInfo!.isDisabled) throw new ModelError(t("zen.api.error.modelDisabled"))
+    if (authInfo!.isDisabled) throw new ModelError(t("gateway.api.error.modelDisabled"))
   }
 
   async function updateProviderKey(authInfo: AuthInfo, modelInfo: ModelInfo, providerInfo: ProviderInfo) {
@@ -1467,7 +1467,7 @@ export async function handler(
 
     if (!planUsageRecorded) {
       throw new PlanUsageLimitError(
-        t("zen.api.error.subscriptionQuotaExceeded", {
+        t("gateway.api.error.subscriptionQuotaExceeded", {
           retryIn: formatRetryTime(MINUTE_IN_SECONDS, locale),
         }),
         MINUTE_IN_SECONDS,

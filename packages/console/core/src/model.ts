@@ -13,7 +13,7 @@ import {
   type ModelFormat,
 } from "./model-config"
 
-export namespace ZenData {
+export namespace GatewayCatalog {
   export type Format = ModelFormat
   const ModelsSchema = MongolGPTModelConfigurationSchema
 

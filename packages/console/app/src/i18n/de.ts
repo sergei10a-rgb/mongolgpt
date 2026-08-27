@@ -162,21 +162,21 @@ export const dict = {
   "home.faq.a8.p3":
     ", was bedeutet, dass jeder ihn nutzen, modifizieren oder zu seiner Entwicklung beitragen kann. Jeder aus der Community kann Issues melden, Pull Requests einreichen und die Funktionalität erweitern.",
 
-  "zen.api.error.rateLimitExceeded": "Ratenlimit überschritten. Bitte versuche es später erneut.",
-  "zen.api.error.modelNotSupported": "Modell {{model}} wird nicht unterstützt",
-  "zen.api.error.modelFormatNotSupported": "Modell {{model}} wird für das Format {{format}} nicht unterstützt",
-  "zen.api.error.noProviderAvailable": "Kein Anbieter verfügbar",
-  "zen.api.error.providerNotSupported": "Anbieter {{provider}} wird nicht unterstützt",
-  "zen.api.error.missingApiKey": "Fehlender API-Key.",
-  "zen.api.error.invalidApiKey": "Ungültiger API-Key.",
-  "zen.api.error.subscriptionQuotaExceeded": "Abonnement-Quote überschritten. Erneuter Versuch in {{retryIn}}.",
-  "zen.api.error.noPaymentMethod": "Keine Zahlungsmethode. Füge hier eine Zahlungsmethode hinzu: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "Unzureichendes Guthaben. Verwalte deine Abrechnung hier: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.rateLimitExceeded": "Ratenlimit überschritten. Bitte versuche es später erneut.",
+  "gateway.api.error.modelNotSupported": "Modell {{model}} wird nicht unterstützt",
+  "gateway.api.error.modelFormatNotSupported": "Modell {{model}} wird für das Format {{format}} nicht unterstützt",
+  "gateway.api.error.noProviderAvailable": "Kein Anbieter verfügbar",
+  "gateway.api.error.providerNotSupported": "Anbieter {{provider}} wird nicht unterstützt",
+  "gateway.api.error.missingApiKey": "Fehlender API-Key.",
+  "gateway.api.error.invalidApiKey": "Ungültiger API-Key.",
+  "gateway.api.error.subscriptionQuotaExceeded": "Abonnement-Quote überschritten. Erneuter Versuch in {{retryIn}}.",
+  "gateway.api.error.noPaymentMethod": "Keine Zahlungsmethode. Füge hier eine Zahlungsmethode hinzu: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "Unzureichendes Guthaben. Verwalte deine Abrechnung hier: {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "Dein Workspace hat sein monatliches Ausgabenlimit von ${{amount}} erreicht. Verwalte deine Limits hier: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "Du hast dein monatliches Ausgabenlimit von ${{amount}} erreicht. Verwalte deine Limits hier: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "Modell ist deaktiviert",
+  "gateway.api.error.modelDisabled": "Modell ist deaktiviert",
   "workspace.nav.usage": "Nutzung",
   "workspace.nav.apiKeys": "API Keys",
   "workspace.nav.members": "Mitglieder",

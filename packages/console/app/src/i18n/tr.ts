@@ -161,21 +161,21 @@ export const dict = {
   "home.faq.a8.p3":
     "altında herkese açıktır, yani herkes kullanabilir, değiştirebilir veya geliştirmeye katkıda bulunabilir. Topluluktan herkes issue açabilir, pull request gönderebilir ve işlevselliği genişletebilir.",
 
-  "zen.api.error.rateLimitExceeded": "İstek limiti aşıldı. Lütfen daha sonra tekrar deneyin.",
-  "zen.api.error.modelNotSupported": "{{model}} modeli desteklenmiyor",
-  "zen.api.error.modelFormatNotSupported": "{{model}} modeli {{format}} formatı için desteklenmiyor",
-  "zen.api.error.noProviderAvailable": "Kullanılabilir sağlayıcı yok",
-  "zen.api.error.providerNotSupported": "{{provider}} sağlayıcısı desteklenmiyor",
-  "zen.api.error.missingApiKey": "API anahtarı eksik.",
-  "zen.api.error.invalidApiKey": "Geçersiz API anahtarı.",
-  "zen.api.error.subscriptionQuotaExceeded": "Abonelik kotası aşıldı. {{retryIn}} içinde tekrar deneyin.",
-  "zen.api.error.noPaymentMethod": "Ödeme yöntemi bulunamadı. Buradan bir ödeme yöntemi ekleyin: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "Yetersiz bakiye. Faturalandırmanızı buradan yönetin: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.rateLimitExceeded": "İstek limiti aşıldı. Lütfen daha sonra tekrar deneyin.",
+  "gateway.api.error.modelNotSupported": "{{model}} modeli desteklenmiyor",
+  "gateway.api.error.modelFormatNotSupported": "{{model}} modeli {{format}} formatı için desteklenmiyor",
+  "gateway.api.error.noProviderAvailable": "Kullanılabilir sağlayıcı yok",
+  "gateway.api.error.providerNotSupported": "{{provider}} sağlayıcısı desteklenmiyor",
+  "gateway.api.error.missingApiKey": "API anahtarı eksik.",
+  "gateway.api.error.invalidApiKey": "Geçersiz API anahtarı.",
+  "gateway.api.error.subscriptionQuotaExceeded": "Abonelik kotası aşıldı. {{retryIn}} içinde tekrar deneyin.",
+  "gateway.api.error.noPaymentMethod": "Ödeme yöntemi bulunamadı. Buradan bir ödeme yöntemi ekleyin: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "Yetersiz bakiye. Faturalandırmanızı buradan yönetin: {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "Çalışma alanınız aylık ${{amount}} harcama limitine ulaştı. Limitlerinizi buradan yönetin: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "Aylık ${{amount}} harcama limitinize ulaştınız. Limitlerinizi buradan yönetin: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "Model devre dışı",
+  "gateway.api.error.modelDisabled": "Model devre dışı",
   "workspace.nav.usage": "Kullanım",
   "workspace.nav.apiKeys": "API Anahtarları",
   "workspace.nav.members": "Üyeler",

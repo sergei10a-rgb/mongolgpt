@@ -1,4 +1,4 @@
-import { ZenData } from "@mongolgpt/console-core/model.js"
+import { GatewayCatalog } from "@mongolgpt/console-core/model.js"
 import {
   fromAnthropicChunk,
   fromAnthropicRequest,
@@ -39,7 +39,7 @@ export type ProviderHelper = (input: {
   adjustCacheUsage?: boolean
   workspaceID?: string
 }) => {
-  format: ZenData.Format
+  format: GatewayCatalog.Format
   modifyUrl: (providerApi: string, isStream?: boolean) => string
   modifyHeaders: (headers: Headers, apiKey: string, stickyId: string) => void
   modifyBody: (body: Record<string, any>) => Record<string, any>
@@ -166,7 +166,7 @@ export interface CommonChunk {
   }
 }
 
-export function buildCostChunk(format: ZenData.Format, cost: string): string {
+export function buildCostChunk(format: GatewayCatalog.Format, cost: string): string {
   switch (format) {
     case "anthropic":
       return `event: ping\ndata: ${JSON.stringify({ type: "ping", cost })}\n\n`
@@ -179,7 +179,7 @@ export function buildCostChunk(format: ZenData.Format, cost: string): string {
   }
 }
 
-export function createBodyConverter(from: ZenData.Format, to: ZenData.Format) {
+export function createBodyConverter(from: GatewayCatalog.Format, to: GatewayCatalog.Format) {
   return (body: any): any => {
     if (from === to) return body
 
@@ -194,7 +194,7 @@ export function createBodyConverter(from: ZenData.Format, to: ZenData.Format) {
   }
 }
 
-export function createStreamPartConverter(from: ZenData.Format, to: ZenData.Format) {
+export function createStreamPartConverter(from: GatewayCatalog.Format, to: GatewayCatalog.Format) {
   return (part: any): any => {
     if (from === to) return part
 
@@ -212,7 +212,7 @@ export function createStreamPartConverter(from: ZenData.Format, to: ZenData.Form
   }
 }
 
-export function createResponseConverter(from: ZenData.Format, to: ZenData.Format) {
+export function createResponseConverter(from: GatewayCatalog.Format, to: GatewayCatalog.Format) {
   return (response: any): any => {
     if (from === to) return response
 

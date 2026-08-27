@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { ZenData } from "../src/model"
+import { GatewayCatalog } from "../src/model"
 import { isProviderAllowedForStage, modelConfigurationStageIssues } from "../src/model-config"
 
 const model = {
@@ -25,7 +25,7 @@ const config = (freeAuto: Record<string, unknown>) => ({
     secondary: { api: "https://secondary.example/v1", apiKey: "secondary-key" },
   },
 })
-const validate = (input: unknown) => ZenData.validate.schema.parse(input)
+const validate = (input: unknown) => GatewayCatalog.validate.schema.parse(input)
 
 describe("MongolGPT Free Auto model contract", () => {
   test("allows only explicitly approved providers in production", () => {

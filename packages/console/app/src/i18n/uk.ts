@@ -161,21 +161,21 @@ export const dict = {
   "home.faq.a8.p3":
     ", тобто кожен може використовувати, змінювати або сприяти його розвитку. Будь-хто зі спільноти може створювати issues, надсилати pull request'и та розширювати функціональність.",
 
-  "zen.api.error.rateLimitExceeded": "Перевищено ліміт запитів. Спробуйте пізніше.",
-  "zen.api.error.modelNotSupported": "Модель {{model}} не підтримується",
-  "zen.api.error.modelFormatNotSupported": "Модель {{model}} не підтримується для формату {{format}}",
-  "zen.api.error.noProviderAvailable": "Немає доступного провайдера",
-  "zen.api.error.providerNotSupported": "Провайдер {{provider}} не підтримується",
-  "zen.api.error.missingApiKey": "Відсутній ключ API.",
-  "zen.api.error.invalidApiKey": "Недійсний ключ API.",
-  "zen.api.error.subscriptionQuotaExceeded": "Перевищено квоту підписки. Повторіть через {{retryIn}}.",
-  "zen.api.error.noPaymentMethod": "Немає способу оплати. Додайте метод оплати: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "Недостатньо коштів. Керуйте оплатою: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.rateLimitExceeded": "Перевищено ліміт запитів. Спробуйте пізніше.",
+  "gateway.api.error.modelNotSupported": "Модель {{model}} не підтримується",
+  "gateway.api.error.modelFormatNotSupported": "Модель {{model}} не підтримується для формату {{format}}",
+  "gateway.api.error.noProviderAvailable": "Немає доступного провайдера",
+  "gateway.api.error.providerNotSupported": "Провайдер {{provider}} не підтримується",
+  "gateway.api.error.missingApiKey": "Відсутній ключ API.",
+  "gateway.api.error.invalidApiKey": "Недійсний ключ API.",
+  "gateway.api.error.subscriptionQuotaExceeded": "Перевищено квоту підписки. Повторіть через {{retryIn}}.",
+  "gateway.api.error.noPaymentMethod": "Немає способу оплати. Додайте метод оплати: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "Недостатньо коштів. Керуйте оплатою: {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "Ваш робочий простір досяг місячного ліміту витрат ${{amount}}. Керуйте лімітами: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "Ви досягли місячного ліміту витрат ${{amount}}. Керуйте лімітами: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "Модель вимкнено",
+  "gateway.api.error.modelDisabled": "Модель вимкнено",
   "workspace.nav.usage": "Використання",
   "workspace.nav.apiKeys": "Ключі API",
   "workspace.nav.members": "Учасники",

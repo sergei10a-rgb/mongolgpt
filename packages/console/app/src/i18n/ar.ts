@@ -159,21 +159,21 @@ export const dict = {
   "home.faq.a8.p3":
     "، مما يعني أن أي شخص يستطيع استخدامه أو تعديله أو المساهمة في تطويره. يمكن لأي شخص من المجتمع فتح قضايا، وتقديم طلبات سحب، وتوسيع الوظائف.",
 
-  "zen.api.error.rateLimitExceeded": "تم تجاوز حد الطلبات. يرجى المحاولة مرة أخرى لاحقًا.",
-  "zen.api.error.modelNotSupported": "النموذج {{model}} غير مدعوم",
-  "zen.api.error.modelFormatNotSupported": "النموذج {{model}} غير مدعوم للتنسيق {{format}}",
-  "zen.api.error.noProviderAvailable": "لا يوجد مزود متاح",
-  "zen.api.error.providerNotSupported": "المزود {{provider}} غير مدعوم",
-  "zen.api.error.missingApiKey": "مفتاح API مفقود.",
-  "zen.api.error.invalidApiKey": "مفتاح API غير صالح.",
-  "zen.api.error.subscriptionQuotaExceeded": "تم تجاوز حصة الاشتراك. أعد المحاولة خلال {{retryIn}}.",
-  "zen.api.error.noPaymentMethod": "لا توجد طريقة دفع. أضف طريقة دفع هنا: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "رصيد غير كاف. إدارة فواتيرك هنا: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.rateLimitExceeded": "تم تجاوز حد الطلبات. يرجى المحاولة مرة أخرى لاحقًا.",
+  "gateway.api.error.modelNotSupported": "النموذج {{model}} غير مدعوم",
+  "gateway.api.error.modelFormatNotSupported": "النموذج {{model}} غير مدعوم للتنسيق {{format}}",
+  "gateway.api.error.noProviderAvailable": "لا يوجد مزود متاح",
+  "gateway.api.error.providerNotSupported": "المزود {{provider}} غير مدعوم",
+  "gateway.api.error.missingApiKey": "مفتاح API مفقود.",
+  "gateway.api.error.invalidApiKey": "مفتاح API غير صالح.",
+  "gateway.api.error.subscriptionQuotaExceeded": "تم تجاوز حصة الاشتراك. أعد المحاولة خلال {{retryIn}}.",
+  "gateway.api.error.noPaymentMethod": "لا توجد طريقة دفع. أضف طريقة دفع هنا: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "رصيد غير كاف. إدارة فواتيرك هنا: {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "وصلت مساحة العمل الخاصة بك إلى حد الإنفاق الشهري البالغ ${{amount}}. إدارة حدودك هنا: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "لقد وصلت إلى حد الإنفاق الشهري البالغ ${{amount}}. إدارة حدودك هنا: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "النموذج معطل",
+  "gateway.api.error.modelDisabled": "النموذج معطل",
   "workspace.nav.usage": "الاستخدام",
   "workspace.nav.apiKeys": "مفاتيح API",
   "workspace.nav.members": "الأعضاء",

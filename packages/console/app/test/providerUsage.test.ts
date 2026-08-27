@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { ZenData } from "@mongolgpt/console-core/model.js"
+import type { GatewayCatalog } from "@mongolgpt/console-core/model.js"
 import type { ProviderHelper } from "../src/routes/gateway/util/provider/provider"
 import { anthropicHelper } from "../src/routes/gateway/util/provider/anthropic"
 import { googleHelper } from "../src/routes/gateway/util/provider/google"
@@ -11,7 +11,7 @@ const providers = {
   google: googleHelper({ reqModel: "gemini-3-flash", providerModel: "gemini-3-flash" }),
   openai: openaiHelper({ reqModel: "gpt-5", providerModel: "gpt-5" }),
   "oa-compat": oaCompatHelper({ reqModel: "gpt-5-nano", providerModel: "gpt-5-nano" }),
-} satisfies Record<ZenData.Format, ReturnType<ProviderHelper>>
+} satisfies Record<GatewayCatalog.Format, ReturnType<ProviderHelper>>
 
 describe("provider usage extraction", () => {
   test("extracts Google non-stream usage metadata", () => {

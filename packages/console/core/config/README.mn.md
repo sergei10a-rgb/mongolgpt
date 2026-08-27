@@ -12,7 +12,7 @@
 6. `freeMaxTokensPerRequest`-ийг тухайн route-ийн нэг хүсэлтэд үүсэж болох input, output, reasoning, cache read/write token-ы нийлбэрийн model/provider-аар баталгаажсан дээд хэмжээнд тохируулна. Энэ утга `freeWeeklyTokenLimit`-ээс их байж болохгүй.
 7. Free Auto-ийн primary provider бүр `providerKind: "openrouter"`, fallback нь `providerKind: "nvidia-nim"`, бүгд `usageMode: "managed"` байна.
 8. Үйлчилгээ үзүүлэгч тус бүрийн үйлдвэрлэлийн эрх, нөхцөлийг баталгаажуулсны дараа л `productionUseApproved: true` болгоно.
-9. `ZenData.validate(...)` болон `modelConfigurationStageIssues(..., "production")` шалгалтыг давсны дараа JSON-ийг `ZEN_MODELS1`-`ZEN_MODELS30` SST secret-д ачаална.
+9. `GatewayCatalog.validate(...)` болон `modelConfigurationStageIssues(..., "production")` шалгалтыг давсны дараа JSON-ийг gateway загварын SST secret-д ачаална.
 10. Апп болон CLI орчинд `MONGOLGPT_ENABLE_HOSTED_SERVICES=1`, `MONGOLGPT_CONSOLE_URL`, `MONGOLGPT_AUTH_URL`-ийг өөрийн production хаягаар тохируулна.
 
 `allowAnonymous: false` болон `freeForAuthenticated: true` нь Free Auto-г зөвхөн MongolGPT бүртгэлээр нэвтэрсэн хэрэглэгчид үнэ төлбөргүй тооцох гэрээ юм. NVIDIA-ийн байршуулсан туршилтын API эрхийг нийтийн Free Auto backend болгон ашиглаж болохгүй; зохих үйлдвэрлэлийн лиценз эсвэл тусдаа гэрээ шаардлагатай.

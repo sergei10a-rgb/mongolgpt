@@ -162,21 +162,21 @@ export const dict = {
   "home.faq.a8.p3":
     ", lo que significa que cualquiera puede usar, modificar o contribuir a su desarrollo. Cualquiera de la comunidad puede abrir problemas, enviar solicitudes de extracción y extender la funcionalidad.",
 
-  "zen.api.error.rateLimitExceeded": "Límite de tasa excedido. Por favor, inténtalo de nuevo más tarde.",
-  "zen.api.error.modelNotSupported": "Modelo {{model}} no soportado",
-  "zen.api.error.modelFormatNotSupported": "Modelo {{model}} no soportado para el formato {{format}}",
-  "zen.api.error.noProviderAvailable": "Ningún proveedor disponible",
-  "zen.api.error.providerNotSupported": "Proveedor {{provider}} no soportado",
-  "zen.api.error.missingApiKey": "Falta la clave API.",
-  "zen.api.error.invalidApiKey": "Clave API inválida.",
-  "zen.api.error.subscriptionQuotaExceeded": "Cuota de suscripción excedida. Reintenta en {{retryIn}}.",
-  "zen.api.error.noPaymentMethod": "Sin método de pago. Añade un método de pago aquí: {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "Saldo insuficiente. Gestiona tu facturación aquí: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.rateLimitExceeded": "Límite de tasa excedido. Por favor, inténtalo de nuevo más tarde.",
+  "gateway.api.error.modelNotSupported": "Modelo {{model}} no soportado",
+  "gateway.api.error.modelFormatNotSupported": "Modelo {{model}} no soportado para el formato {{format}}",
+  "gateway.api.error.noProviderAvailable": "Ningún proveedor disponible",
+  "gateway.api.error.providerNotSupported": "Proveedor {{provider}} no soportado",
+  "gateway.api.error.missingApiKey": "Falta la clave API.",
+  "gateway.api.error.invalidApiKey": "Clave API inválida.",
+  "gateway.api.error.subscriptionQuotaExceeded": "Cuota de suscripción excedida. Reintenta en {{retryIn}}.",
+  "gateway.api.error.noPaymentMethod": "Sin método de pago. Añade un método de pago aquí: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "Saldo insuficiente. Gestiona tu facturación aquí: {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "Tu espacio de trabajo ha alcanzado su límite de gasto mensual de ${{amount}}. Gestiona tus límites aquí: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "Has alcanzado tu límite de gasto mensual de ${{amount}}. Gestiona tus límites aquí: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "El modelo está deshabilitado",
+  "gateway.api.error.modelDisabled": "El modelo está deshabilitado",
   "workspace.nav.usage": "Uso",
   "workspace.nav.apiKeys": "Claves API",
   "workspace.nav.members": "Miembros",

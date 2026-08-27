@@ -161,21 +161,21 @@ export const dict = {
   "home.faq.a8.p3":
     ", ce qui signifie que tout le monde peut l'utiliser, le modifier ou contribuer à son développement. Toute personne de la communauté peut ouvrir des tickets, soumettre des pull requests et étendre les fonctionnalités.",
 
-  "zen.api.error.rateLimitExceeded": "Limite de débit dépassée. Veuillez réessayer plus tard.",
-  "zen.api.error.modelNotSupported": "Modèle {{model}} non pris en charge",
-  "zen.api.error.modelFormatNotSupported": "Modèle {{model}} non pris en charge pour le format {{format}}",
-  "zen.api.error.noProviderAvailable": "Aucun fournisseur disponible",
-  "zen.api.error.providerNotSupported": "Fournisseur {{provider}} non pris en charge",
-  "zen.api.error.missingApiKey": "Clé API manquante.",
-  "zen.api.error.invalidApiKey": "Clé API invalide.",
-  "zen.api.error.subscriptionQuotaExceeded": "Quota d'abonnement dépassé. Réessayez dans {{retryIn}}.",
-  "zen.api.error.noPaymentMethod": "Aucune méthode de paiement. Ajoutez une méthode de paiement ici : {{billingUrl}}",
-  "zen.api.error.insufficientBalance": "Solde insuffisant. Gérez votre facturation ici : {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.rateLimitExceeded": "Limite de débit dépassée. Veuillez réessayer plus tard.",
+  "gateway.api.error.modelNotSupported": "Modèle {{model}} non pris en charge",
+  "gateway.api.error.modelFormatNotSupported": "Modèle {{model}} non pris en charge pour le format {{format}}",
+  "gateway.api.error.noProviderAvailable": "Aucun fournisseur disponible",
+  "gateway.api.error.providerNotSupported": "Fournisseur {{provider}} non pris en charge",
+  "gateway.api.error.missingApiKey": "Clé API manquante.",
+  "gateway.api.error.invalidApiKey": "Clé API invalide.",
+  "gateway.api.error.subscriptionQuotaExceeded": "Quota d'abonnement dépassé. Réessayez dans {{retryIn}}.",
+  "gateway.api.error.noPaymentMethod": "Aucune méthode de paiement. Ajoutez une méthode de paiement ici : {{billingUrl}}",
+  "gateway.api.error.insufficientBalance": "Solde insuffisant. Gérez votre facturation ici : {{billingUrl}}",
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "Votre espace de travail a atteint sa limite de dépense mensuelle de {{amount}} $. Gérez vos limites ici : {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "Vous avez atteint votre limite de dépense mensuelle de {{amount}} $. Gérez vos limites ici : {{membersUrl}}",
-  "zen.api.error.modelDisabled": "Le modèle est désactivé",
+  "gateway.api.error.modelDisabled": "Le modèle est désactivé",
   "workspace.nav.usage": "Utilisation",
   "workspace.nav.apiKeys": "Clés API",
   "workspace.nav.members": "Membres",

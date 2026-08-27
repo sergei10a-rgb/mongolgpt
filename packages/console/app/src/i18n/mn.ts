@@ -212,28 +212,28 @@ export const dict = {
     "Free Auto-оор эхэлж, хэрэгцээ өсөхөд илүү өндөр хязгаартай багц руу шилжинэ. Үнэ, хязгаар, боломж бүрийг ил тод харуулж, төлбөрийг QPay эсвэл Bonum-аар төлнө.",
   "home.pricingCta.link": "Үнэ, багцыг харах",
 
-  "zen.api.error.rateLimitExceeded": "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Дараа дахин оролдоно уу.",
-  "zen.api.error.freeAutoWeeklyLimitExceeded":
+  "gateway.api.error.rateLimitExceeded": "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Дараа дахин оролдоно уу.",
+  "gateway.api.error.freeAutoWeeklyLimitExceeded":
     "Free Auto-ийн долоо хоногийн токен хязгаарт хүрлээ. {{retryIn}} дараа дахин оролдоно уу.",
-  "zen.api.error.organizationRequired": "MongolGPT аккаунтаа ашиглахын өмнө байгууллагаа сонгоно уу.",
-  "zen.api.error.modelNotSupported": "{{model}} загварыг дэмжихгүй",
-  "zen.api.error.modelFormatNotSupported": "{{model}} загвар {{format}} форматыг дэмжихгүй",
-  "zen.api.error.noProviderAvailable": "Ашиглах боломжтой нийлүүлэгч алга",
-  "zen.api.error.providerNotSupported": "{{provider}} нийлүүлэгчийг дэмжихгүй",
-  "zen.api.error.missingApiKey": "API түлхүүр дутуу байна.",
-  "zen.api.error.invalidApiKey": "API түлхүүр буруу байна.",
-  "zen.api.error.providerFailure": "Нийлүүлэгчийн алдаа{{provider}}: {{message}}",
-  "zen.api.error.internalServer": "Серверийн дотоод алдаа гарлаа. Түр хүлээгээд дахин оролдоно уу.",
-  "zen.api.error.subscriptionQuotaExceeded": "Захиалгын эрх дууслаа. {{retryIn}} дараа дахин оролдоно уу.",
-  "zen.api.error.noPaymentMethod": "Төлбөрийн хэрэгсэл алга. Эндээс нэмнэ үү: {{billingUrl}}",
-  "zen.api.error.insufficientBalance":
+  "gateway.api.error.organizationRequired": "MongolGPT аккаунтаа ашиглахын өмнө байгууллагаа сонгоно уу.",
+  "gateway.api.error.modelNotSupported": "{{model}} загварыг дэмжихгүй",
+  "gateway.api.error.modelFormatNotSupported": "{{model}} загвар {{format}} форматыг дэмжихгүй",
+  "gateway.api.error.noProviderAvailable": "Ашиглах боломжтой нийлүүлэгч алга",
+  "gateway.api.error.providerNotSupported": "{{provider}} нийлүүлэгчийг дэмжихгүй",
+  "gateway.api.error.missingApiKey": "API түлхүүр дутуу байна.",
+  "gateway.api.error.invalidApiKey": "API түлхүүр буруу байна.",
+  "gateway.api.error.providerFailure": "Нийлүүлэгчийн алдаа{{provider}}: {{message}}",
+  "gateway.api.error.internalServer": "Серверийн дотоод алдаа гарлаа. Түр хүлээгээд дахин оролдоно уу.",
+  "gateway.api.error.subscriptionQuotaExceeded": "Захиалгын эрх дууслаа. {{retryIn}} дараа дахин оролдоно уу.",
+  "gateway.api.error.noPaymentMethod": "Төлбөрийн хэрэгсэл алга. Эндээс нэмнэ үү: {{billingUrl}}",
+  "gateway.api.error.insufficientBalance":
     "Үлдэгдэл хүрэлцэхгүй байна. Төлбөр тооцоогоо эндээс удирдана уу: {{billingUrl}}",
-  "zen.api.error.workspaceMonthlyLimitReached":
+  "gateway.api.error.workspaceMonthlyLimitReached":
     "Таны ажлын талбар сарын ${{amount}} зарцуулалтын хязгаарт хүрлээ. Хязгаараа эндээс удирдана уу: {{billingUrl}}",
-  "zen.api.error.userMonthlyLimitReached":
+  "gateway.api.error.userMonthlyLimitReached":
     "Та сарын ${{amount}} зарцуулалтын хязгаарт хүрлээ. Хязгаараа эндээс удирдана уу: {{membersUrl}}",
-  "zen.api.error.modelDisabled": "Загварыг идэвхгүй болгосон",
-  "zen.api.error.trialEnded": "{{model}} загварын үнэгүй эрх дууслаа. Үргэлжлүүлэх багцаа эндээс сонгоно уу: {{link}}",
+  "gateway.api.error.modelDisabled": "Загварыг идэвхгүй болгосон",
+  "gateway.api.error.trialEnded": "{{model}} загварын үнэгүй эрх дууслаа. Үргэлжлүүлэх багцаа эндээс сонгоно уу: {{link}}",
 
   "workspace.nav.models": "Загварууд",
   "workspace.nav.usage": "Хэрэглээ",
