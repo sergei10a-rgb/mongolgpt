@@ -127,8 +127,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configPreflight?.env).toEqual({
       MONGOLGPT_RUNTIME_AUTH_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
       SST_SECRET_ByokCredentialsKeyV1: "${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}",
-      SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: "${{ vars.GITHUB_CLIENT_ID_CONSOLE }}",
-      SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "${{ secrets.GITHUB_CLIENT_SECRET_CONSOLE }}",
+      SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: "${{ vars.MONGOLGPT_GITHUB_OAUTH_CLIENT_ID }}",
+      SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "${{ secrets.MONGOLGPT_GITHUB_OAUTH_CLIENT_SECRET }}",
       SST_SECRET_GOOGLE_CLIENT_ID: "${{ vars.GOOGLE_CLIENT_ID }}",
       SST_SECRET_MONGOLGPT_PLAN_LIMITS: "${{ secrets.MONGOLGPT_PLAN_LIMITS }}",
       SST_SECRET_MongolGPTRuntimeAuthSecret: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
@@ -155,6 +155,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("set_optional_secret GITHUB_CLIENT_ID_CONSOLE")
     expect(source).toContain("set_optional_secret GITHUB_CLIENT_SECRET_CONSOLE")
     expect(source).toContain("set_optional_secret GOOGLE_CLIENT_ID")
+    expect(source).not.toMatch(/\$\{\{\s*(?:vars|secrets)\.GITHUB_/)
     expect(source).not.toContain("SST_SECRET_MONGOLGPT_GATEWAY_MODELS1")
     expect(source).not.toMatch(/QPAY_|BONUM_|CLOUDFLARE_ACCESS_API_TOKEN|MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS/)
     expect(contracts?.run).toContain("bun test --cwd packages/console/app")

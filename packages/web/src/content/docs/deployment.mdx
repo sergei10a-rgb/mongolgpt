@@ -109,11 +109,11 @@ client secret хоёрыг заавал хамт өгнө. Production launch-д 
 | Төрөл     | Нэр                                                      | Утга                                                                                                  |
 | --------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Хувьсагч  | `MONGOLGPT_AUTH_EMAIL_DOMAINS`                           | Хөгжүүлэлтийн орчинд зөвшөөрөх яг тохирох имэйл эсвэл домэйн; таслалаар тусгаарлана                   |
-| Хувьсагч  | `GITHUB_CLIENT_ID_CONSOLE`                               | Тухайн орчны GitHub OAuth аппын клиент ID                                                             |
+| Хувьсагч  | `MONGOLGPT_GITHUB_OAUTH_CLIENT_ID`                       | Тухайн орчны GitHub OAuth аппын клиент ID                                                             |
 | Хувьсагч  | `GOOGLE_CLIENT_ID`                                       | Тухайн орчны Google Web OAuth клиент ID                                                               |
 | Хувьсагч  | `MONGOLGPT_TURNSTILE_SITE_KEY`                           | Тухайн орчны Cloudflare Turnstile widget-ийн нийтэд нээлттэй site key                                 |
 | Хувьсагч  | `MONGOLGPT_PAYMENT_PLAN_CATALOG`                         | Basic/Pro/Max багцын MNT үнэ, Монгол нэр бүхий JSON                                                   |
-| Нууц утга | `GITHUB_CLIENT_SECRET_CONSOLE`                           | GitHub OAuth аппын нууц түлхүүр                                                                       |
+| Нууц утга | `MONGOLGPT_GITHUB_OAUTH_CLIENT_SECRET`                   | GitHub OAuth аппын нууц түлхүүр                                                                       |
 | Нууц утга | `TURNSTILE_SECRET_KEY`                                   | Тухайн Turnstile widget-ийн сервер талд ашиглах нууц түлхүүр                                          |
 | Нууц утга | `BYOK_CREDENTIALS_KEY_V1`                                | 32+ тэмдэгт тогтвортой CSPRNG түлхүүр; шинэчлэх хүртэл солихгүй                                       |
 | Нууц утга | `D1_BACKUP_API_TOKEN`                                    | Үйлдвэрлэлийн орчинд заавал; зөвхөн тухайн аккаунтын D1 засах эрхтэй нөөцлөлт, экспортын токен        |
@@ -212,7 +212,7 @@ GitHub-ийн [OAuth App үүсгэх албан ёсны заавраар](http
 
 **Wildcard callback matching**-ийг унтраалттай, **Device Flow**-г унтраалттай үлдээнэ. MongolGPT-ийн Desktop болон CLI нь GitHub-ийн Device Flow-г шууд ашиглахгүй; MongolGPT account service-ийн өөрийн browser/device OAuth урсгалаар нэвтэрдэг. Callback URL яг таарах тул wildcard шаардлагагүй бөгөөд асаавал зөвшөөрлийн код буруу дэд домэйн руу алдагдах эрсдэл нэмэгдэнэ.
 
-Үүссэн **Client ID**-г хөгжүүлэлтийн орчны `GITHUB_CLIENT_ID_CONSOLE` хувьсагчид, **Client secret**-ийг `GITHUB_CLIENT_SECRET_CONSOLE` нууц утгад хадгална. GitHub одоо нэг OAuth App-д хэд хэдэн callback URL дэмждэг боловч dev болон production-ийн нууц, хэрэглэгчийн зөвшөөрөл, цуцлалт, ослын үеийн эргэлтийг тусгаарлахын тулд үйлдвэрлэлийн орчинд тусдаа `MongolGPT` апп үүсгэж `https://auth.mgpt.mn/github/callback` хаягийг ашиглана.
+Үүссэн **Client ID**-г хөгжүүлэлтийн орчны `MONGOLGPT_GITHUB_OAUTH_CLIENT_ID` хувьсагчид, **Client secret**-ийг `MONGOLGPT_GITHUB_OAUTH_CLIENT_SECRET` нууц утгад хадгална. GitHub repository variable болон secret-ийн нэр `GITHUB_`-ээр эхлэх боломжгүй тул эдгээр `MONGOLGPT_` нэрийг яг ашиглана. Workflow нь утгуудыг дотоод SST resource нэр рүү хөрвүүлнэ. GitHub одоо нэг OAuth App-д хэд хэдэн callback URL дэмждэг боловч dev болон production-ийн нууц, хэрэглэгчийн зөвшөөрөл, цуцлалт, ослын үеийн эргэлтийг тусгаарлахын тулд үйлдвэрлэлийн орчинд тусдаа `MongolGPT` апп үүсгэж `https://auth.mgpt.mn/github/callback` хаягийг ашиглана.
 
 Google Cloud Console-ийн **APIs & Services → OAuth consent screen** хэсэгт зөвшөөрлийн дэлгэц болон хөгжүүлэлтийн туршилтын хэрэглэгчээ тохируулаад **Credentials → Create credentials → OAuth client ID → Web application** сонгоно. Google-ийн [веб серверийн OAuth зааврын](https://developers.google.com/identity/protocols/oauth2/web-server) дагуу буцах URI-ийн протокол, хост, зам болон төгсгөлийн ташуу зураас хүртэл яг таарах ёстой.
 
