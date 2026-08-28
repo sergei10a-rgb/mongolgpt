@@ -1,4 +1,11 @@
 import { describe, expect, test } from "bun:test"
+import { fileURLToPath } from "node:url"
+
+const CHECKOUT_PINS = new Map([
+  ["de0fac2e4500dabe0009e67214ff5f5447ce83dd", "v6.0.2"],
+  ["3d3c42e5aac5ba805825da76410c181273ba90b1", "v7.0.1"],
+])
+const CACHE_PINS = new Map([["55cc8345863c7cc4c66a329aec7e433d2d1c52a9", "v6.1.0"]])
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -36,5 +43,26 @@ describe("test workflow contract", () => {
     expect(record(parsed.inputs["install-flags"])).toBe(true)
     expect(source).toContain("bun install --linker hoisted ${{ inputs.install-flags }}")
     expect(source).toContain("bun install ${{ inputs.install-flags }}")
+  })
+
+  test("keeps checkout and cache actions on approved Node 24 pins", async () => {
+    const root = fileURLToPath(new URL("../../../.github/", import.meta.url))
+    const glob = new Bun.Glob("**/*.{yml,yaml}")
+    const references: Array<{ action: string; sha: string; version: string | undefined; file: string }> = []
+
+    for await (const file of glob.scan({ cwd: root })) {
+      const source = await Bun.file(`${root}/${file}`).text()
+      for (const match of source.matchAll(
+        /^\s*-?\s*uses:\s*(actions\/(?:checkout|cache(?:\/(?:restore|save))?))@([^\s#]+)(?:\s+#\s*(\S+))?\s*$/gm,
+      )) {
+        references.push({ action: match[1], sha: match[2], version: match[3], file })
+      }
+    }
+
+    expect(references.length).toBeGreaterThan(0)
+    for (const reference of references) {
+      const pins = reference.action === "actions/checkout" ? CHECKOUT_PINS : CACHE_PINS
+      expect(pins.get(reference.sha), `${reference.file}: ${reference.action}`).toBe(reference.version)
+    }
   })
 })
