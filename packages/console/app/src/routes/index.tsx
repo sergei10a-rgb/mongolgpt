@@ -192,7 +192,7 @@ export default function Home() {
             </div>
           </section>
 
-          <section data-component="pillar-band" aria-label="Core product pillars">
+          <section data-component="pillar-band" aria-label="Бүтээгдэхүүний үндсэн боломжууд">
             <For each={productPillars}>
               {(pillar) => (
                 <article data-component="pillar-card">

@@ -8,6 +8,8 @@ describe("home landing contract", () => {
     const view = await source("routes/index.tsx")
     expect(view).toContain("<h1>MongolGPT</h1>")
     expect(view).toContain("mongolgpt-product-session.png")
+    expect(view).toContain('aria-label="Бүтээгдэхүүний үндсэн боломжууд"')
+    expect(view).not.toContain('aria-label="Core product pillars"')
     expect(view).toContain("Монгол хэрэглэгчийн хиймэл оюуны кодын агент")
     expect(view).not.toContain("Tabs")
     expect(view).not.toContain("EmailSignup")
