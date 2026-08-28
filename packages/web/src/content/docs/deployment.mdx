@@ -205,7 +205,9 @@ GitHub-ийн [OAuth App үүсгэх албан ёсны заавраар](http
 | Нүүр хуудасны URL (`Homepage URL`)                   | `https://app.dev.mgpt.mn`                  |
 | Зөвшөөрлийн буцах URL (`Authorization callback URL`) | `https://auth.dev.mgpt.mn/github/callback` |
 
-Үүссэн **Client ID**-г хөгжүүлэлтийн орчны `GITHUB_CLIENT_ID_CONSOLE` хувьсагчид, **Client secret**-ийг `GITHUB_CLIENT_SECRET_CONSOLE` нууц утгад хадгална. GitHub OAuth апп нэг буцах URL-тэй тул үйлдвэрлэлийн орчинд тусдаа `MongolGPT` апп үүсгэж `https://auth.mgpt.mn/github/callback` хаягийг ашиглана.
+**Wildcard callback matching**-ийг унтраалттай, **Device Flow**-г унтраалттай үлдээнэ. MongolGPT-ийн Desktop болон CLI нь GitHub-ийн Device Flow-г шууд ашиглахгүй; MongolGPT account service-ийн өөрийн browser/device OAuth урсгалаар нэвтэрдэг. Callback URL яг таарах тул wildcard шаардлагагүй бөгөөд асаавал зөвшөөрлийн код буруу дэд домэйн руу алдагдах эрсдэл нэмэгдэнэ.
+
+Үүссэн **Client ID**-г хөгжүүлэлтийн орчны `GITHUB_CLIENT_ID_CONSOLE` хувьсагчид, **Client secret**-ийг `GITHUB_CLIENT_SECRET_CONSOLE` нууц утгад хадгална. GitHub одоо нэг OAuth App-д хэд хэдэн callback URL дэмждэг боловч dev болон production-ийн нууц, хэрэглэгчийн зөвшөөрөл, цуцлалт, ослын үеийн эргэлтийг тусгаарлахын тулд үйлдвэрлэлийн орчинд тусдаа `MongolGPT` апп үүсгэж `https://auth.mgpt.mn/github/callback` хаягийг ашиглана.
 
 Google Cloud Console-ийн **APIs & Services → OAuth consent screen** хэсэгт зөвшөөрлийн дэлгэц болон хөгжүүлэлтийн туршилтын хэрэглэгчээ тохируулаад **Credentials → Create credentials → OAuth client ID → Web application** сонгоно. Google-ийн [веб серверийн OAuth зааврын](https://developers.google.com/identity/protocols/oauth2/web-server) дагуу буцах URI-ийн протокол, хост, зам болон төгсгөлийн ташуу зураас хүртэл яг таарах ёстой.
 

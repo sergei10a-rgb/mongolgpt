@@ -44,9 +44,10 @@ export async function GET(input: APIEvent) {
     })
     return redirect(route(locale, authCallbackTarget(url)))
   } catch (error) {
+    console.error("MongolGPT OAuth callback дууссангүй", error instanceof Error ? error.name : typeof error)
     return Response.json(
       {
-        error: error instanceof Error ? error.message : dict["auth.callback.error.codeMissing"],
+        error: dict["gateway.api.error.internalServer"],
       },
       {
         status: 500,

@@ -104,7 +104,7 @@ export async function runAuthBootstrapSmoke(stage = process.env.SST_STAGE ?? "de
   await check("consoleHealth", endpoints.consoleHealth, "console", result, endpoints.app, runtimeVersion)
   await check("authHealth", endpoints.authHealth, "auth", result, endpoints.app, runtimeVersion)
   await check("console", endpoints.console, undefined, result, endpoints.app, runtimeVersion)
-  console.log("Dev OAuth bootstrap smoke check passed.")
+  console.log("Dev account scaffold smoke check passed. OAuth callback болон authenticated runtime урсгалыг тусад нь шалгана.")
 }
 
 async function runSmoke() {

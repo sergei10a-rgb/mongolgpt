@@ -112,8 +112,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     if (!record(rawJob)) throw new Error("Dev OAuth bootstrap job is missing")
     const job = parseWorkflowJob(rawJob, "bootstrap")
     const confirmation = job.steps.find((step) => step.name === "Validate exact dev bootstrap confirmation")
+    const contracts = job.steps.find((step) => step.name === "Verify bootstrap contracts")
     const deploy = job.steps.find((step) => step.name === "Bootstrap real dev OAuth infrastructure")
-    const smoke = job.steps.find((step) => step.name === "Verify real dev OAuth bootstrap")
+    const smoke = job.steps.find((step) => step.name === "Verify dev account scaffold")
 
     expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
     expect(rawJob.environment).toBe("dev")
@@ -134,6 +135,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("set_optional_secret GITHUB_CLIENT_SECRET_CONSOLE")
     expect(source).toContain("set_optional_secret GOOGLE_CLIENT_ID")
     expect(source).not.toContain("SST_SECRET_MONGOLGPT_GATEWAY_MODELS1")
+    expect(contracts?.run).toContain("bun --cwd packages/console/app test")
+    expect(contracts?.run).not.toContain("bun run --cwd packages/console/app test")
 
     const run = deploy?.run ?? ""
     const database = run.indexOf('bun sst deploy --stage="$stage" --target Database')
