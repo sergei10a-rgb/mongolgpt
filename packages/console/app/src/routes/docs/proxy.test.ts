@@ -25,7 +25,7 @@ describe("docs root alias rewrite", () => {
       '<a href="https://dev.mgpt.mn/support">Тусламж</a>',
     ].join("")
 
-    const result = rewriteDocsHtmlForRootAlias(html, "https://docs.dev.mgpt.mn", "https://mgpt.mn")
+    const result = rewriteDocsHtmlForRootAlias(html, "https://docs.dev.mgpt.mn/docs", "https://mgpt.mn")
     expect(result).toContain('href="https://mgpt.mn/docs/"')
     expect(result).toContain('content="https://mgpt.mn/docs/"')
     expect(result).toContain('content="https://mgpt.mn/docs/social-share.png"')
@@ -35,7 +35,7 @@ describe("docs root alias rewrite", () => {
   })
 
   test("leaves canonical dev HTML untouched outside the public root alias", async () => {
-    import.meta.env.VITE_MONGOLGPT_DOCS_URL = "https://docs.dev.mgpt.mn"
+    import.meta.env.VITE_MONGOLGPT_DOCS_URL = "https://docs.dev.mgpt.mn/docs"
     import.meta.env.VITE_MONGOLGPT_ROOT_URL = "https://mgpt.mn"
     globalThis.fetch = Object.assign(
       mock(
@@ -49,7 +49,7 @@ describe("docs root alias rewrite", () => {
   })
 
   test("rewrites HTML GET responses and refreshes content-length for the root alias", async () => {
-    import.meta.env.VITE_MONGOLGPT_DOCS_URL = "https://docs.dev.mgpt.mn"
+    import.meta.env.VITE_MONGOLGPT_DOCS_URL = "https://docs.dev.mgpt.mn/docs"
     import.meta.env.VITE_MONGOLGPT_ROOT_URL = "https://mgpt.mn"
     const html =
       '<link rel="canonical" href="https://docs.dev.mgpt.mn/docs/"><a href="https://dev.mgpt.mn/support">Support</a>'
@@ -72,7 +72,7 @@ describe("docs root alias rewrite", () => {
   })
 
   test("keeps non-HTML responses streaming without rewrite", async () => {
-    import.meta.env.VITE_MONGOLGPT_DOCS_URL = "https://docs.dev.mgpt.mn"
+    import.meta.env.VITE_MONGOLGPT_DOCS_URL = "https://docs.dev.mgpt.mn/docs"
     import.meta.env.VITE_MONGOLGPT_ROOT_URL = "https://mgpt.mn"
     globalThis.fetch = Object.assign(
       mock(async () => new Response("PNG", { headers: { "content-type": "image/png", "content-length": "3" } })),
@@ -85,7 +85,7 @@ describe("docs root alias rewrite", () => {
   })
 
   test("keeps HEAD body empty while publishing rewritten HTML content-length on the root alias", async () => {
-    import.meta.env.VITE_MONGOLGPT_DOCS_URL = "https://docs.dev.mgpt.mn"
+    import.meta.env.VITE_MONGOLGPT_DOCS_URL = "https://docs.dev.mgpt.mn/docs"
     import.meta.env.VITE_MONGOLGPT_ROOT_URL = "https://mgpt.mn"
     const fetchMock = mock(async (_input: string | URL | Request, init?: RequestInit) => {
       if (init?.method === "HEAD") {

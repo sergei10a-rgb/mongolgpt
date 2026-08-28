@@ -62,7 +62,7 @@ export async function docsHeadProxyHandler(evt: APIEvent) {
 }
 
 export function rewriteDocsHtmlForRootAlias(html: string, docsUrl: string, rootUrl: string) {
-  const docsOrigin = canonicalHttpsOrigin(docsUrl)
+  const docsOrigin = httpsUrlOrigin(docsUrl)
   const rootOrigin = canonicalHttpsOrigin(rootUrl)
   if (!docsOrigin || !rootOrigin) return html
 
@@ -91,9 +91,19 @@ async function rewriteDocsProxyResponse(request: Request, response: Response, do
 
 function shouldRewriteRootAliasHtml(requestUrl: string, docsUrl: string, rootUrl: string | undefined) {
   const requestOrigin = requestUrlOrigin(requestUrl)
-  const docsOrigin = canonicalHttpsOrigin(docsUrl)
+  const docsOrigin = httpsUrlOrigin(docsUrl)
   const rootOrigin = canonicalHttpsOrigin(rootUrl)
   return Boolean(requestOrigin && docsOrigin && rootOrigin && requestOrigin === rootOrigin && docsOrigin !== rootOrigin)
+}
+
+function httpsUrlOrigin(value: string) {
+  try {
+    const url = new URL(value)
+    if (url.protocol !== "https:" || url.username || url.password) return undefined
+    return url.origin
+  } catch {
+    return undefined
+  }
 }
 
 function requestUrlOrigin(value: string) {
