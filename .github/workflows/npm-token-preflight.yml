@@ -15,54 +15,19 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
       - name: Setup public npm registry
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Verify npm token and existing CLI package ownership
+      - name: Verify npm token and complete package ownership
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "NPM_TOKEN тохируулаагүй байна."
-            exit 1
-          fi
-
-          owner="$(npm whoami --registry=https://registry.npmjs.org)"
-          packages=(
-            mongolgpt
-            mongolgpt-linux-arm64
-            mongolgpt-linux-x64
-            mongolgpt-linux-x64-baseline
-            mongolgpt-linux-arm64-musl
-            mongolgpt-linux-x64-musl
-            mongolgpt-linux-x64-baseline-musl
-            mongolgpt-darwin-arm64
-            mongolgpt-darwin-x64
-            mongolgpt-darwin-x64-baseline
-            mongolgpt-windows-arm64
-            mongolgpt-windows-x64
-            mongolgpt-windows-x64-baseline
-          )
-
-          for package in "${packages[@]}"; do
-            maintainers="$(npm view "$package" maintainers --json --registry=https://registry.npmjs.org)"
-            node -e '
-              const maintainers = JSON.parse(process.argv[1])
-              const owner = process.argv[2]
-              const packageName = process.argv[3]
-              const list = Array.isArray(maintainers) ? maintainers : [maintainers]
-              if (!list.some((value) => String(value).split(" ")[0] === owner)) {
-                console.error(`${owner} нь ${packageName} package-ийн maintainer биш байна.`)
-                process.exit(1)
-              }
-            ' "$maintainers" "$owner" "$package"
-          done
-
-          # npm organization governance requires interactive 2FA and does not prove package publish access.
-          echo "npm token ${#packages[@]} одоо байгаа CLI package-ийн ownership-д баталгаажлаа."
-          echo "Шинэ @mongolgpt package-ийн write эрхийг guarded publish өөрөө эцэслэн шалгана."
+        run: bun script/npm-publish-access.ts

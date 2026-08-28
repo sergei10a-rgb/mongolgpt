@@ -22,6 +22,7 @@
     "./deployment": "./src/deployment.ts",
     "./deployment-service-urls": "./src/deployment-service-urls.ts",
     "./deployment-smoke-contract": "./src/deployment-smoke-contract.ts",
+    "./npm-publish-access": "./src/npm-publish-access.ts",
     "./release-integrity": "./src/release-integrity.ts"
   },
   "scripts": {

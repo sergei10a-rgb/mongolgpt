@@ -82,6 +82,9 @@ describe("release integrity contract", () => {
     const cliManifest = JSON.parse(readFileSync(resolve(root, "packages/mongolgpt/package.json"), "utf8"))
 
     expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}")
+    expect(publish.indexOf("script/npm-publish-access.ts")).toBeLessThan(
+      publish.indexOf("packages/mongolgpt/script/publish.ts"),
+    )
     expect(publish.indexOf("packages/ui/script/publish.ts")).toBeLessThan(publish.indexOf("release-preflight.ts --npm"))
     for (const name of ["@mongolgpt/sdk", "@mongolgpt/plugin", "@mongolgpt/ui"]) {
       expect(preflight).toContain(`"${name}"`)
@@ -136,8 +139,9 @@ describe("release integrity contract", () => {
       expect(workflow).toContain(`${script} --dry-run`)
       expect(workflow).toContain(`${script} --skip-build`)
     }
-    expect(workflow).toContain("npm view mongolgpt maintainers --json")
-    expect(workflow).not.toContain("npm org ls")
+    expect(workflow.indexOf("script/npm-publish-access.ts")).toBeLessThan(
+      workflow.indexOf("packages/mongolgpt/script/publish.ts --npm-only"),
+    )
     expect(workflow).toContain("packages/mongolgpt/script/release-preflight.ts --npm")
     expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}")
     expect(workflow).not.toContain("MONGOLGPT_RELEASE")
@@ -152,32 +156,14 @@ describe("release integrity contract", () => {
     expect(localInstall).toContain('"mongolgpt account login"')
   })
 
-  test("checks npm authentication and every existing CLI package owner without governance access", () => {
+  test("checks npm authentication and complete package ownership without publishing", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/npm-token-preflight.yml"), "utf8")
 
     expect(workflow).toContain("workflow_dispatch:")
     expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}")
-    expect(workflow).toContain("npm whoami --registry=https://registry.npmjs.org")
-    for (const name of [
-      "mongolgpt",
-      "mongolgpt-linux-arm64",
-      "mongolgpt-linux-x64",
-      "mongolgpt-linux-x64-baseline",
-      "mongolgpt-linux-arm64-musl",
-      "mongolgpt-linux-x64-musl",
-      "mongolgpt-linux-x64-baseline-musl",
-      "mongolgpt-darwin-arm64",
-      "mongolgpt-darwin-x64",
-      "mongolgpt-darwin-x64-baseline",
-      "mongolgpt-windows-arm64",
-      "mongolgpt-windows-x64",
-      "mongolgpt-windows-x64-baseline",
-    ]) {
-      expect(workflow).toContain(`            ${name}\n`)
-    }
-    expect(workflow).toContain('npm view "$package" maintainers --json')
-    expect(workflow).toContain("Шинэ @mongolgpt package-ийн write эрхийг guarded publish өөрөө эцэслэн шалгана.")
-    expect(workflow).not.toContain("npm org ls")
+    expect(workflow).toContain("bun script/npm-publish-access.ts")
+    expect(workflow).toContain("actions/checkout@")
+    expect(workflow).toContain("./.github/actions/setup-bun")
     expect(workflow).not.toContain("run: npm publish")
     expect(workflow).not.toContain('npm publish "$package"')
   })

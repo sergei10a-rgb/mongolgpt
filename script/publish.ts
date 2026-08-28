@@ -62,6 +62,8 @@ if (Script.release && !Script.preview) {
 
 await prepareReleaseFiles()
 
+await $`bun ./script/npm-publish-access.ts`
+
 console.log("\n=== cli ===\n")
 await $`bun ./packages/mongolgpt/script/publish.ts`
 

@@ -148,23 +148,10 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Verify npm token and existing package ownership
+      - name: Verify npm token and complete package ownership
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          owner="$(npm whoami --registry=https://registry.npmjs.org)"
-          maintainers="$(npm view mongolgpt maintainers --json --registry=https://registry.npmjs.org)"
-          node -e '
-            const maintainers = JSON.parse(process.argv[1])
-            const owner = process.argv[2]
-            const list = Array.isArray(maintainers) ? maintainers : [maintainers]
-            if (!list.some((value) => String(value).split(" ")[0] === owner)) {
-              console.error(`${owner} нь mongolgpt package-ийн maintainer биш байна.`)
-              process.exit(1)
-            }
-          ' "$maintainers" "$owner"
+        run: bun script/npm-publish-access.ts
 
       - name: Download verified CLI packages
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
