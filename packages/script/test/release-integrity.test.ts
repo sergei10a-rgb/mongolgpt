@@ -80,6 +80,12 @@ describe("release integrity contract", () => {
     for (const name of ["@mongolgpt/sdk", "@mongolgpt/plugin", "@mongolgpt/ui"]) {
       expect(preflight).toContain(`"${name}"`)
     }
+    expect(preflight).toContain("smokePublicNpmInstall(version)")
+    expect(preflight).toContain("delete publicEnv[key]")
+    expect(preflight).toContain("NPM_CONFIG_USERCONFIG: npmrc")
+    expect(preflight).toContain("`mongolgpt@${version}`")
+    expect(preflight).toContain('"mongolgpt/free-auto"')
+    expect(preflight).toContain('"mongolgpt account login"')
   })
 
   test("uploads Windows and Desktop assets to the release tag created by the version job", () => {
