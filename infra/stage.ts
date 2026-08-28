@@ -1,6 +1,6 @@
 import { resolveHostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 
-const rootDomain = process.env.MONGOLGPT_DOMAIN?.trim()
+export const rootDomain = process.env.MONGOLGPT_DOMAIN?.trim()
 if (!rootDomain) throw new Error("Дэд бүтцийг байршуулахад MONGOLGPT_DOMAIN заавал байна")
 
 const serviceUrls = resolveHostedServiceUrls(rootDomain, $app.stage)

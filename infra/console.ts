@@ -9,6 +9,7 @@ import {
   enableTurnstile,
   paymentOrigin,
   publicOrigin,
+  rootDomain,
   runtimeOrigin,
   shareOrigin,
 } from "./stage"
@@ -414,6 +415,7 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     VITE_MONGOLGPT_BILLING_ENABLED: "false",
     MONGOLGPT_BILLING_PROVIDER: "disabled",
     VITE_MONGOLGPT_PUBLIC_URL: publicOrigin,
+    VITE_MONGOLGPT_ROOT_URL: `https://${rootDomain}`,
     VITE_MONGOLGPT_DOCS_URL: docsOrigin,
     VITE_MONGOLGPT_ENTERPRISE_URL: enableShareService ? shareOrigin : "",
     VITE_MONGOLGPT_COMMUNITY_URL: "https://github.com/sergei10a-rgb/mongolgpt/discussions",
