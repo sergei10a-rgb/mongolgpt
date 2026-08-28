@@ -73,6 +73,41 @@ describe("Cloudflare deployment token preflight", () => {
     ])
   })
 
+  test("checks hosted account resources without requiring Containers access", async () => {
+    const requests: string[] = []
+    const responses = [
+      response({ success: true, result: { status: "active" } }),
+      response({ success: true, result: [{ id: "zone-id", name: domain, account: { id: accountId } }] }),
+      response({ success: true, result: [] }),
+      response({ success: true, result: [] }),
+      response({ success: true, result: [] }),
+      response({ success: true, result: { buckets: [] } }),
+      response({ success: true, result: [] }),
+    ]
+
+    await preflightCloudflareDeploymentAccess({
+      accountId,
+      domain,
+      token: "hosted-token",
+      scope: "hosted-only",
+      fetcher: async (input) => {
+        requests.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url)
+        return responses.shift() ?? response({ success: false }, 500)
+      },
+    })
+
+    expect(requests).toEqual([
+      "https://api.cloudflare.com/client/v4/user/tokens/verify",
+      `https://api.cloudflare.com/client/v4/zones?name=mgpt.mn&account.id=${accountId}&per_page=2`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database?per_page=1`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces?per_page=1`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets?per_page=1`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/queues?per_page=1`,
+    ])
+    expect(requests.some((url) => url.includes("/containers/"))).toBe(false)
+  })
+
   test("does not require unrelated backend or Containers access for a static Worker deploy", async () => {
     const requests: string[] = []
     const responses = [
@@ -198,6 +233,35 @@ describe("Cloudflare deployment token preflight", () => {
     expect(String(error)).toContain("HTTP 403")
     expect(String(error)).not.toContain("container-token-must-not-leak")
     expect(String(error)).not.toContain("container-details-must-not-surface")
+  })
+
+  test("reports a hosted account resource denial without probing Containers or leaking details", async () => {
+    const requests: string[] = []
+    const responses = [
+      response({ success: true, result: { status: "active" } }),
+      response({ success: true, result: [{ id: "zone-id", name: domain, account: { id: accountId } }] }),
+      response({ success: true, result: [] }),
+      response({ success: false, errors: [{ message: "d1-details-must-not-surface" }] }, 403),
+    ]
+    const error = await rejection(
+      preflightCloudflareDeploymentAccess({
+        accountId,
+        token: "hosted-token-must-not-leak",
+        domain,
+        scope: "hosted-only",
+        fetcher: async (input) => {
+          requests.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url)
+          return responses.shift()!
+        },
+      }),
+    )
+
+    expect(error).toBeInstanceOf(CloudflareDeploymentPreflightError)
+    expect(String(error)).toContain("D1")
+    expect(String(error)).toContain("HTTP 403")
+    expect(String(error)).not.toContain("hosted-token-must-not-leak")
+    expect(String(error)).not.toContain("d1-details-must-not-surface")
+    expect(requests.some((url) => url.includes("/containers/"))).toBe(false)
   })
 
   test("validates the R2 response envelope instead of accepting an unrelated list", async () => {

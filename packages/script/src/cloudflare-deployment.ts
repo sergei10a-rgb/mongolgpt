@@ -14,7 +14,7 @@ export async function preflightCloudflareDeploymentAccess(input: {
   accountId: string
   token: string
   domain: string
-  scope?: "full" | "runtime-only" | "worker-only"
+  scope?: "full" | "hosted-only" | "runtime-only" | "worker-only"
   fetcher?: Fetcher
   timeoutMs?: number
 }) {
@@ -81,13 +81,15 @@ export async function preflightCloudflareDeploymentAccess(input: {
   )
   if (input.scope === "worker-only") return { zoneId: zone.id, domain }
 
-  await requireRecord(
-    fetcher,
-    `${accountPath}/containers/me`,
-    options(),
-    "Cloudflare Containers бүртгэлийн эрхийг шалгах",
-    "Containers Edit",
-  )
+  if (input.scope !== "hosted-only") {
+    await requireRecord(
+      fetcher,
+      `${accountPath}/containers/me`,
+      options(),
+      "Cloudflare Containers бүртгэлийн эрхийг шалгах",
+      "Containers Edit",
+    )
+  }
   if (input.scope === "runtime-only") return { zoneId: zone.id, domain }
 
   await requireList(

@@ -38,9 +38,11 @@ try {
     scope:
       scope === "docs-only" || scope === "app-only"
         ? "worker-only"
-        : scope === "runtime-only"
-          ? "runtime-only"
-          : "full",
+        : scope === "auth-bootstrap"
+          ? "hosted-only"
+          : scope === "runtime-only"
+            ? "runtime-only"
+            : "full",
   })
   const access = result.adminEnabled
     ? await preflightCloudflareAccess({

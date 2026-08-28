@@ -139,6 +139,9 @@ Session болон model gateway нь зөвхөн `MONGOLGPT_GATEWAY_SESSION_SE
 
 OAuth эсвэл runtime bootstrap амжилттай болсон нь бүтээгдэхүүний deploy амжилттай болсон гэсэн үг биш. Эдгээр тусгаарласан урсгал Free Auto model call, subscription эсвэл production орчныг байршуулдаггүй бөгөөд `production` дээр ажиллах боломжгүй. Үндсэн deploy-ийн бодит нэвтэрсэн MongolGPT account-ын шалгалтыг хэзээ ч орлохгүй.
 
+OAuth bootstrap-ийн fail-fast Cloudflare шалгалт нь Zone, Workers, D1, KV, R2 болон Queues эрхийг батална. Энэ урсгал container image байршуулдаггүй тул `Containers Edit` шаардахгүй. Харин **Deploy dev runtime** болон үндсэн full deploy нь Cloudflare Sandbox container ашигладаг учраас `Containers Edit` эрхийг тусад нь заавал шалгана.
+Bootstrap workflow нь runtime-ийн account-isolation `MONGOLGPT_RUNTIME_SECRET`-ийг уншихгүй. Console-оос runtime-д олгох богино настай эрхийн баримтад гарын үсэг зурах `MONGOLGPT_RUNTIME_AUTH_SECRET` л account deployment-д хамаарна.
+
 `MONGOLGPT_PLAN_LIMITS` нь paid багц бүрд 7 хамгаалалтыг заавал тодорхойлно: 7 хоногийн өртөг, токен,
 хүсэлт; сарын өртөг, токен, хүсэлт; мөн гулсах хугацааны өртөг. Өртгийн утга нь загвар нийлүүлэгчийн
 тооцооны ам.доллар, `rollingWindow` нь цагаар өгөгдөнө. Дараах нь зөвхөн бүтцийн жишээ бөгөөд launch-ийн

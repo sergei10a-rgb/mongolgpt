@@ -228,7 +228,9 @@ export function preflightDeployment(input: {
     requireValue("MONGOLGPT_AUTH_EMAIL_DOMAINS", env.MONGOLGPT_AUTH_EMAIL_DOMAINS, issues)
   }
   if (hostedServices && requireDeploymentSecrets) {
-    validateSecretKey("MONGOLGPT_RUNTIME_SECRET", env.MONGOLGPT_RUNTIME_SECRET, issues)
+    if (scope !== "auth-bootstrap") {
+      validateSecretKey("MONGOLGPT_RUNTIME_SECRET", env.MONGOLGPT_RUNTIME_SECRET, issues)
+    }
     validateSecretKey("MONGOLGPT_RUNTIME_AUTH_SECRET", env.MONGOLGPT_RUNTIME_AUTH_SECRET, issues)
     if (scope !== "runtime-only") {
       const linkedRuntimeAuthSecret = deploymentSecret(env, "MongolGPTRuntimeAuthSecret")

@@ -577,6 +577,7 @@ describe("Cloudflare deployment preflight", () => {
 
   test("allows GitHub-only dev OAuth bootstrap without a model catalog", () => {
     const {
+      MONGOLGPT_RUNTIME_SECRET: _runtimeSecret,
       SST_SECRET_GOOGLE_CLIENT_ID: _google,
       SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: _models,
       ...githubOnly
@@ -598,6 +599,7 @@ describe("Cloudflare deployment preflight", () => {
 
   test("allows Google-only dev OAuth bootstrap without GitHub credentials", () => {
     const {
+      MONGOLGPT_RUNTIME_SECRET: _runtimeSecret,
       SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: _githubID,
       SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: _githubSecret,
       SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: _models,
