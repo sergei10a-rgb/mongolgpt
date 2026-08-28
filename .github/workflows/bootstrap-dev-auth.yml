@@ -125,6 +125,7 @@ jobs:
           set_optional_secret GITHUB_CLIENT_SECRET_CONSOLE
           set_optional_secret GOOGLE_CLIENT_ID
           bun sst unlock --stage="$stage" || true
+          bun sst refresh --stage="$stage" --print-logs
           bun sst deploy --stage="$stage" --target Database --print-logs
           bun sst shell --stage="$stage" -- bun run db:migrate
           bun sst deploy --stage="$stage" --target AuthApi --target Console --print-logs

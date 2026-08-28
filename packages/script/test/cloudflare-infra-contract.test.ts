@@ -163,10 +163,14 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).not.toContain("deploy:preflight")
 
     const run = deploy?.run ?? ""
+    const oauthSecrets = run.indexOf("set_optional_secret GOOGLE_CLIENT_ID")
+    const refresh = run.indexOf('bun sst refresh --stage="$stage" --print-logs')
     const database = run.indexOf('bun sst deploy --stage="$stage" --target Database')
     const migration = run.indexOf('bun sst shell --stage="$stage" -- bun run db:migrate')
     const oauth = run.indexOf('bun sst deploy --stage="$stage" --target AuthApi --target Console --print-logs')
-    expect(database).toBeGreaterThanOrEqual(0)
+    expect(oauthSecrets).toBeGreaterThanOrEqual(0)
+    expect(refresh).toBeGreaterThan(oauthSecrets)
+    expect(database).toBeGreaterThan(refresh)
     expect(migration).toBeGreaterThan(database)
     expect(oauth).toBeGreaterThan(migration)
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --auth-bootstrap dev")
