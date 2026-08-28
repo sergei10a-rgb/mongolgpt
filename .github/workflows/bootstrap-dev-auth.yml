@@ -97,6 +97,9 @@ jobs:
           bunx sst@4.7.0 refresh \
             --stage=dev \
             --target UsageDeadLetterQueue \
+            --print-logs
+          bunx sst@4.7.0 refresh \
+            --stage=dev \
             --target UsageQueue \
             --print-logs
 

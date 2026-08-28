@@ -171,6 +171,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(providerMigration?.run).toContain("bunx sst@4.7.0 refresh")
     expect(providerMigration?.run).toContain("--target UsageDeadLetterQueue")
     expect(providerMigration?.run).toContain("--target UsageQueue")
+    expect(providerMigration?.run?.match(/bunx sst@4\.7\.0 refresh/g)).toHaveLength(2)
     expect(job.steps.indexOf(providerMigration!)).toBeGreaterThan(job.steps.indexOf(contracts!))
     expect(job.steps.indexOf(providerMigration!)).toBeLessThan(job.steps.indexOf(deploy!))
     expect(deploy?.run).not.toContain("deploy:preflight")
@@ -195,7 +196,19 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain("const stage = requireDeploymentStage(input?.stage)")
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")')
     expect(configSource).toContain('cloudflareProviderMigration ? "6.14.0" : "6.15.0"')
+    expect(configSource).toContain('await import("./infra/cloudflare-provider-migration.js")')
     expect(configSource).not.toContain('input?.stage === "production"')
+  })
+
+  test("isolates the one-time provider migration to the two legacy usage queues", async () => {
+    const source = await Bun.file(new URL("../../../infra/cloudflare-provider-migration.ts", import.meta.url)).text()
+    expect(source).toContain('MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION !== "true"')
+    expect(source).toContain('new sst.cloudflare.Queue("UsageDeadLetterQueue")')
+    expect(source).toContain('new sst.cloudflare.Queue("UsageQueue"')
+    expect(source).toContain('retryDelay: "30 seconds"')
+    expect(source).not.toContain("Worker(")
+    expect(source).not.toContain("StaticSite")
+    expect(source).not.toContain("SolidStart")
   })
 
   test("never publishes the public web app without hosted services", async () => {

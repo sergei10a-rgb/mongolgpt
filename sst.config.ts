@@ -75,7 +75,16 @@ export default $config({
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
     const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
+    const cloudflareProviderMigration = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")
     const adminEnabled = stage.enableAdmin
+    if (cloudflareProviderMigration) {
+      const queues = await import("./infra/cloudflare-provider-migration.js")
+      return {
+        CloudflareProviderMigration: true,
+        UsageDeadLetterQueue: queues.usageDeadLetterQueue.nodes.queue.queueName,
+        UsageQueue: queues.usageQueue.nodes.queue.queueName,
+      }
+    }
     if (docsOnly) {
       const docs = await import("./infra/docs.js")
       return {
