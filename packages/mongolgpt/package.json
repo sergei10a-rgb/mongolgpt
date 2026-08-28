@@ -6,6 +6,22 @@
   "description": "Монгол хэрэглэгчдэд зориулсан AI код бичих агентын CLI болон нийцтэй ажиллагааны орчин",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sergei10a-rgb/mongolgpt.git",
+    "directory": "packages/mongolgpt"
+  },
+  "homepage": "https://mgpt.mn/",
+  "bugs": {
+    "url": "https://github.com/sergei10a-rgb/mongolgpt/issues"
+  },
+  "keywords": [
+    "mongolgpt",
+    "mongolian",
+    "ai",
+    "coding-agent",
+    "cli"
+  ],
   "publishConfig": {
     "access": "public"
   },

@@ -217,6 +217,13 @@ for (const item of targets) {
       {
         name,
         version: Script.version,
+        description: `${pkg.description} (${item.os} ${item.arch}${item.abi ? ` ${item.abi}` : ""} binary)`,
+        license: pkg.license,
+        repository: pkg.repository,
+        homepage: pkg.homepage,
+        bugs: pkg.bugs,
+        keywords: pkg.keywords,
+        publishConfig: pkg.publishConfig,
         preferUnplugged: true,
         os: [item.os],
         cpu: [item.arch],

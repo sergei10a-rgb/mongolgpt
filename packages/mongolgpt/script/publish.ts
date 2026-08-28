@@ -121,6 +121,7 @@ const version = Object.values(binaries)[0]
 await $`mkdir -p ./dist/${pkg.name}`
 await $`mkdir -p ./dist/${pkg.name}/bin`
 await $`cp ./script/postinstall.mjs ./dist/${pkg.name}/postinstall.mjs`
+await $`cp ./README.md ./dist/${pkg.name}/README.md`
 await Bun.file(`./dist/${pkg.name}/LICENSE`).write(await Bun.file("../../LICENSE").text())
 await Bun.file(`./dist/${pkg.name}/bin/${pkg.name}.exe`).write(
   [
@@ -142,6 +143,11 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
   JSON.stringify(
     {
       name: pkg.name,
+      description: pkg.description,
+      repository: pkg.repository,
+      homepage: pkg.homepage,
+      bugs: pkg.bugs,
+      keywords: pkg.keywords,
       bin: {
         [pkg.name]: `bin/${pkg.name}.exe`,
       },
@@ -150,6 +156,8 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
       },
       version: version,
       license: pkg.license,
+      publishConfig: pkg.publishConfig,
+      files: ["bin", "postinstall.mjs", "README.md", "LICENSE"],
       os: ["darwin", "linux", "win32"],
       cpu: ["arm64", "x64"],
       optionalDependencies: binaries,

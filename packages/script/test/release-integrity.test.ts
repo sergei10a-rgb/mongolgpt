@@ -76,7 +76,10 @@ describe("release integrity contract", () => {
   test("authenticates npm publish and verifies every public package", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
     const publish = readFileSync(resolve(root, "script/publish.ts"), "utf8")
+    const cliPublish = readFileSync(resolve(root, "packages/mongolgpt/script/publish.ts"), "utf8")
+    const cliBuild = readFileSync(resolve(root, "packages/mongolgpt/script/build.ts"), "utf8")
     const preflight = readFileSync(resolve(root, "packages/mongolgpt/script/release-preflight.ts"), "utf8")
+    const cliManifest = JSON.parse(readFileSync(resolve(root, "packages/mongolgpt/package.json"), "utf8"))
 
     expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}")
     expect(publish.indexOf("packages/ui/script/publish.ts")).toBeLessThan(publish.indexOf("release-preflight.ts --npm"))
@@ -91,6 +94,19 @@ describe("release integrity contract", () => {
     expect(preflight).toContain('"MongolGPT бүртгэл"')
     expect(preflight).toContain('"mongolgpt/free-auto"')
     expect(preflight).toContain('"mongolgpt account login"')
+    expect(cliManifest.repository).toEqual({
+      type: "git",
+      url: "git+https://github.com/sergei10a-rgb/mongolgpt.git",
+      directory: "packages/mongolgpt",
+    })
+    expect(cliManifest.homepage).toBe("https://mgpt.mn/")
+    expect(cliManifest.bugs?.url).toBe("https://github.com/sergei10a-rgb/mongolgpt/issues")
+    expect(cliPublish).toContain("cp ./README.md")
+    expect(cliPublish).toContain("description: pkg.description")
+    expect(cliPublish).toContain("repository: pkg.repository")
+    expect(cliBuild).toContain("description: `${pkg.description}")
+    expect(cliBuild).toContain("repository: pkg.repository")
+    expect(preflight).toContain('main.files?.includes("README.md")')
   })
 
   test("keeps dev npm preview builds separate from guarded publishing", () => {

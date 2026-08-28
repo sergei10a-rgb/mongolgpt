@@ -37,8 +37,19 @@ const cliPackages = [...binaryPackages, "mongolgpt"]
 const npmPackages = [...cliPackages, "@mongolgpt/sdk", "@mongolgpt/plugin", "@mongolgpt/ui"]
 const publicNpmRegistry = "https://registry.npmjs.org"
 
+type PackageManifest = {
+  name?: string
+  version?: string
+  description?: string
+  repository?: { type?: string; url?: string; directory?: string }
+  homepage?: string
+  bugs?: { url?: string }
+  license?: string
+  files?: string[]
+}
+
 function readJson(file: string) {
-  return JSON.parse(fs.readFileSync(file, "utf8")) as { name?: string; version?: string }
+  return JSON.parse(fs.readFileSync(file, "utf8")) as PackageManifest
 }
 
 function binaryName(name: string) {
@@ -70,6 +81,22 @@ function checkLocalDist() {
   }
 
   assert(versions.size === 1, `package versions differ: ${Array.from(versions).join(", ")}`)
+
+  const main = readJson(path.join(dist, "mongolgpt", "package.json"))
+  assert(main.description?.includes("Монгол хэрэглэгчдэд"), "mongolgpt package is missing Mongolian description")
+  assert(
+    main.repository?.url === "git+https://github.com/sergei10a-rgb/mongolgpt.git" &&
+      main.repository.directory === "packages/mongolgpt",
+    "mongolgpt package has incorrect repository metadata",
+  )
+  assert(main.homepage === "https://mgpt.mn/", "mongolgpt package has incorrect homepage")
+  assert(
+    main.bugs?.url === "https://github.com/sergei10a-rgb/mongolgpt/issues",
+    "mongolgpt package has incorrect issue tracker",
+  )
+  assert(main.license === "MIT", "mongolgpt package has incorrect license")
+  assert(main.files?.includes("README.md"), "mongolgpt package does not publish README.md")
+  assert(fs.existsSync(path.join(dist, "mongolgpt", "README.md")), "mongolgpt package README.md is missing")
   return Array.from(versions)[0]!
 }
 

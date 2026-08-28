@@ -1,56 +1,50 @@
-# MongolGPT core
+# MongolGPT CLI
 
-Энэ package нь MongolGPT-ийн terminal agent, server, HTTP API, provider/config, compatibility import logic-ийг агуулна.
+MongolGPT бол Монгол хэлээр анхдагчаар ажиллах AI кодын агент юм. Энэ npm багц нь Windows, macOS, Linux дээр ажиллах `mongolgpt` командыг суулгана.
 
-## Гол хэсгүүд
+## Суулгах
 
-- `src/index.ts` - CLI entrypoint
-- `src/server/` - local server болон HTTP API
-- `src/compat/` - MCP, skill, plugin, connector эх сурвалжийг таньж MongolGPT config-д тааруулах importer
-- `src/cli/cmd/compat.ts` - `mongolgpt compat import` CLI command
-- `test/compat/` - compatibility importer-ийн regression tests
-
-## Ажиллуулах
-
-Repository root-оос:
+Node.js 20 буюу түүнээс шинэ хувилбар дээр:
 
 ```bash
-bun install
-bun run dev
+npm install --global mongolgpt
 ```
 
-Энэ package дээр шууд typecheck хийх:
+Дараа нь төсөл дотроо ажиллуулна:
 
 ```bash
-bun --cwd packages/mongolgpt run typecheck
+mongolgpt
 ```
 
-Compatibility importer test:
+## MongolGPT бүртгэлээр нэвтрэх
 
 ```bash
-bun --cwd packages/mongolgpt test test/compat/import.test.ts
+mongolgpt account login
 ```
 
-CLI release archive matrix нь `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `windows-x64`, `windows-arm64` binary-уудыг хамарна.
+Команд нь MongolGPT-ийн аюулгүй нэвтрэх хуудсыг browser-т нээнэ. Нэвтэрсний дараа Free Auto болон таны багцын эрх CLI-д автоматаар холбогдоно.
 
-HTTP API coverage:
+## Өөрийн загвар, үйлчилгээ үзүүлэгч ашиглах
 
-```bash
-bun --cwd packages/mongolgpt script/httpapi-exercise.ts --mode coverage --fail-on-missing --fail-on-skip
-```
+MongolGPT бүртгэл нь үндсэн нэвтрэлт боловч та өөрийн API түлхүүр, локал загвар, MCP сервер, skill, plugin, connector-оо нэмж болно.
 
-## Интеграц импортлох
-
-Plan хийх:
+Жишээ нь гаднын MCP эх сурвалжийг таньж, тохиргоонд тааруулахын өмнө төлөвлөгөөг нь харна:
 
 ```bash
 mongolgpt compat import plan "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
 ```
 
-Apply хийх:
+Дараа нь хэрэгжүүлнэ:
 
 ```bash
 mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:\\Users\\me"
 ```
 
-Importer нь эх сурвалжийн төрлийг автоматаар таньж, шаардлагатай config patch болон plugin wrapper-ийг хэрэглэгчээр гараар бичүүлэхгүйгээр үүсгэхээр бүтээгдсэн.
+## Тусламж
+
+- [MongolGPT](https://mgpt.mn/)
+- [Монгол баримт бичиг](https://docs.mgpt.mn/docs/)
+- [Асуудал мэдээлэх](https://github.com/sergei10a-rgb/mongolgpt/issues)
+- [Нийгэмлэг](https://github.com/sergei10a-rgb/mongolgpt/discussions)
+
+Лиценз: MIT
