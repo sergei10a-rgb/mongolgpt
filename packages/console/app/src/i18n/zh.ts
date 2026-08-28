@@ -25,6 +25,7 @@ export const dict = {
   "footer.changelog": "更新日志",
   "footer.feishu": "飞书",
   "footer.discord": "Discord",
+  "footer.community": "Community",
   "footer.x": "X",
 
   "legal.brand": "品牌",
@@ -43,6 +44,7 @@ export const dict = {
   "notFound.docs": "文档",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
+  "notFound.community": "Community",
   "notFound.logoLightAlt": "MongolGPT logo 亮色",
   "notFound.logoDarkAlt": "MongolGPT logo 暗色",
 

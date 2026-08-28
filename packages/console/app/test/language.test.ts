@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { docs, localeFromRequest, LOCALES } from "../src/lib/language"
+import { docs, localeFromRequest, LOCALES, route } from "../src/lib/language"
 import { i18n } from "../src/i18n"
 import { dict as en } from "../src/i18n/en"
 import { dict as mn } from "../src/i18n/mn"
@@ -70,6 +70,16 @@ test("бүх хэлний docs холбоос Монгол каноник зам
   expect(docs("zh", "/docs")).toBe("/docs")
   expect(docs("mn", "/docs/mn/providers")).toBe("/docs/providers")
   expect(docs("en", "/docs/en/")).toBe("/docs/")
+})
+
+test("locale route нь гаднын URL-г дотоод зам шиг өөрчлөхгүй", () => {
+  expect(route("mn", "https://github.com/sergei10a-rgb/mongolgpt/discussions")).toBe(
+    "https://github.com/sergei10a-rgb/mongolgpt/discussions",
+  )
+  expect(route("zh", "https://discord.com/invite/example")).toBe("https://discord.com/invite/example")
+  expect(route("mn", "mailto:support@mgpt.mn")).toBe("mailto:support@mgpt.mn")
+  expect(route("mn", "javascript:alert(1)")).toBe("/mn/javascript:alert(1)")
+  expect(route("mn", "//example.com/path")).toBe("/mn//example.com/path")
 })
 
 test("locale dictionaries return English and Mongolian billing/error copy", () => {

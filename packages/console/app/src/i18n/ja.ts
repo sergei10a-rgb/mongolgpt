@@ -24,6 +24,7 @@ export const dict = {
   "footer.docs": "ドキュメント",
   "footer.changelog": "変更履歴",
   "footer.discord": "Discord",
+  "footer.community": "Community",
   "footer.x": "X",
 
   "legal.brand": "ブランド",
@@ -42,6 +43,7 @@ export const dict = {
   "notFound.docs": "ドキュメント",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
+  "notFound.community": "Community",
   "notFound.logoLightAlt": "mongolgptのロゴ（ライト）",
   "notFound.logoDarkAlt": "mongolgptのロゴ（ダーク）",
 

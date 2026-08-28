@@ -30,6 +30,10 @@ function fix(pathname: string) {
   return `/${pathname}`
 }
 
+function isExternalUrl(pathname: string) {
+  return /^(?:https?:\/\/|mailto:|tel:)/i.test(pathname)
+}
+
 const LABEL = {
   mn: "Монгол",
   en: "English",
@@ -215,6 +219,7 @@ export function strip(pathname: string) {
 }
 
 export function route(locale: Locale, pathname: string) {
+  if (isExternalUrl(pathname)) return pathname
   const next = strip(pathname)
   if (next.startsWith("/docs")) return docs(locale, next)
   if (next.startsWith("/auth")) return next

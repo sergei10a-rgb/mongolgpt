@@ -23,6 +23,7 @@ export const dict = {
   "footer.docs": "Документація",
   "footer.changelog": "Журнал змін",
   "footer.discord": "Discord",
+  "footer.community": "Community",
   "footer.x": "X",
 
   "legal.brand": "Бренд",
@@ -41,6 +42,7 @@ export const dict = {
   "notFound.docs": "Документація",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
+  "notFound.community": "Community",
   "notFound.logoLightAlt": "світлий логотип mongolgpt",
   "notFound.logoDarkAlt": "темний логотип mongolgpt",
 

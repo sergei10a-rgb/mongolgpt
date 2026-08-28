@@ -25,6 +25,7 @@ export const dict = {
   "footer.changelog": "Өөрчлөлтийн түүх",
   "footer.feishu": "Feishu",
   "footer.discord": "Discord",
+  "footer.community": "Нийгэмлэг",
   "footer.x": "X",
   "footer.support": "Тусламж",
 
@@ -44,6 +45,7 @@ export const dict = {
   "notFound.docs": "Баримт бичиг",
   "notFound.github": "GitHub",
   "notFound.discord": "Discord",
+  "notFound.community": "Нийгэмлэг",
   "notFound.logoLightAlt": "MongolGPT-ийн цайвар лого",
   "notFound.logoDarkAlt": "MongolGPT-ийн бараан лого",
 

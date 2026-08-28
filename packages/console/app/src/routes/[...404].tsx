@@ -6,10 +6,12 @@ import logoDark from "../asset/logo-ornate-dark.svg"
 import { config } from "~/config"
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
+import { resolveCommunityLink } from "~/lib/community-link"
 
 export default function NotFound() {
   const i18n = useI18n()
   const language = useLanguage()
+  const community = resolveCommunityLink
   return (
     <main data-page="not-found">
       <Title>{i18n.t("notFound.title")}</Title>
@@ -34,7 +36,7 @@ export default function NotFound() {
             <a href={config.github.repoUrl}>{i18n.t("notFound.github")}</a>
           </div>
           <div data-slot="action">
-            <a href={language.route("/discord")}>{i18n.t("notFound.discord")}</a>
+            <a href={community().href}>{i18n.t(`notFound.${community().kind}`)}</a>
           </div>
         </section>
       </div>
