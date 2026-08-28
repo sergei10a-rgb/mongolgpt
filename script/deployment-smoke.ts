@@ -1,5 +1,6 @@
 import { deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/deployment"
 import type { DeploymentPreflightResult } from "@mongolgpt/script/deployment"
+import { TURNSTILE_TEST_SITE_KEY, TURNSTILE_TEST_TOKEN } from "../packages/console/core/src/turnstile"
 import {
   inspectAdminProtection,
   inspectAuthenticatedAccountOverview,
@@ -375,6 +376,7 @@ async function checkHostedAuthorize(consoleUrl: string, authOrigin: string, turn
     signal: AbortSignal.timeout(15_000),
   })
   if (turnstileEnabled) {
+    const body = await response.text()
     inspectHostedAuthorizeChallenge({
       requestUrl,
       authOrigin,
@@ -385,9 +387,12 @@ async function checkHostedAuthorize(consoleUrl: string, authOrigin: string, turn
       cacheControl: response.headers.get("cache-control"),
       contentSecurityPolicy: response.headers.get("content-security-policy"),
       frameOptions: response.headers.get("x-frame-options"),
-      body: await response.text(),
+      body,
     })
     await checkHostedTurnstileRejection(consoleUrl, authOrigin)
+    if (turnstileSiteKey(body) === TURNSTILE_TEST_SITE_KEY) {
+      await checkHostedTurnstileSuccess(consoleUrl, authOrigin, body)
+    }
     return
   }
   inspectHostedAuthorizeRedirect({
@@ -398,6 +403,50 @@ async function checkHostedAuthorize(consoleUrl: string, authOrigin: string, turn
     authOrigin,
   })
   await response.body?.cancel()
+}
+
+async function checkHostedTurnstileSuccess(consoleUrl: string, authOrigin: string, challenge: string) {
+  const action = challenge.match(/<form[^>]+action=["']([^"']+)["'][^>]+method=["']post["']/i)?.[1]
+  if (!action || new URL(action).toString() !== `${new URL(authOrigin).origin}/authorize`) {
+    throw new Error("hosted Turnstile success form action is invalid")
+  }
+
+  const form = new URLSearchParams()
+  for (const name of ["client_id", "redirect_uri", "response_type", "state"] as const) {
+    const value = hiddenInputValue(challenge, name)
+    if (!value) throw new Error(`hosted Turnstile success form is missing ${name}`)
+    form.set(name, value)
+  }
+  for (const name of ["code_challenge", "code_challenge_method"] as const) {
+    const value = hiddenInputValue(challenge, name)
+    if (value) form.set(name, value)
+  }
+  form.set("cf-turnstile-response", TURNSTILE_TEST_TOKEN)
+
+  const response = await fetch(action, {
+    method: "POST",
+    headers: {
+      Accept: "text/html,application/xhtml+xml",
+      "Content-Type": "application/x-www-form-urlencoded",
+      Origin: new URL(consoleUrl).origin,
+      Referer: new URL("/auth/authorize", consoleUrl).toString(),
+      "User-Agent": "mongolgpt-deployment-smoke",
+    },
+    body: form,
+    redirect: "manual",
+    signal: AbortSignal.timeout(15_000),
+  })
+  const body = await response.text()
+  inspectHostedTurnstileSuccess({
+    requestUrl: action,
+    responseUrl: response.url,
+    status: response.status,
+    location: response.headers.get("location"),
+    contentType: response.headers.get("content-type"),
+    body,
+    consoleOrigin: new URL(consoleUrl).origin,
+    authOrigin: new URL(authOrigin).origin,
+  })
 }
 
 async function checkHostedTurnstileRejection(consoleUrl: string, authOrigin: string) {
@@ -456,6 +505,53 @@ export function inspectHostedTurnstileRejection(input: {
     body.message !== "Нэвтрэхийн өмнө Cloudflare Turnstile баталгаажуулалт шаардлагатай."
   ) {
     throw new Error("direct auth gate did not fail closed")
+  }
+}
+
+export function inspectHostedTurnstileSuccess(input: {
+  requestUrl: string
+  responseUrl?: string | null
+  status: number
+  location?: string | null
+  contentType?: string | null
+  body: string
+  consoleOrigin: string
+  authOrigin: string
+}) {
+  const request = new URL(input.requestUrl)
+  if (request.origin !== input.authOrigin || request.pathname !== "/authorize") {
+    throw new Error("hosted Turnstile success request did not target the auth worker")
+  }
+  if (input.responseUrl && new URL(input.responseUrl).origin !== request.origin) {
+    throw new Error("hosted Turnstile success response left the auth worker unexpectedly")
+  }
+  if (input.status >= 400) {
+    throw new Error(`hosted Turnstile success returned HTTP ${input.status}`)
+  }
+  if (input.body.length > 1_000_000) throw new Error("hosted Turnstile success response is too large")
+
+  if (input.status === 200) {
+    inspectHtmlContentType(input.contentType ?? null, "hosted Turnstile success response")
+    if (!/(github|google)/i.test(input.body)) {
+      throw new Error("hosted Turnstile success page does not offer an OAuth provider")
+    }
+    return
+  }
+
+  if (![302, 303, 307, 308].includes(input.status) || !input.location) {
+    throw new Error(`hosted Turnstile success returned unexpected HTTP ${input.status}`)
+  }
+  const target = new URL(input.location, request)
+  if (
+    target.origin === input.consoleOrigin &&
+    target.pathname === "/auth/authorize" &&
+    target.searchParams.has("turnstile_error")
+  ) {
+    throw new Error("hosted Turnstile success returned to the challenge with an error")
+  }
+  const allowed = new Set([input.authOrigin, "https://github.com", "https://accounts.google.com"])
+  if (!allowed.has(target.origin)) {
+    throw new Error(`hosted Turnstile success redirected to an unexpected origin: ${target.origin}`)
   }
 }
 
@@ -532,6 +628,10 @@ function hiddenInputValue(body: string, name: string) {
     if (value !== undefined) values.push(value)
   }
   return values.length === 1 ? values[0] : undefined
+}
+
+function turnstileSiteKey(body: string) {
+  return body.match(/data-sitekey=["']([A-Za-z0-9_-]{20,64})["']/i)?.[1]
 }
 
 function htmlAttribute(tag: string, name: string) {

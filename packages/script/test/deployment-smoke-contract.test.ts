@@ -9,6 +9,7 @@ import {
   inspectHostedAuthorizeChallenge,
   inspectHostedAuthorizeRedirect,
   inspectHostedTurnstileRejection,
+  inspectHostedTurnstileSuccess,
   inspectNoStoreResponse,
   inspectRuntimeTokenPreflight,
   inspectStaticAppBackendRejection,
@@ -393,6 +394,16 @@ describe("dev OAuth bootstrap smoke", () => {
           { status: 403, headers: { "cache-control": "no-store" } },
         )
       }
+      if (key === "POST https://auth.dev.mgpt.mn/authorize") {
+        expect(request.headers.get("origin")).toBe("https://dev.mgpt.mn")
+        const form = new URLSearchParams(await request.text())
+        expect(form.get("cf-turnstile-response")).toBe("XXXX.DUMMY.TOKEN.XXXX")
+        expect(form.get("client_id")).toBe("app")
+        expect(form.get("redirect_uri")).toBe("https://dev.mgpt.mn/auth/callback/auth/app")
+        expect(form.get("response_type")).toBe("code")
+        expect(form.get("state")).toBe("12345678-1234-1234-1234-123456789012")
+        return Response.redirect("https://github.com/login/oauth/authorize?client_id=public", 302)
+      }
       throw new Error(`Unexpected bootstrap request: ${key}`)
     })
     globalThis.fetch = mockFetch
@@ -417,6 +428,7 @@ describe("dev OAuth bootstrap smoke", () => {
       "GET https://dev.mgpt.mn/v1/account/overview",
       "GET https://dev.mgpt.mn/auth/authorize",
       "GET https://auth.dev.mgpt.mn/authorize",
+      "POST https://auth.dev.mgpt.mn/authorize",
     ])
   })
 })
@@ -1358,6 +1370,39 @@ describe("hosted authorization smoke contract", () => {
     expect(() => inspectHostedTurnstileRejection(direct)).not.toThrow()
     expect(() => inspectHostedTurnstileRejection({ ...direct, status: 302, location })).toThrow("expected 403")
     expect(() => inspectHostedTurnstileRejection({ ...direct, body: { error: "other" } })).toThrow("shape")
+  })
+
+  test("requires a valid test-token path to reach a real OAuth provider", () => {
+    const success = {
+      requestUrl: `${authOrigin}/authorize`,
+      responseUrl: `${authOrigin}/authorize`,
+      status: 302,
+      location: "https://github.com/login/oauth/authorize?client_id=public",
+      body: "",
+      consoleOrigin: "https://dev.mgpt.mn",
+      authOrigin,
+    }
+    expect(() => inspectHostedTurnstileSuccess(success)).not.toThrow()
+    expect(() =>
+      inspectHostedTurnstileSuccess({
+        ...success,
+        status: 200,
+        location: undefined,
+        contentType: "text/html; charset=utf-8",
+        body: "<html><body>Continue with GitHub</body></html>",
+      }),
+    ).not.toThrow()
+    expect(() => inspectHostedTurnstileSuccess({ ...success, status: 503, location: undefined })).toThrow("HTTP 503")
+    expect(() =>
+      inspectHostedTurnstileSuccess({
+        ...success,
+        status: 303,
+        location: "https://dev.mgpt.mn/auth/authorize?turnstile_error=invalid",
+      }),
+    ).toThrow("challenge with an error")
+    expect(() =>
+      inspectHostedTurnstileSuccess({ ...success, location: "https://example.com/oauth" }),
+    ).toThrow("unexpected origin")
   })
 
   test("requires the console to redirect to the dedicated auth worker when Turnstile is disabled", () => {
