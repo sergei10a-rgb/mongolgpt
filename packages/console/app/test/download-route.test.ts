@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
-import { GET, HEAD, downloadAssetUrl } from "../src/routes/download/[channel]/[platform]"
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
+import { downloadAssetUrl } from "../src/routes/download/assets"
+import { GET } from "../src/routes/download/[channel]/[platform]"
 
 const originalFetch = globalThis.fetch
 
-function event(channel: string, platform: string) {
-  return { params: { channel, platform } }
+function event(channel: string, platform: string, method = "GET") {
+  return { params: { channel, platform }, request: new Request("https://mgpt.mn/download", { method }) }
 }
 
 afterEach(() => {
@@ -12,6 +15,16 @@ afterEach(() => {
 })
 
 describe("desktop download route", () => {
+  test("keeps shared helpers outside the method-picked SolidStart route module", () => {
+    const source = readFileSync(
+      resolve(import.meta.dirname, "../src/routes/download/[channel]/[platform].ts"),
+      "utf8",
+    )
+    expect(source).toContain('from "../assets"')
+    expect(source).toContain('request.method === "HEAD"')
+    expect(source).not.toContain("export async function HEAD")
+  })
+
   test("maps every stable desktop platform to the release asset produced by CI", () => {
     expect(downloadAssetUrl("stable", "darwin-aarch64-dmg")).toEndWith("mongolgpt-desktop-mac-arm64.dmg")
     expect(downloadAssetUrl("stable", "darwin-x64-dmg")).toEndWith("mongolgpt-desktop-mac-x64.dmg")
@@ -23,8 +36,8 @@ describe("desktop download route", () => {
     expect(downloadAssetUrl("stable", "unknown")).toBeUndefined()
   })
 
-  test("redirects downloads directly to GitHub instead of proxying large installers", () => {
-    const response = GET(event("stable", "windows-x64-nsis"))
+  test("redirects downloads directly to GitHub instead of proxying large installers", async () => {
+    const response = await GET(event("stable", "windows-x64-nsis"))
     expect(response.status).toBe(302)
     expect(response.headers.get("location")).toBe(
       "https://github.com/sergei10a-rgb/mongolgpt/releases/latest/download/mongolgpt-desktop-win-x64.exe",
@@ -39,7 +52,7 @@ describe("desktop download route", () => {
     })
     globalThis.fetch = Object.assign(fetchMock, { preconnect: originalFetch.preconnect })
 
-    const response = await HEAD(event("stable", "linux-x64-deb"))
+    const response = await GET(event("stable", "linux-x64-deb", "HEAD"))
     expect(response.status).toBe(204)
     expect(response.headers.get("cache-control")).toBe("public, max-age=300")
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -49,7 +62,7 @@ describe("desktop download route", () => {
     globalThis.fetch = Object.assign(mock(async () => new Response(null, { status: 404 })), {
       preconnect: originalFetch.preconnect,
     })
-    expect((await HEAD(event("stable", "darwin-x64-dmg"))).status).toBe(404)
-    expect((await HEAD(event("beta", "windows-x64-nsis"))).status).toBe(404)
+    expect((await GET(event("stable", "darwin-x64-dmg", "HEAD"))).status).toBe(404)
+    expect((await GET(event("beta", "windows-x64-nsis", "HEAD"))).status).toBe(404)
   })
 })
