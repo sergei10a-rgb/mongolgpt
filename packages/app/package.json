@@ -2,7 +2,7 @@
   "name": "@mongolgpt/app",
   "version": "0.1.1",
   "private": true,
-  "description": "",
+  "description": "MongolGPT-ийн Web болон Desktop клиентэд зориулсан Монгол интерфэйс",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
