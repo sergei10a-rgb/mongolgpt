@@ -178,11 +178,13 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
     const run = deploy?.run ?? ""
     const oauthSecrets = run.indexOf("set_optional_secret GOOGLE_CLIENT_ID")
+    const stateRepair = run.indexOf('bun sst state repair --stage="$stage" --print-logs')
     const database = run.indexOf('bun sst deploy --stage="$stage" --target Database')
     const migration = run.indexOf('bun sst shell --stage="$stage" -- bun run db:migrate')
     const oauth = run.indexOf('bun sst deploy --stage="$stage" --target AuthApi --target Console --print-logs')
     expect(oauthSecrets).toBeGreaterThanOrEqual(0)
-    expect(database).toBeGreaterThan(oauthSecrets)
+    expect(stateRepair).toBeGreaterThan(oauthSecrets)
+    expect(database).toBeGreaterThan(stateRepair)
     expect(migration).toBeGreaterThan(database)
     expect(oauth).toBeGreaterThan(migration)
     expect(run).not.toContain("sst refresh")
