@@ -21,7 +21,7 @@ import { NvidiaPlugin } from "./provider/nvidia"
 import { OpenAIPlugin } from "./provider/openai"
 import { SnowflakeCortexPlugin } from "./provider/snowflake-cortex"
 import { OpenAICompatiblePlugin } from "./provider/openai-compatible"
-import { MongolGPTPlugin } from "./provider/mongolgpt"
+import { MongolGPTAccountPolicyPlugin, MongolGPTPlugin } from "./provider/mongolgpt"
 import { OpenRouterPlugin } from "./provider/openrouter"
 import { PerplexityPlugin } from "./provider/perplexity"
 import { SapAICorePlugin } from "./provider/sap-ai-core"
@@ -34,7 +34,7 @@ import type { PluginInternal } from "./internal"
 import type { Scope } from "effect"
 import { Flag } from "../flag/flag"
 
-export const ProviderPlugins: PluginInternal.Plugin<PluginInternal.Requirements | Scope.Scope>[] = [
+export const ProviderPluginsBeforeConfig: PluginInternal.Plugin<PluginInternal.Requirements | Scope.Scope>[] = [
   AlibabaPlugin,
   AmazonBedrockPlugin,
   AnthropicPlugin,
@@ -56,7 +56,6 @@ export const ProviderPlugins: PluginInternal.Plugin<PluginInternal.Requirements 
   LLMGatewayPlugin,
   MistralPlugin,
   NvidiaPlugin,
-  ...(Flag.MONGOLGPT_ENABLE_HOSTED_SERVICES ? [MongolGPTPlugin] : []),
   SnowflakeCortexPlugin,
   OpenAICompatiblePlugin,
   OpenAIPlugin,
@@ -69,4 +68,14 @@ export const ProviderPlugins: PluginInternal.Plugin<PluginInternal.Requirements 
   XAIPlugin,
   ZenmuxPlugin,
   DynamicProviderPlugin,
+]
+
+export const ProviderPluginsAfterConfig: PluginInternal.Plugin<PluginInternal.Requirements | Scope.Scope>[] = [
+  ...(Flag.MONGOLGPT_ENABLE_HOSTED_SERVICES ? [MongolGPTPlugin] : []),
+  MongolGPTAccountPolicyPlugin,
+]
+
+export const ProviderPlugins: PluginInternal.Plugin<PluginInternal.Requirements | Scope.Scope>[] = [
+  ...ProviderPluginsBeforeConfig,
+  ...ProviderPluginsAfterConfig,
 ]

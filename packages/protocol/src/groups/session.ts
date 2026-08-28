@@ -12,6 +12,7 @@ import {
   InvalidCursorError,
   InvalidRequestError,
   MessageNotFoundError,
+  ModelUnavailableError,
   ServiceUnavailableError,
   SessionNotFoundError,
   UnknownError,
@@ -28,7 +29,8 @@ const SessionsQueryFields = {
     description: "Буцаах сессийн дээд тоо. Анхдагчаар хамгийн сүүлийн 50 сессийг авна.",
   }),
   order: Schema.optional(Schema.Union([Schema.Literal("asc"), Schema.Literal("desc")])).annotate({
-    description: "Эхний хуудасны сессийн эрэмбэ. Шинэ сессийг эхэнд харуулахын тулд desc, хуучныг эхэнд харуулахын тулд asc ашиглана.",
+    description:
+      "Эхний хуудасны сессийн эрэмбэ. Шинэ сессийг эхэнд харуулахын тулд desc, хуучныг эхэнд харуулахын тулд asc ашиглана.",
   }),
   search: Schema.optional(Schema.String),
 }
@@ -92,7 +94,8 @@ export const SessionHistoryQuery = Schema.Struct({
 })
 
 const SessionsQueryCursor = SessionsCursor.annotate({
-  description: "Өмнөх хариуд cursor.previous эсвэл cursor.next хэлбэрээр буцсан, доторх утга нь ил биш хуудаслалтын заагч.",
+  description:
+    "Өмнөх хариуд cursor.previous эсвэл cursor.next хэлбэрээр буцсан, доторх утга нь ил биш хуудаслалтын заагч.",
 })
 
 export const SessionsQuery = Schema.Struct({
@@ -134,6 +137,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
           location: Location.Ref.pipe(Schema.optional),
         }),
         success: Schema.Struct({ data: Session.Info }),
+        error: ModelUnavailableError,
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "v2.session.create",
@@ -190,7 +194,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         params: { sessionID: Session.ID },
         payload: Schema.Struct({ model: Model.Ref }),
         success: HttpApiSchema.NoContent,
-        error: SessionNotFoundError,
+        error: [ModelUnavailableError, SessionNotFoundError],
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(
@@ -211,7 +215,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
           resume: Schema.Boolean.pipe(Schema.optional),
         }),
         success: Schema.Struct({ data: SessionInput.Admitted }),
-        error: [ConflictError, SessionNotFoundError],
+        error: [ConflictError, ModelUnavailableError, SessionNotFoundError],
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(
@@ -276,7 +280,9 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         error: [SessionNotFoundError, UnknownError],
       })
         .middleware(sessionLocationMiddleware)
-        .annotateMerge(OpenApi.annotations({ identifier: "v2.session.revert.clear", summary: "Бэлтгэсэн буцаалтыг цэвэрлэх" })),
+        .annotateMerge(
+          OpenApi.annotations({ identifier: "v2.session.revert.clear", summary: "Бэлтгэсэн буцаалтыг цэвэрлэх" }),
+        ),
     )
     .add(
       HttpApiEndpoint.post("session.revert.commit", "/api/session/:sessionID/revert/commit", {
@@ -286,7 +292,10 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(
-          OpenApi.annotations({ identifier: "v2.session.revert.commit", summary: "Бэлтгэсэн буцаалтыг баталгаажуулах" }),
+          OpenApi.annotations({
+            identifier: "v2.session.revert.commit",
+            summary: "Бэлтгэсэн буцаалтыг баталгаажуулах",
+          }),
         ),
     )
     .add(
@@ -354,7 +363,8 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
           OpenApi.annotations({
             identifier: "v2.session.interrupt",
             summary: "Сессийн гүйцэтгэлийг таслах",
-            description: "Энэ MongolGPT процессын эзэмшиж буй идэвхтэй гүйцэтгэлийг тасална. Сул зогсолтын сессийг таслахад ямар ч үйлдэл хийхгүй.",
+            description:
+              "Энэ MongolGPT процессын эзэмшиж буй идэвхтэй гүйцэтгэлийг тасална. Сул зогсолтын сессийг таслахад ямар ч үйлдэл хийхгүй.",
           }),
         ),
     )

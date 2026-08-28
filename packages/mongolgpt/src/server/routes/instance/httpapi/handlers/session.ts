@@ -14,6 +14,9 @@ import { SessionRunState } from "@/session/run-state"
 import { SessionStatus } from "@/session/status"
 import { SessionSummary } from "@/session/summary"
 import { Todo } from "@/session/todo"
+import { Provider } from "@/provider/provider"
+import { ModelV2 } from "@mongolgpt/core/model"
+import { ProviderV2 } from "@mongolgpt/core/provider"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { NamedError } from "@mongolgpt/core/util/error"
 import { Cause, Effect, Option, Schema, Scope } from "effect"
@@ -35,7 +38,7 @@ import {
   SummarizePayload,
   UpdatePayload,
 } from "../groups/session"
-import { PermissionNotFoundError } from "../errors"
+import { ModelNotFoundError, PermissionNotFoundError } from "../errors"
 import * as SessionError from "./session-errors"
 
 const tryParseJson = (text: string) =>
@@ -58,7 +61,32 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const todoSvc = yield* Todo.Service
     const summary = yield* SessionSummary.Service
     const events = yield* EventV2Bridge.Service
+    const provider = yield* Provider.Service
     const scope = yield* Scope.Scope
+
+    const requireAvailableModel = Effect.fn("SessionHttpApi.requireAvailableModel")(function* (model: {
+      providerID: ProviderV2.ID
+      modelID: ModelV2.ID
+    }) {
+      yield* provider.getModel(model.providerID, model.modelID).pipe(
+        Effect.mapError(
+          (error) =>
+            new ModelNotFoundError({
+              providerID: model.providerID,
+              modelID: model.modelID,
+              suggestions: [...(error.suggestions ?? [])],
+              message: `Загвар ашиглах боломжгүй байна: ${model.providerID}/${model.modelID}. Нийлүүлэгчийн холболт эсвэл MongolGPT аккаунтын нэвтрэлтийг шалгана уу.`,
+            }),
+        ),
+      )
+    })
+
+    const requireAvailableModelName = Effect.fn("SessionHttpApi.requireAvailableModelName")(function* (
+      model: string | undefined,
+    ) {
+      if (!model) return
+      yield* requireAvailableModel(Provider.parseModel(model))
+    })
 
     const list = Effect.fn("SessionHttpApi.list")(function* (ctx: { query: typeof ListQuery.Type }) {
       return yield* session.list({
@@ -151,6 +179,8 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     })
 
     const create = Effect.fn("SessionHttpApi.create")(function* (ctx: { payload?: Session.CreateInput }) {
+      if (ctx.payload?.model)
+        yield* requireAvailableModel({ providerID: ctx.payload.model.providerID, modelID: ctx.payload.model.id })
       return yield* shareSvc.create(ctx.payload)
     })
 
@@ -237,6 +267,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof InitPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
+      yield* requireAvailableModel({ providerID: ctx.payload.providerID, modelID: ctx.payload.modelID })
       yield* promptSvc
         .command({
           sessionID: ctx.params.sessionID,
@@ -272,7 +303,9 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       params: { sessionID: SessionID }
       payload: typeof SummarizePayload.Type
     }) {
-      yield* revertSvc.cleanup(yield* requireSession(ctx.params.sessionID))
+      const current = yield* requireSession(ctx.params.sessionID)
+      yield* requireAvailableModel({ providerID: ctx.payload.providerID, modelID: ctx.payload.modelID })
+      yield* revertSvc.cleanup(current)
       const messages = yield* SessionError.mapStorageNotFound(session.messages({ sessionID: ctx.params.sessionID }))
       const defaultAgent = yield* agentSvc.defaultAgent()
       const currentAgent = messages.findLast((message) => message.info.role === "user")?.info.agent ?? defaultAgent
@@ -295,6 +328,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof PromptPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
+      if (ctx.payload.model) yield* requireAvailableModel(ctx.payload.model)
       const message = yield* promptSvc
         .prompt({
           ...ctx.payload,
@@ -311,6 +345,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof PromptPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
+      if (ctx.payload.model) yield* requireAvailableModel(ctx.payload.model)
       yield* promptSvc.prompt({ ...ctx.payload, sessionID: ctx.params.sessionID }).pipe(
         Effect.catchCause((cause) =>
           Effect.gen(function* () {
@@ -331,6 +366,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof CommandPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
+      yield* requireAvailableModelName(ctx.payload.model)
       return yield* promptSvc
         .command({ ...ctx.payload, sessionID: ctx.params.sessionID })
         .pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
@@ -341,6 +377,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof ShellPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
+      if (ctx.payload.model) yield* requireAvailableModel(ctx.payload.model)
       return yield* SessionError.mapBusy(promptSvc.shell({ ...ctx.payload, sessionID: ctx.params.sessionID }))
     })
 

@@ -8,6 +8,7 @@ import { PluginV2 } from "@mongolgpt/core/plugin"
 import { PluginHost } from "@mongolgpt/core/plugin/host"
 import {
   isAccountBackedCredential,
+  MongolGPTAccountPolicyPlugin,
   MongolGPTPlugin,
   selectSoleOrganization,
 } from "@mongolgpt/core/plugin/provider/mongolgpt"
@@ -22,6 +23,14 @@ const addPlugin = Effect.fn(function* () {
   const host = yield* PluginHost.make(plugin)
   const integration = yield* Integration.Service
   yield* MongolGPTPlugin.effect(host).pipe(Effect.provideService(Integration.Service, integration))
+  yield* MongolGPTAccountPolicyPlugin.effect(host).pipe(Effect.provideService(Integration.Service, integration))
+})
+
+const addAccountPolicy = Effect.fn(function* () {
+  const plugin = yield* PluginV2.Service
+  const host = yield* PluginHost.make(plugin)
+  const integration = yield* Integration.Service
+  yield* MongolGPTAccountPolicyPlugin.effect(host).pipe(Effect.provideService(Integration.Service, integration))
 })
 
 function required<T>(value: T | undefined): T {
@@ -387,6 +396,38 @@ describe("MongolGPTPlugin", () => {
         expect(required(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("free-auto"))).enabled).toBe(
           true,
         )
+      }),
+    ),
+  )
+
+  it.effect("keeps managed free models available for a MongolGPT account OAuth credential", () =>
+    withEnv({ MONGOLGPT_API_KEY: undefined, MONGOLGPT_RUNTIME_MODE: undefined }, () =>
+      Effect.gen(function* () {
+        const catalog = yield* Catalog.Service
+        const credentials = yield* Credential.Service
+        const providerID = ProviderV2.ID.mongolgpt
+        const modelID = ModelV2.ID.make("free-auto")
+        yield* catalog.transform((draft) => {
+          draft.provider.update(providerID, () => {})
+          draft.model.update(providerID, modelID, (model) => {
+            model.cost = [...cost(0)]
+          })
+        })
+        yield* credentials.create({
+          integrationID: Integration.ID.make("mongolgpt"),
+          value: Credential.OAuth.make({
+            type: "oauth",
+            methodID: Integration.MethodID.make("device"),
+            access: "access",
+            refresh: "refresh",
+            expires: Date.now() + 60_000,
+            metadata: { accountID: "account-1", orgID: "workspace-1" },
+          }),
+        })
+
+        yield* addAccountPolicy()
+
+        expect(required(yield* catalog.model.get(providerID, modelID)).enabled).toBe(true)
       }),
     ),
   )

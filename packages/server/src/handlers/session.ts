@@ -7,11 +7,15 @@ import {
   ConflictError,
   InvalidCursorError,
   MessageNotFoundError,
+  ModelUnavailableError,
   ServiceUnavailableError,
   SessionNotFoundError,
   UnknownError,
 } from "@mongolgpt/protocol/errors"
 import { AbsolutePath } from "@mongolgpt/core/schema"
+import { Catalog } from "@mongolgpt/core/catalog"
+import { Location } from "@mongolgpt/core/location"
+import { LocationServiceMap } from "@mongolgpt/core/location-service-map"
 
 const DefaultSessionsLimit = 50
 const DefaultSessionHistoryLimit = 50
@@ -19,6 +23,38 @@ const DefaultSessionHistoryLimit = 50
 export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handlers) =>
   Effect.gen(function* () {
     const session = yield* SessionV2.Service
+    const locations = yield* LocationServiceMap.Service
+
+    const requireAvailableModel = Effect.fn("SessionHandler.requireAvailableModel")(function* (
+      model: { providerID: string; id: string },
+      location: Location.Ref,
+    ) {
+      const check = Effect.gen(function* () {
+        const catalog = yield* Catalog.Service
+        const available = yield* catalog.model.available()
+        if (available.some((candidate) => candidate.providerID === model.providerID && candidate.id === model.id))
+          return
+        yield* new ModelUnavailableError({
+          providerID: model.providerID,
+          modelID: model.id,
+          message: `Загвар ашиглах боломжгүй байна: ${model.providerID}/${model.id}. Нийлүүлэгчийн холболт эсвэл MongolGPT аккаунтын нэвтрэлтийг шалгана уу.`,
+        })
+      })
+      return yield* check.pipe(Effect.provide(locations.get(location)))
+    })
+
+    const getSession = Effect.fn("SessionHandler.getSession")(function* (sessionID: SessionV2.ID) {
+      return yield* session.get(sessionID).pipe(
+        Effect.catchTag(
+          "Session.NotFoundError",
+          (error) =>
+            new SessionNotFoundError({
+              sessionID: error.sessionID,
+              message: `Сесс олдсонгүй: ${error.sessionID}`,
+            }),
+        ),
+      )
+    })
 
     return handlers
       .handle(
@@ -67,6 +103,10 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
       .handle(
         "session.create",
         Effect.fn(function* (ctx) {
+          if (ctx.payload.model) {
+            const location = Location.Ref.make(ctx.payload.location ?? { directory: AbsolutePath.make(process.cwd()) })
+            yield* requireAvailableModel(ctx.payload.model, location)
+          }
           return {
             data: yield* session.create({
               id: ctx.payload.id,
@@ -91,16 +131,7 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
         "session.get",
         Effect.fn(function* (ctx) {
           return {
-            data: yield* session.get(ctx.params.sessionID).pipe(
-              Effect.catchTag(
-                "Session.NotFoundError",
-                (error) =>
-                  new SessionNotFoundError({
-                    sessionID: error.sessionID,
-                    message: `Сесс олдсонгүй: ${error.sessionID}`,
-                  }),
-              ),
-            ),
+            data: yield* getSession(ctx.params.sessionID),
           }
         }),
       )
@@ -123,6 +154,8 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
       .handle(
         "session.switchModel",
         Effect.fn(function* (ctx) {
+          const current = yield* getSession(ctx.params.sessionID)
+          yield* requireAvailableModel(ctx.payload.model, current.location)
           yield* session.switchModel({ sessionID: ctx.params.sessionID, model: ctx.payload.model }).pipe(
             Effect.catchTag("Session.NotFoundError", (error) =>
               Effect.fail(
@@ -139,6 +172,8 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
       .handle(
         "session.prompt",
         Effect.fn(function* (ctx) {
+          const current = yield* getSession(ctx.params.sessionID)
+          if (current.model) yield* requireAvailableModel(current.model, current.location)
           return {
             data: yield* session
               .prompt({

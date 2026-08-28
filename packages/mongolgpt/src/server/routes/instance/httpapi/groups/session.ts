@@ -20,7 +20,7 @@ import {
   WorkspaceRoutingQuery,
   WorkspaceRoutingQueryFields,
 } from "../middleware/workspace-routing"
-import { ApiNotFoundError, PermissionNotFoundError, SessionBusyError } from "../errors"
+import { ApiNotFoundError, ModelNotFoundError, PermissionNotFoundError, SessionBusyError } from "../errors"
 import { described } from "./metadata"
 import { QueryBoolean } from "./query"
 import { ProviderV2 } from "@mongolgpt/core/provider"
@@ -204,13 +204,12 @@ export const SessionApi = HttpApi.make("session")
           query: WorkspaceRoutingQuery,
           payload: [HttpApiSchema.NoContent, Session.CreateInput],
           success: described(Session.Info, "Сессийг амжилттай үүсгэсэн"),
-          error: HttpApiError.BadRequest,
+          error: [HttpApiError.BadRequest, ModelNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.create",
             summary: "Сесс үүсгэх",
-            description:
-              "AI туслахтай харилцаж, харилцан яриаг удирдах шинэ MongolGPT сесс үүсгэнэ.",
+            description: "AI туслахтай харилцаж, харилцан яриаг удирдах шинэ MongolGPT сесс үүсгэнэ.",
           }),
         ),
         HttpApiEndpoint.delete("remove", SessionPaths.remove, {
@@ -260,7 +259,8 @@ export const SessionApi = HttpApi.make("session")
           OpenApi.annotations({
             identifier: "session.abort",
             summary: "Сесс зогсоох",
-            description: "Идэвхтэй сессийг зогсоож, үргэлжилж буй AI боловсруулалт эсвэл командын гүйцэтгэлийг дуусгана.",
+            description:
+              "Идэвхтэй сессийг зогсоож, үргэлжилж буй AI боловсруулалт эсвэл командын гүйцэтгэлийг дуусгана.",
           }),
         ),
         HttpApiEndpoint.post("init", SessionPaths.init, {
@@ -268,7 +268,7 @@ export const SessionApi = HttpApi.make("session")
           query: WorkspaceRoutingQuery,
           payload: InitPayload,
           success: described(Schema.Boolean, "Сессийг эхлүүлсэн"),
-          error: [HttpApiError.BadRequest, ApiNotFoundError],
+          error: [HttpApiError.BadRequest, ApiNotFoundError, ModelNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.init",
@@ -306,12 +306,13 @@ export const SessionApi = HttpApi.make("session")
           query: WorkspaceRoutingQuery,
           payload: SummarizePayload,
           success: described(Schema.Boolean, "Сессийг хураангуйлсан"),
-          error: [HttpApiError.BadRequest, ApiNotFoundError],
+          error: [HttpApiError.BadRequest, ApiNotFoundError, ModelNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.summarize",
             summary: "Сессийг хураангуйлах",
-            description: "Гол мэдээллийг хадгалах зорилгоор AI-ийн хураангуйлах аргыг ашиглан сессийн товч хураангуй үүсгэнэ.",
+            description:
+              "Гол мэдээллийг хадгалах зорилгоор AI-ийн хураангуйлах аргыг ашиглан сессийн товч хураангуй үүсгэнэ.",
           }),
         ),
         HttpApiEndpoint.post("prompt", SessionPaths.prompt, {
@@ -319,7 +320,7 @@ export const SessionApi = HttpApi.make("session")
           query: WorkspaceRoutingQuery,
           payload: PromptPayload,
           success: described(SessionV1.WithParts, "Мессеж үүссэн"),
-          error: [HttpApiError.BadRequest, ApiNotFoundError],
+          error: [HttpApiError.BadRequest, ApiNotFoundError, ModelNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.prompt",
@@ -332,7 +333,7 @@ export const SessionApi = HttpApi.make("session")
           query: WorkspaceRoutingQuery,
           payload: PromptPayload,
           success: described(HttpApiSchema.NoContent, "Промптыг хүлээн авсан"),
-          error: [HttpApiError.BadRequest, ApiNotFoundError],
+          error: [HttpApiError.BadRequest, ApiNotFoundError, ModelNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.prompt_async",
@@ -346,7 +347,7 @@ export const SessionApi = HttpApi.make("session")
           query: WorkspaceRoutingQuery,
           payload: CommandPayload,
           success: described(SessionV1.WithParts, "Мессеж үүссэн"),
-          error: [HttpApiError.BadRequest, ApiNotFoundError],
+          error: [HttpApiError.BadRequest, ApiNotFoundError, ModelNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.command",
@@ -359,7 +360,7 @@ export const SessionApi = HttpApi.make("session")
           query: WorkspaceRoutingQuery,
           payload: ShellPayload,
           success: described(SessionV1.WithParts, "Мессеж үүссэн"),
-          error: [HttpApiError.BadRequest, ApiNotFoundError, SessionBusyError],
+          error: [HttpApiError.BadRequest, ApiNotFoundError, ModelNotFoundError, SessionBusyError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.shell",
@@ -377,8 +378,7 @@ export const SessionApi = HttpApi.make("session")
           OpenApi.annotations({
             identifier: "session.revert",
             summary: "Мессеж буцаах",
-            description:
-              "Сессийн тодорхой мессежийг буцааж, нөлөөг нь цуцлан өмнөх төлөвийг сэргээнэ.",
+            description: "Сессийн тодорхой мессежийг буцааж, нөлөөг нь цуцлан өмнөх төлөвийг сэргээнэ.",
           }),
         ),
         HttpApiEndpoint.post("unrevert", SessionPaths.unrevert, {

@@ -45,10 +45,7 @@ export function isAccountBackedCredential(value: CredentialValue | undefined) {
 }
 
 function isHostedRuntimeAccountBacked() {
-  return HostedCredential.isRuntimePlaceholder(
-    HostedCredential.EnvironmentName,
-    env(HostedCredential.EnvironmentName),
-  )
+  return HostedCredential.isRuntimePlaceholder(HostedCredential.EnvironmentName, env(HostedCredential.EnvironmentName))
 }
 
 function oauth(http: HttpClient.HttpClient) {
@@ -138,8 +135,6 @@ export const MongolGPTPlugin = define<HttpClient.HttpClient | EventV2.Service | 
     const events = yield* EventV2.Service
     const http = yield* HttpClient.HttpClient
     const loading = Semaphore.makeUnsafe(1)
-    let connected = false
-    let accountBacked = false
     let providers: typeof ConfigV1.Info.Type.provider | undefined
 
     const load = Effect.fn("MongolGPTPlugin.load")(function* () {
@@ -147,8 +142,6 @@ export const MongolGPTPlugin = define<HttpClient.HttpClient | EventV2.Service | 
       const credential = connection
         ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.catch(() => Effect.succeed(undefined)))
         : undefined
-      connected = credential !== undefined
-      accountBacked = isAccountBackedCredential(credential) || isHostedRuntimeAccountBacked()
       providers = credential
         ? yield* fetchProviders(http, credential).pipe(
             Effect.catch((cause) =>
@@ -165,15 +158,12 @@ export const MongolGPTPlugin = define<HttpClient.HttpClient | EventV2.Service | 
         integration.name = "MongolGPT"
       })
       draft.method.update(oauth(http))
-      draft.method.update({ integrationID: "mongolgpt", method: { type: "key", label: "API key (үйлчилгээний бүртгэл)" } })
+      draft.method.update({
+        integrationID: "mongolgpt",
+        method: { type: "key", label: "API key (үйлчилгээний бүртгэл)" },
+      })
     })
 
-    const initialConnection = yield* ctx.integration.connection.active("mongolgpt")
-    const initialCredential = initialConnection
-      ? yield* ctx.integration.connection.resolve(initialConnection).pipe(Effect.catch(() => Effect.succeed(undefined)))
-      : undefined
-    connected = initialCredential !== undefined
-    accountBacked = isAccountBackedCredential(initialCredential) || isHostedRuntimeAccountBacked()
     yield* ctx.catalog.transform((catalog) => {
       for (const [providerID, item] of Object.entries(providers ?? {})) {
         catalog.provider.update(providerID, (provider) => {
@@ -228,23 +218,6 @@ export const MongolGPTPlugin = define<HttpClient.HttpClient | EventV2.Service | 
           })
         }
       }
-
-      const item = catalog.provider.get(ProviderV2.ID.mongolgpt)
-      if (!item) return
-      const configuredKey = item.provider.request.body.apiKey
-      const hasKey = Boolean(
-        env(HostedCredential.EnvironmentName) || connected || (configuredKey && configuredKey !== "public"),
-      )
-      catalog.provider.update(item.provider.id, (provider) => {
-        if (provider.request.body.apiKey === "public") delete provider.request.body.apiKey
-      })
-      if (hasKey && accountBacked) return
-      for (const model of item.models.values()) {
-        if (hasKey && !isManagedFreeModel(model)) continue
-        catalog.model.update(item.provider.id, model.id, (draft) => {
-          draft.enabled = false
-        })
-      }
     })
 
     const refresh = () => loading.withPermit(load().pipe(Effect.andThen(ctx.catalog.reload())))
@@ -254,6 +227,47 @@ export const MongolGPTPlugin = define<HttpClient.HttpClient | EventV2.Service | 
       Effect.forkScoped({ startImmediately: true }),
     )
     yield* refresh().pipe(Effect.forkScoped)
+  }),
+})
+
+export const MongolGPTAccountPolicyPlugin = define<EventV2.Service | Scope.Scope>({
+  id: "mongolgpt-account-policy",
+  effect: Effect.fn(function* (ctx) {
+    const events = yield* EventV2.Service
+
+    yield* ctx.catalog.transform(
+      Effect.fn(function* (catalog) {
+        const item = catalog.provider.get(ProviderV2.ID.mongolgpt)
+        if (!item) return
+
+        const connection = yield* ctx.integration.connection.active("mongolgpt")
+        const credential = connection
+          ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.catch(() => Effect.succeed(undefined)))
+          : undefined
+        const configuredKey = item.provider.request.body.apiKey
+        const hasKey = Boolean(
+          env(HostedCredential.EnvironmentName) || credential || (configuredKey && configuredKey !== "public"),
+        )
+        const accountBacked = isAccountBackedCredential(credential) || isHostedRuntimeAccountBacked()
+
+        catalog.provider.update(item.provider.id, (provider) => {
+          if (provider.request.body.apiKey === "public") delete provider.request.body.apiKey
+        })
+        if (hasKey && accountBacked) return
+        for (const model of item.models.values()) {
+          if (hasKey && !isManagedFreeModel(model)) continue
+          catalog.model.update(item.provider.id, model.id, (draft) => {
+            draft.enabled = false
+          })
+        }
+      }),
+    )
+
+    yield* events.subscribe(Integration.Event.ConnectionUpdated).pipe(
+      Stream.filter((event) => event.data.integrationID === Integration.ID.make("mongolgpt")),
+      Stream.runForEach(() => ctx.catalog.reload()),
+      Effect.forkScoped({ startImmediately: true }),
+    )
   }),
 })
 
