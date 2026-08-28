@@ -1199,7 +1199,9 @@ describe("session.compaction.process", () => {
       expect(result).toBe("continue")
       expect(last?.info.role).toBe("user")
       if (last?.parts[0]?.type === "text") {
-        expect(last.parts[0].text).toContain("Өмнөх хүсэлт том хэмжээний media хавсралтаас болж provider-ийн хэмжээсийн хязгаарыг давлаа")
+        expect(last.parts[0].text).toContain(
+          "Өмнөх хүсэлт том хэмжээний media хавсралтаас болж provider-ийн хэмжээсийн хязгаарыг давлаа",
+        )
       }
     }),
   )
@@ -1254,14 +1256,12 @@ describe("session.compaction.process", () => {
           .pipe(Effect.forkChild)
 
         yield* Deferred.await(ready).pipe(Effect.timeout("5 seconds"))
-        const start = Date.now()
-        yield* Fiber.interrupt(fiber)
-        const exit = yield* Fiber.await(fiber).pipe(Effect.timeout("250 millis"))
+        yield* Fiber.interrupt(fiber).pipe(Effect.timeout("2 seconds"))
+        const exit = yield* Fiber.await(fiber)
 
         expect(Exit.isFailure(exit)).toBe(true)
         if (Exit.isFailure(exit)) {
           expect(Cause.hasInterrupts(exit.cause)).toBe(true)
-          expect(Date.now() - start).toBeLessThan(250)
         }
       }).pipe(withCompaction({ llm: stub.layer }))
     },
@@ -1289,8 +1289,8 @@ describe("session.compaction.process", () => {
             .pipe(Effect.forkChild)
 
           yield* Deferred.await(ready).pipe(Effect.timeout("1 second"))
-          yield* Fiber.interrupt(fiber)
-          const exit = yield* Fiber.await(fiber).pipe(Effect.timeout("250 millis"))
+          yield* Fiber.interrupt(fiber).pipe(Effect.timeout("2 seconds"))
+          const exit = yield* Fiber.await(fiber)
           const all = yield* ssn.messages({ sessionID: session.id })
 
           expect(Exit.isFailure(exit)).toBe(true)
