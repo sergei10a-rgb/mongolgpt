@@ -6,9 +6,14 @@ const MAX_RESPONSE_BYTES = 1024 * 1024
 const MAX_BATCH_BYTES = 1024 * 1024
 const MIGRATIONS_TABLE = "__drizzle_migrations"
 
+const ApiResponseInfo = z.object({
+  code: z.number().optional(),
+  message: z.string().optional(),
+})
+
 const ApiEnvelope = z.object({
   success: z.boolean(),
-  errors: z.array(z.object({ code: z.number().optional() })).optional(),
+  errors: z.array(ApiResponseInfo).optional(),
   result: z
     .array(
       z.object({
@@ -85,7 +90,12 @@ export async function migrateD1(input: {
         sql: `INSERT INTO ${MIGRATIONS_TABLE} (hash, created_at, name, applied_at) VALUES (?, ?, ?, ?)`,
         params: [migration.hash, String(migration.folderMillis), migration.name, (input.now ?? (() => new Date()))().toISOString()],
       })
-    await request.batch(statements)
+    try {
+      await request.batch(statements)
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "тодорхойгүй алдаа"
+      throw new Error(`D1 migration амжилтгүй: ${migration.name}. ${detail}`, { cause: error })
+    }
     input.onApplied?.(migration.name)
   }
 
@@ -116,9 +126,10 @@ function createD1Request(input: {
     if (Buffer.byteLength(text) > MAX_RESPONSE_BYTES) throw new Error("Cloudflare D1 хариу 1 MiB хязгаараас давлаа.")
     const payload = ApiEnvelope.parse(JSON.parse(text))
     const errorCodes = payload.errors?.flatMap((error) => (error.code === undefined ? [] : [String(error.code)])) ?? []
+    const errorMessages = payload.errors?.flatMap((error) => (error.message ? [sanitizeDiagnostic(error.message)] : [])) ?? []
     if (!response.ok || !payload.success || !payload.result) {
       throw new Error(
-        `Cloudflare D1 хүсэлт амжилтгүй (HTTP ${response.status}${errorCodes.length ? `, код ${errorCodes.join(",")}` : ""}).`,
+        `Cloudflare D1 хүсэлт амжилтгүй (HTTP ${response.status}${errorCodes.length ? `, код ${errorCodes.join(",")}` : ""})${errorMessages.length ? `: ${errorMessages.join(" | ")}` : "."}`,
       )
     }
     if (payload.result.length !== expectedResults) {
@@ -181,4 +192,8 @@ function requireIdentifier(label: string, value: string, pattern: RegExp) {
   const normalized = value.trim().toLowerCase()
   if (!pattern.test(normalized)) throw new Error(`${label} буруу байна.`)
   return normalized
+}
+
+function sanitizeDiagnostic(value: string) {
+  return value.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 240)
 }

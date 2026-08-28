@@ -84,6 +84,31 @@ describe("D1 HTTP migrator", () => {
     expect(await rejectionMessage(promise)).toContain("migration өөрчлөгдсөн")
     expect(call).toBe(2)
   })
+
+  test("reports the failed migration with a bounded Cloudflare diagnostic", async () => {
+    let call = 0
+    const promise = migrateD1({
+      accountId: ACCOUNT_ID,
+      databaseId: DATABASE_ID,
+      apiToken: "test-token",
+      fetch: async () => {
+        call++
+        if (call < 4) return Response.json({ success: true, result: [successfulResult([])] })
+        return Response.json(
+          {
+            success: false,
+            errors: [{ code: 7500, message: 'D1_ERROR: near "END": syntax error\nignored control text' }],
+          },
+          { status: 400 },
+        )
+      },
+    })
+
+    const message = await rejectionMessage(promise)
+    expect(message).toContain("20260716215848_tiny_dagger")
+    expect(message).toContain('D1_ERROR: near "END": syntax error ignored control text')
+    expect(message).not.toContain("test-token")
+  })
 })
 
 function successfulResult(results: Record<string, unknown>[] = []) {
