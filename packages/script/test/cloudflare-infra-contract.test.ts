@@ -507,6 +507,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const confirmation = job.steps.find((step) => step.name === "Validate exact dev app confirmation")
     const deploy = job.steps.find((step) => step.name === "Deploy only dev app to Cloudflare")
     const smoke = job.steps.find((step) => step.name === "Verify live dev app boundary")
+    const browser = job.steps.find((step) => step.name === "Verify dev app-only boundary in Chromium")
+    const artifacts = job.steps.find((step) => step.name === "Upload app-only browser artifacts")
 
     expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
     expect(parsed.jobs.deploy.environment).toBe("dev")
@@ -523,6 +525,20 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("bun run deploy:preflight -- dev --app-only")
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --target WebApp --print-logs")
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --app-only dev")
+    expect(browser?.env).toEqual({
+      CI: "true",
+      PLAYWRIGHT_DEPLOYED_BASE_URL: "https://app.dev.mgpt.mn",
+      PLAYWRIGHT_DEPLOYED_PUBLIC_URL: "https://dev.mgpt.mn",
+      PLAYWRIGHT_DEPLOYED_RUNTIME_URL: "https://runtime.dev.mgpt.mn",
+      PLAYWRIGHT_DEPLOYED_RELEASE_SHA: "${{ github.sha }}",
+      PLAYWRIGHT_DEPLOYED_CHANNEL: "dev",
+    })
+    expect(browser?.run).toBe("bun --cwd packages/app test:e2e:deployed:app-only")
+    expect(job.steps.indexOf(browser!)).toBeGreaterThan(job.steps.indexOf(smoke!))
+    expect(artifacts?.condition).toBe("always()")
+    expect(artifacts?.uses).toBe("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a")
+    expect(artifacts?.with?.path).toContain("packages/app/e2e/test-results-deployed")
+    expect(artifacts?.with?.path).toContain("packages/app/e2e/playwright-report-deployed")
     expect(source).not.toMatch(
       /MONGOLGPT_(?:GATEWAY|RUNTIME_SECRET|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/,
     )
