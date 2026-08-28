@@ -7,6 +7,7 @@ import { HttpClient, HttpClientRequest, HttpRouter, HttpServer } from "effect/un
 import * as Socket from "effect/unstable/socket/Socket"
 import { WorkspaceV2 } from "@mongolgpt/core/workspace"
 import { ControlPaths } from "../../src/server/routes/instance/httpapi/groups/control"
+import { CompatPaths } from "../../src/server/routes/instance/httpapi/groups/compat"
 import { InstancePaths } from "../../src/server/routes/instance/httpapi/groups/instance"
 import { SessionPaths } from "../../src/server/routes/instance/httpapi/groups/session"
 import { ProjectV2 } from "@mongolgpt/core/project"
@@ -260,6 +261,85 @@ describe("instance HttpApi", () => {
       expect(yield* diff.json).toContainEqual(
         expect.objectContaining({ file: "changed.txt", additions: 1, status: "added" }),
       )
+    }),
+  )
+
+  it.live("plans a plugin adapter and applies an MCP import through the production route tree", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({ git: true })
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const post = (url: string, payload: unknown) =>
+        HttpClientRequest.post(url).pipe(
+          directoryHeader(dir),
+          HttpClientRequest.bodyJson(payload),
+          Effect.flatMap(HttpClient.execute),
+        )
+
+      const preview = yield* post(CompatPaths.plan, {
+        source: "acme-plugin",
+        type: "plugin",
+        scope: "project",
+        adapter: true,
+      })
+      expect(preview.status).toBe(200)
+      expect(preview.headers["content-type"]).toContain("application/json")
+      const configPath = path.join(dir, ".mongolgpt", "mongolgpt.jsonc")
+      expect(yield* preview.json).toMatchObject({
+        scope: "project",
+        configPath,
+        prepared: [
+          {
+            kind: "plugin",
+            adapter: { original: "acme-plugin", format: "planned-js" },
+          },
+        ],
+        outcomes: [{ mode: "add", operation: expect.any(Object) }],
+      })
+      expect(yield* fs.exists(configPath)).toBe(false)
+      expect(yield* fs.exists(path.join(dir, ".mongolgpt", "plugins"))).toBe(false)
+
+      const applied = yield* post(CompatPaths.apply, {
+        type: "auto",
+        scope: "project",
+        name: "higgsfield",
+        mcpCommand: "npx -y @higgsfield/mcp",
+        env: ["HIGGSFIELD_API_KEY=local-secret"],
+      })
+      expect(applied.status).toBe(200)
+      expect(applied.headers["content-type"]).toContain("application/json")
+      expect(yield* applied.json).toMatchObject({
+        scope: "project",
+        configPath,
+        outcomes: [{ mode: "add", operation: { kind: "mcp", name: "higgsfield" } }],
+      })
+      const config = yield* fs.readFileString(configPath)
+      expect(config).toContain('"higgsfield"')
+      expect(config).toContain('"@higgsfield/mcp"')
+      expect(config).toContain('"HIGGSFIELD_API_KEY"')
+    }),
+  )
+
+  it.live("returns a typed Mongolian import error without writing configuration", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({ git: true })
+      const fs = yield* FileSystem.FileSystem
+      const path = yield* Path.Path
+      const response = yield* HttpClientRequest.post(CompatPaths.apply).pipe(
+        directoryHeader(dir),
+        HttpClientRequest.bodyJson({
+          scope: "project",
+          mcpCommand: 'npx -y "unterminated',
+        }),
+        Effect.flatMap(HttpClient.execute),
+      )
+
+      expect(response.status).toBe(400)
+      expect(response.headers["content-type"]).toContain("application/json")
+      expect(yield* response.json).toMatchObject({
+        message: "Командын quote хаагдаагүй байна",
+      })
+      expect(yield* fs.exists(path.join(dir, ".mongolgpt", "mongolgpt.jsonc"))).toBe(false)
     }),
   )
 })
