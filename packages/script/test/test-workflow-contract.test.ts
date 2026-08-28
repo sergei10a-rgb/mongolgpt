@@ -29,6 +29,20 @@ function stepsFor(job: unknown) {
 }
 
 describe("test workflow contract", () => {
+  test("cancels stale suites for the same branch or pull request", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/test.yml", import.meta.url)).text()
+    const parsed: unknown = Bun.YAML.parse(source)
+
+    expect(record(parsed)).toBe(true)
+    if (!record(parsed) || !record(parsed.concurrency)) return
+
+    expect(parsed.concurrency["cancel-in-progress"]).toBe(true)
+    expect(parsed.concurrency.group).toBe(
+      "${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}",
+    )
+    expect(source).not.toContain("github.run_id")
+  })
+
   test("only E2E dependency installation skips native lifecycle scripts", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/test.yml", import.meta.url)).text()
     const parsed: unknown = Bun.YAML.parse(source)
