@@ -3,6 +3,7 @@ import { base64Encode } from "@mongolgpt/core/util/encode"
 import { dict as mn } from "../../src/i18n/mn"
 import { fixture, pageMessages } from "./session-timeline.fixture"
 import { mockMongolGPTServer } from "../utils/mock-server"
+import { trackPageErrors, expectNoSmokeErrors } from "../utils/errors"
 
 const runtimeUrl = process.env.PLAYWRIGHT_HOSTED_RUNTIME_URL ?? "https://runtime.e2e.mgpt.test:4443"
 const publicUrl = process.env.PLAYWRIGHT_HOSTED_PUBLIC_URL ?? "https://dev.e2e.mgpt.test"
@@ -166,6 +167,163 @@ test.describe("hosted MongolGPT account gate", () => {
     await expect
       .poll(() => page.evaluate((origin) => localStorage.getItem(`mongolgpt.hosted.workspace.v1:${origin}`), publicUrl))
       .toBe("wrk_research")
+  })
+
+  test("keeps optional BYOK and custom provider flows available after account login when managed Free Auto is unavailable", async ({
+    page,
+  }) => {
+    const errors = trackPageErrors(page)
+    await mockRuntime(page, {
+      provider: providerCatalog(),
+    })
+    await configureHostedProject(page)
+
+    const current = capability("account_byok_e2e")
+    await page.route(tokenUrl, (route) => session(route, 200, current))
+    await page.route(sessionUrl, (route) =>
+      session(route, 200, {
+        authenticated: true,
+        account: { id: current.account.id },
+        workspace: { id: current.workspace.id },
+        expiresAt: current.expiresAt,
+      }),
+    )
+
+    await page.goto(`/${base64Encode(fixture.directory)}/session/${fixture.sourceID}`)
+    await expectVisibleOrAppError(
+      page,
+      page.getByRole("textbox", { name: mn["prompt.placeholder.simple"], exact: true }),
+    )
+
+    await page.locator('[data-action="prompt-model"]').click()
+    await expect(page.getByText(mn["dialog.model.unpaid.freeModels.title"], { exact: true })).toBeVisible()
+    await expect(page.getByText("MongolGPT Free Auto", { exact: true })).toHaveCount(0)
+
+    await page.getByRole("button", { name: mn["dialog.provider.viewAll"], exact: true }).click()
+    await page.getByText(mn["settings.providers.tag.custom"], { exact: true }).first().click()
+
+    await expect(page.getByText(mn["provider.custom.title"], { exact: true })).toBeVisible()
+    await expect(page.getByLabel(mn["provider.custom.field.providerID.label"], { exact: true })).toBeVisible()
+    expectNoSmokeErrors(errors, [], [])
+  })
+
+  test("sends a hosted mongolgpt/free-auto prompt after login and workspace selection", async ({ page }) => {
+    const capabilities = new Map<string, ReturnType<typeof capability>>()
+    const requested: Array<string | undefined> = []
+    const account = { id: "account_free_auto_e2e", email: "free-auto@mgpt.mn" }
+    const workspaces = [{ id: "wrk_e2e_workspace", name: "MongolGPT баг" }]
+    let issued = 0
+    let promptRequest:
+      | {
+          sessionID: string
+          model?: { providerID?: string; modelID?: string }
+          text: string
+        }
+      | undefined
+
+    await mockRuntime(page, {
+      provider: providerCatalog({
+        connected: ["mongolgpt"],
+        defaults: { mongolgpt: "free-auto" },
+        providers: [
+          {
+            id: "mongolgpt",
+            name: "MongolGPT",
+            models: {
+              "free-auto": {
+                id: "free-auto",
+                name: "MongolGPT Free Auto",
+                limit: { context: 200_000 },
+                cost: { input: 0, output: 0 },
+              },
+            },
+          },
+        ],
+      }),
+    })
+    await configureHostedProject(page)
+
+    await page.route(tokenUrl, async (route) => {
+      const workspaceID = route.request().headers()["x-org-id"]
+      requested.push(workspaceID)
+      if (!workspaceID) {
+        return session(route, 409, {
+          error: "workspace_required",
+          message: "Ашиглах ажлын талбараа сонгоно уу.",
+          account,
+          workspaces,
+        })
+      }
+      const workspace = workspaces.find((item) => item.id === workspaceID)
+      if (!workspace) return session(route, 403, { account, workspaces })
+      const current = { ...capability(account.id, `token-${workspace.id}-${++issued}`), workspace }
+      capabilities.set(current.token, current)
+      return session(route, 200, current)
+    })
+    await page.route(sessionUrl, (route) => {
+      const token =
+        route
+          .request()
+          .headers()
+          .authorization?.replace(/^Bearer\s+/, "") ?? ""
+      const current = capabilities.get(token)
+      if (!current) return session(route, 401, { authenticated: false })
+      return session(route, 200, {
+        authenticated: true,
+        account: { id: current.account.id },
+        workspace: { id: current.workspace.id },
+        expiresAt: current.expiresAt,
+      })
+    })
+    await page.route(`${runtimeUrl}/session/**/prompt_async`, async (route) => {
+      const match = new URL(route.request().url()).pathname.match(/^\/session\/([^/]+)\/prompt_async$/)
+      if (!match || route.request().method() !== "POST") return route.fallback()
+      const body = route.request().postDataJSON() as Record<string, unknown>
+      const parts = Array.isArray(body.parts) ? body.parts : []
+      promptRequest = {
+        sessionID: match[1]!,
+        model: record(body.model) ? body.model : undefined,
+        text: parts
+          .filter((part): part is Record<string, unknown> => record(part) && part.type === "text")
+          .map((part) => (typeof part.text === "string" ? part.text : ""))
+          .join(""),
+      }
+      return route.fulfill({
+        status: 204,
+        headers: {
+          ...corsHeaders(route),
+          "cache-control": "no-store",
+        },
+        body: "",
+      })
+    })
+
+    await page.goto("/")
+    await expect(page.getByText(mn["onboarding.workspace.description"], { exact: true })).toBeVisible()
+    await page.getByRole("button", { name: mn["onboarding.workspace.select"], exact: true }).click()
+    await expect.poll(() => requested.includes("wrk_e2e_workspace")).toBe(true)
+    await expect
+      .poll(() => page.evaluate((origin) => localStorage.getItem(`mongolgpt.hosted.workspace.v1:${origin}`), publicUrl))
+      .toBe("wrk_e2e_workspace")
+    const errors = trackPageErrors(page)
+
+    await page.goto(`/${base64Encode(fixture.directory)}/session/${fixture.sourceID}`)
+    const composer = page.getByRole("textbox", { name: mn["prompt.placeholder.simple"], exact: true })
+    await expectVisibleOrAppError(page, composer)
+    await expect(page.locator('[data-action="prompt-model"]')).toContainText("MongolGPT Free Auto")
+
+    await composer.click()
+    await page.keyboard.type("Free Auto smoke prompt")
+    await page.getByRole("button", { name: mn["prompt.action.send"], exact: true }).click()
+
+    await expect(page).toHaveURL(new RegExp(`/session/${fixture.sourceID}$`))
+    await expect.poll(() => promptRequest?.sessionID).toBe(fixture.sourceID)
+    expect(promptRequest).toMatchObject({
+      sessionID: fixture.sourceID,
+      model: { providerID: "mongolgpt", modelID: "free-auto" },
+      text: "Free Auto smoke prompt",
+    })
+    expectNoSmokeErrors(errors, [], [])
   })
 
   test("shows plan, quota, and usage in account settings and recovers from an overview failure", async ({ page }) => {
@@ -383,13 +541,14 @@ function accountOverview(accountID: string) {
   }
 }
 
-async function mockRuntime(page: Page) {
+async function mockRuntime(page: Page, overrides: Partial<Parameters<typeof mockMongolGPTServer>[1]> = {}) {
   await mockMongolGPTServer(page, {
     sessions: fixture.sessions,
     provider: fixture.provider,
     directory: fixture.directory,
     project: fixture.project,
     pageMessages,
+    ...overrides,
   })
 }
 
@@ -409,18 +568,36 @@ async function configureHostedProject(page: Page) {
 }
 
 function session(route: Route, status: number, body: unknown, contentType = "application/json") {
-  const origin = route.request().headers()["origin"]
   return route.fulfill({
     status,
     contentType,
     headers: {
-      ...(origin ? { "access-control-allow-origin": origin } : {}),
-      "access-control-allow-credentials": "true",
+      ...corsHeaders(route),
       "cache-control": "no-store",
-      vary: "Origin",
     },
     body: contentType === "application/json" ? JSON.stringify(body) : String(body),
   })
+}
+
+function corsHeaders(route: Route) {
+  const origin = route.request().headers()["origin"]
+  return {
+    ...(origin ? { "access-control-allow-origin": origin } : {}),
+    "access-control-allow-credentials": "true",
+    vary: "Origin",
+  }
+}
+
+function providerCatalog(input?: {
+  connected?: string[]
+  defaults?: Record<string, string>
+  providers?: Array<Record<string, unknown>>
+}) {
+  return {
+    all: input?.providers ?? [],
+    connected: input?.connected ?? [],
+    default: input?.defaults ?? {},
+  }
 }
 
 function isBridgePending(value: unknown): value is {
@@ -440,6 +617,10 @@ function isBridgePending(value: unknown): value is {
     "expiresAt" in value &&
     typeof value.expiresAt === "number"
   )
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
 async function expectVisibleOrAppError(page: Page, target: Locator) {
