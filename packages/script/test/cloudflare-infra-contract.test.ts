@@ -142,8 +142,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("set_optional_secret GOOGLE_CLIENT_ID")
     expect(source).not.toContain("SST_SECRET_MONGOLGPT_GATEWAY_MODELS1")
     expect(source).not.toMatch(/QPAY_|BONUM_|CLOUDFLARE_ACCESS_API_TOKEN|MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS/)
-    expect(contracts?.run).toContain("bun --cwd packages/console/app test")
-    expect(contracts?.run).not.toContain("bun run --cwd packages/console/app test")
+    expect(contracts?.run).toContain("bun test --cwd packages/console/app")
+    expect(contracts?.run).not.toContain("bun --cwd packages/console/app test")
 
     const run = deploy?.run ?? ""
     const database = run.indexOf('bun sst deploy --stage="$stage" --target Database')

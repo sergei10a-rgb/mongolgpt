@@ -67,7 +67,7 @@ jobs:
         run: |
           bun typecheck
           bun run --cwd packages/script test
-          bun --cwd packages/console/app test
+          bun test --cwd packages/console/app
 
       - name: Bootstrap real dev OAuth infrastructure
         env:
