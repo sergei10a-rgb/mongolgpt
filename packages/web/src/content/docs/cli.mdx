@@ -148,22 +148,38 @@ mongolgpt attach http://10.20.30.40:4096
 
 ---
 
-### auth
+### account
 
-Нэвтрэх эрхийн мэдээлэл болон үйлчилгээ үзүүлэгчийн баталгаажуулалтыг удирдана.
+MongolGPT бүртгэл, Free Auto эрх, багц болон идэвхтэй ажлын орчноо удирдана. Free Auto нь төлбөртэй багц шаардахгүй боловч MongolGPT бүртгэлээр нэвтэрсэн байна.
 
 ```bash
-mongolgpt auth [command]
+mongolgpt account [command]
+mongolgpt account login
+mongolgpt account status
+mongolgpt account open
+mongolgpt account logout
+```
+
+Өөрийн API түлхүүртэй үйлчилгээ үзүүлэгч болон локал загвар нэмэх нь сонголттой бөгөөд `account login`-оос тусдаа урсгал юм. Дэлгэрэнгүйг [Бүртгэл, Free Auto ба багцууд](../account) хэсгээс үзнэ үү.
+
+---
+
+### providers
+
+Өөрийн API түлхүүр, OAuth эрх болон үйлчилгээ үзүүлэгчийн баталгаажуулалтыг удирдана.
+
+```bash
+mongolgpt providers [command]
 ```
 
 ---
 
 #### login
 
-MongolGPT нь үйлчилгээ үзүүлэгчийн жагсаалтыг [Models.dev](https://models.dev)-ээс авдаг. Ашиглах үйлчилгээ үзүүлэгчийн API түлхүүр эсвэл OAuth эрхийг тохируулахдаа `mongolgpt auth login` ажиллуулна. Нэвтрэх мэдээллийг `~/.local/share/mongolgpt/auth.json` файлд хадгална.
+MongolGPT нь үйлчилгээ үзүүлэгчийн жагсаалтыг [Models.dev](https://models.dev)-ээс авдаг. Ашиглах үйлчилгээ үзүүлэгчийн API түлхүүр эсвэл OAuth эрхийг тохируулахдаа `mongolgpt providers login` ажиллуулна. Нэвтрэх мэдээллийг `~/.local/share/mongolgpt/auth.json` файлд хадгална.
 
 ```bash
-mongolgpt auth login
+mongolgpt providers login
 ```
 
 MongolGPT эхлэхдээ нэвтрэх мэдээллийн файл, орчны хувьсагч болон төслийн `.env` файлд тодорхойлсон түлхүүрүүдийг ачаална.
@@ -182,13 +198,13 @@ MongolGPT эхлэхдээ нэвтрэх мэдээллийн файл, орч�
 Итгэмжлэлийн файлд хадгалагдсан бүх баталгаажсан үйлчилгээ үзүүлэгчдийг жагсаана.
 
 ```bash
-mongolgpt auth list
+mongolgpt providers list
 ```
 
 Эсвэл богино хувилбар.
 
 ```bash
-mongolgpt auth ls
+mongolgpt providers ls
 ```
 
 ---
@@ -198,7 +214,7 @@ mongolgpt auth ls
 Таныг итгэмжлэлийн файлаас устгаснаар үйлчилгээ үзүүлэгчээс гарна.
 
 ```bash
-mongolgpt auth logout
+mongolgpt providers logout
 ```
 
 ---

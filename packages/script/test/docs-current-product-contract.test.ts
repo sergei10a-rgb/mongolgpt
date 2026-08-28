@@ -87,6 +87,22 @@ describe("documentation product contract", () => {
     expect(await Bun.file(new URL("zen.mdx", docs)).exists()).toBe(false)
   })
 
+  test("keeps MongolGPT account login separate from provider credentials in CLI guidance", async () => {
+    const [cli, providers, troubleshooting] = await Promise.all([
+      Bun.file(new URL("cli.mdx", docs)).text(),
+      Bun.file(new URL("providers.mdx", docs)).text(),
+      Bun.file(new URL("troubleshooting.mdx", docs)).text(),
+    ])
+
+    expect(cli).toContain("mongolgpt account login")
+    expect(cli).toContain("Free Auto нь төлбөртэй багц шаардахгүй")
+    expect(cli).toContain("mongolgpt providers login")
+    expect(cli).toContain("mongolgpt providers list")
+    expect(providers).toContain("mongolgpt providers list")
+    expect(troubleshooting).toContain("mongolgpt providers login")
+    for (const source of [cli, providers, troubleshooting]) expect(source).not.toMatch(/mongolgpt auth(?:\s|`)/)
+  })
+
   test("publishes dedicated Mongolian service, privacy, billing, and admin guidance", async () => {
     const [faq, privacy, billing, admin, deployment, backup, acp, config] = await Promise.all([
       Bun.file(new URL("faq.mdx", docs)).text(),
@@ -144,10 +160,12 @@ describe("documentation product contract", () => {
 
   test("keeps every local documentation link on an existing Mongolian route", async () => {
     const files = await markdownFiles(docs)
-    const routes = new Set(files.flatMap((file) => {
-      const route = documentationRoute(file)
-      return route === "/docs/" ? [route, "/docs"] : [route, route.slice(0, -1)]
-    }))
+    const routes = new Set(
+      files.flatMap((file) => {
+        const route = documentationRoute(file)
+        return route === "/docs/" ? [route, "/docs"] : [route, route.slice(0, -1)]
+      }),
+    )
     const broken: string[] = []
 
     for (const file of files) {
