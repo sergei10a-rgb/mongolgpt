@@ -597,6 +597,29 @@ describe("Cloudflare deployment preflight", () => {
     expect(result.stage).toBe("dev")
   })
 
+  test("validates auth bootstrap configuration without requiring Cloudflare credentials", () => {
+    const {
+      MONGOLGPT_RUNTIME_SECRET: _runtimeSecret,
+      SST_SECRET_GOOGLE_CLIENT_ID: _google,
+      SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: _models,
+      ...githubOnly
+    } = hosted
+
+    const result = preflightDeployment({
+      stage: "dev",
+      scope: "auth-bootstrap",
+      requireCloudflareCredentials: false,
+      env: {
+        MONGOLGPT_DOMAIN: cloudflare.MONGOLGPT_DOMAIN,
+        ...githubOnly,
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+      },
+    })
+
+    expect(result.stage).toBe("dev")
+  })
+
   test("allows Google-only dev OAuth bootstrap without GitHub credentials", () => {
     const {
       MONGOLGPT_RUNTIME_SECRET: _runtimeSecret,

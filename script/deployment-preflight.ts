@@ -6,6 +6,7 @@ import {
 import { DeploymentPreflightError, deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/deployment"
 
 try {
+  const configOnly = process.argv.includes("--config-only")
   const authBootstrap = process.argv.includes("--auth-bootstrap")
   const docsOnly = process.argv.includes("--docs-only")
   const appOnly = process.argv.includes("--app-only")
@@ -27,30 +28,36 @@ try {
   const result = preflightDeployment({
     stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
     env: process.env,
+    requireCloudflareCredentials: !configOnly,
     requireHostedServices: scope !== "docs-only",
     requireDeploymentSecrets: scope === "app-only" ? false : undefined,
     scope,
   })
-  const cloudflare = await preflightCloudflareDeploymentAccess({
-    accountId: process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID ?? "",
-    token: process.env.CLOUDFLARE_API_TOKEN ?? "",
-    domain: result.domain,
-    scope:
-      scope === "docs-only" || scope === "app-only"
-        ? "worker-only"
-        : scope === "auth-bootstrap"
-          ? "hosted-only"
-          : scope === "runtime-only"
-            ? "runtime-only"
-            : "full",
-  })
-  const access = result.adminEnabled
-    ? await preflightCloudflareAccess({
+  const cloudflare = configOnly
+    ? undefined
+    : await preflightCloudflareDeploymentAccess({
         accountId: process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID ?? "",
-        token: process.env.CLOUDFLARE_ACCESS_API_TOKEN ?? "",
+        token: process.env.CLOUDFLARE_API_TOKEN ?? "",
+        domain: result.domain,
+        scope:
+          scope === "docs-only" || scope === "app-only"
+            ? "worker-only"
+            : scope === "auth-bootstrap"
+              ? "hosted-only"
+              : scope === "runtime-only"
+                ? "runtime-only"
+                : "full",
       })
-    : undefined
-  console.log("Cloudflare deployment preflight амжилттай.")
+  const access =
+    !configOnly && result.adminEnabled
+      ? await preflightCloudflareAccess({
+          accountId: process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID ?? "",
+          token: process.env.CLOUDFLARE_ACCESS_API_TOKEN ?? "",
+        })
+      : undefined
+  console.log(
+    configOnly ? "Deployment configuration preflight амжилттай." : "Cloudflare deployment preflight амжилттай.",
+  )
   console.log(JSON.stringify({ ...result, cloudflare, access, endpoints: deploymentEndpoints(result) }, null, 2))
 } catch (error) {
   if (error instanceof DeploymentPreflightError) {

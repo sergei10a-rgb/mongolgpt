@@ -112,6 +112,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     if (!record(rawJob)) throw new Error("Dev OAuth bootstrap job is missing")
     const job = parseWorkflowJob(rawJob, "bootstrap")
     const confirmation = job.steps.find((step) => step.name === "Validate exact dev bootstrap confirmation")
+    const configPreflight = job.steps.find((step) => step.name === "Verify dev OAuth bootstrap configuration")
     const tokenPreflight = job.steps.find((step) => step.name === "Verify Cloudflare OAuth bootstrap token")
     const contracts = job.steps.find((step) => step.name === "Verify bootstrap contracts")
     const deploy = job.steps.find((step) => step.name === "Bootstrap real dev OAuth infrastructure")
@@ -123,8 +124,22 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(confirmation?.env).toEqual({ BOOTSTRAP_CONFIRMATION: "${{ inputs.confirmation }}" })
     expect(confirmation?.run).toContain('if [ "$BOOTSTRAP_CONFIRMATION" != "BOOTSTRAP DEV AUTH dev.mgpt.mn" ]; then')
     expect(confirmation?.run).not.toContain("${{ inputs.confirmation }}")
+    expect(configPreflight?.env).toEqual({
+      MONGOLGPT_RUNTIME_AUTH_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+      SST_SECRET_ByokCredentialsKeyV1: "${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}",
+      SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: "${{ vars.GITHUB_CLIENT_ID_CONSOLE }}",
+      SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "${{ secrets.GITHUB_CLIENT_SECRET_CONSOLE }}",
+      SST_SECRET_GOOGLE_CLIENT_ID: "${{ vars.GOOGLE_CLIENT_ID }}",
+      SST_SECRET_MONGOLGPT_PLAN_LIMITS: "${{ secrets.MONGOLGPT_PLAN_LIMITS }}",
+      SST_SECRET_MongolGPTRuntimeAuthSecret: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+      SST_SECRET_TurnstileSecretKey: "1x0000000000000000000000000000000AA",
+      SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: "${{ secrets.MONGOLGPT_GATEWAY_SESSION_SECRET }}",
+    })
+    expect(configPreflight?.env).not.toHaveProperty("CLOUDFLARE_API_TOKEN")
+    expect(configPreflight?.run).toBe("bun run deploy:preflight -- dev --auth-bootstrap --config-only")
     expect(tokenPreflight?.env).toEqual({ CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" })
     expect(tokenPreflight?.run).toBe("bun script/cloudflare-preflight.ts --auth-bootstrap")
+    expect(job.steps.indexOf(configPreflight!)).toBeLessThan(job.steps.indexOf(tokenPreflight!))
     expect(job.steps.indexOf(tokenPreflight!)).toBeLessThan(job.steps.indexOf(contracts!))
 
     expect(source).not.toContain("production")
@@ -144,6 +159,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).not.toMatch(/QPAY_|BONUM_|CLOUDFLARE_ACCESS_API_TOKEN|MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS/)
     expect(contracts?.run).toContain("bun test --cwd packages/console/app")
     expect(contracts?.run).not.toContain("bun --cwd packages/console/app test")
+    expect(deploy?.run).not.toContain("deploy:preflight")
 
     const run = deploy?.run ?? ""
     const database = run.indexOf('bun sst deploy --stage="$stage" --target Database')
