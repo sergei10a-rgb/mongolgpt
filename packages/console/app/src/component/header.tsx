@@ -188,7 +188,7 @@ export function Header(props: { hideGetStarted?: boolean }) {
         <button
           type="button"
           data-component="nav-mobile-toggle"
-          aria-expanded="false"
+          aria-expanded={store.mobileMenuOpen}
           aria-controls="nav-mobile-menu"
           class="nav-toggle"
           onClick={() => setStore("mobileMenuOpen", !store.mobileMenuOpen)}
