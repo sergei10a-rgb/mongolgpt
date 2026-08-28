@@ -11,6 +11,7 @@ export default $config({
     const d1Backups = flag("MONGOLGPT_ENABLE_D1_BACKUPS")
     const monitoring = flag("MONGOLGPT_ENABLE_MONITORING")
     const analytics = flag("MONGOLGPT_ENABLE_ANALYTICS")
+    const cloudflareProviderMigration = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")
     const unsupported = ["MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS", "MONGOLGPT_ENABLE_LEGACY_STRIPE"].filter(flag)
     if (unsupported.length) {
       throw new Error(`Cloudflare-д суурилсан байршуулалтын горим дараахыг дэмжихгүй: ${unsupported.join(", ")}`)
@@ -42,6 +43,9 @@ export default $config({
     if (monitoring && !hostedServices) {
       throw new Error("MONGOLGPT_ENABLE_MONITORING нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true үед л ажиллана.")
     }
+    if (cloudflareProviderMigration && (stage !== "dev" || !hostedServices || appOnly)) {
+      throw new Error("Cloudflare provider-ийн түр шилжилтийг зөвхөн hosted dev орчинд ажиллуулна.")
+    }
     if (stage === "production" && hostedServices && !admin) {
       throw new Error("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_ADMIN=true заавал байна.")
     }
@@ -58,8 +62,8 @@ export default $config({
       home: "cloudflare",
       providers: hostedServices && !appOnly
         ? {
-            // Match the existing state until the upstream Cloudflare v6 state migration is fixed.
-            cloudflare: "6.13.0",
+            // Cloudflare v5 state must pass through provider 6.14 (Terraform 5.18) before 6.15+.
+            cloudflare: cloudflareProviderMigration ? "6.14.0" : "6.15.0",
             random: "4.19.2",
             ...(admin ? { command: "1.0.1" } : {}),
           }

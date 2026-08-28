@@ -115,6 +115,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const configPreflight = job.steps.find((step) => step.name === "Verify dev OAuth bootstrap configuration")
     const tokenPreflight = job.steps.find((step) => step.name === "Verify Cloudflare OAuth bootstrap token")
     const contracts = job.steps.find((step) => step.name === "Verify bootstrap contracts")
+    const providerMigration = job.steps.find(
+      (step) => step.name === "Migrate legacy Cloudflare queue state through provider 6.14",
+    )
     const deploy = job.steps.find((step) => step.name === "Bootstrap real dev OAuth infrastructure")
     const smoke = job.steps.find((step) => step.name === "Verify dev account scaffold")
 
@@ -160,6 +163,16 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).not.toMatch(/QPAY_|BONUM_|CLOUDFLARE_ACCESS_API_TOKEN|MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS/)
     expect(contracts?.run).toContain("bun test --cwd packages/console/app")
     expect(contracts?.run).not.toContain("bun --cwd packages/console/app test")
+    expect(providerMigration?.condition).toBe("inputs.cloudflare_provider_stepping_stone")
+    expect(providerMigration?.env).toEqual({
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+      MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION: "true",
+    })
+    expect(providerMigration?.run).toContain("bunx sst@4.7.0 refresh")
+    expect(providerMigration?.run).toContain("--target UsageDeadLetterQueue")
+    expect(providerMigration?.run).toContain("--target UsageQueue")
+    expect(job.steps.indexOf(providerMigration!)).toBeGreaterThan(job.steps.indexOf(contracts!))
+    expect(job.steps.indexOf(providerMigration!)).toBeLessThan(job.steps.indexOf(deploy!))
     expect(deploy?.run).not.toContain("deploy:preflight")
 
     const run = deploy?.run ?? ""
@@ -180,7 +193,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const configSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
     expect(configSource).toContain('await import("./packages/script/src/deployment-stage.js")')
     expect(configSource).toContain("const stage = requireDeploymentStage(input?.stage)")
-    expect(configSource).toContain('cloudflare: "6.13.0"')
+    expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")')
+    expect(configSource).toContain('cloudflareProviderMigration ? "6.14.0" : "6.15.0"')
     expect(configSource).not.toContain('input?.stage === "production"')
   })
 
