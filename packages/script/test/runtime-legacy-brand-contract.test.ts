@@ -3,9 +3,14 @@ import { readFile, readdir } from "node:fs/promises"
 
 const roots = [
   new URL("../../app/src/", import.meta.url),
+  new URL("../../console/admin/src/", import.meta.url),
+  new URL("../../console/app/src/", import.meta.url),
+  new URL("../../console/function/src/", import.meta.url),
+  new URL("../../desktop/src/", import.meta.url),
   new URL("../../ui/src/", import.meta.url),
   new URL("../../tui/src/", import.meta.url),
   new URL("../../mongolgpt/src/", import.meta.url),
+  new URL("../../web/src/", import.meta.url),
 ]
 
 const apiRoots = [...roots, new URL("../../core/src/", import.meta.url)]
@@ -33,6 +38,17 @@ async function sourceText(file: URL) {
 }
 
 describe("runtime legacy brand contract", () => {
+  test("keeps the upstream brand out of active product source", async () => {
+    const files = (await Promise.all(roots.map(sourceFiles))).flat()
+    const sources = await Promise.all(files.map(sourceText))
+    for (const source of sources) {
+      if (source === undefined) continue
+      expect(source).not.toMatch(/\bOpenCode\b/)
+      expect(source).not.toContain("opencode.ai")
+      expect(source).not.toContain("anomalyco")
+    }
+  })
+
   test("keeps retired Zen and Go product names out of active clients", async () => {
     const files = (await Promise.all(roots.map(sourceFiles))).flat()
     const sources = await Promise.all(files.map(sourceText))
