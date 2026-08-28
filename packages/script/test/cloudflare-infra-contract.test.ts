@@ -206,6 +206,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(migration).toBeGreaterThan(database)
     expect(oauth).toBeGreaterThan(migration)
     expect(run).not.toContain("sst refresh")
+    expect(deploy?.env?.MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE).toBe("true")
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --auth-bootstrap dev")
     expect(job.steps.indexOf(smoke!)).toBeGreaterThan(job.steps.indexOf(deploy!))
   })
@@ -215,8 +216,14 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('await import("./packages/script/src/deployment-stage.js")')
     expect(configSource).toContain("const stage = requireDeploymentStage(input?.stage)")
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")')
+    expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")')
     expect(configSource).toContain('cloudflareProviderMigration ? "6.14.0" : "6.15.0"')
     expect(configSource).toContain('await import("./infra/cloudflare-provider-migration.js")')
+    expect(configSource).toContain('await import("@pulumi/cloudflare")')
+    expect(configSource).toContain('new cloudflare.Provider("default_6_14_0", {}, { version: "6.14.0" })')
+    expect(configSource).toContain(
+      'cloudflareProviderBridge && (stage !== "dev" || !hostedServices || appOnly || cloudflareProviderMigration)',
+    )
     expect(configSource).not.toContain('input?.stage === "production"')
   })
 

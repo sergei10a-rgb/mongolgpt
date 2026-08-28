@@ -121,6 +121,7 @@ jobs:
       - name: Bootstrap real dev OAuth infrastructure
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE: "true"
           MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
           SST_SECRET_ByokCredentialsKeyV1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}
           SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: ${{ vars.MONGOLGPT_GITHUB_OAUTH_CLIENT_ID }}

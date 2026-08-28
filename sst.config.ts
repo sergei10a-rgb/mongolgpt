@@ -12,6 +12,7 @@ export default $config({
     const monitoring = flag("MONGOLGPT_ENABLE_MONITORING")
     const analytics = flag("MONGOLGPT_ENABLE_ANALYTICS")
     const cloudflareProviderMigration = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")
+    const cloudflareProviderBridge = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")
     const unsupported = ["MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS", "MONGOLGPT_ENABLE_LEGACY_STRIPE"].filter(flag)
     if (unsupported.length) {
       throw new Error(`Cloudflare-д суурилсан байршуулалтын горим дараахыг дэмжихгүй: ${unsupported.join(", ")}`)
@@ -46,6 +47,9 @@ export default $config({
     if (cloudflareProviderMigration && (stage !== "dev" || !hostedServices || appOnly)) {
       throw new Error("Cloudflare provider-ийн түр шилжилтийг зөвхөн hosted dev орчинд ажиллуулна.")
     }
+    if (cloudflareProviderBridge && (stage !== "dev" || !hostedServices || appOnly || cloudflareProviderMigration)) {
+      throw new Error("Cloudflare provider bridge-ийг зөвхөн үндсэн hosted dev deploy-д дангаар нь ашиглана.")
+    }
     if (stage === "production" && hostedServices && !admin) {
       throw new Error("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_ADMIN=true заавал байна.")
     }
@@ -76,6 +80,7 @@ export default $config({
     const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
     const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
     const cloudflareProviderMigration = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")
+    const cloudflareProviderBridge = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")
     const adminEnabled = stage.enableAdmin
     if (cloudflareProviderMigration) {
       const queues = await import("./infra/cloudflare-provider-migration.js")
@@ -84,6 +89,10 @@ export default $config({
         UsageDeadLetterQueue: queues.usageDeadLetterQueue.nodes.queue.queueName,
         UsageQueue: queues.usageQueue.nodes.queue.queueName,
       }
+    }
+    if (cloudflareProviderBridge) {
+      const cloudflare = await import("@pulumi/cloudflare")
+      new cloudflare.Provider("default_6_14_0", {}, { version: "6.14.0" })
     }
     if (docsOnly) {
       const docs = await import("./infra/docs.js")
