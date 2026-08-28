@@ -231,6 +231,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")')
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")')
     expect(configSource).toContain('flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")')
+    expect(configSource).toContain(
+      'rootPreviewAlias && (stage !== "dev" || !hostedServices || docsOnly || appOnly)',
+    )
+    expect(configSource).not.toContain(
+      'rootPreviewAlias && (stage !== "dev" || !hostedServices || docsOnly || appOnly || databaseOnly)',
+    )
     expect(configSource).toContain('cloudflareProviderMigration ? "6.14.0" : "6.15.0"')
     expect(configSource).toContain('await import("./infra/cloudflare-provider-migration.js")')
     expect(configSource).toContain('await import("@pulumi/cloudflare")')
@@ -262,6 +268,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"')
     expect(source).toContain("MONGOLGPT_ENABLE_D1_BACKUPS: ${{ inputs.stage == 'production' && 'true' || 'false' }}")
     expect(source).toContain('MONGOLGPT_ENABLE_MONITORING: "true"')
+    expect(source).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: ${{ inputs.stage == 'dev' && 'true' || 'false' }}")
     expect(source).toContain('MONGOLGPT_ENABLE_TURNSTILE: "true"')
     expect(source).toContain("vars.MONGOLGPT_TURNSTILE_SITE_KEY")
     expect(source).toContain("secrets.TURNSTILE_SECRET_KEY")

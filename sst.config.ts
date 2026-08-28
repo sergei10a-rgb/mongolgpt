@@ -34,7 +34,7 @@ export default $config({
     if (databaseOnly && !hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_DATABASE_ONLY нь hosted services асаалттай байхыг шаардана.")
     }
-    if (rootPreviewAlias && (stage !== "dev" || !hostedServices || docsOnly || appOnly || databaseOnly)) {
+    if (rootPreviewAlias && (stage !== "dev" || !hostedServices || docsOnly || appOnly)) {
       throw new Error("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS-г зөвхөн үндсэн hosted dev deploy-д ашиглана.")
     }
     if (appOnly && !hostedServices) {
