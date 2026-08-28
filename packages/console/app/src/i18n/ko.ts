@@ -135,8 +135,7 @@ export const dict = {
   "home.faq.a2.before": "가장 쉬운 시작 방법은",
   "home.faq.a2.link": "소개",
   "home.faq.q3": "MongolGPT를 사용하려면 별도의 AI 구독이 필요한가요?",
-  "home.faq.a3.p1":
-    "꼭 그렇지는 않습니다. MongolGPT에는 계정 없이도 사용할 수 있는 무료 모델 세트가 포함되어 있습니다.",
+  "home.faq.a3.p1": "꼭 그렇지는 않습니다. MongolGPT 계정에 로그인하면 Free Auto를 무료로 사용할 수 있습니다.",
   "home.faq.a3.p4.beforeLocal": "또한",
   "home.faq.a3.p4.localLink": "로컬 모델",
   "home.faq.q4": "기존 AI 구독을 MongolGPT에서 사용할 수 있나요?",

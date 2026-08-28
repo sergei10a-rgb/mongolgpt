@@ -135,8 +135,7 @@ export const dict = {
   "home.faq.a2.before": "Den nemmeste måde at komme i gang på er at læse",
   "home.faq.a2.link": "introen",
   "home.faq.q3": "Skal jeg have ekstra AI-abonnementer for at bruge MongolGPT?",
-  "home.faq.a3.p1":
-    "Ikke nødvendigvis. MongolGPT kommer med gratis modeller, som du kan bruge uden at oprette en konto.",
+  "home.faq.a3.p1": "Ikke nødvendigvis. Log ind på din MongolGPT-konto for at bruge Free Auto gratis.",
   "home.faq.a3.p4.beforeLocal": "Du kan endda forbinde dine",
   "home.faq.a3.p4.localLink": "lokale modeller",
   "home.faq.q4": "Kan jeg bruge mine eksisterende AI-abonnementer med MongolGPT?",

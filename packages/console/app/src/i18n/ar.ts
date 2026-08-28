@@ -133,8 +133,7 @@ export const dict = {
   "home.faq.a2.before": "أسهل طريقة للبدء هي قراءة",
   "home.faq.a2.link": "المقدمة",
   "home.faq.q3": "هل أحتاج لاشتراكات ذكاء اصطناعي إضافية لاستخدام MongolGPT؟",
-  "home.faq.a3.p1":
-    "ليس بالضرورة، فـ MongolGPT يأتي مع مجموعة من النماذج المجانية التي تستطيع استخدامها دون إنشاء حساب.",
+  "home.faq.a3.p1": "ليس بالضرورة. سجّل الدخول إلى حساب MongolGPT لاستخدام Free Auto مجانًا.",
   "home.faq.a3.p4.beforeLocal": "ويمكنك أيضًا ربط",
   "home.faq.a3.p4.localLink": "النماذج المحلية",
   "home.faq.q4": "هل يمكنني استخدام اشتراكاتي الحالية مع MongolGPT؟",

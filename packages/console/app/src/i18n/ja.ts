@@ -135,7 +135,7 @@ export const dict = {
   "home.faq.a2.before": "最も簡単な始め方は",
   "home.faq.a2.link": "イントロを読む",
   "home.faq.q3": "MongolGPTには追加のAIサブスクリプションが必要ですか？",
-  "home.faq.a3.p1": "必ずしも必要ではありません。MongolGPTには、アカウント不要で使える無料モデルが含まれています。",
+  "home.faq.a3.p1": "必ずしも必要ではありません。MongolGPTアカウントにサインインすると、Free Autoを無料で利用できます。",
   "home.faq.a3.p4.beforeLocal": "さらに、",
   "home.faq.a3.p4.localLink": "ローカルモデル",
   "home.faq.q4": "既存のAIサブスクリプションをMongolGPTで使えますか？",

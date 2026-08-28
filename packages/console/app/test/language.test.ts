@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { docs, localeFromRequest } from "../src/lib/language"
+import { docs, localeFromRequest, LOCALES } from "../src/lib/language"
 import { i18n } from "../src/i18n"
 import { dict as en } from "../src/i18n/en"
 import { dict as mn } from "../src/i18n/mn"
@@ -42,6 +42,28 @@ const allowedMongolianIdenticalKeys = new Set<keyof typeof en>([
 
 const placeholders = (value: string) => value.match(/{{[^}]+}}/g)?.sort() ?? []
 
+const freeAutoAccountMarkers = {
+  mn: /бүртгэлээр нэвтэр/,
+  en: /Sign in.*account/,
+  zh: /登录.*账户/,
+  zht: /登入.*帳號/,
+  ko: /계정에 로그인/,
+  de: /Melde dich.*Konto an/,
+  es: /Inicia sesión.*cuenta/,
+  fr: /Connectez-vous.*compte/,
+  it: /Accedi.*account/,
+  da: /Log ind.*konto/,
+  ja: /アカウントにサインイン/,
+  pl: /Zaloguj się.*konto/,
+  ru: /Войдите.*аккаунт/,
+  uk: /Увійдіть.*обліковий запис/,
+  ar: /سجّل الدخول.*حساب/,
+  no: /Logg inn.*konto/,
+  br: /Entre.*conta/,
+  th: /เข้าสู่ระบบบัญชี/,
+  tr: /hesabınızda oturum açın/,
+} satisfies Record<(typeof LOCALES)[number], RegExp>
+
 test("бүх хэлний docs холбоос Монгол каноник замыг ашиглана", () => {
   expect(docs("mn", "/docs/providers")).toBe("/docs/providers")
   expect(docs("en", "/docs/providers")).toBe("/docs/providers")
@@ -81,4 +103,12 @@ test("хэрэглэгчийн илэрхий сонгосон хэлийг ха
       }),
     ),
   ).toBe("en")
+})
+
+test("бүх хэлний Free Auto тайлбар MongolGPT бүртгэлийн бодлоготой таарна", () => {
+  for (const locale of LOCALES) {
+    const description = i18n(locale)["home.faq.a3.p1"]
+    expect(description, locale).toContain("Free Auto")
+    expect(description, locale).toMatch(freeAutoAccountMarkers[locale])
+  }
 })

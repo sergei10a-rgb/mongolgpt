@@ -134,7 +134,7 @@ export const dict = {
   "home.faq.a2.before": "最简单的入门方式是阅读",
   "home.faq.a2.link": "介绍",
   "home.faq.q3": "使用 MongolGPT 需要额外的 AI 订阅吗？",
-  "home.faq.a3.p1": "不一定。MongolGPT 自带一组免费模型，无需创建账户即可使用。",
+  "home.faq.a3.p1": "不一定。登录 MongolGPT 账户后即可免费使用 Free Auto。",
   "home.faq.a3.p4.beforeLocal": "您甚至可以连接您的",
   "home.faq.a3.p4.localLink": "本地模型",
   "home.faq.q4": "我可以使用现有的 AI 订阅吗？",

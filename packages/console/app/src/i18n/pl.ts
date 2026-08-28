@@ -134,8 +134,7 @@ export const dict = {
   "home.faq.a2.before": "Najłatwiej zacząć od przeczytania",
   "home.faq.a2.link": "wprowadzenia",
   "home.faq.q3": "Czy potrzebuję dodatkowych subskrypcji AI, aby używać MongolGPT?",
-  "home.faq.a3.p1":
-    "Niekoniecznie. MongolGPT posiada zestaw darmowych modeli, z których możesz korzystać bez zakładania konta.",
+  "home.faq.a3.p1": "Niekoniecznie. Zaloguj się na konto MongolGPT, aby korzystać z Free Auto bez opłat.",
   "home.faq.a3.p4.beforeLocal": "Możesz nawet podłączyć swoje",
   "home.faq.a3.p4.localLink": "lokalne modele",
   "home.faq.q4": "Czy mogę używać moich istniejących subskrypcji AI z MongolGPT?",

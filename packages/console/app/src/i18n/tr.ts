@@ -135,7 +135,7 @@ export const dict = {
   "home.faq.a2.before": "Başlamanın en kolay yolu",
   "home.faq.a2.link": "girişi okumaktır",
   "home.faq.q3": "MongolGPT için ek AI aboneliklerine ihtiyacım var mı?",
-  "home.faq.a3.p1": "Şart değil. MongolGPT, hesap açmadan kullanabileceğiniz ücretsiz modellerle gelir.",
+  "home.faq.a3.p1": "Şart değil. Free Auto'yu ücretsiz kullanmak için MongolGPT hesabınızda oturum açın.",
   "home.faq.a3.p4.beforeLocal": "Hatta",
   "home.faq.a3.p4.localLink": "yerel modellerinizi bağlayabilirsiniz",
   "home.faq.q4": "Mevcut AI aboneliklerimi MongolGPT ile kullanabilir miyim?",
