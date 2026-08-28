@@ -319,7 +319,7 @@ export default {
               ),
           )
           if (workspaces.length === 0) {
-            await Workspace.create({ name: "Default" })
+            await Workspace.create({ name: "Миний орчин" })
           }
         })
         return ctx.subject("account", accountID, {
