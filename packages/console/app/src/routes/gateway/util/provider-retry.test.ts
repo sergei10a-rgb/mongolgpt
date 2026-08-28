@@ -1,14 +1,70 @@
 import { describe, expect, test } from "bun:test"
 import {
+  acquireProviderFailoverRoute,
   canFailoverProvider,
   cancelProviderResponse,
   inlineProviderRetryDelayMs,
   nextProviderFailoverRetry,
+  partitionProviderFailoverRoutes,
   runProviderAttempt,
   shouldFailoverProviderStatus,
 } from "./provider-retry"
 
 describe("provider failover policy", () => {
+  test("keeps the configured NVIDIA fallback out of the initial primary pool", () => {
+    const routes = partitionProviderFailoverRoutes(
+      [
+        { id: "openrouter-free", priority: 0 },
+        { id: "nvidia-nim-production", priority: 0 },
+      ],
+      "nvidia-nim-production",
+    )
+
+    expect(routes.primaryProviders.map((provider) => provider.id)).toEqual(["openrouter-free"])
+    expect(routes.fallbackProviders.map((provider) => provider.id)).toEqual(["nvidia-nim-production"])
+  })
+
+  test("uses the NVIDIA fallback when every primary circuit is unavailable", () => {
+    const routes = partitionProviderFailoverRoutes(
+      [{ id: "openrouter-free" }, { id: "nvidia-nim-production" }],
+      "nvidia-nim-production",
+    )
+    const attempts: string[] = []
+    const selected = acquireProviderFailoverRoute({
+      ...routes,
+      strict: false,
+      acquire: (provider) => {
+        attempts.push(provider.id)
+        return provider.id === "nvidia-nim-production" ? { id: "permit" } : undefined
+      },
+    })
+
+    expect(attempts).toEqual(["openrouter-free", "nvidia-nim-production"])
+    expect(selected?.provider.id).toBe("nvidia-nim-production")
+  })
+
+  test("fails closed instead of bypassing strict provider affinity", () => {
+    const selected = acquireProviderFailoverRoute({
+      primaryProviders: [{ id: "openrouter-free" }],
+      fallbackProviders: [{ id: "nvidia-nim-production" }],
+      strict: true,
+      acquire: () => undefined,
+    })
+
+    expect(selected).toBeUndefined()
+  })
+
+  test("fails closed when the fallback circuit is also unavailable", () => {
+    const selected = acquireProviderFailoverRoute({
+      primaryProviders: [{ id: "openrouter-free" }],
+      fallbackProviders: [{ id: "nvidia-nim-production" }],
+      strict: false,
+      acquire: () => undefined,
+    })
+
+    expect(selected).toBeUndefined()
+  })
+
   test("requires a bounded, non-strict route to a different fallback provider", () => {
     const input = {
       retryCount: 0,

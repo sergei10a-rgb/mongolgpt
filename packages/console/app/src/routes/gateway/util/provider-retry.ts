@@ -5,10 +5,48 @@ export type ProviderFailoverRetry = {
   retryCount: number
 }
 
+export function partitionProviderFailoverRoutes<T extends { id: string }>(
+  providers: T[],
+  fallbackProvider: string | string[] | undefined,
+) {
+  const fallbackProviderIDs = new Set(
+    Array.isArray(fallbackProvider) ? fallbackProvider : fallbackProvider ? [fallbackProvider] : [],
+  )
+  return {
+    primaryProviders: providers.filter((provider) => !fallbackProviderIDs.has(provider.id)),
+    fallbackProviders: providers.filter((provider) => fallbackProviderIDs.has(provider.id)),
+  }
+}
+
+export function acquireProviderFailoverRoute<T extends { id: string }, TPermit>(input: {
+  primaryProviders: T[]
+  fallbackProviders: T[]
+  strict: boolean
+  acquire: (provider: T) => TPermit | undefined
+}) {
+  const attempted = new Set<string>()
+  for (const provider of input.primaryProviders) {
+    if (attempted.has(provider.id)) continue
+    attempted.add(provider.id)
+    const permit = input.acquire(provider)
+    if (permit) return { provider, circuitPermit: permit }
+    if (input.strict) return undefined
+  }
+
+  if (input.strict) return undefined
+  for (const provider of input.fallbackProviders) {
+    if (attempted.has(provider.id)) continue
+    attempted.add(provider.id)
+    const permit = input.acquire(provider)
+    if (permit) return { provider, circuitPermit: permit }
+  }
+  return undefined
+}
+
 type ProviderFailoverPolicy = {
   maxRetries: number
   stickyProvider: "strict" | "prefer" | undefined
-  fallbackProvider: string | undefined
+  fallbackProvider: string | string[] | undefined
   currentProvider: string
 }
 
@@ -16,14 +54,19 @@ export function canFailoverProvider(input: {
   retryCount: number
   maxRetries: number
   stickyProvider: "strict" | "prefer" | undefined
-  fallbackProvider: string | undefined
+  fallbackProvider: string | string[] | undefined
   currentProvider: string
 }) {
+  const fallbackProviders = Array.isArray(input.fallbackProvider)
+    ? input.fallbackProvider
+    : input.fallbackProvider
+      ? [input.fallbackProvider]
+      : []
   return (
     input.retryCount < input.maxRetries &&
     input.stickyProvider !== "strict" &&
-    !!input.fallbackProvider &&
-    input.currentProvider !== input.fallbackProvider
+    fallbackProviders.length > 0 &&
+    !fallbackProviders.includes(input.currentProvider)
   )
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { GatewayCatalog } from "../src/model"
+import { GatewayCatalog, normalizeGatewayModelRoutes } from "../src/model"
 import { isProviderAllowedForStage, modelConfigurationStageIssues } from "../src/model-config"
 
 const model = {
@@ -125,6 +125,39 @@ describe("MongolGPT Free Auto model contract", () => {
   test("rejects anonymous or trial-backed Free Auto routes", () => {
     expect(() => validate(config({ ...model, allowAnonymous: true }))).toThrow()
     expect(() => validate(config({ ...model, trialProvider: "primary" }))).toThrow()
+    expect(() => validate(config({ ...model, stickyProvider: "strict" }))).toThrow(/шилжих боломжийг хааж болохгүй/)
+  })
+
+  test("normalizes every composite NVIDIA key as a fallback route", () => {
+    const normalized = normalizeGatewayModelRoutes(model, {
+      primary: [
+        { id: "primary.a", key: "primary-key-a" },
+        { id: "primary.b", key: "primary-key-b" },
+        { id: "primary.c", key: "primary-key-c" },
+      ],
+      secondary: [
+        { id: "secondary.a", key: "secondary-key-a" },
+        { id: "secondary.b", key: "secondary-key-b" },
+      ],
+    })
+
+    expect(normalized.fallbackProviders).toEqual(["secondary.a", "secondary.b"])
+    expect(normalized.providers.map((provider) => provider.id)).toEqual([
+      "primary.a",
+      "primary.b",
+      "primary.c",
+      "secondary.a",
+      "secondary.b",
+    ])
+    expect(
+      normalized.providers
+        .filter((provider) => provider.id.startsWith("primary."))
+        .reduce((total, provider) => total + provider.weight, 0),
+    ).toBe(
+      normalized.providers
+        .filter((provider) => provider.id.startsWith("secondary."))
+        .reduce((total, provider) => total + provider.weight, 0),
+    )
   })
 
   test("requires authenticated-free billing and a configured fallback", () => {

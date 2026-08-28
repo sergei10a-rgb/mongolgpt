@@ -60,8 +60,10 @@ import { authenticatedRateLimitIdentity, sanitizeProviderRequestHeaders } from "
 import { freeAutoReservationUpperBound, reserveFreeAutoQuota } from "./free-auto-quota"
 import { planQuotaReservationBounds, reservePlanQuota } from "./plan-quota"
 import {
+  acquireProviderFailoverRoute,
   cancelProviderResponse,
   inlineProviderRetryDelayMs,
+  partitionProviderFailoverRoutes,
   runProviderAttempt,
   shouldFailoverProviderStatus,
 } from "./provider-retry"
@@ -268,7 +270,7 @@ export async function handler(
         policy: {
           maxRetries: MAX_FAILOVER_RETRIES,
           stickyProvider: modelInfo.stickyProvider,
-          fallbackProvider: modelInfo.fallbackProvider,
+          fallbackProvider: modelInfo.fallbackProviders,
           currentProvider: providerInfo.id,
         },
         request: () =>
@@ -632,9 +634,13 @@ export async function handler(
         }))
       }
 
+      const routes = partitionProviderFailoverRoutes(allProviders, modelInfo.fallbackProviders)
+      const acquire = (provider: (typeof allProviders)[number]) =>
+        providerCircuit.acquire(providerCircuitKey(provider.id))
+
       if (retry.retryCount !== MAX_FAILOVER_RETRIES) {
         let topPriority = Infinity
-        const providers = allProviders
+        const providers = routes.primaryProviders
           .filter((provider) => provider.weight !== 0)
           .filter((provider) => !retry.excludeProviders.includes(provider.id))
           .filter((provider) => {
@@ -664,7 +670,13 @@ export async function handler(
           .filter((p) => p.priority <= topPriority)
           .flatMap((provider) => Array<typeof provider>(provider.weight).fill(provider))
 
-        if (providers.length === 0) return undefined
+        if (providers.length === 0)
+          return acquireProviderFailoverRoute({
+            primaryProviders: [],
+            fallbackProviders: routes.fallbackProviders,
+            strict: modelInfo.stickyProvider === "strict",
+            acquire,
+          })
 
         // Use the last 4 characters of session ID to select a provider
         let h = 0
@@ -678,15 +690,14 @@ export async function handler(
         // sticky provider does not exist => use selected provider
         let preferred = provider
         if (!stickyProviderId) {
-          const circuitPermit = providerCircuit.acquire(providerCircuitKey(preferred.id))
-          if (circuitPermit) return { provider: preferred, circuitPermit }
-          if (modelInfo.stickyProvider === "strict") return undefined
-          const alternate = providers.find((candidate) => candidate.id !== preferred.id)
-          if (!alternate) return undefined
-          const alternatePermit = providerCircuit.acquire(providerCircuitKey(alternate.id))
-          return alternatePermit ? { provider: alternate, circuitPermit: alternatePermit } : undefined
+          return acquireProviderFailoverRoute({
+            primaryProviders: [preferred, ...providers.filter((candidate) => candidate.id !== preferred.id)],
+            fallbackProviders: routes.fallbackProviders,
+            strict: modelInfo.stickyProvider === "strict",
+            acquire,
+          })
         }
-        const stickProvider = allProviders.find((provider) => provider.id === stickyProviderId)
+        const stickProvider = routes.primaryProviders.find((provider) => provider.id === stickyProviderId)
         if (stickProvider) {
           // Preserve the existing sticky preference while its circuit is healthy.
           if (!provider.tpsGoal) preferred = stickProvider
@@ -700,19 +711,21 @@ export async function handler(
         }
 
         const ordered = [preferred, ...providers.filter((candidate) => candidate.id !== preferred.id)]
-        for (const candidate of ordered) {
-          const circuitPermit = providerCircuit.acquire(providerCircuitKey(candidate.id))
-          if (circuitPermit) return { provider: candidate, circuitPermit }
-          if (modelInfo.stickyProvider === "strict") break
-        }
-        return undefined
+        return acquireProviderFailoverRoute({
+          primaryProviders: ordered,
+          fallbackProviders: routes.fallbackProviders,
+          strict: modelInfo.stickyProvider === "strict",
+          acquire,
+        })
       }
 
       // fallback provider
-      const provider = allProviders.find((candidate) => candidate.id === modelInfo.fallbackProvider)
-      if (!provider) return undefined
-      const circuitPermit = providerCircuit.acquire(providerCircuitKey(provider.id))
-      return circuitPermit ? { provider, circuitPermit } : undefined
+      return acquireProviderFailoverRoute({
+        primaryProviders: [],
+        fallbackProviders: routes.fallbackProviders,
+        strict: modelInfo.stickyProvider === "strict",
+        acquire,
+      })
     })()
 
     if (!selected) throw new ModelError(t("gateway.api.error.noProviderAvailable"))

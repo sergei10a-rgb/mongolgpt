@@ -145,6 +145,12 @@ export const MongolGPTModelConfigurationSchema = GatewayModelConfigurationSchema
             path,
             message: "Free Auto нь байршуулсан туршилтын нийлүүлэгчээс хамаарах боломжгүй",
           })
+        if (model.stickyProvider === "strict")
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path,
+            message: "Free Auto нь OpenRouter-оос NVIDIA NIM рүү шилжих боломжийг хааж болохгүй",
+          })
         if (!model.rateLimit)
           ctx.addIssue({
             code: z.ZodIssueCode.custom,

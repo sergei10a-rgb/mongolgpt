@@ -13,6 +13,39 @@ import {
   type ModelFormat,
 } from "./model-config"
 
+type GatewayModel = z.infer<typeof MongolGPTModelSchema>
+type CompositeProviders = Record<string, Array<{ id: string; key: string }>>
+
+export function normalizeGatewayModelRoutes(model: GatewayModel, compositeProviders: CompositeProviders) {
+  const providers = model.providers.map((provider) => ({
+    ...provider,
+    priority: provider.priority ?? Infinity,
+    weight: provider.weight ?? 1,
+  }))
+  const gcd = (left: number, right: number): number => (right === 0 ? left : gcd(right, left % right))
+  const weightScale = providers.reduce((scale, provider) => {
+    const count = compositeProviders[provider.id].length
+    return (scale * count) / gcd(scale, count)
+  }, 1)
+  const expandProvider = (providerID: string) =>
+    compositeProviders[providerID]?.map((provider) => provider.id) ?? [providerID]
+  const fallbackProviders = model.fallbackProvider
+    ? expandProvider(model.fallbackProvider)
+    : undefined
+
+  return {
+    trialProvider: model.trialProvider ? expandProvider(model.trialProvider) : undefined,
+    fallbackProviders,
+    providers: providers.flatMap((provider) =>
+      compositeProviders[provider.id].map((sub) => ({
+        ...provider,
+        id: sub.id,
+        weight: (provider.weight * weightScale) / compositeProviders[provider.id].length,
+      })),
+    ),
+  }
+}
+
 export namespace GatewayCatalog {
   export type Format = ModelFormat
   const ModelsSchema = MongolGPTModelConfigurationSchema
@@ -79,48 +112,11 @@ export namespace GatewayCatalog {
         ),
       ),
       models: (() => {
-        const normalize = (model: z.infer<typeof MongolGPTModelSchema>) => {
-          const providers = model.providers.map((p) => ({
-            ...p,
-            priority: p.priority ?? Infinity,
-            weight: p.weight ?? 1,
-          }))
-          const composite = providers.find((p) => compositeProviders[p.id].length > 1)
-          if (!composite)
-            return {
-              trialProvider: model.trialProvider ? [model.trialProvider] : undefined,
-              providers,
-            }
-
-          const weightMulti = compositeProviders[composite.id].length
-
-          return {
-            trialProvider: (() => {
-              if (!model.trialProvider) return undefined
-              if (model.trialProvider === composite.id) return compositeProviders[composite.id].map((p) => p.id)
-              return [model.trialProvider]
-            })(),
-            providers: providers.flatMap((p) =>
-              p.id === composite.id
-                ? compositeProviders[p.id].map((sub) => ({
-                    ...p,
-                    id: sub.id,
-                  }))
-                : [
-                    {
-                      ...p,
-                      weight: p.weight * weightMulti,
-                    },
-                  ],
-            ),
-          }
-        }
-
         return Object.fromEntries(
           Object.entries(modelList === "lightweight" ? lightweightModels : models).map(([modelId, model]) => {
             const n = Array.isArray(model)
-              ? model.map((m) => ({ ...m, ...normalize(m) }))
-              : { ...model, ...normalize(model) }
+              ? model.map((item) => ({ ...item, ...normalizeGatewayModelRoutes(item, compositeProviders) }))
+              : { ...model, ...normalizeGatewayModelRoutes(model, compositeProviders) }
             return [modelId, n]
           }),
         )
