@@ -319,14 +319,14 @@ async function checkDocsRoot(docsUrl: string) {
   })
 }
 
-async function checkConsoleDocument(url: string, label: string) {
+async function checkConsoleDocument(url: string, label: string, expectedFinalUrl = url) {
   const response = await fetch(url, {
     headers: { "User-Agent": "mongolgpt-deployment-smoke" },
     redirect: "follow",
     signal: AbortSignal.timeout(15_000),
   })
   inspectResponseOrigin({
-    requestUrl: url,
+    requestUrl: response.url ? expectedFinalUrl : url,
     responseUrl: response.url,
     status: response.status,
     location: response.headers.get("location"),
@@ -335,21 +335,20 @@ async function checkConsoleDocument(url: string, label: string) {
   if (!response.ok) throw new Error(`${label} HTTP ${response.status}: ${url}`)
   inspectHtmlContentType(response.headers.get("content-type"), `${label} response`)
   const html = await response.text()
-  if (!/<title>[^<]*MongolGPT[^<]*<\/title>/i.test(html)) {
+  if (!/<title(?:\s[^>]*)?>[^<]*MongolGPT[^<]*<\/title>/i.test(html)) {
     throw new Error(`${label} title is not rebranded to MongolGPT`)
   }
   if (!/<div[^>]+id=["']app["']/i.test(html) && !/<div[^>]+id=["']root["']/i.test(html)) {
     throw new Error(`${label} HTML root element is missing`)
   }
-  await checkStaticAssets(url, html, `${label} response`)
+  await checkStaticAssets(response.url || url, html, `${label} response`)
 }
 
 async function checkConsoleRootAliases(result: DeploymentPreflightResult) {
   if (process.env.MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS !== "true") return
-  const aliases = [`https://${result.domain.replace(/^dev\./, "")}`, `https://www.${result.domain.replace(/^dev\./, "")}`]
-  for (const url of aliases) {
-    await checkConsoleDocument(url, "console root alias")
-  }
+  const root = `https://${result.domain.replace(/^dev\./, "")}`
+  await checkConsoleDocument(root, "console root alias")
+  await checkConsoleDocument(`https://www.${new URL(root).hostname}`, "console www alias", root)
 }
 
 function inspectAppDeployment(html: string, url: string, result: DeploymentPreflightResult) {

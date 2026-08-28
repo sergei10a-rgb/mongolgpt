@@ -225,7 +225,7 @@ describe("dev console-only smoke", () => {
     const previous = new Map(Object.keys(configured).map((key) => [key, process.env[key]]))
     const originalFetch = globalThis.fetch
     const requests: string[] = []
-    const document = "<!doctype html><html lang=\"mn\"><head><title>MongolGPT</title><link rel=\"stylesheet\" href=\"/assets/index.css\"></head><body><div id=\"app\"></div><script type=\"module\" src=\"/assets/index.js\"></script></body></html>"
+    const document = "<!doctype html><html lang=\"mn\"><head><title data-sm=\"title\">MongolGPT</title><link rel=\"stylesheet\" href=\"/assets/index.css\"></head><body><div id=\"app\"></div><script type=\"module\" src=\"/assets/index.js\"></script></body></html>"
 
     Object.assign(process.env, configured)
     globalThis.fetch = mockedFetch(async (input: RequestInfo | URL, init?: RequestInit) => {
