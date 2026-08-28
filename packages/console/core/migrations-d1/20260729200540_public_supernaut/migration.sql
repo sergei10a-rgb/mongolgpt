@@ -22,31 +22,33 @@ CREATE INDEX `finance_cost_valuation_fx_rate_id` ON `finance_cost_valuation` (`f
 CREATE TRIGGER `finance_cost_valuation_validate_insert`
 BEFORE INSERT ON `finance_cost_valuation`
 BEGIN
-	SELECT CASE WHEN NOT EXISTS (
-		SELECT 1
-		FROM `finance_cost_entry`
-		WHERE `id` = NEW.`cost_entry_id`
-		  AND `original_currency` = 'USD'
-		  AND `fx_rate_id` IS NULL
-		  AND `amount_mnt_micros` IS NULL
-	) THEN RAISE(ABORT, 'finance_cost_valuation requires an unvalued USD cost entry') END;
-	SELECT CASE WHEN NOT EXISTS (
-		SELECT 1
-		FROM `finance_fx_rate`
-		WHERE `id` = NEW.`fx_rate_id`
-		  AND `base_currency` = 'USD'
-		  AND `quote_currency` = 'MNT'
-	) THEN RAISE(ABORT, 'finance_cost_valuation requires a USD/MNT FX rate') END;
-	SELECT CASE WHEN NOT EXISTS (
-		SELECT 1
-		FROM `finance_cost_valuation`
-		WHERE `idempotency_key` = NEW.`idempotency_key`
-		   OR (`cost_entry_id` = NEW.`cost_entry_id` AND `version` = NEW.`version`)
-	) AND NEW.`version` <> (
-		SELECT COALESCE(MAX(`version`), 0) + 1
-		FROM `finance_cost_valuation`
-		WHERE `cost_entry_id` = NEW.`cost_entry_id`
-	) THEN RAISE(ABORT, 'finance_cost_valuation version must be sequential') END;
+	SELECT CASE
+		WHEN NOT EXISTS (
+			SELECT 1
+			FROM `finance_cost_entry`
+			WHERE `id` = NEW.`cost_entry_id`
+			  AND `original_currency` = 'USD'
+			  AND `fx_rate_id` IS NULL
+			  AND `amount_mnt_micros` IS NULL
+		) THEN RAISE(ABORT, 'finance_cost_valuation requires an unvalued USD cost entry')
+		WHEN NOT EXISTS (
+			SELECT 1
+			FROM `finance_fx_rate`
+			WHERE `id` = NEW.`fx_rate_id`
+			  AND `base_currency` = 'USD'
+			  AND `quote_currency` = 'MNT'
+		) THEN RAISE(ABORT, 'finance_cost_valuation requires a USD/MNT FX rate')
+		WHEN NOT EXISTS (
+			SELECT 1
+			FROM `finance_cost_valuation`
+			WHERE `idempotency_key` = NEW.`idempotency_key`
+			   OR (`cost_entry_id` = NEW.`cost_entry_id` AND `version` = NEW.`version`)
+		) AND NEW.`version` <> (
+			SELECT COALESCE(MAX(`version`), 0) + 1
+			FROM `finance_cost_valuation`
+			WHERE `cost_entry_id` = NEW.`cost_entry_id`
+		) THEN RAISE(ABORT, 'finance_cost_valuation version must be sequential')
+	END;
 END;--> statement-breakpoint
 CREATE TRIGGER `finance_cost_valuation_no_update`
 BEFORE UPDATE ON `finance_cost_valuation`

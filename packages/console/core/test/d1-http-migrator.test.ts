@@ -36,6 +36,7 @@ describe("D1 HTTP migrator", () => {
     const triggers = batches.flat().filter((query) => query.sql.includes("CREATE TRIGGER"))
     expect(triggers.length).toBeGreaterThan(0)
     expect(triggers.every((query) => query.sql.includes("BEGIN") && query.sql.includes("END;"))).toBeTrue()
+    expect(triggers.every((query) => query.sql.match(/;/g)?.length === 2)).toBeTrue()
     expect(batches.flat().some((query) => query.sql.includes("--> statement-breakpoint"))).toBeFalse()
     expect(JSON.stringify(bodies)).not.toContain("test-token")
   })
