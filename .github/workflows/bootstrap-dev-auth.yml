@@ -117,6 +117,15 @@ jobs:
           SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: ${{ secrets.MONGOLGPT_GATEWAY_SESSION_SECRET }}
         run: |
           stage="dev"
+          print_pulumi_error() {
+            status="$?"
+            if [ "$status" -ne 0 ] && [ -f .sst/log/pulumi.err ]; then
+              echo "Pulumi state integrity diagnostic:"
+              sed -n '1,160p' .sst/log/pulumi.err
+            fi
+            exit "$status"
+          }
+          trap print_pulumi_error EXIT
           set_required_secret() {
             name="$1"
             variable="SST_SECRET_${name}"
@@ -159,6 +168,7 @@ jobs:
           bun sst deploy --stage="$stage" --target Database --print-logs
           bun sst shell --stage="$stage" -- bun run db:migrate
           bun sst deploy --stage="$stage" --target AuthApi --target Console --print-logs
+          trap - EXIT
 
       - name: Verify dev account scaffold
         run: bun script/deployment-smoke.ts --auth-bootstrap dev

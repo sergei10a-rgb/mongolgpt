@@ -177,6 +177,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).not.toContain("deploy:preflight")
 
     const run = deploy?.run ?? ""
+    expect(run).toContain("trap print_pulumi_error EXIT")
+    expect(run).toContain("sed -n '1,160p' .sst/log/pulumi.err")
+    expect(run).toContain("trap - EXIT")
     const oauthSecrets = run.indexOf("set_optional_secret GOOGLE_CLIENT_ID")
     const stateRepair = run.indexOf('bun sst state repair --stage="$stage" --print-logs 2>&1 | tee "$repair_log"')
     const database = run.indexOf('bun sst deploy --stage="$stage" --target Database')
