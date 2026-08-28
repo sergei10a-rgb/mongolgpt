@@ -18,6 +18,7 @@ import {
   validateConfiguredAccountServerUrl,
 } from "@/account/url"
 import { resolveProductServiceUrls } from "@mongolgpt/core/product"
+import { InstallationChannel } from "@mongolgpt/core/installation/version"
 import { effectCmd } from "../effect-cmd"
 import * as Prompt from "../effect/prompt"
 import open from "open"
@@ -60,11 +61,11 @@ export const formatPostLoginGuidance = () => [
 
 export const accountOnboardingRequired = (hasActiveWorkspace: boolean) => !hasActiveWorkspace
 
-export const managedModelAccountLoginRequired = (input: { providerID?: string; attached?: boolean }) =>
-  input.providerID === "mongolgpt"
+export const initialAccountLoginRequired = (input: { providerID?: string; attached?: boolean; channel?: string }) =>
+  (input.channel ?? InstallationChannel) !== "local" || input.providerID === "mongolgpt"
 
-export const attachedManagedModelAccountReady = (input: { providerID?: string; activeOrgID?: string }) =>
-  input.providerID !== "mongolgpt" || Boolean(input.activeOrgID?.trim())
+export const attachedAccountReady = (input: { providerID?: string; activeOrgID?: string; channel?: string }) =>
+  !initialAccountLoginRequired(input) || Boolean(input.activeOrgID?.trim())
 
 const formatOrgChoiceLabel = (account: { email: string }, org: { name: string }, isActive: boolean) =>
   `${org.name} (${account.email})${activeSuffix(isActive)}`
@@ -267,12 +268,13 @@ export const ensureAccountLogin = Effect.fn("Cli.account.ensureLogin")(function*
   return Option.isSome(current) && Boolean(current.value.active_org_id)
 })
 
-export const ensureManagedModelAccountLogin = Effect.fn("Cli.account.ensureManagedModelLogin")(function* (input: {
+export const ensureInitialAccountLogin = Effect.fn("Cli.account.ensureInitialLogin")(function* (input: {
   providerID?: string
   attached?: boolean
   interactive?: boolean
+  channel?: string
 }) {
-  if (!managedModelAccountLoginRequired(input)) return true
+  if (!initialAccountLoginRequired(input)) return true
 
   const service = yield* Account.Service
   const active = yield* service.active()

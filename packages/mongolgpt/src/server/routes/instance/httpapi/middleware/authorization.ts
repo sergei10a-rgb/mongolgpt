@@ -77,6 +77,11 @@ function credentialFromRequest(request: HttpServerRequest.HttpServerRequest) {
   return credentialFromURL(new URL(request.url, "http://localhost"), request)
 }
 
+export function serverRequestAuthorized(request: HttpServerRequest.HttpServerRequest, config: ServerAuth.Info) {
+  if (!ServerAuth.required(config)) return Effect.succeed(true)
+  return credentialFromRequest(request).pipe(Effect.map((credential) => ServerAuth.authorized(credential, config)))
+}
+
 function credentialFromURL(url: URL, request: HttpServerRequest.HttpServerRequest) {
   const token = url.searchParams.get(AUTH_TOKEN_QUERY)
   if (token) return decodeCredential(token)

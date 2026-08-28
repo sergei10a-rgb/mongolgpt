@@ -212,7 +212,7 @@ describe("release integrity contract", () => {
     expect(workflow).not.toContain("MONGOLGPT_CHANNEL: prod")
   })
 
-  test("smokes the signed Windows CLI and keeps Free Auto behind a MongolGPT account", () => {
+  test("smokes the signed Windows CLI and keeps every model provider behind a MongolGPT account", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
     const smoke = readFileSync(resolve(root, "packages/mongolgpt/script/smoke-built-cli-windows.ps1"), "utf8")
 
@@ -227,6 +227,13 @@ describe("release integrity contract", () => {
     expect(workflow).toContain("account_url: ${{ steps.version.outputs.account_url }}")
     expect(workflow).toContain('-ExpectedAccountUrl "${{ needs.version.outputs.account_url }}"')
     expect(smoke).toContain('"mongolgpt/free-auto"')
+    expect(smoke).toContain('"ollama/account-gate-smoke"')
+    expect(smoke).toContain('@("attach", "http://127.0.0.1:1")')
+    expect(smoke).toContain('"--attach"')
+    expect(smoke).toContain("Test-ServerAccountGate")
+    expect(smoke).toContain('@("/session", "/api/session")')
+    expect(smoke).toContain('Environment["MONGOLGPT_SERVER_PASSWORD"]')
+    expect(smoke).toContain("StatusCode -ne 401")
     expect(smoke).toContain('@("account", "login", "--help")')
     expect(smoke).toContain("$accountLoginHelpText.Contains($ExpectedAccountUrl)")
     expect(smoke).toContain('"MONGOLGPT_AUTH_CONTENT" = "{}"')
@@ -235,6 +242,17 @@ describe("release integrity contract", () => {
     expect(smoke).toContain('"MongolGPT бүртгэл"')
     expect(smoke).toContain('"mongolgpt account login"')
     expect(smoke).toContain("git -C $repo init --quiet")
+  })
+
+  test("keeps installed attach entrypoints behind the remote MongolGPT workspace", () => {
+    const attach = readFileSync(resolve(root, "packages/mongolgpt/src/cli/cmd/attach.ts"), "utf8")
+    const run = readFileSync(resolve(root, "packages/mongolgpt/src/cli/cmd/run.ts"), "utf8")
+
+    expect(attach).toContain("if (!InstallationLocal)")
+    expect(attach).toContain("sdk.experimental.account.get()")
+    expect(attach).toContain("attachedAccountReady")
+    expect(run).toContain("initialAccountLoginRequired({ providerID: attachedProviderID, attached: true })")
+    expect(run).toContain("attachedAccountReady")
   })
 
   test("bundles TypeScript workspace contracts into the Electron main process", () => {

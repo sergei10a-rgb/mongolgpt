@@ -257,7 +257,7 @@ export const RunCommand = effectCmd({
     const requestedProviderID = args.model ? pick(args.model)?.providerID : undefined
     const accountProviderID = args.attach
       ? undefined
-      : requestedProviderID ??
+      : (requestedProviderID ??
         (yield* Effect.gen(function* () {
           const { Provider } = yield* Effect.promise(() => import("@/provider/provider"))
           const providerSvc = yield* Provider.Service
@@ -265,22 +265,20 @@ export const RunCommand = effectCmd({
             Effect.map((model) => model.providerID as string),
             Effect.catch(() => Effect.succeed(undefined)),
           )
-        }))
-    const { attachedManagedModelAccountReady, ensureManagedModelAccountLogin } = yield* Effect.promise(() =>
-      import("./account"),
+        })))
+    const { attachedAccountReady, ensureInitialAccountLogin, initialAccountLoginRequired } = yield* Effect.promise(
+      () => import("./account"),
     )
     const accountReady = args.attach
       ? true
-      : yield* ensureManagedModelAccountLogin({
+      : yield* ensureInitialAccountLogin({
           providerID: accountProviderID,
           interactive: args.format !== "json" && Boolean(process.stdin.isTTY && process.stdout.isTTY),
         }).pipe(
-          Effect.catch(() =>
-            fail("MongolGPT бүртгэлийн төлөвийг шалгаж чадсангүй. Түр хүлээгээд дахин оролдоно уу"),
-          ),
+          Effect.catch(() => fail("MongolGPT бүртгэлийн төлөвийг шалгаж чадсангүй. Түр хүлээгээд дахин оролдоно уу")),
         )
     if (!accountReady) {
-      return yield* fail("MongolGPT managed загвар ашиглахын өмнө `mongolgpt account login` командаар нэвтэрнэ үү")
+      return yield* fail("MongolGPT ашиглахын өмнө `mongolgpt account login` командаар нэвтэрнэ үү")
     }
     yield* Effect.promise(async () => {
       const rawMessage = [...args.message, ...(args["--"] || [])].join(" ")
@@ -957,17 +955,15 @@ export const RunCommand = effectCmd({
               .then((response) => response.data?.model)
               .catch(() => undefined)
         const attachedProviderID = requestedProviderID ?? pick(configuredModel)?.providerID
-        if (attachedProviderID === "mongolgpt") {
+        if (initialAccountLoginRequired({ providerID: attachedProviderID, attached: true })) {
           const account = await sdk.experimental.account.get().catch(() => undefined)
           if (
-            !attachedManagedModelAccountReady({
+            !attachedAccountReady({
               providerID: attachedProviderID,
               activeOrgID: account?.data?.activeOrgID,
             })
           ) {
-            die(
-              "MongolGPT Free Auto ашиглахын өмнө холбогдсон сервер дээр MongolGPT бүртгэлээр нэвтэрч, ажлын орчноо сонгоно уу",
-            )
+            die("MongolGPT ашиглахын өмнө холбогдсон сервер дээр MongolGPT бүртгэлээр нэвтэрч, ажлын орчноо сонгоно уу")
           }
         }
         return await execute(sdk)

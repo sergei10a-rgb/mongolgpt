@@ -196,7 +196,43 @@ async function smokePublicNpmInstall(version: string) {
       `public npm Free Auto account gate returned the wrong guidance: ${commandOutput(freeAuto)}`,
     )
 
-    console.log(`public npm install smoke ok: mongolgpt@${version}, version, Git repo, Free Auto account gate`)
+    const optionalProvider = spawnSync(
+      binary,
+      ["run", "--model", "ollama/account-gate-smoke", "--format", "json", "npm release smoke"],
+      { cwd: repo, env: publicEnv, encoding: "utf8", timeout: 30_000 },
+    )
+    assert(optionalProvider.status !== null, "public npm optional provider account gate timed out")
+    assert(optionalProvider.status !== 0, "anonymous public npm optional provider request unexpectedly succeeded")
+    assert(
+      commandOutput(optionalProvider).includes("mongolgpt account login"),
+      `public npm optional provider account gate returned the wrong guidance: ${commandOutput(optionalProvider)}`,
+    )
+
+    for (const args of [
+      [
+        "run",
+        "--attach",
+        "http://127.0.0.1:1",
+        "--model",
+        "ollama/account-gate-smoke",
+        "--format",
+        "json",
+        "npm release smoke",
+      ],
+      ["attach", "http://127.0.0.1:1"],
+    ]) {
+      const attached = spawnSync(binary, args, { cwd: repo, env: publicEnv, encoding: "utf8", timeout: 30_000 })
+      assert(attached.status !== null, `public npm attach account gate timed out: ${args.join(" ")}`)
+      assert(attached.status !== 0, `anonymous public npm attach unexpectedly succeeded: ${args.join(" ")}`)
+      assert(
+        /холбогдсон сервер дээр.*бүртгэлээр нэвтэрч/.test(commandOutput(attached)),
+        `public npm attach account gate returned the wrong guidance: ${commandOutput(attached)}`,
+      )
+    }
+
+    console.log(
+      `public npm install smoke ok: mongolgpt@${version}, version, Git repo, Free Auto, optional provider, and attach account gates`,
+    )
   } finally {
     await fs.promises.rm(temp, { recursive: true, force: true })
   }

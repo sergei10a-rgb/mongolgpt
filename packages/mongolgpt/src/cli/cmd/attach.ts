@@ -3,6 +3,8 @@ import { UI } from "@/cli/ui"
 import { errorMessage } from "@mongolgpt/tui/util/error"
 import { validateSession } from "../tui/validate-session"
 import { ServerAuth } from "@/server/auth"
+import { InstallationLocal } from "@mongolgpt/core/installation/version"
+import { createMongolGPTClient } from "@mongolgpt/sdk/v2"
 
 export const AttachCommand = cmd({
   command: "attach <url>",
@@ -112,6 +114,16 @@ export const AttachCommand = cmd({
     }
 
     const headers = ServerAuth.headers({ password: args.password, username: args.username })
+    if (!InstallationLocal) {
+      const { attachedAccountReady } = await import("./account")
+      const sdk = createMongolGPTClient({ baseUrl: args.url, directory, headers })
+      const account = await sdk.experimental.account.get().catch(() => undefined)
+      if (!attachedAccountReady({ activeOrgID: account?.data?.activeOrgID })) {
+        UI.error("MongolGPT ашиглахын өмнө холбогдсон сервер дээр бүртгэлээр нэвтэрч, ажлын орчноо сонгоно уу")
+        process.exitCode = 1
+        return
+      }
+    }
     const config = await TuiConfig.get()
 
     try {

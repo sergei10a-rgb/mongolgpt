@@ -115,6 +115,7 @@ import { corsVaryFix } from "./middleware/cors-vary"
 import { errorLayer } from "./middleware/error"
 import { fenceLayer } from "./middleware/fence"
 import { schemaErrorLayer } from "./middleware/schema-error"
+import { accountUseRouterMiddleware } from "./middleware/account-use"
 
 export const context = Context.makeUnsafe<unknown>(new Map())
 
@@ -134,6 +135,7 @@ const cors = (corsOptions?: CorsOptions) =>
 // - instanceApiRoutes: remaining typed instance routes.
 // - uiRoute: raw catch-all fallback; auth is router middleware so public static assets can bypass it.
 const authOnlyRouterLayer = authorizationRouterMiddleware.layer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
+const accountUseRouterLayer = accountUseRouterMiddleware.layer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
 const httpApiAuthLayer = authorizationLayer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
 const ptyConnectHttpApiAuthLayer = ptyConnectAuthorizationLayer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
 const serverHttpApiAuthLayer = serverAuthorizationLayer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
@@ -283,6 +285,7 @@ export function createRoutes(
   ).pipe(
     Layer.provide([
       errorLayer,
+      accountUseRouterLayer,
       compressionLayer,
       corsVaryFix,
       fenceLayer,

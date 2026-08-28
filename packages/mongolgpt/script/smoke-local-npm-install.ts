@@ -187,7 +187,17 @@ try {
     `Free Auto gate returned wrong guidance: ${output(freeAuto)}`,
   )
 
-  console.log(`local npm install smoke ok: ${packageNames.length} packages @ ${version}, Free Auto account gate`)
+  const optionalProvider = cli(["run", "--model", "ollama/account-gate-smoke", "--format", "json", "local npm smoke"])
+  assert(optionalProvider.status !== null, "optional provider account gate timed out")
+  assert(optionalProvider.status !== 0, "anonymous optional provider request unexpectedly succeeded")
+  assert(
+    output(optionalProvider).includes("mongolgpt account login"),
+    `optional provider account gate returned wrong guidance: ${output(optionalProvider)}`,
+  )
+
+  console.log(
+    `local npm install smoke ok: ${packageNames.length} packages @ ${version}, Free Auto and optional provider account gates`,
+  )
 } finally {
   await fs.promises.rm(root, { recursive: true, force: true })
 }
