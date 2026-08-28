@@ -56,6 +56,11 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      - name: Verify Cloudflare runtime token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: bun script/cloudflare-preflight.ts --runtime-only
+
       - name: Verify runtime contracts
         run: |
           bun typecheck

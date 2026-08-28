@@ -11,6 +11,7 @@ describe("Cloudflare deployment token preflight", () => {
       response({ success: true, result: { status: "active" } }),
       response({ success: true, result: [{ id: "zone-id", name: domain, account: { id: accountId } }] }),
       response({ success: true, result: [] }),
+      response({ success: true, result: { account_id: accountId } }),
       response({ success: true, result: [] }),
       response({ success: true, result: [] }),
       response({ success: true, result: { buckets: [] } }),
@@ -35,12 +36,41 @@ describe("Cloudflare deployment token preflight", () => {
       "https://api.cloudflare.com/client/v4/user/tokens/verify",
       `https://api.cloudflare.com/client/v4/zones?name=mgpt.mn&account.id=${accountId}&per_page=2`,
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/containers/me`,
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database?per_page=1`,
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces?per_page=1`,
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets?per_page=1`,
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/queues?per_page=1`,
     ])
     expect(requests.every((item) => item.authorization === "Bearer deploy-token")).toBe(true)
+  })
+
+  test("checks only Worker and Containers access for an isolated runtime deploy", async () => {
+    const requests: string[] = []
+    const responses = [
+      response({ success: true, result: { status: "active" } }),
+      response({ success: true, result: [{ id: "zone-id", name: domain, account: { id: accountId } }] }),
+      response({ success: true, result: [] }),
+      response({ success: true, result: { account_id: accountId } }),
+    ]
+
+    await preflightCloudflareDeploymentAccess({
+      accountId,
+      domain,
+      token: "runtime-token",
+      scope: "runtime-only",
+      fetcher: async (input) => {
+        requests.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url)
+        return responses.shift() ?? response({ success: false }, 500)
+      },
+    })
+
+    expect(requests).toEqual([
+      "https://api.cloudflare.com/client/v4/user/tokens/verify",
+      `https://api.cloudflare.com/client/v4/zones?name=mgpt.mn&account.id=${accountId}&per_page=2`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/containers/me`,
+    ])
   })
 
   test("rejects invalid inputs and an inactive token before resource probes", async () => {
@@ -120,11 +150,36 @@ describe("Cloudflare deployment token preflight", () => {
     expect(String(error)).not.toContain("must-not-surface")
   })
 
+  test("fails before build when the deploy token cannot access Containers", async () => {
+    const responses = [
+      response({ success: true, result: { status: "active" } }),
+      response({ success: true, result: [{ id: "zone-id", name: domain, account: { id: accountId } }] }),
+      response({ success: true, result: [] }),
+      response({ success: false, errors: [{ message: "container-details-must-not-surface" }] }, 403),
+    ]
+    const error = await rejection(
+      preflightCloudflareDeploymentAccess({
+        accountId,
+        token: "container-token-must-not-leak",
+        domain,
+        scope: "runtime-only",
+        fetcher: async () => responses.shift()!,
+      }),
+    )
+
+    expect(error).toBeInstanceOf(CloudflareDeploymentPreflightError)
+    expect(String(error)).toContain("Containers")
+    expect(String(error)).toContain("HTTP 403")
+    expect(String(error)).not.toContain("container-token-must-not-leak")
+    expect(String(error)).not.toContain("container-details-must-not-surface")
+  })
+
   test("validates the R2 response envelope instead of accepting an unrelated list", async () => {
     const responses = [
       response({ success: true, result: { status: "active" } }),
       response({ success: true, result: [{ id: "zone-id", name: domain, account: { id: accountId } }] }),
       response({ success: true, result: [] }),
+      response({ success: true, result: { account_id: accountId } }),
       response({ success: true, result: [] }),
       response({ success: true, result: [] }),
       response({ success: true, result: [] }),

@@ -521,6 +521,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     }
     const job = parseWorkflowJob(parsed.jobs.deploy, "deploy")
     const confirmation = job.steps.find((step) => step.name === "Validate exact dev runtime confirmation")
+    const tokenPreflight = job.steps.find((step) => step.name === "Verify Cloudflare runtime token")
     const build = job.steps.find((step) => step.name === "Build hosted runtime image payload")
     const deploy = job.steps.find((step) => step.name === "Deploy only dev runtime to Cloudflare")
     const smoke = job.steps.find((step) => step.name === "Verify live dev runtime boundary")
@@ -537,6 +538,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).not.toContain("production")
     expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"')
     expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT|BYOK_/)
+
+    expect(tokenPreflight?.env).toEqual({ CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" })
+    expect(tokenPreflight?.run).toBe("bun script/cloudflare-preflight.ts --runtime-only")
+    expect(job.steps.indexOf(tokenPreflight!)).toBeLessThan(job.steps.indexOf(build!))
 
     expect(build?.run).toContain("packages/mongolgpt build --single --skip-embed-web-ui --skip-install")
     expect(build?.run).toContain("test -x packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt")

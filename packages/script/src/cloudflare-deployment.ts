@@ -14,6 +14,7 @@ export async function preflightCloudflareDeploymentAccess(input: {
   accountId: string
   token: string
   domain: string
+  scope?: "full" | "runtime-only"
   fetcher?: Fetcher
   timeoutMs?: number
 }) {
@@ -78,6 +79,15 @@ export async function preflightCloudflareDeploymentAccess(input: {
     "Cloudflare Workers Scripts жагсаалтыг унших",
     "Workers Scripts Read эсвэл Edit",
   )
+  await requireRecord(
+    fetcher,
+    `${accountPath}/containers/me`,
+    options(),
+    "Cloudflare Containers бүртгэлийн эрхийг шалгах",
+    "Containers Edit",
+  )
+  if (input.scope === "runtime-only") return { zoneId: zone.id, domain }
+
   await requireList(
     fetcher,
     `${accountPath}/d1/database?per_page=1`,
@@ -108,6 +118,21 @@ export async function preflightCloudflareDeploymentAccess(input: {
   )
 
   return { zoneId: zone.id, domain }
+}
+
+async function requireRecord(
+  fetcher: Fetcher,
+  url: string,
+  options: RequestInit,
+  operation: string,
+  permission: string,
+) {
+  const payload = await requestCloudflare(fetcher, url, options, operation)
+  if (!record(payload.result)) {
+    throw new CloudflareDeploymentPreflightError(
+      `${operation} хариу танигдсан объект биш байна. ${permission} эрхийг шалгана.`,
+    )
+  }
 }
 
 async function requireList(fetcher: Fetcher, url: string, options: RequestInit, operation: string, permission: string) {
