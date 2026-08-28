@@ -354,15 +354,6 @@ body {
     @media (max-width: 30rem) {
       padding: var(--vertical-padding) var(--padding);
     }
-
-    @media (prefers-color-scheme: dark) {
-      [data-slot="zen logo light"] {
-        display: none;
-      }
-      [data-slot="zen logo dark"] {
-        display: block;
-      }
-    }
   }
 
   [data-slot="installation-instructions"] {

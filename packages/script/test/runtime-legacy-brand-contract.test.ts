@@ -21,7 +21,7 @@ async function sourceFiles(directory: URL): Promise<URL[]> {
     entries.map(async (entry) => {
       const child = new URL(entry.name + (entry.isDirectory() ? "/" : ""), directory)
       if (entry.isDirectory()) return sourceFiles(child)
-      if (!/\.tsx?$/.test(entry.name) || entry.name.includes(".test.")) return []
+      if (!/\.(?:tsx?|css)$/.test(entry.name) || entry.name.includes(".test.")) return []
       return [child]
     }),
   )
@@ -58,6 +58,7 @@ describe("runtime legacy brand contract", () => {
       expect(source).not.toMatch(/mongolgpt(?:Zen|Go)/)
       expect(source).not.toContain("mongolgpt-go")
       expect(source).not.toContain("opencode-go")
+      expect(source).not.toMatch(/data-slot=["']zen\b/i)
     }
   })
 

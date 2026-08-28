@@ -129,4 +129,11 @@ describe("Монгол хэрэглэгчийн интерфэйсийн гэр�
     expect(clipboard).toContain("гаралтын кодоор дууслаа")
     expect(clipboard).not.toContain("code-той дууслаа")
   })
+
+  test("enterprise-ийн идэвхгүй testimonial хүртэл Монгол тексттэй байна", async () => {
+    const enterprise = await Bun.file(new URL("routes/enterprise/index.tsx", consoleApp)).text()
+
+    expect(enterprise).toContain("MongolGPT-ийн тусламжтайгаар бид бүх хөрөнгөө")
+    expect(enterprise).not.toContain("Thanks to MongolGPT")
+  })
 })
