@@ -96,6 +96,7 @@ describe("release integrity contract", () => {
   test("keeps dev npm preview builds separate from guarded publishing", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/publish-dev-cli.yml"), "utf8")
     const preflight = readFileSync(resolve(root, "packages/mongolgpt/script/release-preflight.ts"), "utf8")
+    const localInstall = readFileSync(resolve(root, "packages/mongolgpt/script/smoke-local-npm-install.ts"), "utf8")
 
     expect(workflow).toContain("workflow_dispatch:")
     expect(workflow).toContain("github.ref == 'refs/heads/main'")
@@ -109,6 +110,7 @@ describe("release integrity contract", () => {
     expect(workflow).toContain("smoke-built-cli-windows.ps1")
     expect(workflow).toContain('-ExpectedAccountUrl "https://dev.mgpt.mn"')
     expect(workflow).toContain("packages/mongolgpt/script/publish.ts --dry-run --npm-only")
+    expect(workflow).toContain("packages/mongolgpt/script/smoke-local-npm-install.ts")
     expect(workflow).toContain("packages/mongolgpt/script/publish.ts --npm-only")
     for (const script of [
       "packages/sdk/js/script/publish.ts",
@@ -127,6 +129,10 @@ describe("release integrity contract", () => {
     expect(workflow).not.toContain("packages/desktop")
     expect(preflight).toContain("smokePublicNpmInstall(version)")
     expect(preflight).toContain("smokePublicPlatformPackages(version)")
+    expect(localInstall).toContain('"--offline"')
+    expect(localInstall).toContain('"--force"')
+    expect(localInstall).toContain('"mongolgpt/free-auto"')
+    expect(localInstall).toContain('"mongolgpt account login"')
   })
 
   test("checks npm authentication and every CLI package owner without publishing", () => {

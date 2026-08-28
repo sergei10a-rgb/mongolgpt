@@ -67,6 +67,9 @@ jobs:
           MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
         run: bun packages/mongolgpt/script/publish.ts --dry-run --npm-only
 
+      - name: Install local npm tarballs and smoke CLI
+        run: bun packages/mongolgpt/script/smoke-local-npm-install.ts --expected-account-url https://dev.mgpt.mn
+
       - name: Build and dry-run SDK, plugin, and UI packages
         env:
           MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
