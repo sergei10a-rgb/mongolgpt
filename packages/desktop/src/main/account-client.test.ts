@@ -321,4 +321,47 @@ describe("desktop account client", () => {
     await expect(client.login()).rejects.toThrow("Нэвтрэхийг цуцаллаа")
     expect(cleanupAborted).toBe(true)
   })
+
+  test("verifies the signed-in account is cleared after logout", async () => {
+    let deleted = false
+    const client = createDesktopAccountClient({
+      server,
+      accountServer: "https://dev.mgpt.mn",
+      openExternal: async () => {},
+      fetch: async (input, init) => {
+        const path = input instanceof URL ? input.pathname : new URL(String(input)).pathname
+        if (path === "/experimental/account" && init?.method === "DELETE") {
+          deleted = true
+          return json(true)
+        }
+        if (path === "/experimental/account") {
+          return json(null)
+        }
+        return json(null, 404)
+      },
+    })
+
+    await expect(client.logout()).resolves.toBeUndefined()
+    expect(deleted).toBe(true)
+  })
+
+  test("fails logout when the authenticated account still exists afterward", async () => {
+    const client = createDesktopAccountClient({
+      server,
+      accountServer: "https://dev.mgpt.mn",
+      openExternal: async () => {},
+      fetch: async (input, init) => {
+        const path = input instanceof URL ? input.pathname : new URL(String(input)).pathname
+        if (path === "/experimental/account" && init?.method === "DELETE") {
+          return json(true)
+        }
+        if (path === "/experimental/account") {
+          return json({ id: "user-1", email: "user@example.com", url: "https://dev.mgpt.mn" })
+        }
+        return json(null, 404)
+      },
+    })
+
+    await expect(client.logout()).rejects.toThrow("бүрэн гарч чадсангүй")
+  })
 })

@@ -204,6 +204,8 @@ export function createDesktopAccountClient(dependencies: Dependencies): DesktopA
 
   const logout = async () => {
     await request("/experimental/account", { method: "DELETE" })
+    const account = await current()
+    if (account) throw new Error("MongolGPT бүртгэлээс бүрэн гарч чадсангүй")
   }
 
   return { current, overview, switchWorkspace, login, logout }
