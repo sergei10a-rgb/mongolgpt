@@ -155,6 +155,9 @@ export function Header(props: { hideGetStarted?: boolean }) {
             <A href={language.route("/pricing")}>{i18n.t("nav.pricing")}</A>
           </li>
           <li>
+            <A href={language.route("/support")}>{i18n.t("footer.support")}</A>
+          </li>
+          <li>
             <A href={language.route("/enterprise")}>{i18n.t("nav.enterprise")}</A>
           </li>
           <li>
@@ -245,6 +248,9 @@ export function Header(props: { hideGetStarted?: boolean }) {
                 </li>
                 <li>
                   <A href={language.route("/pricing")}>{i18n.t("nav.pricing")}</A>
+                </li>
+                <li>
+                  <A href={language.route("/support")}>{i18n.t("footer.support")}</A>
                 </li>
                 <li>
                   <A href={language.route("/enterprise")}>{i18n.t("nav.enterprise")}</A>

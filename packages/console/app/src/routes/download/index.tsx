@@ -1,7 +1,7 @@
 import "./index.css"
 import { Meta, Title } from "@solidjs/meta"
 import { A } from "@solidjs/router"
-import { createSignal, type JSX, onMount, Show } from "solid-js"
+import { createSignal, For, type JSX, onMount, Show } from "solid-js"
 import { Faq } from "~/component/faq"
 import { Footer } from "~/component/footer"
 import { Header } from "~/component/header"
@@ -42,6 +42,27 @@ const optionalDesktopPlatforms = [
   "linux-x64-deb",
   "linux-x64-rpm",
 ] as const satisfies readonly DownloadPlatform[]
+
+const setupRows = [
+  {
+    title: "Нэг бүртгэлээр эхлэх",
+    body: "Вэб, ширээний програм, командын мөрт ижил MongolGPT бүртгэлээр нэвтэрч үнэгүй автомат горимоо шууд ашиглана.",
+    href: "/auth",
+    action: "Нэвтрэх",
+  },
+  {
+    title: "Өөрийн загвараа холбох",
+    body: "OpenRouter, NVIDIA NIM, OpenAI-д нийцсэн API, Ollama, LM Studio тохиргоог Монгол заавраар холбоно.",
+    href: "/docs/providers/",
+    action: "Нийлүүлэгчийн заавар",
+  },
+  {
+    title: "Асуудал гарвал тусламж авах",
+    body: "Таталт, нэвтрэлт, API түлхүүр, лиценз, суулгалтын асуудлыг тусламжийн хэсгээс шийдүүлнэ.",
+    href: "/support",
+    action: "Тусламж нээх",
+  },
+] as const
 
 function IconDownload(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
@@ -118,6 +139,18 @@ export default function Download() {
                 )}
               </Show>
             </div>
+          </section>
+
+          <section data-component="download-setup" aria-label="MongolGPT суулгасны дараах үндсэн алхмууд">
+            <For each={setupRows}>
+              {(item) => (
+                <article data-component="setup-item">
+                  <h2>{item.title}</h2>
+                  <p>{item.body}</p>
+                  <A href={language.route(item.href)}>{item.action}</A>
+                </article>
+              )}
+            </For>
           </section>
 
           <section data-component="download-section">

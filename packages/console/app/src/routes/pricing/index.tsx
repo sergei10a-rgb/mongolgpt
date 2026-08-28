@@ -37,7 +37,11 @@ const getPricingCatalog = query(async () => {
 export default function Pricing() {
   const i18n = useI18n()
   const language = useLanguage()
-  const baseUrl = publicMetadataBaseUrl(getRequestEvent()?.request.url, config.baseUrl, import.meta.env.VITE_MONGOLGPT_ROOT_URL)
+  const baseUrl = publicMetadataBaseUrl(
+    getRequestEvent()?.request.url,
+    config.baseUrl,
+    import.meta.env.VITE_MONGOLGPT_ROOT_URL,
+  )
   const pricing = createAsync(() => getPricingCatalog())
   const formatAmount = (amount: number | undefined) => {
     if (amount === undefined) return i18n.t("pricing.price.configuring")
@@ -104,6 +108,35 @@ export default function Pricing() {
       },
     ] as const
   })
+  const routeRows = createMemo(
+    () =>
+      [
+        {
+          title: "Нэг бүртгэл, бүх хэрэглүүр",
+          body: "Нэг MongolGPT бүртгэлээр вэб, ширээний програм, командын мөрийн хэрэглээ, багц, нэвтрэлтийг хуваалцана.",
+          href: "/download",
+          action: "Татах хуудас",
+        },
+        {
+          title: "Үнэгүй автомат горимоор эхэлнэ",
+          body: "Анхдагч хэрэглээ нь төлбөргүй. Basic, Pro, Max багцууд идэвхжихэд хэрэгцээндээ тааруулж сонгоно. Хүсвэл өөрийн API түлхүүрээ ашиглана.",
+          href: "/auth",
+          action: "Нэвтрэх",
+        },
+        {
+          title: "Өөрийн API түлхүүр ба дотоод загвар",
+          body: "OpenRouter, NVIDIA NIM, OpenAI-д нийцсэн API, Ollama, LM Studio холболтыг Монгол заавраар нэмж болно.",
+          href: "/docs/providers/",
+          action: "Заавар үзэх",
+        },
+        {
+          title: "Төлбөр ба тусламж",
+          body: "QPay, Bonum төлбөр идэвхжих хүртэл багц, захиалга болон бүртгэлийн асуултаа тусламжийн хэсгээс илгээнэ.",
+          href: "/support",
+          action: "Тусламж",
+        },
+      ] as const,
+  )
 
   return (
     <main data-page="mongolgpt" data-view="pricing">
@@ -156,6 +189,18 @@ export default function Pricing() {
                   <A href="/auth" data-slot="plan-action">
                     {plan.action}
                   </A>
+                </article>
+              )}
+            </For>
+          </section>
+
+          <section data-component="pricing-routes" aria-label="Багц сонгосны дараах үндсэн урсгал">
+            <For each={routeRows()}>
+              {(row) => (
+                <article data-component="pricing-route">
+                  <h2>{row.title}</h2>
+                  <p>{row.body}</p>
+                  <A href={language.route(row.href)}>{row.action}</A>
                 </article>
               )}
             </For>

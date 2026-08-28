@@ -28,6 +28,28 @@ describe("home landing contract", () => {
     expect(view).toContain('href: "/support"')
   })
 
+  test("keeps header and footer aligned to the public product routes", async () => {
+    const header = await source("component/header.tsx")
+    const footer = await source("component/footer.tsx")
+    expect(header).toContain('language.route("/support")')
+    expect(header).toContain('language.route("/download")')
+    expect(footer).toContain('language.route("/download")')
+    expect(footer).toContain('i18n.t("footer.support")')
+  })
+
+  test("keeps Mongolian public copy free from internal English feature labels", async () => {
+    const publicCopy = await Promise.all([
+      source("i18n/mn.ts"),
+      source("routes/index.tsx"),
+      source("routes/download/index.tsx"),
+      source("routes/pricing/index.tsx"),
+    ])
+    const text = publicCopy.join("\n")
+    expect(text).not.toContain("Free Auto")
+    expect(text).not.toContain("OpenAI-compatible")
+    expect(text).not.toMatch(/\bCLI\b/)
+  })
+
   test("uses the new home layout structure and keyboard-visible focus styling", async () => {
     const styles = await source("routes/index.css")
     expect(styles).toContain('[data-component="hero-grid"]')

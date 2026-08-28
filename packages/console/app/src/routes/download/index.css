@@ -316,8 +316,7 @@
 
   /* Download Hero Section */
   [data-component="download-hero"] {
-    /* display: grid; */
-    display: none;
+    display: grid;
     grid-template-columns: 260px 1fr;
     gap: 4rem;
     padding-bottom: 2rem;
@@ -427,6 +426,43 @@
           cursor: not-allowed;
         }
       }
+    }
+  }
+
+  [data-component="download-setup"] {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 4rem;
+
+    @media (max-width: 60rem) {
+      grid-template-columns: 1fr;
+      margin-bottom: 3rem;
+    }
+  }
+
+  [data-component="setup-item"] {
+    border: 1px solid var(--color-border-weak);
+    border-radius: 6px;
+    padding: 1.25rem;
+    background: var(--color-background-weak);
+
+    h2 {
+      color: var(--color-text-strong);
+      font-size: 1rem;
+      line-height: 1.4;
+      margin: 0 0 0.75rem;
+    }
+
+    p {
+      margin: 0 0 1rem;
+    }
+
+    a {
+      color: var(--color-text-strong);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      text-decoration-thickness: 1px;
     }
   }
 

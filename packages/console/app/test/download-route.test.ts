@@ -15,6 +15,15 @@ afterEach(() => {
 })
 
 describe("desktop download route", () => {
+  test("keeps the download page hero and account setup guidance visible", () => {
+    const source = readFileSync(resolve(import.meta.dirname, "../src/routes/download/index.tsx"), "utf8")
+    const styles = readFileSync(resolve(import.meta.dirname, "../src/routes/download/index.css"), "utf8")
+    expect(source).toContain('data-component="download-hero"')
+    expect(source).toContain('data-component="download-setup"')
+    expect(source).toContain('href: "/support"')
+    expect(styles).toContain('[data-component="download-hero"] {\n    display: grid;')
+  })
+
   test("keeps shared helpers outside the method-picked SolidStart route module", () => {
     const source = readFileSync(
       resolve(import.meta.dirname, "../src/routes/download/[channel]/[platform].ts"),

@@ -115,10 +115,10 @@ test("хэрэглэгчийн илэрхий сонгосон хэлийг ха
   ).toBe("en")
 })
 
-test("бүх хэлний Free Auto тайлбар MongolGPT бүртгэлийн бодлоготой таарна", () => {
+test("бүх хэлний үнэгүй автомат горим MongolGPT бүртгэлийн бодлоготой таарна", () => {
   for (const locale of LOCALES) {
     const description = i18n(locale)["home.faq.a3.p1"]
-    expect(description, locale).toContain("Free Auto")
+    expect(description, locale).toContain(locale === "mn" ? "үнэгүй автомат горим" : "Free Auto")
     expect(description, locale).toMatch(freeAutoAccountMarkers[locale])
   }
 })
