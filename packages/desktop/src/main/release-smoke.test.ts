@@ -4,7 +4,7 @@ import { EventEmitter } from "node:events"
 import { readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { desktopSmokeFile, waitForRendererReady, writeDesktopSmokeResult } from "./release-smoke"
+import { desktopSmokeFile, rendererSmokeFailure, waitForRendererReady, writeDesktopSmokeResult } from "./release-smoke"
 
 const files: string[] = []
 
@@ -12,7 +12,7 @@ afterEach(() => {
   for (const file of files.splice(0)) rmSync(file, { force: true })
 })
 
-function renderer(url = "mongolgpt://renderer/index.html") {
+function renderer(url = "mongolgpt-renderer://renderer/index.html") {
   return Object.assign(new EventEmitter(), { getURL: () => url })
 }
 
@@ -30,7 +30,7 @@ describe("desktop release smoke", () => {
     webContents.emit("did-fail-load", {}, -3, "subframe", "https://example.com", false)
     webContents.emit("did-finish-load")
 
-    expect(await ready).toBe("mongolgpt://renderer/index.html")
+    expect(await ready).toBe("mongolgpt-renderer://renderer/index.html")
     expect(webContents.listenerCount("did-finish-load")).toBe(0)
     expect(webContents.listenerCount("did-fail-load")).toBe(0)
   })
@@ -39,7 +39,7 @@ describe("desktop release smoke", () => {
     const webContents = renderer()
     const ready = waitForRendererReady(webContents, 100)
 
-    webContents.emit("did-fail-load", {}, -6, "ERR_FILE_NOT_FOUND", "mongolgpt://renderer/index.html", true)
+    webContents.emit("did-fail-load", {}, -6, "ERR_FILE_NOT_FOUND", "mongolgpt-renderer://renderer/index.html", true)
 
     await expect(ready).rejects.toThrow("ERR_FILE_NOT_FOUND")
   })
@@ -57,12 +57,17 @@ describe("desktop release smoke", () => {
     const file = join(tmpdir(), `mongolgpt-desktop-smoke-${randomUUID()}.json`)
     files.push(file)
 
-    writeDesktopSmokeResult(file, { version: "1.2.3", url: "mongolgpt://renderer/index.html" })
+    writeDesktopSmokeResult(file, { version: "1.2.3", url: "mongolgpt-renderer://renderer/index.html" })
 
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({
       status: "ready",
       version: "1.2.3",
-      url: "mongolgpt://renderer/index.html",
+      url: "mongolgpt-renderer://renderer/index.html",
     })
+  })
+
+  test("fails smoke when the renderer error boundary reports a fatal error", () => {
+    expect(rendererSmokeFailure(undefined)).toBeUndefined()
+    expect(rendererSmokeFailure({ error: "  startup failed  " })?.message).toContain("startup failed")
   })
 })

@@ -92,4 +92,25 @@ describe("release integrity contract", () => {
     expect(workflow).toContain("path: packages/desktop/dist/*.yml")
     expect(workflow).toContain("MONGOLGPT_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'latest' }}")
   })
+
+  test("uses one reusable packaged Windows desktop smoke gate", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
+    const smoke = readFileSync(resolve(root, "packages/desktop/scripts/smoke-packaged-windows.ps1"), "utf8")
+
+    expect(workflow).toContain("run: ./scripts/smoke-packaged-windows.ps1")
+    expect(workflow).not.toContain('$apps = @(Get-ChildItem -LiteralPath "dist\\win-unpacked"')
+    expect(smoke).toContain('MONGOLGPT_TEST_ONBOARDING", "1"')
+    expect(smoke).toContain("MONGOLGPT_DESKTOP_SMOKE_FILE")
+    expect(smoke).toContain('result.url -notlike "mongolgpt-renderer://renderer/*"')
+    expect(smoke).toContain("WaitForExit($ExitTimeoutSeconds * 1000)")
+  })
+
+  test("bundles TypeScript workspace contracts into the Electron main process", () => {
+    const desktop = JSON.parse(readFileSync(resolve(root, "packages/desktop/package.json"), "utf8"))
+
+    for (const name of ["@mongolgpt/account-contract", "@mongolgpt/local-bridge"]) {
+      expect(desktop.dependencies?.[name]).toBeUndefined()
+      expect(desktop.devDependencies?.[name]).toBe("workspace:*")
+    }
+  })
 })

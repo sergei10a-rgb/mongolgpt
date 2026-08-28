@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import {
+  browserHttpOrigin,
   hostedAccountGateEnabled,
   hostedLoginUrl,
   readHostedWorkspaceID,
@@ -41,6 +42,14 @@ describe("hosted account gate helpers", () => {
     expect(hostedAccountGateEnabled("hosted", "http://runtime.dev.mgpt.mn")).toBe(false)
     expect(hostedAccountGateEnabled("hosted", "https://[::1]:4096")).toBe(false)
     expect(hostedAccountGateEnabled("hosted", "https://192.168.1.20")).toBe(false)
+  })
+
+  test("does not treat desktop or file renderer origins as web runtimes", () => {
+    expect(browserHttpOrigin("https://app.dev.mgpt.mn/path")).toBe("https://app.dev.mgpt.mn")
+    expect(browserHttpOrigin("http://localhost:5173/path")).toBe("http://localhost:5173")
+    expect(browserHttpOrigin("mongolgpt-renderer://renderer/index.html")).toBeUndefined()
+    expect(browserHttpOrigin("file:///C:/MongolGPT/index.html")).toBeUndefined()
+    expect(browserHttpOrigin("not a url")).toBeUndefined()
   })
 
   test("rejects unsafe hosted endpoint origins", () => {

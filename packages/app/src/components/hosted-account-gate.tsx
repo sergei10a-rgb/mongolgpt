@@ -57,6 +57,17 @@ export function hostedAccountGateEnabled(mode: string | undefined, runtimeUrl: s
   return hostedRemoteOrigin(runtimeUrl) !== undefined
 }
 
+export function browserHttpOrigin(value: string | undefined) {
+  if (!value) return
+  try {
+    const url = new URL(value)
+    if (url.protocol !== "http:" && url.protocol !== "https:") return
+    return url.origin
+  } catch {
+    return
+  }
+}
+
 export function hostedRemoteOrigin(value: string | undefined) {
   if (!value?.trim()) return
   try {
@@ -486,9 +497,11 @@ export function HostedAccountGate(props: ParentProps) {
 
 function hostedRuntimeFallback(): WebRuntime | undefined {
   if (typeof location !== "object" || typeof location.origin !== "string" || !location.origin) return undefined
+  const origin = browserHttpOrigin(location.origin)
+  if (!origin) return undefined
   return resolveWebRuntime({
     dev: import.meta.env.DEV,
-    origin: location.origin,
+    origin,
     serverHost: import.meta.env.VITE_MONGOLGPT_SERVER_HOST,
     serverPort: import.meta.env.VITE_MONGOLGPT_SERVER_PORT,
     serverUrl: import.meta.env.VITE_MONGOLGPT_SERVER_URL,

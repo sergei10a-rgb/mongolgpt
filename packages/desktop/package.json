@@ -2,6 +2,7 @@
   "name": "@mongolgpt/desktop",
   "private": true,
   "version": "0.1.1",
+  "description": "Mongolian AI coding agent desktop client",
   "type": "module",
   "license": "MIT",
   "homepage": "https://github.com/sergei10a-rgb/mongolgpt",
@@ -27,8 +28,6 @@
   },
   "main": "./out/main/index.js",
   "dependencies": {
-    "@mongolgpt/account-contract": "workspace:*",
-    "@mongolgpt/local-bridge": "workspace:*",
     "@zip.js/zip.js": "2.7.62",
     "effect": "catalog:",
     "electron-context-menu": "4.1.2",
@@ -39,9 +38,10 @@
     "marked": "^15"
   },
   "devDependencies": {
-    "@actions/artifact": "4.0.0",
     "@lydell/node-pty": "catalog:",
+    "@mongolgpt/account-contract": "workspace:*",
     "@mongolgpt/app": "workspace:*",
+    "@mongolgpt/local-bridge": "workspace:*",
     "@mongolgpt/ui": "workspace:*",
     "@sentry/solid": "catalog:",
     "@sentry/vite-plugin": "catalog:",

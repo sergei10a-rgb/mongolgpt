@@ -48,3 +48,9 @@ export function waitForRendererReady(webContents: RendererContents, timeoutMs = 
 export function writeDesktopSmokeResult(file: string, input: { version: string; url: string }) {
   writeFileSync(file, `${JSON.stringify({ status: "ready", ...input })}\n`, "utf8")
 }
+
+export function rendererSmokeFailure(value: { error: string } | undefined) {
+  if (!value) return
+  const message = typeof value.error === "string" ? value.error.trim().slice(0, 4_096) : ""
+  return new Error(`Renderer эхлэх үед ноцтой алдаа гарлаа${message ? `: ${message}` : ""}`)
+}

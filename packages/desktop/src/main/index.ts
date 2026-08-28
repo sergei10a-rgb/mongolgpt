@@ -24,7 +24,7 @@ import { parseMarkdown } from "./markdown"
 import { createMenu } from "./menu"
 import { createLocalBridgeGateway } from "./local-bridge-gateway"
 import { createDesktopLocalBridgePairingController, DesktopLocalBridgePairingError } from "./local-bridge-pairing"
-import { desktopSmokeFile, waitForRendererReady, writeDesktopSmokeResult } from "./release-smoke"
+import { desktopSmokeFile, rendererSmokeFailure, waitForRendererReady, writeDesktopSmokeResult } from "./release-smoke"
 import { getStore } from "./store"
 import {
   getDefaultServerUrl,
@@ -63,6 +63,7 @@ const jsCallStackFeature = "DocumentPolicyIncludeJSCallStacksInCrashReports"
 let logger: ReturnType<typeof initLogging>
 let mainWindow: BrowserWindow | null = null
 let server: SidecarListener | null = null
+let fatalRendererError: { error: string } | undefined
 
 const pendingDeepLinks: string[] = []
 const pendingLocalBridgePairings: string[] = []
@@ -373,7 +374,10 @@ const main = Effect.gen(function* () {
     showUpdater: () => showUpdaterDialog(updater, true),
     setBackgroundColor: (color) => setBackgroundColor(color),
     exportDebugLogs: () => exportDebugLogs(),
-    recordFatalRendererError: (error) => writeLog("renderer", "Дүрслэх процессын ноцтой алдаа", { ...error }, "error"),
+    recordFatalRendererError: (error) => {
+      fatalRendererError ??= error
+      writeLog("renderer", "Дүрслэх процессын ноцтой алдаа", { ...error }, "error")
+    },
   })
   registerWslIpcHandlers(wslServers)
   if (!DESKTOP_SMOKE_FILE) {
@@ -500,6 +504,9 @@ const main = Effect.gen(function* () {
       try: () => waitForRendererReady(smokeWindow.webContents),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     })
+    yield* Effect.sleep("500 millis")
+    const rendererFailure = rendererSmokeFailure(fatalRendererError)
+    if (rendererFailure) yield* Effect.fail(rendererFailure)
     yield* Effect.try({
       try: () => writeDesktopSmokeResult(DESKTOP_SMOKE_FILE, { version: app.getVersion(), url: rendererUrl }),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
