@@ -15,7 +15,60 @@ type ObservedApiResponse = {
   cacheControl: string
 }
 
-export function observeDeployedPage(page: Page, appOrigin: string, apiOrigins: string[] = []) {
+type DeployedResponseInput = ObservedApiResponse & {
+  url: string
+  resourceType: string
+}
+
+export function classifyDeployedResponse(
+  input: DeployedResponseInput,
+  appOrigin: string,
+  apiOrigins: ReadonlySet<string>,
+  pageOrigins: ReadonlySet<string>,
+) {
+  const failedRequests: string[] = []
+  const htmlResponses: string[] = []
+  const observedApiResponses: ObservedApiResponse[] = []
+
+  if (pageOrigins.has(input.origin)) {
+    if (input.resourceType === "document" && input.status >= 400) {
+      failedRequests.push(`document:${input.status} ${input.url}`)
+    }
+    if (input.resourceType !== "document" && input.status >= 400 && blockedDocumentTypes.has(input.resourceType)) {
+      failedRequests.push(`${input.resourceType}:${input.status} ${input.url}`)
+    }
+  }
+
+  if (input.origin === appOrigin) {
+    if (isStaticAppBackendPath(input.pathname) && input.contentType.includes("text/html")) {
+      htmlResponses.push(`${input.status} ${input.url}`)
+    }
+    return { failedRequests, htmlResponses, observedApiResponses }
+  }
+
+  if (
+    apiOrigins.has(input.origin) &&
+    isStaticAppBackendPath(input.pathname) &&
+    backendResourceTypes.has(input.resourceType)
+  ) {
+    observedApiResponses.push({
+      origin: input.origin,
+      method: input.method,
+      pathname: input.pathname,
+      status: input.status,
+      contentType: input.contentType,
+      cacheControl: input.cacheControl,
+    })
+  }
+  return { failedRequests, htmlResponses, observedApiResponses }
+}
+
+export function observeDeployedPage(
+  page: Page,
+  appOrigin: string,
+  apiOrigins: string[] = [],
+  additionalPageOrigins: string[] = [],
+) {
   const pageErrors: string[] = []
   const consoleErrors: string[] = []
   const failedRequests: string[] = []
@@ -24,6 +77,7 @@ export function observeDeployedPage(page: Page, appOrigin: string, apiOrigins: s
   const observedApiResponses: ObservedApiResponse[] = []
   const pendingRequests = new Set<Request>()
   const allowedApiOrigins = new Set(apiOrigins)
+  const monitoredPageOrigins = new Set([appOrigin, ...additionalPageOrigins])
 
   page.on("pageerror", (error) => {
     pageErrors.push(error.stack ?? error.message)
@@ -64,40 +118,24 @@ export function observeDeployedPage(page: Page, appOrigin: string, apiOrigins: s
     const origin = url.origin
     const contentType = (response.headers()["content-type"] ?? "").split(";", 1)[0].trim().toLowerCase()
     const cacheControl = (response.headers()["cache-control"] ?? "").trim().toLowerCase()
-
-    if (origin === appOrigin) {
-      if (request.resourceType() === "document" && response.status() >= 400) {
-        failedRequests.push(`document:${response.status()} ${request.url()}`)
-      }
-
-      if (
-        request.resourceType() !== "document" &&
-        response.status() >= 400 &&
-        blockedDocumentTypes.has(request.resourceType())
-      ) {
-        failedRequests.push(`${request.resourceType()}:${response.status()} ${request.url()}`)
-      }
-
-      if (isStaticAppBackendPath(pathname) && contentType.includes("text/html")) {
-        htmlResponses.push(`${response.status()} ${request.url()}`)
-      }
-      return
-    }
-
-    if (
-      allowedApiOrigins.has(origin) &&
-      isStaticAppBackendPath(pathname) &&
-      backendResourceTypes.has(request.resourceType())
-    ) {
-      observedApiResponses.push({
+    const classified = classifyDeployedResponse(
+      {
         origin,
         method: request.method(),
         pathname,
         status: response.status(),
         contentType,
         cacheControl,
-      })
-    }
+        resourceType: request.resourceType(),
+        url: request.url(),
+      },
+      appOrigin,
+      allowedApiOrigins,
+      monitoredPageOrigins,
+    )
+    failedRequests.push(...classified.failedRequests)
+    htmlResponses.push(...classified.htmlResponses)
+    observedApiResponses.push(...classified.observedApiResponses)
   })
 
   return {

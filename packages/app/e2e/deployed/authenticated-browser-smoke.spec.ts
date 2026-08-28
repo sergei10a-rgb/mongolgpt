@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { AccountOverviewSchema, type AccountOverview } from "@mongolgpt/account-contract"
 import {
   expectNoDeployedSmokeFailures,
   installSmokeAuthCookie,
@@ -15,7 +16,7 @@ test("proves the deployed runtime boundary from an authenticated browser session
   const hasAuthCookie = await installSmokeAuthCookie(page.context(), publicOrigin)
   test.skip(!hasAuthCookie, "Set MONGOLGPT_SMOKE_AUTH_COOKIE to run the authenticated deployed smoke test locally.")
 
-  const state = observeDeployedPage(page, appOrigin, [publicOrigin, runtimeOrigin])
+  const state = observeDeployedPage(page, appOrigin, [publicOrigin, runtimeOrigin], [publicOrigin])
 
   await page.goto("/", { waitUntil: "domcontentloaded" })
   expect(new URL(page.url()).origin).toBe(appOrigin)
@@ -75,10 +76,58 @@ test("proves the deployed runtime boundary from an authenticated browser session
       .split(",")
       .map((value) => value.trim()),
   ).toContain("no-store")
-  expectAuthenticatedOverview(JSON.parse(overview.body))
+  const workspace = expectAuthenticatedOverview(JSON.parse(overview.body))
 
   await expect
     .poll(() => state.pendingRequests.size, { message: "authenticated deployed app network did not settle" })
+    .toBe(0)
+  expectNoDeployedSmokeFailures(state)
+
+  await page.goto(new URL(`/workspace/${encodeURIComponent(workspace.id)}/usage`, `${publicOrigin}/`).toString(), {
+    waitUntil: "domcontentloaded",
+  })
+  expect(new URL(page.url()).origin).toBe(publicOrigin)
+  expect(new URL(page.url()).pathname).toBe(`/workspace/${encodeURIComponent(workspace.id)}/usage`)
+  await expect(page.getByRole("heading", { name: "Хэрэглээний түүх" })).toBeVisible()
+  await expect(page.locator('nav[data-component="nav-desktop"] a[data-nav-button].active')).toHaveText("Хэрэглээ")
+  await expect(page.locator('[data-slot="usage-table"]')).toBeVisible()
+  await expect(page.locator('[data-slot="usage-table-element"], [data-component="empty-state"]')).toBeVisible()
+  await expect(page.locator('[role="alert"]')).toHaveCount(0)
+
+  await page.goto(new URL(`/workspace/${encodeURIComponent(workspace.id)}/billing`, `${publicOrigin}/`).toString(), {
+    waitUntil: "domcontentloaded",
+  })
+  expect(new URL(page.url()).origin).toBe(publicOrigin)
+  expect(new URL(page.url()).pathname).toBe(`/workspace/${encodeURIComponent(workspace.id)}/billing`)
+  await expect(page.getByRole("heading", { name: "Багц ба төлбөр" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Төлбөрийн түүх" })).toBeVisible()
+  await expect(page.locator('nav[data-component="nav-desktop"] a[data-nav-button].active')).toHaveText("Төлбөр тооцоо")
+  await expect(page.locator('[data-slot="active-plan"], [data-slot="plans"], [data-slot="notice"]')).toBeVisible()
+  await expect(page.locator('[data-slot="payments-table"], [data-slot="empty"]')).toBeVisible()
+  await expect(page.locator('[role="alert"]')).toHaveCount(0)
+
+  const planPicker = page.locator('[data-slot="plans"]')
+  if (await planPicker.isVisible()) {
+    await expect(planPicker.getByRole("button", { name: /Basic/ })).toBeVisible()
+    await expect(planPicker.getByRole("button", { name: /Pro/ })).toBeVisible()
+    await expect(planPicker.getByRole("button", { name: /Max/ })).toBeVisible()
+    await expect(page.getByRole("button", { name: "QPay", exact: true })).toBeVisible()
+    await expect(page.getByRole("button", { name: "Bonum", exact: true })).toBeVisible()
+  }
+
+  const consoleSnapshot = await page.evaluate(() => ({
+    title: document.title,
+    lang: document.documentElement.lang,
+    text: document.body.innerText,
+    readyState: document.readyState,
+  }))
+  expect(consoleSnapshot.title).toContain("MongolGPT")
+  expect(consoleSnapshot.lang).toBe("mn")
+  expect(consoleSnapshot.readyState).not.toBe("loading")
+  expect(isVisibleMongolianText(consoleSnapshot.text)).toBe(true)
+
+  await expect
+    .poll(() => state.pendingRequests.size, { message: "authenticated account console network did not settle" })
     .toBe(0)
   expectNoDeployedSmokeFailures(state)
 })
@@ -120,20 +169,16 @@ function hasAuthenticatedApiResponse(
   )
 }
 
-function expectAuthenticatedOverview(value: unknown) {
-  if (!record(value)) throw new Error("Authenticated account overview was not an object")
-  if (!record(value.account) || typeof value.account.id !== "string" || value.account.id.length === 0) {
-    throw new Error("Authenticated account overview did not include a valid account")
-  }
-  if (value.account.status !== "active") throw new Error("Authenticated account overview was not active")
-  if (typeof value.currentWorkspaceID !== "string" || !Array.isArray(value.workspaces)) {
+function expectAuthenticatedOverview(value: unknown): AccountOverview["workspaces"][number] {
+  const parsed = AccountOverviewSchema.safeParse(value)
+  if (!parsed.success) throw new Error("Authenticated account overview did not match the account contract")
+  if (!parsed.data.currentWorkspaceID) {
     throw new Error("Authenticated account overview did not include a current workspace")
   }
-  if (!value.workspaces.some((workspace) => record(workspace) && workspace.id === value.currentWorkspaceID)) {
-    throw new Error("Authenticated account overview did not include the selected workspace")
+  const workspace = parsed.data.workspaces.find((item) => item.id === parsed.data.currentWorkspaceID)
+  if (!workspace) throw new Error("Authenticated account overview did not include the selected workspace")
+  if (workspace.role !== "admin") {
+    throw new Error("Authenticated deployment smoke account must administer its current workspace")
   }
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
+  return workspace
 }

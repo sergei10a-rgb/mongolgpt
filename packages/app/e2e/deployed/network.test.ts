@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { parseSmokeAuthCookie } from "./network"
+import { classifyDeployedResponse, parseSmokeAuthCookie } from "./network"
 
 const origin = "https://dev.mgpt.mn"
 const token = "authenticated-smoke-token-value"
@@ -38,5 +38,59 @@ describe("deployed browser auth cookie", () => {
       expect(error).toBeInstanceOf(Error)
       expect(error instanceof Error ? error.message : String(error)).not.toContain(secret)
     }
+  })
+})
+
+describe("deployed multi-origin browser observer", () => {
+  test("monitors the public console without treating its API calls as static-app misrouting", () => {
+    const appOrigin = "https://app.dev.mgpt.mn"
+    const apiOrigins = new Set(["https://dev.mgpt.mn"])
+    const pageOrigins = new Set([appOrigin, "https://dev.mgpt.mn"])
+    const api = classifyDeployedResponse(
+      {
+        origin: "https://dev.mgpt.mn",
+        method: "GET",
+        pathname: "/v1/account/overview",
+        status: 200,
+        contentType: "application/json",
+        cacheControl: "no-store",
+        resourceType: "fetch",
+        url: "https://dev.mgpt.mn/v1/account/overview",
+      },
+      appOrigin,
+      apiOrigins,
+      pageOrigins,
+    )
+    expect(api.failedRequests).toEqual([])
+    expect(api.htmlResponses).toEqual([])
+    expect(api.observedApiResponses).toEqual([
+      {
+        origin: "https://dev.mgpt.mn",
+        method: "GET",
+        pathname: "/v1/account/overview",
+        status: 200,
+        contentType: "application/json",
+        cacheControl: "no-store",
+      },
+    ])
+
+    const document = classifyDeployedResponse(
+      {
+        origin: "https://dev.mgpt.mn",
+        method: "GET",
+        pathname: "/workspace/wrk_smoke/usage",
+        status: 500,
+        contentType: "text/html",
+        cacheControl: "no-store",
+        resourceType: "document",
+        url: "https://dev.mgpt.mn/workspace/wrk_smoke/usage",
+      },
+      appOrigin,
+      apiOrigins,
+      pageOrigins,
+    )
+    expect(document.failedRequests).toEqual(["document:500 https://dev.mgpt.mn/workspace/wrk_smoke/usage"])
+    expect(document.htmlResponses).toEqual([])
+    expect(document.observedApiResponses).toEqual([])
   })
 })
