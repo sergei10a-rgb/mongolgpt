@@ -21,7 +21,7 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Verify npm token, CLI package ownership, and scoped organization
+      - name: Verify npm token and existing CLI package ownership
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         shell: bash
@@ -63,14 +63,6 @@ jobs:
             ' "$maintainers" "$owner" "$package"
           done
 
-          members="$(npm org ls mongolgpt --json --registry=https://registry.npmjs.org)"
-          node -e '
-            const members = JSON.parse(process.argv[1])
-            const owner = process.argv[2]
-            if (!members || typeof members !== "object" || !(owner in members)) {
-              console.error(`${owner} нь @mongolgpt npm organization-ийн гишүүн биш байна.`)
-              process.exit(1)
-            }
-          ' "$members" "$owner"
-
-          echo "npm token ${#packages[@]} CLI package болон @mongolgpt scope-д баталгаажлаа."
+          # npm organization governance requires interactive 2FA and does not prove package publish access.
+          echo "npm token ${#packages[@]} одоо байгаа CLI package-ийн ownership-д баталгаажлаа."
+          echo "Шинэ @mongolgpt package-ийн write эрхийг guarded publish өөрөө эцэслэн шалгана."

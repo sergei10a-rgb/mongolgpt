@@ -120,7 +120,8 @@ describe("release integrity contract", () => {
       expect(workflow).toContain(`${script} --dry-run`)
       expect(workflow).toContain(`${script} --skip-build`)
     }
-    expect(workflow).toContain("npm org ls mongolgpt --json")
+    expect(workflow).toContain("npm view mongolgpt maintainers --json")
+    expect(workflow).not.toContain("npm org ls")
     expect(workflow).toContain("packages/mongolgpt/script/release-preflight.ts --npm")
     expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}")
     expect(workflow).not.toContain("MONGOLGPT_RELEASE")
@@ -135,7 +136,7 @@ describe("release integrity contract", () => {
     expect(localInstall).toContain('"mongolgpt account login"')
   })
 
-  test("checks npm authentication and every CLI package owner without publishing", () => {
+  test("checks npm authentication and every existing CLI package owner without governance access", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/npm-token-preflight.yml"), "utf8")
 
     expect(workflow).toContain("workflow_dispatch:")
@@ -159,7 +160,8 @@ describe("release integrity contract", () => {
       expect(workflow).toContain(`            ${name}\n`)
     }
     expect(workflow).toContain('npm view "$package" maintainers --json')
-    expect(workflow).toContain("npm org ls mongolgpt --json")
+    expect(workflow).toContain("Шинэ @mongolgpt package-ийн write эрхийг guarded publish өөрөө эцэслэн шалгана.")
+    expect(workflow).not.toContain("npm org ls")
     expect(workflow).not.toContain("run: npm publish")
     expect(workflow).not.toContain('npm publish "$package"')
   })
