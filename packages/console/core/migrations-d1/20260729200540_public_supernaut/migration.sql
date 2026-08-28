@@ -19,36 +19,69 @@ CREATE UNIQUE INDEX `finance_cost_valuation_idempotency_key` ON `finance_cost_va
 CREATE UNIQUE INDEX `finance_cost_valuation_entry_version` ON `finance_cost_valuation` (`cost_entry_id`,`version`);--> statement-breakpoint
 CREATE INDEX `finance_cost_valuation_entry_created` ON `finance_cost_valuation` (`cost_entry_id`,`time_created`);--> statement-breakpoint
 CREATE INDEX `finance_cost_valuation_fx_rate_id` ON `finance_cost_valuation` (`fx_rate_id`);--> statement-breakpoint
-CREATE TRIGGER `finance_cost_valuation_validate_insert`
+CREATE TRIGGER `finance_cost_valuation_validate_version`
 BEFORE INSERT ON `finance_cost_valuation`
+WHEN EXISTS (
+	SELECT 1
+	FROM `finance_cost_entry`
+	WHERE `id` = NEW.`cost_entry_id`
+	  AND `original_currency` = 'USD'
+	  AND `fx_rate_id` IS NULL
+	  AND `amount_mnt_micros` IS NULL
+)
+AND EXISTS (
+	SELECT 1
+	FROM `finance_fx_rate`
+	WHERE `id` = NEW.`fx_rate_id`
+	  AND `base_currency` = 'USD'
+	  AND `quote_currency` = 'MNT'
+)
+AND NOT EXISTS (
+	SELECT 1
+	FROM `finance_cost_valuation`
+	WHERE `idempotency_key` = NEW.`idempotency_key`
+	   OR (`cost_entry_id` = NEW.`cost_entry_id` AND `version` = NEW.`version`)
+)
+AND NEW.`version` <> (
+	SELECT COALESCE(MAX(`version`), 0) + 1
+	FROM `finance_cost_valuation`
+	WHERE `cost_entry_id` = NEW.`cost_entry_id`
+)
 BEGIN
-	SELECT CASE
-		WHEN NOT EXISTS (
-			SELECT 1
-			FROM `finance_cost_entry`
-			WHERE `id` = NEW.`cost_entry_id`
-			  AND `original_currency` = 'USD'
-			  AND `fx_rate_id` IS NULL
-			  AND `amount_mnt_micros` IS NULL
-		) THEN RAISE(ABORT, 'finance_cost_valuation requires an unvalued USD cost entry')
-		WHEN NOT EXISTS (
-			SELECT 1
-			FROM `finance_fx_rate`
-			WHERE `id` = NEW.`fx_rate_id`
-			  AND `base_currency` = 'USD'
-			  AND `quote_currency` = 'MNT'
-		) THEN RAISE(ABORT, 'finance_cost_valuation requires a USD/MNT FX rate')
-		WHEN NOT EXISTS (
-			SELECT 1
-			FROM `finance_cost_valuation`
-			WHERE `idempotency_key` = NEW.`idempotency_key`
-			   OR (`cost_entry_id` = NEW.`cost_entry_id` AND `version` = NEW.`version`)
-		) AND NEW.`version` <> (
-			SELECT COALESCE(MAX(`version`), 0) + 1
-			FROM `finance_cost_valuation`
-			WHERE `cost_entry_id` = NEW.`cost_entry_id`
-		) THEN RAISE(ABORT, 'finance_cost_valuation version must be sequential')
-	END;
+	SELECT RAISE(ABORT, 'finance_cost_valuation version must be sequential');
+END;--> statement-breakpoint
+CREATE TRIGGER `finance_cost_valuation_validate_fx_rate`
+BEFORE INSERT ON `finance_cost_valuation`
+WHEN EXISTS (
+	SELECT 1
+	FROM `finance_cost_entry`
+	WHERE `id` = NEW.`cost_entry_id`
+	  AND `original_currency` = 'USD'
+	  AND `fx_rate_id` IS NULL
+	  AND `amount_mnt_micros` IS NULL
+)
+AND NOT EXISTS (
+	SELECT 1
+	FROM `finance_fx_rate`
+	WHERE `id` = NEW.`fx_rate_id`
+	  AND `base_currency` = 'USD'
+	  AND `quote_currency` = 'MNT'
+)
+BEGIN
+	SELECT RAISE(ABORT, 'finance_cost_valuation requires a USD/MNT FX rate');
+END;--> statement-breakpoint
+CREATE TRIGGER `finance_cost_valuation_validate_cost_entry`
+BEFORE INSERT ON `finance_cost_valuation`
+WHEN NOT EXISTS (
+	SELECT 1
+	FROM `finance_cost_entry`
+	WHERE `id` = NEW.`cost_entry_id`
+	  AND `original_currency` = 'USD'
+	  AND `fx_rate_id` IS NULL
+	  AND `amount_mnt_micros` IS NULL
+)
+BEGIN
+	SELECT RAISE(ABORT, 'finance_cost_valuation requires an unvalued USD cost entry');
 END;--> statement-breakpoint
 CREATE TRIGGER `finance_cost_valuation_no_update`
 BEFORE UPDATE ON `finance_cost_valuation`

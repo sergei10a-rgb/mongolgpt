@@ -34,40 +34,59 @@ CREATE UNIQUE INDEX `finance_payment_settlement_provider_external` ON `finance_p
 CREATE INDEX `finance_payment_settlement_invoice_time` ON `finance_payment_settlement` (`payment_invoice_id`,`time_effective`);--> statement-breakpoint
 CREATE INDEX `finance_payment_settlement_workspace_time` ON `finance_payment_settlement` (`workspace_id`,`time_effective`);--> statement-breakpoint
 CREATE INDEX `finance_payment_settlement_event_id` ON `finance_payment_settlement` (`payment_event_id`);--> statement-breakpoint
-CREATE TRIGGER `finance_payment_settlement_validate_insert`
+CREATE TRIGGER `finance_payment_settlement_validate_event`
 BEFORE INSERT ON `finance_payment_settlement`
+WHEN EXISTS (
+	SELECT 1
+	FROM `payment_invoice`
+	WHERE `id` = NEW.`payment_invoice_id`
+	  AND `workspace_id` = NEW.`workspace_id`
+	  AND `provider` = NEW.`provider`
+	  AND `merchant_account_id` = NEW.`merchant_account_id`
+	  AND `currency` = NEW.`currency`
+	  AND (
+		(NEW.`kind` = 'payment' AND `status` IN ('paid', 'refunded') AND NEW.`gross_amount_mnt` = `amount`)
+		OR (NEW.`kind` = 'refund' AND `status` = 'refunded' AND -NEW.`gross_amount_mnt` = `amount`)
+		OR (NEW.`kind` = 'adjustment' AND `status` IN ('paid', 'refunded'))
+	  )
+)
+AND NEW.`payment_event_id` IS NOT NULL
+AND NOT EXISTS (
+	SELECT 1
+	FROM `payment_event`
+	WHERE `id` = NEW.`payment_event_id`
+	  AND `invoice_id` = NEW.`payment_invoice_id`
+	  AND `workspace_id` = NEW.`workspace_id`
+	  AND `provider` = NEW.`provider`
+	  AND `merchant_account_id` = NEW.`merchant_account_id`
+	  AND `outcome` <> 'rejected'
+	  AND (
+		(NEW.`kind` = 'payment' AND `type` = 'paid')
+		OR (NEW.`kind` = 'refund' AND `type` = 'refunded')
+		OR (NEW.`kind` = 'adjustment' AND `type` IN ('paid', 'refunded'))
+	  )
+)
 BEGIN
-	SELECT CASE
-		WHEN NOT EXISTS (
-			SELECT 1
-			FROM `payment_invoice`
-			WHERE `id` = NEW.`payment_invoice_id`
-			  AND `workspace_id` = NEW.`workspace_id`
-			  AND `provider` = NEW.`provider`
-			  AND `merchant_account_id` = NEW.`merchant_account_id`
-			  AND `currency` = NEW.`currency`
-			  AND (
-				(NEW.`kind` = 'payment' AND `status` IN ('paid', 'refunded') AND NEW.`gross_amount_mnt` = `amount`)
-				OR (NEW.`kind` = 'refund' AND `status` = 'refunded' AND -NEW.`gross_amount_mnt` = `amount`)
-				OR (NEW.`kind` = 'adjustment' AND `status` IN ('paid', 'refunded'))
-			  )
-		) THEN RAISE(ABORT, 'finance_payment_settlement does not match a verified invoice')
-		WHEN NEW.`payment_event_id` IS NOT NULL AND NOT EXISTS (
-			SELECT 1
-			FROM `payment_event`
-			WHERE `id` = NEW.`payment_event_id`
-			  AND `invoice_id` = NEW.`payment_invoice_id`
-			  AND `workspace_id` = NEW.`workspace_id`
-			  AND `provider` = NEW.`provider`
-			  AND `merchant_account_id` = NEW.`merchant_account_id`
-			  AND `outcome` <> 'rejected'
-			  AND (
-				(NEW.`kind` = 'payment' AND `type` = 'paid')
-				OR (NEW.`kind` = 'refund' AND `type` = 'refunded')
-				OR (NEW.`kind` = 'adjustment' AND `type` IN ('paid', 'refunded'))
-			  )
-		) THEN RAISE(ABORT, 'finance_payment_settlement does not match a verified payment event')
-	END;
+	SELECT RAISE(ABORT, 'finance_payment_settlement does not match a verified payment event');
+END;--> statement-breakpoint
+CREATE TRIGGER `finance_payment_settlement_validate_invoice`
+BEFORE INSERT ON `finance_payment_settlement`
+WHEN NOT EXISTS (
+	SELECT 1
+	FROM `payment_invoice`
+	WHERE `id` = NEW.`payment_invoice_id`
+	  AND `workspace_id` = NEW.`workspace_id`
+	  AND `provider` = NEW.`provider`
+	  AND `merchant_account_id` = NEW.`merchant_account_id`
+	  AND `currency` = NEW.`currency`
+	  AND (
+		(NEW.`kind` = 'payment' AND `status` IN ('paid', 'refunded') AND NEW.`gross_amount_mnt` = `amount`)
+		OR (NEW.`kind` = 'refund' AND `status` = 'refunded' AND -NEW.`gross_amount_mnt` = `amount`)
+		OR (NEW.`kind` = 'adjustment' AND `status` IN ('paid', 'refunded'))
+	  )
+)
+BEGIN
+	SELECT RAISE(ABORT, 'finance_payment_settlement does not match a verified invoice');
 END;--> statement-breakpoint
 CREATE TRIGGER `finance_payment_settlement_no_update`
 BEFORE UPDATE ON `finance_payment_settlement`
