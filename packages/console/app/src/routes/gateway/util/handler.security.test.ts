@@ -91,7 +91,8 @@ describe("Gateway handler telemetry security", () => {
   })
 
   test("settles measured usage even when persistence fails and releases explicit provider rejections", () => {
-    expect(source).toContain("finally {\n          await settleRequestQuota(actual)")
+    expect(source.match(/trackAndSettleMeasuredUsage\(\{/g)).toHaveLength(2)
+    expect(source.match(/settle: settleRequestQuota/g)).toHaveLength(2)
     expect(source).toContain("if (!usage && res.status >= 400) await releaseRequestQuota()")
     expect(source).toContain("return settleRequestQuota({ costInMicroCents: 0, tokens: 0 })")
   })

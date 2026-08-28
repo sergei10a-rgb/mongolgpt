@@ -68,13 +68,13 @@ import {
   shouldFailoverProviderStatus,
 } from "./provider-retry"
 import { providerCircuit, providerCircuitKey } from "./provider-circuit"
+import { resolveImmediateBillingSource, trackAndSettleMeasuredUsage, type BillingSource } from "./request-lifecycle"
 
 type GatewayCatalogData = Awaited<ReturnType<typeof GatewayCatalog.list>>
 type RetryOptions = {
   excludeProviders: string[]
   retryCount: number
 }
-type BillingSource = "anonymous" | "free" | "byok" | "plan" | "balance"
 type AuthCredential = { type: "key"; value: string } | { type: "account"; accountID: string; workspaceID: string }
 
 function resolve(text: string, params?: Record<string, string | number>) {
@@ -367,11 +367,12 @@ export async function handler(
           costInMicroCents: centsToMicroCents(costInfo.totalCostInCent),
           tokens: usageTokenTotal(usageInfo),
         }
-        try {
-          await trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo, limits)
-        } finally {
-          await settleRequestQuota(actual)
-        }
+        await trackAndSettleMeasuredUsage({
+          actual,
+          track: () =>
+            trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo, limits),
+          settle: settleRequestQuota,
+        })
         json.cost = calculateOccurredCost(billingSource, costInfo)
       }
       if (json.error?.message) {
@@ -437,20 +438,21 @@ export async function handler(
                     costInMicroCents: centsToMicroCents(costInfo.totalCostInCent),
                     tokens: usageTokenTotal(usageInfo),
                   }
-                  try {
-                    await trackUsage(
-                      sessionId,
-                      billingSource,
-                      authInfo,
-                      modelInfo,
-                      providerInfo,
-                      usageInfo,
-                      costInfo,
-                      limits,
-                    )
-                  } finally {
-                    await settleRequestQuota(actual)
-                  }
+                  await trackAndSettleMeasuredUsage({
+                    actual,
+                    track: () =>
+                      trackUsage(
+                        sessionId,
+                        billingSource,
+                        authInfo,
+                        modelInfo,
+                        providerInfo,
+                        usageInfo,
+                        costInfo,
+                        limits,
+                      ),
+                    settle: settleRequestQuota,
+                  })
                   const cost = calculateOccurredCost(billingSource, costInfo)
                   c.enqueue(encoder.encode(buildCostChunk(opts.format, cost)))
                 }
@@ -1037,11 +1039,15 @@ export async function handler(
   }
 
   function validateBilling(authInfo: AuthInfo, modelInfo: ModelInfo, limits: Limits): BillingSource {
-    if (!authInfo) return "anonymous"
-    if (authInfo.provider?.credentials) return "byok"
-    if (modelInfo.freeForAuthenticated) return "free"
-    if (authInfo.isFree) return "free"
-    if (modelInfo.allowAnonymous) return "free"
+    const immediate = resolveImmediateBillingSource({
+      authenticated: !!authInfo,
+      hasProviderCredentials: !!authInfo?.provider?.credentials,
+      freeForAuthenticated: !!modelInfo.freeForAuthenticated,
+      freeWorkspace: !!authInfo?.isFree,
+      allowAnonymous: !!modelInfo.allowAnonymous,
+    })
+    if (immediate) return immediate
+    if (!authInfo) throw new AuthError(t("gateway.api.error.missingApiKey"))
 
     if (authInfo.planEntitlement) {
       try {
