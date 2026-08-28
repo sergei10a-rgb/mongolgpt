@@ -93,6 +93,12 @@ try {
     throw "--help smoke амжилтгүй: exit=$($help.ExitCode), stderr=$($help.Stderr.Trim())"
   }
 
+  $accountHelp = Invoke-MongolGPT -Arguments @("account", "--help")
+  $accountHelpText = $accountHelp.Stdout + $accountHelp.Stderr
+  if ($accountHelp.ExitCode -ne 0 -or $accountHelpText -notmatch "MongolGPT бүртгэл") {
+    throw "account --help smoke амжилтгүй: exit=$($accountHelp.ExitCode), stderr=$($accountHelp.Stderr.Trim())"
+  }
+
   $freeAuto = Invoke-MongolGPT -Arguments @(
     "run",
     "--model",
@@ -108,7 +114,7 @@ try {
     throw "Free Auto нэвтрэх хаалт зөв тайлбар буцаасангүй: $($freeAuto.Stderr.Trim())"
   }
 
-  Write-Host "MongolGPT Windows CLI smoke амжилттай: version, help, Git repo, Free Auto account gate"
+  Write-Host "MongolGPT Windows CLI smoke амжилттай: version, account help, Git repo, Free Auto account gate"
 }
 finally {
   Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue

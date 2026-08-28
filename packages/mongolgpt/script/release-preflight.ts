@@ -164,6 +164,17 @@ async function smokePublicNpmInstall(version: string) {
       `public npm CLI version smoke failed: ${commandOutput(versionResult)}`,
     )
 
+    const accountHelp = spawnSync(binary, ["account", "--help"], {
+      cwd: repo,
+      env: publicEnv,
+      encoding: "utf8",
+      timeout: 30_000,
+    })
+    assert(
+      accountHelp.status === 0 && commandOutput(accountHelp).includes("MongolGPT бүртгэл"),
+      `public npm account command smoke failed: ${commandOutput(accountHelp)}`,
+    )
+
     const git = spawnSync("git", ["init", "--quiet"], {
       cwd: repo,
       env: publicEnv,
