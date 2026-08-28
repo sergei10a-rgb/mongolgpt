@@ -71,6 +71,15 @@ try {
   if ($result.status -ne "ready" -or $result.url -notlike "mongolgpt-renderer://renderer/*") {
     throw "Packaged desktop returned an invalid smoke result: $rawResult"
   }
+  if (
+    $result.language -ne "mn" -or
+    $result.onboardingStage -ne "account" -or
+    $result.accountGateVisible -ne $true -or
+    $result.accountHeading -ne "MongolGPT бүртгэлээрээ нэвтэрнэ үү" -or
+    $result.loginAction -ne "Бүртгүүлэх эсвэл нэвтрэх"
+  ) {
+    throw "Packaged desktop did not show the Mongolian MongolGPT account gate: $rawResult"
+  }
   if (![string]::IsNullOrWhiteSpace($ExpectedVersion) -and $result.version -ne $ExpectedVersion) {
     throw "Packaged desktop version is $($result.version); expected $ExpectedVersion."
   }
@@ -93,6 +102,11 @@ try {
     url = $result.url
     version = $result.version
     productName = $versionInfo.ProductName
+    language = $result.language
+    onboardingStage = $result.onboardingStage
+    accountGateVisible = $result.accountGateVisible
+    accountHeading = $result.accountHeading
+    loginAction = $result.loginAction
     exitCode = $process.ExitCode
   }
 } catch {

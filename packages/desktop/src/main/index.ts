@@ -24,7 +24,13 @@ import { parseMarkdown } from "./markdown"
 import { createMenu } from "./menu"
 import { createLocalBridgeGateway } from "./local-bridge-gateway"
 import { createDesktopLocalBridgePairingController, DesktopLocalBridgePairingError } from "./local-bridge-pairing"
-import { desktopSmokeFile, rendererSmokeFailure, waitForRendererReady, writeDesktopSmokeResult } from "./release-smoke"
+import {
+  desktopSmokeFile,
+  rendererSmokeFailure,
+  waitForRendererAccountGate,
+  waitForRendererReady,
+  writeDesktopSmokeResult,
+} from "./release-smoke"
 import { getStore } from "./store"
 import {
   getDefaultServerUrl,
@@ -504,11 +510,19 @@ const main = Effect.gen(function* () {
       try: () => waitForRendererReady(smokeWindow.webContents),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     })
-    yield* Effect.sleep("500 millis")
+    const accountGate = yield* Effect.tryPromise({
+      try: () => waitForRendererAccountGate(smokeWindow.webContents),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    })
     const rendererFailure = rendererSmokeFailure(fatalRendererError)
     if (rendererFailure) yield* Effect.fail(rendererFailure)
     yield* Effect.try({
-      try: () => writeDesktopSmokeResult(DESKTOP_SMOKE_FILE, { version: app.getVersion(), url: rendererUrl }),
+      try: () =>
+        writeDesktopSmokeResult(DESKTOP_SMOKE_FILE, {
+          version: app.getVersion(),
+          url: rendererUrl,
+          ...accountGate,
+        }),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     })
     yield* Effect.promise(stopSidecars)

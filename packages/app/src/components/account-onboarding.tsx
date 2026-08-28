@@ -145,6 +145,13 @@ function DialogAccountOnboarding(props: {
   })
   const signedIn = () => props.account() !== null && props.account() !== undefined
   const connected = () => state.connected || props.connected()
+  const stage = () =>
+    accountOnboardingStage({
+      ready: true,
+      signedIn: signedIn(),
+      connected: connected(),
+      completed: false,
+    })
 
   const login = async () => {
     setState({ loginPending: true, error: "" })
@@ -205,14 +212,16 @@ function DialogAccountOnboarding(props: {
 
   return (
     <Dialog title={language.t("onboarding.account.title")} transition>
-      <div class="flex flex-col gap-6 px-2.5 pb-3">
+      <div class="flex flex-col gap-6 px-2.5 pb-3" data-mongolgpt-account-onboarding-stage={stage()}>
         <Switch>
           <Match when={!signedIn()}>
             <div class="px-2.5 pb-8 flex flex-col gap-6">
               <div class="flex items-center gap-4">
                 <ProviderIcon id="mongolgpt" class="size-8 shrink-0 icon-strong-base" />
                 <div class="flex min-w-0 flex-col gap-1">
-                  <div class="text-16-medium text-text-strong">{language.t("onboarding.account.heading")}</div>
+                  <div class="text-16-medium text-text-strong" data-mongolgpt-account-login-heading>
+                    {language.t("onboarding.account.heading")}
+                  </div>
                   <p class="text-14-regular text-text-base">{language.t("onboarding.account.description")}</p>
                 </div>
               </div>
@@ -222,7 +231,13 @@ function DialogAccountOnboarding(props: {
                 </p>
               </Show>
               <div class="flex flex-wrap items-center gap-2">
-                <Button size="large" variant="primary" onClick={login} disabled={state.loginPending}>
+                <Button
+                  size="large"
+                  variant="primary"
+                  onClick={login}
+                  disabled={state.loginPending}
+                  data-mongolgpt-account-login-action
+                >
                   {state.loginPending
                     ? language.t("onboarding.account.loggingIn")
                     : language.t("onboarding.account.login")}
