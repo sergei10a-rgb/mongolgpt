@@ -197,7 +197,7 @@ export function make(options: ClientOptions) {
             path: `/api/session`,
             body: { id: input?.id, agent: input?.agent, model: input?.model, location: input?.location },
             successStatus: 200,
-            declaredStatuses: [401, 400],
+            declaredStatuses: [404, 401, 400],
             empty: false,
           },
           requestOptions,

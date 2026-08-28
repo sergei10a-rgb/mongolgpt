@@ -25,6 +25,15 @@ export type UnauthorizedError = { readonly _tag: "UnauthorizedError"; readonly m
 export const isUnauthorizedError = (value: unknown): value is UnauthorizedError =>
   typeof value === "object" && value !== null && "_tag" in value && value._tag === "UnauthorizedError"
 
+export type ModelUnavailableError = {
+  readonly _tag: "ModelUnavailableError"
+  readonly providerID: string
+  readonly modelID: string
+  readonly message: string
+}
+export const isModelUnavailableError = (value: unknown): value is ModelUnavailableError =>
+  typeof value === "object" && value !== null && "_tag" in value && value._tag === "ModelUnavailableError"
+
 export type SessionNotFoundError = {
   readonly _tag: "SessionNotFoundError"
   readonly sessionID: string
