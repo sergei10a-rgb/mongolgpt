@@ -17,6 +17,7 @@
     ".": "./src/index.ts",
     "./cloudflare-access": "./src/cloudflare-access.ts",
     "./cloudflare-deployment": "./src/cloudflare-deployment.ts",
+    "./cloudflare-state-repair": "./src/cloudflare-state-repair.ts",
     "./d1-restore": "./src/d1-restore.ts",
     "./deployment": "./src/deployment.ts",
     "./deployment-service-urls": "./src/deployment-service-urls.ts",

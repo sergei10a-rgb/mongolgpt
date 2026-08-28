@@ -118,6 +118,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const providerMigration = job.steps.find(
       (step) => step.name === "Migrate legacy Cloudflare queue state through provider 6.14",
     )
+    const providerRepair = job.steps.find(
+      (step) => step.name === "Repair dangling Cloudflare queue provider reference",
+    )
     const deploy = job.steps.find((step) => step.name === "Bootstrap real dev OAuth infrastructure")
     const smoke = job.steps.find((step) => step.name === "Verify dev account scaffold")
 
@@ -174,6 +177,15 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(providerMigration?.run?.match(/bunx sst@4\.7\.0 refresh/g)).toHaveLength(2)
     expect(job.steps.indexOf(providerMigration!)).toBeGreaterThan(job.steps.indexOf(contracts!))
     expect(job.steps.indexOf(providerMigration!)).toBeLessThan(job.steps.indexOf(deploy!))
+    expect(providerRepair?.condition).toBe("inputs.repair_cloudflare_queue_provider")
+    expect(providerRepair?.env).toEqual({
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+      MONGOLGPT_REPAIR_CLOUDFLARE_QUEUE_PROVIDER: "true",
+      EDITOR: "bun script/repair-cloudflare-provider-state.ts",
+    })
+    expect(providerRepair?.run).toContain("bun sst state edit --stage=dev --print-logs")
+    expect(job.steps.indexOf(providerRepair!)).toBeGreaterThan(job.steps.indexOf(providerMigration!))
+    expect(job.steps.indexOf(providerRepair!)).toBeLessThan(job.steps.indexOf(deploy!))
     expect(deploy?.run).not.toContain("deploy:preflight")
 
     const run = deploy?.run ?? ""

@@ -12,6 +12,11 @@ on:
         required: false
         default: false
         type: boolean
+      repair_cloudflare_queue_provider:
+        description: "Migration-аас үлдсэн UsageQueue provider reference-г нэг удаа засах"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: cloudflare-bootstrap-dev-auth
@@ -102,6 +107,16 @@ jobs:
             --stage=dev \
             --target UsageQueue \
             --print-logs
+
+      - name: Repair dangling Cloudflare queue provider reference
+        if: inputs.repair_cloudflare_queue_provider
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_REPAIR_CLOUDFLARE_QUEUE_PROVIDER: "true"
+          EDITOR: "bun script/repair-cloudflare-provider-state.ts"
+        run: |
+          bun sst unlock --stage=dev || true
+          bun sst state edit --stage=dev --print-logs
 
       - name: Bootstrap real dev OAuth infrastructure
         env:
