@@ -1,4 +1,4 @@
-const backendPrefixes = new Set([
+export const staticAppBackendPrefixes = [
   "agent",
   "api",
   "auth",
@@ -30,7 +30,25 @@ const backendPrefixes = new Set([
   "v1",
   "vcs",
   "workspace",
-])
+] as const
+
+const backendPrefixes = new Set<string>(staticAppBackendPrefixes)
+
+const criticalBackendPaths = [
+  "/api/health",
+  "/global/health",
+  "/v1/account/overview",
+  "/auth/runtime-token",
+  "/auth/session",
+  "/session",
+  "/provider",
+  "/project",
+] as const
+
+export const staticAppBackendBoundaryPaths = [
+  ...criticalBackendPaths,
+  ...staticAppBackendPrefixes.map((prefix) => `/${prefix}/__mongolgpt_static_boundary_probe__`),
+] as const
 
 export interface StaticAssetsBinding {
   fetch(request: Request): Promise<Response>

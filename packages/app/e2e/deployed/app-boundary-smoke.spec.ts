@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { isStaticAppBackendPath } from "../../src/utils/static-app-router"
+import { isStaticAppBackendPath, staticAppBackendBoundaryPaths } from "../../src/utils/static-app-router"
 import { isVisibleMongolianText } from "./network"
 
 const backendResourceTypes = new Set(["fetch", "xhr"])
@@ -61,7 +61,7 @@ test("keeps the deployed app on its static boundary without requiring a live run
   expect(snapshot.releaseSha).toMatch(/^[0-9a-f]{40}$/)
   if (expectedReleaseSha) expect(snapshot.releaseSha).toBe(expectedReleaseSha)
 
-  for (const pathname of ["/api/health", "/auth/session", "/session", "/provider", "/project"]) {
+  for (const pathname of staticAppBackendBoundaryPaths) {
     const response = await request.get(new URL(pathname, `${appOrigin}/`).toString(), {
       headers: { Accept: "application/json" },
     })

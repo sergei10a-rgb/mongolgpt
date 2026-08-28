@@ -28,7 +28,7 @@ import {
   inspectStaticAssetContentType,
   inspectRuntimeHealth,
 } from "@mongolgpt/script/deployment-smoke-contract"
-import { isStaticAppBackendPath } from "../packages/app/src/utils/static-app-router"
+import { isStaticAppBackendPath, staticAppBackendBoundaryPaths } from "../packages/app/src/utils/static-app-router"
 
 if (import.meta.main) {
   if (process.argv[2] === "--validate-auth-cookie") {
@@ -336,16 +336,7 @@ async function checkDirectAppRoute(appUrl: string, result: DeploymentPreflightRe
 }
 
 async function checkStaticAppBackendBoundary(appUrl: string) {
-  for (const path of [
-    "/api/health",
-    "/global/health",
-    "/v1/account/overview",
-    "/auth/runtime-token",
-    "/auth/session",
-    "/session",
-    "/provider",
-    "/project",
-  ]) {
+  for (const path of staticAppBackendBoundaryPaths) {
     if (!isStaticAppBackendPath(path)) throw new Error(`static app backend path is not reserved: ${path}`)
     const requestUrl = new URL(path, `${appUrl}/`).toString()
     const response = await fetch(requestUrl, {

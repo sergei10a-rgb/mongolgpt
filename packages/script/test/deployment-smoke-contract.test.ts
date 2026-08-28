@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { staticAppBackendBoundaryPaths } from "../../app/src/utils/static-app-router"
 import {
   inspectAccountOverviewPreflight,
   inspectAnonymousAccountOverview,
@@ -148,6 +149,7 @@ describe("dev app-only smoke", () => {
     const previous = new Map(Object.keys(configured).map((key) => [key, process.env[key]]))
     const originalFetch = globalThis.fetch
     const requests: string[] = []
+    const boundaryPaths = new Set<string>(staticAppBackendBoundaryPaths)
     const document = html(`
       <title>MongolGPT</title>
       <meta name="mongolgpt-channel" content="dev">
@@ -166,18 +168,7 @@ describe("dev app-only smoke", () => {
       if (url.pathname === "/assets/index-abc123.js") {
         return new Response("export {}", { headers: { "content-type": "text/javascript; charset=utf-8" } })
       }
-      if (
-        [
-          "/api/health",
-          "/global/health",
-          "/v1/account/overview",
-          "/auth/runtime-token",
-          "/auth/session",
-          "/session",
-          "/provider",
-          "/project",
-        ].includes(url.pathname)
-      ) {
+      if (boundaryPaths.has(url.pathname)) {
         return Response.json(
           { code: "STATIC_APP_API_ROUTE", message: "MongolGPT веб аппын хаяг дээр API ажиллахгүй." },
           { status: 404, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" } },
@@ -201,14 +192,7 @@ describe("dev app-only smoke", () => {
       "https://app.dev.mgpt.mn/assets/index-abc123.js",
       "https://app.dev.mgpt.mn/new-session",
       "https://app.dev.mgpt.mn/assets/index-abc123.js",
-      "https://app.dev.mgpt.mn/api/health",
-      "https://app.dev.mgpt.mn/global/health",
-      "https://app.dev.mgpt.mn/v1/account/overview",
-      "https://app.dev.mgpt.mn/auth/runtime-token",
-      "https://app.dev.mgpt.mn/auth/session",
-      "https://app.dev.mgpt.mn/session",
-      "https://app.dev.mgpt.mn/provider",
-      "https://app.dev.mgpt.mn/project",
+      ...staticAppBackendBoundaryPaths.map((path) => new URL(path, appOrigin).toString()),
     ])
   })
 })

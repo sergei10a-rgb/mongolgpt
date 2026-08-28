@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import { isStaticAppBackendPath, routeStaticAppRequest, type StaticAssetsBinding } from "./static-app-router"
+import {
+  isStaticAppBackendPath,
+  routeStaticAppRequest,
+  staticAppBackendBoundaryPaths,
+  staticAppBackendPrefixes,
+  type StaticAssetsBinding,
+} from "./static-app-router"
 
 describe("static app router", () => {
   test("recognizes backend namespaces without rejecting app navigation", () => {
@@ -26,6 +32,18 @@ describe("static app router", () => {
     ]) {
       expect(isStaticAppBackendPath(path)).toBe(false)
     }
+  })
+
+  test("keeps every reserved backend namespace in the deployment boundary probes", () => {
+    const coveredPrefixes = new Set(
+      staticAppBackendBoundaryPaths
+        .map((path) => path.split("/", 3)[1])
+        .filter((prefix): prefix is string => Boolean(prefix)),
+    )
+
+    expect(coveredPrefixes).toEqual(new Set(staticAppBackendPrefixes))
+    expect(new Set(staticAppBackendBoundaryPaths).size).toBe(staticAppBackendBoundaryPaths.length)
+    for (const path of staticAppBackendBoundaryPaths) expect(isStaticAppBackendPath(path)).toBe(true)
   })
 
   test("returns a non-cacheable JSON error instead of SPA HTML", async () => {
