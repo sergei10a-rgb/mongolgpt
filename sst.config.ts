@@ -79,7 +79,7 @@ export default $config({
       }
     }
     if (appOnly) {
-      const site = await import("./infra/site.js")
+      const site = await import("./infra/web-app.js")
       return {
         WebAppUrl: site.webApp.url,
         HostedServices: true,

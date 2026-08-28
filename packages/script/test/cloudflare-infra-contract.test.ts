@@ -178,11 +178,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).not.toContain("format('https://app.{0}'")
     expect(source).not.toContain("format('https://runtime.{0}'")
     expect(buildStep?.run).toContain("bun --cwd packages/app verify:hosted-artifact")
-    const site = await Bun.file(new URL("../../../infra/site.ts", import.meta.url)).text()
-    expect(site).toContain('command: "bun run build:hosted"')
-    expect(site).toContain('VITE_MONGOLGPT_RELEASE_SHA: process.env.MONGOLGPT_RELEASE_SHA ?? ""')
-    expect(site).toContain("const supportUrl = `${publicOrigin}/support`")
-    expect(site).not.toContain("github.com/sergei10a-rgb/mongolgpt/issues")
+    const webApp = await Bun.file(new URL("../../../infra/web-app.ts", import.meta.url)).text()
+    expect(webApp).toContain('command: "bun run build:hosted"')
+    expect(webApp).toContain('VITE_MONGOLGPT_RELEASE_SHA: process.env.MONGOLGPT_RELEASE_SHA ?? ""')
+    expect(webApp).toContain("const supportUrl = `${publicOrigin}/support`")
+    expect(webApp).not.toContain("github.com/sergei10a-rgb/mongolgpt/issues")
     expect(workflow.jobs.deploy.condition).toBe(
       "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
     )
@@ -426,6 +426,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const sstSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
     const docsSource = await Bun.file(new URL("../../../infra/docs.ts", import.meta.url)).text()
     const siteSource = await Bun.file(new URL("../../../infra/site.ts", import.meta.url)).text()
+    const webAppSource = await Bun.file(new URL("../../../infra/web-app.ts", import.meta.url)).text()
     const rootPackage: unknown = await Bun.file(new URL("../../../package.json", import.meta.url)).json()
     const parsed: unknown = Bun.YAML.parse(source)
     if (!record(parsed) || !record(parsed.jobs) || !record(rootPackage) || !record(rootPackage.dependencies)) {
@@ -462,14 +463,16 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(docsSource).not.toContain('StaticSiteV2("WebApp"')
     expect(docsSource).toContain("const docsSiteOrigin = new URL(docsOrigin).origin")
     expect(docsSource).toContain("MONGOLGPT_PUBLIC_URL: docsSiteOrigin")
-    expect(siteSource).toContain('new sst.cloudflare.StaticSiteV2("WebApp"')
-    expect(siteSource).toContain('args.handler = "packages/app/cloudflare-router.ts"')
-    expect(siteSource).toContain("transform: {")
+    expect(siteSource).toContain('export { webApp } from "./web-app"')
+    expect(webAppSource).toContain('new sst.cloudflare.StaticSiteV2("WebApp"')
+    expect(webAppSource).toContain('args.handler = "packages/app/cloudflare-router.ts"')
+    expect(webAppSource).toContain("transform: {")
   })
 
   test("deploys only the dev hosted app Worker without backend credentials", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy-dev-app.yml", import.meta.url)).text()
     const sstSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
+    const webAppSource = await Bun.file(new URL("../../../infra/web-app.ts", import.meta.url)).text()
     const parsed: unknown = Bun.YAML.parse(source)
     if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs) || !record(parsed.jobs.deploy)) {
       throw new Error("Dev app-only workflow is invalid")
@@ -499,7 +502,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).not.toContain("--target Website")
     expect(sstSource).toContain('const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")')
     expect(sstSource).toContain("if (appOnly) {")
+    expect(sstSource).toContain('const site = await import("./infra/web-app.js")')
     expect(sstSource).toContain('WebAppUrl: site.webApp.url')
+    expect(webAppSource).not.toContain('from "./docs"')
+    expect(webAppSource).not.toContain('StaticSiteV2("Website"')
   })
 
   test("deploys the authenticated Sandbox runtime before publishing the hosted app", async () => {
