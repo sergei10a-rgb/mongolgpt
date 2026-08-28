@@ -12,6 +12,7 @@ import {
   runtimeOrigin,
   shareOrigin,
 } from "./stage"
+import { database } from "./database"
 import {
   businessIntegrationSecretNames,
   D1_BACKUP_MULTIPART_ABORT_SECONDS,
@@ -25,7 +26,7 @@ import { SECRET } from "./secret"
 // DATABASE
 ////////////////
 
-export const database = new sst.cloudflare.D1("Database")
+export { database } from "./database"
 
 new sst.x.DevCommand("Studio", {
   link: [database],

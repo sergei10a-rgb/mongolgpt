@@ -133,6 +133,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configPreflight?.env).toEqual({
       MONGOLGPT_RUNTIME_AUTH_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
       SST_SECRET_ByokCredentialsKeyV1: "${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}",
+      SST_SECRET_D1BackupApiToken: "disabled",
       SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: "${{ vars.MONGOLGPT_GITHUB_OAUTH_CLIENT_ID }}",
       SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: "${{ secrets.MONGOLGPT_GITHUB_OAUTH_CLIENT_SECRET }}",
       SST_SECRET_GOOGLE_CLIENT_ID: "${{ vars.GOOGLE_CLIENT_ID }}",
@@ -161,6 +162,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("set_optional_secret GITHUB_CLIENT_ID_CONSOLE")
     expect(source).toContain("set_optional_secret GITHUB_CLIENT_SECRET_CONSOLE")
     expect(source).toContain("set_optional_secret GOOGLE_CLIENT_ID")
+    expect(source).toContain("set_optional_secret D1BackupApiToken")
     expect(source).not.toMatch(/\$\{\{\s*(?:vars|secrets)\.GITHUB_/)
     expect(source).not.toContain("SST_SECRET_MONGOLGPT_GATEWAY_MODELS1")
     expect(source).not.toMatch(/QPAY_|BONUM_|CLOUDFLARE_ACCESS_API_TOKEN|MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS/)
@@ -194,9 +196,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(run).toContain("trap - EXIT")
     const oauthSecrets = run.indexOf("set_optional_secret GOOGLE_CLIENT_ID")
     const stateRepair = run.indexOf('bun sst state repair --stage="$stage" --print-logs 2>&1 | tee "$repair_log"')
-    const database = run.indexOf('bun sst deploy --stage="$stage" --target Database')
-    const migration = run.indexOf('bun sst shell --stage="$stage" -- bun run db:migrate')
-    const oauth = run.indexOf('bun sst deploy --stage="$stage" --target AuthApi --target Console --print-logs')
+    const database = run.indexOf('MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage="$stage" --print-logs')
+    const migration = run.indexOf(
+      'MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage="$stage" -- bun run db:migrate',
+    )
+    const oauth = run.lastIndexOf('bun sst deploy --stage="$stage" --print-logs')
     expect(oauthSecrets).toBeGreaterThanOrEqual(0)
     expect(stateRepair).toBeGreaterThan(oauthSecrets)
     expect(database).toBeGreaterThan(stateRepair)
@@ -206,7 +210,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(migration).toBeGreaterThan(database)
     expect(oauth).toBeGreaterThan(migration)
     expect(run).not.toContain("sst refresh")
+    expect(run).not.toContain("--target Database")
+    expect(run).not.toContain("--target AuthApi")
     expect(deploy?.env?.MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE).toBe("true")
+    expect(deploy?.env?.SST_SECRET_D1BackupApiToken).toBe("disabled")
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --auth-bootstrap dev")
     expect(job.steps.indexOf(smoke!)).toBeGreaterThan(job.steps.indexOf(deploy!))
   })
@@ -217,10 +224,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain("const stage = requireDeploymentStage(input?.stage)")
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")')
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")')
+    expect(configSource).toContain('flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")')
     expect(configSource).toContain('cloudflareProviderMigration ? "6.14.0" : "6.15.0"')
     expect(configSource).toContain('await import("./infra/cloudflare-provider-migration.js")')
     expect(configSource).toContain('await import("@pulumi/cloudflare")')
     expect(configSource).toContain('new cloudflare.Provider("default_6_14_0", {}, { version: "6.14.0" })')
+    expect(configSource).toContain('await import("./infra/database.js")')
     expect(configSource).toContain(
       'cloudflareProviderBridge && (stage !== "dev" || !hostedServices || appOnly || cloudflareProviderMigration)',
     )
@@ -275,7 +284,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
       "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
     )
     expect(deployStep?.run).toContain('bun --cwd packages/runtime script/deploy.ts "$stage"')
-    expect(deployStep?.run).toContain("bun sst deploy --stage=${{ inputs.stage }} --target Database")
+    expect(deployStep?.run).toContain(
+      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage=${{ inputs.stage }} --print-logs",
+    )
+    expect(deployStep?.run).not.toContain("--target Database")
   })
 
   test("gates every deployed app with HTTP and Chromium smoke checks", async () => {
@@ -713,8 +725,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deployStep).toBeDefined()
 
     const run = deployStep?.run ?? ""
-    const database = run.indexOf("bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs")
-    const migration = run.indexOf("bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate")
+    const database = run.indexOf(
+      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage=${{ inputs.stage }} --print-logs",
+    )
+    const migration = run.indexOf(
+      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate",
+    )
     const application = run.lastIndexOf("bun sst deploy --stage=${{ inputs.stage }} --print-logs")
     expect(database).toBeGreaterThanOrEqual(0)
     expect(migration).toBeGreaterThan(database)

@@ -72,6 +72,7 @@ jobs:
         env:
           MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
           SST_SECRET_ByokCredentialsKeyV1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}
+          SST_SECRET_D1BackupApiToken: "disabled"
           SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: ${{ vars.MONGOLGPT_GITHUB_OAUTH_CLIENT_ID }}
           SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: ${{ secrets.MONGOLGPT_GITHUB_OAUTH_CLIENT_SECRET }}
           SST_SECRET_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
@@ -124,6 +125,7 @@ jobs:
           MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE: "true"
           MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
           SST_SECRET_ByokCredentialsKeyV1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}
+          SST_SECRET_D1BackupApiToken: "disabled"
           SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: ${{ vars.MONGOLGPT_GITHUB_OAUTH_CLIENT_ID }}
           SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: ${{ secrets.MONGOLGPT_GITHUB_OAUTH_CLIENT_SECRET }}
           SST_SECRET_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
@@ -170,6 +172,7 @@ jobs:
           set_optional_secret GITHUB_CLIENT_ID_CONSOLE
           set_optional_secret GITHUB_CLIENT_SECRET_CONSOLE
           set_optional_secret GOOGLE_CLIENT_ID
+          set_optional_secret D1BackupApiToken
           bun sst unlock --stage="$stage" || true
           repair_log="$(mktemp)"
           set +e
@@ -181,9 +184,9 @@ jobs:
             exit "$repair_status"
           fi
           rm -f "$repair_log"
-          bun sst deploy --stage="$stage" --target Database --print-logs
-          bun sst shell --stage="$stage" -- bun run db:migrate
-          bun sst deploy --stage="$stage" --target AuthApi --target Console --print-logs
+          MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage="$stage" --print-logs
+          MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage="$stage" -- bun run db:migrate
+          bun sst deploy --stage="$stage" --print-logs
           trap - EXIT
 
       - name: Verify dev account scaffold

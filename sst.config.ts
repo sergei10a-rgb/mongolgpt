@@ -7,6 +7,7 @@ export default $config({
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
     const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
+    const databaseOnly = flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")
     const admin = flag("MONGOLGPT_ENABLE_ADMIN")
     const d1Backups = flag("MONGOLGPT_ENABLE_D1_BACKUPS")
     const monitoring = flag("MONGOLGPT_ENABLE_MONITORING")
@@ -25,6 +26,12 @@ export default $config({
     }
     if (docsOnly && appOnly) {
       throw new Error("MONGOLGPT_DEPLOY_DOCS_ONLY болон MONGOLGPT_DEPLOY_APP_ONLY-г хамтад нь ашиглахгүй.")
+    }
+    if (databaseOnly && (docsOnly || appOnly || cloudflareProviderMigration)) {
+      throw new Error("MONGOLGPT_DEPLOY_DATABASE_ONLY-г бусад тусгаарласан deploy горимтой хамтад нь ашиглахгүй.")
+    }
+    if (databaseOnly && !hostedServices) {
+      throw new Error("MONGOLGPT_DEPLOY_DATABASE_ONLY нь hosted services асаалттай байхыг шаардана.")
     }
     if (appOnly && !hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_APP_ONLY нь hosted services асаалттай байхыг шаардана.")
@@ -79,6 +86,7 @@ export default $config({
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
     const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
+    const databaseOnly = flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")
     const cloudflareProviderMigration = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")
     const cloudflareProviderBridge = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")
     const adminEnabled = stage.enableAdmin
@@ -93,6 +101,13 @@ export default $config({
     if (cloudflareProviderBridge) {
       const cloudflare = await import("@pulumi/cloudflare")
       new cloudflare.Provider("default_6_14_0", {}, { version: "6.14.0" })
+    }
+    if (databaseOnly) {
+      const { database } = await import("./infra/database.js")
+      return {
+        Database: database.databaseId,
+        HostedServices: true,
+      }
     }
     if (docsOnly) {
       const docs = await import("./infra/docs.js")
