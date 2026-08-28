@@ -36,7 +36,12 @@ function getDownloadHref(platform: DownloadPlatform, channel: "stable" | "beta" 
   return `/download/${channel}/${platform}`
 }
 
-const showUnreleasedDesktopDownloads = false
+const optionalDesktopPlatforms = [
+  "darwin-aarch64-dmg",
+  "darwin-x64-dmg",
+  "linux-x64-deb",
+  "linux-x64-rpm",
+] as const satisfies readonly DownloadPlatform[]
 
 function IconDownload(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
@@ -64,10 +69,21 @@ export default function Download() {
   const i18n = useI18n()
   const language = useLanguage()
   const [detectedOS, setDetectedOS] = createSignal<OS>(null)
+  const [availableDownloads, setAvailableDownloads] = createSignal<Partial<Record<DownloadPlatform, boolean>>>({})
 
   onMount(() => {
     setDetectedOS(detectOS())
+    for (const platform of optionalDesktopPlatforms) {
+      void fetch(language.route(getDownloadHref(platform)), { method: "HEAD" })
+        .then((response) => {
+          if (!response.ok) return
+          setAvailableDownloads((current) => ({ ...current, [platform]: true }))
+        })
+        .catch(() => undefined)
+    }
   })
+
+  const available = (platform: DownloadPlatform) => availableDownloads()[platform] === true
 
   const handleCopyClick = (command: string) => (event: Event) => {
     const button = event.currentTarget as HTMLButtonElement
@@ -128,7 +144,7 @@ export default function Download() {
               <span>[2]</span> {i18n.t("download.section.desktop")}
             </div>
             <div data-component="section-content">
-              {showUnreleasedDesktopDownloads && (
+              <Show when={available("darwin-aarch64-dmg") && available("darwin-x64-dmg")}>
                 <>
                   <div data-component="download-row">
                     <div data-component="download-info">
@@ -163,7 +179,7 @@ export default function Download() {
                     </a>
                   </div>
                 </>
-              )}
+              </Show>
               <div data-component="download-row">
                 <div data-component="download-info">
                   <span data-slot="icon">
@@ -187,7 +203,7 @@ export default function Download() {
                   {i18n.t("download.action.download")}
                 </a>
               </div>
-              {showUnreleasedDesktopDownloads && (
+              <Show when={available("linux-x64-deb") && available("linux-x64-rpm")}>
                 <>
                   <div data-component="download-row">
                     <div data-component="download-info">
@@ -239,7 +255,7 @@ export default function Download() {
                 </a>
               </div>*/}
                 </>
-              )}
+              </Show>
             </div>
           </section>
 
