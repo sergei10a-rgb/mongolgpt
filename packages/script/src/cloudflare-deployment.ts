@@ -87,7 +87,7 @@ export async function preflightCloudflareDeploymentAccess(input: {
       `${accountPath}/containers/me`,
       options(),
       "Cloudflare Containers бүртгэлийн эрхийг шалгах",
-      "Containers Read",
+      "Workers Paid plan болон Containers Read/Write",
     )
   }
   if (input.scope === "runtime-only") return { zoneId: zone.id, domain }
@@ -131,7 +131,7 @@ async function requireRecord(
   operation: string,
   permission: string,
 ) {
-  const payload = await requestCloudflare(fetcher, url, options, operation)
+  const payload = await requestCloudflare(fetcher, url, options, operation, permission)
   if (!record(payload.result)) {
     throw new CloudflareDeploymentPreflightError(
       `${operation} хариу танигдсан объект биш байна. ${permission} эрхийг шалгана.`,
@@ -140,7 +140,7 @@ async function requireRecord(
 }
 
 async function requireList(fetcher: Fetcher, url: string, options: RequestInit, operation: string, permission: string) {
-  const payload = await requestCloudflare(fetcher, url, options, operation)
+  const payload = await requestCloudflare(fetcher, url, options, operation, permission)
   if (!Array.isArray(payload.result)) {
     throw new CloudflareDeploymentPreflightError(
       `${operation} хариу танигдсан жагсаалт биш байна. ${permission} эрхийг шалгана.`,
@@ -155,7 +155,7 @@ async function requireBucketList(
   operation: string,
   permission: string,
 ) {
-  const payload = await requestCloudflare(fetcher, url, options, operation)
+  const payload = await requestCloudflare(fetcher, url, options, operation, permission)
   if (!record(payload.result) || !Array.isArray(payload.result.buckets)) {
     throw new CloudflareDeploymentPreflightError(
       `${operation} хариу танигдсан жагсаалт биш байна. ${permission} эрхийг шалгана.`,
@@ -163,15 +163,22 @@ async function requireBucketList(
   }
 }
 
-async function requestCloudflare(fetcher: Fetcher, url: string, options: RequestInit, operation: string) {
+async function requestCloudflare(
+  fetcher: Fetcher,
+  url: string,
+  options: RequestInit,
+  operation: string,
+  requirement?: string,
+) {
   const response = await fetcher(url, options).catch(() => {
     throw new CloudflareDeploymentPreflightError(`${operation} үед Cloudflare API-тай холбогдож чадсангүй.`)
   })
   const payload = await readResponse(response, operation)
   if (!response.ok || payload.success !== true) {
-    throw new CloudflareDeploymentPreflightError(
-      `${operation} амжилтгүй боллоо (HTTP ${response.status}). Token permission болон resource scope-ийг шалгана.`,
-    )
+    const hint = requirement
+      ? `${requirement} шаардлага болон token resource scope-ийг шалгана.`
+      : "Token permission болон resource scope-ийг шалгана."
+    throw new CloudflareDeploymentPreflightError(`${operation} амжилтгүй боллоо (HTTP ${response.status}). ${hint}`)
   }
   return payload
 }

@@ -231,6 +231,8 @@ describe("Cloudflare deployment token preflight", () => {
     expect(error).toBeInstanceOf(CloudflareDeploymentPreflightError)
     expect(String(error)).toContain("Containers")
     expect(String(error)).toContain("HTTP 403")
+    expect(String(error)).toContain("Workers Paid plan")
+    expect(String(error)).toContain("Containers Read/Write")
     expect(String(error)).not.toContain("container-token-must-not-leak")
     expect(String(error)).not.toContain("container-details-must-not-surface")
   })
