@@ -9,10 +9,21 @@ try {
   const authBootstrap = process.argv.includes("--auth-bootstrap")
   const docsOnly = process.argv.includes("--docs-only")
   const appOnly = process.argv.includes("--app-only")
-  if ([authBootstrap, docsOnly, appOnly].filter(Boolean).length > 1) {
-    throw new DeploymentPreflightError(["--auth-bootstrap, --docs-only, --app-only scope-үүдийг хамтад нь ашиглахгүй."])
+  const runtimeOnly = process.argv.includes("--runtime-only")
+  if ([authBootstrap, docsOnly, appOnly, runtimeOnly].filter(Boolean).length > 1) {
+    throw new DeploymentPreflightError([
+      "--auth-bootstrap, --docs-only, --app-only, --runtime-only scope-үүдийг хамтад нь ашиглахгүй.",
+    ])
   }
-  const scope = authBootstrap ? "auth-bootstrap" : docsOnly ? "docs-only" : appOnly ? "app-only" : "full"
+  const scope = authBootstrap
+    ? "auth-bootstrap"
+    : docsOnly
+      ? "docs-only"
+      : appOnly
+        ? "app-only"
+        : runtimeOnly
+          ? "runtime-only"
+          : "full"
   const result = preflightDeployment({
     stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
     env: process.env,

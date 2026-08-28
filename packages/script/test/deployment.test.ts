@@ -769,6 +769,47 @@ describe("Cloudflare deployment preflight", () => {
     )
   })
 
+  test("allows runtime-only preflight with only the isolated dev runtime secrets", () => {
+    const runtime = {
+      ...cloudflare,
+      MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+      MONGOLGPT_RUNTIME_SECRET: hosted.MONGOLGPT_RUNTIME_SECRET,
+      MONGOLGPT_RUNTIME_AUTH_SECRET: hosted.MONGOLGPT_RUNTIME_AUTH_SECRET,
+    }
+    const result = preflightDeployment({
+      stage: "dev",
+      env: runtime,
+      requireHostedServices: true,
+      scope: "runtime-only",
+    })
+    expect(result.hostedServices).toBe(true)
+    expect(deploymentEndpoints(result).runtimeHealth).toBe("https://runtime.dev.mgpt.mn/global/health")
+    expect(result.warnings).toContain("Зөвхөн dev runtime Worker болон Cloudflare Sandbox container deploy хийнэ.")
+
+    expectIssues(
+      () => preflightDeployment({ stage: "production", env: runtime, scope: "runtime-only" }),
+      ["Runtime-only scope-ийг зөвхөн dev"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: { ...runtime, MONGOLGPT_RUNTIME_AUTH_SECRET: "" },
+          scope: "runtime-only",
+        }),
+      ["MONGOLGPT_RUNTIME_AUTH_SECRET"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: { ...runtime, MONGOLGPT_ENABLE_MONITORING: "true" },
+          scope: "runtime-only",
+        }),
+      ["MONGOLGPT_ENABLE_MONITORING нь runtime-only deploy үед false"],
+    )
+  })
+
   test("rejects retired gateway secrets without canonical replacements", () => {
     const {
       SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: sessionSecret,

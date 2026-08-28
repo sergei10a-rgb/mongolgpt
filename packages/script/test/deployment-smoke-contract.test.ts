@@ -14,6 +14,7 @@ import {
   runAppSmoke,
   runAuthBootstrapSmoke,
   runDocsSmoke,
+  runRuntimeSmoke,
 } from "../../../script/deployment-smoke"
 import {
   inspectDeploymentEndpointConfiguration,
@@ -102,9 +103,7 @@ describe("static app backend boundary", () => {
         "x-content-type-options": "nosniff",
       },
     })
-    expect((await caught(inspectStaticAppBackendRejection(htmlResponse, "/api/health")))?.message).toContain(
-      "not JSON",
-    )
+    expect((await caught(inspectStaticAppBackendRejection(htmlResponse, "/api/health")))?.message).toContain("not JSON")
 
     const cacheable = Response.json(
       { code: "STATIC_APP_API_ROUTE" },
@@ -195,6 +194,111 @@ describe("dev app-only smoke", () => {
       "https://app.dev.mgpt.mn/global/health",
       "https://app.dev.mgpt.mn/v1/account/overview",
     ])
+  })
+})
+
+describe("dev runtime-only smoke", () => {
+  test("checks health, authenticated origin CORS, and anonymous API rejection", async () => {
+    const runtimePackage: unknown = await Bun.file(new URL("../../runtime/package.json", import.meta.url)).json()
+    if (
+      typeof runtimePackage !== "object" ||
+      runtimePackage === null ||
+      !("version" in runtimePackage) ||
+      typeof runtimePackage.version !== "string"
+    ) {
+      throw new Error("runtime package version missing")
+    }
+    const configured = {
+      MONGOLGPT_DOMAIN: "mgpt.mn",
+      MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+      MONGOLGPT_ENABLE_ADMIN: "false",
+      MONGOLGPT_ENABLE_ANALYTICS: "false",
+      MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+      MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false",
+      MONGOLGPT_ENABLE_LEGACY_STRIPE: "false",
+      MONGOLGPT_ENABLE_MONITORING: "false",
+      MONGOLGPT_ENABLE_TURNSTILE: "false",
+      MONGOLGPT_ENABLE_SHARE_SERVICE: "false",
+      MONGOLGPT_ENABLE_SYNC_SERVICE: "false",
+      MONGOLGPT_ENABLE_REAL_PAYMENTS: "false",
+      MONGOLGPT_PAYMENT_ENVIRONMENT: "disabled",
+      MONGOLGPT_SMOKE_RETRIES: "1",
+      MONGOLGPT_SMOKE_DELAY_MS: "1",
+    } satisfies Record<string, string>
+    const previous = new Map(Object.keys(configured).map((key) => [key, process.env[key]]))
+    const originalFetch = globalThis.fetch
+    const requests: string[] = []
+
+    Object.assign(process.env, configured)
+    globalThis.fetch = mockedFetch(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init)
+      const url = new URL(request.url)
+      requests.push(`${request.method} ${request.headers.get("origin") ?? "-"} ${url.toString()}`)
+      if (url.pathname === "/global/health") {
+        return Response.json(
+          {
+            healthy: true,
+            service: "mongolgpt-runtime",
+            stage: "dev",
+            version: runtimePackage.version,
+          },
+          { headers: { "cache-control": "no-store" } },
+        )
+      }
+      if (url.pathname === "/auth/session" && request.headers.get("origin") === "https://invalid-origin.example") {
+        return Response.json(
+          { error: "MongolGPT веб апп-аас хүсэлт илгээнэ үү." },
+          {
+            status: 403,
+            headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" },
+          },
+        )
+      }
+      if (
+        url.pathname === "/auth/session" ||
+        url.pathname === "/project" ||
+        url.pathname === "/provider" ||
+        url.pathname === "/session" ||
+        url.pathname.endsWith("/message")
+      ) {
+        return Response.json(
+          url.pathname === "/auth/session" ? { authenticated: false } : { error: "Нэвтэрч орно уу." },
+          {
+            status: 401,
+            headers: {
+              "access-control-allow-origin": appOrigin,
+              "access-control-allow-credentials": "true",
+              "cache-control": "no-store",
+            },
+          },
+        )
+      }
+      throw new Error(`Unexpected runtime-only smoke request: ${url}`)
+    })
+
+    try {
+      await runRuntimeSmoke("dev")
+    } finally {
+      globalThis.fetch = originalFetch
+      for (const [key, value] of previous) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+
+    expect(requests).toEqual([
+      "GET - https://runtime.dev.mgpt.mn/global/health",
+      `GET ${appOrigin} https://runtime.dev.mgpt.mn/auth/session`,
+      "GET https://invalid-origin.example https://runtime.dev.mgpt.mn/auth/session",
+      `GET ${appOrigin} https://runtime.dev.mgpt.mn/project`,
+      `GET ${appOrigin} https://runtime.dev.mgpt.mn/provider`,
+      `POST ${appOrigin} https://runtime.dev.mgpt.mn/session`,
+      `POST ${appOrigin} https://runtime.dev.mgpt.mn/session/mongolgpt-anonymous-smoke/message`,
+    ])
+  })
+
+  test("refuses non-dev and non-hosted runtime smoke before network access", async () => {
+    expect((await caught(runRuntimeSmoke("production")))?.message).toContain("зөвхөн dev")
   })
 })
 
@@ -780,9 +884,9 @@ describe("redirect origin contracts", () => {
     const body =
       '<!doctype html><html lang="mn"><head><meta http-equiv="refresh" content="0;url=/docs/"><link rel="canonical" href="/docs/"></head></html>'
 
-    expect(
-      inspectDocsRootRedirect({ docsUrl, status: 200, contentType: "text/html; charset=utf-8", body }),
-    ).toBe("https://docs.dev.mgpt.mn/docs/")
+    expect(inspectDocsRootRedirect({ docsUrl, status: 200, contentType: "text/html; charset=utf-8", body })).toBe(
+      "https://docs.dev.mgpt.mn/docs/",
+    )
     expect(
       inspectDocsRootRedirect({
         docsUrl,

@@ -132,11 +132,12 @@ Session болон model gateway нь зөвхөн `MONGOLGPT_GATEWAY_SESSION_SE
 
 1. `dev` GitHub environment-д Cloudflare credential, сесс, багцын хязгаар болон GitHub OAuth-ийн client ID/client secret-ийг оруулна. Google OAuth-ийг бэлэн бол нэмнэ; Free Auto model catalog энэ шатанд шаардахгүй.
 2. GitHub Actions-ийн **Bootstrap dev OAuth** ажлын урсгалыг нээгээд `BOOTSTRAP DEV AUTH dev.mgpt.mn` гэж яг бичиж ажиллуулна. Энэ урсгал зөвхөн D1, өгөгдлийн шилжилт, Auth API болон Console-ийг `dev` орчинд босгоно.
-3. Allowlist-д орсон тусгай Free хэрэглэгчээр хэвийн OAuth нэвтэрч `__Host-mongolgpt-auth` cookie-г дээрх хэлбэрээр авна.
-4. Cookie-г `dev` environment-ийн `MONGOLGPT_SMOKE_AUTH_COOKIE` secret-д хадгална.
-5. Үндсэн **Cloudflare deploy** урсгалыг `dev` дээр ажиллуулж runtime, Free Auto account gate болон browser E2E-г бүхэлд нь батална.
+3. **Deploy dev runtime** ажлын урсгалд `DEPLOY DEV RUNTIME runtime.dev.mgpt.mn` гэж яг бичиж ажиллуулна. Энэ нь зөвхөн Runtime Worker болон Cloudflare Sandbox container-ийг байршуулж, health, CORS, нэвтрээгүй session, project, provider, session create болон Free Auto message замууд бүгд хаалттайг шалгана. Account/workspace тусгаарлалт болон бодит model call-ийг 6-р алхмын нэвтэрсэн full smoke батална.
+4. Allowlist-д орсон тусгай Free хэрэглэгчээр хэвийн OAuth нэвтэрч `__Host-mongolgpt-auth` cookie-г дээрх хэлбэрээр авна.
+5. Cookie-г `dev` environment-ийн `MONGOLGPT_SMOKE_AUTH_COOKIE` secret-д, баталгаажсан OpenRouter → NVIDIA Free Auto catalog-ийг `MONGOLGPT_GATEWAY_MODELS1`-ээс эхлэх secret-д хадгална.
+6. Үндсэн **Cloudflare deploy** урсгалыг `dev` дээр ажиллуулж account, runtime, Free Auto model call болон browser E2E-г бүхэлд нь батална.
 
-Bootstrap амжилттай болсон нь бүтээгдэхүүний deploy амжилттай болсон гэсэн үг биш. Энэ урсгал runtime, Free Auto model call, subscription эсвэл production орчныг байршуулдаггүй бөгөөд `production` дээр ажиллах боломжгүй. Үндсэн deploy-ийн бодит нэвтэрсэн MongolGPT account-ын шалгалтыг хэзээ ч орлохгүй.
+OAuth эсвэл runtime bootstrap амжилттай болсон нь бүтээгдэхүүний deploy амжилттай болсон гэсэн үг биш. Эдгээр тусгаарласан урсгал Free Auto model call, subscription эсвэл production орчныг байршуулдаггүй бөгөөд `production` дээр ажиллах боломжгүй. Үндсэн deploy-ийн бодит нэвтэрсэн MongolGPT account-ын шалгалтыг хэзээ ч орлохгүй.
 
 `MONGOLGPT_PLAN_LIMITS` нь paid багц бүрд 7 хамгаалалтыг заавал тодорхойлно: 7 хоногийн өртөг, токен,
 хүсэлт; сарын өртөг, токен, хүсэлт; мөн гулсах хугацааны өртөг. Өртгийн утга нь загвар нийлүүлэгчийн

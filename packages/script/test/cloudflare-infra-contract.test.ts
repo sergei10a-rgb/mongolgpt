@@ -441,7 +441,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
     expect(source).toContain("workflow_dispatch:")
     expect(source).not.toMatch(/^\s+push:/m)
-    expect(source).toContain('environment: dev')
+    expect(source).toContain("environment: dev")
     expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "false"')
     expect(source).toContain("MONGOLGPT_PUBLIC_URL: https://docs.dev.mgpt.mn")
     expect(source).toContain("MONGOLGPT_CONSOLE_URL: https://dev.mgpt.mn")
@@ -450,18 +450,18 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(record(parsed.env) ? parsed.env.MONGOLGPT_DEPLOY_DOCS_ONLY : undefined).toBeUndefined()
     expect(deploy?.env?.MONGOLGPT_DEPLOY_DOCS_ONLY).toBe("true")
     expect(smoke?.env?.MONGOLGPT_DEPLOY_DOCS_ONLY).toBe("true")
-    expect(source).toContain('DEPLOY DEV DOCS docs.dev.mgpt.mn')
-    expect(source).toContain('MONGOLGPT_STATIC_DOCS=true bun run build:docs')
-    expect(source).toContain('bun run --cwd packages/web verify:static-artifact')
-    expect(source).toContain('bun run deploy:preflight -- dev --docs-only')
-    expect(source).toContain('bun sst deploy --stage=dev --target Website --print-logs')
-    expect(source).toContain('bun script/deployment-smoke.ts --docs-only dev')
-    expect(source).not.toContain('--target WebApp')
+    expect(source).toContain("DEPLOY DEV DOCS docs.dev.mgpt.mn")
+    expect(source).toContain("MONGOLGPT_STATIC_DOCS=true bun run build:docs")
+    expect(source).toContain("bun run --cwd packages/web verify:static-artifact")
+    expect(source).toContain("bun run deploy:preflight -- dev --docs-only")
+    expect(source).toContain("bun sst deploy --stage=dev --target Website --print-logs")
+    expect(source).toContain("bun script/deployment-smoke.ts --docs-only dev")
+    expect(source).not.toContain("--target WebApp")
     expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|RUNTIME|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/)
     expect(rootPackage.dependencies["@mongolgpt/account-contract"]).toBe("workspace:*")
-    expect(sstSource).toContain('if (docsOnly) {')
+    expect(sstSource).toContain("if (docsOnly) {")
     expect(sstSource).toContain('await import("./infra/docs.js")')
-    expect(sstSource.indexOf('if (docsOnly) {')).toBeLessThan(sstSource.indexOf('await import("./infra/site.js")'))
+    expect(sstSource.indexOf("if (docsOnly) {")).toBeLessThan(sstSource.indexOf('await import("./infra/site.js")'))
     expect(docsSource).toContain('new sst.cloudflare.StaticSiteV2("Website"')
     expect(docsSource).not.toContain('StaticSiteV2("WebApp"')
     expect(docsSource).toContain("const docsSiteOrigin = new URL(docsOrigin).origin")
@@ -500,15 +500,57 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("bun run deploy:preflight -- dev --app-only")
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --target WebApp --print-logs")
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --app-only dev")
-    expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|RUNTIME_SECRET|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/)
+    expect(source).not.toMatch(
+      /MONGOLGPT_(?:GATEWAY|RUNTIME_SECRET|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/,
+    )
     expect(source).not.toContain("--target Database")
     expect(source).not.toContain("--target Website")
     expect(sstSource).toContain('const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")')
     expect(sstSource).toContain("if (appOnly) {")
     expect(sstSource).toContain('const site = await import("./infra/web-app.js")')
-    expect(sstSource).toContain('WebAppUrl: site.webApp.url')
+    expect(sstSource).toContain("WebAppUrl: site.webApp.url")
     expect(webAppSource).not.toContain('from "./docs"')
     expect(webAppSource).not.toContain('StaticSiteV2("Website"')
+  })
+
+  test("deploys only the isolated dev runtime with bounded secrets and live boundary smoke", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy-dev-runtime.yml", import.meta.url)).text()
+    const parsed: unknown = Bun.YAML.parse(source)
+    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs) || !record(parsed.jobs.deploy)) {
+      throw new Error("Dev runtime-only workflow is invalid")
+    }
+    const job = parseWorkflowJob(parsed.jobs.deploy, "deploy")
+    const confirmation = job.steps.find((step) => step.name === "Validate exact dev runtime confirmation")
+    const build = job.steps.find((step) => step.name === "Build hosted runtime image payload")
+    const deploy = job.steps.find((step) => step.name === "Deploy only dev runtime to Cloudflare")
+    const smoke = job.steps.find((step) => step.name === "Verify live dev runtime boundary")
+
+    expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
+    expect(parsed.permissions).toEqual({ contents: "read" })
+    expect(parsed.jobs.deploy.environment).toBe("dev")
+    expect(job.condition).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
+    expect(confirmation?.env).toEqual({ DEPLOY_CONFIRMATION: "${{ inputs.confirmation }}" })
+    expect(confirmation?.run).toContain(
+      'if [ "$DEPLOY_CONFIRMATION" != "DEPLOY DEV RUNTIME runtime.dev.mgpt.mn" ]; then',
+    )
+    expect(source).not.toMatch(/^\s+push:/m)
+    expect(source).not.toContain("production")
+    expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"')
+    expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT|BYOK_/)
+
+    expect(build?.run).toContain("packages/mongolgpt build --single --skip-embed-web-ui --skip-install")
+    expect(build?.run).toContain("test -x packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt")
+    expect(build?.run).toContain("cp packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt")
+    expect(deploy?.env).toEqual({
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+      MONGOLGPT_RUNTIME_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_SECRET }}",
+      MONGOLGPT_RUNTIME_AUTH_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+    })
+    expect(deploy?.run).toContain("bun run deploy:preflight -- dev --runtime-only")
+    expect(deploy?.run).toContain("trap 'rm -f \"$runtime_secrets\"' EXIT")
+    expect(deploy?.run).toContain('packages/runtime script/deploy.ts dev --secrets-file="$runtime_secrets"')
+    expect(deploy?.run).not.toContain("bun sst")
+    expect(smoke?.run).toBe("bun script/deployment-smoke.ts --runtime-only dev")
   })
 
   test("deploys the authenticated Sandbox runtime before publishing the hosted app", async () => {

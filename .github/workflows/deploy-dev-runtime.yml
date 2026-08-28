@@ -1,0 +1,86 @@
+name: Deploy dev runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "DEPLOY DEV RUNTIME runtime.dev.mgpt.mn гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-deploy-dev-runtime
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+  MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
+  MONGOLGPT_ENABLE_ADMIN: "false"
+  MONGOLGPT_ENABLE_ANALYTICS: "false"
+  MONGOLGPT_ENABLE_D1_BACKUPS: "false"
+  MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false"
+  MONGOLGPT_ENABLE_LEGACY_STRIPE: "false"
+  MONGOLGPT_ENABLE_MONITORING: "false"
+  MONGOLGPT_ENABLE_TURNSTILE: "false"
+  MONGOLGPT_ENABLE_SHARE_SERVICE: "false"
+  MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
+  MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"
+  MONGOLGPT_PAYMENT_ENVIRONMENT: disabled
+
+jobs:
+  deploy:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: dev
+    env:
+      CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+    steps:
+      - name: Validate exact dev runtime confirmation
+        env:
+          DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$DEPLOY_CONFIRMATION" != "DEPLOY DEV RUNTIME runtime.dev.mgpt.mn" ]; then
+            echo "Dev runtime deploy баталгаажуулалт буруу байна."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify runtime contracts
+        run: |
+          bun typecheck
+          bun run --cwd packages/script test
+          bun run --cwd packages/runtime-auth test
+          bun run --cwd packages/runtime test
+
+      - name: Build hosted runtime image payload
+        run: |
+          runtime_version="$(node -p "require('./packages/mongolgpt/package.json').version")"
+          MONGOLGPT_CHANNEL=dev MONGOLGPT_VERSION="$runtime_version" bun run --cwd packages/mongolgpt build --single --skip-embed-web-ui --skip-install
+          test -x packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt
+          cp packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt packages/runtime/container/mongolgpt
+
+      - name: Deploy only dev runtime to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_RUNTIME_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_SECRET }}
+          MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+        run: |
+          bun run deploy:preflight -- dev --runtime-only
+          runtime_secrets="$RUNNER_TEMP/mongolgpt-runtime-secrets.json"
+          trap 'rm -f "$runtime_secrets"' EXIT
+          node -e 'require("node:fs").writeFileSync(process.argv[1], JSON.stringify({ MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET, MONGOLGPT_RUNTIME_AUTH_SECRET: process.env.MONGOLGPT_RUNTIME_AUTH_SECRET }))' "$runtime_secrets"
+          bun --cwd packages/runtime script/deploy.ts dev --secrets-file="$runtime_secrets"
+
+      - name: Verify live dev runtime boundary
+        run: bun script/deployment-smoke.ts --runtime-only dev

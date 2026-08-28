@@ -40,6 +40,8 @@ if (import.meta.main) {
     await runDocsSmoke(process.argv[3])
   } else if (process.argv[2] === "--app-only") {
     await runAppSmoke(process.argv[3])
+  } else if (process.argv[2] === "--runtime-only") {
+    await runRuntimeSmoke(process.argv[3])
   } else {
     await runSmoke()
   }
@@ -84,6 +86,32 @@ export async function runAppSmoke(stage = process.env.SST_STAGE ?? "dev") {
   console.log("Dev app-only smoke check passed.")
 }
 
+export async function runRuntimeSmoke(stage = process.env.SST_STAGE ?? "dev") {
+  if (stage !== "dev") throw new Error("Runtime-only smoke нь зөвхөн dev орчинд ажиллана.")
+  if (process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES !== "true") {
+    throw new Error("Runtime-only smoke нь hosted service тохиргоо шаардана.")
+  }
+
+  const result = preflightDeployment({
+    stage,
+    env: process.env,
+    requireCloudflareCredentials: false,
+    requireDeploymentSecrets: false,
+    requireHostedServices: true,
+    scope: "runtime-only",
+  })
+  const endpoints = deploymentEndpoints(result)
+  inspectDeploymentEndpointConfiguration(endpoints, result)
+  if (!endpoints.runtimeHealth) throw new Error("Runtime-only smoke health endpoint дутуу байна.")
+
+  const runtimeVersion = await expectedRuntimeVersion()
+  const runtimeOrigin = new URL(endpoints.runtimeHealth).origin
+  await check("runtimeHealth", endpoints.runtimeHealth, "runtime", result, endpoints.app, runtimeVersion)
+  await checkHostedSessionBoundary(runtimeOrigin, endpoints.app)
+  await checkAnonymousRuntimeApiBoundary(runtimeOrigin, endpoints.app)
+  console.log("Dev runtime-only smoke check passed. Authenticated account болон Free Auto урсгалыг full smoke шалгана.")
+}
+
 export async function runAuthBootstrapSmoke(stage = process.env.SST_STAGE ?? "dev") {
   if (stage !== "dev") throw new Error("OAuth bootstrap smoke нь зөвхөн dev орчинд ажиллана.")
 
@@ -104,7 +132,9 @@ export async function runAuthBootstrapSmoke(stage = process.env.SST_STAGE ?? "de
   await check("consoleHealth", endpoints.consoleHealth, "console", result, endpoints.app, runtimeVersion)
   await check("authHealth", endpoints.authHealth, "auth", result, endpoints.app, runtimeVersion)
   await check("console", endpoints.console, undefined, result, endpoints.app, runtimeVersion)
-  console.log("Dev account scaffold smoke check passed. OAuth callback болон authenticated runtime урсгалыг тусад нь шалгана.")
+  console.log(
+    "Dev account scaffold smoke check passed. OAuth callback болон authenticated runtime урсгалыг тусад нь шалгана.",
+  )
 }
 
 async function runSmoke() {
@@ -870,28 +900,58 @@ export function inspectNoStoreResponse(response: Response, label: string) {
 }
 
 async function checkAnonymousRuntimeApiBoundary(serverUrl: string, appUrl: string) {
-  const projectUrl = new URL("/project", `${serverUrl}/`)
   const appOrigin = new URL(appUrl).origin
-  const response = await fetch(projectUrl, {
-    headers: {
-      Accept: "application/json",
-      Origin: appOrigin,
-      "User-Agent": "mongolgpt-deployment-smoke",
+  const checks: ReadonlyArray<{
+    label: string
+    path: string
+    method: "GET" | "POST"
+    body?: string
+  }> = [
+    { label: "project API", path: "/project", method: "GET" },
+    { label: "provider API", path: "/provider", method: "GET" },
+    {
+      label: "session create API",
+      path: "/session",
+      method: "POST",
+      body: JSON.stringify({ title: "MongolGPT anonymous deployment smoke" }),
     },
-    redirect: "manual",
-    signal: AbortSignal.timeout(15_000),
-  })
-  inspectResponseOrigin({
-    requestUrl: projectUrl.toString(),
-    responseUrl: response.url,
-    status: response.status,
-    location: response.headers.get("location"),
-    label: "anonymous runtime project API",
-  })
-  await inspectAnonymousRuntimeApiResponse(response, appOrigin)
+    {
+      label: "Free Auto message API",
+      path: "/session/mongolgpt-anonymous-smoke/message",
+      method: "POST",
+      body: JSON.stringify({
+        model: { providerID: "mongolgpt", modelID: "free-auto" },
+        parts: [{ type: "text", text: "MONGOLGPT_ANONYMOUS_SMOKE" }],
+      }),
+    },
+  ]
+
+  for (const check of checks) {
+    const url = new URL(check.path, `${serverUrl}/`)
+    const response = await fetch(url, {
+      method: check.method,
+      headers: {
+        Accept: "application/json",
+        Origin: appOrigin,
+        "User-Agent": "mongolgpt-deployment-smoke",
+        ...(check.body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: check.body,
+      redirect: "manual",
+      signal: AbortSignal.timeout(15_000),
+    })
+    inspectResponseOrigin({
+      requestUrl: url.toString(),
+      responseUrl: response.url,
+      status: response.status,
+      location: response.headers.get("location"),
+      label: `anonymous runtime ${check.label}`,
+    })
+    await inspectAnonymousRuntimeApiResponse(response, appOrigin, check.label)
+  }
 }
 
-export async function inspectAnonymousRuntimeApiResponse(response: Response, appOrigin: string) {
+export async function inspectAnonymousRuntimeApiResponse(response: Response, appOrigin: string, label = "API") {
   if (response.status !== 401) {
     throw new Error(`anonymous runtime API returned HTTP ${response.status}; expected 401`)
   }
@@ -908,7 +968,7 @@ export async function inspectAnonymousRuntimeApiResponse(response: Response, app
     inspectJsonApiPayload(
       response.headers.get("content-type"),
       await response.text(),
-      "anonymous runtime project API response",
+      `anonymous runtime ${label} response`,
     ),
   )
 }

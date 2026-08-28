@@ -78,7 +78,7 @@ export function preflightDeployment(input: {
   requireCloudflareCredentials?: boolean
   requireDeploymentSecrets?: boolean
   requireHostedServices?: boolean
-  scope?: "full" | "auth-bootstrap" | "docs-only" | "app-only"
+  scope?: "full" | "auth-bootstrap" | "docs-only" | "app-only" | "runtime-only"
 }): DeploymentPreflightResult {
   const issues: string[] = []
   const warnings: string[] = []
@@ -95,6 +95,9 @@ export function preflightDeployment(input: {
   }
   if (scope === "app-only" && stage !== "dev") {
     issues.push("App-only scope-ийг зөвхөн dev орчинд ашиглана.")
+  }
+  if (scope === "runtime-only" && stage !== "dev") {
+    issues.push("Runtime-only scope-ийг зөвхөн dev орчинд ашиглана.")
   }
 
   if (inspectedStage.issue) issues.push(inspectedStage.issue)
@@ -146,14 +149,18 @@ export function preflightDeployment(input: {
     "MONGOLGPT_ENABLE_SHARE_SERVICE",
     "MONGOLGPT_ENABLE_SYNC_SERVICE",
   ] as const
-  if (scope === "app-only") {
+  if (scope === "app-only" || scope === "runtime-only") {
     for (const name of [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_D1_BACKUPS"] as const) {
-      if (enabled(env[name])) issues.push(`${name} нь app-only deploy үед false байна.`)
+      if (enabled(env[name])) issues.push(`${name} нь ${scope} deploy үед false байна.`)
     }
     if (paymentEnvironment !== "disabled") {
-      issues.push("MONGOLGPT_PAYMENT_ENVIRONMENT нь app-only deploy үед disabled байна.")
+      issues.push(`MONGOLGPT_PAYMENT_ENVIRONMENT нь ${scope} deploy үед disabled байна.`)
     }
-    warnings.push("Зөвхөн hosted web app Worker deploy хийнэ; backend resource өөрчлөхгүй.")
+    if (scope === "app-only") {
+      warnings.push("Зөвхөн hosted web app Worker deploy хийнэ; backend resource өөрчлөхгүй.")
+    } else {
+      warnings.push("Зөвхөн dev runtime Worker болон Cloudflare Sandbox container deploy хийнэ.")
+    }
   }
   if (!hostedServices) {
     for (const name of optionalServices) {
@@ -217,37 +224,39 @@ export function preflightDeployment(input: {
     issues.push("Legacy Stripe billing хаалттай. MongolGPT-ийн төлбөр Bonum + QPay adapter-аар хэрэгжинэ.")
   }
 
-  if (hostedServices && stage !== "production" && scope !== "app-only") {
+  if (hostedServices && stage !== "production" && scope !== "app-only" && scope !== "runtime-only") {
     requireValue("MONGOLGPT_AUTH_EMAIL_DOMAINS", env.MONGOLGPT_AUTH_EMAIL_DOMAINS, issues)
   }
   if (hostedServices && requireDeploymentSecrets) {
     validateSecretKey("MONGOLGPT_RUNTIME_SECRET", env.MONGOLGPT_RUNTIME_SECRET, issues)
     validateSecretKey("MONGOLGPT_RUNTIME_AUTH_SECRET", env.MONGOLGPT_RUNTIME_AUTH_SECRET, issues)
-    const linkedRuntimeAuthSecret = deploymentSecret(env, "MongolGPTRuntimeAuthSecret")
-    validateSecretKey("SST_SECRET_MongolGPTRuntimeAuthSecret", linkedRuntimeAuthSecret, issues)
-    if (
-      env.MONGOLGPT_RUNTIME_AUTH_SECRET?.trim() &&
-      linkedRuntimeAuthSecret?.trim() &&
-      env.MONGOLGPT_RUNTIME_AUTH_SECRET !== linkedRuntimeAuthSecret
-    ) {
-      issues.push("MONGOLGPT_RUNTIME_AUTH_SECRET болон SST_SECRET_MongolGPTRuntimeAuthSecret ижил утгатай байна.")
+    if (scope !== "runtime-only") {
+      const linkedRuntimeAuthSecret = deploymentSecret(env, "MongolGPTRuntimeAuthSecret")
+      validateSecretKey("SST_SECRET_MongolGPTRuntimeAuthSecret", linkedRuntimeAuthSecret, issues)
+      if (
+        env.MONGOLGPT_RUNTIME_AUTH_SECRET?.trim() &&
+        linkedRuntimeAuthSecret?.trim() &&
+        env.MONGOLGPT_RUNTIME_AUTH_SECRET !== linkedRuntimeAuthSecret
+      ) {
+        issues.push("MONGOLGPT_RUNTIME_AUTH_SECRET болон SST_SECRET_MongolGPTRuntimeAuthSecret ижил утгатай байна.")
+      }
+      if (backupsEnabled) requireValue("D1_BACKUP_API_TOKEN", deploymentSecret(env, "D1BackupApiToken"), issues)
+      const oauth = inspectOAuthProviderConfiguration({
+        stage,
+        githubClientID: deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"),
+        githubClientSecret: deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"),
+        googleClientID: deploymentSecret(env, "GOOGLE_CLIENT_ID"),
+      })
+      issues.push(...oauth.issues)
+      validateSecretKey("BYOK_CREDENTIALS_KEY_V1", deploymentSecret(env, "ByokCredentialsKeyV1"), issues)
+      validatePlanConfiguration(deploymentSecret(env, "MONGOLGPT_PLAN_LIMITS"), issues)
+      validateSecretKey(
+        "MONGOLGPT_GATEWAY_SESSION_SECRET",
+        deploymentSecret(env, "MONGOLGPT_GATEWAY_SESSION_SECRET"),
+        issues,
+      )
+      if (scope === "full") validateModelConfiguration(modelConfiguration(env), issues, stage)
     }
-    if (backupsEnabled) requireValue("D1_BACKUP_API_TOKEN", deploymentSecret(env, "D1BackupApiToken"), issues)
-    const oauth = inspectOAuthProviderConfiguration({
-      stage,
-      githubClientID: deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"),
-      githubClientSecret: deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"),
-      googleClientID: deploymentSecret(env, "GOOGLE_CLIENT_ID"),
-    })
-    issues.push(...oauth.issues)
-    validateSecretKey("BYOK_CREDENTIALS_KEY_V1", deploymentSecret(env, "ByokCredentialsKeyV1"), issues)
-    validatePlanConfiguration(deploymentSecret(env, "MONGOLGPT_PLAN_LIMITS"), issues)
-    validateSecretKey(
-      "MONGOLGPT_GATEWAY_SESSION_SECRET",
-      deploymentSecret(env, "MONGOLGPT_GATEWAY_SESSION_SECRET"),
-      issues,
-    )
-    if (scope === "full") validateModelConfiguration(modelConfiguration(env), issues, stage)
   }
   validatePaymentConfiguration({
     env,
