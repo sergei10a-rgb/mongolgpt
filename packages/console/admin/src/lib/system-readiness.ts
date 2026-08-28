@@ -109,6 +109,7 @@ const paymentHealthSchema = z
     catalog: z.boolean(),
     checkout: z.boolean(),
     cancellation: z.boolean(),
+    refund: z.boolean(),
   })
   .strict()
 

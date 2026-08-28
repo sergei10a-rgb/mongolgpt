@@ -16,6 +16,7 @@ export const SECRET = {
   QuotaServiceToken: new random.RandomPassword("QuotaServiceToken", { length: 48 }),
   PaymentServiceToken: new random.RandomPassword("PaymentServiceToken", { length: 48 }),
   AdminPaymentCancellationToken: new random.RandomPassword("AdminPaymentCancellationToken", { length: 48 }),
+  AdminPaymentRefundToken: new random.RandomPassword("AdminPaymentRefundToken", { length: 48 }),
   MongolGPTRuntimeAuthSecret: new sst.Secret("MongolGPTRuntimeAuthSecret"),
   ByokCredentialsKeyV1: new sst.Secret("ByokCredentialsKeyV1"),
   D1BackupApiToken: new sst.Secret("D1BackupApiToken"),

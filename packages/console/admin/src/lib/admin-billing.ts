@@ -22,10 +22,12 @@ import {
   PaymentCancellationTable,
   PaymentCheckoutTable,
   PaymentInvoiceTable,
+  PaymentRefundTable,
   PlanSubscriptionTable,
   UsageTable,
 } from "@mongolgpt/console-core/schema/billing.sql.js"
 import { PlatformAdminSubscriptionCheckoutCancellationRequestSchema } from "@mongolgpt/console-core/payment-cancellation-contract.js"
+import { PlatformAdminSubscriptionPaymentRefundRequestSchema } from "@mongolgpt/console-core/payment-refund-contract.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import type { PlatformAdminContext } from "./admin-context"
 import { requirePlatformAdminPermission } from "./admin-auth"
@@ -35,6 +37,10 @@ import {
   AdminPaymentCancellationServiceError,
   requestPlatformAdminSubscriptionCheckoutCancellation,
 } from "./admin-payment-cancellation.server"
+import {
+  AdminPaymentRefundServiceError,
+  requestPlatformAdminSubscriptionPaymentRefund,
+} from "./admin-payment-refund.server"
 
 const day = 86_400_000
 
@@ -49,6 +55,10 @@ export const AdminSubscriptionCheckoutCancellationInput =
     confirmation: z.literal("cancel"),
   })
 
+export const AdminSubscriptionPaymentRefundInput = PlatformAdminSubscriptionPaymentRefundRequestSchema.extend({
+  confirmation: z.literal("refund"),
+})
+
 export type AdminCancellationDependencies = {
   writeAudit: typeof writeAdminAudit
   cancelCheckout: typeof requestPlatformAdminSubscriptionCheckoutCancellation
@@ -57,6 +67,16 @@ export type AdminCancellationDependencies = {
 const adminCancellationDependencies: AdminCancellationDependencies = {
   writeAudit: writeAdminAudit,
   cancelCheckout: requestPlatformAdminSubscriptionCheckoutCancellation,
+}
+
+export type AdminRefundDependencies = {
+  writeAudit: typeof writeAdminAudit
+  refundPayment: typeof requestPlatformAdminSubscriptionPaymentRefund
+}
+
+const adminRefundDependencies: AdminRefundDependencies = {
+  writeAudit: writeAdminAudit,
+  refundPayment: requestPlatformAdminSubscriptionPaymentRefund,
 }
 
 export function adminBillingPeriodBounds(period: z.infer<typeof AdminBillingQueryInput>["period"], now = new Date()) {
@@ -188,6 +208,7 @@ export async function getAdminBilling(context: PlatformAdminContext, raw: unknow
             status: PaymentInvoiceTable.status,
             checkoutStatus: PaymentCheckoutTable.status,
             cancellationStatus: PaymentCancellationTable.status,
+            refundStatus: PaymentRefundTable.status,
             timeCreated: PaymentInvoiceTable.timeCreated,
             timeVerified: PaymentInvoiceTable.time_verified,
             timeRefunded: PaymentInvoiceTable.time_refunded,
@@ -196,6 +217,7 @@ export async function getAdminBilling(context: PlatformAdminContext, raw: unknow
           .leftJoin(WorkspaceTable, eq(WorkspaceTable.id, PaymentInvoiceTable.workspace_id))
           .leftJoin(PaymentCheckoutTable, eq(PaymentCheckoutTable.id, PaymentInvoiceTable.id))
           .leftJoin(PaymentCancellationTable, eq(PaymentCancellationTable.invoice_id, PaymentInvoiceTable.id))
+          .leftJoin(PaymentRefundTable, eq(PaymentRefundTable.invoice_id, PaymentInvoiceTable.id))
           .where(
             and(
               gte(PaymentInvoiceTable.timeCreated, period.start),
@@ -262,12 +284,24 @@ export async function getAdminBilling(context: PlatformAdminContext, raw: unknow
           (invoice.status === "created" || invoice.status === "pending") &&
           (invoice.checkoutStatus === "ready" || invoice.checkoutStatus === "pending") &&
           invoice.cancellationStatus === null
+        const refundNeedsSync = invoice.refundStatus === "refunded" && invoice.status === "paid"
+        const refundNeedsProviderCheck = invoice.refundStatus === "unknown" && invoice.status === "paid"
+        const canRefund =
+          admin.permissions.includes("payments.refund") &&
+          invoice.provider === "qpay" &&
+          invoice.status === "paid" &&
+          invoice.checkoutStatus === "paid" &&
+          (invoice.refundStatus === null || refundNeedsSync || refundNeedsProviderCheck)
 
         return {
           ...invoice,
           workspaceName: invoice.workspaceName || "Нэргүй ажлын орон зай",
           canCancel,
           cancellationRequestKey: canCancel ? crypto.randomUUID() : null,
+          canRefund,
+          refundRequestKey: canRefund ? crypto.randomUUID() : null,
+          refundNeedsSync,
+          refundNeedsProviderCheck,
           timeCreated: invoice.timeCreated.toISOString(),
           timeVerified: invoice.timeVerified?.toISOString() ?? null,
           timeRefunded: invoice.timeRefunded?.toISOString() ?? null,
@@ -381,6 +415,109 @@ export async function cancelAdminSubscriptionCheckout(
   return { ok: true as const, message: "QPay нэхэмжлэхийг цуцлах хүсэлтийг амжилттай дуусгалаа." }
 }
 
+export async function refundAdminSubscriptionPayment(
+  context: PlatformAdminContext,
+  request: Request,
+  raw: unknown,
+  dependencies: AdminRefundDependencies = adminRefundDependencies,
+) {
+  const invoiceID =
+    typeof raw === "object" && raw !== null && "invoiceID" in raw && typeof raw.invoiceID === "string"
+      ? raw.invoiceID.slice(0, 64)
+      : undefined
+  let admin: PlatformAdminContext
+  let input: z.output<typeof AdminSubscriptionPaymentRefundInput>
+  try {
+    requireSameOriginAdminMutation(request)
+    admin = requirePlatformAdminPermission(context, "payments.refund")
+    input = AdminSubscriptionPaymentRefundInput.parse(raw)
+  } catch (error) {
+    const failure = adminRefundFailure(error)
+    try {
+      await dependencies.writeAudit({
+        adminID: context.id,
+        actorEmail: context.email,
+        action: "payments.refund",
+        outcome: "denied",
+        request,
+        targetType: "payment_invoice",
+        targetID: invoiceID,
+        metadata: { reason: failure.code },
+      })
+    } catch {
+      return { ok: false as const, message: "Буцаалтын татгалзсан хүсэлтийг аудитад бүртгэж чадсангүй." }
+    }
+    return { ok: false as const, message: failure.message }
+  }
+
+  try {
+    await dependencies.writeAudit({
+      adminID: admin.id,
+      actorEmail: admin.email,
+      action: "payments.refund.requested",
+      outcome: "success",
+      request,
+      targetType: "payment_invoice",
+      targetID: input.invoiceID,
+      metadata: {
+        request_key: input.requestKey,
+        reason: input.reason,
+        state: "requested",
+      },
+    })
+  } catch {
+    return { ok: false as const, message: "Буцаалтын аудит бүртгэгдсэнгүй. QPay хүсэлт илгээгээгүй." }
+  }
+
+  try {
+    await dependencies.refundPayment({
+      invoiceID: input.invoiceID,
+      requestKey: input.requestKey,
+      reason: input.reason,
+    })
+  } catch (error) {
+    const failure = adminRefundFailure(error)
+    await dependencies
+      .writeAudit({
+        adminID: admin.id,
+        actorEmail: admin.email,
+        action: "payments.refund",
+        outcome: failure.outcome,
+        request,
+        targetType: "payment_invoice",
+        targetID: input.invoiceID,
+        metadata: {
+          request_key: input.requestKey,
+          reason: input.reason,
+          result: failure.code,
+        },
+      })
+      .catch(() => undefined)
+    return { ok: false as const, message: failure.message }
+  }
+
+  try {
+    await dependencies.writeAudit({
+      adminID: admin.id,
+      actorEmail: admin.email,
+      action: "payments.refund",
+      outcome: "success",
+      request,
+      targetType: "payment_invoice",
+      targetID: input.invoiceID,
+      metadata: {
+        request_key: input.requestKey,
+        reason: input.reason,
+        result: "refunded",
+      },
+    })
+  } catch {
+    return { ok: false as const, message: "Буцаалт хийгдсэн ч эцсийн аудит бүртгэгдсэнгүй. Шууд шалгана уу." }
+  }
+
+  return { ok: true as const, message: "QPay төлбөрийн бүтэн буцаалтыг амжилттай хүсэж, төлөв шинэчлэлд орууллаа." }
+}
+
 function adminCancellationFailure(error: unknown) {
   if (error instanceof AdminMutationRequestError) {
     return {
@@ -403,6 +540,30 @@ function adminCancellationFailure(error: unknown) {
     }
   }
   return { outcome: "failure" as const, code: "internal_error", message: "Цуцлалтын дотоод алдаа гарлаа." }
+}
+
+function adminRefundFailure(error: unknown) {
+  if (error instanceof AdminMutationRequestError) {
+    return {
+      outcome: "denied" as const,
+      code: `request_${error.code}`,
+      message: "Аюулгүй байдлын хүсэлтийн шалгалт амжилтгүй боллоо.",
+    }
+  }
+  if (error instanceof AdminAuthorizationError) {
+    return { outcome: "denied" as const, code: error.code, message: error.message }
+  }
+  if (error instanceof z.ZodError) {
+    return { outcome: "denied" as const, code: "invalid_input", message: "Буцаалтын хүсэлтийн өгөгдөл буруу байна." }
+  }
+  if (error instanceof AdminPaymentRefundServiceError) {
+    return {
+      outcome: error.status >= 400 && error.status < 500 ? ("denied" as const) : ("failure" as const),
+      code: error.code ?? `payment_service_${error.status}`,
+      message: error.message,
+    }
+  }
+  return { outcome: "failure" as const, code: "internal_error", message: "Буцаалтын дотоод алдаа гарлаа." }
 }
 
 function normalizeUsage(

@@ -185,6 +185,7 @@ export const paymentService = new sst.cloudflare.Worker("PaymentService", {
     BONUM_WEBHOOK_CHECKSUM_KEY,
     SECRET.PaymentServiceToken,
     SECRET.AdminPaymentCancellationToken,
+    SECRET.AdminPaymentRefundToken,
   ],
   compatibility: {
     date: "2026-07-15",

@@ -454,10 +454,11 @@ export function inspectPaymentHealth(
     catalog?: unknown
     checkout?: unknown
     cancellation?: unknown
+    refund?: unknown
   }
   exactObjectKeys(
     body,
-    ["catalog", "cancellation", "checkout", "environment", "providers", "service", "status"],
+    ["catalog", "cancellation", "checkout", "environment", "providers", "refund", "service", "status"],
     "payment health response",
   )
   if (body.service !== "payments") throw new Error("payment health service is invalid")
@@ -476,7 +477,8 @@ export function inspectPaymentHealth(
       providers.bonum !== false ||
       body.catalog !== false ||
       body.checkout !== false ||
-      body.cancellation !== false
+      body.cancellation !== false ||
+      body.refund !== false
     ) {
       throw new Error("disabled payment service exposes an enabled capability")
     }
@@ -489,7 +491,8 @@ export function inspectPaymentHealth(
     providers.bonum !== true ||
     body.catalog !== true ||
     body.checkout !== true ||
-    body.cancellation !== true
+    body.cancellation !== true ||
+    body.refund !== true
   ) {
     throw new Error("enabled payment service is not fully ready")
   }

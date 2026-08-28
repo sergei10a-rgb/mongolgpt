@@ -258,6 +258,26 @@ const contract = {
     "timeUpdated",
     "timeDeleted",
   ],
+  PaymentRefundTable: [
+    "invoice_id",
+    "workspace_id",
+    "account_id",
+    "request_key",
+    "provider",
+    "merchant_account_id",
+    "external_invoice_id",
+    "external_payment_id",
+    "amount",
+    "currency",
+    "status",
+    "error_code",
+    "provider_payload_hash",
+    "time_requested",
+    "time_completed",
+    "timeCreated",
+    "timeUpdated",
+    "timeDeleted",
+  ],
   PaymentEventTable: [
     "id",
     "invoice_id",
@@ -481,6 +501,7 @@ describe("D1 schema contract", () => {
       "refunded",
     ])
     expect(d1.PaymentCancellationStatuses).toEqual(["requested", "unknown", "cancelled", "failed"])
+    expect(d1.PaymentRefundStatuses).toEqual(["requested", "unknown", "refunded", "failed"])
     expect(d1.PaymentEventTypes).toEqual(["pending", "paid", "failed", "expired", "cancelled", "refunded"])
     expect(d1.PaymentEventOutcomes).toEqual(["applied", "noop", "rejected"])
     expect(d1.PaymentRecoveryStatuses).toEqual(["pending", "processing", "resolved", "manual_review"])

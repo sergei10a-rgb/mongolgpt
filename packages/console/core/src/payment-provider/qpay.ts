@@ -3,6 +3,8 @@ import {
   PaymentInvoiceCancellationReceiptSchema,
   PaymentInvoiceCancellationRequestSchema,
   PaymentInvoiceRequestSchema,
+  PaymentRefundReceiptSchema,
+  PaymentRefundRequestSchema,
   MNTAmountSchema,
   PaymentProviderResponseError,
   PaymentReconciliationRequestSchema,
@@ -16,6 +18,9 @@ import {
   type PaymentInvoiceCancellationRequest,
   type PaymentCancellationAdapter,
   type PaymentInvoiceRequest,
+  type PaymentRefundAdapter,
+  type PaymentRefundReceipt,
+  type PaymentRefundRequest,
   type PaymentReconciliationAdapter,
   type PaymentReconciliationRequest,
   type VerifiedPaymentEvent,
@@ -116,7 +121,7 @@ const QPayCallbackHintSchema = z
 type QPayConfig = z.input<typeof QPayConfigSchema>
 type Fetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
-export class QPayAdapter implements PaymentReconciliationAdapter, PaymentCancellationAdapter {
+export class QPayAdapter implements PaymentReconciliationAdapter, PaymentCancellationAdapter, PaymentRefundAdapter {
   readonly provider = "qpay" as const
   readonly merchantAccountID: string
   private readonly config: z.output<typeof QPayConfigSchema>
@@ -255,6 +260,69 @@ export class QPayAdapter implements PaymentReconciliationAdapter, PaymentCancell
       provider: this.provider,
       merchantAccountID: this.merchantAccountID,
       externalInvoiceID: request.externalInvoiceID,
+    })
+  }
+
+  async refundPayment(input: PaymentRefundRequest): Promise<PaymentRefundReceipt> {
+    const request = PaymentRefundRequestSchema.parse(input)
+    const token = await this.accessToken()
+    const response = await this.fetcher(
+      new URL(
+        `/v2/payment/refund/${encodeURIComponent(request.externalPaymentID)}`,
+        QPAY_BASE_URL[this.config.environment],
+      ),
+      {
+        method: "DELETE",
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${token}`,
+        },
+        redirect: "error",
+        signal: AbortSignal.timeout(this.config.timeoutMs),
+      },
+    )
+    if (response.status === 401 && this.token?.value === token) this.token = undefined
+    if (!response.ok) {
+      await cancelPaymentProviderResponse(response)
+      throw new PaymentProviderResponseError({
+        provider: this.provider,
+        operation: "refund payment",
+        status: response.status,
+      })
+    }
+    await cancelPaymentProviderResponse(response)
+    const receipt = await this.reconcileRefund(request)
+    if (!receipt) {
+      throw new PaymentProviderResponseError({
+        provider: this.provider,
+        operation: "verify refund",
+        status: 502,
+        retryable: false,
+      })
+    }
+    return receipt
+  }
+
+  async reconcileRefund(input: PaymentRefundRequest): Promise<PaymentRefundReceipt | undefined> {
+    const request = PaymentRefundRequestSchema.parse(input)
+    const events = await this.reconcileInvoice({
+      externalInvoiceID: request.externalInvoiceID,
+      expectedAmount: request.amount,
+      currency: request.currency,
+      callbackPaymentID: request.externalPaymentID,
+    })
+    const refunded = events.find(
+      (event) => event.type === "refunded" && event.externalPaymentID === request.externalPaymentID,
+    )
+    if (!refunded) return undefined
+    return PaymentRefundReceiptSchema.parse({
+      provider: this.provider,
+      merchantAccountID: this.merchantAccountID,
+      externalInvoiceID: request.externalInvoiceID,
+      externalPaymentID: request.externalPaymentID,
+      amount: request.amount,
+      currency: request.currency,
+      providerPayloadHash: refunded.payloadHash,
     })
   }
 

@@ -35,6 +35,7 @@ export const PaymentCheckoutStatuses = [
   "refunded",
 ] as const
 export const PaymentCancellationStatuses = ["requested", "unknown", "cancelled", "failed"] as const
+export const PaymentRefundStatuses = ["requested", "unknown", "refunded", "failed"] as const
 export const PaymentEventTypes = ["pending", "paid", "failed", "expired", "cancelled", "refunded"] as const
 export const PaymentEventOutcomes = ["applied", "noop", "rejected"] as const
 export const PaymentRecoveryStatuses = ["pending", "processing", "resolved", "manual_review"] as const
@@ -752,6 +753,53 @@ export const PaymentCancellationTable = sqliteTable(
       "payment_cancellation_completion_check",
       sql`(${table.status} in ('requested', 'unknown') and ${table.time_completed} is null)
         or (${table.status} in ('cancelled', 'failed') and ${table.time_completed} is not null)`,
+    ),
+  ],
+)
+
+export const PaymentRefundTable = sqliteTable(
+  "payment_refund",
+  {
+    invoice_id: ulid("invoice_id").notNull(),
+    workspace_id: ulid("workspace_id").notNull(),
+    account_id: ulid("account_id").notNull(),
+    request_key: text("request_key", { length: 64 }).notNull(),
+    provider: text("provider", { enum: PaymentProviders }).notNull(),
+    merchant_account_id: text("merchant_account_id", { length: 255 }).notNull(),
+    external_invoice_id: text("external_invoice_id", { length: 255 }).notNull(),
+    external_payment_id: text("external_payment_id", { length: 255 }).notNull(),
+    amount: integer("amount").notNull(),
+    currency: text("currency", { enum: ["MNT"] })
+      .notNull()
+      .default("MNT"),
+    status: text("status", { enum: PaymentRefundStatuses }).notNull().default("requested"),
+    error_code: text("error_code", { length: 64 }),
+    provider_payload_hash: text("provider_payload_hash", { length: 64 }),
+    time_requested: utc("time_requested").notNull(),
+    time_completed: utc("time_completed"),
+    ...timestamps,
+  },
+  (table) => [
+    primaryKey({ columns: [table.invoice_id] }),
+    uniqueIndex("payment_refund_workspace_request_key").on(table.workspace_id, table.request_key),
+    uniqueIndex("payment_refund_merchant_external_payment").on(
+      table.provider,
+      table.merchant_account_id,
+      table.external_payment_id,
+    ),
+    index("payment_refund_status_time_requested").on(table.status, table.time_requested),
+    check("payment_refund_provider_check", sql`${table.provider} in ('qpay', 'bonum')`),
+    check("payment_refund_amount_check", sql`${table.amount} > 0`),
+    check("payment_refund_currency_check", sql`${table.currency} = 'MNT'`),
+    check("payment_refund_status_check", sql`${table.status} in ('requested', 'unknown', 'refunded', 'failed')`),
+    check(
+      "payment_refund_completion_check",
+      sql`(${table.status} in ('requested', 'unknown') and ${table.time_completed} is null)
+        or (${table.status} in ('refunded', 'failed') and ${table.time_completed} is not null)`,
+    ),
+    check(
+      "payment_refund_provider_payload_hash_check",
+      sql`${table.provider_payload_hash} is null or length(${table.provider_payload_hash}) = 64`,
     ),
   ],
 )

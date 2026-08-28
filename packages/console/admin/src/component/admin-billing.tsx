@@ -4,7 +4,7 @@ import { getRequestEvent } from "solid-js/web"
 import type { FinanceMarginUnavailableReason } from "@mongolgpt/console-core/finance-reporting.js"
 import type { PlatformAdminContext } from "~/lib/admin-context"
 import { AdminHeader } from "./admin-header"
-import { cancelAdminSubscriptionCheckout } from "~/lib/admin-billing"
+import { cancelAdminSubscriptionCheckout, refundAdminSubscriptionPayment } from "~/lib/admin-billing"
 import { adminBillingQuery } from "~/lib/admin-billing-query"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 
@@ -19,6 +19,18 @@ export const cancelAdminSubscriptionCheckoutAction = action(async (form: FormDat
   )
   return json(result, { revalidate: adminBillingQuery.key })
 }, "admin.billing.cancel")
+
+export const refundAdminSubscriptionPaymentAction = action(async (form: FormData) => {
+  "use server"
+  const event = getRequestEvent()
+  if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
+  const result = await refundAdminSubscriptionPayment(
+    getPlatformAdminContext(),
+    event.request,
+    Object.fromEntries(form.entries()),
+  )
+  return json(result, { revalidate: adminBillingQuery.key })
+}, "admin.billing.refund")
 
 export interface AdminBillingData {
   admin: PlatformAdminContext
@@ -102,13 +114,18 @@ export interface AdminBillingData {
     timeRefunded: string | null
     canCancel: boolean
     cancellationRequestKey: string | null
+    canRefund: boolean
+    refundRequestKey: string | null
+    refundNeedsSync: boolean
+    refundNeedsProviderCheck: boolean
   }[]
   generatedAt: string
 }
 
 export function AdminBillingView(props: { data: AdminBillingData }) {
   const cancellationSubmission = useSubmission(cancelAdminSubscriptionCheckoutAction)
-  const canCancelInvoices = () => props.data.invoices.some((invoice) => invoice.canCancel)
+  const refundSubmission = useSubmission(refundAdminSubscriptionPaymentAction)
+  const canManageInvoices = () => props.data.invoices.some((invoice) => invoice.canCancel || invoice.canRefund)
   return (
     <>
       <AdminHeader admin={props.data.admin} active="billing" />
@@ -119,7 +136,7 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
             <p data-component="eyebrow">QPay + Bonum ба загварын өртөг</p>
             <h1>Санхүүгийн хяналт</h1>
           </div>
-          <span data-component="read-only">Зөвхөн харах горим</span>
+          <span data-component="read-only">RBAC хамгаалалттай санхүүгийн үйлдэл</span>
         </section>
 
         <form method="get" data-component="billing-filters" aria-label="Санхүүгийн мэдээлэл шүүх">
@@ -334,6 +351,18 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
               </p>
             )}
           </Show>
+          <Show when={refundSubmission.result}>
+            {(result) => (
+              <p
+                data-component="action-message"
+                data-outcome={result().ok ? "success" : "failure"}
+                role={result().ok ? "status" : "alert"}
+                aria-live="polite"
+              >
+                {result().message}
+              </p>
+            )}
+          </Show>
           <div data-component="table-scroll">
             <table data-table="payment-invoices">
               <thead>
@@ -345,7 +374,7 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
                   <th>Дүн</th>
                   <th>Төлөв</th>
                   <th>Үүссэн</th>
-                  <Show when={canCancelInvoices()}>
+                  <Show when={canManageInvoices()}>
                     <th>Үйлдэл</th>
                   </Show>
                 </tr>
@@ -355,7 +384,7 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
                   each={props.data.invoices}
                   fallback={
                     <tr>
-                      <td colspan={canCancelInvoices() ? 8 : 7} data-empty>
+                      <td colspan={canManageInvoices() ? 8 : 7} data-empty>
                         Сонгосон нөхцөлд нэхэмжлэх алга.
                       </td>
                     </tr>
@@ -377,13 +406,23 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
                         <span data-payment-status={invoice.status}>{paymentStatusLabel(invoice.status)}</span>
                       </td>
                       <td>{formatDate(invoice.timeCreated)}</td>
-                      <Show when={canCancelInvoices()}>
+                      <Show when={canManageInvoices()}>
                         <td>
                           <Show when={invoice.canCancel && invoice.cancellationRequestKey}>
                             <AdminCancellationAction
                               invoiceID={invoice.id}
                               requestKey={invoice.cancellationRequestKey!}
                               pending={Boolean(cancellationSubmission.pending)}
+                            />
+                          </Show>
+                          <Show when={invoice.canRefund && invoice.refundRequestKey}>
+                            <AdminRefundAction
+                              invoiceID={invoice.id}
+                              requestKey={invoice.refundRequestKey!}
+                              amount={invoice.amount}
+                              resume={invoice.refundNeedsSync}
+                              verify={invoice.refundNeedsProviderCheck}
+                              pending={Boolean(refundSubmission.pending)}
                             />
                           </Show>
                         </td>
@@ -417,6 +456,54 @@ function AdminCancellationAction(props: { invoiceID: string; requestKey: string;
         </label>
         <button type="submit" disabled={props.pending}>
           {props.pending ? "Цуцалж байна..." : "Цуцлах"}
+        </button>
+      </form>
+    </details>
+  )
+}
+
+function AdminRefundAction(props: {
+  invoiceID: string
+  requestKey: string
+  amount: number
+  resume: boolean
+  verify: boolean
+  pending: boolean
+}) {
+  return (
+    <details data-component="payment-refund-action">
+      <summary>
+        {props.verify ? "QPay буцаалтыг шалгах" : props.resume ? "Буцаалтын төлөв сэргээх" : "QPay төлбөр буцаах"}
+      </summary>
+      <form action={refundAdminSubscriptionPaymentAction} method="post">
+        <input type="hidden" name="invoiceID" value={props.invoiceID} />
+        <input type="hidden" name="requestKey" value={props.requestKey} />
+        <p>
+          {props.verify
+            ? "Өмнөх хүсэлтийн үр дүн тодорхойгүй байна. QPay-ийн төлвийг мөнгө дахин хөдөлгөхгүйгээр шалгана."
+            : props.resume
+              ? "QPay буцаалт баталгаажсан. Дотоод төлөвийг дахин синк хийнэ."
+              : "Бүтэн дүн:"}{" "}
+          {!props.resume && !props.verify && formatMNT(props.amount)}
+        </p>
+        <label for={`refund-reason-${props.invoiceID}`}>Буцаах Монгол шалтгаан</label>
+        <textarea id={`refund-reason-${props.invoiceID}`} name="reason" minlength="20" maxlength="500" required />
+        <label data-component="confirmation">
+          <input type="checkbox" name="confirmation" value="refund" required />
+          {props.verify
+            ? "QPay-ийн буцаалтын төлвийг шалгаж, баталгаажсан бол багц болон quota-г синк хийхийг зөвшөөрч байна."
+            : props.resume
+              ? "Баталгаажсан буцаалтыг дахин илгээж, багц болон quota-г синк хийхийг баталгаажуулж байна."
+              : "Мөнгө буцааж, идэвхтэй багц болон quota-г цуцлахыг баталгаажуулж байна."}
+        </label>
+        <button type="submit" disabled={props.pending}>
+          {props.pending
+            ? "Боловсруулж байна..."
+            : props.verify
+              ? "QPay төлөв шалгах"
+              : props.resume
+                ? "Төлөв сэргээх"
+                : "Бүтэн дүн буцаах"}
         </button>
       </form>
     </details>

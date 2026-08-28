@@ -71,6 +71,27 @@ export const PaymentInvoiceCancellationReceiptSchema = z
   })
   .strict()
 
+export const PaymentRefundRequestSchema = z
+  .object({
+    externalInvoiceID: z.string().trim().min(1).max(255),
+    externalPaymentID: z.string().trim().min(1).max(255),
+    amount: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    currency: z.literal("MNT"),
+  })
+  .strict()
+
+export const PaymentRefundReceiptSchema = z
+  .object({
+    provider: z.enum(PaymentProviders),
+    merchantAccountID: z.string().trim().min(1).max(255),
+    externalInvoiceID: z.string().trim().min(1).max(255),
+    externalPaymentID: z.string().trim().min(1).max(255),
+    amount: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    currency: z.literal("MNT"),
+    providerPayloadHash: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict()
+
 export const MNTAmountSchema = z
   .union([
     z.number(),
@@ -93,3 +114,5 @@ export type PaymentInvoiceCheckout = z.output<typeof PaymentInvoiceCheckoutSchem
 export type PaymentReconciliationRequest = z.input<typeof PaymentReconciliationRequestSchema>
 export type PaymentInvoiceCancellationRequest = z.input<typeof PaymentInvoiceCancellationRequestSchema>
 export type PaymentInvoiceCancellationReceipt = z.output<typeof PaymentInvoiceCancellationReceiptSchema>
+export type PaymentRefundRequest = z.input<typeof PaymentRefundRequestSchema>
+export type PaymentRefundReceipt = z.output<typeof PaymentRefundReceiptSchema>

@@ -27,7 +27,7 @@ describe("D1 migration", () => {
       .query("select name from sqlite_schema where type = 'table' and name not like 'sqlite_%' order by name")
       .values()
 
-    expect(tables).toHaveLength(42)
+    expect(tables).toHaveLength(43)
     expect(tables).toContainEqual(["account"])
     expect(tables).toContainEqual(["account_deletion"])
     expect(tables).toContainEqual(["admin_audit_log"])
@@ -42,6 +42,7 @@ describe("D1 migration", () => {
     expect(tables).toContainEqual(["payment_cancellation"])
     expect(tables).toContainEqual(["payment_invoice"])
     expect(tables).toContainEqual(["payment_recovery"])
+    expect(tables).toContainEqual(["payment_refund"])
     expect(tables).toContainEqual(["plan_subscription"])
     expect(tables).toContainEqual(["plan_config_active"])
     expect(tables).toContainEqual(["plan_config_version"])

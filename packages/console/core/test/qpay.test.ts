@@ -346,6 +346,109 @@ describe("QPay Merchant V2 adapter", () => {
     }
   })
 
+  test("requests one full payment refund with the encoded payment ID and returns a bound receipt", async () => {
+    const mock = mockFetch([
+      { body: token },
+      { status: 200 },
+      {
+        body: {
+          count: 1,
+          paid_amount: 49_000,
+          rows: [
+            {
+              payment_id: "payment/refund ?",
+              payment_status: "REFUNDED",
+              payment_date: "2026-08-28T06:00:00.000Z",
+              payment_amount: "49000.00",
+              payment_currency: "MNT",
+            },
+          ],
+        },
+      },
+    ])
+    const receipt = await adapter(mock).refundPayment({
+      externalInvoiceID: "invoice-refund-1",
+      externalPaymentID: "payment/refund ?",
+      amount: 49_000,
+      currency: "MNT",
+    })
+
+    expect(receipt).toMatchObject({
+      provider: "qpay",
+      merchantAccountID: "qpay_merchant_test",
+      externalInvoiceID: "invoice-refund-1",
+      externalPaymentID: "payment/refund ?",
+      amount: 49_000,
+      currency: "MNT",
+    })
+    expect(receipt.providerPayloadHash).toHaveLength(64)
+    expect(mock.calls).toHaveLength(3)
+    expect(mock.calls[1]?.url).toBe("https://merchant-sandbox.qpay.mn/v2/payment/refund/payment%2Frefund%20%3F")
+    expect(mock.calls[1]?.init.method).toBe("DELETE")
+    expect(header(mock.calls[1].init, "authorization")).toBe("Bearer access-token")
+    expect(mock.calls[2]?.url).toBe("https://merchant-sandbox.qpay.mn/v2/payment/check")
+    expect(mock.calls[2]?.init.method).toBe("POST")
+    expect(body(mock.calls[2].init)).toEqual({
+      object_type: "INVOICE",
+      object_id: "invoice-refund-1",
+      offset: { page_number: 1, page_limit: 100 },
+    })
+  })
+
+  test("does not confirm a refund until QPay reconciliation reports REFUNDED", async () => {
+    const mock = mockFetch([
+      { body: token },
+      { status: 200 },
+      {
+        body: {
+          count: 1,
+          paid_amount: 49_000,
+          rows: [
+            {
+              payment_id: "payment-unconfirmed",
+              payment_status: "PAID",
+              payment_date: "2026-08-28T06:00:00.000Z",
+              payment_amount: "49000.00",
+              payment_currency: "MNT",
+            },
+          ],
+        },
+      },
+    ])
+    const error = await captureError(
+      adapter(mock).refundPayment({
+        externalInvoiceID: "invoice-unconfirmed",
+        externalPaymentID: "payment-unconfirmed",
+        amount: 49_000,
+        currency: "MNT",
+      }),
+    )
+
+    expect(error).toBeInstanceOf(PaymentProviderResponseError)
+    expect(error).toMatchObject({ operation: "verify refund", status: 502, retryable: false })
+    expect(mock.calls.filter((call) => call.init.method === "DELETE")).toHaveLength(1)
+  })
+
+  test("never retries a rejected or uncertain refund mutation", async () => {
+    for (const status of [401, 422, 503]) {
+      const mock = mockFetch([{ body: token }, { status, body: { error: "provider failure" } }])
+      const error = await captureError(
+        adapter(mock).refundPayment({
+          externalInvoiceID: `invoice-${status}`,
+          externalPaymentID: `payment-${status}`,
+          amount: 49_000,
+          currency: "MNT",
+        }),
+      )
+
+      expect(error).toBeInstanceOf(PaymentProviderResponseError)
+      expect(error).toMatchObject({ status })
+      expect(mock.calls).toHaveLength(2)
+      expect(mock.calls[1]?.init.method).toBe("DELETE")
+      expect(mock.pending).toHaveLength(0)
+    }
+  })
+
   test("reuses short-lived tokens and parses MNT strings without precision loss", async () => {
     let current = 1_000
     const mock = mockFetch([

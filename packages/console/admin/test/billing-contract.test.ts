@@ -3,6 +3,7 @@ import { resolve } from "node:path"
 import {
   AdminBillingQueryInput,
   AdminSubscriptionCheckoutCancellationInput,
+  AdminSubscriptionPaymentRefundInput,
   adminBillingPeriodBounds,
   adminBillingSafeDifference,
   adminBillingSafeSum,
@@ -47,6 +48,22 @@ describe("admin billing contract", () => {
         requestKey: "73f8cb79-fd55-4f33-b17b-c2d7452d841f",
         reason: "plain English operator reason that must not be accepted",
         confirmation: "cancel",
+      }).success,
+    ).toBe(false)
+    expect(
+      AdminSubscriptionPaymentRefundInput.safeParse({
+        invoiceID: "inv_01JV5T0G9H5Q3N7S2R8M4K6WXA",
+        requestKey: "22222222-2222-4222-8222-222222222222",
+        reason: "Хэрэглэгчийн баталгаажсан хүсэлтээр төлбөрийг бүтнээр буцааж байна.",
+        confirmation: "refund",
+      }).success,
+    ).toBe(true)
+    expect(
+      AdminSubscriptionPaymentRefundInput.safeParse({
+        invoiceID: "inv_01JV5T0G9H5Q3N7S2R8M4K6WXA",
+        requestKey: "22222222-2222-4222-8222-222222222222",
+        reason: "plain English operator reason that must not be accepted",
+        confirmation: "refund",
       }).success,
     ).toBe(false)
   })
@@ -126,6 +143,37 @@ describe("admin billing contract", () => {
     expect(worker).toContain('"/v1/admin/checkouts/subscription/cancel"')
     expect(worker).toContain("adminCancellationToken")
     expect(worker).toContain("PlatformAdminSubscriptionCheckoutCancellationRequestSchema")
+  }, 15_000)
+
+  test("adds a server-derived, audited full QPay refund without trusting client money fields", async () => {
+    const billing = await source("src/lib/admin-billing.ts")
+    const view = await source("src/component/admin-billing.tsx")
+    const worker = await source("../function/src/payment-webhook.ts")
+    const client = await source("src/lib/admin-payment-refund.server.ts")
+    const core = await source("../core/src/payment-refund.ts")
+
+    expect(billing).toContain('"payments.refund"')
+    expect(billing).toContain('action: "payments.refund.requested"')
+    expect(billing).toContain("requestPlatformAdminSubscriptionPaymentRefund")
+    expect(billing).toContain('invoice.refundStatus === "refunded"')
+    expect(billing).toContain('invoice.refundStatus === "unknown"')
+    expect(billing).toContain("invoice.refundStatus === null || refundNeedsSync || refundNeedsProviderCheck")
+    expect(billing).toContain("refundRequestKey")
+    expect(view).toContain("QPay төлбөр буцаах")
+    expect(view).toContain("Буцаах Монгол шалтгаан")
+    expect(view).toContain('value="refund"')
+    expect(view).toContain("идэвхтэй багц болон quota-г цуцлах")
+    expect(view).toContain("Буцаалтын төлөв сэргээх")
+    expect(view).toContain("QPay буцаалтыг шалгах")
+    expect(client).toContain("AdminPaymentRefundToken")
+    expect(client).not.toContain("PaymentServiceToken")
+    expect(worker).toContain('"/v1/admin/payments/subscription/refund"')
+    expect(worker).toContain("adminRefundToken")
+    expect(worker).toContain("PlatformAdminSubscriptionPaymentRefundRequestSchema")
+    expect(core).toContain("PaymentInvoiceTable.amount")
+    expect(core).toContain("PaymentInvoiceTable.external_payment_id")
+    expect(core).not.toContain("input.amount")
+    expect(core).not.toContain("input.externalPaymentID")
   }, 15_000)
 
   test("shows actual and estimated costs separately and refuses to invent an incomplete margin", async () => {

@@ -25,6 +25,17 @@ import {
   type SubscriptionCheckoutCancellationRequest,
 } from "@mongolgpt/console-core/payment-cancellation.js"
 import {
+  PaymentRefundConflictError,
+  PaymentRefundOperationError,
+  PaymentRefundUnavailableError,
+  PaymentRefundUnsupportedError,
+  PlatformAdminSubscriptionPaymentRefundRequestSchema,
+  SubscriptionPaymentRefundResultSchema,
+  refundPlatformAdminSubscriptionPayment,
+  type PlatformAdminSubscriptionPaymentRefundRequest,
+  type SubscriptionRefundOutcome,
+} from "@mongolgpt/console-core/payment-refund.js"
+import {
   createSubscriptionCheckout,
   PaymentCheckoutAuthorizationError,
   PaymentCheckoutConflictError,
@@ -45,6 +56,7 @@ type Dependencies = {
   enqueue(events: PaymentQueueEvent[]): Promise<void>
   internalToken?: string
   adminCancellationToken?: string
+  adminRefundToken?: string
   health?: {
     environment: "disabled" | "sandbox" | "production"
     catalog: boolean
@@ -60,6 +72,9 @@ type Dependencies = {
   cancelPlatformAdminSubscriptionCheckout?: (
     input: PlatformAdminSubscriptionCheckoutCancellationRequest,
   ) => Promise<SubscriptionCancellationOutcome>
+  refundPlatformAdminSubscriptionPayment?: (
+    input: PlatformAdminSubscriptionPaymentRefundRequest,
+  ) => Promise<SubscriptionRefundOutcome>
 }
 
 class PaymentQueueUnavailableError extends Error {
@@ -183,15 +198,20 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
           providers.bonum &&
           productionApproved
         const cancellation = Boolean(dependencies.cancelSubscriptionCheckout) && providers.qpay
+        const refund =
+          Boolean(dependencies.refundPlatformAdminSubscriptionPayment) &&
+          Boolean(dependencies.adminRefundToken) &&
+          providers.qpay
         return Response.json(
           {
-            status: environment === "disabled" ? "disabled" : checkout && cancellation ? "ok" : "degraded",
+            status: environment === "disabled" ? "disabled" : checkout && cancellation && refund ? "ok" : "degraded",
             service: "payments",
             environment,
             providers,
             catalog,
             checkout,
             cancellation,
+            refund,
           },
           { headers: { "Cache-Control": "no-store" } },
         )
@@ -272,6 +292,40 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
         return json(result.data)
       }
 
+      if (url.pathname === "/v1/admin/payments/subscription/refund") {
+        if (!authorized(request, dependencies.adminRefundToken)) {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Дотоод админ буцаалтын зөвшөөрөл хүчингүй байна." }, 401)
+        }
+        if (request.method !== "POST") {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Зөвшөөрөгдөөгүй хүсэлт." }, 405, { Allow: "POST" })
+        }
+        if (!dependencies.refundPlatformAdminSubscriptionPayment) {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Админ буцаалтын үйлчилгээ одоогоор тохируулагдаагүй байна." }, 503)
+        }
+        const contentType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase()
+        if (contentType !== "application/json") {
+          await request.body?.cancel().catch(() => undefined)
+          return json({ error: "Буцаалтын хүсэлт JSON байх ёстой." }, 400)
+        }
+        let body: unknown
+        try {
+          body = JSON.parse(await readBoundedBody(request))
+        } catch (error) {
+          if (error instanceof RangeError) throw error
+          return json({ error: "Буцаалтын хүсэлтийн JSON буруу байна." }, 400)
+        }
+        const parsed = PlatformAdminSubscriptionPaymentRefundRequestSchema.safeParse(body)
+        if (!parsed.success) return json({ error: "Админ буцаалтын хүсэлтийн бүтэц буруу байна." }, 400)
+        const outcome = await dependencies.refundPlatformAdminSubscriptionPayment(parsed.data)
+        const result = SubscriptionPaymentRefundResultSchema.safeParse(outcome.result)
+        if (!result.success) throw new InvalidPaymentCheckoutResponseError()
+        if (outcome.event) await enqueueVerifiedEvents([outcome.event], dependencies)
+        return json(result.data)
+      }
+
       if (url.pathname === "/v1/checkouts/subscription/cancel") {
         if (!authorized(request, dependencies.internalToken)) {
           await request.body?.cancel().catch(() => undefined)
@@ -342,9 +396,19 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
         error: error instanceof Error ? error.name : typeof error,
       })
       if (error instanceof PaymentQueueUnavailableError) {
+        if (url.pathname === "/v1/admin/payments/subscription/refund") {
+          return json(
+            {
+              error: "Төлбөр буцаагдсан боловч төлөв шинэчлэх дараалал түр ажиллахгүй байна. Дахин шалгана уу.",
+              code: "queue_unavailable",
+            },
+            503,
+          )
+        }
         if (
           url.pathname === "/v1/checkouts/subscription/cancel" ||
-          url.pathname === "/v1/admin/checkouts/subscription/cancel"
+          url.pathname === "/v1/admin/checkouts/subscription/cancel" ||
+          url.pathname === "/v1/admin/payments/subscription/refund"
         ) {
           return json(
             {
@@ -428,11 +492,42 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
           error.state === "unknown" ? 503 : 502,
         )
       }
+      if (error instanceof PaymentRefundUnsupportedError) {
+        return json(
+          {
+            error:
+              "Bonum web төлбөрийн буцаалтын API албан ёсоор баталгаажаагүй тул автоматаар буцаахгүй. Bonum мерчантын дэмжлэгээр шийднэ үү.",
+            code: "provider_refund_unsupported",
+          },
+          409,
+        )
+      }
+      if (error instanceof PaymentRefundUnavailableError) {
+        return json({ error: "QPay буцаалтын үйлчилгээ тохируулагдаагүй байна.", code: "provider_unavailable" }, 503)
+      }
+      if (error instanceof PaymentRefundConflictError) {
+        return json({ error: refundConflictMessage(error.state), code: error.state }, 409)
+      }
+      if (error instanceof PaymentRefundOperationError) {
+        return json(
+          {
+            error:
+              error.state === "unknown"
+                ? "Буцаалтын үр дүн тодорхойгүй байна. Давтан буцаахгүйгээр QPay мерчант бүртгэлээс шалгана уу."
+                : "QPay буцаалтын хүсэлтийг зөвшөөрсөнгүй. Энэ endpoint зөвхөн дэмжигдсэн картын гүйлгээнд үйлчилнэ.",
+            code: error.code,
+          },
+          error.state === "unknown" ? 503 : 422,
+        )
+      }
       if (error instanceof InvalidPaymentCheckoutResponseError) {
         return json({ error: "Төлбөрийн үйлчилгээ буруу хариу буцаалаа." }, 502)
       }
       if (error instanceof RangeError && url.pathname === "/v1/checkouts/subscription") {
         return json({ error: "Төлбөрийн хүсэлт хэт том байна." }, 413)
+      }
+      if (error instanceof RangeError && url.pathname === "/v1/admin/payments/subscription/refund") {
+        return json({ error: "Буцаалтын хүсэлт хэт том байна." }, 413)
       }
       if (
         error instanceof RangeError &&
@@ -445,7 +540,8 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
       if (
         url.pathname === "/v1/checkouts/subscription" ||
         url.pathname === "/v1/checkouts/subscription/cancel" ||
-        url.pathname === "/v1/admin/checkouts/subscription/cancel"
+        url.pathname === "/v1/admin/checkouts/subscription/cancel" ||
+        url.pathname === "/v1/admin/payments/subscription/refund"
       ) {
         return json({ error: "Төлбөрийн үйлчилгээний дотоод алдаа гарлаа.", code: "internal_error" }, 500)
       }
@@ -477,6 +573,14 @@ function cancellationConflictMessage(state: PaymentCancellationConflictError["st
   if (state === "result_unknown")
     return "Цуцлалтын үр дүн тодорхойгүй байна. Давтан цуцлахгүйгээр дэмжлэгтэй холбогдоно уу."
   return "Өмнөх цуцлах хүсэлт амжилтгүй болсон. Нэхэмжлэхийн одоогийн төлвийг шалгана уу."
+}
+
+function refundConflictMessage(state: PaymentRefundConflictError["state"]) {
+  if (state === "not_refundable") return "Зөвхөн баталгаажсан, буцаагдаагүй subscription төлбөрийг буцааж болно."
+  if (state === "request_in_progress") return "Төлбөрийг буцааж байна. Түр хүлээгээд төлвийг дахин ачаална уу."
+  if (state === "result_unknown")
+    return "Буцаалтын үр дүн тодорхойгүй байна. Давтан буцаахгүйгээр QPay мерчант бүртгэлээс шалгана уу."
+  return "Өмнөх буцаалтын хүсэлт амжилтгүй болсон. Шинэ хүсэлтээс өмнө QPay төлвийг шалгана уу."
 }
 
 let runtimeDependencies: Dependencies | undefined
@@ -530,6 +634,7 @@ function defaults() {
     bonum: bonum ? (input) => verifyBonumWebhook(input, { adapter: bonum }) : undefined,
     internalToken: Resource.PaymentServiceToken.value,
     adminCancellationToken: Resource.AdminPaymentCancellationToken.value,
+    adminRefundToken: Resource.AdminPaymentRefundToken.value,
     health: {
       environment: config.enabled ? config.environment : "disabled",
       catalog: Boolean(catalog),
@@ -551,6 +656,9 @@ function defaults() {
       : undefined,
     cancelPlatformAdminSubscriptionCheckout: config.enabled
       ? (input) => cancelPlatformAdminSubscriptionCheckout(input, { adapters: { qpay } })
+      : undefined,
+    refundPlatformAdminSubscriptionPayment: config.enabled
+      ? (input) => refundPlatformAdminSubscriptionPayment(input, { adapters: { qpay } })
       : undefined,
     async enqueue(events) {
       await Resource.PaymentQueue.sendBatch(events.map((body) => ({ body })))

@@ -13,13 +13,20 @@ import {
   PaymentCancellationUnavailableError,
   PaymentCancellationUnsupportedError,
 } from "@mongolgpt/console-core/payment-cancellation.js"
+import {
+  PaymentRefundConflictError,
+  PaymentRefundOperationError,
+  PaymentRefundUnavailableError,
+  PaymentRefundUnsupportedError,
+} from "@mongolgpt/console-core/payment-refund.js"
 import { z } from "zod"
 import { createPaymentWebhookHandler } from "../src/payment-webhook"
 
 const invoiceID = "inv_01JV5T0G9H5Q3N7S2R8M4K6WXA"
 const missingInvoiceID = "inv_01JV5T0G9H5Q3N7S2R8M4K6WXB"
 const requestKey = "650f7299-0f46-4d09-92b7-3f8338672227"
-const cancellationRequestKey = "f0e1c9d6-c02e-42e8-a9ae-4fcf57e1cdd4"
+const cancellationRequestKey = "44444444-4444-4444-8444-444444444444"
+const refundRequestKey = "22222222-2222-4222-8222-222222222222"
 
 const checkoutRequest = {
   workspaceID: "wrk_01JV5T0G9H5Q3N7S2R8M4K6WXA",
@@ -65,6 +72,18 @@ const cancellationResult = {
   status: "cancelled" as const,
 }
 
+const adminRefundRequest = {
+  invoiceID,
+  requestKey: refundRequestKey,
+  reason: "Хэрэглэгчийн хүсэлтээр төлбөрийг бүтнээр буцааж байна.",
+}
+
+const refundResult = {
+  invoiceID,
+  provider: "qpay" as const,
+  status: "refunded" as const,
+}
+
 const paid = {
   provider: "qpay" as const,
   merchantAccountID: "merchant_1",
@@ -88,6 +107,14 @@ const cancelled = {
   occurredAt: 1_769_657_391_559,
 }
 
+const refunded = {
+  ...paid,
+  externalEventID: "event_refunded_1",
+  type: "refunded" as const,
+  payloadHash: "c".repeat(64),
+  occurredAt: 1_769_657_491_559,
+}
+
 describe("payment webhook worker", () => {
   test("reports disabled, ready, and degraded payment readiness without exposing credentials", async () => {
     const disabled = createPaymentWebhookHandler({
@@ -103,10 +130,12 @@ describe("payment webhook worker", () => {
       catalog: false,
       checkout: false,
       cancellation: false,
+      refund: false,
     })
 
     const ready = createPaymentWebhookHandler({
       health: { environment: "sandbox", catalog: true },
+      adminRefundToken: "admin-refund-token",
       async qpay() {
         return []
       },
@@ -118,6 +147,9 @@ describe("payment webhook worker", () => {
       },
       async cancelSubscriptionCheckout() {
         return { result: cancellationResult }
+      },
+      async refundPlatformAdminSubscriptionPayment() {
+        return { result: refundResult }
       },
       async enqueue() {},
     })
@@ -133,6 +165,7 @@ describe("payment webhook worker", () => {
       catalog: true,
       checkout: true,
       cancellation: true,
+      refund: true,
     })
 
     const degraded = createPaymentWebhookHandler({
@@ -588,6 +621,120 @@ describe("payment webhook worker", () => {
     const payload: unknown = await success.json()
     expect(payload).toEqual(cancellationResult)
     expect(requests).toEqual([adminCancellationRequest])
+  })
+
+  test("uses a separate admin token, scope-limited contract, and verified queue event for full refunds", async () => {
+    const requests: unknown[] = []
+    const queued: unknown[] = []
+    const handler = createPaymentWebhookHandler({
+      internalToken: "normal-payment-token",
+      adminCancellationToken: "admin-cancellation-token",
+      adminRefundToken: "admin-refund-token",
+      async refundPlatformAdminSubscriptionPayment(input) {
+        requests.push(input)
+        return { result: refundResult, event: refunded }
+      },
+      async enqueue(events) {
+        queued.push(...events)
+      },
+    })
+    const path = "https://pay.dev.mgpt.mn/v1/admin/payments/subscription/refund"
+
+    for (const token of ["normal-payment-token", "admin-cancellation-token"]) {
+      const response = await handler(
+        new Request(path, {
+          method: "POST",
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          body: JSON.stringify(adminRefundRequest),
+        }),
+      )
+      expect(response.status).toBe(401)
+    }
+    const invalidScope = await handler(
+      new Request(path, {
+        method: "POST",
+        headers: { authorization: "Bearer admin-refund-token", "content-type": "application/json" },
+        body: JSON.stringify({ ...adminRefundRequest, amount: 1 }),
+      }),
+    )
+    const success = await handler(
+      new Request(path, {
+        method: "POST",
+        headers: { authorization: "Bearer admin-refund-token", "content-type": "application/json" },
+        body: JSON.stringify(adminRefundRequest),
+      }),
+    )
+
+    expect(invalidScope.status).toBe(400)
+    expect(success.status).toBe(200)
+    const successPayload: unknown = await success.json()
+    expect(successPayload).toEqual(refundResult)
+    expect(requests).toEqual([adminRefundRequest])
+    expect(queued).toHaveLength(1)
+    expect(queued[0]).toMatchObject({ version: 1, event: refunded })
+  })
+
+  test("returns stable refund capability and provider operation errors", async () => {
+    const errorLog = spyOn(console, "error").mockImplementation(() => {})
+    const path = "https://pay.dev.mgpt.mn/v1/admin/payments/subscription/refund"
+    const cases = [
+      { error: new PaymentRefundUnsupportedError("bonum"), status: 409, code: "provider_refund_unsupported" },
+      { error: new PaymentRefundUnavailableError("qpay"), status: 503, code: "provider_unavailable" },
+      { error: new PaymentRefundConflictError("not_refundable"), status: 409, code: "not_refundable" },
+      { error: new PaymentRefundConflictError("result_unknown"), status: 409, code: "result_unknown" },
+      { error: new PaymentRefundOperationError("unknown", "provider_503"), status: 503, code: "provider_503" },
+      { error: new PaymentRefundOperationError("failed", "provider_422"), status: 422, code: "provider_422" },
+    ]
+
+    for (const item of cases) {
+      const handler = createPaymentWebhookHandler({
+        adminRefundToken: "admin-refund-token",
+        async refundPlatformAdminSubscriptionPayment() {
+          throw item.error
+        },
+        async enqueue() {},
+      })
+      const response = await handler(
+        new Request(path, {
+          method: "POST",
+          headers: { authorization: "Bearer admin-refund-token", "content-type": "application/json" },
+          body: JSON.stringify(adminRefundRequest),
+        }),
+      )
+      expect(response.status).toBe(item.status)
+      expect(await response.json()).toMatchObject({ code: item.code })
+    }
+    expect(errorLog).toHaveBeenCalledTimes(cases.length)
+    errorLog.mockRestore()
+  })
+
+  test("returns a replayable JSON error when a confirmed refund cannot be queued", async () => {
+    const errorLog = spyOn(console, "error").mockImplementation(() => {})
+    const handler = createPaymentWebhookHandler({
+      adminRefundToken: "admin-refund-token",
+      async refundPlatformAdminSubscriptionPayment() {
+        return { result: refundResult, event: refunded }
+      },
+      async enqueue() {
+        throw new Error("queue unavailable")
+      },
+    })
+    const response = await handler(
+      new Request("https://pay.dev.mgpt.mn/v1/admin/payments/subscription/refund", {
+        method: "POST",
+        headers: { authorization: "Bearer admin-refund-token", "content-type": "application/json" },
+        body: JSON.stringify(adminRefundRequest),
+      }),
+    )
+
+    expect(response.status).toBe(503)
+    const payload: unknown = await response.json()
+    expect(payload).toEqual({
+      error: "Төлбөр буцаагдсан боловч төлөв шинэчлэх дараалал түр ажиллахгүй байна. Дахин шалгана уу.",
+      code: "queue_unavailable",
+    })
+    expect(errorLog).toHaveBeenCalledTimes(1)
+    errorLog.mockRestore()
   })
 
   test("rejects unauthorized, malformed, oversized, and disabled cancellation requests", async () => {

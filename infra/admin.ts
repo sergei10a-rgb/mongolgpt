@@ -108,6 +108,7 @@ export const admin = new sst.cloudflare.x.SolidStart("Admin", {
     accessConfig,
     bootstrapEmails,
     SECRET.AdminPaymentCancellationToken,
+    SECRET.AdminPaymentRefundToken,
     mongolGPTPlanLimits,
   ],
   environment: {

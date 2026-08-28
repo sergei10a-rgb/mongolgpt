@@ -25,6 +25,8 @@ export {
   PaymentCheckoutTable,
   PaymentCancellationStatuses,
   PaymentCancellationTable,
+  PaymentRefundStatuses,
+  PaymentRefundTable,
   PaymentInvoiceStatuses,
   PaymentInvoiceTable,
   PaymentProviders,

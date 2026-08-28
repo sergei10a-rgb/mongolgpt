@@ -29,6 +29,7 @@ const healthy = {
     catalog: false,
     checkout: false,
     cancellation: false,
+    refund: false,
   }),
 } satisfies Record<string, Response>
 

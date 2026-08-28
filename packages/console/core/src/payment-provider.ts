@@ -5,6 +5,8 @@ import type {
   PaymentInvoiceCancellationRequest,
   PaymentInvoiceCheckout,
   PaymentInvoiceRequest,
+  PaymentRefundReceipt,
+  PaymentRefundRequest,
   PaymentReconciliationRequest,
 } from "./payment-provider-contract"
 
@@ -15,11 +17,15 @@ export {
   PaymentInvoiceCancellationReceiptSchema,
   PaymentInvoiceCancellationRequestSchema,
   PaymentInvoiceRequestSchema,
+  PaymentRefundReceiptSchema,
+  PaymentRefundRequestSchema,
   PaymentReconciliationRequestSchema,
   type PaymentInvoiceCheckout,
   type PaymentInvoiceCancellationReceipt,
   type PaymentInvoiceCancellationRequest,
   type PaymentInvoiceRequest,
+  type PaymentRefundReceipt,
+  type PaymentRefundRequest,
   type PaymentReconciliationRequest,
 } from "./payment-provider-contract"
 
@@ -38,6 +44,11 @@ export interface PaymentReconciliationAdapter extends PaymentProviderAdapter {
 
 export interface PaymentCancellationAdapter extends PaymentProviderAdapter {
   cancelInvoice(input: PaymentInvoiceCancellationRequest): Promise<PaymentInvoiceCancellationReceipt>
+}
+
+export interface PaymentRefundAdapter extends PaymentProviderAdapter {
+  refundPayment(input: PaymentRefundRequest): Promise<PaymentRefundReceipt>
+  reconcileRefund(input: PaymentRefundRequest): Promise<PaymentRefundReceipt | undefined>
 }
 
 export class PaymentProviderResponseError extends Error {
@@ -107,7 +118,8 @@ export async function cancelPaymentProviderResponse(response: Response) {
 export function stableJson(value: unknown): string {
   if (value === null || typeof value !== "object") {
     const encoded = JSON.stringify(value)
-    if (encoded === undefined) throw new TypeError("Төлбөрийн нийлүүлэгчийн өгөгдлийг JSON болгон хувиргах боломжгүй байна")
+    if (encoded === undefined)
+      throw new TypeError("Төлбөрийн нийлүүлэгчийн өгөгдлийг JSON болгон хувиргах боломжгүй байна")
     return encoded
   }
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`
