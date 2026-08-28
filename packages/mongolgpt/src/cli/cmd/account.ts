@@ -456,9 +456,10 @@ export const StatusCommand = effectCmd({
   }),
 })
 
-export const ConsoleCommand = cmd({
-  command: "console",
-  describe: false,
+export const AccountCommand = cmd({
+  command: "account",
+  aliases: ["console"],
+  describe: "MongolGPT бүртгэл, багц болон ажлын орчныг удирдах",
   builder: (yargs) =>
     yargs
       .command({

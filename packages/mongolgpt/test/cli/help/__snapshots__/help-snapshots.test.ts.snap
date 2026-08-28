@@ -144,6 +144,27 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
       --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
 `;
 
+exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt account --help 1`] = `
+"mongolgpt account
+
+MongolGPT бүртгэл, багц болон ажлын орчныг удирдах
+
+Командууд:
+  mongolgpt account login [url]     удирдлагын самбарт нэвтрэх
+  mongolgpt account logout [email]  удирдлагын самбараас гарах
+  mongolgpt account switch          идэвхтэй байгууллага солих
+  mongolgpt account orgs            байгууллагуудыг жагсаах
+  mongolgpt account open            идэвхтэй бүртгэлийн удирдлагын самбарыг нээх
+  mongolgpt account status          багц, хэрэглээний хязгаар болон зарцуулалтыг харах
+
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
+`;
+
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt providers --help 1`] = `
 "mongolgpt providers
 
@@ -473,6 +494,56 @@ MCP серверийн OAuth нэвтрэх мэдээллийг устгах
 
 Байрлалын аргументууд:
   name  MCP серверийн нэр                                                                    [текст]
+
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
+`;
+
+exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt account login --help 1`] = `
+"mongolgpt account login [url]
+
+удирдлагын самбарт нэвтрэх
+
+Байрлалын аргументууд:
+  url  серверийн URL                                                                         [текст]
+
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
+`;
+
+exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt account status --help 1`] = `
+"mongolgpt account status
+
+багц, хэрэглээний хязгаар болон зарцуулалтыг харах
+
+Сонголтууд:
+  -h, --help        тусламж харуулах                                                         [логик]
+  -v, --version     хувилбарын дугаар харуулах                                               [логик]
+      --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
+      --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
+`;
+
+exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt console --help 1`] = `
+"mongolgpt account
+
+MongolGPT бүртгэл, багц болон ажлын орчныг удирдах
+
+Командууд:
+  mongolgpt console login [url]     удирдлагын самбарт нэвтрэх
+  mongolgpt console logout [email]  удирдлагын самбараас гарах
+  mongolgpt console switch          идэвхтэй байгууллага солих
+  mongolgpt console orgs            байгууллагуудыг жагсаах
+  mongolgpt console open            идэвхтэй бүртгэлийн удирдлагын самбарыг нээх
+  mongolgpt console status          багц, хэрэглээний хязгаар болон зарцуулалтыг харах
 
 Сонголтууд:
   -h, --help        тусламж харуулах                                                         [логик]

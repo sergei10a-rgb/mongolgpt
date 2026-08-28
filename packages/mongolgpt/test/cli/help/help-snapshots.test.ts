@@ -48,6 +48,7 @@ const TOP_LEVEL = [
   "attach",
   "run",
   "debug",
+  "account", // `console` remains a backwards-compatible alias
   "providers", // aliased to `auth`
   "agent",
   "upgrade",
@@ -73,6 +74,9 @@ const SUBCOMMANDS = [
   ["mcp", "add"],
   ["mcp", "auth"],
   ["mcp", "logout"],
+  ["account", "login"],
+  ["account", "status"],
+  ["console"],
   ["providers", "list"],
   ["providers", "login"],
   ["providers", "logout"],

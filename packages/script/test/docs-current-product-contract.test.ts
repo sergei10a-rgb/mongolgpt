@@ -74,7 +74,7 @@ describe("documentation product contract", () => {
     const legacy = await Bun.file(legacyRedirects).text()
     const sidebar = config.slice(config.indexOf("sidebar:"), config.indexOf("components:"))
 
-    expect(account).toContain("mongolgpt console login")
+    expect(account).toContain("mongolgpt account login")
     expect(account).toContain("MongolGPT Free Auto")
     expect(account).toContain("Basic, Pro, Max")
     expect(account).toContain("Үйлдвэрлэлийн үйлчилгээ")

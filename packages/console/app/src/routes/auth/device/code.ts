@@ -5,7 +5,7 @@ export async function POST(_event: APIEvent) {
     {
       error: "unsupported_grant_type",
       error_description:
-        "MongolGPT CLI browser OAuth ашигладаг болсон. Шинэчилсний дараа `mongolgpt console login` дахин ажиллуулна уу.",
+        "MongolGPT CLI browser OAuth ашигладаг болсон. Шинэчилсний дараа `mongolgpt account login` дахин ажиллуулна уу.",
     },
     { status: 400, headers: { "Cache-Control": "no-store" } },
   )
