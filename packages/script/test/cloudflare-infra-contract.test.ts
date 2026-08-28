@@ -196,7 +196,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(run).toContain("trap - EXIT")
     const oauthSecrets = run.indexOf("set_optional_secret GOOGLE_CLIENT_ID")
     const stateRepair = run.indexOf('bun sst state repair --stage="$stage" --print-logs 2>&1 | tee "$repair_log"')
-    const database = run.indexOf('MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage="$stage" --print-logs')
+    const database = run.indexOf(
+      'MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage="$stage" --target Database --print-logs',
+    )
     const migration = run.indexOf(
       'MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage="$stage" -- bun run db:migrate',
     )
@@ -210,7 +212,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(migration).toBeGreaterThan(database)
     expect(oauth).toBeGreaterThan(migration)
     expect(run).not.toContain("sst refresh")
-    expect(run).not.toContain("--target Database")
+    expect(run).toContain(
+      'MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage="$stage" --target Database --print-logs',
+    )
     expect(run).not.toContain("--target AuthApi")
     expect(deploy?.env?.MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE).toBe("true")
     expect(deploy?.env?.SST_SECRET_D1BackupApiToken).toBe("disabled")
@@ -285,9 +289,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     )
     expect(deployStep?.run).toContain('bun --cwd packages/runtime script/deploy.ts "$stage"')
     expect(deployStep?.run).toContain(
-      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage=${{ inputs.stage }} --print-logs",
+      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs",
     )
-    expect(deployStep?.run).not.toContain("--target Database")
   })
 
   test("gates every deployed app with HTTP and Chromium smoke checks", async () => {
@@ -720,13 +723,14 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
   test("migrates D1 before publishing schema-dependent hosted services", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
+    const packageSource = await Bun.file(new URL("../../../package.json", import.meta.url)).json()
     const workflow = parseWorkflow(source)
     const deployStep = workflow.jobs.deploy.steps.find((step) => step.name === "Validate and deploy to Cloudflare")
     expect(deployStep).toBeDefined()
 
     const run = deployStep?.run ?? ""
     const database = run.indexOf(
-      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage=${{ inputs.stage }} --print-logs",
+      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs",
     )
     const migration = run.indexOf(
       "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate",
@@ -735,6 +739,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(database).toBeGreaterThanOrEqual(0)
     expect(migration).toBeGreaterThan(database)
     expect(application).toBeGreaterThan(migration)
+    expect(packageSource.scripts["db:migrate"]).toBe("bun --cwd packages/console/core run db:migrate-d1")
   })
 
   test("runs bounded account deletion retention against the linked D1 database", async () => {

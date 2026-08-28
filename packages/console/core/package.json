@@ -23,8 +23,9 @@
   "scripts": {
     "db": "drizzle-kit generate --config=drizzle.config.ts",
     "db-d1-generate": "drizzle-kit generate --config=drizzle.d1.config.ts",
-    "db-dev": "sst shell --stage dev -- drizzle-kit migrate --config=drizzle.remote.config.ts",
-    "db-prod": "sst shell --stage production -- drizzle-kit migrate --config=drizzle.remote.config.ts",
+    "db:migrate-d1": "bun script/migrate-d1.ts",
+    "db-dev": "sst shell --stage dev -- bun run db:migrate-d1",
+    "db-prod": "sst shell --stage production -- bun run db:migrate-d1",
     "db-studio": "sst shell -- drizzle-kit studio --config=drizzle.remote.config.ts",
     "update-models": "script/update-models.ts",
     "promote-models-to-dev": "script/promote-models.ts dev",
