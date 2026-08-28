@@ -52,6 +52,7 @@ export const legacyMongolianDocRedirects = {
   ...Object.fromEntries(legacyMongolianDocSlugs.map((slug) => [`/mn/${slug}`, `/docs/${slug}`])),
 }
 
+/** @type {Record<string, string>} */
 export const staticDocsEntrypointRedirects = {
   "/": "/docs/",
   ...legacyMongolianDocRedirects,

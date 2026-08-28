@@ -1,5 +1,6 @@
 import { access, readFile } from "node:fs/promises"
-import { join } from "node:path"
+import { join, sep } from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import {
   staticDocsEntrypointRedirects,
   staticRedirectHtmlDocument,
@@ -38,6 +39,8 @@ for (const [source, target] of Object.entries(staticDocsEntrypointRedirects)) {
   }
 }
 
+await verifySearchIndex()
+
 console.log("Static docs root, legacy redirect, content, search artifact бэлэн байна.")
 
 function extractAbsoluteUrl(source: string, pattern: RegExp) {
@@ -52,4 +55,60 @@ function canonicalOrigin(value: string) {
     throw new Error("Static docs public URL нь зөвхөн canonical HTTP(S) origin байна.")
   }
   return url.origin
+}
+
+async function verifySearchIndex() {
+  const searchRoot = join(root, "docs", "pagefind")
+  const nativeFetch = globalThis.fetch
+  const localFetch = Object.assign(
+    async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+      const url = input instanceof Request ? input.url : input.toString()
+      if (!url.startsWith("file:")) return nativeFetch(input, init)
+      return new Response(await readFile(fileURLToPath(url)), { status: 200 })
+    },
+    { preconnect: nativeFetch.preconnect },
+  )
+  globalThis.fetch = localFetch
+
+  type SearchResult = { data: () => Promise<{ url: string }> }
+  type SearchIndex = {
+    init: () => Promise<void>
+    search: (query: string) => Promise<{ results: SearchResult[] }>
+    destroy: () => Promise<void>
+  }
+  type PagefindModule = {
+    createInstance: (options: {
+      basePath: string
+      baseUrl: string
+      language: string
+      noWorker: boolean
+    }) => SearchIndex
+  }
+
+  let index: SearchIndex | undefined
+  try {
+    const pagefind = (await import(pathToFileURL(join(searchRoot, "pagefind.js")).href)) as PagefindModule
+    index = pagefind.createInstance({
+      basePath: pathToFileURL(searchRoot + sep).href,
+      baseUrl: "/docs",
+      language: "mn",
+      noWorker: true,
+    })
+    await index.init()
+
+    for (const [query, expectedPath] of [
+      ["Free Auto", "/docs/account/"],
+      ["алдаа оношлох", "/docs/troubleshooting/"],
+      ["MCP серверүүд", "/docs/mcp-servers/"],
+    ] as const) {
+      const result = await index.search(query)
+      const documents = await Promise.all(result.results.slice(0, 20).map((item) => item.data()))
+      if (!documents.some((item) => item.url === expectedPath)) {
+        throw new Error(`Static docs хайлт зөв хуудас буцаасангүй: ${query} -> ${expectedPath}`)
+      }
+    }
+  } finally {
+    await index?.destroy()
+    globalThis.fetch = nativeFetch
+  }
 }

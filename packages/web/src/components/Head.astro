@@ -7,10 +7,9 @@ const base = import.meta.env.BASE_URL.replace(/^\//, "").replace(/\/$/, "")
 const slug = Astro.url.pathname.replace(/^\//, "").replace(/\/$/, "");
 const {
   entry: {
-    data: { title , description },
+    data: { title },
   },
 } = Astro.locals.starlightRoute;
-const isDocs = base === "" ? true : slug === base || slug.startsWith(`${base}/`)
 const t = Astro.locals.t as (key: string) => string
 const titleSuffix = t("app.head.titleSuffix")
 const shareSlug = base === "" ? "s" : `${base}/s`
