@@ -1,29 +1,84 @@
-name: release-github-action
+name: Release MongolGPT GitHub Action
 
 on:
-  push:
-    branches:
-      - dev
-    paths:
-      - "github/**"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Immutable action version (x.y.z)"
+        required: true
+        type: string
+        default: "1.0.0"
+      cli_version:
+        description: "Action-д pin хийх MongolGPT CLI хувилбар (x.y.z)"
+        required: true
+        type: string
+        default: "0.1.2"
+      confirmation:
+        description: "PUBLISH MONGOLGPT GITHUB ACTION x.y.z WITH CLI a.b.c гэж яг бичнэ"
+        required: true
+        type: string
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+concurrency:
+  group: release-mongolgpt-github-action
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
   release:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout main
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
-      - run: git fetch --force --tags
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
 
-      - name: Release
+      - name: Validate immutable version confirmation
+        env:
+          ACTION_VERSION: ${{ inputs.version }}
+          CLI_VERSION: ${{ inputs.cli_version }}
+          RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
         run: |
-          git config --global user.email "mongolgpt@sst.dev"
-          git config --global user.name "mongolgpt"
-          ./github/script/release
+          if [[ ! "$ACTION_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Action version x.y.z форматтай байна."
+            exit 1
+          fi
+          if [[ ! "$CLI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "CLI version x.y.z форматтай байна."
+            exit 1
+          fi
+          if [ "$RELEASE_CONFIRMATION" != "PUBLISH MONGOLGPT GITHUB ACTION $ACTION_VERSION WITH CLI $CLI_VERSION" ]; then
+            echo "GitHub Action publish баталгаажуулалт буруу байна."
+            exit 1
+          fi
+
+      - name: Verify pinned CLI release
+        env:
+          CLI_VERSION: ${{ inputs.cli_version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bun -e 'import { readFileSync } from "node:fs"; import { parse } from "yaml"; const action = parse(readFileSync("github/action.yml", "utf8")); if (String(action.inputs.cli_version.default) !== process.env.CLI_VERSION) throw new Error("action.yml CLI pin таарахгүй байна")'
+          gh release view "mongolgpt-v${CLI_VERSION}" --json isDraft,isPrerelease,assets --jq '
+            select(.isDraft == false and .isPrerelease == false) |
+            select(any(.assets[]; .name == "mongolgpt-linux-x64.tar.gz"))'
+
+      - name: Verify action and CLI contracts
+        run: |
+          bun run --cwd packages/mongolgpt test test/cli/github-action.test.ts
+          bun run --cwd packages/mongolgpt typecheck
+          bun run --cwd packages/script test
+          GITHUB_REF_NAME="mongolgpt-github-v${{ inputs.version }}" ./github/script/publish
+
+      - name: Publish immutable action tag
+        env:
+          ACTION_VERSION: ${{ inputs.version }}
+        run: |
+          git config user.email "actions@mgpt.mn"
+          git config user.name "MongolGPT Release"
+          ./github/script/release "$ACTION_VERSION"

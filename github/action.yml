@@ -5,6 +5,11 @@ branding:
   color: "orange"
 
 inputs:
+  cli_version:
+    description: "Суулгах MongolGPT CLI-ийн хөдөлгөөнгүй хувилбар"
+    required: false
+    default: "0.1.2"
+
   model:
     description: "Ашиглах үйлчилгээ үзүүлэгч болон загвар"
     required: true
@@ -32,7 +37,7 @@ inputs:
     default: "true"
 
   mentions:
-    description: "Таслалаар тусгаарласан дуудах үгс; анхдагч нь /mongolgpt,/oc"
+    description: "Таслалаар тусгаарласан дуудах үгс; анхдагч нь /mongolgpt"
     required: false
 
   variant:
@@ -46,24 +51,17 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: MongolGPT хувилбарыг авах
-      id: version
-      shell: bash
-      run: |
-        VERSION=$(curl -sf https://api.github.com/repos/sergei10a-rgb/mongolgpt/releases/latest | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
-        echo "version=${VERSION:-latest}" >> $GITHUB_OUTPUT
-
     - name: MongolGPT түр санах ойг ашиглах
       id: cache
       uses: actions/cache@v4
       with:
         path: ~/.mongolgpt/bin
-        key: mongolgpt-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.version }}
+        key: mongolgpt-${{ runner.os }}-${{ runner.arch }}-${{ inputs.cli_version }}
 
     - name: MongolGPT суулгах
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
-      run: curl -fsSL https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/install | bash
+      run: VERSION="${{ inputs.cli_version }}" bash "$GITHUB_ACTION_PATH/../install" --no-modify-path
 
     - name: MongolGPT-ийг PATH-д нэмэх
       shell: bash

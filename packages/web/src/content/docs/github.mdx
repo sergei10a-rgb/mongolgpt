@@ -23,7 +23,7 @@ GitHub репо дахь төсөлд дараах тушаалыг ажиллу
 mongolgpt github install
 ```
 
-Энэ нь таныг GitHub аппликейшнийг суулгах, ажлын урсгалыг бий болгох, нууцыг тохируулахад туслах болно.
+Энэ нь ажлын урсгалын файл үүсгэх болон шаардлагатай нууцыг тохируулах алхмуудыг заана. Тусдаа GitHub App суулгах шаардлагагүй.
 
 ---
 
@@ -31,15 +31,11 @@ mongolgpt github install
 
 Эсвэл та гараар тохируулж болно.
 
-1. **GitHub програмыг суулгана уу**
-
-   [**github.com/apps/mongolgpt-agent**](https://github.com/apps/mongolgpt-agent) руу оч. Үүнийг зорилтот репозитор дээр суулгасан эсэхийг шалгаарай.
-
-2. **Ажлын урсгалыг нэмэх**
+1. **Ажлын урсгалыг нэмэх**
 
    Дараах ажлын урсгалын файлыг репозиторт `.github/workflows/mongolgpt.yml` замаар нэмнэ үү. Тохирох `model` болон шаардлагатай API түлхүүрүүдийг `env` хэсэгт тохируулна.
 
-   ```yml title=".github/workflows/mongolgpt.yml" {24,26}
+   ```yml title=".github/workflows/mongolgpt.yml"
    name: mongolgpt
 
    on:
@@ -54,25 +50,29 @@ mongolgpt github install
          contains(github.event.comment.body, '/mongolgpt')
        runs-on: ubuntu-latest
        permissions:
-         id-token: write
+         contents: write
+         issues: write
+         pull-requests: write
        steps:
-          - name: Repository checkout хийх
-            uses: actions/checkout@v6
-            with:
-              fetch-depth: 1
-              persist-credentials: false
+         - name: Repository checkout хийх
+           uses: actions/checkout@v6
+           with:
+             fetch-depth: 1
+             persist-credentials: false
 
-          - name: MongolGPT ажиллуулах
-           uses: sergei10a-rgb/mongolgpt/github@latest
+         - name: MongolGPT ажиллуулах
+           uses: sergei10a-rgb/mongolgpt/github@mongolgpt-github-v1.0.0
            env:
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+             GITHUB_TOKEN: ${{ github.token }}
            with:
              model: anthropic/claude-sonnet-4-20250514
              # share: true
-             # github_token: xxxx
+             use_github_token: true
+             mentions: /mongolgpt
    ```
 
-3. ** API түлхүүрүүдийг нууцаар хадгалах**
+2. **API түлхүүрүүдийг нууцаар хадгалах**
 
    Байгууллага эсвэл репозиторын **Settings** хэсгээс **Secrets and variables**-ийг нээгээд **Actions**-ийг сонгоно. Шаардлагатай API түлхүүрүүдээ нэмнэ үү.
 
@@ -81,22 +81,24 @@ mongolgpt github install
 ## Тохиргоо
 
 - `model`: MongolGPT-тай ашиглах загвар. `provider/model` форматыг авна. Энэ **шаардлагатай**.
+- `cli_version`: Action-ийн суулгах MongolGPT CLI хувилбар. Action release-д шалгагдсан хөдөлгөөнгүй хувилбарыг өгөгдмөлөөр ашиглана.
 - `agent`: Ашиглах агент. Үндсэн төлөөлөгч байх ёстой. Тохиргооноос `default_agent` эсвэл олдохгүй бол `"build"` руу буцна.
-- `share`: MongolGPT сессийг хуваалцах эсэх. Нийтийн агуулахын хувьд өгөгдмөл нь **үнэн**.
+- `share`: MongolGPT сессийг хуваалцах эсэх. Өгөгдмөл нь **худал**. Зөвхөн өөрийн хуваалцах серверийг тохируулсан үед идэвхжүүлнэ.
 - `prompt`: Өгөгдмөл зан төлөвийг хүчингүй болгох нэмэлт захиалгат сануулга. MongolGPT хүсэлтийг хэрхэн боловсруулахыг тохируулахын тулд үүнийг ашиглана уу.
-- `token`: Сэтгэгдэл бичих, өөрчлөлт хийх, татах хүсэлтийг нээх зэрэг үйлдлүүдийг гүйцэтгэх нэмэлт GitHub хандалтын токен. Анхдагчаар MongolGPT нь MongolGPT GitHub Апп-аас суулгах хандалтын тэмдгийг ашигладаг тул амлалт, сэтгэгдэл, татах хүсэлтүүд апп-аас ирсэн мэт харагдана.
+- `use_github_token`: Workflow-д GitHub-аас олгосон `GITHUB_TOKEN`-ийг шууд ашиглах эсэх. Өгөгдмөл нь **үнэн** тул MongolGPT-ийн тусдаа GitHub App шаардлагагүй.
+- `mentions`: MongolGPT-г дуудах үгсийн таслалаар тусгаарласан жагсаалт. Өгөгдмөл нь `/mongolgpt`.
+- `oidc_base_url`: Зөвхөн өөрийн GitHub App болон OIDC token солилцох сервер ашиглах үед тохируулна.
 
-  Эсвэл та GitHub Action runner-ийн [суулгасан `GITHUB_TOKEN`](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token)-г MongolGPT GitHub програм суулгахгүйгээр ашиглаж болно. Ажлын урсгалдаа шаардлагатай зөвшөөрлийг олгохоо мартуузай:
+  Workflow нь [суулгасан `GITHUB_TOKEN`](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token)-ийг ашиглана. Репозиторын **Settings > Actions > General > Workflow permissions** хэсгээс **Read and write permissions**-ийг сонгоно. PR үүсгэх бол мөн **Allow GitHub Actions to create and approve pull requests** сонголтыг идэвхжүүлнэ. Workflow файлд `contents: write`, `issues: write`, `pull-requests: write` зөвшөөрөл өгнө.
 
   ```yaml
   permissions:
-    id-token: write
     contents: write
     pull-requests: write
     issues: write
   ```
 
-  Хэрэв хүсвэл [хувийн хандалтын токенууд](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)(PAT) ашиглаж болно.
+  API түлхүүрүүдийг **Settings > Secrets and variables > Actions** хэсэгт хадгална уу.
 
 ---
 
@@ -139,11 +141,13 @@ jobs:
           persist-credentials: false
 
       - name: MongolGPT ажиллуулах
-        uses: sergei10a-rgb/mongolgpt/github@latest
+        uses: sergei10a-rgb/mongolgpt/github@mongolgpt-github-v1.0.0
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           model: anthropic/claude-sonnet-4-20250514
+          use_github_token: true
           prompt: |
             Кодын сан дахь TODO comment-уудыг шалгаж хураангуй үүсгэ.
             Засах шаардлагатай асуудал олдвол хянах issue нээ.
@@ -176,10 +180,10 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: sergei10a-rgb/mongolgpt/github@latest
+      - uses: sergei10a-rgb/mongolgpt/github@mongolgpt-github-v1.0.0
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           model: anthropic/claude-sonnet-4-20250514
           use_github_token: true
@@ -232,7 +236,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: sergei10a-rgb/mongolgpt/github@latest
+      - uses: sergei10a-rgb/mongolgpt/github@mongolgpt-github-v1.0.0
         if: steps.check.outputs.result == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -254,7 +258,7 @@ jobs:
 Ажлын урсгал дахь MongolGPT-ийн ажиллагааг өөрчлөхийн тулд өгөгдмөл сануулгыг дарж бичнэ.
 
 ```yaml title=".github/workflows/mongolgpt.yml"
-- uses: sergei10a-rgb/mongolgpt/github@latest
+- uses: sergei10a-rgb/mongolgpt/github@mongolgpt-github-v1.0.0
   with:
     model: anthropic/claude-sonnet-4-5
     prompt: |

@@ -9,16 +9,14 @@ on:
 jobs:
   mongolgpt:
     if: |
-      contains(github.event.comment.body, ' /oc') ||
-      startsWith(github.event.comment.body, '/oc') ||
       contains(github.event.comment.body, ' /mongolgpt') ||
       startsWith(github.event.comment.body, '/mongolgpt')
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       id-token: write
-      contents: read
-      pull-requests: read
-      issues: read
+      contents: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -26,7 +24,7 @@ jobs:
       - uses: ./.github/actions/setup-bun
 
       - name: Run mongolgpt
-        uses: sergei10a-rgb/mongolgpt/github@2c14fc5586fe0b88e5c04732d2e846769cc35671 # latest
+        uses: sergei10a-rgb/mongolgpt/github@mongolgpt-github-v1.0.0
         env:
           MONGOLGPT_API_KEY: ${{ secrets.MONGOLGPT_API_KEY }}
           MONGOLGPT_PERMISSION: '{"bash": "deny"}'

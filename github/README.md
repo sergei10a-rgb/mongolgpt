@@ -27,7 +27,7 @@ GitHub-д бүртгэсэн асуудал дээр дараах сэтгэгд
 GitHub PR дээр дараах сэтгэгдлийг үлдээнэ үү. MongolGPT хүссэн өөрчлөлтийг хэрэгжүүлээд тухайн PR-д шууд нэмнэ.
 
 ```
-Delete the attachment from S3 when the note is removed /oc
+Delete the attachment from S3 when the note is removed /mongolgpt
 ```
 
 #### Кодын тодорхой мөрүүдийг хянуулах
@@ -36,7 +36,7 @@ PR-ийн `Files` таб дахь кодын мөрөн дээр шууд сэт
 
 ```
 [Comment on specific lines in Files tab]
-/oc add error handling here
+/mongolgpt add error handling here
 ```
 
 Тодорхой мөрөн дээр сэтгэгдэл үлдээхэд MongolGPT дараах мэдээллийг хүлээн авна:
@@ -56,12 +56,11 @@ GitHub репогийн хавтас дахь терминалаас дараа�
 mongolgpt github install
 ```
 
-Энэ команд GitHub App-ийг суулгах, ажлын урсгалын файл үүсгэх, GitHub Actions-ийн нууц утгуудыг тохируулах алхмуудыг дарааллаар нь заана.
+Энэ команд ажлын урсгалын файл үүсгэх болон GitHub Actions-ийн нууц утгуудыг тохируулах алхмуудыг заана. Тусдаа GitHub App шаардлагагүй.
 
 ### Гараар тохируулах
 
-1. GitHub App-ийг https://github.com/apps/mongolgpt-agent холбоосоос суулгаад холбох репод идэвхжсэн эсэхийг шалгана уу.
-2. Реподоо дараах ажлын урсгалын файлыг `.github/workflows/mongolgpt.yml` замаар нэмнэ үү. Тохирох `model` болон шаардлагатай API түлхүүрүүдийг `env` дотор тохируулна.
+1. Реподоо дараах ажлын урсгалын файлыг `.github/workflows/mongolgpt.yml` замаар нэмнэ үү. Тохирох `model` болон шаардлагатай API түлхүүрүүдийг `env` дотор тохируулна.
 
    ```yml
    name: mongolgpt
@@ -75,29 +74,33 @@ mongolgpt github install
    jobs:
      mongolgpt:
        if: |
-         contains(github.event.comment.body, '/oc') ||
          contains(github.event.comment.body, '/mongolgpt')
        runs-on: ubuntu-latest
        permissions:
-         id-token: write
+         contents: write
+         issues: write
+         pull-requests: write
        steps:
-          - name: Checkout repository
-            uses: actions/checkout@v6
-            with:
-              fetch-depth: 1
-              persist-credentials: false
+         - name: Checkout repository
+           uses: actions/checkout@v6
+           with:
+             fetch-depth: 1
+             persist-credentials: false
 
-          - name: Run mongolgpt
-           uses: sergei10a-rgb/mongolgpt/github@latest
+         - name: Run mongolgpt
+           uses: sergei10a-rgb/mongolgpt/github@mongolgpt-github-v1.0.0
            env:
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+             GITHUB_TOKEN: ${{ github.token }}
            with:
              model: anthropic/claude-sonnet-4-20250514
              use_github_token: true
+             mentions: /mongolgpt
    ```
 
-3. API түлхүүрүүдээ нууц утгаар хадгална уу. Байгууллага эсвэл төслийн **settings** рүү орж, зүүн талын **Secrets and variables** цэсийг дэлгээд **Actions**-ийг сонгоно. Дараа нь шаардлагатай API түлхүүрүүдийг нэмнэ.
+2. API түлхүүрүүдээ **Settings > Secrets and variables > Actions** хэсэгт нууц утгаар хадгална уу. **Settings > Actions > General > Workflow permissions** хэсгээс **Read and write permissions**-ийг сонгоно. PR үүсгэх бол мөн **Allow GitHub Actions to create and approve pull requests** сонголтыг идэвхжүүлнэ.
+
+Action нь шалгагдсан MongolGPT CLI хувилбарыг хөдөлгөөнгүйгээр зааж суулгана. Шинэ CLI-г зориуд турших үед л `cli_version` оролтыг өөрчилнө.
 
 ## Тусламж
 

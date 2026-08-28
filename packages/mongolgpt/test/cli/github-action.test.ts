@@ -1,6 +1,13 @@
 import { test, expect, describe } from "bun:test"
 import { SessionV1 } from "@mongolgpt/core/v1/session"
-import { extractResponseText, formatPromptTooLargeError } from "../../src/cli/cmd/github"
+import {
+  DEFAULT_GITHUB_MENTIONS,
+  MONGOLGPT_GITHUB_ACTION_REF,
+  extractResponseText,
+  formatPromptTooLargeError,
+  githubAgentIdentity,
+  githubMentions,
+} from "../../src/cli/cmd/github"
 import type { MessageV2 } from "../../src/session/message-v2"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 
@@ -195,5 +202,32 @@ describe("formatPromptTooLargeError", () => {
     expect(result).toInclude("img1.png (3 KB)")
     expect(result).toInclude("img2.jpg (6 KB)")
     expect(result).toInclude("img3.gif (9 KB)")
+  })
+})
+
+describe("GitHub Action defaults", () => {
+  test("uses an immutable MongolGPT action tag", () => {
+    expect(MONGOLGPT_GITHUB_ACTION_REF).toBe("sergei10a-rgb/mongolgpt/github@mongolgpt-github-v1.0.0")
+  })
+
+  test("uses only the MongolGPT mention by default", () => {
+    expect(DEFAULT_GITHUB_MENTIONS).toEqual(["/mongolgpt"])
+    expect(githubMentions()).toEqual(["/mongolgpt"])
+    expect(githubMentions(" , ")).toEqual(["/mongolgpt"])
+  })
+
+  test("keeps explicit custom compatibility mentions", () => {
+    expect(githubMentions(" /MongolGPT, /legacy ")).toEqual(["/mongolgpt", "/legacy"])
+  })
+
+  test("uses the real token actor for commits and reactions", () => {
+    expect(githubAgentIdentity(true)).toEqual({
+      username: "github-actions[bot]",
+      email: "41898282+github-actions[bot]@users.noreply.github.com",
+    })
+    expect(githubAgentIdentity(false)).toEqual({
+      username: "mongolgpt-agent[bot]",
+      email: "mongolgpt-agent[bot]@users.noreply.github.com",
+    })
   })
 })

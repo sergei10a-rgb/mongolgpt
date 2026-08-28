@@ -1512,8 +1512,8 @@ export NVIDIA_API_KEY=nvapi-your-key-here
 
 Та Ollama-аар дамжуулан орон нутгийн загваруудыг ашиглахын тулд mongolgpt-г тохируулах боломжтой.
 
-:::tip
-Ollama өөрийгөө автоматаар MongolGPT-д тохируулж болно. Дэлгэрэнгүйг [Ollama нэгтгэх баримтууд](https://docs.ollama.com/integrations/mongolgpt) харна уу.
+:::note
+MongolGPT-ийн тусгай preset одоогоор Ollama-д нийтлэгдээгүй. Ollama-ийн OpenAI-compatible API-г ашиглан MongolGPT-д provider-ийг гараар тохируулна уу. Ollama-ийн ерөнхий [OpenAI compatibility баримт](https://docs.ollama.com/api/openai-compatibility)-ыг үзнэ үү.
 :::
 
 ```json title="mongolgpt.json" "ollama" {5, 6, 8, 10-14}

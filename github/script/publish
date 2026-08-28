@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-# Get the latest Git tag
-latest_tag=$(git tag --sort=committerdate | grep -E '^github-v[0-9]+\.[0-9]+\.[0-9]+$' | tail -1)
-if [ -z "$latest_tag" ]; then
-    echo "No tags found"
-    exit 1
-fi
-echo "Latest tag: $latest_tag"
+set -euo pipefail
 
-# Update latest tag
-git tag -d latest
-git push origin :refs/tags/latest
-git tag -a latest $latest_tag -m "Update latest to $latest_tag"
-git push origin latest
+tag="${GITHUB_REF_NAME:-${1:-}}"
+if [[ ! "$tag" =~ ^mongolgpt-github-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Unexpected MongolGPT GitHub Action tag: ${tag:-<empty>}"
+  exit 1
+fi
+
+test -f github/action.yml
+grep -q 'name: "MongolGPT GitHub Action"' github/action.yml
+grep -q 'using: "composite"' github/action.yml
+
+echo "MongolGPT GitHub Action published from immutable tag ${tag}."

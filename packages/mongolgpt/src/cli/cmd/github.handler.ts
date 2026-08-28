@@ -32,7 +32,13 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { Process } from "@/util/process"
 import { parseGitHubRemote } from "@/util/repository"
 import { Effect } from "effect"
-import { extractResponseText, formatPromptTooLargeError } from "./github.shared"
+import {
+  MONGOLGPT_GITHUB_ACTION_REF,
+  extractResponseText,
+  formatPromptTooLargeError,
+  githubAgentIdentity,
+  githubMentions,
+} from "./github.shared"
 import { parseShareUrl } from "@/share/url"
 
 type GitHubAuthor = {
@@ -138,7 +144,6 @@ type IssueQueryResponse = {
   }
 }
 
-const AGENT_USERNAME = "mongolgpt-agent[bot]"
 const AGENT_REACTION = "eyes"
 const WORKFLOW_FILE = ".github/workflows/mongolgpt.yml"
 
@@ -293,8 +298,6 @@ on:
 jobs:
   mongolgpt:
     if: |
-      contains(github.event.comment.body, ' /oc') ||
-      startsWith(github.event.comment.body, '/oc') ||
       contains(github.event.comment.body, ' /mongolgpt') ||
       startsWith(github.event.comment.body, '/mongolgpt')
     runs-on: ubuntu-latest
@@ -309,7 +312,7 @@ jobs:
           persist-credentials: false
 
       - name: Run MongolGPT
-        uses: sergei10a-rgb/mongolgpt/github@main${envStr}
+        uses: ${MONGOLGPT_GITHUB_ACTION_REF}${envStr}
         with:
           model: ${provider}/${model}
           use_github_token: true`,
@@ -381,7 +384,8 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
     let appToken: string
     let octoRest: Octokit
     let octoGraph: typeof graphql
-    let gitConfig: string
+    let gitConfig: string | undefined
+    let gitCredentialsConfigured = false
     let session: { id: SessionID; title: string; version: string }
     let shareUrl: string | undefined
     let exitCode = 0
@@ -390,6 +394,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
       ? (payload as IssueCommentEvent | PullRequestReviewCommentEvent).comment.id
       : undefined
     const useGithubToken = normalizeUseGithubToken()
+    const agentIdentity = githubAgentIdentity(useGithubToken)
     const commentType = isCommentEvent
       ? context.eventName === "pull_request_review_comment"
         ? "pr_review"
@@ -435,9 +440,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
       })
 
       const { userPrompt, promptFiles } = await getUserPrompt()
-      if (!useGithubToken) {
-        await configureGit(appToken)
-      }
+      await configureGit(appToken, agentIdentity)
       // Skip permission check and reactions for repo events (no actor to check, no issue to react to)
       if (isUserEvent) {
         await assertPermissions()
@@ -601,9 +604,10 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
       // Also output the clean error message for the action to capture
       //core.setOutput("prepare_error", e.message);
     } finally {
-      if (!useGithubToken) {
+      try {
         await restoreGitConfig()
-        await revokeAppToken()
+      } finally {
+        if (!useGithubToken) await revokeAppToken()
       }
     }
     process.exit(exitCode)
@@ -692,10 +696,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
       }
 
       const reviewContext = getReviewCommentContext()
-      const mentions = (process.env["MENTIONS"] || "/mongolgpt,/oc")
-        .split(",")
-        .map((m) => m.trim().toLowerCase())
-        .filter(Boolean)
+      const mentions = githubMentions(process.env["MENTIONS"])
       let prompt = (() => {
         if (!isCommentEvent) {
           return "Энэ pull request-ийг review хий"
@@ -972,7 +973,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
       return responseJson.token
     }
 
-    async function configureGit(appToken: string) {
+    async function configureGit(appToken: string, identity: { username: string; email: string }) {
       // Do not change git config when running locally
       if (isMock) return
 
@@ -989,14 +990,17 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
       const newCredentials = Buffer.from(`x-access-token:${appToken}`, "utf8").toString("base64")
 
       await gitRun(["config", "--local", config, `AUTHORIZATION: basic ${newCredentials}`])
-      await gitRun(["config", "--global", "user.name", AGENT_USERNAME])
-      await gitRun(["config", "--global", "user.email", `${AGENT_USERNAME}@users.noreply.github.com`])
+      gitCredentialsConfigured = true
+      await gitRun(["config", "--global", "user.name", identity.username])
+      await gitRun(["config", "--global", "user.email", identity.email])
     }
 
     async function restoreGitConfig() {
-      if (gitConfig === undefined) return
+      if (!gitCredentialsConfigured) return
       const config = "http.https://github.com/.extraheader"
-      await gitRun(["config", "--local", config, gitConfig])
+      await gitStatus(["config", "--local", "--unset-all", config])
+      if (gitConfig !== undefined) await gitRun(["config", "--local", config, gitConfig])
+      gitCredentialsConfigured = false
     }
 
     async function checkoutNewBranch(type: "issue" | "schedule" | "dispatch") {
@@ -1176,7 +1180,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
             content: AGENT_REACTION,
           })
 
-          const eyesReaction = reactions.data.find((r) => r.user?.login === AGENT_USERNAME)
+          const eyesReaction = reactions.data.find((r) => r.user?.login === agentIdentity.username)
           if (!eyesReaction) return
 
           return await octoRest.rest.reactions.deleteForPullRequestComment({
@@ -1194,7 +1198,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
           content: AGENT_REACTION,
         })
 
-        const eyesReaction = reactions.data.find((r) => r.user?.login === AGENT_USERNAME)
+        const eyesReaction = reactions.data.find((r) => r.user?.login === agentIdentity.username)
         if (!eyesReaction) return
 
         return await octoRest.rest.reactions.deleteForIssueComment({
@@ -1212,7 +1216,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
         content: AGENT_REACTION,
       })
 
-      const eyesReaction = reactions.data.find((r) => r.user?.login === AGENT_USERNAME)
+      const eyesReaction = reactions.data.find((r) => r.user?.login === agentIdentity.username)
       if (!eyesReaction) return
 
       await octoRest.rest.reactions.deleteForIssue({
