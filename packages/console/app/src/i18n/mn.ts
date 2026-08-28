@@ -126,7 +126,7 @@ export const dict = {
 
   "home.banner.badge": "Шинэ",
   "home.banner.text": "Компьютерийн аппын туршилтын хувилбар гарлаа",
-  "home.banner.platforms": "macOS, Windows болон Linux-д",
+  "home.banner.platforms": "Windows x64-д",
   "home.banner.downloadNow": "Одоо татах",
   "home.banner.downloadBetaNow": "Компьютерийн туршилтын хувилбарыг татах",
 
@@ -243,7 +243,8 @@ export const dict = {
   "gateway.api.error.userMonthlyLimitReached":
     "Та сарын ${{amount}} зарцуулалтын хязгаарт хүрлээ. Хязгаараа эндээс удирдана уу: {{membersUrl}}",
   "gateway.api.error.modelDisabled": "Загварыг идэвхгүй болгосон",
-  "gateway.api.error.trialEnded": "{{model}} загварын үнэгүй эрх дууслаа. Үргэлжлүүлэх багцаа эндээс сонгоно уу: {{link}}",
+  "gateway.api.error.trialEnded":
+    "{{model}} загварын үнэгүй эрх дууслаа. Үргэлжлүүлэх багцаа эндээс сонгоно уу: {{link}}",
 
   "workspace.nav.models": "Загварууд",
   "workspace.nav.usage": "Хэрэглээ",

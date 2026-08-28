@@ -1,6 +1,11 @@
-import { Title } from "@solidjs/meta"
+import "../index.css"
+import { Meta, Title } from "@solidjs/meta"
 import { A, useNavigate } from "@solidjs/router"
 import { For, Show, createSignal, onMount } from "solid-js"
+import { Footer } from "~/component/footer"
+import { Header } from "~/component/header"
+import { Legal } from "~/component/legal"
+import { LocaleLinks } from "~/component/locale-links"
 import { useLanguage } from "~/context/language"
 import {
   type SupportCategory,
@@ -23,6 +28,7 @@ export default function SupportIndex() {
   const navigate = useNavigate()
   const language = useLanguage()
   const [page, setPage] = createSignal<SupportTicketPage>()
+  const [authenticated, setAuthenticated] = createSignal(false)
   const [loading, setLoading] = createSignal(true)
   const [listError, setListError] = createSignal<string>()
   const [createError, setCreateError] = createSignal<string>()
@@ -39,7 +45,13 @@ export default function SupportIndex() {
     setListError(undefined)
     try {
       setPage(await listTickets(cursor))
+      setAuthenticated(true)
     } catch (caught) {
+      if (caught instanceof SupportRequestError && caught.status === 401) {
+        setAuthenticated(false)
+        return
+      }
+      setAuthenticated(false)
       setListError(messageFor(caught))
     } finally {
       setLoading(false)
@@ -65,6 +77,10 @@ export default function SupportIndex() {
       })
       void navigate(language.route(`/support/${created.id}`))
     } catch (caught) {
+      if (caught instanceof SupportRequestError && caught.status === 401) {
+        setAuthenticated(false)
+        return
+      }
       setCreateError(messageFor(caught))
     } finally {
       setSubmitting(false)
@@ -103,116 +119,163 @@ export default function SupportIndex() {
   }
 
   return (
-    <>
+    <main data-page="mongolgpt" data-view="support">
       <Title>Тусламж | MongolGPT</Title>
-      <main data-page="support">
-        <header data-slot="page-header">
-          <h1>Тусламж</h1>
-        </header>
-
-        <section aria-labelledby="support-create-title">
-          <h2 id="support-create-title">Шинэ хүсэлт</h2>
-          <form onSubmit={submit} novalidate>
-            <label>
-              Гарчиг
-              <input value={subject()} maxlength="160" onInput={(event) => setSubject(event.currentTarget.value)} />
-            </label>
-            <div data-slot="form-grid">
-              <label>
-                Ангилал
-                <select
-                  value={category()}
-                  onChange={(event) => setCategory(event.currentTarget.value as SupportCategory)}
-                >
-                  <For each={categories}>{(item) => <option value={item.value}>{item.label}</option>}</For>
-                </select>
-              </label>
-              <label>
-                Ажлын орон зайн ID (заавал биш)
-                <input
-                  value={workspaceID()}
-                  maxlength="30"
-                  onInput={(event) => setWorkspaceID(event.currentTarget.value)}
-                />
-              </label>
+      <Meta
+        name="description"
+        content="MongolGPT-ийн суулгалт, нэвтрэлт, үнэгүй автомат горим, загварын холболт, төлбөрийн тусламж"
+      />
+      <LocaleLinks path="/support" />
+      <div data-component="container">
+        <Header hideGetStarted />
+        <div data-page="support">
+          <header data-slot="page-header">
+            <div>
+              <p data-slot="eyebrow">MongolGPT</p>
+              <h1>Тусламж</h1>
+              <p>Заавраас хариултаа олох эсвэл бүртгэлээрээ нэвтэрч тусламжийн хүсэлт илгээнэ.</p>
             </div>
-            <label>
-              Зурвас
-              <textarea value={message()} maxlength="5000" onInput={(event) => setMessage(event.currentTarget.value)} />
-            </label>
-            <button type="submit" disabled={submitting()}>
-              {submitting() ? "Илгээж байна..." : "Хүсэлт илгээх"}
-            </button>
-          </form>
-          <Show when={createError()}>
-            {(value) => (
-              <p data-slot="notice" data-slot-error="true" role="alert">
-                {value()}
-              </p>
-            )}
-          </Show>
-        </section>
+          </header>
 
-        <section aria-labelledby="support-list-title">
-          <h2 id="support-list-title">Миний хүсэлтүүд</h2>
-          <Show when={listError()}>
-            {(value) => (
-              <p data-slot="notice" data-slot-error="true" role="alert">
-                {value()}
-              </p>
-            )}
+          <section aria-labelledby="support-guides-title">
+            <h2 id="support-guides-title">Түгээмэл хэрэгцээ</h2>
+            <div data-slot="guide-links">
+              <A href={language.route("/docs/getting-started/")}>Суулгаж эхлэх</A>
+              <A href={language.route("/docs/providers/")}>Загвар, API холбох</A>
+              <A href={language.route("/docs/troubleshooting/")}>Алдаа оношлох</A>
+              <A href={language.route("/pricing")}>Үнэ, багц шалгах</A>
+            </div>
+          </section>
+
+          <Show when={!authenticated()}>
+            <section aria-labelledby="support-login-title" data-section="support-login">
+              <h2 id="support-login-title">Хувийн тусламжийн хүсэлт</h2>
+              <p>Өөрийн хүсэлт, хариу болон төлөвийг аюулгүй харахын тулд MongolGPT бүртгэлээрээ нэвтэрнэ үү.</p>
+              <A href="/auth" data-slot="primary-action">
+                Нэвтэрч хүсэлт илгээх
+              </A>
+              <Show when={listError()}>
+                {(value) => (
+                  <p data-slot="notice" data-slot-error="true" role="alert">
+                    {value()}
+                  </p>
+                )}
+              </Show>
+            </section>
           </Show>
-          <Show when={loading()}>
-            <p data-slot="notice" role="status">
-              Хүсэлтүүдийг ачаалж байна...
-            </p>
-          </Show>
-          <Show when={!loading() && page()?.items.length === 0}>
-            <p data-slot="notice">Одоогоор тусламжийн хүсэлт алга.</p>
-          </Show>
-          <Show when={!loading() && page()?.items.length}>
-            <table data-slot="tickets">
-              <thead>
-                <tr>
-                  <th>Гарчиг</th>
-                  <th>Төлөв</th>
-                  <th>Ангилал</th>
-                  <th>Шинэчлэгдсэн</th>
-                </tr>
-              </thead>
-              <tbody>
-                <For each={page()?.items}>
-                  {(ticket) => (
+
+          <Show when={authenticated()}>
+            <section aria-labelledby="support-create-title">
+              <h2 id="support-create-title">Шинэ хүсэлт</h2>
+              <form onSubmit={submit} novalidate>
+                <label>
+                  Гарчиг
+                  <input value={subject()} maxlength="160" onInput={(event) => setSubject(event.currentTarget.value)} />
+                </label>
+                <div data-slot="form-grid">
+                  <label>
+                    Ангилал
+                    <select
+                      value={category()}
+                      onChange={(event) => setCategory(event.currentTarget.value as SupportCategory)}
+                    >
+                      <For each={categories}>{(item) => <option value={item.value}>{item.label}</option>}</For>
+                    </select>
+                  </label>
+                  <label>
+                    Ажлын орон зайн ID (заавал биш)
+                    <input
+                      value={workspaceID()}
+                      maxlength="30"
+                      onInput={(event) => setWorkspaceID(event.currentTarget.value)}
+                    />
+                  </label>
+                </div>
+                <label>
+                  Зурвас
+                  <textarea
+                    value={message()}
+                    maxlength="5000"
+                    onInput={(event) => setMessage(event.currentTarget.value)}
+                  />
+                </label>
+                <button type="submit" disabled={submitting()}>
+                  {submitting() ? "Илгээж байна..." : "Хүсэлт илгээх"}
+                </button>
+              </form>
+              <Show when={createError()}>
+                {(value) => (
+                  <p data-slot="notice" data-slot-error="true" role="alert">
+                    {value()}
+                  </p>
+                )}
+              </Show>
+            </section>
+
+            <section aria-labelledby="support-list-title">
+              <h2 id="support-list-title">Миний хүсэлтүүд</h2>
+              <Show when={listError()}>
+                {(value) => (
+                  <p data-slot="notice" data-slot-error="true" role="alert">
+                    {value()}
+                  </p>
+                )}
+              </Show>
+              <Show when={loading()}>
+                <p data-slot="notice" role="status">
+                  Хүсэлтүүдийг ачаалж байна...
+                </p>
+              </Show>
+              <Show when={!loading() && page()?.items.length === 0}>
+                <p data-slot="notice">Одоогоор тусламжийн хүсэлт алга.</p>
+              </Show>
+              <Show when={!loading() && page()?.items.length}>
+                <table data-slot="tickets">
+                  <thead>
                     <tr>
-                      <td>
-                        <A href={language.route(`/support/${ticket.id}`)}>{ticket.subject}</A>
-                      </td>
-                      <td>
-                        <span data-slot="status">{statusName(ticket.status)}</span>
-                      </td>
-                      <td>{categoryName(ticket.category)}</td>
-                      <td>
-                        <time datetime={ticket.last_message_at}>{formatDate(ticket.last_message_at)}</time>
-                      </td>
+                      <th>Гарчиг</th>
+                      <th>Төлөв</th>
+                      <th>Ангилал</th>
+                      <th>Шинэчлэгдсэн</th>
                     </tr>
-                  )}
-                </For>
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    <For each={page()?.items}>
+                      {(ticket) => (
+                        <tr>
+                          <td>
+                            <A href={language.route(`/support/${ticket.id}`)}>{ticket.subject}</A>
+                          </td>
+                          <td>
+                            <span data-slot="status">{statusName(ticket.status)}</span>
+                          </td>
+                          <td>{categoryName(ticket.category)}</td>
+                          <td>
+                            <time datetime={ticket.last_message_at}>{formatDate(ticket.last_message_at)}</time>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+              </Show>
+              <Show when={!loading() && (pageIndex() > 0 || page()?.nextCursor)}>
+                <div data-slot="pagination">
+                  <button type="button" onClick={previous} disabled={pageIndex() === 0}>
+                    Өмнөх
+                  </button>
+                  <button type="button" onClick={next} disabled={!page()?.nextCursor}>
+                    Дараах
+                  </button>
+                </div>
+              </Show>
+            </section>
           </Show>
-          <Show when={!loading() && (pageIndex() > 0 || page()?.nextCursor)}>
-            <div data-slot="pagination">
-              <button type="button" onClick={previous} disabled={pageIndex() === 0}>
-                Өмнөх
-              </button>
-              <button type="button" onClick={next} disabled={!page()?.nextCursor}>
-                Дараах
-              </button>
-            </div>
-          </Show>
-        </section>
-      </main>
-    </>
+        </div>
+        <Footer />
+      </div>
+      <Legal />
+    </main>
   )
 }
 

@@ -22,16 +22,16 @@ describe("docs root alias rewrite", () => {
       '<link rel="canonical" href="https://docs.dev.mgpt.mn/docs/">',
       '<meta property="og:url" content="https://docs.dev.mgpt.mn/docs/">',
       '<meta property="og:image" content="https://docs.dev.mgpt.mn/docs/social-share.png">',
-      '<a href="https://dev.mgpt.mn/support">Тусламж</a>',
+      '<a href="https://dev.mgpt.mn/mn/support">Тусламж</a>',
     ].join("")
 
     const result = rewriteDocsHtmlForRootAlias(html, "https://docs.dev.mgpt.mn/docs", "https://mgpt.mn")
     expect(result).toContain('href="https://mgpt.mn/docs/"')
     expect(result).toContain('content="https://mgpt.mn/docs/"')
     expect(result).toContain('content="https://mgpt.mn/docs/social-share.png"')
-    expect(result).toContain('href="https://mgpt.mn/support"')
+    expect(result).toContain('href="https://mgpt.mn/mn/support"')
     expect(result).not.toContain("docs.dev.mgpt.mn")
-    expect(result).not.toContain("dev.mgpt.mn/support")
+    expect(result).not.toContain("dev.mgpt.mn/mn/support")
   })
 
   test("leaves canonical dev HTML untouched outside the public root alias", async () => {
@@ -39,7 +39,10 @@ describe("docs root alias rewrite", () => {
     import.meta.env.VITE_MONGOLGPT_ROOT_URL = "https://mgpt.mn"
     globalThis.fetch = Object.assign(
       mock(
-        async () => new Response('<link rel="canonical" href="https://docs.dev.mgpt.mn/docs/">', { headers: { "content-type": "text/html; charset=utf-8" } }),
+        async () =>
+          new Response('<link rel="canonical" href="https://docs.dev.mgpt.mn/docs/">', {
+            headers: { "content-type": "text/html; charset=utf-8" },
+          }),
       ),
       { preconnect: originalFetch.preconnect },
     )
@@ -52,7 +55,7 @@ describe("docs root alias rewrite", () => {
     import.meta.env.VITE_MONGOLGPT_DOCS_URL = "https://docs.dev.mgpt.mn/docs"
     import.meta.env.VITE_MONGOLGPT_ROOT_URL = "https://mgpt.mn"
     const html =
-      '<link rel="canonical" href="https://docs.dev.mgpt.mn/docs/"><a href="https://dev.mgpt.mn/support">Support</a>'
+      '<link rel="canonical" href="https://docs.dev.mgpt.mn/docs/"><a href="https://dev.mgpt.mn/mn/support">Support</a>'
     globalThis.fetch = Object.assign(
       mock(
         async () =>
@@ -66,7 +69,7 @@ describe("docs root alias rewrite", () => {
     const response = await docsProxyHandler(event("https://mgpt.mn/docs/"))
     const body = await response.text()
     expect(body).toContain("https://mgpt.mn/docs/")
-    expect(body).toContain("https://mgpt.mn/support")
+    expect(body).toContain("https://mgpt.mn/mn/support")
     expect(response.headers.get("content-length")).toBe(String(new TextEncoder().encode(body).byteLength))
     expect(response.headers.get("etag")).toBeNull()
   })

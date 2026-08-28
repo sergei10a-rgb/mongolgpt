@@ -7,7 +7,7 @@ const template = entry.data.template
 const issueLink = Astro.locals.t("app.footer.issueLink", "Алдаа мэдээлэх")
 const supportUrl =
   import.meta.env.MONGOLGPT_SUPPORT_URL?.trim() ||
-  `${import.meta.env.MONGOLGPT_CONSOLE_URL?.trim() || "https://mgpt.mn"}/support`
+  `${import.meta.env.MONGOLGPT_CONSOLE_URL?.trim() || "https://mgpt.mn"}/mn/support`
 
 const github = config.social?.find((item) => item.icon === "github")
 ---

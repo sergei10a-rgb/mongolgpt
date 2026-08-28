@@ -22,7 +22,9 @@ export async function docsProxyHandler(evt: APIEvent) {
     body: req.body,
   })
 
-  const next = rewrite ? await rewriteDocsProxyResponse(req, response, docsUrl, rootUrl ?? "") : new Response(response.body, response)
+  const next = rewrite
+    ? await rewriteDocsProxyResponse(req, response, docsUrl, rootUrl ?? "")
+    : new Response(response.body, response)
   next.headers.append("set-cookie", cookie(locale))
   return next
 }
@@ -56,7 +58,12 @@ export async function docsHeadProxyHandler(evt: APIEvent) {
     method: "GET",
     headers,
   })
-  const next = await rewriteDocsProxyResponse(new Request(req.url, { method: "HEAD" }), getResponse, docsUrl, rootUrl ?? "")
+  const next = await rewriteDocsProxyResponse(
+    new Request(req.url, { method: "HEAD" }),
+    getResponse,
+    docsUrl,
+    rootUrl ?? "",
+  )
   next.headers.append("set-cookie", cookie(locale))
   return next
 }
@@ -68,7 +75,10 @@ export function rewriteDocsHtmlForRootAlias(html: string, docsUrl: string, rootU
 
   let next = html.replaceAll(docsOrigin, rootOrigin)
   const consoleOrigin = consoleOriginFromDocsOrigin(docsOrigin)
-  if (consoleOrigin) next = next.replaceAll(`${consoleOrigin}/support`, `${rootOrigin}/support`)
+  if (consoleOrigin) {
+    next = next.replaceAll(`${consoleOrigin}/mn/support`, `${rootOrigin}/mn/support`)
+    next = next.replaceAll(`${consoleOrigin}/support`, `${rootOrigin}/mn/support`)
+  }
   return next
 }
 

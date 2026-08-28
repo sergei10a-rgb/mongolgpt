@@ -1,6 +1,6 @@
 export const repositoryUrl = "https://github.com/sergei10a-rgb/mongolgpt"
 const publicUrl = import.meta.env.VITE_MONGOLGPT_PUBLIC_URL?.trim() || repositoryUrl
-export const supportUrl = import.meta.env.VITE_MONGOLGPT_SUPPORT_URL?.trim() || "/support"
+export const supportUrl = import.meta.env.VITE_MONGOLGPT_SUPPORT_URL?.trim() || "/mn/support"
 
 /**
  * Application-wide constants and configuration

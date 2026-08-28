@@ -1,6 +1,6 @@
 import { docsOrigin, domain, publicOrigin } from "./stage"
 
-const supportUrl = `${publicOrigin}/support`
+const supportUrl = `${publicOrigin}/mn/support`
 const docsSiteOrigin = new URL(docsOrigin).origin
 export const docsUrl = docsOrigin
 

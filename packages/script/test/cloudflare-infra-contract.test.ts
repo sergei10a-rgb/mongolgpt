@@ -118,9 +118,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const providerMigration = job.steps.find(
       (step) => step.name === "Migrate legacy Cloudflare queue state through provider 6.14",
     )
-    const providerRepair = job.steps.find(
-      (step) => step.name === "Repair dangling Cloudflare queue provider reference",
-    )
+    const providerRepair = job.steps.find((step) => step.name === "Repair dangling Cloudflare queue provider reference")
     const deploy = job.steps.find((step) => step.name === "Bootstrap real dev OAuth infrastructure")
     const smoke = job.steps.find((step) => step.name === "Verify dev account scaffold")
 
@@ -210,7 +208,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(database).toBeGreaterThan(stateRepair)
     expect(run).toContain('repair_status="${PIPESTATUS[0]}"')
     expect(run).toContain('! grep -Fq "No changes made" "$repair_log"')
-    expect(run).not.toContain("sst state repair --stage=\"$stage\" --print-logs || true")
+    expect(run).not.toContain('sst state repair --stage="$stage" --print-logs || true')
     expect(migration).toBeGreaterThan(database)
     expect(oauth).toBeGreaterThan(migration)
     expect(run).not.toContain("sst refresh")
@@ -231,9 +229,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")')
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")')
     expect(configSource).toContain('flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")')
-    expect(configSource).toContain(
-      'rootPreviewAlias && (stage !== "dev" || !hostedServices || docsOnly || appOnly)',
-    )
+    expect(configSource).toContain('rootPreviewAlias && (stage !== "dev" || !hostedServices || docsOnly || appOnly)')
     expect(configSource).not.toContain(
       'rootPreviewAlias && (stage !== "dev" || !hostedServices || docsOnly || appOnly || databaseOnly)',
     )
@@ -291,7 +287,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(webApp).toContain("VITE_MONGOLGPT_SERVER_URL: runtimeOrigin")
     expect(webApp).toContain('VITE_MONGOLGPT_RELEASE_SHA: process.env.MONGOLGPT_RELEASE_SHA ?? ""')
     expect(webApp).toContain('args.handler = "packages/app/cloudflare-router.ts"')
-    expect(webApp).toContain("const supportUrl = `${publicOrigin}/support`")
+    expect(webApp).toContain("const supportUrl = `${publicOrigin}/mn/support`")
     expect(webApp).not.toContain("github.com/sergei10a-rgb/mongolgpt/issues")
     expect(workflow.jobs.deploy.condition).toBe(
       "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
@@ -435,7 +431,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(consoleSource).toContain("VITE_MONGOLGPT_RUNTIME_URL: runtimeOrigin")
     expect(consoleSource).toContain("? [rootDomain, `www.${rootDomain}`]")
     expect(consoleSource).toContain('$app.stage === "production"')
-    expect(consoleSource).toContain('? [`www.${rootDomain}`]')
+    expect(consoleSource).toContain("? [`www.${rootDomain}`]")
     expect(hostedEnvSource).toContain("import.meta.env.VITE_MONGOLGPT_APP_URL")
     expect(hostedEnvSource).toContain("import.meta.env.VITE_MONGOLGPT_RUNTIME_URL")
     expect(hostedEnvSource).not.toMatch(/import\.meta\.env\.MONGOLGPT_/)
@@ -564,7 +560,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain('MONGOLGPT_ENABLE_HOSTED_SERVICES: "false"')
     expect(source).toContain("MONGOLGPT_PUBLIC_URL: https://docs.dev.mgpt.mn")
     expect(source).toContain("MONGOLGPT_CONSOLE_URL: https://dev.mgpt.mn")
-    expect(source).toContain("MONGOLGPT_SUPPORT_URL: https://dev.mgpt.mn/support")
+    expect(source).toContain("MONGOLGPT_SUPPORT_URL: https://dev.mgpt.mn/mn/support")
     expect(source).toContain('MONGOLGPT_DEPLOY_DOCS_ONLY: "true"')
     expect(record(parsed.env) ? parsed.env.MONGOLGPT_DEPLOY_DOCS_ONLY : undefined).toBeUndefined()
     expect(deploy?.env?.MONGOLGPT_DEPLOY_DOCS_ONLY).toBe("true")

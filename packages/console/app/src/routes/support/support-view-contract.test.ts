@@ -45,10 +45,14 @@ describe("customer support view contract", () => {
     expect(menu).toContain("useAuthSession")
   })
 
-  test("gates the route to an authenticated account before rendering support data", async () => {
-    const layout = await source("layout.tsx")
-    expect(layout).toContain("await getActor()")
-    expect(layout).toContain('actor.type !== "account"')
-    expect(layout).toContain('redirect("/auth/authorize")')
+  test("keeps public help visible and protects private ticket data through the account API", async () => {
+    const view = await source("index.tsx")
+    expect(view).toContain("<Header")
+    expect(view).toContain("<Footer")
+    expect(view).toContain('<LocaleLinks path="/support" />')
+    expect(view).toContain("caught.status === 401")
+    expect(view).toContain("Нэвтэрч хүсэлт илгээх")
+    expect(view).toContain("Алдаа оношлох")
+    expect(view).not.toContain("getActor()")
   })
 })
