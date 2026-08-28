@@ -172,9 +172,11 @@ if (!(Test-Path -LiteralPath $installer -PathType Leaf)) {
   throw "Desktop installer does not exist: $installer"
 }
 
-$tempRoot = [System.IO.Path]::GetFullPath(
-  (if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() })
-).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+$tempBase = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
+$tempRoot = [System.IO.Path]::GetFullPath($tempBase).TrimEnd(
+  [System.IO.Path]::DirectorySeparatorChar,
+  [System.IO.Path]::AltDirectorySeparatorChar
+)
 $installRoot = [System.IO.Path]::GetFullPath(
   (Join-Path $tempRoot ("mongolgpt-desktop-install-" + [guid]::NewGuid().ToString("N")))
 )
