@@ -641,7 +641,7 @@ export function inspectRuntimeTokenPreflight(response: Response, appOrigin: stri
   if (response.headers.get("access-control-allow-methods") !== "POST, OPTIONS") {
     throw new Error("runtime token preflight methods are not exact")
   }
-  if (response.headers.get("access-control-allow-headers") !== "Content-Type") {
+  if (response.headers.get("access-control-allow-headers") !== "Content-Type, X-Org-ID") {
     throw new Error("runtime token preflight headers are not exact")
   }
   if (response.headers.get("access-control-max-age") !== "600") {

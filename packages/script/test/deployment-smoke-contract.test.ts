@@ -531,7 +531,7 @@ function preflightResponse(headers: Record<string, string> = {}) {
     headers: {
       ...corsHeaders(),
       "access-control-allow-methods": "POST, OPTIONS",
-      "access-control-allow-headers": "Content-Type",
+      "access-control-allow-headers": "Content-Type, X-Org-ID",
       "access-control-max-age": "600",
       ...headers,
     },
