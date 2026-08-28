@@ -5,6 +5,7 @@ import {
   enableBusinessIntegrations,
   enableD1Backups,
   enableMonitoring,
+  enableRootPreviewAlias,
   enableShareService,
   enableTurnstile,
   paymentOrigin,
@@ -386,7 +387,10 @@ const businessIntegrationSecrets = businessIntegrationSecretNames(enableBusiness
 export const mongolGPTPlanLimits = new sst.Secret("MONGOLGPT_PLAN_LIMITS")
 
 export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
-  domain,
+  domain: {
+    name: domain,
+    aliases: enableRootPreviewAlias ? [rootDomain] : [],
+  },
   path: "packages/console/app",
   link: [
     bucket,

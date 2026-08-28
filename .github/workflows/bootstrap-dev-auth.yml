@@ -17,6 +17,11 @@ on:
         required: false
         default: false
         type: boolean
+      root_preview_alias:
+        description: "mgpt.mn root домэйныг dev нүүр сайтын preview alias болгох"
+        required: false
+        default: true
+        type: boolean
 
 concurrency:
   group: cloudflare-bootstrap-dev-auth
@@ -35,6 +40,7 @@ env:
   MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false"
   MONGOLGPT_ENABLE_LEGACY_STRIPE: "false"
   MONGOLGPT_ENABLE_MONITORING: "false"
+  MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: ${{ inputs.root_preview_alias }}
   MONGOLGPT_ENABLE_TURNSTILE: "true"
   MONGOLGPT_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
   MONGOLGPT_ENABLE_SHARE_SERVICE: "false"

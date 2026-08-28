@@ -126,6 +126,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
     expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
     expect(rawJob.environment).toBe("dev")
+    expect(parsed.env.MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS).toBe("${{ inputs.root_preview_alias }}")
     expect(job.condition).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
     expect(confirmation?.env).toEqual({ BOOTSTRAP_CONFIRMATION: "${{ inputs.confirmation }}" })
     expect(confirmation?.run).toContain('if [ "$BOOTSTRAP_CONFIRMATION" != "BOOTSTRAP DEV AUTH dev.mgpt.mn" ]; then')
@@ -425,6 +426,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(consoleSource).toContain("SECRET.MongolGPTRuntimeAuthSecret")
     expect(consoleSource).toContain("VITE_MONGOLGPT_APP_URL: appOrigin")
     expect(consoleSource).toContain("VITE_MONGOLGPT_RUNTIME_URL: runtimeOrigin")
+    expect(consoleSource).toContain("aliases: enableRootPreviewAlias ? [rootDomain] : []")
     expect(hostedEnvSource).toContain("import.meta.env.VITE_MONGOLGPT_APP_URL")
     expect(hostedEnvSource).toContain("import.meta.env.VITE_MONGOLGPT_RUNTIME_URL")
     expect(hostedEnvSource).not.toMatch(/import\.meta\.env\.MONGOLGPT_/)

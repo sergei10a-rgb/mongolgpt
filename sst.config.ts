@@ -8,6 +8,7 @@ export default $config({
     const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
     const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
     const databaseOnly = flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")
+    const rootPreviewAlias = flag("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS")
     const admin = flag("MONGOLGPT_ENABLE_ADMIN")
     const d1Backups = flag("MONGOLGPT_ENABLE_D1_BACKUPS")
     const monitoring = flag("MONGOLGPT_ENABLE_MONITORING")
@@ -32,6 +33,9 @@ export default $config({
     }
     if (databaseOnly && !hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_DATABASE_ONLY нь hosted services асаалттай байхыг шаардана.")
+    }
+    if (rootPreviewAlias && (stage !== "dev" || !hostedServices || docsOnly || appOnly || databaseOnly)) {
+      throw new Error("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS-г зөвхөн үндсэн hosted dev deploy-д ашиглана.")
     }
     if (appOnly && !hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_APP_ONLY нь hosted services асаалттай байхыг шаардана.")
