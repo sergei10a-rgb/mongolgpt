@@ -202,6 +202,66 @@ async function smokePublicNpmInstall(version: string) {
   }
 }
 
+async function smokePublicPlatformPackages(version: string) {
+  const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mongolgpt-platform-npm-smoke-"))
+  const npmrc = path.join(temp, "public.npmrc")
+  const npm = process.platform === "win32" ? "npm.cmd" : "npm"
+
+  try {
+    await fs.promises.writeFile(path.join(temp, "package.json"), '{"private":true,"type":"module"}\n')
+    await fs.promises.writeFile(npmrc, `registry=${publicNpmRegistry}\n`)
+    const publicEnv = { ...process.env }
+    for (const key of ["NODE_AUTH_TOKEN", "NPM_TOKEN"]) delete publicEnv[key]
+    Object.assign(publicEnv, {
+      NPM_CONFIG_USERCONFIG: npmrc,
+      NPM_CONFIG_CACHE: path.join(temp, "npm-cache"),
+    })
+
+    const packages = ["@mongolgpt/sdk", "@mongolgpt/plugin", "@mongolgpt/ui"] as const
+    const install = spawnSync(
+      npm,
+      [
+        "install",
+        "--ignore-scripts",
+        "--no-audit",
+        "--no-fund",
+        "--loglevel=error",
+        ...packages.map((name) => `${name}@${version}`),
+      ],
+      { cwd: temp, env: publicEnv, encoding: "utf8", timeout: 120_000 },
+    )
+    assert(install.status === 0, `public platform package install failed: ${commandOutput(install)}`)
+
+    for (const name of packages) {
+      const manifest = readJson(path.join(temp, "node_modules", ...name.split("/"), "package.json"))
+      assert(manifest.name === name, `public package manifest has name ${manifest.name}, expected ${name}`)
+      assert(manifest.version === version, `public ${name} resolved ${manifest.version}, expected ${version}`)
+    }
+
+    const imports = spawnSync(
+      "node",
+      [
+        "--input-type=module",
+        "--eval",
+        'await import("@mongolgpt/sdk"); await import("@mongolgpt/plugin"); console.log("platform imports ok")',
+      ],
+      { cwd: temp, env: publicEnv, encoding: "utf8", timeout: 30_000 },
+    )
+    assert(
+      imports.status === 0 && commandOutput(imports).includes("platform imports ok"),
+      `public SDK/plugin import smoke failed: ${commandOutput(imports)}`,
+    )
+
+    const uiRoot = path.join(temp, "node_modules", "@mongolgpt", "ui")
+    for (const file of ["README.md", "LICENSE", "src/styles/index.css", "dist/hooks/index.d.ts"]) {
+      assert(fs.existsSync(path.join(uiRoot, file)), `public @mongolgpt/ui is missing ${file}`)
+    }
+    console.log(`public npm platform smoke ok: ${packages.join(", ")} @ ${version}`)
+  } finally {
+    await fs.promises.rm(temp, { recursive: true, force: true })
+  }
+}
+
 async function githubMissing(version: string) {
   const tag = `mongolgpt-v${version}`
   const result = await $`gh release view ${tag} --repo ${repo} --json assets`.quiet().nothrow()
@@ -244,7 +304,10 @@ if (checkedNpmPackages) {
   const missing = await npmMissing(version, checkedNpmPackages)
   console.log(missing.length ? `npm missing: ${missing.join(", ")}` : "npm ok")
   if (missing.length) process.exitCode = 1
-  else await smokePublicNpmInstall(version)
+  else {
+    await smokePublicNpmInstall(version)
+    if (checkNpm) await smokePublicPlatformPackages(version)
+  }
 }
 
 if (checkGitHub) {

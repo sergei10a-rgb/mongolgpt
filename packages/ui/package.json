@@ -1,6 +1,7 @@
 {
   "name": "@mongolgpt/ui",
   "version": "0.1.1",
+  "description": "MongolGPT-ийн SolidJS компонент, theme, icon болон stylesheet сан.",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -8,6 +9,16 @@
     "url": "git+https://github.com/sergei10a-rgb/mongolgpt.git",
     "directory": "packages/ui"
   },
+  "homepage": "https://docs.mgpt.mn/",
+  "bugs": {
+    "url": "https://github.com/sergei10a-rgb/mongolgpt/issues"
+  },
+  "keywords": [
+    "mongolgpt",
+    "solidjs",
+    "ui",
+    "design-system"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -30,7 +41,8 @@
     "src/assets/icons/app/*",
     "src/assets/fonts/*",
     "src/assets/audio/*",
-    "LICENSE"
+    "LICENSE",
+    "README.md"
   ],
   "exports": {
     "./package.json": "./package.json",

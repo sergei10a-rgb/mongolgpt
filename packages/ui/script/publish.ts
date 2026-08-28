@@ -7,20 +7,26 @@ import { fileURLToPath } from "node:url"
 import { pack } from "./pack"
 
 process.chdir(fileURLToPath(new URL("..", import.meta.url)))
+const dryRun = process.argv.includes("--dry-run")
+const skipBuild = process.argv.includes("--skip-build")
 
 const pkg = (await Bun.file("package.json").json()) as { name: string; version: string }
-const tarball = `${pkg.name.replace("@", "").replace("/", "-")}-${pkg.version}.tgz`
+const version = Script.version
+const tarball = `${pkg.name.replace("@", "").replace("/", "-")}-${version}.tgz`
 
-if ((await $`npm view ${pkg.name}@${pkg.version} version`.nothrow()).exitCode === 0) {
-  console.log(`already published ${pkg.name}@${pkg.version}`)
+if (!dryRun && (await $`npm view ${pkg.name}@${version} version`.nothrow()).exitCode === 0) {
+  console.log(`already published ${pkg.name}@${version}`)
   process.exit(0)
 }
 
 try {
-  await $`bun run typecheck`
-  await $`bun run test`
-  await pack()
-  await $`npm publish ${tarball} --access public --tag ${Script.channel}`
+  if (!skipBuild) {
+    await $`bun run typecheck`
+    await $`bun run test`
+  }
+  await pack({ version, skipBuild })
+  await $`npm publish ${tarball} --access public --tag ${Script.channel} ${dryRun ? "--dry-run" : []}`
+  if (dryRun) console.log(`[dry-run] ${pkg.name}@${version} package publish бэлэн байна`)
 } finally {
   await rm(tarball, { force: true })
 }

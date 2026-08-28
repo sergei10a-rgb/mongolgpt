@@ -1,15 +1,15 @@
-name: Publish dev CLI preview
+name: Publish dev npm preview
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: "PUBLISH DEV CLI npm dev гэж яг бичнэ"
+        description: "PUBLISH DEV CLI SDK PLUGIN UI npm dev гэж яг бичнэ"
         required: true
         type: string
 
 concurrency:
-  group: npm-publish-dev-cli
+  group: npm-publish-dev-preview
   cancel-in-progress: false
 
 permissions:
@@ -31,8 +31,8 @@ jobs:
         env:
           PUBLISH_CONFIRMATION: ${{ inputs.confirmation }}
         run: |
-          if [ "$PUBLISH_CONFIRMATION" != "PUBLISH DEV CLI npm dev" ]; then
-            echo "Dev CLI publish баталгаажуулалт буруу байна."
+          if [ "$PUBLISH_CONFIRMATION" != "PUBLISH DEV CLI SDK PLUGIN UI npm dev" ]; then
+            echo "Dev npm preview publish баталгаажуулалт буруу байна."
             exit 1
           fi
 
@@ -56,6 +56,14 @@ jobs:
           MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
         run: bun packages/mongolgpt/script/publish.ts --dry-run --npm-only
 
+      - name: Build and dry-run SDK, plugin, and UI packages
+        env:
+          MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          bun packages/sdk/js/script/publish.ts --dry-run
+          bun packages/plugin/script/publish.ts --dry-run
+          bun packages/ui/script/publish.ts --dry-run
+
       - name: Verify local CLI package set
         env:
           MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
@@ -66,6 +74,23 @@ jobs:
         with:
           name: mongolgpt-dev-cli-${{ steps.version.outputs.version }}
           path: packages/mongolgpt/dist
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Archive SDK, plugin, and UI build output
+        env:
+          MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tar -czf "mongolgpt-dev-platform-${MONGOLGPT_VERSION}.tar.gz" \
+            packages/sdk/js/dist \
+            packages/plugin/dist \
+            packages/ui/dist
+
+      - name: Upload SDK, plugin, and UI build output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mongolgpt-dev-platform-${{ steps.version.outputs.version }}
+          path: mongolgpt-dev-platform-${{ steps.version.outputs.version }}.tar.gz
           if-no-files-found: error
           retention-days: 7
 
@@ -108,11 +133,39 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Verify npm token and MongolGPT organization membership
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner="$(npm whoami --registry=https://registry.npmjs.org)"
+          members="$(npm org ls mongolgpt --json --registry=https://registry.npmjs.org)"
+          node -e '
+            const members = JSON.parse(process.argv[1])
+            const owner = process.argv[2]
+            if (!members || typeof members !== "object" || !(owner in members)) {
+              console.error(`${owner} нь @mongolgpt npm organization-ийн гишүүн биш байна.`)
+              process.exit(1)
+            }
+          ' "$members" "$owner"
+
       - name: Download verified CLI packages
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: mongolgpt-dev-cli-${{ needs.build.outputs.version }}
           path: packages/mongolgpt/dist
+
+      - name: Download verified SDK, plugin, and UI build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: mongolgpt-dev-platform-${{ needs.build.outputs.version }}
+          path: .artifacts/platform
+
+      - name: Restore verified SDK, plugin, and UI build output
+        env:
+          MONGOLGPT_VERSION: ${{ needs.build.outputs.version }}
+        run: tar -xzf ".artifacts/platform/mongolgpt-dev-platform-${MONGOLGPT_VERSION}.tar.gz"
 
       - name: Publish only CLI packages under the dev tag
         env:
@@ -121,7 +174,17 @@ jobs:
           NPM_CONFIG_PROVENANCE: false
         run: bun packages/mongolgpt/script/publish.ts --npm-only
 
-      - name: Reinstall from the public registry and verify the account gate
+      - name: Publish SDK, plugin, and UI packages under the dev tag
         env:
           MONGOLGPT_VERSION: ${{ needs.build.outputs.version }}
-        run: bun packages/mongolgpt/script/release-preflight.ts --npm-cli
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          bun packages/sdk/js/script/publish.ts --skip-build
+          bun packages/plugin/script/publish.ts --skip-build
+          bun packages/ui/script/publish.ts --skip-build
+
+      - name: Reinstall from the public registry and verify all npm packages
+        env:
+          MONGOLGPT_VERSION: ${{ needs.build.outputs.version }}
+        run: bun packages/mongolgpt/script/release-preflight.ts --npm

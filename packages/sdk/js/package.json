@@ -2,8 +2,27 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@mongolgpt/sdk",
   "version": "0.1.1",
+  "description": "MongolGPT сервертэй ажиллах төрөл аюулгүй JavaScript болон TypeScript SDK.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sergei10a-rgb/mongolgpt.git",
+    "directory": "packages/sdk/js"
+  },
+  "homepage": "https://docs.mgpt.mn/docs/sdk/",
+  "bugs": {
+    "url": "https://github.com/sergei10a-rgb/mongolgpt/issues"
+  },
+  "keywords": [
+    "mongolgpt",
+    "ai-agent",
+    "sdk",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "bun test",
     "typecheck": "tsgo --noEmit",
@@ -20,7 +39,9 @@
     "./v2/types": "./src/v2/gen/types.gen.ts"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "devDependencies": {
     "@hey-api/openapi-ts": "0.90.10",

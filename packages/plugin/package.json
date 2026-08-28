@@ -2,8 +2,27 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@mongolgpt/plugin",
   "version": "0.1.1",
+  "description": "MongolGPT-д tool, hook болон интеграц нэмэх JavaScript, TypeScript plugin API.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sergei10a-rgb/mongolgpt.git",
+    "directory": "packages/plugin"
+  },
+  "homepage": "https://docs.mgpt.mn/docs/plugins/",
+  "bugs": {
+    "url": "https://github.com/sergei10a-rgb/mongolgpt/issues"
+  },
+  "keywords": [
+    "mongolgpt",
+    "ai-agent",
+    "plugin",
+    "mcp"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "build": "tsc"
@@ -18,7 +37,9 @@
     "./v2/promise": "./src/v2/promise/index.ts"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "dependencies": {
     "@ai-sdk/provider": "3.0.8",
