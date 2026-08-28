@@ -1,10 +1,15 @@
-name: Publish dev npm preview
+name: Build or publish dev npm preview
 
 on:
   workflow_dispatch:
     inputs:
+      publish:
+        description: "npm dev tag руу нийтлэх эсэх"
+        required: true
+        default: false
+        type: boolean
       confirmation:
-        description: "PUBLISH DEV CLI SDK PLUGIN UI npm dev гэж яг бичнэ"
+        description: "Build-д BUILD DEV CLI PREVIEW, publish-д PUBLISH DEV CLI SDK PLUGIN UI npm dev гэж яг бичнэ"
         required: true
         type: string
 
@@ -27,12 +32,18 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Validate exact dev publish confirmation
+      - name: Validate exact dev preview confirmation
         env:
           PUBLISH_CONFIRMATION: ${{ inputs.confirmation }}
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
         run: |
-          if [ "$PUBLISH_CONFIRMATION" != "PUBLISH DEV CLI SDK PLUGIN UI npm dev" ]; then
-            echo "Dev npm preview publish баталгаажуулалт буруу байна."
+          if [ "$PUBLISH_REQUESTED" = "true" ]; then
+            expected="PUBLISH DEV CLI SDK PLUGIN UI npm dev"
+          else
+            expected="BUILD DEV CLI PREVIEW"
+          fi
+          if [ "$PUBLISH_CONFIRMATION" != "$expected" ]; then
+            echo "Dev npm preview баталгаажуулалт буруу байна."
             exit 1
           fi
 
@@ -114,6 +125,7 @@ jobs:
         run: ./script/smoke-built-cli-windows.ps1 -BinaryPath "dist/mongolgpt-windows-x64/bin/mongolgpt.exe" -ExpectedVersion "${{ needs.build.outputs.version }}" -ExpectedAccountUrl "https://dev.mgpt.mn"
 
   publish:
+    if: inputs.publish == true
     needs:
       - build
       - smoke-windows

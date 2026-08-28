@@ -93,13 +93,17 @@ describe("release integrity contract", () => {
     expect(preflight).toContain('"mongolgpt account login"')
   })
 
-  test("keeps dev npm publishing manual, isolated from latest, and publicly smoke-tested", () => {
+  test("keeps dev npm preview builds separate from guarded publishing", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/publish-dev-cli.yml"), "utf8")
     const preflight = readFileSync(resolve(root, "packages/mongolgpt/script/release-preflight.ts"), "utf8")
 
     expect(workflow).toContain("workflow_dispatch:")
     expect(workflow).toContain("github.ref == 'refs/heads/main'")
+    expect(workflow).toContain('description: "npm dev tag руу нийтлэх эсэх"')
+    expect(workflow).toContain("default: false")
+    expect(workflow).toContain('"BUILD DEV CLI PREVIEW"')
     expect(workflow).toContain('"PUBLISH DEV CLI SDK PLUGIN UI npm dev"')
+    expect(workflow).toContain("if: inputs.publish == true")
     expect(workflow).toContain("MONGOLGPT_CHANNEL: dev")
     expect(workflow).toContain("0.0.0-dev-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}")
     expect(workflow).toContain("smoke-built-cli-windows.ps1")
