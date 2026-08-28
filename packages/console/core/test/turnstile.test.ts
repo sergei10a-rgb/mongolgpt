@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test"
 import {
   readTurnstileAuthorizationSubmission,
   TURNSTILE_ACTION,
+  TURNSTILE_TEST_SECRET_KEY,
+  TURNSTILE_TEST_TOKEN,
   turnstileAuthorizationRequest,
   turnstileRetryUrl,
   verifyTurnstile,
@@ -64,6 +66,24 @@ describe("Cloudflare Turnstile OAuth protection", () => {
         fetcher: async () => Response.json({ success: true, hostname: "attacker.example", action: TURNSTILE_ACTION }),
       }),
     ).toEqual({ ok: false, reason: "invalid" })
+  })
+
+  test("accepts Cloudflare test validation without production-only metadata", async () => {
+    const valid = await verifyTurnstile({
+      token: TURNSTILE_TEST_TOKEN,
+      secret: TURNSTILE_TEST_SECRET_KEY,
+      expectedHostname: "dev.mgpt.mn",
+      fetcher: async () => Response.json({ success: true, hostname: "example.com" }),
+    })
+    expect(valid).toEqual({ ok: true })
+
+    const rejected = await verifyTurnstile({
+      token: TURNSTILE_TEST_TOKEN,
+      secret: TURNSTILE_TEST_SECRET_KEY,
+      expectedHostname: "dev.mgpt.mn",
+      fetcher: async () => Response.json({ success: false, "error-codes": ["invalid-input-response"] }),
+    })
+    expect(rejected).toEqual({ ok: false, reason: "invalid" })
   })
 
   test("parses one bounded form and reconstructs only the approved OAuth request", async () => {

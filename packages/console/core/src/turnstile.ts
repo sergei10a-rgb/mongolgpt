@@ -3,6 +3,7 @@ import { z } from "zod"
 export const TURNSTILE_ACTION = "mongolgpt_login"
 export const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA"
 export const TURNSTILE_TEST_SECRET_KEY = "1x0000000000000000000000000000000AA"
+export const TURNSTILE_TEST_TOKEN = "XXXX.DUMMY.TOKEN.XXXX"
 
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 const MAX_TOKEN_LENGTH = 2_048
@@ -82,8 +83,9 @@ export async function verifyTurnstile(input: {
     const result = SiteverifyResponseSchema.safeParse(parsed)
     if (!result.success) return { ok: false, reason: "provider_unavailable" }
     if (!result.data.success) return { ok: false, reason: "invalid" }
-    if (result.data.action !== TURNSTILE_ACTION) return { ok: false, reason: "invalid" }
-    if (result.data.hostname?.toLowerCase().replace(/\.$/, "") !== expectedHostname) {
+    const testMode = secret === TURNSTILE_TEST_SECRET_KEY
+    if (!testMode && result.data.action !== TURNSTILE_ACTION) return { ok: false, reason: "invalid" }
+    if (!testMode && result.data.hostname?.toLowerCase().replace(/\.$/, "") !== expectedHostname) {
       return { ok: false, reason: "invalid" }
     }
     return { ok: true }
