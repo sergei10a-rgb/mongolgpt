@@ -119,9 +119,9 @@ jobs:
           stage="dev"
           print_pulumi_error() {
             status="$?"
-            if [ "$status" -ne 0 ] && [ -f .sst/log/pulumi.err ]; then
+            if [ "$status" -ne 0 ] && [ -f .sst/log/pulumi.err.log ]; then
               echo "Pulumi state integrity diagnostic:"
-              sed -n '1,160p' .sst/log/pulumi.err
+              sed -n '1,160p' .sst/log/pulumi.err.log
             fi
             exit "$status"
           }
