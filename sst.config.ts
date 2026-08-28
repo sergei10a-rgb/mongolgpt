@@ -58,6 +58,8 @@ export default $config({
       home: "cloudflare",
       providers: hostedServices && !appOnly
         ? {
+            // Match the existing state until the upstream Cloudflare v6 state migration is fixed.
+            cloudflare: "6.13.0",
             random: "4.19.2",
             ...(admin ? { command: "1.0.1" } : {}),
           }
