@@ -363,7 +363,9 @@ jobs:
         shell: pwsh
         working-directory: packages/desktop
         timeout-minutes: 3
-        run: ./scripts/smoke-packaged-windows.ps1
+        run: |
+          $expectedProductName = if ("${{ github.ref_name }}" -eq "beta") { "MongolGPT Beta" } else { "MongolGPT" }
+          ./scripts/smoke-packaged-windows.ps1 -ExpectedVersion "${{ needs.version.outputs.version }}" -ExpectedProductName $expectedProductName
 
       - name: Create macOS .app.tar.gz
         if: runner.os == 'macOS' && needs.version.outputs.release

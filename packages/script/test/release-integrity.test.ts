@@ -169,12 +169,35 @@ describe("release integrity contract", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
     const smoke = readFileSync(resolve(root, "packages/desktop/scripts/smoke-packaged-windows.ps1"), "utf8")
 
-    expect(workflow).toContain("run: ./scripts/smoke-packaged-windows.ps1")
+    expect(workflow).toContain("./scripts/smoke-packaged-windows.ps1")
+    expect(workflow).toContain('-ExpectedVersion "${{ needs.version.outputs.version }}"')
+    expect(workflow).toContain("-ExpectedProductName $expectedProductName")
     expect(workflow).not.toContain('$apps = @(Get-ChildItem -LiteralPath "dist\\win-unpacked"')
     expect(smoke).toContain('MONGOLGPT_TEST_ONBOARDING", "1"')
     expect(smoke).toContain("MONGOLGPT_DESKTOP_SMOKE_FILE")
     expect(smoke).toContain('result.url -notlike "mongolgpt-renderer://renderer/*"')
+    expect(smoke).toContain("$result.version -ne $ExpectedVersion")
+    expect(smoke).toContain("$versionInfo.ProductName -ne $ExpectedProductName")
     expect(smoke).toContain("WaitForExit($ExitTimeoutSeconds * 1000)")
+  })
+
+  test("builds a guarded, checksummed Windows dev preview without publishing", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/build-dev-windows-preview.yml"), "utf8")
+
+    expect(workflow).toContain("workflow_dispatch:")
+    expect(workflow).toContain('"BUILD DEV WINDOWS PREVIEW"')
+    expect(workflow).toContain("github.ref == 'refs/heads/main'")
+    expect(workflow).toContain("MONGOLGPT_CHANNEL: dev")
+    expect(workflow).toContain("0.0.0-dev.$env:GITHUB_RUN_ID.$env:GITHUB_RUN_ATTEMPT")
+    expect(workflow).toContain("electron-builder --win --x64 --publish never")
+    expect(workflow).toContain('-ExpectedProductName "MongolGPT Dev"')
+    expect(workflow).toContain("Get-FileHash -Algorithm SHA256")
+    expect(workflow).toContain("SHA256SUMS.txt")
+    expect(workflow).toContain("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a")
+    expect(workflow).toContain("retention-days: 14")
+    expect(workflow).not.toContain("gh release")
+    expect(workflow).not.toContain("npm publish")
+    expect(workflow).not.toContain("MONGOLGPT_CHANNEL: prod")
   })
 
   test("smokes the signed Windows CLI and keeps Free Auto behind a MongolGPT account", () => {

@@ -1,6 +1,8 @@
 param(
   [string]$AppDirectory = (Join-Path $PSScriptRoot "..\dist\win-unpacked"),
   [string]$MarkerPath = "",
+  [string]$ExpectedVersion = "",
+  [string]$ExpectedProductName = "",
   [ValidateRange(1, 300)]
   [int]$ReadyTimeoutSeconds = 90,
   [ValidateRange(1, 120)]
@@ -69,6 +71,14 @@ try {
   if ($result.status -ne "ready" -or $result.url -notlike "mongolgpt-renderer://renderer/*") {
     throw "Packaged desktop returned an invalid smoke result: $rawResult"
   }
+  if (![string]::IsNullOrWhiteSpace($ExpectedVersion) -and $result.version -ne $ExpectedVersion) {
+    throw "Packaged desktop version is $($result.version); expected $ExpectedVersion."
+  }
+
+  $versionInfo = $apps[0].VersionInfo
+  if (![string]::IsNullOrWhiteSpace($ExpectedProductName) -and $versionInfo.ProductName -ne $ExpectedProductName) {
+    throw "Packaged desktop product name is $($versionInfo.ProductName); expected $ExpectedProductName."
+  }
 
   if (!$process.WaitForExit($ExitTimeoutSeconds * 1000)) {
     throw "Packaged desktop reported ready but did not exit cleanly."
@@ -82,6 +92,7 @@ try {
     status = $result.status
     url = $result.url
     version = $result.version
+    productName = $versionInfo.ProductName
     exitCode = $process.ExitCode
   }
 } catch {

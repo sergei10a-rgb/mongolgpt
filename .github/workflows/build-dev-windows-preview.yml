@@ -1,0 +1,112 @@
+name: Build dev Windows preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "BUILD DEV WINDOWS PREVIEW гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: desktop-dev-windows-preview
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_CHANNEL: dev
+
+jobs:
+  build:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - name: Validate exact preview confirmation
+        shell: pwsh
+        env:
+          PREVIEW_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if ($env:PREVIEW_CONFIRMATION -ne "BUILD DEV WINDOWS PREVIEW") {
+            throw "Windows dev preview build баталгаажуулалт буруу байна."
+          }
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Select immutable preview version
+        id: version
+        shell: pwsh
+        run: '"version=0.0.0-dev.$env:GITHUB_RUN_ID.$env:GITHUB_RUN_ATTEMPT" >> $env:GITHUB_OUTPUT'
+
+      - name: Prepare desktop bundle
+        working-directory: packages/desktop
+        env:
+          MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
+        run: bun ./scripts/prepare.ts
+
+      - name: Build desktop
+        working-directory: packages/desktop
+        env:
+          MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: bun run build
+
+      - name: Package unsigned dev installer
+        working-directory: packages/desktop
+        env:
+          MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
+        run: npx electron-builder --win --x64 --publish never --config electron-builder.config.ts
+
+      - name: Smoke packaged MongolGPT Dev
+        working-directory: packages/desktop
+        shell: pwsh
+        run: ./scripts/smoke-packaged-windows.ps1 -ExpectedVersion "${{ steps.version.outputs.version }}" -ExpectedProductName "MongolGPT Dev"
+
+      - name: Prepare checksummed preview artifact
+        working-directory: packages/desktop
+        shell: pwsh
+        env:
+          PREVIEW_VERSION: ${{ steps.version.outputs.version }}
+          PREVIEW_SHA: ${{ github.sha }}
+        run: |
+          $source = Join-Path $PWD "dist\mongolgpt-desktop-win-x64.exe"
+          if (!(Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "Windows dev preview installer олдсонгүй: $source"
+          }
+
+          $artifact = Join-Path $env:RUNNER_TEMP "mongolgpt-dev-windows-preview"
+          New-Item -ItemType Directory -Force -Path $artifact | Out-Null
+          Copy-Item -LiteralPath $source -Destination $artifact
+
+          $name = Split-Path -Leaf $source
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $source).Hash.ToLowerInvariant()
+          "$hash  $name" | Set-Content -Encoding utf8 -LiteralPath (Join-Path $artifact "SHA256SUMS.txt")
+          @(
+            "MongolGPT Windows Dev Preview",
+            "",
+            "Хувилбар: $env:PREVIEW_VERSION",
+            "Commit: $env:PREVIEW_SHA",
+            "",
+            "Энэ нь production release биш, code-sign хийгдээгүй хөгжүүлэлтийн installer.",
+            "Windows SmartScreen анхааруулга үзүүлж болно. Зөвхөн MongolGPT-ийн туршилтад ашиглана."
+          ) | Set-Content -Encoding utf8 -LiteralPath (Join-Path $artifact "README-MN.txt")
+
+      - name: Upload Windows dev preview
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mongolgpt-desktop-dev-windows-${{ steps.version.outputs.version }}
+          path: ${{ runner.temp }}/mongolgpt-dev-windows-preview/*
+          if-no-files-found: error
+          retention-days: 14
