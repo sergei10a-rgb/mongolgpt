@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { repairCloudflareQueueProviderState } from "../src/cloudflare-state-repair"
+import { auditCloudflareQueueProviderState, repairCloudflareQueueProviderState } from "../src/cloudflare-state-repair"
 
 const oldProvider =
   "urn:pulumi:dev::mongolgpt::pulumi:providers:cloudflare::default_6_13_0::9a45bc90-e476-4ef5-9e66-8febc7016477"
@@ -40,6 +40,24 @@ describe("Cloudflare queue provider state repair", () => {
     repairCloudflareQueueProviderState(state)
 
     expect(repairCloudflareQueueProviderState(state).changed).toBe(false)
+  })
+
+  test("audits nested checkpoint copies without exposing unrelated values", () => {
+    const state = fixture()
+    state.checkpoint.latest.resources.push({
+      urn: "urn:pulumi:dev::mongolgpt::example:index:Note::IntegrityMetadata",
+      type: "example:index:Note",
+      provider: `recorded failure: ${oldProvider}`,
+    })
+
+    expect(auditCloudflareQueueProviderState(state)).toEqual({
+      targetProviders: [{ path: "$.checkpoint.latest.resources[1]", provider: oldProvider }],
+      exactDanglingPaths: ["$.checkpoint.latest.resources[1].provider"],
+      danglingMentionPaths: [
+        "$.checkpoint.latest.resources[1].provider",
+        "$.checkpoint.latest.resources[2].provider",
+      ],
+    })
   })
 
   test("fails closed when another resource also references the removed provider", () => {

@@ -1,6 +1,9 @@
 #!/usr/bin/env bun
 
-import { repairCloudflareQueueProviderState } from "@mongolgpt/script/cloudflare-state-repair"
+import {
+  auditCloudflareQueueProviderState,
+  repairCloudflareQueueProviderState,
+} from "@mongolgpt/script/cloudflare-state-repair"
 
 if (process.env.MONGOLGPT_REPAIR_CLOUDFLARE_QUEUE_PROVIDER !== "true") {
   fail("Cloudflare provider state repair зөвхөн баталгаажсан migration workflow-д ажиллана.")
@@ -20,7 +23,14 @@ try {
   fail("SST state JSON уншигдсангүй.")
 }
 
+const before = auditCloudflareQueueProviderState(state)
+console.log(`Cloudflare state audit before: ${JSON.stringify(before)}`)
 const result = repairCloudflareQueueProviderState(state)
+const after = auditCloudflareQueueProviderState(state)
+console.log(`Cloudflare state audit after: ${JSON.stringify(after)}`)
+if (after.targetProviders.length !== 1 || after.exactDanglingPaths.length > 0) {
+  fail("Cloudflare queue provider state бүрэн засагдсангүй.")
+}
 if (result.changed) await Bun.write(path, `${JSON.stringify(state, null, 2)}\n`)
 console.log(result.changed ? "Cloudflare queue provider state засагдлаа." : "Cloudflare queue provider state аль хэдийн зөв байна.")
 

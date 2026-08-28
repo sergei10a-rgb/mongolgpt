@@ -19,6 +19,41 @@ export type CloudflareStateRepairResult = {
   provider: string
 }
 
+export type CloudflareStateAudit = {
+  targetProviders: { path: string; provider: string }[]
+  exactDanglingPaths: string[]
+  danglingMentionPaths: string[]
+}
+
+export function auditCloudflareQueueProviderState(root: unknown): CloudflareStateAudit {
+  const targetProviders: CloudflareStateAudit["targetProviders"] = []
+  const exactDanglingPaths: string[] = []
+  const danglingMentionPaths: string[] = []
+
+  function visit(value: unknown, path: string) {
+    if (Array.isArray(value)) {
+      value.forEach((child, index) => visit(child, `${path}[${index}]`))
+      return
+    }
+    if (!record(value)) return
+
+    if (value.urn === TARGET_QUEUE_URN) {
+      targetProviders.push({ path, provider: typeof value.provider === "string" ? value.provider : "missing" })
+    }
+    for (const [key, child] of Object.entries(value)) {
+      const childPath = `${path}.${key}`
+      if (typeof child === "string" && child.includes(DANGLING_PROVIDER_REFERENCE)) {
+        danglingMentionPaths.push(childPath)
+        if (child === DANGLING_PROVIDER_REFERENCE) exactDanglingPaths.push(childPath)
+      }
+      if (typeof child === "object" && child !== null) visit(child, childPath)
+    }
+  }
+
+  visit(root, "$")
+  return { targetProviders, exactDanglingPaths, danglingMentionPaths }
+}
+
 export function repairCloudflareQueueProviderState(root: unknown): CloudflareStateRepairResult {
   const resources = findTargetResourceArray(root)
   const target = resources.find((resource) => resource.urn === TARGET_QUEUE_URN)
