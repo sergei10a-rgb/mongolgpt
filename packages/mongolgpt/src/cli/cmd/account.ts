@@ -394,6 +394,7 @@ export const LoginCommand = effectCmd({
     yargs.positional("url", {
       describe: "серверийн URL",
       type: "string",
+      default: defaultConsoleUrl,
     }),
   handler: Effect.fn("Cli.account.login")(function* (args) {
     UI.empty()

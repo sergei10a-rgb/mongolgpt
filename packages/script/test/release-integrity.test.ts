@@ -29,6 +29,9 @@ describe("release integrity contract", () => {
     ]) {
       expect(readFileSync(resolve(root, file), "utf8")).toContain("releaseTag(")
     }
+
+    const versionScript = readFileSync(resolve(root, "script/version.ts"), "utf8")
+    expect(versionScript).toContain("account_url=${resolveProductServiceUrls(Script.channel).console}")
   })
 
   test("creates stable lowercase basenames in sorted order", () => {
@@ -100,6 +103,7 @@ describe("release integrity contract", () => {
     expect(workflow).toContain("MONGOLGPT_CHANNEL: dev")
     expect(workflow).toContain("0.0.0-dev-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}")
     expect(workflow).toContain("smoke-built-cli-windows.ps1")
+    expect(workflow).toContain('-ExpectedAccountUrl "https://dev.mgpt.mn"')
     expect(workflow).toContain("packages/mongolgpt/script/publish.ts --dry-run --npm-only")
     expect(workflow).toContain("packages/mongolgpt/script/publish.ts --npm-only")
     expect(workflow).toContain("packages/mongolgpt/script/release-preflight.ts --npm-cli")
@@ -147,7 +151,11 @@ describe("release integrity contract", () => {
     expect(workflow.indexOf("Smoke signed Windows CLI account gate")).toBeLessThan(
       workflow.indexOf("Repack Windows CLI archives"),
     )
+    expect(workflow).toContain("account_url: ${{ steps.version.outputs.account_url }}")
+    expect(workflow).toContain('-ExpectedAccountUrl "${{ needs.version.outputs.account_url }}"')
     expect(smoke).toContain('"mongolgpt/free-auto"')
+    expect(smoke).toContain('@("account", "login", "--help")')
+    expect(smoke).toContain("$accountLoginHelpText.Contains($ExpectedAccountUrl)")
     expect(smoke).toContain('"MONGOLGPT_AUTH_CONTENT" = "{}"')
     expect(smoke).toContain('"MONGOLGPT_API_KEY" = ""')
     expect(smoke).toContain('@("account", "--help")')

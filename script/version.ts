@@ -3,8 +3,13 @@
 import { Script } from "@mongolgpt/script"
 import { $ } from "bun"
 import { releaseTag } from "../packages/script/src/release-integrity"
+import { resolveProductServiceUrls } from "../packages/core/src/product"
 
-const output = [`version=${Script.version}`]
+const output = [
+  `version=${Script.version}`,
+  `channel=${Script.channel}`,
+  `account_url=${resolveProductServiceUrls(Script.channel).console}`,
+]
 const sha = process.env.GITHUB_SHA ?? (await $`git rev-parse HEAD`.text()).trim()
 const tag = releaseTag(Script.version)
 

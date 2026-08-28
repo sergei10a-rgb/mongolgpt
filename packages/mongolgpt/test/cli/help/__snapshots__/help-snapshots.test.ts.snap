@@ -509,7 +509,7 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
 удирдлагын самбарт нэвтрэх
 
 Байрлалын аргументууд:
-  url  серверийн URL                                                                         [текст]
+  url  серверийн URL                                      [текст] [анхдагч: "http://localhost:3000"]
 
 Сонголтууд:
   -h, --help        тусламж харуулах                                                         [логик]

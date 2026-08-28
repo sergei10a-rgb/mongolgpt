@@ -5,6 +5,9 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$ExpectedVersion,
 
+  [Parameter(Mandatory = $true)]
+  [string]$ExpectedAccountUrl,
+
   [int]$TimeoutSeconds = 30
 )
 
@@ -99,6 +102,12 @@ try {
     throw "account --help smoke амжилтгүй: exit=$($accountHelp.ExitCode), stderr=$($accountHelp.Stderr.Trim())"
   }
 
+  $accountLoginHelp = Invoke-MongolGPT -Arguments @("account", "login", "--help")
+  $accountLoginHelpText = $accountLoginHelp.Stdout + $accountLoginHelp.Stderr
+  if ($accountLoginHelp.ExitCode -ne 0 -or -not $accountLoginHelpText.Contains($ExpectedAccountUrl)) {
+    throw "account login --help нь build-ийн бүртгэлийн URL-ийг харуулсангүй: expected=$ExpectedAccountUrl, stderr=$($accountLoginHelp.Stderr.Trim())"
+  }
+
   $freeAuto = Invoke-MongolGPT -Arguments @(
     "run",
     "--model",
@@ -114,7 +123,7 @@ try {
     throw "Free Auto нэвтрэх хаалт зөв тайлбар буцаасангүй: $($freeAuto.Stderr.Trim())"
   }
 
-  Write-Host "MongolGPT Windows CLI smoke амжилттай: version, account help, Git repo, Free Auto account gate"
+  Write-Host "MongolGPT Windows CLI smoke амжилттай: version, account URL, Git repo, Free Auto account gate"
 }
 finally {
   Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue

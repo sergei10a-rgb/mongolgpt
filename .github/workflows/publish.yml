@@ -65,6 +65,7 @@ jobs:
       release: ${{ steps.version.outputs.release }}
       tag: ${{ steps.version.outputs.tag }}
       repo: ${{ steps.version.outputs.repo }}
+      account_url: ${{ steps.version.outputs.account_url }}
 
   build-cli:
     needs: version
@@ -190,7 +191,7 @@ jobs:
       - name: Smoke signed Windows CLI account gate
         shell: pwsh
         working-directory: packages/mongolgpt
-        run: ./script/smoke-built-cli-windows.ps1 -BinaryPath "dist/mongolgpt-windows-x64/bin/mongolgpt.exe" -ExpectedVersion "${{ needs.version.outputs.version }}"
+        run: ./script/smoke-built-cli-windows.ps1 -BinaryPath "dist/mongolgpt-windows-x64/bin/mongolgpt.exe" -ExpectedVersion "${{ needs.version.outputs.version }}" -ExpectedAccountUrl "${{ needs.version.outputs.account_url }}"
 
       - name: Repack Windows CLI archives
         working-directory: packages/mongolgpt/dist

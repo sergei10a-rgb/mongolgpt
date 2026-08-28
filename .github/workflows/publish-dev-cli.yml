@@ -86,7 +86,7 @@ jobs:
       - name: Smoke Windows CLI and anonymous Free Auto gate
         shell: pwsh
         working-directory: packages/mongolgpt
-        run: ./script/smoke-built-cli-windows.ps1 -BinaryPath "dist/mongolgpt-windows-x64/bin/mongolgpt.exe" -ExpectedVersion "${{ needs.build.outputs.version }}"
+        run: ./script/smoke-built-cli-windows.ps1 -BinaryPath "dist/mongolgpt-windows-x64/bin/mongolgpt.exe" -ExpectedVersion "${{ needs.build.outputs.version }}" -ExpectedAccountUrl "https://dev.mgpt.mn"
 
   publish:
     needs:
