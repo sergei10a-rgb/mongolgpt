@@ -206,8 +206,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).not.toContain("format('https://runtime.{0}'")
     expect(buildStep?.run).toContain("bun --cwd packages/app verify:hosted-artifact")
     const webApp = await Bun.file(new URL("../../../infra/web-app.ts", import.meta.url)).text()
+    expect(webApp).toContain('new sst.cloudflare.StaticSiteV2("WebApp"')
     expect(webApp).toContain('command: "bun run build:hosted"')
+    expect(webApp).toContain("VITE_MONGOLGPT_SERVER_URL: runtimeOrigin")
     expect(webApp).toContain('VITE_MONGOLGPT_RELEASE_SHA: process.env.MONGOLGPT_RELEASE_SHA ?? ""')
+    expect(webApp).toContain('args.handler = "packages/app/cloudflare-router.ts"')
     expect(webApp).toContain("const supportUrl = `${publicOrigin}/support`")
     expect(webApp).not.toContain("github.com/sergei10a-rgb/mongolgpt/issues")
     expect(workflow.jobs.deploy.condition).toBe(
