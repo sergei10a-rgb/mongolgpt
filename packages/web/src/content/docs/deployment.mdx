@@ -87,17 +87,18 @@ Cloudflare-ийн удирдлагын самбар хэвийн болмогц 
 
 ### Cloudflare байршуулалтын токен
 
-Cloudflare-ийн **Миний бүртгэл (`My Profile`) → API токен (`API Tokens`) → Токен үүсгэх (`Create Token`)** хэсэгт **Cloudflare Worker засах (`Edit Cloudflare Workers`)** загварыг сонгоно. Энэ загварын Worker script, KV хадгалалт, R2 хадгалалт, Worker route болон унших суурь эрхүүдийг хэвээр үлдээгээд дараах таван эрхийг нэмнэ.
+Cloudflare-ийн **Миний бүртгэл (`My Profile`) → API токен (`API Tokens`) → Токен үүсгэх (`Create Token`)** хэсэгт **Cloudflare Worker засах (`Edit Cloudflare Workers`)** загварыг сонгоно. Энэ загварын Worker script, KV хадгалалт, R2 хадгалалт, Worker route болон унших суурь эрхүүдийг хэвээр үлдээгээд дараах зургаан эрхийг нэмнэ.
 
 | Хамрах хүрээ        | Үйлчилгээ    | Эрх            |
 | ------------------- | ------------ | -------------- |
 | Аккаунт (`Account`) | `D1`         | Засах (`Edit`) |
 | Аккаунт (`Account`) | `Queues`     | Засах (`Edit`) |
-| Аккаунт (`Account`) | `Containers` | Засах (`Edit`) |
+| Аккаунт (`Account`) | `Containers` | Унших (`Read`) |
+| Аккаунт (`Account`) | `Containers` | Бичих (`Write`) |
 | Бүс (`Zone`)        | `Zone`       | Унших (`Read`) |
 | Бүс (`Zone`)        | `DNS`        | Засах (`Edit`) |
 
-Аккаунтын нөөцөд MongolGPT байрлах ганц аккаунтыг, бүсийн нөөцөд зөвхөн `mgpt.mn`-ийг сонгоно. Токеныг `MongolGPT deploy` гэх мэт зориулалт нь ойлгомжтой нэрээр үүсгэж, утгыг репозиторийн `CLOUDFLARE_API_TOKEN` нууц утгад хадгална. IP шүүлтүүр тавих бол GitHub-hosted runner-ийн өөрчлөгддөг хаягийг зөвшөөрөх боломжгүй тул байршуулалт хаагдахыг тооцно. GitHub Actions-ийн **Cloudflare token preflight** урсгалыг ажиллуулахад OAuth, Free Auto болон төлбөрийн нууц шаардахгүйгээр repository secret дэх токеныг шалгаж, ямар ч cloud resource өөрчлөхгүй. Бүрэн шалгалт нь token active эсэх, сонгосон account-аас `mgpt.mn` zone болон Workers Scripts, Containers, D1, Workers KV, R2, Queues-ийг уншиж чадаж байгаа эсэхийг шалгана. Static docs/app урсгал зөвхөн zone+Worker, **Deploy dev runtime** урсгал zone+Worker+Containers хэсгийг binary/image build-ээс өмнө шалгана. Унших probe амжилттай болсон ч container image upload-д хүснэгтэд заасан `Containers Edit` эрх заавал шаардлагатай бөгөөд бодит байршуулалт edit эрхийг эцэслэн шалгана.
+Аккаунтын нөөцөд MongolGPT байрлах ганц аккаунтыг, бүсийн нөөцөд зөвхөн `mgpt.mn`-ийг сонгоно. Токеныг `MongolGPT deploy` гэх мэт зориулалт нь ойлгомжтой нэрээр үүсгэж, утгыг репозиторийн `CLOUDFLARE_API_TOKEN` нууц утгад хадгална. IP шүүлтүүр тавих бол GitHub-hosted runner-ийн өөрчлөгддөг хаягийг зөвшөөрөх боломжгүй тул байршуулалт хаагдахыг тооцно. GitHub Actions-ийн **Cloudflare token preflight** урсгалыг ажиллуулахад OAuth, Free Auto болон төлбөрийн нууц шаардахгүйгээр repository secret дэх токеныг шалгаж, ямар ч cloud resource өөрчлөхгүй. Бүрэн шалгалт нь token active эсэх, сонгосон account-аас `mgpt.mn` zone болон Workers Scripts, Containers, D1, Workers KV, R2, Queues-ийг уншиж чадаж байгаа эсэхийг шалгана. Static docs/app урсгал зөвхөн zone+Worker, **Deploy dev runtime** урсгал zone+Worker+Containers хэсгийг binary/image build-ээс өмнө шалгана. `Containers Read` нь preflight болон registry мэдээлэл уншихад, `Containers Write` нь image upload ба rollout хийхэд заавал хэрэгтэй. Cloudflare-ийн хуучин UI дээр бичих эрх `Edit` гэж харагдаж болно.
 
 Энэ нь Cloudflare Access болон D1 нөөцлөлтийн токен биш. Админы Access-д `CLOUDFLARE_ACCESS_API_TOKEN`, үйлдвэрлэлийн D1 экспортод `D1_BACKUP_API_TOKEN` гэсэн тусдаа хамгийн бага эрхтэй токен хэрэглэнэ. Эрхийн нэр өөрчлөгдсөн эсэхийг [Cloudflare-ийн токены эрхийн жагсаалт](https://developers.cloudflare.com/fundamentals/api/reference/permissions/), SST-ийн суурь шаардлагыг [SST Cloudflare credentials](https://sst.dev/docs/cloudflare/#credentials)-аас тулгаж шалгана.
 
@@ -139,7 +140,7 @@ Session болон model gateway нь зөвхөн `MONGOLGPT_GATEWAY_SESSION_SE
 
 OAuth эсвэл runtime bootstrap амжилттай болсон нь бүтээгдэхүүний deploy амжилттай болсон гэсэн үг биш. Эдгээр тусгаарласан урсгал Free Auto model call, subscription эсвэл production орчныг байршуулдаггүй бөгөөд `production` дээр ажиллах боломжгүй. Үндсэн deploy-ийн бодит нэвтэрсэн MongolGPT account-ын шалгалтыг хэзээ ч орлохгүй.
 
-OAuth bootstrap эхлээд OAuth, quota болон зайлшгүй secret-ийн бүтцийг Cloudflare API дуудах, typecheck/test ажиллуулах, resource өөрчлөхөөс өмнө шалгана. Дараагийн fail-fast Cloudflare шалгалт нь Zone, Workers, D1, KV, R2 болон Queues эрхийг батална. Энэ урсгал container image байршуулдаггүй тул `Containers Edit` шаардахгүй. Харин **Deploy dev runtime** болон үндсэн full deploy нь Cloudflare Sandbox container ашигладаг учраас `Containers Edit` эрхийг тусад нь заавал шалгана.
+OAuth bootstrap эхлээд OAuth, quota болон зайлшгүй secret-ийн бүтцийг Cloudflare API дуудах, typecheck/test ажиллуулах, resource өөрчлөхөөс өмнө шалгана. Дараагийн fail-fast Cloudflare шалгалт нь Zone, Workers, D1, KV, R2 болон Queues эрхийг батална. Энэ урсгал container image байршуулдаггүй тул Containers эрх шаардахгүй. Харин **Deploy dev runtime** болон үндсэн full deploy нь Cloudflare Sandbox container ашигладаг учраас `Containers Read` болон `Containers Write` эрхийг тусад нь заавал өгнө.
 Bootstrap workflow нь runtime-ийн account-isolation `MONGOLGPT_RUNTIME_SECRET`-ийг уншихгүй. Console-оос runtime-д олгох богино настай эрхийн баримтад гарын үсэг зурах `MONGOLGPT_RUNTIME_AUTH_SECRET` л account deployment-д хамаарна.
 
 `MONGOLGPT_PLAN_LIMITS` нь paid багц бүрд 7 хамгаалалтыг заавал тодорхойлно: 7 хоногийн өртөг, токен,

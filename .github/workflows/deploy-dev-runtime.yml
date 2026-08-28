@@ -40,6 +40,7 @@ jobs:
     env:
       CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
     steps:
       - name: Validate exact dev runtime confirmation
         env:
@@ -89,3 +90,27 @@ jobs:
 
       - name: Verify live dev runtime boundary
         run: bun script/deployment-smoke.ts --runtime-only dev
+
+      - name: Install Chromium for deployed browser smoke
+        working-directory: packages/app
+        run: bunx playwright install --with-deps chromium
+
+      - name: Verify dev app and runtime in Chromium
+        env:
+          CI: "true"
+          PLAYWRIGHT_DEPLOYED_BASE_URL: https://app.dev.mgpt.mn
+          PLAYWRIGHT_DEPLOYED_PUBLIC_URL: https://dev.mgpt.mn
+          PLAYWRIGHT_DEPLOYED_RUNTIME_URL: https://runtime.dev.mgpt.mn
+        run: bun --cwd packages/app test:e2e:deployed:anonymous
+        timeout-minutes: 10
+
+      - name: Upload deployed browser artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deployed-browser-dev-runtime-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            packages/app/e2e/test-results-deployed
+            packages/app/e2e/playwright-report-deployed

@@ -166,7 +166,18 @@ describe("dev app-only smoke", () => {
       if (url.pathname === "/assets/index-abc123.js") {
         return new Response("export {}", { headers: { "content-type": "text/javascript; charset=utf-8" } })
       }
-      if (["/api/health", "/global/health", "/v1/account/overview"].includes(url.pathname)) {
+      if (
+        [
+          "/api/health",
+          "/global/health",
+          "/v1/account/overview",
+          "/auth/runtime-token",
+          "/auth/session",
+          "/session",
+          "/provider",
+          "/project",
+        ].includes(url.pathname)
+      ) {
         return Response.json(
           { code: "STATIC_APP_API_ROUTE", message: "MongolGPT веб аппын хаяг дээр API ажиллахгүй." },
           { status: 404, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" } },
@@ -193,6 +204,11 @@ describe("dev app-only smoke", () => {
       "https://app.dev.mgpt.mn/api/health",
       "https://app.dev.mgpt.mn/global/health",
       "https://app.dev.mgpt.mn/v1/account/overview",
+      "https://app.dev.mgpt.mn/auth/runtime-token",
+      "https://app.dev.mgpt.mn/auth/session",
+      "https://app.dev.mgpt.mn/session",
+      "https://app.dev.mgpt.mn/provider",
+      "https://app.dev.mgpt.mn/project",
     ])
   })
 })

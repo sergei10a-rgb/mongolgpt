@@ -87,7 +87,7 @@ export async function preflightCloudflareDeploymentAccess(input: {
       `${accountPath}/containers/me`,
       options(),
       "Cloudflare Containers бүртгэлийн эрхийг шалгах",
-      "Containers Edit",
+      "Containers Read",
     )
   }
   if (input.scope === "runtime-only") return { zoneId: zone.id, domain }

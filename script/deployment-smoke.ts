@@ -336,7 +336,16 @@ async function checkDirectAppRoute(appUrl: string, result: DeploymentPreflightRe
 }
 
 async function checkStaticAppBackendBoundary(appUrl: string) {
-  for (const path of ["/api/health", "/global/health", "/v1/account/overview"]) {
+  for (const path of [
+    "/api/health",
+    "/global/health",
+    "/v1/account/overview",
+    "/auth/runtime-token",
+    "/auth/session",
+    "/session",
+    "/provider",
+    "/project",
+  ]) {
     if (!isStaticAppBackendPath(path)) throw new Error(`static app backend path is not reserved: ${path}`)
     const requestUrl = new URL(path, `${appUrl}/`).toString()
     const response = await fetch(requestUrl, {

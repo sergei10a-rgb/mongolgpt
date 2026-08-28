@@ -548,6 +548,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const build = job.steps.find((step) => step.name === "Build hosted runtime image payload")
     const deploy = job.steps.find((step) => step.name === "Deploy only dev runtime to Cloudflare")
     const smoke = job.steps.find((step) => step.name === "Verify live dev runtime boundary")
+    const browser = job.steps.find((step) => step.name === "Verify dev app and runtime in Chromium")
+    const artifacts = job.steps.find((step) => step.name === "Upload deployed browser artifacts")
 
     expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
     expect(parsed.permissions).toEqual({ contents: "read" })
@@ -579,6 +581,16 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain('packages/runtime script/deploy.ts dev --secrets-file="$runtime_secrets"')
     expect(deploy?.run).not.toContain("bun sst")
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --runtime-only dev")
+    expect(browser?.env).toEqual({
+      CI: "true",
+      PLAYWRIGHT_DEPLOYED_BASE_URL: "https://app.dev.mgpt.mn",
+      PLAYWRIGHT_DEPLOYED_PUBLIC_URL: "https://dev.mgpt.mn",
+      PLAYWRIGHT_DEPLOYED_RUNTIME_URL: "https://runtime.dev.mgpt.mn",
+    })
+    expect(browser?.run).toBe("bun --cwd packages/app test:e2e:deployed:anonymous")
+    expect(job.steps.indexOf(browser!)).toBeGreaterThan(job.steps.indexOf(smoke!))
+    expect(artifacts?.condition).toBe("always()")
+    expect(artifacts?.uses).toBe("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a")
   })
 
   test("deploys the authenticated Sandbox runtime before publishing the hosted app", async () => {
