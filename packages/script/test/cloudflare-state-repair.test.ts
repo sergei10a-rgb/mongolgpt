@@ -12,6 +12,7 @@ function fixture() {
     version: 3,
     checkpoint: {
       latest: {
+        metadata: {} as { integrity_error?: { error: string } },
         resources: [
           { urn: newProviderUrn, type: "pulumi:providers:cloudflare", id: newProviderId },
           { urn: queueUrn, type: "cloudflare:index/queue:Queue", provider: oldProvider },
@@ -27,6 +28,8 @@ describe("Cloudflare queue provider state repair", () => {
     const result = repairCloudflareQueueProviderState(state)
 
     expect(result.changed).toBe(true)
+    expect(result.rewired).toBe(1)
+    expect(result.removedDuplicates).toBe(0)
     expect(state.checkpoint.latest.resources[1].provider).toBe(`${newProviderUrn}::${newProviderId}`)
     expect(state.checkpoint.latest.resources[0]).toEqual({
       urn: newProviderUrn,
@@ -40,6 +43,28 @@ describe("Cloudflare queue provider state repair", () => {
     repairCloudflareQueueProviderState(state)
 
     expect(repairCloudflareQueueProviderState(state).changed).toBe(false)
+  })
+
+  test("removes migrated duplicates, rewires remaining Cloudflare resources, and clears stale metadata", () => {
+    const state = fixture()
+    state.checkpoint.latest.metadata = { integrity_error: { error: `unknown provider ${oldProvider}` } }
+    state.checkpoint.latest.resources.splice(1, 0, {
+      urn: queueUrn,
+      type: "cloudflare:index/queue:Queue",
+      provider: `${newProviderUrn}::${newProviderId}`,
+    })
+    state.checkpoint.latest.resources.push({
+      urn: "urn:pulumi:dev::mongolgpt::cloudflare:index/queueConsumer:QueueConsumer::UsageConsumer",
+      type: "cloudflare:index/queueConsumer:QueueConsumer",
+      provider: oldProvider,
+    })
+
+    const result = repairCloudflareQueueProviderState(state)
+
+    expect(result).toMatchObject({ changed: true, rewired: 1, removedDuplicates: 1 })
+    expect(state.checkpoint.latest.resources.filter((resource) => resource.urn === queueUrn)).toHaveLength(1)
+    expect(state.checkpoint.latest.resources.at(-1)?.provider).toBe(`${newProviderUrn}::${newProviderId}`)
+    expect(state.checkpoint.latest.metadata.integrity_error).toBeUndefined()
   })
 
   test("audits nested checkpoint copies without exposing unrelated values", () => {
@@ -60,15 +85,15 @@ describe("Cloudflare queue provider state repair", () => {
     })
   })
 
-  test("fails closed when another resource also references the removed provider", () => {
+  test("fails closed when a non-Cloudflare resource references the removed provider", () => {
     const state = fixture()
     state.checkpoint.latest.resources.push({
-      urn: "urn:pulumi:dev::mongolgpt::cloudflare:index/kvNamespace:KvNamespace::Unexpected",
-      type: "cloudflare:index/kvNamespace:KvNamespace",
+      urn: "urn:pulumi:dev::mongolgpt::example:index:Thing::Unexpected",
+      type: "example:index:Thing",
       provider: oldProvider,
     })
 
-    expect(() => repairCloudflareQueueProviderState(state)).toThrow("жагсаалт хүлээлтээс зөрлөө")
+    expect(() => repairCloudflareQueueProviderState(state)).toThrow("Cloudflare бус resource")
   })
 
   test("fails closed without exactly one migrated provider", () => {
