@@ -146,7 +146,16 @@ jobs:
           set_optional_secret GITHUB_CLIENT_SECRET_CONSOLE
           set_optional_secret GOOGLE_CLIENT_ID
           bun sst unlock --stage="$stage" || true
-          bun sst state repair --stage="$stage" --print-logs
+          repair_log="$(mktemp)"
+          set +e
+          bun sst state repair --stage="$stage" --print-logs 2>&1 | tee "$repair_log"
+          repair_status="${PIPESTATUS[0]}"
+          set -e
+          if [ "$repair_status" -ne 0 ] && ! grep -Fq "No changes made" "$repair_log"; then
+            rm -f "$repair_log"
+            exit "$repair_status"
+          fi
+          rm -f "$repair_log"
           bun sst deploy --stage="$stage" --target Database --print-logs
           bun sst shell --stage="$stage" -- bun run db:migrate
           bun sst deploy --stage="$stage" --target AuthApi --target Console --print-logs

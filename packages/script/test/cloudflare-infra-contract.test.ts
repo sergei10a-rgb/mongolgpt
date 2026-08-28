@@ -178,13 +178,16 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
     const run = deploy?.run ?? ""
     const oauthSecrets = run.indexOf("set_optional_secret GOOGLE_CLIENT_ID")
-    const stateRepair = run.indexOf('bun sst state repair --stage="$stage" --print-logs')
+    const stateRepair = run.indexOf('bun sst state repair --stage="$stage" --print-logs 2>&1 | tee "$repair_log"')
     const database = run.indexOf('bun sst deploy --stage="$stage" --target Database')
     const migration = run.indexOf('bun sst shell --stage="$stage" -- bun run db:migrate')
     const oauth = run.indexOf('bun sst deploy --stage="$stage" --target AuthApi --target Console --print-logs')
     expect(oauthSecrets).toBeGreaterThanOrEqual(0)
     expect(stateRepair).toBeGreaterThan(oauthSecrets)
     expect(database).toBeGreaterThan(stateRepair)
+    expect(run).toContain('repair_status="${PIPESTATUS[0]}"')
+    expect(run).toContain('! grep -Fq "No changes made" "$repair_log"')
+    expect(run).not.toContain("sst state repair --stage=\"$stage\" --print-logs || true")
     expect(migration).toBeGreaterThan(database)
     expect(oauth).toBeGreaterThan(migration)
     expect(run).not.toContain("sst refresh")
