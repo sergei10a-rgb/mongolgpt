@@ -5,6 +5,7 @@ import {
   inspectAnonymousAccountOverview,
   inspectAnonymousRuntimeToken,
   inspectAnonymousRuntimeApiResponse,
+  runConsoleSmoke,
   inspectForeignOriginRuntimeRejection,
   inspectHostedAuthorizeChallenge,
   inspectHostedAuthorizeRedirect,
@@ -69,6 +70,7 @@ const deployment = {
   stage: "dev",
   domain: "mgpt.mn",
   stageDomain: "dev.mgpt.mn",
+  scope: "full" as const,
   hostedServices: true,
   adminEnabled: false,
   backupsEnabled: false,
@@ -194,6 +196,159 @@ describe("dev app-only smoke", () => {
       "https://app.dev.mgpt.mn/new-session",
       "https://app.dev.mgpt.mn/assets/index-abc123.js",
       ...staticAppBackendBoundaryPaths.map((path) => new URL(path, appOrigin).toString()),
+    ])
+  })
+})
+
+describe("dev console-only smoke", () => {
+  test("checks public console pages while preserving hosted login and account boundaries", async () => {
+    const configured = {
+      MONGOLGPT_DOMAIN: "mgpt.mn",
+      MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+      MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true",
+      MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: "true",
+      MONGOLGPT_ENABLE_ADMIN: "false",
+      MONGOLGPT_ENABLE_ANALYTICS: "false",
+      MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+      MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false",
+      MONGOLGPT_ENABLE_LEGACY_STRIPE: "false",
+      MONGOLGPT_ENABLE_MONITORING: "false",
+      MONGOLGPT_AUTH_EMAIL_DOMAINS: "smoke@mgpt.mn",
+      MONGOLGPT_ENABLE_TURNSTILE: "false",
+      MONGOLGPT_ENABLE_SHARE_SERVICE: "false",
+      MONGOLGPT_ENABLE_SYNC_SERVICE: "false",
+      MONGOLGPT_ENABLE_REAL_PAYMENTS: "false",
+      MONGOLGPT_PAYMENT_ENVIRONMENT: "disabled",
+      MONGOLGPT_SMOKE_RETRIES: "1",
+      MONGOLGPT_SMOKE_DELAY_MS: "1",
+    } satisfies Record<string, string>
+    const previous = new Map(Object.keys(configured).map((key) => [key, process.env[key]]))
+    const originalFetch = globalThis.fetch
+    const requests: string[] = []
+    const document = "<!doctype html><html lang=\"mn\"><head><title>MongolGPT</title><link rel=\"stylesheet\" href=\"/assets/index.css\"></head><body><div id=\"app\"></div><script type=\"module\" src=\"/assets/index.js\"></script></body></html>"
+
+    Object.assign(process.env, configured)
+    globalThis.fetch = mockedFetch(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init)
+      const url = new URL(request.url)
+      requests.push(url.toString())
+      if (url.toString() === "https://dev.mgpt.mn/") {
+        return new Response(document, { headers: { "content-type": "text/html; charset=utf-8" } })
+      }
+      if (url.toString() === "https://dev.mgpt.mn/auth/runtime-token" && url.pathname === "/auth/runtime-token") {
+        if (url.origin === "https://dev.mgpt.mn" && request.method === "OPTIONS") {
+          return new Response(null, {
+            status: 204,
+            headers: {
+              "access-control-allow-origin": appOrigin,
+              "access-control-allow-credentials": "true",
+              "access-control-allow-methods": "POST, OPTIONS",
+              "access-control-allow-headers": "Content-Type, X-Org-ID",
+              "access-control-max-age": "600",
+              "cache-control": "no-store",
+              vary: "Origin",
+            },
+          })
+        }
+        return Response.json(
+          { error: "unauthorized", message: "MongolGPT бүртгэлээр нэвтэрнэ үү." },
+          {
+            status: 401,
+            headers: {
+              "access-control-allow-origin": appOrigin,
+              "access-control-allow-credentials": "true",
+              "cache-control": "no-store",
+              vary: "Origin",
+            },
+          },
+        )
+      }
+      if (url.toString() === "https://dev.mgpt.mn/v1/account/overview") {
+        if (request.method === "OPTIONS") {
+          return new Response(null, {
+            status: 204,
+            headers: {
+              "access-control-allow-origin": appOrigin,
+              "access-control-allow-credentials": "true",
+              "access-control-allow-methods": "GET, OPTIONS",
+              "access-control-allow-headers": "Authorization, X-Org-ID",
+              "access-control-max-age": "600",
+              "cache-control": "no-store",
+              vary: "Origin",
+            },
+          })
+        }
+        return Response.json(
+          { error: "unauthorized", message: "MongolGPT бүртгэлээр нэвтэрнэ үү." },
+          {
+            status: 401,
+            headers: {
+              "access-control-allow-origin": appOrigin,
+              "access-control-allow-credentials": "true",
+              "cache-control": "no-store",
+              vary: "Origin",
+            },
+          },
+        )
+      }
+      if (url.toString() === "https://dev.mgpt.mn/auth/authorize?continue=/auth/app") {
+        return Response.redirect(
+          "https://auth.dev.mgpt.mn/authorize?client_id=app&redirect_uri=https%3A%2F%2Fdev.mgpt.mn%2Fauth%2Fcallback%2Fauth%2Fapp",
+          302,
+        )
+      }
+      if (url.toString().startsWith("https://auth.dev.mgpt.mn/authorize")) {
+        throw new Error(`Unexpected console-only smoke request: ${url}`)
+      }
+      if (
+        url.toString() === "https://dev.mgpt.mn/pricing" ||
+        url.toString() === "https://dev.mgpt.mn/mn/support" ||
+        url.toString() === "https://mgpt.mn/" ||
+        url.toString() === "https://www.mgpt.mn/"
+      ) {
+        return new Response(document, { headers: { "content-type": "text/html; charset=utf-8" } })
+      }
+      if (url.toString() === "https://dev.mgpt.mn/assets/index.css" || url.toString() === "https://mgpt.mn/assets/index.css" || url.toString() === "https://www.mgpt.mn/assets/index.css") {
+        return new Response("body { color: black; }", { headers: { "content-type": "text/css; charset=utf-8" } })
+      }
+      if (url.toString() === "https://dev.mgpt.mn/assets/index.js" || url.toString() === "https://mgpt.mn/assets/index.js" || url.toString() === "https://www.mgpt.mn/assets/index.js") {
+        return new Response("console.log('ok')", { headers: { "content-type": "text/javascript; charset=utf-8" } })
+      }
+      throw new Error(`Unexpected console-only smoke request: ${url}`)
+    })
+
+    try {
+      await runConsoleSmoke("dev")
+    } finally {
+      globalThis.fetch = originalFetch
+      for (const [key, value] of previous) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+
+    expect(requests).toEqual([
+      "https://dev.mgpt.mn/",
+      "https://dev.mgpt.mn/auth/runtime-token",
+      "https://dev.mgpt.mn/auth/runtime-token",
+      "https://dev.mgpt.mn/v1/account/overview",
+      "https://dev.mgpt.mn/v1/account/overview",
+      "https://dev.mgpt.mn/auth/authorize?continue=/auth/app",
+      "https://dev.mgpt.mn/",
+      "https://dev.mgpt.mn/assets/index.css",
+      "https://dev.mgpt.mn/assets/index.js",
+      "https://dev.mgpt.mn/pricing",
+      "https://dev.mgpt.mn/assets/index.css",
+      "https://dev.mgpt.mn/assets/index.js",
+      "https://dev.mgpt.mn/mn/support",
+      "https://dev.mgpt.mn/assets/index.css",
+      "https://dev.mgpt.mn/assets/index.js",
+      "https://mgpt.mn/",
+      "https://mgpt.mn/assets/index.css",
+      "https://mgpt.mn/assets/index.js",
+      "https://www.mgpt.mn/",
+      "https://www.mgpt.mn/assets/index.css",
+      "https://www.mgpt.mn/assets/index.js",
     ])
   })
 })

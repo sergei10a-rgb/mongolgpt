@@ -794,6 +794,130 @@ describe("Cloudflare deployment preflight", () => {
     )
   })
 
+  test("allows console-only preflight only for the public dev console site", () => {
+    const result = preflightDeployment({
+      stage: "dev",
+      env: {
+        ...cloudflare,
+        ...hosted,
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+        MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+        MONGOLGPT_ENABLE_MONITORING: "false",
+        MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true",
+        MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: "true",
+      },
+      requireDeploymentSecrets: false,
+      requireHostedServices: true,
+      scope: "console-only",
+    })
+    expect(result.hostedServices).toBe(true)
+    expect(result.scope).toBe("console-only")
+    expect(deploymentEndpoints(result)).toEqual({
+      docs: "https://docs.dev.mgpt.mn/docs",
+      app: "https://app.dev.mgpt.mn",
+      console: "https://dev.mgpt.mn",
+      consoleHealth: "https://dev.mgpt.mn/api/health",
+      authHealth: "https://auth.dev.mgpt.mn/health",
+      runtimeHealth: "https://runtime.dev.mgpt.mn/global/health",
+      paymentHealth: "https://pay.dev.mgpt.mn/health",
+    })
+    expect(result.warnings).toContain(
+      "Зөвхөн Console target deploy хийнэ; route ownership хадгалж runtime, database, auth, payments, docs болон admin target-уудыг шууд deploy хийхгүй.",
+    )
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: { ...cloudflare, MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true" },
+          requireDeploymentSecrets: false,
+          scope: "console-only",
+        }),
+      ["Console-only scope-ийг зөвхөн dev"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "false",
+            MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true",
+          },
+          requireDeploymentSecrets: false,
+          scope: "console-only",
+        }),
+      ["MONGOLGPT_ENABLE_HOSTED_SERVICES=true"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: { ...cloudflare, MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true" },
+          requireDeploymentSecrets: false,
+        }),
+      ["зөвхөн console-only scope"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_RUNTIME_SECRET: "",
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+            MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true",
+            MONGOLGPT_RUNTIME_AUTH_SECRET: hosted.MONGOLGPT_RUNTIME_AUTH_SECRET,
+            MONGOLGPT_ENABLE_MONITORING: "true",
+          },
+          requireDeploymentSecrets: false,
+          scope: "console-only",
+        }),
+      ["MONGOLGPT_ENABLE_MONITORING нь console-only deploy үед false"],
+    )
+    expect(() =>
+      preflightDeployment({
+        stage: "dev",
+        env: {
+          ...cloudflare,
+          ...hosted,
+          MONGOLGPT_RUNTIME_SECRET: "",
+          MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+          MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+          MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+          MONGOLGPT_ENABLE_MONITORING: "false",
+          MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true",
+          MONGOLGPT_RUNTIME_AUTH_SECRET: hosted.MONGOLGPT_RUNTIME_AUTH_SECRET,
+        },
+        scope: "console-only",
+      }),
+    ).not.toThrow()
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_RUNTIME_SECRET: "",
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+            MONGOLGPT_ENABLE_MONITORING: "false",
+            MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true",
+            MONGOLGPT_RUNTIME_AUTH_SECRET: "",
+          },
+          scope: "console-only",
+        }),
+      ["MONGOLGPT_RUNTIME_AUTH_SECRET"],
+    )
+  })
+
   test("allows runtime-only preflight with only the isolated dev runtime secrets", () => {
     const runtime = {
       ...cloudflare,

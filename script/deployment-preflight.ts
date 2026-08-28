@@ -10,10 +10,11 @@ try {
   const authBootstrap = process.argv.includes("--auth-bootstrap")
   const docsOnly = process.argv.includes("--docs-only")
   const appOnly = process.argv.includes("--app-only")
+  const consoleOnly = process.argv.includes("--console-only")
   const runtimeOnly = process.argv.includes("--runtime-only")
-  if ([authBootstrap, docsOnly, appOnly, runtimeOnly].filter(Boolean).length > 1) {
+  if ([authBootstrap, docsOnly, appOnly, consoleOnly, runtimeOnly].filter(Boolean).length > 1) {
     throw new DeploymentPreflightError([
-      "--auth-bootstrap, --docs-only, --app-only, --runtime-only scope-үүдийг хамтад нь ашиглахгүй.",
+      "--auth-bootstrap, --docs-only, --app-only, --console-only, --runtime-only scope-үүдийг хамтад нь ашиглахгүй.",
     ])
   }
   const scope = authBootstrap
@@ -22,9 +23,11 @@ try {
       ? "docs-only"
       : appOnly
         ? "app-only"
-        : runtimeOnly
-          ? "runtime-only"
-          : "full"
+        : consoleOnly
+          ? "console-only"
+          : runtimeOnly
+            ? "runtime-only"
+            : "full"
   const result = preflightDeployment({
     stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
     env: process.env,
@@ -40,7 +43,7 @@ try {
         token: process.env.CLOUDFLARE_API_TOKEN ?? "",
         domain: result.domain,
         scope:
-          scope === "docs-only" || scope === "app-only"
+          scope === "docs-only" || scope === "app-only" || scope === "console-only"
             ? "worker-only"
             : scope === "auth-bootstrap"
               ? "hosted-only"

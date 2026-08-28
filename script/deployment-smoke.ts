@@ -41,6 +41,8 @@ if (import.meta.main) {
     await runDocsSmoke(process.argv[3])
   } else if (process.argv[2] === "--app-only") {
     await runAppSmoke(process.argv[3])
+  } else if (process.argv[2] === "--console-only") {
+    await runConsoleSmoke(process.argv[3])
   } else if (process.argv[2] === "--runtime-only") {
     await runRuntimeSmoke(process.argv[3])
   } else {
@@ -85,6 +87,32 @@ export async function runAppSmoke(stage = process.env.SST_STAGE ?? "dev") {
   inspectDeploymentEndpointConfiguration(endpoints, result)
   await check("app", endpoints.app, undefined, result, endpoints.app, "", { staticAppOnly: true })
   console.log("Dev app-only smoke check passed.")
+}
+
+export async function runConsoleSmoke(stage = process.env.SST_STAGE ?? "dev") {
+  if (stage !== "dev") throw new Error("Console-only smoke нь зөвхөн dev орчинд ажиллана.")
+  if (process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES !== "true") {
+    throw new Error("Console-only smoke нь hosted service тохиргоо шаардана.")
+  }
+
+  const result = preflightDeployment({
+    stage,
+    env: process.env,
+    requireCloudflareCredentials: false,
+    requireDeploymentSecrets: false,
+    requireHostedServices: true,
+    scope: "console-only",
+  })
+  const endpoints = deploymentEndpoints(result)
+  inspectDeploymentEndpointConfiguration(endpoints, result)
+  if (!endpoints.console) throw new Error("Console-only smoke console endpoint дутуу байна.")
+
+  await check("console", endpoints.console, undefined, result, endpoints.app, await expectedRuntimeVersion())
+  await checkConsoleDocument(endpoints.console, "console")
+  await checkConsoleDocument(new URL("/pricing", `${endpoints.console}/`).toString(), "console pricing")
+  await checkConsoleDocument(new URL("/mn/support", `${endpoints.console}/`).toString(), "console support")
+  await checkConsoleRootAliases(result)
+  console.log("Dev console-only smoke check passed.")
 }
 
 export async function runRuntimeSmoke(stage = process.env.SST_STAGE ?? "dev") {
@@ -289,6 +317,39 @@ async function checkDocsRoot(docsUrl: string) {
     location: response.headers.get("location"),
     body: await response.text(),
   })
+}
+
+async function checkConsoleDocument(url: string, label: string) {
+  const response = await fetch(url, {
+    headers: { "User-Agent": "mongolgpt-deployment-smoke" },
+    redirect: "follow",
+    signal: AbortSignal.timeout(15_000),
+  })
+  inspectResponseOrigin({
+    requestUrl: url,
+    responseUrl: response.url,
+    status: response.status,
+    location: response.headers.get("location"),
+    label,
+  })
+  if (!response.ok) throw new Error(`${label} HTTP ${response.status}: ${url}`)
+  inspectHtmlContentType(response.headers.get("content-type"), `${label} response`)
+  const html = await response.text()
+  if (!/<title>[^<]*MongolGPT[^<]*<\/title>/i.test(html)) {
+    throw new Error(`${label} title is not rebranded to MongolGPT`)
+  }
+  if (!/<div[^>]+id=["']app["']/i.test(html) && !/<div[^>]+id=["']root["']/i.test(html)) {
+    throw new Error(`${label} HTML root element is missing`)
+  }
+  await checkStaticAssets(url, html, `${label} response`)
+}
+
+async function checkConsoleRootAliases(result: DeploymentPreflightResult) {
+  if (process.env.MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS !== "true") return
+  const aliases = [`https://${result.domain.replace(/^dev\./, "")}`, `https://www.${result.domain.replace(/^dev\./, "")}`]
+  for (const url of aliases) {
+    await checkConsoleDocument(url, "console root alias")
+  }
 }
 
 function inspectAppDeployment(html: string, url: string, result: DeploymentPreflightResult) {

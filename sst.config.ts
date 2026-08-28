@@ -7,6 +7,7 @@ export default $config({
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
     const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
+    const consoleOnly = flag("MONGOLGPT_DEPLOY_CONSOLE_ONLY")
     const databaseOnly = flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")
     const rootPreviewAlias = flag("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS")
     const admin = flag("MONGOLGPT_ENABLE_ADMIN")
@@ -25,20 +26,35 @@ export default $config({
     if (appOnly && stage !== "dev") {
       throw new Error("MONGOLGPT_DEPLOY_APP_ONLY-г зөвхөн dev орчинд ашиглана.")
     }
-    if (docsOnly && appOnly) {
-      throw new Error("MONGOLGPT_DEPLOY_DOCS_ONLY болон MONGOLGPT_DEPLOY_APP_ONLY-г хамтад нь ашиглахгүй.")
+    if (consoleOnly && stage !== "dev") {
+      throw new Error("MONGOLGPT_DEPLOY_CONSOLE_ONLY-г зөвхөн dev орчинд ашиглана.")
     }
-    if (databaseOnly && (docsOnly || appOnly || cloudflareProviderMigration)) {
+    if ([docsOnly, appOnly, consoleOnly].filter(Boolean).length > 1) {
+      throw new Error(
+        "MONGOLGPT_DEPLOY_DOCS_ONLY, MONGOLGPT_DEPLOY_APP_ONLY, MONGOLGPT_DEPLOY_CONSOLE_ONLY-г хамтад нь ашиглахгүй.",
+      )
+    }
+    if (databaseOnly && (docsOnly || appOnly || consoleOnly || cloudflareProviderMigration)) {
       throw new Error("MONGOLGPT_DEPLOY_DATABASE_ONLY-г бусад тусгаарласан deploy горимтой хамтад нь ашиглахгүй.")
     }
     if (databaseOnly && !hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_DATABASE_ONLY нь hosted services асаалттай байхыг шаардана.")
     }
-    if (rootPreviewAlias && (stage !== "dev" || !hostedServices || docsOnly || appOnly)) {
-      throw new Error("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS-г зөвхөн үндсэн hosted dev deploy-д ашиглана.")
+    if (rootPreviewAlias && (stage !== "dev" || docsOnly || appOnly || databaseOnly)) {
+      throw new Error(
+        "MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS-г зөвхөн үндсэн hosted dev deploy эсвэл console-only dev deploy-д ашиглана.",
+      )
+    }
+    if (rootPreviewAlias && !hostedServices && !consoleOnly) {
+      throw new Error(
+        "MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS-г hosted service эсвэл console-only dev deploy үед л ашиглана.",
+      )
     }
     if (appOnly && !hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_APP_ONLY нь hosted services асаалттай байхыг шаардана.")
+    }
+    if (consoleOnly && !hostedServices) {
+      throw new Error("MONGOLGPT_DEPLOY_CONSOLE_ONLY нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true байхыг шаардана.")
     }
     if (docsOnly && hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_DOCS_ONLY нь hosted services унтраалттай байхыг шаардана.")
@@ -90,6 +106,7 @@ export default $config({
     const hostedServices = flag("MONGOLGPT_ENABLE_HOSTED_SERVICES")
     const docsOnly = flag("MONGOLGPT_DEPLOY_DOCS_ONLY")
     const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
+    const consoleOnly = flag("MONGOLGPT_DEPLOY_CONSOLE_ONLY")
     const databaseOnly = flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")
     const cloudflareProviderMigration = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")
     const cloudflareProviderBridge = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")
@@ -125,6 +142,13 @@ export default $config({
       const site = await import("./infra/web-app.js")
       return {
         WebAppUrl: site.webApp.url,
+        HostedServices: true,
+      }
+    }
+    if (consoleOnly) {
+      const site = await import("./infra/console.js")
+      return {
+        ConsoleUrl: site.consoleApp.url,
         HostedServices: true,
       }
     }

@@ -22,6 +22,7 @@ const booleanVariables = [
   "MONGOLGPT_ENABLE_REAL_PAYMENTS",
   "MONGOLGPT_DEPLOY_DOCS_ONLY",
   "MONGOLGPT_DEPLOY_APP_ONLY",
+  "MONGOLGPT_DEPLOY_CONSOLE_ONLY",
 ] as const
 
 export const modelSecretNames = Array.from({ length: 30 }, (_, index) => `MONGOLGPT_GATEWAY_MODELS${index + 1}`)
@@ -63,6 +64,7 @@ export type DeploymentPreflightResult = {
   stage: string
   domain: string
   stageDomain: string
+  scope: "full" | "auth-bootstrap" | "docs-only" | "app-only" | "console-only" | "runtime-only"
   hostedServices: boolean
   adminEnabled: boolean
   backupsEnabled: boolean
@@ -78,7 +80,7 @@ export function preflightDeployment(input: {
   requireCloudflareCredentials?: boolean
   requireDeploymentSecrets?: boolean
   requireHostedServices?: boolean
-  scope?: "full" | "auth-bootstrap" | "docs-only" | "app-only" | "runtime-only"
+  scope?: "full" | "auth-bootstrap" | "docs-only" | "app-only" | "console-only" | "runtime-only"
 }): DeploymentPreflightResult {
   const issues: string[] = []
   const warnings: string[] = []
@@ -95,6 +97,9 @@ export function preflightDeployment(input: {
   }
   if (scope === "app-only" && stage !== "dev") {
     issues.push("App-only scope-ийг зөвхөн dev орчинд ашиглана.")
+  }
+  if (scope === "console-only" && stage !== "dev") {
+    issues.push("Console-only scope-ийг зөвхөн dev орчинд ашиглана.")
   }
   if (scope === "runtime-only" && stage !== "dev") {
     issues.push("Runtime-only scope-ийг зөвхөн dev орчинд ашиглана.")
@@ -113,8 +118,9 @@ export function preflightDeployment(input: {
   const hostedServices = enabled(env.MONGOLGPT_ENABLE_HOSTED_SERVICES)
   const deployDocsOnly = enabled(env.MONGOLGPT_DEPLOY_DOCS_ONLY)
   const deployAppOnly = enabled(env.MONGOLGPT_DEPLOY_APP_ONLY)
-  if (deployDocsOnly && deployAppOnly) {
-    issues.push("MONGOLGPT_DEPLOY_DOCS_ONLY болон MONGOLGPT_DEPLOY_APP_ONLY-г хамтад нь ашиглахгүй.")
+  const deployConsoleOnly = enabled(env.MONGOLGPT_DEPLOY_CONSOLE_ONLY)
+  if ([deployDocsOnly, deployAppOnly, deployConsoleOnly].filter(Boolean).length > 1) {
+    issues.push("MONGOLGPT_DEPLOY_DOCS_ONLY, MONGOLGPT_DEPLOY_APP_ONLY, MONGOLGPT_DEPLOY_CONSOLE_ONLY-г хамтад нь ашиглахгүй.")
   }
   if (scope === "docs-only" && !deployDocsOnly) {
     issues.push("Docs-only scope нь MONGOLGPT_DEPLOY_DOCS_ONLY=true байхыг шаардана.")
@@ -134,6 +140,15 @@ export function preflightDeployment(input: {
   if (scope === "app-only" && !hostedServices) {
     issues.push("App-only scope нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true байхыг шаардана.")
   }
+  if (scope === "console-only" && !deployConsoleOnly) {
+    issues.push("Console-only scope нь MONGOLGPT_DEPLOY_CONSOLE_ONLY=true байхыг шаардана.")
+  }
+  if (scope !== "console-only" && deployConsoleOnly) {
+    issues.push("MONGOLGPT_DEPLOY_CONSOLE_ONLY-г зөвхөн console-only scope-той ашиглана.")
+  }
+  if (scope === "console-only" && !hostedServices) {
+    issues.push("Console-only scope нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true байхыг шаардана.")
+  }
   const adminEnabled = enabled(env.MONGOLGPT_ENABLE_ADMIN)
   const backupsEnabled = enabled(env.MONGOLGPT_ENABLE_D1_BACKUPS)
   const monitoringEnabled = enabled(env.MONGOLGPT_ENABLE_MONITORING)
@@ -145,12 +160,15 @@ export function preflightDeployment(input: {
     "MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS",
     "MONGOLGPT_ENABLE_LEGACY_STRIPE",
     "MONGOLGPT_ENABLE_MONITORING",
-    "MONGOLGPT_ENABLE_TURNSTILE",
     "MONGOLGPT_ENABLE_SHARE_SERVICE",
     "MONGOLGPT_ENABLE_SYNC_SERVICE",
   ] as const
-  if (scope === "app-only" || scope === "runtime-only") {
-    for (const name of [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_D1_BACKUPS"] as const) {
+  if (scope === "app-only" || scope === "console-only" || scope === "runtime-only") {
+    const disabledFlags =
+      scope === "console-only"
+        ? [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_D1_BACKUPS"]
+        : [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_D1_BACKUPS", "MONGOLGPT_ENABLE_TURNSTILE"]
+    for (const name of disabledFlags as readonly string[]) {
       if (enabled(env[name])) issues.push(`${name} нь ${scope} deploy үед false байна.`)
     }
     if (paymentEnvironment !== "disabled") {
@@ -158,6 +176,8 @@ export function preflightDeployment(input: {
     }
     if (scope === "app-only") {
       warnings.push("Зөвхөн hosted web app Worker deploy хийнэ; backend resource өөрчлөхгүй.")
+    } else if (scope === "console-only") {
+      warnings.push("Зөвхөн Console target deploy хийнэ; route ownership хадгалж runtime, database, auth, payments, docs болон admin target-уудыг шууд deploy хийхгүй.")
     } else {
       warnings.push("Зөвхөн dev runtime Worker болон Cloudflare Sandbox container deploy хийнэ.")
     }
@@ -228,7 +248,7 @@ export function preflightDeployment(input: {
     requireValue("MONGOLGPT_AUTH_EMAIL_DOMAINS", env.MONGOLGPT_AUTH_EMAIL_DOMAINS, issues)
   }
   if (hostedServices && requireDeploymentSecrets) {
-    if (scope !== "auth-bootstrap") {
+    if (scope !== "auth-bootstrap" && scope !== "console-only") {
       validateSecretKey("MONGOLGPT_RUNTIME_SECRET", env.MONGOLGPT_RUNTIME_SECRET, issues)
     }
     validateSecretKey("MONGOLGPT_RUNTIME_AUTH_SECRET", env.MONGOLGPT_RUNTIME_AUTH_SECRET, issues)
@@ -283,6 +303,7 @@ export function preflightDeployment(input: {
     stage,
     domain,
     stageDomain: serviceUrls.stageDomain,
+    scope,
     hostedServices,
     adminEnabled,
     backupsEnabled,
