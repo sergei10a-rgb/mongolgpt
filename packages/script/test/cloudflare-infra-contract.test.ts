@@ -411,16 +411,23 @@ describe("Cloudflare hosted infrastructure contract", () => {
   })
 
   test("wires one audience-bound capability secret into the console issuer and runtime verifier", async () => {
-    const [consoleSource, secretSource, workflowSource] = await Promise.all(
-      ["../../../infra/console.ts", "../../../infra/secret.ts", "../../../.github/workflows/deploy.yml"].map((path) =>
-        Bun.file(new URL(path, import.meta.url)).text(),
-      ),
+    const [consoleSource, secretSource, workflowSource, hostedEnvSource] = await Promise.all(
+      [
+        "../../../infra/console.ts",
+        "../../../infra/secret.ts",
+        "../../../.github/workflows/deploy.yml",
+        "../../console/app/src/lib/hosted-env.ts",
+      ].map((path) => Bun.file(new URL(path, import.meta.url)).text()),
     )
     const workflow = parseWorkflow(workflowSource)
     const deployStep = workflow.jobs.deploy.steps.find((step) => step.name === "Validate and deploy to Cloudflare")
 
     expect(consoleSource).toContain("SECRET.MongolGPTRuntimeAuthSecret")
-    expect(consoleSource).toContain("MONGOLGPT_RUNTIME_URL: runtimeOrigin")
+    expect(consoleSource).toContain("VITE_MONGOLGPT_APP_URL: appOrigin")
+    expect(consoleSource).toContain("VITE_MONGOLGPT_RUNTIME_URL: runtimeOrigin")
+    expect(hostedEnvSource).toContain("import.meta.env.VITE_MONGOLGPT_APP_URL")
+    expect(hostedEnvSource).toContain("import.meta.env.VITE_MONGOLGPT_RUNTIME_URL")
+    expect(hostedEnvSource).not.toMatch(/import\.meta\.env\.MONGOLGPT_/)
     expect(secretSource).toContain('new sst.Secret("MongolGPTRuntimeAuthSecret")')
     expect(deployStep?.env).toMatchObject({
       MONGOLGPT_RUNTIME_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_SECRET }}",

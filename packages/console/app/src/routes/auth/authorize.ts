@@ -4,11 +4,12 @@ import {
   turnstileAuthorizationRequest,
 } from "@mongolgpt/console-core/turnstile.js"
 import { AuthClient } from "~/context/auth"
+import { hostedConsoleUrl, hostedTurnstileEnabled, hostedTurnstileSiteKey } from "~/lib/hosted-env"
 import { configuredConsoleRequestUrl, safeAuthContinue } from "./helpers"
 import { renderTurnstileChallenge } from "./turnstile"
 
 export async function GET(input: APIEvent) {
-  const url = configuredConsoleRequestUrl(input.request.url, import.meta.env.MONGOLGPT_CONSOLE_URL)
+  const url = configuredConsoleRequestUrl(input.request.url, hostedConsoleUrl)
   if (!url) return invalidAuthorizationRequest()
   const cont = safeAuthContinue(url.searchParams.get("continue"))
   const clientID = url.searchParams.get("client_id")
@@ -50,11 +51,11 @@ async function authorizationTarget(requestUrl: URL, cont: string) {
 }
 
 function turnstileEnabled() {
-  return import.meta.env.MONGOLGPT_TURNSTILE_ENABLED === "true"
+  return hostedTurnstileEnabled
 }
 
 function challengeResponse(authorizationUrl: string, error?: "invalid" | "unavailable" | "misconfigured") {
-  const siteKey = import.meta.env.MONGOLGPT_TURNSTILE_SITE_KEY?.trim() ?? ""
+  const siteKey = hostedTurnstileSiteKey
   if (!siteKey) {
     return Response.json(
       { error: "turnstile_not_configured", message: "Нэвтрэх хамгаалалтын тохиргоо дутуу байна." },

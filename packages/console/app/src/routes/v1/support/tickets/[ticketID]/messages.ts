@@ -1,16 +1,17 @@
 import type { APIEvent } from "@solidjs/start/server"
 import { validateAuthSession } from "~/context/auth"
 import { verifyCliToken } from "~/lib/cli-auth"
+import { hostedAppUrl } from "~/lib/hosted-env"
 import { resolveAccountOverviewIdentity } from "../../../account/overview-auth"
 import { replyTicketRequest, supportPreflight } from "../../support-handler"
 
 export function OPTIONS(event: APIEvent) {
-  return supportPreflight(event.request, import.meta.env.MONGOLGPT_APP_URL)
+  return supportPreflight(event.request, hostedAppUrl)
 }
 
 export function POST(event: APIEvent) {
   return replyTicketRequest(event.request, ticketID(event.request), {
-    appUrl: import.meta.env.MONGOLGPT_APP_URL,
+    appUrl: hostedAppUrl,
     authenticate: (request) =>
       resolveAccountOverviewIdentity(request, { verifyToken: verifyCliToken, session: validateAuthSession }),
   })

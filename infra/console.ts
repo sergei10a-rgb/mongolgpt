@@ -409,18 +409,17 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
   ],
   environment: {
     VITE_AUTH_URL: auth.url.apply((url) => url!),
-    MONGOLGPT_APP_URL: appOrigin,
-    MONGOLGPT_RUNTIME_URL: runtimeOrigin,
+    VITE_MONGOLGPT_APP_URL: appOrigin,
+    VITE_MONGOLGPT_RUNTIME_URL: runtimeOrigin,
     VITE_MONGOLGPT_BILLING_ENABLED: "false",
     MONGOLGPT_BILLING_PROVIDER: "disabled",
     VITE_MONGOLGPT_PUBLIC_URL: publicOrigin,
     VITE_MONGOLGPT_DOCS_URL: docsOrigin,
     VITE_MONGOLGPT_ENTERPRISE_URL: enableShareService ? shareOrigin : "",
     VITE_MONGOLGPT_COMMUNITY_URL: "https://github.com/sergei10a-rgb/mongolgpt/discussions",
-    MONGOLGPT_CONSOLE_URL: publicOrigin,
-    MONGOLGPT_FREE_WORKSPACE_IDS: process.env.MONGOLGPT_FREE_WORKSPACE_IDS ?? "",
-    MONGOLGPT_TURNSTILE_ENABLED: enableTurnstile ? "true" : "false",
-    MONGOLGPT_TURNSTILE_SITE_KEY: turnstileSiteKey,
+    VITE_MONGOLGPT_FREE_WORKSPACE_IDS: process.env.MONGOLGPT_FREE_WORKSPACE_IDS ?? "",
+    VITE_MONGOLGPT_TURNSTILE_ENABLED: enableTurnstile ? "true" : "false",
+    VITE_MONGOLGPT_TURNSTILE_SITE_KEY: turnstileSiteKey,
   },
 })
 

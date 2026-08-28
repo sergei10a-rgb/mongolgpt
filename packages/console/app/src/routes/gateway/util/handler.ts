@@ -21,6 +21,7 @@ import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { ModelTable } from "@mongolgpt/console-core/schema/model.sql.js"
 import { ProviderTable } from "@mongolgpt/console-core/schema/provider.sql.js"
 import { ProviderCredentials } from "@mongolgpt/console-core/provider-credentials.js"
+import { hostedFreeWorkspaceIDs } from "~/lib/hosted-env"
 import { logger } from "./logger"
 import {
   AuthError,
@@ -145,7 +146,7 @@ export async function handler(
   const locale = localeFromRequest(input.request)
   const dict = i18n(locale)
   const t = (key: Key, params?: Record<string, string | number>) => resolve(dict[key], params)
-  const freeWorkspaceIDs = configuredWorkspaceIDs(import.meta.env.MONGOLGPT_FREE_WORKSPACE_IDS)
+  const freeWorkspaceIDs = configuredWorkspaceIDs(hostedFreeWorkspaceIDs)
   type PlanQuotaReservation = Extract<Awaited<ReturnType<typeof reservePlanQuota>>, { allowed: true }>["reservation"]
   const quota = {
     freeAuto: undefined as Awaited<ReturnType<typeof reserveFreeAutoQuota>>,
