@@ -736,7 +736,19 @@ const scenarios: Scenario[] = [
   }),
   http.protected.get("/api/location", "v2.location.get").json(200, object),
   http.protected.get("/api/agent", "v2.agent.list").json(200, locationData(array)),
-  http.protected.get("/api/model", "v2.model.list").json(200, locationData(array)),
+  http.protected
+    .get("/api/model", "v2.model.list")
+    .withLlm()
+    .json(
+      200,
+      locationData((body) => {
+        array(body)
+        check(
+          body.some((item) => isRecord(item) && item.providerID === "test" && item.id === "test-model"),
+          `V2 model catalog should include the configured test model: ${JSON.stringify(body)}`,
+        )
+      }),
+    ),
   http.protected.get("/api/provider", "v2.provider.list").json(200, locationData(array)),
   http.protected.get("/api/integration", "v2.integration.list").json(200, locationData(array)),
   http.protected
@@ -1064,11 +1076,12 @@ const scenarios: Scenario[] = [
     .status(204, undefined, "none"),
   http.protected
     .post("/api/session/{sessionID}/model", "v2.session.switchModel")
+    .withLlm()
     .seeded((ctx) => ctx.session({ title: "Switch model" }))
     .at((ctx) => ({
       path: route("/api/session/{sessionID}/model", { sessionID: ctx.state.id }),
       headers: { ...ctx.headers(), "content-type": "application/json" },
-      body: { model: { providerID: "mongolgpt", id: "big-pickle" } },
+      body: { model: { providerID: "test", id: "test-model" } },
     }))
     .status(204, undefined, "none"),
   http.protected
@@ -1601,6 +1614,7 @@ const scenarios: Scenario[] = [
     .post("/session/{sessionID}/shell", "session.shell")
     .preserveDatabase()
     .mutating()
+    .withLlm()
     .seeded((ctx) => ctx.session({ title: "Shell session" }))
     .at((ctx) => ({
       path: route("/session/{sessionID}/shell", { sessionID: ctx.state.id }),

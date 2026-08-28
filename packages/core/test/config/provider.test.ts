@@ -151,6 +151,40 @@ describe("ConfigProviderPlugin.Plugin", () => {
     }),
   )
 
+  it.effect("does not create an unusable integration for an empty env list", () =>
+    Effect.gen(function* () {
+      const catalog = yield* Catalog.Service
+      const integrations = yield* Integration.Service
+      const providerID = ProviderV2.ID.make("local")
+      const modelID = ModelV2.ID.make("chat")
+      const config = Config.Service.of({
+        entries: () =>
+          Effect.succeed([
+            new Config.Document({
+              type: "document",
+              info: decode({
+                providers: {
+                  local: {
+                    env: [],
+                    api: { type: "aisdk", package: "@ai-sdk/openai-compatible", url: "http://127.0.0.1/v1" },
+                    models: { chat: {} },
+                  },
+                },
+              }),
+            }),
+          ]),
+      })
+
+      yield* addPlugin(config)
+
+      expect(yield* integrations.get(Integration.ID.make("local"))).toBeUndefined()
+      expect((yield* catalog.model.available()).map((model) => [model.providerID, model.id])).toContainEqual([
+        providerID,
+        modelID,
+      ])
+    }),
+  )
+
   it.effect("loads configured providers and applies later model overrides", () =>
     withEnv({ CUSTOM_API_KEY: "secret" }, () =>
       Effect.gen(function* () {
