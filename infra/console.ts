@@ -389,7 +389,11 @@ export const mongolGPTPlanLimits = new sst.Secret("MONGOLGPT_PLAN_LIMITS")
 export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
   domain: {
     name: domain,
-    aliases: enableRootPreviewAlias ? [rootDomain] : [],
+    aliases: enableRootPreviewAlias
+      ? [rootDomain, `www.${rootDomain}`]
+      : $app.stage === "production"
+        ? [`www.${rootDomain}`]
+        : [],
   },
   path: "packages/console/app",
   link: [

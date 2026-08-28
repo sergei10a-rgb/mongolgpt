@@ -56,6 +56,12 @@ test("docs-ийн дотоод Markdown холбоос canonical route руу з
   expect(broken).toEqual([])
 })
 
+test("docs head нь Starlight-ийн canonical title-ийг давхардуулахгүй", () => {
+  const head = readFileSync(join(import.meta.dir, "..", "src", "components", "Head.astro"), "utf8")
+  expect(head).toContain("<Default")
+  expect(head).not.toContain("<title")
+})
+
 function collectLinks(value: unknown, links: string[]) {
   if (Array.isArray(value)) {
     for (const item of value) collectLinks(item, links)
@@ -63,7 +69,8 @@ function collectLinks(value: unknown, links: string[]) {
   }
   if (!value || typeof value !== "object") return
 
-  const token = value as Record<string, unknown>
-  if ((token.type === "link" || token.type === "image") && typeof token.href === "string") links.push(token.href)
-  for (const child of Object.values(token)) collectLinks(child, links)
+  const type = Reflect.get(value, "type")
+  const href = Reflect.get(value, "href")
+  if ((type === "link" || type === "image") && typeof href === "string") links.push(href)
+  for (const child of Object.values(value)) collectLinks(child, links)
 }

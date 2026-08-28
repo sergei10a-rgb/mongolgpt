@@ -8,6 +8,14 @@ export function previewAuthRedirect(requestUrl: string, publicUrl: string | unde
   return new URL(`${request.pathname}${request.search}`, canonical).toString()
 }
 
+export function previewWwwRedirect(requestUrl: string, rootUrl: string | undefined) {
+  const request = parseUrl(requestUrl)
+  const root = parseOrigin(rootUrl)
+  if (!request || !root || request.hostname !== `www.${root.hostname}` || request.port !== root.port) return undefined
+
+  return new URL(`${request.pathname}${request.search}`, root).toString()
+}
+
 function parseUrl(value: string | undefined) {
   try {
     const url = new URL(value ?? "")

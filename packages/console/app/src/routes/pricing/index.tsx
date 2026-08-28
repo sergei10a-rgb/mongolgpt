@@ -5,6 +5,7 @@ import { PaymentPlanCatalogSchema } from "@mongolgpt/console-core/payment-checko
 import { Resource } from "@mongolgpt/console-resource"
 import { A, createAsync, query } from "@solidjs/router"
 import { createMemo, For } from "solid-js"
+import { getRequestEvent } from "solid-js/web"
 import { Footer } from "~/component/footer"
 import { Header } from "~/component/header"
 import { Legal } from "~/component/legal"
@@ -12,6 +13,7 @@ import { LocaleLinks } from "~/component/locale-links"
 import { config } from "~/config"
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
+import { publicMetadataBaseUrl } from "~/lib/public-metadata"
 
 const getPricingCatalog = query(async () => {
   "use server"
@@ -35,6 +37,7 @@ const getPricingCatalog = query(async () => {
 export default function Pricing() {
   const i18n = useI18n()
   const language = useLanguage()
+  const baseUrl = publicMetadataBaseUrl(getRequestEvent()?.request.url, config.baseUrl, import.meta.env.VITE_MONGOLGPT_ROOT_URL)
   const pricing = createAsync(() => getPricingCatalog())
   const formatAmount = (amount: number | undefined) => {
     if (amount === undefined) return i18n.t("pricing.price.configuring")
@@ -108,7 +111,7 @@ export default function Pricing() {
       <Meta name="description" content={i18n.t("pricing.meta.description")} />
       <LocaleLinks path="/pricing" />
       <Meta property="og:type" content="website" />
-      <Meta property="og:url" content={`${config.baseUrl}${language.route("/pricing")}`} />
+      <Meta property="og:url" content={`${baseUrl}${language.route("/pricing")}`} />
       <Meta property="og:title" content={i18n.t("pricing.meta.title")} />
       <Meta property="og:description" content={i18n.t("pricing.meta.description")} />
       <Meta property="og:image" content="/social-share.png" />
