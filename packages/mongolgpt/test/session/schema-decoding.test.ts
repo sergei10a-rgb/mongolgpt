@@ -238,9 +238,9 @@ describe("SessionStatus.Info", () => {
         reason: "free_tier_limit",
         provider: "mongolgpt",
         title: "Үнэгүй хэрэглээний хязгаарт хүрлээ",
-        message: "MongolGPT Go багцыг идэвхжүүлнэ үү.",
-        label: "багц идэвхжүүлэх",
-        link: "http://localhost:3000/go",
+        message: "Basic, Pro эсвэл Max багцаас сонгоно уу.",
+        label: "багц харах",
+        link: "http://localhost:3000/pricing",
       },
       next: 500,
     }

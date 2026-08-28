@@ -10,8 +10,7 @@ export type Err = ReturnType<NamedError["toObject"]>
 
 export const FREE_AUTO_LIMIT_MESSAGE = "Free Auto хэрэглээний хязгаарт хүрлээ"
 const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
-export const PRICING_URL =
-  process.env.MONGOLGPT_PRICING_URL?.trim() || process.env.MONGOLGPT_GO_URL?.trim() || `${consoleUrl}/pricing`
+export const PRICING_URL = process.env.MONGOLGPT_PRICING_URL?.trim() || `${consoleUrl}/pricing`
 export type RetryReason = "free_tier_limit" | "account_rate_limit" | (string & {})
 
 export type Retryable = {

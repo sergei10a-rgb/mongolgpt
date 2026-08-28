@@ -9,8 +9,7 @@ import { useBindings } from "../keymap"
 import { productServiceUrls } from "@mongolgpt/core/product"
 
 const consoleUrl = process.env.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
-const PRICING_URL =
-  process.env.MONGOLGPT_PRICING_URL?.trim() || process.env.MONGOLGPT_GO_URL?.trim() || `${consoleUrl}/pricing`
+const PRICING_URL = process.env.MONGOLGPT_PRICING_URL?.trim() || `${consoleUrl}/pricing`
 const PAD_X = 3
 const PAD_TOP_OUTER = 1
 const FOREGROUND_ALPHA = 186

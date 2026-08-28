@@ -92,9 +92,11 @@ describe("runtime legacy brand contract", () => {
     ).text()
 
     expect(retry).toContain("`${consoleUrl}/pricing`")
+    expect(retry).not.toContain("MONGOLGPT_GO_URL")
     expect(retry).not.toContain("GoUsageLimitError")
     expect(retry).not.toContain("`${consoleUrl}/go`")
     expect(appPrompt).not.toContain('DialogConnectProvider provider="mongolgpt-go"')
     expect(providerDialog).not.toContain("mongolgpt-go")
+    expect(providerDialog).not.toContain("MONGOLGPT_GO_URL")
   })
 })
