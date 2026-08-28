@@ -90,6 +90,28 @@ describe("release integrity contract", () => {
     expect(preflight).toContain('"mongolgpt account login"')
   })
 
+  test("keeps dev CLI publishing manual, isolated from latest, and publicly smoke-tested", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/publish-dev-cli.yml"), "utf8")
+    const preflight = readFileSync(resolve(root, "packages/mongolgpt/script/release-preflight.ts"), "utf8")
+
+    expect(workflow).toContain("workflow_dispatch:")
+    expect(workflow).toContain('github.ref == \'refs/heads/main\'')
+    expect(workflow).toContain('"PUBLISH DEV CLI npm dev"')
+    expect(workflow).toContain("MONGOLGPT_CHANNEL: dev")
+    expect(workflow).toContain("0.0.0-dev-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}")
+    expect(workflow).toContain("smoke-built-cli-windows.ps1")
+    expect(workflow).toContain("packages/mongolgpt/script/publish.ts --dry-run --npm-only")
+    expect(workflow).toContain("packages/mongolgpt/script/publish.ts --npm-only")
+    expect(workflow).toContain("packages/mongolgpt/script/release-preflight.ts --npm-cli")
+    expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}")
+    expect(workflow).not.toContain("MONGOLGPT_RELEASE")
+    expect(workflow).not.toContain("MONGOLGPT_CHANNEL: latest")
+    expect(workflow).not.toContain("gh release")
+    expect(workflow).not.toContain("packages/desktop")
+    expect(preflight).toContain('process.argv.includes("--npm-cli")')
+    expect(preflight).toContain("checkNpmCli ? cliPackages")
+  })
+
   test("uploads Windows and Desktop assets to the release tag created by the version job", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
     const canonicalUpload = 'gh release upload "${{ needs.version.outputs.tag }}"'

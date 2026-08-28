@@ -15,6 +15,7 @@ import {
 const dist = path.resolve(import.meta.dirname, "../dist")
 const repo = process.env.GH_REPO ?? "sergei10a-rgb/mongolgpt"
 const checkNpm = process.argv.includes("--npm")
+const checkNpmCli = process.argv.includes("--npm-cli")
 const checkGitHub = process.argv.includes("--github")
 
 const binaryPackages = [
@@ -72,9 +73,9 @@ function checkLocalDist() {
   return Array.from(versions)[0]!
 }
 
-async function npmMissing(version: string) {
+async function npmMissing(version: string, packages: readonly string[]) {
   const missing: string[] = []
-  for (const name of npmPackages) {
+  for (const name of packages) {
     const result = await $`npm view ${name}@${version} version --silent`.quiet().nothrow()
     if (result.exitCode !== 0) missing.push(name)
   }
@@ -237,8 +238,10 @@ async function githubMissing(version: string) {
 const version = checkLocalDist()
 console.log(`local dist ok: ${cliPackages.length} packages @ ${version}`)
 
-if (checkNpm) {
-  const missing = await npmMissing(version)
+const checkedNpmPackages = checkNpm ? npmPackages : checkNpmCli ? cliPackages : undefined
+
+if (checkedNpmPackages) {
+  const missing = await npmMissing(version, checkedNpmPackages)
   console.log(missing.length ? `npm missing: ${missing.join(", ")}` : "npm ok")
   if (missing.length) process.exitCode = 1
   else await smokePublicNpmInstall(version)

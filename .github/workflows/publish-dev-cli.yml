@@ -1,0 +1,127 @@
+name: Publish dev CLI preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "PUBLISH DEV CLI npm dev гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: npm-publish-dev-cli
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_CHANNEL: dev
+
+jobs:
+  build:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Validate exact dev publish confirmation
+        env:
+          PUBLISH_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$PUBLISH_CONFIRMATION" != "PUBLISH DEV CLI npm dev" ]; then
+            echo "Dev CLI publish баталгаажуулалт буруу байна."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Select immutable preview version
+        id: version
+        run: echo "version=0.0.0-dev-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+
+      - name: Build every CLI platform package
+        env:
+          MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
+        run: bun run --cwd packages/mongolgpt build
+
+      - name: Dry-run npm packaging
+        env:
+          MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
+        run: bun packages/mongolgpt/script/publish.ts --dry-run --npm-only
+
+      - name: Verify local CLI package set
+        env:
+          MONGOLGPT_VERSION: ${{ steps.version.outputs.version }}
+        run: bun packages/mongolgpt/script/release-preflight.ts
+
+      - name: Upload CLI packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mongolgpt-dev-cli-${{ steps.version.outputs.version }}
+          path: packages/mongolgpt/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  smoke-windows:
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download CLI packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: mongolgpt-dev-cli-${{ needs.build.outputs.version }}
+          path: packages/mongolgpt/dist
+
+      - name: Smoke Windows CLI and anonymous Free Auto gate
+        shell: pwsh
+        working-directory: packages/mongolgpt
+        run: ./script/smoke-built-cli-windows.ps1 -BinaryPath "dist/mongolgpt-windows-x64/bin/mongolgpt.exe" -ExpectedVersion "${{ needs.build.outputs.version }}"
+
+  publish:
+    needs:
+      - build
+      - smoke-windows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Setup public npm registry
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Download verified CLI packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: mongolgpt-dev-cli-${{ needs.build.outputs.version }}
+          path: packages/mongolgpt/dist
+
+      - name: Publish only CLI packages under the dev tag
+        env:
+          MONGOLGPT_VERSION: ${{ needs.build.outputs.version }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: bun packages/mongolgpt/script/publish.ts --npm-only
+
+      - name: Reinstall from the public registry and verify the account gate
+        env:
+          MONGOLGPT_VERSION: ${{ needs.build.outputs.version }}
+        run: bun packages/mongolgpt/script/release-preflight.ts --npm-cli
