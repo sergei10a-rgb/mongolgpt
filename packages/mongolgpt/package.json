@@ -144,6 +144,7 @@
     "remeda": "catalog:",
     "semver": "^7.6.3",
     "solid-js": "catalog:",
+    "smol-toml": "1.7.0",
     "strip-ansi": "7.1.2",
     "tree-sitter-bash": "0.25.0",
     "tree-sitter-powershell": "0.25.10",
@@ -154,6 +155,7 @@
     "web-tree-sitter": "0.25.10",
     "ws": "8.21.0",
     "xdg-basedir": "5.1.0",
+    "yaml": "2.9.0",
     "yargs": "18.0.0",
     "zod": "catalog:"
   },

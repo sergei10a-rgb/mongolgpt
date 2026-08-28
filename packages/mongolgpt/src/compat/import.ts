@@ -1,6 +1,8 @@
-﻿import path from "path"
+import path from "path"
 import { fileURLToPath, pathToFileURL } from "url"
 import { applyEdits, modify, parse as parseJsonc, printParseErrorCode, type ParseError } from "jsonc-parser"
+import { parse as parseToml } from "smol-toml"
+import { parseDocument as parseYamlDocument } from "yaml"
 import { Global } from "@mongolgpt/core/global"
 import { ConfigMCPV1 } from "@mongolgpt/core/v1/config/mcp"
 import { ConfigPluginV1 } from "@mongolgpt/core/v1/config/plugin"
@@ -111,14 +113,15 @@ export async function planCompatImport(
   ctx: InstanceContext,
   options: CompatPlanOptions = {},
 ): Promise<CompatPlan> {
-  const operations = await detectOperations(args, ctx)
+  const warnings: string[] = []
+  const operations = await detectOperations(args, ctx, warnings)
   if (operations.length === 0) {
     throw new Error("Танигдах skill, plugin эсвэл MCP тохиргоо олдсонгүй")
   }
 
   const scope: CompatScope = args.project ? "project" : (args.scope ?? "global")
   const configPath = await resolveConfigPath(scope, ctx)
-  const warnings: string[] = []
+  warnings.push(...mcpConflictWarnings(operations))
   const prepared = await prepareCompatibilityOperations({
     operations,
     ctx,
@@ -145,7 +148,7 @@ export async function planCompatImport(
     operations,
     prepared,
     descriptions: prepared.map(describeCompatOperation),
-    warnings,
+    warnings: [...new Set(warnings)],
     outcomes: preview.outcomes,
     existingConfigText: config.text,
     nextConfigText: preview.text,
@@ -167,7 +170,11 @@ export async function applyCompatImport(
   return plan
 }
 
-async function detectOperations(args: CompatImportInput, ctx: InstanceContext): Promise<Operation[]> {
+async function detectOperations(
+  args: CompatImportInput,
+  ctx: InstanceContext,
+  warnings: string[] = [],
+): Promise<Operation[]> {
   const type = args.type ?? "auto"
   const env = parseKeyValueList(args.env ?? [], "env")
   const headers = parseKeyValueList(args.header ?? [], "header")
@@ -204,10 +211,10 @@ async function detectOperations(args: CompatImportInput, ctx: InstanceContext): 
   const resolved = path.resolve(ctx.directory, source)
   const stat = await Filesystem.statAsync(resolved)
   if (stat?.isDirectory()) {
-    return detectDirectory(resolved, source, type, ctx)
+    return detectDirectory(resolved, source, type, ctx, warnings)
   }
   if (stat?.isFile()) {
-    return detectFile(resolved, source, type, ctx)
+    return detectFile(resolved, source, type, ctx, warnings)
   }
 
   if (type === "skill") {
@@ -297,6 +304,7 @@ async function detectFile(
   original: string,
   type: CompatType,
   ctx: InstanceContext,
+  warnings: string[],
 ): Promise<Operation[]> {
   const basename = path.basename(file).toLowerCase()
   if (type === "skill" || basename === "skill.md" || file.endsWith(".md")) {
@@ -313,7 +321,7 @@ async function detectFile(
 
   const text = await Filesystem.readText(file)
   const data = parseConfigDocument(text, file)
-  const fromJson = operationsFromConfigObject(data, original)
+  const fromJson = operationsFromConfigObject(data, original, warnings)
   if (fromJson.length > 0) return fromJson
 
   return []
@@ -324,28 +332,35 @@ async function detectDirectory(
   original: string,
   type: CompatType,
   ctx: InstanceContext,
+  warnings: string[],
 ): Promise<Operation[]> {
-  if (type === "skill" || (await hasSkillFile(dir))) {
+  if (type === "skill") {
     return [{ kind: "skill-path", value: configPathFor(ctx, dir), source: original }]
   }
 
-  if (type === "plugin" && (await Filesystem.exists(path.join(dir, "package.json")))) {
+  if (type === "plugin") {
     return [{ kind: "plugin", spec: configPathFor(ctx, dir), source: original }]
   }
 
-  for (const candidate of commonMcpConfigFiles(dir)) {
-    if (!(await Filesystem.exists(candidate))) continue
-    const text = await Filesystem.readText(candidate)
-    const data = parseConfigDocument(text, candidate)
-    const operations = operationsFromConfigObject(data, candidate)
-    if (operations.length > 0) return operations
+  const operations: Operation[] = []
+  if (type === "auto" && (await hasSkillFile(dir))) {
+    operations.push({ kind: "skill-path", value: configPathFor(ctx, dir), source: original })
   }
 
-  if (type === "plugin" || (await Filesystem.exists(path.join(dir, "package.json")))) {
-    return [{ kind: "plugin", spec: configPathFor(ctx, dir), source: original }]
+  if (type === "auto" || type === "mcp") {
+    for (const candidate of commonMcpConfigFiles(dir)) {
+      if (!(await Filesystem.exists(candidate))) continue
+      const text = await Filesystem.readText(candidate)
+      const data = parseConfigDocument(text, candidate)
+      operations.push(...operationsFromConfigObject(data, candidate, warnings))
+    }
   }
 
-  return []
+  if (type === "auto" && (await Filesystem.exists(path.join(dir, "package.json")))) {
+    operations.push({ kind: "plugin", spec: configPathFor(ctx, dir), source: original })
+  }
+
+  return operations
 }
 
 async function prepareCompatibilityOperations(input: {
@@ -541,11 +556,12 @@ function pluginSpecString(spec: ConfigPluginV1.Spec) {
   return Array.isArray(spec) ? spec[0] : spec
 }
 
-function operationsFromConfigObject(data: unknown, source: string): Operation[] {
+function operationsFromConfigObject(data: unknown, source: string, warnings: string[] = []): Operation[] {
   const operations: Operation[] = []
-  for (const [name, raw] of entriesFromMcpConfigObject(data)) {
-    const config = normalizeMcpServer(raw)
+  for (const { name, raw, dialect } of entriesFromMcpConfigObject(data, source)) {
+    const config = normalizeMcpServer(raw, dialect)
     if (!config) continue
+    warnings.push(...unsupportedMcpWarnings(name, raw, dialect, source))
     operations.push({ kind: "mcp", name: sanitizeName(name), config, source })
   }
 
@@ -564,43 +580,136 @@ function operationsFromConfigObject(data: unknown, source: string): Operation[] 
   return operations
 }
 
-function entriesFromMcpConfigObject(data: unknown): Array<[string, unknown]> {
+type McpConfigDialect = "generic" | "claude" | "codex" | "goose" | "hermes"
+
+function entriesFromMcpConfigObject(
+  data: unknown,
+  source: string,
+): Array<{ name: string; raw: unknown; dialect: McpConfigDialect }> {
   if (!isRecord(data)) return []
   const direct = data.mcpServers
-  if (isRecord(direct)) return Object.entries(direct)
+  if (isRecord(direct)) return mcpEntries(direct, "claude")
+
+  const snake = data.mcp_servers
+  if (isRecord(snake)) {
+    const dialect = path.extname(source).toLowerCase() === ".toml" ? "codex" : "hermes"
+    return mcpEntries(snake, dialect)
+  }
+
+  const extensions = data.extensions
+  if (isRecord(extensions)) return mcpEntries(extensions, "goose")
 
   const mcp = data.mcp
   if (!isRecord(mcp)) return []
-  if (isRecord(mcp.servers)) return Object.entries(mcp.servers)
+  if (isRecord(mcp.servers)) return mcpEntries(mcp.servers, "generic")
 
-  return Object.entries(mcp).filter(
-    ([, value]) => isRecord(value) && ("type" in value || "command" in value || "url" in value),
+  return mcpEntries(
+    Object.fromEntries(
+      Object.entries(mcp).filter(
+        ([, value]) => isRecord(value) && ("type" in value || "command" in value || "url" in value),
+      ),
+    ),
+    "generic",
   )
 }
 
-function normalizeMcpServer(raw: unknown): ConfigMCPV1.Info | undefined {
-  if (!isRecord(raw)) return
+function mcpEntries(data: Record<string, unknown>, dialect: McpConfigDialect) {
+  return Object.entries(data).map(([name, raw]) => ({ name, raw, dialect }))
+}
 
-  if (raw.type === "remote" || typeof raw.url === "string") {
-    const url = typeof raw.url === "string" ? raw.url.trim() : ""
-    if (!url) return
-    const headers = stringRecord(raw.headers)
+const supportedMcpFields: Record<McpConfigDialect, ReadonlySet<string>> = {
+  generic: new Set([
+    "type",
+    "command",
+    "args",
+    "cwd",
+    "environment",
+    "env",
+    "enabled",
+    "disabled",
+    "url",
+    "headers",
+    "timeout",
+  ]),
+  claude: new Set(["type", "command", "args", "cwd", "env", "enabled", "disabled", "url", "headers", "timeout"]),
+  codex: new Set(["command", "args", "cwd", "env", "enabled", "url", "http_headers", "tool_timeout_sec"]),
+  goose: new Set(["name", "description", "type", "cmd", "args", "envs", "enabled", "uri", "url", "headers", "timeout"]),
+  hermes: new Set(["type", "command", "args", "cwd", "env", "enabled", "disabled", "url", "headers", "timeout"]),
+}
+
+function unsupportedMcpWarnings(name: string, raw: unknown, dialect: McpConfigDialect, source: string) {
+  if (!isRecord(raw) || dialect === "generic" || dialect === "claude") return []
+  const unsupported = Object.keys(raw).filter((key) => !supportedMcpFields[dialect].has(key))
+  if (unsupported.length === 0) return []
+  return [
+    `${dialectLabel(dialect)} MCP "${name}"-ийн MongolGPT-д шууд таарахгүй талбаруудыг алгаслаа (${unsupported.sort().join(", ")}): ${source}`,
+  ]
+}
+
+function dialectLabel(dialect: McpConfigDialect) {
+  switch (dialect) {
+    case "codex":
+      return "Codex"
+    case "goose":
+      return "Goose"
+    case "hermes":
+      return "Hermes"
+    case "claude":
+      return "Claude"
+    case "generic":
+      return "MCP"
+  }
+  return dialect
+}
+
+function mcpConflictWarnings(operations: Operation[]) {
+  const first = new Map<string, Extract<Operation, { kind: "mcp" }>>()
+  const warnings: string[] = []
+  for (const operation of operations) {
+    if (operation.kind !== "mcp") continue
+    const previous = first.get(operation.name)
+    if (!previous) {
+      first.set(operation.name, operation)
+      continue
+    }
+    if (sameConfigValue(previous.config, operation.config)) continue
+    warnings.push(
+      `MCP "${operation.name}" нэр ${previous.source} болон ${operation.source} эх сурвалжид өөр тохиргоотой байна. --force ашиглаагүй үед эхний тохиргоог хадгална.`,
+    )
+  }
+  return warnings
+}
+
+function normalizeMcpServer(raw: unknown, dialect: McpConfigDialect): ConfigMCPV1.Info | undefined {
+  if (!isRecord(raw)) return undefined
+
+  const remoteUrl = typeof raw.url === "string" ? raw.url : typeof raw.uri === "string" ? raw.uri : ""
+  if (raw.type === "remote" || remoteUrl) {
+    const url = remoteUrl.trim()
+    if (!url) return undefined
+    const headers = {
+      ...stringRecord(raw.headers),
+      ...stringRecord(raw.http_headers),
+    }
+    const timeout = mcpTimeout(raw, dialect)
     return {
       type: "remote",
       url,
       ...(Object.keys(headers).length > 0 ? { headers } : {}),
       ...(raw.enabled === false || raw.disabled === true ? { enabled: false } : {}),
-      ...(positiveNumber(raw.timeout) ? { timeout: raw.timeout } : {}),
+      ...(timeout ? { timeout } : {}),
     }
   }
 
   const command = commandFromMcpObject(raw)
-  if (command.length === 0) return
+  if (command.length === 0) return undefined
 
   const environment = {
     ...stringRecord(raw.environment),
     ...stringRecord(raw.env),
+    ...stringRecord(raw.envs),
   }
+  const timeout = mcpTimeout(raw, dialect)
 
   return {
     type: "local",
@@ -608,12 +717,12 @@ function normalizeMcpServer(raw: unknown): ConfigMCPV1.Info | undefined {
     ...(typeof raw.cwd === "string" && raw.cwd.trim() ? { cwd: raw.cwd } : {}),
     ...(Object.keys(environment).length > 0 ? { environment } : {}),
     ...(raw.enabled === false || raw.disabled === true ? { enabled: false } : {}),
-    ...(positiveNumber(raw.timeout) ? { timeout: raw.timeout } : {}),
+    ...(timeout ? { timeout } : {}),
   }
 }
 
 function commandFromMcpObject(raw: Record<string, unknown>): string[] {
-  const command = raw.command
+  const command = raw.command ?? raw.cmd
   const args = raw.args
 
   if (Array.isArray(command) && command.every((item) => typeof item === "string")) return command
@@ -627,6 +736,17 @@ function commandFromMcpObject(raw: Record<string, unknown>): string[] {
 
   if (typeof command === "string") return [command, ...suffix].filter(Boolean)
   return []
+}
+
+function mcpTimeout(raw: Record<string, unknown>, dialect: McpConfigDialect): number | undefined {
+  if (positiveNumber(raw.tool_timeout_sec)) return secondsToMilliseconds(raw.tool_timeout_sec)
+  if (!positiveNumber(raw.timeout)) return undefined
+  return dialect === "goose" || dialect === "hermes" ? secondsToMilliseconds(raw.timeout) : raw.timeout
+}
+
+function secondsToMilliseconds(seconds: number) {
+  const milliseconds = seconds * 1000
+  return Number.isSafeInteger(milliseconds) ? milliseconds : undefined
 }
 
 function pluginSpecsFromConfigObject(data: unknown): ConfigPluginV1.Spec[] {
@@ -758,8 +878,27 @@ function patchJsonc(text: string, pointer: Array<string | number>, value: unknow
   )
 }
 
+const maxCompatConfigBytes = 2 * 1024 * 1024
+
 function parseConfigDocument(text: string, source: string): unknown {
   const input = stripBom(text)
+  if (Buffer.byteLength(input, "utf8") > maxCompatConfigBytes) {
+    throw new Error(`${source} тохиргооны файл 2 MiB хэмжээнээс хэтэрсэн тул импортлохгүй`)
+  }
+  const extension = path.extname(source).toLowerCase()
+  if (extension === ".toml") {
+    try {
+      return parseToml(input)
+    } catch (error) {
+      throw new Error(`${source} TOML уншихад алдаа гарлаа: ${errorMessage(error)}`, { cause: error })
+    }
+  }
+  if (extension === ".yaml" || extension === ".yml") {
+    const document = parseYamlDocument(input, { uniqueKeys: true })
+    const error = document.errors[0]
+    if (error) throw new Error(`${source} YAML уншихад алдаа гарлаа: ${error.message}`)
+    return document.toJS({ maxAliasCount: 100 })
+  }
   const errors: ParseError[] = []
   const data = parseJsonc(input, errors, { allowTrailingComma: true })
   if (errors.length === 0) return data
@@ -768,6 +907,10 @@ function parseConfigDocument(text: string, source: string): unknown {
   throw new Error(
     `${source} JSON/JSONC уншихад алдаа гарлаа (${lines.length}:${lines[lines.length - 1].length + 1}, ${printParseErrorCode(err.error)})`,
   )
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function stripBom(text: string) {
@@ -876,13 +1019,26 @@ async function hasSkillFile(dir: string) {
 }
 
 function commonMcpConfigFiles(dir: string) {
-  return [
+  const basename = path.basename(dir).toLowerCase()
+  const direct = [
     path.join(dir, "claude_desktop_config.json"),
     path.join(dir, "mcp.json"),
     path.join(dir, ".mcp.json"),
     path.join(dir, ".cursor", "mcp.json"),
     path.join(dir, "cursor", "mcp.json"),
+    path.join(dir, ".codex", "config.toml"),
+    path.join(dir, ".hermes", "config.yaml"),
+    path.join(dir, ".hermes", "config.yml"),
+    path.join(dir, ".config", "goose", "config.yaml"),
+    path.join(dir, ".config", "goose", "config.yml"),
+    path.join(dir, ".goose", "config.yaml"),
+    path.join(dir, ".goose", "config.yml"),
   ]
+  if (basename === ".codex" || basename === "codex") direct.push(path.join(dir, "config.toml"))
+  if ([".hermes", "hermes", ".goose", "goose"].includes(basename)) {
+    direct.push(path.join(dir, "config.yaml"), path.join(dir, "config.yml"))
+  }
+  return [...new Set(direct)]
 }
 
 function looksLikeCommand(input: string) {
