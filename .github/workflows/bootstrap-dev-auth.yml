@@ -41,6 +41,7 @@ env:
   MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
   MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"
   MONGOLGPT_PAYMENT_ENVIRONMENT: disabled
+  MONGOLGPT_RELEASE_SHA: ${{ github.sha }}
 
 jobs:
   bootstrap:

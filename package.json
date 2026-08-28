@@ -14,7 +14,7 @@
     "cloudflare:preflight": "bun script/cloudflare-preflight.ts",
     "deploy:preflight": "bun script/deployment-preflight.ts",
     "deploy:smoke": "bun script/deployment-smoke.ts",
-    "db:migrate": "bun --cwd packages/console/core run db:migrate-d1",
+    "db:migrate": "bun run --cwd packages/console/core db:migrate-d1",
     "dev:console": "ulimit -n 10240 2>/dev/null; bun run --cwd packages/console/app dev",
     "dev:stats": "bun sst shell --stage=production -- bun run --cwd packages/stats/app dev",
     "dev:storybook": "bun --cwd packages/storybook storybook",

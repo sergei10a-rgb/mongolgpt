@@ -105,7 +105,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
   test("bootstraps only real dev OAuth before the authenticated deployment gate", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/bootstrap-dev-auth.yml", import.meta.url)).text()
     const parsed: unknown = Bun.YAML.parse(source)
-    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs)) {
+    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs) || !record(parsed.env)) {
       throw new Error("Dev OAuth bootstrap workflow is invalid")
     }
     const rawJob = parsed.jobs.bootstrap
@@ -158,6 +158,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain('MONGOLGPT_ENABLE_ADMIN: "false"')
     expect(source).toContain('MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"')
     expect(source).toContain("MONGOLGPT_PAYMENT_ENVIRONMENT: disabled")
+    expect(parsed.env.MONGOLGPT_RELEASE_SHA).toBe("${{ github.sha }}")
     expect(source).toContain("deploy:preflight -- dev --auth-bootstrap")
     expect(source).toContain("set_optional_secret GITHUB_CLIENT_ID_CONSOLE")
     expect(source).toContain("set_optional_secret GITHUB_CLIENT_SECRET_CONSOLE")
@@ -739,7 +740,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(database).toBeGreaterThanOrEqual(0)
     expect(migration).toBeGreaterThan(database)
     expect(application).toBeGreaterThan(migration)
-    expect(packageSource.scripts["db:migrate"]).toBe("bun --cwd packages/console/core run db:migrate-d1")
+    expect(packageSource.scripts["db:migrate"]).toBe("bun run --cwd packages/console/core db:migrate-d1")
   })
 
   test("runs bounded account deletion retention against the linked D1 database", async () => {
