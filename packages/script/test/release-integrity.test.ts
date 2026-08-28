@@ -105,6 +105,25 @@ describe("release integrity contract", () => {
     expect(smoke).toContain("WaitForExit($ExitTimeoutSeconds * 1000)")
   })
 
+  test("smokes the signed Windows CLI and keeps Free Auto behind a MongolGPT account", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
+    const smoke = readFileSync(resolve(root, "packages/mongolgpt/script/smoke-built-cli-windows.ps1"), "utf8")
+
+    expect(workflow).toContain("Smoke signed Windows CLI account gate")
+    expect(workflow).toContain("./script/smoke-built-cli-windows.ps1")
+    expect(workflow.indexOf("Verify Windows CLI signatures")).toBeLessThan(
+      workflow.indexOf("Smoke signed Windows CLI account gate"),
+    )
+    expect(workflow.indexOf("Smoke signed Windows CLI account gate")).toBeLessThan(
+      workflow.indexOf("Repack Windows CLI archives"),
+    )
+    expect(smoke).toContain('"mongolgpt/free-auto"')
+    expect(smoke).toContain('"MONGOLGPT_AUTH_CONTENT" = "{}"')
+    expect(smoke).toContain('"MONGOLGPT_API_KEY" = ""')
+    expect(smoke).toContain('"mongolgpt account login"')
+    expect(smoke).toContain("git -C $repo init --quiet")
+  })
+
   test("bundles TypeScript workspace contracts into the Electron main process", () => {
     const desktop = JSON.parse(readFileSync(resolve(root, "packages/desktop/package.json"), "utf8"))
 

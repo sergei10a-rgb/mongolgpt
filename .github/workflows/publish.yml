@@ -187,6 +187,11 @@ jobs:
             }
           }
 
+      - name: Smoke signed Windows CLI account gate
+        shell: pwsh
+        working-directory: packages/mongolgpt
+        run: ./script/smoke-built-cli-windows.ps1 -BinaryPath "dist/mongolgpt-windows-x64/bin/mongolgpt.exe" -ExpectedVersion "${{ needs.version.outputs.version }}"
+
       - name: Repack Windows CLI archives
         working-directory: packages/mongolgpt/dist
         shell: pwsh
