@@ -14,7 +14,7 @@ export async function preflightCloudflareDeploymentAccess(input: {
   accountId: string
   token: string
   domain: string
-  scope?: "full" | "runtime-only"
+  scope?: "full" | "runtime-only" | "worker-only"
   fetcher?: Fetcher
   timeoutMs?: number
 }) {
@@ -79,6 +79,8 @@ export async function preflightCloudflareDeploymentAccess(input: {
     "Cloudflare Workers Scripts жагсаалтыг унших",
     "Workers Scripts Read эсвэл Edit",
   )
+  if (input.scope === "worker-only") return { zoneId: zone.id, domain }
+
   await requireRecord(
     fetcher,
     `${accountPath}/containers/me`,

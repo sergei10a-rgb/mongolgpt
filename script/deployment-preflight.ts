@@ -35,6 +35,12 @@ try {
     accountId: process.env.CLOUDFLARE_DEFAULT_ACCOUNT_ID ?? "",
     token: process.env.CLOUDFLARE_API_TOKEN ?? "",
     domain: result.domain,
+    scope:
+      scope === "docs-only" || scope === "app-only"
+        ? "worker-only"
+        : scope === "runtime-only"
+          ? "runtime-only"
+          : "full",
   })
   const access = result.adminEnabled
     ? await preflightCloudflareAccess({

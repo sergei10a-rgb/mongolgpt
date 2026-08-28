@@ -73,6 +73,32 @@ describe("Cloudflare deployment token preflight", () => {
     ])
   })
 
+  test("does not require unrelated backend or Containers access for a static Worker deploy", async () => {
+    const requests: string[] = []
+    const responses = [
+      response({ success: true, result: { status: "active" } }),
+      response({ success: true, result: [{ id: "zone-id", name: domain, account: { id: accountId } }] }),
+      response({ success: true, result: [] }),
+    ]
+
+    await preflightCloudflareDeploymentAccess({
+      accountId,
+      domain,
+      token: "worker-token",
+      scope: "worker-only",
+      fetcher: async (input) => {
+        requests.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url)
+        return responses.shift() ?? response({ success: false }, 500)
+      },
+    })
+
+    expect(requests).toEqual([
+      "https://api.cloudflare.com/client/v4/user/tokens/verify",
+      `https://api.cloudflare.com/client/v4/zones?name=mgpt.mn&account.id=${accountId}&per_page=2`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts`,
+    ])
+  })
+
   test("rejects invalid inputs and an inactive token before resource probes", async () => {
     await expect(
       preflightCloudflareDeploymentAccess({
