@@ -116,6 +116,34 @@ describe("release integrity contract", () => {
     expect(preflight).toContain("checkNpmCli ? cliPackages")
   })
 
+  test("checks npm authentication and every CLI package owner without publishing", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/npm-token-preflight.yml"), "utf8")
+
+    expect(workflow).toContain("workflow_dispatch:")
+    expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}")
+    expect(workflow).toContain("npm whoami --registry=https://registry.npmjs.org")
+    for (const name of [
+      "mongolgpt",
+      "mongolgpt-linux-arm64",
+      "mongolgpt-linux-x64",
+      "mongolgpt-linux-x64-baseline",
+      "mongolgpt-linux-arm64-musl",
+      "mongolgpt-linux-x64-musl",
+      "mongolgpt-linux-x64-baseline-musl",
+      "mongolgpt-darwin-arm64",
+      "mongolgpt-darwin-x64",
+      "mongolgpt-darwin-x64-baseline",
+      "mongolgpt-windows-arm64",
+      "mongolgpt-windows-x64",
+      "mongolgpt-windows-x64-baseline",
+    ]) {
+      expect(workflow).toContain(`            ${name}\n`)
+    }
+    expect(workflow).toContain('npm view "$package" maintainers --json')
+    expect(workflow).not.toContain("run: npm publish")
+    expect(workflow).not.toContain('npm publish "$package"')
+  })
+
   test("uploads Windows and Desktop assets to the release tag created by the version job", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
     const canonicalUpload = 'gh release upload "${{ needs.version.outputs.tag }}"'
