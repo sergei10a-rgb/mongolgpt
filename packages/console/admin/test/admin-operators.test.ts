@@ -3,6 +3,7 @@ import { resolve } from "node:path"
 import type { PlatformAdminContext } from "../src/lib/admin-context"
 import {
   AdminOperatorMutationInput,
+  evaluateAdminOperatorAccessEligibility,
   evaluateAdminOperatorTargetMutation,
 } from "../src/lib/admin-operators"
 import { requirePlatformAdminOwner } from "../src/lib/admin-auth"
@@ -57,6 +58,13 @@ describe("platform admin operator management", () => {
     expect(evaluateAdminOperatorTargetMutation(owner.id, { id: "adm_operator", role: "support" })).toBeUndefined()
   })
 
+  test("only creates or reactivates operators already allowed by Cloudflare Access", () => {
+    const accessEmails = new Set(["owner@mgpt.mn", "support@mgpt.mn"])
+
+    expect(evaluateAdminOperatorAccessEligibility("support@mgpt.mn", accessEmails)).toBeUndefined()
+    expect(evaluateAdminOperatorAccessEligibility("finance@mgpt.mn", accessEmails)).toBe("access_not_allowed")
+  })
+
   test("keeps mutation security, transaction, and audit in the server contract", async () => {
     const operators = await source("src/lib/admin-operators.ts")
     const route = await source("src/routes/admins/index.tsx")
@@ -69,9 +77,14 @@ describe("platform admin operator management", () => {
     expect(operators).toContain("writeAdminAudit({")
     expect(operators).toContain("resultChanges(updated) !== 1")
     expect(operators).toContain('AdminOperatorMutationError("conflict")')
+    expect(operators).toContain("loadAdminAccessConfig().bootstrapEmails")
+    expect(operators).toContain('input.operation === "reactivate"')
+    expect(operators).toContain('AdminOperatorMutationError(accessError)')
     expect(operators).toContain('"owner_protected"')
     expect(operators).toContain('"self_change"')
     expect(route).toContain("Операторын удирдлага")
+    expect(route).toContain("Cloudflare Access ба дотоод эрх")
+    expect(route).toContain("operator.accessAllowed")
     expect(route).toContain("aria-live")
     expect(route).not.toContain("opencode")
   })

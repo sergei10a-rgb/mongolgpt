@@ -93,7 +93,7 @@ export default function AdminOperatorsPage() {
               <section data-component="operator-directory" aria-labelledby="operator-directory-title">
                 <div data-component="section-heading">
                   <div>
-                    <p data-component="eyebrow">Баталгаажсан Cloudflare Access бүртгэл</p>
+                    <p data-component="eyebrow">Cloudflare Access ба дотоод эрх</p>
                     <h2 id="operator-directory-title">Операторууд</h2>
                   </div>
                   <span>{data().operators.length} бүртгэл</span>
@@ -105,6 +105,7 @@ export default function AdminOperatorsPage() {
                         <th>Имэйл</th>
                         <th>Эрх</th>
                         <th>Төлөв</th>
+                        <th>Cloudflare хандалт</th>
                         <th>Сүүлд нэвтэрсэн</th>
                         <th>Үүссэн</th>
                         <th>Үйлдэл</th>
@@ -115,7 +116,7 @@ export default function AdminOperatorsPage() {
                         each={data().operators}
                         fallback={
                           <tr>
-                            <td colspan="6" data-empty>
+                            <td colspan="7" data-empty>
                               Операторын бүртгэл алга.
                             </td>
                           </tr>
@@ -130,6 +131,11 @@ export default function AdminOperatorsPage() {
                             <td>{roleLabel(operator.role)}</td>
                             <td>
                               <span data-account-status={operator.status}>{statusLabel(operator.status)}</span>
+                            </td>
+                            <td>
+                              <span data-account-status={operator.accessAllowed ? "active" : "suspended"}>
+                                {operator.accessAllowed ? "Зөвшөөрсөн" : "Жагсаалтад алга"}
+                              </span>
                             </td>
                             <td>{formatDate(operator.timeLastSeen)}</td>
                             <td>{formatDate(operator.timeCreated)}</td>

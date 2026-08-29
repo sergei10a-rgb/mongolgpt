@@ -14,6 +14,7 @@ import {
   writeAdminAudit,
   writeAdminAuditWithDb,
 } from "./admin-auth"
+import { loadAdminAccessConfig } from "./access"
 import { AdminMutationRequestError, requireSameOriginAdminMutation } from "./admin-mutation"
 
 const operatorID = z.string().regex(/^adm_[0-9A-HJKMNP-TV-Z]{26}$/)
@@ -52,6 +53,7 @@ type OperatorMutation = z.infer<typeof AdminOperatorMutationInput>
 
 export async function listAdminOperators(context: PlatformAdminContext) {
   const admin = requirePlatformAdminOwner(context)
+  const accessEmails = loadAdminAccessConfig().bootstrapEmails
   return Database.use(async (tx) => {
     const operators = await tx
       .select({
@@ -72,6 +74,7 @@ export async function listAdminOperators(context: PlatformAdminContext) {
         ...operator,
         timeCreated: operator.timeCreated.toISOString(),
         timeLastSeen: operator.timeLastSeen?.toISOString() ?? null,
+        accessAllowed: accessEmails.has(operator.email),
         mutable: operator.id !== admin.id && operator.role !== "owner",
       })),
     }
@@ -86,9 +89,10 @@ export async function mutateAdminOperator(context: PlatformAdminContext, request
     requireSameOriginAdminMutation(request)
     const admin = requirePlatformAdminOwner(context)
     const input = AdminOperatorMutationInput.parse(raw)
+    const accessEmails = loadAdminAccessConfig().bootstrapEmails
     return await Database.transaction(async (tx) => {
       await requireActiveOwner(tx, admin)
-      const result = await applyOperatorMutation(tx, admin, request, input)
+      const result = await applyOperatorMutation(tx, admin, request, input, accessEmails)
       return { ok: true as const, ...result }
     })
   } catch (error) {
@@ -119,9 +123,12 @@ async function applyOperatorMutation(
   admin: PlatformAdminContext,
   request: Request,
   input: OperatorMutation,
+  accessEmails: ReadonlySet<string>,
 ) {
   if (input.operation === "create") {
     const email = input.email
+    const accessError = evaluateAdminOperatorAccessEligibility(email, accessEmails)
+    if (accessError) throw new AdminOperatorMutationError(accessError)
     const existing = await tx
       .select({ id: PlatformAdminTable.id })
       .from(PlatformAdminTable)
@@ -169,6 +176,11 @@ async function applyOperatorMutation(
   if (!target) throw new AdminOperatorMutationError("not_found")
   const targetMutationError = evaluateAdminOperatorTargetMutation(admin.id, target)
   if (targetMutationError) throw new AdminOperatorMutationError(targetMutationError)
+
+  if (input.operation === "reactivate") {
+    const accessError = evaluateAdminOperatorAccessEligibility(target.email, accessEmails)
+    if (accessError) throw new AdminOperatorMutationError(accessError)
+  }
 
   if (input.operation === "update_role") {
     const updated = await tx
@@ -242,6 +254,11 @@ export function evaluateAdminOperatorTargetMutation(actorID: string, target: { i
   return undefined
 }
 
+export function evaluateAdminOperatorAccessEligibility(email: string, accessEmails: ReadonlySet<string>) {
+  if (!accessEmails.has(email)) return "access_not_allowed" as const
+  return undefined
+}
+
 function readOperatorID(raw: unknown) {
   if (typeof raw !== "object" || raw === null || !("operatorID" in raw) || typeof raw.operatorID !== "string") {
     return undefined
@@ -276,6 +293,9 @@ function mutationFailure(error: unknown) {
 
 function operatorErrorMessage(code: AdminOperatorMutationError["code"]) {
   if (code === "email_exists") return "Энэ имэйлтэй админ бүртгэл аль хэдийн байна."
+  if (code === "access_not_allowed") {
+    return "Энэ имэйл Cloudflare Access-ийн зөвшөөрөгдсөн жагсаалтад алга. Эхлээд MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS нууц утгад нэмээд админ орчныг дахин байршуулна уу."
+  }
   if (code === "self_change") return "Өөрийн эрх эсвэл төлөвийг энэ хуудсаар өөрчлөх боломжгүй."
   if (code === "owner_protected") return "Эзэмшигчийн эрх болон төлөвийг энэ хуудсаар өөрчлөх боломжгүй."
   if (code === "owner_invariant") return "Идэвхтэй эзэмшигчийн хамгаалалт зөрчигдсөн тул үйлдлийг зогсоолоо."
@@ -289,7 +309,14 @@ export function isAssignableOperatorRole(value: unknown) {
 
 export class AdminOperatorMutationError extends Error {
   constructor(
-    readonly code: "email_exists" | "not_found" | "self_change" | "owner_protected" | "owner_invariant" | "conflict",
+    readonly code:
+      | "access_not_allowed"
+      | "email_exists"
+      | "not_found"
+      | "self_change"
+      | "owner_protected"
+      | "owner_invariant"
+      | "conflict",
   ) {
     super(code)
     this.name = "AdminOperatorMutationError"
