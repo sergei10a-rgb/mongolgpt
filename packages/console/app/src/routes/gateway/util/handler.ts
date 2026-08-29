@@ -71,7 +71,13 @@ import {
   shouldFailoverProviderStatus,
 } from "./provider-retry"
 import { providerCircuit, providerCircuitKey } from "./provider-circuit"
-import { resolveImmediateBillingSource, trackAndSettleMeasuredUsage, type BillingSource } from "./request-lifecycle"
+import {
+  resolveImmediateBillingSource,
+  selectByokProviderRoute,
+  selectServerProviderRoutes,
+  trackAndSettleMeasuredUsage,
+  type BillingSource,
+} from "./request-lifecycle"
 
 type GatewayCatalogData = Awaited<ReturnType<typeof GatewayCatalog.list>>
 type RetryOptions = {
@@ -571,8 +577,13 @@ export async function handler(
     const selected = (() => {
       // Byok is top priority b/c if user set their own API key, we should use it
       // instead of using the sticky provider for the same session
-      if (authInfo?.provider?.credentials) {
-        const provider = modelInfo.providers.find((candidate) => candidate.id === modelInfo.byokProvider)
+      if (authInfo?.provider?.credentials && modelInfo.byokProvider) {
+        const provider = selectByokProviderRoute({
+          hasCredentials: true,
+          byokProvider: modelInfo.byokProvider,
+          providers: modelInfo.providers,
+          catalogProviders: catalog.providers,
+        })
         if (!provider) return undefined
         const circuitPermit = providerCircuit.acquire(
           providerCircuitKey(provider.id, { workspaceID: authInfo.workspaceID, modelID: reqModel }),
@@ -581,8 +592,7 @@ export async function handler(
       }
 
       // Prioritize trial providers
-      let allProviders = modelInfo.providers
-        .filter((provider) => !provider.disabled)
+      let allProviders = selectServerProviderRoutes(modelInfo.providers, catalog.providers)
         .filter((provider) => isProviderAllowedForStage(catalog.providers[provider.id], Resource.App.stage))
       if (trialProviders) {
         allProviders = allProviders.map((provider) => ({

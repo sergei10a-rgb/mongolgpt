@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test"
 import type { QuotaLedgerCommand } from "@mongolgpt/console-core/quota.js"
 import { reserveFreeAutoQuota } from "./free-auto-quota"
 import { runProviderAttempt, type ProviderFailoverRetry } from "./provider-retry"
-import { resolveImmediateBillingSource, trackAndSettleMeasuredUsage } from "./request-lifecycle"
+import {
+  resolveImmediateBillingSource,
+  selectByokProviderRoute,
+  selectServerProviderRoutes,
+  trackAndSettleMeasuredUsage,
+} from "./request-lifecycle"
 
 function readUsage(value: unknown) {
   if (!value || typeof value !== "object" || !("usage" in value)) throw new Error("usage missing")
@@ -20,6 +25,38 @@ function readUsage(value: unknown) {
 }
 
 describe("managed request lifecycle", () => {
+  test("selects only an explicitly configured BYOK route when credentials exist", () => {
+    const providers = [
+      { id: "openrouter", disabled: false },
+      { id: "openrouter-managed", disabled: false },
+      { id: "nvidia-nim", disabled: true },
+    ]
+    const catalogProviders = {
+      openrouter: { usageMode: "byok" },
+      "openrouter-managed": { usageMode: "managed" },
+      "nvidia-nim": { usageMode: "byok" },
+    }
+
+    expect(
+      selectByokProviderRoute({ hasCredentials: true, byokProvider: "openrouter", providers, catalogProviders }),
+    ).toEqual(providers[0])
+    expect(
+      selectByokProviderRoute({ hasCredentials: false, byokProvider: "openrouter", providers, catalogProviders }),
+    ).toBeUndefined()
+    expect(
+      selectByokProviderRoute({
+        hasCredentials: true,
+        byokProvider: "openrouter-managed",
+        providers,
+        catalogProviders,
+      }),
+    ).toBeUndefined()
+    expect(
+      selectByokProviderRoute({ hasCredentials: true, byokProvider: "nvidia-nim", providers, catalogProviders }),
+    ).toBeUndefined()
+    expect(selectServerProviderRoutes(providers, catalogProviders)).toEqual([providers[1]])
+  })
+
   test("does not expose account-backed Free Auto to an anonymous request", () => {
     expect(
       resolveImmediateBillingSource({

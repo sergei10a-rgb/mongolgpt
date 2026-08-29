@@ -4,6 +4,7 @@ export const ModelFormatSchema = z.enum(["anthropic", "google", "openai", "oa-co
 export type ModelFormat = z.infer<typeof ModelFormatSchema>
 export const ProviderKindSchema = z.enum(["openrouter", "nvidia-nim", "openai-compatible"])
 export const ProviderUsageModeSchema = z.enum(["managed", "byok", "trial"])
+export const HostedByokProviderSchema = z.enum(["openai", "anthropic", "google", "openrouter", "nvidia-nim"])
 
 const unitCost = z.number().nonnegative()
 const ModelCostSchema = z.object({
@@ -20,7 +21,7 @@ export const MongolGPTModelSchema = z.object({
   cost200K: ModelCostSchema.optional(),
   allowAnonymous: z.boolean().optional(),
   freeForAuthenticated: z.boolean().optional(),
-  byokProvider: z.enum(["openai", "anthropic", "google"]).optional(),
+  byokProvider: HostedByokProviderSchema.optional(),
   stickyProvider: z.enum(["strict", "prefer"]).optional(),
   trialProvider: z.string().optional(),
   trialEnded: z.boolean().optional(),
@@ -74,10 +75,10 @@ const GatewayModelConfigurationSchema = z.object({
 })
 
 export function isProviderAllowedForStage(
-  provider: Pick<MongolGPTProviderConfig, "productionUseApproved">,
+  provider: Pick<MongolGPTProviderConfig, "productionUseApproved" | "usageMode">,
   stage: string,
 ) {
-  return stage !== "production" || provider.productionUseApproved === true
+  return stage !== "production" || provider.usageMode === "byok" || provider.productionUseApproved === true
 }
 
 export const MongolGPTModelConfigurationSchema = GatewayModelConfigurationSchema.superRefine((value, ctx) => {
@@ -103,6 +104,22 @@ export const MongolGPTModelConfigurationSchema = GatewayModelConfigurationSchema
               code: z.ZodIssueCode.custom,
               path: [...path, "providers", routeIndex, "id"],
               message: `"${route.id}" нийлүүлэгчийн чиглэл providers жагсаалтад заасан байх ёстой`,
+            })
+        }
+
+        if (model.byokProvider) {
+          const route = model.providers.find((provider) => provider.id === model.byokProvider)
+          if (!route || route.disabled)
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [...path, "byokProvider"],
+              message: "byokProvider нь тухайн загварт тохируулсан идэвхтэй чиглэлийг заасан байх ёстой",
+            })
+          if (value.providers[model.byokProvider]?.usageMode !== "byok")
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [...path, "byokProvider"],
+              message: "byokProvider-ийн үйлчилгээ үзүүлэгч usageMode=byok тохиргоотой байх ёстой",
             })
         }
 

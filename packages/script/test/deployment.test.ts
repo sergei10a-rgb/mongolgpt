@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { DeploymentPreflightError, deploymentEndpoints, preflightDeployment } from "../src/deployment"
 import { inspectDeploymentStage, requireDeploymentStage } from "../src/deployment-stage"
+import { buildDevFreeAutoCatalog } from "../src/dev-free-auto"
 
 const cloudflare = {
   MONGOLGPT_DOMAIN: "mgpt.mn",
@@ -1141,6 +1142,42 @@ describe("Cloudflare deployment preflight", () => {
         '"sample" үйлчилгээ үзүүлэгч бодит API түлхүүр',
         '"sample" үйлчилгээ үзүүлэгч бодит API төгсгөлийн цэг',
       ],
+    )
+  })
+
+  test("accepts sentinel credentials only for account-owned BYOK routes", () => {
+    const catalog = buildDevFreeAutoCatalog({
+      openRouterApiKey: "real-openrouter-managed-key",
+      nvidiaNimApiKey: "real-nvidia-managed-key",
+    })
+    expect(
+      preflightDeployment({
+        stage: "dev",
+        env: {
+          ...cloudflare,
+          ...hosted,
+          MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+          MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+          SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: JSON.stringify(catalog),
+        },
+      }).stage,
+    ).toBe("dev")
+
+    const unsafe = structuredClone(catalog)
+    unsafe.providers.openrouter.usageMode = "managed"
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            ...hosted,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_AUTH_EMAIL_DOMAINS: "team@mgpt.mn",
+            SST_SECRET_MONGOLGPT_GATEWAY_MODELS1: JSON.stringify(unsafe),
+          },
+        }),
+      ["ажиллах орчны загварын схем", "usageMode=byok"],
     )
   })
 

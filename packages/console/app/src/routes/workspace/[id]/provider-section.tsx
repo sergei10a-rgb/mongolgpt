@@ -10,7 +10,9 @@ import { formError, localizeError } from "~/lib/form-error"
 const PROVIDERS = [
   { name: "OpenAI", key: "openai", prefix: "sk-" },
   { name: "Anthropic", key: "anthropic", prefix: "sk-ant-" },
-  { name: "Google Gemini", key: "google", prefix: "AI" },
+  { name: "Google Gemini", key: "google", prefix: "AIza" },
+  { name: "OpenRouter", key: "openrouter", prefix: "sk-or-v1-" },
+  { name: "NVIDIA NIM", key: "nvidia-nim", prefix: "nvapi-" },
 ] as const
 
 type Provider = (typeof PROVIDERS)[number]
@@ -19,9 +21,11 @@ const removeProvider = action(async (form: FormData) => {
   "use server"
   const provider = form.get("provider") as string | null
   if (!provider) return { error: formError.providerRequired }
+  const parsed = Provider.remove.schema.safeParse({ provider })
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? formError.providerRequired }
   const workspaceID = form.get("workspaceID") as string | null
   if (!workspaceID) return { error: formError.workspaceRequired }
-  return json(await withActor(() => Provider.remove({ provider }), workspaceID), {
+  return json(await withActor(() => Provider.remove(parsed.data), workspaceID), {
     revalidate: listProviders.key,
   })
 }, "provider.remove")
@@ -32,12 +36,17 @@ const saveProvider = action(async (form: FormData) => {
   const credentials = form.get("credentials") as string | null
   if (!provider) return { error: formError.providerRequired }
   if (!credentials) return { error: formError.apiKeyRequired }
+  const parsed = Provider.create.schema.safeParse({
+    provider,
+    credentials,
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? formError.apiKeyRequired }
   const workspaceID = form.get("workspaceID") as string | null
   if (!workspaceID) return { error: formError.workspaceRequired }
   return json(
     await withActor(
       () =>
-        Provider.create({ provider, credentials })
+        Provider.create(parsed.data)
           .then(() => ({ error: undefined }))
           .catch((e) => ({ error: e.message as string })),
       workspaceID,

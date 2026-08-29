@@ -286,7 +286,7 @@ export const dict = {
 
   "workspace.providers.title": "Өөрийн түлхүүрийг ашиглах",
   "workspace.providers.subtitle": "Хиймэл оюуны нийлүүлэгчдийн API түлхүүрээ тохируулна уу.",
-  "workspace.providers.placeholder": "{{provider}}-ийн API түлхүүрийг оруулна уу ({{prefix}}...)",
+  "workspace.providers.placeholder": "{{provider}}-ийн API түлхүүрийг оруулна уу (Жишээ: {{prefix}}...)",
   "workspace.providers.configure": "Тохируулах",
   "workspace.providers.edit": "Засах",
   "workspace.providers.delete": "Устгах",

@@ -585,7 +585,10 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
 
     const api = provider.api.trim()
     const keys = typeof provider.apiKey === "string" ? [provider.apiKey] : Object.values(provider.apiKey)
-    if (keys.length === 0 || keys.some((key) => !key.trim() || placeholderValue(key))) {
+    if (
+      provider.usageMode !== "byok" &&
+      (keys.length === 0 || keys.some((key) => !key.trim() || placeholderValue(key)))
+    ) {
       issues.push(`MONGOLGPT_GATEWAY_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгч бодит API түлхүүртэй байна.`)
     }
 
@@ -599,7 +602,12 @@ function validateModelConfiguration(value: string | undefined, issues: string[],
           `MONGOLGPT_GATEWAY_MODELS дэх "${providerID}" үйлчилгээ үзүүлэгч бодит API төгсгөлийн цэгтэй байна.`,
         )
       }
-      if (stage === "production" && nvidiaApiCatalogHostname(url.hostname) && provider.productionUseApproved !== true) {
+      if (
+        stage === "production" &&
+        provider.usageMode !== "byok" &&
+        nvidiaApiCatalogHostname(url.hostname) &&
+        provider.productionUseApproved !== true
+      ) {
         issues.push(
           `MONGOLGPT_GATEWAY_MODELS дэх "${providerID}" NVIDIA API Catalog үйлчилгээ үзүүлэгч нь үйлдвэрлэлийн захиалга, лиценз баталгаажсан productionUseApproved=true тохиргоотой байна.`,
         )

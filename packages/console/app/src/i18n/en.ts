@@ -278,7 +278,7 @@ export const dict = {
 
   "workspace.providers.title": "Bring Your Own Key",
   "workspace.providers.subtitle": "Configure your own API keys from AI providers.",
-  "workspace.providers.placeholder": "Enter {{provider}} API key ({{prefix}}...)",
+  "workspace.providers.placeholder": "Enter {{provider}} API key (for example {{prefix}}...)",
   "workspace.providers.configure": "Configure",
   "workspace.providers.edit": "Edit",
   "workspace.providers.delete": "Delete",

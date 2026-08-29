@@ -17,6 +17,16 @@ describe("account-scoped MongolGPT config", () => {
       cost: { input: 0, output: 0 },
       tool_call: true,
     })
+    expect(provider.models["openrouter-byok"]).toMatchObject({
+      name: "OpenRouter (өөрийн түлхүүр)",
+      cost: { input: 0, output: 0 },
+      tool_call: true,
+    })
+    expect(provider.models["nvidia-nim-byok"]).toMatchObject({
+      name: "NVIDIA NIM (өөрийн түлхүүр)",
+      cost: { input: 0, output: 0 },
+      tool_call: true,
+    })
   })
 
   test("does not serialize an account access token into remote config", () => {

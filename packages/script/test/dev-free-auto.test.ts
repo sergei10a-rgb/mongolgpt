@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { MongolGPTModelConfigurationSchema, modelConfigurationStageIssues } from "@mongolgpt/console-core/model-config.js"
 import {
+  BYOK_CREDENTIAL_SENTINEL,
   DEFAULT_NVIDIA_NIM_MODEL,
   MODEL_SECRET_PARTS,
+  OPENROUTER_BYOK_MODEL,
   buildDevFreeAutoCatalog,
   gatewaySstEnvironmentLines,
   prepareDevFreeAuto,
@@ -41,6 +43,22 @@ describe("dev Free Auto catalog", () => {
     expect(freeAuto.fallbackProvider).toBe("nvidia-nim-free")
     expect(catalog.providers["openrouter-free"]?.productionUseApproved).toBe(false)
     expect(catalog.providers["nvidia-nim-free"]?.productionUseApproved).toBe(false)
+    expect(catalog.models["openrouter-byok"]).toMatchObject({
+      byokProvider: "openrouter",
+      providers: [{ id: "openrouter", model: OPENROUTER_BYOK_MODEL }],
+    })
+    expect(catalog.models["nvidia-nim-byok"]).toMatchObject({
+      byokProvider: "nvidia-nim",
+      providers: [{ id: "nvidia-nim", model: DEFAULT_NVIDIA_NIM_MODEL }],
+    })
+    expect(catalog.providers.openrouter).toMatchObject({
+      apiKey: BYOK_CREDENTIAL_SENTINEL,
+      usageMode: "byok",
+    })
+    expect(catalog.providers["nvidia-nim"]).toMatchObject({
+      apiKey: BYOK_CREDENTIAL_SENTINEL,
+      usageMode: "byok",
+    })
     expect(modelConfigurationStageIssues(catalog, "dev")).toEqual([])
     expect(modelConfigurationStageIssues(catalog, "production")).not.toEqual([])
   })

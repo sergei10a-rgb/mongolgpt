@@ -5,6 +5,8 @@ import {
 
 export const MODEL_SECRET_PARTS = 30
 export const DEFAULT_NVIDIA_NIM_MODEL = "qwen/qwen2.5-coder-32b-instruct"
+export const OPENROUTER_BYOK_MODEL = "openrouter/free"
+export const BYOK_CREDENTIAL_SENTINEL = "byok-required"
 
 export type DevFreeAutoPreparation = {
   source: "disabled" | "legacy" | "managed"
@@ -43,6 +45,20 @@ export function buildDevFreeAutoCatalog(input: {
           { id: "nvidia-nim-free", model: nvidiaNimModel, priority: 1 },
         ],
       },
+      "openrouter-byok": {
+        name: "OpenRouter (өөрийн түлхүүр)",
+        cost: { input: 0, output: 0 },
+        byokProvider: "openrouter",
+        maxTokensPerRequest: 8_192,
+        providers: [{ id: "openrouter", model: OPENROUTER_BYOK_MODEL }],
+      },
+      "nvidia-nim-byok": {
+        name: "NVIDIA NIM (өөрийн түлхүүр)",
+        cost: { input: 0, output: 0 },
+        byokProvider: "nvidia-nim",
+        maxTokensPerRequest: 8_192,
+        providers: [{ id: "nvidia-nim", model: nvidiaNimModel }],
+      },
     },
     lightweightModels: {},
     providers: {
@@ -65,6 +81,24 @@ export function buildDevFreeAutoCatalog(input: {
         providerKind: "nvidia-nim",
         usageMode: "managed",
         productionUseApproved: false,
+      },
+      openrouter: {
+        displayName: "OpenRouter BYOK",
+        api: "https://openrouter.ai/api/v1",
+        apiKey: BYOK_CREDENTIAL_SENTINEL,
+        providerKind: "openrouter",
+        usageMode: "byok",
+        headerModifier: {
+          "HTTP-Referer": "https://dev.mgpt.mn",
+          "X-Title": "MongolGPT",
+        },
+      },
+      "nvidia-nim": {
+        displayName: "NVIDIA NIM BYOK",
+        api: "https://integrate.api.nvidia.com/v1",
+        apiKey: BYOK_CREDENTIAL_SENTINEL,
+        providerKind: "nvidia-nim",
+        usageMode: "byok",
       },
     },
   })

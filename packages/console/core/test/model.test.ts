@@ -41,12 +41,13 @@ describe("MongolGPT Free Auto model contract", () => {
     ).toThrow(GatewayConfigurationError)
   })
 
-  test("allows only explicitly approved providers in production", () => {
+  test("allows only explicitly approved managed providers or account-owned BYOK in production", () => {
     const unapproved = { productionUseApproved: false }
     const approved = { productionUseApproved: true }
 
     expect(isProviderAllowedForStage(unapproved, "production")).toBe(false)
     expect(isProviderAllowedForStage(approved, "production")).toBe(true)
+    expect(isProviderAllowedForStage({ usageMode: "byok" }, "production")).toBe(true)
   })
 
   test("keeps non-production provider configuration usable", () => {
@@ -122,6 +123,46 @@ describe("MongolGPT Free Auto model contract", () => {
 
   test("accepts an account-only production route with a fallback", () => {
     expect(() => validate(config(model))).not.toThrow()
+  })
+
+  test("requires every hosted BYOK model to use its matching BYOK-only route", () => {
+    const byok = {
+      ...config(model),
+      lightweightModels: {
+        assistant: {
+          name: "OpenRouter BYOK",
+          cost: { input: 0, output: 0 },
+          byokProvider: "openrouter",
+          maxTokensPerRequest: 8_192,
+          providers: [{ id: "openrouter", model: "openrouter/free" }],
+        },
+      },
+      providers: {
+        ...config(model).providers,
+        openrouter: {
+          api: "https://openrouter.ai/api/v1",
+          apiKey: "byok-required",
+          providerKind: "openrouter",
+          usageMode: "byok",
+        },
+      },
+    }
+
+    expect(() => validate(byok)).not.toThrow()
+    expect(() =>
+      validate({
+        ...byok,
+        providers: { ...byok.providers, openrouter: { ...byok.providers.openrouter, usageMode: "managed" } },
+      }),
+    ).toThrow(/usageMode=byok/)
+    expect(() =>
+      validate({
+        ...byok,
+        lightweightModels: {
+          assistant: { ...byok.lightweightModels.assistant, providers: [{ id: "primary", model: "primary-model" }] },
+        },
+      }),
+    ).toThrow(/идэвхтэй чиглэлийг/)
   })
 
   test("rejects the retired model-list keys", () => {
