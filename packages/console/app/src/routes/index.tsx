@@ -104,6 +104,27 @@ const launchActions = [
   },
 ] as const
 
+const trustRows = [
+  {
+    title: "Нууцлал ба өгөгдөл",
+    body: "Үнэгүй автомат горим, хуваалцах холбоос, өөрийн API түлхүүрийн урсгал бүрийг ил тод тайлбарласан. Нууцлалын бодлого, өгөгдлийн хэрэглээг шууд шалгаж болно.",
+    href: "/legal/privacy-policy",
+    action: "Нууцлал унших",
+  },
+  {
+    title: "Нөхцөл ба эрхийн мэдээлэл",
+    body: "Үйлчилгээний нөхцөл, брэндийн материал, нээлттэй эхийн лиценз болон хэрэглэгчийн эрхтэй холбоотой мэдээлэл нийтэд нээлттэй байна.",
+    href: "/legal/terms-of-service",
+    action: "Нөхцөл харах",
+  },
+  {
+    title: "Ил тод хөгжүүлэлт",
+    body: "GitHub репо, баримт бичиг, таталт, тусламжийн урсгалууд нэг брэнд дор холбогдсон тул хэрэглэгч хаанаас юу авахаа төөрөхгүй.",
+    href: "/brand",
+    action: "Брэндийн материал",
+  },
+] as const
+
 const readinessRows = [
   {
     title: "Одоо ашиглах боломжтой",
@@ -166,8 +187,8 @@ export default function Home() {
                   MongolGPT орчинд Монгол хэлээр холбоно.
                 </p>
                 <p data-slot="supporting-copy">
-                  Үнэгүй автомат горимоор шууд эхэлнэ. Хүсвэл өөрийн API түлхүүр, OpenAI-д нийцсэн API хаяг,
-                  OpenRouter, NVIDIA NIM, Ollama, LM Studio болон дотоод загвараа холбоно.
+                  Үнэгүй автомат горимоор шууд эхэлнэ. Хүсвэл өөрийн API түлхүүр, OpenAI-д нийцсэн API хаяг, OpenRouter,
+                  NVIDIA NIM, Ollama, LM Studio болон дотоод загвараа холбоно.
                 </p>
                 <div data-slot="hero-actions">
                   <A href={language.route("/auth")} data-variant="primary">
@@ -217,7 +238,9 @@ export default function Home() {
                 </div>
                 <div data-slot="visual-caption">
                   <span>Бүтээгдэхүүний бодит харагдац</span>
-                  <p>MongolGPT-ийн бодит дэлгэц дээр нэвтрэлт, үнэгүй горим, кодын хяналт, ажлын орон зайг харуулж байна.</p>
+                  <p>
+                    MongolGPT-ийн бодит дэлгэц дээр нэвтрэлт, үнэгүй горим, кодын хяналт, ажлын орон зайг харуулж байна.
+                  </p>
                 </div>
               </div>
             </div>
@@ -260,8 +283,8 @@ export default function Home() {
               <p data-slot="eyebrow">Бодит төлөв</p>
               <h2>Шууд эхлэхэд хэрэгтэй товч мэдээлэл</h2>
               <p>
-                Юу нь шууд бэлэн, юуг бүртгэл эсвэл үйлчилгээ үзүүлэгчийн тохиргоотой уялдуулж ашиглахыг
-                тодорхой харууллаа.
+                Юу нь шууд бэлэн, юуг бүртгэл эсвэл үйлчилгээ үзүүлэгчийн тохиргоотой уялдуулж ашиглахыг тодорхой
+                харууллаа.
               </p>
             </div>
             <div data-component="readiness-grid">
@@ -282,8 +305,8 @@ export default function Home() {
               <p data-slot="eyebrow">Хэрэглээ</p>
               <h2>Нэг бүтээгдэхүүн, өөр өөр ажлын орчин</h2>
               <p>
-                Нэг ажлыг хөтчөөсөө эхлүүлээд ширээний програм эсвэл терминал руу шилжихэд бүртгэл, заавар,
-                үйлчилгээ үзүүлэгчийн тохиргоо, тусламжийн холбоосууд салангид болохгүй.
+                Нэг ажлыг хөтчөөсөө эхлүүлээд ширээний програм эсвэл терминал руу шилжихэд бүртгэл, заавар, үйлчилгээ
+                үзүүлэгчийн тохиргоо, тусламжийн холбоосууд салангид болохгүй.
               </p>
             </div>
             <div data-component="experience-list">
@@ -317,6 +340,28 @@ export default function Home() {
                   <article data-component="account-card">
                     <h3>{row.title}</h3>
                     <p>{row.body}</p>
+                  </article>
+                )}
+              </For>
+            </div>
+          </section>
+
+          <section data-component="trust-band" aria-label="Итгэлцэл, нууцлал, эрх зүйн мэдээлэл">
+            <div data-slot="section-heading">
+              <p data-slot="eyebrow">Итгэлцэл</p>
+              <h2>Нууцлал, эрх зүйн мэдээллийг нэг дороос шалгана</h2>
+              <p>
+                MongolGPT-ийн нийтийн сайт нь нэвтрэх, татах, баримт бичиг үзэхээс гадна нууцлал, нөхцөл, брэндийн
+                материал болон нээлттэй эхийн мэдээллийг ойлгомжтой байлгана.
+              </p>
+            </div>
+            <div data-component="trust-grid">
+              <For each={trustRows}>
+                {(row) => (
+                  <article data-component="trust-card">
+                    <h3>{row.title}</h3>
+                    <p>{row.body}</p>
+                    <A href={language.route(row.href)}>{row.action}</A>
                   </article>
                 )}
               </For>
@@ -358,23 +403,33 @@ export default function Home() {
               </li>
               <li>
                 <Faq question={i18n.t("home.faq.q3")}>
-                  {i18n.t("home.faq.a3.p1")} {i18n.t("home.faq.a3.p2.beforePlans")} <A href={language.route("/pricing")}>{i18n.t("home.faq.a3.p2.plansLink")}</A>
-                  {i18n.t("home.faq.a3.p2.afterPlans")} {i18n.t("home.faq.a3.p3")} {i18n.t("home.faq.a3.p4.beforeLocal")} <a href={language.route("/docs/providers/#lm-studio")} target="_blank" rel="noreferrer">{i18n.t("home.faq.a3.p4.localLink")}</a>.
+                  {i18n.t("home.faq.a3.p1")} {i18n.t("home.faq.a3.p2.beforePlans")}{" "}
+                  <A href={language.route("/pricing")}>{i18n.t("home.faq.a3.p2.plansLink")}</A>
+                  {i18n.t("home.faq.a3.p2.afterPlans")} {i18n.t("home.faq.a3.p3")}{" "}
+                  {i18n.t("home.faq.a3.p4.beforeLocal")}{" "}
+                  <a href={language.route("/docs/providers/#lm-studio")} target="_blank" rel="noreferrer">
+                    {i18n.t("home.faq.a3.p4.localLink")}
+                  </a>
+                  .
                 </Faq>
               </li>
               <li>
                 <Faq question={i18n.t("home.faq.q4")}>
-                  {i18n.t("home.faq.a4.p1")} <a href={language.route("/docs/providers/#directory")}>{i18n.t("common.learnMore")}</a>.
+                  {i18n.t("home.faq.a4.p1")}{" "}
+                  <a href={language.route("/docs/providers/#directory")}>{i18n.t("common.learnMore")}</a>.
                 </Faq>
               </li>
               <li>
                 <Faq question={i18n.t("home.faq.q5")}>
-                  {i18n.t("home.faq.a5.beforeDesktop")} <a href={language.route("/download")}>{i18n.t("home.faq.a5.desktop")}</a> {i18n.t("home.faq.a5.and")} <a href={language.route("/docs/web")}>{i18n.t("home.faq.a5.web")}</a>!
+                  {i18n.t("home.faq.a5.beforeDesktop")}{" "}
+                  <a href={language.route("/download")}>{i18n.t("home.faq.a5.desktop")}</a> {i18n.t("home.faq.a5.and")}{" "}
+                  <a href={language.route("/docs/web")}>{i18n.t("home.faq.a5.web")}</a>!
                 </Faq>
               </li>
               <li>
                 <Faq question={i18n.t("home.faq.q6")}>
-                  {i18n.t("home.faq.a6.beforePricing")} <A href={language.route("/pricing")}>{i18n.t("home.faq.a6.pricingLink")}</A>
+                  {i18n.t("home.faq.a6.beforePricing")}{" "}
+                  <A href={language.route("/pricing")}>{i18n.t("home.faq.a6.pricingLink")}</A>
                   {i18n.t("home.faq.a6.afterPricing")}
                 </Faq>
               </li>

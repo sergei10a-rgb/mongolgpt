@@ -150,9 +150,12 @@ export default function SupportIndex() {
           <Show when={!authenticated()}>
             <section aria-labelledby="support-login-title" data-section="support-login">
               <h2 id="support-login-title">Хувийн тусламжийн хүсэлт</h2>
-              <p>Өөрийн хүсэлт, хариу болон төлөвийг аюулгүй харахын тулд MongolGPT бүртгэлээрээ нэвтэрнэ үү.</p>
+              <p>
+                Өөрийн хүсэлт, хариу болон төлөвийг аюулгүй харахын тулд MongolGPT бүртгэлээрээ нэвтрэх эсвэл шинэ
+                бүртгэл үүсгэнэ үү.
+              </p>
               <A href={language.route("/auth")} data-slot="primary-action">
-                Нэвтэрч хүсэлт илгээх
+                Нэвтэрч эсвэл бүртгүүлээд хүсэлт илгээх
               </A>
               <Show when={listError()}>
                 {(value) => (

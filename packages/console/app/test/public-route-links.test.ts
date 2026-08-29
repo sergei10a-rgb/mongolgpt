@@ -17,6 +17,8 @@ describe("public route link contract", () => {
     expect(support).toContain('language.route("/docs/providers/")')
     expect(support).toContain('language.route("/docs/troubleshooting/")')
     expect(support).toContain('href={language.route("/auth")}')
+    expect(support).toContain("бүртгэл үүсгэнэ үү")
+    expect(support).toContain("Нэвтэрч эсвэл бүртгүүлээд хүсэлт илгээх")
     expect(support).not.toContain('"/docs/getting-started/"')
   })
 })

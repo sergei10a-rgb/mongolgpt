@@ -670,6 +670,7 @@ body {
 [data-component="readiness-band"],
 [data-component="experience-band"],
 [data-component="account-band"],
+[data-component="trust-band"],
 [data-component="launch-band"],
 [data-component="faq-band"] {
   border-bottom: 1px solid var(--color-border);
@@ -693,6 +694,7 @@ body {
 [data-component="pillar-card"],
 [data-component="readiness-card"],
 [data-component="account-card"],
+[data-component="trust-card"],
 [data-component="launch-card"] {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -829,6 +831,38 @@ body {
 
   p {
     margin: 0;
+  }
+}
+
+[data-component="trust-grid"] {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  @media (max-width: 60rem) {
+    grid-template-columns: 1fr;
+  }
+}
+
+[data-component="trust-card"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+
+  h3 {
+    color: var(--color-text-strong);
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    margin-top: auto;
+    text-decoration: underline;
+    text-decoration-color: var(--color-border-strong);
+    text-underline-offset: 0.18rem;
   }
 }
 

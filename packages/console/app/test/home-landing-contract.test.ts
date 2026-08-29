@@ -9,6 +9,7 @@ describe("home landing contract", () => {
     expect(view).toContain("<h1>MongolGPT</h1>")
     expect(view).toContain("mongolgpt-product-session.png")
     expect(view).toContain('aria-label="Бүтээгдэхүүний үндсэн боломжууд"')
+    expect(view).toContain('aria-label="Итгэлцэл, нууцлал, эрх зүйн мэдээлэл"')
     expect(view).not.toContain('aria-label="Core product pillars"')
     expect(view).toContain("Монгол хэрэглэгчийн хиймэл оюуны кодын агент")
     expect(view).not.toContain("Tabs")
@@ -43,6 +44,7 @@ describe("home landing contract", () => {
     expect(footer).toContain('language.route("/support")')
     expect(footer).toContain("resolveCommunityLink")
     expect(footer).toContain('target="_blank" rel="noreferrer"')
+    expect(footer).toContain('target={communityIsExternal ? "_blank" : undefined}')
     expect(footer).not.toContain('href="/auth"')
     expect(footer).toContain('i18n.t("footer.support")')
     expect(footer).toContain('i18n.t("footer.github")')
@@ -71,6 +73,7 @@ describe("home landing contract", () => {
     expect(quoted).not.toMatch(/\bplugin\b/i)
     expect(quoted).not.toMatch(/\bBYOK\b/)
     expect(quoted).not.toMatch(/\bproduction (flow|runtime)\b/i)
+    expect(quoted).not.toMatch(/\bpublic(?: website)?\b/i)
   })
 
   test("uses the new home layout structure and keyboard-visible focus styling", async () => {
@@ -78,6 +81,7 @@ describe("home landing contract", () => {
     expect(styles).toContain('[data-component="hero-grid"]')
     expect(styles).toContain('[data-component="pillar-band"]')
     expect(styles).toContain('[data-component="readiness-band"]')
+    expect(styles).toContain('[data-component="trust-grid"]')
     expect(styles).toContain('[data-component="launch-grid"]')
     expect(styles).toContain("a:focus-visible")
     expect(styles).toContain("border-radius: 8px")
@@ -87,7 +91,7 @@ describe("home landing contract", () => {
   test("keeps the mobile hero compact enough to reveal visual and next-section cues", async () => {
     const styles = await source("routes/index.css")
     expect(styles).toContain('[data-slot="hero-actions"] {')
-    expect(styles).toContain('grid-template-columns: repeat(2, minmax(0, 1fr));')
+    expect(styles).toContain("grid-template-columns: repeat(2, minmax(0, 1fr));")
     expect(styles).toContain('[data-slot="hero-actions"] [data-variant="ghost"] {')
     expect(styles).toContain("grid-column: 1 / -1;")
     expect(styles).toContain("max-height: 8.8rem;")
