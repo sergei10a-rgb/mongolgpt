@@ -91,8 +91,15 @@ describe("home landing contract", () => {
     expect(styles).toContain('[data-slot="hero-actions"] [data-variant="ghost"] {')
     expect(styles).toContain("grid-column: 1 / -1;")
     expect(styles).toContain("max-height: 8.8rem;")
+    expect(styles).toContain('[data-slot="hero-facts"] {\n      display: none;')
     expect(styles).toContain('[data-component="hero-nav"] {')
     expect(styles).toContain("overflow-x: auto;")
+  })
+
+  test("aligns the mobile menu with the compact public header", async () => {
+    const styles = await source("routes/index.css")
+    expect(styles).toContain('[data-component="nav-mobile-menu-list"]')
+    expect(styles).toContain("inset: 68px 0 auto;")
   })
 
   test("reports the live mobile menu state to assistive technology", async () => {
