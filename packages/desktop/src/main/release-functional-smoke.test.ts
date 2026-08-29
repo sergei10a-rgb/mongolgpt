@@ -9,6 +9,7 @@ import {
   isProviderList,
   isStatusArray,
   isToolIds,
+  releaseSmokeTerminalCommand,
   redactSmokeError,
   smokeTimeoutMs,
   validateHttpResponse,
@@ -28,8 +29,8 @@ describe("release functional smoke validators", () => {
     expect(isProject({ id: "project" })).toBe(false)
     expect(isFileContent({ type: "text", content: "README" })).toBe(true)
     expect(isFileContent({ type: "text", content: 1 })).toBe(false)
-    expect(isStatusArray([{ path: "README.md", status: "modified" }])).toBe(true)
-    expect(isStatusArray([{ path: "README.md" }])).toBe(false)
+    expect(isStatusArray([{ file: "README.md", status: "modified" }])).toBe(true)
+    expect(isStatusArray([{ file: "README.md" }])).toBe(false)
   })
 
   test("accepts only the exact provider response families", () => {
@@ -70,5 +71,16 @@ describe("release functional smoke validators", () => {
     expect(smokeTimeoutMs(0)).toBe(10_000)
     expect(redactSmokeError("password=secret secret", "secret")).toBe("password=[redacted] [redacted]")
     expect(redactSmokeError("no secret", "")).toBe("no secret")
+  })
+
+  test("encodes the Windows terminal proof without command-line quoting", () => {
+    const command = releaseSmokeTerminalCommand()
+    expect(command.command).toBe("powershell.exe")
+    expect(command.args.slice(0, 4)).toEqual(["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand"])
+    const script = Buffer.from(command.args[4] ?? "", "base64").toString("utf16le")
+    expect(script).toContain("MONGOLGPT_SMOKE_ROOT")
+    expect(script).toContain("MONGOLGPT_SMOKE_PROOF")
+    expect(script).toContain("status --short")
+    expect(script).toContain("git -C $env:MONGOLGPT_SMOKE_ROOT diff")
   })
 })

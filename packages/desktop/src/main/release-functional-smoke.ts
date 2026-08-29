@@ -9,7 +9,7 @@ export type ReleaseSmokeCheck = { ok: boolean; detail?: string }
 type PathPayload = { home: string; state: string; config: string; worktree: string; directory: string }
 type ProjectPayload = { id: string; worktree: string }
 type FileContentPayload = { type: "text" | "binary"; content: string }
-type StatusPayload = { path: string; status: string }
+type StatusPayload = { file: string; status: string }
 export type ReleaseFunctionalSmokeResult = {
   capable: boolean
   summary: {
@@ -64,6 +64,10 @@ export async function runReleaseFunctionalSmoke(
   const root = await mkdtemp(join(tmpdir(), "mongolgpt-release-smoke-"))
   const proofDir = await mkdtemp(join(tmpdir(), "mongolgpt-release-smoke-proof-"))
   const proof = join(proofDir, "terminal-proof.txt")
+  const headers = {
+    Authorization: `Basic ${Buffer.from(`${server.username}:${server.password}`).toString("base64")}`,
+    "x-mongolgpt-directory": root,
+  }
   const fixture = {
     skill: false,
     tool: false,
@@ -88,7 +92,7 @@ export async function runReleaseFunctionalSmoke(
     fixture.skill = true
     await writeFile(
       join(root, ".mongolgpt", "tools", "desktop-smoke.ts"),
-      'import { tool } from "@mongolgpt/plugin"\n\nexport default tool({\n  description: "Release smoke marker tool",\n  args: {},\n  execute: async () => "desktop smoke tool",\n})\n',
+      'export default {\n  description: "Release smoke marker tool",\n  args: {},\n  execute: async () => "desktop smoke tool",\n}\n',
       "utf8",
     )
     fixture.tool = true
@@ -111,10 +115,6 @@ export async function runReleaseFunctionalSmoke(
     await run("git", ["commit", "-q", "-m", "release smoke baseline"], root)
     await writeFile(join(root, "README.md"), `release smoke baseline\n${marker}\n`, "utf8")
 
-    const headers = {
-      Authorization: `Basic ${Buffer.from(`${server.username}:${server.password}`).toString("base64")}`,
-      "x-mongolgpt-directory": root,
-    }
     const getJson = (path: string, validate: (value: unknown) => boolean) =>
       request(fetcher, base, path, headers, "application/json", validate, timeoutMs)
     http.path = await getJson("/path", (value) => isPath(value) && value.directory === root && value.worktree === root)
@@ -126,7 +126,7 @@ export async function runReleaseFunctionalSmoke(
     http.vcsStatus = await getJson(
       "/vcs/status",
       (value) =>
-        isStatusArray(value) && value.some((item) => item.path.endsWith("README.md") && item.status === "modified"),
+        isStatusArray(value) && value.some((item) => item.file.endsWith("README.md") && item.status === "modified"),
     )
     http.vcsDiffRaw = await request(
       fetcher,
@@ -178,8 +178,9 @@ export async function runReleaseFunctionalSmoke(
       detail: redactSmokeError(error instanceof Error ? error.message : "probe failed", server.password),
     }
   } finally {
-    await rm(root, { recursive: true, force: true })
-    await rm(proofDir, { recursive: true, force: true })
+    await disposeInstance(fetcher, base, headers, timeoutMs)
+    await removeSmokeDirectory(root)
+    await removeSmokeDirectory(proofDir)
   }
   const capable =
     Object.values(http).length === 9 &&
@@ -213,7 +214,7 @@ export function isStatusArray(value: unknown): value is StatusPayload[] {
     isArray(value) &&
     value.every(
       (item): item is StatusPayload =>
-        isRecord(item) && typeof item.path === "string" && typeof item.status === "string",
+        isRecord(item) && typeof item.file === "string" && typeof item.status === "string",
     )
   )
 }
@@ -236,6 +237,27 @@ export function redactSmokeError(value: string, secret: string) {
 }
 export function smokeTimeoutMs(value: number | undefined) {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 10_000
+}
+
+export function releaseSmokeTerminalCommand() {
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    "$status = @(& git -C $env:MONGOLGPT_SMOKE_ROOT status --short)",
+    "if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+    "$diff = @(& git -C $env:MONGOLGPT_SMOKE_ROOT diff)",
+    "if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }",
+    "[IO.File]::WriteAllLines($env:MONGOLGPT_SMOKE_PROOF, [string[]]($status + $diff), [Text.UTF8Encoding]::new($false))",
+  ].join("; ")
+  return {
+    command: "powershell.exe",
+    args: [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-EncodedCommand",
+      Buffer.from(script, "utf16le").toString("base64"),
+    ],
+  }
 }
 
 function localServerUrl(raw: string) {
@@ -281,18 +303,14 @@ async function createPty(
   proof: string,
   timeoutMs: number,
 ) {
+  const terminal = releaseSmokeTerminalCommand()
   const response = await fetcher(new URL("/pty", base), {
     method: "POST",
     headers: { ...headers, "content-type": "application/json" },
     signal: AbortSignal.timeout(timeoutMs),
     body: JSON.stringify({
-      command: "cmd.exe",
-      args: [
-        "/d",
-        "/s",
-        "/c",
-        'git -C "%MONGOLGPT_SMOKE_ROOT%" status --short > "%MONGOLGPT_SMOKE_PROOF%" & git -C "%MONGOLGPT_SMOKE_ROOT%" diff >> "%MONGOLGPT_SMOKE_PROOF%"',
-      ],
+      command: terminal.command,
+      args: terminal.args,
       cwd: root,
       env: { MONGOLGPT_SMOKE_ROOT: root, MONGOLGPT_SMOKE_PROOF: proof },
     }),
@@ -308,6 +326,16 @@ async function deletePty(fetcher: FetchLike, base: URL, headers: Record<string, 
     headers,
     signal: AbortSignal.timeout(5_000),
   }).catch(() => undefined)
+}
+async function disposeInstance(fetcher: FetchLike, base: URL, headers: Record<string, string>, timeoutMs: number) {
+  await fetcher(new URL("/instance/dispose", base), {
+    method: "POST",
+    headers,
+    signal: AbortSignal.timeout(timeoutMs),
+  }).catch(() => undefined)
+}
+async function removeSmokeDirectory(path: string) {
+  await rm(path, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }).catch(() => undefined)
 }
 async function waitForProof(file: string, expected: string, timeoutMs: number): Promise<ReleaseSmokeCheck> {
   const deadline = Date.now() + timeoutMs
