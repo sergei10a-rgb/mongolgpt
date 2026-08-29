@@ -385,6 +385,11 @@ const businessIntegrationSecrets = businessIntegrationSecretNames(enableBusiness
   (name) => new sst.Secret(name),
 )
 export const mongolGPTPlanLimits = new sst.Secret("MONGOLGPT_PLAN_LIMITS")
+const monitorAlertEmail = parseMonitorAlertEmail(process.env.MONGOLGPT_MONITOR_ALERT_EMAIL)
+const monitorAlertFrom = `alerts@${rootDomain}`
+if ($app.stage === "production" && enableMonitoring && !monitorAlertEmail) {
+  throw new Error("Production мониторын мэдэгдэлд MONGOLGPT_MONITOR_ALERT_EMAIL заавал байна.")
+}
 
 export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
   domain: {
@@ -442,10 +447,27 @@ export const serviceMonitor = enableMonitoring
         environment: {
           MONGOLGPT_STAGE: $app.stage,
           MONGOLGPT_STAGE_DOMAIN: domain,
+          MONGOLGPT_MONITOR_ALERTS_ENABLED: monitorAlertEmail ? "true" : "false",
+          MONGOLGPT_MONITOR_ALERT_FROM: monitorAlertFrom,
         },
         compatibility: {
           date: "2026-07-15",
         },
+        transform: monitorAlertEmail
+          ? {
+              worker: (args) => {
+                args.bindings = $resolve(args.bindings).apply((bindings) => [
+                  ...bindings,
+                  {
+                    name: "ServiceMonitorAlertEmail",
+                    type: "send_email",
+                    destinationAddress: monitorAlertEmail,
+                    allowedSenderAddresses: [monitorAlertFrom],
+                  },
+                ])
+              },
+            }
+          : undefined,
       },
     })
   : undefined
@@ -459,3 +481,12 @@ export const stat = new sst.cloudflare.Worker("Stat", {
   link: [database],
   url: true,
 })
+
+function parseMonitorAlertEmail(value: string | undefined) {
+  const email = value?.trim().toLowerCase()
+  if (!email) return undefined
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("MONGOLGPT_MONITOR_ALERT_EMAIL хүчинтэй имэйл хаяг байна.")
+  }
+  return email
+}

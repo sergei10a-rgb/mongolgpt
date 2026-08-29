@@ -157,6 +157,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCESS_API_TOKEN: ${{ inputs.admin && secrets.CLOUDFLARE_ACCESS_API_TOKEN || '' }}
+          MONGOLGPT_MONITOR_ALERT_EMAIL: ${{ secrets.MONGOLGPT_MONITOR_ALERT_EMAIL }}
           MONGOLGPT_RUNTIME_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_SECRET }}
           MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
           SST_SECRET_ByokCredentialsKeyV1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}

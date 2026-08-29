@@ -60,6 +60,7 @@ const hosted = {
   ...byok,
   MONGOLGPT_ENABLE_D1_BACKUPS: "true",
   MONGOLGPT_ENABLE_MONITORING: "true",
+  MONGOLGPT_MONITOR_ALERT_EMAIL: "ops@example.com",
   MONGOLGPT_ENABLE_TURNSTILE: "true",
   MONGOLGPT_TURNSTILE_SITE_KEY: "0x4AAAAAAABBBBBBBBCCCCCCCC",
   MONGOLGPT_RUNTIME_SECRET: "test-runtime-secret-with-at-least-32-characters",
@@ -260,6 +261,7 @@ describe("Cloudflare deployment preflight", () => {
       MONGOLGPT_ENABLE_ADMIN: "true",
       MONGOLGPT_ENABLE_D1_BACKUPS: "true",
       MONGOLGPT_ENABLE_MONITORING: "true",
+      MONGOLGPT_MONITOR_ALERT_EMAIL: hosted.MONGOLGPT_MONITOR_ALERT_EMAIL,
       MONGOLGPT_ENABLE_TURNSTILE: "true",
       MONGOLGPT_TURNSTILE_SITE_KEY: hosted.MONGOLGPT_TURNSTILE_SITE_KEY,
       MONGOLGPT_PAYMENT_ENVIRONMENT: "production",
@@ -429,6 +431,26 @@ describe("Cloudflare deployment preflight", () => {
           },
         }),
       ["Үйлдвэрлэлийн үйлчилгээ байршуулалтад", "MONGOLGPT_ENABLE_MONITORING=true"],
+    )
+  })
+
+  test("requires a verified operator email for production monitoring alerts", () => {
+    const base = {
+      ...cloudflare,
+      ...hosted,
+      MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+      MONGOLGPT_ENABLE_ADMIN: "true",
+      CLOUDFLARE_ACCESS_API_TOKEN: "access-token",
+      SST_SECRET_MongolGPTAdminBootstrapEmails: "admin@mgpt.mn",
+      MONGOLGPT_PRODUCTION_CONFIRMATION: "DEPLOY mgpt.mn",
+    }
+    expectIssues(
+      () => preflightDeployment({ stage: "production", env: { ...base, MONGOLGPT_MONITOR_ALERT_EMAIL: "" } }),
+      ["MONGOLGPT_MONITOR_ALERT_EMAIL дутуу"],
+    )
+    expectIssues(
+      () => preflightDeployment({ stage: "production", env: { ...base, MONGOLGPT_MONITOR_ALERT_EMAIL: "not-email" } }),
+      ["MONGOLGPT_MONITOR_ALERT_EMAIL хүчинтэй"],
     )
   })
 

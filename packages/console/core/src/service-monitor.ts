@@ -3,6 +3,10 @@ import { z } from "zod"
 export const SERVICE_MONITOR_STATE_KEY = "service-monitor:latest"
 export const SERVICE_MONITOR_TTL_SECONDS = 20 * 60
 export const SERVICE_MONITOR_MAX_AGE_MS = 15 * 60 * 1_000
+export const SERVICE_MONITOR_ALERT_STATE_KEY = "service-monitor:alert-state"
+export const SERVICE_MONITOR_ALERT_STATE_TTL_SECONDS = 31 * 24 * 60 * 60
+export const SERVICE_MONITOR_ALERT_REMINDER_MS = 60 * 60 * 1_000
+export const SERVICE_MONITOR_ALERT_STATE_MAX_AGE_MS = 2 * SERVICE_MONITOR_ALERT_REMINDER_MS
 export const SERVICE_MONITOR_SERVICES = ["console", "auth", "runtime", "payments"] as const
 
 const timestamp = z.number().int().min(0).max(8_640_000_000_000_000)
@@ -55,5 +59,33 @@ export const ServiceMonitorEvidenceSchema = z
     }
   })
 
+export const ServiceMonitorAlertStateSchema = z
+  .object({
+    version: z.literal(1),
+    stage: z
+      .string()
+      .trim()
+      .min(1)
+      .max(63)
+      .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/),
+    status: z.enum(["ok", "degraded"]),
+    fingerprint: z.string().trim().min(1).max(512),
+    recordedAt: timestamp,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.status === "ok" && value.fingerprint !== "ok") {
+      context.addIssue({ code: "custom", path: ["fingerprint"], message: "Хэвийн alert төлөвийн fingerprint ok байна." })
+    }
+    if (value.status === "degraded" && value.fingerprint === "ok") {
+      context.addIssue({
+        code: "custom",
+        path: ["fingerprint"],
+        message: "Доголдсон alert төлөвийн fingerprint ok байж болохгүй.",
+      })
+    }
+  })
+
 export type ServiceMonitorCheck = z.infer<typeof ServiceMonitorCheckSchema>
 export type ServiceMonitorEvidence = z.infer<typeof ServiceMonitorEvidenceSchema>
+export type ServiceMonitorAlertState = z.infer<typeof ServiceMonitorAlertStateSchema>

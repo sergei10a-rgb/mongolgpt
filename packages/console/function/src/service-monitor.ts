@@ -1,10 +1,17 @@
 import { resolveHostedServiceUrls, type HostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import {
+  SERVICE_MONITOR_ALERT_REMINDER_MS,
+  SERVICE_MONITOR_ALERT_STATE_MAX_AGE_MS,
+  SERVICE_MONITOR_ALERT_STATE_KEY,
+  SERVICE_MONITOR_ALERT_STATE_TTL_SECONDS,
   SERVICE_MONITOR_SERVICES,
   SERVICE_MONITOR_STATE_KEY,
   SERVICE_MONITOR_TTL_SECONDS,
+  ServiceMonitorAlertStateSchema,
   ServiceMonitorEvidenceSchema,
+  type ServiceMonitorAlertState,
   type ServiceMonitorCheck,
+  type ServiceMonitorEvidence,
 } from "@mongolgpt/console-core/service-monitor.js"
 import { Resource } from "@mongolgpt/console-resource"
 import { z } from "zod"
@@ -41,8 +48,11 @@ type MonitorConfig = {
 }
 
 type StateStore = {
+  get(key: string): Promise<string | null>
   put(key: string, value: string, options: { expirationTtl: number }): Promise<unknown>
 }
+
+type EvidenceStore = Pick<StateStore, "put">
 
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
@@ -52,13 +62,33 @@ type MonitorOptions = {
   timer?: () => number
 }
 
+type EmailMessage = {
+  from: string
+  subject: string
+  text: string
+  to?: undefined
+}
+
+type EmailBinding = {
+  send(message: EmailMessage): Promise<unknown>
+}
+
+type AlertKind = "opened" | "changed" | "reminder" | "recovered" | "none"
+
+type AlertPlan = {
+  kind: AlertKind
+  state: ServiceMonitorAlertState
+  notify: boolean
+  persist: boolean
+}
+
 type Target = {
   service: (typeof SERVICE_MONITOR_SERVICES)[number]
   url: string
   accepts(value: unknown, stage: string): boolean
 }
 
-export async function runServiceMonitor(config: MonitorConfig, state: StateStore, options: MonitorOptions = {}) {
+export async function runServiceMonitor(config: MonitorConfig, state: EvidenceStore, options: MonitorOptions = {}) {
   const normalized = normalizeConfig(config)
   const fetcher = options.fetcher ?? fetch
   const now = options.now ?? Date.now
@@ -80,6 +110,57 @@ export async function runServiceMonitor(config: MonitorConfig, state: StateStore
     expirationTtl: SERVICE_MONITOR_TTL_SECONDS,
   })
   return evidence
+}
+
+export async function runServiceMonitorCycle(
+  config: MonitorConfig & { alertFrom: string },
+  state: StateStore,
+  email: EmailBinding,
+  options: MonitorOptions = {},
+) {
+  const now = options.now ?? Date.now
+  const previous = await readAlertState(state, config.stage, now())
+  const evidence = await runServiceMonitor(config, state, options)
+  const plan = planServiceMonitorAlert(previous, evidence, now())
+  if (plan.persist) {
+    await state.put(SERVICE_MONITOR_ALERT_STATE_KEY, JSON.stringify(plan.state), {
+      expirationTtl: SERVICE_MONITOR_ALERT_STATE_TTL_SECONDS,
+    })
+  }
+  if (plan.notify && plan.kind !== "none") await sendServiceMonitorAlert(email, config.alertFrom, plan.kind, evidence)
+  return { evidence, alert: plan.kind }
+}
+
+export function planServiceMonitorAlert(
+  previous: ServiceMonitorAlertState | undefined,
+  evidence: ServiceMonitorEvidence,
+  now: number,
+): AlertPlan {
+  const current = alertState(evidence, now)
+  if (!previous || previous.stage !== evidence.stage) {
+    return {
+      kind: evidence.status === "degraded" ? "opened" : "none",
+      state: current,
+      notify: evidence.status === "degraded",
+      persist: true,
+    }
+  }
+  if (evidence.status === "ok") {
+    if (previous.status === "degraded") {
+      return { kind: "recovered", state: current, notify: true, persist: true }
+    }
+    return { kind: "none", state: previous, notify: false, persist: false }
+  }
+  if (previous.status === "ok") {
+    return { kind: "opened", state: current, notify: true, persist: true }
+  }
+  if (previous.fingerprint !== current.fingerprint) {
+    return { kind: "changed", state: current, notify: true, persist: true }
+  }
+  if (now - previous.recordedAt >= SERVICE_MONITOR_ALERT_REMINDER_MS) {
+    return { kind: "reminder", state: current, notify: true, persist: true }
+  }
+  return { kind: "none", state: previous, notify: false, persist: false }
 }
 
 function monitorTargets(stage: string, urls: HostedServiceUrls): Target[] {
@@ -111,6 +192,78 @@ function monitorTargets(stage: string, urls: HostedServiceUrls): Target[] {
       },
     },
   ]
+}
+
+async function readAlertState(state: StateStore, stage: string, now: number) {
+  const raw = await state.get(SERVICE_MONITOR_ALERT_STATE_KEY)
+  if (!raw || raw.length > 4_096) return undefined
+  try {
+    const parsed = ServiceMonitorAlertStateSchema.safeParse(JSON.parse(raw))
+    if (!parsed.success || parsed.data.stage !== stage.trim().toLowerCase()) return undefined
+    if (parsed.data.recordedAt > now + 2 * 60 * 1_000) return undefined
+    if (now - parsed.data.recordedAt > SERVICE_MONITOR_ALERT_STATE_MAX_AGE_MS) return undefined
+    return parsed.data
+  } catch {
+    return undefined
+  }
+}
+
+function alertState(evidence: ServiceMonitorEvidence, now: number): ServiceMonitorAlertState {
+  return ServiceMonitorAlertStateSchema.parse({
+    version: 1,
+    stage: evidence.stage,
+    status: evidence.status,
+    fingerprint: alertFingerprint(evidence),
+    recordedAt: now,
+  })
+}
+
+function alertFingerprint(evidence: ServiceMonitorEvidence) {
+  if (evidence.status === "ok") return "ok"
+  return evidence.checks
+    .filter((check) => !check.ok)
+    .map((check) => `${check.service}:${check.failure}:${check.httpStatus ?? 0}`)
+    .join(",")
+}
+
+async function sendServiceMonitorAlert(
+  email: EmailBinding,
+  from: string,
+  kind: Exclude<AlertKind, "none">,
+  evidence: ServiceMonitorEvidence,
+) {
+  const failed = evidence.checks.filter((check) => !check.ok)
+  const stage = evidence.stage.toUpperCase()
+  const recovered = kind === "recovered"
+  const subject = recovered
+    ? `[MongolGPT][${stage}] Үйлчилгээнүүд хэвийн боллоо`
+    : `[MongolGPT][${stage}] ${alertKindLabel(kind)}: ${failed.map((check) => check.service).join(", ")}`
+  const details = recovered
+    ? evidence.checks.map((check) => `- ${check.service}: хэвийн (${check.latencyMs} мс)`)
+    : failed.map(
+        (check) =>
+          `- ${check.service}: ${check.failure ?? "unknown"}${check.httpStatus ? `, HTTP ${check.httpStatus}` : ""}, ${check.latencyMs} мс`,
+      )
+  await email.send({
+    to: undefined,
+    from,
+    subject,
+    text: [
+      recovered ? "MongolGPT-ийн хяналтын бүх үйлчилгээ хэвийн боллоо." : "MongolGPT-ийн үйлчилгээний хяналт доголдол илрүүллээ.",
+      `Орчин: ${evidence.stage}`,
+      `Шалгасан цаг: ${new Date(evidence.checkedAt).toISOString()}`,
+      "",
+      ...details,
+      "",
+      "Админ самбарын Системийн бэлэн байдал хэсгээс дэлгэрэнгүй төлөвийг шалгана уу.",
+    ].join("\n"),
+  })
+}
+
+function alertKindLabel(kind: Exclude<AlertKind, "none" | "recovered">) {
+  if (kind === "changed") return "Доголдлын төлөв өөрчлөгдлөө"
+  if (kind === "reminder") return "Доголдол үргэлжилж байна"
+  return "Үйлчилгээ доголдлоо"
 }
 
 async function checkTarget(target: Target, stage: string, fetcher: Fetcher, timer: () => number) {
@@ -215,18 +368,34 @@ function jsonResponse(response: Response) {
 const resources = Resource as unknown as { ServiceMonitorState: StateStore }
 
 export default {
-  async scheduled() {
-    const evidence = await runServiceMonitor(
-      {
-        stage: process.env.MONGOLGPT_STAGE ?? "",
-        stageDomain: process.env.MONGOLGPT_STAGE_DOMAIN ?? "",
-      },
-      resources.ServiceMonitorState,
-    )
+  async scheduled(_controller: unknown, env: { ServiceMonitorAlertEmail?: EmailBinding }) {
+    const config = {
+      stage: process.env.MONGOLGPT_STAGE ?? "",
+      stageDomain: process.env.MONGOLGPT_STAGE_DOMAIN ?? "",
+    }
+    const alertsEnabled = process.env.MONGOLGPT_MONITOR_ALERTS_ENABLED === "true"
+    const result = alertsEnabled
+      ? await runServiceMonitorCycle(
+          { ...config, alertFrom: process.env.MONGOLGPT_MONITOR_ALERT_FROM ?? "" },
+          resources.ServiceMonitorState,
+          requiredEmailBinding(env.ServiceMonitorAlertEmail),
+        )
+      : { evidence: await runServiceMonitor(config, resources.ServiceMonitorState), alert: "none" as const }
+    const evidence = result.evidence
     console.log("Үйлчилгээний хяналтын шалгалт дууслаа", {
       checkedAt: evidence.checkedAt,
       status: evidence.status,
+      alert: result.alert,
       failedServices: evidence.checks.filter((check) => !check.ok).map((check) => check.service),
     })
   },
+}
+
+function requiredEmailBinding(binding: EmailBinding | undefined) {
+  if (!binding) throw new Error("Үйлчилгээний хяналтын Cloudflare Email binding холбогдоогүй байна.")
+  const from = process.env.MONGOLGPT_MONITOR_ALERT_FROM?.trim() ?? ""
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from)) {
+    throw new Error("Үйлчилгээний хяналтын илгээгч имэйл тохируулагдаагүй байна.")
+  }
+  return binding
 }

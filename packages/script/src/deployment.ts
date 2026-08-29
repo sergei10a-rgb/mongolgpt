@@ -212,6 +212,11 @@ export function preflightDeployment(input: {
   if (hostedServices && stage === "production" && !monitoringEnabled) {
     issues.push("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_MONITORING=true заавал байна.")
   }
+  if (monitoringEnabled && stage === "production") {
+    validateMonitorAlertEmail(env.MONGOLGPT_MONITOR_ALERT_EMAIL, issues)
+  } else if (monitoringEnabled && !env.MONGOLGPT_MONITOR_ALERT_EMAIL?.trim()) {
+    warnings.push("Энэ орчинд мониторын нотолгоо хадгалах боловч операторын имэйл мэдэгдэл идэвхгүй байна.")
+  }
   if (hostedServices && stage === "production" && !turnstileEnabled) {
     issues.push("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_TURNSTILE=true заавал байна.")
   }
@@ -664,5 +669,16 @@ function validateBootstrapEmails(value: string | undefined, issues: string[]) {
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (emails.some((email) => !validEmail.test(email))) {
     issues.push("MongolGPTAdminBootstrapEmails дотор хүчинтэй email-үүдийг таслал эсвэл шинэ мөрөөр өгнө.")
+  }
+}
+
+function validateMonitorAlertEmail(value: string | undefined, issues: string[]) {
+  const email = value?.trim().toLowerCase() ?? ""
+  if (!email) {
+    issues.push("Production мониторын мэдэгдэлд MONGOLGPT_MONITOR_ALERT_EMAIL дутуу байна.")
+    return
+  }
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    issues.push("MONGOLGPT_MONITOR_ALERT_EMAIL хүчинтэй, Cloudflare Email Routing-д баталгаажсан имэйл байна.")
   }
 }
