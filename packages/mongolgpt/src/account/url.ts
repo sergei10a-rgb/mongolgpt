@@ -97,6 +97,8 @@ const configuredAccountServers = () => [
   resolveProductServiceUrls("beta").auth,
 ]
 
+const hostedAccountServices = () => [resolveProductServiceUrls("prod"), resolveProductServiceUrls("beta")]
+
 const accountUiPaths = new Set(["/auth", "/console", "/workspace"])
 
 export const resolveAuthServerUrl = (input: string): string => {
@@ -110,6 +112,11 @@ export const resolveAuthServerUrl = (input: string): string => {
   const pathname = url.pathname.replace(/\/+$/, "")
   if (pathname.startsWith("/auth")) return pathname.length === 0 ? url.origin : `${url.origin}${pathname}`
   if (url.hostname.startsWith("auth.")) return pathname.length === 0 ? url.origin : `${url.origin}${pathname}`
+
+  const hosted = hostedAccountServices().find(
+    (services) => normalizeServerUrl(input) === normalizeServerUrl(services.console),
+  )
+  if (hosted) return hosted.auth
 
   if (normalizeServerUrl(input) === normalizeServerUrl(defaultConsoleUrl)) return defaultAuthUrl
 

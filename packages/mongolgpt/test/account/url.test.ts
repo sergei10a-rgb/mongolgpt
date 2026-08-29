@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { fileURLToPath } from "node:url"
 
 import {
   defaultAuthUrl,
@@ -41,6 +42,29 @@ describe("account url helpers", () => {
 
   test("resolves the production auth issuer from the console origin", () => {
     expect(resolveAuthServerUrl(defaultConsoleUrl)).toBe(defaultAuthUrl)
+  })
+
+  test("resolves hosted console URLs even when the source CLI defaults to localhost", () => {
+    expect(resolveAuthServerUrl("https://mgpt.mn")).toBe("https://auth.mgpt.mn")
+    expect(resolveAuthServerUrl("https://dev.mgpt.mn")).toBe("https://auth.dev.mgpt.mn")
+  })
+
+  test("keeps hosted auth discovery when only the console URL is overridden", () => {
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      MONGOLGPT_CONSOLE_URL: "https://dev.mgpt.mn",
+    }
+    delete env.MONGOLGPT_AUTH_URL
+    const child = Bun.spawnSync(
+      [
+        process.execPath,
+        "-e",
+        'const mod = await import("./src/account/url.ts"); console.log(mod.resolveAuthServerUrl(mod.defaultConsoleUrl))',
+      ],
+      { cwd: fileURLToPath(new URL("../..", import.meta.url)), env },
+    )
+    expect(child.exitCode).toBe(0)
+    expect(child.stdout.toString().trim()).toBe("https://auth.dev.mgpt.mn")
   })
 
   test("keeps explicit auth issuer URLs", () => {
