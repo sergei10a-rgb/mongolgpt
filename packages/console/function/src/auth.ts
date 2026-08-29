@@ -24,7 +24,7 @@ import {
 } from "@mongolgpt/console-core/turnstile.js"
 import { isAllowedNonProductionEmail } from "./auth-allowlist"
 import { inspectOAuthProviderConfiguration } from "@mongolgpt/console-core/oauth-provider-config.js"
-import { authStateError } from "./auth-error"
+import { authStateError, isUnknownAuthStateError, localizeUnknownAuthStateResponse } from "./auth-error"
 import {
   captureOAuthClientState,
   captureOAuthFlow,
@@ -292,7 +292,15 @@ export default {
       },
     })
 
-    const authorized = captureOAuthClientState(request, await authServer.fetch(request, env, ctx))
+    let upstream: Response
+    try {
+      upstream = await authServer.fetch(request, env, ctx)
+    } catch (error) {
+      if (!isUnknownAuthStateError(error)) throw error
+      upstream = authStateError(env.MONGOLGPT_CONSOLE_ORIGIN)
+    }
+    upstream = await localizeUnknownAuthStateResponse(upstream, env.MONGOLGPT_CONSOLE_ORIGIN)
+    const authorized = captureOAuthClientState(request, upstream)
     const captured = captureOAuthFlow(request, authorized)
     const result = restoreOAuthClientState(captured, restored.clientState)
     return restored.cleanupCookie ? clearOAuthFlowCookie(result, restored.cleanupCookie) : result

@@ -1,3 +1,17 @@
+const UNKNOWN_AUTH_STATE =
+  "The browser was in an unknown state. This could be because certain cookies expired or the browser was switched in the middle of an authentication flow."
+
+export function isUnknownAuthStateError(error: unknown) {
+  return error instanceof Error && error.message === UNKNOWN_AUTH_STATE
+}
+
+export async function localizeUnknownAuthStateResponse(response: Response, consoleOrigin?: string) {
+  if (response.status < 400) return response
+  if (!response.headers.get("content-type")?.toLowerCase().startsWith("text/plain")) return response
+  if (!(await response.clone().text()).includes(UNKNOWN_AUTH_STATE)) return response
+  return authStateError(consoleOrigin)
+}
+
 export function authStateError(consoleOrigin?: string) {
   const home = safeConsoleHome(consoleOrigin)
   const homeLink = home ? `<a href="${home}">MongolGPT нүүр хуудас руу буцах</a>` : ""
