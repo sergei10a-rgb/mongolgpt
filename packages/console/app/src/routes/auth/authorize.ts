@@ -19,9 +19,10 @@ export async function GET(input: APIEvent) {
   try {
     target = clientID === "mongolgpt-cli" ? cliAuthorizationTarget(url) : await authorizationTarget(url, cont)
   } catch (error) {
-    if (error instanceof OAuthAuthorizationTargetError) {
-      console.error("MongolGPT OAuth authorization target үүссэнгүй", error.stage, error.causeName)
-      return authorizationServiceUnavailable(error.stage)
+    const failure = authorizationTargetFailure(error)
+    if (failure) {
+      console.error("MongolGPT OAuth authorization target үүссэнгүй", failure.stage, failure.causeName)
+      return authorizationServiceUnavailable(failure.stage)
     }
     if (!clientID) {
       console.error("MongolGPT OAuth authorization target үүссэнгүй", "authorization_target", errorName(error))
@@ -32,6 +33,30 @@ export async function GET(input: APIEvent) {
   if (!turnstileEnabled()) return Response.redirect(target, 302)
 
   return challengeResponse(target, turnstileError(url.searchParams.get("turnstile_error")))
+}
+
+const oauthAuthorizationStages = new Set<OAuthAuthorizationStage>([
+  "authorization_target",
+  "state_session",
+  "authorization_url",
+  "state_issue",
+  "state_store",
+])
+
+export function authorizationTargetFailure(error: unknown) {
+  if (!error || typeof error !== "object") return undefined
+  const candidate = error as { name?: unknown; stage?: unknown; causeName?: unknown }
+  if (candidate.name !== "OAuthAuthorizationTargetError") return undefined
+  if (typeof candidate.stage !== "string" || !oauthAuthorizationStages.has(candidate.stage as OAuthAuthorizationStage)) {
+    return undefined
+  }
+  if (typeof candidate.causeName !== "string" || !/^[A-Za-z][A-Za-z0-9]{0,63}$/.test(candidate.causeName)) {
+    return undefined
+  }
+  return {
+    stage: candidate.stage as OAuthAuthorizationStage,
+    causeName: candidate.causeName,
+  }
 }
 
 type OAuthAuthorizationStage =

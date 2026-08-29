@@ -19,7 +19,7 @@ await mock.module("~/lib/hosted-env", () => ({
   hostedTurnstileSiteKey: undefined,
 }));
 
-const { GET, authorizationTarget } = await import("./authorize");
+const { GET, authorizationTarget, authorizationTargetFailure } = await import("./authorize");
 
 describe("OAuth authorize route", () => {
   beforeEach(() => {
@@ -124,5 +124,29 @@ describe("OAuth authorize route", () => {
       stage: "state_store",
       causeName: "TypeError",
     });
+  });
+
+  test("recognizes only allowlisted authorization failures after a Worker bundle boundary", () => {
+    expect(
+      authorizationTargetFailure({
+        name: "OAuthAuthorizationTargetError",
+        stage: "state_store",
+        causeName: "TypeError",
+      }),
+    ).toEqual({ stage: "state_store", causeName: "TypeError" });
+    expect(
+      authorizationTargetFailure({
+        name: "OAuthAuthorizationTargetError",
+        stage: "secret_stage",
+        causeName: "TypeError",
+      }),
+    ).toBeUndefined();
+    expect(
+      authorizationTargetFailure({
+        name: "OAuthAuthorizationTargetError",
+        stage: "state_store",
+        causeName: "TypeError: secret detail",
+      }),
+    ).toBeUndefined();
   });
 });
