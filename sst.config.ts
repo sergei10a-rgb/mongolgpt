@@ -125,6 +125,13 @@ export default $config({
     }
     if (databaseOnly) {
       const { database } = await import("./infra/database.js")
+      new sst.x.DevCommand("DatabaseMigration", {
+        link: [database],
+        dev: {
+          autostart: false,
+          command: "bun run db:migrate",
+        },
+      })
       return {
         Database: database.databaseId,
         HostedServices: true,

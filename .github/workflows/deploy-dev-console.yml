@@ -95,7 +95,7 @@ jobs:
           MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \
             MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false \
             MONGOLGPT_DEPLOY_DATABASE_ONLY=true \
-            bun sst shell --stage=dev -- bun run db:migrate
+            bun sst shell --stage=dev --target DatabaseMigration -- bun run db:migrate
           MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \
             bun sst deploy --stage=dev --print-logs
 

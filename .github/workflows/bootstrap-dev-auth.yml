@@ -192,7 +192,7 @@ jobs:
           fi
           rm -f "$repair_log"
           bun sst deploy --stage="$stage" --print-logs
-          MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage="$stage" -- bun run db:migrate
+          MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage="$stage" --target DatabaseMigration -- bun run db:migrate
           bun sst deploy --stage="$stage" --print-logs
           trap - EXIT
 

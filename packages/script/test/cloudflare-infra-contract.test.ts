@@ -198,7 +198,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const stateRepair = run.indexOf('bun sst state repair --stage="$stage" --print-logs 2>&1 | tee "$repair_log"')
     const firstDeploy = run.indexOf('bun sst deploy --stage="$stage" --print-logs')
     const migration = run.indexOf(
-      'MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage="$stage" -- bun run db:migrate',
+      'MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage="$stage" --target DatabaseMigration -- bun run db:migrate',
     )
     const finalDeploy = run.lastIndexOf('bun sst deploy --stage="$stage" --print-logs')
     expect(oauthSecrets).toBeGreaterThanOrEqual(0)
@@ -210,7 +210,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(migration).toBeGreaterThan(firstDeploy)
     expect(finalDeploy).toBeGreaterThan(migration)
     expect(run).not.toContain("sst refresh")
-    expect(run).not.toContain("--target Database")
+    expect(run).not.toMatch(/sst deploy[^\n]*--target Database/)
     expect(run).not.toContain("--target AuthApi")
     expect(deploy?.env?.MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE).toBe("true")
     expect(deploy?.env?.SST_SECRET_D1BackupApiToken).toBe("disabled")
@@ -232,6 +232,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('await import("@pulumi/cloudflare")')
     expect(configSource).toContain('new cloudflare.Provider("default_6_14_0", {}, { version: "6.14.0" })')
     expect(configSource).toContain('await import("./infra/database.js")')
+    expect(configSource).toContain('new sst.x.DevCommand("DatabaseMigration"')
+    expect(configSource).toContain("link: [database]")
     expect(configSource).toContain(
       'cloudflareProviderBridge && (stage !== "dev" || !hostedServices || appOnly || cloudflareProviderMigration)',
     )
@@ -288,7 +290,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
       "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
     )
     expect(deployStep?.run).toContain('bun --cwd packages/runtime script/deploy.ts "$stage"')
-    expect(deployStep?.run).not.toContain("--target Database")
+    expect(deployStep?.run).not.toMatch(/sst deploy[^\n]*--target Database/)
   })
 
   test("gates every deployed app with HTTP and Chromium smoke checks", async () => {
@@ -674,9 +676,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_CONSOLE_ONLY=false")
     expect(deploy?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false")
     expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_DATABASE_ONLY=true")
-    expect(deploy?.run).toContain("bun sst shell --stage=dev -- bun run db:migrate")
+    expect(deploy?.run).toContain("bun sst shell --stage=dev --target DatabaseMigration -- bun run db:migrate")
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
-    expect(deploy?.run).not.toContain("--target Database")
+    expect(deploy?.run).not.toMatch(/sst deploy[^\n]*--target Database/)
     expect(deploy?.run).not.toContain("--target Console")
     expect(deploy.run.indexOf("bun run db:migrate")).toBeLessThan(
       deploy.run.indexOf("bun sst deploy --stage=dev --print-logs"),
@@ -809,11 +811,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
     const run = deployStep?.run ?? ""
     const migration = run.indexOf(
-      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate",
+      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage=${{ inputs.stage }} --target DatabaseMigration -- bun run db:migrate",
     )
     const runtime = run.indexOf('packages/runtime script/deploy.ts "$stage"')
     const application = run.lastIndexOf("bun sst deploy --stage=${{ inputs.stage }} --print-logs")
-    expect(run).not.toContain("--target Database")
+    expect(run).not.toMatch(/sst deploy[^\n]*--target Database/)
     expect(migration).toBeGreaterThanOrEqual(0)
     expect(runtime).toBeGreaterThan(migration)
     expect(application).toBeGreaterThan(runtime)
