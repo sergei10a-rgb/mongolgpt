@@ -24,7 +24,8 @@
     "./deployment-service-urls": "./src/deployment-service-urls.ts",
     "./deployment-smoke-contract": "./src/deployment-smoke-contract.ts",
     "./npm-publish-access": "./src/npm-publish-access.ts",
-    "./release-integrity": "./src/release-integrity.ts"
+    "./release-integrity": "./src/release-integrity.ts",
+    "./sst-d1-state": "./src/sst-d1-state.ts"
   },
   "scripts": {
     "test": "bun test",

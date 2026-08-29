@@ -3,7 +3,7 @@ import { migrateD1 } from "../src/d1-http-migrator"
 
 const result = await migrateD1({
   accountId: requireEnvironment("CLOUDFLARE_DEFAULT_ACCOUNT_ID"),
-  databaseId: requireDatabaseId(Resource.Database),
+  databaseId: resolveDatabaseId(),
   apiToken: requireEnvironment("CLOUDFLARE_API_TOKEN"),
   onApplied: (name) => console.log(`D1 migration хэрэглэв: ${name}`),
 })
@@ -20,5 +20,15 @@ function requireDatabaseId(value: unknown) {
   if (!value || typeof value !== "object" || !("databaseId" in value) || typeof value.databaseId !== "string") {
     throw new Error("SST Database resource буруу байна.")
   }
-  return value.databaseId
+  const databaseId = value.databaseId.trim()
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(databaseId)) {
+    throw new Error("D1 Database UUID буруу байна.")
+  }
+  return databaseId
+}
+
+function resolveDatabaseId() {
+  const databaseId = process.env.MONGOLGPT_DATABASE_ID?.trim()
+  if (databaseId) return requireDatabaseId({ databaseId })
+  return requireDatabaseId(Resource.Database)
 }

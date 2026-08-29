@@ -92,7 +92,10 @@ jobs:
         run: |
           bun run deploy:preflight -- dev --console-only
           bun sst unlock --stage=dev || true
-          bun sst shell bun run db:migrate --stage=dev --target Console --print-logs
+          set -o pipefail
+          database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"
+          MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate
+          unset database_id
           MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \
             bun sst deploy --stage=dev --print-logs
 

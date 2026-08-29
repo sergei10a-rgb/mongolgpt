@@ -238,7 +238,10 @@ jobs:
           trap 'rm -f "$runtime_secrets"' EXIT
           node -e 'require("node:fs").writeFileSync(process.argv[1], JSON.stringify({ MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET, MONGOLGPT_RUNTIME_AUTH_SECRET: process.env.MONGOLGPT_RUNTIME_AUTH_SECRET }))' "$runtime_secrets"
           bun sst unlock --stage=${{ inputs.stage }} || true
-          bun sst shell bun run db:migrate --stage=${{ inputs.stage }} --target Console --print-logs
+          set -o pipefail
+          database_id="$(bun sst state export --stage=${{ inputs.stage }} | bun script/resolve-sst-d1-state.ts)"
+          MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate
+          unset database_id
           bun --cwd packages/runtime script/deploy.ts "$stage" --secrets-file="$runtime_secrets"
           bun sst deploy --stage=${{ inputs.stage }} --print-logs
 

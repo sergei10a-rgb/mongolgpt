@@ -192,7 +192,10 @@ jobs:
           fi
           rm -f "$repair_log"
           bun sst deploy --stage="$stage" --print-logs
-          bun sst shell bun run db:migrate --stage="$stage" --target Console --print-logs
+          set -o pipefail
+          database_id="$(bun sst state export --stage="$stage" | bun script/resolve-sst-d1-state.ts)"
+          MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate
+          unset database_id
           bun sst deploy --stage="$stage" --print-logs
           trap - EXIT
 

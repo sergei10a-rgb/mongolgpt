@@ -197,9 +197,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const oauthSecrets = run.indexOf("set_optional_secret GOOGLE_CLIENT_ID")
     const stateRepair = run.indexOf('bun sst state repair --stage="$stage" --print-logs 2>&1 | tee "$repair_log"')
     const firstDeploy = run.indexOf('bun sst deploy --stage="$stage" --print-logs')
-    const migration = run.indexOf(
-      'bun sst shell bun run db:migrate --stage="$stage" --target Console --print-logs',
-    )
+    const migration = run.indexOf('MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate')
     const finalDeploy = run.lastIndexOf('bun sst deploy --stage="$stage" --print-logs')
     expect(oauthSecrets).toBeGreaterThanOrEqual(0)
     expect(stateRepair).toBeGreaterThan(oauthSecrets)
@@ -210,6 +208,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(migration).toBeGreaterThan(firstDeploy)
     expect(finalDeploy).toBeGreaterThan(migration)
     expect(run).not.toContain("sst refresh")
+    expect(run).toContain('bun sst state export --stage="$stage" | bun script/resolve-sst-d1-state.ts')
     expect(run).not.toMatch(/sst deploy[^\n]*--target Database/)
     expect(run).not.toContain("--target AuthApi")
     expect(deploy?.env?.MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE).toBe("true")
@@ -674,7 +673,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_CONSOLE_ONLY=false")
     expect(deploy?.run).not.toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false")
     expect(deploy?.run).not.toContain("MONGOLGPT_DEPLOY_DATABASE_ONLY=true")
-    expect(deploy?.run).toContain("bun sst shell bun run db:migrate --stage=dev --target Console --print-logs")
+    expect(deploy?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
+    expect(deploy?.run).toContain('MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate')
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
     expect(deploy?.run).not.toMatch(/sst deploy[^\n]*--target Database/)
     expect(deploy?.run).not.toMatch(/sst deploy[^\n]*--target Console/)
@@ -808,12 +808,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deployStep).toBeDefined()
 
     const run = deployStep?.run ?? ""
-    const migration = run.indexOf(
-      "bun sst shell bun run db:migrate --stage=${{ inputs.stage }} --target Console --print-logs",
-    )
+    const migration = run.indexOf('MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate')
     const runtime = run.indexOf('packages/runtime script/deploy.ts "$stage"')
     const application = run.lastIndexOf("bun sst deploy --stage=${{ inputs.stage }} --print-logs")
     expect(run).not.toMatch(/sst deploy[^\n]*--target Database/)
+    expect(run).toContain("bun sst state export --stage=${{ inputs.stage }} | bun script/resolve-sst-d1-state.ts")
     expect(migration).toBeGreaterThanOrEqual(0)
     expect(runtime).toBeGreaterThan(migration)
     expect(application).toBeGreaterThan(runtime)
