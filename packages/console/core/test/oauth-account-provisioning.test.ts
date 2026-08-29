@@ -44,7 +44,12 @@ async function fixture() {
     sqlite.exec("BEGIN IMMEDIATE")
     try {
       const result = []
-      for (const statement of callback(db)) result.push(await statement)
+      for (const statement of callback(db)) {
+        if (!("_prepare" in statement) || typeof statement._prepare !== "function") {
+          throw new Error("D1 batch item must be a deferred Drizzle query")
+        }
+        result.push(await statement)
+      }
       sqlite.exec("COMMIT")
       return result
     } catch (error) {

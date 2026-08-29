@@ -23,15 +23,14 @@ export namespace Workspace {
     await batch(
       (db) =>
         [
-          db.run(sql`insert into ${WorkspaceTable} (id, name)
-        values (
-          case when exists (
+          db.insert(WorkspaceTable).values({
+            id: sql<string>`case when exists (
             select 1 from ${AccountTable}
             where ${AccountTable.id} = ${input.accountID}
               and ${AccountTable.timeDeleted} is null
-          ) then ${workspaceID} else null end,
-          ${input.name}
-        )`),
+          ) then ${workspaceID} else null end`,
+            name: input.name,
+          }),
           db.insert(UserTable).values({
             workspaceID,
             id: userID,
