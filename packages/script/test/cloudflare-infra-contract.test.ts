@@ -736,6 +736,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("SST_SECRET_MongolGPTRuntimeAuthSecret")
     expect(source).toContain("SST_SECRET_TurnstileSecretKey")
     expect(source).toContain("SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET")
+    for (let index = 1; index <= 30; index++) {
+      expect(source).toContain(
+        `SST_SECRET_MONGOLGPT_GATEWAY_MODELS${index}: \${{ secrets.MONGOLGPT_GATEWAY_MODELS${index} }}`,
+      )
+    }
     expect(source).not.toContain("--target WebApp")
     expect(source).not.toContain("--target Website")
     expect(source).not.toContain("--target PublicConsole")
