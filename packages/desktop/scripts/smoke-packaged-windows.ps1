@@ -26,6 +26,12 @@ if ($apps.Count -ne 1) {
   throw "Expected one packaged desktop executable, found $($apps.Count)."
 }
 
+$installer = Join-Path $PSScriptRoot "..\dist\mongolgpt-desktop-win-x64.exe"
+& (Join-Path $PSScriptRoot "verify-branding-windows.ps1") `
+  -AppDirectory $appDirectoryPath `
+  -ExpectedProductName $ExpectedProductName `
+  -InstallerPath $installer | Out-Null
+
 if ([string]::IsNullOrWhiteSpace($MarkerPath)) {
   $markerRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
   $MarkerPath = Join-Path $markerRoot "mongolgpt-desktop-smoke.json"

@@ -329,10 +329,14 @@ describe("release integrity contract", () => {
     expect(workflow).not.toContain("packages/desktop")
     expect(preflight).toContain("smokePublicNpmInstall(version)")
     expect(preflight).toContain("smokePublicPlatformPackages(version)")
+    expect(preflight).toContain("assertNoLegacyBrand(pkgFile")
+    expect(preflight).toContain("assertNoLegacyBrand(manifestPath")
     expect(localInstall).toContain('"--offline"')
     expect(localInstall).toContain('"--force"')
     expect(localInstall).toContain('"mongolgpt/free-auto"')
     expect(localInstall).toContain('"mongolgpt account login"')
+    expect(localInstall).toContain("verifyPackedText(packageRoot, name)")
+    expect(localInstall).toContain('assertNoLegacyBrand("mongolgpt --help"')
   })
 
   test("checks npm authentication and complete package ownership without publishing", () => {
@@ -465,6 +469,8 @@ describe("release integrity contract", () => {
     expect(installedSmoke).toContain("MONGOLGPT_DESKTOP_SMOKE_EXTERNAL_PTY_PROOF")
     expect(installedSmoke).toContain("Test-Path -LiteralPath $app.FullName -PathType Leaf")
     expect(installedSmoke).toContain("Desktop uninstaller суулгасан executable-ийг арилгасангүй")
+    expect(installedSmoke).toContain('verify-branding-windows.ps1")')
+    expect(installedSmoke).toContain("-UninstallerPath $uninstaller.FullName")
     expect(packagedSmoke).toContain('MONGOLGPT_TEST_ONBOARDING", "1"')
     expect(packagedSmoke).toContain("$result.functional.capable -ne $true")
     expect(packagedSmoke).toContain("$functionalHttp.Count -ne 9")
@@ -474,6 +480,8 @@ describe("release integrity contract", () => {
     expect(packagedSmoke).toContain('SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "1", "Process")')
     expect(packagedSmoke).toContain("smoke-packaged-pty-windows.ps1")
     expect(packagedSmoke).toContain("MONGOLGPT_DESKTOP_SMOKE_EXTERNAL_PTY_PROOF")
+    expect(packagedSmoke).toContain('verify-branding-windows.ps1")')
+    expect(packagedSmoke).toContain("-InstallerPath $installer")
     expect(ptySmoke).toContain("ELECTRON_RUN_AS_NODE")
     expect(ptySmoke).toContain("@lydell\\node-pty-win32-x64\\lib\\index.js")
     expect(ptySmoke).toContain("MONGOLGPT_PACKAGED_PTY_OK")
@@ -499,6 +507,20 @@ describe("release integrity contract", () => {
     expect(workflow).not.toContain("gh release")
     expect(workflow).not.toContain("npm publish")
     expect(workflow).not.toContain("MONGOLGPT_CHANNEL: prod")
+  })
+
+  test("blocks legacy product branding in generated Windows artifacts", () => {
+    const verifier = readFileSync(resolve(root, "packages/desktop/scripts/verify-branding-windows.ps1"), "utf8")
+
+    expect(verifier).toContain("OpenCode")
+    expect(verifier).toContain("opencode\\.ai")
+    expect(verifier).toContain("anomalyco")
+    expect(verifier).toContain('if ($apps[0].Name -ne "$productName.exe")')
+    expect(verifier).toContain("Assert-ExecutableBranding -Executable $apps[0] -RequiredProductName $productName")
+    expect(verifier).toContain("GetRelativePath($appRoot, $entry.FullName)")
+    expect(verifier).toContain("THIRD_PARTY_NOTICES")
+    expect(verifier).toContain('$_.Name -notmatch "^Uninstall "')
+    expect(verifier).toContain("-and $Value -match $forbiddenBrand")
   })
 
   test("smokes the signed Windows CLI and keeps every model provider behind a MongolGPT account", () => {

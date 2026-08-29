@@ -258,6 +258,11 @@ try {
     throw "Desktop installer uninstaller үүсгэсэнгүй: $installRoot"
   }
   $app = Find-InstalledDesktopExecutable -Root $installRoot
+  & (Join-Path $PSScriptRoot "verify-branding-windows.ps1") `
+    -AppDirectory $installRoot `
+    -ExpectedProductName $ExpectedProductName `
+    -InstallerPath $installer `
+    -UninstallerPath $uninstaller.FullName | Out-Null
   $summary = Invoke-DesktopSmoke `
     -Executable $app `
     -Marker $marker `

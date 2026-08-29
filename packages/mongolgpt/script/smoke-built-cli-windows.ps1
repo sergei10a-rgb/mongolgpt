@@ -34,6 +34,19 @@ $isolated = @{
   "MONGOLGPT_DISABLE_MODELS_FETCH" = "1"
   "MONGOLGPT_PURE" = "1"
 }
+$forbiddenBrand = '(?i)(?:\bOpenCode\b|opencode\.ai|anomalyco|@opencode/|github\.com/(?:sst|anomalyco)/opencode)'
+
+function Assert-NoLegacyBrand {
+  param(
+    [string]$Label,
+    [AllowEmptyString()]
+    [string]$Value
+  )
+
+  if (![string]::IsNullOrWhiteSpace($Value) -and $Value -match $forbiddenBrand) {
+    throw "$Label дээр хуучин бүтээгдэхүүний брэнд илэрлээ: $($Matches[0])"
+  }
+}
 
 function New-MongolGPTStartInfo {
   param([string[]]$Arguments)
@@ -176,17 +189,33 @@ try {
   if ($help.ExitCode -ne 0 -or $helpText -notmatch "(?i)mongolgpt") {
     throw "--help smoke амжилтгүй: exit=$($help.ExitCode), stderr=$($help.Stderr.Trim())"
   }
+  Assert-NoLegacyBrand -Label "mongolgpt --help" -Value $helpText
 
   $accountHelp = Invoke-MongolGPT -Arguments @("account", "--help")
   $accountHelpText = $accountHelp.Stdout + $accountHelp.Stderr
   if ($accountHelp.ExitCode -ne 0 -or $accountHelpText -notmatch "MongolGPT бүртгэл") {
     throw "account --help smoke амжилтгүй: exit=$($accountHelp.ExitCode), stderr=$($accountHelp.Stderr.Trim())"
   }
+  Assert-NoLegacyBrand -Label "mongolgpt account --help" -Value $accountHelpText
 
   $accountLoginHelp = Invoke-MongolGPT -Arguments @("account", "login", "--help")
   $accountLoginHelpText = $accountLoginHelp.Stdout + $accountLoginHelp.Stderr
   if ($accountLoginHelp.ExitCode -ne 0 -or -not $accountLoginHelpText.Contains($ExpectedAccountUrl)) {
     throw "account login --help нь build-ийн бүртгэлийн URL-ийг харуулсангүй: expected=$ExpectedAccountUrl, stderr=$($accountLoginHelp.Stderr.Trim())"
+  }
+  Assert-NoLegacyBrand -Label "mongolgpt account login --help" -Value $accountLoginHelpText
+
+  foreach ($helpArguments in @(
+    @("providers", "--help"),
+    @("mcp", "--help"),
+    @("plugin", "--help")
+  )) {
+    $result = Invoke-MongolGPT -Arguments $helpArguments
+    $text = $result.Stdout + $result.Stderr
+    if ($result.ExitCode -ne 0) {
+      throw "$($helpArguments -join ' ') help smoke амжилтгүй: exit=$($result.ExitCode), stderr=$($result.Stderr.Trim())"
+    }
+    Assert-NoLegacyBrand -Label "mongolgpt $($helpArguments -join ' ')" -Value $text
   }
 
   $freeAuto = Invoke-MongolGPT -Arguments @(
@@ -203,6 +232,7 @@ try {
   if ($freeAuto.Stderr -notmatch "mongolgpt account login") {
     throw "Free Auto нэвтрэх хаалт зөв тайлбар буцаасангүй: $($freeAuto.Stderr.Trim())"
   }
+  Assert-NoLegacyBrand -Label "Free Auto account gate" -Value ($freeAuto.Stdout + $freeAuto.Stderr)
 
   $optionalProvider = Invoke-MongolGPT -Arguments @(
     "run",
@@ -218,6 +248,7 @@ try {
   if ($optionalProvider.Stderr -notmatch "mongolgpt account login") {
     throw "Нэмэлт provider-ийн нэвтрэх хаалт зөв тайлбар буцаасангүй: $($optionalProvider.Stderr.Trim())"
   }
+  Assert-NoLegacyBrand -Label "optional provider account gate" -Value ($optionalProvider.Stdout + $optionalProvider.Stderr)
 
   foreach ($attachArguments in @(
     @("run", "--attach", "http://127.0.0.1:1", "--model", "ollama/account-gate-smoke", "--format", "json", "release smoke"),
@@ -230,6 +261,7 @@ try {
     if ($attached.Stderr -notmatch "холбогдсон сервер дээр.*бүртгэлээр нэвтэрч") {
       throw "Attach нэвтрэх хаалт зөв тайлбар буцаасангүй: $($attached.Stderr.Trim())"
     }
+    Assert-NoLegacyBrand -Label "attach account gate" -Value ($attached.Stdout + $attached.Stderr)
   }
 
   Test-ServerAccountGate

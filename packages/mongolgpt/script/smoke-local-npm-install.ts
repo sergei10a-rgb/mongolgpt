@@ -36,12 +36,39 @@ type Manifest = {
   version?: string
 }
 
+const legacyBrand = /\bOpenCode\b|opencode\.ai|anomalyco|@opencode\/|github\.com\/(?:sst|anomalyco)\/opencode/i
+const artifactTextExtensions = new Set([
+  ".cjs",
+  ".css",
+  ".html",
+  ".js",
+  ".json",
+  ".md",
+  ".mjs",
+  ".txt",
+  ".yaml",
+  ".yml",
+])
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message)
 }
 
 function output(result: ReturnType<typeof spawnSync>) {
   return `${result.stdout ?? ""}${result.stderr ?? ""}`.trim()
+}
+
+function assertNoLegacyBrand(label: string, value: string) {
+  const match = legacyBrand.exec(value)
+  assert(!match, `${label} contains legacy product branding: ${match?.[0]}`)
+}
+
+function verifyPackedText(directory: string, name: string) {
+  for (const relative of new Bun.Glob("**/*").scanSync({ cwd: directory, onlyFiles: true })) {
+    if (!artifactTextExtensions.has(path.extname(relative).toLowerCase())) continue
+    if (/^(?:LICENSE|THIRD_PARTY_NOTICES)(?:\.|$)/i.test(path.basename(relative))) continue
+    assertNoLegacyBrand(`${name}/${relative}`, fs.readFileSync(path.join(directory, relative), "utf8"))
+  }
 }
 
 function readManifest(directory: string) {
@@ -145,9 +172,11 @@ try {
   assert(npmInstall.status === 0, `local npm install failed: ${output(npmInstall)}`)
 
   for (const name of packageNames) {
-    const manifest = readManifest(path.join(install, "node_modules", name))
+    const packageRoot = path.join(install, "node_modules", name)
+    const manifest = readManifest(packageRoot)
     assert(manifest.name === name, `installed package name is ${manifest.name}, expected ${name}`)
     assert(manifest.version === version, `installed ${name} version is ${manifest.version}, expected ${version}`)
+    verifyPackedText(packageRoot, name)
   }
 
   const shim = path.join(install, "node_modules", ".bin", process.platform === "win32" ? "mongolgpt.cmd" : "mongolgpt")
@@ -167,17 +196,33 @@ try {
     `version smoke failed: ${output(actualVersion)}`,
   )
 
+  const rootHelp = cli(["--help"])
+  assert(rootHelp.status === 0, `root help smoke failed: ${output(rootHelp)}`)
+  assertNoLegacyBrand("mongolgpt --help", output(rootHelp))
+
   const accountHelp = cli(["account", "--help"])
   assert(
     accountHelp.status === 0 && output(accountHelp).includes("MongolGPT бүртгэл"),
     `account help smoke failed: ${output(accountHelp)}`,
   )
+  assertNoLegacyBrand("mongolgpt account --help", output(accountHelp))
 
   const accountLoginHelp = cli(["account", "login", "--help"])
   assert(
     accountLoginHelp.status === 0 && output(accountLoginHelp).includes(expectedAccountUrl),
     `account login URL smoke failed: ${output(accountLoginHelp)}`,
   )
+  assertNoLegacyBrand("mongolgpt account login --help", output(accountLoginHelp))
+
+  for (const command of [
+    ["providers", "--help"],
+    ["mcp", "--help"],
+    ["plugin", "--help"],
+  ]) {
+    const result = cli(command)
+    assert(result.status === 0, `${command.join(" ")} help smoke failed: ${output(result)}`)
+    assertNoLegacyBrand(`mongolgpt ${command.join(" ")}`, output(result))
+  }
 
   const freeAuto = cli(["run", "--model", "mongolgpt/free-auto", "--format", "json", "local npm smoke"])
   assert(freeAuto.status !== null, "anonymous Free Auto gate timed out")
@@ -186,6 +231,7 @@ try {
     output(freeAuto).includes("mongolgpt account login"),
     `Free Auto gate returned wrong guidance: ${output(freeAuto)}`,
   )
+  assertNoLegacyBrand("Free Auto account gate", output(freeAuto))
 
   const optionalProvider = cli(["run", "--model", "ollama/account-gate-smoke", "--format", "json", "local npm smoke"])
   assert(optionalProvider.status !== null, "optional provider account gate timed out")
@@ -194,6 +240,7 @@ try {
     output(optionalProvider).includes("mongolgpt account login"),
     `optional provider account gate returned wrong guidance: ${output(optionalProvider)}`,
   )
+  assertNoLegacyBrand("optional provider account gate", output(optionalProvider))
 
   console.log(
     `local npm install smoke ok: ${packageNames.length} packages @ ${version}, Free Auto and optional provider account gates`,

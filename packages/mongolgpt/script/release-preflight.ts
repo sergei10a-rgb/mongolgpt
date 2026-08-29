@@ -39,6 +39,7 @@ const binaryPackages = [
 const cliPackages = [...binaryPackages, "mongolgpt"]
 const npmPackages = [...cliPackages, "@mongolgpt/sdk", "@mongolgpt/plugin", "@mongolgpt/ui"]
 const publicNpmRegistry = "https://registry.npmjs.org"
+const legacyBrand = /\bOpenCode\b|opencode\.ai|anomalyco|@opencode\/|github\.com\/(?:sst|anomalyco)\/opencode/i
 
 type PackageManifest = {
   name?: string
@@ -94,6 +95,11 @@ function assert(condition: unknown, message: string) {
   if (!condition) throw new Error(message)
 }
 
+function assertNoLegacyBrand(label: string, value: string) {
+  const match = legacyBrand.exec(value)
+  assert(!match, `${label} contains legacy product branding: ${match?.[0]}`)
+}
+
 function checkLocalDist() {
   assert(fs.existsSync(dist), `dist directory missing: ${dist}`)
   const versions = new Set<string>()
@@ -106,6 +112,7 @@ function checkLocalDist() {
     const pkg = readJson(pkgFile)
     assert(pkg.name === name, `${pkgFile} has name ${pkg.name}, expected ${name}`)
     assert(pkg.version, `${pkgFile} is missing version`)
+    assertNoLegacyBrand(pkgFile, fs.readFileSync(pkgFile, "utf8"))
     versions.add(pkg.version!)
 
     const bin = path.join(dir, "bin", binaryName(name))
@@ -130,7 +137,9 @@ function checkLocalDist() {
   )
   assert(main.license === "MIT", "mongolgpt package has incorrect license")
   assert(main.files?.includes("README.md"), "mongolgpt package does not publish README.md")
-  assert(fs.existsSync(path.join(dist, "mongolgpt", "README.md")), "mongolgpt package README.md is missing")
+  const readme = path.join(dist, "mongolgpt", "README.md")
+  assert(fs.existsSync(readme), "mongolgpt package README.md is missing")
+  assertNoLegacyBrand(readme, fs.readFileSync(readme, "utf8"))
   return Array.from(versions)[0]
 }
 
@@ -238,6 +247,7 @@ async function smokePublicNpmInstall(version: string) {
       accountHelp.status === 0 && commandOutput(accountHelp).includes("MongolGPT бүртгэл"),
       `public npm account command smoke failed: ${commandOutput(accountHelp)}`,
     )
+    assertNoLegacyBrand("public npm account help", commandOutput(accountHelp))
 
     const git = spawnSync("git", ["init", "--quiet"], {
       cwd: repo,
@@ -332,9 +342,11 @@ async function smokePublicPlatformPackages(version: string) {
     assert(install.status === 0, `public platform package install failed: ${commandOutput(install)}`)
 
     for (const name of packages) {
-      const manifest = readJson(path.join(temp, "node_modules", ...name.split("/"), "package.json"))
+      const manifestPath = path.join(temp, "node_modules", ...name.split("/"), "package.json")
+      const manifest = readJson(manifestPath)
       assert(manifest.name === name, `public package manifest has name ${manifest.name}, expected ${name}`)
       assert(manifest.version === version, `public ${name} resolved ${manifest.version}, expected ${version}`)
+      assertNoLegacyBrand(manifestPath, fs.readFileSync(manifestPath, "utf8"))
     }
 
     const imports = spawnSync(
