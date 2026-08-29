@@ -162,7 +162,8 @@ export function SubscriptionSection() {
       request = { invoiceID, key: crypto.randomUUID() }
       setCancellationRequest(request)
     }
-    await cancelCheckout(params.id!, invoiceID, request.key)
+    const result = await cancelCheckout(params.id!, invoiceID, request.key)
+    if (result.ok) setRequestKey("")
     submission.clear()
   }
 
