@@ -110,6 +110,7 @@ export default defineConfig({
         "deployment",
         "release-upgrade",
         "backup-restore",
+        "incident-response",
         "enterprise",
         "troubleshooting",
         { label: "Windows ба WSL", link: "windows-wsl" },

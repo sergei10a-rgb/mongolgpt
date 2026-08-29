@@ -19,6 +19,7 @@ const requiredTopics = [
   "ecosystem",
   "faq",
   "install",
+  "incident-response",
   "mcp-servers",
   "models",
   "plugins",

@@ -21,6 +21,7 @@ export const legacyMongolianDocSlugs = [
   "github",
   "gitlab",
   "ide",
+  "incident-response",
   "install",
   "keybinds",
   "lsp",

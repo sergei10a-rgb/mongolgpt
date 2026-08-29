@@ -102,6 +102,7 @@ async function verifySearchIndex() {
       ["MCP серверүүд", "/docs/mcp-servers/"],
       ["Аюулгүй ашиглалт", "/docs/security/"],
       ["Буцаах төлөвлөгөө", "/docs/release-upgrade/"],
+      ["Ослын хариу арга хэмжээ", "/docs/incident-response/"],
       ["Claude Codex Goose", "/docs/ecosystem/"],
     ] as const) {
       const result = await index.search(query)
