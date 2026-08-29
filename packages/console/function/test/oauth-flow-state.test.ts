@@ -1,9 +1,16 @@
 import { describe, expect, test } from "bun:test"
-import { captureOAuthFlow, clearOAuthFlowCookie, restoreOAuthFlowRequest } from "../src/oauth-flow-state"
+import {
+  captureOAuthClientState,
+  captureOAuthFlow,
+  clearOAuthFlowCookie,
+  restoreOAuthClientState,
+  restoreOAuthFlowRequest,
+} from "../src/oauth-flow-state"
 
-function authorizationRequest(authorization: string) {
+function authorizationRequest(authorization: string, clientState?: string) {
+  const clientCookie = clientState ? `; __Host-mongolgpt-oauth-client-${clientState}=${authorization}` : ""
   return new Request("https://auth.dev.mgpt.mn/github/authorize", {
-    headers: { cookie: `theme=dark; authorization=${authorization}` },
+    headers: { cookie: `theme=dark; authorization=${authorization}${clientCookie}` },
   })
 }
 
@@ -31,24 +38,45 @@ function readSetCookies(response: Response) {
 }
 
 describe("OAuth flow state isolation", () => {
+  test("binds the original client state to the encrypted authorization cookie", () => {
+    const request = new Request(
+      "https://auth.dev.mgpt.mn/authorize?client_id=mongolgpt-cli&state=client-state-one-1234567890",
+    )
+    const response = new Response(null, {
+      status: 200,
+      headers: {
+        "set-cookie": "authorization=encrypted-authorization-one; Secure; HttpOnly",
+      },
+    })
+
+    const captured = captureOAuthClientState(request, response)
+
+    expect(readSetCookies(captured).join("\n")).toContain(
+      "__Host-mongolgpt-oauth-client-client-state-one-1234567890=encrypted-authorization-one; Max-Age=600; Path=/; HttpOnly; Secure; SameSite=None",
+    )
+  })
+
   test("captures concurrent provider redirects in distinct secure cookies", () => {
     const first = captureOAuthFlow(
-      authorizationRequest("encrypted-authorization-one"),
+      authorizationRequest("encrypted-authorization-one", "client-state-one-1234567890"),
       providerResponse("flow-one", "encrypted-provider-one"),
     )
     const second = captureOAuthFlow(
-      authorizationRequest("encrypted-authorization-two"),
+      authorizationRequest("encrypted-authorization-two", "client-state-two-1234567890"),
       providerResponse("flow-two", "encrypted-provider-two"),
     )
 
     expect(flowCookie(first, "flow-one")).not.toBe(flowCookie(second, "flow-two"))
     expect(readSetCookies(first).join("\n")).toContain("Max-Age=600; Path=/; HttpOnly; Secure; SameSite=None")
     expect(readSetCookies(second).join("\n")).toContain("Max-Age=600; Path=/; HttpOnly; Secure; SameSite=None")
+    expect(readSetCookies(first).join("\n")).toContain(
+      "__Host-mongolgpt-oauth-client-client-state-one-1234567890=; Max-Age=0",
+    )
   })
 
   test("restores the matching flow without dropping unrelated cookies", () => {
     const captured = captureOAuthFlow(
-      authorizationRequest("encrypted-authorization-one"),
+      authorizationRequest("encrypted-authorization-one", "client-state-one-1234567890"),
       providerResponse("flow-one", "encrypted-provider-one"),
     )
     const request = new Request("https://auth.dev.mgpt.mn/github/callback?code=code-one&state=flow-one", {
@@ -60,6 +88,7 @@ describe("OAuth flow state isolation", () => {
     const restored = restoreOAuthFlowRequest(request)
 
     expect(restored.cleanupCookie).toBe("__Host-mongolgpt-oauth-github-flow-one")
+    expect(restored.clientState).toBe("client-state-one-1234567890")
     expect(restored.request.headers.get("cookie")).toContain("theme=dark")
     expect(restored.request.headers.get("cookie")).toContain("authorization=encrypted-authorization-one")
     expect(restored.request.headers.get("cookie")).toContain("provider=encrypted-provider-one")
@@ -110,5 +139,19 @@ describe("OAuth flow state isolation", () => {
     expect(readSetCookies(response)).toEqual([
       "__Host-mongolgpt-oauth-github-flow-one=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=None",
     ])
+  })
+
+  test("restores a missing client state on an OAuth error redirect", () => {
+    const response = restoreOAuthClientState(
+      new Response(null, {
+        status: 302,
+        headers: { location: "http://127.0.0.1:45678/auth/callback?error=invalid_grant" },
+      }),
+      "client-state-one-1234567890",
+    )
+    const location = new URL(response.headers.get("location")!)
+
+    expect(location.searchParams.get("state")).toBe("client-state-one-1234567890")
+    expect(location.searchParams.get("error")).toBe("invalid_grant")
   })
 })

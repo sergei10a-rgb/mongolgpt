@@ -3,16 +3,19 @@ import { z } from "zod"
 const FLOW_TTL_SECONDS = 10 * 60
 const MAX_FLOW_COOKIE_VALUE_LENGTH = 3_800
 const OAUTH_PROVIDER_PATH = /^\/(github|google)\/(authorize|callback)$/
+const CLIENT_COOKIE_PREFIX = "__Host-mongolgpt-oauth-client-"
 const OAuthFlowRecord = z
   .object({
     authorization: z.string().min(1).max(16 * 1024),
     provider: z.string().min(1).max(16 * 1024),
+    clientState: z.string().min(1).max(128).optional(),
   })
   .strict()
 
 export type RestoredOAuthFlow = {
   request: Request
   cleanupCookie?: string
+  clientState?: string
 }
 
 export function restoreOAuthFlowRequest(request: Request): RestoredOAuthFlow {
@@ -40,7 +43,23 @@ export function restoreOAuthFlowRequest(request: Request): RestoredOAuthFlow {
   return {
     request: new Request(request, { headers }),
     cleanupCookie,
+    clientState: record.clientState,
   }
+}
+
+export function captureOAuthClientState(request: Request, response: Response): Response {
+  const url = new URL(request.url)
+  if (request.method !== "GET" || url.pathname !== "/authorize" || response.status < 200 || response.status >= 400) {
+    return response
+  }
+
+  const state = oauthState(url.searchParams.get("state"))
+  const authorization = readSetCookie(response.headers, "authorization")
+  if (!state || !authorization || authorization.length > MAX_FLOW_COOKIE_VALUE_LENGTH) return response
+  return withSetCookie(
+    response,
+    serializeFlowCookie(clientCookieName(state), authorization, FLOW_TTL_SECONDS),
+  )
 }
 
 export function captureOAuthFlow(request: Request, response: Response): Response {
@@ -62,19 +81,37 @@ export function captureOAuthFlow(request: Request, response: Response): Response
 
   const authorization = readCookie(request.headers.get("cookie"), "authorization")
   const provider = readSetCookie(response.headers, "provider")
-  const record = OAuthFlowRecord.safeParse({ authorization, provider })
+  const clientState = findClientState(request.headers.get("cookie"), authorization)
+  const record = OAuthFlowRecord.safeParse({ authorization, provider, clientState })
   if (!record.success) return response
   const value = encodeFlowRecord(record.data)
   if (value.length > MAX_FLOW_COOKIE_VALUE_LENGTH) return response
 
-  return withSetCookie(
+  const captured = withSetCookie(
     response,
     serializeFlowCookie(flowCookieName(route.provider, state), value, FLOW_TTL_SECONDS),
   )
+  return clientState ? clearOAuthFlowCookie(captured, clientCookieName(clientState)) : captured
 }
 
 export function clearOAuthFlowCookie(response: Response, name: string) {
   return withSetCookie(response, serializeFlowCookie(name, "", 0))
+}
+
+export function restoreOAuthClientState(response: Response, state?: string) {
+  if (!state || response.status < 300 || response.status >= 400) return response
+  const location = response.headers.get("location")
+  if (!location) return response
+  try {
+    const target = new URL(location)
+    if (!target.searchParams.has("error") || target.searchParams.has("state")) return response
+    target.searchParams.set("state", state)
+    const headers = new Headers(response.headers)
+    headers.set("location", target.toString())
+    return cloneResponse(response, headers)
+  } catch {
+    return response
+  }
 }
 
 function oauthRoute(request: Request) {
@@ -94,6 +131,10 @@ function oauthState(value: string | null) {
 
 function flowCookieName(provider: "github" | "google", state: string) {
   return `__Host-mongolgpt-oauth-${provider}-${state}`
+}
+
+function clientCookieName(state: string) {
+  return `${CLIENT_COOKIE_PREFIX}${state}`
 }
 
 function encodeFlowRecord(record: z.infer<typeof OAuthFlowRecord>) {
@@ -131,6 +172,16 @@ function writeCookies(header: string | null, values: Record<string, string>) {
   return [...cookies].map(([key, value]) => `${key}=${value}`).join("; ")
 }
 
+function findClientState(header: string | null, authorization: string | undefined) {
+  if (!header || !authorization) return undefined
+  for (const part of header.split(";")) {
+    const [key, ...value] = part.trim().split("=")
+    if (!key?.startsWith(CLIENT_COOKIE_PREFIX) || value.join("=") !== authorization) continue
+    return oauthState(key.slice(CLIENT_COOKIE_PREFIX.length))
+  }
+  return undefined
+}
+
 function readSetCookie(headers: Headers, name: string) {
   const getSetCookie = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie
   const values = getSetCookie ? getSetCookie.call(headers) : [headers.get("set-cookie") ?? ""]
@@ -149,6 +200,10 @@ function serializeFlowCookie(name: string, value: string, maxAge: number) {
 function withSetCookie(response: Response, cookie: string) {
   const headers = new Headers(response.headers)
   headers.append("set-cookie", cookie)
+  return cloneResponse(response, headers)
+}
+
+function cloneResponse(response: Response, headers: Headers) {
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
