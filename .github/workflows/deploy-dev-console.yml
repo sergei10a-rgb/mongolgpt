@@ -95,12 +95,9 @@ jobs:
           MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \
             MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false \
             MONGOLGPT_DEPLOY_DATABASE_ONLY=true \
-            bun sst deploy --stage=dev --target Database --print-logs
-          MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \
-            MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false \
-            MONGOLGPT_DEPLOY_DATABASE_ONLY=true \
             bun sst shell --stage=dev -- bun run db:migrate
-          bun sst deploy --stage=dev --target Console --print-logs
+          MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \
+            bun sst deploy --stage=dev --print-logs
 
       - name: Verify live dev public console boundary
         env:

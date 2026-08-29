@@ -196,25 +196,21 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(run).toContain("trap - EXIT")
     const oauthSecrets = run.indexOf("set_optional_secret GOOGLE_CLIENT_ID")
     const stateRepair = run.indexOf('bun sst state repair --stage="$stage" --print-logs 2>&1 | tee "$repair_log"')
-    const database = run.indexOf(
-      'MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage="$stage" --target Database --print-logs',
-    )
+    const firstDeploy = run.indexOf('bun sst deploy --stage="$stage" --print-logs')
     const migration = run.indexOf(
       'MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage="$stage" -- bun run db:migrate',
     )
-    const oauth = run.lastIndexOf('bun sst deploy --stage="$stage" --print-logs')
+    const finalDeploy = run.lastIndexOf('bun sst deploy --stage="$stage" --print-logs')
     expect(oauthSecrets).toBeGreaterThanOrEqual(0)
     expect(stateRepair).toBeGreaterThan(oauthSecrets)
-    expect(database).toBeGreaterThan(stateRepair)
+    expect(firstDeploy).toBeGreaterThan(stateRepair)
     expect(run).toContain('repair_status="${PIPESTATUS[0]}"')
     expect(run).toContain('! grep -Fq "No changes made" "$repair_log"')
     expect(run).not.toContain('sst state repair --stage="$stage" --print-logs || true')
-    expect(migration).toBeGreaterThan(database)
-    expect(oauth).toBeGreaterThan(migration)
+    expect(migration).toBeGreaterThan(firstDeploy)
+    expect(finalDeploy).toBeGreaterThan(migration)
     expect(run).not.toContain("sst refresh")
-    expect(run).toContain(
-      'MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage="$stage" --target Database --print-logs',
-    )
+    expect(run).not.toContain("--target Database")
     expect(run).not.toContain("--target AuthApi")
     expect(deploy?.env?.MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE).toBe("true")
     expect(deploy?.env?.SST_SECRET_D1BackupApiToken).toBe("disabled")
@@ -292,9 +288,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
       "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
     )
     expect(deployStep?.run).toContain('bun --cwd packages/runtime script/deploy.ts "$stage"')
-    expect(deployStep?.run).toContain(
-      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs",
-    )
+    expect(deployStep?.run).not.toContain("--target Database")
   })
 
   test("gates every deployed app with HTTP and Chromium smoke checks", async () => {
@@ -678,11 +672,13 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_CONSOLE_ONLY=false")
     expect(deploy?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false")
     expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_DATABASE_ONLY=true")
-    expect(deploy?.run).toContain("bun sst deploy --stage=dev --target Database --print-logs")
     expect(deploy?.run).toContain("bun sst shell --stage=dev -- bun run db:migrate")
-    expect(deploy?.run).toContain("bun sst deploy --stage=dev --target Console --print-logs")
-    expect(deploy.run.indexOf("--target Database")).toBeLessThan(deploy.run.indexOf("bun run db:migrate"))
-    expect(deploy.run.indexOf("bun run db:migrate")).toBeLessThan(deploy.run.indexOf("--target Console"))
+    expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
+    expect(deploy?.run).not.toContain("--target Database")
+    expect(deploy?.run).not.toContain("--target Console")
+    expect(deploy.run.indexOf("bun run db:migrate")).toBeLessThan(
+      deploy.run.indexOf("bun sst deploy --stage=dev --print-logs"),
+    )
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --console-only dev")
     expect(source).toContain("MONGOLGPT_RUNTIME_AUTH_SECRET")
     expect(source).toContain("SST_SECRET_ByokCredentialsKeyV1")
@@ -808,15 +804,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deployStep).toBeDefined()
 
     const run = deployStep?.run ?? ""
-    const database = run.indexOf(
-      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs",
-    )
     const migration = run.indexOf(
       "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate",
     )
     const application = run.lastIndexOf("bun sst deploy --stage=${{ inputs.stage }} --print-logs")
-    expect(database).toBeGreaterThanOrEqual(0)
-    expect(migration).toBeGreaterThan(database)
+    expect(run).not.toContain("--target Database")
+    expect(migration).toBeGreaterThanOrEqual(0)
     expect(application).toBeGreaterThan(migration)
     expect(packageSource.scripts["db:migrate"]).toBe("bun run --cwd packages/console/core db:migrate-d1")
   })
