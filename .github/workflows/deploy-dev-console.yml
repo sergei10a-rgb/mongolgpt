@@ -96,8 +96,7 @@ jobs:
           if database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then
             MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate
             unset database_id
-            MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \
-              bun sst deploy --stage=dev --target Console --print-logs
+            bun sst deploy --stage=dev --target Console --print-logs
           else
             echo "Dev SST state-д Database алга. Бүх hosted dev resource-ийг нэг удаа сэргээж байна."
             MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \

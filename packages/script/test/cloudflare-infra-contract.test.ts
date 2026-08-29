@@ -674,6 +674,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
     expect(deploy?.run).toContain('MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate')
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --target Console --print-logs")
+    expect(deploy?.run).not.toContain(
+      "MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \\\n              bun sst deploy --stage=dev --target Console",
+    )
     expect(deploy?.run).toContain('if database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then')
     expect(deploy?.run).toContain("Dev SST state-д Database алга")
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
