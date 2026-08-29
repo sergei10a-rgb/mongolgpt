@@ -42,6 +42,14 @@ export function shouldObserveDeployedRequest(
   return isStaticAppBackendPath(input.pathname)
 }
 
+export function isSuspiciousSameOriginRequest(input: DeployedRequestInput, appOrigin: string) {
+  return (
+    input.origin === appOrigin &&
+    backendResourceTypes.has(input.resourceType) &&
+    isStaticAppBackendPath(input.pathname)
+  )
+}
+
 function isLongLivedBackendPath(pathname: string) {
   return (
     pathname === "/event" ||
@@ -137,8 +145,14 @@ export function observeDeployedPage(
       pendingRequests.set(key, (pendingRequests.get(key) ?? 0) + 1)
     }
 
-    if (url.origin !== appOrigin) return
-    if (!backendResourceTypes.has(request.resourceType()) && !isStaticAppBackendPath(url.pathname)) return
+    if (
+      !isSuspiciousSameOriginRequest(
+        { origin: url.origin, pathname: url.pathname, resourceType: request.resourceType() },
+        appOrigin,
+      )
+    ) {
+      return
+    }
     suspiciousRequests.push(`${request.resourceType()} ${request.method()} ${request.url()}`)
   })
 

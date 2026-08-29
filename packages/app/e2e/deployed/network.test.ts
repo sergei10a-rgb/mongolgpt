@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   classifyDeployedResponse,
   isBenignDeployedConsoleError,
+  isSuspiciousSameOriginRequest,
   parseSmokeAuthCookie,
   shouldObserveDeployedRequest,
   shouldWaitForDeployedRequest,
@@ -76,6 +77,16 @@ describe("deployed multi-origin browser observer", () => {
     expect(observes(appOrigin, "/cdn-cgi/rum", "fetch")).toBe(false)
     expect(observes("https://static.cloudflareinsights.com", "/beacon.min.js", "script")).toBe(false)
     expect(observes("https://telemetry.example", "/collect", "fetch")).toBe(false)
+
+    expect(isSuspiciousSameOriginRequest({ origin: appOrigin, pathname: "/project", resourceType: "fetch" }, appOrigin)).toBe(
+      true,
+    )
+    expect(
+      isSuspiciousSameOriginRequest({ origin: appOrigin, pathname: "/cdn-cgi/rum", resourceType: "xhr" }, appOrigin),
+    ).toBe(false)
+    expect(
+      isSuspiciousSameOriginRequest({ origin: appOrigin, pathname: "/assets/index.js", resourceType: "script" }, appOrigin),
+    ).toBe(false)
   })
 
   test("allows only expected anonymous API authorization errors in the console", () => {
