@@ -68,7 +68,6 @@ export function renderTurnstileChallenge(input: {
       ${error}
       <form action="${escapeHtml(authorization.action)}" method="post">
         ${authorization.fields}
-        <input type="hidden" id="turnstile-response" name="${TURNSTILE_RESPONSE_FIELD}" value="">
         <div class="cf-turnstile" data-sitekey="${escapeHtml(siteKey)}" data-action="${TURNSTILE_ACTION}" data-language="auto" data-theme="auto" data-size="flexible" data-response-field="false" data-callback="mongolGPTTurnstileReady" data-expired-callback="mongolGPTTurnstileExpired" data-timeout-callback="mongolGPTTurnstileExpired" data-error-callback="mongolGPTTurnstileError"></div>
         <p class="status" id="turnstile-status" role="status">Хамгаалалтын шалгалтыг хүлээж байна...</p>
         <button type="submit" disabled>Үргэлжлүүлэх</button>
@@ -80,27 +79,27 @@ export function renderTurnstileChallenge(input: {
         const form = document.querySelector("form")
         const button = form.querySelector("button[type=submit]")
         const status = document.getElementById("turnstile-status")
-        const response = () => document.getElementById("turnstile-response")
+        let verifiedToken = ""
         const update = (ready, message) => {
           button.disabled = !ready
           status.hidden = ready
           status.textContent = message
         }
         const reset = (message) => {
-          const field = response()
-          if (field) field.value = ""
+          verifiedToken = ""
           update(false, message)
         }
         window.mongolGPTTurnstileReady = (token) => {
-          const field = response()
-          if (field && typeof token === "string") field.value = token
-          update(Boolean(field && field.value), field && field.value ? "" : "Хамгаалалтын токен үүссэнгүй. Хуудсыг дахин ачаална уу.")
+          verifiedToken = typeof token === "string" ? token.trim() : ""
+          update(Boolean(verifiedToken), verifiedToken ? "" : "Хамгаалалтын токен үүссэнгүй. Хуудсыг дахин ачаална уу.")
         }
         window.mongolGPTTurnstileExpired = () => reset("Шалгалтын хугацаа дууслаа. Дахин баталгаажуулна уу.")
         window.mongolGPTTurnstileError = () => reset("Хамгаалалтын шалгалтыг эхлүүлж чадсангүй. Хуудсыг дахин ачаална уу.")
+        form.addEventListener("formdata", (event) => {
+          if (verifiedToken) event.formData.set("${TURNSTILE_RESPONSE_FIELD}", verifiedToken)
+        })
         form.addEventListener("submit", (event) => {
-          const token = response()
-          if (!token || !token.value) {
+          if (!verifiedToken) {
             event.preventDefault()
             update(false, "Эхлээд хамгаалалтын шалгалтыг гүйцээнэ үү.")
             return
