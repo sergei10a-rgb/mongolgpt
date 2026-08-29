@@ -561,8 +561,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("MONGOLGPT_STATIC_DOCS=true bun run build:docs")
     expect(source).toContain("bun run --cwd packages/web verify:static-artifact")
     expect(source).toContain("bun run deploy:preflight -- dev --docs-only")
-    expect(source).toContain("bun sst deploy --stage=dev --print-logs")
-    expect(source).not.toContain("--target Website")
+    expect(source).toContain("bun sst deploy --stage=dev --target Website --print-logs")
     expect(source).toContain("bun script/deployment-smoke.ts --docs-only dev")
     expect(source).not.toContain("--target WebApp")
     expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|RUNTIME|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/)
@@ -608,8 +607,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.env?.MONGOLGPT_DEPLOY_APP_ONLY).toBe("true")
     expect(smoke?.env?.MONGOLGPT_DEPLOY_APP_ONLY).toBe("true")
     expect(deploy?.run).toContain("bun run deploy:preflight -- dev --app-only")
-    expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
-    expect(deploy?.run).not.toContain("--target WebApp")
+    expect(deploy?.run).toContain("bun sst deploy --stage=dev --target WebApp --print-logs")
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --app-only dev")
     expect(browser?.env).toEqual({
       CI: "true",
@@ -675,11 +673,14 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).not.toContain("MONGOLGPT_DEPLOY_DATABASE_ONLY=true")
     expect(deploy?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
     expect(deploy?.run).toContain('MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate')
+    expect(deploy?.run).toContain("bun sst deploy --stage=dev --target Console --print-logs")
+    expect(deploy?.run).toContain('if database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then')
+    expect(deploy?.run).toContain("Dev SST state-д Database алга")
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
     expect(deploy?.run).not.toMatch(/sst deploy[^\n]*--target Database/)
-    expect(deploy?.run).not.toMatch(/sst deploy[^\n]*--target Console/)
-    expect(deploy.run.indexOf("bun run db:migrate")).toBeLessThan(
-      deploy.run.indexOf("bun sst deploy --stage=dev --print-logs"),
+    expect(deploy.run.indexOf("bun run db:migrate")).toBeLessThan(deploy.run.indexOf("--target Console"))
+    expect(deploy.run.indexOf("bun sst deploy --stage=dev --print-logs")).toBeLessThan(
+      deploy.run.lastIndexOf("bun run db:migrate"),
     )
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --console-only dev")
     expect(source).toContain("MONGOLGPT_RUNTIME_AUTH_SECRET")
