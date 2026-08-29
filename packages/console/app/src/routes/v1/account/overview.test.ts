@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   AccountOverviewNotFoundError,
   AccountOverviewSuspendedError,
+  AccountOverviewUnavailableError,
   AccountOverviewWorkspaceAccessError,
 } from "@mongolgpt/console-core/account-overview.js"
 import { accountOverviewPreflight, accountOverviewRequest, type AccountOverviewIdentity } from "./overview-handler"
@@ -145,5 +146,18 @@ describe("account overview route", () => {
     expect(
       await handler({ status: "authenticated", account }, async () => ({ account })).catch((error) => error),
     ).toBeInstanceOf(Error)
+  })
+
+  test("returns a bounded unavailable stage without exposing the underlying failure", async () => {
+    const response = await handler({ status: "authenticated", account }, async () => {
+      throw new AccountOverviewUnavailableError("limits", { cause: new Error("secret provider detail") })
+    })
+
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({
+      error: "account_overview_unavailable",
+      stage: "limits",
+      message: "Бүртгэлийн мэдээллийг түр ачаалж чадсангүй. Дахин оролдоно уу.",
+    })
   })
 })

@@ -4,6 +4,7 @@ import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import { resolve } from "node:path"
 import {
   AccountOverviewSuspendedError,
+  AccountOverviewUnavailableError,
   AccountOverviewWorkspaceAccessError,
   getAccountOverviewWithDb,
   listActiveAccountWorkspacesWithDb,
@@ -304,5 +305,23 @@ describe("account overview", () => {
         (error) => error,
       ),
     ).toBeInstanceOf(AccountOverviewSuspendedError)
+  })
+
+  test("classifies operational limit failures without exposing their details", async () => {
+    const { db } = await fixture()
+    const error = await getAccountOverviewWithDb(
+      db,
+      { accountID: ACCOUNT_ID, email: "owner@mgpt.mn", now: NOW },
+      {
+        getFreeLimits: async () => {
+          throw new Error("provider secret")
+        },
+        getPlanLimits: limits.getPlanLimits,
+      },
+    ).catch((error) => error)
+
+    expect(error).toBeInstanceOf(AccountOverviewUnavailableError)
+    expect(error.stage).toBe("limits")
+    expect(error.message).not.toContain("provider secret")
   })
 })

@@ -2,6 +2,7 @@ import { AccountOverviewSchema } from "@mongolgpt/account-contract"
 import {
   AccountOverviewNotFoundError,
   AccountOverviewSuspendedError,
+  AccountOverviewUnavailableError,
   AccountOverviewWorkspaceAccessError,
 } from "@mongolgpt/console-core/account-overview.js"
 import { canonicalHttpsOrigin } from "../../auth/helpers"
@@ -78,6 +79,16 @@ export async function accountOverviewRequest(
       return Response.json(
         { error: "forbidden", message: "Энэ аккаунтын мэдээлэлд хандах эрхгүй байна." },
         { status: 403, headers },
+      )
+    }
+    if (error instanceof AccountOverviewUnavailableError) {
+      return Response.json(
+        {
+          error: "account_overview_unavailable",
+          stage: error.stage,
+          message: "Бүртгэлийн мэдээллийг түр ачаалж чадсангүй. Дахин оролдоно уу.",
+        },
+        { status: 503, headers },
       )
     }
     throw error
