@@ -14,8 +14,8 @@ import { useLanguage } from "~/context/language"
 
 const productPillars = [
   {
-    title: "Нэг бүртгэл, гурван хэрэглүүр",
-    body: "Вэб, ширээний програм, командын мөрийн гурван орчинд ижил MongolGPT бүртгэлээр нэвтэрч, ажлаа таслалгүй үргэлжлүүлнэ.",
+    title: "Шууд ашиглах үндсэн орчин",
+    body: "Вэб, Windows ширээний програм, командын мөрийн нэвтрэлт, баримт бичиг болон тусламжийн хэсэг шууд нээлттэй.",
     links: [
       { label: "Нэвтрэх", href: "/auth" },
       { label: "Ширээний програм татах", href: "/download" },
@@ -23,8 +23,8 @@ const productPillars = [
     ],
   },
   {
-    title: "Үнэгүй автомат горим ба өргөн сонголт",
-    body: "Үнэгүй автомат горимоор шууд эхэлнэ. Хүсвэл OpenRouter, NVIDIA NIM, өөрийн API түлхүүр эсвэл дотоод загвараа холбоно.",
+    title: "Үнэгүй горим ба өөрийн загвар",
+    body: "Үнэгүй автомат горимоор эхэлж, OpenRouter, NVIDIA NIM, OpenAI-д нийцсэн API хаяг, Ollama, LM Studio зэргийг холбоно.",
     links: [
       { label: "Үнийн багц", href: "/pricing" },
       { label: "Үйлчилгээ үзүүлэгчдийн заавар", href: "/docs/providers/" },
@@ -32,8 +32,8 @@ const productPillars = [
     ],
   },
   {
-    title: "MCP, ур чадвар, өргөтгөлтэй ажиллана",
-    body: "Хиймэл оюуны кодын агентын холбогч, ур чадвар, өргөтгөлүүдийг нэг цэгээс удирдах суурьтай.",
+    title: "MCP, ур чадвар, өргөтгөлийн нийцэл",
+    body: "MCP, ур чадвар, өргөтгөлүүдээ заавар болон ширээний програмын ажлын урсгалтай холбож, нэг бүртгэл дээрээ ашиглах суурьтай.",
     links: [
       { label: "Заавар", href: "/docs" },
       { label: "GitHub", href: config.github.repoUrl, external: true },
@@ -68,16 +68,16 @@ const experienceRows = [
 
 const accountRows = [
   {
-    title: "MongolGPT бүртгэл",
-    body: "Нэг бүртгэл дээрээ багц, хэрэглээний хязгаар, нэвтрэлт болон захиалгаа төвлөрүүлнэ.",
+    title: "Нэг бүртгэл, бүх орчин",
+    body: "Нэг MongolGPT бүртгэл дээрээ вэб, ширээний програм, командын мөрийн нэвтрэлт, багц, хэрэглээний мэдээллээ төвлөрүүлнэ.",
   },
   {
-    title: "Өөрийн түлхүүр ба дотоод загвар",
-    body: "Өөрийн OpenRouter, NVIDIA, OpenAI-д нийцсэн API хаяг, Ollama, LM Studio холболтыг сонгож ашиглана.",
+    title: "Өөрийн API түлхүүр ба дотоод загвар",
+    body: "Өөрийн OpenRouter, NVIDIA NIM, OpenAI-д нийцсэн API хаяг, Ollama, LM Studio холболтоо сонгож ашиглана.",
   },
   {
-    title: "Монгол хэл анхдагч заавар",
-    body: "Суулгалт, үйлчилгээ үзүүлэгч, түгээмэл асуулт, алдаа оношлох, үнэ, тусламжийн мэдээллийг Монгол хэлээр олно.",
+    title: "Үнэн зөв төлөв ба тусламж",
+    body: "Төлбөрийн идэвхжил, суулгалт, бүртгэл болон API асуудлаа үнийн багц, заавар, тусламжийн хэсгээс шалгаж шийднэ.",
   },
 ] as const
 
@@ -99,8 +99,29 @@ const launchActions = [
   },
   {
     title: "Үнийн багц",
-    body: "Үнэгүй, Basic, Pro, Max багц болон төлбөрийн мэдээллийг нэг дороос үзнэ.",
+    body: "Үнэгүй хэрэглээ, багцын хязгаар болон төлбөрийн идэвхжлийн өнөөгийн мэдээллийг нэг дороос үзнэ.",
     href: "/pricing",
+  },
+] as const
+
+const readinessRows = [
+  {
+    title: "Одоо ашиглах боломжтой",
+    body: "Вэб нэвтрэлт, Windows ширээний програм таталт, командын мөрийн заавар, үнэгүй автомат горимын эхлэл, тусламж ба баримт бичгийн урсгал одооноос хэрэглэж болно.",
+    href: "/download",
+    action: "Татах ба эхлэх",
+  },
+  {
+    title: "Холбож ашиглах боломжууд",
+    body: "Өөрийн API түлхүүр, дотоод загвар, MCP, ур чадвар, өргөтгөлийн тохиргоонуудыг өөрийн хэрэгцээнд нийцүүлэн заавраар тохируулж ашиглана.",
+    href: "/docs/providers/",
+    action: "Тохиргооны заавар",
+  },
+  {
+    title: "Төлбөр ба нэмэлт тохиргоо",
+    body: "Төлбөрийн идэвхжил болон зарим нэмэлт холболт нь багц, орчин, тохиргооноос шалтгаална. Дэлгэрэнгүйг үнийн багц, тусламжаас баталгаажуулна.",
+    href: "/support",
+    action: "Төлөв шалгах",
   },
 ] as const
 
@@ -141,15 +162,15 @@ export default function Home() {
                 <p data-slot="eyebrow">Монгол хэрэглэгчийн хиймэл оюуны кодын агент</p>
                 <h1>MongolGPT</h1>
                 <p data-slot="lede">
-                  Код, тушаалын мөр, үйлчилгээ үзүүлэгч, бүртгэл, заавар, вэб болон ширээний програмыг нэг
-                  MongolGPT орчинд Монгол хэлээр ашиглана.
+                  Код, командын мөр, үйлчилгээ үзүүлэгч, бүртгэл, заавар, вэб болон ширээний програмын хэрэглээг нэг
+                  MongolGPT орчинд Монгол хэлээр холбоно.
                 </p>
                 <p data-slot="supporting-copy">
-                  Үнэгүй автомат горимоор шууд эхэлнэ. Эсвэл OpenRouter, NVIDIA NIM, өөрийн API түлхүүр,
-                  OpenAI-д нийцсэн API хаяг, Ollama, LM Studio болон дотоод загвараа холбоно.
+                  Үнэгүй автомат горимоор шууд эхэлнэ. Хүсвэл өөрийн API түлхүүр, OpenAI-д нийцсэн API хаяг,
+                  OpenRouter, NVIDIA NIM, Ollama, LM Studio болон дотоод загвараа холбоно.
                 </p>
                 <div data-slot="hero-actions">
-                  <A href="/auth" data-variant="primary">
+                  <A href={language.route("/auth")} data-variant="primary">
                     Эхлэх
                   </A>
                   <A href={language.route("/pricing")} data-variant="secondary">
@@ -161,9 +182,27 @@ export default function Home() {
                 </div>
                 <ul data-slot="hero-points">
                   <li>Вэб, ширээний програм, командын мөрт нэг бүртгэл</li>
-                  <li>Үнэгүй автомат горим, өөрийн түлхүүр, дотоод загвар</li>
-                  <li>MCP, ур чадвар, өргөтгөлийн нийцэл</li>
+                  <li>Үнэгүй автомат горим, өөрийн API түлхүүр, дотоод загвар</li>
+                  <li>MCP, ур чадвар, өргөтгөлтэй нийцэх ажлын урсгал</li>
                 </ul>
+                <dl data-slot="hero-facts" aria-label="Бүтээгдэхүүний гол төлөв">
+                  <div>
+                    <dt>Бүртгэл</dt>
+                    <dd>Нэг бүртгэл</dd>
+                  </div>
+                  <div>
+                    <dt>Орчин</dt>
+                    <dd>Вэб, ширээний програм, командын мөр</dd>
+                  </div>
+                  <div>
+                    <dt>Эхлэл</dt>
+                    <dd>Үнэгүй горим</dd>
+                  </div>
+                  <div>
+                    <dt>Тохиргоо</dt>
+                    <dd>API түлхүүр, дотоод загвар</dd>
+                  </div>
+                </dl>
               </div>
 
               <div data-slot="hero-visual">
@@ -184,7 +223,7 @@ export default function Home() {
             </div>
 
             <div data-component="hero-nav" aria-label="Үндсэн хэсгүүд">
-              <A href="/auth">Бүртгэл</A>
+              <A href={language.route("/auth")}>Бүртгэл</A>
               <A href={language.route("/download")}>Ширээний програм</A>
               <A href={language.route("/docs/cli")}>Командын мөр</A>
               <A href={language.route("/docs/providers/")}>Үйлчилгээ үзүүлэгчид</A>
@@ -216,13 +255,35 @@ export default function Home() {
             </For>
           </section>
 
+          <section data-component="readiness-band" aria-label="Үйлчилгээний бодит төлөв">
+            <div data-slot="section-heading">
+              <p data-slot="eyebrow">Бодит төлөв</p>
+              <h2>Шууд эхлэхэд хэрэгтэй товч мэдээлэл</h2>
+              <p>
+                Юу нь шууд бэлэн, юуг бүртгэл эсвэл үйлчилгээ үзүүлэгчийн тохиргоотой уялдуулж ашиглахыг
+                тодорхой харууллаа.
+              </p>
+            </div>
+            <div data-component="readiness-grid">
+              <For each={readinessRows}>
+                {(row) => (
+                  <article data-component="readiness-card">
+                    <h3>{row.title}</h3>
+                    <p>{row.body}</p>
+                    <A href={language.route(row.href)}>{row.action}</A>
+                  </article>
+                )}
+              </For>
+            </div>
+          </section>
+
           <section data-component="experience-band">
             <div data-slot="section-heading">
               <p data-slot="eyebrow">Хэрэглээ</p>
               <h2>Нэг бүтээгдэхүүн, өөр өөр ажлын орчин</h2>
               <p>
-                ChatGPT эсвэл Claude шиг танил хэрэглээг кодын агентын бодит ажлын урсгалтай нэгтгэж, MongolGPT-ийн
-                бүх хувилбарыг нэг бүртгэлээр холбоно.
+                Нэг ажлыг хөтчөөсөө эхлүүлээд ширээний програм эсвэл терминал руу шилжихэд бүртгэл, заавар,
+                үйлчилгээ үзүүлэгчийн тохиргоо, тусламжийн холбоосууд салангид болохгүй.
               </p>
             </div>
             <div data-component="experience-list">
@@ -244,10 +305,10 @@ export default function Home() {
           <section data-component="account-band">
             <div data-slot="section-heading">
               <p data-slot="eyebrow">Бүртгэл ба загварууд</p>
-              <h2>Үнэгүй горимоор эхэлж, хүсвэл өөрийн загваруудыг холбоно</h2>
+              <h2>Үнэгүй горимоор эхэлж, хэрэгтэй үедээ өөрийн хэрэглүүрүүдээ холбоно</h2>
               <p>
-                Анхдагч тохиргоо нь шууд ашиглахад хялбар. Нарийвчилсан хэрэгцээтэй хэрэглэгч өөрийн үйлчилгээ
-                үзүүлэгч, API түлхүүр болон дотоод загвараа төвөггүй нэмнэ.
+                Анхдагч урсгал нь энгийн. Нарийвчилсан хэрэгцээтэй хэрэглэгч өөрийн үйлчилгээ үзүүлэгч, API түлхүүр,
+                дотоод загвар болон бүртгэлийн төлөвөө нэг дороос хянаж өргөтгөнө.
               </p>
             </div>
             <div data-component="account-grid">

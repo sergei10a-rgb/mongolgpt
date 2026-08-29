@@ -1,5 +1,5 @@
-import logoLight from "../asset/logo-ornate-light.svg"
-import logoDark from "../asset/logo-ornate-dark.svg"
+import logoLight from "../asset/brand/mongolgpt-wordmark-light.svg"
+import logoDark from "../asset/brand/mongolgpt-wordmark-dark.svg"
 import copyLogoLight from "../asset/lander/logo-light.svg"
 import copyLogoDark from "../asset/lander/logo-dark.svg"
 import copyWordmarkLight from "../asset/lander/wordmark-light.svg"
@@ -114,8 +114,8 @@ export function Header(props: { hideGetStarted?: boolean }) {
     <section data-component="top">
       <div onContextMenu={handleLogoContextMenu}>
         <A href={language.route("/")}>
-          <img data-slot="logo light" src={logoLight} alt={i18n.t("nav.logoAlt")} width="189" height="34" />
-          <img data-slot="logo dark" src={logoDark} alt={i18n.t("nav.logoAlt")} width="189" height="34" />
+          <img data-slot="logo light" src={logoLight} alt={i18n.t("nav.logoAlt")} width="210" height="34" />
+          <img data-slot="logo dark" src={logoDark} alt={i18n.t("nav.logoAlt")} width="210" height="34" />
         </A>
       </div>
 
@@ -142,11 +142,9 @@ export function Header(props: { hideGetStarted?: boolean }) {
         </div>
       </Show>
       <nav data-component="nav-desktop">
-        <ul>
+        <ul aria-label="Үндсэн навигаци">
           <li>
-            <a href={config.github.repoUrl} target="_blank" style="white-space: nowrap;">
-              {i18n.t("nav.github")}
-            </a>
+            <A href={language.route("/download")}>{i18n.t("home.banner.downloadNow")}</A>
           </li>
           <li>
             <a href={language.route("/docs")}>{i18n.t("nav.docs")}</a>
@@ -158,30 +156,17 @@ export function Header(props: { hideGetStarted?: boolean }) {
             <A href={language.route("/support")}>{i18n.t("footer.support")}</A>
           </li>
           <li>
-            <A href={language.route("/enterprise")}>{i18n.t("nav.enterprise")}</A>
+            <a href={config.github.repoUrl} target="_blank" rel="noreferrer" style="white-space: nowrap;">
+              {i18n.t("nav.github")}
+            </a>
           </li>
           <li>
-            <a href="/auth">{i18n.t("nav.login")}</a>
+            <A href={language.route("/auth")}>{i18n.t("nav.login")}</A>
           </li>
           <Show when={!props.hideGetStarted}>
             <li>
-              <A href={language.route("/download")} data-slot="cta-button">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 18 18"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  style="flex-shrink: 0;"
-                >
-                  <path
-                    d="M12.1875 9.75L9.00001 12.9375L5.8125 9.75M9.00001 2.0625L9 12.375M14.4375 15.9375H3.5625"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="square"
-                  />
-                </svg>
-                {i18n.t("nav.free")}
+              <A href={language.route("/auth")} data-slot="cta-button">
+                Үнэгүй эхлэх
               </A>
             </li>
           </Show>
@@ -234,12 +219,15 @@ export function Header(props: { hideGetStarted?: boolean }) {
         <Show when={store.mobileMenuOpen}>
           <div id="nav-mobile-menu" data-component="nav-mobile">
             <nav data-component="nav-mobile-menu-list">
-              <ul>
+              <ul aria-label="Гар утасны навигаци">
                 <li>
                   <A href={language.route("/")}>{i18n.t("nav.home")}</A>
                 </li>
                 <li>
-                  <a href={config.github.repoUrl} target="_blank" style="white-space: nowrap;">
+                  <A href={language.route("/download")}>{i18n.t("home.banner.downloadNow")}</A>
+                </li>
+                <li>
+                  <a href={config.github.repoUrl} target="_blank" rel="noreferrer" style="white-space: nowrap;">
                     {i18n.t("nav.github")}
                   </a>
                 </li>
@@ -253,15 +241,12 @@ export function Header(props: { hideGetStarted?: boolean }) {
                   <A href={language.route("/support")}>{i18n.t("footer.support")}</A>
                 </li>
                 <li>
-                  <A href={language.route("/enterprise")}>{i18n.t("nav.enterprise")}</A>
-                </li>
-                <li>
-                  <a href="/auth">{i18n.t("nav.login")}</a>
+                  <A href={language.route("/auth")}>{i18n.t("nav.login")}</A>
                 </li>
                 <Show when={!props.hideGetStarted}>
                   <li>
-                    <A href={language.route("/download")} data-slot="cta-button">
-                      {i18n.t("nav.getStartedFree")}
+                    <A href={language.route("/auth")} data-slot="cta-button">
+                      Үнэгүй эхлэх
                     </A>
                   </li>
                 </Show>
