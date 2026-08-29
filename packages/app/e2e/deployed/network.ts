@@ -102,7 +102,7 @@ export function observeDeployedPage(
   const suspiciousRequests: string[] = []
   const htmlResponses: string[] = []
   const observedApiResponses: ObservedApiResponse[] = []
-  const pendingRequests = new Set<Request>()
+  const pendingRequests = new Map<string, number>()
   const allowedApiOrigins = new Set(apiOrigins)
   const monitoredPageOrigins = new Set([appOrigin, ...additionalPageOrigins])
 
@@ -131,7 +131,8 @@ export function observeDeployedPage(
         monitoredPageOrigins,
       )
     ) {
-      pendingRequests.add(request)
+      const key = deployedRequestKey(request)
+      pendingRequests.set(key, (pendingRequests.get(key) ?? 0) + 1)
     }
 
     if (url.origin !== appOrigin) return
@@ -140,11 +141,11 @@ export function observeDeployedPage(
   })
 
   page.on("requestfinished", (request) => {
-    pendingRequests.delete(request)
+    releaseDeployedRequest(pendingRequests, request)
   })
 
   page.on("requestfailed", (request) => {
-    pendingRequests.delete(request)
+    releaseDeployedRequest(pendingRequests, request)
     const url = new URL(request.url())
     if (
       !shouldTrackDeployedRequest(
@@ -201,6 +202,21 @@ export function observeDeployedPage(
     observedApiResponses,
     pendingRequests,
   }
+}
+
+function deployedRequestKey(request: Request) {
+  return `${request.resourceType()} ${request.method()} ${request.url()}`
+}
+
+function releaseDeployedRequest(pendingRequests: Map<string, number>, request: Request) {
+  const key = deployedRequestKey(request)
+  const count = pendingRequests.get(key)
+  if (!count) return
+  if (count === 1) {
+    pendingRequests.delete(key)
+    return
+  }
+  pendingRequests.set(key, count - 1)
 }
 
 export function expectNoDeployedSmokeFailures(state: ReturnType<typeof observeDeployedPage>) {

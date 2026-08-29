@@ -98,7 +98,7 @@ test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", a
   })
   expectDeployedJson(hostedBoundaries.session, runtimeOrigin, 401, { authenticated: false })
   expectDeployedJson(hostedBoundaries.project, runtimeOrigin, 401, { error: "Нэвтэрч орно уу." })
-  await expect.poll(() => state.pendingRequests.size, { message: "deployed app network did not settle" }).toBe(0)
+  await expect.poll(() => [...state.pendingRequests], { message: "deployed app network did not settle" }).toEqual([])
 
   expectNoDeployedSmokeFailures(state)
 
@@ -106,7 +106,7 @@ test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", a
   expect(new URL(page.url()).origin).toBe(appOrigin)
   expect(new URL(page.url()).pathname).toBe("/new-session")
   await expect(page.getByRole("heading", { name: "MongolGPT-д нэвтэрнэ үү" })).toBeVisible()
-  await expect.poll(() => state.pendingRequests.size, { message: "direct navigation network did not settle" }).toBe(0)
+  await expect.poll(() => [...state.pendingRequests], { message: "direct navigation network did not settle" }).toEqual([])
 
   expectNoDeployedSmokeFailures(state)
 })

@@ -79,8 +79,8 @@ test("proves the deployed runtime boundary from an authenticated browser session
   const workspace = expectAuthenticatedOverview(JSON.parse(overview.body))
 
   await expect
-    .poll(() => state.pendingRequests.size, { message: "authenticated deployed app network did not settle" })
-    .toBe(0)
+    .poll(() => [...state.pendingRequests], { message: "authenticated deployed app network did not settle" })
+    .toEqual([])
   expectNoDeployedSmokeFailures(state)
 
   await page.goto(new URL(`/workspace/${encodeURIComponent(workspace.id)}/usage`, `${publicOrigin}/`).toString(), {
@@ -127,8 +127,8 @@ test("proves the deployed runtime boundary from an authenticated browser session
   expect(isVisibleMongolianText(consoleSnapshot.text)).toBe(true)
 
   await expect
-    .poll(() => state.pendingRequests.size, { message: "authenticated account console network did not settle" })
-    .toBe(0)
+    .poll(() => [...state.pendingRequests], { message: "authenticated account console network did not settle" })
+    .toEqual([])
   expectNoDeployedSmokeFailures(state)
 })
 
