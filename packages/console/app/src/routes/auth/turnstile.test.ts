@@ -9,6 +9,7 @@ describe("Turnstile OAuth challenge page", () => {
     const result = renderTurnstileChallenge({
       siteKey: "1x00000000000000000000AA",
       authorizationUrl,
+      consoleOrigin: "https://dev.mgpt.mn",
       error: "invalid",
     })
     expect(result.authOrigin).toBe("https://auth.dev.mgpt.mn")
@@ -27,12 +28,14 @@ describe("Turnstile OAuth challenge page", () => {
       renderTurnstileChallenge({
         siteKey: "1x00000000000000000000AA",
         authorizationUrl: authorizationUrl.replace("https://auth", "http://auth"),
+        consoleOrigin: "https://dev.mgpt.mn",
       }),
     ).toThrow("тохиргоо буруу")
     expect(() =>
       renderTurnstileChallenge({
         siteKey: "1x00000000000000000000AA",
         authorizationUrl: authorizationUrl.replace(/&state=[^&]+/, ""),
+        consoleOrigin: "https://dev.mgpt.mn",
       }),
     ).toThrow("дутуу")
   })
@@ -42,7 +45,9 @@ describe("Turnstile OAuth challenge page", () => {
       siteKey: "1x00000000000000000000AA",
       authorizationUrl:
         "https://auth.dev.mgpt.mn/authorize?client_id=mongolgpt-cli&redirect_uri=http%3A%2F%2Flocalhost%3A1456%2Fauth%2Fcallback&response_type=code&state=vLrYftwvtNxLFfrx5VG9flLzW7Y8pw9e0sAPQnEPdgQ&code_challenge=r0Z3xQJf4wK8DZmTsCyuLgVbA9hN6pEeU2iO7sMxP1k&code_challenge_method=S256",
+      consoleOrigin: "https://dev.mgpt.mn",
     })
+    expect(result.callbackOrigin).toBe("http://localhost:1456")
     expect(result.html).toContain('name="client_id" value="mongolgpt-cli"')
     expect(result.html).toContain('name="redirect_uri" value="http://localhost:1456/auth/callback"')
     expect(result.html).toContain('name="code_challenge" value="r0Z3xQJf4wK8DZmTsCyuLgVbA9hN6pEeU2iO7sMxP1k"')

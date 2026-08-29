@@ -80,7 +80,7 @@ describe("OAuth authorize route", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-security-policy")).toContain(
-      "form-action https://auth.dev.mgpt.mn https://github.com https://accounts.google.com",
+      "form-action https://auth.dev.mgpt.mn https://github.com https://accounts.google.com http://127.0.0.1:1456",
     );
   });
 

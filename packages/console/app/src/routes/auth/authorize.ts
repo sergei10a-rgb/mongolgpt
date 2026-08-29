@@ -36,7 +36,7 @@ export async function GET(input: APIEvent) {
   }
   if (!turnstileEnabled()) return Response.redirect(target, 302)
 
-  return challengeResponse(target, turnstileError(url.searchParams.get("turnstile_error")))
+  return challengeResponse(target, url.origin, turnstileError(url.searchParams.get("turnstile_error")))
 }
 
 function authorizationServiceUnavailable(stage: OAuthAuthorizationStage) {
@@ -95,7 +95,11 @@ function turnstileEnabled() {
   return hostedTurnstileEnabled
 }
 
-function challengeResponse(authorizationUrl: string, error?: "invalid" | "unavailable" | "misconfigured") {
+function challengeResponse(
+  authorizationUrl: string,
+  consoleOrigin: string,
+  error?: "invalid" | "unavailable" | "misconfigured",
+) {
   const siteKey = hostedTurnstileSiteKey
   if (!siteKey) {
     return Response.json(
@@ -104,13 +108,16 @@ function challengeResponse(authorizationUrl: string, error?: "invalid" | "unavai
     )
   }
   try {
-    const challenge = renderTurnstileChallenge({ siteKey, authorizationUrl, error })
+    const challenge = renderTurnstileChallenge({ siteKey, authorizationUrl, consoleOrigin, error })
+    const formActionOrigins = [
+      ...new Set([challenge.authOrigin, ...OAUTH_PROVIDER_FORM_ACTION_ORIGINS, challenge.callbackOrigin]),
+    ]
     return new Response(challenge.html, {
       status: 200,
       headers: {
         "cache-control": "no-store",
         "content-type": "text/html; charset=utf-8",
-        "content-security-policy": `default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src https://challenges.cloudflare.com; style-src 'unsafe-inline'; form-action ${challenge.authOrigin} ${OAUTH_PROVIDER_FORM_ACTION_ORIGINS.join(" ")}; base-uri 'none'; object-src 'none'`,
+        "content-security-policy": `default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src https://challenges.cloudflare.com; style-src 'unsafe-inline'; form-action ${formActionOrigins.join(" ")}; base-uri 'none'; object-src 'none'`,
         "permissions-policy": "camera=(), microphone=(), geolocation=()",
         "referrer-policy": "no-referrer",
         "x-content-type-options": "nosniff",

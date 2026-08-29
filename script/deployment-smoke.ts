@@ -694,6 +694,9 @@ export function inspectHostedAuthorizeChallenge(input: {
   const redirectURI = hiddenInputValue(input.body, "redirect_uri")
   const expectedCallback = new URL("/auth/callback/auth/app", request.origin).toString()
   if (redirectURI !== expectedCallback) throw new Error("hosted authorization challenge callback is invalid")
+  if (!formActionSources.has(new URL(expectedCallback).origin)) {
+    throw new Error(`hosted authorization challenge CSP form-action is missing ${new URL(expectedCallback).origin}`)
+  }
   const responseType = hiddenInputValue(input.body, "response_type")
   if (responseType !== "code") throw new Error("hosted authorization challenge response type is invalid")
   const state = hiddenInputValue(input.body, "state")

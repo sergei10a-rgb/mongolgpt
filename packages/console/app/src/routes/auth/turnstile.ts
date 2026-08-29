@@ -3,11 +3,12 @@ import { TURNSTILE_ACTION } from "@mongolgpt/console-core/turnstile.js"
 export function renderTurnstileChallenge(input: {
   siteKey: string
   authorizationUrl: string
+  consoleOrigin: string
   error?: "invalid" | "unavailable" | "misconfigured"
 }) {
   const siteKey = input.siteKey.trim()
   if (!/^[A-Za-z0-9_-]{20,64}$/.test(siteKey)) throw new Error("Turnstile site key тохиргоо буруу байна.")
-  const authorization = authorizationForm(input.authorizationUrl)
+  const authorization = authorizationForm(input.authorizationUrl, input.consoleOrigin)
   const error = input.error
     ? `<p class="notice" role="alert">${
         input.error === "unavailable"
@@ -20,6 +21,7 @@ export function renderTurnstileChallenge(input: {
 
   return {
     authOrigin: authorization.origin,
+    callbackOrigin: authorization.callbackOrigin,
     html: `<!doctype html>
 <html lang="mn">
   <head>
@@ -71,8 +73,9 @@ export function renderTurnstileChallenge(input: {
   }
 }
 
-function authorizationForm(value: string) {
+function authorizationForm(value: string, consoleOriginValue: string) {
   const url = new URL(value)
+  const consoleOrigin = new URL(consoleOriginValue)
   const loopback = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1"
   const authorizePath = url.pathname === "/authorize" || (loopback && url.pathname === "/auth/authorize")
   if (
@@ -100,9 +103,42 @@ function authorizationForm(value: string) {
     }
     return [`<input type="hidden" name="${name}" value="${escapeHtml(value)}">`]
   })
+  const clientID = url.searchParams.get("client_id")
+  const redirectURI = url.searchParams.get("redirect_uri")
+  if (!redirectURI) throw new Error("OAuth authorize хүсэлт дутуу байна.")
+  const callback = new URL(redirectURI)
+  const callbackLoopback = callback.hostname === "localhost" || callback.hostname === "127.0.0.1"
+  const validAppCallback =
+    clientID === "app" &&
+    callback.protocol === "https:" &&
+    callback.origin === consoleOrigin.origin &&
+    (callback.pathname === "/auth/callback" || callback.pathname.startsWith("/auth/callback/"))
+  const callbackPort = Number(callback.port)
+  const validCliCallback =
+    clientID === "mongolgpt-cli" &&
+    callback.protocol === "http:" &&
+    callbackLoopback &&
+    callback.pathname === "/auth/callback" &&
+    !callback.search &&
+    Number.isInteger(callbackPort) &&
+    callbackPort >= 1_024 &&
+    callbackPort <= 65_535
+  if (
+    consoleOrigin.protocol !== "https:" ||
+    consoleOrigin.pathname !== "/" ||
+    consoleOrigin.search ||
+    consoleOrigin.hash ||
+    callback.username ||
+    callback.password ||
+    callback.hash ||
+    (!validAppCallback && !validCliCallback)
+  ) {
+    throw new Error("OAuth callback URL тохиргоо буруу байна.")
+  }
   return {
     origin: url.origin,
     action: `${url.origin}${url.pathname}`,
+    callbackOrigin: callback.origin,
     fields: fields.join("\n        "),
   }
 }
