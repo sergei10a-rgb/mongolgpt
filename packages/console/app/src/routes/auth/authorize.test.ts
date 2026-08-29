@@ -19,12 +19,18 @@ await mock.module("~/lib/hosted-env", () => ({
   hostedTurnstileSiteKey: undefined,
 }));
 
-const { GET, authorizationTarget } = await import("./authorize");
+const authorizeRoute = await import("./authorize");
+const { GET } = authorizeRoute;
+const { authorizationTarget } = await import("./authorization-target");
 
 describe("OAuth authorize route", () => {
   beforeEach(() => {
     authorizeMock.mockClear();
     oauthStateUpdates.length = 0;
+  });
+
+  test("keeps production helper logic outside the SolidStart method route", () => {
+    expect(Object.keys(authorizeRoute)).toEqual(["GET"]);
   });
 
   test("labels a foreign request origin without exposing either URL", async () => {

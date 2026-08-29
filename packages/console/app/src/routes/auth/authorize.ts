@@ -3,10 +3,9 @@ import {
   readTurnstileAuthorizationParameters,
   turnstileAuthorizationRequest,
 } from "@mongolgpt/console-core/turnstile.js"
-import { AuthClient } from "~/context/auth"
 import { hostedConsoleUrl, hostedTurnstileEnabled, hostedTurnstileSiteKey } from "~/lib/hosted-env"
+import { authorizationTarget, type OAuthAuthorizationStage } from "./authorization-target"
 import { configuredAppUrl, configuredConsoleRequestUrl, safeAuthContinue } from "./helpers"
-import { issueOAuthState, type OAuthStateSessionData, useOAuthStateSession } from "./oauth-state"
 import { renderTurnstileChallenge } from "./turnstile"
 
 export async function GET(input: APIEvent) {
@@ -37,13 +36,6 @@ export async function GET(input: APIEvent) {
 
   return challengeResponse(target, turnstileError(url.searchParams.get("turnstile_error")))
 }
-
-type OAuthAuthorizationStage =
-  | "authorization_target"
-  | "state_session"
-  | "authorization_url"
-  | "state_issue"
-  | "state_store"
 
 function authorizationServiceUnavailable(stage: OAuthAuthorizationStage) {
   return Response.json(
@@ -95,39 +87,6 @@ function cliAuthorizationTarget(url: URL) {
     consoleOrigin: url.origin,
     submission: { token: "browser-challenge", ...parameters },
   }).toString()
-}
-
-export async function authorizationTarget(
-  requestUrl: URL,
-  cont: string,
-  dependencies: {
-    authorize?: (redirectURI: string, response: "code" | "token") => Promise<{ url: string }>
-    stateSession?: () => Promise<{
-      update(updater: (value: OAuthStateSessionData) => OAuthStateSessionData): Promise<unknown>
-    }>
-    onStage?: (stage: OAuthAuthorizationStage) => void
-  } = {},
-) {
-  const callbackUrl = `${requestUrl.origin}/auth/callback${cont}`
-  const authorize = dependencies.authorize ?? ((...input) => AuthClient.authorize(...input))
-  const session = await stage("state_session", () => (dependencies.stateSession ?? useOAuthStateSession)(), dependencies.onStage)
-  const result = await stage(
-    "authorization_url",
-    () => authorize(callbackUrl, "code"),
-    dependencies.onStage,
-  )
-  const issued = await stage("state_issue", () => issueOAuthState(result.url), dependencies.onStage)
-  await stage("state_store", () => session.update(() => issued.session), dependencies.onStage)
-  return issued.authorizationUrl
-}
-
-async function stage<T>(
-  name: OAuthAuthorizationStage,
-  operation: () => T | Promise<T>,
-  onStage?: (stage: OAuthAuthorizationStage) => void,
-) {
-  onStage?.(name)
-  return operation()
 }
 
 function turnstileEnabled() {
