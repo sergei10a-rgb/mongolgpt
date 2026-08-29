@@ -93,18 +93,13 @@ jobs:
           bun run deploy:preflight -- dev --console-only
           bun sst unlock --stage=dev || true
           set -o pipefail
-          if database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then
-            MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate
-            unset database_id
-            bun sst deploy --stage=dev --target Console --print-logs
-          else
-            echo "Dev SST state-д Database алга. Бүх hosted dev resource-ийг нэг удаа сэргээж байна."
-            MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \
-              bun sst deploy --stage=dev --print-logs
-            database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"
-            MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate
-            unset database_id
+          if ! database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then
+            echo "Dev SST state-д Database алга. Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай."
+            exit 1
           fi
+          MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate
+          unset database_id
+          bun sst deploy --stage=dev --target Console --print-logs
 
       - name: Verify live dev public console boundary
         env:

@@ -239,7 +239,13 @@ jobs:
           node -e 'require("node:fs").writeFileSync(process.argv[1], JSON.stringify({ MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET, MONGOLGPT_RUNTIME_AUTH_SECRET: process.env.MONGOLGPT_RUNTIME_AUTH_SECRET }))' "$runtime_secrets"
           bun sst unlock --stage=${{ inputs.stage }} || true
           set -o pipefail
-          database_id="$(bun sst state export --stage=${{ inputs.stage }} | bun script/resolve-sst-d1-state.ts)"
+          if ! database_id="$(bun sst state export --stage=${{ inputs.stage }} | bun script/resolve-sst-d1-state.ts)"; then
+            echo "SST state-д Database алга. Schema-dependent service-ээс өмнө D1-ийг үүсгэж байна."
+            MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false \
+              MONGOLGPT_DEPLOY_DATABASE_ONLY=true \
+              bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs
+            database_id="$(bun sst state export --stage=${{ inputs.stage }} | bun script/resolve-sst-d1-state.ts)"
+          fi
           MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate
           unset database_id
           bun --cwd packages/runtime script/deploy.ts "$stage" --secrets-file="$runtime_secrets"

@@ -287,7 +287,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
       "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
     )
     expect(deployStep?.run).toContain('bun --cwd packages/runtime script/deploy.ts "$stage"')
-    expect(deployStep?.run).not.toMatch(/sst deploy[^\n]*--target Database/)
+    expect(deployStep?.run).toContain("bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs")
   })
 
   test("gates every deployed app with HTTP and Chromium smoke checks", async () => {
@@ -668,7 +668,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(tokenPreflight?.env).toEqual({ CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" })
     expect(tokenPreflight?.run).toBe("bun script/cloudflare-preflight.ts --console-only")
     expect(deploy?.run).toContain("bun run deploy:preflight -- dev --console-only")
-    expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_CONSOLE_ONLY=false")
+    expect(deploy?.run).not.toContain("MONGOLGPT_DEPLOY_CONSOLE_ONLY=false")
     expect(deploy?.run).not.toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false")
     expect(deploy?.run).not.toContain("MONGOLGPT_DEPLOY_DATABASE_ONLY=true")
     expect(deploy?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
@@ -677,14 +677,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).not.toContain(
       "MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \\\n              bun sst deploy --stage=dev --target Console",
     )
-    expect(deploy?.run).toContain('if database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then')
-    expect(deploy?.run).toContain("Dev SST state-д Database алга")
-    expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
+    expect(deploy?.run).toContain('if ! database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then')
+    expect(deploy?.run).toContain("Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай")
+    expect(deploy?.run).toContain("exit 1")
+    expect(deploy?.run).not.toContain("bun sst deploy --stage=dev --print-logs")
     expect(deploy?.run).not.toMatch(/sst deploy[^\n]*--target Database/)
     expect(deploy.run.indexOf("bun run db:migrate")).toBeLessThan(deploy.run.indexOf("--target Console"))
-    expect(deploy.run.indexOf("bun sst deploy --stage=dev --print-logs")).toBeLessThan(
-      deploy.run.lastIndexOf("bun run db:migrate"),
-    )
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --console-only dev")
     expect(source).toContain("MONGOLGPT_RUNTIME_AUTH_SECRET")
     expect(source).toContain("SST_SECRET_ByokCredentialsKeyV1")
@@ -775,7 +773,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deployStep?.env).toHaveProperty("MONGOLGPT_RUNTIME_SECRET")
 
     const run = deployStep?.run ?? ""
-    const sst = run.indexOf("bun sst deploy")
+    const sst = run.lastIndexOf("bun sst deploy")
     const binary = run.indexOf("packages/mongolgpt build --single")
     const copy = run.indexOf("cp packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt")
     const secrets = run.indexOf("MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET")
@@ -815,7 +813,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const migration = run.indexOf('MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate')
     const runtime = run.indexOf('packages/runtime script/deploy.ts "$stage"')
     const application = run.lastIndexOf("bun sst deploy --stage=${{ inputs.stage }} --print-logs")
-    expect(run).not.toMatch(/sst deploy[^\n]*--target Database/)
+    expect(run).toContain('if ! database_id="$(bun sst state export --stage=${{ inputs.stage }} | bun script/resolve-sst-d1-state.ts)"; then')
+    expect(run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false")
+    expect(run).toContain("MONGOLGPT_DEPLOY_DATABASE_ONLY=true")
+    expect(run).toContain("bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs")
+    expect(run.indexOf("--target Database")).toBeLessThan(migration)
     expect(run).toContain("bun sst state export --stage=${{ inputs.stage }} | bun script/resolve-sst-d1-state.ts")
     expect(migration).toBeGreaterThanOrEqual(0)
     expect(runtime).toBeGreaterThan(migration)
