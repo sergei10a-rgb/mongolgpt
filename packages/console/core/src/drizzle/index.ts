@@ -27,7 +27,7 @@ export namespace Database {
   export async function use<T>(callback: (trx: TxOrDb) => Promise<T>) {
     try {
       const { tx } = TransactionContext.use()
-      return tx.transaction(callback)
+      return callback(tx)
     } catch (err) {
       if (err instanceof Context.NotFound) {
         const effects: (() => void | Promise<void>)[] = []
