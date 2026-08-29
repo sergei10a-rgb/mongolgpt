@@ -3,7 +3,7 @@
 import { $ } from "bun"
 import path from "node:path"
 import { parseArgs } from "node:util"
-import { releaseTag } from "../../script/src/release-integrity"
+import { releaseTag, releaseUpdaterNotes } from "../../script/src/release-integrity"
 import { releaseUpdaterChannel, updaterMetadataFiles } from "../src/shared/updater-channel"
 
 const { values } = parseArgs({
@@ -51,9 +51,12 @@ type Asset = {
 
 type Release = {
   assets?: Asset[]
+  body?: string | null
+  name?: string | null
 }
 
-const assets = ((await rel.json()) as Release).assets ?? []
+const release = (await rel.json()) as Release
+const assets = release.assets ?? []
 const amap = new Map(assets.map((item) => [item.name, item]))
 
 type Item = {
@@ -203,7 +206,7 @@ if (!Object.keys(platforms).length) throw new Error("No updater files found in c
 
 const data = {
   version,
-  notes: "",
+  notes: releaseUpdaterNotes({ body: release.body, name: release.name, tag }),
   pub_date: new Date().toISOString(),
   platforms,
 }

@@ -8,6 +8,7 @@ import {
   RELEASE_ARTIFACTS,
   createSha256Sums,
   releaseTag,
+  releaseUpdaterNotes,
   validateReleaseChecksumContract,
 } from "../src/release-integrity"
 
@@ -32,6 +33,24 @@ describe("release integrity contract", () => {
 
     const versionScript = readFileSync(resolve(root, "script/version.ts"), "utf8")
     expect(versionScript).toContain("account_url=${resolveProductServiceUrls(Script.channel).console}")
+  })
+
+  test("keeps desktop updater release notes non-empty", () => {
+    expect(
+      releaseUpdaterNotes({
+        body: "\n## Шинэ зүйл\n\n- CLI OAuth сайжрав.\n",
+        name: "MongolGPT v0.1.2",
+        tag: "mongolgpt-v0.1.2",
+      }),
+    ).toBe("## Шинэ зүйл\n\n- CLI OAuth сайжрав.")
+    expect(releaseUpdaterNotes({ body: "  ", name: " MongolGPT beta ", tag: "mongolgpt-v0.1.2-beta.1" })).toBe(
+      "MongolGPT beta",
+    )
+    expect(releaseUpdaterNotes({ tag: "mongolgpt-v0.1.2-beta.1" })).toBe("MongolGPT 0.1.2-beta.1")
+
+    const updater = readFileSync(resolve(root, "packages/desktop/scripts/finalize-latest-json.ts"), "utf8")
+    expect(updater).toContain("releaseUpdaterNotes({ body: release.body, name: release.name, tag })")
+    expect(updater).not.toContain('notes: ""')
   })
 
   test("creates stable lowercase basenames in sorted order", () => {

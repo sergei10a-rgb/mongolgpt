@@ -10,6 +10,16 @@ export function releaseTag(version: string) {
   return `mongolgpt-v${version}`
 }
 
+export function releaseUpdaterNotes(input: { body?: string | null; name?: string | null; tag: string }) {
+  const body = input.body?.trim()
+  if (body) return body
+
+  const name = input.name?.trim()
+  if (name) return name
+
+  return `MongolGPT ${input.tag.replace(/^mongolgpt-v/, "")}`
+}
+
 export const CLI_RELEASE_ASSETS = [
   "mongolgpt-linux-arm64.tar.gz",
   "mongolgpt-linux-x64.tar.gz",
