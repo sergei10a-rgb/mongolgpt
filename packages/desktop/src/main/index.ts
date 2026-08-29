@@ -8,7 +8,7 @@ import { getCACertificates, setDefaultCACertificates } from "node:tls"
 import type { Event, MessageBoxOptions } from "electron"
 import { app, BrowserWindow, dialog, safeStorage, shell } from "electron"
 
-import { Deferred, Effect, Fiber } from "effect"
+import { Cause, Deferred, Effect, Fiber } from "effect"
 import contextMenu from "electron-context-menu"
 
 import type { DesktopAccountAPI, ServerReadyData } from "../preload/types"
@@ -30,6 +30,7 @@ import {
   rendererSmokeFailure,
   waitForRendererAccountGate,
   waitForRendererReady,
+  writeDesktopSmokeFailure,
   writeDesktopSmokeResult,
 } from "./release-smoke"
 import { getStore } from "./store"
@@ -507,16 +508,21 @@ const main = Effect.gen(function* () {
       yield* Effect.fail(new Error("Desktop smoke шалгалтад үндсэн цонх үүссэнгүй."))
       return
     }
+    logger.log("Desktop smoke: дүрслэх цонхыг хүлээж байна")
     const rendererUrl = yield* Effect.tryPromise({
       try: () => waitForRendererReady(smokeWindow.webContents),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     })
+    logger.log("Desktop smoke: дүрслэх цонх бэлэн боллоо", { url: rendererUrl })
+    logger.log("Desktop smoke: Монгол аккаунтын дэлгэцийг шалгаж байна")
     const accountGate = yield* Effect.tryPromise({
       try: () => waitForRendererAccountGate(smokeWindow.webContents),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     })
+    logger.log("Desktop smoke: Монгол аккаунтын дэлгэц бэлэн боллоо")
     const rendererFailure = rendererSmokeFailure(fatalRendererError)
     if (rendererFailure) yield* Effect.fail(rendererFailure)
+    logger.log("Desktop smoke: локал чадваруудыг шалгаж байна")
     const functional = yield* Effect.tryPromise({
       try: () =>
         runReleaseFunctionalSmoke({
@@ -531,6 +537,7 @@ const main = Effect.gen(function* () {
         new Error(`Desktop functional smoke шалгалт амжилтгүй боллоо: ${JSON.stringify(functional.summary)}`),
       )
     }
+    logger.log("Desktop smoke: локал чадварууд баталгаажлаа")
     yield* Effect.try({
       try: () =>
         writeDesktopSmokeResult(DESKTOP_SMOKE_FILE, {
@@ -561,4 +568,18 @@ const main = Effect.gen(function* () {
   }
 })
 
-Effect.runFork(main)
+const program = DESKTOP_SMOKE_FILE
+  ? main.pipe(
+      Effect.catchCause((cause) =>
+        Effect.sync(() => {
+          try {
+            writeDesktopSmokeFailure(DESKTOP_SMOKE_FILE, Cause.pretty(cause))
+          } finally {
+            app.exit(1)
+          }
+        }),
+      ),
+    )
+  : main
+
+Effect.runFork(program)

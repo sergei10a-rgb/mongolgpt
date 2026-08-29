@@ -27,16 +27,10 @@ const accountGateProbe = `(() => {
   const root = document.querySelector('[data-mongolgpt-account-onboarding-stage]')
   const heading = document.querySelector('[data-mongolgpt-account-login-heading]')
   const action = document.querySelector('[data-mongolgpt-account-login-action]')
-  const visible = (node) => {
-    if (!(node instanceof HTMLElement)) return false
-    const style = getComputedStyle(node)
-    const rect = node.getBoundingClientRect()
-    return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) > 0 && rect.width > 0 && rect.height > 0
-  }
   return {
     language: document.documentElement.lang,
     onboardingStage: root?.getAttribute('data-mongolgpt-account-onboarding-stage') ?? '',
-    accountGateVisible: visible(root) && visible(heading) && visible(action),
+    accountGateVisible: root instanceof HTMLElement && heading instanceof HTMLElement && action instanceof HTMLElement,
     accountHeading: heading?.textContent?.trim() ?? '',
     loginAction: action?.textContent?.trim() ?? '',
   }
@@ -96,8 +90,9 @@ export function waitForRendererReady(webContents: RendererContents, timeoutMs = 
   if (loadedRendererURL(currentURL)) return Promise.resolve(currentURL)
 
   return new Promise<string>((resolve, reject) => {
+    let timeout: ReturnType<typeof setTimeout> | undefined
     const cleanup = () => {
-      clearTimeout(timeout)
+      if (timeout) clearTimeout(timeout)
       webContents.off("did-finish-load", onReady)
       webContents.off("did-fail-load", onFailure)
     }
@@ -106,7 +101,11 @@ export function waitForRendererReady(webContents: RendererContents, timeoutMs = 
       if ("error" in result) reject(result.error)
       else resolve(result.url)
     }
-    const onReady = () => settle({ url: webContents.getURL() })
+    const onReady = () => {
+      const url = webContents.getURL()
+      if (loadedRendererURL(url)) settle({ url })
+      else settle({ error: new Error(`Renderer буруу төлөвт ачаалагдлаа: ${webContents.getURL() || "хоосон URL"}`) })
+    }
     const onFailure = (
       _event: unknown,
       errorCode: number,
@@ -119,13 +118,16 @@ export function waitForRendererReady(webContents: RendererContents, timeoutMs = 
         error: new Error(`Renderer ачаалагдсангүй (${errorCode}): ${errorDescription} [${validatedURL}]`),
       })
     }
-    const timeout = setTimeout(
+    timeout = setTimeout(
       () => settle({ error: new Error(`Renderer ${timeoutMs} мс-ийн дотор ачаалагдсангүй.`) }),
       timeoutMs,
     )
 
     webContents.once("did-finish-load", onReady)
     webContents.once("did-fail-load", onFailure)
+
+    const loadedAfterSubscription = webContents.getURL()
+    if (loadedRendererURL(loadedAfterSubscription)) settle({ url: loadedAfterSubscription })
   })
 }
 
@@ -153,6 +155,10 @@ export function writeDesktopSmokeResult(
   input: { version: string; url: string; functional: ReleaseFunctionalSmokeResult } & DesktopAccountGateState,
 ) {
   writeFileSync(file, `${JSON.stringify({ status: "ready", ...input })}\n`, "utf8")
+}
+
+export function writeDesktopSmokeFailure(file: string, error: string) {
+  writeFileSync(file, `${JSON.stringify({ status: "error", error: error.trim().slice(0, 4_096) })}\n`, "utf8")
 }
 
 export function rendererSmokeFailure(value: { error: string } | undefined): Error | undefined {

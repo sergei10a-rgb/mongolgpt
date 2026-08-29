@@ -90,6 +90,9 @@ try {
 
   $rawResult = Get-Content -Raw -LiteralPath $marker
   $result = $rawResult | ConvertFrom-Json
+  if ($result.status -eq "error") {
+    throw "Packaged desktop smoke failed: $($result.error)"
+  }
   if ($result.status -ne "ready" -or $result.url -notlike "mongolgpt-renderer://renderer/*") {
     throw "Packaged desktop returned an invalid smoke result: $rawResult"
   }

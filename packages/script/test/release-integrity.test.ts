@@ -189,6 +189,7 @@ describe("release integrity contract", () => {
     expect(workflow).not.toContain('$apps = @(Get-ChildItem -LiteralPath "dist\\win-unpacked"')
     expect(smoke).toContain('MONGOLGPT_TEST_ONBOARDING", "1"')
     expect(smoke).toContain("MONGOLGPT_DESKTOP_SMOKE_FILE")
+    expect(smoke).toContain('if ($result.status -eq "error")')
     expect(smoke).toContain('result.url -notlike "mongolgpt-renderer://renderer/*"')
     expect(smoke).toContain("$result.version -ne $ExpectedVersion")
     expect(smoke).toContain("$versionInfo.ProductName -ne $ExpectedProductName")

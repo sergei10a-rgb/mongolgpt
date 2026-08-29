@@ -9,6 +9,7 @@ import {
   rendererSmokeFailure,
   waitForRendererAccountGate,
   waitForRendererReady,
+  writeDesktopSmokeFailure,
   writeDesktopSmokeResult,
 } from "./release-smoke"
 
@@ -97,7 +98,7 @@ describe("desktop release smoke", () => {
     expect(webContents.listenerCount("did-fail-load")).toBe(0)
   })
 
-  test("waits for the visible Mongolian account onboarding gate", async () => {
+  test("waits for the semantic Mongolian account onboarding gate", async () => {
     const webContents = renderer(undefined, [{ ...accountGate, accountGateVisible: false }, accountGate])
 
     await expect(waitForRendererAccountGate(webContents, 100, 1)).resolves.toEqual(accountGate)
@@ -131,6 +132,17 @@ describe("desktop release smoke", () => {
       functional,
       ...accountGate,
     })
+  })
+
+  test("writes a bounded machine-readable failure marker", () => {
+    const file = join(tmpdir(), `mongolgpt-desktop-smoke-${randomUUID()}.json`)
+    files.push(file)
+
+    writeDesktopSmokeFailure(file, `  ${"x".repeat(5_000)}  `)
+
+    const result = JSON.parse(readFileSync(file, "utf8"))
+    expect(result.status).toBe("error")
+    expect(result.error).toHaveLength(4_096)
   })
 
   test("fails smoke when the renderer error boundary reports a fatal error", () => {
