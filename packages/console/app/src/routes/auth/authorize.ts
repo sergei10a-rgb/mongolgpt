@@ -108,12 +108,12 @@ export async function authorizationTarget(
     onStage?: (stage: OAuthAuthorizationStage) => void
   } = {},
 ) {
-  const callbackUrl = new URL(`./callback${cont}`, requestUrl)
+  const callbackUrl = `${requestUrl.origin}/auth/callback${cont}`
   const authorize = dependencies.authorize ?? ((...input) => AuthClient.authorize(...input))
   const session = await stage("state_session", () => (dependencies.stateSession ?? useOAuthStateSession)(), dependencies.onStage)
   const result = await stage(
     "authorization_url",
-    () => authorize(callbackUrl.toString(), "code"),
+    () => authorize(callbackUrl, "code"),
     dependencies.onStage,
   )
   const issued = await stage("state_issue", () => issueOAuthState(result.url), dependencies.onStage)
