@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { classifyDeployedResponse, parseSmokeAuthCookie } from "./network"
+import { classifyDeployedResponse, parseSmokeAuthCookie, shouldTrackDeployedRequest } from "./network"
 
 const origin = "https://dev.mgpt.mn"
 const token = "authenticated-smoke-token-value"
@@ -42,6 +42,26 @@ describe("deployed browser auth cookie", () => {
 })
 
 describe("deployed multi-origin browser observer", () => {
+  test("waits only for product pages, assets, and API boundaries", () => {
+    const appOrigin = "https://app.dev.mgpt.mn"
+    const publicOrigin = "https://dev.mgpt.mn"
+    const runtimeOrigin = "https://runtime.dev.mgpt.mn"
+    const apiOrigins = new Set([publicOrigin, runtimeOrigin])
+    const pageOrigins = new Set([appOrigin, publicOrigin])
+    const tracks = (origin: string, pathname: string, resourceType: string) =>
+      shouldTrackDeployedRequest({ origin, pathname, resourceType }, appOrigin, apiOrigins, pageOrigins)
+
+    expect(tracks(appOrigin, "/", "document")).toBe(true)
+    expect(tracks(appOrigin, "/assets/index.js", "script")).toBe(true)
+    expect(tracks(publicOrigin, "/v1/account/overview", "fetch")).toBe(true)
+    expect(tracks(runtimeOrigin, "/auth/session", "fetch")).toBe(true)
+    expect(tracks(runtimeOrigin, "/project", "xhr")).toBe(true)
+
+    expect(tracks(appOrigin, "/cdn-cgi/rum", "fetch")).toBe(false)
+    expect(tracks("https://static.cloudflareinsights.com", "/beacon.min.js", "script")).toBe(false)
+    expect(tracks("https://telemetry.example", "/collect", "fetch")).toBe(false)
+  })
+
   test("monitors the public console without treating its API calls as static-app misrouting", () => {
     const appOrigin = "https://app.dev.mgpt.mn"
     const apiOrigins = new Set(["https://dev.mgpt.mn"])

@@ -3,7 +3,6 @@ import { isStaticAppBackendPath } from "../../src/utils/static-app-router"
 
 const blockedDocumentTypes = new Set(["document", "script", "stylesheet", "font"])
 const backendResourceTypes = new Set(["fetch", "xhr"])
-const observedResourceTypes = new Set([...blockedDocumentTypes, ...backendResourceTypes])
 const smokeAuthCookieName = "__Host-mongolgpt-auth"
 
 type ObservedApiResponse = {
@@ -18,6 +17,24 @@ type ObservedApiResponse = {
 type DeployedResponseInput = ObservedApiResponse & {
   url: string
   resourceType: string
+}
+
+type DeployedRequestInput = {
+  origin: string
+  pathname: string
+  resourceType: string
+}
+
+export function shouldTrackDeployedRequest(
+  input: DeployedRequestInput,
+  appOrigin: string,
+  apiOrigins: ReadonlySet<string>,
+  pageOrigins: ReadonlySet<string>,
+) {
+  if (blockedDocumentTypes.has(input.resourceType)) return pageOrigins.has(input.origin)
+  if (!backendResourceTypes.has(input.resourceType)) return false
+  if (input.origin !== appOrigin && !apiOrigins.has(input.origin)) return false
+  return isStaticAppBackendPath(input.pathname)
 }
 
 export function classifyDeployedResponse(
@@ -91,9 +108,22 @@ export function observeDeployedPage(
   })
 
   page.on("request", (request) => {
-    if (observedResourceTypes.has(request.resourceType())) pendingRequests.add(request)
-
     const url = new URL(request.url())
+    if (
+      shouldTrackDeployedRequest(
+        {
+          origin: url.origin,
+          pathname: url.pathname,
+          resourceType: request.resourceType(),
+        },
+        appOrigin,
+        allowedApiOrigins,
+        monitoredPageOrigins,
+      )
+    ) {
+      pendingRequests.add(request)
+    }
+
     if (url.origin !== appOrigin) return
     if (!backendResourceTypes.has(request.resourceType()) && !isStaticAppBackendPath(url.pathname)) return
     suspiciousRequests.push(`${request.resourceType()} ${request.method()} ${request.url()}`)
@@ -105,7 +135,21 @@ export function observeDeployedPage(
 
   page.on("requestfailed", (request) => {
     pendingRequests.delete(request)
-    if (!observedResourceTypes.has(request.resourceType())) return
+    const url = new URL(request.url())
+    if (
+      !shouldTrackDeployedRequest(
+        {
+          origin: url.origin,
+          pathname: url.pathname,
+          resourceType: request.resourceType(),
+        },
+        appOrigin,
+        allowedApiOrigins,
+        monitoredPageOrigins,
+      )
+    ) {
+      return
+    }
     failedRequests.push(
       `${request.resourceType()}:${request.method()} ${request.url()} :: ${request.failure()?.errorText ?? "failed"}`,
     )
