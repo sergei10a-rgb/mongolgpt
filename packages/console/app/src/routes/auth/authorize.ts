@@ -57,8 +57,8 @@ export async function authorizationTarget(
 ) {
   const callbackUrl = new URL(`./callback${cont}`, requestUrl)
   const authorize = dependencies.authorize ?? ((...input) => AuthClient.authorize(...input))
-  const result = await authorize(callbackUrl.toString(), "code")
   const session = await (dependencies.stateSession ?? useOAuthStateSession)()
+  const result = await authorize(callbackUrl.toString(), "code")
   const issued = issueOAuthState(result.url)
   await session.update(() => issued.session)
   return issued.authorizationUrl

@@ -28,16 +28,24 @@ describe("OAuth authorize route", () => {
   });
 
   test("stores a one-time state in session and redirects with the issued callback state", async () => {
+    const order: string[] = [];
     const target = await authorizationTarget(
       new URL("https://dev.mgpt.mn/auth/authorize"),
       "/auth/app",
       {
-        authorize: authorizeMock,
-        stateSession: async () => ({
-          update: async (value) => {
-            oauthStateUpdates.push(value({}));
-          },
-        }),
+        authorize: async (...input) => {
+          order.push("authorize");
+          return authorizeMock(...input);
+        },
+        stateSession: async () => {
+          order.push("session");
+          return {
+            update: async (value) => {
+              order.push("update");
+              oauthStateUpdates.push(value({}));
+            },
+          };
+        },
       },
     );
 
@@ -52,5 +60,6 @@ describe("OAuth authorize route", () => {
     expect(state).not.toBe("upstream");
     expect(state).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(state).toBe(oauthStateUpdates[0]?.state ?? null);
+    expect(order).toEqual(["session", "authorize", "update"]);
   });
 });

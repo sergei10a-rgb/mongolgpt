@@ -104,10 +104,12 @@ jobs:
           bun sst deploy --stage=dev --target Console --print-logs
           # AuthApi target traverses its Console dependent, which requires the SolidStart output above.
           bun sst deploy --stage=dev --target AuthApi --print-logs
+          # Publish Console last so its linked auth URL and build environment are authoritative.
+          bun sst deploy --stage=dev --target Console --print-logs
 
       - name: Verify live dev OAuth and public console boundaries
         env:
           MONGOLGPT_AUTH_EMAIL_DOMAINS: ${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}
         run: |
-          bun script/deployment-smoke.ts --auth-bootstrap dev
+          MONGOLGPT_DEPLOY_CONSOLE_ONLY=false bun script/deployment-smoke.ts --auth-bootstrap dev
           bun script/deployment-smoke.ts --console-only dev
