@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test"
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { authStateError } from "../src/auth-error"
 
 describe("OAuth state error page", () => {
@@ -25,5 +27,11 @@ describe("OAuth state error page", () => {
     expect(body).not.toContain("example.com")
     expect(body).not.toContain("password")
     expect(body).not.toContain("<a ")
+  })
+
+  test("keeps the localized recovery response wired into the OpenAuth issuer", () => {
+    const source = readFileSync(resolve(import.meta.dir, "../src/auth.ts"), "utf8")
+
+    expect(source).toContain("error: async () => authStateError(env.MONGOLGPT_CONSOLE_ORIGIN)")
   })
 })

@@ -25,6 +25,7 @@ import {
 import { isAllowedNonProductionEmail } from "./auth-allowlist"
 import { inspectOAuthProviderConfiguration } from "@mongolgpt/console-core/oauth-provider-config.js"
 import { authStateError } from "./auth-error"
+import { captureOAuthFlow, clearOAuthFlowCookie, restoreOAuthFlowRequest } from "./oauth-flow-state"
 
 type Env = {
   AuthStorage: KVNamespace
@@ -128,7 +129,10 @@ export default {
       request = new Request(authorizationUrl, { method: "GET", headers })
     }
 
-    const result = await issuer({
+    const restored = restoreOAuthFlowRequest(request)
+    request = restored.request
+
+    const authServer = issuer({
       theme: MY_THEME,
       providers: {
         ...(oauth.github
@@ -280,8 +284,10 @@ export default {
           authVersion: access.authVersion,
         })
       },
-    }).fetch(request, env, ctx)
-    return result
+    })
+
+    const result = captureOAuthFlow(request, await authServer.fetch(request, env, ctx))
+    return restored.cleanupCookie ? clearOAuthFlowCookie(result, restored.cleanupCookie) : result
   },
 }
 
