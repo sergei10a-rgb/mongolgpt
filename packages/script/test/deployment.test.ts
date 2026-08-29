@@ -816,7 +816,7 @@ describe("Cloudflare deployment preflight", () => {
     )
   })
 
-  test("allows console-only preflight only for the public dev console site", () => {
+  test("allows console-only preflight only for the public dev console and OAuth service", () => {
     const result = preflightDeployment({
       stage: "dev",
       env: {
@@ -845,7 +845,7 @@ describe("Cloudflare deployment preflight", () => {
       paymentHealth: "https://pay.dev.mgpt.mn/health",
     })
     expect(result.warnings).toContain(
-      "Зөвхөн Console target deploy хийнэ; route ownership хадгалж runtime, database, auth, payments, docs болон admin target-уудыг шууд deploy хийхгүй.",
+      "Зөвхөн Console болон AuthApi target deploy хийнэ; route ownership хадгалж runtime, database, payments, docs болон admin target-уудыг шууд deploy хийхгүй.",
     )
 
     expectIssues(

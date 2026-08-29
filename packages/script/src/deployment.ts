@@ -177,7 +177,9 @@ export function preflightDeployment(input: {
     if (scope === "app-only") {
       warnings.push("Зөвхөн hosted web app Worker deploy хийнэ; backend resource өөрчлөхгүй.")
     } else if (scope === "console-only") {
-      warnings.push("Зөвхөн Console target deploy хийнэ; route ownership хадгалж runtime, database, auth, payments, docs болон admin target-уудыг шууд deploy хийхгүй.")
+      warnings.push(
+        "Зөвхөн Console болон AuthApi target deploy хийнэ; route ownership хадгалж runtime, database, payments, docs болон admin target-уудыг шууд deploy хийхгүй.",
+      )
     } else {
       warnings.push("Зөвхөн dev runtime Worker болон Cloudflare Sandbox container deploy хийнэ.")
     }

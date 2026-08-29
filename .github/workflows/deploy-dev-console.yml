@@ -101,8 +101,9 @@ jobs:
           fi
           MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate
           unset database_id
-          bun sst deploy --stage=dev --target AuthApi --print-logs
           bun sst deploy --stage=dev --target Console --print-logs
+          # AuthApi target traverses its Console dependent, which requires the SolidStart output above.
+          bun sst deploy --stage=dev --target AuthApi --print-logs
 
       - name: Verify live dev OAuth and public console boundaries
         env:
