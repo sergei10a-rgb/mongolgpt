@@ -8,6 +8,7 @@ import {
   normalizeServerUrl,
   resolveAccountVerificationUrl,
   resolveAuthServerUrl,
+  resolveBrowserAuthorizationUrl,
   validateAccountOAuthMetadata,
   validateAccountServerUrl,
   validateConfiguredAccountServerUrl,
@@ -70,6 +71,31 @@ describe("account url helpers", () => {
   test("keeps explicit auth issuer URLs", () => {
     expect(resolveAuthServerUrl("https://example.com/auth/dev")).toBe("https://example.com/auth/dev")
     expect(resolveAuthServerUrl("https://auth.example.com")).toBe("https://auth.example.com")
+  })
+
+  test("routes hosted browser authorization through the Turnstile console entrypoint", () => {
+    const direct =
+      "https://auth.dev.mgpt.mn/authorize?client_id=mongolgpt-cli&redirect_uri=http%3A%2F%2F127.0.0.1%3A1456%2Fauth%2Fcallback&state=state-1&code_challenge=challenge-1"
+    expect(resolveBrowserAuthorizationUrl("https://dev.mgpt.mn", direct)).toBe(
+      "https://dev.mgpt.mn/auth/authorize?client_id=mongolgpt-cli&redirect_uri=http%3A%2F%2F127.0.0.1%3A1456%2Fauth%2Fcallback&state=state-1&code_challenge=challenge-1",
+    )
+    expect(
+      resolveBrowserAuthorizationUrl(
+        "https://mgpt.mn",
+        "https://auth.mgpt.mn/authorize?client_id=mongolgpt-cli&state=state-2",
+      ),
+    ).toBe("https://mgpt.mn/auth/authorize?client_id=mongolgpt-cli&state=state-2")
+  })
+
+  test("keeps custom authorization URLs and rejects a mismatched hosted endpoint", () => {
+    const custom = "https://auth.example.com/authorize?client_id=mongolgpt-cli"
+    expect(resolveBrowserAuthorizationUrl("https://accounts.example.com", custom)).toBe(custom)
+    expect(() =>
+      resolveBrowserAuthorizationUrl(
+        "https://dev.mgpt.mn",
+        "https://auth.dev.mgpt.mn/not-authorize?client_id=mongolgpt-cli",
+      ),
+    ).toThrow("auth issuer")
   })
 
   test("allows HTTPS and local development account servers only", () => {

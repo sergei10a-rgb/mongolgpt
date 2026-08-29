@@ -16,7 +16,12 @@ import {
 
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { AccountRepo, type AccountRow } from "./repo"
-import { resolveAccountVerificationUrl, resolveAuthServerUrl, validateAccountOAuthMetadata } from "./url"
+import {
+  resolveAccountVerificationUrl,
+  resolveAuthServerUrl,
+  resolveBrowserAuthorizationUrl,
+  validateAccountOAuthMetadata,
+} from "./url"
 import {
   defaultAccountDnsLookup,
   resolveAccountTransport,
@@ -454,7 +459,12 @@ function makeLayer(resolveDns: AccountDnsLookup, allowCustomAccountServer = fals
           return new PollSuccess({ id: account.id, email: account.email })
         }).pipe(Effect.ensuring(Effect.promise(() => callback.close())))
 
-        return { url: authorization.url, wait }
+        const browserUrl = yield* Effect.try({
+          try: () => resolveBrowserAuthorizationUrl(accountServer.url, authorization.url),
+          catch: (cause) => new AccountServiceError({ message: "Browser OAuth зөвшөөрлийн URL буруу байна", cause }),
+        })
+
+        return { url: browserUrl, wait }
       })
 
       const token = Effect.fn("Account.token")((accountID: AccountID) =>

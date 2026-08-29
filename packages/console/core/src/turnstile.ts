@@ -159,7 +159,7 @@ export function turnstileAuthorizationRequest(input: {
     }
   } else if (input.submission.clientID === "mongolgpt-cli") {
     if (
-      callback.toString() !== "http://localhost:1456/auth/callback" ||
+      !validCliLoopbackCallback(callback) ||
       !/^[A-Za-z0-9_-]{43,128}$/.test(input.submission.codeChallenge ?? "") ||
       input.submission.codeChallengeMethod !== "S256"
     ) {
@@ -223,6 +223,13 @@ function validAuthorizePath(url: URL) {
 
 function isLoopback(url: URL) {
   return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1"
+}
+
+function validCliLoopbackCallback(url: URL) {
+  if (url.protocol !== "http:" || (url.hostname !== "localhost" && url.hostname !== "127.0.0.1")) return false
+  if (url.pathname !== "/auth/callback" || url.search || url.hash) return false
+  const port = Number(url.port)
+  return Number.isInteger(port) && port >= 1_024 && port <= 65_535
 }
 
 function authorizationParameters(input: TurnstileAuthorizationParameters) {

@@ -123,6 +123,24 @@ export const resolveAuthServerUrl = (input: string): string => {
   return normalizeServerUrl(input)
 }
 
+export const resolveBrowserAuthorizationUrl = (accountServerInput: string, authorizationInput: string): string => {
+  const accountServer = normalizeServerUrl(accountServerInput)
+  const hosted = hostedAccountServices().find(
+    (services) => accountServer === normalizeServerUrl(services.console),
+  )
+  if (!hosted) return authorizationInput
+
+  const authorization = new URL(authorizationInput)
+  const expected = new URL("/authorize", hosted.auth)
+  if (authorization.origin !== expected.origin || authorization.pathname !== expected.pathname) {
+    throw new Error("Hosted OAuth authorization endpoint MongolGPT auth issuer-тэй тохирохгүй байна")
+  }
+
+  const browser = new URL("/auth/authorize", hosted.console)
+  browser.search = authorization.search
+  return browser.toString()
+}
+
 export const validateAccountServerUrl = (input: string) => {
   validateHttpUrl(input)
   return normalizeServerUrl(input)

@@ -135,7 +135,7 @@ describe("Cloudflare Turnstile OAuth protection", () => {
     ).toThrow("client")
   })
 
-  test("preserves the CLI PKCE request while allowing only the fixed loopback callback", () => {
+  test("preserves CLI PKCE while allowing only bounded loopback callbacks", () => {
     expect(
       turnstileAuthorizationRequest({
         authUrl: "https://auth.dev.mgpt.mn/authorize",
@@ -149,9 +149,24 @@ describe("Cloudflare Turnstile OAuth protection", () => {
       turnstileAuthorizationRequest({
         authUrl: "https://auth.dev.mgpt.mn/authorize",
         consoleOrigin: "https://dev.mgpt.mn",
-        submission: { ...cliSubmission, redirectURI: "http://127.0.0.1:1456/auth/callback" },
+        submission: { ...cliSubmission, redirectURI: "http://127.0.0.1:63804/auth/callback" },
       }),
-    ).toThrow("CLI")
+    ).not.toThrow()
+    for (const redirectURI of [
+      "http://192.168.1.10:1456/auth/callback",
+      "http://127.0.0.1/auth/callback",
+      "http://127.0.0.1:80/auth/callback",
+      "http://127.0.0.1:63804/not-callback",
+      "https://127.0.0.1:63804/auth/callback",
+    ]) {
+      expect(() =>
+        turnstileAuthorizationRequest({
+          authUrl: "https://auth.dev.mgpt.mn/authorize",
+          consoleOrigin: "https://dev.mgpt.mn",
+          submission: { ...cliSubmission, redirectURI },
+        }),
+      ).toThrow("CLI")
+    }
     expect(() =>
       turnstileAuthorizationRequest({
         authUrl: "https://auth.dev.mgpt.mn/authorize",
