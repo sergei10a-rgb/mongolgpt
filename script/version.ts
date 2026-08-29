@@ -2,7 +2,7 @@
 
 import { Script } from "@mongolgpt/script"
 import { $ } from "bun"
-import { releaseTag } from "../packages/script/src/release-integrity"
+import { createReleaseNotes, releaseTag } from "../packages/script/src/release-integrity"
 import { resolveProductServiceUrls } from "../packages/core/src/product"
 
 const output = [
@@ -12,23 +12,35 @@ const output = [
 ]
 const sha = process.env.GITHUB_SHA ?? (await $`git rev-parse HEAD`.text()).trim()
 const tag = releaseTag(Script.version)
+const repo = process.env.GH_REPO
 
-if (!Script.preview) {
+if ((!Script.preview || Script.channel === "beta") && repo !== "sergei10a-rgb/mongolgpt") {
+  throw new Error("Release GH_REPO must be sergei10a-rgb/mongolgpt")
+}
+
+async function createNotesFile() {
   await $`bun script/changelog.ts --to ${sha}`.cwd(process.cwd())
   const file = `${process.cwd()}/UPCOMING_CHANGELOG.md`
-  const body = await Bun.file(file)
+  const changelog = await Bun.file(file)
     .text()
-    .catch(() => "No notable changes")
+    .catch(() => "")
+  const body = createReleaseNotes(Script.version, changelog)
   const dir = process.env.RUNNER_TEMP ?? "/tmp"
   const notesFile = `${dir}/mongolgpt-release-notes.txt`
   await Bun.write(notesFile, body)
-  await $`gh release create ${tag} -d --target ${sha} --title "MongolGPT v${Script.version}" --notes-file ${notesFile}`
-  const release = await $`gh release view ${tag} --json tagName,databaseId`.json()
+  return notesFile
+}
+
+if (!Script.preview) {
+  const notesFile = await createNotesFile()
+  await $`gh release create ${tag} -d --target ${sha} --title "MongolGPT v${Script.version}" --notes-file ${notesFile} --repo ${repo}`
+  const release = await $`gh release view ${tag} --json tagName,databaseId --repo ${repo}`.json()
   output.push(`release=${release.databaseId}`)
   output.push(`tag=${release.tagName}`)
 } else if (Script.channel === "beta") {
-  await $`gh release create ${tag} -d --title "MongolGPT v${Script.version}" --repo ${process.env.GH_REPO}`
-  const release = await $`gh release view ${tag} --json tagName,databaseId --repo ${process.env.GH_REPO}`.json()
+  const notesFile = await createNotesFile()
+  await $`gh release create ${tag} -d --target ${sha} --title "MongolGPT v${Script.version}" --notes-file ${notesFile} --repo ${repo}`
+  const release = await $`gh release view ${tag} --json tagName,databaseId --repo ${repo}`.json()
   output.push(`release=${release.databaseId}`)
   output.push(`tag=${release.tagName}`)
 }

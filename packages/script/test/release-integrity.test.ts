@@ -6,10 +6,16 @@ import {
   DESKTOP_RELEASE_ASSETS,
   RELEASE_CHECKSUM_ASSET,
   RELEASE_ARTIFACTS,
+  createReleaseNotes,
   createSha256Sums,
+  isChecksummedReleaseAsset,
   releaseTag,
+  releaseUpdaterMetadataAssets,
   releaseUpdaterNotes,
+  resolveReleaseUpdaterChannel,
   validateReleaseChecksumContract,
+  validateReleaseNotesContract,
+  validateUpdaterReleaseContract,
 } from "../src/release-integrity"
 
 const files = RELEASE_ARTIFACTS.map((name) => ({ name, bytes: new TextEncoder().encode(name) }))
@@ -53,6 +59,40 @@ describe("release integrity contract", () => {
     expect(updater).not.toContain('notes: ""')
   })
 
+  test("creates Mongolian changelog, install, upgrade, and checksum guidance", () => {
+    const notes = createReleaseNotes("0.1.2", "# MongolGPT-ийн өөрчлөлтүүд\n\n- CLI OAuth сайжрав.\n")
+
+    expect(notes).toContain("## Өөрчлөлтийн жагсаалт\n\n- CLI OAuth сайжрав.")
+    expect(notes).not.toContain("# MongolGPT-ийн өөрчлөлтүүд")
+    expect(notes).toContain("npm install -g mongolgpt@0.1.2")
+    expect(notes).toContain("mongolgpt upgrade 0.1.2")
+    expect(notes).toContain("SHA256SUMS")
+    expect(notes).toContain("sha256sum <татсан-файл>")
+    expect(validateReleaseNotesContract(notes, "0.1.2")).toEqual([])
+    expect(validateReleaseNotesContract("## Өөрчлөлтийн жагсаалт", "0.1.2")).toContain(
+      "release notes missing heading: ## Шинэчлэх",
+    )
+
+    const versionScript = readFileSync(resolve(root, "script/version.ts"), "utf8")
+    expect(versionScript).toContain("createReleaseNotes(Script.version, changelog)")
+    expect(versionScript).toContain('repo !== "sergei10a-rgb/mongolgpt"')
+    expect(versionScript).toContain("--repo ${repo}")
+    expect(versionScript.match(/--notes-file \$\{notesFile\}/g)?.length).toBe(2)
+    expect(versionScript).toContain('Script.channel === "beta"')
+  })
+
+  test("resolves only supported updater channels and fails closed on typos", () => {
+    expect(resolveReleaseUpdaterChannel(undefined, "0.1.2")).toBe("latest")
+    expect(resolveReleaseUpdaterChannel(undefined, "0.1.2-beta.1")).toBe("beta")
+    expect(resolveReleaseUpdaterChannel("prod", "0.1.2")).toBe("latest")
+    expect(resolveReleaseUpdaterChannel("latest", "0.1.2")).toBe("latest")
+    expect(resolveReleaseUpdaterChannel("beta", "0.1.2-beta.1")).toBe("beta")
+    expect(() => resolveReleaseUpdaterChannel("dev", "0.1.2")).toThrow("invalid MongolGPT release updater channel")
+
+    const preflight = readFileSync(resolve(root, "packages/mongolgpt/script/release-preflight.ts"), "utf8")
+    expect(preflight).toContain("resolveReleaseUpdaterChannel(process.env.MONGOLGPT_CHANNEL, version)")
+  })
+
   test("creates stable lowercase basenames in sorted order", () => {
     const text = createSha256Sums([...files].reverse())
     const lines = text.trimEnd().split("\n")
@@ -84,6 +124,126 @@ describe("release integrity contract", () => {
         text.replace(RELEASE_ARTIFACTS[0], "0".repeat(64)),
       ),
     ).toContain(`checksum missing artifacts: ${RELEASE_ARTIFACTS[0]}`)
+  })
+
+  test("checksums updater archives and every emitted desktop blockmap", () => {
+    const blockmap = "mongolgpt-desktop-win-x64.exe.blockmap"
+    const selected = [...files, { name: blockmap, bytes: new TextEncoder().encode(blockmap) }]
+    const text = createSha256Sums(selected)
+    expect(isChecksummedReleaseAsset(blockmap)).toBe(true)
+    expect(text).toContain(`  ${blockmap}`)
+    expect(validateReleaseChecksumContract([...RELEASE_ARTIFACTS, blockmap, RELEASE_CHECKSUM_ASSET], text)).toEqual([])
+    expect(
+      validateReleaseChecksumContract(
+        [...RELEASE_ARTIFACTS, blockmap, RELEASE_CHECKSUM_ASSET],
+        createSha256Sums(files),
+      ),
+    ).toContain(`checksum missing artifacts: ${blockmap}`)
+
+    const publish = readFileSync(resolve(root, "script/publish.ts"), "utf8")
+    const preflight = readFileSync(resolve(root, "packages/mongolgpt/script/release-preflight.ts"), "utf8")
+    expect(publish).toContain("isChecksummedReleaseAsset(entry.name)")
+    expect(preflight).toContain(".filter(isChecksummedReleaseAsset)")
+  })
+
+  test("validates complete updater metadata against the release assets", () => {
+    const version = "0.1.2"
+    const repo = "sergei10a-rgb/mongolgpt"
+    const channel = "latest" as const
+    const names = releaseUpdaterMetadataAssets(channel)
+    const body = createReleaseNotes(version, "- Desktop updater баталгаажлаа.")
+    const base = `https://github.com/${repo}/releases/download/mongolgpt-v${version}`
+    const signature = "a".repeat(64)
+    const platformAssets = {
+      "windows-x86_64-nsis": "mongolgpt-desktop-win-x64.exe",
+      "windows-aarch64-nsis": "mongolgpt-desktop-win-arm64.exe",
+      "darwin-x86_64-app": "mongolgpt-desktop-mac-x64.app.tar.gz",
+      "darwin-aarch64-app": "mongolgpt-desktop-mac-arm64.app.tar.gz",
+      "linux-x86_64-deb": "mongolgpt-desktop-linux-x64.deb",
+      "linux-x86_64-rpm": "mongolgpt-desktop-linux-x64.rpm",
+      "linux-x86_64-appimage": "mongolgpt-desktop-linux-x64.AppImage",
+      "linux-aarch64-deb": "mongolgpt-desktop-linux-arm64.deb",
+      "linux-aarch64-rpm": "mongolgpt-desktop-linux-arm64.rpm",
+      "linux-aarch64-appimage": "mongolgpt-desktop-linux-arm64.AppImage",
+      "windows-x86_64": "mongolgpt-desktop-win-x64.exe",
+      "windows-aarch64": "mongolgpt-desktop-win-arm64.exe",
+      "darwin-x86_64": "mongolgpt-desktop-mac-x64.app.tar.gz",
+      "darwin-aarch64": "mongolgpt-desktop-mac-arm64.app.tar.gz",
+      "linux-x86_64": "mongolgpt-desktop-linux-x64.deb",
+      "linux-aarch64": "mongolgpt-desktop-linux-arm64.deb",
+    }
+    const platforms = Object.fromEntries(
+      Object.entries(platformAssets).map(([platform, asset]) => [platform, { url: `${base}/${asset}`, signature }]),
+    )
+    const yml = (assets: readonly string[]) =>
+      [
+        `version: ${version}`,
+        "files:",
+        ...assets.flatMap((asset) => [`  - url: ${asset}`, `    sha512: ${"a".repeat(88)}`, "    size: 123"]),
+        "releaseDate: '2026-08-29T00:00:00.000Z'",
+        "",
+      ].join("\n")
+    const metadata = {
+      windows: yml(["mongolgpt-desktop-win-arm64.exe", "mongolgpt-desktop-win-x64.exe"]),
+      linuxX64: yml([
+        "mongolgpt-desktop-linux-x64.AppImage",
+        "mongolgpt-desktop-linux-x64.deb",
+        "mongolgpt-desktop-linux-x64.rpm",
+      ]),
+      linuxArm64: yml([
+        "mongolgpt-desktop-linux-arm64.AppImage",
+        "mongolgpt-desktop-linux-arm64.deb",
+        "mongolgpt-desktop-linux-arm64.rpm",
+      ]),
+      mac: yml(["mongolgpt-desktop-mac-arm64.zip", "mongolgpt-desktop-mac-x64.zip"]),
+    }
+    const assetNames = [...RELEASE_ARTIFACTS, RELEASE_CHECKSUM_ASSET, ...Object.values(names)]
+    const latestJson = JSON.stringify({ version, notes: body, pub_date: "2026-08-29T00:00:00.000Z", platforms })
+
+    expect(
+      validateUpdaterReleaseContract({
+        version,
+        repo,
+        channel,
+        assetNames,
+        releaseBody: body,
+        latestJson,
+        metadata,
+      }),
+    ).toEqual([])
+
+    const broken = JSON.stringify({
+      version,
+      notes: body,
+      pub_date: "2026-08-29T00:00:00.000Z",
+      platforms: { ...platforms, "windows-x86_64": { url: "https://example.invalid/file.exe", signature } },
+    })
+    expect(
+      validateUpdaterReleaseContract({
+        version,
+        repo,
+        channel,
+        assetNames: assetNames.filter((name) => name !== names.mac),
+        releaseBody: body,
+        latestJson: broken,
+        metadata: {
+          ...metadata,
+          windows: metadata.windows.replace("a".repeat(88), "bad"),
+          linuxArm64: metadata.linuxArm64.replace("mongolgpt-desktop-linux-arm64.rpm", ""),
+        },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        `missing updater metadata: ${names.mac}`,
+        "updater metadata URL mismatch for windows-x86_64",
+        `updater metadata ${names.windows} has invalid sha512: mongolgpt-desktop-win-arm64.exe`,
+        `updater metadata ${names.linuxArm64} missing asset: mongolgpt-desktop-linux-arm64.rpm`,
+      ]),
+    )
+
+    const preflight = readFileSync(resolve(root, "packages/mongolgpt/script/release-preflight.ts"), "utf8")
+    expect(preflight).toContain("validateUpdaterReleaseContract({")
+    expect(preflight).toContain("releaseUpdaterMetadataAssets(channel)")
   })
 
   test("excludes source maps and other non-user release files", () => {
@@ -222,6 +382,16 @@ describe("release integrity contract", () => {
     expect(workflow.indexOf(confirmation)).toBeLessThan(workflow.indexOf(checkout))
     expect(workflow.indexOf(credentials)).toBeLessThan(workflow.indexOf(checkout))
     expect(workflow.indexOf(checkout)).toBeLessThan(workflow.indexOf(version))
+  })
+
+  test("never rewrites a published release tag or mutates the dev branch", () => {
+    const publish = readFileSync(resolve(root, "script/publish.ts"), "utf8")
+
+    expect(publish).not.toContain("git tag -d")
+    expect(publish).not.toContain("--force-with-lease")
+    expect(publish).not.toContain("git checkout -B dev")
+    expect(publish).not.toContain("git push origin HEAD:dev")
+    expect(publish).toContain("gh release edit ${tag} --draft=false")
   })
 
   test("uses one reusable packaged Windows desktop smoke gate", () => {

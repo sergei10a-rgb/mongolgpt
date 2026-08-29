@@ -6,10 +6,13 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import {
-  RELEASE_ARTIFACTS,
   RELEASE_CHECKSUM_ASSET,
   createSha256Sums,
+  isChecksummedReleaseAsset,
+  releaseUpdaterMetadataAssets,
+  resolveReleaseUpdaterChannel,
   validateReleaseChecksumContract,
+  validateUpdaterReleaseContract,
 } from "@mongolgpt/script/release-integrity"
 
 const dist = path.resolve(import.meta.dirname, "../dist")
@@ -48,8 +51,39 @@ type PackageManifest = {
   files?: string[]
 }
 
+function objectProperty(value: unknown, key: string): unknown {
+  if (!value || typeof value !== "object") return undefined
+  return Reflect.get(value, key)
+}
+
 function readJson(file: string) {
-  return JSON.parse(fs.readFileSync(file, "utf8")) as PackageManifest
+  const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"))
+  const text = (key: string) => {
+    const value = objectProperty(parsed, key)
+    return typeof value === "string" ? value : undefined
+  }
+  const repository = objectProperty(parsed, "repository")
+  const bugs = objectProperty(parsed, "bugs")
+  const rawFiles = objectProperty(parsed, "files")
+  return {
+    name: text("name"),
+    version: text("version"),
+    description: text("description"),
+    repository: {
+      type:
+        typeof objectProperty(repository, "type") === "string" ? String(objectProperty(repository, "type")) : undefined,
+      url:
+        typeof objectProperty(repository, "url") === "string" ? String(objectProperty(repository, "url")) : undefined,
+      directory:
+        typeof objectProperty(repository, "directory") === "string"
+          ? String(objectProperty(repository, "directory"))
+          : undefined,
+    },
+    homepage: text("homepage"),
+    bugs: { url: typeof objectProperty(bugs, "url") === "string" ? String(objectProperty(bugs, "url")) : undefined },
+    license: text("license"),
+    files: Array.isArray(rawFiles) ? rawFiles.filter((value): value is string => typeof value === "string") : undefined,
+  } satisfies PackageManifest
 }
 
 function binaryName(name: string) {
@@ -97,7 +131,7 @@ function checkLocalDist() {
   assert(main.license === "MIT", "mongolgpt package has incorrect license")
   assert(main.files?.includes("README.md"), "mongolgpt package does not publish README.md")
   assert(fs.existsSync(path.join(dist, "mongolgpt", "README.md")), "mongolgpt package README.md is missing")
-  return Array.from(versions)[0]!
+  return Array.from(versions)[0]
 }
 
 async function npmMissing(version: string, packages: readonly string[]) {
@@ -110,7 +144,9 @@ async function npmMissing(version: string, packages: readonly string[]) {
 }
 
 function commandOutput(result: ReturnType<typeof spawnSync>) {
-  return `${result.stdout ?? ""}${result.stderr ?? ""}`.trim()
+  const stdout = typeof result.stdout === "string" ? result.stdout : (result.stdout?.toString() ?? "")
+  const stderr = typeof result.stderr === "string" ? result.stderr : (result.stderr?.toString() ?? "")
+  return (stdout + stderr).trim()
 }
 
 async function smokePublicNpmInstall(version: string) {
@@ -327,33 +363,70 @@ async function smokePublicPlatformPackages(version: string) {
 
 async function githubMissing(version: string) {
   const tag = `mongolgpt-v${version}`
-  const result = await $`gh release view ${tag} --repo ${repo} --json assets`.quiet().nothrow()
+  const result = await $`gh release view ${tag} --repo ${repo} --json assets,body,tagName`.quiet().nothrow()
   if (result.exitCode !== 0) return [`release:${tag}`]
 
-  const data = JSON.parse(result.stdout.toString()) as { assets?: { name?: string }[] }
+  const parsed: unknown = JSON.parse(result.stdout.toString())
+  const rawAssets = objectProperty(parsed, "assets")
   const assetNames = new Set(
-    (data.assets ?? []).map((asset) => asset.name).filter((name): name is string => Boolean(name)),
+    (Array.isArray(rawAssets) ? rawAssets : [])
+      .map((asset) => objectProperty(asset, "name"))
+      .filter((name): name is string => typeof name === "string" && Boolean(name)),
   )
+  const rawBody = objectProperty(parsed, "body")
+  const body = typeof rawBody === "string" || rawBody === null ? rawBody : undefined
+  const rawTagName = objectProperty(parsed, "tagName")
+  const tagName = typeof rawTagName === "string" ? rawTagName : undefined
   const missing = validateReleaseChecksumContract(Array.from(assetNames))
-  if (!missing.includes(`missing ${RELEASE_CHECKSUM_ASSET}`)) {
-    const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mongolgpt-release-preflight-"))
-    try {
-      const checksum = await $`gh release download ${tag} --repo ${repo} --dir ${temp}`.quiet().nothrow()
-      if (checksum.exitCode !== 0) missing.push(`unable to download ${RELEASE_CHECKSUM_ASSET}`)
-      else {
-        const content = fs.readFileSync(path.join(temp, RELEASE_CHECKSUM_ASSET), "utf8")
-        missing.push(
-          ...validateReleaseChecksumContract(Array.from(assetNames), content).filter((item) => !missing.includes(item)),
-        )
-        const files = await Promise.all(
-          RELEASE_ARTIFACTS.map(async (name) => ({ name, bytes: await Bun.file(path.join(temp, name)).bytes() })),
-        )
-        const expected = createSha256Sums(files)
-        if (content !== expected) missing.push("checksum content does not match release artifacts")
-      }
-    } finally {
-      await fs.promises.rm(temp, { recursive: true, force: true })
+  if (tagName !== tag) missing.push(`release tag mismatch: expected ${tag}, got ${tagName ?? "missing"}`)
+  const channel = resolveReleaseUpdaterChannel(process.env.MONGOLGPT_CHANNEL, version)
+  const updater = releaseUpdaterMetadataAssets(channel)
+  const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mongolgpt-release-preflight-"))
+  try {
+    const download = await $`gh release download ${tag} --repo ${repo} --dir ${temp}`.quiet().nothrow()
+    if (download.exitCode !== 0) {
+      missing.push("unable to download release assets")
+      return missing
     }
+
+    const read = async (name: string) => {
+      const file = Bun.file(path.join(temp, name))
+      return (await file.exists()) ? file.text() : undefined
+    }
+    const content = await read(RELEASE_CHECKSUM_ASSET)
+    if (content) {
+      missing.push(
+        ...validateReleaseChecksumContract(Array.from(assetNames), content).filter((item) => !missing.includes(item)),
+      )
+      const files = await Promise.all(
+        Array.from(assetNames)
+          .filter(isChecksummedReleaseAsset)
+          .map(async (name) => ({ name, bytes: await Bun.file(path.join(temp, name)).bytes() })),
+      )
+      const expected = createSha256Sums(files)
+      if (content !== expected) missing.push("checksum content does not match release artifacts")
+    }
+
+    const latestJson = await read(updater.json)
+    const metadata = {
+      windows: await read(updater.windows),
+      linuxX64: await read(updater.linuxX64),
+      linuxArm64: await read(updater.linuxArm64),
+      mac: await read(updater.mac),
+    }
+    missing.push(
+      ...validateUpdaterReleaseContract({
+        version,
+        repo,
+        channel,
+        assetNames: Array.from(assetNames),
+        releaseBody: body,
+        latestJson,
+        metadata,
+      }).filter((item) => !missing.includes(item)),
+    )
+  } finally {
+    await fs.promises.rm(temp, { recursive: true, force: true })
   }
   return missing
 }

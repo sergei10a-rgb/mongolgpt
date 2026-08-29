@@ -8,8 +8,8 @@ import os from "node:os"
 import path from "node:path"
 import {
   createSha256Sums,
+  isChecksummedReleaseAsset,
   releaseTag,
-  RELEASE_ARTIFACTS,
   RELEASE_CHECKSUM_ASSET,
 } from "../packages/script/src/release-integrity"
 
@@ -43,8 +43,11 @@ async function publishReleaseChecksums() {
   const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mongolgpt-release-"))
   try {
     await $`gh release download ${tag} --repo ${repo} --dir ${temp}`
+    const downloaded = await fs.promises.readdir(temp, { withFileTypes: true })
     const files = await Promise.all(
-      RELEASE_ARTIFACTS.map(async (name) => ({ name, bytes: await Bun.file(path.join(temp, name)).bytes() })),
+      downloaded
+        .filter((entry) => entry.isFile() && isChecksummedReleaseAsset(entry.name))
+        .map(async (entry) => ({ name: entry.name, bytes: await Bun.file(path.join(temp, entry.name)).bytes() })),
     )
     const checksumPath = path.join(temp, RELEASE_CHECKSUM_ASSET)
     await Bun.write(checksumPath, createSha256Sums(files))
@@ -84,19 +87,6 @@ if (Script.release) {
   await $`bun ./packages/desktop/scripts/finalize-latest-json.ts`
   await $`bun ./packages/desktop/scripts/finalize-latest-yml.ts`
   await publishReleaseChecksums()
-}
-
-if (Script.release && !Script.preview) {
-  await $`git commit -am "release: ${tag}"`
-  await $`git tag -d ${tag}`.nothrow()
-  await $`git tag ${tag}`
-  await $`git push origin refs/tags/${tag} --force-with-lease --no-verify`
-  await new Promise((resolve) => setTimeout(resolve, 5_000))
-  await $`git fetch origin`
-  await $`git checkout -B dev origin/dev`
-  await prepareReleaseFiles()
-  await $`git commit -am "sync release versions for ${tag}"`
-  await $`git push origin HEAD:dev --no-verify`
 }
 
 if (Script.release) {

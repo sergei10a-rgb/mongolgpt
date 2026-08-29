@@ -20,6 +20,63 @@ export function releaseUpdaterNotes(input: { body?: string | null; name?: string
   return `MongolGPT ${input.tag.replace(/^mongolgpt-v/, "")}`
 }
 
+export const RELEASE_NOTES_HEADINGS = [
+  "## Өөрчлөлтийн жагсаалт",
+  "## Суулгах",
+  "## Шинэчлэх",
+  "## Файлын бүрэн бүтэн байдал",
+] as const
+
+function normalizeChangelog(changelog: string) {
+  const body = changelog
+    .trim()
+    .replace(/^#\s+[^\n]+\n+/, "")
+    .trim()
+  return body || "- Энэ хувилбарт хэрэглэгчид харагдах онцлох өөрчлөлт байхгүй."
+}
+
+export function createReleaseNotes(version: string, changelog: string) {
+  const tag = releaseTag(version)
+  return [
+    RELEASE_NOTES_HEADINGS[0],
+    "",
+    normalizeChangelog(changelog),
+    "",
+    RELEASE_NOTES_HEADINGS[1],
+    "",
+    `- Desktop болон CLI файлуудыг [${tag} хувилбарын хуудас](https://github.com/sergei10a-rgb/mongolgpt/releases/tag/${tag})-аас татна.`,
+    `- npm CLI: \`npm install -g mongolgpt@${version}\``,
+    "- Суулгах дэлгэрэнгүй заавар: https://docs.mgpt.mn/install/",
+    "",
+    RELEASE_NOTES_HEADINGS[2],
+    "",
+    `- CLI: \`mongolgpt upgrade ${version}\``,
+    "- Desktop: Тохиргоо доторх шинэчлэлт шалгах үйлдлийг ашиглана. Шинэчлэлт татагдсаны дараа суулгаж дахин нээнэ.",
+    "",
+    RELEASE_NOTES_HEADINGS[3],
+    "",
+    `- Release-ийн \`${RELEASE_CHECKSUM_ASSET}\` файлыг татаж, суулгагч эсвэл CLI архивын SHA-256 утгыг тулгана.`,
+    `- Linux/macOS: \`sha256sum <татсан-файл>\` гэж бодоод, гарсан утгыг \`${RELEASE_CHECKSUM_ASSET}\` доторх тухайн файлын мөртэй тулгана.`,
+    `- Windows PowerShell: \`Get-FileHash -Algorithm SHA256 <татсан-файл>\``,
+    "",
+  ].join("\n")
+}
+
+export function validateReleaseNotesContract(body: string | null | undefined, version: string) {
+  const errors: string[] = []
+  const text = body?.trim() ?? ""
+  if (!text) return ["release notes are empty"]
+
+  for (const heading of RELEASE_NOTES_HEADINGS) {
+    if (!text.includes(heading)) errors.push(`release notes missing heading: ${heading}`)
+  }
+  if (!text.includes(`mongolgpt@${version}`)) errors.push(`release notes missing npm install version: ${version}`)
+  if (!text.includes(`mongolgpt upgrade ${version}`))
+    errors.push(`release notes missing CLI upgrade version: ${version}`)
+  if (!text.includes(RELEASE_CHECKSUM_ASSET)) errors.push(`release notes missing ${RELEASE_CHECKSUM_ASSET} guidance`)
+  return errors
+}
+
 export const CLI_RELEASE_ASSETS = [
   "mongolgpt-linux-arm64.tar.gz",
   "mongolgpt-linux-x64.tar.gz",
@@ -40,6 +97,8 @@ export const DESKTOP_RELEASE_ASSETS = [
   "mongolgpt-desktop-mac-x64.zip",
   "mongolgpt-desktop-mac-arm64.dmg",
   "mongolgpt-desktop-mac-arm64.zip",
+  "mongolgpt-desktop-mac-x64.app.tar.gz",
+  "mongolgpt-desktop-mac-arm64.app.tar.gz",
   "mongolgpt-desktop-win-x64.exe",
   "mongolgpt-desktop-win-arm64.exe",
   "mongolgpt-desktop-linux-x64.AppImage",
@@ -51,6 +110,7 @@ export const DESKTOP_RELEASE_ASSETS = [
 ] as const
 
 export const RELEASE_ARTIFACTS = [...CLI_RELEASE_ASSETS, ...DESKTOP_RELEASE_ASSETS].sort()
+const releaseArtifactNames = new Set<string>(RELEASE_ARTIFACTS)
 
 export type ReleaseFile = {
   name: string
@@ -58,12 +118,16 @@ export type ReleaseFile = {
 }
 
 export function isReleaseArtifact(name: string) {
-  return RELEASE_ARTIFACTS.includes(name as (typeof RELEASE_ARTIFACTS)[number])
+  return releaseArtifactNames.has(name)
+}
+
+export function isChecksummedReleaseAsset(name: string) {
+  return isReleaseArtifact(name) || /^mongolgpt-desktop-.+\.blockmap$/.test(name)
 }
 
 export function createSha256Sums(files: readonly ReleaseFile[]) {
   const seen = new Set<string>()
-  const selected = files.filter((file) => isReleaseArtifact(file.name))
+  const selected = files.filter((file) => isChecksummedReleaseAsset(file.name))
   const missing = RELEASE_ARTIFACTS.filter((name) => !selected.some((file) => file.name === name))
   if (missing.length) throw new Error(`missing release artifacts: ${missing.join(", ")}`)
 
@@ -100,14 +164,215 @@ export function validateReleaseChecksumContract(assetNames: readonly string[], c
       continue
     }
     const [, hash, name] = match
-    if (!isReleaseArtifact(name)) errors.push(`checksum covers non-release asset: ${name}`)
+    if (!isChecksummedReleaseAsset(name)) errors.push(`checksum covers non-release asset: ${name}`)
     if (actual.has(name)) errors.push(`duplicate checksum entry: ${name}`)
     actual.set(name, hash)
   }
 
-  const missingChecksums = RELEASE_ARTIFACTS.filter((name) => !actual.has(name))
+  const expectedChecksums = assetNames.filter(isChecksummedReleaseAsset)
+  const missingChecksums = expectedChecksums.filter((name) => !actual.has(name))
   if (missingChecksums.length) errors.push(`checksum missing artifacts: ${missingChecksums.join(", ")}`)
-  const extraChecksums = Array.from(actual.keys()).filter((name) => !RELEASE_ARTIFACTS.includes(name as any))
+  const extraChecksums = Array.from(actual.keys()).filter((name) => !expectedChecksums.includes(name))
   if (extraChecksums.length) errors.push(`checksum has unexpected artifacts: ${extraChecksums.join(", ")}`)
+  return errors
+}
+
+export type ReleaseUpdaterChannel = "beta" | "latest"
+
+export function resolveReleaseUpdaterChannel(value: string | undefined, version: string): ReleaseUpdaterChannel {
+  if (value === undefined || value === "") return version.includes("-") ? "beta" : "latest"
+  if (value === "beta") return "beta"
+  if (value === "latest" || value === "prod") return "latest"
+  throw new Error(`invalid MongolGPT release updater channel: ${value}`)
+}
+
+export function releaseUpdaterMetadataAssets(channel: ReleaseUpdaterChannel) {
+  return {
+    json: "latest.json",
+    windows: `${channel}.yml`,
+    linuxX64: `${channel}-linux.yml`,
+    linuxArm64: `${channel}-linux-arm64.yml`,
+    mac: `${channel}-mac.yml`,
+  } as const
+}
+
+const updaterPlatforms = {
+  "windows-x86_64-nsis": "mongolgpt-desktop-win-x64.exe",
+  "windows-aarch64-nsis": "mongolgpt-desktop-win-arm64.exe",
+  "darwin-x86_64-app": "mongolgpt-desktop-mac-x64.app.tar.gz",
+  "darwin-aarch64-app": "mongolgpt-desktop-mac-arm64.app.tar.gz",
+  "linux-x86_64-deb": "mongolgpt-desktop-linux-x64.deb",
+  "linux-x86_64-rpm": "mongolgpt-desktop-linux-x64.rpm",
+  "linux-x86_64-appimage": "mongolgpt-desktop-linux-x64.AppImage",
+  "linux-aarch64-deb": "mongolgpt-desktop-linux-arm64.deb",
+  "linux-aarch64-rpm": "mongolgpt-desktop-linux-arm64.rpm",
+  "linux-aarch64-appimage": "mongolgpt-desktop-linux-arm64.AppImage",
+  "windows-x86_64": "mongolgpt-desktop-win-x64.exe",
+  "windows-aarch64": "mongolgpt-desktop-win-arm64.exe",
+  "darwin-x86_64": "mongolgpt-desktop-mac-x64.app.tar.gz",
+  "darwin-aarch64": "mongolgpt-desktop-mac-arm64.app.tar.gz",
+  "linux-x86_64": "mongolgpt-desktop-linux-x64.deb",
+  "linux-aarch64": "mongolgpt-desktop-linux-arm64.deb",
+} as const
+
+type UpdaterJson = {
+  version?: unknown
+  notes?: unknown
+  pub_date?: unknown
+  platforms?: unknown
+}
+
+function objectProperty(value: unknown, key: string) {
+  if (!value || typeof value !== "object") return undefined
+  return Reflect.get(value, key) as unknown
+}
+
+function updaterAssetUrl(repo: string, version: string, asset: string) {
+  return `https://github.com/${repo}/releases/download/${releaseTag(version)}/${asset}`
+}
+
+function ymlVersion(text: string) {
+  return text.match(/^version:\s*([^\s]+)\s*$/m)?.[1]
+}
+
+type YmlFile = {
+  url: string
+  sha512?: string
+  size?: number
+  blockMapSize?: number
+}
+
+function ymlFiles(text: string) {
+  const files: YmlFile[] = []
+  let current: YmlFile | undefined
+  const flush = () => {
+    if (current) files.push(current)
+    current = undefined
+  }
+
+  for (const line of text.split(/\r?\n/)) {
+    const value = line.trim()
+    if (value.startsWith("- url:")) {
+      flush()
+      current = { url: value.slice("- url:".length).trim() }
+    } else if (current && value.startsWith("sha512:")) {
+      current.sha512 = value.slice("sha512:".length).trim()
+    } else if (current && value.startsWith("size:")) {
+      current.size = Number(value.slice("size:".length).trim())
+    } else if (current && value.startsWith("blockMapSize:")) {
+      current.blockMapSize = Number(value.slice("blockMapSize:".length).trim())
+    }
+  }
+  flush()
+  return files
+}
+
+export function validateUpdaterReleaseContract(input: {
+  version: string
+  repo: string
+  channel: ReleaseUpdaterChannel
+  assetNames: readonly string[]
+  releaseBody?: string | null
+  latestJson?: string
+  metadata?: Partial<Record<"windows" | "linuxX64" | "linuxArm64" | "mac", string>>
+}) {
+  const errors = validateReleaseNotesContract(input.releaseBody, input.version)
+  const names = new Set(input.assetNames)
+  const metadataAssets = releaseUpdaterMetadataAssets(input.channel)
+
+  for (const name of Object.values(metadataAssets)) {
+    if (!names.has(name)) errors.push(`missing updater metadata: ${name}`)
+  }
+  if (!input.latestJson && names.has(metadataAssets.json))
+    errors.push(`updater metadata content missing: ${metadataAssets.json}`)
+
+  let latest: UpdaterJson | undefined
+  if (input.latestJson) {
+    try {
+      const parsed: unknown = JSON.parse(input.latestJson)
+      latest = {
+        version: objectProperty(parsed, "version"),
+        notes: objectProperty(parsed, "notes"),
+        pub_date: objectProperty(parsed, "pub_date"),
+        platforms: objectProperty(parsed, "platforms"),
+      }
+    } catch {
+      errors.push("invalid updater metadata JSON: latest.json")
+    }
+  }
+
+  if (latest) {
+    if (latest.version !== input.version)
+      errors.push(`updater metadata version mismatch: expected ${input.version}, got ${String(latest.version)}`)
+    if (typeof latest.notes !== "string" || latest.notes.trim() !== input.releaseBody?.trim())
+      errors.push("updater notes do not match release notes")
+    if (typeof latest.pub_date !== "string" || !Number.isFinite(Date.parse(latest.pub_date)))
+      errors.push("updater metadata pub_date is invalid")
+
+    const platforms = latest.platforms && typeof latest.platforms === "object" ? latest.platforms : undefined
+    if (!platforms) {
+      errors.push("updater metadata platforms are missing")
+    } else {
+      for (const [platform, asset] of Object.entries(updaterPlatforms)) {
+        const value = objectProperty(platforms, platform)
+        if (!value) {
+          errors.push(`updater metadata missing platform: ${platform}`)
+          continue
+        }
+        const expectedUrl = updaterAssetUrl(input.repo, input.version, asset)
+        const url = objectProperty(value, "url")
+        const signature = objectProperty(value, "signature")
+        if (url !== expectedUrl) errors.push(`updater metadata URL mismatch for ${platform}`)
+        if (typeof signature !== "string" || signature.trim().length < 32 || /\s/.test(signature))
+          errors.push(`updater metadata signature invalid for ${platform}`)
+      }
+    }
+  }
+
+  const expectedYml: Record<keyof NonNullable<typeof input.metadata>, readonly string[]> = {
+    windows: ["mongolgpt-desktop-win-arm64.exe", "mongolgpt-desktop-win-x64.exe"],
+    linuxX64: [
+      "mongolgpt-desktop-linux-x64.AppImage",
+      "mongolgpt-desktop-linux-x64.deb",
+      "mongolgpt-desktop-linux-x64.rpm",
+    ],
+    linuxArm64: [
+      "mongolgpt-desktop-linux-arm64.AppImage",
+      "mongolgpt-desktop-linux-arm64.deb",
+      "mongolgpt-desktop-linux-arm64.rpm",
+    ],
+    mac: ["mongolgpt-desktop-mac-arm64.zip", "mongolgpt-desktop-mac-x64.zip"],
+  }
+
+  const metadataKinds = ["windows", "linuxX64", "linuxArm64", "mac"] as const
+  for (const kind of metadataKinds) {
+    const expected = expectedYml[kind]
+    const text = input.metadata?.[kind]
+    const filename = metadataAssets[kind]
+    if (!text) {
+      if (names.has(filename)) errors.push(`updater metadata content missing: ${filename}`)
+      continue
+    }
+    const actualVersion = ymlVersion(text)
+    if (actualVersion !== input.version)
+      errors.push(
+        `updater metadata version mismatch in ${filename}: expected ${input.version}, got ${actualVersion ?? "missing"}`,
+      )
+    const files = ymlFiles(text)
+    for (const asset of expected) {
+      if (!files.some((file) => file.url === asset)) errors.push(`updater metadata ${filename} missing asset: ${asset}`)
+    }
+    for (const file of files) {
+      if (!expected.includes(file.url)) errors.push(`updater metadata ${filename} has unexpected asset: ${file.url}`)
+      const sha512 = file.sha512 ?? ""
+      if (sha512.length < 64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(sha512))
+        errors.push(`updater metadata ${filename} has invalid sha512: ${file.url}`)
+      if (!Number.isSafeInteger(file.size) || (file.size ?? 0) <= 0)
+        errors.push(`updater metadata ${filename} has invalid size: ${file.url}`)
+      if (file.blockMapSize !== undefined && (!Number.isSafeInteger(file.blockMapSize) || file.blockMapSize <= 0))
+        errors.push(`updater metadata ${filename} has invalid blockMapSize: ${file.url}`)
+    }
+  }
+
   return errors
 }
