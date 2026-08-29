@@ -5,6 +5,7 @@ import {
   isSuspiciousSameOriginRequest,
   parseSmokeAuthCookie,
   shouldObserveDeployedRequest,
+  shouldReportDeployedRequestFailure,
   shouldWaitForDeployedRequest,
 } from "./network"
 
@@ -87,6 +88,27 @@ describe("deployed multi-origin browser observer", () => {
     expect(
       isSuspiciousSameOriginRequest({ origin: appOrigin, pathname: "/assets/index.js", resourceType: "script" }, appOrigin),
     ).toBe(false)
+
+    const runtimeToken = { origin: publicOrigin, pathname: "/auth/runtime-token", resourceType: "fetch" }
+    expect(shouldReportDeployedRequestFailure(runtimeToken, "net::ERR_ABORTED", true, appOrigin, apiOrigins, pageOrigins)).toBe(
+      false,
+    )
+    expect(shouldReportDeployedRequestFailure(runtimeToken, "net::ERR_ABORTED", false, appOrigin, apiOrigins, pageOrigins)).toBe(
+      true,
+    )
+    expect(
+      shouldReportDeployedRequestFailure(runtimeToken, "net::ERR_CONNECTION_RESET", true, appOrigin, apiOrigins, pageOrigins),
+    ).toBe(true)
+    expect(
+      shouldReportDeployedRequestFailure(
+        { origin: appOrigin, pathname: "/assets/index.js", resourceType: "script" },
+        "net::ERR_ABORTED",
+        true,
+        appOrigin,
+        apiOrigins,
+        pageOrigins,
+      ),
+    ).toBe(true)
   })
 
   test("allows only expected anonymous API authorization errors in the console", () => {

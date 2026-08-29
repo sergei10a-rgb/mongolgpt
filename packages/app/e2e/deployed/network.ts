@@ -50,6 +50,26 @@ export function isSuspiciousSameOriginRequest(input: DeployedRequestInput, appOr
   )
 }
 
+export function shouldReportDeployedRequestFailure(
+  input: DeployedRequestInput,
+  failureText: string | undefined,
+  responseObserved: boolean,
+  appOrigin: string,
+  apiOrigins: ReadonlySet<string>,
+  pageOrigins: ReadonlySet<string>,
+) {
+  if (!shouldObserveDeployedRequest(input, appOrigin, apiOrigins, pageOrigins)) return false
+  if (
+    failureText === "net::ERR_ABORTED" &&
+    responseObserved &&
+    input.origin !== appOrigin &&
+    backendResourceTypes.has(input.resourceType)
+  ) {
+    return false
+  }
+  return true
+}
+
 function isLongLivedBackendPath(pathname: string) {
   return (
     pathname === "/event" ||
@@ -115,6 +135,7 @@ export function observeDeployedPage(
   const htmlResponses: string[] = []
   const observedApiResponses: ObservedApiResponse[] = []
   const pendingRequests = new Map<string, number>()
+  const respondedRequests = new WeakSet<Request>()
   const allowedApiOrigins = new Set(apiOrigins)
   const monitoredPageOrigins = new Set([appOrigin, ...additionalPageOrigins])
 
@@ -163,13 +184,16 @@ export function observeDeployedPage(
   page.on("requestfailed", (request) => {
     releaseDeployedRequest(pendingRequests, request)
     const url = new URL(request.url())
+    const failureText = request.failure()?.errorText
     if (
-      !shouldObserveDeployedRequest(
+      !shouldReportDeployedRequestFailure(
         {
           origin: url.origin,
           pathname: url.pathname,
           resourceType: request.resourceType(),
         },
+        failureText,
+        respondedRequests.has(request),
         appOrigin,
         allowedApiOrigins,
         monitoredPageOrigins,
@@ -178,12 +202,13 @@ export function observeDeployedPage(
       return
     }
     failedRequests.push(
-      `${request.resourceType()}:${request.method()} ${request.url()} :: ${request.failure()?.errorText ?? "failed"}`,
+      `${request.resourceType()}:${request.method()} ${request.url()} :: ${failureText ?? "failed"}`,
     )
   })
 
   page.on("response", (response) => {
     const request = response.request()
+    respondedRequests.add(request)
     const url = new URL(request.url())
     const pathname = url.pathname
     const origin = url.origin
