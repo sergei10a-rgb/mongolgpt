@@ -761,7 +761,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(artifacts?.uses).toBe("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a")
   })
 
-  test("deploys the authenticated Sandbox runtime before publishing the hosted app", async () => {
+  test("deploys the authenticated Sandbox runtime after migration and before the hosted app", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
     const workflow = parseWorkflow(source)
     const deployStep = workflow.jobs.deploy.steps.find((step) => step.name === "Validate and deploy to Cloudflare")
@@ -773,11 +773,13 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const binary = run.indexOf("packages/mongolgpt build --single")
     const copy = run.indexOf("cp packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt")
     const secrets = run.indexOf("MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET")
+    const migration = run.indexOf("bun run db:migrate")
     const runtime = run.indexOf('packages/runtime script/deploy.ts "$stage"')
     expect(binary).toBeGreaterThanOrEqual(0)
     expect(copy).toBeGreaterThan(binary)
     expect(secrets).toBeGreaterThan(copy)
-    expect(runtime).toBeGreaterThan(secrets)
+    expect(migration).toBeGreaterThan(secrets)
+    expect(runtime).toBeGreaterThan(migration)
     expect(sst).toBeGreaterThan(runtime)
     expect(run).toContain('--secrets-file="$runtime_secrets"')
 
@@ -807,10 +809,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const migration = run.indexOf(
       "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage=${{ inputs.stage }} -- bun run db:migrate",
     )
+    const runtime = run.indexOf('packages/runtime script/deploy.ts "$stage"')
     const application = run.lastIndexOf("bun sst deploy --stage=${{ inputs.stage }} --print-logs")
     expect(run).not.toContain("--target Database")
     expect(migration).toBeGreaterThanOrEqual(0)
-    expect(application).toBeGreaterThan(migration)
+    expect(runtime).toBeGreaterThan(migration)
+    expect(application).toBeGreaterThan(runtime)
     expect(packageSource.scripts["db:migrate"]).toBe("bun run --cwd packages/console/core db:migrate-d1")
   })
 
