@@ -68,7 +68,8 @@ export function renderTurnstileChallenge(input: {
       ${error}
       <form action="${escapeHtml(authorization.action)}" method="post">
         ${authorization.fields}
-        <div class="cf-turnstile" data-sitekey="${escapeHtml(siteKey)}" data-action="${TURNSTILE_ACTION}" data-language="auto" data-theme="auto" data-size="flexible" data-callback="mongolGPTTurnstileReady" data-expired-callback="mongolGPTTurnstileExpired" data-timeout-callback="mongolGPTTurnstileExpired" data-error-callback="mongolGPTTurnstileError"></div>
+        <input type="hidden" id="turnstile-response" name="cf-turnstile-response" value="">
+        <div class="cf-turnstile" data-sitekey="${escapeHtml(siteKey)}" data-action="${TURNSTILE_ACTION}" data-language="auto" data-theme="auto" data-size="flexible" data-response-field="false" data-callback="mongolGPTTurnstileReady" data-expired-callback="mongolGPTTurnstileExpired" data-timeout-callback="mongolGPTTurnstileExpired" data-error-callback="mongolGPTTurnstileError"></div>
         <p class="status" id="turnstile-status" role="status">Хамгаалалтын шалгалтыг хүлээж байна...</p>
         <button type="submit" disabled>Үргэлжлүүлэх</button>
       </form>
@@ -79,7 +80,7 @@ export function renderTurnstileChallenge(input: {
         const form = document.querySelector("form")
         const button = form.querySelector("button[type=submit]")
         const status = document.getElementById("turnstile-status")
-        const response = () => form.querySelector('input[name="cf-turnstile-response"]')
+        const response = () => document.getElementById("turnstile-response")
         const update = (ready, message) => {
           button.disabled = !ready
           status.hidden = ready
