@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { AuthError, PlanUsageLimitError, QuotaServiceUnavailableError } from "./error"
+import { GatewayConfigurationError } from "@mongolgpt/console-core/model.js"
 import { gatewayErrorResponse } from "./error-response"
 
 async function body(response: Response) {
@@ -10,6 +11,20 @@ async function body(response: Response) {
 }
 
 describe("gateway error responses", () => {
+  test("fails fast without exposing gateway configuration details", async () => {
+    const response = gatewayErrorResponse(new GatewayConfigurationError(), "Нууц дотоод алдаа")
+
+    expect(response.status).toBe(424)
+    expect(await body(response)).toEqual({
+      type: "error",
+      error: {
+        type: "GatewayConfigurationError",
+        message:
+          "Free Auto одоогоор идэвхгүй байна: загварын тохиргоо дутуу эсвэл буруу байна. Админ тохиргоог шалгана уу.",
+      },
+    })
+  })
+
   test("returns a retryable 503 when the quota service is unavailable", async () => {
     const response = gatewayErrorResponse(
       new QuotaServiceUnavailableError("Хязгаарын үйлчилгээ түр хариу өгөхгүй байна.", 60),

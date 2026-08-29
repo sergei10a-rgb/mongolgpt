@@ -16,6 +16,12 @@ import {
 type GatewayModel = z.infer<typeof MongolGPTModelSchema>
 type CompositeProviders = Record<string, Array<{ id: string; key: string }>>
 
+export class GatewayConfigurationError extends Error {
+  constructor() {
+    super("Free Auto одоогоор идэвхгүй байна: загварын тохиргоо дутуу эсвэл буруу байна. Админ тохиргоог шалгана уу.")
+  }
+}
+
 export function normalizeGatewayModelRoutes(model: GatewayModel, compositeProviders: CompositeProviders) {
   const providers = model.providers.map((provider) => ({
     ...provider,
@@ -54,6 +60,26 @@ export namespace GatewayCatalog {
     return input
   })
 
+  export const parseConfiguration = fn(
+    z.object({
+      canonical: z.string(),
+      stage: z.string(),
+    }),
+    ({ canonical, stage }) => {
+      let configuration: z.infer<typeof ModelsSchema>
+      try {
+        configuration = ModelsSchema.parse(JSON.parse(canonical))
+      } catch {
+        throw new GatewayConfigurationError()
+      }
+
+      if (modelConfigurationStageIssues(configuration, stage).length > 0) {
+        throw new GatewayConfigurationError()
+      }
+      return configuration
+    },
+  )
+
   export const list = fn(z.enum(["lightweight", "full"]), (modelList) => {
     const canonical = [
       Resource.MONGOLGPT_GATEWAY_MODELS1.value,
@@ -87,12 +113,7 @@ export namespace GatewayCatalog {
       Resource.MONGOLGPT_GATEWAY_MODELS29.value,
       Resource.MONGOLGPT_GATEWAY_MODELS30.value,
     ].join("")
-    const json = JSON.parse(canonical)
-    const configuration = ModelsSchema.parse(json)
-    const policyIssues = modelConfigurationStageIssues(configuration, Resource.App.stage)
-    if (policyIssues.length > 0) {
-      throw new Error(`Үйлдвэрлэлийн загварын тохиргоо аюулгүй биш байна: ${policyIssues.join("; ")}`)
-    }
+    const configuration = parseConfiguration({ canonical, stage: Resource.App.stage })
     const { models, lightweightModels, providers } = configuration
     const compositeProviders = Object.fromEntries(
       Object.entries(providers).map(([id, provider]) => [

@@ -241,6 +241,22 @@ describe("session.retry.retryable", () => {
     expect(SessionRetry.retryable(error, retryProvider)).toBeUndefined()
   })
 
+  test("does not retry a gateway configuration failure", () => {
+    const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
+      new SessionV1.APIError({
+        message: "Free Auto одоогоор идэвхгүй байна.",
+        isRetryable: false,
+        statusCode: 424,
+        responseBody: JSON.stringify({
+          type: "error",
+          error: { type: "GatewayConfigurationError", message: "Free Auto одоогоор идэвхгүй байна." },
+        }),
+      }).toObject(),
+    )
+
+    expect(SessionRetry.retryable(error, "mongolgpt")).toBeUndefined()
+  })
+
   test("retries ZlibError decompression failures", () => {
     const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
       new SessionV1.APIError({

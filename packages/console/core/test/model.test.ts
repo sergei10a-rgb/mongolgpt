@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { GatewayCatalog, normalizeGatewayModelRoutes } from "../src/model"
+import { GatewayCatalog, GatewayConfigurationError, normalizeGatewayModelRoutes } from "../src/model"
 import { isProviderAllowedForStage, modelConfigurationStageIssues } from "../src/model-config"
 
 const model = {
@@ -28,6 +28,19 @@ const config = (freeAuto: Record<string, unknown>) => ({
 const validate = (input: unknown) => GatewayCatalog.validate.schema.parse(input)
 
 describe("MongolGPT Free Auto model contract", () => {
+  test("classifies missing, malformed, and unsafe gateway configuration without exposing details", () => {
+    for (const canonical of ["", "{not-json", JSON.stringify({ models: {} })]) {
+      expect(() => GatewayCatalog.parseConfiguration({ canonical, stage: "dev" })).toThrow(GatewayConfigurationError)
+    }
+
+    expect(() =>
+      GatewayCatalog.parseConfiguration({
+        canonical: JSON.stringify(config(model)),
+        stage: "production",
+      }),
+    ).toThrow(GatewayConfigurationError)
+  })
+
   test("allows only explicitly approved providers in production", () => {
     const unapproved = { productionUseApproved: false }
     const approved = { productionUseApproved: true }

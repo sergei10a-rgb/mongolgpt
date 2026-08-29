@@ -9,6 +9,7 @@ import {
   RateLimitError,
   UserLimitError,
 } from "./error"
+import { GatewayConfigurationError } from "@mongolgpt/console-core/model.js"
 
 function headers(error?: { retryAfter?: number }) {
   const result = new Headers({
@@ -40,6 +41,10 @@ export function gatewayErrorResponse(error: unknown, internalMessage: string) {
 
   if (error instanceof QuotaServiceUnavailableError) {
     return Response.json(typedError(error, true), { status: 503, headers: headers(error) })
+  }
+
+  if (error instanceof GatewayConfigurationError) {
+    return Response.json(typedError(error), { status: 424, headers: headers() })
   }
 
   if (
