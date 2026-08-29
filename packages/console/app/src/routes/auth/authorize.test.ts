@@ -19,12 +19,37 @@ await mock.module("~/lib/hosted-env", () => ({
   hostedTurnstileSiteKey: undefined,
 }));
 
-const { authorizationTarget } = await import("./authorize");
+const { GET, authorizationTarget } = await import("./authorize");
 
 describe("OAuth authorize route", () => {
   beforeEach(() => {
     authorizeMock.mockClear();
     oauthStateUpdates.length = 0;
+  });
+
+  test("labels a foreign request origin without exposing either URL", async () => {
+    const response = await GET({
+      request: new Request("https://alias.dev.mgpt.mn/auth/authorize"),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: "invalid_authorization_request",
+      stage: "origin_mismatch",
+      message: "Нэвтрэх хүсэлт буруу байна.",
+    });
+  });
+
+  test("labels an unsupported explicit client as an invalid CLI request", async () => {
+    const response = await GET({
+      request: new Request("https://dev.mgpt.mn/auth/authorize?client_id=foreign"),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: "invalid_authorization_request",
+      stage: "cli_request",
+    });
   });
 
   test("stores a one-time state in session and redirects with the issued callback state", async () => {

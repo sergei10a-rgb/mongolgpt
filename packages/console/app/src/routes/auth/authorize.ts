@@ -5,16 +5,16 @@ import {
 } from "@mongolgpt/console-core/turnstile.js"
 import { AuthClient } from "~/context/auth"
 import { hostedConsoleUrl, hostedTurnstileEnabled, hostedTurnstileSiteKey } from "~/lib/hosted-env"
-import { configuredConsoleRequestUrl, safeAuthContinue } from "./helpers"
+import { configuredAppUrl, configuredConsoleRequestUrl, safeAuthContinue } from "./helpers"
 import { issueOAuthState, type OAuthStateSessionData, useOAuthStateSession } from "./oauth-state"
 import { renderTurnstileChallenge } from "./turnstile"
 
 export async function GET(input: APIEvent) {
   const url = configuredConsoleRequestUrl(input.request.url, hostedConsoleUrl)
-  if (!url) return invalidAuthorizationRequest()
+  if (!url) return invalidAuthorizationRequest(authorizationOriginFailure(input.request.url, hostedConsoleUrl))
   const cont = safeAuthContinue(url.searchParams.get("continue"))
   const clientID = url.searchParams.get("client_id")
-  if (clientID && clientID !== "mongolgpt-cli") return invalidAuthorizationRequest()
+  if (clientID && clientID !== "mongolgpt-cli") return invalidAuthorizationRequest("cli_request")
   let target: string
   try {
     target = clientID === "mongolgpt-cli" ? cliAuthorizationTarget(url) : await authorizationTarget(url, cont)
@@ -23,14 +23,23 @@ export async function GET(input: APIEvent) {
       console.error("MongolGPT OAuth authorization target үүссэнгүй", error.stage, error.causeName)
       return authorizationServiceUnavailable(error.stage)
     }
-    return invalidAuthorizationRequest()
+    if (!clientID) {
+      console.error("MongolGPT OAuth authorization target үүссэнгүй", "authorization_target", errorName(error))
+      return authorizationServiceUnavailable("authorization_target")
+    }
+    return invalidAuthorizationRequest("cli_request")
   }
   if (!turnstileEnabled()) return Response.redirect(target, 302)
 
   return challengeResponse(target, turnstileError(url.searchParams.get("turnstile_error")))
 }
 
-type OAuthAuthorizationStage = "state_session" | "authorization_url" | "state_issue" | "state_store"
+type OAuthAuthorizationStage =
+  | "authorization_target"
+  | "state_session"
+  | "authorization_url"
+  | "state_issue"
+  | "state_store"
 
 class OAuthAuthorizationTargetError extends Error {
   readonly causeName: string
@@ -56,11 +65,33 @@ function authorizationServiceUnavailable(stage: OAuthAuthorizationStage) {
   )
 }
 
-function invalidAuthorizationRequest() {
+type InvalidAuthorizationStage = "request_url" | "console_url" | "origin_mismatch" | "cli_request"
+
+function invalidAuthorizationRequest(stage: InvalidAuthorizationStage) {
   return Response.json(
-    { error: "invalid_authorization_request", message: "Нэвтрэх хүсэлт буруу байна." },
+    { error: "invalid_authorization_request", stage, message: "Нэвтрэх хүсэлт буруу байна." },
     { status: 400, headers: { "cache-control": "no-store" } },
   )
+}
+
+function authorizationOriginFailure(
+  requestUrl: string,
+  configuredConsoleUrl: string | undefined,
+): Exclude<InvalidAuthorizationStage, "cli_request"> {
+  let request: URL
+  try {
+    request = new URL(requestUrl)
+  } catch {
+    return "request_url"
+  }
+  const configured = configuredAppUrl(configuredConsoleUrl)
+  if (!configured) return "console_url"
+  if (request.origin !== configured.origin) return "origin_mismatch"
+  return "request_url"
+}
+
+function errorName(error: unknown) {
+  return error instanceof Error ? error.name : typeof error
 }
 
 function cliAuthorizationTarget(url: URL) {
