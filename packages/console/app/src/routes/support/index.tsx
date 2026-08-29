@@ -140,7 +140,7 @@ export default function SupportIndex() {
           <section aria-labelledby="support-guides-title">
             <h2 id="support-guides-title">Түгээмэл хэрэгцээ</h2>
             <div data-slot="guide-links">
-              <A href={language.route("/docs/getting-started/")}>Суулгаж эхлэх</A>
+              <A href={language.route("/docs/install/")}>Суулгаж эхлэх</A>
               <A href={language.route("/docs/providers/")}>Загвар, API холбох</A>
               <A href={language.route("/docs/troubleshooting/")}>Алдаа оношлох</A>
               <A href={language.route("/pricing")}>Үнэ, багц шалгах</A>
@@ -151,7 +151,7 @@ export default function SupportIndex() {
             <section aria-labelledby="support-login-title" data-section="support-login">
               <h2 id="support-login-title">Хувийн тусламжийн хүсэлт</h2>
               <p>Өөрийн хүсэлт, хариу болон төлөвийг аюулгүй харахын тулд MongolGPT бүртгэлээрээ нэвтэрнэ үү.</p>
-              <A href="/auth" data-slot="primary-action">
+              <A href={language.route("/auth")} data-slot="primary-action">
                 Нэвтэрч хүсэлт илгээх
               </A>
               <Show when={listError()}>

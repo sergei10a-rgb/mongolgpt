@@ -186,7 +186,7 @@ export default function Pricing() {
                       )}
                     </For>
                   </ul>
-                  <A href="/auth" data-slot="plan-action">
+                  <A href={language.route("/auth")} data-slot="plan-action">
                     {plan.action}
                   </A>
                 </article>
