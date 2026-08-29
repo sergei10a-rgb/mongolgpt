@@ -13,7 +13,7 @@ describe("OAuth account provisioning contract", () => {
     expect(source).not.toContain('Workspace.create({ name: "Default" })')
   })
 
-  test("delegates account identity writes to the transactional core provisioner", async () => {
+  test("delegates account identity writes to the D1 batch provisioner", async () => {
     const source = await Bun.file(resolve(import.meta.dir, "../src/auth.ts")).text()
 
     expect(source).toContain('from "@mongolgpt/console-core/oauth-account-provisioning.js"')

@@ -7,51 +7,56 @@ import { UserTable } from "./schema/user.sql"
 import { BillingTable } from "./schema/billing.sql"
 import { WorkspaceTable } from "./schema/workspace.sql"
 import { AccountTable } from "./schema/account.sql"
+import { KeyTable } from "./schema/key.sql"
 import { Key } from "./key"
-import { and, eq, isNull } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 export namespace Workspace {
+  export async function createForAccount(
+    input: { accountID: string; name: string },
+    batch: typeof Database.batch = Database.batch,
+  ) {
+    const workspaceID = Identifier.create("workspace")
+    const userID = Identifier.create("user")
+    const key = Key.record({ workspaceID, userID, name: "Default API Key" })
+    // A missing or deleted account produces a NULL id and makes D1 roll the whole batch back.
+    await batch(
+      (db) =>
+        [
+          db.run(sql`insert into ${WorkspaceTable} (id, name)
+        values (
+          case when exists (
+            select 1 from ${AccountTable}
+            where ${AccountTable.id} = ${input.accountID}
+              and ${AccountTable.timeDeleted} is null
+          ) then ${workspaceID} else null end,
+          ${input.name}
+        )`),
+          db.insert(UserTable).values({
+            workspaceID,
+            id: userID,
+            accountID: input.accountID,
+            name: "",
+            role: "admin",
+          }),
+          db.insert(BillingTable).values({
+            workspaceID,
+            id: Identifier.create("billing"),
+            balance: 0,
+          }),
+          db.insert(KeyTable).values(key),
+        ] as const,
+    )
+    return workspaceID
+  }
+
   export const create = fn(
     z.object({
       name: z.string().min(1),
     }),
     async ({ name }) => {
       const account = Actor.assert("account")
-      const workspaceID = Identifier.create("workspace")
-      const userID = Identifier.create("user")
-      await Database.transaction(async (tx) => {
-        const active = await tx
-          .select({ id: AccountTable.id })
-          .from(AccountTable)
-          .where(and(eq(AccountTable.id, account.properties.accountID), isNull(AccountTable.timeDeleted)))
-          .then((rows) => rows[0])
-        if (!active) throw new Error("Бүртгэл идэвхгүй байна")
-
-        await tx.insert(WorkspaceTable).values({
-          id: workspaceID,
-          name,
-        })
-        await tx.insert(UserTable).values({
-          workspaceID,
-          id: userID,
-          accountID: account.properties.accountID,
-          name: "",
-          role: "admin",
-        })
-        await tx.insert(BillingTable).values({
-          workspaceID,
-          id: Identifier.create("billing"),
-          balance: 0,
-        })
-      })
-      await Actor.provide(
-        "system",
-        {
-          workspaceID,
-        },
-        () => Key.create({ userID, name: "Default API Key" }),
-      )
-      return workspaceID
+      return createForAccount({ accountID: account.properties.accountID, name })
     },
   )
 
@@ -75,10 +80,7 @@ export namespace Workspace {
 
   export const remove = fn(z.void(), async () => {
     await Database.use((tx) =>
-      tx
-        .update(WorkspaceTable)
-        .set({ timeDeleted: new Date() })
-        .where(eq(WorkspaceTable.id, Actor.workspace())),
+      tx.update(WorkspaceTable).set({ timeDeleted: new Date() }).where(eq(WorkspaceTable.id, Actor.workspace())),
     )
   })
 }

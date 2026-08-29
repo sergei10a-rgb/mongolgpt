@@ -15,6 +15,10 @@ export namespace Database {
   export type Transaction = Parameters<Parameters<Client["transaction"]>[0]>[0]
   export type TxOrDb = Transaction | ReturnType<typeof client>
 
+  export function batch<const T extends Parameters<Client["batch"]>[0]>(callback: (db: Client) => T) {
+    return client().batch(callback(client()))
+  }
+
   const TransactionContext = Context.create<{
     tx: TxOrDb
     effects: (() => void | Promise<void>)[]

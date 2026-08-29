@@ -35,7 +35,30 @@ describe("browser OAuth callback", () => {
       expect((await fetch(rejected)).status).toBe(400)
       const result = await code
       expect(result).toBeInstanceOf(Error)
-      expect((result as Error).message).toBe("Хэрэглэгч зөвшөөрсөнгүй")
+      if (!(result instanceof Error)) throw new Error("Expected OAuth callback error")
+      expect(result.message).toBe("Хэрэглэгч зөвшөөрсөнгүй")
+    } finally {
+      await callback.close()
+    }
+  })
+
+  test("reports a server error callback even when the provider omits state", async () => {
+    const callback = await createBrowserCallbackServer()
+    callback.setState("expected-state")
+
+    try {
+      const rejected = new URL(callback.redirect)
+      rejected.searchParams.set("error", "server_error")
+      rejected.searchParams.set("error_description", "Failed query: begin")
+      const code = callback.code.catch((error: unknown) => error)
+      const response = await fetch(rejected)
+
+      expect(response.status).toBe(400)
+      expect(await response.text()).toContain("Failed query: begin")
+      const result = await code
+      expect(result).toBeInstanceOf(Error)
+      if (!(result instanceof Error)) throw new Error("Expected OAuth callback error")
+      expect(result.message).toBe("Failed query: begin")
     } finally {
       await callback.close()
     }

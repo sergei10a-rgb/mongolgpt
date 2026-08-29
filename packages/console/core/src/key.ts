@@ -8,6 +8,22 @@ import { UserTable } from "./schema/user.sql"
 import { AuthTable } from "./schema/auth.sql"
 
 export namespace Key {
+  export function record(input: { workspaceID: string; userID: string; name: string }) {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    const random = new Uint32Array(64)
+    crypto.getRandomValues(random)
+    const key = `sk-${Array.from(random, (value) => chars[value % chars.length]).join("")}`
+
+    return {
+      id: Identifier.create("key"),
+      workspaceID: input.workspaceID,
+      userID: input.userID,
+      name: input.name,
+      key,
+      timeUsed: null,
+    }
+  }
+
   export const list = fn(z.void(), async () => {
     const keys = await Database.use((tx) =>
       tx
@@ -45,30 +61,14 @@ export namespace Key {
       name: z.string().min(1).max(255),
     }),
     async (input) => {
-      const { name } = input
+      const value = record({
+        workspaceID: Actor.workspace(),
+        userID: input.userID,
+        name: input.name,
+      })
+      await Database.use((tx) => tx.insert(KeyTable).values(value))
 
-      // Generate secret key: sk- + 64 random characters (upper, lower, numbers)
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-      let secretKey = "sk-"
-      const array = new Uint32Array(64)
-      crypto.getRandomValues(array)
-      for (let i = 0, l = array.length; i < l; i++) {
-        secretKey += chars[array[i] % chars.length]
-      }
-      const keyID = Identifier.create("key")
-
-      await Database.use((tx) =>
-        tx.insert(KeyTable).values({
-          id: keyID,
-          workspaceID: Actor.workspace(),
-          userID: input.userID,
-          name,
-          key: secretKey,
-          timeUsed: null,
-        }),
-      )
-
-      return keyID
+      return value.id
     },
   )
 

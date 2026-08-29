@@ -712,6 +712,14 @@ export function createBrowserCallbackServer(): Promise<BrowserCallbackServer> {
       const value = url.searchParams.get("code")
       const state = url.searchParams.get("state")
 
+      if (error && !state) {
+        settle(() => rejectCode(new Error(error)))
+        response
+          .writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
+          .end(OauthCallbackPage.error(error, { provider: "MongolGPT" }))
+        return
+      }
+
       if (!expectedState || state !== expectedState) {
         const message = "OAuth төлөв буруу байна"
         response
