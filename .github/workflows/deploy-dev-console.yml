@@ -92,10 +92,7 @@ jobs:
         run: |
           bun run deploy:preflight -- dev --console-only
           bun sst unlock --stage=dev || true
-          MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \
-            MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false \
-            MONGOLGPT_DEPLOY_DATABASE_ONLY=true \
-            bun sst shell --stage=dev --target DatabaseMigration -- bun run db:migrate
+          bun sst shell bun run db:migrate --stage=dev --target Console --print-logs
           MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \
             bun sst deploy --stage=dev --print-logs
 

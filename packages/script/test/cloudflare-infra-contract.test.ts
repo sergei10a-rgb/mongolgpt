@@ -198,7 +198,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const stateRepair = run.indexOf('bun sst state repair --stage="$stage" --print-logs 2>&1 | tee "$repair_log"')
     const firstDeploy = run.indexOf('bun sst deploy --stage="$stage" --print-logs')
     const migration = run.indexOf(
-      'MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage="$stage" --target DatabaseMigration -- bun run db:migrate',
+      'bun sst shell bun run db:migrate --stage="$stage" --target Console --print-logs',
     )
     const finalDeploy = run.lastIndexOf('bun sst deploy --stage="$stage" --print-logs')
     expect(oauthSecrets).toBeGreaterThanOrEqual(0)
@@ -232,8 +232,6 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('await import("@pulumi/cloudflare")')
     expect(configSource).toContain('new cloudflare.Provider("default_6_14_0", {}, { version: "6.14.0" })')
     expect(configSource).toContain('await import("./infra/database.js")')
-    expect(configSource).toContain('new sst.x.DevCommand("DatabaseMigration"')
-    expect(configSource).toContain("link: [database]")
     expect(configSource).toContain(
       'cloudflareProviderBridge && (stage !== "dev" || !hostedServices || appOnly || cloudflareProviderMigration)',
     )
@@ -674,12 +672,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(tokenPreflight?.run).toBe("bun script/cloudflare-preflight.ts --console-only")
     expect(deploy?.run).toContain("bun run deploy:preflight -- dev --console-only")
     expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_CONSOLE_ONLY=false")
-    expect(deploy?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false")
-    expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_DATABASE_ONLY=true")
-    expect(deploy?.run).toContain("bun sst shell --stage=dev --target DatabaseMigration -- bun run db:migrate")
+    expect(deploy?.run).not.toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false")
+    expect(deploy?.run).not.toContain("MONGOLGPT_DEPLOY_DATABASE_ONLY=true")
+    expect(deploy?.run).toContain("bun sst shell bun run db:migrate --stage=dev --target Console --print-logs")
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
     expect(deploy?.run).not.toMatch(/sst deploy[^\n]*--target Database/)
-    expect(deploy?.run).not.toContain("--target Console")
+    expect(deploy?.run).not.toMatch(/sst deploy[^\n]*--target Console/)
     expect(deploy.run.indexOf("bun run db:migrate")).toBeLessThan(
       deploy.run.indexOf("bun sst deploy --stage=dev --print-logs"),
     )
@@ -811,7 +809,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
     const run = deployStep?.run ?? ""
     const migration = run.indexOf(
-      "MONGOLGPT_DEPLOY_DATABASE_ONLY=true bun sst shell --stage=${{ inputs.stage }} --target DatabaseMigration -- bun run db:migrate",
+      "bun sst shell bun run db:migrate --stage=${{ inputs.stage }} --target Console --print-logs",
     )
     const runtime = run.indexOf('packages/runtime script/deploy.ts "$stage"')
     const application = run.lastIndexOf("bun sst deploy --stage=${{ inputs.stage }} --print-logs")
