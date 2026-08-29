@@ -8,6 +8,8 @@ import { authorizationTarget, type OAuthAuthorizationStage } from "./authorizati
 import { configuredAppUrl, configuredConsoleRequestUrl, safeAuthContinue } from "./helpers"
 import { renderTurnstileChallenge } from "./turnstile"
 
+const OAUTH_PROVIDER_FORM_ACTION_ORIGINS = ["https://github.com", "https://accounts.google.com"] as const
+
 export async function GET(input: APIEvent) {
   const url = configuredConsoleRequestUrl(input.request.url, hostedConsoleUrl)
   if (!url) return invalidAuthorizationRequest(authorizationOriginFailure(input.request.url, hostedConsoleUrl))
@@ -108,7 +110,7 @@ function challengeResponse(authorizationUrl: string, error?: "invalid" | "unavai
       headers: {
         "cache-control": "no-store",
         "content-type": "text/html; charset=utf-8",
-        "content-security-policy": `default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src https://challenges.cloudflare.com; style-src 'unsafe-inline'; form-action ${challenge.authOrigin}; base-uri 'none'; object-src 'none'`,
+        "content-security-policy": `default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src https://challenges.cloudflare.com; style-src 'unsafe-inline'; form-action ${challenge.authOrigin} ${OAUTH_PROVIDER_FORM_ACTION_ORIGINS.join(" ")}; base-uri 'none'; object-src 'none'`,
         "permissions-policy": "camera=(), microphone=(), geolocation=()",
         "referrer-policy": "no-referrer",
         "x-content-type-options": "nosniff",

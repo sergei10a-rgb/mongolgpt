@@ -658,10 +658,19 @@ export function inspectHostedAuthorizeChallenge(input: {
   for (const required of [
     "script-src https://challenges.cloudflare.com",
     "frame-src https://challenges.cloudflare.com",
-    `form-action ${expectedAuth.origin}`,
     "object-src 'none'",
   ]) {
     if (!csp.includes(required)) throw new Error(`hosted authorization challenge CSP is missing ${required}`)
+  }
+  const cspFormAction = csp
+    .split(";")
+    .map((directive) => directive.trim())
+    .find((directive) => directive.startsWith("form-action "))
+  const formActionSources = new Set(cspFormAction?.split(/\s+/).slice(1) ?? [])
+  for (const origin of [expectedAuth.origin, "https://github.com", "https://accounts.google.com"]) {
+    if (!formActionSources.has(origin)) {
+      throw new Error(`hosted authorization challenge CSP form-action is missing ${origin}`)
+    }
   }
 
   if (!/<html\s+lang=["']mn["']/i.test(input.body)) {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { OAuthStateSessionData } from "./oauth-state";
 
 const authorizeMock = mock(async (_redirectURI: string, _response: "code" | "token") => ({
@@ -6,6 +6,8 @@ const authorizeMock = mock(async (_redirectURI: string, _response: "code" | "tok
 }));
 
 const oauthStateUpdates: OAuthStateSessionData[] = [];
+const previousAuthUrl = process.env.VITE_AUTH_URL;
+process.env.VITE_AUTH_URL = "https://auth.dev.mgpt.mn";
 
 await mock.module("~/context/auth", () => ({
   AuthClient: {
@@ -15,13 +17,18 @@ await mock.module("~/context/auth", () => ({
 
 await mock.module("~/lib/hosted-env", () => ({
   hostedConsoleUrl: "https://dev.mgpt.mn",
-  hostedTurnstileEnabled: false,
-  hostedTurnstileSiteKey: undefined,
+  hostedTurnstileEnabled: true,
+  hostedTurnstileSiteKey: "1x00000000000000000000AA",
 }));
 
 const authorizeRoute = await import("./authorize");
 const { GET } = authorizeRoute;
 const { authorizationTarget } = await import("./authorization-target");
+
+afterAll(() => {
+  if (previousAuthUrl === undefined) delete process.env.VITE_AUTH_URL;
+  else process.env.VITE_AUTH_URL = previousAuthUrl;
+});
 
 describe("OAuth authorize route", () => {
   beforeEach(() => {
@@ -56,6 +63,25 @@ describe("OAuth authorize route", () => {
       error: "invalid_authorization_request",
       stage: "cli_request",
     });
+  });
+
+  test("allows the configured OAuth provider redirect chain in the challenge CSP", async () => {
+    const query = new URLSearchParams({
+      client_id: "mongolgpt-cli",
+      redirect_uri: "http://127.0.0.1:1456/auth/callback",
+      response_type: "code",
+      state: "12345678-1234-1234-1234-123456789012",
+      code_challenge: "r0Z3xQJf4wK8DZmTsCyuLgVbA9hN6pEeU2iO7sMxP1k",
+      code_challenge_method: "S256",
+    });
+    const response = await GET({
+      request: new Request(`https://dev.mgpt.mn/auth/authorize?${query}`),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-security-policy")).toContain(
+      "form-action https://auth.dev.mgpt.mn https://github.com https://accounts.google.com",
+    );
   });
 
   test("stores a one-time state in session and redirects with the issued callback state", async () => {

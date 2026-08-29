@@ -528,7 +528,7 @@ describe("dev OAuth bootstrap smoke", () => {
           headers: {
             "cache-control": "no-store",
             "content-security-policy":
-              "default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action https://auth.dev.mgpt.mn; object-src 'none'",
+              "default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action https://auth.dev.mgpt.mn https://github.com https://accounts.google.com; object-src 'none'",
             "content-type": "text/html; charset=utf-8",
             "x-frame-options": "DENY",
           },
@@ -1463,7 +1463,7 @@ describe("hosted authorization smoke contract", () => {
     contentType: "text/html; charset=utf-8",
     cacheControl: "no-store",
     contentSecurityPolicy:
-      "default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action https://auth.dev.mgpt.mn; object-src 'none'",
+      "default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action https://auth.dev.mgpt.mn https://github.com https://accounts.google.com; object-src 'none'",
     frameOptions: "DENY",
     body: challenge,
   }
@@ -1509,6 +1509,12 @@ describe("hosted authorization smoke contract", () => {
         contentSecurityPolicy: "default-src 'self'",
       }),
     ).toThrow("CSP is missing")
+    expect(() =>
+      inspectHostedAuthorizeChallenge({
+        ...challengeInput,
+        contentSecurityPolicy: challengeInput.contentSecurityPolicy.replace(" https://github.com", ""),
+      }),
+    ).toThrow("CSP form-action is missing https://github.com")
   })
 
   test("rejects direct auth worker authorization without a Turnstile token", () => {
