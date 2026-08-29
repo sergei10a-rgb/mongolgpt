@@ -84,6 +84,17 @@ describe("home landing contract", () => {
     expect(styles).not.toMatch(/font-size:\s*clamp\([^)]*vw/)
   })
 
+  test("keeps the mobile hero compact enough to reveal visual and next-section cues", async () => {
+    const styles = await source("routes/index.css")
+    expect(styles).toContain('[data-slot="hero-actions"] {')
+    expect(styles).toContain('grid-template-columns: repeat(2, minmax(0, 1fr));')
+    expect(styles).toContain('[data-slot="hero-actions"] [data-variant="ghost"] {')
+    expect(styles).toContain("grid-column: 1 / -1;")
+    expect(styles).toContain("max-height: 8.8rem;")
+    expect(styles).toContain('[data-component="hero-nav"] {')
+    expect(styles).toContain("overflow-x: auto;")
+  })
+
   test("reports the live mobile menu state to assistive technology", async () => {
     const header = await source("component/header.tsx")
     expect(header).toContain("aria-expanded={store.mobileMenuOpen}")
