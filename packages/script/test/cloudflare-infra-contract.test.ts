@@ -636,7 +636,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(webAppSource).not.toContain('StaticSiteV2("Website"')
   })
 
-  test("deploys only the public dev console site with exact confirmation and root preview alias", async () => {
+  test("deploys only dev OAuth and public console with exact confirmation and root preview alias", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy-dev-console.yml", import.meta.url)).text()
     const sstSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
     const consoleSource = await Bun.file(new URL("../../../infra/console.ts", import.meta.url)).text()
@@ -646,10 +646,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     }
     const job = parseWorkflowJob(parsed.jobs.deploy, "deploy")
     const confirmation = job.steps.find((step) => step.name === "Validate exact dev console confirmation")
-    const artifact = job.steps.find((step) => step.name === "Verify public console artifact")
+    const artifact = job.steps.find((step) => step.name === "Verify public console and OAuth artifacts")
     const tokenPreflight = job.steps.find((step) => step.name === "Verify Cloudflare console token")
-    const deploy = job.steps.find((step) => step.name === "Deploy only dev public console to Cloudflare")
-    const smoke = job.steps.find((step) => step.name === "Verify live dev public console boundary")
+    const deploy = job.steps.find((step) => step.name === "Deploy only dev OAuth and public console to Cloudflare")
+    const smoke = job.steps.find((step) => step.name === "Verify live dev OAuth and public console boundaries")
     if (!deploy?.run) throw new Error("Dev console deploy step is missing")
 
     expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
@@ -662,6 +662,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(parsed.env.MONGOLGPT_ENABLE_TURNSTILE).toBe("true")
     expect(confirmation?.env).toEqual({ DEPLOY_CONFIRMATION: "${{ inputs.confirmation }}" })
     expect(confirmation?.run).toContain('if [ "$DEPLOY_CONFIRMATION" != "DEPLOY DEV CONSOLE dev.mgpt.mn" ]; then')
+    expect(artifact?.run).toContain("bun test --cwd packages/console/core")
+    expect(artifact?.run).toContain("bun test --cwd packages/console/function")
     expect(artifact?.run).toContain("bun run --cwd packages/console/app typecheck")
     expect(artifact?.run).toContain("bun test --cwd packages/console/app")
     expect(artifact?.env).toEqual({})
@@ -673,6 +675,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).not.toContain("MONGOLGPT_DEPLOY_DATABASE_ONLY=true")
     expect(deploy?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
     expect(deploy?.run).toContain('MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate')
+    expect(deploy?.run).toContain("bun sst deploy --stage=dev --target AuthApi --print-logs")
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --target Console --print-logs")
     expect(deploy?.run).not.toContain(
       "MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \\\n              bun sst deploy --stage=dev --target Console",
@@ -682,8 +685,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("exit 1")
     expect(deploy?.run).not.toContain("bun sst deploy --stage=dev --print-logs")
     expect(deploy?.run).not.toMatch(/sst deploy[^\n]*--target Database/)
-    expect(deploy.run.indexOf("bun run db:migrate")).toBeLessThan(deploy.run.indexOf("--target Console"))
-    expect(smoke?.run).toBe("bun script/deployment-smoke.ts --console-only dev")
+    expect(deploy.run.indexOf("bun run db:migrate")).toBeLessThan(deploy.run.indexOf("--target AuthApi"))
+    expect(deploy.run.indexOf("--target AuthApi")).toBeLessThan(deploy.run.indexOf("--target Console"))
+    expect(smoke?.run).toContain("bun script/deployment-smoke.ts --auth-bootstrap dev")
+    expect(smoke?.run).toContain("bun script/deployment-smoke.ts --console-only dev")
     expect(source).toContain("MONGOLGPT_RUNTIME_AUTH_SECRET")
     expect(source).toContain("SST_SECRET_ByokCredentialsKeyV1")
     expect(source).toContain("SST_SECRET_GITHUB_CLIENT_ID_CONSOLE")

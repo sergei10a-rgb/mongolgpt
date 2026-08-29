@@ -65,8 +65,10 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-      - name: Verify public console artifact
+      - name: Verify public console and OAuth artifacts
         run: |
+          bun test --cwd packages/console/core
+          bun test --cwd packages/console/function
           bun run --cwd packages/console/app typecheck
           bun test --cwd packages/console/app
 
@@ -75,7 +77,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: bun script/cloudflare-preflight.ts --console-only
 
-      - name: Deploy only dev public console to Cloudflare
+      - name: Deploy only dev OAuth and public console to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
@@ -99,9 +101,12 @@ jobs:
           fi
           MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate
           unset database_id
+          bun sst deploy --stage=dev --target AuthApi --print-logs
           bun sst deploy --stage=dev --target Console --print-logs
 
-      - name: Verify live dev public console boundary
+      - name: Verify live dev OAuth and public console boundaries
         env:
           MONGOLGPT_AUTH_EMAIL_DOMAINS: ${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}
-        run: bun script/deployment-smoke.ts --console-only dev
+        run: |
+          bun script/deployment-smoke.ts --auth-bootstrap dev
+          bun script/deployment-smoke.ts --console-only dev
