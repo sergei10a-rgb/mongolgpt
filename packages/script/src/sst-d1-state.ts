@@ -20,7 +20,7 @@ export function extractSstD1DatabaseId(input: unknown, logicalName = "Database")
     const outputs = record(resource.outputs) ? resource.outputs : {}
 
     if (resource.type === "sst:cloudflare:D1" && name === logicalName) {
-      addUuid(ids, outputs.databaseId, `SST ${logicalName} component`)
+      if (outputs.databaseId !== undefined) addUuid(ids, outputs.databaseId, `SST ${logicalName} component`)
       continue
     }
 

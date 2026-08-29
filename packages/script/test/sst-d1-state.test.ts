@@ -43,6 +43,28 @@ test("SST D1 state parser component болон provider resource-ийн ижил
   ).toBe(databaseId)
 })
 
+test("SST component output байхгүй үед provider resource-ийн UUID-г ашиглана", () => {
+  expect(
+    extractSstD1DatabaseId({
+      latest: {
+        resources: [
+          {
+            type: "sst:cloudflare:D1",
+            urn: "urn:pulumi:dev::mongolgpt::sst:cloudflare:D1::Database",
+            outputs: {},
+          },
+          {
+            type: "cloudflare:index/d1Database:D1Database",
+            urn: "urn:pulumi:dev::mongolgpt::sst:cloudflare:D1$cloudflare:index/d1Database:D1Database::DatabaseDatabase",
+            id: databaseId,
+            outputs: {},
+          },
+        ],
+      },
+    }),
+  ).toBe(databaseId)
+})
+
 test("SST D1 state parser provider composite id-гаас UUID авна", () => {
   expect(
     extractSstD1DatabaseId({
