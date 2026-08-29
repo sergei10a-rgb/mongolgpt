@@ -9,6 +9,7 @@ describe("MongolGPT account access wiring", () => {
   test("revalidates web cookies and stores the OAuth auth version", async () => {
     const auth = await source("context/auth.ts")
     const callback = await source("routes/auth/[...callback].ts")
+    const callbackHandler = await source("routes/auth/callback-handler.ts")
     const status = await source("routes/auth/status.ts")
     const app = await source("routes/auth/app.ts")
 
@@ -17,7 +18,10 @@ describe("MongolGPT account access wiring", () => {
     expect(auth).toContain("MONGOLGPT_GATEWAY_SESSION_SECRET")
     expect(auth).not.toContain("ZEN_SESSION_SECRET")
     expect(auth).toContain('redirect("/auth/suspended")')
-    expect(callback).toContain("verified.subject.properties.authVersion ?? 0")
+    expect(callback).toContain("useOAuthStateSession")
+    expect(callbackHandler).toContain('error: "invalid_oauth_state"')
+    expect(callbackHandler).toContain("validateOAuthState")
+    expect(callbackHandler).toContain("subject.authVersion ?? 0")
     expect(callback).toContain('dict["gateway.api.error.internalServer"]')
     expect(callback).not.toContain("error instanceof Error ? error.message")
     expect(status).toContain("account_suspended")

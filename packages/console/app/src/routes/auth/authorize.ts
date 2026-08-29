@@ -6,6 +6,7 @@ import {
 import { AuthClient } from "~/context/auth"
 import { hostedConsoleUrl, hostedTurnstileEnabled, hostedTurnstileSiteKey } from "~/lib/hosted-env"
 import { configuredConsoleRequestUrl, safeAuthContinue } from "./helpers"
+import { issueOAuthState, type OAuthStateSessionData, useOAuthStateSession } from "./oauth-state"
 import { renderTurnstileChallenge } from "./turnstile"
 
 export async function GET(input: APIEvent) {
@@ -44,10 +45,23 @@ function cliAuthorizationTarget(url: URL) {
   }).toString()
 }
 
-async function authorizationTarget(requestUrl: URL, cont: string) {
+export async function authorizationTarget(
+  requestUrl: URL,
+  cont: string,
+  dependencies: {
+    authorize?: (redirectURI: string, response: "code" | "token") => Promise<{ url: string }>
+    stateSession?: () => Promise<{
+      update(updater: (value: OAuthStateSessionData) => OAuthStateSessionData): Promise<unknown>
+    }>
+  } = {},
+) {
   const callbackUrl = new URL(`./callback${cont}`, requestUrl)
-  const result = await AuthClient.authorize(callbackUrl.toString(), "code")
-  return result.url
+  const authorize = dependencies.authorize ?? ((...input) => AuthClient.authorize(...input))
+  const result = await authorize(callbackUrl.toString(), "code")
+  const session = await (dependencies.stateSession ?? useOAuthStateSession)()
+  const issued = issueOAuthState(result.url)
+  await session.update(() => issued.session)
+  return issued.authorizationUrl
 }
 
 function turnstileEnabled() {
