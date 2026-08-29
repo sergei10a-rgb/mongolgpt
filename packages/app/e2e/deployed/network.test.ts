@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { classifyDeployedResponse, parseSmokeAuthCookie, shouldTrackDeployedRequest } from "./network"
+import {
+  classifyDeployedResponse,
+  isBenignDeployedConsoleError,
+  parseSmokeAuthCookie,
+  shouldTrackDeployedRequest,
+} from "./network"
 
 const origin = "https://dev.mgpt.mn"
 const token = "authenticated-smoke-token-value"
@@ -57,9 +62,35 @@ describe("deployed multi-origin browser observer", () => {
     expect(tracks(runtimeOrigin, "/auth/session", "fetch")).toBe(true)
     expect(tracks(runtimeOrigin, "/project", "xhr")).toBe(true)
 
+    expect(tracks(runtimeOrigin, "/event", "fetch")).toBe(false)
+    expect(tracks(runtimeOrigin, "/global/event", "fetch")).toBe(false)
+    expect(tracks(runtimeOrigin, "/api/event", "fetch")).toBe(false)
+    expect(tracks(runtimeOrigin, "/api/session/session-1/event", "fetch")).toBe(false)
     expect(tracks(appOrigin, "/cdn-cgi/rum", "fetch")).toBe(false)
     expect(tracks("https://static.cloudflareinsights.com", "/beacon.min.js", "script")).toBe(false)
     expect(tracks("https://telemetry.example", "/collect", "fetch")).toBe(false)
+  })
+
+  test("allows only expected anonymous API authorization errors in the console", () => {
+    const appOrigin = "https://app.dev.mgpt.mn"
+    const publicOrigin = "https://dev.mgpt.mn"
+    const runtimeOrigin = "https://runtime.dev.mgpt.mn"
+    const apiOrigins = new Set([publicOrigin, runtimeOrigin])
+    const unauthorized = "Failed to load resource: the server responded with a status of 401 ()"
+
+    expect(isBenignDeployedConsoleError(unauthorized, `${publicOrigin}/v1/account/overview`, appOrigin, apiOrigins)).toBe(
+      true,
+    )
+    expect(isBenignDeployedConsoleError(unauthorized, `${runtimeOrigin}/project`, appOrigin, apiOrigins)).toBe(true)
+    expect(isBenignDeployedConsoleError(unauthorized, `${appOrigin}/assets/index.js`, appOrigin, apiOrigins)).toBe(false)
+    expect(
+      isBenignDeployedConsoleError(
+        "Failed to load resource: the server responded with a status of 500 ()",
+        `${runtimeOrigin}/project`,
+        appOrigin,
+        apiOrigins,
+      ),
+    ).toBe(false)
   })
 
   test("monitors the public console without treating its API calls as static-app misrouting", () => {

@@ -34,7 +34,17 @@ export function shouldTrackDeployedRequest(
   if (blockedDocumentTypes.has(input.resourceType)) return pageOrigins.has(input.origin)
   if (!backendResourceTypes.has(input.resourceType)) return false
   if (input.origin !== appOrigin && !apiOrigins.has(input.origin)) return false
+  if (isLongLivedBackendPath(input.pathname)) return false
   return isStaticAppBackendPath(input.pathname)
+}
+
+function isLongLivedBackendPath(pathname: string) {
+  return (
+    pathname === "/event" ||
+    pathname === "/global/event" ||
+    pathname === "/api/event" ||
+    /^\/api\/session\/[^/]+\/event$/u.test(pathname)
+  )
 }
 
 export function classifyDeployedResponse(
@@ -103,7 +113,7 @@ export function observeDeployedPage(
   page.on("console", (message) => {
     if (message.type() !== "error") return
     const text = message.text()
-    if (isBenignConsoleError(text)) return
+    if (isBenignDeployedConsoleError(text, message.location().url, appOrigin, allowedApiOrigins)) return
     consoleErrors.push(text)
   })
 
@@ -201,8 +211,22 @@ export function expectNoDeployedSmokeFailures(state: ReturnType<typeof observeDe
   expect(state.htmlResponses, "html returned from api-like requests").toEqual([])
 }
 
-function isBenignConsoleError(text: string) {
-  return ["Download the React DevTools", "favicon", "Manifest: Line"].some((fragment) => text.includes(fragment))
+export function isBenignDeployedConsoleError(
+  text: string,
+  locationUrl: string,
+  appOrigin: string,
+  apiOrigins: ReadonlySet<string>,
+) {
+  if (["Download the React DevTools", "favicon", "Manifest: Line"].some((fragment) => text.includes(fragment))) {
+    return true
+  }
+  if (!/Failed to load resource: the server responded with a status of (401|403)/u.test(text)) return false
+  try {
+    const location = new URL(locationUrl)
+    return location.origin !== appOrigin && apiOrigins.has(location.origin) && isStaticAppBackendPath(location.pathname)
+  } catch {
+    return false
+  }
 }
 
 export function isVisibleMongolianText(text: string) {
