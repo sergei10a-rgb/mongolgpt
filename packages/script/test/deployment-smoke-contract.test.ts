@@ -490,6 +490,7 @@ describe("dev OAuth bootstrap smoke", () => {
     const challenge = `<!doctype html>
       <html lang="mn"><head>
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+        <script nonce="deploymentsmokenonce1234"></script>
       </head><body>
         <form action="https://auth.dev.mgpt.mn/authorize" method="post">
           <input type="hidden" name="client_id" value="app">
@@ -528,7 +529,7 @@ describe("dev OAuth bootstrap smoke", () => {
           headers: {
             "cache-control": "no-store",
             "content-security-policy":
-              "default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action https://auth.dev.mgpt.mn https://github.com https://accounts.google.com https://dev.mgpt.mn; object-src 'none'",
+              "default-src 'none'; script-src 'nonce-deploymentsmokenonce1234' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action https://auth.dev.mgpt.mn https://github.com https://accounts.google.com https://dev.mgpt.mn; object-src 'none'",
             "content-type": "text/html; charset=utf-8",
             "x-frame-options": "DENY",
           },
@@ -1446,6 +1447,7 @@ describe("hosted authorization smoke contract", () => {
   const challenge = `<!doctype html>
     <html lang="mn"><head>
       <script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+      <script nonce="deploymentsmokenonce1234"></script>
     </head><body>
       <form action="https://auth.dev.mgpt.mn/authorize" method="post">
         <input type="hidden" name="client_id" value="app">
@@ -1463,7 +1465,7 @@ describe("hosted authorization smoke contract", () => {
     contentType: "text/html; charset=utf-8",
     cacheControl: "no-store",
     contentSecurityPolicy:
-      "default-src 'none'; script-src https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action https://auth.dev.mgpt.mn https://github.com https://accounts.google.com https://dev.mgpt.mn; object-src 'none'",
+      "default-src 'none'; script-src 'nonce-deploymentsmokenonce1234' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action https://auth.dev.mgpt.mn https://github.com https://accounts.google.com https://dev.mgpt.mn; object-src 'none'",
     frameOptions: "DENY",
     body: challenge,
   }
@@ -1508,7 +1510,22 @@ describe("hosted authorization smoke contract", () => {
         ...challengeInput,
         contentSecurityPolicy: "default-src 'self'",
       }),
-    ).toThrow("CSP is missing")
+    ).toThrow("CSP script-src is missing")
+    expect(() =>
+      inspectHostedAuthorizeChallenge({
+        ...challengeInput,
+        contentSecurityPolicy: challengeInput.contentSecurityPolicy.replace(
+          "'nonce-deploymentsmokenonce1234'",
+          "'unsafe-inline'",
+        ),
+      }),
+    ).toThrow("allows unsafe-inline")
+    expect(() =>
+      inspectHostedAuthorizeChallenge({
+        ...challengeInput,
+        body: challenge.replace('nonce="deploymentsmokenonce1234"', 'nonce="differentnonce123456"'),
+      }),
+    ).toThrow("nonce does not match CSP")
     expect(() =>
       inspectHostedAuthorizeChallenge({
         ...challengeInput,

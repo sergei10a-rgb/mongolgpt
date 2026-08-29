@@ -655,18 +655,30 @@ export function inspectHostedAuthorizeChallenge(input: {
   if (input.frameOptions !== "DENY") throw new Error("hosted authorization challenge can be framed")
 
   const csp = input.contentSecurityPolicy ?? ""
-  for (const required of [
-    "script-src https://challenges.cloudflare.com",
-    "frame-src https://challenges.cloudflare.com",
-    "object-src 'none'",
-  ]) {
-    if (!csp.includes(required)) throw new Error(`hosted authorization challenge CSP is missing ${required}`)
+  const scriptSources = cspDirectiveSources(csp, "script-src")
+  if (!scriptSources.has("https://challenges.cloudflare.com")) {
+    throw new Error("hosted authorization challenge CSP script-src is missing https://challenges.cloudflare.com")
   }
-  const cspFormAction = csp
-    .split(";")
-    .map((directive) => directive.trim())
-    .find((directive) => directive.startsWith("form-action "))
-  const formActionSources = new Set(cspFormAction?.split(/\s+/).slice(1) ?? [])
+  if (scriptSources.has("'unsafe-inline'")) {
+    throw new Error("hosted authorization challenge CSP script-src allows unsafe-inline")
+  }
+  const nonceSource = [...scriptSources].find((source) => /^'nonce-[A-Za-z0-9_-]{16,128}'$/.test(source))
+  if (!nonceSource) throw new Error("hosted authorization challenge CSP script-src nonce is missing")
+  const nonce = nonceSource.slice("'nonce-".length, -1)
+  if (!input.body.includes(`nonce="${nonce}"`)) {
+    throw new Error("hosted authorization challenge script nonce does not match CSP")
+  }
+
+  const frameSources = cspDirectiveSources(csp, "frame-src")
+  if (!frameSources.has("https://challenges.cloudflare.com")) {
+    throw new Error("hosted authorization challenge CSP frame-src is missing https://challenges.cloudflare.com")
+  }
+  const objectSources = cspDirectiveSources(csp, "object-src")
+  if (objectSources.size !== 1 || !objectSources.has("'none'")) {
+    throw new Error("hosted authorization challenge CSP object-src must be none")
+  }
+
+  const formActionSources = cspDirectiveSources(csp, "form-action")
   for (const origin of [expectedAuth.origin, "https://github.com", "https://accounts.google.com"]) {
     if (!formActionSources.has(origin)) {
       throw new Error(`hosted authorization challenge CSP form-action is missing ${origin}`)
@@ -703,6 +715,14 @@ export function inspectHostedAuthorizeChallenge(input: {
   if (!state || !/^[A-Za-z0-9_-]{32,256}$/.test(state)) {
     throw new Error("hosted authorization challenge state is invalid")
   }
+}
+
+function cspDirectiveSources(csp: string, name: string) {
+  const directive = csp
+    .split(";")
+    .map((candidate) => candidate.trim())
+    .find((candidate) => candidate === name || candidate.startsWith(`${name} `))
+  return new Set(directive?.split(/\s+/).slice(1) ?? [])
 }
 
 function hiddenInputValue(body: string, name: string) {

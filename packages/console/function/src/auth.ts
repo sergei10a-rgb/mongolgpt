@@ -24,6 +24,7 @@ import {
 } from "@mongolgpt/console-core/turnstile.js"
 import { isAllowedNonProductionEmail } from "./auth-allowlist"
 import { inspectOAuthProviderConfiguration } from "@mongolgpt/console-core/oauth-provider-config.js"
+import { authStateError } from "./auth-error"
 
 type Env = {
   AuthStorage: KVNamespace
@@ -196,6 +197,7 @@ export default {
         namespace: env.AuthStorage,
       }),
       subjects,
+      error: async () => authStateError(env.MONGOLGPT_CONSOLE_ORIGIN),
       async success(ctx, response) {
         const oauthResponse = OAuthSuccessResponseSchema.parse(response)
         let subject: string | undefined
