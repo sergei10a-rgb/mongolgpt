@@ -562,7 +562,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("MONGOLGPT_STATIC_DOCS=true bun run build:docs")
     expect(source).toContain("bun run --cwd packages/web verify:static-artifact")
     expect(source).toContain("bun run deploy:preflight -- dev --docs-only")
-    expect(source).toContain("bun sst deploy --stage=dev --target Website --print-logs")
+    expect(source).toContain("bun sst deploy --stage=dev --print-logs")
+    expect(source).not.toContain("--target Website")
     expect(source).toContain("bun script/deployment-smoke.ts --docs-only dev")
     expect(source).not.toContain("--target WebApp")
     expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|RUNTIME|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/)
@@ -608,7 +609,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.env?.MONGOLGPT_DEPLOY_APP_ONLY).toBe("true")
     expect(smoke?.env?.MONGOLGPT_DEPLOY_APP_ONLY).toBe("true")
     expect(deploy?.run).toContain("bun run deploy:preflight -- dev --app-only")
-    expect(deploy?.run).toContain("bun sst deploy --stage=dev --target WebApp --print-logs")
+    expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
+    expect(deploy?.run).not.toContain("--target WebApp")
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --app-only dev")
     expect(browser?.env).toEqual({
       CI: "true",

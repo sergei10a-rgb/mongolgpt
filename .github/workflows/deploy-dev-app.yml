@@ -77,7 +77,7 @@ jobs:
         run: |
           bun run deploy:preflight -- dev --app-only
           bun sst unlock --stage=dev || true
-          bun sst deploy --stage=dev --target WebApp --print-logs
+          bun sst deploy --stage=dev --print-logs
 
       - name: Verify live dev app boundary
         env:
