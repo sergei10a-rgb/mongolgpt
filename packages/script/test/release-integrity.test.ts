@@ -204,8 +204,10 @@ describe("release integrity contract", () => {
     const packagedStep = "      - name: Smoke-test packaged Windows desktop\n"
     const installedStep = "      - name: Smoke-test installed Windows desktop\n"
     const signatureStep = "      - name: Verify signed Windows Electron artifacts\n"
-    const desktopArtifactStep = "      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1\n        with:\n          name: mongolgpt-desktop-${{ matrix.settings.target }}\n"
-    const latestYmlStep = "      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1\n        if: needs.version.outputs.release\n        with:\n          name: latest-yml-${{ matrix.settings.target }}\n"
+    const desktopArtifactStep =
+      "      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1\n        with:\n          name: mongolgpt-desktop-${{ matrix.settings.target }}\n"
+    const latestYmlStep =
+      "      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1\n        if: needs.version.outputs.release\n        with:\n          name: latest-yml-${{ matrix.settings.target }}\n"
 
     expect(workflow).toContain("./scripts/smoke-packaged-windows.ps1")
     expect(workflow).toContain("./scripts/smoke-installed-windows.ps1")
@@ -220,19 +222,33 @@ describe("release integrity contract", () => {
     expect(workflow.indexOf(installedStep)).toBeLessThan(workflow.indexOf(desktopArtifactStep))
     expect(workflow.indexOf(installedStep)).toBeLessThan(workflow.indexOf(latestYmlStep))
 
-    expect(installedSmoke).toContain("[string]$InstallerPath = (Join-Path $PSScriptRoot \"..\\dist\\mongolgpt-desktop-win-x64.exe\")")
-    expect(installedSmoke).toContain('Start-Process `')
+    expect(installedSmoke).toContain(
+      '[string]$InstallerPath = (Join-Path $PSScriptRoot "..\\dist\\mongolgpt-desktop-win-x64.exe")',
+    )
+    expect(installedSmoke).toContain("Start-Process `")
     expect(installedSmoke).toContain('-ArgumentList @("/S", "/D=$installRoot")')
     expect(installedSmoke).toContain('Get-ChildItem -LiteralPath $installRoot -Filter "Uninstall *.exe"')
-    expect(installedSmoke).toContain('Start-Process `')
+    expect(installedSmoke).toContain("Start-Process `")
     expect(installedSmoke).toContain('-ArgumentList "/S" `')
-    expect(installedSmoke).toContain('Remove-Item -LiteralPath $installRoot -Recurse -Force -ErrorAction SilentlyContinue')
-    expect(installedSmoke).toContain('$result.accountGateVisible -ne $true')
+    expect(installedSmoke).toContain(
+      "Remove-Item -LiteralPath $installRoot -Recurse -Force -ErrorAction SilentlyContinue",
+    )
+    expect(installedSmoke).toContain("$result.accountGateVisible -ne $true")
     expect(installedSmoke).toContain('$result.accountHeading -ne "MongolGPT бүртгэлээрээ нэвтэрнэ үү"')
     expect(installedSmoke).toContain('$result.loginAction -ne "Бүртгүүлэх эсвэл нэвтрэх"')
-    expect(installedSmoke).toContain('Test-Path -LiteralPath $app.FullName -PathType Leaf')
-    expect(installedSmoke).toContain('Desktop uninstaller суулгасан executable-ийг арилгасангүй')
+    expect(installedSmoke).toContain("$result.functional.capable -ne $true")
+    expect(installedSmoke).toContain("$functionalHttp.Count -ne 9")
+    expect(installedSmoke).toContain("$result.functional.summary.terminal.ok -ne $true")
+    expect(installedSmoke).toContain("$result.functional.summary.fixture.mcpConfiguredDisabled -ne $true")
+    expect(installedSmoke).toContain("$result.functional.summary.fixture.localModelRegisteredNoCall -ne $true")
+    expect(installedSmoke).toContain("Test-Path -LiteralPath $app.FullName -PathType Leaf")
+    expect(installedSmoke).toContain("Desktop uninstaller суулгасан executable-ийг арилгасангүй")
     expect(packagedSmoke).toContain('MONGOLGPT_TEST_ONBOARDING", "1"')
+    expect(packagedSmoke).toContain("$result.functional.capable -ne $true")
+    expect(packagedSmoke).toContain("$functionalHttp.Count -ne 9")
+    expect(packagedSmoke).toContain("$result.functional.summary.terminal.ok -ne $true")
+    expect(packagedSmoke).toContain("$result.functional.summary.fixture.mcpConfiguredDisabled -ne $true")
+    expect(packagedSmoke).toContain("$result.functional.summary.fixture.localModelRegisteredNoCall -ne $true")
   })
 
   test("builds a guarded, checksummed Windows dev preview without publishing", () => {

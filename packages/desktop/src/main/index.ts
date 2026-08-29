@@ -24,6 +24,7 @@ import { parseMarkdown } from "./markdown"
 import { createMenu } from "./menu"
 import { createLocalBridgeGateway } from "./local-bridge-gateway"
 import { createDesktopLocalBridgePairingController, DesktopLocalBridgePairingError } from "./local-bridge-pairing"
+import { runReleaseFunctionalSmoke } from "./release-functional-smoke"
 import {
   desktopSmokeFile,
   rendererSmokeFailure,
@@ -516,11 +517,26 @@ const main = Effect.gen(function* () {
     })
     const rendererFailure = rendererSmokeFailure(fatalRendererError)
     if (rendererFailure) yield* Effect.fail(rendererFailure)
+    const functional = yield* Effect.tryPromise({
+      try: () =>
+        runReleaseFunctionalSmoke({
+          url,
+          username: "mongolgpt",
+          password,
+        }),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    })
+    if (!functional.capable) {
+      yield* Effect.fail(
+        new Error(`Desktop functional smoke шалгалт амжилтгүй боллоо: ${JSON.stringify(functional.summary)}`),
+      )
+    }
     yield* Effect.try({
       try: () =>
         writeDesktopSmokeResult(DESKTOP_SMOKE_FILE, {
           version: app.getVersion(),
           url: rendererUrl,
+          functional,
           ...accountGate,
         }),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),

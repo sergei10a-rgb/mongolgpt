@@ -80,6 +80,20 @@ try {
   ) {
     throw "Packaged desktop did not show the Mongolian MongolGPT account gate: $rawResult"
   }
+  $functionalHttp = @($result.functional.summary.http.PSObject.Properties.Value)
+  if (
+    $result.functional.capable -ne $true -or
+    $functionalHttp.Count -ne 9 -or
+    @($functionalHttp | Where-Object { $_.ok -ne $true }).Count -ne 0 -or
+    $result.functional.summary.terminal.ok -ne $true -or
+    $result.functional.summary.fixture.skill -ne $true -or
+    $result.functional.summary.fixture.tool -ne $true -or
+    $result.functional.summary.fixture.config -ne $true -or
+    $result.functional.summary.fixture.mcpConfiguredDisabled -ne $true -or
+    $result.functional.summary.fixture.localModelRegisteredNoCall -ne $true
+  ) {
+    throw "Packaged desktop functional smoke failed: $rawResult"
+  }
   if (![string]::IsNullOrWhiteSpace($ExpectedVersion) -and $result.version -ne $ExpectedVersion) {
     throw "Packaged desktop version is $($result.version); expected $ExpectedVersion."
   }
@@ -107,6 +121,7 @@ try {
     accountGateVisible = $result.accountGateVisible
     accountHeading = $result.accountHeading
     loginAction = $result.loginAction
+    functional = $result.functional
     exitCode = $process.ExitCode
   }
 } catch {

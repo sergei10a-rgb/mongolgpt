@@ -1,5 +1,6 @@
 import type { EventEmitter } from "node:events"
 import { writeFileSync } from "node:fs"
+import type { ReleaseFunctionalSmokeResult } from "./release-functional-smoke"
 
 type RendererContents = Pick<EventEmitter, "off" | "once"> & {
   getURL(): string
@@ -137,7 +138,7 @@ export async function waitForRendererAccountGate(webContents: RendererContents, 
 
 export function writeDesktopSmokeResult(
   file: string,
-  input: { version: string; url: string } & DesktopAccountGateState,
+  input: { version: string; url: string; functional: ReleaseFunctionalSmokeResult } & DesktopAccountGateState,
 ) {
   writeFileSync(file, `${JSON.stringify({ status: "ready", ...input })}\n`, "utf8")
 }

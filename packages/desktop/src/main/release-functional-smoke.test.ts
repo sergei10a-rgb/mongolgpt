@@ -1,0 +1,74 @@
+import { describe, expect, test } from "bun:test"
+import {
+  hasDisabledMcp,
+  hasProviderModel,
+  isFileContent,
+  isPath,
+  isProject,
+  isProviderConfig,
+  isProviderList,
+  isStatusArray,
+  isToolIds,
+  redactSmokeError,
+  smokeTimeoutMs,
+  validateHttpResponse,
+} from "./release-functional-smoke"
+
+describe("release functional smoke validators", () => {
+  test("fails closed on status, content type, and malformed schemas", () => {
+    const json = new Headers({ "content-type": "application/json; charset=utf-8" })
+    expect(validateHttpResponse({ status: 200, headers: json }, "application/json")).toBe(true)
+    expect(validateHttpResponse({ status: 204, headers: json }, "application/json")).toBe(false)
+    expect(
+      validateHttpResponse({ status: 200, headers: new Headers({ "content-type": "text/plain" }) }, "application/json"),
+    ).toBe(false)
+    expect(isPath({ home: "x", state: "x", config: "x", worktree: "x", directory: "x" })).toBe(true)
+    expect(isPath({ home: "x" })).toBe(false)
+    expect(isProject({ id: "project", worktree: "C:\\repo" })).toBe(true)
+    expect(isProject({ id: "project" })).toBe(false)
+    expect(isFileContent({ type: "text", content: "README" })).toBe(true)
+    expect(isFileContent({ type: "text", content: 1 })).toBe(false)
+    expect(isStatusArray([{ path: "README.md", status: "modified" }])).toBe(true)
+    expect(isStatusArray([{ path: "README.md" }])).toBe(false)
+  })
+
+  test("accepts only the exact provider response families", () => {
+    expect(isProviderList({ all: [], default: {}, connected: [] })).toBe(true)
+    expect(isProviderList({ all: [], default: {} })).toBe(false)
+    expect(isProviderConfig({ providers: [], default: {} })).toBe(true)
+    expect(isProviderConfig({ providers: {}, default: {} })).toBe(false)
+  })
+
+  test("proves exact tool, MCP, provider, and model registrations", () => {
+    expect(isToolIds(["read", "desktop-smoke"])).toBe(true)
+    expect(isToolIds(["desktop-smoke", 1])).toBe(false)
+    expect(hasDisabledMcp({ "release-functional-smoke-mcp": { status: "disabled" } })).toBe(true)
+    expect(hasDisabledMcp({ other: { status: "disabled" } })).toBe(false)
+    expect(
+      hasProviderModel({
+        all: [
+          {
+            id: "release-functional-smoke-provider",
+            models: { "release-functional-smoke-model": { name: "fixture" } },
+          },
+        ],
+        default: {},
+        connected: [],
+      }),
+    ).toBe(true)
+    expect(
+      hasProviderModel({
+        all: [{ id: "other", models: { "release-functional-smoke-model": { name: "fixture" } } }],
+        default: {},
+        connected: [],
+      }),
+    ).toBe(false)
+  })
+
+  test("keeps timeout and secret handling deterministic", () => {
+    expect(smokeTimeoutMs(250)).toBe(250)
+    expect(smokeTimeoutMs(0)).toBe(10_000)
+    expect(redactSmokeError("password=secret secret", "secret")).toBe("password=[redacted] [redacted]")
+    expect(redactSmokeError("no secret", "")).toBe("no secret")
+  })
+})

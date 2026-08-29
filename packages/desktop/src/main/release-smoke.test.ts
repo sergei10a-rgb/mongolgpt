@@ -34,6 +34,21 @@ const accountGate = {
   loginAction: "Бүртгүүлэх эсвэл нэвтрэх",
 }
 
+const functional = {
+  capable: true,
+  summary: {
+    http: { path: { ok: true } },
+    terminal: { ok: true },
+    fixture: {
+      skill: true,
+      tool: true,
+      config: true,
+      mcpConfiguredDisabled: true,
+      localModelRegisteredNoCall: true,
+    },
+  },
+}
+
 describe("desktop release smoke", () => {
   test("enables smoke mode only for a non-empty marker path", () => {
     expect(desktopSmokeFile({ MONGOLGPT_DESKTOP_SMOKE_FILE: " C:\\smoke.json " })).toBe("C:\\smoke.json")
@@ -94,6 +109,7 @@ describe("desktop release smoke", () => {
     writeDesktopSmokeResult(file, {
       version: "1.2.3",
       url: "mongolgpt-renderer://renderer/index.html",
+      functional,
       ...accountGate,
     })
 
@@ -101,6 +117,7 @@ describe("desktop release smoke", () => {
       status: "ready",
       version: "1.2.3",
       url: "mongolgpt-renderer://renderer/index.html",
+      functional,
       ...accountGate,
     })
   })
