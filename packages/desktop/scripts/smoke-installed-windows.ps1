@@ -187,6 +187,10 @@ if (!$installRoot.StartsWith($expectedPrefix, [System.StringComparison]::Ordinal
 $marker = New-SmokeMarkerPath -Candidate $MarkerPath
 $installerProcess = $null
 $uninstaller = $null
+$app = $null
+$summary = $null
+$failure = $null
+$cleanupFailure = $null
 
 New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
 
@@ -205,22 +209,58 @@ try {
   }
 
   $uninstaller = Get-ChildItem -LiteralPath $installRoot -Filter "Uninstall *.exe" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($null -eq $uninstaller) {
+    throw "Desktop installer uninstaller үүсгэсэнгүй: $installRoot"
+  }
   $app = Find-InstalledDesktopExecutable -Root $installRoot
-  Invoke-DesktopSmoke `
+  $summary = Invoke-DesktopSmoke `
     -Executable $app `
     -Marker $marker `
     -ExpectedVersionValue $ExpectedVersion `
     -ExpectedProductNameValue $ExpectedProductName `
     -ReadyTimeout $ReadyTimeoutSeconds `
     -ExitTimeout $ExitTimeoutSeconds
+} catch {
+  $failure = $_
 } finally {
   if ($null -ne $uninstaller -and (Test-Path -LiteralPath $uninstaller.FullName -PathType Leaf)) {
-    $cleanup = Start-Process `
-      -FilePath $uninstaller.FullName `
-      -ArgumentList "/S" `
-      -PassThru `
-      -WindowStyle Hidden
-    $cleanup.WaitForExit(60000) | Out-Null
+    try {
+      $cleanup = Start-Process `
+        -FilePath $uninstaller.FullName `
+        -ArgumentList "/S" `
+        -PassThru `
+        -WindowStyle Hidden
+      if (!$cleanup.WaitForExit(60000)) {
+        Stop-Process -Id $cleanup.Id -Force -ErrorAction SilentlyContinue
+        throw "Desktop uninstaller 60 секундэд дууссангүй."
+      }
+      if ($cleanup.ExitCode -ne 0) {
+        throw "Desktop uninstaller $($cleanup.ExitCode) кодтой дууслаа."
+      }
+      if ($null -ne $app) {
+        $uninstallDeadline = (Get-Date).AddSeconds(10)
+        while ((Test-Path -LiteralPath $app.FullName -PathType Leaf) -and (Get-Date) -lt $uninstallDeadline) {
+          Start-Sleep -Milliseconds 250
+        }
+        if (Test-Path -LiteralPath $app.FullName -PathType Leaf) {
+          throw "Desktop uninstaller суулгасан executable-ийг арилгасангүй: $($app.FullName)"
+        }
+      }
+    } catch {
+      $cleanupFailure = $_
+    }
   }
   Remove-Item -LiteralPath $installRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
+
+if ($null -ne $failure -and $null -ne $cleanupFailure) {
+  throw "$($failure.Exception.Message)`nInstaller cleanup failure: $($cleanupFailure.Exception.Message)"
+}
+if ($null -ne $failure) {
+  throw $failure
+}
+if ($null -ne $cleanupFailure) {
+  throw $cleanupFailure
+}
+
+$summary

@@ -195,6 +195,46 @@ describe("release integrity contract", () => {
     expect(smoke).toContain("WaitForExit($ExitTimeoutSeconds * 1000)")
   })
 
+  test("uses reusable packaged and installed Windows desktop smoke gates before desktop publication", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
+    const packagedSmoke = readFileSync(resolve(root, "packages/desktop/scripts/smoke-packaged-windows.ps1"), "utf8")
+    const installedSmoke = readFileSync(resolve(root, "packages/desktop/scripts/smoke-installed-windows.ps1"), "utf8")
+    const packageStep = "      - name: Package\n"
+    const packageNoPublishStep = "      - name: Package (no publish)\n"
+    const packagedStep = "      - name: Smoke-test packaged Windows desktop\n"
+    const installedStep = "      - name: Smoke-test installed Windows desktop\n"
+    const signatureStep = "      - name: Verify signed Windows Electron artifacts\n"
+    const desktopArtifactStep = "      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1\n        with:\n          name: mongolgpt-desktop-${{ matrix.settings.target }}\n"
+    const latestYmlStep = "      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1\n        if: needs.version.outputs.release\n        with:\n          name: latest-yml-${{ matrix.settings.target }}\n"
+
+    expect(workflow).toContain("./scripts/smoke-packaged-windows.ps1")
+    expect(workflow).toContain("./scripts/smoke-installed-windows.ps1")
+    expect(workflow).toContain('-InstallerPath "dist/mongolgpt-desktop-win-x64.exe"')
+    expect(workflow).toContain('-ExpectedVersion "${{ needs.version.outputs.version }}"')
+    expect(workflow).toContain("-ExpectedProductName $expectedProductName")
+    expect(workflow).toContain("timeout-minutes: 8")
+    expect(workflow.indexOf(packageStep)).toBeLessThan(workflow.indexOf(packagedStep))
+    expect(workflow.indexOf(packageNoPublishStep)).toBeLessThan(workflow.indexOf(packagedStep))
+    expect(workflow.indexOf(packagedStep)).toBeLessThan(workflow.indexOf(installedStep))
+    expect(workflow.indexOf(installedStep)).toBeLessThan(workflow.indexOf(signatureStep))
+    expect(workflow.indexOf(installedStep)).toBeLessThan(workflow.indexOf(desktopArtifactStep))
+    expect(workflow.indexOf(installedStep)).toBeLessThan(workflow.indexOf(latestYmlStep))
+
+    expect(installedSmoke).toContain("[string]$InstallerPath = (Join-Path $PSScriptRoot \"..\\dist\\mongolgpt-desktop-win-x64.exe\")")
+    expect(installedSmoke).toContain('Start-Process `')
+    expect(installedSmoke).toContain('-ArgumentList @("/S", "/D=$installRoot")')
+    expect(installedSmoke).toContain('Get-ChildItem -LiteralPath $installRoot -Filter "Uninstall *.exe"')
+    expect(installedSmoke).toContain('Start-Process `')
+    expect(installedSmoke).toContain('-ArgumentList "/S" `')
+    expect(installedSmoke).toContain('Remove-Item -LiteralPath $installRoot -Recurse -Force -ErrorAction SilentlyContinue')
+    expect(installedSmoke).toContain('$result.accountGateVisible -ne $true')
+    expect(installedSmoke).toContain('$result.accountHeading -ne "MongolGPT бүртгэлээрээ нэвтэрнэ үү"')
+    expect(installedSmoke).toContain('$result.loginAction -ne "Бүртгүүлэх эсвэл нэвтрэх"')
+    expect(installedSmoke).toContain('Test-Path -LiteralPath $app.FullName -PathType Leaf')
+    expect(installedSmoke).toContain('Desktop uninstaller суулгасан executable-ийг арилгасангүй')
+    expect(packagedSmoke).toContain('MONGOLGPT_TEST_ONBOARDING", "1"')
+  })
+
   test("builds a guarded, checksummed Windows dev preview without publishing", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/build-dev-windows-preview.yml"), "utf8")
 
