@@ -87,7 +87,14 @@ Desktop updater автоматаар downgrade хийхгүй. Client rollback �
 3. Config эсвэл database format буцаж нийцэх эсэхийг release note-оос шалгана.
 4. Installer/CLI-г буцаасны дараа account, provider, local repo болон update channel-ийг дахин smoke test хийнэ.
 
-Hosted rollback нь зөвхөн хуучин Worker code буцаах ажиллагаа биш. D1 migration буцаах эсвэл backup сэргээх шаардлагатай бол [нөөц хуулбар ба сэргээх](../backup-restore)-ийн тусгаарласан restore drill, reconciliation болон audit алхмыг дагана. Өгөгдлийн нийцэл нотлогдоогүй үед хуучин runtime-ийг шинэ schema дээр шууд ажиллуулахгүй.
+Hosted rollback-ийг GitHub Actions-ийн **Cloudflare deploy** workflow-оос ажиллуулна. `main` branch-ийг сонгож, `revision`-д test, typecheck, supply-chain security нь өмнө амжилттай болсон `main`-ийн ancestor commit-ын бүтэн 40 тэмдэгт SHA-г оруулна. `stage`, `admin`, analytics болон төлбөрийн орчныг буцаахын өмнөх бодит орчинтой яг тааруулна. Дараа нь:
+
+1. `rollback_confirmation`-д `ROLLBACK <stage> <40-char-sha>` гэж яг бичнэ.
+2. Workflow target revision-ээс хойш D1 migration эсвэл schema файл өөрчлөгдсөн эсэхийг автоматаар шалгана. Өөрчлөгдсөн бол кодын rollback fail-closed хаагдах тул урагш засах release эсвэл баталгаажсан D1 restore төлөвлөгөө ашиглана. Өөрчлөгдөөгүй, хуучин код одоогийн schema-тай нийцэхийг нягталсны дараа `schema_compatibility_confirmation`-д `SCHEMA COMPATIBLE <40-char-sha>` гэж яг бичнэ.
+3. Production бол `production_confirmation`-д `DEPLOY mgpt.mn` гэж нэмж бичиж, GitHub `production` environment-ийн эзэмшигчийн зөвшөөрлийг авна.
+4. Workflow сонгосон immutable SHA-г дахин build/deploy хийж, HTTP болон desktop/mobile Chromium smoke-ийг дуусгана. Run summary дахь SHA-г ослын бүртгэлд хадгална.
+
+Hosted rollback нь зөвхөн хуучин Worker code буцаах ажиллагаа биш. D1 migration буцаах эсвэл backup сэргээх шаардлагатай бол [нөөц хуулбар ба сэргээх](../backup-restore)-ийн тусгаарласан restore drill, reconciliation болон audit алхмыг дагана. Өгөгдлийн нийцэл нотлогдоогүй үед `SCHEMA COMPATIBLE` баталгаажуулалтыг бүү өг, хуучин runtime-ийг шинэ schema дээр шууд ажиллуулахгүй. CLI/npm хувилбарыг registry-гээс устгаж түүхийг өөрчлөхгүй; доголдсон release-ийг тэмдэглээд засвартай шинэ patch хувилбарыг нийтэлнэ.
 
 ## Шинэчлэлтийн дараах шалгалт
 

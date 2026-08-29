@@ -267,7 +267,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
       MONGOLGPT_CHANNEL: "${{ steps.service-urls.outputs.channel }}",
       VITE_MONGOLGPT_APP_URL: "${{ steps.service-urls.outputs.app_url }}",
       VITE_MONGOLGPT_PUBLIC_URL: "${{ steps.service-urls.outputs.public_url }}",
-      VITE_MONGOLGPT_RELEASE_SHA: "${{ github.sha }}",
+      VITE_MONGOLGPT_RELEASE_SHA: "${{ steps.target.outputs.sha }}",
       VITE_MONGOLGPT_SERVER_URL: "${{ steps.service-urls.outputs.runtime_url }}",
     })
     const serviceUrls = workflow.jobs.verify.steps.find((step) => step.name === "Resolve hosted service URLs")
@@ -288,6 +288,64 @@ describe("Cloudflare hosted infrastructure contract", () => {
     )
     expect(deployStep?.run).toContain('bun --cwd packages/runtime script/deploy.ts "$stage"')
     expect(deployStep?.run).toContain("bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs")
+  })
+
+  test("deploys only an immutable green main revision and requires explicit rollback confirmation", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
+    const parsed: unknown = Bun.YAML.parse(source)
+    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs) || !record(parsed.jobs.deploy)) {
+      throw new Error("Deploy workflow rollback contract is missing")
+    }
+    const dispatch = parsed.on.workflow_dispatch
+    if (!record(dispatch) || !record(dispatch.inputs) || !record(parsed.permissions) || !record(parsed.jobs.deploy.env)) {
+      throw new Error("Deploy workflow rollback inputs or permissions are missing")
+    }
+    const workflow = parseWorkflow(source)
+    const inputs = dispatch.inputs
+    const resolve = workflow.jobs.verify.steps.find(
+      (step) => step.name === "Resolve and authorize immutable deployment revision",
+    )
+    const targetCheckout = workflow.jobs.verify.steps.find(
+      (step) => step.name === "Checkout immutable deployment revision",
+    )
+    const deployCheckout = workflow.jobs.deploy.steps.find((step) => step.name === "Checkout verified revision")
+    const receipt = workflow.jobs.deploy.steps.find((step) => step.name === "Record immutable deployment revision")
+    const browser = workflow.jobs.deploy.steps.find((step) => step.name === "Verify deployed app in Chromium")
+
+    expect(record(inputs.revision) ? inputs.revision.type : undefined).toBe("string")
+    expect(record(inputs.rollback_confirmation) ? inputs.rollback_confirmation.type : undefined).toBe("string")
+    expect(record(inputs.schema_compatibility_confirmation) ? inputs.schema_compatibility_confirmation.type : undefined).toBe(
+      "string",
+    )
+    expect(parsed.permissions).toEqual({ actions: "read", contents: "read" })
+    expect(resolve?.env).toEqual({
+      GH_TOKEN: "${{ github.token }}",
+      REQUESTED_REVISION: "${{ inputs.revision }}",
+      ROLLBACK_CONFIRMATION: "${{ inputs.rollback_confirmation }}",
+      SCHEMA_COMPATIBILITY_CONFIRMATION: "${{ inputs.schema_compatibility_confirmation }}",
+    })
+    expect(resolve?.run).toContain('[[ ! "$requested" =~ ^[0-9a-f]{40}$ ]]')
+    expect(resolve?.run).toContain('git merge-base --is-ancestor "$target" "$main"')
+    expect(resolve?.run).toContain("for workflow in test.yml typecheck.yml security.yml")
+    expect(resolve?.run).toContain("runs?branch=main&head_sha=$target&status=success")
+    expect(resolve?.run).toContain('.head_branch == "main" and .conclusion == "success"')
+    expect(resolve?.run).toContain('git diff --name-only "$target" "$main"')
+    expect(resolve?.run).toContain("packages/console/core/migrations-d1")
+    expect(resolve?.run).toContain("packages/console/core/src/schema-d1")
+    expect(resolve?.run).toContain('expected="ROLLBACK ${{ inputs.stage }} $target"')
+    expect(resolve?.run).toContain('expected_schema="SCHEMA COMPATIBLE $target"')
+    expect(resolve?.run).toContain('echo "MONGOLGPT_RELEASE_SHA=$target" >> "$GITHUB_ENV"')
+    expect(targetCheckout?.with?.ref).toBe("${{ steps.target.outputs.sha }}")
+    expect(parsed.jobs.deploy.env.MONGOLGPT_RELEASE_SHA).toBe("${{ needs.verify.outputs.target_sha }}")
+    expect(deployCheckout?.with?.ref).toBe("${{ needs.verify.outputs.target_sha }}")
+    expect(receipt?.env).toEqual({
+      DEPLOYMENT_STAGE: "${{ inputs.stage }}",
+      ROLLBACK: "${{ needs.verify.outputs.rollback }}",
+      TARGET_SHA: "${{ needs.verify.outputs.target_sha }}",
+    })
+    expect(receipt?.run).toContain('echo "- Revision: \\`$TARGET_SHA\\`"')
+    expect(receipt?.run).toContain('>> "$GITHUB_STEP_SUMMARY"')
+    expect(browser?.env?.PLAYWRIGHT_DEPLOYED_RELEASE_SHA).toBe("${{ needs.verify.outputs.target_sha }}")
   })
 
   test("gates every deployed app with HTTP and Chromium smoke checks", async () => {
@@ -334,7 +392,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_BASE_URL).toBe("${{ needs.verify.outputs.app_url }}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_PUBLIC_URL).toBe("${{ needs.verify.outputs.public_url }}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RUNTIME_URL).toBe("${{ needs.verify.outputs.runtime_url }}")
-    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RELEASE_SHA).toBe("${{ github.sha }}")
+    expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RELEASE_SHA).toBe("${{ needs.verify.outputs.target_sha }}")
     expect(steps[docsBrowser]?.run).toBe("bun --cwd packages/web test:e2e:deployed")
     expect(steps[docsBrowser]?.env).toEqual({
       CI: "true",

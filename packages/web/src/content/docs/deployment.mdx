@@ -342,10 +342,11 @@ Production alert-ийг Cloudflare-ийн өөрийн Email binding явуул�
 
 ## Буцаах
 
-1. Асуудалтай байршуулалтаас өмнөх баталгаатай Git коммитыг сонгоно.
-2. Тухайн коммитоос ижил орчин руу `bun sst deploy --stage=<stage>` ажиллуулна.
-3. `bun run deploy:smoke -- <stage>` ажиллуулж бүх нийтэд нээлттэй URL-ийг шалгана.
-4. Өгөгдлийн шилжилт орсон бол кодыг дангаар буцаахгүй. Шилжилт бүр урагш засах тусдаа өөрчлөлт эсвэл урьдчилан бэлтгэсэн сэргээх ажиллагаатай байна.
+1. Асуудалтай байршуулалтаас өмнөх, `main` дээр test/typecheck/security амжилттай болсон бүтэн Git commit SHA-г сонгоно.
+2. GitHub Actions-ийн **Cloudflare deploy** workflow-ийг `main`-ээс ажиллуулж, `revision`-д уг SHA-г оруулна. `stage`, admin, analytics болон төлбөрийн орчны сонголтыг одоогийн байршуулалттай яг тааруулна.
+3. Workflow D1 migration/schema өөрчлөлт илэрвэл кодын rollback-ийг автоматаар хаана. Өөрчлөлтгүй target-д `ROLLBACK <stage> <40-char-sha>` болон migration-ийг нягталсны дараа `SCHEMA COMPATIBLE <40-char-sha>` баталгаажуулалтыг яг оруулна. Production бол `DEPLOY mgpt.mn` болон environment reviewer-ийн зөвшөөрөл мөн шаардана.
+4. Workflow immutable revision-ийг deploy хийсний дараа HTTP schema/content-type, login, runtime, docs search болон desktop/mobile Chromium smoke-ийг автоматаар шалгана.
+5. Өгөгдлийн шилжилт орсон бол кодыг дангаар буцаахгүй. Шилжилт бүр урагш засах тусдаа өөрчлөлт эсвэл урьдчилан бэлтгэсэн сэргээх ажиллагаатай байна.
 
 Үйлдвэрлэлийн орчны нөөц SST дээр хамгаалагдсан бөгөөд репозиторийг устгах эсвэл орчныг арилгах үйлдлээр санамсаргүй устахгүй.
 

@@ -30,6 +30,18 @@ on:
           - disabled
           - sandbox
           - production
+      revision:
+        description: "Deploy хийх бүтэн 40 тэмдэгт Git commit SHA (хоосон бол одоогийн main)"
+        required: false
+        type: string
+      rollback_confirmation:
+        description: "Хуучин revision бол ROLLBACK <stage> <40-char-sha> гэж яг бичнэ"
+        required: false
+        type: string
+      schema_compatibility_confirmation:
+        description: "Хуучин revision бол SCHEMA COMPATIBLE <40-char-sha> гэж яг бичнэ"
+        required: false
+        type: string
       production_confirmation:
         description: "Production бол DEPLOY <domain> гэж яг бичнэ"
         required: false
@@ -44,11 +56,11 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  MONGOLGPT_RELEASE_SHA: ${{ github.sha }}
   MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
   MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
   MONGOLGPT_ENABLE_ADMIN: ${{ inputs.admin }}
@@ -79,9 +91,74 @@ jobs:
       payment_url: ${{ steps.service-urls.outputs.payment_url }}
       public_url: ${{ steps.service-urls.outputs.public_url }}
       runtime_url: ${{ steps.service-urls.outputs.runtime_url }}
+      target_sha: ${{ steps.target.outputs.sha }}
+      rollback: ${{ steps.target.outputs.rollback }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Resolve and authorize immutable deployment revision
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_REVISION: ${{ inputs.revision }}
+          ROLLBACK_CONFIRMATION: ${{ inputs.rollback_confirmation }}
+          SCHEMA_COMPATIBILITY_CONFIRMATION: ${{ inputs.schema_compatibility_confirmation }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          requested="${REQUESTED_REVISION,,}"
+          if [ -n "$requested" ] && [[ ! "$requested" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Revision нь бүтэн 40 тэмдэгт Git commit SHA байна." >&2
+            exit 1
+          fi
+          target="$(git rev-parse "${requested:-$GITHUB_SHA}^{commit}")"
+          main="$(git rev-parse 'origin/main^{commit}')"
+          if ! git merge-base --is-ancestor "$target" "$main"; then
+            echo "Deployment revision нь origin/main-ийн баталгаатай ancestor байна." >&2
+            exit 1
+          fi
+          for workflow in test.yml typecheck.yml security.yml; do
+            passed="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?branch=main&head_sha=$target&status=success&per_page=10" --jq '[.workflow_runs[] | select(.head_branch == "main" and .conclusion == "success" and (.event == "push" or .event == "workflow_dispatch"))] | length')"
+            if [ "$passed" -lt 1 ]; then
+              echo "$target revision-д main branch-ийн $workflow амжилттай run алга." >&2
+              exit 1
+            fi
+          done
+          rollback=false
+          if [ "$target" != "$GITHUB_SHA" ]; then
+            rollback=true
+            schema_changes="$(git diff --name-only "$target" "$main" -- \
+              packages/console/core/migrations-d1 \
+              packages/console/core/src/schema \
+              packages/console/core/src/schema-d1 \
+              packages/console/core/src/d1-http-migrator.ts)"
+            if [ -n "$schema_changes" ]; then
+              echo "Сонгосон revision-ээс хойш D1 migration/schema өөрчлөгдсөн тул кодын rollback хаагдлаа." >&2
+              echo "Урагш засах release эсвэл баталгаажсан D1 restore төлөвлөгөө ашиглана." >&2
+              exit 1
+            fi
+            expected="ROLLBACK ${{ inputs.stage }} $target"
+            if [ "$ROLLBACK_CONFIRMATION" != "$expected" ]; then
+              echo "Rollback баталгаажуулалт яг '$expected' байна." >&2
+              exit 1
+            fi
+            expected_schema="SCHEMA COMPATIBLE $target"
+            if [ "$SCHEMA_COMPATIBILITY_CONFIRMATION" != "$expected_schema" ]; then
+              echo "Schema compatibility баталгаажуулалт яг '$expected_schema' байна." >&2
+              exit 1
+            fi
+          fi
+          echo "sha=$target" >> "$GITHUB_OUTPUT"
+          echo "rollback=$rollback" >> "$GITHUB_OUTPUT"
+          echo "MONGOLGPT_RELEASE_SHA=$target" >> "$GITHUB_ENV"
+
+      - name: Checkout immutable deployment revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ steps.target.outputs.sha }}
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
@@ -122,7 +199,7 @@ jobs:
           MONGOLGPT_CHANNEL: ${{ steps.service-urls.outputs.channel }}
           VITE_MONGOLGPT_APP_URL: ${{ steps.service-urls.outputs.app_url }}
           VITE_MONGOLGPT_PUBLIC_URL: ${{ steps.service-urls.outputs.public_url }}
-          VITE_MONGOLGPT_RELEASE_SHA: ${{ github.sha }}
+          VITE_MONGOLGPT_RELEASE_SHA: ${{ steps.target.outputs.sha }}
           VITE_MONGOLGPT_SERVER_URL: ${{ steps.service-urls.outputs.runtime_url }}
         run: |
           bun --cwd packages/app build
@@ -138,12 +215,27 @@ jobs:
       MONGOLGPT_AUTH_EMAIL_DOMAINS: ${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}
       CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      MONGOLGPT_RELEASE_SHA: ${{ needs.verify.outputs.target_sha }}
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
     steps:
       - name: Checkout verified revision
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.verify.outputs.target_sha }}
+
+      - name: Record immutable deployment revision
+        env:
+          DEPLOYMENT_STAGE: ${{ inputs.stage }}
+          ROLLBACK: ${{ needs.verify.outputs.rollback }}
+          TARGET_SHA: ${{ needs.verify.outputs.target_sha }}
+        shell: bash
+        run: |
+          {
+            echo "## MongolGPT Cloudflare deployment"
+            echo "- Stage: \`$DEPLOYMENT_STAGE\`"
+            echo "- Revision: \`$TARGET_SHA\`"
+            echo "- Rollback: \`$ROLLBACK\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
@@ -309,7 +401,7 @@ jobs:
           PLAYWRIGHT_DEPLOYED_BASE_URL: ${{ needs.verify.outputs.app_url }}
           PLAYWRIGHT_DEPLOYED_PUBLIC_URL: ${{ needs.verify.outputs.public_url }}
           PLAYWRIGHT_DEPLOYED_RUNTIME_URL: ${{ needs.verify.outputs.runtime_url }}
-          PLAYWRIGHT_DEPLOYED_RELEASE_SHA: ${{ github.sha }}
+          PLAYWRIGHT_DEPLOYED_RELEASE_SHA: ${{ needs.verify.outputs.target_sha }}
           MONGOLGPT_SMOKE_AUTH_COOKIE: ${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}
         run: bun --cwd packages/app test:e2e:deployed
         timeout-minutes: 10
