@@ -295,6 +295,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const smokeSource = await Bun.file(new URL("../../../script/deployment-smoke.ts", import.meta.url)).text()
     const steps = parseWorkflow(source).jobs.deploy.steps
     const auth = steps.findIndex((step) => step.name === "Validate authenticated smoke identity")
+    const freeAuto = steps.findIndex((step) => step.name === "Prepare managed Free Auto catalog without logging provider keys")
     const deploy = steps.findIndex((step) => step.name === "Validate and deploy to Cloudflare")
     const http = steps.findIndex((step) => step.name === "Verify deployed URLs")
     const browserSetup = steps.findIndex((step) => step.name === "Install Playwright system dependencies")
@@ -303,7 +304,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const artifact = steps.findIndex((step) => step.name === "Upload deployed browser artifacts")
 
     expect(auth).toBeGreaterThanOrEqual(0)
-    expect(deploy).toBeGreaterThan(auth)
+    expect(freeAuto).toBeGreaterThan(auth)
+    expect(deploy).toBeGreaterThan(freeAuto)
     expect(http).toBeGreaterThan(deploy)
     expect(browserSetup).toBeGreaterThan(http)
     expect(browser).toBeGreaterThan(http)
@@ -315,6 +317,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(steps[auth]?.env).toEqual({
       MONGOLGPT_SMOKE_AUTH_COOKIE: "${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}",
     })
+    expect(steps[freeAuto]?.run).toBe("bun script/prepare-dev-free-auto.ts")
+    expect(steps[freeAuto]?.env?.OPENROUTER_API_KEY).toBe("${{ secrets.OPENROUTER_API_KEY }}")
+    expect(steps[freeAuto]?.env?.NVIDIA_NIM_API_KEY).toBe("${{ secrets.NVIDIA_NIM_API_KEY }}")
+    expect(steps[freeAuto]?.env?.NVIDIA_NIM_MODEL_ID).toBe("${{ vars.NVIDIA_NIM_MODEL_ID }}")
+    expect(steps[freeAuto]?.env?.MONGOLGPT_GATEWAY_MODELS1).toBe("${{ secrets.MONGOLGPT_GATEWAY_MODELS1 }}")
     expect(smokeSource).toContain('model: { providerID: "mongolgpt", modelID: "free-auto" }')
     expect(smokeSource).toContain("MONGOLGPT_SMOKE_READY")
     expect(smokeSource).toContain('method: "DELETE"')
@@ -456,9 +463,15 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deployStep).toBeDefined()
 
     const env = deployStep?.env ?? {}
-    for (const name of hostedSstSecretNames) {
+    for (const name of hostedSstSecretNames.filter((name) => !name.startsWith("MONGOLGPT_GATEWAY_MODELS"))) {
       expect(env).toHaveProperty(`SST_SECRET_${name}`)
     }
+    const freeAutoStep = workflow.jobs.deploy.steps.find(
+      (step) => step.name === "Prepare managed Free Auto catalog without logging provider keys",
+    )
+    expect(freeAutoStep?.run).toBe("bun script/prepare-dev-free-auto.ts")
+    expect(freeAutoStep?.env?.MONGOLGPT_GATEWAY_MODELS1).toBe("${{ secrets.MONGOLGPT_GATEWAY_MODELS1 }}")
+    expect(freeAutoStep?.env?.MONGOLGPT_GATEWAY_MODELS30).toBe("${{ secrets.MONGOLGPT_GATEWAY_MODELS30 }}")
     expect(env).toHaveProperty(
       "CLOUDFLARE_ACCESS_API_TOKEN",
       "${{ inputs.admin && secrets.CLOUDFLARE_ACCESS_API_TOKEN || '' }}",
@@ -492,7 +505,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(authSource).not.toContain("ZEN_SESSION_SECRET")
     expect(catalogSource).not.toContain("ZEN_MODELS")
     expect(workflowSource).toContain("SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET")
-    expect(workflowSource).toContain("SST_SECRET_MONGOLGPT_GATEWAY_MODELS1")
+    expect(workflowSource).toContain("MONGOLGPT_GATEWAY_MODELS1: ${{ secrets.MONGOLGPT_GATEWAY_MODELS1 }}")
+    expect(workflowSource).toContain("bun script/prepare-dev-free-auto.ts")
     expect(workflowSource).not.toContain("SST_SECRET_ZEN_")
   })
 
