@@ -26,6 +26,9 @@ describe("Turnstile OAuth challenge page", () => {
     expect(result.html).toContain('<button type="submit" disabled>Үргэлжлүүлэх</button>')
     expect(result.html).toContain('nonce="testnonce1234567890"')
     expect(result.html).toContain("Нэвтрэх үйлчилгээнд шилжүүлж байна...")
+    expect(result.html).toContain('window.mongolGPTTurnstileReady = (token) =>')
+    expect(result.html).toContain('field.value = token')
+    expect(result.html).toContain('if (field) field.value = ""')
     expect(result.html).toContain("Хүний баталгаажуулалт амжилтгүй боллоо")
   })
 

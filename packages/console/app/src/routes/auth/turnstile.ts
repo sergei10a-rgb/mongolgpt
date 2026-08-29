@@ -79,16 +79,26 @@ export function renderTurnstileChallenge(input: {
         const form = document.querySelector("form")
         const button = form.querySelector("button[type=submit]")
         const status = document.getElementById("turnstile-status")
+        const response = () => form.querySelector('input[name="cf-turnstile-response"]')
         const update = (ready, message) => {
           button.disabled = !ready
           status.hidden = ready
           status.textContent = message
         }
-        window.mongolGPTTurnstileReady = () => update(true, "")
-        window.mongolGPTTurnstileExpired = () => update(false, "Шалгалтын хугацаа дууслаа. Дахин баталгаажуулна уу.")
-        window.mongolGPTTurnstileError = () => update(false, "Хамгаалалтын шалгалтыг эхлүүлж чадсангүй. Хуудсыг дахин ачаална уу.")
+        const reset = (message) => {
+          const field = response()
+          if (field) field.value = ""
+          update(false, message)
+        }
+        window.mongolGPTTurnstileReady = (token) => {
+          const field = response()
+          if (field && typeof token === "string") field.value = token
+          update(Boolean(field && field.value), field && field.value ? "" : "Хамгаалалтын токен үүссэнгүй. Хуудсыг дахин ачаална уу.")
+        }
+        window.mongolGPTTurnstileExpired = () => reset("Шалгалтын хугацаа дууслаа. Дахин баталгаажуулна уу.")
+        window.mongolGPTTurnstileError = () => reset("Хамгаалалтын шалгалтыг эхлүүлж чадсангүй. Хуудсыг дахин ачаална уу.")
         form.addEventListener("submit", (event) => {
-          const token = form.querySelector('input[name="cf-turnstile-response"]')
+          const token = response()
           if (!token || !token.value) {
             event.preventDefault()
             update(false, "Эхлээд хамгаалалтын шалгалтыг гүйцээнэ үү.")
