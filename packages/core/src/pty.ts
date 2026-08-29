@@ -47,6 +47,13 @@ export const UpdateInput = Pty.UpdateInput
 
 export type UpdateInput = Types.DeepMutable<typeof UpdateInput.Type>
 
+export function windowsPtyCompatibilityOptions(
+  platform: NodeJS.Platform = process.platform,
+  env: Record<string, string | undefined> = process.env,
+) {
+  return platform === "win32" && env.MONGOLGPT_PTY_USE_CONPTY_DLL === "1" ? { useConptyDll: true } : {}
+}
+
 export const Event = Pty.Event
 
 export type AttachInput = {
@@ -180,7 +187,9 @@ export const layer = Layer.effect(
       }
       yield* Effect.logInfo("Сесс үүсгэж байна", { id, cmd: command, args, cwd })
       const { spawn } = yield* Effect.promise(() => pty())
-      const proc = yield* Effect.sync(() => spawn(command, args, { name: "xterm-256color", cwd, env }))
+      const proc = yield* Effect.sync(() =>
+        spawn(command, args, { name: "xterm-256color", cwd, env, ...windowsPtyCompatibilityOptions() }),
+      )
       const info: Info = {
         id,
         title: input.title || `Terminal ${id.slice(-4)}`,

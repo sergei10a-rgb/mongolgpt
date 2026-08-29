@@ -61,6 +61,7 @@ function Invoke-DesktopSmoke {
   $stderr = "$Marker.stderr.log"
   $previousOnboarding = [Environment]::GetEnvironmentVariable("MONGOLGPT_TEST_ONBOARDING", "Process")
   $previousMarker = [Environment]::GetEnvironmentVariable("MONGOLGPT_DESKTOP_SMOKE_FILE", "Process")
+  $previousConptyDll = [Environment]::GetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "Process")
   $process = $null
   $summary = $null
   $failure = $null
@@ -68,6 +69,7 @@ function Invoke-DesktopSmoke {
   Remove-Item -LiteralPath $Marker, $stdout, $stderr -Force -ErrorAction SilentlyContinue
   [Environment]::SetEnvironmentVariable("MONGOLGPT_TEST_ONBOARDING", "1", "Process")
   [Environment]::SetEnvironmentVariable("MONGOLGPT_DESKTOP_SMOKE_FILE", $Marker, "Process")
+  [Environment]::SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "1", "Process")
 
   try {
     $process = Start-Process `
@@ -161,6 +163,7 @@ function Invoke-DesktopSmoke {
     }
     [Environment]::SetEnvironmentVariable("MONGOLGPT_TEST_ONBOARDING", $previousOnboarding, "Process")
     [Environment]::SetEnvironmentVariable("MONGOLGPT_DESKTOP_SMOKE_FILE", $previousMarker, "Process")
+    [Environment]::SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", $previousConptyDll, "Process")
     Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue
   }
 

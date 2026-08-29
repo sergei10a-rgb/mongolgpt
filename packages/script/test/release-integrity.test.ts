@@ -241,6 +241,7 @@ describe("release integrity contract", () => {
     expect(installedSmoke).toContain("$result.functional.summary.terminal.ok -ne $true")
     expect(installedSmoke).toContain("$result.functional.summary.fixture.mcpConfiguredDisabled -ne $true")
     expect(installedSmoke).toContain("$result.functional.summary.fixture.localModelRegisteredNoCall -ne $true")
+    expect(installedSmoke).toContain('SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "1", "Process")')
     expect(installedSmoke).toContain("Test-Path -LiteralPath $app.FullName -PathType Leaf")
     expect(installedSmoke).toContain("Desktop uninstaller суулгасан executable-ийг арилгасангүй")
     expect(packagedSmoke).toContain('MONGOLGPT_TEST_ONBOARDING", "1"')
@@ -249,6 +250,7 @@ describe("release integrity contract", () => {
     expect(packagedSmoke).toContain("$result.functional.summary.terminal.ok -ne $true")
     expect(packagedSmoke).toContain("$result.functional.summary.fixture.mcpConfiguredDisabled -ne $true")
     expect(packagedSmoke).toContain("$result.functional.summary.fixture.localModelRegisteredNoCall -ne $true")
+    expect(packagedSmoke).toContain('SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "1", "Process")')
   })
 
   test("builds a guarded, checksummed Windows dev preview without publishing", () => {
