@@ -1,7 +1,7 @@
 import { execFile as nodeExecFile } from "node:child_process"
-import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises"
+import { mkdtemp, readFile, realpath, rm, writeFile, mkdir } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { promisify } from "node:util"
 
 export type ReleaseSmokeServer = { url: string; username: string; password: string }
@@ -123,8 +123,22 @@ export async function runReleaseFunctionalSmoke(
 
     const getJson = (path: string, validate: (value: unknown) => boolean) =>
       request(fetcher, base, path, headers, "application/json", validate, timeoutMs)
-    http.path = await getJson("/path", (value) => isPath(value) && value.directory === root && value.worktree === root)
-    http.project = await getJson("/project/current", (value) => isProject(value) && value.worktree === root)
+    const pathInfo = await requestJsonValue(fetcher, base, "/path", headers, isPath, timeoutMs)
+    http.path = pathInfo.check
+    if (pathInfo.check.ok && isPath(pathInfo.value)) {
+      const [directory, worktree] = await Promise.all([
+        sameLocalPath(pathInfo.value.directory, root),
+        sameLocalPath(pathInfo.value.worktree, root),
+      ])
+      http.path = directory && worktree ? { ok: true } : { ok: false, detail: "path identity mismatch" }
+    }
+    const project = await requestJsonValue(fetcher, base, "/project/current", headers, isProject, timeoutMs)
+    http.project = project.check
+    if (project.check.ok && isProject(project.value)) {
+      http.project = (await sameLocalPath(project.value.worktree, root))
+        ? { ok: true }
+        : { ok: false, detail: "project path identity mismatch" }
+    }
     http.fileContent = await getJson(
       `/file/content?path=${encodeURIComponent("README.md")}`,
       (value) => isFileContent(value) && value.content.includes(marker),
@@ -252,6 +266,15 @@ export function smokeTimeoutMs(value: number | undefined) {
 
 export function isExternalPtyProof(value: string) {
   return value.trim() === externalPtyMarker
+}
+
+export async function sameLocalPath(left: string, right: string) {
+  const canonical = async (value: string) => {
+    const absolute = resolve(value)
+    return realpath(absolute).catch(() => absolute)
+  }
+  const [a, b] = await Promise.all([canonical(left), canonical(right)])
+  return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b
 }
 
 export function releaseSmokeTerminalCommand() {

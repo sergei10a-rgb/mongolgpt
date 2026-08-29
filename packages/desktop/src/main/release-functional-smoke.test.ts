@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { mkdtemp, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import {
   hasDisabledMcp,
   hasProviderModel,
@@ -12,6 +15,7 @@ import {
   isToolIds,
   releaseSmokeTerminalCommand,
   redactSmokeError,
+  sameLocalPath,
   smokeTimeoutMs,
   validateHttpResponse,
 } from "./release-functional-smoke"
@@ -74,6 +78,17 @@ describe("release functional smoke validators", () => {
     expect(redactSmokeError("no secret", "")).toBe("no secret")
     expect(isExternalPtyProof("MONGOLGPT_PACKAGED_PTY_OK\n")).toBe(true)
     expect(isExternalPtyProof("MONGOLGPT_PACKAGED_PTY_OK extra")).toBe(false)
+  })
+
+  test("compares Windows path aliases by filesystem identity", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mongolgpt-path-identity-"))
+    try {
+      expect(await sameLocalPath(root, join(root, "."))).toBe(true)
+      expect(await sameLocalPath(root, join(root, "missing"))).toBe(false)
+      if (process.platform === "win32") expect(await sameLocalPath(root, root.toUpperCase())).toBe(true)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 
   test("encodes the Windows terminal proof without command-line quoting", () => {
