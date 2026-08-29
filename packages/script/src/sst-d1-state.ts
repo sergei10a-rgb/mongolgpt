@@ -8,15 +8,13 @@ export class SstD1StateError extends Error {
 }
 
 export function extractSstD1DatabaseId(input: unknown, logicalName = "Database") {
-  if (!record(input) || !record(input.deployment) || !Array.isArray(input.deployment.resources)) {
-    throw new SstD1StateError("SST state-ийн deployment.resources жагсаалт дутуу байна.")
-  }
   if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(logicalName)) {
     throw new SstD1StateError("D1 logical name буруу байна.")
   }
+  const resources = stateResources(input)
 
   const ids = new Set<string>()
-  for (const resource of input.deployment.resources) {
+  for (const resource of resources) {
     if (!record(resource) || typeof resource.type !== "string" || typeof resource.urn !== "string") continue
     const name = resource.urn.split("::").at(-1) ?? ""
     const outputs = record(resource.outputs) ? resource.outputs : {}
@@ -38,6 +36,13 @@ export function extractSstD1DatabaseId(input: unknown, logicalName = "Database")
     throw new SstD1StateError(`SST state дотроос ${logicalName} D1 UUID яг нэг олдох ёстой, ${ids.size} олдлоо.`)
   }
   return [...ids][0]
+}
+
+function stateResources(input: unknown) {
+  if (!record(input)) throw new SstD1StateError("SST state объект биш байна.")
+  if (record(input.latest) && Array.isArray(input.latest.resources)) return input.latest.resources
+  if (record(input.deployment) && Array.isArray(input.deployment.resources)) return input.deployment.resources
+  throw new SstD1StateError("SST state-ийн latest.resources жагсаалт дутуу байна.")
 }
 
 function addUuid(ids: Set<string>, value: unknown, source: string) {

@@ -3,6 +3,24 @@ import { extractSstD1DatabaseId, SstD1StateError } from "../src/sst-d1-state"
 
 const databaseId = "123e4567-e89b-42d3-a456-426614174000"
 
+test("SST CheckpointV3 latest.resources хэлбэрээс D1 UUID авна", () => {
+  expect(
+    extractSstD1DatabaseId({
+      stack: "mongolgpt/dev",
+      latest: {
+        manifest: {},
+        resources: [
+          {
+            type: "cloudflare:index/d1Database:D1Database",
+            urn: "urn:pulumi:dev::mongolgpt::cloudflare:index/d1Database:D1Database::DatabaseDatabase",
+            outputs: { uuid: databaseId },
+          },
+        ],
+      },
+    }),
+  ).toBe(databaseId)
+})
+
 test("SST D1 state parser component болон provider resource-ийн ижил UUID-г нэгтгэнэ", () => {
   expect(
     extractSstD1DatabaseId({
