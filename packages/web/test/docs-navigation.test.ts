@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import { readFileSync, readdirSync } from "node:fs"
 import { basename, join } from "node:path"
 import { marked } from "marked"
+import { requiredDocsTopics } from "../docs-contract"
 
 const docsRoot = join(import.meta.dir, "..", "src", "content", "docs")
 const files = readdirSync(docsRoot)
@@ -9,31 +10,8 @@ const files = readdirSync(docsRoot)
   .sort()
 const slugs = new Set(files.filter((name) => name !== "index.mdx").map((name) => basename(name, ".mdx")))
 
-const requiredTopics = [
-  "account",
-  "admin",
-  "billing",
-  "cli",
-  "deployment",
-  "desktop",
-  "ecosystem",
-  "faq",
-  "install",
-  "incident-response",
-  "mcp-servers",
-  "models",
-  "plugins",
-  "privacy",
-  "providers",
-  "release-upgrade",
-  "security",
-  "skills",
-  "troubleshooting",
-  "web",
-]
-
 test("шаардлагатай Монгол гарын авлагууд тусдаа route-тэй байна", () => {
-  for (const slug of requiredTopics) expect(slugs.has(slug), `${slug}.mdx дутуу байна`).toBeTrue()
+  for (const slug of requiredDocsTopics) expect(slugs.has(slug), `${slug}.mdx дутуу байна`).toBeTrue()
 })
 
 test("docs-ийн дотоод Markdown холбоос canonical route руу заана", () => {

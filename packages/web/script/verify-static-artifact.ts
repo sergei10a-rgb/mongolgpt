@@ -1,6 +1,7 @@
-import { access, readFile } from "node:fs/promises"
+import { access, readFile, readdir } from "node:fs/promises"
 import { join, sep } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { requiredDocsSearchResults, requiredDocsTopics } from "../docs-contract"
 import {
   staticDocsEntrypointRedirects,
   staticRedirectHtmlDocument,
@@ -30,6 +31,9 @@ const expectedReferences = [
 for (const reference of expectedReferences) {
   if (!docsIndex.includes(reference)) throw new Error(`Static docs asset reference зөрүүтэй байна: ${reference}`)
 }
+
+await verifyRequiredPages(expectedOrigin)
+await verifyPublicBranding()
 
 for (const [source, target] of Object.entries(staticDocsEntrypointRedirects)) {
   const segments = source === "/" ? [] : source.slice(1).split("/")
@@ -96,15 +100,7 @@ async function verifySearchIndex() {
     })
     await index.init()
 
-    for (const [query, expectedPath] of [
-      ["Free Auto", "/docs/account/"],
-      ["алдаа оношлох", "/docs/troubleshooting/"],
-      ["MCP серверүүд", "/docs/mcp-servers/"],
-      ["Аюулгүй ашиглалт", "/docs/security/"],
-      ["Буцаах төлөвлөгөө", "/docs/release-upgrade/"],
-      ["Ослын хариу арга хэмжээ", "/docs/incident-response/"],
-      ["Claude Codex Goose", "/docs/ecosystem/"],
-    ] as const) {
+    for (const [query, expectedPath] of requiredDocsSearchResults) {
       const result = await index.search(query)
       const documents = await Promise.all(result.results.slice(0, 20).map((item) => item.data()))
       if (!documents.some((item) => item.url === expectedPath)) {
@@ -114,5 +110,36 @@ async function verifySearchIndex() {
   } finally {
     await index?.destroy()
     globalThis.fetch = nativeFetch
+  }
+}
+
+async function verifyRequiredPages(expectedOrigin: string) {
+  for (const slug of requiredDocsTopics) {
+    const artifact = await readFile(join(root, "docs", slug, "index.html"), "utf8")
+    const expectedCanonical = `${expectedOrigin}/docs/${slug}/`
+    if (!/<html\s[^>]*lang="mn"(?:\s|>)/i.test(artifact)) {
+      throw new Error(`Static docs хуудасны үндсэн хэл Монгол биш байна: ${slug}`)
+    }
+    if (!/<title>[^<]*MongolGPT[^<]*<\/title>/i.test(artifact)) {
+      throw new Error(`Static docs хуудасны MongolGPT title дутуу байна: ${slug}`)
+    }
+    if (!/<meta\s+name="description"\s+content="[^"\s][^"]*"\s*\/?\s*>/i.test(artifact)) {
+      throw new Error(`Static docs хуудасны description дутуу байна: ${slug}`)
+    }
+    if (!artifact.includes(`<link rel="canonical" href="${expectedCanonical}"`)) {
+      throw new Error(`Static docs хуудасны canonical URL зөрүүтэй байна: ${slug}`)
+    }
+  }
+}
+
+async function verifyPublicBranding() {
+  const paths = (await readdir(join(root, "docs"), { recursive: true }))
+    .filter((path) => path.toLowerCase().endsWith(".html"))
+    .sort()
+  for (const path of paths) {
+    const artifact = await readFile(join(root, "docs", path), "utf8")
+    if (/\bopencode(?:\.ai)?\b|\bopen\s+code\b/i.test(artifact)) {
+      throw new Error(`Static docs public HTML-д хуучин брэнд үлдсэн байна: ${path}`)
+    }
   }
 }
