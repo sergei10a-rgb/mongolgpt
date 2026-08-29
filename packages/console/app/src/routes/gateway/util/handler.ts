@@ -1416,6 +1416,7 @@ export async function handler(
           cacheWriteCost: cacheWriteCostInMicroCents,
           country,
           continent,
+          userID: authInfo.user.id,
           keyID: authInfo.apiKeyId,
           sessionID: sessionId.substring(0, 30),
           enrichment,

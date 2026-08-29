@@ -67,9 +67,9 @@ async function setup() {
     .run("lit_account_deletion", workspaceID, userID)
   sqlite
     .query(
-      "insert into usage (id, workspace_id, model, provider, input_tokens, output_tokens, cost, key_id, session_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "insert into usage (id, workspace_id, user_id, model, provider, input_tokens, output_tokens, cost, key_id, session_id) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
-    .run("usg_account_deletion", workspaceID, "test-model", "openrouter", 10, 20, 0, keyID, "session-secret")
+    .run("usg_account_deletion", workspaceID, userID, "test-model", "openrouter", 10, 20, 0, keyID, "session-secret")
   sqlite
     .query("insert into newsletter_subscriber (email, consent_version, time_consented) values (?, ?, ?)")
     .run("owner@mgpt.mn", "v1", now)
@@ -254,7 +254,8 @@ describe("account deletion lifecycle", () => {
     expect(sqlite.query("select count(*) as count from key_rate_limit where key = ?").get("mgpt_delete_me")).toEqual({
       count: 0,
     })
-    expect(sqlite.query("select key_id, session_id from usage where id = ?").get("usg_account_deletion")).toEqual({
+    expect(sqlite.query("select user_id, key_id, session_id from usage where id = ?").get("usg_account_deletion")).toEqual({
+      user_id: null,
       key_id: null,
       session_id: null,
     })

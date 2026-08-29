@@ -136,6 +136,12 @@ export namespace Account {
           ),
         )
     }
+    if (userIDs.length > 0) {
+      await tx
+        .update(UsageTable)
+        .set({ userID: null, sessionID: null, timeUpdated: input.now })
+        .where(inArray(UsageTable.userID, userIDs))
+    }
     const revokedApiKeys =
       keyRows.length === 0
         ? []
@@ -372,7 +378,7 @@ export namespace Account {
 
     await tx
       .update(UsageTable)
-      .set({ keyID: null, sessionID: null, timeUpdated: now })
+      .set({ userID: null, keyID: null, sessionID: null, timeUpdated: now })
       .where(inArray(UsageTable.workspaceID, workspaceIDs))
     await tx
       .update(SubscriptionTable)

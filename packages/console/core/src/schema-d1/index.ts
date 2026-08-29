@@ -961,6 +961,7 @@ export const UsageTable = sqliteTable(
     cacheWriteCost: currency("cache_write_cost"),
     country: text("country", { length: 2 }),
     continent: text("continent", { length: 2 }),
+    userID: ulid("user_id"),
     keyID: ulid("key_id"),
     sessionID: text("session_id", { length: 30 }),
     enrichment: text("enrichment", { mode: "json" }).$type<{
@@ -970,6 +971,7 @@ export const UsageTable = sqliteTable(
   (table) => [
     ...workspaceIndexes(table),
     index("usage_workspace_time_created").on(table.workspaceID, table.timeCreated),
+    index("usage_workspace_user_time_created").on(table.workspaceID, table.userID, table.timeCreated),
     index("usage_time_model_provider").on(table.timeCreated, table.model, table.provider),
     check("usage_enrichment_json_check", sql`${table.enrichment} is null or json_valid(${table.enrichment})`),
   ],

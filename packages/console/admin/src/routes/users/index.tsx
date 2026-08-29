@@ -123,6 +123,7 @@ export default function AdminUsersPage() {
                         <th>Гишүүнчлэл</th>
                         <th>Сүүлд ашигласан</th>
                         <th>Үүссэн</th>
+                        <th>Харалт</th>
                         <Show when={data().canSuspend}>
                           <th>Үйлдэл</th>
                         </Show>
@@ -133,7 +134,7 @@ export default function AdminUsersPage() {
                         each={data().accounts}
                         fallback={
                           <tr>
-                            <td colspan={data().canSuspend ? 7 : 6} data-empty>
+                            <td colspan={data().canSuspend ? 8 : 7} data-empty>
                               Сонгосон нөхцөлд тохирох аккаунт алга.
                             </td>
                           </tr>
@@ -158,6 +159,11 @@ export default function AdminUsersPage() {
                               <td>{formatNumber(account.memberships)}</td>
                               <td>{formatDate(account.lastSeen)}</td>
                               <td>{formatDate(account.timeCreated)}</td>
+                              <td data-action-cell>
+                                <Show when={data().canInspectBilling}>
+                                  <A href={`/users/${account.id}`}>Дэлгэрэнгүй</A>
+                                </Show>
+                              </td>
                               <Show when={data().canSuspend}>
                                 <td data-action-cell>
                                   <Show

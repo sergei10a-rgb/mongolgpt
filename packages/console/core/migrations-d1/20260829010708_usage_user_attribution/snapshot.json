@@ -1,0 +1,7372 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "994a79b9-ad89-4c2e-aa3f-b56761327fd8",
+  "prevIds": [
+    "38aa9e14-8cbb-4715-88e4-a14b5909c370"
+  ],
+  "ddl": [
+    {
+      "name": "account_deletion",
+      "entityType": "tables"
+    },
+    {
+      "name": "account",
+      "entityType": "tables"
+    },
+    {
+      "name": "admin_audit_log",
+      "entityType": "tables"
+    },
+    {
+      "name": "auth",
+      "entityType": "tables"
+    },
+    {
+      "name": "benchmark",
+      "entityType": "tables"
+    },
+    {
+      "name": "billing",
+      "entityType": "tables"
+    },
+    {
+      "name": "coupon",
+      "entityType": "tables"
+    },
+    {
+      "name": "enterprise_inquiry",
+      "entityType": "tables"
+    },
+    {
+      "name": "finance_cost_entry",
+      "entityType": "tables"
+    },
+    {
+      "name": "finance_cost_valuation",
+      "entityType": "tables"
+    },
+    {
+      "name": "finance_fx_rate",
+      "entityType": "tables"
+    },
+    {
+      "name": "finance_payment_settlement",
+      "entityType": "tables"
+    },
+    {
+      "name": "ip_rate_limit",
+      "entityType": "tables"
+    },
+    {
+      "name": "ip",
+      "entityType": "tables"
+    },
+    {
+      "name": "key_rate_limit",
+      "entityType": "tables"
+    },
+    {
+      "name": "key",
+      "entityType": "tables"
+    },
+    {
+      "name": "lite",
+      "entityType": "tables"
+    },
+    {
+      "name": "model_sticky_provider",
+      "entityType": "tables"
+    },
+    {
+      "name": "model",
+      "entityType": "tables"
+    },
+    {
+      "name": "model_tpm_rate_limit",
+      "entityType": "tables"
+    },
+    {
+      "name": "model_tps_rate_limit",
+      "entityType": "tables"
+    },
+    {
+      "name": "newsletter_subscriber",
+      "entityType": "tables"
+    },
+    {
+      "name": "payment_cancellation",
+      "entityType": "tables"
+    },
+    {
+      "name": "payment_checkout",
+      "entityType": "tables"
+    },
+    {
+      "name": "payment_event",
+      "entityType": "tables"
+    },
+    {
+      "name": "payment_invoice",
+      "entityType": "tables"
+    },
+    {
+      "name": "payment_recovery",
+      "entityType": "tables"
+    },
+    {
+      "name": "payment_refund",
+      "entityType": "tables"
+    },
+    {
+      "name": "payment",
+      "entityType": "tables"
+    },
+    {
+      "name": "plan_config_active",
+      "entityType": "tables"
+    },
+    {
+      "name": "plan_config_version",
+      "entityType": "tables"
+    },
+    {
+      "name": "plan_subscription",
+      "entityType": "tables"
+    },
+    {
+      "name": "platform_admin",
+      "entityType": "tables"
+    },
+    {
+      "name": "provider",
+      "entityType": "tables"
+    },
+    {
+      "name": "referral_code",
+      "entityType": "tables"
+    },
+    {
+      "name": "referral_reward",
+      "entityType": "tables"
+    },
+    {
+      "name": "referral",
+      "entityType": "tables"
+    },
+    {
+      "name": "subscription",
+      "entityType": "tables"
+    },
+    {
+      "name": "support_message",
+      "entityType": "tables"
+    },
+    {
+      "name": "support_ticket",
+      "entityType": "tables"
+    },
+    {
+      "name": "usage",
+      "entityType": "tables"
+    },
+    {
+      "name": "user",
+      "entityType": "tables"
+    },
+    {
+      "name": "workspace",
+      "entityType": "tables"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'requested'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "attempts",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "text(64)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_error_code",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_eligible",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_started",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_completed",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_cancelled",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "account_deletion"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "account"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'active'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "auth_version",
+      "entityType": "columns",
+      "table": "account"
+    },
+    {
+      "type": "text(500)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "suspension_reason",
+      "entityType": "columns",
+      "table": "account"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "suspended_by",
+      "entityType": "columns",
+      "table": "account"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_suspended",
+      "entityType": "columns",
+      "table": "account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "account"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "account"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "account"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "admin_id",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text(254)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "actor_email",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text(128)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "action",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text(64)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "target_type",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "target_id",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "outcome",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text(128)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "request_id",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text(45)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_ip",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text(512)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_agent",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "admin_audit_log"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "auth"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "auth"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "auth"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "auth"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "auth"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject",
+      "entityType": "columns",
+      "table": "auth"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "auth"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "benchmark"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "benchmark"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "benchmark"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "benchmark"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "model",
+      "entityType": "columns",
+      "table": "benchmark"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "agent",
+      "entityType": "columns",
+      "table": "benchmark"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "result",
+      "entityType": "columns",
+      "table": "benchmark"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "customer_id",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payment_method_id",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text(32)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payment_method_type",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text(4)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payment_method_last4",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "balance",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "monthly_limit",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "monthly_usage",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_monthly_usage_updated",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reload",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reload_trigger",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reload_amount",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reload_error",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_reload_error",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_reload_locked_till",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subscription",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text(28)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subscription_id",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subscription_plan",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_subscription_booked",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_subscription_selected",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text(28)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lite_subscription_id",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lite",
+      "entityType": "columns",
+      "table": "billing"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "coupon"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "type",
+      "entityType": "columns",
+      "table": "coupon"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_redeemed",
+      "entityType": "columns",
+      "table": "coupon"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text(120)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text(120)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "role",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text(200)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "company",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text(254)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text(64)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "phone",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text(5000)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "message",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text(16)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'mn'",
+      "generated": null,
+      "name": "locale",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'enterprise'",
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'new'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text(32)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "form_version",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "category",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "direction",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "basis",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_type",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_reference",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "usage_id",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payment_invoice_id",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payment_event_id",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "model",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "original_amount",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "original_currency",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "fx_rate_id",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount_mnt_micros",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payload_hash",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_effective",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "finance_cost_entry"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cost_entry_id",
+      "entityType": "columns",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "fx_rate_id",
+      "entityType": "columns",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "method",
+      "entityType": "columns",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "version",
+      "entityType": "columns",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount_mnt_micros",
+      "entityType": "columns",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payload_hash",
+      "entityType": "columns",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "finance_fx_rate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'USD'",
+      "generated": null,
+      "name": "base_currency",
+      "entityType": "columns",
+      "table": "finance_fx_rate"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'MNT'",
+      "generated": null,
+      "name": "quote_currency",
+      "entityType": "columns",
+      "table": "finance_fx_rate"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rate_micromnt_per_usd",
+      "entityType": "columns",
+      "table": "finance_fx_rate"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "finance_fx_rate"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_reference",
+      "entityType": "columns",
+      "table": "finance_fx_rate"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "table": "finance_fx_rate"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payload_hash",
+      "entityType": "columns",
+      "table": "finance_fx_rate"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_effective",
+      "entityType": "columns",
+      "table": "finance_fx_rate"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "finance_fx_rate"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payment_invoice_id",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payment_event_id",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merchant_account_id",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_settlement_id",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "gross_amount_mnt",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "fee_amount_mnt",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tax_amount_mnt",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "net_amount_mnt",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'MNT'",
+      "generated": null,
+      "name": "currency",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payload_hash",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_effective",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "type": "text(45)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ip",
+      "entityType": "columns",
+      "table": "ip_rate_limit"
+    },
+    {
+      "type": "text(10)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "interval",
+      "entityType": "columns",
+      "table": "ip_rate_limit"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "count",
+      "entityType": "columns",
+      "table": "ip_rate_limit"
+    },
+    {
+      "type": "text(45)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ip",
+      "entityType": "columns",
+      "table": "ip"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "ip"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "ip"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "ip"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "usage",
+      "entityType": "columns",
+      "table": "ip"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "key",
+      "entityType": "columns",
+      "table": "key_rate_limit"
+    },
+    {
+      "type": "text(40)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "interval",
+      "entityType": "columns",
+      "table": "key_rate_limit"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "count",
+      "entityType": "columns",
+      "table": "key_rate_limit"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "key"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "key"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "key"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "key"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "key"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "key"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "key",
+      "entityType": "columns",
+      "table": "key"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "key"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_used",
+      "entityType": "columns",
+      "table": "key"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rolling_usage",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "weekly_usage",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "monthly_usage",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_rolling_updated",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_weekly_updated",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_monthly_updated",
+      "entityType": "columns",
+      "table": "lite"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "model_sticky_provider"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "model_sticky_provider"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "model_sticky_provider"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "model_sticky_provider"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider_id",
+      "entityType": "columns",
+      "table": "model_sticky_provider"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "model"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "model"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "model"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "model"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "model"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "model",
+      "entityType": "columns",
+      "table": "model"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "model_tpm_rate_limit"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "interval",
+      "entityType": "columns",
+      "table": "model_tpm_rate_limit"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "count",
+      "entityType": "columns",
+      "table": "model_tpm_rate_limit"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "model_tps_rate_limit"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "interval",
+      "entityType": "columns",
+      "table": "model_tps_rate_limit"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "qualify",
+      "entityType": "columns",
+      "table": "model_tps_rate_limit"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "unqualify",
+      "entityType": "columns",
+      "table": "model_tps_rate_limit"
+    },
+    {
+      "type": "text(254)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "type": "text(16)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'mn'",
+      "generated": null,
+      "name": "locale",
+      "entityType": "columns",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'stats'",
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'active'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "type": "text(32)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "consent_version",
+      "entityType": "columns",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_consented",
+      "entityType": "columns",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_unsubscribed",
+      "entityType": "columns",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invoice_id",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "request_key",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merchant_account_id",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_invoice_id",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'requested'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "text(64)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "error_code",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_requested",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_completed",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "payment_cancellation"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "request_key",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merchant_account_id",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_invoice_id",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "purpose",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "plan",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'MNT'",
+      "generated": null,
+      "name": "currency",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "checkout",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text(64)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "creation_error_code",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'creating'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_expires",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_ready",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_failed",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_expired",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_cancelled",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_paid",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_refunded",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "payment_checkout"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invoice_id",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merchant_account_id",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_event_id",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_invoice_id",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_payment_id",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "currency",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "type",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "outcome",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "from_status",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "to_status",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payload_hash",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_occurred",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "payment_event"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merchant_account_id",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_invoice_id",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_payment_id",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "purpose",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "plan",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'MNT'",
+      "generated": null,
+      "name": "currency",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'created'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_expires",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_failed",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_expired",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_cancelled",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_verified",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_refunded",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "payment_invoice"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "message_hash",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merchant_account_id",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_event_id",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_invoice_id",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "text(64)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payload_hash",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "attempts",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "text(64)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_error_code",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_next_attempt",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_lease_expires",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_resolved",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "payment_recovery"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invoice_id",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "request_key",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "merchant_account_id",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_invoice_id",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "external_payment_id",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'MNT'",
+      "generated": null,
+      "name": "currency",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'requested'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text(64)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "error_code",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text(64)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider_payload_hash",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_requested",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_completed",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "payment_refund"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "customer_id",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invoice_id",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payment_id",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_refunded",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "enrichment",
+      "entityType": "columns",
+      "table": "payment"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "plan_config_active"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "active_version_id",
+      "entityType": "columns",
+      "table": "plan_config_active"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "revision",
+      "entityType": "columns",
+      "table": "plan_config_active"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_by",
+      "entityType": "columns",
+      "table": "plan_config_active"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "plan_config_active"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "plan_config_version"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revision",
+      "entityType": "columns",
+      "table": "plan_config_version"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "limits",
+      "entityType": "columns",
+      "table": "plan_config_version"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by",
+      "entityType": "columns",
+      "table": "plan_config_version"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_version_id",
+      "entityType": "columns",
+      "table": "plan_config_version"
+    },
+    {
+      "type": "text(500)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "note",
+      "entityType": "columns",
+      "table": "plan_config_version"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "plan_config_version"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invoice_id",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "plan",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'active'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_period_start",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_period_end",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_cancelled",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_refunded",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "plan_subscription"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "platform_admin"
+    },
+    {
+      "type": "text(254)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "platform_admin"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "access_subject",
+      "entityType": "columns",
+      "table": "platform_admin"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "role",
+      "entityType": "columns",
+      "table": "platform_admin"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'active'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "platform_admin"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_last_seen",
+      "entityType": "columns",
+      "table": "platform_admin"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "platform_admin"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "platform_admin"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "platform_admin"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "provider"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "provider"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "provider"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "provider"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "provider"
+    },
+    {
+      "type": "text(64)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "provider"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "credentials",
+      "entityType": "columns",
+      "table": "provider"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "referral_code"
+    },
+    {
+      "type": "text(10)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "code",
+      "entityType": "columns",
+      "table": "referral_code"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "referral_code"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "referral_code"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "referral_code"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "referral_reward"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "referral_id",
+      "entityType": "columns",
+      "table": "referral_reward"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "referral_reward"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "referral_reward"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "referral_reward"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount",
+      "entityType": "columns",
+      "table": "referral_reward"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_applied",
+      "entityType": "columns",
+      "table": "referral_reward"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "referral"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "referral"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "referral"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "referral"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "referral"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invitee_account_id",
+      "entityType": "columns",
+      "table": "referral"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rolling_usage",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "fixed_usage",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "weekly_tokens",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "weekly_requests",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "monthly_cost",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "monthly_tokens",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "monthly_requests",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_rolling_updated",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_fixed_updated",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_weekly_tokens_updated",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_weekly_requests_updated",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_monthly_cost_updated",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_monthly_tokens_updated",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_monthly_requests_updated",
+      "entityType": "columns",
+      "table": "subscription"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "support_message"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ticket_id",
+      "entityType": "columns",
+      "table": "support_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author_type",
+      "entityType": "columns",
+      "table": "support_message"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "support_message"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "admin_id",
+      "entityType": "columns",
+      "table": "support_message"
+    },
+    {
+      "type": "text(5000)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "support_message"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "internal",
+      "entityType": "columns",
+      "table": "support_message"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "support_message"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "text(254)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "requester_email",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "text(160)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "category",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'open'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'normal'",
+      "generated": null,
+      "name": "priority",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "assigned_admin_id",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "lock_version",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_message_at",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_resolved",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_closed",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "support_ticket"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "model",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "input_tokens",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "output_tokens",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reasoning_tokens",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cache_read_tokens",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cache_write_5m_tokens",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cache_write_1h_tokens",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cost",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "input_cost",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "output_cost",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cache_read_cost",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cache_write_cost",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "text(2)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "country",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "text(2)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "continent",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "key_id",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "session_id",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "enrichment",
+      "entityType": "columns",
+      "table": "usage"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "workspace_id",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "text(30)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_id",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_seen",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "color",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "role",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "monthly_limit",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "monthly_usage",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_monthly_usage_updated",
+      "entityType": "columns",
+      "table": "user"
+    },
+    {
+      "type": "text(30)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "workspace"
+    },
+    {
+      "type": "text(255)",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "slug",
+      "entityType": "columns",
+      "table": "workspace"
+    },
+    {
+      "type": "text(255)",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "workspace"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_created",
+      "entityType": "columns",
+      "table": "workspace"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(cast((julianday('now') - 2440587.5)*86400000 as integer))",
+      "generated": null,
+      "name": "time_updated",
+      "entityType": "columns",
+      "table": "workspace"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_deleted",
+      "entityType": "columns",
+      "table": "workspace"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "account_deletion_pk",
+      "entityType": "pks",
+      "table": "account_deletion"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "account_pk",
+      "entityType": "pks",
+      "table": "account"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "admin_audit_log_pk",
+      "entityType": "pks",
+      "table": "admin_audit_log"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "auth_pk",
+      "entityType": "pks",
+      "table": "auth"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "benchmark_pk",
+      "entityType": "pks",
+      "table": "benchmark"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "billing_pk",
+      "entityType": "pks",
+      "table": "billing"
+    },
+    {
+      "columns": [
+        "email",
+        "type"
+      ],
+      "nameExplicit": false,
+      "name": "coupon_pk",
+      "entityType": "pks",
+      "table": "coupon"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "enterprise_inquiry_pk",
+      "entityType": "pks",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "finance_cost_entry_pk",
+      "entityType": "pks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "finance_cost_valuation_pk",
+      "entityType": "pks",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "finance_fx_rate_pk",
+      "entityType": "pks",
+      "table": "finance_fx_rate"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "finance_payment_settlement_pk",
+      "entityType": "pks",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "columns": [
+        "ip",
+        "interval"
+      ],
+      "nameExplicit": false,
+      "name": "ip_rate_limit_pk",
+      "entityType": "pks",
+      "table": "ip_rate_limit"
+    },
+    {
+      "columns": [
+        "ip"
+      ],
+      "nameExplicit": false,
+      "name": "ip_pk",
+      "entityType": "pks",
+      "table": "ip"
+    },
+    {
+      "columns": [
+        "key",
+        "interval"
+      ],
+      "nameExplicit": false,
+      "name": "key_rate_limit_pk",
+      "entityType": "pks",
+      "table": "key_rate_limit"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "key_pk",
+      "entityType": "pks",
+      "table": "key"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "lite_pk",
+      "entityType": "pks",
+      "table": "lite"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "model_sticky_provider_pk",
+      "entityType": "pks",
+      "table": "model_sticky_provider"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "model_pk",
+      "entityType": "pks",
+      "table": "model"
+    },
+    {
+      "columns": [
+        "id",
+        "interval"
+      ],
+      "nameExplicit": false,
+      "name": "model_tpm_rate_limit_pk",
+      "entityType": "pks",
+      "table": "model_tpm_rate_limit"
+    },
+    {
+      "columns": [
+        "id",
+        "interval"
+      ],
+      "nameExplicit": false,
+      "name": "model_tps_rate_limit_pk",
+      "entityType": "pks",
+      "table": "model_tps_rate_limit"
+    },
+    {
+      "columns": [
+        "email"
+      ],
+      "nameExplicit": false,
+      "name": "newsletter_subscriber_pk",
+      "entityType": "pks",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "columns": [
+        "invoice_id"
+      ],
+      "nameExplicit": false,
+      "name": "payment_cancellation_pk",
+      "entityType": "pks",
+      "table": "payment_cancellation"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "payment_checkout_pk",
+      "entityType": "pks",
+      "table": "payment_checkout"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "payment_event_pk",
+      "entityType": "pks",
+      "table": "payment_event"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "payment_invoice_pk",
+      "entityType": "pks",
+      "table": "payment_invoice"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "payment_recovery_pk",
+      "entityType": "pks",
+      "table": "payment_recovery"
+    },
+    {
+      "columns": [
+        "invoice_id"
+      ],
+      "nameExplicit": false,
+      "name": "payment_refund_pk",
+      "entityType": "pks",
+      "table": "payment_refund"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "payment_pk",
+      "entityType": "pks",
+      "table": "payment"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "plan_config_version_pk",
+      "entityType": "pks",
+      "table": "plan_config_version"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "plan_subscription_pk",
+      "entityType": "pks",
+      "table": "plan_subscription"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "platform_admin_pk",
+      "entityType": "pks",
+      "table": "platform_admin"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "provider_pk",
+      "entityType": "pks",
+      "table": "provider"
+    },
+    {
+      "columns": [
+        "workspace_id"
+      ],
+      "nameExplicit": false,
+      "name": "referral_code_pk",
+      "entityType": "pks",
+      "table": "referral_code"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "referral_id"
+      ],
+      "nameExplicit": false,
+      "name": "referral_reward_pk",
+      "entityType": "pks",
+      "table": "referral_reward"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "referral_pk",
+      "entityType": "pks",
+      "table": "referral"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "subscription_pk",
+      "entityType": "pks",
+      "table": "subscription"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "support_message_pk",
+      "entityType": "pks",
+      "table": "support_message"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "support_ticket_pk",
+      "entityType": "pks",
+      "table": "support_ticket"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "usage_pk",
+      "entityType": "pks",
+      "table": "usage"
+    },
+    {
+      "columns": [
+        "workspace_id",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "user_pk",
+      "entityType": "pks",
+      "table": "user"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "workspace_pk",
+      "entityType": "pks",
+      "table": "workspace"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "plan_config_active_pk",
+      "table": "plan_config_active",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "account_deletion_account_id",
+      "entityType": "indexes",
+      "table": "account_deletion"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "time_eligible",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "account_deletion_status_eligible",
+      "entityType": "indexes",
+      "table": "account_deletion"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "account_status_id",
+      "entityType": "indexes",
+      "table": "account"
+    },
+    {
+      "columns": [
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "admin_audit_log_time_created",
+      "entityType": "indexes",
+      "table": "admin_audit_log"
+    },
+    {
+      "columns": [
+        {
+          "value": "admin_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "admin_audit_log_admin_time_created",
+      "entityType": "indexes",
+      "table": "admin_audit_log"
+    },
+    {
+      "columns": [
+        {
+          "value": "action",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "admin_audit_log_action_time_created",
+      "entityType": "indexes",
+      "table": "admin_audit_log"
+    },
+    {
+      "columns": [
+        {
+          "value": "provider",
+          "isExpression": false
+        },
+        {
+          "value": "subject",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "auth_provider_subject",
+      "entityType": "indexes",
+      "table": "auth"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "auth_account_id",
+      "entityType": "indexes",
+      "table": "auth"
+    },
+    {
+      "columns": [
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "benchmark_time_created",
+      "entityType": "indexes",
+      "table": "benchmark"
+    },
+    {
+      "columns": [
+        {
+          "value": "customer_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "billing_global_customer_id",
+      "entityType": "indexes",
+      "table": "billing"
+    },
+    {
+      "columns": [
+        {
+          "value": "subscription_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "billing_global_subscription_id",
+      "entityType": "indexes",
+      "table": "billing"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "enterprise_inquiry_status_time_created",
+      "entityType": "indexes",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "columns": [
+        {
+          "value": "email",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "enterprise_inquiry_email",
+      "entityType": "indexes",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "columns": [
+        {
+          "value": "idempotency_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_cost_entry_idempotency_key",
+      "entityType": "indexes",
+      "table": "finance_cost_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "source_type",
+          "isExpression": false
+        },
+        {
+          "value": "source_reference",
+          "isExpression": false
+        },
+        {
+          "value": "category",
+          "isExpression": false
+        },
+        {
+          "value": "direction",
+          "isExpression": false
+        },
+        {
+          "value": "basis",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_cost_entry_source_identity",
+      "entityType": "indexes",
+      "table": "finance_cost_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_effective",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_cost_entry_workspace_time_effective",
+      "entityType": "indexes",
+      "table": "finance_cost_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "usage_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_cost_entry_usage_id",
+      "entityType": "indexes",
+      "table": "finance_cost_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "payment_invoice_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_cost_entry_payment_invoice_id",
+      "entityType": "indexes",
+      "table": "finance_cost_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "provider",
+          "isExpression": false
+        },
+        {
+          "value": "time_effective",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_cost_entry_provider_time_effective",
+      "entityType": "indexes",
+      "table": "finance_cost_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "idempotency_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_cost_valuation_idempotency_key",
+      "entityType": "indexes",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "columns": [
+        {
+          "value": "cost_entry_id",
+          "isExpression": false
+        },
+        {
+          "value": "version",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_cost_valuation_entry_version",
+      "entityType": "indexes",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "columns": [
+        {
+          "value": "cost_entry_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_cost_valuation_entry_created",
+      "entityType": "indexes",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "columns": [
+        {
+          "value": "fx_rate_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_cost_valuation_fx_rate_id",
+      "entityType": "indexes",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "columns": [
+        {
+          "value": "idempotency_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_fx_rate_idempotency_key",
+      "entityType": "indexes",
+      "table": "finance_fx_rate"
+    },
+    {
+      "columns": [
+        {
+          "value": "source",
+          "isExpression": false
+        },
+        {
+          "value": "source_reference",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_fx_rate_source_reference",
+      "entityType": "indexes",
+      "table": "finance_fx_rate"
+    },
+    {
+      "columns": [
+        {
+          "value": "base_currency",
+          "isExpression": false
+        },
+        {
+          "value": "quote_currency",
+          "isExpression": false
+        },
+        {
+          "value": "time_effective",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_fx_rate_pair_time_effective",
+      "entityType": "indexes",
+      "table": "finance_fx_rate"
+    },
+    {
+      "columns": [
+        {
+          "value": "idempotency_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_payment_settlement_idempotency_key",
+      "entityType": "indexes",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "columns": [
+        {
+          "value": "provider",
+          "isExpression": false
+        },
+        {
+          "value": "merchant_account_id",
+          "isExpression": false
+        },
+        {
+          "value": "external_settlement_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_payment_settlement_provider_external",
+      "entityType": "indexes",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "columns": [
+        {
+          "value": "payment_invoice_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_effective",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_payment_settlement_invoice_time",
+      "entityType": "indexes",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_effective",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_payment_settlement_workspace_time",
+      "entityType": "indexes",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "columns": [
+        {
+          "value": "payment_event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "finance_payment_settlement_event_id",
+      "entityType": "indexes",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "columns": [
+        {
+          "value": "key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "key_global_key",
+      "entityType": "indexes",
+      "table": "key"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "lite_workspace_user_id",
+      "entityType": "indexes",
+      "table": "lite"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "model",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "model_workspace_model",
+      "entityType": "indexes",
+      "table": "model"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "newsletter_subscriber_status_time_created",
+      "entityType": "indexes",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "request_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_cancellation_workspace_request_key",
+      "entityType": "indexes",
+      "table": "payment_cancellation"
+    },
+    {
+      "columns": [
+        {
+          "value": "provider",
+          "isExpression": false
+        },
+        {
+          "value": "merchant_account_id",
+          "isExpression": false
+        },
+        {
+          "value": "external_invoice_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_cancellation_merchant_external_invoice",
+      "entityType": "indexes",
+      "table": "payment_cancellation"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "time_requested",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_cancellation_status_time_requested",
+      "entityType": "indexes",
+      "table": "payment_cancellation"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "request_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_checkout_workspace_request_key",
+      "entityType": "indexes",
+      "table": "payment_checkout"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "\"payment_checkout\".\"purpose\" = 'subscription'\n          and \"payment_checkout\".\"status\" in ('creating', 'unknown', 'ready', 'pending')\n          and \"payment_checkout\".\"time_deleted\" is null",
+      "origin": "manual",
+      "name": "payment_checkout_workspace_open_subscription",
+      "entityType": "indexes",
+      "table": "payment_checkout"
+    },
+    {
+      "columns": [
+        {
+          "value": "provider",
+          "isExpression": false
+        },
+        {
+          "value": "merchant_account_id",
+          "isExpression": false
+        },
+        {
+          "value": "external_invoice_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_checkout_merchant_external_invoice",
+      "entityType": "indexes",
+      "table": "payment_checkout"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "time_expires",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_checkout_status_time_expires",
+      "entityType": "indexes",
+      "table": "payment_checkout"
+    },
+    {
+      "columns": [
+        {
+          "value": "invoice_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_event_invoice_time_created",
+      "entityType": "indexes",
+      "table": "payment_event"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_event_workspace_time_created",
+      "entityType": "indexes",
+      "table": "payment_event"
+    },
+    {
+      "columns": [
+        {
+          "value": "provider",
+          "isExpression": false
+        },
+        {
+          "value": "merchant_account_id",
+          "isExpression": false
+        },
+        {
+          "value": "external_event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_event_merchant_external_event",
+      "entityType": "indexes",
+      "table": "payment_event"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_invoice_workspace_time_created",
+      "entityType": "indexes",
+      "table": "payment_invoice"
+    },
+    {
+      "columns": [
+        {
+          "value": "provider",
+          "isExpression": false
+        },
+        {
+          "value": "merchant_account_id",
+          "isExpression": false
+        },
+        {
+          "value": "external_invoice_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_invoice_merchant_external_invoice",
+      "entityType": "indexes",
+      "table": "payment_invoice"
+    },
+    {
+      "columns": [
+        {
+          "value": "provider",
+          "isExpression": false
+        },
+        {
+          "value": "merchant_account_id",
+          "isExpression": false
+        },
+        {
+          "value": "external_payment_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_invoice_merchant_external_payment",
+      "entityType": "indexes",
+      "table": "payment_invoice"
+    },
+    {
+      "columns": [
+        {
+          "value": "message_hash",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_recovery_message_hash",
+      "entityType": "indexes",
+      "table": "payment_recovery"
+    },
+    {
+      "columns": [
+        {
+          "value": "provider",
+          "isExpression": false
+        },
+        {
+          "value": "merchant_account_id",
+          "isExpression": false
+        },
+        {
+          "value": "external_event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_recovery_merchant_external_event",
+      "entityType": "indexes",
+      "table": "payment_recovery"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "time_next_attempt",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_recovery_status_next_attempt",
+      "entityType": "indexes",
+      "table": "payment_recovery"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "time_lease_expires",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_recovery_status_lease_expires",
+      "entityType": "indexes",
+      "table": "payment_recovery"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "request_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_refund_workspace_request_key",
+      "entityType": "indexes",
+      "table": "payment_refund"
+    },
+    {
+      "columns": [
+        {
+          "value": "provider",
+          "isExpression": false
+        },
+        {
+          "value": "merchant_account_id",
+          "isExpression": false
+        },
+        {
+          "value": "external_payment_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_refund_merchant_external_payment",
+      "entityType": "indexes",
+      "table": "payment_refund"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "time_requested",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "payment_refund_status_time_requested",
+      "entityType": "indexes",
+      "table": "payment_refund"
+    },
+    {
+      "columns": [
+        {
+          "value": "active_version_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "plan_config_active_version",
+      "entityType": "indexes",
+      "table": "plan_config_active"
+    },
+    {
+      "columns": [
+        {
+          "value": "revision",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "plan_config_version_revision",
+      "entityType": "indexes",
+      "table": "plan_config_version"
+    },
+    {
+      "columns": [
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "plan_config_version_time_created",
+      "entityType": "indexes",
+      "table": "plan_config_version"
+    },
+    {
+      "columns": [
+        {
+          "value": "source_version_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "plan_config_version_source_version",
+      "entityType": "indexes",
+      "table": "plan_config_version"
+    },
+    {
+      "columns": [
+        {
+          "value": "invoice_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "plan_subscription_invoice_id",
+      "entityType": "indexes",
+      "table": "plan_subscription"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_period_end",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "plan_subscription_workspace_period_end",
+      "entityType": "indexes",
+      "table": "plan_subscription"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "\"plan_subscription\".\"status\" = 'active' and \"plan_subscription\".\"time_deleted\" is null",
+      "origin": "manual",
+      "name": "plan_subscription_workspace_active",
+      "entityType": "indexes",
+      "table": "plan_subscription"
+    },
+    {
+      "columns": [
+        {
+          "value": "email",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "platform_admin_email",
+      "entityType": "indexes",
+      "table": "platform_admin"
+    },
+    {
+      "columns": [
+        {
+          "value": "access_subject",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "platform_admin_access_subject",
+      "entityType": "indexes",
+      "table": "platform_admin"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "role",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "platform_admin_status_role",
+      "entityType": "indexes",
+      "table": "platform_admin"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "provider",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "provider_workspace_provider",
+      "entityType": "indexes",
+      "table": "provider"
+    },
+    {
+      "columns": [
+        {
+          "value": "code",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "referral_code_code",
+      "entityType": "indexes",
+      "table": "referral_code"
+    },
+    {
+      "columns": [
+        {
+          "value": "invitee_account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "referral_invitee_account_id",
+      "entityType": "indexes",
+      "table": "referral"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "subscription_workspace_user_id",
+      "entityType": "indexes",
+      "table": "subscription"
+    },
+    {
+      "columns": [
+        {
+          "value": "ticket_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "support_message_ticket_time",
+      "entityType": "indexes",
+      "table": "support_message"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        },
+        {
+          "value": "last_message_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "support_ticket_account_last_message",
+      "entityType": "indexes",
+      "table": "support_ticket"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "last_message_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "support_ticket_workspace_last_message",
+      "entityType": "indexes",
+      "table": "support_ticket"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "priority",
+          "isExpression": false
+        },
+        {
+          "value": "last_message_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "support_ticket_status_priority_last_message",
+      "entityType": "indexes",
+      "table": "support_ticket"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "usage_workspace_time_created",
+      "entityType": "indexes",
+      "table": "usage"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "time_created",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "usage_workspace_user_time_created",
+      "entityType": "indexes",
+      "table": "usage"
+    },
+    {
+      "columns": [
+        {
+          "value": "time_created",
+          "isExpression": false
+        },
+        {
+          "value": "model",
+          "isExpression": false
+        },
+        {
+          "value": "provider",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "usage_time_model_provider",
+      "entityType": "indexes",
+      "table": "usage"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "user_workspace_account_id",
+      "entityType": "indexes",
+      "table": "user"
+    },
+    {
+      "columns": [
+        {
+          "value": "workspace_id",
+          "isExpression": false
+        },
+        {
+          "value": "email",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "user_workspace_email",
+      "entityType": "indexes",
+      "table": "user"
+    },
+    {
+      "columns": [
+        {
+          "value": "account_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "user_global_account_id",
+      "entityType": "indexes",
+      "table": "user"
+    },
+    {
+      "columns": [
+        {
+          "value": "email",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "user_global_email",
+      "entityType": "indexes",
+      "table": "user"
+    },
+    {
+      "columns": [
+        {
+          "value": "slug",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "workspace_slug",
+      "entityType": "indexes",
+      "table": "workspace"
+    },
+    {
+      "value": "\"status\" in ('requested', 'processing', 'completed', 'failed', 'cancelled')",
+      "name": "account_deletion_status_check",
+      "entityType": "checks",
+      "table": "account_deletion"
+    },
+    {
+      "value": "\"attempts\" >= 0 and \"attempts\" <= 5",
+      "name": "account_deletion_attempts_check",
+      "entityType": "checks",
+      "table": "account_deletion"
+    },
+    {
+      "value": "(\n        \"status\" = 'requested'\n        and \"time_started\" is null\n        and \"time_completed\" is null\n        and \"time_cancelled\" is null\n        and \"last_error_code\" is null\n      ) or (\n        \"status\" = 'failed'\n        and \"time_started\" is not null\n        and \"time_completed\" is null\n        and \"time_cancelled\" is null\n        and length(trim(\"last_error_code\")) between 1 and 64\n      ) or (\n        \"status\" = 'processing'\n        and \"time_started\" is not null\n        and \"time_completed\" is null\n        and \"time_cancelled\" is null\n        and \"last_error_code\" is null\n      ) or (\n        \"status\" = 'completed'\n        and \"time_started\" is not null\n        and \"time_completed\" is not null\n        and \"time_cancelled\" is null\n        and \"last_error_code\" is null\n      ) or (\n        \"status\" = 'cancelled'\n        and \"time_started\" is null\n        and \"time_completed\" is null\n        and \"time_cancelled\" is not null\n        and \"last_error_code\" is null\n      )",
+      "name": "account_deletion_state_check",
+      "entityType": "checks",
+      "table": "account_deletion"
+    },
+    {
+      "value": "\"status\" in ('active', 'suspended')",
+      "name": "account_status_check",
+      "entityType": "checks",
+      "table": "account"
+    },
+    {
+      "value": "\"auth_version\" >= 0",
+      "name": "account_auth_version_check",
+      "entityType": "checks",
+      "table": "account"
+    },
+    {
+      "value": "(\n        \"status\" = 'active'\n        and \"suspension_reason\" is null\n        and \"suspended_by\" is null\n        and \"time_suspended\" is null\n      ) or (\n        \"status\" = 'suspended'\n        and length(trim(\"suspension_reason\")) between 10 and 500\n        and \"suspended_by\" is not null\n        and \"time_suspended\" is not null\n      )",
+      "name": "account_suspension_check",
+      "entityType": "checks",
+      "table": "account"
+    },
+    {
+      "value": "\"outcome\" in ('success', 'denied', 'failure')",
+      "name": "admin_audit_log_outcome_check",
+      "entityType": "checks",
+      "table": "admin_audit_log"
+    },
+    {
+      "value": "\"metadata\" is null or json_valid(\"metadata\")",
+      "name": "admin_audit_log_metadata_json_check",
+      "entityType": "checks",
+      "table": "admin_audit_log"
+    },
+    {
+      "value": "\"provider\" in ('email', 'github', 'google')",
+      "name": "auth_provider_check",
+      "entityType": "checks",
+      "table": "auth"
+    },
+    {
+      "value": "\"subscription_plan\" is null or \"subscription_plan\" in ('basic', 'pro', 'max')",
+      "name": "billing_subscription_plan_check",
+      "entityType": "checks",
+      "table": "billing"
+    },
+    {
+      "value": "\"subscription\" is null or json_valid(\"subscription\")",
+      "name": "billing_subscription_json_check",
+      "entityType": "checks",
+      "table": "billing"
+    },
+    {
+      "value": "\"lite\" is null or json_valid(\"lite\")",
+      "name": "billing_lite_json_check",
+      "entityType": "checks",
+      "table": "billing"
+    },
+    {
+      "value": "\"type\" in ('BUILDATHON', 'GO1MONTH50', 'GOFREEMONTH', 'GO3MONTHS100', 'GO6MONTHS100', 'GO12MONTHS100')",
+      "name": "coupon_type_check",
+      "entityType": "checks",
+      "table": "coupon"
+    },
+    {
+      "value": "\"source\" in ('enterprise')",
+      "name": "enterprise_inquiry_source_check",
+      "entityType": "checks",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "value": "\"status\" in ('new', 'reviewing', 'resolved', 'spam')",
+      "name": "enterprise_inquiry_status_check",
+      "entityType": "checks",
+      "table": "enterprise_inquiry"
+    },
+    {
+      "value": "\"category\" in ('model_cost', 'payment_fee', 'tax', 'adjustment')",
+      "name": "finance_cost_entry_category_check",
+      "entityType": "checks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "value": "\"direction\" in ('debit', 'credit')",
+      "name": "finance_cost_entry_direction_check",
+      "entityType": "checks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "value": "\"basis\" in ('estimated', 'actual', 'allocated')",
+      "name": "finance_cost_entry_basis_check",
+      "entityType": "checks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "value": "\"source_type\" in ('usage', 'provider_statement', 'payment_settlement', 'manual')",
+      "name": "finance_cost_entry_source_type_check",
+      "entityType": "checks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "value": "\"original_amount\" > 0",
+      "name": "finance_cost_entry_original_amount_check",
+      "entityType": "checks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "value": "(\n        \"original_currency\" = 'MNT'\n        and \"fx_rate_id\" is null\n        and \"amount_mnt_micros\" > 0\n      ) or (\n        \"original_currency\" = 'USD'\n        and (\n          (\"fx_rate_id\" is null and \"amount_mnt_micros\" is null)\n          or (\"fx_rate_id\" is not null and \"amount_mnt_micros\" > 0)\n        )\n      )",
+      "name": "finance_cost_entry_currency_check",
+      "entityType": "checks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "value": "length(trim(\"source_reference\")) between 1 and 255\n        and length(trim(\"idempotency_key\")) between 1 and 255",
+      "name": "finance_cost_entry_source_reference_check",
+      "entityType": "checks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "value": "(\"source_type\" = 'usage' and \"usage_id\" is not null and \"source_reference\" = \"usage_id\")\n        or \"source_type\" = 'provider_statement'\n        or (\"source_type\" = 'payment_settlement'\n          and (\"payment_invoice_id\" is not null or \"payment_event_id\" is not null))\n        or \"source_type\" = 'manual'",
+      "name": "finance_cost_entry_source_link_check",
+      "entityType": "checks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "value": "\"source_type\" <> 'usage'\n        or (\"category\" = 'model_cost' and \"provider\" is not null and \"model\" is not null)",
+      "name": "finance_cost_entry_usage_model_check",
+      "entityType": "checks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "value": "length(\"payload_hash\") = 64",
+      "name": "finance_cost_entry_payload_hash_check",
+      "entityType": "checks",
+      "table": "finance_cost_entry"
+    },
+    {
+      "value": "\"method\" in ('historical_spot', 'provider_settlement', 'manual')",
+      "name": "finance_cost_valuation_method_check",
+      "entityType": "checks",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "value": "\"version\" > 0",
+      "name": "finance_cost_valuation_version_check",
+      "entityType": "checks",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "value": "\"amount_mnt_micros\" > 0",
+      "name": "finance_cost_valuation_amount_check",
+      "entityType": "checks",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "value": "length(trim(\"idempotency_key\")) between 1 and 255",
+      "name": "finance_cost_valuation_identity_check",
+      "entityType": "checks",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "value": "length(\"payload_hash\") = 64",
+      "name": "finance_cost_valuation_payload_hash_check",
+      "entityType": "checks",
+      "table": "finance_cost_valuation"
+    },
+    {
+      "value": "\"base_currency\" = 'USD' and \"quote_currency\" = 'MNT'",
+      "name": "finance_fx_rate_pair_check",
+      "entityType": "checks",
+      "table": "finance_fx_rate"
+    },
+    {
+      "value": "\"rate_micromnt_per_usd\" > 0",
+      "name": "finance_fx_rate_value_check",
+      "entityType": "checks",
+      "table": "finance_fx_rate"
+    },
+    {
+      "value": "length(trim(\"source\")) between 1 and 64\n        and length(trim(\"source_reference\")) between 1 and 255\n        and length(trim(\"idempotency_key\")) between 1 and 255",
+      "name": "finance_fx_rate_identity_check",
+      "entityType": "checks",
+      "table": "finance_fx_rate"
+    },
+    {
+      "value": "length(\"payload_hash\") = 64",
+      "name": "finance_fx_rate_payload_hash_check",
+      "entityType": "checks",
+      "table": "finance_fx_rate"
+    },
+    {
+      "value": "\"provider\" in ('qpay', 'bonum')",
+      "name": "finance_payment_settlement_provider_check",
+      "entityType": "checks",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "value": "\"kind\" in ('payment', 'refund', 'adjustment')",
+      "name": "finance_payment_settlement_kind_check",
+      "entityType": "checks",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "value": "(\"kind\" = 'payment' and \"gross_amount_mnt\" > 0)\n        or (\"kind\" = 'refund' and \"gross_amount_mnt\" < 0)\n        or (\"kind\" = 'adjustment' and \"gross_amount_mnt\" <> 0)",
+      "name": "finance_payment_settlement_gross_sign_check",
+      "entityType": "checks",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "value": "\"net_amount_mnt\" = \"gross_amount_mnt\" - \"fee_amount_mnt\" - \"tax_amount_mnt\"",
+      "name": "finance_payment_settlement_balance_check",
+      "entityType": "checks",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "value": "\"currency\" = 'MNT'",
+      "name": "finance_payment_settlement_currency_check",
+      "entityType": "checks",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "value": "length(trim(\"merchant_account_id\")) between 1 and 255\n        and length(trim(\"external_settlement_id\")) between 1 and 255\n        and length(trim(\"idempotency_key\")) between 1 and 255",
+      "name": "finance_payment_settlement_identity_check",
+      "entityType": "checks",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "value": "length(\"payload_hash\") = 64",
+      "name": "finance_payment_settlement_payload_hash_check",
+      "entityType": "checks",
+      "table": "finance_payment_settlement"
+    },
+    {
+      "value": "\"source\" in ('console', 'stats')",
+      "name": "newsletter_subscriber_source_check",
+      "entityType": "checks",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "value": "\"status\" in ('active', 'unsubscribed')",
+      "name": "newsletter_subscriber_status_check",
+      "entityType": "checks",
+      "table": "newsletter_subscriber"
+    },
+    {
+      "value": "\"provider\" in ('qpay', 'bonum')",
+      "name": "payment_cancellation_provider_check",
+      "entityType": "checks",
+      "table": "payment_cancellation"
+    },
+    {
+      "value": "\"status\" in ('requested', 'unknown', 'cancelled', 'failed')",
+      "name": "payment_cancellation_status_check",
+      "entityType": "checks",
+      "table": "payment_cancellation"
+    },
+    {
+      "value": "(\"status\" in ('requested', 'unknown') and \"time_completed\" is null)\n        or (\"status\" in ('cancelled', 'failed') and \"time_completed\" is not null)",
+      "name": "payment_cancellation_completion_check",
+      "entityType": "checks",
+      "table": "payment_cancellation"
+    },
+    {
+      "value": "\"provider\" in ('qpay', 'bonum')",
+      "name": "payment_checkout_provider_check",
+      "entityType": "checks",
+      "table": "payment_checkout"
+    },
+    {
+      "value": "\"purpose\" in ('subscription', 'credit')",
+      "name": "payment_checkout_purpose_check",
+      "entityType": "checks",
+      "table": "payment_checkout"
+    },
+    {
+      "value": "(\"purpose\" = 'subscription' and \"plan\" in ('basic', 'pro', 'max'))\n        or (\"purpose\" = 'credit' and \"plan\" is null)",
+      "name": "payment_checkout_plan_check",
+      "entityType": "checks",
+      "table": "payment_checkout"
+    },
+    {
+      "value": "\"amount\" > 0",
+      "name": "payment_checkout_amount_check",
+      "entityType": "checks",
+      "table": "payment_checkout"
+    },
+    {
+      "value": "\"currency\" = 'MNT'",
+      "name": "payment_checkout_currency_check",
+      "entityType": "checks",
+      "table": "payment_checkout"
+    },
+    {
+      "value": "\"checkout\" is null or json_valid(\"checkout\")",
+      "name": "payment_checkout_json_check",
+      "entityType": "checks",
+      "table": "payment_checkout"
+    },
+    {
+      "value": "\"status\" in ('creating', 'unknown', 'ready', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')",
+      "name": "payment_checkout_status_check",
+      "entityType": "checks",
+      "table": "payment_checkout"
+    },
+    {
+      "value": "(\"status\" in ('creating', 'unknown') and \"external_invoice_id\" is null and \"checkout\" is null)\n        or (\"status\" in ('failed', 'expired') and (\n          (\"external_invoice_id\" is null and \"checkout\" is null)\n          or (\"external_invoice_id\" is not null and \"checkout\" is not null)\n        ))\n        or (\"status\" in ('ready', 'pending', 'paid', 'cancelled', 'refunded')\n          and \"external_invoice_id\" is not null and \"checkout\" is not null)",
+      "name": "payment_checkout_ready_check",
+      "entityType": "checks",
+      "table": "payment_checkout"
+    },
+    {
+      "value": "\"provider\" in ('qpay', 'bonum')",
+      "name": "payment_event_provider_check",
+      "entityType": "checks",
+      "table": "payment_event"
+    },
+    {
+      "value": "(\"amount\" is null and \"currency\" is null)\n        or (\"amount\" > 0 and \"currency\" = 'MNT')",
+      "name": "payment_event_amount_currency_check",
+      "entityType": "checks",
+      "table": "payment_event"
+    },
+    {
+      "value": "\"type\" in ('pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')",
+      "name": "payment_event_type_check",
+      "entityType": "checks",
+      "table": "payment_event"
+    },
+    {
+      "value": "\"outcome\" in ('applied', 'noop', 'rejected')",
+      "name": "payment_event_outcome_check",
+      "entityType": "checks",
+      "table": "payment_event"
+    },
+    {
+      "value": "\"from_status\" in ('created', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')",
+      "name": "payment_event_from_status_check",
+      "entityType": "checks",
+      "table": "payment_event"
+    },
+    {
+      "value": "\"to_status\" in ('created', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')",
+      "name": "payment_event_to_status_check",
+      "entityType": "checks",
+      "table": "payment_event"
+    },
+    {
+      "value": "length(\"payload_hash\") = 64",
+      "name": "payment_event_payload_hash_check",
+      "entityType": "checks",
+      "table": "payment_event"
+    },
+    {
+      "value": "\"provider\" in ('qpay', 'bonum')",
+      "name": "payment_invoice_provider_check",
+      "entityType": "checks",
+      "table": "payment_invoice"
+    },
+    {
+      "value": "\"purpose\" in ('subscription', 'credit')",
+      "name": "payment_invoice_purpose_check",
+      "entityType": "checks",
+      "table": "payment_invoice"
+    },
+    {
+      "value": "(\"purpose\" = 'subscription' and \"plan\" in ('basic', 'pro', 'max'))\n        or (\"purpose\" = 'credit' and \"plan\" is null)",
+      "name": "payment_invoice_plan_check",
+      "entityType": "checks",
+      "table": "payment_invoice"
+    },
+    {
+      "value": "\"amount\" > 0",
+      "name": "payment_invoice_amount_check",
+      "entityType": "checks",
+      "table": "payment_invoice"
+    },
+    {
+      "value": "\"currency\" = 'MNT'",
+      "name": "payment_invoice_currency_check",
+      "entityType": "checks",
+      "table": "payment_invoice"
+    },
+    {
+      "value": "\"status\" in ('created', 'pending', 'paid', 'failed', 'expired', 'cancelled', 'refunded')",
+      "name": "payment_invoice_status_check",
+      "entityType": "checks",
+      "table": "payment_invoice"
+    },
+    {
+      "value": "length(\"message_hash\") = 64",
+      "name": "payment_recovery_message_hash_check",
+      "entityType": "checks",
+      "table": "payment_recovery"
+    },
+    {
+      "value": "\"provider\" is null or \"provider\" in ('qpay', 'bonum')",
+      "name": "payment_recovery_provider_check",
+      "entityType": "checks",
+      "table": "payment_recovery"
+    },
+    {
+      "value": "\"payload_hash\" is null or length(\"payload_hash\") = 64",
+      "name": "payment_recovery_payload_hash_check",
+      "entityType": "checks",
+      "table": "payment_recovery"
+    },
+    {
+      "value": "\"event\" is null or json_valid(\"event\")",
+      "name": "payment_recovery_event_json_check",
+      "entityType": "checks",
+      "table": "payment_recovery"
+    },
+    {
+      "value": "(\"event\" is null\n          and \"provider\" is null\n          and \"merchant_account_id\" is null\n          and \"external_event_id\" is null\n          and \"external_invoice_id\" is null\n          and \"payload_hash\" is null)\n        or (\"event\" is not null\n          and \"provider\" is not null\n          and \"merchant_account_id\" is not null\n          and \"external_event_id\" is not null\n          and \"external_invoice_id\" is not null\n          and \"payload_hash\" is not null)",
+      "name": "payment_recovery_identity_check",
+      "entityType": "checks",
+      "table": "payment_recovery"
+    },
+    {
+      "value": "\"status\" in ('pending', 'processing', 'resolved', 'manual_review')",
+      "name": "payment_recovery_status_check",
+      "entityType": "checks",
+      "table": "payment_recovery"
+    },
+    {
+      "value": "\"attempts\" >= 0 and \"attempts\" <= 6",
+      "name": "payment_recovery_attempts_check",
+      "entityType": "checks",
+      "table": "payment_recovery"
+    },
+    {
+      "value": "(\"status\" = 'pending'\n          and \"event\" is not null\n          and \"time_next_attempt\" is not null\n          and \"time_lease_expires\" is null\n          and \"time_resolved\" is null)\n        or (\"status\" = 'processing'\n          and \"event\" is not null\n          and \"time_next_attempt\" is null\n          and \"time_lease_expires\" is not null\n          and \"time_resolved\" is null\n          and \"last_error_code\" is null)\n        or (\"status\" = 'resolved'\n          and \"event\" is not null\n          and \"time_next_attempt\" is null\n          and \"time_lease_expires\" is null\n          and \"time_resolved\" is not null\n          and \"last_error_code\" is null)\n        or (\"status\" = 'manual_review'\n          and \"time_next_attempt\" is null\n          and \"time_lease_expires\" is null\n          and \"time_resolved\" is null\n          and length(trim(\"last_error_code\")) between 1 and 64)",
+      "name": "payment_recovery_state_check",
+      "entityType": "checks",
+      "table": "payment_recovery"
+    },
+    {
+      "value": "\"provider\" in ('qpay', 'bonum')",
+      "name": "payment_refund_provider_check",
+      "entityType": "checks",
+      "table": "payment_refund"
+    },
+    {
+      "value": "\"amount\" > 0",
+      "name": "payment_refund_amount_check",
+      "entityType": "checks",
+      "table": "payment_refund"
+    },
+    {
+      "value": "\"currency\" = 'MNT'",
+      "name": "payment_refund_currency_check",
+      "entityType": "checks",
+      "table": "payment_refund"
+    },
+    {
+      "value": "\"status\" in ('requested', 'unknown', 'refunded', 'failed')",
+      "name": "payment_refund_status_check",
+      "entityType": "checks",
+      "table": "payment_refund"
+    },
+    {
+      "value": "(\"status\" in ('requested', 'unknown') and \"time_completed\" is null)\n        or (\"status\" in ('refunded', 'failed') and \"time_completed\" is not null)",
+      "name": "payment_refund_completion_check",
+      "entityType": "checks",
+      "table": "payment_refund"
+    },
+    {
+      "value": "\"provider_payload_hash\" is null or length(\"provider_payload_hash\") = 64",
+      "name": "payment_refund_provider_payload_hash_check",
+      "entityType": "checks",
+      "table": "payment_refund"
+    },
+    {
+      "value": "\"enrichment\" is null or json_valid(\"enrichment\")",
+      "name": "payment_enrichment_json_check",
+      "entityType": "checks",
+      "table": "payment"
+    },
+    {
+      "value": "\"id\" = 1",
+      "name": "plan_config_active_singleton_check",
+      "entityType": "checks",
+      "table": "plan_config_active"
+    },
+    {
+      "value": "\"revision\" >= 0",
+      "name": "plan_config_active_revision_check",
+      "entityType": "checks",
+      "table": "plan_config_active"
+    },
+    {
+      "value": "\"revision\" > 0",
+      "name": "plan_config_version_revision_check",
+      "entityType": "checks",
+      "table": "plan_config_version"
+    },
+    {
+      "value": "json_valid(\"limits\")",
+      "name": "plan_config_version_limits_json_check",
+      "entityType": "checks",
+      "table": "plan_config_version"
+    },
+    {
+      "value": "\"note\" is null or length(trim(\"note\")) between 1 and 500",
+      "name": "plan_config_version_note_check",
+      "entityType": "checks",
+      "table": "plan_config_version"
+    },
+    {
+      "value": "\"plan\" in ('basic', 'pro', 'max')",
+      "name": "plan_subscription_plan_check",
+      "entityType": "checks",
+      "table": "plan_subscription"
+    },
+    {
+      "value": "\"status\" in ('active', 'expired', 'cancelled', 'refunded')",
+      "name": "plan_subscription_status_check",
+      "entityType": "checks",
+      "table": "plan_subscription"
+    },
+    {
+      "value": "\"time_period_end\" > \"time_period_start\"",
+      "name": "plan_subscription_period_check",
+      "entityType": "checks",
+      "table": "plan_subscription"
+    },
+    {
+      "value": "\"email\" = lower(trim(\"email\")) and length(\"email\") between 3 and 254",
+      "name": "platform_admin_email_normalized_check",
+      "entityType": "checks",
+      "table": "platform_admin"
+    },
+    {
+      "value": "\"role\" in ('owner', 'administrator', 'support', 'finance', 'operations')",
+      "name": "platform_admin_role_check",
+      "entityType": "checks",
+      "table": "platform_admin"
+    },
+    {
+      "value": "\"status\" in ('active', 'suspended')",
+      "name": "platform_admin_status_check",
+      "entityType": "checks",
+      "table": "platform_admin"
+    },
+    {
+      "value": "length(\"id\") = 30 and substr(\"id\", 1, 4) = 'spm_'",
+      "name": "support_message_id_check",
+      "entityType": "checks",
+      "table": "support_message"
+    },
+    {
+      "value": "length(trim(\"body\")) between 1 and 5000",
+      "name": "support_message_body_check",
+      "entityType": "checks",
+      "table": "support_message"
+    },
+    {
+      "value": "\"author_type\" in ('customer', 'admin')",
+      "name": "support_message_author_type_check",
+      "entityType": "checks",
+      "table": "support_message"
+    },
+    {
+      "value": "(\"author_type\" = 'customer' and \"account_id\" is not null and \"admin_id\" is null and \"internal\" = 0)\n        or (\"author_type\" = 'admin' and \"account_id\" is null and \"admin_id\" is not null)",
+      "name": "support_message_author_check",
+      "entityType": "checks",
+      "table": "support_message"
+    },
+    {
+      "value": "length(\"id\") = 30 and substr(\"id\", 1, 4) = 'spt_'",
+      "name": "support_ticket_id_check",
+      "entityType": "checks",
+      "table": "support_ticket"
+    },
+    {
+      "value": "\"requester_email\" = lower(trim(\"requester_email\")) and length(\"requester_email\") between 3 and 254",
+      "name": "support_ticket_requester_email_check",
+      "entityType": "checks",
+      "table": "support_ticket"
+    },
+    {
+      "value": "length(trim(\"subject\")) between 1 and 160",
+      "name": "support_ticket_subject_check",
+      "entityType": "checks",
+      "table": "support_ticket"
+    },
+    {
+      "value": "\"category\" in ('account', 'billing', 'technical', 'feedback', 'other')",
+      "name": "support_ticket_category_check",
+      "entityType": "checks",
+      "table": "support_ticket"
+    },
+    {
+      "value": "\"status\" in ('open', 'pending_user', 'pending_support', 'resolved', 'closed')",
+      "name": "support_ticket_status_check",
+      "entityType": "checks",
+      "table": "support_ticket"
+    },
+    {
+      "value": "\"priority\" in ('normal', 'high', 'urgent')",
+      "name": "support_ticket_priority_check",
+      "entityType": "checks",
+      "table": "support_ticket"
+    },
+    {
+      "value": "\"lock_version\" >= 0",
+      "name": "support_ticket_lock_version_check",
+      "entityType": "checks",
+      "table": "support_ticket"
+    },
+    {
+      "value": "(\"status\" in ('open', 'pending_user', 'pending_support') and \"time_resolved\" is null and \"time_closed\" is null)\n        or (\"status\" = 'resolved' and \"time_resolved\" is not null and \"time_closed\" is null)\n        or (\"status\" = 'closed' and \"time_resolved\" is not null and \"time_closed\" is not null and \"time_closed\" >= \"time_resolved\")",
+      "name": "support_ticket_status_time_check",
+      "entityType": "checks",
+      "table": "support_ticket"
+    },
+    {
+      "value": "\"enrichment\" is null or json_valid(\"enrichment\")",
+      "name": "usage_enrichment_json_check",
+      "entityType": "checks",
+      "table": "usage"
+    },
+    {
+      "value": "\"role\" in ('admin', 'member')",
+      "name": "user_role_check",
+      "entityType": "checks",
+      "table": "user"
+    }
+  ],
+  "renames": []
+}

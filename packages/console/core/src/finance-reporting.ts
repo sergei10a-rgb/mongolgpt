@@ -3,18 +3,23 @@ import { and, count, Database, eq, gte, gt, inArray, isNull, lt, or, sql } from 
 import {
   FinanceCostEntryTable,
   FinancePaymentSettlementTable,
+  PaymentCheckoutTable,
   PaymentInvoiceTable,
   PaymentProviders,
   UsageTable,
 } from "./schema/billing.sql"
 
 const MNT_MICROS_PER_MNT = 1_000_000n
+const scopeIdentifier = z.string().trim().min(1).max(30)
 
 export const FinanceMarginEvidenceInput = z
   .object({
     start: z.date(),
     end: z.date(),
     paymentProvider: z.enum(PaymentProviders).optional(),
+    workspaceIDs: z.array(scopeIdentifier).min(1).max(250).optional(),
+    userIDs: z.array(scopeIdentifier).min(1).max(250).optional(),
+    accountID: scopeIdentifier.optional(),
   })
   .strict()
   .refine((input) => input.start.getTime() <= input.end.getTime(), {
@@ -76,6 +81,8 @@ export async function getFinanceMarginEvidenceWithDb(
     isNull(UsageTable.timeDeleted),
     gt(UsageTable.cost, 0),
     managedUsage,
+    input.workspaceIDs ? inArray(UsageTable.workspaceID, input.workspaceIDs) : undefined,
+    input.userIDs ? inArray(UsageTable.userID, input.userIDs) : undefined,
   )
 
   const actualCostCount = sql<number>`(
@@ -136,6 +143,20 @@ export async function getFinanceMarginEvidenceWithDb(
       and settlement.kind = 'refund'
   )`
   const paymentProvider = input.paymentProvider ? eq(PaymentInvoiceTable.provider, input.paymentProvider) : undefined
+  const paymentWorkspaceScope = input.workspaceIDs
+    ? inArray(PaymentInvoiceTable.workspace_id, input.workspaceIDs)
+    : undefined
+  const paymentAccountScope = input.accountID
+    ? sql<boolean>`exists (
+        select 1
+        from ${PaymentCheckoutTable} as scoped_checkout
+        where scoped_checkout.provider = ${PaymentInvoiceTable.provider}
+          and scoped_checkout.merchant_account_id = ${PaymentInvoiceTable.merchant_account_id}
+          and scoped_checkout.external_invoice_id = ${PaymentInvoiceTable.external_invoice_id}
+          and scoped_checkout.account_id = ${input.accountID}
+          and scoped_checkout.time_deleted is null
+      )`
+    : undefined
 
   const [modelCoverageRows, modelCostRows, paymentCoverageRows, paymentCostRows] = await Promise.all([
     db
@@ -200,7 +221,15 @@ export async function getFinanceMarginEvidenceWithDb(
         ), 0)`,
       })
       .from(PaymentInvoiceTable)
-      .where(and(isNull(PaymentInvoiceTable.timeDeleted), paymentProvider, or(paymentExpected, refundExpected))),
+      .where(
+        and(
+          isNull(PaymentInvoiceTable.timeDeleted),
+          paymentProvider,
+          paymentWorkspaceScope,
+          paymentAccountScope,
+          or(paymentExpected, refundExpected),
+        ),
+      ),
     // Payment/refund costs follow their invoice event for accrual reporting.
     // Standalone settlement adjustments follow their own effective instant.
     db
@@ -221,6 +250,8 @@ export async function getFinanceMarginEvidenceWithDb(
         and(
           isNull(PaymentInvoiceTable.timeDeleted),
           paymentProvider,
+          paymentWorkspaceScope,
+          paymentAccountScope,
           or(
             and(eq(FinancePaymentSettlementTable.kind, "payment"), paymentExpected),
             and(eq(FinancePaymentSettlementTable.kind, "refund"), refundExpected),

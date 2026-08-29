@@ -339,6 +339,7 @@ const contract = {
     "cacheWriteCost",
     "country",
     "continent",
+    "userID",
     "keyID",
     "sessionID",
     "enrichment",

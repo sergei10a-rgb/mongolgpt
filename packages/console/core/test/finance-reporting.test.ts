@@ -47,13 +47,14 @@ describe("finance margin reporting", () => {
       provider?: string
       model?: string
       timeCreated?: number
+      userID?: string
     },
   ) {
     sqlite
       .query(
         `insert into usage
-          (id, workspace_id, time_created, model, provider, input_tokens, output_tokens, cost, enrichment)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (id, workspace_id, time_created, model, provider, input_tokens, output_tokens, cost, enrichment, user_id)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         input.id,
@@ -65,6 +66,7 @@ describe("finance margin reporting", () => {
         500,
         input.cost,
         JSON.stringify({ plan: input.plan }),
+        input.userID ?? null,
       )
   }
 
@@ -364,6 +366,74 @@ describe("finance margin reporting", () => {
       coveredEvents: 0,
       complete: true,
     })
+  })
+
+  test("scopes model and payment evidence to one account", async () => {
+    const { sqlite, db } = await fixture()
+    insertUsage(sqlite, { id: "usg_scope_owner", cost: 10, plan: "pro", userID: "usr_scope_owner" })
+    insertUsage(sqlite, { id: "usg_scope_other", cost: 20, plan: "pro", userID: "usr_scope_other" })
+    await paidInvoice(db)
+    sqlite
+      .query(
+        `insert into payment_checkout
+          (id, workspace_id, account_id, request_key, provider, merchant_account_id, external_invoice_id,
+           purpose, amount, checkout, status, time_expires, time_paid)
+         values (?, ?, ?, ?, ?, ?, ?, 'credit', ?, ?, 'paid', ?, ?)`,
+      )
+      .run(
+        "pco_scope_owner",
+        "wrk_report",
+        "acc_scope_owner",
+        "38103320-00de-47e1-8e2a-465d1427c951",
+        "qpay",
+        "merchant_report",
+        "external_invoice_report",
+        100_000,
+        JSON.stringify({
+          provider: "qpay",
+          merchantAccountID: "merchant_report",
+          externalInvoiceID: "external_invoice_report",
+          deepLinks: [],
+        }),
+        reportEnd.getTime(),
+        effectiveAt,
+      )
+    await recordFinancePaymentSettlementWithDb(db, {
+      id: "fps_scope_owner",
+      workspaceID: "wrk_report",
+      paymentInvoiceID: "inv_report",
+      paymentEventID: "pev_report_paid",
+      provider: "qpay",
+      merchantAccountID: "merchant_report",
+      externalSettlementID: "qpay_scope_owner",
+      kind: "payment",
+      grossAmountMNT: 100_000,
+      feeAmountMNT: 1_000,
+      taxAmountMNT: 100,
+      netAmountMNT: 98_900,
+      currency: "MNT",
+      idempotencyKey: "qpay:scope:owner",
+      payloadHash: hash("5"),
+      effectiveAt,
+    })
+
+    const owner = await getFinanceMarginEvidenceWithDb(db, {
+      start: reportStart,
+      end: reportEnd,
+      userIDs: ["usr_scope_owner"],
+      accountID: "acc_scope_owner",
+    })
+    expect(owner.model).toMatchObject({ expectedUsage: 1, missingUsage: 1 })
+    expect(owner.payments).toMatchObject({ expectedEvents: 1, coveredEvents: 1, complete: true })
+
+    const other = await getFinanceMarginEvidenceWithDb(db, {
+      start: reportStart,
+      end: reportEnd,
+      userIDs: ["usr_scope_other"],
+      accountID: "acc_scope_other",
+    })
+    expect(other.model).toMatchObject({ expectedUsage: 1, missingUsage: 1 })
+    expect(other.payments).toMatchObject({ expectedEvents: 0, coveredEvents: 0, complete: true })
   })
 
   test("hides payment amounts and margin when settlement evidence is ambiguous", async () => {

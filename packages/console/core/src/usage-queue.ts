@@ -47,6 +47,7 @@ export async function persistUsageQueueEventWithDb(db: Database.TxOrDb, input: U
       cacheWriteCost: event.usage.cacheWriteCost,
       country: event.usage.country,
       continent: event.usage.continent,
+      userID: event.userID,
       keyID: event.usage.keyID,
       sessionID: event.usage.sessionID,
       enrichment: event.usage.enrichment,
@@ -163,6 +164,7 @@ function assertUsageReplay(stored: typeof UsageTable.$inferSelect, replay: Usage
     stored.cacheWriteCost !== (usage.cacheWriteCost ?? null) ||
     stored.country !== (usage.country ?? null) ||
     stored.continent !== (usage.continent ?? null) ||
+    stored.userID !== replay.userID ||
     stored.keyID !== (usage.keyID ?? null) ||
     stored.sessionID !== (usage.sessionID ?? null) ||
     stored.enrichment?.plan !== usage.enrichment?.plan

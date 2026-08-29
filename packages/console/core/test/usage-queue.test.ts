@@ -66,6 +66,7 @@ describe("Cloudflare usage queue persistence", () => {
     await expect(persistUsageQueueEventWithDb(db, event)).resolves.toBe("duplicate")
 
     expect(sqlite.query("select count(*) from usage").get()).toEqual({ "count(*)": 1 })
+    expect(sqlite.query("select user_id from usage").get()).toEqual({ user_id: event.userID })
     expect(
       sqlite
         .query(
@@ -113,6 +114,14 @@ describe("Cloudflare usage queue persistence", () => {
         usage: { ...event.usage, outputTokens: event.usage.outputTokens + 1 },
       }),
     ).rejects.toThrow("дахин илгээхэд хадгалсан хэрэглээтэй зөрчилдөж байна")
+  })
+
+  test("rejects replaying a usage event under another user", async () => {
+    const { db } = await fixture()
+    await persistUsageQueueEventWithDb(db, event)
+    await expect(persistUsageQueueEventWithDb(db, { ...event, userID: "user_2" })).rejects.toThrow(
+      "дахин илгээхэд хадгалсан хэрэглээтэй зөрчилдөж байна",
+    )
   })
 
   test("rolls back both usage and finance cost when account projection is missing", async () => {

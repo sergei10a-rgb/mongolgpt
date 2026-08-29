@@ -435,4 +435,36 @@ describe("D1 migration", () => {
         ),
     ).not.toThrow()
   })
+
+  test("backfills usage ownership from API keys without guessing account-auth history", async () => {
+    const target = "20260829010708_usage_user_attribution"
+    const paths = await migrationPaths()
+    const targetIndex = paths.findIndex((path) => path.includes(target))
+    expect(targetIndex).toBeGreaterThan(0)
+    const targetPath = paths[targetIndex]
+    if (!targetPath) throw new Error("Usage attribution migration is missing")
+
+    const database = new Database(":memory:")
+    const before = await Promise.all(paths.slice(0, targetIndex).map((path) => Bun.file(path).text()))
+    database.exec(before.join("\n"))
+    database.query("insert into workspace (id, name) values (?, ?)").run("wrk_usage_owner", "Usage owner")
+    database
+      .query('insert into "user" (id, workspace_id, name, role) values (?, ?, ?, ?)')
+      .run("usr_usage_owner", "wrk_usage_owner", "Owner", "admin")
+    database
+      .query('insert into "key" (id, workspace_id, name, key, user_id) values (?, ?, ?, ?, ?)')
+      .run("key_usage_owner", "wrk_usage_owner", "Owner key", "mgpt_usage_owner", "usr_usage_owner")
+    const insertUsage = database.query(
+      "insert into usage (id, workspace_id, model, provider, input_tokens, output_tokens, cost, key_id) values (?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    insertUsage.run("usg_attributed", "wrk_usage_owner", "free-auto", "nvidia", 10, 20, 0, "key_usage_owner")
+    insertUsage.run("usg_unknown", "wrk_usage_owner", "free-auto", "nvidia", 5, 5, 0, null)
+
+    database.exec(await Bun.file(targetPath).text())
+
+    expect(database.query("select id, user_id from usage order by id").all()).toEqual([
+      { id: "usg_attributed", user_id: "usr_usage_owner" },
+      { id: "usg_unknown", user_id: null },
+    ])
+  })
 })
