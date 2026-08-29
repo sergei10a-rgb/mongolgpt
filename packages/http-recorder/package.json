@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/package.json",
   "version": "0.1.1",
   "name": "@mongolgpt/http-recorder",
-  "description": "Record and replay Effect HTTP client traffic with deterministic cassettes",
+  "description": "Effect HTTP клиентийн урсгалыг тогтвортой бичлэгээр хадгалж, дахин тоглуулах хэрэгсэл",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -10,7 +10,7 @@
     "url": "git+https://github.com/sergei10a-rgb/mongolgpt.git",
     "directory": "packages/http-recorder"
   },
-  "homepage": "https://github.com/sergei10a-rgb/mongolgpt/tree/dev/packages/http-recorder",
+  "homepage": "https://github.com/sergei10a-rgb/mongolgpt/tree/main/packages/http-recorder",
   "bugs": "https://github.com/sergei10a-rgb/mongolgpt/issues",
   "keywords": [
     "effect",

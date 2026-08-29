@@ -1,29 +1,29 @@
-### Issue for this PR
+### Энэ PR-ийн issue
 
 Closes #
 
-### Type of change
+### Өөрчлөлтийн төрөл
 
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Refactor / code improvement
-- [ ] Documentation
+- [ ] Алдаа засвар
+- [ ] Шинэ боломж
+- [ ] Refactor / кодын сайжруулалт
+- [ ] Баримт бичиг
 
-### What does this PR do?
+### Энэ PR юу хийж байгаа вэ?
 
-Please provide a description of the issue, the changes you made to fix it, and why they work. It is expected that you understand why your changes work and if you do not understand why at least say as much so a maintainer knows how much to value the PR.
+Асуудал, хийсэн өөрчлөлт, яагаад зөв ажиллаж байгааг тайлбарлана уу. Өөрчлөлтийнхөө ажиллагааг бүрэн ойлгоогүй хэсэг байвал maintainer зөв үнэлэхийн тулд түүнийгээ нээлттэй тэмдэглэнэ үү.
 
-**If you paste a large clearly AI generated description here your PR may be IGNORED or CLOSED!**
+**Хянаж нягтлаагүй, хэт урт хиймэл оюунаар үүсгэсэн тайлбар оруулбал PR-ийг хааж болно.**
 
-### How did you verify your code works?
+### Код ажиллаж байгааг хэрхэн шалгасан бэ?
 
-### Screenshots / recordings
+### Дэлгэцийн зураг / бичлэг
 
-_If this is a UI change, please include a screenshot or recording._
+_UI өөрчилсөн бол дэлгэцийн зураг эсвэл бичлэг хавсаргана уу._
 
-### Checklist
+### Шалгах жагсаалт
 
-- [ ] I have tested my changes locally
-- [ ] I have not included unrelated changes in this PR
+- [ ] Өөрчлөлтөө локал орчинд шалгасан
+- [ ] Энэ PR-д хамааралгүй өөрчлөлт оруулаагүй
 
-_If you do not follow this template your PR will be automatically rejected._
+_Энэ загварын шаардлагыг хангаагүй PR автомат шалгалтад тэнцэхгүй._

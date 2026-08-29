@@ -1,19 +1,19 @@
-name: 🚀 Feature Request
-description: Suggest an idea, feature, or enhancement
-title: "[FEATURE]:"
+name: Шинэ боломж санал болгох
+description: Шинэ санаа, боломж эсвэл сайжруулалтын санал илгээнэ үү
+title: "[САНАЛ]:"
 
 body:
   - type: checkboxes
     id: verified
     attributes:
-      label: Feature hasn't been suggested before.
+      label: Энэ саналыг өмнө нь илгээгээгүйг шалгана уу
       options:
-        - label: I have verified this feature I'm about to request hasn't been suggested before.
+        - label: Ижил санал өмнө нь бүртгэгдээгүйг issue хайлтаар шалгасан.
           required: true
 
   - type: textarea
     attributes:
-      label: Describe the enhancement you want to request
-      description: What do you want to change or add? What are the benefits of implementing this? Try to be detailed so we can understand your request better :)
+      label: Хүсэж буй сайжруулалтаа тайлбарлана уу
+      description: Юуг өөрчлөх эсвэл нэмэх, хэрэглэгчид ямар ашигтайг ойлгомжтой тайлбарлана уу
     validations:
       required: true

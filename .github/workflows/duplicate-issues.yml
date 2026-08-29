@@ -8,23 +8,43 @@ jobs:
   check-duplicates:
     if: github.event.action == 'opened'
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    env:
+      MONGOLGPT_API_KEY: ${{ secrets.MONGOLGPT_API_KEY }}
     permissions:
       contents: read
       issues: write
     steps:
+      - name: MongolGPT автомат шалгагчийн тохиргоог шалгах
+        id: config
+        shell: bash
+        run: |
+          if [[ -n "$MONGOLGPT_API_KEY" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "MONGOLGPT_API_KEY тохируулаагүй тул автомат duplicate шалгалтыг алгаслаа."
+          fi
+
+      - name: Автомат шалгалт идэвхгүй байна
+        if: steps.config.outputs.enabled != 'true'
+        run: echo "MONGOLGPT_API_KEY нэмсний дараа duplicate болон загварын шалгалт автоматаар идэвхжинэ."
+
       - name: Checkout repository
+        if: steps.config.outputs.enabled == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 1
 
       - uses: ./.github/actions/setup-bun
+        if: steps.config.outputs.enabled == 'true'
 
       - name: Install mongolgpt
+        if: steps.config.outputs.enabled == 'true'
         run: curl -fsSL https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/install | bash
 
       - name: Check duplicates and compliance
+        if: steps.config.outputs.enabled == 'true'
         env:
-          MONGOLGPT_API_KEY: ${{ secrets.MONGOLGPT_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MONGOLGPT_PERMISSION: |
             {
@@ -49,11 +69,10 @@ jobs:
 
           Check whether the issue follows our contributing guidelines and issue templates.
 
-          This project has three issue templates that every issue MUST use one of:
+          This project has two issue templates that every issue MUST use one of:
 
-          1. Bug Report - requires a Description field with real content
-          2. Feature Request - requires a verification checkbox and description, title should start with [FEATURE]:
-          3. Question - requires the Question field with real content
+          1. Алдаа мэдээлэх - requires an Асуудлын тайлбар field with real content
+          2. Шинэ боломж санал болгох - requires a verification checkbox and description, title should start with [САНАЛ]:
 
           Additionally check:
           - No AI-generated walls of text (long, AI-generated descriptions are not acceptable)
@@ -75,7 +94,7 @@ jobs:
           3. Related functionality or components
           4. Similar feature requests
 
-          Additionally, if the issue mentions keybinds, keyboard shortcuts, or key bindings, note the pinned keybinds issue #4997.
+          Additionally, if the issue mentions keybinds, keyboard shortcuts, or key bindings, reference https://docs.mgpt.mn/docs/keybinds/.
 
           ---
 
@@ -89,54 +108,74 @@ jobs:
 
           If duplicates were found, include a section about potential duplicates with links.
 
-          If the issue mentions keybinds/keyboard shortcuts, include a note about #4997.
+          If the issue mentions keybinds/keyboard shortcuts, include a note about https://docs.mgpt.mn/docs/keybinds/.
 
           If the issue IS compliant AND no duplicates were found AND no keybind reference, do NOT comment at all.
 
-          Use this format for the comment:
+          Write the whole public comment in Mongolian. Use this format for the comment:
 
           [If not compliant:]
           <!-- issue-compliance -->
-          This issue doesn't fully meet our [contributing guidelines](../blob/dev/CONTRIBUTING.md).
+          Энэ issue нь [хувь нэмэр оруулах заавар](../blob/main/CONTRIBUTING.md)-ын шаардлагыг бүрэн хангахгүй байна.
 
-          **What needs to be fixed:**
-          - [specific reasons]
+          **Засах шаардлагатай зүйлс:**
+          - [тодорхой шалтгаан]
 
-          Please edit this issue to address the above within **2 hours**, or it will be automatically closed.
+          Дээрхийг засаж issue-гээ **2 цагийн дотор** шинэчилнэ үү. Үгүй бол автоматаар хаагдана.
 
           [If duplicates found, add:]
           ---
-          This issue might be a duplicate of existing issues. Please check:
-          - #[issue_number]: [brief description of similarity]
+          Энэ issue өмнөх issue-тэй давхардсан байж магадгүй. Дараахыг шалгана уу:
+          - #[issue дугаар]: [ижил талын товч тайлбар]
 
           [If keybind-related, add:]
-          For keybind-related issues, please also check our pinned keybinds documentation: #4997
+          Товчлолын асуудал бол [товчлолын баримт бичиг](https://docs.mgpt.mn/docs/keybinds/)-ийг мөн шалгана уу.
 
           [End with if not compliant:]
-          If you believe this was flagged incorrectly, please let a maintainer know.
+          Буруу тэмдэглэгдсэн гэж үзвэл maintainer-д мэдэгдэнэ үү.
 
           Remember: post at most ONE comment combining all findings. If everything is fine, post nothing."
 
   recheck-compliance:
     if: github.event.action == 'edited' && contains(github.event.issue.labels.*.name, 'needs:compliance')
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    env:
+      MONGOLGPT_API_KEY: ${{ secrets.MONGOLGPT_API_KEY }}
     permissions:
       contents: read
       issues: write
     steps:
+      - name: MongolGPT автомат шалгагчийн тохиргоог шалгах
+        id: config
+        shell: bash
+        run: |
+          if [[ -n "$MONGOLGPT_API_KEY" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "MONGOLGPT_API_KEY тохируулаагүй тул автомат давтан шалгалтыг алгаслаа."
+          fi
+
+      - name: Автомат давтан шалгалт идэвхгүй байна
+        if: steps.config.outputs.enabled != 'true'
+        run: echo "MONGOLGPT_API_KEY нэмсний дараа засварласан issue-ийн шалгалт автоматаар идэвхжинэ."
+
       - name: Checkout repository
+        if: steps.config.outputs.enabled == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 1
 
       - uses: ./.github/actions/setup-bun
+        if: steps.config.outputs.enabled == 'true'
 
       - name: Install mongolgpt
+        if: steps.config.outputs.enabled == 'true'
         run: curl -fsSL https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/install | bash
 
       - name: Recheck compliance
+        if: steps.config.outputs.enabled == 'true'
         env:
-          MONGOLGPT_API_KEY: ${{ secrets.MONGOLGPT_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MONGOLGPT_PERMISSION: |
             {
@@ -153,11 +192,10 @@ jobs:
 
           Re-check whether the issue now follows our contributing guidelines and issue templates.
 
-          This project has three issue templates that every issue MUST use one of:
+          This project has two issue templates that every issue MUST use one of:
 
-          1. Bug Report - requires a Description field with real content
-          2. Feature Request - requires a verification checkbox and description, title should start with [FEATURE]:
-          3. Question - requires the Question field with real content
+          1. Алдаа мэдээлэх - requires an Асуудлын тайлбар field with real content
+          2. Шинэ боломж санал болгох - requires a verification checkbox and description, title should start with [САНАЛ]:
 
           Additionally check:
           - No AI-generated walls of text (long, AI-generated descriptions are not acceptable)
@@ -171,7 +209,7 @@ jobs:
           If the issue is NOW compliant:
           1. Remove the needs:compliance label: gh issue edit ${{ github.event.issue.number }} --remove-label needs:compliance
           2. Find and delete the previous compliance comment (the one containing <!-- issue-compliance -->) using: gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments --jq '.[] | select(.body | contains(\"<!-- issue-compliance -->\")) | .id' then delete it with: gh api -X DELETE repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments/{id}
-          3. Post a short comment thanking them for updating the issue.
+          3. Issue-гээ шинэчилсэнд нь Монгол хэлээр товч талархсан comment үлдээ.
 
           If the issue is STILL not compliant:
-          Post a comment explaining what still needs to be fixed. Keep the needs:compliance label."
+          Ямар зүйл засах шаардлагатайг Монгол хэлээр тайлбарласан comment үлдээ. needs:compliance label-ийг хэвээр үлдээ."

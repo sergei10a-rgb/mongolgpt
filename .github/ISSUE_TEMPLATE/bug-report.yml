@@ -1,36 +1,36 @@
-name: Bug report
-description: Report an issue that should be fixed (avoid pasting giant AI generated summaries or your issue may be closed/ignored)
+name: "Алдаа мэдээлэх"
+description: "Засах шаардлагатай асуудлыг ойлгомжтой, товч баримттайгаар мэдээлнэ үү"
 body:
   - type: textarea
     id: description
     attributes:
-      label: Description
-      description: Describe the bug you encountered
-      placeholder: What happened?
+      label: "Асуудлын тайлбар"
+      description: "Ямар алдаа гарсан, ямар үр дүн хүлээж байснаа тайлбарлана уу"
+      placeholder: "Юу болсон бэ?"
     validations:
       required: true
 
   - type: input
     id: plugins
     attributes:
-      label: Plugins
-      description: What plugins are you using?
+      label: "Нэмэлтүүд"
+      description: "Ямар plugin ашиглаж байна вэ?"
     validations:
       required: false
 
   - type: input
     id: mongolgpt-version
     attributes:
-      label: MongolGPT version
-      description: What version of MongolGPT are you using?
+      label: "MongolGPT хувилбар"
+      description: "MongolGPT-ийн ямар хувилбар ашиглаж байна вэ?"
     validations:
       required: false
 
   - type: textarea
     id: reproduce
     attributes:
-      label: Steps to reproduce
-      description: How can we reproduce this issue?
+      label: "Алдааг давтах алхам"
+      description: "Энэ асуудлыг бид хэрхэн дахин гаргаж шалгах вэ?"
       placeholder: |
         1.
         2.
@@ -41,26 +41,26 @@ body:
   - type: textarea
     id: screenshot-or-link
     attributes:
-      label: Screenshot and/or share link
-      description: Run `/share` to get a share link, or attach a screenshot
-      placeholder: Paste link or drag and drop screenshot here
+      label: "Дэлгэцийн зураг эсвэл хуваалцах холбоос"
+      description: "`/share` ажиллуулж холбоос аваарай, эсвэл дэлгэцийн зураг хавсаргана уу"
+      placeholder: "Холбоосоо оруулах эсвэл зургаа энд чирж тавина уу"
     validations:
       required: false
 
   - type: input
     id: os
     attributes:
-      label: Operating System
-      description: what OS are you using?
-      placeholder: e.g., macOS 26.0.1, Ubuntu 22.04, Windows 11
+      label: "Үйлдлийн систем"
+      description: "Ямар үйлдлийн систем ашиглаж байна вэ?"
+      placeholder: "Жишээ нь macOS 26.0.1, Ubuntu 22.04, Windows 11"
     validations:
       required: false
 
   - type: input
     id: terminal
     attributes:
-      label: Terminal
-      description: what terminal are you using?
-      placeholder: e.g., iTerm2, Ghostty, Alacritty, Windows Terminal
+      label: "Терминал"
+      description: "Ямар терминал ашиглаж байна вэ?"
+      placeholder: "Жишээ нь iTerm2, Ghostty, Alacritty, Windows Terminal"
     validations:
       required: false

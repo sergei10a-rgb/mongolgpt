@@ -2,7 +2,7 @@
   "name": "@mongolgpt/desktop",
   "private": true,
   "version": "0.1.1",
-  "description": "Mongolian AI coding agent desktop client",
+  "description": "MongolGPT хиймэл оюунт кодын агентын ширээний програм",
   "type": "module",
   "license": "MIT",
   "homepage": "https://github.com/sergei10a-rgb/mongolgpt",
