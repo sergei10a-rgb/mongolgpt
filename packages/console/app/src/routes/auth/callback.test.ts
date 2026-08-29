@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { resolve } from "node:path";
 import { i18n } from "~/i18n";
 import { completeOAuthCallback } from "./callback-handler";
 import type { OAuthStateSessionData } from "./oauth-state";
@@ -88,11 +89,12 @@ describe("OAuth callback route", () => {
           oauthSessionData = {};
         },
       },
-      redirectFn: (target) => Response.redirect(target, 302),
     });
 
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe("/auth/app");
+    expect(response.headers.get("location")).toBe(
+      "https://dev.mgpt.mn/auth/app",
+    );
     expect(exchangeMock).toHaveBeenCalledTimes(1);
     expect(verifyMock).toHaveBeenCalledTimes(1);
     expect(oauthClears).toBe(1);
@@ -133,5 +135,13 @@ describe("OAuth callback route", () => {
     expect(replay.status).toBe(400);
     expect(await replay.json()).toMatchObject({ error: "invalid_oauth_state" });
     expect(exchangeMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("awaits the callback so the route can localize asynchronous failures", async () => {
+    const source = await Bun.file(
+      resolve(import.meta.dir, "[...callback].ts"),
+    ).text();
+
+    expect(source).toContain("return await completeOAuthCallback({");
   });
 });

@@ -67,9 +67,10 @@ export async function completeOAuthCallback(input: {
       blocked: undefined,
     };
   });
-  return (input.redirectFn ?? defaultRedirect)(
-    route(input.locale, authCallbackTarget(input.url)),
-  );
+  const target = route(input.locale, authCallbackTarget(input.url));
+  return input.redirectFn
+    ? input.redirectFn(target)
+    : defaultRedirect(input.url, target);
 }
 
 function invalidStateResponse(
@@ -94,8 +95,8 @@ function invalidStateResponse(
   );
 }
 
-function defaultRedirect(target: string) {
-  return Response.redirect(target, 302);
+function defaultRedirect(requestUrl: URL, target: string) {
+  return Response.redirect(new URL(target, requestUrl.origin), 302);
 }
 
 function exchangeAccessToken(result: unknown) {

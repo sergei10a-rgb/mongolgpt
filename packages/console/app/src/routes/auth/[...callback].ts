@@ -20,7 +20,7 @@ export async function GET(input: APIEvent) {
   }
 
   try {
-    return completeOAuthCallback({
+    return await completeOAuthCallback({
       url,
       locale,
       dict,
