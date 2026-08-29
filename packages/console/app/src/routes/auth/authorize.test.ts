@@ -82,6 +82,10 @@ describe("OAuth authorize route", () => {
     expect(response.headers.get("content-security-policy")).toContain(
       "form-action https://auth.dev.mgpt.mn https://github.com https://accounts.google.com http://127.0.0.1:1456",
     );
+    expect(response.headers.get("content-security-policy")).toMatch(
+      /script-src 'nonce-[A-Za-z0-9_-]{16,128}' https:\/\/challenges\.cloudflare\.com/,
+    );
+    expect(response.headers.get("content-security-policy")).not.toContain("script-src 'unsafe-inline'");
   });
 
   test("stores a one-time state in session and redirects with the issued callback state", async () => {

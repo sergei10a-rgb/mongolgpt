@@ -2,12 +2,15 @@ import { TURNSTILE_ACTION } from "@mongolgpt/console-core/turnstile.js"
 
 export function renderTurnstileChallenge(input: {
   siteKey: string
+  scriptNonce: string
   authorizationUrl: string
   consoleOrigin: string
   error?: "invalid" | "unavailable" | "misconfigured"
 }) {
   const siteKey = input.siteKey.trim()
   if (!/^[A-Za-z0-9_-]{20,64}$/.test(siteKey)) throw new Error("Turnstile site key тохиргоо буруу байна.")
+  const scriptNonce = input.scriptNonce.trim()
+  if (!/^[A-Za-z0-9_-]{16,128}$/.test(scriptNonce)) throw new Error("Turnstile script nonce тохиргоо буруу байна.")
   const authorization = authorizationForm(input.authorizationUrl, input.consoleOrigin)
   const error = input.error
     ? `<p class="notice" role="alert">${
@@ -29,7 +32,7 @@ export function renderTurnstileChallenge(input: {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <title>MongolGPT-д нэвтрэх</title>
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
     <style>
       :root { color-scheme: light dark; font-family: Inter, "Segoe UI", Arial, sans-serif; background: #f7f7f5; color: #181918; }
       * { box-sizing: border-box; }
@@ -44,7 +47,9 @@ export function renderTurnstileChallenge(input: {
       button { min-height: 42px; width: 100%; border: 0; border-radius: 6px; background: #16764a; color: #fff; font: inherit; font-weight: 650; cursor: pointer; }
       button:hover { background: #105f3b; }
       button:focus-visible { outline: 3px solid #7bcaa5; outline-offset: 2px; }
+      button:disabled { cursor: wait; opacity: .62; }
       .notice { padding: 12px 14px; border-left: 3px solid #b43b32; background: #fff0ee; color: #74261f; }
+      .status { min-height: 24px; font-size: 13px; }
       .privacy { font-size: 12px; color: #737872; }
       @media (prefers-color-scheme: dark) {
         :root, body { background: #121412; color: #f2f4f1; }
@@ -63,11 +68,38 @@ export function renderTurnstileChallenge(input: {
       ${error}
       <form action="${escapeHtml(authorization.action)}" method="post">
         ${authorization.fields}
-        <div class="cf-turnstile" data-sitekey="${escapeHtml(siteKey)}" data-action="${TURNSTILE_ACTION}" data-language="mn" data-theme="auto" data-size="flexible"></div>
-        <button type="submit">Үргэлжлүүлэх</button>
+        <div class="cf-turnstile" data-sitekey="${escapeHtml(siteKey)}" data-action="${TURNSTILE_ACTION}" data-language="auto" data-theme="auto" data-size="flexible" data-callback="mongolGPTTurnstileReady" data-expired-callback="mongolGPTTurnstileExpired" data-timeout-callback="mongolGPTTurnstileExpired" data-error-callback="mongolGPTTurnstileError"></div>
+        <p class="status" id="turnstile-status" role="status">Хамгаалалтын шалгалтыг хүлээж байна...</p>
+        <button type="submit" disabled>Үргэлжлүүлэх</button>
       </form>
       <p class="privacy">Шалгалтын токеныг зөвхөн энэ нэвтрэлтийг хамгаалахад ашиглана.</p>
     </main>
+    <script nonce="${scriptNonce}">
+      (() => {
+        const form = document.querySelector("form")
+        const button = form.querySelector("button[type=submit]")
+        const status = document.getElementById("turnstile-status")
+        const update = (ready, message) => {
+          button.disabled = !ready
+          status.hidden = ready
+          status.textContent = message
+        }
+        window.mongolGPTTurnstileReady = () => update(true, "")
+        window.mongolGPTTurnstileExpired = () => update(false, "Шалгалтын хугацаа дууслаа. Дахин баталгаажуулна уу.")
+        window.mongolGPTTurnstileError = () => update(false, "Хамгаалалтын шалгалтыг эхлүүлж чадсангүй. Хуудсыг дахин ачаална уу.")
+        form.addEventListener("submit", (event) => {
+          const token = form.querySelector('input[name="cf-turnstile-response"]')
+          if (!token || !token.value) {
+            event.preventDefault()
+            update(false, "Эхлээд хамгаалалтын шалгалтыг гүйцээнэ үү.")
+            return
+          }
+          button.disabled = true
+          status.hidden = false
+          status.textContent = "Нэвтрэх үйлчилгээнд шилжүүлж байна..."
+        })
+      })()
+    </script>
   </body>
 </html>`,
   }

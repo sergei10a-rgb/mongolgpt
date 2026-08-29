@@ -8,6 +8,7 @@ describe("Turnstile OAuth challenge page", () => {
   test("posts the one-time token and exact OAuth request directly to the auth worker", () => {
     const result = renderTurnstileChallenge({
       siteKey: "1x00000000000000000000AA",
+      scriptNonce: "testnonce1234567890",
       authorizationUrl,
       consoleOrigin: "https://dev.mgpt.mn",
       error: "invalid",
@@ -20,6 +21,11 @@ describe("Turnstile OAuth challenge page", () => {
     expect(result.html).toContain('name="response_type" value="code"')
     expect(result.html).toContain('name="state" value="12345678-1234-1234-1234-123456789012"')
     expect(result.html).toContain('data-action="mongolgpt_login"')
+    expect(result.html).toContain('data-callback="mongolGPTTurnstileReady"')
+    expect(result.html).toContain('data-expired-callback="mongolGPTTurnstileExpired"')
+    expect(result.html).toContain('<button type="submit" disabled>Үргэлжлүүлэх</button>')
+    expect(result.html).toContain('nonce="testnonce1234567890"')
+    expect(result.html).toContain("Нэвтрэх үйлчилгээнд шилжүүлж байна...")
     expect(result.html).toContain("Хүний баталгаажуулалт амжилтгүй боллоо")
   })
 
@@ -27,6 +33,7 @@ describe("Turnstile OAuth challenge page", () => {
     expect(() =>
       renderTurnstileChallenge({
         siteKey: "1x00000000000000000000AA",
+        scriptNonce: "testnonce1234567890",
         authorizationUrl: authorizationUrl.replace("https://auth", "http://auth"),
         consoleOrigin: "https://dev.mgpt.mn",
       }),
@@ -34,6 +41,7 @@ describe("Turnstile OAuth challenge page", () => {
     expect(() =>
       renderTurnstileChallenge({
         siteKey: "1x00000000000000000000AA",
+        scriptNonce: "testnonce1234567890",
         authorizationUrl: authorizationUrl.replace(/&state=[^&]+/, ""),
         consoleOrigin: "https://dev.mgpt.mn",
       }),
@@ -43,6 +51,7 @@ describe("Turnstile OAuth challenge page", () => {
   test("keeps the Desktop and CLI PKCE fields in the protected form", () => {
     const result = renderTurnstileChallenge({
       siteKey: "1x00000000000000000000AA",
+      scriptNonce: "testnonce1234567890",
       authorizationUrl:
         "https://auth.dev.mgpt.mn/authorize?client_id=mongolgpt-cli&redirect_uri=http%3A%2F%2Flocalhost%3A1456%2Fauth%2Fcallback&response_type=code&state=vLrYftwvtNxLFfrx5VG9flLzW7Y8pw9e0sAPQnEPdgQ&code_challenge=r0Z3xQJf4wK8DZmTsCyuLgVbA9hN6pEeU2iO7sMxP1k&code_challenge_method=S256",
       consoleOrigin: "https://dev.mgpt.mn",
