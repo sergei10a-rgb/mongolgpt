@@ -365,7 +365,7 @@ jobs:
         timeout-minutes: 3
         run: |
           $expectedProductName = if ("${{ github.ref_name }}" -eq "beta") { "MongolGPT Beta" } else { "MongolGPT" }
-          ./scripts/smoke-packaged-windows.ps1 -ExpectedVersion "${{ needs.version.outputs.version }}" -ExpectedProductName $expectedProductName
+          ./scripts/smoke-packaged-windows.ps1 -ExpectedVersion "${{ needs.version.outputs.version }}" -ExpectedProductName $expectedProductName -UseExternalPtyProbe
 
       - name: Smoke-test installed Windows desktop
         if: matrix.settings.target == 'x86_64-pc-windows-msvc'
@@ -374,7 +374,7 @@ jobs:
         timeout-minutes: 8
         run: |
           $expectedProductName = if ("${{ github.ref_name }}" -eq "beta") { "MongolGPT Beta" } else { "MongolGPT" }
-          ./scripts/smoke-installed-windows.ps1 -InstallerPath "dist/mongolgpt-desktop-win-x64.exe" -ExpectedVersion "${{ needs.version.outputs.version }}" -ExpectedProductName $expectedProductName
+          ./scripts/smoke-installed-windows.ps1 -InstallerPath "dist/mongolgpt-desktop-win-x64.exe" -ExpectedVersion "${{ needs.version.outputs.version }}" -ExpectedProductName $expectedProductName -UseExternalPtyProbe
 
       - name: Create macOS .app.tar.gz
         if: runner.os == 'macOS' && needs.version.outputs.release

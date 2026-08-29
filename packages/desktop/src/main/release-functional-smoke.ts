@@ -27,10 +27,16 @@ export type ReleaseFunctionalSmokeResult = {
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 type ExecLike = (command: string, args: string[], cwd: string) => Promise<{ stdout: string; stderr: string }>
-export type ReleaseFunctionalSmokeOptions = { fetch?: FetchLike; exec?: ExecLike; timeoutMs?: number }
+export type ReleaseFunctionalSmokeOptions = {
+  fetch?: FetchLike
+  exec?: ExecLike
+  timeoutMs?: number
+  externalPtyProof?: string
+}
 
 const execFile = promisify(nodeExecFile)
 const marker = "MONGOLGPT_RELEASE_FUNCTIONAL_SMOKE_README_MARKER"
+const externalPtyMarker = "MONGOLGPT_PACKAGED_PTY_OK"
 const mcpName = "release-functional-smoke-mcp"
 const providerName = "release-functional-smoke-provider"
 const modelName = "release-functional-smoke-model"
@@ -169,9 +175,14 @@ export async function runReleaseFunctionalSmoke(
     }
     fixture.localModelRegisteredNoCall = http.provider.ok && hasProviderModel(providerValue)
 
-    const created = await createPty(fetcher, base, headers, root, proof, timeoutMs)
-    terminal = await waitForProof(proof, marker, timeoutMs)
-    await deletePty(fetcher, base, headers, created)
+    const externalPtyProof = options.externalPtyProof ?? process.env.MONGOLGPT_DESKTOP_SMOKE_EXTERNAL_PTY_PROOF
+    if (externalPtyProof) {
+      terminal = await readExternalPtyProof(externalPtyProof)
+    } else {
+      const created = await createPty(fetcher, base, headers, root, proof, timeoutMs)
+      terminal = await waitForProof(proof, marker, timeoutMs)
+      await deletePty(fetcher, base, headers, created)
+    }
   } catch (error) {
     terminal = {
       ok: false,
@@ -237,6 +248,10 @@ export function redactSmokeError(value: string, secret: string) {
 }
 export function smokeTimeoutMs(value: number | undefined) {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 10_000
+}
+
+export function isExternalPtyProof(value: string) {
+  return value.trim() === externalPtyMarker
 }
 
 export function releaseSmokeTerminalCommand() {
@@ -345,6 +360,12 @@ async function waitForProof(file: string, expected: string, timeoutMs: number): 
     await new Promise((resolve) => setTimeout(resolve, 50))
   }
   return { ok: false, detail: "terminal proof timed out" }
+}
+async function readExternalPtyProof(file: string): Promise<ReleaseSmokeCheck> {
+  const value = await readFile(file, "utf8").catch(() => "")
+  return isExternalPtyProof(value)
+    ? { ok: true, detail: "packaged Electron PTY proof" }
+    : { ok: false, detail: "external packaged PTY proof is invalid" }
 }
 async function defaultExec(command: string, args: string[], cwd: string) {
   return execFile(command, args, { cwd, windowsHide: true, encoding: "utf8" })

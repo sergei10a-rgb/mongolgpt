@@ -3,6 +3,7 @@ import {
   hasDisabledMcp,
   hasProviderModel,
   isFileContent,
+  isExternalPtyProof,
   isPath,
   isProject,
   isProviderConfig,
@@ -71,6 +72,8 @@ describe("release functional smoke validators", () => {
     expect(smokeTimeoutMs(0)).toBe(10_000)
     expect(redactSmokeError("password=secret secret", "secret")).toBe("password=[redacted] [redacted]")
     expect(redactSmokeError("no secret", "")).toBe("no secret")
+    expect(isExternalPtyProof("MONGOLGPT_PACKAGED_PTY_OK\n")).toBe(true)
+    expect(isExternalPtyProof("MONGOLGPT_PACKAGED_PTY_OK extra")).toBe(false)
   })
 
   test("encodes the Windows terminal proof without command-line quoting", () => {

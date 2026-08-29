@@ -199,6 +199,8 @@ describe("release integrity contract", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
     const packagedSmoke = readFileSync(resolve(root, "packages/desktop/scripts/smoke-packaged-windows.ps1"), "utf8")
     const installedSmoke = readFileSync(resolve(root, "packages/desktop/scripts/smoke-installed-windows.ps1"), "utf8")
+    const ptySmoke = readFileSync(resolve(root, "packages/desktop/scripts/smoke-packaged-pty-windows.ps1"), "utf8")
+    const ptyProbe = readFileSync(resolve(root, "packages/desktop/scripts/smoke-packaged-pty.cjs"), "utf8")
     const packageStep = "      - name: Package\n"
     const packageNoPublishStep = "      - name: Package (no publish)\n"
     const packagedStep = "      - name: Smoke-test packaged Windows desktop\n"
@@ -214,6 +216,7 @@ describe("release integrity contract", () => {
     expect(workflow).toContain('-InstallerPath "dist/mongolgpt-desktop-win-x64.exe"')
     expect(workflow).toContain('-ExpectedVersion "${{ needs.version.outputs.version }}"')
     expect(workflow).toContain("-ExpectedProductName $expectedProductName")
+    expect(workflow.match(/-UseExternalPtyProbe/g)?.length).toBe(2)
     expect(workflow).toContain("timeout-minutes: 8")
     expect(workflow.indexOf(packageStep)).toBeLessThan(workflow.indexOf(packagedStep))
     expect(workflow.indexOf(packageNoPublishStep)).toBeLessThan(workflow.indexOf(packagedStep))
@@ -242,6 +245,8 @@ describe("release integrity contract", () => {
     expect(installedSmoke).toContain("$result.functional.summary.fixture.mcpConfiguredDisabled -ne $true")
     expect(installedSmoke).toContain("$result.functional.summary.fixture.localModelRegisteredNoCall -ne $true")
     expect(installedSmoke).toContain('SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "1", "Process")')
+    expect(installedSmoke).toContain("smoke-packaged-pty-windows.ps1")
+    expect(installedSmoke).toContain("MONGOLGPT_DESKTOP_SMOKE_EXTERNAL_PTY_PROOF")
     expect(installedSmoke).toContain("Test-Path -LiteralPath $app.FullName -PathType Leaf")
     expect(installedSmoke).toContain("Desktop uninstaller суулгасан executable-ийг арилгасангүй")
     expect(packagedSmoke).toContain('MONGOLGPT_TEST_ONBOARDING", "1"')
@@ -251,6 +256,13 @@ describe("release integrity contract", () => {
     expect(packagedSmoke).toContain("$result.functional.summary.fixture.mcpConfiguredDisabled -ne $true")
     expect(packagedSmoke).toContain("$result.functional.summary.fixture.localModelRegisteredNoCall -ne $true")
     expect(packagedSmoke).toContain('SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "1", "Process")')
+    expect(packagedSmoke).toContain("smoke-packaged-pty-windows.ps1")
+    expect(packagedSmoke).toContain("MONGOLGPT_DESKTOP_SMOKE_EXTERNAL_PTY_PROOF")
+    expect(ptySmoke).toContain("ELECTRON_RUN_AS_NODE")
+    expect(ptySmoke).toContain("@lydell\\node-pty-win32-x64\\lib\\index.js")
+    expect(ptySmoke).toContain("MONGOLGPT_PACKAGED_PTY_OK")
+    expect(ptyProbe).toContain("useConptyDll: true")
+    expect(ptyProbe).toContain("writeFileSync(proofPath")
   })
 
   test("builds a guarded, checksummed Windows dev preview without publishing", () => {
@@ -263,6 +275,7 @@ describe("release integrity contract", () => {
     expect(workflow).toContain("0.0.0-dev.$env:GITHUB_RUN_ID.$env:GITHUB_RUN_ATTEMPT")
     expect(workflow).toContain("electron-builder --win --x64 --publish never")
     expect(workflow).toContain('-ExpectedProductName "MongolGPT Dev"')
+    expect(workflow.match(/-UseExternalPtyProbe/g)?.length).toBe(2)
     expect(workflow).toContain("Get-FileHash -Algorithm SHA256")
     expect(workflow).toContain("SHA256SUMS.txt")
     expect(workflow).toContain("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a")

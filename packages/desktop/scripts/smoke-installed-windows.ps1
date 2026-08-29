@@ -3,6 +3,7 @@ param(
   [string]$MarkerPath = "",
   [string]$ExpectedVersion = "",
   [string]$ExpectedProductName = "",
+  [switch]$UseExternalPtyProbe,
   [ValidateRange(1, 300)]
   [int]$InstallTimeoutSeconds = 180,
   [ValidateRange(1, 300)]
@@ -53,28 +54,48 @@ function Invoke-DesktopSmoke {
     [string]$Marker,
     [string]$ExpectedVersionValue,
     [string]$ExpectedProductNameValue,
+    [bool]$ExternalPtyProbe,
     [int]$ReadyTimeout,
     [int]$ExitTimeout
   )
 
   $stdout = "$Marker.stdout.log"
   $stderr = "$Marker.stderr.log"
+  $externalPtyProof = "$Marker.pty-proof"
   $previousOnboarding = [Environment]::GetEnvironmentVariable("MONGOLGPT_TEST_ONBOARDING", "Process")
   $previousMarker = [Environment]::GetEnvironmentVariable("MONGOLGPT_DESKTOP_SMOKE_FILE", "Process")
   $previousConptyDll = [Environment]::GetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "Process")
+  $previousExternalPtyProof = [Environment]::GetEnvironmentVariable(
+    "MONGOLGPT_DESKTOP_SMOKE_EXTERNAL_PTY_PROOF",
+    "Process"
+  )
+  $previousRunAsNode = [Environment]::GetEnvironmentVariable("ELECTRON_RUN_AS_NODE", "Process")
   $process = $null
   $summary = $null
   $failure = $null
 
-  Remove-Item -LiteralPath $Marker, $stdout, $stderr -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $Marker, $stdout, $stderr, $externalPtyProof -Force -ErrorAction SilentlyContinue
   [Environment]::SetEnvironmentVariable("MONGOLGPT_TEST_ONBOARDING", "1", "Process")
   [Environment]::SetEnvironmentVariable("MONGOLGPT_DESKTOP_SMOKE_FILE", $Marker, "Process")
   [Environment]::SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "1", "Process")
+  [Environment]::SetEnvironmentVariable("ELECTRON_RUN_AS_NODE", $null, "Process")
 
   try {
+    if ($ExternalPtyProbe) {
+      & (Join-Path $PSScriptRoot "smoke-packaged-pty-windows.ps1") `
+        -ExecutablePath $Executable.FullName `
+        -ProofPath $externalPtyProof | Out-Null
+      [Environment]::SetEnvironmentVariable(
+        "MONGOLGPT_DESKTOP_SMOKE_EXTERNAL_PTY_PROOF",
+        $externalPtyProof,
+        "Process"
+      )
+    }
+
     $process = Start-Process `
       -FilePath $Executable.FullName `
       -ArgumentList "--enable-logging=stderr" `
+      -Environment @{ ELECTRON_RUN_AS_NODE = $null } `
       -WorkingDirectory $Executable.DirectoryName `
       -PassThru `
       -WindowStyle Hidden `
@@ -164,7 +185,13 @@ function Invoke-DesktopSmoke {
     [Environment]::SetEnvironmentVariable("MONGOLGPT_TEST_ONBOARDING", $previousOnboarding, "Process")
     [Environment]::SetEnvironmentVariable("MONGOLGPT_DESKTOP_SMOKE_FILE", $previousMarker, "Process")
     [Environment]::SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", $previousConptyDll, "Process")
-    Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue
+    [Environment]::SetEnvironmentVariable(
+      "MONGOLGPT_DESKTOP_SMOKE_EXTERNAL_PTY_PROOF",
+      $previousExternalPtyProof,
+      "Process"
+    )
+    [Environment]::SetEnvironmentVariable("ELECTRON_RUN_AS_NODE", $previousRunAsNode, "Process")
+    Remove-Item -LiteralPath $Marker, $externalPtyProof -Force -ErrorAction SilentlyContinue
   }
 
   if ($null -ne $failure) {
@@ -236,6 +263,7 @@ try {
     -Marker $marker `
     -ExpectedVersionValue $ExpectedVersion `
     -ExpectedProductNameValue $ExpectedProductName `
+    -ExternalPtyProbe $UseExternalPtyProbe.IsPresent `
     -ReadyTimeout $ReadyTimeoutSeconds `
     -ExitTimeout $ExitTimeoutSeconds
 } catch {

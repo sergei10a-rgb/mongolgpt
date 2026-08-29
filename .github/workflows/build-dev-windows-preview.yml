@@ -72,12 +72,12 @@ jobs:
       - name: Smoke packaged MongolGPT Dev
         working-directory: packages/desktop
         shell: pwsh
-        run: ./scripts/smoke-packaged-windows.ps1 -ExpectedVersion "${{ steps.version.outputs.version }}" -ExpectedProductName "MongolGPT Dev"
+        run: ./scripts/smoke-packaged-windows.ps1 -ExpectedVersion "${{ steps.version.outputs.version }}" -ExpectedProductName "MongolGPT Dev" -UseExternalPtyProbe
 
       - name: Smoke installed MongolGPT Dev
         working-directory: packages/desktop
         shell: pwsh
-        run: ./scripts/smoke-installed-windows.ps1 -ExpectedVersion "${{ steps.version.outputs.version }}" -ExpectedProductName "MongolGPT Dev"
+        run: ./scripts/smoke-installed-windows.ps1 -ExpectedVersion "${{ steps.version.outputs.version }}" -ExpectedProductName "MongolGPT Dev" -UseExternalPtyProbe
 
       - name: Prepare checksummed preview artifact
         working-directory: packages/desktop
