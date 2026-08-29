@@ -7,17 +7,15 @@ import { THEME_OPENAUTH } from "@openauthjs/openauth/ui/theme"
 import { GithubProvider } from "@openauthjs/openauth/provider/github"
 import { GoogleOidcProvider } from "@openauthjs/openauth/provider/google"
 import { CloudflareStorage } from "@openauthjs/openauth/storage/cloudflare"
-import { Account } from "@mongolgpt/console-core/account.js"
 import { AccountAccess } from "@mongolgpt/console-core/account-access.js"
+import { provisionOAuthAccountIdentity } from "@mongolgpt/console-core/oauth-account-provisioning.js"
 import { Workspace } from "@mongolgpt/console-core/workspace.js"
 import { Actor } from "@mongolgpt/console-core/actor.js"
 import { Resource } from "@mongolgpt/console-resource"
 import { User } from "@mongolgpt/console-core/user.js"
-import { and, Database, eq, isNull, or } from "@mongolgpt/console-core/drizzle/index.js"
+import { and, Database, eq, isNull } from "@mongolgpt/console-core/drizzle/index.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
-import { AuthTable } from "@mongolgpt/console-core/schema/auth.sql.js"
-import { Identifier } from "@mongolgpt/console-core/identifier.js"
 import {
   readTurnstileAuthorizationSubmission,
   turnstileAuthorizationRequest,
@@ -25,7 +23,6 @@ import {
   verifyTurnstile,
 } from "@mongolgpt/console-core/turnstile.js"
 import { isAllowedNonProductionEmail } from "./auth-allowlist"
-import { resolveActiveOAuthAccountIdentity } from "./auth-identity"
 import { inspectOAuthProviderConfiguration } from "@mongolgpt/console-core/oauth-provider-config.js"
 
 type Env = {
@@ -42,9 +39,7 @@ const OAuthSuccessResponseSchema = z.discriminatedUnion("provider", [
     id: z.object({ email_verified: z.boolean(), sub: z.string().min(1), email: z.string().email() }),
   }),
 ])
-const GitHubEmailsSchema = z.array(
-  z.object({ email: z.string().email(), primary: z.boolean(), verified: z.boolean() }),
-)
+const GitHubEmailsSchema = z.array(z.object({ email: z.string().email(), primary: z.boolean(), verified: z.boolean() }))
 const GitHubUserSchema = z.object({ id: z.union([z.string().min(1), z.number().int().nonnegative()]) })
 
 export const subjects = createSubjects({
@@ -241,59 +236,13 @@ export default {
         }
 
         // Get account
-        let newAccount = false
-        const accountID = await (async () => {
-          const matches = await Database.use(async (tx) =>
-            tx
-              .select({
-                provider: AuthTable.provider,
-                accountID: AuthTable.accountID,
-                timeDeleted: AuthTable.timeDeleted,
-              })
-              .from(AuthTable)
-              .where(
-                or(
-                  and(eq(AuthTable.provider, oauthResponse.provider), eq(AuthTable.subject, subject)),
-                  and(eq(AuthTable.provider, "email"), eq(AuthTable.subject, email)),
-                ),
-              ),
-          )
-          let accountID = resolveActiveOAuthAccountIdentity(matches, oauthResponse.provider)
-
-          // Create the account only after identity resolution has succeeded.
-          if (!accountID) {
-            accountID = await Account.create({})
-            newAccount = true
-          }
-
-          await Database.use(async (tx) =>
-            tx
-              .insert(AuthTable)
-              .values([
-                {
-                  id: Identifier.create("auth"),
-                  accountID,
-                  provider: oauthResponse.provider,
-                  subject,
-                },
-                {
-                  id: Identifier.create("auth"),
-                  accountID,
-                  provider: "email",
-                  subject: email,
-                },
-              ])
-              .onConflictDoUpdate({
-                target: [AuthTable.provider, AuthTable.subject],
-                set: {
-                  accountID,
-                  timeDeleted: null,
-                },
-              }),
-          )
-
-          return accountID
-        })()
+        const provisioning = await provisionOAuthAccountIdentity({
+          provider: oauthResponse.provider,
+          subject,
+          email,
+        })
+        const accountID = provisioning.accountID
+        const newAccount = provisioning.newAccount
         const access = await AccountAccess.verify({ accountID })
         if (!access.allowed) {
           if (access.reason === "suspended") {
