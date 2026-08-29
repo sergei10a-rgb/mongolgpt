@@ -108,13 +108,14 @@ export default defineConfig({
         "providers",
         "network",
         "deployment",
+        "release-upgrade",
         "backup-restore",
         "enterprise",
         "troubleshooting",
         { label: "Windows ба WSL", link: "windows-wsl" },
         {
           label: "MongolGPT үйлчилгээ",
-          items: ["faq", "privacy", "billing", "admin"],
+          items: ["faq", "privacy", "security", "billing", "admin"],
         },
         {
           label: "Хэрэглээ",

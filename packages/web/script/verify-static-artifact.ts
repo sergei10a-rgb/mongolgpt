@@ -100,6 +100,9 @@ async function verifySearchIndex() {
       ["Free Auto", "/docs/account/"],
       ["алдаа оношлох", "/docs/troubleshooting/"],
       ["MCP серверүүд", "/docs/mcp-servers/"],
+      ["Аюулгүй ашиглалт", "/docs/security/"],
+      ["Буцаах төлөвлөгөө", "/docs/release-upgrade/"],
+      ["Claude Codex Goose", "/docs/ecosystem/"],
     ] as const) {
       const result = await index.search(query)
       const documents = await Promise.all(result.results.slice(0, 20).map((item) => item.data()))

@@ -1,0 +1,98 @@
+---
+title: Хувилбар, шинэчлэлт ба буцаалт
+description: MongolGPT Desktop, CLI, Web болон Cloudflare үйлчилгээний хувилбарын суваг, шинэчлэх, шалгах, буцаах ажиллагаа.
+---
+
+MongolGPT-ийн Desktop, CLI, Web, docs болон байршуулсан backend нь нэг бүтээгдэхүүний өөр өөр release artifact. Хувилбар гаргахдаа зөвхөн файл үүссэн эсэхийг бус, commit, checksum, channel, migration болон smoke test-ийг хамтад нь шалгана.
+
+:::caution[Одоогийн нээлтийн төлөв]
+`*.dev.mgpt.mn` болон **MongolGPT Dev** installer нь туршилтын орчин. Stable production release-ийг GitHub Release болон хувилбарын тэмдэглэлд албан ёсоор зарлахаас өмнө бодит төлбөр, үйлдвэрлэлийн credential эсвэл чухал төслийг бүү ашигла.
+:::
+
+## Хувилбарын сувгууд
+
+| Суваг             | Зориулалт                   | Desktop нэр    | Шинэчлэлтийн бодлого                                                      |
+| ----------------- | --------------------------- | -------------- | ------------------------------------------------------------------------- |
+| `dev`             | Main commit-ийн туршилт, QA | MongolGPT Dev  | Гарын үсэггүй түр artifact байж болно; production auto-update ашиглахгүй  |
+| `beta`            | Нийтлэхийн өмнөх prerelease | MongolGPT Beta | `beta` metadata-аас prerelease шинэчлэлт авна                             |
+| `prod` / `latest` | Баталгаажсан stable release | MongolGPT      | `latest` metadata-аас stable шинэчлэлт авна; автоматаар downgrade хийхгүй |
+
+Dev, Beta, Stable суулгацууд тусдаа app identity болон тохиргооны хүрээтэй. Нэг сувгийн artifact-ийг өөр сувгийн auto-update metadata-тай хольж болохгүй.
+
+## Татсан файлыг шалгах
+
+1. Installer, CLI архив болон `SHA256SUMS.txt`-ийг зөвхөн [албан ёсны GitHub Releases](https://github.com/sergei10a-rgb/mongolgpt/releases)-ээс татна.
+2. Release tag, файлын нэр, CPU architecture болон checksum-ийг тулгана.
+3. Windows production artifact дээр Authenticode гарын үсэг хүчинтэй, нийтлэгч MongolGPT-ийн release тохиргоотой таарч байгаа эсэхийг шалгана.
+4. Changelog дахь breaking change, database/config migration болон rollback тайлбарыг уншина.
+
+PowerShell дээр checksum шалгах:
+
+```powershell
+Get-FileHash .\mongolgpt-desktop-win-x64.exe -Algorithm SHA256
+Get-Content .\SHA256SUMS.txt
+```
+
+Checksum зөрвөл файлыг ажиллуулахгүй, дахин татаж, release-ийн issue эсвэл security сувгаар мэдээлнэ.
+
+## Desktop шинэчлэх
+
+Production болон Beta build нь өөрийн release channel-ийн шинэчлэлтийг шалгана. Шинэчлэлт хийхээс өмнө:
+
+- ажиллаж буй session, Git diff болон terminal process-оо хадгалж хаах;
+- одоогийн MongolGPT хувилбар, channel болон installer checksum-ийг тэмдэглэх;
+- custom plugin, MCP server болон local model-ийн нийцлийг шалгах;
+- шинэ installer-ийг өмнөх суулгацын дээр ажиллуулахын өмнө release note-ийг унших.
+
+Updater алдаа гарвал танихгүй mirror-оос файл татахгүй. GitHub Release-ийн installer-ийг checksum-тай нь гараар татаж шинэчилнэ.
+
+## CLI шинэчлэх
+
+Одоогийн хувилбар болон суулгасан аргаа эхлээд шалгана.
+
+```bash
+mongolgpt --version
+mongolgpt upgrade
+```
+
+`autoupdate` нь patch шинэчлэлтийг автоматаар хийх, зөвхөн мэдэгдэх эсвэл бүрэн унтраах сонголттой. Дэлгэрэнгүйг [тохиргоо](../config#автоматаар-шинэчлэх)-оос үзнэ үү.
+
+npm-аар суулгасан бол нийтлэгдсэн stable багцыг ингэж шинэчилнэ:
+
+```bash
+npm install --global mongolgpt@latest
+mongolgpt --version
+```
+
+Шинэчлэсний дараа `mongolgpt account status`, provider/model сонголт болон богино local repo хүсэлтийг шалгана.
+
+## Web, docs ба backend rollout
+
+Hosted rollout дараах дарааллыг баримтална.
+
+1. Typecheck, unit, browser E2E, CLI smoke, Desktop packaged/installed smoke болон secret scan ногоон байна.
+2. D1 migration-ийг шинэ runtime болон console-оос өмнө хэрэгжүүлнэ.
+3. Runtime, console, static Web app, docs болон admin-ийг ижил баталгаажсан commit-оос байршуулна.
+4. Health endpoint-оос гадна login, JSON schema/content-type, runtime session, Free Auto model call, usage, payment sandbox болон admin flow-ийг smoke test-ээр шалгана.
+5. Release SHA, channel болон domain boundary нь deploy manifest-тай таарч байгааг батална.
+
+Production deploy, бодит төлбөр болон хэрэглэгчид мэдэгдэл илгээхийг operator-ийн эцсийн зөвшөөрөлгүй ажиллуулахгүй.
+
+## Буцаах төлөвлөгөө
+
+Desktop updater автоматаар downgrade хийхгүй. Client rollback шаардлагатай бол:
+
+1. Асуудалтай хувилбарыг зогсоож, төслийн working tree болон config-оо нөөцөлнө.
+2. GitHub Release-ээс өмнөх баталгаажсан хувилбарын яг тухайн channel/architecture artifact болон checksum-ийг авна.
+3. Config эсвэл database format буцаж нийцэх эсэхийг release note-оос шалгана.
+4. Installer/CLI-г буцаасны дараа account, provider, local repo болон update channel-ийг дахин smoke test хийнэ.
+
+Hosted rollback нь зөвхөн хуучин Worker code буцаах ажиллагаа биш. D1 migration буцаах эсвэл backup сэргээх шаардлагатай бол [нөөц хуулбар ба сэргээх](../backup-restore)-ийн тусгаарласан restore drill, reconciliation болон audit алхмыг дагана. Өгөгдлийн нийцэл нотлогдоогүй үед хуучин runtime-ийг шинэ schema дээр шууд ажиллуулахгүй.
+
+## Шинэчлэлтийн дараах шалгалт
+
+- Desktop/CLI Монгол хэлээр нээгдэж, `MongolGPT` нэр болон icon зөв байна.
+- Нэг аккаунтаар Web/Desktop/CLI нэвтрэлт, logout болон session refresh ажиллана.
+- Free Auto, BYOK, OpenRouter/NVIDIA fallback болон local model тус бүр бодит эсвэл sandbox smoke-оор шалгагдана.
+- MCP, skill, plugin болон terminal permission хуучин тохиргооноос санаандгүй өргөжөөгүй байна.
+- Version, release SHA, channel, checksum болон changelog хоорондоо таарна.

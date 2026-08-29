@@ -14,6 +14,23 @@ MongolGPT-ийн экосистемийн хуудсанд одоогоор зө
 | Залгаас            | Дотоод залгаасын файл болон хувийн npm багцыг тохиргоонд зааж ажиллуулна                                                                                                      |
 | Үйлчилгээ үзүүлэгч | BYOK болон дотоод үйлчилгээ үзүүлэгчийн тохируулгыг дэмжинэ; MongolGPT бүртгэл ба Free Auto нь байршуулсан үйлчилгээ идэвхтэй хөгжүүлэлт/хувилбарын сувагт ажиллана           |
 
+## Нийцлийн матриц
+
+| Эх үүсвэр           | Таних хэлбэр                                           | Автоматаар хөрвүүлэх зүйл                                                 | Хязгаар ба хэрэглэгчийн шалгах зүйл                                                                                          |
+| ------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Claude Desktop      | `claude_desktop_config.json` JSON/JSONC, `mcpServers`  | stdio MCP command, argument, environment болон дэмждэг remote URL         | Claude-ийн өөрийн plugin API эсвэл UI extension-ийг JavaScript кодоор нь шууд хөрвүүлэхгүй                                   |
+| Codex               | `.codex/config.toml`, `mcp_servers`                    | stdio/HTTP MCP, environment, timeout-ийг MongolGPT MCP тохиргоо болгоно   | Танигдаагүй TOML талбарыг алгассан анхааруулгад харуулна; secret утгыг шинэ файлд сохроор хуулж болохгүй                     |
+| Goose               | `.config/goose/config.yaml`, extension жагсаалт        | дэмждэг stdio болон remote MCP extension                                  | Goose-ийн бүх extension төрөл MongolGPT plugin биш; unsupported талбар нь plan дээр үлдэнэ                                   |
+| Hermes              | `.hermes/config.yaml`, `mcp_servers`                   | stdio/remote MCP server                                                   | Hermes-ийн agent runtime болон Python plugin кодыг автоматаар хөрвүүлэхгүй                                                   |
+| MCP install command | `npx`, `bunx`, executable command                      | command ба argument-ийг MCP server entry болгоно                          | Package publisher, install script, version болон шаардах secret-ийг хэрэглэгч хянана                                         |
+| MCP URL             | `https://` remote endpoint                             | дэмждэг HTTP/SSE transport-ын endpoint болгоно                            | OAuth/login шаардлагатай бол browser урсгалыг тусад нь дуусгана; cookie/API key импортлохгүй                                 |
+| Skill folder        | `SKILL.md` бүхий Claude/Codex/Goose хэв маягийн хавтас | metadata, заавар, supporting file-ийг MongolGPT skill discovery-д оруулна | Гаднын binary/script нь skill текстээс тусдаа trust boundary; автоматаар эрх олгохгүй                                        |
+| MongolGPT plugin    | локал `.js`/`.ts` эсвэл npm package                    | MongolGPT-ийн `@mongolgpt/plugin` hook/tool API-аар ачаална               | Claude/Codex/Goose-ийн arbitrary JavaScript plugin API-г ерөнхий wrapper-аар шууд ажиллуулахгүй; native adapter шаардлагатай |
+
+:::note[Автомат тохируулгын бодит хил]
+MongolGPT нь танигдсан config болон MCP/skill форматыг хэрэглэгчээр гараар дахин бичүүлэхгүйгээр хөрвүүлнэ. Харин өөр agent-ийн дурын executable plugin API-г утгыг нь ойлголгүй wrapper-д хийх нь аюултай бөгөөд UI, lifecycle, permission contract-ийг эвдэж болно. Ийм интеграцид эх API-г судалсан MongolGPT native adapter, permission mapping болон тест шаардлагатай.
+:::
+
 ## Импортын урсгал
 
 ```bash
@@ -24,6 +41,16 @@ mongolgpt compat import apply "npx -y @modelcontextprotocol/server-filesystem C:
 Desktop дээр `Тохиргоо -> Интеграц` хэсгээс тушаал, зам, URL эсвэл тохируулга оруулаад шалгах болон нэмэх боломжтой.
 
 Codex-ийн `.codex/config.toml`, Goose-ийн `.config/goose/config.yaml`, Hermes-ийн `.hermes/config.yaml` хавтас эсвэл файлыг шууд заахад MCP холболтын дэмжигдэх тохиргоог MongolGPT хэлбэрт автоматаар хөрвүүлнэ. MongolGPT-д ижил утгатай талбар байхгүй бол `plan` үр дүнд алгассан талбарын нэрийг анхааруулгаар харуулна. Эхлээд `plan` ажиллуулж илэрсэн өөрчлөлтийг шалгаад, дараа нь `apply` ашиглана.
+
+## Импортын аюулгүй дараалал
+
+1. Эх config, command эсвэл URL-аа `plan`-д өгнө.
+2. Илэрсэн эх формат, нэмэх/шинэчлэх entry, алгассан талбар болон анхааруулгыг шалгана.
+3. Package, executable, remote host болон шаардах secret-ийн эзэмшигчийг баталгаажуулна.
+4. `apply` ажиллуулаад үүссэн MongolGPT config diff-ийг хянана.
+5. MCP server-ийг хамгийн бага filesystem/network эрхтэй эхлүүлж, нэг аюулгүй tool call-аар туршина.
+
+Импортлогч config-д байсан secret-ийг шинэ trust boundary руу автоматаар зөвшөөрсөн гэж үзэхгүй. API key, OAuth token, cookie болон хувийн замыг log, screenshot эсвэл issue-д нийтлэхгүй.
 
 ## Нийтлэхээс өмнөх дүрэм
 
