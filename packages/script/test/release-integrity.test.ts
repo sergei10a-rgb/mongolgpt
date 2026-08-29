@@ -198,6 +198,32 @@ describe("release integrity contract", () => {
     expect(workflow).toContain("MONGOLGPT_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'latest' }}")
   })
 
+  test("fails closed before creating a production release", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
+    const confirmation = "      - name: Validate production release confirmation\n"
+    const credentials = "      - name: Validate production release credentials\n"
+    const checkout = "      - uses: actions/checkout@"
+    const version = "          ./script/version.ts\n"
+
+    expect(workflow).toContain("description: 'Production release баталгаажуулалт: \"PUBLISH PRODUCTION MONGOLGPT\"'")
+    expect(workflow).toContain('[[ "$RELEASE_CONFIRMATION" != "PUBLISH PRODUCTION MONGOLGPT" ]]')
+    expect(workflow).toContain("github.event_name == 'workflow_dispatch' && github.ref_name == 'main'")
+    for (const name of [
+      "AZURE_CLIENT_ID",
+      "AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE",
+      "APPLE_CERTIFICATE",
+      "APPLE_API_KEY_PATH",
+      "AUR_KEY",
+      "TAURI_SIGNING_PRIVATE_KEY",
+      "NPM_TOKEN",
+    ]) {
+      expect(workflow).toContain(`${name}: \${{ secrets.${name} }}`)
+    }
+    expect(workflow.indexOf(confirmation)).toBeLessThan(workflow.indexOf(checkout))
+    expect(workflow.indexOf(credentials)).toBeLessThan(workflow.indexOf(checkout))
+    expect(workflow.indexOf(checkout)).toBeLessThan(workflow.indexOf(version))
+  })
+
   test("uses one reusable packaged Windows desktop smoke gate", () => {
     const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
     const smoke = readFileSync(resolve(root, "packages/desktop/scripts/smoke-packaged-windows.ps1"), "utf8")
