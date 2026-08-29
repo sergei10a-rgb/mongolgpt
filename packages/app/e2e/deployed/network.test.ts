@@ -3,7 +3,8 @@ import {
   classifyDeployedResponse,
   isBenignDeployedConsoleError,
   parseSmokeAuthCookie,
-  shouldTrackDeployedRequest,
+  shouldObserveDeployedRequest,
+  shouldWaitForDeployedRequest,
 } from "./network"
 
 const origin = "https://dev.mgpt.mn"
@@ -47,28 +48,34 @@ describe("deployed browser auth cookie", () => {
 })
 
 describe("deployed multi-origin browser observer", () => {
-  test("waits only for product pages, assets, and API boundaries", () => {
+  test("waits for product pages and assets while observing API boundaries separately", () => {
     const appOrigin = "https://app.dev.mgpt.mn"
     const publicOrigin = "https://dev.mgpt.mn"
     const runtimeOrigin = "https://runtime.dev.mgpt.mn"
     const apiOrigins = new Set([publicOrigin, runtimeOrigin])
     const pageOrigins = new Set([appOrigin, publicOrigin])
-    const tracks = (origin: string, pathname: string, resourceType: string) =>
-      shouldTrackDeployedRequest({ origin, pathname, resourceType }, appOrigin, apiOrigins, pageOrigins)
+    const waits = (origin: string, pathname: string, resourceType: string) =>
+      shouldWaitForDeployedRequest({ origin, pathname, resourceType }, pageOrigins)
+    const observes = (origin: string, pathname: string, resourceType: string) =>
+      shouldObserveDeployedRequest({ origin, pathname, resourceType }, appOrigin, apiOrigins, pageOrigins)
 
-    expect(tracks(appOrigin, "/", "document")).toBe(true)
-    expect(tracks(appOrigin, "/assets/index.js", "script")).toBe(true)
-    expect(tracks(publicOrigin, "/v1/account/overview", "fetch")).toBe(true)
-    expect(tracks(runtimeOrigin, "/auth/session", "fetch")).toBe(true)
-    expect(tracks(runtimeOrigin, "/project", "xhr")).toBe(true)
+    expect(waits(appOrigin, "/", "document")).toBe(true)
+    expect(waits(appOrigin, "/assets/index.js", "script")).toBe(true)
+    expect(waits(publicOrigin, "/v1/account/overview", "fetch")).toBe(false)
+    expect(waits(runtimeOrigin, "/auth/session", "fetch")).toBe(false)
+    expect(waits(runtimeOrigin, "/project", "xhr")).toBe(false)
 
-    expect(tracks(runtimeOrigin, "/event", "fetch")).toBe(false)
-    expect(tracks(runtimeOrigin, "/global/event", "fetch")).toBe(false)
-    expect(tracks(runtimeOrigin, "/api/event", "fetch")).toBe(false)
-    expect(tracks(runtimeOrigin, "/api/session/session-1/event", "fetch")).toBe(false)
-    expect(tracks(appOrigin, "/cdn-cgi/rum", "fetch")).toBe(false)
-    expect(tracks("https://static.cloudflareinsights.com", "/beacon.min.js", "script")).toBe(false)
-    expect(tracks("https://telemetry.example", "/collect", "fetch")).toBe(false)
+    expect(observes(publicOrigin, "/v1/account/overview", "fetch")).toBe(true)
+    expect(observes(runtimeOrigin, "/auth/session", "fetch")).toBe(true)
+    expect(observes(runtimeOrigin, "/project", "xhr")).toBe(true)
+
+    expect(observes(runtimeOrigin, "/event", "fetch")).toBe(false)
+    expect(observes(runtimeOrigin, "/global/event", "fetch")).toBe(false)
+    expect(observes(runtimeOrigin, "/api/event", "fetch")).toBe(false)
+    expect(observes(runtimeOrigin, "/api/session/session-1/event", "fetch")).toBe(false)
+    expect(observes(appOrigin, "/cdn-cgi/rum", "fetch")).toBe(false)
+    expect(observes("https://static.cloudflareinsights.com", "/beacon.min.js", "script")).toBe(false)
+    expect(observes("https://telemetry.example", "/collect", "fetch")).toBe(false)
   })
 
   test("allows only expected anonymous API authorization errors in the console", () => {

@@ -25,7 +25,11 @@ type DeployedRequestInput = {
   resourceType: string
 }
 
-export function shouldTrackDeployedRequest(
+export function shouldWaitForDeployedRequest(input: DeployedRequestInput, pageOrigins: ReadonlySet<string>) {
+  return blockedDocumentTypes.has(input.resourceType) && pageOrigins.has(input.origin)
+}
+
+export function shouldObserveDeployedRequest(
   input: DeployedRequestInput,
   appOrigin: string,
   apiOrigins: ReadonlySet<string>,
@@ -120,14 +124,12 @@ export function observeDeployedPage(
   page.on("request", (request) => {
     const url = new URL(request.url())
     if (
-      shouldTrackDeployedRequest(
+      shouldWaitForDeployedRequest(
         {
           origin: url.origin,
           pathname: url.pathname,
           resourceType: request.resourceType(),
         },
-        appOrigin,
-        allowedApiOrigins,
         monitoredPageOrigins,
       )
     ) {
@@ -148,7 +150,7 @@ export function observeDeployedPage(
     releaseDeployedRequest(pendingRequests, request)
     const url = new URL(request.url())
     if (
-      !shouldTrackDeployedRequest(
+      !shouldObserveDeployedRequest(
         {
           origin: url.origin,
           pathname: url.pathname,
