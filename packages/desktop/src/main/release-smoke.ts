@@ -82,7 +82,19 @@ export function desktopSmokeFile(env: NodeJS.ProcessEnv = process.env) {
   return value || undefined
 }
 
+function loadedRendererURL(value: string) {
+  try {
+    const url = new URL(value)
+    return url.protocol === "mongolgpt-renderer:" && url.hostname === "renderer"
+  } catch {
+    return false
+  }
+}
+
 export function waitForRendererReady(webContents: RendererContents, timeoutMs = 30_000) {
+  const currentURL = webContents.getURL()
+  if (loadedRendererURL(currentURL)) return Promise.resolve(currentURL)
+
   return new Promise<string>((resolve, reject) => {
     const cleanup = () => {
       clearTimeout(timeout)

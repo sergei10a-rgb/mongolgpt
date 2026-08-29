@@ -20,8 +20,10 @@ afterEach(() => {
 
 function renderer(url = "mongolgpt-renderer://renderer/index.html", states: unknown[] = []) {
   let index = 0
+  let currentURL = url
   return Object.assign(new EventEmitter(), {
-    getURL: () => url,
+    getURL: () => currentURL,
+    setURL: (value: string) => (currentURL = value),
     executeJavaScript: async () => states[Math.min(index++, Math.max(states.length - 1, 0))],
   })
 }
@@ -57,10 +59,11 @@ describe("desktop release smoke", () => {
   })
 
   test("waits for the packaged renderer main frame", async () => {
-    const webContents = renderer()
+    const webContents = renderer("")
     const ready = waitForRendererReady(webContents, 100)
 
     webContents.emit("did-fail-load", {}, -3, "subframe", "https://example.com", false)
+    webContents.setURL("mongolgpt-renderer://renderer/index.html")
     webContents.emit("did-finish-load")
 
     expect(await ready).toBe("mongolgpt-renderer://renderer/index.html")
@@ -68,8 +71,16 @@ describe("desktop release smoke", () => {
     expect(webContents.listenerCount("did-fail-load")).toBe(0)
   })
 
-  test("rejects a failed renderer main frame", async () => {
+  test("accepts a renderer that loaded before smoke listeners were attached", async () => {
     const webContents = renderer()
+
+    await expect(waitForRendererReady(webContents, 100)).resolves.toBe("mongolgpt-renderer://renderer/index.html")
+    expect(webContents.listenerCount("did-finish-load")).toBe(0)
+    expect(webContents.listenerCount("did-fail-load")).toBe(0)
+  })
+
+  test("rejects a failed renderer main frame", async () => {
+    const webContents = renderer("")
     const ready = waitForRendererReady(webContents, 100)
 
     webContents.emit("did-fail-load", {}, -6, "ERR_FILE_NOT_FOUND", "mongolgpt-renderer://renderer/index.html", true)
@@ -78,7 +89,7 @@ describe("desktop release smoke", () => {
   })
 
   test("times out without leaking renderer listeners", async () => {
-    const webContents = renderer()
+    const webContents = renderer("")
     const ready = waitForRendererReady(webContents, 1)
 
     await expect(ready).rejects.toThrow("1 мс")
