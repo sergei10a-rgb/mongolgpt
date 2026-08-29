@@ -100,16 +100,18 @@ describe("gateway limiters", () => {
     const request = new Request("https://example.com/gateway", {
       headers: {
         "accept-language": "en",
+        "x-real-ip": "203.0.113.7",
       },
     })
 
-    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", 99, " 203.0.113.7 ", request)
+    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", 99, request)
 
     await expect(limiter.check()).rejects.toMatchObject({
       message: "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Дараа дахин оролдоно уу.",
     })
     expect(quotaState.calls).toHaveLength(1)
-    expect(quotaState.calls[0]?.scope).toContain("203.0.113.7")
+    expect(quotaState.calls[0]?.scope).toContain("unknown")
+    expect(quotaState.calls[0]?.scope).not.toContain("203.0.113.7")
     expect(quotaState.calls[0]?.command.lifetimeKey).toBeNull()
     expect(String(quotaState.calls[0]?.command.dailyKey)).not.toContain("gp")
   })
@@ -119,17 +121,64 @@ describe("gateway limiters", () => {
     const request = new Request("https://example.com/gateway", {
       headers: {
         "accept-language": "mn",
-        "x-mongolgpt-gateway-proxy": "trusted edge",
+        "cf-connecting-ip": "203.0.113.7",
+        "x-mongolgpt-gateway-proxy": "trusted",
+        "x-real-ip": "198.51.100.9",
       },
     })
 
-    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", 2, "", request)
+    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", 2, request)
 
     await expect(limiter.check()).rejects.toMatchObject({
       message: "Хүсэлтийн давтамжийн хязгаарт хүрлээ. Түр хүлээгээд дахин оролдоно уу.",
     })
-    expect(String(quotaState.calls[0]?.command.dailyKey)).toContain("unknown")
+    expect(String(quotaState.calls[0]?.command.dailyKey)).toContain("203.0.113.7")
+    expect(String(quotaState.calls[0]?.command.dailyKey)).not.toContain("198.51.100.9")
     expect(String(quotaState.calls[0]?.command.dailyKey)).toContain("gp")
+  })
+
+  test("ip limiter requires exact trusted proxy header values", async () => {
+    const request = new Request("https://example.com/gateway", {
+      headers: {
+        "accept-language": "en",
+        "cf-connecting-ip": "203.0.113.7",
+        "x-mongolgpt-gateway-proxy": "trusted edge",
+      },
+    })
+
+    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", 99, request)
+    await limiter.check()
+
+    expect(quotaState.calls[0]?.command.dailyLimit).toBe(limits.dailyRequestsFallback)
+    expect(String(quotaState.calls[0]?.command.dailyKey)).not.toContain("gp")
+  })
+
+  test("client IP identity ignores spoofable headers and groups IPv6 privacy addresses by prefix", () => {
+    const first = new Request("https://example.com/gateway", {
+      headers: {
+        "cf-connecting-ip": "2001:0DB8:1234:5678:1111:2222:3333:4444",
+        "x-real-ip": "198.51.100.9",
+        "x-forwarded-for": "192.0.2.8",
+      },
+    })
+    const second = new Request("https://example.com/gateway", {
+      headers: {
+        "cf-connecting-ip": "2001:db8:1234:5678::abcd",
+      },
+    })
+
+    expect(ipLimiterModule.clientIpFromRequest(first)).toBe("2001:db8:1234:5678")
+    expect(ipLimiterModule.clientIpFromRequest(second)).toBe("2001:db8:1234:5678")
+    expect(
+      ipLimiterModule.clientIpFromRequest(
+        new Request("https://example.com/gateway", { headers: { "x-real-ip": "203.0.113.8" } }),
+      ),
+    ).toBe("unknown")
+    expect(
+      ipLimiterModule.clientIpFromRequest(
+        new Request("https://example.com/gateway", { headers: { "cf-connecting-ip": "not-an-ip" } }),
+      ),
+    ).toBe("unknown")
   })
 
   test("ip limiter tracks lifetime usage only for verified default traffic", async () => {
@@ -137,11 +186,12 @@ describe("gateway limiters", () => {
     const request = new Request("https://example.com/gateway", {
       headers: {
         "accept-language": "en",
-        "x-mongolgpt-gateway-proxy": "trusted edge",
+        "cf-connecting-ip": "203.0.113.7",
+        "x-mongolgpt-gateway-proxy": "trusted",
       },
     })
 
-    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", undefined, "203.0.113.7", request)
+    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", undefined, request)
     await limiter.check()
     await limiter.track()
 
@@ -153,9 +203,9 @@ describe("gateway limiters", () => {
   test("injected free limits avoid an additional runtime configuration read", async () => {
     dbState.rows = [{ usage: 0 }]
     const request = new Request("https://example.com/gateway", {
-      headers: { "x-mongolgpt-gateway-proxy": "trusted edge" },
+      headers: { "cf-connecting-ip": "203.0.113.7", "x-mongolgpt-gateway-proxy": "trusted" },
     })
-    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", undefined, "203.0.113.7", request, limits)
+    const limiter = await ipLimiterModule.createRateLimiter("gpt-5", undefined, request, limits)
     await limiter.check()
     const trial = await trialLimiterModule.createTrialLimiter(["provider-a"], "203.0.113.9", limits)
     await trial?.check()

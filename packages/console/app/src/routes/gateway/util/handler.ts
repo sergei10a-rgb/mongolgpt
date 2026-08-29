@@ -44,7 +44,7 @@ import { anthropicHelper } from "./provider/anthropic"
 import { googleHelper } from "./provider/google"
 import { openaiHelper } from "./provider/openai"
 import { oaCompatHelper } from "./provider/openai-compatible"
-import { createRateLimiter as createIpRateLimiter } from "./ipRateLimiter"
+import { clientIpFromRequest, createRateLimiter as createIpRateLimiter } from "./ipRateLimiter"
 import { createRateLimiter as createKeyRateLimiter } from "./keyRateLimiter"
 import { createTrialLimiter } from "./trialLimiter"
 import { createStickyTracker } from "./stickyProviderTracker"
@@ -159,8 +159,7 @@ export async function handler(
     const model = opts.parseModel(url, body)
     const variant = opts.parseVariant(url, body)
     const isStream = opts.parseIsStream(url, body)
-    const rawIp = input.request.headers.get("x-real-ip") ?? ""
-    const ip = rawIp.includes(":") ? rawIp.split(":").slice(0, 4).join(":") : rawIp
+    const ip = clientIpFromRequest(input.request)
     const rawGatewayApiKey = opts.parseApiKey(input.request.headers)
     const gatewayApiKey = rawGatewayApiKey === "public" ? undefined : rawGatewayApiKey
     const sessionId = input.request.headers.get("x-mongolgpt-session") ?? ""
@@ -184,7 +183,7 @@ export async function handler(
     const trialLimiter = await createTrialLimiter(modelInfo.trialProvider, ip, limits.free)
     const trialProviders = await trialLimiter?.check()
     const rateLimiter = modelInfo.allowAnonymous
-      ? await createIpRateLimiter(modelInfo.id, modelInfo.rateLimit, ip, input.request, limits.free)
+      ? await createIpRateLimiter(modelInfo.id, modelInfo.rateLimit, input.request, limits.free)
       : createKeyRateLimiter(
           modelInfo.id,
           modelInfo.rateLimit,
