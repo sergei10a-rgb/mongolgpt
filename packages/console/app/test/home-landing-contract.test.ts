@@ -83,6 +83,8 @@ describe("home landing contract", () => {
     expect(styles).toContain('[data-component="readiness-band"]')
     expect(styles).toContain('[data-component="trust-grid"]')
     expect(styles).toContain('[data-component="launch-grid"]')
+    expect(styles).toContain("min-height: 68px;")
+    expect(styles).toContain("scroll-margin-top: 5.5rem;")
     expect(styles).toContain("a:focus-visible")
     expect(styles).toContain("border-radius: 8px")
     expect(styles).not.toMatch(/font-size:\s*clamp\([^)]*vw/)
