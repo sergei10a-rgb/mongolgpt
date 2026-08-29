@@ -12,14 +12,14 @@ export function useOAuthStateSession() {
   return useSession<OAuthStateSessionData>({
     password: Resource.MONGOLGPT_GATEWAY_SESSION_SECRET.value,
     name: import.meta.env.PROD
-      ? "__Secure-mongolgpt-oauth-state"
+      ? "__Host-mongolgpt-oauth-state"
       : "mongolgpt-oauth-state",
     maxAge: Math.ceil(OAUTH_STATE_TTL_MS / 1000),
     cookie: {
       secure: import.meta.env.PROD,
       httpOnly: true,
       sameSite: "lax",
-      path: "/auth/callback",
+      path: "/",
     },
   });
 }

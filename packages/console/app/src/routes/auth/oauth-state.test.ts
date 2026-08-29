@@ -38,10 +38,10 @@ describe("OAuth state session", () => {
     });
   });
 
-  test("uses a browser-valid secure cookie prefix with the callback-only path", () => {
-    expect(source).toContain('"__Secure-mongolgpt-oauth-state"');
-    expect(source).toContain('path: "/auth/callback"');
-    expect(source).not.toContain('"__Host-mongolgpt-oauth-state"');
+  test("uses a browser-valid host-only cookie with a root path", () => {
+    expect(source).toContain('"__Host-mongolgpt-oauth-state"');
+    expect(source).toContain('path: "/"');
+    expect(source).not.toContain('"__Secure-mongolgpt-oauth-state"');
     expect(source).not.toContain('from "node:buffer"');
   });
 });
