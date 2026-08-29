@@ -677,9 +677,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const confirmation = job.steps.find((step) => step.name === "Validate exact dev console confirmation")
     const artifact = job.steps.find((step) => step.name === "Verify public console and OAuth artifacts")
     const tokenPreflight = job.steps.find((step) => step.name === "Verify Cloudflare console token")
+    const freeAuto = job.steps.find((step) => step.name === "Prepare dev Free Auto catalog without logging provider keys")
     const deploy = job.steps.find((step) => step.name === "Deploy only dev OAuth and public console to Cloudflare")
     const smoke = job.steps.find((step) => step.name === "Verify live dev OAuth and public console boundaries")
-    if (!deploy?.run) throw new Error("Dev console deploy step is missing")
+    if (!deploy?.run || !freeAuto?.env) throw new Error("Dev console deploy steps are missing")
 
     expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
     expect(parsed.permissions).toEqual({ contents: "read" })
@@ -698,6 +699,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(artifact?.env).toEqual({})
     expect(tokenPreflight?.env).toEqual({ CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" })
     expect(tokenPreflight?.run).toBe("bun script/cloudflare-preflight.ts --console-only")
+    expect(freeAuto?.run).toBe("bun script/prepare-dev-free-auto.ts")
+    expect(freeAuto?.env.OPENROUTER_API_KEY).toBe("${{ secrets.OPENROUTER_API_KEY }}")
+    expect(freeAuto?.env.NVIDIA_NIM_API_KEY).toBe("${{ secrets.NVIDIA_NIM_API_KEY }}")
+    expect(freeAuto?.env.NVIDIA_NIM_MODEL_ID).toBe("${{ vars.NVIDIA_NIM_MODEL_ID }}")
     expect(deploy?.run).toContain("bun run deploy:preflight -- dev --console-only")
     expect(deploy?.run).not.toContain("MONGOLGPT_DEPLOY_CONSOLE_ONLY=false")
     expect(deploy?.run).not.toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false")
@@ -737,9 +742,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("SST_SECRET_TurnstileSecretKey")
     expect(source).toContain("SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET")
     for (let index = 1; index <= 30; index++) {
-      expect(source).toContain(
-        `SST_SECRET_MONGOLGPT_GATEWAY_MODELS${index}: \${{ secrets.MONGOLGPT_GATEWAY_MODELS${index} }}`,
+      expect(freeAuto?.env[`MONGOLGPT_GATEWAY_MODELS${index}`]).toBe(
+        `\${{ secrets.MONGOLGPT_GATEWAY_MODELS${index} }}`,
       )
+      expect(deploy?.env).not.toHaveProperty(`SST_SECRET_MONGOLGPT_GATEWAY_MODELS${index}`)
     }
     expect(source).not.toContain("--target WebApp")
     expect(source).not.toContain("--target Website")
