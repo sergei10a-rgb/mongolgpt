@@ -35,6 +35,9 @@ describe("home landing contract", () => {
     expect(header).toContain('language.route("/download")')
     expect(footer).toContain('language.route("/download")')
     expect(footer).toContain('i18n.t("footer.support")')
+    expect(footer).toContain('i18n.t("footer.github")')
+    expect(footer).not.toContain("starCount")
+    expect(footer).not.toContain("githubData")
   })
 
   test("keeps Mongolian public copy free from internal English feature labels", async () => {

@@ -12,10 +12,6 @@ export const config = {
   // GitHub
   github: {
     repoUrl: "https://github.com/sergei10a-rgb/mongolgpt",
-    starsFormatted: {
-      compact: "0",
-      full: "0",
-    },
   },
 
   // Social links
