@@ -19,6 +19,7 @@
     "./cloudflare-deployment": "./src/cloudflare-deployment.ts",
     "./cloudflare-state-repair": "./src/cloudflare-state-repair.ts",
     "./d1-restore": "./src/d1-restore.ts",
+    "./d1-restore-drill": "./src/d1-restore-drill.ts",
     "./deployment": "./src/deployment.ts",
     "./deployment-service-urls": "./src/deployment-service-urls.ts",
     "./deployment-smoke-contract": "./src/deployment-smoke-contract.ts",

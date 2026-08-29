@@ -1,0 +1,66 @@
+name: D1 restore drill
+
+on:
+  schedule:
+    - cron: "17 3 1 1,4,7,10 *"
+  workflow_dispatch:
+
+concurrency:
+  group: d1-restore-drill-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+  MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
+  MONGOLGPT_ENABLE_ADMIN: "false"
+  MONGOLGPT_ENABLE_ANALYTICS: "false"
+  MONGOLGPT_ENABLE_D1_BACKUPS: "true"
+  MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false"
+  MONGOLGPT_ENABLE_LEGACY_STRIPE: "false"
+  MONGOLGPT_ENABLE_MONITORING: "false"
+  MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: "false"
+  MONGOLGPT_ENABLE_TURNSTILE: "false"
+  MONGOLGPT_ENABLE_SHARE_SERVICE: "false"
+  MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
+  MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"
+  MONGOLGPT_PAYMENT_ENVIRONMENT: disabled
+
+jobs:
+  drill:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: dev
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      D1_RESTORE_DRILL_API_TOKEN: ${{ secrets.D1_RESTORE_DRILL_API_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify restore drill safety contract
+        run: bun --cwd packages/script test test/d1-restore-drill.test.ts
+
+      - name: Restore latest dev backup into disposable D1
+        run: |
+          bun sst shell --stage=dev -- \
+            env -u CLOUDFLARE_API_TOKEN bun script/d1-restore-drill.ts \
+              --receipt "$RUNNER_TEMP/d1-restore-drill-receipt.json"
+
+      - name: Upload restore drill receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: d1-restore-drill-dev-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 90
+          path: ${{ runner.temp }}/d1-restore-drill-receipt.json
