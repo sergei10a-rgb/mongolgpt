@@ -8,7 +8,8 @@
     "dev": "astro dev",
     "dev:remote": "astro dev",
     "start": "astro dev",
-    "test": "bun test",
+    "test": "bun test ./test",
+    "test:e2e:deployed": "playwright test --config playwright.deployed.config.ts",
     "build": "astro build",
     "verify:static-artifact": "bun script/verify-static-artifact.ts",
     "preview": "astro preview",
@@ -39,6 +40,7 @@
     "vscode-languageserver-types": "3.17.5"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "mongolgpt": "workspace:*",
     "@types/node": "catalog:",
     "@astrojs/check": "0.9.6",

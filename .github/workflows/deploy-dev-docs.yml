@@ -43,6 +43,7 @@ jobs:
     env:
       CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
     steps:
       - name: Validate exact dev docs confirmation
         env:
@@ -79,3 +80,43 @@ jobs:
         env:
           MONGOLGPT_DEPLOY_DOCS_ONLY: "true"
         run: bun script/deployment-smoke.ts --docs-only dev
+
+      - name: Read Playwright version
+        id: playwright-version
+        run: |
+          version=$(node -e 'console.log(require("./package.json").workspaces.catalog["@playwright/test"])')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browser
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ github.workspace }}/.playwright-browsers
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
+
+      - name: Install Playwright system dependencies
+        working-directory: packages/web
+        run: bunx playwright install-deps chromium
+
+      - name: Install Playwright browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: packages/web
+        run: bunx playwright install chromium
+
+      - name: Verify dev docs search in Chromium
+        env:
+          CI: "true"
+          PLAYWRIGHT_DEPLOYED_DOCS_URL: https://docs.dev.mgpt.mn/docs/
+        run: bun --cwd packages/web test:e2e:deployed
+        timeout-minutes: 10
+
+      - name: Upload docs browser artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deployed-browser-dev-docs-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            packages/web/e2e/test-results-deployed
+            packages/web/e2e/playwright-report-deployed

@@ -225,7 +225,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")')
     expect(configSource).toContain('flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")')
     expect(configSource).toContain('rootPreviewAlias && (stage !== "dev" || docsOnly || appOnly || databaseOnly)')
-    expect(configSource).toContain('rootPreviewAlias && !hostedServices && !consoleOnly')
+    expect(configSource).toContain("rootPreviewAlias && !hostedServices && !consoleOnly")
     expect(configSource).toContain('cloudflareProviderMigration ? "6.14.0" : "6.15.0"')
     expect(configSource).toContain('await import("./infra/cloudflare-provider-migration.js")')
     expect(configSource).toContain('await import("@pulumi/cloudflare")')
@@ -299,6 +299,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const http = steps.findIndex((step) => step.name === "Verify deployed URLs")
     const browserSetup = steps.findIndex((step) => step.name === "Install Playwright system dependencies")
     const browser = steps.findIndex((step) => step.name === "Verify deployed app in Chromium")
+    const docsBrowser = steps.findIndex((step) => step.name === "Verify deployed docs search in Chromium")
     const artifact = steps.findIndex((step) => step.name === "Upload deployed browser artifacts")
 
     expect(auth).toBeGreaterThanOrEqual(0)
@@ -307,7 +308,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(browserSetup).toBeGreaterThan(http)
     expect(browser).toBeGreaterThan(http)
     expect(browser).toBeGreaterThan(browserSetup)
-    expect(artifact).toBeGreaterThan(browser)
+    expect(docsBrowser).toBeGreaterThan(browser)
+    expect(docsBrowser).toBeGreaterThan(browserSetup)
+    expect(artifact).toBeGreaterThan(docsBrowser)
     expect(steps[auth]?.run).toBe("bun script/deployment-smoke.ts --validate-auth-cookie")
     expect(steps[auth]?.env).toEqual({
       MONGOLGPT_SMOKE_AUTH_COOKIE: "${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}",
@@ -325,10 +328,18 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_PUBLIC_URL).toBe("${{ needs.verify.outputs.public_url }}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RUNTIME_URL).toBe("${{ needs.verify.outputs.runtime_url }}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RELEASE_SHA).toBe("${{ github.sha }}")
+    expect(steps[docsBrowser]?.run).toBe("bun --cwd packages/web test:e2e:deployed")
+    expect(steps[docsBrowser]?.env).toEqual({
+      CI: "true",
+      PLAYWRIGHT_DEPLOYED_DOCS_URL:
+        "${{ inputs.stage == 'production' && 'https://docs.mgpt.mn/docs/' || 'https://docs.dev.mgpt.mn/docs/' }}",
+    })
     expect(steps[artifact]?.condition).toBe("always()")
     expect(steps[artifact]?.uses).toContain("actions/upload-artifact@")
     expect(steps[artifact]?.with?.path).toContain("packages/app/e2e/test-results-deployed")
     expect(steps[artifact]?.with?.path).toContain("packages/app/e2e/playwright-report-deployed")
+    expect(steps[artifact]?.with?.path).toContain("packages/web/e2e/test-results-deployed")
+    expect(steps[artifact]?.with?.path).toContain("packages/web/e2e/playwright-report-deployed")
   })
 
   test("verifies real sandbox payment adapters without exposing them to production", async () => {
@@ -545,6 +556,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const job = parseWorkflowJob(parsed.jobs.deploy, "deploy")
     const deploy = job.steps.find((step) => step.name === "Deploy only dev docs to Cloudflare")
     const smoke = job.steps.find((step) => step.name === "Verify live dev docs")
+    const browser = job.steps.find((step) => step.name === "Verify dev docs search in Chromium")
+    const artifacts = job.steps.find((step) => step.name === "Upload docs browser artifacts")
 
     expect(source).toContain("workflow_dispatch:")
     expect(source).not.toMatch(/^\s+push:/m)
@@ -563,6 +576,16 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("bun run deploy:preflight -- dev --docs-only")
     expect(source).toContain("bun sst deploy --stage=dev --target Website --print-logs")
     expect(source).toContain("bun script/deployment-smoke.ts --docs-only dev")
+    expect(browser?.env).toEqual({
+      CI: "true",
+      PLAYWRIGHT_DEPLOYED_DOCS_URL: "https://docs.dev.mgpt.mn/docs/",
+    })
+    expect(browser?.run).toBe("bun --cwd packages/web test:e2e:deployed")
+    expect(job.steps.indexOf(browser!)).toBeGreaterThan(job.steps.indexOf(smoke!))
+    expect(artifacts?.condition).toBe("always()")
+    expect(artifacts?.uses).toBe("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a")
+    expect(artifacts?.with?.path).toContain("packages/web/e2e/test-results-deployed")
+    expect(artifacts?.with?.path).toContain("packages/web/e2e/playwright-report-deployed")
     expect(source).not.toContain("--target WebApp")
     expect(source).not.toMatch(/MONGOLGPT_(?:GATEWAY|RUNTIME|SMOKE_AUTH)|QPAY_|BONUM_|GITHUB_CLIENT|GOOGLE_CLIENT/)
     expect(rootPackage.dependencies["@mongolgpt/account-contract"]).toBe("workspace:*")
@@ -641,7 +664,13 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const sstSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
     const consoleSource = await Bun.file(new URL("../../../infra/console.ts", import.meta.url)).text()
     const parsed: unknown = Bun.YAML.parse(source)
-    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs) || !record(parsed.jobs.deploy) || !record(parsed.env)) {
+    if (
+      !record(parsed) ||
+      !record(parsed.on) ||
+      !record(parsed.jobs) ||
+      !record(parsed.jobs.deploy) ||
+      !record(parsed.env)
+    ) {
       throw new Error("Dev console-only workflow is invalid")
     }
     const job = parseWorkflowJob(parsed.jobs.deploy, "deploy")
@@ -680,7 +709,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).not.toContain(
       "MONGOLGPT_DEPLOY_CONSOLE_ONLY=false \\\n              bun sst deploy --stage=dev --target Console",
     )
-    expect(deploy?.run).toContain('if ! database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then')
+    expect(deploy?.run).toContain(
+      'if ! database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then',
+    )
     expect(deploy?.run).toContain("Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай")
     expect(deploy?.run).toContain("exit 1")
     expect(deploy?.run).not.toContain("bun sst deploy --stage=dev --print-logs")
@@ -825,7 +856,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const migration = run.indexOf('MONGOLGPT_DATABASE_ID="$database_id" bun run db:migrate')
     const runtime = run.indexOf('packages/runtime script/deploy.ts "$stage"')
     const application = run.lastIndexOf("bun sst deploy --stage=${{ inputs.stage }} --print-logs")
-    expect(run).toContain('if ! database_id="$(bun sst state export --stage=${{ inputs.stage }} | bun script/resolve-sst-d1-state.ts)"; then')
+    expect(run).toContain(
+      'if ! database_id="$(bun sst state export --stage=${{ inputs.stage }} | bun script/resolve-sst-d1-state.ts)"; then',
+    )
     expect(run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=false")
     expect(run).toContain("MONGOLGPT_DEPLOY_DATABASE_ONLY=true")
     expect(run).toContain("bun sst deploy --stage=${{ inputs.stage }} --target Database --print-logs")

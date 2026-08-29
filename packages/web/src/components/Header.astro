@@ -74,6 +74,18 @@ function href(url: string) {
       .middle-group {
         display: none;
       }
+
+      .right-group {
+        display: flex;
+        position: fixed;
+        top: calc((var(--sl-nav-height) - var(--sl-menu-button-size)) / 2);
+        inset-inline-end: calc(var(--sl-nav-pad-x) + var(--sl-menu-button-size) + 0.5rem);
+        z-index: var(--sl-z-index-navbar);
+      }
+
+      .right-group .social-icons {
+        display: none;
+      }
     }
   }
 
