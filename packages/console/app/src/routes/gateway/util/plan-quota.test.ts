@@ -93,13 +93,13 @@ describe("plan quota reservation", () => {
   test("maps a blocked counter to its correct reset window", async () => {
     const blocked = "user/user-1/rolling-cost"
     const result = await Promise.all([
-      reservePlanQuota(input(), async () => ({ allowed: false, blockedKey: blocked })),
-      reservePlanQuota(input(), async () => ({ allowed: false, blockedKey: blocked })),
+      reservePlanQuota(input(), async () => ({ allowed: false, blockedKey: blocked, values: ledgerValues })),
+      reservePlanQuota(input(), async () => ({ allowed: false, blockedKey: blocked, values: ledgerValues })),
     ])
 
     expect(result).toEqual([
-      { allowed: false, retryAfter: 18_000, deactivated: false },
-      { allowed: false, retryAfter: 18_000, deactivated: false },
+      { allowed: false, status: "limited", retryAfter: 18_000 },
+      { allowed: false, status: "limited", retryAfter: 18_000 },
     ])
   })
 
@@ -107,8 +107,15 @@ describe("plan quota reservation", () => {
     const blocked = "user/user-1/monthly-requests"
     await expect(reservePlanQuota(input(), async () => ({ allowed: false, blockedKey: blocked }))).resolves.toEqual({
       allowed: false,
+      status: "unavailable",
+      retryAfter: 60,
+    })
+    await expect(
+      reservePlanQuota(input(), async () => ({ allowed: false, blockedKey: blocked, values: ledgerValues })),
+    ).resolves.toEqual({
+      allowed: false,
+      status: "limited",
       retryAfter: 1_195_200,
-      deactivated: false,
     })
   })
 
@@ -180,16 +187,18 @@ describe("plan quota reservation", () => {
     )
   })
 
-  test("fails closed for malformed responses and deactivated ledgers", async () => {
+  test("classifies malformed, unavailable, and deactivated ledgers as service failures", async () => {
+    const unavailable = { allowed: false, status: "unavailable", retryAfter: 60 } as const
+    await expect(
+      reservePlanQuota(input(), async () => {
+        throw new Error("durable object unavailable")
+      }),
+    ).resolves.toEqual(unavailable)
     await expect(reservePlanQuota(input(), async () => ({ values: {} }))).resolves.toEqual({
-      allowed: false,
-      retryAfter: 60,
-      deactivated: false,
+      ...unavailable,
     })
     await expect(reservePlanQuota(input(), async () => ({ allowed: true, values: {} }))).resolves.toEqual({
-      allowed: false,
-      retryAfter: 60,
-      deactivated: false,
+      ...unavailable,
     })
     await expect(
       reservePlanQuota(input(), async () => ({
@@ -197,14 +206,15 @@ describe("plan quota reservation", () => {
         values: { ...ledgerValues, unexpected: 0 },
       })),
     ).resolves.toEqual({
-      allowed: false,
-      retryAfter: 60,
-      deactivated: false,
+      ...unavailable,
     })
     await expect(reservePlanQuota(input(), async () => ({ allowed: false, deactivated: true }))).resolves.toEqual({
-      allowed: false,
-      retryAfter: 0,
-      deactivated: true,
+      ...unavailable,
+    })
+    await expect(
+      reservePlanQuota(input(), async () => ({ allowed: false, blockedKey: "unknown", values: ledgerValues })),
+    ).resolves.toEqual({
+      ...unavailable,
     })
   })
 

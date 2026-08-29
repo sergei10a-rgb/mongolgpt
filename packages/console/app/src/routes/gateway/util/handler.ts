@@ -32,7 +32,9 @@ import {
   RateLimitError,
   FreeUsageLimitError,
   PlanUsageLimitError,
+  QuotaServiceUnavailableError,
 } from "./error"
+import { gatewayErrorResponse } from "./error-response"
 import {
   buildCostChunk,
   createBodyConverter,
@@ -520,54 +522,7 @@ export async function handler(
       "error.type": error instanceof Error ? error.constructor.name : "UnknownError",
     })
 
-    // Note: both top level "type" and "error.type" fields are used by the @ai-sdk/anthropic client to render the error message.
-    if (
-      error instanceof AuthError ||
-      error instanceof CreditsError ||
-      error instanceof MonthlyLimitError ||
-      error instanceof UserLimitError ||
-      error instanceof ModelError
-    )
-      return new Response(
-        JSON.stringify({
-          type: "error",
-          error: { type: error.constructor.name, message: error.message },
-        }),
-        { status: 401 },
-      )
-
-    if (
-      error instanceof RateLimitError ||
-      error instanceof FreeUsageLimitError ||
-      error instanceof PlanUsageLimitError
-    ) {
-      const headers = new Headers()
-      if (error.retryAfter) {
-        headers.set("retry-after", String(error.retryAfter))
-      }
-      return new Response(
-        JSON.stringify({
-          type: "error",
-          error: {
-            type: error.constructor.name,
-            message: error.message,
-          },
-          metadata: {},
-        }),
-        { status: 429, headers },
-      )
-    }
-
-    return new Response(
-      JSON.stringify({
-        type: "error",
-        error: {
-          type: "error",
-          message: t("gateway.api.error.internalServer"),
-        },
-      }),
-      { status: 500 },
-    )
+    return gatewayErrorResponse(error, t("gateway.api.error.internalServer"))
   }
 
   function validateModel(catalog: GatewayCatalogData, reqModel: string) {
@@ -1005,6 +960,14 @@ export async function handler(
     if (result.allowed) return result.reservation
 
     const retryAfter = Math.max(MINUTE_IN_SECONDS, result.retryAfter)
+    if (result.status === "unavailable") {
+      throw new QuotaServiceUnavailableError(
+        t("gateway.api.error.quotaServiceUnavailable", {
+          retryIn: formatRetryTime(retryAfter, locale),
+        }),
+        retryAfter,
+      )
+    }
     throw new PlanUsageLimitError(
       t("gateway.api.error.subscriptionQuotaExceeded", {
         retryIn: formatRetryTime(retryAfter, locale),

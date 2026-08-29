@@ -234,6 +234,8 @@ export const dict = {
   "gateway.api.error.invalidApiKey": "API түлхүүр буруу байна.",
   "gateway.api.error.providerFailure": "Нийлүүлэгчийн алдаа{{provider}}: {{message}}",
   "gateway.api.error.internalServer": "Серверийн дотоод алдаа гарлаа. Түр хүлээгээд дахин оролдоно уу.",
+  "gateway.api.error.quotaServiceUnavailable":
+    "Хэрэглээний хязгаарын үйлчилгээ түр хариу өгөхгүй байна. {{retryIn}} дараа дахин оролдоно уу.",
   "gateway.api.error.subscriptionQuotaExceeded": "Захиалгын эрх дууслаа. {{retryIn}} дараа дахин оролдоно уу.",
   "gateway.api.error.noPaymentMethod": "Төлбөрийн хэрэгсэл алга. Эндээс нэмнэ үү: {{billingUrl}}",
   "gateway.api.error.insufficientBalance":

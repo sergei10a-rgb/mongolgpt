@@ -14,3 +14,4 @@ class LimitError extends Error {
 export class RateLimitError extends LimitError {}
 export class FreeUsageLimitError extends LimitError {}
 export class PlanUsageLimitError extends LimitError {}
+export class QuotaServiceUnavailableError extends LimitError {}

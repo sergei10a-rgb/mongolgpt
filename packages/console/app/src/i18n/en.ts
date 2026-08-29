@@ -229,6 +229,7 @@ export const dict = {
   "gateway.api.error.invalidApiKey": "Invalid API key.",
   "gateway.api.error.providerFailure": "Нийлүүлэгчийн алдаа{{provider}}: {{message}}",
   "gateway.api.error.internalServer": "Серверийн дотоод алдаа гарлаа. Түр хүлээгээд дахин оролдоно уу.",
+  "gateway.api.error.quotaServiceUnavailable": "Usage limit service is temporarily unavailable. Retry in {{retryIn}}.",
   "gateway.api.error.subscriptionQuotaExceeded": "Subscription quota exceeded. Retry in {{retryIn}}.",
   "gateway.api.error.noPaymentMethod": "No payment method. Add a payment method here: {{billingUrl}}",
   "gateway.api.error.insufficientBalance": "Insufficient balance. Manage your billing here: {{billingUrl}}",

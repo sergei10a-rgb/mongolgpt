@@ -48,8 +48,8 @@ export type PlanQuotaInput = {
 
 export type PlanQuotaDenied = {
   allowed: false
+  status: "limited" | "unavailable"
   retryAfter: number
-  deactivated: boolean
 }
 
 export type PlanQuotaAllowed = {
@@ -155,7 +155,7 @@ function blockedRetryAfter(
   if (blockedKey === keys.monthlyCost || blockedKey === keys.monthlyTokens || blockedKey === keys.monthlyRequests)
     return secondsUntil(monthEnd, now)
   if (blockedKey === keys.rollingCost) return secondsUntil(rollingReset, now)
-  return MINUTE
+  return undefined
 }
 
 function safeSettlementAmount(value: unknown, fallback: number) {
@@ -167,7 +167,9 @@ export async function reservePlanQuota(
   client: PlanQuotaLedgerClient = ledgerCommand,
 ): Promise<PlanQuotaResult> {
   const now = input.now.getTime()
-  if (!Number.isSafeInteger(now) || now < 0) return { allowed: false, retryAfter: MINUTE, deactivated: false }
+  if (!Number.isSafeInteger(now) || now < 0) {
+    return { allowed: false, status: "unavailable", retryAfter: MINUTE }
+  }
   const periodStart = input.timePeriodStart.getTime()
   if (
     !Number.isSafeInteger(periodStart) ||
@@ -189,7 +191,7 @@ export async function reservePlanQuota(
     nonnegativeInteger(input.reservation.costInMicroCents) === undefined ||
     nonnegativeInteger(input.reservation.tokens) === undefined
   ) {
-    return { allowed: false, retryAfter: MINUTE, deactivated: false }
+    return { allowed: false, status: "unavailable", retryAfter: MINUTE }
   }
 
   const week = getWeekBounds(input.now)
@@ -283,7 +285,7 @@ export async function reservePlanQuota(
   try {
     response = await client(scope, command)
   } catch {
-    return { allowed: false, retryAfter: MINUTE, deactivated: false }
+    return { allowed: false, status: "unavailable", retryAfter: MINUTE }
   }
 
   const parsed = responseObject(response)
@@ -292,16 +294,25 @@ export async function reservePlanQuota(
     typeof parsed.allowed !== "boolean" ||
     (parsed.allowed && !validLedgerValues(parsed.values, ledgerKeys))
   ) {
-    return { allowed: false, retryAfter: MINUTE, deactivated: false }
+    return { allowed: false, status: "unavailable", retryAfter: MINUTE }
   }
   if (!parsed.allowed) {
+    if (parsed.deactivated === true || !validLedgerValues(parsed.values, ledgerKeys)) {
+      return { allowed: false, status: "unavailable", retryAfter: MINUTE }
+    }
+    const retryAfter = blockedRetryAfter(
+      parsed.blockedKey,
+      keys,
+      now,
+      weekEnd,
+      monthEnd,
+      Math.max(now + SECOND, rollingReset),
+    )
+    if (retryAfter === undefined) return { allowed: false, status: "unavailable", retryAfter: MINUTE }
     return {
       allowed: false,
-      retryAfter:
-        parsed.deactivated === true
-          ? 0
-          : blockedRetryAfter(parsed.blockedKey, keys, now, weekEnd, monthEnd, Math.max(now + SECOND, rollingReset)),
-      deactivated: parsed.deactivated === true,
+      status: "limited",
+      retryAfter,
     }
   }
 
