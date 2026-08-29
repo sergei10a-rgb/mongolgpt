@@ -4,7 +4,7 @@ import { Cause, Effect, Exit, Layer, Option } from "effect"
 import { NamedError } from "@mongolgpt/core/util/error"
 import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/unstable/http"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
-import { Config } from "@/config/config"
+import { Config, pluginDependencyDirectories } from "@/config/config"
 import { ConfigManaged } from "@/config/managed"
 import { ConfigParse } from "../../src/config/parse"
 import { EffectFlock } from "@mongolgpt/core/util/effect-flock"
@@ -118,6 +118,41 @@ const configLayer = (
 const layer = configLayer()
 
 const it = testEffect(layer)
+
+describe("plugin dependency directories", () => {
+  const global = path.resolve("fixture", "global")
+  const project = path.resolve("fixture", "project", ".mongolgpt")
+  const directories = [global, project]
+
+  test("skips dependency installation when no plugin or custom tool exists", () => {
+    expect(pluginDependencyDirectories(directories, undefined)).toEqual([])
+  })
+
+  test("selects the directory that owns a plugin declaration", () => {
+    expect(
+      pluginDependencyDirectories(directories, [
+        {
+          spec: "example-plugin",
+          source: path.join(project, "mongolgpt.json"),
+          scope: "local",
+        },
+      ]),
+    ).toEqual([project])
+  })
+
+  test("selects a directory containing an auto-discovered plugin or tool", () => {
+    expect(pluginDependencyDirectories(directories, undefined, [project])).toEqual([project])
+  })
+
+  test("uses the global directory for virtual and remote plugin declarations", () => {
+    expect(
+      pluginDependencyDirectories(directories, [
+        { spec: "virtual-plugin", source: "MONGOLGPT_CONFIG_CONTENT", scope: "local" },
+        { spec: "remote-plugin", source: "https://example.com/config.json", scope: "global" },
+      ]),
+    ).toEqual([global])
+  })
+})
 const configIt = (options?: Parameters<typeof configLayer>[0]) => testEffect(configLayer(options))
 
 const schemaConfig = (config: object) => ({ $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json", ...config })

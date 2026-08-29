@@ -36,6 +36,7 @@ import { ConfigVariable } from "./variable"
 import { Npm } from "@mongolgpt/core/npm"
 import { configSchemaUrl } from "@mongolgpt/core/product"
 import { withTransientReadRetry } from "@/util/effect-http-client"
+import { Glob } from "@mongolgpt/core/util/glob"
 
 // Custom merge function that concatenates array fields instead of replacing them
 // Keep remeda's deep conditional merge type out of hot config-loading paths; TS profiling showed it dominates here.
@@ -113,6 +114,41 @@ type Info = ConfigV1.Info & {
   // plugin_origins is derived state, not a persisted config field. It keeps each winning plugin spec together
   // with the file and scope it came from so later runtime code can make location-sensitive decisions.
   plugin_origins?: ConfigPlugin.Origin[]
+}
+
+export function pluginDependencyDirectories(
+  directories: readonly string[],
+  origins: readonly ConfigPlugin.Origin[] | undefined,
+  localModuleDirectories: readonly string[] = [],
+) {
+  const roots = Array.from(new Set(directories.map((dir) => path.resolve(dir))))
+  const selected = new Set<string>()
+  let needsFallback = false
+
+  const selectSource = (source: string) => {
+    if (source === "MONGOLGPT_CONFIG_CONTENT" || source.startsWith("http://") || source.startsWith("https://")) {
+      needsFallback = true
+      return
+    }
+
+    const target = path.resolve(source)
+    const root = roots
+      .filter((candidate) => {
+        const relative = path.relative(candidate, target)
+        return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))
+      })
+      .sort((a, b) => b.length - a.length)[0]
+
+    if (root) selected.add(root)
+    else needsFallback = true
+  }
+
+  for (const dir of localModuleDirectories) selectSource(dir)
+  for (const origin of origins ?? []) selectSource(origin.source)
+  // ConfigPaths keeps the global config first; remote and virtual declarations have no local directory owner.
+  if (needsFallback && roots[0]) selected.add(roots[0])
+
+  return roots.filter((dir) => selected.has(dir))
 }
 
 type State = {
@@ -425,7 +461,7 @@ export const layer = Layer.effect(
           yield* Effect.logDebug("Тохиргоог MONGOLGPT_CONFIG_DIR-ээс ачаалж байна", { path: Flag.MONGOLGPT_CONFIG_DIR })
         }
 
-        const deps: Fiber.Fiber<void>[] = []
+        const localModuleDirectories = new Set<string>()
 
         for (const dir of directories) {
           if (dir.endsWith(".opencode") || dir.endsWith(".mongolgpt") || dir === Flag.MONGOLGPT_CONFIG_DIR) {
@@ -444,30 +480,6 @@ export const layer = Layer.effect(
 
           yield* ensureGitignore(dir).pipe(Effect.orDie)
 
-          const dep = yield* npmSvc
-            .install(dir, {
-              add: [
-                {
-                  name: "@mongolgpt/plugin",
-                  version: InstallationLocal ? undefined : InstallationVersion,
-                },
-              ],
-            })
-            .pipe(
-              Effect.exit,
-              Effect.tap((exit) =>
-                Exit.isFailure(exit)
-                  ? Effect.logWarning("Дэвсгэр горимд хамаарал суулгаж чадсангүй", {
-                      dir,
-                      error: String(exit.cause),
-                    })
-                  : Effect.void,
-              ),
-              Effect.asVoid,
-              Effect.forkDetach,
-            )
-          deps.push(dep)
-
           result.command = mergeDeep(result.command ?? {}, yield* Effect.promise(() => ConfigCommand.load(dir)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.load(dir)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir)))
@@ -475,6 +487,10 @@ export const layer = Layer.effect(
           // returns normalized Specs and we only need to attach origin metadata here.
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))
           yield* mergePluginOrigins(dir, list)
+          const tools = yield* Effect.promise(() =>
+            Glob.scan("{tool,tools}/*.{js,ts}", { cwd: dir, absolute: true, dot: true, symlink: true }),
+          )
+          if (list.length || tools.length) localModuleDirectories.add(dir)
         }
 
         if (Flag.MONGOLGPT_CONFIG_CONTENT) {
@@ -594,6 +610,37 @@ export const layer = Layer.effect(
         }
         if (Flag.MONGOLGPT_DISABLE_PRUNE) {
           result.compaction = { ...result.compaction, prune: false }
+        }
+
+        const deps: Fiber.Fiber<void>[] = []
+        for (const dir of pluginDependencyDirectories(
+          directories,
+          result.plugin_origins,
+          Array.from(localModuleDirectories),
+        )) {
+          const dep = yield* npmSvc
+            .install(dir, {
+              add: [
+                {
+                  name: "@mongolgpt/plugin",
+                  version: InstallationLocal ? undefined : InstallationVersion,
+                },
+              ],
+            })
+            .pipe(
+              Effect.exit,
+              Effect.tap((exit) =>
+                Exit.isFailure(exit)
+                  ? Effect.logWarning("Дэвсгэр горимд хамаарал суулгаж чадсангүй", {
+                      dir,
+                      error: String(exit.cause),
+                    })
+                  : Effect.void,
+              ),
+              Effect.asVoid,
+              Effect.forkDetach,
+            )
+          deps.push(dep)
         }
 
         return {
