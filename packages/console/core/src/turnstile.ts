@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 export const TURNSTILE_ACTION = "mongolgpt_login"
+export const TURNSTILE_RESPONSE_FIELD = "mongolgpt-turnstile-response"
 export const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA"
 export const TURNSTILE_TEST_SECRET_KEY = "1x0000000000000000000000000000000AA"
 export const TURNSTILE_TEST_TOKEN = "XXXX.DUMMY.TOKEN.XXXX"
@@ -107,7 +108,7 @@ export async function readTurnstileAuthorizationSubmission(
   const raw = await request.text()
   if (raw.length > MAX_FORM_LENGTH) return undefined
   const form = new URLSearchParams(raw)
-  const token = singleValue(form, "cf-turnstile-response", MAX_TOKEN_LENGTH)
+  const token = singleValue(form, TURNSTILE_RESPONSE_FIELD, MAX_TOKEN_LENGTH)
   const parameters = readTurnstileAuthorizationParameters(form)
   if (!token || !parameters) return undefined
   return { token, ...parameters } satisfies TurnstileAuthorizationSubmission

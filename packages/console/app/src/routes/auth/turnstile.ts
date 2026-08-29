@@ -1,4 +1,4 @@
-import { TURNSTILE_ACTION } from "@mongolgpt/console-core/turnstile.js"
+import { TURNSTILE_ACTION, TURNSTILE_RESPONSE_FIELD } from "@mongolgpt/console-core/turnstile.js"
 
 export function renderTurnstileChallenge(input: {
   siteKey: string
@@ -68,7 +68,7 @@ export function renderTurnstileChallenge(input: {
       ${error}
       <form action="${escapeHtml(authorization.action)}" method="post">
         ${authorization.fields}
-        <input type="hidden" id="turnstile-response" name="cf-turnstile-response" value="">
+        <input type="hidden" id="turnstile-response" name="${TURNSTILE_RESPONSE_FIELD}" value="">
         <div class="cf-turnstile" data-sitekey="${escapeHtml(siteKey)}" data-action="${TURNSTILE_ACTION}" data-language="auto" data-theme="auto" data-size="flexible" data-response-field="false" data-callback="mongolGPTTurnstileReady" data-expired-callback="mongolGPTTurnstileExpired" data-timeout-callback="mongolGPTTurnstileExpired" data-error-callback="mongolGPTTurnstileError"></div>
         <p class="status" id="turnstile-status" role="status">Хамгаалалтын шалгалтыг хүлээж байна...</p>
         <button type="submit" disabled>Үргэлжлүүлэх</button>

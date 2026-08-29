@@ -21,7 +21,7 @@ describe("Turnstile OAuth challenge page", () => {
     expect(result.html).toContain('name="response_type" value="code"')
     expect(result.html).toContain('name="state" value="12345678-1234-1234-1234-123456789012"')
     expect(result.html).toContain('data-action="mongolgpt_login"')
-    expect(result.html).toContain('id="turnstile-response" name="cf-turnstile-response" value=""')
+    expect(result.html).toContain('id="turnstile-response" name="mongolgpt-turnstile-response" value=""')
     expect(result.html).toContain('data-response-field="false"')
     expect(result.html).toContain('data-callback="mongolGPTTurnstileReady"')
     expect(result.html).toContain('data-expired-callback="mongolGPTTurnstileExpired"')

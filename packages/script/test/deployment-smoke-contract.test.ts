@@ -553,7 +553,7 @@ describe("dev OAuth bootstrap smoke", () => {
       if (key === "POST https://auth.dev.mgpt.mn/authorize") {
         expect(request.headers.get("origin")).toBe("https://dev.mgpt.mn")
         const form = new URLSearchParams(await request.text())
-        expect(form.get("cf-turnstile-response")).toBe("XXXX.DUMMY.TOKEN.XXXX")
+        expect(form.get("mongolgpt-turnstile-response")).toBe("XXXX.DUMMY.TOKEN.XXXX")
         expect(form.get("client_id")).toBe("app")
         expect(form.get("redirect_uri")).toBe("https://dev.mgpt.mn/auth/callback/auth/app")
         expect(form.get("response_type")).toBe("code")

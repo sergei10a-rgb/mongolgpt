@@ -1,6 +1,10 @@
 import { deploymentEndpoints, preflightDeployment } from "@mongolgpt/script/deployment"
 import type { DeploymentPreflightResult } from "@mongolgpt/script/deployment"
-import { TURNSTILE_TEST_SITE_KEY, TURNSTILE_TEST_TOKEN } from "../packages/console/core/src/turnstile"
+import {
+  TURNSTILE_RESPONSE_FIELD,
+  TURNSTILE_TEST_SITE_KEY,
+  TURNSTILE_TEST_TOKEN,
+} from "../packages/console/core/src/turnstile"
 import {
   inspectAdminProtection,
   inspectAuthenticatedAccountOverview,
@@ -481,7 +485,7 @@ async function checkHostedTurnstileSuccess(consoleUrl: string, authOrigin: strin
     const value = hiddenInputValue(challenge, name)
     if (value) form.set(name, value)
   }
-  form.set("cf-turnstile-response", TURNSTILE_TEST_TOKEN)
+  form.set(TURNSTILE_RESPONSE_FIELD, TURNSTILE_TEST_TOKEN)
 
   const response = await fetch(action, {
     method: "POST",

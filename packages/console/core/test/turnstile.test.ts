@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   readTurnstileAuthorizationSubmission,
   TURNSTILE_ACTION,
+  TURNSTILE_RESPONSE_FIELD,
   TURNSTILE_TEST_SECRET_KEY,
   TURNSTILE_TEST_TOKEN,
   turnstileAuthorizationRequest,
@@ -91,7 +92,7 @@ describe("Cloudflare Turnstile OAuth protection", () => {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        "cf-turnstile-response": submission.token,
+        [TURNSTILE_RESPONSE_FIELD]: submission.token,
         client_id: submission.clientID,
         redirect_uri: submission.redirectURI,
         response_type: submission.responseType,
@@ -116,7 +117,7 @@ describe("Cloudflare Turnstile OAuth protection", () => {
     const duplicate = new Request("https://auth.dev.mgpt.mn/authorize", {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: `cf-turnstile-response=${submission.token}&client_id=app&client_id=other&redirect_uri=${encodeURIComponent(submission.redirectURI)}&response_type=code&state=${submission.state}`,
+      body: `${TURNSTILE_RESPONSE_FIELD}=${submission.token}&client_id=app&client_id=other&redirect_uri=${encodeURIComponent(submission.redirectURI)}&response_type=code&state=${submission.state}`,
     })
     expect(await readTurnstileAuthorizationSubmission(duplicate)).toBeUndefined()
     expect(() =>
