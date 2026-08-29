@@ -47,9 +47,9 @@ describe("OAuth callback route", () => {
       },
       oauthStateSession: {
         data: oauthSessionData,
-        update: async (value) => {
+        clear: async () => {
           oauthClears++;
-          oauthSessionData = value(oauthSessionData);
+          oauthSessionData = {};
         },
       },
       redirectFn: (target) => Response.redirect(target, 302),
@@ -83,9 +83,9 @@ describe("OAuth callback route", () => {
       },
       oauthStateSession: {
         data: oauthSessionData,
-        update: async (value) => {
+        clear: async () => {
           oauthClears++;
-          oauthSessionData = value(oauthSessionData);
+          oauthSessionData = {};
         },
       },
       redirectFn: (target) => Response.redirect(target, 302),
@@ -123,9 +123,9 @@ describe("OAuth callback route", () => {
       },
       oauthStateSession: {
         data: oauthSessionData,
-        update: async (value) => {
+        clear: async () => {
           oauthClears++;
-          oauthSessionData = value(oauthSessionData);
+          oauthSessionData = {};
         },
       },
       redirectFn: (target) => Response.redirect(target, 302),

@@ -26,9 +26,7 @@ export async function completeOAuthCallback(input: {
   };
   oauthStateSession: {
     data: OAuthStateSessionData;
-    update(
-      updater: (_value: OAuthStateSessionData) => OAuthStateSessionData,
-    ): Promise<unknown>;
+    clear(): Promise<unknown>;
   };
   redirectFn?: (target: string) => Response;
 }) {
@@ -36,7 +34,7 @@ export async function completeOAuthCallback(input: {
     input.oauthStateSession.data,
     input.url.searchParams.get("state"),
   );
-  await input.oauthStateSession.update(() => ({}));
+  await input.oauthStateSession.clear();
   if (!state.ok) {
     return invalidStateResponse(state.reason, input.dict);
   }

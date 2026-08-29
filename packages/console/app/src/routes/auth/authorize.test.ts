@@ -62,4 +62,42 @@ describe("OAuth authorize route", () => {
     expect(state).toBe(oauthStateUpdates[0]?.state ?? null);
     expect(order).toEqual(["session", "authorize", "update"]);
   });
+
+  test("labels state-session failures without exposing the underlying error", async () => {
+    await expect(
+      authorizationTarget(
+        new URL("https://dev.mgpt.mn/auth/authorize"),
+        "/auth/app",
+        {
+          stateSession: async () => {
+            throw new Error("secret session detail");
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      name: "OAuthAuthorizationTargetError",
+      stage: "state_session",
+      causeName: "Error",
+    });
+  });
+
+  test("labels state persistence failures", async () => {
+    await expect(
+      authorizationTarget(
+        new URL("https://dev.mgpt.mn/auth/authorize"),
+        "/auth/app",
+        {
+          stateSession: async () => ({
+            update: async () => {
+              throw new TypeError("cookie write failed");
+            },
+          }),
+        },
+      ),
+    ).rejects.toMatchObject({
+      name: "OAuthAuthorizationTargetError",
+      stage: "state_store",
+      causeName: "TypeError",
+    });
+  });
 });

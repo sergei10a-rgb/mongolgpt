@@ -18,12 +18,42 @@ export async function GET(input: APIEvent) {
   let target: string
   try {
     target = clientID === "mongolgpt-cli" ? cliAuthorizationTarget(url) : await authorizationTarget(url, cont)
-  } catch {
+  } catch (error) {
+    if (error instanceof OAuthAuthorizationTargetError) {
+      console.error("MongolGPT OAuth authorization target үүссэнгүй", error.stage, error.causeName)
+      return authorizationServiceUnavailable(error.stage)
+    }
     return invalidAuthorizationRequest()
   }
   if (!turnstileEnabled()) return Response.redirect(target, 302)
 
   return challengeResponse(target, turnstileError(url.searchParams.get("turnstile_error")))
+}
+
+type OAuthAuthorizationStage = "state_session" | "authorization_url" | "state_issue" | "state_store"
+
+class OAuthAuthorizationTargetError extends Error {
+  readonly causeName: string
+
+  constructor(
+    readonly stage: OAuthAuthorizationStage,
+    cause: unknown,
+  ) {
+    super(`OAuth authorization target failed at ${stage}`)
+    this.name = "OAuthAuthorizationTargetError"
+    this.causeName = cause instanceof Error ? cause.name : typeof cause
+  }
+}
+
+function authorizationServiceUnavailable(stage: OAuthAuthorizationStage) {
+  return Response.json(
+    {
+      error: "oauth_authorization_unavailable",
+      stage,
+      message: "Нэвтрэх үйлчилгээг түр эхлүүлж чадсангүй. Түр хүлээгээд дахин оролдоно уу.",
+    },
+    { status: 503, headers: { "cache-control": "no-store", "retry-after": "30" } },
+  )
 }
 
 function invalidAuthorizationRequest() {
@@ -57,11 +87,19 @@ export async function authorizationTarget(
 ) {
   const callbackUrl = new URL(`./callback${cont}`, requestUrl)
   const authorize = dependencies.authorize ?? ((...input) => AuthClient.authorize(...input))
-  const session = await (dependencies.stateSession ?? useOAuthStateSession)()
-  const result = await authorize(callbackUrl.toString(), "code")
-  const issued = issueOAuthState(result.url)
-  await session.update(() => issued.session)
+  const session = await stage("state_session", () => (dependencies.stateSession ?? useOAuthStateSession)())
+  const result = await stage("authorization_url", () => authorize(callbackUrl.toString(), "code"))
+  const issued = await stage("state_issue", () => issueOAuthState(result.url))
+  await stage("state_store", () => session.update(() => issued.session))
   return issued.authorizationUrl
+}
+
+async function stage<T>(name: OAuthAuthorizationStage, operation: () => T | Promise<T>) {
+  try {
+    return await operation()
+  } catch (error) {
+    throw new OAuthAuthorizationTargetError(name, error)
+  }
 }
 
 function turnstileEnabled() {

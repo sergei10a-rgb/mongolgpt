@@ -634,7 +634,21 @@ export function inspectHostedAuthorizeChallenge(input: {
     throw new Error("hosted authorization challenge left the console origin")
   }
   if (input.status !== 200 || input.location) {
-    throw new Error(`hosted authorization challenge returned HTTP ${input.status}; expected a local HTML challenge`)
+    let detail = ""
+    try {
+      const payload = JSON.parse(input.body) as { error?: unknown; stage?: unknown }
+      if (typeof payload.error === "string" && /^[a-z0-9_]{1,64}$/.test(payload.error)) {
+        detail = `: ${payload.error}`
+        if (typeof payload.stage === "string" && /^[a-z0-9_]{1,32}$/.test(payload.stage)) {
+          detail += `/${payload.stage}`
+        }
+      }
+    } catch {
+      // Non-JSON responses are described by status only.
+    }
+    throw new Error(
+      `hosted authorization challenge returned HTTP ${input.status}${detail}; expected a local HTML challenge`,
+    )
   }
   inspectHtmlContentType(input.contentType ?? null, "hosted authorization challenge")
   if (input.cacheControl !== "no-store") throw new Error("hosted authorization challenge must not be cached")
