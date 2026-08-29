@@ -1,11 +1,28 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { hasPlatformAdminPermission } from "@mongolgpt/console-core/platform-admin.js"
 import { platformAdminFromLocals } from "~/lib/admin-context"
+import { requirePlatformAdminPermission } from "~/lib/admin-auth"
 import { getSystemReadiness } from "~/lib/system-readiness"
 
 export async function GET(event: APIEvent) {
   const admin = platformAdminFromLocals(event.locals)
-  if (!admin || !hasPlatformAdminPermission(admin.role, "system.read")) {
+  if (!admin) {
+    return Response.json(
+      {
+        error: "admin_permission_denied",
+        message: "Системийн төлөв харах эрх хүрэлцэхгүй байна.",
+      },
+      {
+        status: 403,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    )
+  }
+
+  try {
+    requirePlatformAdminPermission(admin, "system.read")
+  } catch {
     return Response.json(
       {
         error: "admin_permission_denied",
