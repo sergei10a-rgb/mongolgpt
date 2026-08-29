@@ -19,7 +19,7 @@ await mock.module("~/lib/hosted-env", () => ({
   hostedTurnstileSiteKey: undefined,
 }));
 
-const { GET, authorizationTarget, authorizationTargetFailure } = await import("./authorize");
+const { GET, authorizationTarget } = await import("./authorize");
 
 describe("OAuth authorize route", () => {
   beforeEach(() => {
@@ -89,6 +89,7 @@ describe("OAuth authorize route", () => {
   });
 
   test("labels state-session failures without exposing the underlying error", async () => {
+    const stages: string[] = [];
     await expect(
       authorizationTarget(
         new URL("https://dev.mgpt.mn/auth/authorize"),
@@ -97,16 +98,15 @@ describe("OAuth authorize route", () => {
           stateSession: async () => {
             throw new Error("secret session detail");
           },
+          onStage: (stage) => stages.push(stage),
         },
       ),
-    ).rejects.toMatchObject({
-      name: "OAuthAuthorizationTargetError",
-      stage: "state_session",
-      causeName: "Error",
-    });
+    ).rejects.toThrow("secret session detail");
+    expect(stages).toEqual(["state_session"]);
   });
 
   test("labels state persistence failures", async () => {
+    const stages: string[] = [];
     await expect(
       authorizationTarget(
         new URL("https://dev.mgpt.mn/auth/authorize"),
@@ -117,36 +117,10 @@ describe("OAuth authorize route", () => {
               throw new TypeError("cookie write failed");
             },
           }),
+          onStage: (stage) => stages.push(stage),
         },
       ),
-    ).rejects.toMatchObject({
-      name: "OAuthAuthorizationTargetError",
-      stage: "state_store",
-      causeName: "TypeError",
-    });
-  });
-
-  test("recognizes only allowlisted authorization failures after a Worker bundle boundary", () => {
-    expect(
-      authorizationTargetFailure({
-        name: "OAuthAuthorizationTargetError",
-        stage: "state_store",
-        causeName: "TypeError",
-      }),
-    ).toEqual({ stage: "state_store", causeName: "TypeError" });
-    expect(
-      authorizationTargetFailure({
-        name: "OAuthAuthorizationTargetError",
-        stage: "secret_stage",
-        causeName: "TypeError",
-      }),
-    ).toBeUndefined();
-    expect(
-      authorizationTargetFailure({
-        name: "OAuthAuthorizationTargetError",
-        stage: "state_store",
-        causeName: "TypeError: secret detail",
-      }),
-    ).toBeUndefined();
+    ).rejects.toThrow("cookie write failed");
+    expect(stages).toEqual(["state_session", "authorization_url", "state_issue", "state_store"]);
   });
 });

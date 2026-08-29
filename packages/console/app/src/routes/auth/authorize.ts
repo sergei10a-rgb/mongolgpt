@@ -16,17 +16,20 @@ export async function GET(input: APIEvent) {
   const clientID = url.searchParams.get("client_id")
   if (clientID && clientID !== "mongolgpt-cli") return invalidAuthorizationRequest("cli_request")
   let target: string
+  let failureStage: OAuthAuthorizationStage = "authorization_target"
   try {
-    target = clientID === "mongolgpt-cli" ? cliAuthorizationTarget(url) : await authorizationTarget(url, cont)
+    target =
+      clientID === "mongolgpt-cli"
+        ? cliAuthorizationTarget(url)
+        : await authorizationTarget(url, cont, {
+            onStage: (stage) => {
+              failureStage = stage
+            },
+          })
   } catch (error) {
-    const failure = authorizationTargetFailure(error)
-    if (failure) {
-      console.error("MongolGPT OAuth authorization target үүссэнгүй", failure.stage, failure.causeName)
-      return authorizationServiceUnavailable(failure.stage)
-    }
     if (!clientID) {
-      console.error("MongolGPT OAuth authorization target үүссэнгүй", "authorization_target", errorName(error))
-      return authorizationServiceUnavailable("authorization_target")
+      console.error("MongolGPT OAuth authorization target үүссэнгүй", failureStage, errorName(error))
+      return authorizationServiceUnavailable(failureStage)
     }
     return invalidAuthorizationRequest("cli_request")
   }
@@ -35,49 +38,12 @@ export async function GET(input: APIEvent) {
   return challengeResponse(target, turnstileError(url.searchParams.get("turnstile_error")))
 }
 
-const oauthAuthorizationStages = new Set<OAuthAuthorizationStage>([
-  "authorization_target",
-  "state_session",
-  "authorization_url",
-  "state_issue",
-  "state_store",
-])
-
-export function authorizationTargetFailure(error: unknown) {
-  if (!error || typeof error !== "object") return undefined
-  const candidate = error as { name?: unknown; stage?: unknown; causeName?: unknown }
-  if (candidate.name !== "OAuthAuthorizationTargetError") return undefined
-  if (typeof candidate.stage !== "string" || !oauthAuthorizationStages.has(candidate.stage as OAuthAuthorizationStage)) {
-    return undefined
-  }
-  if (typeof candidate.causeName !== "string" || !/^[A-Za-z][A-Za-z0-9]{0,63}$/.test(candidate.causeName)) {
-    return undefined
-  }
-  return {
-    stage: candidate.stage as OAuthAuthorizationStage,
-    causeName: candidate.causeName,
-  }
-}
-
 type OAuthAuthorizationStage =
   | "authorization_target"
   | "state_session"
   | "authorization_url"
   | "state_issue"
   | "state_store"
-
-class OAuthAuthorizationTargetError extends Error {
-  readonly causeName: string
-
-  constructor(
-    readonly stage: OAuthAuthorizationStage,
-    cause: unknown,
-  ) {
-    super(`OAuth authorization target failed at ${stage}`)
-    this.name = "OAuthAuthorizationTargetError"
-    this.causeName = cause instanceof Error ? cause.name : typeof cause
-  }
-}
 
 function authorizationServiceUnavailable(stage: OAuthAuthorizationStage) {
   return Response.json(
@@ -139,23 +105,29 @@ export async function authorizationTarget(
     stateSession?: () => Promise<{
       update(updater: (value: OAuthStateSessionData) => OAuthStateSessionData): Promise<unknown>
     }>
+    onStage?: (stage: OAuthAuthorizationStage) => void
   } = {},
 ) {
   const callbackUrl = new URL(`./callback${cont}`, requestUrl)
   const authorize = dependencies.authorize ?? ((...input) => AuthClient.authorize(...input))
-  const session = await stage("state_session", () => (dependencies.stateSession ?? useOAuthStateSession)())
-  const result = await stage("authorization_url", () => authorize(callbackUrl.toString(), "code"))
-  const issued = await stage("state_issue", () => issueOAuthState(result.url))
-  await stage("state_store", () => session.update(() => issued.session))
+  const session = await stage("state_session", () => (dependencies.stateSession ?? useOAuthStateSession)(), dependencies.onStage)
+  const result = await stage(
+    "authorization_url",
+    () => authorize(callbackUrl.toString(), "code"),
+    dependencies.onStage,
+  )
+  const issued = await stage("state_issue", () => issueOAuthState(result.url), dependencies.onStage)
+  await stage("state_store", () => session.update(() => issued.session), dependencies.onStage)
   return issued.authorizationUrl
 }
 
-async function stage<T>(name: OAuthAuthorizationStage, operation: () => T | Promise<T>) {
-  try {
-    return await operation()
-  } catch (error) {
-    throw new OAuthAuthorizationTargetError(name, error)
-  }
+async function stage<T>(
+  name: OAuthAuthorizationStage,
+  operation: () => T | Promise<T>,
+  onStage?: (stage: OAuthAuthorizationStage) => void,
+) {
+  onStage?.(name)
+  return operation()
 }
 
 function turnstileEnabled() {
