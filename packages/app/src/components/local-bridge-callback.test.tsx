@@ -1,4 +1,6 @@
 import { describe, expect, mock, test } from "bun:test"
+import type { ServerConnection } from "@/context/server"
+import { createServerRequest } from "@/utils/server"
 import { connectLocalBridgeCallback } from "./local-bridge-callback"
 
 const connection = {
@@ -47,5 +49,50 @@ describe("connectLocalBridgeCallback", () => {
     const fixture = setup("different-account")
     await expect(connectLocalBridgeCallback(fixture.input)).rejects.toThrow("аккаунт таарахгүй байна")
     expect(fixture.addEphemeral).not.toHaveBeenCalled()
+  })
+
+  test("uses the connected bridge as the active server for a follow-up runtime request", async () => {
+    const observed: Array<{ path: string; authorization: string | null }> = []
+    using runtime = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch(request) {
+        observed.push({
+          path: new URL(request.url).pathname,
+          authorization: request.headers.get("authorization"),
+        })
+        return Response.json({ healthy: true })
+      },
+    })
+
+    const bridge = {
+      ...connection,
+      url: `http://127.0.0.1:${runtime.port}`,
+    }
+    let active: ServerConnection.Http | undefined
+    const addEphemeral = mock((input: ServerConnection.Http) => {
+      active = { ...input, ephemeral: true }
+      return active
+    })
+
+    await connectLocalBridgeCallback({
+      currentURL: "https://app.dev.mgpt.mn/#bridge=callback",
+      exchange: mock(async () => bridge),
+      currentAccountID: mock(async () => bridge.accountID),
+      addEphemeral,
+      name: "MongolGPT ширээний апп",
+      accountMismatch: "Ширээний болон веб аппын аккаунт таарахгүй байна.",
+      expired: "Ширээний аппын холболтын хугацаа дууссан байна.",
+    })
+
+    expect(active?.ephemeral).toBe(true)
+    const response = await createServerRequest({ server: active!.http, fetch: Bun.fetch })("/global/health")
+    expect(response.status).toBe(200)
+    expect(observed).toEqual([
+      {
+        path: "/global/health",
+        authorization: `Basic ${btoa(`${bridge.username}:${bridge.password}`)}`,
+      },
+    ])
   })
 })
