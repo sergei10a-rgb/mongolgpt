@@ -5,6 +5,7 @@ import {
   SERVICE_MONITOR_ALERT_STATE_TTL_SECONDS,
   SERVICE_MONITOR_STATE_KEY,
   SERVICE_MONITOR_TTL_SECONDS,
+  PaymentHealthSchema,
   ServiceMonitorEvidenceSchema,
 } from "@mongolgpt/console-core/service-monitor.js"
 import { runServiceMonitor, runServiceMonitorCycle } from "../src/service-monitor"
@@ -28,7 +29,10 @@ const healthy = {
     status: "disabled",
     service: "payments",
     environment: "disabled",
-    providers: { qpay: false, bonum: false },
+    providers: {
+      qpay: { enabled: false, checkout: false, cancellation: false, refund: false },
+      bonum: { enabled: false, checkout: false, cancellation: false, refund: false },
+    },
     catalog: false,
     checkout: false,
     cancellation: false,
@@ -51,6 +55,42 @@ function inputURL(input: RequestInfo | URL) {
 }
 
 describe("Cloudflare service monitor", () => {
+  test("rejects contradictory capabilities for a disabled payment provider", () => {
+    const result = PaymentHealthSchema.safeParse({
+      status: "disabled",
+      service: "payments",
+      environment: "disabled",
+      providers: {
+        qpay: { enabled: false, checkout: true, cancellation: false, refund: false },
+        bonum: { enabled: false, checkout: false, cancellation: false, refund: false },
+      },
+      catalog: false,
+      checkout: false,
+      cancellation: false,
+      refund: false,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  test("rejects disabled status when a payment provider is still enabled", () => {
+    const result = PaymentHealthSchema.safeParse({
+      status: "disabled",
+      service: "payments",
+      environment: "disabled",
+      providers: {
+        qpay: { enabled: true, checkout: false, cancellation: false, refund: false },
+        bonum: { enabled: false, checkout: false, cancellation: false, refund: false },
+      },
+      catalog: false,
+      checkout: false,
+      cancellation: false,
+      refund: false,
+    })
+
+    expect(result.success).toBe(false)
+  })
+
   test("checks every public service and stores bounded, expiring evidence", async () => {
     const writes: Array<[string, string, { expirationTtl: number }]> = []
     const evidence = await runServiceMonitor(
@@ -66,6 +106,31 @@ describe("Cloudflare service monitor", () => {
     expect(writes).toEqual([
       [SERVICE_MONITOR_STATE_KEY, JSON.stringify(evidence), { expirationTtl: SERVICE_MONITOR_TTL_SECONDS }],
     ])
+  })
+
+  test("treats disabled payments as unavailable in production", async () => {
+    const responses = {
+      "https://mgpt.mn/api/health": json({ status: "ok", service: "console" }),
+      "https://auth.mgpt.mn/health": json({ status: "ok", service: "auth" }),
+      "https://runtime.mgpt.mn/global/health": json({
+        healthy: true,
+        service: "mongolgpt-runtime",
+        stage: "production",
+        version: "0.1.1",
+      }),
+      "https://pay.mgpt.mn/health": healthy["https://pay.dev.mgpt.mn/health"],
+    }
+    const evidence = await runServiceMonitor(
+      { stage: "production", stageDomain: "mgpt.mn" },
+      { put: async () => undefined },
+      { fetcher: responseFetcher(responses), now: () => 1_800_000_000_000, timer: () => 100 },
+    )
+
+    expect(evidence.status).toBe("degraded")
+    expect(evidence.checks.find((check) => check.service === "payments")).toMatchObject({
+      ok: false,
+      failure: "schema",
+    })
   })
 
   test("fails closed on HTTP, schema, content-type, and network errors without persisting response content", async () => {

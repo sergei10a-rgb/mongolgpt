@@ -465,16 +465,21 @@ export function inspectPaymentHealth(
   if (body.environment !== expectedEnvironment) {
     throw new Error(`payment environment is ${String(body.environment)}; expected ${expectedEnvironment}`)
   }
-  if (typeof body.providers !== "object" || body.providers === null) {
-    throw new Error("payment provider health is missing")
-  }
-
-  const providers = body.providers as { qpay?: unknown; bonum?: unknown }
+  const providers = record(body.providers, "payment provider health")
+  exactObjectKeys(providers, ["bonum", "qpay"], "payment provider health")
+  const qpay = inspectPaymentProviderCapability(providers.qpay, "qpay")
+  const bonum = inspectPaymentProviderCapability(providers.bonum, "bonum")
   if (expectedEnvironment === "disabled") {
     if (
       body.status !== "disabled" ||
-      providers.qpay !== false ||
-      providers.bonum !== false ||
+      qpay.enabled ||
+      qpay.checkout ||
+      qpay.cancellation ||
+      qpay.refund ||
+      bonum.enabled ||
+      bonum.checkout ||
+      bonum.cancellation ||
+      bonum.refund ||
       body.catalog !== false ||
       body.checkout !== false ||
       body.cancellation !== false ||
@@ -487,8 +492,14 @@ export function inspectPaymentHealth(
 
   if (
     body.status !== "ok" ||
-    providers.qpay !== true ||
-    providers.bonum !== true ||
+    !qpay.enabled ||
+    !qpay.checkout ||
+    !qpay.cancellation ||
+    !qpay.refund ||
+    !bonum.enabled ||
+    !bonum.checkout ||
+    !bonum.cancellation ||
+    !bonum.refund ||
     body.catalog !== true ||
     body.checkout !== true ||
     body.cancellation !== true ||
@@ -497,6 +508,20 @@ export function inspectPaymentHealth(
     throw new Error("enabled payment service is not fully ready")
   }
   return { status: "ok", environment: expectedEnvironment }
+}
+
+function inspectPaymentProviderCapability(value: unknown, provider: string) {
+  const capability = record(value, `${provider} payment capability`)
+  exactObjectKeys(capability, ["cancellation", "checkout", "enabled", "refund"], `${provider} payment capability`)
+  const enabled = capability.enabled
+  const checkout = capability.checkout
+  const cancellation = capability.cancellation
+  const refund = capability.refund
+  if (typeof enabled !== "boolean") throw new Error(`${provider} payment enabled capability is invalid`)
+  if (typeof checkout !== "boolean") throw new Error(`${provider} payment checkout capability is invalid`)
+  if (typeof cancellation !== "boolean") throw new Error(`${provider} payment cancellation capability is invalid`)
+  if (typeof refund !== "boolean") throw new Error(`${provider} payment refund capability is invalid`)
+  return { enabled, checkout, cancellation, refund }
 }
 
 export function inspectSmokeAuthCookie(value: string | undefined) {

@@ -50,6 +50,13 @@ import { z } from "zod"
 
 const MAX_WEBHOOK_BYTES = 1_000_000
 
+type ProviderCapability = {
+  enabled: boolean
+  checkout: boolean
+  cancellation: boolean
+  refund: boolean
+}
+
 type Dependencies = {
   qpay?: (input: { reference: string; callbackPaymentID?: string }) => Promise<VerifiedPaymentEvent[]>
   bonum?: (input: { rawBody: string; checksum: string }) => Promise<VerifiedPaymentEvent[]>
@@ -183,28 +190,26 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
     const url = new URL(request.url)
     try {
       if (url.pathname === "/health") {
-        const providers = {
-          qpay: Boolean(dependencies.qpay),
-          bonum: Boolean(dependencies.bonum),
-        }
+        const providers = providerCapabilities(dependencies)
         const environment =
-          dependencies.health?.environment ?? (providers.qpay || providers.bonum ? "sandbox" : "disabled")
+          dependencies.health?.environment ??
+          (Object.values(providers).some((provider) => provider.enabled) ? "sandbox" : "disabled")
         const catalog = dependencies.health?.catalog ?? Boolean(dependencies.createSubscriptionCheckout)
-        const productionApproved = isProductionPaymentApproved(dependencies)
-        const checkout =
-          catalog &&
-          Boolean(dependencies.createSubscriptionCheckout) &&
-          providers.qpay &&
-          providers.bonum &&
-          productionApproved
-        const cancellation = Boolean(dependencies.cancelSubscriptionCheckout) && providers.qpay
-        const refund =
-          Boolean(dependencies.refundPlatformAdminSubscriptionPayment) &&
-          Boolean(dependencies.adminRefundToken) &&
-          providers.qpay
+        const checkout = everyEnabledProvider(providers, "checkout")
+        const cancellation = everyEnabledProvider(providers, "cancellation")
+        const refund = everyEnabledProvider(providers, "refund")
+        const cleanDisabled =
+          environment === "disabled" && !catalog && Object.values(providers).every((provider) => !provider.enabled)
         return Response.json(
           {
-            status: environment === "disabled" ? "disabled" : checkout && cancellation && refund ? "ok" : "degraded",
+            status:
+              environment === "disabled"
+                ? cleanDisabled
+                  ? "disabled"
+                  : "degraded"
+                : catalog && checkout && cancellation && refund
+                  ? "ok"
+                  : "degraded",
             service: "payments",
             environment,
             providers,
@@ -557,6 +562,36 @@ function isProductionPaymentApproved(dependencies: Dependencies) {
   return Boolean(
     dependencies.productionApprovals?.realPaymentsEnabled && dependencies.productionApprovals.realPaymentConfirmation,
   )
+}
+
+function providerCapabilities(dependencies: Dependencies) {
+  const catalog = dependencies.health?.catalog ?? Boolean(dependencies.createSubscriptionCheckout)
+  const checkoutBound =
+    Boolean(dependencies.createSubscriptionCheckout) && catalog && isProductionPaymentApproved(dependencies)
+  const qpay: ProviderCapability = {
+    enabled: Boolean(dependencies.qpay),
+    checkout: Boolean(dependencies.qpay) && checkoutBound,
+    cancellation: Boolean(dependencies.qpay) && Boolean(dependencies.cancelSubscriptionCheckout),
+    refund:
+      Boolean(dependencies.qpay) &&
+      Boolean(dependencies.refundPlatformAdminSubscriptionPayment) &&
+      Boolean(dependencies.adminRefundToken),
+  }
+  const bonum: ProviderCapability = {
+    enabled: Boolean(dependencies.bonum),
+    checkout: Boolean(dependencies.bonum) && checkoutBound,
+    cancellation: false,
+    refund: false,
+  }
+  return { qpay, bonum }
+}
+
+function everyEnabledProvider(
+  providers: Record<string, ProviderCapability>,
+  capability: "checkout" | "cancellation" | "refund",
+) {
+  const enabled = Object.values(providers).filter((provider) => provider.enabled)
+  return enabled.length > 0 && enabled.every((provider) => provider[capability])
 }
 
 function checkoutConflictMessage(state: PaymentCheckoutConflictError["state"]) {

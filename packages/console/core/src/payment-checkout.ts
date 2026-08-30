@@ -84,11 +84,13 @@ export async function createSubscriptionCheckout(
 ): Promise<SubscriptionCheckoutResult> {
   const request = SubscriptionCheckoutRequestSchema.parse(input)
   const catalog = PaymentPlanCatalogSchema.parse(dependencies.catalog)
-  if (request.provider !== dependencies.adapter.provider) throw new TypeError("Төлбөрийн нийлүүлэгч хүсэлттэй таарахгүй байна")
+  if (request.provider !== dependencies.adapter.provider)
+    throw new TypeError("Төлбөрийн нийлүүлэгч хүсэлттэй таарахгүй байна")
 
   const now = dependencies.now ?? Date.now
   const createdAt = now()
-  if (!Number.isSafeInteger(createdAt) || createdAt < 0) throw new TypeError("Төлбөрийн хүсэлтийн цагийн тэмдэг буруу байна")
+  if (!Number.isSafeInteger(createdAt) || createdAt < 0)
+    throw new TypeError("Төлбөрийн хүсэлтийн цагийн тэмдэг буруу байна")
   const invoiceTtlMs = dependencies.invoiceTtlMs ?? DEFAULT_INVOICE_TTL_MS
   if (!Number.isSafeInteger(invoiceTtlMs) || invoiceTtlMs < 60_000 || invoiceTtlMs > 86_400_000) {
     throw new TypeError("Төлбөрийн хүсэлтийн дуусах хугацаа буруу байна")
@@ -288,7 +290,8 @@ export async function syncPaymentCheckoutStatusWithDb(
   status: (typeof PaymentEventTypes)[number],
   occurredAt: number,
 ) {
-  if (!Number.isSafeInteger(occurredAt) || occurredAt < 0) throw new TypeError("Төлбөрийн үйл явдлын цагийн тэмдэг буруу байна")
+  if (!Number.isSafeInteger(occurredAt) || occurredAt < 0)
+    throw new TypeError("Төлбөрийн үйл явдлын цагийн тэмдэг буруу байна")
   const current = await db
     .select({ status: PaymentCheckoutTable.status })
     .from(PaymentCheckoutTable)
@@ -449,6 +452,7 @@ async function completeSubscriptionCheckoutWithDb(
     plan: intent.plan ?? undefined,
     amount: intent.amount,
     currency: intent.currency,
+    createdAt: intent.timeCreated.getTime(),
     expiresAt: intent.time_expires.getTime(),
   })
 

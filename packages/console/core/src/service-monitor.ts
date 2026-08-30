@@ -11,6 +11,82 @@ export const SERVICE_MONITOR_SERVICES = ["console", "auth", "runtime", "payments
 
 const timestamp = z.number().int().min(0).max(8_640_000_000_000_000)
 
+export const PaymentProviderCapabilitySchema = z
+  .object({
+    enabled: z.boolean(),
+    checkout: z.boolean(),
+    cancellation: z.boolean(),
+    refund: z.boolean(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.enabled || (!value.checkout && !value.cancellation && !value.refund)) return
+    context.addIssue({
+      code: "custom",
+      message: "Идэвхгүй төлбөрийн provider capability зарлаж болохгүй.",
+    })
+  })
+
+export const PaymentHealthSchema = z
+  .object({
+    status: z.enum(["ok", "degraded", "disabled"]),
+    service: z.literal("payments"),
+    environment: z.enum(["disabled", "sandbox", "production"]),
+    providers: z
+      .object({
+        qpay: PaymentProviderCapabilitySchema,
+        bonum: PaymentProviderCapabilitySchema,
+      })
+      .strict(),
+    catalog: z.boolean(),
+    checkout: z.boolean(),
+    cancellation: z.boolean(),
+    refund: z.boolean(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const enabledProviders = Object.values(value.providers).filter((provider) => provider.enabled)
+    const everyEnabled = (field: "checkout" | "cancellation" | "refund") =>
+      enabledProviders.length > 0 && enabledProviders.every((provider) => provider[field])
+
+    const expectedCheckout = everyEnabled("checkout")
+    const expectedCancellation = everyEnabled("cancellation")
+    const expectedRefund = everyEnabled("refund")
+    const disabledClean = enabledProviders.length === 0 && !value.catalog
+    const fullyReady = value.catalog && expectedCheckout && expectedCancellation && expectedRefund
+    const expectedStatus =
+      value.environment === "disabled" ? (disabledClean ? "disabled" : "degraded") : fullyReady ? "ok" : "degraded"
+
+    if (value.checkout !== expectedCheckout) {
+      context.addIssue({
+        code: "custom",
+        path: ["checkout"],
+        message: "Нийт checkout чадвар provider матрицтай зөрж байна.",
+      })
+    }
+    if (value.cancellation !== expectedCancellation) {
+      context.addIssue({
+        code: "custom",
+        path: ["cancellation"],
+        message: "Нийт cancellation чадвар provider матрицтай зөрж байна.",
+      })
+    }
+    if (value.refund !== expectedRefund) {
+      context.addIssue({
+        code: "custom",
+        path: ["refund"],
+        message: "Нийт refund чадвар provider матрицтай зөрж байна.",
+      })
+    }
+    if (value.status !== expectedStatus) {
+      context.addIssue({
+        code: "custom",
+        path: ["status"],
+        message: "Төлбөрийн нийт төлөв capability матрицтай зөрж байна.",
+      })
+    }
+  })
+
 export const ServiceMonitorCheckSchema = z
   .object({
     service: z.enum(SERVICE_MONITOR_SERVICES),
@@ -75,7 +151,11 @@ export const ServiceMonitorAlertStateSchema = z
   .strict()
   .superRefine((value, context) => {
     if (value.status === "ok" && value.fingerprint !== "ok") {
-      context.addIssue({ code: "custom", path: ["fingerprint"], message: "Хэвийн alert төлөвийн fingerprint ok байна." })
+      context.addIssue({
+        code: "custom",
+        path: ["fingerprint"],
+        message: "Хэвийн alert төлөвийн fingerprint ok байна.",
+      })
     }
     if (value.status === "degraded" && value.fingerprint === "ok") {
       context.addIssue({
@@ -89,3 +169,4 @@ export const ServiceMonitorAlertStateSchema = z
 export type ServiceMonitorCheck = z.infer<typeof ServiceMonitorCheckSchema>
 export type ServiceMonitorEvidence = z.infer<typeof ServiceMonitorEvidenceSchema>
 export type ServiceMonitorAlertState = z.infer<typeof ServiceMonitorAlertStateSchema>
+export type PaymentHealth = z.infer<typeof PaymentHealthSchema>

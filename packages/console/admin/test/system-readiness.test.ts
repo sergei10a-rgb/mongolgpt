@@ -203,14 +203,17 @@ function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): Sys
     quota: async () => json({ status: "ok", service: "quota", storage: "durable-objects", queue: "cloudflare-queues" }),
     payments: async () =>
       json({
-        status: "ok",
+        status: "degraded",
         service: "payments",
         environment: "sandbox",
-        providers: { qpay: true, bonum: true },
+        providers: {
+          qpay: { enabled: true, checkout: true, cancellation: true, refund: true },
+          bonum: { enabled: true, checkout: true, cancellation: false, refund: false },
+        },
         catalog: true,
         checkout: true,
-        cancellation: true,
-        refund: true,
+        cancellation: false,
+        refund: false,
       }),
     runtime: async () => json({ healthy: true, version: "0.1.1" }),
     queueHeartbeat: async () => queueHeartbeat(),
@@ -226,7 +229,7 @@ describe("MongolGPT admin system readiness", () => {
   test("reports verified services without exposing provider secrets", async () => {
     const report = await collectSystemReadiness(dependencies())
 
-    expect(report.status).toBe("ok")
+    expect(report.status).toBe("degraded")
     expect(report.stage).toBe("dev")
     expect(report.checkedAt).toBe("2026-08-19T00:00:00.000Z")
     expect(Object.fromEntries(report.checks.map((check) => [check.id, check.state]))).toEqual({
@@ -235,13 +238,36 @@ describe("MongolGPT admin system readiness", () => {
       oauth: "healthy",
       quota: "healthy",
       "usage-queue": "healthy",
-      payments: "healthy",
+      payments: "degraded",
       monitoring: "healthy",
       backup: "healthy",
       release: "healthy",
     })
     expect(JSON.stringify(report)).not.toContain("heartbeat-secret-id")
     expect(JSON.stringify(report)).not.toContain("database.sql")
+  })
+
+  test("does not hide a degraded payment misconfiguration behind disabled state", async () => {
+    const report = await collectSystemReadiness(
+      dependencies({
+        payments: async () =>
+          json({
+            status: "degraded",
+            service: "payments",
+            environment: "disabled",
+            providers: {
+              qpay: { enabled: true, checkout: false, cancellation: false, refund: false },
+              bonum: { enabled: false, checkout: false, cancellation: false, refund: false },
+            },
+            catalog: false,
+            checkout: false,
+            cancellation: false,
+            refund: false,
+          }),
+      }),
+    )
+
+    expect(report.checks.find((check) => check.id === "payments")?.state).toBe("degraded")
   })
 
   test("fails individual checks closed while keeping the report available", async () => {
@@ -258,7 +284,10 @@ describe("MongolGPT admin system readiness", () => {
             status: "disabled",
             service: "payments",
             environment: "disabled",
-            providers: { qpay: false, bonum: false },
+            providers: {
+              qpay: { enabled: false, checkout: false, cancellation: false, refund: false },
+              bonum: { enabled: false, checkout: false, cancellation: false, refund: false },
+            },
             catalog: false,
             checkout: false,
             cancellation: false,

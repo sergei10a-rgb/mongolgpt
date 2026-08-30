@@ -26,6 +26,7 @@ export const RecordPaymentInvoiceSchema = z
     plan: z.enum(PlanNames).optional(),
     amount: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
     currency: z.literal("MNT").default("MNT"),
+    createdAt: timestamp.optional(),
     expiresAt: timestamp.optional(),
   })
   .strict()
@@ -118,6 +119,7 @@ export async function recordPaymentInvoiceWithDb(db: Database.TxOrDb, input: Rec
       plan: invoice.plan,
       amount: invoice.amount,
       currency: invoice.currency,
+      timeCreated: invoice.createdAt === undefined ? undefined : new Date(invoice.createdAt),
       time_expires: invoice.expiresAt === undefined ? undefined : new Date(invoice.expiresAt),
     })
     .onConflictDoNothing()
@@ -324,6 +326,7 @@ function assertInvoiceReplay(
     stored.plan !== (replay.plan ?? null) ||
     stored.amount !== replay.amount ||
     stored.currency !== replay.currency ||
+    (replay.createdAt !== undefined && stored.timeCreated.getTime() !== replay.createdAt) ||
     expiresAt !== replay.expiresAt
   ) {
     throw new Error("Төлбөрийн нэхэмжлэх хүсэлтийг дахин илгээхэд хадгалсан нэхэмжлэхтэй зөрчилдөж байна")

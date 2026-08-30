@@ -132,12 +132,16 @@ describe("provider-neutral payment ledger", () => {
       plan: "pro" as const,
       amount: 39_000,
       currency: "MNT" as const,
+      createdAt: Date.UTC(2026, 6, 19),
       expiresAt: Date.UTC(2026, 6, 20),
     }
 
     await expect(recordPaymentInvoiceWithDb(db, invoice)).resolves.toMatchObject({ kind: "created" })
     await expect(recordPaymentInvoiceWithDb(db, invoice)).resolves.toMatchObject({ kind: "duplicate" })
     await expect(recordPaymentInvoiceWithDb(db, { ...invoice, amount: 59_000 })).rejects.toThrow(
+      "Төлбөрийн нэхэмжлэх хүсэлтийг дахин илгээхэд хадгалсан нэхэмжлэхтэй зөрчилдөж байна",
+    )
+    await expect(recordPaymentInvoiceWithDb(db, { ...invoice, createdAt: invoice.createdAt + 1 })).rejects.toThrow(
       "Төлбөрийн нэхэмжлэх хүсэлтийг дахин илгээхэд хадгалсан нэхэмжлэхтэй зөрчилдөж байна",
     )
     expect(sqlite.query("select count(*) as count from payment_invoice").get()).toEqual({ count: 1 })
@@ -373,6 +377,17 @@ describe("provider-neutral payment ledger", () => {
         provider: "qpay",
         merchantAccountID,
         externalInvoiceID: "qpay_invoice_bad_date",
+        purpose: "credit",
+        amount: 1,
+        createdAt: 8_640_000_000_000_001,
+      }).success,
+    ).toBe(false)
+    expect(
+      RecordPaymentInvoiceSchema.safeParse({
+        workspaceID,
+        provider: "qpay",
+        merchantAccountID,
+        externalInvoiceID: "qpay_invoice_bad_expiry",
         purpose: "credit",
         amount: 1,
         expiresAt: 8_640_000_000_000_001,

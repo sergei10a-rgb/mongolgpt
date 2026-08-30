@@ -126,11 +126,27 @@ describe("payment webhook worker", () => {
       status: "disabled",
       service: "payments",
       environment: "disabled",
-      providers: { qpay: false, bonum: false },
+      providers: {
+        qpay: { enabled: false, checkout: false, cancellation: false, refund: false },
+        bonum: { enabled: false, checkout: false, cancellation: false, refund: false },
+      },
       catalog: false,
       checkout: false,
       cancellation: false,
       refund: false,
+    })
+
+    const misconfiguredDisabled = createPaymentWebhookHandler({
+      health: { environment: "disabled", catalog: false },
+      async qpay() {
+        return []
+      },
+      async enqueue() {},
+    })
+    expect(await (await misconfiguredDisabled(new Request("https://pay.dev.mgpt.mn/health"))).json()).toMatchObject({
+      status: "degraded",
+      environment: "disabled",
+      providers: { qpay: { enabled: true } },
     })
 
     const ready = createPaymentWebhookHandler({
@@ -158,14 +174,17 @@ describe("payment webhook worker", () => {
     expect(readyResponse.headers.get("cache-control")).toBe("no-store")
     const readyPayload: unknown = await readyResponse.json()
     expect(readyPayload).toEqual({
-      status: "ok",
+      status: "degraded",
       service: "payments",
       environment: "sandbox",
-      providers: { qpay: true, bonum: true },
+      providers: {
+        qpay: { enabled: true, checkout: true, cancellation: true, refund: true },
+        bonum: { enabled: true, checkout: true, cancellation: false, refund: false },
+      },
       catalog: true,
       checkout: true,
-      cancellation: true,
-      refund: true,
+      cancellation: false,
+      refund: false,
     })
 
     const degraded = createPaymentWebhookHandler({
@@ -185,7 +204,10 @@ describe("payment webhook worker", () => {
     expect(degradedPayload).toMatchObject({
       status: "degraded",
       environment: "production",
-      providers: { qpay: true, bonum: false },
+      providers: {
+        qpay: { enabled: true, checkout: false, cancellation: true, refund: false },
+        bonum: { enabled: false, checkout: false, cancellation: false, refund: false },
+      },
     })
   })
 

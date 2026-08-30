@@ -9,6 +9,7 @@ import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
 import {
   SERVICE_MONITOR_MAX_AGE_MS,
   SERVICE_MONITOR_STATE_KEY,
+  PaymentHealthSchema,
   ServiceMonitorEvidenceSchema,
 } from "@mongolgpt/console-core/service-monitor.js"
 import {
@@ -105,19 +106,6 @@ const quotaHealthSchema = z
     service: z.literal("quota"),
     storage: z.literal("durable-objects"),
     queue: z.literal("cloudflare-queues"),
-  })
-  .strict()
-
-const paymentHealthSchema = z
-  .object({
-    status: z.enum(["ok", "degraded", "disabled"]),
-    service: z.literal("payments"),
-    environment: z.enum(["disabled", "sandbox", "production"]),
-    providers: z.object({ qpay: z.boolean(), bonum: z.boolean() }).strict(),
-    catalog: z.boolean(),
-    checkout: z.boolean(),
-    cancellation: z.boolean(),
-    refund: z.boolean(),
   })
   .strict()
 
@@ -228,7 +216,7 @@ export async function collectSystemReadiness(
         : Promise.resolve({ ok: false as const }),
       probeJson(() => dependencies.auth(), authHealthSchema),
       probeJson(() => dependencies.quota(), quotaHealthSchema),
-      probeJson(() => dependencies.payments(), paymentHealthSchema),
+      probeJson(() => dependencies.payments(), PaymentHealthSchema),
       probe(() => dependencies.queueHeartbeat()),
       dependencies.monitoringEnabled
         ? probe(() => dependencies.monitorEvidence())
@@ -327,8 +315,15 @@ function monitoringCheck(
   return ready("monitoring", "Үйлчилгээний хяналт", "Нийтийн үйлчилгээнүүдийн автомат шалгалт хэвийн байна.")
 }
 
-function paymentCheck(result: ProbeResult<z.output<typeof paymentHealthSchema>>): SystemReadinessCheck {
+function paymentCheck(result: ProbeResult<z.output<typeof PaymentHealthSchema>>): SystemReadinessCheck {
   if (!result.ok) return degraded("payments", "QPay + Bonum", "Төлбөрийн бэлэн байдлын шалгалт амжилтгүй боллоо.")
+  if (result.value.status === "degraded") {
+    const environment =
+      result.value.environment === "disabled"
+        ? "Идэвхгүй төлбөрийн орчин"
+        : `${environmentLabel(result.value.environment)} орчин`
+    return degraded("payments", "QPay + Bonum", `${environment} бүрэн бэлэн биш байна.`)
+  }
   if (result.value.environment === "disabled") {
     return {
       id: "payments",
@@ -336,13 +331,6 @@ function paymentCheck(result: ProbeResult<z.output<typeof paymentHealthSchema>>)
       state: "disabled",
       summary: "Төлбөрийн орчин идэвхгүй байна.",
     }
-  }
-  if (result.value.status !== "ok") {
-    return degraded(
-      "payments",
-      "QPay + Bonum",
-      `${environmentLabel(result.value.environment)} орчин бүрэн бэлэн биш байна.`,
-    )
   }
   return ready("payments", "QPay + Bonum", `${environmentLabel(result.value.environment)} орчин хэвийн байна.`)
 }

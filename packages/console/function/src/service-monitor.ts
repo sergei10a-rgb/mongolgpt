@@ -1,5 +1,6 @@
 import { resolveHostedServiceUrls, type HostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import {
+  PaymentHealthSchema,
   SERVICE_MONITOR_ALERT_REMINDER_MS,
   SERVICE_MONITOR_ALERT_STATE_MAX_AGE_MS,
   SERVICE_MONITOR_ALERT_STATE_KEY,
@@ -29,19 +30,6 @@ const runtimeHealthSchema = z
     version: z.string().trim().min(1).max(128),
   })
   .strict()
-const paymentHealthSchema = z
-  .object({
-    status: z.enum(["ok", "degraded", "disabled"]),
-    service: z.literal("payments"),
-    environment: z.enum(["disabled", "sandbox", "production"]),
-    providers: z.object({ qpay: z.boolean(), bonum: z.boolean() }).strict(),
-    catalog: z.boolean(),
-    checkout: z.boolean(),
-    cancellation: z.boolean(),
-    refund: z.boolean(),
-  })
-  .strict()
-
 type MonitorConfig = {
   stage: string
   stageDomain: string
@@ -186,9 +174,11 @@ function monitorTargets(stage: string, urls: HostedServiceUrls): Target[] {
     {
       service: "payments",
       url: `${urls.payment}/health`,
-      accepts: (value) => {
-        const parsed = paymentHealthSchema.safeParse(value)
-        return parsed.success && parsed.data.status !== "degraded"
+      accepts: (value, expectedStage) => {
+        const parsed = PaymentHealthSchema.safeParse(value)
+        if (!parsed.success) return false
+        if (expectedStage === "production") return parsed.data.status === "ok"
+        return parsed.data.status !== "degraded"
       },
     },
   ]
@@ -249,7 +239,9 @@ async function sendServiceMonitorAlert(
     from,
     subject,
     text: [
-      recovered ? "MongolGPT-ийн хяналтын бүх үйлчилгээ хэвийн боллоо." : "MongolGPT-ийн үйлчилгээний хяналт доголдол илрүүллээ.",
+      recovered
+        ? "MongolGPT-ийн хяналтын бүх үйлчилгээ хэвийн боллоо."
+        : "MongolGPT-ийн үйлчилгээний хяналт доголдол илрүүллээ.",
       `Орчин: ${evidence.stage}`,
       `Шалгасан цаг: ${new Date(evidence.checkedAt).toISOString()}`,
       "",

@@ -225,7 +225,8 @@ describe("dev console-only smoke", () => {
     const previous = new Map(Object.keys(configured).map((key) => [key, process.env[key]]))
     const originalFetch = globalThis.fetch
     const requests: string[] = []
-    const document = "<!doctype html><html lang=\"mn\"><head><title data-sm=\"title\">MongolGPT</title><link rel=\"stylesheet\" href=\"/assets/index.css\"></head><body><div id=\"app\"></div><script type=\"module\" src=\"/assets/index.js\"></script></body></html>"
+    const document =
+      '<!doctype html><html lang="mn"><head><title data-sm="title">MongolGPT</title><link rel="stylesheet" href="/assets/index.css"></head><body><div id="app"></div><script type="module" src="/assets/index.js"></script></body></html>'
 
     Object.assign(process.env, configured)
     globalThis.fetch = mockedFetch(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -308,10 +309,18 @@ describe("dev console-only smoke", () => {
       ) {
         return new Response(document, { headers: { "content-type": "text/html; charset=utf-8" } })
       }
-      if (url.toString() === "https://dev.mgpt.mn/assets/index.css" || url.toString() === "https://mgpt.mn/assets/index.css" || url.toString() === "https://www.mgpt.mn/assets/index.css") {
+      if (
+        url.toString() === "https://dev.mgpt.mn/assets/index.css" ||
+        url.toString() === "https://mgpt.mn/assets/index.css" ||
+        url.toString() === "https://www.mgpt.mn/assets/index.css"
+      ) {
         return new Response("body { color: black; }", { headers: { "content-type": "text/css; charset=utf-8" } })
       }
-      if (url.toString() === "https://dev.mgpt.mn/assets/index.js" || url.toString() === "https://mgpt.mn/assets/index.js" || url.toString() === "https://www.mgpt.mn/assets/index.js") {
+      if (
+        url.toString() === "https://dev.mgpt.mn/assets/index.js" ||
+        url.toString() === "https://mgpt.mn/assets/index.js" ||
+        url.toString() === "https://www.mgpt.mn/assets/index.js"
+      ) {
         return new Response("console.log('ok')", { headers: { "content-type": "text/javascript; charset=utf-8" } })
       }
       throw new Error(`Unexpected console-only smoke request: ${url}`)
@@ -1584,9 +1593,9 @@ describe("hosted authorization smoke contract", () => {
         location: "https://dev.mgpt.mn/auth/authorize?turnstile_error=invalid",
       }),
     ).toThrow("challenge with an error")
-    expect(() =>
-      inspectHostedTurnstileSuccess({ ...success, location: "https://example.com/oauth" }),
-    ).toThrow("unexpected origin")
+    expect(() => inspectHostedTurnstileSuccess({ ...success, location: "https://example.com/oauth" })).toThrow(
+      "unexpected origin",
+    )
   })
 
   test("requires the console to redirect to the dedicated auth worker when Turnstile is disabled", () => {
@@ -1695,7 +1704,10 @@ describe("inspectPaymentHealth", () => {
           status: "disabled",
           service: "payments",
           environment: "disabled",
-          providers: { qpay: false, bonum: false },
+          providers: {
+            qpay: { enabled: false, checkout: false, cancellation: false, refund: false },
+            bonum: { enabled: false, checkout: false, cancellation: false, refund: false },
+          },
           catalog: false,
           checkout: false,
           cancellation: false,
@@ -1713,7 +1725,10 @@ describe("inspectPaymentHealth", () => {
           status: "ok",
           service: "payments",
           environment: "sandbox",
-          providers: { qpay: true, bonum: true },
+          providers: {
+            qpay: { enabled: true, checkout: true, cancellation: true, refund: true },
+            bonum: { enabled: true, checkout: true, cancellation: true, refund: true },
+          },
           catalog: true,
           checkout: true,
           cancellation: true,
@@ -1731,7 +1746,10 @@ describe("inspectPaymentHealth", () => {
           status: "degraded",
           service: "payments",
           environment: "sandbox",
-          providers: { qpay: true, bonum: false },
+          providers: {
+            qpay: { enabled: true, checkout: true, cancellation: true, refund: true },
+            bonum: { enabled: true, checkout: true, cancellation: false, refund: false },
+          },
           catalog: true,
           checkout: false,
           cancellation: true,
@@ -1747,7 +1765,10 @@ describe("inspectPaymentHealth", () => {
           status: "ok",
           service: "payments",
           environment: "sandbox",
-          providers: { qpay: true, bonum: true },
+          providers: {
+            qpay: { enabled: true, checkout: true, cancellation: true, refund: true },
+            bonum: { enabled: true, checkout: true, cancellation: true, refund: true },
+          },
           catalog: true,
           checkout: true,
           cancellation: true,
@@ -1763,7 +1784,10 @@ describe("inspectPaymentHealth", () => {
           status: "disabled",
           service: "payments",
           environment: "disabled",
-          providers: { qpay: true, bonum: false },
+          providers: {
+            qpay: { enabled: true, checkout: false, cancellation: false, refund: false },
+            bonum: { enabled: false, checkout: false, cancellation: false, refund: false },
+          },
           catalog: false,
           checkout: false,
           cancellation: false,
