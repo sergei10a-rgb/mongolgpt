@@ -27,6 +27,7 @@
     "test:e2e": "playwright test",
     "test:e2e:local": "playwright test",
     "test:e2e:hosted": "bun ./script/test-e2e-hosted.ts",
+    "test:e2e:console": "playwright test --config playwright.console.config.ts",
     "test:e2e:deployed": "bun test ./e2e/deployed/network.test.ts && playwright test --config playwright.deployed.config.ts",
     "test:e2e:deployed:app-only": "bun test ./e2e/deployed/network.test.ts && playwright test --config playwright.deployed.config.ts ./e2e/deployed/app-boundary-smoke.spec.ts",
     "test:e2e:deployed:anonymous": "bun test ./e2e/deployed/network.test.ts && playwright test --config playwright.deployed.config.ts ./e2e/deployed/browser-smoke.spec.ts",

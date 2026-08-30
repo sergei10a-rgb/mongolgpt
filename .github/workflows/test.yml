@@ -148,6 +148,13 @@ jobs:
           CI: true
         timeout-minutes: 30
 
+      - name: Verify console production build in Chromium
+        if: runner.os == 'Linux'
+        run: bun --cwd packages/app test:e2e:console
+        env:
+          CI: true
+        timeout-minutes: 10
+
       - name: Upload Playwright artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -158,5 +165,7 @@ jobs:
           path: |
             packages/app/e2e/test-results
             packages/app/e2e/test-results-hosted
+            packages/app/e2e/test-results-console
             packages/app/e2e/playwright-report
             packages/app/e2e/playwright-report-hosted
+            packages/app/e2e/playwright-report-console

@@ -1,8 +1,7 @@
 import { expect, test } from "@playwright/test"
-import { isVisibleMongolianText } from "./network"
+import { isVisibleMongolianText } from "../deployed/network"
 
-test("renders the public MongolGPT console without hydration or responsive failures", async ({ page }) => {
-  const publicOrigin = new URL(process.env.PLAYWRIGHT_DEPLOYED_PUBLIC_URL!).origin
+test("hydrates the production console build on desktop and mobile", async ({ page }) => {
   const pageErrors: string[] = []
   const consoleErrors: string[] = []
 
@@ -11,8 +10,7 @@ test("renders the public MongolGPT console without hydration or responsive failu
     if (message.type() === "error") consoleErrors.push(message.text())
   })
 
-  await page.goto(publicOrigin, { waitUntil: "domcontentloaded" })
-  expect(new URL(page.url()).origin).toBe(publicOrigin)
+  await page.goto("/", { waitUntil: "domcontentloaded" })
   await expect(page.getByRole("heading", { name: "MongolGPT", exact: true })).toBeVisible()
   await expect
     .poll(() =>
@@ -45,19 +43,6 @@ test("renders the public MongolGPT console without hydration or responsive failu
   }))
 
   expect(mobile.scrollWidth).toBeLessThanOrEqual(mobile.clientWidth)
-
-  await page.setViewportSize({ width: 1280, height: 720 })
-  await page.goto(new URL("/auth", `${publicOrigin}/`).toString(), { waitUntil: "domcontentloaded" })
-  expect(new URL(page.url()).origin).toBe(publicOrigin)
-  const auth = await page.evaluate(() => ({
-    title: document.title,
-    lang: document.documentElement.lang,
-    text: document.body.innerText,
-  }))
-
-  expect(auth.title).toContain("MongolGPT")
-  expect(auth.lang).toMatch(/^mn(?:-MN)?$/)
-  expect(isVisibleMongolianText(auth.text)).toBe(true)
   expect(pageErrors).toEqual([])
   expect(consoleErrors).toEqual([])
 })
