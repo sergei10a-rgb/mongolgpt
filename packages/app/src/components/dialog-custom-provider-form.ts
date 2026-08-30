@@ -1,6 +1,21 @@
 const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
 const OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible"
 
+export const CUSTOM_PROVIDER_PRESETS = {
+  ollama: {
+    providerID: "ollama-local",
+    name: "Ollama (локал)",
+    baseURL: "http://127.0.0.1:11434/v1",
+  },
+  "lm-studio": {
+    providerID: "lm-studio-local",
+    name: "LM Studio (локал)",
+    baseURL: "http://127.0.0.1:1234/v1",
+  },
+} as const
+
+export type CustomProviderPreset = keyof typeof CUSTOM_PROVIDER_PRESETS
+
 type Translator = (key: string, vars?: Record<string, string | number | boolean>) => string
 
 export type ModelErr = {

@@ -12,7 +12,14 @@ import { Link } from "@/components/link"
 import { useServerSDK } from "@/context/server-sdk"
 import { useServerSync } from "@/context/server-sync"
 import { useLanguage } from "@/context/language"
-import { type FormState, headerRow, modelRow, validateCustomProvider } from "./dialog-custom-provider-form"
+import {
+  CUSTOM_PROVIDER_PRESETS,
+  type CustomProviderPreset,
+  type FormState,
+  headerRow,
+  modelRow,
+  validateCustomProvider,
+} from "./dialog-custom-provider-form"
 import { DialogSelectProvider } from "./dialog-select-provider"
 import { documentationUrl } from "@/product"
 
@@ -87,6 +94,23 @@ export function DialogCustomProvider(props: Props) {
     setForm(key, value)
     if (key === "apiKey") return
     setForm("err", key, undefined)
+  }
+
+  const applyPreset = (id: CustomProviderPreset) => {
+    const preset = CUSTOM_PROVIDER_PRESETS[id]
+    batch(() => {
+      setForm({
+        providerID: preset.providerID,
+        name: preset.name,
+        baseURL: preset.baseURL,
+        apiKey: "",
+      })
+      setForm("err", {
+        providerID: undefined,
+        name: undefined,
+        baseURL: undefined,
+      })
+    })
   }
 
   const setModel = (index: number, key: "id" | "name", value: string) => {
@@ -190,6 +214,19 @@ export function DialogCustomProvider(props: Props) {
             </Link>
             {language.t("provider.custom.description.suffix")}
           </p>
+
+          <div class="flex flex-col gap-2">
+            <div class="text-13-medium text-text-strong">{language.t("provider.custom.presets.label")}</div>
+            <p class="text-12-regular text-text-weak">{language.t("provider.custom.presets.description")}</p>
+            <div class="flex flex-wrap gap-2">
+              <Button type="button" size="normal" variant="secondary" onClick={() => applyPreset("ollama")}>
+                {language.t("provider.custom.presets.ollama")}
+              </Button>
+              <Button type="button" size="normal" variant="secondary" onClick={() => applyPreset("lm-studio")}>
+                {language.t("provider.custom.presets.lmStudio")}
+              </Button>
+            </div>
+          </div>
 
           <div class="flex flex-col gap-4">
             <TextField

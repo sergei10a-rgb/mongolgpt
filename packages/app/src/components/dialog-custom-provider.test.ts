@@ -1,9 +1,39 @@
 import { describe, expect, test } from "bun:test"
-import { validateCustomProvider } from "./dialog-custom-provider-form"
+import { CUSTOM_PROVIDER_PRESETS, validateCustomProvider } from "./dialog-custom-provider-form"
 
 const t = (key: string) => key
 
 describe("validateCustomProvider", () => {
+  test.each([
+    ["ollama", "http://127.0.0.1:11434/v1"],
+    ["lm-studio", "http://127.0.0.1:1234/v1"],
+  ] as const)("builds a local %s preset without an API key", (id, baseURL) => {
+    const preset = CUSTOM_PROVIDER_PRESETS[id]
+    const result = validateCustomProvider({
+      form: {
+        ...preset,
+        apiKey: "",
+        models: [{ row: "m0", id: "local-model", name: "Local Model", err: {} }],
+        headers: [{ row: "h0", key: "", value: "", err: {} }],
+        err: {},
+      },
+      t,
+      disabledProviders: [],
+      existingProviderIDs: new Set(),
+    })
+
+    expect(result.result).toMatchObject({
+      providerID: preset.providerID,
+      name: preset.name,
+      key: undefined,
+      config: {
+        npm: "@ai-sdk/openai-compatible",
+        options: { baseURL },
+        models: { "local-model": { name: "Local Model" } },
+      },
+    })
+  })
+
   test("builds trimmed config payload", () => {
     const result = validateCustomProvider({
       form: {
