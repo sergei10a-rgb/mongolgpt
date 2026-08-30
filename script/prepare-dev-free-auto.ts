@@ -9,6 +9,7 @@ import {
 
 const githubEnvironment = process.env.GITHUB_ENV
 if (!githubEnvironment) fail("GITHUB_ENV тохируулаагүй байна.")
+const requireEnabled = process.argv.includes("--require-enabled")
 
 try {
   const result = prepareDevFreeAuto({
@@ -19,6 +20,7 @@ try {
     openRouterApiKey: process.env.OPENROUTER_API_KEY,
     nvidiaNimApiKey: process.env.NVIDIA_NIM_API_KEY,
     nvidiaNimModel: process.env.NVIDIA_NIM_MODEL_ID,
+    requireEnabled,
   })
   await fs.appendFile(githubEnvironment, `${gatewaySstEnvironmentLines(result.parts).join("\n")}\n`, "utf8")
   if (result.source === "disabled") {

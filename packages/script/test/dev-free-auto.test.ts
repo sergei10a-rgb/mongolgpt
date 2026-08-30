@@ -19,6 +19,12 @@ describe("dev Free Auto catalog", () => {
     expect(result.parts.every((part) => part === "")).toBe(true)
   })
 
+  test("fails before a full deployment when managed Free Auto is disabled", () => {
+    expect(() => prepareDevFreeAuto({ requireEnabled: true })).toThrow(
+      "Бүрэн dev deploy хийхэд Free Auto идэвхтэй байх ёстой",
+    )
+  })
+
   test("rejects a partially configured managed fallback", () => {
     expect(() => prepareDevFreeAuto({ openRouterApiKey: "openrouter-test-key" })).toThrow(
       "OPENROUTER_API_KEY болон NVIDIA_NIM_API_KEY хоёул шаардлагатай",

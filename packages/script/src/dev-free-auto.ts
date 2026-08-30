@@ -18,6 +18,7 @@ type Input = {
   openRouterApiKey?: string
   nvidiaNimApiKey?: string
   nvidiaNimModel?: string
+  requireEnabled?: boolean
 }
 
 export function buildDevFreeAutoCatalog(input: {
@@ -115,6 +116,11 @@ export function prepareDevFreeAuto(input: Input): DevFreeAutoPreparation {
   const openRouterApiKey = input.openRouterApiKey?.trim()
   const nvidiaNimApiKey = input.nvidiaNimApiKey?.trim()
   if (!openRouterApiKey && !nvidiaNimApiKey) {
+    if (input.requireEnabled) {
+      throw new Error(
+        "Бүрэн dev deploy хийхэд Free Auto идэвхтэй байх ёстой. OPENROUTER_API_KEY болон NVIDIA_NIM_API_KEY хоёулыг dev environment secret-д нэмнэ үү.",
+      )
+    }
     return { source: "disabled", parts: Array.from({ length: MODEL_SECRET_PARTS }, () => "") }
   }
   if (!openRouterApiKey || !nvidiaNimApiKey) {

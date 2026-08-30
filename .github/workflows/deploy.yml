@@ -280,7 +280,7 @@ jobs:
           MONGOLGPT_GATEWAY_MODELS28: ${{ secrets.MONGOLGPT_GATEWAY_MODELS28 }}
           MONGOLGPT_GATEWAY_MODELS29: ${{ secrets.MONGOLGPT_GATEWAY_MODELS29 }}
           MONGOLGPT_GATEWAY_MODELS30: ${{ secrets.MONGOLGPT_GATEWAY_MODELS30 }}
-        run: bun script/prepare-dev-free-auto.ts
+        run: bun script/prepare-dev-free-auto.ts --require-enabled
 
       - name: Validate and deploy to Cloudflare
         env:
