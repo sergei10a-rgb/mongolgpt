@@ -1,9 +1,38 @@
 import { describe, expect, test } from "bun:test"
-import { CUSTOM_PROVIDER_PRESETS, validateCustomProvider } from "./dialog-custom-provider-form"
+import {
+  CUSTOM_PROVIDER_PRESETS,
+  validateCustomProvider,
+  validateCustomProviderBaseUrl,
+} from "./dialog-custom-provider-form"
 
 const t = (key: string) => key
 
 describe("validateCustomProvider", () => {
+  test.each([
+    "https://api.example.com/v1",
+    "https://api.example.com",
+    "http://localhost:11434/v1",
+    "http://127.0.0.1:1234/v1",
+    "http://[::1]:8000/v1",
+  ])("accepts allowed base URL %s", (baseURL) => {
+    expect(validateCustomProviderBaseUrl(baseURL)).toBe(true)
+  })
+
+  test.each([
+    "http://api.example.com/v1",
+    "http://localhost.example.com/v1",
+    "http://192.168.1.10:8000/v1",
+    "http://10.0.0.5/v1",
+    "http://127.0.0.2:11434/v1",
+    "//localhost:11434/v1",
+    "file:///tmp/model",
+    "not a url",
+    "https://user:secret@api.example.com/v1",
+    "http://user:secret@127.0.0.1:11434/v1",
+  ])("rejects unsafe base URL %s", (baseURL) => {
+    expect(validateCustomProviderBaseUrl(baseURL)).toBe(false)
+  })
+
   test.each([
     ["ollama", "http://127.0.0.1:11434/v1"],
     ["lm-studio", "http://127.0.0.1:1234/v1"],
@@ -106,5 +135,30 @@ describe("validateCustomProvider", () => {
       key: "provider.custom.error.duplicate",
       value: undefined,
     })
+  })
+
+  test.each([
+    "http://api.example.com/v1",
+    "http://192.168.1.10:8000/v1",
+    "not a url",
+    "https://user:secret@api.example.com/v1",
+  ])("reports an error for unsafe custom provider URL %s", (baseURL) => {
+    const result = validateCustomProvider({
+      form: {
+        providerID: "custom-provider",
+        name: "Provider",
+        baseURL,
+        apiKey: "secret",
+        models: [{ row: "m0", id: "model-a", name: "Model A", err: {} }],
+        headers: [{ row: "h0", key: "", value: "", err: {} }],
+        err: {},
+      },
+      t,
+      disabledProviders: [],
+      existingProviderIDs: new Set(),
+    })
+
+    expect(result.result).toBeUndefined()
+    expect(result.err.baseURL).toBe("provider.custom.error.baseURL.format")
   })
 })

@@ -206,7 +206,8 @@ export const dict = {
   "provider.custom.error.providerID.exists": "That provider ID already exists",
   "provider.custom.error.name.required": "Display name is required",
   "provider.custom.error.baseURL.required": "Base URL is required",
-  "provider.custom.error.baseURL.format": "Must start with http:// or https://",
+  "provider.custom.error.baseURL.format":
+    "Use HTTPS. Plain HTTP is allowed only for local loopback hosts: localhost, 127.0.0.1, or ::1",
   "provider.custom.error.required": "Required",
   "provider.custom.error.duplicate": "Duplicate",
 

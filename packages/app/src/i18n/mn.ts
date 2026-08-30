@@ -195,7 +195,8 @@ export const dict = {
   "provider.custom.error.providerID.exists": "Энэ үйлчилгээ үзүүлэгч ID аль хэдийн байна",
   "provider.custom.error.name.required": "Дэлгэцийн нэр шаардлагатай",
   "provider.custom.error.baseURL.required": "Суурь URL шаардлагатай",
-  "provider.custom.error.baseURL.format": "http:// эсвэл https://-р эхлэх ёстой",
+  "provider.custom.error.baseURL.format":
+    "HTTPS URL ашиглана уу. HTTP бол зөвхөн localhost, 127.0.0.1 эсвэл ::1 локал хаяг дээр зөвшөөрнө",
   "provider.custom.error.required": "Заавал оруулна",
   "provider.custom.error.duplicate": "Давхардсан",
   "provider.disconnect.toast.disconnected.title": "{{provider}} салгагдсан",

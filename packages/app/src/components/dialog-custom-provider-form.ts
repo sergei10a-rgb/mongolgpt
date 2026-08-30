@@ -1,5 +1,6 @@
 const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
 const OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible"
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"])
 
 export const CUSTOM_PROVIDER_PRESETS = {
   ollama: {
@@ -63,6 +64,20 @@ type ValidateArgs = {
   existingProviderIDs: Set<string>
 }
 
+export function validateCustomProviderBaseUrl(value: string) {
+  let url: URL
+  try {
+    url = new URL(value.trim())
+  } catch {
+    return false
+  }
+
+  if (url.username || url.password) return false
+  if (url.protocol === "https:") return true
+  if (url.protocol !== "http:") return false
+  return LOOPBACK_HOSTS.has(url.hostname.replace(/^\[|\]$/g, ""))
+}
+
 export function validateCustomProvider(input: ValidateArgs) {
   const providerID = input.form.providerID.trim()
   const name = input.form.name.trim()
@@ -81,7 +96,7 @@ export function validateCustomProvider(input: ValidateArgs) {
   const nameError = !name ? input.t("provider.custom.error.name.required") : undefined
   const urlError = !baseURL
     ? input.t("provider.custom.error.baseURL.required")
-    : !/^https?:\/\//.test(baseURL)
+    : !validateCustomProviderBaseUrl(baseURL)
       ? input.t("provider.custom.error.baseURL.format")
       : undefined
 
