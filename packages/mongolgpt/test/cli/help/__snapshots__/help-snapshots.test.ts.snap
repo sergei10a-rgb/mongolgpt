@@ -516,7 +516,8 @@ exports[`mongolgpt CLI help-text snapshots every documented command emits stable
   -v, --version     хувилбарын дугаар харуулах                                               [логик]
       --print-logs  логийг стандарт алдааны урсгал руу хэвлэх                                [логик]
       --log-level   логийн түвшин             [текст] [сонголтууд: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]"
+      --pure        гадаад нэмэлтгүй ажиллуулах                                              [логик]
+      --browser     нэвтрэх хөтчийг автоматаар нээх                          [логик] [анхдагч: true]"
 `;
 
 exports[`mongolgpt CLI help-text snapshots every documented command emits stable help text: mongolgpt account status --help 1`] = `

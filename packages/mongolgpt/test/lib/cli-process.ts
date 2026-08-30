@@ -30,6 +30,8 @@ import { it } from "./effect"
 
 const mongolgptRoot = path.resolve(import.meta.dir, "../../")
 const cliEntry = path.join(mongolgptRoot, "src/index.ts")
+const secretEnvName =
+  /(?:^|_)(?:API_KEY|ACCESS_TOKEN|AUTH_TOKEN|CLIENT_SECRET|TOKEN|SECRET|PASSWORD|CREDENTIALS?|PRIVATE_KEY)(?:_|$)/i
 
 export const testModelID = "test/test-model"
 
@@ -65,6 +67,7 @@ function isolatedEnv(home: string, configJson: string): Record<string, string> {
     XDG_DATA_HOME: path.join(home, ".local/share"),
     XDG_STATE_HOME: path.join(home, ".local/state"),
     XDG_CACHE_HOME: path.join(home, ".cache"),
+    MONGOLGPT_DB: path.join(home, "mongolgpt-test.db"),
     MONGOLGPT_CONFIG_CONTENT: configJson,
     MONGOLGPT_DISABLE_PROJECT_CONFIG: "1",
     MONGOLGPT_PURE: "1",
@@ -73,6 +76,10 @@ function isolatedEnv(home: string, configJson: string): Record<string, string> {
     MONGOLGPT_DISABLE_MODELS_FETCH: "1",
     MONGOLGPT_AUTH_CONTENT: "{}",
   }
+}
+
+function safeHostEnv(): Record<string, string | undefined> {
+  return Object.fromEntries(Object.entries(process.env).filter(([name]) => !secretEnvName.test(name)))
 }
 
 export type RunResult = {
@@ -85,6 +92,12 @@ export type RunResult = {
 
 export type RunHandle = {
   readonly interrupt: () => void
+  readonly result: Effect.Effect<RunResult>
+}
+
+export type StartedCommand = {
+  readonly interrupt: () => void
+  readonly waitForOutput: (pattern: RegExp, timeoutMs?: number) => Effect.Effect<string, Error>
   readonly result: Effect.Effect<RunResult>
 }
 
@@ -155,6 +168,7 @@ export type MongolGPTCli = {
   // High-level: run a single prompt against the test model. Short-lived.
   readonly run: (message: string, opts?: RunOpts) => Effect.Effect<RunResult>
   readonly startRun: (message: string, opts?: RunOpts) => Effect.Effect<RunHandle, never, Scope.Scope>
+  readonly start: (args: string[], opts?: SpawnOpts) => Effect.Effect<StartedCommand, never, Scope.Scope>
   // Spawn `mongolgpt serve` and wait until it's listening. Long-lived: the
   // returned handle is killed when the caller's Scope closes. Fails if the
   // listening line doesn't appear within `readyTimeoutMs`.
@@ -202,6 +216,7 @@ export function withCliFixture<A, E>(
 
     const configJson = JSON.stringify(testProviderConfig(llm.url))
     const env = isolatedEnv(home, configJson)
+    const hostEnv = safeHostEnv()
 
     const spawn = Effect.fn("mongolgpt.spawn")(function* (args: string[], opts?: SpawnOpts) {
       const start = Date.now()
@@ -252,6 +267,87 @@ export function withCliFixture<A, E>(
       }
     })
 
+    const start = Effect.fn("mongolgpt.start")(function* (args: string[], opts?: SpawnOpts) {
+      const startedAt = Date.now()
+      let stdout = ""
+      let stderr = ""
+      const proc = yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          Bun.spawn(["bun", "run", "--conditions=browser", cliEntry, ...args], {
+            cwd: home,
+            env: { ...hostEnv, ...env, ...opts?.env },
+            stdin: "ignore",
+            stdout: "pipe",
+            stderr: "pipe",
+          }),
+        ),
+        (child) =>
+          Effect.promise(async () => {
+            if (child.exitCode === null) child.kill()
+            await child.exited
+          }).pipe(Effect.ignore),
+      )
+
+      const collect = async (stream: ReadableStream<Uint8Array>, append: (chunk: string) => void) => {
+        const reader = stream.getReader()
+        const decoder = new TextDecoder()
+        while (true) {
+          const next = await reader.read()
+          if (next.done) break
+          append(decoder.decode(next.value, { stream: true }))
+        }
+        append(decoder.decode())
+      }
+      const stdoutDone = collect(proc.stdout, (chunk) => {
+        stdout += chunk
+      })
+      const stderrDone = collect(proc.stderr, (chunk) => {
+        stderr += chunk
+      })
+      const completed = (async (): Promise<RunResult> => {
+        const exitCode = await proc.exited
+        await Promise.all([stdoutDone, stderrDone])
+        return {
+          exitCode,
+          stdout: normalizeLines(stdout),
+          stderr: normalizeLines(stderr),
+          durationMs: Date.now() - startedAt,
+          timedOut: false,
+        }
+      })()
+
+      const waitForOutput = (pattern: RegExp, timeoutMs = opts?.timeoutMs ?? 15_000) =>
+        Effect.tryPromise({
+          try: async () => {
+            const deadline = Date.now() + timeoutMs
+            while (Date.now() < deadline) {
+              const output = normalizeLines(stdout + stderr)
+              pattern.lastIndex = 0
+              if (pattern.test(output)) return output
+              if (proc.exitCode !== null) {
+                await Promise.allSettled([stdoutDone, stderrDone])
+                const finalOutput = normalizeLines(stdout + stderr)
+                pattern.lastIndex = 0
+                if (pattern.test(finalOutput)) return finalOutput
+                break
+              }
+              await Bun.sleep(25)
+            }
+            throw new Error(
+              `mongolgpt output did not match ${pattern} within ${timeoutMs}ms\n` +
+                `stdout:\n${stdout.slice(-2_000)}\nstderr:\n${stderr.slice(-2_000)}`,
+            )
+          },
+          catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+        })
+
+      return {
+        interrupt: () => proc.kill("SIGINT"),
+        waitForOutput,
+        result: Effect.promise(() => completed),
+      } satisfies StartedCommand
+    })
+
     const runArgs = (message: string, opts?: RunOpts) => {
       const argv: string[] = ["run"]
       if (opts?.printLogs) argv.push("--print-logs")
@@ -289,7 +385,7 @@ export function withCliFixture<A, E>(
         Effect.sync(() =>
           Bun.spawn(["bun", "run", "--conditions=browser", cliEntry, ...runArgs(message, opts)], {
             cwd: home,
-            env: { ...process.env, ...env, ...options?.env },
+            env: { ...hostEnv, ...env, ...options?.env },
             stdin: "ignore",
             stdout: "pipe",
             stderr: "pipe",
@@ -331,7 +427,7 @@ export function withCliFixture<A, E>(
         Effect.sync(() =>
           Bun.spawn(["bun", "run", "--conditions=browser", cliEntry, ...argv], {
             cwd: home,
-            env: { ...process.env, ...env, ...opts?.env },
+            env: { ...hostEnv, ...env, ...opts?.env },
             stdout: "pipe",
             stderr: "pipe",
           }),
@@ -400,7 +496,7 @@ export function withCliFixture<A, E>(
         Effect.sync(() =>
           Bun.spawn(["bun", "run", "--conditions=browser", cliEntry, ...argv], {
             cwd: opts?.cwd ?? home,
-            env: { ...process.env, ...env, ...opts?.env },
+            env: { ...hostEnv, ...env, ...opts?.env },
             stdin: "pipe",
             stdout: "pipe",
             stderr: "pipe",
@@ -471,7 +567,7 @@ export function withCliFixture<A, E>(
       } satisfies AcpHandle
     })
 
-    const mongolgpt: MongolGPTCli = { run, startRun, serve, acp, spawn, expectExit, parseJsonEvents }
+    const mongolgpt: MongolGPTCli = { run, startRun, start, serve, acp, spawn, expectExit, parseJsonEvents }
 
     return yield* fn({ llm, home, mongolgpt })
     // FetchHttpClient is provided so test bodies can `yield* HttpClient.HttpClient`

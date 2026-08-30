@@ -169,7 +169,7 @@ const selectLoginOrg = Effect.fnUntraced(function* () {
   return true
 })
 
-const loginEffect = Effect.fn("login")(function* (url: string) {
+const loginEffect = Effect.fn("login")(function* (url: string, browser = true) {
   const service = yield* Account.Service
   const loginUrl = yield* Effect.try({
     try: () => normalizeAccountLoginUrl(url),
@@ -187,7 +187,7 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
 
   if (method._tag === "browser") {
     yield* Prompt.log.info("Энд очно уу: " + method.login.url)
-    yield* openBrowser(method.login.url)
+    if (browser) yield* openBrowser(method.login.url)
 
     const s = Prompt.spinner()
     yield* s.start("MongolGPT бүртгэлийн зөвшөөрөл хүлээж байна...")
@@ -219,7 +219,7 @@ const loginEffect = Effect.fn("login")(function* (url: string) {
 
   yield* Prompt.log.info("Энд очно уу: " + login.url)
   yield* Prompt.log.info("Код оруулна уу: " + login.user)
-  yield* openBrowser(login.url)
+  if (browser) yield* openBrowser(login.url)
 
   const s = Prompt.spinner()
   yield* s.start("Зөвшөөрөл хүлээж байна...")
@@ -393,14 +393,20 @@ export const LoginCommand = effectCmd({
   describe: false,
   instance: false,
   builder: (yargs) =>
-    yargs.positional("url", {
-      describe: "серверийн URL",
-      type: "string",
-      default: defaultConsoleUrl,
-    }),
+    yargs
+      .positional("url", {
+        describe: "серверийн URL",
+        type: "string",
+        default: defaultConsoleUrl,
+      })
+      .option("browser", {
+        describe: "нэвтрэх хөтчийг автоматаар нээх",
+        type: "boolean",
+        default: true,
+      }),
   handler: Effect.fn("Cli.account.login")(function* (args) {
     UI.empty()
-    yield* Effect.orDie(loginEffect(args.url ?? defaultConsoleUrl))
+    yield* Effect.orDie(loginEffect(args.url ?? defaultConsoleUrl, args.browser))
   }),
 })
 
