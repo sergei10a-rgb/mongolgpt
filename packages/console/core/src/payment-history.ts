@@ -24,6 +24,8 @@ export const WorkspacePaymentHistoryItemSchema = z
     createdAt: timestamp,
     expiresAt: timestamp.nullable(),
     verifiedAt: timestamp.nullable(),
+    expiredAt: timestamp.nullable(),
+    cancelledAt: timestamp.nullable(),
     refundedAt: timestamp.nullable(),
   })
   .strict()
@@ -51,6 +53,8 @@ export async function getWorkspacePaymentHistoryWithDb(db: Database.TxOrDb, work
       createdAt: PaymentInvoiceTable.timeCreated,
       expiresAt: PaymentInvoiceTable.time_expires,
       verifiedAt: PaymentInvoiceTable.time_verified,
+      expiredAt: PaymentInvoiceTable.time_expired,
+      cancelledAt: PaymentInvoiceTable.time_cancelled,
       refundedAt: PaymentInvoiceTable.time_refunded,
     })
     .from(PaymentInvoiceTable)
@@ -64,6 +68,8 @@ export async function getWorkspacePaymentHistoryWithDb(db: Database.TxOrDb, work
       createdAt: row.createdAt.getTime(),
       expiresAt: row.expiresAt?.getTime() ?? null,
       verifiedAt: row.verifiedAt?.getTime() ?? null,
+      expiredAt: row.expiredAt?.getTime() ?? null,
+      cancelledAt: row.cancelledAt?.getTime() ?? null,
       refundedAt: row.refundedAt?.getTime() ?? null,
     })),
   )

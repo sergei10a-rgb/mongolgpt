@@ -4,7 +4,11 @@ import { getRequestEvent } from "solid-js/web"
 import type { FinanceMarginUnavailableReason } from "@mongolgpt/console-core/finance-reporting.js"
 import type { PlatformAdminContext } from "~/lib/admin-context"
 import { AdminHeader } from "./admin-header"
-import { cancelAdminSubscriptionCheckout, refundAdminSubscriptionPayment } from "~/lib/admin-billing"
+import {
+  adminInvoiceStatusTime,
+  cancelAdminSubscriptionCheckout,
+  refundAdminSubscriptionPayment,
+} from "~/lib/admin-billing"
 import { adminBillingQuery } from "~/lib/admin-billing-query"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 
@@ -111,6 +115,8 @@ export interface AdminBillingData {
     status: "created" | "pending" | "paid" | "failed" | "expired" | "cancelled" | "refunded"
     timeCreated: string
     timeVerified: string | null
+    timeExpired: string | null
+    timeCancelled: string | null
     timeRefunded: string | null
     canCancel: boolean
     cancellationRequestKey: string | null
@@ -373,7 +379,7 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
                   <th>Багц</th>
                   <th>Дүн</th>
                   <th>Төлөв</th>
-                  <th>Үүссэн</th>
+                  <th>Төлөвийн огноо</th>
                   <Show when={canManageInvoices()}>
                     <th>Үйлдэл</th>
                   </Show>
@@ -405,7 +411,7 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
                       <td>
                         <span data-payment-status={invoice.status}>{paymentStatusLabel(invoice.status)}</span>
                       </td>
-                      <td>{formatDate(invoice.timeCreated)}</td>
+                      <td>{formatDate(adminInvoiceStatusTime(invoice))}</td>
                       <Show when={canManageInvoices()}>
                         <td>
                           <Show when={invoice.canCancel && invoice.cancellationRequestKey}>

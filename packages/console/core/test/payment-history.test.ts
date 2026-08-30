@@ -11,6 +11,8 @@ const INVOICE_A = "inv_01JV5T0G9H5Q3N7S2R8M4K6WXA"
 const INVOICE_B = "inv_01JV5T0G9H5Q3N7S2R8M4K6WXB"
 const INVOICE_C = "inv_01JV5T0G9H5Q3N7S2R8M4K6WXC"
 const INVOICE_D = "inv_01JV5T0G9H5Q3N7S2R8M4K6WXD"
+const INVOICE_E = "inv_01JV5T0G9H5Q3N7S2R8M4K6WXE"
+const INVOICE_F = "inv_01JV5T0G9H5Q3N7S2R8M4K6WXF"
 
 async function migrationSql() {
   const directory = resolve(import.meta.dir, "../migrations-d1")
@@ -29,8 +31,9 @@ describe("workspace payment history", () => {
     const insert = sqlite.query(
       `insert into payment_invoice
         (id, workspace_id, provider, merchant_account_id, external_invoice_id, purpose, plan, amount,
-          currency, status, time_expires, time_verified, time_refunded, time_created, time_deleted)
-        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          currency, status, time_expires, time_verified, time_expired, time_cancelled, time_refunded, time_created,
+          time_deleted)
+        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     insert.run(
       INVOICE_A,
@@ -45,6 +48,8 @@ describe("workspace payment history", () => {
       "paid",
       2_000,
       1_500,
+      null,
+      null,
       null,
       1_000,
       null,
@@ -62,6 +67,8 @@ describe("workspace payment history", () => {
       "refunded",
       4_000,
       3_500,
+      null,
+      null,
       3_800,
       3_000,
       null,
@@ -78,6 +85,8 @@ describe("workspace payment history", () => {
       "MNT",
       "pending",
       5_000,
+      null,
+      null,
       null,
       null,
       4_000,
@@ -97,8 +106,48 @@ describe("workspace payment history", () => {
       6_000,
       null,
       null,
-      5_000,
       5_500,
+      null,
+      5_000,
+      5_600,
+    )
+    insert.run(
+      INVOICE_E,
+      WORKSPACE_A,
+      "bonum",
+      "bonum_expired_merchant",
+      "bonum_expired_invoice",
+      "subscription",
+      "basic",
+      19_000,
+      "MNT",
+      "expired",
+      6_200,
+      null,
+      6_500,
+      null,
+      null,
+      6_000,
+      null,
+    )
+    insert.run(
+      INVOICE_F,
+      WORKSPACE_A,
+      "qpay",
+      "qpay_cancelled_merchant",
+      "qpay_cancelled_invoice",
+      "subscription",
+      "pro",
+      49_000,
+      "MNT",
+      "cancelled",
+      8_200,
+      null,
+      null,
+      7_500,
+      null,
+      7_000,
+      null,
     )
     return { db }
   }
@@ -108,6 +157,36 @@ describe("workspace payment history", () => {
     const history = await getWorkspacePaymentHistoryWithDb(db, WORKSPACE_A, 25)
 
     expect(history).toEqual([
+      {
+        invoiceID: INVOICE_F,
+        provider: "qpay",
+        purpose: "subscription",
+        plan: "pro",
+        amount: 49_000,
+        currency: "MNT",
+        status: "cancelled",
+        createdAt: 7_000,
+        expiresAt: 8_200,
+        verifiedAt: null,
+        expiredAt: null,
+        cancelledAt: 7_500,
+        refundedAt: null,
+      },
+      {
+        invoiceID: INVOICE_E,
+        provider: "bonum",
+        purpose: "subscription",
+        plan: "basic",
+        amount: 19_000,
+        currency: "MNT",
+        status: "expired",
+        createdAt: 6_000,
+        expiresAt: 6_200,
+        verifiedAt: null,
+        expiredAt: 6_500,
+        cancelledAt: null,
+        refundedAt: null,
+      },
       {
         invoiceID: INVOICE_B,
         provider: "bonum",
@@ -119,6 +198,8 @@ describe("workspace payment history", () => {
         createdAt: 3_000,
         expiresAt: 4_000,
         verifiedAt: 3_500,
+        expiredAt: null,
+        cancelledAt: null,
         refundedAt: 3_800,
       },
       {
@@ -132,6 +213,8 @@ describe("workspace payment history", () => {
         createdAt: 1_000,
         expiresAt: 2_000,
         verifiedAt: 1_500,
+        expiredAt: null,
+        cancelledAt: null,
         refundedAt: null,
       },
     ])

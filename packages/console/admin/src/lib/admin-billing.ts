@@ -87,6 +87,16 @@ export function adminBillingPeriodBounds(period: z.infer<typeof AdminBillingQuer
   }
 }
 
+export function adminInvoiceStatusTime(invoice: {
+  timeCreated: string
+  timeVerified: string | null
+  timeExpired: string | null
+  timeCancelled: string | null
+  timeRefunded: string | null
+}) {
+  return invoice.timeRefunded ?? invoice.timeVerified ?? invoice.timeCancelled ?? invoice.timeExpired ?? invoice.timeCreated
+}
+
 export async function getAdminBilling(context: PlatformAdminContext, raw: unknown, now = new Date()) {
   const admin = requirePlatformAdminPermission(context, "billing.read")
   const input = AdminBillingQueryInput.parse(raw)
@@ -211,6 +221,8 @@ export async function getAdminBilling(context: PlatformAdminContext, raw: unknow
             refundStatus: PaymentRefundTable.status,
             timeCreated: PaymentInvoiceTable.timeCreated,
             timeVerified: PaymentInvoiceTable.time_verified,
+            timeExpired: PaymentInvoiceTable.time_expired,
+            timeCancelled: PaymentInvoiceTable.time_cancelled,
             timeRefunded: PaymentInvoiceTable.time_refunded,
           })
           .from(PaymentInvoiceTable)
@@ -304,6 +316,8 @@ export async function getAdminBilling(context: PlatformAdminContext, raw: unknow
           refundNeedsProviderCheck,
           timeCreated: invoice.timeCreated.toISOString(),
           timeVerified: invoice.timeVerified?.toISOString() ?? null,
+          timeExpired: invoice.timeExpired?.toISOString() ?? null,
+          timeCancelled: invoice.timeCancelled?.toISOString() ?? null,
           timeRefunded: invoice.timeRefunded?.toISOString() ?? null,
         }
       }),

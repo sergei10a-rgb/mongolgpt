@@ -85,7 +85,14 @@ export function PaymentSection() {
 }
 
 function PaymentRow(props: { payment: WorkspacePaymentHistoryItem }) {
-  const occurred = () => new Date(props.payment.refundedAt ?? props.payment.verifiedAt ?? props.payment.createdAt)
+  const occurred = () =>
+    new Date(
+      props.payment.refundedAt ??
+        props.payment.verifiedAt ??
+        props.payment.cancelledAt ??
+        props.payment.expiredAt ??
+        props.payment.createdAt,
+    )
   return (
     <tr data-status={props.payment.status}>
       <td>

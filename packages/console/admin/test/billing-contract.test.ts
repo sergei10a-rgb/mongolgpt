@@ -5,6 +5,7 @@ import {
   AdminSubscriptionCheckoutCancellationInput,
   AdminSubscriptionPaymentRefundInput,
   adminBillingPeriodBounds,
+  adminInvoiceStatusTime,
   adminBillingSafeDifference,
   adminBillingSafeSum,
 } from "../src/lib/admin-billing"
@@ -77,6 +78,32 @@ describe("admin billing contract", () => {
     expect(now.toISOString()).toBe("2026-07-29T12:00:00.000Z")
   })
 
+  test("uses the authoritative terminal invoice timestamp in the admin table", () => {
+    const created = {
+      timeCreated: "2026-07-29T10:00:00.000Z",
+      timeVerified: null,
+      timeExpired: null,
+      timeCancelled: null,
+      timeRefunded: null,
+    }
+    expect(adminInvoiceStatusTime({ ...created, timeExpired: "2026-07-29T10:10:00.000Z" })).toBe(
+      "2026-07-29T10:10:00.000Z",
+    )
+    expect(adminInvoiceStatusTime({ ...created, timeCancelled: "2026-07-29T10:20:00.000Z" })).toBe(
+      "2026-07-29T10:20:00.000Z",
+    )
+    expect(adminInvoiceStatusTime({ ...created, timeVerified: "2026-07-29T10:30:00.000Z" })).toBe(
+      "2026-07-29T10:30:00.000Z",
+    )
+    expect(
+      adminInvoiceStatusTime({
+        ...created,
+        timeVerified: "2026-07-29T10:30:00.000Z",
+        timeRefunded: "2026-07-29T10:40:00.000Z",
+      }),
+    ).toBe("2026-07-29T10:40:00.000Z")
+  })
+
   test("rejects aggregate arithmetic outside the safe integer range", () => {
     expect(adminBillingSafeSum(10, 20, 30)).toBe(60)
     expect(adminBillingSafeDifference(10, 30)).toBe(-20)
@@ -98,7 +125,11 @@ describe("admin billing contract", () => {
     expect(billing).toContain("getFinanceMarginEvidenceWithDb")
     expect(billing).toContain("calculateFinanceGrossMargin")
     expect(billing).toContain("PaymentInvoiceTable.time_verified")
+    expect(billing).toContain("PaymentInvoiceTable.time_expired")
+    expect(billing).toContain("PaymentInvoiceTable.time_cancelled")
     expect(billing).toContain("PaymentInvoiceTable.time_refunded")
+    expect(billing).toContain("invoice.timeCancelled")
+    expect(billing).toContain("invoice.timeExpired")
     expect(billing).toContain("lte(PlanSubscriptionTable.timePeriodStart, period.end)")
     expect(billing).toContain("gt(PlanSubscriptionTable.timePeriodEnd, period.end)")
     expect(billing).toContain("isNull(PaymentInvoiceTable.timeDeleted)")
@@ -189,6 +220,8 @@ describe("admin billing contract", () => {
     expect(view).toContain("Зарим төлбөрийн тооцоо нийлүүлэлтийн баримт дутуу")
     expect(view).toContain("Шалтгаан тодорхойгүй")
     expect(view).toContain("Тодорхойгүй төлөв")
+    expect(view).toContain("Төлөвийн огноо")
+    expect(view).toContain("adminInvoiceStatusTime")
     expect(view).toContain('currency: "MNT"')
     expect(view).toContain('currency: "USD"')
     expect(view).not.toContain("opencode")
