@@ -25,8 +25,13 @@ type CommandResult = {
 }
 
 type Run = (args: readonly string[]) => Promise<CommandResult>
+type RegistryStatus = (name: string) => Promise<number>
 
-export async function verifyNpmPublishAccess(input: { token: string | undefined; run: Run }) {
+export async function verifyNpmPublishAccess(input: {
+  token: string | undefined
+  run: Run
+  registryStatus?: RegistryStatus
+}) {
   if (!input.token?.trim()) throw new Error("NPM_TOKEN тохируулаагүй байна")
 
   const owner = npmUsername((await command(input.run, ["whoami", `--registry=${registry}`], "npm account")).stdout)
@@ -54,7 +59,17 @@ export async function verifyNpmPublishAccess(input: { token: string | undefined;
     ["access", "list", "packages", "@mongolgpt", "--json", `--registry=${registry}`],
     "@mongolgpt package access",
   )
-  jsonRecord(access.stdout, "@mongolgpt package access")
+  const packageAccess = jsonRecord(access.stdout, "@mongolgpt package access")
+  for (const name of npmPublishPlatformPackages) {
+    const permission = packageAccess[name]
+    if (permission === "read-write") continue
+    if (permission !== undefined) throw new Error(`${owner} нь ${name} package-д read-write эрхгүй байна`)
+
+    const status = await (input.registryStatus ?? publicRegistryStatus)(name)
+    if (status === 404) continue
+    if (status === 200) throw new Error(`${name} package бүртгэлд байгаа боловч ${owner} publish эрхгүй байна`)
+    throw new Error(`${name} package-ийн public registry төлөвийг баталгаажуулж чадсангүй (HTTP ${status})`)
+  }
 
   return {
     owner,
@@ -62,6 +77,15 @@ export async function verifyNpmPublishAccess(input: { token: string | undefined;
     cliPackages: npmPublishCliPackages.length,
     platformPackages: npmPublishPlatformPackages.length,
   }
+}
+
+async function publicRegistryStatus(name: string) {
+  const response = await fetch(`${registry}/${encodeURIComponent(name)}`, {
+    headers: { Accept: "application/json" },
+    redirect: "error",
+    signal: AbortSignal.timeout(4_000),
+  })
+  return response.status
 }
 
 async function command(run: Run, args: readonly string[], label: string) {
