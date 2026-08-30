@@ -6,7 +6,6 @@ export function isUnknownAuthStateError(error: unknown) {
 }
 
 export async function localizeUnknownAuthStateResponse(response: Response, consoleOrigin?: string) {
-  if (response.status < 400) return response
   if (!response.headers.get("content-type")?.toLowerCase().startsWith("text/plain")) return response
   if (!(await response.clone().text()).includes(UNKNOWN_AUTH_STATE)) return response
   return authStateError(consoleOrigin)

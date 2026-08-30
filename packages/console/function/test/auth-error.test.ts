@@ -44,6 +44,20 @@ describe("OAuth state error page", () => {
     expect(body).not.toContain(message)
   })
 
+  test("replaces a successful plain-text stale callback response", async () => {
+    const message =
+      "The browser was in an unknown state. This could be because certain cookies expired or the browser was switched in the middle of an authentication flow."
+    const response = await localizeUnknownAuthStateResponse(
+      new Response(message, { status: 200, headers: { "content-type": "text/plain; charset=UTF-8" } }),
+      "https://dev.mgpt.mn",
+    )
+    const body = await response.text()
+
+    expect(response.status).toBe(400)
+    expect(body).toContain("Нэвтрэх хүсэлт хүчингүй боллоо")
+    expect(body).not.toContain(message)
+  })
+
   test("does not replace unrelated upstream failures", async () => {
     const original = Response.json({ error: "database_unavailable" }, { status: 503 })
     expect(await localizeUnknownAuthStateResponse(original, "https://dev.mgpt.mn")).toBe(original)

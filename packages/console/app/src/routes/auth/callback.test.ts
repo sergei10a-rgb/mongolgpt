@@ -18,18 +18,18 @@ const verifyMock = mock(async () => ({
 
 const authSessionUpdates: Array<Record<string, unknown>> = [];
 let oauthSessionData: OAuthStateSessionData = {};
-let oauthClears = 0;
+let oauthStateUpdates = 0;
 
 describe("OAuth callback route", () => {
   beforeEach(() => {
     exchangeMock.mockClear();
     verifyMock.mockClear();
     authSessionUpdates.length = 0;
-    oauthClears = 0;
+    oauthStateUpdates = 0;
     oauthSessionData = {};
   });
 
-  test("rejects a mismatched callback state before code exchange and clears the one-time session", async () => {
+  test("rejects a mismatched callback state without destroying another tab's login", async () => {
     oauthSessionData = {
       state: "expected-state",
       expiresAt: Date.now() + 60_000,
@@ -48,9 +48,9 @@ describe("OAuth callback route", () => {
       },
       oauthStateSession: {
         data: oauthSessionData,
-        clear: async () => {
-          oauthClears++;
-          oauthSessionData = {};
+        update: async (updater) => {
+          oauthStateUpdates++;
+          oauthSessionData = updater(oauthSessionData);
         },
       },
       redirectFn: (target) => Response.redirect(target, 302),
@@ -61,14 +61,18 @@ describe("OAuth callback route", () => {
       error: "invalid_oauth_state",
     });
     expect(exchangeMock).toHaveBeenCalledTimes(0);
-    expect(oauthClears).toBe(1);
-    expect(oauthSessionData).toEqual({});
+    expect(oauthStateUpdates).toBe(1);
+    expect(oauthSessionData).toEqual({
+      states: { "expected-state": expect.any(Number) },
+    });
   });
 
   test("accepts the matching callback state exactly once, then stores the verified account", async () => {
     oauthSessionData = {
-      state: "expected-state",
-      expiresAt: Date.now() + 60_000,
+      states: {
+        "expected-state": Date.now() + 60_000,
+        "sibling-state": Date.now() + 60_000,
+      },
     };
     const response = await completeOAuthCallback({
       url: new URL(
@@ -84,9 +88,9 @@ describe("OAuth callback route", () => {
       },
       oauthStateSession: {
         data: oauthSessionData,
-        clear: async () => {
-          oauthClears++;
-          oauthSessionData = {};
+        update: async (updater) => {
+          oauthStateUpdates++;
+          oauthSessionData = updater(oauthSessionData);
         },
       },
     });
@@ -97,7 +101,9 @@ describe("OAuth callback route", () => {
     );
     expect(exchangeMock).toHaveBeenCalledTimes(1);
     expect(verifyMock).toHaveBeenCalledTimes(1);
-    expect(oauthClears).toBe(1);
+    expect(oauthStateUpdates).toBe(1);
+    expect(oauthSessionData.states?.["expected-state"]).toBeUndefined();
+    expect(oauthSessionData.states?.["sibling-state"]).toBeNumber();
     expect(authSessionUpdates).toHaveLength(1);
     expect(authSessionUpdates[0]).toEqual({
       account: {
@@ -125,9 +131,9 @@ describe("OAuth callback route", () => {
       },
       oauthStateSession: {
         data: oauthSessionData,
-        clear: async () => {
-          oauthClears++;
-          oauthSessionData = {};
+        update: async (updater) => {
+          oauthStateUpdates++;
+          oauthSessionData = updater(oauthSessionData);
         },
       },
       redirectFn: (target) => Response.redirect(target, 302),

@@ -1,5 +1,5 @@
 import { AuthClient } from "~/context/auth"
-import { issueOAuthState, type OAuthStateSessionData, useOAuthStateSession } from "./oauth-state"
+import { issueOAuthState, recordOAuthState, type OAuthStateSessionData, useOAuthStateSession } from "./oauth-state"
 
 export type OAuthAuthorizationStage =
   | "authorization_target"
@@ -28,7 +28,11 @@ export async function authorizationTarget(
     dependencies.onStage,
   )
   const issued = await stage("state_issue", () => issueOAuthState(result.url), dependencies.onStage)
-  await stage("state_store", () => session.update(() => issued.session), dependencies.onStage)
+  await stage(
+    "state_store",
+    () => session.update((value) => recordOAuthState(value, issued.session)),
+    dependencies.onStage,
+  )
   return issued.authorizationUrl
 }
 

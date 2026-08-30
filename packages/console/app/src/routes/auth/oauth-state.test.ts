@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { issueOAuthState, validateOAuthState } from "./oauth-state";
+import {
+  consumeOAuthState,
+  issueOAuthState,
+  recordOAuthState,
+  validateOAuthState,
+} from "./oauth-state";
 
 const source = await Bun.file(
   new URL("./oauth-state.ts", import.meta.url),
@@ -35,6 +40,70 @@ describe("OAuth state session", () => {
     expect(validateOAuthState(session, "nonce_123", 2_000)).toEqual({
       ok: false,
       reason: "expired",
+    });
+  });
+
+  test("keeps concurrent login states isolated and consumes only the matching state", () => {
+    const first = { state: "first_nonce", expiresAt: 3_000 };
+    const second = { state: "second_nonce", expiresAt: 4_000 };
+    const stored = recordOAuthState(
+      recordOAuthState({}, first, 1_000),
+      second,
+      1_000,
+    );
+
+    expect(validateOAuthState(stored, first.state, 1_500)).toEqual({
+      ok: true,
+    });
+    expect(validateOAuthState(stored, second.state, 1_500)).toEqual({
+      ok: true,
+    });
+
+    const consumed = consumeOAuthState(stored, first.state, 1_500);
+    expect(consumed.validation).toEqual({ ok: true });
+    expect(validateOAuthState(consumed.session, first.state, 1_500)).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+    expect(validateOAuthState(consumed.session, second.state, 1_500)).toEqual({
+      ok: true,
+    });
+  });
+
+  test("does not destroy another tab's state when a foreign callback arrives", () => {
+    const stored = recordOAuthState(
+      {},
+      { state: "expected_nonce", expiresAt: 3_000 },
+      1_000,
+    );
+    const consumed = consumeOAuthState(stored, "foreign_nonce", 1_500);
+
+    expect(consumed.validation).toEqual({ ok: false, reason: "invalid" });
+    expect(
+      validateOAuthState(consumed.session, "expected_nonce", 1_500),
+    ).toEqual({ ok: true });
+  });
+
+  test("migrates a legacy state and bounds the signed cookie payload", () => {
+    let stored: Parameters<typeof recordOAuthState>[0] = {
+      state: "legacy_nonce",
+      expiresAt: 5_000,
+    };
+    for (let index = 0; index < 9; index++) {
+      stored = recordOAuthState(
+        stored,
+        { state: `new_nonce_${index}`, expiresAt: 6_000 + index },
+        1_000,
+      );
+    }
+
+    expect(Object.keys(stored.states ?? {})).toHaveLength(8);
+    expect(validateOAuthState(stored, "legacy_nonce", 1_500)).toEqual({
+      ok: false,
+      reason: "invalid",
+    });
+    expect(validateOAuthState(stored, "new_nonce_8", 1_500)).toEqual({
+      ok: true,
     });
   });
 

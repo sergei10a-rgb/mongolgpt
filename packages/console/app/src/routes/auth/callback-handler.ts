@@ -2,7 +2,7 @@ import type { Locale } from "~/lib/language";
 import { route } from "~/lib/language";
 import { authCallbackTarget } from "./helpers";
 import type { OAuthStateSessionData } from "./oauth-state";
-import { validateOAuthState } from "./oauth-state";
+import { consumeOAuthState } from "./oauth-state";
 
 type Dictionary = ReturnType<typeof import("~/i18n").i18n>;
 type AuthAccountSession = {
@@ -26,17 +26,20 @@ export async function completeOAuthCallback(input: {
   };
   oauthStateSession: {
     data: OAuthStateSessionData;
-    clear(): Promise<unknown>;
+    update(
+      updater: (value: OAuthStateSessionData) => OAuthStateSessionData,
+    ): Promise<unknown>;
   };
   redirectFn?: (target: string) => Response;
 }) {
-  const state = validateOAuthState(
-    input.oauthStateSession.data,
-    input.url.searchParams.get("state"),
-  );
-  await input.oauthStateSession.clear();
-  if (!state.ok) {
-    return invalidStateResponse(state.reason, input.dict);
+  const callbackState = input.url.searchParams.get("state");
+  let consumed = consumeOAuthState(input.oauthStateSession.data, callbackState);
+  await input.oauthStateSession.update((value) => {
+    consumed = consumeOAuthState(value, callbackState);
+    return consumed.session;
+  });
+  if (!consumed.validation.ok) {
+    return invalidStateResponse(consumed.validation.reason, input.dict);
   }
 
   const code = input.url.searchParams.get("code");

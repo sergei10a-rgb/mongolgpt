@@ -20,7 +20,7 @@ describe("MongolGPT account access wiring", () => {
     expect(auth).toContain('redirect("/auth/suspended")')
     expect(callback).toContain("useOAuthStateSession")
     expect(callbackHandler).toContain('error: "invalid_oauth_state"')
-    expect(callbackHandler).toContain("validateOAuthState")
+    expect(callbackHandler).toContain("consumeOAuthState")
     expect(callbackHandler).toContain("subject.authVersion ?? 0")
     expect(callback).toContain('dict["gateway.api.error.internalServer"]')
     expect(callback).not.toContain("error instanceof Error ? error.message")

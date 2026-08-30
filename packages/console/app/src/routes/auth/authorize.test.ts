@@ -120,8 +120,35 @@ describe("OAuth authorize route", () => {
     const state = redirected.searchParams.get("state");
     expect(state).not.toBe("upstream");
     expect(state).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(state).toBe(oauthStateUpdates[0]?.state ?? null);
+    expect(oauthStateUpdates[0]?.states?.[state!]).toBeNumber();
     expect(order).toEqual(["session", "authorize", "update"]);
+  });
+
+  test("preserves an active state when another login tab starts", async () => {
+    const existing: OAuthStateSessionData = {
+      states: { existing_nonce: Date.now() + 60_000 },
+    };
+    let updated: OAuthStateSessionData = {};
+
+    const target = await authorizationTarget(
+      new URL("https://dev.mgpt.mn/auth/authorize"),
+      "/auth/app",
+      {
+        authorize: authorizeMock,
+        stateSession: async () => ({
+          update: async (updater) => {
+            updated = updater(existing);
+          },
+        }),
+      },
+    );
+    const issuedState = new URL(target).searchParams.get("state");
+
+    expect(issuedState).toBeTruthy();
+    expect(updated.states?.existing_nonce).toBe(
+      existing.states?.existing_nonce,
+    );
+    expect(updated.states?.[issuedState!]).toBeNumber();
   });
 
   test("labels state-session failures without exposing the underlying error", async () => {
