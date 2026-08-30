@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { spawn } from "node:child_process"
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import { fileURLToPath } from "node:url"
+import { gzipSync } from "node:zlib"
 import { localBridgeChallenge, type LocalBridgePairingRequest } from "@mongolgpt/local-bridge"
 import { createLocalBridgeGateway } from "./local-bridge-gateway"
 
@@ -190,6 +191,35 @@ describe("desktop local bridge gateway", () => {
         })
       ).status,
     ).toBe(403)
+  })
+
+  test("does not advertise upstream compression after fetch decodes the sidecar response", async () => {
+    const target = await sidecar((_request, response) => {
+      const body = gzipSync(JSON.stringify({ decoded: true }))
+      response.writeHead(200, {
+        "content-type": "application/json",
+        "content-encoding": "gzip",
+        "content-length": String(body.length),
+      })
+      response.end(body)
+    })
+    const gateway = createLocalBridgeGateway({
+      sidecar: async () => ({ url: target.url, username: "mongolgpt", password: "sidecar-secret" }),
+      randomBytes: entropy(),
+    })
+    cleanup.push(() => gateway.stop())
+    const authorization = await gateway.authorize(await pairing())
+    const base = `http://127.0.0.1:${authorization.port}`
+    const token = await sessionToken(await exchange(base, authorization.code))
+
+    const response = await fetch(`${base}/compressed`, {
+      headers: { origin, authorization: basic(token) },
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-encoding")).toBeNull()
+    expect(response.headers.get("content-length")).toBeNull()
+    expect(await response.json()).toEqual({ decoded: true })
   })
 
   test("revokes browser sessions and closes permanently after a startup race", async () => {

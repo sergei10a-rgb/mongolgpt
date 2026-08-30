@@ -54,6 +54,7 @@ const RESPONSE_HEADER_BLOCKLIST = new Set([
   "access-control-allow-origin",
   "access-control-expose-headers",
   "connection",
+  "content-encoding",
   "content-length",
   "keep-alive",
   "location",
