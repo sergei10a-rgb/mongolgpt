@@ -1,13 +1,17 @@
 import { AccountOverviewSchema, PlanNames, type AccountOverview } from "@mongolgpt/account-contract"
 import { and, Database, eq, gt, gte, isNull, lt, lte, sql } from "./drizzle"
-import { planQuotaCounterKeys, planQuotaScope } from "./quota"
+import {
+  planCostLimitInMicroCents,
+  readPaidPlanQuota,
+  type PaidPlanQuotaLimits,
+  type ReadPlanQuota,
+} from "./paid-plan-quota"
 import { AccountTable } from "./schema/account.sql"
 import { PlanSubscriptionTable, SubscriptionTable, UsageTable } from "./schema/billing.sql"
 import { UserTable } from "./schema/user.sql"
 import { WorkspaceTable } from "./schema/workspace.sql"
 import { Subscription } from "./subscription"
 import { getMonthlyBounds, getWeekBounds } from "./util/date"
-import { centsToMicroCents } from "./util/price"
 import { z } from "zod"
 
 const inputSchema = z
@@ -19,13 +23,12 @@ const inputSchema = z
   })
   .strict()
 
-type PlanLimits = z.output<typeof Subscription.LimitsSchema>["plans"][(typeof PlanNames)[number]]
 type FreeLimits = z.output<typeof Subscription.LimitsSchema>["free"]
 
 export type AccountOverviewDependencies = {
   getFreeLimits?: () => FreeLimits | Promise<FreeLimits>
-  getPlanLimits?: (plan: (typeof PlanNames)[number]) => PlanLimits | Promise<PlanLimits>
-  readPlanQuota?: (input: { scope: string; keys: readonly string[] }) => Promise<Record<string, number>>
+  getPlanLimits?: (plan: (typeof PlanNames)[number]) => PaidPlanQuotaLimits | Promise<PaidPlanQuotaLimits>
+  readPlanQuota?: ReadPlanQuota
 }
 
 export class AccountOverviewNotFoundError extends Error {
@@ -260,16 +263,16 @@ export async function getAccountOverviewWithDb(
           subscription: active,
           limits: {
             plan: active.plan,
-            weeklyCostLimitInMicroCents: costLimit(limits.weeklyCostLimit),
+            weeklyCostLimitInMicroCents: planCostLimitInMicroCents(limits.weeklyCostLimit),
             weeklyTokenLimit: limits.weeklyTokenLimit,
             weeklyRequestLimit: limits.weeklyRequestLimit,
-            monthlyCostLimitInMicroCents: costLimit(limits.monthlyCostLimit),
+            monthlyCostLimitInMicroCents: planCostLimitInMicroCents(limits.monthlyCostLimit),
             monthlyTokenLimit: limits.monthlyTokenLimit,
             monthlyRequestLimit: limits.monthlyRequestLimit,
-            rollingCostLimitInMicroCents: costLimit(limits.rollingCostLimit),
+            rollingCostLimitInMicroCents: planCostLimitInMicroCents(limits.rollingCostLimit),
             rollingWindowHours: limits.rollingWindow,
           },
-          quota: await paidQuota(
+          quota: await readPaidPlanQuota(
             item,
             active.invoiceID,
             limits,
@@ -346,99 +349,6 @@ async function workspaceUsage(
     totalTokens,
     costInMicroCents: number(row?.cost),
   }
-}
-
-async function paidQuota(
-  item: {
-    id: string
-    userID: string
-    fixedUsage: number | null
-    fixedUpdated: Date | null
-    weeklyTokens: number | null
-    weeklyTokensUpdated: Date | null
-    weeklyRequests: number | null
-    weeklyRequestsUpdated: Date | null
-    monthlyCost: number | null
-    monthlyCostUpdated: Date | null
-    monthlyTokens: number | null
-    monthlyTokensUpdated: Date | null
-    monthlyRequests: number | null
-    monthlyRequestsUpdated: Date | null
-    rollingUsage: number | null
-    rollingUpdated: Date | null
-  },
-  invoiceID: string,
-  limits: PlanLimits,
-  now: number,
-  weekEnd: number,
-  monthStart: number,
-  monthEnd: number,
-  read: AccountOverviewDependencies["readPlanQuota"],
-) {
-  if (!read) return { status: "unavailable" as const, reason: "quota-service-unavailable" as const }
-  const keys = planQuotaCounterKeys(item.userID)
-  const rollingWindow = limits.rollingWindow * 3_600_000
-  const weekStart = weekEnd - 7 * 24 * 3_600_000
-  const rollingStart = now - rollingWindow
-  try {
-    const live = await read({ scope: planQuotaScope(item.id, invoiceID), keys: Object.values(keys) })
-    const weeklyCost = Math.max(fresh(item.fixedUsage, item.fixedUpdated, weekStart), counter(live, keys.weeklyCost))
-    const weeklyTokens = Math.max(
-      fresh(item.weeklyTokens, item.weeklyTokensUpdated, weekStart),
-      counter(live, keys.weeklyTokens),
-    )
-    const weeklyRequests = Math.max(
-      fresh(item.weeklyRequests, item.weeklyRequestsUpdated, weekStart),
-      counter(live, keys.weeklyRequests),
-    )
-    const monthlyCost = Math.max(
-      fresh(item.monthlyCost, item.monthlyCostUpdated, monthStart),
-      counter(live, keys.monthlyCost),
-    )
-    const monthlyTokens = Math.max(
-      fresh(item.monthlyTokens, item.monthlyTokensUpdated, monthStart),
-      counter(live, keys.monthlyTokens),
-    )
-    const monthlyRequests = Math.max(
-      fresh(item.monthlyRequests, item.monthlyRequestsUpdated, monthStart),
-      counter(live, keys.monthlyRequests),
-    )
-    const rollingCost = Math.max(
-      fresh(item.rollingUsage, item.rollingUpdated, rollingStart),
-      counter(live, keys.rollingCost),
-    )
-    const rollingReset =
-      item.rollingUpdated && item.rollingUpdated.getTime() >= rollingStart
-        ? item.rollingUpdated.getTime() + rollingWindow
-        : null
-    return {
-      status: "available" as const,
-      scope: "user" as const,
-      weeklyCost: { used: weeklyCost, limit: costLimit(limits.weeklyCostLimit), resetAt: weekEnd },
-      weeklyTokens: { used: weeklyTokens, limit: limits.weeklyTokenLimit, resetAt: weekEnd },
-      weeklyRequests: { used: weeklyRequests, limit: limits.weeklyRequestLimit, resetAt: weekEnd },
-      monthlyCost: { used: monthlyCost, limit: costLimit(limits.monthlyCostLimit), resetAt: monthEnd },
-      monthlyTokens: { used: monthlyTokens, limit: limits.monthlyTokenLimit, resetAt: monthEnd },
-      monthlyRequests: { used: monthlyRequests, limit: limits.monthlyRequestLimit, resetAt: monthEnd },
-      rollingCost: { used: rollingCost, limit: costLimit(limits.rollingCostLimit), resetAt: rollingReset },
-    }
-  } catch {
-    return { status: "unavailable" as const, reason: "quota-service-unavailable" as const }
-  }
-}
-
-function fresh(value: number | null, updated: Date | null, threshold: number) {
-  if (!updated || updated.getTime() < threshold) return 0
-  return number(value)
-}
-
-function counter(values: Record<string, number>, key: string) {
-  if (!(key in values)) throw new TypeError("Хязгаарын тоолуур дутуу байна")
-  return number(values[key])
-}
-
-function costLimit(value: number) {
-  return centsToMicroCents(value * 100)
 }
 
 function number(value: unknown) {

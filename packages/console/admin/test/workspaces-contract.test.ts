@@ -51,9 +51,13 @@ describe("admin workspace investigation contract", () => {
   })
 
   test("keeps the query bounded, escaped, soft-paginated, and read-only", async () => {
-    const workspaces = await source("src/lib/admin-workspaces.ts")
-    const route = await source("src/routes/workspaces/index.tsx")
-    const header = await source("src/component/admin-header.tsx")
+    const [workspaces, route, header, quotaClient, infra] = await Promise.all([
+      source("src/lib/admin-workspaces.ts"),
+      source("src/routes/workspaces/index.tsx"),
+      source("src/component/admin-header.tsx"),
+      source("src/lib/admin-quota.server.ts"),
+      source("../../../infra/admin.ts"),
+    ])
 
     expect(workspaces).toContain('"users.read"')
     expect(workspaces).toContain('"billing.read"')
@@ -67,6 +71,10 @@ describe("admin workspace investigation contract", () => {
     expect(workspaces).toContain("gte(UsageTable.timeCreated, usagePeriod.usageStart)")
     expect(workspaces).toContain("lt(UsageTable.timeCreated, usagePeriod.usageEnd)")
     expect(workspaces).toContain("groupBy(UsageTable.provider, UsageTable.model)")
+    expect(workspaces).toContain("readPaidPlanQuota")
+    expect(workspaces).toContain("SubscriptionTable")
+    expect(workspaces).toContain('mode: "paid-plan"')
+    expect(workspaces).toContain('mode: "model-scoped"')
     expect(workspaces).not.toContain("inArray(")
     expect(workspaces).not.toContain(".insert(")
     expect(workspaces).not.toContain(".update(")
@@ -77,11 +85,16 @@ describe("admin workspace investigation contract", () => {
     expect(route).toContain("Дэлгэрэнгүй")
     expect(route).toContain("aria-label")
     expect(route).toContain("Сүүлийн 30 хоногийн хэрэглээ")
+    expect(route).toContain("Гишүүн тус бүрийн багцын хязгаар")
+    expect(route).toContain("Хуурамч үлдэгдэл")
     expect(route).not.toContain("bounded хайлт")
     expect(route).not.toContain("usage бүртгэл")
     expect(route).not.toContain("action(")
     expect(route).not.toContain("useSubmission")
     expect(route).not.toContain("opencode")
+    expect(quotaClient).toContain("Resource.QuotaServiceToken.value")
+    expect(quotaClient).toContain("Authorization: `Bearer ${resources.token}`")
+    expect(infra).toContain("SECRET.QuotaServiceToken")
     expect(header).toContain('permissions.includes("users.read") && props.admin.permissions.includes("billing.read")')
     expect(header).toContain('href="/workspaces"')
   })

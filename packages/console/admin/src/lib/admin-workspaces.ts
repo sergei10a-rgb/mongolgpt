@@ -6,17 +6,31 @@ import {
   Database,
   desc,
   eq,
+  gt,
   gte,
   isNull,
   lt,
+  lte,
   max,
   sql,
   sum,
 } from "@mongolgpt/console-core/drizzle/index.js"
 import { AccountTable } from "@mongolgpt/console-core/schema/account.sql.js"
-import { PaymentInvoiceTable, PlanSubscriptionTable, UsageTable } from "@mongolgpt/console-core/schema/billing.sql.js"
+import {
+  PaymentInvoiceTable,
+  PlanSubscriptionTable,
+  SubscriptionTable,
+  UsageTable,
+} from "@mongolgpt/console-core/schema/billing.sql.js"
 import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
+import {
+  readPaidPlanQuota,
+  type PaidPlanQuotaLimits,
+  type ReadPlanQuota,
+} from "@mongolgpt/console-core/paid-plan-quota.js"
+import { planQuotaCounterKeys, planQuotaScope } from "@mongolgpt/console-core/quota.js"
+import { getMonthlyBounds, getWeekBounds } from "@mongolgpt/console-core/util/date.js"
 import type { PlatformAdminContext } from "./admin-context"
 import { requirePlatformAdminPermission } from "./admin-auth"
 
@@ -30,71 +44,103 @@ export const AdminWorkspaceInvestigationInput = z.object({
   limit: z.union([z.literal(25), z.literal(50)]).default(25),
 })
 
+export type AdminWorkspaceDependencies = {
+  getPlanLimits?: (plan: "basic" | "pro" | "max") => PaidPlanQuotaLimits | Promise<PaidPlanQuotaLimits>
+  readPlanQuota?: ReadPlanQuota
+}
+
 export function requireAdminWorkspaceInvestigationAccess(context: PlatformAdminContext) {
   return requirePlatformAdminPermission(requirePlatformAdminPermission(context, "users.read"), "billing.read")
 }
 
-export async function listAdminWorkspaces(context: PlatformAdminContext, raw: unknown, now = new Date()) {
+export async function listAdminWorkspaces(
+  context: PlatformAdminContext,
+  raw: unknown,
+  now = new Date(),
+  dependencies: AdminWorkspaceDependencies = {},
+) {
+  return Database.use((tx) => listAdminWorkspacesWithDb(tx, context, raw, now, dependencies))
+}
+
+export async function listAdminWorkspacesWithDb(
+  tx: Database.TxOrDb,
+  context: PlatformAdminContext,
+  raw: unknown,
+  now = new Date(),
+  dependencies: AdminWorkspaceDependencies = {},
+) {
   const admin = requireAdminWorkspaceInvestigationAccess(context)
   const input = AdminWorkspaceInvestigationInput.parse(raw)
   const pattern = input.q ? `%${escapeLike(input.q.toLowerCase())}%` : undefined
   const usageStart = new Date(now.getTime() - 30 * day)
+  const getPlanLimits =
+    dependencies.getPlanLimits ??
+    (async (plan: "basic" | "pro" | "max") => {
+      const { Subscription } = await import("@mongolgpt/console-core/subscription.js")
+      return (await Subscription.getLimits()).plans[plan]
+    })
+  const readPlanQuota =
+    dependencies.readPlanQuota ??
+    (async (request: Parameters<ReadPlanQuota>[0]) => {
+      const { readAdminPlanQuota } = await import("./admin-quota.server")
+      return readAdminPlanQuota(request)
+    })
 
-  return Database.use(async (tx) => {
-    const fetched = await tx
-      .select({
-        id: WorkspaceTable.id,
-        name: WorkspaceTable.name,
-        slug: WorkspaceTable.slug,
-        timeCreated: WorkspaceTable.timeCreated,
-        members: count(UserTable.id),
-        accounts: countDistinct(UserTable.accountID),
-        lastSeen: max(UserTable.timeSeen),
-      })
-      .from(WorkspaceTable)
-      .leftJoin(UserTable, and(eq(UserTable.workspaceID, WorkspaceTable.id), isNull(UserTable.timeDeleted)))
-      .where(
-        and(
-          isNull(WorkspaceTable.timeDeleted),
-          input.cursor ? lt(WorkspaceTable.id, input.cursor) : undefined,
-          pattern
-            ? sql<boolean>`(
+  const fetched = await tx
+    .select({
+      id: WorkspaceTable.id,
+      name: WorkspaceTable.name,
+      slug: WorkspaceTable.slug,
+      timeCreated: WorkspaceTable.timeCreated,
+      members: count(UserTable.id),
+      accounts: countDistinct(UserTable.accountID),
+      lastSeen: max(UserTable.timeSeen),
+    })
+    .from(WorkspaceTable)
+    .leftJoin(UserTable, and(eq(UserTable.workspaceID, WorkspaceTable.id), isNull(UserTable.timeDeleted)))
+    .where(
+      and(
+        isNull(WorkspaceTable.timeDeleted),
+        input.cursor ? lt(WorkspaceTable.id, input.cursor) : undefined,
+        pattern
+          ? sql<boolean>`(
                 lower(${WorkspaceTable.id}) like ${pattern} escape '\'
                 or lower(${WorkspaceTable.name}) like ${pattern} escape '\'
                 or lower(coalesce(${WorkspaceTable.slug}, '')) like ${pattern} escape '\'
               )`
-            : undefined,
-        ),
-      )
-      .groupBy(WorkspaceTable.id, WorkspaceTable.name, WorkspaceTable.slug, WorkspaceTable.timeCreated)
-      .orderBy(desc(WorkspaceTable.id))
-      .limit(input.limit + 1)
+          : undefined,
+      ),
+    )
+    .groupBy(WorkspaceTable.id, WorkspaceTable.name, WorkspaceTable.slug, WorkspaceTable.timeCreated)
+    .orderBy(desc(WorkspaceTable.id))
+    .limit(input.limit + 1)
 
-    const workspaces = fetched.slice(0, input.limit)
-    const selectedWorkspace = input.workspace
-      ? await getAdminWorkspaceDetail(tx, input.workspace, {
-          usageStart,
-          usageEnd: now,
-        })
-      : null
+  const workspaces = fetched.slice(0, input.limit)
+  const selectedWorkspace = input.workspace
+    ? await getAdminWorkspaceDetail(tx, input.workspace, {
+        usageStart,
+        usageEnd: now,
+        getPlanLimits,
+        readPlanQuota,
+      })
+    : null
 
-    return {
-      admin,
-      filters: input,
-      workspaces: workspaces.map((workspace) => ({
-        id: workspace.id,
-        name: workspace.name,
-        slug: workspace.slug,
-        timeCreated: workspace.timeCreated.toISOString(),
-        members: workspace.members,
-        accounts: workspace.accounts,
-        lastSeen: dateISO(workspace.lastSeen),
-      })),
-      selectedWorkspace,
-      nextCursor: fetched.length > input.limit ? workspaces.at(-1)?.id : undefined,
-      generatedAt: now.toISOString(),
-    }
-  })
+  return {
+    admin,
+    filters: input,
+    workspaces: workspaces.map((workspace) => ({
+      id: workspace.id,
+      name: workspace.name,
+      slug: workspace.slug,
+      timeCreated: workspace.timeCreated.toISOString(),
+      members: workspace.members,
+      accounts: workspace.accounts,
+      lastSeen: dateISO(workspace.lastSeen),
+    })),
+    selectedWorkspace,
+    nextCursor: fetched.length > input.limit ? workspaces.at(-1)?.id : undefined,
+    generatedAt: now.toISOString(),
+  }
 }
 
 async function getAdminWorkspaceDetail(
@@ -103,6 +149,8 @@ async function getAdminWorkspaceDetail(
   usagePeriod: {
     usageStart: Date
     usageEnd: Date
+    getPlanLimits: NonNullable<AdminWorkspaceDependencies["getPlanLimits"]>
+    readPlanQuota: ReadPlanQuota
   },
 ) {
   const workspace = await tx
@@ -129,9 +177,31 @@ async function getAdminWorkspaceDetail(
         accountID: UserTable.accountID,
         accountStatus: AccountTable.status,
         timeSeen: UserTable.timeSeen,
+        fixedUsage: SubscriptionTable.fixedUsage,
+        fixedUpdated: SubscriptionTable.timeFixedUpdated,
+        weeklyTokens: SubscriptionTable.weeklyTokens,
+        weeklyTokensUpdated: SubscriptionTable.timeWeeklyTokensUpdated,
+        weeklyRequests: SubscriptionTable.weeklyRequests,
+        weeklyRequestsUpdated: SubscriptionTable.timeWeeklyRequestsUpdated,
+        monthlyCost: SubscriptionTable.monthlyCost,
+        monthlyCostUpdated: SubscriptionTable.timeMonthlyCostUpdated,
+        monthlyTokens: SubscriptionTable.monthlyTokens,
+        monthlyTokensUpdated: SubscriptionTable.timeMonthlyTokensUpdated,
+        monthlyRequests: SubscriptionTable.monthlyRequests,
+        monthlyRequestsUpdated: SubscriptionTable.timeMonthlyRequestsUpdated,
+        rollingUsage: SubscriptionTable.rollingUsage,
+        rollingUpdated: SubscriptionTable.timeRollingUpdated,
       })
       .from(UserTable)
       .leftJoin(AccountTable, and(eq(AccountTable.id, UserTable.accountID), isNull(AccountTable.timeDeleted)))
+      .leftJoin(
+        SubscriptionTable,
+        and(
+          eq(SubscriptionTable.workspaceID, workspace.id),
+          eq(SubscriptionTable.userID, UserTable.id),
+          isNull(SubscriptionTable.timeDeleted),
+        ),
+      )
       .where(and(eq(UserTable.workspaceID, workspace.id), isNull(UserTable.timeDeleted)))
       .orderBy(sql`case when ${UserTable.role} = 'admin' then 0 else 1 end`, UserTable.name, UserTable.id)
       .limit(100),
@@ -166,7 +236,15 @@ async function getAdminWorkspaceDetail(
         and(eq(PaymentInvoiceTable.id, PlanSubscriptionTable.invoiceID), isNull(PaymentInvoiceTable.timeDeleted)),
       )
       .where(and(eq(PlanSubscriptionTable.workspaceID, workspace.id), isNull(PlanSubscriptionTable.timeDeleted)))
-      .orderBy(desc(PlanSubscriptionTable.timePeriodEnd), desc(PlanSubscriptionTable.id))
+      .orderBy(
+        sql`case when ${and(
+          eq(PlanSubscriptionTable.status, "active"),
+          lte(PlanSubscriptionTable.timePeriodStart, usagePeriod.usageEnd),
+          gt(PlanSubscriptionTable.timePeriodEnd, usagePeriod.usageEnd),
+        )} then 0 else 1 end`,
+        desc(PlanSubscriptionTable.timePeriodEnd),
+        desc(PlanSubscriptionTable.id),
+      )
       .limit(1)
       .then((rows) => rows[0]),
     tx
@@ -235,6 +313,21 @@ async function getAdminWorkspaceDetail(
   ])
 
   const aggregate = totals[0]
+  const activeSubscription =
+    currentSubscription?.status === "active" &&
+    currentSubscription.timePeriodStart <= usagePeriod.usageEnd &&
+    currentSubscription.timePeriodEnd > usagePeriod.usageEnd
+      ? currentSubscription
+      : null
+  const memberQuota = activeSubscription
+    ? await getAdminWorkspaceMemberQuota(
+        workspace.id,
+        members,
+        activeSubscription,
+        await usagePeriod.getPlanLimits(activeSubscription.plan),
+        usagePeriod,
+      )
+    : []
   return {
     id: workspace.id,
     name: workspace.name,
@@ -272,6 +365,18 @@ async function getAdminWorkspaceDetail(
           timeRefunded: currentSubscription.timeRefunded?.toISOString() ?? null,
         }
       : null,
+    quota: activeSubscription
+      ? {
+          mode: "paid-plan" as const,
+          plan: activeSubscription.plan,
+          invoiceID: activeSubscription.invoiceID,
+          members: memberQuota,
+        }
+      : {
+          mode: "model-scoped" as const,
+          reason: "no-active-paid-plan" as const,
+          members: [],
+        },
     usage: {
       periodStart: usagePeriod.usageStart.toISOString(),
       periodEnd: usagePeriod.usageEnd.toISOString(),
@@ -295,6 +400,86 @@ async function getAdminWorkspaceDetail(
       timeRefunded: invoice.timeRefunded?.toISOString() ?? null,
     })),
   }
+}
+
+async function getAdminWorkspaceMemberQuota(
+  workspaceID: string,
+  members: Array<{
+    id: string
+    name: string
+    email: string | null
+    role: "admin" | "member"
+    accountID: string | null
+    accountStatus: "active" | "suspended" | null
+    fixedUsage: number | null
+    fixedUpdated: Date | null
+    weeklyTokens: number | null
+    weeklyTokensUpdated: Date | null
+    weeklyRequests: number | null
+    weeklyRequestsUpdated: Date | null
+    monthlyCost: number | null
+    monthlyCostUpdated: Date | null
+    monthlyTokens: number | null
+    monthlyTokensUpdated: Date | null
+    monthlyRequests: number | null
+    monthlyRequestsUpdated: Date | null
+    rollingUsage: number | null
+    rollingUpdated: Date | null
+  }>,
+  subscription: {
+    invoiceID: string
+    timePeriodStart: Date
+  },
+  limits: PaidPlanQuotaLimits,
+  dependencies: {
+    usageEnd: Date
+    readPlanQuota: ReadPlanQuota
+  },
+) {
+  const week = getWeekBounds(dependencies.usageEnd)
+  const month = getMonthlyBounds(dependencies.usageEnd, subscription.timePeriodStart)
+  const connected = members.filter((member): member is typeof member & { accountID: string } =>
+    Boolean(member.accountID),
+  )
+  const scope = planQuotaScope(workspaceID, subscription.invoiceID)
+  const live = await Promise.all(
+    chunk(
+      connected.flatMap((member) => Object.values(planQuotaCounterKeys(member.id))),
+      64,
+    ).map((keys) => dependencies.readPlanQuota({ scope, keys })),
+  )
+    .then((records) => Object.assign({}, ...records) as Record<string, number>)
+    .catch(() => null)
+  const read: ReadPlanQuota = async (input) => {
+    if (!live || input.scope !== scope) throw new Error("Админ квотын багц уншилт таарахгүй байна.")
+    return Object.fromEntries(input.keys.filter((key) => key in live).map((key) => [key, live[key]!]))
+  }
+  return Promise.all(
+    connected.map(async (member) => ({
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      role: member.role,
+      accountID: member.accountID,
+      accountStatus: member.accountStatus,
+      quota: await readPaidPlanQuota(
+        { ...member, id: workspaceID, userID: member.id },
+        subscription.invoiceID,
+        limits,
+        dependencies.usageEnd.getTime(),
+        week.end.getTime(),
+        month.start.getTime(),
+        month.end.getTime(),
+        read,
+      ),
+    })),
+  )
+}
+
+function chunk<T>(items: T[], size: number) {
+  return Array.from({ length: Math.ceil(items.length / size) }, (_, index) =>
+    items.slice(index * size, (index + 1) * size),
+  )
 }
 
 function normalizeUsage(

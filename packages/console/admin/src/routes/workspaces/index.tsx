@@ -277,6 +277,88 @@ export default function AdminWorkspacesPage() {
                           </Show>
                         </section>
 
+                        <section data-component="data-section" aria-labelledby="workspace-quota-title">
+                          <div data-component="section-heading">
+                            <div>
+                              <p data-component="eyebrow">Durable Objects-ийн амьд тоолуур</p>
+                              <h2 id="workspace-quota-title">Гишүүн тус бүрийн багцын хязгаар</h2>
+                            </div>
+                            <Show when={workspace.quota.mode === "paid-plan" ? workspace.quota : null}>
+                              {(quota) => <span>{planLabel(quota().plan)} багц · зөвхөн харах</span>}
+                            </Show>
+                          </div>
+                          <Show
+                            when={workspace.quota.mode === "paid-plan" ? workspace.quota : null}
+                            fallback={
+                              <p data-component="empty">
+                                Идэвхтэй төлбөртэй багцгүй. Free Auto-ийн хязгаар загвар тус бүрээр хэрэгжинэ.
+                              </p>
+                            }
+                          >
+                            {(quota) => (
+                              <div data-component="table-scroll">
+                                <table data-table="workspace-quota">
+                                  <thead>
+                                    <tr>
+                                      <th>Гишүүн</th>
+                                      <th>7 хоногийн өртөг</th>
+                                      <th>7 хоногийн токен</th>
+                                      <th>7 хоногийн хүсэлт</th>
+                                      <th>Сарын өртөг</th>
+                                      <th>Сарын токен</th>
+                                      <th>Сарын хүсэлт</th>
+                                      <th>Гулсах өртөг</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <For
+                                      each={quota().members}
+                                      fallback={
+                                        <tr>
+                                          <td colspan="8" data-empty>
+                                            Холбогдсон аккаунттай гишүүн алга.
+                                          </td>
+                                        </tr>
+                                      }
+                                    >
+                                      {(member) => (
+                                        <tr>
+                                          <td data-account>
+                                            <strong>{member.name}</strong>
+                                            <Show when={member.email}>{(email) => <small>{email()}</small>}</Show>
+                                            <code>{member.id}</code>
+                                          </td>
+                                          <Show
+                                            when={member.quota.status === "available" ? member.quota : null}
+                                            fallback={
+                                              <td colspan="7" data-quota-unavailable>
+                                                Амьд хязгаарын мэдээллийг одоогоор уншиж чадсангүй. Хуурамч үлдэгдэл
+                                                харуулахгүй.
+                                              </td>
+                                            }
+                                          >
+                                            {(live) => (
+                                              <>
+                                                <QuotaCell value={live().weeklyCost} kind="currency" />
+                                                <QuotaCell value={live().weeklyTokens} />
+                                                <QuotaCell value={live().weeklyRequests} />
+                                                <QuotaCell value={live().monthlyCost} kind="currency" />
+                                                <QuotaCell value={live().monthlyTokens} />
+                                                <QuotaCell value={live().monthlyRequests} />
+                                                <QuotaCell value={live().rollingCost} kind="currency" />
+                                              </>
+                                            )}
+                                          </Show>
+                                        </tr>
+                                      )}
+                                    </For>
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </Show>
+                        </section>
+
                         <section data-component="data-section" aria-labelledby="workspace-usage-title">
                           <div data-component="section-heading">
                             <div>
@@ -425,6 +507,19 @@ function Metric(props: { label: string; value: number; kind?: "currency" }) {
   )
 }
 
+function QuotaCell(props: { value: { used: number; limit: number; resetAt: number | null }; kind?: "currency" }) {
+  const format = (value: number) => (props.kind === "currency" ? formatMicroUsd(value) : formatNumber(value))
+  return (
+    <td data-quota-metric>
+      <strong>
+        {format(props.value.used)} / {format(props.value.limit)}
+      </strong>
+      <small>Үлдсэн: {format(Math.max(0, props.value.limit - props.value.used))}</small>
+      <time>{props.value.resetAt === null ? "Гулсах хугацаа" : `Шинэчлэгдэх: ${formatDate(props.value.resetAt)}`}</time>
+    </td>
+  )
+}
+
 function subscriptionLabel(status: string) {
   return (
     {
@@ -482,7 +577,7 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("mn-MN").format(value)
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: string | number | null) {
   if (!value) return "-"
   return new Intl.DateTimeFormat("mn-MN", {
     dateStyle: "medium",

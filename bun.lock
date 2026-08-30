@@ -172,6 +172,7 @@
       "devDependencies": {
         "@types/bun": "catalog:",
         "@typescript/native-preview": "catalog:",
+        "drizzle-orm": "catalog:",
         "typescript": "catalog:",
         "wrangler": "4.50.0",
       },

@@ -1319,6 +1319,30 @@ td[data-empty] {
   text-align: center;
 }
 
+td[data-quota-metric] {
+  min-width: 190px;
+  white-space: normal;
+}
+
+td[data-quota-metric] strong,
+td[data-quota-metric] small,
+td[data-quota-metric] time {
+  display: block;
+  line-height: 17px;
+}
+
+td[data-quota-metric] small,
+td[data-quota-metric] time,
+td[data-quota-unavailable] {
+  color: #686d73;
+  font-size: 10px;
+}
+
+td[data-quota-unavailable] {
+  min-width: 420px;
+  white-space: normal;
+}
+
 [data-outcome] {
   display: inline-block;
   min-width: 78px;
@@ -1604,6 +1628,9 @@ td[data-workspace] small {
   [data-component="readiness-item"] p,
   [data-component="status-band"] span,
   [data-component="finance-status"] span,
+  td[data-quota-metric] small,
+  td[data-quota-metric] time,
+  td[data-quota-unavailable],
   th {
     color: #9ea4aa;
   }
