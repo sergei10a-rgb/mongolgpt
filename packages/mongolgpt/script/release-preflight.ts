@@ -419,7 +419,6 @@ async function githubMissing(version: string) {
       if (content !== expected) missing.push("checksum content does not match release artifacts")
     }
 
-    const latestJson = await read(updater.json)
     const metadata = {
       windows: await read(updater.windows),
       linuxX64: await read(updater.linuxX64),
@@ -429,11 +428,9 @@ async function githubMissing(version: string) {
     missing.push(
       ...validateUpdaterReleaseContract({
         version,
-        repo,
         channel,
         assetNames: Array.from(assetNames),
         releaseBody: body,
-        latestJson,
         metadata,
       }).filter((item) => !missing.includes(item)),
     )

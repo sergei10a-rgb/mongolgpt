@@ -10,7 +10,6 @@ import {
   RELEASE_READINESS_ARTIFACTS,
   RELEASE_READINESS_CHECKSUM,
   RELEASE_READINESS_PACKAGES,
-  RELEASE_READINESS_REPOSITORY,
   releaseTag,
   releaseUpdaterMetadataAssets,
   type PublishedReleaseEvidence,
@@ -131,25 +130,6 @@ const updaterFiles = {
   mac: ["mongolgpt-desktop-mac-arm64.zip", "mongolgpt-desktop-mac-x64.zip"],
 } as const
 
-const latestPlatforms = {
-  "windows-x86_64-nsis": "mongolgpt-desktop-win-x64.exe",
-  "windows-aarch64-nsis": "mongolgpt-desktop-win-arm64.exe",
-  "darwin-x86_64-app": "mongolgpt-desktop-mac-x64.app.tar.gz",
-  "darwin-aarch64-app": "mongolgpt-desktop-mac-arm64.app.tar.gz",
-  "linux-x86_64-deb": "mongolgpt-desktop-linux-x64.deb",
-  "linux-x86_64-rpm": "mongolgpt-desktop-linux-x64.rpm",
-  "linux-x86_64-appimage": "mongolgpt-desktop-linux-x64.AppImage",
-  "linux-aarch64-deb": "mongolgpt-desktop-linux-arm64.deb",
-  "linux-aarch64-rpm": "mongolgpt-desktop-linux-arm64.rpm",
-  "linux-aarch64-appimage": "mongolgpt-desktop-linux-arm64.AppImage",
-  "windows-x86_64": "mongolgpt-desktop-win-x64.exe",
-  "windows-aarch64": "mongolgpt-desktop-win-arm64.exe",
-  "darwin-x86_64": "mongolgpt-desktop-mac-x64.app.tar.gz",
-  "darwin-aarch64": "mongolgpt-desktop-mac-arm64.app.tar.gz",
-  "linux-x86_64": "mongolgpt-desktop-linux-x64.deb",
-  "linux-aarch64": "mongolgpt-desktop-linux-arm64.deb",
-} as const
-
 function updaterYml(files: readonly string[]) {
   return [
     `version: ${releaseVersion}`,
@@ -194,26 +174,11 @@ function releaseEvidence(): PublishedReleaseEvidence {
       },
     ]),
   ) as PublishedReleaseEvidence["packages"]
-  const platforms = Object.fromEntries(
-    Object.entries(latestPlatforms).map(([platform, asset]) => [
-      platform,
-      {
-        url: `https://github.com/${RELEASE_READINESS_REPOSITORY}/releases/download/${tag}/${asset}`,
-        signature: "A".repeat(64),
-      },
-    ]),
-  )
   return {
     version: releaseVersion,
     channel,
     release: { tag_name: tag, draft: false, prerelease: false, body, assets },
     checksumText: RELEASE_READINESS_ARTIFACTS.map((name) => `${"a".repeat(64)}  ${name}`).join("\n"),
-    latestJson: JSON.stringify({
-      version: releaseVersion,
-      notes: body,
-      pub_date: now.toISOString(),
-      platforms,
-    }),
     metadata: {
       windows: updaterYml(updaterFiles.windows),
       linuxX64: updaterYml(updaterFiles.linuxX64),
@@ -535,7 +500,7 @@ describe("MongolGPT admin system readiness", () => {
         }
       : null
     const brokenUpdater = releaseEvidence()
-    brokenUpdater.latestJson = JSON.stringify({ version: "9.9.9", notes: "wrong", pub_date: "invalid", platforms: {} })
+    brokenUpdater.metadata = { ...brokenUpdater.metadata, windows: "version: 9.9.9\nfiles: []\n" }
     const missingChecksum = releaseEvidence()
     missingChecksum.checksumText = undefined
 
@@ -583,8 +548,7 @@ describe("MongolGPT admin system readiness", () => {
       if (url.endsWith(`/${RELEASE_READINESS_CHECKSUM}`)) return new Response(expected.checksumText)
       for (const [kind, name] of Object.entries(metadataNames)) {
         if (url.endsWith(`/${name}`)) {
-          const text = kind === "json" ? expected.latestJson : expected.metadata[kind as keyof typeof expected.metadata]
-          return new Response(text)
+          return new Response(expected.metadata[kind as keyof typeof expected.metadata])
         }
       }
       return new Response("missing", { status: 404 })
@@ -592,7 +556,7 @@ describe("MongolGPT admin system readiness", () => {
 
     const collected = await collectPublishedReleaseEvidence({ version: releaseVersion, fetcher })
     expect(validatePublishedReleaseEvidence(collected)).toEqual([])
-    expect(requested).toHaveLength(11)
+    expect(requested).toHaveLength(10)
     expect(requested.every((url) => new URL(url).protocol === "https:")).toBe(true)
     expect(
       requested.every((url) => ["api.github.com", "github.com", "registry.npmjs.org"].includes(new URL(url).hostname)),

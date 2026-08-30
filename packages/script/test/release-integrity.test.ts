@@ -11,7 +11,6 @@ import {
   isChecksummedReleaseAsset,
   releaseTag,
   releaseUpdaterMetadataAssets,
-  releaseUpdaterNotes,
   resolveReleaseUpdaterChannel,
   validateReleaseChecksumContract,
   validateReleaseNotesContract,
@@ -32,31 +31,12 @@ describe("release integrity contract", () => {
       "script/version.ts",
       "script/publish.ts",
       "packages/desktop/scripts/finalize-latest-yml.ts",
-      "packages/desktop/scripts/finalize-latest-json.ts",
     ]) {
       expect(readFileSync(resolve(root, file), "utf8")).toContain("releaseTag(")
     }
 
     const versionScript = readFileSync(resolve(root, "script/version.ts"), "utf8")
     expect(versionScript).toContain("account_url=${resolveProductServiceUrls(Script.channel).console}")
-  })
-
-  test("keeps desktop updater release notes non-empty", () => {
-    expect(
-      releaseUpdaterNotes({
-        body: "\n## Шинэ зүйл\n\n- CLI OAuth сайжрав.\n",
-        name: "MongolGPT v0.1.2",
-        tag: "mongolgpt-v0.1.2",
-      }),
-    ).toBe("## Шинэ зүйл\n\n- CLI OAuth сайжрав.")
-    expect(releaseUpdaterNotes({ body: "  ", name: " MongolGPT beta ", tag: "mongolgpt-v0.1.2-beta.1" })).toBe(
-      "MongolGPT beta",
-    )
-    expect(releaseUpdaterNotes({ tag: "mongolgpt-v0.1.2-beta.1" })).toBe("MongolGPT 0.1.2-beta.1")
-
-    const updater = readFileSync(resolve(root, "packages/desktop/scripts/finalize-latest-json.ts"), "utf8")
-    expect(updater).toContain("releaseUpdaterNotes({ body: release.body, name: release.name, tag })")
-    expect(updater).not.toContain('notes: ""')
   })
 
   test("creates Mongolian changelog, install, upgrade, and checksum guidance", () => {
@@ -152,33 +132,9 @@ describe("release integrity contract", () => {
 
   test("validates complete updater metadata against the release assets", () => {
     const version = "0.1.2"
-    const repo = "sergei10a-rgb/mongolgpt"
     const channel = "latest" as const
     const names = releaseUpdaterMetadataAssets(channel)
     const body = createReleaseNotes(version, "- Desktop updater баталгаажлаа.")
-    const base = `https://github.com/${repo}/releases/download/mongolgpt-v${version}`
-    const signature = "a".repeat(64)
-    const platformAssets = {
-      "windows-x86_64-nsis": "mongolgpt-desktop-win-x64.exe",
-      "windows-aarch64-nsis": "mongolgpt-desktop-win-arm64.exe",
-      "darwin-x86_64-app": "mongolgpt-desktop-mac-x64.app.tar.gz",
-      "darwin-aarch64-app": "mongolgpt-desktop-mac-arm64.app.tar.gz",
-      "linux-x86_64-deb": "mongolgpt-desktop-linux-x64.deb",
-      "linux-x86_64-rpm": "mongolgpt-desktop-linux-x64.rpm",
-      "linux-x86_64-appimage": "mongolgpt-desktop-linux-x64.AppImage",
-      "linux-aarch64-deb": "mongolgpt-desktop-linux-arm64.deb",
-      "linux-aarch64-rpm": "mongolgpt-desktop-linux-arm64.rpm",
-      "linux-aarch64-appimage": "mongolgpt-desktop-linux-arm64.AppImage",
-      "windows-x86_64": "mongolgpt-desktop-win-x64.exe",
-      "windows-aarch64": "mongolgpt-desktop-win-arm64.exe",
-      "darwin-x86_64": "mongolgpt-desktop-mac-x64.app.tar.gz",
-      "darwin-aarch64": "mongolgpt-desktop-mac-arm64.app.tar.gz",
-      "linux-x86_64": "mongolgpt-desktop-linux-x64.deb",
-      "linux-aarch64": "mongolgpt-desktop-linux-arm64.deb",
-    }
-    const platforms = Object.fromEntries(
-      Object.entries(platformAssets).map(([platform, asset]) => [platform, { url: `${base}/${asset}`, signature }]),
-    )
     const yml = (assets: readonly string[]) =>
       [
         `version: ${version}`,
@@ -202,34 +158,23 @@ describe("release integrity contract", () => {
       mac: yml(["mongolgpt-desktop-mac-arm64.zip", "mongolgpt-desktop-mac-x64.zip"]),
     }
     const assetNames = [...RELEASE_ARTIFACTS, RELEASE_CHECKSUM_ASSET, ...Object.values(names)]
-    const latestJson = JSON.stringify({ version, notes: body, pub_date: "2026-08-29T00:00:00.000Z", platforms })
 
     expect(
       validateUpdaterReleaseContract({
         version,
-        repo,
         channel,
         assetNames,
         releaseBody: body,
-        latestJson,
         metadata,
       }),
     ).toEqual([])
 
-    const broken = JSON.stringify({
-      version,
-      notes: body,
-      pub_date: "2026-08-29T00:00:00.000Z",
-      platforms: { ...platforms, "windows-x86_64": { url: "https://example.invalid/file.exe", signature } },
-    })
     expect(
       validateUpdaterReleaseContract({
         version,
-        repo,
         channel,
         assetNames: assetNames.filter((name) => name !== names.mac),
         releaseBody: body,
-        latestJson: broken,
         metadata: {
           ...metadata,
           windows: metadata.windows.replace("a".repeat(88), "bad"),
@@ -239,7 +184,6 @@ describe("release integrity contract", () => {
     ).toEqual(
       expect.arrayContaining([
         `missing updater metadata: ${names.mac}`,
-        "updater metadata URL mismatch for windows-x86_64",
         `updater metadata ${names.windows} has invalid sha512: mongolgpt-desktop-win-arm64.exe`,
         `updater metadata ${names.linuxArm64} missing asset: mongolgpt-desktop-linux-arm64.rpm`,
       ]),
@@ -382,7 +326,6 @@ describe("release integrity contract", () => {
       "APPLE_CERTIFICATE",
       "APPLE_API_KEY_PATH",
       "AUR_KEY",
-      "TAURI_SIGNING_PRIVATE_KEY",
       "NPM_TOKEN",
     ]) {
       expect(workflow).toContain(`${name}: \${{ secrets.${name} }}`)
@@ -390,6 +333,8 @@ describe("release integrity contract", () => {
     expect(workflow.indexOf(confirmation)).toBeLessThan(workflow.indexOf(checkout))
     expect(workflow.indexOf(credentials)).toBeLessThan(workflow.indexOf(checkout))
     expect(workflow.indexOf(checkout)).toBeLessThan(workflow.indexOf(version))
+    expect(workflow).not.toContain("TAURI_SIGNING_PRIVATE_KEY")
+    expect(workflow).not.toContain("finalize-latest-json")
   })
 
   test("never rewrites a published release tag or mutates the dev branch", () => {

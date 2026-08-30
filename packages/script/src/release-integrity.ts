@@ -10,16 +10,6 @@ export function releaseTag(version: string) {
   return `mongolgpt-v${version}`
 }
 
-export function releaseUpdaterNotes(input: { body?: string | null; name?: string | null; tag: string }) {
-  const body = input.body?.trim()
-  if (body) return body
-
-  const name = input.name?.trim()
-  if (name) return name
-
-  return `MongolGPT ${input.tag.replace(/^mongolgpt-v/, "")}`
-}
-
 export const RELEASE_NOTES_HEADINGS = [
   "## Өөрчлөлтийн жагсаалт",
   "## Суулгах",
@@ -188,47 +178,11 @@ export function resolveReleaseUpdaterChannel(value: string | undefined, version:
 
 export function releaseUpdaterMetadataAssets(channel: ReleaseUpdaterChannel) {
   return {
-    json: "latest.json",
     windows: `${channel}.yml`,
     linuxX64: `${channel}-linux.yml`,
     linuxArm64: `${channel}-linux-arm64.yml`,
     mac: `${channel}-mac.yml`,
   } as const
-}
-
-const updaterPlatforms = {
-  "windows-x86_64-nsis": "mongolgpt-desktop-win-x64.exe",
-  "windows-aarch64-nsis": "mongolgpt-desktop-win-arm64.exe",
-  "darwin-x86_64-app": "mongolgpt-desktop-mac-x64.app.tar.gz",
-  "darwin-aarch64-app": "mongolgpt-desktop-mac-arm64.app.tar.gz",
-  "linux-x86_64-deb": "mongolgpt-desktop-linux-x64.deb",
-  "linux-x86_64-rpm": "mongolgpt-desktop-linux-x64.rpm",
-  "linux-x86_64-appimage": "mongolgpt-desktop-linux-x64.AppImage",
-  "linux-aarch64-deb": "mongolgpt-desktop-linux-arm64.deb",
-  "linux-aarch64-rpm": "mongolgpt-desktop-linux-arm64.rpm",
-  "linux-aarch64-appimage": "mongolgpt-desktop-linux-arm64.AppImage",
-  "windows-x86_64": "mongolgpt-desktop-win-x64.exe",
-  "windows-aarch64": "mongolgpt-desktop-win-arm64.exe",
-  "darwin-x86_64": "mongolgpt-desktop-mac-x64.app.tar.gz",
-  "darwin-aarch64": "mongolgpt-desktop-mac-arm64.app.tar.gz",
-  "linux-x86_64": "mongolgpt-desktop-linux-x64.deb",
-  "linux-aarch64": "mongolgpt-desktop-linux-arm64.deb",
-} as const
-
-type UpdaterJson = {
-  version?: unknown
-  notes?: unknown
-  pub_date?: unknown
-  platforms?: unknown
-}
-
-function objectProperty(value: unknown, key: string) {
-  if (!value || typeof value !== "object") return undefined
-  return Reflect.get(value, key) as unknown
-}
-
-function updaterAssetUrl(repo: string, version: string, asset: string) {
-  return `https://github.com/${repo}/releases/download/${releaseTag(version)}/${asset}`
 }
 
 function ymlVersion(text: string) {
@@ -269,11 +223,9 @@ function ymlFiles(text: string) {
 
 export function validateUpdaterReleaseContract(input: {
   version: string
-  repo: string
   channel: ReleaseUpdaterChannel
   assetNames: readonly string[]
   releaseBody?: string | null
-  latestJson?: string
   metadata?: Partial<Record<"windows" | "linuxX64" | "linuxArm64" | "mac", string>>
 }) {
   const errors = validateReleaseNotesContract(input.releaseBody, input.version)
@@ -282,51 +234,6 @@ export function validateUpdaterReleaseContract(input: {
 
   for (const name of Object.values(metadataAssets)) {
     if (!names.has(name)) errors.push(`missing updater metadata: ${name}`)
-  }
-  if (!input.latestJson && names.has(metadataAssets.json))
-    errors.push(`updater metadata content missing: ${metadataAssets.json}`)
-
-  let latest: UpdaterJson | undefined
-  if (input.latestJson) {
-    try {
-      const parsed: unknown = JSON.parse(input.latestJson)
-      latest = {
-        version: objectProperty(parsed, "version"),
-        notes: objectProperty(parsed, "notes"),
-        pub_date: objectProperty(parsed, "pub_date"),
-        platforms: objectProperty(parsed, "platforms"),
-      }
-    } catch {
-      errors.push("invalid updater metadata JSON: latest.json")
-    }
-  }
-
-  if (latest) {
-    if (latest.version !== input.version)
-      errors.push(`updater metadata version mismatch: expected ${input.version}, got ${String(latest.version)}`)
-    if (typeof latest.notes !== "string" || latest.notes.trim() !== input.releaseBody?.trim())
-      errors.push("updater notes do not match release notes")
-    if (typeof latest.pub_date !== "string" || !Number.isFinite(Date.parse(latest.pub_date)))
-      errors.push("updater metadata pub_date is invalid")
-
-    const platforms = latest.platforms && typeof latest.platforms === "object" ? latest.platforms : undefined
-    if (!platforms) {
-      errors.push("updater metadata platforms are missing")
-    } else {
-      for (const [platform, asset] of Object.entries(updaterPlatforms)) {
-        const value = objectProperty(platforms, platform)
-        if (!value) {
-          errors.push(`updater metadata missing platform: ${platform}`)
-          continue
-        }
-        const expectedUrl = updaterAssetUrl(input.repo, input.version, asset)
-        const url = objectProperty(value, "url")
-        const signature = objectProperty(value, "signature")
-        if (url !== expectedUrl) errors.push(`updater metadata URL mismatch for ${platform}`)
-        if (typeof signature !== "string" || signature.trim().length < 32 || /\s/.test(signature))
-          errors.push(`updater metadata signature invalid for ${platform}`)
-      }
-    }
   }
 
   const expectedYml: Record<keyof NonNullable<typeof input.metadata>, readonly string[]> = {

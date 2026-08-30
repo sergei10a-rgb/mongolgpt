@@ -84,25 +84,6 @@ const releaseNotesHeadings = [
   "## Файлын бүрэн бүтэн байдал",
 ] as const
 
-const updaterPlatforms = {
-  "windows-x86_64-nsis": "mongolgpt-desktop-win-x64.exe",
-  "windows-aarch64-nsis": "mongolgpt-desktop-win-arm64.exe",
-  "darwin-x86_64-app": "mongolgpt-desktop-mac-x64.app.tar.gz",
-  "darwin-aarch64-app": "mongolgpt-desktop-mac-arm64.app.tar.gz",
-  "linux-x86_64-deb": "mongolgpt-desktop-linux-x64.deb",
-  "linux-x86_64-rpm": "mongolgpt-desktop-linux-x64.rpm",
-  "linux-x86_64-appimage": "mongolgpt-desktop-linux-x64.AppImage",
-  "linux-aarch64-deb": "mongolgpt-desktop-linux-arm64.deb",
-  "linux-aarch64-rpm": "mongolgpt-desktop-linux-arm64.rpm",
-  "linux-aarch64-appimage": "mongolgpt-desktop-linux-arm64.AppImage",
-  "windows-x86_64": "mongolgpt-desktop-win-x64.exe",
-  "windows-aarch64": "mongolgpt-desktop-win-arm64.exe",
-  "darwin-x86_64": "mongolgpt-desktop-mac-x64.app.tar.gz",
-  "darwin-aarch64": "mongolgpt-desktop-mac-arm64.app.tar.gz",
-  "linux-x86_64": "mongolgpt-desktop-linux-x64.deb",
-  "linux-aarch64": "mongolgpt-desktop-linux-arm64.deb",
-} as const
-
 type ReleasePackageName = (typeof RELEASE_READINESS_PACKAGES)[number]
 type ReleaseChannel = "beta" | "latest"
 type UpdaterMetadataKind = "windows" | "linuxX64" | "linuxArm64" | "mac"
@@ -112,7 +93,6 @@ export type PublishedReleaseEvidence = {
   channel: ReleaseChannel
   release: z.output<typeof releaseSchema> | null
   checksumText?: string
-  latestJson?: string
   metadata: Partial<Record<UpdaterMetadataKind, string>>
   packages: Record<ReleasePackageName, z.output<typeof npmPackageSchema> | null>
 }
@@ -129,7 +109,6 @@ export function releaseTag(version: string) {
 
 export function releaseUpdaterMetadataAssets(channel: ReleaseChannel) {
   return {
-    json: "latest.json",
     windows: `${channel}.yml`,
     linuxX64: `${channel}-linux.yml`,
     linuxArm64: `${channel}-linux-arm64.yml`,
@@ -191,7 +170,6 @@ export async function collectPublishedReleaseEvidence(input: {
     channel,
     release,
     checksumText,
-    latestJson: texts.json,
     metadata: {
       windows: texts.windows,
       linuxX64: texts.linuxX64,
@@ -233,7 +211,6 @@ export function validatePublishedReleaseEvidence(evidence: PublishedReleaseEvide
   }
 
   validateChecksum(evidence.checksumText, errors)
-  validateLatestJson(evidence, errors)
   validateUpdaterYml(evidence, errors)
   validatePackages(evidence, errors)
   return errors
@@ -265,47 +242,6 @@ function validateChecksum(text: string | undefined, errors: string[]) {
   }
   for (const name of RELEASE_READINESS_ARTIFACTS) {
     if (!entries.has(name)) errors.push(`release-checksum-artifact:${name}`)
-  }
-}
-
-function validateLatestJson(evidence: PublishedReleaseEvidence, errors: string[]) {
-  if (!evidence.latestJson) {
-    errors.push("updater-json-missing")
-    return
-  }
-  let value: unknown
-  try {
-    value = JSON.parse(evidence.latestJson)
-  } catch {
-    errors.push("updater-json-invalid")
-    return
-  }
-  if (!record(value)) {
-    errors.push("updater-json-invalid")
-    return
-  }
-  if (value.version !== evidence.version) errors.push("updater-json-version")
-  if (typeof value.notes !== "string" || value.notes.trim() !== evidence.release?.body?.trim()) {
-    errors.push("updater-json-notes")
-  }
-  if (typeof value.pub_date !== "string" || !Number.isFinite(Date.parse(value.pub_date))) {
-    errors.push("updater-json-date")
-  }
-  if (!record(value.platforms)) {
-    errors.push("updater-json-platforms")
-    return
-  }
-  for (const [platform, asset] of Object.entries(updaterPlatforms)) {
-    const item = value.platforms[platform]
-    if (!record(item)) {
-      errors.push(`updater-json-platform:${platform}`)
-      continue
-    }
-    const expectedUrl = `https://github.com/${RELEASE_READINESS_REPOSITORY}/releases/download/${releaseTag(evidence.version)}/${asset}`
-    if (item.url !== expectedUrl) errors.push(`updater-json-url:${platform}`)
-    if (typeof item.signature !== "string" || item.signature.trim().length < 32 || /\s/.test(item.signature)) {
-      errors.push(`updater-json-signature:${platform}`)
-    }
   }
 }
 
@@ -476,8 +412,4 @@ function ymlFiles(text: string) {
   }
   flush()
   return files
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }

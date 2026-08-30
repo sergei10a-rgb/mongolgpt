@@ -84,7 +84,6 @@ await $`bun ./packages/ui/script/publish.ts`
 await $`bun ./packages/mongolgpt/script/release-preflight.ts --npm`
 
 if (Script.release) {
-  await $`bun ./packages/desktop/scripts/finalize-latest-json.ts`
   await $`bun ./packages/desktop/scripts/finalize-latest-yml.ts`
   await publishReleaseChecksums()
 }
