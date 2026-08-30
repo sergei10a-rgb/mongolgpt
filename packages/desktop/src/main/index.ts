@@ -66,6 +66,7 @@ const APP_IDS: Record<string, string> = {
 }
 const TEST_ONBOARDING = process.env.MONGOLGPT_TEST_ONBOARDING === "1" || process.env.OPENCODE_TEST_ONBOARDING === "1"
 const DESKTOP_SMOKE_FILE = desktopSmokeFile()
+const DESKTOP_SMOKE_PROOF = DESKTOP_SMOKE_FILE ? randomBytes(32).toString("base64url") : undefined
 const jsCallStackFeature = "DocumentPolicyIncludeJSCallStacksInCrashReports"
 
 let logger: ReturnType<typeof initLogging>
@@ -461,6 +462,7 @@ const main = Effect.gen(function* () {
           return await spawnLocalServer(hostname, port, password, {
             userDataPath: app.getPath("userData"),
             accountVaultKey,
+            desktopSmokeProof: DESKTOP_SMOKE_PROOF,
             onStdout: (message) => writeLog("server", "stdout", { message }),
             onStderr: (message) => writeLog("server", "stderr", { message }, "warn"),
             onExit: (code) => writeLog("utility", "Дагалдах сервер дууслаа", { code }, "warn"),
@@ -529,6 +531,7 @@ const main = Effect.gen(function* () {
           url,
           username: "mongolgpt",
           password,
+          smokeProof: DESKTOP_SMOKE_PROOF,
         }),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     })

@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { accountUseAllowed, accountUseRoute } from "../../src/server/routes/instance/httpapi/middleware/account-use"
+import {
+  accountUseAllowed,
+  accountUseRoute,
+  configureDesktopSmokeProof,
+  desktopSmokeProofMatches,
+} from "../../src/server/routes/instance/httpapi/middleware/account-use"
 
 describe("HTTP account use gate", () => {
   test("protects session creation and model-using actions", () => {
@@ -48,5 +53,18 @@ describe("HTTP account use gate", () => {
     expect(accountUseAllowed({ channel: "latest", hostedRuntime: true, serverAuthRequired: true })).toBe(true)
     expect(accountUseAllowed({ channel: "latest", hostedRuntime: true, serverAuthRequired: false })).toBe(false)
     expect(accountUseAllowed({ channel: "local" })).toBe(true)
+  })
+
+  test("accepts only an exact non-empty one-time desktop smoke proof", () => {
+    const proof = "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE"
+    expect(desktopSmokeProofMatches(proof, proof)).toBe(true)
+    expect(desktopSmokeProofMatches(proof, `${proof}x`)).toBe(false)
+    expect(desktopSmokeProofMatches(proof, "release-smoke-proof-0000000000")).toBe(false)
+    expect(desktopSmokeProofMatches(proof, undefined)).toBe(false)
+    expect(desktopSmokeProofMatches(undefined, proof)).toBe(false)
+    expect(desktopSmokeProofMatches("", "")).toBe(false)
+    expect(() => configureDesktopSmokeProof(proof)).not.toThrow()
+    expect(() => configureDesktopSmokeProof("short")).toThrow("32-byte base64url")
+    expect(() => configureDesktopSmokeProof(undefined)).not.toThrow()
   })
 })

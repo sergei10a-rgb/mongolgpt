@@ -1,10 +1,11 @@
 import { execFile as nodeExecFile } from "node:child_process"
 import { mkdtemp, readFile, realpath, rm, writeFile, mkdir } from "node:fs/promises"
+import { createServer } from "node:http"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { promisify } from "node:util"
 
-export type ReleaseSmokeServer = { url: string; username: string; password: string }
+export type ReleaseSmokeServer = { url: string; username: string; password: string; smokeProof?: string }
 export type ReleaseSmokeCheck = { ok: boolean; detail?: string }
 type PathPayload = { home: string; state: string; config: string; worktree: string; directory: string }
 type ProjectPayload = { id: string; worktree: string }
@@ -20,7 +21,7 @@ export type ReleaseFunctionalSmokeResult = {
       tool: boolean
       config: boolean
       mcpConfiguredDisabled: boolean
-      localModelRegisteredNoCall: boolean
+      localModelInference: boolean
     }
   }
 }
@@ -40,6 +41,9 @@ const externalPtyMarker = "MONGOLGPT_PACKAGED_PTY_OK"
 const mcpName = "release-functional-smoke-mcp"
 const providerName = "release-functional-smoke-provider"
 const modelName = "release-functional-smoke-model"
+const localModelApiKey = "release-smoke-local-key"
+const localModelPrompt = "MongolGPT Desktop local model smoke"
+const localModelReply = "MongolGPT Desktop локал загварын smoke амжилттай"
 
 export async function runReleaseFunctionalSmoke(
   server: ReleaseSmokeServer,
@@ -59,7 +63,7 @@ export async function runReleaseFunctionalSmoke(
           tool: false,
           config: false,
           mcpConfiguredDisabled: false,
-          localModelRegisteredNoCall: false,
+          localModelInference: false,
         },
       },
     }
@@ -70,20 +74,23 @@ export async function runReleaseFunctionalSmoke(
   const root = await mkdtemp(join(tmpdir(), "mongolgpt-release-smoke-"))
   const proofDir = await mkdtemp(join(tmpdir(), "mongolgpt-release-smoke-proof-"))
   const proof = join(proofDir, "terminal-proof.txt")
-  const headers = {
+  const headers: Record<string, string> = {
     Authorization: `Basic ${Buffer.from(`${server.username}:${server.password}`).toString("base64")}`,
     "x-mongolgpt-directory": root,
+    ...(server.smokeProof ? { "x-mongolgpt-desktop-smoke-proof": server.smokeProof } : {}),
   }
   const fixture = {
     skill: false,
     tool: false,
     config: false,
     mcpConfiguredDisabled: false,
-    localModelRegisteredNoCall: false,
+    localModelInference: false,
   }
   const http: Record<string, ReleaseSmokeCheck> = {}
   let terminal: ReleaseSmokeCheck = { ok: false }
+  let localModel: Awaited<ReturnType<typeof startLocalModelServer>> | undefined
   try {
+    localModel = await startLocalModelServer()
     await run("git", ["init", "-q"], root)
     await run("git", ["config", "user.email", "release-smoke@example.invalid"], root)
     await run("git", ["config", "user.name", "MongolGPT Release Smoke"], root)
@@ -109,8 +116,15 @@ export async function runReleaseFunctionalSmoke(
         provider: {
           [providerName]: {
             npm: "@ai-sdk/openai-compatible",
-            options: { baseURL: "http://127.0.0.1:9/v1" },
-            models: { [modelName]: { name: modelName } },
+            options: { apiKey: localModelApiKey, baseURL: localModel.url },
+            models: {
+              [modelName]: {
+                name: modelName,
+                tool_call: true,
+                limit: { context: 8_192, output: 2_048 },
+                cost: { input: 0, output: 0 },
+              },
+            },
           },
         },
       }),
@@ -187,7 +201,45 @@ export async function runReleaseFunctionalSmoke(
       http.provider = configProviders.check
       providerValue = configProviders.value
     }
-    fixture.localModelRegisteredNoCall = http.provider.ok && hasProviderModel(providerValue)
+    const providerRegistered = http.provider.ok && hasProviderModel(providerValue)
+    const session = await postJsonValue(
+      fetcher,
+      base,
+      "/session",
+      headers,
+      { title: "Desktop local model release smoke" },
+      isSession,
+      timeoutMs,
+    )
+    http.session = session.check
+    if (session.check.ok && isSession(session.value)) {
+      const sessionID = encodeURIComponent(session.value.id)
+      const prompt = await postJsonValue(
+        fetcher,
+        base,
+        `/session/${sessionID}/message`,
+        headers,
+        {
+          agent: "build",
+          model: { providerID: providerName, modelID: modelName },
+          parts: [{ type: "text", text: localModelPrompt }],
+        },
+        (value) => hasMessageText(value, localModelReply),
+        timeoutMs,
+      )
+      http.localModelPrompt = prompt.check
+      http.localModelMessages = await getJson(`/session/${sessionID}/message`, (value) =>
+        hasMessageText(value, localModelReply),
+      )
+    } else {
+      http.localModelPrompt = { ok: false, detail: "session creation failed" }
+      http.localModelMessages = { ok: false, detail: "session creation failed" }
+    }
+    fixture.localModelInference =
+      providerRegistered &&
+      http.localModelPrompt.ok &&
+      http.localModelMessages.ok &&
+      hasLocalModelRequest(localModel.request())
 
     const externalPtyProof = options.externalPtyProof ?? process.env.MONGOLGPT_DESKTOP_SMOKE_EXTERNAL_PTY_PROOF
     if (externalPtyProof) {
@@ -198,17 +250,24 @@ export async function runReleaseFunctionalSmoke(
       await deletePty(fetcher, base, headers, created)
     }
   } catch (error) {
+    const detail = [server.password, server.smokeProof]
+      .filter((secret): secret is string => Boolean(secret))
+      .reduce(
+        (message, secret) => redactSmokeError(message, secret),
+        error instanceof Error ? error.message : "probe failed",
+      )
     terminal = {
       ok: false,
-      detail: redactSmokeError(error instanceof Error ? error.message : "probe failed", server.password),
+      detail,
     }
   } finally {
     await disposeInstance(fetcher, base, headers, timeoutMs)
+    await localModel?.close()
     await removeSmokeDirectory(root)
     await removeSmokeDirectory(proofDir)
   }
   const capable =
-    Object.values(http).length === 9 &&
+    Object.values(http).length === 12 &&
     Object.values(http).every((check) => check.ok) &&
     terminal.ok &&
     Object.values(fixture).every(Boolean)
@@ -245,6 +304,12 @@ export function isStatusArray(value: unknown): value is StatusPayload[] {
 }
 export function isToolIds(value: unknown): value is string[] {
   return isArray(value) && value.every((item) => typeof item === "string")
+}
+export function isSession(value: unknown): value is { id: string } {
+  return isRecord(value) && typeof value.id === "string" && value.id.length > 0
+}
+export function hasMessageText(value: unknown, text: string) {
+  return JSON.stringify(value).includes(text)
 }
 export function isMcpStatusMap(value: unknown): value is Record<string, unknown> {
   return isRecord(value) && Object.values(value).every((item) => isRecord(item) && typeof item.status === "string")
@@ -333,6 +398,26 @@ async function requestJsonValue(
   const value = await response.json().catch(() => undefined)
   return { check: validate(value) ? { ok: true } : { ok: false, detail: "schema validation failed" }, value }
 }
+async function postJsonValue(
+  fetcher: FetchLike,
+  base: URL,
+  path: string,
+  headers: Record<string, string>,
+  body: unknown,
+  validate: (value: unknown) => boolean,
+  timeoutMs: number,
+) {
+  const response = await fetcher(new URL(path, base), {
+    method: "POST",
+    headers: { ...headers, "content-type": "application/json" },
+    signal: AbortSignal.timeout(timeoutMs),
+    body: JSON.stringify(body),
+  })
+  if (!validateHttpResponse(response, "application/json"))
+    return { check: { ok: false, detail: `HTTP ${response.status}` }, value: undefined }
+  const value = await response.json().catch(() => undefined)
+  return { check: validate(value) ? { ok: true } : { ok: false, detail: "schema validation failed" }, value }
+}
 async function createPty(
   fetcher: FetchLike,
   base: URL,
@@ -392,6 +477,78 @@ async function readExternalPtyProof(file: string): Promise<ReleaseSmokeCheck> {
 }
 async function defaultExec(command: string, args: string[], cwd: string) {
   return execFile(command, args, { cwd, windowsHide: true, encoding: "utf8" })
+}
+type LocalModelRequest = {
+  path: string
+  authorization: string
+  body: Record<string, unknown>
+}
+async function startLocalModelServer() {
+  let captured: LocalModelRequest | undefined
+  const server = createServer(async (request, response) => {
+    const url = new URL(request.url ?? "/", "http://127.0.0.1")
+    const chunks: Buffer[] = []
+    for await (const chunk of request) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+    const raw = Buffer.concat(chunks).toString("utf8")
+    const body = raw ? JSON.parse(raw) : {}
+    captured = {
+      path: url.pathname,
+      authorization: request.headers.authorization ?? "",
+      body: isRecord(body) ? body : {},
+    }
+    if (request.method !== "POST" || url.pathname !== "/v1/chat/completions") {
+      response.writeHead(404, { "content-type": "application/json" })
+      response.end(JSON.stringify({ error: "not found" }))
+      return
+    }
+    response.writeHead(200, {
+      "content-type": "text/event-stream",
+      "cache-control": "no-cache",
+      connection: "keep-alive",
+    })
+    const lines = [
+      modelChunk({ role: "assistant" }),
+      modelChunk({ content: localModelReply }),
+      modelChunk({}, "stop", { prompt_tokens: 11, completion_tokens: 7, total_tokens: 18 }),
+    ]
+    for (const line of lines) response.write(`data: ${JSON.stringify(line)}\n\n`)
+    response.end("data: [DONE]\n\n")
+  })
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(0, "127.0.0.1", () => {
+      server.off("error", reject)
+      resolve()
+    })
+  })
+  const address = server.address()
+  if (!address || typeof address === "string") {
+    server.close()
+    throw new Error("local model smoke server did not bind to a TCP port")
+  }
+  return {
+    url: `http://127.0.0.1:${address.port}/v1`,
+    request: () => captured,
+    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+  }
+}
+function modelChunk(delta: Record<string, unknown>, finishReason?: string, usage?: Record<string, number>) {
+  return {
+    id: "chatcmpl-release-smoke",
+    object: "chat.completion.chunk",
+    created: 0,
+    model: modelName,
+    choices: [{ index: 0, delta, finish_reason: finishReason ?? null }],
+    ...(usage ? { usage } : {}),
+  }
+}
+function hasLocalModelRequest(value: LocalModelRequest | undefined) {
+  return (
+    value?.path === "/v1/chat/completions" &&
+    value.authorization === `Bearer ${localModelApiKey}` &&
+    value.body.model === modelName &&
+    JSON.stringify(value.body.messages).includes(localModelPrompt)
+  )
 }
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value)

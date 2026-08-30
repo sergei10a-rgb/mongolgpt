@@ -1,5 +1,6 @@
 export { Config } from "@/config/config"
 export { configureAccountTokenEncryptionKey } from "@/account/token-codec"
+export { configureDesktopSmokeProof } from "@/server/routes/instance/httpapi/middleware/account-use"
 export { Server } from "./server/server"
 export { bootstrap } from "./cli/bootstrap"
 export { Database } from "@mongolgpt/core/database/database"

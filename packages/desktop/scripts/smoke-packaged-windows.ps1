@@ -115,14 +115,14 @@ try {
   $functionalHttp = @($result.functional.summary.http.PSObject.Properties.Value)
   if (
     $result.functional.capable -ne $true -or
-    $functionalHttp.Count -ne 9 -or
+    $functionalHttp.Count -ne 12 -or
     @($functionalHttp | Where-Object { $_.ok -ne $true }).Count -ne 0 -or
     $result.functional.summary.terminal.ok -ne $true -or
     $result.functional.summary.fixture.skill -ne $true -or
     $result.functional.summary.fixture.tool -ne $true -or
     $result.functional.summary.fixture.config -ne $true -or
     $result.functional.summary.fixture.mcpConfiguredDisabled -ne $true -or
-    $result.functional.summary.fixture.localModelRegisteredNoCall -ne $true
+    $result.functional.summary.fixture.localModelInference -ne $true
   ) {
     throw "Packaged desktop functional smoke failed: $rawResult"
   }

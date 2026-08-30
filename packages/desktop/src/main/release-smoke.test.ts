@@ -48,7 +48,7 @@ const functional = {
       tool: true,
       config: true,
       mcpConfiguredDisabled: true,
-      localModelRegisteredNoCall: true,
+      localModelInference: true,
     },
   },
 }

@@ -19,6 +19,7 @@ type StartCommand = {
   password: string
   userDataPath: string
   accountVaultKey: Uint8Array
+  desktopSmokeProof?: string
 }
 
 type StopCommand = { type: "stop" }
@@ -40,6 +41,7 @@ type Listener = {
 
 type ServerModule = {
   configureAccountTokenEncryptionKey(key: Uint8Array): void
+  configureDesktopSmokeProof(proof?: string): void
   Server: {
     listen(options: {
       port: number
@@ -74,6 +76,7 @@ async function start(command: StartCommand) {
       try {
         const serverModule = await loadServerModule()
         serverModule.configureAccountTokenEncryptionKey(command.accountVaultKey)
+        serverModule.configureDesktopSmokeProof(command.desktopSmokeProof)
         return serverModule
       } finally {
         command.accountVaultKey.fill(0)
@@ -164,6 +167,7 @@ function parseCommand(value: unknown): SidecarCommand | undefined {
   if (typeof command.password !== "string") return
   if (typeof command.userDataPath !== "string") return
   if (!(command.accountVaultKey instanceof Uint8Array) || command.accountVaultKey.byteLength !== 32) return
+  if (command.desktopSmokeProof !== undefined && !/^[A-Za-z0-9_-]{43}$/.test(command.desktopSmokeProof)) return
   return {
     type: "start",
     hostname: command.hostname,
@@ -171,6 +175,7 @@ function parseCommand(value: unknown): SidecarCommand | undefined {
     password: command.password,
     userDataPath: command.userDataPath,
     accountVaultKey: command.accountVaultKey,
+    desktopSmokeProof: command.desktopSmokeProof,
   }
 }
 

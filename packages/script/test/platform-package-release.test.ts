@@ -79,4 +79,28 @@ describe("public platform npm package contract", () => {
     expect(smoke).toContain('outputs.some((name) => name.endsWith(".css"))')
     expect(preflight).toContain("public @mongolgpt/ui consumer build failed")
   })
+
+  test("desktop release smoke contract requires a deterministic local-model inference round-trip", () => {
+    const releaseSmoke = readFileSync(resolve(root, "packages/desktop/src/main/release-functional-smoke.ts"), "utf8")
+    const installedSmoke = readFileSync(resolve(root, "packages/desktop/scripts/smoke-installed-windows.ps1"), "utf8")
+    const sidecar = readFileSync(resolve(root, "packages/desktop/src/main/sidecar.ts"), "utf8")
+    const accountGate = readFileSync(
+      resolve(root, "packages/mongolgpt/src/server/routes/instance/httpapi/middleware/account-use.ts"),
+      "utf8",
+    )
+
+    expect(releaseSmoke).toContain("localModelInference")
+    expect(releaseSmoke).not.toContain("localModelRegisteredNoCall")
+    expect(releaseSmoke).toContain('"/v1/chat/completions"')
+    expect(releaseSmoke).toContain("startLocalModelServer")
+    expect(releaseSmoke).toContain("`/session/${sessionID}/message`")
+    expect(releaseSmoke).toContain('parts: [{ type: "text", text:')
+    expect(releaseSmoke).toContain("hasLocalModelRequest(localModel.request())")
+    expect(releaseSmoke).toContain("hasMessageText(value, localModelReply)")
+    expect(sidecar).toContain("configureDesktopSmokeProof(command.desktopSmokeProof)")
+    expect(accountGate).toContain("configuredDesktopSmokeProof")
+    expect(accountGate).not.toContain("process.env.MONGOLGPT_DESKTOP_SMOKE_PROOF")
+    expect(installedSmoke).toContain("$result.functional.summary.fixture.localModelInference -ne $true")
+    expect(installedSmoke).not.toContain("$result.functional.summary.fixture.localModelRegisteredNoCall -ne $true")
+  })
 })

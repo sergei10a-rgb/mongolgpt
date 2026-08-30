@@ -4,11 +4,13 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
   hasDisabledMcp,
+  hasMessageText,
   hasProviderModel,
   isFileContent,
   isExternalPtyProof,
   isPath,
   isProject,
+  isSession,
   isProviderConfig,
   isProviderList,
   isStatusArray,
@@ -32,6 +34,8 @@ describe("release functional smoke validators", () => {
     expect(isPath({ home: "x" })).toBe(false)
     expect(isProject({ id: "project", worktree: "C:\\repo" })).toBe(true)
     expect(isProject({ id: "project" })).toBe(false)
+    expect(isSession({ id: "session-1" })).toBe(true)
+    expect(isSession({ id: "" })).toBe(false)
     expect(isFileContent({ type: "text", content: "README" })).toBe(true)
     expect(isFileContent({ type: "text", content: 1 })).toBe(false)
     expect(isStatusArray([{ file: "README.md", status: "modified" }])).toBe(true)
@@ -69,6 +73,12 @@ describe("release functional smoke validators", () => {
         connected: [],
       }),
     ).toBe(false)
+  })
+
+  test("finds the deterministic assistant reply in prompt and message payloads", () => {
+    const reply = "MongolGPT Desktop локал загварын smoke амжилттай"
+    expect(hasMessageText({ parts: [{ type: "text", text: reply }] }, reply)).toBe(true)
+    expect(hasMessageText({ parts: [{ type: "text", text: "өөр хариу" }] }, reply)).toBe(false)
   })
 
   test("keeps timeout and secret handling deterministic", () => {

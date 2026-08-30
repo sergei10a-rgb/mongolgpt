@@ -1,6 +1,7 @@
 import { Account } from "@/account/account"
 import { ServerAuth } from "@/server/auth"
 import { InstallationChannel } from "@mongolgpt/core/installation/version"
+import { timingSafeEqual } from "node:crypto"
 import { Effect, Option } from "effect"
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { serverRequestAuthorized } from "./authorization"
@@ -10,6 +11,8 @@ export const AccountLoginRequiredMessage =
 
 const legacySessionUse = /^\/session\/[^/]+\/(?:init|summarize|message|prompt_async|command|shell)\/?$/
 const v2SessionUse = /^\/api\/session\/[^/]+\/(?:agent|model|prompt|compact)\/?$/
+const desktopSmokeProofHeader = "x-mongolgpt-desktop-smoke-proof"
+let configuredDesktopSmokeProof: string | undefined
 
 export function accountUseRoute(method: string, pathname: string) {
   if (method.toUpperCase() !== "POST") return false
@@ -29,6 +32,20 @@ export function accountUseAllowed(input: {
   return Boolean(input.activeOrgID?.trim())
 }
 
+export function desktopSmokeProofMatches(expected: string | undefined, received: string | undefined) {
+  if (!expected || !received) return false
+  const left = Buffer.from(expected)
+  const right = Buffer.from(received)
+  return left.byteLength === right.byteLength && timingSafeEqual(left, right)
+}
+
+export function configureDesktopSmokeProof(proof?: string) {
+  if (proof !== undefined && !/^[A-Za-z0-9_-]{43}$/.test(proof)) {
+    throw new Error("Desktop smoke proof 32-byte base64url утга биш байна")
+  }
+  configuredDesktopSmokeProof = proof
+}
+
 export const accountUseRouterMiddleware = HttpRouter.middleware()(
   Effect.gen(function* () {
     if (accountUseAllowed({ channel: InstallationChannel })) return (effect) => effect
@@ -44,9 +61,16 @@ export const accountUseRouterMiddleware = HttpRouter.middleware()(
         if (!accountUseRoute(request.method, pathname)) return yield* effect
 
         const serverAuthRequired = ServerAuth.required(serverAuth)
-        if (serverAuthRequired && !hostedRuntime && !(yield* serverRequestAuthorized(request, serverAuth))) {
+        const serverAuthorized = serverAuthRequired && (yield* serverRequestAuthorized(request, serverAuth))
+        if (serverAuthRequired && !hostedRuntime && !serverAuthorized) {
           return yield* effect
         }
+
+        if (
+          serverAuthorized &&
+          desktopSmokeProofMatches(configuredDesktopSmokeProof, request.headers[desktopSmokeProofHeader])
+        )
+          return yield* effect
 
         if (
           accountUseAllowed({
