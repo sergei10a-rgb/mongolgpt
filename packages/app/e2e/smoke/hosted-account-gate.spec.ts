@@ -113,6 +113,44 @@ test.describe("hosted MongolGPT account gate", () => {
     )
   })
 
+  test("opens an empty hosted workspace root for a signed-in user", async ({ page }) => {
+    const errors = trackPageErrors(page)
+    await mockRuntime(page, {
+      directory: "/workspace",
+      home: "/workspace",
+      project: { ...fixture.project, worktree: "/workspace", sandboxes: [] },
+      sessions: [],
+    })
+
+    const current = capability("account_empty_workspace_e2e")
+    await page.route(tokenUrl, (route) => session(route, 200, current))
+    await page.route(sessionUrl, (route) =>
+      session(route, 200, {
+        authenticated: true,
+        account: { id: current.account.id },
+        workspace: { id: current.workspace.id },
+        expiresAt: current.expiresAt,
+      }),
+    )
+
+    await page.goto("/")
+    const openProject = page.getByRole("button", { name: mn["command.project.open"], exact: true })
+    await expect(openProject).toBeVisible()
+    await openProject.click()
+
+    const dialog = page.getByRole("dialog")
+    const workspaceRoot = dialog.getByText("~", { exact: true })
+    await expect(workspaceRoot).toBeVisible()
+    await workspaceRoot.click()
+
+    await expect(dialog).toBeHidden()
+    const newSession = page.locator('[data-action="home-new-session"]')
+    await expect(newSession).toBeVisible()
+    await newSession.click()
+    await expect(page.getByRole("textbox", { name: mn["prompt.placeholder.simple"], exact: true })).toBeVisible()
+    expectNoSmokeErrors(errors, [], [])
+  })
+
   test("requires and verifies a workspace choice before opening the hosted app", async ({ page }) => {
     await mockRuntime(page)
     await configureHostedProject(page)

@@ -152,7 +152,7 @@ test("resolves directory autocomplete from the current browser root", async () =
   expect(directories).toEqual(["/repo", "/repo/src"])
 })
 
-test("lists child directories when the picker opens without a search", async () => {
+test("lists the current root and child directories when the picker opens without a search", async () => {
   const sdk = {
     client: {
       file: {
@@ -171,7 +171,20 @@ test("lists child directories when the picker opens without a search", async () 
   } as unknown as Parameters<typeof createDirectorySearch>[0]["sdk"]
   const search = createDirectorySearch({ sdk, home: () => "/home/luke", base: () => "/home/luke" })
 
-  expect(await search("")).toEqual(["/home/luke/Documents", "/home/luke/Projects"])
+  expect(await search("")).toEqual(["/home/luke", "/home/luke/Documents", "/home/luke/Projects"])
+})
+
+test("keeps an empty hosted workspace selectable", async () => {
+  const sdk = {
+    client: {
+      file: {
+        list: () => Promise.resolve({ data: [] }),
+      },
+    },
+  } as unknown as Parameters<typeof createDirectorySearch>[0]["sdk"]
+  const search = createDirectorySearch({ sdk, home: () => "/workspace", base: () => "/workspace" })
+
+  expect(await search("")).toEqual(["/workspace"])
 })
 
 test("identifies the next directory level to preload", () => {
