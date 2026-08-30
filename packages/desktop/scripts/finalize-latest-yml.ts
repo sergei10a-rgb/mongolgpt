@@ -85,14 +85,12 @@ const output: Record<string, string> = {}
 // Windows: merge arm64 + x64 into single file
 const winX64 = await read("latest-yml-x86_64-pc-windows-msvc", metadata.windows)
 const winArm64 = await read("latest-yml-aarch64-pc-windows-msvc", metadata.windows)
-if (winX64 || winArm64) {
-  const base = winArm64 ?? winX64!
-  output[metadata.windows] = serialize({
-    version: base.version,
-    files: [...(winArm64?.files ?? []), ...(winX64?.files ?? [])],
-    releaseDate: base.releaseDate,
-  })
-}
+if (!winX64 || !winArm64) throw new Error("Windows x64 болон ARM64 updater metadata хоёулаа шаардлагатай")
+output[metadata.windows] = serialize({
+  version: winArm64.version,
+  files: [...winArm64.files, ...winX64.files],
+  releaseDate: winArm64.releaseDate,
+})
 
 // Linux x64: pass through
 const linuxX64 = await read("latest-yml-x86_64-unknown-linux-gnu", metadata.linuxX64)

@@ -34,7 +34,7 @@ export function createReleaseNotes(version: string, changelog: string) {
     "",
     RELEASE_NOTES_HEADINGS[1],
     "",
-    `- Desktop болон CLI файлуудыг [${tag} хувилбарын хуудас](https://github.com/sergei10a-rgb/mongolgpt/releases/tag/${tag})-аас татна.`,
+    `- Windows Desktop болон бүх дэмжигдсэн CLI файлыг [${tag} хувилбарын хуудас](https://github.com/sergei10a-rgb/mongolgpt/releases/tag/${tag})-аас татна.`,
     `- npm CLI: \`npm install -g mongolgpt@${version}\``,
     "- Суулгах дэлгэрэнгүй заавар: https://docs.mgpt.mn/install/",
     "",
@@ -82,25 +82,47 @@ export const CLI_RELEASE_ASSETS = [
   "mongolgpt-windows-x64-baseline.zip",
 ] as const
 
-export const DESKTOP_RELEASE_ASSETS = [
+export const DESKTOP_WINDOWS_RELEASE_ASSETS = [
+  "mongolgpt-desktop-win-x64.exe",
+  "mongolgpt-desktop-win-arm64.exe",
+] as const
+
+export const DESKTOP_MAC_RELEASE_ASSETS = [
   "mongolgpt-desktop-mac-x64.dmg",
   "mongolgpt-desktop-mac-x64.zip",
   "mongolgpt-desktop-mac-arm64.dmg",
   "mongolgpt-desktop-mac-arm64.zip",
   "mongolgpt-desktop-mac-x64.app.tar.gz",
   "mongolgpt-desktop-mac-arm64.app.tar.gz",
-  "mongolgpt-desktop-win-x64.exe",
-  "mongolgpt-desktop-win-arm64.exe",
+] as const
+
+export const DESKTOP_LINUX_X64_RELEASE_ASSETS = [
   "mongolgpt-desktop-linux-x64.AppImage",
   "mongolgpt-desktop-linux-x64.deb",
   "mongolgpt-desktop-linux-x64.rpm",
+] as const
+
+export const DESKTOP_LINUX_ARM64_RELEASE_ASSETS = [
   "mongolgpt-desktop-linux-arm64.AppImage",
   "mongolgpt-desktop-linux-arm64.deb",
   "mongolgpt-desktop-linux-arm64.rpm",
 ] as const
 
+export const DESKTOP_RELEASE_ASSETS = [
+  ...DESKTOP_WINDOWS_RELEASE_ASSETS,
+  ...DESKTOP_MAC_RELEASE_ASSETS,
+  ...DESKTOP_LINUX_X64_RELEASE_ASSETS,
+  ...DESKTOP_LINUX_ARM64_RELEASE_ASSETS,
+] as const
+
+export const CORE_RELEASE_ARTIFACTS = [...CLI_RELEASE_ASSETS, ...DESKTOP_WINDOWS_RELEASE_ASSETS].sort()
 export const RELEASE_ARTIFACTS = [...CLI_RELEASE_ASSETS, ...DESKTOP_RELEASE_ASSETS].sort()
 const releaseArtifactNames = new Set<string>(RELEASE_ARTIFACTS)
+const optionalReleaseArtifactGroups = [
+  { name: "macOS Desktop", assets: DESKTOP_MAC_RELEASE_ASSETS },
+  { name: "Linux x64 Desktop", assets: DESKTOP_LINUX_X64_RELEASE_ASSETS },
+  { name: "Linux ARM64 Desktop", assets: DESKTOP_LINUX_ARM64_RELEASE_ASSETS },
+] as const
 
 export type ReleaseFile = {
   name: string
@@ -115,11 +137,25 @@ export function isChecksummedReleaseAsset(name: string) {
   return isReleaseArtifact(name) || /^mongolgpt-desktop-.+\.blockmap$/.test(name)
 }
 
+function releaseArtifactErrors(names: ReadonlySet<string>) {
+  const errors: string[] = []
+  const missingCore = CORE_RELEASE_ARTIFACTS.filter((name) => !names.has(name))
+  if (missingCore.length) errors.push(`missing release artifacts: ${missingCore.join(", ")}`)
+
+  for (const group of optionalReleaseArtifactGroups) {
+    const present = group.assets.filter((name) => names.has(name))
+    if (present.length === 0 || present.length === group.assets.length) continue
+    const missing = group.assets.filter((name) => !names.has(name))
+    errors.push(`incomplete optional ${group.name} artifacts: ${missing.join(", ")}`)
+  }
+  return errors
+}
+
 export function createSha256Sums(files: readonly ReleaseFile[]) {
   const seen = new Set<string>()
   const selected = files.filter((file) => isChecksummedReleaseAsset(file.name))
-  const missing = RELEASE_ARTIFACTS.filter((name) => !selected.some((file) => file.name === name))
-  if (missing.length) throw new Error(`missing release artifacts: ${missing.join(", ")}`)
+  const artifactErrors = releaseArtifactErrors(new Set(selected.map((file) => file.name)))
+  if (artifactErrors.length) throw new Error(artifactErrors.join("; "))
 
   for (const file of selected) {
     if (seen.has(file.name)) throw new Error(`duplicate release artifact: ${file.name}`)
@@ -141,8 +177,7 @@ export function validateReleaseChecksumContract(assetNames: readonly string[], c
   const names = new Set(assetNames)
   if (!names.has(RELEASE_CHECKSUM_ASSET)) errors.push(`missing ${RELEASE_CHECKSUM_ASSET}`)
 
-  const expected = RELEASE_ARTIFACTS.filter((name) => !names.has(name))
-  if (expected.length) errors.push(`missing release artifacts: ${expected.join(", ")}`)
+  errors.push(...releaseArtifactErrors(names))
   if (!checksumText) return errors
 
   const lines = checksumText.split(/\r?\n/).filter(Boolean)
@@ -232,10 +267,6 @@ export function validateUpdaterReleaseContract(input: {
   const names = new Set(input.assetNames)
   const metadataAssets = releaseUpdaterMetadataAssets(input.channel)
 
-  for (const name of Object.values(metadataAssets)) {
-    if (!names.has(name)) errors.push(`missing updater metadata: ${name}`)
-  }
-
   const expectedYml: Record<keyof NonNullable<typeof input.metadata>, readonly string[]> = {
     windows: ["mongolgpt-desktop-win-arm64.exe", "mongolgpt-desktop-win-x64.exe"],
     linuxX64: [
@@ -252,10 +283,20 @@ export function validateUpdaterReleaseContract(input: {
   }
 
   const metadataKinds = ["windows", "linuxX64", "linuxArm64", "mac"] as const
+  const requiredKinds = new Set<(typeof metadataKinds)[number]>(["windows"])
+  for (const kind of metadataKinds.slice(1)) {
+    const filename = metadataAssets[kind]
+    if (expectedYml[kind].some((asset) => names.has(asset)) || names.has(filename) || input.metadata?.[kind]) {
+      requiredKinds.add(kind)
+    }
+  }
+
   for (const kind of metadataKinds) {
     const expected = expectedYml[kind]
     const text = input.metadata?.[kind]
     const filename = metadataAssets[kind]
+    if (!requiredKinds.has(kind)) continue
+    if (!names.has(filename)) errors.push(`missing updater metadata: ${filename}`)
     if (!text) {
       if (names.has(filename)) errors.push(`updater metadata content missing: ${filename}`)
       continue
@@ -267,6 +308,7 @@ export function validateUpdaterReleaseContract(input: {
       )
     const files = ymlFiles(text)
     for (const asset of expected) {
+      if (!names.has(asset)) errors.push(`updater metadata ${filename} references missing release asset: ${asset}`)
       if (!files.some((file) => file.url === asset)) errors.push(`updater metadata ${filename} missing asset: ${asset}`)
     }
     for (const file of files) {

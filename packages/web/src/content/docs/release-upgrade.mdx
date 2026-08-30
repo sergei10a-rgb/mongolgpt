@@ -5,6 +5,8 @@ description: MongolGPT Desktop, CLI, Web болон Cloudflare үйлчилгэ�
 
 MongolGPT-ийн Desktop, CLI, Web, docs болон байршуулсан backend нь нэг бүтээгдэхүүний өөр өөр release artifact. Хувилбар гаргахдаа зөвхөн файл үүссэн эсэхийг бус, commit, checksum, channel, migration болон smoke test-ийг хамтад нь шалгана.
 
+Stable Desktop түгээлт Windows x64 болон ARM64-өөс эхэлнэ. CLI нь Windows, macOS, Linux-ийн дэмжигдсэн architecture бүрээр гарна. macOS эсвэл Linux Desktop asset нэмсэн release нь тухайн платформын installer, updater metadata болон checksum-ийн бүтэн бүлгийг заавал агуулна; дутуу platform bundle-ийг нийтлэх шалгалт хаана.
+
 :::caution[Одоогийн нээлтийн төлөв]
 `*.dev.mgpt.mn` болон **MongolGPT Dev** installer нь туршилтын орчин. Stable production release-ийг GitHub Release болон хувилбарын тэмдэглэлд албан ёсоор зарлахаас өмнө бодит төлбөр, үйлдвэрлэлийн credential эсвэл чухал төслийг бүү ашигла.
 :::
@@ -37,7 +39,7 @@ Checksum зөрвөл файлыг ажиллуулахгүй, дахин тат
 
 ## Desktop шинэчлэх
 
-Production болон Beta build нь өөрийн release channel-ийн шинэчлэлтийг шалгана. Шинэчлэлт хийхээс өмнө:
+Одоогийн stable Desktop суваг Windows x64 болон ARM64 installer-ийг дэмжинэ. Production болон Beta build нь өөрийн release channel-ийн шинэчлэлтийг шалгана. Шинэчлэлт хийхээс өмнө:
 
 - ажиллаж буй session, Git diff болон terminal process-оо хадгалж хаах;
 - одоогийн MongolGPT хувилбар, channel болон installer checksum-ийг тэмдэглэх;
@@ -75,7 +77,7 @@ Hosted rollout дараах дарааллыг баримтална.
 3. Runtime, console, static Web app, docs болон admin-ийг ижил баталгаажсан commit-оос байршуулна.
 4. Health endpoint-оос гадна login, JSON schema/content-type, runtime session, Free Auto model call, usage, payment sandbox болон admin flow-ийг smoke test-ээр шалгана.
 5. Release SHA, channel болон domain boundary нь deploy manifest-тай таарч байгааг батална.
-6. Админы **Хувилбар ба түгээлт** шалгалт manifest дахь хувилбарыг яг тохирох `mongolgpt-v<version>` GitHub tag, бүх CLI/Desktop asset, `SHA256SUMS`, updater metadata, `mongolgpt`, `@mongolgpt/sdk`, `@mongolgpt/plugin`, `@mongolgpt/ui` npm dist-tag-тай тулган ногоон болсныг батална.
+6. Админы **Хувилбар ба түгээлт** шалгалт manifest дахь хувилбарыг яг тохирох `mongolgpt-v<version>` GitHub tag, бүх CLI asset, Windows Desktop-ийн заавал asset, нэмэгдсэн optional Desktop платформ бүрийн бүтэн бүлэг, `SHA256SUMS`, updater metadata, `mongolgpt`, `@mongolgpt/sdk`, `@mongolgpt/plugin`, `@mongolgpt/ui` npm dist-tag-тай тулган ногоон болсныг батална.
 
 Production deploy, бодит төлбөр болон хэрэглэгчид мэдэгдэл илгээхийг operator-ийн эцсийн зөвшөөрөлгүй ажиллуулахгүй.
 

@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import {
   CLI_RELEASE_ASSETS,
+  CORE_RELEASE_ARTIFACTS,
+  DESKTOP_MAC_RELEASE_ASSETS,
   DESKTOP_RELEASE_ASSETS,
   RELEASE_CHECKSUM_ASSET,
   RELEASE_ARTIFACTS,
@@ -45,6 +47,7 @@ describe("release integrity contract", () => {
     expect(notes).toContain("## Өөрчлөлтийн жагсаалт\n\n- CLI OAuth сайжрав.")
     expect(notes).not.toContain("# MongolGPT-ийн өөрчлөлтүүд")
     expect(notes).toContain("npm install -g mongolgpt@0.1.2")
+    expect(notes).toContain("Windows Desktop болон бүх дэмжигдсэн CLI файл")
     expect(notes).toContain("mongolgpt upgrade 0.1.2")
     expect(notes).toContain("SHA256SUMS")
     expect(notes).toContain("sha256sum <татсан-файл>")
@@ -108,6 +111,20 @@ describe("release integrity contract", () => {
         text.replace(RELEASE_ARTIFACTS[0], "0".repeat(64)),
       ),
     ).toContain(`checksum missing artifacts: ${RELEASE_ARTIFACTS[0]}`)
+  })
+
+  test("accepts the Windows-first core and rejects partial optional desktop groups", () => {
+    const coreFiles = CORE_RELEASE_ARTIFACTS.map((name) => ({ name, bytes: new TextEncoder().encode(name) }))
+    const text = createSha256Sums(coreFiles)
+
+    expect(validateReleaseChecksumContract([...CORE_RELEASE_ARTIFACTS, RELEASE_CHECKSUM_ASSET], text)).toEqual([])
+    expect(
+      validateReleaseChecksumContract([
+        ...CORE_RELEASE_ARTIFACTS,
+        DESKTOP_MAC_RELEASE_ASSETS[0],
+        RELEASE_CHECKSUM_ASSET,
+      ]),
+    ).toContain(`incomplete optional macOS Desktop artifacts: ${DESKTOP_MAC_RELEASE_ASSETS.slice(1).join(", ")}`)
   })
 
   test("checksums updater archives and every emitted desktop blockmap", () => {
@@ -188,6 +205,16 @@ describe("release integrity contract", () => {
         `updater metadata ${names.linuxArm64} missing asset: mongolgpt-desktop-linux-arm64.rpm`,
       ]),
     )
+
+    expect(
+      validateUpdaterReleaseContract({
+        version,
+        channel,
+        assetNames: [...CORE_RELEASE_ARTIFACTS, RELEASE_CHECKSUM_ASSET, names.windows],
+        releaseBody: body,
+        metadata: { windows: metadata.windows },
+      }),
+    ).toEqual([])
 
     const preflight = readFileSync(resolve(root, "packages/mongolgpt/script/release-preflight.ts"), "utf8")
     expect(preflight).toContain("validateUpdaterReleaseContract({")
@@ -324,8 +351,6 @@ describe("release integrity contract", () => {
     for (const name of [
       "AZURE_CLIENT_ID",
       "AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE",
-      "APPLE_CERTIFICATE",
-      "APPLE_API_KEY_PATH",
       "NPM_TOKEN",
     ]) {
       expect(workflow).toContain(`${name}: \${{ secrets.${name} }}`)
@@ -334,6 +359,8 @@ describe("release integrity contract", () => {
     expect(workflow.indexOf(credentials)).toBeLessThan(workflow.indexOf(checkout))
     expect(workflow.indexOf(checkout)).toBeLessThan(workflow.indexOf(version))
     expect(workflow).not.toContain("AUR_KEY")
+    expect(workflow).not.toContain("APPLE_CERTIFICATE")
+    expect(workflow).not.toContain("APPLE_API_KEY")
     expect(workflow).not.toContain("TAURI_SIGNING_PRIVATE_KEY")
     expect(workflow).not.toContain("finalize-latest-json")
   })
@@ -353,6 +380,19 @@ describe("release integrity contract", () => {
     expect(cliPublish).toContain("docker buildx build")
     expect(cliPublish).toContain("aur.archlinux.org")
     expect(cliPublish).toContain("homebrew-tap.git")
+  })
+
+  test("keeps the core Desktop release Windows-first", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
+    const finalize = readFileSync(resolve(root, "packages/desktop/scripts/finalize-latest-yml.ts"), "utf8")
+
+    expect(workflow).toContain("target: aarch64-pc-windows-msvc")
+    expect(workflow).toContain("target: x86_64-pc-windows-msvc")
+    expect(workflow).not.toContain("target: x86_64-apple-darwin")
+    expect(workflow).not.toContain("target: aarch64-apple-darwin")
+    expect(workflow).not.toContain("target: x86_64-unknown-linux-gnu")
+    expect(workflow).not.toContain("target: aarch64-unknown-linux-gnu")
+    expect(finalize).toContain("Windows x64 болон ARM64 updater metadata хоёулаа шаардлагатай")
   })
 
   test("never rewrites a published release tag or mutates the dev branch", () => {

@@ -61,11 +61,6 @@ jobs:
           AZURE_TRUSTED_SIGNING_ACCOUNT_NAME: ${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
           AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE: ${{ secrets.AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE }}
           AZURE_TRUSTED_SIGNING_ENDPOINT: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           required=(
@@ -75,11 +70,6 @@ jobs:
             AZURE_TRUSTED_SIGNING_ACCOUNT_NAME
             AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE
             AZURE_TRUSTED_SIGNING_ENDPOINT
-            APPLE_CERTIFICATE
-            APPLE_CERTIFICATE_PASSWORD
-            APPLE_API_KEY_PATH
-            APPLE_API_KEY
-            APPLE_API_ISSUER
             NPM_TOKEN
           )
           missing=()
@@ -292,14 +282,6 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          - host: macos-26-intel
-            target: x86_64-apple-darwin
-            platform_flag: --mac --x64
-            bun_install_flags: --os=darwin --cpu=x64
-          - host: macos-26
-            target: aarch64-apple-darwin
-            platform_flag: --mac --arm64
-            bun_install_flags: --os=darwin --cpu=arm64
           # github-hosted: blacksmith lacks ARM64 MSVC cross-compilation toolchain
           - host: "windows-2025"
             target: aarch64-pc-windows-msvc
@@ -307,26 +289,9 @@ jobs:
           - host: "windows-2025"
             target: x86_64-pc-windows-msvc
             platform_flag: --win
-          - host: "ubuntu-24.04"
-            target: x86_64-unknown-linux-gnu
-            platform_flag: --linux
-          - host: "ubuntu-24.04"
-            target: aarch64-unknown-linux-gnu
-            platform_flag: --linux --arm64
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: apple-actions/import-codesign-certs@8f3fb608891dd2244cdab3d69cd68c0d37a7fe93 # v2.0.0
-        if: runner.os == 'macOS'
-        with:
-          keychain: build
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-
-      - name: Setup Apple API Key
-        if: runner.os == 'macOS'
-        run: echo "${{ secrets.APPLE_API_KEY_PATH }}" > $RUNNER_TEMP/apple-api-key.p8
 
       - uses: ./.github/actions/setup-bun
         with:
@@ -343,23 +308,6 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
-
-      - name: Cache apt packages
-        if: contains(matrix.settings.host, 'ubuntu')
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/apt-cache
-          key: ${{ runner.os }}-${{ matrix.settings.target }}-apt-electron-${{ hashFiles('.github/workflows/publish.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.settings.target }}-apt-electron-
-
-      - name: Install dependencies (ubuntu only)
-        if: contains(matrix.settings.host, 'ubuntu')
-        run: |
-          mkdir -p ~/apt-cache && chmod -R a+rw ~/apt-cache
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends -o dir::cache::archives="$HOME/apt-cache" rpm
-          sudo chmod -R a+rw ~/apt-cache
 
       - name: Setup git committer
         id: committer
@@ -397,11 +345,6 @@ jobs:
         env:
           MONGOLGPT_CHANNEL: ${{ (github.ref_name == 'beta' && 'beta') || 'prod' }}
           GH_TOKEN: ${{ steps.committer.outputs.token }}
-          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
-          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_API_KEY: ${{ runner.temp }}/apple-api-key.p8
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
 
       - name: Package (no publish)
         if: ${{ !needs.version.outputs.release }}
@@ -428,27 +371,6 @@ jobs:
         run: |
           $expectedProductName = if ("${{ github.ref_name }}" -eq "beta") { "MongolGPT Beta" } else { "MongolGPT" }
           ./scripts/smoke-installed-windows.ps1 -InstallerPath "dist/mongolgpt-desktop-win-x64.exe" -ExpectedVersion "${{ needs.version.outputs.version }}" -ExpectedProductName $expectedProductName -UseExternalPtyProbe
-
-      - name: Create macOS .app.tar.gz
-        if: runner.os == 'macOS' && needs.version.outputs.release
-        working-directory: packages/desktop/dist
-        run: |
-          if [[ "${{ matrix.settings.target }}" == "x86_64-apple-darwin" ]]; then
-            APP_DIR="mac"
-            OUT_NAME="mongolgpt-desktop-mac-x64.app.tar.gz"
-          elif [[ "${{ matrix.settings.target }}" == "aarch64-apple-darwin" ]]; then
-            APP_DIR="mac-arm64"
-            OUT_NAME="mongolgpt-desktop-mac-arm64.app.tar.gz"
-          else
-            echo "Unknown macOS target: ${{ matrix.settings.target }}"
-            exit 1
-          fi
-          APP_PATH=$(find "$APP_DIR" -maxdepth 1 -name "*.app" -type d | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "No .app bundle found in $APP_DIR"
-            exit 1
-          fi
-          tar -czf "$OUT_NAME" -C "$(dirname "$APP_PATH")" "$(basename "$APP_PATH")"
 
       - name: Verify signed Windows Electron artifacts
         if: runner.os == 'Windows'
