@@ -16,6 +16,7 @@
 // cuts per-spawn cost when this suite gets bigger.
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
+import path from "node:path"
 import { cliIt } from "../../lib/cli-process"
 
 describe("mongolgpt read-only commands (smoke)", () => {
@@ -108,7 +109,11 @@ describe("mongolgpt read-only commands (smoke)", () => {
       Effect.gen(function* () {
         const r = yield* mongolgpt.spawn(["db", "path"])
         mongolgpt.expectExit(r, 0, "db path")
-        expect(r.stdout.trim()).toMatch(/^(:memory:|[/\\].+\.(db|sqlite|sqlite3))$/i)
+        const output = r.stdout.trim()
+        const extension = path.extname(output).toLowerCase()
+        expect(
+          output === ":memory:" || (path.isAbsolute(output) && [".db", ".sqlite", ".sqlite3"].includes(extension)),
+        ).toBe(true)
       }),
     60_000,
   )
