@@ -18,11 +18,16 @@ import {
 } from "@mongolgpt/console-core/usage-queue-readiness.js"
 import { Resource } from "@mongolgpt/console-resource"
 import { z } from "zod"
+import {
+  collectPublishedReleaseEvidence,
+  type PublishedReleaseEvidence,
+  validatePublishedReleaseEvidence,
+} from "./release-readiness"
 
 export type SystemReadinessState = "healthy" | "configured" | "degraded" | "disabled" | "missing"
 
 export interface SystemReadinessCheck {
-  id: "database" | "runtime" | "oauth" | "quota" | "usage-queue" | "payments" | "monitoring" | "backup"
+  id: "database" | "runtime" | "oauth" | "quota" | "usage-queue" | "payments" | "monitoring" | "backup" | "release"
   label: string
   state: SystemReadinessState
   summary: string
@@ -69,6 +74,7 @@ export interface SystemReadinessDependencies {
   stage: string
   databaseID: string
   runtimeURL: string
+  releaseVersion: string
   backupsEnabled: boolean
   monitoringEnabled: boolean
   database(): Promise<void>
@@ -79,6 +85,7 @@ export interface SystemReadinessDependencies {
   queueHeartbeat(): Promise<string | null>
   monitorEvidence(): Promise<string | null>
   backups(): Promise<BackupEvidence[]>
+  release(): Promise<PublishedReleaseEvidence>
   now(): Date
 }
 
@@ -164,6 +171,7 @@ export async function getSystemReadiness() {
   }
   const stage = process.env.MONGOLGPT_STAGE?.trim() || "тодорхойгүй"
   const runtimeURL = process.env.MONGOLGPT_RUNTIME_URL?.trim() || ""
+  const releaseVersion = process.env.MONGOLGPT_RELEASE_VERSION?.trim() || ""
   const backupsEnabled = process.env.MONGOLGPT_D1_BACKUPS_ENABLED === "true"
   const monitoringEnabled = process.env.MONGOLGPT_MONITORING_ENABLED === "true"
   const timeout = () => AbortSignal.timeout(4_000)
@@ -172,6 +180,7 @@ export async function getSystemReadiness() {
     stage,
     databaseID: resources.Database.databaseId,
     runtimeURL,
+    releaseVersion,
     backupsEnabled,
     monitoringEnabled,
     database: () =>
@@ -202,6 +211,7 @@ export async function getSystemReadiness() {
     queueHeartbeat: () => resources.UsageQueueReadiness.get(USAGE_QUEUE_READINESS_KEY),
     monitorEvidence: () => resources.ServiceMonitorState.get(SERVICE_MONITOR_STATE_KEY),
     backups: () => collectD1BackupEvidence(resources.D1Backups, stage, resources.Database.databaseId),
+    release: () => collectPublishedReleaseEvidence({ version: releaseVersion }),
     now: () => new Date(),
   })
 }
@@ -209,20 +219,22 @@ export async function getSystemReadiness() {
 export async function collectSystemReadiness(
   dependencies: SystemReadinessDependencies,
 ): Promise<SystemReadinessReport> {
-  const [database, runtime, auth, quota, payments, queueHeartbeat, monitorEvidence, backups] = await Promise.all([
-    probe(() => dependencies.database()),
-    dependencies.runtimeURL
-      ? probeJson(() => dependencies.runtime(), runtimeHealthSchema)
-      : Promise.resolve({ ok: false as const }),
-    probeJson(() => dependencies.auth(), authHealthSchema),
-    probeJson(() => dependencies.quota(), quotaHealthSchema),
-    probeJson(() => dependencies.payments(), paymentHealthSchema),
-    probe(() => dependencies.queueHeartbeat()),
-    dependencies.monitoringEnabled
-      ? probe(() => dependencies.monitorEvidence())
-      : Promise.resolve({ ok: false as const }),
-    dependencies.backupsEnabled ? probe(() => dependencies.backups()) : Promise.resolve({ ok: false as const }),
-  ])
+  const [database, runtime, auth, quota, payments, queueHeartbeat, monitorEvidence, backups, release] =
+    await Promise.all([
+      probe(() => dependencies.database()),
+      dependencies.runtimeURL
+        ? probeJson(() => dependencies.runtime(), runtimeHealthSchema)
+        : Promise.resolve({ ok: false as const }),
+      probeJson(() => dependencies.auth(), authHealthSchema),
+      probeJson(() => dependencies.quota(), quotaHealthSchema),
+      probeJson(() => dependencies.payments(), paymentHealthSchema),
+      probe(() => dependencies.queueHeartbeat()),
+      dependencies.monitoringEnabled
+        ? probe(() => dependencies.monitorEvidence())
+        : Promise.resolve({ ok: false as const }),
+      dependencies.backupsEnabled ? probe(() => dependencies.backups()) : Promise.resolve({ ok: false as const }),
+      dependencies.releaseVersion ? probe(() => dependencies.release()) : Promise.resolve({ ok: false as const }),
+    ])
   const now = dependencies.now()
 
   const checks: SystemReadinessCheck[] = [
@@ -244,6 +256,7 @@ export async function collectSystemReadiness(
     paymentCheck(payments),
     monitoringCheck(monitorEvidence, dependencies.stage, dependencies.monitoringEnabled, now),
     backupCheck(backups, dependencies.stage, dependencies.databaseID, dependencies.backupsEnabled, now),
+    releaseCheck(release, dependencies.releaseVersion),
   ]
 
   return {
@@ -252,6 +265,28 @@ export async function collectSystemReadiness(
     checks,
     checkedAt: now.toISOString(),
   }
+}
+
+function releaseCheck(result: ProbeResult<PublishedReleaseEvidence>, version: string): SystemReadinessCheck {
+  if (!version) {
+    return missing("release", "Хувилбар ба түгээлт", "Шалгах MongolGPT release хувилбар тохируулагдаагүй байна.")
+  }
+  if (!result.ok) {
+    return degraded("release", "Хувилбар ба түгээлт", `${version} хувилбарын нийтийн түгээлтийг шалгаж чадсангүй.`)
+  }
+  const errors = validatePublishedReleaseEvidence(result.value)
+  if (errors.length) {
+    return degraded(
+      "release",
+      "Хувилбар ба түгээлт",
+      `${version} хувилбарын GitHub Release, npm багц эсвэл updater metadata бүрэн нийцээгүй байна (${errors.length} шалгалт).`,
+    )
+  }
+  return ready(
+    "release",
+    "Хувилбар ба түгээлт",
+    `${version} хувилбарын GitHub Release, npm багц, checksum болон updater metadata нийцэж байна.`,
+  )
 }
 
 function monitoringCheck(

@@ -21,7 +21,7 @@ Dev, Beta, Stable суулгацууд тусдаа app identity болон то
 
 ## Татсан файлыг шалгах
 
-1. Installer, CLI архив болон `SHA256SUMS.txt`-ийг зөвхөн [албан ёсны GitHub Releases](https://github.com/sergei10a-rgb/mongolgpt/releases)-ээс татна.
+1. Installer, CLI архив болон `SHA256SUMS`-ийг зөвхөн [албан ёсны GitHub Releases](https://github.com/sergei10a-rgb/mongolgpt/releases)-ээс татна.
 2. Release tag, файлын нэр, CPU architecture болон checksum-ийг тулгана.
 3. Windows production artifact дээр Authenticode гарын үсэг хүчинтэй, нийтлэгч MongolGPT-ийн release тохиргоотой таарч байгаа эсэхийг шалгана.
 4. Changelog дахь breaking change, database/config migration болон rollback тайлбарыг уншина.
@@ -30,7 +30,7 @@ PowerShell дээр checksum шалгах:
 
 ```powershell
 Get-FileHash .\mongolgpt-desktop-win-x64.exe -Algorithm SHA256
-Get-Content .\SHA256SUMS.txt
+Get-Content .\SHA256SUMS
 ```
 
 Checksum зөрвөл файлыг ажиллуулахгүй, дахин татаж, release-ийн issue эсвэл security сувгаар мэдээлнэ.
@@ -75,6 +75,7 @@ Hosted rollout дараах дарааллыг баримтална.
 3. Runtime, console, static Web app, docs болон admin-ийг ижил баталгаажсан commit-оос байршуулна.
 4. Health endpoint-оос гадна login, JSON schema/content-type, runtime session, Free Auto model call, usage, payment sandbox болон admin flow-ийг smoke test-ээр шалгана.
 5. Release SHA, channel болон domain boundary нь deploy manifest-тай таарч байгааг батална.
+6. Админы **Хувилбар ба түгээлт** шалгалт manifest дахь хувилбарыг яг тохирох `mongolgpt-v<version>` GitHub tag, бүх CLI/Desktop asset, `SHA256SUMS`, updater metadata, `mongolgpt`, `@mongolgpt/sdk`, `@mongolgpt/plugin`, `@mongolgpt/ui` npm dist-tag-тай тулган ногоон болсныг батална.
 
 Production deploy, бодит төлбөр болон хэрэглэгчид мэдэгдэл илгээхийг operator-ийн эцсийн зөвшөөрөлгүй ажиллуулахгүй.
 

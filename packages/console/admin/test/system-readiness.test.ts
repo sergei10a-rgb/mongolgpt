@@ -5,6 +5,23 @@ import {
   type D1BackupBucket,
   type SystemReadinessDependencies,
 } from "../src/lib/system-readiness"
+import {
+  collectPublishedReleaseEvidence,
+  RELEASE_READINESS_ARTIFACTS,
+  RELEASE_READINESS_CHECKSUM,
+  RELEASE_READINESS_PACKAGES,
+  RELEASE_READINESS_REPOSITORY,
+  releaseTag,
+  releaseUpdaterMetadataAssets,
+  type PublishedReleaseEvidence,
+  validatePublishedReleaseEvidence,
+} from "../src/lib/release-readiness"
+import {
+  CLI_RELEASE_ASSETS,
+  DESKTOP_RELEASE_ASSETS,
+  RELEASE_CHECKSUM_ASSET,
+  releaseUpdaterMetadataAssets as canonicalUpdaterMetadataAssets,
+} from "../../../script/src/release-integrity"
 
 const json = (value: unknown, status = 200) =>
   Response.json(value, {
@@ -14,6 +31,7 @@ const json = (value: unknown, status = 200) =>
 
 const now = new Date("2026-08-19T00:00:00.000Z")
 const databaseID = "01234567-89ab-cdef-0123-456789abcdef"
+const releaseVersion = "0.1.1"
 
 const queueHeartbeat = () =>
   JSON.stringify({
@@ -98,11 +116,120 @@ const backupEvidence = (
   }
 }
 
+const updaterFiles = {
+  windows: ["mongolgpt-desktop-win-arm64.exe", "mongolgpt-desktop-win-x64.exe"],
+  linuxX64: [
+    "mongolgpt-desktop-linux-x64.AppImage",
+    "mongolgpt-desktop-linux-x64.deb",
+    "mongolgpt-desktop-linux-x64.rpm",
+  ],
+  linuxArm64: [
+    "mongolgpt-desktop-linux-arm64.AppImage",
+    "mongolgpt-desktop-linux-arm64.deb",
+    "mongolgpt-desktop-linux-arm64.rpm",
+  ],
+  mac: ["mongolgpt-desktop-mac-arm64.zip", "mongolgpt-desktop-mac-x64.zip"],
+} as const
+
+const latestPlatforms = {
+  "windows-x86_64-nsis": "mongolgpt-desktop-win-x64.exe",
+  "windows-aarch64-nsis": "mongolgpt-desktop-win-arm64.exe",
+  "darwin-x86_64-app": "mongolgpt-desktop-mac-x64.app.tar.gz",
+  "darwin-aarch64-app": "mongolgpt-desktop-mac-arm64.app.tar.gz",
+  "linux-x86_64-deb": "mongolgpt-desktop-linux-x64.deb",
+  "linux-x86_64-rpm": "mongolgpt-desktop-linux-x64.rpm",
+  "linux-x86_64-appimage": "mongolgpt-desktop-linux-x64.AppImage",
+  "linux-aarch64-deb": "mongolgpt-desktop-linux-arm64.deb",
+  "linux-aarch64-rpm": "mongolgpt-desktop-linux-arm64.rpm",
+  "linux-aarch64-appimage": "mongolgpt-desktop-linux-arm64.AppImage",
+  "windows-x86_64": "mongolgpt-desktop-win-x64.exe",
+  "windows-aarch64": "mongolgpt-desktop-win-arm64.exe",
+  "darwin-x86_64": "mongolgpt-desktop-mac-x64.app.tar.gz",
+  "darwin-aarch64": "mongolgpt-desktop-mac-arm64.app.tar.gz",
+  "linux-x86_64": "mongolgpt-desktop-linux-x64.deb",
+  "linux-aarch64": "mongolgpt-desktop-linux-arm64.deb",
+} as const
+
+function updaterYml(files: readonly string[]) {
+  return [
+    `version: ${releaseVersion}`,
+    "files:",
+    ...files.flatMap((name) => [
+      `  - url: ${name}`,
+      `    sha512: ${"A".repeat(64)}`,
+      "    size: 1024",
+      "    blockMapSize: 64",
+    ]),
+  ].join("\n")
+}
+
+function releaseEvidence(): PublishedReleaseEvidence {
+  const channel = "latest" as const
+  const tag = releaseTag(releaseVersion)
+  const body = [
+    "## Өөрчлөлтийн жагсаалт",
+    "- MongolGPT бэлэн боллоо.",
+    "## Суулгах",
+    `npm install -g mongolgpt@${releaseVersion}`,
+    "## Шинэчлэх",
+    `mongolgpt upgrade ${releaseVersion}`,
+    "## Файлын бүрэн бүтэн байдал",
+    RELEASE_READINESS_CHECKSUM,
+  ].join("\n\n")
+  const metadataAssets = releaseUpdaterMetadataAssets(channel)
+  const assets = [...RELEASE_READINESS_ARTIFACTS, RELEASE_READINESS_CHECKSUM, ...Object.values(metadataAssets)].map(
+    (name) => ({ name, size: 1024, state: "uploaded" }),
+  )
+  const packages = Object.fromEntries(
+    RELEASE_READINESS_PACKAGES.map((name) => [
+      name,
+      {
+        name,
+        version: releaseVersion,
+        bin: name === "mongolgpt" ? { mongolgpt: "bin/mongolgpt" } : undefined,
+        dist: {
+          tarball: `https://registry.npmjs.org/${name.replace("/", "-")}-${releaseVersion}.tgz`,
+          integrity: `sha512-${"A".repeat(64)}`,
+        },
+      },
+    ]),
+  ) as PublishedReleaseEvidence["packages"]
+  const platforms = Object.fromEntries(
+    Object.entries(latestPlatforms).map(([platform, asset]) => [
+      platform,
+      {
+        url: `https://github.com/${RELEASE_READINESS_REPOSITORY}/releases/download/${tag}/${asset}`,
+        signature: "A".repeat(64),
+      },
+    ]),
+  )
+  return {
+    version: releaseVersion,
+    channel,
+    release: { tag_name: tag, draft: false, prerelease: false, body, assets },
+    checksumText: RELEASE_READINESS_ARTIFACTS.map((name) => `${"a".repeat(64)}  ${name}`).join("\n"),
+    latestJson: JSON.stringify({
+      version: releaseVersion,
+      notes: body,
+      pub_date: now.toISOString(),
+      platforms,
+    }),
+    metadata: {
+      windows: updaterYml(updaterFiles.windows),
+      linuxX64: updaterYml(updaterFiles.linuxX64),
+      linuxArm64: updaterYml(updaterFiles.linuxArm64),
+      mac: updaterYml(updaterFiles.mac),
+    },
+    packages,
+  }
+}
+
 function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): SystemReadinessDependencies {
   return {
     stage: "dev",
     databaseID,
     runtimeURL: "https://runtime.dev.mgpt.mn",
+    releaseVersion,
     backupsEnabled: true,
     monitoringEnabled: true,
     database: async () => undefined,
@@ -123,6 +250,7 @@ function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): Sys
     queueHeartbeat: async () => queueHeartbeat(),
     monitorEvidence: async () => monitorEvidence(),
     backups: async () => [backupEvidence()],
+    release: async () => releaseEvidence(),
     now: () => now,
     ...overrides,
   }
@@ -144,6 +272,7 @@ describe("MongolGPT admin system readiness", () => {
       payments: "healthy",
       monitoring: "healthy",
       backup: "healthy",
+      release: "healthy",
     })
     expect(JSON.stringify(report)).not.toContain("heartbeat-secret-id")
     expect(JSON.stringify(report)).not.toContain("database.sql")
@@ -184,6 +313,7 @@ describe("MongolGPT admin system readiness", () => {
       payments: "disabled",
       monitoring: "healthy",
       backup: "degraded",
+      release: "healthy",
     })
     expect(JSON.stringify(report)).not.toContain("secret database diagnostic")
   })
@@ -383,5 +513,97 @@ describe("MongolGPT admin system readiness", () => {
     expect(probed).toBe(false)
     expect(report.status).toBe("degraded")
     expect(report.checks.find((check) => check.id === "backup")?.state).toBe("disabled")
+  })
+
+  test("keeps the live release gate aligned with the canonical publish contract", () => {
+    expect([...RELEASE_READINESS_ARTIFACTS]).toEqual([...CLI_RELEASE_ASSETS, ...DESKTOP_RELEASE_ASSETS])
+    expect(RELEASE_READINESS_CHECKSUM).toBe(RELEASE_CHECKSUM_ASSET)
+    expect(releaseUpdaterMetadataAssets("latest")).toEqual(canonicalUpdaterMetadataAssets("latest"))
+    expect(releaseUpdaterMetadataAssets("beta")).toEqual(canonicalUpdaterMetadataAssets("beta"))
+  })
+
+  test("fails incomplete public release channels closed", async () => {
+    const missingPackage = releaseEvidence()
+    missingPackage.packages = { ...missingPackage.packages, "@mongolgpt/sdk": null }
+    const draftRelease = releaseEvidence()
+    draftRelease.release = draftRelease.release ? { ...draftRelease.release, draft: true } : null
+    const missingAsset = releaseEvidence()
+    missingAsset.release = missingAsset.release
+      ? {
+          ...missingAsset.release,
+          assets: missingAsset.release.assets.filter((asset) => asset.name !== "mongolgpt-desktop-linux-arm64.deb"),
+        }
+      : null
+    const brokenUpdater = releaseEvidence()
+    brokenUpdater.latestJson = JSON.stringify({ version: "9.9.9", notes: "wrong", pub_date: "invalid", platforms: {} })
+    const missingChecksum = releaseEvidence()
+    missingChecksum.checksumText = undefined
+
+    for (const evidence of [missingPackage, draftRelease, missingAsset, brokenUpdater, missingChecksum]) {
+      expect(validatePublishedReleaseEvidence(evidence).length).toBeGreaterThan(0)
+      const report = await collectSystemReadiness(dependencies({ release: async () => evidence }))
+      const check = report.checks.find((item) => item.id === "release")
+      expect(check?.state).toBe("degraded")
+      expect(check?.summary).not.toContain("@mongolgpt/sdk")
+    }
+  })
+
+  test("reports a missing release version without making public network requests", async () => {
+    let probed = false
+    const report = await collectSystemReadiness(
+      dependencies({
+        releaseVersion: "",
+        release: async () => {
+          probed = true
+          throw new Error("must not run")
+        },
+      }),
+    )
+
+    expect(probed).toBe(false)
+    expect(report.status).toBe("degraded")
+    expect(report.checks.find((check) => check.id === "release")?.state).toBe("missing")
+  })
+
+  test("collects only fixed GitHub and npm release endpoints with bounded public metadata", async () => {
+    const expected = releaseEvidence()
+    const metadataNames = releaseUpdaterMetadataAssets("latest")
+    const requested: string[] = []
+    const requestOptions: RequestInit[] = []
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      requested.push(url)
+      requestOptions.push(init ?? {})
+      if (url.startsWith("https://api.github.com/")) return json(expected.release)
+      for (const name of RELEASE_READINESS_PACKAGES) {
+        if (url === `https://registry.npmjs.org/${encodeURIComponent(name)}/latest`) {
+          return json(expected.packages[name])
+        }
+      }
+      if (url.endsWith(`/${RELEASE_READINESS_CHECKSUM}`)) return new Response(expected.checksumText)
+      for (const [kind, name] of Object.entries(metadataNames)) {
+        if (url.endsWith(`/${name}`)) {
+          const text = kind === "json" ? expected.latestJson : expected.metadata[kind as keyof typeof expected.metadata]
+          return new Response(text)
+        }
+      }
+      return new Response("missing", { status: 404 })
+    }
+
+    const collected = await collectPublishedReleaseEvidence({ version: releaseVersion, fetcher })
+    expect(validatePublishedReleaseEvidence(collected)).toEqual([])
+    expect(requested).toHaveLength(11)
+    expect(requested.every((url) => new URL(url).protocol === "https:")).toBe(true)
+    expect(
+      requested.every((url) => ["api.github.com", "github.com", "registry.npmjs.org"].includes(new URL(url).hostname)),
+    ).toBe(true)
+    expect(requested.some((url) => url.includes(releaseTag(releaseVersion)))).toBe(true)
+    expect(requestOptions.every((options) => options.redirect === "follow")).toBe(true)
+    expect(
+      requestOptions.every((options) => {
+        const value = Reflect.get(options, "cf") as Record<string, unknown> | undefined
+        return value?.cacheEverything === true && value.cacheTtl === 300
+      }),
+    ).toBe(true)
   })
 })

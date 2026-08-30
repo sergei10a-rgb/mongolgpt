@@ -1061,6 +1061,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(consoleSource).toContain("allowedSenderAddresses: [monitorAlertFrom]")
     expect(adminSource).toContain("serviceMonitorState")
     expect(adminSource).toContain("MONGOLGPT_MONITORING_ENABLED")
+    expect(adminSource).toContain("MONGOLGPT_RELEASE_VERSION")
+    expect(adminSource).toContain('from "../packages/mongolgpt/package.json"')
     expect(configSource).toContain("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_MONITORING=true")
     expect(configSource).not.toContain("honeycomb:")
     expect(configSource).not.toContain('import("./infra/monitoring.js")')

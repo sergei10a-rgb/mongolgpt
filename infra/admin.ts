@@ -1,4 +1,5 @@
 import { adminOrigin, domain, enableD1Backups, enableMonitoring, runtimeOrigin } from "./stage"
+import mongolGPTPackage from "../packages/mongolgpt/package.json"
 import {
   auth,
   d1Backups,
@@ -27,6 +28,7 @@ const accessProvider = new cloudflare.Provider("AdminAccessProvider", {
 })
 const accountId = sst.cloudflare.DEFAULT_ACCOUNT_ID
 const hostname = `admin.${domain}`
+const releaseVersion = releaseVersionFromManifest(mongolGPTPackage.version)
 const bootstrapEmails = new sst.Secret("MongolGPTAdminBootstrapEmails")
 const configureOrganizationMfa = "bun run script/cloudflare-access-mfa.ts"
 // The command has no delete action so removing a stack cannot silently weaken organization MFA.
@@ -114,6 +116,7 @@ export const admin = new sst.cloudflare.x.SolidStart("Admin", {
   environment: {
     MONGOLGPT_ADMIN_ORIGIN: adminOrigin,
     MONGOLGPT_RUNTIME_URL: runtimeOrigin,
+    MONGOLGPT_RELEASE_VERSION: releaseVersion,
     MONGOLGPT_STAGE: $app.stage,
     MONGOLGPT_D1_BACKUPS_ENABLED: enableD1Backups ? "true" : "false",
     MONGOLGPT_MONITORING_ENABLED: enableMonitoring ? "true" : "false",
@@ -155,4 +158,11 @@ function normalizeTeamDomain(value: string) {
     throw new Error("Cloudflare Zero Trust organization-ийн team domain хүчинтэй биш байна.")
   }
   return url.origin
+}
+
+function releaseVersionFromManifest(value: unknown) {
+  if (typeof value !== "string" || !/^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(value)) {
+    throw new Error("packages/mongolgpt release хувилбар хүчинтэй биш байна.")
+  }
+  return value
 }

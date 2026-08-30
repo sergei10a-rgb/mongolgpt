@@ -79,6 +79,10 @@ describe("release integrity contract", () => {
     expect(versionScript).toContain("--repo ${repo}")
     expect(versionScript.match(/--notes-file \$\{notesFile\}/g)?.length).toBe(2)
     expect(versionScript).toContain('Script.channel === "beta"')
+
+    const releaseDocs = readFileSync(resolve(root, "packages/web/src/content/docs/release-upgrade.mdx"), "utf8")
+    expect(releaseDocs).toContain("`SHA256SUMS`")
+    expect(releaseDocs).not.toContain("SHA256SUMS.txt")
   })
 
   test("resolves only supported updater channels and fails closed on typos", () => {
