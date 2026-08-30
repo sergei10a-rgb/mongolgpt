@@ -17,14 +17,14 @@ export const RELEASE_READINESS_CLI_ASSETS = [
   "mongolgpt-windows-x64-baseline.zip",
 ] as const
 export const RELEASE_READINESS_DESKTOP_ASSETS = [
+  "mongolgpt-desktop-win-x64.exe",
+  "mongolgpt-desktop-win-arm64.exe",
   "mongolgpt-desktop-mac-x64.dmg",
   "mongolgpt-desktop-mac-x64.zip",
   "mongolgpt-desktop-mac-arm64.dmg",
   "mongolgpt-desktop-mac-arm64.zip",
   "mongolgpt-desktop-mac-x64.app.tar.gz",
   "mongolgpt-desktop-mac-arm64.app.tar.gz",
-  "mongolgpt-desktop-win-x64.exe",
-  "mongolgpt-desktop-win-arm64.exe",
   "mongolgpt-desktop-linux-x64.AppImage",
   "mongolgpt-desktop-linux-x64.deb",
   "mongolgpt-desktop-linux-x64.rpm",
