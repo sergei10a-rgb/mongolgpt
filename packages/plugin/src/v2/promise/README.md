@@ -1,13 +1,13 @@
-# MongolGPT V2 Promise Plugin API
+# MongolGPT V2 Promise залгаасын API
 
-The Promise plugin API is the async/await equivalent of `@mongolgpt/plugin/v2/effect`. It grants plugins the same two in-process capabilities:
+`Promise` залгаасын API нь `@mongolgpt/plugin/v2/effect`-ийн `async/await` хувилбар юм. Энэ нь залгааст процесс доторх ижил хоёр боломжийг олгоно:
 
-- `hook` installs behavior at an MongolGPT extension point.
-- `reload` reruns every transform hook for a stateful domain.
+- `hook` нь MongolGPT-ийн өргөтгөх цэгт үйлдэл бүртгэнэ.
+- `reload` нь төлөв хадгалдаг дэд системийн бүх хувиргалтын `hook`-ийг дахин ажиллуулна.
 
-The only difference from the Effect API is the async boundary: hook callbacks, hook registration, `reload`, and `Registration.dispose` use Promises instead of Effects.
+`Effect API`-аас ялгарах цорын ганц зүйл нь `async` зааг юм. `hook`-ийн буцаан дуудагдах функц, `hook` бүртгэл, `reload`, мөн `Registration.dispose` нь `Effect`-ийн оронд `Promise` ашиглана.
 
-## Defining A Plugin
+## Залгаас тодорхойлох
 
 ```ts
 import { define } from "@mongolgpt/plugin/v2/promise"
@@ -24,20 +24,20 @@ export const Plugin = define({
 })
 ```
 
-Plugin setup registers hooks imperatively. It does not return a hook object.
+Залгаасын `setup` нь `hook`-уудыг шууд бүртгэх бөгөөд `hook`-ийн объект буцаахгүй.
 
-Configuration supplied for the plugin is available as `ctx.options`.
+Залгааст өгсөн тохиргоог `ctx.options`-оос авна.
 
-A registration may be removed early through `dispose`:
+Бүртгэлийг `dispose` ашиглаад хугацаанаас нь өмнө устгаж болно:
 
 ```ts
 const registration = await ctx.catalog.transform(applyCatalog)
 await registration.dispose()
 ```
 
-## Transform Hooks
+## Хувиргалтын hook
 
-Transform hooks contribute to stateful domains. The draft editor is synchronous; the callback may be `async` when it needs to await other work:
+Хувиргалтын `hook` нь төлөвтэй дэд системд нэмэлт өөрчлөлт оруулна. Ноорог засварлагч синхрон ажиллана. Өөр ажил хүлээх шаардлагатай бол буцаан дуудагдах функц нь `async` байж болно:
 
 ```ts
 await ctx.agent.transform((agent) => {
@@ -48,7 +48,7 @@ await ctx.agent.transform((agent) => {
 })
 ```
 
-Available transform hooks are namespaced by domain:
+Боломжтой хувиргалтын `hook`-ууд дэд систем тус бүрийн нэрийн мужид байрлана:
 
 ```ts
 ctx.agent.transform
@@ -59,9 +59,9 @@ ctx.reference.transform
 ctx.skill.transform
 ```
 
-## Runtime Hooks
+## Ажиллах үеийн hook
 
-Runtime hooks intercept live operations:
+Ажиллах үеийн `hook` нь явагдаж буй бодит үйлдэлд дундаас нь оролцоно:
 
 ```ts
 await ctx.aisdk.sdk(async (event) => {
@@ -76,9 +76,9 @@ await ctx.aisdk.language((event) => {
 })
 ```
 
-## Reloading A Domain
+## Дэд системийг дахин ачаалах
 
-When data captured by a transform changes, reload the affected domain:
+`Transform`-ийн ашиглаж буй өгөгдөл өөрчлөгдвөл нөлөөлсөн дэд системийг дахин ачаална:
 
 ```ts
 let data = await loadCatalog()
@@ -91,7 +91,7 @@ data = await loadCatalog()
 await ctx.catalog.reload()
 ```
 
-Available reload operations are:
+Ашиглаж болох `reload` үйлдлүүд:
 
 ```ts
 ctx.agent.reload()

@@ -1,19 +1,19 @@
 # @mongolgpt/client
 
-Private generation target for clients derived directly from MongolGPT's authoritative Effect `HttpApi`.
+MongolGPT-ийн үндсэн Effect `HttpApi`-аас шууд үүсгэдэг клиентүүдийн дотоод багц.
 
-## Entrypoints
+## Орох цэгүүд
 
-- `@mongolgpt/client`: zero-Effect Promise client using `fetch`.
-- `@mongolgpt/client/effect`: rich Effect network client using an environment-provided `HttpClient`.
+- `@mongolgpt/client`: `fetch` ашигладаг, Effect-гүй Promise клиент.
+- `@mongolgpt/client/effect`: орчноос өгсөн `HttpClient` ашигладаг, Effect дээр суурилсан сүлжээний клиент.
 
-The generated surface starts with the Session group from Server's concrete API. The build compiler reads `@mongolgpt/server/api`; the generated Effect runtime imports a client-local projection built from Protocol, with a generation-equivalence test preventing transport drift. Run `bun run generate` after changing the contract and `bun run check:generated` to detect committed-output drift.
+Үүсгэсэн API нь серверийн бодит API доторх Session бүлгээс эхэлнэ. Бүтээх үеийн хөрвүүлэгч `@mongolgpt/server/api`-г уншина. Үүсгэсэн Effect ажиллах орчин Protocol-оос байгуулсан, зөвхөн клиентэд хамаарах дүрслэлийг импортолдог бөгөөд үүсгэлтийн ижил байдлын шалгалт дамжуулалтын зөрүү гарахаас сэргийлнэ. Гэрээг өөрчилсний дараа `bun run generate`, репод хадгалсан үр дүн зөрсөн эсэхийг шалгахдаа `bun run check:generated` ажиллуул.
 
-The Effect entrypoint uses canonical decoded values such as `Session.ID`, `Location.Ref`, and `Prompt`. These datatypes come from the lightweight `@mongolgpt/schema` package and are re-exported so callers depend only on the client surface. Protocol owns endpoint construction and middleware placement; Server supplies the concrete middleware keys used by the build-time API.
+Effect орох цэг нь `Session.ID`, `Location.Ref`, `Prompt` зэрэг нэгдсэн дүрмээр тайлсан утгуудыг ашиглана. Эдгээр өгөгдлийн төрөл хөнгөн `@mongolgpt/schema` багцаас ирдэг бөгөөд дуудагч тал зөвхөн клиентийн API-гаас хамааралтай байлгахын тулд эндээс дахин экспортлогдоно. Protocol нь endpoint үүсгэх болон middleware байрлуулах ажлыг хариуцна. Сервер нь бүтээх үеийн API-д ашиглах бодит middleware түлхүүрүүдийг өгнө.
 
-The Promise root remains structural and has no Core or Effect runtime dependency. `/effect` depends only on Effect, Schema, and Protocol and is browser-bundle safe. Bundle-boundary tests enforce both import graphs.
+Promise үндэс нь бүтцийн хэлбэрээ хадгалж, Core эсвэл Effect ажиллах орчноос хамаарахгүй. `/effect` нь зөвхөн Effect, Schema, Protocol-оос хамаардаг тул хөтөчид багцлан ашиглахад аюулгүй. Багцын заагийн шалгалтууд энэ хоёр импортын хамаарлыг албадан мөрдүүлнэ.
 
-Effect consumers construct canonical decoded inputs:
+Effect ашиглаж буй тал нэгдсэн дүрмээр тайлсан оролтоо дараах байдлаар үүсгэнэ:
 
 ```ts
 import { AbsolutePath, Location, MongolGPT, Prompt } from "@mongolgpt/client/effect"

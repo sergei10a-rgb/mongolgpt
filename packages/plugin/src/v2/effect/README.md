@@ -1,13 +1,13 @@
-# MongolGPT V2 Effect Plugin API
+# MongolGPT V2 Effect залгаасын API
 
-The Effect plugin API grants plugins two in-process capabilities:
+`Effect` залгаасын API нь залгааст процесс доторх дараах хоёр боломжийг олгоно:
 
-- `hook` installs behavior at an MongolGPT extension point.
-- `reload` reruns every transform hook for a stateful domain.
+- `hook` нь MongolGPT-ийн өргөтгөх цэгт үйлдэл бүртгэнэ.
+- `reload` нь төлөв хадгалдаг дэд системийн бүх хувиргалтын `hook`-ийг дахин ажиллуулна.
 
-The public server client will be exposed separately. It is intentionally not part of `PluginContext` yet.
+Нийтийн серверийн клиент нь тусад нь ил гарна. Одоогоор түүнийг зориуд `PluginContext`-ийн бүрэлдэхүүнд оруулаагүй.
 
-## Defining A Plugin
+## Залгаас тодорхойлох
 
 ```ts
 import { define } from "@mongolgpt/plugin/v2/effect"
@@ -25,15 +25,15 @@ export const Plugin = define({
 })
 ```
 
-Plugin setup registers hooks imperatively. It does not return a hook object.
+Залгаасын `setup` нь `hook`-уудыг шууд бүртгэх бөгөөд `hook`-ийн объект буцаахгүй.
 
-Configuration supplied for the plugin is available as `ctx.options`.
+Залгааст өгсөн тохиргоог `ctx.options`-оос авна.
 
-Registrations are owned by the plugin scope. Closing the scope removes them automatically; a registration may also be removed early through `dispose`.
+Бүртгэлүүд залгаасын хамрах хүрээнд харьяалагдана. Хамрах хүрээ хаагдахад автоматаар цэвэрлэгдэх бөгөөд `dispose` ашиглан түүнээс өмнө устгаж болно.
 
-## Transform Hooks
+## Хувиргалтын hook
 
-Transform hooks contribute to stateful domains:
+Хувиргалтын `hook` нь төлөвтэй дэд системд нэмэлт өөрчлөлт оруулна:
 
 ```ts
 yield *
@@ -45,9 +45,9 @@ yield *
   })
 ```
 
-MongolGPT rebuilds the domain when a transform is registered or disposed. A rebuild starts from fresh domain state and runs every active transform in registration order.
+`Transform` бүртгэх эсвэл `dispose` хийхэд MongolGPT тухайн дэд системийг дахин байгуулна. Энэ явц цэвэр төлвөөс эхэлж, идэвхтэй бүх `transform`-ийг бүртгэсэн дарааллаар ажиллуулна.
 
-Available transform hooks are namespaced by domain:
+Боломжтой хувиргалтын `hook`-ууд дэд систем тус бүрийн нэрийн мужид байрлана:
 
 ```ts
 ctx.agent.transform
@@ -58,9 +58,9 @@ ctx.reference.transform
 ctx.skill.transform
 ```
 
-## Runtime Hooks
+## Ажиллах үеийн hook
 
-Runtime hooks intercept live operations rather than rebuilding domain state:
+Ажиллах үеийн `hook` нь дэд системийн төлвийг дахин байгуулахын оронд явагдаж буй бодит үйлдэлд дундаас нь оролцоно:
 
 ```ts
 yield *
@@ -79,11 +79,11 @@ yield *
   })
 ```
 
-Hooks run sequentially in registration order. Later hooks observe mutations made by earlier hooks.
+`Hook`-ууд нь бүртгэгдсэн дарааллаараа ээлжлэн ажиллана. Дараагийн `hook` нь өмнөх `hook`-ийн хийсэн өөрчлөлтийг харж чадна.
 
-## Reloading A Domain
+## Дэд системийг дахин ачаалах
 
-When data captured by a transform changes, reload the affected domain:
+`Transform`-ийн ашиглаж буй өгөгдөл өөрчлөгдвөл нөлөөлсөн дэд системийг дахин ачаална:
 
 ```ts
 let data = yield * loadCatalog()
@@ -97,9 +97,9 @@ data = yield * loadCatalog()
 yield * ctx.catalog.reload()
 ```
 
-Reload belongs to the domain, not an individual registration. `ctx.catalog.reload()` reruns every active catalog transform and publishes the rebuilt catalog.
+`Reload` нь нэг бүртгэлд биш, дэд системд хамаарна. `ctx.catalog.reload()` нь каталогийн идэвхтэй бүх `transform`-ийг дахин ажиллуулж, шинээр байгуулсан `catalog`-ийг нийтэлнэ.
 
-Available reload operations are:
+Ашиглаж болох `reload` үйлдлүүд:
 
 ```ts
 ctx.agent.reload()

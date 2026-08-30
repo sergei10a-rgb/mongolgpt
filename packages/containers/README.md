@@ -1,27 +1,25 @@
-# CI containers
+# CI контейнерууд
 
-Prebuilt images intended to speed up GitHub Actions jobs by baking in
-large, slow-to-install dependencies. These are designed for Linux jobs
-that can use `job.container` in workflows.
+GitHub Actions-ийн том, суулгахад удаан хамаарлуудыг урьдчилан шингээж, ажлын хугацааг багасгахад зориулсан бэлэн контейнерийн дүрсүүд. Эдгээр нь ажлын урсгалдаа `job.container` ашиглах боломжтой Linux ажлуудад зориулагдсан.
 
-Images
+## Дүрсүүд
 
-- `base`: Ubuntu 24.04 with common build tools and utilities
-- `bun-node`: `base` plus Bun and Node.js 24
-- `rust`: `bun-node` plus Rust (stable, minimal profile)
-- `tauri-linux`: `rust` plus Tauri Linux build dependencies
-- `publish`: `bun-node` plus Docker CLI and AUR tooling
+- `base`: түгээмэл бүтээх хэрэгсэл болон хэрэглүүртэй Ubuntu 24.04
+- `bun-node`: `base` дээр Bun болон Node.js 24 нэмсэн
+- `rust`: `bun-node` дээр Rust (stable, minimal profile) нэмсэн
+- `tauri-linux`: `rust` дээр Tauri-ийн Linux бүтээх хамаарлуудыг нэмсэн
+- `publish`: `bun-node` дээр Docker CLI болон AUR хэрэгслүүд нэмсэн
 
-Build
+## Бүтээх
 
-```
+```sh
 REGISTRY=ghcr.io/sergei10a-rgb TAG=24.04 bun ./packages/containers/script/build.ts
 REGISTRY=ghcr.io/sergei10a-rgb TAG=24.04 bun ./packages/containers/script/build.ts --push
 ```
 
-Workflow usage
+## Ажлын урсгалд ашиглах
 
-```
+```yaml
 jobs:
   build-cli:
     runs-on: ubuntu-latest
@@ -29,10 +27,8 @@ jobs:
       image: ghcr.io/sergei10a-rgb/build/bun-node:24.04
 ```
 
-Notes
+## Тэмдэглэл
 
-- These images only help Linux jobs. macOS and Windows jobs cannot run
-  inside Linux containers.
-- `--push` publishes multi-arch (amd64 + arm64) images using Buildx.
-- If a job uses Docker Buildx, the container needs access to the host
-  Docker daemon (or `docker-in-docker` with privileged mode).
+- Эдгээр дүрс зөвхөн Linux ажилд тусална. macOS болон Windows ажлууд Linux контейнер дотор ажиллахгүй.
+- `--push` нь Buildx ашиглан олон архитектурт (`amd64` + `arm64`) зориулсан дүрсийг нийтэлнэ.
+- Хэрэв ажил Docker Buildx ашиглавал контейнер үндсэн машины Docker daemon-д хандах эрхтэй байх ёстой. Эсвэл давуу эрхийн горимтой `docker-in-docker` ашиглана.

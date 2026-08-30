@@ -1,64 +1,64 @@
-# Manual app performance suite
+# Гар аргаар ажиллуулдаг гүйцэтгэлийн багц шалгалт
 
-The app's high-volume performance diagnostics live under `packages/app/e2e/performance` and are excluded from normal local and CI Playwright discovery. The benchmark config builds the app and serves the production bundle before running scenarios serially.
+Их ачааллын үеийн гүйцэтгэлийн оношилгоо `packages/app/e2e/performance` дотор байрладаг бөгөөд дотоод орчин болон CI дахь Playwright-ийн ердийн илрүүлэлтээс санаатайгаар хасагдсан. Хэмжилтийн тохиргоо нь аппыг бүтээж, үйлдвэрлэлийн багцыг ажиллуулсны дараа туршилтын хувилбаруудыг дарааллаар нь явуулна.
 
-Run the suite explicitly from `packages/app`:
+Энэ багц шалгалтыг `packages/app` дотроос тусад нь ажиллуулна:
 
 ```sh
 bun run test:bench
 ```
 
-PowerShell:
+`PowerShell`:
 
 ```powershell
 $env:PLAYWRIGHT_WORKERS = "1"
 bun run test:bench
 ```
 
-The suite contains:
+Энэ багц дараах хэмжилтүүдийг агуулна:
 
-- cold and hot session-tab timing
-- home-session click timing split between content and titlebar-tab paint
-- single-session tab close timing through stable home restoration
-- cached session repaint and mutation tracing
-- streaming timeline throughput, RAF-gap, long-task, geometry, and remount diagnostics
+- `session-tab`-ийн анхны болон давтан нээлтийн хугацаа
+- `home-session` дээр дарах хугацааг `content` болон `titlebar-tab paint` хэсгээр салгасан хэмжилт
+- нэг session-ийн tab-ыг хааснаас нүүр хуудас тогтвортой сэргэх хүртэлх хугацаа
+- түр санах ойд хадгалсан session-ийг дахин дүрслэх болон өөрчлөлтийг мөрдөх оношилгоо
+- урсгалт хугацааны шугамын нэвтрүүлэх чадвар, RAF завсар, удаан ажил, геометр болон дахин угсралтын оношилгоо
 
-All benchmarks import the shared `benchmark` fixture. Pages created through Playwright's `page` fixture automatically capture main-frame navigation history and emit a Chrome trace when `MONGOLGPT_PERFORMANCE_TRACE_DIR` is set. Benchmarks that need isolated browser contexts use `withBenchmarkPage`, which owns the context and the same diagnostics lifecycle.
+Бүх хэмжилт нийтлэг `benchmark` fixture-ийг импортолно. Playwright-ийн `page` fixture-ээр үүсгэсэн хуудсууд үндсэн frame-ийн шилжилтийн түүхийг автоматаар цуглуулж, `MONGOLGPT_PERFORMANCE_TRACE_DIR` тохируулсан үед Chrome-ийн мөрдлөг үүсгэнэ. Тусгаар хөтчийн орчин шаардсан хэмжилтүүд `withBenchmarkPage`-ийг ашигладаг бөгөөд энэ нь тухайн орчин болон оношилгооны ижил мөчлөгийг өөрөө удирдана.
 
-New benchmarks should look like normal Playwright tests:
+Шинэ хэмжилт нь энгийн Playwright шалгалт шиг харагдах ёстой:
 
 ```ts
 import { benchmark, expect } from "../benchmark"
 
 benchmark("measures one interaction", async ({ page, report }) => {
-  // Only scenario-specific setup and interaction belong here.
+  // Энд зөвхөн тухайн туршилтад хамаарах бэлтгэл болон үйлдэл байна.
   report({ durationMs: 42 })
 })
 ```
 
-The fixture requires every benchmark to call `report()`, automatically names and closes traces, captures navigation history, attaches that history when a test fails, and emits metrics as a consistent `BENCHMARK` JSON line.
+Fixture нь хэмжилт бүрээс `report()` заавал дуудахыг шаарддаг. Мөн мөрдлөгүүдийг автоматаар нэрлэж хаах, шилжилтийн түүхийг хадгалах, шалгалт унахад уг түүхийг хавсаргах, хэмжүүрүүдийг тогтмол хэлбэрийн `BENCHMARK` JSON мөрөөр гаргах ажлыг хариуцна.
 
 ```text
 BENCHMARK {"name":"...","context":{"project":"chromium","platform":"darwin"},"metrics":{...}}
 ```
 
-Every observed page also emits `BENCHMARK_PAGE` with the same run ID, navigation history, and optional trace path before the final status-bearing `BENCHMARK` record. Chrome traces are browser-wide page-lifetime diagnostics; scenario metrics use narrower explicitly named observation windows.
+Ажиглагдсан хуудас бүр эцсийн төлөвтэй `BENCHMARK` бичлэгээс өмнө ижил ажиллуулалтын ID, шилжилтийн түүх, мөн боломжтой бол мөрдлөгийн файлын зам агуулсан `BENCHMARK_PAGE` бичлэг гаргана. Chrome-ийн мөрдлөг нь хөтчийг бүхэлд нь болон хуудасны ажиллах бүх хугацааг хамарна. Харин туршилтын хэмжүүрүүд илүү нарийн, зориуд нэрлэсэн ажиглалтын хугацааг ашиглана.
 
-This follows the stack's own guidance: [Electron recommends repeated Chrome DevTools and Chrome Tracing measurement](https://www.electronjs.org/docs/latest/tutorial/performance), [Chrome DevTools recommends Performance recordings for runtime work](https://developer.chrome.com/docs/devtools/performance), and [Playwright uses traces for test debugging rather than renderer profiling](https://playwright.dev/docs/trace-viewer).
+Энэ нь ашиглаж буй технологиудын зөвлөмжтэй нийцнэ: [Electron-ийн гүйцэтгэлийн хэмжилтийн зөвлөмж](https://www.electronjs.org/docs/latest/tutorial/performance), [Chrome DevTools-ийн ажиллах үеийн бичлэгийн зөвлөмж](https://developer.chrome.com/docs/devtools/performance), мөн [Playwright мөрдлөгийг дүрслэгчийн үзүүлэлт хэмжихэд бус, шалгалтын алдаа шинжлэхэд ашигладаг тухай тайлбар](https://playwright.dev/docs/trace-viewer).
 
-These Playwright benchmarks profile the shared app renderer in Chromium. A future packaged Electron benchmark that needs main-process and multi-process attribution should use Electron's official [`contentTracing`](https://www.electronjs.org/docs/latest/api/content-tracing/) API rather than extending this renderer harness with bespoke process instrumentation.
+Эдгээр Playwright хэмжилт Chromium дахь аппын нийтлэг дүрслэгчийн үзүүлэлтийг хэмжинэ. Ирээдүйд багцалсан Electron хэмжилт дээр `main-process` болон олон процессын хамаарлыг ялгах шаардлагатай бол дүрслэгчийн энэ туршилтын орчинд тусгай хэмжүүр нэмэхийн оронд Electron-ийн албан ёсны [`contentTracing`](https://www.electronjs.org/docs/latest/api/content-tracing/) API-г ашиглана.
 
-CPU and high-volume visual profiling are disabled by default. Set `TIMELINE_CPU_PROFILE=1` to enable both, or additionally set `TIMELINE_VISUAL_PROFILE=0` for CPU-only profiling.
+CPU болон их хэмжээний дүрслэлийн үзүүлэлт хэмжих боломж анхнаасаа унтраалттай. Аль алийг нь идэвхжүүлэх бол `TIMELINE_CPU_PROFILE=1` тохируулна. Зөвхөн CPU-ийн үзүүлэлт хэмжих бол дээр нь `TIMELINE_VISUAL_PROFILE=0` нэмнэ.
 
-The streaming scenario's 30x CPU throttle is a deterministic stress profile, not a simulated end-user device.
+Урсгалт туршилтын CPU-г 30 дахин хязгаарлах тохиргоо нь эцсийн хэрэглэгчийн төхөөрөмжийг дуурайлгах бус, тогтмол давтагдах ачааллын төлөв юм.
 
-Benchmarks do not assert machine-dependent performance budgets. Streaming processes 160 deltas by default and reports renderer-observed completion time, throughput, RAF callback-gap distributions, frame-budget equivalents, and long tasks through final geometry settlement. Delta count and delivery batch are included in result context when overridden. These are main-thread callback diagnostics, not compositor presentation or dropped-frame measurements. Visual-only and geometry metrics are `null` when their probes are disabled. Tab metrics describe sampled DOM observations. Assertions verify scenario and metric collection completion. Repeated repaint states are run-length grouped, but every original observation timestamp is retained alongside raw mutation batches and layout shifts.
+Эдгээр хэмжилт машины онцлогоос хамаарах гүйцэтгэлийн босгыг тулгаж шалгадаггүй. Урсгалт туршилт анхнаасаа 160 өөрчлөлт боловсруулж, дүрслэгчээс ажигласан дуусах хугацаа, нэвтрүүлэх чадвар, RAF callback-ийн завсрын тархалт, frame-ийн хугацааны төсөвтэй дүйх утга болон удаан ажлуудыг геометр эцэслэн тогтворжих хүртэл тайлагнана. Өөрчлөлтийн тоо эсвэл хүргэлтийн багцыг дарж тохируулсан бол үр дүнгийн орчинд оруулна. Эдгээр нь compositor-ийн дэлгэцэд гаргалт эсвэл алгассан frame-ийн хэмжилт биш, үндсэн thread-ийн callback оношилгоо юм. Шалгах мэдрэгчүүд унтраалттай үед зөвхөн дүрслэл болон геометрийн хэмжүүрүүд `null` байна. Tab-ийн хэмжүүрүүд түүвэрлэсэн DOM ажиглалтыг тайлбарлана. Баталгаажуулалтууд туршилт болон хэмжүүр цуглуулах ажил бүрэн дууссаныг шалгана. Давтагдсан дахин дүрслэлтийн төлөвүүдийг үргэлжилсэн тоогоор нь бүлэглэх боловч анхны хугацааны тэмдэглэгээ бүрийг боловсруулаагүй өөрчлөлтийн багц болон байрлалын шилжилттэй нь хамт хадгална.
 
-Committed smoke and regression tests continue to own correctness coverage for pagination, tab paint, context resize, collapse state, and composer spacing.
+Репод хадгалсан анхан болон бууралтын шалгалтууд `pagination`, `tab paint`, `context resize`, `collapse state`, `composer spacing` ажиллагааны зөв байдлыг үргэлжлүүлэн хариуцна.
 
-## Chrome traces
+## Chrome мөрдлөг
 
-Set `MONGOLGPT_PERFORMANCE_TRACE_DIR` to emit a standard Chrome DevTools trace for every benchmark page automatically:
+Хэмжилтийн хуудас бүрт стандарт Chrome DevTools мөрдлөг автоматаар гаргахын тулд `MONGOLGPT_PERFORMANCE_TRACE_DIR`-ийг тохируулна:
 
 ```sh
 MONGOLGPT_PERFORMANCE_TRACE_DIR=/tmp/mongolgpt-performance-traces \
@@ -66,14 +66,14 @@ bunx playwright test --config e2e/performance/playwright.config.ts \
   timeline/session-tab-switch-benchmark.spec.ts
 ```
 
-The emitted JSON is a standard Chrome trace and can be loaded directly into the Chrome DevTools Performance panel. `devtools-tracing` can optionally inspect it from the command line without adding package scripts or dependencies:
+Гарсан JSON нь стандарт Chrome мөрдлөг тул Chrome DevTools-ийн Performance самбарт шууд ачаалж болно. Тусгай скрипт эсвэл хамаарал нэмэлгүйгээр командын мөрөөс шалгах бол `devtools-tracing`-ийг нэмэлтээр ашиглаж болно:
 
-Trace capture mirrors [Puppeteer's official tracing defaults and lifecycle](https://pptr.dev/api/puppeteer.tracing), using Chrome's `ReturnAsStream` transfer mode and failing when Chromium reports trace data loss.
+Мөрдлөг цуглуулах ажил нь [Puppeteer-ийн мөрдлөгийн анхны тохиргоо ба мөчлөг](https://pptr.dev/api/puppeteer.tracing)-ийг дагаж, Chrome-ийн `ReturnAsStream` дамжуулалтын горимыг ашиглана. Chromium мөрдлөгийн өгөгдөл алдагдсаныг мэдэгдвэл шалгалт унана.
 
 ```sh
 bunx devtools-tracing stats <trace-path-from-BENCHMARK_PAGE>
 ```
 
-INP analysis requires a trace with a supported navigation/interaction insight. Selector statistics require a trace captured with `MONGOLGPT_PERFORMANCE_SELECTOR_TRACE=1`.
+INP шинжилгээнд дэмжигдсэн шилжилт эсвэл харилцан үйлдлийн мэдээлэл агуулсан мөрдлөг хэрэгтэй. Сонгогчийн статистик авах бол `MONGOLGPT_PERFORMANCE_SELECTOR_TRACE=1` тохируулж мөрдлөг цуглуулна.
 
-`e2e/performance/playwright.uncapped.config.ts` disables Chromium frame-rate limiting for explicit uncapped diagnostics. Native product benchmarks should use the default Playwright configuration.
+`e2e/performance/playwright.uncapped.config.ts` нь хязгаарлаагүй оношилгоонд зориулж Chromium-ийн frame rate хязгаарлалтыг унтраана. Бүтээгдэхүүний жинхэнэ хэмжилтүүд Playwright-ийн анхны тохиргоог ашиглана.

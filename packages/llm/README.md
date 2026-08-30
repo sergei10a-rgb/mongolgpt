@@ -1,6 +1,6 @@
 # @mongolgpt/llm
 
-Schema-first LLM core for mongolgpt. One typed request, response, event, and tool language; provider quirks live in adapters, not in calling code.
+`mongolgpt`-ийн schema-д тулгуурласан LLM цөм. Төрөлжүүлсэн хүсэлт, хариу, event болон хэрэгслийн нэг нэгдсэн хэлтэй. Үйлчилгээ үзүүлэгч бүрийн онцлог ялгааг дуудагч кодод бус, тохируулагчид тусгаарлана.
 
 ```ts
 import { Effect } from "effect"
@@ -11,8 +11,8 @@ const model = OpenAI.configure({ apiKey: process.env.OPENAI_API_KEY }).responses
 
 const request = LLM.request({
   model,
-  system: "You are concise.",
-  prompt: "Say hello in one short sentence.",
+  system: "Товч хариул.",
+  prompt: "Нэг богино өгүүлбэрээр мэндчил.",
   generation: { maxTokens: 40 },
 })
 
@@ -22,39 +22,39 @@ const program = Effect.gen(function* () {
 })
 ```
 
-Run `LLMClient.stream(request)` instead of `generate` when you want incremental `LLMEvent`s. The event stream is provider-neutral — same shape across OpenAI Chat, OpenAI Responses, Anthropic Messages, Gemini, Bedrock Converse, and any OpenAI-compatible deployment.
+Хэсэгчлэн ирэх `LLMEvent` авах бол `generate`-ийн оронд `LLMClient.stream(request)`-ийг ажиллуул. Event урсгал нь үйлчилгээ үзүүлэгчээс үл хамаарах тул OpenAI Chat, OpenAI Responses, Anthropic Messages, Gemini, Bedrock Converse болон OpenAI-тай нийцтэй ямар ч байршуулалтад ижил хэлбэртэй байна.
 
-## Public API
+## Нийтэд нээлттэй API
 
-- **`LLM.request({...})`** — build a provider-neutral `LLMRequest`. Accepts ergonomic inputs (`system: string`, `prompt: string`) that normalize into the canonical Schema classes.
-- **`LLM.generate` / `LLM.stream`** — re-exported from `LLMClient` for one-import use.
-- **`Message.user(...)` / `Message.assistant(...)` / `Message.tool(...)`** — message constructors from the canonical schema model.
-- **`Model.make(...)` / `ToolCallPart.make(...)` / `ToolResultPart.make(...)` / `ToolDefinition.make(...)`** — model and tool-related constructors from the canonical schema model.
-- **`LLMClient.prepare(request)`** — compile a request through protocol body construction, validation, and HTTP preparation without sending. Useful for inspection and testing.
-- **`LLMEvent.is.*`** — typed guards (`is.textDelta`, `is.toolCall`, `is.finish`, …) for filtering streams.
+- **`LLM.request({...})`** — үйлчилгээ үзүүлэгчээс үл хамаарах `LLMRequest` үүсгэнэ. Нэгдсэн Schema class руу жигдрүүлэх, хэрэглэхэд эвтэй оролтуудыг (`system: string`, `prompt: string`) хүлээн авна.
+- **`LLM.generate` / `LLM.stream`** — нэг импортоор ашиглахын тулд `LLMClient`-аас дахин экспортолсон.
+- **`Message.user(...)` / `Message.assistant(...)` / `Message.tool(...)`** — нэгдсэн schema загварын зурвас байгуулагчид.
+- **`Model.make(...)` / `ToolCallPart.make(...)` / `ToolResultPart.make(...)` / `ToolDefinition.make(...)`** — нэгдсэн schema загварын модель болон хэрэгсэлтэй холбоотой байгуулагчид.
+- **`LLMClient.prepare(request)`** — хүсэлтийг илгээлгүйгээр протоколын body байгуулах, баталгаажуулах болон HTTP-д бэлдэх үе шатаар хөрвүүлнэ. Ажиглан шалгах болон туршихад ашиглана.
+- **`LLMEvent.is.*`** — урсгал шүүх төрөлжүүлсэн хамгаалагчид (`is.textDelta`, `is.toolCall`, `is.finish`, …).
 
-## Caching
+## Түр санах ой
 
-Prompt caching is **on by default**. Every `LLMRequest` resolves to `cache: "auto"` unless the caller opts out with `cache: "none"`. Each protocol translates `CacheHint`s to its wire format (`cache_control` on Anthropic, `cachePoint` on Bedrock; OpenAI and Gemini do implicit caching server-side and don't need inline markers — auto is a no-op there).
+Prompt-ыг түр санах боломж **анхнаасаа асаалттай**. Дуудагч тал `cache: "none"` гэж унтраагаагүй бол бүх `LLMRequest` `cache: "auto"` болно. Протокол бүр `CacheHint`-ийг дамжуулалтын өөрийн хэлбэрт хөрвүүлнэ. Anthropic дээр `cache_control`, Bedrock дээр `cachePoint` ашиглана. OpenAI болон Gemini сервер талдаа далд түр хадгалдаг тул доторх тэмдэглэгээ шаардлагагүй, тэнд `auto` нэмэлт үйлдэл хийхгүй.
 
-### Auto placement
+### Автомат байршуулалт
 
-`"auto"` places three breakpoints — last tool definition, last system part, latest user message. The last-user-message boundary is the load-bearing detail: in a tool-use loop, a single user turn expands into many assistant/tool round-trips, all sharing that prefix. Caching at that boundary lets every intra-turn API call hit.
+`"auto"` нь гурван зааг тавина: хамгийн сүүлийн хэрэгслийн тодорхойлолт, системийн хамгийн сүүлийн хэсэг, хэрэглэгчийн хамгийн сүүлийн зурвас. Энд хэрэглэгчийн хамгийн сүүлийн зурвасын зааг хамгийн чухал. Хэрэгсэл ашиглах давталтад хэрэглэгчийн нэг ээлж assistant болон хэрэгслийн олон нааш цааш дамжуулалт болж тэлэх бөгөөд бүгд ижил эхлэлийг хуваалцана. Тэр заагт түр хадгалснаар нэг ээлж доторх API дуудлага бүр хадгалсан үр дүнг ашиглах боломжтой.
 
-The math justifies the default: Anthropic's 5-minute cache write is 1.25× base, read is 0.1×, so a single reuse within 5 minutes already wins. One-shot completions below the per-model minimum-cacheable-token threshold silently no-op on the wire, so the worst case is harmless.
+Энэ анхны тохиргоог өртгийн тооцоо зөвтгөнө. Anthropic-ийн 5 минутын түр санах ойд бичих үнэ суурь үнийн 1.25 дахин, унших үнэ 0.1 дахин тул таван минутын дотор нэг удаа дахин ашиглахад л хэмнэлттэй. Загвар тус бүрийн түр хадгалж болох хамгийн бага token-ы босгоос доогуур нэг удаагийн гүйцээлт дамжуулалтын түвшинд нэмэлт үйлдэл хийхгүй тул хамгийн муу тохиолдол ч хоргүй.
 
-### Opting out
+### Унтраах
 
 ```ts
 LLM.request({
   model,
   system,
-  prompt: "one-off question",
+  prompt: "нэг удаагийн асуулт",
   cache: "none",
 })
 ```
 
-### Granular policy
+### Нарийвчилсан бодлого
 
 ```ts
 cache: {
@@ -65,34 +65,34 @@ cache: {
 }
 ```
 
-### Manual hints
+### Гараар өгсөн дохио
 
-Inline `CacheHint` on any text / system / tool / tool-result part overrides automatic placement. The auto policy preserves manual hints; it only fills gaps.
+Текст, систем, хэрэгсэл эсвэл хэрэгслийн үр дүнгийн аль ч хэсэгт дотор нь өгсөн `CacheHint` автомат байршуулалтыг дарна. Автомат бодлого гараар өгсөн дохиог хадгалж, зөвхөн дутуу хэсгийг нөхнө.
 
 ```ts
 LLM.request({
   model,
   system: [
-    { type: "text", text: "stable system prompt", cache: { type: "ephemeral" } },
+    { type: "text", text: "тогтвортой системийн prompt", cache: { type: "ephemeral" } },
   ],
   ...
 })
 ```
 
-### Provider behavior table
+### Үйлчилгээ үзүүлэгчийн ажиллагаа
 
-| Protocol                | `cache: "auto"`                                                           |
-| ----------------------- | ------------------------------------------------------------------------- |
-| Anthropic Messages      | emits up to 3 `cache_control` markers (4-breakpoint cap enforced)         |
-| Bedrock Converse        | emits up to 3 `cachePoint` blocks (4-breakpoint cap enforced)             |
-| OpenAI Chat / Responses | no-op (implicit caching above 1024 tokens)                                |
-| Gemini                  | no-op (implicit caching on 2.5+; explicit `CachedContent` is out-of-band) |
+| Протокол                | `cache: "auto"`                                                                |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| Anthropic Messages      | Дээд тал нь 3 `cache_control` тэмдэглэгээ гаргана, нийт заагийн дээд хязгаар 4 |
+| Bedrock Converse        | Дээд тал нь 3 `cachePoint` блок гаргана, нийт заагийн дээд хязгаар 4           |
+| OpenAI Chat / Responses | 1024 token-оос дээш сервер талдаа далд түр хадгалдаг тул нэмэлт үйлдэл хийхгүй |
+| Gemini                  | 2.5+-д сервер талдаа далд хадгална; ил `CachedContent` нь тусдаа урсгалтай     |
 
-Normalized cache usage is read back into `response.usage.cacheReadInputTokens` and `cacheWriteInputTokens` across every provider.
+Жигдрүүлсэн түр санах ойн хэрэглээг бүх үйлчилгээ үзүүлэгч дээр `response.usage.cacheReadInputTokens` болон `cacheWriteInputTokens`-оос уншина.
 
-## Providers
+## Үйлчилгээ үзүүлэгчид
 
-Provider facades configure endpoint/auth/deployment details first, then expose model selectors that take only a model or deployment id. The selected model carries the executable route value used at runtime.
+Үйлчилгээ үзүүлэгчийн facade эхлээд endpoint, нэвтрэлт болон байршуулалтын мэдээллийг тохируулна. Дараа нь зөвхөн загвар эсвэл байршуулалтын ID авдаг загвар сонгогчийг гаргана. Сонгосон загвар ажиллах үед ашиглах чиглэлийн утгаа өөртөө агуулна.
 
 ```ts
 import { OpenAI, CloudflareAIGateway } from "@mongolgpt/llm/providers"
@@ -104,28 +104,28 @@ const gateway = CloudflareAIGateway.configure({
 }).model("workers-ai/@cf/meta/llama-3.1-8b-instruct")
 ```
 
-Included providers: OpenAI, Anthropic, Google (Gemini), Amazon Bedrock, Azure OpenAI, Cloudflare AI Gateway, Cloudflare Workers AI, GitHub Copilot, OpenRouter, xAI, plus generic OpenAI-compatible helpers for DeepSeek, Cerebras, Groq, Fireworks, Together, etc.
+Багтсан үйлчилгээ үзүүлэгчид: OpenAI, Anthropic, Google (Gemini), Amazon Bedrock, Azure OpenAI, Cloudflare AI Gateway, Cloudflare Workers AI, GitHub Copilot, OpenRouter, xAI. Мөн DeepSeek, Cerebras, Groq, Fireworks, Together зэрэгт зориулсан ерөнхий OpenAI-тай нийцтэй туслахууд багтана.
 
-## Provider options & HTTP overlays
+## Үйлчилгээ үзүүлэгчийн тохиргоо ба HTTP давхар тохируулга
 
-Three escape hatches in order of stability:
+Тогтвортой байдлын дарааллаар гурван нөөц гарц бий:
 
-1. **`generation`** — portable knobs (`maxTokens`, `temperature`, `topP`, `topK`, penalties, seed, stop).
-2. **`providerOptions: { <provider>: {...} }`** — typed-at-the-facade provider-specific knobs (OpenAI `promptCacheKey`, Anthropic `thinking`, Gemini `thinkingConfig`, OpenRouter routing).
-3. **`http: { body, headers, query }`** — last-resort serializable overlays merged into the final HTTP request. Reach for this only when a stable typed path doesn't yet exist.
+1. **`generation`** — орчин хооронд зөөврийн тохируулгууд (`maxTokens`, `temperature`, `topP`, `topK`, penalties, seed, stop).
+2. **`providerOptions: { <provider>: {...} }`** — гадаад API дээр төрөлжүүлсэн, үйлчилгээ үзүүлэгчид тусгайлсан тохируулгууд (OpenAI `promptCacheKey`, Anthropic `thinking`, Gemini `thinkingConfig`, OpenRouter routing).
+3. **`http: { body, headers, query }`** — эцсийн HTTP хүсэлтэд нэгтгэх, цуваа болгох боломжтой давхар тохируулга. Тогтвортой төрөлжүүлсэн зам хараахан байхгүй үед л хэрэглэнэ.
 
-Route/provider defaults are overridden by request-level values for each axis.
+Чиглэл болон үйлчилгээ үзүүлэгчийн анхны утгыг хүсэлтийн түвшний утга чиглэл тус бүрээр дарж өөрчилнө.
 
-## Routes
+## Чиглэлүүд
 
-Adding a new model or deployment is usually 5-15 lines using `Route.make({ protocol, endpoint, auth, framing, ... })`. The route owns endpoint/auth/framing and the protocol owns body construction plus stream parsing. Transports are reusable IO templates that receive route endpoint/auth at compile time. Capability/catalog metadata lives outside this low-level package; unsupported request shapes fail during protocol lowering. See `AGENTS.md` for the architectural detail.
+Шинэ загвар эсвэл байршуулалт нэмэхэд ихэвчлэн `Route.make({ protocol, endpoint, auth, framing, ... })` ашигласан 5-15 мөр хангалттай. Чиглэл нь endpoint, нэвтрэлт болон frame-ийн хэлбэрийг хариуцна. Протокол нь body байгуулах болон урсгалыг тайлах ажлыг хариуцна. Дамжуулагчид нь хөрвүүлэх үед чиглэлийн endpoint болон нэвтрэлтийг хүлээн авдаг, дахин ашиглаж болох оролт гаралтын загварууд юм. Боломж болон каталогийн metadata энэ доод түвшний багцаас гадуур байрлана. Дэмжихгүй хүсэлтийн хэлбэр протоколыг буулгах үед алдаа өгнө. Архитектурын дэлгэрэнгүйг `AGENTS.md`-ээс хар.
 
 ## Effect
 
-This package is built on Effect. Public methods return `Effect` or `Stream`; provide `LLMClient.layer` for runtime dispatch and import the provider/protocol modules for the routes you use. The example at `example/tutorial.ts` is a runnable walkthrough.
+Энэ багц Effect дээр суурилсан. Нийтэд гарсан аргууд `Effect` эсвэл `Stream` буцаана. Ажиллах үеийн дамжуулалтад `LLMClient.layer`-ийг өгч, ашиглах чиглэлийнхээ үйлчилгээ үзүүлэгч болон протоколын модулийг импортолно. `example/tutorial.ts` дахь жишээ нь шууд ажиллуулж болох алхамчилсан заавар юм.
 
-## See also
+## Мөн үз
 
-- `AGENTS.md` — architecture, route construction, contributor guide
-- `example/tutorial.ts` — runnable end-to-end walkthrough
-- `test/provider/*.test.ts` — fixture-first protocol tests; `*.recorded.test.ts` files cover live cassettes
+- `AGENTS.md` — архитектур, чиглэл байгуулах арга, хувь нэмэр оруулагчийн заавар
+- `example/tutorial.ts` — эхнээс төгсгөл хүртэл ажиллуулж болох заавар
+- `test/provider/*.test.ts` — fixture-д тулгуурласан протоколын шалгалтууд; `*.recorded.test.ts` файлууд бодит бичлэгийг хамарна

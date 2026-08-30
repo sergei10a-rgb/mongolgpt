@@ -1,42 +1,42 @@
 # @mongolgpt/httpapi-codegen
 
-Build-time source generation for domain-oriented Promise and Effect APIs derived directly from `HttpApi` and Effect Schema contracts.
+`HttpApi` болон Effect Schema гэрээнээс домэйнд чиглэсэн Promise, Effect API-г бүтээх үед шууд гаргах эх код үүсгэгч.
 
-The package is private while its API is explored. Its tests are the executable specification for the generator. It must remain independent of MongolGPT Core and use synthetic `HttpApi` fixtures.
+API нь тогтож дуусаагүй тул энэ багц дотоод хэрэглээнд хэвээр байна. Шалгалтууд нь үүсгэгчийн ажиллуулж болох тодорхойлолт болно. Багц MongolGPT Core-оос хараат бус байж, зохиомол `HttpApi` fixture ашиглах ёстой.
 
-## Settled rules
+## Тогтсон дүрэм
 
-- Reflect one authoritative `HttpApi` into a shared contract with `compile(Api)`.
-- Emit clients independently with `emitPromise(contract)` and `emitEffect(contract)`.
-- Give each emitter its own public type projection; the shared contract, not a generated type package, is the common source.
-- Generate a rich Effect client with decoded Effect-native values, runtime schemas, preserved transformations, and `HttpApiClient`.
-- Generate a zero-Effect Promise client with structural wire-oriented values, direct `fetch`, and syntax parsing without runtime structural validation.
-- Keep the Promise surface domain-oriented rather than Hey API compatible: methods return unwrapped values and reject with tagged declared errors or `ClientError`.
-- Return Promise streams as lazy `AsyncIterable` values and Effect streams as `Stream` values. Neither runtime reconnects automatically.
+- Нэг үндсэн `HttpApi`-г `compile(Api)` ашиглан нийтлэг гэрээ болгон тусга.
+- `emitPromise(contract)` болон `emitEffect(contract)` ашиглан клиентүүдийг бие даан үүсгэ.
+- Үүсгэгч бүр нийтэд гаргах төрлийн өөрийн дүрслэлтэй байна. Үүсгэсэн төрлийн багц бус, нийтлэг гэрээ нь хамтын эх сурвалж болно.
+- Тайлж уншсан Effect-д натив утга, ажиллах үеийн schema, хадгалсан хувиргалт болон `HttpApiClient` бүхий бүрэн Effect клиент үүсгэ.
+- Ажиллах үеийн бүтцийн баталгаажуулалтгүй, дамжуулах хэлбэрт чиглэсэн бүтцийн утга, шууд `fetch` болон бичлэгийн дүрэм тайлах боломжтой Effect-гүй Promise клиент үүсгэ.
+- Promise API-г Hey API-д нийцүүлэх гэж оролдохгүй, домэйнд чиглэсэн хэвээр хадгал. Аргууд бүрхүүлийг нь задалсан утга буцааж, тэмдэглэсэн зарласан алдаа эсвэл `ClientError`-оор татгалзана.
+- Promise урсгалыг хойшлуулан ажиллах `AsyncIterable`, Effect урсгалыг `Stream` хэлбэрээр буцаа. Аль нь ч автоматаар дахин холбогдохгүй.
 
-- Flatten path, query, header, and payload fields into one input object.
-- Reject duplicate field names across input channels.
-- Emit no method argument for zero fields, an optional object when every field is optional, and a required object when any field is required.
-- Unwrap exact `{ data: A }` success envelopes.
-- Map no-content success to `void`.
-- Preserve other single success values.
-- Reject ambiguous multiple-success contracts.
-- Expose streaming success as `Stream`, not `Effect<Stream>`.
-- Reject schemas whose wire/domain transformation cannot be generated exactly.
-- Map transport, unexpected-status, and response-decoding failures to one stable generated `ClientError`.
-- Commit generated source for review; CI regenerates and fails when the worktree changes.
-- Track generated files in `.httpapi-codegen.json` so regeneration removes only stale files previously owned by the generator.
+- Path, query, header болон payload талбаруудыг нэг оролтын объектод хавтгайруул.
+- Оролтын сувгуудын хооронд давхардсан талбарын нэрийг зөвшөөрөхгүй.
+- Талбаргүй бол аргад параметр бүү гарга. Бүх талбар заавал бус бол заавал бус объект, дор хаяж нэг талбар заавал шаардлагатай бол шаардлагатай объект гарга.
+- Яг `{ data: A }` хэлбэрийн амжилттай хариуны бүрхүүлийг задал.
+- Агуулгагүй амжилттай хариуг `void` болгон дүрсэл.
+- Бусад ганц амжилттай утгыг хэвээр хадгал.
+- Олон янзаар ойлгогдох, хэд хэдэн амжилттай хариутай гэрээг зөвшөөрөхгүй.
+- Урсгалт амжилттай хариуг `Effect<Stream>` бус, шууд `Stream` болгон гарга.
+- Дамжуулах болон домэйны хэлбэр хоорондын хувиргалтыг яг үүсгэж чадахгүй schema-г зөвшөөрөхгүй.
+- Дамжуулалтын алдаа, хүлээгээгүй төлөв болон хариу тайлах алдааг нэг тогтвортой үүсгэсэн `ClientError` болгон дүрсэл.
+- Үүсгэсэн эх кодыг хянан шалгахын тулд репод оруулна. CI дахин үүсгээд ажлын мод өөрчлөгдвөл алдаа гаргана.
+- Үүсгэсэн файлуудыг `.httpapi-codegen.json` дотор бүртгэнэ. Дахин үүсгэхдээ зөвхөн үүсгэгчийн өмнө нь эзэмшиж байсан хуучирсан файлыг устгана.
 
-## Boundary
+## Хариуцлагын зааг
 
-This package generates only client APIs derived from `HttpApi`. It does not generate embedded-only capabilities. Networked and embedded MongolGPT use the same generated Effect client against network and in-memory `HttpClient` transports respectively; the embedded host structurally extends that client with same-process capabilities.
+Энэ багц зөвхөн `HttpApi`-аас клиент API үүсгэнэ. Зөвхөн суулгагдсан орчинд ашиглах боломж үүсгэхгүй. Сүлжээтэй болон суулгагдсан MongolGPT хоёулаа ижил үүсгэсэн Effect клиентийг сүлжээний болон санах ой дахь `HttpClient` дамжуулалт дээр тус тус ашиглана. Суулгагдсан хост уг клиентийг нэг процессын боломжуудаар бүтцийн түвшинд өргөтгөнө.
 
-Codegen generates every endpoint in the `HttpApi` it receives. MongolGPT owns the product decision by composing the exact remote API before invoking the generator; the generic package has no endpoint filtering policy.
+Код үүсгэгч өөрт ирсэн `HttpApi` доторх бүх endpoint-ийг үүсгэнэ. Үүсгэгчид яг ямар алсын API өгөхөө MongolGPT бүтээгдэхүүний түвшинд шийдэж угсарна. Ерөнхий зориулалтын энэ багц endpoint шүүх бодлогогүй.
 
-The existing public `generate(Api, { directory })` operation writes the rich Effect output and remains an Effect requiring `FileSystem`. The staged API uses pure `compile(Api)`, `emitEffect(contract)`, and `emitPromise(contract)` phases before `write(output, directory)`. Compiler tests inspect virtual files directly; writer tests use `FileSystem.makeNoop`.
+Одоогийн нийтэд нээлттэй `generate(Api, { directory })` ажиллагаа бүрэн Effect үр дүнг бичдэг бөгөөд `FileSystem` шаарддаг Effect хэвээр байна. Үе шаталсан API нь `write(output, directory)`-ээс өмнө цэвэр `compile(Api)`, `emitEffect(contract)`, `emitPromise(contract)` үе шатыг ашиглана. Хөрвүүлэгчийн шалгалтууд хийсвэр файлуудыг шууд шалгаж, бичигчийн шалгалтууд `FileSystem.makeNoop` ашиглана.
 
-Generation formats TypeScript with Prettier before writing. Output paths are flat, unique, and checked against traversal, reserved manifest names, and existing symbolic links.
+Үүсгэх ажиллагаа бичихийн өмнө TypeScript-ийг Prettier-ээр форматлана. Гаралтын замууд хавтгай, давхардалгүй байх бөгөөд замаас гадагш нэвтрэх оролдлого, нөөцөлсөн manifest нэр болон одоо байгаа бэлгэдлийн холбоосын эсрэг шалгагдана.
 
-Portable Effect output uses one self-contained module per `HttpApiGroup`, plus root client and index modules. Promise output uses shared type and client modules, while imported Effect output keeps adapters in the root client module. Schema dependencies may be duplicated across portable Effect group modules. Cross-group schema partitioning is deferred until measured output or bundle cost requires it.
+Зөөврийн Effect гаралт нь `HttpApiGroup` бүрт бие даасан нэг модуль, дээр нь үндсэн клиент болон индекс модуль ашиглана. Promise гаралт нийтлэг төрөл болон клиент модуль ашиглана. Импортолсон Effect гаралт тохируулагчдаа үндсэн клиент модульд хадгална. Schema хамаарлууд зөөврийн Effect бүлгийн модулиудын хооронд давхардаж болно. Бүлгүүдийн хооронд schema хуваах ажлыг гаралтын хэмжээ эсвэл багцын өртөг бодитоор шаардах хүртэл хойшлуулсан.
 
-Codegen preserves transport identifiers internally. `compile` may explicitly map consumer-facing group names, and endpoint operation IDs are projected to their final dot-delimited segment. The generator performs no other implicit product-specific naming or public-name annotation mapping.
+Код үүсгэгч дамжуулалтын танигчдыг дотроо хадгална. `compile` нь хэрэглэгчид харагдах бүлгийн нэрийг ил тод дүрсэлж болох бөгөөд endpoint ажиллагааны ID-г цэгээр тусгаарласан сүүлийн хэсэгт нь дүрсэлнэ. Үүсгэгч үүнээс өөр бүтээгдэхүүнд тусгайлсан далд нэршил эсвэл нийтэд харагдах нэрийн annotation дүрслэл хийхгүй.
