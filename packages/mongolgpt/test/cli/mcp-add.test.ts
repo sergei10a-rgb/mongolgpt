@@ -1,5 +1,6 @@
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
+import { mkdir, writeFile } from "node:fs/promises"
 import path from "path"
 import { cliIt } from "../lib/cli-process"
 
@@ -68,6 +69,36 @@ describe("mongolgpt mcp add (non-interactive subprocess)", () => {
             VALUE: "one=two",
           },
         })
+      }),
+    60_000,
+  )
+
+  cliIt.concurrent(
+    "writes new entries to MongolGPT config without exposing a legacy filename",
+    ({ home, mongolgpt }) =>
+      Effect.gen(function* () {
+        const configDir = path.join(home, ".config", "mongolgpt")
+        const legacyPath = path.join(configDir, "opencode.json")
+        yield* Effect.promise(async () => {
+          await mkdir(configDir, { recursive: true })
+          await writeFile(legacyPath, JSON.stringify({ mcp: { existing: { type: "remote", url: "https://old.test" } } }))
+        })
+
+        const result = yield* mongolgpt.spawn(["mcp", "add", "fresh", "--url", "https://example.com/mcp"])
+        mongolgpt.expectExit(result, 0)
+
+        expect(result.stdout.toLowerCase()).not.toContain("opencode")
+        expect(result.stdout).toContain("mongolgpt.json")
+        const legacy = yield* Effect.promise(() => Bun.file(legacyPath).json())
+        expect(legacy).toEqual({
+          mcp: { existing: { type: "remote", url: "https://old.test" } },
+        })
+        const primary = yield* Effect.promise(() => Bun.file(path.join(configDir, "mongolgpt.json")).json())
+        expect(primary).toEqual(
+          expect.objectContaining({
+            mcp: { fresh: { type: "remote", url: "https://example.com/mcp" } },
+          }),
+        )
       }),
     60_000,
   )

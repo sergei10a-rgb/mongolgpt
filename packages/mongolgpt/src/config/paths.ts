@@ -43,3 +43,11 @@ export const directories = Effect.fn("ConfigPaths.directories")(function* (direc
 export function fileInDirectory(dir: string, name: string) {
   return [path.join(dir, `${name}.json`), path.join(dir, `${name}.jsonc`)]
 }
+
+export function displayConfigSource(source: string) {
+  const normalized = source.replaceAll("\\", "/")
+  if (/(^|\/)\.opencode(?:\/|$)/i.test(normalized) || /(^|\/)opencode\.jsonc?$/i.test(normalized)) {
+    return "өмнөх хувилбарын нийцтэй тохиргоо"
+  }
+  return source
+}

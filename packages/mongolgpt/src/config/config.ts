@@ -276,7 +276,7 @@ export const layer = Layer.effect(
     })
 
     const loadFile = Effect.fnUntraced(function* (filepath: string, env?: Record<string, string>) {
-      yield* Effect.logInfo("Ачаалж байна", { path: filepath })
+      yield* Effect.logInfo("Ачаалж байна", { path: ConfigPaths.displayConfigSource(filepath) })
       const text = yield* readConfigFile(filepath)
       if (!text) return {} as Info
       return yield* loadConfig(text, { path: filepath }, env)
@@ -470,7 +470,7 @@ export const layer = Layer.effect(
               : ["mongolgpt.json", "mongolgpt.jsonc"]
             for (const file of files) {
               const source = path.join(dir, file)
-              yield* Effect.logDebug(`Тохиргоо ачаалж байна: ${source}`)
+              yield* Effect.logDebug(`Тохиргоо ачаалж байна: ${ConfigPaths.displayConfigSource(source)}`)
               yield* merge(source, yield* loadFile(source, authEnv))
               result.agent ??= {}
               result.mode ??= {}
