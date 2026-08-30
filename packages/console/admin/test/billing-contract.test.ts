@@ -5,10 +5,10 @@ import {
   AdminSubscriptionCheckoutCancellationInput,
   AdminSubscriptionPaymentRefundInput,
   adminBillingPeriodBounds,
-  adminInvoiceStatusTime,
   adminBillingSafeDifference,
   adminBillingSafeSum,
 } from "../src/lib/admin-billing"
+import { adminInvoiceStatusTime } from "../src/lib/admin-billing-display"
 
 async function source(path: string) {
   return Bun.file(resolve(import.meta.dir, "..", path)).text()

@@ -4,11 +4,8 @@ import { getRequestEvent } from "solid-js/web"
 import type { FinanceMarginUnavailableReason } from "@mongolgpt/console-core/finance-reporting.js"
 import type { PlatformAdminContext } from "~/lib/admin-context"
 import { AdminHeader } from "./admin-header"
-import {
-  adminInvoiceStatusTime,
-  cancelAdminSubscriptionCheckout,
-  refundAdminSubscriptionPayment,
-} from "~/lib/admin-billing"
+import { cancelAdminSubscriptionCheckout, refundAdminSubscriptionPayment } from "~/lib/admin-billing"
+import { adminInvoiceStatusTime } from "~/lib/admin-billing-display"
 import { adminBillingQuery } from "~/lib/admin-billing-query"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 
