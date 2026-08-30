@@ -1,32 +1,34 @@
-# SolidStart
+# MongolGPT хуваалцсан сесс
 
-Everything you need to build a Solid project, powered by [`solid-start`](https://start.solidjs.com);
+Энэ багц нь MongolGPT-ийн хуваалцсан coding session-ийг `share.mgpt.mn` дээр зөвхөн унших хэлбэрээр үзүүлэх SolidStart үйлчилгээ юм. Production өгөгдлийг Cloudflare R2-д хадгална.
 
-## Creating a project
+## Үндсэн хэсгүүд
 
-```bash
-# create a new project in the current directory
-npm init solid@latest
+- `src/routes/share/[shareID].tsx` - хуваалцсан сессийн дэлгэц
+- `src/routes/api/[...path].ts` - хуваалцах үйлчилгээний API
+- `src/core/share.ts` - сессийн өгөгдлийн дүрэм
+- `src/core/storage.ts` - Cloudflare R2 хадгалалтын adapter
+- `infra/enterprise.ts` - `share.<domain>` Worker болон R2 bucket-ийн тохиргоо
 
-# create a new project in my-app
-npm init solid@latest my-app
-```
+## Локал ажиллуулах
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Репогийн үндсэн хавтсаас dependency-г суулгана:
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+bun install --frozen-lockfile
 ```
 
-## Building
+Дараа нь энэ багц дотроос:
 
-Solid apps are built with _presets_, which optimise your project for deployment to different environments.
+```bash
+bun run dev
+```
 
-By default, `npm run build` will generate a Node app that you can run with `npm start`. To use a different preset, add it to the `devDependencies` in `package.json` and specify in your `app.config.js`.
+## Шалгалт
 
-## This project was created with the [Solid CLI](https://github.com/solidjs-community/solid-cli)
+```bash
+bun run typecheck
+bun run build:cloudflare
+```
+
+Локал туршилтаас бусад орчинд санах ойн хадгалалт ашиглахгүй. Production deploy-ийг зөвхөн GitHub Actions workflow болон зөвшөөрөгдсөн Cloudflare credential-ээр хийнэ.

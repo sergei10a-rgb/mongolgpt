@@ -1,32 +1,53 @@
-# SolidStart
+# MongolGPT Console
 
-Everything you need to build a Solid project, powered by [`solid-start`](https://start.solidjs.com);
+Энэ багц нь MongolGPT-ийн нийтийн сайт, нэгдсэн нэвтрэлт, аккаунт ба ажлын талбарын удирдлага, төлбөр, model gateway болон хэрэглэгчийн дэмжлэгийн web console юм. SolidStart дээр ажиллаж, Cloudflare Workers-д байрлана.
 
-## Creating a project
+## Үндсэн хэсгүүд
+
+- `src/routes/index.tsx` - `mgpt.mn` нүүр хуудас
+- `src/routes/auth/` - Web, Desktop, CLI-д зориулсан нэгдсэн OAuth урсгал
+- `src/routes/workspace/` - аккаунт, provider, API түлхүүр, хэрэглээ, plan ба төлбөр
+- `src/routes/gateway/` - OpenAI/Anthropic-compatible model gateway
+- `src/routes/support/` - хэрэглэгчийн тусламж ба хүсэлт
+- `src/routes/legal/` - үйлчилгээний нөхцөл ба нууцлалын бодлого
+- `src/i18n/mn.ts` - үндсэн Монгол орчуулга
+
+## Локал ажиллуулах
+
+Репогийн үндсэн хавтсаас dependency-г суулгана:
 
 ```bash
-# create a new project in the current directory
-npm init solid@latest
-
-# create a new project in my-app
-npm init solid@latest my-app
+bun install --frozen-lockfile
 ```
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Хөгжүүлэлтийн серверийг ажиллуулах:
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+bun run dev:console
 ```
 
-## Building
+Эсвэл энэ багц дотроос:
 
-Solid apps are built with _presets_, which optimise your project for deployment to different environments.
+```bash
+bun run dev
+```
 
-By default, `npm run build` will generate a Node app that you can run with `npm start`. To use a different preset, add it to the `devDependencies` in `package.json` and specify in your `app.config.js`.
+## Шалгалт
 
-## This project was created with the [Solid CLI](https://github.com/solidjs-community/solid-cli)
+```bash
+bun run typecheck
+bun test
+bun run build
+```
+
+Production build-ийг жинхэнэ Chromium дээр нээж, Монгол хэл, зураг, hydration, console error болон desktop/mobile overflow-ийг шалгах:
+
+```bash
+bun --cwd ../../app test:e2e:console
+```
+
+## Deploy
+
+Dev болон production deploy-ийг репогийн GitHub Actions workflow-оор хийнэ. Production deploy, бодит төлбөр болон package publish-ийг зөвшөөрөлгүйгээр локал командаар ажиллуулахгүй.
+
+Нууц түлхүүрийг source, log, screenshot эсвэл commit-д оруулахгүй. Cloudflare болон provider credential-ийг зөвхөн GitHub Environment secret болон Cloudflare secret binding-д хадгална.
