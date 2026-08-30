@@ -7,6 +7,10 @@ const viewports = [
 ] as const
 
 test("explains how to connect the local MongolGPT engine", async ({ page }) => {
+  const streamErrors: string[] = []
+  page.on("console", (message) => {
+    if (message.type() === "error" && message.text().includes("[global-sdk]")) streamErrors.push(message.text())
+  })
   await page.addInitScript(() => {
     window.open = ((url?: string | URL) => {
       document.documentElement.dataset.openedUrl = String(url)
@@ -43,7 +47,8 @@ test("explains how to connect the local MongolGPT engine", async ({ page }) => {
         mode: "local-bridge",
       })
       expect(runtime.server).toMatch(/^http:\/\/(localhost|127\.0\.0\.1):4096$/)
-      expect(runtime.overflow).toBeLessThanOrEqual(1)
+      expect(runtime.overflow).toBe(0)
+      expect(streamErrors).toEqual([])
     })
   }
 })

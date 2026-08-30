@@ -38,14 +38,15 @@ export function IconGemini(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
 
 export function IconMongolGPT(props: JSX.SvgSVGAttributes<SVGSVGElement>) {
   return (
-    <svg {...props} viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg {...props} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1.6" y="1.6" width="20.8" height="20.8" rx="5.2" fill="#151111" />
       <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M0 13H35V58H0V13ZM26.25 22.1957H8.75V48.701H26.25V22.1957Z"
-        fill="currentColor"
+        d="M6.8 16.8V7.2L12 12.2L17.2 7.2V16.8"
+        stroke="#F7F7F3"
+        stroke-width="2.35"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       />
-      <path d="M43.75 13H70V22.1957H52.5V48.701H70V57.8967H43.75V13Z" fill="currentColor" />
     </svg>
   )
 }

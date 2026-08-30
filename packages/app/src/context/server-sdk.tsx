@@ -96,6 +96,13 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
     fetch: eventFetch,
     server: server.http,
   })
+  const reportStreamError = (message: string, details: Record<string, unknown>) => {
+    if (ServerConnection.local(server)) {
+      console.debug(message, details)
+      return
+    }
+    console.error(message, details)
+  }
   const emitter = createGlobalEmitter<{
     [key: string]: Event
   }>()
@@ -180,7 +187,7 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
               if (isStreamClosed(error, attempt?.signal)) return
               if (streamErrorLogged) return
               streamErrorLogged = true
-              console.error("[global-sdk] үйл явдлын урсгалын алдаа", {
+              reportStreamError("[global-sdk] үйл явдлын урсгалын алдаа", {
                 url: server.http.url,
                 fetch: eventFetch ? "platform" : "webview",
                 error,
@@ -205,7 +212,7 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
         } catch (error) {
           if (!isStreamClosed(error, attempt?.signal) && !streamErrorLogged) {
             streamErrorLogged = true
-            console.error("[global-sdk] үйл явдлын урсгал бүтэлгүйтлээ", {
+            reportStreamError("[global-sdk] үйл явдлын урсгал бүтэлгүйтлээ", {
               url: server.http.url,
               fetch: eventFetch ? "platform" : "webview",
               error,

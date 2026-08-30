@@ -11,14 +11,12 @@ export const Mark = (props: { class?: string }) => {
     >
       <rect x="1.6" y="1.6" width="20.8" height="20.8" rx="5.4" fill="#151111" />
       <path
-        d="M8.4 7.9L13.8 12L8.4 16.1"
+        d="M6.8 16.8V7.2L12 12.2L17.2 7.2V16.8"
         stroke="white"
-        stroke-width="2.4"
+        stroke-width="2.35"
         stroke-linecap="round"
         stroke-linejoin="round"
       />
-      <path d="M14.6 16.1H18" stroke="#26E6F2" stroke-width="2.2" stroke-linecap="round" />
-      <circle cx="17" cy="7.9" r="1.25" fill="#37F28B" />
     </svg>
   )
 }
@@ -35,14 +33,12 @@ export const Splash = (props: Pick<ComponentProps<"svg">, "ref" | "class">) => {
     >
       <rect x="6.4" y="6.4" width="83.2" height="83.2" rx="21.6" fill="#151111" />
       <path
-        d="M33.4 31.5L55 48L33.4 64.5"
+        d="M27.2 67.2V28.8L48 48.8L68.8 28.8V67.2"
         stroke="white"
-        stroke-width="10.2"
+        stroke-width="9.4"
         stroke-linecap="round"
         stroke-linejoin="round"
       />
-      <path d="M58.1 64.3H71.7" stroke="#26E6F2" stroke-width="8.8" stroke-linecap="round" />
-      <circle cx="67.5" cy="31.8" r="4.8" fill="#37F28B" />
     </svg>
   )
 }
@@ -57,14 +53,12 @@ export const Logo = (props: { class?: string }) => {
     >
       <rect x="10" y="14" width="68" height="68" rx="18" fill="#151111" />
       <path
-        d="M32.4 36.7L49 48L32.4 59.3"
+        d="M29.3 62.8V33.2L44 47.5L58.7 33.2V62.8"
         stroke="white"
-        stroke-width="7.8"
+        stroke-width="7"
         stroke-linecap="round"
         stroke-linejoin="round"
       />
-      <path d="M52.6 59.2H63.4" stroke="#26E6F2" stroke-width="6.8" stroke-linecap="round" />
-      <circle cx="60.8" cy="36.8" r="3.9" fill="#37F28B" />
       <text
         x="96"
         y="61"

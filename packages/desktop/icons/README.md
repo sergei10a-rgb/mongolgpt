@@ -1,12 +1,15 @@
-# Tauri дүрсүүд
+# MongolGPT ширээний аппын дүрс
 
-Дүрс үүсгэх одоогийн дараалал:
+Canonical эх зураг нь `packages/identity/mark.svg`.
 
-- Эх зургийг `packages/desktop` дотор `app-icon.png` нэрээр хадгал
-- `packages/desktop` руу `cd` хий
-- `bun tauri icon -o src-tauri/icons/{environment}` ажиллуул
-- [Image2Icon](https://img2icnsapp.com/)-ийн `Big Sur Icon` бэлэн тохиргоог ашиглан `icon.icns` файл үүсгээд тохирох дүрсний хавтаст байрлуул
+```bash
+bun run brand:generate
+```
 
-Image2Icon алхам зайлшгүй хэрэгтэй. `app-icon.png`-оос шууд үүсгэсэн `icon.icns` нь macOS-ийн шаарддаг сүүдэр болон дотор зайг зөв хэрэгжүүлдэггүй тул аппын дүрс хэмжээнээсээ том харагддаг.
+Энэ команд `dev`, `beta`, `prod` сувгийн PNG болон Windows ICO файлуудыг, мөн Web/PWA favicon-уудыг нэг эх зургаас дахин үүсгэнэ. macOS багцлалтын үед Electron Builder `icon.svg`-ээс ICNS-ийг тухайн runner дээр үүсгэнэ. Generated файлыг гараар засахгүй.
 
-macOS дээр багцлаагүй Electron ашиглах үед `app.dock.setIcon()` нь PNG хэрэглэх ёстой. Хөгжүүлэлтийн үеийн Dock дүрс багцалсан апптай ижил хүрээний дотор зайтай харагдахын тулд суваг бүрийн хавтас дахь `dock.png`-г тухайн сувгийн `icon.icns`-ээс гаргасан `icon_128x128@2x.png`-тэй ижил байлгана.
+```bash
+bun run brand:check
+```
+
+Энэ шалгалт canonical source болон tracked output хооронд зөрүү байгаа эсэхийг файл өөрчлөхгүйгээр шалгана.

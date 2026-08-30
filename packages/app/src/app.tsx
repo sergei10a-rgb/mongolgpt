@@ -468,7 +468,7 @@ function ConnectionGate(props: ParentProps<{ disableHealthCheck?: boolean }>) {
     <Show
       when={!checking()}
       fallback={
-        <div class="h-dvh w-screen flex flex-col items-center justify-center bg-background-base">
+        <div class="h-dvh w-full flex flex-col items-center justify-center bg-background-base">
           <Splash class="w-16 h-20 opacity-50 animate-pulse" />
         </div>
       }
@@ -520,7 +520,7 @@ function ConnectionError(props: {
   onCleanup(() => clearInterval(timer))
 
   return (
-    <div class="h-dvh w-screen flex flex-col items-center justify-center bg-background-base gap-6 p-6">
+    <div class="h-dvh w-full flex flex-col items-center justify-center bg-background-base gap-6 p-6">
       <Show
         when={localBridge()}
         fallback={

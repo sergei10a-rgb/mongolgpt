@@ -260,9 +260,7 @@ const STYLES = `
 // MongolGPT wordmark - same geometry as packages/ui/src/components/logo.tsx (Logo).
 const WORDMARK = `<svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" fill="none" aria-label="MongolGPT" role="img">
         <rect x="10" y="14" width="68" height="68" rx="18" fill="#151111" />
-        <path d="M32.4 36.7L49 48L32.4 59.3" stroke="white" stroke-width="7.8" stroke-linecap="round" stroke-linejoin="round" />
-        <path d="M52.6 59.2H63.4" stroke="#26E6F2" stroke-width="6.8" stroke-linecap="round" />
-        <circle cx="60.8" cy="36.8" r="3.9" fill="#37F28B" />
+        <path d="M29.3 62.8V33.2L44 47.5L58.7 33.2V62.8" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
         <text x="96" y="61" fill="var(--oc-icon-strong)" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="39" font-weight="800" letter-spacing="0">MongolGPT</text>
       </svg>`
 

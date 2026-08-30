@@ -1,0 +1,8 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#F4F4F1"/>
+  <rect x="96" y="95" width="208" height="208" rx="52" fill="#151111"/>
+  <path d="M146 255V143L200 195L254 143V255" stroke="#F7F7F3" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="96" y="406" fill="#181414" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="82" font-weight="800" letter-spacing="0">MongolGPT</text>
+  <text x="100" y="474" fill="#5F5A58" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="34" font-weight="600" letter-spacing="0">Монгол хэлтэй AI кодын агент</text>
+  <path d="M100 526H428" stroke="#181414" stroke-width="8" stroke-linecap="round"/>
+</svg>

@@ -11,6 +11,8 @@
     "dev:web": "bun --cwd packages/app dev",
     "dev:docs": "bun --cwd packages/web dev",
     "build:docs": "bun --cwd packages/web build",
+    "brand:generate": "bun script/generate-brand-assets.ts",
+    "brand:check": "bun script/generate-brand-assets.ts --check",
     "cloudflare:preflight": "bun script/cloudflare-preflight.ts",
     "deploy:preflight": "bun script/deployment-preflight.ts",
     "deploy:smoke": "bun script/deployment-smoke.ts",
@@ -108,6 +110,7 @@
     "oxlint-tsgolint": "0.21.0",
     "prettier": "3.6.2",
     "semver": "^7.6.0",
+    "sharp": "0.33.5",
     "sst": "catalog:",
     "turbo": "2.8.13"
   },

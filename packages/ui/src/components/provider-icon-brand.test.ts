@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs"
 
 const asset = readFileSync(new URL("../assets/icons/provider/mongolgpt.svg", import.meta.url), "utf8")
 const sprite = readFileSync(new URL("./provider-icons/sprite.svg", import.meta.url), "utf8")
+const viteConfig = readFileSync(new URL("../../vite.config.ts", import.meta.url), "utf8")
 
 describe("MongolGPT provider icon", () => {
   test("keeps the geometric M mark in the source asset and generated sprite", () => {
@@ -20,5 +21,9 @@ describe("MongolGPT provider icon", () => {
       expect(source).not.toContain("M8.40005 17.4H19.2001")
       expect(source).not.toContain("linearGradient")
     }
+  })
+
+  test("does not let the remote provider sync overwrite the product mark", () => {
+    expect(viteConfig).toMatch(/providers\s*\.filter\(\(provider\) => provider !== "mongolgpt"\)/)
   })
 })
