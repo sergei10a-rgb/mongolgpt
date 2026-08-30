@@ -399,14 +399,12 @@
     <symbol viewBox="0 0 24 24" fill="none" id="mongolgpt">
       <rect x="1.6" y="1.6" width="20.8" height="20.8" rx="5.2" fill="#151111"></rect>
       <path
-        d="M8.35 7.88L13.78 12L8.35 16.13"
+        d="M6.8 16.8V7.2L12 12.2L17.2 7.2V16.8"
         stroke="#F7F7F3"
-        stroke-width="2.55"
+        stroke-width="2.35"
         stroke-linecap="round"
         stroke-linejoin="round"
       ></path>
-      <path d="M14.55 16.05H17.9" stroke="#26E6F2" stroke-width="2.2" stroke-linecap="round"></path>
-      <circle cx="16.88" cy="7.97" r="1.15" fill="#37F28B"></circle>
     </symbol>
     <symbol viewBox="0 0 40 40" id="openai">
       <path
