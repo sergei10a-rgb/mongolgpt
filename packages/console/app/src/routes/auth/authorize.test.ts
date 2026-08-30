@@ -85,6 +85,9 @@ describe("OAuth authorize route", () => {
     expect(response.headers.get("content-security-policy")).toMatch(
       /script-src 'nonce-[A-Za-z0-9_-]{16,128}' https:\/\/challenges\.cloudflare\.com/,
     );
+    expect(response.headers.get("content-security-policy")).toContain(
+      "connect-src 'self' https://challenges.cloudflare.com",
+    );
     expect(response.headers.get("content-security-policy")).not.toContain("script-src 'unsafe-inline'");
   });
 

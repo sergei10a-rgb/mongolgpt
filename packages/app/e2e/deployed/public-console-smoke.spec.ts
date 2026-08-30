@@ -40,6 +40,19 @@ test("renders the public MongolGPT console without hydration or responsive failu
   }))
 
   expect(mobile.scrollWidth).toBeLessThanOrEqual(mobile.clientWidth)
+
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto(new URL("/auth", `${publicOrigin}/`).toString(), { waitUntil: "domcontentloaded" })
+  expect(new URL(page.url()).origin).toBe(publicOrigin)
+  const auth = await page.evaluate(() => ({
+    title: document.title,
+    lang: document.documentElement.lang,
+    text: document.body.innerText,
+  }))
+
+  expect(auth.title).toContain("MongolGPT")
+  expect(auth.lang).toMatch(/^mn(?:-MN)?$/)
+  expect(isVisibleMongolianText(auth.text)).toBe(true)
   expect(pageErrors).toEqual([])
   expect(consoleErrors).toEqual([])
 })

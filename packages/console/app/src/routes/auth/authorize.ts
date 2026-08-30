@@ -118,7 +118,7 @@ function challengeResponse(
       headers: {
         "cache-control": "no-store",
         "content-type": "text/html; charset=utf-8",
-        "content-security-policy": `default-src 'none'; script-src 'nonce-${scriptNonce}' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src https://challenges.cloudflare.com; style-src 'unsafe-inline'; form-action ${formActionOrigins.join(" ")}; base-uri 'none'; object-src 'none'`,
+        "content-security-policy": `default-src 'none'; script-src 'nonce-${scriptNonce}' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; style-src 'unsafe-inline'; form-action ${formActionOrigins.join(" ")}; base-uri 'none'; object-src 'none'`,
         "permissions-policy": "camera=(), microphone=(), geolocation=()",
         "referrer-policy": "no-referrer",
         "x-content-type-options": "nosniff",
