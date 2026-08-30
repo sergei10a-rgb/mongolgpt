@@ -25,7 +25,7 @@ export function success(options?: CallbackPageOptions) {
     body: renderCard({
       status: "success",
       headline: "Зөвшөөрөл амжилттай",
-      message: provider ? `MongolGPT ${escapeHtml(provider)}-тэй холбогдлоо.` : "MongolGPT зөвшөөрөгдлөө.",
+      message: connectionMessage("success", provider),
       footnote: "Энэ цонхыг хааж болно.",
     }),
     script: options?.autoClose === false ? undefined : AUTO_CLOSE_SCRIPT,
@@ -39,9 +39,7 @@ export function error(detail: string, options?: CallbackPageOptions) {
     body: renderCard({
       status: "error",
       headline: "Зөвшөөрөл амжилтгүй",
-      message: provider
-        ? `MongolGPT ${escapeHtml(provider)}-тэй холбогдож чадсангүй.`
-        : "MongolGPT зөвшөөрлийг дуусгаж чадсангүй.",
+      message: connectionMessage("error", provider),
       detail,
       footnote: "Энэ цонхыг хаагаад MongolGPT-ээс дахин оролдоно уу.",
     }),
@@ -113,11 +111,12 @@ const AUTO_CLOSE_SCRIPT = `setTimeout(function(){try{window.close()}catch(e){}},
 
 function bootstrapScript(options: BootstrapOptions) {
   return `var PROVIDER=${scriptString(options.provider ?? "")};
+var PRODUCT_PROVIDER=PROVIDER.trim().toLowerCase()==="mongolgpt";
 var TOKEN_URL=new URL(${scriptString(options.tokenPath)},window.location.origin).href;
 (function(){
   var card=document.getElementById("oc-card"),headline=document.getElementById("oc-headline"),message=document.getElementById("oc-message"),detail=document.getElementById("oc-detail"),footnote=document.getElementById("oc-footnote");
-  function fail(text){card.dataset.status="error";headline.textContent="Зөвшөөрөл амжилтгүй";message.textContent=PROVIDER?("MongolGPT "+PROVIDER+"-тэй холбогдож чадсангүй."):"MongolGPT зөвшөөрлийг дуусгаж чадсангүй.";if(text){detail.textContent=text;detail.hidden=false}footnote.textContent="Энэ цонхыг хаагаад MongolGPT-ээс дахин оролдоно уу."}
-  function ok(){card.dataset.status="success";headline.textContent="Зөвшөөрөл амжилттай";message.textContent=PROVIDER?("MongolGPT "+PROVIDER+"-тэй холбогдлоо."):"MongolGPT зөвшөөрөгдлөө.";detail.hidden=true;footnote.textContent="Энэ цонхыг хааж болно.";setTimeout(function(){try{window.close()}catch(e){}},2500)}
+  function fail(text){document.title="Зөвшөөрөл амжилтгүй - MongolGPT";card.dataset.status="error";headline.textContent="Зөвшөөрөл амжилтгүй";message.textContent=!PROVIDER||PRODUCT_PROVIDER?"MongolGPT бүртгэлийг холбож чадсангүй.":("MongolGPT "+PROVIDER+"-тэй холбогдож чадсангүй.");if(text){detail.textContent=text;detail.hidden=false}footnote.textContent="Энэ цонхыг хаагаад MongolGPT-ээс дахин оролдоно уу."}
+  function ok(){document.title="Зөвшөөрөл амжилттай - MongolGPT";card.dataset.status="success";headline.textContent="Зөвшөөрөл амжилттай";message.textContent=!PROVIDER||PRODUCT_PROVIDER?"MongolGPT бүртгэл амжилттай холбогдлоо.":("MongolGPT "+PROVIDER+"-тэй холбогдлоо.");detail.hidden=true;footnote.textContent="Энэ цонхыг хааж болно.";setTimeout(function(){try{window.close()}catch(e){}},2500)}
   try{
     var hash=new URLSearchParams((window.location.hash||"").slice(1));
     var search=new URLSearchParams(window.location.search||"");
@@ -135,6 +134,15 @@ var TOKEN_URL=new URL(${scriptString(options.tokenPath)},window.location.origin)
 
 function scriptString(value: string) {
   return JSON.stringify(value).replaceAll("<", "\\u003c")
+}
+
+function connectionMessage(status: "success" | "error", provider?: string) {
+  if (!provider || provider.trim().toLowerCase() === "mongolgpt") {
+    return status === "success" ? "MongolGPT бүртгэл амжилттай холбогдлоо." : "MongolGPT бүртгэлийг холбож чадсангүй."
+  }
+  return status === "success"
+    ? `MongolGPT ${escapeHtml(provider)}-тэй холбогдлоо.`
+    : `MongolGPT ${escapeHtml(provider)}-тэй холбогдож чадсангүй.`
 }
 
 function escapeHtml(value: string) {
@@ -209,12 +217,12 @@ const STYLES = `
     padding: 2.25rem 2rem 1.75rem;
     background: var(--oc-card);
     border: 1px solid var(--oc-border-weak);
-    border-radius: 14px;
+    border-radius: 8px;
     box-shadow: var(--oc-shadow);
     text-align: center;
   }
   .brand { display: flex; justify-content: center; margin-bottom: 1.75rem; }
-  .brand svg { height: 19px; width: auto; }
+  .brand svg { height: 28px; width: auto; }
   .status { display: flex; justify-content: center; margin-bottom: 1.125rem; }
   .icon { display: none; line-height: 0; }
   .icon svg { display: block; }
@@ -224,7 +232,7 @@ const STYLES = `
   .icon-success { color: var(--oc-success); }
   .icon-error { color: var(--oc-error); }
   .icon-pending { color: var(--oc-text-weak); }
-  .headline { margin: 0; font-size: 1.1875rem; font-weight: 500; line-height: 1.3; letter-spacing: -0.012em; color: var(--oc-text-strong); }
+  .headline { margin: 0; font-size: 1.1875rem; font-weight: 500; line-height: 1.3; letter-spacing: 0; color: var(--oc-text-strong); }
   .message { margin: 0.5rem 0 0; font-size: 0.9375rem; color: var(--oc-text-base); }
   .detail {
     margin: 1.25rem 0 0;
@@ -249,24 +257,13 @@ const STYLES = `
   @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
 `
 
-// MongolGPT wordmark - same path geometry as packages/ui/src/components/logo.tsx (Logo).
-const WORDMARK = `<svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 234 42" fill="none" aria-label="MongolGPT" role="img">
-        <path d="M18 30H6V18H18V30Z" fill="var(--oc-icon-weak)" />
-        <path d="M18 12H6V30H18V12ZM24 36H0V6H24V36Z" fill="var(--oc-icon-base)" />
-        <path d="M48 30H36V18H48V30Z" fill="var(--oc-icon-weak)" />
-        <path d="M36 30H48V12H36V30ZM54 36H36V42H30V6H54V36Z" fill="var(--oc-icon-base)" />
-        <path d="M84 24V30H66V24H84Z" fill="var(--oc-icon-weak)" />
-        <path d="M84 24H66V30H84V36H60V6H84V24ZM66 18H78V12H66V18Z" fill="var(--oc-icon-base)" />
-        <path d="M108 36H96V18H108V36Z" fill="var(--oc-icon-weak)" />
-        <path d="M108 12H96V36H90V6H108V12ZM114 36H108V12H114V36Z" fill="var(--oc-icon-base)" />
-        <path d="M144 30H126V18H144V30Z" fill="var(--oc-icon-weak)" />
-        <path d="M144 12H126V30H144V36H120V6H144V12Z" fill="var(--oc-icon-strong)" />
-        <path d="M168 30H156V18H168V30Z" fill="var(--oc-icon-weak)" />
-        <path d="M168 12H156V30H168V12ZM174 36H150V6H174V36Z" fill="var(--oc-icon-strong)" />
-        <path d="M198 30H186V18H198V30Z" fill="var(--oc-icon-weak)" />
-        <path d="M198 12H186V30H198V12ZM204 36H180V6H198V0H204V36Z" fill="var(--oc-icon-strong)" />
-        <path d="M234 24V30H216V24H234Z" fill="var(--oc-icon-weak)" />
-        <path d="M216 12V18H228V12H216ZM234 24H216V30H234V36H210V6H234V24Z" fill="var(--oc-icon-strong)" />
+// MongolGPT wordmark - same geometry as packages/ui/src/components/logo.tsx (Logo).
+const WORDMARK = `<svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" fill="none" aria-label="MongolGPT" role="img">
+        <rect x="10" y="14" width="68" height="68" rx="18" fill="#151111" />
+        <path d="M32.4 36.7L49 48L32.4 59.3" stroke="white" stroke-width="7.8" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M52.6 59.2H63.4" stroke="#26E6F2" stroke-width="6.8" stroke-linecap="round" />
+        <circle cx="60.8" cy="36.8" r="3.9" fill="#37F28B" />
+        <text x="96" y="61" fill="var(--oc-icon-strong)" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="39" font-weight="800" letter-spacing="0">MongolGPT</text>
       </svg>`
 
 const ICON_CHECK = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="m8.5 12.5 2.4 2.4 4.6-5.4" /></svg>`
