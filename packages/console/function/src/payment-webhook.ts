@@ -98,7 +98,7 @@ class InvalidPaymentCheckoutResponseError extends Error {
   }
 }
 
-function text(body: string, status = 200, headers: HeadersInit = {}) {
+function text(body: string, status = 200, headers: Readonly<Record<string, string>> = {}) {
   const responseHeaders = new Headers(headers)
   responseHeaders.set("Cache-Control", "no-store")
   responseHeaders.set("Content-Type", "text/plain; charset=utf-8")
@@ -108,7 +108,7 @@ function text(body: string, status = 200, headers: HeadersInit = {}) {
   })
 }
 
-function json(body: unknown, status = 200, headers: HeadersInit = {}) {
+function json(body: unknown, status = 200, headers: Readonly<Record<string, string>> = {}) {
   const responseHeaders = new Headers(headers)
   responseHeaders.set("Cache-Control", "no-store")
   return Response.json(body, { status, headers: responseHeaders })
