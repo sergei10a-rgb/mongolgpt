@@ -6,6 +6,7 @@ const astro = new URL("../../web/astro.config.mjs", import.meta.url)
 const legacyRedirects = new URL("../../web/legacy-mn-redirects.mjs", import.meta.url)
 const mobileMenu = new URL("../../web/src/components/MobileMenuToggle.astro", import.meta.url)
 const install = new URL("../../../install", import.meta.url)
+const workflows = new URL("../../../.github/workflows/", import.meta.url)
 const productSourceRoots = [
   new URL("../../app/src/i18n/", import.meta.url),
   new URL("../../mongolgpt/src/", import.meta.url),
@@ -150,6 +151,35 @@ describe("documentation product contract", () => {
     expect(deployment).toContain("https://auth.mgpt.mn/github/callback")
     expect(deployment).toContain("https://auth.mgpt.mn/google/callback")
     expect(deployment).toContain("GET https://runtime.mgpt.mn/global/health")
+  })
+
+  test("keeps incident recovery instructions aligned with protected GitHub workflows", async () => {
+    const [incident, deployWorkflow, restoreWorkflow, drillWorkflow, rehearsalWorkflow] = await Promise.all([
+      Bun.file(new URL("incident-response.mdx", docs)).text(),
+      Bun.file(new URL("deploy.yml", workflows)).text(),
+      Bun.file(new URL("d1-restore.yml", workflows)).text(),
+      Bun.file(new URL("d1-restore-drill.yml", workflows)).text(),
+      Bun.file(new URL("d1-backup-restore-rehearsal.yml", workflows)).text(),
+    ])
+
+    expect(deployWorkflow).toContain("name: Cloudflare deploy")
+    expect(deployWorkflow).toContain("ROLLBACK <stage> <40-char-sha>")
+    expect(deployWorkflow).toContain("SCHEMA COMPATIBLE <40-char-sha>")
+    expect(deployWorkflow).toContain("DEPLOY <domain>")
+    expect(incident).toContain("GitHub Actions-ийн **Cloudflare deploy** workflow")
+    expect(incident).toContain("`ROLLBACK <stage> <40-char-sha>`")
+    expect(incident).toContain("`SCHEMA COMPATIBLE <40-char-sha>`")
+    expect(incident).toContain("`DEPLOY mgpt.mn`")
+
+    expect(restoreWorkflow).toContain("name: D1 restore")
+    expect(restoreWorkflow).toContain("RESTORE D1 <stage> <normalized-target>")
+    expect(incident).toContain("GitHub Actions-ийн **D1 restore** workflow")
+    expect(incident).toContain("`RESTORE D1 <stage> <normalized-target>`")
+
+    expect(drillWorkflow).toContain("name: D1 restore drill")
+    expect(rehearsalWorkflow).toContain("name: D1 нөөцлөлт ба сэргээх сургуулилалт")
+    expect(incident).toContain("**D1 restore drill**")
+    expect(incident).toContain("**D1 нөөцлөлт ба сэргээх сургуулилалт**")
   })
 
   test("keeps repository documentation links on canonical Mongolian sources", async () => {

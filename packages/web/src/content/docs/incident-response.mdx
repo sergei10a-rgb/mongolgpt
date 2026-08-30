@@ -68,7 +68,8 @@ Production deploy, D1 сэргээх, бодит төлбөр буцаах, prov
 
 1. Бичих endpoint, payment queue consumer болон migration-г түр зогсоож, одоогийн D1 bookmark/экспортыг хамгаална.
 2. Сүүлийн хүчинтэй R2 manifest, SQL object, D1 Time Travel цэг болон migration version-ийг шалгана.
-3. [Нөөцлөлт ба сэргээх](../backup-restore)-ийн plan-only алхам, яг тохирох confirmation болон эзэмшигчийн зөвшөөрөлгүйгээр restore бүү ажиллуул.
+3. Сүүлийн **D1 restore drill** болон **D1 нөөцлөлт ба сэргээх сургуулилалт** run-ийн receipt амжилттай, тухайн backup manifest-тэй таарч байгааг шалгана.
+4. [Нөөцлөлт ба сэргээх](../backup-restore)-ийн plan-only алхам, эзэмшигчийн зөвшөөрөл болон GitHub Actions-ийн **D1 restore** workflow дахь `RESTORE D1 <stage> <normalized-target>` баталгаажуулалтгүйгээр restore бүү ажиллуул.
 
 ## Нотолгоо хамгаалах
 
@@ -96,7 +97,7 @@ MongolGPT-ийн <үйлчилгээ> хэсэгт <эхэлсэн цаг>-аа�
 
 1. Root cause эсвэл аюулгүй workaround батлагдаж, хязгаарлалт хэрэгжсэн байна.
 2. Засварыг dev орчинд typecheck, unit/integration, security болон browser smoke-оор шалгана.
-3. [Хувилбар шинэчлэх ба буцаах](../release-upgrade)-ын production confirmation, immutable commit болон rollback цэгийг батална.
+3. [Хувилбар шинэчлэх ба буцаах](../release-upgrade)-ын immutable commit болон rollback цэгийг батална. GitHub Actions-ийн **Cloudflare deploy** workflow-оор буцаах бол `ROLLBACK <stage> <40-char-sha>`, `SCHEMA COMPATIBLE <40-char-sha>` болон production орчинд `DEPLOY mgpt.mn` гэсэн exact confirmation-уудыг ашиглана.
 4. Health endpoint бүр зөв schema/content type-тэй; login/logout/session, нэг бодит эсвэл sandbox model call, quota/usage, payment sandbox болон admin access урсгалыг хамрах хүрээнд нь шалгана.
 5. Queue backlog, provider error/cost, D1 mutation, payment ledger болон audit-д шинэ зөрүү үүсээгүйг ажиглана.
 6. Эхлээд хязгаарлагдмал traffic эсвэл операторын account-аар canary шалгаад дараа нь ердийн урсгалыг нээнэ.
