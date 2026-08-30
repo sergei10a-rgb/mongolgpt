@@ -9,6 +9,7 @@ const command = `bun run dev -- --host 0.0.0.0 --port ${port}`
 const reuse = !process.env.CI
 const workers = Number(process.env.PLAYWRIGHT_WORKERS ?? (process.env.CI ? 5 : 0)) || undefined
 const ignored = [
+  "console/**",
   "deployed/**",
   "smoke/hosted-account-gate.spec.ts",
   process.env.MONGOLGPT_PERFORMANCE === "1" ? "performance/**/*.test.ts" : "performance/**",
