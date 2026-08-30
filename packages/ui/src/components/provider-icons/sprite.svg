@@ -397,10 +397,16 @@
       ></path>
     </symbol>
     <symbol viewBox="0 0 24 24" fill="none" id="mongolgpt">
+      <rect x="1.6" y="1.6" width="20.8" height="20.8" rx="5.2" fill="#151111"></rect>
       <path
-        d="M8.40005 17.4H19.2001V21H4.80005V13.8H8.40005V17.4ZM15.6001 10.2V13.8H8.40005V10.2H15.6001ZM19.2001 10.2H15.6001V6.6H4.80005V3H19.2001V10.2Z"
-        fill="currentColor"
+        d="M8.35 7.88L13.78 12L8.35 16.13"
+        stroke="#F7F7F3"
+        stroke-width="2.55"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       ></path>
+      <path d="M14.55 16.05H17.9" stroke="#26E6F2" stroke-width="2.2" stroke-linecap="round"></path>
+      <circle cx="16.88" cy="7.97" r="1.15" fill="#37F28B"></circle>
     </symbol>
     <symbol viewBox="0 0 40 40" id="openai">
       <path
