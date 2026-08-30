@@ -16,27 +16,49 @@ export const RELEASE_READINESS_CLI_ASSETS = [
   "mongolgpt-windows-x64.zip",
   "mongolgpt-windows-x64-baseline.zip",
 ] as const
-export const RELEASE_READINESS_DESKTOP_ASSETS = [
+export const RELEASE_READINESS_DESKTOP_WINDOWS_ASSETS = [
   "mongolgpt-desktop-win-x64.exe",
   "mongolgpt-desktop-win-arm64.exe",
+] as const
+export const RELEASE_READINESS_DESKTOP_MAC_ASSETS = [
   "mongolgpt-desktop-mac-x64.dmg",
   "mongolgpt-desktop-mac-x64.zip",
   "mongolgpt-desktop-mac-arm64.dmg",
   "mongolgpt-desktop-mac-arm64.zip",
   "mongolgpt-desktop-mac-x64.app.tar.gz",
   "mongolgpt-desktop-mac-arm64.app.tar.gz",
+] as const
+export const RELEASE_READINESS_DESKTOP_LINUX_X64_ASSETS = [
   "mongolgpt-desktop-linux-x64.AppImage",
   "mongolgpt-desktop-linux-x64.deb",
   "mongolgpt-desktop-linux-x64.rpm",
+] as const
+export const RELEASE_READINESS_DESKTOP_LINUX_ARM64_ASSETS = [
   "mongolgpt-desktop-linux-arm64.AppImage",
   "mongolgpt-desktop-linux-arm64.deb",
   "mongolgpt-desktop-linux-arm64.rpm",
 ] as const
+export const RELEASE_READINESS_DESKTOP_ASSETS = [
+  ...RELEASE_READINESS_DESKTOP_WINDOWS_ASSETS,
+  ...RELEASE_READINESS_DESKTOP_MAC_ASSETS,
+  ...RELEASE_READINESS_DESKTOP_LINUX_X64_ASSETS,
+  ...RELEASE_READINESS_DESKTOP_LINUX_ARM64_ASSETS,
+] as const
 export const RELEASE_READINESS_ARTIFACTS = [
   ...RELEASE_READINESS_CLI_ASSETS,
-  ...RELEASE_READINESS_DESKTOP_ASSETS,
+  ...RELEASE_READINESS_DESKTOP_WINDOWS_ASSETS,
 ] as const
 export const RELEASE_READINESS_CHECKSUM = "SHA256SUMS"
+
+const optionalDesktopGroups = [
+  RELEASE_READINESS_DESKTOP_MAC_ASSETS,
+  RELEASE_READINESS_DESKTOP_LINUX_X64_ASSETS,
+  RELEASE_READINESS_DESKTOP_LINUX_ARM64_ASSETS,
+] as const
+const knownReleaseArtifacts = new Set<string>([
+  ...RELEASE_READINESS_ARTIFACTS,
+  ...optionalDesktopGroups.flatMap((group) => [...group]),
+])
 
 const releaseVersionPattern = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
 const MAX_RELEASE_JSON_BYTES = 1024 * 1024
@@ -200,6 +222,7 @@ export function validatePublishedReleaseEvidence(evidence: PublishedReleaseEvide
     for (const name of requiredReleaseAssets(evidence.channel)) {
       if (!names.has(name)) errors.push(`release-asset-missing:${name}`)
     }
+    validateOptionalDesktopGroups(names, errors)
 
     const body = release.body?.trim() ?? ""
     for (const heading of releaseNotesHeadings) {
@@ -210,8 +233,9 @@ export function validatePublishedReleaseEvidence(evidence: PublishedReleaseEvide
     if (!body.includes(RELEASE_READINESS_CHECKSUM)) errors.push("release-notes-checksum")
   }
 
-  validateChecksum(evidence.checksumText, errors)
-  validateUpdaterYml(evidence, errors)
+  const releaseNames = new Set(release?.assets.map((asset) => asset.name) ?? [])
+  validateChecksum(evidence.checksumText, releaseNames, errors)
+  validateUpdaterYml(evidence, releaseNames, errors)
   validatePackages(evidence, errors)
   return errors
 }
@@ -220,11 +244,21 @@ function requiredReleaseAssets(channel: ReleaseChannel) {
   return [
     ...RELEASE_READINESS_ARTIFACTS,
     RELEASE_READINESS_CHECKSUM,
-    ...Object.values(releaseUpdaterMetadataAssets(channel)),
+    releaseUpdaterMetadataAssets(channel).windows,
   ]
 }
 
-function validateChecksum(text: string | undefined, errors: string[]) {
+function validateOptionalDesktopGroups(names: ReadonlySet<string>, errors: string[]) {
+  for (const group of optionalDesktopGroups) {
+    const present = group.filter((name) => names.has(name))
+    if (present.length === 0 || present.length === group.length) continue
+    for (const name of group) {
+      if (!names.has(name)) errors.push(`release-asset-missing:${name}`)
+    }
+  }
+}
+
+function validateChecksum(text: string | undefined, releaseNames: ReadonlySet<string>, errors: string[]) {
   if (!text) {
     errors.push("release-checksum-missing")
     return
@@ -239,13 +273,21 @@ function validateChecksum(text: string | undefined, errors: string[]) {
     const [, hash, name] = match
     if (entries.has(name)) errors.push(`release-checksum-duplicate:${name}`)
     entries.set(name, hash)
+    if (!knownReleaseArtifacts.has(name) || !releaseNames.has(name)) {
+      errors.push(`release-checksum-unexpected:${name}`)
+    }
   }
-  for (const name of RELEASE_READINESS_ARTIFACTS) {
+  for (const name of releaseNames) {
+    if (!knownReleaseArtifacts.has(name)) continue
     if (!entries.has(name)) errors.push(`release-checksum-artifact:${name}`)
   }
 }
 
-function validateUpdaterYml(evidence: PublishedReleaseEvidence, errors: string[]) {
+function validateUpdaterYml(
+  evidence: PublishedReleaseEvidence,
+  releaseNames: ReadonlySet<string>,
+  errors: string[],
+) {
   const expected: Record<UpdaterMetadataKind, readonly string[]> = {
     windows: ["mongolgpt-desktop-win-arm64.exe", "mongolgpt-desktop-win-x64.exe"],
     linuxX64: [
@@ -260,7 +302,22 @@ function validateUpdaterYml(evidence: PublishedReleaseEvidence, errors: string[]
     ],
     mac: ["mongolgpt-desktop-mac-arm64.zip", "mongolgpt-desktop-mac-x64.zip"],
   }
+  const platformAssets: Record<UpdaterMetadataKind, readonly string[]> = {
+    windows: RELEASE_READINESS_DESKTOP_WINDOWS_ASSETS,
+    linuxX64: RELEASE_READINESS_DESKTOP_LINUX_X64_ASSETS,
+    linuxArm64: RELEASE_READINESS_DESKTOP_LINUX_ARM64_ASSETS,
+    mac: RELEASE_READINESS_DESKTOP_MAC_ASSETS,
+  }
+  const metadataAssets = releaseUpdaterMetadataAssets(evidence.channel)
   for (const kind of Object.keys(expected) as UpdaterMetadataKind[]) {
+    const metadataName = metadataAssets[kind]
+    const required =
+      kind === "windows" ||
+      platformAssets[kind].some((asset) => releaseNames.has(asset)) ||
+      releaseNames.has(metadataName) ||
+      evidence.metadata[kind] !== undefined
+    if (!required) continue
+    if (!releaseNames.has(metadataName)) errors.push(`release-asset-missing:${metadataName}`)
     const text = evidence.metadata[kind]
     if (!text) {
       errors.push(`updater-yml-missing:${kind}`)

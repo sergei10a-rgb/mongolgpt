@@ -8,7 +8,13 @@ import {
 import {
   collectPublishedReleaseEvidence,
   RELEASE_READINESS_ARTIFACTS,
+  RELEASE_READINESS_CLI_ASSETS,
   RELEASE_READINESS_CHECKSUM,
+  RELEASE_READINESS_DESKTOP_ASSETS,
+  RELEASE_READINESS_DESKTOP_LINUX_ARM64_ASSETS,
+  RELEASE_READINESS_DESKTOP_LINUX_X64_ASSETS,
+  RELEASE_READINESS_DESKTOP_MAC_ASSETS,
+  RELEASE_READINESS_DESKTOP_WINDOWS_ASSETS,
   RELEASE_READINESS_PACKAGES,
   releaseTag,
   releaseUpdaterMetadataAssets,
@@ -17,7 +23,12 @@ import {
 } from "../src/lib/release-readiness"
 import {
   CLI_RELEASE_ASSETS,
+  CORE_RELEASE_ARTIFACTS,
+  DESKTOP_LINUX_ARM64_RELEASE_ASSETS,
+  DESKTOP_LINUX_X64_RELEASE_ASSETS,
+  DESKTOP_MAC_RELEASE_ASSETS,
   DESKTOP_RELEASE_ASSETS,
+  DESKTOP_WINDOWS_RELEASE_ASSETS,
   RELEASE_CHECKSUM_ASSET,
   releaseUpdaterMetadataAssets as canonicalUpdaterMetadataAssets,
 } from "../../../script/src/release-integrity"
@@ -158,9 +169,11 @@ function releaseEvidence(): PublishedReleaseEvidence {
     RELEASE_READINESS_CHECKSUM,
   ].join("\n\n")
   const metadataAssets = releaseUpdaterMetadataAssets(channel)
-  const assets = [...RELEASE_READINESS_ARTIFACTS, RELEASE_READINESS_CHECKSUM, ...Object.values(metadataAssets)].map(
-    (name) => ({ name, size: 1024, state: "uploaded" }),
-  )
+  const assets = [...RELEASE_READINESS_ARTIFACTS, RELEASE_READINESS_CHECKSUM, metadataAssets.windows].map((name) => ({
+    name,
+    size: 1024,
+    state: "uploaded",
+  }))
   const packages = Object.fromEntries(
     RELEASE_READINESS_PACKAGES.map((name) => [
       name,
@@ -182,9 +195,6 @@ function releaseEvidence(): PublishedReleaseEvidence {
     checksumText: RELEASE_READINESS_ARTIFACTS.map((name) => `${"a".repeat(64)}  ${name}`).join("\n"),
     metadata: {
       windows: updaterYml(updaterFiles.windows),
-      linuxX64: updaterYml(updaterFiles.linuxX64),
-      linuxArm64: updaterYml(updaterFiles.linuxArm64),
-      mac: updaterYml(updaterFiles.mac),
     },
     packages,
   }
@@ -521,7 +531,13 @@ describe("MongolGPT admin system readiness", () => {
   })
 
   test("keeps the live release gate aligned with the canonical publish contract", () => {
-    expect([...RELEASE_READINESS_ARTIFACTS]).toEqual([...CLI_RELEASE_ASSETS, ...DESKTOP_RELEASE_ASSETS])
+    expect([...RELEASE_READINESS_ARTIFACTS].sort()).toEqual([...CORE_RELEASE_ARTIFACTS])
+    expect([...RELEASE_READINESS_DESKTOP_ASSETS]).toEqual([...DESKTOP_RELEASE_ASSETS])
+    expect([...RELEASE_READINESS_DESKTOP_WINDOWS_ASSETS]).toEqual([...DESKTOP_WINDOWS_RELEASE_ASSETS])
+    expect([...RELEASE_READINESS_DESKTOP_MAC_ASSETS]).toEqual([...DESKTOP_MAC_RELEASE_ASSETS])
+    expect([...RELEASE_READINESS_DESKTOP_LINUX_X64_ASSETS]).toEqual([...DESKTOP_LINUX_X64_RELEASE_ASSETS])
+    expect([...RELEASE_READINESS_DESKTOP_LINUX_ARM64_ASSETS]).toEqual([...DESKTOP_LINUX_ARM64_RELEASE_ASSETS])
+    expect([...RELEASE_READINESS_CLI_ASSETS]).toEqual([...CLI_RELEASE_ASSETS])
     expect(RELEASE_READINESS_CHECKSUM).toBe(RELEASE_CHECKSUM_ASSET)
     expect(releaseUpdaterMetadataAssets("latest")).toEqual(canonicalUpdaterMetadataAssets("latest"))
     expect(releaseUpdaterMetadataAssets("beta")).toEqual(canonicalUpdaterMetadataAssets("beta"))
@@ -536,7 +552,7 @@ describe("MongolGPT admin system readiness", () => {
     missingAsset.release = missingAsset.release
       ? {
           ...missingAsset.release,
-          assets: missingAsset.release.assets.filter((asset) => asset.name !== "mongolgpt-desktop-linux-arm64.deb"),
+          assets: missingAsset.release.assets.filter((asset) => asset.name !== "mongolgpt-desktop-win-arm64.exe"),
         }
       : null
     const brokenUpdater = releaseEvidence()
@@ -551,6 +567,47 @@ describe("MongolGPT admin system readiness", () => {
       expect(check?.state).toBe("degraded")
       expect(check?.summary).not.toContain("@mongolgpt/sdk")
     }
+  })
+
+  test("accepts Windows-first releases and validates optional Desktop platforms atomically", () => {
+    expect(validatePublishedReleaseEvidence(releaseEvidence())).toEqual([])
+
+    const completeLinux = releaseEvidence()
+    const metadataName = releaseUpdaterMetadataAssets("latest").linuxX64
+    completeLinux.release?.assets.push(
+      ...RELEASE_READINESS_DESKTOP_LINUX_X64_ASSETS.map((name) => ({ name, size: 1024, state: "uploaded" })),
+      { name: metadataName, size: 1024, state: "uploaded" },
+    )
+    completeLinux.checksumText += `\n${RELEASE_READINESS_DESKTOP_LINUX_X64_ASSETS.map(
+      (name) => `${"b".repeat(64)}  ${name}`,
+    ).join("\n")}`
+    completeLinux.metadata.linuxX64 = updaterYml(updaterFiles.linuxX64)
+    expect(validatePublishedReleaseEvidence(completeLinux)).toEqual([])
+
+    const partialLinux = structuredClone(completeLinux)
+    partialLinux.release!.assets = partialLinux.release!.assets.filter(
+      (asset) => asset.name !== "mongolgpt-desktop-linux-x64.rpm",
+    )
+    expect(validatePublishedReleaseEvidence(partialLinux)).toContain(
+      "release-asset-missing:mongolgpt-desktop-linux-x64.rpm",
+    )
+
+    const metadataMissing = structuredClone(completeLinux)
+    metadataMissing.release!.assets = metadataMissing.release!.assets.filter((asset) => asset.name !== metadataName)
+    expect(validatePublishedReleaseEvidence(metadataMissing)).toContain(`release-asset-missing:${metadataName}`)
+
+    const metadataContentMissing = structuredClone(completeLinux)
+    metadataContentMissing.metadata.linuxX64 = undefined
+    expect(validatePublishedReleaseEvidence(metadataContentMissing)).toContain("updater-yml-missing:linuxX64")
+
+    const checksumMissing = structuredClone(completeLinux)
+    checksumMissing.checksumText = checksumMissing.checksumText
+      ?.split("\n")
+      .filter((line) => !line.endsWith("mongolgpt-desktop-linux-x64.deb"))
+      .join("\n")
+    expect(validatePublishedReleaseEvidence(checksumMissing)).toContain(
+      "release-checksum-artifact:mongolgpt-desktop-linux-x64.deb",
+    )
   })
 
   test("reports a missing release version without making public network requests", async () => {
@@ -596,7 +653,11 @@ describe("MongolGPT admin system readiness", () => {
 
     const collected = await collectPublishedReleaseEvidence({ version: releaseVersion, fetcher })
     expect(validatePublishedReleaseEvidence(collected)).toEqual([])
-    expect(requested).toHaveLength(10)
+    expect(requested).toHaveLength(RELEASE_READINESS_PACKAGES.length + 3)
+    expect(requested.some((url) => url.endsWith(`/${metadataNames.windows}`))).toBe(true)
+    for (const name of [metadataNames.linuxX64, metadataNames.linuxArm64, metadataNames.mac]) {
+      expect(requested.some((url) => url.endsWith(`/${name}`))).toBe(false)
+    }
     expect(requested.every((url) => new URL(url).protocol === "https:")).toBe(true)
     expect(
       requested.every((url) => ["api.github.com", "github.com", "registry.npmjs.org"].includes(new URL(url).hostname)),
