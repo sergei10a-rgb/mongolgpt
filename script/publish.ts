@@ -68,7 +68,7 @@ await prepareReleaseFiles()
 await $`bun ./script/npm-publish-access.ts`
 
 console.log("\n=== cli ===\n")
-await $`bun ./packages/mongolgpt/script/publish.ts`
+await $`bun ./packages/mongolgpt/script/publish.ts --npm-only`
 
 console.log("\n=== preview cli ===\n")
 await $`bun ./packages/cli/script/publish.ts`

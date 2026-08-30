@@ -326,7 +326,6 @@ describe("release integrity contract", () => {
       "AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE",
       "APPLE_CERTIFICATE",
       "APPLE_API_KEY_PATH",
-      "AUR_KEY",
       "NPM_TOKEN",
     ]) {
       expect(workflow).toContain(`${name}: \${{ secrets.${name} }}`)
@@ -334,8 +333,26 @@ describe("release integrity contract", () => {
     expect(workflow.indexOf(confirmation)).toBeLessThan(workflow.indexOf(checkout))
     expect(workflow.indexOf(credentials)).toBeLessThan(workflow.indexOf(checkout))
     expect(workflow.indexOf(checkout)).toBeLessThan(workflow.indexOf(version))
+    expect(workflow).not.toContain("AUR_KEY")
     expect(workflow).not.toContain("TAURI_SIGNING_PRIVATE_KEY")
     expect(workflow).not.toContain("finalize-latest-json")
+  })
+
+  test("keeps optional registries out of the core release path", () => {
+    const workflow = readFileSync(resolve(root, ".github/workflows/publish.yml"), "utf8")
+    const publish = readFileSync(resolve(root, "script/publish.ts"), "utf8")
+    const cliPublish = readFileSync(resolve(root, "packages/mongolgpt/script/publish.ts"), "utf8")
+
+    expect(workflow).not.toContain("docker/login-action@")
+    expect(workflow).not.toContain("docker/setup-qemu-action@")
+    expect(workflow).not.toContain("docker/setup-buildx-action@")
+    expect(workflow).not.toContain("Setup SSH for AUR")
+    expect(workflow).not.toContain("pacman-package-manager")
+    expect(publish).toContain("packages/mongolgpt/script/publish.ts --npm-only")
+    expect(cliPublish).toContain("if (!Script.preview && !dryRun && !npmOnly)")
+    expect(cliPublish).toContain("docker buildx build")
+    expect(cliPublish).toContain("aur.archlinux.org")
+    expect(cliPublish).toContain("homebrew-tap.git")
   })
 
   test("never rewrites a published release tag or mutates the dev branch", () => {
