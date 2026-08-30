@@ -104,6 +104,25 @@ describe("documentation product contract", () => {
     for (const source of [cli, providers, troubleshooting]) expect(source).not.toMatch(/mongolgpt auth(?:\s|`)/)
   })
 
+  test("keeps local-model quick setup aligned with the Desktop presets", async () => {
+    const [desktop, providers, faq] = await Promise.all([
+      Bun.file(new URL("desktop.mdx", docs)).text(),
+      Bun.file(new URL("providers.mdx", docs)).text(),
+      Bun.file(new URL("faq.mdx", docs)).text(),
+    ])
+
+    for (const source of [desktop, providers]) {
+      expect(source).toContain("Ollama тохиргоог бөглөх")
+      expect(source).toContain("LM Studio тохиргоог бөглөх")
+      expect(source).toContain("http://127.0.0.1:11434/v1")
+      expect(source).toContain("http://127.0.0.1:1234/v1")
+    }
+    expect(providers).toContain('"ollama-local"')
+    expect(providers).toContain('"lm-studio-local"')
+    expect(providers).not.toContain("тусгай preset одоогоор Ollama-д нийтлэгдээгүй")
+    expect(faq).toContain("Ширээний програмын Ollama, LM Studio түргэн тохиргоо")
+  })
+
   test("publishes dedicated Mongolian service, privacy, billing, and admin guidance", async () => {
     const [faq, privacy, billing, admin, deployment, backup, acp, config] = await Promise.all([
       Bun.file(new URL("faq.mdx", docs)).text(),

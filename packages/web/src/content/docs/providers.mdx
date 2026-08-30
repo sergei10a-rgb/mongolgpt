@@ -1349,12 +1349,18 @@ IO.NET нь янз бүрийн хэрэглээнд тохирсон 17 заг�
 
 ### LM Studio
 
-Та LM Studio-ээр дамжуулан орон нутгийн загваруудыг ашиглахын тулд mongolgpt-г тохируулах боломжтой.
+Та LM Studio-ээр дамжуулан орон нутгийн загваруудыг ашиглахын тулд MongolGPT-г тохируулах боломжтой.
 
-```json title="mongolgpt.json" "lmstudio" {5, 6, 8, 10-14}
+:::tip
+Ширээний програмд **Тохиргоо → Үйлчилгээ үзүүлэгчид → Захиалгат үйлчилгээ үзүүлэгч** хэсгээс
+**LM Studio тохиргоог бөглөх**-ийг сонгоход provider ID болон `http://127.0.0.1:1234/v1` хаяг автоматаар бөглөгдөнө.
+Та зөвхөн LM Studio-д ачаалсан загварын ID-г оруулж хадгална. CLI эсвэл гараар тохируулах бол доорх жишээг ашиглана.
+:::
+
+```json title="mongolgpt.json" "lm-studio-local" {5, 6, 8, 10-14}
 {
   "provider": {
-    "lmstudio": {
+    "lm-studio-local": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "LM Studio (локал)",
       "options": {
@@ -1362,7 +1368,7 @@ IO.NET нь янз бүрийн хэрэглээнд тохирсон 17 заг�
       },
       "models": {
         "google/gemma-3n-e4b": {
-          "name": "Gemma 3n-e4b (local)"
+          "name": "Gemma 3n-e4b (локал)"
         }
       }
     }
@@ -1372,7 +1378,7 @@ IO.NET нь янз бүрийн хэрэглээнд тохирсон 17 заг�
 
 Энэ жишээнд:
 
-- `lmstudio` нь захиалгат үйлчилгээ үзүүлэгчийн ID бөгөөд таны сонгосон дурын мөр байж болно.
+- `lm-studio-local` нь түргэн тохиргооны provider ID бөгөөд гараар тохируулахдаа давхцахгүй өөр ID сонгож болно.
 - `npm` нь энэ үйлчилгээ үзүүлэгчийн ашиглах багцыг заана. Энд OpenAI-тай нийцтэй API-д `@ai-sdk/openai-compatible` ашиглаж байна.
 - `name` нь интерфэйст харагдах үйлчилгээ үзүүлэгчийн нэр.
 - `options.baseURL` нь дотоод серверийн төгсгөлийн цэг юм.
@@ -1518,20 +1524,24 @@ export NVIDIA_API_KEY=nvapi-your-key-here
 
 ### Ollama
 
-Та Ollama-аар дамжуулан орон нутгийн загваруудыг ашиглахын тулд mongolgpt-г тохируулах боломжтой.
+Та Ollama-аар дамжуулан орон нутгийн загваруудыг ашиглахын тулд MongolGPT-г тохируулах боломжтой.
 
-:::note
-MongolGPT-ийн тусгай preset одоогоор Ollama-д нийтлэгдээгүй. Ollama-ийн OpenAI-compatible API-г ашиглан MongolGPT-д provider-ийг гараар тохируулна уу. Ollama-ийн ерөнхий [OpenAI compatibility баримт](https://docs.ollama.com/api/openai-compatibility)-ыг үзнэ үү.
+:::tip
+Ширээний програмд **Тохиргоо → Үйлчилгээ үзүүлэгчид → Захиалгат үйлчилгээ үзүүлэгч** хэсгээс
+**Ollama тохиргоог бөглөх**-ийг сонгоход provider ID болон `http://127.0.0.1:11434/v1` хаяг автоматаар бөглөгдөнө.
+Та зөвхөн Ollama-д татсан загварын ID-г оруулж хадгална. CLI эсвэл гараар тохируулах бол доорх жишээг ашиглана.
 :::
 
-```json title="mongolgpt.json" "ollama" {5, 6, 8, 10-14}
+Ollama-ийн ерөнхий [OpenAI compatibility баримт](https://docs.ollama.com/api/openai-compatibility)-ыг мөн үзнэ үү.
+
+```json title="mongolgpt.json" "ollama-local" {5, 6, 8, 10-14}
 {
   "provider": {
-    "ollama": {
+    "ollama-local": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "Ollama (local)",
+      "name": "Ollama (локал)",
       "options": {
-        "baseURL": "http://localhost:11434/v1"
+        "baseURL": "http://127.0.0.1:11434/v1"
       },
       "models": {
         "llama2": {
@@ -1545,7 +1555,7 @@ MongolGPT-ийн тусгай preset одоогоор Ollama-д нийтлэгд
 
 Энэ жишээнд:
 
-- `ollama` нь захиалгат үйлчилгээ үзүүлэгчийн ID бөгөөд таны сонгосон дурын мөр байж болно.
+- `ollama-local` нь түргэн тохиргооны provider ID бөгөөд гараар тохируулахдаа давхцахгүй өөр ID сонгож болно.
 - `npm` нь энэ үйлчилгээ үзүүлэгчийн ашиглах багцыг заана. Энд OpenAI-тай нийцтэй API-д `@ai-sdk/openai-compatible` ашиглаж байна.
 - `name` нь интерфэйст харагдах үйлчилгээ үзүүлэгчийн нэр.
 - `options.baseURL` нь дотоод серверийн төгсгөлийн цэг юм.
