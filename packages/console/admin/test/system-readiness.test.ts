@@ -34,7 +34,8 @@ const releaseVersion = "0.1.1"
 
 const queueHeartbeat = () =>
   JSON.stringify({
-    version: 1,
+    version: 2,
+    stage: "dev",
     id: "heartbeat-secret-id",
     sentAt: now.getTime() - 60_000,
     processedAt: now.getTime() - 30_000,
@@ -296,22 +297,32 @@ describe("MongolGPT admin system readiness", () => {
     expect(JSON.stringify(report)).not.toContain("must-not-pass")
   })
 
-  test("fails stale or malformed queue heartbeat evidence closed", async () => {
+  test("fails stale, malformed, legacy, or wrong-stage queue heartbeat evidence closed", async () => {
     const evidence = [
       "not-json",
       JSON.stringify({
-        version: 1,
+        version: 2,
+        stage: "dev",
         id: "stale",
         sentAt: now.getTime() - 1_000_000,
         processedAt: now.getTime() - 950_000,
       }),
-      JSON.stringify({ version: 1, id: "reversed", sentAt: now.getTime(), processedAt: now.getTime() - 1 }),
       JSON.stringify({
-        version: 1,
+        version: 2,
+        stage: "dev",
+        id: "reversed",
+        sentAt: now.getTime(),
+        processedAt: now.getTime() - 1,
+      }),
+      JSON.stringify({
+        version: 2,
+        stage: "dev",
         id: "future",
         sentAt: now.getTime() + 180_000,
         processedAt: now.getTime() + 180_000,
       }),
+      queueHeartbeat().replace('"stage":"dev"', '"stage":"production"'),
+      queueHeartbeat().replace('"version":2', '"version":1'),
     ]
 
     for (const value of evidence) {

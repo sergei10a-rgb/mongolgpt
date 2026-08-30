@@ -12,9 +12,10 @@ import {
   ServiceMonitorEvidenceSchema,
 } from "@mongolgpt/console-core/service-monitor.js"
 import {
-  USAGE_QUEUE_READINESS_KEY,
   USAGE_QUEUE_READINESS_MAX_AGE_MS,
+  usageQueueReadinessKey,
   UsageQueueHeartbeatEvidenceSchema,
+  UsageQueueStageSchema,
 } from "@mongolgpt/console-core/usage-queue-readiness.js"
 import { Resource } from "@mongolgpt/console-resource"
 import { z } from "zod"
@@ -208,7 +209,7 @@ export async function getSystemReadiness() {
         redirect: "error",
         signal: timeout(),
       }),
-    queueHeartbeat: () => resources.UsageQueueReadiness.get(USAGE_QUEUE_READINESS_KEY),
+    queueHeartbeat: () => resources.UsageQueueReadiness.get(usageQueueReadinessKey(stage)),
     monitorEvidence: () => resources.ServiceMonitorState.get(SERVICE_MONITOR_STATE_KEY),
     backups: () => collectD1BackupEvidence(resources.D1Backups, stage, resources.Database.databaseId),
     release: () => collectPublishedReleaseEvidence({ version: releaseVersion }),
@@ -252,7 +253,7 @@ export async function collectSystemReadiness(
     quota.ok
       ? ready("quota", "Квотын бүртгэл", "Durable Objects-ийн бүртгэл хариу өгч байна.")
       : degraded("quota", "Квотын бүртгэл", "Квотын үйлчилгээний бэлэн байдлын шалгалт амжилтгүй боллоо."),
-    queueCheck(queueHeartbeat, now),
+    queueCheck(queueHeartbeat, dependencies.stage, now),
     paymentCheck(payments),
     monitoringCheck(monitorEvidence, dependencies.stage, dependencies.monitoringEnabled, now),
     backupCheck(backups, dependencies.stage, dependencies.databaseID, dependencies.backupsEnabled, now),
@@ -346,7 +347,7 @@ function paymentCheck(result: ProbeResult<z.output<typeof paymentHealthSchema>>)
   return ready("payments", "QPay + Bonum", `${environmentLabel(result.value.environment)} орчин хэвийн байна.`)
 }
 
-function queueCheck(result: ProbeResult<string | null>, now: Date): SystemReadinessCheck {
+function queueCheck(result: ProbeResult<string | null>, stage: string, now: Date): SystemReadinessCheck {
   if (!result.ok || !result.value || result.value.length > 4_096) {
     return degraded("usage-queue", "Хэрэглээний дараалал", "Дарааллын хяналтын дохио олдсонгүй.")
   }
@@ -357,7 +358,13 @@ function queueCheck(result: ProbeResult<string | null>, now: Date): SystemReadin
     return degraded("usage-queue", "Хэрэглээний дараалал", "Дарааллын хяналтын дохио буруу байна.")
   }
   const parsed = UsageQueueHeartbeatEvidenceSchema.safeParse(value)
-  if (!parsed.success || parsed.data.processedAt < parsed.data.sentAt) {
+  const expectedStage = UsageQueueStageSchema.safeParse(stage)
+  if (
+    !parsed.success ||
+    !expectedStage.success ||
+    parsed.data.stage !== expectedStage.data ||
+    parsed.data.processedAt < parsed.data.sentAt
+  ) {
     return degraded("usage-queue", "Хэрэглээний дараалал", "Дарааллын хяналтын дохио буруу байна.")
   }
   const age = now.getTime() - parsed.data.processedAt

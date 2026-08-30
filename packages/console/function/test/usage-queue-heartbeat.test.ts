@@ -1,7 +1,7 @@
 import { describe, expect, spyOn, test } from "bun:test"
 import {
   createUsageQueueHeartbeat,
-  USAGE_QUEUE_READINESS_KEY,
+  usageQueueReadinessKey,
   UsageQueueHeartbeatSchema,
 } from "@mongolgpt/console-core/usage-queue-readiness.js"
 import { createUsageQueueConsumer, recordUsageQueueHeartbeat } from "../src/usage-queue"
@@ -29,12 +29,14 @@ describe("Usage Queue freshness heartbeat", () => {
     const sent: unknown[] = []
     const heartbeat = await createUsageQueueHeartbeatSender(
       { send: async (value) => void sent.push(value) },
+      "DEV",
       () => 1_800_000_000_000,
       () => "heartbeat-test-id",
     )()
     expect(heartbeat).toEqual({
       type: "usage-queue-heartbeat",
-      version: 1,
+      version: 2,
+      stage: "dev",
       id: "heartbeat-test-id",
       sentAt: 1_800_000_000_000,
     })
@@ -45,31 +47,44 @@ describe("Usage Queue freshness heartbeat", () => {
   test("stores bounded evidence and acknowledges only after KV succeeds", async () => {
     const writes: Array<[string, unknown, unknown?]> = []
     const heartbeat = createUsageQueueHeartbeat(
+      "dev",
       () => 1_700_000_000_000,
       () => "id-1",
     )
-    await recordUsageQueueHeartbeat({ put: async (...args) => void writes.push(args) }, heartbeat, 1_700_000_000_123)
+    await recordUsageQueueHeartbeat(
+      { put: async (...args) => void writes.push(args) },
+      heartbeat,
+      "dev",
+      1_700_000_000_123,
+    )
     expect(writes).toEqual([
       [
-        USAGE_QUEUE_READINESS_KEY,
-        '{"version":1,"id":"id-1","sentAt":1700000000000,"processedAt":1700000000123}',
+        usageQueueReadinessKey("dev"),
+        '{"version":2,"stage":"dev","id":"id-1","sentAt":1700000000000,"processedAt":1700000000123}',
         { expirationTtl: 900 },
       ],
     ])
+    expect(usageQueueReadinessKey("DEV")).toBe("usage-queue:dev:last-processed")
+    expect(() => usageQueueReadinessKey("../production")).toThrow()
 
     await expect(
-      recordUsageQueueHeartbeat({ put: async () => undefined }, heartbeat, heartbeat.sentAt - 1),
+      recordUsageQueueHeartbeat({ put: async () => undefined }, heartbeat, "dev", heartbeat.sentAt - 1),
     ).rejects.toThrow("илгээхээс өмнө")
+    await expect(
+      recordUsageQueueHeartbeat({ put: async () => undefined }, heartbeat, "production", heartbeat.sentAt + 1),
+    ).rejects.toThrow("орчин зөрж")
   })
 
-  test("acks valid heartbeat, retries invalid and KV-failed messages, and preserves usage persistence", async () => {
+  test("acks stage-bound heartbeats, drops legacy controls, retries KV failures, and preserves usage persistence", async () => {
     const error = spyOn(console, "error").mockImplementation(() => {})
     const heartbeat = createUsageQueueHeartbeat(
+      "dev",
       () => 1_700_000_000_000,
       () => "id-2",
     )
     const valid = message(heartbeat)
     const invalid = message({ type: "usage-queue-heartbeat", version: 1, id: "bad", secret: "must-not-log" })
+    const wrongStage = message({ ...heartbeat, stage: "production" })
     const failed = message(heartbeat)
     const persisted: unknown[] = []
     const consumer = createUsageQueueConsumer(
@@ -78,8 +93,9 @@ describe("Usage Queue freshness heartbeat", () => {
         put: async () => undefined,
       },
       () => 1_700_000_000_100,
+      "dev",
     )
-    await consumer.queue({ messages: [valid, invalid] })
+    await consumer.queue({ messages: [valid, invalid, wrongStage] })
 
     const failedConsumer = createUsageQueueConsumer(
       async (event) => void persisted.push(event),
@@ -89,13 +105,15 @@ describe("Usage Queue freshness heartbeat", () => {
         },
       },
       () => 1_700_000_000_100,
+      "dev",
     )
     await failedConsumer.queue({ messages: [failed] })
     expect(valid.result()).toEqual({ acknowledged: 1, retried: 0 })
-    expect(invalid.result()).toEqual({ acknowledged: 0, retried: 1 })
+    expect(invalid.result()).toEqual({ acknowledged: 1, retried: 0 })
+    expect(wrongStage.result()).toEqual({ acknowledged: 1, retried: 0 })
     expect(failed.result()).toEqual({ acknowledged: 0, retried: 1 })
     expect(persisted).toEqual([])
-    expect(error.mock.calls).toHaveLength(2)
+    expect(error.mock.calls).toHaveLength(3)
     expect(JSON.stringify(error.mock.calls)).not.toContain("KV unavailable")
     expect(JSON.stringify(error.mock.calls)).not.toContain("must-not-log")
     error.mockRestore()

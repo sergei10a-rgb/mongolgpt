@@ -2,8 +2,10 @@ import { UsageQueueEventSchema, type UsageQueueEvent } from "@mongolgpt/console-
 import { persistUsageQueueEvent } from "@mongolgpt/console-core/usage-queue.js"
 import {
   createUsageQueueHeartbeatEvidence,
-  USAGE_QUEUE_READINESS_KEY,
+  USAGE_QUEUE_HEARTBEAT_TYPE,
   USAGE_QUEUE_READINESS_TTL_SECONDS,
+  usageQueueReadinessKey,
+  UsageQueueStageSchema,
   UsageQueueHeartbeatSchema,
   type UsageQueueHeartbeat,
 } from "@mongolgpt/console-core/usage-queue-readiness.js"
@@ -18,15 +20,19 @@ type QueueMessage = {
 
 type QueueBatch = { messages: ReadonlyArray<QueueMessage> }
 type ReadinessKV = Pick<KVNamespace, "put">
+const HeartbeatEnvelopeSchema = UsageQueueHeartbeatSchema.pick({ type: true }).passthrough()
 
 export async function recordUsageQueueHeartbeat(
   readiness: ReadinessKV,
   heartbeat: UsageQueueHeartbeat,
+  expectedStage: string,
   processedAt = Date.now(),
 ) {
+  const stage = UsageQueueStageSchema.parse(expectedStage)
+  if (heartbeat.stage !== stage) throw new TypeError("Хэрэглээний дарааллын хяналтын дохионы орчин зөрж байна")
   const evidence = createUsageQueueHeartbeatEvidence(heartbeat, processedAt)
   const serialized = JSON.stringify(evidence)
-  await readiness.put(USAGE_QUEUE_READINESS_KEY, serialized, { expirationTtl: USAGE_QUEUE_READINESS_TTL_SECONDS })
+  await readiness.put(usageQueueReadinessKey(stage), serialized, { expirationTtl: USAGE_QUEUE_READINESS_TTL_SECONDS })
   return serialized
 }
 
@@ -34,14 +40,26 @@ export function createUsageQueueConsumer(
   persist: (event: UsageQueueEvent) => Promise<unknown> = persistUsageQueueEvent,
   readiness?: ReadinessKV,
   now: () => number = Date.now,
+  stage?: string,
 ) {
   return {
     async queue(batch: QueueBatch) {
+      const expectedStage = UsageQueueStageSchema.parse(stage ?? Resource.App.stage)
       for (const message of batch.messages) {
         const heartbeat = UsageQueueHeartbeatSchema.safeParse(message.body)
         if (heartbeat.success) {
+          if (heartbeat.data.stage !== expectedStage) {
+            console.error("Хэрэглээний дарааллын өөр орчны хяналтын дохиог орхилоо")
+            message.ack()
+            continue
+          }
           try {
-            await recordUsageQueueHeartbeat(readiness ?? Resource.UsageQueueReadiness, heartbeat.data, now())
+            await recordUsageQueueHeartbeat(
+              readiness ?? Resource.UsageQueueReadiness,
+              heartbeat.data,
+              expectedStage,
+              now(),
+            )
             message.ack()
           } catch (error) {
             console.error("Хэрэглээний дарааллын хяналтын дохиог бэлэн байдлын KV-д хадгалж чадсангүй", {
@@ -49,6 +67,13 @@ export function createUsageQueueConsumer(
             })
             message.retry()
           }
+          continue
+        }
+
+        const control = HeartbeatEnvelopeSchema.safeParse(message.body)
+        if (control.success && control.data.type === USAGE_QUEUE_HEARTBEAT_TYPE) {
+          console.error("Хэрэглээний дарааллын хуучин эсвэл буруу хяналтын дохиог орхилоо")
+          message.ack()
           continue
         }
 

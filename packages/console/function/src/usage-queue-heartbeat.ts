@@ -7,11 +7,12 @@ type QueueBinding = {
 
 export function createUsageQueueHeartbeatSender(
   queue: QueueBinding,
+  stage: string,
   now: () => number = Date.now,
   id: () => string = () => crypto.randomUUID(),
 ) {
   return async () => {
-    const heartbeat = createUsageQueueHeartbeat(now, id)
+    const heartbeat = createUsageQueueHeartbeat(stage, now, id)
     await queue.send(heartbeat)
     return heartbeat
   }
@@ -19,8 +20,9 @@ export function createUsageQueueHeartbeatSender(
 
 export default {
   async scheduled() {
-    const heartbeat = await createUsageQueueHeartbeatSender(Resource.UsageQueue)()
+    const heartbeat = await createUsageQueueHeartbeatSender(Resource.UsageQueue, Resource.App.stage)()
     console.log("Хэрэглээний дарааллын хяналтын дохио илгээгдлээ", {
+      stage: heartbeat.stage,
       heartbeatID: heartbeat.id,
       sentAt: heartbeat.sentAt,
     })
