@@ -363,11 +363,23 @@ async function smokePublicPlatformPackages(version: string) {
       `public SDK/plugin import smoke failed: ${commandOutput(imports)}`,
     )
 
+    const uiEntry = path.join(temp, "ui-smoke.tsx")
+    await fs.promises.writeFile(
+      uiEntry,
+      'import { Button } from "@mongolgpt/ui/button"; import "@mongolgpt/ui/styles"; document.body.dataset.component = Button.name || "Button"\n',
+    )
+    const uiBuild = spawnSync(
+      process.execPath,
+      ["build", uiEntry, "--outdir", path.join(temp, "ui-dist"), "--target", "browser", "--production"],
+      { cwd: temp, env: publicEnv, encoding: "utf8", timeout: 120_000 },
+    )
+    assert(uiBuild.status === 0, `public @mongolgpt/ui consumer build failed: ${commandOutput(uiBuild)}`)
+
     const uiRoot = path.join(temp, "node_modules", "@mongolgpt", "ui")
     for (const file of ["README.md", "LICENSE", "src/styles/index.css", "dist/hooks/index.d.ts"]) {
       assert(fs.existsSync(path.join(uiRoot, file)), `public @mongolgpt/ui is missing ${file}`)
     }
-    console.log(`public npm platform smoke ok: ${packages.join(", ")} @ ${version}`)
+    console.log(`public npm platform smoke ok: ${packages.join(", ")} @ ${version}, imports and UI browser bundle`)
   } finally {
     await fs.promises.rm(temp, { recursive: true, force: true })
   }

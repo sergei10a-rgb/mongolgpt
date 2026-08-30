@@ -277,6 +277,7 @@ describe("release integrity contract", () => {
     expect(workflow).not.toContain("packages/desktop")
     expect(preflight).toContain("smokePublicNpmInstall(version)")
     expect(preflight).toContain("smokePublicPlatformPackages(version)")
+    expect(preflight).toContain("public @mongolgpt/ui consumer build failed")
     expect(preflight).toContain("assertNoLegacyBrand(pkgFile")
     expect(preflight).toContain("assertNoLegacyBrand(manifestPath")
     expect(localInstall).toContain('"--offline"')

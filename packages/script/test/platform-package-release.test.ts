@@ -63,4 +63,20 @@ describe("public platform npm package contract", () => {
     const source = readFileSync(resolve(root, "packages/plugin/script/publish.ts"), "utf8")
     expect(source).toContain('value.startsWith("workspace:") ? version : value')
   })
+
+  test("UI release builds a packed browser consumer before publishing", () => {
+    const publish = readFileSync(resolve(root, "packages/ui/script/publish.ts"), "utf8")
+    const smoke = readFileSync(resolve(root, "packages/ui/script/smoke-packed.ts"), "utf8")
+    const preflight = readFileSync(resolve(root, "packages/mongolgpt/script/release-preflight.ts"), "utf8")
+
+    expect(publish.indexOf("script/smoke-packed.ts")).toBeLessThan(publish.indexOf("npm publish"))
+    expect(smoke).toContain('import { Button } from "@mongolgpt/ui/button"')
+    expect(smoke).toContain('import "@mongolgpt/ui/styles"')
+    expect(smoke).toContain('delete publicEnv[key]')
+    expect(smoke).toContain('publicEnv.NPM_CONFIG_USERCONFIG = npmrc')
+    expect(smoke).toContain('["build", "entry.tsx", "--outdir", "dist", "--target", "browser", "--production"]')
+    expect(smoke).toContain('outputs.some((name) => name.endsWith(".js"))')
+    expect(smoke).toContain('outputs.some((name) => name.endsWith(".css"))')
+    expect(preflight).toContain("public @mongolgpt/ui consumer build failed")
+  })
 })

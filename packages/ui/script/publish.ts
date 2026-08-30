@@ -24,8 +24,9 @@ try {
     await $`bun run typecheck`
     await $`bun run test`
   }
-  await pack({ version, skipBuild })
-  await $`npm publish ${tarball} --access public --tag ${Script.channel} ${dryRun ? "--dry-run" : []}`
+  const packed = await pack({ version, skipBuild })
+  await $`bun ./script/smoke-packed.ts --tarball ${packed}`
+  await $`npm publish ${packed} --access public --tag ${Script.channel} ${dryRun ? "--dry-run" : []}`
   if (dryRun) console.log(`[dry-run] ${pkg.name}@${version} package publish бэлэн байна`)
 } finally {
   await rm(tarball, { force: true })
