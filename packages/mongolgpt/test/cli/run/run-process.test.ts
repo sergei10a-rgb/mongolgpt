@@ -19,6 +19,11 @@ describe("mongolgpt run (non-interactive subprocess)", () => {
         const result = yield* mongolgpt.run("say hi")
         mongolgpt.expectExit(result, 0)
         expect(result.stdout).toBe("hello from the test llm\n")
+
+        const request = (yield* llm.hits).find((hit) => JSON.stringify(hit.body).includes("say hi"))
+        expect(request?.url.pathname).toBe("/v1/chat/completions")
+        expect(request?.body.model).toBe("test-model")
+        expect(request?.headers.authorization).toBe("Bearer test-key")
       }),
     60_000,
   )
