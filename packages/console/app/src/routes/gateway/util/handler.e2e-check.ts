@@ -7,6 +7,7 @@ const authState = { credentials: null as string | null }
 const state = {
   metrics: [] as Array<Record<string, unknown>>,
   usageRows: [] as Array<Record<string, unknown>>,
+  providerAttempts: [] as Array<Record<string, unknown>>,
   circuit: [] as Array<{ provider: string; outcome: string }>,
 }
 
@@ -32,6 +33,9 @@ await mock.module("@mongolgpt/console-resource", () => ({
   Resource: {
     App: { stage: "dev" },
     ByokCredentialsKeyV1: { value: "unused-test-key" },
+    UsageQueue: {
+      send: async (value: Record<string, unknown>) => void state.providerAttempts.push(value),
+    },
   },
 }))
 
@@ -162,6 +166,7 @@ beforeEach(() => {
   authState.credentials = null
   state.metrics.length = 0
   state.usageRows.length = 0
+  state.providerAttempts.length = 0
   state.circuit.length = 0
 })
 
@@ -260,6 +265,23 @@ describe("gateway handler HTTP boundary", () => {
       { provider: "openrouter-free", outcome: "transient-error" },
       { provider: "nvidia-nim-production", outcome: "success" },
     ])
+    expect(state.providerAttempts).toHaveLength(2)
+    expect(state.providerAttempts).toEqual([
+      expect.objectContaining({
+        type: "provider-attempt",
+        provider: "openrouter-free",
+        outcome: "transient-error",
+        responseStatus: 429,
+        fallback: false,
+      }),
+      expect.objectContaining({
+        type: "provider-attempt",
+        provider: "nvidia-nim-production",
+        outcome: "success",
+        responseStatus: 200,
+        fallback: true,
+      }),
+    ])
     expect(state.usageRows).toHaveLength(1)
     expect(state.usageRows[0]).toMatchObject({
       workspaceID: "wrk_gateway_e2e",
@@ -344,5 +366,6 @@ describe("gateway handler HTTP boundary", () => {
       outputTokens: 3,
       enrichment: { plan: "byok" },
     })
+    expect(state.providerAttempts).toEqual([])
   })
 })

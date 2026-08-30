@@ -1,5 +1,6 @@
 import { Resource } from "@mongolgpt/console-resource"
 import type { QuotaLedgerCommand, UsageQueueEvent } from "@mongolgpt/console-core/quota.js"
+import type { ProviderAttemptEvent } from "@mongolgpt/console-core/provider-health.js"
 
 type JsonObject = Record<string, unknown>
 
@@ -33,6 +34,10 @@ export async function readLedgerCounters(scope: string, keys: readonly string[])
 
 export async function enqueueUsageEvent(event: UsageQueueEvent) {
   await callQuotaService("/v1/usage", event)
+}
+
+export async function enqueueProviderAttemptEvent(event: ProviderAttemptEvent) {
+  await Resource.UsageQueue.send(event)
 }
 
 export function buildRateLimitKey(kind: string, identifier: string, interval?: string) {

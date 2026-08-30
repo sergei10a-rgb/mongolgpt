@@ -18,6 +18,7 @@ export namespace Identifier {
     payment: "pay",
     paymentEvent: "pev",
     paymentInvoice: "inv",
+    providerAttempt: "pat",
     provider: "prv",
     referral: "ref",
     subscription: "sub",

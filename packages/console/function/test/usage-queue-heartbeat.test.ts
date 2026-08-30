@@ -118,4 +118,38 @@ describe("Usage Queue freshness heartbeat", () => {
     expect(JSON.stringify(error.mock.calls)).not.toContain("must-not-log")
     error.mockRestore()
   })
+
+  test("routes typed provider attempts to the idempotent health persistence path", async () => {
+    const attempts: unknown[] = []
+    const providerAttempt = {
+      type: "provider-attempt",
+      version: 1,
+      id: "pat_01K3ABCDEFGHJKMNPQRSTVWXYZ",
+      provider: "openrouter-free",
+      providerKind: "openrouter",
+      usageMode: "managed",
+      model: "free-auto",
+      outcome: "transient-error",
+      responseStatus: 429,
+      latencyMs: 800,
+      retryCount: 0,
+      fallback: false,
+      timeCreated: 1_700_000_000_000,
+    } as const
+    const queued = message(providerAttempt)
+    const consumer = createUsageQueueConsumer(
+      async () => {
+        throw new Error("usage persistence must not run")
+      },
+      undefined,
+      () => providerAttempt.timeCreated,
+      "dev",
+      async (event) => void attempts.push(event),
+    )
+
+    await consumer.queue({ messages: [queued] })
+
+    expect(queued.result()).toEqual({ acknowledged: 1, retried: 0 })
+    expect(attempts).toEqual([providerAttempt])
+  })
 })

@@ -11,6 +11,11 @@ import {
 } from "@mongolgpt/console-core/usage-queue-readiness.js"
 import { Resource } from "@mongolgpt/console-resource"
 import type { KVNamespace } from "@cloudflare/workers-types"
+import {
+  persistProviderAttempt,
+  ProviderAttemptEventSchema,
+  type ProviderAttemptEvent,
+} from "@mongolgpt/console-core/provider-health.js"
 
 type QueueMessage = {
   body: unknown
@@ -41,6 +46,7 @@ export function createUsageQueueConsumer(
   readiness?: ReadinessKV,
   now: () => number = Date.now,
   stage?: string,
+  persistAttempt: (event: ProviderAttemptEvent) => Promise<unknown> = persistProviderAttempt,
 ) {
   return {
     async queue(batch: QueueBatch) {
@@ -74,6 +80,20 @@ export function createUsageQueueConsumer(
         if (control.success && control.data.type === USAGE_QUEUE_HEARTBEAT_TYPE) {
           console.error("Хэрэглээний дарааллын хуучин эсвэл буруу хяналтын дохиог орхилоо")
           message.ack()
+          continue
+        }
+
+        const providerAttempt = ProviderAttemptEventSchema.safeParse(message.body)
+        if (providerAttempt.success) {
+          try {
+            await persistAttempt(providerAttempt.data)
+            message.ack()
+          } catch (error) {
+            console.error("Нийлүүлэгчийн оролдлогыг хадгалж чадсангүй", {
+              error: error instanceof Error ? error.name : typeof error,
+            })
+            message.retry()
+          }
           continue
         }
 

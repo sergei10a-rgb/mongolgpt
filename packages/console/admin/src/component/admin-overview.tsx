@@ -1,6 +1,8 @@
 import { For, Show } from "solid-js"
 import type { PlatformAdminContext } from "~/lib/admin-context"
 import type { SystemReadinessReport, SystemReadinessState } from "~/lib/system-readiness"
+import type { AdminProviderHealthItem, AdminProviderHealthState } from "~/lib/admin-provider-health.server"
+import { formatAdminDate } from "~/lib/admin-date"
 import { AdminHeader, roleLabel } from "./admin-header"
 
 export interface AdminOverviewData {
@@ -23,6 +25,7 @@ export interface AdminOverviewData {
   }[]
   auditVisible: boolean
   readiness: SystemReadinessReport
+  providerHealth: AdminProviderHealthItem[]
   generatedAt: string
 }
 
@@ -101,6 +104,65 @@ export function AdminOverviewView(props: { data: AdminOverviewData }) {
           </p>
         </section>
 
+        <section data-component="provider-health-section" aria-labelledby="provider-health-heading">
+          <div data-component="section-heading">
+            <div>
+              <p data-component="eyebrow">Сүүлийн 24 цагийн бодит оролдлого</p>
+              <h2 id="provider-health-heading">Загварын үйлчилгээний төлөв</h2>
+            </div>
+          </div>
+          <div data-component="table-scroll">
+            <table data-table="provider-health">
+              <thead>
+                <tr>
+                  <th>Үйлчилгээ</th>
+                  <th>Төлөв</th>
+                  <th>15 минут</th>
+                  <th>24 цагийн амжилт</th>
+                  <th>Хариуны хугацаа</th>
+                  <th>Шилжилт</th>
+                  <th>Сүүлийн оролдлого</th>
+                </tr>
+              </thead>
+              <tbody>
+                <For each={props.data.providerHealth}>
+                  {(provider) => (
+                    <tr>
+                      <td>
+                        <strong>{providerLabel(provider.providerID, provider.providerKind)}</strong>
+                        <code>{provider.providerID}</code>
+                      </td>
+                      <td>
+                        <span data-provider-health={provider.state}>{providerHealthLabel(provider.state)}</span>
+                      </td>
+                      <td>
+                        <span data-component="provider-attempts">
+                          {provider.successes15m} амжилт · {provider.transientFailures15m} түр алдаа ·{" "}
+                          {provider.permanentErrors15m} татгалзалт
+                        </span>
+                      </td>
+                      <td>{providerSuccessRate(provider)}</td>
+                      <td>
+                        {provider.attempts24h
+                          ? `${formatDuration(provider.averageLatencyMs24h)} / ихдээ ${formatDuration(provider.maxLatencyMs24h)}`
+                          : "Нотолгоо алга"}
+                      </td>
+                      <td>
+                        {provider.failovers24h} шилжилт · {provider.fallbackAttempts24h} нөөц чиглэл
+                      </td>
+                      <td>{provider.lastAttemptAt ? formatDate(provider.lastAttemptAt) : "Хараахан оролдлого алга"}</td>
+                    </tr>
+                  )}
+                </For>
+              </tbody>
+            </table>
+          </div>
+          <p data-component="report-generated">
+            Зөвхөн MongolGPT-ийн удирдлагатай болон туршилтын үйлчилгээ үзүүлэгчийн оролдлого. Хэрэглэгчийн BYOK
+            түлхүүр, ажлын орон зай болон хүсэлтийн агуулга хадгалагдахгүй.
+          </p>
+        </section>
+
         <section data-component="audit-section">
           <div data-component="section-heading">
             <div>
@@ -159,6 +221,32 @@ export function AdminOverviewView(props: { data: AdminOverviewData }) {
   )
 }
 
+function providerHealthLabel(state: AdminProviderHealthState) {
+  return {
+    healthy: "Хэвийн",
+    warning: "Анхаарах",
+    degraded: "Доголдолтой",
+    idle: "Идэвхгүй",
+    unknown: "Нотолгоо дутуу",
+  }[state]
+}
+
+function providerLabel(providerID: string, providerKind: string | null) {
+  if (providerKind === "openrouter" || providerID.startsWith("openrouter")) return "OpenRouter"
+  if (providerKind === "nvidia-nim" || providerID.startsWith("nvidia")) return "NVIDIA NIM"
+  return providerKind || "Нийлүүлэгч"
+}
+
+function providerSuccessRate(provider: AdminProviderHealthItem) {
+  if (!provider.attempts24h) return "Нотолгоо алга"
+  return `${new Intl.NumberFormat("mn-MN", { maximumFractionDigits: 1 }).format((provider.successes24h / provider.attempts24h) * 100)}% (${provider.successes24h}/${provider.attempts24h})`
+}
+
+function formatDuration(value: number) {
+  if (value < 1_000) return `${value} мс`
+  return `${new Intl.NumberFormat("mn-MN", { maximumFractionDigits: 1 }).format(value / 1_000)} сек`
+}
+
 function readinessLabel(state: SystemReadinessState) {
   return {
     healthy: "Хэвийн",
@@ -189,9 +277,5 @@ function outcomeLabel(outcome: string) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("mn-MN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Ulaanbaatar",
-  }).format(new Date(value))
+  return formatAdminDate(value)
 }

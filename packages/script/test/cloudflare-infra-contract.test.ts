@@ -963,6 +963,19 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("link: [database]")
   })
 
+  test("prunes provider attempt telemetry frequently with only the D1 binding", async () => {
+    const source = await Bun.file(new URL("../../../infra/console.ts", import.meta.url)).text()
+    const retention = source.slice(
+      source.indexOf('new sst.cloudflare.Cron("ProviderAttemptRetention"'),
+      source.indexOf("const paymentDeadLetterQueue"),
+    )
+    expect(retention).toContain('schedules: ["*/15 * * * *"]')
+    expect(retention).toContain('handler: "packages/console/function/src/provider-attempt-retention.ts"')
+    expect(retention).toContain("link: [database]")
+    expect(retention).not.toContain("usageQueue")
+    expect(retention).not.toContain("quotaService")
+  })
+
   test("backs up D1 daily to a private, expiring R2 bucket", async () => {
     const [consoleSource, stageSource, configSource, secretSource, workflowSource, scheduleSource] = await Promise.all(
       [

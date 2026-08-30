@@ -344,6 +344,19 @@ const contract = {
     "sessionID",
     "enrichment",
   ],
+  ProviderAttemptTable: [
+    "id",
+    "provider",
+    "provider_kind",
+    "usage_mode",
+    "model",
+    "outcome",
+    "response_status",
+    "latency_ms",
+    "retry_count",
+    "fallback",
+    "time_created",
+  ],
   FinanceFxRateTable: [
     "id",
     "base_currency",
@@ -507,6 +520,8 @@ describe("D1 schema contract", () => {
     expect(d1.PaymentEventOutcomes).toEqual(["applied", "noop", "rejected"])
     expect(d1.PaymentRecoveryStatuses).toEqual(["pending", "processing", "resolved", "manual_review"])
     expect(d1.PlanSubscriptionStatuses).toEqual(["active", "expired", "cancelled", "refunded"])
+    expect(d1.ProviderAttemptOutcomes).toEqual(["success", "transient-error", "permanent-error"])
+    expect(d1.ProviderAttemptUsageModes).toEqual(["managed", "trial"])
     expect(d1.NewsletterSubscriberStatus).toEqual(["active", "unsubscribed"])
     expect(d1.NewsletterSubscriberSource).toEqual(["console", "stats"])
     expect(d1.EnterpriseInquiryStatus).toEqual(["new", "reviewing", "resolved", "spam"])

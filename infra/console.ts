@@ -135,6 +135,17 @@ export const usageQueueHeartbeat = new sst.cloudflare.Cron("UsageQueueHeartbeat"
   },
 })
 
+export const providerAttemptRetention = new sst.cloudflare.Cron("ProviderAttemptRetention", {
+  schedules: ["*/15 * * * *"],
+  worker: {
+    handler: "packages/console/function/src/provider-attempt-retention.ts",
+    link: [database],
+    compatibility: {
+      date: "2026-07-15",
+    },
+  },
+})
+
 const paymentDeadLetterQueue = new sst.cloudflare.Queue("PaymentDeadLetterQueue")
 export const paymentQueue = new sst.cloudflare.Queue("PaymentQueue", {
   dlq: {
@@ -409,6 +420,7 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     bucket,
     bucketNew,
     database,
+    usageQueue,
     quotaService,
     paymentService,
     paymentConfig,

@@ -40,6 +40,8 @@ export const PaymentEventTypes = ["pending", "paid", "failed", "expired", "cance
 export const PaymentEventOutcomes = ["applied", "noop", "rejected"] as const
 export const PaymentRecoveryStatuses = ["pending", "processing", "resolved", "manual_review"] as const
 export const PlanSubscriptionStatuses = ["active", "expired", "cancelled", "refunded"] as const
+export const ProviderAttemptOutcomes = ["success", "transient-error", "permanent-error"] as const
+export const ProviderAttemptUsageModes = ["managed", "trial"] as const
 export const FinanceCurrencies = ["MNT", "USD"] as const
 export const FinanceCostCategories = ["model_cost", "payment_fee", "tax", "adjustment"] as const
 export const FinanceCostDirections = ["debit", "credit"] as const
@@ -974,6 +976,45 @@ export const UsageTable = sqliteTable(
     index("usage_workspace_user_time_created").on(table.workspaceID, table.userID, table.timeCreated),
     index("usage_time_model_provider").on(table.timeCreated, table.model, table.provider),
     check("usage_enrichment_json_check", sql`${table.enrichment} is null or json_valid(${table.enrichment})`),
+  ],
+)
+
+export const ProviderAttemptTable = sqliteTable(
+  "provider_attempt",
+  {
+    id: ulid("id").notNull(),
+    provider: text("provider", { length: 255 }).notNull(),
+    provider_kind: text("provider_kind", { length: 64 }),
+    usage_mode: text("usage_mode", { enum: ProviderAttemptUsageModes }).notNull(),
+    model: text("model", { length: 255 }).notNull(),
+    outcome: text("outcome", { enum: ProviderAttemptOutcomes }).notNull(),
+    response_status: integer("response_status"),
+    latency_ms: integer("latency_ms").notNull(),
+    retry_count: integer("retry_count").notNull(),
+    fallback: integer("fallback", { mode: "boolean" }).notNull(),
+    time_created: utc("time_created").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.id] }),
+    index("provider_attempt_provider_time").on(table.provider, table.time_created),
+    index("provider_attempt_time_outcome").on(table.time_created, table.outcome),
+    check("provider_attempt_id_check", sql`length(${table.id}) = 30 and substr(${table.id}, 1, 4) = 'pat_'`),
+    check(
+      "provider_attempt_identity_check",
+      sql`length(trim(${table.provider})) between 1 and 255 and length(trim(${table.model})) between 1 and 255`,
+    ),
+    check(
+      "provider_attempt_provider_kind_check",
+      sql`${table.provider_kind} is null or length(trim(${table.provider_kind})) between 1 and 64`,
+    ),
+    check("provider_attempt_usage_mode_check", sql`${table.usage_mode} in ('managed', 'trial')`),
+    check("provider_attempt_outcome_check", sql`${table.outcome} in ('success', 'transient-error', 'permanent-error')`),
+    check(
+      "provider_attempt_response_status_check",
+      sql`${table.response_status} is null or ${table.response_status} between 100 and 599`,
+    ),
+    check("provider_attempt_latency_check", sql`${table.latency_ms} between 0 and 600000`),
+    check("provider_attempt_retry_check", sql`${table.retry_count} between 0 and 10`),
   ],
 )
 

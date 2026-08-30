@@ -12,12 +12,13 @@ import { AdminOverviewView } from "~/component/admin-overview"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { requirePlatformAdminPermission } from "~/lib/admin-auth"
 import { getSystemReadiness } from "~/lib/system-readiness"
+import { getAdminProviderHealth } from "~/lib/admin-provider-health.server"
 
 async function getAdminOverview() {
   "use server"
   const admin = requirePlatformAdminPermission(getPlatformAdminContext(), "overview.read")
 
-  const [overview, readiness] = await Promise.all([
+  const [overview, readiness, providerHealth] = await Promise.all([
     Database.use(async (tx) => {
       const metrics = await Promise.all([
         tx.select({ value: count() }).from(AccountTable).where(isNull(AccountTable.timeDeleted)),
@@ -72,8 +73,9 @@ async function getAdminOverview() {
       }
     }),
     getSystemReadiness(),
+    getAdminProviderHealth(),
   ])
-  return { ...overview, readiness }
+  return { ...overview, readiness, providerHealth }
 }
 
 const overviewQuery = query(getAdminOverview, "admin.overview")

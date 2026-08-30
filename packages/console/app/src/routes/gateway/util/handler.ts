@@ -77,6 +77,7 @@ import {
   trackAndSettleMeasuredUsage,
   type BillingSource,
 } from "./request-lifecycle"
+import { enqueueProviderAttemptEvent } from "./quota-service"
 
 type GatewayCatalogData = Awaited<ReturnType<typeof GatewayCatalog.list>>
 type RetryOptions = {
@@ -216,6 +217,38 @@ export async function handler(
     )
     const providerBudgetUsage = await providerBudgetTracker?.check()
 
+    async function recordProviderAttempt(
+      providerInfo: ProviderInfo,
+      retry: RetryOptions,
+      startTimestamp: number,
+      outcome: "success" | "transient-error" | "permanent-error",
+      responseStatus?: number,
+    ) {
+      if (providerInfo.usageMode === "byok") return
+      try {
+        await enqueueProviderAttemptEvent({
+          type: "provider-attempt",
+          version: 1,
+          id: Identifier.create("providerAttempt"),
+          provider: providerInfo.id,
+          providerKind: providerInfo.providerKind,
+          usageMode: providerInfo.usageMode === "trial" ? "trial" : "managed",
+          model,
+          outcome,
+          responseStatus,
+          latencyMs: Math.min(600_000, Math.max(0, Date.now() - startTimestamp)),
+          retryCount: retry.retryCount,
+          fallback: modelInfo.fallbackProviders?.includes(providerInfo.id) ?? false,
+          timeCreated: Date.now(),
+        })
+      } catch (error) {
+        logger.metric({
+          "provider.health.telemetry_error": error instanceof Error ? error.name : typeof error,
+          provider: providerInfo.id,
+        })
+      }
+    }
+
     const retriableRequest = async (
       retry: RetryOptions = { excludeProviders: [], retryCount: 0 },
     ): Promise<ProviderRequestResult> => {
@@ -305,11 +338,12 @@ export async function handler(
             })(),
             body: reqBody,
           }),
-        onNetworkError() {
+        async onNetworkError() {
           providerCircuit.record(providerInfo.circuitPermit, "transient-error")
           logger.metric({ "llm.error.type": "network" })
+          await recordProviderAttempt(providerInfo, retry, startTimestamp, "transient-error")
         },
-        onResponse(res) {
+        async onResponse(res) {
           if (providerInfo.id.startsWith("console.")) {
             const resEndpointId = res.headers.get("x-mongolgpt-endpoint-id")
             const resEndpointModelId = res.headers.get("x-mongolgpt-upstream-model-id")
@@ -326,14 +360,14 @@ export async function handler(
             })
           }
 
-          providerCircuit.record(
-            providerInfo.circuitPermit,
+          const outcome =
             res.status === 200
               ? "success"
               : shouldFailoverProviderStatus(res.status)
                 ? "transient-error"
-                : "permanent-error",
-          )
+                : "permanent-error"
+          providerCircuit.record(providerInfo.circuitPermit, outcome)
+          await recordProviderAttempt(providerInfo, retry, startTimestamp, outcome, res.status)
         },
         failover: retriableRequest,
         complete: (res) => ({ providerInfo, res, startTimestamp }),
