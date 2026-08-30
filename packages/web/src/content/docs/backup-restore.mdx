@@ -86,6 +86,17 @@ sqlite3 restore-check.db "PRAGMA integrity_check;"
 
 ## Сэргээх туршилт
 
+Dev нөөцлөлтийн автомат ажиллагаа шинэ орчинд өөрөө асаагддаггүй. Эхний бодит бэлэн байдлын шалгалтыг GitHub-ийн **D1 нөөцлөлт ба сэргээх сургуулилалт** workflow-оор гараар ажиллуулна. `DEV D1 НӨӨЦЛӨЛТ БА СЭРГЭЭЛТИЙГ ШАЛГА` гэж яг баталгаажуулсны дараа энэ workflow зөвхөн dev орчны `D1Backups` bucket, 90 хоногийн retention, `D1BackupWorkflow`, `D1BackupSchedule` target-уудыг байршуулна. Дараа нь шинэ backup instance үүсгэж 30 минут хүртэл төлвийг нь шалгаад, амжилттай manifest/SQL гарсны дараа disposable dev D1 рүү сэргээж схемийг батална. Backup болон restore receipt artifact тус бүр 90 хоног хадгалагдана.
+
+`dev` GitHub environment-д дараах хоёр тусдаа нууц утга заавал байна:
+
+| Нууц утга                    | Хамгийн бага эрх                               | Зориулалт                                                                        |
+| ---------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------- |
+| `D1_BACKUP_API_TOKEN`        | Account → D1 → Edit                            | Зөвхөн SQL экспорт эхлүүлэх backup Workflow-д ашиглана.                          |
+| `D1_RESTORE_DRILL_API_TOKEN` | Account → D1 → Edit, backup bucket-ийн R2 read | Зөвхөн disposable D1 үүсгэх, backup унших, импортлох, шалгаад устгахад ашиглана. |
+
+Ерөнхий `CLOUDFLARE_API_TOKEN` нь backup resource deploy болон Cloudflare Workflow instance trigger/status шалгалтад хэрэглэгдэнэ. Backup token restore process-д, restore token backup Workflow-д очихгүй. Rehearsal нь production stage, production D1 болон бодит төлбөрийн resource сонгох боломжгүйгээр алдаанд хаалттай.
+
 GitHub-ийн **D1 restore drill** workflow улирал бүрийн 1-ний `03:17 UTC`-д болон гараар ажиллана. Энэ workflow зөвхөн `dev` GitHub environment болон `dev` SST stage ашиглаж, сүүлийн 36 цагийн баталгаажсан manifest/SQL backup-ийг сонгоно. Дараа нь `mongolgpt-restore-drill-<run-id>` нэртэй шинэ disposable D1 үүсгэж, SQL backup-ийг Wrangler-аар импортлон `account`, `workspace`, `user`, `plan_subscription`, `payment_invoice`, `usage`, `admin_audit_log` хүснэгтүүдийг бодитоор шалгана.
 
 Туршилтын D1 ID нь эх D1 ID-тай ижил байвал ажиллагаа шууд зогсоно. Амжилт, import алдаа эсвэл schema алдааны аль ч үед disposable D1 болон runner-ийн түр SQL файл устаж, хэрэглэгчийн мөрийн агуулга log эсвэл receipt-д орохгүй. Receipt artifact нь зөвхөн backup key/хугацаа, түр database нэр, баталгаажсан хүснэгтийн нэр болон дууссан хугацааг 90 хоног хадгална. Энэ автомат workflow production D1-ийг хэзээ ч сонгохгүй; production сэргээх ажиллагаа дээрх гараар баталгаажуулах урсгал хэвээр байна.

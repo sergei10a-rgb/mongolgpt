@@ -9,6 +9,7 @@ export default $config({
     const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
     const consoleOnly = flag("MONGOLGPT_DEPLOY_CONSOLE_ONLY")
     const databaseOnly = flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")
+    const d1BackupOnly = flag("MONGOLGPT_DEPLOY_D1_BACKUP_ONLY")
     const rootPreviewAlias = flag("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS")
     const admin = flag("MONGOLGPT_ENABLE_ADMIN")
     const d1Backups = flag("MONGOLGPT_ENABLE_D1_BACKUPS")
@@ -29,18 +30,21 @@ export default $config({
     if (consoleOnly && stage !== "dev") {
       throw new Error("MONGOLGPT_DEPLOY_CONSOLE_ONLY-г зөвхөн dev орчинд ашиглана.")
     }
-    if ([docsOnly, appOnly, consoleOnly].filter(Boolean).length > 1) {
+    if (d1BackupOnly && stage !== "dev") {
+      throw new Error("MONGOLGPT_DEPLOY_D1_BACKUP_ONLY-г зөвхөн dev орчинд ашиглана.")
+    }
+    if ([docsOnly, appOnly, consoleOnly, d1BackupOnly].filter(Boolean).length > 1) {
       throw new Error(
-        "MONGOLGPT_DEPLOY_DOCS_ONLY, MONGOLGPT_DEPLOY_APP_ONLY, MONGOLGPT_DEPLOY_CONSOLE_ONLY-г хамтад нь ашиглахгүй.",
+        "MONGOLGPT_DEPLOY_DOCS_ONLY, MONGOLGPT_DEPLOY_APP_ONLY, MONGOLGPT_DEPLOY_CONSOLE_ONLY, MONGOLGPT_DEPLOY_D1_BACKUP_ONLY-г хамтад нь ашиглахгүй.",
       )
     }
-    if (databaseOnly && (docsOnly || appOnly || consoleOnly || cloudflareProviderMigration)) {
+    if (databaseOnly && (docsOnly || appOnly || consoleOnly || d1BackupOnly || cloudflareProviderMigration)) {
       throw new Error("MONGOLGPT_DEPLOY_DATABASE_ONLY-г бусад тусгаарласан deploy горимтой хамтад нь ашиглахгүй.")
     }
     if (databaseOnly && !hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_DATABASE_ONLY нь hosted services асаалттай байхыг шаардана.")
     }
-    if (rootPreviewAlias && (stage !== "dev" || docsOnly || appOnly || databaseOnly)) {
+    if (rootPreviewAlias && (stage !== "dev" || docsOnly || appOnly || databaseOnly || d1BackupOnly)) {
       throw new Error(
         "MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS-г зөвхөн үндсэн hosted dev deploy эсвэл console-only dev deploy-д ашиглана.",
       )
@@ -55,6 +59,11 @@ export default $config({
     }
     if (consoleOnly && !hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_CONSOLE_ONLY нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true байхыг шаардана.")
+    }
+    if (d1BackupOnly && (!hostedServices || !d1Backups)) {
+      throw new Error(
+        "MONGOLGPT_DEPLOY_D1_BACKUP_ONLY нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true болон MONGOLGPT_ENABLE_D1_BACKUPS=true байхыг шаардана.",
+      )
     }
     if (docsOnly && hostedServices) {
       throw new Error("MONGOLGPT_DEPLOY_DOCS_ONLY нь hosted services унтраалттай байхыг шаардана.")
@@ -108,6 +117,7 @@ export default $config({
     const appOnly = flag("MONGOLGPT_DEPLOY_APP_ONLY")
     const consoleOnly = flag("MONGOLGPT_DEPLOY_CONSOLE_ONLY")
     const databaseOnly = flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")
+    const d1BackupOnly = flag("MONGOLGPT_DEPLOY_D1_BACKUP_ONLY")
     const cloudflareProviderMigration = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")
     const cloudflareProviderBridge = flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")
     const adminEnabled = stage.enableAdmin
@@ -127,6 +137,18 @@ export default $config({
       const { database } = await import("./infra/database.js")
       return {
         Database: database.databaseId,
+        HostedServices: true,
+      }
+    }
+    if (d1BackupOnly) {
+      const backup = await import("./infra/console.js")
+      if (!backup.d1BackupWorkflow || !backup.d1BackupSchedule) {
+        throw new Error("Dev D1 нөөцлөлтийн Workflow болон Cron үүссэнгүй.")
+      }
+      return {
+        Database: backup.database.databaseId,
+        D1Backups: backup.d1Backups.name,
+        D1BackupWorkflowName: backup.d1BackupWorkflow.workflowName,
         HostedServices: true,
       }
     }

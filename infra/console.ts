@@ -41,7 +41,7 @@ new sst.x.DevCommand("Studio", {
 
 export const d1Backups = new sst.cloudflare.Bucket("D1Backups")
 
-new cloudflare.R2BucketLifecycle(
+const d1BackupRetention = new cloudflare.R2BucketLifecycle(
   "D1BackupRetention",
   {
     accountId: sst.cloudflare.DEFAULT_ACCOUNT_ID,
@@ -75,16 +75,20 @@ const d1BackupAutomation = enableD1Backups
           MONGOLGPT_STAGE: $app.stage,
         },
       })
-      const schedule = new sst.cloudflare.Cron("D1BackupSchedule", {
-        schedules: [D1_BACKUP_SCHEDULE],
-        worker: {
-          handler: "packages/console/function/src/d1-backup-schedule.ts",
-          link: [workflow],
-          compatibility: {
-            date: "2026-07-15",
+      const schedule = new sst.cloudflare.Cron(
+        "D1BackupSchedule",
+        {
+          schedules: [D1_BACKUP_SCHEDULE],
+          worker: {
+            handler: "packages/console/function/src/d1-backup-schedule.ts",
+            link: [workflow],
+            compatibility: {
+              date: "2026-07-15",
+            },
           },
         },
-      })
+        { dependsOn: [d1BackupRetention] },
+      )
       return { schedule, workflow }
     })()
   : undefined

@@ -18,6 +18,7 @@
     "./cloudflare-access": "./src/cloudflare-access.ts",
     "./cloudflare-deployment": "./src/cloudflare-deployment.ts",
     "./cloudflare-state-repair": "./src/cloudflare-state-repair.ts",
+    "./d1-backup-rehearsal": "./src/d1-backup-rehearsal.ts",
     "./d1-restore": "./src/d1-restore.ts",
     "./d1-restore-drill": "./src/d1-restore-drill.ts",
     "./deployment": "./src/deployment.ts",

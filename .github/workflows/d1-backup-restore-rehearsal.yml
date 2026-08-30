@@ -1,0 +1,117 @@
+name: D1 нөөцлөлт ба сэргээх сургуулилалт
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "DEV D1 НӨӨЦЛӨЛТ БА СЭРГЭЭЛТИЙГ ШАЛГА гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: d1-backup-restore-rehearsal-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+  MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
+  MONGOLGPT_DEPLOY_D1_BACKUP_ONLY: "true"
+  MONGOLGPT_ENABLE_ADMIN: "false"
+  MONGOLGPT_ENABLE_ANALYTICS: "false"
+  MONGOLGPT_ENABLE_D1_BACKUPS: "true"
+  MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false"
+  MONGOLGPT_ENABLE_LEGACY_STRIPE: "false"
+  MONGOLGPT_ENABLE_MONITORING: "false"
+  MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: "false"
+  MONGOLGPT_ENABLE_TURNSTILE: "false"
+  MONGOLGPT_ENABLE_SHARE_SERVICE: "false"
+  MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
+  MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"
+  MONGOLGPT_PAYMENT_ENVIRONMENT: disabled
+
+jobs:
+  rehearse:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: dev
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+    steps:
+      - name: Validate exact dev rehearsal confirmation
+        env:
+          REHEARSAL_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$REHEARSAL_CONFIRMATION" != "DEV D1 НӨӨЦЛӨЛТ БА СЭРГЭЭЛТИЙГ ШАЛГА" ]; then
+            echo "Dev D1 backup/restore rehearsal баталгаажуулалт буруу байна."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify backup and restore safety contracts
+        run: |
+          bun --cwd packages/script test test/d1-backup-rehearsal.test.ts
+          bun --cwd packages/script test test/d1-restore-drill.test.ts
+
+      - name: Verify isolated dev backup deploy access
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SST_SECRET_D1BackupApiToken: ${{ secrets.D1_BACKUP_API_TOKEN }}
+        run: bun run deploy:preflight -- dev --d1-backup-only
+
+      - name: Deploy only dev D1 backup automation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SST_SECRET_D1BackupApiToken: ${{ secrets.D1_BACKUP_API_TOKEN }}
+        run: |
+          bun sst unlock --stage=dev || true
+          bun sst deploy --stage=dev --target D1BackupSchedule --print-logs
+
+      - name: Trigger a fresh dev backup and wait for completion
+        id: backup
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          bun sst shell --stage=dev -- \
+            bun script/d1-backup-rehearsal.ts \
+              --receipt "$RUNNER_TEMP/d1-backup-rehearsal-receipt.json"
+
+      - name: Restore fresh backup into disposable dev D1
+        id: restore
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_RESTORE_DRILL_API_TOKEN: ${{ secrets.D1_RESTORE_DRILL_API_TOKEN }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          bun sst shell --stage=dev -- \
+            env -u CLOUDFLARE_API_TOKEN bun script/d1-restore-drill.ts \
+              --receipt "$RUNNER_TEMP/d1-restore-drill-receipt.json"
+
+      - name: Upload backup rehearsal receipt
+        if: always() && steps.backup.outcome != 'skipped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: d1-backup-rehearsal-dev-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 90
+          path: ${{ runner.temp }}/d1-backup-rehearsal-receipt.json
+
+      - name: Upload restore drill receipt
+        if: always() && steps.restore.outcome != 'skipped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: d1-restore-drill-dev-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 90
+          path: ${{ runner.temp }}/d1-restore-drill-receipt.json

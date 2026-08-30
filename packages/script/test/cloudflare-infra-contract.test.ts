@@ -224,7 +224,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")')
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")')
     expect(configSource).toContain('flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")')
-    expect(configSource).toContain('rootPreviewAlias && (stage !== "dev" || docsOnly || appOnly || databaseOnly)')
+    expect(configSource).toContain(
+      'rootPreviewAlias && (stage !== "dev" || docsOnly || appOnly || databaseOnly || d1BackupOnly)',
+    )
     expect(configSource).toContain("rootPreviewAlias && !hostedServices && !consoleOnly")
     expect(configSource).toContain('cloudflareProviderMigration ? "6.14.0" : "6.15.0"')
     expect(configSource).toContain('await import("./infra/cloudflare-provider-migration.js")')
@@ -986,7 +988,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(consoleSource).toContain("const d1BackupAutomation = enableD1Backups")
     expect(consoleSource).toContain('className: "D1BackupWorkflow"')
     expect(consoleSource).toContain("link: [d1Backups, SECRET.D1BackupApiToken]")
-    expect(consoleSource).toContain('new sst.cloudflare.Cron("D1BackupSchedule"')
+    expect(consoleSource).toContain("new sst.cloudflare.Cron(")
+    expect(consoleSource).toContain('"D1BackupSchedule"')
     expect(consoleSource).toContain("schedules: [D1_BACKUP_SCHEDULE]")
     expect(consoleSource).not.toContain("public: true")
     expect(secretSource).toContain('D1BackupApiToken: new sst.Secret("D1BackupApiToken")')
@@ -997,6 +1000,43 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(workflowSource).toContain("storeCompletedD1Export")
     expect(scheduleSource).toContain('successRetention: "30 days"')
     expect(scheduleSource).toContain('errorRetention: "30 days"')
+  })
+
+  test("rehearses a fresh dev D1 backup and disposable restore behind exact manual confirmation", async () => {
+    const [source, configSource, consoleSource, preflightSource, docs] = await Promise.all([
+      Bun.file(new URL("../../../.github/workflows/d1-backup-restore-rehearsal.yml", import.meta.url)).text(),
+      Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text(),
+      Bun.file(new URL("../../../infra/console.ts", import.meta.url)).text(),
+      Bun.file(new URL("../../../script/deployment-preflight.ts", import.meta.url)).text(),
+      Bun.file(new URL("../../web/src/content/docs/backup-restore.mdx", import.meta.url)).text(),
+    ])
+    const parsed: unknown = Bun.YAML.parse(source)
+    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs) || !record(parsed.jobs.rehearse)) {
+      throw new Error("D1 backup/restore rehearsal workflow is invalid")
+    }
+    const job = parseWorkflowJob(parsed.jobs.rehearse, "rehearse")
+    const confirmation = job.steps.find((step) => step.name === "Validate exact dev rehearsal confirmation")
+    const deploy = job.steps.find((step) => step.name === "Deploy only dev D1 backup automation")
+    const backup = job.steps.find((step) => step.name === "Trigger a fresh dev backup and wait for completion")
+    const restore = job.steps.find((step) => step.name === "Restore fresh backup into disposable dev D1")
+
+    expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
+    expect(parsed.permissions).toEqual({ contents: "read" })
+    expect(parsed.jobs.rehearse.environment).toBe("dev")
+    expect(record(parsed.env) ? parsed.env.MONGOLGPT_DEPLOY_D1_BACKUP_ONLY : undefined).toBe("true")
+    expect(record(parsed.env) ? parsed.env.MONGOLGPT_ENABLE_D1_BACKUPS : undefined).toBe("true")
+    expect(record(parsed.env) ? parsed.env.MONGOLGPT_ENABLE_REAL_PAYMENTS : undefined).toBe("false")
+    expect(confirmation?.run).toContain('"DEV D1 НӨӨЦЛӨЛТ БА СЭРГЭЭЛТИЙГ ШАЛГА"')
+    expect(deploy?.run).toContain("--target D1BackupSchedule")
+    expect(backup?.run).toContain("script/d1-backup-rehearsal.ts")
+    expect(restore?.run).toContain("env -u CLOUDFLARE_API_TOKEN bun script/d1-restore-drill.ts")
+    expect(source).toContain("D1_RESTORE_DRILL_API_TOKEN: ${{ secrets.D1_RESTORE_DRILL_API_TOKEN }}")
+    expect(source).toContain("SST_SECRET_D1BackupApiToken: ${{ secrets.D1_BACKUP_API_TOKEN }}")
+    expect(source).not.toContain("stage=production")
+    expect(consoleSource).toContain("{ dependsOn: [d1BackupRetention] }")
+    expect(configSource).toContain('flag("MONGOLGPT_DEPLOY_D1_BACKUP_ONLY")')
+    expect(preflightSource).toContain('process.argv.includes("--d1-backup-only")')
+    expect(docs).toContain("D1 нөөцлөлт ба сэргээх сургуулилалт")
   })
 
   test("uses Cloudflare Cron and KV for service monitoring without Honeycomb or Discord", async () => {

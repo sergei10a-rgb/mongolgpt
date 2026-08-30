@@ -23,6 +23,7 @@ const booleanVariables = [
   "MONGOLGPT_DEPLOY_DOCS_ONLY",
   "MONGOLGPT_DEPLOY_APP_ONLY",
   "MONGOLGPT_DEPLOY_CONSOLE_ONLY",
+  "MONGOLGPT_DEPLOY_D1_BACKUP_ONLY",
 ] as const
 
 export const modelSecretNames = Array.from({ length: 30 }, (_, index) => `MONGOLGPT_GATEWAY_MODELS${index + 1}`)
@@ -64,7 +65,7 @@ export type DeploymentPreflightResult = {
   stage: string
   domain: string
   stageDomain: string
-  scope: "full" | "auth-bootstrap" | "docs-only" | "app-only" | "console-only" | "runtime-only"
+  scope: "full" | "auth-bootstrap" | "docs-only" | "app-only" | "console-only" | "d1-backup-only" | "runtime-only"
   hostedServices: boolean
   adminEnabled: boolean
   backupsEnabled: boolean
@@ -80,7 +81,7 @@ export function preflightDeployment(input: {
   requireCloudflareCredentials?: boolean
   requireDeploymentSecrets?: boolean
   requireHostedServices?: boolean
-  scope?: "full" | "auth-bootstrap" | "docs-only" | "app-only" | "console-only" | "runtime-only"
+  scope?: "full" | "auth-bootstrap" | "docs-only" | "app-only" | "console-only" | "d1-backup-only" | "runtime-only"
 }): DeploymentPreflightResult {
   const issues: string[] = []
   const warnings: string[] = []
@@ -101,6 +102,9 @@ export function preflightDeployment(input: {
   if (scope === "console-only" && stage !== "dev") {
     issues.push("Console-only scope-ийг зөвхөн dev орчинд ашиглана.")
   }
+  if (scope === "d1-backup-only" && stage !== "dev") {
+    issues.push("D1-backup-only scope-ийг зөвхөн dev орчинд ашиглана.")
+  }
   if (scope === "runtime-only" && stage !== "dev") {
     issues.push("Runtime-only scope-ийг зөвхөн dev орчинд ашиглана.")
   }
@@ -119,8 +123,11 @@ export function preflightDeployment(input: {
   const deployDocsOnly = enabled(env.MONGOLGPT_DEPLOY_DOCS_ONLY)
   const deployAppOnly = enabled(env.MONGOLGPT_DEPLOY_APP_ONLY)
   const deployConsoleOnly = enabled(env.MONGOLGPT_DEPLOY_CONSOLE_ONLY)
-  if ([deployDocsOnly, deployAppOnly, deployConsoleOnly].filter(Boolean).length > 1) {
-    issues.push("MONGOLGPT_DEPLOY_DOCS_ONLY, MONGOLGPT_DEPLOY_APP_ONLY, MONGOLGPT_DEPLOY_CONSOLE_ONLY-г хамтад нь ашиглахгүй.")
+  const deployD1BackupOnly = enabled(env.MONGOLGPT_DEPLOY_D1_BACKUP_ONLY)
+  if ([deployDocsOnly, deployAppOnly, deployConsoleOnly, deployD1BackupOnly].filter(Boolean).length > 1) {
+    issues.push(
+      "MONGOLGPT_DEPLOY_DOCS_ONLY, MONGOLGPT_DEPLOY_APP_ONLY, MONGOLGPT_DEPLOY_CONSOLE_ONLY, MONGOLGPT_DEPLOY_D1_BACKUP_ONLY-г хамтад нь ашиглахгүй.",
+    )
   }
   if (scope === "docs-only" && !deployDocsOnly) {
     issues.push("Docs-only scope нь MONGOLGPT_DEPLOY_DOCS_ONLY=true байхыг шаардана.")
@@ -149,6 +156,15 @@ export function preflightDeployment(input: {
   if (scope === "console-only" && !hostedServices) {
     issues.push("Console-only scope нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true байхыг шаардана.")
   }
+  if (scope === "d1-backup-only" && !deployD1BackupOnly) {
+    issues.push("D1-backup-only scope нь MONGOLGPT_DEPLOY_D1_BACKUP_ONLY=true байхыг шаардана.")
+  }
+  if (scope !== "d1-backup-only" && deployD1BackupOnly) {
+    issues.push("MONGOLGPT_DEPLOY_D1_BACKUP_ONLY-г зөвхөн d1-backup-only scope-той ашиглана.")
+  }
+  if (scope === "d1-backup-only" && !hostedServices) {
+    issues.push("D1-backup-only scope нь MONGOLGPT_ENABLE_HOSTED_SERVICES=true байхыг шаардана.")
+  }
   const adminEnabled = enabled(env.MONGOLGPT_ENABLE_ADMIN)
   const backupsEnabled = enabled(env.MONGOLGPT_ENABLE_D1_BACKUPS)
   const monitoringEnabled = enabled(env.MONGOLGPT_ENABLE_MONITORING)
@@ -163,11 +179,13 @@ export function preflightDeployment(input: {
     "MONGOLGPT_ENABLE_SHARE_SERVICE",
     "MONGOLGPT_ENABLE_SYNC_SERVICE",
   ] as const
-  if (scope === "app-only" || scope === "console-only" || scope === "runtime-only") {
+  if (scope === "app-only" || scope === "console-only" || scope === "d1-backup-only" || scope === "runtime-only") {
     const disabledFlags =
       scope === "console-only"
         ? [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_D1_BACKUPS"]
-        : [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_D1_BACKUPS", "MONGOLGPT_ENABLE_TURNSTILE"]
+        : scope === "d1-backup-only"
+          ? [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_TURNSTILE"]
+          : [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_D1_BACKUPS", "MONGOLGPT_ENABLE_TURNSTILE"]
     for (const name of disabledFlags as readonly string[]) {
       if (enabled(env[name])) issues.push(`${name} нь ${scope} deploy үед false байна.`)
     }
@@ -180,6 +198,8 @@ export function preflightDeployment(input: {
       warnings.push(
         "Зөвхөн Console болон AuthApi target deploy хийнэ; route ownership хадгалж runtime, database, payments, docs болон admin target-уудыг шууд deploy хийхгүй.",
       )
+    } else if (scope === "d1-backup-only") {
+      warnings.push("Зөвхөн dev D1 backup bucket, retention, Workflow болон Cron target-уудыг deploy хийнэ.")
     } else {
       warnings.push("Зөвхөн dev runtime Worker болон Cloudflare Sandbox container deploy хийнэ.")
     }
@@ -201,6 +221,9 @@ export function preflightDeployment(input: {
   }
   if (backupsEnabled && !hostedServices) {
     issues.push("MONGOLGPT_ENABLE_D1_BACKUPS нь байршуулсан үйлчилгээнүүд асаалттай үед л true байж болно.")
+  }
+  if (scope === "d1-backup-only" && !backupsEnabled) {
+    issues.push("D1-backup-only scope нь MONGOLGPT_ENABLE_D1_BACKUPS=true байхыг шаардана.")
   }
   if (paymentEnvironment !== "disabled" && !hostedServices) {
     issues.push("MONGOLGPT_PAYMENT_ENVIRONMENT нь hosted services асаалттай үед л sandbox эсвэл production байж болно.")
@@ -251,40 +274,50 @@ export function preflightDeployment(input: {
     issues.push("Legacy Stripe billing хаалттай. MongolGPT-ийн төлбөр Bonum + QPay adapter-аар хэрэгжинэ.")
   }
 
-  if (hostedServices && stage !== "production" && scope !== "app-only" && scope !== "runtime-only") {
+  if (
+    hostedServices &&
+    stage !== "production" &&
+    scope !== "app-only" &&
+    scope !== "d1-backup-only" &&
+    scope !== "runtime-only"
+  ) {
     requireValue("MONGOLGPT_AUTH_EMAIL_DOMAINS", env.MONGOLGPT_AUTH_EMAIL_DOMAINS, issues)
   }
   if (hostedServices && requireDeploymentSecrets) {
-    if (scope !== "auth-bootstrap" && scope !== "console-only") {
-      validateSecretKey("MONGOLGPT_RUNTIME_SECRET", env.MONGOLGPT_RUNTIME_SECRET, issues)
-    }
-    validateSecretKey("MONGOLGPT_RUNTIME_AUTH_SECRET", env.MONGOLGPT_RUNTIME_AUTH_SECRET, issues)
-    if (scope !== "runtime-only") {
-      const linkedRuntimeAuthSecret = deploymentSecret(env, "MongolGPTRuntimeAuthSecret")
-      validateSecretKey("SST_SECRET_MongolGPTRuntimeAuthSecret", linkedRuntimeAuthSecret, issues)
-      if (
-        env.MONGOLGPT_RUNTIME_AUTH_SECRET?.trim() &&
-        linkedRuntimeAuthSecret?.trim() &&
-        env.MONGOLGPT_RUNTIME_AUTH_SECRET !== linkedRuntimeAuthSecret
-      ) {
-        issues.push("MONGOLGPT_RUNTIME_AUTH_SECRET болон SST_SECRET_MongolGPTRuntimeAuthSecret ижил утгатай байна.")
+    if (scope === "d1-backup-only") {
+      requireValue("D1_BACKUP_API_TOKEN", deploymentSecret(env, "D1BackupApiToken"), issues)
+    } else {
+      if (scope !== "auth-bootstrap" && scope !== "console-only") {
+        validateSecretKey("MONGOLGPT_RUNTIME_SECRET", env.MONGOLGPT_RUNTIME_SECRET, issues)
       }
-      if (backupsEnabled) requireValue("D1_BACKUP_API_TOKEN", deploymentSecret(env, "D1BackupApiToken"), issues)
-      const oauth = inspectOAuthProviderConfiguration({
-        stage,
-        githubClientID: deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"),
-        githubClientSecret: deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"),
-        googleClientID: deploymentSecret(env, "GOOGLE_CLIENT_ID"),
-      })
-      issues.push(...oauth.issues)
-      validateSecretKey("BYOK_CREDENTIALS_KEY_V1", deploymentSecret(env, "ByokCredentialsKeyV1"), issues)
-      validatePlanConfiguration(deploymentSecret(env, "MONGOLGPT_PLAN_LIMITS"), issues)
-      validateSecretKey(
-        "MONGOLGPT_GATEWAY_SESSION_SECRET",
-        deploymentSecret(env, "MONGOLGPT_GATEWAY_SESSION_SECRET"),
-        issues,
-      )
-      if (scope === "full") validateModelConfiguration(modelConfiguration(env), issues, stage)
+      validateSecretKey("MONGOLGPT_RUNTIME_AUTH_SECRET", env.MONGOLGPT_RUNTIME_AUTH_SECRET, issues)
+      if (scope !== "runtime-only") {
+        const linkedRuntimeAuthSecret = deploymentSecret(env, "MongolGPTRuntimeAuthSecret")
+        validateSecretKey("SST_SECRET_MongolGPTRuntimeAuthSecret", linkedRuntimeAuthSecret, issues)
+        if (
+          env.MONGOLGPT_RUNTIME_AUTH_SECRET?.trim() &&
+          linkedRuntimeAuthSecret?.trim() &&
+          env.MONGOLGPT_RUNTIME_AUTH_SECRET !== linkedRuntimeAuthSecret
+        ) {
+          issues.push("MONGOLGPT_RUNTIME_AUTH_SECRET болон SST_SECRET_MongolGPTRuntimeAuthSecret ижил утгатай байна.")
+        }
+        if (backupsEnabled) requireValue("D1_BACKUP_API_TOKEN", deploymentSecret(env, "D1BackupApiToken"), issues)
+        const oauth = inspectOAuthProviderConfiguration({
+          stage,
+          githubClientID: deploymentSecret(env, "GITHUB_CLIENT_ID_CONSOLE"),
+          githubClientSecret: deploymentSecret(env, "GITHUB_CLIENT_SECRET_CONSOLE"),
+          googleClientID: deploymentSecret(env, "GOOGLE_CLIENT_ID"),
+        })
+        issues.push(...oauth.issues)
+        validateSecretKey("BYOK_CREDENTIALS_KEY_V1", deploymentSecret(env, "ByokCredentialsKeyV1"), issues)
+        validatePlanConfiguration(deploymentSecret(env, "MONGOLGPT_PLAN_LIMITS"), issues)
+        validateSecretKey(
+          "MONGOLGPT_GATEWAY_SESSION_SECRET",
+          deploymentSecret(env, "MONGOLGPT_GATEWAY_SESSION_SECRET"),
+          issues,
+        )
+        if (scope === "full") validateModelConfiguration(modelConfiguration(env), issues, stage)
+      }
     }
   }
   validatePaymentConfiguration({

@@ -941,6 +941,54 @@ describe("Cloudflare deployment preflight", () => {
     )
   })
 
+  test("allows d1-backup-only preflight only for isolated dev backup automation", () => {
+    const result = preflightDeployment({
+      stage: "dev",
+      env: {
+        ...cloudflare,
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_ENABLE_D1_BACKUPS: "true",
+        MONGOLGPT_DEPLOY_D1_BACKUP_ONLY: "true",
+        SST_SECRET_D1BackupApiToken: "dev-d1-backup-token",
+      },
+      scope: "d1-backup-only",
+    })
+    expect(result.scope).toBe("d1-backup-only")
+    expect(result.backupsEnabled).toBe(true)
+    expect(result.warnings).toContain(
+      "Зөвхөн dev D1 backup bucket, retention, Workflow болон Cron target-уудыг deploy хийнэ.",
+    )
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_D1_BACKUPS: "true",
+            MONGOLGPT_DEPLOY_D1_BACKUP_ONLY: "true",
+            SST_SECRET_D1BackupApiToken: "dev-d1-backup-token",
+          },
+          scope: "d1-backup-only",
+        }),
+      ["зөвхөн dev"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_DEPLOY_D1_BACKUP_ONLY: "true",
+          },
+          scope: "d1-backup-only",
+        }),
+      ["MONGOLGPT_ENABLE_D1_BACKUPS=true", "D1_BACKUP_API_TOKEN"],
+    )
+  })
+
   test("allows runtime-only preflight with only the isolated dev runtime secrets", () => {
     const runtime = {
       ...cloudflare,
