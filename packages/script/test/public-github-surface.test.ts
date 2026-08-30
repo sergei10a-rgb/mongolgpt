@@ -77,4 +77,19 @@ describe("public GitHub surface", () => {
     )
     expect(recorder.homepage).toBe("https://github.com/sergei10a-rgb/mongolgpt/tree/main/packages/http-recorder")
   })
+
+  test("keeps CLI installation failures and package-manager descriptions Mongolian", () => {
+    const publish = read("packages/mongolgpt/script/publish.ts")
+    const postinstall = read("packages/mongolgpt/script/postinstall.mjs")
+
+    expect(publish).toContain("Алдаа: ${pkg.name} багцын суулгасны дараах скрипт ажиллаагүй байна.")
+    expect(publish).toContain("Монгол хэрэглэгчдэд зориулсан терминалын AI кодын агент")
+    expect(postinstall).toContain("Таны багцын менежер MongolGPT CLI-ийн тохирох багцыг суулгаж чадсангүй.")
+
+    for (const source of [publish, postinstall]) {
+      expect(source).not.toContain("postinstall script was not run")
+      expect(source).not.toContain("Binary not found at")
+      expect(source).not.toContain("Mongolian-first AI coding agent built for the terminal")
+    }
+  })
 })

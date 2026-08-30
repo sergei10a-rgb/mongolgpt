@@ -119,7 +119,7 @@ function packageNames() {
 function resolveBinary(name) {
   const packageJsonPath = require.resolve(`${name}/package.json`)
   const binaryPath = path.join(path.dirname(packageJsonPath), "bin", sourceBinary)
-  if (!fs.existsSync(binaryPath)) throw new Error(`Binary not found at ${binaryPath}`)
+  if (!fs.existsSync(binaryPath)) throw new Error(`MongolGPT ажиллуулах файл олдсонгүй: ${binaryPath}`)
   return binaryPath
 }
 
@@ -144,7 +144,7 @@ function installPackage(name) {
 }
 
 function copyBinary(source, target) {
-  if (!fs.existsSync(source)) throw new Error(`Binary not found at ${source}`)
+  if (!fs.existsSync(source)) throw new Error(`MongolGPT ажиллуулах файл олдсонгүй: ${source}`)
   fs.mkdirSync(path.dirname(target), { recursive: true })
   if (fs.existsSync(target)) fs.unlinkSync(target)
   try {
@@ -175,9 +175,9 @@ function main() {
   }
 
   throw new Error(
-    `It seems your package manager failed to install the right mongolgpt CLI package. Try manually installing ${packageNames()
+    `Таны багцын менежер MongolGPT CLI-ийн тохирох багцыг суулгаж чадсангүй. ${packageNames()
       .map((name) => JSON.stringify(name))
-      .join(" or ")}.`,
+      .join(" эсвэл ")} багцыг гараар суулгаад дахин оролдоно уу.`,
   )
 }
 

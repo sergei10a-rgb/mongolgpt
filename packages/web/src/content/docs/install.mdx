@@ -3,8 +3,9 @@ title: MongolGPT суулгах
 description: MongolGPT-ийн Windows ширээний програм, CLI болон эх кодын суулгалтын Монгол заавар.
 ---
 
-MongolGPT-ийн албан ёсны суулгагч, CLI архив болон checksum файлыг зөвхөн
-[GitHub Releases](https://github.com/sergei10a-rgb/mongolgpt/releases)-ээс татна. Танихгүй домэйн, зар сурталчилгааны
+MongolGPT-ийн албан ёсны Desktop суулгагч, CLI архив болон checksum файлыг
+[GitHub Releases](https://github.com/sergei10a-rgb/mongolgpt/releases)-ээс татна. CLI-г мөн албан ёсны
+[`mongolgpt` npm багцаар](https://www.npmjs.com/package/mongolgpt) суулгаж болно. Танихгүй домэйн, зар сурталчилгааны
 татах товч эсвэл гуравдагч талын толин сайтаас файл бүү ажиллуул.
 
 ## Windows-ийн ширээний програм
@@ -23,6 +24,27 @@ MongolGPT-ийн албан ёсны суулгагч, CLI архив болон
 :::
 
 ## CLI суулгах
+
+### npm багцаар суулгах
+
+Node.js 20 буюу түүнээс шинэ хувилбар суусан бол npm платформдоо тохирох MongolGPT ажиллуулах файлыг автоматаар сонгоно.
+
+```bash
+npm install --global mongolgpt
+mongolgpt --version
+```
+
+`postinstall` скрипт ажиллаагүй гэсэн Монгол алдаа гарвал `--ignore-scripts` тохиргоо ашиглаагүй эсэхээ шалгаад дахин суулгана.
+
+```bash
+npm uninstall --global mongolgpt
+npm install --global mongolgpt --ignore-scripts=false
+```
+
+Байгууллагын аюулгүй байдлын бодлого суулгалтын скриптийг хориглодог бол уг хамгаалалтыг дур мэдэн тойрохгүй. Доорх GitHub
+Release архиваас тохирох файлаа татаж checksum-ийг тулгана.
+
+### Release архиваар суулгах
 
 Releases хуудаснаас үйлдлийн систем, процессортоо тохирох архивыг сонгоно.
 

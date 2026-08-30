@@ -89,6 +89,15 @@ describe("documentation product contract", () => {
     expect(await Bun.file(new URL("zen.mdx", docs)).exists()).toBe(false)
   })
 
+  test("documents the published npm CLI without hiding the verified release fallback", async () => {
+    const guide = await Bun.file(new URL("install.mdx", docs)).text()
+
+    expect(guide).toContain("https://www.npmjs.com/package/mongolgpt")
+    expect(guide).toContain("npm install --global mongolgpt")
+    expect(guide).toContain("npm install --global mongolgpt --ignore-scripts=false")
+    expect(guide).toMatch(/GitHub\s+Release архиваас тохирох файлаа татаж checksum-ийг тулгана/)
+  })
+
   test("keeps MongolGPT account login separate from provider credentials in CLI guidance", async () => {
     const [cli, providers, troubleshooting] = await Promise.all([
       Bun.file(new URL("cli.mdx", docs)).text(),
