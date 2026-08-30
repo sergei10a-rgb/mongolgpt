@@ -7,6 +7,24 @@ const execute = (client: HttpClient.HttpClient) =>
   HttpClientRequest.get("https://example.test/ripgrep.zip").pipe(RipgrepBinary.downloadHttpClient(client).execute)
 
 describe("Ripgrep binary download", () => {
+  test("does not cache an interrupted binary resolution", async () => {
+    let attempts = 0
+    const cached = await Effect.runPromise(
+      RipgrepBinary.cacheSuccess(
+        Effect.suspend(() => {
+          attempts += 1
+          return attempts === 1 ? Effect.interrupt : Effect.succeed("rg")
+        }),
+      ),
+    )
+
+    const interrupted = await Effect.runPromiseExit(cached)
+    expect(interrupted._tag).toBe("Failure")
+    expect(await Effect.runPromise(cached)).toBe("rg")
+    expect(await Effect.runPromise(cached)).toBe("rg")
+    expect(attempts).toBe(2)
+  })
+
   test("retries transient server responses and accepts the third attempt", async () => {
     let attempts = 0
     const client = HttpClient.make((request) => {

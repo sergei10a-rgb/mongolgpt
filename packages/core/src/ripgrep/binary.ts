@@ -1,5 +1,5 @@
 import path from "path"
-import { Context, Effect, Layer, Schedule, Stream } from "effect"
+import { Context, Duration, Effect, Exit, Layer, Schedule, Stream } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -28,6 +28,12 @@ export namespace RipgrepBinary {
   }
 
   export class Service extends Context.Service<Service, Interface>()("@mongolgpt/RipgrepBinary") {}
+
+  export const cacheSuccess = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    Effect.gen(function* () {
+      const [cached, invalidate] = yield* Effect.cachedInvalidateWithTTL(effect, Duration.infinity)
+      return cached.pipe(Effect.onExit((exit) => (Exit.isFailure(exit) ? invalidate : Effect.void)))
+    })
 
   export const downloadHttpClient = (client: HttpClient.HttpClient) =>
     HttpClient.filterStatusOk(
@@ -109,7 +115,7 @@ export namespace RipgrepBinary {
       }, Effect.scoped)
 
       return Service.of({
-        filepath: yield* Effect.cached(
+        filepath: yield* cacheSuccess(
           Effect.gen(function* () {
             const system = yield* Effect.sync(() => which(process.platform === "win32" ? "rg.exe" : "rg"))
             if (system && (yield* fs.isFile(system).pipe(Effect.orDie))) return system
