@@ -5,6 +5,7 @@ const docs = new URL("../../web/src/content/docs/", import.meta.url)
 const astro = new URL("../../web/astro.config.mjs", import.meta.url)
 const legacyRedirects = new URL("../../web/legacy-mn-redirects.mjs", import.meta.url)
 const mobileMenu = new URL("../../web/src/components/MobileMenuToggle.astro", import.meta.url)
+const customStyles = new URL("../../web/src/styles/custom.css", import.meta.url)
 const install = new URL("../../../install", import.meta.url)
 const workflows = new URL("../../../.github/workflows/", import.meta.url)
 const productSourceRoots = [
@@ -123,6 +124,15 @@ describe("documentation product contract", () => {
     expect(faq).toContain("Ширээний програмын Ollama, LM Studio түргэн тохиргоо")
   })
 
+  test("keeps long documentation identifiers readable in mobile tables", async () => {
+    const styles = await Bun.file(customStyles).text()
+
+    expect(styles).toContain(".sl-markdown-content table")
+    expect(styles).toContain("overflow-x: auto")
+    expect(styles).toContain(".sl-markdown-content table code")
+    expect(styles).toContain("white-space: nowrap")
+  })
+
   test("publishes dedicated Mongolian service, privacy, billing, and admin guidance", async () => {
     const [faq, privacy, billing, admin, deployment, backup, acp, config] = await Promise.all([
       Bun.file(new URL("faq.mdx", docs)).text(),
@@ -163,6 +173,10 @@ describe("documentation product contract", () => {
     expect(deployment).not.toContain('$env:MONGOLGPT_ENABLE_HOSTED_SERVICES="false"')
     expect(deployment).toContain("`MONGOLGPT_RUNTIME_SECRET`")
     expect(deployment).toContain("`MONGOLGPT_RUNTIME_AUTH_SECRET`")
+    expect(deployment).toContain("`OPENROUTER_API_KEY`")
+    expect(deployment).toContain("`NVIDIA_NIM_API_KEY`")
+    expect(deployment).toContain("Multipart catalog-ийг гараар JSON болгон бэлдэх шаардлагагүй")
+    expect(deployment).toContain("Cloudflare-ийн нөөц өөрчлөхөөс өмнө хаалттай зогсоно")
     expect(deployment).toContain("хоорондоо ялгаатай хоёр тогтвортой нууц утга")
     expect(deployment).toContain("криптографын аюулгүй санамсаргүй үүсгүүрээр")
     expect(deployment).toContain("https://auth.dev.mgpt.mn/github/callback")

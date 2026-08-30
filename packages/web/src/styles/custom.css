@@ -406,6 +406,26 @@ nav.sidebar ul.top-level > li > details > summary .group-label > span {
   box-shadow: none;
 }
 
+@media (max-width: 768px) {
+  .sl-markdown-content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sl-markdown-content table th,
+  .sl-markdown-content table td {
+    min-width: 8rem;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .sl-markdown-content table code {
+    white-space: nowrap;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .shiki,
   .shiki span {
