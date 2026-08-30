@@ -43,6 +43,16 @@ test("hydrates the production console build on desktop and mobile", async ({ pag
   }))
 
   expect(mobile.scrollWidth).toBeLessThanOrEqual(mobile.clientWidth)
+
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto("/pricing", { waitUntil: "domcontentloaded" })
+  for (const plan of ["basic", "pro", "max"] as const) {
+    await expect(page.locator(`[data-plan="${plan}"] [data-slot="plan-action"]`)).toHaveAttribute(
+      "href",
+      `/auth?plan=${plan}`,
+    )
+  }
+
   expect(pageErrors).toEqual([])
   expect(consoleErrors).toEqual([])
 })

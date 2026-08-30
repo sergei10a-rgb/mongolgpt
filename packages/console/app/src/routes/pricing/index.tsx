@@ -13,6 +13,7 @@ import { LocaleLinks } from "~/component/locale-links"
 import { config } from "~/config"
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
+import { pricingAuthRoute } from "~/lib/billing-route"
 import { publicMetadataBaseUrl } from "~/lib/public-metadata"
 
 const getPricingCatalog = query(async () => {
@@ -186,7 +187,7 @@ export default function Pricing() {
                       )}
                     </For>
                   </ul>
-                  <A href={language.route("/auth")} data-slot="plan-action">
+                  <A href={language.route(pricingAuthRoute(plan.id))} data-slot="plan-action">
                     {plan.action}
                   </A>
                 </article>

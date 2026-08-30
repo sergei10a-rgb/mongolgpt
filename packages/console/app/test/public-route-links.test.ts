@@ -7,7 +7,8 @@ const source = (path: string) => readFileSync(resolve(import.meta.dir, "..", "sr
 describe("public route link contract", () => {
   test("pricing page keeps plan CTAs locale-aware", () => {
     const pricing = source("routes/pricing/index.tsx")
-    expect(pricing).toContain('href={language.route("/auth")}')
+    expect(pricing).toContain("pricingAuthRoute(plan.id)")
+    expect(pricing).toContain("href={language.route(pricingAuthRoute(plan.id))}")
     expect(pricing).not.toContain('href="/auth"')
   })
 

@@ -11,10 +11,11 @@ import {
   type PaymentCancellationState,
 } from "@mongolgpt/console-core/payment-cancellation-contract.js"
 import { Resource } from "@mongolgpt/console-resource"
-import { action, createAsync, json, query, useAction, useParams, useSubmission } from "@solidjs/router"
+import { action, createAsync, json, query, useAction, useParams, useSearchParams, useSubmission } from "@solidjs/router"
 import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js"
 import { withActor } from "~/context/auth.withActor"
 import { safeHttpsHref, safePaymentDeepLink, safeQrImage } from "~/lib/payment-display"
+import { selectedPaidPlan } from "~/lib/billing-route"
 import { PaymentServiceClientError } from "~/lib/payment-service"
 import { requestSubscriptionCheckout, requestSubscriptionCheckoutCancellation } from "~/lib/payment-service.server"
 import styles from "./subscription-section.module.css"
@@ -116,12 +117,13 @@ export const cancelPlanCheckout = action(async (workspaceID: string, invoiceID: 
 
 export function SubscriptionSection() {
   const params = useParams()
+  const [searchParams] = useSearchParams()
   const billing = createAsync(() => querySubscriptionBilling(params.id!))
   const createCheckout = useAction(createPlanCheckout)
   const submission = useSubmission(createPlanCheckout)
   const cancelCheckout = useAction(cancelPlanCheckout)
   const cancellationSubmission = useSubmission(cancelPlanCheckout)
-  const [plan, setPlan] = createSignal<(typeof planOrder)[number]>("pro")
+  const [plan, setPlan] = createSignal<(typeof planOrder)[number]>(selectedPaidPlan(searchParams.plan) ?? "pro")
   const [provider, setProvider] = createSignal<keyof typeof providerNames>("qpay")
   const [requestKey, setRequestKey] = createSignal("")
   const [cancellationRequest, setCancellationRequest] = createSignal<{ invoiceID: string; key: string }>()

@@ -1,4 +1,4 @@
-import { query, useParams, action, createAsync, redirect, useSubmission } from "@solidjs/router"
+import { query, useParams, action, createAsync, redirect, useSearchParams, useSubmission } from "@solidjs/router"
 import { For, createEffect, createSignal } from "solid-js"
 import { withActor } from "~/context/auth.withActor"
 import { Actor } from "@mongolgpt/console-core/actor.js"
@@ -9,6 +9,7 @@ import { Workspace } from "@mongolgpt/console-core/workspace.js"
 import { Dropdown, DropdownItem } from "~/component/dropdown"
 import { Modal } from "~/component/modal"
 import { useI18n } from "~/context/i18n"
+import { workspacePlanRoute } from "~/lib/billing-route"
 import "./workspace-picker.css"
 
 const getWorkspaces = query(async () => {
@@ -37,16 +38,18 @@ const getWorkspaces = query(async () => {
 const createWorkspace = action(async (form: FormData) => {
   "use server"
   const name = form.get("workspaceName") as string
+  const plan = form.get("plan")
   if (name?.trim()) {
     return withActor(async () => {
       const workspaceID = await Workspace.create({ name: name.trim() })
-      return redirect(`/workspace/${workspaceID}`)
+      return redirect(workspacePlanRoute(workspaceID, plan))
     })
   }
 }, "createWorkspace")
 
 export function WorkspacePicker() {
   const params = useParams()
+  const [searchParams] = useSearchParams()
   const i18n = useI18n()
   const workspaces = createAsync(() => getWorkspaces())
   const submission = useSubmission(createWorkspace)
@@ -66,7 +69,7 @@ export function WorkspacePicker() {
 
   const handleSelectWorkspace = (workspaceID: string) => {
     if (workspaceID === params.id) return
-    window.location.href = `/workspace/${workspaceID}`
+    window.location.href = workspacePlanRoute(workspaceID, searchParams.plan)
   }
 
   // Reset signals when workspace ID changes
@@ -93,6 +96,7 @@ export function WorkspacePicker() {
       <Modal open={showForm()} onClose={() => setShowForm(false)} title={i18n.t("workspace.modal.title")}>
         <div data-component="workspace-create-modal">
           <form data-slot="create-form" action={createWorkspace} method="post">
+            <input type="hidden" name="plan" value={searchParams.plan ?? ""} />
             <div data-slot="create-input-group">
               <input
                 ref={inputRef}
