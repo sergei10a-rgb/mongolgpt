@@ -106,6 +106,7 @@ try {
     $result.language -ne "mn" -or
     $result.onboardingStage -ne "account" -or
     $result.accountGateVisible -ne $true -or
+    $result.accountLogo -ne "mongolgpt" -or
     $result.accountHeading -ne "MongolGPT бүртгэлээрээ нэвтэрнэ үү" -or
     $result.loginAction -ne "Бүртгүүлэх эсвэл нэвтрэх"
   ) {
@@ -150,6 +151,7 @@ try {
     language = $result.language
     onboardingStage = $result.onboardingStage
     accountGateVisible = $result.accountGateVisible
+    accountLogo = $result.accountLogo
     accountHeading = $result.accountHeading
     loginAction = $result.loginAction
     functional = $result.functional

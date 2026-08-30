@@ -33,6 +33,7 @@ const accountGate = {
   language: "mn",
   onboardingStage: "account",
   accountGateVisible: true,
+  accountLogo: "mongolgpt",
   accountHeading: "MongolGPT бүртгэлээрээ нэвтэрнэ үү",
   loginAction: "Бүртгүүлэх эсвэл нэвтрэх",
 }
@@ -108,6 +109,7 @@ describe("desktop release smoke", () => {
     const webContents = renderer(undefined, [
       { ...accountGate, language: "en" },
       { ...accountGate, onboardingStage: "providers" },
+      { ...accountGate, accountLogo: "opencode" },
       { ...accountGate, loginAction: 42 },
     ])
 

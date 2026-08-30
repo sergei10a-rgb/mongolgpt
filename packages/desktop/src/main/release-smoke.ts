@@ -11,6 +11,7 @@ export type DesktopAccountGateState = {
   language: string
   onboardingStage: string
   accountGateVisible: boolean
+  accountLogo: string
   accountHeading: string
   loginAction: string
 }
@@ -19,18 +20,22 @@ const expectedAccountGate = {
   language: "mn",
   onboardingStage: "account",
   accountGateVisible: true,
+  accountLogo: "mongolgpt",
   accountHeading: "MongolGPT бүртгэлээрээ нэвтэрнэ үү",
   loginAction: "Бүртгүүлэх эсвэл нэвтрэх",
 } satisfies DesktopAccountGateState
 
 const accountGateProbe = `(() => {
   const root = document.querySelector('[data-mongolgpt-account-onboarding-stage]')
+  const logo = document.querySelector('[data-mongolgpt-account-login-logo]')
+  const logoSymbol = logo?.querySelector('use')?.getAttribute('href')?.split('#').at(-1) ?? ''
   const heading = document.querySelector('[data-mongolgpt-account-login-heading]')
   const action = document.querySelector('[data-mongolgpt-account-login-action]')
   return {
     language: document.documentElement.lang,
     onboardingStage: root?.getAttribute('data-mongolgpt-account-onboarding-stage') ?? '',
     accountGateVisible: root instanceof HTMLElement && heading instanceof HTMLElement && action instanceof HTMLElement,
+    accountLogo: logo instanceof SVGElement ? logoSymbol : '',
     accountHeading: heading?.textContent?.trim() ?? '',
     loginAction: action?.textContent?.trim() ?? '',
   }
@@ -41,12 +46,14 @@ function accountGateState(value: unknown): DesktopAccountGateState | undefined {
   const language = Reflect.get(value, "language")
   const onboardingStage = Reflect.get(value, "onboardingStage")
   const accountGateVisible = Reflect.get(value, "accountGateVisible")
+  const accountLogo = Reflect.get(value, "accountLogo")
   const accountHeading = Reflect.get(value, "accountHeading")
   const loginAction = Reflect.get(value, "loginAction")
   if (
     typeof language !== "string" ||
     typeof onboardingStage !== "string" ||
     typeof accountGateVisible !== "boolean" ||
+    typeof accountLogo !== "string" ||
     typeof accountHeading !== "string" ||
     typeof loginAction !== "string"
   )
@@ -55,6 +62,7 @@ function accountGateState(value: unknown): DesktopAccountGateState | undefined {
     language,
     onboardingStage,
     accountGateVisible,
+    accountLogo,
     accountHeading,
     loginAction,
   }
@@ -66,6 +74,7 @@ function accountGateReady(state: DesktopAccountGateState | undefined): state is 
     state.language === expectedAccountGate.language &&
     state.onboardingStage === expectedAccountGate.onboardingStage &&
     state.accountGateVisible === expectedAccountGate.accountGateVisible &&
+    state.accountLogo === expectedAccountGate.accountLogo &&
     state.accountHeading === expectedAccountGate.accountHeading &&
     state.loginAction === expectedAccountGate.loginAction
   )

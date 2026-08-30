@@ -217,7 +217,11 @@ function DialogAccountOnboarding(props: {
           <Match when={!signedIn()}>
             <div class="px-2.5 pb-8 flex flex-col gap-6">
               <div class="flex items-center gap-4">
-                <ProviderIcon id="mongolgpt" class="size-8 shrink-0 icon-strong-base" />
+                <ProviderIcon
+                  id="mongolgpt"
+                  class="size-8 shrink-0 icon-strong-base"
+                  data-mongolgpt-account-login-logo
+                />
                 <div class="flex min-w-0 flex-col gap-1">
                   <div class="text-16-medium text-text-strong" data-mongolgpt-account-login-heading>
                     {language.t("onboarding.account.heading")}
