@@ -86,6 +86,33 @@ export async function cancelProviderResponse(response: Response) {
   if (response.body) await response.body.cancel().catch(() => undefined)
 }
 
+export async function fetchWith429Retry(
+  url: string,
+  options: RequestInit,
+  dependencies: {
+    request?: typeof fetch
+    sleep?: (delay: number) => Promise<void>
+    maxRetries?: number
+  } = {},
+) {
+  const request = dependencies.request ?? fetch
+  const sleep = dependencies.sleep ?? ((delay: number) => new Promise<void>((resolve) => setTimeout(resolve, delay)))
+  const maxRetries = dependencies.maxRetries ?? 3
+
+  const attempt = async (retryCount: number): Promise<Response> => {
+    const response = await request(url, options)
+    if (response.status !== 429 || retryCount >= maxRetries) return response
+
+    const delay = inlineProviderRetryDelayMs(response.headers.get("retry-after"), retryCount)
+    if (delay === undefined) return response
+    await cancelProviderResponse(response)
+    await sleep(delay)
+    return attempt(retryCount + 1)
+  }
+
+  return attempt(0)
+}
+
 export async function runProviderAttempt<T>(input: {
   retry: ProviderFailoverRetry
   policy: ProviderFailoverPolicy

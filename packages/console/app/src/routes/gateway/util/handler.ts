@@ -64,8 +64,7 @@ import { freeAutoReservationUpperBound, reserveFreeAutoQuota } from "./free-auto
 import { planQuotaReservationBounds, reservePlanQuota } from "./plan-quota"
 import {
   acquireProviderFailoverRoute,
-  cancelProviderResponse,
-  inlineProviderRetryDelayMs,
+  fetchWith429Retry,
   partitionProviderFailoverRoutes,
   runProviderAttempt,
   shouldFailoverProviderStatus,
@@ -149,7 +148,6 @@ export async function handler(
   type Limits = Awaited<ReturnType<typeof Subscription.getLimits>>
 
   const MAX_FAILOVER_RETRIES = 3
-  const MAX_429_RETRIES = 3
   const MINUTE_IN_SECONDS = 60
   const locale = localeFromRequest(input.request)
   const dict = i18n(locale)
@@ -1196,18 +1194,6 @@ export async function handler(
       provider: modelInfo.byokProvider,
       credentials: authInfo.provider.credentials,
     })
-  }
-
-  async function fetchWith429Retry(url: string, options: RequestInit, retry = { count: 0 }) {
-    const res = await fetch(url, options)
-    if (res.status === 429 && retry.count < MAX_429_RETRIES) {
-      const delay = inlineProviderRetryDelayMs(res.headers.get("retry-after"), retry.count)
-      if (delay === undefined) return res
-      await cancelProviderResponse(res)
-      await new Promise((resolve) => setTimeout(resolve, delay))
-      return fetchWith429Retry(url, options, { count: retry.count + 1 })
-    }
-    return res
   }
 
   function calculateCost(modelInfo: ModelInfo, usageInfo: UsageInfo) {
