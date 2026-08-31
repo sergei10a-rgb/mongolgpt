@@ -96,7 +96,7 @@ describe("Монгол хэрэглэгчийн интерфэйсийн гэр�
     expect(appMongolian).toContain("MongolGPT бүртгэлээр нэвтэрсний дараа Free Auto төлбөргүй идэвхжинэ.")
     expect(appMongolian).not.toContain("MongolGPT үнэгүй загваруудыг багтаасан тул та шууд эхлэх боломжтой.")
     expect(consoleMongolian).toContain(
-      "Заавал биш. MongolGPT бүртгэлээр нэвтэрсний дараа үнэгүй автомат горимыг төлбөргүй ашиглаж болно.",
+      "Заавал биш. Тухайн орчинд үнэгүй загварын үйлчилгээ тохируулагдсан үед MongolGPT бүртгэлээр нэвтэрч үнэгүй автомат горим ашиглана.",
     )
     expect(consoleMongolian).not.toContain(
       "Заавал биш. MongolGPT-ийн Free Auto багцаар үнэгүй загваруудаас шууд эхэлж болно.",
