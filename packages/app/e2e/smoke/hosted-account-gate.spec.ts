@@ -134,7 +134,9 @@ test.describe("hosted MongolGPT account gate", () => {
     )
 
     await page.goto("/")
-    const openProject = page.getByRole("button", { name: mn["command.project.open"], exact: true })
+    await expect(page.getByText(mn["home.sessions.empty.noProject.webDescription"], { exact: true })).toBeVisible()
+    await expect(page.getByRole("button", { name: mn["dialog.server.bridge.button"], exact: true })).toBeVisible()
+    const openProject = page.getByRole("button", { name: mn["home.project.openCloud"], exact: true })
     await expect(openProject).toBeVisible()
     await openProject.click()
 

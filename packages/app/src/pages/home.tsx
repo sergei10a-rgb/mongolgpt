@@ -150,6 +150,7 @@ export function NewHome() {
   const notification = useNotification()
   const marked = useMarked()
   const openSettings = useSettingsCommand()
+  const bridge = useServerManagementController({ navigateOnAdd: false })
   let focusSessionSearch: (() => void) | undefined
   const [state, setState] = createStore({
     search: "",
@@ -478,6 +479,9 @@ export function NewHome() {
                   <HomeSessionsEmpty
                     onNewSession={newSessionProject() ? openNewSession : undefined}
                     onOpenProject={!newSessionProject() && focusedServer() ? openProjectPicker : undefined}
+                    hosted={platform.platform === "web"}
+                    onConnectDesktop={bridge.canLocalBridge() ? () => void bridge.startLocalBridge() : undefined}
+                    connectingDesktop={bridge.bridgeBusy()}
                   />
                 }
               >
@@ -1226,7 +1230,13 @@ function HomeSessionRow(props: {
   )
 }
 
-function HomeSessionsEmpty(props: { onNewSession?: () => void; onOpenProject?: () => void }) {
+function HomeSessionsEmpty(props: {
+  onNewSession?: () => void
+  onOpenProject?: () => void
+  hosted: boolean
+  onConnectDesktop?: () => void
+  connectingDesktop: boolean
+}) {
   const language = useLanguage()
   const hasProject = () => !!props.onNewSession
   return (
@@ -1236,7 +1246,13 @@ function HomeSessionsEmpty(props: { onNewSession?: () => void; onOpenProject?: (
         {language.t("home.sessions.empty")}
       </div>
       <p class="mb-1 text-center text-[13px] leading-5 tracking-[-0.04px] text-v2-text-text-muted [font-weight:440]">
-        {language.t(hasProject() ? "home.sessions.empty.description" : "home.sessions.empty.noProject.description")}
+        {language.t(
+          hasProject()
+            ? "home.sessions.empty.description"
+            : props.hosted
+              ? "home.sessions.empty.noProject.webDescription"
+              : "home.sessions.empty.noProject.description",
+        )}
       </p>
       <Show when={props.onNewSession}>
         {(onNewSession) => (
@@ -1247,15 +1263,33 @@ function HomeSessionsEmpty(props: { onNewSession?: () => void; onOpenProject?: (
       </Show>
       <Show when={props.onOpenProject}>
         {(onOpenProject) => (
-          <ButtonV2
-            data-action="home-open-project"
-            variant="neutral"
-            size="normal"
-            icon="folder-add-left"
-            onClick={onOpenProject()}
-          >
-            {language.t("command.project.open")}
-          </ButtonV2>
+          <div class="flex flex-wrap items-center justify-center gap-2">
+            <ButtonV2
+              data-action="home-open-project"
+              variant="neutral"
+              size="normal"
+              icon="folder-add-left"
+              onClick={onOpenProject()}
+            >
+              {language.t(props.hosted ? "home.project.openCloud" : "command.project.open")}
+            </ButtonV2>
+            <Show when={props.onConnectDesktop}>
+              {(onConnectDesktop) => (
+                <ButtonV2
+                  data-action="home-connect-desktop"
+                  variant="ghost"
+                  size="normal"
+                  icon="link"
+                  disabled={props.connectingDesktop}
+                  onClick={onConnectDesktop()}
+                >
+                  {language.t(
+                    props.connectingDesktop ? "dialog.server.bridge.connecting" : "dialog.server.bridge.button",
+                  )}
+                </ButtonV2>
+              )}
+            </Show>
+          </div>
         )}
       </Show>
     </div>
@@ -1309,6 +1343,9 @@ export function LegacyHome() {
   const global = useGlobal()
   const server = useServer()
   const language = useLanguage()
+  const bridge = useServerManagementController({ navigateOnAdd: false })
+  const hosted = () => platform.platform === "web"
+  const openProjectLabel = () => language.t(hosted() ? "home.project.openCloud" : "command.project.open")
   const homedir = createMemo(() => sync().data.path.home)
   const serverUnreachable = createMemo(() => global.servers.health[server.key]?.healthy === false)
   const recent = createMemo(() => {
@@ -1384,7 +1421,7 @@ export function LegacyHome() {
                 disabled={serverUnreachable()}
                 onClick={chooseProject}
               >
-                {language.t("command.project.open")}
+                {openProjectLabel()}
               </Button>
             </div>
             <ul class="flex flex-col gap-2">
@@ -1410,7 +1447,7 @@ export function LegacyHome() {
           <div class="mt-30 mx-auto flex flex-col items-center gap-3">
             <div class="text-12-regular text-text-weak">{language.t("common.loading")}</div>
             <Button class="px-3" disabled={serverUnreachable()} onClick={chooseProject}>
-              {language.t("command.project.open")}
+              {openProjectLabel()}
             </Button>
           </div>
         </Match>
@@ -1419,11 +1456,26 @@ export function LegacyHome() {
             <Icon name="folder-add-left" size="large" />
             <div class="flex flex-col gap-1 items-center justify-center">
               <div class="text-14-medium text-text-strong">{language.t("home.empty.title")}</div>
-              <div class="text-12-regular text-text-weak">{language.t("home.empty.description")}</div>
+              <div class="text-12-regular text-text-weak">
+                {language.t(hosted() ? "home.empty.webDescription" : "home.empty.description")}
+              </div>
             </div>
-            <Button class="px-3 mt-1" disabled={serverUnreachable()} onClick={chooseProject}>
-              {language.t("command.project.open")}
-            </Button>
+            <div class="mt-1 flex flex-wrap items-center justify-center gap-2">
+              <Button class="px-3" disabled={serverUnreachable()} onClick={chooseProject}>
+                {openProjectLabel()}
+              </Button>
+              <Show when={bridge.canLocalBridge()}>
+                <Button
+                  class="px-3"
+                  variant="secondary"
+                  icon="link"
+                  disabled={bridge.bridgeBusy()}
+                  onClick={() => void bridge.startLocalBridge()}
+                >
+                  {language.t(bridge.bridgeBusy() ? "dialog.server.bridge.connecting" : "dialog.server.bridge.button")}
+                </Button>
+              </Show>
+            </div>
           </div>
         </Match>
       </Switch>
