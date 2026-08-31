@@ -486,7 +486,9 @@ export function HostedAccountGate(props: ParentProps) {
       when={!enabled || (!session.error && isHostedSessionReady(session()))}
       fallback={
         <div class="h-dvh w-full flex items-center justify-center bg-background-base">
-          <Splash class="w-16 h-20 opacity-50 animate-pulse" />
+          <Show when={session.loading}>
+            <Splash class="w-16 h-20 opacity-50 animate-pulse" data-mongolgpt-hosted-loading-splash />
+          </Show>
         </div>
       }
     >

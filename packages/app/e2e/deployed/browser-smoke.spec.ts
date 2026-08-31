@@ -47,6 +47,7 @@ test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", a
 
   await expect(page.getByRole("heading", { name: "MongolGPT-д нэвтэрнэ үү" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Нэвтрэх" })).toBeVisible()
+  await expect(page.locator("[data-mongolgpt-hosted-loading-splash]")).toHaveCount(0)
   const accountOverview = await page.evaluate(
     async (url) => {
       const response = await fetch(url, {
