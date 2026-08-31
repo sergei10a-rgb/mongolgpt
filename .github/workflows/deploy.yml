@@ -175,6 +175,7 @@ jobs:
           bun run --cwd packages/script test
           bun run --cwd packages/console/admin test
           bun run --cwd packages/console/core test
+          bun run --cwd packages/console/function test
           bun run --cwd packages/runtime-auth test
           bun run --cwd packages/runtime test
 

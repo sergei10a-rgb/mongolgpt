@@ -270,6 +270,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
   test("never publishes the public web app without hosted services", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
     const workflow = parseWorkflow(source)
+    const contractStep = workflow.jobs.verify.steps.find((step) => step.name === "Test deployment contracts")
     const buildStep = workflow.jobs.verify.steps.find((step) => step.name === "Build web app")
     const deployStep = workflow.jobs.deploy.steps.find((step) => step.name === "Validate and deploy to Cloudflare")
 
@@ -293,6 +294,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(serviceUrls?.run).toBe('bun script/deployment-service-urls.ts "${{ inputs.stage }}"')
     expect(source).not.toContain("format('https://app.{0}'")
     expect(source).not.toContain("format('https://runtime.{0}'")
+    expect(contractStep?.run).toContain("bun run --cwd packages/console/function test")
     expect(buildStep?.run).toContain("bun --cwd packages/app verify:hosted-artifact")
     const webApp = await Bun.file(new URL("../../../infra/web-app.ts", import.meta.url)).text()
     expect(webApp).toContain('new sst.cloudflare.StaticSiteV2("WebApp"')
