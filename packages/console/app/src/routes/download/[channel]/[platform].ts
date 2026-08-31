@@ -13,10 +13,11 @@ export async function GET({ params: { platform, channel }, request }: DownloadEv
 async function availability(assetUrl: string, platform: string) {
   const response = await fetch(assetUrl, {
     method: "HEAD",
-    redirect: "manual",
+    redirect: "follow",
     headers: { "User-Agent": "mongolgpt-download-check" },
+    signal: AbortSignal.timeout(4_000),
   }).catch(() => undefined)
-  const available = response && response.status >= 200 && response.status < 400
+  const available = response?.ok === true
   const headers = new Headers({
     "cache-control": available ? "public, max-age=300" : "public, max-age=60",
   })

@@ -56,8 +56,9 @@ describe("desktop download route", () => {
   test("reports availability without downloading the installer body", async () => {
     const fetchMock = mock(async (_input: string | URL | Request, init?: RequestInit) => {
       expect(init?.method).toBe("HEAD")
-      expect(init?.redirect).toBe("manual")
-      return new Response(null, { status: 302 })
+      expect(init?.redirect).toBe("follow")
+      expect(init?.signal).toBeDefined()
+      return new Response(null, { status: 200 })
     })
     globalThis.fetch = Object.assign(fetchMock, { preconnect: originalFetch.preconnect })
 
@@ -65,6 +66,16 @@ describe("desktop download route", () => {
     expect(response.status).toBe(204)
     expect(response.headers.get("cache-control")).toBe("public, max-age=300")
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  test("does not report an unresolved GitHub redirect as an available artifact", async () => {
+    globalThis.fetch = Object.assign(mock(async () => new Response(null, { status: 302 })), {
+      preconnect: originalFetch.preconnect,
+    })
+
+    const response = await GET(event("stable", "darwin-x64-dmg", "HEAD"))
+    expect(response.status).toBe(404)
+    expect(response.headers.get("cache-control")).toBe("public, max-age=60")
   })
 
   test("keeps missing or unsupported artifacts hidden", async () => {
