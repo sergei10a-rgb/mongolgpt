@@ -90,7 +90,7 @@ export const SettingsServersV2: Component = () => {
         <Show when={controller.canLocalBridge()}>
           <ButtonV2
             variant="neutral"
-            icon="link"
+            icon="monitor"
             disabled={controller.bridgeBusy()}
             onClick={() => void controller.startLocalBridge()}
           >

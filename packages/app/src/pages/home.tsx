@@ -167,6 +167,11 @@ export function NewHome() {
     return global.ensureServerCtx(conn)
   })
   const focusedSync = () => focusedServerCtx()?.sync ?? sync()
+  const canOpenProject = (conn: ServerConnection.Any) => {
+    if (platform.platform !== "web") return true
+    const path = global.ensureServerCtx(conn).sync.data.path
+    return !!(path.home || path.directory)
+  }
   const projects = createMemo(() => focusedServerCtx()?.projects.list() ?? layout.projects.list())
   const selectedProject = createMemo(() => projects().find((project) => project.worktree === selection().directory))
   const newSessionProject = createMemo(
@@ -409,7 +414,7 @@ export function NewHome() {
 
     pickDirectory({
       server: conn,
-      title: language.t("command.project.open"),
+      title: language.t(platform.platform === "web" ? "home.project.openCloud" : "command.project.open"),
       multiple: true,
       onSelect: resolve,
     })
@@ -421,6 +426,7 @@ export function NewHome() {
         <HomeProjectColumn
           projects={projects()}
           selected={selection()}
+          canOpenProject={canOpenProject}
           focusServer={focusServer}
           selectProject={selectProject}
           openNewSession={openProjectNewSession}
@@ -478,7 +484,11 @@ export function NewHome() {
                 fallback={
                   <HomeSessionsEmpty
                     onNewSession={newSessionProject() ? openNewSession : undefined}
-                    onOpenProject={!newSessionProject() && focusedServer() ? openProjectPicker : undefined}
+                    onOpenProject={
+                      !newSessionProject() && focusedServer() && canOpenProject(focusedServer()!)
+                        ? openProjectPicker
+                        : undefined
+                    }
                     hosted={platform.platform === "web"}
                     onConnectDesktop={bridge.canLocalBridge() ? () => void bridge.startLocalBridge() : undefined}
                     connectingDesktop={bridge.bridgeBusy()}
@@ -529,6 +539,7 @@ export function NewHome() {
 function HomeProjectColumn(props: {
   projects: LocalProject[]
   selected: HomeProjectSelection
+  canOpenProject: (server: ServerConnection.Any) => boolean
   focusServer: (server: ServerConnection.Any) => void
   selectProject: (server: ServerConnection.Any, directory: string) => void
   openNewSession: (server: ServerConnection.Any, directory: string) => void
@@ -561,7 +572,7 @@ function HomeProjectColumn(props: {
     >
       <div class="flex h-7 min-w-0 items-center justify-between pl-1.5">
         <div class={HOME_SECTION_LABEL}>{props.language.t("home.projects")}</div>
-        <Show when={global.servers.list().length === 1}>
+        <Show when={global.servers.list().length === 1 && props.canOpenProject(global.servers.list()[0]!)}>
           <TooltipV2 placement="bottom" value={props.language.t("home.project.add")}>
             <IconButtonV2
               data-action="home-add-project"
@@ -594,6 +605,7 @@ function HomeProjectColumn(props: {
                   healthy={healthy()}
                   collapsed={collapsed()}
                   health={global.servers.health[key]}
+                  canOpenProject={props.canOpenProject(item)}
                   controller={controller}
                   focusServer={props.focusServer}
                   chooseProject={props.chooseProject}
@@ -654,6 +666,7 @@ function HomeServerRow(props: {
   healthy: boolean
   collapsed: boolean
   health: ServerHealth | undefined
+  canOpenProject: boolean
   controller: ReturnType<typeof useServerManagementController>
   focusServer: (server: ServerConnection.Any) => void
   chooseProject: (server: ServerConnection.Any) => void
@@ -719,17 +732,19 @@ function HomeServerRow(props: {
           open={state.menuOpen}
           onOpenChange={(open) => setState("menuOpen", open)}
         />
-        <TooltipV2 class="flex shrink-0 items-center" placement="bottom" value={props.language.t("home.project.add")}>
-          <IconButtonV2
-            data-action="home-add-project"
-            variant="ghost-muted"
-            size="small"
-            icon={<IconV2 name="folder-add-left" />}
-            aria-label={props.language.t("home.project.add")}
-            disabled={props.health?.healthy === false}
-            onClick={() => props.chooseProject(props.server)}
-          />
-        </TooltipV2>
+        <Show when={props.canOpenProject}>
+          <TooltipV2 class="flex shrink-0 items-center" placement="bottom" value={props.language.t("home.project.add")}>
+            <IconButtonV2
+              data-action="home-add-project"
+              variant="ghost-muted"
+              size="small"
+              icon={<IconV2 name="folder-add-left" />}
+              aria-label={props.language.t("home.project.add")}
+              disabled={props.health?.healthy === false}
+              onClick={() => props.chooseProject(props.server)}
+            />
+          </TooltipV2>
+        </Show>
       </div>
     </div>
   )
@@ -1250,7 +1265,9 @@ function HomeSessionsEmpty(props: {
           hasProject()
             ? "home.sessions.empty.description"
             : props.hosted
-              ? "home.sessions.empty.noProject.webDescription"
+              ? props.onOpenProject
+                ? "home.sessions.empty.noProject.webDescription"
+                : "home.empty.webBridgeDescription"
               : "home.sessions.empty.noProject.description",
         )}
       </p>
@@ -1261,36 +1278,38 @@ function HomeSessionsEmpty(props: {
           </ButtonV2>
         )}
       </Show>
-      <Show when={props.onOpenProject}>
-        {(onOpenProject) => (
-          <div class="flex flex-wrap items-center justify-center gap-2">
-            <ButtonV2
-              data-action="home-open-project"
-              variant="neutral"
-              size="normal"
-              icon="folder-add-left"
-              onClick={onOpenProject()}
-            >
-              {language.t(props.hosted ? "home.project.openCloud" : "command.project.open")}
-            </ButtonV2>
-            <Show when={props.onConnectDesktop}>
-              {(onConnectDesktop) => (
-                <ButtonV2
-                  data-action="home-connect-desktop"
-                  variant="ghost"
-                  size="normal"
-                  icon="link"
-                  disabled={props.connectingDesktop}
-                  onClick={onConnectDesktop()}
-                >
-                  {language.t(
-                    props.connectingDesktop ? "dialog.server.bridge.connecting" : "dialog.server.bridge.button",
-                  )}
-                </ButtonV2>
-              )}
-            </Show>
-          </div>
-        )}
+      <Show when={props.onOpenProject || props.onConnectDesktop}>
+        <div class="flex flex-wrap items-center justify-center gap-2">
+          <Show when={props.onOpenProject}>
+            {(onOpenProject) => (
+              <ButtonV2
+                data-action="home-open-project"
+                variant="neutral"
+                size="normal"
+                icon="folder-add-left"
+                onClick={onOpenProject()}
+              >
+                {language.t(props.hosted ? "home.project.openCloud" : "command.project.open")}
+              </ButtonV2>
+            )}
+          </Show>
+          <Show when={props.onConnectDesktop}>
+            {(onConnectDesktop) => (
+              <ButtonV2
+                data-action="home-connect-desktop"
+                variant={props.onOpenProject ? "ghost" : "neutral"}
+                size="normal"
+                icon="monitor"
+                disabled={props.connectingDesktop}
+                onClick={onConnectDesktop()}
+              >
+                {language.t(
+                  props.connectingDesktop ? "dialog.server.bridge.connecting" : "dialog.server.bridge.button",
+                )}
+              </ButtonV2>
+            )}
+          </Show>
+        </div>
       </Show>
     </div>
   )
@@ -1345,6 +1364,7 @@ export function LegacyHome() {
   const language = useLanguage()
   const bridge = useServerManagementController({ navigateOnAdd: false })
   const hosted = () => platform.platform === "web"
+  const canOpenProject = () => !hosted() || !!(sync().data.path.home || sync().data.path.directory)
   const openProjectLabel = () => language.t(hosted() ? "home.project.openCloud" : "command.project.open")
   const homedir = createMemo(() => sync().data.path.home)
   const serverUnreachable = createMemo(() => global.servers.health[server.key]?.healthy === false)
@@ -1386,7 +1406,7 @@ export function LegacyHome() {
 
     pickDirectory({
       server: s,
-      title: language.t("command.project.open"),
+      title: openProjectLabel(),
       multiple: true,
       onSelect: resolve,
     })
@@ -1414,15 +1434,17 @@ export function LegacyHome() {
           <div class="mt-20 w-full flex flex-col gap-4">
             <div class="flex gap-2 items-center justify-between pl-3">
               <div class="text-14-medium text-text-strong">{language.t("home.recentProjects")}</div>
-              <Button
-                icon="folder-add-left"
-                size="normal"
-                class="pl-2 pr-3"
-                disabled={serverUnreachable()}
-                onClick={chooseProject}
-              >
-                {openProjectLabel()}
-              </Button>
+              <Show when={canOpenProject()}>
+                <Button
+                  icon="folder-add-left"
+                  size="normal"
+                  class="pl-2 pr-3"
+                  disabled={serverUnreachable()}
+                  onClick={chooseProject}
+                >
+                  {openProjectLabel()}
+                </Button>
+              </Show>
             </div>
             <ul class="flex flex-col gap-2">
               <For each={recent()}>
@@ -1446,9 +1468,11 @@ export function LegacyHome() {
         <Match when={!sync().ready}>
           <div class="mt-30 mx-auto flex flex-col items-center gap-3">
             <div class="text-12-regular text-text-weak">{language.t("common.loading")}</div>
-            <Button class="px-3" disabled={serverUnreachable()} onClick={chooseProject}>
-              {openProjectLabel()}
-            </Button>
+            <Show when={canOpenProject()}>
+              <Button class="px-3" disabled={serverUnreachable()} onClick={chooseProject}>
+                {openProjectLabel()}
+              </Button>
+            </Show>
           </div>
         </Match>
         <Match when={true}>
@@ -1457,17 +1481,25 @@ export function LegacyHome() {
             <div class="flex flex-col gap-1 items-center justify-center">
               <div class="text-14-medium text-text-strong">{language.t("home.empty.title")}</div>
               <div class="text-12-regular text-text-weak">
-                {language.t(hosted() ? "home.empty.webDescription" : "home.empty.description")}
+                {language.t(
+                  hosted()
+                    ? canOpenProject()
+                      ? "home.empty.webDescription"
+                      : "home.empty.webBridgeDescription"
+                    : "home.empty.description",
+                )}
               </div>
             </div>
             <div class="mt-1 flex flex-wrap items-center justify-center gap-2">
-              <Button class="px-3" disabled={serverUnreachable()} onClick={chooseProject}>
-                {openProjectLabel()}
-              </Button>
+              <Show when={canOpenProject()}>
+                <Button class="px-3" disabled={serverUnreachable()} onClick={chooseProject}>
+                  {openProjectLabel()}
+                </Button>
+              </Show>
               <Show when={bridge.canLocalBridge()}>
                 <Button
                   class="px-3"
-                  variant="secondary"
+                  variant={canOpenProject() ? "secondary" : undefined}
                   icon="link"
                   disabled={bridge.bridgeBusy()}
                   onClick={() => void bridge.startLocalBridge()}

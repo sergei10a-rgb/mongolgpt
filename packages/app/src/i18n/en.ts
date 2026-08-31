@@ -673,6 +673,7 @@ export const dict = {
   "home.empty.title": "No recent projects",
   "home.empty.description": "Get started by opening a local project",
   "home.empty.webDescription": "Open a cloud workspace or connect the desktop app to get started",
+  "home.empty.webBridgeDescription": "Connect the desktop app to open a local project",
   "home.title": "Home",
   "home.projects": "Projects",
   "home.project.add": "Add project",
