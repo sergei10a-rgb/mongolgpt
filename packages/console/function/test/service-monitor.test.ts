@@ -299,7 +299,7 @@ describe("Cloudflare service monitor", () => {
     })
   })
 
-  test("records an alert attempt before email delivery so provider failures do not retry every cron run", async () => {
+  test("retries an opened alert after delivery failure and persists only after success", async () => {
     const values = new Map<string, string>()
     const state = {
       get: async (key: string) => values.get(key) ?? null,
@@ -308,10 +308,11 @@ describe("Cloudflare service monitor", () => {
       },
     }
     let attempts = 0
+    let fail = true
     const email = {
       send: async () => {
         attempts += 1
-        throw new Error("provider-secret-response")
+        if (fail) throw new Error("provider-secret-response")
       },
     }
     let now = 1_800_000_000_000
@@ -334,7 +335,21 @@ describe("Cloudflare service monitor", () => {
     expect(deliveryError).toBeInstanceOf(Error)
     expect(deliveryError instanceof Error ? deliveryError.message : "").toBe("provider-secret-response")
     expect(attempts).toBe(1)
-    expect(values.get(SERVICE_MONITOR_ALERT_STATE_KEY)).not.toContain("provider-secret-response")
+    expect(values.has(SERVICE_MONITOR_ALERT_STATE_KEY)).toBe(false)
+
+    fail = false
+    now += 5 * 60 * 1_000
+    const retried = await runServiceMonitorCycle(config, state, email, {
+      fetcher: responseFetcher(degraded),
+      now: () => now,
+      timer: () => 100,
+    })
+    expect(retried.alert).toBe("opened")
+    expect(attempts).toBe(2)
+    expect(JSON.parse(values.get(SERVICE_MONITOR_ALERT_STATE_KEY)!)).toMatchObject({
+      stage: "dev",
+      status: "degraded",
+    })
 
     now += 5 * 60 * 1_000
     const duplicate = await runServiceMonitorCycle(config, state, email, {
@@ -343,7 +358,120 @@ describe("Cloudflare service monitor", () => {
       timer: () => 100,
     })
     expect(duplicate.alert).toBe("none")
-    expect(attempts).toBe(1)
+    expect(attempts).toBe(2)
+  })
+
+  test("retries a changed incident after delivery failure without advancing the fingerprint", async () => {
+    const values = new Map<string, string>()
+    const state = {
+      get: async (key: string) => values.get(key) ?? null,
+      put: async (key: string, value: string) => {
+        values.set(key, value)
+      },
+    }
+    let attempts = 0
+    let fail = false
+    const email = {
+      send: async () => {
+        attempts += 1
+        if (fail) throw new Error("provider-unavailable")
+      },
+    }
+    let now = 1_800_000_000_000
+    const config = { stage: "dev", stageDomain: "dev.mgpt.mn", alertFrom: "alerts@mgpt.mn" }
+    const degradedAuth = {
+      ...healthy,
+      "https://auth.dev.mgpt.mn/health": json({ status: "unavailable" }, 503),
+    }
+    const changedFetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (inputURL(input).includes("runtime.dev")) throw new Error("network")
+      return responseFetcher(degradedAuth)(input, init)
+    }
+
+    const opened = await runServiceMonitorCycle(config, state, email, {
+      fetcher: responseFetcher(degradedAuth),
+      now: () => now,
+      timer: () => 100,
+    })
+    expect(opened.alert).toBe("opened")
+    const previous = values.get(SERVICE_MONITOR_ALERT_STATE_KEY)
+
+    fail = true
+    now += 5 * 60 * 1_000
+    await expect(
+      runServiceMonitorCycle(config, state, email, {
+        fetcher: changedFetcher,
+        now: () => now,
+        timer: () => 100,
+      }),
+    ).rejects.toThrow("provider-unavailable")
+    expect(attempts).toBe(2)
+    expect(values.get(SERVICE_MONITOR_ALERT_STATE_KEY)).toBe(previous)
+
+    fail = false
+    now += 5 * 60 * 1_000
+    const retried = await runServiceMonitorCycle(config, state, email, {
+      fetcher: changedFetcher,
+      now: () => now,
+      timer: () => 100,
+    })
+    expect(retried.alert).toBe("changed")
+    expect(attempts).toBe(3)
+    expect(values.get(SERVICE_MONITOR_ALERT_STATE_KEY)).not.toBe(previous)
+  })
+
+  test("retries a recovery after delivery failure without losing degraded state", async () => {
+    const values = new Map<string, string>()
+    const state = {
+      get: async (key: string) => values.get(key) ?? null,
+      put: async (key: string, value: string) => {
+        values.set(key, value)
+      },
+    }
+    let attempts = 0
+    let fail = false
+    const email = {
+      send: async () => {
+        attempts += 1
+        if (fail) throw new Error("provider-unavailable")
+      },
+    }
+    let now = 1_800_000_000_000
+    const config = { stage: "dev", stageDomain: "dev.mgpt.mn", alertFrom: "alerts@mgpt.mn" }
+    const degraded = {
+      ...healthy,
+      "https://auth.dev.mgpt.mn/health": json({ status: "unavailable" }, 503),
+    }
+
+    await runServiceMonitorCycle(config, state, email, {
+      fetcher: responseFetcher(degraded),
+      now: () => now,
+      timer: () => 100,
+    })
+    const previous = values.get(SERVICE_MONITOR_ALERT_STATE_KEY)
+
+    fail = true
+    now += 5 * 60 * 1_000
+    await expect(
+      runServiceMonitorCycle(config, state, email, {
+        fetcher: responseFetcher(),
+        now: () => now,
+        timer: () => 100,
+      }),
+    ).rejects.toThrow("provider-unavailable")
+    expect(attempts).toBe(2)
+    expect(values.get(SERVICE_MONITOR_ALERT_STATE_KEY)).toBe(previous)
+
+    fail = false
+    now += 5 * 60 * 1_000
+    const retried = await runServiceMonitorCycle(config, state, email, {
+      fetcher: responseFetcher(),
+      now: () => now,
+      timer: () => 100,
+    })
+    expect(retried.alert).toBe("recovered")
+    expect(attempts).toBe(3)
+    expect(JSON.parse(values.get(SERVICE_MONITOR_ALERT_STATE_KEY)!)).toMatchObject({ status: "ok", fingerprint: "ok" })
   })
 
   test("ignores stale alert state instead of emitting a false recovery or reminder", async () => {

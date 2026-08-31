@@ -110,12 +110,12 @@ export async function runServiceMonitorCycle(
   const previous = await readAlertState(state, config.stage, now())
   const evidence = await runServiceMonitor(config, state, options)
   const plan = planServiceMonitorAlert(previous, evidence, now())
+  if (plan.notify && plan.kind !== "none") await sendServiceMonitorAlert(email, config.alertFrom, plan.kind, evidence)
   if (plan.persist) {
     await state.put(SERVICE_MONITOR_ALERT_STATE_KEY, JSON.stringify(plan.state), {
       expirationTtl: SERVICE_MONITOR_ALERT_STATE_TTL_SECONDS,
     })
   }
-  if (plan.notify && plan.kind !== "none") await sendServiceMonitorAlert(email, config.alertFrom, plan.kind, evidence)
   return { evidence, alert: plan.kind }
 }
 
