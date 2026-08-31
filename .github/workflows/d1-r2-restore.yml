@@ -1,0 +1,82 @@
+name: D1 R2 restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Recovery D1 үүсгэх орчин"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - production
+      backup_key:
+        description: "Баталгаажсан d1/<stage>/.../*.sql R2 object key"
+        required: true
+        type: string
+      confirmation:
+        description: "RESTORE R2 D1 <stage> <backup-key> гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: d1-r2-restore-${{ inputs.stage }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_STAGE: ${{ inputs.stage }}
+  MONGOLGPT_D1_R2_RESTORE_BACKUP_KEY: ${{ inputs.backup_key }}
+  MONGOLGPT_D1_R2_RESTORE_CONFIRMATION: ${{ inputs.confirmation }}
+
+jobs:
+  restore:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: ${{ inputs.stage }}
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      D1_R2_RESTORE_API_TOKEN: ${{ secrets.D1_R2_RESTORE_API_TOKEN }}
+    steps:
+      - name: Validate exact R2 restore confirmation
+        run: |
+          expected="RESTORE R2 D1 ${MONGOLGPT_STAGE} ${MONGOLGPT_D1_R2_RESTORE_BACKUP_KEY}"
+          if [ "$MONGOLGPT_D1_R2_RESTORE_CONFIRMATION" != "$expected" ]; then
+            echo "D1 R2 restore баталгаажуулалт буруу байна."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify R2 restore safety contract
+        run: bun --cwd packages/script test test/d1-r2-restore.test.ts
+
+      - name: Restore selected R2 backup into a new recovery D1
+        env:
+          RESTORE_OPERATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          bun sst shell --stage="$MONGOLGPT_STAGE" -- \
+            env -u CLOUDFLARE_API_TOKEN bun script/d1-r2-restore.ts \
+              --backup-key "$MONGOLGPT_D1_R2_RESTORE_BACKUP_KEY" \
+              --operation-id "$RESTORE_OPERATION_ID" \
+              --execute \
+              --receipt "$RUNNER_TEMP/d1-r2-restore-receipt.json"
+
+      - name: Upload R2 restore receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: d1-r2-restore-${{ inputs.stage }}-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          retention-days: 90
+          path: ${{ runner.temp }}/d1-r2-restore-receipt.json
