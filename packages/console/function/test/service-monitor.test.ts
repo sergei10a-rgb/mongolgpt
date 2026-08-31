@@ -103,6 +103,24 @@ describe("Cloudflare service monitor", () => {
     expect(result.success).toBe(false)
   })
 
+  test("accepts checkout readiness while preserving provider-specific cancellation and refund limits", () => {
+    const result = PaymentHealthSchema.safeParse({
+      status: "ok",
+      service: "payments",
+      environment: "production",
+      providers: {
+        qpay: { enabled: true, checkout: true, cancellation: true, refund: true },
+        bonum: { enabled: true, checkout: true, cancellation: false, refund: false },
+      },
+      catalog: true,
+      checkout: true,
+      cancellation: false,
+      refund: false,
+    })
+
+    expect(result.success).toBe(true)
+  })
+
   test("checks every public service and stores bounded, expiring evidence", async () => {
     const writes: Array<[string, string, { expirationTtl: number }]> = []
     const evidence = await runServiceMonitor(

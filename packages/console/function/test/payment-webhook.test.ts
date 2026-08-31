@@ -174,7 +174,7 @@ describe("payment webhook worker", () => {
     expect(readyResponse.headers.get("cache-control")).toBe("no-store")
     const readyPayload: unknown = await readyResponse.json()
     expect(readyPayload).toEqual({
-      status: "degraded",
+      status: "ok",
       service: "payments",
       environment: "sandbox",
       providers: {

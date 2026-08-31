@@ -332,7 +332,15 @@ function paymentCheck(result: ProbeResult<z.output<typeof PaymentHealthSchema>>)
       summary: "Төлбөрийн орчин идэвхгүй байна.",
     }
   }
-  return ready("payments", "QPay + Bonum", `${environmentLabel(result.value.environment)} орчин хэвийн байна.`)
+  const capabilityNotice =
+    !result.value.cancellation || !result.value.refund
+      ? " Цуцлалт ба буцаалт зөвхөн дэмждэг төлбөрийн сувгаар ажиллана."
+      : ""
+  return ready(
+    "payments",
+    "QPay + Bonum",
+    `${environmentLabel(result.value.environment)} орчны нэхэмжлэх үүсгэх урсгал хэвийн байна.${capabilityNotice}`,
+  )
 }
 
 function queueCheck(result: ProbeResult<string | null>, stage: string, now: Date): SystemReadinessCheck {

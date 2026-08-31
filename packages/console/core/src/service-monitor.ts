@@ -54,9 +54,9 @@ export const PaymentHealthSchema = z
     const expectedCancellation = everyEnabled("cancellation")
     const expectedRefund = everyEnabled("refund")
     const disabledClean = enabledProviders.length === 0 && !value.catalog
-    const fullyReady = value.catalog && expectedCheckout && expectedCancellation && expectedRefund
+    const checkoutReady = value.catalog && expectedCheckout
     const expectedStatus =
-      value.environment === "disabled" ? (disabledClean ? "disabled" : "degraded") : fullyReady ? "ok" : "degraded"
+      value.environment === "disabled" ? (disabledClean ? "disabled" : "degraded") : checkoutReady ? "ok" : "degraded"
 
     if (value.checkout !== expectedCheckout) {
       context.addIssue({

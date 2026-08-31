@@ -207,7 +207,7 @@ export function createPaymentWebhookHandler(dependencies: Dependencies) {
                 ? cleanDisabled
                   ? "disabled"
                   : "degraded"
-                : catalog && checkout && cancellation && refund
+                : catalog && checkout
                   ? "ok"
                   : "degraded",
             service: "payments",

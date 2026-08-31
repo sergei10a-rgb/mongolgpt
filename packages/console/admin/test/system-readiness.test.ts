@@ -213,7 +213,7 @@ function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): Sys
     quota: async () => json({ status: "ok", service: "quota", storage: "durable-objects", queue: "cloudflare-queues" }),
     payments: async () =>
       json({
-        status: "degraded",
+        status: "ok",
         service: "payments",
         environment: "sandbox",
         providers: {
@@ -239,7 +239,7 @@ describe("MongolGPT admin system readiness", () => {
   test("reports verified services without exposing provider secrets", async () => {
     const report = await collectSystemReadiness(dependencies())
 
-    expect(report.status).toBe("degraded")
+    expect(report.status).toBe("ok")
     expect(report.stage).toBe("dev")
     expect(report.checkedAt).toBe("2026-08-19T00:00:00.000Z")
     expect(Object.fromEntries(report.checks.map((check) => [check.id, check.state]))).toEqual({
@@ -248,13 +248,16 @@ describe("MongolGPT admin system readiness", () => {
       oauth: "healthy",
       quota: "healthy",
       "usage-queue": "healthy",
-      payments: "degraded",
+      payments: "healthy",
       monitoring: "healthy",
       backup: "healthy",
       release: "healthy",
     })
     expect(JSON.stringify(report)).not.toContain("heartbeat-secret-id")
     expect(JSON.stringify(report)).not.toContain("database.sql")
+    expect(report.checks.find((check) => check.id === "payments")?.summary).toContain(
+      "зөвхөн дэмждэг төлбөрийн сувгаар ажиллана",
+    )
   })
 
   test("does not hide a degraded payment misconfiguration behind disabled state", async () => {
