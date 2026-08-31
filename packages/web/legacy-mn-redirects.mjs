@@ -24,6 +24,7 @@ export const legacyMongolianDocSlugs = [
   "incident-response",
   "install",
   "keybinds",
+  "launch",
   "lsp",
   "mcp-servers",
   "models",

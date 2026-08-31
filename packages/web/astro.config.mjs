@@ -103,6 +103,7 @@ export default defineConfig({
       },
       sidebar: [
         "",
+        { label: "Анхны эхлэл", link: "launch" },
         { label: "Суулгах", link: "install" },
         "config",
         "providers",
