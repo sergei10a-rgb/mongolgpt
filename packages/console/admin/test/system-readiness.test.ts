@@ -58,7 +58,7 @@ const monitorEvidence = (overrides: Record<string, unknown> = {}) =>
     stage: "dev",
     checkedAt: now.getTime() - 60_000,
     status: "ok",
-    checks: ["console", "auth", "runtime", "payments"].map((service) => ({
+    checks: ["console", "auth", "runtime", "payments", "docs"].map((service) => ({
       service,
       ok: true,
       httpStatus: 200,
@@ -480,7 +480,7 @@ describe("MongolGPT admin system readiness", () => {
         status: "degraded",
         checks: [
           { service: "console", ok: false, httpStatus: 503, latencyMs: 25, failure: "http" },
-          ...["auth", "runtime", "payments"].map((service) => ({
+          ...["auth", "runtime", "payments", "docs"].map((service) => ({
             service,
             ok: true,
             httpStatus: 200,

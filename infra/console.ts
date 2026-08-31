@@ -2,6 +2,7 @@ import {
   appOrigin,
   docsOrigin,
   domain,
+  enableAdmin,
   enableBusinessIntegrations,
   enableD1Backups,
   enableMonitoring,
@@ -463,6 +464,7 @@ export const serviceMonitor = enableMonitoring
         environment: {
           MONGOLGPT_STAGE: $app.stage,
           MONGOLGPT_STAGE_DOMAIN: domain,
+          MONGOLGPT_MONITOR_ADMIN_ENABLED: enableAdmin ? "true" : "false",
           MONGOLGPT_MONITOR_ALERTS_ENABLED: monitorAlertEmail ? "true" : "false",
           MONGOLGPT_MONITOR_ALERT_FROM: monitorAlertFrom,
         },

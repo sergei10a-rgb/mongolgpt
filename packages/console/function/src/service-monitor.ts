@@ -33,6 +33,7 @@ const runtimeHealthSchema = z
 type MonitorConfig = {
   stage: string
   stageDomain: string
+  adminEnabled?: boolean
 }
 
 type StateStore = {
@@ -70,11 +71,26 @@ type AlertPlan = {
   persist: boolean
 }
 
-type Target = {
+type JsonTarget = {
+  kind: "json"
   service: (typeof SERVICE_MONITOR_SERVICES)[number]
   url: string
   accepts(value: unknown, stage: string): boolean
 }
+
+type HtmlTarget = {
+  kind: "html"
+  service: (typeof SERVICE_MONITOR_SERVICES)[number]
+  url: string
+}
+
+type AccessTarget = {
+  kind: "access"
+  service: (typeof SERVICE_MONITOR_SERVICES)[number]
+  url: string
+}
+
+type Target = JsonTarget | HtmlTarget | AccessTarget
 
 export async function runServiceMonitor(config: MonitorConfig, state: EvidenceStore, options: MonitorOptions = {}) {
   const normalized = normalizeConfig(config)
@@ -83,7 +99,7 @@ export async function runServiceMonitor(config: MonitorConfig, state: EvidenceSt
   const timer = options.timer ?? Date.now
   const checkedAt = now()
   const checks = await Promise.all(
-    monitorTargets(normalized.stage, normalized.urls).map((target) =>
+    monitorTargets(normalized.stage, normalized.urls, normalized.adminEnabled).map((target) =>
       checkTarget(target, normalized.stage, fetcher, timer),
     ),
   )
@@ -151,19 +167,22 @@ export function planServiceMonitorAlert(
   return { kind: "none", state: previous, notify: false, persist: false }
 }
 
-function monitorTargets(stage: string, urls: HostedServiceUrls): Target[] {
-  return [
+function monitorTargets(stage: string, urls: HostedServiceUrls, adminEnabled: boolean): Target[] {
+  const targets: Target[] = [
     {
+      kind: "json",
       service: "console",
       url: `${urls.console}/api/health`,
       accepts: (value) => consoleHealthSchema.safeParse(value).success,
     },
     {
+      kind: "json",
       service: "auth",
       url: `${urls.auth}/health`,
       accepts: (value) => authHealthSchema.safeParse(value).success,
     },
     {
+      kind: "json",
       service: "runtime",
       url: `${urls.runtime}/global/health`,
       accepts: (value, expectedStage) => {
@@ -172,6 +191,7 @@ function monitorTargets(stage: string, urls: HostedServiceUrls): Target[] {
       },
     },
     {
+      kind: "json",
       service: "payments",
       url: `${urls.payment}/health`,
       accepts: (value, expectedStage) => {
@@ -181,7 +201,14 @@ function monitorTargets(stage: string, urls: HostedServiceUrls): Target[] {
         return parsed.data.status !== "degraded"
       },
     },
+    {
+      kind: "html",
+      service: "docs",
+      url: `${urls.docs}/`,
+    },
   ]
+  if (adminEnabled) targets.push({ kind: "access", service: "admin", url: urls.admin })
+  return targets
 }
 
 async function readAlertState(state: StateStore, stage: string, now: number) {
@@ -262,11 +289,26 @@ async function checkTarget(target: Target, stage: string, fetcher: Fetcher, time
   const startedAt = timer()
   try {
     const response = await fetcher(target.url, {
-      headers: { Accept: "application/json", "User-Agent": "mongolgpt-service-monitor" },
-      redirect: "error",
+      headers: {
+        Accept: target.kind === "json" ? "application/json" : "text/html",
+        "User-Agent": "mongolgpt-service-monitor",
+      },
+      redirect: target.kind === "access" ? "manual" : "error",
       signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
     })
+    if (target.kind === "access") {
+      const latencyMs = boundedLatency(startedAt, timer())
+      if (!adminProtectionResponse(response, target.url)) {
+        return failed(target.service, latencyMs, response.status >= 400 ? "http" : "schema", response.status)
+      }
+      return { service: target.service, ok: true, httpStatus: response.status, latencyMs } satisfies ServiceMonitorCheck
+    }
     if (!response.ok) return failed(target.service, boundedLatency(startedAt, timer()), "http", response.status)
+    if (target.kind === "html") {
+      const latencyMs = boundedLatency(startedAt, timer())
+      if (!htmlResponse(response)) return failed(target.service, latencyMs, "schema", response.status)
+      return { service: target.service, ok: true, httpStatus: response.status, latencyMs } satisfies ServiceMonitorCheck
+    }
     if (!jsonResponse(response))
       return failed(target.service, boundedLatency(startedAt, timer()), "schema", response.status)
     const body = await readBoundedJson(response)
@@ -325,10 +367,12 @@ function normalizeConfig(config: MonitorConfig) {
     throw new TypeError("Monitor stage болон domain зөрж байна.")
   }
   const rootDomain = stage === "production" ? stageDomain : stageDomain.slice(stage.length + 1)
+  const adminEnabled = config.adminEnabled ?? stage === "production"
+  if (stage === "production" && !adminEnabled) throw new TypeError("Production monitor admin үйлчилгээг шалгах ёстой.")
   try {
     const urls = resolveHostedServiceUrls(rootDomain, stage)
     if (urls.stageDomain !== stageDomain) throw new Error("stage domain mismatch")
-    return { stage, stageDomain, urls }
+    return { stage, stageDomain, adminEnabled, urls }
   } catch {
     throw new TypeError("Monitor stage болон domain зөрж байна.")
   }
@@ -364,6 +408,7 @@ export default {
     const config = {
       stage: process.env.MONGOLGPT_STAGE ?? "",
       stageDomain: process.env.MONGOLGPT_STAGE_DOMAIN ?? "",
+      adminEnabled: process.env.MONGOLGPT_MONITOR_ADMIN_ENABLED === "true",
     }
     const alertsEnabled = process.env.MONGOLGPT_MONITOR_ALERTS_ENABLED === "true"
     const result = alertsEnabled
@@ -390,4 +435,22 @@ function requiredEmailBinding(binding: EmailBinding | undefined) {
     throw new Error("Үйлчилгээний хяналтын илгээгч имэйл тохируулагдаагүй байна.")
   }
   return binding
+}
+
+function htmlResponse(response: Response) {
+  return response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() === "text/html"
+}
+
+function adminProtectionResponse(response: Response, requestUrl: string) {
+  if (response.status === 401 || response.status === 403) return true
+  const location = response.headers.get("location")
+  if (response.status !== 302 || !location) return false
+  try {
+    const request = new URL(requestUrl)
+    const target = new URL(location, request)
+    const accessHost = target.origin === request.origin || target.hostname.endsWith(".cloudflareaccess.com")
+    return target.protocol === "https:" && accessHost && target.pathname.startsWith("/cdn-cgi/access/")
+  } catch {
+    return false
+  }
 }

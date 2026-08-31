@@ -16,6 +16,17 @@ const json = (value: unknown, status = 200) =>
     headers: { "Cache-Control": "no-store" },
   })
 
+const html = () =>
+  new Response("<!doctype html><title>MongolGPT баримт бичиг</title>", {
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  })
+
+const access = (host: string) =>
+  new Response(null, {
+    status: 302,
+    headers: { Location: `https://mongolgpt.cloudflareaccess.com/cdn-cgi/access/login/${host}` },
+  })
+
 const healthy = {
   "https://dev.mgpt.mn/api/health": json({ status: "ok", service: "console" }),
   "https://auth.dev.mgpt.mn/health": json({ status: "ok", service: "auth" }),
@@ -38,6 +49,7 @@ const healthy = {
     cancellation: false,
     refund: false,
   }),
+  "https://docs.dev.mgpt.mn/docs/": html(),
 } satisfies Record<string, Response>
 
 function responseFetcher(responses: Record<string, Response> = healthy) {
@@ -100,12 +112,37 @@ describe("Cloudflare service monitor", () => {
     )
 
     expect(evidence.status).toBe("ok")
-    expect(evidence.checks.map((check) => check.service)).toEqual(["console", "auth", "runtime", "payments"])
+    expect(evidence.checks.map((check) => check.service)).toEqual(["console", "auth", "runtime", "payments", "docs"])
     expect(evidence.checks.every((check) => check.ok && check.httpStatus === 200)).toBe(true)
     expect(ServiceMonitorEvidenceSchema.safeParse(evidence).success).toBe(true)
     expect(writes).toEqual([
       [SERVICE_MONITOR_STATE_KEY, JSON.stringify(evidence), { expirationTtl: SERVICE_MONITOR_TTL_SECONDS }],
     ])
+  })
+
+  test("requires docs in every stage and admin evidence in production", () => {
+    const devChecks = ["console", "auth", "runtime", "payments", "docs"].map((service) => ({
+      service,
+      ok: true,
+      httpStatus: 200,
+      latencyMs: 1,
+    }))
+    const evidence = (stage: string, checks: unknown[]) => ({
+      version: 1,
+      stage,
+      checkedAt: 1_800_000_000_000,
+      status: "ok",
+      checks,
+    })
+
+    expect(ServiceMonitorEvidenceSchema.safeParse(evidence("dev", devChecks)).success).toBe(true)
+    expect(ServiceMonitorEvidenceSchema.safeParse(evidence("dev", devChecks.slice(0, -1))).success).toBe(false)
+    expect(ServiceMonitorEvidenceSchema.safeParse(evidence("production", devChecks)).success).toBe(false)
+    expect(
+      ServiceMonitorEvidenceSchema.safeParse(
+        evidence("production", [...devChecks, { service: "admin", ok: true, httpStatus: 302, latencyMs: 1 }]),
+      ).success,
+    ).toBe(true)
   })
 
   test("treats disabled payments as unavailable in production", async () => {
@@ -119,6 +156,8 @@ describe("Cloudflare service monitor", () => {
         version: "0.1.1",
       }),
       "https://pay.mgpt.mn/health": healthy["https://pay.dev.mgpt.mn/health"],
+      "https://docs.mgpt.mn/docs/": html(),
+      "https://admin.mgpt.mn": access("admin.mgpt.mn"),
     }
     const evidence = await runServiceMonitor(
       { stage: "production", stageDomain: "mgpt.mn" },
@@ -142,6 +181,9 @@ describe("Cloudflare service monitor", () => {
         status: 200,
         headers: { "Content-Type": "text/plain" },
       }),
+      "https://docs.dev.mgpt.mn/docs/": new Response("MongolGPT", {
+        headers: { "Content-Type": "text/plain" },
+      }),
     }
     const writes: string[] = []
     const base = responseFetcher(responses)
@@ -162,9 +204,40 @@ describe("Cloudflare service monitor", () => {
       auth: "http",
       runtime: "network",
       payments: "schema",
+      docs: "schema",
     })
     expect(writes.join("\n")).not.toContain("must-not-persist")
     expect(writes.join("\n")).not.toContain("provider-secret-response")
+  })
+
+  test("checks an enabled admin through the exact Cloudflare Access boundary", async () => {
+    const responses = {
+      ...healthy,
+      "https://admin.dev.mgpt.mn": access("admin.dev.mgpt.mn"),
+    }
+    const protectedEvidence = await runServiceMonitor(
+      { stage: "dev", stageDomain: "dev.mgpt.mn", adminEnabled: true },
+      { put: async () => undefined },
+      { fetcher: responseFetcher(responses), now: () => 1_800_000_000_000, timer: () => 100 },
+    )
+    expect(protectedEvidence.checks.find((check) => check.service === "admin")).toMatchObject({
+      ok: true,
+      httpStatus: 302,
+    })
+
+    const unprotectedEvidence = await runServiceMonitor(
+      { stage: "dev", stageDomain: "dev.mgpt.mn", adminEnabled: true },
+      { put: async () => undefined },
+      {
+        fetcher: responseFetcher({ ...responses, "https://admin.dev.mgpt.mn": html() }),
+        now: () => 1_800_000_000_000,
+        timer: () => 100,
+      },
+    )
+    expect(unprotectedEvidence.checks.find((check) => check.service === "admin")).toMatchObject({
+      ok: false,
+      failure: "schema",
+    })
   })
 
   test("requires the runtime stage to match and classifies aborts as timeouts", async () => {

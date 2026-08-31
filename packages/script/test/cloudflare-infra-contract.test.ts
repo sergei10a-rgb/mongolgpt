@@ -1076,6 +1076,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(consoleSource).toContain('schedules: ["*/5 * * * *"]')
     expect(consoleSource).toContain('handler: "packages/console/function/src/service-monitor.ts"')
     expect(consoleSource).toContain("link: [serviceMonitorState]")
+    expect(consoleSource).toContain('MONGOLGPT_MONITOR_ADMIN_ENABLED: enableAdmin ? "true" : "false"')
     expect(consoleSource).toContain('type: "send_email"')
     expect(consoleSource).toContain('name: "ServiceMonitorAlertEmail"')
     expect(consoleSource).toContain("destinationAddress: monitorAlertEmail")

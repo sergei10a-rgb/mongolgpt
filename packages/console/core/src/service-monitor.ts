@@ -7,7 +7,8 @@ export const SERVICE_MONITOR_ALERT_STATE_KEY = "service-monitor:alert-state"
 export const SERVICE_MONITOR_ALERT_STATE_TTL_SECONDS = 31 * 24 * 60 * 60
 export const SERVICE_MONITOR_ALERT_REMINDER_MS = 60 * 60 * 1_000
 export const SERVICE_MONITOR_ALERT_STATE_MAX_AGE_MS = 2 * SERVICE_MONITOR_ALERT_REMINDER_MS
-export const SERVICE_MONITOR_SERVICES = ["console", "auth", "runtime", "payments"] as const
+export const SERVICE_MONITOR_REQUIRED_SERVICES = ["console", "auth", "runtime", "payments", "docs"] as const
+export const SERVICE_MONITOR_SERVICES = [...SERVICE_MONITOR_REQUIRED_SERVICES, "admin"] as const
 
 const timestamp = z.number().int().min(0).max(8_640_000_000_000_000)
 
@@ -116,18 +117,24 @@ export const ServiceMonitorEvidenceSchema = z
       .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/),
     checkedAt: timestamp,
     status: z.enum(["ok", "degraded"]),
-    checks: z.array(ServiceMonitorCheckSchema).length(SERVICE_MONITOR_SERVICES.length),
+    checks: z
+      .array(ServiceMonitorCheckSchema)
+      .min(SERVICE_MONITOR_REQUIRED_SERVICES.length)
+      .max(SERVICE_MONITOR_SERVICES.length),
   })
   .strict()
   .superRefine((value, context) => {
     const services = new Set(value.checks.map((check) => check.service))
-    if (services.size !== SERVICE_MONITOR_SERVICES.length) {
+    if (services.size !== value.checks.length) {
       context.addIssue({ code: "custom", path: ["checks"], message: "Үйлчилгээний шалгалтууд давхардаж болохгүй." })
     }
-    for (const service of SERVICE_MONITOR_SERVICES) {
+    for (const service of SERVICE_MONITOR_REQUIRED_SERVICES) {
       if (!services.has(service)) {
         context.addIssue({ code: "custom", path: ["checks"], message: `${service} үйлчилгээний шалгалт дутуу байна.` })
       }
+    }
+    if (value.stage === "production" && !services.has("admin")) {
+      context.addIssue({ code: "custom", path: ["checks"], message: "admin үйлчилгээний шалгалт дутуу байна." })
     }
     const expectedStatus = value.checks.every((check) => check.ok) ? "ok" : "degraded"
     if (value.status !== expectedStatus) {
