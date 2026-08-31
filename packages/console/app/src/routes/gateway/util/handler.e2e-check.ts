@@ -115,6 +115,7 @@ await mock.module("@mongolgpt/console-core/drizzle/index.js", () => ({
   Database: {
     use: async () => ({
       apiKey: "key_gateway_e2e",
+      accountID: "acc_gateway_e2e",
       workspaceID: "wrk_gateway_e2e",
       billing: { balance: 0 },
       user: { id: "usr_gateway_e2e" },

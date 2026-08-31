@@ -9,7 +9,7 @@ export function freeAutoReservationUpperBound(maxTokensPerRequest: number, weekl
 
 export async function reserveFreeAutoQuota(
   input: {
-    workspaceID: string
+    accountID: string
     modelID: string
     weekStart: Date
     persistedUsage: number
@@ -19,7 +19,7 @@ export async function reserveFreeAutoQuota(
   },
   client: LedgerClient = ledgerCommand,
 ) {
-  const scope = `free-auto:${input.workspaceID}:${input.modelID}:${input.weekStart.toISOString().slice(0, 10)}`
+  const scope = `free-auto:${input.accountID}:${input.modelID}:${input.weekStart.toISOString().slice(0, 10)}`
   const counterKey = "weekly-usage"
   const reservationID = crypto.randomUUID()
   const expiresAt = Date.now() + Math.max(60, Math.ceil(input.ttlSeconds)) * 1_000

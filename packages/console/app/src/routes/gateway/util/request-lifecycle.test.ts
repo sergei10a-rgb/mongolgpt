@@ -82,7 +82,7 @@ describe("managed request lifecycle", () => {
     const ledgerCalls: QuotaLedgerCommand[] = []
     const reservation = await reserveFreeAutoQuota(
       {
-        workspaceID: "workspace-account-free",
+        accountID: "account-free",
         modelID: "free-auto",
         weekStart: new Date("2026-08-24T00:00:00.000Z"),
         persistedUsage: 10_000,

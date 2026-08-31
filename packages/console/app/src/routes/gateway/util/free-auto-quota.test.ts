@@ -18,7 +18,7 @@ describe("Free Auto weekly quota reservation", () => {
     }
     const quota = await reserveFreeAutoQuota(
       {
-        workspaceID: "workspace-1",
+        accountID: "account-1",
         modelID: "free-auto",
         weekStart: new Date("2026-07-13T00:00:00.000Z"),
         persistedUsage: 1_000,
@@ -30,7 +30,7 @@ describe("Free Auto weekly quota reservation", () => {
     )
 
     expect(quota).toBeDefined()
-    expect(calls[0]?.scope).toContain("workspace-1:free-auto:2026-07-13")
+    expect(calls[0]?.scope).toContain("account-1:free-auto:2026-07-13")
     expect(Number(calls[0]?.command.expiresAt)).toBeGreaterThan(Date.now())
     const reservationID = calls[0]?.command.reservationID
     expect(typeof reservationID).toBe("string")
@@ -54,7 +54,7 @@ describe("Free Auto weekly quota reservation", () => {
     }
     const quota = await reserveFreeAutoQuota(
       {
-        workspaceID: "workspace-1",
+        accountID: "account-1",
         modelID: "free-auto",
         weekStart: new Date("2026-07-13T00:00:00.000Z"),
         persistedUsage: 0,
@@ -73,7 +73,7 @@ describe("Free Auto weekly quota reservation", () => {
   test("fails closed when provider usage exceeds the reserved request bound", async () => {
     const quota = await reserveFreeAutoQuota(
       {
-        workspaceID: "workspace-1",
+        accountID: "account-1",
         modelID: "free-auto",
         weekStart: new Date("2026-07-13T00:00:00.000Z"),
         persistedUsage: 0,
@@ -88,5 +88,42 @@ describe("Free Auto weekly quota reservation", () => {
     )
 
     await expect(quota!.settle(2_001)).rejects.toThrow("нөөцөлсөн хэмжээнээс хэтэрлээ")
+  })
+
+  test("uses one account scope across multiple workspaces in the same week and model", async () => {
+    const scopes: string[] = []
+    const client = async (scope: string, command: Record<string, unknown>) => {
+      scopes.push(scope)
+      return command.type === "reserve" ? { allowed: true, value: 1_000 } : { value: 1_000 }
+    }
+
+    const first = await reserveFreeAutoQuota(
+      {
+        accountID: "account-shared",
+        modelID: "free-auto",
+        weekStart: new Date("2026-07-13T00:00:00.000Z"),
+        persistedUsage: 0,
+        reservation: 500,
+        weeklyLimit: 100_000,
+        ttlSeconds: 3_600,
+      },
+      client,
+    )
+    const second = await reserveFreeAutoQuota(
+      {
+        accountID: "account-shared",
+        modelID: "free-auto",
+        weekStart: new Date("2026-07-13T00:00:00.000Z"),
+        persistedUsage: 500,
+        reservation: 500,
+        weeklyLimit: 100_000,
+        ttlSeconds: 3_600,
+      },
+      client,
+    )
+
+    expect(first).toBeDefined()
+    expect(second).toBeDefined()
+    expect(new Set(scopes)).toEqual(new Set(["free-auto:account-shared:free-auto:2026-07-13"]))
   })
 })

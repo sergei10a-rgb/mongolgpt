@@ -799,6 +799,7 @@ export async function handler(
 
     return {
       apiKeyId: data.apiKey,
+      accountID: data.accountID,
       workspaceID: data.workspaceID,
       billing: data.billing,
       user: data.user,
@@ -830,6 +831,7 @@ export async function handler(
       tx
         .select({
           apiKey: KeyTable.id,
+          accountID: AccountTable.id,
           workspaceID: UserTable.workspaceID,
           billing: {
             balance: BillingTable.balance,
@@ -945,9 +947,13 @@ export async function handler(
           `.as("total"),
         })
         .from(UsageTable)
+        .innerJoin(
+          UserTable,
+          and(eq(UserTable.workspaceID, UsageTable.workspaceID), eq(UserTable.id, UsageTable.userID)),
+        )
         .where(
           and(
-            eq(UsageTable.workspaceID, authInfo.workspaceID),
+            eq(UserTable.accountID, authInfo.accountID),
             eq(UsageTable.model, modelInfo.id),
             gte(UsageTable.timeCreated, week.start),
           ),
@@ -962,7 +968,7 @@ export async function handler(
     if (result.status === "rate-limited") throw freeAutoWeeklyLimitError(result.resetInSec)
 
     const reservation = await reserveFreeAutoQuota({
-      workspaceID: authInfo.workspaceID,
+      accountID: authInfo.accountID,
       modelID: modelInfo.id,
       weekStart: week.start,
       persistedUsage: usage,

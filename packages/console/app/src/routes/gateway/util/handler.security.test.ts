@@ -96,4 +96,15 @@ describe("Gateway handler telemetry security", () => {
     expect(source).toContain("if (!usage && res.status >= 400) await releaseRequestQuota()")
     expect(source).toContain("return settleRequestQuota({ costInMicroCents: 0, tokens: 0 })")
   })
+
+  test("scopes authenticated Free Auto weekly usage to the account across workspaces", () => {
+    expect(source).toContain("accountID: AccountTable.id")
+    expect(source).toContain("accountID: data.accountID")
+    expect(source).toContain(".innerJoin(")
+    expect(source).toContain("eq(UserTable.workspaceID, UsageTable.workspaceID)")
+    expect(source).toContain("eq(UserTable.id, UsageTable.userID)")
+    expect(source).toContain("eq(UserTable.accountID, authInfo.accountID)")
+    expect(source).not.toContain("eq(UsageTable.workspaceID, authInfo.workspaceID)")
+    expect(source).toContain("accountID: authInfo.accountID")
+  })
 })
