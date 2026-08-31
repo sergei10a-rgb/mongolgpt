@@ -140,6 +140,31 @@ describe("MongolGPTPlugin", () => {
     }),
   )
 
+  it.effect("allocates a separate loopback port for concurrent account OAuth attempts", () =>
+    Effect.gen(function* () {
+      yield* addPlugin()
+      const integrations = yield* Integration.Service
+      const input = {
+        integrationID: Integration.ID.make("mongolgpt"),
+        methodID: Integration.MethodID.make("device"),
+        inputs: {},
+      }
+      const first = yield* integrations.connection.oauth(input)
+      const second = yield* integrations.connection.oauth(input)
+      const redirects = [first, second].map((attempt) => {
+        const redirect = new URL(new URL(attempt.url).searchParams.get("redirect_uri") ?? "")
+        expect(redirect.hostname).toBe("127.0.0.1")
+        expect(redirect.pathname).toBe("/auth/callback")
+        expect(Number(redirect.port)).toBeGreaterThanOrEqual(1_024)
+        expect(Number(redirect.port)).toBeLessThanOrEqual(65_535)
+        return redirect
+      })
+
+      expect(redirects[0]?.port).not.toBe(redirects[1]?.port)
+      yield* Effect.all([integrations.attempt.cancel(first.attemptID), integrations.attempt.cancel(second.attemptID)])
+    }),
+  )
+
   it.live("loads providers and models from the connected MongolGPT server", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => {

@@ -22,7 +22,8 @@ import { productServiceUrls } from "../../product"
 const defaultServer = env("MONGOLGPT_CONSOLE_URL")?.trim() || productServiceUrls.console
 const defaultAuthServer = env("MONGOLGPT_AUTH_URL")?.trim() || productServiceUrls.auth
 const clientID = "mongolgpt-cli"
-const callbackPort = 1456
+const callbackHost = "127.0.0.1"
+const callbackPath = "/auth/callback"
 const methodID = Integration.MethodID.make("device")
 const RemoteResponse = Schema.Struct({ config: ConfigV1.Info })
 const Token = Schema.Struct({
@@ -61,10 +62,9 @@ function oauth(http: HttpClient.HttpClient) {
         const pkce = yield* Effect.promise(generatePKCE)
         const state = base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)).buffer)
         const code = yield* Deferred.make<string, Error>()
-        const redirect = `http://localhost:${callbackPort}/auth/callback`
         const server = createServer((request, response) => {
-          const url = new URL(request.url ?? "/", `http://localhost:${callbackPort}`)
-          if (url.pathname !== "/auth/callback") {
+          const url = new URL(request.url ?? "/", `http://${callbackHost}`)
+          if (url.pathname !== callbackPath) {
             response.writeHead(404).end("Олдсонгүй")
             return
           }
@@ -92,11 +92,21 @@ function oauth(http: HttpClient.HttpClient) {
             .writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
             .end(OauthCallbackPage.success({ provider: "MongolGPT" }))
         })
-        yield* Effect.callback<void, Error>((resume) => {
-          server.once("error", (error) => resume(Effect.fail(error)))
-          server.listen(callbackPort, "localhost", () => resume(Effect.void))
-        })
         yield* Effect.addFinalizer(() => Effect.sync(() => server.close()))
+        const callbackPort = yield* Effect.callback<number, Error>((resume) => {
+          const onError = (error: Error) => resume(Effect.fail(error))
+          server.once("error", onError)
+          server.listen(0, callbackHost, () => {
+            server.off("error", onError)
+            const address = server.address()
+            if (!address || typeof address === "string") {
+              resume(Effect.fail(new Error("OAuth callback server port тодорхойгүй байна")))
+              return
+            }
+            resume(Effect.succeed(address.port))
+          })
+        })
+        const redirect = `http://${callbackHost}:${callbackPort}${callbackPath}`
         return {
           mode: "auto" as const,
           url: authorizeURL(defaultServer, redirect, pkce, state),
