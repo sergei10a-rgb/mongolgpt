@@ -38,6 +38,48 @@ for (const channel of channels) {
   })
 }
 
+for (const invalid of [undefined, "", "latest", "Prod"] as const) {
+  test(`fails closed for an invalid packaging channel: ${invalid ?? "missing"}`, async () => {
+    const previous = process.env.MONGOLGPT_CHANNEL
+    const previousCI = process.env.CI
+    if (invalid === undefined) delete process.env.MONGOLGPT_CHANNEL
+    else process.env.MONGOLGPT_CHANNEL = invalid
+    process.env.CI = "true"
+
+    try {
+      await expect(
+        import(`./electron-builder.config.ts?invalid=${encodeURIComponent(invalid ?? "missing")}`),
+      ).rejects.toThrow("MONGOLGPT_CHANNEL")
+    } finally {
+      if (previous === undefined) delete process.env.MONGOLGPT_CHANNEL
+      else process.env.MONGOLGPT_CHANNEL = previous
+      if (previousCI === undefined) delete process.env.CI
+      else process.env.CI = previousCI
+    }
+  })
+}
+
+test("defaults only a non-CI local package build to dev", async () => {
+  const previous = process.env.MONGOLGPT_CHANNEL
+  const previousCI = process.env.CI
+  const previousActions = process.env.GITHUB_ACTIONS
+  delete process.env.MONGOLGPT_CHANNEL
+  delete process.env.CI
+  delete process.env.GITHUB_ACTIONS
+
+  try {
+    const module = await import("./electron-builder.config.ts?local=missing")
+    expect((module.default as Configuration).appId).toBe("org.mongolgpt.desktop.dev")
+  } finally {
+    if (previous === undefined) delete process.env.MONGOLGPT_CHANNEL
+    else process.env.MONGOLGPT_CHANNEL = previous
+    if (previousCI === undefined) delete process.env.CI
+    else process.env.CI = previousCI
+    if (previousActions === undefined) delete process.env.GITHUB_ACTIONS
+    else process.env.GITHUB_ACTIONS = previousActions
+  }
+})
+
 test("keeps a hidden prod launcher for old Linux pins", async () => {
   const previous = process.env.MONGOLGPT_CHANNEL
   process.env.MONGOLGPT_CHANNEL = "prod"

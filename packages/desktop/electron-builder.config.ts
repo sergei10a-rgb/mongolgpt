@@ -30,7 +30,8 @@ async function signWindows(configuration: { path: string }) {
 const channel = (() => {
   const raw = process.env.MONGOLGPT_CHANNEL
   if (raw === "dev" || raw === "beta" || raw === "prod") return raw
-  return "dev"
+  if (raw === undefined && process.env.CI === undefined && process.env.GITHUB_ACTIONS !== "true") return "dev"
+  throw new Error("MONGOLGPT_CHANNEL нь dev, beta эсвэл prod байх ёстой")
 })()
 
 const APP_IDS = {
