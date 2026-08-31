@@ -50,6 +50,8 @@ test("keeps the deployed app on its static boundary without requiring a live run
     runtimeMode: document.querySelector('meta[name="mongolgpt-runtime-mode"]')?.getAttribute("content"),
     serverUrl: document.querySelector('meta[name="mongolgpt-server-url"]')?.getAttribute("content"),
     releaseSha: document.querySelector('meta[name="mongolgpt-release-sha"]')?.getAttribute("content"),
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
   }))
 
   expect(snapshot.title).toContain("MongolGPT")
@@ -60,6 +62,7 @@ test("keeps the deployed app on its static boundary without requiring a live run
   expect(snapshot.serverUrl).toBe(runtimeOrigin)
   expect(snapshot.releaseSha).toMatch(/^[0-9a-f]{40}$/)
   if (expectedReleaseSha) expect(snapshot.releaseSha).toBe(expectedReleaseSha)
+  expect(snapshot.scrollWidth).toBeLessThanOrEqual(snapshot.clientWidth)
 
   for (const pathname of staticAppBackendBoundaryPaths) {
     const response = await request.get(new URL(pathname, `${appOrigin}/`).toString(), {

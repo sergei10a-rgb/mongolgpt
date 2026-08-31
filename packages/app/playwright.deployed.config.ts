@@ -35,9 +35,17 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "chromium-deployed",
+      name: "chromium-deployed-desktop",
       use: {
         ...devices["Desktop Chrome"],
+        launchOptions: executablePath ? { executablePath } : undefined,
+      },
+    },
+    {
+      name: "chromium-deployed-mobile",
+      testIgnore: "**/authenticated-browser-smoke.spec.ts",
+      use: {
+        ...devices["Pixel 5"],
         launchOptions: executablePath ? { executablePath } : undefined,
       },
     },

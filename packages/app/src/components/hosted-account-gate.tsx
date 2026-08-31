@@ -485,7 +485,7 @@ export function HostedAccountGate(props: ParentProps) {
     <Show
       when={!enabled || (!session.error && isHostedSessionReady(session()))}
       fallback={
-        <div class="h-dvh w-screen flex items-center justify-center bg-background-base">
+        <div class="h-dvh w-full flex items-center justify-center bg-background-base">
           <Splash class="w-16 h-20 opacity-50 animate-pulse" />
         </div>
       }

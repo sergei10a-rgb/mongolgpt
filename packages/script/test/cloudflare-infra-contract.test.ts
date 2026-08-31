@@ -353,6 +353,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
   test("gates every deployed app with HTTP and Chromium smoke checks", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy.yml", import.meta.url)).text()
     const smokeSource = await Bun.file(new URL("../../../script/deployment-smoke.ts", import.meta.url)).text()
+    const browserConfig = await Bun.file(new URL("../../app/playwright.deployed.config.ts", import.meta.url)).text()
+    const browserSmoke = await Bun.file(new URL("../../app/e2e/deployed/browser-smoke.spec.ts", import.meta.url)).text()
     const steps = parseWorkflow(source).jobs.deploy.steps
     const auth = steps.findIndex((step) => step.name === "Validate authenticated smoke identity")
     const freeAuto = steps.findIndex((step) => step.name === "Prepare managed Free Auto catalog without logging provider keys")
@@ -395,6 +397,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_PUBLIC_URL).toBe("${{ needs.verify.outputs.public_url }}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RUNTIME_URL).toBe("${{ needs.verify.outputs.runtime_url }}")
     expect(steps[browser]?.env?.PLAYWRIGHT_DEPLOYED_RELEASE_SHA).toBe("${{ needs.verify.outputs.target_sha }}")
+    expect(browserConfig).toContain('name: "chromium-deployed-desktop"')
+    expect(browserConfig).toContain('...devices["Desktop Chrome"]')
+    expect(browserConfig).toContain('name: "chromium-deployed-mobile"')
+    expect(browserConfig).toContain('...devices["Pixel 5"]')
+    expect(browserConfig).toContain('testIgnore: "**/authenticated-browser-smoke.spec.ts"')
+    expect(browserSmoke).toContain("expect(snapshot.scrollWidth).toBeLessThanOrEqual(snapshot.clientWidth)")
     expect(steps[docsBrowser]?.run).toBe("bun --cwd packages/web test:e2e:deployed")
     expect(steps[docsBrowser]?.env).toEqual({
       CI: "true",

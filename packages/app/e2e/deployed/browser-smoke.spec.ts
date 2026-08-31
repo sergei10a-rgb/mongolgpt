@@ -31,6 +31,8 @@ test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", a
     lang: document.documentElement.lang,
     text: document.body.innerText,
     readyState: document.readyState,
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
   }))
 
   expect(snapshot.title).toContain("MongolGPT")
@@ -41,6 +43,7 @@ test("shows an anonymous MongolGPT UI and avoids same-origin backend routing", a
   if (expectedReleaseSha) expect(deployedReleaseSha).toBe(expectedReleaseSha)
   expect(isVisibleMongolianText(snapshot.text)).toBe(true)
   expect(snapshot.text.length).toBeGreaterThan(80)
+  expect(snapshot.scrollWidth).toBeLessThanOrEqual(snapshot.clientWidth)
 
   await expect(page.getByRole("heading", { name: "MongolGPT-д нэвтэрнэ үү" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Нэвтрэх" })).toBeVisible()
