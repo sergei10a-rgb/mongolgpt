@@ -881,6 +881,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const contracts = job.steps.find((step) => step.name === "Verify admin app contracts")
     const configPreflight = job.steps.find((step) => step.name === "Verify isolated dev admin configuration")
     const tokenPreflight = job.steps.find((step) => step.name === "Verify Cloudflare deploy token")
+    const accessPreflight = job.steps.find((step) => step.name === "Verify Cloudflare Access token")
     const diff = job.steps.find((step) => step.name === "Verify admin bootstrap SST diff")
     const deploy = job.steps.find((step) => step.name === "Deploy only dev admin to Cloudflare")
     const access = job.steps.find((step) => step.name === "Verify deployed admin Access policy")
@@ -921,6 +922,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     })
     expect(tokenPreflight?.env).toEqual({ CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" })
     expect(tokenPreflight?.run).toBe("bun run cloudflare:preflight")
+    expect(accessPreflight?.env).toEqual({
+      CLOUDFLARE_ACCESS_API_TOKEN: "${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}",
+    })
+    expect(accessPreflight?.run).toBe("bun script/cloudflare-access-preflight.ts")
     expect(diff?.env).toEqual({
       CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
       CLOUDFLARE_ACCESS_API_TOKEN: "${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}",
@@ -935,6 +940,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(diff?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true")
     expect(diff?.run).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
     expect(diff?.run).toContain("bun sst diff --stage=dev --json --print-logs")
+    expect(diff?.run).toContain("bun script/sst-error-diagnostics.ts .sst/pulumi")
+    expect(diff?.run).toContain("exit 1")
     expect(diff?.run).not.toContain("--target")
     expect(diff?.run).toContain('bun script/admin-deployment-diff.ts "$diff_file"')
     expect(deploy?.env).toEqual({
@@ -953,6 +960,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true")
     expect(deploy?.run).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
     expect(deploy?.run).toContain("bun sst diff --stage=dev --json --print-logs")
+    expect(deploy?.run).toContain("bun script/sst-error-diagnostics.ts .sst/pulumi")
     expect(deploy?.run).toContain('bun script/admin-deployment-diff.ts "$diff_file"')
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
     expect(deploy?.run).not.toContain("--target Admin")

@@ -29,6 +29,7 @@
     "./npm-publish-access": "./src/npm-publish-access.ts",
     "./release-integrity": "./src/release-integrity.ts",
     "./sst-admin-diff": "./src/sst-admin-diff.ts",
+    "./sst-error-diagnostics": "./src/sst-error-diagnostics.ts",
     "./sst-d1-state": "./src/sst-d1-state.ts"
   },
   "scripts": {
