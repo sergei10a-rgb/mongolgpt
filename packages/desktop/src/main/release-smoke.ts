@@ -7,6 +7,14 @@ type RendererContents = Pick<EventEmitter, "off" | "once"> & {
   executeJavaScript(code: string, userGesture?: boolean): Promise<unknown>
 }
 
+type RendererScreenshotContents = {
+  capturePage(): Promise<{
+    isEmpty(): boolean
+    getSize(): { width: number; height: number }
+    toPNG(): Buffer
+  }>
+}
+
 export type DesktopAccountGateState = {
   language: string
   onboardingStage: string
@@ -14,6 +22,12 @@ export type DesktopAccountGateState = {
   accountLogo: string
   accountHeading: string
   loginAction: string
+}
+
+export type DesktopSmokeScreenshot = {
+  width: number
+  height: number
+  bytes: number
 }
 
 const expectedAccountGate = {
@@ -83,6 +97,10 @@ function accountGateReady(state: DesktopAccountGateState | undefined): state is 
 export function desktopSmokeFile(env: NodeJS.ProcessEnv = process.env) {
   const value = env.MONGOLGPT_DESKTOP_SMOKE_FILE?.trim()
   return value || undefined
+}
+
+export function desktopSmokeScreenshotFile(file: string) {
+  return `${file}.png`
 }
 
 function loadedRendererURL(value: string) {
@@ -159,9 +177,28 @@ export async function waitForRendererAccountGate(webContents: RendererContents, 
   throw new Error(`MongolGPT аккаунтын Монгол onboarding ${timeoutMs} мс-ийн дотор харагдсангүй.${detail}`)
 }
 
+export async function captureRendererSmokeScreenshot(
+  webContents: RendererScreenshotContents,
+  file: string,
+): Promise<DesktopSmokeScreenshot> {
+  const image = await webContents.capturePage()
+  const size = image.getSize()
+  const png = image.toPNG()
+  if (image.isEmpty() || size.width < 1 || size.height < 1 || png.length < 8) {
+    throw new Error("Desktop smoke screenshot хоосон эсвэл буруу хэмжээтэй байна.")
+  }
+  writeFileSync(desktopSmokeScreenshotFile(file), png)
+  return { width: size.width, height: size.height, bytes: png.length }
+}
+
 export function writeDesktopSmokeResult(
   file: string,
-  input: { version: string; url: string; functional: ReleaseFunctionalSmokeResult } & DesktopAccountGateState,
+  input: {
+    version: string
+    url: string
+    functional: ReleaseFunctionalSmokeResult
+    screenshot: DesktopSmokeScreenshot
+  } & DesktopAccountGateState,
 ) {
   writeFileSync(file, `${JSON.stringify({ status: "ready", ...input })}\n`, "utf8")
 }

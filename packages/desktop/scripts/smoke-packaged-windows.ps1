@@ -13,6 +13,34 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Assert-DesktopSmokeScreenshot {
+  param([string]$Path, [object]$Metadata)
+
+  if (!(Test-Path -LiteralPath $Path -PathType Leaf)) {
+    throw "Packaged desktop screenshot үүссэнгүй: $Path"
+  }
+  $file = Get-Item -LiteralPath $Path
+  if ($Metadata.width -lt 1 -or $Metadata.height -lt 1 -or $Metadata.bytes -ne $file.Length) {
+    throw "Packaged desktop screenshot metadata буруу байна: $($Metadata | ConvertTo-Json -Compress)"
+  }
+  $bytes = [System.IO.File]::ReadAllBytes($Path)
+  $expected = [byte[]](137, 80, 78, 71, 13, 10, 26, 10)
+  if ($bytes.Length -lt $expected.Length) {
+    throw "Packaged desktop screenshot хоосон байна: $Path"
+  }
+  for ($index = 0; $index -lt $expected.Length; $index++) {
+    if ($bytes[$index] -ne $expected[$index]) {
+      throw "Packaged desktop screenshot PNG файл биш байна: $Path"
+    }
+  }
+  return [PSCustomObject]@{
+    path = $Path
+    width = $Metadata.width
+    height = $Metadata.height
+    bytes = $file.Length
+  }
+}
+
 $appDirectoryPath = [System.IO.Path]::GetFullPath($AppDirectory)
 if (!(Test-Path -LiteralPath $appDirectoryPath -PathType Container)) {
   throw "Packaged desktop directory does not exist: $appDirectoryPath"
@@ -40,6 +68,7 @@ $marker = [System.IO.Path]::GetFullPath($MarkerPath)
 $stdout = "$marker.stdout.log"
 $stderr = "$marker.stderr.log"
 $externalPtyProof = "$marker.pty-proof"
+$screenshotPath = "$marker.png"
 
 $previousOnboarding = [Environment]::GetEnvironmentVariable("MONGOLGPT_TEST_ONBOARDING", "Process")
 $previousMarker = [Environment]::GetEnvironmentVariable("MONGOLGPT_DESKTOP_SMOKE_FILE", "Process")
@@ -53,7 +82,7 @@ $process = $null
 $summary = $null
 $failure = $null
 
-Remove-Item -LiteralPath $marker, $stdout, $stderr, $externalPtyProof -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $marker, $stdout, $stderr, $externalPtyProof, $screenshotPath -Force -ErrorAction SilentlyContinue
 [Environment]::SetEnvironmentVariable("MONGOLGPT_TEST_ONBOARDING", "1", "Process")
 [Environment]::SetEnvironmentVariable("MONGOLGPT_DESKTOP_SMOKE_FILE", $marker, "Process")
 [Environment]::SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "1", "Process")
@@ -112,6 +141,7 @@ try {
   ) {
     throw "Packaged desktop did not show the Mongolian MongolGPT account gate: $rawResult"
   }
+  $screenshot = Assert-DesktopSmokeScreenshot -Path $screenshotPath -Metadata $result.screenshot
   $functionalHttp = @($result.functional.summary.http.PSObject.Properties.Value)
   if (
     $result.functional.capable -ne $true -or
@@ -154,6 +184,7 @@ try {
     accountLogo = $result.accountLogo
     accountHeading = $result.accountHeading
     loginAction = $result.loginAction
+    screenshot = $screenshot
     functional = $result.functional
     exitCode = $process.ExitCode
   }

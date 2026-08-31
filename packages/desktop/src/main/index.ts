@@ -26,6 +26,7 @@ import { createLocalBridgeGateway } from "./local-bridge-gateway"
 import { createDesktopLocalBridgePairingController, DesktopLocalBridgePairingError } from "./local-bridge-pairing"
 import { runReleaseFunctionalSmoke } from "./release-functional-smoke"
 import {
+  captureRendererSmokeScreenshot,
   desktopSmokeFile,
   rendererSmokeFailure,
   waitForRendererAccountGate,
@@ -524,6 +525,12 @@ const main = Effect.gen(function* () {
     logger.log("Desktop smoke: Монгол аккаунтын дэлгэц бэлэн боллоо")
     const rendererFailure = rendererSmokeFailure(fatalRendererError)
     if (rendererFailure) yield* Effect.fail(rendererFailure)
+    logger.log("Desktop smoke: дүрслэлийн screenshot авч байна")
+    const screenshot = yield* Effect.tryPromise({
+      try: () => captureRendererSmokeScreenshot(smokeWindow.webContents, DESKTOP_SMOKE_FILE),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    })
+    logger.log("Desktop smoke: дүрслэлийн screenshot бэлэн боллоо", screenshot)
     logger.log("Desktop smoke: локал чадваруудыг шалгаж байна")
     const functional = yield* Effect.tryPromise({
       try: () =>
@@ -547,6 +554,7 @@ const main = Effect.gen(function* () {
           version: app.getVersion(),
           url: rendererUrl,
           functional,
+          screenshot,
           ...accountGate,
         }),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),

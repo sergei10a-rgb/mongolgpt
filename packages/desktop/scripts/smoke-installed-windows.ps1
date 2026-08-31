@@ -15,6 +15,34 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Assert-DesktopSmokeScreenshot {
+  param([string]$Path, [object]$Metadata)
+
+  if (!(Test-Path -LiteralPath $Path -PathType Leaf)) {
+    throw "Installed desktop screenshot үүссэнгүй: $Path"
+  }
+  $file = Get-Item -LiteralPath $Path
+  if ($Metadata.width -lt 1 -or $Metadata.height -lt 1 -or $Metadata.bytes -ne $file.Length) {
+    throw "Installed desktop screenshot metadata буруу байна: $($Metadata | ConvertTo-Json -Compress)"
+  }
+  $bytes = [System.IO.File]::ReadAllBytes($Path)
+  $expected = [byte[]](137, 80, 78, 71, 13, 10, 26, 10)
+  if ($bytes.Length -lt $expected.Length) {
+    throw "Installed desktop screenshot хоосон байна: $Path"
+  }
+  for ($index = 0; $index -lt $expected.Length; $index++) {
+    if ($bytes[$index] -ne $expected[$index]) {
+      throw "Installed desktop screenshot PNG файл биш байна: $Path"
+    }
+  }
+  return [PSCustomObject]@{
+    path = $Path
+    width = $Metadata.width
+    height = $Metadata.height
+    bytes = $file.Length
+  }
+}
+
 function New-SmokeMarkerPath {
   param([string]$Candidate)
 
@@ -62,6 +90,7 @@ function Invoke-DesktopSmoke {
   $stdout = "$Marker.stdout.log"
   $stderr = "$Marker.stderr.log"
   $externalPtyProof = "$Marker.pty-proof"
+  $screenshotPath = "$Marker.png"
   $previousOnboarding = [Environment]::GetEnvironmentVariable("MONGOLGPT_TEST_ONBOARDING", "Process")
   $previousMarker = [Environment]::GetEnvironmentVariable("MONGOLGPT_DESKTOP_SMOKE_FILE", "Process")
   $previousConptyDll = [Environment]::GetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "Process")
@@ -74,7 +103,7 @@ function Invoke-DesktopSmoke {
   $summary = $null
   $failure = $null
 
-  Remove-Item -LiteralPath $Marker, $stdout, $stderr, $externalPtyProof -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $Marker, $stdout, $stderr, $externalPtyProof, $screenshotPath -Force -ErrorAction SilentlyContinue
   [Environment]::SetEnvironmentVariable("MONGOLGPT_TEST_ONBOARDING", "1", "Process")
   [Environment]::SetEnvironmentVariable("MONGOLGPT_DESKTOP_SMOKE_FILE", $Marker, "Process")
   [Environment]::SetEnvironmentVariable("MONGOLGPT_PTY_USE_CONPTY_DLL", "1", "Process")
@@ -130,6 +159,7 @@ function Invoke-DesktopSmoke {
     ) {
       throw "Installed desktop did not show the Mongolian MongolGPT account gate: $rawResult"
     }
+    $screenshot = Assert-DesktopSmokeScreenshot -Path $screenshotPath -Metadata $result.screenshot
     $functionalHttp = @($result.functional.summary.http.PSObject.Properties.Value)
     if (
       $result.functional.capable -ne $true -or
@@ -172,6 +202,7 @@ function Invoke-DesktopSmoke {
       accountLogo = $result.accountLogo
       accountHeading = $result.accountHeading
       loginAction = $result.loginAction
+      screenshot = $screenshot
       functional = $result.functional
       exitCode = $process.ExitCode
     }

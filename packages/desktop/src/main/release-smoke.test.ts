@@ -5,6 +5,8 @@ import { readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
+  captureRendererSmokeScreenshot,
+  desktopSmokeScreenshotFile,
   desktopSmokeFile,
   rendererSmokeFailure,
   waitForRendererAccountGate,
@@ -53,11 +55,50 @@ const functional = {
   },
 }
 
+const screenshot = { width: 1280, height: 800, bytes: 8 }
+
 describe("desktop release smoke", () => {
   test("enables smoke mode only for a non-empty marker path", () => {
     expect(desktopSmokeFile({ MONGOLGPT_DESKTOP_SMOKE_FILE: " C:\\smoke.json " })).toBe("C:\\smoke.json")
     expect(desktopSmokeFile({ MONGOLGPT_DESKTOP_SMOKE_FILE: "  " })).toBeUndefined()
     expect(desktopSmokeFile({})).toBeUndefined()
+  })
+
+  test("captures a non-empty renderer screenshot beside the smoke marker", async () => {
+    const file = join(tmpdir(), `mongolgpt-desktop-smoke-${randomUUID()}.json`)
+    const screenshotFile = desktopSmokeScreenshotFile(file)
+    files.push(screenshotFile)
+    const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+
+    await expect(
+      captureRendererSmokeScreenshot(
+        {
+          capturePage: async () => ({
+            isEmpty: () => false,
+            getSize: () => ({ width: 1280, height: 800 }),
+            toPNG: () => png,
+          }),
+        },
+        file,
+      ),
+    ).resolves.toEqual(screenshot)
+    expect(readFileSync(screenshotFile)).toEqual(png)
+  })
+
+  test("rejects an empty renderer screenshot", async () => {
+    const file = join(tmpdir(), `mongolgpt-desktop-smoke-${randomUUID()}.json`)
+    await expect(
+      captureRendererSmokeScreenshot(
+        {
+          capturePage: async () => ({
+            isEmpty: () => true,
+            getSize: () => ({ width: 0, height: 0 }),
+            toPNG: () => Buffer.alloc(0),
+          }),
+        },
+        file,
+      ),
+    ).rejects.toThrow("screenshot")
   })
 
   test("waits for the packaged renderer main frame", async () => {
@@ -124,6 +165,7 @@ describe("desktop release smoke", () => {
       version: "1.2.3",
       url: "mongolgpt-renderer://renderer/index.html",
       functional,
+      screenshot,
       ...accountGate,
     })
 
@@ -132,6 +174,7 @@ describe("desktop release smoke", () => {
       version: "1.2.3",
       url: "mongolgpt-renderer://renderer/index.html",
       functional,
+      screenshot,
       ...accountGate,
     })
   })
