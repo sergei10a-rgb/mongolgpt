@@ -73,7 +73,6 @@ jobs:
           MONGOLGPT_DEPLOY_DOCS_ONLY: "true"
         run: |
           bun run deploy:preflight -- dev --docs-only
-          bun sst unlock --stage=dev || true
           bun sst deploy --stage=dev --target Website --print-logs
 
       - name: Verify live dev docs

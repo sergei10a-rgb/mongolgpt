@@ -137,9 +137,11 @@ describe("documentation product contract", () => {
     const styles = await Bun.file(customStyles).text()
 
     expect(styles).toContain(".sl-markdown-content table")
-    expect(styles).toContain("overflow-x: auto")
+    expect(styles).toContain("display: table")
+    expect(styles).toContain("table-layout: fixed")
+    expect(styles).toContain("overflow-wrap: anywhere")
     expect(styles).toContain(".sl-markdown-content table code")
-    expect(styles).toContain("white-space: nowrap")
+    expect(styles).toContain("white-space: normal")
   })
 
   test("publishes dedicated Mongolian service, privacy, billing, and admin guidance", async () => {

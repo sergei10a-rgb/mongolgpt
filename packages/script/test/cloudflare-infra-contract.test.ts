@@ -27,6 +27,7 @@ type Workflow = {
 
 type WorkflowJob = {
   condition?: string
+  environment?: string
   env?: Record<string, string>
   steps: WorkflowStep[]
 }
@@ -79,9 +80,14 @@ function parseWorkflowJob(input: unknown, name: string): WorkflowJob {
 
   return {
     condition: typeof input.if === "string" ? input.if : undefined,
+    environment: typeof input.environment === "string" ? input.environment : undefined,
     env: jobEnv,
     steps,
   }
+}
+
+async function readWorkflowSource(relativePath: string) {
+  return Bun.file(new URL(relativePath, import.meta.url)).text()
 }
 
 describe("Cloudflare hosted infrastructure contract", () => {
@@ -1394,5 +1400,83 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).not.toContain("MONGOLGPT_ADMIN_MFA_ENFORCED")
     expect(mfaScriptSource).toContain("configureCloudflareAccessMfa")
     expect(mfaScriptSource).not.toContain("CLOUDFLARE_API_TOKEN")
+  })
+
+  test("keeps normal deploy, rehearsal, and bootstrap workflows free of automatic SST unlocks", async () => {
+    const workflowPaths = [
+      "../../../.github/workflows/deploy.yml",
+      "../../../.github/workflows/deploy-dev-docs.yml",
+      "../../../.github/workflows/deploy-dev-console.yml",
+      "../../../.github/workflows/deploy-dev-app.yml",
+      "../../../.github/workflows/d1-backup-restore-rehearsal.yml",
+      "../../../.github/workflows/bootstrap-dev-auth.yml",
+    ]
+    const sources = await Promise.all(workflowPaths.map((path) => readWorkflowSource(path)))
+    for (const source of sources) {
+      expect(source).not.toContain("sst unlock")
+    }
+  })
+
+  test("manually recovers only the requested SST lock stage with exact confirmation", async () => {
+    const source = await readWorkflowSource("../../../.github/workflows/recover-sst-lock.yml")
+    const parsed: unknown = Bun.YAML.parse(source)
+    if (
+      !record(parsed) ||
+      !record(parsed.on) ||
+      !record(parsed.concurrency) ||
+      !record(parsed.permissions) ||
+      !record(parsed.jobs)
+    ) {
+      throw new Error("SST lock recovery workflow is invalid")
+    }
+    const dispatch = parsed.on.workflow_dispatch
+    if (!record(dispatch) || !record(dispatch.inputs) || !record(parsed.jobs.unlock)) {
+      throw new Error("SST lock recovery workflow inputs or job are missing")
+    }
+    const job = parseWorkflowJob(parsed.jobs.unlock, "unlock")
+    const inputs = dispatch.inputs
+    const stageInput = record(inputs.stage) ? inputs.stage : undefined
+    const confirmationInput = record(inputs.confirmation) ? inputs.confirmation : undefined
+    const confirmation = job.steps.find((step) => step.name === "SST түгжээ сэргээх баталгаажуулалтыг шалгах")
+    const checkout = job.steps.find((step) => step.name === "Эх кодыг татах")
+    const setup = job.steps.find((step) => step.name === "Bun тохируулах")
+    const unlock = job.steps.find((step) => step.name === "SST төлөвийн түгжээг тайлах")
+
+    expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
+    expect(stageInput?.type).toBe("choice")
+    expect(stageInput?.default).toBe("dev")
+    expect(stageInput?.options).toEqual(["dev", "production"])
+    expect(confirmationInput?.type).toBe("string")
+    expect(confirmationInput?.required).toBe(true)
+    expect(parsed.concurrency).toEqual({
+      group: "cloudflare-deploy-${{ inputs.stage }}",
+      "cancel-in-progress": false,
+    })
+    expect(parsed.permissions).toEqual({ contents: "read" })
+    expect(job.condition).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
+    expect(job.environment).toBe("${{ inputs.stage }}")
+    expect(confirmation?.env).toEqual({
+      RECOVERY_CONFIRMATION: "${{ inputs.confirmation }}",
+      RECOVERY_STAGE: "${{ inputs.stage }}",
+    })
+    expect(confirmation?.run).toContain('dev) expected="UNLOCK DEV SST STATE dev.mgpt.mn" ;;')
+    expect(confirmation?.run).toContain('production) expected="UNLOCK PRODUCTION SST STATE mgpt.mn" ;;')
+    expect(confirmation?.run).toContain('if [ "$RECOVERY_CONFIRMATION" != "$expected" ]; then')
+    expect(confirmation?.run).not.toContain("${{ inputs.stage }}")
+    expect(checkout?.uses).toBe("actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd")
+    expect(setup?.uses).toBe("./.github/actions/setup-bun")
+    expect(unlock?.env).toEqual({
+      STAGE: "${{ inputs.stage }}",
+      MONGOLGPT_DOMAIN: "${{ vars.MONGOLGPT_DOMAIN }}",
+      CLOUDFLARE_ACCOUNT_ID: "${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}",
+      CLOUDFLARE_DEFAULT_ACCOUNT_ID: "${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}",
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+    })
+    expect(unlock?.run).toContain('bun sst unlock --stage="$STAGE" --print-logs')
+    expect(unlock?.run).not.toContain("${{ inputs.stage }}")
+    expect(source).toContain("name: SST түгжээ сэргээх")
+    expect(source).not.toContain("schedule:")
+    expect(source).not.toContain("push:")
+    expect(source).not.toContain("|| true")
   })
 })

@@ -336,7 +336,6 @@ jobs:
           runtime_secrets="$RUNNER_TEMP/mongolgpt-runtime-secrets.json"
           trap 'rm -f "$runtime_secrets"' EXIT
           node -e 'require("node:fs").writeFileSync(process.argv[1], JSON.stringify({ MONGOLGPT_RUNTIME_SECRET: process.env.MONGOLGPT_RUNTIME_SECRET, MONGOLGPT_RUNTIME_AUTH_SECRET: process.env.MONGOLGPT_RUNTIME_AUTH_SECRET }))' "$runtime_secrets"
-          bun sst unlock --stage=${{ inputs.stage }} || true
           set -o pipefail
           if ! database_id="$(bun sst state export --stage=${{ inputs.stage }} | bun script/resolve-sst-d1-state.ts)"; then
             echo "SST state-д Database алга. Schema-dependent service-ээс өмнө D1-ийг үүсгэж байна."

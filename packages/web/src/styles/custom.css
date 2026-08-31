@@ -421,21 +421,28 @@ nav.sidebar ul.top-level > li > details > summary .group-label > span {
 
 @media (max-width: 768px) {
   .sl-markdown-content table {
-    display: block;
+    display: table;
+    width: 100%;
     max-width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    table-layout: fixed;
   }
 
   .sl-markdown-content table th,
   .sl-markdown-content table td {
-    min-width: 8rem;
-    overflow-wrap: normal;
-    word-break: normal;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .sl-markdown-content table th:first-child,
+  .sl-markdown-content table td:first-child {
+    width: 25%;
   }
 
   .sl-markdown-content table code {
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 }
 

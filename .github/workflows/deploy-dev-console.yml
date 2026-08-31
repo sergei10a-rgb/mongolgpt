@@ -130,7 +130,6 @@ jobs:
           SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: ${{ secrets.MONGOLGPT_GATEWAY_SESSION_SECRET }}
         run: |
           bun run deploy:preflight -- dev --console-only
-          bun sst unlock --stage=dev || true
           set -o pipefail
           if ! database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then
             echo "Dev SST state-д Database алга. Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай."

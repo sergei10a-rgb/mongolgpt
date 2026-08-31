@@ -1,0 +1,67 @@
+name: SST түгжээ сэргээх
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Unlock хийх орчин"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - production
+      confirmation:
+        description: "STAGE-д таарсан SST unlock баталгаажуулалт"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-deploy-${{ inputs.stage }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  unlock:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: ${{ inputs.stage }}
+    steps:
+      - name: SST түгжээ сэргээх баталгаажуулалтыг шалгах
+        env:
+          RECOVERY_CONFIRMATION: ${{ inputs.confirmation }}
+          RECOVERY_STAGE: ${{ inputs.stage }}
+        run: |
+          case "$RECOVERY_STAGE" in
+            dev) expected="UNLOCK DEV SST STATE dev.mgpt.mn" ;;
+            production) expected="UNLOCK PRODUCTION SST STATE mgpt.mn" ;;
+            *)
+              echo "SST recovery stage буруу байна." >&2
+              exit 1
+              ;;
+          esac
+          if [ "$RECOVERY_CONFIRMATION" != "$expected" ]; then
+            echo "SST recovery баталгаажуулалт яг '$expected' байна." >&2
+            exit 1
+          fi
+
+      - name: Эх кодыг татах
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Bun тохируулах
+        uses: ./.github/actions/setup-bun
+
+      - name: SST төлөвийн түгжээг тайлах
+        env:
+          STAGE: ${{ inputs.stage }}
+          MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: bun sst unlock --stage="$STAGE" --print-logs

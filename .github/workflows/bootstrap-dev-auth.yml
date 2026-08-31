@@ -106,7 +106,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION: "true"
         run: |
-          bunx sst@4.7.0 unlock --stage=dev || true
           bunx sst@4.7.0 refresh \
             --stage=dev \
             --target UsageDeadLetterQueue \
@@ -123,7 +122,6 @@ jobs:
           MONGOLGPT_REPAIR_CLOUDFLARE_QUEUE_PROVIDER: "true"
           EDITOR: "bun script/repair-cloudflare-provider-state.ts"
         run: |
-          bun sst unlock --stage=dev || true
           bun sst state edit --stage=dev --print-logs
 
       - name: Bootstrap real dev OAuth infrastructure
@@ -180,7 +178,6 @@ jobs:
           set_optional_secret GITHUB_CLIENT_SECRET_CONSOLE
           set_optional_secret GOOGLE_CLIENT_ID
           set_optional_secret D1BackupApiToken
-          bun sst unlock --stage="$stage" || true
           repair_log="$(mktemp)"
           set +e
           bun sst state repair --stage="$stage" --print-logs 2>&1 | tee "$repair_log"

@@ -74,7 +74,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           SST_SECRET_D1BackupApiToken: ${{ secrets.D1_BACKUP_API_TOKEN }}
         run: |
-          bun sst unlock --stage=dev || true
           bun sst deploy --stage=dev --target D1BackupSchedule --print-logs
 
       - name: Trigger a fresh dev backup and wait for completion

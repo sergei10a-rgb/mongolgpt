@@ -76,7 +76,6 @@ jobs:
           MONGOLGPT_DEPLOY_APP_ONLY: "true"
         run: |
           bun run deploy:preflight -- dev --app-only
-          bun sst unlock --stage=dev || true
           bun sst deploy --stage=dev --target WebApp --print-logs
 
       - name: Verify live dev app boundary
