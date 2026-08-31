@@ -149,7 +149,26 @@ export const providerAttemptRetention = new sst.cloudflare.Cron("ProviderAttempt
   },
 })
 
+const PAYMENT_RECOVERY_ARCHIVE_PREFIX = "payment-recovery/v1/"
 export const paymentRecoveryArchive = new sst.cloudflare.Bucket("PaymentRecoveryArchive")
+const paymentRecoveryArchiveRetention = new cloudflare.R2BucketLifecycle(
+  "PaymentRecoveryArchiveRetention",
+  {
+    accountId: sst.cloudflare.DEFAULT_ACCOUNT_ID,
+    bucketName: paymentRecoveryArchive.name,
+    rules: [
+      {
+        id: "expire-payment-recovery-archive-after-14-days",
+        conditions: { prefix: PAYMENT_RECOVERY_ARCHIVE_PREFIX },
+        enabled: true,
+        deleteObjectsTransition: {
+          condition: { maxAge: PAYMENT_QUEUE_RETENTION_SECONDS, type: "Age" },
+        },
+      },
+    ],
+  },
+  { dependsOn: [paymentRecoveryArchive.nodes.bucket] },
+)
 const paymentLastResortQueue = new sst.cloudflare.Queue("PaymentLastResortQueue", {
   transform: {
     queue: (args) => {
