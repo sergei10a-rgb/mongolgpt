@@ -12,12 +12,14 @@ import "./settings-v2.css"
 import { SettingsServersV2 } from "./servers"
 import { SettingsImportsV2 } from "./imports"
 import { SettingsAccountV2 } from "../settings-account"
+import { settingsPlatformLabels } from "../settings-platform"
 
 export const DialogSettings: Component<{
   sessionID?: string
 }> = (props) => {
   const language = useLanguage()
   const platform = usePlatform()
+  const labels = () => settingsPlatformLabels(platform.platform)
 
   return (
     <Dialog size="x-large" variant="settings" class="settings-v2-dialog">
@@ -40,7 +42,7 @@ export const DialogSettings: Component<{
                   </div>
                 </Show>
                 <div class="flex flex-col gap-1.5">
-                  <TabsV2.SectionTitle>{language.t("settings.section.desktop")}</TabsV2.SectionTitle>
+                  <TabsV2.SectionTitle>{language.t(labels().section)}</TabsV2.SectionTitle>
                   <div class="flex flex-col gap-1.5 w-full">
                     <TabsV2.Trigger
                       value="general"
@@ -101,7 +103,7 @@ export const DialogSettings: Component<{
               </div>
             </div>
             <div class="settings-v2-nav-footer">
-              <span>{language.t("app.name.desktop")}</span>
+              <span>{language.t(labels().app)}</span>
               <span>v{platform.version}</span>
             </div>
           </div>

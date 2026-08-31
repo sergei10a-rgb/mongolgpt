@@ -885,6 +885,7 @@ export const dict = {
   "debugBar.mem.tip": "Used JS heap vs heap limit. {{used}} of {{limit}}.",
 
   "app.name.desktop": "MongolGPT Desktop",
+  "app.name.web": "MongolGPT Web",
 
   "settings.section.account": "MongolGPT",
   "settings.account.tab": "Account",
@@ -939,6 +940,7 @@ export const dict = {
   "settings.account.quota.monthlyResetAt": "Monthly limits reset: {{date}}",
 
   "settings.section.desktop": "Desktop",
+  "settings.section.web": "Web app",
   "settings.section.server": "Server",
   "settings.tab.general": "General",
   "settings.tab.shortcuts": "Shortcuts",

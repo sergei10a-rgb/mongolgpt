@@ -10,10 +10,12 @@ import { SettingsProviders } from "./settings-providers"
 import { SettingsModels } from "./settings-models"
 import { SettingsServers } from "./settings-servers"
 import { SettingsAccount } from "./settings-account"
+import { settingsPlatformLabels } from "./settings-platform"
 
 export const DialogSettings: Component = () => {
   const language = useLanguage()
   const platform = usePlatform()
+  const labels = () => settingsPlatformLabels(platform.platform)
 
   return (
     <Dialog size="x-large" transition>
@@ -32,7 +34,7 @@ export const DialogSettings: Component = () => {
                   </div>
                 </Show>
                 <div class="flex flex-col gap-1.5">
-                  <Tabs.SectionTitle>{language.t("settings.section.desktop")}</Tabs.SectionTitle>
+                  <Tabs.SectionTitle>{language.t(labels().section)}</Tabs.SectionTitle>
                   <div class="flex flex-col gap-1.5 w-full">
                     <Tabs.Trigger value="general">
                       <Icon name="sliders" />
@@ -65,7 +67,7 @@ export const DialogSettings: Component = () => {
               </div>
             </div>
             <div class="flex flex-col gap-1 pl-1 py-1 text-12-medium text-text-weak">
-              <span>{language.t("app.name.desktop")}</span>
+              <span>{language.t(labels().app)}</span>
               <span class="text-11-regular">v{platform.version}</span>
             </div>
           </div>
