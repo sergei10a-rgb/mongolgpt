@@ -24,11 +24,15 @@ describe("desktop download route", () => {
     expect(styles).toContain('[data-component="download-hero"] {\n    display: grid;')
   })
 
+  test("installs the published CLI package instead of bootstrapping the source repository", () => {
+    const source = readFileSync(resolve(import.meta.dirname, "../src/routes/download/index.tsx"), "utf8")
+    expect(source).toContain('handleCopyClick("npm install --global mongolgpt")')
+    expect(source).toContain("npm install --global <strong>mongolgpt</strong>")
+    expect(source).not.toContain("git clone https://github.com/sergei10a-rgb/mongolgpt && cd mongolgpt && bun install")
+  })
+
   test("keeps shared helpers outside the method-picked SolidStart route module", () => {
-    const source = readFileSync(
-      resolve(import.meta.dirname, "../src/routes/download/[channel]/[platform].ts"),
-      "utf8",
-    )
+    const source = readFileSync(resolve(import.meta.dirname, "../src/routes/download/[channel]/[platform].ts"), "utf8")
     expect(source).toContain('from "../assets"')
     expect(source).toContain('request.method === "HEAD"')
     expect(source).not.toContain("export async function HEAD")
@@ -72,9 +76,12 @@ describe("desktop download route", () => {
   })
 
   test("does not report an unresolved GitHub redirect as an available artifact", async () => {
-    globalThis.fetch = Object.assign(mock(async () => new Response(null, { status: 302 })), {
-      preconnect: originalFetch.preconnect,
-    })
+    globalThis.fetch = Object.assign(
+      mock(async () => new Response(null, { status: 302 })),
+      {
+        preconnect: originalFetch.preconnect,
+      },
+    )
 
     const response = await GET(event("stable", "darwin-x64-dmg", "GET", "?availability=1"))
     expect(response.status).toBe(200)
@@ -83,9 +90,12 @@ describe("desktop download route", () => {
   })
 
   test("keeps missing or unsupported artifacts hidden", async () => {
-    globalThis.fetch = Object.assign(mock(async () => new Response(null, { status: 404 })), {
-      preconnect: originalFetch.preconnect,
-    })
+    globalThis.fetch = Object.assign(
+      mock(async () => new Response(null, { status: 404 })),
+      {
+        preconnect: originalFetch.preconnect,
+      },
+    )
     const missing = await GET(event("stable", "darwin-x64-dmg", "GET", "?availability=1"))
     expect(missing.status).toBe(200)
     expect(missing.headers.get("x-mongolgpt-download-available")).toBe("0")

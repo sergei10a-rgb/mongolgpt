@@ -158,14 +158,9 @@ export default function Download() {
               <span>[1]</span> {i18n.t("download.section.terminal")}
             </div>
             <div data-component="section-content">
-              <button
-                data-component="cli-row"
-                onClick={handleCopyClick(
-                  "git clone https://github.com/sergei10a-rgb/mongolgpt && cd mongolgpt && bun install",
-                )}
-              >
+              <button data-component="cli-row" onClick={handleCopyClick("npm install --global mongolgpt")}>
                 <code>
-                  git clone https://github.com/sergei10a-rgb/<strong>mongolgpt</strong> && cd mongolgpt && bun install
+                  npm install --global <strong>mongolgpt</strong>
                 </code>
                 <CopyStatus />
               </button>
