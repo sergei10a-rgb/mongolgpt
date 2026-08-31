@@ -39,16 +39,34 @@ const expectedAccountGate = {
   loginAction: "Бүртгүүлэх эсвэл нэвтрэх",
 } satisfies DesktopAccountGateState
 
-const accountGateProbe = `(() => {
+export const accountGateProbe = `(() => {
+  const visiblyRendered = (element) => {
+    if (!(element instanceof Element)) return false
+    const rect = element.getBoundingClientRect()
+    if (rect.width < 1 || rect.height < 1) return false
+    let current = element
+    while (current instanceof Element) {
+      const style = getComputedStyle(current)
+      if (style.display === 'none' || style.visibility !== 'visible' || Number.parseFloat(style.opacity) < 0.99) {
+        return false
+      }
+      current = current.parentElement
+    }
+    return true
+  }
   const root = document.querySelector('[data-mongolgpt-account-onboarding-stage]')
   const logo = document.querySelector('[data-mongolgpt-account-login-logo]')
   const logoSymbol = logo?.querySelector('use')?.getAttribute('href')?.split('#').at(-1) ?? ''
   const heading = document.querySelector('[data-mongolgpt-account-login-heading]')
   const action = document.querySelector('[data-mongolgpt-account-login-action]')
+  const content = root?.closest('[data-slot="dialog-content"]')
   return {
     language: document.documentElement.lang,
     onboardingStage: root?.getAttribute('data-mongolgpt-account-onboarding-stage') ?? '',
-    accountGateVisible: root instanceof HTMLElement && heading instanceof HTMLElement && action instanceof HTMLElement,
+    accountGateVisible:
+      content instanceof HTMLElement &&
+      content.hasAttribute('data-expanded') &&
+      [content, root, logo, heading, action].every(visiblyRendered),
     accountLogo: logo instanceof SVGElement ? logoSymbol : '',
     accountHeading: heading?.textContent?.trim() ?? '',
     loginAction: action?.textContent?.trim() ?? '',

@@ -5,6 +5,7 @@ import { readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
+  accountGateProbe,
   captureRendererSmokeScreenshot,
   desktopSmokeScreenshotFile,
   desktopSmokeFile,
@@ -62,6 +63,12 @@ describe("desktop release smoke", () => {
     expect(desktopSmokeFile({ MONGOLGPT_DESKTOP_SMOKE_FILE: " C:\\smoke.json " })).toBe("C:\\smoke.json")
     expect(desktopSmokeFile({ MONGOLGPT_DESKTOP_SMOKE_FILE: "  " })).toBeUndefined()
     expect(desktopSmokeFile({})).toBeUndefined()
+  })
+
+  test("requires the account dialog to be visibly expanded after its transition", () => {
+    expect(accountGateProbe).toContain("data-expanded")
+    expect(accountGateProbe).toContain("getBoundingClientRect")
+    expect(accountGateProbe).toContain("Number.parseFloat(style.opacity) < 0.99")
   })
 
   test("captures a non-empty renderer screenshot beside the smoke marker", async () => {
