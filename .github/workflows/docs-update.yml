@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   LOOKBACK_HOURS: 4
+  MONGOLGPT_CLI_VERSION: 0.1.2
 
 jobs:
   update-docs:
@@ -41,12 +43,43 @@ jobs:
             } >> $GITHUB_OUTPUT
           fi
 
-      - name: MongolGPT ажиллуулах
+      - name: Автомат шинэчлэл бэлэн эсэхийг шалгах
+        id: readiness
         if: steps.commits.outputs.has_commits == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONGOLGPT_API_KEY: ${{ secrets.MONGOLGPT_API_KEY }}
+        run: |
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+          if [ -z "${MONGOLGPT_API_KEY:-}" ]; then
+            echo "MONGOLGPT_API_KEY тохируулаагүй тул баримт бичгийн автомат шинэчлэлийг алгаслаа."
+            exit 0
+          fi
+
+          target="linux-x64"
+          if ! grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then
+            target="linux-x64-baseline"
+          fi
+          asset="mongolgpt-${target}.tar.gz"
+          tag="mongolgpt-v${MONGOLGPT_CLI_VERSION}"
+          if ! release=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" 2>/dev/null); then
+            echo "${tag} албан ёсны хувилбар гараагүй тул баримт бичгийн автомат шинэчлэлийг алгаслаа."
+            exit 0
+          fi
+          if ! jq -e --arg asset "$asset" 'any(.assets[]?; .name == $asset)' <<<"$release" >/dev/null; then
+            echo "${tag} хувилбарт ${asset} файл байхгүй тул баримт бичгийн автомат шинэчлэлийг алгаслаа."
+            exit 0
+          fi
+
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: MongolGPT ажиллуулах
+        if: steps.commits.outputs.has_commits == 'true' && steps.readiness.outputs.ready == 'true'
         uses: ./github
         env:
           MONGOLGPT_API_KEY: ${{ secrets.MONGOLGPT_API_KEY }}
         with:
+          cli_version: ${{ env.MONGOLGPT_CLI_VERSION }}
           model: mongolgpt/gpt-5.2
           agent: docs
           prompt: |
