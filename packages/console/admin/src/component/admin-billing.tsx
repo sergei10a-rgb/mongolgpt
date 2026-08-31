@@ -1,10 +1,12 @@
-import { action, json, useSubmission } from "@solidjs/router"
+import { A, action, json, useSubmission } from "@solidjs/router"
 import { For, Show } from "solid-js"
 import { getRequestEvent } from "solid-js/web"
 import type { FinanceMarginUnavailableReason } from "@mongolgpt/console-core/finance-reporting.js"
 import type { PlatformAdminContext } from "~/lib/admin-context"
 import { AdminHeader } from "./admin-header"
 import { cancelAdminSubscriptionCheckout, refundAdminSubscriptionPayment } from "~/lib/admin-billing"
+import { retryAdminPaymentRecovery } from "~/lib/admin-payment-recovery"
+import { adminPaymentRecoveryQueryKey } from "~/lib/admin-payment-recovery-query"
 import { adminInvoiceStatusTime } from "~/lib/admin-billing-display"
 import { adminBillingQuery } from "~/lib/admin-billing-query"
 import { getPlatformAdminContext } from "~/lib/admin-context"
@@ -32,6 +34,18 @@ export const refundAdminSubscriptionPaymentAction = action(async (form: FormData
   )
   return json(result, { revalidate: adminBillingQuery.key })
 }, "admin.billing.refund")
+
+export const retryAdminPaymentRecoveryAction = action(async (form: FormData) => {
+  "use server"
+  const event = getRequestEvent()
+  if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
+  const result = await retryAdminPaymentRecovery(
+    getPlatformAdminContext(),
+    event.request,
+    Object.fromEntries(form.entries()),
+  )
+  return json(result, { revalidate: adminPaymentRecoveryQueryKey })
+}, "admin.billing.recovery.retry")
 
 export interface AdminBillingData {
   admin: PlatformAdminContext
@@ -125,9 +139,37 @@ export interface AdminBillingData {
   generatedAt: string
 }
 
-export function AdminBillingView(props: { data: AdminBillingData }) {
+export interface AdminPaymentRecoveryListData {
+  admin: PlatformAdminContext
+  canRetry: boolean
+  generatedAt: string
+  summary: {
+    unresolved: number
+    manualReview: number
+  }
+  items: {
+    id: string
+    status: "pending" | "processing" | "resolved" | "manual_review"
+    provider: "qpay" | "bonum" | null
+    merchantAccountID: string | null
+    externalEventID: string | null
+    externalInvoiceID: string | null
+    attempts: number
+    lastErrorCode: string | null
+    timeNextAttempt: string | null
+    timeLeaseExpires: string | null
+    timeResolved: string | null
+    timeCreated: string
+    timeUpdated: string
+    validEvent: boolean
+    canRetry: boolean
+  }[]
+}
+
+export function AdminBillingView(props: { data: AdminBillingData; recoveries: AdminPaymentRecoveryListData }) {
   const cancellationSubmission = useSubmission(cancelAdminSubscriptionCheckoutAction)
   const refundSubmission = useSubmission(refundAdminSubscriptionPaymentAction)
+  const recoverySubmission = useSubmission(retryAdminPaymentRecoveryAction)
   const canManageInvoices = () => props.data.invoices.some((invoice) => invoice.canCancel || invoice.canRefund)
   return (
     <>
@@ -280,6 +322,80 @@ export function AdminBillingView(props: { data: AdminBillingData }) {
             <strong>
               {formatDate(props.data.period.start)} - {formatDate(props.data.period.end)}
             </strong>
+          </div>
+        </section>
+
+        <section data-component="data-section" aria-labelledby="payment-recovery-title">
+          <div data-component="section-heading">
+            <div>
+              <p data-component="eyebrow">Алдааны дараалал болон гар шалгалтын одоогийн төлөв</p>
+              <h2 id="payment-recovery-title">Төлбөрийн сэргээх бүртгэл</h2>
+            </div>
+            <span>
+              Нээлттэй {formatNumber(props.recoveries.summary.unresolved)} · Гар шалгалт{" "}
+              {formatNumber(props.recoveries.summary.manualReview)}
+            </span>
+          </div>
+          <Show when={recoverySubmission.result}>
+            {(result) => (
+              <p
+                data-component="action-message"
+                data-outcome={result().ok ? "success" : "failure"}
+                role={result().ok ? "status" : "alert"}
+                aria-live="polite"
+              >
+                {result().message}
+              </p>
+            )}
+          </Show>
+          <div data-component="table-scroll">
+            <table data-table="payment-recovery">
+              <thead>
+                <tr>
+                  <th>Сэргээх бүртгэл</th>
+                  <th>Төлөв</th>
+                  <th>Суваг</th>
+                  <th>Гадаад үйл явдал / нэхэмжлэх</th>
+                  <th>Оролдлого</th>
+                  <th>Сүүлийн алдаа</th>
+                  <th>Шинэчлэгдсэн</th>
+                </tr>
+              </thead>
+              <tbody>
+                <For
+                  each={props.recoveries.items}
+                  fallback={
+                    <tr>
+                      <td colspan="7" data-empty>
+                        Сэргээх бүртгэл алга.
+                      </td>
+                    </tr>
+                  }
+                >
+                  {(recovery) => (
+                    <tr>
+                      <td data-recovery-id>
+                        <A href={paymentRecoveryDetailURL(recovery.id)}>{recovery.id}</A>
+                        <small>{recovery.validEvent ? "Хадгалсан үйл явдал хүчинтэй" : "Гар шалгалт шаардсан"}</small>
+                      </td>
+                      <td>
+                        <span data-payment-recovery-status={recovery.status}>
+                          {paymentRecoveryStatusLabel(recovery.status)}
+                        </span>
+                      </td>
+                      <td>{paymentProviderLabel(recovery.provider)}</td>
+                      <td data-recovery-target>
+                        <code>{recovery.externalEventID ?? "үйл явдлын ID байхгүй"}</code>
+                        <code>{recovery.externalInvoiceID ?? "нэхэмжлэхийн ID байхгүй"}</code>
+                      </td>
+                      <td>{formatNumber(recovery.attempts)}</td>
+                      <td>{recovery.lastErrorCode ? <code>{recovery.lastErrorCode}</code> : "-"}</td>
+                      <td>{formatDate(recovery.timeUpdated)}</td>
+                    </tr>
+                  )}
+                </For>
+              </tbody>
+            </table>
           </div>
         </section>
 
@@ -578,8 +694,8 @@ function marginUnavailableReasonLabel(reason: FinanceMarginUnavailableReason) {
   )
 }
 
-function paymentProviderLabel(provider: string) {
-  return provider === "qpay" ? "QPay" : provider === "bonum" ? "Bonum" : provider
+function paymentProviderLabel(provider: string | null) {
+  return provider === "qpay" ? "QPay" : provider === "bonum" ? "Bonum" : provider || "-"
 }
 
 function planLabel(plan: string | null) {
@@ -602,6 +718,21 @@ function paymentStatusLabel(status: string) {
       expired: "Хугацаа дууссан",
       cancelled: "Цуцлагдсан",
       refunded: "Буцаасан",
+    }[status] ?? `Тодорхойгүй төлөв (${status})`
+  )
+}
+
+export function paymentRecoveryDetailURL(recoveryID: string) {
+  return `/billing/${recoveryID}`
+}
+
+export function paymentRecoveryStatusLabel(status: string) {
+  return (
+    {
+      pending: "Хүлээгдэж буй",
+      processing: "Боловсруулж байна",
+      resolved: "Шийдсэн",
+      manual_review: "Гар шалгалт",
     }[status] ?? `Тодорхойгүй төлөв (${status})`
   )
 }

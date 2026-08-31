@@ -9,6 +9,8 @@ import {
   paymentRecoveryFingerprint,
   processPaymentRecoveries,
   recordPaymentDeadLetter,
+  retryPaymentRecoveryWithDb,
+  PaymentRecoveryRetryError,
 } from "../src/payment-recovery"
 import { createPaymentQueueEvent } from "../src/payment-queue"
 import * as schema from "../src/schema-d1"
@@ -209,5 +211,55 @@ describe("payment dead-letter recovery", () => {
       last_error_code: "payment_apply_failed",
       time_next_attempt: null,
     })
+  })
+
+  test("allows only stored manual-review events to be re-queued", async () => {
+    const { sqlite, transaction } = await setup()
+    const retryable = await recordPaymentDeadLetter({ body: payment("4"), now }, { transaction })
+    sqlite
+      .query(
+        "update payment_recovery set status = 'manual_review', attempts = ?, last_error_code = ?, time_next_attempt = null, time_lease_expires = null, time_resolved = null where id = ?",
+      )
+      .run(PAYMENT_RECOVERY_MAX_ATTEMPTS, "payment_apply_failed", retryable.id)
+
+    const retried = await transaction((db) =>
+      retryPaymentRecoveryWithDb(db, { recoveryID: retryable.id, now: now + 10 }),
+    )
+    expect(retried).toMatchObject({
+      id: retryable.id,
+      status: "pending",
+      attempts: 0,
+      previousStatus: "manual_review",
+      previousAttempts: PAYMENT_RECOVERY_MAX_ATTEMPTS,
+      previousLastErrorCode: "payment_apply_failed",
+    })
+    expect(
+      sqlite
+        .query(
+          "select status, attempts, last_error_code, time_next_attempt, time_lease_expires from payment_recovery where id = ?",
+        )
+        .get(retryable.id),
+    ).toEqual({
+      status: "pending",
+      attempts: 0,
+      last_error_code: null,
+      time_next_attempt: now + 10,
+      time_lease_expires: null,
+    })
+
+    await expect(
+      transaction((db) => retryPaymentRecoveryWithDb(db, { recoveryID: retryable.id, now: now + 11 })),
+    ).rejects.toMatchObject({ name: "PaymentRecoveryRetryError", code: "invalid_state", currentStatus: "pending" })
+
+    const invalid = await recordPaymentDeadLetter({ body: { broken: true }, now: now + 12 }, { transaction })
+    await expect(
+      transaction((db) => retryPaymentRecoveryWithDb(db, { recoveryID: invalid.id, now: now + 13 })),
+    ).rejects.toMatchObject({ name: "PaymentRecoveryRetryError", code: "invalid_event" })
+
+    await expect(
+      transaction((db) =>
+        retryPaymentRecoveryWithDb(db, { recoveryID: "prc_01JV5T0G9H5Q3N7S2R8M4K6WXA", now: now + 14 }),
+      ),
+    ).rejects.toBeInstanceOf(PaymentRecoveryRetryError)
   })
 })

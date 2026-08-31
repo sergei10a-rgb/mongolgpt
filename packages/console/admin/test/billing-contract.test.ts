@@ -9,6 +9,7 @@ import {
   adminBillingSafeSum,
 } from "../src/lib/admin-billing"
 import { adminInvoiceStatusTime } from "../src/lib/admin-billing-display"
+import { AdminPaymentRecoveryRetryInput } from "../src/lib/admin-payment-recovery"
 
 async function source(path: string) {
   return Bun.file(resolve(import.meta.dir, "..", path)).text()
@@ -35,6 +36,22 @@ describe("admin billing contract", () => {
     expect(AdminBillingQueryInput.safeParse({ period: "365d" }).success).toBe(false)
     expect(AdminBillingQueryInput.safeParse({ provider: "stripe" }).success).toBe(false)
     expect(AdminBillingQueryInput.safeParse({ status: "chargeback" }).success).toBe(false)
+    expect(
+      AdminPaymentRecoveryRetryInput.safeParse({
+        recoveryID: "prc_01JV5T0G9H5Q3N7S2R8M4K6WXA",
+        requestKey: "33333333-3333-4333-8333-333333333333",
+        reason: "Scheduler-аар аюулгүй retry хийж, гар шалгалтаас буцаан оруулж байна.",
+        confirmation: "retry",
+      }).success,
+    ).toBe(true)
+    expect(
+      AdminPaymentRecoveryRetryInput.safeParse({
+        recoveryID: "prc_01JV5T0G9H5Q3N7S2R8M4K6WXA",
+        requestKey: "33333333-3333-4333-8333-333333333333",
+        reason: "plain English retry reason that must not be accepted",
+        confirmation: "retry",
+      }).success,
+    ).toBe(false)
     expect(
       AdminSubscriptionCheckoutCancellationInput.safeParse({
         invoiceID: "inv_01JV5T0G9H5Q3N7S2R8M4K6WXA",
@@ -114,6 +131,7 @@ describe("admin billing contract", () => {
 
   test("keeps reporting permission-gated and based on the authoritative ledgers", async () => {
     const billing = await source("src/lib/admin-billing.ts")
+    const recovery = await source("src/lib/admin-payment-recovery.ts")
     const finance = await source("../core/src/finance-reporting.ts")
     const route = await source("src/routes/billing/index.tsx")
     const header = await source("src/component/admin-header.tsx")
@@ -137,6 +155,13 @@ describe("admin billing contract", () => {
     expect(billing).toContain("'$.plan'")
     expect(billing).toContain("<> 'byok'")
     expect(billing).toContain("lt(UsageTable.timeCreated, period.end)")
+    expect(recovery).toContain('"billing.read"')
+    expect(recovery).toContain("PaymentRecoveryTable")
+    expect(recovery).toContain("PaymentQueueEventSchema.safeParse")
+    expect(recovery).toContain("PaymentQueueEventSchema.safeParse(item.event).success")
+    expect(recovery).toContain("validEvent: parsedEvent.success")
+    expect(recovery).not.toContain("token")
+    expect(recovery).not.toContain("secret")
     expect(billing).not.toContain("PaymentTable")
     expect(finance).toContain("FinanceCostEntryTable")
     expect(finance).toContain("FinancePaymentSettlementTable")
@@ -226,5 +251,39 @@ describe("admin billing contract", () => {
     expect(view).toContain('currency: "USD"')
     expect(view).not.toContain("opencode")
     expect(view).not.toContain("Stripe")
+  })
+
+  test("adds a first-class payment recovery list and a fail-closed retry detail flow", async () => {
+    const [view, route, detail, service, queryContract, core, css] = await Promise.all([
+      source("src/component/admin-billing.tsx"),
+      source("src/routes/billing/index.tsx"),
+      source("src/routes/billing/[recoveryID].tsx"),
+      source("src/lib/admin-payment-recovery.ts"),
+      source("src/lib/admin-payment-recovery-query.ts"),
+      source("../core/src/payment-recovery.ts"),
+      source("src/app.css"),
+    ])
+
+    expect(route).toContain("adminPaymentRecoveryListQuery")
+    expect(queryContract).toContain('adminPaymentRecoveryQueryKey = "admin.billing.recovery"')
+    expect(view).toContain("Төлбөрийн сэргээх бүртгэл")
+    expect(view).toContain('data-table="payment-recovery"')
+    expect(view).toContain("manual_review")
+    expect(view).toContain("paymentRecoveryDetailURL")
+    expect(detail).toContain("retryAdminPaymentRecoveryAction")
+    expect(detail).toContain("Дахин дараалалд оруулах")
+    expect(detail).toContain('name="requestKey"')
+    expect(detail).toContain("retryDisabledReason")
+    expect(detail).toContain("data-payment-recovery-detail")
+    expect(css).toContain('[data-component="status-band"][data-payment-recovery-detail] code')
+    expect(css).toContain("overflow-wrap: anywhere")
+    expect(service).toContain('"payments.recover"')
+    expect(service).toContain('action: "payment_recovery.retry"')
+    expect(service).toContain("retryPaymentRecoveryWithDb")
+    expect(service).not.toContain("raw payload")
+    expect(core).toContain('if (current.status !== "manual_review")')
+    expect(core).toContain('throw new PaymentRecoveryRetryError("invalid_event"')
+    expect(core).toContain('status: "pending"')
+    expect(core).toContain("attempts: 0")
   })
 })

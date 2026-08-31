@@ -492,6 +492,14 @@ h2 {
   color: #12745a;
 }
 
+[data-component="status-band"][data-payment-recovery-detail] strong,
+[data-component="status-band"][data-payment-recovery-detail] code {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 [data-component="audit-section"] {
   margin-top: 40px;
 }
@@ -837,6 +845,155 @@ h2 {
   margin-top: 28px;
 }
 
+[data-component="recovery-guardrail"] {
+  margin-top: 28px;
+}
+
+[data-component="recovery-detail-grid"] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+[data-component="recovery-detail-item"] {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #dfe2e5;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+[data-component="recovery-detail-item"] span,
+[data-component="payment-recovery-action"] label,
+td[data-recovery-id] small {
+  color: #686d73;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+[data-component="recovery-detail-item"] strong,
+[data-component="recovery-detail-item"] code {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+td[data-recovery-id] {
+  min-width: 230px;
+  white-space: normal;
+}
+
+td[data-recovery-id] a {
+  display: block;
+  color: #295ea8;
+  font-weight: 650;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+td[data-recovery-id] a:hover {
+  text-decoration: underline;
+}
+
+td[data-recovery-id] small,
+td[data-recovery-target] code {
+  display: block;
+  margin-top: 4px;
+}
+
+td[data-recovery-target] {
+  min-width: 250px;
+  white-space: normal;
+}
+
+td[data-recovery-target] code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+[data-payment-recovery-status] {
+  display: inline-block;
+  min-width: 96px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #f0f2f3;
+  color: #4e545b;
+  text-align: center;
+}
+
+[data-payment-recovery-status="pending"] {
+  background: #fffaf0;
+  color: #8a651c;
+}
+
+[data-payment-recovery-status="processing"] {
+  background: #edf3fb;
+  color: #295ea8;
+}
+
+[data-payment-recovery-status="resolved"] {
+  background: #edf5f2;
+  color: #12745a;
+}
+
+[data-payment-recovery-status="manual_review"] {
+  background: #fff0ef;
+  color: #a2362c;
+}
+
+[data-component="payment-recovery-action"] {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+[data-component="payment-recovery-action"] textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 8px 10px;
+  border: 1px solid #cbd0d5;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #17191c;
+  font: inherit;
+  resize: vertical;
+}
+
+[data-component="payment-recovery-action"] textarea:focus {
+  border-color: #295ea8;
+  outline: 2px solid rgba(41, 94, 168, 0.2);
+  outline-offset: 1px;
+}
+
+[data-component="payment-recovery-action"] [data-component="confirmation"] {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+[data-component="payment-recovery-action"] button {
+  justify-self: start;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #17191c;
+  border-radius: 4px;
+  background: #17191c;
+  color: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+[data-component="payment-recovery-action"] button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 td[data-support-subject] {
   min-width: 250px;
   white-space: normal;
@@ -1026,6 +1183,10 @@ td[data-support-subject] code {
 }
 
 @media (max-width: 980px) {
+  [data-component="recovery-detail-grid"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   [data-component="support-filters"] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1467,6 +1628,10 @@ td[data-workspace] small {
 }
 
 @media (max-width: 620px) {
+  [data-component="recovery-detail-grid"] {
+    grid-template-columns: 1fr;
+  }
+
   [data-component="admin-header"] {
     min-height: 0;
     display: grid;
@@ -1725,6 +1890,8 @@ td[data-workspace] small {
   [data-component="status-band"] strong,
   [data-component="status-band"] code,
   [data-component="finance-status"] strong,
+  [data-component="recovery-detail-item"] strong,
+  [data-component="recovery-detail-item"] code,
   [data-component="user-filters"] input,
   [data-component="user-filters"] select,
   [data-component="workspace-filters"] input,
@@ -1742,6 +1909,11 @@ td[data-workspace] small {
   [data-component="metric"][data-tone="warning"] {
     border-color: #705d31;
     background: #231f16;
+  }
+
+  [data-component="recovery-detail-item"] {
+    border-color: #34383d;
+    background: #191c1f;
   }
 
   [data-component="notice"] {
@@ -1785,6 +1957,7 @@ td[data-workspace] small {
   [data-component="finance-status"],
   [data-component="finance-status"] > div,
   [data-component="section-heading"],
+  [data-component="payment-recovery-action"] textarea,
   th,
   td {
     border-color: #303438;

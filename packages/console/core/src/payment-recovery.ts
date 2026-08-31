@@ -16,6 +16,16 @@ type Use = <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise<T>
 type Transaction = <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise<T>
 type Apply = (event: PaymentQueueEvent) => Promise<unknown>
 
+export class PaymentRecoveryRetryError extends Error {
+  constructor(
+    readonly code: "not_found" | "invalid_state" | "invalid_event",
+    readonly currentStatus?: string,
+  ) {
+    super(code)
+    this.name = "PaymentRecoveryRetryError"
+  }
+}
+
 export async function recordPaymentDeadLetter(
   input: { body: unknown; now?: number; trustedMessageHash?: string },
   dependencies: { transaction?: Transaction } = {},
@@ -175,6 +185,69 @@ export async function processPaymentRecoveries(
   }
 
   return { resolved, retried, manualReview, skipped, truncated: candidates.length === limit }
+}
+
+export async function retryPaymentRecoveryWithDb(db: Database.TxOrDb, input: { recoveryID: string; now: number }) {
+  const date = new Date(timestamp(input.now))
+  const current = await db
+    .select({
+      id: PaymentRecoveryTable.id,
+      status: PaymentRecoveryTable.status,
+      attempts: PaymentRecoveryTable.attempts,
+      last_error_code: PaymentRecoveryTable.last_error_code,
+      event: PaymentRecoveryTable.event,
+    })
+    .from(PaymentRecoveryTable)
+    .where(and(eq(PaymentRecoveryTable.id, input.recoveryID), isNull(PaymentRecoveryTable.timeDeleted)))
+    .limit(1)
+    .then((rows) => rows[0])
+
+  if (!current) throw new PaymentRecoveryRetryError("not_found")
+  if (current.status !== "manual_review") {
+    throw new PaymentRecoveryRetryError("invalid_state", current.status)
+  }
+  if (!PaymentQueueEventSchema.safeParse(current.event).success) {
+    throw new PaymentRecoveryRetryError("invalid_event", current.status)
+  }
+
+  const updated = await db
+    .update(PaymentRecoveryTable)
+    .set({
+      status: "pending",
+      attempts: 0,
+      last_error_code: null,
+      time_next_attempt: date,
+      time_lease_expires: null,
+      time_resolved: null,
+      timeUpdated: date,
+    })
+    .where(
+      and(
+        eq(PaymentRecoveryTable.id, input.recoveryID),
+        eq(PaymentRecoveryTable.status, "manual_review"),
+        isNull(PaymentRecoveryTable.timeDeleted),
+      ),
+    )
+    .returning({
+      id: PaymentRecoveryTable.id,
+      status: PaymentRecoveryTable.status,
+      attempts: PaymentRecoveryTable.attempts,
+      last_error_code: PaymentRecoveryTable.last_error_code,
+      time_next_attempt: PaymentRecoveryTable.time_next_attempt,
+    })
+    .then((rows) => rows[0])
+
+  if (!updated) throw new PaymentRecoveryRetryError("invalid_state", current.status)
+
+  return {
+    id: updated.id,
+    status: updated.status,
+    attempts: updated.attempts,
+    previousStatus: current.status,
+    previousAttempts: current.attempts,
+    previousLastErrorCode: current.last_error_code,
+    timeNextAttempt: updated.time_next_attempt,
+  }
 }
 
 async function claimRecovery(db: Database.TxOrDb, id: string, now: number) {

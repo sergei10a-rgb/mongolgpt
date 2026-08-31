@@ -170,6 +170,8 @@ describe("documentation product contract", () => {
     expect(billing).toContain("### Үйлдвэрлэлийн орчин")
     expect(admin).toContain("## Одоогийн хязгаарлалт")
     expect(admin).toContain("буцаан олголт")
+    expect(admin).toContain("`payments.recover`")
+    expect(admin).toContain("Хүлээгдэж буй, боловсруулж буй, шийдэгдсэн")
     expect(deployment).toContain("Тохиргоо (`Settings`)")
     expect(deployment).toContain("Токен үүсгэх (`Create Token`)")
     expect(deployment).toContain("Access токен HTTP 403 буцаавал")

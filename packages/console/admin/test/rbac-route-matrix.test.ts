@@ -73,6 +73,7 @@ const mutationMatrix = [
   { name: "users.suspend", allowed: ["owner", "administrator"] },
   { name: "payments.cancel", allowed: ["owner", "administrator"] },
   { name: "payments.refund", allowed: ["owner", "administrator"] },
+  { name: "payments.recover", allowed: ["owner", "administrator"] },
   { name: "plans.manage", allowed: ["owner", "administrator"] },
   { name: "support.manage", allowed: ["owner", "administrator", "support"] },
 ] as const
@@ -163,17 +164,19 @@ describe("admin RBAC route matrix", () => {
   })
 
   test("keeps every route wired to a server-side permission guard", async () => {
-    const [overview, users, workspaces, billing, support, operators, audit, plans, health] = await Promise.all([
-      source("src/routes/index.tsx"),
-      source("src/lib/admin-users.ts"),
-      source("src/lib/admin-workspaces.ts"),
-      source("src/lib/admin-billing.ts"),
-      source("src/lib/admin-support.ts"),
-      source("src/lib/admin-operators.ts"),
-      source("src/lib/admin-audit.ts"),
-      source("src/lib/admin-plans.ts"),
-      source("src/routes/api/health.ts"),
-    ])
+    const [overview, users, workspaces, billing, recovery, support, operators, audit, plans, health] =
+      await Promise.all([
+        source("src/routes/index.tsx"),
+        source("src/lib/admin-users.ts"),
+        source("src/lib/admin-workspaces.ts"),
+        source("src/lib/admin-billing.ts"),
+        source("src/lib/admin-payment-recovery.ts"),
+        source("src/lib/admin-support.ts"),
+        source("src/lib/admin-operators.ts"),
+        source("src/lib/admin-audit.ts"),
+        source("src/lib/admin-plans.ts"),
+        source("src/routes/api/health.ts"),
+      ])
 
     expect(overview).toContain('requirePlatformAdminPermission(getPlatformAdminContext(), "overview.read")')
     expect(users).toContain('const admin = requirePlatformAdminPermission(context, "users.read")')
@@ -183,6 +186,8 @@ describe("admin RBAC route matrix", () => {
     expect(billing).toContain('const admin = requirePlatformAdminPermission(context, "billing.read")')
     expect(billing).toContain('admin = requirePlatformAdminPermission(context, "payments.cancel")')
     expect(billing).toContain('admin = requirePlatformAdminPermission(context, "payments.refund")')
+    expect(recovery).toContain('const admin = requirePlatformAdminPermission(context, "billing.read")')
+    expect(recovery).toContain('const admin = requirePlatformAdminPermission(context, "payments.recover")')
     expect(support).toContain('const admin = requirePlatformAdminPermission(context, "support.read")')
     expect(support).toContain('const admin = requirePlatformAdminPermission(context, "support.manage")')
     expect(operators).toContain("const admin = requirePlatformAdminOwner(context)")
@@ -205,10 +210,7 @@ function context(role: PlatformAdminRole): PlatformAdminContext {
   }
 }
 
-function canAccess(
-  guard: (context: PlatformAdminContext) => unknown,
-  candidate: PlatformAdminContext,
-) {
+function canAccess(guard: (context: PlatformAdminContext) => unknown, candidate: PlatformAdminContext) {
   try {
     guard(candidate)
     return true
