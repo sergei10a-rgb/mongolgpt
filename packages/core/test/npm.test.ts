@@ -1,5 +1,6 @@
 import fs from "fs/promises"
 import path from "path"
+import { pathToFileURL } from "url"
 import { describe, expect, test } from "bun:test"
 import { NodeFileSystem } from "@effect/platform-node"
 import { Effect, Layer, Option } from "effect"
@@ -65,6 +66,32 @@ describe("Npm.add", () => {
 })
 
 describe("Npm.install", () => {
+  test("installs a scoped package from a local file source without a registry", async () => {
+    await using tmp = await tmpdir()
+    const source = path.join(tmp.path, "source")
+    const project = path.join(tmp.path, "project")
+    await fs.mkdir(source)
+    await fs.mkdir(project)
+    await writePackage(source, {
+      name: "@mongolgpt/plugin",
+      type: "module",
+      exports: "./index.js",
+    })
+    await Bun.write(path.join(source, "index.js"), "export const bundled = true\n")
+
+    await Effect.gen(function* () {
+      const npm = yield* Npm.Service
+      yield* npm.install(project, {
+        add: [{ name: "@mongolgpt/plugin", version: pathToFileURL(source).href }],
+      })
+    }).pipe(Effect.scoped, Effect.provide(npmLayer(path.join(tmp.path, "cache"))), Effect.runPromise)
+
+    const installed = JSON.parse(
+      await fs.readFile(path.join(project, "node_modules", "@mongolgpt", "plugin", "package.json"), "utf8"),
+    )
+    expect(installed).toMatchObject({ name: "@mongolgpt/plugin" })
+  })
+
   test("respects omit from project .npmrc", async () => {
     await using tmp = await tmpdir()
 

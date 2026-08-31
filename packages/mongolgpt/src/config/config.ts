@@ -11,7 +11,6 @@ import { Flag } from "@mongolgpt/core/flag/flag"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { applyEdits, modify } from "jsonc-parser"
-import { InstallationLocal, InstallationVersion } from "@mongolgpt/core/installation/version"
 import { existsSync } from "fs"
 import { Account } from "@/account/account"
 import { isRecord } from "@/util/record"
@@ -33,6 +32,7 @@ import { ConfigParse } from "./parse"
 import { ConfigPaths } from "./paths"
 import { ConfigPlugin } from "./plugin"
 import { ConfigVariable } from "./variable"
+import { BundledPluginRuntime } from "@/plugin/vendor-runtime"
 import { Npm } from "@mongolgpt/core/npm"
 import { configSchemaUrl } from "@mongolgpt/core/product"
 import { withTransientReadRetry } from "@/util/effect-http-client"
@@ -618,28 +618,19 @@ export const layer = Layer.effect(
           result.plugin_origins,
           Array.from(localModuleDirectories),
         )) {
-          const dep = yield* npmSvc
-            .install(dir, {
-              add: [
-                {
-                  name: "@mongolgpt/plugin",
-                  version: InstallationLocal ? undefined : InstallationVersion,
-                },
-              ],
-            })
-            .pipe(
-              Effect.exit,
-              Effect.tap((exit) =>
-                Exit.isFailure(exit)
-                  ? Effect.logWarning("Дэвсгэр горимд хамаарал суулгаж чадсангүй", {
-                      dir,
-                      error: String(exit.cause),
-                    })
-                  : Effect.void,
-              ),
-              Effect.asVoid,
-              Effect.forkDetach,
-            )
+          const dep = yield* BundledPluginRuntime.install(npmSvc, dir).pipe(
+            Effect.exit,
+            Effect.tap((exit) =>
+              Exit.isFailure(exit)
+                ? Effect.logWarning("Дэвсгэр горимд хамаарал суулгаж чадсангүй", {
+                    dir,
+                    error: String(exit.cause),
+                  })
+                : Effect.void,
+            ),
+            Effect.asVoid,
+            Effect.forkDetach,
+          )
           deps.push(dep)
         }
 

@@ -1142,11 +1142,7 @@ function normalizeSlashes(input: string) {
 }
 
 function resolvePluginRuntimeImport() {
-  try {
-    return import.meta.resolve("@mongolgpt/plugin")
-  } catch {
-    return "@mongolgpt/plugin"
-  }
+  return "@mongolgpt/plugin"
 }
 
 function pluginAdapterTemplate(input: { id: string; target: string; toolImport: string }) {

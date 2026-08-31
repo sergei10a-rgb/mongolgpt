@@ -14,13 +14,13 @@ import { FSUtil } from "@mongolgpt/core/fs-util"
 import { CurrentWorkingDirectory } from "./tui-cwd"
 import { ConfigPlugin } from "@/config/plugin"
 import { TuiKeybind } from "@mongolgpt/tui/config/keybind"
-import { InstallationLocal, InstallationVersion } from "@mongolgpt/core/installation/version"
 import { makeRuntime } from "@mongolgpt/core/effect/runtime"
 import { Filesystem } from "@/util/filesystem"
 import { ConfigVariable } from "@/config/variable"
 import { Npm } from "@mongolgpt/core/npm"
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { TuiConfig } from "@mongolgpt/tui/config"
+import { BundledPluginRuntime } from "@/plugin/vendor-runtime"
 
 export const Info = TuiConfig.Info
 export type Info = TuiConfig.Info
@@ -234,17 +234,7 @@ export const layer = Layer.effect(
     const data = yield* loadState({ directory })
     const deps = yield* Effect.forEach(
       data.dirs,
-      (dir) =>
-        npm
-          .install(dir, {
-            add: [
-              {
-                name: "@mongolgpt/plugin",
-                version: InstallationLocal ? undefined : InstallationVersion,
-              },
-            ],
-          })
-          .pipe(Effect.forkScoped),
+      (dir) => BundledPluginRuntime.install(npm, dir).pipe(Effect.forkScoped),
       {
         concurrency: "unbounded",
       },
