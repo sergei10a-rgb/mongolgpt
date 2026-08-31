@@ -26,5 +26,5 @@ async function availability(assetUrl: string, platform: string) {
     const downloadName = downloadNames[platform]
     if (downloadName) headers.set("content-disposition", `attachment; filename="${downloadName}"`)
   }
-  return new Response(null, { status: 204, headers })
+  return new Response(null, { status: 200, headers })
 }

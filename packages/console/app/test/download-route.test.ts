@@ -63,7 +63,7 @@ describe("desktop download route", () => {
     globalThis.fetch = Object.assign(fetchMock, { preconnect: originalFetch.preconnect })
 
     const response = await GET(event("stable", "linux-x64-deb", "HEAD"))
-    expect(response.status).toBe(204)
+    expect(response.status).toBe(200)
     expect(response.headers.get("cache-control")).toBe("public, max-age=300")
     expect(response.headers.get("x-mongolgpt-download-available")).toBe("1")
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -75,7 +75,7 @@ describe("desktop download route", () => {
     })
 
     const response = await GET(event("stable", "darwin-x64-dmg", "HEAD"))
-    expect(response.status).toBe(204)
+    expect(response.status).toBe(200)
     expect(response.headers.get("cache-control")).toBe("public, max-age=60")
     expect(response.headers.get("x-mongolgpt-download-available")).toBe("0")
   })
@@ -85,7 +85,7 @@ describe("desktop download route", () => {
       preconnect: originalFetch.preconnect,
     })
     const missing = await GET(event("stable", "darwin-x64-dmg", "HEAD"))
-    expect(missing.status).toBe(204)
+    expect(missing.status).toBe(200)
     expect(missing.headers.get("x-mongolgpt-download-available")).toBe("0")
     expect((await GET(event("beta", "windows-x64-nsis", "HEAD"))).status).toBe(404)
   })
