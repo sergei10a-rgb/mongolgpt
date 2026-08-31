@@ -69,6 +69,8 @@ describe("test workflow contract", () => {
     expect(record(parsed.inputs["install-flags"])).toBe(true)
     expect(source).toContain("bun install --linker hoisted ${{ inputs.install-flags }}")
     expect(source).toContain("bun install ${{ inputs.install-flags }}")
+    expect(source).toContain("if ! bun install --linker hoisted ${{ inputs.install-flags }}; then")
+    expect(source).toContain("Windows Bun install failed; retrying once after a short delay")
   })
 
   test("keeps core JavaScript actions on approved Node 24 pins", async () => {

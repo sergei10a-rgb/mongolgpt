@@ -52,7 +52,11 @@ runs:
         # e.g. ./patches/ for standard-openapi
         # https://github.com/oven-sh/bun/issues/28147
         if [ "$RUNNER_OS" = "Windows" ]; then
-          bun install --linker hoisted ${{ inputs.install-flags }}
+          if ! bun install --linker hoisted ${{ inputs.install-flags }}; then
+            echo "::warning::Windows Bun install failed; retrying once after a short delay"
+            sleep 5
+            bun install --linker hoisted ${{ inputs.install-flags }}
+          fi
         else
           bun install ${{ inputs.install-flags }}
         fi
