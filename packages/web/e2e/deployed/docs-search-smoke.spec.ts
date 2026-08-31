@@ -57,12 +57,17 @@ test("Монгол баримт бичиг болон хайлт desktop, mobile
 
   const dialog = page.getByRole("dialog", { name: "Хайх", exact: true })
   await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole("search", { name: "Энэ сайтаас хайх", exact: true })).toBeVisible()
   const input = dialog.getByPlaceholder("Хайх")
   await expect(input).toBeVisible()
   for (const [query, expectedPath] of deployedSearchResults) {
     await input.fill(query)
+    await expect(dialog.getByRole("button", { name: "Хайлтыг арилгах", exact: true })).toBeVisible()
     await expect(dialog.locator(`a[href="${expectedPath}"]`).first(), `${query} -> ${expectedPath}`).toBeVisible()
   }
+
+  await expect(page.getByRole("figure", { name: "Терминалын цонх", exact: true }).first()).toBeVisible()
+  await expect(page.getByRole("button", { name: "Түр санах ойд хуулах", exact: true }).first()).toBeVisible()
 
   expect(pageErrors, "browser errors").toEqual([])
   expect(failedRequests, "failed same-origin docs requests").toEqual([])
