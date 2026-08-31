@@ -11,11 +11,12 @@ try {
   const docsOnly = process.argv.includes("--docs-only")
   const appOnly = process.argv.includes("--app-only")
   const consoleOnly = process.argv.includes("--console-only")
+  const adminOnly = process.argv.includes("--admin-only")
   const d1BackupOnly = process.argv.includes("--d1-backup-only")
   const runtimeOnly = process.argv.includes("--runtime-only")
-  if ([authBootstrap, docsOnly, appOnly, consoleOnly, d1BackupOnly, runtimeOnly].filter(Boolean).length > 1) {
+  if ([authBootstrap, docsOnly, appOnly, consoleOnly, adminOnly, d1BackupOnly, runtimeOnly].filter(Boolean).length > 1) {
     throw new DeploymentPreflightError([
-      "--auth-bootstrap, --docs-only, --app-only, --console-only, --d1-backup-only, --runtime-only scope-үүдийг хамтад нь ашиглахгүй.",
+      "--auth-bootstrap, --docs-only, --app-only, --console-only, --admin-only, --d1-backup-only, --runtime-only scope-үүдийг хамтад нь ашиглахгүй.",
     ])
   }
   const scope = authBootstrap
@@ -26,11 +27,13 @@ try {
         ? "app-only"
         : consoleOnly
           ? "console-only"
-          : d1BackupOnly
-            ? "d1-backup-only"
-            : runtimeOnly
-              ? "runtime-only"
-              : "full"
+          : adminOnly
+            ? "admin-only"
+            : d1BackupOnly
+              ? "d1-backup-only"
+              : runtimeOnly
+                ? "runtime-only"
+                : "full"
   const result = preflightDeployment({
     stage: process.argv[2] ?? process.env.SST_STAGE ?? "dev",
     env: process.env,

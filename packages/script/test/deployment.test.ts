@@ -941,6 +941,166 @@ describe("Cloudflare deployment preflight", () => {
     )
   })
 
+  test("allows admin-only preflight only for the isolated dev admin Access boundary", () => {
+    const result = preflightDeployment({
+      stage: "dev",
+      env: {
+        ...cloudflare,
+        MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+        MONGOLGPT_ENABLE_ADMIN: "true",
+        MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+        MONGOLGPT_ENABLE_MONITORING: "false",
+        MONGOLGPT_ENABLE_TURNSTILE: "false",
+        MONGOLGPT_DEPLOY_ADMIN_ONLY: "true",
+        CLOUDFLARE_ACCESS_API_TOKEN: "access-token",
+        MONGOLGPT_RUNTIME_AUTH_SECRET: hosted.MONGOLGPT_RUNTIME_AUTH_SECRET,
+        SST_SECRET_ByokCredentialsKeyV1: hosted.SST_SECRET_ByokCredentialsKeyV1,
+        SST_SECRET_MONGOLGPT_PLAN_LIMITS: hosted.SST_SECRET_MONGOLGPT_PLAN_LIMITS,
+        SST_SECRET_MongolGPTRuntimeAuthSecret: hosted.SST_SECRET_MongolGPTRuntimeAuthSecret,
+        SST_SECRET_MongolGPTAdminBootstrapEmails: "admin@mgpt.mn",
+      },
+      requireHostedServices: true,
+      scope: "admin-only",
+    })
+    expect(result.hostedServices).toBe(true)
+    expect(result.scope).toBe("admin-only")
+    expect(result.adminEnabled).toBe(true)
+    expect(deploymentEndpoints(result)).toEqual({
+      docs: "https://docs.dev.mgpt.mn/docs",
+      app: "https://app.dev.mgpt.mn",
+      console: "https://dev.mgpt.mn",
+      consoleHealth: "https://dev.mgpt.mn/api/health",
+      authHealth: "https://auth.dev.mgpt.mn/health",
+      runtimeHealth: "https://runtime.dev.mgpt.mn/global/health",
+      paymentHealth: "https://pay.dev.mgpt.mn/health",
+      admin: "https://admin.dev.mgpt.mn",
+    })
+    expect(result.warnings).toContain(
+      "Зөвхөн Admin target deploy хийнэ; dev Cloudflare Access boundary, MFA enforcement, existing database state болон admin app-ийг тусгаарлаж шалгана.",
+    )
+
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "production",
+          env: { ...cloudflare, MONGOLGPT_DEPLOY_ADMIN_ONLY: "true" },
+          requireDeploymentSecrets: false,
+          scope: "admin-only",
+        }),
+      ["Admin-only scope-ийг зөвхөн dev"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "false",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_DEPLOY_ADMIN_ONLY: "true",
+          },
+          requireDeploymentSecrets: false,
+          scope: "admin-only",
+        }),
+      ["MONGOLGPT_ENABLE_HOSTED_SERVICES=true"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "false",
+            MONGOLGPT_DEPLOY_ADMIN_ONLY: "true",
+          },
+          requireDeploymentSecrets: false,
+          scope: "admin-only",
+        }),
+      ["MONGOLGPT_ENABLE_ADMIN=true"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_DEPLOY_ADMIN_ONLY: "true",
+            MONGOLGPT_ENABLE_MONITORING: "true",
+          },
+          requireDeploymentSecrets: false,
+          scope: "admin-only",
+        }),
+      ["MONGOLGPT_ENABLE_MONITORING нь admin-only deploy үед false"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_DEPLOY_ADMIN_ONLY: "true",
+            MONGOLGPT_PAYMENT_ENVIRONMENT: "sandbox",
+          },
+          requireDeploymentSecrets: false,
+          scope: "admin-only",
+        }),
+      ["MONGOLGPT_PAYMENT_ENVIRONMENT нь admin-only deploy үед disabled байна."],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_DEPLOY_ADMIN_ONLY: "true",
+          },
+          requireDeploymentSecrets: false,
+        }),
+      ["зөвхөн admin-only scope"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_DEPLOY_ADMIN_ONLY: "true",
+            MONGOLGPT_RUNTIME_AUTH_SECRET: "",
+            SST_SECRET_MongolGPTRuntimeAuthSecret: "",
+          },
+          scope: "admin-only",
+        }),
+      ["MONGOLGPT_RUNTIME_AUTH_SECRET", "SST_SECRET_MongolGPTRuntimeAuthSecret"],
+    )
+    expectIssues(
+      () =>
+        preflightDeployment({
+          stage: "dev",
+          env: {
+            ...cloudflare,
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_ENABLE_ADMIN: "true",
+            MONGOLGPT_DEPLOY_ADMIN_ONLY: "true",
+            MONGOLGPT_RUNTIME_AUTH_SECRET: hosted.MONGOLGPT_RUNTIME_AUTH_SECRET,
+            SST_SECRET_ByokCredentialsKeyV1: hosted.SST_SECRET_ByokCredentialsKeyV1,
+            SST_SECRET_MONGOLGPT_PLAN_LIMITS: hosted.SST_SECRET_MONGOLGPT_PLAN_LIMITS,
+            SST_SECRET_MongolGPTRuntimeAuthSecret: hosted.SST_SECRET_MongolGPTRuntimeAuthSecret,
+          },
+          scope: "admin-only",
+        }),
+      ["CLOUDFLARE_ACCESS_API_TOKEN", "MongolGPTAdminBootstrapEmails"],
+    )
+  })
+
   test("allows d1-backup-only preflight only for isolated dev backup automation", () => {
     const result = preflightDeployment({
       stage: "dev",

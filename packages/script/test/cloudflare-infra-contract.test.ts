@@ -224,8 +224,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_MIGRATION")')
     expect(configSource).toContain('flag("MONGOLGPT_CLOUDFLARE_PROVIDER_BRIDGE")')
     expect(configSource).toContain('flag("MONGOLGPT_DEPLOY_DATABASE_ONLY")')
+    expect(configSource).toContain('flag("MONGOLGPT_DEPLOY_ADMIN_ONLY")')
     expect(configSource).toContain(
-      'rootPreviewAlias && (stage !== "dev" || docsOnly || appOnly || databaseOnly || d1BackupOnly)',
+      'rootPreviewAlias && (stage !== "dev" || docsOnly || appOnly || adminOnly || databaseOnly || d1BackupOnly)',
     )
     expect(configSource).toContain("rootPreviewAlias && !hostedServices && !consoleOnly")
     expect(configSource).toContain('cloudflareProviderMigration ? "6.14.0" : "6.15.0"')
@@ -234,7 +235,10 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('new cloudflare.Provider("default_6_14_0", {}, { version: "6.14.0" })')
     expect(configSource).toContain('await import("./infra/database.js")')
     expect(configSource).toContain(
-      'cloudflareProviderBridge && (stage !== "dev" || !hostedServices || appOnly || cloudflareProviderMigration)',
+      'cloudflareProviderBridge &&',
+    )
+    expect(configSource).toContain(
+      '(stage !== "dev" || !hostedServices || appOnly || adminOnly || cloudflareProviderMigration)',
     )
     expect(configSource).not.toContain('input?.stage === "production"')
   })
@@ -842,6 +846,98 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(sstSource).toContain('const consoleOnly = flag("MONGOLGPT_DEPLOY_CONSOLE_ONLY")')
     expect(sstSource).toContain('const site = await import("./infra/console.js")')
     expect(sstSource).toContain("ConsoleUrl: site.consoleApp.url")
+  })
+
+  test("deploys only the isolated dev admin with exact confirmation and bounded secrets", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/deploy-dev-admin.yml", import.meta.url)).text()
+    const sstSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
+    const secretSource = await Bun.file(new URL("../../../infra/secret.ts", import.meta.url)).text()
+    const parsed: unknown = Bun.YAML.parse(source)
+    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs) || !record(parsed.jobs.deploy) || !record(parsed.env)) {
+      throw new Error("Dev admin-only workflow is invalid")
+    }
+    const job = parseWorkflowJob(parsed.jobs.deploy, "deploy")
+    const confirmation = job.steps.find((step) => step.name === "Validate exact dev admin confirmation")
+    const contracts = job.steps.find((step) => step.name === "Verify admin app contracts")
+    const configPreflight = job.steps.find((step) => step.name === "Verify isolated dev admin configuration")
+    const tokenPreflight = job.steps.find((step) => step.name === "Verify Cloudflare deploy token")
+    const deploy = job.steps.find((step) => step.name === "Deploy only dev admin to Cloudflare")
+    const smoke = job.steps.find((step) => step.name === "Verify live dev admin Access boundary")
+    const browser = job.steps.find((step) => step.name === "Verify dev admin Access UI in Chromium")
+    const artifacts = job.steps.find((step) => step.name === "Upload admin browser artifacts")
+    const browserConfig = await Bun.file(
+      new URL("../../app/playwright.admin-deployed.config.ts", import.meta.url),
+    ).text()
+    const browserSmoke = await Bun.file(
+      new URL("../../app/e2e/deployed/admin-access-smoke.spec.ts", import.meta.url),
+    ).text()
+
+    expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
+    expect(parsed.permissions).toEqual({ contents: "read" })
+    expect(parsed.jobs.deploy.environment).toBe("dev")
+    expect(job.condition).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
+    expect(parsed.env.MONGOLGPT_ENABLE_HOSTED_SERVICES).toBe("true")
+    expect(parsed.env.MONGOLGPT_DEPLOY_ADMIN_ONLY).toBe("true")
+    expect(parsed.env.MONGOLGPT_ENABLE_ADMIN).toBe("true")
+    expect(parsed.env.MONGOLGPT_ENABLE_MONITORING).toBe("false")
+    expect(parsed.env.MONGOLGPT_ENABLE_TURNSTILE).toBe("false")
+    expect(parsed.env.MONGOLGPT_PAYMENT_ENVIRONMENT).toBe("disabled")
+    expect(confirmation?.env).toEqual({ DEPLOY_CONFIRMATION: "${{ inputs.confirmation }}" })
+    expect(confirmation?.run).toContain('if [ "$DEPLOY_CONFIRMATION" != "DEPLOY DEV ADMIN dev.mgpt.mn" ]; then')
+    expect(contracts?.run).toContain("bun run --cwd packages/console/admin typecheck")
+    expect(contracts?.run).toContain("bun test --cwd packages/console/admin")
+    expect(configPreflight?.run).toBe("bun run deploy:preflight -- dev --admin-only --config-only")
+    expect(configPreflight?.env).toEqual({
+      CLOUDFLARE_ACCESS_API_TOKEN: "${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}",
+      MONGOLGPT_RUNTIME_AUTH_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+      SST_SECRET_ByokCredentialsKeyV1: "${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}",
+      SST_SECRET_MONGOLGPT_PLAN_LIMITS: "${{ secrets.MONGOLGPT_PLAN_LIMITS }}",
+      SST_SECRET_MongolGPTRuntimeAuthSecret: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+      SST_SECRET_MongolGPTAdminBootstrapEmails: "${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}",
+    })
+    expect(tokenPreflight?.env).toEqual({ CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" })
+    expect(tokenPreflight?.run).toBe("bun run cloudflare:preflight")
+    expect(deploy?.env).toEqual({
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+      CLOUDFLARE_ACCESS_API_TOKEN: "${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}",
+      MONGOLGPT_RUNTIME_AUTH_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+      SST_SECRET_ByokCredentialsKeyV1: "${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}",
+      SST_SECRET_MONGOLGPT_PLAN_LIMITS: "${{ secrets.MONGOLGPT_PLAN_LIMITS }}",
+      SST_SECRET_MongolGPTRuntimeAuthSecret: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+      SST_SECRET_MongolGPTAdminBootstrapEmails: "${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}",
+    })
+    expect(deploy?.run).toContain("bun run deploy:preflight -- dev --admin-only")
+    expect(deploy?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
+    expect(deploy?.run).toContain("Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай")
+    expect(deploy?.run).toContain("bun sst deploy --stage=dev --target Admin --print-logs")
+    expect(deploy?.run).not.toContain("--target Database")
+    expect(deploy?.run).not.toContain("--target Console")
+    expect(deploy?.run).not.toContain("--target AuthApi")
+    expect(deploy?.run).not.toContain("MONGOLGPT_GATEWAY_MODELS")
+    expect(deploy?.run).not.toContain("MONGOLGPT_SMOKE_AUTH_COOKIE")
+    expect(deploy?.run).not.toContain("MONGOLGPT_MONITOR_ALERT_EMAIL")
+    expect(smoke?.run).toBe("bun script/deployment-smoke.ts --admin-only dev")
+    expect(browser?.env).toEqual({
+      CI: "true",
+      PLAYWRIGHT_DEPLOYED_ADMIN_URL: "https://admin.dev.mgpt.mn",
+    })
+    expect(browser?.run).toBe("bun --cwd packages/app test:e2e:deployed:admin")
+    expect(artifacts?.condition).toBe("always()")
+    expect(artifacts?.uses).toBe("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a")
+    expect(browserConfig).toContain('testMatch: "admin-access-smoke.spec.ts"')
+    expect(browserConfig).toContain('name: "chromium-admin-desktop"')
+    expect(browserConfig).toContain('name: "chromium-admin-mobile"')
+    expect(browserSmoke).toContain('expect(`${snapshot.title}\\n${snapshot.text}`).toContain("MongolGPT")')
+    expect(browserSmoke).toContain("snapshot.scrollWidth")
+    expect(browserSmoke).toContain("snapshot.clientWidth")
+    expect(browserSmoke).toContain('testInfo.outputPath("admin-access.png")')
+    expect(browserSmoke).toContain("expect(consoleErrors).toEqual([])")
+    expect(browserSmoke).toContain("expect(pageErrors).toEqual([])")
+    expect(browserSmoke).toContain("expect(failedAdminRequests).toEqual([])")
+    expect(sstSource).toContain('const adminOnly = flag("MONGOLGPT_DEPLOY_ADMIN_ONLY")')
+    expect(sstSource).toContain('const site = await import("./infra/admin.js")')
+    expect(sstSource).toContain("AdminUrl: site.adminUrl")
+    expect(secretSource).not.toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY")
   })
 
   test("deploys only the isolated dev runtime with bounded secrets and live boundary smoke", async () => {

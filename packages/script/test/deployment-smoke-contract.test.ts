@@ -15,6 +15,7 @@ import {
   inspectRuntimeTokenPreflight,
   inspectStaticAppBackendRejection,
   runAppSmoke,
+  runAdminSmoke,
   runAuthBootstrapSmoke,
   runDocsSmoke,
   runRuntimeSmoke,
@@ -359,6 +360,59 @@ describe("dev console-only smoke", () => {
       "https://www.mgpt.mn/assets/index.css",
       "https://www.mgpt.mn/assets/index.js",
     ])
+  })
+})
+
+describe("dev admin-only smoke", () => {
+  test("checks only the live Cloudflare Access boundary for admin.dev.mgpt.mn", async () => {
+    const configured = {
+      MONGOLGPT_DOMAIN: "mgpt.mn",
+      MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+      MONGOLGPT_DEPLOY_ADMIN_ONLY: "true",
+      MONGOLGPT_ENABLE_ADMIN: "true",
+      MONGOLGPT_ENABLE_ANALYTICS: "false",
+      MONGOLGPT_ENABLE_D1_BACKUPS: "false",
+      MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false",
+      MONGOLGPT_ENABLE_LEGACY_STRIPE: "false",
+      MONGOLGPT_ENABLE_MONITORING: "false",
+      MONGOLGPT_ENABLE_TURNSTILE: "false",
+      MONGOLGPT_ENABLE_SHARE_SERVICE: "false",
+      MONGOLGPT_ENABLE_SYNC_SERVICE: "false",
+      MONGOLGPT_ENABLE_REAL_PAYMENTS: "false",
+      MONGOLGPT_PAYMENT_ENVIRONMENT: "disabled",
+      MONGOLGPT_SMOKE_RETRIES: "1",
+      MONGOLGPT_SMOKE_DELAY_MS: "1",
+    } satisfies Record<string, string>
+    const previous = new Map(Object.keys(configured).map((key) => [key, process.env[key]]))
+    const originalFetch = globalThis.fetch
+    const requests: string[] = []
+
+    Object.assign(process.env, configured)
+    globalThis.fetch = mockedFetch(async (input: RequestInfo | URL) => {
+      const url = new URL(input instanceof Request ? input.url : input)
+      requests.push(url.toString())
+      if (url.toString() === "https://admin.dev.mgpt.mn/") {
+        return new Response(null, {
+          status: 302,
+          headers: {
+            location: "https://mongolgpt.cloudflareaccess.com/cdn-cgi/access/login/admin.dev.mgpt.mn",
+          },
+        })
+      }
+      throw new Error(`Unexpected admin-only smoke request: ${url}`)
+    })
+
+    try {
+      await runAdminSmoke("dev")
+    } finally {
+      globalThis.fetch = originalFetch
+      for (const [key, value] of previous) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+
+    expect(requests).toEqual(["https://admin.dev.mgpt.mn/"])
   })
 })
 

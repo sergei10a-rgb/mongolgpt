@@ -1,0 +1,142 @@
+name: Deploy dev admin
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "DEPLOY DEV ADMIN dev.mgpt.mn гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-deploy-dev-admin
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_RELEASE_SHA: ${{ github.sha }}
+  MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+  MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
+  MONGOLGPT_DEPLOY_ADMIN_ONLY: "true"
+  MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: "false"
+  MONGOLGPT_ENABLE_ADMIN: "true"
+  MONGOLGPT_ENABLE_ANALYTICS: "false"
+  MONGOLGPT_ENABLE_D1_BACKUPS: "false"
+  MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false"
+  MONGOLGPT_ENABLE_LEGACY_STRIPE: "false"
+  MONGOLGPT_ENABLE_MONITORING: "false"
+  MONGOLGPT_ENABLE_TURNSTILE: "false"
+  MONGOLGPT_ENABLE_SHARE_SERVICE: "false"
+  MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
+  MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"
+  MONGOLGPT_PAYMENT_ENVIRONMENT: disabled
+
+jobs:
+  deploy:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: dev
+    env:
+      CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
+    steps:
+      - name: Validate exact dev admin confirmation
+        env:
+          DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$DEPLOY_CONFIRMATION" != "DEPLOY DEV ADMIN dev.mgpt.mn" ]; then
+            echo "Dev admin deploy баталгаажуулалт буруу байна."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify admin app contracts
+        run: |
+          bun run --cwd packages/console/admin typecheck
+          bun test --cwd packages/console/admin
+
+      - name: Verify isolated dev admin configuration
+        env:
+          CLOUDFLARE_ACCESS_API_TOKEN: ${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}
+          MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+          SST_SECRET_ByokCredentialsKeyV1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}
+          SST_SECRET_MONGOLGPT_PLAN_LIMITS: ${{ secrets.MONGOLGPT_PLAN_LIMITS }}
+          SST_SECRET_MongolGPTRuntimeAuthSecret: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+          SST_SECRET_MongolGPTAdminBootstrapEmails: ${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}
+        run: bun run deploy:preflight -- dev --admin-only --config-only
+
+      - name: Verify Cloudflare deploy token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: bun run cloudflare:preflight
+
+      - name: Deploy only dev admin to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCESS_API_TOKEN: ${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}
+          MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+          SST_SECRET_ByokCredentialsKeyV1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}
+          SST_SECRET_MONGOLGPT_PLAN_LIMITS: ${{ secrets.MONGOLGPT_PLAN_LIMITS }}
+          SST_SECRET_MongolGPTRuntimeAuthSecret: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+          SST_SECRET_MongolGPTAdminBootstrapEmails: ${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}
+        run: |
+          bun run deploy:preflight -- dev --admin-only
+          bun sst unlock --stage=dev || true
+          if ! bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts >/tmp/mongolgpt-admin-database-id; then
+            echo "Dev SST state-д Database алга. Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай."
+            exit 1
+          fi
+          bun sst deploy --stage=dev --target Admin --print-logs
+
+      - name: Verify live dev admin Access boundary
+        run: bun script/deployment-smoke.ts --admin-only dev
+
+      - name: Read Playwright version
+        id: playwright-version
+        run: |
+          version=$(node -e 'console.log(require("./package.json").workspaces.catalog["@playwright/test"])')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browser
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ github.workspace }}/.playwright-browsers
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.playwright-version.outputs.version }}-chromium
+
+      - name: Install Playwright system dependencies
+        working-directory: packages/app
+        run: bunx playwright install-deps chromium
+
+      - name: Install Playwright browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: packages/app
+        run: bunx playwright install chromium
+
+      - name: Verify dev admin Access UI in Chromium
+        env:
+          CI: "true"
+          PLAYWRIGHT_DEPLOYED_ADMIN_URL: https://admin.dev.mgpt.mn
+        run: bun --cwd packages/app test:e2e:deployed:admin
+        timeout-minutes: 10
+
+      - name: Upload admin browser artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deployed-browser-dev-admin-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            packages/app/e2e/test-results-admin-deployed
+            packages/app/e2e/playwright-report-admin-deployed

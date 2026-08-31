@@ -47,6 +47,8 @@ if (import.meta.main) {
     await runAppSmoke(process.argv[3])
   } else if (process.argv[2] === "--console-only") {
     await runConsoleSmoke(process.argv[3])
+  } else if (process.argv[2] === "--admin-only") {
+    await runAdminSmoke(process.argv[3])
   } else if (process.argv[2] === "--runtime-only") {
     await runRuntimeSmoke(process.argv[3])
   } else {
@@ -117,6 +119,28 @@ export async function runConsoleSmoke(stage = process.env.SST_STAGE ?? "dev") {
   await checkConsoleDocument(new URL("/mn/support", `${endpoints.console}/`).toString(), "console support")
   await checkConsoleRootAliases(result)
   console.log("Dev console-only smoke check passed.")
+}
+
+export async function runAdminSmoke(stage = process.env.SST_STAGE ?? "dev") {
+  if (stage !== "dev") throw new Error("Admin-only smoke нь зөвхөн dev орчинд ажиллана.")
+  if (process.env.MONGOLGPT_ENABLE_HOSTED_SERVICES !== "true") {
+    throw new Error("Admin-only smoke нь hosted service тохиргоо шаардана.")
+  }
+
+  const result = preflightDeployment({
+    stage,
+    env: process.env,
+    requireCloudflareCredentials: false,
+    requireDeploymentSecrets: false,
+    requireHostedServices: true,
+    scope: "admin-only",
+  })
+  const endpoints = deploymentEndpoints(result)
+  inspectDeploymentEndpointConfiguration(endpoints, result)
+  if (!endpoints.admin) throw new Error("Admin-only smoke admin endpoint дутуу байна.")
+
+  await check("admin", endpoints.admin, "admin", result, endpoints.app, await expectedRuntimeVersion())
+  console.log("Dev admin-only smoke check passed.")
 }
 
 export async function runRuntimeSmoke(stage = process.env.SST_STAGE ?? "dev") {
