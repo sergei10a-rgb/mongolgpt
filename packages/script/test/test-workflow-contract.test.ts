@@ -59,6 +59,44 @@ describe("test workflow contract", () => {
     expect(e2eSetup?.with).toEqual({ "install-flags": "--ignore-scripts" })
   })
 
+  test("packages and exercises the Windows desktop in the default CI suite", async () => {
+    const source = await Bun.file(new URL("../../../.github/workflows/test.yml", import.meta.url)).text()
+    const parsed: unknown = Bun.YAML.parse(source)
+
+    expect(record(parsed)).toBe(true)
+    if (!record(parsed) || !record(parsed.jobs)) return
+
+    const job = parsed.jobs["desktop-smoke"]
+    expect(record(job)).toBe(true)
+    if (!record(job)) return
+    expect(job["runs-on"]).toBe("windows-2025")
+    expect(job["timeout-minutes"]).toBe(45)
+    expect(job.env).toEqual({ MONGOLGPT_CHANNEL: "dev" })
+
+    const steps = stepsFor(job)
+    const setup = steps.find((step) => step.name === "Setup Bun")
+    const prepare = steps.findIndex((step) => step.name === "Prepare desktop bundle")
+    const version = steps.findIndex((step) => step.name === "Read prepared desktop version")
+    const build = steps.findIndex((step) => step.name === "Build desktop")
+    const packaged = steps.findIndex((step) => step.name === "Package unsigned dev installer")
+    const smoke = steps.find((step) => step.name === "Smoke packaged MongolGPT Dev")
+    const upload = steps.find((step) => step.name === "Upload desktop smoke artifacts")
+
+    expect(setup?.uses).toBe("./.github/actions/setup-bun")
+    expect(setup?.with).toBeUndefined()
+    expect(prepare).toBeGreaterThan(-1)
+    expect(prepare).toBeLessThan(version)
+    expect(version).toBeLessThan(build)
+    expect(build).toBeLessThan(packaged)
+    expect(smoke?.shell).toBe("pwsh")
+    expect(smoke?.run).toContain("./scripts/smoke-packaged-windows.ps1")
+    expect(smoke?.run).toContain('-ExpectedVersion "${{ steps.desktop-version.outputs.version }}"')
+    expect(smoke?.run).toContain('-ExpectedProductName "MongolGPT Dev"')
+    expect(smoke?.run).toContain("-UseExternalPtyProbe")
+    expect(upload?.if).toBe("failure()")
+    expect(JSON.stringify(upload)).toContain("mongolgpt-desktop-smoke.json.png")
+  })
+
   test("keeps the setup action install-flags API wired to bun install", async () => {
     const source = await Bun.file(new URL("../../../.github/actions/setup-bun/action.yml", import.meta.url)).text()
     const parsed: unknown = Bun.YAML.parse(source)

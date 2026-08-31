@@ -169,3 +169,64 @@ jobs:
             packages/app/e2e/playwright-report
             packages/app/e2e/playwright-report-hosted
             packages/app/e2e/playwright-report-console
+
+  desktop-smoke:
+    name: desktop smoke (windows packaged)
+    runs-on: windows-2025
+    timeout-minutes: 45
+    env:
+      MONGOLGPT_CHANNEL: dev
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Prepare desktop bundle
+        working-directory: packages/desktop
+        run: bun ./scripts/prepare.ts
+
+      - name: Read prepared desktop version
+        id: desktop-version
+        run: |
+          version=$(node -p "require('./packages/desktop/package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build desktop
+        working-directory: packages/desktop
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: bun run build
+
+      - name: Package unsigned dev installer
+        working-directory: packages/desktop
+        run: npx electron-builder --win --x64 --publish never --config electron-builder.config.ts
+
+      - name: Smoke packaged MongolGPT Dev
+        working-directory: packages/desktop
+        shell: pwsh
+        timeout-minutes: 5
+        run: ./scripts/smoke-packaged-windows.ps1 -ExpectedVersion "${{ steps.desktop-version.outputs.version }}" -ExpectedProductName "MongolGPT Dev" -UseExternalPtyProbe
+
+      - name: Upload desktop smoke artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: desktop-smoke-windows-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            packages/desktop/dist/mongolgpt-desktop-win-x64.exe
+            packages/desktop/dist/win-unpacked/**
+            ${{ runner.temp }}/mongolgpt-desktop-smoke.json.png
