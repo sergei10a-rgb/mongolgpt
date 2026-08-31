@@ -12,6 +12,7 @@ test("hydrates the production console build on desktop and mobile", async ({ pag
 
   await page.goto("/", { waitUntil: "domcontentloaded" })
   await expect(page.getByRole("heading", { name: "MongolGPT", exact: true })).toBeVisible()
+  await expect(page.locator('[data-component="preview-notice"]')).toContainText("Бодит төлбөр идэвхгүй")
   await expect
     .poll(() =>
       page.locator("img").evaluateAll((images) => images.every((image) => image.complete && image.naturalWidth > 0)),
@@ -46,11 +47,13 @@ test("hydrates the production console build on desktop and mobile", async ({ pag
 
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.goto("/pricing", { waitUntil: "domcontentloaded" })
+  await expect(page.locator('[data-component="pricing-status"]')).toHaveAttribute("data-status", "disabled")
+  await expect(page.locator('[data-plan="free"] a[data-slot="plan-action"]')).toHaveAttribute("href", "/auth")
   for (const plan of ["basic", "pro", "max"] as const) {
-    await expect(page.locator(`[data-plan="${plan}"] [data-slot="plan-action"]`)).toHaveAttribute(
-      "href",
-      `/auth?plan=${plan}`,
-    )
+    const action = page.locator(`[data-plan="${plan}"] [data-slot="plan-action"]`)
+    await expect(action).toHaveAttribute("aria-disabled", "true")
+    await expect(action).toHaveText("Одоогоор идэвхгүй")
+    await expect(page.locator(`[data-plan="${plan}"] a[data-slot="plan-action"]`)).toHaveCount(0)
   }
 
   expect(pageErrors).toEqual([])
