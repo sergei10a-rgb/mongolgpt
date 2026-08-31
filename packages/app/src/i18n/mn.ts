@@ -850,7 +850,7 @@ export const dict = {
   "settings.account.workspaceSwitch": "Идэвхжүүлэх",
   "settings.account.workspaceSwitching": "Шилжүүлж байна...",
   "settings.account.workspaceSwitchError": "Ажлын орчныг сольж чадсангүй. Дахин оролдоно уу.",
-  "settings.account.plan.free": "Free",
+  "settings.account.plan.free": "Үнэгүй",
   "settings.account.plan.basic": "Basic",
   "settings.account.plan.pro": "Pro",
   "settings.account.plan.max": "Max",

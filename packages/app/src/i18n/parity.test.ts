@@ -23,7 +23,6 @@ const locales = [ar, br, bs, da, de, es, fr, ja, ko, mn, no, pl, ru, uk, th, tr,
 const keys = ["command.session.previous.unseen", "command.session.next.unseen"] as const
 const allowedMongolianIdenticalKeys = new Set<keyof typeof en>([
   "settings.section.account",
-  "settings.account.plan.free",
   "settings.account.plan.basic",
   "settings.account.plan.pro",
   "settings.account.plan.max",
