@@ -106,6 +106,29 @@ describe("Cloudflare Access deployment preflight", () => {
     ).toContain("хэт том хариу")
   })
 
+  test("explains the Zero Trust activation and permission checks for an organization 403", async () => {
+    const error = await rejection(
+      preflightCloudflareAccess({
+        accountId: "account-id",
+        token: "must-not-leak",
+        fetcher: async () =>
+          response(
+            {
+              success: false,
+              errors: [{ message: "permission denied" }],
+            },
+            403,
+          ),
+      }),
+    )
+
+    expect(error).toBeInstanceOf(CloudflareAccessPreflightError)
+    expect(String(error)).toContain("Zero Trust Free")
+    expect(String(error)).toContain("Access-ийн хоёр эрх Edit")
+    expect(String(error)).not.toContain("must-not-leak")
+    expect(String(error)).not.toContain("permission denied")
+  })
+
   test("requires at least one configured login method", async () => {
     const responses = [
       response({

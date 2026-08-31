@@ -237,6 +237,11 @@ async function requestCloudflare(fetcher: Fetcher, url: string, options: Request
   })
   const payload = await readResponse(response)
   if (!response.ok || payload.success !== true) {
+    if (response.status === 403 && operation === "Zero Trust organization-ийг унших") {
+      throw new CloudflareAccessPreflightError(
+        `${operation} амжилтгүй боллоо (HTTP 403). Cloudflare Dashboard-ийн Zero Trust хэсэгт Zero Trust Free багцыг бүрэн идэвхжүүлсэн эсэх, мөн токены Access-ийн хоёр эрх Edit түвшинтэй эсэхийг шалгана.`,
+      )
+    }
     throw new CloudflareAccessPreflightError(`${operation} амжилтгүй боллоо (HTTP ${response.status}).`)
   }
   return payload
