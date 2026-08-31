@@ -116,6 +116,7 @@ import { errorLayer } from "./middleware/error"
 import { fenceLayer } from "./middleware/fence"
 import { schemaErrorLayer } from "./middleware/schema-error"
 import { accountUseRouterMiddleware } from "./middleware/account-use"
+import { desktopSmokeRoute } from "./desktop-smoke"
 
 export const context = Context.makeUnsafe<unknown>(new Map())
 
@@ -281,6 +282,7 @@ export function createRoutes(
     instanceRoutes,
     serverRoutes,
     docRoute,
+    desktopSmokeRoute,
     uiRoute,
   ).pipe(
     Layer.provide([

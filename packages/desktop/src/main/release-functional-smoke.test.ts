@@ -7,6 +7,7 @@ import {
   hasMessageText,
   hasProviderModel,
   isFileContent,
+  isOAuthCallbackPage,
   isExternalPtyProof,
   isPath,
   isProject,
@@ -79,6 +80,18 @@ describe("release functional smoke validators", () => {
     const reply = "MongolGPT Desktop локал загварын smoke амжилттай"
     expect(hasMessageText({ parts: [{ type: "text", text: reply }] }, reply)).toBe(true)
     expect(hasMessageText({ parts: [{ type: "text", text: "өөр хариу" }] }, reply)).toBe(false)
+  })
+
+  test("accepts only branded Mongolian OAuth callback pages", () => {
+    const success =
+      '<html lang="mn"><title>Зөвшөөрөл амжилттай - MongolGPT</title><main data-status="success"><svg aria-label="MongolGPT"></svg>MongolGPT бүртгэл амжилттай холбогдлоо.</main></html>'
+    const error =
+      '<html lang="mn"><title>Зөвшөөрөл амжилтгүй - MongolGPT</title><main data-status="error"><svg aria-label="MongolGPT"></svg>MongolGPT бүртгэлийг холбож чадсангүй.</main></html>'
+    expect(isOAuthCallbackPage(success, "success")).toBe(true)
+    expect(isOAuthCallbackPage(error, "error")).toBe(true)
+    expect(isOAuthCallbackPage(success.replace("MongolGPT", "OpenCode"), "success")).toBe(false)
+    expect(isOAuthCallbackPage(success.replace('lang="mn"', 'lang="en"'), "success")).toBe(false)
+    expect(isOAuthCallbackPage(error, "success")).toBe(false)
   })
 
   test("keeps timeout and secret handling deterministic", () => {

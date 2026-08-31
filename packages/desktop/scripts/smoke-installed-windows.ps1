@@ -133,7 +133,7 @@ function Invoke-DesktopSmoke {
     $functionalHttp = @($result.functional.summary.http.PSObject.Properties.Value)
     if (
       $result.functional.capable -ne $true -or
-      $functionalHttp.Count -ne 12 -or
+      $functionalHttp.Count -ne 15 -or
       @($functionalHttp | Where-Object { $_.ok -ne $true }).Count -ne 0 -or
       $result.functional.summary.terminal.ok -ne $true -or
       $result.functional.summary.fixture.skill -ne $true -or

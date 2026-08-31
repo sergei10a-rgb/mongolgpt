@@ -11,7 +11,7 @@ export const AccountLoginRequiredMessage =
 
 const legacySessionUse = /^\/session\/[^/]+\/(?:init|summarize|message|prompt_async|command|shell)\/?$/
 const v2SessionUse = /^\/api\/session\/[^/]+\/(?:agent|model|prompt|compact)\/?$/
-const desktopSmokeProofHeader = "x-mongolgpt-desktop-smoke-proof"
+export const desktopSmokeProofHeader = "x-mongolgpt-desktop-smoke-proof"
 let configuredDesktopSmokeProof: string | undefined
 
 export function accountUseRoute(method: string, pathname: string) {
@@ -46,6 +46,10 @@ export function configureDesktopSmokeProof(proof?: string) {
   configuredDesktopSmokeProof = proof
 }
 
+export function desktopSmokeProofAccepted(received: string | undefined) {
+  return desktopSmokeProofMatches(configuredDesktopSmokeProof, received)
+}
+
 export const accountUseRouterMiddleware = HttpRouter.middleware()(
   Effect.gen(function* () {
     if (accountUseAllowed({ channel: InstallationChannel })) return (effect) => effect
@@ -66,10 +70,7 @@ export const accountUseRouterMiddleware = HttpRouter.middleware()(
           return yield* effect
         }
 
-        if (
-          serverAuthorized &&
-          desktopSmokeProofMatches(configuredDesktopSmokeProof, request.headers[desktopSmokeProofHeader])
-        )
+        if (serverAuthorized && desktopSmokeProofAccepted(request.headers[desktopSmokeProofHeader]))
           return yield* effect
 
         if (

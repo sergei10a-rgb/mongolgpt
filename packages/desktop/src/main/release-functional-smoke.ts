@@ -44,6 +44,8 @@ const modelName = "release-functional-smoke-model"
 const localModelApiKey = "release-smoke-local-key"
 const localModelPrompt = "MongolGPT Desktop local model smoke"
 const localModelReply = "MongolGPT Desktop локал загварын smoke амжилттай"
+const oauthSuccessPath = "/_internal/desktop-smoke/oauth-callback/success"
+const oauthErrorPath = "/_internal/desktop-smoke/oauth-callback/error"
 
 export async function runReleaseFunctionalSmoke(
   server: ReleaseSmokeServer,
@@ -183,6 +185,32 @@ export async function runReleaseFunctionalSmoke(
       "/experimental/tool/ids",
       (value) => isToolIds(value) && value.includes("desktop-smoke"),
     )
+    http.oauthCallbackSuccess = await request(
+      fetcher,
+      base,
+      oauthSuccessPath,
+      headers,
+      "text/html",
+      (value) => isOAuthCallbackPage(value, "success"),
+      timeoutMs,
+    )
+    http.oauthCallbackError = await request(
+      fetcher,
+      base,
+      oauthErrorPath,
+      headers,
+      "text/html",
+      (value) => isOAuthCallbackPage(value, "error"),
+      timeoutMs,
+    )
+    http.oauthCallbackUnauthorized = await requestStatus(
+      fetcher,
+      base,
+      oauthSuccessPath,
+      { ...headers, "x-mongolgpt-desktop-smoke-proof": "invalid" },
+      404,
+      timeoutMs,
+    )
     const mcp = await requestJsonValue(fetcher, base, "/mcp", headers, isMcpStatusMap, timeoutMs)
     http.mcp = mcp.check
     fixture.mcpConfiguredDisabled = mcp.check.ok && hasDisabledMcp(mcp.value)
@@ -267,7 +295,7 @@ export async function runReleaseFunctionalSmoke(
     await removeSmokeDirectory(proofDir)
   }
   const capable =
-    Object.values(http).length === 12 &&
+    Object.values(http).length === 15 &&
     Object.values(http).every((check) => check.ok) &&
     terminal.ok &&
     Object.values(fixture).every(Boolean)
@@ -304,6 +332,18 @@ export function isStatusArray(value: unknown): value is StatusPayload[] {
 }
 export function isToolIds(value: unknown): value is string[] {
   return isArray(value) && value.every((item) => typeof item === "string")
+}
+export function isOAuthCallbackPage(value: unknown, state: "success" | "error") {
+  if (typeof value !== "string" || /\bopencode\b/i.test(value)) return false
+  const expected =
+    state === "success"
+      ? ["Зөвшөөрөл амжилттай - MongolGPT", "MongolGPT бүртгэл амжилттай холбогдлоо.", 'data-status="success"']
+      : ["Зөвшөөрөл амжилтгүй - MongolGPT", "MongolGPT бүртгэлийг холбож чадсангүй.", 'data-status="error"']
+  return (
+    value.includes('<html lang="mn">') &&
+    value.includes('aria-label="MongolGPT"') &&
+    expected.every((marker) => value.includes(marker))
+  )
 }
 export function isSession(value: unknown): value is { id: string } {
   return isRecord(value) && typeof value.id === "string" && value.id.length > 0
@@ -383,6 +423,19 @@ async function request(
   if (!validateHttpResponse(response, contentType)) return { ok: false, detail: `HTTP ${response.status}` }
   const value = contentType.startsWith("text/") ? await response.text() : await response.json().catch(() => undefined)
   return validate(value) ? { ok: true } : { ok: false, detail: "schema validation failed" }
+}
+async function requestStatus(
+  fetcher: FetchLike,
+  base: URL,
+  path: string,
+  headers: Record<string, string>,
+  expectedStatus: number,
+  timeoutMs: number,
+): Promise<ReleaseSmokeCheck> {
+  const response = await fetcher(new URL(path, base), { headers, signal: AbortSignal.timeout(timeoutMs) })
+  return response.status === expectedStatus
+    ? { ok: true }
+    : { ok: false, detail: `HTTP ${response.status}; expected ${expectedStatus}` }
 }
 async function requestJsonValue(
   fetcher: FetchLike,
