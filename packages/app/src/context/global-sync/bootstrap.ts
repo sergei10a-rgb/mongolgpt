@@ -65,22 +65,6 @@ function runAll(list: Array<() => Promise<unknown>>) {
   return Promise.allSettled(list.map((item) => item()))
 }
 
-function showErrors(input: {
-  errors: unknown[]
-  title: string
-  translate: (key: string, vars?: Record<string, string | number>) => string
-  formatMoreCount: (count: number) => string
-}) {
-  if (input.errors.length === 0) return
-  const message = formatServerError(input.errors[0], input.translate)
-  const more = input.errors.length > 1 ? input.formatMoreCount(input.errors.length - 1) : ""
-  showToast({
-    variant: "error",
-    title: input.title,
-    description: message + more,
-  })
-}
-
 export const loadGlobalConfigQuery = (scope: ServerScope, sdk: MongolGPTClient) =>
   queryOptions({
     queryKey: [scope, "config"],
@@ -105,9 +89,6 @@ export const loadProjectsQuery = (scope: ServerScope, sdk: MongolGPTClient) =>
 export async function bootstrapGlobal(input: {
   serverSDK: MongolGPTClient
   scope: ServerScope
-  requestFailedTitle: string
-  translate: (key: string, vars?: Record<string, string | number>) => string
-  formatMoreCount: (count: number) => string
   setGlobalStore: SetStoreFunction<GlobalStore>
   queryClient: QueryClient
 }) {
@@ -120,13 +101,7 @@ export async function bootstrapGlobal(input: {
         .fetchQuery(loadProjectsQuery(input.scope, input.serverSDK))
         .then((data) => input.setGlobalStore("project", data)),
   ]
-  await runAll(slow)
-  // showErrors({
-  //   errors: errors(),
-  //   title: input.requestFailedTitle,
-  //   translate: input.translate,
-  //   formatMoreCount: input.formatMoreCount,
-  // })
+  return errors(await runAll(slow))
 }
 
 function groupBySession<T extends { id: string; sessionID: string }>(input: T[]) {

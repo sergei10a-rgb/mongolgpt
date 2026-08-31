@@ -2,7 +2,7 @@ import type { Config, MongolGPTClient, Path, Project, ProviderAuthResponse } fro
 import { showToast } from "@/utils/toast"
 import { getFilename } from "@mongolgpt/core/util/path"
 import { type Accessor, batch, createEffect, createMemo, getOwner, onCleanup, untrack } from "solid-js"
-import { createStore, produce, reconcile } from "solid-js/store"
+import { createStore, reconcile } from "solid-js/store"
 import { useLanguage } from "@/context/language"
 import type { InitError } from "../pages/error"
 import { ServerSDK } from "./server-sdk"
@@ -146,10 +146,29 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
   let eventFrame: number | undefined
   let eventTimer: ReturnType<typeof setTimeout> | undefined
   let eventStarted = false
+  let bootstrapErrorTimer: ReturnType<typeof setTimeout> | undefined
+  let reportedBootstrapError: unknown
+
+  const reportBootstrapErrors = (failures: unknown[]) => {
+    const error = failures[0]
+    if (!error || ServerConnection.local(serverSDK.server) || error === reportedBootstrapError) return
+    reportedBootstrapError = error
+    if (bootstrapErrorTimer !== undefined) clearTimeout(bootstrapErrorTimer)
+    bootstrapErrorTimer = setTimeout(() => {
+      bootstrapErrorTimer = undefined
+      const more = failures.length > 1 ? language.t("common.moreCountSuffix", { count: failures.length - 1 }) : ""
+      showToast({
+        variant: "error",
+        title: language.t("common.requestFailed"),
+        description: formatServerError(error, language.t) + more,
+      })
+    }, 0)
+  }
 
   onCleanup(() => {
     if (eventFrame !== undefined) cancelAnimationFrame(eventFrame)
     if (eventTimer !== undefined) clearTimeout(eventTimer)
+    if (bootstrapErrorTimer !== undefined) clearTimeout(bootstrapErrorTimer)
   })
 
   const setProjects = (next: Project[] | ((draft: Project[]) => Project[])) => {
@@ -167,15 +186,13 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
   const bootstrap = useQuery(() => ({
     queryKey: [serverSDK.scope, "bootstrap"],
     queryFn: async () => {
-      await bootstrapGlobal({
+      const failures = await bootstrapGlobal({
         serverSDK: serverSDK.client,
         scope: serverSDK.scope,
-        requestFailedTitle: language.t("common.requestFailed"),
-        translate: language.t,
-        formatMoreCount: (count) => language.t("common.moreCountSuffix", { count }),
         setGlobalStore: setBootStore,
         queryClient,
       })
+      reportBootstrapErrors(failures)
       bootedAt = Date.now()
       return bootedAt
     },

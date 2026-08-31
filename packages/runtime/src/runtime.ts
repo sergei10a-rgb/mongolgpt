@@ -56,8 +56,28 @@ export interface RuntimeRateLimiter {
 
 type RuntimeDependencies<Environment extends RuntimeVariables> = {
   sandbox(env: Environment, id: string): RuntimeSandbox
-  report?(error: unknown): void
+  report?(error: unknown, code: RuntimeFailureCode): void
   schedule?: (callback: () => void, delay: number) => () => void
+}
+
+const runtimeFailureMessages = {
+  runtime_process_lookup_failed: "Cloud runtime процессийн төлөвийг шалгаж чадсангүй.",
+  runtime_process_start_failed: "Cloud runtime процессийг эхлүүлж чадсангүй.",
+  runtime_process_exited: "Cloud runtime процесс сервер бэлэн болохоос өмнө зогслоо.",
+  runtime_process_status_failed: "Cloud runtime процессийн ажиллагааны төлөвийг уншиж чадсангүй.",
+  runtime_process_port_timeout: "Cloud runtime сервер хугацаандаа бэлэн болсонгүй.",
+  runtime_proxy_failed: "Cloud runtime хүсэлтийг контейнер рүү дамжуулж чадсангүй.",
+  runtime_websocket_proxy_failed: "Cloud runtime-ийн шууд холболтыг контейнер рүү дамжуулж чадсангүй.",
+  runtime_unavailable: "Cloud coding runtime-г эхлүүлж чадсангүй. Түр хүлээгээд дахин оролдоно уу.",
+} as const
+
+type RuntimeFailureCode = keyof typeof runtimeFailureMessages
+
+class RuntimeFailure extends Error {
+  constructor(readonly code: RuntimeFailureCode) {
+    super(runtimeFailureMessages[code])
+    this.name = "RuntimeFailure"
+  }
 }
 
 type Authentication = {
@@ -184,19 +204,22 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
       )
 
       if (request.headers.get("upgrade")?.toLowerCase() === "websocket") {
-        const response = await sandbox.wsConnect(internal, PORT)
+        const response = await sandbox.wsConnect(internal, PORT).catch(() => {
+          throw new RuntimeFailure("runtime_websocket_proxy_failed")
+        })
         return expireWebSocket(response, authentication.expiresAt, dependencies.schedule ?? scheduleTimeout)
       }
-      return cors(await sandbox.containerFetch(internal, PORT), appOrigin)
+      const response = await sandbox.containerFetch(internal, PORT).catch(() => {
+        throw new RuntimeFailure("runtime_proxy_failed")
+      })
+      return cors(response, appOrigin)
     } catch (error) {
       if (error instanceof RequestBodyTooLarge) {
         return cors(json({ error: "Хүсэлтийн хэмжээ 16 MiB хязгаараас хэтэрсэн байна." }, 413), appOrigin)
       }
-      dependencies.report?.(error)
-      return cors(
-        json({ error: "Cloud coding runtime-г эхлүүлж чадсангүй. Түр хүлээгээд дахин оролдоно уу." }, 502),
-        appOrigin,
-      )
+      const failure = error instanceof RuntimeFailure ? error : new RuntimeFailure("runtime_unavailable")
+      dependencies.report?.(error, failure.code)
+      return cors(json({ error: failure.code, code: failure.code, message: failure.message }, 502), appOrigin)
     }
   }
 }
@@ -389,7 +412,9 @@ export function hostedDirectory(raw: string | null) {
 }
 
 async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOrigin: string) {
-  const existing = await sandbox.getProcess(PROCESS_ID)
+  const existing = await sandbox.getProcess(PROCESS_ID).catch(() => {
+    throw new RuntimeFailure("runtime_process_lookup_failed")
+  })
   if (existing && (await waitForServer(existing))) return
 
   const started = await sandbox
@@ -412,23 +437,29 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOr
         MONGOLGPT_API_KEY: "runtime",
       },
     })
-    .catch(async (error) => {
-      const concurrent = await sandbox.getProcess(PROCESS_ID)
-      if (!concurrent) throw error
+    .catch(async () => {
+      const concurrent = await sandbox.getProcess(PROCESS_ID).catch(() => undefined)
+      if (!concurrent) throw new RuntimeFailure("runtime_process_start_failed")
       return concurrent
     })
 
-  if (!(await waitForServer(started))) throw new Error("MongolGPT сервер бэлэн болохоосоо өмнө зогслоо")
+  if (!(await waitForServer(started))) throw new RuntimeFailure("runtime_process_exited")
 }
 
 async function waitForServer(process: RuntimeProcess) {
-  const status = await process.getStatus()
-  if (status !== "starting" && status !== "running") return false
-  await process.waitForPort(PORT, {
-    mode: "tcp",
-    timeout: START_TIMEOUT_MS,
-    interval: 500,
+  const status = await process.getStatus().catch(() => {
+    throw new RuntimeFailure("runtime_process_status_failed")
   })
+  if (status !== "starting" && status !== "running") return false
+  await process
+    .waitForPort(PORT, {
+      mode: "tcp",
+      timeout: START_TIMEOUT_MS,
+      interval: 500,
+    })
+    .catch(() => {
+      throw new RuntimeFailure("runtime_process_port_timeout")
+    })
   return true
 }
 

@@ -29,6 +29,8 @@ export function formatServerError(error: unknown, translate?: Translator, fallba
   const unwrapped = unwrapNamedError(error)
   if (isConfigInvalidErrorLike(unwrapped)) return parseReadableConfigInvalidError(unwrapped, translate)
   if (isProviderModelNotFoundErrorLike(unwrapped)) return parseReadableProviderModelNotFoundError(unwrapped, translate)
+  const runtimeMessage = readRuntimeFailureMessage(unwrapped)
+  if (runtimeMessage) return runtimeMessage
   if (!translate) {
     if (error instanceof Error && error.message) return error.message
     if (typeof error === "string" && error) return error
@@ -59,6 +61,26 @@ export function formatServerError(error: unknown, translate?: Translator, fallba
   return message
     ? tr(translate, "error.chain.requestFailed", "Хүсэлт амжилтгүй боллоо")
     : tr(translate, "error.chain.unknown", "Тодорхойгүй алдаа")
+}
+
+const runtimeFailureCodes = new Set([
+  "runtime_process_lookup_failed",
+  "runtime_process_start_failed",
+  "runtime_process_exited",
+  "runtime_process_status_failed",
+  "runtime_process_port_timeout",
+  "runtime_proxy_failed",
+  "runtime_websocket_proxy_failed",
+  "runtime_unavailable",
+])
+
+function readRuntimeFailureMessage(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null) return undefined
+  const code = ("code" in error ? error.code : undefined) ?? ("error" in error ? error.error : undefined)
+  if (typeof code !== "string" || !runtimeFailureCodes.has(code)) return undefined
+  const message = "message" in error ? error.message : undefined
+  if (typeof message !== "string" || !message.trim()) return undefined
+  return message.trim()
 }
 
 function readErrorMessage(error: unknown) {

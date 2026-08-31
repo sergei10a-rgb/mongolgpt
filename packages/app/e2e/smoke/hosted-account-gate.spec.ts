@@ -192,6 +192,46 @@ test.describe("hosted MongolGPT account gate", () => {
     expectNoSmokeErrors(errors, [], [])
   })
 
+  test("shows a safe Mongolian diagnostic when the hosted runtime cannot become ready", async ({ page }) => {
+    const errors = trackPageErrors(page)
+    const message = "Cloud runtime сервер хугацаандаа бэлэн болсонгүй."
+    let pathRequests = 0
+    await mockRuntime(page)
+    await page.route(`${runtimeUrl}/path**`, (route) => {
+      pathRequests += 1
+      return session(route, 502, {
+        error: "runtime_process_port_timeout",
+        code: "runtime_process_port_timeout",
+        message,
+      })
+    })
+
+    const current = capability("account_runtime_failure_e2e")
+    await page.route(tokenUrl, (route) => session(route, 200, current))
+    await page.route(sessionUrl, (route) =>
+      session(route, 200, {
+        authenticated: true,
+        account: { id: current.account.id },
+        workspace: { id: current.workspace.id },
+        expiresAt: current.expiresAt,
+      }),
+    )
+
+    await page.goto("/")
+    await expect.poll(() => pathRequests).toBeGreaterThan(0)
+    const toast = page.locator('[data-component="toast"][data-variant="error"], [data-component="toast-v2"]')
+    await expect(toast.getByText(mn["common.requestFailed"], { exact: true })).toBeVisible()
+    await expect(toast.getByText(message, { exact: true })).toBeVisible()
+    await expect(page.getByRole("button", { name: mn["home.project.openCloud"], exact: true })).toHaveCount(0)
+    const expectedNetworkError = "Failed to load resource: the server responded with a status of 502 (Bad Gateway)"
+    expect(errors.filter((error) => error === expectedNetworkError).length).toBeGreaterThan(0)
+    expectNoSmokeErrors(
+      errors.filter((error) => error !== expectedNetworkError),
+      [],
+      [],
+    )
+  })
+
   test("requires and verifies a workspace choice before opening the hosted app", async ({ page }) => {
     await mockRuntime(page)
     await configureHostedProject(page)

@@ -453,6 +453,144 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(running.ports).toEqual([4096])
   })
 
+  test("returns safe stage-specific diagnostics for sandbox startup and proxy failures", async () => {
+    const token = await capability()
+    const running = process()
+    const base = sandbox().value
+    const scenarios: Array<{
+      code: string
+      message: string
+      value: RuntimeSandbox
+      headers?: Record<string, string>
+    }> = [
+      {
+        code: "runtime_process_lookup_failed",
+        message: "Cloud runtime процессийн төлөвийг шалгаж чадсангүй.",
+        value: {
+          ...base,
+          getProcess: async () => {
+            throw new Error("provider detail must stay private")
+          },
+        },
+      },
+      {
+        code: "runtime_process_start_failed",
+        message: "Cloud runtime процессийг эхлүүлж чадсангүй.",
+        value: {
+          ...base,
+          getProcess: async () => null,
+          startProcess: async () => {
+            throw new Error("provider detail must stay private")
+          },
+        },
+      },
+      {
+        code: "runtime_process_exited",
+        message: "Cloud runtime процесс сервер бэлэн болохоос өмнө зогслоо.",
+        value: {
+          ...base,
+          getProcess: async () => null,
+          startProcess: async () => process("completed").value,
+        },
+      },
+      {
+        code: "runtime_process_status_failed",
+        message: "Cloud runtime процессийн ажиллагааны төлөвийг уншиж чадсангүй.",
+        value: {
+          ...base,
+          getProcess: async () => ({
+            ...running.value,
+            getStatus: async () => {
+              throw new Error("provider detail must stay private")
+            },
+          }),
+        },
+      },
+      {
+        code: "runtime_process_port_timeout",
+        message: "Cloud runtime сервер хугацаандаа бэлэн болсонгүй.",
+        value: {
+          ...base,
+          getProcess: async () => ({
+            ...running.value,
+            waitForPort: async () => {
+              throw new Error("provider detail must stay private")
+            },
+          }),
+        },
+      },
+      {
+        code: "runtime_proxy_failed",
+        message: "Cloud runtime хүсэлтийг контейнер рүү дамжуулж чадсангүй.",
+        value: {
+          ...base,
+          getProcess: async () => running.value,
+          containerFetch: async () => {
+            throw new Error("provider detail must stay private")
+          },
+        },
+      },
+      {
+        code: "runtime_websocket_proxy_failed",
+        message: "Cloud runtime-ийн шууд холболтыг контейнер рүү дамжуулж чадсангүй.",
+        headers: { upgrade: "websocket" },
+        value: {
+          ...base,
+          getProcess: async () => running.value,
+          wsConnect: async () => {
+            throw new Error("provider detail must stay private")
+          },
+        },
+      },
+    ]
+
+    for (const scenario of scenarios) {
+      const reported: string[] = []
+      const handler = createRuntimeHandler<Environment>({
+        sandbox: () => scenario.value,
+        report: (_error, code) => reported.push(code),
+      })
+      const response = await handler(
+        hostedRequest("/path", {
+          headers: scenario.headers?.upgrade
+            ? { cookie: `__Host-mongolgpt-runtime=${token}`, ...scenario.headers }
+            : { authorization: `Bearer ${token}` },
+        }),
+        environment(),
+      )
+
+      expect(response.status).toBe(502)
+      const body = await response.json()
+      expect(body).toEqual({
+        error: scenario.code,
+        code: scenario.code,
+        message: scenario.message,
+      })
+      expect(reported).toEqual([scenario.code])
+      expect(JSON.stringify(body)).not.toContain("provider detail")
+    }
+
+    const reported: string[] = []
+    const handler = createRuntimeHandler<Environment>({
+      sandbox: () => {
+        throw new Error("provider detail must stay private")
+      },
+      report: (_error, code) => reported.push(code),
+    })
+    const response = await handler(
+      hostedRequest("/path", { headers: { authorization: `Bearer ${token}` } }),
+      environment(),
+    )
+    const body = await response.json()
+    expect(body).toEqual({
+      error: "runtime_unavailable",
+      code: "runtime_unavailable",
+      message: "Cloud coding runtime-г эхлүүлж чадсангүй. Түр хүлээгээд дахин оролдоно уу.",
+    })
+    expect(reported).toEqual(["runtime_unavailable"])
+    expect(JSON.stringify(body)).not.toContain("provider detail")
+  })
+
   test("rate limits before allocating a sandbox and rejects oversized bodies", async () => {
     let sandboxes = 0
     const keys: string[] = []

@@ -197,6 +197,25 @@ describe("formatServerError", () => {
 
     expect(formatServerError(wrapped, language.t)).toBe("Arquivo de config em config invalido: Missing host")
   })
+
+  test("shows allowlisted runtime diagnostics without reducing them to an HTTP status", () => {
+    const body = {
+      error: "runtime_process_port_timeout",
+      code: "runtime_process_port_timeout",
+      message: "Cloud runtime сервер хугацаандаа бэлэн болсонгүй.",
+    }
+    const wrapped = new Error(body.message, { cause: { body, status: 502 } })
+
+    expect(formatServerError(wrapped, language.t)).toBe(body.message)
+    expect(
+      formatServerError(
+        new Error("sensitive upstream detail", {
+          cause: { body: { code: "unknown_runtime_error", message: "sensitive upstream detail" }, status: 502 },
+        }),
+        language.t,
+      ),
+    ).toBe("O servidor respondeu com status 502")
+  })
 })
 
 describe("isSessionNotFoundError", () => {
