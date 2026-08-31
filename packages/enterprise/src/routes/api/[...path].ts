@@ -22,9 +22,9 @@ app
     openAPIRouteHandler(app, {
       documentation: {
         info: {
-          title: "MongolGPT Enterprise API",
+          title: "MongolGPT байгууллагын API",
           version: "1.0.0",
-          description: "MongolGPT Enterprise API-ийн хандалтын цэгүүд",
+          description: "MongolGPT байгууллагын API-ийн хандалтын цэгүүд",
         },
         openapi: "3.1.1",
       },

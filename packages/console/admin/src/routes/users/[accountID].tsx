@@ -74,7 +74,7 @@ export default function AdminUserDetailPage() {
                           <div>
                             <span>Орон зай</span>
                             <strong>{formatNumber(account.totals.workspaces)}</strong>
-                            <code>{formatNumber(account.totals.freeWorkspaces)} free</code>
+                            <code>{formatNumber(account.totals.freeWorkspaces)} үнэгүй</code>
                           </div>
                           <div>
                             <span>Үүссэн / түдгэлзсэн</span>

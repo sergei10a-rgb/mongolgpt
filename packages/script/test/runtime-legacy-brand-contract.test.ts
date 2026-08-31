@@ -99,4 +99,19 @@ describe("runtime legacy brand contract", () => {
     expect(providerDialog).not.toContain("mongolgpt-go")
     expect(providerDialog).not.toContain("MONGOLGPT_GO_URL")
   })
+
+  test("keeps account status and API documentation copy in Mongolian", async () => {
+    const [adminUser, suspended, enterpriseApi] = await Promise.all([
+      Bun.file(new URL("../../console/admin/src/routes/users/[accountID].tsx", import.meta.url)).text(),
+      Bun.file(new URL("../../console/app/src/routes/auth/suspended.tsx", import.meta.url)).text(),
+      Bun.file(new URL("../../enterprise/src/routes/api/[...path].ts", import.meta.url)).text(),
+    ])
+
+    expect(adminUser).toContain("freeWorkspaces)} үнэгүй")
+    expect(adminUser).not.toContain("freeWorkspaces)} free")
+    expect(suspended).toContain("Таны вэб, ширээний програм, CLI болон API түлхүүр ашиглах эрх")
+    expect(suspended).not.toContain("Таны Web, Desktop, CLI болон API key ашиглах эрх")
+    expect(enterpriseApi).toContain('title: "MongolGPT байгууллагын API"')
+    expect(enterpriseApi).not.toContain('title: "MongolGPT Enterprise API"')
+  })
 })
