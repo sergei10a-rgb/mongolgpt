@@ -44,6 +44,18 @@ test("docs head нь Starlight-ийн canonical title-ийг давхардуу�
   expect(head).not.toContain("<title")
 })
 
+test("desktop агуулгын жагсаалтын урт Монгол гарчгийг тайрахгүй", () => {
+  const css = readFileSync(join(import.meta.dir, "..", "src", "styles", "custom.css"), "utf8")
+  const container = css.match(/\.right-sidebar-panel \.sl-container \{([^}]+)\}/)?.[1]
+  const rules = [...css.matchAll(/div\.right-sidebar \.sl-container ul li a \{([^}]+)\}/g)].map((match) => match[1])
+  const rule = rules.find((value) => value.includes("white-space"))
+  expect(container).toContain("width: calc(var(--sl-sidebar-width) - 2 * var(--sl-sidebar-pad-x))")
+  expect(container).toContain("max-width: calc(")
+  expect(rule).toContain("box-sizing: border-box")
+  expect(rule).toContain("white-space: normal")
+  expect(rule).toContain("overflow-wrap: anywhere")
+})
+
 function collectLinks(value: unknown, links: string[]) {
   if (Array.isArray(value)) {
     for (const item of value) collectLinks(item, links)

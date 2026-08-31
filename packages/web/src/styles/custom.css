@@ -132,6 +132,13 @@ a {
   color: var(--color-text-weaker);
 }
 
+.right-sidebar-panel .sl-container {
+  width: calc(var(--sl-sidebar-width) - 2 * var(--sl-sidebar-pad-x)) !important;
+  max-width: calc(
+    (100vw - var(--sl-sidebar-width) - 2 * var(--sl-content-pad-x) - 2 * var(--sl-sidebar-pad-x)) * 0.25
+  ) !important;
+}
+
 .sidebar-content {
   padding: 24px 0 !important;
 }
@@ -320,6 +327,12 @@ div.right-sidebar .sl-container ul li a {
   width: 100% !important;
   color: var(--color-text-weaker);
   opacity: 50%;
+}
+
+div.right-sidebar .sl-container ul li a {
+  box-sizing: border-box;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 nav.sidebar .sl-container ul li a:hover,

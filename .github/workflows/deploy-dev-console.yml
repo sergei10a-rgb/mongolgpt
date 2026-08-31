@@ -14,7 +14,7 @@ on:
         type: boolean
 
 concurrency:
-  group: cloudflare-deploy-dev-console
+  group: cloudflare-deploy-dev
   cancel-in-progress: false
 
 permissions:

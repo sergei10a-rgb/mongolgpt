@@ -139,7 +139,9 @@ export function preflightDeployment(input: {
   const deployConsoleOnly = enabled(env.MONGOLGPT_DEPLOY_CONSOLE_ONLY)
   const deployAdminOnly = enabled(env.MONGOLGPT_DEPLOY_ADMIN_ONLY)
   const deployD1BackupOnly = enabled(env.MONGOLGPT_DEPLOY_D1_BACKUP_ONLY)
-  if ([deployDocsOnly, deployAppOnly, deployConsoleOnly, deployAdminOnly, deployD1BackupOnly].filter(Boolean).length > 1) {
+  if (
+    [deployDocsOnly, deployAppOnly, deployConsoleOnly, deployAdminOnly, deployD1BackupOnly].filter(Boolean).length > 1
+  ) {
     issues.push(
       "MONGOLGPT_DEPLOY_DOCS_ONLY, MONGOLGPT_DEPLOY_APP_ONLY, MONGOLGPT_DEPLOY_CONSOLE_ONLY, MONGOLGPT_DEPLOY_ADMIN_ONLY, MONGOLGPT_DEPLOY_D1_BACKUP_ONLY-г хамтад нь ашиглахгүй.",
     )
@@ -215,9 +217,14 @@ export function preflightDeployment(input: {
         ? [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_D1_BACKUPS"]
         : scope === "admin-only"
           ? [...optionalServices, "MONGOLGPT_ENABLE_D1_BACKUPS", "MONGOLGPT_ENABLE_TURNSTILE"]
-        : scope === "d1-backup-only"
-          ? [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_TURNSTILE"]
-          : [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_D1_BACKUPS", "MONGOLGPT_ENABLE_TURNSTILE"]
+          : scope === "d1-backup-only"
+            ? [...optionalServices, "MONGOLGPT_ENABLE_ADMIN", "MONGOLGPT_ENABLE_TURNSTILE"]
+            : [
+                ...optionalServices,
+                "MONGOLGPT_ENABLE_ADMIN",
+                "MONGOLGPT_ENABLE_D1_BACKUPS",
+                "MONGOLGPT_ENABLE_TURNSTILE",
+              ]
     for (const name of disabledFlags as readonly string[]) {
       if (enabled(env[name])) issues.push(`${name} нь ${scope} deploy үед false байна.`)
     }
@@ -232,7 +239,7 @@ export function preflightDeployment(input: {
       )
     } else if (scope === "admin-only") {
       warnings.push(
-        "Зөвхөн Admin target deploy хийнэ; dev Cloudflare Access boundary, MFA enforcement, existing database state болон admin app-ийг тусгаарлаж шалгана.",
+        "Dev graph-ийн diff-ийг зөвхөн Admin болон Access өөрчлөлтөөр хязгаарласны дараа admin app-ийг bootstrap хийнэ.",
       )
     } else if (scope === "d1-backup-only") {
       warnings.push("Зөвхөн dev D1 backup bucket, retention, Workflow болон Cron target-уудыг deploy хийнэ.")

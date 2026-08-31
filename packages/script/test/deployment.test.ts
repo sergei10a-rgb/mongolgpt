@@ -976,7 +976,7 @@ describe("Cloudflare deployment preflight", () => {
       admin: "https://admin.dev.mgpt.mn",
     })
     expect(result.warnings).toContain(
-      "Зөвхөн Admin target deploy хийнэ; dev Cloudflare Access boundary, MFA enforcement, existing database state болон admin app-ийг тусгаарлаж шалгана.",
+      "Dev graph-ийн diff-ийг зөвхөн Admin болон Access өөрчлөлтөөр хязгаарласны дараа admin app-ийг bootstrap хийнэ.",
     )
 
     expectIssues(

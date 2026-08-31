@@ -6,7 +6,11 @@ const exactResources = new Map<string, RegExp>([
   ["AdminAccessOrganizationMfa", /^command:local:Command$/],
   ["AdminAccessProvider", /^pulumi:providers:cloudflare$/],
   ["MongolGPTAdminBootstrapEmails", /^sst:sst:Secret$/],
+  ["default_1_0_1", /^pulumi:providers:command$/],
 ])
+
+const allowedOperations = new Set(["create", "update"])
+const maximumChanges = 2_000
 
 export class AdminDeploymentDiffError extends Error {
   constructor(message: string) {
@@ -24,8 +28,12 @@ export function inspectAdminDeploymentDiff(value: unknown): AdminDeploymentDiffS
   if (!Array.isArray(value)) {
     throw new AdminDeploymentDiffError("SST admin diff нь JSON жагсаалт биш байна.")
   }
+  if (value.length > maximumChanges) {
+    throw new AdminDeploymentDiffError(`SST admin diff хэт олон өөрчлөлттэй байна: ${value.length}.`)
+  }
 
   const operations: Record<string, number> = {}
+  const rejected: string[] = []
   for (const [index, raw] of value.entries()) {
     const entry = record(raw)
     const urn = text(entry?.urn)
@@ -36,12 +44,15 @@ export function inspectAdminDeploymentDiff(value: unknown): AdminDeploymentDiffS
     }
 
     const parsed = parseUrn(urn)
-    if (!isAllowedAdminChange(parsed.type, parsed.name, type, op, entry?.detailedDiff)) {
-      throw new AdminDeploymentDiffError(
-        `Admin-only diff зөвшөөрөөгүй өөрчлөлт илрүүллээ: ${op} ${type} ${parsed.name}`,
-      )
+    if (!allowedOperations.has(op) || !isAllowedAdminChange(parsed.type, parsed.name, type, op, entry?.detailedDiff)) {
+      if (rejected.length < 12) rejected.push(`${op} ${type} ${parsed.name}`)
+      continue
     }
     operations[op] = (operations[op] ?? 0) + 1
+  }
+
+  if (rejected.length) {
+    throw new AdminDeploymentDiffError(`Admin bootstrap diff зөвшөөрөөгүй өөрчлөлт илрүүллээ: ${rejected.join("; ")}`)
   }
 
   return { changes: value.length, operations }

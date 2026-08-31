@@ -9,6 +9,7 @@ describe("admin-only SST diff boundary", () => {
       inspectAdminDeploymentDiff([
         change("sst:sst:Secret", "MongolGPTAdminBootstrapEmails", "create"),
         change("pulumi:providers:cloudflare", "AdminAccessProvider", "create"),
+        change("pulumi:providers:command", "default_1_0_1", "create"),
         change("command:local:Command", "AdminAccessOrganizationMfa", "update"),
         change(
           "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication",
@@ -30,7 +31,7 @@ describe("admin-only SST diff boundary", () => {
           },
         },
       ]),
-    ).toEqual({ changes: 7, operations: { create: 4, update: 3 } })
+    ).toEqual({ changes: 8, operations: { create: 5, update: 3 } })
   })
 
   test.each([
@@ -55,6 +56,26 @@ describe("admin-only SST diff boundary", () => {
     ).toThrow("зөвшөөрөөгүй")
     expect(() => inspectAdminDeploymentDiff({})).toThrow("JSON жагсаалт")
     expect(() => inspectAdminDeploymentDiff([{ op: "create" }])).toThrow("urn, type эсвэл op")
+  })
+
+  test("rejects destructive admin operations and reports multiple shared changes without values", () => {
+    expect(() =>
+      inspectAdminDeploymentDiff([
+        change("sst:cloudflare:SolidStart", "Admin", "delete"),
+        change("sst:cloudflare:Worker", "AuthApi", "update"),
+        change("sst:cloudflare:D1", "Database", "update"),
+      ]),
+    ).toThrow(
+      "delete sst:cloudflare:SolidStart Admin; update sst:cloudflare:Worker AuthApi; update sst:cloudflare:D1 Database",
+    )
+  })
+
+  test("rejects an unexpectedly large plan", () => {
+    expect(() =>
+      inspectAdminDeploymentDiff(
+        Array.from({ length: 2_001 }, () => change("sst:cloudflare:SolidStart", "Admin", "create")),
+      ),
+    ).toThrow("хэт олон")
   })
 })
 

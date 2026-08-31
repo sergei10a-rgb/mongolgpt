@@ -27,6 +27,7 @@ type Workflow = {
 
 type WorkflowJob = {
   condition?: string
+  env?: Record<string, string>
   steps: WorkflowStep[]
 }
 
@@ -51,6 +52,13 @@ function parseWorkflow(source: string): Workflow {
 function parseWorkflowJob(input: unknown, name: string): WorkflowJob {
   if (!record(input) || !Array.isArray(input.steps)) throw new Error(`Deploy workflow ${name} job is missing`)
 
+  const jobEnv: Record<string, string> = {}
+  if (record(input.env)) {
+    for (const [name, value] of Object.entries(input.env)) {
+      if (typeof value === "string") jobEnv[name] = value
+    }
+  }
+
   const steps = input.steps.map((rawStep): WorkflowStep => {
     if (!record(rawStep)) throw new Error("Deploy workflow contains an invalid step")
     const env: Record<string, string> = {}
@@ -71,6 +79,7 @@ function parseWorkflowJob(input: unknown, name: string): WorkflowJob {
 
   return {
     condition: typeof input.if === "string" ? input.if : undefined,
+    env: jobEnv,
     steps,
   }
 }
@@ -872,7 +881,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const contracts = job.steps.find((step) => step.name === "Verify admin app contracts")
     const configPreflight = job.steps.find((step) => step.name === "Verify isolated dev admin configuration")
     const tokenPreflight = job.steps.find((step) => step.name === "Verify Cloudflare deploy token")
-    const diff = job.steps.find((step) => step.name === "Verify admin-only SST diff")
+    const diff = job.steps.find((step) => step.name === "Verify admin bootstrap SST diff")
     const deploy = job.steps.find((step) => step.name === "Deploy only dev admin to Cloudflare")
     const access = job.steps.find((step) => step.name === "Verify deployed admin Access policy")
     const smoke = job.steps.find((step) => step.name === "Verify live dev admin Access boundary")
@@ -889,6 +898,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(parsed.permissions).toEqual({ contents: "read" })
     expect(parsed.concurrency).toEqual({ group: "cloudflare-deploy-dev", "cancel-in-progress": false })
     expect(parsed.jobs.deploy.environment).toBe("dev")
+    expect(job.env?.MONGOLGPT_AUTH_EMAIL_DOMAINS).toBe("${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}")
     expect(job.condition).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
     expect(parsed.env.MONGOLGPT_ENABLE_HOSTED_SERVICES).toBe("true")
     expect(parsed.env.MONGOLGPT_DEPLOY_ADMIN_ONLY).toBe("true")
@@ -921,7 +931,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
       SST_SECRET_MongolGPTAdminBootstrapEmails: "${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}",
     })
     expect(diff?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
-    expect(diff?.run).toContain("bun sst diff --stage=dev --target Admin --json")
+    expect(diff?.run).toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY=false")
+    expect(diff?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true")
+    expect(diff?.run).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
+    expect(diff?.run).toContain("bun sst diff --stage=dev --json")
+    expect(diff?.run).not.toContain("--target")
     expect(diff?.run).toContain('bun script/admin-deployment-diff.ts "$diff_file"')
     expect(deploy?.env).toEqual({
       CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
@@ -935,7 +949,13 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("bun run deploy:preflight -- dev --admin-only")
     expect(deploy?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
     expect(deploy?.run).toContain("Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай")
-    expect(deploy?.run).toContain("bun sst deploy --stage=dev --target Admin --print-logs")
+    expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY=false")
+    expect(deploy?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true")
+    expect(deploy?.run).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
+    expect(deploy?.run).toContain("bun sst diff --stage=dev --json")
+    expect(deploy?.run).toContain('bun script/admin-deployment-diff.ts "$diff_file"')
+    expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
+    expect(deploy?.run).not.toContain("--target Admin")
     expect(deploy?.run).not.toContain("sst unlock")
     expect(deploy?.run).not.toContain("--target Database")
     expect(deploy?.run).not.toContain("--target Console")
@@ -971,6 +991,36 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(sstSource).toContain('const site = await import("./infra/admin.js")')
     expect(sstSource).toContain("AdminUrl: site.adminUrl")
     expect(secretSource).not.toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY")
+  })
+
+  test("serializes every dev workflow that mutates Cloudflare deployment state", async () => {
+    const workflows = [
+      "bootstrap-dev-auth.yml",
+      "d1-backup-restore-rehearsal.yml",
+      "d1-restore-drill.yml",
+      "deploy-dev-admin.yml",
+      "deploy-dev-app.yml",
+      "deploy-dev-console.yml",
+      "deploy-dev-docs.yml",
+      "deploy-dev-runtime.yml",
+    ]
+
+    for (const workflow of workflows) {
+      const source = await Bun.file(new URL(`../../../.github/workflows/${workflow}`, import.meta.url)).text()
+      const parsed: unknown = Bun.YAML.parse(source)
+      if (!record(parsed) || !record(parsed.concurrency)) throw new Error(`${workflow} concurrency тохиргоогүй байна`)
+      expect(parsed.concurrency).toEqual({ group: "cloudflare-deploy-dev", "cancel-in-progress": false })
+    }
+
+    for (const workflow of ["d1-restore.yml", "d1-r2-restore.yml"]) {
+      const source = await Bun.file(new URL(`../../../.github/workflows/${workflow}`, import.meta.url)).text()
+      const parsed: unknown = Bun.YAML.parse(source)
+      if (!record(parsed) || !record(parsed.concurrency)) throw new Error(`${workflow} concurrency тохиргоогүй байна`)
+      expect(parsed.concurrency).toEqual({
+        group: "cloudflare-deploy-${{ inputs.stage }}",
+        "cancel-in-progress": false,
+      })
+    }
   })
 
   test("deploys only the isolated dev runtime with bounded secrets and live boundary smoke", async () => {

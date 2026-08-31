@@ -9,7 +9,7 @@ on:
         type: string
 
 concurrency:
-  group: cloudflare-deploy-dev-docs
+  group: cloudflare-deploy-dev
   cancel-in-progress: false
 
 permissions:

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: d1-restore-drill-dev
+  group: cloudflare-deploy-dev
   cancel-in-progress: false
 
 permissions:

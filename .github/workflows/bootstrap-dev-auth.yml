@@ -24,7 +24,7 @@ on:
         type: boolean
 
 concurrency:
-  group: cloudflare-bootstrap-dev-auth
+  group: cloudflare-deploy-dev
   cancel-in-progress: false
 
 permissions:

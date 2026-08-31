@@ -29,7 +29,7 @@ on:
         type: string
 
 concurrency:
-  group: d1-restore-${{ inputs.stage }}
+  group: cloudflare-deploy-${{ inputs.stage }}
   cancel-in-progress: false
 
 permissions:
