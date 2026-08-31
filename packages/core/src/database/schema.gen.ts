@@ -5,6 +5,26 @@ export default {
   up(tx) {
     return Effect.gen(function* () {
       yield* tx.run(`
+        CREATE TABLE \`background_job\` (
+          \`namespace\` text NOT NULL,
+          \`id\` text NOT NULL,
+          \`type\` text NOT NULL,
+          \`title\` text,
+          \`status\` text NOT NULL,
+          \`started_at\` integer NOT NULL,
+          \`completed_at\` integer,
+          \`output\` text,
+          \`error\` text,
+          \`metadata\` text,
+          \`owner_token\` text NOT NULL,
+          \`generation\` integer NOT NULL,
+          \`heartbeat_at\` integer NOT NULL,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL,
+          CONSTRAINT \`background_job_pk\` PRIMARY KEY(\`namespace\`, \`id\`)
+        );
+      `)
+      yield* tx.run(`
         CREATE TABLE \`workspace\` (
           \`id\` text PRIMARY KEY,
           \`type\` text NOT NULL,
@@ -236,6 +256,9 @@ export default {
           CONSTRAINT \`fk_session_share_session_id_session_id_fk\` FOREIGN KEY (\`session_id\`) REFERENCES \`session\`(\`id\`) ON DELETE CASCADE
         );
       `)
+      yield* tx.run(
+        `CREATE INDEX \`background_job_namespace_status_heartbeat_idx\` ON \`background_job\` (\`namespace\`,\`status\`,\`heartbeat_at\`);`,
+      )
       yield* tx.run(`CREATE UNIQUE INDEX \`event_aggregate_seq_idx\` ON \`event\` (\`aggregate_id\`,\`seq\`);`)
       yield* tx.run(`CREATE INDEX \`event_aggregate_type_seq_idx\` ON \`event\` (\`aggregate_id\`,\`type\`,\`seq\`);`)
       yield* tx.run(

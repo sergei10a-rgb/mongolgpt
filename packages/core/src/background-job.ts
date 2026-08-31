@@ -3,8 +3,9 @@ export * as BackgroundJob from "./background-job"
 import { Cause, Clock, Context, Deferred, Effect, Exit, Layer, Scope, SynchronizedRef } from "effect"
 import { Identifier } from "./id/id"
 import { makeGlobalNode } from "./effect/node"
+import { BackgroundJobStore } from "./background-job-store"
 
-export type Status = "running" | "completed" | "error" | "cancelled"
+export type Status = "running" | "completed" | "error" | "cancelled" | "recovery_required"
 
 export type Info = {
   id: string
@@ -360,7 +361,218 @@ export const make = Effect.gen(function* () {
   return Service.of({ list, get, start, extend, wait, waitForPromotion, promote, cancel })
 })
 
+const DURABLE_POLL_MS = 200
+const DURABLE_RETENTION_MS = 30 * 24 * 60 * 60 * 1_000
+
+/**
+ * Adds SQLite observation and lease fencing around the process-local engine.
+ * Unknown work is never replayed after a crash; an expired owner becomes
+ * recovery_required and a later explicit start creates a new fenced generation.
+ */
+export const makeDurable = Effect.fn("BackgroundJob.makeDurable")(function* (input: {
+  namespace: string
+  leaseMs?: number
+}) {
+  const local = yield* make
+  const store = yield* BackgroundJobStore.make(input)
+  const scope = yield* Scope.Scope
+  const owners = new Map<string, string>()
+  const heartbeatEvery = Math.max(100, Math.floor(store.leaseMs / 3))
+
+  const initializedAt = yield* Clock.currentTimeMillis
+  yield* store.pruneTerminal({ before: initializedAt - DURABLE_RETENTION_MS })
+  const recover = store.recoverStale().pipe(Effect.asVoid)
+  const renew = Effect.fn("BackgroundJob.renewOwner")(function* (id: string, owner: string) {
+    const active = yield* store.touch({ id, owner })
+    if (active) return true
+    if (owners.get(id) === owner) owners.delete(id)
+    yield* local.cancel(id).pipe(Effect.asVoid)
+    return false
+  })
+  yield* recover
+  yield* Effect.gen(function* () {
+    while (true) {
+      yield* Effect.sleep(heartbeatEvery)
+      yield* Effect.forEach([...owners], ([id, owner]) => renew(id, owner))
+      yield* recover
+    }
+  }).pipe(Effect.forkIn(scope, { startImmediately: true }))
+
+  const persisted = Effect.fn("BackgroundJob.persisted")(function* (id: string) {
+    yield* recover
+    return yield* store.get(id)
+  })
+
+  const monitor = Effect.fn("BackgroundJob.monitor")(function* (id: string, owner: string) {
+    yield* local.wait({ id }).pipe(
+      Effect.flatMap((result) =>
+        result.info ? store.settle({ id, owner, info: result.info }).pipe(Effect.asVoid) : Effect.void,
+      ),
+      Effect.ensuring(
+        Effect.sync(() => {
+          if (owners.get(id) === owner) owners.delete(id)
+        }),
+      ),
+    )
+  })
+
+  const list: Interface["list"] = Effect.fn("BackgroundJob.durableList")(function* () {
+    yield* recover
+    const [saved, active] = yield* Effect.all([store.list(), local.list()])
+    const merged = new Map(saved.map((job) => [job.id, job]))
+    for (const job of active) {
+      const owner = owners.get(job.id)
+      if (owner && (yield* renew(job.id, owner))) {
+        merged.set(job.id, job)
+        continue
+      }
+      const latest = yield* persisted(job.id)
+      if (latest) merged.set(job.id, latest)
+      else merged.delete(job.id)
+    }
+    return [...merged.values()].toSorted((a, b) => a.started_at - b.started_at)
+  })
+
+  const get: Interface["get"] = Effect.fn("BackgroundJob.durableGet")(function* (id) {
+    const active = yield* local.get(id)
+    const owner = owners.get(id)
+    if (active && owner && (yield* renew(id, owner))) return active
+    if (active?.status === "running") yield* local.cancel(id).pipe(Effect.asVoid)
+    return yield* persisted(id)
+  })
+
+  const start: Interface["start"] = Effect.fn("BackgroundJob.durableStart")(function* (startInput) {
+    const id = startInput.id ?? Identifier.ascending("job")
+    const active = yield* local.get(id)
+    if (active?.status === "running") {
+      const current = yield* get(id)
+      if (current?.status === "running") return current
+    }
+    const owner = crypto.randomUUID()
+    const started_at = yield* Clock.currentTimeMillis
+    const claim = yield* store.claim({
+      owner,
+      info: {
+        id,
+        type: startInput.type,
+        title: startInput.title,
+        status: "running",
+        started_at,
+        metadata: startInput.metadata,
+      },
+    })
+    if (!claim.claimed) return claim.info
+    owners.set(id, owner)
+    const launched = yield* Effect.exit(local.start({ ...startInput, id }))
+    if (Exit.isFailure(launched)) {
+      owners.delete(id)
+      const completed_at = yield* Clock.currentTimeMillis
+      yield* store.settle({
+        id,
+        owner,
+        info: {
+          id,
+          type: startInput.type,
+          title: startInput.title,
+          status: Cause.hasInterruptsOnly(launched.cause) ? "cancelled" : "error",
+          started_at,
+          completed_at,
+          error: errorText(Cause.squash(launched.cause)),
+          metadata: startInput.metadata,
+        },
+      })
+      return yield* Effect.failCause(launched.cause)
+    }
+    const info = launched.value
+    yield* monitor(id, owner).pipe(Effect.forkIn(scope, { startImmediately: true }))
+    return info
+  })
+
+  const extend: Interface["extend"] = Effect.fn("BackgroundJob.durableExtend")(function* (extendInput) {
+    const owner = owners.get(extendInput.id)
+    if (!owner) return false
+    if (!(yield* renew(extendInput.id, owner))) return false
+    return yield* local.extend(extendInput)
+  })
+
+  const wait: Interface["wait"] = Effect.fn("BackgroundJob.durableWait")(function* (waitInput) {
+    const active = yield* local.get(waitInput.id)
+    const owner = owners.get(waitInput.id)
+    if (active && owner && (yield* renew(waitInput.id, owner))) {
+      const result = yield* local.wait(waitInput)
+      if (!result.info) return result
+      if (result.info.status === "running") {
+        if (yield* renew(waitInput.id, owner)) return result
+      } else {
+        const settled = yield* store.settle({ id: waitInput.id, owner, info: result.info })
+        if (settled) {
+          if (owners.get(waitInput.id) === owner) owners.delete(waitInput.id)
+          return result
+        }
+      }
+      const info = yield* persisted(waitInput.id)
+      return { info, timedOut: result.timedOut && info?.status === "running" }
+    }
+    if (active?.status === "running") yield* local.cancel(waitInput.id).pipe(Effect.asVoid)
+    const started = yield* Clock.currentTimeMillis
+    while (true) {
+      const info = yield* persisted(waitInput.id)
+      if (!info || info.status !== "running") return { info, timedOut: false }
+      if (waitInput.timeout !== undefined) {
+        const elapsed = (yield* Clock.currentTimeMillis) - started
+        if (elapsed >= waitInput.timeout) return { info, timedOut: true }
+        yield* Effect.sleep(Math.min(DURABLE_POLL_MS, waitInput.timeout - elapsed))
+        continue
+      }
+      yield* Effect.sleep(DURABLE_POLL_MS)
+    }
+  })
+
+  const waitForPromotion: Interface["waitForPromotion"] = Effect.fn("BackgroundJob.durableWaitForPromotion")(
+    function* (id) {
+      while (true) {
+        const info = yield* get(id)
+        if (info && (info.metadata?.background === true || info.status !== "running")) return info
+        yield* Effect.sleep(Math.min(1_000, heartbeatEvery))
+      }
+    },
+  )
+
+  const promote: Interface["promote"] = Effect.fn("BackgroundJob.durablePromote")(function* (id) {
+    const owner = owners.get(id)
+    if (!owner) {
+      const info = yield* persisted(id)
+      return info?.metadata?.background === true ? info : undefined
+    }
+    if (!(yield* renew(id, owner))) return undefined
+    const info = yield* local.promote(id)
+    if (info) yield* store.updateMetadata({ id, owner, metadata: info.metadata })
+    return info
+  })
+
+  const cancel: Interface["cancel"] = Effect.fn("BackgroundJob.durableCancel")(function* (id) {
+    const owner = owners.get(id)
+    if (!owner) {
+      const active = yield* local.get(id)
+      if (active?.status === "running") yield* local.cancel(id).pipe(Effect.asVoid)
+      return yield* store.abandon({ id })
+    }
+    if (!(yield* renew(id, owner))) return yield* persisted(id)
+    const info = yield* local.cancel(id)
+    const settled = info ? yield* store.settle({ id, owner, info }) : false
+    if (owners.get(id) === owner) owners.delete(id)
+    if (settled) return info
+    return yield* persisted(id)
+  })
+
+  return Service.of({ list, get, start, extend, wait, waitForPromotion, promote, cancel })
+})
+
 export const layer = Layer.effect(Service, make)
+
+export function durableLayer(input: { namespace: string; leaseMs?: number }) {
+  return Layer.effect(Service, makeDurable(input))
+}
 
 export const defaultLayer = layer
 

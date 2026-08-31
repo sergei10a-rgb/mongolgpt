@@ -1,5 +1,6 @@
 import { LayerNode } from "@mongolgpt/core/effect/layer-node"
 import { BackgroundJob as CoreBackgroundJob } from "@mongolgpt/core/background-job"
+import { Database } from "@mongolgpt/core/database/database"
 import { InstanceState } from "@/effect/instance-state"
 import { Effect, Layer } from "effect"
 
@@ -14,11 +15,16 @@ export {
   type WaitResult,
 } from "@mongolgpt/core/background-job"
 
-/** Keeps the legacy service instance-scoped while sharing the core registry engine. */
+/** Keeps the service instance-scoped while persisting fenced observation in SQLite. */
 export const layer = Layer.effect(
   CoreBackgroundJob.Service,
   Effect.gen(function* () {
-    const state = yield* InstanceState.make(() => CoreBackgroundJob.make)
+    const database = yield* Database.Service
+    const state = yield* InstanceState.make((ctx) =>
+      CoreBackgroundJob.makeDurable({ namespace: ctx.directory }).pipe(
+        Effect.provideService(Database.Service, database),
+      ),
+    )
     return CoreBackgroundJob.Service.of({
       list: () => InstanceState.useEffect(state, (jobs) => jobs.list()),
       get: (id) => InstanceState.useEffect(state, (jobs) => jobs.get(id)),
@@ -32,8 +38,8 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer
+export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))
 
-export const node = LayerNode.make({ service: CoreBackgroundJob.Service, layer, deps: [] })
+export const node = LayerNode.make({ service: CoreBackgroundJob.Service, layer, deps: [Database.node] })
 
 export * as BackgroundJob from "./job"

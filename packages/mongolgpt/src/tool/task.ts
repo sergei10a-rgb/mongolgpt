@@ -97,7 +97,9 @@ export const TaskTool = Tool.define(
       const runInBackground = params.background === true
       if (runInBackground && !flags.experimentalBackgroundSubagents) {
         return yield* Effect.fail(
-          new Error("Арын туслах агент ажиллуулахын тулд MONGOLGPT_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true шаардлагатай"),
+          new Error(
+            "Арын туслах агент ажиллуулахын тулд MONGOLGPT_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true шаардлагатай",
+          ),
         )
       }
 
@@ -115,7 +117,9 @@ export const TaskTool = Tool.define(
 
       const next = yield* agent.get(params.subagent_type)
       if (!next) {
-        return yield* Effect.fail(new Error(`Үл мэдэгдэх агентын төрөл: ${params.subagent_type} нь зөвшөөрөгдөх агентын төрөл биш`))
+        return yield* Effect.fail(
+          new Error(`Үл мэдэгдэх агентын төрөл: ${params.subagent_type} нь зөвшөөрөгдөх агентын төрөл биш`),
+        )
       }
 
       const session = params.task_id
@@ -233,6 +237,11 @@ export const TaskTool = Tool.define(
           Effect.flatMap((result) => {
             if (result.info?.status === "completed") return inject("completed", result.info.output ?? "")
             if (result.info?.status === "error") return inject("error", result.info.error ?? "")
+            if (result.info?.status === "recovery_required")
+              return inject(
+                "error",
+                result.info.error ?? "MongolGPT дахин эхэлсэн тул даалгаврыг автоматаар давтан ажиллуулаагүй.",
+              )
             return Effect.void
           }),
           Effect.forkIn(scope, { startImmediately: true }),
@@ -311,7 +320,12 @@ export const TaskTool = Tool.define(
               background.waitForPromotion(nextSession.id),
             )
             if (result?.metadata?.background === true) return backgroundResult()
-            if (result?.status === "error") return yield* Effect.fail(new Error(result.error ?? "Даалгавар амжилтгүй боллоо"))
+            if (result?.status === "error")
+              return yield* Effect.fail(new Error(result.error ?? "Даалгавар амжилтгүй боллоо"))
+            if (result?.status === "recovery_required")
+              return yield* Effect.fail(
+                new Error(result.error ?? "MongolGPT дахин эхэлсэн тул даалгаврыг автоматаар давтан ажиллуулаагүй"),
+              )
             if (result?.status === "cancelled") return yield* Effect.fail(new Error("Даалгаврыг цуцаллаа"))
             return {
               title: params.description,

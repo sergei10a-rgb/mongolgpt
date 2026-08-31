@@ -37,6 +37,10 @@ a FIFO until the Session would otherwise become idle and then promote one at a t
 
 Next reviewed slices:
 
+- [x] local/legacy background task-ын persistent status/output observation болон
+      SQLite-д restart дамнан хадгалах төлөв хэрэгжсэн; lease/owner fencing нь
+      stale owner-ын settle-ийг хаадаг
+
 - preserve eager structured local-tool settlement: durably record each complete
   call, start its child execution immediately, await every settlement after the
   provider turn closes, then reload projected history once
@@ -51,7 +55,8 @@ Next reviewed slices:
   bash jobs and background agent dispatch with durable status observation,
   completion delivery, and explicit cancellation / continuation semantics
 - add durable/clustered interruption, retries, and stale-owner fencing only as
-  their slices become concrete
+  their slices become concrete; local/legacy fencing above does not complete this
+  V2 or clustered recovery work
 
 ### Deferred durable continuation recovery
 
