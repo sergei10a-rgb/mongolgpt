@@ -101,7 +101,7 @@ jobs:
             MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true \
             MONGOLGPT_ENABLE_TURNSTILE=true \
             MONGOLGPT_TURNSTILE_SITE_KEY=1x00000000000000000000AA \
-            bun sst diff --stage=dev --json >"$diff_file"
+            bun sst diff --stage=dev --json --print-logs >"$diff_file"
           bun script/admin-deployment-diff.ts "$diff_file"
 
       - name: Deploy only dev admin to Cloudflare
@@ -125,7 +125,7 @@ jobs:
             MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true \
             MONGOLGPT_ENABLE_TURNSTILE=true \
             MONGOLGPT_TURNSTILE_SITE_KEY=1x00000000000000000000AA \
-            bun sst diff --stage=dev --json >"$diff_file"
+            bun sst diff --stage=dev --json --print-logs >"$diff_file"
           bun script/admin-deployment-diff.ts "$diff_file"
           MONGOLGPT_DEPLOY_ADMIN_ONLY=false \
             MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true \

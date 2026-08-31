@@ -934,7 +934,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(diff?.run).toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY=false")
     expect(diff?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true")
     expect(diff?.run).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
-    expect(diff?.run).toContain("bun sst diff --stage=dev --json")
+    expect(diff?.run).toContain("bun sst diff --stage=dev --json --print-logs")
     expect(diff?.run).not.toContain("--target")
     expect(diff?.run).toContain('bun script/admin-deployment-diff.ts "$diff_file"')
     expect(deploy?.env).toEqual({
@@ -952,7 +952,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY=false")
     expect(deploy?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true")
     expect(deploy?.run).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
-    expect(deploy?.run).toContain("bun sst diff --stage=dev --json")
+    expect(deploy?.run).toContain("bun sst diff --stage=dev --json --print-logs")
     expect(deploy?.run).toContain('bun script/admin-deployment-diff.ts "$diff_file"')
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
     expect(deploy?.run).not.toContain("--target Admin")
