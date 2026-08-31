@@ -1,6 +1,20 @@
 import { describe, expect, test } from "bun:test"
 import { canDisposeDirectory, pickDirectoriesToEvict } from "./global-sync/eviction"
 import { estimateRootSessionTotal, loadRootSessionsWithFallback } from "./global-sync/session-load"
+import { hasRuntimeFilesystem } from "./server-sync"
+
+describe("hasRuntimeFilesystem", () => {
+  const path = { state: "", config: "", worktree: "", directory: "", home: "" }
+
+  test("fails closed until the runtime exposes a filesystem root", () => {
+    expect(hasRuntimeFilesystem(path)).toBe(false)
+  })
+
+  test("accepts either a home or active directory", () => {
+    expect(hasRuntimeFilesystem({ ...path, home: "/workspace" })).toBe(true)
+    expect(hasRuntimeFilesystem({ ...path, directory: "/workspace/repo" })).toBe(true)
+  })
+})
 
 describe("pickDirectoriesToEvict", () => {
   test("keeps pinned stores and evicts idle stores", () => {

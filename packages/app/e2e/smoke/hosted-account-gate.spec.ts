@@ -115,6 +115,10 @@ test.describe("hosted MongolGPT account gate", () => {
 
   test("opens an empty hosted workspace root for a signed-in user", async ({ page }) => {
     const errors = trackPageErrors(page)
+    let eventRequests = 0
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/global/event") eventRequests++
+    })
     await mockRuntime(page, {
       directory: "/workspace",
       home: "/workspace",
@@ -151,11 +155,16 @@ test.describe("hosted MongolGPT account gate", () => {
     await expect(newSession).toBeVisible()
     await newSession.click()
     await expect(page.getByRole("textbox", { name: mn["prompt.placeholder.simple"], exact: true })).toBeVisible()
+    await expect.poll(() => eventRequests).toBeGreaterThan(0)
     expectNoSmokeErrors(errors, [], [])
   })
 
   test("fails closed to Desktop pairing when the hosted runtime has no filesystem root", async ({ page }) => {
     const errors = trackPageErrors(page)
+    let eventRequests = 0
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/global/event") eventRequests++
+    })
     await mockRuntime(page)
     await page.route(`${runtimeUrl}/path**`, (route) =>
       session(route, 200, { state: "", config: "", worktree: "", directory: "", home: "" }),
@@ -178,6 +187,8 @@ test.describe("hosted MongolGPT account gate", () => {
     await expect(page.getByRole("button", { name: mn["dialog.server.bridge.button"], exact: true })).toBeVisible()
     await expect(page.getByRole("button", { name: mn["home.project.openCloud"], exact: true })).toHaveCount(0)
     await expect(page.locator('[data-action="home-add-project"]')).toHaveCount(0)
+    await page.waitForTimeout(500)
+    expect(eventRequests).toBe(0)
     expectNoSmokeErrors(errors, [], [])
   })
 

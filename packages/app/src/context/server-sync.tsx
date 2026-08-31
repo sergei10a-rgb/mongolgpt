@@ -1,7 +1,7 @@
 import type { Config, MongolGPTClient, Path, Project, ProviderAuthResponse } from "@mongolgpt/sdk/v2/client"
 import { showToast } from "@/utils/toast"
 import { getFilename } from "@mongolgpt/core/util/path"
-import { type Accessor, batch, createMemo, getOwner, onCleanup, onMount, untrack } from "solid-js"
+import { type Accessor, batch, createEffect, createMemo, getOwner, onCleanup, untrack } from "solid-js"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useLanguage } from "@/context/language"
 import type { InitError } from "../pages/error"
@@ -48,6 +48,10 @@ type GlobalStore = {
   provider_auth: ProviderAuthResponse
   config: Config
   reload: undefined | "pending" | "complete"
+}
+
+export function hasRuntimeFilesystem(path: Path) {
+  return !!(path.home || path.directory)
 }
 
 export const loadMcpQuery = (scope: ServerScope, directory: string, sdk: MongolGPTClient) =>
@@ -141,6 +145,7 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
   let bootingRoot = false
   let eventFrame: number | undefined
   let eventTimer: ReturnType<typeof setTimeout> | undefined
+  let eventStarted = false
 
   onCleanup(() => {
     if (eventFrame !== undefined) cancelAnimationFrame(eventFrame)
@@ -409,18 +414,22 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
     }
   })
 
-  onMount(() => {
+  createEffect(() => {
+    if (!globalStore.ready || !hasRuntimeFilesystem(globalStore.path)) return
+    if (eventStarted || eventFrame !== undefined || eventTimer !== undefined) return
     if (typeof requestAnimationFrame === "function") {
       eventFrame = requestAnimationFrame(() => {
         eventFrame = undefined
         eventTimer = setTimeout(() => {
           eventTimer = undefined
+          eventStarted = true
           void serverSDK.event.start()
         }, 0)
       })
     } else {
       eventTimer = setTimeout(() => {
         eventTimer = undefined
+        eventStarted = true
         void serverSDK.event.start()
       }, 0)
     }
