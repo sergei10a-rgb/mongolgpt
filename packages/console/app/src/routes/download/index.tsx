@@ -97,7 +97,7 @@ export default function Download() {
     for (const platform of optionalDesktopPlatforms) {
       void fetch(language.route(getDownloadHref(platform)), { method: "HEAD" })
         .then((response) => {
-          if (!response.ok) return
+          if (response.headers.get("x-mongolgpt-download-available") !== "1") return
           setAvailableDownloads((current) => ({ ...current, [platform]: true }))
         })
         .catch(() => undefined)

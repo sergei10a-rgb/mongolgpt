@@ -20,10 +20,11 @@ async function availability(assetUrl: string, platform: string) {
   const available = response?.ok === true
   const headers = new Headers({
     "cache-control": available ? "public, max-age=300" : "public, max-age=60",
+    "x-mongolgpt-download-available": available ? "1" : "0",
   })
   if (available && isDownloadPlatform(platform)) {
     const downloadName = downloadNames[platform]
     if (downloadName) headers.set("content-disposition", `attachment; filename="${downloadName}"`)
   }
-  return new Response(null, { status: available ? 204 : 404, headers })
+  return new Response(null, { status: 204, headers })
 }
