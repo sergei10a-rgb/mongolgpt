@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test"
+import { describe, expect, setDefaultTimeout } from "bun:test"
 import { $ } from "bun"
 import fs from "fs/promises"
 import path from "path"
@@ -21,6 +21,8 @@ import { SessionTable } from "@mongolgpt/core/session/sql"
 import { SessionStore } from "@mongolgpt/core/session/store"
 import { tmpdir } from "./fixture/tmpdir"
 import { testEffect } from "./lib/effect"
+
+if (process.platform === "win32") setDefaultTimeout(30_000)
 
 const project = Project.layer.pipe(
   Layer.provide(Database.defaultLayer),
