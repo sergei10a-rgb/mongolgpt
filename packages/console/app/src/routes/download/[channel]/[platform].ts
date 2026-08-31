@@ -6,11 +6,12 @@ type DownloadEvent = Pick<APIEvent, "params" | "request">
 export async function GET({ params: { platform, channel }, request }: DownloadEvent) {
   const assetUrl = downloadAssetUrl(channel, platform)
   if (!assetUrl) return new Response(null, { status: 404 })
-  if (request.method === "HEAD") return availability(assetUrl, platform)
+  const probe = new URL(request.url).searchParams.get("availability") === "1"
+  if (request.method === "HEAD" || probe) return availability(assetUrl, platform, request.method !== "HEAD")
   return Response.redirect(assetUrl, 302)
 }
 
-async function availability(assetUrl: string, platform: string) {
+async function availability(assetUrl: string, platform: string, includeBody: boolean) {
   const response = await fetch(assetUrl, {
     method: "HEAD",
     redirect: "follow",
@@ -26,5 +27,7 @@ async function availability(assetUrl: string, platform: string) {
     const downloadName = downloadNames[platform]
     if (downloadName) headers.set("content-disposition", `attachment; filename="${downloadName}"`)
   }
-  return new Response(null, { status: 200, headers })
+  if (!includeBody) return new Response(null, { status: 200, headers })
+  headers.set("content-type", "application/json; charset=utf-8")
+  return new Response(JSON.stringify({ available }), { status: 200, headers })
 }

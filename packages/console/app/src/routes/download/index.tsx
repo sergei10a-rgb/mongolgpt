@@ -95,7 +95,7 @@ export default function Download() {
   onMount(() => {
     setDetectedOS(detectOS())
     for (const platform of optionalDesktopPlatforms) {
-      void fetch(language.route(getDownloadHref(platform)), { method: "HEAD" })
+      void fetch(`${language.route(getDownloadHref(platform))}?availability=1`)
         .then((response) => {
           if (response.headers.get("x-mongolgpt-download-available") !== "1") return
           setAvailableDownloads((current) => ({ ...current, [platform]: true }))

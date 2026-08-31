@@ -6,8 +6,8 @@ import { GET } from "../src/routes/download/[channel]/[platform]"
 
 const originalFetch = globalThis.fetch
 
-function event(channel: string, platform: string, method = "GET") {
-  return { params: { channel, platform }, request: new Request("https://mgpt.mn/download", { method }) }
+function event(channel: string, platform: string, method = "GET", query = "") {
+  return { params: { channel, platform }, request: new Request(`https://mgpt.mn/download${query}`, { method }) }
 }
 
 afterEach(() => {
@@ -62,10 +62,12 @@ describe("desktop download route", () => {
     })
     globalThis.fetch = Object.assign(fetchMock, { preconnect: originalFetch.preconnect })
 
-    const response = await GET(event("stable", "linux-x64-deb", "HEAD"))
+    const response = await GET(event("stable", "linux-x64-deb", "GET", "?availability=1"))
     expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toBe("application/json; charset=utf-8")
     expect(response.headers.get("cache-control")).toBe("public, max-age=300")
     expect(response.headers.get("x-mongolgpt-download-available")).toBe("1")
+    expect(await response.json()).toEqual({ available: true })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -74,7 +76,7 @@ describe("desktop download route", () => {
       preconnect: originalFetch.preconnect,
     })
 
-    const response = await GET(event("stable", "darwin-x64-dmg", "HEAD"))
+    const response = await GET(event("stable", "darwin-x64-dmg", "GET", "?availability=1"))
     expect(response.status).toBe(200)
     expect(response.headers.get("cache-control")).toBe("public, max-age=60")
     expect(response.headers.get("x-mongolgpt-download-available")).toBe("0")
@@ -84,9 +86,9 @@ describe("desktop download route", () => {
     globalThis.fetch = Object.assign(mock(async () => new Response(null, { status: 404 })), {
       preconnect: originalFetch.preconnect,
     })
-    const missing = await GET(event("stable", "darwin-x64-dmg", "HEAD"))
+    const missing = await GET(event("stable", "darwin-x64-dmg", "GET", "?availability=1"))
     expect(missing.status).toBe(200)
     expect(missing.headers.get("x-mongolgpt-download-available")).toBe("0")
-    expect((await GET(event("beta", "windows-x64-nsis", "HEAD"))).status).toBe(404)
+    expect((await GET(event("beta", "windows-x64-nsis", "GET", "?availability=1"))).status).toBe(404)
   })
 })
