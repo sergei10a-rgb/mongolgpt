@@ -14,8 +14,8 @@ import { useLanguage } from "~/context/language"
 
 const productPillars = [
   {
-    title: "Шууд ашиглах үндсэн орчин",
-    body: "Вэб, Windows ширээний програм, командын мөрийн нэвтрэлт, баримт бичиг болон тусламжийн хэсэг шууд нээлттэй.",
+    title: "Туршиж болох үндсэн орчин",
+    body: "Вэб нэвтрэлт, Windows ширээний програм, командын мөр, баримт бичиг болон тусламжийн урсгалыг хөгжүүлэлтийн орчинд туршина.",
     links: [
       { label: "Нэвтрэх", href: "/auth" },
       { label: "Ширээний програм татах", href: "/download" },
@@ -24,7 +24,7 @@ const productPillars = [
   },
   {
     title: "Үнэгүй горим ба өөрийн загвар",
-    body: "Үнэгүй автомат горимоор эхэлж, OpenRouter, NVIDIA NIM, OpenAI-д нийцсэн API хаяг, Ollama, LM Studio зэргийг холбоно.",
+    body: "Үнэгүй автомат горимын бэлэн байдлыг шалгаж, OpenRouter, NVIDIA NIM, OpenAI-д нийцсэн API хаяг, Ollama, LM Studio зэргийг холбоно.",
     links: [
       { label: "Үнийн багц", href: "/pricing" },
       { label: "Үйлчилгээ үзүүлэгчдийн заавар", href: "/docs/providers/" },
@@ -45,8 +45,8 @@ const productPillars = [
 const experienceRows = [
   {
     label: "Вэб",
-    title: "Хөтөчөөсөө шууд эхэлнэ",
-    body: "Нэвтэрмэгц үнэгүй автомат горим, ажлын орон зай, хэрэглээ, үйлчилгээ үзүүлэгчийн тохиргоогоо нэг дороос ашиглана.",
+    title: "Хөтөчийн урсгалыг туршина",
+    body: "Нэвтрэлт, ажлын орон зай, хэрэглээ болон үйлчилгээ үзүүлэгчийн тохиргоог нэг дороос шалгана. Үнэгүй автомат горим нь тухайн орчны загварын үйлчилгээ бэлэн үед ажиллана.",
     href: "/auth",
     action: "Вэб програм нээх",
   },
@@ -84,7 +84,7 @@ const accountRows = [
 const launchActions = [
   {
     title: "Нэвтрэх",
-    body: "MongolGPT бүртгэлээрээ орж үнэгүй автомат горим болон ажлын орон зайгаа эхлүүлнэ.",
+    body: "MongolGPT бүртгэлээрээ орж нэвтрэлт, ажлын орон зай болон тухайн орчинд нээлттэй боломжуудыг туршина.",
     href: "/auth",
   },
   {
@@ -127,8 +127,8 @@ const trustRows = [
 
 const readinessRows = [
   {
-    title: "Одоо ашиглах боломжтой",
-    body: "Вэб нэвтрэлт, Windows ширээний програм таталт, командын мөрийн заавар, үнэгүй автомат горимын эхлэл, тусламж ба баримт бичгийн урсгал одооноос хэрэглэж болно.",
+    title: "Одоогийн туршилтын боломжууд",
+    body: "Вэб нэвтрэлт, Windows ширээний програм таталт, командын мөрийн заавар, тусламж болон баримт бичгийн урсгалыг хөгжүүлэлтийн орчинд шалгаж болно.",
     href: "/download",
     action: "Татах ба эхлэх",
   },
@@ -161,6 +161,14 @@ export default function Home() {
         <Header />
 
         <div data-component="content">
+          <aside data-component="preview-notice" role="status" aria-label="Үйлчилгээний төлөв">
+            <strong>Хөгжүүлэлтийн туршилтын орчин</strong>
+            <span>
+              Нэвтрэлт, вэб, ширээний програм, командын мөр болон үнэгүй загварын урсгалыг баталгаажуулж байна. Бодит
+              төлбөр идэвхгүй.
+            </span>
+          </aside>
+
           <section data-component="hero">
             <div data-component="desktop-app-banner">
               <span data-slot="badge">{i18n.t("home.banner.badge")}</span>
@@ -187,12 +195,13 @@ export default function Home() {
                   MongolGPT орчинд Монгол хэлээр холбоно.
                 </p>
                 <p data-slot="supporting-copy">
-                  Үнэгүй автомат горимоор шууд эхэлнэ. Хүсвэл өөрийн API түлхүүр, OpenAI-д нийцсэн API хаяг, OpenRouter,
-                  NVIDIA NIM, Ollama, LM Studio болон дотоод загвараа холбоно.
+                  Үнэгүй автомат горим нь хөгжүүлэлтийн орчны загварын үйлчилгээ бэлэн үед ажиллана. Хүсвэл өөрийн API
+                  түлхүүр, OpenAI-д нийцсэн API хаяг, OpenRouter, NVIDIA NIM, Ollama, LM Studio болон дотоод загвараа
+                  холбоно.
                 </p>
                 <div data-slot="hero-actions">
                   <A href={language.route("/auth")} data-variant="primary">
-                    Эхлэх
+                    Туршиж үзэх
                   </A>
                   <A href={language.route("/pricing")} data-variant="secondary">
                     Үнийн багц
@@ -217,7 +226,7 @@ export default function Home() {
                   </div>
                   <div>
                     <dt>Эхлэл</dt>
-                    <dd>Үнэгүй горим</dd>
+                    <dd>Хөгжүүлэлтийн туршилт</dd>
                   </div>
                   <div>
                     <dt>Тохиргоо</dt>
@@ -281,9 +290,9 @@ export default function Home() {
           <section data-component="readiness-band" aria-label="Үйлчилгээний бодит төлөв">
             <div data-slot="section-heading">
               <p data-slot="eyebrow">Бодит төлөв</p>
-              <h2>Шууд эхлэхэд хэрэгтэй товч мэдээлэл</h2>
+              <h2>Туршилтаа эхлэхэд хэрэгтэй товч мэдээлэл</h2>
               <p>
-                Юу нь шууд бэлэн, юуг бүртгэл эсвэл үйлчилгээ үзүүлэгчийн тохиргоотой уялдуулж ашиглахыг тодорхой
+                Юуг одоо туршиж болох, юунд бүртгэл эсвэл үйлчилгээ үзүүлэгчийн нэмэлт тохиргоо хэрэгтэйг тодорхой
                 харууллаа.
               </p>
             </div>
@@ -328,7 +337,7 @@ export default function Home() {
           <section data-component="account-band">
             <div data-slot="section-heading">
               <p data-slot="eyebrow">Бүртгэл ба загварууд</p>
-              <h2>Үнэгүй горимоор эхэлж, хэрэгтэй үедээ өөрийн хэрэглүүрүүдээ холбоно</h2>
+              <h2>Үнэгүй горимын төлөвийг шалгаж, өөрийн хэрэглүүрүүдээ холбоно</h2>
               <p>
                 Анхдагч урсгал нь энгийн. Нарийвчилсан хэрэгцээтэй хэрэглэгч өөрийн үйлчилгээ үзүүлэгч, API түлхүүр,
                 дотоод загвар болон бүртгэлийн төлөвөө нэг дороос хянаж өргөтгөнө.
@@ -372,7 +381,7 @@ export default function Home() {
             <div data-slot="section-heading">
               <p data-slot="eyebrow">Дараагийн алхам</p>
               <h2>Туршиж эхлэх үндсэн хэсгүүд</h2>
-              <p>Нэвтрэх, татах, заавар унших, үнийн багцаа сонгох хэсэг рүү шууд орно.</p>
+              <p>Нэвтрэх, татах, заавар унших болон багцын бодит төлөвийг шалгах хэсэг рүү орно.</p>
             </div>
             <div data-component="launch-grid">
               <For each={launchActions}>

@@ -4,7 +4,7 @@ import { Meta, Title } from "@solidjs/meta"
 import { PaymentPlanCatalogSchema } from "@mongolgpt/console-core/payment-checkout.js"
 import { Resource } from "@mongolgpt/console-resource"
 import { A, createAsync, query } from "@solidjs/router"
-import { createMemo, For } from "solid-js"
+import { createMemo, For, Show } from "solid-js"
 import { getRequestEvent } from "solid-js/web"
 import { Footer } from "~/component/footer"
 import { Header } from "~/component/header"
@@ -44,6 +44,28 @@ export default function Pricing() {
     import.meta.env.VITE_MONGOLGPT_ROOT_URL,
   )
   const pricing = createAsync(() => getPricingCatalog())
+  const paymentStatus = createMemo(() => {
+    const value = pricing()
+    if (!value?.enabled) {
+      return {
+        state: "disabled" as const,
+        title: i18n.t("pricing.status.disabled.title"),
+        body: i18n.t("pricing.status.disabled.body"),
+      }
+    }
+    if (value.environment === "sandbox") {
+      return {
+        state: "sandbox" as const,
+        title: i18n.t("pricing.status.sandbox.title"),
+        body: i18n.t("pricing.status.sandbox.body"),
+      }
+    }
+    return {
+      state: "production" as const,
+      title: i18n.t("pricing.status.production.title"),
+      body: i18n.t("pricing.status.production.body"),
+    }
+  })
   const formatAmount = (amount: number | undefined) => {
     if (amount === undefined) return i18n.t("pricing.price.configuring")
     return new Intl.NumberFormat(language.tag(language.locale()), {
@@ -119,8 +141,8 @@ export default function Pricing() {
           action: "Татах хуудас",
         },
         {
-          title: "Үнэгүй автомат горимоор эхэлнэ",
-          body: "Анхдагч хэрэглээ нь төлбөргүй. Basic, Pro, Max багцууд идэвхжихэд хэрэгцээндээ тааруулж сонгоно. Хүсвэл өөрийн API түлхүүрээ ашиглана.",
+          title: "Үнэгүй горимын бэлэн байдлыг шалгана",
+          body: "Үнэгүй автомат горим нь тухайн орчны загварын үйлчилгээ бэлэн үед нээгдэнэ. Хүсвэл өөрийн API түлхүүр эсвэл дотоод загвараа ашиглана.",
           href: "/auth",
           action: "Нэвтрэх",
         },
@@ -163,6 +185,11 @@ export default function Pricing() {
             <p>{i18n.t("pricing.subtitle")}</p>
           </section>
 
+          <section data-component="pricing-status" data-status={paymentStatus().state} aria-live="polite">
+            <strong>{paymentStatus().title}</strong>
+            <p>{paymentStatus().body}</p>
+          </section>
+
           <section data-component="pricing-plans" aria-label={i18n.t("pricing.plans.ariaLabel")}>
             <For each={plans()}>
               {(plan) => (
@@ -187,9 +214,20 @@ export default function Pricing() {
                       )}
                     </For>
                   </ul>
-                  <A href={language.route(pricingAuthRoute(plan.id))} data-slot="plan-action">
-                    {plan.action}
-                  </A>
+                  <Show
+                    when={plan.id === "free" || pricing()?.enabled}
+                    fallback={
+                      <span data-slot="plan-action" aria-disabled="true">
+                        {i18n.t("pricing.cta.disabled")}
+                      </span>
+                    }
+                  >
+                    <A href={language.route(pricingAuthRoute(plan.id))} data-slot="plan-action">
+                      {plan.id !== "free" && pricing()?.environment === "sandbox"
+                        ? i18n.t("pricing.cta.sandbox")
+                        : plan.action}
+                    </A>
+                  </Show>
                 </article>
               )}
             </For>

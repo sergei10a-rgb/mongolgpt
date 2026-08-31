@@ -94,7 +94,8 @@ export const dict = {
     "Start free with your own or local models, then choose a managed plan when you need a configured usage allowance.",
   "pricing.plans.ariaLabel": "MongolGPT plans",
   "pricing.plan.free.name": "Free",
-  "pricing.plan.free.description": "Start with Free Auto, your own API keys, or local models.",
+  "pricing.plan.free.description":
+    "Use your own API keys or local models, and Free Auto when the hosted free-model service is available.",
   "pricing.plan.basic.name": "Basic",
   "pricing.plan.basic.description": "For lighter individual development workflows.",
   "pricing.plan.pro.name": "Pro",
@@ -115,8 +116,18 @@ export const dict = {
   "pricing.price.forever": "No monthly fee",
   "pricing.price.monthly": "per month",
   "pricing.price.configuring": "Configuring",
-  "pricing.cta.free": "Start free",
+  "pricing.cta.free": "Sign in",
   "pricing.cta.paid": "Choose plan",
+  "pricing.cta.sandbox": "Start sandbox test",
+  "pricing.cta.disabled": "Not yet available",
+  "pricing.status.disabled.title": "Paid plans are not active",
+  "pricing.status.disabled.body":
+    "Basic, Pro, and Max checkout remains unavailable until QPay or Bonum is configured and verified.",
+  "pricing.status.sandbox.title": "Sandbox payments only",
+  "pricing.status.sandbox.body":
+    "Checkout creates test invoices only. It does not collect real money or activate a production subscription.",
+  "pricing.status.production.title": "Production payments are active",
+  "pricing.status.production.body": "QPay or Bonum checkout is available for the displayed paid plans.",
   "pricing.note.limits":
     "Exact request, token, and cost limits are configurable. Your current allowance and usage are shown in your account.",
   "pricing.note.payment":
@@ -181,7 +192,8 @@ export const dict = {
   "home.faq.a2.before": "The easiest way to get started is to read the",
   "home.faq.a2.link": "intro",
   "home.faq.q3": "Do I need extra AI subscriptions to use MongolGPT?",
-  "home.faq.a3.p1": "Not necessarily. Sign in to your MongolGPT account to use Free Auto at no cost.",
+  "home.faq.a3.p1":
+    "Not necessarily. Sign in to your MongolGPT account; Free Auto is available when the hosted free-model service is configured for the current environment.",
   "home.faq.a3.p2.beforePlans": "For higher limits or paid models, choose a",
   "home.faq.a3.p2.plansLink": "Basic, Pro, or Max plan",
   "home.faq.a3.p2.afterPlans": ".",
@@ -197,7 +209,7 @@ export const dict = {
   "home.faq.a5.and": "and",
   "home.faq.a5.web": "web",
   "home.faq.q6": "How much does MongolGPT cost?",
-  "home.faq.a6.beforePricing": "You can start for free.",
+  "home.faq.a6.beforePricing": "The Free plan is available when the hosted free-model service is configured.",
   "home.faq.a6.pricingLink": "See the limits and pricing for Basic, Pro, and Max",
   "home.faq.a6.afterPricing": ". BYOK users pay their provider directly.",
   "home.faq.q7": "What about data and privacy?",
@@ -472,7 +484,8 @@ export const dict = {
   "download.faq.a3.providersLink": "provider setup guides",
   "download.faq.a3.afterProviders": " to connect OpenRouter, NVIDIA NIM, and other APIs.",
 
-  "download.faq.a5.p1": "You can start with the MongolGPT Free plan at no cost.",
+  "download.faq.a5.p1":
+    "The MongolGPT Free plan is available when the hosted free-model service is configured for the current environment.",
   "download.faq.a5.p2.beforePricing": "Review Basic, Pro, and Max on the",
   "download.faq.a5.p2.pricingLink": "plans and pricing page",
   "download.faq.a5.p2.afterPricing": ". BYOK users pay their model provider directly.",

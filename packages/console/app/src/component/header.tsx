@@ -166,7 +166,7 @@ export function Header(props: { hideGetStarted?: boolean }) {
           <Show when={!props.hideGetStarted}>
             <li>
               <A href={language.route("/auth")} data-slot="cta-button">
-                Үнэгүй эхлэх
+                Бүртгүүлэх
               </A>
             </li>
           </Show>
@@ -246,7 +246,7 @@ export function Header(props: { hideGetStarted?: boolean }) {
                 <Show when={!props.hideGetStarted}>
                   <li>
                     <A href={language.route("/auth")} data-slot="cta-button">
-                      Үнэгүй эхлэх
+                      Бүртгүүлэх
                     </A>
                   </li>
                 </Show>

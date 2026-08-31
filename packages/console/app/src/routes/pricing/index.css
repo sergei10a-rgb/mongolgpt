@@ -43,6 +43,33 @@
     }
   }
 
+  [data-component="pricing-status"] {
+    border: 1px solid var(--color-border-weak);
+    border-left: 4px solid var(--color-text-weak);
+    margin: 0 0 2rem;
+    padding: 1rem 1.25rem;
+
+    strong {
+      color: var(--color-text-strong);
+      display: block;
+      font-size: 0.875rem;
+    }
+
+    p {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin: 0.4rem 0 0;
+    }
+  }
+
+  [data-component="pricing-status"][data-status="sandbox"] {
+    border-left-color: hsl(40, 72%, 46%);
+  }
+
+  [data-component="pricing-status"][data-status="production"] {
+    border-left-color: hsl(151, 52%, 38%);
+  }
+
   [data-component="pricing-plan"] {
     min-width: 0;
     min-height: 31rem;
@@ -129,14 +156,20 @@
       background: var(--color-background-weak-hover);
       text-decoration: none;
     }
+
+    [data-slot="plan-action"][aria-disabled="true"] {
+      border-color: var(--color-border-weak);
+      color: var(--color-text-weak);
+      cursor: not-allowed;
+    }
   }
 
-  [data-component="pricing-plan"][data-plan="pro"] [data-slot="plan-action"] {
+  [data-component="pricing-plan"][data-plan="pro"] a[data-slot="plan-action"] {
     background: var(--color-background-strong);
     color: var(--color-text-inverted);
   }
 
-  [data-component="pricing-plan"][data-plan="pro"] [data-slot="plan-action"]:hover {
+  [data-component="pricing-plan"][data-plan="pro"] a[data-slot="plan-action"]:hover {
     background: var(--color-background-strong-hover);
   }
 

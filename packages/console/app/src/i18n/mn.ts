@@ -96,7 +96,8 @@ export const dict = {
     "Өөрийн API түлхүүр эсвэл дотоод загвараар үнэгүй эхэлж, тохируулсан хэрэглээний эрх хэрэгтэй үедээ төлбөртэй багц сонгоорой.",
   "pricing.plans.ariaLabel": "MongolGPT-ийн багцууд",
   "pricing.plan.free.name": "Үнэгүй",
-  "pricing.plan.free.description": "Үнэгүй автомат горим, өөрийн API түлхүүр эсвэл дотоод загвараар эхэлнэ.",
+  "pricing.plan.free.description":
+    "Өөрийн API түлхүүр эсвэл дотоод загвар ашиглана. Үнэгүй автомат горим нь загварын үйлчилгээ бэлэн үед нээгдэнэ.",
   "pricing.plan.basic.name": "Basic",
   "pricing.plan.basic.description": "Хөнгөн хэрэглээтэй хувийн хөгжүүлэлтийн ажилд.",
   "pricing.plan.pro.name": "Pro",
@@ -117,8 +118,18 @@ export const dict = {
   "pricing.price.forever": "Сарын төлбөргүй",
   "pricing.price.monthly": "сар бүр",
   "pricing.price.configuring": "Тохируулж байна",
-  "pricing.cta.free": "Үнэгүй эхлэх",
+  "pricing.cta.free": "Нэвтрэх",
   "pricing.cta.paid": "Багц сонгох",
+  "pricing.cta.sandbox": "Туршилтын нэхэмжлэл үүсгэх",
+  "pricing.cta.disabled": "Одоогоор идэвхгүй",
+  "pricing.status.disabled.title": "Төлбөртэй багцууд идэвхгүй байна",
+  "pricing.status.disabled.body":
+    "QPay эсвэл Bonum-ийн орчин тохируулагдаж, баталгаажих хүртэл Basic, Pro, Max багцын төлбөр нээгдэхгүй.",
+  "pricing.status.sandbox.title": "Зөвхөн туршилтын төлбөрийн орчин",
+  "pricing.status.sandbox.body":
+    "Эндээс зөвхөн туршилтын нэхэмжлэл үүснэ. Бодит мөнгө татахгүй, үйлдвэрлэлийн захиалга идэвхжүүлэхгүй.",
+  "pricing.status.production.title": "Бодит төлбөр идэвхтэй байна",
+  "pricing.status.production.body": "Харагдаж буй төлбөртэй багцуудыг QPay эсвэл Bonum-аар сонгох боломжтой.",
   "pricing.note.limits":
     "Хүсэлт, токен болон зардлын нарийн хязгаарыг тохиргоогоор удирдана. Таны одоогийн эрх, хэрэглээ бүртгэл дотор харагдана.",
   "pricing.note.payment":
@@ -183,7 +194,8 @@ export const dict = {
   "home.faq.a2.before": "Эхлэх хамгийн хялбар арга нь",
   "home.faq.a2.link": "танилцуулгыг унших",
   "home.faq.q3": "MongolGPT ашиглахад хиймэл оюуны нэмэлт захиалга хэрэгтэй юу?",
-  "home.faq.a3.p1": "Заавал биш. MongolGPT бүртгэлээр нэвтэрсний дараа үнэгүй автомат горимыг төлбөргүй ашиглаж болно.",
+  "home.faq.a3.p1":
+    "Заавал биш. Тухайн орчинд үнэгүй загварын үйлчилгээ тохируулагдсан үед MongolGPT бүртгэлээр нэвтэрч үнэгүй автомат горим ашиглана.",
   "home.faq.a3.p2.beforePlans": "Илүү өндөр хязгаар эсвэл төлбөртэй загвар хэрэгтэй бол",
   "home.faq.a3.p2.plansLink": "Basic, Pro эсвэл Max багц",
   "home.faq.a3.p2.afterPlans": " сонгоно.",
@@ -200,7 +212,7 @@ export const dict = {
   "home.faq.a5.and": "болон",
   "home.faq.a5.web": "вэбээр ашиглах боломжтой",
   "home.faq.q6": "MongolGPT ямар үнэтэй вэ?",
-  "home.faq.a6.beforePricing": "Free багцаар үнэ төлбөргүй эхэлнэ.",
+  "home.faq.a6.beforePricing": "Тухайн орчинд үнэгүй загварын үйлчилгээ бэлэн үед Free багцыг ашиглана.",
   "home.faq.a6.pricingLink": "Basic, Pro, Max багцын үнэ болон хязгаарыг эндээс харна уу",
   "home.faq.a6.afterPricing": ". Өөрийн API түлхүүртэй хэрэглэгч тухайн нийлүүлэгчийн үнээр төлнө.",
   "home.faq.q7": "Өгөгдөл болон нууцлалын талаар ямар бодлоготой вэ?",
@@ -481,7 +493,7 @@ export const dict = {
   "download.faq.a3.providersLink": "дэмждэг үйлчилгээ үзүүлэгчдийн заавраас",
   "download.faq.a3.afterProviders": " OpenRouter, NVIDIA NIM болон бусад API-г холбож болно.",
 
-  "download.faq.a5.p1": "MongolGPT-ийн Үнэгүй багцаар үнэ төлбөргүй эхэлнэ.",
+  "download.faq.a5.p1": "Тухайн орчинд үнэгүй загварын үйлчилгээ бэлэн үед MongolGPT-ийн Үнэгүй багцыг ашиглана.",
   "download.faq.a5.p2.beforePricing": "Basic, Pro, Max багцын нөхцөлийг",
   "download.faq.a5.p2.pricingLink": "үнэ, багцын хуудаснаас",
   "download.faq.a5.p2.afterPricing": " харна уу. Өөрийн API түлхүүр ашиглавал төлбөрийг тухайн нийлүүлэгчид төлнө.",

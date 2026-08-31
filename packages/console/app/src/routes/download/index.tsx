@@ -46,7 +46,7 @@ const optionalDesktopPlatforms = [
 const setupRows = [
   {
     title: "Нэг бүртгэлээр эхлэх",
-    body: "Вэб, ширээний програм, командын мөрт ижил MongolGPT бүртгэлээр нэвтэрч үнэгүй автомат горимоо шууд ашиглана.",
+    body: "Вэб, ширээний програм, командын мөрт ижил MongolGPT бүртгэлээр нэвтэрнэ. Үнэгүй автомат горим нь тухайн орчны загварын үйлчилгээ бэлэн үед ажиллана.",
     href: "/auth",
     action: "Нэвтрэх",
   },
@@ -107,7 +107,8 @@ export default function Download() {
   const available = (platform: DownloadPlatform) => availableDownloads()[platform] === true
 
   const handleCopyClick = (command: string) => (event: Event) => {
-    const button = event.currentTarget as HTMLButtonElement
+    if (!(event.currentTarget instanceof HTMLButtonElement)) return
+    const button = event.currentTarget
     void navigator.clipboard.writeText(command)
     button.setAttribute("data-copied", "")
     setTimeout(() => {
