@@ -115,5 +115,6 @@ await Bun.write(sseTypesPath, sseTypesPatched)
 await $`bun prettier --write src/gen`
 await $`bun prettier --write src/v2`
 await $`rm -rf dist`
+await $`rm -f tsconfig.tsbuildinfo`
 await $`bun tsc`
 await $`rm openapi.json`

@@ -64,6 +64,29 @@ describe("public platform npm package contract", () => {
     expect(source).toContain('value.startsWith("workspace:") ? version : value')
   })
 
+  test("SDK and plugin releases exercise fresh packed consumers before publishing", () => {
+    const sdkBuild = readFileSync(resolve(root, "packages/sdk/js/script/build.ts"), "utf8")
+    const sdkPublish = readFileSync(resolve(root, "packages/sdk/js/script/publish.ts"), "utf8")
+    const sdkSmoke = readFileSync(resolve(root, "packages/sdk/js/script/smoke-packed.ts"), "utf8")
+    const pluginPublish = readFileSync(resolve(root, "packages/plugin/script/publish.ts"), "utf8")
+    const pluginSmoke = readFileSync(resolve(root, "packages/plugin/script/smoke-packed.ts"), "utf8")
+
+    expect(sdkBuild).toContain("rm -f tsconfig.tsbuildinfo")
+    expect(sdkPublish.indexOf("script/smoke-packed.ts")).toBeLessThan(sdkPublish.indexOf("npm publish"))
+    expect(pluginPublish.indexOf("script/smoke-packed.ts")).toBeLessThan(pluginPublish.indexOf("npm publish"))
+    expect(pluginPublish).toContain("await packSDK()")
+    expect(sdkSmoke).toContain('import { createMongolGPTClient } from "@mongolgpt/sdk"')
+    expect(pluginSmoke).toContain('import { tool as rootTool } from "@mongolgpt/plugin"')
+    expect(pluginSmoke).toContain('import { tool } from "@mongolgpt/plugin/tool"')
+    expect(pluginSmoke).toContain('from "@mongolgpt/plugin/v2/effect"')
+    expect(pluginSmoke).toContain('from "@mongolgpt/plugin/v2/promise"')
+    for (const smoke of [sdkSmoke, pluginSmoke]) {
+      expect(smoke).toContain("delete publicEnv[key]")
+      expect(smoke).toContain("publicEnv.NPM_CONFIG_USERCONFIG = npmrc")
+      expect(smoke).toContain('"install", "--ignore-scripts"')
+    }
+  })
+
   test("UI release builds a packed browser consumer before publishing", () => {
     const publish = readFileSync(resolve(root, "packages/ui/script/publish.ts"), "utf8")
     const smoke = readFileSync(resolve(root, "packages/ui/script/smoke-packed.ts"), "utf8")
@@ -72,8 +95,8 @@ describe("public platform npm package contract", () => {
     expect(publish.indexOf("script/smoke-packed.ts")).toBeLessThan(publish.indexOf("npm publish"))
     expect(smoke).toContain('import { Button } from "@mongolgpt/ui/button"')
     expect(smoke).toContain('import "@mongolgpt/ui/styles"')
-    expect(smoke).toContain('delete publicEnv[key]')
-    expect(smoke).toContain('publicEnv.NPM_CONFIG_USERCONFIG = npmrc')
+    expect(smoke).toContain("delete publicEnv[key]")
+    expect(smoke).toContain("publicEnv.NPM_CONFIG_USERCONFIG = npmrc")
     expect(smoke).toContain('["build", "entry.tsx", "--outdir", "dist", "--target", "browser", "--production"]')
     expect(smoke).toContain('outputs.some((name) => name.endsWith(".js"))')
     expect(smoke).toContain('outputs.some((name) => name.endsWith(".css"))')

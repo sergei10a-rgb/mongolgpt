@@ -46,6 +46,7 @@ if (!dryRun && (await published(pkg.name, version))) {
   try {
     await rm(tarball, { force: true })
     await $`bun pm pack`
+    await $`bun ./script/smoke-packed.ts --tarball ${tarball}`
     await $`npm publish ${tarball} --tag ${Script.channel} --access public ${dryRun ? "--dry-run" : []}`
     if (dryRun) console.log(`[dry-run] ${pkg.name}@${version} package publish бэлэн байна`)
   } finally {
