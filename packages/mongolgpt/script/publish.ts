@@ -182,8 +182,13 @@ if (!Script.preview && !dryRun && !npmOnly) {
   await $`docker buildx build --platform ${platforms} ${tagFlags} --push .`
   // Calculate SHA values
   const arm64Sha = await $`sha256sum ./dist/mongolgpt-linux-arm64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
-  const x64Sha = await $`sha256sum ./dist/mongolgpt-linux-x64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
-  const macX64Sha = await $`sha256sum ./dist/mongolgpt-darwin-x64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
+  // Package managers cannot safely dispatch on AVX2, so x64 defaults to the baseline artifacts.
+  const x64BaselineSha = await $`sha256sum ./dist/mongolgpt-linux-x64-baseline.tar.gz | cut -d' ' -f1`
+    .text()
+    .then((x) => x.trim())
+  const macX64BaselineSha = await $`sha256sum ./dist/mongolgpt-darwin-x64-baseline.zip | cut -d' ' -f1`
+    .text()
+    .then((x) => x.trim())
   const macArm64Sha = await $`sha256sum ./dist/mongolgpt-darwin-arm64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
 
   const [pkgver, _subver = ""] = Script.version.split(/(-.*)/, 2)
@@ -208,8 +213,8 @@ if (!Script.preview && !dryRun && !npmOnly) {
     `source_aarch64=("\${pkgname}_\${pkgver}_aarch64.tar.gz::https://github.com/sergei10a-rgb/mongolgpt/releases/download/mongolgpt-v\${pkgver}\${_subver}/mongolgpt-linux-arm64.tar.gz")`,
     `sha256sums_aarch64=('${arm64Sha}')`,
 
-    `source_x86_64=("\${pkgname}_\${pkgver}_x86_64.tar.gz::https://github.com/sergei10a-rgb/mongolgpt/releases/download/mongolgpt-v\${pkgver}\${_subver}/mongolgpt-linux-x64.tar.gz")`,
-    `sha256sums_x86_64=('${x64Sha}')`,
+    `source_x86_64=("\${pkgname}_\${pkgver}_x86_64.tar.gz::https://github.com/sergei10a-rgb/mongolgpt/releases/download/mongolgpt-v\${pkgver}\${_subver}/mongolgpt-linux-x64-baseline.tar.gz")`,
+    `sha256sums_x86_64=('${x64BaselineSha}')`,
     "",
     "package() {",
     '  install -Dm755 ./mongolgpt "${pkgdir}/usr/bin/mongolgpt"',
@@ -251,8 +256,8 @@ if (!Script.preview && !dryRun && !npmOnly) {
     "",
     "  on_macos do",
     "    if Hardware::CPU.intel?",
-    `      url "https://github.com/sergei10a-rgb/mongolgpt/releases/download/${releaseTag}/mongolgpt-darwin-x64.zip"`,
-    `      sha256 "${macX64Sha}"`,
+    `      url "https://github.com/sergei10a-rgb/mongolgpt/releases/download/${releaseTag}/mongolgpt-darwin-x64-baseline.zip"`,
+    `      sha256 "${macX64BaselineSha}"`,
     "",
     "      def install",
     '        bin.install "mongolgpt"',
@@ -270,8 +275,8 @@ if (!Script.preview && !dryRun && !npmOnly) {
     "",
     "  on_linux do",
     "    if Hardware::CPU.intel? and Hardware::CPU.is_64_bit?",
-    `      url "https://github.com/sergei10a-rgb/mongolgpt/releases/download/${releaseTag}/mongolgpt-linux-x64.tar.gz"`,
-    `      sha256 "${x64Sha}"`,
+    `      url "https://github.com/sergei10a-rgb/mongolgpt/releases/download/${releaseTag}/mongolgpt-linux-x64-baseline.tar.gz"`,
+    `      sha256 "${x64BaselineSha}"`,
     "      def install",
     '        bin.install "mongolgpt"',
     "      end",

@@ -380,6 +380,12 @@ describe("release integrity contract", () => {
     expect(cliPublish).toContain("docker buildx build")
     expect(cliPublish).toContain("aur.archlinux.org")
     expect(cliPublish).toContain("homebrew-tap.git")
+    expect(cliPublish).toContain("sha256sum ./dist/mongolgpt-linux-x64-baseline.tar.gz")
+    expect(cliPublish).toContain("sha256sum ./dist/mongolgpt-darwin-x64-baseline.zip")
+    expect(cliPublish).toContain("mongolgpt-linux-x64-baseline.tar.gz")
+    expect(cliPublish).toContain("mongolgpt-darwin-x64-baseline.zip")
+    expect(cliPublish).not.toContain("sha256sum ./dist/mongolgpt-linux-x64.tar.gz")
+    expect(cliPublish).not.toContain("sha256sum ./dist/mongolgpt-darwin-x64.zip")
   })
 
   test("keeps the core Desktop release Windows-first", () => {
