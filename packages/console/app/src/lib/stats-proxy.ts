@@ -1,5 +1,6 @@
 import type { APIEvent } from "@solidjs/start/server"
 import { LOCALE_HEADER, cookie, localeFromRequest, route, tag } from "~/lib/language"
+import { publicProxyRequestHeaders } from "~/lib/public-proxy-headers"
 
 const dataPath = "/data"
 
@@ -9,10 +10,13 @@ export async function statsProxy(evt: APIEvent) {
   const redirect = redirectToLocalizedData(req, new URL(req.url), locale)
   if (redirect) return redirect
 
+  const requestUrl = new URL(req.url)
+  if (!isAllowedStatsProxyRequest(req.method, requestUrl.pathname)) return methodNotAllowed()
+
   const statsUrl = import.meta.env.VITE_MONGOLGPT_STATS_URL?.trim()
   if (!statsUrl) return upstreamUnavailable()
 
-  const targetUrl = new URL(req.url)
+  const targetUrl = requestUrl
   const upstreamUrl = new URL(statsUrl)
   targetUrl.protocol = upstreamUrl.protocol
   targetUrl.hostname = upstreamUrl.hostname
@@ -26,7 +30,7 @@ export async function statsProxy(evt: APIEvent) {
     targetUrl.pathname = targetUrl.pathname.slice(dataPath.length)
   }
 
-  const requestHeaders = new Headers(req.headers)
+  const requestHeaders = publicProxyRequestHeaders(req.headers)
   requestHeaders.set(LOCALE_HEADER, locale)
   requestHeaders.set("accept-language", tag(locale))
 
@@ -123,10 +127,25 @@ function appendVary(headers: Headers, ...values: string[]) {
   )
 }
 
+export function isAllowedStatsProxyRequest(method: string, pathname: string) {
+  if (method === "GET" || method === "HEAD") return true
+  return method === "POST" && pathname === `${dataPath}/api/newsletter`
+}
+
 function upstreamUnavailable() {
   return new Response("Статистикийн үйлчилгээний хаяг одоогоор тохируулаагүй байна.", {
     status: 503,
     headers: {
+      "content-type": "text/plain; charset=utf-8",
+    },
+  })
+}
+
+function methodNotAllowed() {
+  return new Response("Энэ хүсэлтийн аргыг статистикийн үйлчилгээ дэмжихгүй байна.", {
+    status: 405,
+    headers: {
+      allow: "GET, HEAD, POST",
       "content-type": "text/plain; charset=utf-8",
     },
   })

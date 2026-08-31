@@ -1,5 +1,6 @@
 import type { APIEvent } from "@solidjs/start/server"
 import { cookie, docs, localeFromRequest, tag } from "~/lib/language"
+import { publicProxyRequestHeaders } from "~/lib/public-proxy-headers"
 import { canonicalHttpsOrigin } from "../auth/helpers"
 
 export async function docsProxyHandler(evt: APIEvent) {
@@ -11,7 +12,7 @@ export async function docsProxyHandler(evt: APIEvent) {
 
   const upstreamUrl = new URL(docsUrl)
   const targetUrl = new URL(`${docs(locale, url.pathname)}${url.search}`, upstreamUrl)
-  const headers = new Headers(req.headers)
+  const headers = publicProxyRequestHeaders(req.headers)
   headers.set("accept-language", tag(locale))
 
   const rootUrl = import.meta.env.VITE_MONGOLGPT_ROOT_URL
@@ -40,7 +41,7 @@ export async function docsHeadProxyHandler(evt: APIEvent) {
   const locale = localeFromRequest(req)
   const upstreamUrl = new URL(docsUrl)
   const targetUrl = new URL(`${docs(locale, url.pathname)}${url.search}`, upstreamUrl)
-  const headers = new Headers(req.headers)
+  const headers = publicProxyRequestHeaders(req.headers)
   headers.set("accept-language", tag(locale))
 
   const head = await fetch(targetUrl, {
