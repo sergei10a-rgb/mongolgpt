@@ -13,11 +13,15 @@ describe("BundledPluginRuntime", () => {
     const config = path.join(tmp.path, "config")
     const prepared = await BundledPluginRuntime.prepare(config, { cache: path.join(tmp.path, "cache") })
     const manifest = JSON.parse(await fs.readFile(path.join(prepared.target, "package.json"), "utf8"))
+    const published = JSON.parse(
+      await fs.readFile(path.resolve(import.meta.dir, "../../../plugin/package.json"), "utf8"),
+    )
     expect(manifest).toMatchObject({
       name: "@mongolgpt/plugin",
       version: prepared.version,
       mongolgptBundledRuntime: true,
     })
+    expect(Object.keys(manifest.exports).sort()).toEqual(Object.keys(published.exports).sort())
 
     const consumer = path.join(config, "verify-runtime.mjs")
     await fs.writeFile(
