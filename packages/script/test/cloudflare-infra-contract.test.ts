@@ -5,6 +5,9 @@ import {
   D1_BACKUP_RETENTION_DAYS,
   D1_BACKUP_RETENTION_SECONDS,
   D1_BACKUP_SCHEDULE,
+  PAYMENT_DEAD_LETTER_RETRIES,
+  PAYMENT_QUEUE_RETENTION_DAYS,
+  PAYMENT_QUEUE_RETENTION_SECONDS,
   quotaServiceMigrations,
 } from "../../../infra/console-policy"
 import { hostedSstSecretNames } from "../src/deployment"
@@ -1177,6 +1180,32 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(retention).toContain("link: [database]")
     expect(retention).not.toContain("usageQueue")
     expect(retention).not.toContain("quotaService")
+  })
+
+  test("archives payment dead letters outside D1 and keeps a bounded last-resort queue", async () => {
+    const [source, deadLetter, recovery] = await Promise.all(
+      [
+        "../../../infra/console.ts",
+        "../../console/function/src/payment-dead-letter.ts",
+        "../../console/function/src/payment-recovery.ts",
+      ].map((path) => Bun.file(new URL(path, import.meta.url)).text()),
+    )
+
+    expect(PAYMENT_QUEUE_RETENTION_DAYS).toBe(14)
+    expect(PAYMENT_QUEUE_RETENTION_SECONDS).toBe(1_209_600)
+    expect(PAYMENT_DEAD_LETTER_RETRIES).toBe(100)
+    expect(source).toContain('new sst.cloudflare.Bucket("PaymentRecoveryArchive")')
+    expect(source).toContain('new sst.cloudflare.Queue("PaymentLastResortQueue"')
+    expect(source).toContain("queue: paymentLastResortQueue.nodes.queue.queueName")
+    expect(source).toContain("retry: PAYMENT_DEAD_LETTER_RETRIES")
+    expect(source).toContain('retryDelay: "5 minutes"')
+    expect(source).toContain("messageRetentionPeriod: PAYMENT_QUEUE_RETENTION_SECONDS")
+    expect(source).toContain("link: [database, paymentRecoveryArchive]")
+    expect(source).toContain("link: [database, paymentRecoveryArchive, quotaService, SECRET.QuotaServiceToken]")
+    expect(source).not.toContain("paymentLastResortQueue.subscribe")
+    expect(deadLetter).toContain("archivePaymentDeadLetter")
+    expect(deadLetter).toContain("message.ack()")
+    expect(recovery).toContain("drainPaymentRecoveryArchive")
   })
 
   test("backs up D1 daily to a private, expiring R2 bucket", async () => {

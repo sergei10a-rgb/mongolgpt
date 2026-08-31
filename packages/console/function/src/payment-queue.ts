@@ -3,6 +3,7 @@ import {
   applyPaymentQueueEvent,
   type PaymentQueueEvent,
 } from "@mongolgpt/console-core/payment-queue.js"
+import { recordPaymentDeadLetter } from "@mongolgpt/console-core/payment-recovery.js"
 import { applyPlanSubscriptionPaymentEffect } from "@mongolgpt/console-core/payment-entitlement.js"
 import { deactivatePlanQuota } from "./quota-client"
 
@@ -18,6 +19,7 @@ type PaymentApplyResult = {
 }
 type ApplyPaymentLedger = (event: PaymentQueueEvent) => Promise<PaymentApplyResult>
 type DeactivatePlanQuota = (workspaceID: string, invoiceID: string) => Promise<void>
+type QuarantineInvalidMessage = (input: { body: unknown; now?: number }) => Promise<unknown>
 type QueueBatch = {
   messages: ReadonlyArray<{
     body: unknown
@@ -45,14 +47,26 @@ export function createPaymentEntitlementApply(
 
 const applyPaymentWithEntitlements = createPaymentEntitlementApply()
 
-export function createPaymentQueueConsumer(apply: ApplyPayment = applyPaymentWithEntitlements) {
+export function createPaymentQueueConsumer(
+  apply: ApplyPayment = applyPaymentWithEntitlements,
+  quarantineInvalidMessage: QuarantineInvalidMessage = recordPaymentDeadLetter,
+  now: () => number = Date.now,
+) {
   return {
     async queue(batch: QueueBatch) {
       for (const message of batch.messages) {
         const parsed = PaymentQueueEventSchema.safeParse(message.body)
         if (!parsed.success) {
-          console.error("Төлбөрийн дарааллын мессежийн шалгалт амжилтгүй боллоо")
-          message.retry()
+          try {
+            await quarantineInvalidMessage({ body: message.body, now: now() })
+            console.error("Төлбөрийн дарааллын буруу мессежийг recovery бүртгэлд шилжүүллээ")
+            message.ack()
+          } catch (error) {
+            console.error("Төлбөрийн дарааллын буруу мессежийг recovery бүртгэлд шилжүүлж чадсангүй", {
+              error: error instanceof Error ? error.name : typeof error,
+            })
+            message.retry()
+          }
           continue
         }
 

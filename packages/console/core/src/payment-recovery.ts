@@ -17,12 +17,19 @@ type Transaction = <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise
 type Apply = (event: PaymentQueueEvent) => Promise<unknown>
 
 export async function recordPaymentDeadLetter(
-  input: { body: unknown; now?: number },
+  input: { body: unknown; now?: number; trustedMessageHash?: string },
   dependencies: { transaction?: Transaction } = {},
 ) {
   const now = timestamp(input.now ?? Date.now())
   const parsed = PaymentQueueEventSchema.safeParse(input.body)
-  const messageHash = await paymentRecoveryFingerprint(parsed.success ? parsed.data : input.body)
+  const calculatedHash = await paymentRecoveryFingerprint(parsed.success ? parsed.data : input.body)
+  const messageHash = input.trustedMessageHash ?? calculatedHash
+  if (!/^[a-f0-9]{64}$/.test(messageHash)) {
+    throw new TypeError("Төлбөрийн recovery message hash буруу байна")
+  }
+  if (parsed.success && messageHash !== calculatedHash) {
+    throw new Error("Төлбөрийн recovery event-ийн message hash зөрлөө")
+  }
   const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
 
   return transaction(async (db) => {

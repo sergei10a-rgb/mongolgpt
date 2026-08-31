@@ -21,6 +21,8 @@ import {
   D1_BACKUP_MULTIPART_ABORT_SECONDS,
   D1_BACKUP_RETENTION_SECONDS,
   D1_BACKUP_SCHEDULE,
+  PAYMENT_DEAD_LETTER_RETRIES,
+  PAYMENT_QUEUE_RETENTION_SECONDS,
   quotaServiceMigrations,
 } from "./console-policy"
 import { SECRET } from "./secret"
@@ -147,12 +149,36 @@ export const providerAttemptRetention = new sst.cloudflare.Cron("ProviderAttempt
   },
 })
 
-const paymentDeadLetterQueue = new sst.cloudflare.Queue("PaymentDeadLetterQueue")
+export const paymentRecoveryArchive = new sst.cloudflare.Bucket("PaymentRecoveryArchive")
+const paymentLastResortQueue = new sst.cloudflare.Queue("PaymentLastResortQueue", {
+  transform: {
+    queue: (args) => {
+      args.settings = { messageRetentionPeriod: PAYMENT_QUEUE_RETENTION_SECONDS }
+    },
+  },
+})
+const paymentDeadLetterQueue = new sst.cloudflare.Queue("PaymentDeadLetterQueue", {
+  dlq: {
+    queue: paymentLastResortQueue.nodes.queue.queueName,
+    retry: PAYMENT_DEAD_LETTER_RETRIES,
+    retryDelay: "5 minutes",
+  },
+  transform: {
+    queue: (args) => {
+      args.settings = { messageRetentionPeriod: PAYMENT_QUEUE_RETENTION_SECONDS }
+    },
+  },
+})
 export const paymentQueue = new sst.cloudflare.Queue("PaymentQueue", {
   dlq: {
     queue: paymentDeadLetterQueue.nodes.queue.queueName,
     retry: 8,
     retryDelay: "30 seconds",
+  },
+  transform: {
+    queue: (args) => {
+      args.settings = { messageRetentionPeriod: PAYMENT_QUEUE_RETENTION_SECONDS }
+    },
   },
 })
 
@@ -249,7 +275,7 @@ paymentQueue.subscribe(
 paymentDeadLetterQueue.subscribe(
   {
     handler: "packages/console/function/src/payment-dead-letter.ts",
-    link: [database],
+    link: [database, paymentRecoveryArchive],
   },
   {
     batch: {
@@ -263,7 +289,7 @@ export const paymentRecovery = new sst.cloudflare.Cron("PaymentRecovery", {
   schedules: ["*/5 * * * *"],
   worker: {
     handler: "packages/console/function/src/payment-recovery.ts",
-    link: [database, quotaService, SECRET.QuotaServiceToken],
+    link: [database, paymentRecoveryArchive, quotaService, SECRET.QuotaServiceToken],
     compatibility: {
       date: "2026-07-15",
     },

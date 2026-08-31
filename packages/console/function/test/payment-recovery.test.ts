@@ -1,7 +1,15 @@
 import { describe, expect, test } from "bun:test"
-import { runPaymentRecovery } from "../src/payment-recovery"
+import { runPaymentRecovery, runPaymentRecoveryArchive } from "../src/payment-recovery"
 
 describe("payment recovery scheduler", () => {
+  test("drains a bounded R2 archive batch before database recovery", async () => {
+    const result = await runPaymentRecoveryArchive(async (input) => {
+      expect(input).toEqual({ limit: 50 })
+      return { imported: 2, failed: 1, missing: 0, truncated: false }
+    })
+    expect(result).toEqual({ imported: 2, failed: 1, missing: 0, truncated: false })
+  })
+
   test("drains bounded batches and aggregates outcomes", async () => {
     let calls = 0
     const result = await runPaymentRecovery(123, async (input) => {
@@ -27,6 +35,13 @@ describe("payment recovery scheduler", () => {
       truncated: false,
     })).catch((error) => error)
     expect(invalidResult).toHaveProperty("message", expect.stringContaining("үр дүн буруу"))
+    const invalidArchive = await runPaymentRecoveryArchive(async () => ({
+      imported: 51,
+      failed: 0,
+      missing: 0,
+      truncated: false,
+    })).catch((error) => error)
+    expect(invalidArchive).toHaveProperty("message", expect.stringContaining("archive багцын үр дүн буруу"))
   })
 })
 

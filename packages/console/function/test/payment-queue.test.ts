@@ -36,21 +36,46 @@ function message(body: unknown) {
 }
 
 describe("payment queue consumer", () => {
-  test("acknowledges an applied event and retries invalid messages", async () => {
+  test("acknowledges an applied event and quarantines invalid messages", async () => {
     const errorLog = spyOn(console, "error").mockImplementation(() => {})
     const applied: unknown[] = []
+    const quarantined: unknown[] = []
     const valid = message(payment)
     const invalid = message({ version: 2, event: payment.event })
-    const consumer = createPaymentQueueConsumer(async (event) => {
-      applied.push(event)
-    })
+    const consumer = createPaymentQueueConsumer(
+      async (event) => {
+        applied.push(event)
+      },
+      async (input) => {
+        quarantined.push(input)
+      },
+      () => 123,
+    )
 
     await consumer.queue({ messages: [valid, invalid] })
 
     expect(applied).toEqual([payment])
+    expect(quarantined).toEqual([{ body: { version: 2, event: payment.event }, now: 123 }])
     expect(valid.result()).toEqual({ acknowledged: 1, retried: 0 })
-    expect(invalid.result()).toEqual({ acknowledged: 0, retried: 1 })
+    expect(invalid.result()).toEqual({ acknowledged: 1, retried: 0 })
     expect(errorLog).toHaveBeenCalledTimes(1)
+    errorLog.mockRestore()
+  })
+
+  test("retries invalid messages when recovery quarantine persistence fails", async () => {
+    const errorLog = spyOn(console, "error").mockImplementation(() => {})
+    const invalid = message({ version: 2, event: payment.event, secret: "must-not-log" })
+    const consumer = createPaymentQueueConsumer(
+      async () => undefined,
+      async () => {
+        throw new Error("recovery unavailable")
+      },
+    )
+
+    await consumer.queue({ messages: [invalid] })
+
+    expect(invalid.result()).toEqual({ acknowledged: 0, retried: 1 })
+    expect(JSON.stringify(errorLog.mock.calls)).not.toContain("must-not-log")
     errorLog.mockRestore()
   })
 

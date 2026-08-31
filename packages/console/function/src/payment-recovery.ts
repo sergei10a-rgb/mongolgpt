@@ -1,5 +1,7 @@
-import { processPaymentRecoveries } from "@mongolgpt/console-core/payment-recovery.js"
+import { processPaymentRecoveries, recordPaymentDeadLetter } from "@mongolgpt/console-core/payment-recovery.js"
+import { Resource } from "sst"
 import { createPaymentEntitlementApply } from "./payment-queue"
+import { drainPaymentRecoveryArchive, type PaymentRecoveryArchiveBucket } from "./payment-recovery-archive"
 
 const BATCH_SIZE = 50
 const MAX_BATCHES = 10
@@ -11,6 +13,36 @@ type ProcessBatch = (input: { now: number; limit?: number }) => Promise<{
   skipped: number
   truncated: boolean
 }>
+type DrainArchive = (input: { limit: number }) => Promise<{
+  imported: number
+  failed: number
+  missing: number
+  truncated: boolean
+}>
+
+// oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- generated SST types gain this binding after deploy
+const resources = Resource as unknown as {
+  PaymentRecoveryArchive: PaymentRecoveryArchiveBucket
+}
+
+const drainLinkedArchive: DrainArchive = (input) =>
+  drainPaymentRecoveryArchive({
+    ...input,
+    bucket: resources.PaymentRecoveryArchive,
+    record: recordPaymentDeadLetter,
+  })
+
+export async function runPaymentRecoveryArchive(drain: DrainArchive = drainLinkedArchive) {
+  const result = await drain({ limit: BATCH_SIZE })
+  const counts = [result.imported, result.failed, result.missing]
+  if (
+    counts.some((count) => !Number.isSafeInteger(count) || count < 0) ||
+    result.imported + result.failed + result.missing > BATCH_SIZE
+  ) {
+    throw new Error("Төлбөрийн recovery archive багцын үр дүн буруу байна")
+  }
+  return result
+}
 
 export async function runPaymentRecovery(
   now: number,
@@ -45,7 +77,18 @@ export async function runPaymentRecovery(
 
 export default {
   async scheduled(controller: { scheduledTime: number }) {
+    let archive:
+      | Awaited<ReturnType<typeof runPaymentRecoveryArchive>>
+      | { imported: 0; failed: 1; missing: 0; truncated: true }
+    try {
+      archive = await runPaymentRecoveryArchive()
+    } catch (error) {
+      archive = { imported: 0, failed: 1, missing: 0, truncated: true }
+      console.error("Төлбөрийн recovery R2 archive-ийг уншиж чадсангүй", {
+        error: error instanceof Error ? error.name : typeof error,
+      })
+    }
     const result = await runPaymentRecovery(controller.scheduledTime)
-    console.log("Төлбөрийн recovery боловсруулалт дууслаа", result)
+    console.log("Төлбөрийн recovery боловсруулалт дууслаа", { archive, database: result })
   },
 }

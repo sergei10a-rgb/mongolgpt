@@ -106,6 +106,16 @@ describe("payment dead-letter recovery", () => {
     const storedHash = rows[0]?.message_hash
     if (typeof storedHash !== "string") throw new Error("Төлбөрийн recovery hash хадгалагдсангүй")
     expect(await paymentRecoveryFingerprint(event)).toBe(storedHash)
+
+    const archivedInvalidHash = "b".repeat(64)
+    const archivedInvalid = await recordPaymentDeadLetter(
+      { body: undefined, now: now + 3, trustedMessageHash: archivedInvalidHash },
+      { transaction },
+    )
+    expect(archivedInvalid).toMatchObject({ status: "manual_review", validEvent: false, changed: true })
+    expect(
+      sqlite.query("select message_hash, event from payment_recovery where message_hash = ?").get(archivedInvalidHash),
+    ).toEqual({ message_hash: archivedInvalidHash, event: null })
   })
 
   test("backs off a failed apply and resolves the idempotent retry", async () => {
