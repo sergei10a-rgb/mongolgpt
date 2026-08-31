@@ -8,7 +8,8 @@ async function source(path: string) {
 describe("MongolGPT account access wiring", () => {
   test("revalidates web cookies and stores the OAuth auth version", async () => {
     const auth = await source("context/auth.ts")
-    const callback = await source("routes/auth/[...callback].ts")
+    const callback = await source("routes/auth/callback/index.ts")
+    const callbackTarget = await source("routes/auth/callback/[...target].ts")
     const callbackHandler = await source("routes/auth/callback-handler.ts")
     const status = await source("routes/auth/status.ts")
     const app = await source("routes/auth/app.ts")
@@ -24,6 +25,8 @@ describe("MongolGPT account access wiring", () => {
     expect(callbackHandler).toContain("subject.authVersion ?? 0")
     expect(callback).toContain('dict["gateway.api.error.internalServer"]')
     expect(callback).not.toContain("error instanceof Error ? error.message")
+    expect(callbackTarget).toContain('export { GET } from "./index"')
+    expect(await Bun.file(resolve(import.meta.dir, "../routes/auth/[...callback].ts")).exists()).toBe(false)
     expect(status).toContain("account_suspended")
     expect(app).toContain("await getActor()")
   })

@@ -145,7 +145,7 @@ describe("OAuth callback route", () => {
 
   test("awaits the callback so the route can localize asynchronous failures", async () => {
     const source = await Bun.file(
-      resolve(import.meta.dir, "[...callback].ts"),
+      resolve(import.meta.dir, "callback/index.ts"),
     ).text();
 
     expect(source).toContain("return await completeOAuthCallback({");

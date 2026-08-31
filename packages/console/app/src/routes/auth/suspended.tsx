@@ -13,8 +13,8 @@ export default function AccountSuspendedPage() {
         <Title>MongolGPT аккаунт түр түдгэлзсэн</Title>
         <h1 id="suspended-title">Аккаунт түр түдгэлзсэн байна</h1>
         <p>
-          Таны Web, Desktop, CLI болон API key ашиглах эрх түр хаагдсан. Асуудлыг шалгуулахын тулд MongolGPT-ийн
-          админтай холбогдоно уу.
+          Таны вэб, ширээний програм, CLI болон API түлхүүр ашиглах эрх түр хаагдсан. Асуудлыг шалгуулахын тулд
+          MongolGPT-ийн админтай холбогдоно уу.
         </p>
         <A class={styles.action} href="/auth/logout">
           Сессээс гарах

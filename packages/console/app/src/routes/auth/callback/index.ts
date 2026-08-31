@@ -1,12 +1,11 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { AuthClient } from "~/context/auth"
-import { useAuthSession } from "~/context/auth"
+import { AuthClient, useAuthSession } from "~/context/auth"
 import { i18n } from "~/i18n"
 import { localeFromRequest } from "~/lib/language"
 import { hostedConsoleUrl } from "~/lib/hosted-env"
-import { configuredConsoleRequestUrl } from "./helpers"
-import { useOAuthStateSession } from "./oauth-state"
-import { completeOAuthCallback } from "./callback-handler"
+import { completeOAuthCallback } from "../callback-handler"
+import { configuredConsoleRequestUrl } from "../helpers"
+import { useOAuthStateSession } from "../oauth-state"
 
 export async function GET(input: APIEvent) {
   const locale = localeFromRequest(input.request)
