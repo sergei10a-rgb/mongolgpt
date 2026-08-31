@@ -234,9 +234,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(configSource).toContain('await import("@pulumi/cloudflare")')
     expect(configSource).toContain('new cloudflare.Provider("default_6_14_0", {}, { version: "6.14.0" })')
     expect(configSource).toContain('await import("./infra/database.js")')
-    expect(configSource).toContain(
-      'cloudflareProviderBridge &&',
-    )
+    expect(configSource).toContain("cloudflareProviderBridge &&")
     expect(configSource).toContain(
       '(stage !== "dev" || !hostedServices || appOnly || adminOnly || cloudflareProviderMigration)',
     )
@@ -303,7 +301,12 @@ describe("Cloudflare hosted infrastructure contract", () => {
       throw new Error("Deploy workflow rollback contract is missing")
     }
     const dispatch = parsed.on.workflow_dispatch
-    if (!record(dispatch) || !record(dispatch.inputs) || !record(parsed.permissions) || !record(parsed.jobs.deploy.env)) {
+    if (
+      !record(dispatch) ||
+      !record(dispatch.inputs) ||
+      !record(parsed.permissions) ||
+      !record(parsed.jobs.deploy.env)
+    ) {
       throw new Error("Deploy workflow rollback inputs or permissions are missing")
     }
     const workflow = parseWorkflow(source)
@@ -320,9 +323,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
     expect(record(inputs.revision) ? inputs.revision.type : undefined).toBe("string")
     expect(record(inputs.rollback_confirmation) ? inputs.rollback_confirmation.type : undefined).toBe("string")
-    expect(record(inputs.schema_compatibility_confirmation) ? inputs.schema_compatibility_confirmation.type : undefined).toBe(
-      "string",
-    )
+    expect(
+      record(inputs.schema_compatibility_confirmation) ? inputs.schema_compatibility_confirmation.type : undefined,
+    ).toBe("string")
     expect(parsed.permissions).toEqual({ actions: "read", contents: "read" })
     expect(resolve?.env).toEqual({
       GH_TOKEN: "${{ github.token }}",
@@ -361,7 +364,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const browserSmoke = await Bun.file(new URL("../../app/e2e/deployed/browser-smoke.spec.ts", import.meta.url)).text()
     const steps = parseWorkflow(source).jobs.deploy.steps
     const auth = steps.findIndex((step) => step.name === "Validate authenticated smoke identity")
-    const freeAuto = steps.findIndex((step) => step.name === "Prepare managed Free Auto catalog without logging provider keys")
+    const freeAuto = steps.findIndex(
+      (step) => step.name === "Prepare managed Free Auto catalog without logging provider keys",
+    )
     const deploy = steps.findIndex((step) => step.name === "Validate and deploy to Cloudflare")
     const http = steps.findIndex((step) => step.name === "Verify deployed URLs")
     const browserSetup = steps.findIndex((step) => step.name === "Install Playwright system dependencies")
@@ -763,7 +768,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const confirmation = job.steps.find((step) => step.name === "Validate exact dev console confirmation")
     const artifact = job.steps.find((step) => step.name === "Verify public console and OAuth artifacts")
     const tokenPreflight = job.steps.find((step) => step.name === "Verify Cloudflare console token")
-    const freeAuto = job.steps.find((step) => step.name === "Prepare dev Free Auto catalog without logging provider keys")
+    const freeAuto = job.steps.find(
+      (step) => step.name === "Prepare dev Free Auto catalog without logging provider keys",
+    )
     const deploy = job.steps.find((step) => step.name === "Deploy only dev OAuth and public console to Cloudflare")
     const smoke = job.steps.find((step) => step.name === "Verify live dev OAuth and public console boundaries")
     if (!deploy?.run || !freeAuto?.env) throw new Error("Dev console deploy steps are missing")
@@ -828,9 +835,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(source).toContain("SST_SECRET_TurnstileSecretKey")
     expect(source).toContain("SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET")
     for (let index = 1; index <= 30; index++) {
-      expect(freeAuto?.env[`MONGOLGPT_GATEWAY_MODELS${index}`]).toBe(
-        `\${{ secrets.MONGOLGPT_GATEWAY_MODELS${index} }}`,
-      )
+      expect(freeAuto?.env[`MONGOLGPT_GATEWAY_MODELS${index}`]).toBe(`\${{ secrets.MONGOLGPT_GATEWAY_MODELS${index} }}`)
       expect(deploy?.env).not.toHaveProperty(`SST_SECRET_MONGOLGPT_GATEWAY_MODELS${index}`)
     }
     expect(source).not.toContain("--target WebApp")
@@ -853,7 +858,13 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const sstSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
     const secretSource = await Bun.file(new URL("../../../infra/secret.ts", import.meta.url)).text()
     const parsed: unknown = Bun.YAML.parse(source)
-    if (!record(parsed) || !record(parsed.on) || !record(parsed.jobs) || !record(parsed.jobs.deploy) || !record(parsed.env)) {
+    if (
+      !record(parsed) ||
+      !record(parsed.on) ||
+      !record(parsed.jobs) ||
+      !record(parsed.jobs.deploy) ||
+      !record(parsed.env)
+    ) {
       throw new Error("Dev admin-only workflow is invalid")
     }
     const job = parseWorkflowJob(parsed.jobs.deploy, "deploy")
@@ -861,7 +872,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     const contracts = job.steps.find((step) => step.name === "Verify admin app contracts")
     const configPreflight = job.steps.find((step) => step.name === "Verify isolated dev admin configuration")
     const tokenPreflight = job.steps.find((step) => step.name === "Verify Cloudflare deploy token")
+    const diff = job.steps.find((step) => step.name === "Verify admin-only SST diff")
     const deploy = job.steps.find((step) => step.name === "Deploy only dev admin to Cloudflare")
+    const access = job.steps.find((step) => step.name === "Verify deployed admin Access policy")
     const smoke = job.steps.find((step) => step.name === "Verify live dev admin Access boundary")
     const browser = job.steps.find((step) => step.name === "Verify dev admin Access UI in Chromium")
     const artifacts = job.steps.find((step) => step.name === "Upload admin browser artifacts")
@@ -874,6 +887,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
 
     expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
     expect(parsed.permissions).toEqual({ contents: "read" })
+    expect(parsed.concurrency).toEqual({ group: "cloudflare-deploy-dev", "cancel-in-progress": false })
     expect(parsed.jobs.deploy.environment).toBe("dev")
     expect(job.condition).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
     expect(parsed.env.MONGOLGPT_ENABLE_HOSTED_SERVICES).toBe("true")
@@ -897,6 +911,18 @@ describe("Cloudflare hosted infrastructure contract", () => {
     })
     expect(tokenPreflight?.env).toEqual({ CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" })
     expect(tokenPreflight?.run).toBe("bun run cloudflare:preflight")
+    expect(diff?.env).toEqual({
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+      CLOUDFLARE_ACCESS_API_TOKEN: "${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}",
+      MONGOLGPT_RUNTIME_AUTH_SECRET: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+      SST_SECRET_ByokCredentialsKeyV1: "${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}",
+      SST_SECRET_MONGOLGPT_PLAN_LIMITS: "${{ secrets.MONGOLGPT_PLAN_LIMITS }}",
+      SST_SECRET_MongolGPTRuntimeAuthSecret: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
+      SST_SECRET_MongolGPTAdminBootstrapEmails: "${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}",
+    })
+    expect(diff?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
+    expect(diff?.run).toContain("bun sst diff --stage=dev --target Admin --json")
+    expect(diff?.run).toContain('bun script/admin-deployment-diff.ts "$diff_file"')
     expect(deploy?.env).toEqual({
       CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
       CLOUDFLARE_ACCESS_API_TOKEN: "${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}",
@@ -910,12 +936,18 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
     expect(deploy?.run).toContain("Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай")
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --target Admin --print-logs")
+    expect(deploy?.run).not.toContain("sst unlock")
     expect(deploy?.run).not.toContain("--target Database")
     expect(deploy?.run).not.toContain("--target Console")
     expect(deploy?.run).not.toContain("--target AuthApi")
     expect(deploy?.run).not.toContain("MONGOLGPT_GATEWAY_MODELS")
     expect(deploy?.run).not.toContain("MONGOLGPT_SMOKE_AUTH_COOKIE")
     expect(deploy?.run).not.toContain("MONGOLGPT_MONITOR_ALERT_EMAIL")
+    expect(access?.env).toEqual({
+      CLOUDFLARE_ACCESS_API_TOKEN: "${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}",
+      SST_SECRET_MongolGPTAdminBootstrapEmails: "${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}",
+    })
+    expect(access?.run).toBe("bun script/cloudflare-access-admin-check.ts dev")
     expect(smoke?.run).toBe("bun script/deployment-smoke.ts --admin-only dev")
     expect(browser?.env).toEqual({
       CI: "true",
@@ -927,7 +959,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(browserConfig).toContain('testMatch: "admin-access-smoke.spec.ts"')
     expect(browserConfig).toContain('name: "chromium-admin-desktop"')
     expect(browserConfig).toContain('name: "chromium-admin-mobile"')
-    expect(browserSmoke).toContain('expect(`${snapshot.title}\\n${snapshot.text}`).toContain("MongolGPT")')
+    expect(browserSmoke).toContain('expect(`${snapshot.title}\\n${snapshot.text}`).toContain("MongolGPT админ")')
+    expect(browserSmoke).toContain("expect(decodeURIComponent(current.toString())).toContain(adminURL.hostname)")
     expect(browserSmoke).toContain("snapshot.scrollWidth")
     expect(browserSmoke).toContain("snapshot.clientWidth")
     expect(browserSmoke).toContain('testInfo.outputPath("admin-access.png")')

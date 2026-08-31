@@ -236,10 +236,6 @@ export function inspectAdminProtection(input: {
   location?: string | null
 }) {
   const request = new URL(normalizeHttpUrl(input.requestUrl, "admin request URL"))
-  if (input.status === 401 || input.status === 403) {
-    inspectResponseOrigin({ ...input, label: "admin" })
-    return
-  }
   if (input.status !== 302 || !input.location) {
     throw new Error(`admin endpoint is not protected: HTTP ${input.status}`)
   }

@@ -25,9 +25,9 @@ test("renders the protected MongolGPT admin boundary", async ({ page }, testInfo
     .not.toBe("")
 
   const current = new URL(page.url())
-  const accessHost = current.hostname === adminURL.hostname || current.hostname.endsWith(".cloudflareaccess.com")
-  expect(accessHost).toBe(true)
+  expect(current.hostname.endsWith(".cloudflareaccess.com")).toBe(true)
   expect(current.pathname).toContain("/cdn-cgi/access/")
+  expect(decodeURIComponent(current.toString())).toContain(adminURL.hostname)
 
   const snapshot = await page.evaluate(() => ({
     title: document.title,
@@ -37,7 +37,7 @@ test("renders the protected MongolGPT admin boundary", async ({ page }, testInfo
     clientWidth: document.documentElement.clientWidth,
   }))
   expect(snapshot.readyState).not.toBe("loading")
-  expect(`${snapshot.title}\n${snapshot.text}`).toContain("MongolGPT")
+  expect(`${snapshot.title}\n${snapshot.text}`).toContain("MongolGPT админ")
   expect(snapshot.text.length).toBeGreaterThan(20)
   expect(snapshot.scrollWidth).toBeLessThanOrEqual(snapshot.clientWidth)
 

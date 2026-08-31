@@ -1200,6 +1200,15 @@ describe("redirect origin contracts", () => {
         status: 200,
       }),
     ).toThrow("not protected")
+    for (const status of [401, 403]) {
+      expect(() =>
+        inspectAdminProtection({
+          requestUrl: "https://admin.dev.mgpt.mn",
+          responseUrl: "https://admin.dev.mgpt.mn",
+          status,
+        }),
+      ).toThrow("not protected")
+    }
   })
 })
 

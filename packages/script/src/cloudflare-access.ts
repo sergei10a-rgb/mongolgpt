@@ -134,6 +134,81 @@ export async function configureCloudflareAccessMfa(input: {
   }
 }
 
+export async function verifyCloudflareAdminAccess(input: {
+  accountId: string
+  token: string
+  hostname: string
+  stage: string
+  bootstrapEmails: string
+  fetcher?: Fetcher
+  timeoutMs?: number
+}) {
+  const accountId = input.accountId.trim()
+  const token = input.token.trim()
+  const hostname = normalizeHostname(input.hostname)
+  const stage = input.stage.trim()
+  const bootstrapEmails = parseBootstrapEmails(input.bootstrapEmails)
+  if (!accountId) throw new CloudflareAccessPreflightError("Cloudflare account ID дутуу байна.")
+  if (!token) throw new CloudflareAccessPreflightError("Cloudflare Access API token дутуу байна.")
+  if (!stage) throw new CloudflareAccessPreflightError("Admin Access орчны нэр дутуу байна.")
+
+  const fetcher = input.fetcher ?? fetch
+  const options = () => ({
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    signal: AbortSignal.timeout(input.timeoutMs ?? 10_000),
+  })
+  const organization = await requestCloudflare(
+    fetcher,
+    `${apiOrigin}/accounts/${encodeURIComponent(accountId)}/access/organizations`,
+    options(),
+    "Zero Trust organization-ийн MFA-г баталгаажуулах",
+  )
+  if (!record(organization.result) || !hasRequiredIndependentMfa(organization.result)) {
+    throw new CloudflareAccessPreflightError(
+      "Cloudflare Zero Trust organization Independent MFA шаардлага хангахгүй байна.",
+    )
+  }
+  const teamDomain = normalizeTeamDomain(String(organization.result.auth_domain))
+
+  const applications = await requestCloudflare(
+    fetcher,
+    `${apiOrigin}/accounts/${encodeURIComponent(accountId)}/access/apps?domain=${encodeURIComponent(hostname)}&per_page=10`,
+    options(),
+    "Admin Access application-ийг унших",
+  )
+  if (!Array.isArray(applications.result)) {
+    throw new CloudflareAccessPreflightError("Admin Access application жагсаалтын хариу танигдсан хэлбэртэй биш байна.")
+  }
+  const matches = applications.result.filter(
+    (value): value is Record<string, unknown> => record(value) && value.domain === hostname,
+  )
+  if (matches.length !== 1) {
+    throw new CloudflareAccessPreflightError("Admin hostname-д яг нэг Cloudflare Access application байх ёстой.")
+  }
+  const application = matches[0]
+  inspectAdminApplication(application, hostname, stage)
+
+  const applicationId = typeof application.id === "string" ? application.id.trim() : ""
+  if (!/^[0-9a-f-]{32,36}$/i.test(applicationId)) {
+    throw new CloudflareAccessPreflightError("Admin Access application ID хүчинтэй биш байна.")
+  }
+  const policies = await requestCloudflare(
+    fetcher,
+    `${apiOrigin}/accounts/${encodeURIComponent(accountId)}/access/apps/${encodeURIComponent(applicationId)}/policies?per_page=10`,
+    options(),
+    "Admin Access policy-г унших",
+  )
+  if (!Array.isArray(policies.result) || policies.result.length !== 1 || !record(policies.result[0])) {
+    throw new CloudflareAccessPreflightError("Admin Access application яг нэг allow policy-тэй байх ёстой.")
+  }
+  inspectAdminPolicy(policies.result[0], bootstrapEmails)
+
+  return { hostname, teamDomain, bootstrapEmailCount: bootstrapEmails.length }
+}
+
 export function mergeIndependentMfa(organization: Record<string, unknown>): Record<string, unknown> {
   const currentMfa = record(organization.mfa_config) ? organization.mfa_config : {}
   const allowed = Array.isArray(currentMfa.allowed_authenticators)
@@ -216,6 +291,101 @@ function hasRequiredIndependentMfa(organization: Record<string, unknown>) {
     typeof duration === "string" &&
     duration.trim().length > 0
   )
+}
+
+function inspectAdminApplication(application: Record<string, unknown>, hostname: string, stage: string) {
+  const landing = record(application.landing_page_design) ? application.landing_page_design : undefined
+  const checks = [
+    ["name", application.name === `MongolGPT Admin (${stage})`],
+    ["domain", application.domain === hostname],
+    ["type", application.type === "self_hosted"],
+    ["session_duration", application.session_duration === "4h"],
+    ["allow_authenticate_via_warp", application.allow_authenticate_via_warp === false],
+    ["allow_iframe", application.allow_iframe === false],
+    ["app_launcher_visible", application.app_launcher_visible === false],
+    ["enable_binding_cookie", application.enable_binding_cookie === true],
+    ["http_only_cookie_attribute", application.http_only_cookie_attribute === true],
+    ["options_preflight_bypass", application.options_preflight_bypass === false],
+    ["same_site_cookie_attribute", application.same_site_cookie_attribute === "strict"],
+    ["aud", typeof application.aud === "string" && Boolean(application.aud.trim())],
+    ["landing_page_design.title", landing?.title === "MongolGPT админ"],
+    [
+      "landing_page_design.message",
+      landing?.message === "Админ хэсэгт нэвтрэхийн тулд эрх бүхий аккаунтаа баталгаажуулна уу.",
+    ],
+    ["mfa_config", hasExactBrowserMfa(application.mfa_config)],
+  ] as const
+  const failed = checks.filter(([, valid]) => !valid).map(([name]) => name)
+  if (failed.length) {
+    throw new CloudflareAccessPreflightError(
+      `Admin Access application хамгаалалтын тохиргоо шаардлага хангахгүй байна: ${failed.join(", ")}.`,
+    )
+  }
+}
+
+function inspectAdminPolicy(policy: Record<string, unknown>, expectedEmails: string[]) {
+  const includes = Array.isArray(policy.include)
+    ? policy.include
+    : Array.isArray(policy.includes)
+      ? policy.includes
+      : []
+  const emails = includes.flatMap((value) => {
+    if (!record(value) || !record(value.email) || typeof value.email.email !== "string") return []
+    return [value.email.email.trim().toLowerCase()]
+  })
+  const excluded = Array.isArray(policy.exclude) ? policy.exclude : []
+  const required = Array.isArray(policy.require) ? policy.require : []
+  if (
+    policy.name !== "MongolGPT администраторууд" ||
+    policy.decision !== "allow" ||
+    policy.precedence !== 1 ||
+    excluded.length ||
+    required.length ||
+    emails.length !== includes.length ||
+    !sameStrings(emails, expectedEmails) ||
+    !hasExactBrowserMfa(policy.mfa_config)
+  ) {
+    throw new CloudflareAccessPreflightError(
+      "Admin Access allow policy зөвшөөрөгдсөн имэйл ба MFA шаардлагатай таарахгүй байна.",
+    )
+  }
+}
+
+function hasExactBrowserMfa(value: unknown) {
+  if (!record(value) || value.mfa_disabled !== false || value.session_duration !== "1h") return false
+  const allowed = Array.isArray(value.allowed_authenticators)
+    ? value.allowed_authenticators.filter((item): item is string => typeof item === "string")
+    : []
+  return sameStrings(allowed, [...cloudflareAccessMfaAuthenticators])
+}
+
+function parseBootstrapEmails(value: string) {
+  const emails = [
+    ...new Set(
+      value
+        .split(/[\s,;]+/)
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ]
+  if (!emails.length || emails.some((email) => email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    throw new CloudflareAccessPreflightError("Admin bootstrap имэйлүүд дутуу эсвэл буруу байна.")
+  }
+  return emails
+}
+
+function sameStrings(left: string[], right: string[]) {
+  if (left.length !== right.length) return false
+  const sortedRight = [...right].sort()
+  return [...left].sort().every((value, index) => value === sortedRight[index])
+}
+
+function normalizeHostname(value: string) {
+  const hostname = value.trim().toLowerCase()
+  if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(hostname)) {
+    throw new CloudflareAccessPreflightError("Admin Access hostname хүчинтэй биш байна.")
+  }
+  return hostname
 }
 
 function normalizeTeamDomain(value: string) {

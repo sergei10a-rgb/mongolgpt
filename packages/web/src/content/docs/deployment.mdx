@@ -106,27 +106,27 @@ Cloudflare-ийн **Миний бүртгэл (`My Profile`) → API токен 
 `dev` орчны OAuth bootstrap-д GitHub эсвэл Google-ийн дор хаяж нэг provider хангалттай; GitHub ашиглах бол client ID,
 client secret хоёрыг заавал хамт өгнө. Production launch-д GitHub болон Google хоёул бүрэн тохирсон байна.
 
-| Төрөл     | Нэр                                                      | Утга                                                                                                  |
-| --------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Хувьсагч  | `MONGOLGPT_AUTH_EMAIL_DOMAINS`                           | Хөгжүүлэлтийн орчинд зөвшөөрөх яг тохирох имэйл эсвэл домэйн; таслалаар тусгаарлана                   |
-| Хувьсагч  | `MONGOLGPT_GITHUB_OAUTH_CLIENT_ID`                       | Тухайн орчны GitHub OAuth аппын клиент ID                                                             |
-| Хувьсагч  | `GOOGLE_CLIENT_ID`                                       | Тухайн орчны Google Web OAuth клиент ID                                                               |
-| Хувьсагч  | `MONGOLGPT_TURNSTILE_SITE_KEY`                           | Тухайн орчны Cloudflare Turnstile widget-ийн нийтэд нээлттэй site key                                 |
-| Хувьсагч  | `MONGOLGPT_PAYMENT_PLAN_CATALOG`                         | Basic/Pro/Max багцын MNT үнэ, Монгол нэр бүхий JSON                                                   |
-| Хувьсагч  | `NVIDIA_NIM_MODEL_ID`                                    | NVIDIA NIM нөөц загварын ID; оруулаагүй бол баталгаажсан өгөгдмөл загварыг ашиглана                   |
-| Нууц утга | `MONGOLGPT_GITHUB_OAUTH_CLIENT_SECRET`                   | GitHub OAuth аппын нууц түлхүүр                                                                       |
-| Нууц утга | `TURNSTILE_SECRET_KEY`                                   | Тухайн Turnstile widget-ийн сервер талд ашиглах нууц түлхүүр                                          |
-| Нууц утга | `BYOK_CREDENTIALS_KEY_V1`                                | 32+ тэмдэгт тогтвортой CSPRNG түлхүүр; шинэчлэх хүртэл солихгүй                                       |
-| Нууц утга | `D1_BACKUP_API_TOKEN`                                    | Үйлдвэрлэлийн орчинд заавал; зөвхөн тухайн аккаунтын D1 засах эрхтэй нөөцлөлт, экспортын токен        |
-| Нууц утга | `MONGOLGPT_RUNTIME_SECRET`                               | 32+ тэмдэгт Cloudflare Sandbox-ийн аккаунт тусгаарлах нууц утга                                       |
-| Нууц утга | `MONGOLGPT_RUNTIME_AUTH_SECRET`                          | 32+ тэмдэгт ажиллах орчны эрхийн баримтад гарын үсэг зурж шалгах нууц утга                            |
-| Нууц утга | `MONGOLGPT_PLAN_LIMITS`                                  | Free/Basic/Pro/Max багц, токен, өртөг болон хүсэлтийн давтамжийн хязгаарын JSON                       |
-| Нууц утга | `MONGOLGPT_GATEWAY_SESSION_SECRET`                       | 32+ тэмдэгт тусдаа CSPRNG сессийн нууц утга                                                           |
-| Нууц утга | `MONGOLGPT_MONITOR_ALERT_EMAIL`                          | Cloudflare Email Routing-д баталгаажсан, production доголдлын мэдэгдэл хүлээн авах операторын имэйл   |
-| Нууц утга | `MONGOLGPT_SMOKE_AUTH_COOKIE`                            | Тусгай Free хэрэглэгчийн `__Host-mongolgpt-auth=<утга>` OAuth сесс; зөвхөн deploy smoke-д ашиглана    |
-| Нууц утга | `OPENROUTER_API_KEY`                                     | Dev Free Auto-ийн OpenRouter free router-д ашиглах сервер талын түлхүүр                               |
-| Нууц утга | `NVIDIA_NIM_API_KEY`                                     | OpenRouter боломжгүй үед ашиглах NVIDIA NIM нөөц үйлчилгээний сервер талын түлхүүр                    |
-| Нууц утга | `MONGOLGPT_GATEWAY_MODELS1`…`MONGOLGPT_GATEWAY_MODELS30` | Зөвхөн өмнөх multipart catalog-ийг шилжилтийн хугацаанд унших нийцтэй нууц утгууд                     |
+| Төрөл     | Нэр                                                      | Утга                                                                                                |
+| --------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Хувьсагч  | `MONGOLGPT_AUTH_EMAIL_DOMAINS`                           | Хөгжүүлэлтийн орчинд зөвшөөрөх яг тохирох имэйл эсвэл домэйн; таслалаар тусгаарлана                 |
+| Хувьсагч  | `MONGOLGPT_GITHUB_OAUTH_CLIENT_ID`                       | Тухайн орчны GitHub OAuth аппын клиент ID                                                           |
+| Хувьсагч  | `GOOGLE_CLIENT_ID`                                       | Тухайн орчны Google Web OAuth клиент ID                                                             |
+| Хувьсагч  | `MONGOLGPT_TURNSTILE_SITE_KEY`                           | Тухайн орчны Cloudflare Turnstile widget-ийн нийтэд нээлттэй site key                               |
+| Хувьсагч  | `MONGOLGPT_PAYMENT_PLAN_CATALOG`                         | Basic/Pro/Max багцын MNT үнэ, Монгол нэр бүхий JSON                                                 |
+| Хувьсагч  | `NVIDIA_NIM_MODEL_ID`                                    | NVIDIA NIM нөөц загварын ID; оруулаагүй бол баталгаажсан өгөгдмөл загварыг ашиглана                 |
+| Нууц утга | `MONGOLGPT_GITHUB_OAUTH_CLIENT_SECRET`                   | GitHub OAuth аппын нууц түлхүүр                                                                     |
+| Нууц утга | `TURNSTILE_SECRET_KEY`                                   | Тухайн Turnstile widget-ийн сервер талд ашиглах нууц түлхүүр                                        |
+| Нууц утга | `BYOK_CREDENTIALS_KEY_V1`                                | 32+ тэмдэгт тогтвортой CSPRNG түлхүүр; шинэчлэх хүртэл солихгүй                                     |
+| Нууц утга | `D1_BACKUP_API_TOKEN`                                    | Үйлдвэрлэлийн орчинд заавал; зөвхөн тухайн аккаунтын D1 засах эрхтэй нөөцлөлт, экспортын токен      |
+| Нууц утга | `MONGOLGPT_RUNTIME_SECRET`                               | 32+ тэмдэгт Cloudflare Sandbox-ийн аккаунт тусгаарлах нууц утга                                     |
+| Нууц утга | `MONGOLGPT_RUNTIME_AUTH_SECRET`                          | 32+ тэмдэгт ажиллах орчны эрхийн баримтад гарын үсэг зурж шалгах нууц утга                          |
+| Нууц утга | `MONGOLGPT_PLAN_LIMITS`                                  | Free/Basic/Pro/Max багц, токен, өртөг болон хүсэлтийн давтамжийн хязгаарын JSON                     |
+| Нууц утга | `MONGOLGPT_GATEWAY_SESSION_SECRET`                       | 32+ тэмдэгт тусдаа CSPRNG сессийн нууц утга                                                         |
+| Нууц утга | `MONGOLGPT_MONITOR_ALERT_EMAIL`                          | Cloudflare Email Routing-д баталгаажсан, production доголдлын мэдэгдэл хүлээн авах операторын имэйл |
+| Нууц утга | `MONGOLGPT_SMOKE_AUTH_COOKIE`                            | Тусгай Free хэрэглэгчийн `__Host-mongolgpt-auth=<утга>` OAuth сесс; зөвхөн deploy smoke-д ашиглана  |
+| Нууц утга | `OPENROUTER_API_KEY`                                     | Dev Free Auto-ийн OpenRouter free router-д ашиглах сервер талын түлхүүр                             |
+| Нууц утга | `NVIDIA_NIM_API_KEY`                                     | OpenRouter боломжгүй үед ашиглах NVIDIA NIM нөөц үйлчилгээний сервер талын түлхүүр                  |
+| Нууц утга | `MONGOLGPT_GATEWAY_MODELS1`…`MONGOLGPT_GATEWAY_MODELS30` | Зөвхөн өмнөх multipart catalog-ийг шилжилтийн хугацаанд унших нийцтэй нууц утгууд                   |
 
 Үндсэн full deploy нь `OPENROUTER_API_KEY` болон `NVIDIA_NIM_API_KEY` хоёроос схемээр баталгаажсан Free Auto catalog-ийг автоматаар үүсгээд gateway-ийн multipart нууц утгууд руу дамжуулна. Хоёр provider key хоёулаа дутуу, мөн шилжилтийн хуучин catalog байхгүй бол Cloudflare-ийн нөөц өөрчлөхөөс өмнө хаалттай зогсоно; зөвхөн нэг key оруулсан тохиргоог мөн зөвшөөрөхгүй. OAuth bootstrap нь model catalog байршуулдаггүй учраас provider key шаардахгүй.
 
@@ -303,6 +303,14 @@ Cloudflare Zero Trust-ийг тухайн аккаунт дээр нэг уда�
 `MONGOLGPT_ADMIN_ACCESS_TEAM_DOMAIN`, `MONGOLGPT_ADMIN_ACCESS_AUDIENCE`, `MONGOLGPT_ADMIN_MFA_ENFORCED` гэсэн гар тохиргоо ашиглахгүй. `everyone` болон `bypass` утгатай бодлого үүсгэхгүй.
 
 Ажлын урсгал нууц утга шаарддаггүй баталгаажуулах ажлыг эхэлж ажиллуулаад, зөвхөн `main` хувилбар болон сонгосон GitHub орчинд байршуулалтын ажлыг нээнэ. Access токеныг зөвхөн админ идэвхтэй байршуулалтад, худалдааны байгууллагын нэвтрэх мэдээллийг зөвхөн төлбөр идэвхтэй байршуулалтын SST нууц утгын шинэчлэлд ашиглана. Байршуулах алхам эдгээр утгыг командын аргументад гаргалгүй, стандарт оролтоор тухайн SST орчны шифрлэгдсэн нууц утгын санд шинэчилсний дараа байршуулна. GitHub орчны байршуулалтын салбарын дүрмийг `main`-ээр хязгаарлана. Иймээс нууц утгыг репозиторийн файл, командын түүх эсвэл SST-ийн орлуулах утгад бичихгүй. `deploy:preflight` нь OAuth, сесс, багц ба хэрэглээний хязгаар, Free Auto JSON, QPay/Bonum каталог ба нэвтрэх мэдээлэл, Access-ийн байгууллага, нэвтрэх арга, аппын жагсаалтыг Cloudflare-ийн нөөц үүсгэхээс өмнө шалгана. Энэ нь өөрчлөлт хийдэггүй унших шалгалт тул токены засах эрхийг дангаар нотлохгүй. Байгууллагын MFA-г PUT хүсэлтээр шинэчлэх болон Access апп үүсгэх алхам нь байршуулалтын үед засах эрхийг бодитоор шалгаж, эрх дутуу бол ажиллагааг зогсооно.
+
+### Хөгжүүлэлтийн админ хэсгийг тусад нь байрлуулах
+
+GitHub Actions-ийн **Deploy dev admin** ажлын урсгал нь зөвхөн `main`, `dev` орчин болон `DEPLOY DEV ADMIN dev.mgpt.mn` гэсэн яг тохирох баталгаажуулалтыг хүлээн авна. Одоо байгаа D1 сан SST state-д бүртгэлтэй биш бол шинэ сан үүсгэхгүйгээр зогсоно. Байршуулахын өмнө `sst diff --json --target Admin` үр дүнг шалгаж, зөвхөн Admin сайт, Cloudflare Access апп, бодлого, MFA команд, bootstrap имэйлийн нууц утга болон тэдгээрийн stack output өөрчлөгдөхийг зөвшөөрнө. Database, Auth, Payment, Quota, Queue, KV, bucket эсвэл ерөнхий Cloudflare provider өөрчлөгдвөл deploy эхлэхгүй.
+
+Ажлын урсгал SST lock-ийг автоматаар тайлахгүй. Ижил `dev` орчны үндсэн deploy-той нэг concurrency дараалал ашиглаж, төлөв өөрчилж байгаа өөр ажил дуусахыг хүлээнэ. Deploy-ийн дараа Cloudflare API-аас яг нэг `admin.dev.mgpt.mn` Access апп, зөвхөн bootstrap имэйлүүдтэй ганц allow policy, апп ба бодлогын Independent MFA, HttpOnly болон SameSite Strict cookie-г дахин уншиж батална. Дараа нь HTTP redirect болон desktop/mobile Chromium дээрх **MongolGPT админ** Access дэлгэц, overflow, console, page error, network failure-ийг шалгана.
+
+Post-deploy шалгалт амжилтгүй болбол нөөцийг автоматаар устгахгүй, дахин `unlock` хийхгүй. Админ апп өөрөө зөв Access JWT, audience болон bootstrap имэйлгүй хүсэлтийг хаалттай төлөвөөр татгалзана. Өмнөх баталгаажсан хувилбар байгаа бол доорх ерөнхий rollback журмаар буцаана. Анхны deploy бол алдааны нотолгоог хадгалаад урагш засах өөрчлөлт хийнэ; `Admin` target-ийг устгах шаардлагатай бол бүтээгдэхүүний эзэмшигчийн зөвшөөрөл, Access policy-н дараах шалгалттайгаар тусад нь гүйцэтгэнэ. Байгууллагын Independent MFA-г cleanup нэрээр сулруулахгүй.
 
 NVIDIA API Catalog-ийн туршилтын төгсгөлийн цэг зөвхөн туршилт, үнэлгээнд зориулагдсан. Үйлдвэрлэлийн `MONGOLGPT_GATEWAY_MODELS` тохиргоонд `integrate.api.nvidia.com` ашиглах бол үйлдвэрлэлийн зориулалтын захиалга, лицензээ тусад нь баталгаажуулсны дараа тухайн үйлчилгээ үзүүлэгч дээр `productionUseApproved: true` гэж санаатай тэмдэглэнэ. Энэ баталгаа байхгүй үйлдвэрлэлийн байршуулалтыг урьдчилсан шалгалт зогсооно.
 
