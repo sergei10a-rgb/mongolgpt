@@ -7,7 +7,9 @@ test("renders the protected MongolGPT admin boundary", async ({ page }, testInfo
   const failedAdminRequests: string[] = []
 
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text())
+    if (message.type() !== "error") return
+    const text = message.text()
+    if (!isCloudflareAccessDataImageCspNoise(page.url(), text)) consoleErrors.push(text)
   })
   page.on("pageerror", (error) => pageErrors.push(error.message))
   page.on("requestfailed", (request) => {
@@ -46,3 +48,19 @@ test("renders the protected MongolGPT admin boundary", async ({ page }, testInfo
   expect(pageErrors).toEqual([])
   expect(failedAdminRequests).toEqual([])
 })
+
+function isCloudflareAccessDataImageCspNoise(pageURL: string, message: string) {
+  let hostname: string
+  try {
+    hostname = new URL(pageURL).hostname
+  } catch {
+    return false
+  }
+  return (
+    hostname.endsWith(".cloudflareaccess.com") &&
+    message.startsWith("Loading the image 'data:image/svg+xml") &&
+    message.includes("violates the following Content Security Policy directive") &&
+    message.includes(`"default-src https: 'unsafe-inline'"`) &&
+    message.includes("'img-src' was not explicitly set")
+  )
+}
