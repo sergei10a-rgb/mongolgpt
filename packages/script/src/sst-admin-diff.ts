@@ -23,6 +23,21 @@ const exactResources = new Map<string, RegExp>([
 
 const allowedOperations = new Set(["create", "update"])
 const createOnlyResources = new Set(["AdminAccessApplication", "AdminAccessConfig", "AdminAccessProvider"])
+const createOnlyLinkRefs = new Set([
+  "AdminAccessConfigLinkRef",
+  "AdminPaymentCancellationTokenLinkRef",
+  "AdminPaymentRefundTokenLinkRef",
+  "AuthApiLinkRef",
+  "D1BackupsLinkRef",
+  "DatabaseLinkRef",
+  "MONGOLGPT_PLAN_LIMITSLinkRef",
+  "MongolGPTAdminBootstrapEmailsLinkRef",
+  "PaymentServiceLinkRef",
+  "QuotaServiceLinkRef",
+  "QuotaServiceTokenLinkRef",
+  "ServiceMonitorStateLinkRef",
+  "UsageQueueReadinessLinkRef",
+])
 const maximumChanges = 2_000
 
 export class AdminDeploymentDiffError extends Error {
@@ -73,8 +88,11 @@ export function inspectAdminDeploymentDiff(value: unknown): AdminDeploymentDiffS
 
 function isAllowedAdminChange(urnType: string, name: string, type: string, op: string, detailedDiff: unknown) {
   if (type === "pulumi:pulumi:Stack") {
-    return op === "update" && isAdminStackOutputDiff(detailedDiff)
+    if (name !== "mongolgpt-admin-dev") return false
+    return op === "create" || (op === "update" && isAdminStackOutputDiff(detailedDiff))
   }
+
+  if (type === "sst:sst:LinkRef") return op === "create" && createOnlyLinkRefs.has(name)
 
   const exact = exactResources.get(name)
   if (exact) return exact.test(type) && (!createOnlyResources.has(name) || op === "create")

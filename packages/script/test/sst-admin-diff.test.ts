@@ -29,21 +29,45 @@ describe("admin-only SST diff boundary", () => {
         change("sst:sst:Linkable", "AdminPaymentRefundToken", "create"),
         change("sst:sst:Secret", "MONGOLGPT_PLAN_LIMITS", "create"),
         change("pulumi:providers:cloudflare", "default_6_15_0", "create"),
+        change("sst:sst:LinkRef", "AdminAccessConfigLinkRef", "create"),
+        change("sst:sst:LinkRef", "AdminPaymentCancellationTokenLinkRef", "create"),
+        change("sst:sst:LinkRef", "AdminPaymentRefundTokenLinkRef", "create"),
+        change("sst:sst:LinkRef", "AuthApiLinkRef", "create"),
+        change("sst:sst:LinkRef", "D1BackupsLinkRef", "create"),
+        change("sst:sst:LinkRef", "DatabaseLinkRef", "create"),
+        change("sst:sst:LinkRef", "MONGOLGPT_PLAN_LIMITSLinkRef", "create"),
+        change("sst:sst:LinkRef", "MongolGPTAdminBootstrapEmailsLinkRef", "create"),
+        change("sst:sst:LinkRef", "PaymentServiceLinkRef", "create"),
+        change("sst:sst:LinkRef", "QuotaServiceLinkRef", "create"),
+        change("sst:sst:LinkRef", "QuotaServiceTokenLinkRef", "create"),
+        change("sst:sst:LinkRef", "ServiceMonitorStateLinkRef", "create"),
+        change("sst:sst:LinkRef", "UsageQueueReadinessLinkRef", "create"),
         change(
           "sst:cloudflare:SolidStart$sst:cloudflare:Worker$cloudflare:index/workerScript:WorkerScript",
           "AdminServerCode",
           "update",
           "cloudflare:index/workerScript:WorkerScript",
         ),
+        change("pulumi:pulumi:Stack", "mongolgpt-admin-dev", "create"),
+      ]),
+    ).toEqual({ changes: 33, operations: { create: 31, update: 2 } })
+  })
+
+  test("accepts only bounded outputs on the existing isolated admin stack", () => {
+    expect(
+      inspectAdminDeploymentDiff([
         {
-          ...change("pulumi:pulumi:Stack", "mongolgpt-dev", "update"),
+          ...change("pulumi:pulumi:Stack", "mongolgpt-admin-dev", "update"),
           detailedDiff: {
             "outputs.AdminUrl": { kind: "update" },
             "outputs.HostedServices": { kind: "update" },
           },
         },
       ]),
-    ).toEqual({ changes: 20, operations: { create: 17, update: 3 } })
+    ).toEqual({ changes: 1, operations: { update: 1 } })
+    expect(() => inspectAdminDeploymentDiff([change("pulumi:pulumi:Stack", "mongolgpt-dev", "create")])).toThrow(
+      "mongolgpt-dev",
+    )
   })
 
   test.each([
@@ -94,6 +118,12 @@ describe("admin-only SST diff boundary", () => {
     ).toThrow("AdminAccessApplication")
     expect(() => inspectAdminDeploymentDiff([change("sst:sst:Linkable", "AdminAccessConfig", "update")])).toThrow(
       "AdminAccessConfig",
+    )
+    expect(() => inspectAdminDeploymentDiff([change("sst:sst:LinkRef", "AuthApiLinkRef", "update")])).toThrow(
+      "AuthApiLinkRef",
+    )
+    expect(() => inspectAdminDeploymentDiff([change("sst:sst:LinkRef", "UnknownLinkRef", "create")])).toThrow(
+      "UnknownLinkRef",
     )
   })
 
