@@ -1,4 +1,6 @@
 const MAX_STATE_BYTES = 32 * 1024 * 1024
+const PULUMI_SPECIAL_SIGNATURE = "4dabf18193072939515e22adb298388d"
+const PULUMI_SECRET_SIGNATURE = ["1b470612", "64138c4a", "c30d75fd", "1eb44270"].join("")
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const KV_NAMESPACE_ID = /^(?:[0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/i
 const R2_BUCKET_NAME = /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/
@@ -333,11 +335,25 @@ function readSafeScalar(value: unknown, expected: ExtractedResource<string>) {
 }
 
 function readSecretValue(value: unknown, expected: ExtractedResource<string>) {
-  const text = readSafeScalar(value, expected)
+  const text = readSafeScalar(unwrapPulumiSecret(value, expected), expected)
   if (text.length < 32) {
     throw new SstAdminExternalStateError(`SST state дотор ${expected.name} secret output хэт богино байна.`)
   }
   return text
+}
+
+function unwrapPulumiSecret(value: unknown, expected: ExtractedResource<string>) {
+  if (!record(value)) return value
+  const keys = Object.keys(value).sort()
+  if (
+    keys.length !== 2 ||
+    keys[0] !== PULUMI_SPECIAL_SIGNATURE ||
+    keys[1] !== "value" ||
+    value[PULUMI_SPECIAL_SIGNATURE] !== PULUMI_SECRET_SIGNATURE
+  ) {
+    throw new SstAdminExternalStateError(`SST state дотор ${expected.name} secret envelope буруу байна.`)
+  }
+  return value.value
 }
 
 function validateEnvValue(name: string, value: string) {

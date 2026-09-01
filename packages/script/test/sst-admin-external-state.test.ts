@@ -19,6 +19,10 @@ const paymentServiceUrl = "https://pay.dev.mgpt.mn"
 const quotaServiceToken = "quota-token-synth-01+alpha+beta+gamma+delta"
 const paymentCancellationToken = "payment-cancel-token-synth-02+alpha+beta+gamma"
 const paymentRefundToken = "payment-refund-token-synth-03+alpha+beta+gamma"
+const pulumiSecret = (value: string) => ({
+  "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+  value,
+})
 
 describe("SST admin external state resolver", () => {
   test("extracts the exact external admin references from checkpoint.latest.resources", () => {
@@ -141,9 +145,9 @@ describe("SST admin external state resolver", () => {
             providerResource("cloudflare:index/workersCustomDomain:WorkersCustomDomain", "PaymentServiceDomain", {
               hostname: "pay.dev.mgpt.mn",
             }),
-            passwordResource("QuotaServiceToken", { result: quotaServiceToken }),
-            passwordResource("AdminPaymentCancellationToken", { result: paymentCancellationToken }),
-            passwordResource("AdminPaymentRefundToken", { result: paymentRefundToken }),
+            passwordResource("QuotaServiceToken", { result: pulumiSecret(quotaServiceToken) }),
+            passwordResource("AdminPaymentCancellationToken", { result: pulumiSecret(paymentCancellationToken) }),
+            passwordResource("AdminPaymentRefundToken", { result: pulumiSecret(paymentRefundToken) }),
           ],
         },
       }),
@@ -336,6 +340,32 @@ describe("SST admin external state resolver", () => {
         },
       }),
     ).toThrow("secret output хэт богино")
+
+    expect(() =>
+      extractSstAdminExternalState({
+        checkpoint: {
+          latest: {
+            resources: [
+              resource("sst:cloudflare:D1", "Database", { databaseId }),
+              resource("sst:cloudflare:Bucket", "D1Backups", { name: d1BackupsBucket }),
+              resource("sst:cloudflare:Kv", "UsageQueueReadiness", { namespaceId: usageQueueReadinessNamespaceId }),
+              resource("sst:cloudflare:Kv", "ServiceMonitorState", { namespaceId: serviceMonitorStateNamespaceId }),
+              resource("sst:cloudflare:Worker", "AuthApi", { url: authApiUrl }),
+              resource("sst:cloudflare:Worker", "QuotaService", { url: quotaServiceUrl }),
+              resource("sst:cloudflare:Worker", "PaymentService", { url: paymentServiceUrl }),
+              passwordResource("QuotaServiceToken", {
+                result: {
+                  "4dabf18193072939515e22adb298388d": "wrong-signature",
+                  value: quotaServiceToken,
+                },
+              }),
+              passwordResource("AdminPaymentCancellationToken", { result: paymentCancellationToken }),
+              passwordResource("AdminPaymentRefundToken", { result: paymentRefundToken }),
+            ],
+          },
+        },
+      }),
+    ).toThrow("secret envelope буруу")
   })
 
   test("CLI prints the vetted env lines from a CheckpointV3 state file", async () => {
