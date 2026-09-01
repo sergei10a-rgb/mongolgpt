@@ -1401,6 +1401,8 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(adminSource).toContain("additionalSecretOutputs")
     expect(adminSource).toContain("dependsOn: [accessOrganizationMfa]")
     expect(adminSource).toContain('type: "self_hosted"')
+    expect(adminSource).toContain('name: `MongolGPT админ (${$app.stage})`')
+    expect(adminSource).not.toContain("landingPageDesign")
     expect(adminSource).toContain('decision: "allow"')
     expect(adminSource).toContain("parseBootstrapEmails(value).map")
     expect(adminSource).toContain('allowedAuthenticators: ["totp", "biometrics", "security_key"]')

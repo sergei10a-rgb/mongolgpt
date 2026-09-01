@@ -388,7 +388,7 @@ function adminApplication() {
   return {
     id: "11111111-2222-4333-8444-555555555555",
     aud: "admin-audience",
-    name: "MongolGPT Admin (dev)",
+    name: "MongolGPT админ (dev)",
     domain: "admin.dev.mgpt.mn",
     type: "self_hosted",
     session_duration: "4h",
@@ -399,10 +399,6 @@ function adminApplication() {
     http_only_cookie_attribute: true,
     options_preflight_bypass: false,
     same_site_cookie_attribute: "strict",
-    landing_page_design: {
-      title: "MongolGPT админ",
-      message: "Админ хэсэгт нэвтрэхийн тулд эрх бүхий аккаунтаа баталгаажуулна уу.",
-    },
     mfa_config: browserMfa(),
   }
 }

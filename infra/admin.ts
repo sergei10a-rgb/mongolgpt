@@ -67,12 +67,8 @@ const accessApplication = new cloudflare.ZeroTrustAccessApplication(
     domain: hostname,
     enableBindingCookie: true,
     httpOnlyCookieAttribute: true,
-    landingPageDesign: {
-      message: "Админ хэсэгт нэвтрэхийн тулд эрх бүхий аккаунтаа баталгаажуулна уу.",
-      title: "MongolGPT админ",
-    },
     mfaConfig,
-    name: `MongolGPT Admin (${$app.stage})`,
+    name: `MongolGPT админ (${$app.stage})`,
     optionsPreflightBypass: false,
     policies: bootstrapEmails.value.apply((value) => [
       {

@@ -299,9 +299,8 @@ function hasRequiredIndependentMfa(organization: Record<string, unknown>) {
 }
 
 function inspectAdminApplication(application: Record<string, unknown>, hostname: string, stage: string) {
-  const landing = record(application.landing_page_design) ? application.landing_page_design : undefined
   const checks = [
-    ["name", application.name === `MongolGPT Admin (${stage})`],
+    ["name", application.name === `MongolGPT админ (${stage})`],
     ["domain", application.domain === hostname],
     ["type", application.type === "self_hosted"],
     ["session_duration", application.session_duration === "4h"],
@@ -313,11 +312,6 @@ function inspectAdminApplication(application: Record<string, unknown>, hostname:
     ["options_preflight_bypass", application.options_preflight_bypass === false],
     ["same_site_cookie_attribute", application.same_site_cookie_attribute === "strict"],
     ["aud", typeof application.aud === "string" && Boolean(application.aud.trim())],
-    ["landing_page_design.title", landing?.title === "MongolGPT админ"],
-    [
-      "landing_page_design.message",
-      landing?.message === "Админ хэсэгт нэвтрэхийн тулд эрх бүхий аккаунтаа баталгаажуулна уу.",
-    ],
     ["mfa_config", hasExactBrowserMfa(application.mfa_config)],
   ] as const
   const failed = checks.filter(([, valid]) => !valid).map(([name]) => name)
