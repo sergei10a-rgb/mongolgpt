@@ -115,6 +115,29 @@ function verification(rawBody: string, checksum: string) {
 }
 
 describe("Bonum Ecommerce Gateway adapter", () => {
+  test("normalizes the sandbox token type whitespace before bearer authentication", async () => {
+    const mock = mockFetch([
+      { body: { ...token, tokenType: "Bearer " } },
+      {
+        body: {
+          invoiceId: "bonum-invoice-1",
+          followUpLink: "https://ecommerce.bonum.mn/ecommerce?invoiceId=bonum-invoice-1",
+        },
+      },
+    ])
+    const bonum = adapter(mock)
+
+    await bonum.createInvoice({
+      reference: "inv_local_1",
+      customerReference: "customer_1",
+      description: "MongolGPT Pro bagts",
+      amount: 39_000,
+      currency: "MNT",
+    })
+
+    expect(header(mock.calls[1]!.init, "authorization")).toBe("Bearer access-token")
+  })
+
   test("creates a sandbox invoice with a cached terminal token", async () => {
     const mock = mockFetch([
       { body: token },

@@ -61,7 +61,7 @@ const BonumConfigSchema = z
 
 const TokenResponseSchema = z
   .object({
-    tokenType: z.literal("Bearer"),
+    tokenType: z.string().max(32).transform((value) => value.trim()).pipe(z.literal("Bearer")),
     accessToken: z
       .string()
       .min(1)
