@@ -27,6 +27,7 @@ export function createAdminDeployment(sharedLinks: readonly object[]) {
     {
       addPreviousOutputInEnv: false,
       create: configureOrganizationMfa,
+      dir: process.cwd(),
       environment: {
         CLOUDFLARE_ACCOUNT_ID: accountId,
         CLOUDFLARE_ACCESS_API_TOKEN: $util.secret(accessApiToken),

@@ -1410,6 +1410,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploymentSource).toContain("new cloudflare.ZeroTrustAccessApplication")
     expect(deploymentSource).toContain('"command:local:Command"')
     expect(deploymentSource).toContain("bun run script/cloudflare-access-mfa.ts")
+    expect(deploymentSource).toContain("dir: process.cwd()")
     expect(deploymentSource).toContain("additionalSecretOutputs")
     expect(deploymentSource).toContain("dependsOn: [accessOrganizationMfa]")
     expect(deploymentSource).toContain('type: "self_hosted"')
