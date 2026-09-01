@@ -108,7 +108,7 @@ jobs:
             MONGOLGPT_ENABLE_TURNSTILE=true \
             MONGOLGPT_TURNSTILE_SITE_KEY=1x00000000000000000000AA \
             bun sst diff --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"; then
-            bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log
+            bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log
             exit 1
           fi
           bun script/admin-deployment-diff.ts "$diff_file"
@@ -136,7 +136,7 @@ jobs:
             MONGOLGPT_ENABLE_TURNSTILE=true \
             MONGOLGPT_TURNSTILE_SITE_KEY=1x00000000000000000000AA \
             bun sst diff --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"; then
-            bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log
+            bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log
             exit 1
           fi
           bun script/admin-deployment-diff.ts "$diff_file"

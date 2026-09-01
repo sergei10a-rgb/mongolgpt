@@ -952,7 +952,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(diff?.run).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
     expect(diff?.run).toContain('bun sst diff --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"')
     expect(diff?.run).toContain(
-      'bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log',
+      'bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log',
     )
     expect(diff?.run).toContain("exit 1")
     expect(diff?.run).not.toContain("--target")
@@ -974,7 +974,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploy?.run).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
     expect(deploy?.run).toContain('bun sst diff --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"')
     expect(deploy?.run).toContain(
-      'bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log',
+      'bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log',
     )
     expect(deploy?.run).toContain('bun script/admin-deployment-diff.ts "$diff_file"')
     expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")

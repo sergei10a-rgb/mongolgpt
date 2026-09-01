@@ -37,7 +37,7 @@ for await (const relative of glob.scan({ cwd: root, onlyFiles: true })) {
   trail.push(...inspectSstEventTrail(text))
 }
 
-for (const path of process.argv.slice(3, 7)) {
+for (const path of process.argv.slice(3, 9)) {
   const file = Bun.file(path)
   if (!(await file.exists())) continue
   if (file.size > maximumFileBytes || totalBytes + file.size > maximumTotalBytes) continue
