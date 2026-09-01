@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { tmpdir } from "node:os"
 import {
   inspectSstCommandErrorDiagnostics,
+  inspectSstCommandLogTail,
   inspectSstErrorDiagnostics,
   inspectSstEventTrail,
 } from "../src/sst-error-diagnostics"
@@ -72,6 +73,24 @@ describe("SST Pulumi error diagnostics", () => {
     expect(JSON.stringify(result)).not.toContain("api.example.com")
     expect(result[0]?.message).toContain("token=[redacted]")
     expect(result[1]?.message).toContain("status 255")
+  })
+
+  test("keeps only the bounded redacted tail of an SST command log", () => {
+    const secret = "runtime-log-secret-that-must-not-leak"
+    const input = Array.from({ length: 30 }, (_, index) =>
+      index === 29
+        ? `time=now level=INFO msg="last context token=${secret} owner@example.com https://api.example.com/private"`
+        : `time=now level=INFO msg="context ${index}"`,
+    ).join("\n")
+
+    const result = inspectSstCommandLogTail(input, [secret])
+
+    expect(result).toHaveLength(24)
+    expect(result[0]).toContain("context 6")
+    expect(result.at(-1)).toContain("token=[redacted]")
+    expect(JSON.stringify(result)).not.toContain(secret)
+    expect(JSON.stringify(result)).not.toContain("owner@example.com")
+    expect(JSON.stringify(result)).not.toContain("api.example.com")
   })
 
   test("reports only bounded operation and resource labels from the event trail", () => {
@@ -162,6 +181,42 @@ describe("SST Pulumi error diagnostics", () => {
       expect(exitCode).toBe(0)
       expect(stdout).toBe("")
       expect(stderr).toContain("token=[redacted]")
+      expect(stderr).not.toContain(secret)
+      expect(stderr).not.toContain("owner@example.com")
+      expect(stderr).not.toContain("api.example.com")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("CLI prints a redacted bounded tail only for the SST runtime log", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mongolgpt-sst-runtime-context-"))
+    const logRoot = join(root, "log")
+    const commandLog = join(logRoot, "sst.log")
+    const secret = "runtime-cli-secret-that-must-not-leak"
+    try {
+      await mkdir(logRoot)
+      await writeFile(
+        commandLog,
+        `level=INFO msg="provider request token=${secret} owner@example.com https://api.example.com/private"\nlevel=ERROR msg="stack run had errors"\n`,
+      )
+      const child = Bun.spawn(
+        [process.execPath, join(import.meta.dir, "../../../script/sst-error-diagnostics.ts"), root, commandLog],
+        {
+          env: { ...globalThis.process.env, TEST_SECRET: secret },
+          stdout: "pipe",
+          stderr: "pipe",
+        },
+      )
+      const [exitCode, stdout, stderr] = await Promise.all([
+        child.exited,
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+      ])
+      expect(exitCode).toBe(0)
+      expect(stdout).toBe("")
+      expect(stderr).toContain("SST runtime log-ийн төгсгөлийн нууц утгагүй context")
+      expect(stderr).toContain("provider request token=[redacted]")
       expect(stderr).not.toContain(secret)
       expect(stderr).not.toContain("owner@example.com")
       expect(stderr).not.toContain("api.example.com")

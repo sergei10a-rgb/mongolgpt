@@ -1,6 +1,7 @@
 import { join } from "node:path"
 import {
   inspectSstCommandErrorDiagnostics,
+  inspectSstCommandLogTail,
   inspectSstErrorDiagnostics,
   inspectSstEventTrail,
 } from "@mongolgpt/script/sst-error-diagnostics"
@@ -23,6 +24,7 @@ let totalBytes = 0
 let files = 0
 const diagnostics = []
 const trail = []
+const commandLogTail = []
 const glob = new Bun.Glob("**/eventlog.json")
 for await (const relative of glob.scan({ cwd: root, onlyFiles: true })) {
   if (files === maximumFiles) break
@@ -40,7 +42,9 @@ for (const path of process.argv.slice(3, 7)) {
   if (!(await file.exists())) continue
   if (file.size > maximumFileBytes || totalBytes + file.size > maximumTotalBytes) continue
   totalBytes += file.size
-  diagnostics.push(...inspectSstCommandErrorDiagnostics(await file.text(), secretValues))
+  const text = await file.text()
+  diagnostics.push(...inspectSstCommandErrorDiagnostics(text, secretValues))
+  if (/(?:^|[\\/])sst\.log$/i.test(path)) commandLogTail.push(...inspectSstCommandLogTail(text, secretValues))
 }
 
 const unique = [
@@ -62,4 +66,9 @@ if (recentTrail.length) {
   for (const entry of recentTrail) {
     console.error(`- ${entry.event}${entry.operation ? ` ${entry.operation}` : ""}${entry.resource ? ` ${entry.resource}` : ""}`)
   }
+}
+
+if (commandLogTail.length) {
+  console.error("SST runtime log-ийн төгсгөлийн нууц утгагүй context:")
+  for (const message of commandLogTail.slice(-24)) console.error(`- ${message}`)
 }

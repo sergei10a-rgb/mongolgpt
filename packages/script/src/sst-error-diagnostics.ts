@@ -50,6 +50,15 @@ export function inspectSstCommandErrorDiagnostics(input: string, secretValues: r
   return diagnostics
 }
 
+export function inspectSstCommandLogTail(input: string, secretValues: readonly string[] = [], limit = 24) {
+  const secrets = normalizedSecrets(secretValues)
+  const lines = input.split(/\r?\n/).filter((line) => line.trim())
+  return lines.slice(-Math.max(0, Math.min(limit, 24))).flatMap((line) => {
+    const message = sanitizeMessage(line, secrets)
+    return message ? [message] : []
+  })
+}
+
 export function inspectSstEventTrail(input: string) {
   const trail: SstEventTrailEntry[] = []
   for (const event of parseEvents(input)) {
