@@ -1,6 +1,7 @@
 import { resolveHostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import { BonumAdapter } from "../src/payment-provider/bonum"
 import { QPayAdapter } from "../src/payment-provider/qpay"
+import { PaymentProviderResponseError } from "../src/payment-provider"
 import type {
   PaymentCancellationAdapter,
   PaymentInvoiceCheckout,
@@ -49,7 +50,7 @@ export async function runPaymentSandboxSmoke(input: PaymentSandboxSmokeInput): P
   const provider = parseProvider(input.provider)
   assertSandbox(input)
   const now = input.now ?? Date.now
-  parseCallbackBaseURL(input.callbackBaseURL)
+  const callbackBaseURL = parseCallbackBaseURL(input.callbackBaseURL)
   const reference = parseReference(input.reference, now())
   const timeoutMs = parseTimeout(input.timeoutMs)
   const output = input.output ?? console.log
@@ -66,7 +67,22 @@ export async function runPaymentSandboxSmoke(input: PaymentSandboxSmokeInput): P
     if (!input.bonum) throw new Error("Bonum sandbox adapter тохируулагдаагүй байна")
     const expiresAt = now() + BONUM_EXPIRY_MS
     output("Bonum sandbox: богино хугацаатай 1 MNT checkout үүсгэж байна.")
-    result.bonum = await withTimeout(runBonum(input.bonum, reference, expiresAt), timeoutMs)
+    try {
+      result.bonum = await withTimeout(runBonum(input.bonum, reference, expiresAt), timeoutMs)
+    } catch (error) {
+      if (
+        error instanceof PaymentProviderResponseError &&
+        error.provider === "bonum" &&
+        error.operation === "create invoice" &&
+        error.status === 502
+      ) {
+        throw new Error(
+          `Bonum sandbox нэхэмжлэх үүсгэхэд HTTP 502 алдаа гарлаа. Bonum талд ${callbackBaseURL}/v1/webhooks/bonum callback URL урьдчилан бүртгэлтэй, sandbox E_COMMERCE үйлчилгээ идэвхтэй эсэхийг шалгана уу.`,
+          { cause: error },
+        )
+      }
+      throw error
+    }
     output("Bonum sandbox: checkout холбоос баталгаажлаа.")
   }
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { redactSecrets, runPaymentSandboxSmoke, type PaymentSandboxSmokeInput } from "../script/payment-sandbox-smoke"
-import type { PaymentInvoiceCheckout, VerifiedPaymentEvent } from "../src/payment-provider"
+import { PaymentProviderResponseError, type PaymentInvoiceCheckout, type VerifiedPaymentEvent } from "../src/payment-provider"
 
 const callbackBaseURL = "https://pay.dev.mgpt.mn"
 const confirmation = "RUN_SANDBOX_SMOKE"
@@ -121,6 +121,22 @@ describe("payment sandbox smoke", () => {
       externalInvoiceID: "b-1",
       checkoutURL: "https://ecommerce.bonum.mn/ecommerce?invoiceId=b-1",
     })
+  })
+
+  test("Bonum invoice 502 gives actionable sandbox activation guidance", async () => {
+    const bonum = {
+      createInvoice: async () => {
+        throw new PaymentProviderResponseError({
+          provider: "bonum",
+          operation: "create invoice",
+          status: 502,
+        })
+      },
+    }
+
+    await expect(runPaymentSandboxSmoke(input({ provider: "bonum", bonum }))).rejects.toThrow(
+      "https://pay.dev.mgpt.mn/v1/webhooks/bonum callback URL урьдчилан бүртгэлтэй, sandbox E_COMMERCE үйлчилгээ идэвхтэй эсэхийг шалгана уу",
+    )
   })
 
   test("selects only the requested provider and rejects unsafe callback URLs", async () => {
