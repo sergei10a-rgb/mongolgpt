@@ -23,6 +23,7 @@ const exactResources = new Map<string, RegExp>([
 ])
 
 const allowedOperations = new Set(["create", "update"])
+const adminBuilderReplacementOperations = new Set(["create-replacement", "replace", "delete-replaced"])
 const createOnlyResources = new Set(["AdminAccessApplication", "AdminAccessConfig", "AdminAccessProvider", "default"])
 const createOnlyLinkRefs = new Set([
   "AdminAccessConfigLinkRef",
@@ -74,7 +75,10 @@ export function inspectAdminDeploymentDiff(value: unknown): AdminDeploymentDiffS
     }
 
     const parsed = parseUrn(urn)
-    if (!allowedOperations.has(op) || !isAllowedAdminChange(parsed.type, parsed.name, type, op, entry?.detailedDiff)) {
+    if (
+      !isAllowedAdminOperation(parsed.type, parsed.name, type, op) ||
+      !isAllowedAdminChange(parsed.type, parsed.name, type, op, entry?.detailedDiff)
+    ) {
       if (rejected.length < 12) rejected.push(`${op} ${type} ${parsed.name}`)
       continue
     }
@@ -86,6 +90,17 @@ export function inspectAdminDeploymentDiff(value: unknown): AdminDeploymentDiffS
   }
 
   return { changes: value.length, operations }
+}
+
+function isAllowedAdminOperation(urnType: string, name: string, type: string, op: string) {
+  if (allowedOperations.has(op)) return true
+  return (
+    name === "AdminBuilder" &&
+    type === "command:local:Command" &&
+    urnType.split("$").includes(adminSiteType) &&
+    urnType.split("$").at(-1) === type &&
+    adminBuilderReplacementOperations.has(op)
+  )
 }
 
 function isAllowedAdminChange(urnType: string, name: string, type: string, op: string, detailedDiff: unknown) {

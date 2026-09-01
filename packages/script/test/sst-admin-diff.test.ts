@@ -72,6 +72,26 @@ describe("admin-only SST diff boundary", () => {
     )
   })
 
+  test("accepts only the admin bundle builder replacement lifecycle", () => {
+    const builderType = "sst:cloudflare:SolidStart$command:local:Command"
+    expect(
+      inspectAdminDeploymentDiff([
+        change(builderType, "AdminBuilder", "create-replacement"),
+        change(builderType, "AdminBuilder", "replace"),
+        change(builderType, "AdminBuilder", "delete-replaced"),
+      ]),
+    ).toEqual({
+      changes: 3,
+      operations: { "create-replacement": 1, replace: 1, "delete-replaced": 1 },
+    })
+    expect(() => inspectAdminDeploymentDiff([change(builderType, "AdminBuilder", "delete")])).toThrow(
+      "AdminBuilder",
+    )
+    expect(() =>
+      inspectAdminDeploymentDiff([change("command:local:Command", "AdminBuilder", "create-replacement")]),
+    ).toThrow("AdminBuilder")
+  })
+
   test.each([
     ["sst:cloudflare:D1", "Database"],
     ["sst:cloudflare:Worker", "AuthApi"],
