@@ -273,6 +273,8 @@ QPay + Bonum-ийн туршилтын төлбөрийг идэвхжүүлэх
 
 QPay болон Bonum-ийн туршилтын худалдааны эрхийг авсны дараа нууц утгуудыг зөвхөн тухайн shell-ийн орчны хувьсагчид ачаална. Репозиторийн файл, командын аргумент эсвэл screenshot-д утгыг нь оруулахгүй. Дараа нь:
 
+Bonum-ийн нэхэмжлэх үүсгэхээс өмнө мерчантын тохиргоонд `https://pay.dev.mgpt.mn/v1/webhooks/bonum` callback/webhook URL-ийг урьдчилан бүртгүүлсэн байна. Нэхэмжлэхийн хүсэлтэд callback дамжуулах нь Bonum талын энэ бүртгэлийг орлохгүй. URL бүртгэлгүй бол нууц утгууд зөв байсан ч sandbox нэхэмжлэх үүсгэх шатанд алдаа гарч болно.
+
 ```powershell
 $env:MONGOLGPT_PAYMENT_SANDBOX_ENVIRONMENT="sandbox"
 $env:MONGOLGPT_PAYMENT_SANDBOX_PROVIDER="all"
