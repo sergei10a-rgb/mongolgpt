@@ -17,14 +17,16 @@ const exactResources = new Map<string, RegExp>([
   ["QuotaServiceToken", /^sst:sst:Linkable$/],
   ["ServiceMonitorState", /^sst:sst:Linkable$/],
   ["UsageQueueReadiness", /^sst:sst:Linkable$/],
+  ["default", /^pulumi:providers:pulumi-nodejs$/],
   ["default_1_0_1", /^pulumi:providers:command$/],
   ["default_6_15_0", /^pulumi:providers:cloudflare$/],
 ])
 
 const allowedOperations = new Set(["create", "update"])
-const createOnlyResources = new Set(["AdminAccessApplication", "AdminAccessConfig", "AdminAccessProvider"])
+const createOnlyResources = new Set(["AdminAccessApplication", "AdminAccessConfig", "AdminAccessProvider", "default"])
 const createOnlyLinkRefs = new Set([
   "AdminAccessConfigLinkRef",
+  "AdminLinkRef",
   "AdminPaymentCancellationTokenLinkRef",
   "AdminPaymentRefundTokenLinkRef",
   "AuthApiLinkRef",

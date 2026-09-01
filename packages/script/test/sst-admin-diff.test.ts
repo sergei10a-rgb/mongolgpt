@@ -30,6 +30,7 @@ describe("admin-only SST diff boundary", () => {
         change("sst:sst:Secret", "MONGOLGPT_PLAN_LIMITS", "create"),
         change("pulumi:providers:cloudflare", "default_6_15_0", "create"),
         change("sst:sst:LinkRef", "AdminAccessConfigLinkRef", "create"),
+        change("sst:sst:LinkRef", "AdminLinkRef", "create"),
         change("sst:sst:LinkRef", "AdminPaymentCancellationTokenLinkRef", "create"),
         change("sst:sst:LinkRef", "AdminPaymentRefundTokenLinkRef", "create"),
         change("sst:sst:LinkRef", "AuthApiLinkRef", "create"),
@@ -42,6 +43,7 @@ describe("admin-only SST diff boundary", () => {
         change("sst:sst:LinkRef", "QuotaServiceTokenLinkRef", "create"),
         change("sst:sst:LinkRef", "ServiceMonitorStateLinkRef", "create"),
         change("sst:sst:LinkRef", "UsageQueueReadinessLinkRef", "create"),
+        change("pulumi:providers:pulumi-nodejs", "default", "create"),
         change(
           "sst:cloudflare:SolidStart$sst:cloudflare:Worker$cloudflare:index/workerScript:WorkerScript",
           "AdminServerCode",
@@ -50,7 +52,7 @@ describe("admin-only SST diff boundary", () => {
         ),
         change("pulumi:pulumi:Stack", "mongolgpt-admin-dev", "create"),
       ]),
-    ).toEqual({ changes: 33, operations: { create: 31, update: 2 } })
+    ).toEqual({ changes: 35, operations: { create: 33, update: 2 } })
   })
 
   test("accepts only bounded outputs on the existing isolated admin stack", () => {
@@ -124,6 +126,9 @@ describe("admin-only SST diff boundary", () => {
     )
     expect(() => inspectAdminDeploymentDiff([change("sst:sst:LinkRef", "UnknownLinkRef", "create")])).toThrow(
       "UnknownLinkRef",
+    )
+    expect(() => inspectAdminDeploymentDiff([change("pulumi:providers:pulumi-nodejs", "default", "update")])).toThrow(
+      "default",
     )
   })
 
