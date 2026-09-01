@@ -5,6 +5,7 @@ import {
   type PlatformAdminSubscriptionCheckoutCancellationRequest,
 } from "@mongolgpt/console-core/payment-cancellation-contract.js"
 import { z } from "zod"
+import { fetchAdminService } from "./admin-service"
 
 const PaymentServiceErrorSchema = z
   .object({
@@ -31,7 +32,7 @@ export async function requestPlatformAdminSubscriptionCheckoutCancellation(
   const body = PlatformAdminSubscriptionCheckoutCancellationRequestSchema.parse(input)
   let response: Response
   try {
-    response = await Resource.PaymentService.fetch("https://payments.internal/v1/admin/checkouts/subscription/cancel", {
+    response = await fetchAdminService(Resource.PaymentService, "/v1/admin/checkouts/subscription/cancel", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${Resource.AdminPaymentCancellationToken.value}`,

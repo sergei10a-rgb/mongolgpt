@@ -56,7 +56,7 @@ describe("admin workspace investigation contract", () => {
       source("src/routes/workspaces/index.tsx"),
       source("src/component/admin-header.tsx"),
       source("src/lib/admin-quota.server.ts"),
-      source("../../../infra/admin.ts"),
+      source("../../../infra/admin-standalone.ts"),
     ])
 
     expect(workspaces).toContain('"users.read"')
@@ -94,7 +94,8 @@ describe("admin workspace investigation contract", () => {
     expect(route).not.toContain("opencode")
     expect(quotaClient).toContain("Resource.QuotaServiceToken.value")
     expect(quotaClient).toContain("Authorization: `Bearer ${resources.token}`")
-    expect(infra).toContain("SECRET.QuotaServiceToken")
+    expect(infra).toContain('importedSecretValue("QuotaServiceToken"')
+    expect(infra).not.toContain("RandomPassword")
     expect(header).toContain('permissions.includes("users.read") && props.admin.permissions.includes("billing.read")')
     expect(header).toContain('href="/workspaces"')
   })

@@ -5,6 +5,7 @@ import {
   type PlatformAdminSubscriptionPaymentRefundRequest,
 } from "@mongolgpt/console-core/payment-refund-contract.js"
 import { z } from "zod"
+import { fetchAdminService } from "./admin-service"
 
 const PaymentServiceErrorSchema = z
   .object({
@@ -31,7 +32,7 @@ export async function requestPlatformAdminSubscriptionPaymentRefund(
   const body = PlatformAdminSubscriptionPaymentRefundRequestSchema.parse(input)
   let response: Response
   try {
-    response = await Resource.PaymentService.fetch("https://payments.internal/v1/admin/payments/subscription/refund", {
+    response = await fetchAdminService(Resource.PaymentService, "/v1/admin/payments/subscription/refund", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${Resource.AdminPaymentRefundToken.value}`,

@@ -876,6 +876,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
   test("deploys only the isolated dev admin with exact confirmation and bounded secrets", async () => {
     const source = await Bun.file(new URL("../../../.github/workflows/deploy-dev-admin.yml", import.meta.url)).text()
     const sstSource = await Bun.file(new URL("../../../sst.config.ts", import.meta.url)).text()
+    const adminSstSource = await Bun.file(new URL("../../../sst.admin.config.ts", import.meta.url)).text()
     const secretSource = await Bun.file(new URL("../../../infra/secret.ts", import.meta.url)).text()
     const parsed: unknown = Bun.YAML.parse(source)
     if (
@@ -946,11 +947,15 @@ describe("Cloudflare hosted infrastructure contract", () => {
       SST_SECRET_MongolGPTRuntimeAuthSecret: "${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}",
       SST_SECRET_MongolGPTAdminBootstrapEmails: "${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}",
     })
-    expect(diff?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
-    expect(diff?.run).toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY=false")
-    expect(diff?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true")
-    expect(diff?.run).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
-    expect(diff?.run).toContain('bun sst diff --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"')
+    expect(diff?.run).toContain("umask 077")
+    expect(diff?.run).toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY=false bun sst state export --stage=dev --decrypt")
+    expect(diff?.run).toContain("bun script/resolve-sst-admin-external-state.ts")
+    expect(diff?.run).toContain('echo "::add-mask::$value"')
+    expect(diff?.run).toContain('export "$name=$value"')
+    expect(diff?.run).not.toContain("GITHUB_ENV")
+    expect(diff?.run).toContain(
+      'bun sst diff --config sst.admin.config.ts --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"',
+    )
     expect(diff?.run).toContain(
       'bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log',
     )
@@ -967,17 +972,18 @@ describe("Cloudflare hosted infrastructure contract", () => {
       SST_SECRET_MongolGPTAdminBootstrapEmails: "${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}",
     })
     expect(deploy?.run).toContain("bun run deploy:preflight -- dev --admin-only")
-    expect(deploy?.run).toContain("bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts")
-    expect(deploy?.run).toContain("Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай")
-    expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY=false")
-    expect(deploy?.run).toContain("MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true")
-    expect(deploy?.run).toContain("MONGOLGPT_ENABLE_TURNSTILE=true")
-    expect(deploy?.run).toContain('bun sst diff --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"')
+    expect(deploy?.run).toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY=false bun sst state export --stage=dev --decrypt")
+    expect(deploy?.run).toContain("bun script/resolve-sst-admin-external-state.ts")
+    expect(deploy?.run).toContain('export "$name=$value"')
+    expect(deploy?.run).not.toContain("GITHUB_ENV")
+    expect(deploy?.run).toContain(
+      'bun sst diff --config sst.admin.config.ts --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"',
+    )
     expect(deploy?.run).toContain(
       'bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log',
     )
     expect(deploy?.run).toContain('bun script/admin-deployment-diff.ts "$diff_file"')
-    expect(deploy?.run).toContain("bun sst deploy --stage=dev --print-logs")
+    expect(deploy?.run).toContain("bun sst deploy --config sst.admin.config.ts --stage=dev --print-logs")
     expect(deploy?.run).not.toContain("--target Admin")
     expect(deploy?.run).not.toContain("sst unlock")
     expect(deploy?.run).not.toContain("--target Database")
@@ -1011,8 +1017,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(browserSmoke).toContain("expect(pageErrors).toEqual([])")
     expect(browserSmoke).toContain("expect(failedAdminRequests).toEqual([])")
     expect(sstSource).toContain('const adminOnly = flag("MONGOLGPT_DEPLOY_ADMIN_ONLY")')
-    expect(sstSource).toContain('const site = await import("./infra/admin.js")')
-    expect(sstSource).toContain("AdminUrl: site.adminUrl")
+    expect(sstSource).toContain("Admin deploy-ийг үндсэн stack-аас тусгаарласан sst.admin.config.ts")
+    expect(sstSource).not.toContain('await import("./infra/admin.js")')
+    expect(adminSstSource).toContain('name: "mongolgpt-admin"')
+    expect(adminSstSource).toContain('await import("./infra/admin-standalone.js")')
+    expect(adminSstSource).not.toContain('random: "')
     expect(secretSource).not.toContain("MONGOLGPT_DEPLOY_ADMIN_ONLY")
   })
 
@@ -1295,10 +1304,11 @@ describe("Cloudflare hosted infrastructure contract", () => {
   })
 
   test("uses Cloudflare Cron and KV for service monitoring without Honeycomb or Discord", async () => {
-    const [consoleSource, adminSource, configSource, secretSource, monitorSource] = await Promise.all(
+    const [consoleSource, adminSource, deploymentSource, configSource, secretSource, monitorSource] = await Promise.all(
       [
         "../../../infra/console.ts",
-        "../../../infra/admin.ts",
+        "../../../infra/admin-standalone.ts",
+        "../../../infra/admin-deployment.ts",
         "../../../sst.config.ts",
         "../../../infra/secret.ts",
         "../../console/function/src/service-monitor.ts",
@@ -1316,9 +1326,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(consoleSource).toContain("destinationAddress: monitorAlertEmail")
     expect(consoleSource).toContain("allowedSenderAddresses: [monitorAlertFrom]")
     expect(adminSource).toContain("serviceMonitorState")
-    expect(adminSource).toContain("MONGOLGPT_MONITORING_ENABLED")
-    expect(adminSource).toContain("MONGOLGPT_RELEASE_VERSION")
-    expect(adminSource).toContain('from "../packages/mongolgpt/package.json"')
+    expect(deploymentSource).toContain("MONGOLGPT_MONITORING_ENABLED")
+    expect(deploymentSource).toContain("MONGOLGPT_RELEASE_VERSION")
+    expect(deploymentSource).toContain('from "../packages/mongolgpt/package.json"')
     expect(configSource).toContain("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_MONITORING=true")
     expect(configSource).not.toContain("honeycomb:")
     expect(configSource).not.toContain('import("./infra/monitoring.js")')
@@ -1381,37 +1391,39 @@ describe("Cloudflare hosted infrastructure contract", () => {
   })
 
   test("creates a fail-closed Cloudflare Access admin application through IaC", async () => {
-    const [adminSource, stageSource, configSource, accessSource, mfaScriptSource] = await Promise.all(
-      [
-        "../../../infra/admin.ts",
-        "../../../infra/stage.ts",
-        "../../../sst.config.ts",
-        "../../console/admin/src/lib/access.ts",
-        "../../../script/cloudflare-access-mfa.ts",
-      ].map((path) => Bun.file(new URL(path, import.meta.url)).text()),
-    )
-    expect(adminSource).toContain('new sst.cloudflare.x.SolidStart("Admin"')
-    expect(adminSource).toContain('path: "packages/console/admin"')
-    expect(adminSource).toContain("database")
-    expect(adminSource).toContain('new cloudflare.Provider("AdminAccessProvider"')
-    expect(adminSource).toContain("CLOUDFLARE_ACCESS_API_TOKEN")
-    expect(adminSource).toContain("new cloudflare.ZeroTrustAccessApplication")
-    expect(adminSource).toContain('"command:local:Command"')
-    expect(adminSource).toContain("bun run script/cloudflare-access-mfa.ts")
-    expect(adminSource).toContain("additionalSecretOutputs")
-    expect(adminSource).toContain("dependsOn: [accessOrganizationMfa]")
-    expect(adminSource).toContain('type: "self_hosted"')
-    expect(adminSource).toContain('name: `MongolGPT админ (${$app.stage})`')
-    expect(adminSource).not.toContain("landingPageDesign")
-    expect(adminSource).toContain('decision: "allow"')
-    expect(adminSource).toContain("parseBootstrapEmails(value).map")
-    expect(adminSource).toContain('allowedAuthenticators: ["totp", "biometrics", "security_key"]')
-    expect(adminSource).toContain("mfaDisabled: false")
-    expect(adminSource).toContain("optionsPreflightBypass: false")
-    expect(adminSource).toContain("enableBindingCookie: true")
-    expect(adminSource).toContain("httpOnlyCookieAttribute: true")
-    expect(adminSource).toContain('sameSiteCookieAttribute: "strict"')
-    expect(adminSource).toContain('new sst.Linkable("AdminAccessConfig"')
+    const [deploymentSource, standaloneSource, stageSource, configSource, accessSource, mfaScriptSource] =
+      await Promise.all(
+        [
+          "../../../infra/admin-deployment.ts",
+          "../../../infra/admin-standalone.ts",
+          "../../../infra/stage.ts",
+          "../../../sst.config.ts",
+          "../../console/admin/src/lib/access.ts",
+          "../../../script/cloudflare-access-mfa.ts",
+        ].map((path) => Bun.file(new URL(path, import.meta.url)).text()),
+      )
+    expect(deploymentSource).toContain('new sst.cloudflare.x.SolidStart("Admin"')
+    expect(deploymentSource).toContain('path: "packages/console/admin"')
+    expect(standaloneSource).toContain("database")
+    expect(deploymentSource).toContain('new cloudflare.Provider("AdminAccessProvider"')
+    expect(deploymentSource).toContain("CLOUDFLARE_ACCESS_API_TOKEN")
+    expect(deploymentSource).toContain("new cloudflare.ZeroTrustAccessApplication")
+    expect(deploymentSource).toContain('"command:local:Command"')
+    expect(deploymentSource).toContain("bun run script/cloudflare-access-mfa.ts")
+    expect(deploymentSource).toContain("additionalSecretOutputs")
+    expect(deploymentSource).toContain("dependsOn: [accessOrganizationMfa]")
+    expect(deploymentSource).toContain('type: "self_hosted"')
+    expect(deploymentSource).toContain("name: `MongolGPT админ (${$app.stage})`")
+    expect(deploymentSource).not.toContain("landingPageDesign")
+    expect(deploymentSource).toContain('decision: "allow"')
+    expect(deploymentSource).toContain("parseBootstrapEmails(value).map")
+    expect(deploymentSource).toContain('allowedAuthenticators: ["totp", "biometrics", "security_key"]')
+    expect(deploymentSource).toContain("mfaDisabled: false")
+    expect(deploymentSource).toContain("optionsPreflightBypass: false")
+    expect(deploymentSource).toContain("enableBindingCookie: true")
+    expect(deploymentSource).toContain("httpOnlyCookieAttribute: true")
+    expect(deploymentSource).toContain('sameSiteCookieAttribute: "strict"')
+    expect(deploymentSource).toContain('new sst.Linkable("AdminAccessConfig"')
     for (const resource of [
       "database",
       "d1Backups",
@@ -1420,25 +1432,29 @@ describe("Cloudflare hosted infrastructure contract", () => {
       "paymentService",
       "usageQueueReadiness",
       "serviceMonitorState",
-      "accessConfig",
     ]) {
-      expect(adminSource).toContain(`    ${resource},`)
+      expect(standaloneSource).toContain(`  ${resource},`)
     }
-    expect(adminSource).toContain("MONGOLGPT_RUNTIME_URL: runtimeOrigin")
-    expect(adminSource).toContain("MONGOLGPT_STAGE: $app.stage")
-    expect(adminSource).toContain("SECRET.AdminPaymentCancellationToken")
-    expect(adminSource).toContain("MongolGPTAdminBootstrapEmails")
-    expect(adminSource).not.toContain("MongolGPTAdminAccessTeamDomain")
-    expect(adminSource).not.toContain("MongolGPTAdminAccessAudience")
-    expect(adminSource).not.toMatch(/\beveryone\s*:/)
-    expect(adminSource).not.toMatch(/decision:\s*["']bypass["']/)
+    expect(deploymentSource).toContain("MONGOLGPT_RUNTIME_URL: runtimeOrigin")
+    expect(deploymentSource).toContain("MONGOLGPT_STAGE: $app.stage")
+    expect(standaloneSource).toContain("const paymentCancellationToken = importedSecretValue(")
+    expect(standaloneSource).toContain('"AdminPaymentCancellationToken"')
+    expect(standaloneSource).not.toContain("RandomPassword")
+    expect(deploymentSource).toContain("MongolGPTAdminBootstrapEmails")
+    expect(deploymentSource).not.toContain("MongolGPTAdminAccessTeamDomain")
+    expect(deploymentSource).not.toContain("MongolGPTAdminAccessAudience")
+    expect(deploymentSource).not.toMatch(/\beveryone\s*:/)
+    expect(deploymentSource).not.toMatch(/decision:\s*["']bypass["']/)
+    expect(standaloneSource).toContain('new sst.Linkable("Database"')
+    expect(standaloneSource).toContain('type: "d1DatabaseBindings"')
+    expect(standaloneSource).toContain('type: "r2BucketBindings"')
+    expect(standaloneSource).toContain('type: "kvNamespaceBindings"')
     expect(accessSource).toContain('readResourceProperty("AdminAccessConfig", "teamDomain")')
     expect(accessSource).toContain('readResourceProperty("AdminAccessConfig", "audience")')
     expect(stageSource).toContain("enableAdmin")
     expect(stageSource).toContain("adminOrigin")
     expect(configSource).toContain('flag("MONGOLGPT_ENABLE_ADMIN")')
-    expect(configSource).toContain('admin ? { command: "1.0.1" }')
-    expect(configSource).toContain('await import("./infra/admin.js")')
+    expect(configSource).not.toContain('await import("./infra/admin.js")')
     expect(configSource).toContain("Үйлдвэрлэлийн үйлчилгээ байршуулалтад MONGOLGPT_ENABLE_ADMIN=true")
     expect(configSource).not.toContain("MONGOLGPT_ADMIN_MFA_ENFORCED")
     expect(mfaScriptSource).toContain("configureCloudflareAccessMfa")

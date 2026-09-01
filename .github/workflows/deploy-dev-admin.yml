@@ -96,18 +96,27 @@ jobs:
           SST_SECRET_MongolGPTRuntimeAuthSecret: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
           SST_SECRET_MongolGPTAdminBootstrapEmails: ${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}
         run: |
-          if ! bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts >/tmp/mongolgpt-admin-database-id; then
-            echo "Dev SST state-д Database алга. Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай."
-            exit 1
-          fi
+          umask 077
+          state_file="$RUNNER_TEMP/mongolgpt-main-state.json"
+          env_file="$RUNNER_TEMP/mongolgpt-admin-external.env"
           diff_file="$RUNNER_TEMP/mongolgpt-admin-diff.json"
           stderr_file="$RUNNER_TEMP/mongolgpt-admin-diff.stderr.log"
-          trap 'rm -f "$diff_file" "$stderr_file"' EXIT
-          if ! MONGOLGPT_DEPLOY_ADMIN_ONLY=false \
-            MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true \
-            MONGOLGPT_ENABLE_TURNSTILE=true \
-            MONGOLGPT_TURNSTILE_SITE_KEY=1x00000000000000000000AA \
-            bun sst diff --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"; then
+          trap 'rm -f "$state_file" "$env_file" "$diff_file" "$stderr_file"' EXIT
+          MONGOLGPT_DEPLOY_ADMIN_ONLY=false bun sst state export --stage=dev --decrypt >"$state_file"
+          bun script/resolve-sst-admin-external-state.ts "$state_file" >"$env_file"
+          while IFS='=' read -r name value; do
+            if ! printf '%s' "$name" | grep -Eq '^MONGOLGPT_ADMIN_[A-Z0-9_]+$' || [ -z "$value" ]; then
+              echo "Admin external state env мөр буруу байна."
+              exit 1
+            fi
+            case "$name" in
+              MONGOLGPT_ADMIN_QUOTA_SERVICE_TOKEN|MONGOLGPT_ADMIN_PAYMENT_CANCELLATION_TOKEN|MONGOLGPT_ADMIN_PAYMENT_REFUND_TOKEN)
+                echo "::add-mask::$value"
+                ;;
+            esac
+            export "$name=$value"
+          done <"$env_file"
+          if ! bun sst diff --config sst.admin.config.ts --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"; then
             bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log
             exit 1
           fi
@@ -124,27 +133,32 @@ jobs:
           SST_SECRET_MongolGPTAdminBootstrapEmails: ${{ secrets.MONGOLGPT_ADMIN_BOOTSTRAP_EMAILS }}
         run: |
           bun run deploy:preflight -- dev --admin-only
-          if ! bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts >/tmp/mongolgpt-admin-database-id; then
-            echo "Dev SST state-д Database алга. Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай."
-            exit 1
-          fi
+          umask 077
+          state_file="$RUNNER_TEMP/mongolgpt-main-state.json"
+          env_file="$RUNNER_TEMP/mongolgpt-admin-external.env"
           diff_file="$RUNNER_TEMP/mongolgpt-admin-predeploy-diff.json"
           stderr_file="$RUNNER_TEMP/mongolgpt-admin-predeploy-diff.stderr.log"
-          trap 'rm -f "$diff_file" "$stderr_file"' EXIT
-          if ! MONGOLGPT_DEPLOY_ADMIN_ONLY=false \
-            MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true \
-            MONGOLGPT_ENABLE_TURNSTILE=true \
-            MONGOLGPT_TURNSTILE_SITE_KEY=1x00000000000000000000AA \
-            bun sst diff --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"; then
+          trap 'rm -f "$state_file" "$env_file" "$diff_file" "$stderr_file"' EXIT
+          MONGOLGPT_DEPLOY_ADMIN_ONLY=false bun sst state export --stage=dev --decrypt >"$state_file"
+          bun script/resolve-sst-admin-external-state.ts "$state_file" >"$env_file"
+          while IFS='=' read -r name value; do
+            if ! printf '%s' "$name" | grep -Eq '^MONGOLGPT_ADMIN_[A-Z0-9_]+$' || [ -z "$value" ]; then
+              echo "Admin external state env мөр буруу байна."
+              exit 1
+            fi
+            case "$name" in
+              MONGOLGPT_ADMIN_QUOTA_SERVICE_TOKEN|MONGOLGPT_ADMIN_PAYMENT_CANCELLATION_TOKEN|MONGOLGPT_ADMIN_PAYMENT_REFUND_TOKEN)
+                echo "::add-mask::$value"
+                ;;
+            esac
+            export "$name=$value"
+          done <"$env_file"
+          if ! bun sst diff --config sst.admin.config.ts --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"; then
             bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log
             exit 1
           fi
           bun script/admin-deployment-diff.ts "$diff_file"
-          MONGOLGPT_DEPLOY_ADMIN_ONLY=false \
-            MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true \
-            MONGOLGPT_ENABLE_TURNSTILE=true \
-            MONGOLGPT_TURNSTILE_SITE_KEY=1x00000000000000000000AA \
-            bun sst deploy --stage=dev --print-logs
+          bun sst deploy --config sst.admin.config.ts --stage=dev --print-logs
 
       - name: Verify deployed admin Access policy
         env:

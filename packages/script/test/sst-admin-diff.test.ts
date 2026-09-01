@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { AdminDeploymentDiffError, inspectAdminDeploymentDiff } from "../src/sst-admin-diff"
 
-const stack = "urn:pulumi:dev::mongolgpt"
+const stack = "urn:pulumi:dev::mongolgpt-admin"
 
 describe("admin-only SST diff boundary", () => {
   test("accepts only the admin site, Access resources, bootstrap secret, and bounded stack outputs", () => {
@@ -17,6 +17,18 @@ describe("admin-only SST diff boundary", () => {
           "create",
         ),
         change("sst:sst:Linkable", "AdminAccessConfig", "create"),
+        change("sst:sst:Linkable", "Database", "create"),
+        change("sst:sst:Linkable", "D1Backups", "create"),
+        change("sst:sst:Linkable", "UsageQueueReadiness", "create"),
+        change("sst:sst:Linkable", "ServiceMonitorState", "create"),
+        change("sst:sst:Linkable", "AuthApi", "create"),
+        change("sst:sst:Linkable", "QuotaService", "create"),
+        change("sst:sst:Linkable", "PaymentService", "create"),
+        change("sst:sst:Linkable", "QuotaServiceToken", "create"),
+        change("sst:sst:Linkable", "AdminPaymentCancellationToken", "create"),
+        change("sst:sst:Linkable", "AdminPaymentRefundToken", "create"),
+        change("sst:sst:Secret", "MONGOLGPT_PLAN_LIMITS", "create"),
+        change("pulumi:providers:cloudflare", "default_6_15_0", "create"),
         change(
           "sst:cloudflare:SolidStart$sst:cloudflare:Worker$cloudflare:index/workerScript:WorkerScript",
           "AdminServerCode",
@@ -31,7 +43,7 @@ describe("admin-only SST diff boundary", () => {
           },
         },
       ]),
-    ).toEqual({ changes: 8, operations: { create: 5, update: 3 } })
+    ).toEqual({ changes: 20, operations: { create: 17, update: 3 } })
   })
 
   test.each([
@@ -40,7 +52,7 @@ describe("admin-only SST diff boundary", () => {
     ["sst:cloudflare:Worker", "PaymentService"],
     ["sst:cloudflare:Kv", "UsageQueueReadiness"],
     ["sst:sst:Secret", "AdminPaymentRefundToken"],
-    ["pulumi:providers:cloudflare", "default_6_15_0"],
+    ["pulumi:providers:cloudflare", "default_6_14_0"],
   ])("rejects shared dependency changes: %s %s", (type, name) => {
     expect(() => inspectAdminDeploymentDiff([change(type, name, "update")])).toThrow(AdminDeploymentDiffError)
   })
@@ -67,6 +79,21 @@ describe("admin-only SST diff boundary", () => {
       ]),
     ).toThrow(
       "delete sst:cloudflare:SolidStart Admin; update sst:cloudflare:Worker AuthApi; update sst:cloudflare:D1 Database",
+    )
+  })
+
+  test("does not mutate the Access boundary through a routine admin deploy", () => {
+    expect(() =>
+      inspectAdminDeploymentDiff([
+        change(
+          "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication",
+          "AdminAccessApplication",
+          "update",
+        ),
+      ]),
+    ).toThrow("AdminAccessApplication")
+    expect(() => inspectAdminDeploymentDiff([change("sst:sst:Linkable", "AdminAccessConfig", "update")])).toThrow(
+      "AdminAccessConfig",
     )
   })
 

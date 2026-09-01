@@ -25,6 +25,7 @@ import {
   type PublishedReleaseEvidence,
   validatePublishedReleaseEvidence,
 } from "./release-readiness"
+import { fetchAdminService } from "./admin-service"
 
 export type SystemReadinessState = "healthy" | "configured" | "degraded" | "disabled" | "missing"
 
@@ -43,7 +44,7 @@ export interface SystemReadinessReport {
 }
 
 type WorkerBinding = {
-  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
+  url: string
 }
 
 export type D1BackupBucket = {
@@ -177,17 +178,17 @@ export async function getSystemReadiness() {
         await tx.select({ id: AccountTable.id }).from(AccountTable).limit(1)
       }),
     auth: () =>
-      resources.AuthApi.fetch("https://auth.internal/health", {
+      fetchAdminService(resources.AuthApi, "/health", {
         headers: { Accept: "application/json" },
         signal: timeout(),
       }),
     quota: () =>
-      resources.QuotaService.fetch("https://quota.internal/health", {
+      fetchAdminService(resources.QuotaService, "/health", {
         headers: { Accept: "application/json" },
         signal: timeout(),
       }),
     payments: () =>
-      resources.PaymentService.fetch("https://payments.internal/health", {
+      fetchAdminService(resources.PaymentService, "/health", {
         headers: { Accept: "application/json" },
         signal: timeout(),
       }),

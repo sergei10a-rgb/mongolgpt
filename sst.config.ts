@@ -34,6 +34,9 @@ export default $config({
     if (adminOnly && stage !== "dev") {
       throw new Error("MONGOLGPT_DEPLOY_ADMIN_ONLY-г зөвхөн dev орчинд ашиглана.")
     }
+    if (adminOnly) {
+      throw new Error("Admin deploy-ийг үндсэн stack-аас тусгаарласан sst.admin.config.ts тохиргоогоор ажиллуулна.")
+    }
     if (d1BackupOnly && stage !== "dev") {
       throw new Error("MONGOLGPT_DEPLOY_D1_BACKUP_ONLY-г зөвхөн dev орчинд ашиглана.")
     }
@@ -42,7 +45,10 @@ export default $config({
         "MONGOLGPT_DEPLOY_DOCS_ONLY, MONGOLGPT_DEPLOY_APP_ONLY, MONGOLGPT_DEPLOY_CONSOLE_ONLY, MONGOLGPT_DEPLOY_ADMIN_ONLY, MONGOLGPT_DEPLOY_D1_BACKUP_ONLY-г хамтад нь ашиглахгүй.",
       )
     }
-    if (databaseOnly && (docsOnly || appOnly || consoleOnly || adminOnly || d1BackupOnly || cloudflareProviderMigration)) {
+    if (
+      databaseOnly &&
+      (docsOnly || appOnly || consoleOnly || adminOnly || d1BackupOnly || cloudflareProviderMigration)
+    ) {
       throw new Error("MONGOLGPT_DEPLOY_DATABASE_ONLY-г бусад тусгаарласан deploy горимтой хамтад нь ашиглахгүй.")
     }
     if (databaseOnly && !hostedServices) {
@@ -113,14 +119,14 @@ export default $config({
       removal: stage === "production" ? "retain" : "remove",
       protect: stage === "production",
       home: "cloudflare",
-      providers: hostedServices && !appOnly
-        ? {
-            // Cloudflare v5 state must pass through provider 6.14 (Terraform 5.18) before 6.15+.
-            cloudflare: cloudflareProviderMigration ? "6.14.0" : "6.15.0",
-            random: "4.19.2",
-            ...(admin ? { command: "1.0.1" } : {}),
-          }
-        : {},
+      providers:
+        hostedServices && !appOnly
+          ? {
+              // Cloudflare v5 state must pass through provider 6.14 (Terraform 5.18) before 6.15+.
+              cloudflare: cloudflareProviderMigration ? "6.14.0" : "6.15.0",
+              random: "4.19.2",
+            }
+          : {},
     }
   },
   async run() {
@@ -188,13 +194,6 @@ export default $config({
         HostedServices: true,
       }
     }
-    if (adminOnly) {
-      const site = await import("./infra/admin.js")
-      return {
-        AdminUrl: site.adminUrl,
-        HostedServices: true,
-      }
-    }
     const site = await import("./infra/site.js")
     if (!hostedServices) {
       return {
@@ -208,7 +207,6 @@ export default $config({
 
     if (stage.enableSyncService) await import("./infra/app.js")
     const { consoleApp, paymentService, stat } = await import("./infra/console.js")
-    const admin = adminEnabled ? await import("./infra/admin.js") : undefined
     const stats = stage.enableAnalytics ? await import("./infra/stats.js") : undefined
     const enterprise = stage.enableShareService ? await import("./infra/enterprise.js") : undefined
     return {
@@ -220,7 +218,7 @@ export default $config({
       DocsWorkerUrl: site.website.url,
       WebAppUrl: site.webApp.url,
       ShareUrl: enterprise?.teams.url ?? "",
-      AdminUrl: admin?.adminUrl ?? "",
+      AdminUrl: adminEnabled ? stage.adminOrigin : "",
       HostedServices: true,
     }
   },

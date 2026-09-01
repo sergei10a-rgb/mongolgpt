@@ -5,11 +5,24 @@ const exactResources = new Map<string, RegExp>([
   ["AdminAccessConfig", /^sst:sst:Linkable$/],
   ["AdminAccessOrganizationMfa", /^command:local:Command$/],
   ["AdminAccessProvider", /^pulumi:providers:cloudflare$/],
+  ["AdminPaymentCancellationToken", /^sst:sst:Linkable$/],
+  ["AdminPaymentRefundToken", /^sst:sst:Linkable$/],
+  ["AuthApi", /^sst:sst:Linkable$/],
+  ["D1Backups", /^sst:sst:Linkable$/],
+  ["Database", /^sst:sst:Linkable$/],
+  ["MONGOLGPT_PLAN_LIMITS", /^sst:sst:Secret$/],
   ["MongolGPTAdminBootstrapEmails", /^sst:sst:Secret$/],
+  ["PaymentService", /^sst:sst:Linkable$/],
+  ["QuotaService", /^sst:sst:Linkable$/],
+  ["QuotaServiceToken", /^sst:sst:Linkable$/],
+  ["ServiceMonitorState", /^sst:sst:Linkable$/],
+  ["UsageQueueReadiness", /^sst:sst:Linkable$/],
   ["default_1_0_1", /^pulumi:providers:command$/],
+  ["default_6_15_0", /^pulumi:providers:cloudflare$/],
 ])
 
 const allowedOperations = new Set(["create", "update"])
+const createOnlyResources = new Set(["AdminAccessApplication", "AdminAccessConfig", "AdminAccessProvider"])
 const maximumChanges = 2_000
 
 export class AdminDeploymentDiffError extends Error {
@@ -64,7 +77,7 @@ function isAllowedAdminChange(urnType: string, name: string, type: string, op: s
   }
 
   const exact = exactResources.get(name)
-  if (exact) return exact.test(type)
+  if (exact) return exact.test(type) && (!createOnlyResources.has(name) || op === "create")
 
   if (!name.startsWith("Admin") || !urnType.split("$").includes(adminSiteType)) return false
   return type === urnType.split("$").at(-1)

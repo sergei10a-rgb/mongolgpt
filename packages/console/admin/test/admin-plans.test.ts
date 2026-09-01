@@ -247,7 +247,7 @@ describe("admin plan management", () => {
     const route = await source("src/routes/plans/index.tsx")
     const header = await source("src/component/admin-header.tsx")
     const infraConsole = await source("../../../infra/console.ts")
-    const infraAdmin = await source("../../../infra/admin.ts")
+    const infraAdmin = await source("../../../infra/admin-standalone.ts")
 
     expect(plans).toContain('requirePlatformAdminPermission(context, "plans.manage")')
     expect(plans).toContain("requireSameOriginAdminMutation(request)")
@@ -277,6 +277,7 @@ describe("admin plan management", () => {
     expect(header).toContain('permissions.includes("plans.manage")')
     expect(header).toContain('href="/plans"')
     expect(infraConsole).toContain('export const mongolGPTPlanLimits = new sst.Secret("MONGOLGPT_PLAN_LIMITS")')
+    expect(infraAdmin).toContain('new sst.Secret("MONGOLGPT_PLAN_LIMITS")')
     expect(infraAdmin).toContain("mongolGPTPlanLimits,")
   })
 })

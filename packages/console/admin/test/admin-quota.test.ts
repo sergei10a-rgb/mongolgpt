@@ -17,7 +17,7 @@ describe("admin quota service client", () => {
     )
 
     expect(result).toEqual({ "user/usr_test/weekly-cost": 42 })
-    expect(captured?.input).toBe("https://quota.internal/v1/ledger")
+    expect(captured?.input).toBe("/v1/ledger")
     expect(captured?.init?.method).toBe("POST")
     expect(new Headers(captured?.init?.headers).get("authorization")).toBe("Bearer test-token")
     expect(JSON.parse(String(captured?.init?.body))).toEqual({
