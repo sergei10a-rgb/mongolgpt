@@ -1415,6 +1415,9 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploymentSource).toContain("dependsOn: [accessOrganizationMfa]")
     expect(deploymentSource).toContain('type: "self_hosted"')
     expect(deploymentSource).toContain("name: `MongolGPT админ (${$app.stage})`")
+    expect(deploymentSource).toContain(
+      'customDenyMessage: "Энэ хэсэг зөвхөн эрх бүхий MongolGPT администраторуудад нээлттэй"',
+    )
     expect(deploymentSource).not.toContain("landingPageDesign")
     expect(deploymentSource).toContain('decision: "allow"')
     expect(deploymentSource).toContain("parseBootstrapEmails(value).map")

@@ -53,7 +53,7 @@ export function createAdminDeployment(sharedLinks: readonly object[]) {
       allowAuthenticateViaWarp: false,
       allowIframe: false,
       appLauncherVisible: false,
-      customDenyMessage: "Энэ хэсэг зөвхөн MongolGPT-ийн эрх бүхий администраторт нээлттэй.",
+      customDenyMessage: "Энэ хэсэг зөвхөн эрх бүхий MongolGPT администраторуудад нээлттэй",
       destinations: [{ type: "public", uri: hostname }],
       domain: hostname,
       enableBindingCookie: true,
