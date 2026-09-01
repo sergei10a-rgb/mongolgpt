@@ -2,6 +2,7 @@ import { join } from "node:path"
 import {
   inspectSstCommandErrorDiagnostics,
   inspectSstErrorDiagnostics,
+  inspectSstEventTrail,
 } from "@mongolgpt/script/sst-error-diagnostics"
 
 const root = process.argv[2]
@@ -21,6 +22,7 @@ const secretValues = Object.entries(process.env).flatMap(([name, value]) =>
 let totalBytes = 0
 let files = 0
 const diagnostics = []
+const trail = []
 const glob = new Bun.Glob("**/eventlog.json")
 for await (const relative of glob.scan({ cwd: root, onlyFiles: true })) {
   if (files === maximumFiles) break
@@ -28,7 +30,9 @@ for await (const relative of glob.scan({ cwd: root, onlyFiles: true })) {
   if (file.size > maximumFileBytes || totalBytes + file.size > maximumTotalBytes) continue
   totalBytes += file.size
   files += 1
-  diagnostics.push(...inspectSstErrorDiagnostics(await file.text(), secretValues))
+  const text = await file.text()
+  diagnostics.push(...inspectSstErrorDiagnostics(text, secretValues))
+  trail.push(...inspectSstEventTrail(text))
 }
 
 for (const path of process.argv.slice(3, 7)) {
@@ -49,5 +53,13 @@ if (!unique.length) {
   console.error("Pulumi preview-ийн нууц утгагүй error diagnostics:")
   for (const diagnostic of unique) {
     console.error(`- ${diagnostic.resource ? `${diagnostic.resource}: ` : ""}${diagnostic.message}`)
+  }
+}
+
+const recentTrail = trail.slice(-12)
+if (recentTrail.length) {
+  console.error("Pulumi preview-ийн сүүлийн аюулгүй event trail:")
+  for (const entry of recentTrail) {
+    console.error(`- ${entry.event}${entry.operation ? ` ${entry.operation}` : ""}${entry.resource ? ` ${entry.resource}` : ""}`)
   }
 }

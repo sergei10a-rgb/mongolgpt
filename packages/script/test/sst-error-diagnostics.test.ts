@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test"
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { inspectSstCommandErrorDiagnostics, inspectSstErrorDiagnostics } from "../src/sst-error-diagnostics"
+import {
+  inspectSstCommandErrorDiagnostics,
+  inspectSstErrorDiagnostics,
+  inspectSstEventTrail,
+} from "../src/sst-error-diagnostics"
 
 describe("SST Pulumi error diagnostics", () => {
   test("keeps only bounded error diagnostics and redacts sensitive values", () => {
@@ -68,6 +72,33 @@ describe("SST Pulumi error diagnostics", () => {
     expect(JSON.stringify(result)).not.toContain("api.example.com")
     expect(result[0]?.message).toContain("token=[redacted]")
     expect(result[1]?.message).toContain("status 255")
+  })
+
+  test("reports only bounded operation and resource labels from the event trail", () => {
+    const input = [
+      resourceEvent("resourcePreEvent", "create", "cloudflare:index/worker:Worker", "AdminServer"),
+      resourceEvent("resOutputsEvent", "create", "cloudflare:index/worker:Worker", "AdminServer"),
+      resourceEvent(
+        "resOpFailedEvent",
+        "update<script>",
+        "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication",
+        "AdminAccessApplication",
+      ),
+      JSON.stringify({ cancelEvent: {} }),
+      JSON.stringify({ summaryEvent: { resourceChanges: { create: 1 } } }),
+    ].join("\n")
+
+    expect(inspectSstEventTrail(input)).toEqual([
+      { event: "resource-pre", operation: "create", resource: "cloudflare:index/worker:Worker AdminServer" },
+      { event: "resource-output", operation: "create", resource: "cloudflare:index/worker:Worker AdminServer" },
+      {
+        event: "resource-failed",
+        operation: "updatescript",
+        resource: "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication AdminAccessApplication",
+      },
+      { event: "cancel" },
+      { event: "summary" },
+    ])
   })
 
   test("CLI prints only redacted diagnostics from a bounded event log", async () => {
@@ -142,4 +173,16 @@ describe("SST Pulumi error diagnostics", () => {
 
 function event(severity: string, message: string, urn?: string) {
   return JSON.stringify({ diagnosticEvent: { severity, message, ...(urn ? { urn } : {}) } })
+}
+
+function resourceEvent(key: string, op: string, type: string, name: string) {
+  return JSON.stringify({
+    [key]: {
+      metadata: {
+        op,
+        urn: `urn:pulumi:dev::mongolgpt::${type}::${name}`,
+        new: { inputs: { token: "must-not-be-read" } },
+      },
+    },
+  })
 }

@@ -6,6 +6,12 @@ export interface SstErrorDiagnostic {
   resource?: string
 }
 
+export interface SstEventTrailEntry {
+  event: string
+  operation?: string
+  resource?: string
+}
+
 export function inspectSstErrorDiagnostics(input: string, secretValues: readonly string[] = []) {
   const secrets = normalizedSecrets(secretValues)
   const diagnostics: SstErrorDiagnostic[] = []
@@ -44,6 +50,17 @@ export function inspectSstCommandErrorDiagnostics(input: string, secretValues: r
   return diagnostics
 }
 
+export function inspectSstEventTrail(input: string) {
+  const trail: SstEventTrailEntry[] = []
+  for (const event of parseEvents(input)) {
+    const entry = eventTrailEntry(event)
+    if (!entry) continue
+    trail.push(entry)
+    if (trail.length > maximumDiagnostics) trail.shift()
+  }
+  return trail
+}
+
 function normalizedSecrets(secretValues: readonly string[]) {
   return [...new Set(secretValues.filter((value) => value.length >= 4))].sort(
     (left, right) => right.length - left.length,
@@ -73,6 +90,30 @@ function parseEvents(input: string): Record<string, unknown>[] {
     }
   }
   return result
+}
+
+function eventTrailEntry(event: Record<string, unknown>): SstEventTrailEntry | undefined {
+  for (const [key, label] of [
+    ["resourcePreEvent", "resource-pre"],
+    ["resOutputsEvent", "resource-output"],
+    ["resOpFailedEvent", "resource-failed"],
+  ] as const) {
+    const payload = event[key]
+    if (!record(payload)) continue
+    const metadata = payload.metadata
+    if (!record(metadata)) continue
+    const operation = typeof metadata.op === "string" ? safeOperation(metadata.op) : undefined
+    const resource = typeof metadata.urn === "string" ? resourceLabel(metadata.urn) : undefined
+    return { event: label, ...(operation ? { operation } : {}), ...(resource ? { resource } : {}) }
+  }
+  if ("cancelEvent" in event) return { event: "cancel" }
+  if ("summaryEvent" in event) return { event: "summary" }
+  return undefined
+}
+
+function safeOperation(value: string) {
+  const operation = value.replace(/[^A-Za-z0-9_.:/-]/g, "").slice(0, 64)
+  return operation || undefined
 }
 
 function sanitizeMessage(input: string, secrets: readonly string[]) {
