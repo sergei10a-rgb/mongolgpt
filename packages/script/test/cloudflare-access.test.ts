@@ -381,6 +381,23 @@ describe("Cloudflare admin Access deployment verification", () => {
         ),
       ),
     ).toContain("хамгаалалтын тохиргоо")
+
+    const iframeApplication = { ...adminApplication(), allow_iframe: true }
+    const iframeResponses = [organizationResponse(), response({ success: true, result: [iframeApplication] })]
+    expect(
+      String(
+        await rejection(
+          verifyCloudflareAdminAccess({
+            accountId: "account-id",
+            token: "access-token",
+            hostname: "admin.dev.mgpt.mn",
+            stage: "dev",
+            bootstrapEmails: "admin@example.com",
+            fetcher: async () => iframeResponses.shift()!,
+          }),
+        ),
+      ),
+    ).toContain("allow_iframe")
   })
 })
 
@@ -393,7 +410,6 @@ function adminApplication() {
     type: "self_hosted",
     session_duration: "4h",
     allow_authenticate_via_warp: false,
-    allow_iframe: false,
     app_launcher_visible: false,
     enable_binding_cookie: true,
     http_only_cookie_attribute: true,

@@ -305,7 +305,7 @@ function inspectAdminApplication(application: Record<string, unknown>, hostname:
     ["type", application.type === "self_hosted"],
     ["session_duration", application.session_duration === "4h"],
     ["allow_authenticate_via_warp", application.allow_authenticate_via_warp === false],
-    ["allow_iframe", application.allow_iframe === false],
+    ["allow_iframe", application.allow_iframe === false || !Object.hasOwn(application, "allow_iframe")],
     ["app_launcher_visible", application.app_launcher_visible === false],
     ["enable_binding_cookie", application.enable_binding_cookie === true],
     ["http_only_cookie_attribute", application.http_only_cookie_attribute === true],
