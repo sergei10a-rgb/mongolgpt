@@ -348,12 +348,12 @@ function unwrapPulumiSecret(value: unknown, expected: ExtractedResource<string>)
   if (
     keys.length !== 2 ||
     keys[0] !== PULUMI_SPECIAL_SIGNATURE ||
-    keys[1] !== "value" ||
+    keys[1] !== "plaintext" ||
     value[PULUMI_SPECIAL_SIGNATURE] !== PULUMI_SECRET_SIGNATURE
   ) {
     throw new SstAdminExternalStateError(`SST state дотор ${expected.name} secret envelope буруу байна.`)
   }
-  return value.value
+  return value.plaintext
 }
 
 function validateEnvValue(name: string, value: string) {

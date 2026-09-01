@@ -21,7 +21,7 @@ const paymentCancellationToken = "payment-cancel-token-synth-02+alpha+beta+gamma
 const paymentRefundToken = "payment-refund-token-synth-03+alpha+beta+gamma"
 const pulumiSecret = (value: string) => ({
   "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
-  value,
+  plaintext: value,
 })
 
 describe("SST admin external state resolver", () => {
@@ -356,7 +356,7 @@ describe("SST admin external state resolver", () => {
               passwordResource("QuotaServiceToken", {
                 result: {
                   "4dabf18193072939515e22adb298388d": "wrong-signature",
-                  value: quotaServiceToken,
+                  plaintext: quotaServiceToken,
                 },
               }),
               passwordResource("AdminPaymentCancellationToken", { result: paymentCancellationToken }),
