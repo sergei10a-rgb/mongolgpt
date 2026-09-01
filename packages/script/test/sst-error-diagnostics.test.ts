@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { inspectSstErrorDiagnostics } from "../src/sst-error-diagnostics"
+import { inspectSstCommandErrorDiagnostics, inspectSstErrorDiagnostics } from "../src/sst-error-diagnostics"
 
 describe("SST Pulumi error diagnostics", () => {
   test("keeps only bounded error diagnostics and redacts sensitive values", () => {
@@ -51,6 +51,25 @@ describe("SST Pulumi error diagnostics", () => {
     expect(inspectSstErrorDiagnostics(event("warning", "warning only"))).toEqual([])
   })
 
+  test("extracts bounded command errors and redacts sensitive values", () => {
+    const secret = "command-secret-value-that-must-not-leak"
+    const input = [
+      "time=now level=INFO msg=starting",
+      `time=now level=ERROR msg=\"provider denied token=${secret} for owner@example.com at https://api.example.com/private\"`,
+      "error: stack run exited with status 255",
+      "time=now level=INFO msg=done",
+    ].join("\n")
+
+    const result = inspectSstCommandErrorDiagnostics(input, [secret])
+
+    expect(result).toHaveLength(2)
+    expect(JSON.stringify(result)).not.toContain(secret)
+    expect(JSON.stringify(result)).not.toContain("owner@example.com")
+    expect(JSON.stringify(result)).not.toContain("api.example.com")
+    expect(result[0]?.message).toContain("token=[redacted]")
+    expect(result[1]?.message).toContain("status 255")
+  })
+
   test("CLI prints only redacted diagnostics from a bounded event log", async () => {
     const root = await mkdtemp(join(tmpdir(), "mongolgpt-sst-diagnostics-"))
     const eventRoot = join(root, "preview")
@@ -81,6 +100,36 @@ describe("SST Pulumi error diagnostics", () => {
       expect(exitCode).toBe(0)
       expect(stdout).toBe("")
       expect(stderr).toContain("Pulumi preview-ийн нууц утгагүй error diagnostics")
+      expect(stderr).toContain("token=[redacted]")
+      expect(stderr).not.toContain(secret)
+      expect(stderr).not.toContain("owner@example.com")
+      expect(stderr).not.toContain("api.example.com")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("CLI prints redacted diagnostics from a captured command log", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mongolgpt-sst-command-diagnostics-"))
+    const commandLog = join(root, "stderr.log")
+    const secret = "command-cli-secret-that-must-not-leak"
+    try {
+      await writeFile(commandLog, `level=ERROR msg=\"token=${secret} owner@example.com https://api.example.com/private\"\n`)
+      const child = Bun.spawn(
+        [process.execPath, join(import.meta.dir, "../../../script/sst-error-diagnostics.ts"), root, commandLog],
+        {
+          env: { ...globalThis.process.env, TEST_SECRET: secret },
+          stdout: "pipe",
+          stderr: "pipe",
+        },
+      )
+      const [exitCode, stdout, stderr] = await Promise.all([
+        child.exited,
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+      ])
+      expect(exitCode).toBe(0)
+      expect(stdout).toBe("")
       expect(stderr).toContain("token=[redacted]")
       expect(stderr).not.toContain(secret)
       expect(stderr).not.toContain("owner@example.com")

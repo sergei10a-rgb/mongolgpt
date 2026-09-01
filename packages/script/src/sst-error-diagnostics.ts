@@ -7,9 +7,7 @@ export interface SstErrorDiagnostic {
 }
 
 export function inspectSstErrorDiagnostics(input: string, secretValues: readonly string[] = []) {
-  const secrets = [...new Set(secretValues.filter((value) => value.length >= 4))].sort(
-    (left, right) => right.length - left.length,
-  )
+  const secrets = normalizedSecrets(secretValues)
   const diagnostics: SstErrorDiagnostic[] = []
   const seen = new Set<string>()
 
@@ -27,6 +25,29 @@ export function inspectSstErrorDiagnostics(input: string, secretValues: readonly
   }
 
   return diagnostics
+}
+
+export function inspectSstCommandErrorDiagnostics(input: string, secretValues: readonly string[] = []) {
+  const secrets = normalizedSecrets(secretValues)
+  const diagnostics: SstErrorDiagnostic[] = []
+  const seen = new Set<string>()
+
+  for (const line of input.split(/\r?\n/)) {
+    if (!/\b(?:error|failed|failure|forbidden|unauthorized|denied|exit status|exited with)\b/i.test(line)) continue
+    const message = sanitizeMessage(line, secrets)
+    if (!message || seen.has(message)) continue
+    seen.add(message)
+    diagnostics.push({ message })
+    if (diagnostics.length === maximumDiagnostics) break
+  }
+
+  return diagnostics
+}
+
+function normalizedSecrets(secretValues: readonly string[]) {
+  return [...new Set(secretValues.filter((value) => value.length >= 4))].sort(
+    (left, right) => right.length - left.length,
+  )
 }
 
 function parseEvents(input: string): Record<string, unknown>[] {

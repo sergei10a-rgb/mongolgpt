@@ -1,5 +1,8 @@
 import { join } from "node:path"
-import { inspectSstErrorDiagnostics } from "@mongolgpt/script/sst-error-diagnostics"
+import {
+  inspectSstCommandErrorDiagnostics,
+  inspectSstErrorDiagnostics,
+} from "@mongolgpt/script/sst-error-diagnostics"
 
 const root = process.argv[2]
 if (!root) {
@@ -26,6 +29,14 @@ for await (const relative of glob.scan({ cwd: root, onlyFiles: true })) {
   totalBytes += file.size
   files += 1
   diagnostics.push(...inspectSstErrorDiagnostics(await file.text(), secretValues))
+}
+
+for (const path of process.argv.slice(3, 7)) {
+  const file = Bun.file(path)
+  if (!(await file.exists())) continue
+  if (file.size > maximumFileBytes || totalBytes + file.size > maximumTotalBytes) continue
+  totalBytes += file.size
+  diagnostics.push(...inspectSstCommandErrorDiagnostics(await file.text(), secretValues))
 }
 
 const unique = [

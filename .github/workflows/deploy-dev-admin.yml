@@ -101,13 +101,14 @@ jobs:
             exit 1
           fi
           diff_file="$RUNNER_TEMP/mongolgpt-admin-diff.json"
-          trap 'rm -f "$diff_file"' EXIT
+          stderr_file="$RUNNER_TEMP/mongolgpt-admin-diff.stderr.log"
+          trap 'rm -f "$diff_file" "$stderr_file"' EXIT
           if ! MONGOLGPT_DEPLOY_ADMIN_ONLY=false \
             MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true \
             MONGOLGPT_ENABLE_TURNSTILE=true \
             MONGOLGPT_TURNSTILE_SITE_KEY=1x00000000000000000000AA \
-            bun sst diff --stage=dev --json --print-logs >"$diff_file"; then
-            bun script/sst-error-diagnostics.ts .sst/pulumi
+            bun sst diff --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"; then
+            bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file"
             exit 1
           fi
           bun script/admin-deployment-diff.ts "$diff_file"
@@ -128,13 +129,14 @@ jobs:
             exit 1
           fi
           diff_file="$RUNNER_TEMP/mongolgpt-admin-predeploy-diff.json"
-          trap 'rm -f "$diff_file"' EXIT
+          stderr_file="$RUNNER_TEMP/mongolgpt-admin-predeploy-diff.stderr.log"
+          trap 'rm -f "$diff_file" "$stderr_file"' EXIT
           if ! MONGOLGPT_DEPLOY_ADMIN_ONLY=false \
             MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS=true \
             MONGOLGPT_ENABLE_TURNSTILE=true \
             MONGOLGPT_TURNSTILE_SITE_KEY=1x00000000000000000000AA \
-            bun sst diff --stage=dev --json --print-logs >"$diff_file"; then
-            bun script/sst-error-diagnostics.ts .sst/pulumi
+            bun sst diff --stage=dev --json --print-logs >"$diff_file" 2>"$stderr_file"; then
+            bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file"
             exit 1
           fi
           bun script/admin-deployment-diff.ts "$diff_file"
