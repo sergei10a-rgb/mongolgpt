@@ -36,7 +36,7 @@
     "promote-limits-to-dev": "script/promote-limits.ts dev",
     "promote-limits-to-prod": "script/promote-limits.ts production",
     "backfill-provider-credentials": "script/backfill-provider-credentials.ts",
-    "payment-sandbox-smoke": "script/payment-sandbox-smoke.ts",
+    "payment-sandbox-smoke": "bun script/payment-sandbox-smoke.ts",
     "test": "bun test test",
     "typecheck": "tsgo --noEmit"
   },
