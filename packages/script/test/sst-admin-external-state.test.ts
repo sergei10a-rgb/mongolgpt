@@ -95,6 +95,72 @@ describe("SST admin external state resolver", () => {
     })
   })
 
+  test("extracts provider child outputs when SST component outputs are empty", () => {
+    const quotaWorkersDevUrl = "https://mongolgpt-dev-quota.workers.dev"
+    expect(
+      extractSstAdminExternalState({
+        latest: {
+          resources: [
+            resource("sst:cloudflare:D1", "Database", {}),
+            providerResource(
+              "cloudflare:index/d1Database:D1Database",
+              "DatabaseDatabase",
+              { uuid: databaseId },
+              `account/${databaseId}`,
+            ),
+            resource("sst:cloudflare:Bucket", "D1Backups", {}),
+            providerResource(
+              "cloudflare:index/r2Bucket:R2Bucket",
+              "D1BackupsBucket",
+              { name: d1BackupsBucket },
+              `account/${d1BackupsBucket}`,
+            ),
+            resource("sst:cloudflare:Kv", "UsageQueueReadiness", {}),
+            providerResource(
+              "cloudflare:index/workersKvNamespace:WorkersKvNamespace",
+              "UsageQueueReadinessNamespace",
+              {},
+              `account/${usageQueueReadinessNamespaceId}`,
+            ),
+            resource("sst:cloudflare:Kv", "ServiceMonitorState", {}),
+            providerResource(
+              "cloudflare:index/workersKvNamespace:WorkersKvNamespace",
+              "ServiceMonitorStateNamespace",
+              { id: serviceMonitorStateNamespaceId },
+              `account/${serviceMonitorStateNamespaceId}`,
+            ),
+            resource("sst:cloudflare:Worker", "AuthApi", {}),
+            providerResource("cloudflare:index/workersCustomDomain:WorkersCustomDomain", "AuthApiDomain", {
+              hostname: "auth.dev.mgpt.mn",
+            }),
+            resource("sst:cloudflare:Worker", "QuotaService", {}),
+            providerResource("pulumi-nodejs:dynamic:Resource", "QuotaServiceUrl.sst.cloudflare.WorkerUrl", {
+              url: "mongolgpt-dev-quota.workers.dev",
+            }),
+            resource("sst:cloudflare:Worker", "PaymentService", {}),
+            providerResource("cloudflare:index/workersCustomDomain:WorkersCustomDomain", "PaymentServiceDomain", {
+              hostname: "pay.dev.mgpt.mn",
+            }),
+            passwordResource("QuotaServiceToken", { result: quotaServiceToken }),
+            passwordResource("AdminPaymentCancellationToken", { result: paymentCancellationToken }),
+            passwordResource("AdminPaymentRefundToken", { result: paymentRefundToken }),
+          ],
+        },
+      }),
+    ).toEqual({
+      databaseId: databaseId.toLowerCase(),
+      d1BackupsBucket,
+      usageQueueReadinessKvId: usageQueueReadinessNamespaceId,
+      serviceMonitorStateKvId: serviceMonitorStateNamespaceId,
+      authApiUrl,
+      quotaServiceUrl: quotaWorkersDevUrl,
+      paymentServiceUrl,
+      quotaServiceToken,
+      paymentCancellationToken,
+      paymentRefundToken,
+    })
+  })
+
   test("formats only the approved key=value environment lines", () => {
     expect(
       formatSstAdminExternalStateEnv({
@@ -372,4 +438,11 @@ function resource(type: string, name: string, outputs: Record<string, unknown>) 
 
 function passwordResource(name: string, outputs: Record<string, unknown>) {
   return resource("random:index/randomPassword:RandomPassword", name, outputs)
+}
+
+function providerResource(type: string, name: string, outputs: Record<string, unknown>, id?: string) {
+  return {
+    ...resource(type, name, outputs),
+    ...(id ? { id } : {}),
+  }
 }

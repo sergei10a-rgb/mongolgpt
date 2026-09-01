@@ -5,6 +5,7 @@ const R2_BUCKET_NAME = /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/
 
 type JsonRecord = Record<string, unknown>
 type Resource = JsonRecord & {
+  id?: unknown
   type?: unknown
   urn?: unknown
   outputs?: unknown
@@ -151,13 +152,8 @@ function readExpectedValue(resources: readonly unknown[], expected: ExtractedRes
   }
 
   const outputs = record(matches[0].outputs) ? matches[0].outputs : undefined
-  if (!outputs || !(expected.outputKey in outputs)) {
-    throw new SstAdminExternalStateError(
-      `SST state дотор ${expected.type} ${expected.name} ${expected.outputKey} output дутуу байна.`,
-    )
-  }
-
-  const raw = outputs[expected.outputKey]
+  const raw =
+    outputs && expected.outputKey in outputs ? outputs[expected.outputKey] : fallbackResourceValue(resources, expected)
   switch (expected.kind) {
     case "uuid":
       return readUuid(raw, expected)
@@ -170,6 +166,81 @@ function readExpectedValue(resources: readonly unknown[], expected: ExtractedRes
     case "secret":
       return readSecretValue(raw, expected)
   }
+}
+
+function fallbackResourceValue(resources: readonly unknown[], expected: ExtractedResource<string>) {
+  switch (expected.name) {
+    case "Database": {
+      const resource = exactResource(resources, "cloudflare:index/d1Database:D1Database", "DatabaseDatabase")
+      const outputs = resourceOutputs(resource)
+      return outputs.uuid ?? providerId(resource, expected.name)
+    }
+    case "D1Backups": {
+      const resource = exactResource(resources, "cloudflare:index/r2Bucket:R2Bucket", "D1BackupsBucket")
+      const outputs = resourceOutputs(resource)
+      return outputs.name ?? providerId(resource, expected.name)
+    }
+    case "UsageQueueReadiness":
+    case "ServiceMonitorState": {
+      const resource = exactResource(
+        resources,
+        "cloudflare:index/workersKvNamespace:WorkersKvNamespace",
+        `${expected.name}Namespace`,
+      )
+      const outputs = resourceOutputs(resource)
+      return outputs.id ?? providerId(resource, expected.name)
+    }
+    case "AuthApi":
+    case "PaymentService": {
+      const resource = exactResource(
+        resources,
+        "cloudflare:index/workersCustomDomain:WorkersCustomDomain",
+        `${expected.name}Domain`,
+      )
+      const hostname = readSafeScalar(resourceOutputs(resource).hostname, expected)
+      return `https://${hostname}`
+    }
+    case "QuotaService": {
+      const resource = exactResource(
+        resources,
+        "pulumi-nodejs:dynamic:Resource",
+        "QuotaServiceUrl.sst.cloudflare.WorkerUrl",
+      )
+      const raw = readSafeScalar(resourceOutputs(resource).url, expected)
+      return raw.includes("://") ? raw : `https://${raw}`
+    }
+    default:
+      throw new SstAdminExternalStateError(
+        `SST state дотор ${expected.type} ${expected.name} ${expected.outputKey} output дутуу байна.`,
+      )
+  }
+}
+
+function exactResource(resources: readonly unknown[], type: string, name: string) {
+  const matches = resources.filter(
+    (resource): resource is Resource =>
+      record(resource) &&
+      resource.type === type &&
+      typeof resource.urn === "string" &&
+      resourceName(resource.urn) === name,
+  )
+  if (matches.length !== 1) {
+    throw new SstAdminExternalStateError(`SST state дотор ${type} ${name} яг нэг байх ёстой, ${matches.length} олдлоо.`)
+  }
+  return matches[0]
+}
+
+function resourceOutputs(resource: Resource) {
+  return record(resource.outputs) ? resource.outputs : {}
+}
+
+function providerId(resource: Resource, name: string) {
+  if (typeof resource.id !== "string") {
+    throw new SstAdminExternalStateError(`SST state дотор ${name} provider ID дутуу байна.`)
+  }
+  const value = resource.id.split("/").at(-1)
+  if (!value) throw new SstAdminExternalStateError(`SST state дотор ${name} provider ID дутуу байна.`)
+  return value
 }
 
 function isResource(resource: unknown, expected: ExtractedResource<string>) {
