@@ -302,7 +302,14 @@ describe("SessionRunnerModel", () => {
         }),
         id: ModelV2.ID.make("big-pickle"),
         providerID: ProviderV2.ID.mongolgpt,
-        request: { headers: {}, body: { apiKey: "public" } },
+        request: {
+          headers: {
+            "x-org-id": "workspace-1",
+            "x-mongolgpt-client": "desktop",
+            "x-mongolgpt-session": "session-1",
+          },
+          body: { apiKey: "public" },
+        },
         cost: [{ input: 0, output: 0, cache: { read: 0, write: 0 } }],
       })
       const resolved = yield* SessionRunnerModel.fromCatalogModel(
@@ -326,6 +333,11 @@ describe("SessionRunnerModel", () => {
 
       expect(headers.authorization).toBe("Bearer public")
       expect(headers.authorization).not.toContain("mongolgpt-account-token")
+      expect(resolved.route.defaults.headers).toEqual({
+        "x-opencode-client": "desktop",
+        "x-opencode-session": "session-1",
+      })
+      expect(JSON.stringify(resolved.route.defaults.headers)).not.toContain("workspace-1")
     }),
   )
 

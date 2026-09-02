@@ -14,7 +14,7 @@ import { Integration } from "../../integration"
 import { ModelV2 } from "../../model"
 import { ProviderV2 } from "../../provider"
 import { SessionSchema } from "../schema"
-import { isOpenCodePublicFreeModel } from "../../managed-model"
+import { isOpenCodePublicFreeModel, normalizeOpenCodePublicHeaders } from "../../managed-model"
 
 export class ModelNotSelectedError extends Schema.TaggedErrorClass<ModelNotSelectedError>()(
   "SessionRunnerModel.ModelNotSelectedError",
@@ -94,10 +94,13 @@ const withDefaults = (model: ModelV2.Info, route: AnyRoute) => {
   const httpBody = Object.hasOwn(body, "apiKey")
     ? Object.fromEntries(Object.entries(body).filter(([key]) => key !== "apiKey"))
     : body
+  const headers = isOpenCodePublicFreeModel(model)
+    ? normalizeOpenCodePublicHeaders(model.request.headers)
+    : model.request.headers
   return route.with({
     provider: model.providerID,
     endpoint: model.api.url === undefined ? undefined : { baseURL: model.api.url },
-    headers: model.request.headers,
+    headers,
     http: { body: httpBody },
     limits: { context: model.limit.context, output: model.limit.output },
   })
