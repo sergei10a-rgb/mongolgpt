@@ -19,12 +19,32 @@ export type CatalogModelStatus = typeof CatalogModelStatus.Type
 const USER_AGENT = `mongolgpt/${InstallationChannel}/${InstallationVersion}/${Flag.MONGOLGPT_CLIENT}`
 const hostedProviderIDs = new Set(["mongolgpt", "mongolgpt-go", "opencode", "opencode-go"])
 const hostedServer = env("MONGOLGPT_CONSOLE_URL")?.trim() || productServiceUrls.console
+const maxHostedFreeModels = 128
+const hostedModelIDPattern = /^[a-z0-9][a-z0-9._:/-]{0,127}$/
+
+function isActiveFreeHostedModel(model: Provider["models"][string]) {
+  if (model.status === "deprecated" || model.status === "alpha" || !model.cost) return false
+  if (model.cost.input !== 0 || model.cost.output !== 0) return false
+  if (model.cost.cache_read || model.cost.cache_write) return false
+  if (model.cost.context_over_200k?.input || model.cost.context_over_200k?.output) return false
+  if (model.cost.context_over_200k?.cache_read || model.cost.context_over_200k?.cache_write) return false
+  return !(model.cost.tiers ?? []).some(
+    (tier) => tier.input !== 0 || tier.output !== 0 || Boolean(tier.cache_read) || Boolean(tier.cache_write),
+  )
+}
 
 export function rebrandHostedProviders(providers: Record<string, Provider>, consoleUrl = hostedServer) {
   const result = { ...providers }
   const base = consoleUrl.replace(/\/+$/, "")
   const hosted = result.mongolgpt
+  const upstream = result.opencode
+  const upstreamFreeModels = Object.fromEntries(
+    Object.entries(upstream?.models ?? {})
+      .filter(([id, model]) => hostedModelIDPattern.test(id) && isActiveFreeHostedModel(model))
+      .slice(0, maxHostedFreeModels),
+  )
   result.mongolgpt = {
+    ...upstream,
     ...hosted,
     id: "mongolgpt",
     name: "MongolGPT",
@@ -32,6 +52,7 @@ export function rebrandHostedProviders(providers: Record<string, Provider>, cons
     npm: hosted?.npm ?? "@ai-sdk/openai-compatible",
     env: ["MONGOLGPT_API_KEY"],
     models: {
+      ...upstreamFreeModels,
       ...hosted?.models,
       "free-auto": freeAutoModel,
     },
@@ -280,7 +301,7 @@ export const layer = Layer.effect(
 
     if (!Flag.MONGOLGPT_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-completions")) {
       // Schedule.spaced runs the effect once, then waits between completions.
-      yield* Effect.forkScoped(refresh().pipe(Effect.repeat(Schedule.spaced("60 minutes")), Effect.ignore))
+      yield* Effect.forkScoped(refresh().pipe(Effect.repeat(Schedule.spaced("5 minutes")), Effect.ignore))
     }
 
     return Service.of({ get, refresh })

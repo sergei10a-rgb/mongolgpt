@@ -8,7 +8,7 @@ describe("gateway handler HTTP boundary", () => {
     const output = result.stdout + result.stderr
 
     expect(result.code).toBe(0)
-    expect(output).toContain("2 pass")
+    expect(output).toContain("3 pass")
     expect(output).toContain("0 fail")
   })
 })

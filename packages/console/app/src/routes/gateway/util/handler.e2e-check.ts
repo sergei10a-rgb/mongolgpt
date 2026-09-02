@@ -181,7 +181,63 @@ beforeEach(() => {
 })
 
 describe("gateway handler HTTP boundary", () => {
-  test("executes the authenticated three-route Free Auto chain and persists NVIDIA usage attribution", async () => {
+  test("applies the shared Free Auto policy to a directly selected dynamic model", async () => {
+    const observed: Array<{ authorization: string | null; model: string }> = []
+    using baseFree = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      async fetch(request) {
+        const body = (await request.json()) as { model: string }
+        observed.push({ authorization: request.headers.get("authorization"), model: body.model })
+        return Response.json({
+          id: "chatcmpl-handler-direct-free",
+          object: "chat.completion",
+          model: body.model,
+          choices: [{ index: 0, message: { role: "assistant", content: "direct-free-ok" }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 4, completion_tokens: 2, total_tokens: 6 },
+        })
+      },
+    })
+    endpoints.baseFree = `http://127.0.0.1:${baseFree.port}/v1`
+
+    const response = await handler(
+      {
+        request: new Request("https://dev.mgpt.mn/gateway/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            authorization: "Bearer mongolgpt-account-token",
+            "content-type": "application/json",
+            "accept-language": "mn",
+          },
+          body: JSON.stringify({
+            model: "big-pickle",
+            messages: [{ role: "user", content: "Шууд загварын шалгалт" }],
+            stream: false,
+          }),
+        }),
+      } as Parameters<typeof handler>[0],
+      {
+        format: "oa-compat",
+        modelList: "full",
+        parseApiKey: (headers) => headers.get("authorization")?.replace(/^Bearer /, ""),
+        parseModel: (_url, body) => body.model,
+        parseVariant: () => undefined,
+        parseIsStream: (_url, body) => body.stream === true,
+        loadUpstreamFreeModels: async () => [{ id: "big-pickle", name: "Big Pickle", format: "oa-compat" }],
+      },
+    )
+
+    expect(response.status).toBe(200)
+    expect(observed).toEqual([{ authorization: "Bearer public", model: "big-pickle" }])
+    expect(state.usageRows).toHaveLength(1)
+    expect(state.usageRows[0]).toMatchObject({
+      model: "free-auto",
+      inputTokens: 4,
+      outputTokens: 2,
+    })
+  })
+
+  test("executes the authenticated dynamic Free Auto chain and persists NVIDIA usage attribution", async () => {
     const observed: Array<{ provider: string; authorization: string | null; model: string }> = []
     using baseFree = Bun.serve({
       hostname: "127.0.0.1",
@@ -193,10 +249,7 @@ describe("gateway handler HTTP boundary", () => {
           authorization: request.headers.get("authorization"),
           model: body.model,
         })
-        return Response.json(
-          { error: { message: "rate limited" } },
-          { status: 429, headers: { "retry-after": "60" } },
-        )
+        return Response.json({ error: { message: "rate limited" } }, { status: 429, headers: { "retry-after": "60" } })
       },
     })
     using openrouter = Bun.serve({
@@ -226,7 +279,9 @@ describe("gateway handler HTTP boundary", () => {
           id: "chatcmpl-handler-fallback",
           object: "chat.completion",
           model: body.model,
-          choices: [{ index: 0, message: { role: "assistant", content: "handler-fallback-ok" }, finish_reason: "stop" }],
+          choices: [
+            { index: 0, message: { role: "assistant", content: "handler-fallback-ok" }, finish_reason: "stop" },
+          ],
           usage: { prompt_tokens: 11, completion_tokens: 7, total_tokens: 18 },
         })
       },
@@ -259,6 +314,10 @@ describe("gateway handler HTTP boundary", () => {
         parseModel: (_url, body) => body.model,
         parseVariant: () => undefined,
         parseIsStream: (_url, body) => body.stream === true,
+        loadUpstreamFreeModels: async () => [
+          { id: "mimo-v2.5-free", name: "MiMo V2.5 Free", format: "oa-compat" },
+          { id: "ling-3.0-flash-fin-free", name: "Ling 3.0 Flash Fin Free", format: "oa-compat" },
+        ],
       },
     )
     const payload = (await response.json()) as {
@@ -272,12 +331,21 @@ describe("gateway handler HTTP boundary", () => {
     expect(payload.choices[0]?.message.content).toBe("handler-fallback-ok")
     expect(payload.usage).toMatchObject({ prompt_tokens: 11, completion_tokens: 7 })
     expect(payload.cost).toBe("0")
-    expect(observed).toEqual([
-      {
-        provider: "mongolgpt-base-free",
-        authorization: "Bearer public",
-        model: "mimo-v2.5-free",
-      },
+    expect(observed.slice(0, 2)).toEqual(
+      expect.arrayContaining([
+        {
+          provider: "mongolgpt-base-free",
+          authorization: "Bearer public",
+          model: "mimo-v2.5-free",
+        },
+        {
+          provider: "mongolgpt-base-free",
+          authorization: "Bearer public",
+          model: "ling-3.0-flash-fin-free",
+        },
+      ]),
+    )
+    expect(observed.slice(2)).toEqual([
       {
         provider: "openrouter-free",
         authorization: "Bearer openrouter-upstream-test",
@@ -290,20 +358,36 @@ describe("gateway handler HTTP boundary", () => {
       },
     ])
     expect(JSON.stringify(observed)).not.toContain("mongolgpt-account-token")
-    expect(state.circuit).toEqual([
-      { provider: "mongolgpt-base-free", outcome: "transient-error" },
+    expect(state.circuit.slice(0, 2)).toEqual([
+      expect.objectContaining({
+        provider: expect.stringContaining("mongolgpt-base-free--"),
+        outcome: "transient-error",
+      }),
+      expect.objectContaining({
+        provider: expect.stringContaining("mongolgpt-base-free--"),
+        outcome: "transient-error",
+      }),
+    ])
+    expect(state.circuit.slice(2)).toEqual([
       { provider: "openrouter-free", outcome: "transient-error" },
       { provider: "nvidia-nim-production", outcome: "success" },
     ])
-    expect(state.providerAttempts).toHaveLength(3)
-    expect(state.providerAttempts).toEqual([
+    expect(state.providerAttempts).toHaveLength(4)
+    expect(state.providerAttempts.slice(0, 2)).toEqual([
       expect.objectContaining({
         type: "provider-attempt",
-        provider: "mongolgpt-base-free",
         outcome: "transient-error",
         responseStatus: 429,
         fallback: false,
       }),
+      expect.objectContaining({
+        type: "provider-attempt",
+        outcome: "transient-error",
+        responseStatus: 429,
+        fallback: false,
+      }),
+    ])
+    expect(state.providerAttempts.slice(2)).toEqual([
       expect.objectContaining({
         type: "provider-attempt",
         provider: "openrouter-free",
@@ -328,9 +412,14 @@ describe("gateway handler HTTP boundary", () => {
       inputTokens: 11,
       outputTokens: 7,
     })
-    expect(
-      state.metrics.filter((metric) => typeof metric.provider === "string").map((metric) => metric.provider),
-    ).toEqual(["mongolgpt-base-free", "openrouter-free", "nvidia-nim-production"])
+    const providerMetrics = state.metrics
+      .filter((metric) => typeof metric.provider === "string")
+      .map((metric) => String(metric.provider))
+    expect(providerMetrics.slice(0, 2)).toEqual([
+      expect.stringContaining("mongolgpt-base-free--"),
+      expect.stringContaining("mongolgpt-base-free--"),
+    ])
+    expect(providerMetrics.slice(2)).toEqual(["openrouter-free", "nvidia-nim-production"])
   })
 
   test("decrypts a workspace-bound BYOK credential for the upstream request", async () => {

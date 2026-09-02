@@ -82,4 +82,18 @@ describe("authenticated gateway model catalog", () => {
       data: [{ id: "free-auto", object: "model", owned_by: "mongolgpt" }],
     })
   })
+
+  test("hides every dynamic free model when the Free Auto policy is disabled", async () => {
+    const response = await buildAuthenticatedModelsResponse(request("Bearer valid"), {
+      authenticate: async () => "workspace-1",
+      disabled: async () => ["free-auto"],
+      models: () => ["free-auto", "big-pickle", "paid-model"],
+      policyModelID: (id) => (id === "big-pickle" ? "free-auto" : id),
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      data: [{ id: "paid-model", owned_by: "mongolgpt" }],
+    })
+  })
 })

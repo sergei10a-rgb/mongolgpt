@@ -78,6 +78,12 @@ import {
   type BillingSource,
 } from "./request-lifecycle"
 import { enqueueProviderAttemptEvent } from "./quota-service"
+import {
+  expandUpstreamFreeModels,
+  loadUpstreamFreeModels,
+  upstreamFreePolicyModelID,
+  type UpstreamFreeModel,
+} from "./upstream-free-models"
 
 type GatewayCatalogData = Awaited<ReturnType<typeof GatewayCatalog.list>>
 type RetryOptions = {
@@ -139,6 +145,7 @@ export async function handler(
     parseModel: (url: string, body: any) => string
     parseVariant: (url: string, body: any) => string | undefined
     parseIsStream: (url: string, body: any) => boolean
+    loadUpstreamFreeModels?: () => Promise<readonly UpstreamFreeModel[]>
   },
 ) {
   type AuthInfo = Awaited<ReturnType<typeof authenticate>>
@@ -159,6 +166,8 @@ export async function handler(
     freeAuto: undefined as Awaited<ReturnType<typeof reserveFreeAutoQuota>>,
     plan: undefined as PlanQuotaReservation | undefined,
   }
+  const failoverRetryLimit = (modelInfo: ModelInfo) =>
+    modelInfo.id === "free-auto" ? Math.max(MAX_FAILOVER_RETRIES, modelInfo.providers.length - 1) : MAX_FAILOVER_RETRIES
 
   try {
     const url = input.request.url
@@ -184,15 +193,21 @@ export async function handler(
       "model.variant": variant,
       "model.tier": opts.modelList,
     })
-    const catalog = GatewayCatalog.list(opts.modelList)
+    const baseCatalog = GatewayCatalog.list(opts.modelList)
+    const needsUpstreamCatalog = model === "free-auto" || !(model in baseCatalog.models)
+    const upstreamFreeModels = needsUpstreamCatalog
+      ? await (opts.loadUpstreamFreeModels ?? loadUpstreamFreeModels)()
+      : []
+    const catalog = needsUpstreamCatalog ? expandUpstreamFreeModels(baseCatalog, upstreamFreeModels) : baseCatalog
     const modelInfo = validateModel(catalog, model)
-    const authInfo = await authenticate(modelInfo, gatewayApiKey)
+    const policyModelID = upstreamFreePolicyModelID(model, baseCatalog, upstreamFreeModels)
+    const authInfo = await authenticate(modelInfo, policyModelID, gatewayApiKey)
     const trialLimiter = await createTrialLimiter(modelInfo.trialProvider, ip, limits.free)
     const trialProviders = await trialLimiter?.check()
     const rateLimiter = modelInfo.allowAnonymous
-      ? await createIpRateLimiter(modelInfo.id, modelInfo.rateLimit, input.request, limits.free)
+      ? await createIpRateLimiter(policyModelID, modelInfo.rateLimit, input.request, limits.free)
       : createKeyRateLimiter(
-          modelInfo.id,
+          policyModelID,
           modelInfo.rateLimit,
           authenticatedRateLimitIdentity(
             authInfo ? { workspaceID: authInfo.workspaceID, userID: authInfo.user.id } : undefined,
@@ -202,10 +217,10 @@ export async function handler(
         )
     await rateLimiter?.check()
     const stickyId = sessionId ? sessionId : (authInfo?.workspaceID ?? ip)
-    const stickyTracker = createStickyTracker(modelInfo.id, modelInfo.stickyProvider, stickyId)
+    const stickyTracker = createStickyTracker(policyModelID, modelInfo.stickyProvider, stickyId)
     const stickyProvider = await stickyTracker?.get()
     const billingSource = validateBilling(authInfo, modelInfo, limits)
-    quota.freeAuto = await reserveFreeAutoWeeklyUsage(authInfo, modelInfo)
+    quota.freeAuto = await reserveFreeAutoWeeklyUsage(authInfo, modelInfo, policyModelID)
     quota.plan = await reservePaidPlanUsage(billingSource, authInfo, modelInfo, limits)
     logger.metric({ source: billingSource })
     const modelTpmLimiter = createModelTpmLimiter(modelInfo.providers)
@@ -307,7 +322,7 @@ export async function handler(
       return runProviderAttempt({
         retry,
         policy: {
-          maxRetries: MAX_FAILOVER_RETRIES,
+          maxRetries: failoverRetryLimit(modelInfo),
           stickyProvider: modelInfo.stickyProvider,
           fallbackProvider: modelInfo.fallbackProviders,
           currentProvider: providerInfo.id,
@@ -410,7 +425,17 @@ export async function handler(
         await trackAndSettleMeasuredUsage({
           actual,
           track: () =>
-            trackUsage(sessionId, billingSource, authInfo, modelInfo, providerInfo, usageInfo, costInfo, limits),
+            trackUsage(
+              sessionId,
+              billingSource,
+              authInfo,
+              modelInfo,
+              policyModelID,
+              providerInfo,
+              usageInfo,
+              costInfo,
+              limits,
+            ),
           settle: settleRequestQuota,
         })
         json.cost = calculateOccurredCost(billingSource, costInfo)
@@ -486,6 +511,7 @@ export async function handler(
                         billingSource,
                         authInfo,
                         modelInfo,
+                        policyModelID,
                         providerInfo,
                         usageInfo,
                         costInfo,
@@ -606,6 +632,7 @@ export async function handler(
     modelTpsLimits: Record<string, { qualify: number; unqualify: number }> | undefined,
     providerBudgetUsage: Record<string, number> | undefined,
   ) {
+    const maxFailoverRetries = failoverRetryLimit(modelInfo)
     const selected = (() => {
       // Byok is top priority b/c if user set their own API key, we should use it
       // instead of using the sticky provider for the same session
@@ -624,8 +651,9 @@ export async function handler(
       }
 
       // Prioritize trial providers
-      let allProviders = selectServerProviderRoutes(modelInfo.providers, catalog.providers)
-        .filter((provider) => isProviderAllowedForStage(catalog.providers[provider.id], Resource.App.stage))
+      let allProviders = selectServerProviderRoutes(modelInfo.providers, catalog.providers).filter((provider) =>
+        isProviderAllowedForStage(catalog.providers[provider.id], Resource.App.stage),
+      )
       if (trialProviders) {
         allProviders = allProviders.map((provider) => ({
           ...provider,
@@ -637,7 +665,7 @@ export async function handler(
       const acquire = (provider: (typeof allProviders)[number]) =>
         providerCircuit.acquire(providerCircuitKey(provider.id))
 
-      if (retry.retryCount !== MAX_FAILOVER_RETRIES) {
+      if (retry.retryCount !== maxFailoverRetries) {
         let topPriority = Infinity
         const providers = routes.primaryProviders
           .filter((provider) => provider.weight !== 0)
@@ -753,14 +781,16 @@ export async function handler(
     }
   }
 
-  async function authenticate(modelInfo: ModelInfo, gatewayApiKey?: string) {
+  async function authenticate(modelInfo: ModelInfo, policyModelID: string, gatewayApiKey?: string) {
     if (!gatewayApiKey) {
       if (modelInfo.allowAnonymous) return
       throw new AuthError(t("gateway.api.error.missingApiKey"))
     }
 
     const data = await (async () => {
-      const key = gatewayApiKey ? await loadAuthData(modelInfo, { type: "key", value: gatewayApiKey }) : undefined
+      const key = gatewayApiKey
+        ? await loadAuthData(modelInfo, policyModelID, { type: "key", value: gatewayApiKey })
+        : undefined
       if (key) return key
 
       const account = await verifyGatewayAccount(input.request, gatewayApiKey)
@@ -771,7 +801,7 @@ export async function handler(
         if (workspace.error === "workspace_required") throw new AuthError(t("gateway.api.error.organizationRequired"))
         return undefined
       }
-      return loadAuthData(modelInfo, {
+      return loadAuthData(modelInfo, policyModelID, {
         type: "account",
         accountID: account.accountID,
         workspaceID: workspace.workspaceID,
@@ -811,7 +841,7 @@ export async function handler(
     }
   }
 
-  function loadAuthData(modelInfo: ModelInfo, credential: AuthCredential) {
+  function loadAuthData(modelInfo: ModelInfo, policyModelID: string, credential: AuthCredential) {
     const now = new Date()
     const key =
       credential.type === "key"
@@ -892,7 +922,7 @@ export async function handler(
         .leftJoin(KeyTable, key)
         .leftJoin(
           ModelTable,
-          and(eq(ModelTable.workspaceID, UserTable.workspaceID), eq(ModelTable.model, modelInfo.id)),
+          and(eq(ModelTable.workspaceID, UserTable.workspaceID), eq(ModelTable.model, policyModelID)),
         )
         .leftJoin(
           ProviderTable,
@@ -929,7 +959,7 @@ export async function handler(
     )
   }
 
-  async function reserveFreeAutoWeeklyUsage(authInfo: AuthInfo, modelInfo: ModelInfo) {
+  async function reserveFreeAutoWeeklyUsage(authInfo: AuthInfo, modelInfo: ModelInfo, policyModelID: string) {
     if (!modelInfo.freeForAuthenticated || !modelInfo.freeWeeklyTokenLimit || !modelInfo.freeMaxTokensPerRequest) return
     if (!authInfo) throw new AuthError(t("gateway.api.error.missingApiKey"))
 
@@ -954,7 +984,7 @@ export async function handler(
         .where(
           and(
             eq(UserTable.accountID, authInfo.accountID),
-            eq(UsageTable.model, modelInfo.id),
+            eq(UsageTable.model, policyModelID),
             gte(UsageTable.timeCreated, week.start),
           ),
         )
@@ -969,7 +999,7 @@ export async function handler(
 
     const reservation = await reserveFreeAutoQuota({
       accountID: authInfo.accountID,
-      modelID: modelInfo.id,
+      modelID: policyModelID,
       weekStart: week.start,
       persistedUsage: usage,
       reservation: freeAutoReservationUpperBound(modelInfo.freeMaxTokensPerRequest, modelInfo.freeWeeklyTokenLimit),
@@ -1295,6 +1325,7 @@ export async function handler(
     billingSource: BillingSource,
     authInfo: AuthInfo,
     modelInfo: ModelInfo,
+    policyModelID: string,
     providerInfo: ProviderInfo,
     usageInfo: UsageInfo,
     costInfo: CostInfo,
@@ -1364,7 +1395,7 @@ export async function handler(
           workspaceCost: queuedWorkspaceCost,
           userCost: cost,
           usage: {
-            model: modelInfo.id,
+            model: policyModelID,
             provider: providerInfo.id,
             inputTokens,
             outputTokens,
@@ -1399,7 +1430,7 @@ export async function handler(
           id: usageID,
           timeCreated: now,
           timeUpdated: now,
-          model: modelInfo.id,
+          model: policyModelID,
           provider: providerInfo.id,
           inputTokens,
           outputTokens,
@@ -1426,7 +1457,7 @@ export async function handler(
         workspaceID: authInfo.workspaceID,
         usageID,
         provider: providerInfo.id,
-        model: modelInfo.id,
+        model: policyModelID,
         costUSDInMicrocents: cost,
         effectiveAt: nowMs,
         plan: enrichment?.plan,

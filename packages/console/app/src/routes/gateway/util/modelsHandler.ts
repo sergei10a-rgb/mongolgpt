@@ -13,7 +13,8 @@ export async function buildOptionsResponse() {
 interface ModelsRequestDependencies {
   authenticate: (request: Request, token: string) => Promise<string | undefined>
   disabled: (workspaceID: string) => Promise<readonly string[]>
-  models: () => readonly string[]
+  models: () => readonly string[] | Promise<readonly string[]>
+  policyModelID?: (modelID: string) => string | Promise<string>
 }
 
 export async function buildAuthenticatedModelsResponse(request: Request, dependencies: ModelsRequestDependencies) {
@@ -25,10 +26,12 @@ export async function buildAuthenticatedModelsResponse(request: Request, depende
   if (!workspaceID) return buildModelsUnauthorizedResponse()
 
   const disabled = await dependencies.disabled(workspaceID)
-  const models = dependencies
-    .models()
-    .filter((id) => !id.endsWith(":global"))
-    .filter((id) => !disabled.includes(id))
+  const visible = (await dependencies.models()).filter((id) => !id.endsWith(":global"))
+  const models = (
+    await Promise.all(
+      visible.map(async (id) => (disabled.includes(await (dependencies.policyModelID?.(id) ?? id)) ? undefined : id)),
+    )
+  ).filter((id): id is string => Boolean(id))
   return buildModelsResponse(models)
 }
 

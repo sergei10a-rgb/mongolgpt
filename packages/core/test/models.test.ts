@@ -138,11 +138,35 @@ describe("ModelsDev Service", () => {
     }),
   )
 
-  it.live("discards legacy hosted providers instead of inheriting them into MongolGPT", () =>
+  it.live("rebrands only the active zero-cost OpenCode catalog as MongolGPT", () =>
     Effect.sync(() => {
+      const free = {
+        ...fixture.acme.models["acme-1"],
+        id: "free-current",
+        name: "Free Current",
+        cost: { input: 0, output: 0 },
+      }
+      const paid = {
+        ...fixture.acme.models["acme-1"],
+        id: "paid-current",
+        name: "Paid Current",
+        cost: { input: 1, output: 2 },
+      }
+      const retired = {
+        ...free,
+        id: "free-retired",
+        name: "Free Retired",
+        status: "deprecated" as const,
+      }
       const providers = {
         ...fixture,
-        opencode: { ...fixture.acme, id: "opencode", name: "OpenCode Zen", api: "https://opencode.ai/zen/v1" },
+        opencode: {
+          ...fixture.acme,
+          id: "opencode",
+          name: "OpenCode Zen",
+          api: "https://opencode.ai/zen/v1",
+          models: { [free.id]: free, [paid.id]: paid, [retired.id]: retired },
+        },
         "opencode-go": {
           ...fixture.acme,
           id: "opencode-go",
@@ -160,6 +184,11 @@ describe("ModelsDev Service", () => {
         api: "https://mgpt.mn/gateway/v1",
         env: ["MONGOLGPT_API_KEY"],
         models: {
+          "free-current": {
+            id: "free-current",
+            name: "Free Current",
+            cost: { input: 0, output: 0 },
+          },
           "free-auto": {
             id: "free-auto",
             name: "MongolGPT Free Auto",
@@ -168,6 +197,8 @@ describe("ModelsDev Service", () => {
           },
         },
       })
+      expect(result.mongolgpt.models["paid-current"]).toBeUndefined()
+      expect(result.mongolgpt.models["free-retired"]).toBeUndefined()
       expect(result.mongolgpt.models["acme-1"]).toBeUndefined()
       expect(result["mongolgpt-go"]).toBeUndefined()
     }),

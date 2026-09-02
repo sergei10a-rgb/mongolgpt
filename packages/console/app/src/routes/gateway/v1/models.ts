@@ -8,12 +8,19 @@ import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { ModelTable } from "@mongolgpt/console-core/schema/model.sql.js"
 import { buildAuthenticatedModelsResponse, buildOptionsResponse } from "~/routes/gateway/util/modelsHandler"
 import { resolveGatewayWorkspace, verifyGatewayAccount } from "~/lib/cli-auth"
+import {
+  expandUpstreamFreeModels,
+  loadUpstreamFreeModels,
+  upstreamFreePolicyModelID,
+} from "~/routes/gateway/util/upstream-free-models"
 
 export async function OPTIONS(_input: APIEvent) {
   return buildOptionsResponse()
 }
 
 export async function GET(input: APIEvent) {
+  const baseCatalog = GatewayCatalog.list("full")
+  const upstream = loadUpstreamFreeModels()
   return buildAuthenticatedModelsResponse(input.request, {
     authenticate: authenticatedWorkspace,
     disabled: (workspaceID) =>
@@ -24,7 +31,8 @@ export async function GET(input: APIEvent) {
           .where(and(eq(ModelTable.workspaceID, workspaceID), isNull(ModelTable.timeDeleted)))
           .then((rows) => rows.map((row) => row.model)),
       ),
-    models: () => Object.keys(GatewayCatalog.list("full").models),
+    models: async () => Object.keys(expandUpstreamFreeModels(baseCatalog, await upstream).models),
+    policyModelID: async (modelID) => upstreamFreePolicyModelID(modelID, baseCatalog, await upstream),
   })
 }
 
