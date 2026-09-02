@@ -876,7 +876,7 @@ export const dict = {
   "settings.account.quota.monthlyRequests": "Таны сарын хүсэлт: {{used}} / {{limit}}",
   "settings.account.quota.monthlyCost": "Таны сарын өртгийн хязгаар: {{percent}}",
   "settings.account.quota.rollingCost": "Таны {{hours}} цагийн өртгийн хязгаар: {{percent}}",
-  "settings.account.quota.modelScoped": "Free Auto хязгаарыг загвар бүрээр тооцно.",
+  "settings.account.quota.modelScoped": "Free Auto-ийн нийт хэрэглээг нэгтгэн тооцно.",
   "settings.account.quota.unavailable": "Хэрэглээний хязгаарын төлөвийг одоогоор авч чадсангүй.",
   "settings.account.quota.resetAt": "7 хоногийн хязгаар шинэчлэгдэх хугацаа: {{date}}",
   "settings.account.quota.monthlyResetAt": "Сарын хязгаар шинэчлэгдэх хугацаа: {{date}}",

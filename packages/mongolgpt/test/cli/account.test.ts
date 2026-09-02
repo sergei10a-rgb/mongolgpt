@@ -144,7 +144,7 @@ describe("console account display", () => {
       "● Миний төсөл · Free · админ",
       "  Ажлын орчны хэрэглээ: 3 хүсэлт, 185 токен",
       "  Өдрийн хязгаар: 20 үндсэн, 5 нөөц хүсэлт",
-      "  Хэрэглээний хязгаарыг Free Auto загвар бүрээр тооцно",
+      "  Free Auto-ийн нийт хэрэглээг нэг хязгаарт нэгтгэн тооцно",
     ])
     expect(lines.join(" ").toLowerCase()).not.toMatch(/workspace|quota|usage/)
   })

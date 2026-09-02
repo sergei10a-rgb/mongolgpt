@@ -124,7 +124,7 @@ export function formatAccountOverview(overview: AccountOverview) {
         `  Таны сарын хүсэлт: ${number.format(workspace.quota.monthlyRequests.used)} / ${number.format(workspace.quota.monthlyRequests.limit)}`,
       )
     } else if (workspace.quota.status === "model-scoped") {
-      lines.push("  Хэрэглээний хязгаарыг Free Auto загвар бүрээр тооцно")
+      lines.push("  Free Auto-ийн нийт хэрэглээг нэг хязгаарт нэгтгэн тооцно")
     } else {
       lines.push("  Хэрэглээний хязгаарын төлөвийг одоогоор авч чадсангүй")
     }

@@ -938,7 +938,7 @@ export const dict = {
   "settings.account.quota.monthlyRequests": "Your monthly requests: {{used}} / {{limit}}",
   "settings.account.quota.monthlyCost": "Your monthly cost limit used: {{percent}}",
   "settings.account.quota.rollingCost": "Your {{hours}}-hour cost limit used: {{percent}}",
-  "settings.account.quota.modelScoped": "Free Auto limits are tracked per model.",
+  "settings.account.quota.modelScoped": "Free Auto usage is counted toward one shared limit.",
   "settings.account.quota.unavailable": "Usage limit status is temporarily unavailable.",
   "settings.account.quota.resetAt": "Weekly limits reset: {{date}}",
   "settings.account.quota.monthlyResetAt": "Monthly limits reset: {{date}}",
