@@ -71,6 +71,7 @@ describe("admin provider health read model", () => {
       "degraded-provider": "degraded",
       "warning-provider": "warning",
       "idle-provider": "idle",
+      "mongolgpt-base-free": "unknown",
       "openrouter-free": "unknown",
       "nvidia-nim-production": "unknown",
     })
@@ -86,6 +87,7 @@ describe("admin provider health read model", () => {
       now,
     )
     expect(report.map((provider) => provider.providerID)).toEqual([
+      "mongolgpt-base-free",
       "nvidia-nim-production.a",
       "openrouter-free.primary",
     ])

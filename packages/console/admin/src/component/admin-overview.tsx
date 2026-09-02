@@ -232,6 +232,9 @@ function providerHealthLabel(state: AdminProviderHealthState) {
 }
 
 function providerLabel(providerID: string, providerKind: string | null) {
+  if (providerKind === "mongolgpt-base-free" || providerID.startsWith("mongolgpt-base-free")) {
+    return "MongolGPT суурь үнэгүй чиглэл"
+  }
   if (providerKind === "openrouter" || providerID.startsWith("openrouter")) return "OpenRouter"
   if (providerKind === "nvidia-nim" || providerID.startsWith("nvidia")) return "NVIDIA NIM"
   return providerKind || "Нийлүүлэгч"

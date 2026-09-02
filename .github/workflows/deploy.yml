@@ -248,6 +248,7 @@ jobs:
 
       - name: Prepare managed Free Auto catalog without logging provider keys
         env:
+          MONGOLGPT_BASE_FREE_MODEL_ID: ${{ vars.MONGOLGPT_BASE_FREE_MODEL_ID }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           NVIDIA_NIM_API_KEY: ${{ secrets.NVIDIA_NIM_API_KEY }}
           NVIDIA_NIM_MODEL_ID: ${{ vars.NVIDIA_NIM_MODEL_ID }}

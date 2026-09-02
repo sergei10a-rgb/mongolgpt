@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 
 const coreDrizzle = await import("@mongolgpt/console-core/drizzle/index.js")
-const endpoints = { openrouter: "", nvidia: "", byok: "" }
+const endpoints = { baseFree: "", openrouter: "", nvidia: "", byok: "" }
 const authState = { credentials: null as string | null }
 const state = {
   metrics: [] as Array<Record<string, unknown>>,
@@ -44,6 +44,13 @@ await mock.module("@mongolgpt/console-core/model.js", () => ({
   GatewayCatalog: {
     list: () => ({
       providers: {
+        "mongolgpt-base-free": {
+          api: endpoints.baseFree,
+          apiKey: "public",
+          format: "oa-compat",
+          providerKind: "mongolgpt-base-free",
+          usageMode: "managed",
+        },
         "openrouter-free": {
           api: endpoints.openrouter,
           apiKey: "openrouter-upstream-test",
@@ -73,8 +80,9 @@ await mock.module("@mongolgpt/console-core/model.js", () => ({
           freeForAuthenticated: true,
           fallbackProviders: ["nvidia-nim-production"],
           providers: [
-            { id: "openrouter-free", model: "openrouter/free", priority: 0, weight: 1 },
-            { id: "nvidia-nim-production", model: "nvidia/free", priority: 1, weight: 1 },
+            { id: "mongolgpt-base-free", model: "mimo-v2.5-free", priority: 0, weight: 1 },
+            { id: "openrouter-free", model: "openrouter/free", priority: 1, weight: 1 },
+            { id: "nvidia-nim-production", model: "nvidia/free", priority: 2, weight: 1 },
           ],
           cost: {
             input: 0,
@@ -161,6 +169,7 @@ const { handler } = await import("./handler")
 const { ProviderCredentials } = await import("@mongolgpt/console-core/provider-credentials.js")
 
 beforeEach(() => {
+  endpoints.baseFree = ""
   endpoints.openrouter = ""
   endpoints.nvidia = ""
   endpoints.byok = ""
@@ -172,8 +181,24 @@ beforeEach(() => {
 })
 
 describe("gateway handler HTTP boundary", () => {
-  test("executes authenticated Free Auto fallback and persists NVIDIA usage attribution", async () => {
+  test("executes the authenticated three-route Free Auto chain and persists NVIDIA usage attribution", async () => {
     const observed: Array<{ provider: string; authorization: string | null; model: string }> = []
+    using baseFree = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      async fetch(request) {
+        const body = (await request.json()) as { model: string }
+        observed.push({
+          provider: "mongolgpt-base-free",
+          authorization: request.headers.get("authorization"),
+          model: body.model,
+        })
+        return Response.json(
+          { error: { message: "rate limited" } },
+          { status: 429, headers: { "retry-after": "60" } },
+        )
+      },
+    })
     using openrouter = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
@@ -184,10 +209,7 @@ describe("gateway handler HTTP boundary", () => {
           authorization: request.headers.get("authorization"),
           model: body.model,
         })
-        return Response.json(
-          { error: { message: "rate limited" } },
-          { status: 429, headers: { "retry-after": "60" } },
-        )
+        return Response.json({ error: { message: "temporarily unavailable" } }, { status: 503 })
       },
     })
     using nvidia = Bun.serve({
@@ -209,6 +231,7 @@ describe("gateway handler HTTP boundary", () => {
         })
       },
     })
+    endpoints.baseFree = `http://127.0.0.1:${baseFree.port}/v1`
     endpoints.openrouter = `http://127.0.0.1:${openrouter.port}/v1`
     endpoints.nvidia = `http://127.0.0.1:${nvidia.port}/v1`
 
@@ -251,6 +274,11 @@ describe("gateway handler HTTP boundary", () => {
     expect(payload.cost).toBe("0")
     expect(observed).toEqual([
       {
+        provider: "mongolgpt-base-free",
+        authorization: "Bearer public",
+        model: "mimo-v2.5-free",
+      },
+      {
         provider: "openrouter-free",
         authorization: "Bearer openrouter-upstream-test",
         model: "openrouter/free",
@@ -263,16 +291,24 @@ describe("gateway handler HTTP boundary", () => {
     ])
     expect(JSON.stringify(observed)).not.toContain("mongolgpt-account-token")
     expect(state.circuit).toEqual([
+      { provider: "mongolgpt-base-free", outcome: "transient-error" },
       { provider: "openrouter-free", outcome: "transient-error" },
       { provider: "nvidia-nim-production", outcome: "success" },
     ])
-    expect(state.providerAttempts).toHaveLength(2)
+    expect(state.providerAttempts).toHaveLength(3)
     expect(state.providerAttempts).toEqual([
+      expect.objectContaining({
+        type: "provider-attempt",
+        provider: "mongolgpt-base-free",
+        outcome: "transient-error",
+        responseStatus: 429,
+        fallback: false,
+      }),
       expect.objectContaining({
         type: "provider-attempt",
         provider: "openrouter-free",
         outcome: "transient-error",
-        responseStatus: 429,
+        responseStatus: 503,
         fallback: false,
       }),
       expect.objectContaining({
@@ -294,7 +330,7 @@ describe("gateway handler HTTP boundary", () => {
     })
     expect(
       state.metrics.filter((metric) => typeof metric.provider === "string").map((metric) => metric.provider),
-    ).toEqual(["openrouter-free", "nvidia-nim-production"])
+    ).toEqual(["mongolgpt-base-free", "openrouter-free", "nvidia-nim-production"])
   })
 
   test("decrypts a workspace-bound BYOK credential for the upstream request", async () => {

@@ -193,7 +193,7 @@ describe("documentation product contract", () => {
     expect(deployment).toContain("`OPENROUTER_API_KEY`")
     expect(deployment).toContain("`NVIDIA_NIM_API_KEY`")
     expect(deployment).toContain("Multipart catalog-ийг гараар JSON болгон бэлдэх шаардлагагүй")
-    expect(deployment).toContain("Cloudflare-ийн нөөц өөрчлөхөөс өмнө хаалттай зогсоно")
+    expect(deployment).toContain("API түлхүүр шаардахгүй MongolGPT-ийн үнэгүй үндсэн route-ийг үргэлж агуулсан")
     expect(deployment).toContain("хоорондоо ялгаатай хоёр тогтвортой нууц утга")
     expect(deployment).toContain("криптографын аюулгүй санамсаргүй үүсгүүрээр")
     expect(deployment).toContain("https://auth.dev.mgpt.mn/github/callback")

@@ -409,6 +409,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
       MONGOLGPT_SMOKE_AUTH_COOKIE: "${{ secrets.MONGOLGPT_SMOKE_AUTH_COOKIE }}",
     })
     expect(steps[freeAuto]?.run).toBe("bun script/prepare-dev-free-auto.ts --require-enabled")
+    expect(steps[freeAuto]?.env?.MONGOLGPT_BASE_FREE_MODEL_ID).toBe("${{ vars.MONGOLGPT_BASE_FREE_MODEL_ID }}")
     expect(steps[freeAuto]?.env?.OPENROUTER_API_KEY).toBe("${{ secrets.OPENROUTER_API_KEY }}")
     expect(steps[freeAuto]?.env?.NVIDIA_NIM_API_KEY).toBe("${{ secrets.NVIDIA_NIM_API_KEY }}")
     expect(steps[freeAuto]?.env?.NVIDIA_NIM_MODEL_ID).toBe("${{ vars.NVIDIA_NIM_MODEL_ID }}")
@@ -813,6 +814,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(tokenPreflight?.env).toEqual({ CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" })
     expect(tokenPreflight?.run).toBe("bun script/cloudflare-preflight.ts --console-only")
     expect(freeAuto?.run).toBe("bun script/prepare-dev-free-auto.ts")
+    expect(freeAuto?.env.MONGOLGPT_BASE_FREE_MODEL_ID).toBe("${{ vars.MONGOLGPT_BASE_FREE_MODEL_ID }}")
     expect(freeAuto?.env.OPENROUTER_API_KEY).toBe("${{ secrets.OPENROUTER_API_KEY }}")
     expect(freeAuto?.env.NVIDIA_NIM_API_KEY).toBe("${{ secrets.NVIDIA_NIM_API_KEY }}")
     expect(freeAuto?.env.NVIDIA_NIM_MODEL_ID).toBe("${{ vars.NVIDIA_NIM_MODEL_ID }}")

@@ -4,7 +4,7 @@ import { ProviderAttemptTable } from "@mongolgpt/console-core/schema/provider-he
 const minute = 60_000
 const recentWindowMs = 15 * minute
 const historyWindowMs = 24 * 60 * minute
-const coreProviders = ["openrouter-free", "nvidia-nim-production"] as const
+const coreProviders = ["mongolgpt-base-free", "openrouter-free", "nvidia-nim-production"] as const
 
 export type AdminProviderHealthState = "healthy" | "warning" | "degraded" | "idle" | "unknown"
 
@@ -135,7 +135,11 @@ function providerState(row: AdminProviderHealthAggregate, now: Date): AdminProvi
 function emptyAggregate(providerID: string): AdminProviderHealthAggregate {
   return {
     providerID,
-    providerKind: providerID.startsWith("openrouter") ? "openrouter" : "nvidia-nim",
+    providerKind: providerID.startsWith("mongolgpt-base-free")
+      ? "mongolgpt-base-free"
+      : providerID.startsWith("openrouter")
+        ? "openrouter"
+        : "nvidia-nim",
     usageMode: "managed",
     attempts15m: 0,
     successes15m: 0,

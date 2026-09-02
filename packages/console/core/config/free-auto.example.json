@@ -14,20 +14,33 @@
       "freeMaxTokensPerRequest": 32000,
       "providers": [
         {
+          "id": "mongolgpt-base-free",
+          "model": "mimo-v2.5-free",
+          "priority": 0
+        },
+        {
           "id": "openrouter-free",
           "model": "openrouter/free",
-          "priority": 0
+          "priority": 1
         },
         {
           "id": "nvidia-nim-production",
           "model": "replace-with-licensed-nvidia-model",
-          "priority": 1
+          "priority": 2
         }
       ]
     }
   },
   "lightweightModels": {},
   "providers": {
+    "mongolgpt-base-free": {
+      "displayName": "MongolGPT суурь үнэгүй чиглэл",
+      "api": "https://opencode.ai/zen/v1",
+      "apiKey": "public",
+      "providerKind": "mongolgpt-base-free",
+      "usageMode": "managed",
+      "productionUseApproved": false
+    },
     "openrouter-free": {
       "displayName": "OpenRouter Free",
       "api": "https://openrouter.ai/api/v1",

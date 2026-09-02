@@ -2,7 +2,7 @@ import { z } from "zod"
 
 export const ModelFormatSchema = z.enum(["anthropic", "google", "openai", "oa-compat"])
 export type ModelFormat = z.infer<typeof ModelFormatSchema>
-export const ProviderKindSchema = z.enum(["openrouter", "nvidia-nim", "openai-compatible"])
+export const ProviderKindSchema = z.enum(["mongolgpt-base-free", "openrouter", "nvidia-nim", "openai-compatible"])
 export const ProviderUsageModeSchema = z.enum(["managed", "byok", "trial"])
 export const HostedByokProviderSchema = z.enum(["openai", "anthropic", "google", "openrouter", "nvidia-nim"])
 
@@ -166,7 +166,7 @@ export const MongolGPTModelConfigurationSchema = GatewayModelConfigurationSchema
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path,
-            message: "Free Auto нь OpenRouter-оос NVIDIA NIM рүү шилжих боломжийг хааж болохгүй",
+            message: "Free Auto нь дараагийн үнэгүй чиглэл рүү шилжих боломжийг хааж болохгүй",
           })
         if (!model.rateLimit)
           ctx.addIssue({
@@ -196,14 +196,15 @@ export const MongolGPTModelConfigurationSchema = GatewayModelConfigurationSchema
             path,
             message: "Free Auto-ийн нэг хүсэлтийн токены дээд хязгаар долоо хоногийн хязгаараас их байж болохгүй",
           })
-        if (new Set(model.providers.filter((provider) => !provider.disabled).map((provider) => provider.id)).size < 2)
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: "Free Auto нь нөөц чиглэл заасан байх ёстой" })
-        if (!model.fallbackProvider || !model.providers.some((provider) => provider.id === model.fallbackProvider))
+        const enabledRoutes = model.providers.filter((provider) => !provider.disabled)
+        if (!enabledRoutes.some((route) => value.providers[route.id]?.providerKind === "mongolgpt-base-free"))
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            path,
-            message: "Free Auto-ийн fallbackProvider нь тохируулсан нийлүүлэгчийг заасан байх ёстой",
+            path: [...path, "providers"],
+            message: "Free Auto нь MongolGPT-ийн суулгалттай дагалддаг үнэгүй чиглэлийг хадгалах ёстой",
           })
+        if (enabledRoutes.length > 1 && !model.fallbackProvider)
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: "Олон чиглэлтэй Free Auto нь нөөц чиглэл заасан байх ёстой" })
       }
     }
   }
@@ -241,19 +242,26 @@ export function modelConfigurationStageIssues(value: MongolGPTModelConfiguration
         }
 
         const fallbackID = model.fallbackProvider
-        const fallback = fallbackID ? value.providers[fallbackID] : undefined
-        if (fallback && fallback.providerKind !== "nvidia-nim")
-          issues.add(
-            `${path}-ийн нөөц үйлчилгээ үзүүлэгч "${fallbackID}"-ийг providerKind=nvidia-nim гэж тохируулах ёстой`,
-          )
+        const upstreamRoutes = enabledRoutes.filter(
+          (route) => value.providers[route.id]?.providerKind === "mongolgpt-base-free",
+        )
+        if (upstreamRoutes.length === 0)
+          issues.add(`${path} нь MongolGPT-ийн үнэгүй үндсэн чиглэлийг хадгалах ёстой`)
+        if (fallbackID && upstreamRoutes.some((route) => route.id === fallbackID))
+          issues.add(`${path}-ийн MongolGPT үнэгүй чиглэлийг fallbackProvider болгож болохгүй`)
 
-        for (const route of enabledRoutes.filter((route) => route.id !== fallbackID)) {
-          const provider = value.providers[route.id]
-          if (provider && provider.providerKind !== "openrouter")
-            issues.add(
-              `${path}-ийн үндсэн үйлчилгээ үзүүлэгч "${route.id}"-ийг providerKind=openrouter гэж тохируулах ёстой`,
-            )
-        }
+        const minimumPriority = Math.min(...enabledRoutes.map((route) => route.priority ?? Number.POSITIVE_INFINITY))
+        const primaryRoutes = enabledRoutes.filter(
+          (route) => (route.priority ?? Number.POSITIVE_INFINITY) === minimumPriority,
+        )
+        if (!primaryRoutes.some((route) => value.providers[route.id]?.providerKind === "mongolgpt-base-free"))
+          issues.add(`${path}-ийн хамгийн түрүүнд ашиглах чиглэл providerKind=mongolgpt-base-free байх ёстой`)
+
+        const nvidiaRoutes = enabledRoutes.filter(
+          (route) => value.providers[route.id]?.providerKind === "nvidia-nim",
+        )
+        if (nvidiaRoutes.length > 0 && fallbackID && !nvidiaRoutes.some((route) => route.id === fallbackID))
+          issues.add(`${path}-ийн эцсийн нөөц чиглэл providerKind=nvidia-nim байх ёстой`)
       }
     }
   }

@@ -17,18 +17,17 @@ try {
       { length: MODEL_SECRET_PARTS },
       (_, index) => process.env[`MONGOLGPT_GATEWAY_MODELS${index + 1}`] ?? "",
     ),
+    baseFreeModel: process.env.MONGOLGPT_BASE_FREE_MODEL_ID,
     openRouterApiKey: process.env.OPENROUTER_API_KEY,
     nvidiaNimApiKey: process.env.NVIDIA_NIM_API_KEY,
     nvidiaNimModel: process.env.NVIDIA_NIM_MODEL_ID,
     requireEnabled,
   })
   await fs.appendFile(githubEnvironment, `${gatewaySstEnvironmentLines(result.parts).join("\n")}\n`, "utf8")
-  if (result.source === "disabled") {
-    console.log("Dev Free Auto provider key-гүй тул model catalog идэвхгүй хэвээр үлдлээ.")
-  } else if (result.source === "legacy") {
+  if (result.source === "legacy") {
     console.log("Dev Free Auto хуучин multipart catalog-ийг баталгаажуулж ашиглана.")
   } else {
-    console.log("Dev Free Auto OpenRouter болон NVIDIA NIM secret-ээс catalog үүсгэлээ.")
+    console.log("Dev Free Auto MongolGPT-ийн үнэгүй үндсэн чиглэл болон тохируулсан нэмэлт provider-уудаас catalog үүсгэлээ.")
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error))

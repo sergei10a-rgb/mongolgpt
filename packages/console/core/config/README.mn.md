@@ -4,17 +4,17 @@
 
 Байршуулалтын өмнө:
 
-1. `openrouter-free`, `nvidia-nim-production` үйлчилгээг бодит үйлдвэрлэлийн эрхтэй provider account-аар солино.
+1. `mongolgpt-base-free` үнэгүй үндсэн чиглэлийг хадгалж, `openrouter-free`, `nvidia-nim-production` нэмэлт чиглэлийг ашиглах бол үйлчилгээ бүрийн үйлдвэрлэлийн эрхийг баталгаажуулна.
 2. Загварын ID, API URL, нууц түлхүүр болон бодит дотоод өртгийг оруулна.
 3. `fallbackProvider` нь `providers` жагсаалтад байгаа provider-ийг зааж буйг шалгана.
 4. `rateLimit`-ийг Free багцын нэг минутын хүсэлтийн хязгаарт тохируулна.
 5. `freeWeeklyTokenLimit`-ийг нэг ажлын талбарын долоо хоногт ашиглах token-ы дээд хэмжээнд тохируулна.
 6. `freeMaxTokensPerRequest`-ийг тухайн route-ийн нэг хүсэлтэд үүсэж болох input, output, reasoning, cache read/write token-ы нийлбэрийн model/provider-аар баталгаажсан дээд хэмжээнд тохируулна. Энэ утга `freeWeeklyTokenLimit`-ээс их байж болохгүй.
-7. Free Auto-ийн primary provider бүр `providerKind: "openrouter"`, fallback нь `providerKind: "nvidia-nim"`, бүгд `usageMode: "managed"` байна.
+7. Free Auto-ийн эхний чиглэл `providerKind: "mongolgpt-base-free"`, нэмэлт чиглэлүүд `openrouter`, `nvidia-nim`, бүгд `usageMode: "managed"` байна. NVIDIA байгаа үед түүнийг эцсийн `fallbackProvider` болгоно.
 8. Үйлчилгээ үзүүлэгч тус бүрийн үйлдвэрлэлийн эрх, нөхцөлийг баталгаажуулсны дараа л `productionUseApproved: true` болгоно.
 9. `GatewayCatalog.validate(...)` болон `modelConfigurationStageIssues(..., "production")` шалгалтыг давсны дараа JSON-ийг gateway загварын SST secret-д ачаална.
 10. Апп болон CLI орчинд `MONGOLGPT_ENABLE_HOSTED_SERVICES=1`, `MONGOLGPT_CONSOLE_URL`, `MONGOLGPT_AUTH_URL`-ийг өөрийн production хаягаар тохируулна.
 
-`allowAnonymous: false` болон `freeForAuthenticated: true` нь Free Auto-г зөвхөн MongolGPT бүртгэлээр нэвтэрсэн хэрэглэгчид үнэ төлбөргүй тооцох гэрээ юм. NVIDIA-ийн байршуулсан туршилтын API эрхийг нийтийн Free Auto backend болгон ашиглаж болохгүй; зохих үйлдвэрлэлийн лиценз эсвэл тусдаа гэрээ шаардлагатай.
+`allowAnonymous: false` болон `freeForAuthenticated: true` нь Free Auto-г зөвхөн MongolGPT бүртгэлээр нэвтэрсэн хэрэглэгчид үнэ төлбөргүй тооцох гэрээ юм. Суурь нийтийн үнэгүй чиглэл API key шаардахгүй боловч upstream нөхцөл, загварын бэлэн байдал болон үйлдвэрлэлийн ашиглах эрхийг launch-аас өмнө баталгаажуулна. NVIDIA-ийн байршуулсан туршилтын API эрхийг нийтийн Free Auto backend болгон ашиглаж болохгүй; зохих үйлдвэрлэлийн лиценз эсвэл тусдаа гэрээ шаардлагатай.
 
 Тохиргоо `models`, `lightweightModels`, `providers` гэсэн үндсэн талбаруудтай. Gateway зөвхөн `MONGOLGPT_GATEWAY_MODELS1`…`MONGOLGPT_GATEWAY_MODELS30` нууц утгыг уншина; retired нэр эсвэл хуучин талбар дутуу тохиргоог нуухгүйгээр хаалттай зогсооно.

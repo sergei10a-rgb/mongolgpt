@@ -137,6 +137,33 @@ describe("provider failover policy", () => {
     expect(attempts).toEqual(["openrouter-free", "nvidia-nim-production"])
   })
 
+  test("tries the retained OpenCode free route before OpenRouter and the final NVIDIA fallback", async () => {
+    const providers = ["mongolgpt-base-free", "openrouter-free", "nvidia-nim-production"]
+    const attempts: string[] = []
+    const route = async (retry = { excludeProviders: [] as string[], retryCount: 0 }): Promise<string> => {
+      const provider = providers.find((candidate) => !retry.excludeProviders.includes(candidate))!
+      attempts.push(provider)
+      return runProviderAttempt({
+        retry,
+        policy: {
+          maxRetries: 3,
+          stickyProvider: "prefer",
+          fallbackProvider: "nvidia-nim-production",
+          currentProvider: provider,
+        },
+        request: async () =>
+          new Response(null, {
+            status: provider === "nvidia-nim-production" ? 200 : provider === "mongolgpt-base-free" ? 429 : 503,
+          }),
+        failover: route,
+        complete: async (response) => `${provider}:${response.status}`,
+      })
+    }
+
+    expect(await route()).toBe("nvidia-nim-production:200")
+    expect(attempts).toEqual(providers)
+  })
+
   test("uses the NVIDIA fallback when the OpenRouter request cannot connect", async () => {
     const attempts: string[] = []
     const route = async (retry = { excludeProviders: [] as string[], retryCount: 0 }): Promise<string> => {

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { MongolGPTModelConfigurationSchema, modelConfigurationStageIssues } from "@mongolgpt/console-core/model-config.js"
 import {
   BYOK_CREDENTIAL_SENTINEL,
+  DEFAULT_MONGOLGPT_BASE_FREE_MODEL,
   DEFAULT_NVIDIA_NIM_MODEL,
   MODEL_SECRET_PARTS,
   OPENROUTER_BYOK_MODEL,
@@ -11,27 +12,44 @@ import {
 } from "../src/dev-free-auto"
 
 describe("dev Free Auto catalog", () => {
-  test("stays disabled when neither managed provider key exists", () => {
+  test("keeps the OpenCode free tier enabled without extra provider keys", () => {
     const result = prepareDevFreeAuto({})
+    const catalog = MongolGPTModelConfigurationSchema.parse(JSON.parse(result.parts.join("")))
+    const freeAuto = catalog.models["free-auto"]
 
-    expect(result.source).toBe("disabled")
+    expect(result.source).toBe("managed")
     expect(result.parts).toHaveLength(MODEL_SECRET_PARTS)
-    expect(result.parts.every((part) => part === "")).toBe(true)
+    if (Array.isArray(freeAuto) || !freeAuto) throw new Error("Free Auto catalog дутуу байна")
+    expect(freeAuto.providers).toEqual([
+      { id: "mongolgpt-base-free", model: DEFAULT_MONGOLGPT_BASE_FREE_MODEL, priority: 0 },
+    ])
+    expect(freeAuto.fallbackProvider).toBeUndefined()
+    expect(catalog.providers["mongolgpt-base-free"]).toMatchObject({
+      api: "https://opencode.ai/zen/v1",
+      apiKey: "public",
+      providerKind: "mongolgpt-base-free",
+      usageMode: "managed",
+    })
   })
 
-  test("fails before a full deployment when managed Free Auto is disabled", () => {
-    expect(() => prepareDevFreeAuto({ requireEnabled: true })).toThrow(
-      "Бүрэн dev deploy хийхэд Free Auto идэвхтэй байх ёстой",
-    )
+  test("keeps full deployment Free Auto enabled without extra secrets", () => {
+    expect(prepareDevFreeAuto({ requireEnabled: true }).source).toBe("managed")
   })
 
-  test("rejects a partially configured managed fallback", () => {
-    expect(() => prepareDevFreeAuto({ openRouterApiKey: "openrouter-test-key" })).toThrow(
-      "OPENROUTER_API_KEY болон NVIDIA_NIM_API_KEY хоёул шаардлагатай",
-    )
+  test("adds OpenRouter independently as a managed fallback", () => {
+    const result = prepareDevFreeAuto({ openRouterApiKey: "openrouter-test-key" })
+    const catalog = MongolGPTModelConfigurationSchema.parse(JSON.parse(result.parts.join("")))
+    const freeAuto = catalog.models["free-auto"]
+    if (Array.isArray(freeAuto) || !freeAuto) throw new Error("Free Auto catalog дутуу байна")
+
+    expect(freeAuto.providers).toEqual([
+      { id: "mongolgpt-base-free", model: DEFAULT_MONGOLGPT_BASE_FREE_MODEL, priority: 0 },
+      { id: "openrouter-free", model: "openrouter/free", priority: 1 },
+    ])
+    expect(freeAuto.fallbackProvider).toBe("openrouter-free")
   })
 
-  test("builds a schema-valid dev-only OpenRouter to NVIDIA catalog", () => {
+  test("builds a schema-valid OpenCode to OpenRouter to NVIDIA catalog", () => {
     const result = prepareDevFreeAuto({
       openRouterApiKey: "openrouter-test-key",
       nvidiaNimApiKey: "nvidia-test-key",
@@ -43,8 +61,9 @@ describe("dev Free Auto catalog", () => {
     expect(Array.isArray(freeAuto)).toBe(false)
     if (Array.isArray(freeAuto) || !freeAuto) throw new Error("Free Auto catalog дутуу байна")
     expect(freeAuto.providers).toEqual([
-      { id: "openrouter-free", model: "openrouter/free", priority: 0 },
-      { id: "nvidia-nim-free", model: DEFAULT_NVIDIA_NIM_MODEL, priority: 1 },
+      { id: "mongolgpt-base-free", model: DEFAULT_MONGOLGPT_BASE_FREE_MODEL, priority: 0 },
+      { id: "openrouter-free", model: "openrouter/free", priority: 1 },
+      { id: "nvidia-nim-free", model: DEFAULT_NVIDIA_NIM_MODEL, priority: 2 },
     ])
     expect(freeAuto.fallbackProvider).toBe("nvidia-nim-free")
     expect(catalog.providers["openrouter-free"]?.productionUseApproved).toBe(false)
@@ -78,7 +97,19 @@ describe("dev Free Auto catalog", () => {
     const freeAuto = catalog.models["free-auto"]
     if (Array.isArray(freeAuto) || !freeAuto) throw new Error("Free Auto catalog дутуу байна")
 
-    expect(freeAuto.providers[1]?.model).toBe("meta/llama-3.1-8b-instruct")
+    expect(freeAuto.providers[2]?.model).toBe("meta/llama-3.1-8b-instruct")
+  })
+
+  test("allows the OpenCode free model to be updated without a secret", () => {
+    const catalog = buildDevFreeAutoCatalog({ baseFreeModel: "nemotron-3.5-lightning-free" })
+    const freeAuto = catalog.models["free-auto"]
+    if (Array.isArray(freeAuto) || !freeAuto) throw new Error("Free Auto catalog дутуу байна")
+
+    expect(freeAuto.providers[0]).toEqual({
+      id: "mongolgpt-base-free",
+      model: "nemotron-3.5-lightning-free",
+      priority: 0,
+    })
   })
 
   test("preserves and validates the legacy multipart catalog", () => {

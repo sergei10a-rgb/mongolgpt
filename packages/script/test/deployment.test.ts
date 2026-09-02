@@ -86,13 +86,21 @@ const hosted = {
         freeMaxTokensPerRequest: 32_000,
         fallbackProvider: "nvidia",
         providers: [
-          { id: "openrouter", model: "openrouter/auto" },
-          { id: "nvidia", model: "nvidia/auto" },
+          { id: "mongolgpt-base-free", model: "mimo-v2.5-free", priority: 0 },
+          { id: "openrouter", model: "openrouter/auto", priority: 1 },
+          { id: "nvidia", model: "nvidia/auto", priority: 2 },
         ],
       },
     },
     lightweightModels: {},
     providers: {
+      "mongolgpt-base-free": {
+        api: "https://opencode.ai/zen/v1",
+        apiKey: "public",
+        providerKind: "mongolgpt-base-free",
+        usageMode: "managed",
+        productionUseApproved: true,
+      },
       openrouter: {
         api: "https://openrouter.ai/api/v1",
         apiKey: "unit-test-provider-key",
@@ -1293,8 +1301,8 @@ describe("Cloudflare deployment preflight", () => {
                   freeMaxTokensPerRequest: 100,
                   fallbackProvider: "fallback",
                   providers: [
-                    { id: "primary", model: "your-model-id" },
-                    { id: "fallback", model: "fallback-model" },
+                    { id: "primary", model: "your-model-id", priority: 0 },
+                    { id: "fallback", model: "fallback-model", priority: 1 },
                   ],
                 },
               },
@@ -1303,10 +1311,14 @@ describe("Cloudflare deployment preflight", () => {
                 primary: {
                   api: "https://api.example.invalid/v1",
                   apiKey: "your-api-key",
+                  providerKind: "mongolgpt-base-free",
+                  usageMode: "managed",
                 },
                 fallback: {
                   api: "https://fallback.test/v1",
                   apiKey: "sample-api-key",
+                  providerKind: "nvidia-nim",
+                  usageMode: "managed",
                 },
               },
             }),
@@ -1469,8 +1481,7 @@ describe("Cloudflare deployment preflight", () => {
       [
         '"openrouter" үйлчилгээ үзүүлэгчийг productionUseApproved=true',
         '"openrouter" үйлчилгээ үзүүлэгчийг usageMode=managed',
-        'үндсэн үйлчилгээ үзүүлэгч "openrouter"-ийг providerKind=openrouter',
-        'нөөц үйлчилгээ үзүүлэгч "nvidia"-ийг providerKind=nvidia-nim',
+        "эцсийн нөөц чиглэл providerKind=nvidia-nim",
       ],
     )
   })

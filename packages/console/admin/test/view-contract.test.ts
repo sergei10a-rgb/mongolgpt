@@ -25,7 +25,8 @@ describe("MongolGPT admin overview contract", () => {
     expect(view).not.toContain(">Platform role<")
     expect(view).not.toContain(">Audit бүртгэл")
     expect(view).not.toContain("Lookup user")
-    expect(view).not.toContain("opencode")
+    expect(view).toContain('return "MongolGPT суурь үнэгүй чиглэл"')
+    expect(view).not.toContain('return "OpenCode"')
   })
 
   test("keeps compact desktop and mobile layout constraints", async () => {

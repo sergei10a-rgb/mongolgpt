@@ -12,8 +12,8 @@ const model = {
   freeWeeklyTokenLimit: 100_000,
   freeMaxTokensPerRequest: 32_000,
   providers: [
-    { id: "primary", model: "primary-model" },
-    { id: "secondary", model: "secondary-model" },
+    { id: "primary", model: "primary-model", priority: 0 },
+    { id: "secondary", model: "secondary-model", priority: 1 },
   ],
 }
 
@@ -21,8 +21,18 @@ const config = (freeAuto: Record<string, unknown>) => ({
   models: { "free-auto": freeAuto },
   lightweightModels: {},
   providers: {
-    primary: { api: "https://primary.example/v1", apiKey: "primary-key" },
-    secondary: { api: "https://secondary.example/v1", apiKey: "secondary-key" },
+    primary: {
+      api: "https://opencode.ai/zen/v1",
+      apiKey: "public",
+      providerKind: "mongolgpt-base-free",
+      usageMode: "managed",
+    },
+    secondary: {
+      api: "https://secondary.example/v1",
+      apiKey: "secondary-key",
+      providerKind: "nvidia-nim",
+      usageMode: "managed",
+    },
   },
 })
 const validate = (input: unknown) => GatewayCatalog.validate.schema.parse(input)
@@ -65,14 +75,14 @@ describe("MongolGPT Free Auto model contract", () => {
     expect(isProviderAllowedForStage(providers.fallback, "production")).toBe(false)
   })
 
-  test("requires an approved managed OpenRouter primary and NVIDIA NIM fallback in production", () => {
+  test("requires an approved managed OpenCode free primary and NVIDIA NIM fallback in production", () => {
     const valid = validate({
       ...config(model),
       providers: {
         primary: {
-          api: "https://openrouter.ai/api/v1",
-          apiKey: "primary-key",
-          providerKind: "openrouter",
+          api: "https://opencode.ai/zen/v1",
+          apiKey: "public",
+          providerKind: "mongolgpt-base-free",
           usageMode: "managed",
           productionUseApproved: true,
         },
@@ -108,15 +118,15 @@ describe("MongolGPT Free Auto model contract", () => {
     const unsafe = structuredClone(valid)
     unsafe.providers.primary.productionUseApproved = false
     unsafe.providers.primary.usageMode = "trial"
-    unsafe.providers.primary.providerKind = "nvidia-nim"
-    unsafe.providers.secondary.providerKind = "openrouter"
+    unsafe.providers.primary.providerKind = "openrouter"
+    unsafe.providers.secondary.providerKind = "mongolgpt-base-free"
 
     expect(modelConfigurationStageIssues(unsafe, "production")).toEqual(
       expect.arrayContaining([
         expect.stringContaining('"primary" үйлчилгээ үзүүлэгчийг productionUseApproved=true гэж тохируулах ёстой'),
         expect.stringContaining('"primary" үйлчилгээ үзүүлэгчийг usageMode=managed гэж тохируулах ёстой'),
-        expect.stringContaining('үндсэн үйлчилгээ үзүүлэгч "primary"-ийг providerKind=openrouter гэж тохируулах ёстой'),
-        expect.stringContaining('нөөц үйлчилгээ үзүүлэгч "secondary"-ийг providerKind=nvidia-nim гэж тохируулах ёстой'),
+        expect.stringContaining("MongolGPT үнэгүй чиглэлийг fallbackProvider болгож болохгүй"),
+        expect.stringContaining("хамгийн түрүүнд ашиглах чиглэл providerKind=mongolgpt-base-free байх ёстой"),
       ]),
     )
   })
@@ -231,6 +241,18 @@ describe("MongolGPT Free Auto model contract", () => {
     expect(() => validate(config({ ...model, providers: [...model.providers, model.providers[0]] }))).toThrow(
       /нийлүүлэгчийн чиглэл тухайн загвар дотор давхардаж болохгүй/,
     )
+  })
+
+  test("keeps the OpenCode install-time free route as the Free Auto base", () => {
+    expect(() =>
+      validate({
+        ...config(model),
+        providers: {
+          ...config(model).providers,
+          primary: { ...config(model).providers.primary, providerKind: "openrouter" },
+        },
+      }),
+    ).toThrow(/MongolGPT-ийн суулгалттай дагалддаг үнэгүй чиглэлийг хадгалах ёстой/)
   })
 
   test("requires a weekly token quota", () => {
