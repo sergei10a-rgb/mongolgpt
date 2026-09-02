@@ -14,6 +14,7 @@ import { Effect, Record } from "effect"
 import { jsonSchema, tool as aiTool, type ModelMessage, type Tool } from "ai"
 import type { Plugin } from "@/plugin"
 import { mergeDeep } from "remeda"
+import { isOpenCodePublicFreeModel, normalizeOpenCodePublicHeaders } from "@mongolgpt/core/managed-model"
 
 const USER_AGENT = `mongolgpt/${InstallationVersion}`
 
@@ -52,6 +53,11 @@ export type Prepared = {
 
 const mergeOptions = (target: Record<string, any>, source: Record<string, any> | undefined): Record<string, any> =>
   mergeDeep(target, source ?? {}) as Record<string, any>
+
+export function normalizeDirectOpenCodeHeaders(model: Provider.Model, headers: Record<string, string>) {
+  if (!isOpenCodePublicFreeModel(model)) return headers
+  return normalizeOpenCodePublicHeaders(headers)
+}
 
 export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: PrepareInput) {
   const isOpenaiOauth = input.provider.id === "openai" && input.auth?.type === "oauth"
@@ -178,30 +184,32 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
     ? (yield* InstanceState.context).project.id
     : undefined
 
+  const requestHeaders = {
+    ...(input.model.providerID.startsWith("mongolgpt")
+      ? {
+          ...(mongolgptProjectID ? { "x-mongolgpt-project": mongolgptProjectID } : {}),
+          "x-mongolgpt-session": input.sessionID,
+          "x-mongolgpt-request": input.user.id,
+          "x-mongolgpt-client": input.flags.client,
+          "User-Agent": USER_AGENT,
+        }
+      : {
+          "x-session-affinity": input.sessionID,
+          "X-Session-Id": input.sessionID,
+          ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
+          "User-Agent": USER_AGENT,
+        }),
+    ...input.model.headers,
+    ...headers,
+  }
+
   return {
     system,
     messages,
     tools: Object.fromEntries(Object.entries(tools).toSorted(([a], [b]) => a.localeCompare(b))),
     params,
     messageTransformOptions: options,
-    headers: {
-      ...(input.model.providerID.startsWith("mongolgpt")
-        ? {
-            ...(mongolgptProjectID ? { "x-mongolgpt-project": mongolgptProjectID } : {}),
-            "x-mongolgpt-session": input.sessionID,
-            "x-mongolgpt-request": input.user.id,
-            "x-mongolgpt-client": input.flags.client,
-            "User-Agent": USER_AGENT,
-          }
-        : {
-            "x-session-affinity": input.sessionID,
-            "X-Session-Id": input.sessionID,
-            ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
-            "User-Agent": USER_AGENT,
-          }),
-      ...input.model.headers,
-      ...headers,
-    },
+    headers: normalizeDirectOpenCodeHeaders(input.model, requestHeaders),
   }
 })
 

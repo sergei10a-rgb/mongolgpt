@@ -6,6 +6,55 @@ import { ProviderV2 } from "@mongolgpt/core/provider"
 import { ModelV2 } from "@mongolgpt/core/model"
 import { jsonSchema } from "ai"
 
+describe("LLMRequestPrep.normalizeDirectOpenCodeHeaders", () => {
+  const directModel = {
+    id: "nemotron-3.5-lightning-free",
+    providerID: "mongolgpt",
+    api: {
+      id: "nemotron-3.5-lightning-free",
+      url: "https://opencode.ai/zen/v1",
+      npm: "@ai-sdk/openai-compatible",
+    },
+    cost: { input: 0, output: 0 },
+  } as any
+
+  test("keeps the upstream protocol contract for direct public models", () => {
+    const result = LLMRequestPrep.normalizeDirectOpenCodeHeaders(directModel, {
+      "x-mongolgpt-client": "cli",
+      "x-mongolgpt-project": "project-1",
+      "x-mongolgpt-request": "request-1",
+      "x-mongolgpt-session": "session-1",
+      "x-mongolgpt-internal": "must-not-leak",
+      "X-Org-Id": "account-workspace",
+      "User-Agent": "mongolgpt/test",
+    })
+
+    expect(result).toEqual({
+      "x-opencode-client": "cli",
+      "x-opencode-project": "project-1",
+      "x-opencode-request": "request-1",
+      "x-opencode-session": "session-1",
+      "User-Agent": "mongolgpt/test",
+    })
+    expect(JSON.stringify(result)).not.toContain("account-workspace")
+    expect(JSON.stringify(result)).not.toContain("must-not-leak")
+  })
+
+  test("does not rewrite MongolGPT gateway headers", () => {
+    const headers = { "x-mongolgpt-client": "cli", "x-org-id": "workspace-1" }
+    const result = LLMRequestPrep.normalizeDirectOpenCodeHeaders(
+      {
+        ...directModel,
+        id: "free-auto",
+        api: { ...directModel.api, url: "https://dev.mgpt.mn/gateway/v1" },
+      },
+      headers,
+    )
+
+    expect(result).toBe(headers)
+  })
+})
+
 describe("ProviderTransform.options - setCacheKey", () => {
   const sessionID = "test-session-123"
 

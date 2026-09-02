@@ -12,7 +12,11 @@ import { serviceUse } from "@mongolgpt/core/effect/service-use"
 import { type LanguageModelV3 } from "@ai-sdk/provider"
 import { ModelsDev } from "@mongolgpt/core/models-dev"
 import { HostedCredential } from "@mongolgpt/core/hosted-credential"
-import { isManagedFreeModel, isOpenCodePublicFreeModel } from "@mongolgpt/core/managed-model"
+import {
+  isManagedFreeModel,
+  isOpenCodePublicFreeModel,
+  normalizeOpenCodePublicHeaders,
+} from "@mongolgpt/core/managed-model"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { InstallationVersion } from "@mongolgpt/core/installation/version"
@@ -1059,6 +1063,11 @@ export function withOpenCodePublicOptions(options: Record<string, any>, model: M
   if (!isOpenCodePublicFreeModel(model)) return result
   result.baseURL = model.api.url
   result.apiKey = "public"
+  if (result.headers) {
+    const headers = normalizeOpenCodePublicHeaders(result.headers)
+    if (Object.keys(headers).length === 0) delete result.headers
+    else result.headers = headers
+  }
   return result
 }
 

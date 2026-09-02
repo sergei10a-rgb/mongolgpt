@@ -23,6 +23,22 @@ export function isOpenCodePublicApi(value: string | undefined) {
   }
 }
 
+export function normalizeOpenCodePublicHeaders(headers: Readonly<Record<string, string>>) {
+  const result: Record<string, string> = {}
+  const metadata = new Set(["client", "project", "request", "session"])
+  for (const [key, value] of Object.entries(headers)) {
+    const normalized = key.toLowerCase()
+    if (normalized === "x-org-id") continue
+    if (normalized.startsWith("x-mongolgpt-")) {
+      const suffix = normalized.slice("x-mongolgpt-".length)
+      if (metadata.has(suffix)) result[`x-opencode-${suffix}`] = value
+      continue
+    }
+    result[key] = value
+  }
+  return result
+}
+
 export function isOpenCodePublicFreeModel(input: {
   readonly id: string
   readonly providerID: string

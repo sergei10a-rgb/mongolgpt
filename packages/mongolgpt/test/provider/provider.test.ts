@@ -150,12 +150,21 @@ test("OpenCode free models keep their direct route and public credential", () =>
     },
   }).models["big-pickle"]
   const options = Provider.withOpenCodePublicOptions(
-    { baseURL: "https://dev.mgpt.mn/gateway/v1", apiKey: "mongolgpt-account-token" },
+    {
+      baseURL: "https://dev.mgpt.mn/gateway/v1",
+      apiKey: "mongolgpt-account-token",
+      headers: { "x-org-id": "account-workspace", "X-MongolGPT-Client": "cli" },
+    },
     model,
   )
 
-  expect(options).toMatchObject({ baseURL: "https://opencode.ai/zen/v1", apiKey: "public" })
+  expect(options).toMatchObject({
+    baseURL: "https://opencode.ai/zen/v1",
+    apiKey: "public",
+    headers: { "x-opencode-client": "cli" },
+  })
   expect(JSON.stringify(options)).not.toContain("mongolgpt-account-token")
+  expect(JSON.stringify(options)).not.toContain("account-workspace")
 })
 
 const languageBaseURL = (language: unknown) => (language as { config: { baseURL: string } }).config.baseURL
