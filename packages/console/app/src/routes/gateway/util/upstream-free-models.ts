@@ -152,7 +152,7 @@ function expandFreeAutoVariant(
   const expandedByBase = new Map<string, string[]>()
   const providers = model.providers.flatMap((route) => {
     const provider = catalog.providers[route.id]
-    // Dynamic discovery is permitted only through OpenCode's public, non-billable route.
+    // Dynamic discovery is permitted only through the trusted upstream public, non-billable route.
     if (provider?.providerKind !== "mongolgpt-base-free" || provider.apiKey !== "public") return [route]
 
     const expanded = freeModels.map((freeModel) => {
