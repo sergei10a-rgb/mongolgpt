@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import { isManagedFreeModel } from "@mongolgpt/core/managed-model"
+import {
+  isManagedFreeModel,
+  isOpenCodePublicApi,
+  isOpenCodePublicFreeModel,
+} from "@mongolgpt/core/managed-model"
 
 describe("managed model access policy", () => {
   test("recognizes Free Auto and every zero-cost managed tier", () => {
@@ -28,5 +32,28 @@ describe("managed model access policy", () => {
         ],
       }),
     ).toBe(false)
+  })
+})
+
+describe("OpenCode public free model routing", () => {
+  test("accepts only the trusted HTTPS Zen route", () => {
+    expect(isOpenCodePublicApi("https://opencode.ai/zen/v1")).toBe(true)
+    expect(isOpenCodePublicApi("https://opencode.ai/zen/go/v1")).toBe(true)
+    expect(isOpenCodePublicApi("http://opencode.ai/zen/v1")).toBe(false)
+    expect(isOpenCodePublicApi("https://example.test/zen/v1")).toBe(false)
+    expect(isOpenCodePublicApi("not-a-url")).toBe(false)
+  })
+
+  test("requires the MongolGPT provider, a free direct model, and excludes Free Auto", () => {
+    const direct = {
+      id: "big-pickle",
+      providerID: "mongolgpt",
+      api: { url: "https://opencode.ai/zen/v1" },
+      cost: { input: 0, output: 0 },
+    }
+    expect(isOpenCodePublicFreeModel(direct)).toBe(true)
+    expect(isOpenCodePublicFreeModel({ ...direct, id: "free-auto" })).toBe(false)
+    expect(isOpenCodePublicFreeModel({ ...direct, providerID: "other" })).toBe(false)
+    expect(isOpenCodePublicFreeModel({ ...direct, cost: { input: 1, output: 0 } })).toBe(false)
   })
 })

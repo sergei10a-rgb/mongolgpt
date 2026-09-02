@@ -12,7 +12,7 @@ import { serviceUse } from "@mongolgpt/core/effect/service-use"
 import { type LanguageModelV3 } from "@ai-sdk/provider"
 import { ModelsDev } from "@mongolgpt/core/models-dev"
 import { HostedCredential } from "@mongolgpt/core/hosted-credential"
-import { isManagedFreeModel } from "@mongolgpt/core/managed-model"
+import { isManagedFreeModel, isOpenCodePublicFreeModel } from "@mongolgpt/core/managed-model"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { InstallationVersion } from "@mongolgpt/core/installation/version"
@@ -1054,6 +1054,14 @@ export const Info = Schema.Struct({
 }).annotate({ identifier: "Provider" })
 export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
 
+export function withOpenCodePublicOptions(options: Record<string, any>, model: Model) {
+  const result = { ...options }
+  if (!isOpenCodePublicFreeModel(model)) return result
+  result.baseURL = model.api.url
+  result.apiKey = "public"
+  return result
+}
+
 const DefaultModelIDs = Schema.Record(Schema.String, Schema.String)
 
 export const ListResult = Schema.Struct({
@@ -1672,7 +1680,7 @@ export const layer = Layer.effect(
     async function resolveSDK(model: Model, s: State, envs: Record<string, string | undefined>) {
       try {
         const provider = s.providers[model.providerID]
-        const options = { ...provider.options }
+        const options = withOpenCodePublicOptions(provider.options, model)
 
         if (
           model.providerID === "google-vertex" &&

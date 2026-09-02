@@ -12,6 +12,7 @@ import { EventV2 } from "./event"
 import { makeGlobalNode } from "./effect/node"
 import { httpClient } from "./effect/layer-node-platform"
 import { productServiceUrls } from "./product"
+import { isOpenCodePublicApi } from "./managed-model"
 
 export const CatalogModelStatus = Schema.Literals(["alpha", "beta", "deprecated"])
 export type CatalogModelStatus = typeof CatalogModelStatus.Type
@@ -38,11 +39,24 @@ export function rebrandHostedProviders(providers: Record<string, Provider>, cons
   const base = consoleUrl.replace(/\/+$/, "")
   const hosted = result.mongolgpt
   const upstream = result.opencode
-  const upstreamFreeModels = Object.fromEntries(
-    Object.entries(upstream?.models ?? {})
-      .filter(([id, model]) => hostedModelIDPattern.test(id) && isActiveFreeHostedModel(model))
-      .slice(0, maxHostedFreeModels),
-  )
+  const upstreamFreeModels = isOpenCodePublicApi(upstream?.api)
+    ? Object.fromEntries(
+        Object.entries(upstream?.models ?? {})
+          .filter(([id, model]) => hostedModelIDPattern.test(id) && isActiveFreeHostedModel(model))
+          .slice(0, maxHostedFreeModels)
+          .map(([id, model]) => [
+            id,
+            {
+              ...model,
+              provider: {
+                ...model.provider,
+                ...(model.provider?.npm ?? upstream?.npm ? { npm: model.provider?.npm ?? upstream?.npm } : {}),
+                api: upstream?.api,
+              },
+            },
+          ]),
+      )
+    : {}
   result.mongolgpt = {
     ...upstream,
     ...hosted,

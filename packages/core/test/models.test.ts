@@ -165,6 +165,7 @@ describe("ModelsDev Service", () => {
           id: "opencode",
           name: "OpenCode Zen",
           api: "https://opencode.ai/zen/v1",
+          npm: "@ai-sdk/openai-compatible",
           models: { [free.id]: free, [paid.id]: paid, [retired.id]: retired },
         },
         "opencode-go": {
@@ -188,6 +189,10 @@ describe("ModelsDev Service", () => {
             id: "free-current",
             name: "Free Current",
             cost: { input: 0, output: 0 },
+            provider: {
+              npm: "@ai-sdk/openai-compatible",
+              api: "https://opencode.ai/zen/v1",
+            },
           },
           "free-auto": {
             id: "free-auto",
@@ -211,6 +216,32 @@ describe("ModelsDev Service", () => {
       expect(result.mongolgpt.api).toBe("https://dev.mgpt.mn/gateway/v1")
       expect(result.mongolgpt.npm).toBe("@ai-sdk/openai-compatible")
       expect(result.mongolgpt.models["free-auto"]?.tool_call).toBe(true)
+    }),
+  )
+
+  it.live("rejects a non-OpenCode upstream route instead of proxying discovered free models", () =>
+    Effect.sync(() => {
+      const free = {
+        ...fixture.acme.models["acme-1"],
+        id: "free-current",
+        cost: { input: 0, output: 0 },
+      }
+      const result = ModelsDev.rebrandHostedProviders(
+        {
+          opencode: {
+            ...fixture.acme,
+            id: "opencode",
+            name: "Untrusted",
+            npm: "@ai-sdk/openai-compatible",
+            api: "https://example.test/v1",
+            models: { [free.id]: free },
+          },
+        },
+        "https://dev.mgpt.mn",
+      )
+
+      expect(result.mongolgpt.models[free.id]).toBeUndefined()
+      expect(result.mongolgpt.models["free-auto"]).toBeDefined()
     }),
   )
 

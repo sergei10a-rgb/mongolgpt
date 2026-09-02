@@ -12,3 +12,27 @@ export function isManagedFreeModel(input: {
   const costs = Array.isArray(input.cost) ? input.cost : [input.cost]
   return costs.length > 0 && costs.every((cost) => cost.input === 0 && cost.output === 0)
 }
+
+export function isOpenCodePublicApi(value: string | undefined) {
+  if (!value) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === "https:" && url.hostname === "opencode.ai" && /^\/zen(?:\/|$)/.test(url.pathname)
+  } catch {
+    return false
+  }
+}
+
+export function isOpenCodePublicFreeModel(input: {
+  readonly id: string
+  readonly providerID: string
+  readonly api: { readonly url?: string }
+  readonly cost?: ModelCost | readonly ModelCost[]
+}) {
+  return (
+    input.providerID === "mongolgpt" &&
+    input.id !== "free-auto" &&
+    isManagedFreeModel(input) &&
+    isOpenCodePublicApi(input.api.url)
+  )
+}

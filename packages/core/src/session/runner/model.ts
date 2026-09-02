@@ -14,6 +14,7 @@ import { Integration } from "../../integration"
 import { ModelV2 } from "../../model"
 import { ProviderV2 } from "../../provider"
 import { SessionSchema } from "../schema"
+import { isOpenCodePublicFreeModel } from "../../managed-model"
 
 export class ModelNotSelectedError extends Schema.TaggedErrorClass<ModelNotSelectedError>()(
   "SessionRunnerModel.ModelNotSelectedError",
@@ -81,6 +82,7 @@ export class Service extends Context.Service<Service, Interface>()("@mongolgpt/v
 export const layerWith = (resolve: Interface["resolve"]) => Layer.succeed(Service, Service.of({ resolve }))
 
 const apiKey = (model: ModelV2.Info, credential?: Credential.Value) => {
+  if (model.request.body.apiKey === "public" && isOpenCodePublicFreeModel(model)) return Auth.value("public")
   if (credential?.type === "key") return Auth.value(credential.key)
   if (credential?.type === "oauth") return Auth.value(credential.access)
   const value = model.request.body.apiKey ?? model.api.settings?.apiKey

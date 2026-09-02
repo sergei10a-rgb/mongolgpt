@@ -127,6 +127,37 @@ test("managed catalog models are visible only when the account-backed provider e
   ).toEqual(["free-auto", "paid"])
 })
 
+test("OpenCode free models keep their direct route and public credential", () => {
+  const model = Provider.fromModelsDevProvider({
+    id: "mongolgpt",
+    name: "MongolGPT",
+    env: ["MONGOLGPT_API_KEY"],
+    api: "https://dev.mgpt.mn/gateway/v1",
+    npm: "@ai-sdk/openai-compatible",
+    models: {
+      "big-pickle": {
+        id: "big-pickle",
+        name: "Big Pickle",
+        release_date: "2026-01-01",
+        attachment: false,
+        reasoning: true,
+        temperature: true,
+        tool_call: true,
+        cost: { input: 0, output: 0 },
+        limit: { context: 200_000, output: 32_000 },
+        provider: { npm: "@ai-sdk/openai-compatible", api: "https://opencode.ai/zen/v1" },
+      },
+    },
+  }).models["big-pickle"]
+  const options = Provider.withOpenCodePublicOptions(
+    { baseURL: "https://dev.mgpt.mn/gateway/v1", apiKey: "mongolgpt-account-token" },
+    model,
+  )
+
+  expect(options).toMatchObject({ baseURL: "https://opencode.ai/zen/v1", apiKey: "public" })
+  expect(JSON.stringify(options)).not.toContain("mongolgpt-account-token")
+})
+
 const languageBaseURL = (language: unknown) => (language as { config: { baseURL: string } }).config.baseURL
 
 const it = testEffect(Layer.mergeAll(Provider.defaultLayer, Env.defaultLayer, Plugin.defaultLayer))

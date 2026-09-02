@@ -457,6 +457,60 @@ describe("MongolGPTPlugin", () => {
     ),
   )
 
+  it.effect("uses the original OpenCode public route without leaking the MongolGPT account token", () =>
+    withEnv({ MONGOLGPT_API_KEY: undefined, MONGOLGPT_RUNTIME_MODE: undefined }, () =>
+      Effect.gen(function* () {
+        const catalog = yield* Catalog.Service
+        const credentials = yield* Credential.Service
+        const providerID = ProviderV2.ID.mongolgpt
+        const directID = ModelV2.ID.make("big-pickle")
+        const autoID = ModelV2.ID.make("free-auto")
+        yield* catalog.transform((draft) => {
+          draft.provider.update(providerID, (provider) => {
+            provider.api = {
+              type: "aisdk",
+              package: "@ai-sdk/openai-compatible",
+              url: "https://dev.mgpt.mn/gateway/v1",
+            }
+          })
+          draft.model.update(providerID, directID, (model) => {
+            model.api = {
+              id: directID,
+              type: "aisdk",
+              package: "@ai-sdk/openai-compatible",
+              url: "https://opencode.ai/zen/v1",
+            }
+            model.cost = [...cost(0)]
+          })
+          draft.model.update(providerID, autoID, (model) => {
+            model.cost = [...cost(0)]
+          })
+        })
+        yield* credentials.create({
+          integrationID: Integration.ID.make("mongolgpt"),
+          value: Credential.OAuth.make({
+            type: "oauth",
+            methodID: Integration.MethodID.make("device"),
+            access: "mongolgpt-account-token",
+            refresh: "refresh",
+            expires: Date.now() + 60_000,
+            metadata: { accountID: "account-1", orgID: "workspace-1" },
+          }),
+        })
+
+        yield* addAccountPolicy()
+
+        const direct = required(yield* catalog.model.get(providerID, directID))
+        const auto = required(yield* catalog.model.get(providerID, autoID))
+        expect(direct.enabled).toBe(true)
+        expect(direct.api.url).toBe("https://opencode.ai/zen/v1")
+        expect(direct.request.body.apiKey).toBe("public")
+        expect(direct.request.body.apiKey).not.toBe("mongolgpt-account-token")
+        expect(auto.request.body.apiKey).toBeUndefined()
+      }),
+    ),
+  )
+
   it.effect("uses configured provider env vars as credentials", () =>
     withEnv({ MONGOLGPT_API_KEY: undefined, CUSTOM_MONGOLGPT_API_KEY: "secret" }, () =>
       Effect.gen(function* () {

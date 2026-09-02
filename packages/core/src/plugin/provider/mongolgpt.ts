@@ -16,7 +16,7 @@ import { ConfigProviderOptionsV1 } from "../../v1/config/provider-options"
 import { ConfigV1 } from "../../v1/config/config"
 import { env } from "../../flag/flag"
 import { HostedCredential } from "../../hosted-credential"
-import { isManagedFreeModel } from "../../managed-model"
+import { isManagedFreeModel, isOpenCodePublicFreeModel } from "../../managed-model"
 import { productServiceUrls } from "../../product"
 
 const defaultServer = env("MONGOLGPT_CONSOLE_URL")?.trim() || productServiceUrls.console
@@ -263,6 +263,13 @@ export const MongolGPTAccountPolicyPlugin = define<EventV2.Service | Scope.Scope
         catalog.provider.update(item.provider.id, (provider) => {
           if (provider.request.body.apiKey === "public") delete provider.request.body.apiKey
         })
+        for (const model of item.models.values()) {
+          if (!isOpenCodePublicFreeModel(model)) continue
+          catalog.model.update(item.provider.id, model.id, (draft) => {
+            // Account access enables the model, but the upstream public route must never receive that account token.
+            draft.request.body.apiKey = "public"
+          })
+        }
         if (hasKey && accountBacked) return
         for (const model of item.models.values()) {
           if (hasKey && !isManagedFreeModel(model)) continue

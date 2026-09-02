@@ -292,6 +292,43 @@ describe("SessionRunnerModel", () => {
     }),
   )
 
+  it.effect("never sends a MongolGPT account token to the OpenCode public free route", () =>
+    Effect.gen(function* () {
+      const publicModel = ModelV2.Info.make({
+        ...model({
+          type: "aisdk",
+          package: "@ai-sdk/openai-compatible",
+          url: "https://opencode.ai/zen/v1",
+        }),
+        id: ModelV2.ID.make("big-pickle"),
+        providerID: ProviderV2.ID.mongolgpt,
+        request: { headers: {}, body: { apiKey: "public" } },
+        cost: [{ input: 0, output: 0, cache: { read: 0, write: 0 } }],
+      })
+      const resolved = yield* SessionRunnerModel.fromCatalogModel(
+        publicModel,
+        Credential.OAuth.make({
+          type: "oauth",
+          methodID: Integration.MethodID.make("device"),
+          access: "mongolgpt-account-token",
+          refresh: "refresh",
+          expires: Date.now() + 60_000,
+          metadata: { accountID: "account-1", orgID: "workspace-1" },
+        }),
+      )
+      const headers = yield* resolved.route.auth.apply({
+        request: LLM.request({ model: resolved, prompt: "Hello" }),
+        method: "POST",
+        url: "https://opencode.ai/zen/v1/chat/completions",
+        body: "{}",
+        headers: Headers.empty,
+      })
+
+      expect(headers.authorization).toBe("Bearer public")
+      expect(headers.authorization).not.toContain("mongolgpt-account-token")
+    }),
+  )
+
   it.effect("does not project OAuth account metadata into the request body", () =>
     Effect.gen(function* () {
       const resolved = yield* SessionRunnerModel.fromCatalogModel(
