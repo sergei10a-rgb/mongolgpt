@@ -31,12 +31,12 @@ export function buildDevFreeAutoCatalog(input: {
   nvidiaNimModel?: string
 }): MongolGPTModelConfiguration {
   const baseFreeModel = identifier(
-    input.baseFreeModel ?? DEFAULT_MONGOLGPT_BASE_FREE_MODEL,
+    input.baseFreeModel?.trim() || DEFAULT_MONGOLGPT_BASE_FREE_MODEL,
     "MONGOLGPT_BASE_FREE_MODEL_ID",
   )
   const openRouterApiKey = optionalSecret(input.openRouterApiKey, "OPENROUTER_API_KEY")
   const nvidiaNimApiKey = optionalSecret(input.nvidiaNimApiKey, "NVIDIA_NIM_API_KEY")
-  const nvidiaNimModel = identifier(input.nvidiaNimModel ?? DEFAULT_NVIDIA_NIM_MODEL, "NVIDIA_NIM_MODEL_ID")
+  const nvidiaNimModel = identifier(input.nvidiaNimModel?.trim() || DEFAULT_NVIDIA_NIM_MODEL, "NVIDIA_NIM_MODEL_ID")
   const managedRoutes = [
     { id: "mongolgpt-base-free", model: baseFreeModel, priority: 0 },
     ...(openRouterApiKey ? [{ id: "openrouter-free", model: "openrouter/free", priority: 1 }] : []),

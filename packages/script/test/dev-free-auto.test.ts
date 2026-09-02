@@ -36,6 +36,18 @@ describe("dev Free Auto catalog", () => {
     expect(prepareDevFreeAuto({ requireEnabled: true }).source).toBe("managed")
   })
 
+  test("treats empty GitHub Actions model overrides as unset", () => {
+    const result = prepareDevFreeAuto({ baseFreeModel: "", nvidiaNimModel: "  " })
+    const catalog = MongolGPTModelConfigurationSchema.parse(JSON.parse(result.parts.join("")))
+    const freeAuto = catalog.models["free-auto"]
+    if (Array.isArray(freeAuto) || !freeAuto) throw new Error("Free Auto catalog дутуу байна")
+
+    expect(freeAuto.providers[0]?.model).toBe(DEFAULT_MONGOLGPT_BASE_FREE_MODEL)
+    expect(catalog.models["nvidia-nim-byok"]).toMatchObject({
+      providers: [{ id: "nvidia-nim", model: DEFAULT_NVIDIA_NIM_MODEL }],
+    })
+  })
+
   test("adds OpenRouter independently as a managed fallback", () => {
     const result = prepareDevFreeAuto({ openRouterApiKey: "openrouter-test-key" })
     const catalog = MongolGPTModelConfigurationSchema.parse(JSON.parse(result.parts.join("")))
