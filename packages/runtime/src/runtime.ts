@@ -56,7 +56,7 @@ export interface RuntimeRateLimiter {
 
 type RuntimeDependencies<Environment extends RuntimeVariables> = {
   sandbox(env: Environment, id: string): RuntimeSandbox
-  report?(error: unknown, code: RuntimeFailureCode): void
+  report?(failure: RuntimeFailure): void
   schedule?: (callback: () => void, delay: number) => () => void
 }
 
@@ -73,10 +73,108 @@ const runtimeFailureMessages = {
 
 type RuntimeFailureCode = keyof typeof runtimeFailureMessages
 
-class RuntimeFailure extends Error {
-  constructor(readonly code: RuntimeFailureCode) {
+const sdkCodes = new Set([
+  "CONTAINER_UNAVAILABLE",
+  "INTERNAL_ERROR",
+  "OPERATION_INTERRUPTED",
+  "PORT_ALREADY_EXPOSED",
+  "PORT_IN_USE",
+  "PORT_NOT_EXPOSED",
+  "PORT_OPERATION_ERROR",
+  "PROCESS_ERROR",
+  "PROCESS_NOT_FOUND",
+  "PROCESS_PERMISSION_DENIED",
+  "PROCESS_READY_TIMEOUT",
+  "PROCESS_EXITED_BEFORE_READY",
+  "RPC_TRANSPORT_ERROR",
+  "SERVICE_NOT_RESPONDING",
+  "UNKNOWN_ERROR",
+])
+
+const sdkKinds = new Set([
+  "peer_closed",
+  "connection_failed",
+  "upgrade_failed",
+  "invalid_frame",
+  "protocol_error",
+  "session_disposed",
+  "unknown",
+])
+
+const sdkReasons = new Set([
+  "runtime_replaced",
+  "transport_disposed",
+  "sandbox_lifetime_changed",
+  "recovery_exhausted",
+  "rpc_upgrade_failed",
+])
+
+export type RuntimeDiagnostic = {
+  readonly code: string
+  readonly kind?: string
+  readonly reason?: string
+}
+
+function readProperty(value: unknown, key: string): unknown {
+  if (typeof value !== "object" || value === null) return undefined
+  try {
+    return (value as Record<string, unknown>)[key]
+  } catch {
+    return undefined
+  }
+}
+
+function readRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined
+}
+
+export function sanitizeRuntimeDiagnostic(error: unknown): RuntimeDiagnostic | undefined {
+  try {
+    const response = readProperty(error, "errorResponse")
+    const code = readString(readProperty(error, "code")) ?? readString(readProperty(response, "code"))
+    if (!code || !sdkCodes.has(code)) return undefined
+
+    const context = readRecord(readProperty(error, "context") ?? readProperty(response, "context"))
+    const diagnostic: RuntimeDiagnostic = { code }
+    const kind = readString(context && readProperty(context, "kind"))
+    const reason = readString(context && readProperty(context, "reason"))
+    if (code === "RPC_TRANSPORT_ERROR" && kind && sdkKinds.has(kind)) return { ...diagnostic, kind }
+    if ((code === "OPERATION_INTERRUPTED" || code === "CONTAINER_UNAVAILABLE") && reason && sdkReasons.has(reason)) {
+      return { ...diagnostic, reason }
+    }
+    return diagnostic
+  } catch {
+    return undefined
+  }
+}
+
+function diagnosticSuffix(diagnostic: RuntimeDiagnostic | undefined) {
+  if (!diagnostic) return ""
+  const detail = diagnostic.kind ?? diagnostic.reason
+  return ` Лавлах код: ${diagnostic.code}${detail ? `/${detail}` : ""}`
+}
+
+export class RuntimeFailure extends Error {
+  private constructor(
+    readonly code: RuntimeFailureCode,
+    readonly diagnostic?: RuntimeDiagnostic,
+  ) {
     super(runtimeFailureMessages[code])
     this.name = "RuntimeFailure"
+  }
+
+  static create(code: RuntimeFailureCode, error?: unknown) {
+    return new RuntimeFailure(code, sanitizeRuntimeDiagnostic(error))
+  }
+
+  messageFor(stage: string) {
+    return stage.trim() === "dev" ? `${this.message}${diagnosticSuffix(this.diagnostic)}` : this.message
   }
 }
 
@@ -204,22 +302,28 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
       )
 
       if (request.headers.get("upgrade")?.toLowerCase() === "websocket") {
-        const response = await sandbox.wsConnect(internal, PORT).catch(() => {
-          throw new RuntimeFailure("runtime_websocket_proxy_failed")
+        const response = await sandbox.wsConnect(internal, PORT).catch((error) => {
+          throw RuntimeFailure.create("runtime_websocket_proxy_failed", error)
         })
         return expireWebSocket(response, authentication.expiresAt, dependencies.schedule ?? scheduleTimeout)
       }
-      const response = await sandbox.containerFetch(internal, PORT).catch(() => {
-        throw new RuntimeFailure("runtime_proxy_failed")
+      const response = await sandbox.containerFetch(internal, PORT).catch((error) => {
+        throw RuntimeFailure.create("runtime_proxy_failed", error)
       })
       return cors(response, appOrigin)
     } catch (error) {
       if (error instanceof RequestBodyTooLarge) {
         return cors(json({ error: "Хүсэлтийн хэмжээ 16 MiB хязгаараас хэтэрсэн байна." }, 413), appOrigin)
       }
-      const failure = error instanceof RuntimeFailure ? error : new RuntimeFailure("runtime_unavailable")
-      dependencies.report?.(error, failure.code)
-      return cors(json({ error: failure.code, code: failure.code, message: failure.message }, 502), appOrigin)
+      const failure = error instanceof RuntimeFailure ? error : RuntimeFailure.create("runtime_unavailable", error)
+      dependencies.report?.(failure)
+      const body = {
+        error: failure.code,
+        code: failure.code,
+        message: failure.messageFor(env.STAGE),
+        ...(env.STAGE.trim() === "dev" && failure.diagnostic ? { diagnostic: failure.diagnostic } : {}),
+      }
+      return cors(json(body, 502), appOrigin)
     }
   }
 }
@@ -424,8 +528,8 @@ function requestDirectory(request: Request, url: URL) {
 }
 
 async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOrigin: string) {
-  const existing = await sandbox.getProcess(PROCESS_ID).catch(() => {
-    throw new RuntimeFailure("runtime_process_lookup_failed")
+  const existing = await sandbox.getProcess(PROCESS_ID).catch((error) => {
+    throw RuntimeFailure.create("runtime_process_lookup_failed", error)
   })
   if (existing && (await waitForServer(existing))) return
 
@@ -449,18 +553,18 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOr
         MONGOLGPT_API_KEY: "runtime",
       },
     })
-    .catch(async () => {
+    .catch(async (error) => {
       const concurrent = await sandbox.getProcess(PROCESS_ID).catch(() => undefined)
-      if (!concurrent) throw new RuntimeFailure("runtime_process_start_failed")
+      if (!concurrent) throw RuntimeFailure.create("runtime_process_start_failed", error)
       return concurrent
     })
 
-  if (!(await waitForServer(started))) throw new RuntimeFailure("runtime_process_exited")
+  if (!(await waitForServer(started))) throw RuntimeFailure.create("runtime_process_exited")
 }
 
 async function waitForServer(process: RuntimeProcess) {
-  const status = await process.getStatus().catch(() => {
-    throw new RuntimeFailure("runtime_process_status_failed")
+  const status = await process.getStatus().catch((error) => {
+    throw RuntimeFailure.create("runtime_process_status_failed", error)
   })
   if (status !== "starting" && status !== "running") return false
   await process
@@ -469,8 +573,8 @@ async function waitForServer(process: RuntimeProcess) {
       timeout: START_TIMEOUT_MS,
       interval: 500,
     })
-    .catch(() => {
-      throw new RuntimeFailure("runtime_process_port_timeout")
+    .catch((error) => {
+      throw RuntimeFailure.create("runtime_process_port_timeout", error)
     })
   return true
 }

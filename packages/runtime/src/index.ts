@@ -42,10 +42,10 @@ const handler = createRuntimeHandler<RuntimeEnvironment>({
       sleepAfter: "10m",
       transport: "rpc",
     }),
-  report: (error, code) => {
+  report: (failure) => {
     console.error("MongolGPT runtime хүсэлт амжилтгүй боллоо", {
-      code,
-      name: error instanceof Error ? error.name : "UnknownError",
+      code: failure.code,
+      diagnostic: failure.diagnostic,
     })
   },
 })

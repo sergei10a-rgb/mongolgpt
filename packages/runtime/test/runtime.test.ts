@@ -5,6 +5,8 @@ import {
   createRuntimeHandler,
   deriveRuntimeIdentity,
   hostedDirectory,
+  sanitizeRuntimeDiagnostic,
+  type RuntimeFailure,
   type RuntimeProcess,
   type RuntimeSandbox,
   type RuntimeVariables,
@@ -649,7 +651,7 @@ describe("MongolGPT Cloudflare runtime", () => {
       const reported: string[] = []
       const handler = createRuntimeHandler<Environment>({
         sandbox: () => scenario.value,
-        report: (_error, code) => reported.push(code),
+        report: (failure) => reported.push(failure.code),
       })
       const response = await handler(
         hostedRequest("/path", {
@@ -676,7 +678,7 @@ describe("MongolGPT Cloudflare runtime", () => {
       sandbox: () => {
         throw new Error("provider detail must stay private")
       },
-      report: (_error, code) => reported.push(code),
+      report: (failure) => reported.push(failure.code),
     })
     const response = await handler(
       hostedRequest("/path", { headers: { authorization: `Bearer ${token}` } }),
@@ -690,6 +692,238 @@ describe("MongolGPT Cloudflare runtime", () => {
     })
     expect(reported).toEqual(["runtime_unavailable"])
     expect(JSON.stringify(body)).not.toContain("provider detail")
+  })
+
+  test("exposes only allowlisted sandbox diagnostics in dev and keeps production unchanged", async () => {
+    const token = await capability()
+    const sdkError = (code: string, context: Record<string, unknown>) => ({
+      errorResponse: { code, context, message: "secret https://internal.example/command" },
+    })
+    const reported: RuntimeFailure[] = []
+    const devSandbox = sandbox().value
+    const handler = createRuntimeHandler<Environment>({
+      sandbox: () => ({
+        ...devSandbox,
+        getProcess: async () => {
+          throw sdkError("RPC_TRANSPORT_ERROR", { kind: "upgrade_failed", originalMessage: "secret" })
+        },
+      }),
+      report: (failure) => reported.push(failure),
+    })
+
+    const dev = await handler(hostedRequest("/path", { headers: { authorization: `Bearer ${token}` } }), environment())
+    const devBody: unknown = await dev.json()
+    expect(devBody).toEqual({
+      error: "runtime_process_lookup_failed",
+      code: "runtime_process_lookup_failed",
+      message: "Cloud runtime процессийн төлөвийг шалгаж чадсангүй. Лавлах код: RPC_TRANSPORT_ERROR/upgrade_failed",
+      diagnostic: { code: "RPC_TRANSPORT_ERROR", kind: "upgrade_failed" },
+    })
+    expect(reported[0]?.diagnostic).toEqual({ code: "RPC_TRANSPORT_ERROR", kind: "upgrade_failed" })
+    expect(JSON.stringify(reported[0])).not.toContain("secret")
+
+    const production = environment()
+    production.STAGE = "production"
+    const productionResponse = await handler(
+      hostedRequest("/path", { headers: { authorization: `Bearer ${token}` } }),
+      production,
+    )
+    const productionBody: unknown = await productionResponse.json()
+    expect(productionBody).toEqual({
+      error: "runtime_process_lookup_failed",
+      code: "runtime_process_lookup_failed",
+      message: "Cloud runtime процессийн төлөвийг шалгаж чадсангүй.",
+    })
+  })
+
+  test("sanitizes structured diagnostics across sandbox failure phases", async () => {
+    const token = await capability()
+    const error = (code: string, context: Record<string, unknown>) => ({
+      errorResponse: { code, context, message: "do not expose this" },
+    })
+    const running = process().value
+    const base = sandbox().value
+    const scenarios: Array<{ expected: string; value: RuntimeSandbox }> = [
+      {
+        expected: "CONTAINER_UNAVAILABLE/rpc_upgrade_failed",
+        value: {
+          ...base,
+          getProcess: async () => {
+            throw error("CONTAINER_UNAVAILABLE", { reason: "rpc_upgrade_failed" })
+          },
+        },
+      },
+      {
+        expected: "OPERATION_INTERRUPTED/runtime_replaced",
+        value: {
+          ...base,
+          getProcess: async () => null,
+          startProcess: async () => {
+            throw error("OPERATION_INTERRUPTED", { reason: "runtime_replaced" })
+          },
+        },
+      },
+      {
+        expected: "OPERATION_INTERRUPTED/transport_disposed",
+        value: {
+          ...base,
+          getProcess: async () => ({
+            ...running,
+            getStatus: async () => {
+              throw error("OPERATION_INTERRUPTED", { reason: "transport_disposed" })
+            },
+          }),
+        },
+      },
+      {
+        expected: "RPC_TRANSPORT_ERROR/peer_closed",
+        value: {
+          ...base,
+          getProcess: async () => ({
+            ...running,
+            waitForPort: async () => {
+              throw error("RPC_TRANSPORT_ERROR", { kind: "peer_closed" })
+            },
+          }),
+        },
+      },
+      {
+        expected: "SERVICE_NOT_RESPONDING",
+        value: {
+          ...base,
+          getProcess: async () => running,
+          containerFetch: async () => {
+            throw error("SERVICE_NOT_RESPONDING", {})
+          },
+        },
+      },
+    ]
+
+    for (const scenario of scenarios) {
+      const reported: RuntimeFailure[] = []
+      const response = await createRuntimeHandler<Environment>({
+        sandbox: () => scenario.value,
+        report: (failure) => reported.push(failure),
+      })(hostedRequest("/path", { headers: { authorization: `Bearer ${token}` } }), environment())
+      const body = await response.json()
+      const [expectedCode, expectedDetail] = scenario.expected.split("/")
+      const detailKey = expectedCode === "RPC_TRANSPORT_ERROR" ? "kind" : "reason"
+      expect(body).toMatchObject({
+        diagnostic: {
+          code: expectedCode,
+          ...(expectedDetail ? { [detailKey]: expectedDetail } : {}),
+        },
+      })
+      expect(reported[0]?.diagnostic).toMatchObject({
+        code: expectedCode,
+        ...(expectedDetail ? { [detailKey]: expectedDetail } : {}),
+      })
+      expect(JSON.stringify(body)).not.toContain("do not expose this")
+    }
+  })
+
+  test("drops unknown and hostile sandbox metadata without throwing or leaking", async () => {
+    const token = await capability()
+    const cyclic: Record<string, unknown> = {}
+    cyclic.self = cyclic
+    const hostile = {
+      get errorResponse() {
+        throw new Error("private error")
+      },
+      context: cyclic,
+    }
+    const reported: RuntimeFailure[] = []
+    const response = await createRuntimeHandler<Environment>({
+      sandbox: () => ({
+        ...sandbox().value,
+        getProcess: async () => {
+          throw hostile
+        },
+      }),
+      report: (failure) => reported.push(failure),
+    })(hostedRequest("/path", { headers: { authorization: `Bearer ${token}` } }), environment())
+    const responseBody: unknown = await response.json()
+    expect(responseBody).toEqual({
+      error: "runtime_process_lookup_failed",
+      code: "runtime_process_lookup_failed",
+      message: "Cloud runtime процессийн төлөвийг шалгаж чадсангүй.",
+    })
+    expect(reported[0]?.diagnostic).toBeUndefined()
+  })
+
+  test("does not copy unknown codes or unrelated context fields into diagnostics", () => {
+    const privateValue = "private-token-and-command"
+    const cyclic: Record<string, unknown> = { code: "RPC_TRANSPORT_ERROR" }
+    cyclic.context = cyclic
+    expect(sanitizeRuntimeDiagnostic(cyclic)).toEqual({ code: "RPC_TRANSPORT_ERROR" })
+    expect(sanitizeRuntimeDiagnostic({ code: privateValue })).toBeUndefined()
+    expect(sanitizeRuntimeDiagnostic({ errorResponse: { code: "toString" } })).toBeUndefined()
+    expect(
+      sanitizeRuntimeDiagnostic({
+        code: "RPC_TRANSPORT_ERROR",
+        context: { kind: privateValue, reason: "runtime_replaced", originalMessage: privateValue },
+      }),
+    ).toEqual({ code: "RPC_TRANSPORT_ERROR" })
+    expect(
+      sanitizeRuntimeDiagnostic({
+        errorResponse: { code: "OPERATION_INTERRUPTED", context: { reason: privateValue, kind: "peer_closed" } },
+      }),
+    ).toEqual({ code: "OPERATION_INTERRUPTED" })
+
+    const remote = {
+      get code() {
+        throw new Error(privateValue)
+      },
+      errorResponse: {
+        code: "RPC_TRANSPORT_ERROR",
+        context: {
+          get kind() {
+            throw new Error(privateValue)
+          },
+        },
+      },
+    }
+    expect(sanitizeRuntimeDiagnostic(remote)).toEqual({ code: "RPC_TRANSPORT_ERROR" })
+    const revoked = Proxy.revocable({}, {})
+    revoked.revoke()
+    expect(sanitizeRuntimeDiagnostic(revoked.proxy)).toBeUndefined()
+  })
+
+  test("sanitizes factory failures and never retains the raw error in reporting", async () => {
+    const token = await capability()
+    const reported: RuntimeFailure[] = []
+    const raw = Object.assign(new Error("private-token-and-command"), {
+      code: "CONTAINER_UNAVAILABLE",
+      context: { reason: "rpc_upgrade_failed", originalMessage: "private-token-and-command" },
+    })
+    const handler = createRuntimeHandler<Environment>({
+      sandbox: () => {
+        throw raw
+      },
+      report: (failure) => reported.push(failure),
+    })
+    const env = environment()
+    env.STAGE = " dev "
+    const response = await handler(
+      hostedRequest("/path", {
+        headers: { authorization: `Bearer ${token}` },
+      }),
+      env,
+    )
+    expect(response.status).toBe(502)
+    const body: unknown = await response.json()
+    expect(body).toEqual({
+      error: "runtime_unavailable",
+      code: "runtime_unavailable",
+      message:
+        "Cloud coding runtime-г эхлүүлж чадсангүй. Түр хүлээгээд дахин оролдоно уу. Лавлах код: CONTAINER_UNAVAILABLE/rpc_upgrade_failed",
+      diagnostic: { code: "CONTAINER_UNAVAILABLE", reason: "rpc_upgrade_failed" },
+    })
+    expect(reported).toHaveLength(1)
+    expect(reported[0]).not.toBe(raw)
+    expect(reported[0]?.cause).toBeUndefined()
+    expect(reported[0]?.stack).not.toContain("private-token-and-command")
+    expect(JSON.stringify(reported)).not.toContain("private-token-and-command")
   })
 
   test("rate limits before allocating a sandbox and rejects oversized bodies", async () => {
