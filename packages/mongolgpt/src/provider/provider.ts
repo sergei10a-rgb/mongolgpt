@@ -11,6 +11,7 @@ import { Plugin } from "../plugin"
 import { serviceUse } from "@mongolgpt/core/effect/service-use"
 import { type LanguageModelV3 } from "@ai-sdk/provider"
 import { ModelsDev } from "@mongolgpt/core/models-dev"
+import { EventV2 } from "@mongolgpt/core/event"
 import { HostedCredential } from "@mongolgpt/core/hosted-credential"
 import {
   isManagedFreeModel,
@@ -1356,6 +1357,7 @@ export const layer = Layer.effect(
     const env = yield* Env.Service
     const plugin = yield* Plugin.Service
     const modelsDevSvc = yield* ModelsDev.Service
+    const events = yield* EventV2.Service
     const runtimeFlags = yield* RuntimeFlags.Service
 
     const state = yield* InstanceState.make<State>(() =>
@@ -1684,6 +1686,14 @@ export const layer = Layer.effect(
       }),
     )
 
+    // EventV2 notifies listeners before broadcasting to SSE/PubSub consumers.
+    // Invalidate every directory first so legacy provider refetches observe the
+    // rebuilt catalog, including directories that have not been initialized yet.
+    const unsubscribe = yield* events.listen((event) =>
+      event.type === ModelsDev.Event.Refreshed.type ? InstanceState.invalidateAll(state) : Effect.void,
+    )
+    yield* Effect.addFinalizer(() => unsubscribe)
+
     const list = Effect.fn("Provider.list")(() => InstanceState.use(state, (s) => s.providers))
 
     async function resolveSDK(model: Model, s: State, envs: Record<string, string | undefined>) {
@@ -2007,6 +2017,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Auth.defaultLayer),
     Layer.provide(Plugin.defaultLayer),
     Layer.provide(ModelsDev.defaultLayer),
+    Layer.provide(EventV2.defaultLayer),
     Layer.provide(RuntimeFlags.defaultLayer),
   ),
 )
@@ -2033,7 +2044,7 @@ export function parseModel(model: string) {
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [FSUtil.node, Config.node, Auth.node, Env.node, Plugin.node, ModelsDev.node, RuntimeFlags.node],
+  deps: [FSUtil.node, Config.node, Auth.node, Env.node, Plugin.node, ModelsDev.node, EventV2.node, RuntimeFlags.node],
 })
 
 export * as Provider from "./provider"

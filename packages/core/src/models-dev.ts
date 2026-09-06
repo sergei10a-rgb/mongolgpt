@@ -1,5 +1,6 @@
 import path from "path"
 import { Context, Duration, Effect, Layer, Option, Schedule, Schema } from "effect"
+import { isDeepStrictEqual } from "node:util"
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { ModelsDev } from "@mongolgpt/schema/models-dev"
 import { Global } from "./global"
@@ -22,6 +23,7 @@ const hostedProviderIDs = new Set(["mongolgpt", "mongolgpt-go", "opencode", "ope
 const hostedServer = env("MONGOLGPT_CONSOLE_URL")?.trim() || productServiceUrls.console
 const maxHostedFreeModels = 128
 const hostedModelIDPattern = /^[a-z0-9][a-z0-9._:/-]{0,127}$/
+const decodeJson = Schema.decodeUnknownOption(Schema.UnknownFromJsonString)
 
 function isActiveFreeHostedModel(model: Provider["models"][string]) {
   if (model.status === "deprecated" || model.status === "alpha" || !model.cost) return false
@@ -261,6 +263,10 @@ export const layer = Layer.effect(
 
     const fetchAndWrite = Effect.fn("ModelsDev.fetchAndWrite")(function* () {
       const text = yield* fetchApi()
+      const parsed = decodeJson(text)
+      if (Option.isNone(parsed) || !parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) {
+        return yield* Effect.fail(new Error("models.dev-ийн хариу буруу бүтэцтэй байна"))
+      }
       const tempfile = `${filepath}.${process.pid}.${Date.now()}.tmp`
       yield* fs.writeWithDirs(tempfile, text).pipe(
         Effect.andThen(fs.rename(tempfile, filepath)),
@@ -292,17 +298,28 @@ export const layer = Layer.effect(
 
     const [cachedGet, invalidate] = yield* Effect.cachedInvalidateWithTTL(populate, Duration.infinity)
 
+    const refreshFreshDisk = Effect.fnUntraced(function* () {
+      const disk = yield* loadFromDisk
+      if (!disk) return
+      const cached = yield* cachedGet
+      if (isDeepStrictEqual(disk, cached)) return
+      yield* invalidate
+      yield* events.publish(Event.Refreshed, {})
+    })
+
     const get = (): Effect.Effect<Record<string, Provider>> =>
       cachedGet.pipe(Effect.map(rebrandHostedProviders), Effect.map(filterHostedProviders))
 
     const refresh = Effect.fn("ModelsDev.refresh")(function* (force = false) {
-      if (!force && (yield* fresh())) return
       yield* Effect.scoped(
         Effect.gen(function* () {
           yield* Flock.effect(lockKey)
-          // Re-check under the lock: another process may have refreshed between
-          // our outer check and lock acquisition.
-          if (!force && (yield* fresh())) return
+          // A fresh disk cache may have been written by another process while
+          // this process still holds an older in-memory catalog.
+          if (!force && (yield* fresh())) {
+            yield* refreshFreshDisk()
+            return
+          }
           yield* fetchAndWrite()
           yield* invalidate
           yield* events.publish(Event.Refreshed, {})

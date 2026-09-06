@@ -2,6 +2,7 @@ import { ConfigV1 } from "@mongolgpt/core/v1/config/config"
 import { SessionV1 } from "@mongolgpt/core/v1/session"
 import { FSUtil } from "@mongolgpt/core/fs-util"
 import { ModelsDev } from "@mongolgpt/core/models-dev"
+import { EventV2 } from "@mongolgpt/core/event"
 import { HttpRecorder } from "@mongolgpt/http-recorder"
 import { HttpRecorderInternal } from "@mongolgpt/http-recorder/internal"
 import { describe, expect, test } from "bun:test"
@@ -269,6 +270,7 @@ function recordedNativeLLMLayer(scenario: RecordedScenario) {
     Layer.provide(auth),
     Layer.provide(Plugin.defaultLayer),
     Layer.provide(ModelsDev.defaultLayer),
+    Layer.provide(EventV2.defaultLayer),
     Layer.provide(RuntimeFlags.defaultLayer),
   )
   // Only the HTTP client is recorded; RequestExecutor and the mongolgpt LLM stack remain real.

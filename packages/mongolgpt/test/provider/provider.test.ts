@@ -3,6 +3,7 @@ import { mkdir, unlink } from "fs/promises"
 import path from "path"
 import { Effect, Layer } from "effect"
 import { ModelsDev } from "@mongolgpt/core/models-dev"
+import { EventV2 } from "@mongolgpt/core/event"
 import { FSUtil } from "@mongolgpt/core/fs-util"
 import { CrossSpawnSpawner } from "@mongolgpt/core/cross-spawn-spawner"
 import { Global } from "@mongolgpt/core/global"
@@ -56,14 +57,18 @@ afterEach(async () => {
   await disposeAllInstances()
 })
 
-const providerLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
+const providerLayer = (
+  flags: Partial<RuntimeFlags.Info> = {},
+  modelsDevLayer: Layer.Layer<ModelsDev.Service> = ModelsDev.defaultLayer,
+) =>
   Provider.layer.pipe(
     Layer.provide(FSUtil.defaultLayer),
     Layer.provide(Env.defaultLayer),
     Layer.provide(Config.defaultLayer),
     Layer.provide(Auth.defaultLayer),
     Layer.provide(Plugin.defaultLayer),
-    Layer.provide(ModelsDev.defaultLayer),
+    Layer.provide(modelsDevLayer),
+    Layer.provide(EventV2.defaultLayer),
     Layer.provide(RuntimeFlags.layer(flags)),
   )
 
@@ -171,6 +176,81 @@ const languageBaseURL = (language: unknown) => (language as { config: { baseURL:
 
 const it = testEffect(Layer.mergeAll(Provider.defaultLayer, Env.defaultLayer, Plugin.defaultLayer))
 const experimentalModels = testEffect(providerLayer({ enableExperimentalModels: true }))
+
+const providerRefreshCatalog: { current: Record<string, ModelsDev.Provider> } = {
+  current: {
+    opencode: {
+      id: "opencode",
+      name: "OpenCode",
+      env: [],
+      api: "https://opencode.ai/zen/v1",
+      npm: "@ai-sdk/openai-compatible",
+      models: {
+        "muse-spark-1.2": {
+          id: "muse-spark-1.2",
+          name: "Muse Spark 1.2",
+          release_date: "2026-01-01",
+          attachment: false,
+          reasoning: true,
+          temperature: true,
+          tool_call: true,
+          cost: { input: 0, output: 0 },
+          limit: { context: 128_000, output: 16_384 },
+        },
+      },
+    },
+  },
+}
+const providerRefreshLayer = Layer.succeed(ModelsDev.Service, {
+  get: () => Effect.sync(() => ModelsDev.rebrandHostedProviders(providerRefreshCatalog.current)),
+  refresh: () => Effect.void,
+})
+const providerRefresh = testEffect(
+  Layer.mergeAll(providerLayer({}, providerRefreshLayer), EventV2.defaultLayer, Env.defaultLayer),
+)
+
+providerRefresh.instance("provider list observes models.dev additions and removals after refresh event", () =>
+  Effect.gen(function* () {
+    const initial = providerRefreshCatalog.current
+    yield* Effect.addFinalizer(() =>
+      Effect.sync(() => {
+        providerRefreshCatalog.current = initial
+      }),
+    )
+    yield* set("MONGOLGPT_RUNTIME_MODE", "hosted")
+    yield* set("MONGOLGPT_API_KEY", "runtime")
+    const provider = yield* Provider.Service
+    const events = yield* EventV2.Service
+
+    const before = yield* provider.list()
+    expect(before[ProviderV2.ID.mongolgpt].models[ModelV2.ID.make("muse-spark-1.2")]).toBeDefined()
+    expect(before[ProviderV2.ID.mongolgpt].models[ModelV2.ID.make("muse-spark-1.3")]).toBeUndefined()
+
+    providerRefreshCatalog.current = {
+      ...initial,
+      opencode: {
+        ...initial.opencode,
+        models: {
+          ...initial.opencode.models,
+          "muse-spark-1.3": {
+            ...initial.opencode.models["muse-spark-1.2"],
+            id: "muse-spark-1.3",
+            name: "Muse Spark 1.3",
+          },
+        },
+      },
+    }
+
+    yield* events.publish(ModelsDev.Event.Refreshed, {})
+    const added = yield* provider.list()
+    expect(added[ProviderV2.ID.mongolgpt].models[ModelV2.ID.make("muse-spark-1.3")]).toBeDefined()
+
+    providerRefreshCatalog.current = initial
+    yield* events.publish(ModelsDev.Event.Refreshed, {})
+    const removed = yield* provider.list()
+    expect(removed[ProviderV2.ID.mongolgpt].models[ModelV2.ID.make("muse-spark-1.3")]).toBeUndefined()
+  }),
+)
 
 const alphaProviderConfig = {
   provider: {

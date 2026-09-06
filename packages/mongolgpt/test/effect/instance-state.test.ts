@@ -101,6 +101,25 @@ it.live("InstanceState invalidates on disposeAll", () =>
   }),
 )
 
+it.live("InstanceState invalidates all initialized directories without initializing new ones", () =>
+  Effect.gen(function* () {
+    const one = yield* tmpdirScoped()
+    const two = yield* tmpdirScoped()
+    let n = 0
+    const state = yield* InstanceState.make(() => Effect.sync(() => ({ n: ++n })))
+
+    yield* access(state, one)
+    yield* access(state, two)
+    yield* InstanceState.invalidateAll(state)
+
+    expect(n).toBe(2)
+    const refreshedOne = yield* access(state, one)
+    const refreshedTwo = yield* access(state, two)
+    expect(refreshedOne.n).toBe(3)
+    expect(refreshedTwo.n).toBe(4)
+  }),
+)
+
 it.live("InstanceState.get reads the current directory lazily", () =>
   Effect.gen(function* () {
     const one = yield* tmpdirScoped()

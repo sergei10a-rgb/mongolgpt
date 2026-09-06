@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { describe, expect, test } from "bun:test"
 import { tmpdir } from "../../../fixture/fixture"
-import { mount, wait } from "./sync-fixture"
+import { directory, json, mount, wait } from "./sync-fixture"
 import type { GlobalEvent } from "@mongolgpt/sdk/v2"
 
 function branchEvent(branch: string, workspace?: string): GlobalEvent {
@@ -13,6 +13,17 @@ function branchEvent(branch: string, workspace?: string): GlobalEvent {
       id: `evt_vcs_${branch}`,
       type: "vcs.branch.updated",
       properties: { branch },
+    },
+  }
+}
+
+function modelsRefreshedEvent(): GlobalEvent {
+  return {
+    directory,
+    payload: {
+      id: "evt_models_refreshed",
+      type: "models-dev.refreshed",
+      properties: {},
     },
   }
 }
@@ -58,6 +69,27 @@ describe("tui sync", () => {
       await wait(() => sync.data.vcs?.branch === "feature")
 
       expect(sync.data.vcs?.branch).toBe("feature")
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+
+  test("models.dev refresh refetches legacy provider state", async () => {
+    await using tmp = await tmpdir()
+    await Bun.write(`${tmp.path}/kv.json`, "{}")
+    const requests: string[] = []
+    const { app, emit, sync } = await mount((url) => {
+      requests.push(url.pathname)
+      if (url.pathname === "/config/providers") return json({ providers: {}, default: {} })
+      if (url.pathname === "/provider") return json({ all: [], default: {}, connected: [] })
+      return undefined
+    }, tmp.path)
+
+    try {
+      const before = requests.filter((item) => item === "/provider").length
+      emit(modelsRefreshedEvent())
+      await wait(() => requests.filter((item) => item === "/provider").length > before)
+      expect(sync.status).toBe("complete")
     } finally {
       app.renderer.destroy()
     }

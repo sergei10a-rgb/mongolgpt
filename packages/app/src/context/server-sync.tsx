@@ -54,6 +54,14 @@ export function hasRuntimeFilesystem(path: Path) {
   return !!(path.home || path.directory)
 }
 
+export function isProviderRefreshEvent(event: { type: string }) {
+  return event.type === "models-dev.refreshed"
+}
+
+export function isProviderQuery(queryKey: readonly unknown[], scope: ServerScope) {
+  return queryKey[0] === scope && queryKey[2] === "providers"
+}
+
 export const loadMcpQuery = (scope: ServerScope, directory: string, sdk: MongolGPTClient) =>
   queryOptions({
     queryKey: [scope, directory, "mcp"] as const,
@@ -379,6 +387,12 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
     const key = directoryKey(directory)
     const event = e.details
     const recent = bootingRoot || Date.now() - bootedAt < 1500
+
+    if (isProviderRefreshEvent(event)) {
+      void queryClient.invalidateQueries({
+        predicate: (query) => isProviderQuery(query.queryKey, serverSDK.scope),
+      })
+    }
 
     session.apply(event)
 

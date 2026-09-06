@@ -381,6 +381,25 @@ describe("ModelsDev Service", () => {
     }),
   )
 
+  it.live("refresh(false) reloads a changed fresh disk cache from another process", () =>
+    Effect.gen(function* () {
+      yield* writeCache(fixture)
+      const state = yield* Ref.make(initialState)
+      const after = yield* provided(
+        state,
+        Effect.gen(function* () {
+          const svc = yield* ModelsDev.Service
+          yield* svc.get()
+          yield* writeCache(fixture2, Date.now() - 1000)
+          yield* svc.refresh(false)
+          return yield* svc.get()
+        }),
+      )
+      expect(after).toEqual(fixture2)
+      expect((yield* Ref.get(state)).calls).toEqual([])
+    }),
+  )
+
   it.live("refresh(false) fetches when on-disk file is stale", () =>
     Effect.gen(function* () {
       // Stale: mtime 10 minutes ago, beyond the 5-minute TTL.
@@ -397,6 +416,26 @@ describe("ModelsDev Service", () => {
       const final = yield* Ref.get(state)
       expect(final.calls.length).toBe(1)
       expect(after).toEqual(fixture2)
+    }),
+  )
+
+  it.live("refresh preserves the last good catalog after invalid JSON and recovers", () =>
+    Effect.gen(function* () {
+      yield* writeCache(fixture)
+      const state = yield* Ref.make({ ...initialState, body: "{" })
+      yield* provided(
+        state,
+        Effect.gen(function* () {
+          const svc = yield* ModelsDev.Service
+          yield* svc.get()
+          yield* svc.refresh(true)
+          expect(yield* svc.get()).toEqual(fixture)
+          expect(yield* Effect.promise(() => readFile(cacheFile, "utf8"))).toBe(JSON.stringify(fixture))
+          yield* Ref.update(state, (value) => ({ ...value, body: JSON.stringify(fixture2) }))
+          yield* svc.refresh(true)
+          expect(yield* svc.get()).toEqual(fixture2)
+        }),
+      )
     }),
   )
 

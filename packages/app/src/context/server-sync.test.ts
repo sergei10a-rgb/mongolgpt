@@ -1,7 +1,24 @@
 import { describe, expect, test } from "bun:test"
 import { canDisposeDirectory, pickDirectoriesToEvict } from "./global-sync/eviction"
 import { estimateRootSessionTotal, loadRootSessionsWithFallback } from "./global-sync/session-load"
-import { hasRuntimeFilesystem } from "./server-sync"
+import { hasRuntimeFilesystem, isProviderQuery, isProviderRefreshEvent } from "./server-sync"
+import { ServerScope } from "@/utils/server-scope"
+
+describe("isProviderRefreshEvent", () => {
+  test("refreshes legacy provider queries for the models.dev event", () => {
+    expect(isProviderRefreshEvent({ type: "models-dev.refreshed" })).toBe(true)
+    expect(isProviderRefreshEvent({ type: "catalog.updated" })).toBe(false)
+  })
+})
+
+describe("isProviderQuery", () => {
+  test("matches global and directory provider resources", () => {
+    expect(isProviderQuery([ServerScope.local, null, "providers"], ServerScope.local)).toBe(true)
+    expect(isProviderQuery([ServerScope.local, "C:/repo", "providers"], ServerScope.local)).toBe(true)
+    expect(isProviderQuery(["remote" as ServerScope, null, "providers"], ServerScope.local)).toBe(false)
+    expect(isProviderQuery([ServerScope.local, null, "models"], ServerScope.local)).toBe(false)
+  })
+})
 
 describe("hasRuntimeFilesystem", () => {
   const path = { state: "", config: "", worktree: "", directory: "", home: "" }
