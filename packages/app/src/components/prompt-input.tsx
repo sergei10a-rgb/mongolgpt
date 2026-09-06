@@ -83,6 +83,15 @@ export type PromptInputSubmission = {
   handleSubmit: (event: Event) => Promise<void> | void
 }
 
+export type PromptBootstrapDependency = "agent" | "directory-models" | "server-models"
+
+export type PromptBootstrapState = {
+  status: "loading" | "ready" | "error"
+  dependency?: PromptBootstrapDependency
+  timedOut?: boolean
+  retry?: () => Promise<void> | void
+}
+
 export type PromptInputControls = {
   agents: {
     available: { name: string; hidden?: boolean; mode: string }[]
@@ -96,6 +105,7 @@ export type PromptInputControls = {
     selection: ReturnType<typeof useLocal>["model"]
     paid: boolean
     loading: boolean
+    bootstrap?: PromptBootstrapState
   }
   session: {
     id?: string
@@ -634,11 +644,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const agentList = createMemo(() =>
     props.controls.agents.available
       .filter((agent) => !agent.hidden && agent.mode !== "primary")
-      .map((agent): AtOption => ({
-        type: "agent",
-        name: agent.name,
-        display: agentDisplayName(agent.name, language.t),
-      })),
+      .map(
+        (agent): AtOption => ({
+          type: "agent",
+          name: agent.name,
+          display: agentDisplayName(agent.name, language.t),
+        }),
+      ),
   )
 
   const handleAtSelect = (option: AtOption | undefined) => {
@@ -1161,7 +1173,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return permission.isAutoAccepting(id, sdk().directory)
   })
 
-  const { abort, handleSubmit } =
+  const submission =
     props.submission ??
     createPromptSubmit({
       prompt,
@@ -1187,6 +1199,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       onAbort: props.onAbort,
       onSubmit: props.onSubmit,
     })
+
+  const abort = submission.abort
+  const bootstrapBlocked = () =>
+    store.mode === "normal" &&
+    (props.controls.model.bootstrap ? props.controls.model.bootstrap.status !== "ready" : props.controls.model.loading)
+  const submitDisabled = () => (!working() && blank()) || (!stopping() && bootstrapBlocked())
+  const handleSubmit = (event: Event) => {
+    if (!stopping() && bootstrapBlocked()) {
+      event.preventDefault()
+      return
+    }
+    return submission.handleSubmit(event)
+  }
 
   const handleKeyDown = (event: KeyboardEvent) => {
     if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "u") {
@@ -1366,7 +1391,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const modelControlState = createMemo<ComposerModelControlState>(() => ({
-    loading: providersLoading(),
+    bootstrap:
+      props.controls.model.bootstrap ??
+      (providersLoading() ? { status: "loading", dependency: "server-models" } : { status: "ready" }),
     shouldAnimate: providersShouldFadeIn(),
     paid: props.controls.model.paid,
     title: language.t("command.model.choose"),
@@ -1533,7 +1560,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   </Show>
                   {props.toolbar}
                   <ComposerModelControl state={modelControlState()} />
-                  <Show when={!providersLoading() && store.mode !== "shell" && showVariantControl()}>
+                  <Show
+                    when={
+                      modelControlState().bootstrap.status === "ready" && store.mode !== "shell" && showVariantControl()
+                    }
+                  >
                     <div
                       data-component="prompt-variant-control"
                       classList={{
@@ -1576,7 +1607,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   <IconButton
                     data-action="prompt-submit"
                     type="submit"
-                    disabled={!working() && blank()}
+                    disabled={submitDisabled()}
                     tabIndex={store.mode === "normal" ? undefined : -1}
                     icon={stopping() ? "stop" : store.mode === "shell" ? "arrow-undo-down" : "arrow-up"}
                     variant="primary"
@@ -1714,7 +1745,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     <IconButton
                       data-action="prompt-submit"
                       type="submit"
-                      disabled={!working() && blank()}
+                      disabled={submitDisabled()}
                       tabIndex={store.mode === "normal" ? undefined : -1}
                       icon={stopping() ? "stop" : store.mode === "shell" ? "arrow-undo-down" : "arrow-up"}
                       variant="primary"
@@ -1810,7 +1841,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                         </TooltipKeybind>
                       </div>
                     </Show>
-                    <Show when={!providersLoading()}>
+                    <Show
+                      when={modelControlState().bootstrap.status === "ready"}
+                      fallback={<ComposerBootstrapStatus state={modelControlState().bootstrap} />}
+                    >
                       <Show when={store.mode !== "shell"}>
                         <div
                           data-component="prompt-model-control"
@@ -1943,7 +1977,7 @@ type ComposerAgentControlState = {
 }
 
 type ComposerModelControlState = {
-  loading: boolean
+  bootstrap: PromptBootstrapState
   shouldAnimate: boolean
   paid: boolean
   title: string
@@ -1991,7 +2025,10 @@ function ComposerAgentControl(props: { state: ComposerAgentControlState }) {
 
 function ComposerModelControl(props: { state: ComposerModelControlState }) {
   return (
-    <Show when={!props.state.loading}>
+    <Show
+      when={props.state.bootstrap.status === "ready"}
+      fallback={<ComposerBootstrapStatus state={props.state.bootstrap} />}
+    >
       <Show
         when={props.state.paid}
         fallback={
@@ -2072,6 +2109,54 @@ function ComposerModelControl(props: { state: ComposerModelControlState }) {
           </ModelSelectorPopover>
         </TooltipV2>
       </Show>
+    </Show>
+  )
+}
+
+function ComposerBootstrapStatus(props: { state?: PromptBootstrapState }) {
+  const language = useLanguage()
+  const state = () => props.state
+  const dependency = () => state()?.dependency ?? "server-models"
+  const loadingLabel = () => {
+    if (dependency() === "agent") return language.t("prompt.bootstrap.loading.agent")
+    if (dependency() === "directory-models") return language.t("prompt.bootstrap.loading.directory-models")
+    return language.t("prompt.bootstrap.loading.server-models")
+  }
+  const errorLabel = () => {
+    if (state()?.timedOut) {
+      if (dependency() === "agent") return language.t("prompt.bootstrap.timeout.agent")
+      if (dependency() === "directory-models") return language.t("prompt.bootstrap.timeout.directory-models")
+      return language.t("prompt.bootstrap.timeout.server-models")
+    }
+    if (dependency() === "agent") return language.t("prompt.bootstrap.error.agent")
+    if (dependency() === "directory-models") return language.t("prompt.bootstrap.error.directory-models")
+    return language.t("prompt.bootstrap.error.server-models")
+  }
+  const label = () => (state()?.status === "error" ? errorLabel() : loadingLabel())
+
+  return (
+    <Show when={state()?.status === "loading" || state()?.status === "error"}>
+      <div
+        class="flex min-h-8 min-w-0 max-w-[220px] items-center gap-1.5 text-[12px] leading-4 text-v2-text-text-faint"
+        classList={{ "text-icon-critical-base": state()?.status === "error" }}
+        role={state()?.status === "error" ? "alert" : "status"}
+        aria-live={state()?.status === "error" ? undefined : "polite"}
+        aria-label={label()}
+        title={label()}
+        data-component="prompt-bootstrap-status"
+      >
+        <span class="min-w-0 whitespace-normal break-words">{label()}</span>
+        <Show when={state()?.status === "error" && state()?.retry}>
+          <IconButton
+            type="button"
+            icon="reset"
+            variant="ghost"
+            class="size-6 shrink-0 p-1"
+            aria-label={language.t("prompt.bootstrap.retry")}
+            onClick={() => void state()?.retry?.()}
+          />
+        </Show>
+      </div>
     </Show>
   )
 }

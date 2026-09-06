@@ -540,6 +540,7 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
     },
     child: children.child,
     peek: children.peek,
+    queryClient,
     disableMcp: children.disableMcp,
     queryOptions: queryOptionsApi,
     // bootstrap,

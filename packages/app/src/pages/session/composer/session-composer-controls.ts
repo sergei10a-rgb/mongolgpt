@@ -1,14 +1,14 @@
 import { base64Encode } from "@mongolgpt/core/util/encode"
-import { createQuery } from "@tanstack/solid-query"
+import { createQuery, type QueryClient } from "@tanstack/solid-query"
 import { useNavigate, useSearchParams } from "@solidjs/router"
 import { type Accessor, createMemo } from "solid-js"
-import type { PromptInputControls } from "@/components/prompt-input"
+import type { PromptBootstrapState, PromptInputControls } from "@/components/prompt-input"
 import type { PromptProjectControls } from "@/components/prompt-project-selector"
 import { useDirectoryPicker } from "@/components/directory-picker"
 import { useGlobal } from "@/context/global"
 import { useLayout } from "@/context/layout"
 import { useLocal } from "@/context/local"
-import type { QueryOptionsApi } from "@/context/server-sync"
+import { useServerSync, type QueryOptionsApi } from "@/context/server-sync"
 import { useServerSDK } from "@/context/server-sdk"
 import { serverName, ServerConnection, useServer } from "@/context/server"
 import { useSDK } from "@/context/sdk"
@@ -17,6 +17,7 @@ import { useSync } from "@/context/sync"
 import { useTabs } from "@/context/tabs"
 import { useProviders } from "@/hooks/use-providers"
 import { pathKey } from "@/utils/path-key"
+import type { Agent } from "@mongolgpt/sdk/v2/client"
 
 export function createPromptInputController(input: {
   sessionKey: Accessor<string>
@@ -26,13 +27,51 @@ export function createPromptInputController(input: {
   const layout = useLayout()
   const local = useLocal()
   const providers = useProviders()
+  const serverSync = useServerSync()
   const settings = useSettings()
   const sync = useSync()
   const sdk = useSDK()
   const view = layout.view(input.sessionKey)
-  const agentsQuery = createQuery(() => input.queryOptions.agents(pathKey(sdk().directory)))
-  const globalProvidersQuery = createQuery(() => input.queryOptions.providers(null))
-  const providersQuery = createQuery(() => input.queryOptions.providers(pathKey(sdk().directory)))
+  // The route shell has its own cache; observe the cache that owns the actual directory catalogs.
+  const queryClient = () => serverSync().queryClient
+  const agentsQuery = createQuery(() => input.queryOptions.agents(pathKey(sdk().directory)), queryClient)
+  const globalProvidersQuery = createQuery(() => input.queryOptions.providers(null), queryClient)
+  const providersQuery = createQuery(() => input.queryOptions.providers(pathKey(sdk().directory)), queryClient)
+
+  const retryBootstrap = async () => {
+    const targetSync = sync()
+    const directory = pathKey(sdk().directory)
+    await retryPromptBootstrap({
+      queryClient: queryClient(),
+      agents: agentsQuery.isError ? input.queryOptions.agents(directory) : undefined,
+      providers: providersQuery.isError ? input.queryOptions.providers(directory) : undefined,
+      globalProviders: globalProvidersQuery.isError ? input.queryOptions.providers(null) : undefined,
+      setAgents: (value) => targetSync.set("agent", value),
+    })
+  }
+
+  const bootstrap = createMemo<PromptBootstrapState>(() => {
+    const dependencies = [
+      { dependency: "agent", query: agentsQuery },
+      { dependency: "directory-models", query: providersQuery },
+      { dependency: "server-models", query: globalProvidersQuery },
+    ] as const
+    // Reading Solid Query data before pending state would suspend the whole composer.
+    // Cached successful data remains usable during background catalog refreshes.
+    const loading = dependencies.find(({ query }) => query.isPending)
+    if (loading) return { status: "loading", dependency: loading.dependency, retry: retryBootstrap }
+
+    const failed = dependencies.find(({ query }) => query.isError && query.data === undefined)
+    if (failed) {
+      return {
+        status: "error",
+        dependency: failed.dependency,
+        timedOut: failed.query.error instanceof Error && failed.query.error.name === "TimeoutError",
+        retry: retryBootstrap,
+      }
+    }
+    return { status: "ready" }
+  })
 
   return createMemo<PromptInputControls>(() => ({
     agents: {
@@ -45,8 +84,9 @@ export function createPromptInputController(input: {
     },
     model: {
       selection: local.model,
-      paid: providers.paid().length > 0,
-      loading: agentsQuery.isLoading || providersQuery.isLoading || globalProvidersQuery.isLoading,
+      paid: bootstrap().status === "ready" && providers.paid().length > 0,
+      loading: bootstrap().status !== "ready",
+      bootstrap: bootstrap(),
     },
     session: {
       id: input.sessionID(),
@@ -55,6 +95,22 @@ export function createPromptInputController(input: {
     },
     newLayoutDesigns: settings.general.newLayoutDesigns(),
   }))
+}
+
+export async function retryPromptBootstrap(input: {
+  queryClient: QueryClient
+  agents?: ReturnType<QueryOptionsApi["agents"]>
+  providers?: ReturnType<QueryOptionsApi["providers"]>
+  globalProviders?: ReturnType<QueryOptionsApi["providers"]>
+  setAgents: (value: Agent[]) => void
+}) {
+  const pending: Promise<unknown>[] = []
+  if (input.agents) {
+    pending.push(input.queryClient.fetchQuery(input.agents).then((value) => input.setAgents(value)))
+  }
+  if (input.providers) pending.push(input.queryClient.fetchQuery(input.providers))
+  if (input.globalProviders) pending.push(input.queryClient.fetchQuery(input.globalProviders))
+  await Promise.allSettled(pending)
 }
 
 export function createPromptProjectControls() {

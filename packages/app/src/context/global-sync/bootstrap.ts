@@ -21,6 +21,7 @@ import { QueryClient, queryOptions } from "@tanstack/solid-query"
 import { isRuntimePath, loadMcpQuery } from "../server-sync"
 import { NormalizedProviderListResponse } from "@mongolgpt/session-ui/context"
 import { ScopedKey, type ServerScope } from "@/utils/server-scope"
+import { bootstrapRequest } from "./bootstrap-request"
 
 type GlobalStore = {
   ready: boolean
@@ -155,13 +156,23 @@ function warmSessions(input: {
 export const loadProvidersQuery = (scope: ServerScope, directory: string | null, sdk: MongolGPTClient) =>
   queryOptions({
     queryKey: [scope, directory, "providers"],
-    queryFn: () => retry(() => sdk.provider.list().then((x) => normalizeProviderList(x.data!))),
+    retry: false,
+    queryFn: ({ signal }) =>
+      bootstrapRequest(
+        (signal) => retry(() => sdk.provider.list(undefined, { signal }).then((x) => normalizeProviderList(x.data!))),
+        signal,
+      ),
   })
 
 export const loadAgentsQuery = (scope: ServerScope, directory: string | null, sdk: MongolGPTClient) =>
   queryOptions({
     queryKey: [scope, directory, "agents"],
-    queryFn: () => retry(() => sdk.app.agents().then((x) => normalizeAgentList(x.data))),
+    retry: false,
+    queryFn: ({ signal }) =>
+      bootstrapRequest(
+        (signal) => retry(() => sdk.app.agents(undefined, { signal }).then((x) => normalizeAgentList(x.data))),
+        signal,
+      ),
   })
 
 export const loadPathQuery = (scope: ServerScope, directory: string | null, sdk: MongolGPTClient) =>
