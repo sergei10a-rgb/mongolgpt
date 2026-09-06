@@ -453,6 +453,107 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(running.ports).toEqual([4096])
   })
 
+  test("normalizes SDK query directories before forwarding to either API generation", async () => {
+    const token = await capability()
+    for (const route of [
+      "/provider?directory=%2F",
+      "/provider?directory=projects%2Fdemo",
+      "/api/location?directory=projects%2Fdemo&location%5Bdirectory%5D=projects%2Fdemo",
+    ]) {
+      const runtime = sandbox()
+      const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+      const response = await handler(
+        hostedRequest(route, { headers: { authorization: `Bearer ${token}` } }),
+        environment(),
+      )
+      expect(response.status).toBe(200)
+      const expected = route === "/provider?directory=%2F" ? "/workspace" : "/workspace/projects/demo"
+      const forwarded = runtime.requests[0]!
+      const url = new URL(forwarded.url)
+      expect(url.searchParams.get("directory")).toBe(expected)
+      if (url.pathname.startsWith("/api/")) expect(url.searchParams.get("location[directory]")).toBe(expected)
+      expect(decodeURIComponent(forwarded.headers.get("x-mongolgpt-directory")!)).toBe(expected)
+    }
+  })
+
+  test("rejects unsafe, duplicate and conflicting directory selectors before sandbox access", async () => {
+    const token = await capability()
+    const runtime = sandbox()
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+    for (const route of [
+      "/provider?directory=%2Fetc",
+      "/provider?directory=..%2Fother",
+      "/provider?directory=%252e%252e%252fother",
+      "/provider?directory=%25252e%25252e%25252fother",
+      "/provider?directory=%2Fworkspace%2F%25252e%25252e%2Fetc",
+      "/provider?directory=projects%5Cother",
+      "/provider?directory=%2Fworkspace&directory=%2Fetc",
+      "/api/location?location%5Bdirectory%5D=%2Fetc",
+      "/api/location?location%5Bdirectory%5D=%2Fworkspace&location%5Bdirectory%5D=%2Fetc",
+      "/api/location?directory=one&location%5Bdirectory%5D=two",
+    ]) {
+      const response = await handler(
+        hostedRequest(route, { headers: { authorization: `Bearer ${token}` } }),
+        environment(),
+      )
+      expect(response.status).toBe(400)
+    }
+    const conflicting = await handler(
+      hostedRequest("/provider?directory=one", {
+        headers: { authorization: `Bearer ${token}`, "x-mongolgpt-directory": encodeURIComponent("two") },
+      }),
+      environment(),
+    )
+    expect(conflicting.status).toBe(400)
+    expect(runtime.started).toHaveLength(0)
+    expect(runtime.requests).toHaveLength(0)
+  })
+
+  test("preserves matching directory selectors and unrelated query parameters", async () => {
+    const runtime = sandbox()
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+    const response = await handler(
+      hostedRequest("/file?directory=projects%2Fdemo&path=src%2Findex.ts", {
+        headers: {
+          authorization: `Bearer ${await capability()}`,
+          "x-mongolgpt-directory": encodeURIComponent("/workspace/projects/demo"),
+        },
+      }),
+      environment(),
+    )
+    expect(response.status).toBe(200)
+    const url = new URL(runtime.requests[0]!.url)
+    expect(url.searchParams.get("directory")).toBe("/workspace/projects/demo")
+    expect(url.searchParams.get("path")).toBe("src/index.ts")
+  })
+
+  test("preserves body, method and abort signal while normalizing query selectors", async () => {
+    const token = await capability()
+    for (const method of ["HEAD", "POST"]) {
+      const controller = new AbortController()
+      const runtime = sandbox()
+      const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+      const body = method === "POST" ? JSON.stringify({ title: "Synthetic QA" }) : undefined
+      const response = await handler(
+        hostedRequest("/session?directory=projects%2Fdemo", {
+          method,
+          signal: controller.signal,
+          redirect: "manual",
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          body,
+        }),
+        environment(),
+      )
+      expect(response.status).toBe(200)
+      const forwarded = runtime.requests[0]!
+      expect(forwarded.method).toBe(method)
+      expect(forwarded.redirect).toBe("manual")
+      expect(await forwarded.text()).toBe(body ?? "")
+      controller.abort()
+      expect(forwarded.signal.aborted).toBe(true)
+    }
+  })
+
   test("returns safe stage-specific diagnostics for sandbox startup and proxy failures", async () => {
     const token = await capability()
     const running = process()

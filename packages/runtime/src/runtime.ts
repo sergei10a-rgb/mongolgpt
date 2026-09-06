@@ -169,7 +169,7 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
       )
     }
 
-    const directory = hostedDirectory(request.headers.get("x-mongolgpt-directory"))
+    const directory = requestDirectory(request, url)
     if (!directory) {
       return cors(json({ error: "Cloud workspace-ийн зам зөвшөөрөгдсөн хүрээнээс гарсан байна." }, 400), appOrigin)
     }
@@ -393,6 +393,8 @@ export function hostedDirectory(raw: string | null) {
 
   const decoded = decodeDirectory(raw)
   if (!decoded) return null
+  // Legacy handlers decode once more; reject residual escapes instead of allowing a second path interpretation.
+  if (/%[0-9a-f]{2}/i.test(decoded)) return null
   if (decoded === "/" || decoded === ".") return WORKSPACE_ROOT
 
   const relative = decoded.startsWith(`${WORKSPACE_ROOT}/`)
@@ -409,6 +411,16 @@ export function hostedDirectory(raw: string | null) {
     return null
   }
   return segments.length ? `${WORKSPACE_ROOT}/${segments.join("/")}` : WORKSPACE_ROOT
+}
+
+function requestDirectory(request: Request, url: URL) {
+  const selectors = ["directory", "location[directory]"].map((name) => url.searchParams.getAll(name))
+  if (selectors.some((values) => values.length > 1)) return null
+  const header = request.headers.get("x-mongolgpt-directory")
+  const values = [...(header === null ? [] : [header]), ...selectors.flat()].map(hostedDirectory)
+  if (values.length === 0) return WORKSPACE_ROOT
+  const directory = values[0]
+  return directory && values.every((value) => value === directory) ? directory : null
 }
 
 async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOrigin: string) {
@@ -494,8 +506,19 @@ function internalRequest(
   headers.set("x-mongolgpt-directory", encodeURIComponent(directory))
   headers.set("x-org-id", workspaceID)
   headers.set(runtimeGatewayHeader, gatewayToken)
+  // SDK GET/HEAD requests use query selectors, which take precedence over headers downstream.
+  const url = new URL(request.url)
+  for (const name of ["directory", "location[directory]"]) {
+    if (url.searchParams.has(name)) url.searchParams.set(name, directory)
+  }
   const requestBody = body ? Uint8Array.from(body) : undefined
-  return new Request(request, requestBody ? { headers, body: requestBody } : { headers })
+  return new Request(url, {
+    method: request.method,
+    headers,
+    body: requestBody,
+    signal: request.signal,
+    redirect: request.redirect,
+  })
 }
 
 class RequestBodyTooLarge extends Error {}
