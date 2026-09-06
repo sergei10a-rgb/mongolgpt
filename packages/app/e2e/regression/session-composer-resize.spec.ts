@@ -9,6 +9,7 @@ const secondSessionID = "ses_composer_resize_second"
 const firstTitle = "Composer resize first"
 const secondTitle = "Composer resize second"
 const model = { providerID: "mongolgpt", modelID: "claude-opus-4-6", variant: "max" }
+const streamedText = "MONGOLGPT_DESKTOP_02BFC9A_OK"
 
 for (const viewport of [
   { name: "desktop", width: 1400, height: 900 },
@@ -84,11 +85,16 @@ for (const viewport of [
 
     phase = "assistant-stream"
     const streamed = page.locator(`[data-timeline-part-id="${streamedAssistantID}_part"]`).first()
-    await expect(streamed).toHaveText("MONGOLGPT_DESKTOP_02BFC9A_OK")
-    await expect(streamed).toBeVisible()
+    const streamedMarkdown = streamed.locator('[data-slot="text-part-body"] [data-component="markdown"]').first()
+    await expect(streamedMarkdown).toHaveText(streamedText)
+    await expect(streamedMarkdown).toBeVisible()
     phase = "assistant-complete"
     await expect(composer.locator('[data-action="prompt-submit"]')).toBeDisabled()
     await settle(page)
+    await expect(streamed.locator('[data-slot="text-part-meta"]').first()).toHaveText(
+      /^Build · Claude Opus 4\.6 · 2(?:s| сек)$/,
+    )
+    await expect(streamedMarkdown).toHaveText(streamedText)
     const completed = await geometry(page)
     await screenshot(page, testInfo, `${viewport.name}-streamed`)
 
