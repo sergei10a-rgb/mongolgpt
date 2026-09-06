@@ -232,6 +232,58 @@ test.describe("hosted MongolGPT account gate", () => {
     )
   })
 
+  for (const failure of ["unavailable", "malformed"] as const) {
+    test(`recovers the hosted cloud action after a ${failure} path retry succeeds`, async ({ page }) => {
+      let pathRequests = 0
+      let projectRequests = 0
+      let pathAvailable = false
+      await mockRuntime(page)
+      await page.route(`${runtimeUrl}/path**`, (route) => {
+        pathRequests += 1
+        if (!pathAvailable)
+          return failure === "unavailable"
+            ? session(route, 502, { error: "runtime_unavailable", code: "runtime_unavailable" })
+            : session(route, 200, { home: "/workspace", directory: "/workspace" })
+        return session(route, 200, {
+          state: "",
+          config: "",
+          worktree: "/workspace",
+          directory: "/workspace",
+          home: "/workspace",
+        })
+      })
+      await page.route(`${runtimeUrl}/project`, (route) => {
+        projectRequests++
+        return session(route, 200, pathAvailable ? [{ ...fixture.project, worktree: "/workspace" }] : [])
+      })
+
+      const current = capability("account_runtime_retry_e2e")
+      await page.route(tokenUrl, (route) => session(route, 200, current))
+      await page.route(sessionUrl, (route) =>
+        session(route, 200, {
+          authenticated: true,
+          account: { id: current.account.id },
+          workspace: { id: current.workspace.id },
+          expiresAt: current.expiresAt,
+        }),
+      )
+
+      await page.goto("/")
+      await expect.poll(() => pathRequests).toBeGreaterThan(0)
+      await expect(page.getByText(mn["home.empty.webPathError"], { exact: true })).toBeVisible()
+      const retry = page.getByRole("button", { name: mn["home.empty.webPathRetry"], exact: true })
+      await expect(retry).toBeVisible()
+      const beforeRetry = { paths: pathRequests, projects: projectRequests }
+      pathAvailable = true
+      await retry.click()
+      await expect.poll(() => pathRequests).toBeGreaterThan(beforeRetry.paths)
+      await expect.poll(() => projectRequests).toBeGreaterThan(beforeRetry.projects)
+      await expect(page.getByRole("button", { name: mn["home.project.openCloud"], exact: true })).toBeVisible()
+      await expect(page.getByText(mn["home.empty.webPathError"], { exact: true })).toHaveCount(0)
+      await expect(page.locator('[data-slot="toast-v2-title"]')).toHaveCount(0)
+    })
+  }
+
   test("requires and verifies a workspace choice before opening the hosted app", async ({ page }) => {
     await mockRuntime(page)
     await configureHostedProject(page)

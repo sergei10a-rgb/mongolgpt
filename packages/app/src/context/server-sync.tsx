@@ -1,5 +1,6 @@
 import type { Config, MongolGPTClient, Path, Project, ProviderAuthResponse } from "@mongolgpt/sdk/v2/client"
 import { showToast } from "@/utils/toast"
+import { toaster } from "@mongolgpt/ui/toast"
 import { getFilename } from "@mongolgpt/core/util/path"
 import { type Accessor, batch, createEffect, createMemo, getOwner, onCleanup, untrack } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
@@ -52,6 +53,26 @@ type GlobalStore = {
 
 export function hasRuntimeFilesystem(path: Path) {
   return !!(path.home || path.directory)
+}
+
+export type RuntimePathStatus = "loading" | "error" | "ready"
+
+export function runtimePathStatus(input: {
+  isPending: boolean
+  isFetching: boolean
+  isError: boolean
+  hasData: boolean
+}) {
+  if (input.isPending || input.isFetching) return "loading" as const
+  if (input.isError || !input.hasData) return "error" as const
+  return "ready" as const
+}
+
+export function isRuntimePath(value: unknown): value is Path {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false
+  return ["home", "state", "config", "worktree", "directory"].every(
+    (key) => typeof (value as Record<string, unknown>)[key] === "string",
+  )
 }
 
 export function isProviderRefreshEvent(event: { type: string }) {
@@ -156,16 +177,26 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
   let eventStarted = false
   let bootstrapErrorTimer: ReturnType<typeof setTimeout> | undefined
   let reportedBootstrapError: unknown
+  let bootstrapToast: number | undefined
 
   const reportBootstrapErrors = (failures: unknown[]) => {
     const error = failures[0]
+    if (!error) {
+      if (bootstrapErrorTimer !== undefined) clearTimeout(bootstrapErrorTimer)
+      bootstrapErrorTimer = undefined
+      if (bootstrapToast !== undefined) toaster.dismiss(bootstrapToast)
+      bootstrapToast = undefined
+      reportedBootstrapError = undefined
+      return
+    }
     if (!error || ServerConnection.local(serverSDK.server) || error === reportedBootstrapError) return
     reportedBootstrapError = error
     if (bootstrapErrorTimer !== undefined) clearTimeout(bootstrapErrorTimer)
     bootstrapErrorTimer = setTimeout(() => {
       bootstrapErrorTimer = undefined
       const more = failures.length > 1 ? language.t("common.moreCountSuffix", { count: failures.length - 1 }) : ""
-      showToast({
+      if (bootstrapToast !== undefined) toaster.dismiss(bootstrapToast)
+      bootstrapToast = showToast({
         variant: "error",
         title: language.t("common.requestFailed"),
         description: formatServerError(error, language.t) + more,
@@ -177,6 +208,7 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
     if (eventFrame !== undefined) cancelAnimationFrame(eventFrame)
     if (eventTimer !== undefined) clearTimeout(eventTimer)
     if (bootstrapErrorTimer !== undefined) clearTimeout(bootstrapErrorTimer)
+    if (bootstrapToast !== undefined) toaster.dismiss(bootstrapToast)
   })
 
   const setProjects = (next: Project[] | ((draft: Project[]) => Project[])) => {
@@ -491,6 +523,14 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
 
   return {
     data: globalStore,
+    get pathStatus() {
+      return runtimePathStatus({
+        isPending: pathQuery.isPending,
+        isFetching: pathQuery.isFetching,
+        isError: pathQuery.isError,
+        hasData: !pathQuery.isPending && isRuntimePath(pathQuery.data),
+      })
+    },
     set,
     get ready() {
       return globalStore.ready
@@ -508,6 +548,9 @@ export function createServerSyncContextInner(serverSDK: ServerSDK) {
       await configQuery.refetch()
       await providerQuery.refetch()
       await bootstrap.refetch()
+    },
+    refreshPath: async () => {
+      await Promise.all([pathQuery.refetch(), bootstrap.refetch()])
     },
     project: projectApi,
     session,

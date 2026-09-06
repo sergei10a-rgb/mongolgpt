@@ -625,6 +625,8 @@ export const dict = {
   "home.empty.description": "Локал төсөл нээж эхэлнэ үү",
   "home.empty.webDescription": "Үүлэн орчин нээх эсвэл ширээний апптай холбогдож эхэлнэ үү",
   "home.empty.webBridgeDescription": "Локал төслөө нээхийн тулд ширээний апптай холбоно уу",
+  "home.empty.webPathError": "Үүлэн ажлын орчныг ачаалж чадсангүй.",
+  "home.empty.webPathRetry": "Үүлэн орчныг дахин ачаалах",
   "home.title": "Нүүр",
   "home.projects": "Төслүүд",
   "home.project.add": "Төсөл нэмэх",

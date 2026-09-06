@@ -18,7 +18,7 @@ import type { ServerSession } from "../server-session"
 import { cmp, normalizeAgentList, normalizeProviderList } from "./utils"
 import { formatServerError } from "@/utils/server-errors"
 import { QueryClient, queryOptions } from "@tanstack/solid-query"
-import { loadMcpQuery } from "../server-sync"
+import { isRuntimePath, loadMcpQuery } from "../server-sync"
 import { NormalizedProviderListResponse } from "@mongolgpt/session-ui/context"
 import { ScopedKey, type ServerScope } from "@/utils/server-scope"
 
@@ -167,7 +167,13 @@ export const loadAgentsQuery = (scope: ServerScope, directory: string | null, sd
 export const loadPathQuery = (scope: ServerScope, directory: string | null, sdk: MongolGPTClient) =>
   queryOptions<Path>({
     queryKey: [scope, directory, "path"],
-    queryFn: () => retry(() => sdk.path.get().then((x) => x.data!)),
+    queryFn: () =>
+      retry(() =>
+        sdk.path.get().then((x) => {
+          if (!isRuntimePath(x.data)) throw new Error("Серверийн замын мэдээлэл буруу байна")
+          return x.data
+        }),
+      ),
   })
 
 export async function bootstrapDirectory(input: {

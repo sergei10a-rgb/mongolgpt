@@ -40,7 +40,7 @@ import { DialogSelectServer, useServerManagementController } from "@/components/
 import { DialogServerV2 } from "@/components/settings-v2/dialog-server-v2"
 import { ServerConnection, serverName, useServer } from "@/context/server"
 import { sessionHasOpenTab, useTabs } from "@/context/tabs"
-import { useServerSync, type ServerSync } from "@/context/server-sync"
+import { hasRuntimeFilesystem, useServerSync, type RuntimePathStatus, type ServerSync } from "@/context/server-sync"
 import { useLanguage } from "@/context/language"
 import { useNotification } from "@/context/notification"
 import {
@@ -167,10 +167,11 @@ export function NewHome() {
     return global.ensureServerCtx(conn)
   })
   const focusedSync = () => focusedServerCtx()?.sync ?? sync()
+  const focusedPathStatus = () => focusedSync().pathStatus
   const canOpenProject = (conn: ServerConnection.Any) => {
     if (platform.platform !== "web") return true
-    const path = global.ensureServerCtx(conn).sync.data.path
-    return !!(path.home || path.directory)
+    const serverSync = global.ensureServerCtx(conn).sync
+    return serverSync.pathStatus === "ready" && hasRuntimeFilesystem(serverSync.data.path)
   }
   const projects = createMemo(() => focusedServerCtx()?.projects.list() ?? layout.projects.list())
   const selectedProject = createMemo(() => projects().find((project) => project.worktree === selection().directory))
@@ -471,30 +472,25 @@ export function NewHome() {
             onSelect={selectSearchSession}
           />
           <ScrollView class="mt-3 -mr-3 min-h-0 flex-1">
-            <Show
-              when={!sessionLoad.isLoading}
-              fallback={
+            <Switch>
+              <Match when={platform.platform === "web" && focusedPathStatus() === "loading"}>
+                <HomeSessionsEmpty hosted={true} pathStatus="loading" connectingDesktop={bridge.bridgeBusy()} />
+              </Match>
+              <Match when={platform.platform === "web" && focusedPathStatus() === "error"}>
+                <HomeSessionsEmpty
+                  hosted={true}
+                  pathStatus="error"
+                  onRetryPath={() => void focusedSync().refreshPath()}
+                  onConnectDesktop={bridge.canLocalBridge() ? () => void bridge.startLocalBridge() : undefined}
+                  connectingDesktop={bridge.bridgeBusy()}
+                />
+              </Match>
+              <Match when={sessionLoad.isLoading}>
                 <div class="pt-3">
                   <HomeSessionSkeleton label={language.t("common.loading")} />
                 </div>
-              }
-            >
-              <Show
-                when={groups().length > 0}
-                fallback={
-                  <HomeSessionsEmpty
-                    onNewSession={newSessionProject() ? openNewSession : undefined}
-                    onOpenProject={
-                      !newSessionProject() && focusedServer() && canOpenProject(focusedServer()!)
-                        ? openProjectPicker
-                        : undefined
-                    }
-                    hosted={platform.platform === "web"}
-                    onConnectDesktop={bridge.canLocalBridge() ? () => void bridge.startLocalBridge() : undefined}
-                    connectingDesktop={bridge.bridgeBusy()}
-                  />
-                }
-              >
+              </Match>
+              <Match when={groups().length > 0}>
                 <div class="flex flex-col gap-6 pt-3 pr-3">
                   <For each={groups()}>
                     {(group, index) => (
@@ -521,8 +517,21 @@ export function NewHome() {
                     )}
                   </For>
                 </div>
-              </Show>
-            </Show>
+              </Match>
+              <Match when={true}>
+                <HomeSessionsEmpty
+                  onNewSession={newSessionProject() ? openNewSession : undefined}
+                  onOpenProject={
+                    !newSessionProject() && focusedServer() && canOpenProject(focusedServer()!)
+                      ? openProjectPicker
+                      : undefined
+                  }
+                  hosted={platform.platform === "web"}
+                  onConnectDesktop={bridge.canLocalBridge() ? () => void bridge.startLocalBridge() : undefined}
+                  connectingDesktop={bridge.bridgeBusy()}
+                />
+              </Match>
+            </Switch>
           </ScrollView>
         </section>
         <HomeUtilityNav
@@ -1251,26 +1260,45 @@ function HomeSessionsEmpty(props: {
   hosted: boolean
   onConnectDesktop?: () => void
   connectingDesktop: boolean
+  pathStatus?: RuntimePathStatus
+  onRetryPath?: () => void
 }) {
   const language = useLanguage()
   const hasProject = () => !!props.onNewSession
+  const pathUnavailable = () => props.hosted && props.pathStatus === "error"
+  const pathLoading = () => props.hosted && props.pathStatus === "loading"
   return (
     <div class="flex min-h-full flex-col items-center gap-4 px-6 pt-[52px] text-center">
       <Logo class="mb-1 h-8 w-auto max-w-[150px]" />
-      <div class="shrink-0 text-[13px] leading-[13px] tracking-[-0.04px] text-v2-text-text-base [font-weight:530]">
-        {language.t("home.sessions.empty")}
+      <div
+        role={pathLoading() ? "status" : pathUnavailable() ? "alert" : undefined}
+        class="shrink-0 text-[13px] leading-5 tracking-normal text-v2-text-text-base [font-weight:530]"
+      >
+        {language.t(
+          pathLoading() ? "common.loading" : pathUnavailable() ? "home.empty.webPathError" : "home.sessions.empty",
+        )}
       </div>
       <p class="mb-1 text-center text-[13px] leading-5 tracking-[-0.04px] text-v2-text-text-muted [font-weight:440]">
-        {language.t(
-          hasProject()
-            ? "home.sessions.empty.description"
-            : props.hosted
-              ? props.onOpenProject
-                ? "home.sessions.empty.noProject.webDescription"
-                : "home.empty.webBridgeDescription"
-              : "home.sessions.empty.noProject.description",
-        )}
+        {pathLoading() || pathUnavailable()
+          ? ""
+          : language.t(
+              hasProject()
+                ? "home.sessions.empty.description"
+                : props.hosted
+                  ? props.onOpenProject
+                    ? "home.sessions.empty.noProject.webDescription"
+                    : "home.empty.webBridgeDescription"
+                  : "home.sessions.empty.noProject.description",
+            )}
       </p>
+      <Show when={pathUnavailable() && props.onRetryPath}>
+        {(onRetryPath) => (
+          <ButtonV2 data-action="home-retry-path" variant="neutral" size="normal" onClick={onRetryPath()}>
+            <Icon name="reset" size="small" />
+            {language.t("home.empty.webPathRetry")}
+          </ButtonV2>
+        )}
+      </Show>
       <Show when={props.onNewSession}>
         {(onNewSession) => (
           <ButtonV2 data-action="home-new-session" variant="neutral" size="normal" icon="edit" onClick={onNewSession()}>
@@ -1430,6 +1458,33 @@ export function LegacyHome() {
         {server.name}
       </Button>
       <Switch>
+        <Match when={hosted() && sync().pathStatus === "loading"}>
+          <div class="mt-30 mx-auto flex flex-col items-center gap-3">
+            <Icon name="folder-add-left" size="large" />
+            <div class="text-12-regular text-text-weak">{language.t("common.loading")}</div>
+          </div>
+        </Match>
+        <Match when={hosted() && sync().pathStatus === "error"}>
+          <div class="mt-30 mx-auto flex flex-col items-center gap-3">
+            <Icon name="folder-add-left" size="large" />
+            <div class="flex flex-col gap-1 items-center justify-center text-center">
+              <div class="text-14-medium text-text-strong">{language.t("home.empty.webPathError")}</div>
+            </div>
+            <Button class="px-3" icon="reset" disabled={serverUnreachable()} onClick={() => void sync().refreshPath()}>
+              {language.t("home.empty.webPathRetry")}
+            </Button>
+            <Show when={bridge.canLocalBridge()}>
+              <Button
+                class="px-3"
+                icon="link"
+                disabled={bridge.bridgeBusy()}
+                onClick={() => void bridge.startLocalBridge()}
+              >
+                {language.t(bridge.bridgeBusy() ? "dialog.server.bridge.connecting" : "dialog.server.bridge.button")}
+              </Button>
+            </Show>
+          </div>
+        </Match>
         <Match when={sync().data.project.length > 0}>
           <div class="mt-20 w-full flex flex-col gap-4">
             <div class="flex gap-2 items-center justify-between pl-3">

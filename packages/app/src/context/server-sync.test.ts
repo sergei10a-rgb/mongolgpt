@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test"
 import { canDisposeDirectory, pickDirectoriesToEvict } from "./global-sync/eviction"
 import { estimateRootSessionTotal, loadRootSessionsWithFallback } from "./global-sync/session-load"
-import { hasRuntimeFilesystem, isProviderQuery, isProviderRefreshEvent } from "./server-sync"
+import {
+  hasRuntimeFilesystem,
+  isProviderQuery,
+  isProviderRefreshEvent,
+  isRuntimePath,
+  runtimePathStatus,
+} from "./server-sync"
 import { ServerScope } from "@/utils/server-scope"
 
 describe("isProviderRefreshEvent", () => {
@@ -30,6 +36,39 @@ describe("hasRuntimeFilesystem", () => {
   test("accepts either a home or active directory", () => {
     expect(hasRuntimeFilesystem({ ...path, home: "/workspace" })).toBe(true)
     expect(hasRuntimeFilesystem({ ...path, directory: "/workspace/repo" })).toBe(true)
+  })
+})
+
+describe("runtimePathStatus", () => {
+  test("reports loading while the path query is fetching", () => {
+    expect(runtimePathStatus({ isPending: false, isFetching: true, isError: false, hasData: true })).toBe("loading")
+  })
+
+  test("reports an error after the path query fails", () => {
+    expect(runtimePathStatus({ isPending: false, isFetching: false, isError: true, hasData: false })).toBe("error")
+  })
+
+  test("reports ready for a successful empty path response", () => {
+    expect(runtimePathStatus({ isPending: false, isFetching: false, isError: false, hasData: true })).toBe("ready")
+  })
+
+  test("does not claim ready for missing settled data or a pending offline query", () => {
+    expect(runtimePathStatus({ isPending: false, isFetching: false, isError: false, hasData: false })).toBe("error")
+    expect(runtimePathStatus({ isPending: true, isFetching: false, isError: false, hasData: false })).toBe("loading")
+  })
+})
+
+describe("isRuntimePath", () => {
+  test("accepts a valid empty hosted path response", () => {
+    expect(isRuntimePath({ home: "", state: "", config: "", worktree: "", directory: "" })).toBe(true)
+  })
+
+  test("rejects malformed hosted path responses", () => {
+    expect(isRuntimePath({ home: "/workspace", directory: "/workspace" })).toBe(false)
+    expect(isRuntimePath(null)).toBe(false)
+    expect(isRuntimePath("<!doctype html><title>not an API</title>")).toBe(false)
+    expect(isRuntimePath([])).toBe(false)
+    expect(isRuntimePath({ home: {}, state: "", config: "", worktree: "", directory: "" })).toBe(false)
   })
 })
 
