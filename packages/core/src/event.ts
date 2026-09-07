@@ -1,6 +1,6 @@
 export * as EventV2 from "./event"
 
-import { Cause, Context, Effect, Layer, Option, PubSub, Queue, Schema, Stream } from "effect"
+import { Cause, Config, Context, Effect, Layer, Option, PubSub, Queue, Schema, Stream } from "effect"
 import { Event } from "@mongolgpt/schema/event"
 import type { Data, Definition, Payload } from "@mongolgpt/schema/event"
 import { and, asc, eq, gt, inArray, or } from "drizzle-orm"
@@ -128,6 +128,8 @@ export interface PublishOptions {
 }
 
 export interface Interface {
+  /** Called after native projectors are registered, before serving requests. Local mode is a no-op. */
+  readonly recover: Effect.Effect<void>
   /** Fails closed after an uncertain remote commit until this projection is rebuilt. */
   readonly check: Effect.Effect<void>
   readonly publish: <D extends Definition>(
@@ -174,6 +176,7 @@ export interface LayerOptions {
   readonly beforeAggregateRead?: (aggregateID: string) => Effect.Effect<void>
   /** Admission is separate from replay so a cloud projection can rebuild before serving requests. */
   readonly admission?: Effect.Effect<void>
+  readonly recovery?: Effect.Effect<void, never, Service | Database.Service>
   readonly requireProjectors?: boolean
   readonly journal?: {
     /** Called with the encoded envelope after local validation, before commit or notification. */
@@ -200,7 +203,8 @@ export const layerWith = (options?: LayerOptions) =>
       const projectors = new Map<string, Subscriber[]>()
       // TODO: Bind durable projectors to exact type+version before supporting incompatible historical payloads.
       const listeners = new Array<Subscriber>()
-      const { db } = yield* Database.Service
+      const database = yield* Database.Service
+      const db = database.db
       let journalFailed = false
       const checkJournal = Effect.suspend(() =>
         journalFailed ? Effect.die(new JournalUnavailableError()) : Effect.void,
@@ -716,7 +720,14 @@ export const layerWith = (options?: LayerOptions) =>
           projectors.set(definition.type, list)
         })
 
-      return Service.of({
+      const service: Interface = Service.of({
+        recover: Effect.suspend(() =>
+          (options?.recovery ?? Effect.void).pipe(
+            Effect.provideService(Service, service),
+            Effect.provideService(Database.Service, database),
+            Effect.andThen(check),
+          ),
+        ),
         check,
         publish,
         subscribe,
@@ -729,10 +740,21 @@ export const layerWith = (options?: LayerOptions) =>
         remove,
         claim,
       })
+      return service
     }),
   )
 
-export const layer = layerWith()
+export const layer = Layer.unwrap(
+  Effect.gen(function* () {
+    const enabled = yield* Config.boolean("MONGOLGPT_CLOUD_HISTORY").pipe(Config.withDefault(false))
+    if (!enabled) return layerWith()
+    const mode = yield* Config.string("MONGOLGPT_RUNTIME_MODE").pipe(Config.withDefault("local"))
+    if (mode !== "hosted") return yield* Effect.die(new Error("Cloud түүхийг зөвхөн hosted runtime-д идэвхжүүлнэ."))
+    const { createCloudHistory } = yield* Effect.promise(() => import("./event/cloud-history"))
+    const { createCloudRecovery } = yield* Effect.promise(() => import("./event/cloud-recovery"))
+    return layerWith(createCloudRecovery(createCloudHistory()).eventOptions)
+  }).pipe(Effect.orDie),
+)
 export const node = makeGlobalNode({ service: Service, layer: layer, deps: [Database.node] })
 
 export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))

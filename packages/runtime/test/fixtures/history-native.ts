@@ -23,7 +23,8 @@ export async function recoverProjection(request: (request: Request) => Promise<R
   )
   return Effect.runPromise(
     Effect.gen(function* () {
-      yield* recovery.recover
+      const events = yield* EventV2.Service
+      yield* events.recover
       const { db } = yield* Database.Service
       const projects = yield* db.select().from(ProjectTable).all().pipe(Effect.orDie)
       const directories = yield* db.select().from(ProjectDirectoryTable).all().pipe(Effect.orDie)

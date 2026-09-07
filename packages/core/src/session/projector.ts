@@ -349,7 +349,8 @@ export const layer = Layer.effectDiscard(
     )
     yield* events.project(SessionEvent.Prompted, (event) =>
       Effect.gen(function* () {
-        if (event.durable === undefined) return yield* Effect.die("Тогтвортой сессийн үйл явдлын нэгтгэсэн дараалал алга байна")
+        if (event.durable === undefined)
+          return yield* Effect.die("Тогтвортой сессийн үйл явдлын нэгтгэсэн дараалал алга байна")
         yield* SessionInput.projectPrompted(db, {
           id: event.data.messageID,
           sessionID: event.data.sessionID,
@@ -363,7 +364,8 @@ export const layer = Layer.effectDiscard(
     )
     yield* events.project(SessionEvent.PromptAdmitted, (event) =>
       Effect.gen(function* () {
-        if (event.durable === undefined) return yield* Effect.die("Тогтвортой сессийн үйл явдлын нэгтгэсэн дараалал алга байна")
+        if (event.durable === undefined)
+          return yield* Effect.die("Тогтвортой сессийн үйл явдлын нэгтгэсэн дараалал алга байна")
         yield* SessionInput.projectAdmitted(db, {
           admittedSeq: event.durable.seq,
           id: event.data.messageID,
@@ -391,7 +393,9 @@ export const layer = Layer.effectDiscard(
     yield* events.project(SessionEvent.Tool.Failed, (event) => run(db, event))
     yield* events.project(SessionEvent.Reasoning.Started, (event) => run(db, event))
     yield* events.project(SessionEvent.Reasoning.Ended, (event) => run(db, event))
-    // yield* events.project(SessionEvent.Retried, (event) => run(db, event))
+    // Durable progress/notification events are kept in history, but intentionally do not change transcript rows.
+    yield* events.project(SessionEvent.Retried, (event) => run(db, event))
+    yield* events.project(SessionEvent.Compaction.Started, (event) => run(db, event))
     yield* events.project(SessionEvent.Compaction.Ended, (event) => run(db, event))
     yield* events.project(SessionEvent.RevertEvent.Staged, (event) =>
       db

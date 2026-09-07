@@ -11,6 +11,7 @@ import { AbsolutePath } from "../schema"
 import { ProjectDirectoryTable, ProjectTable } from "./sql"
 import { SessionTable } from "../session/sql"
 import { WorkspaceTable } from "../control-plane/workspace.sql"
+import type { Location } from "../location"
 
 export { Changed }
 type Change = EventV2.Data<typeof Changed>["change"]
@@ -40,11 +41,21 @@ export function fromRow(row: typeof ProjectTable.$inferSelect): Types.DeepMutabl
 }
 
 export interface Interface {
+  readonly ensure: (input: EnsureInput) => Effect.Effect<void>
   readonly change: (projectID: Project.ID, change: Change) => Effect.Effect<void, NotFoundError>
   readonly directories: (
     projectID: Project.ID,
     operations: readonly DirectoryOperation[],
   ) => Effect.Effect<boolean[], NotFoundError>
+}
+
+export type EnsureInput = {
+  readonly id: Project.ID
+  readonly previous?: Project.ID
+  readonly worktree: AbsolutePath
+  readonly vcs?: NonNullable<Project.Info["vcs"]>
+  readonly openedDirectory?: AbsolutePath
+  readonly location?: Location.Ref
 }
 
 export type DirectoryOperation =
@@ -262,6 +273,55 @@ export const layer = Layer.effect(
       if (snapshot) yield* events.publish(Changed, { projectID, change: { type: "saved", ...snapshot } })
     })
 
+    const ensure = Effect.fn("ProjectHistory.ensure")(function* (input: EnsureInput) {
+      yield* events.check
+      const latest = yield* EventV2.latestSequence(db, input.id)
+      const row = yield* db
+        .select({ id: ProjectTable.id })
+        .from(ProjectTable)
+        .where(eq(ProjectTable.id, input.id))
+        .get()
+        .pipe(Effect.orDie)
+      if (row) {
+        if (latest >= 0) return
+        // Existing rows carry user/projector metadata; baseline them instead of overwriting with resolver defaults.
+        yield* baseline(input.id)
+        return
+      }
+      if (latest < 0 && input.previous && input.previous !== Project.ID.global && input.previous !== input.id) {
+        const previous = yield* db
+          .select({ id: ProjectTable.id })
+          .from(ProjectTable)
+          .where(eq(ProjectTable.id, input.previous))
+          .get()
+          .pipe(Effect.orDie)
+        if (previous) {
+          yield* change(input.id, { type: "migrated", previousID: input.previous, time: Date.now() }).pipe(Effect.orDie)
+          return
+        }
+      }
+      const now = Date.now()
+      yield* events.publish(
+        Changed,
+        {
+          projectID: input.id,
+          change: {
+            type: "saved",
+            info: {
+              id: input.id,
+              worktree: input.worktree,
+              vcs: input.vcs,
+              time: { created: now, updated: now },
+              sandboxes: [],
+            },
+            discovered: true,
+            openedDirectory: input.openedDirectory ? { directory: input.openedDirectory, time: now } : undefined,
+          },
+        },
+        { location: input.location },
+      )
+    })
+
     const change = Effect.fn("ProjectHistory.change")(function* (projectID: Project.ID, change: Change) {
       yield* events.check
       // A legacy row must have an authoritative baseline before its first delta or migration.
@@ -326,6 +386,7 @@ export const layer = Layer.effect(
       return results
     })
     return Service.of({
+      ensure: (input) => lock.withPermit(ensure(input)),
       change: (projectID, input) => lock.withPermit(change(projectID, input)),
       directories: (projectID, operations) => lock.withPermit(directories(projectID, operations)),
     })

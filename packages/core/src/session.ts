@@ -21,7 +21,7 @@ import { AgentV2 } from "./agent"
 import { SessionV1 } from "./v1/session"
 import { InstallationVersion } from "./installation/version"
 import { Slug } from "./util/slug"
-import { ProjectTable } from "./project/sql"
+import { ProjectHistory } from "./project/history"
 import path from "path"
 import { fromRow } from "./session/info"
 import { SessionRunner } from "./session/runner/index"
@@ -181,13 +181,14 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@mongolgpt/v2/Session") {}
 
-export const layer = Layer.effect(
+const serviceLayer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const database = yield* Database.Service
     const db = database.db
     const events = yield* EventV2.Service
     const projects = yield* ProjectV2.Service
+    const projectHistory = yield* ProjectHistory.Service
     const execution = yield* SessionExecution.Service
     const store = yield* SessionStore.Service
     const locations = yield* LocationServiceMap.Service
@@ -210,12 +211,14 @@ export const layer = Layer.effect(
         const recorded = yield* store.get(sessionID)
         if (recorded) return recorded
         const project = yield* projects.resolve(input.location.directory)
-        yield* db
-          .insert(ProjectTable)
-          .values({ id: project.id, worktree: project.directory, vcs: project.vcs?.type, sandboxes: [] })
-          .onConflictDoNothing()
-          .run()
-          .pipe(Effect.orDie)
+        yield* projectHistory.ensure({
+          id: project.id,
+          previous: project.previous,
+          worktree: project.directory,
+          vcs: project.vcs?.type,
+          openedDirectory: input.location.directory,
+          location: input.location,
+        })
         const now = Date.now()
         const info = SessionV1.SessionInfo.make({
           id: sessionID,
@@ -456,6 +459,8 @@ export const layer = Layer.effect(
     return result
   }),
 )
+
+export const layer = serviceLayer.pipe(Layer.provide(ProjectHistory.layer))
 
 export const defaultLayer = layer.pipe(
   Layer.provide(SessionStore.defaultLayer),

@@ -15,6 +15,7 @@ const base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB"
 const capture = () => {
   const published: Array<{ readonly type: string; readonly data: unknown }> = []
   const events = EventV2.Service.of({
+    recover: Effect.void,
     check: Effect.void,
     publish: (definition, data) =>
       Effect.sync(() => {

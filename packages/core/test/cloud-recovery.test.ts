@@ -304,6 +304,24 @@ describe("native cloud startup recovery", () => {
     }),
   )
 
+  it.live("preserves native local events missing from the remote journal and refuses readiness", () =>
+    Effect.gen(function* () {
+      const wire = yield* source
+      const input = fixture([])
+      yield* Effect.gen(function* () {
+        const events = yield* EventV2.Service
+        const { db } = yield* Database.Service
+        for (const event of wire) yield* events.replay(event)
+        const before = yield* db.select().from(EventTable).all()
+        expect(Exit.isFailure(yield* events.recover.pipe(Effect.exit))).toBe(true)
+        expect(Exit.isFailure(yield* events.check.pipe(Effect.exit))).toBe(true)
+        expect(yield* db.select().from(EventTable).all()).toEqual(before)
+        expect(yield* db.select().from(SessionTable).all()).toHaveLength(3)
+        expect(input.calls).toEqual(["/v1/epoch", "/v1/claim", "/v1/read"])
+      }).pipe(Effect.provide(layers(input.recovery.eventOptions)))
+    }),
+  )
+
   it.live("refuses recovery without registered domain projectors", () =>
     Effect.gen(function* () {
       const input = fixture(pageEntries(yield* source))

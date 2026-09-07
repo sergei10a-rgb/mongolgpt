@@ -282,6 +282,14 @@ const services = Layer.mergeAll(
   locationServiceMapLayer,
 ).pipe(Layer.provideMerge(LayerNodeTree.compile(app)))
 
+// Construction registers every native projector before the shared EventV2 admits HTTP traffic.
+const initializedServices = Layer.effectDiscard(
+  Effect.gen(function* () {
+    const events = yield* EventV2.Service
+    yield* events.recover
+  }),
+).pipe(Layer.provideMerge(services))
+
 export function createRoutes(
   corsOptions?: CorsOptions,
   serviceMemoMap?: Layer.MemoMap,
@@ -290,10 +298,10 @@ export function createRoutes(
     ? Layer.effectContext(
         Effect.gen(function* () {
           const scope = yield* Effect.scope
-          return yield* Layer.buildWithMemoMap(services, serviceMemoMap, scope)
+          return yield* Layer.buildWithMemoMap(initializedServices, serviceMemoMap, scope)
         }),
       )
-    : services
+    : initializedServices
   return Layer.mergeAll(
     rootApiRoutes,
     eventApiRoutes,

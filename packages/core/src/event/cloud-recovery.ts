@@ -1,9 +1,11 @@
 import { Effect, Semaphore } from "effect"
-import { sql } from "drizzle-orm"
+import { count, sql } from "drizzle-orm"
 import { Database } from "../database/database"
 import { EventV2 } from "../event"
 import type { createCloudHistory } from "./cloud-history"
 import { eraseCloudSession } from "./cloud-history-erase"
+import { EventTable } from "./sql"
+import { CloudHistoryTombstoneTable } from "./cloud-history.sql"
 
 export class CloudRecoveryUnavailableError extends Error {
   constructor() {
@@ -61,15 +63,33 @@ export function createCloudRecovery(cloud: ReturnType<typeof createCloudHistory>
         yield* cloud.initialize
         // Global cursor order preserves project/session dependencies across aggregates.
         let cursor = 0
+        let live = 0
+        let deleted = 0
         while (true) {
           const page = yield* cloud.read(cursor)
           for (const entry of page.entries) {
-            if (entry.deleted) yield* eraseCloudSession(db, entry)
-            else yield* events.replay(entry.event)
+            if (entry.deleted) {
+              yield* eraseCloudSession(db, entry)
+              deleted++
+            } else {
+              yield* events.replay(entry.event)
+              live++
+            }
           }
           cursor = page.cursor
           if (!page.hasMore) break
         }
+        // Replay checks exact identities/content. Extra local rows are not proof of a remote receipt.
+        const stored = yield* db.select({ count: count() }).from(EventTable).get().pipe(Effect.orDie)
+        const tombstones = yield* db
+          .select({ count: count() })
+          .from(CloudHistoryTombstoneTable)
+          .get()
+          .pipe(Effect.orDie)
+        if (stored?.count !== live || tombstones?.count !== deleted)
+          return yield* Effect.die(
+            new Error("Cloud-д баталгаажаагүй local түүх байна. Өгөгдөл шилжүүлэх шаардлагатай."),
+          )
         state = "ready"
       }).pipe(
         Effect.onExit((exit) =>
@@ -80,5 +100,5 @@ export function createCloudRecovery(cloud: ReturnType<typeof createCloudHistory>
       )
     }),
   )
-  return { admission, recover, eventOptions: { admission, journal: cloud, requireProjectors: true } }
+  return { admission, recover, eventOptions: { admission, recovery: recover, journal: cloud, requireProjectors: true } }
 }
