@@ -1,13 +1,14 @@
 export * as ProjectDirectories from "./directories"
 
-import { and, asc, desc, eq, isNotNull, isNull, ne, or } from "drizzle-orm"
+import { and, asc, desc, eq } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "../database/database"
 import { makeGlobalNode } from "../effect/node"
 import { AbsolutePath, optional } from "../schema"
 import { ProjectSchema } from "./schema"
 import { ProjectDirectoryTable } from "./sql"
-import type { EffectDrizzleSqlite } from "@mongolgpt/effect-drizzle-sqlite"
+import { ProjectHistory } from "./history"
+import { EventV2 } from "../event"
 
 export interface Directory {
   readonly directory: AbsolutePath
@@ -27,9 +28,6 @@ export const RemoveInput = Schema.Struct({
   directory: AbsolutePath,
 })
 export type RemoveInput = typeof RemoveInput.Type
-
-type DatabaseClient = EffectDrizzleSqlite.EffectSQLiteDatabase
-export type Transaction = Parameters<Parameters<DatabaseClient["transaction"]>[0]>[0]
 
 export const ListInput = Schema.Struct({
   projectID: ProjectSchema.ID,
@@ -51,8 +49,12 @@ export interface Interface {
     directory: AbsolutePath
   }) => Effect.Effect<Directory | undefined>
   readonly contains: (input: { projectID: ProjectSchema.ID; directory: AbsolutePath }) => Effect.Effect<boolean>
-  readonly create: (input: CreateInput, tx?: Transaction) => Effect.Effect<boolean>
-  readonly remove: (input: RemoveInput, tx?: Transaction) => Effect.Effect<boolean>
+  readonly create: (input: CreateInput) => Effect.Effect<boolean>
+  readonly remove: (input: RemoveInput) => Effect.Effect<boolean>
+  readonly batch: (input: {
+    projectID: ProjectSchema.ID
+    operations: readonly ProjectHistory.DirectoryOperation[]
+  }) => Effect.Effect<boolean[]>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@mongolgpt/ProjectDirectories") {}
@@ -61,43 +63,36 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const db = (yield* Database.Service).db
+    const history = yield* ProjectHistory.Service
+    const events = yield* EventV2.Service
 
-    const create = Effect.fn("ProjectDirectories.create")(function* (input: CreateInput, tx?: Transaction) {
-      const insert = (tx ?? db)
-        .insert(ProjectDirectoryTable)
-        .values({ project_id: input.projectID, directory: input.directory, strategy: input.strategy })
-      const query =
-        input.behavior === "replace"
-          ? insert.onConflictDoUpdate({
-              target: [ProjectDirectoryTable.project_id, ProjectDirectoryTable.directory],
-              set: { strategy: input.strategy ?? null },
-              setWhere: input.strategy
-                ? or(isNull(ProjectDirectoryTable.strategy), ne(ProjectDirectoryTable.strategy, input.strategy))
-                : isNotNull(ProjectDirectoryTable.strategy),
-            })
-          : insert.onConflictDoNothing()
-      return (
-        (yield* query.returning({ directory: ProjectDirectoryTable.directory }).get().pipe(Effect.orDie)) !== undefined
-      )
+    const batch = Effect.fn("ProjectDirectories.batch")(function* (input: {
+      projectID: ProjectSchema.ID
+      operations: readonly ProjectHistory.DirectoryOperation[]
+    }) {
+      return yield* history.directories(input.projectID, input.operations).pipe(Effect.orDie)
     })
 
-    const remove = Effect.fn("ProjectDirectories.remove")(function* (input: RemoveInput, tx?: Transaction) {
-      return (
-        (yield* (tx ?? db)
-          .delete(ProjectDirectoryTable)
-          .where(
-            and(
-              eq(ProjectDirectoryTable.project_id, input.projectID),
-              eq(ProjectDirectoryTable.directory, input.directory),
-            ),
-          )
-          .returning({ directory: ProjectDirectoryTable.directory })
-          .get()
-          .pipe(Effect.orDie)) !== undefined
-      )
+    const create = Effect.fn("ProjectDirectories.create")(function* (input: CreateInput) {
+      const results = yield* batch({
+        projectID: input.projectID,
+        operations: [
+          { type: "create", directory: input.directory, strategy: input.strategy, behavior: input.behavior },
+        ],
+      })
+      return results[0]!
+    })
+
+    const remove = Effect.fn("ProjectDirectories.remove")(function* (input: RemoveInput) {
+      const results = yield* batch({
+        projectID: input.projectID,
+        operations: [{ type: "remove", directory: input.directory }],
+      })
+      return results[0]!
     })
 
     const list = Effect.fn("ProjectDirectories.list")(function* (projectID: ProjectSchema.ID) {
+      yield* events.check
       const rows = yield* db
         .select({ directory: ProjectDirectoryTable.directory, strategy: ProjectDirectoryTable.strategy })
         .from(ProjectDirectoryTable)
@@ -112,6 +107,7 @@ export const layer = Layer.effect(
       projectID: ProjectSchema.ID
       directory: AbsolutePath
     }) {
+      yield* events.check
       return (
         (yield* db
           .select({ directory: ProjectDirectoryTable.directory })
@@ -131,6 +127,7 @@ export const layer = Layer.effect(
       projectID: ProjectSchema.ID
       directory: AbsolutePath
     }) {
+      yield* events.check
       const row = yield* db
         .select({ directory: ProjectDirectoryTable.directory, strategy: ProjectDirectoryTable.strategy })
         .from(ProjectDirectoryTable)
@@ -151,9 +148,18 @@ export const layer = Layer.effect(
       contains,
       create,
       remove,
+      batch,
     })
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))
-export const node = makeGlobalNode({ service: Service, layer: layer, deps: [Database.node] })
+export const defaultLayer = layer.pipe(
+  Layer.provide(ProjectHistory.defaultLayer),
+  Layer.provide(EventV2.defaultLayer),
+  Layer.provide(Database.defaultLayer),
+)
+export const node = makeGlobalNode({
+  service: Service,
+  layer,
+  deps: [Database.node, ProjectHistory.node, EventV2.node],
+})

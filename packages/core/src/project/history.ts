@@ -41,7 +41,20 @@ export function fromRow(row: typeof ProjectTable.$inferSelect): Types.DeepMutabl
 
 export interface Interface {
   readonly change: (projectID: Project.ID, change: Change) => Effect.Effect<void, NotFoundError>
+  readonly directories: (
+    projectID: Project.ID,
+    operations: readonly DirectoryOperation[],
+  ) => Effect.Effect<boolean[], NotFoundError>
 }
+
+export type DirectoryOperation =
+  | { readonly type: "remove"; readonly directory: AbsolutePath }
+  | {
+      readonly type: "create"
+      readonly directory: AbsolutePath
+      readonly strategy?: string
+      readonly behavior?: "ignore" | "replace"
+    }
 
 export class Service extends Context.Service<Service, Interface>()("@mongolgpt/ProjectHistory") {}
 
@@ -153,6 +166,39 @@ export const layer = Layer.effect(
 
         const row = yield* db.select().from(ProjectTable).where(eq(ProjectTable.id, id)).get()
         if (!row) return yield* Effect.die(new NotFoundError({ projectID: id }))
+        if (change.type === "directories") {
+          for (const operation of change.operations) {
+            if (operation.type === "remove") {
+              yield* db
+                .delete(ProjectDirectoryTable)
+                .where(
+                  and(
+                    eq(ProjectDirectoryTable.project_id, id),
+                    eq(ProjectDirectoryTable.directory, AbsolutePath.make(operation.directory)),
+                  ),
+                )
+                .run()
+              continue
+            }
+            const entry = operation.entry
+            const directory = {
+              project_id: id,
+              directory: AbsolutePath.make(entry.directory),
+              strategy: entry.strategy ?? null,
+              type: entry.type ?? null,
+              time_created: entry.time,
+            }
+            yield* db
+              .insert(ProjectDirectoryTable)
+              .values(directory)
+              .onConflictDoUpdate({
+                target: [ProjectDirectoryTable.project_id, ProjectDirectoryTable.directory],
+                set: directory,
+              })
+              .run()
+          }
+          return
+        }
         if (change.type === "updated") {
           yield* db
             .update(ProjectTable)
@@ -232,8 +278,56 @@ export const layer = Layer.effect(
       }
       yield* events.publish(Changed, { projectID, change })
     })
+
+    const directories = Effect.fn("ProjectHistory.directories")(function* (
+      projectID: Project.ID,
+      operations: readonly DirectoryOperation[],
+    ) {
+      yield* events.check
+      if (operations.length === 0) return []
+      const rows = yield* db
+        .select()
+        .from(ProjectDirectoryTable)
+        .where(eq(ProjectDirectoryTable.project_id, projectID))
+        .all()
+        .pipe(Effect.orDie)
+      const entries = new Map(rows.map((row) => [row.directory, row]))
+      const changes: Extract<Change, { type: "directories" }>["operations"][number][] = []
+      const results = operations.map((operation) => {
+        const directory = operation.directory
+        const current = entries.get(directory)
+        if (operation.type === "remove") {
+          if (!entries.delete(directory)) return false
+          changes.push({ type: "remove", directory })
+          return true
+        }
+        if (current && (operation.behavior !== "replace" || current.strategy === (operation.strategy ?? null)))
+          return false
+        const entry = {
+          project_id: projectID,
+          directory,
+          type: current?.type ?? null,
+          strategy: operation.strategy ?? null,
+          time_created: current?.time_created ?? Date.now(),
+        }
+        entries.set(directory, entry)
+        changes.push({
+          type: "upsert",
+          entry: {
+            directory,
+            type: entry.type ?? undefined,
+            strategy: entry.strategy ?? undefined,
+            time: entry.time_created,
+          },
+        })
+        return true
+      })
+      if (changes.length) yield* change(projectID, { type: "directories", operations: changes })
+      return results
+    })
     return Service.of({
       change: (projectID, input) => lock.withPermit(change(projectID, input)),
+      directories: (projectID, operations) => lock.withPermit(directories(projectID, operations)),
     })
   }),
 )

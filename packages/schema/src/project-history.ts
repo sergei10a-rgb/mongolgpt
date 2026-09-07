@@ -30,6 +30,15 @@ const Changed = Event.define({
         adoptDirectory: optional(Schema.String),
       }),
       Schema.Struct({
+        type: Schema.Literal("directories"),
+        operations: Schema.Array(
+          Schema.Union([
+            Schema.Struct({ type: Schema.Literal("upsert"), entry: Directory }),
+            Schema.Struct({ type: Schema.Literal("remove"), directory: Schema.String }),
+          ]),
+        ),
+      }),
+      Schema.Struct({
         type: Schema.Literal("updated"),
         name: optional(Schema.String),
         icon: optional(Project.Icon),

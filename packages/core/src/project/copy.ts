@@ -11,7 +11,6 @@ import { ProjectDirectories } from "./directories"
 import { makeGitWorktreeStrategy } from "./copy-strategies"
 import { Slug } from "../util/slug"
 import { EventV2 } from "../event"
-import { Database } from "../database/database"
 import { Location } from "../location"
 import { Event } from "@mongolgpt/schema/project-directories"
 import { ProjectCopy } from "@mongolgpt/schema/project-copy"
@@ -131,7 +130,6 @@ export const layer = Layer.effect(
     const fs = yield* FSUtil.Service
     const git = yield* Git.Service
     const directories = yield* ProjectDirectories.Service
-    const db = (yield* Database.Service).db
     const events = yield* EventV2.Service
 
     const changed = Effect.fnUntraced(function* (projectID: Project.ID, update: boolean) {
@@ -241,29 +239,16 @@ export const layer = Layer.effect(
         Effect.map((sets) => new Map(sets.flat(2).map((item) => [item.directory, item] as const)).values().toArray()),
       )
       const removed = checked.filter((item) => !item.exists).map((item) => item.directory)
-      const result = yield* db
-        .transaction((tx) =>
-          Effect.all({
-            updated: Effect.forEach(discovered, (item) =>
-              directories.create(
-                {
-                  projectID: input.projectID,
-                  directory: item.directory,
-                  strategy: item.strategy,
-                  behavior: "replace",
-                },
-                tx,
-              ),
-            ),
-            removed: Effect.forEach(removed, (directory) =>
-              directories.remove({ projectID: input.projectID, directory }, tx),
-            ),
-          }),
-        )
-        .pipe(Effect.orDie)
+      const result = yield* directories.batch({
+        projectID: input.projectID,
+        operations: [
+          ...discovered.map((item) => ({ type: "create" as const, ...item, behavior: "replace" as const })),
+          ...removed.map((directory) => ({ type: "remove" as const, directory })),
+        ],
+      })
       const changes = {
-        updated: discovered.filter((_, index) => result.updated[index]).map((item) => item.directory),
-        removed: removed.filter((_, index) => result.removed[index]),
+        updated: discovered.filter((_, index) => result[index]).map((item) => item.directory),
+        removed: removed.filter((_, index) => result[discovered.length + index]),
       }
       yield* changed(input.projectID, changes.updated.length > 0 || changes.removed.length > 0)
       return changes
@@ -282,7 +267,7 @@ export const locationLayer = layer
 export const node = makeLocationNode({
   service: Service,
   layer: layer,
-  deps: [FSUtil.node, Git.node, ProjectDirectories.node, EventV2.node, Database.node],
+  deps: [FSUtil.node, Git.node, ProjectDirectories.node, EventV2.node],
 })
 
 export const refreshNode = makeLocationNode({

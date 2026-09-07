@@ -1,18 +1,14 @@
-import { Context, Effect, Layer } from "effect"
+import { Effect, Layer } from "effect"
 import { Info, Ref, response } from "@mongolgpt/schema/location"
 import { Project } from "./project"
 import { LayerNode } from "./effect/layer-node"
 import { makeLocationNode, tags } from "./effect/node"
+import { Service } from "./location-context"
 
 export * as Location from "./location"
 
 export { Info, Ref, response }
-
-export interface Interface extends Info {
-  readonly vcs?: Project.Vcs
-}
-
-export class Service extends Context.Service<Service, Interface>()("@mongolgpt/Location") {}
+export { Service, type Interface } from "./location-context"
 
 export const node = LayerNode.unbound(Service, tags.values.location)
 

@@ -142,6 +142,27 @@ try {
   await Effect.runPromise(projectClient.initialize)
   await Effect.runPromise(projectClient.append(projectEnvelope))
   equal((await store.read(projectScope)).entries.length, 1, "native project metadata was not persisted")
+  const directoryEnvelope = {
+    id: "evt_native_directories",
+    aggregateID: projectEnvelope.aggregateID,
+    seq: 1,
+    type: projectEnvelope.type,
+    data: {
+      projectID: projectEnvelope.aggregateID,
+      change: {
+        type: "directories",
+        operations: [
+          { type: "remove", directory: "/workspace/copy" },
+          {
+            type: "upsert",
+            entry: { directory: "/workspace/new", type: "git_worktree", strategy: "git_worktree", time: 200 },
+          },
+        ],
+      },
+    },
+  }
+  await Effect.runPromise(projectClient.append(directoryEnvelope))
+  equal((await store.read(projectScope)).entries.length, 2, "native directory batch was not persisted")
 
   const firstLease = await store.claim(scope, { expectedEpoch: 0, writerID: "writer_a" })
   equal(await store.epoch(scope), 1, "writer epoch was not durable")
@@ -318,8 +339,10 @@ try {
   })
   await Effect.runPromise(restoredProject.initialize)
   const projectPage = await Effect.runPromise(restoredProject.read(0))
-  equal(projectPage.entries.length, 1, "project metadata did not survive actual D1 restart")
+  equal(projectPage.entries.length, 2, "project metadata did not survive actual D1 restart")
   assert.deepEqual(projectPage.entries[0]?.event, projectEnvelope, "project metadata changed across D1 restart")
+  assertionCount++
+  assert.deepEqual(projectPage.entries[1]?.event, directoryEnvelope, "directory batch changed across D1 restart")
   assertionCount++
   const restoredNative = createCloudHistory({
     request: (request: Request) => handleHistoryOutbound(request, { HISTORY: reopenedDB }, { params: nativeScope }),
