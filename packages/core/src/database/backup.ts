@@ -2,20 +2,18 @@ export * as DatabaseBackup from "./backup"
 
 import { EffectDrizzleSqlite } from "@mongolgpt/effect-drizzle-sqlite"
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto"
-import { lstat, open, mkdtemp, chmod, link, unlink, rmdir } from "node:fs/promises"
+import { lstat, open, mkdtemp, link, unlink, rmdir } from "node:fs/promises"
 import type { FileHandle } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
-import { execFile } from "node:child_process"
-import { promisify } from "node:util"
 import { sql } from "drizzle-orm"
 import { Effect, Schema } from "effect"
+import { protectBackupPath } from "./backup-permissions"
 
 const magic = Buffer.from("MONGOLGPT-SQLITE-BACKUP\0\x01")
 const nonceBytes = 12
 const tagBytes = 16
 const chunkBytes = 128 * 1024
 const maxBytes = 16 * 1024 * 1024 * 1024
-const execute = promisify(execFile)
 
 export class BackupError extends Schema.TaggedErrorClass<BackupError>()("DatabaseBackupError", {
   message: Schema.String,
@@ -150,7 +148,7 @@ async function staging<A>(destination: string, run: (directory: string) => Promi
   // Staging must be on the destination filesystem for atomic, no-replace publication.
   const directory = await mkdtemp(join(dirname(destination), ".mongolgpt-backup-"))
   try {
-    await protect(directory)
+    await protectBackupPath(directory, "directory")
     return await run(directory)
   } finally {
     // Only our fixed filenames, never recursive cleanup of a caller-supplied path.
@@ -167,28 +165,10 @@ async function staging<A>(destination: string, run: (directory: string) => Promi
   }
 }
 
-async function protect(directory: string) {
-  if (process.platform !== "win32") return chmod(directory, 0o700)
-  // chmod does not enforce Windows ACLs. Restrict the empty directory before writing any plaintext.
-  const system = join(process.env.SystemRoot ?? "C:\\Windows", "System32")
-  const identity = (
-    await execute(join(system, "whoami.exe"), [], {
-      windowsHide: true,
-      timeout: 10_000,
-      maxBuffer: 4096,
-    })
-  ).stdout.trim()
-  if (!/^[^:\r\n]+\\[^:\r\n]+$/.test(identity)) throw invalid()
-  await execute(
-    join(system, "icacls.exe"),
-    [directory, "/inheritance:r", "/grant:r", `${identity}:(OI)(CI)F`, "*S-1-5-18:(OI)(CI)F"],
-    { windowsHide: true, timeout: 10_000, maxBuffer: 4096 },
-  )
-}
-
 async function withFile<A>(filename: string, flags: string, run: (file: FileHandle) => Promise<A>) {
   const file = await open(filename, flags, 0o600)
   try {
+    if (flags.includes("x")) await protectBackupPath(filename, "file")
     return await run(file)
   } finally {
     await file.close()
