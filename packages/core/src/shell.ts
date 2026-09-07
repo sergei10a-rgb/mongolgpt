@@ -171,13 +171,16 @@ export function args(file: string, command: string, cwd: string) {
       "-l",
       "-c",
       `
+        __mongolgpt_cwd=$1
+        __mongolgpt_command=$2
         [[ -f ~/.zshenv ]] && source ~/.zshenv >/dev/null 2>&1 || true
         [[ -f "\${ZDOTDIR:-$HOME}/.zshrc" ]] && source "\${ZDOTDIR:-$HOME}/.zshrc" >/dev/null 2>&1 || true
-        cd -- "$1"
-        eval ${JSON.stringify(command)}
+        cd -- "$__mongolgpt_cwd" || exit
+        eval -- "$__mongolgpt_command"
       `,
       "mongolgpt",
       cwd,
+      command,
     ]
   }
   if (n === "bash") {
@@ -185,13 +188,16 @@ export function args(file: string, command: string, cwd: string) {
       "-l",
       "-c",
       `
+        __mongolgpt_cwd=$1
+        __mongolgpt_command=$2
         shopt -s expand_aliases
         [[ -f ~/.bashrc ]] && source ~/.bashrc >/dev/null 2>&1 || true
-        cd -- "$1"
-        eval ${JSON.stringify(command)}
+        cd -- "$__mongolgpt_cwd" || exit
+        eval -- "$__mongolgpt_command"
       `,
       "mongolgpt",
       cwd,
+      command,
     ]
   }
   if (n === "cmd") return ["/c", command]
