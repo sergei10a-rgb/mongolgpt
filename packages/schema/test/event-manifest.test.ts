@@ -55,6 +55,6 @@ describe("public event manifest", () => {
     expect(EventManifest.Durable.get("session.next.step.ended.2")).toBe(SessionEvent.Step.Ended)
     expect(EventManifest.Durable.get("project.history.changed.1")).toBe(ProjectHistory.Changed)
     expect(EventManifest.Latest.has(ProjectHistory.Changed.type)).toBe(false)
-    expect(EventManifest.ServerDefinitions.some((event) => event.type === ProjectHistory.Changed.type)).toBe(false)
+    expect(EventManifest.ServerDefinitions.map((event) => event.type)).not.toContain(ProjectHistory.Changed.type)
   })
 })
