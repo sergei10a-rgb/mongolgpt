@@ -40,4 +40,5 @@ test("runs the same encrypted backup/restore through the real Node SQLite adapte
   })
   expect(output.code, output.stderr).toBe(0)
   expect(output.stdout).toContain("DATABASE_BACKUP_NODE_OK")
+  expect(output.stdout).toContain("DATABASE_CHECKPOINT_NODE_OK")
 }, 40_000)

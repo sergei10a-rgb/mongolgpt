@@ -102,6 +102,33 @@ export function restore(input: Options) {
   })
 }
 
+/** Verify a private, immutable restore against its authenticated backup receipt.
+ * Never use a live database here: its WAL is not part of the restored file hash.
+ */
+export function verify(input: { source: string; expected: Report }) {
+  return operation(async (signal) => {
+    const filename = resolve(input.source)
+    const expected = JSON.stringify(input.expected)
+    const info = await lstat(filename)
+    if (!info.isFile() || info.isSymbolicLink()) throw invalid()
+    await assertNoSidecars(filename)
+    const report = await inspect(filename, signal)
+    await assertNoSidecars(filename)
+    if (JSON.stringify(report) !== expected) throw invalid()
+    return report
+  })
+}
+
+async function assertNoSidecars(filename: string) {
+  for (const suffix of ["-wal", "-shm", "-journal"]) {
+    const info = await lstat(filename + suffix).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return undefined
+      throw error
+    })
+    if (info) throw invalid()
+  }
+}
+
 function operation<A>(run: (signal: AbortSignal) => Promise<A>) {
   return Effect.callback<A, BackupError>((resume, signal) => {
     const pending = run(signal).then(
