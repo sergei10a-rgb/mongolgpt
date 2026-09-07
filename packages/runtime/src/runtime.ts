@@ -544,7 +544,7 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOr
   const existing = await sandbox.getProcess(PROCESS_ID).catch((error) => {
     throw RuntimeFailure.create("runtime_process_lookup_failed", error)
   })
-  if (existing && (await waitForServer(existing))) return
+  if (existing && (await waitForServer(existing, sandbox, password))) return
 
   const started = await sandbox
     .startProcess("/usr/local/bin/mongolgpt serve --hostname 0.0.0.0 --port 4096", {
@@ -572,10 +572,10 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOr
       return concurrent
     })
 
-  if (!(await waitForServer(started))) throw RuntimeFailure.create("runtime_process_exited")
+  if (!(await waitForServer(started, sandbox, password))) throw RuntimeFailure.create("runtime_process_exited")
 }
 
-async function waitForServer(process: RuntimeProcess) {
+async function waitForServer(process: RuntimeProcess, sandbox: RuntimeSandbox, password: string) {
   const status = await process.getStatus().catch((error) => {
     throw RuntimeFailure.create("runtime_process_status_failed", error)
   })
@@ -586,10 +586,74 @@ async function waitForServer(process: RuntimeProcess) {
       timeout: START_TIMEOUT_MS,
       interval: 500,
     })
-    .catch((error) => {
+    .catch(async (error) => {
+      // A failed control-plane stream does not prove the application server is down.
+      if (await serverResponding(sandbox, password)) return
       throw RuntimeFailure.create("runtime_process_port_timeout", error)
     })
   return true
+}
+
+async function serverResponding(sandbox: RuntimeSandbox, password: string) {
+  const controller = new AbortController()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<boolean>((resolve) => {
+    timer = setTimeout(() => {
+      controller.abort()
+      resolve(false)
+    }, 5_000)
+  })
+  const probe = async () => {
+    const response = await sandbox.containerFetch(
+      new Request("http://localhost/global/health", {
+        headers: { authorization: `Basic ${btoa(`${SERVER_USERNAME}:${password}`)}` },
+        redirect: "manual",
+        signal: controller.signal,
+      }),
+      PORT,
+    )
+    if (
+      controller.signal.aborted ||
+      response.status !== 200 ||
+      response.headers.get("content-type")?.split(";")[0].trim() !== "application/json"
+    ) {
+      void response.body?.cancel().catch(() => {})
+      return false
+    }
+    const reader = response.body?.getReader()
+    if (!reader) return false
+    const cancel = () => {
+      void reader.cancel().catch(() => {})
+    }
+    controller.signal.addEventListener("abort", cancel, { once: true })
+    const decoder = new TextDecoder()
+    let size = 0
+    let body = ""
+    try {
+      while (true) {
+        const chunk = await reader.read()
+        if (controller.signal.aborted) return false
+        if (chunk.done) break
+        size += chunk.value.byteLength
+        if (size > 1_024) return false
+        body += decoder.decode(chunk.value, { stream: true })
+      }
+      const health = readRecord(JSON.parse(body + decoder.decode()))
+      return health?.healthy === true && typeof health.version === "string" && health.version.trim().length > 0
+    } finally {
+      controller.signal.removeEventListener("abort", cancel)
+      cancel()
+      reader.releaseLock()
+    }
+  }
+  try {
+    return await Promise.race([probe(), deadline])
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timer)
+    controller.abort()
+  }
 }
 
 function internalRequest(

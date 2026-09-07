@@ -694,6 +694,177 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(JSON.stringify(body)).not.toContain("provider detail")
   })
 
+  test("recovers failed port-watch streams only when the authenticated application is healthy", async () => {
+    const token = await capability()
+    const identity = await deriveRuntimeIdentity("acc_123", "wrk_123", secret)
+    const watched = {
+      ...process().value,
+      waitForPort: async () => {
+        throw new Error("Port watch stream ended unexpectedly")
+      },
+    }
+    for (const existing of [false, true]) {
+      const runtime = sandbox()
+      const probes: Request[] = []
+      const reports: RuntimeFailure[] = []
+      const handler = createRuntimeHandler<Environment>({
+        sandbox: () => ({
+          ...runtime.value,
+          getProcess: async () => (existing ? watched : null),
+          startProcess: async () => watched,
+          containerFetch: async (request, port) => {
+            if (new URL(request.url).pathname !== "/global/health") return runtime.value.containerFetch(request)
+            expect(port).toBe(4096)
+            probes.push(request)
+            return Response.json({ healthy: true, version: "0.1.1" })
+          },
+        }),
+        report: (failure) => reports.push(failure),
+      })
+      const response = await handler(
+        hostedRequest("/session", { headers: { authorization: `Bearer ${token}` } }),
+        environment(),
+      )
+      expect(response.status).toBe(200)
+      const body: unknown = await response.json()
+      expect(body).toEqual({ ok: true })
+      expect(probes).toHaveLength(1)
+      expect(probes[0].url).toBe("http://localhost/global/health")
+      expect(probes[0].redirect).toBe("manual")
+      expect(Array.from(probes[0].headers.keys())).toEqual(["authorization"])
+      expect(probes[0].headers.get("authorization")).toBe(`Basic ${btoa(`mongolgpt:${identity.password}`)}`)
+      expect(runtime.requests).toHaveLength(1)
+      expect(reports).toHaveLength(0)
+    }
+  })
+
+  test("keeps port-watch failures closed for invalid health responses without forwarding user requests", async () => {
+    const token = await capability()
+    const failed = {
+      ...process().value,
+      waitForPort: async () => {
+        throw { code: "RPC_TRANSPORT_ERROR", context: { kind: "peer_closed" } }
+      },
+    }
+    for (const health of [
+      () => Response.json({ healthy: true, version: "0.1.1" }, { status: 401 }),
+      () => new Response(null, { status: 302, headers: { location: "https://attacker.example" } }),
+      () => new Response("<html>Login</html>", { headers: { "content-type": "text/html" } }),
+      () => Response.json({ healthy: false, version: "0.1.1" }),
+      () => Response.json({ healthy: true }),
+      () => Response.json({ healthy: true, version: " " }),
+      () => Response.json({ healthy: true, version: 1 }),
+      () => Response.json([{ healthy: true, version: "0.1.1" }]),
+      () => new Response("broken-json", { headers: { "content-type": "application/json" } }),
+      () => Response.json({ healthy: true, version: "0.1.1", extra: "x".repeat(1_024) }),
+      () => {
+        throw new Error("private probe credential detail")
+      },
+    ]) {
+      const runtime = sandbox({ existing: failed })
+      let probes = 0
+      const handler = createRuntimeHandler<Environment>({
+        sandbox: () => ({
+          ...runtime.value,
+          containerFetch: async (request) => {
+            if (new URL(request.url).pathname !== "/global/health") return runtime.value.containerFetch(request)
+            probes++
+            return health()
+          },
+        }),
+      })
+      const response = await handler(
+        hostedRequest("/session", { headers: { authorization: `Bearer ${token}` } }),
+        environment(),
+      )
+      expect(response.status).toBe(502)
+      expect(await response.json()).toMatchObject({
+        code: "runtime_process_port_timeout",
+        diagnostic: { code: "RPC_TRANSPORT_ERROR", kind: "peer_closed" },
+      })
+      expect(probes).toBe(1)
+      expect(runtime.requests).toHaveLength(0)
+    }
+  })
+
+  test("cancels oversized fallback health bodies", async () => {
+    let cancelled = false
+    const handler = createRuntimeHandler<Environment>({
+      sandbox: () => ({
+        ...sandbox({
+          existing: {
+            ...process().value,
+            waitForPort: async () => {
+              throw new Error("watch failed")
+            },
+          },
+        }).value,
+        containerFetch: async () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                controller.enqueue(new Uint8Array(1_025))
+              },
+              cancel() {
+                cancelled = true
+                return new Promise<void>(() => {})
+              },
+            }),
+            { headers: { "content-type": "application/json" } },
+          ),
+      }),
+    })
+    const response = await handler(
+      hostedRequest("/session", { headers: { authorization: `Bearer ${await capability()}` } }),
+      environment(),
+    )
+    expect(response.status).toBe(502)
+    expect(cancelled).toBe(true)
+  })
+
+  test("bounds fallback health checks even when the transport or response body ignores abort", async () => {
+    for (const bodyStalls of [false, true]) {
+      let signal: AbortSignal | undefined
+      let cancelled = false
+      const handler = createRuntimeHandler<Environment>({
+        sandbox: () => ({
+          ...sandbox({
+            existing: {
+              ...process().value,
+              waitForPort: async () => {
+                throw new Error("watch failed")
+              },
+            },
+          }).value,
+          containerFetch: async (request) => {
+            signal = request.signal
+            if (!bodyStalls) return new Promise<Response>(() => {})
+            return new Response(
+              new ReadableStream<Uint8Array>({
+                start(controller) {
+                  controller.enqueue(new TextEncoder().encode('{"healthy":true,"version":"0.1.1"}'))
+                },
+                cancel() {
+                  cancelled = true
+                },
+              }),
+              { headers: { "content-type": "application/json" } },
+            )
+          },
+        }),
+      })
+      const startedAt = Date.now()
+      const response = await handler(
+        hostedRequest("/session", { headers: { authorization: `Bearer ${await capability()}` } }),
+        environment(),
+      )
+      expect(response.status).toBe(502)
+      expect(signal?.aborted).toBe(true)
+      if (bodyStalls) expect(cancelled).toBe(true)
+      expect(Date.now() - startedAt).toBeLessThan(7_500)
+    }
+  }, 15_000)
+
   test("exposes only allowlisted sandbox diagnostics in dev and keeps production unchanged", async () => {
     const token = await capability()
     const sdkError = (code: string, context: Record<string, unknown>) => ({
