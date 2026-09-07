@@ -2,6 +2,7 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "mongolgpt-history-d1-test",
   "compatibility_date": "2026-07-18",
+  "r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "mongolgpt-checkpoint-test" }],
   "d1_databases": [
     {
       "binding": "DB",

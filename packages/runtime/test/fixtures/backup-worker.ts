@@ -1,4 +1,7 @@
 import { createRuntimeBackupStore, deriveRuntimeBackupKey, RuntimeBackupError } from "../../src/backup"
+import { createRuntimeCheckpointStore } from "../../src/checkpoint"
+import { createHistoryStore, HistoryError } from "../../src/history"
+import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 
 // Synthetic keys in a loopback-only test fixture. Never deploy this handler.
 const scope = { accountID: "acc_worker", workspaceID: "wrk_worker" }
@@ -6,10 +9,29 @@ const keyID = "key_worker"
 const master = bytes("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
 
 export default {
-  async fetch(request: Request, env: { BACKUPS: R2Bucket }) {
+  async fetch(request: Request, env: { BACKUPS: R2Bucket; DB: D1Database }) {
     const url = new URL(request.url)
     const store = createRuntimeBackupStore(env.BACKUPS)
     try {
+      if (request.method === "POST" && url.pathname === "/setup") {
+        const statements = (await request.json()) as string[]
+        for (const statement of statements) await env.DB.prepare(statement).run()
+        await createHistoryStore(env.DB).claim(scope, { expectedEpoch: 0, writerID: "writer_worker" })
+        return Response.json({ ok: true })
+      }
+      if (request.method === "POST" && url.pathname === "/checkpoint") {
+        return Response.json(
+          await createRuntimeCheckpointStore(env.DB, env.BACKUPS, { [keyID]: master }).publish(
+            { ...scope, epoch: 1, writerID: "writer_worker" },
+            (await request.json()) as CloudCheckpoint.Checkpoint,
+          ),
+        )
+      }
+      if (request.method === "GET" && url.pathname === "/checkpoint") {
+        return Response.json(
+          (await createRuntimeCheckpointStore(env.DB, env.BACKUPS, { [keyID]: master }).read(scope)) ?? null,
+        )
+      }
       if (request.method === "GET" && url.pathname === "/derive") {
         return Response.json({ key: hex(deriveRuntimeBackupKey(scope, keyID, master)) })
       }
@@ -30,6 +52,7 @@ export default {
       }
       return new Response("not found", { status: 404 })
     } catch (error) {
+      if (error instanceof HistoryError) return Response.json({ code: error.code }, { status: 409 })
       if (error instanceof RuntimeBackupError) {
         return Response.json(
           { code: error.code, message: error.message },

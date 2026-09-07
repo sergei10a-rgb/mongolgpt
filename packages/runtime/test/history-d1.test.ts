@@ -41,7 +41,7 @@ test("runs real local D1 history persistence and concurrency checks under Node",
       const timeout = setTimeout(() => {
         timedOut = true
         child.kill("SIGTERM")
-      }, 60_000)
+      }, 120_000)
       child.stdout.on("data", (chunk) => (stdout = (stdout + chunk).slice(-16000)))
       child.stderr.on("data", (chunk) => (stderr = (stderr + chunk).slice(-16000)))
       child.once("error", (error) => {
@@ -50,7 +50,8 @@ test("runs real local D1 history persistence and concurrency checks under Node",
       })
       child.once("close", (code, signal) => {
         clearTimeout(timeout)
-        if (timedOut) return reject(new Error("local D1 integration timed out"))
+        if (timedOut)
+          return reject(new Error(`local D1 integration timed out\n${stdout.slice(-2000)}\n${stderr.slice(-2000)}`))
         resolve({ code, signal, stdout, stderr })
       })
     })
@@ -73,4 +74,4 @@ test("runs real local D1 history persistence and concurrency checks under Node",
       throw new Error("history RPC cleanup escaped temp root")
     await rm(bundle, { recursive: true, force: true })
   }
-}, 70_000)
+}, 130_000)

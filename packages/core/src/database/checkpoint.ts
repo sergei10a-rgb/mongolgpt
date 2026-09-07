@@ -8,22 +8,14 @@ import { EffectDrizzleSqlite } from "@mongolgpt/effect-drizzle-sqlite"
 import { Durable } from "@mongolgpt/schema/durable-event-manifest"
 import { ProjectHistory } from "@mongolgpt/schema/project-history"
 import { SessionV1 } from "@mongolgpt/schema/session-v1"
+import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { DatabaseBackup } from "./backup"
 
 export class CheckpointError extends Schema.TaggedErrorClass<CheckpointError>()("DatabaseCheckpointError", {
   message: Schema.String,
 }) {}
 
-export interface Inventory {
-  version: 1
-  database: { bytes: number; sha256: string; schemaSha256: string }
-  projects: { id: string; journaled: boolean }[]
-  sessions: { id: string; projectID: string; journaled: boolean }[]
-  aggregates: { id: string; seq: number; events: number; sha256: string }[]
-  tombstonesRecorded: boolean
-  tombstones: { aggregateID: string; id: string; seq: number }[]
-  counts: { events: number; tombstones: number }
-}
+export type Inventory = CloudCheckpoint.Inventory
 
 const Identifier = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_.:-]{1,256}$/))
 const Sequence = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0), Schema.isLessThan(Number.MAX_SAFE_INTEGER))
@@ -139,9 +131,10 @@ function read() {
           erasedIDs.add(marker.aggregate_id)
           erasedEventIDs.add(marker.event_id)
         }
-        const aggregates: Inventory["aggregates"] = []
+        const aggregates: Array<Inventory["aggregates"][number]> = []
         const journaled = new Set<string>()
-        const eventIDs = new Set<string>()
+        const seenEventIDs = new Set<string>()
+        const eventIDs: Array<Inventory["eventIDs"][number]> = []
         let current: { id: string; seq: number; events: number; hash: ReturnType<typeof createHash> } | undefined
         let afterAggregate = ""
         let afterSequence = -1
@@ -167,9 +160,10 @@ function read() {
           `)
           for (const value of page) {
             const row = Schema.decodeUnknownSync(EventRow)(value)
-            if (Buffer.byteLength(row.data) > maxEventBytes || eventIDs.has(row.id) || erasedEventIDs.has(row.id))
+            if (Buffer.byteLength(row.data) > maxEventBytes || seenEventIDs.has(row.id) || erasedEventIDs.has(row.id))
               throw invalid()
-            eventIDs.add(row.id)
+            seenEventIDs.add(row.id)
+            eventIDs.push({ id: row.id, aggregateID: row.aggregate_id, seq: row.seq })
             const definition = Durable.get(row.type)
             if (!definition?.durable || !sequences.has(row.aggregate_id) || erasedIDs.has(row.aggregate_id))
               throw invalid()
@@ -218,6 +212,7 @@ function read() {
             journaled: journaled.has(row.id),
           })),
           aggregates,
+          eventIDs,
           tombstonesRecorded,
           tombstones: tombstones.map((row) => ({ aggregateID: row.aggregate_id, id: row.event_id, seq: row.seq })),
           counts: { events, tombstones: tombstones.length },

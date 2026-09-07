@@ -31,6 +31,7 @@ const EpochInput = Schema.Struct({})
 const ClaimInput = Schema.Struct({
   expectedEpoch: NonNegativeInt,
   writerID: Schema.String,
+  checkpointID: Schema.optional(Schema.String),
 })
 const EventInput = Schema.Struct({
   id: Schema.String,
@@ -54,6 +55,7 @@ const EraseInput = Schema.Struct({
 const ReadInput = Schema.Struct({
   after: Schema.optional(NonNegativeInt),
   limit: Schema.optional(PositiveInt),
+  checkpointID: Schema.optional(Schema.String),
 })
 const ScopeInput = Schema.Struct({ accountID: Schema.String, workspaceID: Schema.String })
 
@@ -67,7 +69,7 @@ export function handleHistoryOutbound(request: Request, env: { HISTORY?: D1Datab
   }
 }
 
-type HistoryStore = ReturnType<typeof createHistoryStore>
+type HistoryStore = Pick<ReturnType<typeof createHistoryStore>, "epoch" | "claim" | "append" | "erase" | "read">
 type HistoryStoreSource = Pick<D1Database, "prepare" | "batch"> | HistoryStore
 
 export function createHistoryHandler(db: HistoryStoreSource, scope: HistoryScope) {
@@ -88,7 +90,7 @@ export function createHistoryHandler(db: HistoryStoreSource, scope: HistoryScope
         return success({ epoch: await store.epoch(trustedScope) })
       }
       if (url.pathname === "/v1/claim") {
-        exact(input, ["expectedEpoch", "writerID"])
+        exact(input, ["expectedEpoch", "writerID", "checkpointID"])
         rejectEnvelopeScopeFields(input)
         const body = decode(ClaimInput, input) as typeof ClaimInput.Type
         const lease = await store.claim(trustedScope, body)
@@ -120,7 +122,7 @@ export function createHistoryHandler(db: HistoryStoreSource, scope: HistoryScope
         )
       }
       if (url.pathname === "/v1/read") {
-        exact(input, ["after", "limit"])
+        exact(input, ["after", "limit", "checkpointID"])
         rejectEnvelopeScopeFields(input)
         return success(await store.read(trustedScope, decode(ReadInput, input) as typeof ReadInput.Type))
       }

@@ -205,7 +205,22 @@ export function createRuntimeBackupStore(bucket: Pick<R2Bucket, "put" | "get">) 
         },
         { highWaterMark: 0 },
       )
-      return { manifest, body }
+      // workerd requires the GCM tag before the first decipher.update. Read only
+      // the final one or two verified chunks; full-stream authentication is still
+      // the recipient's responsibility. This also handles a split 16-byte tag.
+      async function authTag() {
+        try {
+          const last = manifest.chunks.length - 1
+          const tail = await readChunk(bucket, chunkKey(prefix, last), manifest.chunks[last])
+          if (tail.byteLength >= 16) return tail.slice(-16)
+          if (!last) throw new RuntimeBackupError("invalid")
+          const previous = await readChunk(bucket, chunkKey(prefix, last - 1), manifest.chunks[last - 1])
+          return new Uint8Array(Buffer.concat([previous.subarray(-(16 - tail.byteLength)), tail]))
+        } catch (error) {
+          throw safe(error)
+        }
+      }
+      return { manifest, body, authTag }
     } catch (error) {
       throw safe(error)
     }

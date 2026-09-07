@@ -1,9 +1,10 @@
 import assert from "node:assert/strict"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdtemp, readFile, rm } from "node:fs/promises"
+import { createCipheriv, createHash, randomBytes, randomUUID } from "node:crypto"
 import { tmpdir } from "node:os"
 import { isAbsolute, join, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { createTestHarness, type TestHarness } from "wrangler"
+import { createTestHarness, unstable_splitSqlQuery, type TestHarness } from "wrangler"
 import { deriveRuntimeBackupKey } from "../src/backup.ts"
 
 const magic = Buffer.from("MONGOLGPT-SQLITE-BACKUP\0\x01")
@@ -27,6 +28,14 @@ try {
           compatibility_date: "2026-07-18",
           compatibility_flags: ["nodejs_compat"],
           r2_buckets: [{ binding: "BACKUPS", bucket_name: "mongolgpt-backup-r2-worker-test", remote: false }],
+          d1_databases: [
+            {
+              binding: "DB",
+              database_name: "mongolgpt-checkpoint-worker-test",
+              database_id: "00000000-0000-0000-0000-000000000003",
+              remote: false,
+            },
+          ],
           dev: { ip: "127.0.0.1", port: 0, inspector_port: 0 },
         },
       },
@@ -67,6 +76,84 @@ try {
   equal(missing.status, 400, "worker did not validate backup id through Effect schema")
   const missingPayload = (await missing.json()) as { code: string }
   equal(missingPayload.code, "invalid", "worker returned the wrong validation code")
+
+  const statements = []
+  for (const file of ["0001_history.sql", "0002_history_checkpoint.sql"]) {
+    statements.push(...unstable_splitSqlQuery(await readFile(join(process.cwd(), "migrations", file), "utf8")))
+  }
+  equal(
+    (await worker.fetch("http://backup.test/setup", { method: "POST", body: JSON.stringify(statements) })).status,
+    200,
+    "checkpoint D1 setup failed",
+  )
+  // Synthetic plaintext isolates streaming GCM compatibility in workerd. Native
+  // SQLite inspection is exercised separately by checkpoint-d1.integration.ts.
+  async function archive(size: number, corrupt = false) {
+    const plain = Buffer.alloc(size, 73)
+    const header = Buffer.concat([magic, randomBytes(12)])
+    const cipher = createCipheriv(
+      "aes-256-gcm",
+      deriveRuntimeBackupKey(scope, keyID, master),
+      header.subarray(magic.length),
+    )
+    cipher.setAAD(header)
+    const encrypted = Buffer.concat([header, cipher.update(plain), cipher.final(), cipher.getAuthTag()])
+    if (corrupt) encrypted[encrypted.length - 1] ^= 1
+    const response = await worker.fetch("http://backup.test/backup", { method: "POST", body: encrypted })
+    equal(response.status, 200, "encrypted fixture upload failed")
+    const { manifest } = (await response.json()) as { manifest: { backupID: string; bytes: number; sha256: string } }
+    return {
+      backupID: manifest.backupID,
+      keyID,
+      bytes: manifest.bytes,
+      sha256: manifest.sha256,
+      plaintext: { bytes: plain.length, sha256: createHash("sha256").update(plain).digest("hex") },
+    }
+  }
+  const sqlite = await archive(1024)
+  const invalidFiles = await archive(8 * 1024 * 1024 - magic.length - 12 - 8, true)
+  const checkpoint = {
+    id: randomUUID(),
+    sqlite,
+    files: invalidFiles,
+    inventory: {
+      version: 1,
+      database: { ...sqlite.plaintext, schemaSha256: "b".repeat(64) },
+      projects: [],
+      sessions: [],
+      aggregates: [],
+      eventIDs: [],
+      tombstonesRecorded: true,
+      tombstones: [],
+      counts: { events: 0, tombstones: 0 },
+    },
+  }
+  const rejected = await worker.fetch("http://backup.test/checkpoint", {
+    method: "POST",
+    body: JSON.stringify(checkpoint),
+  })
+  if (rejected.status !== 400) throw new Error(`invalid-tag checkpoint response: ${await rejected.text()}`)
+  equal(rejected.status, 400, "workerd accepted invalid GCM tag with matching transport hashes")
+  equal(((await rejected.json()) as { code: string }).code, "invalid", "GCM error was not sanitized")
+  equal(
+    await (await worker.fetch("http://backup.test/checkpoint")).json(),
+    null,
+    "failed authentication published D1 state",
+  )
+  checkpoint.files = await archive(8 * 1024 * 1024 - magic.length - 12 - 8)
+  const published = await worker.fetch("http://backup.test/checkpoint", {
+    method: "POST",
+    body: JSON.stringify(checkpoint),
+  })
+  if (published.status !== 200) throw new Error(`checkpoint failed: ${await published.text()}`)
+  equal(published.status, 200, "workerd failed to authenticate and publish multi-chunk checkpoint")
+  const checkpointRead = await worker.fetch("http://backup.test/checkpoint")
+  equal(checkpointRead.status, 200, "workerd checkpoint read failed")
+  equal(
+    ((await checkpointRead.json()) as { data: { id: string } }).data.id,
+    checkpoint.id,
+    "worker read different checkpoint",
+  )
 
   console.log(`BACKUP_WORKER_RESULT ${JSON.stringify({ ok: true, skipped: false, assertions: assertionCount })}`)
 } finally {

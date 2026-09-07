@@ -10,6 +10,10 @@ import { SessionProjector } from "../../../core/src/session/projector"
 import { SessionTable } from "../../../core/src/session/sql"
 export { createCloudHistory } from "../../../core/src/event/cloud-history"
 export { createHistoryHandler, handleHistoryOutbound } from "../../src/history-rpc"
+export { createHistoryStore } from "../../src/history"
+export { createRuntimeCheckpointStore } from "../../src/checkpoint"
+export { createRuntimeBackupStore } from "../../src/backup"
+export { createCheckpointFixture } from "./checkpoint-native"
 
 import { createCloudHistory } from "../../../core/src/event/cloud-history"
 

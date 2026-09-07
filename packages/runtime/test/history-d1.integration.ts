@@ -4,12 +4,13 @@ import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { isAbsolute, join, relative, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import type { D1Database } from "@cloudflare/workers-types"
-import { createHistoryStore, type HistoryEvent, type HistoryScope } from "../src/history.ts"
+import type { D1Database, R2Bucket } from "@cloudflare/workers-types"
+import type { HistoryEvent, HistoryScope } from "../src/history.ts"
+import { runCheckpointChecks } from "./checkpoint-d1.integration.ts"
 
 const configPath = fileURLToPath(new URL("./fixtures/history-d1.jsonc", import.meta.url))
 const persistTo = await mkdtemp(join(tmpdir(), "mongolgpt-history-d1-"))
-let platform: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database }>>> | undefined
+let platform: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>>> | undefined
 let assertionCount = 0
 
 const scope = { accountID: "acc_one", workspaceID: "wrk_shared" } satisfies HistoryScope
@@ -17,23 +18,29 @@ const otherAccount = { accountID: "acc_two", workspaceID: "wrk_shared" } satisfi
 const otherWorkspace = { accountID: "acc_one", workspaceID: "wrk_other" } satisfies HistoryScope
 
 try {
-  platform = await getPlatformProxy<{ DB: D1Database }>({
+  platform = await getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>({
     configPath,
     persist: { path: persistTo },
     remoteBindings: false,
     envFiles: [],
   })
-  const migration = await readFile(fileURLToPath(new URL("../migrations/0001_history.sql", import.meta.url)), "utf8")
-  for (const statement of unstable_splitSqlQuery(migration)) {
-    await platform.env.DB.prepare(statement).run()
+  for (const file of ["0001_history.sql", "0002_history_checkpoint.sql"]) {
+    const migration = await readFile(fileURLToPath(new URL(`../migrations/${file}`, import.meta.url)), "utf8")
+    for (const statement of unstable_splitSqlQuery(migration)) await platform.env.DB.prepare(statement).run()
   }
+  const nativeFixture = await import(pathToFileURL(process.argv[2]).href)
+  const {
+    createHistoryStore,
+    createHistoryHandler,
+    handleHistoryOutbound,
+    createCloudHistory,
+    recoverProjection,
+    Effect,
+  } = nativeFixture
   const store = createHistoryStore(platform.env.DB)
   const initialWriters = await platform.env.DB.prepare("SELECT * FROM runtime_history_writer").all()
   equal(initialWriters.results.length, 0, "fresh local D1 persistence already contained history writers")
 
-  const { createHistoryHandler, handleHistoryOutbound, createCloudHistory, recoverProjection, Effect } = await import(
-    pathToFileURL(process.argv[2]).href
-  )
   const rpcScope = { accountID: "acc_rpc", workspaceID: "wrk_rpc" }
   const rpcDB = platform.env.DB
   const rpc = (request: Request): Promise<Response> =>
@@ -347,7 +354,7 @@ try {
 
   await platform.dispose()
   platform = undefined
-  platform = await getPlatformProxy<{ DB: D1Database }>({
+  platform = await getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>({
     configPath,
     persist: { path: persistTo },
     remoteBindings: false,
@@ -459,6 +466,31 @@ try {
     "fenced",
   )
   await reopened.append(restoredLease, event("evt_new_after_restart", "ses_one", 3, { value: "continued" }))
+  assertionCount += await runCheckpointChecks(platform.env.DB, platform.env.BACKUPS, nativeFixture, persistTo)
+  const checkpointScope = { accountID: "acc_checkpoint", workspaceID: "wrk_checkpoint" }
+  const beforeRestart = await reopened.checkpoint(checkpointScope)
+  ok(beforeRestart, "checkpoint restart fixture is missing")
+  await platform.dispose()
+  platform = undefined
+  platform = await getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>({
+    configPath,
+    persist: { path: persistTo },
+    remoteBindings: false,
+    envFiles: [],
+  })
+  const restarted = createHistoryStore(platform.env.DB)
+  assert.deepEqual(
+    await restarted.checkpoint(checkpointScope),
+    beforeRestart,
+    "D1 restart changed the checkpoint receipt",
+  )
+  assertionCount++
+  await expectCode(restarted.read(checkpointScope), "conflict")
+  equal(
+    (await restarted.read(checkpointScope, { checkpointID: beforeRestart!.data.id })).entries.length,
+    3,
+    "checkpoint deltas did not persist across D1 restart",
+  )
   console.log(`HISTORY_D1_RESULT ${JSON.stringify({ ok: true, assertions: assertionCount })}`)
 } finally {
   await platform?.dispose()

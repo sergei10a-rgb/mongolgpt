@@ -13,6 +13,7 @@ import { SessionProjector } from "@mongolgpt/core/session/projector"
 import { SessionV1 } from "@mongolgpt/core/v1/session"
 import { Project } from "@mongolgpt/schema/project"
 import { Session } from "@mongolgpt/schema/session"
+import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { tmpdir } from "./fixture/tmpdir"
 
 const marker = "synthetic-checkpoint-token-not-a-real-secret"
@@ -76,6 +77,16 @@ describe("native database checkpoint inspector", () => {
       expect(inventory.tombstonesRecorded).toBe(true)
       expect(inventory.tombstones).toEqual([{ aggregateID: sessionDeleted, id: eventIDs.deleted, seq: 3 }])
       expect(inventory.counts).toEqual({ events: 7, tombstones: 1 })
+      expect(Schema.is(CloudCheckpoint.Inventory)(inventory)).toBe(true)
+      expect(inventory.eventIDs).toEqual([
+        { id: eventIDs.projectASaved, aggregateID: projectA, seq: 0 },
+        { id: eventIDs.projectAInitialized, aggregateID: projectA, seq: 1 },
+        { id: eventIDs.projectBSaved, aggregateID: projectB, seq: 0 },
+        { id: eventIDs.sessionACreated, aggregateID: sessionA, seq: 0 },
+        { id: eventIDs.sessionAMessage, aggregateID: sessionA, seq: 1 },
+        { id: eventIDs.sessionAPart, aggregateID: sessionA, seq: 2 },
+        { id: eventIDs.sessionBCreated, aggregateID: sessionB, seq: 0 },
+      ])
       expect(aggregateShape(inventory)).toEqual({
         [projectA]: { seq: 1, events: 2 },
         [projectB]: { seq: 0, events: 1 },
