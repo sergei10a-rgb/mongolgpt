@@ -283,6 +283,7 @@ async function check(
         if (health === "payment") inspectPaymentHealth(body, result.paymentEnvironment)
       } else if (name === "console") {
         await checkHostedRuntimeToken(url, appUrl)
+        await checkNativeRuntimeToken(url, appUrl)
         await checkHostedAccountOverview(url, appUrl)
         const authHealthUrl = deploymentEndpoints(result).authHealth
         if (!authHealthUrl) throw new Error("hosted auth endpoint is missing")
@@ -811,6 +812,55 @@ export function inspectHostedAuthorizeRedirect(input: {
   const expectedCallback = new URL("/auth/callback/auth/app", request.origin)
   if (callback.toString() !== expectedCallback.toString()) {
     throw new Error(`hosted authorization callback is invalid: ${callback}`)
+  }
+}
+
+export async function checkNativeRuntimeToken(consoleUrl: string, appUrl: string) {
+  const url = new URL("/api/runtime-token", `${consoleUrl}/`)
+  for (const origin of [undefined, new URL(appUrl).origin]) {
+    const headers = new Headers({ Accept: "application/json", "User-Agent": "mongolgpt-deployment-smoke" })
+    if (origin) headers.set("Origin", origin)
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      credentials: "omit",
+      redirect: "manual",
+      signal: AbortSignal.timeout(15_000),
+    })
+    inspectResponseOrigin({
+      requestUrl: url.toString(),
+      responseUrl: response.url,
+      status: response.status,
+      location: response.headers.get("location"),
+      label: "native runtime token boundary",
+    })
+    const status = origin ? 403 : 401
+    if (response.status !== status) throw new Error(`native runtime token boundary expected HTTP ${status}`)
+    if (
+      response.headers.has("Access-Control-Allow-Origin") ||
+      response.headers.has("Access-Control-Allow-Credentials")
+    ) {
+      throw new Error("native runtime token boundary must not permit browser CORS")
+    }
+    inspectNoStoreResponse(response, "native runtime token boundary")
+    const body = inspectJsonApiPayload(
+      response.headers.get("content-type"),
+      await response.text(),
+      "native runtime token boundary",
+    )
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body) ||
+      !("error" in body) ||
+      body.error !== (origin ? "invalid_origin" : "unauthorized") ||
+      !("message" in body) ||
+      typeof body.message !== "string" ||
+      !/[\u0400-\u04ff]/.test(body.message) ||
+      "token" in body
+    ) {
+      throw new Error("native runtime token boundary returned an invalid error contract")
+    }
   }
 }
 

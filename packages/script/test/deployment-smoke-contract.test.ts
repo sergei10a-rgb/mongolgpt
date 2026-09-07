@@ -56,6 +56,14 @@ const html = (meta: string) => `<!doctype html>
 
 const appOrigin = "https://app.dev.mgpt.mn"
 
+function nativeTokenRejection(request: Request) {
+  const browser = request.headers.has("Origin")
+  return Response.json(
+    { error: browser ? "invalid_origin" : "unauthorized", message: "MongolGPT бүртгэлээр нэвтэрнэ үү." },
+    { status: browser ? 403 : 401, headers: { "cache-control": "no-store", vary: "Origin" } },
+  )
+}
+
 async function caught(promise: Promise<unknown>) {
   return promise.then(
     () => undefined,
@@ -237,6 +245,7 @@ describe("dev console-only smoke", () => {
       if (url.toString() === "https://dev.mgpt.mn/") {
         return new Response(document, { headers: { "content-type": "text/html; charset=utf-8" } })
       }
+      if (url.pathname === "/api/runtime-token") return nativeTokenRejection(request)
       if (url.toString() === "https://dev.mgpt.mn/auth/runtime-token" && url.pathname === "/auth/runtime-token") {
         if (url.origin === "https://dev.mgpt.mn" && request.method === "OPTIONS") {
           return new Response(null, {
@@ -341,6 +350,8 @@ describe("dev console-only smoke", () => {
       "https://dev.mgpt.mn/",
       "https://dev.mgpt.mn/auth/runtime-token",
       "https://dev.mgpt.mn/auth/runtime-token",
+      "https://dev.mgpt.mn/api/runtime-token",
+      "https://dev.mgpt.mn/api/runtime-token",
       "https://dev.mgpt.mn/v1/account/overview",
       "https://dev.mgpt.mn/v1/account/overview",
       "https://dev.mgpt.mn/auth/authorize?continue=/auth/app",
@@ -584,6 +595,7 @@ describe("dev OAuth bootstrap smoke", () => {
       }
       if (key === "OPTIONS https://dev.mgpt.mn/auth/runtime-token") return preflightResponse()
       if (key === "POST https://dev.mgpt.mn/auth/runtime-token") return anonymousResponse()
+      if (key === "POST https://dev.mgpt.mn/api/runtime-token") return nativeTokenRejection(request)
       if (key === "OPTIONS https://dev.mgpt.mn/v1/account/overview") return accountOverviewPreflightResponse()
       if (key === "GET https://dev.mgpt.mn/v1/account/overview") return anonymousResponse()
       if (key === "GET https://dev.mgpt.mn/auth/authorize") {
@@ -643,6 +655,8 @@ describe("dev OAuth bootstrap smoke", () => {
       "GET https://dev.mgpt.mn/",
       "OPTIONS https://dev.mgpt.mn/auth/runtime-token",
       "POST https://dev.mgpt.mn/auth/runtime-token",
+      "POST https://dev.mgpt.mn/api/runtime-token",
+      "POST https://dev.mgpt.mn/api/runtime-token",
       "OPTIONS https://dev.mgpt.mn/v1/account/overview",
       "GET https://dev.mgpt.mn/v1/account/overview",
       "GET https://dev.mgpt.mn/auth/authorize",
