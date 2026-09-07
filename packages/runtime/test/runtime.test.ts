@@ -940,6 +940,106 @@ describe("MongolGPT Cloudflare runtime", () => {
     ).toEqual({ code: "OPERATION_INTERRUPTED" })
   })
 
+  test("preserves only bounded process exit codes for exited-before-ready diagnostics", () => {
+    for (const exitCode of [0, 132, 137, 255]) {
+      expect(
+        sanitizeRuntimeDiagnostic({
+          code: "PROCESS_EXITED_BEFORE_READY",
+          context: { exitCode, command: "private-command", env: "private-env", logs: "private-logs" },
+        }),
+      ).toEqual({ code: "PROCESS_EXITED_BEFORE_READY", exitCode })
+    }
+
+    expect(
+      sanitizeRuntimeDiagnostic({
+        errorResponse: {
+          code: "PROCESS_EXITED_BEFORE_READY",
+          context: { exitCode: 132, command: "private-command" },
+        },
+      }),
+    ).toEqual({ code: "PROCESS_EXITED_BEFORE_READY", exitCode: 132 })
+
+    for (const exitCode of [-1, 256, 1.5, NaN, Infinity, "132", [132], null, undefined]) {
+      expect(sanitizeRuntimeDiagnostic({ code: "PROCESS_EXITED_BEFORE_READY", context: { exitCode } })).toEqual({
+        code: "PROCESS_EXITED_BEFORE_READY",
+      })
+    }
+
+    expect(
+      sanitizeRuntimeDiagnostic({
+        code: "PROCESS_READY_TIMEOUT",
+        context: { exitCode: 137 },
+      }),
+    ).toEqual({ code: "PROCESS_READY_TIMEOUT" })
+
+    const hostile = {
+      code: "PROCESS_EXITED_BEFORE_READY",
+      context: {
+        get exitCode() {
+          throw new Error("private-token-and-command")
+        },
+      },
+    }
+    expect(sanitizeRuntimeDiagnostic(hostile)).toEqual({ code: "PROCESS_EXITED_BEFORE_READY" })
+  })
+
+  test("exposes process exit code diagnostics only in dev runtime responses", async () => {
+    const token = await capability()
+    const responseFor = async (stage: string, exitCode: number) => {
+      const error = {
+        errorResponse: {
+          code: "PROCESS_EXITED_BEFORE_READY",
+          context: {
+            exitCode,
+            command: "private-command",
+            env: { MONGOLGPT_SERVER_PASSWORD: "private-password" },
+            logs: "private-logs",
+          },
+        },
+      }
+      const running = process().value
+      const handler = createRuntimeHandler<Environment>({
+        sandbox: () => ({
+          ...sandbox().value,
+          getProcess: async () => ({
+            ...running,
+            waitForPort: async () => {
+              throw error
+            },
+          }),
+          containerFetch: async () => new Response("not ready", { status: 503 }),
+        }),
+      })
+      const env = environment()
+      env.STAGE = stage
+      return handler(hostedRequest("/path", { headers: { authorization: `Bearer ${token}` } }), env)
+    }
+
+    for (const exitCode of [0, 132, 137]) {
+      const devResponse = await responseFor("dev", exitCode)
+      expect(devResponse.status).toBe(502)
+      const devBody: unknown = await devResponse.json()
+      expect(devBody).toEqual({
+        error: "runtime_process_port_timeout",
+        code: "runtime_process_port_timeout",
+        message: `Cloud runtime сервер хугацаандаа бэлэн болсонгүй. Лавлах код: PROCESS_EXITED_BEFORE_READY, гаралтын код: ${exitCode}`,
+        diagnostic: { code: "PROCESS_EXITED_BEFORE_READY", exitCode },
+      })
+      expect(JSON.stringify(devBody)).not.toContain("private-command")
+      expect(JSON.stringify(devBody)).not.toContain("private-password")
+      expect(JSON.stringify(devBody)).not.toContain("private-logs")
+    }
+
+    const productionResponse = await responseFor("production", 132)
+    expect(productionResponse.status).toBe(502)
+    const productionBody: unknown = await productionResponse.json()
+    expect(productionBody).toEqual({
+      error: "runtime_process_port_timeout",
+      code: "runtime_process_port_timeout",
+      message: "Cloud runtime сервер хугацаандаа бэлэн болсонгүй.",
+    })
+  })
+
   test("sanitizes structured diagnostics across sandbox failure phases", async () => {
     const token = await capability()
     const error = (code: string, context: Record<string, unknown>) => ({

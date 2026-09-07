@@ -123,6 +123,7 @@ export type RuntimeDiagnostic = {
   readonly code: string
   readonly kind?: string
   readonly reason?: string
+  readonly exitCode?: number
 }
 
 function readProperty(value: unknown, key: string): unknown {
@@ -144,6 +145,10 @@ function readString(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined
 }
 
+function readExitCode(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 255 ? value : undefined
+}
+
 export function sanitizeRuntimeDiagnostic(error: unknown): RuntimeDiagnostic | undefined {
   try {
     const response = readProperty(error, "errorResponse")
@@ -154,12 +159,16 @@ export function sanitizeRuntimeDiagnostic(error: unknown): RuntimeDiagnostic | u
     const diagnostic: RuntimeDiagnostic = { code }
     const kind = readString(context && readProperty(context, "kind"))
     const reason = readString(context && readProperty(context, "reason"))
+    const exitCode = readExitCode(context && readProperty(context, "exitCode"))
     if (code === "RPC_TRANSPORT_ERROR" && kind && sdkKinds.has(kind)) return { ...diagnostic, kind }
     if (code === "OPERATION_INTERRUPTED" && reason && sdkReasons.has(reason)) {
       return { ...diagnostic, reason }
     }
     if (code === "CONTAINER_UNAVAILABLE" && reason && containerReasons.has(reason)) {
       return { ...diagnostic, reason }
+    }
+    if (code === "PROCESS_EXITED_BEFORE_READY" && exitCode !== undefined) {
+      return { ...diagnostic, exitCode }
     }
     return diagnostic
   } catch {
@@ -170,7 +179,8 @@ export function sanitizeRuntimeDiagnostic(error: unknown): RuntimeDiagnostic | u
 function diagnosticSuffix(diagnostic: RuntimeDiagnostic | undefined) {
   if (!diagnostic) return ""
   const detail = diagnostic.kind ?? diagnostic.reason
-  return ` Лавлах код: ${diagnostic.code}${detail ? `/${detail}` : ""}`
+  const exitCode = diagnostic.exitCode === undefined ? "" : `, гаралтын код: ${diagnostic.exitCode}`
+  return ` Лавлах код: ${diagnostic.code}${detail ? `/${detail}` : ""}${exitCode}`
 }
 
 export class RuntimeFailure extends Error {
