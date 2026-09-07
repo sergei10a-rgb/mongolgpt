@@ -79,6 +79,11 @@ jobs:
         working-directory: packages/client
         run: bun run check:generated
 
+      - name: Check Linux workspace isolation and quiesced native capture
+        if: runner.os == 'Linux'
+        timeout-minutes: 3
+        run: sudo -- "$(command -v bun)" packages/runtime/script/test-process-group.ts
+
       - name: Run HttpApi exerciser gates
         if: runner.os == 'Linux'
         working-directory: packages/mongolgpt

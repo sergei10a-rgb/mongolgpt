@@ -1,3 +1,7 @@
 .wrangler/
 container/*
 !container/.gitkeep
+!container/workspace-launcher.c
+!container/licenses/
+container/licenses/*
+!container/licenses/musl.COPYRIGHT
