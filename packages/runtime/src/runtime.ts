@@ -590,6 +590,8 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOr
         XDG_DATA_HOME: `${WORKSPACE_ROOT}/.mongolgpt/data`,
         XDG_CONFIG_HOME: `${WORKSPACE_ROOT}/.mongolgpt/config`,
         XDG_CACHE_HOME: `${WORKSPACE_ROOT}/.mongolgpt/cache`,
+        // SDK persistent sessions may predate CA setup; make Bun trust explicit for the hosted server process.
+        NODE_EXTRA_CA_CERTS: "/etc/cloudflare/certs/cloudflare-containers-ca.crt",
         MONGOLGPT_SERVER_USERNAME: SERVER_USERNAME,
         MONGOLGPT_SERVER_PASSWORD: password,
         MONGOLGPT_DISABLE_SHARE: "true",

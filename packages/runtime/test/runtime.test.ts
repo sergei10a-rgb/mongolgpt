@@ -422,6 +422,7 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(runtime.started).toHaveLength(1)
     expect(runtime.started[0]?.options.env.MONGOLGPT_SERVER_PASSWORD).toHaveLength(43)
     expect(runtime.started[0]?.options.env).toMatchObject({
+      NODE_EXTRA_CA_CERTS: "/etc/cloudflare/certs/cloudflare-containers-ca.crt",
       MONGOLGPT_RUNTIME_MODE: "hosted",
       MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
       MONGOLGPT_CONSOLE_URL: consoleOrigin,
