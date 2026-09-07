@@ -1,0 +1,12 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mongolgpt-backup-r2-test",
+  "compatibility_date": "2026-07-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "r2_buckets": [
+    {
+      "binding": "BACKUPS",
+      "bucket_name": "mongolgpt-backup-r2-test",
+    },
+  ],
+}
