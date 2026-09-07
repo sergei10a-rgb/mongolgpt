@@ -55,7 +55,11 @@ export interface RuntimeRateLimiter {
 }
 
 type RuntimeDependencies<Environment extends RuntimeVariables> = {
-  sandbox(env: Environment, id: string): RuntimeSandbox
+  sandbox(
+    env: Environment,
+    id: string,
+    scope: { readonly accountID: string; readonly workspaceID: string },
+  ): RuntimeSandbox | Promise<RuntimeSandbox>
   report?(failure: RuntimeFailure): void
   schedule?: (callback: () => void, delay: number) => () => void
 }
@@ -326,7 +330,10 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
         authentication.workspace.id,
         env.MONGOLGPT_RUNTIME_SECRET,
       )
-      const sandbox = dependencies.sandbox(env, identity.sandboxID)
+      const sandbox = await dependencies.sandbox(env, identity.sandboxID, {
+        accountID: authentication.account.id,
+        workspaceID: authentication.workspace.id,
+      })
       await ensureServer(sandbox, identity.password, consoleOrigin)
       if (authentication.expiresAt <= Date.now()) {
         return cors(json({ error: "Runtime сессийн хугацаа дууссан байна. Дахин нэвтэрнэ үү." }, 401), appOrigin)

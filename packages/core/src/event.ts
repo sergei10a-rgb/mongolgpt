@@ -127,6 +127,8 @@ export interface PublishOptions {
 }
 
 export interface Interface {
+  /** Fails closed after an uncertain remote commit until this projection is rebuilt. */
+  readonly check: Effect.Effect<void>
   readonly publish: <D extends Definition>(
     definition: D,
     data: Data<D>,
@@ -168,6 +170,17 @@ export const allBounded = (events: Interface, capacity: number) =>
 
 export interface LayerOptions {
   readonly beforeAggregateRead?: (aggregateID: string) => Effect.Effect<void>
+  readonly journal?: {
+    /** Called with the encoded envelope after local validation, before commit or notification. */
+    readonly append: (event: SerializedEvent) => Effect.Effect<void>
+  }
+}
+
+export class JournalUnavailableError extends Error {
+  constructor() {
+    super("Cloud түүхийн хадгалалтыг баталгаажуулж чадсангүй. Сэргээх хүртэл сессийг үргэлжлүүлэх боломжгүй.")
+    this.name = "JournalUnavailableError"
+  }
 }
 
 export const layerWith = (options?: LayerOptions) =>
@@ -183,6 +196,8 @@ export const layerWith = (options?: LayerOptions) =>
       // TODO: Bind durable projectors to exact type+version before supporting incompatible historical payloads.
       const listeners = new Array<Subscriber>()
       const { db } = yield* Database.Service
+      let journalFailed = false
+      const check = Effect.suspend(() => (journalFailed ? Effect.die(new JournalUnavailableError()) : Effect.void))
 
       const getOrCreate = (definition: Definition) =>
         Effect.gen(function* () {
@@ -219,6 +234,18 @@ export const layerWith = (options?: LayerOptions) =>
         return Effect.gen(function* () {
           const durable = definition?.durable
           if (durable) {
+            if (
+              !input &&
+              options?.journal &&
+              Option.isSome(yield* Effect.serviceOption(db.$client.transactionService))
+            ) {
+              return yield* Effect.die(
+                new InvalidDurableEventError({
+                  type: event.type,
+                  message: "Cloud түүхийн бичилт өөр гүйлгээний дотор ажиллах боломжгүй.",
+                }),
+              )
+            }
             const aggregateID = (event.data as Record<string, unknown>)[durable.aggregate]
             if (typeof aggregateID !== "string") {
               yield* Effect.die(
@@ -239,10 +266,13 @@ export const layerWith = (options?: LayerOptions) =>
               const list = projectors.get(event.type) ?? []
               return yield* Effect.uninterruptible(
                 Effect.gen(function* () {
+                  let journalAttempted = false
                   const committed = yield* db
                     .transaction(
                       () =>
                         Effect.gen(function* () {
+                          // Recheck inside the transaction: a queued writer may have failed while we waited.
+                          yield* check
                           const row = yield* db
                             .select({ seq: EventSequenceTable.seq, ownerID: EventSequenceTable.owner_id })
                             .from(EventSequenceTable)
@@ -250,10 +280,10 @@ export const layerWith = (options?: LayerOptions) =>
                             .get()
                             .pipe(Effect.orDie)
                           const latest = row?.seq ?? -1
-                          const encoded = Schema.encodeUnknownSync(definition.data)(event.data) as Record<
-                            string,
-                            unknown
-                          >
+                          const encoded = Schema.encodeUnknownSync(definition.data)(
+                            event.data,
+                            options?.journal ? { onExcessProperty: "error" } : undefined,
+                          ) as Record<string, unknown>
                           if (input?.strictOwner && row?.ownerID && row.ownerID !== input.ownerID) {
                             yield* Effect.die(
                               new InvalidDurableEventError({
@@ -349,11 +379,31 @@ export const layerWith = (options?: LayerOptions) =>
                             ])
                             .run()
                             .pipe(Effect.orDie)
+                          if (!input && options?.journal) {
+                            journalAttempted = true
+                            yield* options.journal
+                              .append({
+                                id: event.id,
+                                aggregateID,
+                                seq,
+                                type: versionedType(definition.type, durable.version),
+                                data: structuredClone(encoded),
+                              })
+                              .pipe(Effect.timeout("15 seconds"), Effect.interruptible)
+                          }
                           return { aggregateID, seq }
                         }),
                       { behavior: "immediate" },
                     )
-                    .pipe(Effect.orDie)
+                    .pipe(
+                      Effect.catchCause((cause) => {
+                        if (!journalAttempted) return Effect.failCause(cause)
+                        // The remote write may have succeeded even when its response or local commit failed.
+                        journalFailed = true
+                        return Effect.die(new JournalUnavailableError())
+                      }),
+                      Effect.orDie,
+                    )
                   if (committed) {
                     yield* Effect.forEach(
                       pubsub.durable.get(committed.aggregateID) ?? [],
@@ -402,7 +452,8 @@ export const layerWith = (options?: LayerOptions) =>
         Effect.suspend(() => observer(event)).pipe(
           Effect.catchCauseIf(
             (cause) => !Cause.hasInterrupts(cause),
-            (cause) => Effect.logError("Үйл явдлын сонсогч ажилласангүй", { eventID: event.id, eventType: event.type, cause }),
+            (cause) =>
+              Effect.logError("Үйл явдлын сонсогч ажилласангүй", { eventID: event.id, eventType: event.type, cause }),
           ),
         )
 
@@ -421,6 +472,7 @@ export const layerWith = (options?: LayerOptions) =>
 
       function publish<D extends Definition>(definition: D, data: Data<D>, options?: PublishOptions) {
         return Effect.gen(function* () {
+          yield* check
           const serviceLocation = Option.getOrUndefined(yield* Effect.serviceOption(Location.Service))
           const location =
             options?.location ??
@@ -521,6 +573,7 @@ export const layerWith = (options?: LayerOptions) =>
         return db
           .transaction(() =>
             Effect.gen(function* () {
+              yield* check
               yield* db.delete(EventSequenceTable).where(eq(EventSequenceTable.aggregate_id, aggregateID)).run()
               yield* db.delete(EventTable).where(eq(EventTable.aggregate_id, aggregateID)).run()
             }),
@@ -529,12 +582,16 @@ export const layerWith = (options?: LayerOptions) =>
       }
 
       function claim(aggregateID: string, ownerID: string) {
-        return db
-          .update(EventSequenceTable)
-          .set({ owner_id: ownerID })
-          .where(eq(EventSequenceTable.aggregate_id, aggregateID))
-          .run()
-          .pipe(Effect.orDie)
+        return check.pipe(
+          Effect.andThen(
+            db
+              .update(EventSequenceTable)
+              .set({ owner_id: ownerID })
+              .where(eq(EventSequenceTable.aggregate_id, aggregateID))
+              .run()
+              .pipe(Effect.orDie),
+          ),
+        )
       }
 
       const subscribe = <D extends Definition>(definition: D): Stream.Stream<Payload<D>> =>
@@ -545,7 +602,8 @@ export const layerWith = (options?: LayerOptions) =>
       const streamAll = (): Stream.Stream<Payload> => Stream.fromPubSub(pubsub.all)
 
       const readAfter = (aggregateID: string, after: number) =>
-        (options?.beforeAggregateRead?.(aggregateID) ?? Effect.void).pipe(
+        check.pipe(
+          Effect.andThen(options?.beforeAggregateRead?.(aggregateID) ?? Effect.void),
           Effect.andThen(
             db
               .select()
@@ -626,6 +684,7 @@ export const layerWith = (options?: LayerOptions) =>
         })
 
       return Service.of({
+        check,
         publish,
         subscribe,
         all: streamAll,

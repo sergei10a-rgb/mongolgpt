@@ -1,5 +1,6 @@
 import { ContainerProxy, getSandbox, Sandbox, type Process } from "@cloudflare/sandbox"
 import { createRuntimeHandler, createRuntimeProcessStarter, RUNTIME_PROCESS_ID, type RuntimeVariables } from "./runtime"
+import { handleHistoryOutbound } from "./history-rpc"
 
 export { ContainerProxy }
 
@@ -26,6 +27,10 @@ export const blockedEgressHosts = [
 ]
 
 export class MongolGPTSandbox extends Sandbox {
+  static override get outboundHandlers() {
+    return { history: handleHistoryOutbound }
+  }
+
   enableInternet = false
   // Keep raw internet disabled while allowing the SDK proxy to mediate HTTPS egress.
   interceptHttps = true
@@ -45,15 +50,20 @@ export class MongolGPTSandbox extends Sandbox {
 
 interface RuntimeEnvironment extends RuntimeVariables {
   Sandbox: DurableObjectNamespace<MongolGPTSandbox>
+  HISTORY?: D1Database
 }
 
 const handler = createRuntimeHandler<RuntimeEnvironment>({
-  sandbox: (env, id) =>
-    getSandbox(env.Sandbox, id, {
+  sandbox: async (env, id, scope) => {
+    const sandbox = getSandbox(env.Sandbox, id, {
       normalizeId: true,
       sleepAfter: "10m",
       transport: "rpc",
-    }),
+    })
+    // Scope is supplied by the verified Worker identity, never by sandbox request JSON.
+    if (env.HISTORY) await sandbox.setOutboundByHost("history.mongolgpt.internal", "history", scope)
+    return sandbox
+  },
   report: (failure) => {
     console.error("MongolGPT runtime хүсэлт амжилтгүй боллоо", {
       code: failure.code,

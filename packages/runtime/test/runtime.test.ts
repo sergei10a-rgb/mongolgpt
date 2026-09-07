@@ -394,9 +394,11 @@ describe("MongolGPT Cloudflare runtime", () => {
   test("starts a workspace-isolated server and proxies with internal credentials", async () => {
     const runtime = sandbox()
     const ids: string[] = []
+    const scopes: Array<{ accountID: string; workspaceID: string }> = []
     const handler = createRuntimeHandler<Environment>({
-      sandbox: (_env, id) => {
+      sandbox: async (_env, id, scope) => {
         ids.push(id)
+        scopes.push(scope)
         return runtime.value
       },
     })
@@ -417,6 +419,7 @@ describe("MongolGPT Cloudflare runtime", () => {
     )
 
     expect(response.status).toBe(200)
+    expect(scopes).toEqual([{ accountID: "acc_123", workspaceID: "wrk_123" }])
     expect(ids[0]).toStartWith("workspace-")
     expect(ids[0]).not.toContain("acc_123")
     expect(runtime.started).toHaveLength(1)
