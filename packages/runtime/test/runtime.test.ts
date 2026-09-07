@@ -1495,6 +1495,15 @@ describe("runtime deployment contract", () => {
     expect(source).toContain("return super.startProcess(...args)")
   })
 
+  test("enables HTTPS interception while preserving restricted egress policy", async () => {
+    const source = await Bun.file(new URL("../src/index.ts", import.meta.url)).text()
+    expect(source).toContain("enableInternet = false")
+    expect(source).toContain("interceptHttps = true")
+    expect(source).toContain('allowedHosts = ["*"]')
+    expect(source).toContain("deniedHosts = blockedEgressHosts")
+    expect(source).toContain("export { ContainerProxy }")
+  })
+
   test("pins matching sandbox SDK and container image versions", async () => {
     const manifest = await Bun.file(new URL("../package.json", import.meta.url)).json()
     const version = manifest.dependencies["@cloudflare/sandbox"]

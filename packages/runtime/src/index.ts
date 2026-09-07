@@ -27,6 +27,8 @@ export const blockedEgressHosts = [
 
 export class MongolGPTSandbox extends Sandbox {
   enableInternet = false
+  // Keep raw internet disabled while allowing the SDK proxy to mediate HTTPS egress.
+  interceptHttps = true
   allowedHosts = ["*"]
   deniedHosts = blockedEgressHosts
 
