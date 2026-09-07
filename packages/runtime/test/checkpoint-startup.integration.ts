@@ -3,7 +3,7 @@ import { spawn, type ChildProcessByStdio } from "node:child_process"
 import { createServer } from "node:http"
 import { once } from "node:events"
 import { Readable } from "node:stream"
-import { mkdtemp, mkdir, readFile, readdir, rm } from "node:fs/promises"
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { isAbsolute, join, relative } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -32,7 +32,7 @@ try {
     remoteBindings: false,
     envFiles: [],
   })
-  for (const name of ["0001_history.sql", "0002_history_checkpoint.sql"]) {
+  for (const name of ["0001_history.sql", "0002_history_checkpoint.sql", "0003_file_revision.sql"]) {
     const sql = await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), "utf8")
     for (const statement of unstable_splitSqlQuery(sql)) await platform.env.DB.prepare(statement).run()
   }
@@ -61,6 +61,44 @@ try {
   await native
     .createRuntimeCheckpointStore(db, bucket, { [refs.sqlite.keyID]: fixture.master })
     .publish(lease, checkpoint)
+  const key = native.deriveRuntimeBackupKey(scope, refs.files.keyID, fixture.master)
+  try {
+    const source = await native.restoreCheckpoint({
+      parent: root,
+      checkpoint,
+      sqlite: { source: fixture.sqliteArchive, key },
+      files: { source: fixture.filesArchive, key },
+    })
+    await writeFile(join(source.directory, "synthetic/transcript.txt"), "file revision after checkpoint")
+    const archive = join(root, "latest-files.backup")
+    const captured = await native.Effect.runPromise(
+      native.WorkspaceCapture.create({
+        source: source.directory,
+        destination: archive,
+        key,
+        exclude: [".mongolgpt/runtime.sqlite"],
+      }),
+    )
+    const saved = await backups.save(scope, {
+      keyID: refs.files.keyID,
+      body: new Response(await readFile(archive)).body!,
+    })
+    await native.createRuntimeCheckpointStore(db, bucket, { [refs.files.keyID]: fixture.master }).publishFiles(lease, {
+      id: crypto.randomUUID(),
+      checkpointID: checkpoint.id,
+      sequence: 1,
+      previousID: null,
+      archive: {
+        backupID: saved.backupID,
+        keyID: saved.keyID,
+        bytes: saved.bytes,
+        sha256: saved.sha256,
+        plaintext: { bytes: captured.report.bytes, sha256: captured.report.sha256 },
+      },
+    })
+  } finally {
+    key.fill(0)
+  }
   const part = {
     id: "evt_startup_delta",
     aggregateID: "ses_checkpoint",
@@ -170,7 +208,7 @@ try {
       equal(calls[5], "history/v1/read")
       equal(
         await readFile(join(directory, "workspace/synthetic/transcript.txt"), "utf8"),
-        "synthetic checkpoint file payload",
+        "file revision after checkpoint",
       )
       equal(await readFile(join(directory, "workspace/synthetic/data.bin")), Buffer.from([0, 1, 127, 255]))
     }

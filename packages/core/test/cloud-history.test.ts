@@ -79,6 +79,7 @@ describe("native cloud history transport", () => {
     const requests: Request[] = []
     const options = {
       checkpointID: "checkpoint_native",
+      filesRevisionID: "files_native",
       request: async (request: Request) => {
         requests.push(request)
         if (request.url.endsWith("/epoch")) return response({ epoch: 2 })
@@ -91,12 +92,17 @@ describe("native cloud history transport", () => {
     }
     const client = createCloudHistory(options)
     options.checkpointID = "mutated_after_creation"
+    options.filesRevisionID = "mutated_after_creation"
     await Effect.runPromise(client.initialize)
     await Effect.runPromise(client.read(0))
     expect(client.checkpointID).toBe("checkpoint_native")
-    expect(await requests[1].json()).toMatchObject({ checkpointID: "checkpoint_native" })
+    expect(await requests[1].json()).toMatchObject({
+      checkpointID: "checkpoint_native",
+      filesRevisionID: "files_native",
+    })
     expect(await requests[2].json()).toEqual({ after: 0, limit: 10, checkpointID: "checkpoint_native" })
     expect(() => createCloudHistory({ checkpointID: "../invalid" })).toThrow()
+    expect(() => createCloudHistory({ filesRevisionID: "../invalid" })).toThrow()
   })
 
   test("is lazy, requires initialization and uses only the fixed POST contract", async () => {

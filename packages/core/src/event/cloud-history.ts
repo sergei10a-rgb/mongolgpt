@@ -61,11 +61,17 @@ const Failure = Schema.Struct({
 const statuses = { invalid_input: 400, conflict: 409, fenced: 409, unavailable: 503 } as const
 
 export function createCloudHistory(
-  options: { readonly request?: (request: Request) => Promise<Response>; readonly checkpointID?: string } = {},
+  options: {
+    readonly request?: (request: Request) => Promise<Response>
+    readonly checkpointID?: string
+    readonly filesRevisionID?: string
+  } = {},
 ) {
   const request = options.request ?? ((request: Request) => fetch(request))
   const checkpointID =
     options.checkpointID === undefined ? undefined : decode(Identifier, options.checkpointID, "invalid_input")
+  const filesRevisionID =
+    options.filesRevisionID === undefined ? undefined : decode(Identifier, options.filesRevisionID, "invalid_input")
   const writerID = crypto.randomUUID()
   let lease: typeof Lease.Type | undefined
   let initialization: Promise<void> | undefined
@@ -142,7 +148,7 @@ export function createCloudHistory(
         if (expected.epoch === Number.MAX_SAFE_INTEGER) throw new CloudHistoryError("unavailable")
         const claimed = await rpc(
           "claim",
-          json({ expectedEpoch: expected.epoch, writerID, checkpointID }),
+          json({ expectedEpoch: expected.epoch, writerID, checkpointID, filesRevisionID }),
           Lease,
           signal,
         )

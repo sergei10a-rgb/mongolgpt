@@ -32,6 +32,7 @@ const ClaimInput = Schema.Struct({
   expectedEpoch: NonNegativeInt,
   writerID: Schema.String,
   checkpointID: Schema.optional(Schema.String),
+  filesRevisionID: Schema.optional(Schema.String),
 })
 const EventInput = Schema.Struct({
   id: Schema.String,
@@ -90,7 +91,7 @@ export function createHistoryHandler(db: HistoryStoreSource, scope: HistoryScope
         return success({ epoch: await store.epoch(trustedScope) })
       }
       if (url.pathname === "/v1/claim") {
-        exact(input, ["expectedEpoch", "writerID", "checkpointID"])
+        exact(input, ["expectedEpoch", "writerID", "checkpointID", "filesRevisionID"])
         rejectEnvelopeScopeFields(input)
         const body = decode(ClaimInput, input) as typeof ClaimInput.Type
         const lease = await store.claim(trustedScope, body)

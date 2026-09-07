@@ -38,10 +38,11 @@ const BootstrapInput = Schema.Struct({})
 const ArchiveInput = Schema.Struct({
   checkpointID: UUID,
   kind: Schema.Union([Schema.Literal("sqlite"), Schema.Literal("files")]),
+  filesRevisionID: Schema.optional(UUID),
 })
 
 type CheckpointRecord = { data: CloudCheckpoint.Checkpoint; digest?: string }
-type HistoryStore = Pick<ReturnType<typeof createHistoryStore>, "checkpoint" | "epoch">
+type HistoryStore = Pick<ReturnType<typeof createHistoryStore>, "checkpoint" | "epoch" | "fileRevision">
 type ArchiveManifest = {
   version: number
   format: string
@@ -106,7 +107,12 @@ export function createCheckpointHandler(stores: CheckpointStores, scope: History
         return await bootstrap(stores, trustedScope)
       }
       if (url.pathname === "/v1/archive") {
-        exact(input, ["checkpointID", "kind"])
+        exact(
+          input,
+          input && typeof input === "object" && Object.hasOwn(input, "filesRevisionID")
+            ? ["checkpointID", "kind", "filesRevisionID"]
+            : ["checkpointID", "kind"],
+        )
         rejectEnvelopeScopeFields(input)
         return await archive(stores, trustedScope, decode(ArchiveInput, input) as typeof ArchiveInput.Type)
       }
@@ -120,13 +126,16 @@ export function createCheckpointHandler(stores: CheckpointStores, scope: History
 async function bootstrap(stores: CheckpointStores, scope: HistoryScope) {
   const checkpoint = await acceptedCheckpoint(stores.history, scope)
   if (!checkpoint) return success({ checkpoint: null })
+  const files = await stores.history.fileRevision(scope)
+  if (files && files.data.checkpointID !== checkpoint.data.id) throw new CheckpointRpcError("conflict")
   const masters = readMasterKeys(stores.masterKeyJson)
   try {
     return success({
       checkpoint: checkpoint.data,
+      ...(files ? { filesRevision: files.data } : {}),
       keys: {
         sqlite: derivedKey(scope, checkpoint.data.sqlite.keyID, masters),
-        files: derivedKey(scope, checkpoint.data.files.keyID, masters),
+        files: derivedKey(scope, (files?.data.archive ?? checkpoint.data.files).keyID, masters),
       },
     })
   } finally {
@@ -139,7 +148,10 @@ async function archive(stores: CheckpointStores, scope: HistoryScope, input: typ
   const checkpoint = await stores.history.checkpoint(scope)
   if (!checkpoint) throw new CheckpointRpcError("conflict")
   if (checkpoint.data.id !== input.checkpointID) throw new CheckpointRpcError("conflict")
-  const accepted = checkpoint.data[input.kind]
+  const files = await stores.history.fileRevision(scope)
+  if (files?.data.id !== input.filesRevisionID || (files && files.data.checkpointID !== input.checkpointID))
+    throw new CheckpointRpcError("conflict")
+  const accepted = input.kind === "files" && files ? files.data.archive : checkpoint.data[input.kind]
   const opened = await stores.backups.open(scope, accepted.backupID)
   if (!sameArchive(opened.manifest, accepted)) {
     cancelStream(opened.body)

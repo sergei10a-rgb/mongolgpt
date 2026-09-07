@@ -25,7 +25,7 @@ try {
     remoteBindings: false,
     envFiles: [],
   })
-  for (const file of ["0001_history.sql", "0002_history_checkpoint.sql"]) {
+  for (const file of ["0001_history.sql", "0002_history_checkpoint.sql", "0003_file_revision.sql"]) {
     const migration = await readFile(fileURLToPath(new URL(`../migrations/${file}`, import.meta.url)), "utf8")
     for (const statement of unstable_splitSqlQuery(migration)) await platform.env.DB.prepare(statement).run()
   }

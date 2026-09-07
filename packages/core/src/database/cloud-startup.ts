@@ -12,6 +12,7 @@ const envelope = Schema.Union([
   Schema.Struct({ checkpoint: Schema.Null }),
   Schema.Struct({
     checkpoint: CloudCheckpoint.Checkpoint,
+    filesRevision: Schema.optional(CloudCheckpoint.FileRevision),
     keys: Schema.Struct({ sqlite: Schema.String, files: Schema.String }),
   }),
 ])
@@ -26,7 +27,8 @@ interface Input {
   signal?: AbortSignal
 }
 
-let prepared: { checkpoint: CloudCheckpoint.Checkpoint | null; database: string } | undefined
+type Baseline = CloudCheckpoint.Checkpoint & { filesRevisionID?: string }
+let prepared: { checkpoint: Baseline | null; database: string } | undefined
 
 /** CLI boundary, before account storage or AppRuntime can open the database. */
 export async function prepare(input: Input = { root: "/workspace" }) {
@@ -58,7 +60,7 @@ export function baseline() {
 /** Only replaces a pristine container root. Nonempty roots must be checkpointed
  * by the file lifecycle before replacement; never discard uncheckpointed edits.
  */
-export async function bootstrap(input: Input): Promise<CloudCheckpoint.Checkpoint | null> {
+export async function bootstrap(input: Input): Promise<Baseline | null> {
   const root = resolve(input.root)
   const parent = dirname(root)
   const signal = input.signal
@@ -105,6 +107,8 @@ export async function bootstrap(input: Input): Promise<CloudCheckpoint.Checkpoin
       signal.throwIfAborted()
       return null
     }
+    if (data.filesRevision && data.filesRevision.checkpointID !== data.checkpoint.id) throw new Error()
+    const checkpoint = data.filesRevision ? { ...data.checkpoint, files: data.filesRevision.archive } : data.checkpoint
     for (const kind of ["sqlite", "files"] as const) {
       const key = Buffer.from(data.keys[kind], "base64")
       keys.push(key)
@@ -113,8 +117,12 @@ export async function bootstrap(input: Input): Promise<CloudCheckpoint.Checkpoin
     scratch = await mkdtemp(join(parent, ".mongolgpt-startup-"))
     await protectBackupPath(scratch, "directory")
     for (const kind of ["sqlite", "files"] as const) {
-      const archive = data.checkpoint[kind]
-      const response = await send("/v1/archive", { checkpointID: data.checkpoint.id, kind })
+      const archive = checkpoint[kind]
+      const response = await send("/v1/archive", {
+        checkpointID: checkpoint.id,
+        kind,
+        filesRevisionID: data.filesRevision?.id,
+      })
       if (
         response.headers.get("content-type")?.split(";")[0].trim() !== "application/octet-stream" ||
         response.headers.get("content-length") !== String(archive.bytes)
@@ -147,7 +155,7 @@ export async function bootstrap(input: Input): Promise<CloudCheckpoint.Checkpoin
     const restored = await Effect.runPromise(
       CloudRestore.restore({
         parent: scratch,
-        checkpoint: data.checkpoint,
+        checkpoint,
         sqlite: { source: join(scratch, "sqlite.mgptbackup"), key: keys[0] },
         files: { source: join(scratch, "files.mgptbackup"), key: keys[1] },
       }),
@@ -169,7 +177,7 @@ export async function bootstrap(input: Input): Promise<CloudCheckpoint.Checkpoin
       preserve = false
       throw error
     }
-    return data.checkpoint
+    return data.filesRevision ? { ...checkpoint, filesRevisionID: data.filesRevision.id } : checkpoint
   } catch {
     throw unavailable()
   } finally {

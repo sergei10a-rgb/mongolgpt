@@ -73,3 +73,18 @@ function unique<T>(rows: readonly T[], key: (row: T) => string) {
 function invalid() {
   return new HistoryError("invalid_input")
 }
+
+export function decodeFileRevision(input: unknown): CloudCheckpoint.FileRevision {
+  try {
+    const json = JSON.stringify(input)
+    if (typeof json !== "string" || new TextEncoder().encode(json).byteLength > 4096) throw invalid()
+    const value = Schema.decodeUnknownSync(CloudCheckpoint.FileRevision)(
+      Schema.decodeUnknownSync(Schema.UnknownFromJsonString)(json),
+      { onExcessProperty: "error" },
+    )
+    if ((value.sequence === 1) !== (value.previousID === null) || value.previousID === value.id) throw invalid()
+    return value
+  } catch {
+    throw invalid()
+  }
+}

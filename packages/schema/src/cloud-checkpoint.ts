@@ -34,3 +34,12 @@ export type Archive = typeof Archive.Type
 
 export const Checkpoint = Schema.Struct({ id: UUID, inventory: Inventory, sqlite: Archive, files: Archive })
 export type Checkpoint = typeof Checkpoint.Type
+
+export const FileRevision = Schema.Struct({
+  id: UUID,
+  checkpointID: UUID,
+  sequence: Sequence.check(Schema.isGreaterThan(0)),
+  previousID: Schema.NullOr(UUID),
+  archive: Archive,
+})
+export interface FileRevision extends Schema.Schema.Type<typeof FileRevision> {}

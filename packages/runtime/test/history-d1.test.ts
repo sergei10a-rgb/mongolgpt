@@ -25,6 +25,12 @@ afterAll(async () => {
 
 for (const fixture of [
   {
+    name: "file revisions and replacement recovery",
+    script: "file-revision.integration.ts",
+    prefix: "FILE_REVISION_RESULT ",
+    assertions: 35,
+  },
+  {
     name: "history persistence and concurrency",
     script: "history-d1.integration.ts",
     prefix: "HISTORY_D1_RESULT ",

@@ -12,6 +12,53 @@ const master = Buffer.from("9b4f5d452df4b2a252956e2a31a8245f5f6453c8849974c1f94e
 const masterKeyJson = JSON.stringify({ key_checkpoint_rpc: master.toString("base64") })
 
 describe("checkpoint rpc", () => {
+  test("selects the current file revision and rejects stale or missing archive guards", async () => {
+    const checkpoint = checkpointFixture()
+    const revision: CloudCheckpoint.FileRevision = {
+      id: crypto.randomUUID(),
+      checkpointID: checkpoint.id,
+      sequence: 1,
+      previousID: null,
+      archive: { ...checkpoint.files, backupID: crypto.randomUUID(), keyID: "key_rotated" },
+    }
+    const backups = backupStore({ ...checkpoint, files: revision.archive })
+    const handler = createCheckpointHandler(
+      {
+        history: historyStore({ checkpoint, revision }),
+        backups,
+        masterKeyJson: JSON.stringify({
+          key_checkpoint_rpc: master.toString("base64"),
+          key_rotated: master.toString("base64"),
+        }),
+      },
+      scope,
+    )
+    const boot = await handler(request("/bootstrap", {}))
+    expect(boot.status).toBe(200)
+    expect(await boot.json()).toMatchObject({
+      checkpoint,
+      filesRevision: revision,
+      keys: { files: canonicalBase64(deriveRuntimeBackupKey(scope, "key_rotated", master)) },
+    })
+    for (const kind of ["sqlite", "files"]) {
+      expect((await handler(request("/archive", { checkpointID: checkpoint.id, kind }))).status).toBe(409)
+      expect(
+        (
+          await handler(
+            request("/archive", { checkpointID: checkpoint.id, kind, filesRevisionID: crypto.randomUUID() }),
+          )
+        ).status,
+      ).toBe(409)
+    }
+    expect(backups.opened).toHaveLength(0)
+    const stream = await handler(
+      request("/archive", { checkpointID: checkpoint.id, kind: "files", filesRevisionID: revision.id }),
+    )
+    expect(stream.status).toBe(200)
+    await stream.arrayBuffer()
+    expect(backups.opened).toEqual([{ scope, backupID: revision.archive.backupID }])
+  })
+
   test("fails closed when the internal D1 binding is missing", async () => {
     const response = await handleCheckpointOutbound(request("/bootstrap", {}), {}, { params: scope })
 
@@ -354,11 +401,13 @@ function historyStore(input: {
   checkpoint?: CloudCheckpoint.Checkpoint
   epoch?: number
   checkpointError?: Error
+  revision?: CloudCheckpoint.FileRevision
   calls?: string[]
 }) {
   const calls = input.calls ?? []
   return {
     calls,
+    fileRevision: async () => (input.revision ? { data: input.revision, digest: "2".repeat(64) } : undefined),
     checkpoint: async (tenant: HistoryScope) => {
       calls.push(`checkpoint:${tenant.accountID}:${tenant.workspaceID}`)
       if (input.checkpointError) throw input.checkpointError

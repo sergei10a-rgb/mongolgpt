@@ -1,4 +1,4 @@
-import { decodeCheckpoint } from "./checkpoint-contract"
+import { decodeCheckpoint, decodeFileRevision } from "./checkpoint-contract"
 import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 
 export type HistoryScope = { accountID: string; workspaceID: string }
@@ -47,6 +47,7 @@ type StoredEvent = {
 }
 
 type StoredCheckpoint = { checkpoint_id: string; digest: string; data: string; epoch: number; writer_id: string }
+type StoredFileRevision = StoredCheckpoint & { revision_id: string; sequence: number; previous_id: string | null }
 
 // This store is Worker-internal. Callers must derive scope from trusted identity,
 // never from request JSON. Events must already be schema-encoded/versioned by
@@ -89,6 +90,95 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
     } catch {
       throw new HistoryError("unavailable")
     }
+  }
+
+  function latestFiles(scope: HistoryScope) {
+    return db
+      .prepare(
+        `SELECT revision_id, checkpoint_id, sequence, previous_id, digest, data, epoch, writer_id
+      FROM runtime_file_revision WHERE account_id = ? AND workspace_id = ? ORDER BY sequence DESC LIMIT 1`,
+      )
+      .bind(scope.accountID, scope.workspaceID)
+  }
+
+  async function fileRevision(tenant: HistoryScope) {
+    const scope = { ...tenant }
+    validateScope(scope)
+    const results = await batch<StoredFileRevision>([latestFiles(scope), checkpointRow(scope)])
+    const row = results[0].results[0]
+    if (!row) return undefined
+    try {
+      const data = decodeFileRevision(JSON.parse(row.data))
+      if (
+        data.id !== row.revision_id ||
+        data.sequence !== row.sequence ||
+        data.previousID !== row.previous_id ||
+        data.checkpointID !== row.checkpoint_id ||
+        data.checkpointID !== results[1].results[0]?.checkpoint_id ||
+        (await digest(canonical(data))) !== row.digest
+      )
+        throw new Error()
+      return { data, digest: row.digest }
+    } catch {
+      throw new HistoryError("unavailable")
+    }
+  }
+
+  // Internal verified receipt: the R2 boundary authenticates the archive before
+  // this CAS. One INSERT publishes the complete file set, including deletions.
+  async function publishFiles(writerLease: HistoryLease, input: CloudCheckpoint.FileRevision) {
+    const lease = { ...writerLease }
+    validateScope(lease)
+    integer(lease.epoch, 1)
+    identifier(lease.writerID)
+    const data = decodeFileRevision(input)
+    const json = canonical(data)
+    const fingerprint = await digest(json)
+    const scope = [lease.accountID, lease.workspaceID]
+    const result = await batch<StoredFileRevision>([
+      db
+        .prepare(
+          `INSERT INTO runtime_file_revision
+        (account_id, workspace_id, revision_id, checkpoint_id, sequence, previous_id, epoch, writer_id, digest, data)
+        SELECT w.account_id, w.workspace_id, ?, c.checkpoint_id, ?, ?, w.epoch, w.writer_id, ?, ?
+        FROM runtime_history_writer w JOIN runtime_history_checkpoint c
+          ON c.account_id = w.account_id AND c.workspace_id = w.workspace_id
+        WHERE w.account_id = ? AND w.workspace_id = ? AND w.epoch = ? AND w.writer_id = ? AND c.checkpoint_id = ?
+          AND COALESCE((SELECT sequence FROM runtime_file_revision WHERE account_id = ? AND workspace_id = ?
+            ORDER BY sequence DESC LIMIT 1), 0) = ?
+          AND (SELECT revision_id FROM runtime_file_revision WHERE account_id = ? AND workspace_id = ?
+            ORDER BY sequence DESC LIMIT 1) IS ?
+        ON CONFLICT DO NOTHING`,
+        )
+        .bind(
+          data.id,
+          data.sequence,
+          data.previousID,
+          fingerprint,
+          json,
+          ...scope,
+          lease.epoch,
+          lease.writerID,
+          data.checkpointID,
+          ...scope,
+          data.sequence - 1,
+          ...scope,
+          data.previousID,
+        ),
+      latestFiles(lease),
+      writer(lease),
+    ])
+    const current = result[2].results[0]
+    if (current?.epoch !== lease.epoch || current.writer_id !== lease.writerID) throw new HistoryError("fenced")
+    const stored = result[1].results[0]
+    if (
+      stored?.revision_id !== data.id ||
+      stored.digest !== fingerprint ||
+      stored.epoch !== lease.epoch ||
+      stored.writer_id !== lease.writerID
+    )
+      throw new HistoryError("conflict")
+    return { data, digest: fingerprint }
   }
 
   // Internal receipt only: the caller must authenticate both R2 archives first.
@@ -176,7 +266,7 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
 
   async function claim(
     tenant: HistoryScope,
-    claim: { expectedEpoch: number; writerID: string; checkpointID?: string },
+    claim: { expectedEpoch: number; writerID: string; checkpointID?: string; filesRevisionID?: string },
   ): Promise<HistoryLease> {
     const scope = { ...tenant }
     const input = { ...claim }
@@ -184,21 +274,24 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
     integer(input.expectedEpoch)
     identifier(input.writerID)
     if (input.checkpointID !== undefined) identifier(input.checkpointID)
+    if (input.filesRevisionID !== undefined) identifier(input.filesRevisionID)
     const next = input.expectedEpoch + 1
     integer(next)
-    const result = await batch<{ epoch: number; writer_id: string; checkpoint_id: string }>([
+    const result = await batch<{ epoch: number; writer_id: string; checkpoint_id: string; revision_id: string }>([
       db
         .prepare(
           `INSERT INTO runtime_history_writer (account_id, workspace_id, epoch, writer_id)
-        SELECT ?, ?, 1, ? WHERE ? = 0 ON CONFLICT (account_id, workspace_id) DO NOTHING`,
+        SELECT ?, ?, 1, ? WHERE ? = 0 AND ? IS NULL ON CONFLICT (account_id, workspace_id) DO NOTHING`,
         )
-        .bind(scope.accountID, scope.workspaceID, input.writerID, input.expectedEpoch),
+        .bind(scope.accountID, scope.workspaceID, input.writerID, input.expectedEpoch, input.filesRevisionID ?? null),
       db
         .prepare(
           `UPDATE runtime_history_writer SET epoch = ?, writer_id = ?
         WHERE account_id = ? AND workspace_id = ? AND epoch = ? AND writer_id != ?
           AND NOT EXISTS (SELECT 1 FROM runtime_history_checkpoint WHERE account_id = ? AND workspace_id = ?
-            AND checkpoint_id != COALESCE(?, ''))`,
+            AND checkpoint_id != COALESCE(?, ''))
+          AND (SELECT revision_id FROM runtime_file_revision WHERE account_id = ? AND workspace_id = ?
+            ORDER BY sequence DESC LIMIT 1) IS ?`,
         )
         .bind(
           next,
@@ -210,12 +303,17 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
           scope.accountID,
           scope.workspaceID,
           input.checkpointID ?? null,
+          scope.accountID,
+          scope.workspaceID,
+          input.filesRevisionID ?? null,
         ),
       writer(scope),
       checkpointRow(scope),
+      latestFiles(scope),
     ])
     if (result[3].results[0] && result[3].results[0].checkpoint_id !== input.checkpointID)
       throw new HistoryError("conflict")
+    if (result[4].results[0]?.revision_id !== input.filesRevisionID) throw new HistoryError("conflict")
     const row = result[2].results[0]
     if (row?.epoch !== next || row.writer_id !== input.writerID) throw new HistoryError("fenced")
     return { ...scope, epoch: next, writerID: input.writerID }
@@ -392,7 +490,7 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
     return { entries, cursor: entries.at(-1)?.cursor ?? after, hasMore: result[0].results.length > limit }
   }
 
-  return { epoch, claim, append, erase, read, checkpoint, publishCheckpoint }
+  return { epoch, claim, append, erase, read, checkpoint, publishCheckpoint, fileRevision, publishFiles }
 }
 
 function identifier(value: unknown) {

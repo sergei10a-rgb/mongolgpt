@@ -1,7 +1,7 @@
 import { createDecipheriv, createHash } from "node:crypto"
 import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { createRuntimeBackupStore, deriveRuntimeBackupKey, RuntimeBackupError } from "./backup"
-import { decodeCheckpoint } from "./checkpoint-contract"
+import { decodeCheckpoint, decodeFileRevision } from "./checkpoint-contract"
 import { createHistoryStore, type HistoryLease, type HistoryScope } from "./history"
 
 const magic = new TextEncoder().encode("MONGOLGPT-SQLITE-BACKUP\0\x01")
@@ -81,7 +81,7 @@ export function createRuntimeCheckpointStore(
         if (bytes !== ref.plaintext.bytes || hash.digest("hex") !== ref.plaintext.sha256)
           throw new RuntimeBackupError("invalid")
       } finally {
-        await reader.cancel().catch(() => {})
+        void reader.cancel().catch(() => {})
         reader.releaseLock()
       }
     } catch (error) {
@@ -109,5 +109,20 @@ export function createRuntimeCheckpointStore(
     return checkpoint
   }
 
-  return { publish, read }
+  async function publishFiles(writer: HistoryLease, input: CloudCheckpoint.FileRevision) {
+    const lease = { ...writer }
+    const data = decodeFileRevision(input)
+    await verify({ accountID: lease.accountID, workspaceID: lease.workspaceID }, data.archive)
+    return history.publishFiles(lease, data)
+  }
+
+  async function readFiles(tenant: HistoryScope) {
+    const scope = { ...tenant }
+    const revision = await history.fileRevision(scope)
+    if (!revision) return undefined
+    await verify(scope, revision.data.archive)
+    return revision
+  }
+
+  return { publish, read, publishFiles, readFiles }
 }

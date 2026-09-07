@@ -71,9 +71,10 @@ if (corrupt) {
   console.log("checkpoint-startup: restored")
   assert.equal(process.cwd(), directory)
   assert(CloudStartup.baseline())
+  assert(CloudStartup.baseline()?.filesRevisionID)
   assert.equal(
     await fs.readFile(path.join(directory, "synthetic/transcript.txt"), "utf8"),
-    "synthetic checkpoint file payload",
+    "file revision after checkpoint",
   )
   const { AppRuntime } = await import("../../src/effect/app-runtime")
   const { EventV2Bridge } = await import("../../src/event-v2-bridge")

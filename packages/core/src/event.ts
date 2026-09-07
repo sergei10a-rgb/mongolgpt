@@ -761,7 +761,15 @@ export const layer = Layer.unwrap(
     if (restore) {
       const { CloudStartup } = yield* Effect.promise(() => import("./database/cloud-startup"))
       const baseline = CloudStartup.baseline()
-      return layerWith(createCloudRecovery(createCloudHistory({ checkpointID: baseline?.id }), baseline).eventOptions)
+      const cloud = createCloudHistory({ checkpointID: baseline?.id, filesRevisionID: baseline?.filesRevisionID })
+      // File revision admission is separate from the immutable SQLite inventory.
+      const checkpoint = baseline && {
+        id: baseline.id,
+        inventory: baseline.inventory,
+        sqlite: baseline.sqlite,
+        files: baseline.files,
+      }
+      return layerWith(createCloudRecovery(cloud, checkpoint).eventOptions)
     }
     return layerWith(createCloudRecovery(createCloudHistory()).eventOptions)
   }).pipe(Effect.orDie),
