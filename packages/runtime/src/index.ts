@@ -1,6 +1,7 @@
 import { ContainerProxy, getSandbox, Sandbox, type Process } from "@cloudflare/sandbox"
 import { createRuntimeHandler, createRuntimeProcessStarter, RUNTIME_PROCESS_ID, type RuntimeVariables } from "./runtime"
 import { handleHistoryOutbound } from "./history-rpc"
+import { handleCheckpointOutbound } from "./checkpoint-rpc"
 
 export { ContainerProxy }
 
@@ -28,7 +29,7 @@ export const blockedEgressHosts = [
 
 export class MongolGPTSandbox extends Sandbox {
   static override get outboundHandlers() {
-    return { history: handleHistoryOutbound }
+    return { history: handleHistoryOutbound, checkpoint: handleCheckpointOutbound }
   }
 
   enableInternet = false
@@ -51,10 +52,18 @@ export class MongolGPTSandbox extends Sandbox {
 interface RuntimeEnvironment extends RuntimeVariables {
   Sandbox: DurableObjectNamespace<MongolGPTSandbox>
   HISTORY?: D1Database
+  RUNTIME_BACKUPS?: R2Bucket
+  MONGOLGPT_RUNTIME_BACKUP_KEYS?: string
 }
 
 const handler = createRuntimeHandler<RuntimeEnvironment>({
   sandbox: async (env, id, scope) => {
+    if (
+      env.MONGOLGPT_CLOUD_HISTORY === "true" &&
+      (!env.HISTORY || !env.RUNTIME_BACKUPS || !env.MONGOLGPT_RUNTIME_BACKUP_KEYS)
+    ) {
+      throw new Error("Cloud сэргээх хадгалалт эсвэл түлхүүр тохируулаагүй байна.")
+    }
     const sandbox = getSandbox(env.Sandbox, id, {
       normalizeId: true,
       sleepAfter: "10m",
@@ -62,6 +71,8 @@ const handler = createRuntimeHandler<RuntimeEnvironment>({
     })
     // Scope is supplied by the verified Worker identity, never by sandbox request JSON.
     if (env.HISTORY) await sandbox.setOutboundByHost("history.mongolgpt.internal", "history", scope)
+    if (env.MONGOLGPT_CLOUD_HISTORY === "true")
+      await sandbox.setOutboundByHost("checkpoint.mongolgpt.internal", "checkpoint", scope)
     return sandbox
   },
   report: (failure) => {

@@ -47,6 +47,7 @@ export interface RuntimeVariables {
   MONGOLGPT_RUNTIME_RATE_LIMITER: RuntimeRateLimiter
   MONGOLGPT_RUNTIME_SECRET: string
   MONGOLGPT_RUNTIME_VERSION?: string
+  MONGOLGPT_CLOUD_HISTORY?: string
   STAGE: string
 }
 
@@ -334,7 +335,7 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
         accountID: authentication.account.id,
         workspaceID: authentication.workspace.id,
       })
-      await ensureServer(sandbox, identity.password, consoleOrigin)
+      await ensureServer(sandbox, identity.password, consoleOrigin, env.MONGOLGPT_CLOUD_HISTORY === "true")
       if (authentication.expiresAt <= Date.now()) {
         return cors(json({ error: "Runtime сессийн хугацаа дууссан байна. Дахин нэвтэрнэ үү." }, 401), appOrigin)
       }
@@ -581,11 +582,15 @@ function requestDirectory(request: Request, url: URL) {
   return directory && values.every((value) => value === directory) ? directory : null
 }
 
-async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOrigin: string) {
+async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOrigin: string, restore: boolean) {
   const existing = await sandbox.getProcess(RUNTIME_PROCESS_ID).catch((error) => {
     throw RuntimeFailure.create("runtime_process_lookup_failed", error)
   })
-  if (existing && (await waitForServer(existing, sandbox, password))) return
+  if (existing && (await waitForServer(existing, sandbox, password))) {
+    if (restore && !(await serverResponding(sandbox, password, true)))
+      throw RuntimeFailure.create("runtime_unavailable")
+    return
+  }
 
   const started = await sandbox
     .startProcess("/usr/local/bin/mongolgpt serve --hostname 0.0.0.0 --port 4096", {
@@ -607,6 +612,14 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOr
         MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
         MONGOLGPT_CONSOLE_URL: consoleOrigin,
         MONGOLGPT_API_KEY: "runtime",
+        ...(restore
+          ? {
+              MONGOLGPT_CLOUD_HISTORY: "true",
+              MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE: "true",
+              MONGOLGPT_DB: `${WORKSPACE_ROOT}/.mongolgpt/runtime.sqlite`,
+              XDG_STATE_HOME: `${WORKSPACE_ROOT}/.mongolgpt/state`,
+            }
+          : {}),
       },
     })
     .catch(async (error) => {
@@ -616,6 +629,7 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOr
     })
 
   if (!(await waitForServer(started, sandbox, password))) throw RuntimeFailure.create("runtime_process_exited")
+  if (restore && !(await serverResponding(sandbox, password, true))) throw RuntimeFailure.create("runtime_unavailable")
 }
 
 async function waitForServer(process: RuntimeProcess, sandbox: RuntimeSandbox, password: string) {
@@ -637,7 +651,7 @@ async function waitForServer(process: RuntimeProcess, sandbox: RuntimeSandbox, p
   return true
 }
 
-async function serverResponding(sandbox: RuntimeSandbox, password: string) {
+async function serverResponding(sandbox: RuntimeSandbox, password: string, restored = false) {
   const controller = new AbortController()
   let timer: ReturnType<typeof setTimeout> | undefined
   const deadline = new Promise<boolean>((resolve) => {
@@ -658,6 +672,7 @@ async function serverResponding(sandbox: RuntimeSandbox, password: string) {
     if (
       controller.signal.aborted ||
       response.status !== 200 ||
+      (restored && response.headers.get("x-mongolgpt-runtime-history") !== "checkpoint-v1") ||
       response.headers.get("content-type")?.split(";")[0].trim() !== "application/json"
     ) {
       void response.body?.cancel().catch(() => {})
@@ -763,7 +778,7 @@ async function boundedRequestBody(request: Request) {
     if (next.done) break
     size += next.value.byteLength
     if (size > MAX_REQUEST_BODY_BYTES) {
-      await reader.cancel()
+      void reader.cancel().catch(() => {})
       throw new RequestBodyTooLarge()
     }
     chunks.push(next.value)

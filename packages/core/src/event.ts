@@ -757,6 +757,12 @@ export const layer = Layer.unwrap(
     if (mode !== "hosted") return yield* Effect.die(new Error("Cloud түүхийг зөвхөн hosted runtime-д идэвхжүүлнэ."))
     const { createCloudHistory } = yield* Effect.promise(() => import("./event/cloud-history"))
     const { createCloudRecovery } = yield* Effect.promise(() => import("./event/cloud-recovery"))
+    const restore = yield* Config.boolean("MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE").pipe(Config.withDefault(false))
+    if (restore) {
+      const { CloudStartup } = yield* Effect.promise(() => import("./database/cloud-startup"))
+      const baseline = CloudStartup.baseline()
+      return layerWith(createCloudRecovery(createCloudHistory({ checkpointID: baseline?.id }), baseline).eventOptions)
+    }
     return layerWith(createCloudRecovery(createCloudHistory()).eventOptions)
   }).pipe(Effect.orDie),
 )

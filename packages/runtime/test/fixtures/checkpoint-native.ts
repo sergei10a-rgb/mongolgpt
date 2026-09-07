@@ -47,6 +47,7 @@ export interface CheckpointFixture {
 export async function createCheckpointFixture(
   root: string,
   scope: HistoryScope = defaultScope,
+  workspace = "/workspace",
 ): Promise<CheckpointFixture> {
   const token = `${scope.accountID}-${scope.workspaceID}-${crypto.randomUUID()}`
   const source = join(root, `${token}-native.sqlite`)
@@ -56,7 +57,7 @@ export async function createCheckpointFixture(
   const filesArchive = join(root, `${token}-files.backup`)
   const key = deriveRuntimeBackupKey(scope, keyID, master)
 
-  const expectedEventIDs = await seedNative(source)
+  const expectedEventIDs = await seedNative(source, workspace)
   const sqliteReport = await Effect.runPromise(
     DatabaseBackup.create({ source, destination: sqliteArchive, key: Buffer.from(key) }),
   )
@@ -83,7 +84,8 @@ export async function createCheckpointFixture(
   }
 }
 
-async function seedNative(filename: string) {
+async function seedNative(filename: string, workspace: string) {
+  const directory = (name: string) => (workspace === "/workspace" ? `/workspace/${name}` : join(workspace, name))
   const projectID = "checkpoint_project"
   const sessionID = "ses_checkpoint"
   const project = Project.ID.make(projectID)
@@ -107,17 +109,17 @@ async function seedNative(filename: string) {
             type: "saved",
             info: {
               id: project,
-              worktree: "/workspace/checkpoint",
+              worktree: directory("checkpoint"),
               vcs: "git",
               name: "Checkpoint Project",
               icon: { color: "blue" },
               commands: { start: "bun dev" },
               time: { created: 1710000000000, updated: 1710000001000, initialized: 1710000000500 },
-              sandboxes: ["/workspace/checkpoint-copy"],
+              sandboxes: [directory("checkpoint-copy")],
             },
             directories: [
               {
-                directory: "/workspace/checkpoint",
+                directory: directory("checkpoint"),
                 type: "git_worktree",
                 strategy: "git-worktree",
                 time: 1710000000000,
@@ -136,7 +138,7 @@ async function seedNative(filename: string) {
             slug: "checkpoint",
             projectID: project,
             workspaceID: WorkspaceID.ascending("wrk_native_checkpoint"),
-            directory: "/workspace/checkpoint",
+            directory: directory("checkpoint"),
             title: "Checkpoint Session",
             version: "test",
             metadata: { fixture: "checkpoint" },
@@ -181,7 +183,7 @@ async function seedNative(filename: string) {
         .insert(ProjectTable)
         .values({
           id: Project.ID.make("checkpoint_legacy"),
-          worktree: AbsolutePath.make("/workspace/legacy"),
+          worktree: AbsolutePath.make(directory("legacy")),
           vcs: "git",
           name: "Legacy Project",
           icon_color: "gray",
@@ -214,6 +216,8 @@ function seedFiles(filename: string) {
       "CREATE TABLE file (path TEXT PRIMARY KEY, type TEXT NOT NULL, mode INTEGER NOT NULL, bytes INTEGER NOT NULL, sha256 TEXT, content BLOB)",
     )
     const insert = db.prepare("INSERT INTO file VALUES (?, ?, ?, ?, ?, ?)")
+    for (const directory of ["checkpoint", "checkpoint-copy", "legacy"])
+      insert.run(directory, "directory", 448, 0, null, null)
     insert.run("synthetic", "directory", 448, 0, null, null)
     const text = Buffer.from("synthetic checkpoint file payload")
     const binary = Buffer.from([0, 1, 127, 255])

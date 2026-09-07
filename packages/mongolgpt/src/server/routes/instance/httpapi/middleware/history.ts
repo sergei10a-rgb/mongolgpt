@@ -1,11 +1,17 @@
 import { EventV2 } from "@mongolgpt/core/event"
 import { NamedError } from "@mongolgpt/core/util/error"
-import { Cause, Effect } from "effect"
+import { CloudStartup } from "@mongolgpt/core/database/cloud-startup"
+import { Cause, Config, Effect } from "effect"
 import { HttpRouter, HttpServerResponse } from "effect/unstable/http"
 
 export const historyLayer = HttpRouter.middleware<{ requires: EventV2.Service; handles: unknown }>()(
   Effect.gen(function* () {
     const events = yield* EventV2.Service
+    const restored = yield* Config.boolean("MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE").pipe(
+      Config.withDefault(false),
+      Effect.orDie,
+    )
+    if (restored) CloudStartup.baseline()
     const unavailable = () =>
       HttpServerResponse.jsonUnsafe(
         new NamedError.Unknown({
@@ -24,7 +30,12 @@ export const historyLayer = HttpRouter.middleware<{ requires: EventV2.Service; h
                   Effect.matchCauseEffect({
                     onFailure: (cause) =>
                       Cause.hasInterrupts(cause) ? Effect.failCause(cause) : Effect.succeed(unavailable()),
-                    onSuccess: () => Effect.succeed(response),
+                    onSuccess: () =>
+                      Effect.succeed(
+                        restored
+                          ? HttpServerResponse.setHeader(response, "x-mongolgpt-runtime-history", "checkpoint-v1")
+                          : response,
+                      ),
                   }),
                 ),
               ),

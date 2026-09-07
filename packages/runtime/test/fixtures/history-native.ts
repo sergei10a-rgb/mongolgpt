@@ -15,6 +15,8 @@ import { MessageTable, PartTable, SessionTable } from "../../../core/src/session
 import { EventTable } from "../../../core/src/event/sql"
 export { createCloudHistory } from "../../../core/src/event/cloud-history"
 export { createHistoryHandler, handleHistoryOutbound } from "../../src/history-rpc"
+export { handleCheckpointOutbound } from "../../src/checkpoint-rpc"
+export { CloudStartup } from "../../../core/src/database/cloud-startup"
 export { createHistoryStore } from "../../src/history"
 export { createRuntimeCheckpointStore } from "../../src/checkpoint"
 export { createRuntimeBackupStore, deriveRuntimeBackupKey } from "../../src/backup"

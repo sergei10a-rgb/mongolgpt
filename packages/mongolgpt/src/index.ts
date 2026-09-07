@@ -127,6 +127,10 @@ const cli = yargs(args)
     type: "boolean",
   })
   .middleware(async (opts) => {
+    if (process.env.MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE === "true") {
+      const { CloudStartup } = await import("@mongolgpt/core/database/cloud-startup")
+      await CloudStartup.prepare()
+    }
     accountTokenEncryptionInitialization ??= initializeCliAccountTokenEncryption()
     await accountTokenEncryptionInitialization.catch(() => undefined)
 

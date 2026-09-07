@@ -1,26 +1,48 @@
-import { expect, test } from "bun:test"
+import { afterAll, beforeAll, expect, test } from "bun:test"
 import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { isAbsolute, join, relative } from "node:path"
 
-test("runs real local D1 history persistence and concurrency checks under Node", async () => {
-  const node = Bun.which("node")
-  if (!node) throw new Error("Node is required for the local D1 integration harness")
-  const bundle = await mkdtemp(join(tmpdir(), "mongolgpt-history-rpc-"))
-  try {
-    const build = await Bun.build({
-      entrypoints: [fileURLToPath(new URL("./fixtures/history-native.ts", import.meta.url))],
-      outdir: bundle,
-      naming: "history-rpc.mjs",
-      target: "node",
-    })
-    if (!build.success) throw new Error(`history RPC build failed: ${build.logs.join("\n")}`)
+let bundle: string
+beforeAll(async () => {
+  bundle = await mkdtemp(join(tmpdir(), "mongolgpt-history-rpc-"))
+  const build = await Bun.build({
+    entrypoints: [fileURLToPath(new URL("./fixtures/history-native.ts", import.meta.url))],
+    outdir: bundle,
+    naming: "history-rpc.mjs",
+    target: "node",
+  })
+  if (!build.success) throw new Error(`history RPC build failed: ${build.logs.join("\n")}`)
+})
+afterAll(async () => {
+  if (!bundle) return
+  const inside = relative(tmpdir(), bundle)
+  if (!inside || inside.startsWith("..") || isAbsolute(inside)) throw new Error("history RPC cleanup escaped temp root")
+  await rm(bundle, { recursive: true, force: true })
+})
 
+for (const fixture of [
+  {
+    name: "history persistence and concurrency",
+    script: "history-d1.integration.ts",
+    prefix: "HISTORY_D1_RESULT ",
+    assertions: 40,
+  },
+  {
+    name: "hosted checkpoint startup and HTTP admission",
+    script: "checkpoint-startup.integration.ts",
+    prefix: "CHECKPOINT_STARTUP_RESULT ",
+    assertions: 20,
+  },
+])
+  test(`runs real local D1 ${fixture.name} checks under Node`, async () => {
+    const node = Bun.which("node")
+    if (!node) throw new Error("Node is required for the local D1 integration harness")
     const child = spawn(
       node,
-      ["--experimental-strip-types", "test/history-d1.integration.ts", join(bundle, "history-rpc.mjs")],
+      ["--experimental-strip-types", `test/${fixture.script}`, join(bundle, "history-rpc.mjs"), process.execPath],
       {
         cwd: fileURLToPath(new URL("..", import.meta.url)),
         windowsHide: true,
@@ -61,17 +83,11 @@ test("runs real local D1 history persistence and concurrency checks under Node",
         `local D1 integration failed (code=${output.code}, signal=${output.signal})\nstdout: ${output.stdout.slice(-2000)}\nstderr: ${output.stderr.slice(-2000)}`,
       )
     }
-    const resultLine = output.stdout.split(/\r?\n/).find((line) => line.startsWith("HISTORY_D1_RESULT "))
+    const resultLine = output.stdout.split(/\r?\n/).find((line) => line.startsWith(fixture.prefix))
     expect(resultLine).toBeDefined()
-    const result = JSON.parse(resultLine!.slice("HISTORY_D1_RESULT ".length))
+    const result = JSON.parse(resultLine!.slice(fixture.prefix.length))
     expect(result.ok).toBe(true)
     expect(typeof result.assertions).toBe("number")
-    expect(result.assertions).toBeGreaterThanOrEqual(40)
+    expect(result.assertions).toBeGreaterThanOrEqual(fixture.assertions)
     console.log(`Local D1: ${result.assertions} assertions passed`)
-  } finally {
-    const inside = relative(tmpdir(), bundle)
-    if (!inside || inside.startsWith("..") || isAbsolute(inside))
-      throw new Error("history RPC cleanup escaped temp root")
-    await rm(bundle, { recursive: true, force: true })
-  }
-}, 130_000)
+  }, 130_000)

@@ -124,7 +124,7 @@ export async function runCheckpointReplacementChecks(db: D1Database, bucket: R2B
   const first = await restore()
   equal(
     first.files,
-    { files: 2, directories: 1, bytes: Buffer.byteLength("synthetic checkpoint file payload") + 4 },
+    { files: 2, directories: 4, bytes: Buffer.byteLength("synthetic checkpoint file payload") + 4 },
     "file materializer returned wrong inventory",
   )
   await files(first.directory)

@@ -120,6 +120,32 @@ function deferred<Value>() {
 }
 
 describe("MongolGPT Cloudflare runtime", () => {
+  test("rejects oversized streamed requests without waiting for a stuck cancel", async () => {
+    const runtime = sandbox()
+    let cancelled = false
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+    const response = await handler(
+      hostedRequest("/session", {
+        method: "POST",
+        headers: { authorization: `Bearer ${await capability()}`, "content-type": "application/json" },
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new Uint8Array(16 * 1024 * 1024 + 1))
+          },
+          cancel() {
+            cancelled = true
+            return new Promise(() => {})
+          },
+        }),
+      }),
+      environment(),
+    )
+    expect(response.status).toBe(413)
+    expect(cancelled).toBe(true)
+    expect(runtime.started).toHaveLength(0)
+    expect(runtime.requests).toHaveLength(0)
+  })
+
   test("reports health only when both runtime secrets are configured", async () => {
     const handler = createRuntimeHandler<Environment>({ sandbox: () => sandbox().value })
 
@@ -432,6 +458,7 @@ describe("MongolGPT Cloudflare runtime", () => {
       MONGOLGPT_API_KEY: "runtime",
     })
     expect(Object.values(runtime.started[0]?.options.env ?? {})).not.toContain(token)
+    expect(runtime.started[0]?.options.env.MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE).toBeUndefined()
     expect(runtime.requests).toHaveLength(1)
     expect(runtime.requests[0]?.headers.get("cookie")).toBeNull()
     expect(runtime.requests[0]?.headers.get("authorization")).toStartWith("Basic ")
@@ -454,6 +481,70 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(decodeURIComponent(runtime.requests[0]?.headers.get("x-mongolgpt-directory") ?? "")).toBe(
       "/workspace/projects/demo",
     )
+  })
+
+  test("enables authenticated checkpoint startup without passing backup keys to the child", async () => {
+    const runtime = sandbox()
+    runtime.value.containerFetch = async (request) => {
+      runtime.requests.push(request)
+      return Response.json(
+        { healthy: true, version: "test" },
+        { headers: { "x-mongolgpt-runtime-history": "checkpoint-v1" } },
+      )
+    }
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+    const response = await handler(
+      hostedRequest("/project", { headers: { authorization: `Bearer ${await capability()}` } }),
+      { ...environment(), MONGOLGPT_CLOUD_HISTORY: "true" },
+    )
+    expect(response.status).toBe(200)
+    expect(runtime.started).toHaveLength(1)
+    expect(runtime.started[0].options.env).toMatchObject({
+      MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE: "true",
+      MONGOLGPT_CLOUD_HISTORY: "true",
+      MONGOLGPT_DB: "/workspace/.mongolgpt/runtime.sqlite",
+      XDG_STATE_HOME: "/workspace/.mongolgpt/state",
+    })
+    expect(runtime.started[0].options.env.MONGOLGPT_RUNTIME_BACKUP_KEYS).toBeUndefined()
+    expect(runtime.started[0].command).toBe("/usr/local/bin/mongolgpt serve --hostname 0.0.0.0 --port 4096")
+    expect(new URL(runtime.requests[0].url).pathname).toBe("/global/health")
+    expect(runtime.requests[0].headers.get("authorization")).toStartWith("Basic ")
+  })
+
+  test("does not reuse an old non-checkpoint server or overwrite its workspace", async () => {
+    const runtime = sandbox({ existing: process().value })
+    runtime.value.containerFetch = async (request) => {
+      runtime.requests.push(request)
+      return Response.json({ healthy: true, version: "old-server" })
+    }
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+    const response = await handler(
+      hostedRequest("/project", { headers: { authorization: `Bearer ${await capability()}` } }),
+      { ...environment(), MONGOLGPT_CLOUD_HISTORY: "true" },
+    )
+    expect(response.status).toBe(502)
+    expect(runtime.started).toHaveLength(0)
+    expect(runtime.requests).toHaveLength(1)
+    expect(new URL(runtime.requests[0].url).pathname).toBe("/global/health")
+  })
+
+  test("reuses a checkpoint-ready server only after authenticated schema validation", async () => {
+    const runtime = sandbox({ existing: process().value })
+    runtime.value.containerFetch = async (request) => {
+      runtime.requests.push(request)
+      return Response.json(
+        { healthy: true, version: "current" },
+        { headers: { "x-mongolgpt-runtime-history": "checkpoint-v1" } },
+      )
+    }
+    const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+    const response = await handler(
+      hostedRequest("/project", { headers: { authorization: `Bearer ${await capability()}` } }),
+      { ...environment(), MONGOLGPT_CLOUD_HISTORY: "true" },
+    )
+    expect(response.status).toBe(200)
+    expect(runtime.started).toHaveLength(0)
+    expect(runtime.requests).toHaveLength(2)
   })
 
   test("reuses a healthy server process instead of starting another", async () => {
