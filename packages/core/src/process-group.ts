@@ -28,6 +28,7 @@ export interface Command {
   cwd: string
   env: Readonly<Record<string, string>>
   stdio?: "pipe" | "ignore" | "inherit"
+  startupFD?: number
 }
 
 /** Linux hosted-supervisor boundary. The supervisor and SDK must stay outside
@@ -55,7 +56,7 @@ export async function create(input: Input) {
   let pending: Promise<unknown> = Promise.resolve()
   let closing: Promise<void> | undefined
   const lifetime = new AbortController()
-  const children = new Set<ChildProcess>()
+  const children = new Map<ChildProcess, Promise<void>>()
   try {
     await chmod(directory, 0o700)
     // Refuse unsupported kernels before starting any workspace process.
@@ -88,22 +89,36 @@ export async function create(input: Input) {
       const env = { ...command.env }
       const cwd = command.cwd
       const stdio = command.stdio ?? "pipe"
+      const startupFD = command.startupFD
       return serialized(async () => {
         available()
         if (!isAbsolute(executable) || !isAbsolute(cwd)) throw new IsolationError()
+        if (startupFD !== undefined && (!Number.isInteger(startupFD) || startupFD < 0)) throw new IsolationError()
         // Defense in depth if a different launcher build is dynamically linked.
         if (Object.keys(env).some((key) => /^(LD_|DYLD_)/.test(key))) throw new IsolationError()
         const file = await open(join(directory, "cgroup.procs"), constants.O_WRONLY | constants.O_NOFOLLOW)
         try {
           available()
-          const options: SpawnOptions = { cwd: "/", env, detached: true, stdio: [stdio, stdio, stdio, file.fd] }
+          const options: SpawnOptions = {
+            cwd: "/",
+            env,
+            detached: true,
+            stdio: [stdio, stdio, stdio, file.fd, startupFD ?? "ignore"],
+          }
           const child = spawn(launcher, [String(uid), String(gid), cwd, executable, ...args], options)
-          children.add(child)
-          child.once("exit", () => children.delete(child))
+          const terminal = Promise.withResolvers<void>()
+          children.set(child, terminal.promise)
+          const finished = () => {
+            children.delete(child)
+            child.removeListener("exit", finished)
+            child.removeListener("error", finished)
+            terminal.resolve()
+          }
+          child.once("exit", finished)
+          child.once("error", finished)
           await new Promise<void>((accept, reject) => {
             child.once("spawn", accept)
             child.once("error", () => {
-              children.delete(child)
               reject(new IsolationError())
             })
           })
@@ -153,9 +168,25 @@ export async function create(input: Input) {
         // Kill now, even if capture is awaiting IO. Keep the group until that
         // callback settles; never thaw or abandon its native cleanup early.
         await writeFile(kill, "1")
-        // A trusted launcher might still be about to join an empty group.
-        for (const child of children) child.kill("SIGKILL")
+        // Terminal listeners were registered at spawn, before either kill can
+        // finish a launcher. Bound this wait independently of capture settlement.
+        const launchers = [...children]
+        const timeout = new AbortController()
+        try {
+          for (const [child] of launchers) child.kill("SIGKILL")
+          await Promise.race([
+            Promise.all(launchers.map(([, terminal]) => terminal)),
+            setTimeout(5000, undefined, { signal: timeout.signal }).then(() => {
+              throw new IsolationError()
+            }),
+          ])
+        } finally {
+          timeout.abort()
+        }
         return serialized(async () => {
+          // A launcher could join and fork after the first sweep. No launcher
+          // can admit more descendants now; kill those late arrivals as well.
+          await writeFile(kill, "1")
           await waitFor(events, "populated", "0", 5000)
           await rmdir(directory)
           stopped = true

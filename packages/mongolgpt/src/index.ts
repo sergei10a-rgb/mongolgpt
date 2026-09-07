@@ -127,6 +127,11 @@ const cli = yargs(args)
     type: "boolean",
   })
   .middleware(async (opts) => {
+    if (process.env.MONGOLGPT_RUNTIME_SUPERVISOR === "true") {
+      if (opts._[0] !== "serve") throw new Error("Cloud хянагч зөвхөн сервер эхлүүлэх боломжтой.")
+      const { runRuntimeSupervisor } = await import("./cli/runtime-supervisor")
+      process.exit(await runRuntimeSupervisor())
+    }
     if (process.env.MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE === "true") {
       const { CloudStartup } = await import("@mongolgpt/core/database/cloud-startup")
       await CloudStartup.prepare()

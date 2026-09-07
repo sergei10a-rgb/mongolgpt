@@ -489,7 +489,7 @@ describe("MongolGPT Cloudflare runtime", () => {
       runtime.requests.push(request)
       return Response.json(
         { healthy: true, version: "test" },
-        { headers: { "x-mongolgpt-runtime-history": "checkpoint-v1" } },
+        { headers: { "x-mongolgpt-runtime-history": "checkpoint-v1", "x-mongolgpt-runtime-isolation": "cgroup-v1" } },
       )
     }
     const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
@@ -501,6 +501,7 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(runtime.started).toHaveLength(1)
     expect(runtime.started[0].options.env).toMatchObject({
       MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE: "true",
+      MONGOLGPT_RUNTIME_SUPERVISOR: "true",
       MONGOLGPT_CLOUD_HISTORY: "true",
       MONGOLGPT_DB: "/workspace/.mongolgpt/runtime.sqlite",
       XDG_STATE_HOME: "/workspace/.mongolgpt/state",
@@ -511,11 +512,16 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(runtime.requests[0].headers.get("authorization")).toStartWith("Basic ")
   })
 
-  test("does not reuse an old non-checkpoint server or overwrite its workspace", async () => {
+  const missingReceipts: Record<string, string>[] = [
+    {},
+    { "x-mongolgpt-runtime-history": "checkpoint-v1" },
+    { "x-mongolgpt-runtime-isolation": "cgroup-v1" },
+  ]
+  test.each(missingReceipts)("does not reuse a server missing a restore or isolation receipt (%j)", async (headers) => {
     const runtime = sandbox({ existing: process().value })
     runtime.value.containerFetch = async (request) => {
       runtime.requests.push(request)
-      return Response.json({ healthy: true, version: "old-server" })
+      return Response.json({ healthy: true, version: "old-server" }, { headers })
     }
     const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
     const response = await handler(
@@ -534,7 +540,7 @@ describe("MongolGPT Cloudflare runtime", () => {
       runtime.requests.push(request)
       return Response.json(
         { healthy: true, version: "current" },
-        { headers: { "x-mongolgpt-runtime-history": "checkpoint-v1" } },
+        { headers: { "x-mongolgpt-runtime-history": "checkpoint-v1", "x-mongolgpt-runtime-isolation": "cgroup-v1" } },
       )
     }
     const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
@@ -1604,7 +1610,13 @@ describe("runtime deployment contract", () => {
     const version = manifest.dependencies["@cloudflare/sandbox"]
     expect(version).toMatch(/^\d+\.\d+\.\d+$/)
     const dockerfile = await Bun.file(new URL("../Dockerfile", import.meta.url)).text()
-    expect(dockerfile.split(/\r?\n/)[0]).toBe(`FROM docker.io/cloudflare/sandbox:${version}`)
+    const stages = dockerfile.split(/\r?\n/).filter((line) => /^FROM\s/i.test(line))
+    expect(stages).toHaveLength(2)
+    expect(stages[0]).toMatch(/^FROM docker\.io\/alpine:3\.23@sha256:[0-9a-f]{64} AS workspace-launcher$/)
+    expect(stages.at(-1)).toBe(`FROM docker.io/cloudflare/sandbox:${version}`)
+    expect(dockerfile).toContain(
+      "COPY --from=workspace-launcher --chmod=0755 /workspace-launcher /usr/local/bin/mongolgpt-workspace-launcher",
+    )
     const sdk = await Bun.file(new URL("../package.json", import.meta.resolve("@cloudflare/sandbox"))).json()
     expect(sdk.version).toBe(version)
     const root = await Bun.file(new URL("../../../package.json", import.meta.url)).json()

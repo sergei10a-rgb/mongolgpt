@@ -27,8 +27,8 @@ interface Input {
   signal?: AbortSignal
 }
 
-type Baseline = CloudCheckpoint.Checkpoint & { filesRevisionID?: string }
-let prepared: { checkpoint: Baseline | null; database: string } | undefined
+export type Baseline = CloudCheckpoint.Checkpoint & { filesRevisionID?: string }
+let prepared: { checkpoint: Baseline | null; database: string; supervised: boolean } | undefined
 
 /** CLI boundary, before account storage or AppRuntime can open the database. */
 export async function prepare(input: Input = { root: "/workspace" }) {
@@ -45,11 +45,18 @@ export async function prepare(input: Input = { root: "/workspace" }) {
     if (prepared.database !== database) throw unavailable()
     return
   }
-  const checkpoint = await bootstrap(input)
+  const supervised = process.env.MONGOLGPT_RUNTIME_PREPARED_FD !== undefined
+  const { StartupHandoff } = await import("./startup-handoff")
+  const checkpoint = supervised ? await StartupHandoff.accept(root) : await bootstrap(input)
   // The SDK starts the child inside the old directory inode. Restore the stable
   // working directory after publication; all persisted project paths stay valid.
   process.chdir(root)
-  prepared = { checkpoint, database }
+  prepared = { checkpoint, database, supervised }
+}
+
+export function supervised() {
+  baseline()
+  return prepared!.supervised
 }
 
 export function baseline() {

@@ -616,6 +616,7 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOr
           ? {
               MONGOLGPT_CLOUD_HISTORY: "true",
               MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE: "true",
+              MONGOLGPT_RUNTIME_SUPERVISOR: "true",
               MONGOLGPT_DB: `${WORKSPACE_ROOT}/.mongolgpt/runtime.sqlite`,
               XDG_STATE_HOME: `${WORKSPACE_ROOT}/.mongolgpt/state`,
             }
@@ -673,6 +674,7 @@ async function serverResponding(sandbox: RuntimeSandbox, password: string, resto
       controller.signal.aborted ||
       response.status !== 200 ||
       (restored && response.headers.get("x-mongolgpt-runtime-history") !== "checkpoint-v1") ||
+      (restored && response.headers.get("x-mongolgpt-runtime-isolation") !== "cgroup-v1") ||
       response.headers.get("content-type")?.split(";")[0].trim() !== "application/json"
     ) {
       void response.body?.cancel().catch(() => {})

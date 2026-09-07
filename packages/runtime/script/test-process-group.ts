@@ -31,6 +31,13 @@ try {
     naming: "process-group.test.js",
   })
   if (!bundle.success) throw new Error("Workspace isolation integration build failed")
+  const startup = await Bun.build({
+    entrypoints: [join(root, "../core/test/fixture/startup-handoff-child.ts")],
+    target: "bun",
+    outdir: directory,
+    naming: "startup-child.js",
+  })
+  if (!startup.success) throw new Error("Workspace startup child build failed")
   const child = Bun.spawn([process.execPath, "test", join(directory, "process-group.test.js")], {
     cwd: directory,
     stdout: "inherit",
@@ -45,6 +52,7 @@ try {
       XDG_STATE_HOME: join(directory, "state"),
       MONGOLGPT_TEST_WORKSPACE_LAUNCHER: join(directory, "launcher"),
       MONGOLGPT_TEST_WORKSPACE_POLICY: join(directory, "policy"),
+      MONGOLGPT_TEST_STARTUP_CHILD: join(directory, "startup-child.js"),
     },
   })
   process.exitCode = await child.exited

@@ -1,0 +1,145 @@
+export * as StartupHandoff from "./startup-handoff"
+
+import { closeSync, fstatSync, readSync } from "node:fs"
+import { lstat, mkdtemp, open, readFile, rmdir, unlink } from "node:fs/promises"
+import { join, resolve } from "node:path"
+import { Schema } from "effect"
+import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
+import type { CloudStartup } from "./cloud-startup"
+
+const maxBytes = 1024 * 1024
+const UUID = Schema.String.check(
+  Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/),
+)
+const Packet = Schema.Struct({
+  version: Schema.Literal(1),
+  root: Schema.String,
+  group: Schema.String,
+  checkpoint: Schema.Union([
+    Schema.Null,
+    Schema.Struct({ data: CloudCheckpoint.Checkpoint, filesRevisionID: Schema.optional(UUID) }),
+  ]),
+})
+
+export class HandoffError extends Error {
+  constructor() {
+    super("Cloud серверт сэргээсэн төлөвийг найдвартай дамжуулж чадсангүй.")
+    this.name = "StartupHandoffError"
+  }
+}
+
+/** Root supervisor only. The packet has no encryption keys. It is unlinked
+ * before launch and inherited as a read-only fd, not a tenant-writable path. */
+export async function issue(input: { root: string; group: string; checkpoint: CloudStartup.Baseline | null }) {
+  if (process.platform !== "linux" || process.getuid?.() !== 0) throw new HandoffError()
+  const root = resolve(input.root)
+  const group = input.group
+  if (root !== input.root || !/^\/sys\/fs\/cgroup\/(?:[A-Za-z0-9_.-]+\/)*mongolgpt-[0-9a-f-]{36}$/.test(group))
+    throw new HandoffError()
+  const checkpoint = input.checkpoint
+  const packet = {
+    version: 1,
+    root,
+    group: group.slice("/sys/fs/cgroup".length),
+    checkpoint: checkpoint
+      ? {
+          data: {
+            id: checkpoint.id,
+            inventory: checkpoint.inventory,
+            sqlite: checkpoint.sqlite,
+            files: checkpoint.files,
+          },
+          ...(checkpoint.filesRevisionID ? { filesRevisionID: checkpoint.filesRevisionID } : {}),
+        }
+      : null,
+  }
+  const decoded = Schema.decodeUnknownSync(Packet)(packet, { onExcessProperty: "error" })
+  const bytes = Buffer.from(JSON.stringify(decoded))
+  if (bytes.length > maxBytes) throw new HandoffError()
+  const parent = await lstat("/run")
+  if (!parent.isDirectory() || parent.isSymbolicLink() || parent.uid !== 0 || (parent.mode & 0o022) !== 0)
+    throw new HandoffError()
+  const directory = await mkdtemp("/run/mongolgpt-startup-")
+  const path = join(directory, "packet")
+  try {
+    const writer = await open(path, "wx", 0o600)
+    try {
+      await writer.writeFile(bytes)
+      await writer.sync()
+    } finally {
+      await writer.close()
+    }
+    const reader = await open(path, "r")
+    try {
+      await unlink(path)
+      await rmdir(directory)
+      return reader
+    } catch (error) {
+      await reader.close()
+      throw error
+    }
+  } finally {
+    bytes.fill(0)
+    await unlink(path).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error
+    })
+    await rmdir(directory).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error
+    })
+  }
+}
+
+/** fd 4 is reserved for the root supervisor's startup receipt and consumed once.
+ * An ordinary CLI/env flag cannot synthesize a root-owned anonymous receipt. */
+export async function accept(root: string): Promise<CloudStartup.Baseline | null> {
+  if (process.platform !== "linux" || !process.getuid?.() || process.env.MONGOLGPT_RUNTIME_PREPARED_FD !== "4")
+    throw new HandoffError()
+  let bytes: Buffer | undefined
+  try {
+    const info = fstatSync(4)
+    if (
+      !info.isFile() ||
+      info.uid !== 0 ||
+      info.nlink !== 0 ||
+      (info.mode & 0o777) !== 0o600 ||
+      info.size < 1 ||
+      info.size > maxBytes
+    )
+      throw new HandoffError()
+    bytes = Buffer.alloc(info.size)
+    let offset = 0
+    while (offset < bytes.length) {
+      const count = readSync(4, bytes, offset, bytes.length - offset, offset)
+      if (count === 0) throw new HandoffError()
+      offset += count
+    }
+    const after = fstatSync(4)
+    if (info.size !== after.size || info.mtimeMs !== after.mtimeMs || info.ctimeMs !== after.ctimeMs)
+      throw new HandoffError()
+    const packet = Schema.decodeUnknownSync(Packet)(
+      Schema.decodeUnknownSync(Schema.UnknownFromJsonString)(bytes.toString("utf8")),
+      { onExcessProperty: "error" },
+    )
+    if (
+      packet.root !== root ||
+      resolve(root) !== root ||
+      !/^\/(?:[A-Za-z0-9_.-]+\/)*mongolgpt-[0-9a-f-]{36}$/.test(packet.group)
+    )
+      throw new HandoffError()
+    if ((await readFile("/proc/self/cgroup", "utf8")).trim() !== `0::${packet.group}`) throw new HandoffError()
+    return packet.checkpoint
+      ? {
+          ...packet.checkpoint.data,
+          ...(packet.checkpoint.filesRevisionID ? { filesRevisionID: packet.checkpoint.filesRevisionID } : {}),
+        }
+      : null
+  } catch {
+    throw new HandoffError()
+  } finally {
+    bytes?.fill(0)
+    try {
+      closeSync(4)
+    } catch {}
+    delete process.env.MONGOLGPT_RUNTIME_PREPARED_FD
+  }
+}

@@ -12,6 +12,7 @@ export const historyLayer = HttpRouter.middleware<{ requires: EventV2.Service; h
       Effect.orDie,
     )
     if (restored) CloudStartup.baseline()
+    const supervised = restored && CloudStartup.supervised()
     const unavailable = () =>
       HttpServerResponse.jsonUnsafe(
         new NamedError.Unknown({
@@ -33,7 +34,10 @@ export const historyLayer = HttpRouter.middleware<{ requires: EventV2.Service; h
                     onSuccess: () =>
                       Effect.succeed(
                         restored
-                          ? HttpServerResponse.setHeader(response, "x-mongolgpt-runtime-history", "checkpoint-v1")
+                          ? HttpServerResponse.setHeaders(response, {
+                              "x-mongolgpt-runtime-history": "checkpoint-v1",
+                              ...(supervised ? { "x-mongolgpt-runtime-isolation": "cgroup-v1" } : {}),
+                            })
                           : response,
                       ),
                   }),

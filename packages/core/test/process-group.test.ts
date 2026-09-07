@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { chmod, chown, mkdir, readFile, readdir, writeFile } from "node:fs/promises"
+import { existsSync, writeFileSync } from "node:fs"
+import { chmod, chown, mkdir, open, readFile, readdir, rmdir, unlink, writeFile } from "node:fs/promises"
 import type { ChildProcess } from "node:child_process"
 import { join } from "node:path"
 import { setTimeout } from "node:timers/promises"
@@ -9,10 +10,13 @@ import { ProcessGroup } from "@mongolgpt/core/process-group"
 import { DatabaseBackup } from "@mongolgpt/core/database/backup"
 import { WorkspaceCapture } from "@mongolgpt/core/database/workspace-capture"
 import { WorkspaceRestore } from "@mongolgpt/core/database/workspace-restore"
+import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
+import { StartupHandoff } from "@mongolgpt/core/database/startup-handoff"
 import { tmpdir } from "./fixture/tmpdir"
 
 const launcher = process.env.MONGOLGPT_TEST_WORKSPACE_LAUNCHER
 const policy = process.env.MONGOLGPT_TEST_WORKSPACE_POLICY
+const startup = process.env.MONGOLGPT_TEST_STARTUP_CHILD
 const isolated = process.platform === "linux" && process.getuid?.() === 0 && !!launcher && !!policy
 
 test("process groups reject privileged tenant identities before creating anything", async () => {
@@ -35,6 +39,139 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
   function command(code: string, cwd: string) {
     return { executable: process.execPath, args: ["-e", code], cwd, env: { BUN_BE_BUN: "1", PATH: "/usr/bin:/bin" } }
   }
+
+  function startupCommand(root: string, reject = false) {
+    if (!startup) throw new Error("Startup child fixture is required")
+    return {
+      executable: process.execPath,
+      args: [startup, root, ...(reject ? ["reject"] : [])],
+      cwd: root,
+      env: {
+        BUN_BE_BUN: "1",
+        PATH: "/usr/bin:/bin",
+        HOME: root,
+        MONGOLGPT_RUNTIME_MODE: "hosted",
+        MONGOLGPT_CLOUD_HISTORY: "true",
+        MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE: "true",
+        MONGOLGPT_RUNTIME_PREPARED_FD: "4",
+        MONGOLGPT_DB: join(root, ".mongolgpt/runtime.sqlite"),
+      },
+    }
+  }
+
+  test("supervisor restores before non-root startup and hands off a read-only anonymous receipt", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    let bootstraps = 0
+    const runtime = await RuntimeSupervisor.start({
+      root,
+      launcher: launcher!,
+      ...startupCommand(root),
+      request: async (request) => {
+        expect(request.url).toBe("http://checkpoint.mongolgpt.internal/v1/bootstrap")
+        bootstraps++
+        return Response.json({ checkpoint: null })
+      },
+    })
+    try {
+      const result = await output(runtime.child)
+      expect(result.code).toBe(0)
+      expect(result.stdout.trim()).toBe("STARTUP_HANDOFF_READY")
+      expect(bootstraps).toBe(1)
+      expect(await readFile(join(root, "child-owned.txt"), "utf8")).toBe("restored then isolated")
+    } finally {
+      await runtime.group.close()
+    }
+  })
+
+  test("startup rejects a valid receipt inherited by a different cgroup", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    await chown(root, 10001, 10001)
+    const first = await group()
+    const second = await group()
+    try {
+      const packet = await StartupHandoff.issue({ root, group: first.directory, checkpoint: null })
+      try {
+        const result = await output(await second.spawn({ ...startupCommand(root, true), startupFD: packet.fd }))
+        expect(result.code).toBe(0)
+        expect(result.stdout.trim()).toBe("STARTUP_HANDOFF_REJECTED")
+        expect(await readdir(root)).toEqual([])
+      } finally {
+        await packet.close()
+      }
+    } finally {
+      await first.close()
+      await second.close()
+    }
+  })
+
+  test("startup cancellation removes its group before any tenant process runs", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    const before = new Set(await readdir("/sys/fs/cgroup"))
+    const abort = new AbortController()
+    const created: string[] = []
+    await expect(
+      RuntimeSupervisor.start({
+        root,
+        launcher: launcher!,
+        ...startupCommand(root),
+        signal: abort.signal,
+        request: async () => {
+          created.push(
+            ...(await readdir("/sys/fs/cgroup")).filter((name) => name.startsWith("mongolgpt-") && !before.has(name)),
+          )
+          abort.abort(new Error("cancel startup"))
+          return Response.json({ checkpoint: null })
+        },
+      }),
+    ).rejects.toThrow()
+    expect(created).toHaveLength(1)
+    await expect(readdir(join("/sys/fs/cgroup", created[0]))).rejects.toMatchObject({ code: "ENOENT" })
+    expect(await readdir(root)).toEqual([])
+  })
+
+  test("startup rejects a tenant-owned forged anonymous receipt", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    await chown(root, 10001, 10001)
+    const controlled = await group()
+    try {
+      const filename = join(temp.path, "forged")
+      await writeFile(
+        filename,
+        JSON.stringify({
+          version: 1,
+          root,
+          group: controlled.directory.slice("/sys/fs/cgroup".length),
+          checkpoint: null,
+        }),
+        { mode: 0o600 },
+      )
+      await chown(filename, 10001, 10001)
+      const packet = await open(filename, "r")
+      await unlink(filename)
+      try {
+        const result = await output(await controlled.spawn({ ...startupCommand(root, true), startupFD: packet.fd }))
+        expect(result.code).toBe(0)
+        expect(result.stdout.trim()).toBe("STARTUP_HANDOFF_REJECTED")
+        expect(await readdir(root)).toEqual([])
+      } finally {
+        await packet.close()
+      }
+    } finally {
+      await controlled.close()
+    }
+  })
 
   test("drops identities/capabilities and prevents group escape, root recovery and async kernel IO", async () => {
     const controlled = await group()
@@ -217,6 +354,117 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
       await controlled.close()
     }
   })
+
+  test("shutdown settles a launcher that failed before receiving a PID", async () => {
+    await using temp = await tmpdir()
+    const filename = join(temp.path, "failed-launcher")
+    await writeFile(filename, "#!/mongolgpt-missing-interpreter\n", { mode: 0o700 })
+    const controlled = await ProcessGroup.create({ launcher: filename, uid: 10001, gid: 10001 })
+    try {
+      await expect(controlled.spawn(command("process.exit(0)", "/tmp"))).rejects.toBeInstanceOf(
+        ProcessGroup.IsolationError,
+      )
+      await controlled.close()
+      await expect(readdir(controlled.directory)).rejects.toMatchObject({ code: "ENOENT" })
+    } finally {
+      await controlled.close()
+    }
+  })
+
+  test("shutdown kills detached descendants admitted after the first cgroup sweep", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const source = join(temp.path, "workspace")
+    await mkdir(source)
+    await chown(source, 10001, 10001)
+    const filename = join(temp.path, "gated-launcher")
+    const ready = join(temp.path, "launcher-ready")
+    const release = join(temp.path, "release-launcher")
+    const admitted = join(source, "writer-ready.json")
+    const counter = join(source, "counter.txt")
+    await writeFile(
+      filename,
+      `#!/bin/sh
+printf ready > "$MONGOLGPT_TEST_LAUNCH_READY"
+while [ ! -e "$MONGOLGPT_TEST_LAUNCH_RELEASE" ]; do sleep 0.01; done
+exec "$MONGOLGPT_TEST_REAL_LAUNCHER" "$@"
+`,
+      { mode: 0o700 },
+    )
+    const controlled = await ProcessGroup.create({ launcher: filename, uid: 10001, gid: 10001 })
+    const writer = `
+      const fs = require("node:fs");
+      fs.writeFileSync(${JSON.stringify(counter)}, "0");
+      fs.writeFileSync(${JSON.stringify(admitted + ".tmp")}, JSON.stringify({uid:process.getuid(),group:fs.readFileSync("/proc/self/cgroup","utf8").trim()}));
+      fs.renameSync(${JSON.stringify(admitted + ".tmp")}, ${JSON.stringify(admitted)});
+      let n=0;setInterval(()=>fs.writeFileSync(${JSON.stringify(counter)},String(++n)),5);
+    `
+    const cmd = command(
+      `
+      const {spawn} = require("node:child_process");
+      spawn(process.execPath,["-e",${JSON.stringify(writer)}],{detached:true,stdio:"ignore",env:process.env}).unref();
+      setInterval(()=>{},1000);
+    `,
+      source,
+    )
+    const child = await controlled.spawn({
+      ...cmd,
+      stdio: "ignore",
+      env: {
+        ...cmd.env,
+        MONGOLGPT_TEST_LAUNCH_READY: ready,
+        MONGOLGPT_TEST_LAUNCH_RELEASE: release,
+        MONGOLGPT_TEST_REAL_LAUNCHER: launcher!,
+      },
+    })
+    const kill = child.kill.bind(child)
+    try {
+      await waitUntil(async () => existsSync(ready))
+      expect(await readFile(join(controlled.directory, "cgroup.events"), "utf8")).toContain("populated 0")
+      // Gate only this handle's PID kill: the first real cgroup sweep has
+      // completed, and the real native launcher must now admit a descendant.
+      child.kill = (signal) => {
+        writeFileSync(release, "go")
+        const deadline = performance.now() + 5000
+        const wait = new Int32Array(new SharedArrayBuffer(4))
+        while (!existsSync(admitted)) {
+          if (performance.now() >= deadline) throw new Error("Late descendant did not enter the cgroup")
+          Atomics.wait(wait, 0, 0, 10)
+        }
+        return kill(signal)
+      }
+      await controlled.close()
+      expect(JSON.parse(await readFile(admitted, "utf8"))).toEqual({
+        uid: 10001,
+        group: `0::${controlled.directory.slice("/sys/fs/cgroup".length)}`,
+      })
+      expect(child.signalCode).toBe("SIGKILL")
+      await expect(readdir(controlled.directory)).rejects.toMatchObject({ code: "ENOENT" })
+      const final = await readFile(counter, "utf8")
+      await setTimeout(100)
+      expect(await readFile(counter, "utf8")).toBe(final)
+    } finally {
+      child.kill = kill
+      if (child.exitCode === null && child.signalCode === null) kill("SIGKILL")
+      await waitUntil(async () => child.exitCode !== null || child.signalCode !== null)
+      // Also reclaim the real descendant if the shutdown assertion fails.
+      await writeFile(join(controlled.directory, "cgroup.kill"), "1").catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "ENOENT") throw error
+      })
+      await waitUntil(async () => {
+        const state = await readFile(join(controlled.directory, "cgroup.events"), "utf8").catch(
+          (error: NodeJS.ErrnoException) => {
+            if (error.code !== "ENOENT") throw error
+            return null
+          },
+        )
+        return state === null || state.includes("populated 0")
+      })
+      await rmdir(controlled.directory).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "ENOENT") throw error
+      })
+    }
+  }, 20_000)
 })
 
 async function output(child: ChildProcess) {
