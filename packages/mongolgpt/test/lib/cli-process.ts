@@ -62,6 +62,7 @@ function forkStderrDrain(stream: ReadableStream<Uint8Array>, into: string[]) {
 function isolatedEnv(home: string, configJson: string): Record<string, string> {
   return {
     MONGOLGPT_TEST_HOME: home,
+    MONGOLGPT_TEST_MANAGED_CONFIG_DIR: path.join(home, "managed"),
     HOME: home,
     XDG_CONFIG_HOME: path.join(home, ".config"),
     XDG_DATA_HOME: path.join(home, ".local/share"),
@@ -79,7 +80,9 @@ function isolatedEnv(home: string, configJson: string): Record<string, string> {
 }
 
 function safeHostEnv(): Record<string, string | undefined> {
-  return Object.fromEntries(Object.entries(process.env).filter(([name]) => !secretEnvName.test(name)))
+  return Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !secretEnvName.test(name) && !/^MONGOLGPT_/i.test(name)),
+  )
 }
 
 export type RunResult = {
@@ -227,8 +230,8 @@ export function withCliFixture<A, E>(
       // ignore; ChildProcess.make defaults to pipe, so we set it explicitly.
       const command = ChildProcess.make("bun", ["run", "--conditions=browser", cliEntry, ...args], {
         cwd: home,
-        env: { ...env, ...opts?.env },
-        extendEnv: true,
+        env: { ...hostEnv, ...env, ...opts?.env },
+        extendEnv: false,
         stdin: "ignore",
       })
       // Pass timeout to appProc.run rather than wrapping with
