@@ -1,7 +1,7 @@
 import { issueRuntimeCapability, runtimeGatewayHeader, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
 
 const PORT = 4096
-const PROCESS_ID = "mongolgpt-server"
+export const RUNTIME_PROCESS_ID = "mongolgpt-server"
 const SERVER_USERNAME = "mongolgpt"
 const WORKSPACE_ROOT = "/workspace"
 const START_TIMEOUT_MS = 120_000
@@ -118,6 +118,30 @@ const containerReasons = new Set([
   "max_container_instances_exceeded",
   "container_unreachable",
 ])
+
+export function createRuntimeProcessStarter<Process extends { readonly status: string }>(
+  lookup: () => Promise<Process | null>,
+) {
+  let pending: Promise<Process> | undefined
+  return (start: () => Promise<Process>) => {
+    if (pending) return pending
+    const operation = (async () => {
+      const existing = await lookup()
+      if (existing && (existing.status === "starting" || existing.status === "running")) return existing
+      return start()
+    })()
+    pending = operation
+    operation.then(
+      () => {
+        if (pending === operation) pending = undefined
+      },
+      () => {
+        if (pending === operation) pending = undefined
+      },
+    )
+    return operation
+  }
+}
 
 export type RuntimeDiagnostic = {
   readonly code: string
@@ -551,14 +575,14 @@ function requestDirectory(request: Request, url: URL) {
 }
 
 async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOrigin: string) {
-  const existing = await sandbox.getProcess(PROCESS_ID).catch((error) => {
+  const existing = await sandbox.getProcess(RUNTIME_PROCESS_ID).catch((error) => {
     throw RuntimeFailure.create("runtime_process_lookup_failed", error)
   })
   if (existing && (await waitForServer(existing, sandbox, password))) return
 
   const started = await sandbox
     .startProcess("/usr/local/bin/mongolgpt serve --hostname 0.0.0.0 --port 4096", {
-      processId: PROCESS_ID,
+      processId: RUNTIME_PROCESS_ID,
       autoCleanup: true,
       cwd: WORKSPACE_ROOT,
       env: {
@@ -577,7 +601,7 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOr
       },
     })
     .catch(async (error) => {
-      const concurrent = await sandbox.getProcess(PROCESS_ID).catch(() => undefined)
+      const concurrent = await sandbox.getProcess(RUNTIME_PROCESS_ID).catch(() => undefined)
       if (!concurrent) throw RuntimeFailure.create("runtime_process_start_failed", error)
       return concurrent
     })

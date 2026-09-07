@@ -1,5 +1,5 @@
-import { ContainerProxy, getSandbox, Sandbox } from "@cloudflare/sandbox"
-import { createRuntimeHandler, type RuntimeVariables } from "./runtime"
+import { ContainerProxy, getSandbox, Sandbox, type Process } from "@cloudflare/sandbox"
+import { createRuntimeHandler, createRuntimeProcessStarter, RUNTIME_PROCESS_ID, type RuntimeVariables } from "./runtime"
 
 export { ContainerProxy }
 
@@ -29,6 +29,16 @@ export class MongolGPTSandbox extends Sandbox {
   enableInternet = false
   allowedHosts = ["*"]
   deniedHosts = blockedEgressHosts
+
+  // SDK processId starts are not idempotent; coordinate on this DO instance.
+  #startRuntimeProcess?: ReturnType<typeof createRuntimeProcessStarter<Process>>
+
+  override startProcess(...args: Parameters<Sandbox["startProcess"]>): ReturnType<Sandbox["startProcess"]> {
+    const options = args[1]
+    if (options?.processId !== RUNTIME_PROCESS_ID) return super.startProcess(...args)
+    this.#startRuntimeProcess ??= createRuntimeProcessStarter<Process>(() => super.getProcess(RUNTIME_PROCESS_ID))
+    return this.#startRuntimeProcess(() => super.startProcess(...args))
+  }
 }
 
 interface RuntimeEnvironment extends RuntimeVariables {

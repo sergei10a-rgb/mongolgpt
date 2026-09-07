@@ -2,9 +2,11 @@ import { describe, expect, test } from "bun:test"
 import { issueRuntimeCapability, runtimeGatewayHeader, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
 import { createRuntimeDeployCommand, parseRuntimeDeployStage } from "../script/deploy"
 import {
+  createRuntimeProcessStarter,
   createRuntimeHandler,
   deriveRuntimeIdentity,
   hostedDirectory,
+  RUNTIME_PROCESS_ID,
   sanitizeRuntimeDiagnostic,
   RuntimeFailure,
   type RuntimeProcess,
@@ -105,6 +107,16 @@ function hostedRequest(path: string, init: RequestInit = {}) {
   headers.set("origin", appOrigin)
   if (!headers.has("cookie")) headers.set("cookie", "theme=dark; auth=console-session; analytics=1")
   return new Request(`${runtimeOrigin}${path}`, { ...init, headers })
+}
+
+function deferred<Value>() {
+  let resolve!: (value: Value) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<Value>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
 }
 
 describe("MongolGPT Cloudflare runtime", () => {
@@ -1297,7 +1309,192 @@ describe("runtime account and path isolation", () => {
   })
 })
 
+type StarterProcess = {
+  readonly id: string
+  readonly status: string
+}
+
+describe("runtime process singleflight", () => {
+  test("shares one runtime process start across concurrent callers", async () => {
+    const process = { id: RUNTIME_PROCESS_ID, status: "running" } satisfies StarterProcess
+    const started = deferred<StarterProcess>()
+    const startRuntime = createRuntimeProcessStarter<StarterProcess>(async () => null)
+    let starts = 0
+
+    const calls = Array.from({ length: 5 }, () =>
+      startRuntime(async () => {
+        starts += 1
+        return started.promise
+      }),
+    )
+    await Promise.resolve()
+    expect(starts).toBe(1)
+    started.resolve(process)
+
+    await expect(Promise.all(calls)).resolves.toEqual([process, process, process, process, process])
+    expect(starts).toBe(1)
+  })
+
+  test("uses a fresh lookup after pending work settles", async () => {
+    const first = { id: RUNTIME_PROCESS_ID, status: "running" } satisfies StarterProcess
+    const second = { id: RUNTIME_PROCESS_ID, status: "running" } satisfies StarterProcess
+    const lookups: Array<StarterProcess | null> = [null, second]
+    const startRuntime = createRuntimeProcessStarter<StarterProcess>(async () => lookups.shift() ?? null)
+    let starts = 0
+
+    await expect(
+      startRuntime(async () => {
+        starts += 1
+        return first
+      }),
+    ).resolves.toBe(first)
+    await expect(
+      startRuntime(async () => {
+        starts += 1
+        return { id: RUNTIME_PROCESS_ID, status: "running" }
+      }),
+    ).resolves.toBe(second)
+    expect(starts).toBe(1)
+  })
+
+  test("reuses a warm starting or running process from lookup", async () => {
+    for (const status of ["starting", "running"]) {
+      const existing = { id: RUNTIME_PROCESS_ID, status } satisfies StarterProcess
+      const startRuntime = createRuntimeProcessStarter<StarterProcess>(async () => existing)
+      let starts = 0
+
+      await expect(
+        startRuntime(async () => {
+          starts += 1
+          return { id: RUNTIME_PROCESS_ID, status: "running" }
+        }),
+      ).resolves.toBe(existing)
+      expect(starts).toBe(0)
+    }
+  })
+
+  test("restarts instead of accepting terminal lookup records", async () => {
+    for (const status of ["completed", "failed", "killed", "error"]) {
+      const replacement = { id: RUNTIME_PROCESS_ID, status: "running" } satisfies StarterProcess
+      const startRuntime = createRuntimeProcessStarter<StarterProcess>(async () => ({ id: RUNTIME_PROCESS_ID, status }))
+      let starts = 0
+
+      await expect(
+        startRuntime(async () => {
+          starts += 1
+          return replacement
+        }),
+      ).resolves.toBe(replacement)
+      expect(starts).toBe(1)
+    }
+  })
+
+  test("clears failed starts so later callers can retry", async () => {
+    const startRuntime = createRuntimeProcessStarter<StarterProcess>(async () => null)
+    let starts = 0
+
+    await expect(
+      startRuntime(async () => {
+        starts += 1
+        throw new Error("first start failed")
+      }),
+    ).rejects.toThrow("first start failed")
+    await expect(
+      startRuntime(async () => {
+        starts += 1
+        return { id: RUNTIME_PROCESS_ID, status: "running" }
+      }),
+    ).resolves.toEqual({ id: RUNTIME_PROCESS_ID, status: "running" })
+    expect(starts).toBe(2)
+  })
+
+  test("keeps independent runtime process starters isolated", async () => {
+    const first = createRuntimeProcessStarter<StarterProcess>(async () => null)
+    const second = createRuntimeProcessStarter<StarterProcess>(async () => null)
+    let firstStarts = 0
+    let secondStarts = 0
+
+    await expect(
+      Promise.all([
+        first(async () => {
+          firstStarts += 1
+          return { id: RUNTIME_PROCESS_ID, status: "running" }
+        }),
+        second(async () => {
+          secondStarts += 1
+          return { id: RUNTIME_PROCESS_ID, status: "running" }
+        }),
+      ]),
+    ).resolves.toEqual([
+      { id: RUNTIME_PROCESS_ID, status: "running" },
+      { id: RUNTIME_PROCESS_ID, status: "running" },
+    ])
+    expect(firstStarts).toBe(1)
+    expect(secondStarts).toBe(1)
+  })
+
+  test("rejects concurrent callers with the same start error and then retries", async () => {
+    const startRuntime = createRuntimeProcessStarter<StarterProcess>(async () => null)
+    const firstError = new Error("start failed")
+    let starts = 0
+
+    const calls = Array.from({ length: 5 }, () =>
+      startRuntime(async () => {
+        starts += 1
+        throw firstError
+      }),
+    )
+    await expect(Promise.all(calls)).rejects.toBe(firstError)
+    await Promise.all(calls.map((call) => expect(call).rejects.toBe(firstError)))
+    expect(starts).toBe(1)
+
+    await expect(
+      startRuntime(async () => {
+        starts += 1
+        return { id: RUNTIME_PROCESS_ID, status: "running" }
+      }),
+    ).resolves.toEqual({ id: RUNTIME_PROCESS_ID, status: "running" })
+    expect(starts).toBe(2)
+  })
+
+  test("clears failed lookups so later callers can retry", async () => {
+    const lookupError = new Error("lookup failed")
+    const lookups: Array<"throw" | StarterProcess | null> = ["throw", null]
+    const startRuntime = createRuntimeProcessStarter<StarterProcess>(async () => {
+      const next = lookups.shift()
+      if (next === "throw") throw lookupError
+      return next ?? null
+    })
+    let starts = 0
+
+    await expect(
+      startRuntime(async () => {
+        starts += 1
+        return { id: RUNTIME_PROCESS_ID, status: "running" }
+      }),
+    ).rejects.toBe(lookupError)
+    expect(starts).toBe(0)
+
+    await expect(
+      startRuntime(async () => {
+        starts += 1
+        return { id: RUNTIME_PROCESS_ID, status: "running" }
+      }),
+    ).resolves.toEqual({ id: RUNTIME_PROCESS_ID, status: "running" })
+    expect(starts).toBe(1)
+  })
+})
+
 describe("runtime deployment contract", () => {
+  test("keeps RPC transport while singleflighting only the fixed runtime process", async () => {
+    const source = await Bun.file(new URL("../src/index.ts", import.meta.url)).text()
+    expect(source).toContain('transport: "rpc"')
+    expect(source).toContain("createRuntimeProcessStarter")
+    expect(source).toContain("#startRuntimeProcess")
+    expect(source).toContain("options?.processId !== RUNTIME_PROCESS_ID")
+    expect(source).toContain("return super.startProcess(...args)")
+  })
+
   test("pins matching sandbox SDK and container image versions", async () => {
     const manifest = await Bun.file(new URL("../package.json", import.meta.url)).json()
     const version = manifest.dependencies["@cloudflare/sandbox"]
