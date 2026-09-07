@@ -204,6 +204,43 @@
   }
 }
 
+@media (max-width: 767px) {
+  [data-component="toast-region"] {
+    top: calc(48px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+    left: 12px;
+    right: 12px;
+    max-width: none;
+    height: min(45dvh, calc(100dvh - 60px - env(safe-area-inset-top, 0px)));
+    width: auto;
+  }
+
+  [data-component="toast-region"] [data-slot="toast-list"] {
+    max-height: 100%;
+
+    > * {
+      flex-shrink: 0;
+    }
+  }
+
+  [data-component="toast"] {
+    width: 100%;
+    max-width: none;
+    max-height: min(280px, 45dvh);
+    background-color: var(--surface-float-base);
+
+    &[data-opened] {
+      animation: none;
+      opacity: 1;
+    }
+
+    [data-slot="toast-close-button"] {
+      min-width: 32px;
+      min-height: 32px;
+    }
+  }
+}
+
 @keyframes toastPopIn {
   from {
     opacity: 0;

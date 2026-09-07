@@ -192,6 +192,51 @@
   }
 }
 
+@media (max-width: 767px) {
+  [data-component="toast-v2-region"] {
+    top: calc(48px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+    left: 12px;
+    right: 12px;
+    max-width: none;
+    height: min(45dvh, calc(100dvh - 60px - env(safe-area-inset-top, 0px)));
+    width: auto;
+  }
+
+  [data-component="toast-v2-region"] [data-slot="toast-v2-list"] {
+    max-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    > * {
+      flex-shrink: 0;
+    }
+  }
+
+  [data-component="toast-v2"] {
+    width: 100%;
+    max-width: none;
+    max-height: min(280px, 45dvh);
+    background-color: var(--v2-background-bg-layer-01);
+
+    &[data-opened] {
+      animation: none;
+      opacity: 1;
+    }
+
+    [data-slot="toast-v2-close-button"] {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      min-height: 32px;
+    }
+
+    [data-slot="toast-v2-content"] {
+      overflow-y: auto;
+    }
+  }
+}
+
 @keyframes toastV2PopIn {
   from {
     opacity: 0.8;
