@@ -71,7 +71,7 @@
       "effect": "4.0.0-beta.83",
       "ai": "6.0.168",
       "cross-spawn": "7.0.6",
-      "hono": "4.12.34",
+      "hono": "4.13.0",
       "hono-openapi": "1.1.2",
       "fuzzysort": "3.1.0",
       "luxon": "3.6.1",
@@ -147,7 +147,7 @@
     "@opentui/solid": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
-    "hono": "4.12.34",
+    "hono": "4.13.0",
     "seroval": "1.5.6",
     "seroval-plugins": "1.5.6",
     "solid-js": "1.9.12"

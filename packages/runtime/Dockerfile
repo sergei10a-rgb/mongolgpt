@@ -1,4 +1,4 @@
-FROM docker.io/cloudflare/sandbox:0.12.3
+FROM docker.io/cloudflare/sandbox:0.12.9
 
 COPY --chmod=0755 container/mongolgpt /usr/local/bin/mongolgpt
 

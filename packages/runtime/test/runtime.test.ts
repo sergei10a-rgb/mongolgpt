@@ -6,7 +6,7 @@ import {
   deriveRuntimeIdentity,
   hostedDirectory,
   sanitizeRuntimeDiagnostic,
-  type RuntimeFailure,
+  RuntimeFailure,
   type RuntimeProcess,
   type RuntimeSandbox,
   type RuntimeVariables,
@@ -736,6 +736,39 @@ describe("MongolGPT Cloudflare runtime", () => {
     })
   })
 
+  test("preserves only typed container availability reasons in dev", () => {
+    for (const reason of [
+      "container_starting",
+      "container_unhealthy",
+      "container_replaced",
+      "rpc_upgrade_failed",
+      "no_container_instance_available",
+      "max_container_instances_exceeded",
+      "container_unreachable",
+    ]) {
+      const error = {
+        errorResponse: {
+          code: "CONTAINER_UNAVAILABLE",
+          context: { reason, originalMessage: "private-command-and-token" },
+        },
+      }
+      const failure = RuntimeFailure.create("runtime_process_lookup_failed", error)
+      expect(failure.diagnostic).toEqual({ code: "CONTAINER_UNAVAILABLE", reason })
+      expect(failure.messageFor("dev")).toContain(`CONTAINER_UNAVAILABLE/${reason}`)
+      expect(failure.messageFor("production")).not.toContain(reason)
+      expect(JSON.stringify(failure)).not.toContain("private-command-and-token")
+    }
+    expect(sanitizeRuntimeDiagnostic({ code: "CONTAINER_UNAVAILABLE", context: { reason: "private-reason" } })).toEqual(
+      { code: "CONTAINER_UNAVAILABLE" },
+    )
+    expect(
+      sanitizeRuntimeDiagnostic({ code: "RPC_TRANSPORT_ERROR", context: { reason: "container_unreachable" } }),
+    ).toEqual({ code: "RPC_TRANSPORT_ERROR" })
+    expect(
+      sanitizeRuntimeDiagnostic({ code: "OPERATION_INTERRUPTED", context: { reason: "container_unreachable" } }),
+    ).toEqual({ code: "OPERATION_INTERRUPTED" })
+  })
+
   test("sanitizes structured diagnostics across sandbox failure phases", async () => {
     const token = await capability()
     const error = (code: string, context: Record<string, unknown>) => ({
@@ -994,6 +1027,19 @@ describe("runtime account and path isolation", () => {
 })
 
 describe("runtime deployment contract", () => {
+  test("pins matching sandbox SDK and container image versions", async () => {
+    const manifest = await Bun.file(new URL("../package.json", import.meta.url)).json()
+    const version = manifest.dependencies["@cloudflare/sandbox"]
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/)
+    const dockerfile = await Bun.file(new URL("../Dockerfile", import.meta.url)).text()
+    expect(dockerfile.split(/\r?\n/)[0]).toBe(`FROM docker.io/cloudflare/sandbox:${version}`)
+    const sdk = await Bun.file(new URL("../package.json", import.meta.resolve("@cloudflare/sandbox"))).json()
+    expect(sdk.version).toBe(version)
+    const root = await Bun.file(new URL("../../../package.json", import.meta.url)).json()
+    expect(root.workspaces.catalog.hono).toBe(root.overrides.hono)
+    expect(Bun.semver.satisfies(root.overrides.hono, sdk.dependencies.hono)).toBe(true)
+  })
+
   test("requires both runtime secrets and deploys the restricted sandbox in every stage", async () => {
     const packageJSON = JSON.parse(await Bun.file(new URL("../package.json", import.meta.url)).text()) as {
       scripts?: Record<string, unknown>

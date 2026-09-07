@@ -109,6 +109,16 @@ const sdkReasons = new Set([
   "rpc_upgrade_failed",
 ])
 
+const containerReasons = new Set([
+  "container_starting",
+  "container_unhealthy",
+  "container_replaced",
+  "rpc_upgrade_failed",
+  "no_container_instance_available",
+  "max_container_instances_exceeded",
+  "container_unreachable",
+])
+
 export type RuntimeDiagnostic = {
   readonly code: string
   readonly kind?: string
@@ -145,7 +155,10 @@ export function sanitizeRuntimeDiagnostic(error: unknown): RuntimeDiagnostic | u
     const kind = readString(context && readProperty(context, "kind"))
     const reason = readString(context && readProperty(context, "reason"))
     if (code === "RPC_TRANSPORT_ERROR" && kind && sdkKinds.has(kind)) return { ...diagnostic, kind }
-    if ((code === "OPERATION_INTERRUPTED" || code === "CONTAINER_UNAVAILABLE") && reason && sdkReasons.has(reason)) {
+    if (code === "OPERATION_INTERRUPTED" && reason && sdkReasons.has(reason)) {
+      return { ...diagnostic, reason }
+    }
+    if (code === "CONTAINER_UNAVAILABLE" && reason && containerReasons.has(reason)) {
       return { ...diagnostic, reason }
     }
     return diagnostic
