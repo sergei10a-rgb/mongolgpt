@@ -4,7 +4,7 @@ import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Schema } from "effect"
 import { Project } from "@mongolgpt/schema/project"
 import { SessionID } from "@mongolgpt/schema/session-id"
 import { SessionV1 } from "@mongolgpt/schema/session-v1"
@@ -145,6 +145,37 @@ async function seedNative(filename: string) {
         },
         { id: sessionEvent },
       )
+      yield* events.publish(
+        SessionV1.Event.MessageUpdated,
+        {
+          sessionID: session,
+          info: Schema.decodeUnknownSync(SessionV1.Info)({
+            id: "msg_checkpoint",
+            sessionID: session,
+            role: "user",
+            time: { created: 1710000003001 },
+            agent: "build",
+            model: { providerID: "opencode", modelID: "big-pickle" },
+          }),
+        },
+        { id: EventV2.ID.make("evt_checkpoint_message") },
+      )
+      yield* events.publish(
+        SessionV1.Event.PartUpdated,
+        {
+          sessionID: session,
+          time: 1710000003002,
+          part: Schema.decodeUnknownSync(SessionV1.Part)({
+            id: "prt_checkpoint",
+            sessionID: session,
+            messageID: "msg_checkpoint",
+            type: "text",
+            text: "Restored chat content",
+          }),
+        },
+        { id: EventV2.ID.make("evt_checkpoint_part") },
+      )
+      yield* events.claim(session, "old_instance_replay_owner")
       const { db } = yield* Database.Service
       yield* db
         .insert(ProjectTable)
@@ -168,6 +199,8 @@ async function seedNative(filename: string) {
       return [
         { id: projectEvent, aggregateID: projectID, seq: 0 },
         { id: sessionEvent, aggregateID: sessionID, seq: 0 },
+        { id: "evt_checkpoint_message", aggregateID: sessionID, seq: 1 },
+        { id: "evt_checkpoint_part", aggregateID: sessionID, seq: 2 },
       ]
     }).pipe(Effect.provide(layer), Effect.scoped),
   )
@@ -177,12 +210,15 @@ function seedFiles(filename: string) {
   const db = new DatabaseSync(filename)
   try {
     db.exec("PRAGMA journal_mode=WAL")
-    db.exec("CREATE TABLE blob_manifest (path TEXT PRIMARY KEY, bytes INTEGER NOT NULL, sha256 TEXT NOT NULL)")
-    db.prepare("INSERT INTO blob_manifest VALUES (?, ?, ?)").run(
-      "synthetic/transcript.txt",
-      34,
-      checksum(Buffer.from("synthetic checkpoint file payload")),
+    db.exec(
+      "CREATE TABLE file (path TEXT PRIMARY KEY, type TEXT NOT NULL, mode INTEGER NOT NULL, bytes INTEGER NOT NULL, sha256 TEXT, content BLOB)",
     )
+    const insert = db.prepare("INSERT INTO file VALUES (?, ?, ?, ?, ?, ?)")
+    insert.run("synthetic", "directory", 448, 0, null, null)
+    const text = Buffer.from("synthetic checkpoint file payload")
+    const binary = Buffer.from([0, 1, 127, 255])
+    insert.run("synthetic/transcript.txt", "file", 384, text.length, checksum(text), text)
+    insert.run("synthetic/data.bin", "file", 384, binary.length, checksum(binary), binary)
   } finally {
     db.close()
   }

@@ -75,6 +75,30 @@ async function rejection(effect: Effect.Effect<unknown>) {
 }
 
 describe("native cloud history transport", () => {
+  test("binds claim and every read to an immutable checkpoint ID", async () => {
+    const requests: Request[] = []
+    const options = {
+      checkpointID: "checkpoint_native",
+      request: async (request: Request) => {
+        requests.push(request)
+        if (request.url.endsWith("/epoch")) return response({ epoch: 2 })
+        if (request.url.endsWith("/claim")) {
+          const body = await readClaim(request)
+          return response({ epoch: 3, writerID: body.writerID })
+        }
+        return response({ entries: [], cursor: 0, hasMore: false })
+      },
+    }
+    const client = createCloudHistory(options)
+    options.checkpointID = "mutated_after_creation"
+    await Effect.runPromise(client.initialize)
+    await Effect.runPromise(client.read(0))
+    expect(client.checkpointID).toBe("checkpoint_native")
+    expect(await requests[1].json()).toMatchObject({ checkpointID: "checkpoint_native" })
+    expect(await requests[2].json()).toEqual({ after: 0, limit: 10, checkpointID: "checkpoint_native" })
+    expect(() => createCloudHistory({ checkpointID: "../invalid" })).toThrow()
+  })
+
   test("is lazy, requires initialization and uses only the fixed POST contract", async () => {
     const { client, requests } = fixture()
     expect(requests).toHaveLength(0)

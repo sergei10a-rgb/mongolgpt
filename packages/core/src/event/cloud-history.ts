@@ -60,8 +60,12 @@ const Failure = Schema.Struct({
 })
 const statuses = { invalid_input: 400, conflict: 409, fenced: 409, unavailable: 503 } as const
 
-export function createCloudHistory(options: { readonly request?: (request: Request) => Promise<Response> } = {}) {
+export function createCloudHistory(
+  options: { readonly request?: (request: Request) => Promise<Response>; readonly checkpointID?: string } = {},
+) {
   const request = options.request ?? ((request: Request) => fetch(request))
+  const checkpointID =
+    options.checkpointID === undefined ? undefined : decode(Identifier, options.checkpointID, "invalid_input")
   const writerID = crypto.randomUUID()
   let lease: typeof Lease.Type | undefined
   let initialization: Promise<void> | undefined
@@ -136,7 +140,12 @@ export function createCloudHistory(options: { readonly request?: (request: Reque
       try {
         const expected = await rpc("epoch", json({}), Epoch, signal)
         if (expected.epoch === Number.MAX_SAFE_INTEGER) throw new CloudHistoryError("unavailable")
-        const claimed = await rpc("claim", json({ expectedEpoch: expected.epoch, writerID }), Lease, signal)
+        const claimed = await rpc(
+          "claim",
+          json({ expectedEpoch: expected.epoch, writerID, checkpointID }),
+          Lease,
+          signal,
+        )
         if (claimed.epoch !== expected.epoch + 1 || claimed.writerID !== writerID) throw new CloudHistoryError("fenced")
         lease = claimed
       } catch (error) {
@@ -163,7 +172,12 @@ export function createCloudHistory(options: { readonly request?: (request: Reque
   const read = (after: number): Effect.Effect<Page> =>
     perform(async (signal) => {
       ready()
-      const page = await rpc("read", json({ after: decode(Integer, after, "invalid_input"), limit: 10 }), Page, signal)
+      const page = await rpc(
+        "read",
+        json({ after: decode(Integer, after, "invalid_input"), limit: 10, checkpointID }),
+        Page,
+        signal,
+      )
       let cursor = after
       for (const entry of page.entries) {
         if (entry.cursor <= cursor) throw new CloudHistoryError("unavailable")
@@ -174,7 +188,7 @@ export function createCloudHistory(options: { readonly request?: (request: Reque
       return page
     })
 
-  return { initialize, append, read }
+  return { initialize, append, read, checkpointID }
 }
 
 function perform<A>(run: (signal: AbortSignal) => Promise<A>): Effect.Effect<A> {

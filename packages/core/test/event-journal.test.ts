@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm"
 import { Database } from "@mongolgpt/core/database/database"
 import { EventV2 } from "@mongolgpt/core/event"
 import { EventSequenceTable, EventTable } from "@mongolgpt/core/event/sql"
+import { CloudHistoryTombstoneTable } from "@mongolgpt/core/event/cloud-history.sql"
 import { SessionEvent } from "@mongolgpt/schema/session-event"
 import { SessionV1 } from "@mongolgpt/schema/session-v1"
 import { Session } from "@mongolgpt/schema/session"
@@ -21,6 +22,107 @@ const definition = SessionV1.Event.MessageRemoved
 const data = (sessionID: Session.ID) => ({ sessionID, messageID: SessionV1.MessageID.make("msg_journal") })
 
 describe("EventV2 remote journal commit boundary", () => {
+  test.each(["acknowledged", "lost-receipt", "marker-failure", "local"] as const)(
+    "keeps cloud deletion atomic and terminal: %s",
+    async (mode) => {
+      const remote: EventV2.SerializedEvent[] = []
+      const observed: EventV2.Payload[] = []
+      const sessionID = Session.ID.create()
+      const info = Schema.decodeUnknownSync(SessionV1.SessionInfo)({
+        id: sessionID,
+        slug: "erase",
+        projectID: "global",
+        directory: "/workspace",
+        title: "Private chat",
+        version: "test",
+        time: { created: 1000, updated: 1000 },
+      })
+      const layer = SessionProjector.layer.pipe(
+        Layer.provideMerge(
+          EventV2.layerWith(
+            mode === "local"
+              ? undefined
+              : {
+                  journal: {
+                    append: (event) =>
+                      Effect.sync(() => {
+                        remote.push(event)
+                        if (mode === "lost-receipt" && event.type === "session.deleted.1")
+                          throw new Error("private transport detail")
+                      }),
+                  },
+                },
+          ),
+        ),
+        Layer.provideMerge(Database.layerFromPath(":memory:")),
+      )
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const database = yield* Database.Service
+          const events = yield* EventV2.Service
+          yield* database.db
+            .insert(ProjectTable)
+            .values({ id: ProjectSchema.ID.make("global"), worktree: AbsolutePath.make("/workspace"), sandboxes: [] })
+            .run()
+          yield* events.publish(SessionV1.Event.Created, { sessionID, info })
+          yield* events.publish(SessionV1.Event.MessageUpdated, {
+            sessionID,
+            info: Schema.decodeUnknownSync(SessionV1.Info)({
+              id: "msg_erase",
+              sessionID,
+              role: "user",
+              time: { created: 1001 },
+              agent: "build",
+              model: { providerID: "opencode", modelID: "big-pickle" },
+            }),
+          })
+          yield* events.publish(SessionV1.Event.PartUpdated, {
+            sessionID,
+            time: 1002,
+            part: Schema.decodeUnknownSync(SessionV1.Part)({
+              id: "prt_erase",
+              sessionID,
+              messageID: "msg_erase",
+              type: "text",
+              text: "Private message body",
+            }),
+          })
+          yield* events.listen((event) =>
+            Effect.sync(() => {
+              observed.push(event)
+            }),
+          )
+          if (mode === "marker-failure")
+            yield* database.db.run(
+              "CREATE TEMP TRIGGER fail_marker BEFORE INSERT ON cloud_history_tombstone BEGIN SELECT RAISE(ABORT, 'private SQLite detail'); END",
+            )
+          const outcome = yield* events.publish(SessionV1.Event.Deleted, { sessionID, info }).pipe(Effect.exit)
+          const failed = mode === "lost-receipt" || mode === "marker-failure"
+          expect(Exit.isFailure(outcome)).toBe(failed)
+          expect(String(outcome)).not.toContain("private transport detail")
+          expect(String(outcome)).not.toContain("private SQLite detail")
+          expect(yield* database.db.select().from(SessionTable).all()).toHaveLength(failed ? 1 : 0)
+          expect(yield* database.db.select().from(MessageTable).all()).toHaveLength(failed ? 1 : 0)
+          expect(yield* database.db.select().from(PartTable).all()).toHaveLength(failed ? 1 : 0)
+          expect(yield* database.db.select().from(EventTable).all()).toHaveLength(failed ? 3 : mode === "local" ? 4 : 0)
+          expect(yield* database.db.select().from(CloudHistoryTombstoneTable).all()).toHaveLength(
+            mode === "acknowledged" ? 1 : 0,
+          )
+          expect(observed).toHaveLength(failed ? 0 : 1)
+          expect(remote).toHaveLength(mode === "local" ? 0 : 4)
+          expect(Exit.isFailure(yield* events.check.pipe(Effect.exit))).toBe(failed)
+          if (mode === "acknowledged") {
+            expect(yield* database.db.select().from(EventSequenceTable).all()).toHaveLength(0)
+            expect(
+              Exit.isFailure(yield* events.publish(SessionV1.Event.Created, { sessionID, info }).pipe(Effect.exit)),
+            ).toBe(true)
+            expect(remote).toHaveLength(4)
+          }
+        }).pipe(Effect.provide(layer), Effect.scoped),
+      )
+    },
+  )
+
   it.effect("bounds a stalled remote write and fences the queued writer", () =>
     Effect.gen(function* () {
       const entered = yield* Deferred.make<void>()

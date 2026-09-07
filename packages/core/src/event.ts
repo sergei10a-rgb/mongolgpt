@@ -7,6 +7,7 @@ import { and, asc, eq, gt, inArray, or } from "drizzle-orm"
 import { Database } from "./database/database"
 import { EventSequenceTable, EventTable } from "./event/sql"
 import { CloudHistoryTombstoneTable } from "./event/cloud-history.sql"
+import { eraseCloudSession } from "./event/cloud-history-erase"
 import { Location } from "./location-context"
 import { makeGlobalNode } from "./effect/node"
 import { isDeepStrictEqual } from "node:util"
@@ -427,6 +428,10 @@ export const layerWith = (options?: LayerOptions) =>
                                 data: structuredClone(encoded),
                               })
                               .pipe(Effect.timeout("15 seconds"), Effect.interruptible)
+                            // A cloud deletion is terminal. Keep only its marker locally
+                            // after the remote receipt, in the same local transaction.
+                            if (versionedType(definition.type, durable.version) === "session.deleted.1")
+                              yield* eraseCloudSession(db, { aggregateID, id: event.id, seq })
                           }
                           return { aggregateID, seq }
                         }),

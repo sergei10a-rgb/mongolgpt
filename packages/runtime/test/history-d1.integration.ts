@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types"
 import type { HistoryEvent, HistoryScope } from "../src/history.ts"
 import { runCheckpointChecks } from "./checkpoint-d1.integration.ts"
+import { runCheckpointReplacementChecks } from "./checkpoint-recovery.integration.ts"
 
 const configPath = fileURLToPath(new URL("./fixtures/history-d1.jsonc", import.meta.url))
 const persistTo = await mkdtemp(join(tmpdir(), "mongolgpt-history-d1-"))
@@ -467,6 +468,13 @@ try {
   )
   await reopened.append(restoredLease, event("evt_new_after_restart", "ses_one", 3, { value: "continued" }))
   assertionCount += await runCheckpointChecks(platform.env.DB, platform.env.BACKUPS, nativeFixture, persistTo)
+  const replacement = await runCheckpointReplacementChecks(
+    platform.env.DB,
+    platform.env.BACKUPS,
+    nativeFixture,
+    persistTo,
+  )
+  assertionCount += replacement.assertions
   const checkpointScope = { accountID: "acc_checkpoint", workspaceID: "wrk_checkpoint" }
   const beforeRestart = await reopened.checkpoint(checkpointScope)
   ok(beforeRestart, "checkpoint restart fixture is missing")
@@ -491,6 +499,7 @@ try {
     3,
     "checkpoint deltas did not persist across D1 restart",
   )
+  assertionCount += await replacement.afterRestart(platform.env.DB, platform.env.BACKUPS)
   console.log(`HISTORY_D1_RESULT ${JSON.stringify({ ok: true, assertions: assertionCount })}`)
 } finally {
   await platform?.dispose()
