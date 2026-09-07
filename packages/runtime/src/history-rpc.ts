@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { Durable } from "@mongolgpt/schema/durable-event-manifest"
+import { ProjectHistory } from "@mongolgpt/schema/project-history"
 import { SessionV1 } from "@mongolgpt/schema/session-v1"
 import { createHistoryStore, HistoryError, type HistoryEvent, type HistoryScope } from "./history"
 
@@ -168,6 +169,11 @@ function durableEvent(event: HistoryEvent) {
   if (!definition?.durable) throw new HistoryError("invalid_input")
   const decoded = decode(definition.data, event.data) as Record<string, unknown>
   if (decoded[definition.durable.aggregate] !== event.aggregateID) throw new HistoryError("invalid_input")
+  if (definition === ProjectHistory.Changed) {
+    const value = Schema.decodeUnknownSync(ProjectHistory.Changed.data)(decoded)
+    if (value.change.type === "saved" && value.change.info.id !== value.projectID)
+      throw new HistoryError("invalid_input")
+  }
   const encoded = encode(definition.data, decoded)
   if (!encoded || typeof encoded !== "object" || Array.isArray(encoded)) throw new HistoryError("invalid_input")
   return { definition, event: { ...event, data: encoded as Record<string, unknown> } }

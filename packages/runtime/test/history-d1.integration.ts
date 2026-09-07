@@ -112,6 +112,37 @@ try {
   await expectRejected(Effect.runPromise(native.append(rpcEnvelope)))
   equal((await store.read(nativeScope)).entries.length, 1, "lost client receipt did not leave the authoritative write")
 
+  const projectScope = { accountID: "acc_project", workspaceID: "wrk_project" }
+  const projectClient = createCloudHistory({
+    request: (request: Request) => handleHistoryOutbound(request, { HISTORY: rpcDB }, { params: projectScope }),
+  })
+  const projectEnvelope = {
+    id: "evt_native_project",
+    aggregateID: "project_native",
+    seq: 0,
+    type: "project.history.changed.1",
+    data: {
+      projectID: "project_native",
+      change: {
+        type: "saved",
+        info: {
+          id: "project_native",
+          worktree: "/workspace/repo",
+          name: "Durable project",
+          vcs: "git",
+          commands: { start: "bun dev" },
+          icon: { color: "blue" },
+          time: { created: 100, updated: 110, initialized: 105 },
+          sandboxes: ["/workspace/copy"],
+        },
+        directories: [{ directory: "/workspace/copy", type: "git_worktree", strategy: "git-worktree", time: 100 }],
+      },
+    },
+  }
+  await Effect.runPromise(projectClient.initialize)
+  await Effect.runPromise(projectClient.append(projectEnvelope))
+  equal((await store.read(projectScope)).entries.length, 1, "native project metadata was not persisted")
+
   const firstLease = await store.claim(scope, { expectedEpoch: 0, writerID: "writer_a" })
   equal(await store.epoch(scope), 1, "writer epoch was not durable")
   equal(
@@ -282,6 +313,14 @@ try {
   })
   const reopened = createHistoryStore(platform.env.DB)
   const reopenedDB = platform.env.DB
+  const restoredProject = createCloudHistory({
+    request: (request: Request) => handleHistoryOutbound(request, { HISTORY: reopenedDB }, { params: projectScope }),
+  })
+  await Effect.runPromise(restoredProject.initialize)
+  const projectPage = await Effect.runPromise(restoredProject.read(0))
+  equal(projectPage.entries.length, 1, "project metadata did not survive actual D1 restart")
+  assert.deepEqual(projectPage.entries[0]?.event, projectEnvelope, "project metadata changed across D1 restart")
+  assertionCount++
   const restoredNative = createCloudHistory({
     request: (request: Request) => handleHistoryOutbound(request, { HISTORY: reopenedDB }, { params: nativeScope }),
   })

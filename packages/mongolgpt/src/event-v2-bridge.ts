@@ -4,6 +4,7 @@ import { LayerNode } from "@mongolgpt/core/effect/layer-node"
 import { InstanceRef, WorkspaceRef } from "@/effect/instance-ref"
 import { GlobalBus } from "@/bus/global"
 import { EventV2 } from "@mongolgpt/core/event"
+import { ProjectHistory } from "@mongolgpt/schema/project-history"
 import { Location } from "@mongolgpt/core/location"
 import { Project } from "@mongolgpt/core/project"
 import { AbsolutePath } from "@mongolgpt/core/schema"
@@ -34,6 +35,7 @@ export const layer = Layer.effect(
 
     const unsubscribe = yield* events.listen((event) =>
       Effect.gen(function* () {
+        if (event.type === ProjectHistory.Changed.type) return
         const ctx = yield* InstanceRef
         const workspaceID = (yield* WorkspaceRef) ?? event.location?.workspaceID
         GlobalBus.emit("event", {

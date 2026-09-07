@@ -5,6 +5,7 @@ import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { httpApiLayer, requestInDirectory } from "./httpapi-layer"
+import { Project } from "@/project/project"
 
 const EventData = Schema.Struct({
   id: Schema.optional(Schema.String),
@@ -42,6 +43,29 @@ afterEach(async () => {
 const it = testEffect(httpApiLayer)
 
 describe("event HttpApi", () => {
+  it.instance(
+    "keeps storage-only project events out of the public stream while preserving subsequent events",
+    () =>
+      Effect.gen(function* () {
+        const { directory } = yield* TestInstance
+        const { reader } = yield* openEventStream(directory)
+        expect(yield* readEvent(reader)).toMatchObject({ type: "server.connected" })
+        const current = yield* requestInDirectory("/project/current", directory)
+        const project = Schema.decodeUnknownSync(Project.Info)(yield* current.json)
+        const updated = yield* requestInDirectory(`/project/${encodeURIComponent(project.id)}`, directory, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Journal UI" }),
+        })
+        expect(updated.status).toBe(200)
+        expect(Schema.decodeUnknownSync(Project.Info)(yield* updated.json).name).toBe("Journal UI")
+        const created = yield* requestInDirectory("/session", directory, { method: "POST" })
+        expect(created.status).toBe(200)
+        expect(yield* readEvent(reader)).toMatchObject({ type: "session.created" })
+      }),
+    { git: true, config: { formatter: false, lsp: false } },
+  )
+
   it.instance(
     "serves event stream",
     () =>

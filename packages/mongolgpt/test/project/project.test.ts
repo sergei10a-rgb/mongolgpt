@@ -20,6 +20,7 @@ import { FSUtil } from "@mongolgpt/core/fs-util"
 import { AppProcess } from "@mongolgpt/core/process"
 import { ProjectV2 } from "@mongolgpt/core/project"
 import { ProjectDirectories } from "@mongolgpt/core/project/directories"
+import { ProjectHistory } from "@mongolgpt/core/project/history"
 import { CrossSpawnSpawner } from "@mongolgpt/core/cross-spawn-spawner"
 import { testEffect } from "../lib/effect"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -70,6 +71,7 @@ function mockGitFailure(failArg: string) {
 
 function projectLayerWithFailure(failArg: string) {
   return Project.layer.pipe(
+    Layer.provide(ProjectHistory.defaultLayer),
     Layer.provide(AppProcess.layer.pipe(Layer.provide(mockGitFailure(failArg)))),
     Layer.provide(mockGitFailure(failArg)),
     Layer.provide(ProjectV2.defaultLayer),
@@ -84,6 +86,7 @@ function projectLayerWithFailure(failArg: string) {
 
 function projectLayerWithRuntimeFlags(flags: Parameters<typeof RuntimeFlags.layer>[0]) {
   return Project.layer.pipe(
+    Layer.provide(ProjectHistory.defaultLayer),
     Layer.provide(EventV2Bridge.defaultLayer),
     Layer.provide(ProjectV2.defaultLayer),
     Layer.provide(ProjectDirectories.defaultLayer),

@@ -5,6 +5,8 @@ import { Event } from "@mongolgpt/schema/event"
 import { Session } from "@mongolgpt/schema/session"
 import { SessionEvent } from "@mongolgpt/schema/session-event"
 import { SessionV1 } from "@mongolgpt/schema/session-v1"
+import { Project } from "@mongolgpt/schema/project"
+import { ProjectHistory } from "@mongolgpt/schema/project-history"
 import { Database } from "@mongolgpt/core/database/database"
 import { EventSequenceTable, EventTable } from "@mongolgpt/core/event/sql"
 import { Location } from "@mongolgpt/core/location"
@@ -314,6 +316,34 @@ describe("EventV2", () => {
       if (!event.durable) throw new Error("Expected durable event metadata")
 
       expect(observed).toEqual([{ id: event.id, seq: event.durable.seq }])
+    }),
+  )
+
+  it.effect("excludes private project history before consuming bounded subscriber capacity", () =>
+    Effect.gen(function* () {
+      const events = yield* EventV2.Service
+      const filtered = yield* EventV2.allBounded(events, 256, (event) => event.type !== ProjectHistory.Changed.type)
+      const unfiltered = yield* EventV2.allBounded(events, 258)
+      const project: Project.Info = {
+        id: Project.ID.make("project_bounded_filter"),
+        worktree: "/workspace",
+        time: { created: 0, updated: 257 },
+        sandboxes: [],
+      }
+
+      for (let index = 0; index < 257; index++) {
+        yield* events.publish(ProjectHistory.Changed, {
+          projectID: project.id,
+          change: { type: "updated", name: `private-${index}`, time: index },
+        })
+      }
+      const publicEvent = yield* events.publish(Project.Event.Updated, project)
+
+      expect(Array.from(yield* filtered.pipe(Stream.take(1), Stream.runCollect))).toEqual([publicEvent])
+      const all = Array.from(yield* unfiltered.pipe(Stream.take(258), Stream.runCollect))
+      expect(all).toHaveLength(258)
+      expect(all.slice(0, 257).every((event) => event.type === ProjectHistory.Changed.type)).toBe(true)
+      expect(all[257]).toEqual(publicEvent)
     }),
   )
 

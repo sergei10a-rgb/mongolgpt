@@ -6,6 +6,40 @@ const scope = { accountID: "acc_test", workspaceID: "wrk_test" } satisfies Histo
 const url = "http://history.mongolgpt.internal/v1"
 
 describe("history rpc", () => {
+  test("accepts project metadata and rejects a conflicting nested project identity", async () => {
+    const store = stubStore()
+    const handler = createHistoryHandler(store, scope)
+    const body = {
+      epoch: 8,
+      writerID: "writer_a",
+      event: {
+        id: "evt_project",
+        aggregateID: "project-a",
+        seq: 0,
+        type: "project.history.changed.1",
+        data: {
+          projectID: "project-a",
+          change: {
+            type: "saved",
+            info: {
+              id: "project-a",
+              worktree: "/workspace/project-a",
+              name: "Test project",
+              time: { created: 10, updated: 10 },
+              sandboxes: [],
+            },
+            openedDirectory: { directory: "/workspace/project-a", time: 10 },
+          },
+        },
+      },
+    }
+    expect((await handler(request("/append", body))).status).toBe(200)
+    expect(store.appended[0]?.data).toEqual(body.event.data)
+    body.event.data.change.info.id = "other-project"
+    expect((await handler(request("/append", body))).status).toBe(400)
+    expect(store.appended).toHaveLength(1)
+  })
+
   test("fails closed when the internal outbound binding is missing", async () => {
     const response = await handleHistoryOutbound(request("/read", {}), {}, { params: scope })
     expect(response.status).toBe(503)

@@ -1,5 +1,6 @@
 import { EventV2 } from "@mongolgpt/core/event"
 import { MongolGPTEvent } from "@mongolgpt/protocol/groups/event"
+import { ProjectHistory } from "@mongolgpt/core/project/history"
 import { Effect, Schema, Stream } from "effect"
 import { HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
@@ -30,7 +31,11 @@ export const EventHandler = HttpApiBuilder.group(Api, "server.event", (handlers)
         const output = Stream.unwrap(
           Effect.gen(function* () {
             // Acquiring the bounded stream installs its listener before readiness is observable.
-            const live = yield* EventV2.allBounded(events, subscriberCapacity)
+            const live = yield* EventV2.allBounded(
+              events,
+              subscriberCapacity,
+              (event) => event.type !== ProjectHistory.Changed.type,
+            )
             return Stream.make(connected).pipe(Stream.concat(live))
           }),
         ).pipe(Stream.map(eventData), Stream.pipeThroughChannel(Sse.encode()))
