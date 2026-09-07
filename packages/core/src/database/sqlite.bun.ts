@@ -55,7 +55,8 @@ const make = (options: Config) =>
 
     const run = (query: string, params: ReadonlyArray<unknown> = []) =>
       Effect.withFiber<Array<Record<string, unknown>>, SqlError>((fiber) => {
-        const statement = native.query(query)
+        // Readonly snapshot handles must close before their temporary files are removed on Windows.
+        const statement = options.readonly ? native.prepare(query) : native.query(query)
         // @ts-ignore bun-types missing safeIntegers method, fixed in https://github.com/oven-sh/bun/pull/26627
         statement.safeIntegers(Context.get(fiber.context, Client.SafeIntegers))
         try {
@@ -66,12 +67,14 @@ const make = (options: Config) =>
               reason: classifySqliteError(cause, { message: "SQL үйлдлийг гүйцэтгэж чадсангүй", operation: "execute" }),
             }),
           )
+        } finally {
+          if (options.readonly) statement.finalize()
         }
       })
 
     const runValues = (query: string, params: ReadonlyArray<unknown> = []) =>
       Effect.withFiber<Array<unknown[]>, SqlError>((fiber) => {
-        const statement = native.query(query)
+        const statement = options.readonly ? native.prepare(query) : native.query(query)
         // @ts-ignore bun-types missing safeIntegers method, fixed in https://github.com/oven-sh/bun/pull/26627
         statement.safeIntegers(Context.get(fiber.context, Client.SafeIntegers))
         try {
@@ -82,6 +85,8 @@ const make = (options: Config) =>
               reason: classifySqliteError(cause, { message: "SQL үйлдлийг гүйцэтгэж чадсангүй", operation: "execute" }),
             }),
           )
+        } finally {
+          if (options.readonly) statement.finalize()
         }
       })
 
@@ -113,7 +118,10 @@ const make = (options: Config) =>
           try: () => native.loadExtension(path),
           catch: (cause) =>
             new SqlError({
-              reason: classifySqliteError(cause, { message: "Өргөтгөлийг ачаалж чадсангүй", operation: "loadExtension" }),
+              reason: classifySqliteError(cause, {
+                message: "Өргөтгөлийг ачаалж чадсангүй",
+                operation: "loadExtension",
+              }),
             }),
         }),
     })
@@ -161,7 +169,7 @@ const nativeLayer = (config: Config) =>
         create: config.create ?? true,
       })
       yield* Effect.addFinalizer(() => Effect.sync(() => native.close()))
-      if (config.disableWAL !== true) native.run("PRAGMA journal_mode = WAL;")
+      if (config.disableWAL !== true && config.readonly !== true) native.run("PRAGMA journal_mode = WAL;")
       return native
     }),
   )
