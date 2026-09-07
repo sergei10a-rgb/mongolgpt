@@ -1,8 +1,8 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "14d24a2f-1377-42d9-9323-ea1125a41d73",
-  "prevIds": ["f14a9b18-8207-487e-a3d3-227e629ba9ad"],
+  "id": "50b29902-98e6-4f2a-973b-9c9a74258a47",
+  "prevIds": ["14d24a2f-1377-42d9-9323-ea1125a41d73"],
   "ddl": [
     {
       "name": "background_job",
@@ -14,6 +14,10 @@
     },
     {
       "name": "data_migration",
+      "entityType": "tables"
+    },
+    {
+      "name": "cloud_history_tombstone",
       "entityType": "tables"
     },
     {
@@ -333,6 +337,36 @@
       "name": "time_completed",
       "entityType": "columns",
       "table": "data_migration"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "aggregate_id",
+      "entityType": "columns",
+      "table": "cloud_history_tombstone"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "cloud_history_tombstone"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "seq",
+      "entityType": "columns",
+      "table": "cloud_history_tombstone"
     },
     {
       "type": "integer",
@@ -1820,6 +1854,13 @@
       "entityType": "pks"
     },
     {
+      "columns": ["aggregate_id"],
+      "nameExplicit": false,
+      "name": "cloud_history_tombstone_pk",
+      "table": "cloud_history_tombstone",
+      "entityType": "pks"
+    },
+    {
       "columns": ["id"],
       "nameExplicit": false,
       "name": "account_state_pk",
@@ -1938,6 +1979,20 @@
       "name": "background_job_namespace_status_heartbeat_idx",
       "entityType": "indexes",
       "table": "background_job"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "cloud_history_tombstone_event_id_idx",
+      "entityType": "indexes",
+      "table": "cloud_history_tombstone"
     },
     {
       "columns": [

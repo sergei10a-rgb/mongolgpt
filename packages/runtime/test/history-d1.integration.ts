@@ -31,7 +31,7 @@ try {
   const initialWriters = await platform.env.DB.prepare("SELECT * FROM runtime_history_writer").all()
   equal(initialWriters.results.length, 0, "fresh local D1 persistence already contained history writers")
 
-  const { createHistoryHandler, handleHistoryOutbound, createCloudHistory, Effect } = await import(
+  const { createHistoryHandler, handleHistoryOutbound, createCloudHistory, recoverProjection, Effect } = await import(
     pathToFileURL(process.argv[2]).href
   )
   const rpcScope = { accountID: "acc_rpc", workspaceID: "wrk_rpc" }
@@ -163,6 +163,27 @@ try {
   }
   await Effect.runPromise(projectClient.append(directoryEnvelope))
   equal((await store.read(projectScope)).entries.length, 2, "native directory batch was not persisted")
+  const nativeSessionInfo = {
+    id: "ses_native",
+    slug: "native",
+    projectID: "project_native",
+    directory: "/workspace/repo",
+    title: "Native session",
+    version: "test",
+    time: { created: 120, updated: 130 },
+  }
+  const sessionEnvelope = {
+    id: "evt_native_session",
+    aggregateID: "ses_native",
+    seq: 0,
+    type: "session.created.1",
+    data: {
+      sessionID: "ses_native",
+      info: nativeSessionInfo,
+    },
+  }
+  await Effect.runPromise(projectClient.append(sessionEnvelope))
+  equal((await store.read(projectScope)).entries.length, 3, "native session creation was not persisted")
 
   const firstLease = await store.claim(scope, { expectedEpoch: 0, writerID: "writer_a" })
   equal(await store.epoch(scope), 1, "writer epoch was not durable")
@@ -339,11 +360,56 @@ try {
   })
   await Effect.runPromise(restoredProject.initialize)
   const projectPage = await Effect.runPromise(restoredProject.read(0))
-  equal(projectPage.entries.length, 2, "project metadata did not survive actual D1 restart")
+  equal(projectPage.entries.length, 3, "project metadata did not survive actual D1 restart")
   assert.deepEqual(projectPage.entries[0]?.event, projectEnvelope, "project metadata changed across D1 restart")
   assertionCount++
   assert.deepEqual(projectPage.entries[1]?.event, directoryEnvelope, "directory batch changed across D1 restart")
   assertionCount++
+  assert.deepEqual(projectPage.entries[2]?.event, sessionEnvelope, "session creation changed across D1 restart")
+  assertionCount++
+  const projectionFile = join(persistTo, "native-projection.sqlite")
+  const recoveredProjection = await recoverProjection(
+    (request: Request) => handleHistoryOutbound(request, { HISTORY: reopenedDB }, { params: projectScope }),
+    projectionFile,
+  )
+  equal(recoveredProjection.projects.length, 1, "project recovery did not project one project")
+  equal(recoveredProjection.projects[0]?.id, "project_native", "project recovery used the wrong project id")
+  equal(recoveredProjection.projects[0]?.name, "Durable project", "project recovery lost project metadata")
+  equal(recoveredProjection.projects[0]?.worktree, "/workspace/repo", "project recovery lost worktree")
+  equal(recoveredProjection.directories.length, 1, "directory recovery did not apply the directory batch")
+  equal(recoveredProjection.directories[0]?.project_id, "project_native", "directory recovery used the wrong project")
+  equal(recoveredProjection.directories[0]?.directory, "/workspace/new", "directory recovery lost updated directory")
+  equal(recoveredProjection.sessions.length, 1, "session recovery did not project one session")
+  equal(recoveredProjection.sessions[0]?.id, "ses_native", "session recovery used the wrong session id")
+  equal(recoveredProjection.sessions[0]?.project_id, "project_native", "session recovery lost project reference")
+  equal(recoveredProjection.sessions[0]?.title, "Native session", "session recovery lost title")
+  equal(recoveredProjection.tombstones.length, 0, "initial recovery projected an unexpected tombstone")
+  const deleteClient = createCloudHistory({
+    request: (request: Request) => handleHistoryOutbound(request, { HISTORY: reopenedDB }, { params: projectScope }),
+  })
+  await Effect.runPromise(deleteClient.initialize)
+  const deleteEnvelope = {
+    id: "evt_native_session_deleted",
+    aggregateID: "ses_native",
+    seq: 1,
+    type: "session.deleted.1",
+    data: {
+      sessionID: "ses_native",
+      info: nativeSessionInfo,
+    },
+  }
+  await Effect.runPromise(deleteClient.append(deleteEnvelope))
+  const recoveredAfterDelete = await recoverProjection(
+    (request: Request) => handleHistoryOutbound(request, { HISTORY: reopenedDB }, { params: projectScope }),
+    projectionFile,
+  )
+  equal(recoveredAfterDelete.projects.length, 1, "session deletion removed the project")
+  equal(recoveredAfterDelete.projects[0]?.id, "project_native", "session deletion changed the project id")
+  equal(recoveredAfterDelete.sessions.length, 0, "session deletion recovery retained the session")
+  equal(recoveredAfterDelete.tombstones.length, 1, "session deletion recovery did not persist a tombstone")
+  equal(recoveredAfterDelete.tombstones[0]?.aggregate_id, "ses_native", "tombstone used the wrong aggregate")
+  equal(recoveredAfterDelete.tombstones[0]?.event_id, "evt_native_session_deleted", "tombstone used the wrong event id")
+  equal(recoveredAfterDelete.tombstones[0]?.seq, 1, "tombstone used the wrong sequence")
   const restoredNative = createCloudHistory({
     request: (request: Request) => handleHistoryOutbound(request, { HISTORY: reopenedDB }, { params: nativeScope }),
   })

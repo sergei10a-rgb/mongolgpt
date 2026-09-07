@@ -3,9 +3,10 @@ export * as EventV2 from "./event"
 import { Cause, Context, Effect, Layer, Option, PubSub, Queue, Schema, Stream } from "effect"
 import { Event } from "@mongolgpt/schema/event"
 import type { Data, Definition, Payload } from "@mongolgpt/schema/event"
-import { and, asc, eq, gt, inArray } from "drizzle-orm"
+import { and, asc, eq, gt, inArray, or } from "drizzle-orm"
 import { Database } from "./database/database"
 import { EventSequenceTable, EventTable } from "./event/sql"
+import { CloudHistoryTombstoneTable } from "./event/cloud-history.sql"
 import { Location } from "./location-context"
 import { makeGlobalNode } from "./effect/node"
 import { isDeepStrictEqual } from "node:util"
@@ -171,6 +172,9 @@ export const allBounded = (events: Interface, capacity: number, predicate?: (eve
 
 export interface LayerOptions {
   readonly beforeAggregateRead?: (aggregateID: string) => Effect.Effect<void>
+  /** Admission is separate from replay so a cloud projection can rebuild before serving requests. */
+  readonly admission?: Effect.Effect<void>
+  readonly requireProjectors?: boolean
   readonly journal?: {
     /** Called with the encoded envelope after local validation, before commit or notification. */
     readonly append: (event: SerializedEvent) => Effect.Effect<void>
@@ -198,7 +202,10 @@ export const layerWith = (options?: LayerOptions) =>
       const listeners = new Array<Subscriber>()
       const { db } = yield* Database.Service
       let journalFailed = false
-      const check = Effect.suspend(() => (journalFailed ? Effect.die(new JournalUnavailableError()) : Effect.void))
+      const checkJournal = Effect.suspend(() =>
+        journalFailed ? Effect.die(new JournalUnavailableError()) : Effect.void,
+      )
+      const check = checkJournal.pipe(Effect.andThen(options?.admission ?? Effect.void))
 
       const getOrCreate = (definition: Definition) =>
         Effect.gen(function* () {
@@ -265,6 +272,13 @@ export const layerWith = (options?: LayerOptions) =>
                 )
               }
               const list = projectors.get(event.type) ?? []
+              if (options?.requireProjectors && list.length === 0)
+                return yield* Effect.die(
+                  new InvalidDurableEventError({
+                    type: event.type,
+                    message: "Cloud түүхийг сэргээх өгөгдлийн боловсруулагч бэлэн биш байна.",
+                  }),
+                )
               return yield* Effect.uninterruptible(
                 Effect.gen(function* () {
                   let journalAttempted = false
@@ -273,7 +287,25 @@ export const layerWith = (options?: LayerOptions) =>
                       () =>
                         Effect.gen(function* () {
                           // Recheck inside the transaction: a queued writer may have failed while we waited.
-                          yield* check
+                          yield* input ? checkJournal : check
+                          const deleted = yield* db
+                            .select({ aggregateID: CloudHistoryTombstoneTable.aggregate_id })
+                            .from(CloudHistoryTombstoneTable)
+                            .where(
+                              or(
+                                eq(CloudHistoryTombstoneTable.aggregate_id, aggregateID),
+                                eq(CloudHistoryTombstoneTable.event_id, event.id),
+                              ),
+                            )
+                            .get()
+                            .pipe(Effect.orDie)
+                          if (deleted)
+                            return yield* Effect.die(
+                              new InvalidDurableEventError({
+                                type: event.type,
+                                message: "Устгасан түүхийг дахин бичих боломжгүй.",
+                              }),
+                            )
                           const row = yield* db
                             .select({ seq: EventSequenceTable.seq, ownerID: EventSequenceTable.owner_id })
                             .from(EventSequenceTable)

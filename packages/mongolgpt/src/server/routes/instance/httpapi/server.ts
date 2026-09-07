@@ -114,6 +114,7 @@ import { compressionLayer } from "./middleware/compression"
 import { corsVaryFix } from "./middleware/cors-vary"
 import { errorLayer } from "./middleware/error"
 import { fenceLayer } from "./middleware/fence"
+import { historyLayer } from "./middleware/history"
 import { schemaErrorLayer } from "./middleware/schema-error"
 import { accountUseRouterMiddleware } from "./middleware/account-use"
 import { desktopSmokeRoute } from "./desktop-smoke"
@@ -291,6 +292,7 @@ export function createRoutes(
       compressionLayer,
       corsVaryFix,
       fenceLayer,
+      historyLayer,
       cors(corsOptions),
       MoveSession.defaultLayer,
       HttpServer.layerServices,

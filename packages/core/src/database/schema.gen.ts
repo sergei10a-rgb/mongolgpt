@@ -44,6 +44,13 @@ export default {
         );
       `)
       yield* tx.run(`
+        CREATE TABLE \`cloud_history_tombstone\` (
+          \`aggregate_id\` text PRIMARY KEY,
+          \`event_id\` text NOT NULL,
+          \`seq\` integer NOT NULL
+        );
+      `)
+      yield* tx.run(`
         CREATE TABLE \`account_state\` (
           \`id\` integer PRIMARY KEY,
           \`active_account_id\` text,
@@ -258,6 +265,9 @@ export default {
       `)
       yield* tx.run(
         `CREATE INDEX \`background_job_namespace_status_heartbeat_idx\` ON \`background_job\` (\`namespace\`,\`status\`,\`heartbeat_at\`);`,
+      )
+      yield* tx.run(
+        `CREATE UNIQUE INDEX \`cloud_history_tombstone_event_id_idx\` ON \`cloud_history_tombstone\` (\`event_id\`);`,
       )
       yield* tx.run(`CREATE UNIQUE INDEX \`event_aggregate_seq_idx\` ON \`event\` (\`aggregate_id\`,\`seq\`);`)
       yield* tx.run(`CREATE INDEX \`event_aggregate_type_seq_idx\` ON \`event\` (\`aggregate_id\`,\`type\`,\`seq\`);`)
