@@ -11,6 +11,7 @@ import { disposeMiddleware } from "./routes/instance/httpapi/lifecycle"
 import { WebSocketTracker } from "./routes/instance/httpapi/websocket-tracker"
 import { PublicApi } from "./routes/instance/httpapi/public"
 import type { CorsOptions } from "@mongolgpt/server/cors"
+import { memoMap } from "@mongolgpt/core/effect/memo-map"
 import { lazy } from "@/util/lazy"
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
@@ -97,7 +98,8 @@ const listenEffect: (opts: ListenOptions) => Effect.Effect<EffectListener, unkno
 )
 
 function listenerLayer(opts: ListenOptions, port: number) {
-  return HttpRouter.serve(HttpApiApp.createRoutes(opts), {
+  // Only application services share the CLI lifetime; listener auth and transport stay isolated.
+  return HttpRouter.serve(HttpApiApp.createRoutes(opts, memoMap), {
     middleware: disposeMiddleware,
     disableLogger: true,
     disableListenLog: true,

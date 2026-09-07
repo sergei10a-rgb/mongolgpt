@@ -273,9 +273,27 @@ const app = LayerNode.group([
   PtyTicket.node,
 ])
 
+const services = Layer.mergeAll(
+  MoveSession.defaultLayer,
+  SessionV2.defaultLayer.pipe(
+    Layer.provide(SessionExecutionLocal.defaultLayer),
+    Layer.provide(locationServiceMapLayer),
+  ),
+  locationServiceMapLayer,
+).pipe(Layer.provideMerge(LayerNodeTree.compile(app)))
+
 export function createRoutes(
   corsOptions?: CorsOptions,
+  serviceMemoMap?: Layer.MemoMap,
 ): Layer.Layer<never, EffectConfig.ConfigError, RouteRequirements> {
+  const application = serviceMemoMap
+    ? Layer.effectContext(
+        Effect.gen(function* () {
+          const scope = yield* Effect.scope
+          return yield* Layer.buildWithMemoMap(services, serviceMemoMap, scope)
+        }),
+      )
+    : services
   return Layer.mergeAll(
     rootApiRoutes,
     eventApiRoutes,
@@ -294,7 +312,6 @@ export function createRoutes(
       fenceLayer,
       historyLayer,
       cors(corsOptions),
-      MoveSession.defaultLayer,
       HttpServer.layerServices,
     ]),
     Layer.provide(Layer.succeed(CorsConfig)(corsOptions)),
@@ -303,15 +320,7 @@ export function createRoutes(
     Layer.provide(sessionLocationLayer),
     Layer.provide(locationLayer),
     Layer.provide(PtyEnvironment.layer),
-    Layer.provide(
-      SessionV2.defaultLayer.pipe(
-        Layer.provide(SessionExecutionLocal.defaultLayer),
-        Layer.provide(locationServiceMapLayer),
-      ),
-    ),
-    Layer.provide(locationServiceMapLayer),
-
-    Layer.provide(LayerNodeTree.compile(app)),
+    Layer.provide(application),
   )
 }
 
