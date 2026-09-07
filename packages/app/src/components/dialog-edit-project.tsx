@@ -109,8 +109,8 @@ export function DialogEditProject(props: { project: LocalProject; server: Server
 
   return (
     <Dialog title={language.t("dialog.project.edit.title")} class="w-full max-w-[480px] mx-auto">
-      <form onSubmit={handleSubmit} class="flex flex-col gap-6 p-6 pt-0">
-        <div class="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} class="flex min-h-0 flex-1 flex-col gap-6 p-6 pt-0">
+        <div class="flex min-h-0 flex-col gap-4 overflow-y-auto">
           <TextField
             autofocus
             type="text"
@@ -210,7 +210,7 @@ export function DialogEditProject(props: { project: LocalProject; server: Server
           <Show when={!store.iconOverride}>
             <div class="flex flex-col gap-2">
               <label class="text-12-medium text-text-weak">{language.t("dialog.project.edit.color")}</label>
-              <div class="flex gap-1.5">
+              <div class="flex flex-wrap gap-1.5">
                 <For each={AVATAR_COLOR_KEYS}>
                   {(color) => (
                     <button
@@ -253,7 +253,7 @@ export function DialogEditProject(props: { project: LocalProject; server: Server
           />
         </div>
 
-        <div class="flex justify-end gap-2">
+        <div class="flex shrink-0 justify-end gap-2">
           <Button type="button" variant="ghost" size="large" onClick={() => dialog.close()}>
             {language.t("common.cancel")}
           </Button>
