@@ -205,10 +205,10 @@ function createWorkspaceTerminalSession(
 
   const update = (client: DirectorySDK["client"], pty: Partial<LocalPTY> & { id: string }) => {
     const index = store.all.findIndex((x) => x.id === pty.id)
-    const previous = index >= 0 ? store.all[index] : undefined
-    if (index >= 0) {
-      setStore("all", index, (item) => ({ ...item, ...pty }))
-    }
+    // An exited PTY can unmount and flush its buffer after removal from the store.
+    if (index === -1) return
+    const previous = store.all[index]
+    setStore("all", index, (item) => ({ ...item, ...pty }))
     client.pty
       .update({
         ptyID: pty.id,

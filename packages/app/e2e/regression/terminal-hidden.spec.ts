@@ -7,7 +7,11 @@ const projectID = "proj_hidden_terminal_regression"
 const sessionID = "ses_hidden_terminal_regression"
 const title = "Hidden terminal regression"
 
-test("unmounts the terminal renderer while the pane is hidden", async ({ page }) => {
+test("unmounts hidden or exited terminals without updating exited PTYs", async ({ page }) => {
+  const events: unknown[] = []
+  const updatesAfterExit: unknown[] = []
+  let updateCount = 0
+  let exited = false
   await page.setViewportSize({ width: 1400, height: 900 })
   await mockMongolGPTServer(page, {
     directory,
@@ -42,6 +46,8 @@ test("unmounts the terminal renderer while the pane is hidden", async ({ page })
       },
     ],
     pageMessages: () => ({ items: [] }),
+    events: () => events.splice(0, 1),
+    eventRetry: 16,
   })
   await page.route("**/pty", (route) =>
     route.fulfill({
@@ -50,9 +56,13 @@ test("unmounts the terminal renderer while the pane is hidden", async ({ page })
       body: JSON.stringify({ id: "pty_hidden_terminal", title: "Terminal 1" }),
     }),
   )
-  await page.route("**/pty/pty_hidden_terminal", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
-  )
+  await page.route("**/pty/pty_hidden_terminal", (route) => {
+    if (route.request().method() === "PUT") {
+      updateCount += 1
+      if (exited) updatesAfterExit.push(route.request().postDataJSON())
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", body: "{}" })
+  })
   await page.routeWebSocket("**/pty/pty_hidden_terminal/connect", () => undefined)
 
   await page.goto(`/${base64Encode(directory)}/session/${sessionID}`)
@@ -70,8 +80,17 @@ test("unmounts the terminal renderer while the pane is hidden", async ({ page })
   await page.setViewportSize({ width: 1200, height: 700 })
   await expect(page.locator('[data-component="terminal"]')).toHaveCount(0)
 
+  const beforeReopen = updateCount
   await page.keyboard.press("Control+Backquote")
   await expect(page.locator('[data-component="terminal"]')).toBeVisible()
+  await expect.poll(() => updateCount).toBeGreaterThan(beforeReopen)
+
+  // The exit event removes the PTY before the renderer persists its final buffer.
+  exited = true
+  events.push({ directory, payload: { type: "pty.exited", properties: { id: "pty_hidden_terminal", exitCode: 0 } } })
+  await expect(page.locator('[data-component="terminal"]')).toHaveCount(0)
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  expect(updatesAfterExit).toEqual([])
 })
 
 function base64Encode(value: string) {
