@@ -1,5 +1,10 @@
 import { Buffer } from "node:buffer"
 import { Schema } from "effect"
+import {
+  checkpointControlHeader,
+  deriveCheckpointControlToken,
+  matchesControlToken,
+} from "@mongolgpt/runtime-auth/control"
 import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { createRuntimeBackupStore, deriveRuntimeBackupKey, RuntimeBackupError } from "./backup"
 import { createRuntimeCheckpointStore } from "./checkpoint"
@@ -24,11 +29,13 @@ const streamHeaders = {
   "content-type": "application/octet-stream",
 } as const
 const safeMessages = {
+  forbidden: "Cloud checkpoint эрх баталгаажаагүй байна.",
   invalid: "Cloud checkpoint хүсэлт буруу байна.",
   conflict: "Cloud checkpoint-ийн төлөв зөрсөн байна. Сессийг дахин ачаална уу.",
   unavailable: "Cloud checkpoint үйлчилгээнд холбогдож чадсангүй.",
 } as const
 const statuses = {
+  forbidden: 403,
   invalid: 400,
   conflict: 409,
   unavailable: 503,
@@ -97,15 +104,24 @@ class CheckpointRpcError extends Error {
 
 export async function handleCheckpointOutbound(
   request: Request,
-  env: { HISTORY?: D1Database; RUNTIME_BACKUPS?: R2Bucket; MONGOLGPT_RUNTIME_BACKUP_KEYS?: string },
+  env: {
+    HISTORY?: D1Database
+    RUNTIME_BACKUPS?: R2Bucket
+    MONGOLGPT_RUNTIME_BACKUP_KEYS?: string
+    MONGOLGPT_RUNTIME_SECRET?: string
+  },
   context: { params?: unknown },
 ): Promise<Response> {
-  const db = env.HISTORY
-  const bucket = env.RUNTIME_BACKUPS
-  const masterKeyJson = env.MONGOLGPT_RUNTIME_BACKUP_KEYS
-  if (!db) return failure("unavailable")
   let masters: Record<string, Uint8Array> | undefined
   try {
+    const trustedScope = Object.freeze({ ...(decode(ScopeInput, context.params) as typeof ScopeInput.Type) })
+    const expected = await deriveCheckpointControlToken(env.MONGOLGPT_RUNTIME_SECRET ?? "", trustedScope)
+    if (!matchesControlToken(request.headers.get(checkpointControlHeader), expected)) return failure("forbidden")
+
+    const db = env.HISTORY
+    const bucket = env.RUNTIME_BACKUPS
+    const masterKeyJson = env.MONGOLGPT_RUNTIME_BACKUP_KEYS
+    if (!db) return failure("unavailable")
     return await createCheckpointHandler(
       {
         history: createHistoryStore(db),
@@ -124,7 +140,7 @@ export async function handleCheckpointOutbound(
           : undefined,
         masterKeyJson,
       },
-      decode(ScopeInput, context.params) as typeof ScopeInput.Type,
+      trustedScope,
     )(request)
   } catch {
     return failure("unavailable")

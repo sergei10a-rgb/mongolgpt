@@ -333,6 +333,7 @@ jobs:
             runtime_channel="dev"
           fi
           runtime_version="$(node -p "require('./packages/mongolgpt/package.json').version")"
+          bun packages/runtime/script/build-sandbox.ts
           MONGOLGPT_CHANNEL="$runtime_channel" MONGOLGPT_VERSION="$runtime_version" bun run --cwd packages/mongolgpt build --single --skip-embed-web-ui --skip-install
           cp packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt packages/runtime/container/mongolgpt
           runtime_secrets="$RUNNER_TEMP/mongolgpt-runtime-secrets.json"

@@ -9,6 +9,7 @@ import type { D1Database, R2Bucket } from "@cloudflare/workers-types"
 
 const root = await mkdtemp(join(tmpdir(), "mongolgpt-postcommit-integration-"))
 const masters = JSON.stringify({ synthetic_postcommit: Buffer.alloc(32, 9).toString("base64") })
+const testMasterSecret = "checkpoint-postcommit-test-secret-32-bytes"
 let assertions = 0
 const equal = (actual: unknown, expected: unknown) => {
   assertions++
@@ -18,6 +19,7 @@ let platform: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database; BACKU
 try {
   for (const name of ["data", "config", "cache", "state"])
     process.env[`XDG_${name.toUpperCase()}_HOME`] = join(root, name)
+  process.env.MONGOLGPT_RUNTIME_SECRET = testMasterSecret
   const native: typeof import("./fixtures/history-native.ts") = await import(pathToFileURL(process.argv[2]).href)
   platform = await getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>({
     configPath: fileURLToPath(new URL("./fixtures/history-d1.jsonc", import.meta.url)),
@@ -39,8 +41,13 @@ try {
         Parameters<typeof native.handleCheckpointOutbound>[1]["RUNTIME_BACKUPS"]
       >,
       MONGOLGPT_RUNTIME_BACKUP_KEYS: masters,
+      MONGOLGPT_RUNTIME_SECRET: testMasterSecret,
     }
-    const request = (input: Request) => native.handleCheckpointOutbound(input, env, { params: scope })
+    const request = await native.createRuntimeCheckpointClient({
+      secret: testMasterSecret,
+      scope,
+      request: (input) => native.handleCheckpointOutbound(input, env, { params: scope }),
+    })
     const history = async (input: Request) => native.handleHistoryOutbound(input, env, { params: scope })
     const store = native.createHistoryStore(
       platform.env.DB as unknown as Parameters<typeof native.createHistoryStore>[0],

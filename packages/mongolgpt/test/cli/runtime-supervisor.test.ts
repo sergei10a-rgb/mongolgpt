@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { EventEmitter } from "node:events"
 import { setTimeout } from "node:timers/promises"
+import { checkpointControlEnv, checkpointControlHeader } from "@mongolgpt/core/runtime-checkpoint-client"
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
 import { runRuntimeSupervisor } from "../../src/cli/runtime-supervisor"
 
@@ -15,6 +16,8 @@ const requiredEnv = {
   MONGOLGPT_CLOUD_HISTORY: "true",
   MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE: "true",
   MONGOLGPT_SERVER_PASSWORD: "test-password",
+  [checkpointControlEnv]: "a".repeat(64),
+  MONGOLGPT_SDK_CONTROL_TOKEN: "b".repeat(64),
 } as const
 
 describe("runRuntimeSupervisor hosted lifecycle", () => {
@@ -72,6 +75,10 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
           MONGOLGPT_DB: "/workspace/.mongolgpt/runtime.sqlite",
         },
       })
+      expect(input.env).not.toHaveProperty(checkpointControlEnv)
+      expect(input.env).not.toHaveProperty("MONGOLGPT_SDK_CONTROL_TOKEN")
+      expect(input.env).not.toHaveProperty("MONGOLGPT_RUNTIME_GATEWAY_TOKEN")
+      expect(input.request).toBeFunction()
 
       process.emit("SIGTERM", "SIGTERM")
       process.emit("SIGTERM", "SIGTERM")
@@ -257,6 +264,62 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         }),
       ).rejects.toThrow("Container is draining")
       expect(starts).toBe(0)
+    })
+  })
+
+  test("missing checkpoint control token never joins IPC or starts a runtime", async () => {
+    await withSupervisorProcess(async () => {
+      delete process.env[checkpointControlEnv]
+      let starts = 0
+      let joins = 0
+
+      await expect(
+        runRuntimeSupervisor({
+          start: async () => {
+            starts++
+            return syntheticRuntime().handle
+          },
+          connect: async () => {
+            joins++
+            return { complete: async (_success: boolean) => {} }
+          },
+        }),
+      ).rejects.toThrow("Cloud checkpoint control token is missing or invalid.")
+      expect(starts).toBe(0)
+      expect(joins).toBe(0)
+    })
+  })
+
+  test("passes an authenticated checkpoint request client to the runtime", async () => {
+    await withSupervisorProcess(async () => {
+      const started = deferred<StartInput>()
+      const runtime = syntheticRuntime()
+      const start = (async (input) => {
+        started.resolve(input)
+        return runtime.handle
+      }) satisfies RuntimeStart
+
+      const result = runRuntimeSupervisor({ start, connect, request })
+      const input = await runtimeReady(started.promise)
+      let forwarded!: Request
+
+      const response = await input.request!(
+        new Request("http://checkpoint.mongolgpt.internal/v1/bootstrap", { method: "POST" }),
+      )
+      expect(await response.text()).toBe("ok")
+      expect(forwarded.headers.get(checkpointControlHeader)).toBe(requiredEnv[checkpointControlEnv])
+
+      runtime.child.exitCode = 0
+      runtime.child.emit("exit", 0, null)
+      expect(await result).toBe(0)
+
+      async function connect() {
+        return { complete: async (_success: boolean) => {} }
+      }
+      async function request(next: Request) {
+        forwarded = next
+        return new Response("ok")
+      }
     })
   })
 })

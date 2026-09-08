@@ -1,0 +1,38 @@
+diff --git a/packages/sandbox-container/src/server.ts b/packages/sandbox-container/src/server.ts
+index 922e2ac..3e15195 100644
+--- a/packages/sandbox-container/src/server.ts
++++ b/packages/sandbox-container/src/server.ts
+@@ -1 +1,3 @@
++// MongolGPT modification: authenticate the privileged HTTP and WebSocket control plane.
++import { timingSafeEqual } from 'node:crypto';
+ import { createLogger, type SandboxControlCallback } from '@repo/shared';
+@@ -172,2 +174,7 @@ async function createApplication(): Promise<{
+ export async function startServer(): Promise<ServerInstance> {
++  const rawToken = process.env.MONGOLGPT_SDK_CONTROL_TOKEN;
++  if (!rawToken || rawToken.length !== 64 || !/^[a-f0-9]{64}$/.test(rawToken)) {
++    throw new Error('MongolGPT SDK control credential is missing or invalid.');
++  }
++  const controlToken = Buffer.from(rawToken, 'hex');
+   const app = await createApplication();
+@@ -176,3 +183,20 @@ export async function startServer(): Promise<ServerInstance> {
+     idleTimeout: 255,
+-    fetch: (req, server) => app.fetch(req, server),
++    fetch: (req, server) => {
++      const provided = req.headers.get('x-mongolgpt-control-token');
++      if (
++        !provided ||
++        provided.length !== 64 ||
++        !/^[a-f0-9]{64}$/.test(provided) ||
++        !timingSafeEqual(controlToken, Buffer.from(provided, 'hex'))
++      ) {
++        return new Response('{"error":"forbidden"}', {
++          status: 403,
++          headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }
++        });
++      }
++      // Keep the credential out of route logs, RPC parameters and child requests.
++      // Preserve Bun's original Request identity for server.upgrade().
++      req.headers.delete('x-mongolgpt-control-token');
++      return app.fetch(req, server);
++    },
+     error(error) {

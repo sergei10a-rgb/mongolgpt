@@ -2,6 +2,12 @@ import { ContainerProxy, getSandbox, Sandbox, type Process } from "@cloudflare/s
 import { createRuntimeHandler, createRuntimeProcessStarter, RUNTIME_PROCESS_ID, type RuntimeVariables } from "./runtime"
 import { handleHistoryOutbound } from "./history-rpc"
 import { handleCheckpointOutbound } from "./checkpoint-rpc"
+import {
+  deriveControlToken,
+  sdkControlEnv,
+  sdkControlHeader,
+  checkpointControlHeader,
+} from "@mongolgpt/runtime-auth/control"
 
 export { ContainerProxy }
 
@@ -28,6 +34,29 @@ export const blockedEgressHosts = [
 ]
 
 export class MongolGPTSandbox extends Sandbox {
+  #sdkToken: Promise<string>
+
+  constructor(ctx: DurableObjectState<{}>, env: RuntimeEnvironment) {
+    super(ctx, env)
+    this.#sdkToken = ctx.blockConcurrencyWhile(async () => {
+      const token = await deriveControlToken(env.MONGOLGPT_RUNTIME_SECRET, ctx.id.toString(), "sdk")
+      this.envVars = { ...this.envVars, [sdkControlEnv]: token }
+      return token
+    })
+  }
+
+  override async containerFetch(...args: Parameters<Sandbox["containerFetch"]>): Promise<Response> {
+    const request =
+      args[0] instanceof Request ? args[0] : new Request(args[0], typeof args[1] === "number" ? undefined : args[1])
+    const port = typeof args[1] === "number" ? args[1] : (args[2] ?? this.defaultPort)
+    const forwarded = new Request(request, port === 3000 ? { redirect: "error" } : undefined)
+    // Mutate the copy: Bun can inherit the original headers when init.headers is empty.
+    forwarded.headers.delete(sdkControlHeader)
+    forwarded.headers.delete(checkpointControlHeader)
+    if (port === 3000) forwarded.headers.set(sdkControlHeader, await this.#sdkToken)
+    return super.containerFetch(forwarded, port)
+  }
+
   static override get outboundHandlers() {
     return { history: handleHistoryOutbound, checkpoint: handleCheckpointOutbound }
   }

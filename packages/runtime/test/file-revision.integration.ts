@@ -9,6 +9,7 @@ import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 
 const root = await mkdtemp(join(tmpdir(), "mongolgpt-file-revision-"))
 const scope = { accountID: "acc_files", workspaceID: "wrk_files" }
+const testMasterSecret = "checkpoint-file-revision-test-secret-32"
 const configPath = fileURLToPath(new URL("./fixtures/history-d1.jsonc", import.meta.url))
 const start = () =>
   getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>({
@@ -30,6 +31,7 @@ const rejects = async (pending: Promise<unknown>, code: string) => {
 try {
   for (const name of ["data", "config", "cache", "state"])
     process.env[`XDG_${name.toUpperCase()}_HOME`] = join(root, name)
+  process.env.MONGOLGPT_RUNTIME_SECRET = testMasterSecret
   platform = await start()
   for (const name of ["0001_history.sql", "0002_history_checkpoint.sql", "0003_file_revision.sql"]) {
     const sql = await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), "utf8")
@@ -174,15 +176,20 @@ try {
   platform = undefined
   platform = await start()
   equal(await stores().checkpoints.readFiles(scope), latest)
-  const request = (request: Request) =>
-    native.handleCheckpointOutbound(
-      request,
-      {
-        ...env(),
-        MONGOLGPT_RUNTIME_BACKUP_KEYS: masterJSON,
-      },
-      { params: scope },
-    )
+  const request = await native.createRuntimeCheckpointClient({
+    secret: testMasterSecret,
+    scope,
+    request: (request) =>
+      native.handleCheckpointOutbound(
+        request,
+        {
+          ...env(),
+          MONGOLGPT_RUNTIME_BACKUP_KEYS: masterJSON,
+          MONGOLGPT_RUNTIME_SECRET: testMasterSecret,
+        },
+        { params: scope },
+      ),
+  })
   const fresh = join(root, "replacement")
   await mkdir(fresh)
   const restored = await native.CloudStartup.bootstrap({ root: fresh, request })

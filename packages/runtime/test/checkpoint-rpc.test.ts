@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
+import { checkpointControlHeader, deriveCheckpointControlToken } from "@mongolgpt/runtime-auth/control"
 import { RuntimeBackupError, deriveRuntimeBackupKey } from "../src/backup"
 import { createCheckpointHandler, handleCheckpointOutbound } from "../src/checkpoint-rpc"
 import { HistoryError, type HistoryLease, type HistoryScope } from "../src/history"
@@ -10,6 +11,7 @@ const otherScope = { accountID: "acc_checkpoint_other", workspaceID: "wrk_checkp
 const url = "http://checkpoint.mongolgpt.internal/v1"
 const master = Buffer.from("9b4f5d452df4b2a252956e2a31a8245f5f6453c8849974c1f94e72cd8b5b9466", "hex")
 const masterKeyJson = JSON.stringify({ key_checkpoint_rpc: master.toString("base64") })
+const runtimeSecret = "checkpoint-runtime-secret-at-least-thirty-two-characters"
 
 describe("checkpoint rpc", () => {
   test("selects the current file revision and rejects stale or missing archive guards", async () => {
@@ -116,11 +118,81 @@ describe("checkpoint rpc", () => {
   })
 
   test("fails closed when the internal D1 binding is missing", async () => {
-    const response = await handleCheckpointOutbound(request("/bootstrap", {}), {}, { params: scope })
+    const response = await handleCheckpointOutbound(
+      await authorizedRequest("/bootstrap", {}, scope),
+      { MONGOLGPT_RUNTIME_SECRET: runtimeSecret },
+      { params: scope },
+    )
 
     expect(response.status).toBe(503)
     expect(response.headers.get("cache-control")).toBe("no-store")
     expect(await response.json()).toMatchObject({ error: { code: "unavailable" } })
+  })
+
+  test("external outbound rejects missing, malformed, wrong, and cross-scope credentials before storage", async () => {
+    const storage = guardedEnv()
+
+    for (const input of [
+      request("/bootstrap", {}),
+      request("/bootstrap", {}, undefined, { [checkpointControlHeader]: "not-a-token" }),
+      request("/bootstrap", {}, undefined, { [checkpointControlHeader]: "0".repeat(64) }),
+      await authorizedRequest("/bootstrap", {}, otherScope),
+    ]) {
+      const response = await handleCheckpointOutbound(input, storage.env, { params: scope })
+      expect(response.status).toBe(403)
+      expect(response.headers.get("cache-control")).toBe("no-store")
+      expect(JSON.stringify(await response.json())).not.toContain(runtimeSecret)
+      expect(storage.calls).toEqual([])
+    }
+  })
+
+  test("external outbound rejects unauthorized requests before reading the body", async () => {
+    let reads = 0
+    const response = await handleCheckpointOutbound(
+      new Request(`${url}/bootstrap`, {
+        method: "POST",
+        headers: jsonContent(),
+        body: new ReadableStream<Uint8Array>(
+          {
+            pull() {
+              reads++
+              throw new Error("unexpected body read")
+            },
+          },
+          { highWaterMark: 0 },
+        ),
+      }),
+      guardedEnv().env,
+      { params: scope },
+    )
+
+    expect(response.status).toBe(403)
+    expect(reads).toBe(0)
+  })
+
+  test("external outbound rejects missing or invalid server secrets before storage", async () => {
+    for (const secret of [undefined, "short", "x".repeat(8193)]) {
+      const storage = guardedEnv()
+      const response = await handleCheckpointOutbound(
+        request("/bootstrap", {}, undefined, { [checkpointControlHeader]: "0".repeat(64) }),
+        { ...storage.env, MONGOLGPT_RUNTIME_SECRET: secret },
+        { params: scope },
+      )
+      expect(response.status).toBe(503)
+      expect(JSON.stringify(await response.json())).not.toContain(runtimeSecret)
+      expect(storage.calls).toEqual([])
+    }
+  })
+
+  test("external outbound preserves authorized checkpoint paths", async () => {
+    const response = await handleCheckpointOutbound(
+      await authorizedRequest("/bootstrap", {}, scope),
+      { HISTORY: emptyD1(), MONGOLGPT_RUNTIME_SECRET: runtimeSecret },
+      { params: scope },
+    )
+
+    expect(response.status).toBe(200)
+    expect((await response.json()) as unknown).toEqual({ checkpoint: null })
   })
 
   test("bootstraps a trusted checkpoint with tenant-derived keys only", async () => {
@@ -695,8 +767,13 @@ function archiveBytes(bytes: number) {
   return new Uint8Array(Array.from({ length: bytes }, (_value, index) => index % 251))
 }
 
-function request(path: string, body: unknown, signal?: AbortSignal) {
-  return new Request(`${url}${path}`, { method: "POST", headers: jsonContent(), body: JSON.stringify(body), signal })
+function request(path: string, body: unknown, signal?: AbortSignal, headers: Record<string, string> = {}) {
+  return new Request(`${url}${path}`, {
+    method: "POST",
+    headers: { ...jsonContent(), ...headers },
+    body: JSON.stringify(body),
+    signal,
+  })
 }
 
 function jsonContent() {
@@ -728,4 +805,48 @@ async function bounded<T>(promise: Promise<T>) {
     promise,
     new Promise<T>((_resolve, reject) => setTimeout(() => reject(new Error("operation hung")), 250)),
   ])
+}
+
+async function authorizedRequest(path: string, body: unknown, tenant: HistoryScope, signal?: AbortSignal) {
+  return request(path, body, signal, {
+    [checkpointControlHeader]: await deriveCheckpointControlToken(runtimeSecret, tenant),
+  })
+}
+
+function guardedEnv() {
+  const calls = new Array<string>()
+  return {
+    calls,
+    env: {
+      MONGOLGPT_RUNTIME_SECRET: runtimeSecret,
+      HISTORY: {
+        prepare() {
+          calls.push("d1:prepare")
+          throw new Error("unexpected D1 access")
+        },
+      } as unknown as D1Database,
+      RUNTIME_BACKUPS: {
+        get() {
+          calls.push("r2:get")
+          throw new Error("unexpected R2 access")
+        },
+      } as unknown as R2Bucket,
+      MONGOLGPT_RUNTIME_BACKUP_KEYS: masterKeyJson,
+    },
+  }
+}
+
+function emptyD1() {
+  return {
+    prepare() {
+      return {
+        bind() {
+          return this
+        },
+      }
+    },
+    async batch(statements: D1PreparedStatement[]) {
+      return statements.map(() => ({ success: true, results: [] }))
+    },
+  } as unknown as D1Database
 }

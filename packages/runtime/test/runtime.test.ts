@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test"
 import { issueRuntimeCapability, runtimeGatewayHeader, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
+import {
+  checkpointControlEnv,
+  checkpointControlHeader,
+  deriveCheckpointControlToken,
+  sdkControlEnv,
+  sdkControlHeader,
+} from "@mongolgpt/runtime-auth/control"
 import { createRuntimeDeployCommand, parseRuntimeDeployStage } from "../script/deploy"
 import {
   createRuntimeProcessStarter,
@@ -511,11 +518,21 @@ describe("MongolGPT Cloudflare runtime", () => {
       MONGOLGPT_CLOUD_HISTORY: "true",
       MONGOLGPT_DB: "/workspace/.mongolgpt/runtime.sqlite",
       XDG_STATE_HOME: "/workspace/.mongolgpt/state",
+      [checkpointControlEnv]: await deriveCheckpointControlToken(secret, {
+        accountID: "acc_123",
+        workspaceID: "wrk_123",
+      }),
     })
     expect(runtime.started[0].options.env.MONGOLGPT_RUNTIME_BACKUP_KEYS).toBeUndefined()
+    expect(runtime.started[0].options.env.MONGOLGPT_RUNTIME_SECRET).toBeUndefined()
+    expect(runtime.started[0].options.env[sdkControlEnv]).toBeUndefined()
     expect(runtime.started[0].command).toBe("/usr/local/bin/mongolgpt serve --hostname 0.0.0.0 --port 4096")
     expect(new URL(runtime.requests[0].url).pathname).toBe("/global/health")
     expect(runtime.requests[0].headers.get("authorization")).toStartWith("Basic ")
+    for (const request of runtime.requests) {
+      expect(request.headers.get(checkpointControlHeader)).toBeNull()
+      expect(request.headers.get(sdkControlHeader)).toBeNull()
+    }
   })
 
   const missingReceipts: Record<string, string>[] = [
@@ -1640,6 +1657,11 @@ describe("runtime deployment contract", () => {
     expect(stages).toHaveLength(2)
     expect(stages[0]).toMatch(/^FROM docker\.io\/alpine:3\.23@sha256:[0-9a-f]{64} AS workspace-launcher$/)
     expect(stages.at(-1)).toBe(`FROM docker.io/cloudflare/sandbox:${version}`)
+    expect(dockerfile).toContain("COPY --chmod=0555 container/sandbox /container-server/sandbox")
+    expect(dockerfile).toContain("COPY vendor/sandbox-control/LICENSE /usr/share/licenses/mongolgpt-sandbox/LICENSE")
+    const upstream = await Bun.file(new URL("../vendor/sandbox-control/upstream.json", import.meta.url)).json()
+    expect(upstream.version).toBe(version)
+    expect(upstream.revision).toMatch(/^[0-9a-f]{40}$/)
     expect(dockerfile).toContain(
       "COPY --from=workspace-launcher --chmod=0755 /workspace-launcher /usr/local/bin/mongolgpt-workspace-launcher",
     )

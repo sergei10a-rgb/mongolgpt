@@ -29,6 +29,16 @@ export { createRuntimeBackupStore, deriveRuntimeBackupKey } from "../../src/back
 export { createCheckpointFixture } from "./checkpoint-native"
 
 import { createCloudHistory } from "../../../core/src/event/cloud-history"
+import { RuntimeCheckpointClient } from "../../../core/src/runtime-checkpoint-client"
+import { deriveCheckpointControlToken } from "../../../runtime-auth/src/control"
+
+export async function createRuntimeCheckpointClient(input: {
+  secret: string
+  scope: { accountID: string; workspaceID: string }
+  request: (request: Request) => Promise<Response>
+}) {
+  return RuntimeCheckpointClient.create(await deriveCheckpointControlToken(input.secret, input.scope), input.request)
+}
 
 export async function postcommitProjection(input: {
   filename: string

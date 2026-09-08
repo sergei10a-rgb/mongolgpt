@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/cloudflare/sandbox-sdk.git",
+  "revision": "133939602f28a23ae6bab1d00878d95b3f308394",
+  "tag": "@cloudflare/sandbox@0.12.9",
+  "version": "0.12.9",
+  "license": "Apache-2.0",
+  "changes": "Require a root-only control credential before all HTTP routes and WebSocket upgrades; strip the credential before dispatch."
+}

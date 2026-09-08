@@ -13,6 +13,7 @@ import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 
 const root = await mkdtemp(join(tmpdir(), "mongolgpt-checkpoint-startup-"))
 const scope = { accountID: "acc_startup", workspaceID: "wrk_startup" }
+const testMasterSecret = "checkpoint-startup-test-secret-32-bytes"
 let platform: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>>> | undefined
 let assertions = 0
 const equal = (actual: unknown, expected: unknown) => {
@@ -26,6 +27,7 @@ try {
   for (const name of ["data", "config", "cache", "state"]) {
     process.env[`XDG_${name.toUpperCase()}_HOME`] = join(root, name)
   }
+  process.env.MONGOLGPT_RUNTIME_SECRET = testMasterSecret
   platform = await getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>({
     configPath: fileURLToPath(new URL("./fixtures/history-d1.jsonc", import.meta.url)),
     persist: { path: join(root, "platform") },
@@ -125,7 +127,13 @@ try {
     MONGOLGPT_RUNTIME_BACKUP_KEYS: JSON.stringify({
       [refs.sqlite.keyID]: Buffer.from(fixture.master).toString("base64"),
     }),
+    MONGOLGPT_RUNTIME_SECRET: testMasterSecret,
   }
+  const checkpointRequest = await native.createRuntimeCheckpointClient({
+    secret: testMasterSecret,
+    scope,
+    request: (request) => native.handleCheckpointOutbound(request, env, { params: scope }),
+  })
   proxy.on("request", async (incoming, outgoing) => {
     try {
       const url = new URL(incoming.url!, "http://127.0.0.1")
@@ -139,7 +147,7 @@ try {
         body,
       })
       const response = isCheckpoint
-        ? await native.handleCheckpointOutbound(request, env, { params: scope })
+        ? await checkpointRequest(request)
         : await native.handleHistoryOutbound(request, { HISTORY: db }, { params: scope })
       outgoing.writeHead(response.status, Object.fromEntries(response.headers))
       if (corrupt && isCheckpoint && route === "/v1/archive" && response.status === 200) {
@@ -180,7 +188,7 @@ try {
         cwd: fileURLToPath(new URL("../../mongolgpt", import.meta.url)),
         windowsHide: true,
         stdio: ["ignore", "pipe", "pipe"],
-        env: { ...process.env },
+        env: { ...process.env, MONGOLGPT_RUNTIME_SECRET: testMasterSecret },
       },
     )
     const output: string[] = []

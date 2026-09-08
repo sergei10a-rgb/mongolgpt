@@ -11,6 +11,7 @@ const root = await mkdtemp(join(tmpdir(), "mongolgpt-baseline-integration-"))
 const scope = { accountID: "acc_baseline", workspaceID: "wrk_fresh" }
 const keyID = "synthetic_baseline"
 const masters = JSON.stringify({ [keyID]: Buffer.alloc(32, 9).toString("base64") })
+const testMasterSecret = "checkpoint-baseline-test-secret-32-bytes"
 let assertions = 0
 const equal = (actual: unknown, expected: unknown) => {
   assertions++
@@ -20,6 +21,7 @@ let platform: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database; BACKU
 try {
   for (const name of ["data", "config", "cache", "state"])
     process.env[`XDG_${name.toUpperCase()}_HOME`] = join(root, name)
+  process.env.MONGOLGPT_RUNTIME_SECRET = testMasterSecret
   const native: typeof import("./fixtures/history-native.ts") = await import(pathToFileURL(process.argv[2]).href)
   const connect = () =>
     getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>({
@@ -34,28 +36,52 @@ try {
       await platform.env.DB.prepare(sql).run()
   }
   const calls: string[] = []
-  const request = (tenant: typeof scope) => async (input: Request) => {
-    calls.push(new URL(input.url).pathname)
-    return native.handleCheckpointOutbound(
-      input,
-      {
-        HISTORY: platform!.env.DB as unknown as NonNullable<
-          Parameters<typeof native.handleCheckpointOutbound>[1]["HISTORY"]
-        >,
-        RUNTIME_BACKUPS: platform!.env.BACKUPS as unknown as NonNullable<
-          Parameters<typeof native.handleCheckpointOutbound>[1]["RUNTIME_BACKUPS"]
-        >,
-        MONGOLGPT_RUNTIME_BACKUP_KEYS: masters,
+  const request = (tenant: typeof scope) =>
+    native.createRuntimeCheckpointClient({
+      secret: testMasterSecret,
+      scope: tenant,
+      request: async (input) => {
+        calls.push(new URL(input.url).pathname)
+        return native.handleCheckpointOutbound(
+          input,
+          {
+            HISTORY: platform!.env.DB as unknown as NonNullable<
+              Parameters<typeof native.handleCheckpointOutbound>[1]["HISTORY"]
+            >,
+            RUNTIME_BACKUPS: platform!.env.BACKUPS as unknown as NonNullable<
+              Parameters<typeof native.handleCheckpointOutbound>[1]["RUNTIME_BACKUPS"]
+            >,
+            MONGOLGPT_RUNTIME_BACKUP_KEYS: masters,
+            MONGOLGPT_RUNTIME_SECRET: testMasterSecret,
+          },
+          { params: tenant },
+        )
       },
-      { params: tenant },
-    )
-  }
+    })
   const store = () =>
     native.createHistoryStore(platform!.env.DB as unknown as Parameters<typeof native.createHistoryStore>[0])
   const workspace = join(root, "workspace")
   await mkdir(join(workspace, ".mongolgpt/data"), { recursive: true })
-  equal(await native.CloudStartup.bootstrap({ root: workspace, request: request(scope) }), null)
-  const checkpoint = await native.CloudBaseline.publish({ root: workspace, request: request(scope) })
+  const unauthorized = await native.handleCheckpointOutbound(
+    new Request("http://checkpoint.mongolgpt.internal/v1/bootstrap", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    }),
+    {
+      HISTORY: platform.env.DB as unknown as NonNullable<
+        Parameters<typeof native.handleCheckpointOutbound>[1]["HISTORY"]
+      >,
+      RUNTIME_BACKUPS: platform.env.BACKUPS as unknown as NonNullable<
+        Parameters<typeof native.handleCheckpointOutbound>[1]["RUNTIME_BACKUPS"]
+      >,
+      MONGOLGPT_RUNTIME_SECRET: testMasterSecret,
+    },
+    { params: scope },
+  )
+  equal(unauthorized.status, 403)
+  equal(await native.CloudStartup.bootstrap({ root: workspace, request: await request(scope) }), null)
+  const checkpoint = await native.CloudBaseline.publish({ root: workspace, request: await request(scope) })
   equal(await store().epoch(scope), 1)
   equal((await store().checkpoint(scope))?.data, checkpoint)
   equal(checkpoint.inventory.counts, { events: 0, tombstones: 0 })
@@ -73,7 +99,7 @@ try {
   // Reopen the actual platform storage, not an in-memory mock or prior handles.
   await platform.dispose()
   platform = await connect()
-  equal(await native.CloudStartup.bootstrap({ root: workspace, request: request(scope) }), checkpoint)
+  equal(await native.CloudStartup.bootstrap({ root: workspace, request: await request(scope) }), checkpoint)
   const database = new DatabaseSync(join(workspace, ".mongolgpt/runtime.sqlite"), { readOnly: true })
   try {
     equal(database.prepare("SELECT count(*) AS count FROM session").get()?.count, 0)
@@ -106,7 +132,9 @@ try {
   equal(lease.epoch, 2)
   equal((await native.Effect.runPromise(cloud.read(0))).entries, [])
   equal(await store().epoch(scope), 2)
-  const stale = await request(scope)(
+  const stale = await (
+    await request(scope)
+  )(
     new Request("http://checkpoint.mongolgpt.internal/v1/publish", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -127,7 +155,7 @@ try {
     checkpointID: checkpoint.id,
     lease,
     signal: new AbortController().signal,
-    request: request(scope),
+    request: await request(scope),
   }).finally(() => snapshot.close())
   equal(files.data.sequence, 1)
   equal(!!files.data.sqlite, true)
@@ -135,7 +163,7 @@ try {
   equal((await store().checkpoint(scope))?.data, checkpoint)
   const replacement = join(root, "replacement")
   await mkdir(replacement)
-  const replaced = await native.CloudStartup.bootstrap({ root: replacement, request: request(scope) })
+  const replaced = await native.CloudStartup.bootstrap({ root: replacement, request: await request(scope) })
   equal(replaced?.filesRevisionID, files.data.id)
   equal(replaced?.resume, {})
   equal(replaced?.sqlite, checkpoint.sqlite)
@@ -166,7 +194,7 @@ try {
   const beforeResume = calls.length
   const resumed = await native.CloudStartup.resume({
     root: workspace,
-    request: request(scope),
+    request: await request(scope),
     checkpointID: checkpoint.id,
     expectedEpoch: 2,
   })
@@ -208,7 +236,7 @@ try {
   const duplicate = join(root, "duplicate")
   await mkdir(duplicate)
   await assert.rejects(
-    native.CloudBaseline.publish({ root: duplicate, request: request(scope) }),
+    native.CloudBaseline.publish({ root: duplicate, request: await request(scope) }),
     native.CloudBaseline.BaselineError,
   )
   assertions++
@@ -223,7 +251,7 @@ try {
     native.CloudBaseline.publish({
       root: lost,
       request: async (input) => {
-        const response = await request(lostScope)(input)
+        const response = await (await request(lostScope))(input)
         if (new URL(input.url).pathname === "/v1/publish" && response.status === 200)
           throw new Error("Synthetic lost acknowledgement after durable commit")
         return response
@@ -240,13 +268,13 @@ try {
     false,
   )
   // A new explicit startup can restore the committed generation without publishing again.
-  const recovered = await native.CloudStartup.bootstrap({ root: lost, request: request(lostScope) })
+  const recovered = await native.CloudStartup.bootstrap({ root: lost, request: await request(lostScope) })
   equal(recovered?.id, (await store().checkpoint(lostScope))?.data.id)
   equal(await store().epoch(lostScope), 1)
   const raceScope = { ...scope, workspaceID: "wrk_begin_race" }
   const raced = await Promise.all(
-    ["first_writer", "second_writer"].map((writerID) =>
-      request(raceScope)(
+    ["first_writer", "second_writer"].map(async (writerID) =>
+      (await request(raceScope))(
         new Request("http://checkpoint.mongolgpt.internal/v1/begin", {
           method: "POST",
           headers: { "content-type": "application/json" },

@@ -98,6 +98,13 @@ jobs:
         timeout-minutes: 3
         run: sudo -- "$(command -v bun)" packages/runtime/script/test-process-group.ts
 
+      - name: Build and test authenticated Sandbox control plane
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: |
+          bun packages/runtime/script/build-sandbox.ts
+          sudo -- "$(command -v bun)" packages/runtime/script/test-sandbox-control.ts
+
       - name: Run HttpApi exerciser gates
         if: runner.os == 'Linux'
         working-directory: packages/mongolgpt

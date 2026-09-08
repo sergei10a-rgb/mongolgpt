@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
 import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
+import { deriveCheckpointControlToken } from "@mongolgpt/runtime-auth/control"
+import { RuntimeCheckpointClient } from "../../core/src/runtime-checkpoint-client"
 import { RuntimeBackupError, type RuntimeBackupManifest } from "../src/backup"
 import { createCheckpointHandler, handleCheckpointOutbound } from "../src/checkpoint-rpc"
 import { HistoryError, type HistoryLease, type HistoryScope } from "../src/history"
@@ -9,6 +11,7 @@ const scope = { accountID: "acc_publish_rpc", workspaceID: "wrk_publish_rpc" }
 const origin = "http://checkpoint.mongolgpt.internal"
 const keyID = "key_publish_v1"
 const masterKeyJson = JSON.stringify({ [keyID]: Buffer.alloc(32, 7).toString("base64") })
+const testMasterSecret = "checkpoint-publish-rpc-test-secret-32"
 const maxBytes = 96 * 1024 * 1024
 const digest = "a".repeat(64)
 type Stores = Parameters<typeof createCheckpointHandler>[0]
@@ -562,15 +565,11 @@ describe("checkpoint file publication RPC", () => {
       },
     } as unknown as R2Bucket
     let settled = false
-    const pending = handleCheckpointOutbound(
-      json("/v1/publish-files", publication(), abort.signal),
-      {
-        HISTORY: db,
-        RUNTIME_BACKUPS: bucket,
-        MONGOLGPT_RUNTIME_BACKUP_KEYS: masterKeyJson,
-      },
-      { params: scope },
-    ).then((response) => {
+    const pending = authenticatedOutbound(json("/v1/publish-files", publication(), abort.signal), {
+      HISTORY: db,
+      RUNTIME_BACKUPS: bucket,
+      MONGOLGPT_RUNTIME_BACKUP_KEYS: masterKeyJson,
+    }).then((response) => {
       settled = true
       return response
     })
@@ -609,15 +608,11 @@ describe("checkpoint file publication RPC", () => {
       },
     } as unknown as R2Bucket
     let settled = false
-    const pending = handleCheckpointOutbound(
-      json("/v1/publish", checkpointPublication(), abort.signal),
-      {
-        HISTORY: db,
-        RUNTIME_BACKUPS: bucket,
-        MONGOLGPT_RUNTIME_BACKUP_KEYS: masterKeyJson,
-      },
-      { params: scope },
-    ).then((response) => {
+    const pending = authenticatedOutbound(json("/v1/publish", checkpointPublication(), abort.signal), {
+      HISTORY: db,
+      RUNTIME_BACKUPS: bucket,
+      MONGOLGPT_RUNTIME_BACKUP_KEYS: masterKeyJson,
+    }).then((response) => {
       settled = true
       return response
     })
@@ -702,6 +697,16 @@ function handler(overrides: Partial<Stores> = {}, tenant = scope) {
     ...overrides,
   }
   return { stores, handle: createCheckpointHandler(stores, tenant), uploads, publications, checkpointPublications }
+}
+
+async function authenticatedOutbound(
+  request: Request,
+  env: Parameters<typeof handleCheckpointOutbound>[1],
+  tenant = scope,
+) {
+  return RuntimeCheckpointClient.create(await deriveCheckpointControlToken(testMasterSecret, tenant), (input) =>
+    handleCheckpointOutbound(input, { ...env, MONGOLGPT_RUNTIME_SECRET: testMasterSecret }, { params: tenant }),
+  )(request)
 }
 
 async function unreadable(): Promise<never> {

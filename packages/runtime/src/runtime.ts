@@ -1,4 +1,5 @@
 import { issueRuntimeCapability, runtimeGatewayHeader, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
+import { checkpointControlEnv, deriveCheckpointControlToken } from "@mongolgpt/runtime-auth/control"
 
 const PORT = 4096
 export const RUNTIME_PROCESS_ID = "mongolgpt-server"
@@ -335,7 +336,14 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
         accountID: authentication.account.id,
         workspaceID: authentication.workspace.id,
       })
-      await ensureServer(sandbox, identity.password, consoleOrigin, env.MONGOLGPT_CLOUD_HISTORY === "true")
+      const restore = env.MONGOLGPT_CLOUD_HISTORY === "true"
+      const checkpointToken = restore
+        ? await deriveCheckpointControlToken(env.MONGOLGPT_RUNTIME_SECRET, {
+            accountID: authentication.account.id,
+            workspaceID: authentication.workspace.id,
+          })
+        : undefined
+      await ensureServer(sandbox, identity.password, consoleOrigin, restore, checkpointToken)
       if (authentication.expiresAt <= Date.now()) {
         return cors(json({ error: "Runtime сессийн хугацаа дууссан байна. Дахин нэвтэрнэ үү." }, 401), appOrigin)
       }
@@ -582,7 +590,13 @@ function requestDirectory(request: Request, url: URL) {
   return directory && values.every((value) => value === directory) ? directory : null
 }
 
-async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOrigin: string, restore: boolean) {
+async function ensureServer(
+  sandbox: RuntimeSandbox,
+  password: string,
+  consoleOrigin: string,
+  restore: boolean,
+  checkpointToken?: string,
+) {
   const existing = await sandbox.getProcess(RUNTIME_PROCESS_ID).catch((error) => {
     throw RuntimeFailure.create("runtime_process_lookup_failed", error)
   })
@@ -617,6 +631,7 @@ async function ensureServer(sandbox: RuntimeSandbox, password: string, consoleOr
               MONGOLGPT_CLOUD_HISTORY: "true",
               MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE: "true",
               MONGOLGPT_RUNTIME_SUPERVISOR: "true",
+              [checkpointControlEnv]: checkpointToken!,
               MONGOLGPT_DB: `${WORKSPACE_ROOT}/.mongolgpt/runtime.sqlite`,
               XDG_STATE_HOME: `${WORKSPACE_ROOT}/.mongolgpt/state`,
             }

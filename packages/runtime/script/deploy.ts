@@ -1,5 +1,6 @@
 import { resolveHostedServiceUrls } from "@mongolgpt/account-contract/service-urls"
 import { fileURLToPath } from "node:url"
+import { verifySandboxBuild } from "./build-sandbox"
 
 export type RuntimeDeployStage = "dev" | "production"
 
@@ -45,6 +46,7 @@ export function createRuntimeDeployCommand(input: {
 export async function runRuntimeDeploy(argv = process.argv.slice(2)) {
   const [rawStage, ...args] = argv
   const stage = parseRuntimeDeployStage(rawStage)
+  await verifySandboxBuild()
   const packageJSON: unknown = await Bun.file(new URL("../package.json", import.meta.url)).json()
   if (
     typeof packageJSON !== "object" ||

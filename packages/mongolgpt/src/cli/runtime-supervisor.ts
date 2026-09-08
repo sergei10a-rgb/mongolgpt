@@ -1,5 +1,10 @@
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
 import { RuntimeContainerControl } from "@mongolgpt/core/runtime-container-control"
+import {
+  RuntimeCheckpointClient,
+  checkpointControlEnv,
+  validControlToken,
+} from "@mongolgpt/core/runtime-checkpoint-client"
 
 type RuntimeStart = typeof RuntimeSupervisor.start
 type RuntimeHandle = Awaited<ReturnType<RuntimeStart>>
@@ -26,7 +31,11 @@ const forwarded = [
 ] as const
 
 export async function runRuntimeSupervisor(
-  input: { start?: RuntimeStart; connect?: typeof RuntimeContainerControl.join } = {},
+  input: {
+    start?: RuntimeStart
+    connect?: typeof RuntimeContainerControl.join
+    request?: (request: Request) => Promise<Response>
+  } = {},
 ) {
   if (
     process.env.MONGOLGPT_RUNTIME_MODE !== "hosted" ||
@@ -35,7 +44,15 @@ export async function runRuntimeSupervisor(
     !process.env.MONGOLGPT_SERVER_PASSWORD
   )
     throw new Error("Cloud серверийн хамгаалалт эсвэл сэргээх тохиргоо дутуу байна.")
+  const controlToken = process.env[checkpointControlEnv]
+  if (!validControlToken(controlToken)) throw new Error("Cloud checkpoint control token is missing or invalid.")
   const startRuntime = input.start ?? RuntimeSupervisor.start
+  if (
+    !input.start &&
+    !input.connect &&
+    (process.platform !== "linux" || process.getuid?.() !== 0 || process.geteuid?.() !== 0)
+  )
+    throw new Error("Cloud runtime supervisor must run as Linux root.")
   const root = "/workspace"
   const env = Object.fromEntries(
     forwarded.flatMap((name) => {
@@ -70,6 +87,7 @@ export async function runRuntimeSupervisor(
       args: ["serve", "--hostname", "0.0.0.0", "--port", "4096"],
       stdio: "inherit",
       signal: abort.signal,
+      request: RuntimeCheckpointClient.create(controlToken, input.request),
       env: {
         ...env,
         PATH: "/usr/local/bin:/usr/bin:/bin",

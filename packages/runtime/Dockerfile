@@ -5,6 +5,10 @@ RUN cc -Os -s -Wall -Wextra -Werror -static /build/workspace-launcher.c -o /work
 
 FROM docker.io/cloudflare/sandbox:0.12.9
 
+COPY --chmod=0555 container/sandbox /container-server/sandbox
+COPY container/sandbox-build.json /usr/share/mongolgpt/sandbox-build.json
+COPY vendor/sandbox-control/LICENSE /usr/share/licenses/mongolgpt-sandbox/LICENSE
+COPY vendor/sandbox-control/upstream.json /usr/share/licenses/mongolgpt-sandbox/upstream.json
 COPY --chmod=0755 container/mongolgpt /usr/local/bin/mongolgpt
 COPY --from=workspace-launcher --chmod=0755 /workspace-launcher /usr/local/bin/mongolgpt-workspace-launcher
 COPY --from=workspace-launcher --chmod=0755 /sbin/tini-static /usr/local/bin/mongolgpt-init
