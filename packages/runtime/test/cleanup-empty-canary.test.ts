@@ -126,6 +126,113 @@ describe("empty canary recovery", () => {
   })
 })
 
+describe("removed canary backend recovery", () => {
+  test("verifies absent frontends and exact database before deleting only an empty backend", async () => {
+    for (const listing of [[], { applications: [] }, { success: true, result: [] }]) {
+      const api = removedMock({ listing: Response.json(listing) })
+      const result = await cleanupEmptyCanary({ ...input, frontendRemoved: true, request: api.request })
+      expect(result.failures).toEqual([])
+      expect(result.manualCleanup).toEqual([])
+      expect(result.deleted).toEqual([`r2:${name}`, `d1:${input.databaseID}`])
+      expect(result.skipped).toEqual([
+        `worker:${name}:verified-missing`,
+        `container:${input.containerApplicationID}:verified-missing`,
+      ])
+      expect(api.calls.filter((call) => call.startsWith("DELETE"))).toEqual([
+        `DELETE /accounts/${input.accountID}/r2/buckets/${name}`,
+        `DELETE /accounts/${input.accountID}/d1/database/${input.databaseID}`,
+      ])
+      expect(api.calls.slice(0, 4)).toEqual([
+        `GET /accounts/${input.accountID}/workers/scripts/${name}/settings`,
+        `GET /accounts/${input.accountID}/containers/applications/${input.containerApplicationID}`,
+        `GET /accounts/${input.accountID}/containers/applications?name=${name}`,
+        `GET /accounts/${input.accountID}/d1/database/${input.databaseID}`,
+      ])
+      expect(api.calls.some((call) => /force|mongolgpt-runtime-dev/.test(call))).toBe(false)
+    }
+  })
+
+  test("existing, unauthorized, unknown or paginated frontends never authorize backend deletion", async () => {
+    for (const override of [
+      { worker: Response.json({ success: true, result: {} }) },
+      { worker: Response.json({ success: true, result: null }) },
+      { worker: Response.json({ success: false }, { status: 403 }) },
+      { application: Response.json({ id: input.containerApplicationID, name }) },
+      { application: Response.json(null) },
+      { application: Response.json({ success: false }, { status: 403 }) },
+      { listing: Response.json([{ id: "different-application-id", name }]) },
+      { listing: Response.json(["malformed"]) },
+      { listing: Response.json({}) },
+      { listing: Response.json({ applications: [], next_page_token: "more" }) },
+      { listing: Response.json({ success: true, result: [], result_info: { next_page_token: "more" } }) },
+      { listing: Response.json({ success: false, result: [] }) },
+      { listing: Response.json({}, { status: 403 }) },
+      { listing: Response.json({ padding: "x".repeat(70_000) }) },
+      { databaseName: "mongolgpt-runtime-dev" },
+    ]) {
+      const api = removedMock(override)
+      await expect(cleanupEmptyCanary({ ...input, frontendRemoved: true, request: api.request })).rejects.toThrow()
+      expect(api.calls.filter((call) => call.startsWith("DELETE"))).toEqual([])
+    }
+  })
+
+  test("a nonempty R2 bucket retains D1 and never issues a forced deletion", async () => {
+    const api = removedMock({ bucketStatus: 409 })
+    const result = await cleanupEmptyCanary({ ...input, frontendRemoved: true, request: api.request })
+    expect(result.deleted).toEqual([])
+    expect(result.failures[0]?.resource).toBe(`r2:${name}`)
+    expect(result.manualCleanup).toContain(`d1:${input.databaseID}`)
+    expect(api.calls.filter((call) => call.startsWith("DELETE"))).toEqual([
+      `DELETE /accounts/${input.accountID}/r2/buckets/${name}`,
+    ])
+    expect(api.calls.some((call) => call.includes("force"))).toBe(false)
+  })
+
+  test("validates every identifier before sending a request in removed-frontend mode", async () => {
+    for (const override of [
+      { accountID: "../live" },
+      { token: "" },
+      { runID: "dev" },
+      { containerApplicationID: "../live" },
+    ]) {
+      const api = removedMock()
+      await expect(
+        cleanupEmptyCanary({ ...input, ...override, frontendRemoved: true, request: api.request }),
+      ).rejects.toThrow()
+      expect(api.calls).toEqual([])
+    }
+  })
+})
+
+function removedMock(
+  options: {
+    worker?: Response
+    application?: Response
+    listing?: Response
+    databaseName?: string
+    bucketStatus?: number
+  } = {},
+) {
+  const base = mock({ bucketStatus: options.bucketStatus })
+  const calls: string[] = []
+  const request: CanaryRequest = async (url, init) => {
+    const path = new URL(url).pathname.replace("/client/v4", "") + new URL(url).search
+    const method = init?.method ?? "GET"
+    calls.push(`${method} ${path}`)
+    expect(new Headers(init?.headers).get("authorization")).toBe(`Bearer ${input.token}`)
+    expect(init?.redirect).toBe("error")
+    expect(init?.signal).toBeInstanceOf(AbortSignal)
+    if (method === "GET" && path.endsWith("/settings")) return options.worker ?? new Response(null, { status: 404 })
+    if (method === "GET" && path.includes("/containers/applications/"))
+      return options.application ?? new Response(null, { status: 404 })
+    if (method === "GET" && path.includes("/containers/applications?")) return options.listing ?? Response.json([])
+    if (method === "GET" && options.databaseName && path.includes("/d1/database/"))
+      return Response.json({ success: true, result: { name: options.databaseName } })
+    return base.request(url, init)
+  }
+  return { request, calls }
+}
+
 function mock(
   options: {
     listing?: unknown

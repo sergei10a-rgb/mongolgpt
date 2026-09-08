@@ -1,4 +1,9 @@
-import { cleanupCanaryResourceReceipt, createCanaryName, type CanaryRequest } from "./canary-resources"
+import {
+  cleanupCanaryResourceReceipt,
+  cleanupRemovedCanaryBackend,
+  createCanaryName,
+  type CanaryRequest,
+} from "./canary-resources"
 import { readCanaryJson } from "./canary-probe"
 
 export async function cleanupEmptyCanary(input: {
@@ -8,6 +13,7 @@ export async function cleanupEmptyCanary(input: {
   attempt: string
   databaseID: string
   containerApplicationID: string
+  frontendRemoved?: boolean
   request?: CanaryRequest
 }) {
   const name = createCanaryName(input.runID, input.attempt)
@@ -16,6 +22,7 @@ export async function cleanupEmptyCanary(input: {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.containerApplicationID))
     throw new Error("Invalid canary application ID")
   const request = input.request ?? fetch
+  if (input.frontendRemoved === true) return cleanupRemovedCanaryBackend({ ...input, name, request })
   return cleanupCanaryResourceReceipt({
     accountID: input.accountID,
     token: input.token,
@@ -89,6 +96,7 @@ if (import.meta.main) {
       attempt: process.env.CANARY_ATTEMPT ?? "",
       databaseID: process.env.CANARY_DATABASE_ID ?? "",
       containerApplicationID: process.env.CANARY_APPLICATION_ID ?? "",
+      frontendRemoved: process.env.CANARY_FRONTEND_REMOVED === "true",
     })
     console.log(JSON.stringify(result))
     process.exitCode = result.failures.length === 0 && result.manualCleanup.length === 0 ? 0 : 1

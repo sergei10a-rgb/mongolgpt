@@ -79,6 +79,68 @@ export async function cleanupCanaryResourceReceipt(input: {
   })
 }
 
+export async function cleanupRemovedCanaryBackend(input: {
+  accountID: string
+  token: string
+  name: string
+  databaseID: string
+  containerApplicationID: string
+  request?: CanaryRequest
+}): Promise<CanaryCleanupResult> {
+  const accountID = validateAccountID(input.accountID)
+  const token = validateToken(input.token)
+  const name = validateCanaryName(input.name)
+  const databaseID = validateDatabaseID(input.databaseID)
+  if (!uuid.test(input.containerApplicationID)) throw new TypeError("Invalid canary application ID")
+  const request = input.request ?? fetch
+  const worker = await boundedFetch(request, token, `/accounts/${accountID}/workers/scripts/${name}/settings`, {})
+  if (worker.response.status !== 404) throw new CanaryResourceError("Backend recovery requires an absent Worker")
+  const application = await boundedFetch(
+    request,
+    token,
+    `/accounts/${accountID}/containers/applications/${input.containerApplicationID}`,
+    {},
+  )
+  if (application.response.status !== 404)
+    throw new CanaryResourceError("Backend recovery requires an absent Container application")
+  const listing = await boundedFetch(request, token, `/accounts/${accountID}/containers/applications?name=${name}`, {})
+  const envelope = parseJSON<unknown>(listing.body)
+  if (record(envelope) && ("result_info" in envelope || "next_page_token" in envelope))
+    throw new CanaryResourceError("Backend recovery refuses a paginated Container listing")
+  const applications = unwrapRaw<unknown>(listing.response, listing.body, token, false)
+  const empty = Array.isArray(applications)
+    ? applications.length === 0
+    : record(applications) &&
+      Object.keys(applications).length === 1 &&
+      Array.isArray(applications.applications) &&
+      applications.applications.length === 0
+  if (!empty) throw new CanaryResourceError("Backend recovery requires an empty exact-name Container listing")
+  const database = await optionalCloudflareResult<D1Database>(
+    accountID,
+    token,
+    `/accounts/${accountID}/d1/database/${databaseID}`,
+    request,
+  )
+  if (database !== null && database.name !== name) throw new CanaryResourceError("Backend recovery D1 name mismatch")
+  const result: CanaryCleanupResult = {
+    name,
+    deleted: [],
+    skipped: [`worker:${name}:verified-missing`, `container:${input.containerApplicationID}:verified-missing`],
+    failures: [],
+    manualCleanup: [],
+  }
+  const verified = { accountID, token, name, request }
+  // Never purge or force-delete data here; Cloudflare must confirm the bucket is empty.
+  await cleanupR2Bucket(verified, result, name)
+  if (result.failures.length > 0) {
+    result.skipped.push(`d1:${databaseID}:backend-cleanup-failed`)
+    result.manualCleanup.push(`d1:${databaseID}`)
+    return result
+  }
+  await cleanupD1Database(verified, result, databaseID)
+  return result
+}
+
 type OwnedResources = {
   databaseID?: string
   bucketName?: string

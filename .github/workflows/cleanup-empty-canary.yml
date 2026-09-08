@@ -22,6 +22,11 @@ on:
         description: "Exact canary Container application ID"
         required: true
         type: string
+      frontend_removed:
+        description: "Verify Worker and Container are already absent; recover only empty R2 and exact D1"
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 concurrency:
@@ -47,4 +52,5 @@ jobs:
           CANARY_ATTEMPT: ${{ inputs.attempt }}
           CANARY_DATABASE_ID: ${{ inputs.database_id }}
           CANARY_APPLICATION_ID: ${{ inputs.application_id }}
+          CANARY_FRONTEND_REMOVED: ${{ inputs.frontend_removed }}
         run: bun packages/runtime/script/cleanup-empty-canary.ts
