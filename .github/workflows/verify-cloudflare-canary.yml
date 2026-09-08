@@ -26,10 +26,11 @@ jobs:
     environment: dev
     env:
       MONGOLGPT_CANARY_CONFIRMATION: ${{ inputs.confirmation }}
-      MONGOLGPT_CANARY_OUTPUT: ${{ runner.temp }}/mgpt-canary-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Validate isolated test confirmation
-        run: test "$MONGOLGPT_CANARY_CONFIRMATION" = "RUN ISOLATED CLOUDFLARE CANARY"
+        run: |
+          test "$MONGOLGPT_CANARY_CONFIRMATION" = "RUN ISOLATED CLOUDFLARE CANARY"
+          echo "MONGOLGPT_CANARY_OUTPUT=$RUNNER_TEMP/mgpt-canary-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
 
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

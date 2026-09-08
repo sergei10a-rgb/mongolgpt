@@ -88,6 +88,10 @@ test("canary workflow has no automatic deploy or production routes and cannot ca
   )
   expect(source).not.toContain("deploy-dev-runtime")
   expect(source).not.toContain("MONGOLGPT_ENABLE_REAL_PAYMENTS")
+  expect(source).not.toContain("${{ runner.temp }}")
+  expect(source).toContain(
+    'echo "MONGOLGPT_CANARY_OUTPUT=$RUNNER_TEMP/mgpt-canary-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"',
+  )
   expect(job.steps.filter((step) => step.with?.path).map((step) => step.with!.path)).toEqual([
     "${{ env.MONGOLGPT_CANARY_OUTPUT }}/report.json",
   ])
