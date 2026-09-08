@@ -280,6 +280,104 @@ try {
     admissionRace[0].status === "fulfilled" ? racedProposal.id : proposal.id,
   )
   equal(await stores().history.epoch(scope), admissionRace[0].status === "fulfilled" ? 3 : 4)
+  const beforePublication = (await stores().history.fileRevision(scope))!
+  const publicationLease = await stores().history.claim(scope, {
+    expectedEpoch: await stores().history.epoch(scope),
+    writerID: "writer_native_publication",
+    checkpointID: checkpoint.id,
+    filesRevisionID: beforePublication.data.id,
+  })
+  const owner = { epoch: publicationLease.epoch, writerID: publicationLease.writerID }
+  // No process writes this fixture while capture runs. The Linux cgroup suite
+  // separately exercises the supervisor's actual concurrent writer boundary.
+  await writeFile(join(fresh, "synthetic/data.bin"), Buffer.from([5, 0, 250, 13, 10]))
+  await unlink(join(fresh, "synthetic/new.txt"))
+  const calls: string[] = []
+  const publication = await native.CloudFiles.publish({
+    root: fresh,
+    checkpointID: checkpoint.id,
+    lease: owner,
+    signal: new AbortController().signal,
+    request: async (incoming) => {
+      calls.push(new URL(incoming.url).pathname)
+      return request(incoming)
+    },
+  })
+  equal(calls, ["/v1/bootstrap", "/v1/upload", "/v1/publish-files"])
+  equal(publication.data.sequence, beforePublication.data.sequence + 1)
+  equal(publication.data.previousID, beforePublication.data.id)
+  equal(await stores().checkpoints.readFiles(scope), publication)
+  await platform.dispose()
+  platform = undefined
+  platform = await start()
+  equal(await stores().checkpoints.readFiles(scope), publication)
+  const afterPublication = join(root, "after-native-publication")
+  await mkdir(afterPublication)
+  const latestRestored = await native.CloudStartup.bootstrap({ root: afterPublication, request })
+  equal(latestRestored?.filesRevisionID, publication.data.id)
+  equal(await readFile(join(afterPublication, "synthetic/data.bin")), Buffer.from([5, 0, 250, 13, 10]))
+  equal((await readdir(join(afterPublication, "synthetic"))).includes("new.txt"), false)
+  equal((await stores().history.checkpoint(scope))?.data, checkpoint)
+  let unexpectedPublish = false
+  assertions++
+  await assert.rejects(
+    native.CloudFiles.publish({
+      root: fresh,
+      checkpointID: checkpoint.id,
+      lease: owner,
+      signal: new AbortController().signal,
+      request: async (incoming) => {
+        const response = await request(incoming)
+        if (new URL(incoming.url).pathname === "/v1/upload") {
+          const data = (await response.json()) as Record<string, unknown>
+          return Response.json({ ...data, sha256: "0".repeat(64) })
+        }
+        if (new URL(incoming.url).pathname === "/v1/publish-files") unexpectedPublish = true
+        return response
+      },
+    }),
+    /Cloud файлууд/,
+  )
+  equal(unexpectedPublish, false)
+  equal(await stores().checkpoints.readFiles(scope), publication)
+  // Unknown final acknowledgement is never reported as a successful write.
+  assertions++
+  await assert.rejects(
+    native.CloudFiles.publish({
+      root: fresh,
+      checkpointID: checkpoint.id,
+      lease: owner,
+      signal: new AbortController().signal,
+      request: async (incoming) => {
+        const response = await request(incoming)
+        if (new URL(incoming.url).pathname === "/v1/publish-files" && response.status === 200)
+          throw new Error("lost publication response, private transport details")
+        return response
+      },
+    }),
+    /Cloud файлууд/,
+  )
+  const acknowledgedRemotely = (await stores().checkpoints.readFiles(scope))!
+  equal(acknowledgedRemotely.data.previousID, publication.data.id)
+  equal(acknowledgedRemotely.data.sequence, publication.data.sequence + 1)
+  await stores().history.claim(scope, {
+    expectedEpoch: owner.epoch,
+    writerID: "writer_after_native_publication",
+    checkpointID: checkpoint.id,
+    filesRevisionID: acknowledgedRemotely.data.id,
+  })
+  assertions++
+  await assert.rejects(
+    native.CloudFiles.publish({
+      root: fresh,
+      checkpointID: checkpoint.id,
+      lease: owner,
+      signal: new AbortController().signal,
+      request,
+    }),
+    /Cloud файлууд/,
+  )
+  equal(await stores().checkpoints.readFiles(scope), acknowledgedRemotely)
   key.fill(0)
   console.log(`FILE_REVISION_RESULT ${JSON.stringify({ ok: true, assertions })}`)
 } finally {

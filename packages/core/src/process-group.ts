@@ -79,6 +79,43 @@ export async function create(input: Input) {
     if (stopped || poisoned) throw new IsolationError()
   }
 
+  function close() {
+    if (closing) return closing
+    if (stopped) return Promise.resolve()
+    poisoned = true
+    lifetime.abort(new IsolationError())
+    closing = (async () => {
+      // cgroup.kill includes detached descendants, not just the original PID.
+      // Kill now, even if capture is awaiting IO. Keep the group until that
+      // callback settles; never thaw or abandon its native cleanup early.
+      await writeFile(kill, "1")
+      // Terminal listeners were registered at spawn, before either kill can
+      // finish a launcher. Bound this wait independently of capture settlement.
+      const launchers = [...children]
+      const timeout = new AbortController()
+      try {
+        for (const [child] of launchers) child.kill("SIGKILL")
+        await Promise.race([
+          Promise.all(launchers.map(([, terminal]) => terminal)),
+          setTimeout(5000, undefined, { signal: timeout.signal }).then(() => {
+            throw new IsolationError()
+          }),
+        ])
+      } finally {
+        timeout.abort()
+      }
+      return serialized(async () => {
+        // A launcher could join and fork after the first sweep. No launcher
+        // can admit more descendants now; kill those late arrivals as well.
+        await writeFile(kill, "1")
+        await waitFor(events, "populated", "0", 5000)
+        await rmdir(directory)
+        stopped = true
+      })
+    })()
+    return closing
+  }
+
   return {
     // Diagnostic identity only, never a caller-selected process group.
     directory,
@@ -130,11 +167,15 @@ export async function create(input: Input) {
     },
     // timeoutMs bounds freezer transitions. Native work must honor signal and
     // settle its own cleanup; it must never be abandoned while still capturing.
-    quiesce<A>(run: (signal: AbortSignal) => Promise<A>, options: { signal?: AbortSignal; timeoutMs?: number } = {}) {
+    quiesce<A>(
+      run: (signal: AbortSignal) => Promise<A>,
+      options: { signal?: AbortSignal; timeoutMs?: number; closeOnError?: boolean } = {},
+    ) {
       if (stopped || poisoned) return Promise.reject(new IsolationError())
       const signal = options.signal ? AbortSignal.any([options.signal, lifetime.signal]) : lifetime.signal
       const timeoutMs = options.timeoutMs ?? 5000
-      return serialized(async () => {
+      const closeOnError = options.closeOnError === true
+      const operation = serialized(async () => {
         available()
         if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 60_000) throw new IsolationError()
         signal?.throwIfAborted()
@@ -147,53 +188,33 @@ export async function create(input: Input) {
           const result = await run(signal)
           signal.throwIfAborted()
           return result
-        } finally {
-          try {
-            await writeFile(freeze, "0")
-            await waitFor(events, "frozen", "0", timeoutMs)
-          } catch {
+        } catch (error) {
+          if (closeOnError) {
+            // Do not resume writers after an uncertain durable receipt. Fence
+            // queued work now; close outside this serialized operation below.
             poisoned = true
-            throw new IsolationError()
+            lifetime.abort(new IsolationError())
+          }
+          throw error
+        } finally {
+          if (!poisoned) {
+            try {
+              await writeFile(freeze, "0")
+              await waitFor(events, "frozen", "0", timeoutMs)
+            } catch {
+              poisoned = true
+              throw new IsolationError()
+            }
           }
         }
       })
+      if (!closeOnError) return operation
+      return operation.catch(async (error) => {
+        await close()
+        throw error
+      })
     },
-    close() {
-      if (closing) return closing
-      if (stopped) return Promise.resolve()
-      poisoned = true
-      lifetime.abort(new IsolationError())
-      closing = (async () => {
-        // cgroup.kill includes detached descendants, not just the original PID.
-        // Kill now, even if capture is awaiting IO. Keep the group until that
-        // callback settles; never thaw or abandon its native cleanup early.
-        await writeFile(kill, "1")
-        // Terminal listeners were registered at spawn, before either kill can
-        // finish a launcher. Bound this wait independently of capture settlement.
-        const launchers = [...children]
-        const timeout = new AbortController()
-        try {
-          for (const [child] of launchers) child.kill("SIGKILL")
-          await Promise.race([
-            Promise.all(launchers.map(([, terminal]) => terminal)),
-            setTimeout(5000, undefined, { signal: timeout.signal }).then(() => {
-              throw new IsolationError()
-            }),
-          ])
-        } finally {
-          timeout.abort()
-        }
-        return serialized(async () => {
-          // A launcher could join and fork after the first sweep. No launcher
-          // can admit more descendants now; kill those late arrivals as well.
-          await writeFile(kill, "1")
-          await waitFor(events, "populated", "0", 5000)
-          await rmdir(directory)
-          stopped = true
-        })
-      })()
-      return closing
-    },
+    close,
   }
 }
 

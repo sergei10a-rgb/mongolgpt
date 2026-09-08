@@ -5,6 +5,7 @@ import { join, resolve } from "node:path"
 import { CloudStartup } from "./database/cloud-startup"
 import { StartupHandoff } from "./database/startup-handoff"
 import { ProcessGroup } from "./process-group"
+import type { CloudFiles } from "./database/cloud-files"
 
 /** Bootstrap stays privileged and outside the frozen group. No workspace code
  * executes until authenticated restore and ownership transfer have completed. */
@@ -24,6 +25,7 @@ export async function start(input: {
   const group = await ProcessGroup.create({ launcher: input.launcher, uid, gid: uid })
   try {
     const checkpoint = await CloudStartup.bootstrap({ root, request: input.request, signal: input.signal })
+    const checkpointID = checkpoint?.id
     await own(root, uid, input.signal)
     input.signal?.throwIfAborted()
     const packet = await StartupHandoff.issue({ root, group: group.directory, checkpoint })
@@ -37,7 +39,34 @@ export async function start(input: {
         stdio: input.stdio ?? "pipe",
       })
       input.signal?.throwIfAborted()
-      return { child, group, checkpoint }
+      return {
+        child,
+        group,
+        checkpoint,
+        async publishFiles(lease: CloudFiles.Lease, signal?: AbortSignal) {
+          const owner = { ...lease }
+          const { CloudFiles } = await import("./database/cloud-files")
+          try {
+            if (!checkpointID) throw new CloudFiles.PublicationError()
+            return await group.quiesce(
+              (signal) =>
+                CloudFiles.publish({
+                  root,
+                  checkpointID,
+                  lease: owner,
+                  signal,
+                  request: input.request,
+                }),
+              { signal, closeOnError: true },
+            )
+          } catch (error) {
+            // Unknown remote acknowledgement fences this process, never a success
+            // response or a new blind snapshot against possibly advanced state.
+            await group.close()
+            throw error
+          }
+        },
+      }
     } finally {
       await packet.close()
     }

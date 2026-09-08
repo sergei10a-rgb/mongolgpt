@@ -1,4 +1,6 @@
-import { chmod, mkdtemp, rm } from "node:fs/promises"
+import { spawnSync } from "node:child_process"
+import { constants } from "node:fs"
+import { chmod, copyFile, mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -10,6 +12,24 @@ const root = fileURLToPath(new URL("../", import.meta.url))
 const directory = await mkdtemp(join(tmpdir(), "mongolgpt-isolation-test-"))
 try {
   await chmod(directory, 0o755)
+  // sudo can run a Bun installation whose parent directories deny tenant access.
+  // Copy the running image, not a symlink or another Bun found through PATH.
+  const runtime = join(directory, "bun")
+  await copyFile("/proc/self/exe", runtime, constants.COPYFILE_EXCL)
+  await chmod(runtime, 0o555)
+  const probe = spawnSync(runtime, ["-e", "process.stdout.write(Bun.version + '+' + Bun.revision)"], {
+    cwd: directory,
+    uid: 10001,
+    gid: 10001,
+    env: { BUN_BE_BUN: "1", PATH: "/usr/bin:/bin" },
+    encoding: "utf8",
+    timeout: 10_000,
+    killSignal: "SIGKILL",
+  })
+  if (probe.status !== 0 || probe.stdout.trim() !== `${Bun.version}+${Bun.revision}`)
+    throw new Error(
+      `Workspace test runtime probe failed: ${JSON.stringify({ runtime, status: probe.status, signal: probe.signal, error: probe.error?.message, stdout: probe.stdout, stderr: probe.stderr })}`,
+    )
   for (const [source, binary] of [
     ["container/workspace-launcher.c", "launcher"],
     ["test/fixtures/workspace-policy.c", "policy"],
@@ -38,7 +58,7 @@ try {
     naming: "startup-child.js",
   })
   if (!startup.success) throw new Error("Workspace startup child build failed")
-  const child = Bun.spawn([process.execPath, "test", join(directory, "process-group.test.js")], {
+  const child = Bun.spawn([runtime, "test", join(directory, "process-group.test.js")], {
     cwd: directory,
     stdout: "inherit",
     stderr: "inherit",

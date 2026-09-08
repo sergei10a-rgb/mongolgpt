@@ -1,13 +1,17 @@
 import { Buffer } from "node:buffer"
 import { Schema } from "effect"
-import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
+import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { createRuntimeBackupStore, deriveRuntimeBackupKey, RuntimeBackupError } from "./backup"
-import { createHistoryStore, HistoryError, type HistoryScope } from "./history"
+import { createRuntimeCheckpointStore } from "./checkpoint"
+import { decodeFileRevision } from "./checkpoint-contract"
+import { createHistoryStore, HistoryError, type HistoryLease, type HistoryScope } from "./history"
 
 const origin = "http://checkpoint.mongolgpt.internal"
 const maxBodyBytes = 4096
 const maxSecretBytes = 32 * 1024
 const bodyTimeoutMs = 5000
+const maxUploadBytes = 96 * 1024 * 1024
+const uploadTimeoutMs = 110_000
 const decoder = new TextDecoder("utf-8", { fatal: true })
 const encoder = new TextEncoder()
 const jsonHeaders = {
@@ -40,6 +44,18 @@ const ArchiveInput = Schema.Struct({
   kind: Schema.Union([Schema.Literal("sqlite"), Schema.Literal("files")]),
   filesRevisionID: Schema.optional(UUID),
 })
+const PublishFilesInput = Schema.Struct({
+  epoch: Schema.Int.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(Number.MAX_SAFE_INTEGER)),
+  writerID: Identifier,
+  revision: CloudCheckpoint.FileRevision,
+})
+const BackupKeyID = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$/))
+const UploadReceipt = Schema.Struct({
+  backupID: UUID,
+  keyID: BackupKeyID,
+  bytes: Schema.Int.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(maxUploadBytes)),
+  sha256: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/)),
+})
 
 type CheckpointRecord = { data: CloudCheckpoint.Checkpoint; digest?: string }
 type HistoryStore = Pick<ReturnType<typeof createHistoryStore>, "checkpoint" | "epoch" | "fileRevision">
@@ -54,12 +70,15 @@ type ArchiveManifest = {
 type StreamReadResult = ReadableStreamDefaultReadDoneResult | ReadableStreamDefaultReadValueResult<Uint8Array>
 type BackupStore = {
   open(scope: HistoryScope, backupID: string): Promise<{ manifest: ArchiveManifest; body: ReadableStream<Uint8Array> }>
+  save?: ReturnType<typeof createRuntimeBackupStore>["save"]
 }
 type CheckpointStores = {
   history: HistoryStore
   backups?: BackupStore
+  publisher?: Pick<ReturnType<typeof createRuntimeCheckpointStore>, "publishFiles">
   masterKeyJson?: string
   bodyTimeoutMs?: number
+  uploadTimeoutMs?: number
 }
 
 class CheckpointRpcError extends Error {
@@ -74,18 +93,34 @@ export async function handleCheckpointOutbound(
   env: { HISTORY?: D1Database; RUNTIME_BACKUPS?: R2Bucket; MONGOLGPT_RUNTIME_BACKUP_KEYS?: string },
   context: { params?: unknown },
 ): Promise<Response> {
-  if (!env.HISTORY) return failure("unavailable")
+  const db = env.HISTORY
+  const bucket = env.RUNTIME_BACKUPS
+  const masterKeyJson = env.MONGOLGPT_RUNTIME_BACKUP_KEYS
+  if (!db) return failure("unavailable")
+  let masters: Record<string, Uint8Array> | undefined
   try {
-    return createCheckpointHandler(
+    return await createCheckpointHandler(
       {
-        history: createHistoryStore(env.HISTORY),
-        backups: env.RUNTIME_BACKUPS ? createRuntimeBackupStore(env.RUNTIME_BACKUPS) : undefined,
-        masterKeyJson: env.MONGOLGPT_RUNTIME_BACKUP_KEYS,
+        history: createHistoryStore(db),
+        backups: bucket ? createRuntimeBackupStore(bucket) : undefined,
+        publisher: bucket
+          ? {
+              async publishFiles(lease, revision) {
+                masters = readMasterKeys(masterKeyJson)
+                return createRuntimeCheckpointStore(db, bucket, masters).publishFiles(lease, revision)
+              },
+            }
+          : undefined,
+        masterKeyJson,
       },
       decode(ScopeInput, context.params) as typeof ScopeInput.Type,
     )(request)
   } catch {
     return failure("unavailable")
+  } finally {
+    // Publication may still be authenticating an archive after request abort.
+    // Its master keys belong to the awaited operation, not the response race.
+    if (masters) Object.values(masters).forEach((master) => master.fill(0))
   }
 }
 
@@ -95,10 +130,14 @@ export function createCheckpointHandler(stores: CheckpointStores, scope: History
   return async (request: Request): Promise<Response> => {
     try {
       if (request.method !== "POST") throw new CheckpointRpcError("invalid")
-      if (!isJson(request.headers.get("content-type"))) throw new CheckpointRpcError("invalid")
       const url = new URL(request.url)
       if (url.origin !== origin || url.search !== "" || url.hash !== "" || url.username !== "" || url.password !== "")
         throw new CheckpointRpcError("invalid")
+      if (url.href !== `${origin}${url.pathname}`) throw new CheckpointRpcError("invalid")
+      if (url.pathname === "/v1/upload") return await upload(stores, trustedScope, request)
+      if (!["/v1/bootstrap", "/v1/archive", "/v1/publish-files"].includes(url.pathname))
+        throw new CheckpointRpcError("invalid")
+      if (!isJson(request.headers.get("content-type"))) throw new CheckpointRpcError("invalid")
       const input = await readJson(request, stores.bodyTimeoutMs ?? bodyTimeoutMs)
 
       if (url.pathname === "/v1/bootstrap") {
@@ -116,10 +155,112 @@ export function createCheckpointHandler(stores: CheckpointStores, scope: History
         rejectEnvelopeScopeFields(input)
         return await archive(stores, trustedScope, decode(ArchiveInput, input) as typeof ArchiveInput.Type)
       }
+      if (url.pathname === "/v1/publish-files") {
+        exact(input, ["epoch", "writerID", "revision"])
+        rejectEnvelopeScopeFields(input)
+        const body = decode(PublishFilesInput, input) as typeof PublishFilesInput.Type
+        const revision = decodeFileRevision(body.revision)
+        if (!stores.publisher) throw new CheckpointRpcError("unavailable")
+        request.signal.throwIfAborted()
+        const lease: HistoryLease = { ...trustedScope, epoch: body.epoch, writerID: body.writerID }
+        const result = await stores.publisher.publishFiles(lease, revision)
+        request.signal.throwIfAborted()
+        return success({ data: result.data, digest: result.digest })
+      }
       throw new CheckpointRpcError("invalid")
     } catch (error) {
+      if (request.body && !request.body.locked) cancelStream(request.body)
       return failure(mapError(error))
     }
+  }
+}
+
+async function upload(stores: CheckpointStores, scope: HistoryScope, request: Request) {
+  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/octet-stream")
+    throw new CheckpointRpcError("invalid")
+  const announced = request.headers.get("content-length")
+  if (!announced || !/^[1-9][0-9]*$/.test(announced)) throw new CheckpointRpcError("invalid")
+  const length = Number(announced)
+  if (!Number.isSafeInteger(length) || length > maxUploadBytes || !request.body) throw new CheckpointRpcError("invalid")
+  const keyID = decode(BackupKeyID, request.headers.get("x-mongolgpt-backup-key-id")) as string
+  if (!stores.backups?.save) throw new CheckpointRpcError("unavailable")
+  const timeoutMs = stores.uploadTimeoutMs ?? uploadTimeoutMs
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > uploadTimeoutMs)
+    throw new CheckpointRpcError("unavailable")
+  const masters = readMasterKeys(stores.masterKeyJson)
+  try {
+    if (!Object.hasOwn(masters, keyID)) throw new CheckpointRpcError("invalid")
+    request.signal.throwIfAborted()
+    const reader = request.body.getReader()
+    const deadline = Date.now() + timeoutMs
+    let size = 0
+    let complete = false
+    let stopped = false
+    let error: CheckpointRpcError | undefined
+    let controller!: ReadableStreamDefaultController<Uint8Array>
+    const fail = (cause: CheckpointRpcError) => {
+      if (error) return
+      error = cause
+      stopped = true
+      controller.error(cause)
+      cancelReader(reader)
+    }
+    // The store awaits cancellation in its finalizer. This wrapper never awaits
+    // the caller's cancel hook, and errors even while storage applies backpressure.
+    const body = new ReadableStream<Uint8Array>(
+      {
+        start(value) {
+          controller = value
+        },
+        async pull(value) {
+          try {
+            const item = await readWithDeadline(reader, request.signal, deadline)
+            if (stopped) return
+            if (item.done) {
+              if (size !== length) throw new CheckpointRpcError("invalid")
+              complete = true
+              stopped = true
+              value.close()
+              return
+            }
+            if (!(item.value instanceof Uint8Array) || size + item.value.byteLength > length)
+              throw new CheckpointRpcError("invalid")
+            size += item.value.byteLength
+            value.enqueue(item.value)
+          } catch (cause) {
+            if (!stopped) fail(cause instanceof CheckpointRpcError ? cause : new CheckpointRpcError("invalid"))
+          }
+        },
+        cancel() {
+          stopped = true
+          cancelReader(reader)
+        },
+      },
+      { highWaterMark: 0 },
+    )
+    const abort = () => fail(new CheckpointRpcError("unavailable"))
+    const timeout = setTimeout(abort, timeoutMs)
+    request.signal.addEventListener("abort", abort, { once: true })
+    try {
+      const saved = await stores.backups.save(scope, { keyID, body })
+      if (error) throw error
+      if (!complete || saved.keyID !== keyID || saved.bytes !== length || Date.now() >= deadline)
+        throw new CheckpointRpcError("unavailable")
+      const receipt = { backupID: saved.backupID, keyID: saved.keyID, bytes: saved.bytes, sha256: saved.sha256 }
+      decodeSecret(UploadReceipt, receipt)
+      return success(receipt)
+    } catch (cause) {
+      // save() sanitizes stream failures; retain the boundary's exact error code.
+      throw error ?? cause
+    } finally {
+      stopped = true
+      clearTimeout(timeout)
+      request.signal.removeEventListener("abort", abort)
+      cancelReader(reader)
+      releaseReader(reader)
+    }
+  } finally {
+    Object.values(masters).forEach((master) => master.fill(0))
   }
 }
 

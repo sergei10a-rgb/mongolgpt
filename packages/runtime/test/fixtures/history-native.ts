@@ -18,6 +18,7 @@ export { createHistoryHandler, handleHistoryOutbound } from "../../src/history-r
 export { handleCheckpointOutbound } from "../../src/checkpoint-rpc"
 export { CloudStartup } from "../../../core/src/database/cloud-startup"
 export { WorkspaceCapture } from "../../../core/src/database/workspace-capture"
+export { CloudFiles } from "../../../core/src/database/cloud-files"
 export { createHistoryStore } from "../../src/history"
 export { createRuntimeCheckpointStore } from "../../src/checkpoint"
 export { createRuntimeBackupStore, deriveRuntimeBackupKey } from "../../src/backup"

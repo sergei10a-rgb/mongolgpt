@@ -4,7 +4,7 @@ import { chmod, chown, mkdir, open, readFile, readdir, rmdir, unlink, writeFile 
 import type { ChildProcess } from "node:child_process"
 import { join } from "node:path"
 import { setTimeout } from "node:timers/promises"
-import { randomBytes } from "node:crypto"
+import { createHash, randomBytes, randomUUID } from "node:crypto"
 import { Effect } from "effect"
 import { ProcessGroup } from "@mongolgpt/core/process-group"
 import { DatabaseBackup } from "@mongolgpt/core/database/backup"
@@ -13,6 +13,8 @@ import { WorkspaceRestore } from "@mongolgpt/core/database/workspace-restore"
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
 import { StartupHandoff } from "@mongolgpt/core/database/startup-handoff"
 import { tmpdir } from "./fixture/tmpdir"
+import { cloudFilesSeed } from "./fixture/cloud-files-seed"
+import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 
 const launcher = process.env.MONGOLGPT_TEST_WORKSPACE_LAUNCHER
 const policy = process.env.MONGOLGPT_TEST_WORKSPACE_POLICY
@@ -109,6 +111,114 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
       await second.close()
     }
   })
+
+  test("supervised file publication holds detached writers until receipt and kills them on unknown acknowledgement", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const seed = await cloudFilesSeed(temp.path)
+    const root = join(temp.path, "publication-workspace")
+    await mkdir(root)
+    const ready = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    let failed = false
+    let latest: CloudCheckpoint.FileRevision | undefined
+    let captured = ""
+    const cmd = startupCommand(root)
+    const runtime = await RuntimeSupervisor.start({
+      ...cmd,
+      args: [startup!, root, "writer"],
+      root,
+      launcher: launcher!,
+      request: async (request) => {
+        const route = new URL(request.url).pathname
+        if (route === "/v1/bootstrap")
+          return Response.json({
+            checkpoint: seed.checkpoint,
+            ...(latest ? { filesRevision: latest } : {}),
+            keys: { sqlite: seed.key.toString("base64"), files: seed.key.toString("base64") },
+          })
+        if (route === "/v1/archive") {
+          const input = (await request.json()) as { kind: "sqlite" | "files" }
+          const bytes = seed.bodies.get(seed.checkpoint[input.kind].backupID)!
+          return new Response(new Uint8Array(bytes), {
+            headers: { "content-type": "application/octet-stream", "content-length": String(bytes.length) },
+          })
+        }
+        expect(await readFile(join(runtime.group.directory, "cgroup.freeze"), "utf8")).toBe("1\n")
+        if (route === "/v1/upload") {
+          const bytes = Buffer.from(await request.arrayBuffer())
+          const backupID = randomUUID()
+          seed.bodies.set(backupID, bytes)
+          captured = await readFile(join(root, "project/counter.txt"), "utf8")
+          return Response.json({
+            backupID,
+            keyID: "synthetic",
+            bytes: bytes.length,
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+          })
+        }
+        expect(route).toBe("/v1/publish-files")
+        const input = (await request.json()) as {
+          epoch: number
+          writerID: string
+          revision: CloudCheckpoint.FileRevision
+        }
+        expect(input.epoch).toBe(1)
+        expect(input.writerID).toBe("writer_native")
+        if (failed) throw new Error("Unknown final acknowledgement with private transport details")
+        ready.resolve()
+        await release.promise
+        latest = input.revision
+        return Response.json({ data: latest, digest: "a".repeat(64) })
+      },
+    })
+    try {
+      const counter = join(root, "project/counter.txt")
+      await waitUntil(async () => Number(await readFile(counter, "utf8").catch(() => "0")) > 1)
+      let acknowledged = false
+      const publishing = runtime
+        .publishFiles({ epoch: 1, writerID: "writer_native" }, AbortSignal.timeout(15_000))
+        .then((value) => {
+          acknowledged = true
+          return value
+        })
+      await Promise.race([
+        ready.promise,
+        publishing.then(() => {
+          throw new Error("Publication did not wait for its receipt")
+        }),
+      ])
+      await setTimeout(100)
+      expect(acknowledged).toBe(false)
+      expect(await readFile(counter, "utf8")).toBe(captured)
+      release.resolve()
+      const receipt = await publishing
+      expect(receipt.data).toEqual(latest!)
+      await waitUntil(async () => (await readFile(counter, "utf8")) !== captured)
+      const cipher = join(temp.path, "published.backup")
+      await writeFile(cipher, seed.bodies.get(receipt.data.archive.backupID)!)
+      const database = join(temp.path, "published.sqlite")
+      const report = await Effect.runPromise(
+        DatabaseBackup.restore({ source: cipher, destination: database, key: seed.key }),
+      )
+      const restored = join(temp.path, "published-files")
+      await Effect.runPromise(
+        WorkspaceRestore.materialize({ source: database, expected: report, destination: restored }),
+      )
+      expect(await readFile(join(restored, "project/counter.txt"), "utf8")).toBe(captured)
+      failed = true
+      await expect(runtime.publishFiles({ epoch: 1, writerID: "writer_native" })).rejects.toThrow("Cloud файлууд")
+      expect(await readdir(runtime.group.directory).catch(() => null)).toBeNull()
+      const final = await readFile(counter, "utf8")
+      expect(final).toBe(captured)
+      await setTimeout(100)
+      expect(await readFile(counter, "utf8")).toBe(final)
+    } finally {
+      release.resolve()
+      seed.key.fill(0)
+      await runtime.group.close()
+    }
+  }, 30_000)
 
   test("startup cancellation removes its group before any tenant process runs", async () => {
     await using temp = await tmpdir()
@@ -354,6 +464,58 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
       await controlled.close()
     }
   })
+
+  for (const failure of ["rejection", "cancellation"] as const) {
+    test(`failed publication closes the frozen group without resuming writers on ${failure}`, async () => {
+      await using temp = await tmpdir()
+      await chmod(temp.path, 0o755)
+      const root = join(temp.path, "workspace")
+      await mkdir(root)
+      await chown(root, 10001, 10001)
+      const counter = join(root, "counter.txt")
+      const controlled = await group()
+      const abort = new AbortController()
+      const entered = Promise.withResolvers<void>()
+      const release = Promise.withResolvers<void>()
+      let captured = ""
+      try {
+        await controlled.spawn(
+          command(
+            `const fs=require("node:fs");let n=0;setInterval(()=>fs.writeFileSync(${JSON.stringify(counter)},String(++n)),1)`,
+            root,
+          ),
+        )
+        await waitUntil(async () => Number(await readFile(counter, "utf8").catch(() => "0")) > 1)
+        const operation = controlled.quiesce(
+          async () => {
+            captured = await readFile(counter, "utf8")
+            entered.resolve()
+            await release.promise
+            if (failure === "rejection") throw new Error("receipt unavailable")
+            return "must not acknowledge"
+          },
+          { signal: abort.signal, closeOnError: true },
+        )
+        const rejected = operation.catch((error) => error)
+        await entered.promise
+        if (failure === "cancellation") abort.abort(new Error("publication cancelled"))
+        await setTimeout(50)
+        expect(await readFile(join(controlled.directory, "cgroup.freeze"), "utf8")).toBe("1\n")
+        expect(await readFile(counter, "utf8")).toBe(captured)
+        release.resolve()
+        expect(await rejected).toBeInstanceOf(Error)
+        expect(await readdir(controlled.directory).catch(() => null)).toBeNull()
+        await expect(controlled.spawn(command("process.exit(0)", root))).rejects.toBeInstanceOf(
+          ProcessGroup.IsolationError,
+        )
+        await setTimeout(50)
+        expect(await readFile(counter, "utf8")).toBe(captured)
+      } finally {
+        release.resolve()
+        await controlled.close()
+      }
+    })
+  }
 
   test("shutdown settles a launcher that failed before receiving a PID", async () => {
     await using temp = await tmpdir()
