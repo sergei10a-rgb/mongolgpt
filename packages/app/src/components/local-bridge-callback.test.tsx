@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test"
+import { createServer } from "node:http"
 import type { ServerConnection } from "@/context/server"
 import { createServerRequest } from "@/utils/server"
 import { connectLocalBridgeCallback } from "./local-bridge-callback"
@@ -53,21 +54,32 @@ describe("connectLocalBridgeCallback", () => {
 
   test("uses the connected bridge as the active server for a follow-up runtime request", async () => {
     const observed: Array<{ path: string; authorization: string | null }> = []
-    using runtime = Bun.serve({
-      hostname: "127.0.0.1",
-      port: 0,
-      fetch(request) {
-        observed.push({
-          path: new URL(request.url).pathname,
-          authorization: request.headers.get("authorization"),
-        })
-        return Response.json({ healthy: true })
-      },
+    let preflights = 0
+    // Keep the browser's Request/Response/AbortSignal in the Happy DOM realm.
+    await using runtime = createServer((request, response) => {
+      response.setHeader("access-control-allow-origin", window.location.origin)
+      response.setHeader("access-control-allow-methods", "GET")
+      response.setHeader("access-control-allow-headers", "authorization")
+      if (request.method === "OPTIONS") {
+        preflights++
+        response.writeHead(204)
+        response.end()
+        return
+      }
+      observed.push({
+        path: new URL(request.url!, "http://127.0.0.1").pathname,
+        authorization: request.headers.authorization ?? null,
+      })
+      response.setHeader("content-type", "application/json")
+      response.end(JSON.stringify({ healthy: true }))
     })
+    await new Promise<void>((resolve) => runtime.listen(0, "127.0.0.1", resolve))
+    const address = runtime.address()
+    if (!address || typeof address === "string") throw new Error("Test runtime address missing")
 
     const bridge = {
       ...connection,
-      url: `http://127.0.0.1:${runtime.port}`,
+      url: `http://127.0.0.1:${address.port}`,
     }
     let active: ServerConnection.Http | undefined
     const addEphemeral = mock((input: ServerConnection.Http) => {
@@ -86,8 +98,10 @@ describe("connectLocalBridgeCallback", () => {
     })
 
     expect(active?.ephemeral).toBe(true)
-    const response = await createServerRequest({ server: active!.http, fetch: Bun.fetch })("/global/health")
+    const response = await createServerRequest({ server: active!.http })("/global/health")
     expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ healthy: true })
+    expect(preflights).toBe(1)
     expect(observed).toEqual([
       {
         path: "/global/health",
