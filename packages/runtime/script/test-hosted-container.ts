@@ -1,0 +1,565 @@
+import assert from "node:assert/strict"
+import {
+  chmod,
+  copyFile,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  rename,
+  rmdir,
+  writeFile,
+} from "node:fs/promises"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+import { randomBytes, randomUUID } from "node:crypto"
+import { setTimeout } from "node:timers/promises"
+import { deriveCheckpointControlToken, sdkControlEnv, sdkControlHeader } from "@mongolgpt/runtime-auth/control"
+import { verifySandboxBuild } from "./build-sandbox"
+import upstream from "../vendor/sandbox-control/upstream.json"
+
+const root = fileURLToPath(new URL("../", import.meta.url))
+const executable = join(root, "../mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt")
+const script = fileURLToPath(import.meta.url)
+const node = process.env.MONGOLGPT_TEST_NODE ?? Bun.which("node")
+const path = `${node ? dirname(node) : "/usr/bin"}:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`
+const baseEnv = {
+  PATH: path,
+  WRANGLER_SEND_METRICS: "false",
+  MINIFLARE_WORKERD_PATH: process.env.MINIFLARE_WORKERD_PATH,
+}
+
+if (process.platform !== "linux" || process.getuid?.() !== 0) throw new Error("Linux root integration runner required")
+if (!node) throw new Error("Node 22.14+ is required for local D1/R2 integration")
+
+if (!["--isolated", "--rooted"].includes(process.argv[2]!)) {
+  await verifySandboxBuild()
+  assert.ok(await Bun.file(executable).exists(), "Build the current Linux CLI first")
+  await mkdir(join(root, ".tmp"), { recursive: true })
+  const output = await mkdtemp(join(root, ".tmp/hosted-container-"))
+  const group = `/sys/fs/cgroup/mongolgpt-integration-${randomUUID()}`
+  await mkdir(group, { mode: 0o700 })
+  try {
+    const child = Bun.spawn(
+      [
+        "unshare",
+        "--mount",
+        "--net",
+        "--pid",
+        "--fork",
+        "--kill-child=SIGKILL",
+        "--mount-proc",
+        process.execPath,
+        script,
+        "--isolated",
+        output,
+        group,
+      ],
+      { env: { ...baseEnv, MONGOLGPT_TEST_NODE: node }, stdout: "inherit", stderr: "inherit" },
+    )
+    const timer = globalThis.setTimeout(() => child.kill("SIGKILL"), 600_000)
+    try {
+      process.exitCode = await child.exited
+    } finally {
+      clearTimeout(timer)
+    }
+    console.log(`Integration evidence: ${output}`)
+  } finally {
+    // The namespace cannot clean up host cgroup directories after SIGKILL.
+    // Reap only this run's generated, dedicated subtree, never unrelated groups.
+    try {
+      await writeFile(join(group, "cgroup.kill"), "1")
+      await until(
+        async () => (await readFile(join(group, "cgroup.events"), "utf8")).includes("populated 0"),
+        "Integration cgroup cleanup",
+      )
+      await removeGroup(group, group)
+    } catch (error) {
+      console.error("Integration cgroup cleanup failed", error)
+      if (!process.exitCode) process.exitCode = 1
+    }
+  }
+  if (process.exitCode === 0) {
+    const proof = await Bun.file(join(output, "proof.json")).json()
+    await writeFile(join(output, "result.json"), `${JSON.stringify(proof, null, 2)}\n`)
+    console.log(`HOSTED_CONTAINER_RESULT ${JSON.stringify(proof)}`)
+  }
+} else if (process.argv[2] === "--isolated") {
+  await namespace(process.argv[3]!, process.argv[4]!)
+} else {
+  await isolated(process.argv[3]!)
+}
+
+async function namespace(output: string, group: string) {
+  assert.match(group, /^\/sys\/fs\/cgroup\/mongolgpt-integration-[0-9a-f-]{36}$/)
+  await command(["mount", "--make-rprivate", "/"])
+  await command(["mount", "-t", "tmpfs", "-o", "mode=1777", "tmpfs", "/tmp"])
+  await chmod("/tmp", 0o1777)
+  await assertMode("/tmp", 0o1777)
+  await command(["ip", "link", "set", "lo", "up"])
+  const jail = "/tmp/hosted-root"
+  // A disposable root filesystem allows the real atomic /workspace rename.
+  // System binaries are read-only; /workspace and all root-owned state are new.
+  for (const directory of [
+    "/bin",
+    "/sbin",
+    "/usr",
+    "/lib",
+    "/lib64",
+    "/etc",
+    "/dev",
+    "/sys",
+    "/proc",
+    "/tmp",
+    "/run",
+    "/root",
+    "/workspace",
+    "/container-server",
+  ])
+    await mkdir(`${jail}${directory}`, { recursive: true, mode: directory === "/tmp" ? 0o1777 : 0o755 })
+  await chmod(`${jail}/tmp`, 0o1777)
+  await assertMode(`${jail}/tmp`, 0o1777)
+  await assertMode(`${jail}/workspace`, 0o755)
+  await assertMode(`${jail}/run`, 0o755)
+  for (const directory of ["/bin", "/sbin", "/usr", "/lib", "/lib64", "/etc", "/sys"]) {
+    await command(["mount", "--bind", directory, `${jail}${directory}`])
+    await command(["mount", "-o", "remount,bind,ro", `${jail}${directory}`])
+  }
+  await command(["mount", "--rbind", "/dev", `${jail}/dev`])
+  await command(["mount", "--bind", group, `${jail}/sys/fs/cgroup`])
+  await command(["mount", "-t", "proc", "proc", `${jail}/proc`])
+  const repo = join(root, "../..")
+  await mkdir(`${jail}${repo}`, { recursive: true })
+  await command(["mount", "--bind", repo, `${jail}${repo}`])
+  await command(["mount", "-o", "remount,bind,ro", `${jail}${repo}`])
+  await command(["mount", "--bind", output, `${jail}${output}`])
+  await command(["mount", "-t", "tmpfs", "-o", "mode=0755", "tmpfs", `${jail}/usr/local/bin`])
+  await copyFile("/proc/self/exe", `${jail}/usr/local/bin/bun`)
+  await copyFile(node!, `${jail}/usr/local/bin/node`)
+  await chmod(`${jail}/usr/local/bin/bun`, 0o555)
+  await chmod(`${jail}/usr/local/bin/node`, 0o555)
+  await writeFile(join(group, "cgroup.procs"), String(process.pid))
+  const child = Bun.spawn(["unshare", "--cgroup", "chroot", jail, "/usr/local/bin/bun", script, "--rooted", output], {
+    env: { ...baseEnv, MONGOLGPT_TEST_NODE: "/usr/local/bin/node" },
+    stdout: "inherit",
+    stderr: "inherit",
+  })
+  process.exitCode = await child.exited
+}
+
+async function isolated(output: string) {
+  await assertMode("/tmp", 0o1777)
+  await assertMode("/workspace", 0o755)
+  await assertMode("/run", 0o755)
+  await writeFile("/tmp/hosts", "127.0.0.1 localhost checkpoint.mongolgpt.internal history.mongolgpt.internal\n")
+  await command(["mount", "--bind", "/tmp/hosts", "/etc/hosts"])
+  await copyFile(executable, "/usr/local/bin/mongolgpt")
+  await copyFile(join(root, "container/sandbox"), "/container-server/sandbox")
+  await chmod("/usr/local/bin/mongolgpt", 0o555)
+  await chmod("/container-server/sandbox", 0o555)
+  await command([
+    "cc",
+    "-Os",
+    "-s",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-static",
+    join(root, "container/workspace-launcher.c"),
+    "-o",
+    "/usr/local/bin/mongolgpt-workspace-launcher",
+  ])
+  await chmod("/usr/local/bin/mongolgpt-workspace-launcher", 0o555)
+  const compiledVersion = (await command(["/usr/local/bin/mongolgpt", "--version"])).trim()
+  assert.ok(compiledVersion)
+  const build = await Bun.build({
+    entrypoints: [join(root, "test/fixtures/history-native.ts")],
+    outdir: "/tmp/native",
+    naming: "history-rpc.mjs",
+    target: "node",
+  })
+  if (!build.success) throw new AggregateError(build.logs, "Native integration fixture build failed")
+  const scope = { accountID: "account_container_integration", workspaceID: "workspace_container_integration" }
+  const secret = randomBytes(32).toString("hex")
+  const adminToken = randomBytes(32).toString("hex")
+  const sdkToken = randomBytes(32).toString("hex")
+  const checkpointToken = await deriveCheckpointControlToken(secret, scope)
+  const password = randomBytes(32).toString("hex")
+  const privateValues = [secret, adminToken, sdkToken, checkpointToken, password]
+  await mkdir("/tmp/bridge", { mode: 0o700 })
+  await writeFile(
+    "/tmp/bridge/config.json",
+    JSON.stringify({
+      root: "/tmp/bridge",
+      nativeBundle: "/tmp/native/history-rpc.mjs",
+      port: 80,
+      scope,
+      secret,
+      adminToken,
+    }),
+    { mode: 0o600 },
+  )
+  await mkdir("/tmp/sdk-home", { mode: 0o700 })
+  const bridgeLogs = [join(output, "bridge.log"), join(output, "bridge-error.log")]
+  const bridge = Bun.spawn(
+    [
+      node!,
+      "--experimental-strip-types",
+      join(root, "test/fixtures/container-checkpoint-bridge.ts"),
+      "/tmp/bridge/config.json",
+    ],
+    {
+      cwd: root,
+      env: { ...baseEnv, HOME: "/tmp/bridge" },
+      stdout: Bun.file(bridgeLogs[0]!),
+      stderr: Bun.file(bridgeLogs[1]!),
+    },
+  )
+  const headers = { authorization: `Basic ${Buffer.from(`mongolgpt:${password}`).toString("base64")}` }
+  const controlHeaders = { [sdkControlHeader]: sdkToken }
+  const adminHeaders = { "x-test-admin-token": adminToken }
+  const logs = [...bridgeLogs]
+  let outer: Bun.Subprocess | undefined
+  try {
+    await until(
+      async () => {
+        assert.equal(bridge.exitCode, null, "D1/R2 bridge exited")
+        return fetch("http://127.0.0.1/__test/health", { headers: adminHeaders }).then(
+          (r) => r.ok,
+          () => false,
+        )
+      },
+      "D1/R2 bridge readiness",
+      90_000,
+    )
+    const blocked = await fetch("http://checkpoint.mongolgpt.internal/v1/bootstrap", { method: "POST", body: "{}" })
+    assert.equal(blocked.status, 403, "Bridge must not bypass root checkpoint authentication")
+    const initial = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
+    assert.equal(initial.epoch, 0)
+    assert.equal(initial.checkpoint, null)
+    assert.equal(initial.revision, null)
+    privateValues.push((await Bun.file("/tmp/bridge/.container-checkpoint-bridge-master.json").json()).master)
+    let accepted: BridgeStatus | undefined
+    const archiveDownloads = []
+    const sessionID = "ses_compiled_container_restore"
+    const proof = "native-r2-proof-compiled-container"
+    for (const round of [1, 2]) {
+      assert.deepEqual(await readdir("/workspace"), [], "Replacement must start from physically empty workspace")
+      const runtimeEntries = await readdir("/run")
+      assert.deepEqual(
+        round === 1 ? runtimeEntries.filter((entry) => entry !== "mount") : runtimeEntries,
+        [],
+        "Replacement must start from physically empty runtime state (initial OS mount bookkeeping excepted)",
+      )
+      assert.equal(await Bun.file("/run/mongolgpt-container/control.sock").exists(), false)
+      const archive200Before =
+        (await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders }))
+          .requestPathStatusCounters["/v1/archive"]?.["200"] ?? 0
+      const stdout = join(output, `container-${round}.log`)
+      const stderr = join(output, `container-${round}-error.log`)
+      logs.push(stdout, stderr)
+      const nativeLog = `/tmp/native-${round}.log`
+      logs.push(nativeLog)
+      outer = Bun.spawn(["/usr/local/bin/mongolgpt", "serve"], {
+        cwd: "/",
+        env: {
+          PATH: path,
+          HOME: "/tmp/sdk-home",
+          MONGOLGPT_CONTAINER_ENTRYPOINT: "true",
+          [sdkControlEnv]: sdkToken,
+          SANDBOX_VERSION: upstream.version,
+          PYTHON_POOL_MIN_SIZE: "0",
+          TYPESCRIPT_POOL_MIN_SIZE: "0",
+          SANDBOX_LOG_LEVEL: "error",
+        },
+        stdout: Bun.file(stdout),
+        stderr: Bun.file(stderr),
+      })
+      await until(async () => {
+        assert.equal(outer!.exitCode, null, "Compiled outer container exited before SDK readiness")
+        return fetch("http://127.0.0.1:3000/api/ping", { headers: controlHeaders }).then(
+          (r) => r.ok,
+          () => false,
+        )
+      }, "SDK readiness")
+      await json("http://127.0.0.1:3000/api/process/start", {
+        method: "POST",
+        headers: controlHeaders,
+        body: JSON.stringify({
+          command: `exec /usr/local/bin/mongolgpt serve --hostname 0.0.0.0 --port 4096 > ${nativeLog} 2>&1`,
+          processId: "mongolgpt-server",
+          sessionId: "__DISABLE_SESSION__",
+          cwd: "/workspace",
+          env: {
+            HOME: "/workspace",
+            XDG_DATA_HOME: "/workspace/.mongolgpt/data",
+            XDG_CONFIG_HOME: "/workspace/.mongolgpt/config",
+            XDG_CACHE_HOME: "/workspace/.mongolgpt/cache",
+            XDG_STATE_HOME: "/workspace/.mongolgpt/state",
+            MONGOLGPT_DB: "/workspace/.mongolgpt/runtime.sqlite",
+            MONGOLGPT_SERVER_USERNAME: "mongolgpt",
+            MONGOLGPT_SERVER_PASSWORD: password,
+            MONGOLGPT_DISABLE_SHARE: "true",
+            MONGOLGPT_AUTO_SHARE: "false",
+            MONGOLGPT_RUNTIME_MODE: "hosted",
+            MONGOLGPT_ENABLE_HOSTED_SERVICES: "true",
+            MONGOLGPT_CONSOLE_URL: "http://console.invalid",
+            MONGOLGPT_API_KEY: "runtime",
+            MONGOLGPT_CLOUD_HISTORY: "true",
+            MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE: "true",
+            MONGOLGPT_RUNTIME_SUPERVISOR: "true",
+            MONGOLGPT_CHECKPOINT_CONTROL_TOKEN: checkpointToken,
+          },
+        }),
+      })
+      await until(
+        async () => {
+          assert.equal(outer!.exitCode, null, "Outer container exited during native startup")
+          const state = await json<{ process: { status: string } }>(
+            "http://127.0.0.1:3000/api/process/mongolgpt-server",
+            { headers: controlHeaders },
+          )
+          assert.ok(["starting", "running"].includes(state.process.status), `Native process ${state.process.status}`)
+          const response = await fetch("http://127.0.0.1:4096/global/health", {
+            headers,
+            signal: AbortSignal.timeout(4000),
+          }).catch(() => undefined)
+          if (!response?.ok) return false
+          assert.match(response.headers.get("content-type") ?? "", /application\/json/)
+          const health = (await response.json()) as { healthy: boolean; version: string }
+          assert.equal(health.healthy, true)
+          assert.equal(health.version, compiledVersion)
+          assert.equal(response.headers.get("x-mongolgpt-runtime-history"), "checkpoint-v1")
+          assert.equal(response.headers.get("x-mongolgpt-runtime-isolation"), "cgroup-v1")
+          assert.equal(response.headers.get("x-mongolgpt-runtime-publication"), "tool-pty-v1")
+          return true
+        },
+        "Native checkpoint/isolation/publication readiness",
+        180_000,
+      )
+      console.log(`Round ${round}: compiled native runtime admitted with durable/isolation receipts`)
+      if (round === 1) {
+        const session = await json<{ data: { id: string } }>("http://127.0.0.1:4096/api/session", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ id: sessionID, location: { directory: "/workspace" } }),
+        })
+        assert.equal(session.data.id, sessionID)
+        const pty = await json<{ data: { id: string } }>(
+          "http://127.0.0.1:4096/api/pty?location[directory]=/workspace",
+          {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              command: "/bin/sh",
+              args: [
+                "-c",
+                `test "$(id -u)" = 10001 && test -z "$MONGOLGPT_SDK_CONTROL_TOKEN" && test -z "$MONGOLGPT_CHECKPOINT_CONTROL_TOKEN" && mkdir -p /workspace/audit-proof && printf '%s' '${proof}' > /workspace/audit-proof/proof.txt`,
+              ],
+              cwd: "/workspace",
+              title: "Persistence integration",
+            }),
+          },
+        )
+        assert.match(pty.data.id, /^pty/)
+        await until(
+          async () => {
+            const value = await json<{ data: { status: string; exitCode?: number } }>(
+              `http://127.0.0.1:4096/api/pty/${pty.data.id}?location[directory]=/workspace`,
+              { headers },
+            )
+            if (value.data.status !== "exited") return false
+            assert.equal(value.data.exitCode, 0)
+            return true
+          },
+          "Real PTY file publication",
+          90_000,
+        )
+      }
+      const session = await json<{ data: { id: string } }>(`http://127.0.0.1:4096/api/session/${sessionID}`, {
+        headers,
+      })
+      assert.equal(session.data.id, sessionID)
+      const file = await json<{ type: string; content: string }>(
+        "http://127.0.0.1:4096/file/content?path=audit-proof/proof.txt&directory=/workspace",
+        { headers },
+      )
+      assert.equal(file.type, "text")
+      assert.equal(file.content, proof)
+      assert.equal(await readFile("/workspace/audit-proof/proof.txt", "utf8"), proof)
+      const status = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
+      assert.ok(status.checkpoint)
+      assert.ok(status.revision)
+      if (accepted) {
+        assert.equal(status.epoch, accepted.epoch + 1, "Replacement must claim a new writer epoch")
+        assert.match(status.checkpoint.data.id, /^[0-9a-f-]{36}$/)
+        assert.equal(status.checkpoint.data.id, accepted.checkpoint!.data.id)
+        assert.ok(
+          (status.requestPathStatusCounters["/v1/archive"]?.["200"] ?? 0) -
+            (accepted.requestPathStatusCounters["/v1/archive"]?.["200"] ?? 0) >=
+            2,
+          "Fresh replacement must download authenticated archives",
+        )
+      }
+      archiveDownloads.push({
+        round,
+        downloads: (status.requestPathStatusCounters["/v1/archive"]?.["200"] ?? 0) - archive200Before,
+      })
+      outer.kill("SIGTERM")
+      assert.equal(
+        await terminal(outer, 260_000),
+        0,
+        "Container must acknowledge final durable publication before stopping SDK",
+      )
+      outer = undefined
+      accepted = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
+      assert.ok(
+        accepted.revision!.data.sequence > status.revision.data.sequence,
+        "Shutdown must publish another acknowledged revision",
+      )
+      assert.equal(
+        await fetch("http://127.0.0.1:3000/api/ping").then(
+          () => true,
+          () => false,
+        ),
+        false,
+      )
+      if (round === 1) {
+        await mkdir("/tmp/retired", { mode: 0o700 })
+        for (const directory of ["/workspace", "/run"]) {
+          await rename(directory, `/tmp/retired${directory}`)
+          await mkdir(directory, { mode: 0o755 })
+          assert.deepEqual(await readdir(directory), [], `${directory} reset must be physically empty`)
+        }
+        assert.notDeepEqual(await readdir("/tmp/retired/workspace"), [])
+        assert.notDeepEqual(await readdir("/tmp/retired/run"), [])
+      }
+    }
+    assert.ok(
+      archiveDownloads[1]!.downloads >= 2,
+      "Second physical replacement must fetch checkpoint and revision archives",
+    )
+    for (const log of logs) {
+      const content = await readFile(log, "utf8")
+      for (const value of privateValues)
+        assert.equal(content.includes(value), false, "Control secrets must not be logged")
+    }
+    const result = {
+      ok: true,
+      compiledVersion,
+      cliSha256: await digest(executable),
+      sdkSha256: await digest(join(root, "container/sandbox")),
+      epoch: accepted!.epoch,
+      realPTY: true,
+      freshPhysicalWorkspace: true,
+      freshPhysicalRun: true,
+      archiveDownloads,
+      sessionRestored: true,
+      fileRestored: true,
+      gracefulContainerExit: true,
+    }
+    await writeFile(join(output, "proof.json"), `${JSON.stringify(result, null, 2)}\n`)
+  } catch (error) {
+    await setTimeout(1000)
+    const nativeLogRoot = "/workspace/.mongolgpt/data/mongolgpt/log"
+    for (const entry of await readdir(nativeLogRoot).catch(() => [])) {
+      if (entry.endsWith(".log")) logs.push(join(nativeLogRoot, entry))
+    }
+    const diagnostic = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders }).catch(
+      () => undefined,
+    )
+    if (diagnostic)
+      console.error(
+        JSON.stringify({
+          epoch: diagnostic.epoch,
+          checkpoint: diagnostic.checkpoint?.data.id,
+          paths: diagnostic.requestPathStatusCounters,
+          workspace: await readdir("/workspace"),
+        }),
+      )
+    for (const log of logs) {
+      let content = await readFile(log, "utf8").catch(() => "")
+      for (const value of privateValues) content = content.replaceAll(value, "[REDACTED]")
+      console.error(`${log}:\n${content.slice(-5000)}`)
+    }
+    throw error
+  } finally {
+    if (outer?.exitCode === null) {
+      outer.kill("SIGTERM")
+      await terminal(outer, 20_000)
+    }
+    if (bridge.exitCode === null) bridge.kill("SIGTERM")
+    await terminal(bridge, 20_000)
+  }
+}
+
+type BridgeStatus = {
+  epoch: number
+  checkpoint: { data: { id: string }; digest: string } | null
+  revision: { data: { id: string; sequence: number }; digest: string } | null
+  requestPathStatusCounters: Record<string, Record<string, number>>
+}
+
+async function json<T = unknown>(url: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(url, {
+    ...init,
+    headers: { "content-type": "application/json", ...init.headers },
+    redirect: "error",
+    signal: AbortSignal.timeout(90_000),
+  })
+  assert.equal(
+    response.status,
+    200,
+    `${new URL(url).pathname} returned ${response.status}: ${(await response.clone().text()).slice(0, 2000)}`,
+  )
+  assert.match(response.headers.get("content-type") ?? "", /application\/json/)
+  return response.json() as Promise<T>
+}
+
+async function until(check: () => Promise<boolean>, name: string, timeout = 30_000) {
+  const deadline = Date.now() + timeout
+  while (!(await check())) {
+    assert.ok(Date.now() < deadline, `${name} timed out`)
+    await setTimeout(100)
+  }
+}
+
+async function terminal(child: Bun.Subprocess, timeout: number) {
+  const timer = globalThis.setTimeout(() => child.kill("SIGKILL"), timeout)
+  try {
+    return await child.exited
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function command(args: string[]) {
+  const child = Bun.spawn(args, { env: baseEnv, stdout: "pipe", stderr: "pipe" })
+  const stdout = new Response(child.stdout).text()
+  const stderr = new Response(child.stderr).text()
+  assert.equal(await child.exited, 0, `${args[0]}: ${await stderr}`)
+  return await stdout
+}
+
+async function digest(file: string) {
+  return new Bun.CryptoHasher("sha256").update(await Bun.file(file).arrayBuffer()).digest("hex")
+}
+
+async function assertMode(file: string, mode: number) {
+  assert.equal((await lstat(file)).mode & 0o7777, mode, `${file} must have mode ${mode.toString(8)}`)
+}
+
+async function removeGroup(directory: string, root: string) {
+  assert.ok(directory === root || directory.startsWith(`${root}/`))
+  assert.equal(await realpath(directory), directory)
+  const info = await lstat(directory)
+  assert.ok(info.isDirectory() && !info.isSymbolicLink())
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    assert.ok(entry.name !== "." && entry.name !== ".." && /^[A-Za-z0-9_.-]+$/.test(entry.name))
+    await removeGroup(join(directory, entry.name), root)
+  }
+  await rmdir(directory)
+}

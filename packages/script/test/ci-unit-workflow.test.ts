@@ -50,4 +50,14 @@ test("Windows CLI and other unit suites keep separate bounded sequential steps w
   expect(common.env?.MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER).toBe(
     "${{ runner.os == 'Windows' && 'true' || 'false' }}",
   )
+  const container = job.steps.find((step) => step.name === "Verify compiled hosted container persistence")!
+  const sandbox = job.steps.find((step) => step.name === "Build and test authenticated Sandbox control plane")!
+  expect(container.if).toBe("runner.os == 'Linux'")
+  expect(container["timeout-minutes"]).toBe(12)
+  expect(container["continue-on-error"]).not.toBe(true)
+  expect(job.steps.indexOf(container)).toBeGreaterThan(job.steps.indexOf(sandbox))
+  expect(container.run).toContain("MONGOLGPT_VERSION=0.0.0-ci-container MONGOLGPT_CHANNEL=dev")
+  expect(container.run).toContain("script/build.ts --single --skip-install --skip-embed-web-ui")
+  expect(container.run).toContain('sudo -- env MONGOLGPT_TEST_NODE="$(command -v node)" "$(command -v bun)"')
+  expect(container.run).toContain("packages/runtime/script/test-hosted-container.ts")
 })

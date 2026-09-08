@@ -110,6 +110,13 @@ jobs:
         working-directory: packages/mongolgpt
         run: bun run test:httpapi
 
+      - name: Verify compiled hosted container persistence
+        if: runner.os == 'Linux'
+        timeout-minutes: 12
+        run: |
+          MONGOLGPT_VERSION=0.0.0-ci-container MONGOLGPT_CHANNEL=dev bun packages/mongolgpt/script/build.ts --single --skip-install --skip-embed-web-ui
+          sudo -- env MONGOLGPT_TEST_NODE="$(command -v node)" "$(command -v bun)" packages/runtime/script/test-hosted-container.ts
+
   e2e:
     name: e2e (${{ matrix.settings.name }})
     strategy:
