@@ -1,0 +1,247 @@
+import { getSandbox } from "@cloudflare/sandbox"
+import { matchesControlToken } from "@mongolgpt/runtime-auth/control"
+import production, { ContainerProxy, MongolGPTSandbox } from "../../src/index"
+import { createHistoryStore } from "../../src/history"
+import { deriveRuntimeIdentity } from "../../src/runtime"
+
+export { ContainerProxy }
+
+export const canaryScope = {
+  accountID: "account_cloudflare_canary",
+  workspaceID: "wrk_cloudflare_canary",
+} as const
+
+const canaryRunID = /^mgpt-canary-[0-9]{1,12}-[0-9]{1,3}$/
+const canaryToken = /^[0-9a-f]{64}$/
+const tokenHeader = "x-mongolgpt-canary-token"
+const bootCountKey = "canary:bootCount"
+const lastStopKey = "canary:lastStop"
+const canaryBackupPrefix = "runtime-backups/v1/account_cloudflare_canary/wrk_cloudflare_canary/"
+const purgeLimit = 4_000
+const purgeBatchSize = 1_000
+
+type Environment = Parameters<typeof production.fetch>[1] & {
+  CANARY_RUN_ID: string
+  CANARY_ADMIN_TOKEN: string
+}
+type IncomingRequest = Parameters<typeof production.fetch>[0]
+
+type CanaryState = {
+  bootCount: number
+  lastStop: { exitCode?: number; reason?: string } | null
+  state: SanitizedState
+  epoch: number
+  checkpointID?: string
+  revisionID?: string
+  revisionSequence?: number
+}
+type SanitizedState = { status?: string; lastChange?: number; exitCode?: number }
+type StopParams = Parameters<MongolGPTSandbox["onStop"]>[0]
+
+export class CanarySandbox extends MongolGPTSandbox {
+  override async onStart(): Promise<void> {
+    await super.onStart()
+    await this.ctx.storage.put(bootCountKey, (await this.bootCount()) + 1)
+  }
+
+  override async onStop(params?: StopParams): Promise<void> {
+    await super.onStop(params)
+    await this.ctx.storage.put(lastStopKey, safeStop(params))
+  }
+
+  async canaryState(): Promise<Pick<CanaryState, "bootCount" | "lastStop" | "state">> {
+    const [bootCount, lastStop, state] = await Promise.all([this.bootCount(), this.lastStop(), this.getState()])
+    return {
+      bootCount,
+      lastStop,
+      state: sanitizeState(state),
+    }
+  }
+
+  private async bootCount() {
+    const value = await this.ctx.storage.get(bootCountKey)
+    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : 0
+  }
+
+  private async lastStop() {
+    const value = await this.ctx.storage.get(lastStopKey)
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null
+    return safeStop(value as StopParams)
+  }
+}
+
+export function canaryGate(request: Request, env: Partial<Environment>) {
+  if (env.STAGE !== "dev") return false
+  if (typeof env.CANARY_RUN_ID !== "string" || !canaryRunID.test(env.CANARY_RUN_ID)) return false
+  if (typeof env.CANARY_ADMIN_TOKEN !== "string" || !canaryToken.test(env.CANARY_ADMIN_TOKEN)) return false
+  return matchesControlToken(request.headers.get(tokenHeader), env.CANARY_ADMIN_TOKEN)
+}
+
+export default {
+  async fetch(request: IncomingRequest, env: Environment) {
+    if (!canaryGate(request, env)) return json({ error: "forbidden" }, 403)
+
+    const url = new URL(request.url)
+    if (url.pathname === "/__canary/state") return canaryState(request, env, url)
+    if (url.pathname === "/__canary/stop") return canaryStop(request, env, url)
+    if (url.pathname === "/__canary/purge") return canaryPurge(request, env, url)
+    if (url.pathname === "/__canary" || url.pathname.startsWith("/__canary/")) return json({ error: "not_found" }, 404)
+
+    return production.fetch(nativeRequest(request), env)
+  },
+} satisfies ExportedHandler<Environment>
+
+async function canaryState(request: Request, env: Environment, url: URL) {
+  if (request.method !== "GET") return methodNotAllowed(["GET"])
+  if (url.search !== "" || request.headers.has("content-length") || request.body)
+    return json({ error: "invalid_request" }, 400)
+  const sandbox = await canarySandbox(env)
+  const history = env.HISTORY ? createHistoryStore(env.HISTORY) : undefined
+  const [state, receipts, epoch] = await Promise.all([
+    sandbox.canaryState(),
+    history ? historyReceipts(history) : {},
+    history ? history.epoch(canaryScope) : 0,
+  ])
+  return json({ ...state, ...receipts, epoch })
+}
+
+async function canaryStop(request: Request, env: Environment, url: URL) {
+  if (request.method !== "POST") return methodNotAllowed(["POST"])
+  if (url.search !== "") return json({ error: "invalid_request" }, 400)
+  if (!strictEmptyBody(request)) return json({ error: "invalid_request" }, 400)
+  await (await canarySandbox(env)).stop("SIGTERM")
+  return json({ accepted: true }, 202)
+}
+
+async function canaryPurge(request: Request, env: Environment, url: URL) {
+  if (request.method !== "POST") return methodNotAllowed(["POST"])
+  if (url.search !== "") return json({ error: "invalid_request" }, 400)
+  if (!strictEmptyBody(request)) return json({ error: "invalid_request" }, 400)
+  if (!env.RUNTIME_BACKUPS) return json({ error: "unavailable" }, 503)
+
+  const sandbox = await canarySandbox(env)
+  const state = await sandbox.getState()
+  if (!stopped(state)) return json({ error: "sandbox_active" }, 409)
+
+  const names = await listCanaryBackups(env.RUNTIME_BACKUPS)
+  for (let index = 0; index < names.length; index += purgeBatchSize) {
+    await env.RUNTIME_BACKUPS.delete(names.slice(index, index + purgeBatchSize))
+  }
+  return json({ purged: names.length })
+}
+
+async function canarySandbox(env: Environment) {
+  const identity = await deriveRuntimeIdentity(
+    canaryScope.accountID,
+    canaryScope.workspaceID,
+    env.MONGOLGPT_RUNTIME_SECRET,
+  )
+  return getSandbox(env.Sandbox, identity.sandboxID, {
+    normalizeId: true,
+    transport: "rpc",
+    sleepAfter: "10m",
+  }) as CanarySandbox
+}
+
+async function listCanaryBackups(bucket: Pick<R2Bucket, "list">) {
+  const names: string[] = []
+  let cursor: string | undefined
+  for (let pageIndex = 0; pageIndex < purgeLimit / purgeBatchSize; pageIndex++) {
+    const page = await bucket.list({ prefix: canaryBackupPrefix, limit: purgeBatchSize, cursor })
+    const pageNames = page.objects.map((object) => object.key)
+    if (pageNames.some((name) => !name.startsWith(canaryBackupPrefix)))
+      throw new Error("Canary R2 listing escaped prefix")
+    if (names.length + pageNames.length > purgeLimit) throw new Error("Canary R2 purge cap exceeded")
+    names.push(...pageNames)
+    if (!page.truncated) return names
+    if (pageNames.length === 0) throw new Error("Canary R2 purge truncated empty page")
+    if (names.length >= purgeLimit) throw new Error("Canary R2 purge truncated beyond cap")
+    if (!page.cursor || page.cursor === cursor) throw new Error("Canary R2 purge invalid cursor")
+    cursor = page.cursor
+  }
+  throw new Error("Canary R2 purge truncated beyond cap")
+}
+
+async function historyReceipts(history: ReturnType<typeof createHistoryStore>) {
+  const [checkpoint, revision] = await Promise.all([history.checkpoint(canaryScope), history.fileRevision(canaryScope)])
+  return {
+    checkpointID: checkpoint?.data.id,
+    revisionID: revision?.data.id,
+    revisionSequence: revision?.data.sequence,
+  }
+}
+
+function stopped(state: unknown) {
+  return (
+    typeof state === "object" &&
+    state !== null &&
+    ((state as { status?: unknown }).status === "stopped" ||
+      (state as { status?: unknown }).status === "stopped_with_code")
+  )
+}
+
+function sanitizeState(state: unknown): SanitizedState {
+  if (typeof state !== "object" || state === null) return {}
+  const input = state as { status?: unknown; lastChange?: unknown; exitCode?: unknown }
+  return {
+    ...(typeof input.status === "string" ? { status: input.status } : {}),
+    ...(typeof input.lastChange === "number" && Number.isSafeInteger(input.lastChange)
+      ? { lastChange: input.lastChange }
+      : {}),
+    ...(typeof input.exitCode === "number" &&
+    Number.isInteger(input.exitCode) &&
+    input.exitCode >= 0 &&
+    input.exitCode <= 255
+      ? { exitCode: input.exitCode }
+      : {}),
+  }
+}
+
+function safeStop(params?: StopParams) {
+  const stop: { exitCode?: number; reason?: string } = {}
+  if (
+    typeof params?.exitCode === "number" &&
+    Number.isInteger(params.exitCode) &&
+    params.exitCode >= 0 &&
+    params.exitCode <= 255
+  ) {
+    stop.exitCode = params.exitCode
+  }
+  if (typeof params?.reason === "string" && /^[A-Za-z0-9_.:-]{1,64}$/.test(params.reason)) stop.reason = params.reason
+  return Object.keys(stop).length ? stop : null
+}
+
+function nativeRequest(request: IncomingRequest): IncomingRequest {
+  const headers = new Headers(request.headers)
+  headers.delete(tokenHeader)
+  const clean = new Request(request.url, {
+    method: request.method,
+    headers,
+    body: request.body,
+    redirect: request.redirect,
+    signal: request.signal,
+  })
+  Object.defineProperty(clean, "cf", { value: request.cf })
+  return clean as IncomingRequest
+}
+
+function strictEmptyBody(request: Request) {
+  if (request.headers.get("content-length") !== null && request.headers.get("content-length") !== "0") return false
+  if (request.body) {
+    void request.body.cancel().catch(() => {})
+    return false
+  }
+  return true
+}
+
+function methodNotAllowed(methods: string[]) {
+  return json({ error: "method_not_allowed" }, 405, { allow: methods.join(", ") })
+}
+
+function json(value: unknown, status = 200, input: HeadersInit = {}) {
+  const headers = new Headers(input)
+  headers.set("content-type", "application/json; charset=utf-8")
+  headers.set("cache-control", "no-store")
+  headers.set("x-content-type-options", "nosniff")
+  return new Response(JSON.stringify(value), { status, headers })
+}

@@ -1,0 +1,81 @@
+name: Verify isolated Cloudflare container
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "RUN ISOLATED CLOUDFLARE CANARY гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-isolated-canary
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  verify:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    environment: dev
+    env:
+      MONGOLGPT_CANARY_CONFIRMATION: ${{ inputs.confirmation }}
+      MONGOLGPT_CANARY_OUTPUT: ${{ runner.temp }}/mgpt-canary-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Validate isolated test confirmation
+        run: test "$MONGOLGPT_CANARY_CONFIRMATION" = "RUN ISOLATED CLOUDFLARE CANARY"
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify canary safety contracts
+        run: |
+          bun run --cwd packages/runtime typecheck
+          bun --cwd packages/runtime test test/canary-probe.test.ts test/canary-resources.test.ts test/cloudflare-canary.test.ts test/canary-workflow.test.ts
+
+      - name: Build current authenticated container payload
+        timeout-minutes: 10
+        run: |
+          bun packages/runtime/script/build-sandbox.ts
+          MONGOLGPT_CHANNEL=dev MONGOLGPT_VERSION="0.0.0-ci-canary-${GITHUB_SHA:0:12}" bun packages/mongolgpt/script/build.ts --single --skip-embed-web-ui --skip-install
+          cp packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt packages/runtime/container/mongolgpt
+
+      - name: Verify actual Cloudflare lifecycle in new isolated resources
+        timeout-minutes: 30
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: bun packages/runtime/script/test-cloudflare-canary.ts
+
+      # Reserved for step failure/timeout; whole-job termination can still prevent cleanup.
+      - name: Independently clean up isolated canary resources
+        if: always()
+        timeout-minutes: 8
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: bun packages/runtime/script/test-cloudflare-canary.ts --cleanup-only
+
+      - name: Upload sanitized canary receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: isolated-cloudflare-canary-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          # Never upload the generated config, secrets or unredacted process output.
+          path: ${{ env.MONGOLGPT_CANARY_OUTPUT }}/report.json
