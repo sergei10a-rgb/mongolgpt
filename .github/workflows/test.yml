@@ -30,10 +30,12 @@ jobs:
           - name: linux
             host: ubuntu-24.04
             test_concurrency: ""
+            test_filter: ""
             timeout_minutes: 20
           - name: windows
             host: windows-2025
             test_concurrency: --concurrency=1
+            test_filter: --filter=!mongolgpt
             timeout_minutes: 30
     runs-on: ${{ matrix.settings.host }}
     defaults:
@@ -67,12 +69,24 @@ jobs:
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-
             turbo-${{ runner.os }}-
 
+      - name: Verify unit-test workflow contract
+        working-directory: packages/script
+        run: bun test test/ci-unit-workflow.test.ts
+
       - name: Run unit tests
         # Windows runners become unreliable when package suites compete for child-process and filesystem IO.
         timeout-minutes: ${{ matrix.settings.timeout_minutes }}
-        run: GITHUB_ACTIONS=false bun turbo test ${{ matrix.settings.test_concurrency }}
+        run: GITHUB_ACTIONS=false bun turbo test ${{ matrix.settings.test_concurrency }} ${{ matrix.settings.test_filter }} --log-order=stream
         env:
           MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
+
+      - name: Run Windows CLI unit tests
+        # CLI alone can take 20 minutes; it must not share the other suites' deadline.
+        if: runner.os == 'Windows'
+        timeout-minutes: 30
+        run: GITHUB_ACTIONS=false bun turbo test --filter=mongolgpt --concurrency=1 --log-order=stream
+        env:
+          MONGOLGPT_EXPERIMENTAL_DISABLE_FILEWATCHER: "true"
 
       - name: Check generated client
         if: runner.os == 'Linux'
