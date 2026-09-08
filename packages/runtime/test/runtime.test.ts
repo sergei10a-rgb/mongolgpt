@@ -1643,6 +1643,15 @@ describe("runtime deployment contract", () => {
     expect(dockerfile).toContain(
       "COPY --from=workspace-launcher --chmod=0755 /workspace-launcher /usr/local/bin/mongolgpt-workspace-launcher",
     )
+    expect(dockerfile).toContain("tini-static=0.19.0-r3")
+    expect(dockerfile).toContain(
+      "COPY --from=workspace-launcher --chmod=0755 /sbin/tini-static /usr/local/bin/mongolgpt-init",
+    )
+    expect(dockerfile).toContain("ENV MONGOLGPT_CONTAINER_ENTRYPOINT=true")
+    expect(dockerfile).toContain(
+      'ENTRYPOINT ["/usr/local/bin/mongolgpt-init", "--", "/usr/local/bin/mongolgpt", "serve"]',
+    )
+    expect(dockerfile).toContain("COPY container/licenses/tini.LICENSE /usr/share/licenses/mongolgpt-init/LICENSE")
     const sdk = await Bun.file(new URL("../package.json", import.meta.resolve("@cloudflare/sandbox"))).json()
     expect(sdk.version).toBe(version)
     const root = await Bun.file(new URL("../../../package.json", import.meta.url)).json()

@@ -127,6 +127,11 @@ const cli = yargs(args)
     type: "boolean",
   })
   .middleware(async (opts) => {
+    if (process.env.MONGOLGPT_CONTAINER_ENTRYPOINT === "true") {
+      if (opts._[0] !== "serve") throw new Error("Cloud контейнерийн эхлүүлэх команд буруу байна.")
+      const { RuntimeContainer } = await import("@mongolgpt/core/runtime-container")
+      process.exit(await RuntimeContainer.run())
+    }
     if (process.env.MONGOLGPT_RUNTIME_SUPERVISOR === "true") {
       if (opts._[0] !== "serve") throw new Error("Cloud хянагч зөвхөн сервер эхлүүлэх боломжтой.")
       const { runRuntimeSupervisor } = await import("./cli/runtime-supervisor")

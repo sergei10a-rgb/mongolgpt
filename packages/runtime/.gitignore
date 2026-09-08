@@ -5,3 +5,4 @@ container/*
 !container/licenses/
 container/licenses/*
 !container/licenses/musl.COPYRIGHT
+!container/licenses/tini.LICENSE

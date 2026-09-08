@@ -1,4 +1,5 @@
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
+import { RuntimeContainerControl } from "@mongolgpt/core/runtime-container-control"
 
 type RuntimeStart = typeof RuntimeSupervisor.start
 type RuntimeHandle = Awaited<ReturnType<RuntimeStart>>
@@ -24,7 +25,9 @@ const forwarded = [
   "MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE",
 ] as const
 
-export async function runRuntimeSupervisor(input: { start?: RuntimeStart } = {}) {
+export async function runRuntimeSupervisor(
+  input: { start?: RuntimeStart; connect?: typeof RuntimeContainerControl.join } = {},
+) {
   if (
     process.env.MONGOLGPT_RUNTIME_MODE !== "hosted" ||
     process.env.MONGOLGPT_CLOUD_HISTORY !== "true" ||
@@ -42,12 +45,24 @@ export async function runRuntimeSupervisor(input: { start?: RuntimeStart } = {})
   )
   const abort = new AbortController()
   let runtime: RuntimeHandle | undefined
+  let connection: Awaited<ReturnType<typeof RuntimeContainerControl.join>> | undefined
+  let result = 1
+  let supervised = false
   const interruptStartup = () => {
     abort.abort(new Error("Runtime supervisor startup interrupted."))
     void runtime?.group.close().catch(() => {})
   }
+  let interrupt = interruptStartup
   addSignalListeners(interruptStartup)
   try {
+    connection = await (input.connect ?? RuntimeContainerControl.join)({
+      onDrain: () => interrupt(),
+      onDisconnect: () => {
+        abort.abort(new Error("Container control channel closed."))
+        void runtime?.group.close().catch(() => {})
+      },
+    })
+    abort.signal.throwIfAborted()
     runtime = await startRuntime({
       root,
       launcher: "/usr/local/bin/mongolgpt-workspace-launcher",
@@ -67,17 +82,25 @@ export async function runRuntimeSupervisor(input: { start?: RuntimeStart } = {})
       },
     })
     abort.signal.throwIfAborted()
+    removeSignalListeners(interruptStartup)
+    supervised = true
+    result = await superviseRuntime(runtime, (stop) => {
+      interrupt = stop
+    })
+    return result
   } catch (error) {
-    await runtime?.group.close().catch(() => {})
-    await runtime?.control.catch(() => {})
+    if (!supervised) {
+      await runtime?.group.close().catch(() => {})
+      await runtime?.control.catch(() => {})
+    }
     throw error
   } finally {
     removeSignalListeners(interruptStartup)
+    await connection?.complete(result === 0)
   }
-  return await superviseRuntime(runtime)
 }
 
-async function superviseRuntime(runtime: RuntimeHandle) {
+async function superviseRuntime(runtime: RuntimeHandle, ready: (stop: () => void) => void) {
   if (runtime.child.exitCode !== null) return await closeRuntime(runtime, runtime.child.exitCode)
   if (runtime.child.signalCode !== null) return await closeRuntime(runtime, 1)
 
@@ -122,6 +145,7 @@ async function superviseRuntime(runtime: RuntimeHandle) {
   addSignalListeners(stop)
   runtime.child.once("exit", exited)
   runtime.child.once("error", childError)
+  ready(stop)
   try {
     const result = await outcome
     if (result.type === "stop") {

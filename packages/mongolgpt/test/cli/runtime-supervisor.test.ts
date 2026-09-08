@@ -29,7 +29,7 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         throw input.signal?.reason ?? new Error("missing abort reason")
       }) satisfies RuntimeStart
 
-      const result = runRuntimeSupervisor({ start })
+      const result = runRuntimeSupervisor({ start, connect })
       const input = await started.promise
       process.emit("SIGTERM", "SIGTERM")
 
@@ -55,7 +55,7 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         return runtime.handle
       }) satisfies RuntimeStart
 
-      const result = runRuntimeSupervisor({ start })
+      const result = runRuntimeSupervisor({ start, connect })
       const input = await runtimeReady(started.promise)
 
       expect(input).toMatchObject({
@@ -104,7 +104,7 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         return runtime.handle
       }) satisfies RuntimeStart
 
-      const result = runRuntimeSupervisor({ start })
+      const result = runRuntimeSupervisor({ start, connect })
       await runtimeReady(started.promise)
       process.emit("SIGTERM", "SIGTERM")
 
@@ -122,7 +122,7 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         return runtime.handle
       }) satisfies RuntimeStart
 
-      const result = runRuntimeSupervisor({ start })
+      const result = runRuntimeSupervisor({ start, connect })
       await runtimeReady(started.promise)
       runtime.child.exitCode = 7
       runtime.child.emit("exit", 7, null)
@@ -143,7 +143,7 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         return runtime.handle
       }) satisfies RuntimeStart
 
-      const result = runRuntimeSupervisor({ start })
+      const result = runRuntimeSupervisor({ start, connect })
       await runtimeReady(started.promise)
       runtime.control.reject(new Error("private control channel details"))
 
@@ -164,7 +164,7 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         return runtime.handle
       }) satisfies RuntimeStart
 
-      const result = runRuntimeSupervisor({ start })
+      const result = runRuntimeSupervisor({ start, connect })
       await runtimeReady(started.promise)
       runtime.child.emit("error", new Error("private child error"))
 
@@ -172,6 +172,91 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
       expect(error).toBeInstanceOf(Error)
       expect((error as Error).message).toBe("Runtime supervisor failed.")
       expect(runtime.events).toEqual(["group.close"])
+    })
+  })
+
+  test("container drain uses graceful stop and waits for its completion receipt", async () => {
+    await withSupervisorProcess(async () => {
+      const started = deferred<StartInput>()
+      const release = deferred<void>()
+      const confirmed = deferred<void>()
+      let drain!: () => void
+      const runtime = syntheticRuntime({
+        stop: async () => {
+          runtime.events.push("stop")
+          runtime.control.resolve()
+        },
+      })
+      const result = runRuntimeSupervisor({
+        start: async (input) => {
+          started.resolve(input)
+          return runtime.handle
+        },
+        connect: async (input) => {
+          drain = input.onDrain
+          return {
+            complete: async (success) => {
+              expect(success).toBe(true)
+              confirmed.resolve()
+              await release.promise
+            },
+          }
+        },
+      })
+      await runtimeReady(started.promise)
+      drain()
+      await confirmed.promise
+      expect(await Promise.race([result.then(() => "done"), setTimeout(25).then(() => "pending")])).toBe("pending")
+      release.resolve()
+      expect(await result).toBe(0)
+      expect(runtime.events).toEqual(["stop"])
+    })
+  })
+
+  test("lost container control closes the runtime immediately without a snapshot", async () => {
+    await withSupervisorProcess(async () => {
+      const started = deferred<StartInput>()
+      let disconnect!: () => void
+      const outcomes: boolean[] = []
+      const runtime = syntheticRuntime()
+      const result = runRuntimeSupervisor({
+        start: async (input) => {
+          started.resolve(input)
+          return runtime.handle
+        },
+        connect: async (input) => {
+          disconnect = input.onDisconnect
+          return {
+            complete: async (success) => {
+              outcomes.push(success)
+            },
+          }
+        },
+      })
+      await runtimeReady(started.promise)
+      disconnect()
+      await expect(result).rejects.toThrow("Runtime supervisor failed.")
+      expect(runtime.events).not.toContain("stop")
+      expect(runtime.events).toContain("group.close")
+      expect(outcomes).toEqual([false])
+    })
+  })
+
+  test("refused container admission never starts a runtime", async () => {
+    await withSupervisorProcess(async () => {
+      let starts = 0
+      await expect(
+        runRuntimeSupervisor({
+          start: async () => {
+            starts++
+            return syntheticRuntime().handle
+          },
+          connect: async () => {
+            throw new Error("Container is draining")
+          },
+        }),
+      ).rejects.toThrow("Container is draining")
+      expect(starts).toBe(0)
     })
   })
 })
@@ -197,6 +282,10 @@ function syntheticRuntime(input: { stop?: (signal?: AbortSignal) => Promise<void
     stop: input.stop ?? (async () => events.push("stop")),
   } as unknown as RuntimeHandle
   return { child, control, events, handle }
+}
+
+async function connect() {
+  return { complete: async (_success: boolean) => {} }
 }
 
 async function withSupervisorProcess(run: () => Promise<void>) {

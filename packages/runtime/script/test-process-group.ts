@@ -54,9 +54,13 @@ try {
     if ((await compiler.exited) !== 0) throw new Error("Workspace isolation fixture compilation failed")
   }
   const bundle = await Bun.build({
-    entrypoints: ["process-group", "runtime-lock", "runtime-state"].map((name) =>
-      join(root, `../core/test/${name}.test.ts`),
-    ),
+    entrypoints: [
+      "process-group",
+      "runtime-lock",
+      "runtime-state",
+      "runtime-container-control",
+      "runtime-container",
+    ].map((name) => join(root, `../core/test/${name}.test.ts`)),
     target: "bun",
     external: ["bun:test"],
     outdir: directory,
@@ -88,7 +92,9 @@ try {
     [
       runtime,
       "test",
-      ...["process-group", "runtime-lock", "runtime-state"].map((name) => join(directory, `${name}.test.js`)),
+      ...["process-group", "runtime-lock", "runtime-state", "runtime-container-control", "runtime-container"].map(
+        (name) => join(directory, `${name}.test.js`),
+      ),
       ...process.argv.slice(2),
     ],
     {
