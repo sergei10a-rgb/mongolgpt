@@ -26,7 +26,13 @@ export async function start(input: {
   const uid = 10001
   const group = await ProcessGroup.create({ launcher: input.launcher, uid, gid: uid })
   try {
-    const checkpoint = await CloudStartup.bootstrap({ root, request: input.request, signal: input.signal })
+    let checkpoint = await CloudStartup.bootstrap({ root, request: input.request, signal: input.signal })
+    if (!checkpoint) {
+      const { CloudBaseline } = await import("./database/cloud-baseline")
+      const created = await CloudBaseline.publish({ root, request: input.request, signal: input.signal })
+      checkpoint = await CloudStartup.bootstrap({ root, request: input.request, signal: input.signal })
+      if (checkpoint?.id !== created.id) throw new CloudBaseline.BaselineError()
+    }
     const checkpointID = checkpoint?.id
     await own(root, uid, input.signal)
     input.signal?.throwIfAborted()

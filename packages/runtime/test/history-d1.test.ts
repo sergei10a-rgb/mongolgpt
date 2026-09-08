@@ -25,6 +25,12 @@ afterAll(async () => {
 
 for (const fixture of [
   {
+    name: "fresh native baseline and durable restart",
+    script: "checkpoint-baseline.integration.ts",
+    prefix: "CHECKPOINT_BASELINE_RESULT ",
+    assertions: 25,
+  },
+  {
     name: "file revisions and replacement recovery",
     script: "file-revision.integration.ts",
     prefix: "FILE_REVISION_RESULT ",

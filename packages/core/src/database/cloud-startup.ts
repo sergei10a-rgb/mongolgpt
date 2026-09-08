@@ -199,7 +199,7 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
   }
 }
 
-async function pristine(root: string) {
+export async function pristine(root: string) {
   for (let current = root; ; current = dirname(current)) {
     const info = await lstat(current)
     if (!info.isDirectory() || info.isSymbolicLink()) throw new Error()

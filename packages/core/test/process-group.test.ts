@@ -15,6 +15,7 @@ import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
 import { StartupHandoff } from "@mongolgpt/core/database/startup-handoff"
 import { tmpdir } from "./fixture/tmpdir"
 import { cloudFilesSeed } from "./fixture/cloud-files-seed"
+import { cloudBaselineStore } from "./fixture/cloud-baseline-store"
 import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 
 const launcher = process.env.MONGOLGPT_TEST_WORKSPACE_LAUNCHER
@@ -68,26 +69,65 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
     await chmod(temp.path, 0o755)
     const root = join(temp.path, "workspace")
     await mkdir(root)
-    let bootstraps = 0
+    const store = cloudBaselineStore()
     const runtime = await RuntimeSupervisor.start({
       root,
       launcher: launcher!,
       ...startupCommand(root),
-      request: async (request) => {
-        expect(request.url).toBe("http://checkpoint.mongolgpt.internal/v1/bootstrap")
-        bootstraps++
-        return Response.json({ checkpoint: null })
-      },
+      request: store.request,
     })
     try {
       const result = await output(runtime.child)
       expect(result.code).toBe(0)
       expect(result.stdout.trim()).toBe("STARTUP_HANDOFF_READY")
-      expect(bootstraps).toBe(1)
+      expect(store.calls).toEqual([
+        "/v1/bootstrap",
+        "/v1/begin",
+        "/v1/upload",
+        "/v1/upload",
+        "/v1/publish",
+        "/v1/bootstrap",
+        "/v1/archive",
+        "/v1/archive",
+      ])
+      expect(runtime.checkpoint.id).toBe(store.checkpoint!.id)
       expect(await readFile(join(root, "child-owned.txt"), "utf8")).toBe("restored then isolated")
     } finally {
       await runtime.group.close()
     }
+  })
+
+  test("fresh baseline lost acknowledgement never starts a tenant and removes its cgroup", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    const store = cloudBaselineStore()
+    const before = new Set(await readdir("/sys/fs/cgroup"))
+    let created: string[] = []
+    await expect(
+      RuntimeSupervisor.start({
+        root,
+        launcher: launcher!,
+        ...startupCommand(root),
+        request: async (request) => {
+          const response = await store.request(request)
+          if (request.url.endsWith("/publish")) {
+            created = (await readdir("/sys/fs/cgroup")).filter(
+              (name) => name.startsWith("mongolgpt-") && !before.has(name),
+            )
+            throw new Error("Synthetic lost receipt")
+          }
+          return response
+        },
+      }),
+    ).rejects.toThrow()
+    expect(created).toHaveLength(1)
+    await expect(readdir(join("/sys/fs/cgroup", created[0]))).rejects.toMatchObject({ code: "ENOENT" })
+    expect(store.checkpoint).toBeDefined()
+    expect(store.calls).toEqual(["/v1/bootstrap", "/v1/begin", "/v1/upload", "/v1/upload", "/v1/publish"])
+    expect(await readdir(root)).toEqual([])
+    expect(await readdir(temp.path)).toEqual(["workspace"])
   })
 
   test("startup rejects a valid receipt inherited by a different cgroup", async () => {

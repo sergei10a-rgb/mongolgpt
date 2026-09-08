@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { Buffer } from "node:buffer"
 import { RuntimeBackupError, deriveRuntimeBackupKey } from "../src/backup"
 import { createCheckpointHandler, handleCheckpointOutbound } from "../src/checkpoint-rpc"
-import { HistoryError, type HistoryScope } from "../src/history"
+import { HistoryError, type HistoryLease, type HistoryScope } from "../src/history"
 import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 
 const scope = { accountID: "acc_checkpoint_rpc", workspaceID: "wrk_checkpoint_rpc" } satisfies HistoryScope
@@ -129,6 +129,115 @@ describe("checkpoint rpc", () => {
     expect(await missingBaseline.json()).toMatchObject({ error: { code: "conflict" } })
   })
 
+  test("begins a fresh baseline with one deterministic tenant-derived key", async () => {
+    const calls = new Array<string>()
+    const keys = {
+      key_z_checkpoint_rpc: Buffer.alloc(32, 1),
+      key_a_checkpoint_rpc: Buffer.alloc(32, 2),
+    }
+    const response = await createCheckpointHandler(
+      {
+        history: historyStore({ checkpoint: undefined, epoch: 0, calls }),
+        backups: beginBackups(),
+        publisher: beginPublisher(),
+        masterKeyJson: JSON.stringify({
+          key_z_checkpoint_rpc: keys.key_z_checkpoint_rpc.toString("base64"),
+          key_a_checkpoint_rpc: keys.key_a_checkpoint_rpc.toString("base64"),
+        }),
+      },
+      scope,
+    )(request("/begin", { writerID: "writer_begin_rpc" }))
+
+    expect(response.status).toBe(200)
+    expect((await response.json()) as unknown).toEqual({
+      lease: { epoch: 1, writerID: "writer_begin_rpc" },
+      keyID: "key_a_checkpoint_rpc",
+      key: canonicalBase64(deriveRuntimeBackupKey(scope, "key_a_checkpoint_rpc", keys.key_a_checkpoint_rpc)),
+    })
+    expect(calls).toEqual([
+      `checkpoint:${scope.accountID}:${scope.workspaceID}`,
+      `epoch:${scope.accountID}:${scope.workspaceID}`,
+      `claim:${scope.accountID}:${scope.workspaceID}:0:writer_begin_rpc`,
+    ])
+  })
+
+  test("begin rejects non-fresh state and invalid keys before claiming", async () => {
+    for (const input of [
+      {
+        history: historyStore({ checkpoint: checkpointFixture(), epoch: 0 }),
+        backups: beginBackups(),
+        publisher: beginPublisher(),
+        masterKeyJson,
+      },
+      {
+        history: historyStore({ checkpoint: undefined, epoch: 2 }),
+        backups: beginBackups(),
+        publisher: beginPublisher(),
+        masterKeyJson,
+      },
+      {
+        history: historyStore({ checkpoint: undefined, epoch: 0 }),
+        backups: beginBackups(),
+        publisher: beginPublisher(),
+        masterKeyJson: JSON.stringify({ ["__proto__"]: master.toString("base64") }),
+      },
+      {
+        history: historyStore({ checkpoint: undefined, epoch: 0 }),
+        backups: beginBackups(),
+        publisher: beginPublisher(),
+        masterKeyJson: undefined,
+      },
+      {
+        history: historyStore({ checkpoint: undefined, epoch: 0 }),
+        backups: undefined,
+        publisher: beginPublisher(),
+        masterKeyJson,
+      },
+      {
+        history: historyStore({ checkpoint: undefined, epoch: 0 }),
+        backups: beginBackups(),
+        publisher: undefined,
+        masterKeyJson,
+      },
+    ]) {
+      const response = await createCheckpointHandler(input, scope)(request("/begin", { writerID: "writer_begin_rpc" }))
+      expect([409, 503]).toContain(response.status)
+      expect(JSON.stringify(await response.json())).not.toContain(master.toString("base64"))
+      expect(input.history.calls.some((call) => call.startsWith("claim:"))).toBe(false)
+    }
+  })
+
+  test("begin does not return a key when claim acknowledgement is lost to abort", async () => {
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const abort = new AbortController()
+    const response = createCheckpointHandler(
+      {
+        history: historyStore({
+          checkpoint: undefined,
+          epoch: 0,
+          async claim(tenant, input) {
+            entered.resolve()
+            await release.promise
+            return { ...tenant, epoch: input.expectedEpoch + 1, writerID: input.writerID }
+          },
+        }),
+        backups: beginBackups(),
+        publisher: beginPublisher(),
+        masterKeyJson,
+      },
+      scope,
+    )(request("/begin", { writerID: "writer_begin_rpc" }, abort.signal))
+
+    await bounded(entered.promise)
+    abort.abort()
+    release.resolve()
+    const body = await (await bounded(response)).json()
+    expect(body).toMatchObject({ error: { code: "unavailable" } })
+    expect(JSON.stringify(body)).not.toContain("key_checkpoint_rpc")
+    expect(JSON.stringify(body)).not.toContain(master.toString("base64"))
+  })
+
   test("rejects malformed transport and exact-body violations before stores run", async () => {
     await expectInvalid(new Request(`${url}/bootstrap`, { method: "GET", headers: jsonContent() }))
     await expectInvalid(
@@ -147,6 +256,7 @@ describe("checkpoint rpc", () => {
     await expectInvalid(request("/bootstrap?x=1", {}))
     await expectInvalid(new Request(`${url}/bootstrap#hash`, { method: "POST", headers: jsonContent(), body: "{}" }))
     await expectInvalid(request("/bootstrap", { extra: true }))
+    await expectInvalid(request("/begin", { writerID: "writer_begin_rpc", scope }))
     await expectInvalid(request("/archive", { checkpointID: checkpointFixture().id, kind: "sqlite", scope }))
     await expectInvalid(request("/archive", { checkpointID: checkpointFixture().id, kind: "sqlite", backupID: "x" }))
   })
@@ -403,6 +513,10 @@ function historyStore(input: {
   checkpointError?: Error
   revision?: CloudCheckpoint.FileRevision
   calls?: string[]
+  claim?: (
+    tenant: HistoryScope,
+    input: { expectedEpoch: number; writerID: string; checkpointID?: string; filesRevisionID?: string },
+  ) => Promise<HistoryLease>
 }) {
   const calls = input.calls ?? []
   return {
@@ -416,6 +530,34 @@ function historyStore(input: {
     epoch: async (tenant: HistoryScope) => {
       calls.push(`epoch:${tenant.accountID}:${tenant.workspaceID}`)
       return input.epoch ?? 0
+    },
+    claim: async (
+      tenant: HistoryScope,
+      claim: { expectedEpoch: number; writerID: string; checkpointID?: string; filesRevisionID?: string },
+    ) => {
+      calls.push(`claim:${tenant.accountID}:${tenant.workspaceID}:${claim.expectedEpoch}:${claim.writerID}`)
+      return input.claim
+        ? input.claim(tenant, claim)
+        : { ...tenant, epoch: claim.expectedEpoch + 1, writerID: claim.writerID }
+    },
+  }
+}
+
+function beginBackups() {
+  return {
+    open: async () => {
+      throw new Error("unexpected begin archive open")
+    },
+    save: async () => {
+      throw new Error("unexpected begin upload")
+    },
+  }
+}
+
+function beginPublisher() {
+  return {
+    publish: async () => {
+      throw new Error("unexpected begin publish")
     },
   }
 }
@@ -492,8 +634,8 @@ function archiveBytes(bytes: number) {
   return new Uint8Array(Array.from({ length: bytes }, (_value, index) => index % 251))
 }
 
-function request(path: string, body: unknown) {
-  return new Request(`${url}${path}`, { method: "POST", headers: jsonContent(), body: JSON.stringify(body) })
+function request(path: string, body: unknown, signal?: AbortSignal) {
+  return new Request(`${url}${path}`, { method: "POST", headers: jsonContent(), body: JSON.stringify(body), signal })
 }
 
 function jsonContent() {

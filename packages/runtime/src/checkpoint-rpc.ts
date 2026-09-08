@@ -3,11 +3,12 @@ import { Schema } from "effect"
 import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { createRuntimeBackupStore, deriveRuntimeBackupKey, RuntimeBackupError } from "./backup"
 import { createRuntimeCheckpointStore } from "./checkpoint"
-import { decodeFileRevision } from "./checkpoint-contract"
+import { decodeCheckpoint, decodeFileRevision } from "./checkpoint-contract"
 import { createHistoryStore, HistoryError, type HistoryLease, type HistoryScope } from "./history"
 
 const origin = "http://checkpoint.mongolgpt.internal"
 const maxBodyBytes = 4096
+const maxCheckpointBodyBytes = 1024 * 1024
 const maxSecretBytes = 32 * 1024
 const bodyTimeoutMs = 5000
 const maxUploadBytes = 96 * 1024 * 1024
@@ -39,10 +40,16 @@ const UUID = Schema.String.check(
 )
 const ScopeInput = Schema.Struct({ accountID: Identifier, workspaceID: Identifier })
 const BootstrapInput = Schema.Struct({})
+const BeginInput = Schema.Struct({ writerID: Identifier })
 const ArchiveInput = Schema.Struct({
   checkpointID: UUID,
   kind: Schema.Union([Schema.Literal("sqlite"), Schema.Literal("files")]),
   filesRevisionID: Schema.optional(UUID),
+})
+const PublishInput = Schema.Struct({
+  epoch: Schema.Int.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(Number.MAX_SAFE_INTEGER)),
+  writerID: Identifier,
+  checkpoint: Schema.Unknown,
 })
 const PublishFilesInput = Schema.Struct({
   epoch: Schema.Int.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(Number.MAX_SAFE_INTEGER)),
@@ -58,7 +65,7 @@ const UploadReceipt = Schema.Struct({
 })
 
 type CheckpointRecord = { data: CloudCheckpoint.Checkpoint; digest?: string }
-type HistoryStore = Pick<ReturnType<typeof createHistoryStore>, "checkpoint" | "epoch" | "fileRevision">
+type HistoryStore = Pick<ReturnType<typeof createHistoryStore>, "checkpoint" | "epoch" | "claim" | "fileRevision">
 type ArchiveManifest = {
   version: number
   format: string
@@ -75,7 +82,7 @@ type BackupStore = {
 type CheckpointStores = {
   history: HistoryStore
   backups?: BackupStore
-  publisher?: Pick<ReturnType<typeof createRuntimeCheckpointStore>, "publishFiles">
+  publisher?: Partial<Pick<ReturnType<typeof createRuntimeCheckpointStore>, "publish" | "publishFiles">>
   masterKeyJson?: string
   bodyTimeoutMs?: number
   uploadTimeoutMs?: number
@@ -105,6 +112,10 @@ export async function handleCheckpointOutbound(
         backups: bucket ? createRuntimeBackupStore(bucket) : undefined,
         publisher: bucket
           ? {
+              async publish(lease, checkpoint) {
+                masters = readMasterKeys(masterKeyJson)
+                return createRuntimeCheckpointStore(db, bucket, masters).publish(lease, checkpoint)
+              },
               async publishFiles(lease, revision) {
                 masters = readMasterKeys(masterKeyJson)
                 return createRuntimeCheckpointStore(db, bucket, masters).publishFiles(lease, revision)
@@ -135,15 +146,24 @@ export function createCheckpointHandler(stores: CheckpointStores, scope: History
         throw new CheckpointRpcError("invalid")
       if (url.href !== `${origin}${url.pathname}`) throw new CheckpointRpcError("invalid")
       if (url.pathname === "/v1/upload") return await upload(stores, trustedScope, request)
-      if (!["/v1/bootstrap", "/v1/archive", "/v1/publish-files"].includes(url.pathname))
+      if (!["/v1/bootstrap", "/v1/begin", "/v1/archive", "/v1/publish", "/v1/publish-files"].includes(url.pathname))
         throw new CheckpointRpcError("invalid")
       if (!isJson(request.headers.get("content-type"))) throw new CheckpointRpcError("invalid")
-      const input = await readJson(request, stores.bodyTimeoutMs ?? bodyTimeoutMs)
+      const input = await readJson(
+        request,
+        stores.bodyTimeoutMs ?? bodyTimeoutMs,
+        url.pathname === "/v1/publish" ? maxCheckpointBodyBytes : maxBodyBytes,
+      )
 
       if (url.pathname === "/v1/bootstrap") {
         exact(input, [])
         decode(BootstrapInput, input)
         return await bootstrap(stores, trustedScope)
+      }
+      if (url.pathname === "/v1/begin") {
+        exact(input, ["writerID"])
+        rejectEnvelopeScopeFields(input)
+        return await begin(stores, trustedScope, decode(BeginInput, input) as typeof BeginInput.Type, request.signal)
       }
       if (url.pathname === "/v1/archive") {
         exact(
@@ -155,12 +175,24 @@ export function createCheckpointHandler(stores: CheckpointStores, scope: History
         rejectEnvelopeScopeFields(input)
         return await archive(stores, trustedScope, decode(ArchiveInput, input) as typeof ArchiveInput.Type)
       }
+      if (url.pathname === "/v1/publish") {
+        exact(input, ["epoch", "writerID", "checkpoint"])
+        rejectEnvelopeScopeFields(input)
+        const body = decode(PublishInput, input) as typeof PublishInput.Type
+        const checkpoint = decodeCheckpoint(body.checkpoint)
+        if (!stores.publisher?.publish) throw new CheckpointRpcError("unavailable")
+        request.signal.throwIfAborted()
+        const lease: HistoryLease = { ...trustedScope, epoch: body.epoch, writerID: body.writerID }
+        const result = await stores.publisher.publish(lease, checkpoint)
+        request.signal.throwIfAborted()
+        return success({ data: result.data, digest: result.digest })
+      }
       if (url.pathname === "/v1/publish-files") {
         exact(input, ["epoch", "writerID", "revision"])
         rejectEnvelopeScopeFields(input)
         const body = decode(PublishFilesInput, input) as typeof PublishFilesInput.Type
         const revision = decodeFileRevision(body.revision)
-        if (!stores.publisher) throw new CheckpointRpcError("unavailable")
+        if (!stores.publisher?.publishFiles) throw new CheckpointRpcError("unavailable")
         request.signal.throwIfAborted()
         const lease: HistoryLease = { ...trustedScope, epoch: body.epoch, writerID: body.writerID }
         const result = await stores.publisher.publishFiles(lease, revision)
@@ -172,6 +204,33 @@ export function createCheckpointHandler(stores: CheckpointStores, scope: History
       if (request.body && !request.body.locked) cancelStream(request.body)
       return failure(mapError(error))
     }
+  }
+}
+
+async function begin(
+  stores: CheckpointStores,
+  scope: HistoryScope,
+  input: typeof BeginInput.Type,
+  signal: AbortSignal,
+) {
+  const masters = readMasterKeys(stores.masterKeyJson)
+  try {
+    if (!stores.backups?.save || !stores.publisher?.publish) throw new CheckpointRpcError("unavailable")
+    const keyID = defaultBackupKeyID(masters)
+    signal.throwIfAborted()
+    if (await stores.history.checkpoint(scope)) throw new CheckpointRpcError("conflict")
+    if ((await stores.history.epoch(scope)) !== 0) throw new CheckpointRpcError("conflict")
+    signal.throwIfAborted()
+    const lease = await stores.history.claim(scope, { expectedEpoch: 0, writerID: input.writerID })
+    signal.throwIfAborted()
+    if (lease.epoch !== 1 || lease.writerID !== input.writerID) throw new CheckpointRpcError("conflict")
+    return success({
+      lease: { epoch: lease.epoch, writerID: lease.writerID },
+      keyID,
+      key: derivedKey(scope, keyID, masters),
+    })
+  } finally {
+    Object.values(masters).forEach((master) => master.fill(0))
   }
 }
 
@@ -363,11 +422,28 @@ function readMasterKeys(input: string | undefined) {
   }
 }
 
+function defaultBackupKeyID(masters: Readonly<Record<string, Uint8Array>>) {
+  const keyID = Object.keys(masters)
+    .filter((item) => isBackupKeyID(item))
+    .sort()[0]
+  if (!keyID) throw new CheckpointRpcError("unavailable")
+  return keyID
+}
+
+function isBackupKeyID(value: unknown) {
+  try {
+    decode(BackupKeyID, value)
+    return true
+  } catch {
+    return false
+  }
+}
+
 function isJson(contentType: string | null) {
   return contentType?.split(";")[0]?.trim().toLowerCase() === "application/json"
 }
 
-async function readJson(request: Request, timeoutMs: number) {
+async function readJson(request: Request, timeoutMs: number, maxBytes = maxBodyBytes) {
   if (!request.body) throw new CheckpointRpcError("invalid")
   const reader = request.body.getReader()
   const chunks = new Array<Uint8Array>()
@@ -379,7 +455,7 @@ async function readJson(request: Request, timeoutMs: number) {
       if (chunk.done) break
       if (!(chunk.value instanceof Uint8Array)) throw new CheckpointRpcError("invalid")
       size += chunk.value.byteLength
-      if (size > maxBodyBytes) {
+      if (size > maxBytes) {
         cancelReader(reader)
         throw new CheckpointRpcError("invalid")
       }
