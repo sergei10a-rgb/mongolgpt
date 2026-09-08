@@ -195,7 +195,7 @@ export async function getSystemReadiness() {
     runtime: () =>
       fetch(new URL("/global/health", `${runtimeURL}/`), {
         headers: { Accept: "application/json", "User-Agent": "mongolgpt-admin-readiness" },
-        redirect: "error",
+        redirect: "manual",
         signal: timeout(),
       }),
     queueHeartbeat: () => resources.UsageQueueReadiness.get(usageQueueReadinessKey(stage)),

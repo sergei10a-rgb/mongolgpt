@@ -242,7 +242,7 @@ export class QPayAdapter implements PaymentReconciliationAdapter, PaymentCancell
           accept: "application/json",
           authorization: `Bearer ${token}`,
         },
-        redirect: "error",
+        redirect: "manual",
         signal: AbortSignal.timeout(this.config.timeoutMs),
       },
     )
@@ -277,7 +277,7 @@ export class QPayAdapter implements PaymentReconciliationAdapter, PaymentCancell
           accept: "application/json",
           authorization: `Bearer ${token}`,
         },
-        redirect: "error",
+        redirect: "manual",
         signal: AbortSignal.timeout(this.config.timeoutMs),
       },
     )
@@ -372,7 +372,7 @@ export class QPayAdapter implements PaymentReconciliationAdapter, PaymentCancell
         "content-type": "application/json",
         authorization: `Bearer ${token}`,
       },
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(this.config.timeoutMs),
     })
     if (response.status === 401 && this.token?.value === token) this.token = undefined
@@ -402,7 +402,7 @@ export class QPayAdapter implements PaymentReconciliationAdapter, PaymentCancell
         authorization: `Basic ${authorization}`,
       },
       body: "{}",
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(this.config.timeoutMs),
     })
     const token = TokenResponseSchema.parse(

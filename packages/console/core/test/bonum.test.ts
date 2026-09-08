@@ -6,18 +6,23 @@ type MockResponse = {
   status?: number
   body?: unknown
   contentType?: string
+  location?: string
 }
 
 function mockFetch(responses: MockResponse[]) {
   const calls: { url: string; init: RequestInit }[] = []
   const fetcher = async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    expect(init.redirect).toBe("manual")
     const url = input instanceof Request ? input.url : input instanceof URL ? input.href : input
     calls.push({ url, init })
     const next = responses.shift()
     if (!next) throw new Error("Unexpected Bonum request")
-    return new Response(JSON.stringify(next.body ?? {}), {
+    return new Response(next.status === 304 ? null : JSON.stringify(next.body ?? {}), {
       status: next.status ?? 200,
-      headers: { "content-type": next.contentType ?? "application/json" },
+      headers: {
+        "content-type": next.contentType ?? "application/json",
+        ...(next.location === undefined ? {} : { location: next.location }),
+      },
     })
   }
   return { fetcher, calls, pending: responses }
@@ -27,7 +32,7 @@ const now = Date.parse("2026-07-19T00:00:00.000Z")
 const invoiceCreatedAt = Date.parse("2026-01-29T10:00:00+08:00")
 const checksumKey = "bonum-webhook-checksum-test-key"
 
-function adapter(mock: ReturnType<typeof mockFetch>) {
+function adapter(mock: ReturnType<typeof mockFetch>, clock = () => now) {
   return new BonumAdapter(
     {
       environment: "sandbox",
@@ -38,7 +43,7 @@ function adapter(mock: ReturnType<typeof mockFetch>) {
       invoiceCallbackURL: "https://dev.mgpt.mn/api/payments/bonum/callback",
       providers: ["E_COMMERCE"],
     },
-    { fetch: mock.fetcher, now: () => now },
+    { fetch: mock.fetcher, now: clock },
   )
 }
 
@@ -115,6 +120,44 @@ function verification(rawBody: string, checksum: string) {
 }
 
 describe("Bonum Ecommerce Gateway adapter", () => {
+  test.each(["token", "invoice", "refresh"] as const)(
+    "rejects every 3xx at the %s boundary without forwarding credentials or retrying",
+    async (operation) => {
+      const location = "https://redirect.invalid/private-location?token=private-redirect-token"
+      const invoice = {
+        invoiceId: "bonum-invoice-1",
+        followUpLink: "https://ecommerce.bonum.mn/ecommerce?invoiceId=bonum-invoice-1",
+      }
+      const request = {
+        reference: "invoice-redirect",
+        customerReference: "customer-redirect",
+        description: "Synthetic checkout",
+        amount: 39_000,
+        currency: "MNT" as const,
+      }
+      for (let status = 300; status < 400; status++) {
+        let current = now
+        const mock = mockFetch([
+          ...(operation === "token" ? [] : [{ body: token }]),
+          ...(operation === "refresh" ? [{ body: invoice }] : []),
+          { status, location, body: { error: "private-provider-body", ...token, ...invoice } },
+        ])
+        const bonum = adapter(mock, () => current)
+        if (operation === "refresh") {
+          await bonum.createInvoice(request)
+          current += 1_800_000
+        }
+        const error = await captureError(bonum.createInvoice(request))
+        expect(error).toBeInstanceOf(PaymentProviderResponseError)
+        expect(error).toMatchObject({ status, retryable: false })
+        expect(String(error)).not.toContain("private-")
+        expect(mock.calls).toHaveLength(operation === "token" ? 1 : operation === "refresh" ? 3 : 2)
+        expect(mock.calls.every((call) => new URL(call.url).origin === "https://testapi.bonum.mn")).toBe(true)
+        expect(mock.pending).toHaveLength(0)
+      }
+    },
+  )
+
   test("normalizes the sandbox token type whitespace before bearer authentication", async () => {
     const mock = mockFetch([
       { body: { ...token, tokenType: "Bearer " } },

@@ -74,7 +74,7 @@ export async function storeCompletedD1Export(input: {
 
   const signedUrl = validateSignedDownloadUrl(progress.signedUrl)
   const key = backupObjectKey(input.config.stage, input.scheduledTime, progress.filename)
-  const dump = await fetcher(signedUrl, { method: "GET", redirect: "error" })
+  const dump = await fetcher(signedUrl, { method: "GET", redirect: "manual" })
   if (!dump.ok || !dump.body) throw new Error(`D1 export татаж авахад амжилтгүй боллоо, HTTP ${dump.status}`)
   if (dump.url) validateSignedDownloadUrl(dump.url)
   validateContentLength(dump.headers.get("content-length"))

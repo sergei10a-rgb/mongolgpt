@@ -62,7 +62,7 @@ describe("CLI refresh token proxy", () => {
       url: endpoint,
       method: "POST",
       contentType: "application/x-www-form-urlencoded",
-      redirect: "error",
+      redirect: "manual",
       body: "grant_type=refresh_token&refresh_token=refresh-1&client_id=mongolgpt-cli",
     })
     expect(verified).toBe("access-2")
@@ -138,7 +138,7 @@ describe("CLI refresh token proxy", () => {
         tokenEndpoint: endpoint,
         verifyToken: async () => ({ accountID: "acc_123" }),
         fetcher: async (_input, init) => {
-          expect(init?.redirect).toBe("error")
+          expect(init?.redirect).toBe("manual")
           return upstream
         },
       })
@@ -146,6 +146,83 @@ describe("CLI refresh token proxy", () => {
       expect((await errorBody(response)).error).toBe("server_error")
     }
   })
+
+  test("rejects every 3xx without replaying the refresh or exposing redirect content", async () => {
+    for (let status = 300; status < 400; status++) {
+      let calls = 0
+      let verified = 0
+      let cancelled = false
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(JSON.stringify({ error: "private_error", error_description: "private-body" })),
+          )
+        },
+        cancel() {
+          cancelled = true
+        },
+      })
+      const response = await refreshCliToken(request(body()), {
+        tokenEndpoint: endpoint,
+        verifyToken: async () => {
+          verified++
+          return { accountID: "acc_123" }
+        },
+        fetcher: async (input, init) => {
+          calls++
+          expect(input).toBe(endpoint)
+          expect(init?.redirect).toBe("manual")
+          return new Response(status === 304 ? null : stream, {
+            status,
+            headers: {
+              "content-type": "application/json",
+              location: "https://redirect.invalid/private-location?token=private-token",
+            },
+          })
+        },
+      })
+      expect(response.status).toBe(502)
+      expect(response.headers.get("location")).toBeNull()
+      expect(response.headers.get("cache-control")).toBe("no-store")
+      const payload = await errorBody(response)
+      expect(payload.error).toBe("server_error")
+      expect(JSON.stringify(payload)).not.toContain("private")
+      expect(calls).toBe(1)
+      expect(verified).toBe(0)
+      if (status !== 304) expect(cancelled).toBe(true)
+    }
+  })
+
+  test("fails promptly when redirect body cancellation never settles", async () => {
+    let cancelled = false
+    let calls = 0
+    let verified = 0
+    const response = await refreshCliToken(request(body()), {
+      tokenEndpoint: endpoint,
+      verifyToken: async () => {
+        verified++
+        return { accountID: "acc_123" }
+      },
+      fetcher: async () => {
+        calls++
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            cancel() {
+              cancelled = true
+              return new Promise<void>(() => {})
+            },
+          }),
+          { status: 307, headers: { location: "https://redirect.invalid/private-location" } },
+        )
+      },
+    })
+    expect(response.status).toBe(502)
+    expect((await errorBody(response)).error).toBe("server_error")
+    expect(response.headers.get("location")).toBeNull()
+    expect(cancelled).toBe(true)
+    expect(calls).toBe(1)
+    expect(verified).toBe(0)
+  }, 1000)
 
   test("normalizes OAuth errors and strips upstream fields", async () => {
     const response = await refreshCliToken(request(body()), {

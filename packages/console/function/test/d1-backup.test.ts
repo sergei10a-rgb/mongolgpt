@@ -79,6 +79,8 @@ describe("Cloudflare D1 backup", () => {
             },
           })
         }
+        expect(init?.redirect).toBe("manual")
+        expect(new Headers(init?.headers).get("authorization")).toBeNull()
         return new Response("-- valid sqlite export\n", {
           status: 200,
           headers: { "content-length": "24", "content-type": "application/sql" },
@@ -133,6 +135,46 @@ describe("Cloudflare D1 backup", () => {
       artifact: { key: receipt.key, size: 24, etag: "etag-1", contentType: "application/sql" },
     })
     expect(receipt.manifestSize).toBe(new TextEncoder().encode(puts[1].body).byteLength)
+  })
+
+  test("rejects every signed-download 3xx without following it or publishing any R2 object", async () => {
+    const signedUrl = "https://backup.example/export?signature=private-signature"
+    for (let status = 300; status < 400; status++) {
+      let calls = 0
+      let puts = 0
+      const error = await storeCompletedD1Export({
+        config,
+        bookmark: "bookmark-1",
+        scheduledTime: 1,
+        bucket: {
+          async put() {
+            puts++
+            return { etag: "unused", size: 1 }
+          },
+        },
+        fetcher: async (input, init) => {
+          calls++
+          if (calls === 1)
+            return Response.json({
+              success: true,
+              result: { status: "complete", result: { filename: "backup.sql", signed_url: signedUrl } },
+            })
+          expect(input).toBe(signedUrl)
+          expect(init?.redirect).toBe("manual")
+          expect(init?.method).toBe("GET")
+          expect(new Headers(init?.headers).get("authorization")).toBeNull()
+          return new Response(status === 304 ? null : "private-body", {
+            status,
+            headers: { location: "https://redirect.invalid/private-location?token=private-token" },
+          })
+        },
+      }).catch((cause: unknown) => cause)
+      expect(error).toBeInstanceOf(Error)
+      expect(String(error)).toContain(`HTTP ${status}`)
+      expect(String(error)).not.toContain("private")
+      expect(calls).toBe(2)
+      expect(puts).toBe(0)
+    }
   })
 
   test("retries incomplete exports and rejects API, SSRF, and size failures", async () => {

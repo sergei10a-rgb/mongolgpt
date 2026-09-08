@@ -85,11 +85,16 @@ export async function refreshCliToken(
         refresh_token: body.data.refresh_token,
         client_id: CLI_CLIENT_ID,
       }).toString(),
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(10_000),
     })
   } catch {
     return oauthError("temporarily_unavailable", "Нэвтрэх token үйлчилгээ түр хариу өгөхгүй байна", 503)
+  }
+
+  if (response.status >= 300 && response.status < 400) {
+    void response.body?.cancel().catch(() => undefined)
+    return oauthError("server_error", "Нэвтрэх token үйлчилгээ буруу хариу өглөө", 502)
   }
 
   let text: string

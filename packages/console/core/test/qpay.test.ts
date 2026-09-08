@@ -8,22 +8,25 @@ type MockResponse = {
   stream?: ReadableStream<Uint8Array>
   contentType?: string
   contentLength?: string
+  location?: string
 }
 
 function mockFetch(responses: MockResponse[]) {
   const calls: { url: string; init: RequestInit }[] = []
   const fetcher = async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    expect(init.redirect).toBe("manual")
     const url = input instanceof Request ? input.url : input instanceof URL ? input.href : input
     calls.push({ url, init })
     const next = responses.shift()
     if (!next) throw new Error("Unexpected QPay request")
     const status = next.status ?? 200
     if (status === 204) return new Response(null, { status })
-    return new Response(next.stream ?? JSON.stringify(next.body ?? {}), {
+    return new Response(status === 304 ? null : (next.stream ?? JSON.stringify(next.body ?? {})), {
       status,
       headers: {
         "content-type": next.contentType ?? "application/json",
         ...(next.contentLength === undefined ? {} : { "content-length": next.contentLength }),
+        ...(next.location === undefined ? {} : { location: next.location }),
       },
     })
   }
@@ -86,6 +89,50 @@ const paidCheck = {
 }
 
 describe("QPay Merchant V2 adapter", () => {
+  test.each(["token", "invoice", "reconcile", "cancel", "refund"] as const)(
+    "rejects every 3xx at the %s boundary without forwarding credentials or retrying",
+    async (operation) => {
+      const location = "https://redirect.invalid/private-location?token=private-redirect-token"
+      for (let status = 300; status < 400; status++) {
+        const mock = mockFetch([
+          ...(operation === "token" ? [] : [{ body: token }]),
+          { status, location, body: { error: "private-provider-body", ...token } },
+        ])
+        const qpay = adapter(mock)
+        const error = await captureError(
+          operation === "cancel"
+            ? qpay.cancelInvoice({ externalInvoiceID: "invoice-redirect" })
+            : operation === "refund"
+              ? qpay.refundPayment({
+                  externalInvoiceID: "invoice-redirect",
+                  externalPaymentID: "payment-redirect",
+                  amount: 39_000,
+                  currency: "MNT",
+                })
+              : operation === "reconcile"
+                ? qpay.reconcileInvoice({
+                    externalInvoiceID: "invoice-redirect",
+                    expectedAmount: 39_000,
+                    currency: "MNT",
+                  })
+                : qpay.createInvoice({
+                    reference: "invoice-redirect",
+                    customerReference: "customer-redirect",
+                    description: "Synthetic checkout",
+                    amount: 39_000,
+                    currency: "MNT",
+                  }),
+        )
+        expect(error).toBeInstanceOf(PaymentProviderResponseError)
+        expect(error).toMatchObject({ status, retryable: false })
+        expect(String(error)).not.toContain("private-")
+        expect(mock.calls).toHaveLength(operation === "token" ? 1 : 2)
+        expect(mock.calls.every((call) => new URL(call.url).origin === "https://merchant-sandbox.qpay.mn")).toBe(true)
+        expect(mock.pending).toHaveLength(0)
+      }
+    },
+  )
+
   test("creates a sandbox QR invoice and verifies its paid settlement", async () => {
     const mock = mockFetch([
       { body: token },

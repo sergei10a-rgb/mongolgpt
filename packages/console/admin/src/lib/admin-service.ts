@@ -31,14 +31,19 @@ export function resolveAdminServiceURL(service: AdminServiceReference, path: str
   return result
 }
 
-export function fetchAdminService(service: AdminServiceReference, path: string, init?: RequestInit) {
+export async function fetchAdminService(service: AdminServiceReference, path: string, init?: RequestInit) {
   const request = adminServiceRequest(service, path, init)
-  return fetch(request.url, request.init)
+  const response = await fetch(request.url, request.init)
+  if (response.status >= 300 && response.status < 400) {
+    void response.body?.cancel().catch(() => undefined)
+    throw new Error("Admin service redirects are forbidden")
+  }
+  return response
 }
 
 export function adminServiceRequest(service: AdminServiceReference, path: string, init?: RequestInit) {
   return {
     url: resolveAdminServiceURL(service, path),
-    init: { ...init, redirect: "error" as const },
+    init: { ...init, redirect: "manual" as const },
   }
 }

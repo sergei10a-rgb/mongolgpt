@@ -61,7 +61,11 @@ const BonumConfigSchema = z
 
 const TokenResponseSchema = z
   .object({
-    tokenType: z.string().max(32).transform((value) => value.trim()).pipe(z.literal("Bearer")),
+    tokenType: z
+      .string()
+      .max(32)
+      .transform((value) => value.trim())
+      .pipe(z.literal("Bearer")),
     accessToken: z
       .string()
       .min(1)
@@ -361,7 +365,7 @@ export class BonumAdapter implements PaymentProviderAdapter {
         "content-type": "application/json",
         authorization: `Bearer ${token}`,
       },
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(this.config.timeoutMs),
     })
     if (response.status === 401 && this.token?.value === token) {
@@ -405,7 +409,7 @@ export class BonumAdapter implements PaymentProviderAdapter {
           authorization: `AppSecret ${this.config.appSecret}`,
           "x-terminal-id": this.config.terminalID,
         },
-        redirect: "error",
+        redirect: "manual",
         signal: AbortSignal.timeout(this.config.timeoutMs),
       },
     )
@@ -425,7 +429,7 @@ export class BonumAdapter implements PaymentProviderAdapter {
           accept: "application/json",
           authorization: `Bearer ${refreshToken}`,
         },
-        redirect: "error",
+        redirect: "manual",
         signal: AbortSignal.timeout(this.config.timeoutMs),
       },
     )

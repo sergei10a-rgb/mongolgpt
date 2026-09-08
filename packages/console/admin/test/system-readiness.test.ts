@@ -236,6 +236,35 @@ function dependencies(overrides: Partial<SystemReadinessDependencies> = {}): Sys
 }
 
 describe("MongolGPT admin system readiness", () => {
+  test("treats every runtime health 3xx as degraded without exposing its Location or body", async () => {
+    for (let status = 300; status < 400; status++) {
+      let calls = 0
+      const response = new Response(
+        status === 304 ? null : JSON.stringify({ healthy: true, version: "0.1.1", secret: "private-body" }),
+        {
+          status,
+          headers: {
+            "content-type": "application/json",
+            location: "https://redirect.invalid/private-location?token=private-token",
+          },
+        },
+      )
+      const report = await collectSystemReadiness(
+        dependencies({
+          runtime: async () => {
+            calls++
+            return response
+          },
+        }),
+      )
+      expect(report.status).toBe("degraded")
+      expect(report.checks.find((check) => check.id === "runtime")?.state).toBe("degraded")
+      expect(JSON.stringify(report)).not.toContain("private")
+      expect(response.bodyUsed).toBe(false)
+      expect(calls).toBe(1)
+    }
+  })
+
   test("reports verified services without exposing provider secrets", async () => {
     const report = await collectSystemReadiness(dependencies())
 
