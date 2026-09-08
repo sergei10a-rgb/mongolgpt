@@ -39,6 +39,7 @@ mock.module("cloudflare:workers", () => {
 const runtimeSecret = "sandbox-control-routing-secret-at-least-thirty-two-characters"
 const sandboxID = "root-supervisor-sandbox"
 const { MongolGPTSandbox } = await import("../src/index")
+const { CanarySandbox, canaryScope } = await import("./fixtures/cloudflare-canary")
 
 describe("sandbox control routing", () => {
   test("runs against the pinned installed Cloudflare sandbox and container packages", async () => {
@@ -48,6 +49,62 @@ describe("sandbox control routing", () => {
     expect((await packageJson(join(dirname(dirname(sandboxPackage.path)), "containers", "package.json"))).version).toBe(
       "0.3.7",
     )
+  })
+
+  for (const [SandboxClass, verifiedScope] of [
+    [MongolGPTSandbox, { accountID: "account_verified", workspaceID: "wrk_verified" }],
+    [CanarySandbox, canaryScope],
+  ] as const) {
+    test(`${SandboxClass.name} registers both outbound handlers with the verified scope and rejects unknown handlers`, async () => {
+      const fixture = await createSandbox({}, SandboxClass)
+      const scope = Object.freeze({ ...verifiedScope })
+      const history = { method: "history", params: scope }
+      const checkpoint = { method: "checkpoint", params: scope }
+
+      await expect(
+        fixture.sandbox.setOutboundByHost("history.mongolgpt.internal", "history", scope),
+      ).resolves.toBeUndefined()
+      expect(fixture.proxyCalls.at(-1)).toMatchObject({
+        className: SandboxClass.name,
+        containerId: sandboxID,
+        outboundByHostOverrides: { "history.mongolgpt.internal": history },
+      })
+
+      await expect(
+        fixture.sandbox.setOutboundByHost("checkpoint.mongolgpt.internal", "checkpoint", scope),
+      ).resolves.toBeUndefined()
+      expect(fixture.proxyCalls.at(-1)?.outboundByHostOverrides).toEqual({
+        "history.mongolgpt.internal": history,
+        "checkpoint.mongolgpt.internal": checkpoint,
+      })
+
+      const registrations = fixture.proxyCalls.length
+      await expect(fixture.sandbox.setOutboundByHost("history.mongolgpt.internal", "unknown", scope)).rejects.toThrow(
+        `Outbound handler method 'unknown' not found in outboundHandlers for ${SandboxClass.name}`,
+      )
+      expect(fixture.proxyCalls).toHaveLength(registrations)
+      expect(fixture.calls).toEqual([])
+      expect(fixture.starts).toEqual([])
+    })
+  }
+
+  test("a getter-only handler map fails the real SDK registry validation", async () => {
+    class GetterOnlySandbox extends MongolGPTSandbox {
+      static override get outboundHandlers() {
+        return MongolGPTSandbox.outboundHandlers
+      }
+    }
+
+    const fixture = await createSandbox({}, GetterOnlySandbox)
+    const registrations = fixture.proxyCalls.length
+    for (const handler of ["history", "checkpoint"]) {
+      await expect(
+        fixture.sandbox.setOutboundByHost(`${handler}.mongolgpt.internal`, handler, canaryScope),
+      ).rejects.toThrow(`Outbound handler method '${handler}' not found in outboundHandlers for GetterOnlySandbox`)
+    }
+    expect(fixture.proxyCalls).toHaveLength(registrations)
+    expect(fixture.calls).toEqual([])
+    expect(fixture.starts).toEqual([])
   })
 
   test("injects the SDK control token only on the SDK port and strips untrusted control headers elsewhere", async () => {
@@ -140,13 +197,20 @@ type CapturedFetch = {
   tcpHealthProbe: boolean
   url: string
 }
+
+type OutboundProxyProps = {
+  className: string
+  containerId: string
+  outboundByHostOverrides?: Record<string, { method: string; params?: unknown }>
+}
 type FakeContext = DurableObjectState<{}> & { flush(): Promise<void> }
 type PackageJson = { path: string; version: string }
 
-async function createSandbox(env: Partial<TestRuntimeEnv> = {}) {
+async function createSandbox(env: Partial<TestRuntimeEnv> = {}, SandboxClass = MongolGPTSandbox) {
   const calls = new Array<CapturedFetch>()
   const starts = new Array<unknown>()
-  const ctx = fakeContext(fakeContainer(calls, starts))
+  const proxyCalls = new Array<OutboundProxyProps>()
+  const ctx = fakeContext(fakeContainer(calls, starts), proxyCalls)
   const runtimeEnv: TestRuntimeEnv = {
     MONGOLGPT_APP_ORIGIN: "https://app.example",
     MONGOLGPT_CONSOLE_URL: "https://console.example",
@@ -158,19 +222,20 @@ async function createSandbox(env: Partial<TestRuntimeEnv> = {}) {
     STAGE: "test",
     ...env,
   }
-  const sandbox = new MongolGPTSandbox(ctx, runtimeEnv)
+  const sandbox = new SandboxClass(ctx, runtimeEnv)
   await ctx.flush()
-  return { calls, sandbox, starts }
+  return { calls, proxyCalls, sandbox, starts }
 }
 
-function fakeContext(container: ReturnType<typeof fakeContainer>): FakeContext {
+function fakeContext(container: ReturnType<typeof fakeContainer>, proxyCalls: OutboundProxyProps[]): FakeContext {
   const values = new Map<string, unknown>([["__CF_CONTAINER_STATE", { status: "healthy", lastChange: Date.now() }]])
   const blockers = new Array<Promise<unknown>>()
   return {
     id: { toString: () => sandboxID },
     container,
     exports: {
-      ContainerProxy() {
+      ContainerProxy({ props }: { props: OutboundProxyProps }) {
+        proxyCalls.push(structuredClone(props))
         return { fetch: async () => new Response(null, { status: 204 }) }
       },
     },

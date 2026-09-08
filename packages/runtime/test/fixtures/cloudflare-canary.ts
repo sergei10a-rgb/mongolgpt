@@ -70,6 +70,9 @@ export class CanarySandbox extends MongolGPTSandbox {
   }
 }
 
+// Containers keys its handler registry by concrete class name, including canaries.
+CanarySandbox.outboundHandlers = MongolGPTSandbox.outboundHandlers!
+
 export function canaryGate(request: Request, env: Partial<Environment>) {
   if (env.STAGE !== "dev") return false
   if (typeof env.CANARY_RUN_ID !== "string" || !canaryRunID.test(env.CANARY_RUN_ID)) return false

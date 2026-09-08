@@ -57,10 +57,6 @@ export class MongolGPTSandbox extends Sandbox {
     return super.containerFetch(forwarded, port)
   }
 
-  static override get outboundHandlers() {
-    return { history: handleHistoryOutbound, checkpoint: handleCheckpointOutbound }
-  }
-
   enableInternet = false
   // Keep raw internet disabled while allowing the SDK proxy to mediate HTTPS egress.
   interceptHttps = true
@@ -77,6 +73,9 @@ export class MongolGPTSandbox extends Sandbox {
     return this.#startRuntimeProcess(() => super.startProcess(...args))
   }
 }
+
+// The inherited setter registers handlers for this concrete class in the SDK.
+MongolGPTSandbox.outboundHandlers = { history: handleHistoryOutbound, checkpoint: handleCheckpointOutbound }
 
 interface RuntimeEnvironment extends RuntimeVariables {
   Sandbox: DurableObjectNamespace<MongolGPTSandbox>
