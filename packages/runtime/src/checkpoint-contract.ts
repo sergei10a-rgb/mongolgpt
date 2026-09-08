@@ -82,7 +82,12 @@ export function decodeFileRevision(input: unknown): CloudCheckpoint.FileRevision
       Schema.decodeUnknownSync(Schema.UnknownFromJsonString)(json),
       { onExcessProperty: "error" },
     )
-    if ((value.sequence === 1) !== (value.previousID === null) || value.previousID === value.id) throw invalid()
+    if (
+      (value.sequence === 1) !== (value.previousID === null) ||
+      value.previousID === value.id ||
+      value.sqlite?.backupID === value.archive.backupID
+    )
+      throw invalid()
     return value
   } catch {
     throw invalid()

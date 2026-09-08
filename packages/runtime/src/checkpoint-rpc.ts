@@ -329,12 +329,13 @@ async function bootstrap(stores: CheckpointStores, scope: HistoryScope) {
   const files = await stores.history.fileRevision(scope)
   if (files && files.data.checkpointID !== checkpoint.data.id) throw new CheckpointRpcError("conflict")
   const masters = readMasterKeys(stores.masterKeyJson)
+  const sqlite = files?.data.sqlite ?? checkpoint.data.sqlite
   try {
     return success({
       checkpoint: checkpoint.data,
       ...(files ? { filesRevision: files.data } : {}),
       keys: {
-        sqlite: derivedKey(scope, checkpoint.data.sqlite.keyID, masters),
+        sqlite: derivedKey(scope, sqlite.keyID, masters),
         files: derivedKey(scope, (files?.data.archive ?? checkpoint.data.files).keyID, masters),
       },
     })
@@ -351,7 +352,12 @@ async function archive(stores: CheckpointStores, scope: HistoryScope, input: typ
   const files = await stores.history.fileRevision(scope)
   if (files?.data.id !== input.filesRevisionID || (files && files.data.checkpointID !== input.checkpointID))
     throw new CheckpointRpcError("conflict")
-  const accepted = input.kind === "files" && files ? files.data.archive : checkpoint.data[input.kind]
+  const accepted =
+    input.kind === "files" && files
+      ? files.data.archive
+      : input.kind === "sqlite" && files?.data.sqlite
+        ? files.data.sqlite
+        : checkpoint.data[input.kind]
   const opened = await stores.backups.open(scope, accepted.backupID)
   if (!sameArchive(opened.manifest, accepted)) {
     cancelStream(opened.body)

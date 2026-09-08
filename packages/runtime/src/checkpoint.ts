@@ -112,7 +112,9 @@ export function createRuntimeCheckpointStore(
   async function publishFiles(writer: HistoryLease, input: CloudCheckpoint.FileRevision) {
     const lease = { ...writer }
     const data = decodeFileRevision(input)
-    await verify({ accountID: lease.accountID, workspaceID: lease.workspaceID }, data.archive)
+    const scope = { accountID: lease.accountID, workspaceID: lease.workspaceID }
+    if (data.sqlite) await verify(scope, data.sqlite)
+    await verify(scope, data.archive)
     return history.publishFiles(lease, data)
   }
 
@@ -120,6 +122,7 @@ export function createRuntimeCheckpointStore(
     const scope = { ...tenant }
     const revision = await history.fileRevision(scope)
     if (!revision) return undefined
+    if (revision.data.sqlite) await verify(scope, revision.data.sqlite)
     await verify(scope, revision.data.archive)
     return revision
   }

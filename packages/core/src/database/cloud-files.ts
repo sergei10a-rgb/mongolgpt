@@ -3,11 +3,12 @@ export * as CloudFiles from "./cloud-files"
 import { createHash, randomUUID } from "node:crypto"
 import { lstat, mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join, resolve } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { isDeepStrictEqual } from "node:util"
 import { Effect, Schema } from "effect"
 import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { WorkspaceCapture } from "./workspace-capture"
+import { DatabaseBackup } from "./backup"
 import { protectBackupPath } from "./backup-permissions"
 
 const origin = "http://checkpoint.mongolgpt.internal/v1"
@@ -51,20 +52,46 @@ export async function publish(input: {
   const request = input.request ?? fetch
   const signal = AbortSignal.any([input.signal, AbortSignal.timeout(110_000)])
   let directory: string | undefined
-  let key: Buffer | undefined
-  let bytes: Buffer | undefined
+  const keys: Buffer[] = []
   try {
     const lease = Schema.decodeUnknownSync(Lease)(owner, { onExcessProperty: "error" })
     if (root !== input.root) throw new PublicationError()
+    for (let current = root; ; current = dirname(current)) {
+      const info = await lstat(current)
+      if (!info.isDirectory() || info.isSymbolicLink()) throw new PublicationError()
+      if (current === dirname(current)) break
+    }
     const bootstrap = await json(await send("/bootstrap", {}), Bootstrap, signal, 1024 * 1024)
     if (bootstrap.checkpoint.id !== checkpointID) throw new PublicationError()
     if (bootstrap.filesRevision && bootstrap.filesRevision.checkpointID !== checkpointID) throw new PublicationError()
     const previous = bootstrap.filesRevision
     const keyID = (previous?.archive ?? bootstrap.checkpoint.files).keyID
-    key = Buffer.from(bootstrap.keys.files, "base64")
+    const key = Buffer.from(bootstrap.keys.files, "base64")
+    keys.push(key)
     if (key.byteLength !== 32 || key.toString("base64") !== bootstrap.keys.files) throw new PublicationError()
+    const sqliteKey = Buffer.from(bootstrap.keys.sqlite, "base64")
+    keys.push(sqliteKey)
+    if (sqliteKey.byteLength !== 32 || sqliteKey.toString("base64") !== bootstrap.keys.sqlite)
+      throw new PublicationError()
     directory = await mkdtemp(join(tmpdir(), "mongolgpt-cloud-files-"))
     await protectBackupPath(directory, "directory")
+    const home = await lstat(join(root, ".mongolgpt"))
+    if (!home.isDirectory() || home.isSymbolicLink()) throw new PublicationError()
+    const database = join(root, ".mongolgpt/runtime.sqlite")
+    for (const suffix of ["", "-wal", "-shm", "-journal"]) {
+      const info = await lstat(database + suffix).catch((error: NodeJS.ErrnoException) => {
+        if (suffix && error.code === "ENOENT") return undefined
+        throw error
+      })
+      if (info && (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1)) throw new PublicationError()
+    }
+    // The supervisor's freezer spans BOTH native snapshots and the atomic receipt.
+    // SQLite's native logical backup includes committed WAL and non-journal tables.
+    const sqliteArchive = join(directory, "sqlite.mgptbackup")
+    const sqliteReport = await Effect.runPromise(
+      DatabaseBackup.create({ source: database, destination: sqliteArchive, key: sqliteKey }),
+      { signal },
+    )
     const archive = join(directory, "files.mgptbackup")
     const captured = await Effect.runPromise(
       WorkspaceCapture.create({
@@ -80,44 +107,14 @@ export async function publish(input: {
       }),
       { signal },
     )
-    const info = await lstat(archive)
-    if (!info.isFile() || info.isSymbolicLink() || info.size < 1 || info.size > maxUploadBytes)
-      throw new PublicationError()
-    signal.throwIfAborted()
-    bytes = await readFile(archive)
-    if (bytes.length !== info.size) throw new PublicationError()
-    const sha256 = createHash("sha256").update(bytes).digest("hex")
-    signal.throwIfAborted()
-    const uploaded = await json(
-      await interrupted(
-        request(
-          new Request(`${origin}/upload`, {
-            method: "POST",
-            redirect: "error",
-            signal,
-            headers: {
-              "content-type": "application/octet-stream",
-              "content-length": String(bytes.length),
-              "x-mongolgpt-backup-key-id": keyID,
-            },
-            body: new Uint8Array(bytes).buffer,
-          }),
-        ),
-        signal,
-      ),
-      Upload,
-      signal,
-      4096,
-    )
-    if (uploaded.bytes !== bytes.length || uploaded.sha256 !== sha256 || uploaded.keyID !== keyID)
-      throw new PublicationError()
     const revision = Schema.decodeUnknownSync(CloudCheckpoint.FileRevision)(
       {
         id: randomUUID(),
         checkpointID,
         sequence: (previous?.sequence ?? 0) + 1,
         previousID: previous?.id ?? null,
-        archive: { ...uploaded, plaintext: { bytes: captured.report.bytes, sha256: captured.report.sha256 } },
+        archive: await upload(archive, keyID, captured.report),
+        sqlite: await upload(sqliteArchive, (previous?.sqlite ?? bootstrap.checkpoint.sqlite).keyID, sqliteReport),
       },
       { onExcessProperty: "error" },
     )
@@ -129,9 +126,47 @@ export async function publish(input: {
   } catch {
     throw new PublicationError()
   } finally {
-    key?.fill(0)
-    bytes?.fill(0)
+    keys.forEach((key) => key.fill(0))
     if (directory) await rm(directory, { recursive: true, force: true })
+  }
+
+  async function upload(filename: string, keyID: string, plaintext: Pick<DatabaseBackup.Report, "bytes" | "sha256">) {
+    signal.throwIfAborted()
+    const info = await lstat(filename)
+    if (!info.isFile() || info.isSymbolicLink() || info.size < 1 || info.size > maxUploadBytes)
+      throw new PublicationError()
+    const bytes = await readFile(filename)
+    try {
+      if (bytes.length !== info.size) throw new PublicationError()
+      const sha256 = createHash("sha256").update(bytes).digest("hex")
+      signal.throwIfAborted()
+      const uploaded = await json(
+        await interrupted(
+          request(
+            new Request(`${origin}/upload`, {
+              method: "POST",
+              redirect: "error",
+              signal,
+              headers: {
+                "content-type": "application/octet-stream",
+                "content-length": String(bytes.length),
+                "x-mongolgpt-backup-key-id": keyID,
+              },
+              body: new Uint8Array(bytes).buffer,
+            }),
+          ),
+          signal,
+        ),
+        Upload,
+        signal,
+        4096,
+      )
+      if (uploaded.bytes !== bytes.length || uploaded.sha256 !== sha256 || uploaded.keyID !== keyID)
+        throw new PublicationError()
+      return { ...uploaded, plaintext: { bytes: plaintext.bytes, sha256: plaintext.sha256 } }
+    } finally {
+      bytes.fill(0)
+    }
   }
 
   function send(path: string, body: object) {

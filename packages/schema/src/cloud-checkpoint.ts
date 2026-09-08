@@ -1,6 +1,7 @@
 export * as CloudCheckpoint from "./cloud-checkpoint"
 
 import { Schema } from "effect"
+import { optional } from "./schema"
 
 const Identifier = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_.:-]{1,256}$/))
 const Sequence = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0), Schema.isLessThan(Number.MAX_SAFE_INTEGER))
@@ -41,5 +42,6 @@ export const FileRevision = Schema.Struct({
   sequence: Sequence.check(Schema.isGreaterThan(0)),
   previousID: Schema.NullOr(UUID),
   archive: Archive,
+  sqlite: optional(Archive),
 })
 export interface FileRevision extends Schema.Schema.Type<typeof FileRevision> {}

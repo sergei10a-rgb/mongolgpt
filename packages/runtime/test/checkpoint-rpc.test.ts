@@ -57,6 +57,62 @@ describe("checkpoint rpc", () => {
     expect(stream.status).toBe(200)
     await stream.arrayBuffer()
     expect(backups.opened).toEqual([{ scope, backupID: revision.archive.backupID }])
+    const sqlite = await handler(
+      request("/archive", { checkpointID: checkpoint.id, kind: "sqlite", filesRevisionID: revision.id }),
+    )
+    expect(sqlite.status).toBe(200)
+    await sqlite.arrayBuffer()
+    expect(backups.opened).toEqual([
+      { scope, backupID: revision.archive.backupID },
+      { scope, backupID: checkpoint.sqlite.backupID },
+    ])
+  })
+
+  test("selects the current paired sqlite revision and derives its key", async () => {
+    const checkpoint = checkpointFixture()
+    const revision: CloudCheckpoint.FileRevision = {
+      id: crypto.randomUUID(),
+      checkpointID: checkpoint.id,
+      sequence: 1,
+      previousID: null,
+      archive: { ...checkpoint.files, backupID: crypto.randomUUID(), keyID: "key_files_revision" },
+      sqlite: { ...checkpoint.sqlite, backupID: crypto.randomUUID(), keyID: "key_sqlite_revision" },
+    }
+    const backups = backupStore(checkpoint, {}, undefined, [
+      { kind: "files", archive: revision.archive },
+      { kind: "sqlite", archive: revision.sqlite! },
+    ])
+    const handler = createCheckpointHandler(
+      {
+        history: historyStore({ checkpoint, revision }),
+        backups,
+        masterKeyJson: JSON.stringify({
+          key_checkpoint_rpc: master.toString("base64"),
+          key_files_revision: master.toString("base64"),
+          key_sqlite_revision: master.toString("base64"),
+        }),
+      },
+      scope,
+    )
+    const boot = await handler(request("/bootstrap", {}))
+    const body = (await boot.json()) as {
+      keys: { sqlite: string; files: string }
+      filesRevision: CloudCheckpoint.FileRevision
+    }
+    expect(boot.status).toBe(200)
+    expect(body.filesRevision).toEqual(revision)
+    expect(body.keys).toEqual({
+      sqlite: canonicalBase64(deriveRuntimeBackupKey(scope, "key_sqlite_revision", master)),
+      files: canonicalBase64(deriveRuntimeBackupKey(scope, "key_files_revision", master)),
+    })
+    expect((await handler(request("/archive", { checkpointID: checkpoint.id, kind: "sqlite" }))).status).toBe(409)
+    const stream = await handler(
+      request("/archive", { checkpointID: checkpoint.id, kind: "sqlite", filesRevisionID: revision.id }),
+    )
+    expect(stream.status).toBe(200)
+    expect(stream.headers.get("content-length")).toBe(String(revision.sqlite!.bytes))
+    await stream.arrayBuffer()
+    expect(backups.opened).toEqual([{ scope, backupID: revision.sqlite!.backupID }])
   })
 
   test("fails closed when the internal D1 binding is missing", async () => {
@@ -566,25 +622,30 @@ function backupStore(
   checkpoint: CloudCheckpoint.Checkpoint,
   overrides: Partial<Record<"sqlite" | "files", Partial<ArchiveManifest>>> = {},
   stream?: ReadableStream<Uint8Array>,
+  extra: { kind: "sqlite" | "files"; archive: CloudCheckpoint.Archive }[] = [],
 ) {
   const opened = new Array<{ scope: HistoryScope; backupID: string }>()
   return {
     opened,
     open: async (tenant: HistoryScope, backupID: string) => {
       opened.push({ scope: tenant, backupID })
-      const selected = checkpoint.sqlite.backupID === backupID ? checkpoint.sqlite : checkpoint.files
-      const kind = checkpoint.sqlite.backupID === backupID ? "sqlite" : "files"
+      const found = [
+        { kind: "sqlite" as const, archive: checkpoint.sqlite },
+        { kind: "files" as const, archive: checkpoint.files },
+        ...extra,
+      ].find((item) => item.archive.backupID === backupID)
+      if (!found) throw new RuntimeBackupError("not_found")
       return {
         manifest: {
           version: 1,
           format: "mongolgpt-sqlite-backup-v1",
-          backupID: selected.backupID,
-          keyID: selected.keyID,
-          bytes: selected.bytes,
-          sha256: selected.sha256,
-          ...overrides[kind],
+          backupID: found.archive.backupID,
+          keyID: found.archive.keyID,
+          bytes: found.archive.bytes,
+          sha256: found.archive.sha256,
+          ...overrides[found.kind],
         },
-        body: stream ?? new Response(archiveBytes(selected.bytes)).body!,
+        body: stream ?? new Response(archiveBytes(found.archive.bytes)).body!,
       }
     },
   }

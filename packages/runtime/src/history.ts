@@ -148,6 +148,8 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
             ORDER BY sequence DESC LIMIT 1), 0) = ?
           AND (SELECT revision_id FROM runtime_file_revision WHERE account_id = ? AND workspace_id = ?
             ORDER BY sequence DESC LIMIT 1) IS ?
+          AND (? = 1 OR (SELECT json_type(data, '$.sqlite') FROM runtime_file_revision
+            WHERE account_id = ? AND workspace_id = ? ORDER BY sequence DESC LIMIT 1) IS NULL)
         ON CONFLICT DO NOTHING`,
         )
         .bind(
@@ -164,6 +166,8 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
           data.sequence - 1,
           ...scope,
           data.previousID,
+          data.sqlite ? 1 : 0,
+          ...scope,
         ),
       latestFiles(lease),
       writer(lease),

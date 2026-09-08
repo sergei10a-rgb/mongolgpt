@@ -27,7 +27,8 @@ interface Input {
   signal?: AbortSignal
 }
 
-export type Baseline = CloudCheckpoint.Checkpoint & { filesRevisionID?: string; resume?: { expectedEpoch: number } }
+/** sqlite/inventory identify the immutable journal baseline, not the latest paired native image. */
+export type Baseline = CloudCheckpoint.Checkpoint & { filesRevisionID?: string; resume?: { expectedEpoch?: number } }
 let prepared: { checkpoint: Baseline | null; database: string; supervised: boolean } | undefined
 
 /** CLI boundary, before account storage or AppRuntime can open the database. */
@@ -198,7 +199,7 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
     scratch = await mkdtemp(join(parent, ".mongolgpt-startup-"))
     await protectBackupPath(scratch, "directory")
     for (const kind of ["sqlite", "files"] as const) {
-      const archive = checkpoint[kind]
+      const archive = kind === "sqlite" ? (data.filesRevision?.sqlite ?? checkpoint.sqlite) : checkpoint.files
       const response = await send("/v1/archive", {
         checkpointID: checkpoint.id,
         kind,
@@ -237,6 +238,7 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
       CloudRestore.restore({
         parent: scratch,
         checkpoint,
+        revision: data.filesRevision,
         sqlite: { source: join(scratch, "sqlite.mgptbackup"), key: keys[0] },
         files: { source: join(scratch, "files.mgptbackup"), key: keys[1] },
       }),
@@ -258,7 +260,9 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
       preserve = false
       throw error
     }
-    return data.filesRevision ? { ...checkpoint, filesRevisionID: data.filesRevision.id } : checkpoint
+    return data.filesRevision
+      ? { ...checkpoint, filesRevisionID: data.filesRevision.id, ...(data.filesRevision.sqlite ? { resume: {} } : {}) }
+      : checkpoint
   } catch {
     throw unavailable()
   } finally {

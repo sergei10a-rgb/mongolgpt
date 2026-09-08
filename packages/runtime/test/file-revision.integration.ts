@@ -279,6 +279,18 @@ try {
     (await stores().history.fileRevision(scope))?.data.id,
     admissionRace[0].status === "fulfilled" ? racedProposal.id : proposal.id,
   )
+  const failedPairTarget = (await stores().history.fileRevision(scope))!
+  await rejects(
+    stores().checkpoints.publishFiles(lease, {
+      ...failedPairTarget.data,
+      id: crypto.randomUUID(),
+      sequence: failedPairTarget.data.sequence + 1,
+      previousID: failedPairTarget.data.id,
+      sqlite: { ...checkpoint.sqlite, sha256: "0".repeat(64) },
+    }),
+    "invalid",
+  )
+  equal(await stores().history.fileRevision(scope), failedPairTarget)
   equal(await stores().history.epoch(scope), admissionRace[0].status === "fulfilled" ? 3 : 4)
   const beforePublication = (await stores().history.fileRevision(scope))!
   const publicationLease = await stores().history.claim(scope, {
@@ -303,9 +315,21 @@ try {
       return request(incoming)
     },
   })
-  equal(calls, ["/v1/bootstrap", "/v1/upload", "/v1/publish-files"])
+  equal(calls, ["/v1/bootstrap", "/v1/upload", "/v1/upload", "/v1/publish-files"])
   equal(publication.data.sequence, beforePublication.data.sequence + 1)
   equal(publication.data.previousID, beforePublication.data.id)
+  equal(publication.data.sqlite !== undefined, true)
+  equal(await stores().checkpoints.readFiles(scope), publication)
+  await rejects(
+    stores().checkpoints.publishFiles(publicationLease, {
+      id: crypto.randomUUID(),
+      checkpointID: checkpoint.id,
+      sequence: publication.data.sequence + 1,
+      previousID: publication.data.id,
+      archive: publication.data.archive,
+    }),
+    "conflict",
+  )
   equal(await stores().checkpoints.readFiles(scope), publication)
   await platform.dispose()
   platform = undefined

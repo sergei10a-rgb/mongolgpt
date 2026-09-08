@@ -274,7 +274,11 @@ exec "$LAUNCHER" "$@"
           })
         if (route === "/v1/archive") {
           const input = (await request.json()) as { kind: "sqlite" | "files" }
-          const bytes = seed.bodies.get(seed.checkpoint[input.kind].backupID)!
+          const archive =
+            input.kind === "files"
+              ? (latest?.archive ?? seed.checkpoint.files)
+              : (latest?.sqlite ?? seed.checkpoint.sqlite)
+          const bytes = seed.bodies.get(archive.backupID)!
           return new Response(new Uint8Array(bytes), {
             headers: { "content-type": "application/octet-stream", "content-length": String(bytes.length) },
           })
@@ -394,7 +398,8 @@ exec "$LAUNCHER" "$@"
         const entered = Promise.withResolvers<void>()
         const release = Promise.withResolvers<void>()
         let captured = ""
-        let archive: Buffer | undefined
+        const archives = new Map<string, Buffer>()
+        let revision: CloudCheckpoint.FileRevision | undefined
         const runtime = await RuntimeSupervisor.start({
           ...startupCommand(root),
           args: [startup!, root, mode],
@@ -416,10 +421,12 @@ exec "$LAUNCHER" "$@"
             }
             expect(await readFile(join(runtime.group.directory, "cgroup.freeze"), "utf8")).toBe("1\n")
             if (route === "/v1/upload") {
-              archive = Buffer.from(await request.arrayBuffer())
+              const archive = Buffer.from(await request.arrayBuffer())
+              const backupID = randomUUID()
+              archives.set(backupID, archive)
               captured = await readFile(join(root, "project/counter.txt"), "utf8")
               return Response.json({
-                backupID: randomUUID(),
+                backupID,
                 keyID: "synthetic",
                 bytes: archive.length,
                 sha256: createHash("sha256").update(archive).digest("hex"),
@@ -436,6 +443,10 @@ exec "$LAUNCHER" "$@"
             expect({ epoch: input.epoch, writerID: input.writerID }).toEqual(
               JSON.parse(await readFile(join(root, "claimed-lease.json"), "utf8")),
             )
+            revision = input.revision
+            expect(archives.has(revision.archive.backupID)).toBe(true)
+            expect(archives.has(revision.sqlite!.backupID)).toBe(true)
+            expect(revision.archive.backupID).not.toBe(revision.sqlite!.backupID)
             entered.resolve()
             await release.promise
             if (failure) throw new Error("lost receipt")
@@ -465,7 +476,7 @@ exec "$LAUNCHER" "$@"
             expect(await readFile(join(root, "history-acknowledged.txt"), "utf8")).toBe("durable tool")
             const source = join(temp.path, "controlled.backup")
             const database = join(temp.path, "controlled.sqlite")
-            await writeFile(source, archive!)
+            await writeFile(source, archives.get(revision!.archive.backupID)!)
             const report = await Effect.runPromise(
               DatabaseBackup.restore({ source, destination: database, key: seed.key }),
             )

@@ -22,7 +22,9 @@ const Packet = Schema.Struct({
       filesRevisionID: Schema.optional(UUID),
       resume: Schema.optional(
         Schema.Struct({
-          expectedEpoch: Schema.Int.check(Schema.isGreaterThan(0), Schema.isLessThan(Number.MAX_SAFE_INTEGER)),
+          expectedEpoch: Schema.optional(
+            Schema.Int.check(Schema.isGreaterThan(0), Schema.isLessThan(Number.MAX_SAFE_INTEGER)),
+          ),
         }),
       ),
     }),

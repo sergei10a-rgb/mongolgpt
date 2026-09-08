@@ -23,6 +23,7 @@ export class RestoreError extends Schema.TaggedErrorClass<RestoreError>()("Cloud
 interface Input {
   parent: string
   checkpoint: CloudCheckpoint.Checkpoint
+  revision?: CloudCheckpoint.FileRevision
   sqlite: { source: string; key: Uint8Array }
   files: { source: string; key: Uint8Array }
 }
@@ -31,7 +32,9 @@ export interface Restored {
   directory: string
   database: string
   checkpoint: CloudCheckpoint.Checkpoint
+  revision?: CloudCheckpoint.FileRevision
   report: DatabaseBackup.Report
+  verifiedInventory: CloudCheckpoint.Inventory
   files: { files: number; directories: number; bytes: number }
 }
 
@@ -42,18 +45,50 @@ export interface Restored {
 export function restore(input: Input) {
   return Effect.callback<Restored, RestoreError>((resume, signal) => {
     const keys = { sqlite: new Uint8Array(input.sqlite.key), files: new Uint8Array(input.files.key) }
-    const sources = { sqlite: resolve(input.sqlite.source), files: resolve(input.files.source) }
-    const parent = resolve(input.parent)
+    let prepared:
+      | {
+          sources: { sqlite: string; files: string }
+          parent: string
+          checkpoint: CloudCheckpoint.Checkpoint
+          revision?: CloudCheckpoint.FileRevision
+          sqliteArchive: CloudCheckpoint.Archive
+        }
+      | undefined
+    try {
+      const checkpoint = decode(input.checkpoint, CloudCheckpoint.Checkpoint, 1024 * 1024)
+      const revision =
+        input.revision === undefined ? undefined : decode(input.revision, CloudCheckpoint.FileRevision, 4096)
+      if (revision && revision.checkpointID !== checkpoint.id) throw new Error()
+      if (revision) {
+        if (!sameArchive(checkpoint.files, revision.archive)) throw new Error()
+        if ((revision.sequence === 1) !== (revision.previousID === null)) throw new Error()
+        if (revision.previousID === revision.id) throw new Error()
+        if (revision.sqlite?.backupID === revision.archive.backupID) throw new Error()
+      }
+      prepared = {
+        sources: { sqlite: resolve(input.sqlite.source), files: resolve(input.files.source) },
+        parent: resolve(input.parent),
+        checkpoint,
+        revision,
+        sqliteArchive: revision?.sqlite ?? checkpoint.sqlite,
+      }
+    } catch {
+      keys.sqlite.fill(0)
+      keys.files.fill(0)
+      resume(
+        Effect.fail(
+          new RestoreError({
+            message: "Cloud ажлын талбарыг нөөцөөс сэргээж чадсангүй. Өмнөх өгөгдлийг өөрчлөөгүй.",
+          }),
+        ),
+      )
+      return Effect.void
+    }
+    const { checkpoint, parent, revision, sources, sqliteArchive } = prepared
     const pending = (async () => {
       let generation: string | undefined
       let retained = false
       try {
-        const encoded = JSON.stringify(input.checkpoint)
-        if (!encoded || Buffer.byteLength(encoded) > 1024 * 1024) throw new Error()
-        const checkpoint = Schema.decodeUnknownSync(CloudCheckpoint.Checkpoint)(
-          Schema.decodeUnknownSync(Schema.UnknownFromJsonString)(encoded),
-          { onExcessProperty: "error" },
-        )
         for (let current = parent; ; current = dirname(current)) {
           const info = await lstat(current)
           if (!info.isDirectory() || info.isSymbolicLink()) throw new Error()
@@ -68,16 +103,20 @@ export function restore(input: Input) {
           DatabaseBackup.restore({ source: sources.sqlite, destination: sqlite, key: keys.sqlite }),
           { signal },
         )
-        checkReceipt(report, checkpoint.sqlite)
-        const inventory = await Effect.runPromise(DatabaseCheckpoint.inspect({ source: sqlite, expected: report }), {
-          signal,
-        })
-        if (!sameInventory(inventory, checkpoint.inventory)) throw new Error()
+        checkReceipt(report, sqliteArchive)
+        const verifiedInventory = await Effect.runPromise(
+          DatabaseCheckpoint.inspect({ source: sqlite, expected: report }),
+          {
+            signal,
+          },
+        )
+        if (!revision?.sqlite && !sameInventory(verifiedInventory, checkpoint.inventory)) throw new Error()
         const fileReport = await Effect.runPromise(
           DatabaseBackup.restore({ source: sources.files, destination: manifest, key: keys.files }),
           { signal },
         )
         checkReceipt(fileReport, checkpoint.files)
+        if (revision) checkReceipt(fileReport, revision.archive)
         const directory = join(generation, "workspace")
         const files = await Effect.runPromise(
           WorkspaceRestore.materialize({ source: manifest, expected: fileReport, destination: directory }),
@@ -101,7 +140,7 @@ export function restore(input: Input) {
         await unlink(manifest)
         signal.throwIfAborted()
         retained = true
-        return { directory, database, checkpoint, report, files }
+        return { directory, database, checkpoint, revision, report, verifiedInventory, files }
       } finally {
         keys.sqlite.fill(0)
         keys.files.fill(0)
@@ -131,11 +170,15 @@ export function restore(input: Input) {
  * cloud journal. No model execution, filesystem tool or HTTP server starts here.
  */
 export function createRuntime(restored: Restored, request?: (request: Request) => Promise<Response>) {
-  const cloud = createCloudHistory({ request, checkpointID: restored.checkpoint.id })
-  const recovery = createCloudRecovery(cloud, restored.checkpoint)
+  const cloud = createCloudHistory({
+    request,
+    checkpointID: restored.checkpoint.id,
+    filesRevisionID: restored.revision?.id,
+  })
+  const recovery = createCloudRecovery(cloud, restored.checkpoint, { resume: !!restored.revision?.sqlite })
   const filename = resolve(restored.database)
   const expected = structuredClone(restored.report)
-  const inventory = structuredClone(restored.checkpoint.inventory)
+  const inventory = structuredClone(restored.verifiedInventory)
   const layer = Layer.unwrap(
     Effect.gen(function* () {
       const observed = yield* DatabaseCheckpoint.inspect({ source: filename, expected })
@@ -154,6 +197,18 @@ export function createRuntime(restored: Restored, request?: (request: Request) =
 
 function checkReceipt(report: DatabaseBackup.Report, expected: CloudCheckpoint.Archive) {
   if (report.bytes !== expected.plaintext.bytes || report.sha256 !== expected.plaintext.sha256) throw new Error()
+}
+
+function decode<A>(input: A, schema: Schema.Decoder<A>, limit: number) {
+  const encoded = JSON.stringify(input)
+  if (!encoded || Buffer.byteLength(encoded) > limit) throw new Error()
+  return Schema.decodeUnknownSync(schema)(Schema.decodeUnknownSync(Schema.UnknownFromJsonString)(encoded), {
+    onExcessProperty: "error",
+  })
+}
+
+function sameArchive(actual: CloudCheckpoint.Archive, expected: CloudCheckpoint.Archive) {
+  return isDeepStrictEqual(actual, expected)
 }
 
 function sameInventory(actual: CloudCheckpoint.Inventory, expected: CloudCheckpoint.Inventory) {

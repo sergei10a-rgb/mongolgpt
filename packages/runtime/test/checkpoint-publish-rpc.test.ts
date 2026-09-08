@@ -353,9 +353,35 @@ describe("checkpoint file publication RPC", () => {
       { ...input, revision: { ...input.revision, sequence: 2, previousID: null } },
       { ...input, revision: { ...input.revision, id: "invalid" } },
       { ...input, revision: { ...input.revision, archive: { ...input.revision.archive, accountID: "attacker" } } },
+      { ...input, revision: { ...input.revision, sqlite: { ...input.revision.archive } } },
+      {
+        ...input,
+        revision: {
+          ...input.revision,
+          sqlite: { ...input.revision.archive, backupID: crypto.randomUUID(), keyID: "../key" },
+        },
+      },
+      {
+        ...input,
+        revision: {
+          ...input.revision,
+          sqlite: { ...input.revision.archive, backupID: crypto.randomUUID(), accountID: "attacker" },
+        },
+      },
       {
         ...input,
         revision: { ...input.revision, archive: { ...input.revision.archive, plaintext: { bytes: 1, sha256: "bad" } } },
+      },
+      {
+        ...input,
+        revision: {
+          ...input.revision,
+          sqlite: {
+            ...input.revision.archive,
+            backupID: crypto.randomUUID(),
+            plaintext: { bytes: 1, sha256: "bad" },
+          },
+        },
       },
     ]) {
       const fixture = handler()

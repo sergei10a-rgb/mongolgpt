@@ -7,17 +7,25 @@ export function cloudBaselineStore() {
   const archives = new Map<string, Uint8Array>()
   const calls: string[] = []
   let checkpoint: CloudCheckpoint.Checkpoint | undefined
+  let filesRevision: CloudCheckpoint.FileRevision | undefined
   return {
     calls,
     archives,
     get checkpoint() {
       return checkpoint
     },
+    get filesRevision() {
+      return filesRevision
+    },
     async request(request: Request): Promise<Response> {
       const route = new URL(request.url).pathname
       calls.push(route)
       if (route === "/v1/bootstrap")
-        return Response.json(checkpoint ? { checkpoint, keys: { sqlite: key, files: key } } : { checkpoint: null })
+        return Response.json(
+          checkpoint
+            ? { checkpoint, ...(filesRevision ? { filesRevision } : {}), keys: { sqlite: key, files: key } }
+            : { checkpoint: null },
+        )
       if (route === "/v1/begin") {
         const input = (await request.json()) as { writerID: string }
         return Response.json({ lease: { epoch: 1, writerID: input.writerID }, keyID: "synthetic", key })
@@ -40,13 +48,21 @@ export function cloudBaselineStore() {
       }
       if (route === "/v1/archive") {
         const input = (await request.json()) as { kind: "sqlite" | "files" }
-        const bytes = archives.get(checkpoint![input.kind].backupID)!
+        const archive =
+          input.kind === "files"
+            ? (filesRevision?.archive ?? checkpoint!.files)
+            : (filesRevision?.sqlite ?? checkpoint!.sqlite)
+        const bytes = archives.get(archive.backupID)!
         return new Response(bytes, {
           headers: {
             "content-type": "application/octet-stream",
             "content-length": String(bytes.length),
           },
         })
+      }
+      if (route === "/v1/publish-files") {
+        filesRevision = ((await request.json()) as { revision: CloudCheckpoint.FileRevision }).revision
+        return Response.json({ data: filesRevision, digest: "a".repeat(64) })
       }
       throw new Error(`Unexpected fixture route: ${route}`)
     },

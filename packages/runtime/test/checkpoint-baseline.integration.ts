@@ -116,25 +116,44 @@ try {
   equal(stale.status, 409)
   equal((await store().checkpoint(scope))?.data, checkpoint)
   await writeFile(join(workspace, "created.txt"), "first real workspace file")
+  const nativePath = join(workspace, ".mongolgpt/runtime.sqlite")
+  const snapshot = new DatabaseSync(nativePath)
+  snapshot.exec(
+    "PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; CREATE TABLE native_snapshot_probe (value TEXT NOT NULL)",
+  )
+  snapshot.prepare("INSERT INTO native_snapshot_probe VALUES (?)").run("committed native state after baseline")
   const files = await native.CloudFiles.publish({
     root: workspace,
     checkpointID: checkpoint.id,
     lease,
     signal: new AbortController().signal,
     request: request(scope),
-  })
+  }).finally(() => snapshot.close())
   equal(files.data.sequence, 1)
+  equal(!!files.data.sqlite, true)
+  equal(files.data.sqlite?.backupID !== files.data.archive.backupID, true)
+  equal((await store().checkpoint(scope))?.data, checkpoint)
   const replacement = join(root, "replacement")
   await mkdir(replacement)
-  equal(
-    (await native.CloudStartup.bootstrap({ root: replacement, request: request(scope) }))?.filesRevisionID,
-    files.data.id,
-  )
+  const replaced = await native.CloudStartup.bootstrap({ root: replacement, request: request(scope) })
+  equal(replaced?.filesRevisionID, files.data.id)
+  equal(replaced?.resume, {})
+  equal(replaced?.sqlite, checkpoint.sqlite)
+  equal(replaced?.inventory, checkpoint.inventory)
   equal(await readFile(join(replacement, "created.txt"), "utf8"), "first real workspace file")
+  const restoredNative = new DatabaseSync(join(replacement, ".mongolgpt/runtime.sqlite"), { readOnly: true })
+  try {
+    equal(
+      restoredNative.prepare("SELECT value FROM native_snapshot_probe").get()?.value,
+      "committed native state after baseline",
+    )
+    equal(restoredNative.prepare("PRAGMA integrity_check").get()?.integrity_check, "ok")
+  } finally {
+    restoredNative.close()
+  }
 
   // Resume the same native DB, not the immutable baseline image. The cloud
   // lease prevents an old container from admitting work after replacement.
-  const nativePath = join(workspace, ".mongolgpt/runtime.sqlite")
   const pending = new DatabaseSync(nativePath)
   try {
     pending.exec("CREATE TABLE resume_probe (value TEXT NOT NULL)")
