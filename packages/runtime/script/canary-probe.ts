@@ -1,5 +1,6 @@
 import { issueRuntimeCapability } from "@mongolgpt/runtime-auth"
 import { validControlToken } from "@mongolgpt/runtime-auth/control"
+import { sanitizeRuntimeDiagnostic } from "../src/runtime"
 
 const scope = { accountID: "account_cloudflare_canary", workspaceID: "wrk_cloudflare_canary" }
 const appOrigin = "https://canary.invalid"
@@ -244,14 +245,38 @@ grep -q mongolgpt-init /proc/1/cmdline`,
       throw new CanaryRequestFailure("Canary request failed; credentials and response content are suppressed", true)
     })
     if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
-      await response.body?.cancel()
+      const detail = response.headers.get("content-type")?.includes("application/json")
+        ? await readCanaryJsonBody<unknown>(response, AbortSignal.any([deadline, AbortSignal.timeout(5_000)]))
+            .then(canaryFailureDiagnostic)
+            .catch(() => "")
+        : ""
+      void response.body?.cancel().catch(() => {})
       throw new CanaryRequestFailure(
-        `Canary endpoint failed: ${path.split("?")[0]} (HTTP ${response.status})`,
+        `Canary endpoint failed: ${path.split("?")[0]} (HTTP ${response.status})${detail}`,
         [502, 503, 504, 520, 522, 523, 524].includes(response.status),
       )
     }
     return readCanaryJson<T>(response)
   }
+}
+
+function canaryFailureDiagnostic(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return ""
+  const body = value as { code?: unknown; diagnostic?: { code?: unknown } }
+  const codes = [
+    "runtime_process_lookup_failed",
+    "runtime_process_start_failed",
+    "runtime_process_exited",
+    "runtime_process_status_failed",
+    "runtime_process_port_timeout",
+    "runtime_proxy_failed",
+    "runtime_websocket_proxy_failed",
+    "runtime_unavailable",
+  ]
+  const code = typeof body.code === "string" && codes.includes(body.code) ? body.code : undefined
+  // Reuse the production allowlist; never print messages, stack traces, or raw bodies.
+  const diagnostic = sanitizeRuntimeDiagnostic({ code: body.diagnostic?.code, context: body.diagnostic })
+  return code || diagnostic ? ` ${JSON.stringify({ code, diagnostic })}` : ""
 }
 
 export async function readCanaryJson<T = unknown>(response: Response): Promise<T> {

@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { Database } from "bun:sqlite"
 import { link, mkdir, readFile, stat, symlink, writeFile } from "node:fs/promises"
 import { join } from "node:path"
@@ -68,48 +68,85 @@ test("publishes committed native WAL and files as one revision and restores the 
   }
 }, 30_000)
 
-test("a failed second archive upload never publishes a partial revision", async () => {
-  await using temp = await tmpdir()
+describe("failed native archive pair publication", () => {
+  let fixture: Awaited<ReturnType<typeof acceptedPair>> | undefined
+
+  // Windows ACL subprocesses make real baseline/restore setup substantial.
+  // Give setup its own bound, and abort each phase before Bun's outer timeout.
+  beforeEach(async () => {
+    fixture = await acceptedPair()
+  }, 30_000)
+
+  afterEach(async () => {
+    await fixture?.temp[Symbol.asyncDispose]()
+    fixture = undefined
+  }, 15_000)
+
+  test("a failed second archive upload never publishes a partial revision", async () => {
+    const { temp, root, store, checkpoint, accepted } = fixture!
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 20_000)
+    try {
+      await writeFile(join(root, "state.txt"), "not accepted")
+      for (const mode of ["unavailable", "wrong hash"]) {
+        let uploads = 0
+        const calls = store.calls.length
+        await expect(
+          CloudFiles.publish({
+            root,
+            checkpointID: checkpoint.id,
+            lease,
+            signal: controller.signal,
+            request: async (request) => {
+              if (new URL(request.url).pathname !== "/v1/upload" || ++uploads !== 2) return store.request(request)
+              if (mode === "unavailable") return new Response(null, { status: 503 })
+              const receipt = (await (await store.request(request)).json()) as Record<string, unknown>
+              return Response.json({ ...receipt, sha256: "0".repeat(64) })
+            },
+          }),
+        ).rejects.toBeInstanceOf(CloudFiles.PublicationError)
+        expect(uploads).toBe(2)
+        expect(store.calls.slice(calls)).not.toContain("/v1/publish-files")
+        expect(store.filesRevision).toEqual(accepted.data)
+      }
+      const replacement = join(temp.path, "replacement")
+      await mkdir(replacement)
+      await CloudStartup.bootstrap({ root: replacement, request: store.request, signal: controller.signal })
+      expect(await readFile(join(replacement, "state.txt"), "utf8")).toBe("accepted")
+    } finally {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, 30_000)
+})
+
+async function acceptedPair() {
+  const temp = await tmpdir()
   const root = join(temp.path, "workspace")
-  await mkdir(root)
   const store = cloudBaselineStore()
-  const checkpoint = await CloudBaseline.publish({ root, request: store.request })
-  await CloudStartup.bootstrap({ root, request: store.request })
-  await writeFile(join(root, "state.txt"), "accepted")
-  const accepted = await CloudFiles.publish({
-    root,
-    checkpointID: checkpoint.id,
-    lease,
-    signal: AbortSignal.timeout(20_000),
-    request: store.request,
-  })
-  await writeFile(join(root, "state.txt"), "not accepted")
-  for (const mode of ["unavailable", "wrong hash"]) {
-    let uploads = 0
-    const calls = store.calls.length
-    await expect(
-      CloudFiles.publish({
-        root,
-        checkpointID: checkpoint.id,
-        lease,
-        signal: AbortSignal.timeout(20_000),
-        request: async (request) => {
-          if (new URL(request.url).pathname !== "/v1/upload" || ++uploads !== 2) return store.request(request)
-          if (mode === "unavailable") return new Response(null, { status: 503 })
-          const receipt = (await (await store.request(request)).json()) as Record<string, unknown>
-          return Response.json({ ...receipt, sha256: "0".repeat(64) })
-        },
-      }),
-    ).rejects.toBeInstanceOf(CloudFiles.PublicationError)
-    expect(uploads).toBe(2)
-    expect(store.calls.slice(calls)).not.toContain("/v1/publish-files")
-    expect(store.filesRevision).toEqual(accepted.data)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 20_000)
+  try {
+    await mkdir(root)
+    const checkpoint = await CloudBaseline.publish({ root, request: store.request, signal: controller.signal })
+    await CloudStartup.bootstrap({ root, request: store.request, signal: controller.signal })
+    await writeFile(join(root, "state.txt"), "accepted")
+    const accepted = await CloudFiles.publish({
+      root,
+      checkpointID: checkpoint.id,
+      lease,
+      signal: controller.signal,
+      request: store.request,
+    })
+    return { temp, root, store, checkpoint, accepted }
+  } catch (error) {
+    await temp[Symbol.asyncDispose]()
+    throw error
+  } finally {
+    clearTimeout(timer)
+    controller.abort()
   }
-  const replacement = join(temp.path, "replacement")
-  await mkdir(replacement)
-  await CloudStartup.bootstrap({ root: replacement, request: store.request })
-  expect(await readFile(join(replacement, "state.txt"), "utf8")).toBe("accepted")
-}, 30_000)
+}
 
 test("rejects native database hardlinks before capturing or uploading", async () => {
   await using temp = await tmpdir()

@@ -370,6 +370,46 @@ test("a stalled 403 response is cancelled at the deadline without retrying or wa
   expect(pauses).toBe(0)
 })
 
+test("native startup failures preserve only allowlisted diagnostic codes", async () => {
+  for (const detail of [
+    { code: "CONTAINER_UNAVAILABLE", reason: "no_container_instance_available" },
+    { code: "PROCESS_EXITED_BEFORE_READY", exitCode: 1 },
+    { code: "RPC_TRANSPORT_ERROR", kind: "upgrade_failed" },
+    { code: adminToken, reason: authSecret },
+  ]) {
+    const runtime = fixture()
+    const error = await runCanaryProbe({
+      origin,
+      adminToken,
+      authSecret,
+      version,
+      pause: async () => {},
+      request: async (url, init) => {
+        if (url.includes("/api/session?"))
+          return Response.json(
+            {
+              code: "runtime_process_lookup_failed",
+              diagnostic: { ...detail, message: adminToken },
+              message: authSecret,
+              stack: adminToken,
+            },
+            { status: 502 },
+          )
+        return runtime.request(url, init)
+      },
+    }).catch((error: unknown) => error)
+    expect(error).toBeInstanceOf(Error)
+    expect(String(error)).toContain("HTTP 502")
+    expect(String(error)).toContain("runtime_process_lookup_failed")
+    expect(String(error)).not.toContain(adminToken)
+    expect(String(error)).not.toContain(authSecret)
+    if (detail.code !== adminToken) expect(String(error)).toContain(detail.code)
+    if ("exitCode" in detail) expect(String(error)).toContain('"exitCode":1')
+    if ("kind" in detail) expect(String(error)).toContain("upgrade_failed")
+    expect(runtime.calls.filter((call) => call.method === "POST")).toEqual([])
+  }
+})
+
 test("probe cannot target existing dev, production, arbitrary URLs or malformed credentials", async () => {
   for (const target of [
     "https://runtime.dev.mgpt.mn",
