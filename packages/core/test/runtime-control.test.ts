@@ -101,7 +101,11 @@ test("client and server register then publish only after receipt", async () => {
 test("server accepts same register as idempotent and rejects lease changes", async () => {
   await using pair = await socketPair()
   let closed = false
+  let registrations = 0
   const server = RuntimeControl.serve(pair.server, {
+    async register() {
+      registrations++
+    },
     async publish() {},
     async close() {
       closed = true
@@ -111,11 +115,62 @@ test("server accepts same register as idempotent and rejects lease changes", asy
   const client = RuntimeControl.create(pair.client)
   await client.register(lease)
   await client.register({ ...lease })
+  expect(registrations).toBe(1)
   expect(await client.register({ epoch: 2, writerID: lease.writerID }).catch((error) => error)).toBeInstanceOf(
     RuntimeControl.RuntimeControlError,
   )
   expect(await serverResult).toBeInstanceOf(RuntimeControl.RuntimeControlError)
   expect(closed).toBe(true)
+})
+
+test("registration is acknowledged only after durable root state is written", async () => {
+  await using pair = await socketPair()
+  const entered = Promise.withResolvers<void>()
+  const release = Promise.withResolvers<void>()
+  const server = RuntimeControl.serve(pair.server, {
+    async register(value, signal) {
+      expect(value).toEqual(lease)
+      expect(signal.aborted).toBe(false)
+      entered.resolve()
+      await release.promise
+    },
+    async publish() {},
+    async close() {},
+  })
+  const client = RuntimeControl.create(pair.client)
+  try {
+    const registering = client.register(lease)
+    await entered.promise
+    expect(await settlesWithin(registering, 30)).toBe(false)
+    release.resolve()
+    await registering
+  } finally {
+    release.resolve()
+    client.close()
+    await server
+  }
+})
+
+test("failed durable registration closes the root and never admits publication", async () => {
+  await using pair = await socketPair()
+  let closed = false
+  let published = false
+  const server = RuntimeControl.serve(pair.server, {
+    async register() {
+      throw new Error("private state write failed")
+    },
+    async publish() {
+      published = true
+    },
+    async close() {
+      closed = true
+    },
+  }).catch((error) => error)
+  const client = RuntimeControl.create(pair.client)
+  await expect(client.register(lease)).rejects.toBeInstanceOf(RuntimeControl.RuntimeControlError)
+  expect(await server).toBeInstanceOf(RuntimeControl.RuntimeControlError)
+  expect(closed).toBe(true)
+  expect(published).toBe(false)
 })
 
 test("server rejects publish before register without ack", async () => {

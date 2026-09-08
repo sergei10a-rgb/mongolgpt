@@ -27,7 +27,7 @@ interface Input {
   signal?: AbortSignal
 }
 
-export type Baseline = CloudCheckpoint.Checkpoint & { filesRevisionID?: string }
+export type Baseline = CloudCheckpoint.Checkpoint & { filesRevisionID?: string; resume?: { expectedEpoch: number } }
 let prepared: { checkpoint: Baseline | null; database: string; supervised: boolean } | undefined
 
 /** CLI boundary, before account storage or AppRuntime can open the database. */
@@ -62,6 +62,80 @@ export function supervised() {
 export function baseline() {
   if (!prepared || process.env.MONGOLGPT_DB !== prepared.database) throw unavailable()
   return prepared.checkpoint ? structuredClone(prepared.checkpoint) : undefined
+}
+
+/** Same-container restart only, after the locked root supervisor has reaped its
+ * old cgroup. Preserve the actual native database and all workspace files. */
+export async function resume(input: Input & { checkpointID: string; expectedEpoch: number }): Promise<Baseline> {
+  const root = resolve(input.root)
+  const signal = AbortSignal.any([...(input.signal ? [input.signal] : []), AbortSignal.timeout(110_000)])
+  const chunks: Uint8Array[] = []
+  try {
+    if (
+      root !== input.root ||
+      !Number.isSafeInteger(input.expectedEpoch) ||
+      input.expectedEpoch < 1 ||
+      input.expectedEpoch >= Number.MAX_SAFE_INTEGER
+    )
+      throw unavailable()
+    for (let current = root; ; current = dirname(current)) {
+      const info = await lstat(current)
+      if (!info.isDirectory() || info.isSymbolicLink()) throw unavailable()
+      if (current === dirname(current)) break
+    }
+    const home = await lstat(join(root, ".mongolgpt"))
+    const database = await lstat(join(root, ".mongolgpt/runtime.sqlite"))
+    if (
+      !home.isDirectory() ||
+      home.isSymbolicLink() ||
+      !database.isFile() ||
+      database.isSymbolicLink() ||
+      database.nlink !== 1 ||
+      database.size < 512
+    )
+      throw unavailable()
+    signal.throwIfAborted()
+    const response = await aborted(
+      (input.request ?? fetch)(
+        new Request(`${origin}/v1/bootstrap`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+          redirect: "error",
+          signal,
+        }),
+      ),
+      signal,
+    )
+    if (
+      response.status !== 200 ||
+      response.redirected ||
+      response.headers.get("content-type")?.split(";")[0].trim() !== "application/json"
+    ) {
+      void response.body?.cancel().catch(() => {})
+      throw unavailable()
+    }
+    await consume(response, 1024 * 1024, signal, async (chunk) => {
+      chunks.push(chunk.slice())
+    })
+    const data = decodeBootstrap(chunks)
+    if (
+      !data.checkpoint ||
+      data.checkpoint.id !== input.checkpointID ||
+      (data.filesRevision && data.filesRevision.checkpointID !== input.checkpointID)
+    )
+      throw unavailable()
+    signal.throwIfAborted()
+    return {
+      ...data.checkpoint,
+      ...(data.filesRevision ? { files: data.filesRevision.archive, filesRevisionID: data.filesRevision.id } : {}),
+      resume: { expectedEpoch: input.expectedEpoch },
+    }
+  } catch {
+    throw unavailable()
+  } finally {
+    chunks.forEach((chunk) => chunk.fill(0))
+  }
 }
 
 /** Only replaces a pristine container root. Nonempty roots must be checkpointed

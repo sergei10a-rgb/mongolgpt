@@ -75,6 +75,34 @@ async function rejection(effect: Effect.Effect<unknown>) {
 }
 
 describe("native cloud history transport", () => {
+  test("resumes only the exact root-recorded epoch and fences stale local state before claim", async () => {
+    for (const remote of [6, 7, 8]) {
+      const requests: Request[] = []
+      const options = {
+        expectedEpoch: 7,
+        request: async (request: Request) => {
+          requests.push(request)
+          if (request.url.endsWith("/epoch")) return response({ epoch: remote })
+          const body = await readClaim(request)
+          return response({ epoch: body.expectedEpoch + 1, writerID: body.writerID })
+        },
+      }
+      const client = createCloudHistory(options)
+      options.expectedEpoch = remote
+      if (remote === 7) {
+        await Effect.runPromise(client.initialize)
+        expect(requests).toHaveLength(2)
+        expect((await readClaim(requests[1])).expectedEpoch).toBe(7)
+      } else {
+        expect(await rejection(client.initialize)).toContain("шинэчлэгдсэн")
+        await rejection(client.initialize)
+        expect(requests).toHaveLength(1)
+      }
+    }
+    for (const expectedEpoch of [-1, 0.5, Number.MAX_SAFE_INTEGER])
+      expect(() => createCloudHistory({ expectedEpoch })).toThrow()
+  })
+
   test("binds claim and every read to an immutable checkpoint ID", async () => {
     const requests: Request[] = []
     const options = {

@@ -54,11 +54,13 @@ try {
     if ((await compiler.exited) !== 0) throw new Error("Workspace isolation fixture compilation failed")
   }
   const bundle = await Bun.build({
-    entrypoints: [join(root, "../core/test/process-group.test.ts")],
+    entrypoints: ["process-group", "runtime-lock", "runtime-state"].map((name) =>
+      join(root, `../core/test/${name}.test.ts`),
+    ),
     target: "bun",
     external: ["bun:test"],
     outdir: directory,
-    naming: "process-group.test.js",
+    naming: "[name].js",
   })
   if (!bundle.success) throw new Error("Workspace isolation integration build failed")
   const startup = await Bun.build({
@@ -68,24 +70,48 @@ try {
     naming: "startup-child.js",
   })
   if (!startup.success) throw new Error("Workspace startup child build failed")
-  const child = Bun.spawn([runtime, "test", join(directory, "process-group.test.js"), ...process.argv.slice(2)], {
-    cwd: directory,
-    stdout: "inherit",
-    stderr: "inherit",
-    env: {
-      PATH: process.env.PATH ?? "/usr/bin:/bin",
-      BUN_BE_BUN: "1",
-      HOME: directory,
-      XDG_CONFIG_HOME: join(directory, "config"),
-      XDG_DATA_HOME: join(directory, "data"),
-      XDG_CACHE_HOME: join(directory, "cache"),
-      XDG_STATE_HOME: join(directory, "state"),
-      MONGOLGPT_TEST_WORKSPACE_LAUNCHER: join(directory, "launcher"),
-      MONGOLGPT_TEST_WORKSPACE_POLICY: join(directory, "policy"),
-      MONGOLGPT_TEST_STARTUP_CHILD: join(directory, "startup-child.js"),
-      MONGOLGPT_TEST_PTY_LIB: ptyLibrary,
-    },
+  const lockChild = await Bun.build({
+    entrypoints: [join(root, "../core/test/runtime-lock-child.ts")],
+    target: "bun",
+    outdir: directory,
+    naming: "runtime-lock-child.js",
   })
+  if (!lockChild.success) throw new Error("Workspace lock child build failed")
+  const resumeChild = await Bun.build({
+    entrypoints: [join(root, "../core/test/fixture/runtime-resume-child.ts")],
+    target: "bun",
+    outdir: directory,
+    naming: "runtime-resume-child.js",
+  })
+  if (!resumeChild.success) throw new Error("Workspace resume child build failed")
+  const child = Bun.spawn(
+    [
+      runtime,
+      "test",
+      ...["process-group", "runtime-lock", "runtime-state"].map((name) => join(directory, `${name}.test.js`)),
+      ...process.argv.slice(2),
+    ],
+    {
+      cwd: directory,
+      stdout: "inherit",
+      stderr: "inherit",
+      env: {
+        PATH: process.env.PATH ?? "/usr/bin:/bin",
+        BUN_BE_BUN: "1",
+        HOME: directory,
+        XDG_CONFIG_HOME: join(directory, "config"),
+        XDG_DATA_HOME: join(directory, "data"),
+        XDG_CACHE_HOME: join(directory, "cache"),
+        XDG_STATE_HOME: join(directory, "state"),
+        MONGOLGPT_TEST_WORKSPACE_LAUNCHER: join(directory, "launcher"),
+        MONGOLGPT_TEST_WORKSPACE_POLICY: join(directory, "policy"),
+        MONGOLGPT_TEST_STARTUP_CHILD: join(directory, "startup-child.js"),
+        MONGOLGPT_TEST_LOCK_CHILD: join(directory, "runtime-lock-child.js"),
+        MONGOLGPT_TEST_RESUME_CHILD: join(directory, "runtime-resume-child.js"),
+        MONGOLGPT_TEST_PTY_LIB: ptyLibrary,
+      },
+    },
+  )
   process.exitCode = await child.exited
 } finally {
   await rm(directory, { recursive: true, force: true })

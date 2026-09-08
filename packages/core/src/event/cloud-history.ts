@@ -76,6 +76,7 @@ export function createCloudHistory(
     readonly request?: (request: Request) => Promise<Response>
     readonly checkpointID?: string
     readonly filesRevisionID?: string
+    readonly expectedEpoch?: number
     readonly workspace?: Pick<RuntimeControl.Client, "register" | "publish">
   } = {},
 ) {
@@ -84,6 +85,10 @@ export function createCloudHistory(
     options.checkpointID === undefined ? undefined : decode(Identifier, options.checkpointID, "invalid_input")
   const filesRevisionID =
     options.filesRevisionID === undefined ? undefined : decode(Identifier, options.filesRevisionID, "invalid_input")
+  const expectedEpoch =
+    options.expectedEpoch === undefined
+      ? undefined
+      : decode(Integer.check(Schema.isLessThan(Number.MAX_SAFE_INTEGER)), options.expectedEpoch, "invalid_input")
   const writerID = crypto.randomUUID()
   const workspace = options.workspace
   let lease: typeof Lease.Type | undefined
@@ -158,6 +163,7 @@ export function createCloudHistory(
     return (initialization ??= (async () => {
       try {
         const expected = await rpc("epoch", json({}), Epoch, signal)
+        if (expectedEpoch !== undefined && expected.epoch !== expectedEpoch) throw new CloudHistoryError("fenced")
         if (expected.epoch === Number.MAX_SAFE_INTEGER) throw new CloudHistoryError("unavailable")
         const claimed = await rpc(
           "claim",

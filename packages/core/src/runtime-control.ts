@@ -139,7 +139,11 @@ export function create(stream: Duplex, options: { timeoutMs?: number } = {}): Cl
 
 export function serve(
   stream: Duplex,
-  input: { publish(lease: Lease, signal: AbortSignal): Promise<unknown>; close(): Promise<void> },
+  input: {
+    register?(lease: Lease, signal: AbortSignal): Promise<unknown>
+    publish(lease: Lease, signal: AbortSignal): Promise<unknown>
+    close(): Promise<void>
+  },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     let closed = false
@@ -181,6 +185,11 @@ export function serve(
         if (request.id !== expectedID++) throw new RuntimeControlError()
         if (request.op === "register") {
           if (lease && !sameLease(lease, request.lease)) throw new RuntimeControlError()
+          activeAbort = new AbortController()
+          const signal = activeAbort.signal
+          if (!lease) await input.register?.(request.lease, signal)
+          if (closed || signal.aborted) return
+          activeAbort = undefined
           lease = request.lease
           await writeFrame(stream, { id: request.id, ok: true })
           handling = false

@@ -8,8 +8,11 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/file.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -24,6 +27,13 @@ static unsigned int identity(const char *text) {
   unsigned long value = strtoul(text, &end, 10);
   if (errno || !*text || *end || value < 10000 || value > 60000) fail();
   return (unsigned int)value;
+}
+
+static void lock_supervisor_fd(void) {
+  struct stat info;
+  if (getuid() != 0 || geteuid() != 0 || fstat(3, &info) != 0) fail();
+  if (!S_ISREG(info.st_mode) || info.st_uid != 0 || (info.st_mode & 0777) != 0600) fail();
+  if (flock(3, LOCK_EX | LOCK_NB) != 0) fail();
 }
 
 /* Outstanding asynchronous kernel writes can outlive a userspace freezer.
@@ -68,6 +78,10 @@ static void restrict_async_io(void) {
 /* fd 3 is an already-validated, root-owned cgroup.procs opened by the
  * supervisor. Join BEFORE dropping privileges or executing user code. */
 int main(int argc, char **argv) {
+  if (argc == 2 && strcmp(argv[1], "--lock") == 0) {
+    lock_supervisor_fd();
+    return 0;
+  }
   if (argc < 5 || getuid() != 0 || geteuid() != 0 || argv[3][0] != '/' || argv[4][0] != '/') fail();
   unsigned int uid = identity(argv[1]);
   unsigned int gid = identity(argv[2]);

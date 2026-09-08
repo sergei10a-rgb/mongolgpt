@@ -132,6 +132,59 @@ try {
   )
   equal(await readFile(join(replacement, "created.txt"), "utf8"), "first real workspace file")
 
+  // Resume the same native DB, not the immutable baseline image. The cloud
+  // lease prevents an old container from admitting work after replacement.
+  const nativePath = join(workspace, ".mongolgpt/runtime.sqlite")
+  const pending = new DatabaseSync(nativePath)
+  try {
+    pending.exec("CREATE TABLE resume_probe (value TEXT NOT NULL)")
+    pending.prepare("INSERT INTO resume_probe VALUES (?)").run("native pending state")
+  } finally {
+    pending.close()
+  }
+  await writeFile(join(workspace, "pending.txt"), "not yet checkpointed")
+  const nativeBefore = await readFile(nativePath)
+  const beforeResume = calls.length
+  const resumed = await native.CloudStartup.resume({
+    root: workspace,
+    request: request(scope),
+    checkpointID: checkpoint.id,
+    expectedEpoch: 2,
+  })
+  equal(resumed.resume, { expectedEpoch: 2 })
+  equal(resumed.filesRevisionID, files.data.id)
+  equal(calls.slice(beforeResume), ["/v1/bootstrap"])
+  equal(await readFile(nativePath), nativeBefore)
+  equal(await readFile(join(workspace, "pending.txt"), "utf8"), "not yet checkpointed")
+  const historyCalls: string[] = []
+  const historyRequest = async (input: Request) => {
+    historyCalls.push(new URL(input.url).pathname)
+    return native.handleHistoryOutbound(
+      input,
+      {
+        HISTORY: platform!.env.DB as unknown as NonNullable<
+          Parameters<typeof native.handleHistoryOutbound>[1]["HISTORY"]
+        >,
+      },
+      { params: scope },
+    )
+  }
+  const resumedCloud = native.createCloudHistory({
+    checkpointID: resumed.id,
+    filesRevisionID: resumed.filesRevisionID,
+    expectedEpoch: resumed.resume?.expectedEpoch,
+    request: historyRequest,
+  })
+  await native.Effect.runPromise(resumedCloud.initialize)
+  equal(await store().epoch(scope), 3)
+  equal(historyCalls, ["/v1/epoch", "/v1/claim"])
+  const outdated = native.createCloudHistory({ checkpointID: resumed.id, expectedEpoch: 2, request: historyRequest })
+  await assert.rejects(native.Effect.runPromise(outdated.initialize), /Cloud runtime/)
+  assertions++
+  equal(historyCalls, ["/v1/epoch", "/v1/claim", "/v1/epoch"])
+  equal(await store().epoch(scope), 3)
+  equal(await readFile(nativePath), nativeBefore)
+
   // Once a claim/baseline exists, initialization never takes it over or resets it.
   const duplicate = join(root, "duplicate")
   await mkdir(duplicate)
@@ -140,7 +193,7 @@ try {
     native.CloudBaseline.BaselineError,
   )
   assertions++
-  equal(await store().epoch(scope), 2)
+  equal(await store().epoch(scope), 3)
   equal(await readdir(duplicate), [])
   equal((await store().checkpoint(scope))?.data.id, checkpoint.id)
 

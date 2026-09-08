@@ -12,6 +12,8 @@ import { DatabaseBackup } from "@mongolgpt/core/database/backup"
 import { WorkspaceCapture } from "@mongolgpt/core/database/workspace-capture"
 import { WorkspaceRestore } from "@mongolgpt/core/database/workspace-restore"
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
+import { RuntimeLock } from "@mongolgpt/core/runtime-lock"
+import { RuntimeState } from "@mongolgpt/core/runtime-state"
 import { StartupHandoff } from "@mongolgpt/core/database/startup-handoff"
 import { tmpdir } from "./fixture/tmpdir"
 import { cloudFilesSeed } from "./fixture/cloud-files-seed"
@@ -128,6 +130,97 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
     expect(store.calls).toEqual(["/v1/bootstrap", "/v1/begin", "/v1/upload", "/v1/upload", "/v1/publish"])
     expect(await readdir(root)).toEqual([])
     expect(await readdir(temp.path)).toEqual(["workspace"])
+  })
+
+  test("same-container restart preserves native SQLite and files, and rejects a remotely superseded epoch", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    const store = cloudBaselineStore()
+    const fixture = process.env.MONGOLGPT_TEST_RESUME_CHILD
+    if (!fixture) throw new Error("Runtime resume child fixture is required")
+    const start = (epoch: number) =>
+      RuntimeSupervisor.start({
+        root,
+        launcher: launcher!,
+        ...startupCommand(root),
+        args: [fixture, root, String(epoch)],
+        request: store.request,
+      })
+    for (const epoch of [1, 2, 3]) {
+      const before = store.calls.length
+      const runtime = await start(epoch)
+      try {
+        const result = await output(runtime.child)
+        expect(result.stderr).toBe("")
+        // Closing the inherited channel deliberately terminates the tenant group.
+        expect(result.code === 0 || runtime.child.signalCode === "SIGKILL").toBe(true)
+        expect(JSON.parse(result.stdout)).toEqual({
+          resume: epoch > 1,
+          ...(epoch > 1 ? { previousEpoch: epoch } : {}),
+          epoch: epoch + 1,
+        })
+        await runtime.control
+        if (epoch > 1) expect(store.calls.slice(before)).toEqual(["/v1/bootstrap"])
+      } finally {
+        await runtime.group.close()
+      }
+    }
+    const before = await readFile(join(root, ".mongolgpt/runtime.sqlite"))
+    const stale = await start(9)
+    try {
+      const result = await output(stale.child)
+      expect(result.code).not.toBe(0)
+      expect(result.stderr).toContain("Cloud")
+      await stale.control
+      expect(await readFile(join(root, ".mongolgpt/runtime.sqlite"))).toEqual(before)
+      expect(await readFile(join(root, "pending-work.txt"), "utf8")).toBe("keep uncheckpointed files")
+    } finally {
+      await stale.group.close()
+    }
+    await using lock = await RuntimeLock.acquire({ root, launcher: launcher! })
+    const state = await RuntimeState.openState(lock.directory, root)
+    expect((await state.read())?.epoch).toBe(4)
+  }, 20_000)
+
+  test("orphan cleanup removes the admission target before a late launcher can run tenant code", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    await chown(root, 10001, 10001)
+    const gated = join(temp.path, "delayed-launcher")
+    const ready = join(temp.path, "ready")
+    const release = join(temp.path, "release")
+    await writeFile(
+      gated,
+      `#!/bin/sh
+printf ready > "$READY"
+while [ ! -e "$RELEASE" ]; do sleep 0.01; done
+exec "$LAUNCHER" "$@"
+`,
+      { mode: 0o700 },
+    )
+    const controlled = await ProcessGroup.create({ launcher: gated, uid: 10001, gid: 10001 })
+    const cmd = command('require("node:fs").writeFileSync("should-not-exist", "unsafe")', root)
+    const child = await controlled.spawn({
+      ...cmd,
+      env: { ...cmd.env, READY: ready, RELEASE: release, LAUNCHER: launcher! },
+    })
+    const result = output(child)
+    try {
+      await waitUntil(async () => existsSync(ready))
+      await ProcessGroup.reap(controlled.directory)
+      await writeFile(release, "continue")
+      expect((await result).code).toBe(125)
+      expect(existsSync(join(root, "should-not-exist"))).toBe(false)
+      await ProcessGroup.reap(controlled.directory)
+    } finally {
+      child.kill("SIGKILL")
+      await result
+      await ProcessGroup.reap(controlled.directory)
+    }
   })
 
   test("startup rejects a valid receipt inherited by a different cgroup", async () => {

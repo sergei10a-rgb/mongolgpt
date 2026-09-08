@@ -230,6 +230,121 @@ export function scan(db: Database.Interface["db"]) {
   )
 }
 
+/** Validate only the immutable checkpoint prefix in the current native database.
+ * Resume may have later durable rows and unrelated native state, so this helper
+ * authenticates the original aggregate heads without treating the whole DB as a
+ * pristine checkpoint image.
+ */
+export function verifyPrefix(
+  db: Database.Interface["db"],
+  input: {
+    readonly inventory: Inventory
+    readonly deletedAggregates?: ReadonlySet<string>
+  },
+) {
+  return db.transaction(() =>
+    Effect.gen(function* () {
+      const deletedAggregates = input.deletedAggregates ?? new Set<string>()
+      const tables = yield* db.all<{ name: string; type: string }>(sql`
+          SELECT name, type FROM sqlite_schema
+          WHERE name IN ('project', 'session', 'event', 'event_sequence', 'cloud_history_tombstone')
+        `)
+      if (
+        tables.some((row) => row.type !== "table") ||
+        ["project", "session", "event", "event_sequence"].some((name) => !tables.some((row) => row.name === name))
+      )
+        throw invalid()
+
+      const projectIDs = new Set((yield* db.all<{ id: string }>(sql`SELECT id FROM project`)).map((row) => row.id))
+      const sessions = new Map(
+        (yield* db.all<{ id: string; project_id: string }>(sql`SELECT id, project_id FROM session`)).map((row) => [
+          row.id,
+          row.project_id,
+        ]),
+      )
+      for (const row of input.inventory.projects) {
+        Schema.decodeUnknownSync(Identifier)(row.id)
+        if (!deletedAggregates.has(row.id) && !projectIDs.has(row.id)) throw invalid()
+      }
+      for (const row of input.inventory.sessions) {
+        Schema.decodeUnknownSync(Identifier)(row.id)
+        Schema.decodeUnknownSync(Identifier)(row.projectID)
+        if (!deletedAggregates.has(row.id) && sessions.get(row.id) !== row.projectID) throw invalid()
+      }
+
+      const expectedByAggregate = new Map<string, Map<number, string>>()
+      const seenEventIDs = new Set<string>()
+      for (const event of input.inventory.eventIDs) {
+        Schema.decodeUnknownSync(Identifier)(event.id)
+        Schema.decodeUnknownSync(Identifier)(event.aggregateID)
+        Schema.decodeUnknownSync(Sequence)(event.seq)
+        if (seenEventIDs.has(event.id)) throw invalid()
+        seenEventIDs.add(event.id)
+        const events = expectedByAggregate.get(event.aggregateID) ?? new Map<number, string>()
+        if (events.has(event.seq)) throw invalid()
+        events.set(event.seq, event.id)
+        expectedByAggregate.set(event.aggregateID, events)
+      }
+
+      let accountedEvents = 0
+      for (const aggregate of input.inventory.aggregates) {
+        Schema.decodeUnknownSync(Identifier)(aggregate.id)
+        Schema.decodeUnknownSync(Sequence)(aggregate.seq)
+        Schema.decodeUnknownSync(Sequence)(aggregate.events)
+        const expected = expectedByAggregate.get(aggregate.id)
+        if (!expected || expected.size !== aggregate.events) throw invalid()
+        for (let seq = 0; seq <= aggregate.seq; seq++) {
+          if (!expected.has(seq)) throw invalid()
+        }
+
+        const sequence = yield* db.get<{ seq: number }>(sql`
+            SELECT seq FROM event_sequence WHERE aggregate_id = ${aggregate.id}
+          `)
+        if (!sequence) {
+          if (deletedAggregates.has(aggregate.id)) {
+            accountedEvents += aggregate.events
+            continue
+          }
+          throw invalid()
+        }
+        Schema.decodeUnknownSync(Sequence)(sequence.seq)
+        if (sequence.seq < aggregate.seq) throw invalid()
+
+        let afterSequence = -1
+        let count = 0
+        const hash = createHash("sha256")
+        while (true) {
+          const page = yield* db.all<typeof EventRow.Type>(sql`
+              SELECT id, aggregate_id, seq, type, data FROM event
+              WHERE aggregate_id = ${aggregate.id}
+                AND seq > ${afterSequence}
+                AND seq <= ${aggregate.seq}
+              ORDER BY seq LIMIT ${pageSize}
+            `)
+          for (const value of page) {
+            const row = Schema.decodeUnknownSync(EventRow)(value)
+            if (Buffer.byteLength(row.data) > maxEventBytes) throw invalid()
+            if (row.seq !== afterSequence + 1 || row.aggregate_id !== aggregate.id) throw invalid()
+            if (expected.get(row.seq) !== row.id) throw invalid()
+            hash.update(frame(row))
+            afterSequence = row.seq
+            count++
+          }
+          if (page.length < pageSize) break
+        }
+        if (count !== aggregate.events || afterSequence !== aggregate.seq || hash.digest("hex") !== aggregate.sha256)
+          throw invalid()
+        accountedEvents += count
+      }
+      if (accountedEvents !== input.inventory.counts.events) throw invalid()
+    }),
+  )
+}
+
+function frame(row: typeof EventRow.Type) {
+  return JSON.stringify([row.id, row.aggregate_id, row.seq, row.type, row.data]) + "\n"
+}
+
 function invalid() {
   return new Error("Invalid restored history inventory")
 }

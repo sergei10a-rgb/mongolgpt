@@ -2,7 +2,38 @@ import { expect, test } from "bun:test"
 import { mkdir, readFile, readdir, symlink, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { CloudStartup } from "@mongolgpt/core/database/cloud-startup"
+import { CloudBaseline } from "@mongolgpt/core/database/cloud-baseline"
+import { cloudBaselineStore } from "./fixture/cloud-baseline-store"
 import { tmpdir } from "./fixture/tmpdir"
+
+test("resume validates the remote baseline without replacing native SQLite or uncheckpointed files", async () => {
+  await using temp = await tmpdir()
+  const root = join(temp.path, "workspace")
+  await mkdir(root)
+  const store = cloudBaselineStore()
+  const checkpoint = await CloudBaseline.publish({ root, request: store.request })
+  await CloudStartup.bootstrap({ root, request: store.request })
+  const filename = join(root, ".mongolgpt/runtime.sqlite")
+  const before = await readFile(filename)
+  await writeFile(join(root, "unsaved-work.txt"), "keep user work")
+  const calls = store.calls.length
+  expect(
+    await CloudStartup.resume({ root, request: store.request, checkpointID: checkpoint.id, expectedEpoch: 2 }),
+  ).toEqual({ ...checkpoint, resume: { expectedEpoch: 2 } })
+  expect(store.calls.slice(calls)).toEqual(["/v1/bootstrap"])
+  expect(await readFile(filename)).toEqual(before)
+  expect(await readFile(join(root, "unsaved-work.txt"), "utf8")).toBe("keep user work")
+  for (const request of [
+    async () => Response.json({ checkpoint: null }),
+    store.request,
+    async () => new Response("<html>wrong service</html>", { headers: { "content-type": "text/html" } }),
+  ]) {
+    await expect(
+      CloudStartup.resume({ root, request, checkpointID: crypto.randomUUID(), expectedEpoch: 2 }),
+    ).rejects.toThrow()
+    expect(await readFile(filename)).toEqual(before)
+  }
+}, 30_000)
 
 test("accepts only a confirmed empty history for a pristine workspace", async () => {
   await using temp = await tmpdir()

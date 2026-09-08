@@ -32,6 +32,33 @@ export interface Command {
   controlChannel?: boolean
 }
 
+/** Only a root-owned runtime record may select this group. The caller must hold
+ * the kernel workspace lock, so no live supervisor can admit more descendants. */
+export async function reap(directory: string) {
+  if (
+    process.platform !== "linux" ||
+    process.getuid?.() !== 0 ||
+    process.geteuid?.() !== 0 ||
+    !/^\/sys\/fs\/cgroup\/mongolgpt-[0-9a-f-]{36}$/.test(directory)
+  )
+    throw new IsolationError()
+  const info = await lstat(directory).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === "ENOENT") return undefined
+    throw error
+  })
+  if (!info) return
+  await trustedPath(directory, true)
+  if ((await statfs(directory)).type !== 0x63677270) throw new IsolationError()
+  const file = await open(join(directory, "cgroup.kill"), constants.O_WRONLY | constants.O_NOFOLLOW)
+  try {
+    await file.writeFile("1")
+  } finally {
+    await file.close()
+  }
+  await waitFor(join(directory, "cgroup.events"), "populated", "0", 5000)
+  await rmdir(directory)
+}
+
 /** Linux hosted-supervisor boundary. The supervisor and SDK must stay outside
  * this group; every workspace writer must be launched inside it. This does not
  * replace durable publication or make an unsupervised existing process safe. */

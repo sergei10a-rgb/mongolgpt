@@ -765,6 +765,7 @@ export const layer = Layer.unwrap(
       const cloud = createCloudHistory({
         checkpointID: baseline?.id,
         filesRevisionID: baseline?.filesRevisionID,
+        expectedEpoch: baseline?.resume?.expectedEpoch,
         workspace: CloudStartup.supervised() ? CloudWorkspace.connect() : undefined,
       })
       // File revision admission is separate from the immutable SQLite inventory.
@@ -774,7 +775,7 @@ export const layer = Layer.unwrap(
         sqlite: baseline.sqlite,
         files: baseline.files,
       }
-      return layerWith(createCloudRecovery(cloud, checkpoint).eventOptions)
+      return layerWith(createCloudRecovery(cloud, checkpoint, { resume: !!baseline?.resume }).eventOptions)
     }
     return layerWith(createCloudRecovery(createCloudHistory()).eventOptions)
   }).pipe(Effect.orDie),

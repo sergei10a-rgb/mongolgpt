@@ -7,6 +7,8 @@ import { CloudStartup } from "./database/cloud-startup"
 import { StartupHandoff } from "./database/startup-handoff"
 import { ProcessGroup } from "./process-group"
 import { RuntimeControl } from "./runtime-control"
+import { RuntimeLock } from "./runtime-lock"
+import { RuntimeState } from "./runtime-state"
 import type { CloudFiles } from "./database/cloud-files"
 
 /** Bootstrap stays privileged and outside the frozen group. No workspace code
@@ -24,9 +26,31 @@ export async function start(input: {
   input = { ...input, args: [...input.args], env: { ...input.env } }
   const root = resolve(input.root)
   const uid = 10001
-  const group = await ProcessGroup.create({ launcher: input.launcher, uid, gid: uid })
+  const lock = await RuntimeLock.acquire({ root, launcher: input.launcher, signal: input.signal })
+  let group: Awaited<ReturnType<typeof ProcessGroup.create>> | undefined
   try {
-    let checkpoint = await CloudStartup.bootstrap({ root, request: input.request, signal: input.signal })
+    const state = await RuntimeState.openState(lock.directory, root)
+    const previous = await state.read()
+    if (previous) await ProcessGroup.reap(previous.group)
+    const createdGroup = await ProcessGroup.create({ launcher: input.launcher, uid, gid: uid })
+    const ownedGroup = {
+      ...createdGroup,
+      async close() {
+        await createdGroup.close()
+        await lock.close()
+      },
+    }
+    group = ownedGroup
+    if (previous && previous.epoch === undefined) throw new RuntimeState.StateError()
+    let checkpoint = previous
+      ? await CloudStartup.resume({
+          root,
+          request: input.request,
+          signal: input.signal,
+          checkpointID: previous.checkpointID,
+          expectedEpoch: previous.epoch!,
+        })
+      : await CloudStartup.bootstrap({ root, request: input.request, signal: input.signal })
     if (!checkpoint) {
       const { CloudBaseline } = await import("./database/cloud-baseline")
       const created = await CloudBaseline.publish({ root, request: input.request, signal: input.signal })
@@ -34,11 +58,16 @@ export async function start(input: {
       if (checkpoint?.id !== created.id) throw new CloudBaseline.BaselineError()
     }
     const checkpointID = checkpoint?.id
-    await own(root, uid, input.signal)
+    if (!previous) await own(root, uid, input.signal)
+    await state.write({
+      checkpointID: checkpoint.id,
+      group: ownedGroup.directory,
+      ...(previous?.epoch ? { epoch: previous.epoch } : {}),
+    })
     input.signal?.throwIfAborted()
-    const packet = await StartupHandoff.issue({ root, group: group.directory, checkpoint })
+    const packet = await StartupHandoff.issue({ root, group: ownedGroup.directory, checkpoint })
     try {
-      const child = await group.spawn({
+      const child = await ownedGroup.spawn({
         executable: input.executable,
         args: input.args,
         cwd: root,
@@ -53,7 +82,7 @@ export async function start(input: {
         const { CloudFiles } = await import("./database/cloud-files")
         try {
           if (!checkpointID) throw new CloudFiles.PublicationError()
-          return await group.quiesce(
+          return await ownedGroup.quiesce(
             (signal) =>
               CloudFiles.publish({
                 root,
@@ -67,7 +96,7 @@ export async function start(input: {
         } catch (error) {
           // Unknown remote acknowledgement fences this process, never a success
           // response or a new blind snapshot against possibly advanced state.
-          await group.close()
+          await ownedGroup.close()
           throw error
         }
       }
@@ -85,10 +114,18 @@ export async function start(input: {
       child.once("exit", disconnect)
       child.once("error", disconnect)
       const control = RuntimeControl.serve(channel, {
+        register(lease, signal) {
+          if (previous?.epoch !== undefined && lease.epoch !== previous.epoch + 1)
+            return Promise.reject(new RuntimeState.StateError())
+          return ownedGroup.quiesce(
+            () => state.write({ checkpointID: checkpoint.id, group: ownedGroup.directory, epoch: lease.epoch }),
+            { signal, closeOnError: true },
+          )
+        },
         publish: publishFiles,
         async close() {
           try {
-            await group.close()
+            await ownedGroup.close()
           } finally {
             disconnect()
           }
@@ -99,12 +136,13 @@ export async function start(input: {
       })
       // The CLI owns the terminal outcome; tests may exercise the group directly.
       void control.catch(() => {})
-      return { child, group, checkpoint, publishFiles, control }
+      return { child, group: ownedGroup, checkpoint, publishFiles, control }
     } finally {
       await packet.close()
     }
   } catch (error) {
-    await group.close()
+    await group?.close()
+    await lock.close()
     throw error
   }
 }

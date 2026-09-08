@@ -17,7 +17,15 @@ const Packet = Schema.Struct({
   group: Schema.String,
   checkpoint: Schema.Union([
     Schema.Null,
-    Schema.Struct({ data: CloudCheckpoint.Checkpoint, filesRevisionID: Schema.optional(UUID) }),
+    Schema.Struct({
+      data: CloudCheckpoint.Checkpoint,
+      filesRevisionID: Schema.optional(UUID),
+      resume: Schema.optional(
+        Schema.Struct({
+          expectedEpoch: Schema.Int.check(Schema.isGreaterThan(0), Schema.isLessThan(Number.MAX_SAFE_INTEGER)),
+        }),
+      ),
+    }),
   ]),
 })
 
@@ -50,6 +58,7 @@ export async function issue(input: { root: string; group: string; checkpoint: Cl
             files: checkpoint.files,
           },
           ...(checkpoint.filesRevisionID ? { filesRevisionID: checkpoint.filesRevisionID } : {}),
+          ...(checkpoint.resume ? { resume: checkpoint.resume } : {}),
         }
       : null,
   }
@@ -131,6 +140,7 @@ export async function accept(root: string): Promise<CloudStartup.Baseline | null
       ? {
           ...packet.checkpoint.data,
           ...(packet.checkpoint.filesRevisionID ? { filesRevisionID: packet.checkpoint.filesRevisionID } : {}),
+          ...(packet.checkpoint.resume ? { resume: packet.checkpoint.resume } : {}),
         }
       : null
   } catch {
