@@ -25,6 +25,12 @@ afterAll(async () => {
 
 for (const fixture of [
   {
+    name: "native postcommit acknowledgement and replacement",
+    script: "postcommit.integration.ts",
+    prefix: "POSTCOMMIT_RESULT ",
+    assertions: 40,
+  },
+  {
     name: "fresh native baseline and durable restart",
     script: "checkpoint-baseline.integration.ts",
     prefix: "CHECKPOINT_BASELINE_RESULT ",

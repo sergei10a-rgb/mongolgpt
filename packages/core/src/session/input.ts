@@ -49,7 +49,7 @@ export const admit = Effect.fn("SessionInput.admit")(function* (
   },
 ) {
   const existing = yield* find(db, input.id)
-  if (existing !== undefined) return existing
+  if (existing !== undefined) return yield* accept(events, existing)
   const timestamp = yield* DateTime.now
   return yield* events
     .publish(SessionEvent.PromptAdmitted, {
@@ -75,10 +75,14 @@ export const admit = Effect.fn("SessionInput.admit")(function* (
             ),
       ),
       Effect.catchDefect((defect) =>
-        find(db, input.id).pipe(Effect.flatMap((stored) => (stored ? Effect.succeed(stored) : Effect.die(defect)))),
+        defect instanceof LifecycleConflict
+          ? find(db, input.id).pipe(Effect.flatMap((stored) => (stored ? accept(events, stored) : Effect.die(defect))))
+          : Effect.die(defect),
       ),
     )
 })
+
+const accept = (events: EventV2.Interface, admitted: Admitted) => events.check.pipe(Effect.as(admitted))
 
 export const projectAdmitted = Effect.fn("SessionInput.projectAdmitted")(function* (
   db: DatabaseService,

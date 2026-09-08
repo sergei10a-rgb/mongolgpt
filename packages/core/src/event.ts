@@ -1,6 +1,6 @@
 export * as EventV2 from "./event"
 
-import { Cause, Config, Context, Effect, Layer, Option, PubSub, Queue, Schema, Stream } from "effect"
+import { Cause, Config, Context, Effect, Layer, Option, PubSub, Queue, Schema, Semaphore, Stream } from "effect"
 import { Event } from "@mongolgpt/schema/event"
 import type { Data, Definition, Payload } from "@mongolgpt/schema/event"
 import { and, asc, eq, gt, inArray, or } from "drizzle-orm"
@@ -182,6 +182,8 @@ export interface LayerOptions {
   readonly journal?: {
     /** Called with the encoded envelope after local validation, before commit or notification. */
     readonly append: (event: SerializedEvent) => Effect.Effect<void>
+    /** Runs after SQLite COMMIT, before observers or success; nativeCommit marks the non-replayed commit hook. */
+    readonly afterCommit?: (event: SerializedEvent, nativeCommit: boolean) => Effect.Effect<void>
   }
 }
 
@@ -206,6 +208,7 @@ export const layerWith = (options?: LayerOptions) =>
       const listeners = new Array<Subscriber>()
       const database = yield* Database.Service
       const db = database.db
+      const journalCommit = Semaphore.makeUnsafe(1).withPermit
       let journalFailed = false
       const checkJournal = Effect.suspend(() =>
         journalFailed ? Effect.die(new JournalUnavailableError()) : Effect.void,
@@ -284,7 +287,7 @@ export const layerWith = (options?: LayerOptions) =>
                     message: "Cloud түүхийг сэргээх өгөгдлийн боловсруулагч бэлэн биш байна.",
                   }),
                 )
-              return yield* Effect.uninterruptible(
+              const transaction = Effect.uninterruptible(
                 Effect.gen(function* () {
                   let journalAttempted = false
                   const committed = yield* db
@@ -433,7 +436,20 @@ export const layerWith = (options?: LayerOptions) =>
                             if (versionedType(definition.type, durable.version) === "session.deleted.1")
                               yield* eraseCloudSession(db, { aggregateID, id: event.id, seq })
                           }
-                          return { aggregateID, seq }
+                          return {
+                            aggregateID,
+                            seq,
+                            serialized:
+                              !input && options?.journal?.afterCommit
+                                ? {
+                                    id: event.id,
+                                    aggregateID,
+                                    seq,
+                                    type: versionedType(definition.type, durable.version),
+                                    data: structuredClone(encoded),
+                                  }
+                                : undefined,
+                          }
                         }),
                       { behavior: "immediate" },
                     )
@@ -446,6 +462,18 @@ export const layerWith = (options?: LayerOptions) =>
                       }),
                       Effect.orDie,
                     )
+                  if (committed?.serialized && options?.journal?.afterCommit) {
+                    yield* Effect.suspend(() => options.journal!.afterCommit!(committed.serialized!, !!commit)).pipe(
+                      Effect.timeout("120 seconds"),
+                      Effect.interruptible,
+                      Effect.catchCause(() => {
+                        // SQLite is committed: never roll it back, notify, or allow
+                        // a queued journal writer after an uncertain snapshot receipt.
+                        journalFailed = true
+                        return Effect.die(new JournalUnavailableError())
+                      }),
+                    )
+                  }
                   if (committed) {
                     yield* Effect.forEach(
                       pubsub.durable.get(committed.aggregateID) ?? [],
@@ -456,6 +484,7 @@ export const layerWith = (options?: LayerOptions) =>
                   return committed
                 }),
               )
+              return yield* options?.journal && !input ? journalCommit(transaction) : transaction
             }
           }
         })
@@ -643,8 +672,8 @@ export const layerWith = (options?: LayerOptions) =>
 
       const streamAll = (): Stream.Stream<Payload> => Stream.fromPubSub(pubsub.all)
 
-      const readAfter = (aggregateID: string, after: number) =>
-        check.pipe(
+      const readAfter = (aggregateID: string, after: number) => {
+        const read = check.pipe(
           Effect.andThen(options?.beforeAggregateRead?.(aggregateID) ?? Effect.void),
           Effect.andThen(
             db
@@ -667,6 +696,8 @@ export const layerWith = (options?: LayerOptions) =>
             ),
           ),
         )
+        return options?.journal ? journalCommit(read) : read
+      }
 
       const subscribeDurable = (aggregateID: string) =>
         Effect.gen(function* () {
@@ -733,7 +764,8 @@ export const layerWith = (options?: LayerOptions) =>
             Effect.andThen(check),
           ),
         ),
-        check,
+        // Exact retries may already see committed rows while their snapshot is pending.
+        check: options?.journal ? journalCommit(check) : check,
         publish,
         subscribe,
         all: streamAll,

@@ -3,6 +3,8 @@ import assert from "node:assert/strict"
 import { Effect, Exit, Layer, Schema } from "effect"
 import { SessionV1 } from "@mongolgpt/schema/session-v1"
 import { SessionID } from "@mongolgpt/schema/session-id"
+import { Project } from "@mongolgpt/schema/project"
+import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { CloudRestore } from "../../../core/src/database/cloud-restore"
 import { Database } from "../../../core/src/database/database"
 import { EventV2 } from "../../../core/src/event"
@@ -13,6 +15,7 @@ import { ProjectDirectoryTable, ProjectTable } from "../../../core/src/project/s
 import { SessionProjector } from "../../../core/src/session/projector"
 import { MessageTable, PartTable, SessionTable } from "../../../core/src/session/sql"
 import { EventTable } from "../../../core/src/event/sql"
+import { AbsolutePath } from "../../../core/src/schema"
 export { createCloudHistory } from "../../../core/src/event/cloud-history"
 export { createHistoryHandler, handleHistoryOutbound } from "../../src/history-rpc"
 export { handleCheckpointOutbound } from "../../src/checkpoint-rpc"
@@ -26,6 +29,63 @@ export { createRuntimeBackupStore, deriveRuntimeBackupKey } from "../../src/back
 export { createCheckpointFixture } from "./checkpoint-native"
 
 import { createCloudHistory } from "../../../core/src/event/cloud-history"
+
+export async function postcommitProjection(input: {
+  filename: string
+  checkpoint: CloudCheckpoint.Checkpoint
+  cloud: Parameters<typeof createCloudHistory>[0]
+  notify: () => void
+  resume?: boolean
+}) {
+  const recovery = createCloudRecovery(createCloudHistory(input.cloud), input.checkpoint, { resume: input.resume })
+  const layer = Layer.mergeAll(ProjectHistory.layer, SessionProjector.layer).pipe(
+    Layer.provideMerge(EventV2.layerWith(recovery.eventOptions)),
+    Layer.provideMerge(Database.layerFromPath(input.filename)),
+  )
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const events = yield* EventV2.Service
+      const { db } = yield* Database.Service
+      yield* events.recover
+      yield* events.listen(() => Effect.sync(input.notify))
+      const publish = Effect.gen(function* () {
+        const projectID = Project.ID.make("proj_postcommit")
+        yield* db.run("CREATE TABLE native_postcommit (value TEXT NOT NULL)").pipe(Effect.orDie)
+        yield* events.publish(
+          ProjectHistory.Changed,
+          {
+            projectID,
+            change: {
+              type: "saved",
+              info: {
+                id: projectID,
+                worktree: AbsolutePath.make("/workspace"),
+                name: "Postcommit integration",
+                time: { created: 1710000000000, updated: 1710000000000 },
+                sandboxes: [],
+              },
+            },
+          },
+          {
+            id: EventV2.ID.make("evt_postcommit"),
+            commit: () =>
+              db
+                .run("INSERT INTO native_postcommit VALUES ('private committed state')")
+                .pipe(Effect.asVoid, Effect.orDie),
+          },
+        )
+      })
+      const result = yield* (input.resume ? Effect.void : publish).pipe(Effect.exit)
+      return {
+        accepted: Exit.isSuccess(result),
+        admitted: Exit.isSuccess(yield* events.check.pipe(Effect.exit)),
+        rows: yield* db.all<{ value: string }>("SELECT value FROM native_postcommit").pipe(Effect.orDie),
+        events: yield* db.select().from(EventTable).all().pipe(Effect.orDie),
+        projects: yield* db.select().from(ProjectTable).all().pipe(Effect.orDie),
+      }
+    }).pipe(Effect.provide(layer), Effect.scoped),
+  )
+}
 
 export function restoreCheckpoint(input: Parameters<typeof CloudRestore.restore>[0]) {
   return Effect.runPromise(CloudRestore.restore(input))

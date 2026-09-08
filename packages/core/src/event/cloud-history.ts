@@ -215,7 +215,23 @@ export function createCloudHistory(
       return page
     })
 
-  return { initialize, append, read, checkpointID }
+  const afterCommit = (event: EventV2.SerializedEvent, nativeCommit: boolean): Effect.Effect<void> => {
+    const capture = nativeCommit || fileBoundaries.has(event.type)
+    return perform(async (signal) => {
+      ready()
+      if (!capture || !workspace) return
+      try {
+        // Pre-append capture protects the remote tool result. This second
+        // receipt includes the now-committed native state and private commit hook.
+        await workspace.publish(signal)
+      } catch (error) {
+        failure = sanitize(error)
+        throw failure
+      }
+    })
+  }
+
+  return { initialize, append, afterCommit, read, checkpointID }
 }
 
 function perform<A>(run: (signal: AbortSignal) => Promise<A>): Effect.Effect<A> {

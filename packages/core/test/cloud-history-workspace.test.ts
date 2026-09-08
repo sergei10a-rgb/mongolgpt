@@ -129,6 +129,62 @@ test("non-file history events keep their existing path without taking a file sna
   })
   await Effect.runPromise(input.cloud.initialize)
   await Effect.runPromise(input.cloud.append(event("session.next.text.ended.1")))
+  await Effect.runPromise(input.cloud.afterCommit(event("session.next.text.ended.1"), false))
   expect(input.appended).toHaveLength(1)
   expect(captures).toBe(0)
+})
+
+test("tool boundaries retain pre-append files and then capture committed native state", async () => {
+  const order: string[] = []
+  const input = fixture({
+    async register() {},
+    async publish() {
+      order.push(`snapshot-after-${input.appended.length}-remote-events`)
+    },
+  })
+  await Effect.runPromise(input.cloud.initialize)
+  const tool = event("session.next.tool.success.1")
+  await Effect.runPromise(input.cloud.append(tool))
+  expect(order).toEqual(["snapshot-after-0-remote-events"])
+  await Effect.runPromise(input.cloud.afterCommit(tool, false))
+  expect(order).toEqual(["snapshot-after-0-remote-events", "snapshot-after-1-remote-events"])
+})
+
+test("a private native commit hook requires a snapshot even for an otherwise journal-only event", async () => {
+  let captures = 0
+  const input = fixture({
+    async register() {},
+    async publish() {
+      captures++
+    },
+  })
+  await Effect.runPromise(input.cloud.initialize)
+  const native = event("session.next.text.ended.1")
+  await Effect.runPromise(input.cloud.append(native))
+  expect(captures).toBe(0)
+  await Effect.runPromise(input.cloud.afterCommit(native, true))
+  expect(captures).toBe(1)
+})
+
+test("failed postcommit publication fences the existing lease without repeating the acknowledged append", async () => {
+  let captures = 0
+  const input = fixture({
+    async register() {},
+    async publish() {
+      captures++
+      throw new Error("private native failure")
+    },
+  })
+  await Effect.runPromise(input.cloud.initialize)
+  const native = event("session.next.text.ended.1")
+  await Effect.runPromise(input.cloud.append(native))
+  const result = await Effect.runPromise(input.cloud.afterCommit(native, true)).catch(String)
+  expect(String(result)).toContain("Cloud")
+  expect(String(result)).not.toContain("private native failure")
+  expect((await Effect.runPromiseExit(input.cloud.append(native)))._tag).toBe("Failure")
+  expect((await Effect.runPromiseExit(input.cloud.afterCommit(native, true)))._tag).toBe("Failure")
+  expect((await Effect.runPromiseExit(input.cloud.initialize))._tag).toBe("Failure")
+  expect(input.appended).toHaveLength(1)
+  expect(input.claims()).toBe(1)
+  expect(captures).toBe(1)
 })
