@@ -93,8 +93,8 @@ export default {
 
 async function canaryState(request: Request, env: Environment, url: URL) {
   if (request.method !== "GET") return methodNotAllowed(["GET"])
-  if (url.search !== "" || request.headers.has("content-length") || request.body)
-    return json({ error: "invalid_request" }, 400)
+  if (url.search !== "") return json({ error: "invalid_request" }, 400)
+  if (!(await strictEmptyBody(request))) return json({ error: "invalid_request" }, 400)
   const sandbox = await canarySandbox(env)
   const history = env.HISTORY ? createHistoryStore(env.HISTORY) : undefined
   const [state, receipts, epoch] = await Promise.all([
@@ -108,7 +108,7 @@ async function canaryState(request: Request, env: Environment, url: URL) {
 async function canaryStop(request: Request, env: Environment, url: URL) {
   if (request.method !== "POST") return methodNotAllowed(["POST"])
   if (url.search !== "") return json({ error: "invalid_request" }, 400)
-  if (!strictEmptyBody(request)) return json({ error: "invalid_request" }, 400)
+  if (!(await strictEmptyBody(request))) return json({ error: "invalid_request" }, 400)
   await (await canarySandbox(env)).stop("SIGTERM")
   return json({ accepted: true }, 202)
 }
@@ -116,7 +116,7 @@ async function canaryStop(request: Request, env: Environment, url: URL) {
 async function canaryPurge(request: Request, env: Environment, url: URL) {
   if (request.method !== "POST") return methodNotAllowed(["POST"])
   if (url.search !== "") return json({ error: "invalid_request" }, 400)
-  if (!strictEmptyBody(request)) return json({ error: "invalid_request" }, 400)
+  if (!(await strictEmptyBody(request))) return json({ error: "invalid_request" }, 400)
   if (!env.RUNTIME_BACKUPS) return json({ error: "unavailable" }, 503)
 
   const sandbox = await canarySandbox(env)
@@ -225,13 +225,35 @@ function nativeRequest(request: IncomingRequest): IncomingRequest {
   return clean as IncomingRequest
 }
 
-function strictEmptyBody(request: Request) {
-  if (request.headers.get("content-length") !== null && request.headers.get("content-length") !== "0") return false
-  if (request.body) {
-    void request.body.cancel().catch(() => {})
+async function strictEmptyBody(request: Request) {
+  const length = request.headers.get("content-length")
+  if (length !== null && length !== "0") {
+    void request.body?.cancel().catch(() => {})
     return false
   }
-  return true
+  if (!request.body) return true
+  if (request.body.locked) return false
+
+  const reader = request.body.getReader()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<undefined>((resolve) => {
+    timer = setTimeout(() => resolve(undefined), 1_000)
+  })
+  try {
+    // Incoming Workers requests can expose an empty stream, including for GET.
+    for (let reads = 0; reads < 4; reads++) {
+      const chunk = await Promise.race([reader.read(), deadline])
+      if (!chunk || chunk.value?.byteLength) return false
+      if (chunk.done) return true
+    }
+    return false
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timer)
+    void reader.cancel().catch(() => {})
+    reader.releaseLock()
+  }
 }
 
 function methodNotAllowed(methods: string[]) {

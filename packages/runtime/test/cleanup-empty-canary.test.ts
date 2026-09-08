@@ -60,6 +60,11 @@ describe("empty canary recovery", () => {
       { result: { instances: [] } },
       { success: true, result: { instances: [{}] } },
       { success: true, result: { instances: [], durable_objects: [{}] } },
+      { success: true, result: { instances: [], durable_objects: [{ id: "a".repeat(64), deployment_id: "old-vm" }] } },
+      {
+        success: true,
+        result: { instances: [], durable_objects: [{ id: "a".repeat(64), placement_id: "old-location" }] },
+      },
       { success: true, result: { instances: [], durable_objects: {} } },
       { success: true, result: { instances: [] }, result_info: { next_page_token: "next" } },
     ]) {
@@ -68,6 +73,15 @@ describe("empty canary recovery", () => {
       expect(result.failures.length).toBeGreaterThan(0)
       expect(result.deleted).toEqual([])
       expect(api.calls.filter((call) => call.startsWith("DELETE"))).toEqual([])
+    }
+  })
+
+  test("allows a dormant DO created by state RPC only when no VM, deployment, or placement exists", async () => {
+    for (const dormant of [{ id: "a".repeat(64) }, { id: "a".repeat(64), deployment_id: null, placement_id: null }]) {
+      const api = mock({ listing: { success: true, result: { instances: [], durable_objects: [dormant] } } })
+      const result = await cleanupEmptyCanary({ ...input, request: api.request })
+      expect(result.failures).toEqual([])
+      expect(result.deleted).toHaveLength(4)
     }
   })
 

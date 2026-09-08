@@ -27,7 +27,8 @@ export async function cleanupEmptyCanary(input: {
       workerDeployed: true,
     },
     request,
-    // Recovery is allowed only before any VM or Durable Object instance exists.
+    // A state-only RPC can create a dormant DO without ever provisioning a VM.
+    // Allow that record only with no deployment/placement and no VM instances.
     // The resource helper then verifies exact Worker/D1/R2/namespace ownership;
     // R2 deletion remains non-forced and therefore requires an empty bucket.
     purge: async () => {
@@ -44,15 +45,30 @@ export async function cleanupEmptyCanary(input: {
         result?: { instances?: unknown[]; durable_objects?: unknown[] }
         result_info?: { next_page_token?: string }
       }>(response)
+      const dormant = page.result?.durable_objects
+      const onlyDormantObjects =
+        dormant === undefined ||
+        (Array.isArray(dormant) &&
+          dormant.every((value) => {
+            if (!value || typeof value !== "object") return false
+            const object = value as { id?: unknown; deployment_id?: unknown; placement_id?: unknown }
+            return (
+              typeof object.id === "string" &&
+              /^[0-9a-f]{64}$/.test(object.id) &&
+              (object.deployment_id === undefined || object.deployment_id === null) &&
+              (object.placement_id === undefined || object.placement_id === null)
+            )
+          }))
       if (
         page.success !== true ||
         !Array.isArray(page.result?.instances) ||
         page.result.instances.length !== 0 ||
-        (page.result.durable_objects !== undefined &&
-          (!Array.isArray(page.result.durable_objects) || page.result.durable_objects.length !== 0)) ||
+        !onlyDormantObjects ||
         page.result_info?.next_page_token
       )
-        throw new Error("Canary has instances or an unverified instance listing; refusing empty recovery")
+        throw new Error(
+          `Canary recovery refused: success=${page.success === true}, emptyVMs=${Array.isArray(page.result?.instances) && page.result.instances.length === 0}, dormantDOs=${onlyDormantObjects}, morePages=${Boolean(page.result_info?.next_page_token)}`,
+        )
     },
   })
 }

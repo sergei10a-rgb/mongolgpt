@@ -274,6 +274,181 @@ describe("cloudflare canary worker", () => {
     expect("destroy" in sandbox).toBe(false)
   })
 
+  test("admin routes accept CL0 and incoming streams that reach EOF without bytes", async () => {
+    sandbox.state = { status: "stopped" }
+    for (const route of adminRoutes) {
+      for (const length of [undefined, "0"]) {
+        for (const emptyChunks of [undefined, 0, 3]) {
+          let reads = 0
+          const body =
+            emptyChunks === undefined
+              ? null
+              : new ReadableStream<Uint8Array>(
+                  {
+                    pull(controller) {
+                      if (reads++ < emptyChunks) controller.enqueue(new Uint8Array(0))
+                      else controller.close()
+                    },
+                  },
+                  { highWaterMark: 0 },
+                )
+          const incoming = nativeIncoming(route, body, length === undefined ? {} : { "content-length": length })
+          const response = await canary.default.fetch(incoming, env())
+          expect(response.status).toBe(route.status)
+          expect(body?.locked ?? false).toBe(false)
+        }
+      }
+    }
+    expect(sandbox.stopCalls).toEqual(Array(6).fill("SIGTERM"))
+    expect(calls.productions).toEqual([])
+  })
+
+  test("admin routes reject nonzero or malformed declared lengths without reading or awaiting cancellation", async () => {
+    let reads = 0
+    let cancellations = 0
+    for (const route of adminRoutes) {
+      for (const length of ["1", "1000000", "-1", "invalid"]) {
+        const body = new ReadableStream<Uint8Array>(
+          {
+            pull() {
+              reads++
+            },
+            cancel() {
+              cancellations++
+              return new Promise(() => {})
+            },
+          },
+          { highWaterMark: 0 },
+        )
+        const response = await canary.default.fetch(nativeIncoming(route, body, { "content-length": length }), env())
+        expect(response.status).toBe(400)
+      }
+    }
+    expect(reads).toBe(0)
+    expect(cancellations).toBe(12)
+    expectNoCanaryEffects()
+  })
+
+  test("admin routes reject actual bytes in incoming GET, CL0, and chunked bodies", async () => {
+    let cancellations = 0
+    const headers: HeadersInit[] = [{}, { "content-length": "0" }, { "transfer-encoding": "chunked" }]
+    for (const route of adminRoutes) {
+      for (const header of headers) {
+        let reads = 0
+        const body = new ReadableStream<Uint8Array>(
+          {
+            pull(controller) {
+              controller.enqueue(reads++ === 0 ? new Uint8Array(0) : Uint8Array.of(120))
+            },
+            cancel() {
+              cancellations++
+            },
+          },
+          { highWaterMark: 0 },
+        )
+        const response = await canary.default.fetch(nativeIncoming(route, body, header), env())
+        expect(response.status).toBe(400)
+        expect(reads).toBe(2)
+        expect(body.locked).toBe(false)
+      }
+    }
+    expect(cancellations).toBe(9)
+    expectNoCanaryEffects()
+  })
+
+  test("admin routes cap zero-length chunks instead of reading indefinitely", async () => {
+    let cancellations = 0
+    for (const route of adminRoutes) {
+      let reads = 0
+      const body = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            reads++
+            controller.enqueue(new Uint8Array(0))
+          },
+          cancel() {
+            cancellations++
+          },
+        },
+        { highWaterMark: 0 },
+      )
+      expect((await canary.default.fetch(nativeIncoming(route, body), env())).status).toBe(400)
+      expect(reads).toBeGreaterThan(0)
+      expect(reads).toBeLessThanOrEqual(4)
+      expect(body.locked).toBe(false)
+    }
+    expect(cancellations).toBe(3)
+    expectNoCanaryEffects()
+  })
+
+  test("admin routes time out stalled bodies even when cancellation never settles", async () => {
+    let cancellations = 0
+    const started = Date.now()
+    await Promise.all(
+      adminRoutes.map(async (route) => {
+        const body = new ReadableStream<Uint8Array>(
+          {
+            pull() {
+              return new Promise(() => {})
+            },
+            cancel() {
+              cancellations++
+              return new Promise(() => {})
+            },
+          },
+          { highWaterMark: 0 },
+        )
+        const response = await canary.default.fetch(nativeIncoming(route, body, { "content-length": "0" }), env())
+        expect(response.status).toBe(400)
+        expect(body.locked).toBe(false)
+      }),
+    )
+    expect(Date.now() - started).toBeGreaterThanOrEqual(900)
+    expect(Date.now() - started).toBeLessThan(3_000)
+    expect(cancellations).toBe(3)
+    expectNoCanaryEffects()
+  }, 4_000)
+
+  test("admin routes fail closed when an incoming body read errors", async () => {
+    for (const route of adminRoutes) {
+      const body = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            controller.error(new Error("body read failed"))
+          },
+        },
+        { highWaterMark: 0 },
+      )
+      expect((await canary.default.fetch(nativeIncoming(route, body), env())).status).toBe(400)
+      expect(body.locked).toBe(false)
+    }
+    expectNoCanaryEffects()
+  })
+
+  test("the canary gate rejects incoming streams before any body reads or admin side effects", async () => {
+    let reads = 0
+    let cancellations = 0
+    for (const route of adminRoutes) {
+      const body = new ReadableStream<Uint8Array>(
+        {
+          pull() {
+            reads++
+          },
+          cancel() {
+            cancellations++
+          },
+        },
+        { highWaterMark: 0 },
+      )
+      const incoming = nativeIncoming(route, body, { "content-length": "0" })
+      incoming.headers.delete("x-mongolgpt-canary-token")
+      expect((await canary.default.fetch(incoming, env())).status).toBe(403)
+    }
+    expect(reads).toBe(0)
+    expect(cancellations).toBe(0)
+    expectNoCanaryEffects()
+  })
+
   test("unknown canary admin paths are not command endpoints", async () => {
     const response = await canary.default.fetch(request("/__canary/exec", { method: "POST", token: true }), env())
 
@@ -400,6 +575,34 @@ describe("cloudflare canary worker", () => {
     expect(bucket.deletes).toEqual([])
   })
 })
+
+const adminRoutes = [
+  { path: "/__canary/state", method: "GET", status: 200 },
+  { path: "/__canary/stop", method: "POST", status: 202 },
+  { path: "/__canary/purge", method: "POST", status: 200 },
+]
+
+function nativeIncoming(
+  route: { path: string; method: string },
+  body: ReadableStream<Uint8Array> | null,
+  headers: HeadersInit = {},
+) {
+  const incoming = request(route.path, { method: route.method, token: true })
+  new Headers(headers).forEach((value, key) => incoming.headers.set(key, value))
+  // Workers incoming GETs may have a stream; Bun's Request constructor forbids a GET body.
+  Object.defineProperty(incoming, "body", { value: body })
+  return incoming
+}
+
+function expectNoCanaryEffects() {
+  expect(calls.derived).toEqual([])
+  expect(calls.histories).toBe(0)
+  expect(calls.lists).toEqual([])
+  expect(calls.productions).toEqual([])
+  expect(calls.sandboxes).toEqual([])
+  expect(sandbox.stopCalls).toEqual([])
+  expect(bucket.deletes).toEqual([])
+}
 
 function request(path: string, options: { method?: string; body?: BodyInit; token?: boolean } = {}): CanaryRequest {
   const value = new Request(`https://runtime.example${path}`, {

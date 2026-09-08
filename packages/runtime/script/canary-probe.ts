@@ -33,14 +33,9 @@ export async function runCanaryProbe(input: {
   check(validControlToken(input.adminToken) && input.authSecret.length >= 32, "Canary credentials are missing")
   const request = input.request ?? fetch
   const deadline = input.signal ?? AbortSignal.timeout(600_000)
-  deadline.throwIfAborted()
+  check(!deadline.aborted, "Canary probe deadline exceeded")
   const pause = input.pause ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)))
-  const unauthenticated = await request(`${input.origin}/api/session`, {
-    redirect: "error",
-    signal: AbortSignal.any([deadline, AbortSignal.timeout(30_000)]),
-  })
-  check(unauthenticated.status === 403, "Canary control gate admitted an anonymous caller")
-  await unauthenticated.body?.cancel()
+  await anonymousGate()
   const unauthorized = await request(`${input.origin}/api/session`, {
     headers: { "x-mongolgpt-canary-token": input.adminToken, origin: appOrigin },
     redirect: "error",
@@ -114,6 +109,56 @@ grep -q mongolgpt-init /proc/1/cmdline`,
 
   async function state() {
     return json<State>("/__canary/state", false)
+  }
+
+  async function anonymousGate() {
+    const propagation = AbortSignal.any([deadline, AbortSignal.timeout(120_000)])
+    let lastFailure = "no response"
+    for (let attempt = 0; attempt < 24; attempt++) {
+      if (propagation.aborted)
+        throw new Error(`Canary control gate propagation exhausted its deadline; last result: ${lastFailure}`)
+      try {
+        const signal = AbortSignal.any([propagation, AbortSignal.timeout(30_000)])
+        const response = await request(`${input.origin}/api/session`, {
+          method: "GET",
+          redirect: "error",
+          signal,
+        }).catch(() => {
+          throw new CanaryRequestFailure(
+            "Canary control gate network failure; private diagnostics are suppressed",
+            true,
+          )
+        })
+        if (response.status !== 403) {
+          void response.body?.cancel().catch(() => {})
+          throw new CanaryRequestFailure(
+            `Canary control gate returned unexpected HTTP ${response.status}`,
+            [404, 502, 503, 504, 520, 522, 523, 524].includes(response.status),
+          )
+        }
+        try {
+          check(response.headers.get("content-type")?.includes("application/json"), "Expected JSON")
+          const body = await readCanaryJsonBody<unknown>(response, signal)
+          check(
+            body !== null &&
+              typeof body === "object" &&
+              !Array.isArray(body) &&
+              (body as { error?: unknown }).error === "forbidden",
+            "Expected canary forbidden receipt",
+          )
+        } catch {
+          void response.body?.cancel().catch(() => {})
+          throw new CanaryRequestFailure("Canary control gate returned invalid forbidden JSON (HTTP 403)", false)
+        }
+        return
+      } catch (error) {
+        if (!(error instanceof CanaryRequestFailure) || !error.retryable) throw error
+        lastFailure = error.message
+        if (attempt === 23 || propagation.aborted)
+          throw new Error(`Canary control gate propagation exhausted; last result: ${lastFailure}`)
+        await pause(5000)
+      }
+    }
   }
 
   async function ready() {
@@ -214,13 +259,23 @@ export async function readCanaryJson<T = unknown>(response: Response): Promise<T
     await response.body?.cancel()
     throw new Error(`Canary response is not successful JSON (HTTP ${response.status})`)
   }
+  return readCanaryJsonBody<T>(response)
+}
+
+async function readCanaryJsonBody<T>(response: Response, signal?: AbortSignal): Promise<T> {
   const reader = response.body?.getReader()
   check(reader, "Canary returned an empty response")
+  const cancel = () => {
+    void reader.cancel().catch(() => {})
+  }
+  signal?.addEventListener("abort", cancel, { once: true })
   const chunks: Uint8Array[] = []
   let size = 0
   try {
     for (;;) {
+      check(!signal?.aborted, "Canary response deadline exceeded")
       const item = await reader.read()
+      check(!signal?.aborted, "Canary response deadline exceeded")
       if (item.done) break
       size += item.value.length
       check(size <= 65_536, "Canary response exceeded its bounded size")
@@ -231,7 +286,9 @@ export async function readCanaryJson<T = unknown>(response: Response): Promise<T
   } catch {
     throw new Error("Canary response could not be decoded safely")
   } finally {
-    await reader.cancel().catch(() => {})
+    signal?.removeEventListener("abort", cancel)
+    cancel()
+    reader.releaseLock()
   }
 }
 
