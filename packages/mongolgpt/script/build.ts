@@ -203,6 +203,9 @@ for (const item of targets) {
     const binaryPath = `dist/${name}/bin/mongolgpt`
     console.log(`Running smoke test: ${binaryPath} --version`)
     try {
+      const embeddedBunVersion = await $`BUN_BE_BUN=1 ${binaryPath} -e "process.stdout.write(Bun.version)"`.text()
+      if (embeddedBunVersion.trim() !== Bun.version)
+        throw new Error(`Embedded Bun ${embeddedBunVersion.trim()} does not match build runtime ${Bun.version}`)
       const versionOutput = await $`${binaryPath} --version`.text()
       console.log(`Smoke test passed: ${versionOutput.trim()}`)
     } catch (e) {

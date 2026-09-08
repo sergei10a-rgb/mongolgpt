@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { existsSync, writeFileSync } from "node:fs"
 import { chmod, chown, mkdir, open, readFile, readdir, rmdir, unlink, writeFile } from "node:fs/promises"
 import type { ChildProcess } from "node:child_process"
+import { Duplex } from "node:stream"
 import { join } from "node:path"
 import { setTimeout } from "node:timers/promises"
 import { createHash, randomBytes, randomUUID } from "node:crypto"
@@ -341,9 +342,15 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
             expect(await readFile(join(destination, "project/counter.txt"), "utf8")).toBe(captured)
             expect(existsSync(join(destination, "history-acknowledged.txt"))).toBe(false)
           }
+        } catch (error) {
+          release.resolve()
+          await runtime.group.close()
+          throw new Error(`Native publication failed: ${JSON.stringify(await done)}`, { cause: error })
         } finally {
           release.resolve()
           await runtime.group.close()
+          expect((runtime.child.stdio.at(5) as Duplex).destroyed).toBe(true)
+          expect((runtime.child.stdio.at(6) as Duplex).destroyed).toBe(true)
           await runtime.control.catch(() => {})
           await done
           seed.key.fill(0)

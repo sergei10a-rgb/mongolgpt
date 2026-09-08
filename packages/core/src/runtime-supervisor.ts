@@ -69,7 +69,28 @@ export async function start(input: {
       const requests = child.stdio.at(6)
       if (!(responses instanceof Duplex) || !(requests instanceof Duplex)) throw new ProcessGroup.IsolationError()
       const channel = Duplex.from({ readable: requests, writable: responses })
-      const control = RuntimeControl.serve(channel, { publish: publishFiles, close: group.close })
+      // Bun's composed Duplex does not close both underlying pipe handles.
+      // Own them explicitly so child "close" cannot wait forever after exit.
+      const disconnect = () => {
+        requests.destroy()
+        responses.destroy()
+        channel.destroy()
+      }
+      child.once("exit", disconnect)
+      child.once("error", disconnect)
+      const control = RuntimeControl.serve(channel, {
+        publish: publishFiles,
+        async close() {
+          try {
+            await group.close()
+          } finally {
+            disconnect()
+          }
+        },
+      }).finally(() => {
+        child.removeListener("exit", disconnect)
+        child.removeListener("error", disconnect)
+      })
       // The CLI owns the terminal outcome; tests may exercise the group directly.
       void control.catch(() => {})
       return { child, group, checkpoint, publishFiles, control }

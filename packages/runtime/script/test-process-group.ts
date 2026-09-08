@@ -68,7 +68,7 @@ try {
     naming: "startup-child.js",
   })
   if (!startup.success) throw new Error("Workspace startup child build failed")
-  const child = Bun.spawn([runtime, "test", join(directory, "process-group.test.js")], {
+  const child = Bun.spawn([runtime, "test", join(directory, "process-group.test.js"), ...process.argv.slice(2)], {
     cwd: directory,
     stdout: "inherit",
     stderr: "inherit",

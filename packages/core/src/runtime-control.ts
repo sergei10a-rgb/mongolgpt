@@ -1,5 +1,8 @@
 export * as RuntimeControl from "./runtime-control"
 
+import { fstatSync } from "node:fs"
+import { connect } from "node:net"
+import type { NetConnectOpts } from "node:net"
 import { Duplex } from "node:stream"
 import { Schema } from "effect"
 
@@ -29,6 +32,25 @@ export class RuntimeControlError extends Error {
     super(message)
     this.name = "RuntimeControlError"
   }
+}
+
+export function inherit(input: { readFD: number; writeFD: number }): Client {
+  const { readFD, writeFD } = input
+  if (
+    readFD === writeFD ||
+    ![readFD, writeFD].every((fd) => Number.isSafeInteger(fd) && fd >= 3 && fstatSync(fd).isSocket())
+  )
+    throw new RuntimeControlError()
+  // Bun adopts inherited sockets through connect({ fd }), not Socket({ fd }).
+  // Its child_process implementation uses this same event-driven transport.
+  const readable = connect({ fd: readFD } as NetConnectOpts & { fd: number })
+  const writable = connect({ fd: writeFD } as NetConnectOpts & { fd: number })
+  const stream = Duplex.from({ readable, writable })
+  stream.once("close", () => {
+    writable.destroy()
+    readable.destroy()
+  })
+  return create(stream)
 }
 
 export function create(stream: Duplex, options: { timeoutMs?: number } = {}): Client {
@@ -187,8 +209,14 @@ export function serve(
       activeAbort?.abort()
       stream.pause()
       cleanup = input.close().then(
-        () => resolve(),
-        () => reject(new RuntimeControlError()),
+        () => {
+          destroyStream(stream)
+          resolve()
+        },
+        () => {
+          destroyStream(stream)
+          reject(new RuntimeControlError())
+        },
       )
       await cleanup
     }

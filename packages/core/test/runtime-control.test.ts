@@ -1,9 +1,78 @@
 import { expect, test } from "bun:test"
 import { createServer, connect } from "node:net"
+import { spawn } from "node:child_process"
+import { fileURLToPath } from "node:url"
 import { Duplex, PassThrough } from "node:stream"
 import { RuntimeControl } from "@mongolgpt/core/runtime-control"
 
 const lease = { epoch: 1, writerID: "writer.runtime-control" }
+
+test.skipIf(process.platform !== "linux")(
+  "inherited control survives suspension and collection of previous child handles",
+  async () => {
+    for (let attempt = 0; attempt < 3; attempt++) await inheritedControl()
+  },
+)
+
+async function inheritedControl() {
+  const child = spawn(
+    process.execPath,
+    [fileURLToPath(new URL("./fixture/runtime-control-child.ts", import.meta.url))],
+    {
+      env: { BUN_BE_BUN: "1", PATH: process.env.PATH },
+      stdio: ["ignore", "pipe", "pipe", "pipe", "pipe"],
+      timeout: 4000,
+      killSignal: "SIGKILL",
+    },
+  )
+  const responses = child.stdio[3] as Duplex
+  const requests = child.stdio[4] as Duplex
+  let stdout = ""
+  let stderr = ""
+  child.stdout?.on("data", (chunk) => {
+    stdout += chunk.toString()
+  })
+  child.stderr?.on("data", (chunk) => {
+    stderr += chunk.toString()
+  })
+  const done = new Promise<number | null>((resolve, reject) => {
+    child.once("error", reject)
+    child.once("close", resolve)
+  })
+  let count = 0
+  const stream = Duplex.from({ readable: requests, writable: responses })
+  const server = RuntimeControl.serve(stream, {
+    async publish(value) {
+      expect(value).toEqual(lease)
+      count++
+      // Old Bun subprocess finalizers could close a newer child's reused FD.
+      Bun.gc(true)
+      child.kill("SIGSTOP")
+      await Bun.sleep(30)
+      child.kill("SIGCONT")
+      await Bun.sleep(10)
+    },
+    async close() {
+      requests.destroy()
+      responses.destroy()
+    },
+  })
+  const result = server.catch((error) => error)
+  try {
+    expect(await done).toBe(0)
+    expect(stderr).toBe("")
+    expect(stdout).toContain("CONTROL_CLOSED")
+    expect(count).toBe(10)
+    expect(await result).toBeUndefined()
+  } finally {
+    child.kill("SIGKILL")
+    requests.destroy()
+    responses.destroy()
+    stream.destroy()
+    await done.catch(() => {})
+    await result
+  }
+}
 
 test("client and server register then publish only after receipt", async () => {
   await using pair = await socketPair()
@@ -354,10 +423,13 @@ test("stream end aborts server publish, awaits cleanup, and sends no late ack", 
   expect(await settlesWithin(server, 30)).toBe(false)
   release.resolve()
   await Bun.sleep(10)
+  const channelClosed = new Promise<void>((resolve) => pair.root.once("close", resolve))
   cleanup.resolve()
   await server
+  await channelClosed
   expect(aborted).toBe(true)
   expect(publishAcks).toBe(0)
+  expect(pair.root.destroyed).toBe(true)
 })
 
 async function socketPair() {

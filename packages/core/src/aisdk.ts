@@ -35,7 +35,8 @@ function wrapSSE(res: Response, ms: number, ctl: AbortController) {
         const id = setTimeout(() => {
           const err = new Error("SSE унших хугацаа хэтэрлээ.")
           ctl.abort(err)
-          void reader.cancel(err)
+          // Aborting may already error the reader; preserve the timeout below.
+          void reader.cancel(err).catch(() => {})
           reject(err)
         }, ms)
 
