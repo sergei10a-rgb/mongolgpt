@@ -410,6 +410,49 @@ test("native startup failures preserve only allowlisted diagnostic codes", async
   }
 })
 
+for (const phase of ["pause", "request"] as const) {
+  test(`native startup deadline during ${phase} retains the last safe response`, async () => {
+    const controller = new AbortController()
+    const runtime = fixture()
+    let attempts = 0
+    const error = await runCanaryProbe({
+      origin,
+      adminToken,
+      authSecret,
+      version,
+      signal: controller.signal,
+      pause: async () => {
+        if (phase === "pause") controller.abort(new Error(authSecret))
+      },
+      request: async (url, init) => {
+        if (!url.includes("/api/session?")) return runtime.request(url, init)
+        attempts++
+        if (attempts === 2) {
+          controller.abort(new Error(adminToken))
+          throw new Error(authSecret)
+        }
+        return Response.json(
+          {
+            code: "runtime_process_port_timeout",
+            diagnostic: { code: "PROCESS_EXITED_BEFORE_READY", exitCode: 7, message: adminToken },
+            message: authSecret,
+          },
+          { status: 502 },
+        )
+      },
+    }).catch((error: unknown) => error)
+    expect(error).toBeInstanceOf(Error)
+    expect(String(error)).toContain("Native startup deadline exceeded")
+    expect(String(error)).toContain("HTTP 502")
+    expect(String(error)).toContain("runtime_process_port_timeout")
+    expect(String(error)).toContain('"exitCode":7')
+    expect(String(error)).not.toContain(adminToken)
+    expect(String(error)).not.toContain(authSecret)
+    expect(attempts).toBe(phase === "pause" ? 1 : 2)
+    expect(runtime.calls.filter((call) => call.method === "POST")).toEqual([])
+  })
+}
+
 test("probe cannot target existing dev, production, arbitrary URLs or malformed credentials", async () => {
   for (const target of [
     "https://runtime.dev.mgpt.mn",

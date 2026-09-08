@@ -164,17 +164,32 @@ grep -q mongolgpt-init /proc/1/cmdline`,
 
   async function ready() {
     const startup = AbortSignal.any([deadline, AbortSignal.timeout(300_000)])
+    const diagnostic = { attempts: 0, lastFailure: "no response", lastResponse: "no HTTP response" }
     for (let attempt = 0; attempt < 60; attempt++) {
-      startup.throwIfAborted()
+      if (startup.aborted) throw exhausted("deadline exceeded")
+      diagnostic.attempts++
       try {
         return await json<{ data: unknown[] }>("/api/session?location[directory]=/workspace", true, undefined, startup)
       } catch (error) {
-        if (!(error instanceof CanaryRequestFailure) || !error.retryable || attempt === 59 || startup.aborted)
-          throw error
+        if (error instanceof CanaryRequestFailure) {
+          diagnostic.lastFailure = error.message
+          if (error.httpStatus !== undefined) diagnostic.lastResponse = error.message
+          if (!error.retryable) throw error
+        }
+        if (startup.aborted) throw exhausted("deadline exceeded")
+        if (!(error instanceof CanaryRequestFailure)) throw error
+        if (attempt === 59) throw exhausted("attempt limit exceeded")
         await pause(5000)
       }
     }
-    throw new Error("Initial Cloudflare provisioning exceeded its deadline")
+    throw exhausted("attempt limit exceeded")
+
+    function exhausted(reason: "deadline exceeded" | "attempt limit exceeded") {
+      // These fields contain only locally generated messages and allowlisted response details.
+      return new Error(
+        `Native startup ${reason} after ${diagnostic.attempts} attempts; last failure: ${diagnostic.lastFailure}; last HTTP response: ${diagnostic.lastResponse}`,
+      )
+    }
   }
 
   async function stop(before: State) {
@@ -254,6 +269,7 @@ grep -q mongolgpt-init /proc/1/cmdline`,
       throw new CanaryRequestFailure(
         `Canary endpoint failed: ${path.split("?")[0]} (HTTP ${response.status})${detail}`,
         [502, 503, 504, 520, 522, 523, 524].includes(response.status),
+        response.status,
       )
     }
     return readCanaryJson<T>(response)
@@ -325,6 +341,7 @@ class CanaryRequestFailure extends Error {
   constructor(
     message: string,
     readonly retryable: boolean,
+    readonly httpStatus?: number,
   ) {
     super(message)
   }
