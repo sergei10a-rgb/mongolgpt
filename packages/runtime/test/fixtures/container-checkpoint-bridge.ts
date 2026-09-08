@@ -1,15 +1,31 @@
 import { createServer, type IncomingHttpHeaders, type IncomingMessage, type ServerResponse } from "node:http"
 import { createHash, timingSafeEqual, randomBytes } from "node:crypto"
 import { constants } from "node:fs"
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import { isAbsolute, join, relative, resolve } from "node:path"
 import { Readable } from "node:stream"
 import { pipeline } from "node:stream/promises"
-import { fileURLToPath, pathToFileURL } from "node:url"
-import { getPlatformProxy, unstable_splitSqlQuery } from "wrangler"
-import type { D1Database, R2Bucket } from "@cloudflare/workers-types"
+import { fileURLToPath } from "node:url"
 
-type NativeFixture = typeof import("./history-native.ts")
+// esbuild captures this variable during import. The shared Windows checkout may
+// have a private Linux binary instead of the normal platform package link.
+if (process.platform === "linux" && !process.env.ESBUILD_BINARY_PATH) {
+  const binary = fileURLToPath(
+    new URL(
+      "../../../../node_modules/.bun/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+      import.meta.url,
+    ),
+  )
+  if (
+    await stat(binary).then(
+      (entry) => entry.isFile(),
+      () => false,
+    )
+  )
+    process.env.ESBUILD_BINARY_PATH = binary
+}
+const { unstable_startWorker, unstable_splitSqlQuery } = await import("wrangler")
 type HistoryScope = { accountID: string; workspaceID: string }
 type BridgeConfig = {
   root: string
@@ -36,11 +52,11 @@ const checkpointPaths = new Set([
 const historyPaths = new Set(["/v1/epoch", "/v1/claim", "/v1/append", "/v1/erase", "/v1/read"])
 const adminPaths = new Set(["/__test/health", "/__test/status"])
 const jsonHeaders = { "cache-control": "no-store", "content-type": "application/json; charset=utf-8" } as const
-const migrationLedgerTable = "container_checkpoint_bridge_migration"
 const counters = new Map<string, Map<number, number>>()
 const activeRequests = new Set<AbortController>()
 const injected = { droppedClaimResponses: 0, archiveResponsesWithoutLength: 0 }
 const historyRequests: HistoryRequestRecord[] = []
+let loggedResponses = 0
 
 type HistoryRequestRecord = {
   path: string
@@ -57,39 +73,84 @@ type HistoryRequestRecord = {
 }
 
 const configPath = process.argv[2]
+const startupOnly = configPath === "--startup-only"
 if (!configPath)
   throw new Error("usage: node --experimental-strip-types container-checkpoint-bridge.ts CONFIG_JSON_PATH")
 
-const config = decodeConfig(await readJsonFile(configPath))
+const config = startupOnly
+  ? decodeConfig({
+      root: await mkdtemp(join(tmpdir(), "container-bridge-startup-")),
+      nativeBundle: fileURLToPath(new URL("./history-native.ts", import.meta.url)),
+      port: 0,
+      scope: { accountID: "account_container_integration", workspaceID: "workspace_container_integration" },
+      secret: randomBytes(32).toString("hex"),
+      adminToken: randomBytes(32).toString("hex"),
+    })
+  : decodeConfig(await readJsonFile(configPath))
 await mkdir(config.root, { recursive: true, mode: 0o700 })
 const backupMaster = await loadSyntheticBackupMaster(config.root)
-const native: NativeFixture = await import(pathToFileURL(config.nativeBundle).href)
 // Wrangler places transient files beside its config even with explicit persist.
 // Keep those files inside the disposable bridge root, never in the source tree.
-const platformConfig = join(config.root, "history-d1.jsonc")
-await copyFile(fileURLToPath(new URL("./history-d1.jsonc", import.meta.url)), platformConfig)
-const platform = await getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>({
-  configPath: platformConfig,
-  persist: { path: join(config.root, "platform") },
-  remoteBindings: false,
-  envFiles: [],
-})
-await applyMigrations(platform.env.DB)
-
-const scope = Object.freeze({ ...config.scope })
-const store = native.createHistoryStore(
-  platform.env.DB as unknown as Parameters<NativeFixture["createHistoryStore"]>[0],
+const platformConfig = join(config.root, "wrangler.jsonc")
+const migrations = []
+for (const name of migrationNames) {
+  const sql = await readFile(fileURLToPath(new URL(`../../migrations/${name}`, import.meta.url)), "utf8")
+  migrations.push({ name, statements: unstable_splitSqlQuery(sql) })
+}
+await writeFile(
+  platformConfig,
+  JSON.stringify({
+    name: "mongolgpt-container-checkpoint-loopback",
+    main: fileURLToPath(new URL("./container-checkpoint-worker.ts", import.meta.url)),
+    compatibility_date: "2026-07-18",
+    compatibility_flags: ["nodejs_compat"],
+    vars: {
+      BRIDGE_SCOPE: config.scope,
+      BRIDGE_ADMIN_TOKEN: config.adminToken,
+      BRIDGE_MIGRATIONS: migrations,
+      MONGOLGPT_RUNTIME_SECRET: config.secret,
+      MONGOLGPT_RUNTIME_BACKUP_KEYS: JSON.stringify({ [backupMaster.keyID]: backupMaster.master }),
+    },
+    r2_buckets: [{ binding: "RUNTIME_BACKUPS", bucket_name: "mongolgpt-checkpoint-test", remote: false }],
+    d1_databases: [
+      {
+        binding: "HISTORY",
+        database_name: "mongolgpt-history-d1-test",
+        database_id: "00000000-0000-0000-0000-000000000001",
+        remote: false,
+      },
+    ],
+    dev: { ip: "127.0.0.1", port: 0, inspector_port: 0 },
+  }),
+  { mode: 0o600 },
 )
-const env = Object.freeze({
-  HISTORY: platform.env.DB as unknown as NonNullable<
-    Parameters<NativeFixture["handleCheckpointOutbound"]>[1]["HISTORY"]
-  >,
-  RUNTIME_BACKUPS: platform.env.BACKUPS as unknown as NonNullable<
-    Parameters<NativeFixture["handleCheckpointOutbound"]>[1]["RUNTIME_BACKUPS"]
-  >,
-  MONGOLGPT_RUNTIME_BACKUP_KEYS: JSON.stringify({ [backupMaster.keyID]: backupMaster.master }),
-  MONGOLGPT_RUNTIME_SECRET: config.secret,
-})
+const worker = await startWorker()
+if (startupOnly) {
+  try {
+    const unauthorized = await worker.fetch("http://127.0.0.1/__test/status", { signal: AbortSignal.timeout(10_000) })
+    void unauthorized.body?.cancel().catch(() => {})
+    if (unauthorized.status !== 403) throw new Error("startup probe admin gate failed")
+    const status = await workerAdmin("/__test/status")
+    const receipt = (await bounded(status.json(), 10_000)) as { epoch: number; checkpoint: unknown; revision: unknown }
+    if (receipt.epoch !== 0 || receipt.checkpoint !== null || receipt.revision !== null)
+      throw new Error("startup probe must use empty synthetic storage")
+    const denied = await forwardToWorker(
+      new Request(`http://${hostCheckpoint}/v1/bootstrap`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+        signal: AbortSignal.timeout(10_000),
+      }),
+      hostCheckpoint,
+    )
+    void denied.body?.cancel().catch(() => {})
+    if (denied.status !== 403) throw new Error("startup probe checkpoint gate failed")
+    console.log('BRIDGE_STARTUP_RESULT {"ok":true,"assertions":3}')
+  } finally {
+    await bounded(worker.dispose(), 10_000)
+  }
+  process.exit(0)
+}
 
 const server = createServer((request, response) => {
   void handleNodeRequest(request, response).catch(() => {
@@ -132,17 +193,17 @@ async function handleNodeRequest(request: IncomingMessage, response: ServerRespo
     if (!finished) controller.abort()
   })
   try {
-    let result = await dispatch(request, controller.signal)
+    const result = await dispatch(request, controller.signal)
     const omitArchiveLength =
       hostFromHeader(request.headers.host) === hostCheckpoint &&
       pathnameOf(request) === "/v1/archive" &&
       request.method === "POST" &&
       result.ok
     if (omitArchiveLength) {
-      // Workerd strips this header from streamed archive responses.
-      const headers = new Headers(result.headers)
-      headers.delete("content-length")
-      result = new Response(result.body, { status: result.status, statusText: result.statusText, headers })
+      if (result.headers.has("content-length")) {
+        void result.body?.cancel().catch(() => {})
+        throw new Error("workerd archive unexpectedly retained Content-Length")
+      }
     }
     incrementCounter(pathnameOf(request), result.status)
     await writeFetchResponse(response, result, controller)
@@ -174,7 +235,7 @@ async function dispatch(request: IncomingMessage, signal: AbortSignal): Promise<
   if (host === hostCheckpoint) {
     if (!checkpointPaths.has(incoming.pathname)) return json(404, { error: "not_found" })
     const forwarded = toFetchRequest(request, hostCheckpoint, signal)
-    return native.handleCheckpointOutbound(forwarded, env, { params: scope })
+    return forwardToWorker(forwarded, hostCheckpoint)
   }
 
   return json(404, { error: "not_found" })
@@ -184,7 +245,7 @@ async function handleHistoryRequest(request: IncomingMessage, path: string, sign
   const body = hasRequestBody(request) ? await readRequestBody(request, signal) : undefined
   const claim = path === "/v1/claim" ? claimRecord(body) : undefined
   const forwarded = toFetchRequest(request, hostHistory, signal, body)
-  const result = await native.handleHistoryOutbound(forwarded, { HISTORY: env.HISTORY }, { params: scope })
+  const result = await forwardToWorker(forwarded, hostHistory)
   const record: HistoryRequestRecord = { path, status: result.status, ...(claim ? { claim } : {}) }
   if (
     config.dropFirstClaimResponse &&
@@ -205,6 +266,8 @@ async function handleHistoryRequest(request: IncomingMessage, path: string, sign
 }
 
 async function statusBody() {
+  const response = await workerAdmin("/__test/status")
+  const status = (await bounded(response.json(), 10_000)) as { epoch: number; checkpoint: unknown; revision: unknown }
   const requestPathStatusCounters = Object.fromEntries(
     Array.from(counters.entries())
       .sort(([left], [right]) => left.localeCompare(right))
@@ -223,9 +286,9 @@ async function statusBody() {
   }
   return {
     ready: true,
-    epoch: await store.epoch(scope),
-    checkpoint: (await store.checkpoint(scope)) ?? null,
-    revision: (await store.fileRevision(scope)) ?? null,
+    epoch: status.epoch,
+    checkpoint: status.checkpoint,
+    revision: status.revision,
     injected: { ...injected },
     historyRequests: historyRequests.slice(),
     requestPathStatusCounters,
@@ -279,33 +342,146 @@ async function writeFetchResponse(response: ServerResponse, result: Response, co
   }
 }
 
-async function applyMigrations(db: D1Database) {
-  await db
-    .prepare(
-      `CREATE TABLE IF NOT EXISTS ${migrationLedgerTable} (
-        name TEXT PRIMARY KEY,
-        applied_at INTEGER NOT NULL
-      )`,
+async function startWorker() {
+  let instance: Awaited<ReturnType<typeof unstable_startWorker>> | undefined
+  let abandoned = false
+  let phase = "worker_start"
+  let setupStatus: number | null = null
+  let workerPhase: string | null = null
+  let workerErrorType: string | null = null
+  try {
+    const pending = unstable_startWorker({
+      config: platformConfig,
+      envFiles: [],
+      dev: {
+        remote: false,
+        watch: false,
+        persist: join(config.root, "platform"),
+        inspector: false,
+        logLevel: "none",
+        registry: undefined,
+        server: { hostname: "127.0.0.1", port: 0 },
+      },
+    })
+    void pending
+      .then((started) => {
+        if (abandoned) void started.dispose().catch(() => {})
+      })
+      .catch(() => {})
+    instance = await bounded(pending, 30_000)
+    phase = "worker_ready"
+    await bounded(instance.ready, 30_000)
+    phase = "worker_setup"
+    const setup = await bounded(
+      instance.fetch("http://127.0.0.1/__test/setup", {
+        method: "POST",
+        headers: { "x-test-admin-token": config.adminToken },
+        signal: AbortSignal.timeout(10_000),
+      }),
+      10_000,
     )
-    .run()
-  for (const name of migrationNames) {
-    if (await migrationApplied(db, name)) continue
-    const migration = await readFile(fileURLToPath(new URL(`../../migrations/${name}`, import.meta.url)), "utf8")
-    const statements = unstable_splitSqlQuery(migration).map((statement) => db.prepare(statement))
-    statements.push(
-      db.prepare(`INSERT INTO ${migrationLedgerTable} (name, applied_at) VALUES (?, ?)`).bind(name, Date.now()),
+    setupStatus = setup.status
+    const reportedPhase = setup.headers.get("x-test-worker-phase")
+    if (["migration_table", "migration_query", "migration_batch"].includes(reportedPhase ?? ""))
+      workerPhase = reportedPhase
+    const reportedType = setup.headers.get("x-test-worker-error-type")
+    if (["Error", "TypeError", "RangeError"].includes(reportedType ?? "")) workerErrorType = reportedType
+    void setup.body?.cancel().catch(() => {})
+    if (setup.status !== 200) throw new Error("worker setup failed")
+    console.log("BRIDGE_WORKER_READY workerd-container-proxy")
+    return instance
+  } catch (error) {
+    abandoned = true
+    console.error(
+      `BRIDGE_WORKER_STARTUP_FAILURE ${JSON.stringify({ phase, setupStatus, workerPhase, workerErrorType, ...safeWorkerError(error) })}`,
     )
-    const results = await db.batch(statements)
-    if (results.some((result) => !result.success)) throw new Error(`failed to apply bridge migration ${name}`)
+    await bounded(instance?.dispose() ?? Promise.resolve(), 10_000).catch(() => {})
+    throw new Error("bridge worker startup failed")
   }
 }
 
-async function migrationApplied(db: D1Database, name: string) {
-  const row = await db
-    .prepare(`SELECT name FROM ${migrationLedgerTable} WHERE name = ?`)
-    .bind(name)
-    .first<{ name: string }>()
-  return row?.name === name
+function safeWorkerError(error: unknown) {
+  const types = new Set([
+    "Error",
+    "TypeError",
+    "SyntaxError",
+    "RangeError",
+    "UserError",
+    "FatalError",
+    "MiniflareCoreError",
+  ])
+  const codes = new Set([
+    "ERR_MODULE_NOT_FOUND",
+    "ERR_RUNTIME_FAILURE",
+    "ERR_VALIDATION",
+    "ERR_WORKER_PATH",
+    "ENOENT",
+    "EACCES",
+    "EADDRINUSE",
+    "ECONNREFUSED",
+    "UND_ERR_CONNECT_TIMEOUT",
+    "UND_ERR_SOCKET",
+  ])
+  const record = error instanceof Error ? (error as Error & { code?: unknown; cause?: unknown }) : undefined
+  const cause = record?.cause instanceof Error ? (record.cause as Error & { code?: unknown }) : undefined
+  return {
+    errorType: record && types.has(record.name) ? record.name : null,
+    errorCode: typeof record?.code === "string" && codes.has(record.code) ? record.code : null,
+    causeType: cause && types.has(cause.name) ? cause.name : null,
+    causeCode: typeof cause?.code === "string" && codes.has(cause.code) ? cause.code : null,
+    timeout: record?.message === "bridge worker deadline",
+    esbuildPlatformMismatch: [record, cause].some((value) =>
+      value?.message.includes("You installed esbuild for another platform"),
+    ),
+  }
+}
+
+async function workerAdmin(path: "/__test/status") {
+  const response = await bounded(
+    worker.fetch(`http://127.0.0.1${path}`, {
+      headers: { "x-test-admin-token": config.adminToken },
+      signal: AbortSignal.timeout(10_000),
+    }),
+    10_000,
+  )
+  if (response.status !== 200) {
+    void response.body?.cancel().catch(() => {})
+    throw new Error("bridge worker status failed")
+  }
+  return response
+}
+
+async function forwardToWorker(request: Request, host: string) {
+  const url = new URL(request.url)
+  const headers = new Headers(request.headers)
+  headers.set("x-test-admin-token", config.adminToken)
+  headers.set("x-test-outbound-host", host)
+  headers.delete("host")
+  headers.delete("transfer-encoding")
+  const response = await worker.fetch(`http://127.0.0.1${url.pathname}${url.search}`, {
+    method: request.method,
+    headers: Array.from(headers),
+    body: request.body
+      ? Readable.fromWeb(request.body as unknown as Parameters<typeof Readable.fromWeb>[0])
+      : undefined,
+    duplex: "half",
+    redirect: "manual",
+    signal: request.signal,
+  })
+  if (loggedResponses++ < 128) {
+    console.log(`BRIDGE_WORKER_RESPONSE ${JSON.stringify({ path: url.pathname, status: response.status })}`)
+  }
+  if (response.headers.get("x-test-bridge-workerd") !== "container-proxy") {
+    void response.body?.cancel().catch(() => {})
+    throw new Error("bridge worker dispatch failed")
+  }
+  const receivedHeaders = new Headers(Array.from(response.headers))
+  receivedHeaders.delete("x-test-bridge-workerd")
+  // Wrangler types Node's Web Stream separately from the global DOM/Bun declarations.
+  return new Response(response.body as unknown as ReadableStream<Uint8Array> | null, {
+    status: response.status,
+    headers: receivedHeaders,
+  })
 }
 
 async function loadSyntheticBackupMaster(root: string) {
@@ -518,9 +694,27 @@ async function shutdown(code: number) {
   for (const request of activeRequests) request.abort()
   const closed = new Promise<void>((resolve) => server.close(() => resolve()))
   server.closeAllConnections?.()
-  await closed
-  await platform.dispose()
-  process.exit(code)
+  try {
+    await bounded(closed, 5000)
+    await bounded(worker.dispose(), 10_000)
+    process.exit(code)
+  } catch {
+    process.exit(1)
+  }
+}
+
+async function bounded<T>(work: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error("bridge worker deadline")), milliseconds)
+      }),
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 function isNodeError(error: unknown, code: string) {
