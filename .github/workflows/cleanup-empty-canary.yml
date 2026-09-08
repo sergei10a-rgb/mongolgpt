@@ -1,0 +1,50 @@
+name: Cleanup empty Cloudflare canary
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "CLEAN EMPTY CANARY"
+        required: true
+        type: string
+      run_id:
+        description: "Original isolated canary run ID"
+        required: true
+        type: string
+      attempt:
+        description: "Original isolated canary attempt"
+        required: true
+        type: string
+      database_id:
+        description: "D1 ID from the sanitized canary receipt"
+        required: true
+        type: string
+      application_id:
+        description: "Exact canary Container application ID"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: cloudflare-isolated-canary
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    environment: dev
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: ./.github/actions/setup-bun
+      - name: Verify recovery contracts
+        run: bun --cwd packages/runtime test test/cleanup-empty-canary.test.ts
+      - name: Recover only an empty verified canary
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CANARY_CLEANUP_CONFIRMATION: ${{ inputs.confirmation }}
+          CANARY_RUN_ID: ${{ inputs.run_id }}
+          CANARY_ATTEMPT: ${{ inputs.attempt }}
+          CANARY_DATABASE_ID: ${{ inputs.database_id }}
+          CANARY_APPLICATION_ID: ${{ inputs.application_id }}
+        run: bun packages/runtime/script/cleanup-empty-canary.ts

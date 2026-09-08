@@ -232,11 +232,45 @@ describe("canary resource provisioning", () => {
     const cleanup = await resources.cleanup({ workerDeployed: false })
 
     expect(cleanup.deleted).toEqual([])
-    expect(cleanup.failures).toEqual([
-      { resource: `r2:${name}`, message: "name-mismatch" },
-      { resource: `d1:${databaseID}`, message: "name-mismatch" },
-    ])
+    expect(cleanup.failures).toEqual([{ resource: `r2:${name}`, message: "name-mismatch" }])
+    expect(cleanup.skipped).toContain(`d1:${databaseID}:backend-cleanup-failed`)
+    expect(api.calls.filter((call) => call.path.endsWith(`/d1/database/${databaseID}`))).toEqual([])
     expect(cleanup.manualCleanup).toEqual([`r2:${name}`, `d1:${databaseID}`])
+  })
+
+  test("retains D1 after a nonempty bucket refuses deletion", async () => {
+    const api = cloudflareMock({ failR2Delete: true })
+    const resources = await createCanaryResources({
+      accountID,
+      token,
+      runID: "123456789012",
+      attempt: "123",
+      request: api.fetch,
+    })
+    const result = await resources.cleanup({
+      workerDeployed: true,
+      containerApplicationID: containerID,
+      purge: async () => {},
+    })
+    expect(result.deleted).toEqual([`worker:${name}`, `container:${containerID}`])
+    expect(result.failures[0]?.resource).toBe(`r2:${name}`)
+    expect(result.manualCleanup).toEqual([`r2:${name}`, `d1:${databaseID}`])
+    expect(api.calls.filter((call) => call.path.endsWith(`/d1/database/${databaseID}`))).toEqual([])
+  })
+
+  test("D1 name mismatch still blocks deletion after successful bucket cleanup", async () => {
+    const api = cloudflareMock({ cleanupDatabaseName: "mongolgpt-runtime-dev" })
+    const resources = await createCanaryResources({
+      accountID,
+      token,
+      runID: "123456789012",
+      attempt: "123",
+      request: api.fetch,
+    })
+    const result = await resources.cleanup({ workerDeployed: false })
+    expect(result.deleted).toEqual([`r2:${name}`])
+    expect(result.failures).toEqual([{ resource: `d1:${databaseID}`, message: "name-mismatch" }])
+    expect(api.calls.filter((call) => call.method === "DELETE" && call.path.includes("/d1/"))).toEqual([])
   })
 
   test("does not delete R2 or D1 when purge or frontend cleanup fails", async () => {
@@ -508,6 +542,7 @@ type MockOptions = {
   bucketExists?: boolean
   databaseExists?: boolean
   failR2Create?: boolean
+  failR2Delete?: boolean
   cleanupWorkerName?: string
   cleanupBucketName?: string
   cleanupDatabaseName?: string
@@ -610,6 +645,8 @@ function cloudflareMock(options: MockOptions = {}) {
     ) {
       return new Response(null, { status: 204 })
     }
+    if (method === "DELETE" && url.pathname.endsWith(`/r2/buckets/${name}`) && options.failR2Delete)
+      return Response.json({ success: false, errors: [{ code: 100, message: "Bucket is not empty" }] }, { status: 409 })
     if (method === "DELETE") return cloudflare({})
     throw new Error(`unexpected ${method} ${url.pathname}${url.search}`)
   }

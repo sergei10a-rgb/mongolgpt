@@ -377,7 +377,10 @@ async function cleanupCanaryResources(input: {
   else result.skipped.push(`r2:${input.name}:not-confirmed-created`)
 
   if (!input.workerDeployed || frontendClean) {
-    if (input.owned.databaseID) await cleanupD1Database(input, result, input.owned.databaseID)
+    if (input.owned.databaseID && result.failures.length > 0) {
+      result.skipped.push(`d1:${input.owned.databaseID}:backend-cleanup-failed`)
+      result.manualCleanup.push(`d1:${input.owned.databaseID}`)
+    } else if (input.owned.databaseID) await cleanupD1Database(input, result, input.owned.databaseID)
     else result.skipped.push(`d1:${input.name}:not-confirmed-created`)
   }
 
