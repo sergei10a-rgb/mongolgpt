@@ -19,8 +19,30 @@ type Msg = {
   done?: string
 }
 
+type WorkerResult = {
+  code: number
+  stdout: Buffer
+  stderr: Buffer
+}
+
 const root = path.join(import.meta.dir, "../..")
 const worker = path.join(import.meta.dir, "../fixture/flock-worker.ts")
+const diagnosticErrnos = [
+  "EACCES",
+  "EPERM",
+  "EEXIST",
+  "ENOENT",
+  "EBUSY",
+  "ETIMEDOUT",
+  "ENOSPC",
+  "EIO",
+  "EMFILE",
+  "ENFILE",
+  "ENOTDIR",
+  "ENOTEMPTY",
+]
+const diagnosticBytes = 4_096
+const diagnosticFailures = 4
 
 async function tmpdir() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "flock-test-"))
@@ -60,7 +82,7 @@ async function wait(file: string, timeout = 3_000) {
 }
 
 function run(msg: Msg) {
-  return new Promise<{ code: number; stdout: Buffer; stderr: Buffer }>((resolve) => {
+  return new Promise<WorkerResult>((resolve) => {
     const proc = spawn(process.execPath, [worker, JSON.stringify(msg)], {
       cwd: root,
     })
@@ -79,6 +101,41 @@ function run(msg: Msg) {
       })
     })
   })
+}
+
+function expectWorkersExitedCleanly(out: WorkerResult[], n: number) {
+  const failures = workerFailureDiagnostics(out)
+
+  if (failures.entries.length > 0) {
+    throw new Error(`flock worker failures: ${JSON.stringify(failures, null, 2)}`)
+  }
+
+  expect(out.map((x) => x.code)).toEqual(Array.from({ length: n }, () => 0))
+}
+
+function workerFailureDiagnostics(out: WorkerResult[]) {
+  const failures = out.map((x, index) => ({ index, result: x })).filter((x) => x.result.code !== 0)
+
+  return {
+    entries: failures.slice(0, diagnosticFailures).map((x) => ({
+      index: x.index,
+      code: x.result.code,
+      stdoutBytes: x.result.stdout.length,
+      stderrBytes: x.result.stderr.length,
+      flags: diagnosticFlags(x.result),
+    })),
+    omittedFailureCount: Math.max(0, failures.length - diagnosticFailures),
+  }
+}
+
+function diagnosticFlags(result: WorkerResult) {
+  const text =
+    result.stdout.subarray(0, diagnosticBytes).toString("utf8") +
+    "\n" +
+    result.stderr.subarray(0, diagnosticBytes).toString("utf8")
+  const errnoFlags = diagnosticErrnos.filter((x) => new RegExp(`\\b${x}\\b`).test(text))
+  const flockTimeout = text.includes("Түгжээг хүлээх хугацаа дууслаа") ? ["FLOCK_TIMEOUT"] : []
+  return [...errnoFlags, ...flockTimeout]
 }
 
 function spawnWorker(msg: Msg) {
@@ -136,7 +193,7 @@ describe("util.flock", () => {
       ),
     )
 
-    expect(out.map((x) => x.code)).toEqual(Array.from({ length: n }, () => 0))
+    expectWorkersExitedCleanly(out, n)
     expect(out.map((x) => x.stderr.toString()).filter(Boolean)).toEqual([])
 
     const lines = (await fs.readFile(done, "utf8"))
@@ -424,5 +481,46 @@ describe("util.flock", () => {
     } finally {
       await fs.chmod(dir, 0o700)
     }
+  })
+
+  test("worker failure diagnostics exclude unknown private stderr", () => {
+    const diagnostics = workerFailureDiagnostics([
+      {
+        code: 1,
+        stdout: Buffer.from("safe prefix"),
+        stderr: Buffer.from("secret-token C:\\private\\workspace --flag=value UNKNOWN_SENTINEL"),
+      },
+    ])
+    const text = JSON.stringify(diagnostics)
+
+    expect(diagnostics.entries).toEqual([
+      {
+        index: 0,
+        code: 1,
+        stdoutBytes: 11,
+        stderrBytes: 63,
+        flags: [],
+      },
+    ])
+    expect(text.includes("secret-token")).toBe(false)
+    expect(text.includes("C:\\private\\workspace")).toBe(false)
+    expect(text.includes("--flag=value")).toBe(false)
+    expect(text.includes("UNKNOWN_SENTINEL")).toBe(false)
+  })
+
+  test("worker failure diagnostics cap scanned bytes and failed entries", () => {
+    const diagnostics = workerFailureDiagnostics(
+      Array.from({ length: diagnosticFailures + 2 }, (_, index) => ({
+        code: 1,
+        stdout: Buffer.from(""),
+        stderr: Buffer.from(index === 0 ? `${"x".repeat(diagnosticBytes)} EPERM` : "ENOENT"),
+      })),
+    )
+
+    expect(diagnostics.entries.length).toBe(diagnosticFailures)
+    expect(diagnostics.omittedFailureCount).toBe(2)
+    expect(diagnostics.entries[0]?.flags).toEqual([])
+    expect(diagnostics.entries[1]?.flags).toEqual(["ENOENT"])
+    expect(JSON.stringify(diagnostics).includes("EPERM")).toBe(false)
   })
 })
