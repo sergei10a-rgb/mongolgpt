@@ -1,11 +1,22 @@
 import { Effect, Schema } from "effect"
 import { Event } from "@mongolgpt/schema/event"
+import { SessionEvent } from "@mongolgpt/schema/session-event"
 import type { EventV2 } from "../event"
+import type { RuntimeControl } from "../runtime-control"
 
 const base = "http://history.mongolgpt.internal/v1"
 const maxRequestBytes = 1024 * 1024 + 4096
 const maxResponseBytes = 11 * 1024 * 1024
 const encoder = new TextEncoder()
+const fileBoundaries = new Set(
+  [
+    SessionEvent.Tool.Progress,
+    SessionEvent.Tool.Success,
+    SessionEvent.Tool.Failed,
+    SessionEvent.Step.Ended,
+    SessionEvent.Step.Failed,
+  ].map((event) => `${event.type}.${event.durable!.version}`),
+)
 const messages = {
   not_initialized: "Cloud түүхийн холболт эхлээгүй байна.",
   invalid_input: "Cloud түүхийн өгөгдөл буруу байна.",
@@ -65,6 +76,7 @@ export function createCloudHistory(
     readonly request?: (request: Request) => Promise<Response>
     readonly checkpointID?: string
     readonly filesRevisionID?: string
+    readonly workspace?: Pick<RuntimeControl.Client, "register" | "publish">
   } = {},
 ) {
   const request = options.request ?? ((request: Request) => fetch(request))
@@ -73,6 +85,7 @@ export function createCloudHistory(
   const filesRevisionID =
     options.filesRevisionID === undefined ? undefined : decode(Identifier, options.filesRevisionID, "invalid_input")
   const writerID = crypto.randomUUID()
+  const workspace = options.workspace
   let lease: typeof Lease.Type | undefined
   let initialization: Promise<void> | undefined
   let failure: CloudHistoryError | undefined
@@ -153,6 +166,7 @@ export function createCloudHistory(
           signal,
         )
         if (claimed.epoch !== expected.epoch + 1 || claimed.writerID !== writerID) throw new CloudHistoryError("fenced")
+        await workspace?.register(claimed, signal)
         lease = claimed
       } catch (error) {
         failure = sanitize(error)
@@ -168,6 +182,7 @@ export function createCloudHistory(
       plainJson(event.data)
       const body = json({ ...current, event: decode(WireEvent, event, "invalid_input") })
       try {
+        if (fileBoundaries.has(event.type)) await workspace?.publish(signal)
         await rpc("append", body, Receipt, signal)
       } catch (error) {
         failure = sanitize(error)

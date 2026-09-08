@@ -36,7 +36,12 @@ export const historyLayer = HttpRouter.middleware<{ requires: EventV2.Service; h
                         restored
                           ? HttpServerResponse.setHeaders(response, {
                               "x-mongolgpt-runtime-history": "checkpoint-v1",
-                              ...(supervised ? { "x-mongolgpt-runtime-isolation": "cgroup-v1" } : {}),
+                              ...(supervised
+                                ? {
+                                    "x-mongolgpt-runtime-isolation": "cgroup-v1",
+                                    "x-mongolgpt-runtime-publication": "tool-v1",
+                                  }
+                                : {}),
                             })
                           : response,
                       ),

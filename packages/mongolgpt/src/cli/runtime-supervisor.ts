@@ -67,6 +67,7 @@ export async function runRuntimeSupervisor() {
   } finally {
     try {
       await runtime?.group.close()
+      await runtime?.control
     } finally {
       process.removeListener("SIGTERM", stop)
       process.removeListener("SIGINT", stop)

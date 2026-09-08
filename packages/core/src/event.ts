@@ -760,8 +760,13 @@ export const layer = Layer.unwrap(
     const restore = yield* Config.boolean("MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE").pipe(Config.withDefault(false))
     if (restore) {
       const { CloudStartup } = yield* Effect.promise(() => import("./database/cloud-startup"))
+      const { CloudWorkspace } = yield* Effect.promise(() => import("./database/cloud-workspace"))
       const baseline = CloudStartup.baseline()
-      const cloud = createCloudHistory({ checkpointID: baseline?.id, filesRevisionID: baseline?.filesRevisionID })
+      const cloud = createCloudHistory({
+        checkpointID: baseline?.id,
+        filesRevisionID: baseline?.filesRevisionID,
+        workspace: CloudStartup.supervised() ? CloudWorkspace.connect() : undefined,
+      })
       // File revision admission is separate from the immutable SQLite inventory.
       const checkpoint = baseline && {
         id: baseline.id,

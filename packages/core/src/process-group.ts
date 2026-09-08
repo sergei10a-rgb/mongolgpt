@@ -29,6 +29,7 @@ export interface Command {
   env: Readonly<Record<string, string>>
   stdio?: "pipe" | "ignore" | "inherit"
   startupFD?: number
+  controlChannel?: boolean
 }
 
 /** Linux hosted-supervisor boundary. The supervisor and SDK must stay outside
@@ -127,6 +128,7 @@ export async function create(input: Input) {
       const cwd = command.cwd
       const stdio = command.stdio ?? "pipe"
       const startupFD = command.startupFD
+      const controlChannel = command.controlChannel === true
       return serialized(async () => {
         available()
         if (!isAbsolute(executable) || !isAbsolute(cwd)) throw new IsolationError()
@@ -140,7 +142,14 @@ export async function create(input: Input) {
             cwd: "/",
             env,
             detached: true,
-            stdio: [stdio, stdio, stdio, file.fd, startupFD ?? "ignore"],
+            stdio: [
+              stdio,
+              stdio,
+              stdio,
+              file.fd,
+              startupFD ?? "ignore",
+              ...(controlChannel ? ["pipe" as const, "pipe" as const] : []),
+            ],
           }
           const child = spawn(launcher, [String(uid), String(gid), cwd, executable, ...args], options)
           const terminal = Promise.withResolvers<void>()

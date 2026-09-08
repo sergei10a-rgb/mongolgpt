@@ -489,7 +489,13 @@ describe("MongolGPT Cloudflare runtime", () => {
       runtime.requests.push(request)
       return Response.json(
         { healthy: true, version: "test" },
-        { headers: { "x-mongolgpt-runtime-history": "checkpoint-v1", "x-mongolgpt-runtime-isolation": "cgroup-v1" } },
+        {
+          headers: {
+            "x-mongolgpt-runtime-history": "checkpoint-v1",
+            "x-mongolgpt-runtime-isolation": "cgroup-v1",
+            "x-mongolgpt-runtime-publication": "tool-v1",
+          },
+        },
       )
     }
     const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
@@ -516,23 +522,32 @@ describe("MongolGPT Cloudflare runtime", () => {
     {},
     { "x-mongolgpt-runtime-history": "checkpoint-v1" },
     { "x-mongolgpt-runtime-isolation": "cgroup-v1" },
+    { "x-mongolgpt-runtime-history": "checkpoint-v1", "x-mongolgpt-runtime-isolation": "cgroup-v1" },
+    {
+      "x-mongolgpt-runtime-history": "checkpoint-v1",
+      "x-mongolgpt-runtime-isolation": "cgroup-v1",
+      "x-mongolgpt-runtime-publication": "old",
+    },
   ]
-  test.each(missingReceipts)("does not reuse a server missing a restore or isolation receipt (%j)", async (headers) => {
-    const runtime = sandbox({ existing: process().value })
-    runtime.value.containerFetch = async (request) => {
-      runtime.requests.push(request)
-      return Response.json({ healthy: true, version: "old-server" }, { headers })
-    }
-    const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
-    const response = await handler(
-      hostedRequest("/project", { headers: { authorization: `Bearer ${await capability()}` } }),
-      { ...environment(), MONGOLGPT_CLOUD_HISTORY: "true" },
-    )
-    expect(response.status).toBe(502)
-    expect(runtime.started).toHaveLength(0)
-    expect(runtime.requests).toHaveLength(1)
-    expect(new URL(runtime.requests[0].url).pathname).toBe("/global/health")
-  })
+  test.each(missingReceipts)(
+    "does not reuse a server missing a restore, isolation or publication receipt (%j)",
+    async (headers) => {
+      const runtime = sandbox({ existing: process().value })
+      runtime.value.containerFetch = async (request) => {
+        runtime.requests.push(request)
+        return Response.json({ healthy: true, version: "old-server" }, { headers })
+      }
+      const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+      const response = await handler(
+        hostedRequest("/project", { headers: { authorization: `Bearer ${await capability()}` } }),
+        { ...environment(), MONGOLGPT_CLOUD_HISTORY: "true" },
+      )
+      expect(response.status).toBe(502)
+      expect(runtime.started).toHaveLength(0)
+      expect(runtime.requests).toHaveLength(1)
+      expect(new URL(runtime.requests[0].url).pathname).toBe("/global/health")
+    },
+  )
 
   test("reuses a checkpoint-ready server only after authenticated schema validation", async () => {
     const runtime = sandbox({ existing: process().value })
@@ -540,7 +555,13 @@ describe("MongolGPT Cloudflare runtime", () => {
       runtime.requests.push(request)
       return Response.json(
         { healthy: true, version: "current" },
-        { headers: { "x-mongolgpt-runtime-history": "checkpoint-v1", "x-mongolgpt-runtime-isolation": "cgroup-v1" } },
+        {
+          headers: {
+            "x-mongolgpt-runtime-history": "checkpoint-v1",
+            "x-mongolgpt-runtime-isolation": "cgroup-v1",
+            "x-mongolgpt-runtime-publication": "tool-v1",
+          },
+        },
       )
     }
     const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })

@@ -2,11 +2,36 @@ import { expect, test } from "bun:test"
 import { readFile, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { CloudFiles } from "@mongolgpt/core/database/cloud-files"
+import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { tmpdir } from "./fixture/tmpdir"
-import { cloudFilesSeed } from "./fixture/cloud-files-seed"
 
 const lease = { epoch: 1, writerID: "writer_publication_test" }
 const checkpointID = "11111111-1111-4111-8111-111111111111"
+const baselineCheckpointID = "22222222-2222-4222-8222-222222222222"
+const validFilesKey = Buffer.alloc(32, 1).toString("base64")
+const archive = {
+  backupID: "33333333-3333-4333-8333-333333333333",
+  keyID: "synthetic",
+  bytes: 1,
+  sha256: "a".repeat(64),
+  plaintext: { bytes: 1, sha256: "b".repeat(64) },
+}
+const checkpoint: CloudCheckpoint.Checkpoint = {
+  id: baselineCheckpointID,
+  inventory: {
+    version: 1,
+    database: { bytes: 1, sha256: "c".repeat(64), schemaSha256: "d".repeat(64) },
+    projects: [],
+    sessions: [],
+    aggregates: [],
+    eventIDs: [],
+    tombstonesRecorded: true,
+    tombstones: [],
+    counts: { events: 0, tombstones: 0 },
+  },
+  sqlite: archive,
+  files: archive,
+}
 
 for (const [name, response] of [
   ["missing baseline", () => Response.json({ checkpoint: null })],
@@ -103,30 +128,25 @@ test("file publication cancels stalled JSON without awaiting a stuck stream canc
 
 test("file publication rejects a different baseline or malformed derived key before upload", async () => {
   await using temp = await tmpdir()
-  const seed = await cloudFilesSeed(temp.path)
   const before = (await readdir(temp.path)).sort()
-  try {
-    for (const [id, key] of [
-      [checkpointID, seed.key.toString("base64")],
-      [seed.checkpoint.id, "not-a-canonical-key"],
-    ]) {
-      let calls = 0
-      await expect(
-        CloudFiles.publish({
-          root: seed.source,
-          checkpointID: id,
-          lease,
-          signal: new AbortController().signal,
-          request: async () => {
-            calls++
-            return Response.json({ checkpoint: seed.checkpoint, keys: { sqlite: key, files: key } })
-          },
-        }),
-      ).rejects.toBeInstanceOf(CloudFiles.PublicationError)
-      expect(calls).toBe(1)
-    }
-    expect((await readdir(temp.path)).sort()).toEqual(before)
-  } finally {
-    seed.key.fill(0)
+  for (const [id, key] of [
+    [checkpointID, validFilesKey],
+    [baselineCheckpointID, "not-a-canonical-key"],
+  ]) {
+    let calls = 0
+    await expect(
+      CloudFiles.publish({
+        root: temp.path,
+        checkpointID: id,
+        lease,
+        signal: new AbortController().signal,
+        request: async () => {
+          calls++
+          return Response.json({ checkpoint, keys: { sqlite: key, files: key } })
+        },
+      }),
+    ).rejects.toBeInstanceOf(CloudFiles.PublicationError)
+    expect(calls).toBe(1)
   }
+  expect((await readdir(temp.path)).sort()).toEqual(before)
 })
