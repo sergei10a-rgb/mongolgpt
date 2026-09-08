@@ -247,14 +247,23 @@ describe("encrypted SQLite preservation", () => {
     await using temp = await tmpdir()
     const source = join(temp.path, "source.sqlite")
     const destination = join(temp.path, "archive")
-    await seed(source)
+    const native = await import("bun:sqlite")
+    const db = new native.Database(source)
+    db.run("CREATE TABLE interrupt_fixture (id INTEGER PRIMARY KEY, payload BLOB)")
+    db.run("INSERT INTO interrupt_fixture VALUES (1, zeroblob(4194304))")
+    db.close()
+    const before = await readFile(source)
     const controller = new AbortController()
     const running = Effect.runPromise(DatabaseBackup.create({ source, destination, key: randomBytes(32) }), {
       signal: controller.signal,
     })
     const failed = running.catch(() => "interrupted")
     const deadline = Date.now() + 5000
-    while (!(await readdir(temp.path)).some((name) => name.startsWith(".mongolgpt-backup-"))) {
+    while (
+      !(await readdir(temp.path, { withFileTypes: true })).some(
+        (entry) => entry.isDirectory() && entry.name.startsWith(".mongolgpt-backup-"),
+      )
+    ) {
       if (Date.now() > deadline) throw new Error("backup staging was not created")
       await Bun.sleep(5)
     }
@@ -262,7 +271,8 @@ describe("encrypted SQLite preservation", () => {
     expect(await failed).toBe("interrupted")
     expect((await readdir(temp.path)).some((name) => name.startsWith(".mongolgpt-backup-"))).toBe(false)
     expect(await readdir(temp.path)).not.toContain("archive")
-    expect((await rows(source)).session).toHaveLength(1)
+    expect(await readFile(source)).toEqual(before)
+    expect((await rows(source)).interrupt_fixture).toHaveLength(1)
   })
 
   test("rejects invalid keys and foreign-key violations without mutating source or exposing raw data", async () => {
