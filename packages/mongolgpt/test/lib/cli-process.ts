@@ -35,25 +35,89 @@ const secretEnvName =
 
 export const testModelID = "test/test-model"
 
+const acpDiagnosticMethods = new Set([
+  "initialize",
+  "authenticate",
+  "session/new",
+  "session/load",
+  "session/list",
+  "session/fork",
+  "session/resume",
+  "session/close",
+  "session/cancel",
+  "session/prompt",
+  "session/set_mode",
+  "session/set_model",
+  "session/set_config_option",
+])
+
+export function createCliProcessDiagnostics(
+  proc: Pick<Bun.Subprocess, "pid" | "exitCode" | "signalCode">,
+  command: "start" | "serve" | "acp",
+  report: (message: string) => void = (message) => console.error(message),
+) {
+  const startedAt = performance.now()
+  const bytes = { stdout: 0, stderr: 0 }
+  let lastRequest: { method: string; id: number | null } | undefined
+  let reported = false
+  const summary = () =>
+    JSON.stringify({
+      command,
+      pid: proc.pid,
+      exitCode: proc.exitCode,
+      signalCode: proc.signalCode,
+      elapsedMs: Math.max(0, Math.round(performance.now() - startedAt)),
+      stdoutBytes: bytes.stdout,
+      stderrBytes: bytes.stderr,
+      ...(lastRequest ? { lastRequest } : {}),
+    })
+
+  return {
+    summary,
+    count(stream: "stdout" | "stderr", chunk: Uint8Array) {
+      bytes[stream] = Math.min(Number.MAX_SAFE_INTEGER, bytes[stream] + chunk.byteLength)
+    },
+    request(message: object) {
+      if (!("id" in message)) return
+      const method = "method" in message ? message.method : undefined
+      lastRequest = {
+        method: typeof method === "string" && acpDiagnosticMethods.has(method) ? method : "unknown",
+        id: typeof message.id === "number" && Number.isSafeInteger(message.id) ? message.id : null,
+      }
+    },
+    receive<A, E, R>(effect: Effect.Effect<A, E, R>) {
+      // The caller owns the timeout; report interruption without adding a competing timer.
+      return effect.pipe(
+        Effect.onInterrupt(() =>
+          Effect.sync(() => {
+            if (reported) return
+            reported = true
+            report(`mongolgpt ACP receive interrupted: ${summary()}`)
+          }),
+        ),
+      )
+    },
+  }
+}
+
 // Wrap a Bun subprocess pipe (or any ReadableStream<Uint8Array>) as a Stream.
 // Centralizes the `evaluate` + `onError` boilerplate and tags errors with the
 // stream name so a stderr/stdout failure is greppable in logs.
 function fromBunStream(name: string, get: () => ReadableStream<Uint8Array>) {
   return Stream.fromReadableStream({
     evaluate: get,
-    onError: (cause) => new Error(`${name} stream error: ${String(cause)}`),
+    onError: () => new Error(`${name} stream error`),
   })
 }
 
-// Long-lived processes (serve, acp) all want the same stderr drain: read every
-// chunk, push to a tail buffer, swallow stream errors (the child closing the
-// pipe is normal). `log: true` surfaces a real protocol error to logs so a
-// regression doesn't silently disappear.
-function forkStderrDrain(stream: ReadableStream<Uint8Array>, into: string[]) {
+// Drain stderr without retaining or logging potentially sensitive child output.
+function forkStderrDrain(
+  stream: ReadableStream<Uint8Array>,
+  diagnostics: ReturnType<typeof createCliProcessDiagnostics>,
+) {
   return Effect.forkScoped(
     fromBunStream("stderr", () => stream).pipe(
-      Stream.decodeText(),
-      Stream.runForEach((chunk) => Effect.sync(() => into.push(chunk))),
+      Stream.runForEach((chunk) => Effect.sync(() => diagnostics.count("stderr", chunk))),
       Effect.ignore({ log: true }),
     ),
   )
@@ -182,8 +246,7 @@ export type MongolGPTCli = {
   // Escape hatch: any CLI invocation with full control over argv. Used to test
   // commands that don't yet have a typed builder.
   readonly spawn: (args: string[], opts?: SpawnOpts) => Effect.Effect<RunResult>
-  // Convenience assertion. Dumps captured stderr/stdout on mismatch so CI
-  // failures are debuggable without re-running locally.
+  // Convenience assertion with content-free failure diagnostics.
   readonly expectExit: (result: RunResult, expected: number, label?: string) => void
   // Parse `--format json` stdout into one event object per non-empty line.
   // The CLI writes `JSON.stringify({ type, sessionID, ... }) + EOL` for each
@@ -291,20 +354,26 @@ export function withCliFixture<A, E>(
           }).pipe(Effect.ignore),
       )
 
-      const collect = async (stream: ReadableStream<Uint8Array>, append: (chunk: string) => void) => {
+      const diagnostics = createCliProcessDiagnostics(proc, "start")
+      const collect = async (
+        name: "stdout" | "stderr",
+        stream: ReadableStream<Uint8Array>,
+        append: (chunk: string) => void,
+      ) => {
         const reader = stream.getReader()
         const decoder = new TextDecoder()
         while (true) {
           const next = await reader.read()
           if (next.done) break
+          diagnostics.count(name, next.value)
           append(decoder.decode(next.value, { stream: true }))
         }
         append(decoder.decode())
       }
-      const stdoutDone = collect(proc.stdout, (chunk) => {
+      const stdoutDone = collect("stdout", proc.stdout, (chunk) => {
         stdout += chunk
       })
-      const stderrDone = collect(proc.stderr, (chunk) => {
+      const stderrDone = collect("stderr", proc.stderr, (chunk) => {
         stderr += chunk
       })
       const completed = (async (): Promise<RunResult> => {
@@ -336,10 +405,7 @@ export function withCliFixture<A, E>(
               }
               await Bun.sleep(25)
             }
-            throw new Error(
-              `mongolgpt output did not match ${pattern} within ${timeoutMs}ms\n` +
-                `stdout:\n${stdout.slice(-2_000)}\nstderr:\n${stderr.slice(-2_000)}`,
-            )
+            throw new Error(`mongolgpt output was not observed within ${timeoutMs}ms\n${diagnostics.summary()}`)
           },
           catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
         })
@@ -442,16 +508,15 @@ export function withCliFixture<A, E>(
           }).pipe(Effect.ignore),
       )
 
-      // Tail buffer so timeout failures can include stderr context. The fork
-      // also keeps the OS pipe buffer from filling and wedging the child.
-      const stderrChunks: string[] = []
-      yield* forkStderrDrain(proc.stderr, stderrChunks)
+      const diagnostics = createCliProcessDiagnostics(proc, "serve")
+      yield* forkStderrDrain(proc.stderr, diagnostics)
 
       // Match the stable command name and URL; the surrounding status text is localized.
       const readyRe = /^mongolgpt .*?(http:\/\/([^\s:]+):(\d+))(?:\s|$)/
       const readyDeferred = yield* Deferred.make<{ url: string; hostname: string; port: number }>()
       yield* Effect.forkScoped(
         fromBunStream("stdout", () => proc.stdout).pipe(
+          Stream.tap((chunk) => Effect.sync(() => diagnostics.count("stdout", chunk))),
           Stream.decodeText(),
           Stream.splitLines,
           Stream.runForEach((line) => {
@@ -468,10 +533,7 @@ export function withCliFixture<A, E>(
           duration: Duration.millis(readyTimeoutMs),
           orElse: () =>
             Effect.fail(
-              new Error(
-                `mongolgpt serve did not become ready within ${readyTimeoutMs}ms\n` +
-                  `stderr (last 2000):\n${stderrChunks.join("").slice(-2000)}`,
-              ),
+              new Error(`mongolgpt serve did not become ready within ${readyTimeoutMs}ms\n${diagnostics.summary()}`),
             ),
         }),
       )
@@ -526,8 +588,8 @@ export function withCliFixture<A, E>(
           }).pipe(Effect.ignore),
       )
 
-      const stderrChunks: string[] = []
-      yield* forkStderrDrain(proc.stderr, stderrChunks)
+      const diagnostics = createCliProcessDiagnostics(proc, "acp")
+      yield* forkStderrDrain(proc.stderr, diagnostics)
 
       // Each ndjson line becomes one queue entry. JSON.parse failures are
       // surfaced as the raw string so a malformed protocol message doesn't
@@ -535,6 +597,7 @@ export function withCliFixture<A, E>(
       const responses = yield* Queue.unbounded<unknown>()
       yield* Effect.forkScoped(
         fromBunStream("stdout", () => proc.stdout).pipe(
+          Stream.tap((chunk) => Effect.sync(() => diagnostics.count("stdout", chunk))),
           Stream.decodeText(),
           Stream.splitLines,
           Stream.runForEach((line) => {
@@ -558,10 +621,11 @@ export function withCliFixture<A, E>(
         // and corrupt the ndjson framing.
         send: (msg: object) =>
           Effect.promise(async () => {
+            diagnostics.request(msg)
             const ret = proc.stdin.write(JSON.stringify(msg) + "\n")
             if (typeof ret !== "number") await ret
           }),
-        receive: Queue.take(responses),
+        receive: diagnostics.receive(Queue.take(responses)),
         // Await the pipe flush so EOF is observable before tests await exit.
         close: async () => {
           await proc.stdin.end()
@@ -594,18 +658,19 @@ function normalizeLines(value: string) {
   return value.replaceAll("\r\n", "\n")
 }
 
-// Convenience for the common assertion pattern. Dumps stderr/stdout when
-// the exit code doesn't match — saves debugging time on CI failures.
-function expectExit(result: RunResult, expected: number, label = "mongolgpt") {
+// Output and caller-provided labels can contain credentials or protocol bodies.
+// Keep the optional label argument compatible without echoing its contents.
+function expectExit(result: RunResult, expected: number, _label = "mongolgpt") {
   if (result.exitCode === expected) return
-  const tail = (s: string, n: number) => (s.length > n ? "..." + s.slice(-n) : s)
-  // eslint-disable-next-line no-console
-  console.error(`[${label}] expected exit ${expected}, got ${result.exitCode} after ${result.durationMs}ms`)
-  // eslint-disable-next-line no-console
-  console.error(`[${label}] stderr (last 2000):\n${tail(result.stderr, 2000)}`)
-  // eslint-disable-next-line no-console
-  console.error(`[${label}] stdout (last 500):\n${tail(result.stdout, 500)}`)
-  throw new Error(`${label}: expected exit ${expected}, got ${result.exitCode}`)
+  throw new Error(
+    `mongolgpt expected exit ${expected}: ${JSON.stringify({
+      exitCode: result.exitCode,
+      elapsedMs: result.durationMs,
+      timedOut: result.timedOut,
+      stdoutBytes: Buffer.byteLength(result.stdout),
+      stderrBytes: Buffer.byteLength(result.stderr),
+    })}`,
+  )
 }
 
 // `cliIt.live(name, fixture => effect)` is the same as
