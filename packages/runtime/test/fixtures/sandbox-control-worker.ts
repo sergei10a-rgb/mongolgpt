@@ -5,6 +5,11 @@ import { MongolGPTSandbox } from "../../src/index"
 export { ContainerProxy } from "../../src/index"
 
 const sandboxID = "control-probe-sandbox"
+const listenerID = "control-probe-port-listener"
+// The isolated runner copies its Bun executable here before starting the SDK.
+const listenerCommand =
+  `/tmp/tenant-bun -e 'setTimeout(() => process.exit(0), 10000); ` +
+  `setTimeout(() => Bun.serve({hostname:"0.0.0.0",port:4097,fetch:() => new Response("probe")}), 250)'`
 type Environment = ConstructorParameters<typeof MongolGPTSandbox>[1] & { EXPECTED_SDK_TOKEN: string }
 
 function receipts() {
@@ -130,19 +135,104 @@ export default {
 
     const sandbox = getSandbox(env.Sandbox, sandboxID, { normalizeId: true, transport: "rpc", sleepAfter: "10m" })
     let phase = "configure"
-    try {
-      await sandbox.setTransport("rpc")
-      phase = "first_lookup"
-      const firstMissing = (await boundedLookup(sandbox.getProcess("control-probe-missing-first"))) === null
-      phase = "second_lookup"
-      const secondMissing = (await boundedLookup(sandbox.getProcess("control-probe-missing-second"))) === null
-      return Response.json({ ok: true, firstMissing, secondMissing, receipts: await sandbox.probeReceipts() })
-    } catch (error) {
-      return Response.json(
-        { ok: false, phase, error: diagnostic(error, env), receipts: await sandbox.probeReceipts() },
-        { status: 502 },
-      )
+    let firstMissing = false
+    let secondMissing = false
+    let startAttempted = false
+    const sessionID = `control-probe-port-session-${crypto.randomUUID()}`
+    let sessionAttempted = false
+    let failure: { phase: string; error: string } | undefined
+    const cleanupErrors: string[] = []
+    const listener = {
+      sessionCreated: false,
+      started: false,
+      explicitSession: false,
+      portReady: false,
+      postWatchLookup: false,
+      killAttempted: false,
+      killCompleted: false,
+      stopped: false,
+      sessionDeleteAttempted: false,
+      sessionDeleted: false,
     }
+    const deadline = Date.now() + 30_000
+    const step = <T>(work: Promise<T>) => bounded(work, Math.max(1, Math.min(8000, deadline - Date.now())), phase)
+    try {
+      await step(sandbox.setTransport("rpc"))
+      phase = "first_lookup"
+      firstMissing = (await step(sandbox.getProcess("control-probe-missing-first"))) === null
+      phase = "second_lookup"
+      secondMissing = (await step(sandbox.getProcess("control-probe-missing-second"))) === null
+      phase = "listener_absent"
+      if ((await step(sandbox.getProcess(listenerID))) !== null) throw new Error("probe listener already exists")
+      phase = "session_create"
+      sessionAttempted = true
+      // Default-session creation requires /workspace, absent in this isolated
+      // runner. Exercise an actual persistent session without creating host paths.
+      const session = await step(sandbox.createSession({ id: sessionID, cwd: "/tmp/sdk-home" }))
+      listener.sessionCreated = session.id === sessionID
+      if (!listener.sessionCreated) throw new Error("probe session identity mismatch")
+      phase = "listener_start"
+      startAttempted = true
+      const process = await step(
+        session.startProcess(listenerCommand, {
+          processId: listenerID,
+          cwd: "/tmp/sdk-home",
+          env: { BUN_BE_BUN: "1" },
+          timeout: 10_000,
+          autoCleanup: false,
+        }),
+      )
+      listener.started = process.id === listenerID
+      listener.explicitSession = process.sessionId === sessionID
+      if (!listener.started || !listener.explicitSession) throw new Error("probe process or explicit session mismatch")
+      phase = "port_watch"
+      // SDK's own timer starts after watchPort returns its stream. Bound both.
+      await step(process.waitForPort(4097, { mode: "tcp", timeout: 5000, interval: 100 }))
+      listener.portReady = true
+      phase = "post_watch_lookup"
+      const found = await step(sandbox.getProcess(listenerID))
+      listener.postWatchLookup = found?.id === listenerID && found.status === "running"
+      if (!listener.postWatchLookup) throw new Error("probe listener not running after port watch")
+    } catch (error) {
+      failure = { phase, error: diagnostic(error, env) }
+    } finally {
+      if (startAttempted) {
+        listener.killAttempted = true
+        try {
+          await bounded(sandbox.killProcess(listenerID), 3000, "listener_kill")
+          listener.killCompleted = true
+          const stopped = await bounded(sandbox.getProcess(listenerID), 3000, "cleanup_lookup")
+          listener.stopped =
+            stopped?.id === listenerID && ["completed", "failed", "killed", "error"].includes(stopped.status)
+          if (!listener.stopped) throw new Error("probe listener termination not confirmed")
+        } catch (error) {
+          cleanupErrors.push(diagnostic(error, env))
+        }
+      }
+      if (sessionAttempted) {
+        listener.sessionDeleteAttempted = true
+        try {
+          const deleted = await bounded(sandbox.deleteSession(sessionID), 3000, "session_delete")
+          listener.sessionDeleted = deleted.success === true && deleted.sessionId === sessionID
+          if (!listener.sessionDeleted) throw new Error("probe session deletion not confirmed")
+        } catch (error) {
+          cleanupErrors.push(diagnostic(error, env))
+        }
+      }
+    }
+    const ok = !failure && cleanupErrors.length === 0
+    return Response.json(
+      {
+        ok,
+        ...failure,
+        ...(cleanupErrors.length > 0 && { cleanupErrors }),
+        firstMissing,
+        secondMissing,
+        listener,
+        receipts: await bounded(Promise.resolve(sandbox.probeReceipts()), 3000, "receipts"),
+      },
+      { status: ok ? 200 : 502 },
+    )
   },
 } satisfies ExportedHandler<Omit<Environment, "Sandbox"> & { Sandbox: DurableObjectNamespace<SandboxControlWorker> }>
 
@@ -154,13 +244,13 @@ function diagnostic(error: unknown, env: Pick<Environment, "MONGOLGPT_RUNTIME_SE
     .slice(0, 500)
 }
 
-async function boundedLookup<T>(work: Promise<T>) {
+async function bounded<T>(work: Promise<T>, milliseconds: number, phase: string) {
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
     return await Promise.race([
       work,
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("probe lookup deadline")), 8000)
+        timer = setTimeout(() => reject(new Error(`probe ${phase} deadline`)), milliseconds)
       }),
     ])
   } finally {

@@ -55,10 +55,11 @@ try {
     "worker startup deadline",
   )
   await bounded(server.ready, 30_000, "worker ready deadline")
-  console.log("SANDBOX_CONTROL_WORKER_PHASE lookup")
+  console.log("SANDBOX_CONTROL_WORKER_PHASE port_watch")
+  // The Worker reserves 30s for RPC proof steps, 9s for cleanup, and 3s for receipts.
   const response = await bounded(
-    server.fetch("http://localhost/probe", { method: "POST", signal: AbortSignal.timeout(20_000) }),
-    20_000,
+    server.fetch("http://localhost/probe", { method: "POST", signal: AbortSignal.timeout(45_000) }),
+    45_000,
     "worker RPC deadline",
   )
   assert.ok(
@@ -70,6 +71,18 @@ try {
     phase?: string
     firstMissing: boolean
     secondMissing: boolean
+    listener: {
+      sessionCreated: boolean
+      started: boolean
+      explicitSession: boolean
+      portReady: boolean
+      postWatchLookup: boolean
+      killAttempted: boolean
+      killCompleted: boolean
+      stopped: boolean
+      sessionDeleteAttempted: boolean
+      sessionDeleted: boolean
+    }
     receipts: {
       starts: number
       startTokenMatched: boolean
@@ -86,6 +99,17 @@ try {
   )
   ok(result.firstMissing === true, "first actual SDK lookup did not return null")
   ok(result.secondMissing === true, "subsequent actual SDK lookup did not return null")
+  ok(result.listener.sessionCreated === true, "actual SDK did not create the explicit persistent session")
+  ok(result.listener.started === true, "actual SDK did not start the synthetic listener")
+  // This local proof does not cover default-session creation at /workspace.
+  ok(result.listener.explicitSession === true, "listener did not use its explicit persistent SDK session")
+  ok(result.listener.portReady === true, "actual SDK RPC port-watch stream did not report ready")
+  ok(result.listener.postWatchLookup === true, "actual SDK lookup failed after consuming the port-watch stream")
+  ok(result.listener.killAttempted === true, "synthetic listener cleanup was not attempted")
+  ok(result.listener.killCompleted === true, "actual SDK did not acknowledge synthetic listener kill")
+  ok(result.listener.stopped === true, "actual SDK lookup did not confirm synthetic listener termination")
+  ok(result.listener.sessionDeleteAttempted === true, "explicit session cleanup was not attempted")
+  ok(result.listener.sessionDeleted === true, "actual SDK did not confirm explicit session deletion")
   ok(result.receipts.starts === 1, "cold boundary did not start exactly once")
   ok(result.receipts.startTokenMatched === true, "cold start token did not match")
   ok(result.receipts.onStarts >= 1, "actual subclass onStart did not complete")

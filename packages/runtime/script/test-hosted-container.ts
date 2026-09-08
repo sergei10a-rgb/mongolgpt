@@ -277,13 +277,22 @@ async function isolated(output: string) {
           () => false,
         )
       }, "SDK readiness")
+      // Match Sandbox.startProcess's persistent execution session, not the
+      // sessionless HTTP escape used by the older local harness.
+      const sdkSession = `native-supervisor-${label}`
+      const session = await json<{ success: boolean }>("http://127.0.0.1:3000/api/session/create", {
+        method: "POST",
+        headers: controlHeaders,
+        body: JSON.stringify({ id: sdkSession, env: { [sdkControlEnv]: sdkToken }, cwd: "/workspace" }),
+      })
+      assert.equal(session.success, true, "Native SDK execution session was not created")
       await json("http://127.0.0.1:3000/api/process/start", {
         method: "POST",
         headers: controlHeaders,
         body: JSON.stringify({
           command: `exec /usr/local/bin/mongolgpt serve --hostname 0.0.0.0 --port 4096 > ${nativeLog} 2>&1`,
           processId: "mongolgpt-server",
-          sessionId: "__DISABLE_SESSION__",
+          sessionId: sdkSession,
           cwd: "/workspace",
           env: {
             HOME: "/workspace",
