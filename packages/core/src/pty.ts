@@ -5,9 +5,12 @@ import type { Disp, Proc } from "#pty"
 import { Context, Effect, Layer, Schema, Types } from "effect"
 import { Pty } from "@mongolgpt/schema/pty"
 import { Config } from "./config"
+import { CloudStartup } from "./database/cloud-startup"
+import { CloudWorkspace } from "./database/cloud-workspace"
 import { EventV2 } from "./event"
 import { Location } from "./location"
 import { PtyID } from "./pty/schema"
+import { PtyPublication } from "./pty/publication"
 import { Shell } from "./shell"
 import { lazy } from "./util/lazy"
 
@@ -23,6 +26,7 @@ type Subscriber = {
   active: boolean
   detached: boolean
   pending: string[]
+  pendingSize: number
   end?: { exitCode?: number }
 }
 
@@ -34,6 +38,10 @@ type Active = {
   cursor: number
   subscribers: Map<object, Subscriber>
   listeners: Disp[]
+  closed: boolean
+  stopped: boolean
+  removing: boolean
+  publication?: ReturnType<typeof PtyPublication.create>
 }
 
 export const Info = Pty.Info
@@ -59,7 +67,7 @@ export const Event = Pty.Event
 export type AttachInput = {
   // Absolute output cursor to replay from. -1 tails from the current end; omitted replays the full retained buffer.
   readonly cursor?: number
-  // Callbacks fire synchronously from the native PTY data path; keep them non-blocking.
+  // Keep callbacks non-blocking. Hosted output waits for durable workspace publication.
   readonly onData: (chunk: string) => void
   // Fired once when the session stops producing output: process exit (exitCode set), removal, or service teardown.
   readonly onEnd: (event: { exitCode?: number }) => void
@@ -96,125 +104,181 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@mongolgpt/v2/Pty") {}
 
-export const layer = Layer.effect(
-  Service,
-  Effect.gen(function* () {
-    const events = yield* EventV2.Service
-    const location = yield* Location.Service
-    const config = yield* Config.Service
-    const context = yield* Effect.context()
-    const runFork = Effect.runForkWith(context)
-    const sessions = new Map<PtyID, Active>()
-    const exitOrder: PtyID[] = []
+export function layerWithPublication(publication?: {
+  publish: (signal: AbortSignal) => Promise<void>
+  fence: () => void
+}) {
+  return Layer.effect(
+    Service,
+    Effect.gen(function* () {
+      const events = yield* EventV2.Service
+      const location = yield* Location.Service
+      const config = yield* Config.Service
+      const context = yield* Effect.context()
+      const runFork = Effect.runForkWith(context)
+      const sessions = new Map<PtyID, Active>()
+      const exitOrder: PtyID[] = []
+      let failed = false
+      const durability =
+        publication ??
+        (process.env.MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE === "true" && CloudStartup.supervised()
+          ? { publish: CloudWorkspace.publish, fence: () => CloudWorkspace.connect().close() }
+          : undefined)
 
-    function notifyEnd(session: Active, event: { exitCode?: number }) {
-      for (const subscriber of session.subscribers.values()) {
-        if (!subscriber.active) {
-          subscriber.end = event
-          continue
+      function notifyEnd(session: Active, event: { exitCode?: number }) {
+        for (const subscriber of session.subscribers.values()) {
+          if (!subscriber.active) {
+            subscriber.end = event
+            continue
+          }
+          try {
+            subscriber.onEnd(event)
+          } catch {}
         }
+        session.subscribers.clear()
+      }
+
+      function halt(session: Active) {
+        for (const listener of session.listeners) listener.dispose()
+        session.listeners.length = 0
+        if (!session.stopped) {
+          session.stopped = true
+          try {
+            session.process.kill()
+          } catch {}
+        }
+      }
+
+      function stop(session: Active) {
+        session.closed = true
+        halt(session)
+        notifyEnd(session, {})
+      }
+
+      async function teardown(session: Active, drain = false) {
+        session.removing = true
+        if (drain && session.publication) halt(session)
+        else stop(session)
         try {
-          subscriber.onEnd(event)
-        } catch {}
+          if (drain) await session.publication?.end({})
+        } finally {
+          stop(session)
+          await session.publication?.close()
+        }
       }
-      session.subscribers.clear()
-    }
 
-    function teardown(session: Active) {
-      for (const listener of session.listeners) listener.dispose()
-      session.listeners.length = 0
-      if (session.info.status === "running") {
-        try {
-          session.process.kill()
-        } catch {}
-      }
-      notifyEnd(session, {})
-    }
-
-    yield* Effect.addFinalizer(() =>
-      Effect.sync(() => {
-        for (const session of sessions.values()) teardown(session)
-        sessions.clear()
-        exitOrder.length = 0
-      }),
-    )
-
-    const requireSession = Effect.fn("Pty.requireSession")(function* (id: PtyID) {
-      const session = sessions.get(id)
-      if (!session) return yield* new NotFoundError({ ptyID: id })
-      return session
-    })
-
-    const removeSession = Effect.fnUntraced(function* (id: PtyID) {
-      const session = sessions.get(id)
-      if (!session) return
-      sessions.delete(id)
-      const index = exitOrder.indexOf(id)
-      if (index !== -1) exitOrder.splice(index, 1)
-      yield* Effect.logInfo("Сессийг устгаж байна", { id })
-      teardown(session)
-      yield* events.publish(Event.Deleted, { id: session.info.id })
-    })
-
-    const remove = Effect.fn("Pty.remove")(function* (id: PtyID) {
-      yield* requireSession(id)
-      yield* removeSession(id)
-    })
-
-    const list = Effect.fn("Pty.list")(function* () {
-      return Array.from(sessions.values()).map((session) => session.info)
-    })
-
-    const get = Effect.fn("Pty.get")(function* (id: PtyID) {
-      return (yield* requireSession(id)).info
-    })
-
-    const create = Effect.fn("Pty.create")(function* (input: CreateInput) {
-      const id = PtyID.ascending()
-      const command = input.command || Shell.preferred(Config.latest(yield* config.entries(), "shell"))
-      const args = Shell.login(command) ? [...(input.args ?? []), "-l"] : [...(input.args ?? [])]
-      const cwd = input.cwd || location.directory
-      const env = {
-        ...process.env,
-        ...input.env,
-        TERM: "xterm-256color",
-        MONGOLGPT_TERMINAL: "1",
-      } as Record<string, string>
-      if (process.platform === "win32") {
-        env.LC_ALL = "C.UTF-8"
-        env.LC_CTYPE = "C.UTF-8"
-        env.LANG = "C.UTF-8"
-      }
-      yield* Effect.logInfo("Сесс үүсгэж байна", { id, cmd: command, args, cwd })
-      const { spawn } = yield* Effect.promise(() => pty())
-      const proc = yield* Effect.sync(() =>
-        spawn(command, args, { name: "xterm-256color", cwd, env, ...windowsPtyCompatibilityOptions() }),
+      yield* Effect.addFinalizer(() =>
+        Effect.promise(async () => {
+          failed = true
+          const closing = Array.from(sessions.values(), (session) => teardown(session))
+          sessions.clear()
+          exitOrder.length = 0
+          await Promise.all(closing)
+        }),
       )
-      const info: Info = {
-        id,
-        title: input.title || `Terminal ${id.slice(-4)}`,
-        command,
-        args,
-        cwd,
-        status: "running",
-        pid: proc.pid,
-      }
-      const session: Active = {
-        info,
-        process: proc,
-        buffer: "",
-        bufferCursor: 0,
-        cursor: 0,
-        subscribers: new Map(),
-        listeners: [],
-      }
-      sessions.set(id, session)
-      session.listeners.push(
-        proc.onData((chunk) => {
+
+      const requireSession = Effect.fn("Pty.requireSession")(function* (id: PtyID) {
+        const session = sessions.get(id)
+        if (!session || session.closed || session.removing) return yield* new NotFoundError({ ptyID: id })
+        return session
+      })
+
+      const removeSession = Effect.fnUntraced(function* (id: PtyID) {
+        const session = sessions.get(id)
+        const index = exitOrder.indexOf(id)
+        if (index !== -1) exitOrder.splice(index, 1)
+        if (!session) return
+        yield* Effect.logInfo("Сессийг устгаж байна", { id })
+        yield* Effect.promise(() => teardown(session, true))
+        sessions.delete(id)
+        yield* events.publish(Event.Deleted, { id: session.info.id })
+      })
+
+      const remove = Effect.fn("Pty.remove")(function* (id: PtyID) {
+        yield* requireSession(id)
+        yield* removeSession(id)
+      })
+
+      const list = Effect.fn("Pty.list")(function* () {
+        return Array.from(sessions.values())
+          .filter((session) => !session.closed)
+          .map((session) => session.info)
+      })
+
+      const get = Effect.fn("Pty.get")(function* (id: PtyID) {
+        return (yield* requireSession(id)).info
+      })
+
+      const create = Effect.fn("Pty.create")(function* (input: CreateInput) {
+        if (failed)
+          return yield* Effect.die(new Error("Cloud хадгалалтын холболт зогссон байна. Сессийг дахин ачаална уу."))
+        const id = PtyID.ascending()
+        const command = input.command || Shell.preferred(Config.latest(yield* config.entries(), "shell"))
+        const args = Shell.login(command) ? [...(input.args ?? []), "-l"] : [...(input.args ?? [])]
+        const cwd = input.cwd || location.directory
+        const env = {
+          ...process.env,
+          ...input.env,
+          TERM: "xterm-256color",
+          MONGOLGPT_TERMINAL: "1",
+        } as Record<string, string>
+        if (process.platform === "win32") {
+          env.LC_ALL = "C.UTF-8"
+          env.LC_CTYPE = "C.UTF-8"
+          env.LANG = "C.UTF-8"
+        }
+        yield* Effect.logInfo("Сесс үүсгэж байна", { id, cmd: command, args, cwd })
+        const { spawn } = yield* Effect.promise(() => pty())
+        if (failed)
+          return yield* Effect.die(new Error("Cloud хадгалалтын холболт зогссон байна. Сессийг дахин ачаална уу."))
+        const proc = yield* Effect.sync(() =>
+          spawn(command, args, { name: "xterm-256color", cwd, env, ...windowsPtyCompatibilityOptions() }),
+        )
+        const info: Info = {
+          id,
+          title: input.title || `Terminal ${id.slice(-4)}`,
+          command,
+          args,
+          cwd,
+          status: "running",
+          pid: proc.pid,
+        }
+        const session: Active = {
+          info,
+          process: proc,
+          buffer: "",
+          bufferCursor: 0,
+          cursor: 0,
+          subscribers: new Map(),
+          listeners: [],
+          closed: false,
+          stopped: false,
+          removing: false,
+        }
+        sessions.set(id, session)
+        const deliverData = (chunk: string) => {
+          if (session.closed) return
           session.cursor += chunk.length
-          for (const [token, subscriber] of session.subscribers.entries()) {
+          // Commit replay state before callbacks: an output handler can attach
+          // another subscriber synchronously, including through Effect Deferred.
+          session.buffer += chunk
+          if (session.buffer.length > BUFFER_LIMIT) {
+            const excess = session.buffer.length - BUFFER_LIMIT
+            session.buffer = session.buffer.slice(excess)
+            session.bufferCursor += excess
+          }
+          for (const [token, subscriber] of Array.from(session.subscribers.entries())) {
+            if (session.closed) return
+            if (session.subscribers.get(token) !== subscriber) continue
             if (!subscriber.active) {
               subscriber.pending.push(chunk)
+              subscriber.pendingSize += chunk.length
+              if (durability && (subscriber.pendingSize > BUFFER_LIMIT || subscriber.pending.length > 4096)) {
+                subscriber.pending.length = 0
+                subscriber.pendingSize = 0
+                subscriber.end = {}
+                session.subscribers.delete(token)
+              }
               continue
             }
             try {
@@ -223,22 +287,18 @@ export const layer = Layer.effect(
               session.subscribers.delete(token)
             }
           }
-          session.buffer += chunk
-          if (session.buffer.length <= BUFFER_LIMIT) return
-          const excess = session.buffer.length - BUFFER_LIMIT
-          session.buffer = session.buffer.slice(excess)
-          session.bufferCursor += excess
-        }),
-        proc.onExit(({ exitCode }) => {
-          if (session.info.status === "exited") return
+        }
+        const deliverEnd = ({ exitCode }: { exitCode?: number }) => {
+          if (session.closed || session.info.status === "exited") return
           session.info.status = "exited"
           session.info.exitCode = exitCode
           notifyEnd(session, { exitCode })
+          if (session.removing) return
           exitOrder.push(id)
           runFork(
             Effect.gen(function* () {
               yield* Effect.logInfo("Сесс дууслаа", { id, exitCode })
-              yield* events.publish(Event.Exited, { id, exitCode })
+              if (exitCode !== undefined) yield* events.publish(Event.Exited, { id, exitCode })
               while (exitOrder.length > EXITED_LIMIT) {
                 const oldest = exitOrder[0]
                 if (!oldest) break
@@ -246,81 +306,128 @@ export const layer = Layer.effect(
               }
             }),
           )
-        }),
-      )
-      yield* events.publish(Event.Created, { info })
-      return info
-    })
+        }
+        if (durability)
+          session.publication = PtyPublication.create({
+            publish: durability.publish,
+            onData: deliverData,
+            onEnd: deliverEnd,
+            onFailure: () => {
+              // An uncertain receipt must not leave another terminal or tool writing.
+              if (failed) return
+              failed = true
+              try {
+                durability.fence()
+              } finally {
+                for (const active of sessions.values()) {
+                  stop(active)
+                  active.info.status = "exited"
+                  delete active.info.exitCode
+                  void active.publication?.close().catch(() => {})
+                }
+              }
+              runFork(Effect.logError("Терминалын өөрчлөлтийг хадгалж чадсангүй. Cloud холболтыг зогсоолоо.", { id }))
+            },
+          })
+        session.listeners.push(
+          proc.onData((chunk) => {
+            if (session.closed) return
+            if (session.publication) return session.publication.data(chunk)
+            deliverData(chunk)
+          }),
+          proc.onExit(({ exitCode }) => {
+            session.stopped = true
+            if (session.closed) return
+            if (session.publication) {
+              void session.publication.end({ exitCode }).catch(() => {})
+              return
+            }
+            deliverEnd({ exitCode })
+          }),
+        )
+        yield* events.publish(Event.Created, { info })
+        return info
+      })
 
-    const update = Effect.fn("Pty.update")(function* (id: PtyID, input: UpdateInput) {
-      const session = yield* requireSession(id)
-      if (input.title) session.info.title = input.title
-      if (input.size && session.info.status === "running") session.process.resize(input.size.cols, input.size.rows)
-      yield* events.publish(Event.Updated, { info: session.info })
-      return session.info
-    })
+      const update = Effect.fn("Pty.update")(function* (id: PtyID, input: UpdateInput) {
+        const session = yield* requireSession(id)
+        if (input.title) session.info.title = input.title
+        if (input.size && !session.stopped && !session.closed) session.process.resize(input.size.cols, input.size.rows)
+        yield* events.publish(Event.Updated, { info: session.info })
+        return session.info
+      })
 
-    const write = Effect.fn("Pty.write")(function* (id: PtyID, data: string) {
-      const session = yield* requireSession(id)
-      if (session.info.status === "running") session.process.write(data)
-    })
+      const write = Effect.fn("Pty.write")(function* (id: PtyID, data: string) {
+        const session = yield* requireSession(id)
+        if (!session.stopped && !session.closed) session.process.write(data)
+      })
 
-    const attach = Effect.fn("Pty.attach")(function* (id: PtyID, input: AttachInput) {
-      const session = yield* requireSession(id)
-      if (session.info.status !== "running") return yield* new ExitedError({ ptyID: id })
-      yield* Effect.logInfo("Клиент сесст холбогдлоо", { id, directory: location.directory })
-      const token = {}
-      const subscriber: Subscriber = {
-        onData: input.onData,
-        onEnd: input.onEnd,
-        active: false,
-        detached: false,
-        pending: [],
-      }
-      session.subscribers.set(token, subscriber)
-      const start = session.bufferCursor
-      const end = session.cursor
-      const from =
-        input.cursor === -1
-          ? end
-          : typeof input.cursor === "number" && Number.isSafeInteger(input.cursor)
-            ? Math.max(0, input.cursor)
-            : 0
-      const replay = (() => {
-        if (!session.buffer || from >= end) return ""
-        const offset = Math.max(0, from - start)
-        if (offset >= session.buffer.length) return ""
-        return session.buffer.slice(offset)
-      })()
-      return {
-        replay,
-        cursor: end,
-        write: (data: string) => {
-          if (session.info.status === "running") session.process.write(data)
-        },
-        activate: () => {
-          if (subscriber.active || subscriber.detached) return
-          subscriber.active = true
-          try {
-            for (const chunk of subscriber.pending) subscriber.onData(chunk)
+      const attach = Effect.fn("Pty.attach")(function* (id: PtyID, input: AttachInput) {
+        const session = yield* requireSession(id)
+        if (session.info.status !== "running") return yield* new ExitedError({ ptyID: id })
+        yield* Effect.logInfo("Клиент сесст холбогдлоо", { id, directory: location.directory })
+        const token = {}
+        const subscriber: Subscriber = {
+          onData: input.onData,
+          onEnd: input.onEnd,
+          active: false,
+          detached: false,
+          pending: [],
+          pendingSize: 0,
+        }
+        session.subscribers.set(token, subscriber)
+        const start = session.bufferCursor
+        const end = session.cursor
+        const from =
+          input.cursor === -1
+            ? end
+            : typeof input.cursor === "number" && Number.isSafeInteger(input.cursor)
+              ? Math.max(0, input.cursor)
+              : 0
+        const replay = (() => {
+          if (!session.buffer || from >= end) return ""
+          const offset = Math.max(0, from - start)
+          if (offset >= session.buffer.length) return ""
+          return session.buffer.slice(offset)
+        })()
+        return {
+          replay,
+          cursor: end,
+          write: (data: string) => {
+            if (!session.stopped && !session.closed) session.process.write(data)
+          },
+          activate: () => {
+            if (subscriber.active || subscriber.detached) return
+            subscriber.active = true
+            try {
+              const pending = subscriber.pending
+              subscriber.pending = []
+              subscriber.pendingSize = 0
+              for (const chunk of pending) {
+                if (subscriber.detached) return
+                subscriber.onData(chunk)
+              }
+              if (!subscriber.detached && subscriber.end) subscriber.onEnd(subscriber.end)
+            } catch {
+              session.subscribers.delete(token)
+            }
+          },
+          detach: () => {
+            subscriber.detached = true
             subscriber.pending.length = 0
-            if (subscriber.end) subscriber.onEnd(subscriber.end)
-          } catch {
+            subscriber.pendingSize = 0
+            subscriber.end = undefined
             session.subscribers.delete(token)
-          }
-        },
-        detach: () => {
-          subscriber.detached = true
-          subscriber.pending.length = 0
-          subscriber.end = undefined
-          session.subscribers.delete(token)
-        },
-      }
-    })
+          },
+        }
+      })
 
-    return Service.of({ list, get, create, update, remove, write, attach })
-  }),
-)
+      return Service.of({ list, get, create, update, remove, write, attach })
+    }),
+  )
+}
+
+export const layer = layerWithPublication()
 
 export const locationLayer = layer.pipe(Layer.provide(Config.locationLayer))
 

@@ -675,7 +675,7 @@ async function serverResponding(sandbox: RuntimeSandbox, password: string, resto
       response.status !== 200 ||
       (restored && response.headers.get("x-mongolgpt-runtime-history") !== "checkpoint-v1") ||
       (restored && response.headers.get("x-mongolgpt-runtime-isolation") !== "cgroup-v1") ||
-      (restored && response.headers.get("x-mongolgpt-runtime-publication") !== "tool-v1") ||
+      (restored && response.headers.get("x-mongolgpt-runtime-publication") !== "tool-pty-v1") ||
       response.headers.get("content-type")?.split(";")[0].trim() !== "application/json"
     ) {
       void response.body?.cancel().catch(() => {})

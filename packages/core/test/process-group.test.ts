@@ -52,6 +52,7 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
         BUN_BE_BUN: "1",
         PATH: "/usr/bin:/bin",
         HOME: root,
+        ...(process.env.MONGOLGPT_TEST_PTY_LIB ? { BUN_PTY_LIB: process.env.MONGOLGPT_TEST_PTY_LIB } : {}),
         MONGOLGPT_RUNTIME_MODE: "hosted",
         MONGOLGPT_CLOUD_HISTORY: "true",
         MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE: "true",
@@ -248,105 +249,107 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
     expect(await readdir(root)).toEqual([])
   })
 
-  for (const failure of [false, true]) {
-    test(`native child tool acknowledgement waits for inherited supervisor channel, failure=${failure}`, async () => {
-      await using temp = await tmpdir()
-      await chmod(temp.path, 0o755)
-      const seed = await cloudFilesSeed(temp.path)
-      const root = join(temp.path, "controlled-workspace")
-      await mkdir(root)
-      const entered = Promise.withResolvers<void>()
-      const release = Promise.withResolvers<void>()
-      let captured = ""
-      let archive: Buffer | undefined
-      const runtime = await RuntimeSupervisor.start({
-        ...startupCommand(root),
-        args: [startup!, root, "publication"],
-        root,
-        launcher: launcher!,
-        request: async (request) => {
-          const route = new URL(request.url).pathname
-          if (route === "/v1/bootstrap")
-            return Response.json({
-              checkpoint: seed.checkpoint,
-              keys: { sqlite: seed.key.toString("base64"), files: seed.key.toString("base64") },
-            })
-          if (route === "/v1/archive") {
-            const { kind } = (await request.json()) as { kind: "sqlite" | "files" }
-            const bytes = seed.bodies.get(seed.checkpoint[kind].backupID)!
-            return new Response(new Uint8Array(bytes), {
-              headers: { "content-type": "application/octet-stream", "content-length": String(bytes.length) },
-            })
-          }
-          expect(await readFile(join(runtime.group.directory, "cgroup.freeze"), "utf8")).toBe("1\n")
-          if (route === "/v1/upload") {
-            archive = Buffer.from(await request.arrayBuffer())
-            captured = await readFile(join(root, "project/counter.txt"), "utf8")
-            return Response.json({
-              backupID: randomUUID(),
-              keyID: "synthetic",
-              bytes: archive.length,
-              sha256: createHash("sha256").update(archive).digest("hex"),
-            })
-          }
-          expect(route).toBe("/v1/publish-files")
-          const input = (await request.json()) as {
-            epoch: number
-            writerID: string
-            revision: CloudCheckpoint.FileRevision
-          }
-          expect(input.epoch).toBe(8)
-          expect(input.writerID).toMatch(/^[0-9a-f-]{36}$/)
-          expect({ epoch: input.epoch, writerID: input.writerID }).toEqual(
-            JSON.parse(await readFile(join(root, "claimed-lease.json"), "utf8")),
-          )
-          entered.resolve()
-          await release.promise
-          if (failure) throw new Error("lost receipt")
-          return Response.json({ data: input.revision, digest: "b".repeat(64) })
-        },
-      })
-      const done = output(runtime.child)
-      try {
-        await Promise.race([
-          entered.promise,
-          done.then((result) => {
-            throw new Error(`Child ended before publication: ${JSON.stringify(result)}`)
-          }),
-        ])
-        expect(existsSync(join(root, "history-acknowledged.txt"))).toBe(false)
-        await setTimeout(100)
-        expect(await readFile(join(root, "project/counter.txt"), "utf8")).toBe(captured)
-        release.resolve()
-        if (failure) {
-          await done
-          await runtime.control.catch(() => {})
+  for (const mode of ["publication", "terminal"] as const) {
+    for (const failure of [false, true]) {
+      test(`native child ${mode} acknowledgement waits for inherited supervisor channel, failure=${failure}`, async () => {
+        await using temp = await tmpdir()
+        await chmod(temp.path, 0o755)
+        const seed = await cloudFilesSeed(temp.path)
+        const root = join(temp.path, "controlled-workspace")
+        await mkdir(root)
+        const entered = Promise.withResolvers<void>()
+        const release = Promise.withResolvers<void>()
+        let captured = ""
+        let archive: Buffer | undefined
+        const runtime = await RuntimeSupervisor.start({
+          ...startupCommand(root),
+          args: [startup!, root, mode],
+          root,
+          launcher: launcher!,
+          request: async (request) => {
+            const route = new URL(request.url).pathname
+            if (route === "/v1/bootstrap")
+              return Response.json({
+                checkpoint: seed.checkpoint,
+                keys: { sqlite: seed.key.toString("base64"), files: seed.key.toString("base64") },
+              })
+            if (route === "/v1/archive") {
+              const { kind } = (await request.json()) as { kind: "sqlite" | "files" }
+              const bytes = seed.bodies.get(seed.checkpoint[kind].backupID)!
+              return new Response(new Uint8Array(bytes), {
+                headers: { "content-type": "application/octet-stream", "content-length": String(bytes.length) },
+              })
+            }
+            expect(await readFile(join(runtime.group.directory, "cgroup.freeze"), "utf8")).toBe("1\n")
+            if (route === "/v1/upload") {
+              archive = Buffer.from(await request.arrayBuffer())
+              captured = await readFile(join(root, "project/counter.txt"), "utf8")
+              return Response.json({
+                backupID: randomUUID(),
+                keyID: "synthetic",
+                bytes: archive.length,
+                sha256: createHash("sha256").update(archive).digest("hex"),
+              })
+            }
+            expect(route).toBe("/v1/publish-files")
+            const input = (await request.json()) as {
+              epoch: number
+              writerID: string
+              revision: CloudCheckpoint.FileRevision
+            }
+            expect(input.epoch).toBe(8)
+            expect(input.writerID).toMatch(/^[0-9a-f-]{36}$/)
+            expect({ epoch: input.epoch, writerID: input.writerID }).toEqual(
+              JSON.parse(await readFile(join(root, "claimed-lease.json"), "utf8")),
+            )
+            entered.resolve()
+            await release.promise
+            if (failure) throw new Error("lost receipt")
+            return Response.json({ data: input.revision, digest: "b".repeat(64) })
+          },
+        })
+        const done = output(runtime.child)
+        try {
+          await Promise.race([
+            entered.promise,
+            done.then((result) => {
+              throw new Error(`Child ended before publication: ${JSON.stringify(result)}`)
+            }),
+          ])
           expect(existsSync(join(root, "history-acknowledged.txt"))).toBe(false)
-          expect(await readdir(runtime.group.directory).catch(() => null)).toBeNull()
+          await setTimeout(100)
           expect(await readFile(join(root, "project/counter.txt"), "utf8")).toBe(captured)
-        } else {
-          await waitUntil(async () => existsSync(join(root, "history-acknowledged.txt")))
-          expect(await readFile(join(root, "history-acknowledged.txt"), "utf8")).toBe("durable tool")
-          const source = join(temp.path, "controlled.backup")
-          const database = join(temp.path, "controlled.sqlite")
-          await writeFile(source, archive!)
-          const report = await Effect.runPromise(
-            DatabaseBackup.restore({ source, destination: database, key: seed.key }),
-          )
-          const destination = join(temp.path, "controlled-restore")
-          await Effect.runPromise(WorkspaceRestore.materialize({ source: database, expected: report, destination }))
-          expect(await readFile(join(destination, "project/tool-output.txt"), "utf8")).toBe("native tool result")
-          expect(await readFile(join(destination, "project/counter.txt"), "utf8")).toBe(captured)
-          expect(existsSync(join(destination, "history-acknowledged.txt"))).toBe(false)
+          release.resolve()
+          if (failure) {
+            await done
+            await runtime.control.catch(() => {})
+            expect(existsSync(join(root, "history-acknowledged.txt"))).toBe(false)
+            expect(await readdir(runtime.group.directory).catch(() => null)).toBeNull()
+            expect(await readFile(join(root, "project/counter.txt"), "utf8")).toBe(captured)
+          } else {
+            await waitUntil(async () => existsSync(join(root, "history-acknowledged.txt")))
+            expect(await readFile(join(root, "history-acknowledged.txt"), "utf8")).toBe("durable tool")
+            const source = join(temp.path, "controlled.backup")
+            const database = join(temp.path, "controlled.sqlite")
+            await writeFile(source, archive!)
+            const report = await Effect.runPromise(
+              DatabaseBackup.restore({ source, destination: database, key: seed.key }),
+            )
+            const destination = join(temp.path, "controlled-restore")
+            await Effect.runPromise(WorkspaceRestore.materialize({ source: database, expected: report, destination }))
+            expect(await readFile(join(destination, "project/tool-output.txt"), "utf8")).toBe("native tool result")
+            expect(await readFile(join(destination, "project/counter.txt"), "utf8")).toBe(captured)
+            expect(existsSync(join(destination, "history-acknowledged.txt"))).toBe(false)
+          }
+        } finally {
+          release.resolve()
+          await runtime.group.close()
+          await runtime.control.catch(() => {})
+          await done
+          seed.key.fill(0)
         }
-      } finally {
-        release.resolve()
-        await runtime.group.close()
-        await runtime.control.catch(() => {})
-        await done
-        seed.key.fill(0)
-      }
-    }, 30_000)
+      }, 30_000)
+    }
   }
 
   test("startup rejects a tenant-owned forged anonymous receipt", async () => {

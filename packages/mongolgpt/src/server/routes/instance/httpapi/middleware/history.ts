@@ -39,7 +39,7 @@ export const historyLayer = HttpRouter.middleware<{ requires: EventV2.Service; h
                               ...(supervised
                                 ? {
                                     "x-mongolgpt-runtime-isolation": "cgroup-v1",
-                                    "x-mongolgpt-runtime-publication": "tool-v1",
+                                    "x-mongolgpt-runtime-publication": "tool-pty-v1",
                                   }
                                 : {}),
                             })

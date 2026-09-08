@@ -7,7 +7,8 @@ import { CloudStartup } from "@mongolgpt/core/database/cloud-startup"
 const root = process.argv[2]
 const reject = process.argv[3] === "reject"
 const publication = process.argv[3] === "publication"
-const writer = process.argv[3] === "writer" || publication
+const terminal = process.argv[3] === "terminal"
+const writer = process.argv[3] === "writer" || publication || terminal
 assert.equal(process.getuid!(), 10001)
 if (reject) {
   await assert.rejects(CloudStartup.prepare({ root }))
@@ -39,8 +40,8 @@ if (reject) {
       ],
       { env: { BUN_BE_BUN: "1", PATH: "/usr/bin:/bin" }, detached: true, stdio: "ignore" },
     ).unref()
-    if (publication) {
-      const { Effect } = await import("effect")
+    if (publication || terminal) {
+      const { Effect, Layer } = await import("effect")
       const { Event } = await import("@mongolgpt/schema/event")
       const { CloudWorkspace } = await import("@mongolgpt/core/database/cloud-workspace")
       const { createCloudHistory } = await import("@mongolgpt/core/event/cloud-history")
@@ -78,6 +79,66 @@ if (reject) {
       while (Number(await readFile(join(root, "project/counter.txt"), "utf8").catch(() => "0")) < 2) {
         assert.ok(performance.now() < deadline)
         await setTimeout(10)
+      }
+      if (terminal) {
+        const { Pty } = await import("@mongolgpt/core/pty")
+        const { Config } = await import("@mongolgpt/core/config")
+        const { EventV2 } = await import("@mongolgpt/core/event")
+        const { Location } = await import("@mongolgpt/core/location")
+        const { AbsolutePath } = await import("@mongolgpt/core/schema")
+        const { Project } = await import("@mongolgpt/core/project")
+        const { writeFileSync } = await import("node:fs")
+        await Effect.runPromise(
+          Effect.gen(function* () {
+            const pty = yield* Pty.Service
+            const info = yield* pty.create({
+              command: "/bin/sh",
+              args: [
+                "-c",
+                "stty -echo; printf ready > pty-ready; read value; printf 'native tool result' > project/tool-output.txt; printf MGPT_TERMINAL; sleep 60",
+              ],
+              cwd: root,
+            })
+            let output = ""
+            const attachment = yield* pty.attach(info.id, {
+              onData(chunk) {
+                output += chunk
+                if (output.includes("MGPT_TERMINAL"))
+                  writeFileSync(join(root, "history-acknowledged.txt"), "durable tool")
+              },
+              onEnd() {},
+            })
+            attachment.activate()
+            const readyDeadline = performance.now() + 5000
+            while (!(yield* Effect.promise(() => Bun.file(join(root, "pty-ready")).exists()))) {
+              assert.ok(performance.now() < readyDeadline)
+              yield* Effect.sleep("10 millis")
+            }
+            yield* pty.write(info.id, "start\n")
+            yield* Effect.never
+          }).pipe(
+            Effect.provide(
+              Pty.layer.pipe(
+                Layer.provide(Layer.mock(Config.Service)({ entries: () => Effect.succeed([]) })),
+                // This case exercises native PTY -> inherited channel -> root files.
+                // CloudHistory's actual lease was already claimed and registered above.
+                Layer.provide(
+                  Layer.mock(EventV2.Service)({
+                    publish: (definition, data) =>
+                      Effect.succeed({ id: Event.ID.make("evt_pty_fixture"), type: definition.type, data }),
+                  }),
+                ),
+                Layer.provide(
+                  Layer.succeed(Location.Service, {
+                    directory: AbsolutePath.make(root),
+                    project: { id: Project.ID.global, directory: AbsolutePath.make(root) },
+                  }),
+                ),
+              ),
+            ),
+            Effect.scoped,
+          ),
+        )
       }
       await writeFile(join(root, "project/tool-output.txt"), "native tool result")
       await Effect.runPromise(

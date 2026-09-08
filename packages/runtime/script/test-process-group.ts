@@ -17,6 +17,16 @@ try {
   const runtime = join(directory, "bun")
   await copyFile("/proc/self/exe", runtime, constants.COPYFILE_EXCL)
   await chmod(runtime, 0o555)
+  const ptyLibrary = join(directory, "librust_pty.so")
+  await copyFile(
+    join(
+      root,
+      `../core/node_modules/bun-pty/rust-pty/target/release/librust_pty${process.arch === "arm64" ? "_arm64" : ""}.so`,
+    ),
+    ptyLibrary,
+    constants.COPYFILE_EXCL,
+  )
+  await chmod(ptyLibrary, 0o555)
   const probe = spawnSync(runtime, ["-e", "process.stdout.write(Bun.version + '+' + Bun.revision)"], {
     cwd: directory,
     uid: 10001,
@@ -73,6 +83,7 @@ try {
       MONGOLGPT_TEST_WORKSPACE_LAUNCHER: join(directory, "launcher"),
       MONGOLGPT_TEST_WORKSPACE_POLICY: join(directory, "policy"),
       MONGOLGPT_TEST_STARTUP_CHILD: join(directory, "startup-child.js"),
+      MONGOLGPT_TEST_PTY_LIB: ptyLibrary,
     },
   })
   process.exitCode = await child.exited

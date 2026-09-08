@@ -493,7 +493,7 @@ describe("MongolGPT Cloudflare runtime", () => {
           headers: {
             "x-mongolgpt-runtime-history": "checkpoint-v1",
             "x-mongolgpt-runtime-isolation": "cgroup-v1",
-            "x-mongolgpt-runtime-publication": "tool-v1",
+            "x-mongolgpt-runtime-publication": "tool-pty-v1",
           },
         },
       )
@@ -528,6 +528,11 @@ describe("MongolGPT Cloudflare runtime", () => {
       "x-mongolgpt-runtime-isolation": "cgroup-v1",
       "x-mongolgpt-runtime-publication": "old",
     },
+    {
+      "x-mongolgpt-runtime-history": "checkpoint-v1",
+      "x-mongolgpt-runtime-isolation": "cgroup-v1",
+      "x-mongolgpt-runtime-publication": "tool-v1",
+    },
   ]
   test.each(missingReceipts)(
     "does not reuse a server missing a restore, isolation or publication receipt (%j)",
@@ -559,7 +564,7 @@ describe("MongolGPT Cloudflare runtime", () => {
           headers: {
             "x-mongolgpt-runtime-history": "checkpoint-v1",
             "x-mongolgpt-runtime-isolation": "cgroup-v1",
-            "x-mongolgpt-runtime-publication": "tool-v1",
+            "x-mongolgpt-runtime-publication": "tool-pty-v1",
           },
         },
       )
