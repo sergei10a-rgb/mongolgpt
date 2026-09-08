@@ -205,12 +205,13 @@ export async function create(input: Input) {
     // settle its own cleanup; it must never be abandoned while still capturing.
     quiesce<A>(
       run: (signal: AbortSignal) => Promise<A>,
-      options: { signal?: AbortSignal; timeoutMs?: number; closeOnError?: boolean } = {},
+      options: { signal?: AbortSignal; timeoutMs?: number; closeOnError?: boolean; closeOnSuccess?: boolean } = {},
     ) {
       if (stopped || poisoned) return Promise.reject(new IsolationError())
       const signal = options.signal ? AbortSignal.any([options.signal, lifetime.signal]) : lifetime.signal
       const timeoutMs = options.timeoutMs ?? 5000
-      const closeOnError = options.closeOnError === true
+      const closeOnSuccess = options.closeOnSuccess === true
+      const closeOnError = options.closeOnError === true || closeOnSuccess
       const operation = serialized(async () => {
         available()
         if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 60_000) throw new IsolationError()
@@ -223,6 +224,9 @@ export async function create(input: Input) {
           signal?.throwIfAborted()
           const result = await run(signal)
           signal.throwIfAborted()
+          // Final snapshots must never resume writers between receipt and kill.
+          // Closing waits for this serialized operation, so do it outside below.
+          if (closeOnSuccess) poisoned = true
           return result
         } catch (error) {
           if (closeOnError) {
@@ -245,10 +249,16 @@ export async function create(input: Input) {
         }
       })
       if (!closeOnError) return operation
-      return operation.catch(async (error) => {
-        await close()
-        throw error
-      })
+      return operation.then(
+        async (result) => {
+          if (closeOnSuccess) await close()
+          return result
+        },
+        async (error) => {
+          await close()
+          throw error
+        },
+      )
     },
     close,
   }

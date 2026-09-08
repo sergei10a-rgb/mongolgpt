@@ -1,5 +1,15 @@
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
 
+type RuntimeStart = typeof RuntimeSupervisor.start
+type RuntimeHandle = Awaited<ReturnType<RuntimeStart>>
+type RuntimeSignal = "SIGTERM" | "SIGINT"
+type RuntimeOutcome =
+  | { type: "child-error"; error: unknown }
+  | { type: "control-close" }
+  | { type: "control-error"; error: unknown }
+  | { type: "exit"; code: number | null; signal: string | null }
+  | { type: "stop" }
+
 const forwarded = [
   "NODE_EXTRA_CA_CERTS",
   "MONGOLGPT_SERVER_USERNAME",
@@ -14,7 +24,7 @@ const forwarded = [
   "MONGOLGPT_RUNTIME_CHECKPOINT_RESTORE",
 ] as const
 
-export async function runRuntimeSupervisor() {
+export async function runRuntimeSupervisor(input: { start?: RuntimeStart } = {}) {
   if (
     process.env.MONGOLGPT_RUNTIME_MODE !== "hosted" ||
     process.env.MONGOLGPT_CLOUD_HISTORY !== "true" ||
@@ -22,6 +32,7 @@ export async function runRuntimeSupervisor() {
     !process.env.MONGOLGPT_SERVER_PASSWORD
   )
     throw new Error("Cloud серверийн хамгаалалт эсвэл сэргээх тохиргоо дутуу байна.")
+  const startRuntime = input.start ?? RuntimeSupervisor.start
   const root = "/workspace"
   const env = Object.fromEntries(
     forwarded.flatMap((name) => {
@@ -30,15 +41,14 @@ export async function runRuntimeSupervisor() {
     }),
   )
   const abort = new AbortController()
-  let runtime: Awaited<ReturnType<typeof RuntimeSupervisor.start>> | undefined
-  const stop = () => {
-    abort.abort()
+  let runtime: RuntimeHandle | undefined
+  const interruptStartup = () => {
+    abort.abort(new Error("Runtime supervisor startup interrupted."))
     void runtime?.group.close().catch(() => {})
   }
-  process.once("SIGTERM", stop)
-  process.once("SIGINT", stop)
+  addSignalListeners(interruptStartup)
   try {
-    runtime = await RuntimeSupervisor.start({
+    runtime = await startRuntime({
       root,
       launcher: "/usr/local/bin/mongolgpt-workspace-launcher",
       executable: process.execPath,
@@ -57,20 +67,92 @@ export async function runRuntimeSupervisor() {
       },
     })
     abort.signal.throwIfAborted()
-    const child = runtime.child
-    if (child.exitCode !== null) return child.exitCode
-    if (child.signalCode !== null) return 1
-    return await new Promise<number>((resolve, reject) => {
-      child.once("exit", (code) => resolve(code ?? 1))
-      child.once("error", reject)
-    })
+  } catch (error) {
+    await runtime?.group.close().catch(() => {})
+    await runtime?.control.catch(() => {})
+    throw error
   } finally {
-    try {
-      await runtime?.group.close()
-      await runtime?.control
-    } finally {
-      process.removeListener("SIGTERM", stop)
-      process.removeListener("SIGINT", stop)
+    removeSignalListeners(interruptStartup)
+  }
+  return await superviseRuntime(runtime)
+}
+
+async function superviseRuntime(runtime: RuntimeHandle) {
+  if (runtime.child.exitCode !== null) return await closeRuntime(runtime, runtime.child.exitCode)
+  if (runtime.child.signalCode !== null) return await closeRuntime(runtime, 1)
+
+  let settled = false
+  let gracefulStop: Promise<boolean> | undefined
+  let resolveOutcome!: (outcome: RuntimeOutcome) => void
+  const outcome = new Promise<RuntimeOutcome>((resolve) => {
+    resolveOutcome = resolve
+  })
+  const settle = (next: RuntimeOutcome) => {
+    if (settled) return
+    settled = true
+    resolveOutcome(next)
+  }
+  const stop = () => {
+    if (settled) return
+    if (!gracefulStop) {
+      gracefulStop = Promise.resolve()
+        .then(() => runtime.stop())
+        .then(
+          () => true,
+          () => false,
+        )
+      settle({ type: "stop" })
     }
   }
+  const exited = (code: number | null, signal: string | null) => {
+    if (!gracefulStop) settle({ type: "exit", code, signal })
+  }
+  const childError = (error: unknown) => {
+    if (!gracefulStop) settle({ type: "child-error", error })
+  }
+  const controlCleanup = runtime.control.then(
+    () => {
+      if (!gracefulStop) settle({ type: "control-close" })
+    },
+    (error) => {
+      if (!gracefulStop) settle({ type: "control-error", error })
+    },
+  )
+
+  addSignalListeners(stop)
+  runtime.child.once("exit", exited)
+  runtime.child.once("error", childError)
+  try {
+    const result = await outcome
+    if (result.type === "stop") {
+      const stopped = await gracefulStop!
+      await controlCleanup
+      return stopped ? 0 : 1
+    }
+    if (result.type === "exit")
+      return await closeRuntime(runtime, result.code ?? (result.signal ? 1 : 0), controlCleanup)
+    await closeRuntime(runtime, 1, controlCleanup)
+    throw new Error("Runtime supervisor failed.")
+  } finally {
+    removeSignalListeners(stop)
+    runtime.child.removeListener("exit", exited)
+    runtime.child.removeListener("error", childError)
+  }
+}
+
+async function closeRuntime(runtime: RuntimeHandle, code: number, control?: Promise<void>) {
+  try {
+    await runtime.group.close()
+  } finally {
+    await (control ?? runtime.control.catch(() => {}))
+  }
+  return code
+}
+
+function addSignalListeners(listener: () => void) {
+  for (const signal of ["SIGTERM", "SIGINT"] satisfies RuntimeSignal[]) process.on(signal, listener)
+}
+
+function removeSignalListeners(listener: () => void) {
+  for (const signal of ["SIGTERM", "SIGINT"] satisfies RuntimeSignal[]) process.removeListener(signal, listener)
 }

@@ -37,6 +37,21 @@ test("process groups reject a non-cgroup root before starting anything", async (
   ).rejects.toBeInstanceOf(ProcessGroup.IsolationError)
 })
 
+test("supervisor rejects invalid checkpoint intervals before acquiring a workspace lock", async () => {
+  for (const checkpointIntervalMs of [0, 999, 1.5, NaN, Infinity, 3_600_001]) {
+    await expect(
+      RuntimeSupervisor.start({
+        root: "/not/a/workspace",
+        launcher: "/not/a/launcher",
+        executable: process.execPath,
+        args: [],
+        env: {},
+        checkpointIntervalMs,
+      }),
+    ).rejects.toBeInstanceOf(ProcessGroup.IsolationError)
+  }
+})
+
 describe.skipIf(!isolated)("actual Linux hosted process group", () => {
   async function group() {
     return ProcessGroup.create({ launcher: launcher!, uid: 10001, gid: 10001 })
@@ -632,6 +647,264 @@ exec "$LAUNCHER" "$@"
     }
   }, 30_000)
 
+  for (const outcome of ["success", "rejection", "cancellation"] as const) {
+    test(`final quiesce never thaws or admits queued writers after ${outcome}`, async () => {
+      await using temp = await tmpdir()
+      await chmod(temp.path, 0o755)
+      const root = join(temp.path, "workspace")
+      await mkdir(root)
+      await chown(root, 10001, 10001)
+      const file = join(root, "counter.txt")
+      const controlled = await group()
+      const entered = Promise.withResolvers<void>()
+      const release = Promise.withResolvers<void>()
+      const abort = new AbortController()
+      let captured = ""
+      let acknowledged = false
+      let ran = false
+      try {
+        await controlled.spawn(
+          command(
+            `const fs=require("node:fs");let n=0;setInterval(()=>fs.writeFileSync(${JSON.stringify(file)},String(++n)),1)`,
+            root,
+          ),
+        )
+        await waitUntil(async () => Number(await readFile(file, "utf8").catch(() => "0")) > 1)
+        const stopped = controlled
+          .quiesce(
+            async () => {
+              captured = await readFile(file, "utf8")
+              entered.resolve()
+              await release.promise
+              if (outcome === "rejection") throw new Error("receipt lost")
+              return "confirmed receipt"
+            },
+            { closeOnSuccess: true, signal: abort.signal },
+          )
+          .then(
+            (value) => {
+              acknowledged = true
+              return value
+            },
+            (error: unknown) => error,
+          )
+        await entered.promise
+        const queued = controlled
+          .quiesce(async () => {
+            ran = true
+          })
+          .catch((error: unknown) => error)
+        const spawned = controlled.spawn(command("process.exit(0)", root)).catch((error: unknown) => error)
+        if (outcome === "cancellation") abort.abort()
+        await setTimeout(50)
+        expect(acknowledged).toBe(false)
+        expect(ran).toBe(false)
+        expect(await readFile(join(controlled.directory, "cgroup.freeze"), "utf8")).toBe("1\n")
+        expect(await readFile(file, "utf8")).toBe(captured)
+        release.resolve()
+        const result = await stopped
+        if (outcome === "success") expect(result).toBe("confirmed receipt")
+        else expect(result).toBeInstanceOf(Error)
+        expect(acknowledged).toBe(outcome === "success")
+        expect(await queued).toBeInstanceOf(ProcessGroup.IsolationError)
+        expect(await spawned).toBeInstanceOf(ProcessGroup.IsolationError)
+        expect(ran).toBe(false)
+        expect(await readdir(controlled.directory).catch(() => null)).toBeNull()
+        await setTimeout(50)
+        expect(await readFile(file, "utf8")).toBe(captured)
+      } finally {
+        release.resolve()
+        await controlled.close()
+      }
+    })
+  }
+
+  test("graceful stop without a registered cloud lease closes the group but never reports a saved snapshot", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    const store = cloudBaselineStore()
+    const runtime = await RuntimeSupervisor.start({
+      root,
+      launcher: launcher!,
+      ...startupCommand(root),
+      request: store.request,
+    })
+    const terminal = output(runtime.child)
+    try {
+      const stopping = runtime.stop()
+      await expect(stopping).rejects.toThrow()
+      expect(runtime.stop()).toBe(stopping)
+      expect(store.calls.filter((path) => path === "/v1/publish-files")).toEqual([])
+      expect(await readdir(runtime.group.directory).catch(() => null)).toBeNull()
+      const reacquired = await RuntimeLock.acquire({ root, launcher: launcher! })
+      await reacquired.close()
+    } finally {
+      await runtime.group.close()
+      await runtime.control.catch(() => {})
+      await terminal
+    }
+  })
+
+  for (const lostReceipt of [false, true]) {
+    test(`supervisor graceful stop publishes final native SQLite and files before killing writers, lost=${lostReceipt}`, async () => {
+      await using temp = await tmpdir()
+      await chmod(temp.path, 0o755)
+      const root = join(temp.path, "workspace")
+      await mkdir(root)
+      const store = cloudBaselineStore()
+      const entered = Promise.withResolvers<void>()
+      const release = Promise.withResolvers<void>()
+      const command = startupCommand(root)
+      const runtime = await RuntimeSupervisor.start({
+        root,
+        launcher: launcher!,
+        ...command,
+        args: [...command.args, "stopping"],
+        request: async (request) => {
+          const response = await store.request(request)
+          if (request.url.endsWith("/publish-files")) {
+            entered.resolve()
+            await release.promise
+            if (lostReceipt) throw new Error("Synthetic lost final receipt")
+          }
+          return response
+        },
+      })
+      const terminal = output(runtime.child)
+      try {
+        await waitUntil(() => Bun.file(join(root, "stop-ready")).exists())
+        const before = store.calls.length
+        const stopping = runtime.stop()
+        const settled = stopping.then(
+          () => true,
+          () => false,
+        )
+        expect(runtime.stop()).toBe(stopping)
+        await entered.promise
+        const captured = await readFile(join(root, "project/counter.txt"), "utf8")
+        expect(await readFile(join(runtime.group.directory, "cgroup.freeze"), "utf8")).toBe("1\n")
+        expect(runtime.child.exitCode).toBeNull()
+        expect(runtime.child.signalCode).toBeNull()
+        expect(store.calls.slice(before)).toEqual(["/v1/bootstrap", "/v1/upload", "/v1/upload", "/v1/publish-files"])
+        expect(store.filesRevision?.sqlite).toBeDefined()
+        await setTimeout(50)
+        expect(await readFile(join(root, "project/counter.txt"), "utf8")).toBe(captured)
+        release.resolve()
+        expect(await settled).toBe(!lostReceipt)
+        expect(runtime.stop()).toBe(stopping)
+        await terminal
+        await runtime.control.catch(() => {})
+        expect(await readdir(runtime.group.directory).catch(() => null)).toBeNull()
+        await setTimeout(50)
+        expect(await readFile(join(root, "project/counter.txt"), "utf8")).toBe(captured)
+        const reacquired = await RuntimeLock.acquire({ root, launcher: launcher! })
+        await reacquired.close()
+
+        const revision = store.filesRevision!
+        const archive = join(temp.path, "final.archive")
+        const restored = join(temp.path, "final.sqlite")
+        const key = Buffer.alloc(32, 7)
+        try {
+          await writeFile(archive, store.archives.get(revision.sqlite!.backupID)!)
+          await Effect.runPromise(DatabaseBackup.restore({ source: archive, destination: restored, key }))
+          const sqlite = await import("bun:sqlite")
+          const database = new sqlite.Database(restored, { readonly: true })
+          try {
+            expect(database.query("SELECT value FROM native_stop_state").get()).toEqual({
+              value: "committed before graceful stop",
+            })
+            expect(database.query("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" })
+          } finally {
+            database.close()
+          }
+          const fileArchive = join(temp.path, "files.archive")
+          const fileDatabase = join(temp.path, "files.sqlite")
+          await writeFile(fileArchive, store.archives.get(revision.archive.backupID)!)
+          const report = await Effect.runPromise(
+            DatabaseBackup.restore({ source: fileArchive, destination: fileDatabase, key }),
+          )
+          const destination = join(temp.path, "restored-workspace")
+          await Effect.runPromise(WorkspaceRestore.materialize({ source: fileDatabase, expected: report, destination }))
+          expect(await readFile(join(destination, "project/counter.txt"), "utf8")).toBe(captured)
+        } finally {
+          key.fill(0)
+        }
+      } finally {
+        release.resolve()
+        await runtime.group.close()
+        await runtime.control.catch(() => {})
+        await terminal
+      }
+    }, 30_000)
+  }
+
+  test("background snapshots repeat without overlap and stop drains an active receipt before the final snapshot", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    const store = cloudBaselineStore()
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    let publications = 0
+    const command = startupCommand(root)
+    const runtime = await RuntimeSupervisor.start({
+      root,
+      launcher: launcher!,
+      ...command,
+      args: [...command.args, "stopping"],
+      checkpointIntervalMs: 1000,
+      request: async (request) => {
+        const response = await store.request(request)
+        if (request.url.endsWith("/publish-files") && ++publications === 2) {
+          entered.resolve()
+          await release.promise
+        }
+        return response
+      },
+    })
+    const terminal = output(runtime.child)
+    try {
+      await waitUntil(() => Bun.file(join(root, "stop-ready")).exists())
+      await entered.promise
+      const captured = await readFile(join(root, "project/counter.txt"), "utf8")
+      await setTimeout(1100)
+      expect(publications).toBe(2)
+      expect(await readFile(join(root, "project/counter.txt"), "utf8")).toBe(captured)
+      expect(await readFile(join(runtime.group.directory, "cgroup.freeze"), "utf8")).toBe("1\n")
+      const stopping = runtime.stop()
+      const settled = stopping.then(
+        () => "stopped",
+        () => "failed",
+      )
+      expect(runtime.stop()).toBe(stopping)
+      expect(await Promise.race([settled, setTimeout(50).then(() => "pending")])).toBe("pending")
+      expect(runtime.child.signalCode).toBeNull()
+      expect(publications).toBe(2)
+      release.resolve()
+      expect(await settled).toBe("stopped")
+      await terminal
+      await runtime.control
+      expect(publications).toBe(3)
+      expect(store.filesRevision?.sequence).toBe(3)
+      expect(store.filesRevision?.sqlite).toBeDefined()
+      expect(await readdir(runtime.group.directory).catch(() => null)).toBeNull()
+      const finalCounter = await readFile(join(root, "project/counter.txt"), "utf8")
+      await setTimeout(1100)
+      expect(publications).toBe(3)
+      expect(await readFile(join(root, "project/counter.txt"), "utf8")).toBe(finalCounter)
+      const reacquired = await RuntimeLock.acquire({ root, launcher: launcher! })
+      await reacquired.close()
+    } finally {
+      release.resolve()
+      await runtime.group.close()
+      await runtime.control.catch(() => {})
+      await terminal
+    }
+  }, 30_000)
+
   test("keeps writers frozen until cancelled work settles, then thaws and serializes the next operation", async () => {
     const controlled = await group()
     try {
@@ -680,45 +953,50 @@ exec "$LAUNCHER" "$@"
     }
   })
 
-  test("shutdown kills writers immediately while waiting for an active capture to settle", async () => {
-    const controlled = await group()
-    const child = await controlled.spawn(command("setInterval(()=>{},1000)", "/tmp"))
-    const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()))
-    let release!: () => void
-    let entered!: () => void
-    const held = new Promise<void>((resolve) => {
-      release = resolve
-    })
-    const ready = new Promise<void>((resolve) => {
-      entered = resolve
-    })
-    try {
-      const operation = controlled.quiesce(async () => {
-        entered()
-        await held
-        return "must not acknowledge"
+  for (const final of [false, true]) {
+    test(`shutdown kills writers immediately while waiting for an active capture to settle, final=${final}`, async () => {
+      const controlled = await group()
+      const child = await controlled.spawn(command("setInterval(()=>{},1000)", "/tmp"))
+      const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()))
+      let release!: () => void
+      let entered!: () => void
+      const held = new Promise<void>((resolve) => {
+        release = resolve
       })
-      const result = operation.catch((error) => error)
-      await ready
-      let closed = false
-      const closing = controlled.close().then(() => {
-        closed = true
+      const ready = new Promise<void>((resolve) => {
+        entered = resolve
       })
-      await exited
-      expect(closed).toBe(false)
-      expect(await readFile(join(controlled.directory, "cgroup.events"), "utf8")).toContain("populated 0")
-      await expect(controlled.spawn(command("process.exit(0)", "/tmp"))).rejects.toBeInstanceOf(
-        ProcessGroup.IsolationError,
-      )
-      release()
-      expect(await result).toBeInstanceOf(ProcessGroup.IsolationError)
-      await closing
-      expect(closed).toBe(true)
-    } finally {
-      release?.()
-      await controlled.close()
-    }
-  })
+      try {
+        const operation = controlled.quiesce(
+          async () => {
+            entered()
+            await held
+            return "must not acknowledge"
+          },
+          { closeOnSuccess: final },
+        )
+        const result = operation.catch((error) => error)
+        await ready
+        let closed = false
+        const closing = controlled.close().then(() => {
+          closed = true
+        })
+        await exited
+        expect(closed).toBe(false)
+        expect(await readFile(join(controlled.directory, "cgroup.events"), "utf8")).toContain("populated 0")
+        await expect(controlled.spawn(command("process.exit(0)", "/tmp"))).rejects.toBeInstanceOf(
+          ProcessGroup.IsolationError,
+        )
+        release()
+        expect(await result).toBeInstanceOf(ProcessGroup.IsolationError)
+        await closing
+        expect(closed).toBe(true)
+      } finally {
+        release?.()
+        await controlled.close()
+      }
+    })
+  }
 
   for (const failure of ["rejection", "cancellation"] as const) {
     test(`failed publication closes the frozen group without resuming writers on ${failure}`, async () => {

@@ -22,8 +22,19 @@ export async function start(input: {
   request?: (request: Request) => Promise<Response>
   signal?: AbortSignal
   stdio?: "pipe" | "inherit"
+  checkpointIntervalMs?: number
 }) {
   input = { ...input, args: [...input.args], env: { ...input.env } }
+  const checkpointIntervalMs = input.checkpointIntervalMs ?? 300_000
+  if (!Number.isSafeInteger(checkpointIntervalMs) || checkpointIntervalMs < 1000 || checkpointIntervalMs > 3_600_000)
+    throw new ProcessGroup.IsolationError()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let schedulingStopped = false
+  function stopScheduling() {
+    schedulingStopped = true
+    if (timer) clearTimeout(timer)
+    timer = undefined
+  }
   const root = resolve(input.root)
   const uid = 10001
   const lock = await RuntimeLock.acquire({ root, launcher: input.launcher, signal: input.signal })
@@ -36,6 +47,7 @@ export async function start(input: {
     const ownedGroup = {
       ...createdGroup,
       async close() {
+        stopScheduling()
         await createdGroup.close()
         await lock.close()
       },
@@ -77,6 +89,8 @@ export async function start(input: {
         stdio: input.stdio ?? "pipe",
       })
       input.signal?.throwIfAborted()
+      let registeredLease: CloudFiles.Lease | undefined
+      let stopping: Promise<void> | undefined
       async function publishFiles(lease: CloudFiles.Lease, signal?: AbortSignal) {
         const owner = { ...lease }
         const { CloudFiles } = await import("./database/cloud-files")
@@ -100,6 +114,37 @@ export async function start(input: {
           throw error
         }
       }
+      function stop(signal?: AbortSignal) {
+        if (stopping) return stopping
+        stopScheduling()
+        stopping = (async () => {
+          try {
+            const { CloudFiles } = await import("./database/cloud-files")
+            if (!registeredLease || !checkpointID) throw new CloudFiles.PublicationError()
+            const lease = { ...registeredLease }
+            await ownedGroup.quiesce(
+              (signal) => CloudFiles.publish({ root, checkpointID, lease, signal, request: input.request }),
+              { signal, closeOnSuccess: true },
+            )
+          } finally {
+            // The final freezer operation closes the cgroup; this also releases
+            // the supervisor lock, including when publication was uncertain.
+            await ownedGroup.close()
+          }
+        })()
+        return stopping
+      }
+      function scheduleCheckpoint() {
+        if (schedulingStopped || timer) return
+        timer = setTimeout(() => {
+          timer = undefined
+          if (schedulingStopped || !registeredLease) return
+          // Schedule from settlement, not from a fixed interval: slow captures
+          // never accumulate queued work or overlap another background capture.
+          void publishFiles(registeredLease).then(scheduleCheckpoint, stopScheduling)
+        }, checkpointIntervalMs)
+        timer.unref()
+      }
       const responses = child.stdio.at(5)
       const requests = child.stdio.at(6)
       if (!(responses instanceof Duplex) || !(requests instanceof Duplex)) throw new ProcessGroup.IsolationError()
@@ -114,13 +159,15 @@ export async function start(input: {
       child.once("exit", disconnect)
       child.once("error", disconnect)
       const control = RuntimeControl.serve(channel, {
-        register(lease, signal) {
+        async register(lease, signal) {
           if (previous?.epoch !== undefined && lease.epoch !== previous.epoch + 1)
             return Promise.reject(new RuntimeState.StateError())
-          return ownedGroup.quiesce(
+          await ownedGroup.quiesce(
             () => state.write({ checkpointID: checkpoint.id, group: ownedGroup.directory, epoch: lease.epoch }),
             { signal, closeOnError: true },
           )
+          registeredLease = { ...lease }
+          scheduleCheckpoint()
         },
         publish: publishFiles,
         async close() {
@@ -136,7 +183,7 @@ export async function start(input: {
       })
       // The CLI owns the terminal outcome; tests may exercise the group directly.
       void control.catch(() => {})
-      return { child, group: ownedGroup, checkpoint, publishFiles, control }
+      return { child, group: ownedGroup, checkpoint, publishFiles, stop, control }
     } finally {
       await packet.close()
     }

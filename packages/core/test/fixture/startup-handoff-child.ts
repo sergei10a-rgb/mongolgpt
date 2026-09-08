@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { fstatSync, writeSync } from "node:fs"
-import { readFile, writeFile } from "node:fs/promises"
+import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { CloudStartup } from "@mongolgpt/core/database/cloud-startup"
 
@@ -8,7 +8,8 @@ const root = process.argv[2]
 const reject = process.argv[3] === "reject"
 const publication = process.argv[3] === "publication"
 const terminal = process.argv[3] === "terminal"
-const writer = process.argv[3] === "writer" || publication || terminal
+const stopping = process.argv[3] === "stopping"
+const writer = process.argv[3] === "writer" || publication || terminal || stopping
 assert.equal(process.getuid!(), 10001)
 if (reject) {
   await assert.rejects(CloudStartup.prepare({ root }))
@@ -27,6 +28,7 @@ if (reject) {
   assert.equal(CloudStartup.supervised(), true)
   console.log("STARTUP_HANDOFF_READY")
   if (writer) {
+    if (stopping) await mkdir(join(root, "project"), { recursive: true })
     const { spawn } = await import("node:child_process")
     spawn(
       process.execPath,
@@ -39,7 +41,7 @@ if (reject) {
       ],
       { env: { BUN_BE_BUN: "1", PATH: "/usr/bin:/bin" }, detached: true, stdio: "ignore" },
     ).unref()
-    if (publication || terminal) {
+    if (publication || terminal || stopping) {
       const { Effect, Layer } = await import("effect")
       const { Event } = await import("@mongolgpt/schema/event")
       const { CloudWorkspace } = await import("@mongolgpt/core/database/cloud-workspace")
@@ -78,6 +80,19 @@ if (reject) {
       while (Number(await readFile(join(root, "project/counter.txt"), "utf8").catch(() => "0")) < 2) {
         assert.ok(performance.now() < deadline)
         await setTimeout(10)
+      }
+      if (stopping) {
+        const sqlite = await import("bun:sqlite")
+        const database = new sqlite.Database(join(root, ".mongolgpt/runtime.sqlite"))
+        try {
+          database.exec("CREATE TABLE native_stop_state (value TEXT NOT NULL)")
+          database.exec("INSERT INTO native_stop_state VALUES ('committed before graceful stop')")
+        } finally {
+          database.close()
+        }
+        await writeFile(join(root, "stop-ready"), "ready")
+        setInterval(() => {}, 1000)
+        await new Promise<void>(() => {})
       }
       if (terminal) {
         const { Pty } = await import("@mongolgpt/core/pty")
