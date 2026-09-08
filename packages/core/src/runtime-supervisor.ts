@@ -53,14 +53,16 @@ export async function start(input: {
       },
     }
     group = ownedGroup
-    if (previous && previous.epoch === undefined) throw new RuntimeState.StateError()
+    // Legacy records did not persist claim intent: their unknown outcome cannot
+    // be treated as permission to choose a new writer or discard native state.
+    if (previous?.version === 1 && previous.epoch === undefined) throw new RuntimeState.StateError()
     let checkpoint = previous
       ? await CloudStartup.resume({
           root,
           request: input.request,
           signal: input.signal,
           checkpointID: previous.checkpointID,
-          expectedEpoch: previous.epoch!,
+          expectedEpoch: previous.epoch,
         })
       : await CloudStartup.bootstrap({ root, request: input.request, signal: input.signal })
     if (!checkpoint) {
@@ -70,11 +72,20 @@ export async function start(input: {
       if (checkpoint?.id !== created.id) throw new CloudBaseline.BaselineError()
     }
     const checkpointID = checkpoint?.id
+    if (previous?.pendingClaim) {
+      if (checkpoint.filesRevisionID !== previous.pendingClaim.filesRevisionID) throw new RuntimeState.StateError()
+      checkpoint.pendingClaim = {
+        expectedEpoch: previous.pendingClaim.expectedEpoch,
+        writerID: previous.pendingClaim.writerID,
+      }
+    }
     if (!previous) await own(root, uid, input.signal)
+    let pendingClaim = previous?.pendingClaim
     await state.write({
       checkpointID: checkpoint.id,
       group: ownedGroup.directory,
       ...(previous?.epoch ? { epoch: previous.epoch } : {}),
+      ...(pendingClaim ? { pendingClaim } : {}),
     })
     input.signal?.throwIfAborted()
     const packet = await StartupHandoff.issue({ root, group: ownedGroup.directory, checkpoint })
@@ -159,14 +170,42 @@ export async function start(input: {
       child.once("exit", disconnect)
       child.once("error", disconnect)
       const control = RuntimeControl.serve(channel, {
+        async prepare(claim, signal) {
+          if (
+            (previous?.epoch !== undefined && claim.expectedEpoch !== previous.epoch) ||
+            (pendingClaim &&
+              (claim.expectedEpoch !== pendingClaim.expectedEpoch || claim.writerID !== pendingClaim.writerID))
+          )
+            throw new RuntimeState.StateError()
+          const intent = {
+            ...claim,
+            ...(checkpoint.filesRevisionID ? { filesRevisionID: checkpoint.filesRevisionID } : {}),
+          }
+          await ownedGroup.quiesce(
+            () =>
+              state.write({
+                checkpointID: checkpoint.id,
+                group: ownedGroup.directory,
+                ...(previous?.epoch ? { epoch: previous.epoch } : {}),
+                pendingClaim: intent,
+              }),
+            { signal, closeOnError: true },
+          )
+          pendingClaim = intent
+        },
         async register(lease, signal) {
-          if (previous?.epoch !== undefined && lease.epoch !== previous.epoch + 1)
+          if (
+            !pendingClaim ||
+            lease.epoch !== pendingClaim.expectedEpoch + 1 ||
+            lease.writerID !== pendingClaim.writerID
+          )
             return Promise.reject(new RuntimeState.StateError())
           await ownedGroup.quiesce(
             () => state.write({ checkpointID: checkpoint.id, group: ownedGroup.directory, epoch: lease.epoch }),
             { signal, closeOnError: true },
           )
           registeredLease = { ...lease }
+          pendingClaim = undefined
           scheduleCheckpoint()
         },
         publish: publishFiles,

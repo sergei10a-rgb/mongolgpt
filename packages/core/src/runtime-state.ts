@@ -5,15 +5,23 @@ import { lstat, open, rename, unlink } from "node:fs/promises"
 import { randomUUID } from "node:crypto"
 import { join, resolve } from "node:path"
 import { Schema } from "effect"
+import { RuntimeControl } from "./runtime-control"
+
+const UUID = Schema.String.check(
+  Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/),
+)
+const PendingClaim = Schema.Struct({
+  ...RuntimeControl.Claim.fields,
+  filesRevisionID: Schema.optional(UUID),
+})
 
 const State = Schema.Struct({
-  version: Schema.Literal(1),
+  version: Schema.Literals([1, 2]),
   root: Schema.String,
-  checkpointID: Schema.String.check(
-    Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/),
-  ),
+  checkpointID: UUID,
   group: Schema.String.check(Schema.isPattern(/^\/sys\/fs\/cgroup\/mongolgpt-[0-9a-f-]{36}$/)),
   epoch: Schema.optional(Schema.Int.check(Schema.isGreaterThan(0), Schema.isLessThan(Number.MAX_SAFE_INTEGER))),
+  pendingClaim: Schema.optional(PendingClaim),
 })
 export type State = typeof State.Type
 
@@ -56,7 +64,9 @@ export async function openState(directory: string, root: string) {
           Schema.decodeUnknownSync(Schema.UnknownFromJsonString)(await file.readFile("utf8")),
           { onExcessProperty: "error" },
         )
-        if (data.root !== root) throw new StateError()
+        if (data.root !== root || (data.version === 1 && data.pendingClaim)) throw new StateError()
+        if (data.pendingClaim && data.epoch !== undefined && data.pendingClaim.expectedEpoch !== data.epoch)
+          throw new StateError()
         return data
       } catch {
         throw new StateError()
@@ -65,7 +75,9 @@ export async function openState(directory: string, root: string) {
       }
     },
     async write(input: Omit<State, "version" | "root">) {
-      const data = Schema.decodeUnknownSync(State)({ ...input, version: 1, root }, { onExcessProperty: "error" })
+      const data = Schema.decodeUnknownSync(State)({ ...input, version: 2, root }, { onExcessProperty: "error" })
+      if (data.pendingClaim && data.epoch !== undefined && data.pendingClaim.expectedEpoch !== data.epoch)
+        throw new StateError()
       const bytes = Buffer.from(JSON.stringify(data))
       if (bytes.length > 4096) throw new StateError()
       const temporary = join(directory, `state-${randomUUID()}.tmp`)

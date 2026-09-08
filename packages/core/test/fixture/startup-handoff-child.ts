@@ -50,6 +50,7 @@ if (reject) {
       const cloud = createCloudHistory({
         checkpointID: CloudStartup.baseline()!.id,
         workspace: {
+          prepare: workspace.prepare,
           async register(lease, signal) {
             try {
               await workspace.register(lease, signal)

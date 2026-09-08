@@ -1,5 +1,5 @@
 import { createServer, type IncomingHttpHeaders, type IncomingMessage, type ServerResponse } from "node:http"
-import { timingSafeEqual, randomBytes } from "node:crypto"
+import { createHash, timingSafeEqual, randomBytes } from "node:crypto"
 import { constants } from "node:fs"
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises"
 import { isAbsolute, join, relative, resolve } from "node:path"
@@ -18,6 +18,7 @@ type BridgeConfig = {
   scope: HistoryScope
   secret: string
   adminToken: string
+  dropFirstClaimResponse?: boolean
 }
 
 const hostCheckpoint = "checkpoint.mongolgpt.internal"
@@ -38,6 +39,22 @@ const jsonHeaders = { "cache-control": "no-store", "content-type": "application/
 const migrationLedgerTable = "container_checkpoint_bridge_migration"
 const counters = new Map<string, Map<number, number>>()
 const activeRequests = new Set<AbortController>()
+const injected = { droppedClaimResponses: 0 }
+const historyRequests: HistoryRequestRecord[] = []
+
+type HistoryRequestRecord = {
+  path: string
+  status: number
+  injected?: "dropped_first_claim_response"
+  claim?: {
+    expectedEpoch: number
+    writerHash: string
+    checkpointHash: string | null
+    filesRevisionHash: string | null
+    hasCheckpointID: boolean
+    hasFilesRevisionID: boolean
+  }
+}
 
 const configPath = process.argv[2]
 if (!configPath)
@@ -137,8 +154,7 @@ async function dispatch(request: IncomingMessage, signal: AbortSignal): Promise<
 
   if (host === hostHistory) {
     if (!historyPaths.has(incoming.pathname)) return json(404, { error: "not_found" })
-    const forwarded = toFetchRequest(request, hostHistory, signal)
-    return native.handleHistoryOutbound(forwarded, { HISTORY: env.HISTORY }, { params: scope })
+    return handleHistoryRequest(request, incoming.pathname, signal)
   }
 
   if (host === hostCheckpoint) {
@@ -148,6 +164,30 @@ async function dispatch(request: IncomingMessage, signal: AbortSignal): Promise<
   }
 
   return json(404, { error: "not_found" })
+}
+
+async function handleHistoryRequest(request: IncomingMessage, path: string, signal: AbortSignal) {
+  const body = hasRequestBody(request) ? await readRequestBody(request, signal) : undefined
+  const claim = path === "/v1/claim" ? claimRecord(body) : undefined
+  const forwarded = toFetchRequest(request, hostHistory, signal, body)
+  const result = await native.handleHistoryOutbound(forwarded, { HISTORY: env.HISTORY }, { params: scope })
+  const record: HistoryRequestRecord = { path, status: result.status, ...(claim ? { claim } : {}) }
+  if (
+    config.dropFirstClaimResponse &&
+    path === "/v1/claim" &&
+    result.status === 200 &&
+    injected.droppedClaimResponses === 0
+  ) {
+    injected.droppedClaimResponses++
+    record.injected = "dropped_first_claim_response"
+    historyRequests.push(record)
+    void result.body?.cancel().catch(() => {})
+    return json(503, {
+      error: { code: "unavailable", message: "Cloud түүхийг хадгалах үйлчилгээнд холбогдож чадсангүй." },
+    })
+  }
+  historyRequests.push(record)
+  return result
 }
 
 async function statusBody() {
@@ -172,6 +212,8 @@ async function statusBody() {
     epoch: await store.epoch(scope),
     checkpoint: (await store.checkpoint(scope)) ?? null,
     revision: (await store.fileRevision(scope)) ?? null,
+    injected: { ...injected },
+    historyRequests: historyRequests.slice(),
     requestPathStatusCounters,
     statusCounters: Object.fromEntries(
       Array.from(statusCounters.entries())
@@ -181,7 +223,7 @@ async function statusBody() {
   }
 }
 
-function toFetchRequest(request: IncomingMessage, host: string, signal: AbortSignal) {
+function toFetchRequest(request: IncomingMessage, host: string, signal: AbortSignal, body?: Uint8Array) {
   const url = new URL(request.url ?? "/", `http://${host}`)
   const init: RequestInit & { duplex?: "half" } = {
     method: request.method,
@@ -189,8 +231,11 @@ function toFetchRequest(request: IncomingMessage, host: string, signal: AbortSig
     signal,
   }
   if (hasRequestBody(request)) {
-    init.body = Readable.toWeb(request) as unknown as BodyInit
-    init.duplex = "half"
+    if (body) init.body = body.slice().buffer
+    else {
+      init.body = Readable.toWeb(request) as unknown as BodyInit
+      init.duplex = "half"
+    }
   }
   return new Request(`http://${host}${url.pathname}${url.search}`, init)
 }
@@ -284,6 +329,7 @@ function decodeConfig(value: unknown): BridgeConfig {
   const nativeBundle = stringField(config, "nativeBundle")
   const secret = stringField(config, "secret")
   const adminToken = stringField(config, "adminToken")
+  const dropFirstClaimResponse = config.dropFirstClaimResponse
   const port = config.port
   if (!isAbsolute(root)) throw new Error("bridge config root must be absolute")
   if (!isAbsolute(nativeBundle)) throw new Error("bridge config nativeBundle must be absolute")
@@ -293,7 +339,18 @@ function decodeConfig(value: unknown): BridgeConfig {
   if (adminToken.length !== 64 || !/^[0-9a-f]+$/i.test(adminToken))
     throw new Error("bridge config adminToken must be exactly 64 hex characters")
   const scope = scopeField(config.scope)
-  return { root: resolve(root), nativeBundle: resolve(nativeBundle), port, scope, secret, adminToken }
+  if (dropFirstClaimResponse !== undefined && typeof dropFirstClaimResponse !== "boolean") {
+    throw new Error("bridge config dropFirstClaimResponse must be a boolean")
+  }
+  return {
+    root: resolve(root),
+    nativeBundle: resolve(nativeBundle),
+    port,
+    scope,
+    secret,
+    adminToken,
+    dropFirstClaimResponse,
+  }
 }
 
 function scopeField(value: unknown): HistoryScope {
@@ -336,6 +393,52 @@ function plainObject(value: unknown): value is Record<string, unknown> {
 
 function hasRequestBody(request: IncomingMessage) {
   return request.method !== "GET" && request.method !== "HEAD"
+}
+
+async function readRequestBody(request: IncomingMessage, signal: AbortSignal) {
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for await (const chunk of request) {
+    signal.throwIfAborted()
+    const bytes = typeof chunk === "string" ? Buffer.from(chunk) : new Uint8Array(chunk)
+    size += bytes.byteLength
+    if (size > 1024 * 1024 + 4096) throw new Error("bridge request body too large")
+    chunks.push(bytes.slice())
+  }
+  const body = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    body.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return body
+}
+
+function claimRecord(body: Uint8Array | undefined): HistoryRequestRecord["claim"] | undefined {
+  if (!body) return undefined
+  try {
+    const value = JSON.parse(new TextDecoder().decode(body))
+    if (!plainObject(value)) return undefined
+    const expectedEpoch = value.expectedEpoch
+    const writerID = value.writerID
+    if (typeof expectedEpoch !== "number" || typeof writerID !== "string") return undefined
+    const checkpointID = typeof value.checkpointID === "string" ? value.checkpointID : undefined
+    const filesRevisionID = typeof value.filesRevisionID === "string" ? value.filesRevisionID : undefined
+    return {
+      expectedEpoch,
+      writerHash: safeHash(writerID),
+      checkpointHash: checkpointID ? safeHash(checkpointID) : null,
+      filesRevisionHash: filesRevisionID ? safeHash(filesRevisionID) : null,
+      hasCheckpointID: checkpointID !== undefined,
+      hasFilesRevisionID: filesRevisionID !== undefined,
+    }
+  } catch {
+    return undefined
+  }
+}
+
+function safeHash(value: string) {
+  return createHash("sha256").update(value).digest("hex")
 }
 
 function toFetchHeaders(headers: IncomingHttpHeaders) {

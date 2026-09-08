@@ -6,6 +6,7 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path"
 import { Effect, Schema } from "effect"
 import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { protectBackupPath } from "./backup-permissions"
+import type { RuntimeControl } from "../runtime-control"
 
 const origin = "http://checkpoint.mongolgpt.internal"
 const envelope = Schema.Union([
@@ -28,7 +29,11 @@ interface Input {
 }
 
 /** sqlite/inventory identify the immutable journal baseline, not the latest paired native image. */
-export type Baseline = CloudCheckpoint.Checkpoint & { filesRevisionID?: string; resume?: { expectedEpoch?: number } }
+export type Baseline = CloudCheckpoint.Checkpoint & {
+  filesRevisionID?: string
+  resume?: { expectedEpoch?: number }
+  pendingClaim?: RuntimeControl.Claim
+}
 let prepared: { checkpoint: Baseline | null; database: string; supervised: boolean } | undefined
 
 /** CLI boundary, before account storage or AppRuntime can open the database. */
@@ -67,16 +72,17 @@ export function baseline() {
 
 /** Same-container restart only, after the locked root supervisor has reaped its
  * old cgroup. Preserve the actual native database and all workspace files. */
-export async function resume(input: Input & { checkpointID: string; expectedEpoch: number }): Promise<Baseline> {
+export async function resume(input: Input & { checkpointID: string; expectedEpoch?: number }): Promise<Baseline> {
   const root = resolve(input.root)
   const signal = AbortSignal.any([...(input.signal ? [input.signal] : []), AbortSignal.timeout(110_000)])
   const chunks: Uint8Array[] = []
   try {
     if (
       root !== input.root ||
-      !Number.isSafeInteger(input.expectedEpoch) ||
-      input.expectedEpoch < 1 ||
-      input.expectedEpoch >= Number.MAX_SAFE_INTEGER
+      (input.expectedEpoch !== undefined &&
+        (!Number.isSafeInteger(input.expectedEpoch) ||
+          input.expectedEpoch < 1 ||
+          input.expectedEpoch >= Number.MAX_SAFE_INTEGER))
     )
       throw unavailable()
     for (let current = root; ; current = dirname(current)) {
@@ -130,7 +136,7 @@ export async function resume(input: Input & { checkpointID: string; expectedEpoc
     return {
       ...data.checkpoint,
       ...(data.filesRevision ? { files: data.filesRevision.archive, filesRevisionID: data.filesRevision.id } : {}),
-      resume: { expectedEpoch: input.expectedEpoch },
+      resume: input.expectedEpoch === undefined ? {} : { expectedEpoch: input.expectedEpoch },
     }
   } catch {
     throw unavailable()

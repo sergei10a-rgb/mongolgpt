@@ -198,6 +198,7 @@ async function isolated(output: string) {
       scope,
       secret,
       adminToken,
+      dropFirstClaimResponse: true,
     }),
     { mode: 0o600 },
   )
@@ -221,7 +222,7 @@ async function isolated(output: string) {
   const controlHeaders = { [sdkControlHeader]: sdkToken }
   const adminHeaders = { "x-test-admin-token": adminToken }
   const logs = [...bridgeLogs]
-  let outer: Bun.Subprocess | undefined
+  let outer: ReturnType<typeof Bun.spawn> | undefined
   try {
     await until(
       async () => {
@@ -245,24 +246,15 @@ async function isolated(output: string) {
     const archiveDownloads = []
     const sessionID = "ses_compiled_container_restore"
     const proof = "native-r2-proof-compiled-container"
-    for (const round of [1, 2]) {
-      assert.deepEqual(await readdir("/workspace"), [], "Replacement must start from physically empty workspace")
-      const runtimeEntries = await readdir("/run")
-      assert.deepEqual(
-        round === 1 ? runtimeEntries.filter((entry) => entry !== "mount") : runtimeEntries,
-        [],
-        "Replacement must start from physically empty runtime state (initial OS mount bookkeeping excepted)",
-      )
-      assert.equal(await Bun.file("/run/mongolgpt-container/control.sock").exists(), false)
-      const archive200Before =
-        (await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders }))
-          .requestPathStatusCounters["/v1/archive"]?.["200"] ?? 0
-      const stdout = join(output, `container-${round}.log`)
-      const stderr = join(output, `container-${round}-error.log`)
+    let lostInitialClaimRecovered = false
+    let replayedSameClaim = false
+    const startNative = async (label: number | string) => {
+      const stdout = join(output, `container-${label}.log`)
+      const stderr = join(output, `container-${label}-error.log`)
       logs.push(stdout, stderr)
-      const nativeLog = `/tmp/native-${round}.log`
+      const nativeLog = `/tmp/native-${label}.log`
       logs.push(nativeLog)
-      outer = Bun.spawn(["/usr/local/bin/mongolgpt", "serve"], {
+      const spawned = Bun.spawn(["/usr/local/bin/mongolgpt", "serve"], {
         cwd: "/",
         env: {
           PATH: path,
@@ -277,6 +269,7 @@ async function isolated(output: string) {
         stdout: Bun.file(stdout),
         stderr: Bun.file(stderr),
       })
+      outer = spawned
       await until(async () => {
         assert.equal(outer!.exitCode, null, "Compiled outer container exited before SDK readiness")
         return fetch("http://127.0.0.1:3000/api/ping", { headers: controlHeaders }).then(
@@ -314,9 +307,67 @@ async function isolated(output: string) {
           },
         }),
       })
+      return { nativeLog, outer: spawned }
+    }
+    assert.deepEqual(await readdir("/workspace"), [], "Initial startup must begin from physically empty workspace")
+    const initialRuntimeEntries = await readdir("/run")
+    assert.deepEqual(
+      initialRuntimeEntries.filter((entry) => entry !== "mount"),
+      [],
+      "Initial startup must begin from physically empty runtime state",
+    )
+    assert.equal(await Bun.file("/run/mongolgpt-container/control.sock").exists(), false)
+    const failedAttempt = await startNative("lost-initial-claim")
+    await until(
+      async () => {
+        const response = await fetch("http://127.0.0.1:4096/global/health", {
+          headers,
+          signal: AbortSignal.timeout(1000),
+        }).catch(() => undefined)
+        assert.notEqual(response?.ok, true, "Dropped initial claim response must not admit native HTTP")
+        return failedAttempt.outer.exitCode !== null
+      },
+      "Dropped initial claim response shutdown",
+      180_000,
+    )
+    assert.notEqual(
+      await terminal(failedAttempt.outer, 20_000),
+      0,
+      "Controller must fail closed after lost initial claim response",
+    )
+    outer = undefined
+    const lostClaimStatus = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
+    assert.equal(lostClaimStatus.injected.droppedClaimResponses, 1)
+    const firstClaims = lostClaimStatus.historyRequests.filter((entry) => entry.path === "/v1/claim")
+    assert.equal(firstClaims.length, 1)
+    assert.ok(firstClaims[0]!.claim, "Dropped claim response must record safe claim metadata")
+    assert.equal(
+      lostClaimStatus.epoch,
+      firstClaims[0]!.claim!.expectedEpoch + 1,
+      "Dropped claim response must still commit the D1 writer epoch",
+    )
+    assert.equal(lostClaimStatus.historyRequests.at(-1)?.injected, "dropped_first_claim_response")
+    for (const round of [1, 2]) {
+      if (round === 1) {
+        assert.notDeepEqual(await readdir("/workspace"), [], "Retry must preserve the failed startup workspace")
+        assert.notDeepEqual(
+          (await readdir("/run")).filter((entry) => entry !== "mount"),
+          [],
+          "Retry must preserve the failed startup runtime state",
+        )
+      } else {
+        assert.deepEqual(await readdir("/workspace"), [], "Replacement must start from physically empty workspace")
+        const runtimeEntries = await readdir("/run")
+        assert.deepEqual(runtimeEntries, [], "Replacement must start from physically empty runtime state")
+        assert.equal(await Bun.file("/run/mongolgpt-container/control.sock").exists(), false)
+      }
+      const archive200Before =
+        (await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders }))
+          .requestPathStatusCounters["/v1/archive"]?.["200"] ?? 0
+      const attempt = await startNative(round)
       await until(
         async () => {
-          assert.equal(outer!.exitCode, null, "Outer container exited during native startup")
+          assert.equal(attempt.outer.exitCode, null, "Outer container exited during native startup")
           const state = await json<{ process: { status: string } }>(
             "http://127.0.0.1:3000/api/process/mongolgpt-server",
             { headers: controlHeaders },
@@ -340,6 +391,23 @@ async function isolated(output: string) {
         180_000,
       )
       console.log(`Round ${round}: compiled native runtime admitted with durable/isolation receipts`)
+      if (round === 1) {
+        const retryStatus = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
+        const claims = retryStatus.historyRequests.filter((entry) => entry.path === "/v1/claim")
+        assert.equal(claims.length, 2, "Retry must replay exactly one pending claim")
+        assert.deepEqual(claims[1]!.claim, claims[0]!.claim, "Retry claim must reuse exact safe claim metadata")
+        assert.equal(claims[0]!.claim?.hasCheckpointID, true)
+        assert.equal(claims[0]!.claim?.hasFilesRevisionID, false)
+        assert.equal(retryStatus.epoch, lostClaimStatus.epoch, "Retry must not advance a new writer epoch")
+        assert.equal(retryStatus.injected.droppedClaimResponses, 1)
+        assert.equal(
+          retryStatus.requestPathStatusCounters["/v1/epoch"]?.["200"] ?? 0,
+          lostClaimStatus.requestPathStatusCounters["/v1/epoch"]?.["200"] ?? 0,
+          "Pending retry must not issue another epoch read",
+        )
+        lostInitialClaimRecovered = true
+        replayedSameClaim = true
+      }
       if (round === 1) {
         const session = await json<{ data: { id: string } }>("http://127.0.0.1:4096/api/session", {
           method: "POST",
@@ -407,9 +475,10 @@ async function isolated(output: string) {
         round,
         downloads: (status.requestPathStatusCounters["/v1/archive"]?.["200"] ?? 0) - archive200Before,
       })
-      outer.kill("SIGTERM")
+      const runningOuter = attempt.outer
+      runningOuter.kill("SIGTERM")
       assert.equal(
-        await terminal(outer, 260_000),
+        await terminal(runningOuter, 260_000),
         0,
         "Container must acknowledge final durable publication before stopping SDK",
       )
@@ -456,6 +525,8 @@ async function isolated(output: string) {
       freshPhysicalWorkspace: true,
       freshPhysicalRun: true,
       archiveDownloads,
+      lostInitialClaimRecovered,
+      replayedSameClaim,
       sessionRestored: true,
       fileRestored: true,
       gracefulContainerExit: true,
@@ -499,6 +570,20 @@ type BridgeStatus = {
   epoch: number
   checkpoint: { data: { id: string }; digest: string } | null
   revision: { data: { id: string; sequence: number }; digest: string } | null
+  injected: { droppedClaimResponses: number }
+  historyRequests: Array<{
+    path: string
+    status: number
+    injected?: "dropped_first_claim_response"
+    claim?: {
+      expectedEpoch: number
+      writerHash: string
+      checkpointHash: string | null
+      filesRevisionHash: string | null
+      hasCheckpointID: boolean
+      hasFilesRevisionID: boolean
+    }
+  }>
   requestPathStatusCounters: Record<string, Record<string, number>>
 }
 
@@ -526,7 +611,7 @@ async function until(check: () => Promise<boolean>, name: string, timeout = 30_0
   }
 }
 
-async function terminal(child: Bun.Subprocess, timeout: number) {
+async function terminal(child: ReturnType<typeof Bun.spawn>, timeout: number) {
   const timer = globalThis.setTimeout(() => child.kill("SIGKILL"), timeout)
   try {
     return await child.exited

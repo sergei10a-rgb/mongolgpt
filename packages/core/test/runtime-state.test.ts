@@ -11,6 +11,36 @@ const isolated = process.platform === "linux" && process.getuid?.() === 0 && !!l
 const record = () => ({ checkpointID: randomUUID(), group: `/sys/fs/cgroup/mongolgpt-${randomUUID()}`, epoch: 2 })
 
 describe.skipIf(!isolated)("root-private runtime resume state", () => {
+  test("retains exact pending intent and only clears it with accepted durable state", async () => {
+    await using temp = await tmpdir()
+    await using lock = await RuntimeLock.acquire({ root: temp.path, launcher: launcher! })
+    const state = await RuntimeState.openState(lock.directory, temp.path)
+    const accepted = record()
+    const pendingClaim = { expectedEpoch: accepted.epoch, writerID: "pending.writer", filesRevisionID: randomUUID() }
+    await state.write({ ...accepted, pendingClaim })
+    expect((await state.read())?.pendingClaim).toEqual(pendingClaim)
+    const before = await readFile(join(lock.directory, "state.json"))
+    await expect(state.write({ ...accepted, pendingClaim: { ...pendingClaim, expectedEpoch: 9 } })).rejects.toThrow()
+    expect(await readFile(join(lock.directory, "state.json"))).toEqual(before)
+    await state.write({ ...accepted, epoch: accepted.epoch + 1 })
+    expect((await state.read())?.pendingClaim).toBeUndefined()
+    expect((await state.read())?.epoch).toBe(3)
+  })
+
+  test("reads legacy accepted state but rejects fabricated legacy claim intent", async () => {
+    await using temp = await tmpdir()
+    await using lock = await RuntimeLock.acquire({ root: temp.path, launcher: launcher! })
+    const state = await RuntimeState.openState(lock.directory, temp.path)
+    const legacy = { version: 1 as const, root: temp.path, ...record() }
+    const filename = join(lock.directory, "state.json")
+    await writeFile(filename, JSON.stringify(legacy), { mode: 0o600 })
+    expect(await state.read()).toEqual(legacy)
+    await writeFile(filename, JSON.stringify({ ...legacy, pendingClaim: { expectedEpoch: 2, writerID: "fake" } }))
+    await expect(state.read()).rejects.toThrow()
+    await state.write(record())
+    expect((await state.read())?.version).toBe(2)
+  })
+
   test("atomically persists a root-bound record across lock release without cross-workspace reuse", async () => {
     await using temp = await tmpdir()
     const roots = [join(temp.path, "first"), join(temp.path, "second")]
@@ -27,7 +57,7 @@ describe.skipIf(!isolated)("root-private runtime resume state", () => {
     await first.close()
     await using resumed = await RuntimeLock.acquire({ root: roots[0], launcher: launcher! })
     expect(await (await RuntimeState.openState(resumed.directory, roots[0])).read()).toEqual({
-      version: 1,
+      version: 2,
       root: roots[0],
       ...data,
     })

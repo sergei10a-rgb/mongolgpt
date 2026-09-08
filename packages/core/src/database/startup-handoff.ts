@@ -6,6 +6,7 @@ import { join, resolve } from "node:path"
 import { Schema } from "effect"
 import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import type { CloudStartup } from "./cloud-startup"
+import { RuntimeControl } from "../runtime-control"
 
 const maxBytes = 1024 * 1024
 const UUID = Schema.String.check(
@@ -20,6 +21,7 @@ const Packet = Schema.Struct({
     Schema.Struct({
       data: CloudCheckpoint.Checkpoint,
       filesRevisionID: Schema.optional(UUID),
+      pendingClaim: Schema.optional(RuntimeControl.Claim),
       resume: Schema.optional(
         Schema.Struct({
           expectedEpoch: Schema.optional(
@@ -60,6 +62,7 @@ export async function issue(input: { root: string; group: string; checkpoint: Cl
             files: checkpoint.files,
           },
           ...(checkpoint.filesRevisionID ? { filesRevisionID: checkpoint.filesRevisionID } : {}),
+          ...(checkpoint.pendingClaim ? { pendingClaim: checkpoint.pendingClaim } : {}),
           ...(checkpoint.resume ? { resume: checkpoint.resume } : {}),
         }
       : null,
@@ -142,6 +145,7 @@ export async function accept(root: string): Promise<CloudStartup.Baseline | null
       ? {
           ...packet.checkpoint.data,
           ...(packet.checkpoint.filesRevisionID ? { filesRevisionID: packet.checkpoint.filesRevisionID } : {}),
+          ...(packet.checkpoint.pendingClaim ? { pendingClaim: packet.checkpoint.pendingClaim } : {}),
           ...(packet.checkpoint.resume ? { resume: packet.checkpoint.resume } : {}),
         }
       : null

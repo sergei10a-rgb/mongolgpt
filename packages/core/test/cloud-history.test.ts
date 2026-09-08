@@ -31,6 +31,17 @@ async function readClaim(request: Request) {
   )
 }
 
+async function readClaimEnvelope(request: Request) {
+  return Schema.decodeUnknownSync(
+    Schema.Struct({
+      expectedEpoch: Schema.Int,
+      writerID: Schema.String,
+      checkpointID: Schema.optional(Schema.String),
+      filesRevisionID: Schema.optional(Schema.String),
+    }),
+  )(await request.clone().json())
+}
+
 async function readAppend(request: Request) {
   return (await request.clone().json()) as { epoch: number; writerID: string; event: EventV2.SerializedEvent }
 }
@@ -101,6 +112,211 @@ describe("native cloud history transport", () => {
     }
     for (const expectedEpoch of [-1, 0.5, Number.MAX_SAFE_INTEGER])
       expect(() => createCloudHistory({ expectedEpoch })).toThrow()
+  })
+
+  test("prepares the normal startup claim before sending it to cloud history", async () => {
+    const requests: Request[] = []
+    const steps: string[] = []
+    const prepared: Array<{ expectedEpoch: number; writerID: string }> = []
+    const client = createCloudHistory({
+      workspace: {
+        async prepare(claim) {
+          steps.push("prepare")
+          prepared.push({ ...claim })
+          expect(requests.map((request) => new URL(request.url).pathname)).toEqual(["/v1/epoch"])
+        },
+        async register(lease) {
+          steps.push("register")
+          expect(lease).toEqual({ epoch: 8, writerID: prepared[0].writerID })
+        },
+        async publish() {},
+      },
+      request: async (request) => {
+        requests.push(request)
+        if (request.url.endsWith("/epoch")) {
+          steps.push("epoch")
+          return response({ epoch: 7 })
+        }
+        steps.push("claim")
+        expect(await readClaim(request)).toEqual(prepared[0])
+        return response({ epoch: 8, writerID: prepared[0].writerID })
+      },
+    })
+    await Effect.runPromise(client.initialize)
+    expect(steps).toEqual(["epoch", "prepare", "claim", "register"])
+    expect(prepared[0].expectedEpoch).toBe(7)
+  })
+
+  test("does not send the claim when root prepare fails", async () => {
+    const requests: Request[] = []
+    const client = createCloudHistory({
+      workspace: {
+        async prepare() {
+          throw new Error("server-secret")
+        },
+        async register() {
+          throw new Error("unexpected register")
+        },
+        async publish() {},
+      },
+      request: async (request) => {
+        requests.push(request)
+        if (request.url.endsWith("/epoch")) return response({ epoch: 7 })
+        throw new Error("unexpected claim")
+      },
+    })
+    expect(await rejection(client.initialize)).toContain("холбогдож чадсангүй")
+    await rejection(client.initialize)
+    expect(requests.map((request) => new URL(request.url).pathname)).toEqual(["/v1/epoch"])
+  })
+
+  test("replays a pending startup claim without reading epoch and registers the acknowledged lease", async () => {
+    const checkpointID = "checkpoint_pending"
+    const filesRevisionID = "files_pending"
+    const firstRequests: Request[] = []
+    const first = createCloudHistory({
+      checkpointID,
+      filesRevisionID,
+      request: async (request) => {
+        firstRequests.push(request)
+        if (request.url.endsWith("/epoch")) return response({ epoch: 7 })
+        throw new Error("lost claim receipt")
+      },
+    })
+    expect(await rejection(first.initialize)).toContain("холбогдож чадсангүй")
+    await rejection(first.initialize)
+    expect(firstRequests.map((request) => new URL(request.url).pathname)).toEqual(["/v1/epoch", "/v1/claim"])
+
+    const pendingClaim = await readClaim(firstRequests[1])
+    const originalRequest = await firstRequests[1].clone().text()
+    const replayRequests: Request[] = []
+    const steps: string[] = []
+    const replay = createCloudHistory({
+      checkpointID,
+      filesRevisionID,
+      expectedEpoch: pendingClaim.expectedEpoch,
+      pendingClaim,
+      workspace: {
+        async prepare(claim) {
+          steps.push("prepare")
+          expect(claim).toEqual(pendingClaim)
+        },
+        async register(lease) {
+          steps.push("register")
+          expect(lease).toEqual({ epoch: pendingClaim.expectedEpoch + 1, writerID: pendingClaim.writerID })
+        },
+        async publish() {},
+      },
+      request: async (request) => {
+        replayRequests.push(request)
+        if (request.url.endsWith("/claim"))
+          return response({ epoch: pendingClaim.expectedEpoch + 1, writerID: pendingClaim.writerID })
+        if (request.url.endsWith("/append")) return response({ cursor: 1 })
+        throw new Error("unexpected epoch")
+      },
+    })
+    await Effect.runPromise(replay.initialize)
+    await Effect.runPromise(replay.append(event))
+    expect(steps).toEqual(["prepare", "register"])
+    expect(replayRequests.map((request) => new URL(request.url).pathname)).toEqual(["/v1/claim", "/v1/append"])
+    expect(await replayRequests[0].clone().text()).toBe(originalRequest)
+    expect(await readAppend(replayRequests[1])).toEqual({
+      epoch: pendingClaim.expectedEpoch + 1,
+      writerID: pendingClaim.writerID,
+      event,
+    })
+  })
+
+  test("fails closed when a pending claim is acknowledged with a superseded lease", async () => {
+    const pendingClaim = { expectedEpoch: 7, writerID: "writer.pending" }
+    const requests: Request[] = []
+    const registered: Array<{ epoch: number; writerID: string }> = []
+    const client = createCloudHistory({
+      pendingClaim,
+      workspace: {
+        async prepare() {},
+        async register(lease) {
+          registered.push({ ...lease })
+        },
+        async publish() {},
+      },
+      request: async (request) => {
+        requests.push(request)
+        return response({ epoch: 9, writerID: pendingClaim.writerID })
+      },
+    })
+    expect(await rejection(client.initialize)).toContain("шинэчлэгдсэн")
+    await rejection(client.initialize)
+    await rejection(client.append(event))
+    expect(requests.map((request) => new URL(request.url).pathname)).toEqual(["/v1/claim"])
+    expect(registered).toEqual([])
+  })
+
+  test("snapshots pending claim input and rejects invalid or untrusted pending startup claims", async () => {
+    const pendingClaim = { expectedEpoch: 7, writerID: "writer.pending" }
+    const requests: Request[] = []
+    const client = createCloudHistory({
+      checkpointID: "checkpoint_pending",
+      filesRevisionID: "files_pending",
+      expectedEpoch: 7,
+      pendingClaim,
+      workspace: {
+        async prepare(claim) {
+          expect(claim).toEqual({ expectedEpoch: 7, writerID: "writer.pending" })
+          const mutable = claim as { expectedEpoch: number; writerID: string }
+          mutable.expectedEpoch = 6
+          mutable.writerID = "writer.mutated.prepare"
+        },
+        async register() {},
+        async publish() {},
+      },
+      request: async (request) => {
+        requests.push(request)
+        const body = await readClaimEnvelope(request)
+        return response({ epoch: body.expectedEpoch + 1, writerID: body.writerID })
+      },
+    })
+    pendingClaim.expectedEpoch = 8
+    pendingClaim.writerID = "writer.mutated"
+    await Effect.runPromise(client.initialize)
+    expect(await readClaimEnvelope(requests[0])).toEqual({
+      expectedEpoch: 7,
+      writerID: "writer.pending",
+      checkpointID: "checkpoint_pending",
+      filesRevisionID: "files_pending",
+    })
+    const zeroRequests: Request[] = []
+    const zero = createCloudHistory({
+      pendingClaim: { expectedEpoch: 0, writerID: "writer.zero" },
+      workspace: { async prepare() {}, async register() {}, async publish() {} },
+      request: async (request) => {
+        zeroRequests.push(request)
+        return response({ epoch: 1, writerID: "writer.zero" })
+      },
+    })
+    await Effect.runPromise(zero.initialize)
+    expect(await readClaim(zeroRequests[0])).toEqual({ expectedEpoch: 0, writerID: "writer.zero" })
+    for (const claim of [
+      { expectedEpoch: -1, writerID: "writer.pending" },
+      { expectedEpoch: 0.5, writerID: "writer.pending" },
+      { expectedEpoch: Number.MAX_SAFE_INTEGER, writerID: "writer.pending" },
+      { expectedEpoch: 0, writerID: "bad writer" },
+      { expectedEpoch: 0, writerID: "writer.pending", extra: true },
+    ])
+      expect(() =>
+        createCloudHistory({
+          pendingClaim: claim,
+          workspace: { async prepare() {}, async register() {}, async publish() {} },
+        }),
+      ).toThrow()
+    expect(() => createCloudHistory({ pendingClaim: { expectedEpoch: 0, writerID: "writer.pending" } })).toThrow()
+    expect(() =>
+      createCloudHistory({
+        expectedEpoch: 6,
+        pendingClaim: { expectedEpoch: 7, writerID: "writer.pending" },
+        workspace: { async prepare() {}, async register() {}, async publish() {} },
+      }),
+    ).toThrow("шинэчлэгдсэн")
   })
 
   test("binds claim and every read to an immutable checkpoint ID", async () => {

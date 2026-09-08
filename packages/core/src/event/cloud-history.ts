@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect"
 import { Event } from "@mongolgpt/schema/event"
 import { SessionEvent } from "@mongolgpt/schema/session-event"
 import type { EventV2 } from "../event"
-import type { RuntimeControl } from "../runtime-control"
+import { RuntimeControl } from "../runtime-control"
 
 const base = "http://history.mongolgpt.internal/v1"
 const maxRequestBytes = 1024 * 1024 + 4096
@@ -62,6 +62,7 @@ const Page = Schema.Struct({
   hasMore: Schema.Boolean,
 })
 export type Page = typeof Page.Type
+type Workspace = Pick<RuntimeControl.Client, "register" | "publish"> & Partial<Pick<RuntimeControl.Client, "prepare">>
 
 const Failure = Schema.Struct({
   error: Schema.Struct({
@@ -77,7 +78,8 @@ export function createCloudHistory(
     readonly checkpointID?: string
     readonly filesRevisionID?: string
     readonly expectedEpoch?: number
-    readonly workspace?: Pick<RuntimeControl.Client, "register" | "publish">
+    readonly pendingClaim?: RuntimeControl.Claim
+    readonly workspace?: Workspace
   } = {},
 ) {
   const request = options.request ?? ((request: Request) => fetch(request))
@@ -89,8 +91,15 @@ export function createCloudHistory(
     options.expectedEpoch === undefined
       ? undefined
       : decode(Integer.check(Schema.isLessThan(Number.MAX_SAFE_INTEGER)), options.expectedEpoch, "invalid_input")
-  const writerID = crypto.randomUUID()
   const workspace = options.workspace
+  const pendingClaim =
+    options.pendingClaim === undefined
+      ? undefined
+      : decode(RuntimeControl.Claim, { ...options.pendingClaim }, "invalid_input")
+  if (pendingClaim && expectedEpoch !== undefined && expectedEpoch !== pendingClaim.expectedEpoch)
+    throw new CloudHistoryError("fenced")
+  if (pendingClaim && !workspace?.prepare) throw new CloudHistoryError("invalid_input")
+  const writerID = pendingClaim ? undefined : crypto.randomUUID()
   let lease: typeof Lease.Type | undefined
   let initialization: Promise<void> | undefined
   let failure: CloudHistoryError | undefined
@@ -162,17 +171,12 @@ export function createCloudHistory(
     // Keep the same outcome, including rejection: an uncertain claim must never start a new CAS.
     return (initialization ??= (async () => {
       try {
-        const expected = await rpc("epoch", json({}), Epoch, signal)
-        if (expectedEpoch !== undefined && expected.epoch !== expectedEpoch) throw new CloudHistoryError("fenced")
-        if (expected.epoch === Number.MAX_SAFE_INTEGER) throw new CloudHistoryError("unavailable")
-        const claimed = await rpc(
-          "claim",
-          json({ expectedEpoch: expected.epoch, writerID, checkpointID, filesRevisionID }),
-          Lease,
-          signal,
-        )
-        if (claimed.epoch !== expected.epoch + 1 || claimed.writerID !== writerID) throw new CloudHistoryError("fenced")
-        await workspace?.register(claimed, signal)
+        const claim = pendingClaim ?? (await newClaim(signal))
+        await workspace?.prepare?.({ ...claim }, signal)
+        const claimed = await rpc("claim", json({ ...claim, checkpointID, filesRevisionID }), Lease, signal)
+        if (claimed.epoch !== claim.expectedEpoch + 1 || claimed.writerID !== claim.writerID)
+          throw new CloudHistoryError("fenced")
+        await workspace?.register({ ...claimed }, signal)
         lease = claimed
       } catch (error) {
         failure = sanitize(error)
@@ -232,6 +236,13 @@ export function createCloudHistory(
   }
 
   return { initialize, append, afterCommit, read, checkpointID }
+
+  async function newClaim(signal: AbortSignal) {
+    const expected = await rpc("epoch", json({}), Epoch, signal)
+    if (expectedEpoch !== undefined && expected.epoch !== expectedEpoch) throw new CloudHistoryError("fenced")
+    if (expected.epoch === Number.MAX_SAFE_INTEGER || !writerID) throw new CloudHistoryError("unavailable")
+    return { expectedEpoch: expected.epoch, writerID }
+  }
 }
 
 function perform<A>(run: (signal: AbortSignal) => Promise<A>): Effect.Effect<A> {

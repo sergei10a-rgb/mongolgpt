@@ -155,12 +155,12 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
     const store = cloudBaselineStore()
     const fixture = process.env.MONGOLGPT_TEST_RESUME_CHILD
     if (!fixture) throw new Error("Runtime resume child fixture is required")
-    const start = (epoch: number) =>
+    const start = (epoch: number, fault?: string) =>
       RuntimeSupervisor.start({
         root,
         launcher: launcher!,
         ...startupCommand(root),
-        args: [fixture, root, String(epoch)],
+        args: [fixture, root, String(epoch), ...(fault ? [fault] : [])],
         request: store.request,
       })
     for (const epoch of [1, 2, 3]) {
@@ -182,6 +182,22 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
         await runtime.group.close()
       }
     }
+    const interrupted = await start(4, "lost-claim")
+    try {
+      expect((await output(interrupted.child)).code).not.toBe(0)
+      await interrupted.control
+    } finally {
+      await interrupted.group.close()
+    }
+    const retried = await start(5)
+    try {
+      const result = await output(retried.child)
+      expect(result.stderr).toBe("")
+      expect(JSON.parse(result.stdout)).toEqual({ resume: true, previousEpoch: 4, epoch: 5 })
+      await retried.control
+    } finally {
+      await retried.group.close()
+    }
     const before = await readFile(join(root, ".mongolgpt/runtime.sqlite"))
     const stale = await start(9)
     try {
@@ -196,7 +212,115 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
     }
     await using lock = await RuntimeLock.acquire({ root, launcher: launcher! })
     const state = await RuntimeState.openState(lock.directory, root)
-    expect((await state.read())?.epoch).toBe(4)
+    expect((await state.read())?.epoch).toBe(5)
+  }, 20_000)
+
+  for (const mode of ["before-claim", "lost-claim"]) {
+    test(`initial ${mode} failure restarts without discarding native files or replacing pending claim identity`, async () => {
+      await using temp = await tmpdir()
+      await chmod(temp.path, 0o755)
+      const root = join(temp.path, "workspace")
+      await mkdir(root)
+      const store = cloudBaselineStore()
+      const fixture = process.env.MONGOLGPT_TEST_RESUME_CHILD!
+      const start = (epoch: number, fault?: string) =>
+        RuntimeSupervisor.start({
+          root,
+          launcher: launcher!,
+          ...startupCommand(root),
+          args: [fixture, root, String(epoch), ...(fault ? [fault] : [])],
+          request: store.request,
+        })
+      const first = await start(1, mode)
+      try {
+        expect((await output(first.child)).code).not.toBe(0)
+        await first.control
+      } finally {
+        await first.group.close()
+      }
+      const database = join(root, ".mongolgpt/runtime.sqlite")
+      const original = await readFile(database)
+      await writeFile(join(root, "uncheckpointed.txt"), "must survive unknown claim", { mode: 0o644 })
+      await using lock = await RuntimeLock.acquire({ root, launcher: launcher! })
+      const state = await RuntimeState.openState(lock.directory, root)
+      const pending = await state.read()
+      expect(pending?.version).toBe(2)
+      expect(pending?.epoch).toBeUndefined()
+      expect(!!pending?.pendingClaim).toBe(mode === "lost-claim")
+      if (pending?.pendingClaim) {
+        const request = JSON.parse(await readFile(join(root, "pending-request.json"), "utf8"))
+        expect(pending.pendingClaim).toEqual({ expectedEpoch: request.expectedEpoch, writerID: request.writerID })
+        expect(pending.checkpointID).toBe(request.checkpointID)
+      }
+      await lock.close()
+      const before = store.calls.length
+      const second = await start(mode === "lost-claim" ? 2 : 1)
+      try {
+        const result = await output(second.child)
+        expect(result.stderr).toBe("")
+        expect(result.code === 0 || second.child.signalCode === "SIGKILL").toBe(true)
+        expect(JSON.parse(result.stdout)).toEqual({ resume: true, epoch: 2 })
+        await second.control
+        expect(store.calls.slice(before)).toEqual(["/v1/bootstrap"])
+        expect(await readFile(join(root, "uncheckpointed.txt"), "utf8")).toBe("must survive unknown claim")
+        expect((await readFile(database)).length).toBeGreaterThanOrEqual(original.length)
+      } finally {
+        await second.group.close()
+      }
+      await using acceptedLock = await RuntimeLock.acquire({ root, launcher: launcher! })
+      const accepted = await (await RuntimeState.openState(acceptedLock.directory, root)).read()
+      expect(accepted?.epoch).toBe(2)
+      expect(accepted?.pendingClaim).toBeUndefined()
+    }, 20_000)
+  }
+
+  test("superseded pending claim and legacy unknown state remain fenced without modifying native data", async () => {
+    await using temp = await tmpdir()
+    await chmod(temp.path, 0o755)
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    const store = cloudBaselineStore()
+    const fixture = process.env.MONGOLGPT_TEST_RESUME_CHILD!
+    const start = (epoch: number, fault?: string) =>
+      RuntimeSupervisor.start({
+        root,
+        launcher: launcher!,
+        ...startupCommand(root),
+        args: [fixture, root, String(epoch), ...(fault ? [fault] : [])],
+        request: store.request,
+      })
+    const first = await start(1, "lost-claim")
+    try {
+      expect((await output(first.child)).code).not.toBe(0)
+      await first.control
+    } finally {
+      await first.group.close()
+    }
+    const database = join(root, ".mongolgpt/runtime.sqlite")
+    const before = await readFile(database)
+    const request = await readFile(join(root, "pending-request.json"))
+    const second = await start(9)
+    try {
+      expect((await output(second.child)).code).not.toBe(0)
+      await second.control
+      expect(await readFile(database)).toEqual(before)
+      expect(await readFile(join(root, "pending-request.json"))).toEqual(request)
+    } finally {
+      await second.group.close()
+    }
+    await using lock = await RuntimeLock.acquire({ root, launcher: launcher! })
+    const state = await (await RuntimeState.openState(lock.directory, root)).read()
+    expect(state?.pendingClaim?.expectedEpoch).toBe(1)
+    expect(state?.epoch).toBeUndefined()
+    await writeFile(
+      join(lock.directory, "state.json"),
+      JSON.stringify({ ...state, version: 1, pendingClaim: undefined }),
+    )
+    await lock.close()
+    const calls = store.calls.length
+    await expect(start(1)).rejects.toBeInstanceOf(RuntimeState.StateError)
+    expect(store.calls).toHaveLength(calls)
+    expect(await readFile(database)).toEqual(before)
   }, 20_000)
 
   test("orphan cleanup removes the admission target before a late launcher can run tenant code", async () => {

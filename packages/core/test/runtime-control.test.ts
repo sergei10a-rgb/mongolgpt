@@ -6,6 +6,7 @@ import { Duplex, PassThrough } from "node:stream"
 import { RuntimeControl } from "@mongolgpt/core/runtime-control"
 
 const lease = { epoch: 1, writerID: "writer.runtime-control" }
+const claim = { expectedEpoch: 0, writerID: lease.writerID }
 
 test.skipIf(process.platform !== "linux")(
   "inherited control survives suspension and collection of previous child handles",
@@ -95,6 +96,229 @@ test("client and server register then publish only after receipt", async () => {
   release.resolve()
   await published
   client.close()
+  await server
+})
+
+test("prepare is acknowledged only after durable claim state is written", async () => {
+  await using pair = await socketPair()
+  const entered = Promise.withResolvers<void>()
+  const release = Promise.withResolvers<void>()
+  const server = RuntimeControl.serve(pair.server, {
+    async prepare(value, signal) {
+      expect(value).toEqual(claim)
+      expect(signal.aborted).toBe(false)
+      entered.resolve()
+      await release.promise
+    },
+    async publish() {},
+    async close() {},
+  })
+  const client = RuntimeControl.create(pair.client)
+  try {
+    const preparing = client.prepare(claim)
+    await entered.promise
+    expect(await settlesWithin(preparing, 30)).toBe(false)
+    release.resolve()
+    await preparing
+    await client.register(lease)
+  } finally {
+    release.resolve()
+    client.close()
+    await server
+  }
+})
+
+test("failed durable prepare closes the root and never admits registration", async () => {
+  await using pair = await socketPair()
+  let closed = false
+  let registered = false
+  const server = RuntimeControl.serve(pair.server, {
+    async prepare() {
+      throw new Error("private claim write failed")
+    },
+    async register() {
+      registered = true
+    },
+    async publish() {},
+    async close() {
+      closed = true
+    },
+  }).catch((error) => error)
+  const client = RuntimeControl.create(pair.client)
+  await expect(client.prepare(claim)).rejects.toBeInstanceOf(RuntimeControl.RuntimeControlError)
+  expect(await server).toBeInstanceOf(RuntimeControl.RuntimeControlError)
+  expect(closed).toBe(true)
+  expect(registered).toBe(false)
+})
+
+test("server rejects register before prepare when prepare is configured", async () => {
+  await using pair = await socketPair()
+  let prepared = false
+  let registered = false
+  const server = RuntimeControl.serve(pair.server, {
+    async prepare() {
+      prepared = true
+    },
+    async register() {
+      registered = true
+    },
+    async publish() {},
+    async close() {},
+  }).catch((error) => error)
+  const client = RuntimeControl.create(pair.client)
+  expect(await client.register(lease).catch((error) => error)).toBeInstanceOf(RuntimeControl.RuntimeControlError)
+  expect(await server).toBeInstanceOf(RuntimeControl.RuntimeControlError)
+  expect(prepared).toBe(false)
+  expect(registered).toBe(false)
+})
+
+test("server rejects registration that does not match the prepared claim", async () => {
+  await using pair = await socketPair()
+  let registered = false
+  const server = RuntimeControl.serve(pair.server, {
+    async prepare() {},
+    async register() {
+      registered = true
+    },
+    async publish() {},
+    async close() {},
+  }).catch((error) => error)
+  const client = RuntimeControl.create(pair.client)
+  await client.prepare(claim)
+  expect(await client.register({ epoch: 2, writerID: lease.writerID }).catch((error) => error)).toBeInstanceOf(
+    RuntimeControl.RuntimeControlError,
+  )
+  expect(await server).toBeInstanceOf(RuntimeControl.RuntimeControlError)
+  expect(registered).toBe(false)
+})
+
+test("server rejects prepare after registration", async () => {
+  await using pair = await socketPair()
+  const server = RuntimeControl.serve(pair.server, {
+    async prepare() {},
+    async publish() {},
+    async close() {},
+  }).catch((error) => error)
+  const client = RuntimeControl.create(pair.client)
+  await client.prepare(claim)
+  await client.register(lease)
+  expect(await client.prepare(claim).catch((error) => error)).toBeInstanceOf(RuntimeControl.RuntimeControlError)
+  expect(await server).toBeInstanceOf(RuntimeControl.RuntimeControlError)
+})
+
+test("server accepts exact prepare retry before register without repeating the durable write", async () => {
+  await using pair = await socketPair()
+  let preparations = 0
+  let registrations = 0
+  const server = RuntimeControl.serve(pair.server, {
+    async prepare(value) {
+      expect(value).toEqual(claim)
+      preparations++
+    },
+    async register(value) {
+      expect(value).toEqual(lease)
+      registrations++
+    },
+    async publish() {},
+    async close() {},
+  })
+  const client = RuntimeControl.create(pair.client)
+  await client.prepare(claim)
+  await client.prepare({ ...claim })
+  await client.register(lease)
+  client.close()
+  await server
+  expect(preparations).toBe(1)
+  expect(registrations).toBe(1)
+})
+
+test("server rejects changed prepare claims before register", async () => {
+  await using pair = await socketPair()
+  let preparations = 0
+  const server = RuntimeControl.serve(pair.server, {
+    async prepare() {
+      preparations++
+    },
+    async publish() {},
+    async close() {},
+  }).catch((error) => error)
+  const client = RuntimeControl.create(pair.client)
+  await client.prepare(claim)
+  expect(await client.prepare({ expectedEpoch: 0, writerID: "writer.changed" }).catch((error) => error)).toBeInstanceOf(
+    RuntimeControl.RuntimeControlError,
+  )
+  expect(await server).toBeInstanceOf(RuntimeControl.RuntimeControlError)
+  expect(preparations).toBe(1)
+})
+
+test("server rejects malformed prepare claims", async () => {
+  for (const frame of [
+    '{"id":1,"op":"prepare","claim":{"expectedEpoch":9007199254740991,"writerID":"writer.runtime-control"}}\n',
+    '{"id":1,"op":"prepare","claim":{"expectedEpoch":0,"writerID":"bad writer"}}\n',
+    '{"id":1,"op":"prepare","claim":{"expectedEpoch":0,"writerID":"writer.runtime-control","extra":true}}\n',
+  ]) {
+    await using pair = await socketPair()
+    let closed = false
+    let prepared = false
+    const server = RuntimeControl.serve(pair.server, {
+      async prepare() {
+        prepared = true
+      },
+      async publish() {},
+      async close() {
+        closed = true
+      },
+    }).catch((error) => error)
+    pair.client.write(frame)
+    expect(await server).toBeInstanceOf(RuntimeControl.RuntimeControlError)
+    expect(closed).toBe(true)
+    expect(prepared).toBe(false)
+  }
+})
+
+test("client prepare snapshots claim before queued mutation", async () => {
+  await using pair = await socketPair()
+  const seen = Promise.withResolvers<RuntimeControl.Claim>()
+  const release = Promise.withResolvers<void>()
+  const server = RuntimeControl.serve(pair.server, {
+    async prepare(value) {
+      seen.resolve({ ...value })
+      await release.promise
+    },
+    async publish() {},
+    async close() {},
+  })
+  const client = RuntimeControl.create(pair.client)
+  const mutable = { ...claim }
+  const preparing = client.prepare(mutable)
+  mutable.expectedEpoch = 5
+  expect(await seen.promise).toEqual(claim)
+  release.resolve()
+  await preparing
+  client.close()
+  await server
+})
+
+test("client abort during active prepare fences the bounded channel", async () => {
+  await using pair = await socketPair()
+  const abort = new AbortController()
+  const entered = Promise.withResolvers<void>()
+  const aborted = Promise.withResolvers<void>()
+  const server = RuntimeControl.serve(pair.server, {
+    async prepare(_claim, signal) {
+      signal.addEventListener("abort", () => aborted.resolve(), { once: true })
+      entered.resolve()
+      await new Promise(() => {})
+    },
+    async publish() {},
+    async close() {},
+  })
+  const client = RuntimeControl.create(pair.client)
+  const preparing = client.prepare(claim, abort.signal).catch((error) => error)
+  await entered.promise
+  abort.abort()
+  expect(await preparing).toBeInstanceOf(RuntimeControl.RuntimeControlError)
+  await aborted.promise
   await server
 })
 

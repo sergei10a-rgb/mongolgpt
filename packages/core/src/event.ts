@@ -798,6 +798,7 @@ export const layer = Layer.unwrap(
         checkpointID: baseline?.id,
         filesRevisionID: baseline?.filesRevisionID,
         expectedEpoch: baseline?.resume?.expectedEpoch,
+        pendingClaim: baseline?.pendingClaim,
         workspace: CloudStartup.supervised() ? CloudWorkspace.connect() : undefined,
       })
       // File revision admission is separate from the immutable SQLite inventory.
