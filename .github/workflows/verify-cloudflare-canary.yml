@@ -46,7 +46,7 @@ jobs:
       - name: Verify canary safety contracts
         run: |
           bun run --cwd packages/runtime typecheck
-          bun --cwd packages/runtime test test/canary-probe.test.ts test/canary-resources.test.ts test/cloudflare-canary.test.ts test/canary-workflow.test.ts
+          bun --cwd packages/runtime test test/canary-probe.test.ts test/canary-resources.test.ts test/cloudflare-canary.test.ts test/canary-workflow.test.ts test/canary-diagnostics.test.ts test/canary-failure-diagnostics.test.ts
 
       - name: Build current authenticated container payload
         timeout-minutes: 10

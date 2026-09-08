@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url"
 import { validControlToken } from "@mongolgpt/runtime-auth/control"
 import { verifySandboxBuild } from "./build-sandbox"
 import { readCanaryJson, runCanaryProbe } from "./canary-probe"
+import { sanitizeCanaryDiagnostics } from "./canary-diagnostics"
 import {
   CanaryResourceError,
   cleanupCanaryResourceReceipt,
@@ -75,6 +76,7 @@ async function run() {
   await writeFile(secretsPath, JSON.stringify(secrets), { mode: 0o600, flag: "wx" })
   let resources: CanaryResources | undefined
   let deploymentAttempted = false
+  let probeStarted = false
   let origin: string | undefined
   const report: Record<string, unknown> = { name: context.name, version: context.version, ok: false }
   report.r2BucketCreated = false
@@ -123,6 +125,7 @@ async function run() {
     report.workerDeployed = true
     await saveReport()
     await wrangler(["deploy", `--config=${configPath}`, `--secrets-file=${secretsPath}`], "deploy", 600_000)
+    probeStarted = true
     report.probe = await runCanaryProbe({
       origin,
       adminToken: secrets.CANARY_ADMIN_TOKEN,
@@ -131,6 +134,12 @@ async function run() {
     })
   } catch (error) {
     report.error = safeError(error)
+    if (probeStarted && origin) {
+      report.failureDiagnostics = await collectCanaryFailureDiagnostics({
+        origin,
+        adminToken: secrets.CANARY_ADMIN_TOKEN,
+      })
+    }
     if (error instanceof CanaryResourceError) {
       report.cleanup = error.cleanup
       report.manualCleanup = error.manualCleanup
@@ -399,6 +408,46 @@ async function stopAndPurge(origin: string, adminToken: string, request: CanaryR
       throw new Error(`Canary cleanup endpoint returned HTTP ${response.status}`)
     }
     return readCanaryJson<T>(response)
+  }
+}
+
+export async function collectCanaryFailureDiagnostics(input: {
+  origin: string
+  adminToken: string
+  request?: CanaryRequest
+  signal?: AbortSignal
+}) {
+  if (
+    !/^https:\/\/mgpt-canary-[0-9]{1,12}-[0-9]{1,3}\.[a-z0-9-]+\.workers\.dev$/.test(input.origin) ||
+    !validControlToken(input.adminToken)
+  )
+    return undefined
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 10_000)
+  const signal = input.signal ? AbortSignal.any([input.signal, controller.signal]) : controller.signal
+  const aborted = Promise.withResolvers<undefined>()
+  const cancel = () => aborted.resolve(undefined)
+  signal.addEventListener("abort", cancel, { once: true })
+  try {
+    if (signal.aborted) return undefined
+    // Diagnostic failure must never delay or replace the independent cleanup.
+    return await Promise.race([
+      aborted.promise,
+      (async () => {
+        const response = await (input.request ?? fetch)(`${input.origin}/__canary/diagnostics`, {
+          method: "GET",
+          headers: { "x-mongolgpt-canary-token": input.adminToken },
+          redirect: "error",
+          signal,
+        })
+        const value = await readCanaryJson(response, signal)
+        return signal.aborted ? undefined : sanitizeCanaryDiagnostics(value)
+      })().catch(() => undefined),
+    ])
+  } finally {
+    clearTimeout(timer)
+    signal.removeEventListener("abort", cancel)
+    controller.abort()
   }
 }
 

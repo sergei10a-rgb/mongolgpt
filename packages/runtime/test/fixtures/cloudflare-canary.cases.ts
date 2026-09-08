@@ -1,22 +1,32 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
+import { emptyCanaryDiagnostics, sanitizeCanaryDiagnostics } from "../../script/canary-diagnostics"
 
 const calls = {
   derived: new Array<unknown[]>(),
   histories: 0,
+  historyScopes: new Array<unknown>(),
+  processes: new Array<string>(),
+  logs: 0,
   lists: new Array<unknown>(),
   productions: new Array<Request>(),
   sandboxes: new Array<unknown>(),
 }
 type SandboxState = { status: string; lastChange?: number; exitCode?: number; metadata?: string }
+type NativeProcess = { status: string; exitCode?: number; stdout: string; stderr: string }
+const privateValue = "private-token-path-url-message-never-report"
+let diagnosticFault: string | undefined
 const sandbox = {
   canaryStateArgs: new Array<unknown[]>(),
   stopCalls: new Array<unknown>(),
   state: { status: "healthy", lastChange: 123, exitCode: 0, metadata: "secret" } as SandboxState,
+  lastStop: { exitCode: 143, reason: "runtime_signal" },
+  process: null as NativeProcess | null,
   async canaryState(...args: unknown[]) {
     this.canaryStateArgs.push(args)
+    await fault("state")
     return {
       bootCount: 2,
-      lastStop: { exitCode: 143, reason: "runtime_signal" },
+      lastStop: this.lastStop,
       state: {
         status: this.state.status,
         lastChange: this.state.lastChange,
@@ -29,6 +39,22 @@ const sandbox = {
   },
   async getState() {
     return this.state
+  },
+  async getProcess(id: string) {
+    calls.processes.push(id)
+    await fault("process")
+    const process = this.process
+    return (
+      process && {
+        ...process,
+        command: privateValue,
+        async getLogs() {
+          calls.logs++
+          await fault("logs")
+          return { stdout: process.stdout, stderr: process.stderr }
+        },
+      }
+    )
   },
 }
 const bucket = {
@@ -136,6 +162,7 @@ mock.module("../../src/index", () => ({
 }))
 
 mock.module("../../src/runtime", () => ({
+  RUNTIME_PROCESS_ID: "mongolgpt-server",
   deriveRuntimeIdentity(...args: unknown[]) {
     calls.derived.push(args)
     return { sandboxID: "workspace-canary-derived", password: "unused" }
@@ -148,12 +175,18 @@ mock.module("../../src/history", () => ({
     return {
       db,
       async epoch(scope: unknown) {
+        calls.historyScopes.push(scope)
+        await fault("history")
         return scope && 5
       },
-      async checkpoint() {
+      async checkpoint(scope: unknown) {
+        calls.historyScopes.push(scope)
+        await fault("history")
         return { data: { id: "chk_canary" }, digest: "digest" }
       },
-      async fileRevision() {
+      async fileRevision(scope: unknown) {
+        calls.historyScopes.push(scope)
+        await fault("history")
         return { data: { id: "rev_canary", checkpointID: "chk_canary", sequence: 7 }, digest: "digest" }
       },
     }
@@ -167,12 +200,23 @@ describe("cloudflare canary worker", () => {
   beforeEach(() => {
     calls.derived.length = 0
     calls.histories = 0
+    calls.historyScopes.length = 0
+    calls.processes.length = 0
+    calls.logs = 0
+    diagnosticFault = undefined
     calls.lists.length = 0
     calls.productions.length = 0
     calls.sandboxes.length = 0
     sandbox.canaryStateArgs.length = 0
     sandbox.stopCalls.length = 0
     sandbox.state = { status: "healthy", lastChange: 123, exitCode: 0, metadata: "secret" }
+    sandbox.lastStop = { exitCode: 143, reason: "runtime_signal" }
+    sandbox.process = {
+      status: "failed",
+      exitCode: 1,
+      stdout: privateValue,
+      stderr: `TypeError: ${privateValue} ENOENT`,
+    }
     bucket.pages.length = 0
     bucket.deletes.length = 0
   })
@@ -274,6 +318,158 @@ describe("cloudflare canary worker", () => {
     expect("destroy" in sandbox).toBe(false)
   })
 
+  test("diagnostics requires the complete canary gate before any side effects", async () => {
+    for (const invalid of [
+      env({ STAGE: "production" }),
+      env({ CANARY_RUN_ID: "other-run" }),
+      env({ CANARY_ADMIN_TOKEN: "A".repeat(64) }),
+    ]) {
+      expect((await canary.default.fetch(request("/__canary/diagnostics", { token: true }), invalid)).status).toBe(403)
+    }
+    expect((await canary.default.fetch(request("/__canary/diagnostics"), env())).status).toBe(403)
+    expectNoCanaryEffects()
+  })
+
+  test("diagnostics is GET only and rejects queries before any SDK or history calls", async () => {
+    for (const method of ["POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]) {
+      const response = await canary.default.fetch(request("/__canary/diagnostics", { method, token: true }), env())
+      expect(response.status).toBe(405)
+      expect(response.headers.get("allow")).toBe("GET")
+    }
+    expect((await canary.default.fetch(request("/__canary/diagnostics?x=1", { token: true }), env())).status).toBe(400)
+    expectNoCanaryEffects()
+  })
+
+  test("diagnostics returns only fixed safe fields for the scoped native process and history", async () => {
+    const response = await canary.default.fetch(request("/__canary/diagnostics", { token: true }), env())
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    const value = await response.json()
+    expect(value).toEqual({
+      bootCount: 2,
+      lastStop: { exitCode: 143, reason: "runtime_signal" },
+      containerStatus: "healthy",
+      epoch: 5,
+      checkpointPresent: true,
+      revisionPresent: true,
+      sequence: 7,
+      process: {
+        present: true,
+        status: "failed",
+        exitCode: 1,
+        stdoutBytes: privateValue.length,
+        stderrBytes: `TypeError: ${privateValue} ENOENT`.length,
+        signals: ["TypeError", "ENOENT"],
+      },
+      failure: null,
+    })
+    expect<unknown>(sanitizeCanaryDiagnostics(value)).toEqual(value)
+    expect(JSON.stringify(value)).not.toContain(privateValue)
+    expect(JSON.stringify(value)).not.toContain("chk_canary")
+    expect(JSON.stringify(value)).not.toContain("rev_canary")
+    expect(JSON.stringify(value).length).toBeLessThan(4096)
+    expect(calls.processes).toEqual(["mongolgpt-server"])
+    expect(calls.logs).toBe(1)
+    expect(calls.historyScopes).toEqual(Array(3).fill(canary.canaryScope))
+    expect(calls.derived[0]).toEqual([
+      canary.canaryScope.accountID,
+      canary.canaryScope.workspaceID,
+      env().MONGOLGPT_RUNTIME_SECRET,
+    ])
+    expect(sandbox.canaryStateArgs).toEqual([[]])
+    expect(calls.productions).toEqual([])
+    expect(calls.lists).toEqual([])
+    expect(bucket.deletes).toEqual([])
+    expect(sandbox.stopCalls).toEqual([])
+  })
+
+  test("diagnostics never starts a cold container to inspect its native process", async () => {
+    for (const status of ["stopped", "stopped_with_code", "stopping"]) {
+      sandbox.state = { status }
+      const response = await canary.default.fetch(request("/__canary/diagnostics", { token: true }), env())
+      const value = (await response.json()) as { containerStatus: string; process: unknown; failure: unknown }
+      expect(value.containerStatus).toBe(status)
+      expect(value.process).toEqual(emptyCanaryDiagnostics().process)
+      expect(value.failure).toBeNull()
+    }
+    expect(calls.processes).toEqual([])
+    expect(calls.logs).toBe(0)
+    expect(calls.productions).toEqual([])
+    expect(sandbox.stopCalls).toEqual([])
+  })
+
+  test("an unknown private stop reason does not suppress current healthy process diagnostics", async () => {
+    sandbox.lastStop = { exitCode: 143, reason: privateValue }
+    const response = await canary.default.fetch(request("/__canary/diagnostics", { token: true }), env())
+    const value = (await response.json()) as {
+      bootCount: number
+      lastStop: unknown
+      containerStatus: string
+      process: { present: boolean; status: string }
+      failure: unknown
+    }
+    expect(value.bootCount).toBe(2)
+    expect(value.lastStop).toEqual({ exitCode: 143, reason: null })
+    expect(value.containerStatus).toBe("healthy")
+    expect(value.process.present).toBe(true)
+    expect(value.process.status).toBe("failed")
+    expect(value.failure).toBeNull()
+    expect(calls.processes).toEqual(["mongolgpt-server"])
+    expect(calls.logs).toBe(1)
+    expect(JSON.stringify(value)).not.toContain(privateValue)
+  })
+
+  test("diagnostics reports a missing process without requesting logs", async () => {
+    sandbox.state = { status: "running" }
+    sandbox.process = null
+    const response = await canary.default.fetch(request("/__canary/diagnostics", { token: true }), env())
+    const value = (await response.json()) as { process: unknown }
+    expect(value.process).toEqual({ ...emptyCanaryDiagnostics().process, present: false })
+    expect(calls.processes).toEqual(["mongolgpt-server"])
+    expect(calls.logs).toBe(0)
+  })
+
+  test("diagnostic failures expose only an enum and preserve successful independent receipts", async () => {
+    for (const stage of ["state", "history", "process", "logs"]) {
+      diagnosticFault = `${stage}-error`
+      const response = await canary.default.fetch(request("/__canary/diagnostics", { token: true }), env())
+      const value = (await response.json()) as { failure: unknown; epoch: unknown; containerStatus: unknown }
+      expect(response.status).toBe(200)
+      expect(value.failure).toBe("unavailable")
+      expect<unknown>(sanitizeCanaryDiagnostics(value)).toEqual(value)
+      expect(JSON.stringify(value)).not.toContain(privateValue)
+      if (stage !== "history") expect(value.epoch).toBe(5)
+      if (stage !== "state") expect(value.containerStatus).toBe("healthy")
+    }
+  })
+
+  test("all diagnostic reads share one deadline and timed-out state never leads to process lookup", async () => {
+    const nativeSetTimeout = globalThis.setTimeout
+    let deadlines = 0
+    const accelerated = new Proxy(nativeSetTimeout, {
+      apply(target, thisArg, [handler, milliseconds, ...args]) {
+        if (milliseconds === 8000) deadlines++
+        return Reflect.apply(target, thisArg, [handler, milliseconds === 8000 ? 20 : milliseconds, ...args])
+      },
+    })
+    const clock = spyOn(globalThis, "setTimeout").mockImplementation(accelerated)
+    try {
+      for (const stage of ["state", "history", "process", "logs"]) {
+        calls.processes.length = 0
+        diagnosticFault = `${stage}-timeout`
+        const response = await canary.default.fetch(request("/__canary/diagnostics", { token: true }), env())
+        const value = (await response.json()) as { failure: unknown }
+        expect(value.failure).toBe("timeout")
+        expect<unknown>(sanitizeCanaryDiagnostics(value)).toEqual(value)
+        expect(JSON.stringify(value)).not.toContain(privateValue)
+        if (stage === "state") expect(calls.processes).toEqual([])
+      }
+      expect(deadlines).toBe(4)
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
   test("admin routes accept CL0 and incoming streams that reach EOF without bytes", async () => {
     sandbox.state = { status: "stopped" }
     for (const route of adminRoutes) {
@@ -325,7 +521,7 @@ describe("cloudflare canary worker", () => {
       }
     }
     expect(reads).toBe(0)
-    expect(cancellations).toBe(12)
+    expect(cancellations).toBe(adminRoutes.length * 4)
     expectNoCanaryEffects()
   })
 
@@ -352,7 +548,7 @@ describe("cloudflare canary worker", () => {
         expect(body.locked).toBe(false)
       }
     }
-    expect(cancellations).toBe(9)
+    expect(cancellations).toBe(adminRoutes.length * 3)
     expectNoCanaryEffects()
   })
 
@@ -377,7 +573,7 @@ describe("cloudflare canary worker", () => {
       expect(reads).toBeLessThanOrEqual(4)
       expect(body.locked).toBe(false)
     }
-    expect(cancellations).toBe(3)
+    expect(cancellations).toBe(adminRoutes.length)
     expectNoCanaryEffects()
   })
 
@@ -405,7 +601,7 @@ describe("cloudflare canary worker", () => {
     )
     expect(Date.now() - started).toBeGreaterThanOrEqual(900)
     expect(Date.now() - started).toBeLessThan(3_000)
-    expect(cancellations).toBe(3)
+    expect(cancellations).toBe(adminRoutes.length)
     expectNoCanaryEffects()
   }, 4_000)
 
@@ -578,6 +774,7 @@ describe("cloudflare canary worker", () => {
 
 const adminRoutes = [
   { path: "/__canary/state", method: "GET", status: 200 },
+  { path: "/__canary/diagnostics", method: "GET", status: 200 },
   { path: "/__canary/stop", method: "POST", status: 202 },
   { path: "/__canary/purge", method: "POST", status: 200 },
 ]
@@ -597,6 +794,9 @@ function nativeIncoming(
 function expectNoCanaryEffects() {
   expect(calls.derived).toEqual([])
   expect(calls.histories).toBe(0)
+  expect(calls.historyScopes).toEqual([])
+  expect(calls.processes).toEqual([])
+  expect(calls.logs).toBe(0)
   expect(calls.lists).toEqual([])
   expect(calls.productions).toEqual([])
   expect(calls.sandboxes).toEqual([])
@@ -621,6 +821,11 @@ function request(path: string, options: { method?: string; body?: BodyInit; toke
     },
   })
   return value as CanaryRequest
+}
+
+async function fault(stage: string) {
+  if (diagnosticFault === `${stage}-error`) throw new Error(privateValue)
+  if (diagnosticFault === `${stage}-timeout`) await new Promise<never>(() => {})
 }
 
 const token = "0".repeat(64)

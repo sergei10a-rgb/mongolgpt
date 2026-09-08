@@ -295,12 +295,12 @@ function canaryFailureDiagnostic(value: unknown) {
   return code || diagnostic ? ` ${JSON.stringify({ code, diagnostic })}` : ""
 }
 
-export async function readCanaryJson<T = unknown>(response: Response): Promise<T> {
+export async function readCanaryJson<T = unknown>(response: Response, signal?: AbortSignal): Promise<T> {
   if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
-    await response.body?.cancel()
+    void response.body?.cancel().catch(() => {})
     throw new Error(`Canary response is not successful JSON (HTTP ${response.status})`)
   }
-  return readCanaryJsonBody<T>(response)
+  return readCanaryJsonBody<T>(response, signal)
 }
 
 async function readCanaryJsonBody<T>(response: Response, signal?: AbortSignal): Promise<T> {

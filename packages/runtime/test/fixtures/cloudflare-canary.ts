@@ -2,7 +2,8 @@ import { getSandbox } from "@cloudflare/sandbox"
 import { matchesControlToken } from "@mongolgpt/runtime-auth/control"
 import production, { ContainerProxy, MongolGPTSandbox } from "../../src/index"
 import { createHistoryStore } from "../../src/history"
-import { deriveRuntimeIdentity } from "../../src/runtime"
+import { deriveRuntimeIdentity, RUNTIME_PROCESS_ID } from "../../src/runtime"
+import { emptyCanaryDiagnostics, sanitizeCanaryDiagnostics, summarizeCanaryLogs } from "../../script/canary-diagnostics"
 
 export { ContainerProxy }
 
@@ -86,6 +87,7 @@ export default {
 
     const url = new URL(request.url)
     if (url.pathname === "/__canary/state") return canaryState(request, env, url)
+    if (url.pathname === "/__canary/diagnostics") return canaryDiagnostics(request, env, url)
     if (url.pathname === "/__canary/stop") return canaryStop(request, env, url)
     if (url.pathname === "/__canary/purge") return canaryPurge(request, env, url)
     if (url.pathname === "/__canary" || url.pathname.startsWith("/__canary/")) return json({ error: "not_found" }, 404)
@@ -114,6 +116,93 @@ async function canaryStop(request: Request, env: Environment, url: URL) {
   if (!(await strictEmptyBody(request))) return json({ error: "invalid_request" }, 400)
   await (await canarySandbox(env)).stop("SIGTERM")
   return json({ accepted: true }, 202)
+}
+
+async function canaryDiagnostics(request: Request, env: Environment, url: URL) {
+  if (request.method !== "GET") return methodNotAllowed(["GET"])
+  if (url.search !== "") return json({ error: "invalid_request" }, 400)
+  if (!(await strictEmptyBody(request))) return json({ error: "invalid_request" }, 400)
+
+  const result = emptyCanaryDiagnostics()
+  const timeout = Symbol("diagnostics timeout")
+  let expired = false
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      expired = true
+      reject(timeout)
+    }, 8000)
+  })
+  const read = <T>(work: () => T | PromiseLike<T>) =>
+    Promise.race([
+      Promise.resolve().then(() => {
+        if (expired) throw timeout
+        return work()
+      }),
+      deadline,
+    ])
+  const failed = (error: unknown) => {
+    if (error === timeout || expired) result.failure = "timeout"
+    else result.failure ??= "unavailable"
+  }
+  try {
+    const sandbox = await read(() => canarySandbox(env))
+    await Promise.all([
+      (async () => {
+        const state = await read(() => sandbox.canaryState())
+        const safe = sanitizeCanaryDiagnostics({
+          ...result,
+          bootCount: state.bootCount,
+          lastStop: state.lastStop
+            ? {
+                exitCode: state.lastStop.exitCode ?? null,
+                reason:
+                  state.lastStop.reason === "exit" || state.lastStop.reason === "runtime_signal"
+                    ? state.lastStop.reason
+                    : null,
+              }
+            : null,
+          containerStatus: state.state.status ?? null,
+        })
+        if (!safe) throw new Error("unavailable")
+        result.bootCount = safe.bootCount
+        result.lastStop = safe.lastStop
+        result.containerStatus = safe.containerStatus
+        if (safe.containerStatus !== "running" && safe.containerStatus !== "healthy") return
+
+        const process = await read(() => sandbox.getProcess(RUNTIME_PROCESS_ID))
+        result.process.present = process !== null
+        if (!process) return
+        const safeProcess = sanitizeCanaryDiagnostics({
+          ...result,
+          process: { ...result.process, status: process.status, exitCode: process.exitCode ?? null },
+        })
+        if (!safeProcess) throw new Error("unavailable")
+        result.process.status = safeProcess.process.status
+        result.process.exitCode = safeProcess.process.exitCode
+        // Pinned SDK getLogs has no limit/abort option. Bound its duration and
+        // inspect only a fixed prefix; never serialize the returned log strings.
+        const logs = await read(() => process.getLogs())
+        Object.assign(result.process, summarizeCanaryLogs(logs.stdout, logs.stderr))
+      })().catch(failed),
+      (async () => {
+        if (!env.HISTORY) throw new Error("unavailable")
+        const history = createHistoryStore(env.HISTORY)
+        const [epoch, checkpoint, revision] = await read(() =>
+          Promise.all([history.epoch(canaryScope), history.checkpoint(canaryScope), history.fileRevision(canaryScope)]),
+        )
+        result.epoch = epoch
+        result.checkpointPresent = checkpoint !== undefined && checkpoint !== null
+        result.revisionPresent = revision !== undefined && revision !== null
+        result.sequence = revision?.data.sequence ?? null
+      })().catch(failed),
+    ])
+  } catch (error) {
+    failed(error)
+  } finally {
+    clearTimeout(timer)
+  }
+  return json(sanitizeCanaryDiagnostics(result) ?? { ...emptyCanaryDiagnostics(), failure: "unavailable" })
 }
 
 async function canaryPurge(request: Request, env: Environment, url: URL) {
