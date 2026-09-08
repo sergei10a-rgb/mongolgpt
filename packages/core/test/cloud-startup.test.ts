@@ -6,6 +6,62 @@ import { CloudBaseline } from "@mongolgpt/core/database/cloud-baseline"
 import { cloudBaselineStore } from "./fixture/cloud-baseline-store"
 import { tmpdir } from "./fixture/tmpdir"
 
+test("restores chunked archives without Content-Length using authenticated size and hash", async () => {
+  await using temp = await tmpdir()
+  const root = join(temp.path, "workspace")
+  await mkdir(root)
+  const store = cloudBaselineStore()
+  const checkpoint = await CloudBaseline.publish({ root, request: store.request })
+  let archives = 0
+  const restored = await CloudStartup.bootstrap({
+    root,
+    request: async (request) => {
+      const response = await store.request(request)
+      if (!request.url.endsWith("/v1/archive")) return response
+      archives++
+      response.headers.delete("content-length")
+      return response
+    },
+  })
+  expect(restored).toEqual(checkpoint)
+  expect(archives).toBe(2)
+  expect((await readFile(join(root, ".mongolgpt/runtime.sqlite"))).subarray(0, 16).toString()).toBe("SQLite format 3\0")
+  expect(await readdir(temp.path)).toEqual(["workspace"])
+}, 30_000)
+
+for (const mode of ["truncated", "oversized", "corrupt", "wrong-length", "malformed-length"] as const) {
+  test(`rejects ${mode} archive transport without publishing a partial workspace`, async () => {
+    await using temp = await tmpdir()
+    const root = join(temp.path, "workspace")
+    await mkdir(root)
+    const store = cloudBaselineStore()
+    await CloudBaseline.publish({ root, request: store.request })
+    await expect(
+      CloudStartup.bootstrap({
+        root,
+        request: async (request) => {
+          const response = await store.request(request)
+          if (!request.url.endsWith("/v1/archive")) return response
+          const original = new Uint8Array(await response.arrayBuffer())
+          const bytes =
+            mode === "truncated"
+              ? original.subarray(0, original.length - 1)
+              : mode === "oversized"
+                ? new Uint8Array([...original, 0])
+                : original.slice()
+          if (mode === "corrupt") bytes[bytes.length - 1] ^= 1
+          const headers = new Headers({ "content-type": "application/octet-stream" })
+          if (mode === "wrong-length") headers.set("content-length", String(original.length + 1))
+          if (mode === "malformed-length") headers.set("content-length", "unknown")
+          return new Response(bytes, { headers })
+        },
+      }),
+    ).rejects.toThrow("Cloud ажлын талбарыг")
+    expect(await readdir(root)).toEqual([])
+    expect(await readdir(temp.path)).toEqual(["workspace"])
+  }, 30_000)
+}
+
 test("resume validates the remote baseline without replacing native SQLite or uncheckpointed files", async () => {
   await using temp = await tmpdir()
   const root = join(temp.path, "workspace")

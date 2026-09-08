@@ -5,6 +5,7 @@ import {
   lstat,
   mkdir,
   mkdtemp,
+  open,
   readFile,
   readdir,
   realpath,
@@ -19,6 +20,7 @@ import { setTimeout } from "node:timers/promises"
 import { deriveCheckpointControlToken, sdkControlEnv, sdkControlHeader } from "@mongolgpt/runtime-auth/control"
 import { verifySandboxBuild } from "./build-sandbox"
 import upstream from "../vendor/sandbox-control/upstream.json"
+import { summarizeCanaryLogs } from "./canary-diagnostics"
 
 const root = fileURLToPath(new URL("../", import.meta.url))
 const executable = join(root, "../mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt")
@@ -222,6 +224,9 @@ async function isolated(output: string) {
   const controlHeaders = { [sdkControlHeader]: sdkToken }
   const adminHeaders = { "x-test-admin-token": adminToken }
   const logs = [...bridgeLogs]
+  const captures: Array<{ controller: AbortController; done: Promise<void>; failure?: "unavailable" | "size_limit" }> =
+    []
+  let phase = "bridge_readiness"
   let outer: ReturnType<typeof Bun.spawn> | undefined
   try {
     await until(
@@ -241,6 +246,7 @@ async function isolated(output: string) {
     assert.equal(initial.epoch, 0)
     assert.equal(initial.checkpoint, null)
     assert.equal(initial.revision, null)
+    assert.equal(initial.injected.archiveResponsesWithoutLength, 0)
     privateValues.push((await Bun.file("/tmp/bridge/.container-checkpoint-bridge-master.json").json()).master)
     let accepted: BridgeStatus | undefined
     const archiveDownloads = []
@@ -249,10 +255,12 @@ async function isolated(output: string) {
     let lostInitialClaimRecovered = false
     let replayedSameClaim = false
     const startNative = async (label: number | string) => {
+      phase = "container_start"
       const stdout = join(output, `container-${label}.log`)
       const stderr = join(output, `container-${label}-error.log`)
       logs.push(stdout, stderr)
       const nativeLog = `/tmp/native-${label}.log`
+      await writeFile(nativeLog, "", { mode: 0o600 })
       logs.push(nativeLog)
       const spawned = Bun.spawn(["/usr/local/bin/mongolgpt", "serve"], {
         cwd: "/",
@@ -279,6 +287,7 @@ async function isolated(output: string) {
       }, "SDK readiness")
       // Match Sandbox.startProcess's persistent execution session, not the
       // sessionless HTTP escape used by the older local harness.
+      phase = "persistent_session_create"
       const sdkSession = `native-supervisor-${label}`
       const session = await json<{ success: boolean }>("http://127.0.0.1:3000/api/session/create", {
         method: "POST",
@@ -286,11 +295,12 @@ async function isolated(output: string) {
         body: JSON.stringify({ id: sdkSession, env: { [sdkControlEnv]: sdkToken }, cwd: "/workspace" }),
       })
       assert.equal(session.success, true, "Native SDK execution session was not created")
+      phase = "native_process_start"
       await json("http://127.0.0.1:3000/api/process/start", {
         method: "POST",
         headers: controlHeaders,
         body: JSON.stringify({
-          command: `exec /usr/local/bin/mongolgpt serve --hostname 0.0.0.0 --port 4096 > ${nativeLog} 2>&1`,
+          command: "/usr/local/bin/mongolgpt serve --hostname 0.0.0.0 --port 4096",
           processId: "mongolgpt-server",
           sessionId: sdkSession,
           cwd: "/workspace",
@@ -316,7 +326,49 @@ async function isolated(output: string) {
           },
         }),
       })
-      return { nativeLog, outer: spawned }
+      phase = "sdk_log_capture"
+      const controller = new AbortController()
+      const timer = globalThis.setTimeout(() => controller.abort(), 8000)
+      const response = await fetch("http://127.0.0.1:3000/api/process/mongolgpt-server/stream", {
+        headers: controlHeaders,
+        redirect: "error",
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timer))
+      assert.equal(response.status, 200, "SDK log stream must be available")
+      assert.ok(response.body, "SDK log stream must have a body")
+      const file = await open(nativeLog, "w", 0o600)
+      const capture: (typeof captures)[number] = { controller, done: Promise.resolve() }
+      captures.push(capture)
+      let bytes = 0
+      // Observe the real FIFO-backed SDK stream; never redirect the native command.
+      capture.done = response.body
+        .pipeTo(
+          new WritableStream<Uint8Array>({
+            async write(chunk) {
+              bytes += chunk.byteLength
+              if (bytes > 1024 * 1024) {
+                capture.failure = "size_limit"
+                throw new Error("SDK log capture size limit")
+              }
+              await file.writeFile(chunk).catch(() => {
+                capture.failure = "unavailable"
+                throw new Error("SDK log capture write failed")
+              })
+            },
+          }),
+          { signal: controller.signal },
+        )
+        .catch(async () => {
+          // SDK shutdown can close the HTTP stream before the outer exit event.
+          if (!controller.signal.aborted) await Promise.race([spawned.exited, setTimeout(1000)])
+          if (!controller.signal.aborted && spawned.exitCode === null) capture.failure ??= "unavailable"
+        })
+        .finally(() =>
+          file.close().catch(() => {
+            capture.failure ??= "unavailable"
+          }),
+        )
+      return { capture, outer: spawned }
     }
     assert.deepEqual(await readdir("/workspace"), [], "Initial startup must begin from physically empty workspace")
     const initialRuntimeEntries = await readdir("/run")
@@ -327,6 +379,7 @@ async function isolated(output: string) {
     )
     assert.equal(await Bun.file("/run/mongolgpt-container/control.sock").exists(), false)
     const failedAttempt = await startNative("lost-initial-claim")
+    phase = "lost_initial_claim_shutdown"
     await until(
       async () => {
         const response = await fetch("http://127.0.0.1:4096/global/health", {
@@ -344,6 +397,7 @@ async function isolated(output: string) {
       0,
       "Controller must fail closed after lost initial claim response",
     )
+    await finishCapture(failedAttempt.capture)
     outer = undefined
     const lostClaimStatus = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
     assert.equal(lostClaimStatus.injected.droppedClaimResponses, 1)
@@ -370,10 +424,10 @@ async function isolated(output: string) {
         assert.deepEqual(runtimeEntries, [], "Replacement must start from physically empty runtime state")
         assert.equal(await Bun.file("/run/mongolgpt-container/control.sock").exists(), false)
       }
-      const archive200Before =
-        (await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders }))
-          .requestPathStatusCounters["/v1/archive"]?.["200"] ?? 0
+      const before = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
+      const archive200Before = before.requestPathStatusCounters["/v1/archive"]?.["200"] ?? 0
       const attempt = await startNative(round)
+      phase = `round_${round}_native_readiness`
       await until(
         async () => {
           assert.equal(attempt.outer.exitCode, null, "Outer container exited during native startup")
@@ -400,6 +454,7 @@ async function isolated(output: string) {
         180_000,
       )
       console.log(`Round ${round}: compiled native runtime admitted with durable/isolation receipts`)
+      phase = `round_${round}_restore_and_publication`
       if (round === 1) {
         const retryStatus = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
         const claims = retryStatus.historyRequests.filter((entry) => entry.path === "/v1/claim")
@@ -483,14 +538,24 @@ async function isolated(output: string) {
       archiveDownloads.push({
         round,
         downloads: (status.requestPathStatusCounters["/v1/archive"]?.["200"] ?? 0) - archive200Before,
+        withoutContentLength:
+          status.injected.archiveResponsesWithoutLength - before.injected.archiveResponsesWithoutLength,
       })
+      phase = `round_${round}_archive_transport`
+      assert.equal(
+        archiveDownloads.at(-1)!.withoutContentLength,
+        archiveDownloads.at(-1)!.downloads,
+        "Every successful archive download must finish without Content-Length",
+      )
       const runningOuter = attempt.outer
+      phase = `round_${round}_graceful_exit`
       runningOuter.kill("SIGTERM")
       assert.equal(
         await terminal(runningOuter, 260_000),
         0,
         "Container must acknowledge final durable publication before stopping SDK",
       )
+      await finishCapture(attempt.capture)
       outer = undefined
       accepted = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
       assert.ok(
@@ -519,6 +584,11 @@ async function isolated(output: string) {
       archiveDownloads[1]!.downloads >= 2,
       "Second physical replacement must fetch checkpoint and revision archives",
     )
+    assert.ok(
+      archiveDownloads[1]!.withoutContentLength >= 2,
+      "Second physical replacement must restore both archives without Content-Length",
+    )
+    phase = "captured_log_secret_scan"
     for (const log of logs) {
       const content = await readFile(log, "utf8")
       for (const value of privateValues)
@@ -534,38 +604,53 @@ async function isolated(output: string) {
       freshPhysicalWorkspace: true,
       freshPhysicalRun: true,
       archiveDownloads,
+      archiveResponsesWithoutLength: accepted!.injected.archiveResponsesWithoutLength,
       lostInitialClaimRecovered,
       replayedSameClaim,
       sessionRestored: true,
       fileRestored: true,
       gracefulContainerExit: true,
+      sdkFifoOutput: true,
     }
     await writeFile(join(output, "proof.json"), `${JSON.stringify(result, null, 2)}\n`)
   } catch (error) {
     await setTimeout(1000)
     const nativeLogRoot = "/workspace/.mongolgpt/data/mongolgpt/log"
-    for (const entry of await readdir(nativeLogRoot).catch(() => [])) {
+    for (const entry of (await readdir(nativeLogRoot).catch(() => [])).slice(0, 8)) {
       if (entry.endsWith(".log")) logs.push(join(nativeLogRoot, entry))
     }
-    const diagnostic = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders }).catch(
-      () => undefined,
-    )
-    if (diagnostic)
-      console.error(
-        JSON.stringify({
-          epoch: diagnostic.epoch,
-          checkpoint: diagnostic.checkpoint?.data.id,
-          paths: diagnostic.requestPathStatusCounters,
-          workspace: await readdir("/workspace"),
-        }),
-      )
-    for (const log of logs) {
-      let content = await readFile(log, "utf8").catch(() => "")
-      for (const value of privateValues) content = content.replaceAll(value, "[REDACTED]")
-      console.error(`${log}:\n${content.slice(-5000)}`)
+    const diagnostic = await json<BridgeStatus>("http://127.0.0.1/__test/status", {
+      headers: adminHeaders,
+      signal: AbortSignal.timeout(3000),
+    }).catch(() => undefined)
+    const summaries = []
+    for (const log of logs.slice(0, 16)) {
+      const file = await open(log, "r").catch(() => undefined)
+      if (!file) continue
+      try {
+        const buffer = Buffer.alloc(65_536)
+        const { bytesRead } = await file.read(buffer, 0, buffer.length, 0)
+        summaries.push(summarizeCanaryLogs(buffer.subarray(0, bytesRead).toString("utf8"), ""))
+      } finally {
+        await file.close()
+      }
     }
-    throw error
+    console.error(
+      "HOSTED_CONTAINER_FAILURE",
+      JSON.stringify({
+        phase,
+        epoch: diagnostic?.epoch,
+        checkpointPresent: !!diagnostic?.checkpoint,
+        revisionPresent: !!diagnostic?.revision,
+        errorSignals: summarizeCanaryLogs(error instanceof Error ? error.message : "", "").signals,
+        captures: captures.map((capture) => capture.failure ?? null),
+        logs: summaries,
+      }),
+    )
+    throw new Error(`Hosted container integration failed at ${phase}`)
   } finally {
+    for (const capture of captures) capture.controller.abort()
+    await Promise.race([Promise.all(captures.map((capture) => capture.done)), setTimeout(3000)])
     if (outer?.exitCode === null) {
       outer.kill("SIGTERM")
       await terminal(outer, 20_000)
@@ -575,11 +660,19 @@ async function isolated(output: string) {
   }
 }
 
+async function finishCapture(capture: { controller: AbortController; done: Promise<void>; failure?: string }) {
+  await Promise.race([capture.done, setTimeout(1000)])
+  capture.controller.abort()
+  const finished = await Promise.race([capture.done.then(() => true), setTimeout(3000).then(() => false)])
+  assert.equal(finished, true, "SDK log capture cleanup deadline")
+  assert.equal(capture.failure, undefined, "SDK captured output must remain available for the secret scan")
+}
+
 type BridgeStatus = {
   epoch: number
   checkpoint: { data: { id: string }; digest: string } | null
   revision: { data: { id: string; sequence: number }; digest: string } | null
-  injected: { droppedClaimResponses: number }
+  injected: { droppedClaimResponses: number; archiveResponsesWithoutLength: number }
   historyRequests: Array<{
     path: string
     status: number
@@ -601,7 +694,7 @@ async function json<T = unknown>(url: string, init: RequestInit = {}): Promise<T
     ...init,
     headers: { "content-type": "application/json", ...init.headers },
     redirect: "error",
-    signal: AbortSignal.timeout(90_000),
+    signal: init.signal ?? AbortSignal.timeout(90_000),
   })
   assert.equal(
     response.status,

@@ -1,5 +1,6 @@
 import { createRuntimeBackupStore, deriveRuntimeBackupKey, RuntimeBackupError } from "../../src/backup"
 import { createRuntimeCheckpointStore } from "../../src/checkpoint"
+import { createCheckpointHandler } from "../../src/checkpoint-rpc"
 import { createHistoryStore, HistoryError } from "../../src/history"
 import type { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 
@@ -31,6 +32,12 @@ export default {
         return Response.json(
           (await createRuntimeCheckpointStore(env.DB, env.BACKUPS, { [keyID]: master }).read(scope)) ?? null,
         )
+      }
+      if (request.method === "POST" && url.pathname === "/checkpoint-archive") {
+        return createCheckpointHandler(
+          { history: createHistoryStore(env.DB), backups: store },
+          scope,
+        )(new Request("http://checkpoint.mongolgpt.internal/v1/archive", request))
       }
       if (request.method === "GET" && url.pathname === "/derive") {
         return Response.json({ key: hex(deriveRuntimeBackupKey(scope, keyID, master)) })

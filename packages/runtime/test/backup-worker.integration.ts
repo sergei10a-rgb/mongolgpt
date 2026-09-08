@@ -155,6 +155,23 @@ try {
     "worker read different checkpoint",
   )
 
+  for (const kind of ["sqlite", "files"] as const) {
+    const response = await worker.fetch("http://backup.test/checkpoint-archive", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ checkpointID: checkpoint.id, kind }),
+    })
+    equal(response.status, 200, "checkpoint archive download failed")
+    ok(
+      response.headers.get("content-length") === null ||
+        response.headers.get("content-length") === String(checkpoint[kind].bytes),
+      "archive transport announced a conflicting length",
+    )
+    const downloaded = Buffer.from(await response.arrayBuffer())
+    equal(downloaded.length, checkpoint[kind].bytes, "archive stream length differs from its receipt")
+    equal(createHash("sha256").update(downloaded).digest("hex"), checkpoint[kind].sha256, "archive bytes changed")
+  }
+
   console.log(`BACKUP_WORKER_RESULT ${JSON.stringify({ ok: true, skipped: false, assertions: assertionCount })}`)
 } finally {
   await server?.close()

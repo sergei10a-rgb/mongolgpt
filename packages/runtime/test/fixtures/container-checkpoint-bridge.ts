@@ -39,7 +39,7 @@ const jsonHeaders = { "cache-control": "no-store", "content-type": "application/
 const migrationLedgerTable = "container_checkpoint_bridge_migration"
 const counters = new Map<string, Map<number, number>>()
 const activeRequests = new Set<AbortController>()
-const injected = { droppedClaimResponses: 0 }
+const injected = { droppedClaimResponses: 0, archiveResponsesWithoutLength: 0 }
 const historyRequests: HistoryRequestRecord[] = []
 
 type HistoryRequestRecord = {
@@ -132,9 +132,23 @@ async function handleNodeRequest(request: IncomingMessage, response: ServerRespo
     if (!finished) controller.abort()
   })
   try {
-    const result = await dispatch(request, controller.signal)
+    let result = await dispatch(request, controller.signal)
+    const omitArchiveLength =
+      hostFromHeader(request.headers.host) === hostCheckpoint &&
+      pathnameOf(request) === "/v1/archive" &&
+      request.method === "POST" &&
+      result.ok
+    if (omitArchiveLength) {
+      // Workerd strips this header from streamed archive responses.
+      const headers = new Headers(result.headers)
+      headers.delete("content-length")
+      result = new Response(result.body, { status: result.status, statusText: result.statusText, headers })
+    }
     incrementCounter(pathnameOf(request), result.status)
     await writeFetchResponse(response, result, controller)
+    if (omitArchiveLength && response.writableFinished && !response.hasHeader("content-length")) {
+      injected.archiveResponsesWithoutLength = Math.min(1000, injected.archiveResponsesWithoutLength + 1)
+    }
   } finally {
     activeRequests.delete(controller)
   }

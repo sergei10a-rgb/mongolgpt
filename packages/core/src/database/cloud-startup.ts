@@ -211,9 +211,12 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
         kind,
         filesRevisionID: data.filesRevision?.id,
       })
+      // Workers can stream without Content-Length. The authenticated receipt
+      // still bounds consumption and requires an exact byte count and digest.
+      const announced = response.headers.get("content-length")
       if (
         response.headers.get("content-type")?.split(";")[0].trim() !== "application/octet-stream" ||
-        response.headers.get("content-length") !== String(archive.bytes)
+        (announced !== null && announced !== String(archive.bytes))
       ) {
         void response.body?.cancel().catch(() => {})
         throw new Error()
