@@ -12,6 +12,8 @@ const connection = {
   expiresAt: Date.now() + 900_000,
 }
 
+type HappyDOMWindow = typeof window & { happyDOM: { setURL(url: string): void } }
+
 function setup(accountID = connection.accountID) {
   const addEphemeral = mock(() => ({ type: "http" as const }))
   return {
@@ -54,14 +56,16 @@ describe("connectLocalBridgeCallback", () => {
 
   test("uses the connected bridge as the active server for a follow-up runtime request", async () => {
     const observed: Array<{ path: string; authorization: string | null }> = []
+    const preflightOrigins: Array<string | undefined> = []
     let preflights = 0
-    // Keep the browser's Request/Response/AbortSignal in the Happy DOM realm.
+    let allowedOrigin = ""
     await using runtime = createServer((request, response) => {
-      response.setHeader("access-control-allow-origin", window.location.origin)
+      response.setHeader("access-control-allow-origin", allowedOrigin)
       response.setHeader("access-control-allow-methods", "GET")
       response.setHeader("access-control-allow-headers", "authorization")
       if (request.method === "OPTIONS") {
         preflights++
+        preflightOrigins.push(request.headers.origin)
         response.writeHead(204)
         response.end()
         return
@@ -81,6 +85,7 @@ describe("connectLocalBridgeCallback", () => {
       ...connection,
       url: `http://127.0.0.1:${address.port}`,
     }
+
     let active: ServerConnection.Http | undefined
     const addEphemeral = mock((input: ServerConnection.Http) => {
       active = { ...input, ephemeral: true }
@@ -98,15 +103,29 @@ describe("connectLocalBridgeCallback", () => {
     })
 
     expect(active?.ephemeral).toBe(true)
-    const response = await createServerRequest({ server: active!.http })("/global/health")
-    expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ healthy: true })
-    expect(preflights).toBe(1)
-    expect(observed).toEqual([
-      {
-        path: "/global/health",
-        authorization: `Basic ${btoa(`${bridge.username}:${bridge.password}`)}`,
-      },
-    ])
+    const browserWindow = window as HappyDOMWindow
+    const originalURL = browserWindow.location.href
+    try {
+      // Happy DOM rejects HTTPS -> loopback HTTP before CORS. Use a distinct
+      // HTTP origin for this transport test; real browser policy belongs in E2E.
+      browserWindow.happyDOM.setURL("https://app.dev.mgpt.mn/")
+      await expect(createServerRequest({ server: active!.http })("/global/health")).rejects.toThrow("Mixed Content")
+
+      browserWindow.happyDOM.setURL(`http://localhost:${address.port}/`)
+      allowedOrigin = browserWindow.location.origin
+      const response = await createServerRequest({ server: active!.http })("/global/health")
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({ healthy: true })
+      expect(preflights).toBe(1)
+      expect(preflightOrigins).toEqual([allowedOrigin])
+      expect(observed).toEqual([
+        {
+          path: "/global/health",
+          authorization: `Basic ${btoa(`${bridge.username}:${bridge.password}`)}`,
+        },
+      ])
+    } finally {
+      browserWindow.happyDOM.setURL(originalURL)
+    }
   })
 })
