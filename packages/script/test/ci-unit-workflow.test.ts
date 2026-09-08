@@ -2,6 +2,9 @@ import { expect, test } from "bun:test"
 
 type Step = {
   name: string
+  id?: string
+  uses?: string
+  with?: Record<string, string>
   if?: string
   run?: string
   "timeout-minutes"?: number | string
@@ -60,4 +63,26 @@ test("Windows CLI and other unit suites keep separate bounded sequential steps w
   expect(container.run).toContain("script/build.ts --single --skip-install --skip-embed-web-ui")
   expect(container.run).toContain('sudo -- env MONGOLGPT_TEST_NODE="$(command -v node)" "$(command -v bun)"')
   expect(container.run).toContain("packages/runtime/script/test-hosted-container.ts")
+})
+
+test("Turbo cache reuses a pre-test hash without traversing root-private evidence during post-save", async () => {
+  const source = await Bun.file(new URL("../../../.github/workflows/test.yml", import.meta.url)).text()
+  const workflow = Bun.YAML.parse(source) as { jobs: { unit: { steps: Step[] } } }
+  const steps = workflow.jobs.unit.steps
+  const fingerprint = steps.find((step) => step.id === "turbo-cache-key")
+  const cache = steps.find((step) => step.name === "Cache Turbo")!
+  expect(fingerprint).toBeDefined()
+  expect(fingerprint?.env?.TURBO_INPUTS_HASH).toBe("${{ hashFiles('turbo.json', '**/package.json') }}")
+  expect(fingerprint?.run).toBe('echo "hash=$TURBO_INPUTS_HASH" >> "$GITHUB_OUTPUT"')
+  expect(fingerprint?.if).toBeUndefined()
+  expect(fingerprint?.["continue-on-error"]).not.toBe(true)
+  expect(steps.indexOf(fingerprint!)).toBeLessThan(steps.indexOf(cache))
+  expect(steps.indexOf(cache)).toBeLessThan(steps.findIndex((step) => step.name === "Run unit tests"))
+  expect(cache.with?.key).toBe("turbo-${{ runner.os }}-${{ steps.turbo-cache-key.outputs.hash }}-${{ github.sha }}")
+  expect(cache.with?.["restore-keys"]?.trim().split("\n")).toEqual([
+    "turbo-${{ runner.os }}-${{ steps.turbo-cache-key.outputs.hash }}-",
+    "turbo-${{ runner.os }}-",
+  ])
+  expect(JSON.stringify(cache)).not.toContain("hashFiles(")
+  expect(cache["continue-on-error"]).not.toBe(true)
 })
