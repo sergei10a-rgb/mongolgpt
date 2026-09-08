@@ -154,7 +154,7 @@ describe("sandbox control routing", () => {
     expect(fixture.calls.filter((call) => requiresSdkControl(call, expected)).map(unauthorizedCall)).toEqual([])
     expect(fixture.calls[0]!.request.headers.get(sdkControlHeader)).toBe(expected)
     expect(fixture.calls[0]!.request.headers.get(checkpointControlHeader)).toBeNull()
-    expect(fixture.calls[0]!.request.redirect).toBe("error")
+    expect(fixture.calls[0]!.request.redirect).toBe("manual")
     expect(fixture.calls[1]!.request.headers.get(sdkControlHeader)).toBe(expected)
     expect(fixture.calls[1]!.request.headers.get(checkpointControlHeader)).toBeNull()
     expect(callerHeaders.get(sdkControlHeader)).toBe("0".repeat(64))
@@ -185,6 +185,18 @@ describe("sandbox control routing", () => {
     expect(fixture.calls.filter((call) => requiresSdkControl(call, expected)).map(unauthorizedCall)).toEqual([])
     expect(fixture.starts).toEqual([])
   })
+
+  for (const status of [301, 302, 303, 307, 308]) {
+    test(`rejects SDK HTTP ${status} without following the redirect or forwarding its location`, async () => {
+      const fixture = await createSandbox({}, MongolGPTSandbox, status)
+      await expect(fixture.sandbox.containerFetch("http://worker.example/api/manual", {}, 3000)).rejects.toThrow(
+        "SDK control redirects are forbidden",
+      )
+      expect(fixture.calls).toHaveLength(1)
+      expect(fixture.calls[0]!.request.redirect).toBe("manual")
+      expect(new URL(fixture.calls[0]!.request.url).hostname).toBe("worker.example")
+    })
+  }
 })
 
 type RuntimeSandbox = InstanceType<typeof MongolGPTSandbox>
@@ -206,11 +218,15 @@ type OutboundProxyProps = {
 type FakeContext = DurableObjectState<{}> & { flush(): Promise<void> }
 type PackageJson = { path: string; version: string }
 
-async function createSandbox(env: Partial<TestRuntimeEnv> = {}, SandboxClass = MongolGPTSandbox) {
+async function createSandbox(
+  env: Partial<TestRuntimeEnv> = {},
+  SandboxClass = MongolGPTSandbox,
+  redirectStatus?: number,
+) {
   const calls = new Array<CapturedFetch>()
   const starts = new Array<unknown>()
   const proxyCalls = new Array<OutboundProxyProps>()
-  const ctx = fakeContext(fakeContainer(calls, starts), proxyCalls)
+  const ctx = fakeContext(fakeContainer(calls, starts, redirectStatus), proxyCalls)
   const runtimeEnv: TestRuntimeEnv = {
     MONGOLGPT_APP_ORIGIN: "https://app.example",
     MONGOLGPT_CONSOLE_URL: "https://console.example",
@@ -285,7 +301,7 @@ function fakeContext(container: ReturnType<typeof fakeContainer>, proxyCalls: Ou
   } as unknown as FakeContext
 }
 
-function fakeContainer(calls: CapturedFetch[], starts: unknown[]) {
+function fakeContainer(calls: CapturedFetch[], starts: unknown[], redirectStatus?: number) {
   return {
     running: true,
     getTcpPort(port: number) {
@@ -294,6 +310,11 @@ function fakeContainer(calls: CapturedFetch[], starts: unknown[]) {
           const call = capturedFetch(port, input, init)
           calls.push(call)
           const pathname = new URL(call.url).pathname
+          if (redirectStatus && pathname === "/api/manual")
+            return response(null, {
+              status: redirectStatus,
+              headers: { location: "https://untrusted.example/control" },
+            })
           if (pathname === "/rpc") return response(null, { status: 400, statusText: "Bad Request" })
           if (pathname.startsWith("/api/process/")) return jsonResponse({ process: null })
           return jsonResponse({})

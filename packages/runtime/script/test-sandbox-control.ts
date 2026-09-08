@@ -1,17 +1,25 @@
 import assert from "node:assert/strict"
-import { chmod, copyFile, mkdir, readFile } from "node:fs/promises"
+import { chmod, copyFile, mkdir, mkdtemp, readFile, rm } from "node:fs/promises"
+import { isAbsolute, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { setTimeout } from "node:timers/promises"
 import { randomBytes } from "node:crypto"
 import { spawnSync } from "node:child_process"
-import { sdkControlEnv, sdkControlHeader } from "@mongolgpt/runtime-auth/control"
+import { createRequire } from "node:module"
+import { deriveControlToken, sdkControlEnv, sdkControlHeader } from "@mongolgpt/runtime-auth/control"
 import upstream from "../vendor/sandbox-control/upstream.json"
 import { verifySandboxBuild } from "./build-sandbox"
 
 const root = fileURLToPath(new URL("../", import.meta.url))
 const binary = `${root}container/sandbox`
 const bun = process.execPath
+const node = process.argv[3] ?? process.env.MONGOLGPT_TEST_NODE ?? Bun.which("node")
+const toolEnv = {
+  ...(process.env.ESBUILD_BINARY_PATH && { ESBUILD_BINARY_PATH: process.env.ESBUILD_BINARY_PATH }),
+  ...(process.env.MINIFLARE_WORKERD_PATH && { MINIFLARE_WORKERD_PATH: process.env.MINIFLARE_WORKERD_PATH }),
+}
 if (process.platform !== "linux" || process.getuid?.() !== 0) throw new Error("Linux root integration runner required")
+if (!node) throw new Error("Node 22 is required for the local Workers integration")
 
 if (process.argv[2] !== "--isolated") {
   // No host network, host /tmp, or host process table is exposed to the SDK probe.
@@ -26,12 +34,17 @@ if (process.argv[2] !== "--isolated") {
       "sh",
       "-eu",
       "-c",
-      'mount --make-rprivate /; mount -t tmpfs -o mode=1777 tmpfs /tmp; mount -t tmpfs -o mode=0755 tmpfs /run; ip link set lo up; exec "$1" "$2" --isolated',
+      'mount --make-rprivate /; mount -t tmpfs -o mode=1777 tmpfs /tmp; mount -t tmpfs -o mode=0755 tmpfs /run; ip link set lo up; exec "$1" "$2" --isolated "$3"',
       "sandbox-control-test",
       bun,
       fileURLToPath(import.meta.url),
+      node,
     ],
-    { stdout: "inherit", stderr: "inherit", env: { PATH: "/usr/local/bin:/usr/bin:/bin", BUN_BE_BUN: "1" } },
+    {
+      stdout: "inherit",
+      stderr: "inherit",
+      env: { PATH: "/usr/local/bin:/usr/bin:/bin", BUN_BE_BUN: "1", ...toolEnv },
+    },
   )
   process.exitCode = await child.exited
 } else {
@@ -70,7 +83,8 @@ async function testControl() {
       clearTimeout(timer)
     }
   }
-  const token = randomBytes(32).toString("hex")
+  const runtimeSecret = randomBytes(32).toString("hex")
+  const token = await deriveControlToken(runtimeSecret, "control-probe-sandbox", "sdk")
   const sdk = Bun.spawn([binary], {
     cwd: directory,
     env: { ...env, [sdkControlEnv]: token },
@@ -152,15 +166,14 @@ async function testControl() {
     const BunSocket = WebSocket as unknown as {
       new (url: string, options: { headers: Record<string, string> }): WebSocket
     }
+    const socket = new BunSocket("ws://127.0.0.1:3000/rpc", { headers: { [sdkControlHeader]: token } })
     await new Promise<void>((resolve, reject) => {
-      const socket = new BunSocket("ws://127.0.0.1:3000/rpc", { headers: { [sdkControlHeader]: token } })
       const timer = globalThis.setTimeout(() => {
         socket.close()
         reject(new Error("Authenticated RPC upgrade timeout"))
       }, 10_000)
       socket.onopen = () => {
         clearTimeout(timer)
-        socket.close()
         resolve()
       }
       socket.onerror = () => {
@@ -168,7 +181,66 @@ async function testControl() {
         reject(new Error("Authenticated RPC upgrade failed"))
       }
     })
-    console.log("Authenticated SDK command and RPC WebSocket upgrade passed")
+    // Exercise the same installed RPC library as the SDK, not a test protocol imitation.
+    const require = createRequire(createRequire(import.meta.url).resolve("@cloudflare/sandbox"))
+    const { newWebSocketRpcSession } = require("capnweb") as {
+      newWebSocketRpcSession(socket: WebSocket): Disposable & {
+        utils: {
+          createSession(options: { id: string; cwd: string }): Promise<{ success: boolean }>
+          deleteSession(id: string): Promise<{ success: boolean }>
+        }
+        processes: {
+          listProcesses(): Promise<{ success: boolean; processes: { id: string }[] }>
+          getProcess(id: string): Promise<{ success: boolean; process: { id: string; status: string } }>
+          startProcess(command: string, session: string, options: { processId: string }): Promise<{ success: boolean }>
+          killProcess(id: string): Promise<{ success: boolean }>
+        }
+      }
+    }
+    const rpc = newWebSocketRpcSession(socket)
+    const rpcDeadline = AbortSignal.timeout(10_000)
+    try {
+      await Promise.race([
+        (async () => {
+          const listed = await rpc.processes.listProcesses()
+          assert.equal(listed.success, true)
+          assert.ok(Array.isArray(listed.processes))
+          await assert.rejects(async () => await rpc.processes.getProcess("mongolgpt-server"), {
+            message: "Process mongolgpt-server not found",
+          })
+          assert.equal((await rpc.utils.createSession({ id: "control-probe", cwd: directory })).success, true)
+          const started = await rpc.processes.startProcess("sleep 30", "control-probe", {
+            processId: "mongolgpt-control-probe",
+          })
+          assert.equal(started.success, true)
+          const found = await rpc.processes.getProcess("mongolgpt-control-probe")
+          assert.equal(found.success, true)
+          assert.equal(found.process.id, "mongolgpt-control-probe")
+          assert.equal(found.process.status, "running")
+          assert.equal((await rpc.processes.killProcess("mongolgpt-control-probe")).success, true)
+          assert.equal((await rpc.utils.deleteSession("control-probe")).success, true)
+        })(),
+        new Promise<never>((_, reject) => {
+          rpcDeadline.addEventListener("abort", () => reject(new Error("Authenticated SDK RPC roundtrip timeout")), {
+            once: true,
+          })
+        }),
+      ])
+    } finally {
+      rpc[Symbol.dispose]()
+      socket.close()
+    }
+    console.log("Authenticated SDK command and RPC list/missing/start/get/kill roundtrips passed")
+    try {
+      await testWorkerControl(node!, runtimeSecret, token)
+    } catch (error) {
+      const diagnostics = (await readFile("/tmp/sdk.log", "utf8")) + (await readFile("/tmp/sdk-error.log", "utf8"))
+      console.error(
+        "Isolated SDK diagnostics:",
+        diagnostics.replaceAll(token, "[REDACTED]").replaceAll(runtimeSecret, "[REDACTED]").slice(-3000),
+      )
+      throw error
+    }
     assert.equal((await readFile("/tmp/sdk.log", "utf8")).includes(token), false)
     assert.equal((await readFile("/tmp/sdk-error.log", "utf8")).includes(token), false)
   } finally {
@@ -186,4 +258,58 @@ async function testControl() {
 
 async function hash(path: string) {
   return new Bun.CryptoHasher("sha256").update(await Bun.file(path).arrayBuffer()).digest("hex")
+}
+
+async function testWorkerControl(node: string, runtimeSecret: string, token: string) {
+  const transientRoot = join(root, ".tmp")
+  await mkdir(transientRoot, { recursive: true })
+  const directory = await mkdtemp(join(transientRoot, "sandbox-control-worker-"))
+  try {
+    const build = await Bun.build({
+      entrypoints: [join(root, "test/sandbox-control-worker.integration.ts")],
+      outdir: directory,
+      naming: "probe.mjs",
+      target: "node",
+      packages: "external",
+    })
+    if (!build.success) throw new AggregateError(build.logs, "Workers control probe build failed")
+    const child = Bun.spawn(
+      [node, join(directory, "probe.mjs"), join(root, "test/fixtures/sandbox-control-worker.ts")],
+      {
+        cwd: root,
+        env: {
+          PATH: "/usr/local/bin:/usr/bin:/bin",
+          HOME: "/tmp/sdk-home",
+          TMPDIR: "/tmp",
+          WRANGLER_SEND_METRICS: "false",
+          MONGOLGPT_RUNTIME_SECRET: runtimeSecret,
+          EXPECTED_SDK_TOKEN: token,
+          ...toolEnv,
+        },
+        stdout: Bun.file("/tmp/worker-control.log"),
+        stderr: Bun.file("/tmp/worker-control-error.log"),
+      },
+    )
+    const timer = globalThis.setTimeout(() => child.kill("SIGKILL"), 90_000)
+    try {
+      const code = await child.exited
+      const stdout = await readFile("/tmp/worker-control.log", "utf8")
+      const stderr = await readFile("/tmp/worker-control-error.log", "utf8")
+      assert.equal(stdout.includes(token) || stderr.includes(token), false, "Worker logs exposed the control token")
+      assert.equal(
+        stdout.includes(runtimeSecret) || stderr.includes(runtimeSecret),
+        false,
+        "Worker logs exposed the runtime secret",
+      )
+      assert.equal(code, 0, `Workers control probe failed: ${stderr.slice(-3000)}\n${stdout.slice(-3000)}`)
+      console.log(stdout.trim())
+    } finally {
+      clearTimeout(timer)
+    }
+  } finally {
+    const inside = relative(transientRoot, directory)
+    if (!inside || inside.startsWith("..") || isAbsolute(inside))
+      throw new Error("Worker probe cleanup escaped test root")
+    await rm(directory, { recursive: true, force: true })
+  }
 }

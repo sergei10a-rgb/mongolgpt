@@ -63,6 +63,12 @@ test("Windows CLI and other unit suites keep separate bounded sequential steps w
   expect(container.run).toContain("script/build.ts --single --skip-install --skip-embed-web-ui")
   expect(container.run).toContain('sudo -- env MONGOLGPT_TEST_NODE="$(command -v node)" "$(command -v bun)"')
   expect(container.run).toContain("packages/runtime/script/test-hosted-container.ts")
+  expect(sandbox.if).toBe("runner.os == 'Linux'")
+  expect(sandbox["timeout-minutes"]).toBe(5)
+  expect(sandbox["continue-on-error"]).not.toBe(true)
+  expect(sandbox.run).toContain(
+    'sudo -- env MONGOLGPT_TEST_NODE="$(command -v node)" "$(command -v bun)" packages/runtime/script/test-sandbox-control.ts',
+  )
 })
 
 test("Turbo cache reuses a pre-test hash without traversing root-private evidence during post-save", async () => {

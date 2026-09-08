@@ -110,7 +110,7 @@ jobs:
         timeout-minutes: 5
         run: |
           bun packages/runtime/script/build-sandbox.ts
-          sudo -- "$(command -v bun)" packages/runtime/script/test-sandbox-control.ts
+          sudo -- env MONGOLGPT_TEST_NODE="$(command -v node)" "$(command -v bun)" packages/runtime/script/test-sandbox-control.ts
 
       - name: Run HttpApi exerciser gates
         if: runner.os == 'Linux'

@@ -49,12 +49,18 @@ export class MongolGPTSandbox extends Sandbox {
     const request =
       args[0] instanceof Request ? args[0] : new Request(args[0], typeof args[1] === "number" ? undefined : args[1])
     const port = typeof args[1] === "number" ? args[1] : (args[2] ?? this.defaultPort)
-    const forwarded = new Request(request, port === 3000 ? { redirect: "error" } : undefined)
+    // Workers only supports follow/manual. Never follow a privileged control redirect.
+    const forwarded = new Request(request, port === 3000 ? { redirect: "manual" } : undefined)
     // Mutate the copy: Bun can inherit the original headers when init.headers is empty.
     forwarded.headers.delete(sdkControlHeader)
     forwarded.headers.delete(checkpointControlHeader)
     if (port === 3000) forwarded.headers.set(sdkControlHeader, await this.#sdkToken)
-    return super.containerFetch(forwarded, port)
+    const response = await super.containerFetch(forwarded, port)
+    if (port === 3000 && response.status >= 300 && response.status < 400) {
+      void response.body?.cancel().catch(() => {})
+      throw new Error("SDK control redirects are forbidden")
+    }
+    return response
   }
 
   enableInternet = false
