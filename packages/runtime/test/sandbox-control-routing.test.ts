@@ -119,7 +119,24 @@ describe("sandbox control routing", () => {
 
   test("concurrent retirement drains pre-admitted work and stops a late platform start again", async () => {
     const marker = { accountID: "acc_stop", workspaceID: "wrk_stop", requestID: "del_stop" }
-    const fixture = await createSandbox(retiredEnvironment(marker.accountID))
+    const validated = Promise.withResolvers<void>()
+    let validations = 0
+    const fixture = await createSandbox({
+      ...retiredEnvironment(marker.accountID),
+      HISTORY: {
+        prepare: () => ({
+          bind: () => ({
+            first: async () => {
+              if (++validations === 2) validated.resolve()
+              // Both asynchronous identity checks must finish before testing
+              // overlapping stops, otherwise the second call is a later retry.
+              await validated.promise
+              return { account_id: marker.accountID }
+            },
+          }),
+        }),
+      } as unknown as D1Database,
+    })
     const container = fixture.ctx.container!
     const entered = Promise.withResolvers<void>()
     const release = Promise.withResolvers<void>()
@@ -162,6 +179,52 @@ describe("sandbox control routing", () => {
     ])
     expect(stops).toBe(2)
     expect(container.running).toBe(false)
+  })
+
+  test("a concurrent caller validated after the first stop rechecks termination without reopening admission", async () => {
+    const marker = { accountID: "acc_stop", workspaceID: "wrk_stop", requestID: "del_stop" }
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    let validations = 0
+    const fixture = await createSandbox({
+      ...retiredEnvironment(marker.accountID),
+      HISTORY: {
+        prepare: () => ({
+          bind: () => ({
+            first: async () => {
+              if (++validations === 2) {
+                entered.resolve()
+                await release.promise
+              }
+              return { account_id: marker.accountID }
+            },
+          }),
+        }),
+      } as unknown as D1Database,
+    })
+    const container = fixture.ctx.container!
+    const destroy = container.destroy.bind(container)
+    const stops: boolean[] = []
+    container.destroy = async () => {
+      stops.push(container.running)
+      await destroy()
+    }
+    const retiring = [fixture.sandbox.retireAccount(marker), fixture.sandbox.retireAccount(marker)]
+    try {
+      await bounded(entered.promise)
+      expect(await bounded(Promise.race(retiring))).toEqual({ ...marker, stopped: true })
+      expect(container.running).toBe(false)
+      await expect(fixture.sandbox.start()).rejects.toThrow("хаагдсан")
+    } finally {
+      release.resolve()
+    }
+    expect(await bounded(Promise.all(retiring))).toEqual([
+      { ...marker, stopped: true },
+      { ...marker, stopped: true },
+    ])
+    expect(stops).toEqual([true, false])
+    expect(container.running).toBe(false)
+    expect(fixture.starts).toEqual([])
   })
 
   for (const state of ["retired", "unavailable", "active"] as const) {
