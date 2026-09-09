@@ -4,10 +4,11 @@ import { startupDiagnosticEnv, startupDiagnosticPath } from "@mongolgpt/runtime-
 import { handleCheckpointOutbound } from "../../src/checkpoint-rpc"
 import production, { ContainerProxy, MongolGPTSandbox } from "../../src/index"
 import { createHistoryStore } from "../../src/history"
-import { deriveRuntimeIdentity, RUNTIME_PROCESS_ID } from "../../src/runtime"
+import { deriveRuntimeIdentity, RUNTIME_PROCESS_ID, runtimeReadiness } from "../../src/runtime"
 import {
   emptyCanaryDiagnostics,
   parseCanaryStartupFailure,
+  parseCanaryReadiness,
   sanitizeCanaryDiagnostics,
   summarizeCanaryLogs,
 } from "../../script/canary-diagnostics"
@@ -229,6 +230,15 @@ async function canaryDiagnostics(request: Request, env: Environment, url: URL) {
         if (!safeProcess) throw new Error("unavailable")
         result.process.status = safeProcess.process.status
         result.process.exitCode = safeProcess.process.exitCode
+        if (process.status === "starting" || process.status === "running") {
+          const identity = await read(() =>
+            deriveRuntimeIdentity(canaryScope.accountID, canaryScope.workspaceID, env.MONGOLGPT_RUNTIME_SECRET),
+          )
+          const readiness = await read(() => runtimeReadiness(sandbox, identity.password, true))
+          const safeReadiness = parseCanaryReadiness(readiness)
+          if (!safeReadiness) throw new Error("unavailable")
+          result.readiness = safeReadiness
+        }
         // Pinned SDK getLogs has no limit/abort option. Bound its duration and
         // inspect only a fixed prefix; never serialize the returned log strings.
         const logs = await read(() => process.getLogs())

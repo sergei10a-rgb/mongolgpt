@@ -21,6 +21,7 @@ import { deriveCheckpointControlToken, sdkControlEnv, sdkControlHeader } from "@
 import { verifySandboxBuild } from "./build-sandbox"
 import upstream from "../vendor/sandbox-control/upstream.json"
 import { summarizeCanaryLogs } from "./canary-diagnostics"
+import { runtimeReadiness } from "../src/runtime"
 
 const root = fileURLToPath(new URL("../", import.meta.url))
 const executable = join(root, "../mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt")
@@ -458,6 +459,21 @@ async function isolated(output: string) {
           assert.equal(response.headers.get("x-mongolgpt-runtime-history"), "checkpoint-v1")
           assert.equal(response.headers.get("x-mongolgpt-runtime-isolation"), "cgroup-v1")
           assert.equal(response.headers.get("x-mongolgpt-runtime-publication"), "tool-pty-v1")
+          assert.deepEqual(
+            await runtimeReadiness(
+              {
+                containerFetch(request, port) {
+                  const target = new URL(request.url)
+                  target.hostname = "127.0.0.1"
+                  target.port = String(port)
+                  return fetch(new Request(target, request))
+                },
+              },
+              password,
+              true,
+            ),
+            { code: "ready", status: 200 },
+          )
           return true
         },
         "Native checkpoint/isolation/publication readiness",

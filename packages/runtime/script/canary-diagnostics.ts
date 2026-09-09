@@ -1,4 +1,5 @@
 import { parseStartupDiagnostic, type StartupDiagnostic } from "@mongolgpt/runtime-auth/startup-diagnostic"
+import { runtimeReadinessCodes, type RuntimeReadiness } from "../src/runtime"
 
 const containerStatuses = ["running", "healthy", "stopping", "stopped", "stopped_with_code"] as const
 const processStatuses = ["starting", "running", "completed", "failed", "killed", "error"] as const
@@ -32,6 +33,7 @@ type Signal = (typeof signals)[number]
 export type CanaryDiagnostics = {
   bootCount: number | null
   startupFailure: { bootCount: number; diagnostic: StartupDiagnostic } | null
+  readiness: RuntimeReadiness | null
   lastStop: { exitCode: number | null; reason: (typeof stopReasons)[number] | null } | null
   containerStatus: (typeof containerStatuses)[number] | null
   epoch: number | null
@@ -61,6 +63,7 @@ export function emptyCanaryDiagnostics(): CanaryDiagnostics {
   return {
     bootCount: null,
     startupFailure: null,
+    readiness: null,
     lastStop: null,
     containerStatus: null,
     epoch: null,
@@ -97,6 +100,7 @@ function parseDiagnostics(input: unknown): CanaryDiagnostics | undefined {
   const result: CanaryDiagnostics = {
     bootCount: integer(value.bootCount),
     startupFailure: parseCanaryStartupFailure(value.startupFailure) ?? null,
+    readiness: parseCanaryReadiness(value.readiness) ?? null,
     lastStop: value.lastStop === null ? null : { exitCode, reason },
     containerStatus: member(value.containerStatus, containerStatuses),
     epoch: integer(value.epoch),
@@ -114,6 +118,7 @@ function parseDiagnostics(input: unknown): CanaryDiagnostics | undefined {
     failure: value.failure === null ? null : value.failure === "timeout" ? "timeout" : "unavailable",
   }
   if (value.startupFailure !== null && result.startupFailure === null) return
+  if (value.readiness !== null && result.readiness === null) return
   for (const key of [
     "bootCount",
     "containerStatus",
@@ -140,6 +145,21 @@ export function summarizeCanaryLogs(stdout: unknown, stderr: unknown) {
     signals: signalPatterns
       .filter(({ pattern }) => pattern.test(out.prefix) || pattern.test(err.prefix))
       .map(({ signal }) => signal),
+  }
+}
+
+export function parseCanaryReadiness(input: unknown): RuntimeReadiness | null | undefined {
+  if (input === null) return null
+  try {
+    const value = record(input)
+    if (Object.keys(value).length !== 2 || !Object.hasOwn(value, "code") || !Object.hasOwn(value, "status")) return
+    const code = member(value.code, runtimeReadinessCodes)
+    const status = value.status === null ? null : integer(value.status, 599)
+    if (!code || status !== value.status || (status !== null && status < 100)) return
+    if (code === "ready" && status !== 200) return
+    return { code, status }
+  } catch {
+    return undefined
   }
 }
 

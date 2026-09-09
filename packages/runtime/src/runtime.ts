@@ -601,7 +601,7 @@ async function ensureServer(
     throw RuntimeFailure.create("runtime_process_lookup_failed", error)
   })
   if (existing && (await waitForServer(existing, sandbox, password))) {
-    if (restore && !(await serverResponding(sandbox, password, true)))
+    if (restore && (await runtimeReadiness(sandbox, password, true)).code !== "ready")
       throw RuntimeFailure.create("runtime_unavailable")
     return
   }
@@ -645,7 +645,8 @@ async function ensureServer(
     })
 
   if (!(await waitForServer(started, sandbox, password))) throw RuntimeFailure.create("runtime_process_exited")
-  if (restore && !(await serverResponding(sandbox, password, true))) throw RuntimeFailure.create("runtime_unavailable")
+  if (restore && (await runtimeReadiness(sandbox, password, true)).code !== "ready")
+    throw RuntimeFailure.create("runtime_unavailable")
 }
 
 async function waitForServer(process: RuntimeProcess, sandbox: RuntimeSandbox, password: string) {
@@ -661,19 +662,44 @@ async function waitForServer(process: RuntimeProcess, sandbox: RuntimeSandbox, p
     })
     .catch(async (error) => {
       // A failed control-plane stream does not prove the application server is down.
-      if (await serverResponding(sandbox, password)) return
+      if ((await runtimeReadiness(sandbox, password)).code === "ready") return
       throw RuntimeFailure.create("runtime_process_port_timeout", error)
     })
   return true
 }
 
-async function serverResponding(sandbox: RuntimeSandbox, password: string, restored = false) {
+export const runtimeReadinessCodes = [
+  "ready",
+  "timeout",
+  "transport",
+  "http_status",
+  "history",
+  "isolation",
+  "publication",
+  "content_type",
+  "body_missing",
+  "body_limit",
+  "body_read",
+  "body_json",
+  "body_schema",
+] as const
+
+export type RuntimeReadiness = { code: (typeof runtimeReadinessCodes)[number]; status: number | null }
+
+// Both admission and the isolated canary use this bounded probe. Never retain the body or credentials.
+export async function runtimeReadiness(
+  sandbox: Pick<RuntimeSandbox, "containerFetch">,
+  password: string,
+  restored = false,
+): Promise<RuntimeReadiness> {
   const controller = new AbortController()
+  let status: number | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
-  const deadline = new Promise<boolean>((resolve) => {
+  const result = (code: RuntimeReadiness["code"]): RuntimeReadiness => ({ code, status })
+  const deadline = new Promise<RuntimeReadiness>((resolve) => {
     timer = setTimeout(() => {
       controller.abort()
-      resolve(false)
+      resolve(result("timeout"))
     }, 5_000)
   })
   const probe = async () => {
@@ -685,19 +711,26 @@ async function serverResponding(sandbox: RuntimeSandbox, password: string, resto
       }),
       PORT,
     )
-    if (
-      controller.signal.aborted ||
-      response.status !== 200 ||
-      (restored && response.headers.get("x-mongolgpt-runtime-history") !== "checkpoint-v1") ||
-      (restored && response.headers.get("x-mongolgpt-runtime-isolation") !== "cgroup-v1") ||
-      (restored && response.headers.get("x-mongolgpt-runtime-publication") !== "tool-pty-v1") ||
-      response.headers.get("content-type")?.split(";")[0].trim() !== "application/json"
-    ) {
+    status = response.status
+    const rejection = controller.signal.aborted
+      ? "timeout"
+      : response.status !== 200
+        ? "http_status"
+        : restored && response.headers.get("x-mongolgpt-runtime-history") !== "checkpoint-v1"
+          ? "history"
+          : restored && response.headers.get("x-mongolgpt-runtime-isolation") !== "cgroup-v1"
+            ? "isolation"
+            : restored && response.headers.get("x-mongolgpt-runtime-publication") !== "tool-pty-v1"
+              ? "publication"
+              : response.headers.get("content-type")?.split(";")[0].trim() !== "application/json"
+                ? "content_type"
+                : undefined
+    if (rejection) {
       void response.body?.cancel().catch(() => {})
-      return false
+      return result(rejection)
     }
     const reader = response.body?.getReader()
-    if (!reader) return false
+    if (!reader) return result("body_missing")
     const cancel = () => {
       void reader.cancel().catch(() => {})
     }
@@ -708,14 +741,29 @@ async function serverResponding(sandbox: RuntimeSandbox, password: string, resto
     try {
       while (true) {
         const chunk = await reader.read()
-        if (controller.signal.aborted) return false
+        if (controller.signal.aborted) return result("timeout")
         if (chunk.done) break
         size += chunk.value.byteLength
-        if (size > 1_024) return false
+        if (size > 1_024) return result("body_limit")
         body += decoder.decode(chunk.value, { stream: true })
       }
-      const health = readRecord(JSON.parse(body + decoder.decode()))
-      return health?.healthy === true && typeof health.version === "string" && health.version.trim().length > 0
+      const health = (() => {
+        try {
+          return { value: readRecord(JSON.parse(body + decoder.decode())) }
+        } catch {
+          return undefined
+        }
+      })()
+      if (!health) return result("body_json")
+      return result(
+        health.value?.healthy === true &&
+          typeof health.value.version === "string" &&
+          health.value.version.trim().length > 0
+          ? "ready"
+          : "body_schema",
+      )
+    } catch {
+      return result(controller.signal.aborted ? "timeout" : "body_read")
     } finally {
       controller.signal.removeEventListener("abort", cancel)
       cancel()
@@ -725,7 +773,7 @@ async function serverResponding(sandbox: RuntimeSandbox, password: string, resto
   try {
     return await Promise.race([probe(), deadline])
   } catch {
-    return false
+    return result(controller.signal.aborted ? "timeout" : "transport")
   } finally {
     clearTimeout(timer)
     controller.abort()

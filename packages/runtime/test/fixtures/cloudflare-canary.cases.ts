@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { emptyCanaryDiagnostics, sanitizeCanaryDiagnostics } from "../../script/canary-diagnostics"
 import { startupDiagnosticEnv } from "@mongolgpt/runtime-auth/startup-diagnostic"
 
+const actualRuntime = await import("../../src/runtime")
+
 const calls = {
   derived: new Array<unknown[]>(),
   histories: 0,
@@ -63,6 +65,10 @@ const sandbox = {
         },
       }
     )
+  },
+  async containerFetch() {
+    await fault("readiness")
+    return Response.json({ private: privateValue }, { status: 503 })
   },
 }
 const bucket = {
@@ -174,6 +180,7 @@ mock.module("../../src/index", () => ({
 }))
 
 mock.module("../../src/runtime", () => ({
+  ...actualRuntime,
   RUNTIME_PROCESS_ID: "mongolgpt-server",
   deriveRuntimeIdentity(...args: unknown[]) {
     calls.derived.push(args)
@@ -415,6 +422,7 @@ describe("cloudflare canary worker", () => {
     expect(value).toEqual({
       bootCount: 2,
       startupFailure: await sandbox.startupFailure(),
+      readiness: null,
       lastStop: { exitCode: 143, reason: "runtime_signal" },
       containerStatus: "healthy",
       epoch: 5,
@@ -464,6 +472,25 @@ describe("cloudflare canary worker", () => {
     expect(calls.processes).toEqual([])
     expect(calls.logs).toBe(0)
     expect(calls.productions).toEqual([])
+    expect(sandbox.stopCalls).toEqual([])
+  })
+
+  test("a running native process is checked with the actual bounded admission probe", async () => {
+    sandbox.process = { status: "running", stdout: "", stderr: "" }
+    for (const transportFails of [false, true]) {
+      diagnosticFault = transportFails ? "readiness-error" : undefined
+      const response = await canary.default.fetch(request("/__canary/diagnostics", { token: true }), env())
+      const value = await response.json()
+      expect(value).toHaveProperty(
+        "readiness",
+        transportFails ? { code: "transport", status: null } : { code: "http_status", status: 503 },
+      )
+      expect(value).toHaveProperty("failure", null)
+      expect(value).toHaveProperty("epoch", 5)
+      expect<unknown>(sanitizeCanaryDiagnostics(value)).toEqual(value)
+      expect(JSON.stringify(value)).not.toContain(privateValue)
+    }
+    expect(calls.starts).toEqual([])
     expect(sandbox.stopCalls).toEqual([])
   })
 

@@ -25,6 +25,34 @@ function valid() {
 }
 
 describe("canary diagnostic report sanitization", () => {
+  test("accepts only finite readiness codes and bounded HTTP status, never response content", () => {
+    for (const readiness of [
+      { code: "ready", status: 200 },
+      { code: "http_status", status: 503 },
+      { code: "timeout", status: null },
+      { code: "publication", status: 200 },
+    ] as const)
+      expect(sanitizeCanaryDiagnostics({ ...valid(), readiness })?.readiness).toEqual(readiness)
+    for (const readiness of [
+      {},
+      { code: privateValue, status: 200 },
+      { code: "ready", status: null },
+      { code: "ready", status: 503 },
+      { code: "http_status", status: 99 },
+      { code: "http_status", status: 600 },
+      { code: "http_status", status: 200.5 },
+      { code: "http_status", status: "503" },
+      { code: "http_status", status: 503, body: privateValue },
+      Object.defineProperty({}, "code", {
+        enumerable: true,
+        get() {
+          throw new Error(privateValue)
+        },
+      }),
+    ])
+      expect(sanitizeCanaryDiagnostics({ ...valid(), readiness })).toBeUndefined()
+  })
+
   test("accepts bounded startup evidence and rejects private or malformed nested receipts", () => {
     const startupFailure = {
       bootCount: 1,
