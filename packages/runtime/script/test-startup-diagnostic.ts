@@ -60,7 +60,13 @@ try {
       .then((response) => response.json())
   phase = "initial_read"
   assert.equal(await receipt(), null)
-  const body = JSON.stringify({ phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false })
+  const body = JSON.stringify({
+    phase: "retire_root",
+    code: "EXDEV",
+    overlay: true,
+    workspaceMount: false,
+    exitCode: null,
+  })
   phase = "unauthorized_write"
   const denied = await worker.fetch("http://127.0.0.1/v1/startup-diagnostic", {
     method: "POST",
@@ -117,22 +123,51 @@ try {
   worker = await unstable_startWorker(options)
   await bounded(worker.ready)
   assert.deepEqual(await receipt(), native)
+  phase = "native_child_exit"
+  const childExit = JSON.parse(
+    await run(
+      executable,
+      [],
+      JSON.stringify({
+        origin: (await worker.url).origin,
+        token,
+        admin,
+        nativeExit: true,
+      }),
+    ),
+  )
+  assert.deepEqual(childExit, { reported: true, completed: true, exitCode: 17 })
+  const fatal = (await receipt()) as {
+    bootCount: number
+    diagnostic: { phase: string; code: string; exitCode: number }
+  }
+  assert.equal(fatal.bootCount, 1)
+  assert.equal(fatal.diagnostic.phase, "native_runtime")
+  assert.equal(fatal.diagnostic.code, "unknown")
+  assert.equal(fatal.diagnostic.exitCode, 17)
+  await worker.dispose()
+  worker = await unstable_startWorker(options)
+  await bounded(worker.ready)
+  phase = "native_child_restart_read"
+  assert.deepEqual(await receipt(), fatal)
   await writeFile(
     join(root, "result.json"),
     JSON.stringify(
       {
-        assertions: 11,
+        assertions: 17,
         proxy: "actual-ContainerProxy",
         storage: "actual-DO-shared-persistence",
         retainedAfterRestart: true,
         compiledReporter: true,
+        compiledChildExit: 17,
+        reportedBeforeContainerCompletion: true,
         containerLifecycle: "not-tested",
       },
       null,
       2,
     ),
   )
-  console.log(JSON.stringify({ passed: true, assertions: 11, receipt: join(root, "result.json") }))
+  console.log(JSON.stringify({ passed: true, assertions: 17, receipt: join(root, "result.json") }))
 } catch (error) {
   console.error(JSON.stringify({ phase }))
   throw error

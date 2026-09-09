@@ -27,7 +27,7 @@ test("reports only fixed safe fields to the authenticated fixed destination", as
   expect(requests[0].headers.get(checkpointControlHeader)).toBe("a".repeat(64))
   const body = await requests[0].json()
   expect(parseStartupDiagnostic(body)).toEqual(body)
-  expect(body).toMatchObject({ phase: "retire_root", code: "EXDEV" })
+  expect(body).toMatchObject({ phase: "retire_root", code: "EXDEV", exitCode: null })
   expect(JSON.stringify(body)).not.toContain("private")
 })
 

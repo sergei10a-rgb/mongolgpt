@@ -106,10 +106,11 @@ export async function runRuntimeSupervisor(
     result = await superviseRuntime(runtime, (stop) => {
       interrupt = stop
     })
+    if (result !== 0) await reportStartupFailure(undefined, controlToken, input.request, { exitCode: result })
     return result
   } catch (error) {
+    await reportStartupFailure(error, controlToken, input.request, supervised ? { exitCode: null } : undefined)
     if (!supervised) {
-      await reportStartupFailure(error, controlToken, input.request)
       await runtime?.group.close().catch(() => {})
       await runtime?.control.catch(() => {})
     }

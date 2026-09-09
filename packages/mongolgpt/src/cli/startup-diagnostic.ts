@@ -13,6 +13,7 @@ export async function reportStartupFailure(
   error: unknown,
   token: string,
   request: (request: Request) => Promise<Response> = fetch,
+  native?: { exitCode: number | null },
 ) {
   if (process.env[startupDiagnosticEnv] !== "true" || !validControlToken(token)) return
   const controller = new AbortController()
@@ -25,7 +26,11 @@ export async function reportStartupFailure(
   })
   const send = async () => {
     const code = error && typeof error === "object" ? Object.getOwnPropertyDescriptor(error, "code")?.value : undefined
-    const phase = error instanceof CloudStartup.StartupError ? (error.phase ?? "supervisor") : "supervisor"
+    const phase = native
+      ? "native_runtime"
+      : error instanceof CloudStartup.StartupError
+        ? (error.phase ?? "supervisor")
+        : "supervisor"
     const [overlay, workspaceMount] = await Promise.all([
       statfs("/workspace").then(
         (value) => value.type === 0x794c7630,
@@ -39,6 +44,7 @@ export async function reportStartupFailure(
       code: startupDiagnosticCodes.find((value) => value === code) ?? "unknown",
       overlay,
       workspaceMount,
+      exitCode: native?.exitCode ?? null,
     })
     if (!body) return
     const response = await request(

@@ -24,7 +24,10 @@ const sandbox = {
   lastStop: { exitCode: 143, reason: "runtime_signal" },
   process: null as NativeProcess | null,
   async startupFailure() {
-    return { bootCount: 1, diagnostic: { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false } }
+    return {
+      bootCount: 1,
+      diagnostic: { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false, exitCode: null },
+    }
   },
   async canaryState(...args: unknown[]) {
     this.canaryStateArgs.push(args)
@@ -272,7 +275,13 @@ describe("cloudflare canary worker", () => {
       },
     } as unknown as ConstructorParameters<typeof canary.CanarySandbox>[0]
     const first = new canary.CanarySandbox(ctx, env())
-    const diagnostic = { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false } as const
+    const diagnostic = {
+      phase: "retire_root",
+      code: "EXDEV",
+      overlay: true,
+      workspaceMount: false,
+      exitCode: null,
+    } as const
     await first.onStart()
     await first.recordStartupFailure(diagnostic)
     await first.onStop({ exitCode: 1, reason: "exit" })

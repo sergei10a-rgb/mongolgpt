@@ -7,7 +7,7 @@ import {
   startupDiagnosticPhases,
 } from "../src/startup-diagnostic"
 
-const valid = { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false } as const
+const valid = { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false, exitCode: null } as const
 
 describe("startup diagnostic contract", () => {
   test("exports the fixed transport and accepts every bounded combination", () => {
@@ -17,13 +17,26 @@ describe("startup diagnostic contract", () => {
       for (const code of startupDiagnosticCodes)
         for (const overlay of [true, false, null])
           for (const workspaceMount of [true, false, null]) {
-            const input = { phase, code, overlay, workspaceMount }
+            const input = { phase, code, overlay, workspaceMount, exitCode: null }
             const parsed = parseStartupDiagnostic(input)
             expect(parsed).toEqual(input)
             expect(parsed).not.toBe(input)
           }
     expect(Object.isFrozen(startupDiagnosticPhases)).toBe(true)
     expect(Object.isFrozen(startupDiagnosticCodes)).toBe(true)
+  })
+
+  test("bounds native failure status and rejects status for pre-child phases", () => {
+    for (const exitCode of [null, 1, 17, 127, 255])
+      expect(parseStartupDiagnostic({ ...valid, phase: "native_runtime", exitCode })).toEqual({
+        ...valid,
+        phase: "native_runtime",
+        exitCode,
+      })
+    for (const exitCode of [undefined, 0, -1, 256, 1.5, NaN, Infinity, "17", {}, true])
+      expect(parseStartupDiagnostic({ ...valid, phase: "native_runtime", exitCode })).toBeUndefined()
+    for (const phase of startupDiagnosticPhases.filter((value) => value !== "native_runtime"))
+      expect(parseStartupDiagnostic({ ...valid, phase, exitCode: 17 })).toBeUndefined()
   })
 
   test("rejects missing fields, unknown values, arrays and private extras", () => {

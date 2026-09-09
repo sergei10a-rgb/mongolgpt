@@ -11,7 +11,13 @@ const env = {
 }
 const scope = { accountID: "account_cloudflare_canary", workspaceID: "wrk_cloudflare_canary" }
 const token = await deriveCheckpointControlToken(env.MONGOLGPT_RUNTIME_SECRET, scope)
-const diagnostic: StartupDiagnostic = { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false }
+const diagnostic: StartupDiagnostic = {
+  phase: "retire_root",
+  code: "EXDEV",
+  overlay: true,
+  workspaceMount: false,
+  exitCode: null,
+}
 const url = `http://checkpoint.mongolgpt.internal${startupDiagnosticPath}`
 
 function request(body: BodyInit = JSON.stringify(diagnostic), headers: HeadersInit = {}) {
@@ -62,6 +68,8 @@ describe("canary root startup collector", () => {
     for (const req of [
       request(JSON.stringify({ ...diagnostic, token: "private-key" })),
       request(JSON.stringify({ ...diagnostic, code: "private-path" })),
+      request(JSON.stringify({ ...diagnostic, phase: "native_runtime", exitCode: "private-exit" })),
+      request(JSON.stringify({ ...diagnostic, phase: "native_runtime", exitCode: 256 })),
       request("not json"),
       request(new Uint8Array([255])),
       request(undefined, { "content-type": "text/plain" }),

@@ -24,6 +24,65 @@ const requiredEnv = {
 } as const
 
 describe("runRuntimeSupervisor hosted lifecycle", () => {
+  for (const outcome of [
+    "exit",
+    "already-exited",
+    "signal",
+    "control-error",
+    "child-error",
+    "control-close",
+  ] as const) {
+    test(`reports native ${outcome} before acknowledging container failure`, async () => {
+      await withSupervisorProcess(async () => {
+        process.env[startupDiagnosticEnv] = "true"
+        const started = deferred<StartInput>()
+        const runtime = syntheticRuntime()
+        const events: string[] = []
+        const bodies: unknown[] = []
+        const result = runRuntimeSupervisor({
+          start: async (input) => {
+            if (outcome === "already-exited") runtime.child.exitCode = 17
+            started.resolve(input)
+            return runtime.handle
+          },
+          connect: async () => ({
+            complete: async (success) => {
+              events.push(`complete:${success}`)
+            },
+          }),
+          request: async (request) => {
+            events.push("report")
+            bodies.push(await request.json())
+            return new Response(null, { status: 204 })
+          },
+        })
+        await runtimeReady(started.promise)
+        if (outcome === "exit" || outcome === "already-exited") {
+          runtime.child.exitCode = 17
+          runtime.child.emit("exit", 17, null)
+          expect(await result).toBe(17)
+        } else if (outcome === "signal") {
+          runtime.child.signalCode = "SIGKILL"
+          runtime.child.emit("exit", null, "SIGKILL")
+          expect(await result).toBe(1)
+        } else {
+          if (outcome === "child-error") runtime.child.emit("error", new Error("private child failure"))
+          if (outcome === "control-error") runtime.control.reject(new Error("private child control detail"))
+          if (outcome === "control-close") runtime.control.resolve()
+          await expect(result).rejects.toThrow("Runtime supervisor failed.")
+        }
+        expect(events).toEqual(["report", "complete:false"])
+        expect(bodies).toHaveLength(1)
+        expect(bodies[0]).toMatchObject({
+          phase: "native_runtime",
+          exitCode: outcome === "exit" || outcome === "already-exited" ? 17 : outcome === "signal" ? 1 : null,
+        })
+        expect(JSON.stringify(bodies)).not.toContain("private")
+        expect(runtime.events).toEqual(["group.close"])
+      })
+    })
+  }
+
   for (const enabled of [false, true]) {
     test(`startup reporting is opt-in (${enabled}) and precedes failed container completion`, async () => {
       await withSupervisorProcess(async () => {
@@ -81,6 +140,8 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
 
   test("runtime-ready signals wait for successful stop instead of child SIGKILL", async () => {
     await withSupervisorProcess(async () => {
+      process.env[startupDiagnosticEnv] = "true"
+      const requests: Request[] = []
       const releaseStop = deferred<void>()
       const started = deferred<StartInput>()
       const runtime = syntheticRuntime({
@@ -96,7 +157,14 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         return runtime.handle
       }) satisfies RuntimeStart
 
-      const result = runRuntimeSupervisor({ start, connect })
+      const result = runRuntimeSupervisor({
+        start,
+        connect,
+        request: async (request) => {
+          requests.push(request)
+          return new Response(null, { status: 204 })
+        },
+      })
       const input = await runtimeReady(started.promise)
 
       expect(input).toMatchObject({
@@ -129,6 +197,7 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
 
       expect(await result).toBe(0)
       expect(runtime.events).toEqual(["stop"])
+      expect(requests).toEqual([])
     })
   })
 

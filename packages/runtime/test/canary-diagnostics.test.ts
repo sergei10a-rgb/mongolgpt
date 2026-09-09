@@ -28,7 +28,7 @@ describe("canary diagnostic report sanitization", () => {
   test("accepts bounded startup evidence and rejects private or malformed nested receipts", () => {
     const startupFailure = {
       bootCount: 1,
-      diagnostic: { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false },
+      diagnostic: { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false, exitCode: null },
     }
     expect(sanitizeCanaryDiagnostics({ ...valid(), startupFailure })).toHaveProperty("startupFailure", startupFailure)
     for (const failure of [
