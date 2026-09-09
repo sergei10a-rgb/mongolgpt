@@ -51,7 +51,7 @@ const layers = (filename: string, options?: EventV2.LayerOptions) =>
   )
 
 describe("native same-container cloud history resume recovery", () => {
-  // Three native SQLite fixtures plus replay can exceed Bun's default on Windows CI.
+  // Native SQLite fixtures plus replay share an explicit deadline on Windows CI.
   test("resumes from a validated prefix, replays durable cloud delta idempotently, and preserves native rows", async () => {
     await using temp = await tmpdir()
     const fixture = await resumeFixture(temp.path)
@@ -102,7 +102,7 @@ describe("native same-container cloud history resume recovery", () => {
       }),
       recovery.eventOptions,
     )
-  })
+  }, 30_000)
 
   test("refuses resume without a baseline", () => {
     expect(() => createCloudRecovery(createCloudHistory(), undefined, { resume: true })).toThrow()
@@ -117,7 +117,7 @@ describe("native same-container cloud history resume recovery", () => {
     const input = cloudFixture(fixture.delta, fixture.checkpoint)
 
     await expectFailure(fixture.resume, input)
-  })
+  }, 30_000)
 
   test("fails closed when baseline rows are missing without an authenticated deletion", async () => {
     await using temp = await tmpdir()
@@ -139,7 +139,7 @@ describe("native same-container cloud history resume recovery", () => {
     const input = cloudFixture(fixture.delta, fixture.checkpoint)
 
     await expectFailure(fixture.resume, input)
-  })
+  }, 30_000)
 
   for (const [name, mutation] of [
     [
@@ -170,7 +170,7 @@ describe("native same-container cloud history resume recovery", () => {
       const fixture = await resumeFixture(temp.path)
       await mutate(fixture.resume, mutation)
       await expectFailure(fixture.resume, cloudFixture(fixture.delta, fixture.checkpoint))
-    })
+    }, 30_000)
   }
 
   test("fails closed on local durable events that are not acknowledged by baseline or remote history", async () => {
@@ -180,7 +180,7 @@ describe("native same-container cloud history resume recovery", () => {
     const input = cloudFixture(fixture.delta, fixture.checkpoint)
 
     await expectFailure(fixture.resume, input)
-  })
+  }, 30_000)
 
   test("fails closed on forged local deletion without a remote deletion guard", async () => {
     await using temp = await tmpdir()
@@ -190,7 +190,7 @@ describe("native same-container cloud history resume recovery", () => {
     const input = cloudFixture([], fixture.checkpoint)
 
     await expectFailure(fixture.resume, input)
-  })
+  }, 30_000)
 })
 
 async function resumeFixture(root: string) {
