@@ -2,6 +2,8 @@ import {
   processEligibleAccountDeletions,
   purgeCompletedAccountDeletions,
 } from "@mongolgpt/console-core/account-deletion.js"
+import { Resource } from "@mongolgpt/console-resource"
+import { prepareRuntimeAccountCleanup } from "./runtime-account-cleanup"
 
 const BATCH_SIZE = 50
 const MAX_BATCHES = 10
@@ -58,7 +60,12 @@ export async function runAccountDeletionPurge(now: number, purgeBatch: PurgeBatc
 
 export default {
   async scheduled(controller: { scheduledTime: number }) {
-    const retention = await runAccountDeletionRetention(controller.scheduledTime)
+    const runtime = await prepareRuntimeAccountCleanup(
+      (Resource as unknown as Record<string, unknown>).RuntimeAccountCleanup,
+    )
+    const retention = await runAccountDeletionRetention(controller.scheduledTime, (input) =>
+      processEligibleAccountDeletions(input, { runtime }),
+    )
     const purge = await runAccountDeletionPurge(controller.scheduledTime)
     console.log("Бүртгэл устгалын хадгалалт дууслаа", { retention, purge })
   },

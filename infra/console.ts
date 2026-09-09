@@ -24,6 +24,7 @@ import {
   PAYMENT_DEAD_LETTER_RETRIES,
   PAYMENT_QUEUE_RETENTION_SECONDS,
   quotaServiceMigrations,
+  runtimeAccountCleanupBinding,
 } from "./console-policy"
 import { SECRET } from "./secret"
 
@@ -326,11 +327,24 @@ export const subscriptionExpiration = new sst.cloudflare.Cron("SubscriptionExpir
   },
 })
 
+// Enable after the runtime migration, registered-writer cutover and named
+// entrypoint are deployed. Only this cron receives the erasure capability.
+const runtimeCleanupBinding = runtimeAccountCleanupBinding(
+  $app.stage,
+  process.env.MONGOLGPT_ENABLE_RUNTIME_CLEANUP === "true",
+)
+const runtimeAccountCleanup = runtimeCleanupBinding
+  ? new sst.Linkable("RuntimeAccountCleanup", {
+      properties: {},
+      include: [sst.cloudflare.binding({ type: "serviceBindings", properties: runtimeCleanupBinding })],
+    })
+  : undefined
+
 export const accountDeletionRetention = new sst.cloudflare.Cron("AccountDeletionRetention", {
   schedules: ["*/15 * * * *"],
   worker: {
     handler: "packages/console/function/src/account-deletion.ts",
-    link: [database],
+    link: [database, ...(runtimeAccountCleanup ? [runtimeAccountCleanup] : [])],
     compatibility: {
       date: "2026-07-15",
     },

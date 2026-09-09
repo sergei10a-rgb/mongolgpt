@@ -1,8 +1,12 @@
 import { MongolGPTSandbox } from "../../src/index"
 import { deriveRuntimeIdentity } from "../../src/runtime"
 import { createHistoryStore } from "../../src/history"
+import { registerRuntimeSandbox } from "../../src/account-cleanup"
+import { createRetirableBackupBucket } from "../../src/backup-writes"
+import type { RuntimeAccountCleanup } from "../../src/account-cleanup-service"
+import { prepareRuntimeAccountCleanup } from "../../../console/function/src/runtime-account-cleanup"
 
-export { ContainerProxy } from "../../src/index"
+export { ContainerProxy, RuntimeAccountCleanup } from "../../src/index"
 
 const scope = {
   accountID: "acc_retirement_probe",
@@ -12,6 +16,8 @@ const scope = {
 type Environment = Omit<ConstructorParameters<typeof MongolGPTSandbox>[1], "Sandbox" | "HISTORY"> & {
   Sandbox: DurableObjectNamespace<RetirementSandbox>
   HISTORY: D1Database
+  RUNTIME_BACKUPS: R2Bucket
+  Cleanup: Service<RuntimeAccountCleanup>
 }
 
 // Only the external container boundary is simulated. Identity, SDK teardown,
@@ -95,6 +101,44 @@ export default {
       const statements = await request.json<string[]>()
       for (const statement of statements) await env.HISTORY.prepare(statement).run()
       return Response.json({ ok: true })
+    }
+    if (url.pathname.startsWith("/service-")) {
+      const cleanup = { accountID: "acc_service", requestID: "del_service", workspaceIDs: ["wrk_service"] }
+      const owner = { accountID: cleanup.accountID, workspaceID: cleanup.workspaceIDs[0] }
+      const identity = await deriveRuntimeIdentity(owner.accountID, owner.workspaceID, env.MONGOLGPT_RUNTIME_SECRET)
+      const oldIdentity = await deriveRuntimeIdentity(
+        owner.accountID,
+        owner.workspaceID,
+        "synthetic-previous-runtime-secret-at-least-thirty-two-characters",
+      )
+      const ids = [identity.sandboxID, oldIdentity.sandboxID].map((name) => env.Sandbox.idFromName(name))
+      if (url.pathname === "/service-prepare") {
+        for (const id of ids) {
+          await registerRuntimeSandbox(env.HISTORY, owner, id.toString())
+          await env.Sandbox.get(id).prepare()
+        }
+        await createHistoryStore(env.HISTORY).claim(owner, { expectedEpoch: 0, writerID: "writer_service" })
+        await createRetirableBackupBucket(env.HISTORY, env.RUNTIME_BACKUPS, owner).put(
+          `runtime-backups/v1/${owner.accountID}/${owner.workspaceID}/00000000-0000-4000-8000-000000000001/000000.bin`,
+          "private synthetic workspace",
+          { onlyIf: { etagDoesNotMatch: "*" } },
+        )
+        return Response.json(await Promise.all(ids.map((id) => env.Sandbox.get(id).status())))
+      }
+      if (url.pathname === "/service-ready") return Response.json(await env.Cleanup.ready())
+      if (url.pathname === "/service-cleanup") {
+        const client = await prepareRuntimeAccountCleanup(env.Cleanup)
+        return Response.json(await client(cleanup))
+      }
+      if (url.pathname === "/service-state")
+        return Response.json({
+          sandboxes: await Promise.all(ids.map((id) => env.Sandbox.get(id).status())),
+          content: await env.HISTORY.prepare("SELECT count(*) AS n FROM runtime_history_writer WHERE account_id = ?")
+            .bind(owner.accountID)
+            .first("n"),
+          objects: (await env.RUNTIME_BACKUPS.list({ prefix: `runtime-backups/v1/${owner.accountID}/` })).objects
+            .length,
+        })
     }
     const identity = await deriveRuntimeIdentity(scope.accountID, scope.workspaceID, env.MONGOLGPT_RUNTIME_SECRET)
     const sandbox = env.Sandbox.getByName(identity.sandboxID)

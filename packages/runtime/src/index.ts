@@ -9,6 +9,7 @@ import {
 import { createSandboxRetirement, validateSandboxRetirement, type SandboxRetirement } from "./sandbox-retirement"
 import { handleHistoryOutbound } from "./history-rpc"
 import { createHistoryStore } from "./history"
+import { registerRuntimeSandbox } from "./account-cleanup"
 import { handleCheckpointOutbound } from "./checkpoint-rpc"
 import { fetchRuntime, runtimeHttpHeader } from "./runtime-http"
 import {
@@ -19,6 +20,7 @@ import {
 } from "@mongolgpt/runtime-auth/control"
 
 export { ContainerProxy }
+export { RuntimeAccountCleanup } from "./account-cleanup-service"
 
 export const blockedEgressHosts = [
   "localhost",
@@ -141,9 +143,16 @@ export class MongolGPTSandbox extends Sandbox {
     const env = this.#retireEnvironment
     const ctx = this.#retireContext
     const identity = await deriveRuntimeIdentity(input.accountID, input.workspaceID, env.MONGOLGPT_RUNTIME_SECRET)
-    if (env.Sandbox.idFromName(identity.sandboxID).toString() !== ctx.id.toString())
-      throw new Error("Ажиллах орчны устгалын хүрээ зөрсөн байна.")
     if (!env.HISTORY) throw new Error("Устгалын хамгаалалт тохируулаагүй байна.")
+    if (env.Sandbox.idFromName(identity.sandboxID).toString() !== ctx.id.toString()) {
+      const registered = await env.HISTORY.prepare(
+        `SELECT object_id FROM runtime_sandbox
+        WHERE object_id = ? AND account_id = ? AND workspace_id = ?`,
+      )
+        .bind(ctx.id.toString(), input.accountID, input.workspaceID)
+        .first<{ object_id: string }>()
+      if (registered?.object_id !== ctx.id.toString()) throw new Error("Ажиллах орчны устгалын хүрээ зөрсөн байна.")
+    }
     const retired = await env.HISTORY.prepare("SELECT account_id FROM runtime_history_retirement WHERE account_id = ?")
       .bind(input.accountID)
       .first()
@@ -172,11 +181,12 @@ export class MongolGPTSandbox extends Sandbox {
 // The inherited setter registers handlers for this concrete class in the SDK.
 MongolGPTSandbox.outboundHandlers = { history: handleHistoryOutbound, checkpoint: handleCheckpointOutbound }
 
-interface RuntimeEnvironment extends RuntimeVariables {
+export interface RuntimeEnvironment extends RuntimeVariables {
   Sandbox: DurableObjectNamespace<MongolGPTSandbox>
   HISTORY?: D1Database
   RUNTIME_BACKUPS?: R2Bucket
   MONGOLGPT_RUNTIME_BACKUP_KEYS?: string
+  MONGOLGPT_RUNTIME_ACCOUNT_CLEANUP?: string
 }
 
 const handler = createRuntimeHandler<RuntimeEnvironment>({
@@ -188,6 +198,7 @@ const handler = createRuntimeHandler<RuntimeEnvironment>({
       throw new Error("Cloud сэргээх хадгалалт эсвэл түлхүүр тохируулаагүй байна.")
     }
     if (env.HISTORY) await createHistoryStore(env.HISTORY).assertActive(scope)
+    if (env.HISTORY) await registerRuntimeSandbox(env.HISTORY, scope, env.Sandbox.idFromName(id).toString())
     const sandbox = getSandbox(env.Sandbox, id, {
       normalizeId: true,
       sleepAfter: "10m",

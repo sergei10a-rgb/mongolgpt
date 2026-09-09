@@ -9,6 +9,7 @@ import {
   PAYMENT_QUEUE_RETENTION_DAYS,
   PAYMENT_QUEUE_RETENTION_SECONDS,
   quotaServiceMigrations,
+  runtimeAccountCleanupBinding,
 } from "../../../infra/console-policy"
 import { hostedSstSecretNames } from "../src/deployment"
 
@@ -1179,12 +1180,32 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(packageSource.scripts["db:migrate"]).toBe("bun run --cwd packages/console/core db:migrate-d1")
   })
 
-  test("runs bounded account deletion retention against the linked D1 database", async () => {
+  test("gates account erasure behind a named runtime binding available only to its cron", async () => {
     const source = await Bun.file(new URL("../../../infra/console.ts", import.meta.url)).text()
-    expect(source).toContain('new sst.cloudflare.Cron("AccountDeletionRetention"')
-    expect(source).toContain('schedules: ["*/15 * * * *"]')
-    expect(source).toContain('handler: "packages/console/function/src/account-deletion.ts"')
-    expect(source).toContain("link: [database]")
+    const start = source.indexOf('new sst.cloudflare.Cron("AccountDeletionRetention"')
+    expect(start).toBeGreaterThan(0)
+    const retention = source.slice(start, source.indexOf("// AUTH", start))
+    expect(retention).toContain('schedules: ["*/15 * * * *"]')
+    expect(retention).toContain('handler: "packages/console/function/src/account-deletion.ts"')
+    expect(retention).toContain("link: [database, ...(runtimeAccountCleanup ? [runtimeAccountCleanup] : [])]")
+    expect(source).toContain('process.env.MONGOLGPT_ENABLE_RUNTIME_CLEANUP === "true"')
+    expect(runtimeAccountCleanupBinding("preview", false)).toBeUndefined()
+    expect(() => runtimeAccountCleanupBinding("preview", true)).toThrow("dev эсвэл production")
+    expect(runtimeAccountCleanupBinding("dev", true)).toEqual({
+      service: "mongolgpt-runtime-dev",
+      entrypoint: "RuntimeAccountCleanup",
+    })
+    expect(runtimeAccountCleanupBinding("production", true)).toEqual({
+      service: "mongolgpt-runtime-production",
+      entrypoint: "RuntimeAccountCleanup",
+    })
+    expect(source).toContain('sst.cloudflare.binding({ type: "serviceBindings", properties: runtimeCleanupBinding })')
+    expect(source.match(/link:.*runtimeAccountCleanup/g)).toHaveLength(1)
+    const cron = await Bun.file(new URL("../../console/function/src/account-deletion.ts", import.meta.url)).text()
+    expect(cron.indexOf("const runtime = await prepareRuntimeAccountCleanup")).toBeLessThan(
+      cron.indexOf("const retention = await runAccountDeletionRetention"),
+    )
+    expect(cron).toContain("processEligibleAccountDeletions(input, { runtime })")
   })
 
   test("prunes provider attempt telemetry frequently with only the D1 binding", async () => {

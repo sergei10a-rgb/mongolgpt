@@ -19,3 +19,10 @@ const businessSecrets = ["AWS_SES_ACCESS_KEY_ID", "AWS_SES_SECRET_ACCESS_KEY"] a
 export function businessIntegrationSecretNames(enabled: boolean) {
   return enabled ? businessSecrets : []
 }
+
+export function runtimeAccountCleanupBinding(stage: string, enabled: boolean) {
+  if (!enabled) return undefined
+  if (stage !== "dev" && stage !== "production")
+    throw new Error("Runtime устгалд dev эсвэл production орчныг тодорхой заана")
+  return { service: `mongolgpt-runtime-${stage}`, entrypoint: "RuntimeAccountCleanup" }
+}

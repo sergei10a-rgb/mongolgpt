@@ -84,6 +84,7 @@ try {
     "0003_file_revision.sql",
     "0004_account_retirement.sql",
     "0005_backup_write_fences.sql",
+    "0006_account_cleanup.sql",
   ]) {
     statements.push(...unstable_splitSqlQuery(await readFile(join(process.cwd(), "migrations", file), "utf8")))
   }

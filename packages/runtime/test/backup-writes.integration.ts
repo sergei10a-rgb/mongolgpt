@@ -29,6 +29,7 @@ try {
     "0003_file_revision.sql",
     "0004_account_retirement.sql",
     "0005_backup_write_fences.sql",
+    "0006_account_cleanup.sql",
   ]) {
     const sql = await readFile(fileURLToPath(new URL(`../migrations/${file}`, import.meta.url)), "utf8")
     for (const statement of unstable_splitSqlQuery(sql)) await db.prepare(statement).run()

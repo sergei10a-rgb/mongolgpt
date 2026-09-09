@@ -28,9 +28,14 @@ try {
       vars: {
         MONGOLGPT_RUNTIME_SECRET: "synthetic-retirement-test-secret-at-least-thirty-two-characters",
         SANDBOX_LOG_LEVEL: "error",
+        MONGOLGPT_RUNTIME_ACCOUNT_CLEANUP: "true",
       },
       durable_objects: { bindings: [{ name: "Sandbox", class_name: "RetirementSandbox" }] },
       migrations: [{ tag: "v1", new_sqlite_classes: ["RetirementSandbox"] }],
+      services: [
+        { binding: "Cleanup", service: "mongolgpt-retirement-local-test", entrypoint: "RuntimeAccountCleanup" },
+      ],
+      r2_buckets: [{ binding: "RUNTIME_BACKUPS", bucket_name: "retirement-backups" }],
       d1_databases: [
         { binding: "HISTORY", database_name: "retirement-test", database_id: "00000000-0000-4000-8000-000000000001" },
       ],
@@ -57,6 +62,7 @@ try {
     "0003_file_revision.sql",
     "0004_account_retirement.sql",
     "0005_backup_write_fences.sql",
+    "0006_account_cleanup.sql",
   ]) {
     const sql = await readFile(fileURLToPath(new URL(`../migrations/${file}`, import.meta.url)), "utf8")
     await call("/migrate", unstable_splitSqlQuery(sql))
@@ -93,6 +99,30 @@ try {
   const retried = await call<State>("/state")
   equal(retried.running, false, "retry restarted the container")
   equal(retried.stops > stopped.stops, true, "restart retry did not confirm container termination again")
+  console.log("SANDBOX_RETIREMENT_PHASE service_binding_cleanup")
+  equal(await call("/service-ready"), { ready: true, protocol: 1 }, "named service binding is not ready")
+  const prepared = await call<State[]>("/service-prepare")
+  equal(
+    prepared.map((s) => s.running),
+    [true, true],
+    "current and old-secret sandboxes were not started",
+  )
+  const receipt = { accountID: "acc_service", requestID: "del_service", complete: true }
+  equal(await call("/service-cleanup"), receipt, "console client did not receive complete runtime receipt")
+  const cleaned = await call<{ sandboxes: State[]; content: number; objects: number }>("/service-state")
+  equal(
+    cleaned.sandboxes.map((s) => s.running),
+    [false, false],
+    "historical sandbox survived cleanup",
+  )
+  equal(
+    cleaned.sandboxes.every((s) => s.seal?.accountID === receipt.accountID),
+    true,
+    "historical sandbox was not durably sealed",
+  )
+  equal(cleaned.content, 0, "service cleanup left D1 history")
+  equal(cleaned.objects, 0, "service cleanup left R2 content")
+  equal(await call("/service-cleanup"), receipt, "service retry lost completion receipt")
   console.log(
     `SANDBOX_RETIREMENT_RESULT ${JSON.stringify({ ok: true, assertions, realD1: true, realDurableStorage: true, realDOReinstantiation: true, simulatedContainer: true })}`,
   )
