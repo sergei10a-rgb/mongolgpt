@@ -13,6 +13,10 @@ await writeFile(
     main: fileURLToPath(new URL("./runtime-http-worker.ts", import.meta.url)),
     compatibility_date: "2026-07-18",
     compatibility_flags: ["nodejs_compat"],
+    vars: {
+      MONGOLGPT_RUNTIME_SECRET: "synthetic-http-routing-secret-at-least-thirty-two-characters",
+      SANDBOX_LOG_LEVEL: "error",
+    },
     durable_objects: { bindings: [{ name: "Native", class_name: "NativeEndpoint" }] },
     migrations: [{ tag: "v1", new_sqlite_classes: ["NativeEndpoint"] }],
   }),

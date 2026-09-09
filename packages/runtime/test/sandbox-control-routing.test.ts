@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test"
 import { dirname, join } from "node:path"
 import { issueRuntimeCapability } from "@mongolgpt/runtime-auth"
+import { deriveRuntimeIdentity } from "../src/runtime"
 import {
   checkpointControlHeader,
   deriveControlToken,
@@ -43,6 +44,126 @@ const { MongolGPTSandbox } = await import("../src/index")
 const { CanarySandbox, canaryScope } = await import("./fixtures/cloudflare-canary")
 
 describe("sandbox control routing", () => {
+  test("retirement seals the actual SDK subclass, stops its container and survives re-instantiation", async () => {
+    const marker = { accountID: "acc_stop", workspaceID: "wrk_stop", requestID: "del_stop" }
+    const identity = await deriveRuntimeIdentity(marker.accountID, marker.workspaceID, runtimeSecret)
+    const fixture = await createSandbox({
+      Sandbox: {
+        idFromName: (id: string) => ({ toString: () => (id === identity.sandboxID ? sandboxID : "different-sandbox") }),
+      } as RuntimeEnv["Sandbox"],
+      HISTORY: {
+        prepare: () => ({ bind: () => ({ first: async () => ({ account_id: marker.accountID }) }) }),
+      } as unknown as D1Database,
+    })
+    await expect(fixture.sandbox.retireAccount({ ...marker, workspaceID: "wrk_wrong" })).rejects.toThrow("хүрээ")
+    expect(fixture.ctx.container?.running).toBe(true)
+    expect(await bounded(fixture.sandbox.retireAccount(marker))).toEqual({ ...marker, stopped: true })
+    expect(fixture.ctx.container?.running).toBe(false)
+    const calls = fixture.calls.length
+    const restarted = new MongolGPTSandbox(fixture.ctx, fixture.env)
+    await fixture.ctx.flush()
+    for (const sandbox of [fixture.sandbox, restarted]) {
+      for (const operation of [
+        () => sandbox.start(),
+        () => sandbox.startAndWaitForPorts([4096]),
+        () => sandbox.startProcess("must-not-run"),
+        () => sandbox.onStart(),
+        () => sandbox.fetch(new Request("http://sandbox/")),
+        () => sandbox.containerFetch(new Request("http://sandbox/"), 4096),
+        () => sandbox.wsConnect(new Request("http://sandbox/", { headers: { upgrade: "websocket" } }), 4096),
+      ])
+        await expect(bounded<unknown>(operation())).rejects.toThrow("хаагдсан")
+      expect(await bounded(sandbox.retireAccount(marker))).toEqual({ ...marker, stopped: true })
+    }
+    expect(fixture.calls).toHaveLength(calls)
+    expect(fixture.starts).toEqual([])
+  })
+
+  test("retirement refuses an account without the prior global D1 fence", async () => {
+    const marker = { accountID: "acc_stop", workspaceID: "wrk_stop", requestID: "del_stop" }
+    const fixture = await createSandbox({
+      Sandbox: { idFromName: () => ({ toString: () => sandboxID }) } as unknown as RuntimeEnv["Sandbox"],
+      HISTORY: { prepare: () => ({ bind: () => ({ first: async () => null }) }) } as unknown as D1Database,
+    })
+    await expect(fixture.sandbox.retireAccount(marker)).rejects.toThrow("эхлээгүй")
+    expect(fixture.ctx.container?.running).toBe(true)
+    await bounded(fixture.sandbox.containerFetch(new Request("http://sandbox/api/manual"), 3000))
+    expect(fixture.calls.length).toBeGreaterThan(0)
+  })
+
+  test("a failed stop acknowledgement keeps admission sealed and is retryable", async () => {
+    const marker = { accountID: "acc_stop", workspaceID: "wrk_stop", requestID: "del_stop" }
+    const fixture = await createSandbox(retiredEnvironment(marker.accountID))
+    const container = fixture.ctx.container!
+    const destroy = container.destroy.bind(container)
+    let attempts = 0
+    container.destroy = async () => {
+      await destroy()
+      if (++attempts === 1) throw new Error("lost stop acknowledgement")
+    }
+    await expect(bounded(fixture.sandbox.retireAccount(marker))).rejects.toThrow("lost stop acknowledgement")
+    await expect(fixture.sandbox.start()).rejects.toThrow("хаагдсан")
+    expect(await bounded(fixture.sandbox.retireAccount(marker))).toEqual({ ...marker, stopped: true })
+    expect(container.running).toBe(false)
+    expect(attempts).toBe(2)
+  })
+
+  test("a platform acknowledgement without termination cannot produce a stopped receipt", async () => {
+    const marker = { accountID: "acc_stop", workspaceID: "wrk_stop", requestID: "del_stop" }
+    const fixture = await createSandbox(retiredEnvironment(marker.accountID))
+    fixture.ctx.container!.destroy = async () => {}
+    await expect(bounded(fixture.sandbox.retireAccount(marker))).rejects.toThrow("баталгаажуулж чадсангүй")
+    await expect(fixture.sandbox.startProcess("must-not-run")).rejects.toThrow("хаагдсан")
+    expect(fixture.ctx.container!.running).toBe(true)
+  })
+
+  test("concurrent retirement drains pre-admitted work and stops a late platform start again", async () => {
+    const marker = { accountID: "acc_stop", workspaceID: "wrk_stop", requestID: "del_stop" }
+    const fixture = await createSandbox(retiredEnvironment(marker.accountID))
+    const container = fixture.ctx.container!
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const stopped = Promise.withResolvers<void>()
+    const getPort = container.getTcpPort.bind(container)
+    const destroy = container.destroy.bind(container)
+    let stops = 0
+    let acknowledged = false
+    container.getTcpPort = (port) => ({
+      ...getPort(port),
+      async fetch() {
+        entered.resolve()
+        await release.promise
+        // Simulate a platform start that was already admitted before sealing.
+        container.start()
+        return response(null, { status: 204 })
+      },
+    })
+    container.destroy = async () => {
+      stops++
+      await destroy()
+      stopped.resolve()
+    }
+    const fetching = fixture.sandbox.containerFetch(new Request("http://sandbox/admitted"), 4096)
+    await bounded(entered.promise)
+    const retiring = Promise.all([fixture.sandbox.retireAccount(marker), fixture.sandbox.retireAccount(marker)]).then(
+      (result) => {
+        acknowledged = true
+        return result
+      },
+    )
+    await bounded(stopped.promise)
+    expect(acknowledged).toBe(false)
+    await expect(fixture.sandbox.start()).rejects.toThrow("хаагдсан")
+    release.resolve()
+    expect((await bounded(fetching)).status).toBe(204)
+    expect(await bounded(retiring)).toEqual([
+      { ...marker, stopped: true },
+      { ...marker, stopped: true },
+    ])
+    expect(stops).toBe(2)
+    expect(container.running).toBe(false)
+  })
+
   for (const state of ["retired", "unavailable", "active"] as const) {
     test(`the actual Worker checks ${state} account admission before allocating a sandbox`, async () => {
       const entry = await import("../src/index")
@@ -329,6 +450,15 @@ type OutboundProxyProps = {
 type FakeContext = DurableObjectState<{}> & { flush(): Promise<void> }
 type PackageJson = { path: string; version: string }
 
+function retiredEnvironment(accountID: string): Partial<TestRuntimeEnv> {
+  return {
+    Sandbox: { idFromName: () => ({ toString: () => sandboxID }) } as unknown as RuntimeEnv["Sandbox"],
+    HISTORY: {
+      prepare: () => ({ bind: () => ({ first: async () => ({ account_id: accountID }) }) }),
+    } as unknown as D1Database,
+  }
+}
+
 async function createSandbox(
   env: Partial<TestRuntimeEnv> = {},
   SandboxClass = MongolGPTSandbox,
@@ -351,7 +481,7 @@ async function createSandbox(
   }
   const sandbox = new SandboxClass(ctx, runtimeEnv)
   await ctx.flush()
-  return { calls, proxyCalls, sandbox, starts }
+  return { calls, proxyCalls, sandbox, starts, ctx, env: runtimeEnv }
 }
 
 function fakeContext(container: ReturnType<typeof fakeContainer>, proxyCalls: OutboundProxyProps[]): FakeContext {
@@ -413,8 +543,14 @@ function fakeContext(container: ReturnType<typeof fakeContainer>, proxyCalls: Ou
 }
 
 function fakeContainer(calls: CapturedFetch[], starts: unknown[], redirectStatus?: number) {
+  let running = true
   return {
-    running: true,
+    get running() {
+      return running
+    },
+    destroy: async () => {
+      running = false
+    },
     getTcpPort(port: number) {
       return {
         fetch: async (input: Request | string | URL, init?: RequestInit | Request) => {
@@ -437,6 +573,7 @@ function fakeContainer(calls: CapturedFetch[], starts: unknown[], redirectStatus
     interceptAllOutboundHttp: async () => {},
     monitor: () => new Promise<number>(() => {}),
     start: (config: unknown) => {
+      running = true
       starts.push(config)
     },
   }

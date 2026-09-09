@@ -1,25 +1,29 @@
-import { DurableObject } from "cloudflare:workers"
 import { getSandbox } from "@cloudflare/sandbox"
 import { MongolGPTSandbox } from "../../src/index"
 import { runtimeReadiness } from "../../src/runtime"
 import { fetchRuntime, runtimeHttpHeader } from "../../src/runtime-http"
 
+export { ContainerProxy } from "../../src/index"
+
 // A real DO/RPC boundary, with only the VM TCP endpoint replaced by a fixed response.
-export class NativeEndpoint extends DurableObject {
+export class NativeEndpoint extends MongolGPTSandbox {
   #invocations = 0
-  async configure() {}
+
+  constructor(ctx: DurableObjectState<{}>, env: ConstructorParameters<typeof MongolGPTSandbox>[1]) {
+    Object.defineProperty(ctx, "container", { value: { running: false } })
+    super(ctx, env)
+  }
 
   async invocations() {
     return this.#invocations
   }
 
-  override fetch(request: Request) {
-    return MongolGPTSandbox.prototype.fetch.call(this as unknown as MongolGPTSandbox, request)
-  }
-
-  async containerFetch(request: Request, port: number) {
+  override async containerFetch(...args: Parameters<MongolGPTSandbox["containerFetch"]>): Promise<Response> {
+    const request = args[0]
+    const port = typeof args[1] === "number" ? args[1] : args[2]
     this.#invocations++
-    if (port !== 4096 || request.headers.has(runtimeHttpHeader)) throw new Error("Invalid fixture routing")
+    if (!(request instanceof Request) || port !== 4096 || request.headers.has(runtimeHttpHeader))
+      throw new Error("Invalid fixture routing")
     if (request.headers.get("authorization") !== `Basic ${btoa("mongolgpt:test")}`)
       return new Response(null, { status: 401 })
     if (new URL(request.url).pathname !== "/global/health") {
@@ -37,6 +41,8 @@ export class NativeEndpoint extends DurableObject {
     )
   }
 }
+
+NativeEndpoint.outboundHandlers = MongolGPTSandbox.outboundHandlers!
 
 export default {
   async fetch(request: Request, env: { Native: DurableObjectNamespace<NativeEndpoint> }) {
