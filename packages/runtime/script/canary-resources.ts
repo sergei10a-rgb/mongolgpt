@@ -279,6 +279,7 @@ export function createCanaryConfig(input: CanaryConfigInput) {
     vars: {
       STAGE: "dev",
       MONGOLGPT_CLOUD_HISTORY: "true",
+      MONGOLGPT_RUNTIME_ACCOUNT_CLEANUP: "true",
       CANARY_RUN_ID: name,
       MONGOLGPT_APP_ORIGIN: "https://canary.invalid",
       MONGOLGPT_CONSOLE_URL: "https://canary.invalid",
@@ -305,6 +306,7 @@ export function createCanaryConfig(input: CanaryConfigInput) {
       },
     ],
     r2_buckets: [{ binding: "RUNTIME_BACKUPS", bucket_name: name }],
+    services: [{ binding: "RuntimeAccountCleanup", service: name, entrypoint: "RuntimeAccountCleanup" }],
     containers: [
       {
         name,

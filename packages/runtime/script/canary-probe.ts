@@ -13,6 +13,10 @@ export type CanaryProbePhase =
   | "replacement_pty"
   | "replacement_receipts"
   | "replacement_shutdown"
+  | "cleanup_startup"
+  | "account_cleanup"
+  | "retired_access"
+  | "erasure_receipts"
   | "complete"
 
 const scope = { accountID: "account_cloudflare_canary", workspaceID: "wrk_cloudflare_canary" }
@@ -118,6 +122,67 @@ grep -q mongolgpt-init /proc/1/cmdline`,
   check((second.revisionSequence ?? 0) >= (stopped.revisionSequence ?? 0), "Replacement lost the shutdown revision")
   await input.onPhase?.("replacement_shutdown")
   const final = await stop(second)
+  // Erasure must stop a running VM, not just acknowledge the already stopped
+  // lifecycle fixture. No model request is needed to start the native process.
+  await input.onPhase?.("cleanup_startup")
+  await ready()
+  const active = await state()
+  check(["running", "healthy"].includes(active.state.status), "Cleanup requires a running canary VM")
+  await input.onPhase?.("account_cleanup")
+  const receipt = await json<{ accountID: string; requestID: string; complete: boolean }>(
+    "/__canary/account-cleanup",
+    false,
+    null,
+  )
+  check(
+    receipt.accountID === scope.accountID &&
+      receipt.requestID === `del_${new URL(input.origin).hostname.split(".")[0]}` &&
+      receipt.complete === true,
+    "Runtime cleanup returned an invalid account receipt",
+  )
+  await input.onPhase?.("retired_access")
+  const denialDeadline = AbortSignal.any([deadline, AbortSignal.timeout(30_000)])
+  const denied = await request(`${input.origin}/api/session`, {
+    headers: {
+      "x-mongolgpt-canary-token": input.adminToken,
+      origin: appOrigin,
+      authorization: `Bearer ${await issueRuntimeCapability({ ...scope, authVersion: 1, audience: input.origin, secret: input.authSecret, ttlSeconds: 120 })}`,
+    },
+    redirect: "error",
+    signal: denialDeadline,
+  }).catch(() => {
+    throw new Error("Retired runtime request failed; private diagnostics are suppressed")
+  })
+  try {
+    check(
+      denied.status === 502 && denied.headers.get("content-type")?.includes("application/json"),
+      "Retired runtime access was not rejected",
+    )
+    const denial = await readCanaryJsonBody<{ code?: unknown }>(denied, denialDeadline)
+    check(denial?.code === "runtime_unavailable", "Retired runtime returned an unrelated failure")
+  } finally {
+    void denied.body?.cancel().catch(() => {})
+  }
+  await input.onPhase?.("erasure_receipts")
+  const erased = await json<{
+    retired: boolean
+    complete: boolean
+    historyRows: number
+    backupContentObjects: number
+    retainedFences: number
+    stopped: boolean
+    bootCount: number
+  }>("/__canary/account-cleanup-state", false)
+  check(
+    erased.retired === true &&
+      erased.complete === true &&
+      erased.stopped === true &&
+      erased.historyRows === 0 &&
+      erased.backupContentObjects === 0,
+    "Runtime erasure left active execution or user content",
+  )
+  check(Number.isSafeInteger(erased.retainedFences) && erased.retainedFences >= 0, "Runtime fence receipt is invalid")
+  check(erased.bootCount === active.bootCount, "Retired request restarted the VM")
   await input.onPhase?.("complete")
   return {
     ok: true,
@@ -133,6 +198,8 @@ grep -q mongolgpt-init /proc/1/cmdline`,
     sessionRestored: true,
     fileRestored: true,
     gracefulExit: true,
+    runtimeAccountErased: true,
+    retiredAccessDenied: true,
   }
 
   async function state() {

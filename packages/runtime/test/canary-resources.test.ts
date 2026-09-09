@@ -500,12 +500,16 @@ describe("canary wrangler config", () => {
       { binding: "HISTORY", database_name: name, database_id: databaseID, migrations_dir: join(root, "migrations") },
     ])
     expect(config.r2_buckets).toEqual([{ binding: "RUNTIME_BACKUPS", bucket_name: name }])
+    expect(config.services).toEqual([
+      { binding: "RuntimeAccountCleanup", service: name, entrypoint: "RuntimeAccountCleanup" },
+    ])
     expect(config.workers_dev).toBe(true)
     expect(config).not.toHaveProperty("routes")
     expect(config).not.toHaveProperty("custom_domain")
     expect(config.vars).toEqual({
       STAGE: "dev",
       MONGOLGPT_CLOUD_HISTORY: "true",
+      MONGOLGPT_RUNTIME_ACCOUNT_CLEANUP: "true",
       CANARY_RUN_ID: name,
       MONGOLGPT_APP_ORIGIN: "https://canary.invalid",
       MONGOLGPT_CONSOLE_URL: "https://canary.invalid",

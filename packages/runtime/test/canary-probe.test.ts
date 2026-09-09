@@ -45,6 +45,7 @@ function fixture(
   let epoch = 2
   let sequence = 3
   let stopped = false
+  let erased = false
   const calls: { path: string; method: string; body: unknown; admin: boolean; authorized: boolean }[] = []
   const commands: string[] = []
   let startupAttempts = 0
@@ -72,6 +73,7 @@ function fixture(
       const identity = await verifyRuntimeCapability({ token: bearer, audience: origin, secret: authSecret })
       expect(identity.sub).toBe("account_cloudflare_canary")
       expect(identity.workspaceID).toBe("wrk_cloudflare_canary")
+      if (erased) return Response.json({ code: "runtime_unavailable" }, { status: 502 })
       if (warmStarts) bootCount++
       if (stopped) {
         stopped = false
@@ -103,6 +105,27 @@ function fixture(
       sequence++
       return Response.json({ accepted: true })
     }
+    if (path === "/__canary/account-cleanup") {
+      expect(incoming.method).toBe("POST")
+      expect(body).toBeUndefined()
+      erased = true
+      stopped = true
+      return Response.json({
+        accountID: "account_cloudflare_canary",
+        requestID: "del_mgpt-canary-12345-1",
+        complete: true,
+      })
+    }
+    if (path === "/__canary/account-cleanup-state")
+      return Response.json({
+        retired: erased,
+        complete: erased,
+        historyRows: 0,
+        backupContentObjects: 0,
+        retainedFences: 0,
+        stopped,
+        bootCount,
+      })
     if (path === "/api/session") {
       if (incoming.method === "POST") {
         if (fault === "post") return Response.json({ error: "unavailable" }, { status: 503 })
@@ -154,6 +177,10 @@ test("canary exercises real runtime paths with capabilities and checks shutdown 
     "replacement_pty",
     "replacement_receipts",
     "replacement_shutdown",
+    "cleanup_startup",
+    "account_cleanup",
+    "retired_access",
+    "erasure_receipts",
     "complete",
   ])
   expect(result).toEqual({
@@ -170,6 +197,8 @@ test("canary exercises real runtime paths with capabilities and checks shutdown 
     sessionRestored: true,
     fileRestored: true,
     gracefulExit: true,
+    runtimeAccountErased: true,
+    retiredAccessDenied: true,
   })
   expect(runtime.commands).toHaveLength(2)
   expect(runtime.commands[0]).toContain('test "$(id -u)" = 10001')
@@ -192,6 +221,98 @@ test("warm SDK start callbacks do not count as extra virtual machine boots", asy
   await expect(
     runCanaryProbe({ origin, adminToken, authSecret, version, request: staleEpoch.request }),
   ).rejects.toThrow("Replacement did not acquire the next writer epoch")
+})
+
+for (const [phase, field, value] of [
+  ["account_cleanup", "accountID", "other"],
+  ["account_cleanup", "requestID", "del_other"],
+  ["account_cleanup", "complete", false],
+  ["erasure_receipts", "retired", false],
+  ["erasure_receipts", "complete", false],
+  ["erasure_receipts", "stopped", false],
+  ["erasure_receipts", "historyRows", 1],
+  ["erasure_receipts", "backupContentObjects", 1],
+  ["erasure_receipts", "retainedFences", -1],
+  ["erasure_receipts", "bootCount", 999],
+] as const) {
+  test(`cleanup rejects ${phase} with invalid ${field}`, async () => {
+    const runtime = fixture()
+    let current: CanaryProbePhase | undefined
+    const error = await runCanaryProbe({
+      origin,
+      adminToken,
+      authSecret,
+      version,
+      onPhase: (phase) => {
+        current = phase
+      },
+      request: async (url, init) => {
+        const response = await runtime.request(url, init)
+        if (current !== phase) return response
+        return Response.json({ ...((await response.json()) as Record<string, unknown>), [field]: value })
+      },
+    }).catch((error: unknown) => error)
+    expect(error).toBeInstanceOf(Error)
+    expect(current).toBe(phase)
+    expect(runtime.calls.filter((call) => call.path === "/__canary/account-cleanup")).toHaveLength(1)
+  })
+}
+
+test("retirement rejection must be the runtime result, not a generic denial or a lost response", async () => {
+  for (const result of [
+    { status: 200, code: "runtime_unavailable" },
+    { status: 401, code: "unauthorized" },
+    { status: 502, code: "runtime_process_lookup_failed" },
+    { status: 502, code: null },
+    "network",
+  ] as const) {
+    const runtime = fixture()
+    let phase: CanaryProbePhase | undefined
+    const error = await runCanaryProbe({
+      origin,
+      adminToken,
+      authSecret,
+      version,
+      onPhase: (value) => {
+        phase = value
+      },
+      request: async (url, init) => {
+        if (phase !== "retired_access") return runtime.request(url, init)
+        if (result === "network") throw new Error(authSecret)
+        return Response.json({ code: result.code, detail: adminToken }, { status: result.status })
+      },
+    }).catch((error: unknown) => error)
+    expect(error).toBeInstanceOf(Error)
+    expect(phase).toBe("retired_access")
+    expect(String(error)).not.toContain(authSecret)
+    expect(String(error)).not.toContain(adminToken)
+    expect(runtime.calls.some((call) => call.path === "/__canary/account-cleanup-state")).toBe(false)
+  }
+})
+
+test("uncertain cleanup is never automatically retried or reported complete", async () => {
+  const runtime = fixture()
+  let phase: CanaryProbePhase | undefined
+  let cleanups = 0
+  await expect(
+    runCanaryProbe({
+      origin,
+      adminToken,
+      authSecret,
+      version,
+      onPhase: (value) => {
+        phase = value
+      },
+      request: async (url, init) => {
+        if (phase !== "account_cleanup") return runtime.request(url, init)
+        cleanups++
+        return Response.json({ error: authSecret }, { status: 503 })
+      },
+    }),
+  ).rejects.toThrow("HTTP 503")
+  expect(cleanups).toBe(1)
+  expect(phase).toBe("account_cleanup")
+  expect(runtime.calls.some((call) => call.path === "/__canary/account-cleanup-state")).toBe(false)
 })
 
 test.each(["initial_readback", "replacement_readback"] as const)(
@@ -332,13 +453,18 @@ test("initial native read tolerates a transient 404 after the control gate succe
   const runtime = fixture()
   const pauses: number[] = []
   let attempts = 0
+  let phase: CanaryProbePhase | undefined
   const result = await runCanaryProbe({
     origin,
     adminToken,
     authSecret,
     version,
+    onPhase: (value) => {
+      phase = value
+    },
     request: (url, init) => {
       if (
+        phase === "initial_startup" &&
         new URL(url).pathname === "/api/session" &&
         init?.method === "GET" &&
         new Headers(init.headers).has("authorization")

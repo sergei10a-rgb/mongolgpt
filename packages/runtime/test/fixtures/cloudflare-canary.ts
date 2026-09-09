@@ -6,6 +6,8 @@ import production, { ContainerProxy, MongolGPTSandbox } from "../../src/index"
 import { createHistoryStore } from "../../src/history"
 import { deriveRuntimeIdentity, RUNTIME_PROCESS_ID, runtimeReadiness } from "../../src/runtime"
 import { fetchRuntime } from "../../src/runtime-http"
+import { prepareRuntimeAccountCleanup } from "../../../console/function/src/runtime-account-cleanup"
+import type { RuntimeAccountCleanup } from "../../src/account-cleanup-service"
 import {
   emptyCanaryDiagnostics,
   parseCanaryStartupFailure,
@@ -21,6 +23,7 @@ import {
 } from "./canary-startup"
 
 export { ContainerProxy }
+export { RuntimeAccountCleanup } from "../../src/index"
 
 export const canaryScope = {
   accountID: "account_cloudflare_canary",
@@ -39,6 +42,7 @@ const purgeBatchSize = 1_000
 type Environment = Parameters<typeof production.fetch>[1] & {
   CANARY_RUN_ID: string
   CANARY_ADMIN_TOKEN: string
+  RuntimeAccountCleanup?: Service<RuntimeAccountCleanup>
 }
 type IncomingRequest = Parameters<typeof production.fetch>[0]
 
@@ -134,6 +138,8 @@ export default {
     if (url.pathname === "/__canary/diagnostics") return canaryDiagnostics(request, env, url)
     if (url.pathname === "/__canary/stop") return canaryStop(request, env, url)
     if (url.pathname === "/__canary/purge") return canaryPurge(request, env, url)
+    if (url.pathname === "/__canary/account-cleanup") return canaryAccountCleanup(request, env, url)
+    if (url.pathname === "/__canary/account-cleanup-state") return canaryAccountCleanupState(request, env, url)
     if (url.pathname === "/__canary" || url.pathname.startsWith("/__canary/")) return json({ error: "not_found" }, 404)
 
     return production.fetch(nativeRequest(request), env)
@@ -145,6 +151,12 @@ async function canaryState(request: Request, env: Environment, url: URL) {
   if (url.search !== "") return json({ error: "invalid_request" }, 400)
   if (!(await strictEmptyBody(request))) return json({ error: "invalid_request" }, 400)
   const sandbox = await canarySandbox(env)
+  if (env.MONGOLGPT_RUNTIME_ACCOUNT_CLEANUP === "true" && env.HISTORY) {
+    const retired = await env.HISTORY.prepare("SELECT account_id FROM runtime_history_retirement WHERE account_id = ?")
+      .bind(canaryScope.accountID)
+      .first()
+    if (retired) return json({ ...(await sandbox.canaryState()), epoch: 0, retired: true })
+  }
   const history = env.HISTORY ? createHistoryStore(env.HISTORY) : undefined
   const [state, receipts, epoch] = await Promise.all([
     sandbox.canaryState(),
@@ -160,6 +172,76 @@ async function canaryStop(request: Request, env: Environment, url: URL) {
   if (!(await strictEmptyBody(request))) return json({ error: "invalid_request" }, 400)
   await (await canarySandbox(env)).stop("SIGTERM")
   return json({ accepted: true }, 202)
+}
+
+async function canaryAccountCleanup(request: Request, env: Environment, url: URL) {
+  if (request.method !== "POST") return methodNotAllowed(["POST"])
+  if (url.search !== "" || !(await strictEmptyBody(request))) return json({ error: "invalid_request" }, 400)
+  try {
+    const cleanup = await prepareRuntimeAccountCleanup(env.RuntimeAccountCleanup)
+    return json(
+      await cleanup({
+        accountID: canaryScope.accountID,
+        requestID: `del_${env.CANARY_RUN_ID}`,
+        workspaceIDs: [canaryScope.workspaceID],
+      }),
+    )
+  } catch {
+    return json({ error: "cleanup_unavailable" }, 503)
+  }
+}
+
+async function canaryAccountCleanupState(request: Request, env: Environment, url: URL) {
+  if (request.method !== "GET") return methodNotAllowed(["GET"])
+  if (url.search !== "" || !(await strictEmptyBody(request))) return json({ error: "invalid_request" }, 400)
+  if (!env.HISTORY || !env.RUNTIME_BACKUPS) return json({ error: "unavailable" }, 503)
+  const db = env.HISTORY
+  const accountID = canaryScope.accountID
+  const retired = await db
+    .prepare("SELECT account_id FROM runtime_history_retirement WHERE account_id = ?")
+    .bind(accountID)
+    .first()
+  const job = await db
+    .prepare("SELECT phase, request_id FROM runtime_account_cleanup WHERE account_id = ?")
+    .bind(accountID)
+    .first<{ phase: number; request_id: string }>()
+  let historyRows = 0
+  for (const table of [
+    "runtime_history_event",
+    "runtime_history_session",
+    "runtime_history_checkpoint_event",
+    "runtime_file_revision",
+    "runtime_history_checkpoint",
+    "runtime_history_writer",
+  ]) {
+    const count = await db
+      .prepare(`SELECT count(*) AS n FROM ${table} WHERE account_id = ?`)
+      .bind(accountID)
+      .first<number>("n")
+    if (!Number.isSafeInteger(count) || count === null || count < 0) return json({ error: "unavailable" }, 503)
+    historyRows += count
+  }
+  const prefix = `runtime-backups/v1/${accountID}/`
+  const options = { prefix, limit: 1000, include: ["customMetadata"] }
+  const page = await env.RUNTIME_BACKUPS.list(options)
+  if (page.truncated || page.objects.some((object) => !object.key.startsWith(prefix)))
+    return json({ error: "unavailable" }, 503)
+  const retainedFences = page.objects.filter(
+    (object) =>
+      object.size === 0 &&
+      Object.keys(object.customMetadata ?? {}).length === 1 &&
+      object.customMetadata?.["mongolgpt-retired-write"] === "v1",
+  ).length
+  const state = await (await canarySandbox(env)).canaryState()
+  return json({
+    retired: !!retired,
+    complete: job?.phase === 5 && job.request_id === `del_${env.CANARY_RUN_ID}`,
+    historyRows,
+    backupContentObjects: page.objects.length - retainedFences,
+    retainedFences,
+    stopped: stopped(state.state),
+    bootCount: state.bootCount,
+  })
 }
 
 async function canaryDiagnostics(request: Request, env: Environment, url: URL) {

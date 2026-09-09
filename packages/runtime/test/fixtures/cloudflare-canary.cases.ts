@@ -72,7 +72,11 @@ const sandbox = {
   },
 }
 const bucket = {
-  pages: new Array<{ objects: Array<{ key: string }>; truncated?: boolean; cursor?: string }>(),
+  pages: new Array<{
+    objects: Array<{ key: string; size?: number; customMetadata?: Record<string, string> }>
+    truncated?: boolean
+    cursor?: string
+  }>(),
   deletes: new Array<string[]>(),
   async list(options: { prefix: string; limit: number; cursor?: string }) {
     calls.lists.push(options)
@@ -80,6 +84,43 @@ const bucket = {
   },
   async delete(names: string[]) {
     this.deletes.push(names)
+  },
+}
+
+const cleanupFixture = {
+  scopes: new Array<unknown>(),
+  queries: new Array<string>(),
+  retired: true,
+  phase: 5,
+  count: 0 as unknown,
+  requestID: "del_mgpt-canary-123456789012-123",
+  db: {
+    prepare(sql: string) {
+      cleanupFixture.queries.push(sql)
+      return {
+        bind(accountID: string) {
+          expect(accountID).toBe("account_cloudflare_canary")
+          return {
+            async first(column?: string) {
+              if (column === "n") return cleanupFixture.count
+              if (sql.includes("runtime_history_retirement"))
+                return cleanupFixture.retired ? { account_id: accountID } : null
+              return { phase: cleanupFixture.phase, request_id: cleanupFixture.requestID }
+            },
+          }
+        },
+      }
+    },
+  },
+  binding: {
+    async ready() {
+      await fault("cleanup")
+      return { ready: true, protocol: 1 }
+    },
+    async cleanup(input: { accountID: string; requestID: string; workspaceIDs: string[] }) {
+      cleanupFixture.scopes.push(input)
+      return { accountID: input.accountID, requestID: cleanupFixture.requestID, complete: true }
+    },
   },
 }
 
@@ -154,6 +195,7 @@ mock.module("@cloudflare/sandbox", () => {
 
 mock.module("../../src/index", () => ({
   ContainerProxy: class ContainerProxy {},
+  RuntimeAccountCleanup: class RuntimeAccountCleanup {},
   MongolGPTSandbox: class MongolGPTSandbox {
     constructor(
       readonly ctx: DurableObjectState,
@@ -243,6 +285,12 @@ describe("cloudflare canary worker", () => {
     }
     bucket.pages.length = 0
     bucket.deletes.length = 0
+    cleanupFixture.scopes.length = 0
+    cleanupFixture.queries.length = 0
+    cleanupFixture.retired = true
+    cleanupFixture.phase = 5
+    cleanupFixture.count = 0
+    cleanupFixture.requestID = "del_mgpt-canary-123456789012-123"
   })
 
   test("exports the fixed canary scope", () => {
@@ -749,6 +797,126 @@ describe("cloudflare canary worker", () => {
     expect((await canary.default.fetch(request("/__canary", { token: true }), env())).status).toBe(404)
   })
 
+  test("cleanup uses only the fixed synthetic account and request through the private binding", async () => {
+    const response = await canary.default.fetch(
+      request("/__canary/account-cleanup", { method: "POST", token: true }),
+      env(),
+    )
+    expect(response.status).toBe(200)
+    expect<unknown>(await response.json()).toEqual({
+      accountID: "account_cloudflare_canary",
+      requestID: cleanupFixture.requestID,
+      complete: true,
+    })
+    expect(cleanupFixture.scopes).toEqual([
+      {
+        accountID: canary.canaryScope.accountID,
+        requestID: cleanupFixture.requestID,
+        workspaceIDs: [canary.canaryScope.workspaceID],
+      },
+    ])
+  })
+
+  test("cleanup refuses missing bindings, private failures, and wrong receipts", async () => {
+    for (const kind of ["missing", "failure", "receipt"]) {
+      diagnosticFault = kind === "failure" ? "cleanup-error" : undefined
+      cleanupFixture.requestID = kind === "receipt" ? "del_other" : "del_mgpt-canary-123456789012-123"
+      const response = await canary.default.fetch(
+        request("/__canary/account-cleanup", { method: "POST", token: true }),
+        env(kind === "missing" ? { RuntimeAccountCleanup: undefined } : {}),
+      )
+      expect(response.status).toBe(503)
+      expect<unknown>(await response.json()).toEqual({ error: "cleanup_unavailable" })
+    }
+  })
+
+  test("cleanup endpoints reject method and caller-selected scope before effects", async () => {
+    for (const route of adminRoutes.filter((route) => route.path.includes("account-cleanup"))) {
+      expect((await canary.default.fetch(request(route.path, { method: "DELETE", token: true }), env())).status).toBe(
+        405,
+      )
+      expect(
+        (
+          await canary.default.fetch(
+            request(`${route.path}?accountID=other`, { method: route.method, token: true }),
+            env(),
+          )
+        ).status,
+      ).toBe(400)
+    }
+    expectNoCanaryEffects()
+  })
+
+  test("erasure state independently counts history, backup content, and only data-free fences", async () => {
+    sandbox.state = { status: "stopped" }
+    cleanupFixture.count = 2
+    const prefix = "runtime-backups/v1/account_cloudflare_canary/"
+    bucket.pages.push({
+      truncated: false,
+      objects: [
+        { key: `${prefix}one`, size: 0, customMetadata: { "mongolgpt-retired-write": "v1" } },
+        { key: `${prefix}two`, size: 1, customMetadata: { "mongolgpt-retired-write": "v1" } },
+        { key: `${prefix}three`, size: 0, customMetadata: { "mongolgpt-retired-write": "v1", private: privateValue } },
+        { key: `${prefix}four`, size: 0 },
+      ],
+    })
+    const response = await canary.default.fetch(request("/__canary/account-cleanup-state", { token: true }), env())
+    expect<unknown>(await response.json()).toEqual({
+      retired: true,
+      complete: true,
+      historyRows: 12,
+      backupContentObjects: 3,
+      retainedFences: 1,
+      stopped: true,
+      bootCount: 2,
+    })
+    expect(cleanupFixture.queries).toHaveLength(8)
+    expect(calls.lists).toEqual([{ prefix, limit: 1000, include: ["customMetadata"] }])
+    expect(bucket.deletes).toEqual([])
+  })
+
+  test("erasure verification refuses incomplete storage inventories", async () => {
+    for (const page of [
+      { objects: [], truncated: true },
+      { objects: [{ key: "runtime-backups/v1/other/file" }], truncated: false },
+    ]) {
+      bucket.pages.push(page)
+      const response = await canary.default.fetch(request("/__canary/account-cleanup-state", { token: true }), env())
+      expect(response.status).toBe(503)
+      expect<unknown>(await response.json()).toEqual({ error: "unavailable" })
+    }
+    for (const count of [null, -1, 1.5, "0"]) {
+      cleanupFixture.count = count
+      expect(
+        (await canary.default.fetch(request("/__canary/account-cleanup-state", { token: true }), env())).status,
+      ).toBe(503)
+    }
+    expect(sandbox.canaryStateArgs).toEqual([])
+    expect(bucket.deletes).toEqual([])
+  })
+
+  test("erasure state reports incomplete jobs and active execution without false success", async () => {
+    cleanupFixture.retired = false
+    cleanupFixture.phase = 4
+    const response = await canary.default.fetch(request("/__canary/account-cleanup-state", { token: true }), env())
+    expect(await response.json()).toMatchObject({ retired: false, complete: false, stopped: false })
+    cleanupFixture.phase = 5
+    cleanupFixture.requestID = "del_other"
+    const wrong = await canary.default.fetch(request("/__canary/account-cleanup-state", { token: true }), env())
+    expect(await wrong.json()).toMatchObject({ complete: false })
+  })
+
+  test("post-retirement teardown reads DO state without reopening fenced history", async () => {
+    sandbox.state = { status: "stopped" }
+    const response = await canary.default.fetch(
+      request("/__canary/state", { token: true }),
+      env({ MONGOLGPT_RUNTIME_ACCOUNT_CLEANUP: "true" }),
+    )
+    expect(await response.json()).toMatchObject({ retired: true, epoch: 0, state: { status: "stopped" } })
+    expect(calls.histories).toBe(0)
+    expect(calls.historyScopes).toEqual([])
+  })
+
   test("purge rejects active sandbox state before listing or deleting backups", async () => {
     const response = await canary.default.fetch(request("/__canary/purge", { method: "POST", token: true }), env())
 
@@ -873,6 +1041,8 @@ const adminRoutes = [
   { path: "/__canary/diagnostics", method: "GET", status: 200 },
   { path: "/__canary/stop", method: "POST", status: 202 },
   { path: "/__canary/purge", method: "POST", status: 200 },
+  { path: "/__canary/account-cleanup", method: "POST", status: 200 },
+  { path: "/__canary/account-cleanup-state", method: "GET", status: 200 },
 ]
 
 function nativeIncoming(
@@ -898,6 +1068,8 @@ function expectNoCanaryEffects() {
   expect(calls.sandboxes).toEqual([])
   expect(sandbox.stopCalls).toEqual([])
   expect(bucket.deletes).toEqual([])
+  expect(cleanupFixture.scopes).toEqual([])
+  expect(cleanupFixture.queries).toEqual([])
 }
 
 function request(path: string, options: { method?: string; body?: BodyInit; token?: boolean } = {}): CanaryRequest {
@@ -933,8 +1105,9 @@ function env(overrides: Partial<Parameters<typeof canary.default.fetch>[1]> = {}
     CANARY_ADMIN_TOKEN: token,
     MONGOLGPT_RUNTIME_SECRET: "runtime-secret-at-least-thirty-two-chars",
     Sandbox: "binding",
-    HISTORY: "history",
+    HISTORY: cleanupFixture.db,
     RUNTIME_BACKUPS: bucket,
+    RuntimeAccountCleanup: cleanupFixture.binding,
     ...overrides,
   } as Parameters<typeof canary.default.fetch>[1]
 }
