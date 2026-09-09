@@ -27,15 +27,14 @@ describe("startup diagnostic contract", () => {
   })
 
   test("bounds native failure status and rejects status for pre-child phases", () => {
-    for (const exitCode of [null, 1, 17, 127, 255])
-      expect(parseStartupDiagnostic({ ...valid, phase: "native_runtime", exitCode })).toEqual({
-        ...valid,
-        phase: "native_runtime",
-        exitCode,
-      })
+    for (const phase of ["native_runtime", "native_exit"] as const)
+      for (const exitCode of [null, 1, 17, 127, 255])
+        expect(parseStartupDiagnostic({ ...valid, phase, exitCode })).toEqual({ ...valid, phase, exitCode })
     for (const exitCode of [undefined, 0, -1, 256, 1.5, NaN, Infinity, "17", {}, true])
       expect(parseStartupDiagnostic({ ...valid, phase: "native_runtime", exitCode })).toBeUndefined()
-    for (const phase of startupDiagnosticPhases.filter((value) => value !== "native_runtime"))
+    for (const phase of startupDiagnosticPhases.filter(
+      (value) => value !== "native_runtime" && value !== "native_exit",
+    ))
       expect(parseStartupDiagnostic({ ...valid, phase, exitCode: 17 })).toBeUndefined()
   })
 

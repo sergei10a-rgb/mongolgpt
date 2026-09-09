@@ -1,9 +1,19 @@
 export const startupDiagnosticEnv = "MONGOLGPT_CANARY_STARTUP_DIAGNOSTICS"
 export const startupDiagnosticPath = "/v1/startup-diagnostic"
 
+export const startupDiagnosticNativePhases = Object.freeze([
+  "native_runtime",
+  "native_exit",
+  "native_signal",
+  "native_stop",
+  "native_child_error",
+  "native_control_error",
+  "native_control_close",
+] as const)
+
 export const startupDiagnosticPhases = Object.freeze([
   "supervisor",
-  "native_runtime",
+  ...startupDiagnosticNativePhases,
   "validate_root",
   "bootstrap_request",
   "bootstrap_decode",
@@ -27,6 +37,18 @@ export const startupDiagnosticCodes = Object.freeze([
   "ENOSPC",
   "EIO",
   "ENOMEM",
+  "EADDRINUSE",
+  "ECONNREFUSED",
+  "EBADF",
+  "ERR_DLOPEN_FAILED",
+  "StartupHandoffError",
+  "WorkspaceIsolationError",
+  "RuntimeControlError",
+  "CloudRuntimeStartupError",
+  "SQLiteError",
+  "TypeError",
+  "ReferenceError",
+  "SyntaxError",
 ] as const)
 
 export type StartupDiagnostic = {
@@ -57,7 +79,10 @@ export function parseStartupDiagnostic(input: unknown): StartupDiagnostic | unde
     if (workspaceMount !== null && typeof workspaceMount !== "boolean") return
     if (
       exitCode !== null &&
-      (safePhase !== "native_runtime" || !Number.isInteger(exitCode) || exitCode < 1 || exitCode > 255)
+      ((safePhase !== "native_runtime" && safePhase !== "native_exit") ||
+        !Number.isInteger(exitCode) ||
+        exitCode < 1 ||
+        exitCode > 255)
     )
       return
     return { phase: safePhase, code: safeCode, overlay, workspaceMount, exitCode }

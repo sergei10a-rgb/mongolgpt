@@ -7,7 +7,12 @@ import { startupDiagnosticEnv } from "@mongolgpt/runtime-auth/startup-diagnostic
 import { reportStartupFailure } from "../../src/cli/startup-diagnostic"
 import { runRuntimeSupervisor } from "../../src/cli/runtime-supervisor"
 
-if (process.argv.includes("--native-exit-probe")) process.exit(17)
+if (process.argv.includes("--native-exit-probe")) {
+  // Use real stderr with sensitive decoys; the persisted receipt may contain
+  // only the allowlisted errno, not this message or inherited credentials.
+  process.stderr.write("EACCES: private-test-user@example.test /private-test-path\n", () => process.exit(17))
+  await new Promise(() => {})
+}
 
 const config = JSON.parse(await Bun.stdin.text()) as {
   origin: string
@@ -37,7 +42,7 @@ if (config.nativeExit) {
       const child = spawn(process.execPath, ["--native-exit-probe"], {
         env: input.env,
         windowsHide: true,
-        stdio: "ignore",
+        stdio: ["ignore", "ignore", input.stderr ?? "ignore"],
       })
       const closed = new Promise<void>((resolve) => child.once("close", () => resolve()))
       let finish!: () => void

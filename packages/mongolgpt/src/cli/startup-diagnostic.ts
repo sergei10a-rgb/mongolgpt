@@ -6,14 +6,22 @@ import {
   startupDiagnosticCodes,
   startupDiagnosticEnv,
   startupDiagnosticPath,
+  type StartupDiagnostic,
+  startupDiagnosticNativePhases,
 } from "@mongolgpt/runtime-auth/startup-diagnostic"
+
+export type NativeStartupFailure = {
+  phase: (typeof startupDiagnosticNativePhases)[number]
+  exitCode: number | null
+  code?: StartupDiagnostic["code"]
+}
 
 /** Canary-only root failure evidence. Never forward the switch or control token to workspace code. */
 export async function reportStartupFailure(
   error: unknown,
   token: string,
   request: (request: Request) => Promise<Response> = fetch,
-  native?: { exitCode: number | null },
+  native?: NativeStartupFailure,
 ) {
   if (process.env[startupDiagnosticEnv] !== "true" || !validControlToken(token)) return
   const controller = new AbortController()
@@ -27,7 +35,7 @@ export async function reportStartupFailure(
   const send = async () => {
     const code = error && typeof error === "object" ? Object.getOwnPropertyDescriptor(error, "code")?.value : undefined
     const phase = native
-      ? "native_runtime"
+      ? native.phase
       : error instanceof CloudStartup.StartupError
         ? (error.phase ?? "supervisor")
         : "supervisor"
@@ -41,7 +49,7 @@ export async function reportStartupFailure(
     if (controller.signal.aborted) return
     const body = parseStartupDiagnostic({
       phase,
-      code: startupDiagnosticCodes.find((value) => value === code) ?? "unknown",
+      code: native?.code ?? startupDiagnosticCodes.find((value) => value === code) ?? "unknown",
       overlay,
       workspaceMount,
       exitCode: native?.exitCode ?? null,

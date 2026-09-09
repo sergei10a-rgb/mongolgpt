@@ -22,6 +22,7 @@ export async function start(input: {
   request?: (request: Request) => Promise<Response>
   signal?: AbortSignal
   stdio?: "pipe" | "inherit"
+  stderr?: "pipe"
   checkpointIntervalMs?: number
 }) {
   input = { ...input, args: [...input.args], env: { ...input.env } }
@@ -98,6 +99,7 @@ export async function start(input: {
         startupFD: packet.fd,
         controlChannel: true,
         stdio: input.stdio ?? "pipe",
+        stderr: input.stderr,
       })
       input.signal?.throwIfAborted()
       let registeredLease: CloudFiles.Lease | undefined

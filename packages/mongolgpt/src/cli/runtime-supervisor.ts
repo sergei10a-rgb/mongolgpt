@@ -1,6 +1,8 @@
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
 import { RuntimeContainerControl } from "@mongolgpt/core/runtime-container-control"
-import { reportStartupFailure } from "./startup-diagnostic"
+import { reportStartupFailure, type NativeStartupFailure } from "./startup-diagnostic"
+import { captureNativeStderr } from "./native-startup-diagnostic"
+import { startupDiagnosticEnv } from "@mongolgpt/runtime-auth/startup-diagnostic"
 import {
   RuntimeCheckpointClient,
   checkpointControlEnv,
@@ -66,6 +68,9 @@ export async function runRuntimeSupervisor(
   let connection: Awaited<ReturnType<typeof RuntimeContainerControl.join>> | undefined
   let result = 1
   let supervised = false
+  let native: NativeStartupFailure = { phase: "native_runtime", exitCode: null }
+  let collect: ReturnType<typeof captureNativeStderr> | undefined
+  const diagnostic = process.env[startupDiagnosticEnv] === "true"
   const interruptStartup = () => {
     abort.abort(new Error("Runtime supervisor startup interrupted."))
     void runtime?.group.close().catch(() => {})
@@ -87,6 +92,7 @@ export async function runRuntimeSupervisor(
       executable: process.execPath,
       args: ["serve", "--hostname", "0.0.0.0", "--port", "4096"],
       stdio: "inherit",
+      ...(diagnostic ? { stderr: "pipe" as const } : {}),
       signal: abort.signal,
       request: RuntimeCheckpointClient.create(controlToken, input.request),
       env: {
@@ -100,16 +106,29 @@ export async function runRuntimeSupervisor(
         MONGOLGPT_DB: `${root}/.mongolgpt/runtime.sqlite`,
       },
     })
+    if (diagnostic) collect = captureNativeStderr(runtime.child.stderr)
     abort.signal.throwIfAborted()
     removeSignalListeners(interruptStartup)
     supervised = true
-    result = await superviseRuntime(runtime, (stop) => {
-      interrupt = stop
-    })
-    if (result !== 0) await reportStartupFailure(undefined, controlToken, input.request, { exitCode: result })
+    result = await superviseRuntime(
+      runtime,
+      (stop) => {
+        interrupt = stop
+      },
+      (failure) => {
+        native = failure
+      },
+    )
+    if (result !== 0)
+      await reportStartupFailure(undefined, controlToken, input.request, { ...native, code: await collect?.() })
     return result
   } catch (error) {
-    await reportStartupFailure(error, controlToken, input.request, supervised ? { exitCode: null } : undefined)
+    await reportStartupFailure(
+      error,
+      controlToken,
+      input.request,
+      supervised ? { ...native, code: await collect?.() } : undefined,
+    )
     if (!supervised) {
       await runtime?.group.close().catch(() => {})
       await runtime?.control.catch(() => {})
@@ -117,13 +136,24 @@ export async function runRuntimeSupervisor(
     throw error
   } finally {
     removeSignalListeners(interruptStartup)
+    await collect?.()
     await connection?.complete(result === 0)
   }
 }
 
-async function superviseRuntime(runtime: RuntimeHandle, ready: (stop: () => void) => void) {
-  if (runtime.child.exitCode !== null) return await closeRuntime(runtime, runtime.child.exitCode)
-  if (runtime.child.signalCode !== null) return await closeRuntime(runtime, 1)
+async function superviseRuntime(
+  runtime: RuntimeHandle,
+  ready: (stop: () => void) => void,
+  failed: (failure: NativeStartupFailure) => void,
+) {
+  if (runtime.child.exitCode !== null) {
+    failed({ phase: "native_exit", exitCode: runtime.child.exitCode || null })
+    return await closeRuntime(runtime, runtime.child.exitCode)
+  }
+  if (runtime.child.signalCode !== null) {
+    failed({ phase: "native_signal", exitCode: null })
+    return await closeRuntime(runtime, 1)
+  }
 
   let settled = false
   let gracefulStop: Promise<boolean> | undefined
@@ -171,11 +201,23 @@ async function superviseRuntime(runtime: RuntimeHandle, ready: (stop: () => void
     const result = await outcome
     if (result.type === "stop") {
       const stopped = await gracefulStop!
+      if (!stopped) failed({ phase: "native_stop", exitCode: null })
       await controlCleanup
       return stopped ? 0 : 1
     }
-    if (result.type === "exit")
+    if (result.type === "exit") {
+      failed({ phase: result.signal ? "native_signal" : "native_exit", exitCode: result.code || null })
       return await closeRuntime(runtime, result.code ?? (result.signal ? 1 : 0), controlCleanup)
+    }
+    failed({
+      phase:
+        result.type === "child-error"
+          ? "native_child_error"
+          : result.type === "control-error"
+            ? "native_control_error"
+            : "native_control_close",
+      exitCode: null,
+    })
     await closeRuntime(runtime, 1, controlCleanup)
     throw new Error("Runtime supervisor failed.")
   } finally {

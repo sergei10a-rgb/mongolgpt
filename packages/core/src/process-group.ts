@@ -28,6 +28,7 @@ export interface Command {
   cwd: string
   env: Readonly<Record<string, string>>
   stdio?: "pipe" | "ignore" | "inherit"
+  stderr?: "pipe"
   startupFD?: number
   controlChannel?: boolean
 }
@@ -154,6 +155,7 @@ export async function create(input: Input) {
       const env = { ...command.env }
       const cwd = command.cwd
       const stdio = command.stdio ?? "pipe"
+      const stderr = command.stderr ?? stdio
       const startupFD = command.startupFD
       const controlChannel = command.controlChannel === true
       return serialized(async () => {
@@ -172,7 +174,7 @@ export async function create(input: Input) {
             stdio: [
               stdio,
               stdio,
-              stdio,
+              stderr,
               file.fd,
               startupFD ?? "ignore",
               ...(controlChannel ? ["pipe" as const, "pipe" as const] : []),

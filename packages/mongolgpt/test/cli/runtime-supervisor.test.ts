@@ -74,8 +74,8 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         expect(events).toEqual(["report", "complete:false"])
         expect(bodies).toHaveLength(1)
         expect(bodies[0]).toMatchObject({
-          phase: "native_runtime",
-          exitCode: outcome === "exit" || outcome === "already-exited" ? 17 : outcome === "signal" ? 1 : null,
+          phase: `native_${outcome === "already-exited" ? "exit" : outcome.replace("-", "_")}`,
+          exitCode: outcome === "exit" || outcome === "already-exited" ? 17 : null,
         })
         expect(JSON.stringify(bodies)).not.toContain("private")
         expect(runtime.events).toEqual(["group.close"])
@@ -95,6 +95,8 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         })
         const result = runRuntimeSupervisor({
           start: async (input) => {
+            expect(input.stdio).toBe("inherit")
+            expect(input.stderr).toBe(enabled ? "pipe" : undefined)
             expect(input.env).not.toHaveProperty(startupDiagnosticEnv)
             expect(input.env).not.toHaveProperty(checkpointControlEnv)
             throw error
@@ -203,6 +205,8 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
 
   test("runtime-ready signal returns exit 1 when final stop fails", async () => {
     await withSupervisorProcess(async () => {
+      process.env[startupDiagnosticEnv] = "true"
+      const bodies: unknown[] = []
       const started = deferred<StartInput>()
       const runtime = syntheticRuntime({
         stop: async () => {
@@ -218,12 +222,21 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
         return runtime.handle
       }) satisfies RuntimeStart
 
-      const result = runRuntimeSupervisor({ start, connect })
+      const result = runRuntimeSupervisor({
+        start,
+        connect,
+        request: async (request) => {
+          bodies.push(await request.json())
+          return new Response(null, { status: 204 })
+        },
+      })
       await runtimeReady(started.promise)
       process.emit("SIGTERM", "SIGTERM")
 
       expect(await result).toBe(1)
       expect(runtime.events).toEqual(["stop"])
+      expect(bodies).toHaveLength(1)
+      expect(bodies[0]).toMatchObject({ phase: "native_stop", exitCode: null })
     })
   })
 

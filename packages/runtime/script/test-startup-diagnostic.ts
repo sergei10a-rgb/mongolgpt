@@ -142,9 +142,10 @@ try {
     diagnostic: { phase: string; code: string; exitCode: number }
   }
   assert.equal(fatal.bootCount, 1)
-  assert.equal(fatal.diagnostic.phase, "native_runtime")
-  assert.equal(fatal.diagnostic.code, "unknown")
+  assert.equal(fatal.diagnostic.phase, "native_exit")
+  assert.equal(fatal.diagnostic.code, "EACCES")
   assert.equal(fatal.diagnostic.exitCode, 17)
+  assert.equal(JSON.stringify(fatal).includes("private-test"), false)
   await worker.dispose()
   worker = await unstable_startWorker(options)
   await bounded(worker.ready)
@@ -154,12 +155,13 @@ try {
     join(root, "result.json"),
     JSON.stringify(
       {
-        assertions: 17,
+        assertions: 18,
         proxy: "actual-ContainerProxy",
         storage: "actual-DO-shared-persistence",
         retainedAfterRestart: true,
         compiledReporter: true,
         compiledChildExit: 17,
+        compiledChildStderrClassification: "EACCES",
         reportedBeforeContainerCompletion: true,
         containerLifecycle: "not-tested",
       },
@@ -167,7 +169,7 @@ try {
       2,
     ),
   )
-  console.log(JSON.stringify({ passed: true, assertions: 17, receipt: join(root, "result.json") }))
+  console.log(JSON.stringify({ passed: true, assertions: 18, receipt: join(root, "result.json") }))
 } catch (error) {
   console.error(JSON.stringify({ phase }))
   throw error
