@@ -24,6 +24,8 @@ type JsonRpcNotification<T = unknown> = {
 }
 
 export type AcpClient = {
+  readonly close: AcpHandle["close"]
+  readonly exited: AcpHandle["exited"]
   readonly request: <T>(method: string, params?: unknown) => Effect.Effect<JsonRpcResponse<T>, unknown>
   readonly receive: Effect.Effect<unknown>
   readonly waitForNotification: <T>(
@@ -59,6 +61,8 @@ export function createAcpClient(acp: AcpHandle): AcpClient {
     })
 
   return {
+    close: acp.close,
+    exited: acp.exited,
     request,
     receive: acp.receive,
     waitForNotification,

@@ -18,6 +18,22 @@ describe("mongolgpt acp lifecycle subprocess", () => {
         const acp = yield* mongolgpt.acp()
         yield* Effect.promise(() => acp.close())
 
+        // EOF is sent before startup: Windows source loading shares this budget.
+        const code = yield* Effect.promise(() => acp.exited).pipe(
+          Effect.timeout(Duration.seconds(process.platform === "win32" ? 45 : 15)),
+        )
+        expect(code).toBe(0)
+      }),
+    60_000,
+  )
+
+  cliIt.live(
+    "initialized ACP exits promptly on stdin EOF",
+    ({ mongolgpt }) =>
+      Effect.gen(function* () {
+        const acp = yield* createAcpClient({ mongolgpt })
+        yield* initialize(acp)
+        yield* Effect.promise(() => acp.close())
         const code = yield* Effect.promise(() => acp.exited).pipe(Effect.timeout(Duration.seconds(15)))
         expect(code).toBe(0)
       }),
