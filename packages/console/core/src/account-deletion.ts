@@ -1,12 +1,12 @@
 import { z } from "zod"
-import { and, asc, eq, exists, inArray, isNotNull, isNull, lt, lte, ne, notExists, sql } from "./drizzle"
+import { and, asc, eq, exists, inArray, isNotNull, isNull, lte, ne, notExists, sql } from "./drizzle"
 import { alias } from "drizzle-orm/sqlite-core"
-import { Account } from "./account"
 import { Database } from "./drizzle"
 import { Identifier } from "./identifier"
 import { AccountTable } from "./schema/account.sql"
 import { AccountDeletionTable } from "./schema/account-deletion.sql"
 import { UserTable } from "./schema/user.sql"
+import { AccountDeletionCleanupTable } from "./schema-d1"
 
 export const ACCOUNT_DELETION_GRACE_MS = 7 * 24 * 60 * 60 * 1_000
 export const ACCOUNT_DELETION_MAX_ATTEMPTS = 5
@@ -26,8 +26,6 @@ const Request = z.object({
 const AccountInput = z.object({ accountID: AccountID })
 
 type Use = <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise<T>
-type Transaction = <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise<T>
-type Remove = typeof Account.removeByID
 
 export type AccountDeletionState = ReturnType<typeof state>
 
@@ -154,95 +152,7 @@ export async function getAccountDeletion(
   return row ? state(row, false) : undefined
 }
 
-export async function processEligibleAccountDeletions(
-  input: {
-    now: number
-    limit?: number
-  },
-  dependencies: {
-    use?: Use
-    transaction?: Transaction
-    remove?: Remove
-  } = {},
-) {
-  const now = timestamp(input.now)
-  const limit = input.limit ?? 50
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
-    throw new TypeError("Бүртгэл устгах багцын хязгаар буруу байна")
-  }
-  const use = dependencies.use ?? ((callback) => Database.use(callback))
-  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
-  const remove = dependencies.remove ?? Account.removeByID
-  const date = new Date(now)
-  const candidates = await use((db) =>
-    db
-      .select({ id: AccountDeletionTable.id })
-      .from(AccountDeletionTable)
-      .where(
-        and(
-          inArray(AccountDeletionTable.status, ["requested", "failed"]),
-          lte(AccountDeletionTable.time_eligible, date),
-          lt(AccountDeletionTable.attempts, ACCOUNT_DELETION_MAX_ATTEMPTS),
-          isNull(AccountDeletionTable.timeDeleted),
-        ),
-      )
-      .orderBy(asc(AccountDeletionTable.time_eligible), asc(AccountDeletionTable.id))
-      .limit(limit),
-  )
-
-  let processed = 0
-  let failed = 0
-  let skipped = 0
-  for (const candidate of candidates) {
-    try {
-      const changed = await transaction(async (db) => {
-        const claimed = await db
-          .update(AccountDeletionTable)
-          .set({
-            status: "processing",
-            attempts: sql`${AccountDeletionTable.attempts} + 1`,
-            last_error_code: null,
-            time_started: date,
-            timeUpdated: date,
-          })
-          .where(
-            and(
-              eq(AccountDeletionTable.id, candidate.id),
-              inArray(AccountDeletionTable.status, ["requested", "failed"]),
-              lte(AccountDeletionTable.time_eligible, date),
-              lt(AccountDeletionTable.attempts, ACCOUNT_DELETION_MAX_ATTEMPTS),
-              isNull(AccountDeletionTable.timeDeleted),
-            ),
-          )
-          .returning({
-            accountID: AccountDeletionTable.account_id,
-          })
-          .then((rows) => rows[0])
-        if (!claimed) return false
-
-        await assertSharedWorkspacesKeepAdministrator(db, claimed.accountID)
-        await remove(db, { accountID: claimed.accountID, now: date })
-        await db
-          .update(AccountDeletionTable)
-          .set({
-            status: "completed",
-            last_error_code: null,
-            time_completed: date,
-            timeUpdated: date,
-          })
-          .where(and(eq(AccountDeletionTable.id, candidate.id), eq(AccountDeletionTable.status, "processing")))
-        return true
-      })
-      if (changed) processed++
-      else skipped++
-    } catch {
-      const marked = await transaction((db) => markFailure(db, candidate.id, now))
-      if (marked) failed++
-      else skipped++
-    }
-  }
-  return { processed, failed, skipped, truncated: candidates.length === limit }
-}
+export { processEligibleAccountDeletions } from "./account-deletion-worker"
 
 export async function purgeCompletedAccountDeletions(
   input: {
@@ -251,7 +161,7 @@ export async function purgeCompletedAccountDeletions(
   },
   dependencies: {
     use?: Use
-    transaction?: Transaction
+    batch?: typeof Database.batch
   } = {},
 ) {
   const now = timestamp(input.now)
@@ -260,7 +170,7 @@ export async function purgeCompletedAccountDeletions(
     throw new TypeError("Бүртгэл устгах цэвэрлэгээний багцын хязгаар буруу байна")
   }
   const use = dependencies.use ?? ((callback) => Database.use(callback))
-  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
+  const batch = dependencies.batch ?? Database.batch
   const cutoff = new Date(now - ACCOUNT_DELETION_OPERATIONAL_RETENTION_MS)
   const date = new Date(now)
   const candidates = await use((db) =>
@@ -272,6 +182,23 @@ export async function purgeCompletedAccountDeletions(
           eq(AccountDeletionTable.status, "completed"),
           lte(AccountDeletionTable.time_completed, cutoff),
           isNull(AccountDeletionTable.timeDeleted),
+          exists(
+            db
+              .select({ id: AccountDeletionCleanupTable.request_id })
+              .from(AccountDeletionCleanupTable)
+              .where(
+                and(
+                  eq(AccountDeletionCleanupTable.request_id, AccountDeletionTable.id),
+                  isNotNull(AccountDeletionCleanupTable.time_completed),
+                ),
+              ),
+          ),
+          notExists(
+            db
+              .select({ id: AccountTable.id })
+              .from(AccountTable)
+              .where(and(eq(AccountTable.id, AccountDeletionTable.account_id), isNull(AccountTable.timeDeleted))),
+          ),
         ),
       )
       .orderBy(asc(AccountDeletionTable.time_completed), asc(AccountDeletionTable.id))
@@ -281,56 +208,53 @@ export async function purgeCompletedAccountDeletions(
   let purged = 0
   let skipped = 0
   for (const candidate of candidates) {
-    const changed = await transaction(async (db) => {
-      const account = await db
-        .select({ timeDeleted: AccountTable.timeDeleted })
-        .from(AccountTable)
-        .where(eq(AccountTable.id, candidate.accountID))
-        .limit(1)
-        .then((rows) => rows[0])
-      if (account && !account.timeDeleted) return false
-
-      const detached = await db
-        .update(AccountDeletionTable)
-        .set({
-          account_id: Identifier.create("account"),
-          timeDeleted: date,
-          timeUpdated: date,
-        })
-        .where(
+    const pseudonym = Identifier.create("account")
+    const changed = await batch((db) => {
+      const eligible = sql`exists (select 1 from ${AccountDeletionTable}
+        where ${AccountDeletionTable.id} = ${candidate.id}
+          and ${AccountDeletionTable.account_id} = ${candidate.accountID}
+          and ${AccountDeletionTable.status} = 'completed'
+          and ${AccountDeletionTable.time_completed} <= ${cutoff.getTime()}
+          and ${AccountDeletionTable.timeDeleted} is null)
+        and not exists (select 1 from ${AccountTable} where ${AccountTable.id} = ${candidate.accountID} and ${AccountTable.timeDeleted} is null)
+        and exists (select 1 from ${AccountDeletionCleanupTable} where ${AccountDeletionCleanupTable.request_id} = ${candidate.id}
+          and ${AccountDeletionCleanupTable.time_completed} is not null)`
+      return [
+        db
+          .delete(AccountTable)
+          .where(and(eq(AccountTable.id, candidate.accountID), isNotNull(AccountTable.timeDeleted), eligible)),
+        db
+          .update(AccountDeletionTable)
+          .set({ account_id: pseudonym, timeDeleted: date, timeUpdated: date })
+          .where(and(eq(AccountDeletionTable.id, candidate.id), eligible))
+          .returning({ id: AccountDeletionTable.id }),
+        db.delete(AccountDeletionCleanupTable).where(
           and(
-            eq(AccountDeletionTable.id, candidate.id),
-            eq(AccountDeletionTable.account_id, candidate.accountID),
-            eq(AccountDeletionTable.status, "completed"),
-            lte(AccountDeletionTable.time_completed, cutoff),
-            isNull(AccountDeletionTable.timeDeleted),
+            eq(AccountDeletionCleanupTable.request_id, candidate.id),
+            sql`exists (select 1 from ${AccountDeletionTable} where ${AccountDeletionTable.id} = ${candidate.id}
+            and ${AccountDeletionTable.account_id} = ${pseudonym} and ${AccountDeletionTable.timeDeleted} = ${now})`,
           ),
-        )
-        .returning({ id: AccountDeletionTable.id })
-        .then((rows) => rows[0])
-      if (!detached) return false
-
-      await db
-        .delete(AccountTable)
-        .where(and(eq(AccountTable.id, candidate.accountID), isNotNull(AccountTable.timeDeleted)))
-      return true
-    })
+        ),
+      ] as const
+    }).then((results) => Boolean(results[1][0]))
     if (changed) purged++
     else skipped++
   }
   return { purged, skipped, truncated: candidates.length === limit }
 }
 
-async function assertSharedWorkspacesKeepAdministrator(db: Database.TxOrDb, accountID: string) {
-  if ((await blockingWorkspace(db, accountID))[0]) throw new AccountDeletionError("workspace_admin_required")
-}
-
-function blockingWorkspace(db: Database.TxOrDb, accountID: string) {
+export function blockingWorkspace(db: Database.TxOrDb, accountID: string) {
   const other = alias(UserTable, "other_member")
   const otherMember = and(
     eq(other.workspaceID, UserTable.workspaceID),
     ne(other.accountID, accountID),
     isNull(other.timeDeleted),
+    exists(
+      db
+        .select({ id: AccountTable.id })
+        .from(AccountTable)
+        .where(and(eq(AccountTable.id, other.accountID), isNull(AccountTable.timeDeleted))),
+    ),
   )
   return db
     .select({ workspaceID: UserTable.workspaceID })
@@ -350,43 +274,6 @@ function blockingWorkspace(db: Database.TxOrDb, accountID: string) {
       ),
     )
     .limit(1)
-}
-
-async function markFailure(db: Database.TxOrDb, id: string, now: number) {
-  const date = new Date(now)
-  const current = await db
-    .select({
-      status: AccountDeletionTable.status,
-      attempts: AccountDeletionTable.attempts,
-    })
-    .from(AccountDeletionTable)
-    .where(and(eq(AccountDeletionTable.id, id), isNull(AccountDeletionTable.timeDeleted)))
-    .limit(1)
-    .then((rows) => rows[0])
-  if (!current || current.status === "completed" || current.status === "cancelled") return false
-  const attempts = current.status === "processing" ? current.attempts : current.attempts + 1
-  if (attempts > ACCOUNT_DELETION_MAX_ATTEMPTS) return false
-
-  return db
-    .update(AccountDeletionTable)
-    .set({
-      status: "failed",
-      attempts,
-      last_error_code: "account_cleanup_failed",
-      time_started: date,
-      time_eligible: new Date(now + ACCOUNT_DELETION_RETRY_MS),
-      timeUpdated: date,
-    })
-    .where(
-      and(
-        eq(AccountDeletionTable.id, id),
-        eq(AccountDeletionTable.status, current.status),
-        eq(AccountDeletionTable.attempts, current.attempts),
-        isNull(AccountDeletionTable.timeDeleted),
-      ),
-    )
-    .returning({ id: AccountDeletionTable.id })
-    .then((rows) => Boolean(rows[0]))
 }
 
 function find(db: Database.TxOrDb, accountID: string) {

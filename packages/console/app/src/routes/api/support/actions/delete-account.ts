@@ -1,21 +1,11 @@
 import type { APIEvent } from "@solidjs/start/server"
 import { Account } from "@mongolgpt/console-core/account.js"
-import { safeEqual } from "@mongolgpt/console-core/util/crypto.js"
 import { Resource } from "@mongolgpt/console-resource"
-import z from "zod"
-
-const Body = z.object({ email: z.email() })
+import { handleSupportAccountDeletion } from "~/lib/support-account-deletion"
 
 export async function DELETE(event: APIEvent) {
-  if (!safeEqual(event.request.headers.get("authorization") ?? "", `Bearer ${Resource.SUPPORT_API_KEY.value}`)) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const body = Body.safeParse(await event.request.json().catch(() => undefined))
-  if (!body.success) {
-    return Response.json({ error: "Хүсэлт буруу байна", issues: body.error.issues }, { status: 400 })
-  }
-  return Account.remove(body.data.email)
-    .then(() => Response.json({ success: true, message: "Аккаунт устгагдлаа" }))
-    .catch((error) => Response.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 }))
+  return handleSupportAccountDeletion(event.request, {
+    secret: Resource.SUPPORT_API_KEY.value,
+    requestDeletion: Account.remove,
+  })
 }

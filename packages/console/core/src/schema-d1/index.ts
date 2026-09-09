@@ -166,6 +166,44 @@ export const AccountDeletionTable = sqliteTable(
   ],
 )
 
+export const AccountDeletionCleanupTable = sqliteTable(
+  "account_deletion_cleanup",
+  {
+    request_id: text()
+      .primaryKey()
+      .references(() => AccountDeletionTable.id),
+    account_id: text().notNull(),
+    workspace_ids: text({ mode: "json" }).$type<string[]>().notNull(),
+    pseudonymous_account_id: text().notNull(),
+    attempts: integer().notNull().default(0),
+    lease_id: text(),
+    time_lease_expires: utc("time_lease_expires"),
+    time_next_attempt: utc("time_next_attempt").notNull(),
+    time_runtime_completed: utc("time_runtime_completed"),
+    time_completed: utc("time_completed"),
+    last_error_code: text({ enum: ["runtime_cleanup_failed", "account_cleanup_failed"] }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("account_deletion_cleanup_account").on(table.account_id),
+    index("account_deletion_cleanup_due").on(table.time_next_attempt, table.time_lease_expires),
+    check("account_deletion_cleanup_attempts", sql`${table.attempts} >= 0`),
+    check(
+      "account_deletion_cleanup_workspaces",
+      sql`json_valid(${table.workspace_ids}) and json_type(${table.workspace_ids}) = 'array'`,
+    ),
+    check("account_deletion_cleanup_lease", sql`(${table.lease_id} is null) = (${table.time_lease_expires} is null)`),
+    check(
+      "account_deletion_cleanup_completion",
+      sql`${table.time_completed} is null or ${table.time_runtime_completed} is not null`,
+    ),
+    check(
+      "account_deletion_cleanup_error",
+      sql`${table.last_error_code} is null or ${table.last_error_code} in ('runtime_cleanup_failed', 'account_cleanup_failed')`,
+    ),
+  ],
+)
+
 export const AuthTable = sqliteTable(
   "auth",
   {

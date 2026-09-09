@@ -1,4 +1,10 @@
-export { requestAccountDeletion, cancelAccountDeletion, getAccountDeletion } from "../../src/account-deletion"
+export {
+  requestAccountDeletion,
+  cancelAccountDeletion,
+  getAccountDeletion,
+  processEligibleAccountDeletions,
+  purgeCompletedAccountDeletions,
+} from "../../src/account-deletion"
 import { drizzle } from "drizzle-orm/d1"
 import type { D1Database } from "@cloudflare/workers-types"
 export { sql } from "drizzle-orm"

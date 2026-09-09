@@ -8,6 +8,9 @@ import type { D1Database } from "@cloudflare/workers-types"
 import type { Database } from "../src/drizzle"
 
 const native: typeof import("./fixtures/account-deletion-native") = await import(pathToFileURL(process.argv[2]).href)
+const { runCleanupChecks }: typeof import("./account-deletion-cleanup.integration") = await import(
+  new URL("./account-deletion-cleanup.integration.ts", import.meta.url).href
+)
 const persistTo = await mkdtemp(join(tmpdir(), "mongolgpt-deletion-d1-"))
 let platform: Awaited<ReturnType<typeof getPlatformProxy<{ DB: D1Database }>>> | undefined
 let checks = 0
@@ -190,6 +193,7 @@ try {
   await rejects(request("acc_admin"), { code: "workspace_admin_required" })
   equal((await get("acc_admin"))?.status, "cancelled")
 
+  checks += await runCleanupChecks(binding, native)
   console.log(`DELETION_D1_RESULT ${JSON.stringify({ ok: true, checks })}`)
 } finally {
   await platform?.dispose()

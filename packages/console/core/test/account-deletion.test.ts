@@ -22,6 +22,17 @@ const userID = "usr_account_deletion"
 const invitationID = "usr_account_deletion_invitation"
 const keyID = "key_account_deletion"
 
+function processDeletions(
+  input: Parameters<typeof processEligibleAccountDeletions>[0],
+  dependencies: Parameters<typeof processEligibleAccountDeletions>[1],
+) {
+  return processEligibleAccountDeletions(input, {
+    ...dependencies,
+    runtime: dependencies?.runtime ?? (async ({ requestID, accountID }) => ({ requestID, accountID, complete: true })),
+    clock: () => input.now,
+  })
+}
+
 async function migrationSql() {
   const directory = resolve(import.meta.dir, "../migrations-d1")
   const paths: string[] = []
@@ -202,7 +213,7 @@ describe("account deletion lifecycle", () => {
   })
 
   test("rechecks shared workspace administrators when cleanup starts", async () => {
-    const { sqlite, use, transaction, batch } = await setup()
+    const { sqlite, use, batch } = await setup()
     const otherAccountID = "acc_account_deletion_race"
     const otherUserID = "usr_account_deletion_race"
     sqlite.query("insert into account (id) values (?)").run(otherAccountID)
@@ -212,7 +223,7 @@ describe("account deletion lifecycle", () => {
     await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, batch })
 
     sqlite.query("update user set role = 'member' where id = ?").run(otherUserID)
-    expect(await processEligibleAccountDeletions({ now }, { use, transaction })).toEqual({
+    expect(await processDeletions({ now }, { use, batch })).toEqual({
       processed: 0,
       failed: 1,
       skipped: 0,
@@ -227,9 +238,7 @@ describe("account deletion lifecycle", () => {
     })
 
     sqlite.query("update user set role = 'admin' where id = ?").run(otherUserID)
-    expect(
-      await processEligibleAccountDeletions({ now: now + ACCOUNT_DELETION_RETRY_MS }, { use, transaction }),
-    ).toEqual({
+    expect(await processDeletions({ now: now + ACCOUNT_DELETION_RETRY_MS }, { use, batch })).toEqual({
       processed: 1,
       failed: 0,
       skipped: 0,
@@ -238,16 +247,16 @@ describe("account deletion lifecycle", () => {
   })
 
   test("revokes access, scrubs sole-workspace secrets, and pseudonymizes retained payment records", async () => {
-    const { sqlite, use, transaction, batch } = await setup()
+    const { sqlite, use, batch } = await setup()
     await requestAccountDeletion({ accountID, graceMs: 1_000 }, { now: () => now, batch })
 
-    expect(await processEligibleAccountDeletions({ now: now + 999 }, { use, transaction })).toEqual({
+    expect(await processDeletions({ now: now + 999 }, { use, batch })).toEqual({
       processed: 0,
       failed: 0,
       skipped: 0,
       truncated: false,
     })
-    expect(await processEligibleAccountDeletions({ now: now + 1_000 }, { use, transaction })).toEqual({
+    expect(await processDeletions({ now: now + 1_000 }, { use, batch })).toEqual({
       processed: 1,
       failed: 0,
       skipped: 0,
@@ -267,7 +276,7 @@ describe("account deletion lifecycle", () => {
     })
     expect(sqlite.query("select name, key, time_used, time_deleted from key where id = ?").get(keyID)).toEqual({
       name: "",
-      key: `revoked:${keyID}`,
+      key: `revoked:${workspaceID.length}:${workspaceID}:${keyID}`,
       time_used: null,
       time_deleted: now + 1_000,
     })
@@ -346,7 +355,7 @@ describe("account deletion lifecycle", () => {
       attempts: 1,
       completedAt: now + 1_000,
     })
-    expect(await processEligibleAccountDeletions({ now: now + 2_000 }, { use, transaction })).toEqual({
+    expect(await processDeletions({ now: now + 2_000 }, { use, batch })).toEqual({
       processed: 0,
       failed: 0,
       skipped: 0,
@@ -361,7 +370,7 @@ describe("account deletion lifecycle", () => {
   })
 
   test("keeps shared workspace credentials while removing only the departing account", async () => {
-    const { sqlite, use, transaction, batch } = await setup()
+    const { sqlite, use, batch } = await setup()
     const otherAccountID = "acc_account_deletion_shared"
     const otherUserID = "usr_account_deletion_shared"
     sqlite.query("insert into account (id) values (?)").run(otherAccountID)
@@ -370,7 +379,7 @@ describe("account deletion lifecycle", () => {
       .run(otherUserID, workspaceID, otherAccountID, "shared@mgpt.mn", "Shared admin", "admin")
 
     await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, batch })
-    expect(await processEligibleAccountDeletions({ now }, { use, transaction })).toEqual({
+    expect(await processDeletions({ now }, { use, batch })).toEqual({
       processed: 1,
       failed: 0,
       skipped: 0,
@@ -408,21 +417,18 @@ describe("account deletion lifecycle", () => {
   })
 
   test("detaches completed deletion records and removes tombstone accounts after 30 days", async () => {
-    const { sqlite, use, transaction, batch } = await setup()
+    const { sqlite, use, batch } = await setup()
     await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, batch })
-    await processEligibleAccountDeletions({ now }, { use, transaction })
+    await processDeletions({ now }, { use, batch })
 
     expect(
       await purgeCompletedAccountDeletions(
         { now: now + ACCOUNT_DELETION_OPERATIONAL_RETENTION_MS - 1 },
-        { use, transaction },
+        { use, batch },
       ),
     ).toEqual({ purged: 0, skipped: 0, truncated: false })
     expect(
-      await purgeCompletedAccountDeletions(
-        { now: now + ACCOUNT_DELETION_OPERATIONAL_RETENTION_MS },
-        { use, transaction },
-      ),
+      await purgeCompletedAccountDeletions({ now: now + ACCOUNT_DELETION_OPERATIONAL_RETENTION_MS }, { use, batch }),
     ).toEqual({ purged: 1, skipped: 0, truncated: false })
     expect(sqlite.query("select count(*) as count from account where id = ?").get(accountID)).toEqual({ count: 0 })
     const operation = sqlite.query("select account_id, time_deleted from account_deletion where id like 'adl_%'").get()
@@ -432,15 +438,15 @@ describe("account deletion lifecycle", () => {
   })
 
   test("records only a bounded error code and retries without exposing failure details", async () => {
-    const { sqlite, use, transaction, batch } = await setup()
+    const { sqlite, use, batch } = await setup()
     await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, batch })
 
-    const failed = await processEligibleAccountDeletions(
+    const failed = await processDeletions(
       { now },
       {
         use,
-        transaction,
-        remove: async () => {
+        batch,
+        runtime: async () => {
           throw new Error("provider-secret=must-not-be-persisted")
         },
       },
@@ -448,22 +454,30 @@ describe("account deletion lifecycle", () => {
     expect(failed).toEqual({ processed: 0, failed: 1, skipped: 0, truncated: false })
     expect(
       sqlite
-        .query("select status, attempts, last_error_code, time_eligible from account_deletion where account_id = ?")
+        .query(
+          "select d.status, c.attempts, c.last_error_code, c.time_next_attempt as time_eligible from account_deletion d join account_deletion_cleanup c on c.request_id = d.id where d.account_id = ?",
+        )
         .get(accountID),
     ).toEqual({
-      status: "failed",
+      status: "processing",
       attempts: 1,
-      last_error_code: "account_cleanup_failed",
+      last_error_code: "runtime_cleanup_failed",
       time_eligible: now + ACCOUNT_DELETION_RETRY_MS,
     })
     expect(await getAccountDeletion({ accountID }, { use })).not.toHaveProperty("lastErrorCode")
 
-    expect(
-      await processEligibleAccountDeletions({ now: now + ACCOUNT_DELETION_RETRY_MS - 1 }, { use, transaction }),
-    ).toEqual({ processed: 0, failed: 0, skipped: 0, truncated: false })
-    expect(
-      await processEligibleAccountDeletions({ now: now + ACCOUNT_DELETION_RETRY_MS }, { use, transaction }),
-    ).toEqual({ processed: 1, failed: 0, skipped: 0, truncated: false })
+    expect(await processDeletions({ now: now + ACCOUNT_DELETION_RETRY_MS - 1 }, { use, batch })).toEqual({
+      processed: 0,
+      failed: 0,
+      skipped: 0,
+      truncated: false,
+    })
+    expect(await processDeletions({ now: now + ACCOUNT_DELETION_RETRY_MS }, { use, batch })).toEqual({
+      processed: 1,
+      failed: 0,
+      skipped: 0,
+      truncated: false,
+    })
     expect(await getAccountDeletion({ accountID }, { use })).toMatchObject({
       status: "completed",
       attempts: 2,
