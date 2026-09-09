@@ -47,6 +47,7 @@ const migrationNames = [
   "0002_history_checkpoint.sql",
   "0003_file_revision.sql",
   "0004_account_retirement.sql",
+  "0005_backup_write_fences.sql",
 ] as const
 const checkpointPaths = new Set([
   "/v1/bootstrap",

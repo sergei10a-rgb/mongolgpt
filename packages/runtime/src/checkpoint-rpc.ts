@@ -7,6 +7,7 @@ import {
 } from "@mongolgpt/runtime-auth/control"
 import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import { createRuntimeBackupStore, deriveRuntimeBackupKey, RuntimeBackupError } from "./backup"
+import { createRetirableBackupBucket } from "./backup-writes"
 import { createRuntimeCheckpointStore } from "./checkpoint"
 import { decodeCheckpoint, decodeFileRevision } from "./checkpoint-contract"
 import { createHistoryStore, HistoryError, type HistoryLease, type HistoryScope } from "./history"
@@ -128,7 +129,7 @@ export async function handleCheckpointOutbound(
     return await createCheckpointHandler(
       {
         history: createHistoryStore(db),
-        backups: bucket ? createRuntimeBackupStore(bucket) : undefined,
+        backups: bucket ? createRuntimeBackupStore(createRetirableBackupBucket(db, bucket, trustedScope)) : undefined,
         publisher: bucket
           ? {
               async publish(lease, checkpoint) {

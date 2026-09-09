@@ -31,6 +31,7 @@ try {
     "0002_history_checkpoint.sql",
     "0003_file_revision.sql",
     "0004_account_retirement.sql",
+    "0005_backup_write_fences.sql",
   ]) {
     const migration = await readFile(fileURLToPath(new URL(`../migrations/${file}`, import.meta.url)), "utf8")
     for (const statement of unstable_splitSqlQuery(migration)) await platform.env.DB.prepare(statement).run()
