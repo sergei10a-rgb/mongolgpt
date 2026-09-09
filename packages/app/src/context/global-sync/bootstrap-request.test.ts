@@ -1,5 +1,37 @@
 import { describe, expect, test } from "bun:test"
-import { bootstrapRequest } from "./bootstrap-request"
+import { bootstrapRequest, bootstrapTimeoutMs } from "./bootstrap-request"
+import { ServerScope } from "@/utils/server-scope"
+
+describe("bootstrap deadline by server scope", () => {
+  for (const scope of [
+    "local",
+    "sidecar",
+    "wsl:Ubuntu",
+    "invalid",
+    "file:///workspace",
+    "http://localhost:4096",
+    "http://127.0.0.1:4096",
+    "http://127.2.3.4",
+    "http://[::1]:4096",
+    "http://[::]",
+    "http://0.0.0.0",
+    "https://test.localhost",
+  ]) {
+    test(`retains the thirty-second budget for ${scope}`, () => {
+      expect(bootstrapTimeoutMs(scope as ServerScope)).toBe(30_000)
+    })
+  }
+  for (const scope of [
+    "https://runtime.dev.mgpt.mn",
+    "https://runtime.mgpt.mn",
+    "http://192.168.1.20:4096",
+    "https://remote.example/api",
+  ]) {
+    test(`permits a bounded cold start for ${scope}`, () => {
+      expect(bootstrapTimeoutMs(scope as ServerScope)).toBe(120_000)
+    })
+  }
+})
 
 describe("bootstrapRequest", () => {
   test("returns the actual response and leaves successful requests un-aborted", async () => {

@@ -18,6 +18,84 @@ const capability = (accountID = "account_e2e", token = "e2e-runtime-token") => (
 })
 
 test.describe("hosted MongolGPT account gate", () => {
+  for (const { viewport, catalog } of [
+    { width: 1365, height: 900 },
+    { width: 390, height: 844 },
+  ].flatMap((viewport) => ["agent", "provider"].map((catalog) => ({ viewport, catalog })))) {
+    test(`waits for a cold hosted ${catalog} catalog beyond thirty seconds at ${viewport.width}px`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize(viewport)
+      await page.clock.install()
+      const errors = trackPageErrors(page)
+      await mockRuntime(page)
+      await configureHostedProject(page)
+      await page.addInitScript(() => {
+        localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
+      })
+      await page.route(tokenUrl, (route) => session(route, 200, capability()))
+      await page.route(sessionUrl, (route) => {
+        const current = capability()
+        return session(route, 200, {
+          authenticated: true,
+          account: { id: current.account.id },
+          workspace: { id: current.workspace.id },
+          expiresAt: current.expiresAt - 1000,
+        })
+      })
+
+      let release = () => {}
+      const ready = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      let requests = 0
+      await page.route(
+        (url) => url.origin === runtimeUrl && url.pathname === `/${catalog}`,
+        async (route) => {
+          if (route.request().method() !== "GET") return route.fallback()
+          requests++
+          await ready
+          return route.fallback()
+        },
+      )
+      let prompts = 0
+      page.on("request", (request) => {
+        if (new URL(request.url()).pathname.endsWith("/prompt_async")) prompts++
+      })
+
+      try {
+        await page.goto(`/${base64Encode(fixture.directory)}/session/${fixture.sourceID}`)
+        const composer = page.locator('[data-component="session-composer"]')
+        await expect(composer).toBeVisible()
+        const status = composer.locator('[data-component="prompt-bootstrap-status"]')
+        await expect(status).toHaveRole("status")
+        await expect.poll(() => requests).toBeGreaterThan(0)
+        const initialRequests = requests
+        await composer.locator('[contenteditable="true"]').first().fill("Cold runtime readiness")
+
+        await page.clock.fastForward(31_000)
+        await expect(status).toHaveRole("status")
+        await expect(composer.locator('[data-action="prompt-submit"]')).toBeDisabled()
+        expect(requests).toBe(initialRequests)
+        expect(prompts).toBe(0)
+        await page.screenshot({ path: testInfo.outputPath("cold-catalog-waiting.png") })
+
+        release()
+        await expect(status).toHaveCount(0)
+        await expect(composer.locator('[data-action="prompt-submit"]')).toBeEnabled()
+        await expect(composer.locator('[data-action="prompt-model"]')).toBeEnabled()
+        expect(requests).toBe(initialRequests)
+        expect(prompts).toBe(0)
+        await expect(page.locator("html")).toHaveAttribute("lang", "mn")
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        expectNoSmokeErrors(errors, [], [])
+        await page.screenshot({ path: testInfo.outputPath("cold-catalog-ready.png") })
+      } finally {
+        release()
+      }
+    })
+  }
+
   test("shows the Mongolian login gate and uses the fixed internal continuation", async ({ page }) => {
     await mockRuntime(page)
     let tokenRequest: { method: string; accept: string; credentials: string } | undefined

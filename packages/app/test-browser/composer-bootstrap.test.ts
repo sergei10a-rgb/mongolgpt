@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 import { QueryClient, QueryObserver } from "@tanstack/solid-query"
 import { createMongolGPTClient, type Agent } from "@mongolgpt/sdk/v2/client"
 import { loadAgentsQuery, loadProvidersQuery } from "@/context/global-sync/bootstrap"
@@ -102,6 +102,33 @@ describe("retryPromptBootstrap isolation", () => {
 })
 
 describe("catalog query cancellation", () => {
+  for (const scope of [ServerScope.local, "https://runtime.dev.mgpt.mn" as ServerScope]) {
+    for (const kind of ["agents", "providers"] as const) {
+      test(`${kind} uses the bounded deadline for ${scope} without enabling query retries`, async () => {
+        const timers = spyOn(globalThis, "setTimeout")
+        const sdk = sdkFor({
+          directory: "/workspace",
+          response: () => jsonResponse(kind === "agents" ? [] : { all: [], connected: [], default: {} }),
+        })
+        const client = new QueryClient()
+        try {
+          const agents = loadAgentsQuery(scope, "/workspace", sdk)
+          const providers = loadProvidersQuery(scope, "/workspace", sdk)
+          expect(agents.retry).toBe(false)
+          expect(providers.retry).toBe(false)
+          if (kind === "agents") await client.fetchQuery(agents)
+          if (kind === "providers") await client.fetchQuery(providers)
+          const delays = timers.mock.calls.map((call) => call[1])
+          expect(delays).toContain(scope === ServerScope.local ? 30_000 : 120_000)
+          expect(delays).not.toContain(scope === ServerScope.local ? 120_000 : 30_000)
+        } finally {
+          client.clear()
+          timers.mockRestore()
+        }
+      })
+    }
+  }
+
   for (const kind of ["agents", "providers"] as const) {
     test(`${kind} forwards cancellation to the SDK instead of leaving an unbounded fetch`, async () => {
       let forwarded: AbortSignal | undefined

@@ -21,7 +21,7 @@ import { QueryClient, queryOptions } from "@tanstack/solid-query"
 import { isRuntimePath, loadMcpQuery } from "../server-sync"
 import { NormalizedProviderListResponse } from "@mongolgpt/session-ui/context"
 import { ScopedKey, type ServerScope } from "@/utils/server-scope"
-import { bootstrapRequest } from "./bootstrap-request"
+import { bootstrapRequest, bootstrapTimeoutMs } from "./bootstrap-request"
 
 type GlobalStore = {
   ready: boolean
@@ -161,6 +161,7 @@ export const loadProvidersQuery = (scope: ServerScope, directory: string | null,
       bootstrapRequest(
         (signal) => retry(() => sdk.provider.list(undefined, { signal }).then((x) => normalizeProviderList(x.data!))),
         signal,
+        bootstrapTimeoutMs(scope),
       ),
   })
 
@@ -172,6 +173,7 @@ export const loadAgentsQuery = (scope: ServerScope, directory: string | null, sd
       bootstrapRequest(
         (signal) => retry(() => sdk.app.agents(undefined, { signal }).then((x) => normalizeAgentList(x.data))),
         signal,
+        bootstrapTimeoutMs(scope),
       ),
   })
 
