@@ -76,12 +76,18 @@ if (corrupt) {
     await fs.readFile(path.join(directory, "synthetic/transcript.txt"), "utf8"),
     "file revision after checkpoint",
   )
+  const importStarted = performance.now()
+  console.log("checkpoint-startup: importing AppRuntime")
   const { AppRuntime } = await import("../../src/effect/app-runtime")
+  console.log("checkpoint-startup: AppRuntime imported", Math.round(performance.now() - importStarted))
   const { EventV2Bridge } = await import("../../src/event-v2-bridge")
+  console.log("checkpoint-startup: EventV2Bridge imported", Math.round(performance.now() - importStarted))
   const { Database } = await import("@mongolgpt/core/database/database")
+  console.log("checkpoint-startup: Database imported", Math.round(performance.now() - importStarted))
   const { PartTable } = await import("@mongolgpt/core/session/sql")
+  console.log("checkpoint-startup: session schema imported", Math.round(performance.now() - importStarted))
   const { Server } = await import("../../src/server/server")
-  console.log("checkpoint-startup: modules loaded")
+  console.log("checkpoint-startup: modules loaded", Math.round(performance.now() - importStarted))
   const bridge = await AppRuntime.runPromise(EventV2Bridge.Service)
   console.log("checkpoint-startup: bridge loaded")
   let returned = false

@@ -202,12 +202,16 @@ try {
     const errors: string[] = []
     child.stdout.on("data", (chunk) => output.push(chunk.toString()))
     child.stderr.on("data", (chunk) => errors.push(chunk.toString()))
-    const timeout = setTimeout(() => child.kill(), 50_000)
+    let timedOut = false
+    const timeout = setTimeout(() => {
+      timedOut = true
+      child.kill()
+    }, 50_000)
     const result: unknown[] = await once(child, "close").finally(() => clearTimeout(timeout))
     assert.equal(
       result[0],
       0,
-      `${mode}: ${calls.join(",")}\n${output.join("").slice(-1000)}\n${errors.join("").slice(-8000)}`,
+      `${JSON.stringify({ mode, timedOut, exitCode: result[0], signal: result[1] })}: ${calls.join(",")}\n${output.join("").slice(-1000)}\n${errors.join("").slice(-8000)}`,
     )
     assertions++
     equal(output.join("").includes(`CHECKPOINT_CHILD_${mode.toUpperCase()}_PASS`), true)
