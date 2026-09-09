@@ -127,6 +127,7 @@ const handler = createRuntimeHandler<RuntimeEnvironment>({
     console.error("MongolGPT runtime хүсэлт амжилтгүй боллоо", {
       code: failure.code,
       diagnostic: failure.diagnostic,
+      readiness: failure.readiness,
     })
   },
 })

@@ -1,5 +1,5 @@
 import { parseStartupDiagnostic, type StartupDiagnostic } from "@mongolgpt/runtime-auth/startup-diagnostic"
-import { runtimeReadinessCodes, type RuntimeReadiness } from "../src/runtime"
+import { parseRuntimeReadiness, type RuntimeReadiness } from "../src/runtime"
 
 const containerStatuses = ["running", "healthy", "stopping", "stopped", "stopped_with_code"] as const
 const processStatuses = ["starting", "running", "completed", "failed", "killed", "error"] as const
@@ -149,18 +149,7 @@ export function summarizeCanaryLogs(stdout: unknown, stderr: unknown) {
 }
 
 export function parseCanaryReadiness(input: unknown): RuntimeReadiness | null | undefined {
-  if (input === null) return null
-  try {
-    const value = record(input)
-    if (Object.keys(value).length !== 2 || !Object.hasOwn(value, "code") || !Object.hasOwn(value, "status")) return
-    const code = member(value.code, runtimeReadinessCodes)
-    const status = value.status === null ? null : integer(value.status, 599)
-    if (!code || status !== value.status || (status !== null && status < 100)) return
-    if (code === "ready" && status !== 200) return
-    return { code, status }
-  } catch {
-    return undefined
-  }
+  return input === null ? null : parseRuntimeReadiness(input)
 }
 
 export function parseCanaryStartupFailure(input: unknown): CanaryDiagnostics["startupFailure"] | undefined {

@@ -131,6 +131,10 @@ async function run() {
       adminToken: secrets.CANARY_ADMIN_TOKEN,
       authSecret: secrets.MONGOLGPT_RUNTIME_AUTH_SECRET,
       version: context.version,
+      onPhase: async (phase) => {
+        report.probePhase = phase
+        await saveReport()
+      },
     })
   } catch (error) {
     report.error = safeError(error)

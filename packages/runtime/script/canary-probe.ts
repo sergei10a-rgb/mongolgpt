@@ -1,6 +1,19 @@
 import { issueRuntimeCapability } from "@mongolgpt/runtime-auth"
 import { validControlToken } from "@mongolgpt/runtime-auth/control"
-import { sanitizeRuntimeDiagnostic } from "../src/runtime"
+import { parseRuntimeReadiness, sanitizeRuntimeDiagnostic } from "../src/runtime"
+
+export type CanaryProbePhase =
+  | "authorization"
+  | "initial_startup"
+  | "session_create"
+  | "initial_pty"
+  | "initial_readback"
+  | "initial_shutdown"
+  | "replacement_readback"
+  | "replacement_pty"
+  | "replacement_receipts"
+  | "replacement_shutdown"
+  | "complete"
 
 const scope = { accountID: "account_cloudflare_canary", workspaceID: "wrk_cloudflare_canary" }
 const appOrigin = "https://canary.invalid"
@@ -26,6 +39,7 @@ export async function runCanaryProbe(input: {
   request?: (url: string, init?: RequestInit) => Promise<Response>
   pause?: (ms: number) => Promise<void>
   signal?: AbortSignal
+  onPhase?: (phase: CanaryProbePhase) => void | Promise<void>
 }) {
   check(
     /^https:\/\/mgpt-canary-[0-9]{1,12}-[0-9]{1,3}\.[a-z0-9-]+\.workers\.dev$/.test(input.origin),
@@ -36,6 +50,7 @@ export async function runCanaryProbe(input: {
   const deadline = input.signal ?? AbortSignal.timeout(600_000)
   check(!deadline.aborted, "Canary probe deadline exceeded")
   const pause = input.pause ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)))
+  await input.onPhase?.("authorization")
   await anonymousGate()
   const unauthorized = await request(`${input.origin}/api/session`, {
     headers: { "x-mongolgpt-canary-token": input.adminToken, origin: appOrigin },
@@ -48,13 +63,16 @@ export async function runCanaryProbe(input: {
   check(health.healthy && health.version === input.version && health.stage === "dev", "Canary build identity mismatch")
 
   // A read starts the native runtime without retrying a possibly committed POST.
+  await input.onPhase?.("initial_startup")
   const sessions = await ready()
   check(Array.isArray(sessions.data), "Native runtime did not return a session list")
+  await input.onPhase?.("session_create")
   const created = await json<{ data: { id: string } }>("/api/session", true, {
     id: sessionID,
     location: { directory: "/workspace" },
   })
   check(created.data?.id === sessionID, "Native session was not created")
+  await input.onPhase?.("initial_pty")
   await pty(
     `set -eu
 test "$(id -u)" = 10001
@@ -72,13 +90,17 @@ mkdir -p /workspace/audit-proof
 printf '%s' '${proof}' > /workspace/audit-proof/proof.txt
 cat /proc/sys/kernel/random/boot_id > /workspace/audit-proof/boot-id.txt`,
   )
+  await input.onPhase?.("initial_readback")
   await restored()
   const first = await state()
   check(first.bootCount >= 1 && !!first.checkpointID && !!first.revisionID, "Initial durable receipt is missing")
+  await input.onPhase?.("initial_shutdown")
   const stopped = await stop(first)
 
   // Cloudflare must replace ephemeral disk, then restore from actual D1/R2.
+  await input.onPhase?.("replacement_readback")
   await restored()
+  await input.onPhase?.("replacement_pty")
   await pty(
     `set -eu
 test "$(id -u)" = 10001
@@ -86,6 +108,7 @@ test ! -e /tmp/mgpt-canary-ephemeral
 test "$(cat /proc/sys/kernel/random/boot_id)" != "$(cat /workspace/audit-proof/boot-id.txt)"
 grep -q mongolgpt-init /proc/1/cmdline`,
   )
+  await input.onPhase?.("replacement_receipts")
   const second = await state()
   // The pinned SDK calls onStart for warm port checks too. Physical replacement
   // is proved above by the kernel boot ID and below by exactly one new epoch.
@@ -93,7 +116,9 @@ grep -q mongolgpt-init /proc/1/cmdline`,
   check(second.epoch === first.epoch + 1, "Replacement did not acquire the next writer epoch")
   check(second.checkpointID === first.checkpointID, "Replacement discarded the original baseline")
   check((second.revisionSequence ?? 0) >= (stopped.revisionSequence ?? 0), "Replacement lost the shutdown revision")
+  await input.onPhase?.("replacement_shutdown")
   const final = await stop(second)
+  await input.onPhase?.("complete")
   return {
     ok: true,
     version: input.version,
@@ -281,7 +306,7 @@ grep -q mongolgpt-init /proc/1/cmdline`,
 
 function canaryFailureDiagnostic(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return ""
-  const body = value as { code?: unknown; diagnostic?: { code?: unknown } }
+  const body = value as { code?: unknown; diagnostic?: { code?: unknown }; readiness?: unknown }
   const codes = [
     "runtime_process_lookup_failed",
     "runtime_process_start_failed",
@@ -295,7 +320,8 @@ function canaryFailureDiagnostic(value: unknown) {
   const code = typeof body.code === "string" && codes.includes(body.code) ? body.code : undefined
   // Reuse the production allowlist; never print messages, stack traces, or raw bodies.
   const diagnostic = sanitizeRuntimeDiagnostic({ code: body.diagnostic?.code, context: body.diagnostic })
-  return code || diagnostic ? ` ${JSON.stringify({ code, diagnostic })}` : ""
+  const readiness = parseRuntimeReadiness(body.readiness)
+  return code || diagnostic || readiness ? ` ${JSON.stringify({ code, diagnostic, readiness })}` : ""
 }
 
 export async function readCanaryJson<T = unknown>(response: Response, signal?: AbortSignal): Promise<T> {

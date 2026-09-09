@@ -597,6 +597,34 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(runtime.requests).toHaveLength(2)
   })
 
+  test("records the failed readiness probe in dev without reprobing or exposing private response data", async () => {
+    for (const existing of [false, true]) {
+      for (const stage of ["dev", "production"]) {
+        const runtime = sandbox({ existing: existing ? process().value : null })
+        const failures: RuntimeFailure[] = []
+        runtime.value.containerFetch = async (request) => {
+          runtime.requests.push(request)
+          return new Response("private-response-with-token", { status: 503 })
+        }
+        const handler = createRuntimeHandler<Environment>({
+          sandbox: () => runtime.value,
+          report: (failure) => failures.push(failure),
+        })
+        const response = await handler(
+          hostedRequest("/api/session/ses_test", { headers: { authorization: `Bearer ${await capability()}` } }),
+          { ...environment(), MONGOLGPT_CLOUD_HISTORY: "true", STAGE: stage },
+        )
+        expect(response.status).toBe(502)
+        const body = (await response.json()) as Record<string, unknown>
+        expect(body.readiness).toEqual(stage === "dev" ? { code: "http_status", status: 503 } : undefined)
+        expect(failures[0]?.readiness).toEqual({ code: "http_status", status: 503 })
+        expect(JSON.stringify(body)).not.toContain("private-response")
+        expect(JSON.stringify(failures)).not.toContain("private-response")
+        expect(runtime.requests).toHaveLength(1)
+      }
+    }
+  })
+
   test.each([false, true])(
     "waits for a frozen publisher before admission (existing=%s)",
     async (existing) => {

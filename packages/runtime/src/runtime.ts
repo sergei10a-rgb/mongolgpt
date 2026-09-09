@@ -217,6 +217,7 @@ export class RuntimeFailure extends Error {
   private constructor(
     readonly code: RuntimeFailureCode,
     readonly diagnostic?: RuntimeDiagnostic,
+    readonly readiness?: RuntimeReadiness,
   ) {
     super(runtimeFailureMessages[code])
     this.name = "RuntimeFailure"
@@ -224,6 +225,10 @@ export class RuntimeFailure extends Error {
 
   static create(code: RuntimeFailureCode, error?: unknown) {
     return new RuntimeFailure(code, sanitizeRuntimeDiagnostic(error))
+  }
+
+  static notReady(input: RuntimeReadiness) {
+    return new RuntimeFailure("runtime_unavailable", undefined, parseRuntimeReadiness(input))
   }
 
   messageFor(stage: string) {
@@ -385,6 +390,7 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
         code: failure.code,
         message: failure.messageFor(env.STAGE),
         ...(env.STAGE.trim() === "dev" && failure.diagnostic ? { diagnostic: failure.diagnostic } : {}),
+        ...(env.STAGE.trim() === "dev" && failure.readiness ? { readiness: failure.readiness } : {}),
       }
       return cors(json(body, 502), appOrigin)
     }
@@ -605,11 +611,10 @@ async function ensureServer(
     throw RuntimeFailure.create("runtime_process_lookup_failed", error)
   })
   if (existing && (await waitForServer(existing, sandbox, password))) {
-    if (
-      restore &&
-      (await runtimeReadiness(sandbox, password, true, Math.max(1, deadline - Date.now()))).code !== "ready"
-    )
-      throw RuntimeFailure.create("runtime_unavailable")
+    if (restore) {
+      const readiness = await runtimeReadiness(sandbox, password, true, Math.max(1, deadline - Date.now()))
+      if (readiness.code !== "ready") throw RuntimeFailure.notReady(readiness)
+    }
     return
   }
 
@@ -652,8 +657,10 @@ async function ensureServer(
     })
 
   if (!(await waitForServer(started, sandbox, password))) throw RuntimeFailure.create("runtime_process_exited")
-  if (restore && (await runtimeReadiness(sandbox, password, true, Math.max(1, deadline - Date.now()))).code !== "ready")
-    throw RuntimeFailure.create("runtime_unavailable")
+  if (restore) {
+    const readiness = await runtimeReadiness(sandbox, password, true, Math.max(1, deadline - Date.now()))
+    if (readiness.code !== "ready") throw RuntimeFailure.notReady(readiness)
+  }
 }
 
 async function waitForServer(process: RuntimeProcess, sandbox: RuntimeSandbox, password: string) {
@@ -692,6 +699,25 @@ export const runtimeReadinessCodes = [
 ] as const
 
 export type RuntimeReadiness = { code: (typeof runtimeReadinessCodes)[number]; status: number | null }
+
+export function parseRuntimeReadiness(input: unknown): RuntimeReadiness | undefined {
+  try {
+    const value = readRecord(input)
+    if (!value || Object.keys(value).length !== 2 || !Object.hasOwn(value, "code") || !Object.hasOwn(value, "status"))
+      return
+    const code = runtimeReadinessCodes.find((code) => code === value.code)
+    const status = value.status
+    if (
+      !code ||
+      (status !== null && (typeof status !== "number" || !Number.isInteger(status) || status < 100 || status > 599))
+    )
+      return
+    if (code === "ready" && status !== 200) return
+    return { code, status }
+  } catch {
+    return undefined
+  }
+}
 
 // Both admission and the isolated canary use this bounded probe. Never retain the body or credentials.
 export async function runtimeReadiness(

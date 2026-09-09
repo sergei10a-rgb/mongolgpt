@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
-import { readCanaryJson, runCanaryProbe } from "../script/canary-probe"
+import { readCanaryJson, runCanaryProbe, type CanaryProbePhase } from "../script/canary-probe"
 
 const origin = "https://mgpt-canary-12345-1.test-account.workers.dev"
 const adminToken = "a".repeat(64)
@@ -132,7 +132,30 @@ function fixture(
 
 test("canary exercises real runtime paths with capabilities and checks shutdown and replacement receipts", async () => {
   const runtime = fixture()
-  const result = await runCanaryProbe({ origin, adminToken, authSecret, version, request: runtime.request })
+  const phases: CanaryProbePhase[] = []
+  const result = await runCanaryProbe({
+    origin,
+    adminToken,
+    authSecret,
+    version,
+    request: runtime.request,
+    onPhase: (phase) => {
+      phases.push(phase)
+    },
+  })
+  expect(phases).toEqual([
+    "authorization",
+    "initial_startup",
+    "session_create",
+    "initial_pty",
+    "initial_readback",
+    "initial_shutdown",
+    "replacement_readback",
+    "replacement_pty",
+    "replacement_receipts",
+    "replacement_shutdown",
+    "complete",
+  ])
   expect(result).toEqual({
     ok: true,
     version,
@@ -169,6 +192,76 @@ test("warm SDK start callbacks do not count as extra virtual machine boots", asy
   await expect(
     runCanaryProbe({ origin, adminToken, authSecret, version, request: staleEpoch.request }),
   ).rejects.toThrow("Replacement did not acquire the next writer epoch")
+})
+
+test.each(["initial_readback", "replacement_readback"] as const)(
+  "retains the exact %s failure phase and safe readiness",
+  async (failedPhase) => {
+    const runtime = fixture()
+    const phases: CanaryProbePhase[] = []
+    const error = await runCanaryProbe({
+      origin,
+      adminToken,
+      authSecret,
+      version,
+      onPhase: (phase) => {
+        phases.push(phase)
+      },
+      request: (url, init) => {
+        if (phases.at(-1) === failedPhase && url.includes(`/api/session/ses_cloudflare_canary_restore`)) {
+          return Promise.resolve(
+            Response.json(
+              {
+                code: "runtime_unavailable",
+                readiness: { code: "timeout", status: null },
+                message: adminToken,
+                responseBody: authSecret,
+              },
+              { status: 502 },
+            ),
+          )
+        }
+        return runtime.request(url, init)
+      },
+    }).catch((error: unknown) => error)
+    expect(error).toBeInstanceOf(Error)
+    expect(String(error)).toContain('"readiness":{"code":"timeout","status":null}')
+    expect(String(error)).not.toContain(adminToken)
+    expect(String(error)).not.toContain(authSecret)
+    expect(phases.at(-1)).toBe(failedPhase)
+    expect(runtime.calls.filter((call) => call.path === "/__canary/stop")).toHaveLength(
+      failedPhase === "initial_readback" ? 0 : 1,
+    )
+  },
+)
+
+test("canary suppresses malformed or private readiness metadata", async () => {
+  for (const readiness of [
+    { code: adminToken, status: 503 },
+    { code: "timeout", status: null, message: authSecret },
+    { code: "timeout", status: authSecret },
+    { code: "ready", status: 503 },
+  ]) {
+    const runtime = fixture()
+    let phase: CanaryProbePhase | undefined
+    const error = await runCanaryProbe({
+      origin,
+      adminToken,
+      authSecret,
+      version,
+      onPhase: (value) => {
+        phase = value
+      },
+      request: (url, init) =>
+        phase === "session_create"
+          ? Promise.resolve(Response.json({ code: "runtime_unavailable", readiness }, { status: 502 }))
+          : runtime.request(url, init),
+    }).catch((error: unknown) => error)
+    expect(error).toBeInstanceOf(Error)
+    expect(String(error)).not.toContain("readiness")
+    expect(String(error)).not.toContain(adminToken)
+    expect(String(error)).not.toContain(authSecret)
+  }
 })
 
 test("initial read waits for provisioning but never retries a POST or authentication failure", async () => {
