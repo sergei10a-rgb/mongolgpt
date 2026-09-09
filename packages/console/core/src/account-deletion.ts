@@ -1,5 +1,6 @@
 import { z } from "zod"
-import { and, asc, eq, inArray, isNotNull, isNull, lt, lte, ne, sql } from "./drizzle"
+import { and, asc, eq, exists, inArray, isNotNull, isNull, lt, lte, ne, notExists, sql } from "./drizzle"
+import { alias } from "drizzle-orm/sqlite-core"
 import { Account } from "./account"
 import { Database } from "./drizzle"
 import { Identifier } from "./identifier"
@@ -41,27 +42,104 @@ export async function requestAccountDeletion(
   input: z.input<typeof Request>,
   dependencies: {
     now?: () => number
-    transaction?: Transaction
+    batch?: typeof Database.batch
   } = {},
 ) {
   const value = Request.parse(input)
   const now = timestamp(dependencies.now?.() ?? Date.now())
   const eligibleAt = now + (value.graceMs ?? ACCOUNT_DELETION_GRACE_MS)
-  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
-  return transaction((db) => requestWithDb(db, value.accountID, now, eligibleAt))
+  const batch = dependencies.batch ?? Database.batch
+  // D1 cannot hold an interactive transaction across awaits. Read policy, write,
+  // and return the resulting state in one serialized batch instead.
+  const [accounts, blocked, changed, current] = await batch((db) => {
+    const account = and(eq(AccountTable.id, value.accountID), isNull(AccountTable.timeDeleted))
+    const workspace = blockingWorkspace(db, value.accountID)
+    return [
+      db.select({ id: AccountTable.id }).from(AccountTable).where(account),
+      workspace,
+      db
+        .insert(AccountDeletionTable)
+        .select(
+          db
+            .select({
+              id: sql<string>`${Identifier.create("accountDeletion")}`.as("id"),
+              account_id: AccountTable.id,
+              status: sql<"requested">`'requested'`.as("status"),
+              attempts: sql<number>`0`.as("attempts"),
+              last_error_code: sql<null>`null`.as("last_error_code"),
+              time_eligible: sql<Date>`${eligibleAt}`.as("time_eligible"),
+              time_started: sql<null>`null`.as("time_started"),
+              time_completed: sql<null>`null`.as("time_completed"),
+              time_cancelled: sql<null>`null`.as("time_cancelled"),
+              timeCreated: sql<Date>`${now}`.as("time_created"),
+              timeUpdated: sql<Date>`${now}`.as("time_updated"),
+              timeDeleted: sql<null>`null`.as("time_deleted"),
+            })
+            .from(AccountTable)
+            .where(and(account, notExists(workspace))),
+        )
+        .onConflictDoUpdate({
+          target: AccountDeletionTable.account_id,
+          set: {
+            status: "requested",
+            attempts: 0,
+            last_error_code: null,
+            time_eligible: new Date(eligibleAt),
+            time_started: null,
+            time_completed: null,
+            time_cancelled: null,
+            timeUpdated: new Date(now),
+          },
+          setWhere: and(
+            inArray(AccountDeletionTable.status, ["failed", "cancelled"]),
+            isNull(AccountDeletionTable.timeDeleted),
+          ),
+        })
+        .returning(),
+      findQuery(db, value.accountID),
+    ] as const
+  })
+  if (!accounts[0]) throw new AccountDeletionError("not_found")
+  if (blocked[0]) throw new AccountDeletionError("workspace_admin_required")
+  const row = changed[0] ?? current[0]
+  if (!row) throw new AccountDeletionError("not_found")
+  return state(row, Boolean(changed[0]))
 }
 
 export async function cancelAccountDeletion(
   input: z.input<typeof AccountInput>,
   dependencies: {
     now?: () => number
-    transaction?: Transaction
+    batch?: typeof Database.batch
   } = {},
 ) {
   const value = AccountInput.parse(input)
   const now = timestamp(dependencies.now?.() ?? Date.now())
-  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
-  return transaction((db) => cancelWithDb(db, value.accountID, now))
+  const batch = dependencies.batch ?? Database.batch
+  const [changed, current] = await batch((db) => [
+    db
+      .update(AccountDeletionTable)
+      .set({
+        status: "cancelled",
+        last_error_code: null,
+        time_started: null,
+        time_cancelled: new Date(now),
+        timeUpdated: new Date(now),
+      })
+      .where(
+        and(
+          eq(AccountDeletionTable.account_id, value.accountID),
+          inArray(AccountDeletionTable.status, ["requested", "failed"]),
+          isNull(AccountDeletionTable.timeDeleted),
+        ),
+      )
+      .returning(),
+    findQuery(db, value.accountID),
+  ])
+  const row = changed[0] ?? current[0]
+  if (!row) throw new AccountDeletionError("not_found")
+  if (row.status === "processing" || row.status === "completed") throw new AccountDeletionError("too_late")
+  return state(row, Boolean(changed[0]))
 }
 
 export async function getAccountDeletion(
@@ -243,116 +321,35 @@ export async function purgeCompletedAccountDeletions(
   return { purged, skipped, truncated: candidates.length === limit }
 }
 
-async function requestWithDb(db: Database.TxOrDb, accountID: string, now: number, eligibleAt: number) {
-  const account = await db
-    .select({ id: AccountTable.id })
-    .from(AccountTable)
-    .where(and(eq(AccountTable.id, accountID), isNull(AccountTable.timeDeleted)))
-    .limit(1)
-    .then((rows) => rows[0])
-  if (!account) throw new AccountDeletionError("not_found")
-  await assertSharedWorkspacesKeepAdministrator(db, accountID)
-
-  const existing = await find(db, accountID)
-  if (existing) {
-    if (existing.status === "processing" || existing.status === "completed") {
-      return state(existing, false)
-    }
-    if (existing.status === "requested") return state(existing, false)
-
-    const reopened = await db
-      .update(AccountDeletionTable)
-      .set({
-        status: "requested",
-        attempts: 0,
-        last_error_code: null,
-        time_eligible: new Date(eligibleAt),
-        time_started: null,
-        time_completed: null,
-        time_cancelled: null,
-        timeDeleted: null,
-        timeUpdated: new Date(now),
-      })
-      .where(
-        and(eq(AccountDeletionTable.id, existing.id), inArray(AccountDeletionTable.status, ["failed", "cancelled"])),
-      )
-      .returning()
-      .then((rows) => rows[0])
-    if (reopened) return state(reopened, true)
-    const current = await find(db, accountID)
-    if (!current) throw new AccountDeletionError("not_found")
-    return state(current, false)
-  }
-
-  const inserted = await db
-    .insert(AccountDeletionTable)
-    .values({
-      id: Identifier.create("accountDeletion"),
-      account_id: accountID,
-      status: "requested",
-      attempts: 0,
-      time_eligible: new Date(eligibleAt),
-      timeCreated: new Date(now),
-      timeUpdated: new Date(now),
-    })
-    .onConflictDoNothing({ target: AccountDeletionTable.account_id })
-    .returning()
-    .then((rows) => rows[0])
-  if (inserted) return state(inserted, true)
-  const current = await find(db, accountID)
-  if (!current) throw new AccountDeletionError("not_found")
-  return state(current, false)
+async function assertSharedWorkspacesKeepAdministrator(db: Database.TxOrDb, accountID: string) {
+  if ((await blockingWorkspace(db, accountID))[0]) throw new AccountDeletionError("workspace_admin_required")
 }
 
-async function assertSharedWorkspacesKeepAdministrator(db: Database.TxOrDb, accountID: string) {
-  const administered = await db
+function blockingWorkspace(db: Database.TxOrDb, accountID: string) {
+  const other = alias(UserTable, "other_member")
+  const otherMember = and(
+    eq(other.workspaceID, UserTable.workspaceID),
+    ne(other.accountID, accountID),
+    isNull(other.timeDeleted),
+  )
+  return db
     .select({ workspaceID: UserTable.workspaceID })
     .from(UserTable)
-    .where(and(eq(UserTable.accountID, accountID), eq(UserTable.role, "admin"), isNull(UserTable.timeDeleted)))
-  for (const membership of administered) {
-    const others = await db
-      .select({ role: UserTable.role })
-      .from(UserTable)
-      .where(
-        and(
-          eq(UserTable.workspaceID, membership.workspaceID),
-          ne(UserTable.accountID, accountID),
-          isNull(UserTable.timeDeleted),
+    .where(
+      and(
+        eq(UserTable.accountID, accountID),
+        eq(UserTable.role, "admin"),
+        isNull(UserTable.timeDeleted),
+        exists(db.select({ id: other.id }).from(other).where(otherMember)),
+        notExists(
+          db
+            .select({ id: other.id })
+            .from(other)
+            .where(and(otherMember, eq(other.role, "admin"))),
         ),
-      )
-    if (others.length > 0 && !others.some((user) => user.role === "admin")) {
-      throw new AccountDeletionError("workspace_admin_required")
-    }
-  }
-}
-
-async function cancelWithDb(db: Database.TxOrDb, accountID: string, now: number) {
-  const existing = await find(db, accountID)
-  if (!existing) throw new AccountDeletionError("not_found")
-  if (existing.status === "cancelled") return state(existing, false)
-  if (existing.status === "processing" || existing.status === "completed") {
-    throw new AccountDeletionError("too_late")
-  }
-
-  const cancelled = await db
-    .update(AccountDeletionTable)
-    .set({
-      status: "cancelled",
-      last_error_code: null,
-      time_started: null,
-      time_cancelled: new Date(now),
-      timeUpdated: new Date(now),
-    })
-    .where(and(eq(AccountDeletionTable.id, existing.id), inArray(AccountDeletionTable.status, ["requested", "failed"])))
-    .returning()
-    .then((rows) => rows[0])
-  if (cancelled) return state(cancelled, true)
-  const current = await find(db, accountID)
-  if (!current) throw new AccountDeletionError("not_found")
-  if (current.status === "processing" || current.status === "completed") {
-    throw new AccountDeletionError("too_late")
-  }
-  return state(current, false)
+      ),
+    )
+    .limit(1)
 }
 
 async function markFailure(db: Database.TxOrDb, id: string, now: number) {
@@ -393,12 +390,15 @@ async function markFailure(db: Database.TxOrDb, id: string, now: number) {
 }
 
 function find(db: Database.TxOrDb, accountID: string) {
+  return findQuery(db, accountID).then((rows) => rows[0])
+}
+
+function findQuery(db: Database.TxOrDb, accountID: string) {
   return db
     .select()
     .from(AccountDeletionTable)
     .where(and(eq(AccountDeletionTable.account_id, accountID), isNull(AccountDeletionTable.timeDeleted)))
     .limit(1)
-    .then((rows) => rows[0])
 }
 
 function state(row: typeof AccountDeletionTable.$inferSelect, changed: boolean) {

@@ -36,7 +36,36 @@ async function setup() {
   // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- test adapter implements the D1 subset
   const db = drizzleDb as unknown as Database.TxOrDb
   const use = <T>(callback: (value: Database.TxOrDb) => Promise<T>) => callback(db)
-  const transaction = <T>(callback: (value: Database.TxOrDb) => Promise<T>) => callback(db)
+  let tail = Promise.resolve()
+  // This SQLite fixture models rollback; the separate workerd suite verifies real D1 compatibility.
+  const transaction = async <T>(callback: (value: Database.TxOrDb) => Promise<T>) => {
+    const previous = tail
+    let release!: () => void
+    tail = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    await previous
+    sqlite.exec("BEGIN IMMEDIATE")
+    try {
+      const result = await callback(db)
+      sqlite.exec("COMMIT")
+      return result
+    } catch (error) {
+      sqlite.exec("ROLLBACK")
+      throw error
+    } finally {
+      release()
+    }
+  }
+  const batch = ((callback: (value: Database.TxOrDb) => readonly PromiseLike<unknown>[]) =>
+    transaction(async (db) => {
+      const results = []
+      for (const query of callback(db)) {
+        if (!("_prepare" in query)) throw new Error("Expected a deferred Drizzle query")
+        results.push(await query)
+      }
+      return results
+    })) as typeof Database.batch
 
   sqlite.query("insert into account (id) values (?)").run(accountID)
   sqlite
@@ -106,13 +135,13 @@ async function setup() {
       "external_account_deletion",
       now,
     )
-  return { sqlite, db, use, transaction }
+  return { sqlite, db, use, transaction, batch }
 }
 
 describe("account deletion lifecycle", () => {
   test("schedules idempotently, supports cancellation, and reopens a cancelled request", async () => {
-    const { use, transaction } = await setup()
-    const first = await requestAccountDeletion({ accountID, graceMs: 60_000 }, { now: () => now, transaction })
+    const { use, batch } = await setup()
+    const first = await requestAccountDeletion({ accountID, graceMs: 60_000 }, { now: () => now, batch })
     expect(first).toMatchObject({
       accountID,
       status: "requested",
@@ -120,10 +149,7 @@ describe("account deletion lifecycle", () => {
       changed: true,
     })
 
-    const replay = await requestAccountDeletion(
-      { accountID, graceMs: 120_000 },
-      { now: () => now + 1_000, transaction },
-    )
+    const replay = await requestAccountDeletion({ accountID, graceMs: 120_000 }, { now: () => now + 1_000, batch })
     expect(replay).toMatchObject({
       id: first.id,
       status: "requested",
@@ -131,21 +157,18 @@ describe("account deletion lifecycle", () => {
       changed: false,
     })
 
-    const cancelled = await cancelAccountDeletion({ accountID }, { now: () => now + 2_000, transaction })
+    const cancelled = await cancelAccountDeletion({ accountID }, { now: () => now + 2_000, batch })
     expect(cancelled).toMatchObject({
       status: "cancelled",
       cancelledAt: now + 2_000,
       changed: true,
     })
-    expect(await cancelAccountDeletion({ accountID }, { now: () => now + 3_000, transaction })).toMatchObject({
+    expect(await cancelAccountDeletion({ accountID }, { now: () => now + 3_000, batch })).toMatchObject({
       status: "cancelled",
       changed: false,
     })
 
-    const reopened = await requestAccountDeletion(
-      { accountID, graceMs: 30_000 },
-      { now: () => now + 4_000, transaction },
-    )
+    const reopened = await requestAccountDeletion({ accountID, graceMs: 30_000 }, { now: () => now + 4_000, batch })
     expect(reopened).toMatchObject({
       id: first.id,
       status: "requested",
@@ -157,7 +180,7 @@ describe("account deletion lifecycle", () => {
   })
 
   test("requires another administrator before leaving a shared workspace", async () => {
-    const { sqlite, transaction } = await setup()
+    const { sqlite, batch } = await setup()
     const otherAccountID = "acc_account_deletion_other"
     const otherUserID = "usr_account_deletion_other"
     sqlite.query("insert into account (id) values (?)").run(otherAccountID)
@@ -165,15 +188,13 @@ describe("account deletion lifecycle", () => {
       .query("insert into user (id, workspace_id, account_id, email, name, role) values (?, ?, ?, ?, ?, ?)")
       .run(otherUserID, workspaceID, otherAccountID, "member@mgpt.mn", "Member", "member")
 
-    const rejected = await requestAccountDeletion({ accountID }, { now: () => now, transaction }).catch(
-      (error) => error,
-    )
+    const rejected = await requestAccountDeletion({ accountID }, { now: () => now, batch }).catch((error) => error)
     expect(rejected).toMatchObject({
       code: "workspace_admin_required",
     } satisfies Partial<AccountDeletionError>)
 
     sqlite.query("update user set role = 'admin' where id = ?").run(otherUserID)
-    expect(await requestAccountDeletion({ accountID }, { now: () => now, transaction })).toMatchObject({
+    expect(await requestAccountDeletion({ accountID }, { now: () => now, batch })).toMatchObject({
       accountID,
       status: "requested",
       changed: true,
@@ -181,14 +202,14 @@ describe("account deletion lifecycle", () => {
   })
 
   test("rechecks shared workspace administrators when cleanup starts", async () => {
-    const { sqlite, use, transaction } = await setup()
+    const { sqlite, use, transaction, batch } = await setup()
     const otherAccountID = "acc_account_deletion_race"
     const otherUserID = "usr_account_deletion_race"
     sqlite.query("insert into account (id) values (?)").run(otherAccountID)
     sqlite
       .query("insert into user (id, workspace_id, account_id, email, name, role) values (?, ?, ?, ?, ?, ?)")
       .run(otherUserID, workspaceID, otherAccountID, "admin@mgpt.mn", "Other admin", "admin")
-    await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, transaction })
+    await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, batch })
 
     sqlite.query("update user set role = 'member' where id = ?").run(otherUserID)
     expect(await processEligibleAccountDeletions({ now }, { use, transaction })).toEqual({
@@ -217,8 +238,8 @@ describe("account deletion lifecycle", () => {
   })
 
   test("revokes access, scrubs sole-workspace secrets, and pseudonymizes retained payment records", async () => {
-    const { sqlite, use, transaction } = await setup()
-    await requestAccountDeletion({ accountID, graceMs: 1_000 }, { now: () => now, transaction })
+    const { sqlite, use, transaction, batch } = await setup()
+    await requestAccountDeletion({ accountID, graceMs: 1_000 }, { now: () => now, batch })
 
     expect(await processEligibleAccountDeletions({ now: now + 999 }, { use, transaction })).toEqual({
       processed: 0,
@@ -254,7 +275,9 @@ describe("account deletion lifecycle", () => {
     expect(sqlite.query("select count(*) as count from key_rate_limit where key = ?").get("mgpt_delete_me")).toEqual({
       count: 0,
     })
-    expect(sqlite.query("select user_id, key_id, session_id from usage where id = ?").get("usg_account_deletion")).toEqual({
+    expect(
+      sqlite.query("select user_id, key_id, session_id from usage where id = ?").get("usg_account_deletion"),
+    ).toEqual({
       user_id: null,
       key_id: null,
       session_id: null,
@@ -329,7 +352,7 @@ describe("account deletion lifecycle", () => {
       skipped: 0,
       truncated: false,
     })
-    const rejected = await cancelAccountDeletion({ accountID }, { now: () => now + 2_000, transaction }).catch(
+    const rejected = await cancelAccountDeletion({ accountID }, { now: () => now + 2_000, batch }).catch(
       (error) => error,
     )
     expect(rejected).toMatchObject({
@@ -338,7 +361,7 @@ describe("account deletion lifecycle", () => {
   })
 
   test("keeps shared workspace credentials while removing only the departing account", async () => {
-    const { sqlite, use, transaction } = await setup()
+    const { sqlite, use, transaction, batch } = await setup()
     const otherAccountID = "acc_account_deletion_shared"
     const otherUserID = "usr_account_deletion_shared"
     sqlite.query("insert into account (id) values (?)").run(otherAccountID)
@@ -346,7 +369,7 @@ describe("account deletion lifecycle", () => {
       .query("insert into user (id, workspace_id, account_id, email, name, role) values (?, ?, ?, ?, ?, ?)")
       .run(otherUserID, workspaceID, otherAccountID, "shared@mgpt.mn", "Shared admin", "admin")
 
-    await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, transaction })
+    await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, batch })
     expect(await processEligibleAccountDeletions({ now }, { use, transaction })).toEqual({
       processed: 1,
       failed: 0,
@@ -385,8 +408,8 @@ describe("account deletion lifecycle", () => {
   })
 
   test("detaches completed deletion records and removes tombstone accounts after 30 days", async () => {
-    const { sqlite, use, transaction } = await setup()
-    await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, transaction })
+    const { sqlite, use, transaction, batch } = await setup()
+    await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, batch })
     await processEligibleAccountDeletions({ now }, { use, transaction })
 
     expect(
@@ -409,8 +432,8 @@ describe("account deletion lifecycle", () => {
   })
 
   test("records only a bounded error code and retries without exposing failure details", async () => {
-    const { sqlite, use, transaction } = await setup()
-    await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, transaction })
+    const { sqlite, use, transaction, batch } = await setup()
+    await requestAccountDeletion({ accountID, graceMs: 0 }, { now: () => now, batch })
 
     const failed = await processEligibleAccountDeletions(
       { now },

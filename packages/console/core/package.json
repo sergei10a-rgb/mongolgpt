@@ -47,6 +47,7 @@
     "@types/node": "catalog:",
     "drizzle-kit": "catalog:",
     "typescript": "catalog:",
+    "wrangler": "4.112.0",
     "@typescript/native-preview": "catalog:"
   }
 }
