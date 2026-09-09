@@ -62,6 +62,7 @@
     "@mongolgpt/account-contract": "workspace:*",
     "@mongolgpt/core": "workspace:*",
     "@mongolgpt/local-bridge": "workspace:*",
+    "@mongolgpt/runtime-auth": "workspace:*",
     "@mongolgpt/sdk": "workspace:*",
     "@mongolgpt/session-ui": "workspace:*",
     "@mongolgpt/ui": "workspace:*",

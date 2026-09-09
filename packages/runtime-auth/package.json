@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./control": "./src/control.ts",
+    "./read-retry": "./src/read-retry.ts",
     "./startup-diagnostic": "./src/startup-diagnostic.ts"
   },
   "scripts": {

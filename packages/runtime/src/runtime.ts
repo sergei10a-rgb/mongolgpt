@@ -1,5 +1,10 @@
 import { issueRuntimeCapability, runtimeGatewayHeader, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
 import { checkpointControlEnv, deriveCheckpointControlToken } from "@mongolgpt/runtime-auth/control"
+import {
+  isRuntimeReadRetryScope,
+  runtimeReadRetryHeader,
+  runtimeReadRetryScope,
+} from "@mongolgpt/runtime-auth/read-retry"
 
 const PORT = 4096
 export const RUNTIME_PROCESS_ID = "mongolgpt-server"
@@ -338,6 +343,20 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
     }
 
     try {
+      const retryScope = request.headers.get(runtimeReadRetryHeader)
+      if (
+        retryScope !== null &&
+        (!isRuntimeReadRetryScope(retryScope) ||
+          (request.method !== "GET" && request.method !== "HEAD") ||
+          retryScope !==
+            (await runtimeReadRetryScope({
+              accountID: authentication.account.id,
+              workspaceID: authentication.workspace.id,
+              authVersion: authentication.authVersion,
+            })))
+      ) {
+        return cors(json({ error: "Нэвтрэх сешн өөрчлөгдсөн байна. Хуудсаа дахин ачаална уу." }, 409), appOrigin)
+      }
       const body = await boundedRequestBody(request)
       const identity = await deriveRuntimeIdentity(
         authentication.account.id,
@@ -357,7 +376,21 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
         : undefined
       await ensureServer(sandbox, identity.password, consoleOrigin, restore, checkpointToken)
       if (authentication.expiresAt <= Date.now()) {
-        return cors(json({ error: "Runtime сессийн хугацаа дууссан байна. Дахин нэвтэрнэ үү." }, 401), appOrigin)
+        const headers = new Headers()
+        if (request.method === "GET" || request.method === "HEAD") {
+          headers.set(
+            runtimeReadRetryHeader,
+            await runtimeReadRetryScope({
+              accountID: authentication.account.id,
+              workspaceID: authentication.workspace.id,
+              authVersion: authentication.authVersion,
+            }),
+          )
+        }
+        return cors(
+          json({ error: "Runtime сессийн хугацаа дууссан байна. Дахин нэвтэрнэ үү." }, 401, headers),
+          appOrigin,
+        )
       }
       const gatewayToken = await issueRuntimeCapability({
         accountID: authentication.account.id,
@@ -857,6 +890,7 @@ function internalRequest(
     "x-real-ip",
     "x-org-id",
     runtimeGatewayHeader,
+    runtimeReadRetryHeader,
   ]) {
     headers.delete(name)
   }
@@ -949,11 +983,17 @@ function cors(response: Response, origin: string, preflight = false) {
   headers.set("access-control-allow-origin", origin)
   headers.set("access-control-allow-credentials", "true")
   headers.set("vary", appendVary(headers.get("vary"), "Origin"))
+  if (headers.has(runtimeReadRetryHeader)) {
+    headers.set(
+      "access-control-expose-headers",
+      appendVary(headers.get("access-control-expose-headers"), runtimeReadRetryHeader),
+    )
+  }
   if (preflight) {
     headers.set("access-control-allow-methods", "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS")
     headers.set(
       "access-control-allow-headers",
-      "authorization, content-type, last-event-id, x-mongolgpt-directory, x-mongolgpt-workspace",
+      `authorization, content-type, last-event-id, x-mongolgpt-directory, x-mongolgpt-workspace, ${runtimeReadRetryHeader}`,
     )
     headers.set("access-control-max-age", "600")
   }

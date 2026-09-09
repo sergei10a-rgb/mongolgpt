@@ -12,7 +12,7 @@ process.env.PLAYWRIGHT_SERVER_PORT = new URL(runtimeUrl).port || (runtimeUrl.sta
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "**/hosted-account-gate.spec.ts",
+  testMatch: ["**/hosted-account-gate.spec.ts", "**/hosted-runtime-recovery.spec.ts"],
   outputDir: "./e2e/test-results-hosted",
   timeout: 60_000,
   expect: {

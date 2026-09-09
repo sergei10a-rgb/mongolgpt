@@ -1,4 +1,5 @@
 import { createMongolGPTClient } from "@mongolgpt/sdk/v2/client"
+import { isRuntimeReadRetryScope, runtimeReadRetryHeader } from "@mongolgpt/runtime-auth/read-retry"
 import type { ServerConnection } from "@/context/server"
 import { decode64 } from "@/utils/base64"
 
@@ -48,6 +49,11 @@ export function createSdkForServer({
 
   return createMongolGPTClient({
     ...config,
+    fetch: isHostedServer(server.url)
+      ? Object.assign(runtimeReadRetryFetch(config.fetch ?? globalThis.fetch, server.url), {
+          preconnect: config.fetch?.preconnect ?? globalThis.fetch.preconnect,
+        })
+      : config.fetch,
     credentials: config.credentials ?? (isHostedServer(server.url) ? "include" : undefined),
     headers: {
       ...(config.headers instanceof Headers ? Object.fromEntries(config.headers.entries()) : config.headers),
@@ -61,7 +67,9 @@ export function createServerRequest(input: { server: ServerConnection.HttpBase; 
   const auth = input.server.password
     ? `Basic ${authTokenFromCredentials({ username: input.server.username, password: input.server.password })}`
     : undefined
-  const fetcher = input.fetch ?? fetch
+  const fetcher = isHostedServer(input.server.url)
+    ? runtimeReadRetryFetch(input.fetch ?? fetch, input.server.url)
+    : (input.fetch ?? fetch)
   const base = input.server.url.endsWith("/") ? input.server.url : `${input.server.url}/`
 
   return (path: string, init: ServerRequestInit = {}) => {
@@ -84,5 +92,32 @@ export function createServerRequest(input: { server: ServerConnection.HttpBase; 
         headers,
       }),
     )
+  }
+}
+
+function runtimeReadRetryFetch(fetcher: FetchLike, serverUrl: string): FetchLike {
+  const origin = new URL(serverUrl).origin
+  return async (input, init) => {
+    const request = new Request(input, init)
+    const response = await fetcher(request)
+    const scope = response.headers.get(runtimeReadRetryHeader)
+    if (
+      response.status !== 401 ||
+      !isRuntimeReadRetryScope(scope) ||
+      (request.method !== "GET" && request.method !== "HEAD") ||
+      request.credentials !== "include" ||
+      request.headers.has("authorization") ||
+      request.headers.has(runtimeReadRetryHeader) ||
+      request.signal.aborted ||
+      new URL(request.url).origin !== origin
+    )
+      return response
+
+    // The account gate refreshes cookies while admission is pending. The server
+    // re-authenticates this read and rejects any account/workspace/revocation change.
+    const retry = new Request(request)
+    retry.headers.set(runtimeReadRetryHeader, scope)
+    void response.body?.cancel().catch(() => {})
+    return fetcher(retry)
   }
 }

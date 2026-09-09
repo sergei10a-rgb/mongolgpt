@@ -1,6 +1,11 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, setSystemTime, test } from "bun:test"
 import { scheduler } from "node:timers/promises"
 import { issueRuntimeCapability, runtimeGatewayHeader, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
+import {
+  isRuntimeReadRetryScope,
+  runtimeReadRetryHeader,
+  runtimeReadRetryScope,
+} from "@mongolgpt/runtime-auth/read-retry"
 import {
   checkpointControlEnv,
   checkpointControlHeader,
@@ -129,6 +134,117 @@ function deferred<Value>() {
 }
 
 describe("MongolGPT Cloudflare runtime", () => {
+  for (const method of ["GET", "HEAD", "POST"]) {
+    test(`bounds expired ${method} admission without forwarding or replaying mutations`, async () => {
+      const now = 1_800_000_000
+      // Cross the JWT expiry deterministically even when the host/VM wall clock is corrected.
+      setSystemTime(new Date(now * 1000))
+      try {
+        const runtime = sandbox({ existing: process().value })
+        let cold = true
+        runtime.value.getProcess = async () => {
+          if (cold) {
+            cold = false
+            setSystemTime(new Date((now + 61) * 1000))
+          }
+          return process().value
+        }
+        const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+        const token = await capability({ now, ttlSeconds: 60 })
+        const expired = await handler(
+          hostedRequest("/provider", {
+            method,
+            headers: { cookie: `__Host-mongolgpt-runtime=${token}` },
+          }),
+          environment(),
+        )
+        expect(expired.status).toBe(401)
+        const scope = expired.headers.get(runtimeReadRetryHeader)
+        expect(runtime.requests).toHaveLength(0)
+        if (method === "POST") {
+          expect(scope).toBeNull()
+          return
+        }
+        expect(isRuntimeReadRetryScope(scope)).toBe(true)
+        expect(expired.headers.get("access-control-expose-headers")).toContain(runtimeReadRetryHeader)
+        expect(expired.headers.get("cache-control")).toBe("no-store")
+
+        const retry = await handler(
+          hostedRequest("/provider", {
+            method,
+            headers: { cookie: `__Host-mongolgpt-runtime=${await capability()}`, [runtimeReadRetryHeader]: scope! },
+          }),
+          environment(),
+        )
+        expect(retry.status).toBe(200)
+        expect(runtime.requests).toHaveLength(1)
+        expect(runtime.requests[0]?.headers.get(runtimeReadRetryHeader)).toBeNull()
+        expect(runtime.requests[0]?.headers.get("cookie")).toBeNull()
+      } finally {
+        setSystemTime()
+      }
+    })
+  }
+
+  test("rejects read retries after identity changes before allocating a sandbox", async () => {
+    let allocations = 0
+    const handler = createRuntimeHandler<Environment>({
+      sandbox: () => {
+        allocations++
+        return sandbox().value
+      },
+    })
+    const scope = await runtimeReadRetryScope({ accountID: "acc_123", workspaceID: "wrk_123", authVersion: 1 })
+    for (const input of [{ accountID: "acc_other" }, { workspaceID: "wrk_other" }, { authVersion: 2 }]) {
+      const response = await handler(
+        hostedRequest("/provider", {
+          headers: { cookie: `__Host-mongolgpt-runtime=${await capability(input)}`, [runtimeReadRetryHeader]: scope },
+        }),
+        environment(),
+      )
+      expect(response.status).toBe(409)
+      expect(response.headers.get(runtimeReadRetryHeader)).toBeNull()
+    }
+    expect(allocations).toBe(0)
+  })
+
+  test("a read retry scope is never a credential or permission to replay a mutation", async () => {
+    let allocations = 0
+    const handler = createRuntimeHandler<Environment>({
+      sandbox: () => {
+        allocations++
+        return sandbox().value
+      },
+    })
+    const scope = await runtimeReadRetryScope({ accountID: "acc_123", workspaceID: "wrk_123", authVersion: 1 })
+    const anonymous = await handler(
+      hostedRequest("/provider", { headers: { [runtimeReadRetryHeader]: scope } }),
+      environment(),
+    )
+    expect(anonymous.status).toBe(401)
+    expect(anonymous.headers.get(runtimeReadRetryHeader)).toBeNull()
+    for (const method of ["POST", "PATCH", "DELETE"]) {
+      const response = await handler(
+        hostedRequest("/session", {
+          method,
+          headers: { authorization: `Bearer ${await capability()}`, [runtimeReadRetryHeader]: scope },
+        }),
+        environment(),
+      )
+      expect(response.status).toBe(409)
+    }
+    for (const invalid of ["", "v1.private", `${scope},${scope}`, scope.toUpperCase()]) {
+      const response = await handler(
+        hostedRequest("/provider", {
+          headers: { authorization: `Bearer ${await capability()}`, [runtimeReadRetryHeader]: invalid },
+        }),
+        environment(),
+      )
+      expect(response.status).toBe(409)
+    }
+    expect(allocations).toBe(0)
+  })
+
   test("rejects oversized streamed requests without waiting for a stuck cancel", async () => {
     const runtime = sandbox()
     let cancelled = false
@@ -214,6 +330,7 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe(appOrigin)
     expect(response.headers.get("access-control-allow-credentials")).toBe("true")
     expect(response.headers.get("access-control-allow-headers")).toContain("authorization")
+    expect(response.headers.get("access-control-allow-headers")).toContain(runtimeReadRetryHeader)
     expect(await Bun.file(new URL("../src/runtime.ts", import.meta.url)).text()).not.toContain("/auth/status")
   })
 
