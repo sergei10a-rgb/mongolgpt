@@ -23,6 +23,7 @@ import { AppProcess } from "@mongolgpt/core/process"
 import { Deferred, Duration, Effect, Layer, Queue, Schedule, Scope, Stream } from "effect"
 import { FetchHttpClient, HttpClient } from "effect/unstable/http"
 import { ChildProcess } from "effect/unstable/process"
+import { randomBytes } from "node:crypto"
 import path from "node:path"
 import { TestLLMServer } from "./llm-server"
 import { testProviderConfig } from "./test-provider"
@@ -123,8 +124,10 @@ function forkStderrDrain(
   )
 }
 
-function isolatedEnv(home: string, configJson: string): Record<string, string> {
+export function isolatedEnv(home: string, configJson: string): Record<string, string> {
   return {
+    // Temporary HOME does not isolate the OS credential store. Share a key only within this fixture.
+    MONGOLGPT_ACCOUNT_TOKEN_KEY: randomBytes(32).toString("base64url"),
     MONGOLGPT_TEST_HOME: home,
     MONGOLGPT_TEST_MANAGED_CONFIG_DIR: path.join(home, "managed"),
     HOME: home,
