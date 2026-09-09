@@ -51,6 +51,7 @@ const layers = (filename: string, options?: EventV2.LayerOptions) =>
   )
 
 describe("native same-container cloud history resume recovery", () => {
+  // Three native SQLite fixtures plus replay can exceed Bun's default on Windows CI.
   test("resumes from a validated prefix, replays durable cloud delta idempotently, and preserves native rows", async () => {
     await using temp = await tmpdir()
     const fixture = await resumeFixture(temp.path)
@@ -77,7 +78,7 @@ describe("native same-container cloud history resume recovery", () => {
       }),
       recovery.eventOptions,
     )
-  })
+  }, 30_000)
 
   test("allows a missing baseline aggregate only with a remote deletion guard", async () => {
     await using temp = await tmpdir()
