@@ -214,6 +214,7 @@ test.each(["initial_readback", "replacement_readback"] as const)(
               {
                 code: "runtime_unavailable",
                 readiness: { code: "timeout", status: null },
+                readinessBudgetMs: 1,
                 message: adminToken,
                 responseBody: authSecret,
               },
@@ -226,6 +227,7 @@ test.each(["initial_readback", "replacement_readback"] as const)(
     }).catch((error: unknown) => error)
     expect(error).toBeInstanceOf(Error)
     expect(String(error)).toContain('"readiness":{"code":"timeout","status":null}')
+    expect(String(error)).toContain('"readinessBudgetMs":1')
     expect(String(error)).not.toContain(adminToken)
     expect(String(error)).not.toContain(authSecret)
     expect(phases.at(-1)).toBe(failedPhase)
@@ -260,6 +262,36 @@ test("canary suppresses malformed or private readiness metadata", async () => {
     expect(error).toBeInstanceOf(Error)
     expect(String(error)).not.toContain("readiness")
     expect(String(error)).not.toContain(adminToken)
+    expect(String(error)).not.toContain(authSecret)
+  }
+})
+
+test("canary suppresses invalid readiness budgets and budgets without valid readiness", async () => {
+  for (const diagnostic of [
+    ...[authSecret, 0, -1, 120_001, 1.5, null, { token: authSecret }].map((readinessBudgetMs) => ({
+      readiness: { code: "timeout", status: null },
+      readinessBudgetMs,
+    })),
+    { readiness: { code: authSecret, status: null }, readinessBudgetMs: 1 },
+    { readinessBudgetMs: 1 },
+  ]) {
+    const runtime = fixture()
+    let phase: CanaryProbePhase | undefined
+    const error = await runCanaryProbe({
+      origin,
+      adminToken,
+      authSecret,
+      version,
+      onPhase: (value) => {
+        phase = value
+      },
+      request: (url, init) =>
+        phase === "session_create"
+          ? Promise.resolve(Response.json({ code: "runtime_unavailable", ...diagnostic }, { status: 502 }))
+          : runtime.request(url, init),
+    }).catch((error: unknown) => error)
+    expect(String(error)).toContain("runtime_unavailable")
+    expect(String(error)).not.toContain("readinessBudgetMs")
     expect(String(error)).not.toContain(authSecret)
   }
 })

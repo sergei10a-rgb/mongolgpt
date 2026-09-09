@@ -14,6 +14,7 @@ import {
   createRuntimeHandler,
   deriveRuntimeIdentity,
   hostedDirectory,
+  parseRuntimeReadinessBudget,
   RUNTIME_PROCESS_ID,
   sanitizeRuntimeDiagnostic,
   RuntimeFailure,
@@ -618,11 +619,55 @@ describe("MongolGPT Cloudflare runtime", () => {
         const body = (await response.json()) as Record<string, unknown>
         expect(body.readiness).toEqual(stage === "dev" ? { code: "http_status", status: 503 } : undefined)
         expect(failures[0]?.readiness).toEqual({ code: "http_status", status: 503 })
+        expect(failures[0]?.readinessBudgetMs).toBeGreaterThanOrEqual(1)
+        expect(failures[0]?.readinessBudgetMs).toBeLessThanOrEqual(120_000)
+        expect(body.readinessBudgetMs).toEqual(stage === "dev" ? failures[0]?.readinessBudgetMs : undefined)
         expect(JSON.stringify(body)).not.toContain("private-response")
         expect(JSON.stringify(failures)).not.toContain("private-response")
         expect(runtime.requests).toHaveLength(1)
       }
     }
+  })
+
+  test("readiness budget diagnostics accept only the actual bounded millisecond budget", () => {
+    for (const budget of [1, 20, 120_000]) {
+      expect(parseRuntimeReadinessBudget(budget)).toBe(budget)
+      expect(RuntimeFailure.notReady({ code: "timeout", status: null }, budget).readinessBudgetMs).toBe(budget)
+    }
+    for (const budget of [undefined, null, "private-token", "120000", 0, -1, 120_001, 1.5, NaN, Infinity, {}])
+      expect(parseRuntimeReadinessBudget(budget)).toBeUndefined()
+    expect(RuntimeFailure.notReady({ code: "timeout", status: null }, NaN).readinessBudgetMs).toBeUndefined()
+  })
+
+  test.each([false, true])("records readiness budget after process lookup (existing=%s)", async (existing) => {
+    const runtime = sandbox()
+    const failures: RuntimeFailure[] = []
+    let lookupMs = 0
+    runtime.value.getProcess = async () => {
+      const start = Date.now()
+      await scheduler.wait(25)
+      lookupMs = Date.now() - start
+      return existing ? process().value : null
+    }
+    runtime.value.containerFetch = async (request) => {
+      runtime.requests.push(request)
+      return new Response(null, { status: 503 })
+    }
+    const handler = createRuntimeHandler<Environment>({
+      sandbox: () => runtime.value,
+      report: (failure) => failures.push(failure),
+    })
+    const response = await handler(
+      hostedRequest("/api/session/ses_test", { headers: { authorization: `Bearer ${await capability()}` } }),
+      { ...environment(), MONGOLGPT_CLOUD_HISTORY: "true" },
+    )
+    expect(response.status).toBe(502)
+    expect(lookupMs).toBeGreaterThan(0)
+    expect(failures[0]?.readinessBudgetMs).toBeGreaterThanOrEqual(1)
+    expect(failures[0]?.readinessBudgetMs).toBeLessThanOrEqual(120_000 - lookupMs)
+    expect(runtime.requests).toHaveLength(1)
+    expect(runtime.started).toHaveLength(existing ? 0 : 1)
+    expect(await response.json()).toHaveProperty("readinessBudgetMs", failures[0]?.readinessBudgetMs)
   })
 
   test.each([false, true])(

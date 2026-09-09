@@ -1,6 +1,6 @@
 import { issueRuntimeCapability } from "@mongolgpt/runtime-auth"
 import { validControlToken } from "@mongolgpt/runtime-auth/control"
-import { parseRuntimeReadiness, sanitizeRuntimeDiagnostic } from "../src/runtime"
+import { parseRuntimeReadiness, parseRuntimeReadinessBudget, sanitizeRuntimeDiagnostic } from "../src/runtime"
 
 export type CanaryProbePhase =
   | "authorization"
@@ -308,7 +308,12 @@ grep -q mongolgpt-init /proc/1/cmdline`,
 
 function canaryFailureDiagnostic(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return ""
-  const body = value as { code?: unknown; diagnostic?: { code?: unknown }; readiness?: unknown }
+  const body = value as {
+    code?: unknown
+    diagnostic?: { code?: unknown }
+    readiness?: unknown
+    readinessBudgetMs?: unknown
+  }
   const codes = [
     "runtime_process_lookup_failed",
     "runtime_process_start_failed",
@@ -323,7 +328,8 @@ function canaryFailureDiagnostic(value: unknown) {
   // Reuse the production allowlist; never print messages, stack traces, or raw bodies.
   const diagnostic = sanitizeRuntimeDiagnostic({ code: body.diagnostic?.code, context: body.diagnostic })
   const readiness = parseRuntimeReadiness(body.readiness)
-  return code || diagnostic || readiness ? ` ${JSON.stringify({ code, diagnostic, readiness })}` : ""
+  const readinessBudgetMs = readiness ? parseRuntimeReadinessBudget(body.readinessBudgetMs) : undefined
+  return code || diagnostic || readiness ? ` ${JSON.stringify({ code, diagnostic, readiness, readinessBudgetMs })}` : ""
 }
 
 export async function readCanaryJson<T = unknown>(response: Response, signal?: AbortSignal): Promise<T> {

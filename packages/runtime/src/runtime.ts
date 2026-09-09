@@ -218,6 +218,7 @@ export class RuntimeFailure extends Error {
     readonly code: RuntimeFailureCode,
     readonly diagnostic?: RuntimeDiagnostic,
     readonly readiness?: RuntimeReadiness,
+    readonly readinessBudgetMs?: number,
   ) {
     super(runtimeFailureMessages[code])
     this.name = "RuntimeFailure"
@@ -227,8 +228,14 @@ export class RuntimeFailure extends Error {
     return new RuntimeFailure(code, sanitizeRuntimeDiagnostic(error))
   }
 
-  static notReady(input: RuntimeReadiness) {
-    return new RuntimeFailure("runtime_unavailable", undefined, parseRuntimeReadiness(input))
+  static notReady(input: RuntimeReadiness, budgetMs: number) {
+    const readiness = parseRuntimeReadiness(input)
+    return new RuntimeFailure(
+      "runtime_unavailable",
+      undefined,
+      readiness,
+      readiness ? parseRuntimeReadinessBudget(budgetMs) : undefined,
+    )
   }
 
   messageFor(stage: string) {
@@ -391,6 +398,9 @@ export function createRuntimeHandler<Environment extends RuntimeVariables>(
         message: failure.messageFor(env.STAGE),
         ...(env.STAGE.trim() === "dev" && failure.diagnostic ? { diagnostic: failure.diagnostic } : {}),
         ...(env.STAGE.trim() === "dev" && failure.readiness ? { readiness: failure.readiness } : {}),
+        ...(env.STAGE.trim() === "dev" && failure.readinessBudgetMs !== undefined
+          ? { readinessBudgetMs: failure.readinessBudgetMs }
+          : {}),
       }
       return cors(json(body, 502), appOrigin)
     }
@@ -612,8 +622,9 @@ async function ensureServer(
   })
   if (existing && (await waitForServer(existing, sandbox, password))) {
     if (restore) {
-      const readiness = await runtimeReadiness(sandbox, password, true, Math.max(1, deadline - Date.now()))
-      if (readiness.code !== "ready") throw RuntimeFailure.notReady(readiness)
+      const budgetMs = Math.max(1, deadline - Date.now())
+      const readiness = await runtimeReadiness(sandbox, password, true, budgetMs)
+      if (readiness.code !== "ready") throw RuntimeFailure.notReady(readiness, budgetMs)
     }
     return
   }
@@ -658,8 +669,9 @@ async function ensureServer(
 
   if (!(await waitForServer(started, sandbox, password))) throw RuntimeFailure.create("runtime_process_exited")
   if (restore) {
-    const readiness = await runtimeReadiness(sandbox, password, true, Math.max(1, deadline - Date.now()))
-    if (readiness.code !== "ready") throw RuntimeFailure.notReady(readiness)
+    const budgetMs = Math.max(1, deadline - Date.now())
+    const readiness = await runtimeReadiness(sandbox, password, true, budgetMs)
+    if (readiness.code !== "ready") throw RuntimeFailure.notReady(readiness, budgetMs)
   }
 }
 
@@ -700,6 +712,12 @@ export const runtimeReadinessCodes = [
 
 export type RuntimeReadiness = { code: (typeof runtimeReadinessCodes)[number]; status: number | null }
 
+export function parseRuntimeReadinessBudget(input: unknown): number | undefined {
+  return typeof input === "number" && Number.isInteger(input) && input >= 1 && input <= START_TIMEOUT_MS
+    ? input
+    : undefined
+}
+
 export function parseRuntimeReadiness(input: unknown): RuntimeReadiness | undefined {
   try {
     const value = readRecord(input)
@@ -726,8 +744,7 @@ export async function runtimeReadiness(
   restored = false,
   timeoutMs = 5_000,
 ): Promise<RuntimeReadiness> {
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > START_TIMEOUT_MS)
-    throw new RangeError("Invalid runtime readiness deadline")
+  if (parseRuntimeReadinessBudget(timeoutMs) === undefined) throw new RangeError("Invalid runtime readiness deadline")
   const controller = new AbortController()
   let status: number | null = null
   let timer: ReturnType<typeof setTimeout> | undefined

@@ -128,6 +128,7 @@ const handler = createRuntimeHandler<RuntimeEnvironment>({
       code: failure.code,
       diagnostic: failure.diagnostic,
       readiness: failure.readiness,
+      readinessBudgetMs: failure.readinessBudgetMs,
     })
   },
 })
