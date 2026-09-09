@@ -2,7 +2,7 @@ export * as StartupHandoff from "./startup-handoff"
 
 import { closeSync, fstatSync, readSync } from "node:fs"
 import { lstat, mkdtemp, open, readFile, rmdir, unlink } from "node:fs/promises"
-import { join, resolve } from "node:path"
+import { join, posix, resolve } from "node:path"
 import { Schema } from "effect"
 import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import type { CloudStartup } from "./cloud-startup"
@@ -55,7 +55,7 @@ export async function issue(input: { root: string; group: string; checkpoint: Cl
   const packet = {
     version: 1,
     root,
-    group: group.slice("/sys/fs/cgroup".length),
+    group: cgroupMembership(group, await readFile("/proc/self/mountinfo", "utf8")),
     checkpoint: checkpoint
       ? {
           data: {
@@ -104,6 +104,43 @@ export async function issue(input: { root: string; group: string; checkpoint: Cl
       if (error.code !== "ENOENT") throw error
     })
   }
+}
+
+/** Mount roots, unlike mount points, use the same cgroup namespace as /proc/self/cgroup. */
+export function cgroupMembership(group: string, mountinfo: string) {
+  if (
+    posix.resolve(group) !== group ||
+    !/^\/sys\/fs\/cgroup\/(?:[A-Za-z0-9_.-]+\/)*mongolgpt-[0-9a-f-]{36}$/.test(group) ||
+    mountinfo.length > maxBytes
+  )
+    throw new HandoffError()
+  const mounts = mountinfo
+    .trim()
+    .split("\n")
+    .map((line) => {
+      const fields = line.split(" ")
+      const separator = fields.indexOf("-")
+      if (
+        separator < 6 ||
+        fields.length !== separator + 4 ||
+        !/^\d+$/.test(fields[0]) ||
+        !/^\d+$/.test(fields[1]) ||
+        !/^\d+:\d+$/.test(fields[2]) ||
+        !fields[3].startsWith("/") ||
+        !fields[4].startsWith("/")
+      )
+        throw new HandoffError()
+      return { id: fields[0], parent: fields[1], root: fields[3], point: fields[4], type: fields[separator + 1] }
+    })
+    .filter((mount) => group === mount.point || group.startsWith(mount.point === "/" ? "/" : `${mount.point}/`))
+    .sort((left, right) => right.point.length - left.point.length)
+  // Reject ambiguous stacks; never infer identity by a matching path suffix.
+  const candidates = mounts.filter((mount) => mount.point === mounts[0]?.point)
+  const top = candidates.filter((mount) => !candidates.some((other) => other.parent === mount.id && other !== mount))
+  if (top.length !== 1 || top[0].type !== "cgroup2") throw new HandoffError()
+  const path = `${top[0].root === "/" ? "" : top[0].root}${group.slice(top[0].point.length)}`
+  if (!/^\/(?:[A-Za-z0-9_.-]+\/)*mongolgpt-[0-9a-f-]{36}$/.test(path)) throw new HandoffError()
+  return path
 }
 
 /** fd 4 is reserved for the root supervisor's startup receipt and consumed once.

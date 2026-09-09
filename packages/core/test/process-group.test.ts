@@ -81,6 +81,36 @@ describe.skipIf(!isolated)("actual Linux hosted process group", () => {
     }
   }
 
+  for (const cgroupNamespace of [false, true]) {
+    test(`startup binds an exact cgroup through a subtree mount (new namespace: ${cgroupNamespace})`, async () => {
+      const fixture = process.env.MONGOLGPT_TEST_HANDOFF_NAMESPACE
+      if (!fixture) throw new Error("Startup namespace fixture is required")
+      const parent = await group()
+      try {
+        const child = Bun.spawn(
+          [
+            "/usr/bin/unshare",
+            "--mount",
+            "--propagation",
+            "private",
+            process.execPath,
+            fixture,
+            parent.directory,
+            launcher!,
+            ...(cgroupNamespace ? ["enter"] : []),
+          ],
+          { env: { BUN_BE_BUN: "1", PATH: "/usr/bin:/bin" }, stdout: "pipe", stderr: "pipe" },
+        )
+        const stdout = await new Response(child.stdout).text()
+        const stderr = await new Response(child.stderr).text()
+        expect({ code: await child.exited, stderr }).toEqual({ code: 0, stderr: "" })
+        expect(stdout.trim()).toBe("NAMESPACED_HANDOFF_VERIFIED")
+      } finally {
+        await parent.close()
+      }
+    }, 30_000)
+  }
+
   test("supervisor restores before non-root startup and hands off a read-only anonymous receipt", async () => {
     await using temp = await tmpdir()
     await chmod(temp.path, 0o755)

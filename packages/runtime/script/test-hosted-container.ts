@@ -130,7 +130,11 @@ async function namespace(output: string, group: string) {
     await command(["mount", "-o", "remount,bind,ro", `${jail}${directory}`])
   }
   await command(["mount", "--rbind", "/dev", `${jail}/dev`])
-  await command(["mount", "--bind", group, `${jail}/sys/fs/cgroup`])
+  // Keep a real mount-root offset inside the cgroup namespace. A root mount
+  // would hide regressions that confuse /sys paths with /proc membership.
+  const subtree = join(group, "runtime")
+  await mkdir(subtree, { mode: 0o700 })
+  await command(["mount", "--bind", subtree, `${jail}/sys/fs/cgroup`])
   await command(["mount", "-t", "proc", "proc", `${jail}/proc`])
   const repo = join(root, "../..")
   await mkdir(`${jail}${repo}`, { recursive: true })
@@ -176,6 +180,12 @@ async function isolated(output: string) {
   await chmod("/usr/local/bin/mongolgpt-workspace-launcher", 0o555)
   const compiledVersion = (await command(["/usr/local/bin/mongolgpt", "--version"])).trim()
   assert.ok(compiledVersion)
+  assert.ok(
+    (await readFile("/proc/self/mountinfo", "utf8"))
+      .split("\n")
+      .some((line) => line.split(" ")[3] === "/runtime" && line.split(" ")[4] === "/sys/fs/cgroup"),
+    "Compiled native proof must use a non-root cgroup mount",
+  )
   const build = await Bun.build({
     entrypoints: [join(root, "test/fixtures/history-native.ts")],
     outdir: "/tmp/native",
@@ -611,6 +621,7 @@ async function isolated(output: string) {
       fileRestored: true,
       gracefulContainerExit: true,
       sdkFifoOutput: true,
+      mappedCgroupRoot: true,
     }
     await writeFile(join(output, "proof.json"), `${JSON.stringify(result, null, 2)}\n`)
   } catch (error) {

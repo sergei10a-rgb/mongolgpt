@@ -74,6 +74,13 @@ try {
     naming: "startup-child.js",
   })
   if (!startup.success) throw new Error("Workspace startup child build failed")
+  const namespace = await Bun.build({
+    entrypoints: [join(root, "../core/test/fixture/startup-handoff-namespace.ts")],
+    target: "bun",
+    outdir: directory,
+    naming: "startup-namespace.js",
+  })
+  if (!namespace.success) throw new Error("Workspace startup namespace build failed")
   const lockChild = await Bun.build({
     entrypoints: [join(root, "../core/test/runtime-lock-child.ts")],
     target: "bun",
@@ -112,6 +119,7 @@ try {
         MONGOLGPT_TEST_WORKSPACE_LAUNCHER: join(directory, "launcher"),
         MONGOLGPT_TEST_WORKSPACE_POLICY: join(directory, "policy"),
         MONGOLGPT_TEST_STARTUP_CHILD: join(directory, "startup-child.js"),
+        MONGOLGPT_TEST_HANDOFF_NAMESPACE: join(directory, "startup-namespace.js"),
         MONGOLGPT_TEST_LOCK_CHILD: join(directory, "runtime-lock-child.js"),
         MONGOLGPT_TEST_RESUME_CHILD: join(directory, "runtime-resume-child.js"),
         MONGOLGPT_TEST_PTY_LIB: ptyLibrary,
