@@ -2,6 +2,7 @@ import { ContainerProxy, getSandbox, Sandbox, type Process } from "@cloudflare/s
 import { createRuntimeHandler, createRuntimeProcessStarter, RUNTIME_PROCESS_ID, type RuntimeVariables } from "./runtime"
 import { handleHistoryOutbound } from "./history-rpc"
 import { handleCheckpointOutbound } from "./checkpoint-rpc"
+import { fetchRuntime, runtimeHttpHeader } from "./runtime-http"
 import {
   deriveControlToken,
   sdkControlEnv,
@@ -63,6 +64,14 @@ export class MongolGPTSandbox extends Sandbox {
     return response
   }
 
+  override async fetch(request: Request): Promise<Response> {
+    if (!request.headers.has(runtimeHttpHeader)) return super.fetch(request)
+    if (request.headers.get(runtimeHttpHeader) !== "v1") return new Response(null, { status: 400 })
+    const forwarded = new Request(request)
+    forwarded.headers.delete(runtimeHttpHeader)
+    return this.containerFetch(forwarded, 4096)
+  }
+
   enableInternet = false
   // Keep raw internet disabled while allowing the SDK proxy to mediate HTTPS egress.
   interceptHttps = true
@@ -107,7 +116,12 @@ const handler = createRuntimeHandler<RuntimeEnvironment>({
     if (env.HISTORY) await sandbox.setOutboundByHost("history.mongolgpt.internal", "history", scope)
     if (env.MONGOLGPT_CLOUD_HISTORY === "true")
       await sandbox.setOutboundByHost("checkpoint.mongolgpt.internal", "checkpoint", scope)
-    return sandbox
+    return {
+      getProcess: (processID) => sandbox.getProcess(processID),
+      startProcess: (command, options) => sandbox.startProcess(command, options),
+      containerFetch: (request, port) => fetchRuntime(sandbox, request, port),
+      wsConnect: (request, port) => sandbox.wsConnect(request, port),
+    }
   },
   report: (failure) => {
     console.error("MongolGPT runtime хүсэлт амжилтгүй боллоо", {

@@ -165,6 +165,40 @@ describe("sandbox control routing", () => {
     expect(fixture.calls[3]!.request.headers.get(checkpointControlHeader)).toBeNull()
   })
 
+  test("native HTTP fetch preserves the request while stripping control and routing headers", async () => {
+    const { fetchRuntime, runtimeHttpHeader } = await import("../src/runtime-http")
+    const fixture = await createSandbox()
+    const controller = new AbortController()
+    const request = new Request("http://localhost/session?directory=%2Fworkspace", {
+      method: "POST",
+      headers: {
+        authorization: "Basic synthetic-native-credential",
+        [runtimeHttpHeader]: "untrusted",
+        [sdkControlHeader]: "untrusted-sdk",
+        [checkpointControlHeader]: "untrusted-checkpoint",
+      },
+      body: "synthetic-body",
+      signal: controller.signal,
+      redirect: "manual",
+    })
+    await fetchRuntime(fixture.sandbox, request, 4096)
+    expect(fixture.calls).toHaveLength(1)
+    const forwarded = fixture.calls[0]!
+    expect(forwarded.port).toBe(4096)
+    expect(forwarded.url).toBe(request.url)
+    expect(forwarded.request.method).toBe("POST")
+    expect(forwarded.request.headers.get("authorization")).toBe("Basic synthetic-native-credential")
+    for (const name of [runtimeHttpHeader, sdkControlHeader, checkpointControlHeader]) {
+      expect(forwarded.request.headers.get(name)).toBeNull()
+    }
+    expect(await forwarded.request.text()).toBe("synthetic-body")
+    expect(request.headers.get(runtimeHttpHeader)).toBe("untrusted")
+    expect(forwarded.request.redirect).toBe("manual")
+    controller.abort()
+    expect(forwarded.request.signal.aborted).toBe(true)
+    expect(fixture.starts).toEqual([])
+  })
+
   test("routes the real RPC WebSocket upgrade through Sandbox.fetch to /rpc with the SDK token", async () => {
     const fixture = await createSandbox({ SANDBOX_TRANSPORT: "rpc" })
     const expected = await deriveControlToken(runtimeSecret, sandboxID, "sdk")

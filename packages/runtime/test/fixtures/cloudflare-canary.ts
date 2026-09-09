@@ -5,6 +5,7 @@ import { handleCheckpointOutbound } from "../../src/checkpoint-rpc"
 import production, { ContainerProxy, MongolGPTSandbox } from "../../src/index"
 import { createHistoryStore } from "../../src/history"
 import { deriveRuntimeIdentity, RUNTIME_PROCESS_ID, runtimeReadiness } from "../../src/runtime"
+import { fetchRuntime } from "../../src/runtime-http"
 import {
   emptyCanaryDiagnostics,
   parseCanaryStartupFailure,
@@ -234,7 +235,15 @@ async function canaryDiagnostics(request: Request, env: Environment, url: URL) {
           const identity = await read(() =>
             deriveRuntimeIdentity(canaryScope.accountID, canaryScope.workspaceID, env.MONGOLGPT_RUNTIME_SECRET),
           )
-          const readiness = await read(() => runtimeReadiness(sandbox, identity.password, true))
+          const readiness = await read(() =>
+            runtimeReadiness(
+              {
+                containerFetch: (request, port) => fetchRuntime(sandbox, request, port),
+              },
+              identity.password,
+              true,
+            ),
+          )
           const safeReadiness = parseCanaryReadiness(readiness)
           if (!safeReadiness) throw new Error("unavailable")
           result.readiness = safeReadiness

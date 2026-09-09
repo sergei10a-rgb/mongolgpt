@@ -66,7 +66,7 @@ const sandbox = {
       }
     )
   },
-  async containerFetch() {
+  async fetch() {
     await fault("readiness")
     return Response.json({ private: privateValue }, { status: 503 })
   },
