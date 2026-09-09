@@ -13,7 +13,7 @@ for (const config of ["playwright.config.ts", "playwright.hosted.config.ts"]) {
     const result = Bun.spawnSync(
       [
         process.execPath,
-        join(root, "node_modules/@playwright/test/cli.js"),
+        fileURLToPath(import.meta.resolve("@playwright/test/cli")),
         "test",
         "--config",
         config,
