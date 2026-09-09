@@ -296,6 +296,95 @@ test("initial read waits for provisioning but never retries a POST or authentica
   expect(denied.calls.filter((call) => call.method === "POST")).toHaveLength(0)
 })
 
+test("initial native read tolerates a transient 404 after the control gate succeeded", async () => {
+  const runtime = fixture()
+  const pauses: number[] = []
+  let attempts = 0
+  const result = await runCanaryProbe({
+    origin,
+    adminToken,
+    authSecret,
+    version,
+    request: (url, init) => {
+      if (
+        new URL(url).pathname === "/api/session" &&
+        init?.method === "GET" &&
+        new Headers(init.headers).has("authorization")
+      ) {
+        if (++attempts === 1) return Promise.resolve(new Response("private edge response", { status: 404 }))
+      }
+      return runtime.request(url, init)
+    },
+    pause: async (ms) => {
+      pauses.push(ms)
+    },
+  })
+  expect(result.ok).toBe(true)
+  expect(attempts).toBe(2)
+  expect(pauses).toEqual([5000])
+  expect(runtime.calls.filter((call) => call.method === "POST" && call.path === "/api/session")).toHaveLength(1)
+})
+
+test("a persistent initial native 404 exhausts the existing attempt bound without any POST", async () => {
+  const runtime = fixture()
+  let attempts = 0
+  let pauses = 0
+  const error = await runCanaryProbe({
+    origin,
+    adminToken,
+    authSecret,
+    version,
+    request: (url, init) => {
+      if (new URL(url).pathname === "/api/session" && new Headers(init?.headers).has("authorization")) {
+        attempts++
+        return Promise.resolve(new Response(authSecret, { status: 404 }))
+      }
+      return runtime.request(url, init)
+    },
+    pause: async () => {
+      pauses++
+    },
+  }).catch((error: unknown) => error)
+  expect(String(error)).toContain("attempt limit exceeded after 60 attempts")
+  expect(String(error)).toContain("HTTP 404")
+  expect(String(error)).not.toContain(authSecret)
+  expect(attempts).toBe(60)
+  expect(pauses).toBe(59)
+  expect(runtime.calls.filter((call) => call.method === "POST")).toHaveLength(0)
+})
+
+test.each(["session_create", "initial_readback", "replacement_readback"] as const)(
+  "a 404 in %s is never retried",
+  async (failedPhase) => {
+    const runtime = fixture()
+    let phase: CanaryProbePhase | undefined
+    let attempts = 0
+    const error = await runCanaryProbe({
+      origin,
+      adminToken,
+      authSecret,
+      version,
+      onPhase: (value) => {
+        phase = value
+      },
+      request: (url, init) => {
+        if (phase === failedPhase) {
+          attempts++
+          return Promise.resolve(new Response(authSecret, { status: 404 }))
+        }
+        return runtime.request(url, init)
+      },
+      pause: async () => {
+        throw new Error("must not retry")
+      },
+    }).catch((error: unknown) => error)
+    expect(String(error)).toContain("HTTP 404")
+    expect(String(error)).not.toContain(authSecret)
+    expect(phase).toBe(failedPhase)
+    expect(attempts).toBe(1)
+  },
+)
+
 test("initial anonymous GET waits for propagation and requires the actual forbidden JSON receipt", async () => {
   const transient = [404, 502, 503, 504, 520, 522, 523, 524]
   const runtime = fixture(undefined, [

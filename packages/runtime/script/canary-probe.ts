@@ -201,7 +201,9 @@ grep -q mongolgpt-init /proc/1/cmdline`,
         if (error instanceof CanaryRequestFailure) {
           diagnostic.lastFailure = error.message
           if (error.httpStatus !== undefined) diagnostic.lastResponse = error.message
-          if (!error.retryable) throw error
+          // A newly deployed origin can still return 404 after its control gate.
+          // Only this initial GET may wait; POSTs and restoration reads never retry.
+          if (!error.retryable && error.httpStatus !== 404) throw error
         }
         if (startup.aborted) throw exhausted("deadline exceeded")
         if (!(error instanceof CanaryRequestFailure)) throw error
