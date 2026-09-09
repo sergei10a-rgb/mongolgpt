@@ -87,7 +87,9 @@ test "$(cat /proc/sys/kernel/random/boot_id)" != "$(cat /workspace/audit-proof/b
 grep -q mongolgpt-init /proc/1/cmdline`,
   )
   const second = await state()
-  check(second.bootCount === first.bootCount + 1, "Canary did not perform exactly one new container boot")
+  // The pinned SDK calls onStart for warm port checks too. Physical replacement
+  // is proved above by the kernel boot ID and below by exactly one new epoch.
+  check(second.bootCount > first.bootCount, "Replacement did not invoke the SDK start callback")
   check(second.epoch === first.epoch + 1, "Replacement did not acquire the next writer epoch")
   check(second.checkpointID === first.checkpointID, "Replacement discarded the original baseline")
   check((second.revisionSequence ?? 0) >= (stopped.revisionSequence ?? 0), "Replacement lost the shutdown revision")
@@ -95,7 +97,7 @@ grep -q mongolgpt-init /proc/1/cmdline`,
   return {
     ok: true,
     version: input.version,
-    boots: [first.bootCount, second.bootCount],
+    startCallbacks: [first.bootCount, second.bootCount],
     epoch: final.epoch,
     revisionSequence: final.revisionSequence,
     realPTY: true,
@@ -202,6 +204,7 @@ grep -q mongolgpt-init /proc/1/cmdline`,
     check(["stopped", "stopped_with_code"].includes(after.state.status), "Canary shutdown exceeded its deadline")
     check(after.lastStop?.exitCode === 0, "Tini/native shutdown did not exit successfully")
     check(after.bootCount === before.bootCount, "Container restarted during shutdown verification")
+    check(after.epoch === before.epoch, "Writer epoch changed during shutdown verification")
     check(
       (after.revisionSequence ?? 0) > (before.revisionSequence ?? 0),
       "Shutdown did not durably publish native state",

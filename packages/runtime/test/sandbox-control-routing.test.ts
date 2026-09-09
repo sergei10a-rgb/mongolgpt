@@ -42,6 +42,16 @@ const { MongolGPTSandbox } = await import("../src/index")
 const { CanarySandbox, canaryScope } = await import("./fixtures/cloudflare-canary")
 
 describe("sandbox control routing", () => {
+  test("pinned SDK invokes onStart again for an already-running container", async () => {
+    const fixture = await createSandbox({}, CanarySandbox)
+    const canary = fixture.sandbox as InstanceType<typeof CanarySandbox>
+    expect((await canary.canaryState()).bootCount).toBe(0)
+    await bounded(canary.startAndWaitForPorts([4096]))
+    await bounded(canary.startAndWaitForPorts([4096]))
+    expect((await canary.canaryState()).bootCount).toBe(2)
+    expect(fixture.starts).toHaveLength(0)
+  })
+
   test("runs against the pinned installed Cloudflare sandbox and container packages", async () => {
     const sandboxPackage = await packageJson(Bun.resolveSync("@cloudflare/sandbox/package.json", import.meta.dir))
 

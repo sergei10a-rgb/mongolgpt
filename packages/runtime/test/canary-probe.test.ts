@@ -27,8 +27,19 @@ test("shared canary response reader rejects HTML, oversized and malformed JSON",
 })
 
 function fixture(
-  fault?: "file" | "exit" | "epoch" | "post" | "html" | "oversized" | "startup" | "startup-auth",
+  fault?:
+    | "file"
+    | "exit"
+    | "epoch"
+    | "epoch-jump"
+    | "shutdown-epoch"
+    | "post"
+    | "html"
+    | "oversized"
+    | "startup"
+    | "startup-auth",
   propagation: Array<Response | Error> = [],
+  warmStarts = false,
 ) {
   let bootCount = 1
   let epoch = 2
@@ -61,10 +72,11 @@ function fixture(
       const identity = await verifyRuntimeCapability({ token: bearer, audience: origin, secret: authSecret })
       expect(identity.sub).toBe("account_cloudflare_canary")
       expect(identity.workspaceID).toBe("wrk_cloudflare_canary")
+      if (warmStarts) bootCount++
       if (stopped) {
         stopped = false
         bootCount++
-        if (fault !== "epoch") epoch++
+        if (fault !== "epoch") epoch += fault === "epoch-jump" ? 2 : 1
       }
     }
     if (path === "/global/health") {
@@ -87,6 +99,7 @@ function fixture(
       expect(incoming.method).toBe("POST")
       expect(body).toBeUndefined()
       stopped = true
+      if (fault === "shutdown-epoch") epoch++
       sequence++
       return Response.json({ accepted: true })
     }
@@ -123,7 +136,7 @@ test("canary exercises real runtime paths with capabilities and checks shutdown 
   expect(result).toEqual({
     ok: true,
     version,
-    boots: [1, 2],
+    startCallbacks: [1, 2],
     epoch: 3,
     revisionSequence: 5,
     realPTY: true,
@@ -143,6 +156,19 @@ test("canary exercises real runtime paths with capabilities and checks shutdown 
   expect(runtime.commands[1]).toContain("test ! -e /tmp/mgpt-canary-ephemeral")
   expect(runtime.commands[1]).toContain('"$(cat /proc/sys/kernel/random/boot_id)" !=')
   expect(runtime.calls.filter((call) => call.path === "/__canary/stop")).toHaveLength(2)
+})
+
+test("warm SDK start callbacks do not count as extra virtual machine boots", async () => {
+  const runtime = fixture(undefined, [], true)
+  const result = await runCanaryProbe({ origin, adminToken, authSecret, version, request: runtime.request })
+  expect(result.ok).toBe(true)
+  expect(result.startCallbacks[1] - result.startCallbacks[0]).toBeGreaterThan(1)
+  expect(result.epoch).toBe(3)
+  expect(runtime.commands[1]).toContain('"$(cat /proc/sys/kernel/random/boot_id)" !=')
+  const staleEpoch = fixture("epoch", [], true)
+  await expect(
+    runCanaryProbe({ origin, adminToken, authSecret, version, request: staleEpoch.request }),
+  ).rejects.toThrow("Replacement did not acquire the next writer epoch")
 })
 
 test("initial read waits for provisioning but never retries a POST or authentication failure", async () => {
@@ -479,6 +505,8 @@ for (const [fault, message] of [
   ["file", "Native file did not survive"],
   ["exit", "shutdown did not exit successfully"],
   ["epoch", "next writer epoch"],
+  ["epoch-jump", "next writer epoch"],
+  ["shutdown-epoch", "Writer epoch changed during shutdown verification"],
   ["html", "endpoint failed"],
   ["oversized", "decoded safely"],
 ] as const) {
