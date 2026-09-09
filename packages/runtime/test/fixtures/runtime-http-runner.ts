@@ -39,6 +39,18 @@ try {
   const fetch = (path: string) => worker.fetch(`http://localhost${path}`, { signal: AbortSignal.timeout(15_000) })
   assert.deepEqual(await (await fetch("/legacy")).json(), { code: "transport", status: null })
   assert.deepEqual(await (await fetch("/health")).json(), { code: "ready", status: 200 })
+  const recovered = (await (await fetch("/retry-health")).json()) as {
+    readiness: unknown
+    invocations: number
+    elapsed: number
+  }
+  assert.deepEqual(recovered.readiness, { code: "ready", status: 200 })
+  assert.equal(recovered.invocations, 2)
+  assert.ok(recovered.elapsed < 2_000)
+  const exhausted = (await (await fetch("/retry-deadline")).json()) as typeof recovered
+  assert.deepEqual(exhausted.readiness, { code: "http_status", status: 500 })
+  assert.ok(exhausted.invocations >= 1 && exhausted.invocations <= 2)
+  assert.ok(exhausted.elapsed >= 549 && exhausted.elapsed < 2_000)
   assert.deepEqual(await (await fetch("/post")).json(), {
     method: "POST",
     body: "synthetic-request-body",

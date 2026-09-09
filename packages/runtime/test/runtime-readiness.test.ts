@@ -1,5 +1,5 @@
-import { expect, test } from "bun:test"
-import { runtimeReadiness } from "../src/runtime"
+import { expect, setSystemTime, test } from "bun:test"
+import { runtimeReadiness, waitForRestoredRuntimeReadiness } from "../src/runtime"
 
 const headers = {
   "content-type": "application/json",
@@ -21,6 +21,9 @@ test("readiness deadlines remain finite and cancel a stalled transport", async (
   }
   for (const timeout of [0, -1, 120_001, Number.NaN, Infinity, 1.5]) {
     await expect(runtimeReadiness(sandbox, "test", true, timeout)).rejects.toThrow("Invalid runtime readiness deadline")
+    await expect(waitForRestoredRuntimeReadiness(sandbox, "test", timeout)).rejects.toThrow(
+      "Invalid runtime readiness deadline",
+    )
   }
   expect(calls).toBe(0)
   expect(await runtimeReadiness(sandbox, "test", true, 20)).toEqual({ code: "timeout", status: null })
@@ -76,21 +79,142 @@ test("classifies the real admission guards without retaining private response da
     },
   ]
   for (const scenario of scenarios) {
-    const result = await runtimeReadiness(
-      {
+    for (const admission of scenario.status === 503 ? [false] : [false, true]) {
+      let calls = 0
+      const sandbox = {
         containerFetch: async (request, port) => {
+          calls++
           expect(request.url).toBe("http://localhost/global/health")
           expect(request.headers.get("authorization")).toBe(`Basic ${btoa(`mongolgpt:${privateValue}`)}`)
           expect(request.redirect).toBe("manual")
           expect(port).toBe(4096)
           return scenario.response()
         },
+      } satisfies Parameters<typeof runtimeReadiness>[0]
+      const result = admission
+        ? await waitForRestoredRuntimeReadiness(sandbox, privateValue, 1_000)
+        : await runtimeReadiness(sandbox, privateValue, true)
+      expect<unknown>(result).toEqual({ code: scenario.code, status: scenario.status })
+      expect(JSON.stringify(result)).not.toContain(privateValue)
+      expect(calls).toBe(1)
+    }
+  }
+})
+
+test.each([500, 502, 503, 504])("rechecks transient HTTP %s with every readiness guard intact", async (status) => {
+  const requests: Request[] = []
+  let cancelled = 0
+  const result = await waitForRestoredRuntimeReadiness(
+    {
+      containerFetch: async (request, port) => {
+        expect(port).toBe(4096)
+        requests.push(request)
+        if (requests.length === 2) return new Response(body, { headers })
+        return new Response(new ReadableStream({ cancel: () => void cancelled++ }), { status })
       },
-      privateValue,
-      true,
+    },
+    "test-secret",
+    2_000,
+  )
+  expect(result).toEqual({ code: "ready", status: 200 })
+  expect(requests).toHaveLength(2)
+  expect(cancelled).toBe(1)
+  for (const request of requests) {
+    expect(request.method).toBe("GET")
+    expect(request.url).toBe("http://localhost/global/health")
+    expect(request.headers.get("authorization")).toBe(`Basic ${btoa("mongolgpt:test-secret")}`)
+    expect(request.redirect).toBe("manual")
+    expect(request.signal.aborted).toBe(true)
+  }
+})
+
+test.each(["history", "isolation", "publication"])("a retry still rejects an invalid %s receipt", async (receipt) => {
+  let calls = 0
+  const result = await waitForRestoredRuntimeReadiness(
+    {
+      containerFetch: async () => {
+        calls++
+        if (calls === 1) return new Response(null, { status: 500 })
+        return new Response(body, { headers: { ...headers, [`x-mongolgpt-runtime-${receipt}`]: "invalid" } })
+      },
+    },
+    "test",
+    2_000,
+  )
+  expect(result).toEqual({ code: receipt, status: 200 })
+  expect(calls).toBe(2)
+})
+
+test("persistent transient errors do not reset the total admission deadline", async () => {
+  let calls = 0
+  const start = performance.now()
+  const result = await waitForRestoredRuntimeReadiness(
+    {
+      containerFetch: async () => {
+        calls++
+        return new Response("private-upstream-error", { status: 503 })
+      },
+    },
+    "test",
+    550,
+  )
+  expect(result).toEqual({ code: "http_status", status: 503 })
+  expect(calls).toBeGreaterThanOrEqual(1)
+  expect(calls).toBeLessThanOrEqual(2)
+  expect(performance.now() - start).toBeGreaterThanOrEqual(549)
+  expect(performance.now() - start).toBeLessThan(2_000)
+})
+
+test("a stalled retry gets only the remaining deadline and is aborted", async () => {
+  let calls = 0
+  let aborted = false
+  const start = performance.now()
+  const result = await waitForRestoredRuntimeReadiness(
+    {
+      containerFetch: async (request) => {
+        calls++
+        if (calls === 1) return new Response(null, { status: 502 })
+        return new Promise<Response>((_, reject) => {
+          request.signal.addEventListener(
+            "abort",
+            () => {
+              aborted = true
+              reject(request.signal.reason)
+            },
+            { once: true },
+          )
+        })
+      },
+    },
+    "test",
+    1_500,
+  )
+  expect(result).toEqual({ code: "timeout", status: null })
+  expect(calls).toBe(2)
+  expect(aborted).toBe(true)
+  expect(performance.now() - start).toBeLessThan(2_500)
+})
+
+test("wall-clock adjustment cannot prematurely exhaust the retry deadline", async () => {
+  let calls = 0
+  try {
+    const result = await waitForRestoredRuntimeReadiness(
+      {
+        containerFetch: async () => {
+          if (++calls === 1) {
+            setSystemTime(new Date(Date.now() + 60_000))
+            return new Response(null, { status: 500 })
+          }
+          return new Response(body, { headers })
+        },
+      },
+      "test",
+      2_000,
     )
-    expect<unknown>(result).toEqual({ code: scenario.code, status: scenario.status })
-    expect(JSON.stringify(result)).not.toContain(privateValue)
+    expect(result).toEqual({ code: "ready", status: 200 })
+    expect(calls).toBe(2)
+  } finally {
+    setSystemTime()
   }
 })
 

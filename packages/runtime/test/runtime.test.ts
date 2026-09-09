@@ -715,14 +715,14 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(runtime.requests).toHaveLength(2)
   })
 
-  test("records the failed readiness probe in dev without reprobing or exposing private response data", async () => {
+  test("records terminal readiness failures without reprobing or exposing private response data", async () => {
     for (const existing of [false, true]) {
       for (const stage of ["dev", "production"]) {
         const runtime = sandbox({ existing: existing ? process().value : null })
         const failures: RuntimeFailure[] = []
         runtime.value.containerFetch = async (request) => {
           runtime.requests.push(request)
-          return new Response("private-response-with-token", { status: 503 })
+          return new Response("private-response-with-token", { status: 401 })
         }
         const handler = createRuntimeHandler<Environment>({
           sandbox: () => runtime.value,
@@ -734,8 +734,8 @@ describe("MongolGPT Cloudflare runtime", () => {
         )
         expect(response.status).toBe(502)
         const body = (await response.json()) as Record<string, unknown>
-        expect(body.readiness).toEqual(stage === "dev" ? { code: "http_status", status: 503 } : undefined)
-        expect(failures[0]?.readiness).toEqual({ code: "http_status", status: 503 })
+        expect(body.readiness).toEqual(stage === "dev" ? { code: "http_status", status: 401 } : undefined)
+        expect(failures[0]?.readiness).toEqual({ code: "http_status", status: 401 })
         expect(failures[0]?.readinessBudgetMs).toBeGreaterThanOrEqual(1)
         expect(failures[0]?.readinessBudgetMs).toBeLessThanOrEqual(120_000)
         expect(body.readinessBudgetMs).toEqual(stage === "dev" ? failures[0]?.readinessBudgetMs : undefined)
@@ -768,7 +768,7 @@ describe("MongolGPT Cloudflare runtime", () => {
     }
     runtime.value.containerFetch = async (request) => {
       runtime.requests.push(request)
-      return new Response(null, { status: 503 })
+      return new Response(null, { status: 401 })
     }
     const handler = createRuntimeHandler<Environment>({
       sandbox: () => runtime.value,
@@ -785,6 +785,44 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(runtime.requests).toHaveLength(1)
     expect(runtime.started).toHaveLength(existing ? 0 : 1)
     expect(await response.json()).toHaveProperty("readinessBudgetMs", failures[0]?.readinessBudgetMs)
+  })
+
+  test.each([false, true])("retries readiness but forwards a mutation only once (existing=%s)", async (existing) => {
+    for (const status of [200, 500]) {
+      const runtime = sandbox({ existing: existing ? process().value : null })
+      runtime.value.containerFetch = async (request) => {
+        runtime.requests.push(request)
+        if (new URL(request.url).pathname !== "/global/health") return Response.json({ status }, { status })
+        if (runtime.requests.length === 1) return new Response("private-upstream-error", { status: 500 })
+        return Response.json(
+          { healthy: true, version: "current" },
+          {
+            headers: {
+              "x-mongolgpt-runtime-history": "checkpoint-v1",
+              "x-mongolgpt-runtime-isolation": "cgroup-v1",
+              "x-mongolgpt-runtime-publication": "tool-pty-v1",
+            },
+          },
+        )
+      }
+      const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+      const response = await handler(
+        hostedRequest("/api/session", {
+          method: "POST",
+          headers: { authorization: `Bearer ${await capability()}`, "content-type": "application/json" },
+          body: JSON.stringify({ title: "one mutation" }),
+        }),
+        { ...environment(), MONGOLGPT_CLOUD_HISTORY: "true" },
+      )
+      expect(response.status).toBe(status)
+      expect(runtime.started).toHaveLength(existing ? 0 : 1)
+      expect(runtime.requests.map((request) => `${request.method} ${new URL(request.url).pathname}`)).toEqual([
+        "GET /global/health",
+        "GET /global/health",
+        "POST /api/session",
+      ])
+      expect<unknown>(await runtime.requests[2].json()).toEqual({ title: "one mutation" })
+    }
   })
 
   test.each([false, true])(

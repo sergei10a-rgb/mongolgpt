@@ -656,7 +656,7 @@ async function ensureServer(
   if (existing && (await waitForServer(existing, sandbox, password))) {
     if (restore) {
       const budgetMs = Math.max(1, deadline - Date.now())
-      const readiness = await runtimeReadiness(sandbox, password, true, budgetMs)
+      const readiness = await waitForRestoredRuntimeReadiness(sandbox, password, budgetMs)
       if (readiness.code !== "ready") throw RuntimeFailure.notReady(readiness, budgetMs)
     }
     return
@@ -703,7 +703,7 @@ async function ensureServer(
   if (!(await waitForServer(started, sandbox, password))) throw RuntimeFailure.create("runtime_process_exited")
   if (restore) {
     const budgetMs = Math.max(1, deadline - Date.now())
-    const readiness = await runtimeReadiness(sandbox, password, true, budgetMs)
+    const readiness = await waitForRestoredRuntimeReadiness(sandbox, password, budgetMs)
     if (readiness.code !== "ready") throw RuntimeFailure.notReady(readiness, budgetMs)
   }
 }
@@ -770,7 +770,27 @@ export function parseRuntimeReadiness(input: unknown): RuntimeReadiness | undefi
   }
 }
 
-// Both admission and the isolated canary use this bounded probe. Never retain the body or credentials.
+export async function waitForRestoredRuntimeReadiness(
+  sandbox: Pick<RuntimeSandbox, "containerFetch">,
+  password: string,
+  timeoutMs: number,
+): Promise<RuntimeReadiness> {
+  const deadline = performance.now() + timeoutMs
+  let readiness = await runtimeReadiness(sandbox, password, true, timeoutMs)
+  // Only retry this authenticated GET, never the caller's command. Invalid
+  // receipts and authorization failures remain terminal admission failures.
+  while (readiness.code === "http_status" && [500, 502, 503, 504].includes(readiness.status ?? 0)) {
+    const remaining = Math.floor(deadline - performance.now())
+    if (remaining <= 0) return readiness
+    await new Promise<void>((resolve) => setTimeout(resolve, Math.min(500, remaining)))
+    const budgetMs = Math.floor(deadline - performance.now())
+    if (budgetMs <= 0) return readiness
+    readiness = await runtimeReadiness(sandbox, password, true, budgetMs)
+  }
+  return readiness
+}
+
+// Diagnostics use one bounded probe. Never retain the body or credentials.
 export async function runtimeReadiness(
   sandbox: Pick<RuntimeSandbox, "containerFetch">,
   password: string,

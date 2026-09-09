@@ -1,6 +1,6 @@
 import { getSandbox } from "@cloudflare/sandbox"
 import { MongolGPTSandbox } from "../../src/index"
-import { runtimeReadiness } from "../../src/runtime"
+import { runtimeReadiness, waitForRestoredRuntimeReadiness } from "../../src/runtime"
 import { fetchRuntime, runtimeHttpHeader } from "../../src/runtime-http"
 
 export { ContainerProxy } from "../../src/index"
@@ -8,6 +8,7 @@ export { ContainerProxy } from "../../src/index"
 // A real DO/RPC boundary, with only the VM TCP endpoint replaced by a fixed response.
 export class NativeEndpoint extends MongolGPTSandbox {
   #invocations = 0
+  #healthFailures = 0
 
   constructor(ctx: DurableObjectState<{}>, env: ConstructorParameters<typeof MongolGPTSandbox>[1]) {
     Object.defineProperty(ctx, "container", { value: { running: false } })
@@ -16,6 +17,10 @@ export class NativeEndpoint extends MongolGPTSandbox {
 
   async invocations() {
     return this.#invocations
+  }
+
+  async healthFailures(count: number) {
+    this.#healthFailures = count
   }
 
   override async containerFetch(...args: Parameters<MongolGPTSandbox["containerFetch"]>): Promise<Response> {
@@ -28,6 +33,10 @@ export class NativeEndpoint extends MongolGPTSandbox {
       return new Response(null, { status: 401 })
     if (new URL(request.url).pathname !== "/global/health") {
       return Response.json({ method: request.method, body: await request.text(), url: request.url })
+    }
+    if (this.#healthFailures > 0) {
+      this.#healthFailures--
+      return new Response("synthetic-temporary-health-error", { status: 500 })
     }
     return Response.json(
       { healthy: true, version: "fixture" },
@@ -52,6 +61,21 @@ export default {
       transport: "rpc",
     })
     const pathname = new URL(request.url).pathname
+    if (pathname === "/retry-health" || pathname === "/retry-deadline") {
+      const endpoint = env.Native.get(env.Native.idFromName("native-http"))
+      await endpoint.healthFailures(pathname === "/retry-health" ? 1 : 100)
+      const before = await endpoint.invocations()
+      const started = performance.now()
+      const readiness = await waitForRestoredRuntimeReadiness(
+        { containerFetch: (request, port) => fetchRuntime(sandbox, request, port) },
+        "test",
+        pathname === "/retry-health" ? 2_000 : 550,
+      )
+      const elapsed = performance.now() - started
+      const invocations = (await endpoint.invocations()) - before
+      await endpoint.healthFailures(0)
+      return Response.json({ readiness, invocations, elapsed })
+    }
     if (pathname === "/legacy") return Response.json(await runtimeReadiness(sandbox, "test", true))
     if (pathname === "/health")
       return Response.json(
