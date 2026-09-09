@@ -121,10 +121,22 @@ try {
     await call("/migrate-runtime", unstable_splitSqlQuery(await readFile(join(migrations, file), "utf8")))
   await call("/seed-runtime")
   const neighbor = await call<State>("/neighbor")
+  await call("/cron-before-eligible")
+  equal(
+    await call("/preflight-state"),
+    { account: { time_deleted: null, auth_version: 0 }, request: { status: "requested" } },
+    "scheduled handler retired an account before eligibility",
+  )
   console.log("ACCOUNT_CLEANUP_CRON_PHASE runtime_failure")
-  await call("/cron")
+  const scheduled = await call<{ scheduledTime: number }>("/cron")
   const partial = await call<State>("/state")
-  equal(partial.request, { id: requested.id, status: "processing" }, "failed runtime was reported complete")
+  if (partial.request?.status !== "processing") {
+    console.log("ACCOUNT_CLEANUP_CRON_ELIGIBILITY", {
+      scheduledTime: scheduled.scheduledTime,
+      ...(await call<{ time_eligible: number; attempts: number; last_error_code: string | null }>("/eligibility")),
+    })
+  }
+  equal(partial.request, { id: requested.id, status: "processing" }, "runtime cleanup did not reach processing")
   equal(partial.account!.auth_version, 1, "retirement did not revoke sessions")
   equal(typeof partial.account!.time_deleted, "number", "retired account stayed active")
   equal(typeof partial.key.time_deleted, "number", "key remained usable during cleanup")

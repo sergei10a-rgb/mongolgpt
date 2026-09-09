@@ -101,12 +101,29 @@ export default {
         await retryNow(env)
         return Response.json({ ok: true })
       }
-      if (url.pathname === "/cron" || url.pathname === "/purge") {
-        await retention.scheduled({
-          scheduledTime: Date.now() + (url.pathname === "/purge" ? 31 * 24 * 60 * 60_000 : 0),
-        })
-        return Response.json({ ok: true })
+      if (["/cron", "/cron-before-eligible", "/purge"].includes(url.pathname)) {
+        const eligibleAt = await env.Database.prepare("SELECT time_eligible FROM account_deletion WHERE account_id = ?")
+          .bind(accountID)
+          .first<number>("time_eligible")
+        if (!Number.isSafeInteger(eligibleAt) || eligibleAt === null || eligibleAt < 1)
+          throw new Error("Fixture deletion eligibility is missing")
+        // Exercise both sides of the eligibility boundary with the real
+        // scheduled handler, independent of host clock adjustments between requests.
+        const scheduledTime =
+          url.pathname === "/purge"
+            ? Date.now() + 31 * 24 * 60 * 60_000
+            : eligibleAt - (url.pathname === "/cron-before-eligible" ? 1 : 0)
+        await retention.scheduled({ scheduledTime })
+        return Response.json({ ok: true, scheduledTime })
       }
+      if (url.pathname === "/eligibility")
+        return Response.json(
+          await env.Database.prepare(
+            "SELECT time_eligible, attempts, last_error_code FROM account_deletion WHERE account_id = ?",
+          )
+            .bind(accountID)
+            .first(),
+        )
       if (url.pathname === "/state" || url.pathname === "/neighbor") {
         const id = url.pathname === "/state" ? accountID : neighborID
         const identities = await identitiesFor(env, id)
