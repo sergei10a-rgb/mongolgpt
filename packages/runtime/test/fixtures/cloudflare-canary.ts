@@ -1,9 +1,22 @@
 import { getSandbox } from "@cloudflare/sandbox"
 import { matchesControlToken } from "@mongolgpt/runtime-auth/control"
+import { startupDiagnosticEnv, startupDiagnosticPath } from "@mongolgpt/runtime-auth/startup-diagnostic"
+import { handleCheckpointOutbound } from "../../src/checkpoint-rpc"
 import production, { ContainerProxy, MongolGPTSandbox } from "../../src/index"
 import { createHistoryStore } from "../../src/history"
 import { deriveRuntimeIdentity, RUNTIME_PROCESS_ID } from "../../src/runtime"
-import { emptyCanaryDiagnostics, sanitizeCanaryDiagnostics, summarizeCanaryLogs } from "../../script/canary-diagnostics"
+import {
+  emptyCanaryDiagnostics,
+  parseCanaryStartupFailure,
+  sanitizeCanaryDiagnostics,
+  summarizeCanaryLogs,
+} from "../../script/canary-diagnostics"
+import {
+  canaryStartupConfigured,
+  collectCanaryStartup,
+  persistCanaryStartup,
+  readCanaryStartup,
+} from "./canary-startup"
 
 export { ContainerProxy }
 
@@ -40,6 +53,27 @@ type SanitizedState = { status?: string; lastChange?: number; exitCode?: number 
 type StopParams = Parameters<MongolGPTSandbox["onStop"]>[0]
 
 export class CanarySandbox extends MongolGPTSandbox {
+  override startProcess(
+    ...args: Parameters<MongolGPTSandbox["startProcess"]>
+  ): ReturnType<MongolGPTSandbox["startProcess"]> {
+    const [command, options] = args
+    if (options?.processId !== RUNTIME_PROCESS_ID || !canaryStartupConfigured(this.env as Environment))
+      return super.startProcess(...args)
+    return super.startProcess(command, {
+      ...options,
+      env: { ...options.env, [startupDiagnosticEnv]: "true" },
+    })
+  }
+
+  async recordStartupFailure(input: unknown) {
+    if (!canaryStartupConfigured(this.env as Environment)) throw new Error("Invalid startup diagnostic")
+    await persistCanaryStartup(this.ctx.storage, input)
+  }
+
+  async startupFailure() {
+    return readCanaryStartup(this.ctx.storage)
+  }
+
   override async onStart(): Promise<void> {
     await super.onStart()
     await this.ctx.storage.put(bootCountKey, (await this.bootCount()) + 1)
@@ -72,7 +106,15 @@ export class CanarySandbox extends MongolGPTSandbox {
 }
 
 // Containers keys its handler registry by concrete class name, including canaries.
-CanarySandbox.outboundHandlers = MongolGPTSandbox.outboundHandlers!
+CanarySandbox.outboundHandlers = {
+  ...MongolGPTSandbox.outboundHandlers,
+  checkpoint: async (request, env, context) => {
+    if (new URL(request.url).pathname !== startupDiagnosticPath) return handleCheckpointOutbound(request, env, context)
+    return collectCanaryStartup(request, env, context, async (diagnostic) => {
+      await (await canarySandbox(env as Environment)).recordStartupFailure(diagnostic)
+    })
+  },
+}
 
 export function canaryGate(request: Request, env: Partial<Environment>) {
   if (env.STAGE !== "dev") return false
@@ -148,6 +190,13 @@ async function canaryDiagnostics(request: Request, env: Environment, url: URL) {
   try {
     const sandbox = await read(() => canarySandbox(env))
     await Promise.all([
+      read(() => sandbox.startupFailure())
+        .then((value) => {
+          const safe = parseCanaryStartupFailure(value)
+          if (safe === undefined) throw new Error("unavailable")
+          result.startupFailure = safe
+        })
+        .catch(failed),
       (async () => {
         const state = await read(() => sandbox.canaryState())
         const safe = sanitizeCanaryDiagnostics({

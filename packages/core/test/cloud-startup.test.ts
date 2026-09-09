@@ -1,10 +1,52 @@
-import { expect, test } from "bun:test"
+import { expect, spyOn, test } from "bun:test"
 import { mkdir, readFile, readdir, symlink, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { CloudStartup } from "@mongolgpt/core/database/cloud-startup"
 import { CloudBaseline } from "@mongolgpt/core/database/cloud-baseline"
 import { cloudBaselineStore } from "./fixture/cloud-baseline-store"
 import { tmpdir } from "./fixture/tmpdir"
+
+test("startup failure exposes the exact phase and allowlisted code without private error details", async () => {
+  await using temp = await tmpdir()
+  const root = join(temp.path, "workspace")
+  await mkdir(root)
+  for (const code of ["EXDEV", "private-file-path"]) {
+    const error = await CloudStartup.bootstrap({
+      root,
+      request: async () => {
+        throw Object.assign(new Error("private-url-token"), { code, path: "private-file" })
+      },
+    }).catch((error: unknown) => error)
+    expect(error).toBeInstanceOf(CloudStartup.StartupError)
+    expect(error).toMatchObject({ phase: "bootstrap_request", code: code === "EXDEV" ? "EXDEV" : "unknown" })
+    expect(JSON.stringify(error)).not.toContain("private")
+    expect(await readdir(root)).toEqual([])
+  }
+})
+
+test("retirement rename failure retains the pristine root and reports its safe filesystem code", async () => {
+  await using temp = await tmpdir()
+  const root = join(temp.path, "workspace")
+  await mkdir(root)
+  const store = cloudBaselineStore()
+  await CloudBaseline.publish({ root, request: store.request })
+  const filesystem = await import("node:fs/promises")
+  const rename = filesystem.rename
+  const failure = spyOn(filesystem, "rename").mockImplementation(async (source, destination) => {
+    if (source === root) throw Object.assign(new Error("private-root-path"), { code: "EXDEV", path: root })
+    return rename(source, destination)
+  })
+  try {
+    const error = await CloudStartup.bootstrap({ root, request: store.request }).catch((error: unknown) => error)
+    expect(error).toBeInstanceOf(CloudStartup.StartupError)
+    expect(error).toMatchObject({ phase: "retire_root", code: "EXDEV" })
+    expect(JSON.stringify(error)).not.toContain(root)
+    expect(await readdir(root)).toEqual([])
+    expect(await readdir(temp.path)).toEqual(["workspace"])
+  } finally {
+    failure.mockRestore()
+  }
+}, 30_000)
 
 test("restores chunked archives without Content-Length using authenticated size and hash", async () => {
   await using temp = await tmpdir()

@@ -1,5 +1,6 @@
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
 import { RuntimeContainerControl } from "@mongolgpt/core/runtime-container-control"
+import { reportStartupFailure } from "./startup-diagnostic"
 import {
   RuntimeCheckpointClient,
   checkpointControlEnv,
@@ -108,6 +109,7 @@ export async function runRuntimeSupervisor(
     return result
   } catch (error) {
     if (!supervised) {
+      await reportStartupFailure(error, controlToken, input.request)
       await runtime?.group.close().catch(() => {})
       await runtime?.control.catch(() => {})
     }

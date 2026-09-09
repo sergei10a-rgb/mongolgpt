@@ -3,6 +3,8 @@ import { EventEmitter } from "node:events"
 import { setTimeout } from "node:timers/promises"
 import { checkpointControlEnv, checkpointControlHeader } from "@mongolgpt/core/runtime-checkpoint-client"
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
+import { CloudStartup } from "@mongolgpt/core/database/cloud-startup"
+import { startupDiagnosticEnv, startupDiagnosticPath } from "@mongolgpt/runtime-auth/startup-diagnostic"
 import { runRuntimeSupervisor } from "../../src/cli/runtime-supervisor"
 
 type RuntimeStart = typeof RuntimeSupervisor.start
@@ -18,9 +20,45 @@ const requiredEnv = {
   MONGOLGPT_SERVER_PASSWORD: "test-password",
   [checkpointControlEnv]: "a".repeat(64),
   MONGOLGPT_SDK_CONTROL_TOKEN: "b".repeat(64),
+  [startupDiagnosticEnv]: "false",
 } as const
 
 describe("runRuntimeSupervisor hosted lifecycle", () => {
+  for (const enabled of [false, true]) {
+    test(`startup reporting is opt-in (${enabled}) and precedes failed container completion`, async () => {
+      await withSupervisorProcess(async () => {
+        process.env[startupDiagnosticEnv] = String(enabled)
+        const events: string[] = []
+        const error = new CloudStartup.StartupError({
+          message: "private error details",
+          phase: "retire_root",
+          code: "EXDEV",
+        })
+        const result = runRuntimeSupervisor({
+          start: async (input) => {
+            expect(input.env).not.toHaveProperty(startupDiagnosticEnv)
+            expect(input.env).not.toHaveProperty(checkpointControlEnv)
+            throw error
+          },
+          connect: async () => ({
+            complete: async (success) => {
+              events.push(`complete:${success}`)
+            },
+          }),
+          request: async (request) => {
+            events.push("report")
+            expect(request.url).toBe(`http://checkpoint.mongolgpt.internal${startupDiagnosticPath}`)
+            expect(request.headers.get(checkpointControlHeader)).toBe(requiredEnv[checkpointControlEnv])
+            expect(await request.text()).not.toContain("private error details")
+            throw new Error("report failed")
+          },
+        })
+        expect(await result.catch((cause) => cause)).toBe(error)
+        expect(events).toEqual(enabled ? ["report", "complete:false"] : ["complete:false"])
+      })
+    })
+  }
+
   test("signals during startup abort startup and remove listeners", async () => {
     await withSupervisorProcess(async () => {
       const started = deferred<StartInput>()

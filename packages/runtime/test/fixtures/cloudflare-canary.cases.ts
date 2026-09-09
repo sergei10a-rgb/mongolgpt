@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { emptyCanaryDiagnostics, sanitizeCanaryDiagnostics } from "../../script/canary-diagnostics"
+import { startupDiagnosticEnv } from "@mongolgpt/runtime-auth/startup-diagnostic"
 
 const calls = {
   derived: new Array<unknown[]>(),
@@ -10,6 +11,7 @@ const calls = {
   lists: new Array<unknown>(),
   productions: new Array<Request>(),
   sandboxes: new Array<unknown>(),
+  starts: new Array<unknown[]>(),
 }
 type SandboxState = { status: string; lastChange?: number; exitCode?: number; metadata?: string }
 type NativeProcess = { status: string; exitCode?: number; stdout: string; stderr: string }
@@ -21,6 +23,9 @@ const sandbox = {
   state: { status: "healthy", lastChange: 123, exitCode: 0, metadata: "secret" } as SandboxState,
   lastStop: { exitCode: 143, reason: "runtime_signal" },
   process: null as NativeProcess | null,
+  async startupFailure() {
+    return { bootCount: 1, diagnostic: { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false } }
+  },
   async canaryState(...args: unknown[]) {
     this.canaryStateArgs.push(args)
     await fault("state")
@@ -148,6 +153,10 @@ mock.module("../../src/index", () => ({
 
     async onStart() {}
     async onStop() {}
+    async startProcess(...args: unknown[]) {
+      calls.starts.push(args)
+      return {}
+    }
     async stop() {}
     async getState() {
       return { status: "healthy" }
@@ -193,6 +202,10 @@ mock.module("../../src/history", () => ({
   },
 }))
 
+mock.module("../../src/checkpoint-rpc", () => ({
+  handleCheckpointOutbound: async () => new Response(null, { status: 209 }),
+}))
+
 const canary = await import("./cloudflare-canary")
 type CanaryRequest = Parameters<typeof canary.default.fetch>[0]
 
@@ -207,6 +220,7 @@ describe("cloudflare canary worker", () => {
     calls.lists.length = 0
     calls.productions.length = 0
     calls.sandboxes.length = 0
+    calls.starts.length = 0
     sandbox.canaryStateArgs.length = 0
     sandbox.stopCalls.length = 0
     sandbox.state = { status: "healthy", lastChange: 123, exitCode: 0, metadata: "secret" }
@@ -226,6 +240,50 @@ describe("cloudflare canary worker", () => {
       accountID: "account_cloudflare_canary",
       workspaceID: "wrk_cloudflare_canary",
     })
+  })
+
+  test("startup diagnostics opt in only the canary native supervisor", async () => {
+    const ctx = { storage: {} } as ConstructorParameters<typeof canary.CanarySandbox>[0]
+    const options = { processId: "mongolgpt-server", env: { EXISTING: "preserved" } }
+    await new canary.CanarySandbox(ctx, env()).startProcess("native", options)
+    expect(calls.starts[0]).toEqual([
+      "native",
+      { ...options, env: { EXISTING: "preserved", [startupDiagnosticEnv]: "true" } },
+    ])
+    expect(options.env).toEqual({ EXISTING: "preserved" })
+    await new canary.CanarySandbox(ctx, env({ STAGE: "production" })).startProcess("native", options)
+    await new canary.CanarySandbox(ctx, env()).startProcess("user", { processId: "user" })
+    expect(calls.starts.slice(1)).toEqual([
+      ["native", options],
+      ["user", { processId: "user" }],
+    ])
+  })
+
+  test("startup failure survives stop and DO reconstruction without retaining private fields", async () => {
+    const values = new Map<string, unknown>()
+    const ctx = {
+      storage: {
+        async get(key: string) {
+          return values.get(key)
+        },
+        async put(key: string, value: unknown) {
+          values.set(key, value)
+        },
+      },
+    } as unknown as ConstructorParameters<typeof canary.CanarySandbox>[0]
+    const first = new canary.CanarySandbox(ctx, env())
+    const diagnostic = { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false } as const
+    await first.onStart()
+    await first.recordStartupFailure(diagnostic)
+    await first.onStop({ exitCode: 1, reason: "exit" })
+    const second = new canary.CanarySandbox(ctx, env())
+    expect(await second.startupFailure()).toEqual({ bootCount: 1, diagnostic })
+    await expect(second.recordStartupFailure({ ...diagnostic, message: privateValue })).rejects.toThrow()
+    await expect(
+      new canary.CanarySandbox(ctx, env({ STAGE: "production" })).recordStartupFailure(diagnostic),
+    ).rejects.toThrow()
+    expect(await second.startupFailure()).toEqual({ bootCount: 1, diagnostic })
+    expect(JSON.stringify([...values.values()])).not.toContain(privateValue)
   })
 
   test("rejects invalid gate inputs before touching history, durable objects, or production fetch", async () => {
@@ -347,6 +405,7 @@ describe("cloudflare canary worker", () => {
     const value = await response.json()
     expect(value).toEqual({
       bootCount: 2,
+      startupFailure: await sandbox.startupFailure(),
       lastStop: { exitCode: 143, reason: "runtime_signal" },
       containerStatus: "healthy",
       epoch: 5,
@@ -391,6 +450,7 @@ describe("cloudflare canary worker", () => {
       expect(value.containerStatus).toBe(status)
       expect(value.process).toEqual(emptyCanaryDiagnostics().process)
       expect(value.failure).toBeNull()
+      expect(value).toHaveProperty("startupFailure", await sandbox.startupFailure())
     }
     expect(calls.processes).toEqual([])
     expect(calls.logs).toBe(0)

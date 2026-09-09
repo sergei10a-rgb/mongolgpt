@@ -1,3 +1,5 @@
+import { parseStartupDiagnostic, type StartupDiagnostic } from "@mongolgpt/runtime-auth/startup-diagnostic"
+
 const containerStatuses = ["running", "healthy", "stopping", "stopped", "stopped_with_code"] as const
 const processStatuses = ["starting", "running", "completed", "failed", "killed", "error"] as const
 const stopReasons = ["exit", "runtime_signal"] as const
@@ -29,6 +31,7 @@ const signals = [
 type Signal = (typeof signals)[number]
 export type CanaryDiagnostics = {
   bootCount: number | null
+  startupFailure: { bootCount: number; diagnostic: StartupDiagnostic } | null
   lastStop: { exitCode: number | null; reason: (typeof stopReasons)[number] | null } | null
   containerStatus: (typeof containerStatuses)[number] | null
   epoch: number | null
@@ -57,6 +60,7 @@ const signalPatterns = signals.map((signal) => ({
 export function emptyCanaryDiagnostics(): CanaryDiagnostics {
   return {
     bootCount: null,
+    startupFailure: null,
     lastStop: null,
     containerStatus: null,
     epoch: null,
@@ -92,6 +96,7 @@ function parseDiagnostics(input: unknown): CanaryDiagnostics | undefined {
   if (value.lastStop !== null && (exitCode !== stop.exitCode || reason !== stop.reason)) return
   const result: CanaryDiagnostics = {
     bootCount: integer(value.bootCount),
+    startupFailure: parseCanaryStartupFailure(value.startupFailure) ?? null,
     lastStop: value.lastStop === null ? null : { exitCode, reason },
     containerStatus: member(value.containerStatus, containerStatuses),
     epoch: integer(value.epoch),
@@ -108,6 +113,7 @@ function parseDiagnostics(input: unknown): CanaryDiagnostics | undefined {
     },
     failure: value.failure === null ? null : value.failure === "timeout" ? "timeout" : "unavailable",
   }
+  if (value.startupFailure !== null && result.startupFailure === null) return
   for (const key of [
     "bootCount",
     "containerStatus",
@@ -134,6 +140,21 @@ export function summarizeCanaryLogs(stdout: unknown, stderr: unknown) {
     signals: signalPatterns
       .filter(({ pattern }) => pattern.test(out.prefix) || pattern.test(err.prefix))
       .map(({ signal }) => signal),
+  }
+}
+
+export function parseCanaryStartupFailure(input: unknown): CanaryDiagnostics["startupFailure"] | undefined {
+  if (input === null) return null
+  try {
+    const value = record(input)
+    if (Object.keys(value).length !== 2 || !Object.hasOwn(value, "bootCount") || !Object.hasOwn(value, "diagnostic"))
+      return
+    const bootCount = integer(value.bootCount)
+    const diagnostic = parseStartupDiagnostic(value.diagnostic)
+    if (bootCount === null || !diagnostic) return
+    return { bootCount, diagnostic }
+  } catch {
+    return undefined
   }
 }
 

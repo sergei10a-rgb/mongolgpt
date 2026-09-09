@@ -25,6 +25,23 @@ function valid() {
 }
 
 describe("canary diagnostic report sanitization", () => {
+  test("accepts bounded startup evidence and rejects private or malformed nested receipts", () => {
+    const startupFailure = {
+      bootCount: 1,
+      diagnostic: { phase: "retire_root", code: "EXDEV", overlay: true, workspaceMount: false },
+    }
+    expect(sanitizeCanaryDiagnostics({ ...valid(), startupFailure })).toHaveProperty("startupFailure", startupFailure)
+    for (const failure of [
+      {},
+      { ...startupFailure, bootCount: -1 },
+      { ...startupFailure, bootCount: 2 ** 32 },
+      { ...startupFailure, private: privateValue },
+      { ...startupFailure, diagnostic: { ...startupFailure.diagnostic, token: privateValue } },
+      { ...startupFailure, diagnostic: { ...startupFailure.diagnostic, phase: privateValue } },
+    ])
+      expect(sanitizeCanaryDiagnostics({ ...valid(), startupFailure: failure })).toBeUndefined()
+  })
+
   test("reconstructs only the complete fixed envelope and never serializes private extra fields", () => {
     const expected = valid()
     const input = {

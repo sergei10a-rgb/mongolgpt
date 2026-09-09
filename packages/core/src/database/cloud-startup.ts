@@ -5,6 +5,11 @@ import { lstat, mkdtemp, open, readdir, rename, rm } from "node:fs/promises"
 import { dirname, isAbsolute, join, relative, resolve } from "node:path"
 import { Effect, Schema } from "effect"
 import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
+import {
+  startupDiagnosticCodes,
+  startupDiagnosticPhases,
+  type StartupDiagnostic,
+} from "@mongolgpt/runtime-auth/startup-diagnostic"
 import { protectBackupPath } from "./backup-permissions"
 import type { RuntimeControl } from "../runtime-control"
 
@@ -20,6 +25,8 @@ const envelope = Schema.Union([
 
 export class StartupError extends Schema.TaggedErrorClass<StartupError>()("CloudRuntimeStartupError", {
   message: Schema.String,
+  phase: Schema.optional(Schema.Literals(startupDiagnosticPhases)),
+  code: Schema.optional(Schema.Literals(startupDiagnosticCodes)),
 }) {}
 
 interface Input {
@@ -157,6 +164,7 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
   const request = input.request ?? fetch
   let scratch: string | undefined
   let preserve = false
+  let phase: StartupDiagnostic["phase"] = "validate_root"
   const keys: Uint8Array[] = []
   const chunks: Uint8Array[] = []
   try {
@@ -181,6 +189,7 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
       }
       return response
     }
+    phase = "bootstrap_request"
     const response = await send("/v1/bootstrap", {})
     if (response.headers.get("content-type")?.split(";")[0].trim() !== "application/json") {
       void response.body?.cancel().catch(() => {})
@@ -189,6 +198,7 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
     await consume(response, 1024 * 1024, signal, async (chunk) => {
       chunks.push(chunk.slice())
     })
+    phase = "bootstrap_decode"
     const data = decodeBootstrap(chunks)
     if (!data.checkpoint) {
       await pristine(root)
@@ -205,6 +215,7 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
     scratch = await mkdtemp(join(parent, ".mongolgpt-startup-"))
     await protectBackupPath(scratch, "directory")
     for (const kind of ["sqlite", "files"] as const) {
+      phase = kind === "sqlite" ? "sqlite_archive" : "files_archive"
       const archive = kind === "sqlite" ? (data.filesRevision?.sqlite ?? checkpoint.sqlite) : checkpoint.files
       const response = await send("/v1/archive", {
         checkpointID: checkpoint.id,
@@ -242,6 +253,7 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
       }
     }
     // Keep heavyweight native layers out of the pre-runtime module's imports.
+    phase = "restore"
     const { CloudRestore } = await import("./cloud-restore")
     const restored = await Effect.runPromise(
       CloudRestore.restore({
@@ -253,27 +265,41 @@ export async function bootstrap(input: Input): Promise<Baseline | null> {
       }),
       { signal },
     )
+    phase = "validate_publication"
     await pristine(root)
     signal.throwIfAborted()
     const previous = join(scratch, "empty-root")
     // Publication cannot be interrupted between the two renames. A failure
     // restores the old root, or retains both generations for explicit recovery.
+    phase = "retire_root"
     await rename(root, previous)
     preserve = true
     try {
+      phase = "validate_publication"
       await pristine(previous)
+      phase = "publish_root"
       await rename(restored.directory, root)
       preserve = false
     } catch (error) {
+      const failedPhase = phase
+      phase = "rollback_root"
       await rename(previous, root)
       preserve = false
+      phase = failedPhase
       throw error
     }
     return data.filesRevision
       ? { ...checkpoint, filesRevisionID: data.filesRevision.id, ...(data.filesRevision.sqlite ? { resume: {} } : {}) }
       : checkpoint
-  } catch {
-    throw unavailable()
+  } catch (error) {
+    const code = (() => {
+      try {
+        return error && typeof error === "object" ? Object.getOwnPropertyDescriptor(error, "code")?.value : undefined
+      } catch {
+        return undefined
+      }
+    })()
+    throw unavailable({ phase, code: startupDiagnosticCodes.find((value) => value === code) ?? "unknown" })
   } finally {
     keys.forEach((key) => key.fill(0))
     chunks.forEach((chunk) => chunk.fill(0))
@@ -358,8 +384,9 @@ async function aborted<T>(pending: Promise<T>, signal: AbortSignal) {
   }
 }
 
-function unavailable() {
+function unavailable(diagnostic?: Pick<StartupDiagnostic, "phase" | "code">) {
   return new StartupError({
     message: "Cloud ажлын талбарыг аюулгүй сэргээж чадсангүй. Өгөгдлийг шалгах хүртэл серверийг эхлүүлэхгүй.",
+    ...diagnostic,
   })
 }
