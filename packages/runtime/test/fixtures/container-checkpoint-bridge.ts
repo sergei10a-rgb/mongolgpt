@@ -6,6 +6,7 @@ import { tmpdir } from "node:os"
 import { isAbsolute, join, relative, resolve } from "node:path"
 import { Readable } from "node:stream"
 import { pipeline } from "node:stream/promises"
+import { scheduler } from "node:timers/promises"
 import { fileURLToPath } from "node:url"
 
 // esbuild captures this variable during import. The shared Windows checkout may
@@ -35,6 +36,7 @@ type BridgeConfig = {
   secret: string
   adminToken: string
   dropFirstClaimResponse?: boolean
+  delayFirstPublication?: boolean
 }
 
 const hostCheckpoint = "checkpoint.mongolgpt.internal"
@@ -54,7 +56,7 @@ const adminPaths = new Set(["/__test/health", "/__test/status"])
 const jsonHeaders = { "cache-control": "no-store", "content-type": "application/json; charset=utf-8" } as const
 const counters = new Map<string, Map<number, number>>()
 const activeRequests = new Set<AbortController>()
-const injected = { droppedClaimResponses: 0, archiveResponsesWithoutLength: 0 }
+const injected = { droppedClaimResponses: 0, archiveResponsesWithoutLength: 0, delayedPublications: 0 }
 const historyRequests: HistoryRequestRecord[] = []
 let loggedResponses = 0
 
@@ -234,6 +236,14 @@ async function dispatch(request: IncomingMessage, signal: AbortSignal): Promise<
 
   if (host === hostCheckpoint) {
     if (!checkpointPaths.has(incoming.pathname)) return json(404, { error: "not_found" })
+    if (
+      config.delayFirstPublication &&
+      incoming.pathname === "/v1/publish-files" &&
+      injected.delayedPublications === 0
+    ) {
+      injected.delayedPublications++
+      await scheduler.wait(10_000, { signal })
+    }
     const forwarded = toFetchRequest(request, hostCheckpoint, signal)
     return forwardToWorker(forwarded, hostCheckpoint)
   }
@@ -520,6 +530,7 @@ function decodeConfig(value: unknown): BridgeConfig {
   const secret = stringField(config, "secret")
   const adminToken = stringField(config, "adminToken")
   const dropFirstClaimResponse = config.dropFirstClaimResponse
+  const delayFirstPublication = config.delayFirstPublication
   const port = config.port
   if (!isAbsolute(root)) throw new Error("bridge config root must be absolute")
   if (!isAbsolute(nativeBundle)) throw new Error("bridge config nativeBundle must be absolute")
@@ -532,6 +543,9 @@ function decodeConfig(value: unknown): BridgeConfig {
   if (dropFirstClaimResponse !== undefined && typeof dropFirstClaimResponse !== "boolean") {
     throw new Error("bridge config dropFirstClaimResponse must be a boolean")
   }
+  if (delayFirstPublication !== undefined && typeof delayFirstPublication !== "boolean") {
+    throw new Error("bridge config delayFirstPublication must be a boolean")
+  }
   return {
     root: resolve(root),
     nativeBundle: resolve(nativeBundle),
@@ -540,6 +554,7 @@ function decodeConfig(value: unknown): BridgeConfig {
     secret,
     adminToken,
     dropFirstClaimResponse,
+    delayFirstPublication,
   }
 }
 

@@ -212,6 +212,7 @@ async function isolated(output: string) {
       secret,
       adminToken,
       dropFirstClaimResponse: true,
+      delayFirstPublication: true,
     }),
     { mode: 0o600 },
   )
@@ -522,6 +523,30 @@ async function isolated(output: string) {
           },
         )
         assert.match(pty.data.id, /^pty/)
+        phase = "frozen_publication_admission"
+        await until(async () => {
+          const status = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
+          return status.injected.delayedPublications === 1
+        }, "Delayed publication must freeze the actual native writer")
+        const publicationReadiness = await runtimeReadiness(
+          {
+            containerFetch(request, port) {
+              const target = new URL(request.url)
+              target.hostname = "127.0.0.1"
+              target.port = String(port)
+              return fetch(new Request(target, request))
+            },
+          },
+          password,
+          true,
+          120_000,
+        )
+        console.log(`FROZEN_PUBLICATION_READINESS ${JSON.stringify(publicationReadiness)}`)
+        assert.deepEqual(
+          publicationReadiness,
+          { code: "ready", status: 200 },
+          "Admission must wait for the native writer to thaw after durable publication",
+        )
         await until(
           async () => {
             const value = await json<{ data: { status: string; exitCode?: number } }>(
@@ -638,6 +663,7 @@ async function isolated(output: string) {
       gracefulContainerExit: true,
       sdkFifoOutput: true,
       mappedCgroupRoot: true,
+      frozenPublicationAdmission: true,
     }
     await writeFile(join(output, "proof.json"), `${JSON.stringify(result, null, 2)}\n`)
   } catch (error) {
@@ -699,7 +725,7 @@ type BridgeStatus = {
   epoch: number
   checkpoint: { data: { id: string }; digest: string } | null
   revision: { data: { id: string; sequence: number }; digest: string } | null
-  injected: { droppedClaimResponses: number; archiveResponsesWithoutLength: number }
+  injected: { droppedClaimResponses: number; archiveResponsesWithoutLength: number; delayedPublications: number }
   historyRequests: Array<{
     path: string
     status: number

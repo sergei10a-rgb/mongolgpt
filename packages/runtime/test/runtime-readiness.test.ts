@@ -9,6 +9,24 @@ const headers = {
 }
 const body = JSON.stringify({ healthy: true, version: "current-test" })
 
+test("readiness deadlines remain finite and cancel a stalled transport", async () => {
+  let calls = 0
+  const sandbox = {
+    containerFetch(request: Request) {
+      calls++
+      return new Promise<Response>((_, reject) => {
+        request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true })
+      })
+    },
+  }
+  for (const timeout of [0, -1, 120_001, Number.NaN, Infinity, 1.5]) {
+    await expect(runtimeReadiness(sandbox, "test", true, timeout)).rejects.toThrow("Invalid runtime readiness deadline")
+  }
+  expect(calls).toBe(0)
+  expect(await runtimeReadiness(sandbox, "test", true, 20)).toEqual({ code: "timeout", status: null })
+  expect(calls).toBe(1)
+})
+
 test("classifies the real admission guards without retaining private response data", async () => {
   const privateValue = "private-password-path-response-never-report"
   const scenarios = [

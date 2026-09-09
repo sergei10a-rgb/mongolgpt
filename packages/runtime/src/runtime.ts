@@ -597,11 +597,18 @@ async function ensureServer(
   restore: boolean,
   checkpointToken?: string,
 ) {
+  // Durable publication freezes the native writer (including HTTP) for up to
+  // 110 seconds. Admission may wait within the existing startup budget; it
+  // must still receive every receipt before forwarding the user's request.
+  const deadline = Date.now() + START_TIMEOUT_MS
   const existing = await sandbox.getProcess(RUNTIME_PROCESS_ID).catch((error) => {
     throw RuntimeFailure.create("runtime_process_lookup_failed", error)
   })
   if (existing && (await waitForServer(existing, sandbox, password))) {
-    if (restore && (await runtimeReadiness(sandbox, password, true)).code !== "ready")
+    if (
+      restore &&
+      (await runtimeReadiness(sandbox, password, true, Math.max(1, deadline - Date.now()))).code !== "ready"
+    )
       throw RuntimeFailure.create("runtime_unavailable")
     return
   }
@@ -645,7 +652,7 @@ async function ensureServer(
     })
 
   if (!(await waitForServer(started, sandbox, password))) throw RuntimeFailure.create("runtime_process_exited")
-  if (restore && (await runtimeReadiness(sandbox, password, true)).code !== "ready")
+  if (restore && (await runtimeReadiness(sandbox, password, true, Math.max(1, deadline - Date.now()))).code !== "ready")
     throw RuntimeFailure.create("runtime_unavailable")
 }
 
@@ -691,7 +698,10 @@ export async function runtimeReadiness(
   sandbox: Pick<RuntimeSandbox, "containerFetch">,
   password: string,
   restored = false,
+  timeoutMs = 5_000,
 ): Promise<RuntimeReadiness> {
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > START_TIMEOUT_MS)
+    throw new RangeError("Invalid runtime readiness deadline")
   const controller = new AbortController()
   let status: number | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -700,7 +710,7 @@ export async function runtimeReadiness(
     timer = setTimeout(() => {
       controller.abort()
       resolve(result("timeout"))
-    }, 5_000)
+    }, timeoutMs)
   })
   const probe = async () => {
     const response = await sandbox.containerFetch(

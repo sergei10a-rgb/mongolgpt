@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { scheduler } from "node:timers/promises"
 import { issueRuntimeCapability, runtimeGatewayHeader, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
 import {
   checkpointControlEnv,
@@ -595,6 +596,41 @@ describe("MongolGPT Cloudflare runtime", () => {
     expect(runtime.started).toHaveLength(0)
     expect(runtime.requests).toHaveLength(2)
   })
+
+  test.each([false, true])(
+    "waits for a frozen publisher before admission (existing=%s)",
+    async (existing) => {
+      const runtime = sandbox({ existing: existing ? process().value : null })
+      runtime.value.containerFetch = async (request) => {
+        runtime.requests.push(request)
+        if (new URL(request.url).pathname === "/global/health") {
+          await scheduler.wait(5_500, { signal: request.signal })
+          return Response.json(
+            { healthy: true, version: "current" },
+            {
+              headers: {
+                "x-mongolgpt-runtime-history": "checkpoint-v1",
+                "x-mongolgpt-runtime-isolation": "cgroup-v1",
+                "x-mongolgpt-runtime-publication": "tool-pty-v1",
+              },
+            },
+          )
+        }
+        return Response.json({ ok: true })
+      }
+      const handler = createRuntimeHandler<Environment>({ sandbox: () => runtime.value })
+      const response = await handler(
+        hostedRequest("/api/pty/pty_test", { headers: { authorization: `Bearer ${await capability()}` } }),
+        { ...environment(), MONGOLGPT_CLOUD_HISTORY: "true" },
+      )
+      expect(response.status).toBe(200)
+      expect(runtime.started).toHaveLength(existing ? 0 : 1)
+      expect(runtime.requests).toHaveLength(2)
+      expect(new URL(runtime.requests[0].url).pathname).toBe("/global/health")
+      expect(new URL(runtime.requests[1].url).pathname).toBe("/api/pty/pty_test")
+    },
+    15_000,
+  )
 
   test("reuses a healthy server process instead of starting another", async () => {
     const running = process()
