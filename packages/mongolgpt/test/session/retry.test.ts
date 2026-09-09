@@ -34,6 +34,47 @@ function wrap(message: unknown): ReturnType<NamedError["toObject"]> {
 }
 
 describe("session.retry.delay", () => {
+  it.live("ends an exhausted public free request without retrying or publishing an upsell", () =>
+    Effect.gen(function* () {
+      const error = new APICallError({
+        message: "Free usage exceeded",
+        url: "https://opencode.ai/zen/v1/chat/completions",
+        requestBodyValues: {},
+        statusCode: 429,
+        isRetryable: true,
+        responseHeaders: { "retry-after": "41024" },
+        responseBody: '{"error":{"type":"FreeUsageLimitError"}}',
+      })
+      let attempts = 0
+      let statuses = 0
+      const result = yield* Effect.gen(function* () {
+        attempts++
+        return yield* Effect.fail(error)
+      }).pipe(
+        Effect.retry(
+          SessionRetry.policy({
+            provider: "mongolgpt",
+            parse: (input) => MessageV2.fromError(input, { providerID: ProviderV2.ID.make("mongolgpt") }),
+            set: () =>
+              Effect.sync(() => {
+                statuses++
+              }),
+          }),
+        ),
+        Effect.timeout("1 second"),
+        Effect.flip,
+      )
+      expect(result).toBe(error)
+      expect(attempts).toBe(1)
+      expect(statuses).toBe(0)
+      const final = MessageV2.fromError(result, { providerID: ProviderV2.ID.make("mongolgpt") })
+      expect(SessionV1.APIError.isInstance(final)).toBe(true)
+      if (!SessionV1.APIError.isInstance(final)) throw new Error("expected APIError")
+      expect(final.data.message).toContain("Энэ хүсэлтийг автоматаар дахин илгээхгүй.")
+      expect(SessionRetry.retryable(final, "mongolgpt")).toBeUndefined()
+    }),
+  )
+
   test("caps delay at 30 seconds when headers missing", () => {
     const error = apiError()
     const delays = Array.from({ length: 10 }, (_, index) => SessionRetry.delay(index + 1, error))
@@ -174,7 +215,9 @@ describe("session.retry.retryable", () => {
 
   test("retries websocket stream transport errors", () => {
     const request = MessageV2.fromError(
-      new ProviderError.ResponseStreamError("WebSocket response.completed-ээс өмнө хаагдлаа (код 1006: Connection ended)"),
+      new ProviderError.ResponseStreamError(
+        "WebSocket response.completed-ээс өмнө хаагдлаа (код 1006: Connection ended)",
+      ),
       { providerID },
     )
     expect(SessionV1.APIError.isInstance(request)).toBe(true)
@@ -296,7 +339,6 @@ describe("session.retry.retryable", () => {
       },
     })
   })
-
 })
 
 describe("session.message-v2.fromError", () => {

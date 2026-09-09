@@ -3,6 +3,7 @@ import { STATUS_CODES } from "http"
 import { iife } from "@/util/iife"
 import type { ProviderV2 } from "@mongolgpt/core/provider"
 import { isContextOverflow } from "@mongolgpt/llm"
+import { isOpenCodePublicApi } from "@mongolgpt/core/managed-model"
 
 export class HeaderTimeoutError extends Error {
   public override readonly name = "ProviderHeaderTimeoutError"
@@ -124,7 +125,8 @@ export function parseStreamError(input: unknown): ParsedStreamError | undefined 
     case "usage_not_included":
       return {
         type: "api_error",
-        message: "Codex-ийг ChatGPT багцаараа ашиглахын тулд Plus багц руу шинэчилнэ үү: https://chatgpt.com/explore/plus.",
+        message:
+          "Codex-ийг ChatGPT багцаараа ашиглахын тулд Plus багц руу шинэчилнэ үү: https://chatgpt.com/explore/plus.",
         isRetryable: false,
         responseBody,
       }
@@ -174,11 +176,22 @@ export function parseAPICallError(input: { providerID: ProviderV2.ID; error: API
   }
 
   const metadata = input.error.url ? { url: input.error.url } : undefined
+  // Public free quota belongs to the upstream service, not a MongolGPT paid plan.
+  const publicFreeQuota =
+    input.error.statusCode === 429 &&
+    isOpenCodePublicApi(input.error.url) &&
+    body?.error?.type === "FreeUsageLimitError"
   return {
     type: "api_error",
-    message: m,
+    message: publicFreeQuota
+      ? "Үнэгүй загварын үйлчилгээ үзүүлэгчийн хэрэглээний хязгаарт хүрлээ. Хязгаар шинэчлэгдсэний дараа дахин оролдоно уу. Энэ хүсэлтийг автоматаар дахин илгээхгүй."
+      : m,
     statusCode: input.error.statusCode,
-    isRetryable: input.providerID.startsWith("openai") ? isOpenAiErrorRetryable(input.error) : input.error.isRetryable,
+    isRetryable: publicFreeQuota
+      ? false
+      : input.providerID.startsWith("openai")
+        ? isOpenAiErrorRetryable(input.error)
+        : input.error.isRetryable,
     responseHeaders: input.error.responseHeaders,
     responseBody: input.error.responseBody,
     metadata,

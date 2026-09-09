@@ -18,6 +18,60 @@ const capability = (accountID = "account_e2e", token = "e2e-runtime-token") => (
 })
 
 test.describe("hosted MongolGPT account gate", () => {
+  for (const viewport of [
+    { width: 1365, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    test(`renders exhausted upstream free quota as a stopped turn at ${viewport.width}px`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize(viewport)
+      const errors = trackPageErrors(page)
+      const message =
+        "Үнэгүй загварын үйлчилгээ үзүүлэгчийн хэрэглээний хязгаарт хүрлээ. Хязгаар шинэчлэгдсэний дараа дахин оролдоно уу. Энэ хүсэлтийг автоматаар дахин илгээхгүй."
+      const items = structuredClone(fixture.messages[fixture.sourceID].slice(0, 2))
+      items[0].parts[0].text = "Холболтыг шалгана уу."
+      items[1].info.error = { name: "APIError", data: { message, statusCode: 429, isRetryable: false } }
+      items[1].parts = []
+      await mockRuntime(page, {
+        sessions: [{ ...fixture.sessions[0], title: "Үнэгүй загварын шалгалт" }],
+        pageMessages: () => ({ items }),
+      })
+      await configureHostedProject(page)
+      await page.addInitScript(() => {
+        localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
+      })
+      const current = capability()
+      await page.route(tokenUrl, (route) => session(route, 200, current))
+      await page.route(sessionUrl, (route) =>
+        session(route, 200, {
+          authenticated: true,
+          account: { id: current.account.id },
+          workspace: { id: current.workspace.id },
+          expiresAt: current.expiresAt,
+        }),
+      )
+      let prompts = 0
+      page.on("request", (request) => {
+        if (new URL(request.url()).pathname.endsWith("/prompt_async")) prompts++
+      })
+      await page.goto(`/${base64Encode(fixture.directory)}/session/${fixture.sourceID}`)
+      const error = page.locator(".error-card").filter({ hasText: message })
+      await expect(error).toBeVisible()
+      await expect(page.locator('[data-component="session-retry"]')).toHaveCount(0)
+      await expect(page.getByRole("dialog")).toHaveCount(0)
+      const composer = page.locator('[data-component="session-composer"]')
+      await composer.locator('[contenteditable="true"]').first().fill("Дараа үргэлжлүүлье.")
+      await expect(composer.locator('[data-action="prompt-submit"]')).toBeEnabled()
+      expect(prompts).toBe(0)
+      expect(await error.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await expect(page.locator("html")).toHaveAttribute("lang", "mn")
+      expectNoSmokeErrors(errors, [], [])
+      await page.screenshot({ path: testInfo.outputPath("upstream-free-quota.png") })
+    })
+  }
+
   for (const { viewport, catalog } of [
     { width: 1365, height: 900 },
     { width: 390, height: 844 },
