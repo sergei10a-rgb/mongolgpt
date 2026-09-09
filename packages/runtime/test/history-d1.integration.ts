@@ -8,6 +8,7 @@ import type { D1Database, R2Bucket } from "@cloudflare/workers-types"
 import type { HistoryEvent, HistoryScope } from "../src/history.ts"
 import { runCheckpointChecks } from "./checkpoint-d1.integration.ts"
 import { runCheckpointReplacementChecks } from "./checkpoint-recovery.integration.ts"
+import { runRetirementChecks } from "./history-retirement.integration.ts"
 
 const configPath = fileURLToPath(new URL("./fixtures/history-d1.jsonc", import.meta.url))
 const persistTo = await mkdtemp(join(tmpdir(), "mongolgpt-history-d1-"))
@@ -25,7 +26,12 @@ try {
     remoteBindings: false,
     envFiles: [],
   })
-  for (const file of ["0001_history.sql", "0002_history_checkpoint.sql", "0003_file_revision.sql"]) {
+  for (const file of [
+    "0001_history.sql",
+    "0002_history_checkpoint.sql",
+    "0003_file_revision.sql",
+    "0004_account_retirement.sql",
+  ]) {
     const migration = await readFile(fileURLToPath(new URL(`../migrations/${file}`, import.meta.url)), "utf8")
     for (const statement of unstable_splitSqlQuery(migration)) await platform.env.DB.prepare(statement).run()
   }
@@ -478,6 +484,13 @@ try {
   const checkpointScope = { accountID: "acc_checkpoint", workspaceID: "wrk_checkpoint" }
   const beforeRestart = await reopened.checkpoint(checkpointScope)
   ok(beforeRestart, "checkpoint restart fixture is missing")
+  const retirement = await runRetirementChecks(
+    platform.env.DB,
+    platform.env.BACKUPS,
+    nativeFixture,
+    beforeRestart!.data,
+  )
+  assertionCount += retirement.assertions
   await platform.dispose()
   platform = undefined
   platform = await getPlatformProxy<{ DB: D1Database; BACKUPS: R2Bucket }>({
@@ -500,6 +513,7 @@ try {
     "checkpoint deltas did not persist across D1 restart",
   )
   assertionCount += await replacement.afterRestart(platform.env.DB, platform.env.BACKUPS)
+  assertionCount += await retirement.afterRestart(platform.env.DB)
   console.log(`HISTORY_D1_RESULT ${JSON.stringify({ ok: true, assertions: assertionCount })}`)
 } finally {
   await platform?.dispose()

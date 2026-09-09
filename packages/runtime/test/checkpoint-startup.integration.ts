@@ -34,7 +34,12 @@ try {
     remoteBindings: false,
     envFiles: [],
   })
-  for (const name of ["0001_history.sql", "0002_history_checkpoint.sql", "0003_file_revision.sql"]) {
+  for (const name of [
+    "0001_history.sql",
+    "0002_history_checkpoint.sql",
+    "0003_file_revision.sql",
+    "0004_account_retirement.sql",
+  ]) {
     const sql = await readFile(fileURLToPath(new URL(`../migrations/${name}`, import.meta.url)), "utf8")
     for (const statement of unstable_splitSqlQuery(sql)) await platform.env.DB.prepare(statement).run()
   }

@@ -1,6 +1,7 @@
 import { ContainerProxy, getSandbox, Sandbox, type Process } from "@cloudflare/sandbox"
 import { createRuntimeHandler, createRuntimeProcessStarter, RUNTIME_PROCESS_ID, type RuntimeVariables } from "./runtime"
 import { handleHistoryOutbound } from "./history-rpc"
+import { createHistoryStore } from "./history"
 import { handleCheckpointOutbound } from "./checkpoint-rpc"
 import { fetchRuntime, runtimeHttpHeader } from "./runtime-http"
 import {
@@ -107,6 +108,7 @@ const handler = createRuntimeHandler<RuntimeEnvironment>({
     ) {
       throw new Error("Cloud сэргээх хадгалалт эсвэл түлхүүр тохируулаагүй байна.")
     }
+    if (env.HISTORY) await createHistoryStore(env.HISTORY).assertActive(scope)
     const sandbox = getSandbox(env.Sandbox, id, {
       normalizeId: true,
       sleepAfter: "10m",

@@ -95,6 +95,7 @@ export function createRuntimeCheckpointStore(
     const lease = { ...writer }
     const scope = { accountID: lease.accountID, workspaceID: lease.workspaceID }
     const data = decodeCheckpoint(input)
+    await history.assertActive(scope)
     await verify(scope, data.sqlite)
     await verify(scope, data.files)
     return history.publishCheckpoint(lease, data)
@@ -106,6 +107,7 @@ export function createRuntimeCheckpointStore(
     if (!checkpoint) return undefined
     await verify(scope, checkpoint.data.sqlite)
     await verify(scope, checkpoint.data.files)
+    await history.assertActive(scope)
     return checkpoint
   }
 
@@ -113,6 +115,7 @@ export function createRuntimeCheckpointStore(
     const lease = { ...writer }
     const data = decodeFileRevision(input)
     const scope = { accountID: lease.accountID, workspaceID: lease.workspaceID }
+    await history.assertActive(scope)
     if (data.sqlite) await verify(scope, data.sqlite)
     await verify(scope, data.archive)
     return history.publishFiles(lease, data)
@@ -124,6 +127,7 @@ export function createRuntimeCheckpointStore(
     if (!revision) return undefined
     if (revision.data.sqlite) await verify(scope, revision.data.sqlite)
     await verify(scope, revision.data.archive)
+    await history.assertActive(scope)
     return revision
   }
 

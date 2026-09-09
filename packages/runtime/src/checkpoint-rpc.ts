@@ -72,7 +72,10 @@ const UploadReceipt = Schema.Struct({
 })
 
 type CheckpointRecord = { data: CloudCheckpoint.Checkpoint; digest?: string }
-type HistoryStore = Pick<ReturnType<typeof createHistoryStore>, "checkpoint" | "epoch" | "claim" | "fileRevision">
+type HistoryStore = Pick<
+  ReturnType<typeof createHistoryStore>,
+  "assertActive" | "checkpoint" | "epoch" | "claim" | "fileRevision"
+>
 type ArchiveManifest = {
   version: number
   format: string
@@ -161,6 +164,7 @@ export function createCheckpointHandler(stores: CheckpointStores, scope: History
       if (url.origin !== origin || url.search !== "" || url.hash !== "" || url.username !== "" || url.password !== "")
         throw new CheckpointRpcError("invalid")
       if (url.href !== `${origin}${url.pathname}`) throw new CheckpointRpcError("invalid")
+      await stores.history.assertActive(trustedScope)
       if (url.pathname === "/v1/upload") return await upload(stores, trustedScope, request)
       if (!["/v1/bootstrap", "/v1/begin", "/v1/archive", "/v1/publish", "/v1/publish-files"].includes(url.pathname))
         throw new CheckpointRpcError("invalid")
@@ -240,6 +244,7 @@ async function begin(
     const lease = await stores.history.claim(scope, { expectedEpoch: 0, writerID: input.writerID })
     signal.throwIfAborted()
     if (lease.epoch !== 1 || lease.writerID !== input.writerID) throw new CheckpointRpcError("conflict")
+    await stores.history.assertActive(scope)
     return success({
       lease: { epoch: lease.epoch, writerID: lease.writerID },
       keyID,
@@ -323,6 +328,7 @@ async function upload(stores: CheckpointStores, scope: HistoryScope, request: Re
         throw new CheckpointRpcError("unavailable")
       const receipt = { backupID: saved.backupID, keyID: saved.keyID, bytes: saved.bytes, sha256: saved.sha256 }
       decodeSecret(UploadReceipt, receipt)
+      await stores.history.assertActive(scope)
       return success(receipt)
     } catch (cause) {
       // save() sanitizes stream failures; retain the boundary's exact error code.
@@ -347,6 +353,7 @@ async function bootstrap(stores: CheckpointStores, scope: HistoryScope) {
   const masters = readMasterKeys(stores.masterKeyJson)
   const sqlite = files?.data.sqlite ?? checkpoint.data.sqlite
   try {
+    await stores.history.assertActive(scope)
     return success({
       checkpoint: checkpoint.data,
       ...(files ? { filesRevision: files.data } : {}),
@@ -375,6 +382,12 @@ async function archive(stores: CheckpointStores, scope: HistoryScope, input: typ
         ? files.data.sqlite
         : checkpoint.data[input.kind]
   const opened = await stores.backups.open(scope, accepted.backupID)
+  try {
+    await stores.history.assertActive(scope)
+  } catch (error) {
+    cancelStream(opened.body)
+    throw error
+  }
   if (!sameArchive(opened.manifest, accepted)) {
     cancelStream(opened.body)
     throw new CheckpointRpcError("conflict")

@@ -14,6 +14,65 @@ const masterKeyJson = JSON.stringify({ key_checkpoint_rpc: master.toString("base
 const runtimeSecret = "checkpoint-runtime-secret-at-least-thirty-two-characters"
 
 describe("checkpoint rpc", () => {
+  test("does not expose archive bytes when retirement wins during archive open", async () => {
+    const checkpoint = checkpointFixture()
+    let retired = false
+    let cancelled = false
+    const backups = backupStore(
+      checkpoint,
+      {},
+      new ReadableStream<Uint8Array>({
+        cancel() {
+          cancelled = true
+        },
+      }),
+    )
+    const response = await createCheckpointHandler(
+      {
+        history: historyStore({
+          checkpoint,
+          assertActive: async () => {
+            if (retired) throw new HistoryError("fenced")
+          },
+        }),
+        backups: {
+          open: async (tenant, id) => {
+            const result = await backups.open(tenant, id)
+            retired = true
+            return result
+          },
+        },
+      },
+      scope,
+    )(request("/archive", { checkpointID: checkpoint.id, kind: "sqlite" }))
+    expect(response.status).toBe(409)
+    expect(cancelled).toBe(true)
+    expect(await response.text()).not.toContain("backupID")
+  })
+
+  test("does not return tenant keys when retirement wins during baseline claim", async () => {
+    let retired = false
+    const response = await createCheckpointHandler(
+      {
+        history: historyStore({
+          assertActive: async () => {
+            if (retired) throw new HistoryError("fenced")
+          },
+          claim: async (tenant) => {
+            retired = true
+            return { ...tenant, epoch: 1, writerID: "writer_retired" }
+          },
+        }),
+        backups: beginBackups(),
+        publisher: beginPublisher(),
+        masterKeyJson,
+      },
+      scope,
+    )(request("/begin", { writerID: "writer_retired" }))
+    expect(response.status).toBe(409)
+    expect(await response.text()).not.toContain("key")
+  })
+
   test("selects the current file revision and rejects stale or missing archive guards", async () => {
     const checkpoint = checkpointFixture()
     const revision: CloudCheckpoint.FileRevision = {
@@ -636,6 +695,7 @@ describe("checkpoint rpc", () => {
 })
 
 function historyStore(input: {
+  assertActive?: () => Promise<void>
   checkpoint?: CloudCheckpoint.Checkpoint
   epoch?: number
   checkpointError?: Error
@@ -649,6 +709,7 @@ function historyStore(input: {
   const calls = input.calls ?? []
   return {
     calls,
+    assertActive: input.assertActive ?? (async () => {}),
     fileRevision: async () => (input.revision ? { data: input.revision, digest: "2".repeat(64) } : undefined),
     checkpoint: async (tenant: HistoryScope) => {
       calls.push(`checkpoint:${tenant.accountID}:${tenant.workspaceID}`)

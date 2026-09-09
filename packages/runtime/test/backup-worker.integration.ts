@@ -78,7 +78,12 @@ try {
   equal(missingPayload.code, "invalid", "worker returned the wrong validation code")
 
   const statements = []
-  for (const file of ["0001_history.sql", "0002_history_checkpoint.sql", "0003_file_revision.sql"]) {
+  for (const file of [
+    "0001_history.sql",
+    "0002_history_checkpoint.sql",
+    "0003_file_revision.sql",
+    "0004_account_retirement.sql",
+  ]) {
     statements.push(...unstable_splitSqlQuery(await readFile(join(process.cwd(), "migrations", file), "utf8")))
   }
   equal(

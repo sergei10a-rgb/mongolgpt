@@ -53,11 +53,45 @@ type StoredFileRevision = StoredCheckpoint & { revision_id: string; sequence: nu
 // never from request JSON. Events must already be schema-encoded/versioned by
 // EventV2. It deliberately exposes no SQL or database credential.
 export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
-  async function batch<T>(statements: D1PreparedStatement[]) {
+  function retirement(accountID: string) {
+    return db.prepare("SELECT account_id FROM runtime_history_retirement WHERE account_id = ?").bind(accountID)
+  }
+
+  async function batch<T>(scope: HistoryScope, statements: D1PreparedStatement[]) {
     try {
-      const results = await db.batch<T>(statements)
+      // Read admission and data in the same transaction. Database triggers also
+      // reject stale writers, including code deployed before this read gate.
+      const results = await db.batch<T>([retirement(scope.accountID), ...statements])
       if (results.some((result) => !result.success)) throw new HistoryError("unavailable")
-      return results
+      if (results[0].results.length) throw new HistoryError("fenced")
+      return results.slice(1)
+    } catch (error) {
+      if (error instanceof HistoryError) throw error
+      // A trigger abort rolls back the whole batch, including its read result.
+      // Classify from durable state, never from platform-specific SQL messages.
+      const retired = await Promise.resolve()
+        .then(() => retirement(scope.accountID).first())
+        .catch(() => null)
+      if (retired) throw new HistoryError("fenced")
+      throw new HistoryError("unavailable")
+    }
+  }
+
+  async function assertActive(scope: HistoryScope) {
+    validateScope(scope)
+    await batch(scope, [])
+  }
+
+  // Irreversible internal fence, not a deletion receipt. The cleanup coordinator
+  // must still stop containers and drain uploads before purging D1/R2 content.
+  async function retire(accountID: string) {
+    identifier(accountID)
+    try {
+      const result = await db
+        .prepare("INSERT INTO runtime_history_retirement (account_id) VALUES (?) ON CONFLICT DO NOTHING")
+        .bind(accountID)
+        .run()
+      if (!result.success) throw new HistoryError("unavailable")
     } catch {
       throw new HistoryError("unavailable")
     }
@@ -80,7 +114,7 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
 
   async function checkpoint(scope: HistoryScope) {
     validateScope(scope)
-    const result = await batch<StoredCheckpoint>([checkpointRow(scope)])
+    const result = await batch<StoredCheckpoint>(scope, [checkpointRow(scope)])
     const row = result[0].results[0]
     if (!row) return undefined
     try {
@@ -104,7 +138,7 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
   async function fileRevision(tenant: HistoryScope) {
     const scope = { ...tenant }
     validateScope(scope)
-    const results = await batch<StoredFileRevision>([latestFiles(scope), checkpointRow(scope)])
+    const results = await batch<StoredFileRevision>(scope, [latestFiles(scope), checkpointRow(scope)])
     const row = results[0].results[0]
     if (!row) return undefined
     try {
@@ -135,7 +169,7 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
     const json = canonical(data)
     const fingerprint = await digest(json)
     const scope = [lease.accountID, lease.workspaceID]
-    const result = await batch<StoredFileRevision>([
+    const result = await batch<StoredFileRevision>(lease, [
       db
         .prepare(
           `INSERT INTO runtime_file_revision
@@ -201,7 +235,7 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
       AND EXISTS (SELECT 1 FROM runtime_history_writer w WHERE w.account_id = c.account_id
         AND w.workspace_id = c.workspace_id AND w.epoch = c.epoch AND w.writer_id = c.writer_id)`
     const args = [...scope, data.id, fingerprint, lease.epoch, lease.writerID]
-    const result = await batch<StoredCheckpoint>([
+    const result = await batch<StoredCheckpoint>(lease, [
       db
         .prepare(
           `INSERT INTO runtime_history_checkpoint
@@ -264,7 +298,7 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
 
   async function epoch(scope: HistoryScope) {
     validateScope(scope)
-    const result = await batch<{ epoch: number }>([writer(scope)])
+    const result = await batch<{ epoch: number }>(scope, [writer(scope)])
     return result[0].results[0]?.epoch ?? 0
   }
 
@@ -281,40 +315,43 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
     if (input.filesRevisionID !== undefined) identifier(input.filesRevisionID)
     const next = input.expectedEpoch + 1
     integer(next)
-    const result = await batch<{ epoch: number; writer_id: string; checkpoint_id: string; revision_id: string }>([
-      db
-        .prepare(
-          `INSERT INTO runtime_history_writer (account_id, workspace_id, epoch, writer_id)
+    const result = await batch<{ epoch: number; writer_id: string; checkpoint_id: string; revision_id: string }>(
+      scope,
+      [
+        db
+          .prepare(
+            `INSERT INTO runtime_history_writer (account_id, workspace_id, epoch, writer_id)
         SELECT ?, ?, 1, ? WHERE ? = 0 AND ? IS NULL ON CONFLICT (account_id, workspace_id) DO NOTHING`,
-        )
-        .bind(scope.accountID, scope.workspaceID, input.writerID, input.expectedEpoch, input.filesRevisionID ?? null),
-      db
-        .prepare(
-          `UPDATE runtime_history_writer SET epoch = ?, writer_id = ?
+          )
+          .bind(scope.accountID, scope.workspaceID, input.writerID, input.expectedEpoch, input.filesRevisionID ?? null),
+        db
+          .prepare(
+            `UPDATE runtime_history_writer SET epoch = ?, writer_id = ?
         WHERE account_id = ? AND workspace_id = ? AND epoch = ? AND writer_id != ?
           AND NOT EXISTS (SELECT 1 FROM runtime_history_checkpoint WHERE account_id = ? AND workspace_id = ?
             AND checkpoint_id != COALESCE(?, ''))
           AND (SELECT revision_id FROM runtime_file_revision WHERE account_id = ? AND workspace_id = ?
             ORDER BY sequence DESC LIMIT 1) IS ?`,
-        )
-        .bind(
-          next,
-          input.writerID,
-          scope.accountID,
-          scope.workspaceID,
-          input.expectedEpoch,
-          input.writerID,
-          scope.accountID,
-          scope.workspaceID,
-          input.checkpointID ?? null,
-          scope.accountID,
-          scope.workspaceID,
-          input.filesRevisionID ?? null,
-        ),
-      writer(scope),
-      checkpointRow(scope),
-      latestFiles(scope),
-    ])
+          )
+          .bind(
+            next,
+            input.writerID,
+            scope.accountID,
+            scope.workspaceID,
+            input.expectedEpoch,
+            input.writerID,
+            scope.accountID,
+            scope.workspaceID,
+            input.checkpointID ?? null,
+            scope.accountID,
+            scope.workspaceID,
+            input.filesRevisionID ?? null,
+          ),
+        writer(scope),
+        checkpointRow(scope),
+        latestFiles(scope),
+      ],
+    )
     if (result[3].results[0] && result[3].results[0].checkpoint_id !== input.checkpointID)
       throw new HistoryError("conflict")
     if (result[4].results[0]?.revision_id !== input.filesRevisionID) throw new HistoryError("conflict")
@@ -350,7 +387,7 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
     const scope = [lease.accountID, lease.workspaceID]
     // Preconditions, insert, head advancement and the receipt are one D1 batch.
     // A failed CAS cannot acknowledge an event or purge any previous history.
-    const result = await batch<StoredEvent & { epoch: number; writer_id: string }>([
+    const result = await batch<StoredEvent & { epoch: number; writer_id: string }>(lease, [
       db
         .prepare(
           `INSERT INTO runtime_history_session (account_id, workspace_id, session_id)
@@ -465,7 +502,7 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
     integer(limit, 1)
     if (input.checkpointID !== undefined) identifier(input.checkpointID)
     if (limit > MAX_PAGE_ENTRIES) throw new HistoryError("invalid_input")
-    const result = await batch<StoredEvent & StoredCheckpoint>([
+    const result = await batch<StoredEvent & StoredCheckpoint>(scope, [
       db
         .prepare(
           `SELECT cursor, event_id, session_id, seq, type, data, deleted FROM runtime_history_event
@@ -494,7 +531,19 @@ export function createHistoryStore(db: Pick<D1Database, "prepare" | "batch">) {
     return { entries, cursor: entries.at(-1)?.cursor ?? after, hasMore: result[0].results.length > limit }
   }
 
-  return { epoch, claim, append, erase, read, checkpoint, publishCheckpoint, fileRevision, publishFiles }
+  return {
+    assertActive,
+    retire,
+    epoch,
+    claim,
+    append,
+    erase,
+    read,
+    checkpoint,
+    publishCheckpoint,
+    fileRevision,
+    publishFiles,
+  }
 }
 
 function identifier(value: unknown) {

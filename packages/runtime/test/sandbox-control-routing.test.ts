@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test"
 import { dirname, join } from "node:path"
+import { issueRuntimeCapability } from "@mongolgpt/runtime-auth"
 import {
   checkpointControlHeader,
   deriveControlToken,
@@ -42,6 +43,72 @@ const { MongolGPTSandbox } = await import("../src/index")
 const { CanarySandbox, canaryScope } = await import("./fixtures/cloudflare-canary")
 
 describe("sandbox control routing", () => {
+  for (const state of ["retired", "unavailable", "active"] as const) {
+    test(`the actual Worker checks ${state} account admission before allocating a sandbox`, async () => {
+      const entry = await import("../src/index")
+      const scope = { accountID: "acc_worker_retirement", workspaceID: "wrk_worker_retirement" }
+      const authSecret = "worker-retirement-auth-secret-at-least-thirty-two-characters"
+      let allocated = false
+      const queries: string[] = []
+      const bindings: unknown[][] = []
+      const env = {
+        MONGOLGPT_APP_ORIGIN: "https://app.dev.mgpt.mn",
+        MONGOLGPT_CONSOLE_URL: "https://dev.mgpt.mn",
+        MONGOLGPT_RUNTIME_AUTH_SECRET: authSecret,
+        MONGOLGPT_RUNTIME_SECRET: runtimeSecret,
+        MONGOLGPT_RUNTIME_VERSION: "retirement-test",
+        MONGOLGPT_RUNTIME_BURST_LIMITER: limiter(),
+        MONGOLGPT_RUNTIME_RATE_LIMITER: limiter(),
+        STAGE: "dev",
+        Sandbox: new Proxy(
+          {},
+          {
+            get() {
+              allocated = true
+              throw new Error("test stops at sandbox allocation")
+            },
+          },
+        ),
+        HISTORY: {
+          prepare(query: string) {
+            queries.push(query)
+            return {
+              bind(...args: unknown[]) {
+                bindings.push(args)
+                return {}
+              },
+            }
+          },
+          async batch() {
+            if (state === "unavailable") throw new Error("private D1 failure")
+            return [{ success: true, results: state === "retired" ? [{ account_id: scope.accountID }] : [] }]
+          },
+        },
+      } as unknown as RuntimeEnv
+      const token = await issueRuntimeCapability({
+        ...scope,
+        authVersion: 1,
+        audience: "https://runtime.dev.mgpt.mn",
+        secret: authSecret,
+        ttlSeconds: 90,
+      })
+      const response = await entry.default.fetch(
+        new Request("https://runtime.dev.mgpt.mn/project", {
+          headers: { origin: env.MONGOLGPT_APP_ORIGIN, authorization: `Bearer ${token}` },
+        }) as Parameters<typeof entry.default.fetch>[0],
+        env,
+      )
+      expect(response.status).toBe(502)
+      expect(allocated).toBe(state === "active")
+      expect(queries.length).toBeGreaterThan(0)
+      expect(
+        queries.every((query) => query === "SELECT account_id FROM runtime_history_retirement WHERE account_id = ?"),
+      ).toBe(true)
+      expect(bindings.every((args) => JSON.stringify(args) === JSON.stringify([scope.accountID]))).toBe(true)
+      expect(await response.text()).not.toMatch(/private D1|acc_worker|SELECT|test stops/)
+    })
+  }
+
   test("pinned SDK invokes onStart again for an already-running container", async () => {
     const fixture = await createSandbox({}, CanarySandbox)
     const canary = fixture.sandbox as InstanceType<typeof CanarySandbox>

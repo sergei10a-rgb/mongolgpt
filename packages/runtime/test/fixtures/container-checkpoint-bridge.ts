@@ -42,7 +42,12 @@ type BridgeConfig = {
 const hostCheckpoint = "checkpoint.mongolgpt.internal"
 const hostHistory = "history.mongolgpt.internal"
 const bridgeKeyID = "synthetic_bridge_master"
-const migrationNames = ["0001_history.sql", "0002_history_checkpoint.sql", "0003_file_revision.sql"] as const
+const migrationNames = [
+  "0001_history.sql",
+  "0002_history_checkpoint.sql",
+  "0003_file_revision.sql",
+  "0004_account_retirement.sql",
+] as const
 const checkpointPaths = new Set([
   "/v1/bootstrap",
   "/v1/begin",

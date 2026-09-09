@@ -17,6 +17,25 @@ const digest = "a".repeat(64)
 type Stores = Parameters<typeof createCheckpointHandler>[0]
 
 describe("checkpoint upload RPC transport", () => {
+  test("does not acknowledge an upload which finishes after retirement", async () => {
+    const fixture = handler()
+    let retired = false
+    fixture.stores.history.assertActive = async () => {
+      if (retired) throw new HistoryError("fenced")
+    }
+    const save = fixture.stores.backups!.save!
+    fixture.stores.backups!.save = async (tenant, input) => {
+      const receipt = await save(tenant, input)
+      retired = true
+      return receipt
+    }
+    const response = await fixture.handle(upload(stream([new Uint8Array([1])]), "1"))
+    await expectFailure(response, 409, "conflict")
+    expect(fixture.uploads).toHaveLength(1)
+    // Bytes may already exist: draining and purging remain the coordinator's job.
+    expect(fixture.publications).toHaveLength(0)
+  })
+
   test("streams exact bytes under verified scope and returns only the receipt", async () => {
     const tenant = { ...scope }
     const fixture = handler({}, tenant)
@@ -548,16 +567,7 @@ describe("checkpoint file publication RPC", () => {
     const release = Promise.withResolvers<null>()
     const abort = new AbortController()
     let sql = 0
-    const db = {
-      prepare() {
-        sql++
-        throw new Error("unexpected CAS")
-      },
-      batch() {
-        sql++
-        throw new Error("unexpected CAS")
-      },
-    } as unknown as D1Database
+    const db = admissionOnlyD1(() => sql++)
     const bucket = {
       get() {
         entered.resolve()
@@ -591,16 +601,7 @@ describe("checkpoint file publication RPC", () => {
     const release = Promise.withResolvers<null>()
     const abort = new AbortController()
     let sql = 0
-    const db = {
-      prepare() {
-        sql++
-        throw new Error("unexpected CAS")
-      },
-      batch() {
-        sql++
-        throw new Error("unexpected CAS")
-      },
-    } as unknown as D1Database
+    const db = admissionOnlyD1(() => sql++)
     const bucket = {
       get() {
         entered.resolve()
@@ -654,13 +655,39 @@ test("write endpoints reject methods, content types, noncanonical paths and quer
   }
 })
 
+function admissionOnlyD1(unexpected: () => void) {
+  const statement = {
+    bind: (...args: unknown[]) => {
+      expect(args).toEqual([scope.accountID])
+      return statement
+    },
+  }
+  return {
+    prepare(query: string) {
+      if (query === "SELECT account_id FROM runtime_history_retirement WHERE account_id = ?") return statement
+      unexpected()
+      throw new Error("unexpected CAS")
+    },
+    async batch(statements: unknown[]) {
+      expect(statements).toEqual([statement])
+      return [{ success: true, results: [] }]
+    },
+  } as unknown as D1Database
+}
+
 function handler(overrides: Partial<Stores> = {}, tenant = scope) {
   // These stubs test transport delegation only, not AES, R2 durability, or D1 CAS.
   const uploads: { scope: HistoryScope; keyID: string; bytes: number; chunks: number }[] = []
   const publications: { lease: HistoryLease; revision: CloudCheckpoint.FileRevision }[] = []
   const checkpointPublications: { lease: HistoryLease; checkpoint: CloudCheckpoint.Checkpoint }[] = []
   const stores: Stores = {
-    history: { checkpoint: unreadable, epoch: unreadable, claim: unreadable, fileRevision: unreadable },
+    history: {
+      assertActive: async () => {},
+      checkpoint: unreadable,
+      epoch: unreadable,
+      claim: unreadable,
+      fileRevision: unreadable,
+    },
     masterKeyJson,
     backups: {
       open: unreadable,

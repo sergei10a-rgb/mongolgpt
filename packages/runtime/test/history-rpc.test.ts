@@ -6,6 +6,20 @@ const scope = { accountID: "acc_test", workspaceID: "wrk_test" } satisfies Histo
 const url = "http://history.mongolgpt.internal/v1"
 
 describe("history rpc", () => {
+  test("does not expose account retirement through the sandbox history RPC", async () => {
+    let retired = false
+    const store = {
+      ...stubStore(),
+      retire: async () => {
+        retired = true
+      },
+    }
+    expect((await createHistoryHandler(store, scope)(request("/retire", { accountID: scope.accountID }))).status).toBe(
+      400,
+    )
+    expect(retired).toBe(false)
+  })
+
   test("accepts project metadata and rejects a conflicting nested project identity", async () => {
     const store = stubStore()
     const handler = createHistoryHandler(store, scope)
