@@ -239,26 +239,35 @@ async function isolated(output: string) {
   const captures: Array<{ controller: AbortController; done: Promise<void>; failure?: "unavailable" | "size_limit" }> =
     []
   let phase = "bridge_readiness"
+  let bridgeReadinessStatus: number | null = null
+  let bridgeAuthStatus: number | null = null
   let outer: ReturnType<typeof Bun.spawn> | undefined
   try {
     await until(
       async () => {
         assert.equal(bridge.exitCode, null, "D1/R2 bridge exited")
         return fetch("http://127.0.0.1/__test/health", { headers: adminHeaders }).then(
-          (r) => r.ok,
+          (r) => {
+            bridgeReadinessStatus = r.status
+            return r.ok
+          },
           () => false,
         )
       },
       "D1/R2 bridge readiness",
       90_000,
     )
+    phase = "bridge_authentication"
     const blocked = await fetch("http://checkpoint.mongolgpt.internal/v1/bootstrap", { method: "POST", body: "{}" })
+    bridgeAuthStatus = blocked.status
     assert.equal(blocked.status, 403, "Bridge must not bypass root checkpoint authentication")
+    phase = "bridge_initial_state"
     const initial = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
     assert.equal(initial.epoch, 0)
     assert.equal(initial.checkpoint, null)
     assert.equal(initial.revision, null)
     assert.equal(initial.injected.archiveResponsesWithoutLength, 0)
+    phase = "bridge_master_key"
     privateValues.push((await Bun.file("/tmp/bridge/.container-checkpoint-bridge-master.json").json()).master)
     let accepted: BridgeStatus | undefined
     const archiveDownloads = []
@@ -692,6 +701,25 @@ async function isolated(output: string) {
       "HOSTED_CONTAINER_FAILURE",
       JSON.stringify({
         phase,
+        bridgeExitCode: bridge.exitCode,
+        bridgeReadinessStatus,
+        bridgeAuthStatus,
+        errorCode:
+          error instanceof Error &&
+          "code" in error &&
+          typeof error.code === "string" &&
+          [
+            "ERR_ASSERTION",
+            "EAI_AGAIN",
+            "ENOTFOUND",
+            "ECONNREFUSED",
+            "ECONNRESET",
+            "ETIMEDOUT",
+            "ENOENT",
+            "EACCES",
+          ].includes(error.code)
+            ? error.code
+            : null,
         epoch: diagnostic?.epoch,
         checkpointPresent: !!diagnostic?.checkpoint,
         revisionPresent: !!diagnostic?.revision,
