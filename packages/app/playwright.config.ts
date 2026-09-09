@@ -11,7 +11,7 @@ const workers = Number(process.env.PLAYWRIGHT_WORKERS ?? (process.env.CI ? 5 : 0
 const ignored = [
   "console/**",
   "deployed/**",
-  "smoke/hosted-account-gate.spec.ts",
+  "**/smoke/hosted-*.spec.ts",
   process.env.MONGOLGPT_PERFORMANCE === "1" ? "performance/**/*.test.ts" : "performance/**",
 ]
 export default defineConfig({
