@@ -9,6 +9,8 @@ import { deriveCheckpointControlToken, checkpointControlHeader } from "@mongolgp
 // Run with Node 22+; the native reporter is compiled with the supplied Bun executable.
 const { unstable_startWorker } = await import("wrangler")
 const root = await mkdtemp(fileURLToPath(new URL("../.tmp/startup-diagnostic-", import.meta.url)))
+const nativeHandoff = process.platform === "linux" && process.getuid?.() === 0
+const assertions = nativeHandoff ? 23 : 18
 const secret = randomBytes(32).toString("hex")
 const admin = randomBytes(32).toString("hex")
 const scope = { accountID: "account_cloudflare_canary", workspaceID: "wrk_cloudflare_canary" }
@@ -151,17 +153,42 @@ try {
   await bounded(worker.ready)
   phase = "native_child_restart_read"
   assert.deepEqual(await receipt(), fatal)
+  if (nativeHandoff) {
+    phase = "native_handoff_rejection"
+    const handoff = JSON.parse(
+      await run(
+        executable,
+        [],
+        JSON.stringify({
+          origin: (await worker.url).origin,
+          token,
+          admin,
+          nativeHandoff: true,
+        }),
+      ),
+    )
+    assert.deepEqual(handoff, { reported: true, completed: true, exitCode: 1 })
+    const rejected = (await receipt()) as { diagnostic: { phase: string; code: string; exitCode: number } }
+    assert.equal(rejected.diagnostic.phase, "native_exit")
+    assert.equal(rejected.diagnostic.code, "handoff_cgroup_binding")
+    assert.equal(rejected.diagnostic.exitCode, 1)
+    await worker.dispose()
+    worker = await unstable_startWorker(options)
+    await bounded(worker.ready)
+    assert.deepEqual(await receipt(), rejected)
+  }
   await writeFile(
     join(root, "result.json"),
     JSON.stringify(
       {
-        assertions: 18,
+        assertions,
         proxy: "actual-ContainerProxy",
         storage: "actual-DO-shared-persistence",
         retainedAfterRestart: true,
         compiledReporter: true,
         compiledChildExit: 17,
         compiledChildStderrClassification: "EACCES",
+        actualHandoffRejection: nativeHandoff,
         reportedBeforeContainerCompletion: true,
         containerLifecycle: "not-tested",
       },
@@ -169,7 +196,7 @@ try {
       2,
     ),
   )
-  console.log(JSON.stringify({ passed: true, assertions: 18, receipt: join(root, "result.json") }))
+  console.log(JSON.stringify({ passed: true, assertions, receipt: join(root, "result.json") }))
 } catch (error) {
   console.error(JSON.stringify({ phase }))
   throw error

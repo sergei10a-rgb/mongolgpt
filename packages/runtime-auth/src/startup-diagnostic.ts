@@ -1,5 +1,25 @@
 export const startupDiagnosticEnv = "MONGOLGPT_CANARY_STARTUP_DIAGNOSTICS"
+// This child flag permits bounded stderr codes only; it grants no root/reporting access.
+export const nativeStartupDiagnosticEnv = "MONGOLGPT_CANARY_NATIVE_DIAGNOSTICS"
 export const startupDiagnosticPath = "/v1/startup-diagnostic"
+
+export const startupHandoffCodes = Object.freeze([
+  "handoff_unknown",
+  "handoff_identity",
+  "handoff_fd_stat",
+  "handoff_fd_type",
+  "handoff_fd_owner",
+  "handoff_fd_links",
+  "handoff_fd_mode",
+  "handoff_fd_size",
+  "handoff_read",
+  "handoff_changed",
+  "handoff_decode",
+  "handoff_root",
+  "handoff_group",
+  "handoff_cgroup_read",
+  "handoff_cgroup_binding",
+] as const)
 
 export const startupDiagnosticNativePhases = Object.freeze([
   "native_runtime",
@@ -28,6 +48,7 @@ export const startupDiagnosticPhases = Object.freeze([
 
 export const startupDiagnosticCodes = Object.freeze([
   "unknown",
+  ...startupHandoffCodes,
   "EXDEV",
   "EBUSY",
   "EACCES",

@@ -1,11 +1,23 @@
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
+import { randomUUID } from "node:crypto"
 import { CloudStartup } from "@mongolgpt/core/database/cloud-startup"
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
+import { StartupHandoff } from "@mongolgpt/core/database/startup-handoff"
 import { checkpointControlEnv } from "@mongolgpt/runtime-auth/control"
 import { startupDiagnosticEnv } from "@mongolgpt/runtime-auth/startup-diagnostic"
 import { reportStartupFailure } from "../../src/cli/startup-diagnostic"
 import { runRuntimeSupervisor } from "../../src/cli/runtime-supervisor"
+import { nativeStartupDiagnostic } from "../../src/cli/native-startup-diagnostic"
+
+if (process.argv.includes("--handoff-reject-probe")) {
+  const error = await StartupHandoff.accept("/workspace").catch((error: unknown) => error)
+  if (!(error instanceof StartupHandoff.HandoffError)) process.exit(99)
+  const diagnostic = nativeStartupDiagnostic(error)
+  if (!diagnostic) process.exit(98)
+  process.stderr.write(diagnostic, () => process.exit(1))
+  await new Promise(() => {})
+}
 
 if (process.argv.includes("--native-exit-probe")) {
   // Use real stderr with sensitive decoys; the persisted receipt may contain
@@ -20,11 +32,12 @@ const config = JSON.parse(await Bun.stdin.text()) as {
   admin: string
   missingRoot: string
   nativeExit?: boolean
+  nativeHandoff?: boolean
 }
 if (new URL(config.origin).hostname !== "127.0.0.1") throw new Error("Loopback test only")
 process.env[startupDiagnosticEnv] = "true"
 let reported = false
-if (config.nativeExit) {
+if (config.nativeExit || config.nativeHandoff) {
   Object.assign(process.env, {
     MONGOLGPT_RUNTIME_MODE: "hosted",
     MONGOLGPT_CLOUD_HISTORY: "true",
@@ -39,12 +52,21 @@ if (config.nativeExit) {
     start: async (input) => {
       assert.equal(input.env[startupDiagnosticEnv], undefined)
       assert.equal(input.env[checkpointControlEnv], undefined)
-      const child = spawn(process.execPath, ["--native-exit-probe"], {
-        env: input.env,
+      const packet = config.nativeHandoff
+        ? await StartupHandoff.issue({
+            root: "/workspace",
+            group: `/sys/fs/cgroup/mongolgpt-${randomUUID()}`,
+            checkpoint: null,
+          })
+        : undefined
+      const child = spawn(process.execPath, [config.nativeHandoff ? "--handoff-reject-probe" : "--native-exit-probe"], {
+        env: { ...input.env, ...(packet ? { MONGOLGPT_RUNTIME_PREPARED_FD: "4" } : {}) },
         windowsHide: true,
-        stdio: ["ignore", "ignore", input.stderr ?? "ignore"],
+        ...(packet ? { uid: 10001, gid: 10001 } : {}),
+        stdio: ["ignore", "ignore", input.stderr ?? "ignore", "ignore", packet?.fd ?? "ignore"],
       })
       const closed = new Promise<void>((resolve) => child.once("close", () => resolve()))
+      await packet?.close()
       let finish!: () => void
       const control = new Promise<void>((resolve) => {
         finish = resolve
@@ -73,7 +95,7 @@ if (config.nativeExit) {
     }),
     request,
   })
-  assert.equal(result, 17)
+  assert.equal(result, config.nativeHandoff ? 1 : 17)
   assert.equal(completed, true)
   console.log(JSON.stringify({ reported, completed, exitCode: result }))
   process.exit(0)

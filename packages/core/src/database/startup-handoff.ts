@@ -7,6 +7,9 @@ import { Schema } from "effect"
 import { CloudCheckpoint } from "@mongolgpt/schema/cloud-checkpoint"
 import type { CloudStartup } from "./cloud-startup"
 import { RuntimeControl } from "../runtime-control"
+import { startupHandoffCodes } from "@mongolgpt/runtime-auth/startup-diagnostic"
+
+type HandoffCode = (typeof startupHandoffCodes)[number]
 
 const maxBytes = 1024 * 1024
 const UUID = Schema.String.check(
@@ -34,7 +37,7 @@ const Packet = Schema.Struct({
 })
 
 export class HandoffError extends Error {
-  constructor() {
+  constructor(readonly code: HandoffCode = "handoff_unknown") {
     super("Cloud серверт сэргээсэн төлөвийг найдвартай дамжуулж чадсангүй.")
     this.name = "StartupHandoffError"
   }
@@ -107,40 +110,46 @@ export async function issue(input: { root: string; group: string; checkpoint: Cl
  * An ordinary CLI/env flag cannot synthesize a root-owned anonymous receipt. */
 export async function accept(root: string): Promise<CloudStartup.Baseline | null> {
   if (process.platform !== "linux" || !process.getuid?.() || process.env.MONGOLGPT_RUNTIME_PREPARED_FD !== "4")
-    throw new HandoffError()
+    throw new HandoffError("handoff_identity")
   let bytes: Buffer | undefined
+  let code: HandoffCode = "handoff_fd_stat"
   try {
     const info = fstatSync(4)
-    if (
-      !info.isFile() ||
-      info.uid !== 0 ||
-      info.nlink !== 0 ||
-      (info.mode & 0o777) !== 0o600 ||
-      info.size < 1 ||
-      info.size > maxBytes
-    )
-      throw new HandoffError()
+    code = "handoff_fd_type"
+    if (!info.isFile()) throw new HandoffError(code)
+    code = "handoff_fd_owner"
+    if (info.uid !== 0) throw new HandoffError(code)
+    code = "handoff_fd_links"
+    if (info.nlink !== 0) throw new HandoffError(code)
+    code = "handoff_fd_mode"
+    if ((info.mode & 0o777) !== 0o600) throw new HandoffError(code)
+    code = "handoff_fd_size"
+    if (info.size < 1 || info.size > maxBytes) throw new HandoffError(code)
+    code = "handoff_read"
     bytes = Buffer.alloc(info.size)
     let offset = 0
     while (offset < bytes.length) {
       const count = readSync(4, bytes, offset, bytes.length - offset, offset)
-      if (count === 0) throw new HandoffError()
+      if (count === 0) throw new HandoffError(code)
       offset += count
     }
     const after = fstatSync(4)
+    code = "handoff_changed"
     if (info.size !== after.size || info.mtimeMs !== after.mtimeMs || info.ctimeMs !== after.ctimeMs)
-      throw new HandoffError()
+      throw new HandoffError(code)
+    code = "handoff_decode"
     const packet = Schema.decodeUnknownSync(Packet)(
       Schema.decodeUnknownSync(Schema.UnknownFromJsonString)(bytes.toString("utf8")),
       { onExcessProperty: "error" },
     )
-    if (
-      packet.root !== root ||
-      resolve(root) !== root ||
-      !/^\/(?:[A-Za-z0-9_.-]+\/)*mongolgpt-[0-9a-f-]{36}$/.test(packet.group)
-    )
-      throw new HandoffError()
-    if ((await readFile("/proc/self/cgroup", "utf8")).trim() !== `0::${packet.group}`) throw new HandoffError()
+    code = "handoff_root"
+    if (packet.root !== root || resolve(root) !== root) throw new HandoffError(code)
+    code = "handoff_group"
+    if (!/^\/(?:[A-Za-z0-9_.-]+\/)*mongolgpt-[0-9a-f-]{36}$/.test(packet.group)) throw new HandoffError(code)
+    code = "handoff_cgroup_read"
+    const membership = (await readFile("/proc/self/cgroup", "utf8")).trim()
+    code = "handoff_cgroup_binding"
+    if (membership !== `0::${packet.group}`) throw new HandoffError(code)
     return packet.checkpoint
       ? {
           ...packet.checkpoint.data,
@@ -150,7 +159,7 @@ export async function accept(root: string): Promise<CloudStartup.Baseline | null
         }
       : null
   } catch {
-    throw new HandoffError()
+    throw new HandoffError(code)
   } finally {
     bytes?.fill(0)
     try {

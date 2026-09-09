@@ -2,7 +2,8 @@ import { expect, test } from "bun:test"
 import { PassThrough, Writable } from "node:stream"
 import { StartupHandoff } from "@mongolgpt/core/database/startup-handoff"
 import { RuntimeControl } from "@mongolgpt/core/runtime-control"
-import { captureNativeStderr } from "../../src/cli/native-startup-diagnostic"
+import { captureNativeStderr, nativeStartupDiagnostic } from "../../src/cli/native-startup-diagnostic"
+import { nativeStartupDiagnosticEnv, startupHandoffCodes } from "@mongolgpt/runtime-auth/startup-diagnostic"
 
 for (const [message, code] of [
   ["EACCES: private-user@example.test /private/path", "EACCES"],
@@ -65,4 +66,42 @@ test("missing and errored stderr cannot prevent cleanup", async () => {
   source.destroy(new Error("private stream error"))
   await new Promise<void>((resolve) => source.once("close", resolve))
   expect(await collect()).toBe("unknown")
+})
+
+test("child diagnostics are opt-in, finite codes and never invoke private accessors", async () => {
+  const previous = process.env[nativeStartupDiagnosticEnv]
+  try {
+    const error = new StartupHandoff.HandoffError("handoff_cgroup_binding")
+    for (const flag of [undefined, "false", "1", "TRUE"]) {
+      if (flag === undefined) delete process.env[nativeStartupDiagnosticEnv]
+      else process.env[nativeStartupDiagnosticEnv] = flag
+      expect(nativeStartupDiagnostic(error)).toBeUndefined()
+    }
+    process.env[nativeStartupDiagnosticEnv] = "true"
+    for (const code of startupHandoffCodes) {
+      const error = new StartupHandoff.HandoffError(code)
+      const source = new PassThrough()
+      const destination = new Writable({
+        write(_chunk, _encoding, done) {
+          done()
+        },
+      })
+      const collect = captureNativeStderr(source, destination)
+      const diagnostic = nativeStartupDiagnostic(error)
+      expect(diagnostic).toBe(`MONGOLGPT_STARTUP_DIAGNOSTIC:${code}\n`)
+      source.end(`${diagnostic}${error.message}`)
+      expect(await collect()).toBe(code)
+    }
+    expect(nativeStartupDiagnostic(new Error("private"))).toBeUndefined()
+    expect(nativeStartupDiagnostic({ code: "handoff_cgroup_binding" })).toBeUndefined()
+    Object.defineProperty(error, "code", {
+      get() {
+        throw new Error("private getter")
+      },
+    })
+    expect(nativeStartupDiagnostic(error)).toBeUndefined()
+  } finally {
+    if (previous === undefined) delete process.env[nativeStartupDiagnosticEnv]
+    else process.env[nativeStartupDiagnosticEnv] = previous
+  }
 })

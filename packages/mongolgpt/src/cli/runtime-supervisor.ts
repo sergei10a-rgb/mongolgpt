@@ -2,7 +2,7 @@ import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
 import { RuntimeContainerControl } from "@mongolgpt/core/runtime-container-control"
 import { reportStartupFailure, type NativeStartupFailure } from "./startup-diagnostic"
 import { captureNativeStderr } from "./native-startup-diagnostic"
-import { startupDiagnosticEnv } from "@mongolgpt/runtime-auth/startup-diagnostic"
+import { startupDiagnosticEnv, nativeStartupDiagnosticEnv } from "@mongolgpt/runtime-auth/startup-diagnostic"
 import {
   RuntimeCheckpointClient,
   checkpointControlEnv,
@@ -97,6 +97,7 @@ export async function runRuntimeSupervisor(
       request: RuntimeCheckpointClient.create(controlToken, input.request),
       env: {
         ...env,
+        ...(diagnostic ? { [nativeStartupDiagnosticEnv]: "true" } : {}),
         PATH: "/usr/local/bin:/usr/bin:/bin",
         HOME: root,
         XDG_DATA_HOME: `${root}/.mongolgpt/data`,

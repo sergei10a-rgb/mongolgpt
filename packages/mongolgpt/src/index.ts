@@ -31,6 +31,7 @@ import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 import { CompatCommand } from "./cli/cmd/compat"
 import { initializeCliAccountTokenEncryption } from "./account/cli-token-key"
+import { nativeStartupDiagnosticEnv } from "@mongolgpt/runtime-auth/startup-diagnostic"
 
 const args = hideBin(process.argv)
 let accountTokenEncryptionInitialization: Promise<void> | undefined
@@ -207,6 +208,11 @@ try {
     await cli.parse()
   }
 } catch (e) {
+  if (process.env[nativeStartupDiagnosticEnv] === "true") {
+    const { nativeStartupDiagnostic } = await import("./cli/native-startup-diagnostic")
+    const diagnostic = nativeStartupDiagnostic(e)
+    if (diagnostic) process.stderr.write(diagnostic)
+  }
   const formatted = FormatError(e)
   if (formatted) UI.error(formatted)
   if (formatted === undefined) {

@@ -4,7 +4,11 @@ import { setTimeout } from "node:timers/promises"
 import { checkpointControlEnv, checkpointControlHeader } from "@mongolgpt/core/runtime-checkpoint-client"
 import { RuntimeSupervisor } from "@mongolgpt/core/runtime-supervisor"
 import { CloudStartup } from "@mongolgpt/core/database/cloud-startup"
-import { startupDiagnosticEnv, startupDiagnosticPath } from "@mongolgpt/runtime-auth/startup-diagnostic"
+import {
+  startupDiagnosticEnv,
+  nativeStartupDiagnosticEnv,
+  startupDiagnosticPath,
+} from "@mongolgpt/runtime-auth/startup-diagnostic"
 import { runRuntimeSupervisor } from "../../src/cli/runtime-supervisor"
 
 type RuntimeStart = typeof RuntimeSupervisor.start
@@ -21,6 +25,7 @@ const requiredEnv = {
   [checkpointControlEnv]: "a".repeat(64),
   MONGOLGPT_SDK_CONTROL_TOKEN: "b".repeat(64),
   [startupDiagnosticEnv]: "false",
+  [nativeStartupDiagnosticEnv]: "true",
 } as const
 
 describe("runRuntimeSupervisor hosted lifecycle", () => {
@@ -97,6 +102,8 @@ describe("runRuntimeSupervisor hosted lifecycle", () => {
           start: async (input) => {
             expect(input.stdio).toBe("inherit")
             expect(input.stderr).toBe(enabled ? "pipe" : undefined)
+            if (enabled) expect(input.env[nativeStartupDiagnosticEnv]).toBe("true")
+            else expect(input.env).not.toHaveProperty(nativeStartupDiagnosticEnv)
             expect(input.env).not.toHaveProperty(startupDiagnosticEnv)
             expect(input.env).not.toHaveProperty(checkpointControlEnv)
             throw error

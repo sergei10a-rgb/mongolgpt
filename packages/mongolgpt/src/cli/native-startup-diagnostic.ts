@@ -1,7 +1,22 @@
 import type { Readable, Writable } from "node:stream"
 import { StartupHandoff } from "@mongolgpt/core/database/startup-handoff"
 import { RuntimeControl } from "@mongolgpt/core/runtime-control"
-import { startupDiagnosticCodes, type StartupDiagnostic } from "@mongolgpt/runtime-auth/startup-diagnostic"
+import {
+  startupDiagnosticCodes,
+  startupHandoffCodes,
+  nativeStartupDiagnosticEnv,
+  type StartupDiagnostic,
+} from "@mongolgpt/runtime-auth/startup-diagnostic"
+
+export function nativeStartupDiagnostic(error: unknown): string | undefined {
+  if (process.env[nativeStartupDiagnosticEnv] !== "true") return
+  try {
+    if (!(error instanceof StartupHandoff.HandoffError)) return
+    const code = Object.getOwnPropertyDescriptor(error, "code")?.value
+    const safe = startupHandoffCodes.find((value) => value === code)
+    if (safe) return `MONGOLGPT_STARTUP_DIAGNOSTIC:${safe}\n`
+  } catch {}
+}
 
 /** Root-only, canary-only observation. Child text is untrusted: retain at most
  * 4 KiB in memory and return only a fixed classification, never log contents. */
@@ -30,6 +45,10 @@ export function captureNativeStderr(stream: Readable | null, destination: Writab
       if (stream && !stream.readableEnded && !stream.destroyed)
         await Promise.race([closed, new Promise<void>((resolve) => (timer = setTimeout(resolve, 500)))])
       const text = bytes.subarray(0, length).toString("utf8")
+      const handoff = startupHandoffCodes.find((code) =>
+        new RegExp(`(^|\\n)MONGOLGPT_STARTUP_DIAGNOSTIC:${code}(\\r?\\n|$)`).test(text),
+      )
+      if (handoff) return handoff
       if (text.includes("MongolGPT workspace isolation failed.")) return "WorkspaceIsolationError"
       // CLI errorMessage intentionally prints only the message for these errors.
       if (text.includes(new StartupHandoff.HandoffError().message)) return "StartupHandoffError"
