@@ -124,7 +124,7 @@ describe("subscription checkout cancellation", () => {
     })
     const dependencies = {
       adapters: { qpay: created.adapter },
-      transaction: environment.transaction,
+      batch: sqliteBatch(environment.transaction),
       now: () => NOW,
     }
 
@@ -183,7 +183,7 @@ describe("subscription checkout cancellation", () => {
         requestKey: SECOND_CANCELLATION_REQUEST,
         reason: "Давхардсан QPay нэхэмжлэхийг админаас цуцалж байна.",
       },
-      { adapters: { qpay: created.adapter }, transaction: environment.transaction, now: () => NOW },
+      { adapters: { qpay: created.adapter }, batch: sqliteBatch(environment.transaction), now: () => NOW },
     )
 
     expect(result.result).toEqual({ invoiceID: created.checkout.invoiceID, provider: "qpay", status: "cancelled" })
@@ -220,7 +220,7 @@ describe("subscription checkout cancellation", () => {
 
     await cancelSubscriptionCheckout(request(environment.workspaceID, actingAccountID, created.checkout.invoiceID), {
       adapters: { qpay: created.adapter },
-      transaction: environment.transaction,
+      batch: sqliteBatch(environment.transaction),
       now: () => NOW,
     })
 
@@ -249,7 +249,7 @@ describe("subscription checkout cancellation", () => {
         requestKey: SECOND_CANCELLATION_REQUEST,
         reason: "Устгагдсан нэхэмжлэхийг дахин цуцлахгүй гэж шалгаж байна.",
       },
-      { adapters: { qpay: created.adapter }, transaction: environment.transaction, now: () => NOW },
+      { adapters: { qpay: created.adapter }, batch: sqliteBatch(environment.transaction), now: () => NOW },
     ).catch((caught) => caught)
 
     expect(error).toBeInstanceOf(PaymentCancellationConflictError)
@@ -267,7 +267,7 @@ describe("subscription checkout cancellation", () => {
     unauthorized.sqlite.query("update user set role = 'member' where account_id = ?").run(unauthorized.accountID)
     const authorizationError = await cancelSubscriptionCheckout(
       request(unauthorized.workspaceID, unauthorized.accountID, qpay.checkout.invoiceID),
-      { adapters: { qpay: qpay.adapter }, transaction: unauthorized.transaction, now: () => NOW },
+      { adapters: { qpay: qpay.adapter }, batch: sqliteBatch(unauthorized.transaction), now: () => NOW },
     ).catch((error) => error)
 
     expect(authorizationError).toBeInstanceOf(PaymentCancellationAuthorizationError)
@@ -282,7 +282,7 @@ describe("subscription checkout cancellation", () => {
     })
     const unsupportedError = await cancelSubscriptionCheckout(
       request(unsupported.workspaceID, unsupported.accountID, bonum.checkout.invoiceID),
-      { adapters: { bonum: bonum.adapter }, transaction: unsupported.transaction, now: () => NOW },
+      { adapters: { bonum: bonum.adapter }, batch: sqliteBatch(unsupported.transaction), now: () => NOW },
     ).catch((error) => error)
 
     expect(unsupportedError).toBeInstanceOf(PaymentCancellationUnsupportedError)
@@ -299,7 +299,7 @@ describe("subscription checkout cancellation", () => {
     })
     const dependencies = {
       adapters: { qpay: created.adapter },
-      transaction: environment.transaction,
+      batch: sqliteBatch(environment.transaction),
       now: () => NOW,
     }
     const cancellationRequest = request(environment.workspaceID, environment.accountID, created.checkout.invoiceID)
@@ -327,7 +327,7 @@ describe("subscription checkout cancellation", () => {
     })
     const dependencies = {
       adapters: { qpay: created.adapter },
-      transaction: environment.transaction,
+      batch: sqliteBatch(environment.transaction),
       now: () => NOW,
     }
     const cancellationRequest = request(environment.workspaceID, environment.accountID, created.checkout.invoiceID)
@@ -375,7 +375,7 @@ describe("subscription checkout cancellation", () => {
       request(environment.workspaceID, environment.accountID, created.checkout.invoiceID),
       {
         adapters: { qpay: created.adapter },
-        transaction: environment.transaction,
+        batch: sqliteBatch(environment.transaction),
         now: () => NOW + 2 * 60_000,
       },
     ).catch((caught) => caught)
@@ -401,7 +401,7 @@ describe("subscription checkout cancellation", () => {
 
     const error = await cancelSubscriptionCheckout(
       request(environment.workspaceID, environment.accountID, created.checkout.invoiceID),
-      { adapters: { qpay: created.adapter }, transaction: environment.transaction, now: () => NOW },
+      { adapters: { qpay: created.adapter }, batch: sqliteBatch(environment.transaction), now: () => NOW },
     ).catch((caught) => caught)
 
     expect(error).toBeInstanceOf(PaymentCancellationConflictError)
@@ -413,7 +413,7 @@ describe("subscription checkout cancellation", () => {
   test("retries only local completion when the committed response is lost", async () => {
     const environment = await fixture()
     let providerCalls = 0
-    let transactionCalls = 0
+    let batchCalls = 0
     const created = await environment.createCheckout("qpay", async (input) => {
       providerCalls++
       return {
@@ -427,10 +427,10 @@ describe("subscription checkout cancellation", () => {
       request(environment.workspaceID, environment.accountID, created.checkout.invoiceID),
       {
         adapters: { qpay: created.adapter },
-        transaction: async (callback) => {
-          transactionCalls++
-          const value = await environment.transaction(callback)
-          if (transactionCalls === 2) throw new Error("committed response was lost")
+        batch: async (callback) => {
+          batchCalls++
+          const value = await sqliteBatch(environment.transaction)(callback)
+          if (batchCalls === 3) throw new Error("committed response was lost")
           return value
         },
         now: () => NOW,
@@ -439,7 +439,7 @@ describe("subscription checkout cancellation", () => {
 
     expect(result.result.status).toBe("cancelled")
     expect(providerCalls).toBe(1)
-    expect(transactionCalls).toBe(3)
+    expect(batchCalls).toBe(4)
   })
 
   test("fails closed on a mismatched provider receipt and does not mutate twice", async () => {
@@ -455,7 +455,7 @@ describe("subscription checkout cancellation", () => {
     })
     const dependencies = {
       adapters: { qpay: created.adapter },
-      transaction: environment.transaction,
+      batch: sqliteBatch(environment.transaction),
       now: () => NOW,
     }
     const cancellationRequest = request(environment.workspaceID, environment.accountID, created.checkout.invoiceID)

@@ -1,4 +1,5 @@
-import { and, Database, eq, isNull } from "./drizzle"
+import { and, Database, eq, exists, isNull, sql, type SQL } from "./drizzle"
+import { paymentBatchGuard, type PaymentBatchDatabase } from "./payment-ledger"
 import {
   PaymentCancellationStateSchema,
   PlatformAdminSubscriptionCheckoutCancellationRequestSchema,
@@ -26,7 +27,6 @@ import { UserTable } from "./schema/user.sql"
 
 const CANCELLATION_IN_PROGRESS_MS = 2 * 60 * 1_000
 
-type Transaction = <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise<T>
 type Provider = (typeof PaymentProviders)[number]
 type CancellationAdapters = Partial<Record<Provider, PaymentCancellationAdapter>>
 
@@ -89,7 +89,7 @@ export async function cancelSubscriptionCheckout(
   input: SubscriptionCheckoutCancellationRequest,
   dependencies: {
     adapters: CancellationAdapters
-    transaction?: Transaction
+    batch?: typeof Database.batch
     now?: () => number
   },
 ): Promise<SubscriptionCancellationOutcome> {
@@ -97,12 +97,19 @@ export async function cancelSubscriptionCheckout(
   const now = dependencies.now ?? Date.now
   const requestedAt = now()
   validateTimestamp(requestedAt)
-  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
-
-  const reservation = await transaction((db) =>
-    reserveCancellationWithDb(db, request, dependencies.adapters, requestedAt),
+  const batch = dependencies.batch ?? Database.batch
+  const reservation = await reserveStoredCancellation(
+    batch,
+    request.invoiceID,
+    request.requestKey,
+    dependencies.adapters,
+    requestedAt,
+    {
+      expectedWorkspaceID: request.workspaceID,
+      actorAccountID: request.accountID,
+    },
   )
-  return finishCancellationReservation(reservation, transaction, now, requestedAt)
+  return finishCancellationReservation(reservation, batch, now, requestedAt)
 }
 
 /**
@@ -115,7 +122,7 @@ export async function cancelPlatformAdminSubscriptionCheckout(
   input: PlatformAdminSubscriptionCheckoutCancellationRequest,
   dependencies: {
     adapters: CancellationAdapters
-    transaction?: Transaction
+    batch?: typeof Database.batch
     now?: () => number
   },
 ): Promise<SubscriptionCancellationOutcome> {
@@ -123,16 +130,20 @@ export async function cancelPlatformAdminSubscriptionCheckout(
   const now = dependencies.now ?? Date.now
   const requestedAt = now()
   validateTimestamp(requestedAt)
-  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
-  const reservation = await transaction((db) =>
-    reserveStoredCancellationWithDb(db, request.invoiceID, request.requestKey, dependencies.adapters, requestedAt),
+  const batch = dependencies.batch ?? Database.batch
+  const reservation = await reserveStoredCancellation(
+    batch,
+    request.invoiceID,
+    request.requestKey,
+    dependencies.adapters,
+    requestedAt,
   )
-  return finishCancellationReservation(reservation, transaction, now, requestedAt)
+  return finishCancellationReservation(reservation, batch, now, requestedAt)
 }
 
 async function finishCancellationReservation(
-  reservation: Awaited<ReturnType<typeof reserveStoredCancellationWithDb>>,
-  transaction: Transaction,
+  reservation: Awaited<ReturnType<typeof reserveStoredCancellation>>,
+  batch: typeof Database.batch,
   now: () => number,
   requestedAt: number,
 ): Promise<SubscriptionCancellationOutcome> {
@@ -157,9 +168,9 @@ async function finishCancellationReservation(
     const failure = classifyCancellationFailure(error)
     const failedAt = now()
     validateTimestamp(failedAt, requestedAt)
-    await transaction((db) =>
-      markCancellationFailureWithDb(db, reservation.invoice.id, failure.state, failure.code, failedAt),
-    ).catch(() => undefined)
+    await markCancellationFailure(batch, reservation.invoice.id, failure.state, failure.code, failedAt).catch(
+      () => undefined,
+    )
     throw new PaymentCancellationOperationError(failure.state, failure.code)
   }
 
@@ -167,59 +178,45 @@ async function finishCancellationReservation(
   validateTimestamp(completedAt, requestedAt)
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const completed = await transaction((db) =>
-        completeCancellationWithDb(db, reservation.invoice.id, receipt, completedAt),
-      )
+      const completed = await completeCancellation(batch, reservation.invoice.id, receipt, completedAt)
       return cancellationOutcome(completed)
     } catch {
       if (attempt === 0) continue
     }
   }
-  await transaction((db) =>
-    markCancellationFailureWithDb(db, reservation.invoice.id, "unknown", "persistence_failed", requestedAt),
-  ).catch(() => undefined)
+  await markCancellationFailure(batch, reservation.invoice.id, "unknown", "persistence_failed", requestedAt).catch(
+    () => undefined,
+  )
   throw new PaymentCancellationOperationError("unknown", "persistence_failed")
 }
 
-async function reserveCancellationWithDb(
-  db: Database.TxOrDb,
-  input: ReturnType<typeof SubscriptionCheckoutCancellationRequestSchema.parse>,
-  adapters: CancellationAdapters,
-  now: number,
-) {
-  const administrator = await db
-    .select({ id: UserTable.id })
-    .from(UserTable)
-    .where(
-      and(
-        eq(UserTable.workspaceID, input.workspaceID),
-        eq(UserTable.accountID, input.accountID),
-        eq(UserTable.role, "admin"),
-        isNull(UserTable.timeDeleted),
-      ),
-    )
-    .limit(1)
-    .then((rows) => rows[0])
-  if (!administrator) throw new PaymentCancellationAuthorizationError()
+type CancellationScope = { expectedWorkspaceID: string; actorAccountID: string }
 
-  return reserveStoredCancellationWithDb(db, input.invoiceID, input.requestKey, adapters, now, {
-    expectedWorkspaceID: input.workspaceID,
-    actorAccountID: input.accountID,
-  })
+function cancellationAuthorization(db: PaymentBatchDatabase, scope?: CancellationScope) {
+  if (!scope) return sql`1`
+  return exists(
+    db
+      .select({ id: UserTable.id })
+      .from(UserTable)
+      .where(
+        and(
+          eq(UserTable.workspaceID, scope.expectedWorkspaceID),
+          eq(UserTable.accountID, scope.actorAccountID),
+          eq(UserTable.role, "admin"),
+          isNull(UserTable.timeDeleted),
+        ),
+      )
+      .limit(1),
+  )
 }
 
-async function reserveStoredCancellationWithDb(
-  db: Database.TxOrDb,
+function cancellationInvoice(
+  db: PaymentBatchDatabase,
   invoiceID: string,
-  requestKey: string,
-  adapters: CancellationAdapters,
-  now: number,
-  options?: {
-    expectedWorkspaceID?: string
-    actorAccountID?: string
-  },
+  options?: CancellationScope,
+  condition?: SQL,
 ) {
-  const invoice = await db
+  return db
     .select({
       id: PaymentCheckoutTable.id,
       workspaceID: PaymentCheckoutTable.workspace_id,
@@ -228,21 +225,52 @@ async function reserveStoredCancellationWithDb(
       merchant_account_id: PaymentCheckoutTable.merchant_account_id,
       external_invoice_id: PaymentCheckoutTable.external_invoice_id,
       purpose: PaymentCheckoutTable.purpose,
-      checkoutStatus: PaymentCheckoutTable.status,
-      invoiceStatus: PaymentInvoiceTable.status,
+      // D1 batch rows are objects: duplicate SQL column names collapse before Drizzle maps them.
+      checkoutStatus: sql<typeof PaymentCheckoutTable.$inferSelect.status>`${PaymentCheckoutTable.status}`.as(
+        "checkout_status",
+      ),
+      invoiceStatus: sql<typeof PaymentInvoiceTable.$inferSelect.status>`${PaymentInvoiceTable.status}`.as(
+        "invoice_status",
+      ),
     })
     .from(PaymentCheckoutTable)
-    .leftJoin(PaymentInvoiceTable, eq(PaymentInvoiceTable.id, PaymentCheckoutTable.id))
+    .innerJoin(
+      PaymentInvoiceTable,
+      and(
+        eq(PaymentInvoiceTable.id, PaymentCheckoutTable.id),
+        eq(PaymentInvoiceTable.workspace_id, PaymentCheckoutTable.workspace_id),
+        eq(PaymentInvoiceTable.provider, PaymentCheckoutTable.provider),
+        eq(PaymentInvoiceTable.merchant_account_id, PaymentCheckoutTable.merchant_account_id),
+        eq(PaymentInvoiceTable.external_invoice_id, PaymentCheckoutTable.external_invoice_id),
+        eq(PaymentInvoiceTable.purpose, PaymentCheckoutTable.purpose),
+      ),
+    )
     .where(
       and(
         eq(PaymentCheckoutTable.id, invoiceID),
         options?.expectedWorkspaceID ? eq(PaymentCheckoutTable.workspace_id, options.expectedWorkspaceID) : undefined,
         isNull(PaymentCheckoutTable.timeDeleted),
         isNull(PaymentInvoiceTable.timeDeleted),
+        condition,
       ),
     )
     .limit(1)
-    .then((rows) => rows[0])
+}
+
+async function reserveStoredCancellation(
+  batch: typeof Database.batch,
+  invoiceID: string,
+  requestKey: string,
+  adapters: CancellationAdapters,
+  now: number,
+  options?: CancellationScope,
+) {
+  const [[invoice], [existing], [authorization]] = await batch((db) => [
+    cancellationInvoice(db, invoiceID, options),
+    findCancellation(db, invoiceID),
+    db.select({ allowed: cancellationAuthorization(db, options).mapWith(Number) }).from(sql`(select 1)`),
+  ])
+  if (!authorization.allowed) throw new PaymentCancellationAuthorizationError()
   if (!invoice || !invoice.external_invoice_id || !invoice.invoiceStatus || invoice.purpose !== "subscription") {
     throw new PaymentCancellationConflictError("not_cancellable")
   }
@@ -255,16 +283,24 @@ async function reserveStoredCancellationWithDb(
     throw new PaymentCancellationConflictError("settled")
   }
 
-  const existing = await findCancellation(db, invoice.id)
   if (existing) {
     if (existing.status === "cancelled") return { kind: "replay" as const, cancellation: existing }
     if (existing.status === "requested" && existing.time_requested.getTime() + CANCELLATION_IN_PROGRESS_MS <= now) {
-      await db
-        .update(PaymentCancellationTable)
-        .set({ status: "unknown", error_code: "provider_result_unknown" })
-        .where(
-          and(eq(PaymentCancellationTable.invoice_id, invoice.id), eq(PaymentCancellationTable.status, "requested")),
-        )
+      const [, , [current]] = await batch((db) => [
+        paymentBatchGuard(db, cancellationAuthorization(db, options)),
+        db
+          .update(PaymentCancellationTable)
+          .set({ status: "unknown", error_code: "provider_result_unknown" })
+          .where(
+            and(
+              eq(PaymentCancellationTable.invoice_id, invoice.id),
+              eq(PaymentCancellationTable.status, "requested"),
+              eq(PaymentCancellationTable.time_requested, existing.time_requested),
+            ),
+          ),
+        findCancellation(db, invoice.id),
+      ])
+      if (current?.status === "cancelled") return { kind: "replay" as const, cancellation: current }
       return { kind: "stale_unknown" as const }
     }
     if (existing.status === "requested") throw new PaymentCancellationConflictError("request_in_progress")
@@ -287,38 +323,64 @@ async function reserveStoredCancellationWithDb(
     throw new PaymentCancellationConflictError("not_cancellable")
   }
 
-  const requestReplay = await db
-    .select({ invoiceID: PaymentCancellationTable.invoice_id })
-    .from(PaymentCancellationTable)
-    .where(
+  // Authorization and the cancellable snapshot must still hold when the reservation commits.
+  const [, inserted, [current], [requestReplay]] = await batch((db) => [
+    paymentBatchGuard(
+      db,
       and(
-        eq(PaymentCancellationTable.workspace_id, invoice.workspaceID),
-        eq(PaymentCancellationTable.request_key, requestKey),
+        cancellationAuthorization(db, options),
+        exists(
+          cancellationInvoice(
+            db,
+            invoice.id,
+            options,
+            and(
+              eq(PaymentCheckoutTable.workspace_id, invoice.workspaceID),
+              eq(PaymentCheckoutTable.account_id, invoice.accountID),
+              eq(PaymentCheckoutTable.provider, invoice.provider),
+              eq(PaymentCheckoutTable.merchant_account_id, invoice.merchant_account_id),
+              eq(PaymentCheckoutTable.external_invoice_id, invoice.external_invoice_id!),
+              eq(PaymentCheckoutTable.purpose, invoice.purpose),
+              eq(PaymentCheckoutTable.status, invoice.checkoutStatus),
+              eq(PaymentInvoiceTable.status, invoice.invoiceStatus),
+            ),
+          ),
+        ),
       ),
-    )
-    .limit(1)
-    .then((rows) => rows[0])
-  if (requestReplay && requestReplay.invoiceID !== invoice.id) {
-    throw new Error("Төлбөр цуцлах хүсэлтийг дахин илгээхэд өөр нэхэмжлэхтэй зөрчилдөж байна")
-  }
-
-  const inserted = await db
-    .insert(PaymentCancellationTable)
-    .values({
-      invoice_id: invoice.id,
-      workspace_id: invoice.workspaceID,
-      account_id: options?.actorAccountID ?? invoice.accountID,
-      request_key: requestKey,
-      provider: invoice.provider,
-      merchant_account_id: invoice.merchant_account_id,
-      external_invoice_id: invoice.external_invoice_id,
-      status: "requested",
-      time_requested: new Date(now),
-      timeCreated: new Date(now),
-    })
-    .onConflictDoNothing()
-  if (resultChanges(inserted) !== 1) {
-    const concurrent = await findCancellation(db, invoice.id)
+    ),
+    db
+      .insert(PaymentCancellationTable)
+      .values({
+        invoice_id: invoice.id,
+        workspace_id: invoice.workspaceID,
+        account_id: options?.actorAccountID ?? invoice.accountID,
+        request_key: requestKey,
+        provider: invoice.provider,
+        merchant_account_id: invoice.merchant_account_id,
+        external_invoice_id: invoice.external_invoice_id!,
+        status: "requested",
+        time_requested: new Date(now),
+        timeCreated: new Date(now),
+      })
+      .onConflictDoNothing()
+      .returning(),
+    findCancellation(db, invoice.id),
+    db
+      .select({ invoiceID: PaymentCancellationTable.invoice_id })
+      .from(PaymentCancellationTable)
+      .where(
+        and(
+          eq(PaymentCancellationTable.workspace_id, invoice.workspaceID),
+          eq(PaymentCancellationTable.request_key, requestKey),
+        ),
+      )
+      .limit(1),
+  ])
+  if (inserted.length !== 1) {
+    if (requestReplay && requestReplay.invoiceID !== invoice.id) {
+      throw new Error("Төлбөр цуцлах хүсэлтийг дахин илгээхэд өөр нэхэмжлэхтэй зөрчилдөж байна")
+    }
+    const concurrent = current
     if (!concurrent) throw new Error("Төлбөр цуцлах нөөцлөлт зөрчилдлөө")
     if (concurrent.status === "cancelled") return { kind: "replay" as const, cancellation: concurrent }
     throw new PaymentCancellationConflictError(
@@ -332,15 +394,32 @@ async function reserveStoredCancellationWithDb(
   return { kind: "reserved" as const, invoice, externalInvoiceID: invoice.external_invoice_id, adapter }
 }
 
-async function completeCancellationWithDb(
-  db: Database.TxOrDb,
+async function completeCancellation(
+  batch: typeof Database.batch,
   invoiceID: string,
   receipt: Awaited<ReturnType<PaymentCancellationAdapter["cancelInvoice"]>>,
   completedAt: number,
 ) {
-  const cancellation = await requireCancellation(db, invoiceID)
-  if (cancellation.status === "cancelled") return cancellation
-  if (cancellation.status !== "requested") throw new Error("Төлбөр цуцлах үйлдэл цааш үргэлжлэх боломжгүй болсон")
+  const [, [cancellation]] = await batch((db) => [
+    db
+      .update(PaymentCancellationTable)
+      .set({
+        status: "cancelled",
+        error_code: null,
+        time_completed: new Date(completedAt),
+      })
+      .where(
+        and(
+          eq(PaymentCancellationTable.invoice_id, invoiceID),
+          eq(PaymentCancellationTable.status, "requested"),
+          eq(PaymentCancellationTable.provider, receipt.provider),
+          eq(PaymentCancellationTable.merchant_account_id, receipt.merchantAccountID),
+          eq(PaymentCancellationTable.external_invoice_id, receipt.externalInvoiceID),
+        ),
+      ),
+    findCancellation(db, invoiceID),
+  ])
+  if (!cancellation) throw new Error("Төлбөр цуцлах нөөцлөлт олдсонгүй")
   if (
     receipt.provider !== cancellation.provider ||
     receipt.merchantAccountID !== cancellation.merchant_account_id ||
@@ -349,34 +428,27 @@ async function completeCancellationWithDb(
     throw new Error("Төлбөр цуцалсан баримтын мэдээлэл нөөцлөлттэй таарахгүй байна")
   }
 
-  const changed = await db
-    .update(PaymentCancellationTable)
-    .set({
-      status: "cancelled",
-      error_code: null,
-      time_completed: new Date(completedAt),
-    })
-    .where(and(eq(PaymentCancellationTable.invoice_id, invoiceID), eq(PaymentCancellationTable.status, "requested")))
-    .returning({ invoiceID: PaymentCancellationTable.invoice_id })
-  if (changed.length !== 1) throw new Error("Төлбөр цуцлах мэдээлэл зэрэг өөрчлөгдсөн байна")
-  return requireCancellation(db, invoiceID)
+  if (cancellation.status !== "cancelled") throw new Error("Төлбөр цуцлах мэдээлэл зэрэг өөрчлөгдсөн байна")
+  return cancellation
 }
 
-async function markCancellationFailureWithDb(
-  db: Database.TxOrDb,
+async function markCancellationFailure(
+  batch: typeof Database.batch,
   invoiceID: string,
   status: "failed" | "unknown",
   code: string,
   occurredAt: number,
 ) {
-  await db
-    .update(PaymentCancellationTable)
-    .set({
-      status,
-      error_code: code,
-      ...(status === "failed" ? { time_completed: new Date(occurredAt) } : {}),
-    })
-    .where(and(eq(PaymentCancellationTable.invoice_id, invoiceID), eq(PaymentCancellationTable.status, "requested")))
+  await batch((db) => [
+    db
+      .update(PaymentCancellationTable)
+      .set({
+        status,
+        error_code: code,
+        ...(status === "failed" ? { time_completed: new Date(occurredAt) } : {}),
+      })
+      .where(and(eq(PaymentCancellationTable.invoice_id, invoiceID), eq(PaymentCancellationTable.status, "requested"))),
+  ])
 }
 
 async function cancellationOutcome(
@@ -425,30 +497,9 @@ function classifyCancellationFailure(error: unknown) {
 }
 
 function validateTimestamp(value: number, lowerBound = 0) {
-  if (!Number.isSafeInteger(value) || value < lowerBound)
-    throw new TypeError("Төлбөр цуцлах цагийн тэмдэг буруу байна")
+  if (!Number.isSafeInteger(value) || value < lowerBound) throw new TypeError("Төлбөр цуцлах цагийн тэмдэг буруу байна")
 }
 
-function findCancellation(db: Database.TxOrDb, invoiceID: string) {
-  return db
-    .select()
-    .from(PaymentCancellationTable)
-    .where(eq(PaymentCancellationTable.invoice_id, invoiceID))
-    .limit(1)
-    .then((rows) => rows[0])
-}
-
-async function requireCancellation(db: Database.TxOrDb, invoiceID: string) {
-  const cancellation = await findCancellation(db, invoiceID)
-  if (!cancellation) throw new Error("Төлбөр цуцлах нөөцлөлт олдсонгүй")
-  return cancellation
-}
-
-function resultChanges(result: unknown) {
-  if (!result || typeof result !== "object") return 0
-  if ("meta" in result && result.meta && typeof result.meta === "object" && "changes" in result.meta) {
-    return Number(result.meta.changes ?? 0)
-  }
-  if ("changes" in result) return Number(result.changes ?? 0)
-  return 0
+function findCancellation(db: PaymentBatchDatabase, invoiceID: string) {
+  return db.select().from(PaymentCancellationTable).where(eq(PaymentCancellationTable.invoice_id, invoiceID)).limit(1)
 }

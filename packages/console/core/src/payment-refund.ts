@@ -1,4 +1,5 @@
-import { and, Database, eq, isNull } from "./drizzle"
+import { and, Database, eq, exists, isNull, sql, type SQL } from "./drizzle"
+import { paymentBatchGuard, type PaymentBatchDatabase } from "./payment-ledger"
 import {
   PaymentRefundStateSchema,
   PlatformAdminSubscriptionPaymentRefundRequestSchema,
@@ -17,7 +18,6 @@ import { PaymentCheckoutTable, PaymentInvoiceTable, PaymentProviders, PaymentRef
 
 const REFUND_IN_PROGRESS_MS = 2 * 60 * 1_000
 
-type Transaction = <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise<T>
 type Provider = (typeof PaymentProviders)[number]
 type RefundAdapters = Partial<Record<Provider, PaymentRefundAdapter>>
 
@@ -73,7 +73,7 @@ export async function refundPlatformAdminSubscriptionPayment(
   input: PlatformAdminSubscriptionPaymentRefundRequest,
   dependencies: {
     adapters: RefundAdapters
-    transaction?: Transaction
+    batch?: typeof Database.batch
     now?: () => number
   },
 ): Promise<SubscriptionRefundOutcome> {
@@ -81,16 +81,20 @@ export async function refundPlatformAdminSubscriptionPayment(
   const now = dependencies.now ?? Date.now
   const requestedAt = now()
   validateTimestamp(requestedAt)
-  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
-  const reservation = await transaction((db) =>
-    reserveStoredRefundWithDb(db, request.invoiceID, request.requestKey, dependencies.adapters, requestedAt),
+  const batch = dependencies.batch ?? Database.batch
+  const reservation = await reserveStoredRefund(
+    batch,
+    request.invoiceID,
+    request.requestKey,
+    dependencies.adapters,
+    requestedAt,
   )
-  return finishRefundReservation(reservation, transaction, now, requestedAt)
+  return finishRefundReservation(reservation, batch, now, requestedAt)
 }
 
 async function finishRefundReservation(
-  reservation: Awaited<ReturnType<typeof reserveStoredRefundWithDb>>,
-  transaction: Transaction,
+  reservation: Awaited<ReturnType<typeof reserveStoredRefund>>,
+  batch: typeof Database.batch,
   now: () => number,
   requestedAt: number,
 ): Promise<SubscriptionRefundOutcome> {
@@ -116,9 +120,7 @@ async function finishRefundReservation(
     const reconciledAt = now()
     validateTimestamp(reconciledAt, requestedAt)
     try {
-      const completed = await transaction((db) =>
-        completeRefundWithDb(db, reservation.refund.invoice_id, receipt, reconciledAt, "unknown"),
-      )
+      const completed = await completeRefund(batch, reservation.refund.invoice_id, receipt, reconciledAt, "unknown")
       return refundOutcome(completed)
     } catch {
       throw new PaymentRefundOperationError("unknown", "persistence_failed")
@@ -132,9 +134,9 @@ async function finishRefundReservation(
     const failure = classifyRefundFailure(error)
     const failedAt = now()
     validateTimestamp(failedAt, requestedAt)
-    await transaction((db) =>
-      markRefundFailureWithDb(db, reservation.refund.invoice_id, failure.state, failure.code, failedAt),
-    ).catch(() => undefined)
+    await markRefundFailure(batch, reservation.refund.invoice_id, failure.state, failure.code, failedAt).catch(
+      () => undefined,
+    )
     throw new PaymentRefundOperationError(failure.state, failure.code)
   }
 
@@ -142,28 +144,20 @@ async function finishRefundReservation(
   validateTimestamp(completedAt, requestedAt)
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const completed = await transaction((db) =>
-        completeRefundWithDb(db, reservation.refund.invoice_id, receipt, completedAt, "requested"),
-      )
+      const completed = await completeRefund(batch, reservation.refund.invoice_id, receipt, completedAt, "requested")
       return refundOutcome(completed)
     } catch {
       if (attempt === 0) continue
     }
   }
-  await transaction((db) =>
-    markRefundFailureWithDb(db, reservation.refund.invoice_id, "unknown", "persistence_failed", requestedAt),
-  ).catch(() => undefined)
+  await markRefundFailure(batch, reservation.refund.invoice_id, "unknown", "persistence_failed", requestedAt).catch(
+    () => undefined,
+  )
   throw new PaymentRefundOperationError("unknown", "persistence_failed")
 }
 
-async function reserveStoredRefundWithDb(
-  db: Database.TxOrDb,
-  invoiceID: string,
-  requestKey: string,
-  adapters: RefundAdapters,
-  now: number,
-) {
-  const invoice = await db
+function refundInvoice(db: PaymentBatchDatabase, invoiceID: string, condition?: SQL) {
+  return db
     .select({
       id: PaymentCheckoutTable.id,
       workspaceID: PaymentCheckoutTable.workspace_id,
@@ -172,28 +166,54 @@ async function reserveStoredRefundWithDb(
       merchantAccountID: PaymentCheckoutTable.merchant_account_id,
       externalInvoiceID: PaymentCheckoutTable.external_invoice_id,
       purpose: PaymentCheckoutTable.purpose,
-      checkoutStatus: PaymentCheckoutTable.status,
-      invoiceStatus: PaymentInvoiceTable.status,
+      // D1 batch rows need unique SQL column names, not just distinct TypeScript keys.
+      checkoutStatus: sql<typeof PaymentCheckoutTable.$inferSelect.status>`${PaymentCheckoutTable.status}`.as(
+        "checkout_status",
+      ),
+      invoiceStatus: sql<typeof PaymentInvoiceTable.$inferSelect.status>`${PaymentInvoiceTable.status}`.as(
+        "invoice_status",
+      ),
       externalPaymentID: PaymentInvoiceTable.external_payment_id,
       amount: PaymentInvoiceTable.amount,
       currency: PaymentInvoiceTable.currency,
     })
     .from(PaymentCheckoutTable)
-    .innerJoin(PaymentInvoiceTable, eq(PaymentInvoiceTable.id, PaymentCheckoutTable.id))
+    .innerJoin(
+      PaymentInvoiceTable,
+      and(
+        eq(PaymentInvoiceTable.id, PaymentCheckoutTable.id),
+        eq(PaymentInvoiceTable.workspace_id, PaymentCheckoutTable.workspace_id),
+        eq(PaymentInvoiceTable.provider, PaymentCheckoutTable.provider),
+        eq(PaymentInvoiceTable.merchant_account_id, PaymentCheckoutTable.merchant_account_id),
+        eq(PaymentInvoiceTable.external_invoice_id, PaymentCheckoutTable.external_invoice_id),
+        eq(PaymentInvoiceTable.purpose, PaymentCheckoutTable.purpose),
+        eq(PaymentInvoiceTable.amount, PaymentCheckoutTable.amount),
+        eq(PaymentInvoiceTable.currency, PaymentCheckoutTable.currency),
+      ),
+    )
     .where(
       and(
         eq(PaymentCheckoutTable.id, invoiceID),
         isNull(PaymentCheckoutTable.timeDeleted),
         isNull(PaymentInvoiceTable.timeDeleted),
+        condition,
       ),
     )
     .limit(1)
-    .then((rows) => rows[0])
+}
+
+async function reserveStoredRefund(
+  batch: typeof Database.batch,
+  invoiceID: string,
+  requestKey: string,
+  adapters: RefundAdapters,
+  now: number,
+) {
+  const [[invoice], [existing]] = await batch((db) => [refundInvoice(db, invoiceID), findRefund(db, invoiceID)])
   if (!invoice || invoice.purpose !== "subscription" || !invoice.externalInvoiceID || !invoice.externalPaymentID) {
     throw new PaymentRefundConflictError("not_refundable")
   }
 
-  const existing = await findRefund(db, invoice.id)
   if (existing?.status === "refunded") return { kind: "replay" as const, refund: existing }
   if (invoice.invoiceStatus === "refunded" || invoice.checkoutStatus === "refunded") {
     return { kind: "already_refunded" as const, invoice }
@@ -203,13 +223,24 @@ async function reserveStoredRefundWithDb(
   }
   if (existing) {
     if (existing.status === "requested" && existing.time_requested.getTime() + REFUND_IN_PROGRESS_MS <= now) {
-      await db
-        .update(PaymentRefundTable)
-        .set({ status: "unknown", error_code: "provider_result_unknown" })
-        .where(and(eq(PaymentRefundTable.invoice_id, invoice.id), eq(PaymentRefundTable.status, "requested")))
+      const [, [current]] = await batch((db) => [
+        db
+          .update(PaymentRefundTable)
+          .set({ status: "unknown", error_code: "provider_result_unknown" })
+          .where(
+            and(
+              eq(PaymentRefundTable.invoice_id, invoice.id),
+              eq(PaymentRefundTable.status, "requested"),
+              eq(PaymentRefundTable.time_requested, existing.time_requested),
+            ),
+          ),
+        findRefund(db, invoice.id),
+      ])
+      if (current?.status === "refunded") return { kind: "replay" as const, refund: current }
+      if (current?.status !== "unknown") throw new PaymentRefundConflictError("result_unknown")
       return {
         kind: "reconcile_unknown" as const,
-        refund: await requireRefund(db, invoice.id),
+        refund: current,
         adapter: requireRefundAdapter(invoice, adapters),
       }
     }
@@ -222,38 +253,63 @@ async function reserveStoredRefundWithDb(
 
   const adapter = requireRefundAdapter(invoice, adapters)
 
-  const requestReplay = await db
-    .select({ invoiceID: PaymentRefundTable.invoice_id })
-    .from(PaymentRefundTable)
-    .where(
-      and(eq(PaymentRefundTable.workspace_id, invoice.workspaceID), eq(PaymentRefundTable.request_key, requestKey)),
-    )
-    .limit(1)
-    .then((rows) => rows[0])
-  if (requestReplay && requestReplay.invoiceID !== invoice.id) {
-    throw new Error("Төлбөр буцаах хүсэлтийг дахин илгээхэд өөр нэхэмжлэхтэй зөрчилдөж байна")
-  }
-
-  const inserted = await db
-    .insert(PaymentRefundTable)
-    .values({
-      invoice_id: invoice.id,
-      workspace_id: invoice.workspaceID,
-      account_id: invoice.accountID,
-      request_key: requestKey,
-      provider: invoice.provider,
-      merchant_account_id: invoice.merchantAccountID,
-      external_invoice_id: invoice.externalInvoiceID,
-      external_payment_id: invoice.externalPaymentID,
-      amount: invoice.amount,
-      currency: invoice.currency,
-      status: "requested",
-      time_requested: new Date(now),
-      timeCreated: new Date(now),
-    })
-    .onConflictDoNothing()
-  if (resultChanges(inserted) !== 1) {
-    const concurrent = await findRefund(db, invoice.id)
+  // Recheck the ledger snapshot in the same atomic batch as the reservation.
+  const [, inserted, [current], [requestReplay]] = await batch((db) => [
+    paymentBatchGuard(
+      db,
+      exists(
+        refundInvoice(
+          db,
+          invoice.id,
+          and(
+            eq(PaymentCheckoutTable.workspace_id, invoice.workspaceID),
+            eq(PaymentCheckoutTable.account_id, invoice.accountID),
+            eq(PaymentCheckoutTable.provider, invoice.provider),
+            eq(PaymentCheckoutTable.merchant_account_id, invoice.merchantAccountID),
+            eq(PaymentCheckoutTable.external_invoice_id, invoice.externalInvoiceID!),
+            eq(PaymentCheckoutTable.purpose, invoice.purpose),
+            eq(PaymentCheckoutTable.status, "paid"),
+            eq(PaymentInvoiceTable.status, "paid"),
+            eq(PaymentInvoiceTable.external_payment_id, invoice.externalPaymentID!),
+            eq(PaymentInvoiceTable.amount, invoice.amount),
+            eq(PaymentInvoiceTable.currency, invoice.currency),
+          ),
+        ),
+      ),
+    ),
+    db
+      .insert(PaymentRefundTable)
+      .values({
+        invoice_id: invoice.id,
+        workspace_id: invoice.workspaceID,
+        account_id: invoice.accountID,
+        request_key: requestKey,
+        provider: invoice.provider,
+        merchant_account_id: invoice.merchantAccountID,
+        external_invoice_id: invoice.externalInvoiceID!,
+        external_payment_id: invoice.externalPaymentID!,
+        amount: invoice.amount,
+        currency: invoice.currency,
+        status: "requested",
+        time_requested: new Date(now),
+        timeCreated: new Date(now),
+      })
+      .onConflictDoNothing()
+      .returning(),
+    findRefund(db, invoice.id),
+    db
+      .select({ invoiceID: PaymentRefundTable.invoice_id })
+      .from(PaymentRefundTable)
+      .where(
+        and(eq(PaymentRefundTable.workspace_id, invoice.workspaceID), eq(PaymentRefundTable.request_key, requestKey)),
+      )
+      .limit(1),
+  ])
+  if (inserted.length !== 1) {
+    if (requestReplay && requestReplay.invoiceID !== invoice.id) {
+      throw new Error("Төлбөр буцаах хүсэлтийг дахин илгээхэд өөр нэхэмжлэхтэй зөрчилдөж байна")
+    }
+    const concurrent = current
     if (!concurrent) throw new Error("Төлбөр буцаах нөөцлөлт зөрчилдлөө")
     if (concurrent.status === "refunded") return { kind: "replay" as const, refund: concurrent }
     throw new PaymentRefundConflictError(
@@ -266,21 +322,42 @@ async function reserveStoredRefundWithDb(
   }
   return {
     kind: "reserved" as const,
-    refund: await requireRefund(db, invoice.id),
+    refund: inserted[0],
     adapter,
   }
 }
 
-async function completeRefundWithDb(
-  db: Database.TxOrDb,
+async function completeRefund(
+  batch: typeof Database.batch,
   invoiceID: string,
   receipt: Awaited<ReturnType<PaymentRefundAdapter["refundPayment"]>>,
   completedAt: number,
   expectedStatus: "requested" | "unknown",
 ) {
-  const refund = await requireRefund(db, invoiceID)
-  if (refund.status === "refunded") return refund
-  if (refund.status !== expectedStatus) throw new Error("Төлбөр буцаах үйлдэл цааш үргэлжлэх боломжгүй болсон")
+  const [, [refund]] = await batch((db) => [
+    db
+      .update(PaymentRefundTable)
+      .set({
+        status: "refunded",
+        error_code: null,
+        provider_payload_hash: receipt.providerPayloadHash,
+        time_completed: new Date(completedAt),
+      })
+      .where(
+        and(
+          eq(PaymentRefundTable.invoice_id, invoiceID),
+          eq(PaymentRefundTable.status, expectedStatus),
+          eq(PaymentRefundTable.provider, receipt.provider),
+          eq(PaymentRefundTable.merchant_account_id, receipt.merchantAccountID),
+          eq(PaymentRefundTable.external_invoice_id, receipt.externalInvoiceID),
+          eq(PaymentRefundTable.external_payment_id, receipt.externalPaymentID),
+          eq(PaymentRefundTable.amount, receipt.amount),
+          eq(PaymentRefundTable.currency, receipt.currency),
+        ),
+      ),
+    findRefund(db, invoiceID),
+  ])
+  if (!refund) throw new Error("Төлбөр буцаах нөөцлөлт олдсонгүй")
   if (
     receipt.provider !== refund.provider ||
     receipt.merchantAccountID !== refund.merchant_account_id ||
@@ -292,18 +369,8 @@ async function completeRefundWithDb(
     throw new Error("Төлбөр буцаасан баримтын мэдээлэл нөөцлөлттэй таарахгүй байна")
   }
 
-  const changed = await db
-    .update(PaymentRefundTable)
-    .set({
-      status: "refunded",
-      error_code: null,
-      provider_payload_hash: receipt.providerPayloadHash,
-      time_completed: new Date(completedAt),
-    })
-    .where(and(eq(PaymentRefundTable.invoice_id, invoiceID), eq(PaymentRefundTable.status, expectedStatus)))
-    .returning({ invoiceID: PaymentRefundTable.invoice_id })
-  if (changed.length !== 1) throw new Error("Төлбөр буцаах мэдээлэл зэрэг өөрчлөгдсөн байна")
-  return requireRefund(db, invoiceID)
+  if (refund.status !== "refunded") throw new Error("Төлбөр буцаах мэдээлэл зэрэг өөрчлөгдсөн байна")
+  return refund
 }
 
 function refundProviderRequest(refund: typeof PaymentRefundTable.$inferSelect) {
@@ -331,21 +398,23 @@ function requireRefundAdapter(
   return adapter
 }
 
-async function markRefundFailureWithDb(
-  db: Database.TxOrDb,
+async function markRefundFailure(
+  batch: typeof Database.batch,
   invoiceID: string,
   status: "failed" | "unknown",
   code: string,
   occurredAt: number,
 ) {
-  await db
-    .update(PaymentRefundTable)
-    .set({
-      status,
-      error_code: code,
-      ...(status === "failed" ? { time_completed: new Date(occurredAt) } : {}),
-    })
-    .where(and(eq(PaymentRefundTable.invoice_id, invoiceID), eq(PaymentRefundTable.status, "requested")))
+  await batch((db) => [
+    db
+      .update(PaymentRefundTable)
+      .set({
+        status,
+        error_code: code,
+        ...(status === "failed" ? { time_completed: new Date(occurredAt) } : {}),
+      })
+      .where(and(eq(PaymentRefundTable.invoice_id, invoiceID), eq(PaymentRefundTable.status, "requested"))),
+  ])
 }
 
 async function refundOutcome(refund: typeof PaymentRefundTable.$inferSelect): Promise<SubscriptionRefundOutcome> {
@@ -390,26 +459,6 @@ function validateTimestamp(value: number, lowerBound = 0) {
   if (!Number.isSafeInteger(value) || value < lowerBound) throw new TypeError("Төлбөр буцаах цагийн тэмдэг буруу байна")
 }
 
-function findRefund(db: Database.TxOrDb, invoiceID: string) {
-  return db
-    .select()
-    .from(PaymentRefundTable)
-    .where(eq(PaymentRefundTable.invoice_id, invoiceID))
-    .limit(1)
-    .then((rows) => rows[0])
-}
-
-async function requireRefund(db: Database.TxOrDb, invoiceID: string) {
-  const refund = await findRefund(db, invoiceID)
-  if (!refund) throw new Error("Төлбөр буцаах нөөцлөлт олдсонгүй")
-  return refund
-}
-
-function resultChanges(result: unknown) {
-  if (!result || typeof result !== "object") return 0
-  if ("meta" in result && result.meta && typeof result.meta === "object" && "changes" in result.meta) {
-    return Number(result.meta.changes ?? 0)
-  }
-  if ("changes" in result) return Number(result.changes ?? 0)
-  return 0
+function findRefund(db: PaymentBatchDatabase, invoiceID: string) {
+  return db.select().from(PaymentRefundTable).where(eq(PaymentRefundTable.invoice_id, invoiceID)).limit(1)
 }

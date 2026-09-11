@@ -144,7 +144,7 @@ describe("platform admin subscription payment refund", () => {
     })
     const dependencies = {
       adapters: { qpay: created.adapter },
-      transaction: environment.transaction,
+      batch: sqliteBatch(environment.transaction),
       now: () => NOW,
     }
 
@@ -202,7 +202,7 @@ describe("platform admin subscription payment refund", () => {
 
     const error = await refundPlatformAdminSubscriptionPayment(request(created.checkout.invoiceID), {
       adapters: { bonum: created.adapter },
-      transaction: environment.transaction,
+      batch: sqliteBatch(environment.transaction),
       now: () => NOW,
     }).catch((cause) => cause)
 
@@ -221,7 +221,7 @@ describe("platform admin subscription payment refund", () => {
       })
       const dependencies = {
         adapters: { qpay: created.adapter },
-        transaction: environment.transaction,
+        batch: sqliteBatch(environment.transaction),
         now: () => NOW,
       }
 
@@ -272,16 +272,16 @@ describe("platform admin subscription payment refund", () => {
         return receipt()
       },
     )
-    let transactionCalls = 0
-    const flakyTransaction: typeof environment.transaction = async (callback) => {
-      transactionCalls++
-      if (transactionCalls === 2 || transactionCalls === 3) throw new Error("simulated D1 write outage")
-      return environment.transaction(callback)
+    let batchCalls = 0
+    const flakyBatch: typeof Database.batch = async (callback) => {
+      batchCalls++
+      if (batchCalls === 3 || batchCalls === 4) throw new Error("simulated D1 write outage")
+      return sqliteBatch(environment.transaction)(callback)
     }
 
     const first = await refundPlatformAdminSubscriptionPayment(request(created.checkout.invoiceID), {
       adapters: { qpay: created.adapter },
-      transaction: flakyTransaction,
+      batch: flakyBatch,
       now: () => NOW,
     }).catch((cause) => cause)
     expect(first).toBeInstanceOf(PaymentRefundOperationError)
@@ -295,7 +295,7 @@ describe("platform admin subscription payment refund", () => {
       request(created.checkout.invoiceID, REPLAY_REQUEST),
       {
         adapters: { qpay: created.adapter },
-        transaction: environment.transaction,
+        batch: sqliteBatch(environment.transaction),
         now: () => NOW + 1_000,
       },
     )
