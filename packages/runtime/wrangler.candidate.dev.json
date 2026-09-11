@@ -1,0 +1,56 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mongolgpt-runtime-candidate-dev",
+  "account_id": "cc97ad90bfaf8a1da5de612eef2658f5",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "secrets": {
+    "required": ["MONGOLGPT_RUNTIME_SECRET", "MONGOLGPT_RUNTIME_AUTH_SECRET", "MONGOLGPT_RUNTIME_BACKUP_KEYS"]
+  },
+  "vars": {
+    "STAGE": "dev",
+    "MONGOLGPT_APP_ORIGIN": "https://app.dev.mgpt.mn",
+    "MONGOLGPT_CONSOLE_URL": "https://dev.mgpt.mn",
+    "MONGOLGPT_RUNTIME_VERSION": "0.1.1",
+    "MONGOLGPT_CLOUD_HISTORY": "true",
+    "MONGOLGPT_RUNTIME_ACCOUNT_CLEANUP": "false"
+  },
+  "ratelimits": [
+    {
+      "name": "MONGOLGPT_RUNTIME_BURST_LIMITER",
+      "namespace_id": "206071811",
+      "simple": { "limit": 60, "period": 10 }
+    },
+    {
+      "name": "MONGOLGPT_RUNTIME_RATE_LIMITER",
+      "namespace_id": "206071812",
+      "simple": { "limit": 300, "period": 60 }
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "HISTORY",
+      "database_name": "mongolgpt-runtime-history-dev",
+      "database_id": "8415178b-8e73-46ae-947a-215eaf42d9b5",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "RUNTIME_BACKUPS", "bucket_name": "mongolgpt-runtime-backups-dev" }],
+  "containers": [
+    {
+      "name": "mongolgpt-runtime-candidate-dev",
+      "class_name": "MongolGPTSandbox",
+      "image": "./Dockerfile",
+      "instance_type": "basic",
+      "max_instances": 5
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "Sandbox", "class_name": "MongolGPTSandbox" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MongolGPTSandbox"] }]
+}
