@@ -4,6 +4,7 @@ import {
   applyPaymentEventWithDb,
   type ApplyPaymentEventInput,
   type PaymentTransitionEffect,
+  type PaymentTransitionBatchEffect,
 } from "./payment-ledger"
 import { Database } from "./drizzle"
 import { z } from "zod"
@@ -37,7 +38,11 @@ export function applyPaymentQueueEventWithDb(
   return applyPaymentEventWithDb(db, message.event, effect)
 }
 
-export function applyPaymentQueueEvent(input: PaymentQueueEvent, effect?: PaymentTransitionEffect) {
+export function applyPaymentQueueEvent(
+  input: PaymentQueueEvent,
+  effect?: PaymentTransitionBatchEffect,
+  dependencies: { batch?: typeof Database.batch } = {},
+) {
   const message = PaymentQueueEventSchema.parse(input)
-  return applyPaymentEvent(message.event, effect)
+  return applyPaymentEvent(message.event, effect, dependencies)
 }

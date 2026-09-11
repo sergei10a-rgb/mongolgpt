@@ -1,4 +1,4 @@
-import { and, Database, eq } from "./drizzle"
+import { and, Database, eq, exists, isNull, notExists, sql, type SQL } from "./drizzle"
 import { Identifier } from "./identifier"
 import {
   PaymentEventTable,
@@ -105,6 +105,26 @@ export type PaymentTransitionEffect = (input: {
   event: ApplyPaymentEventInput
 }) => Promise<void>
 
+export type PaymentBatchDatabase = Parameters<Parameters<typeof Database.batch>[0]>[0]
+export type PaymentBatchQuery = Parameters<PaymentBatchDatabase["batch"]>[0][number]
+export type PaymentTransitionBatchEffect = (input: {
+  db: PaymentBatchDatabase
+  invoice: typeof PaymentInvoiceTable.$inferSelect
+  previousStatus: PaymentInvoiceStatus
+  event: z.output<typeof ApplyPaymentEventSchema>
+}) => readonly PaymentBatchQuery[]
+
+// SQLite RAISE is trigger-only. A deliberately invalid JSON value aborts the entire D1
+// batch when a checked snapshot or business precondition is no longer true.
+export function paymentBatchGuard(db: PaymentBatchDatabase, condition: SQL | undefined) {
+  if (!condition) throw new TypeError("Төлбөрийн багц үйлдлийн шалгах нөхцөл алга")
+  return db
+    .select({
+      valid: sql<number>`case when ${condition} then 1 else json_extract('mongolgpt_payment_state_conflict', '$') end`,
+    })
+    .from(sql`(select 1)`)
+}
+
 export async function recordPaymentInvoiceWithDb(db: Database.TxOrDb, input: RecordPaymentInvoiceInput) {
   const invoice = RecordPaymentInvoiceSchema.parse(input)
   const inserted = await db
@@ -144,8 +164,49 @@ export async function recordPaymentInvoiceWithDb(db: Database.TxOrDb, input: Rec
   return { kind: "created" as const, invoice: stored }
 }
 
-export function recordPaymentInvoice(input: RecordPaymentInvoiceInput) {
-  return Database.transaction((db) => recordPaymentInvoiceWithDb(db, input))
+export async function recordPaymentInvoice(
+  input: RecordPaymentInvoiceInput,
+  dependencies: { batch?: typeof Database.batch } = {},
+) {
+  const invoice = RecordPaymentInvoiceSchema.parse(input)
+  const [inserted, rows] = await (dependencies.batch ?? Database.batch)(
+    (db) =>
+      [
+        db
+          .insert(PaymentInvoiceTable)
+          .values({
+            id: invoice.id ?? Identifier.create("paymentInvoice"),
+            workspace_id: invoice.workspaceID,
+            provider: invoice.provider,
+            merchant_account_id: invoice.merchantAccountID,
+            external_invoice_id: invoice.externalInvoiceID,
+            purpose: invoice.purpose,
+            plan: invoice.plan,
+            amount: invoice.amount,
+            currency: invoice.currency,
+            timeCreated: invoice.createdAt === undefined ? undefined : new Date(invoice.createdAt),
+            time_expires: invoice.expiresAt === undefined ? undefined : new Date(invoice.expiresAt),
+          })
+          .onConflictDoNothing()
+          .returning(),
+        db
+          .select()
+          .from(PaymentInvoiceTable)
+          .where(
+            and(
+              eq(PaymentInvoiceTable.provider, invoice.provider),
+              eq(PaymentInvoiceTable.merchant_account_id, invoice.merchantAccountID),
+              eq(PaymentInvoiceTable.external_invoice_id, invoice.externalInvoiceID),
+            ),
+          )
+          .limit(1),
+      ] as const,
+  )
+  const stored = rows[0]
+  if (!stored || stored.timeDeleted) throw new Error("Төлбөрийн нэхэмжлэх олдсонгүй")
+  if (inserted.length) return { kind: "created" as const, invoice: stored }
+  assertInvoiceReplay(stored, invoice)
+  return { kind: "duplicate" as const, invoice: stored }
 }
 
 // The caller must provide an active transaction. External callers should use applyPaymentEvent.
@@ -260,8 +321,118 @@ export async function applyPaymentEventWithDb(
   }
 }
 
-export function applyPaymentEvent(input: ApplyPaymentEventInput, effect?: PaymentTransitionEffect) {
-  return Database.transaction((db) => applyPaymentEventWithDb(db, input, effect))
+export async function applyPaymentEvent(
+  input: ApplyPaymentEventInput,
+  effect?: PaymentTransitionBatchEffect,
+  dependencies: { batch?: typeof Database.batch } = {},
+) {
+  const event = ApplyPaymentEventSchema.parse(input)
+  const batch = dependencies.batch ?? Database.batch
+  const scope = and(
+    eq(PaymentInvoiceTable.provider, event.provider),
+    eq(PaymentInvoiceTable.merchant_account_id, event.merchantAccountID),
+    eq(PaymentInvoiceTable.external_invoice_id, event.externalInvoiceID),
+    isNull(PaymentInvoiceTable.timeDeleted),
+  )
+  const eventScope = and(
+    eq(PaymentEventTable.provider, event.provider),
+    eq(PaymentEventTable.merchant_account_id, event.merchantAccountID),
+    eq(PaymentEventTable.external_event_id, event.externalEventID),
+  )
+  const [invoices, replays] = await batch(
+    (db) =>
+      [
+        db.select().from(PaymentInvoiceTable).where(scope).limit(1),
+        db.select().from(PaymentEventTable).where(eventScope).limit(1),
+      ] as const,
+  )
+  const invoice = invoices[0]
+  if (!invoice) throw new Error("Төлбөрийн нэхэмжлэх олдсонгүй")
+  if (invoice.external_payment_id && event.externalPaymentID && invoice.external_payment_id !== event.externalPaymentID)
+    throw new Error("Төлбөрийн үйл явдал өөр гадаад төлбөрийг зааж байна")
+  if (event.amount !== undefined && (event.amount !== invoice.amount || event.currency !== invoice.currency))
+    throw new Error("Төлбөрийн үйл явдлын дүн эсвэл валют нэхэмжлэхтэй таарахгүй байна")
+  const replay = replays[0]
+  if (replay) {
+    assertEventReplay(replay, event)
+    return { kind: "duplicate" as const, outcome: replay.outcome, invoice }
+  }
+  const outcome = paymentTransition(invoice.status, event.type)
+  const result = await batch((db) => {
+    const current = db
+      .select({ id: PaymentInvoiceTable.id })
+      .from(PaymentInvoiceTable)
+      .where(
+        and(
+          scope,
+          eq(PaymentInvoiceTable.id, invoice.id),
+          eq(PaymentInvoiceTable.workspace_id, invoice.workspace_id),
+          eq(PaymentInvoiceTable.status, invoice.status),
+          eq(PaymentInvoiceTable.purpose, invoice.purpose),
+          invoice.plan === null ? isNull(PaymentInvoiceTable.plan) : eq(PaymentInvoiceTable.plan, invoice.plan),
+          eq(PaymentInvoiceTable.amount, invoice.amount),
+          eq(PaymentInvoiceTable.currency, invoice.currency),
+          invoice.external_payment_id === null
+            ? isNull(PaymentInvoiceTable.external_payment_id)
+            : eq(PaymentInvoiceTable.external_payment_id, invoice.external_payment_id),
+        ),
+      )
+    const occurredAt = new Date(event.occurredAt)
+    const changes = {
+      status: event.type,
+      external_payment_id: event.externalPaymentID ?? invoice.external_payment_id,
+      timeUpdated: new Date(),
+      ...(event.type === "paid" ? { time_verified: occurredAt } : {}),
+      ...(event.type === "failed" ? { time_failed: occurredAt } : {}),
+      ...(event.type === "expired" ? { time_expired: occurredAt } : {}),
+      ...(event.type === "cancelled" ? { time_cancelled: occurredAt } : {}),
+      ...(event.type === "refunded" ? { time_refunded: occurredAt } : {}),
+    }
+    const applied: readonly PaymentBatchQuery[] =
+      outcome === "applied"
+        ? [
+            db.update(PaymentInvoiceTable).set(changes).where(eq(PaymentInvoiceTable.id, invoice.id)),
+            ...(effect?.({
+              db,
+              invoice: { ...invoice, ...changes },
+              previousStatus: invoice.status,
+              event,
+            }) ?? []),
+          ]
+        : []
+    return [
+      paymentBatchGuard(
+        db,
+        and(
+          exists(current),
+          notExists(db.select({ id: PaymentEventTable.id }).from(PaymentEventTable).where(eventScope)),
+        ),
+      ),
+      db.insert(PaymentEventTable).values({
+        id: event.id ?? Identifier.create("paymentEvent"),
+        invoice_id: invoice.id,
+        workspace_id: invoice.workspace_id,
+        provider: event.provider,
+        merchant_account_id: event.merchantAccountID,
+        external_event_id: event.externalEventID,
+        external_invoice_id: event.externalInvoiceID,
+        external_payment_id: event.externalPaymentID,
+        amount: event.amount,
+        currency: event.currency,
+        type: event.type,
+        outcome,
+        from_status: invoice.status,
+        to_status: event.type,
+        payload_hash: event.payloadHash,
+        time_occurred: occurredAt,
+      }),
+      ...applied,
+      db.select().from(PaymentInvoiceTable).where(eq(PaymentInvoiceTable.id, invoice.id)).limit(1),
+    ] as const
+  })
+  const rows = result.at(-1) as (typeof PaymentInvoiceTable.$inferSelect)[]
+  if (!rows[0]) throw new Error("Төлбөрийн нэхэмжлэх олдсонгүй")
+  return { kind: outcome, outcome, invoice: rows[0] }
 }
 
 export function paymentTransition(

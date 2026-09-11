@@ -4,7 +4,7 @@ import {
   type PaymentQueueEvent,
 } from "@mongolgpt/console-core/payment-queue.js"
 import { recordPaymentDeadLetter } from "@mongolgpt/console-core/payment-recovery.js"
-import { applyPlanSubscriptionPaymentEffect } from "@mongolgpt/console-core/payment-entitlement.js"
+import { applyPlanSubscriptionPaymentBatchEffect } from "@mongolgpt/console-core/payment-entitlement.js"
 import { deactivatePlanQuota } from "./quota-client"
 
 type ApplyPayment = (event: PaymentQueueEvent) => Promise<unknown>
@@ -29,7 +29,7 @@ type QueueBatch = {
 }
 
 export function createPaymentEntitlementApply(
-  apply: ApplyPaymentLedger = (event) => applyPaymentQueueEvent(event, applyPlanSubscriptionPaymentEffect),
+  apply: ApplyPaymentLedger = (event) => applyPaymentQueueEvent(event, applyPlanSubscriptionPaymentBatchEffect),
   deactivate: DeactivatePlanQuota = deactivatePlanQuota,
 ): ApplyPayment {
   return async (event) => {
