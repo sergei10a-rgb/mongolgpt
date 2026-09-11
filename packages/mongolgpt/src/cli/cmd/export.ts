@@ -17,6 +17,65 @@ function data(kind: string, id: string, value: Record<string, unknown> | undefin
   return Object.keys(value).length ? { redacted: `${kind}:${id}` } : value
 }
 
+function apiError(id: string, error: SessionV1.APIError): SessionV1.APIError {
+  return {
+    ...error,
+    data: {
+      ...error.data,
+      message: redact("error-message", id, error.data.message),
+      // Provider-controlled keys can contain sensitive data too, not only values.
+      responseHeaders:
+        error.data.responseHeaders === undefined ? undefined : { redacted: `error-response-headers:${id}` },
+      responseBody:
+        error.data.responseBody === undefined ? undefined : redact("error-response-body", id, error.data.responseBody),
+      metadata: error.data.metadata === undefined ? undefined : { redacted: `error-metadata:${id}` },
+    },
+  }
+}
+
+function error(id: string, value: SessionV1.Assistant["error"]): SessionV1.Assistant["error"] {
+  if (!value) return value
+  switch (value.name) {
+    case "APIError":
+      return apiError(id, value)
+    case "ContextOverflowError":
+      return {
+        ...value,
+        data: {
+          ...value.data,
+          message: redact("error-message", id, value.data.message),
+          responseBody:
+            value.data.responseBody === undefined
+              ? undefined
+              : redact("error-response-body", id, value.data.responseBody),
+        },
+      }
+    case "ProviderAuthError":
+      return {
+        ...value,
+        data: {
+          providerID: redact("error-provider", id, value.data.providerID),
+          message: redact("error-message", id, value.data.message),
+        },
+      }
+    case "UnknownError":
+      return {
+        ...value,
+        data: {
+          message: redact("error-message", id, value.data.message),
+          ref: value.data.ref === undefined ? undefined : redact("error-ref", id, value.data.ref),
+        },
+      }
+    case "StructuredOutputError":
+      return { ...value, data: { ...value.data, message: redact("error-message", id, value.data.message) } }
+    case "MessageAbortedError":
+    case "ContentFilterError":
+      return { ...value, data: { message: redact("error-message", id, value.data.message) } }
+    case "MessageOutputLengthError":
+      return value
+  }
+}
+
 function span(id: string, value: { value: string; start: number; end: number }) {
   return {
     ...value,
@@ -119,9 +178,12 @@ function part(part: SessionV1.Part): SessionV1.Part {
                 : {
                     ...part.state,
                     input: data("tool-input", part.id, part.state.input) ?? part.state.input,
+                    error: redact("tool-error", part.id, part.state.error),
                     metadata: data("tool-state-metadata", part.id, part.state.metadata),
                   },
       }
+    case "retry":
+      return { ...part, error: apiError(part.id, part.error) }
     case "patch":
       return {
         ...part,
@@ -160,7 +222,7 @@ function part(part: SessionV1.Part): SessionV1.Part {
 
 const partFn = part
 
-function sanitize(data: { info: Session.Info; messages: SessionV1.WithParts[] }) {
+export function sanitize(data: { info: Session.Info; messages: SessionV1.WithParts[] }) {
   return {
     info: {
       ...data.info,
@@ -209,6 +271,7 @@ function sanitize(data: { info: Session.Info; messages: SessionV1.WithParts[] })
             }
           : {
               ...msg.info,
+              error: error(msg.info.id, msg.info.error),
               path: {
                 cwd: redact("cwd", msg.info.id, msg.info.path.cwd),
                 root: redact("root", msg.info.id, msg.info.path.root),
