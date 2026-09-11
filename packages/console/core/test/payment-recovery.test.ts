@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { sqliteBatch } from "./fixtures/sqlite-batch"
 import { Database as SQLite } from "bun:sqlite"
 import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import { resolve } from "node:path"
@@ -9,7 +10,7 @@ import {
   paymentRecoveryFingerprint,
   processPaymentRecoveries,
   recordPaymentDeadLetter,
-  retryPaymentRecoveryWithDb,
+  retryPaymentRecovery,
   PaymentRecoveryRetryError,
 } from "../src/payment-recovery"
 import { createPaymentQueueEvent } from "../src/payment-queue"
@@ -42,7 +43,7 @@ async function setup() {
       throw error
     }
   }
-  return { sqlite, use, transaction }
+  return { sqlite, batch: sqliteBatch(transaction) }
 }
 
 function payment(suffix = "1") {
@@ -65,11 +66,11 @@ function payment(suffix = "1") {
 
 describe("payment dead-letter recovery", () => {
   test("stores valid events idempotently and quarantines invalid bodies without raw secrets", async () => {
-    const { sqlite, transaction } = await setup()
+    const { sqlite, batch } = await setup()
     const event = payment()
 
-    const first = await recordPaymentDeadLetter({ body: event, now }, { transaction })
-    const replay = await recordPaymentDeadLetter({ body: event, now: now + 1 }, { transaction })
+    const first = await recordPaymentDeadLetter({ body: event, now }, { batch })
+    const replay = await recordPaymentDeadLetter({ body: event, now: now + 1 }, { batch })
     expect(first).toMatchObject({ status: "pending", validEvent: true, changed: true })
     expect(replay).toEqual({ ...first, changed: false })
     const conflict = await recordPaymentDeadLetter(
@@ -77,7 +78,7 @@ describe("payment dead-letter recovery", () => {
         body: createPaymentQueueEvent({ ...event.event, amount: 49_000 }, event.enqueuedAt + 1),
         now: now + 1,
       },
-      { transaction },
+      { batch },
     ).catch((error) => error)
     expect(conflict).toBeInstanceOf(Error)
     expect(conflict).toHaveProperty("message", expect.stringContaining("өмнөх event-тэй зөрчилдөж байна"))
@@ -85,7 +86,7 @@ describe("payment dead-letter recovery", () => {
     const invalidSecret = "must-never-be-stored"
     const invalid = await recordPaymentDeadLetter(
       { body: { version: 2, token: invalidSecret }, now: now + 2 },
-      { transaction },
+      { batch },
     )
     expect(invalid).toMatchObject({ status: "manual_review", validEvent: false, changed: true })
 
@@ -112,7 +113,7 @@ describe("payment dead-letter recovery", () => {
     const archivedInvalidHash = "b".repeat(64)
     const archivedInvalid = await recordPaymentDeadLetter(
       { body: undefined, now: now + 3, trustedMessageHash: archivedInvalidHash },
-      { transaction },
+      { batch },
     )
     expect(archivedInvalid).toMatchObject({ status: "manual_review", validEvent: false, changed: true })
     expect(
@@ -121,15 +122,15 @@ describe("payment dead-letter recovery", () => {
   })
 
   test("backs off a failed apply and resolves the idempotent retry", async () => {
-    const { sqlite, use, transaction } = await setup()
-    await recordPaymentDeadLetter({ body: payment(), now }, { transaction })
+    const { sqlite, batch } = await setup()
+    await recordPaymentDeadLetter({ body: payment(), now }, { batch })
     let calls = 0
     const apply = async () => {
       calls++
       if (calls === 1) throw new Error("temporary D1 failure")
     }
 
-    expect(await processPaymentRecoveries({ now }, { apply, use, transaction })).toEqual({
+    expect(await processPaymentRecoveries({ now }, { apply, batch })).toEqual({
       resolved: 0,
       retried: 1,
       manualReview: 0,
@@ -146,12 +147,12 @@ describe("payment dead-letter recovery", () => {
     })
 
     expect(
-      await processPaymentRecoveries({ now: now + PAYMENT_RECOVERY_BASE_RETRY_MS - 1 }, { apply, use, transaction }),
+      await processPaymentRecoveries({ now: now + PAYMENT_RECOVERY_BASE_RETRY_MS - 1 }, { apply, batch }),
     ).toMatchObject({ resolved: 0, retried: 0 })
     expect(calls).toBe(1)
 
     expect(
-      await processPaymentRecoveries({ now: now + PAYMENT_RECOVERY_BASE_RETRY_MS }, { apply, use, transaction }),
+      await processPaymentRecoveries({ now: now + PAYMENT_RECOVERY_BASE_RETRY_MS }, { apply, batch }),
     ).toMatchObject({ resolved: 1, retried: 0, manualReview: 0 })
     expect(calls).toBe(2)
     expect(sqlite.query("select status, attempts, last_error_code, time_resolved from payment_recovery").get()).toEqual(
@@ -169,15 +170,15 @@ describe("payment dead-letter recovery", () => {
   })
 
   test("reclaims expired leases and sends the final failed attempt to manual review", async () => {
-    const { sqlite, use, transaction } = await setup()
-    const leased = await recordPaymentDeadLetter({ body: payment("2"), now }, { transaction })
+    const { sqlite, batch } = await setup()
+    const leased = await recordPaymentDeadLetter({ body: payment("2"), now }, { batch })
     sqlite
       .query(
         "update payment_recovery set status = 'processing', attempts = 1, time_next_attempt = null, time_lease_expires = ?, last_error_code = null where id = ?",
       )
       .run(now - 1, leased.id)
 
-    expect(await processPaymentRecoveries({ now }, { apply: async () => undefined, use, transaction })).toMatchObject({
+    expect(await processPaymentRecoveries({ now }, { apply: async () => undefined, batch })).toMatchObject({
       resolved: 1,
     })
     expect(sqlite.query("select status, attempts from payment_recovery where id = ?").get(leased.id)).toEqual({
@@ -185,7 +186,7 @@ describe("payment dead-letter recovery", () => {
       attempts: 2,
     })
 
-    const exhausted = await recordPaymentDeadLetter({ body: payment("3"), now: now + 1 }, { transaction })
+    const exhausted = await recordPaymentDeadLetter({ body: payment("3"), now: now + 1 }, { batch })
     sqlite
       .query("update payment_recovery set attempts = ?, time_next_attempt = ? where id = ?")
       .run(PAYMENT_RECOVERY_MAX_ATTEMPTS - 1, now + 1, exhausted.id)
@@ -196,8 +197,7 @@ describe("payment dead-letter recovery", () => {
           apply: async () => {
             throw new Error("persistent failure")
           },
-          use,
-          transaction,
+          batch,
         },
       ),
     ).toMatchObject({ manualReview: 1, retried: 0 })
@@ -214,17 +214,15 @@ describe("payment dead-letter recovery", () => {
   })
 
   test("allows only stored manual-review events to be re-queued", async () => {
-    const { sqlite, transaction } = await setup()
-    const retryable = await recordPaymentDeadLetter({ body: payment("4"), now }, { transaction })
+    const { sqlite, batch } = await setup()
+    const retryable = await recordPaymentDeadLetter({ body: payment("4"), now }, { batch })
     sqlite
       .query(
         "update payment_recovery set status = 'manual_review', attempts = ?, last_error_code = ?, time_next_attempt = null, time_lease_expires = null, time_resolved = null where id = ?",
       )
       .run(PAYMENT_RECOVERY_MAX_ATTEMPTS, "payment_apply_failed", retryable.id)
 
-    const retried = await transaction((db) =>
-      retryPaymentRecoveryWithDb(db, { recoveryID: retryable.id, now: now + 10 }),
-    )
+    const retried = await retryPaymentRecovery({ recoveryID: retryable.id, now: now + 10 }, { batch })
     expect(retried).toMatchObject({
       id: retryable.id,
       status: "pending",
@@ -247,19 +245,20 @@ describe("payment dead-letter recovery", () => {
       time_lease_expires: null,
     })
 
-    await expect(
-      transaction((db) => retryPaymentRecoveryWithDb(db, { recoveryID: retryable.id, now: now + 11 })),
-    ).rejects.toMatchObject({ name: "PaymentRecoveryRetryError", code: "invalid_state", currentStatus: "pending" })
+    await expect(retryPaymentRecovery({ recoveryID: retryable.id, now: now + 11 }, { batch })).rejects.toMatchObject({
+      name: "PaymentRecoveryRetryError",
+      code: "invalid_state",
+      currentStatus: "pending",
+    })
 
-    const invalid = await recordPaymentDeadLetter({ body: { broken: true }, now: now + 12 }, { transaction })
-    await expect(
-      transaction((db) => retryPaymentRecoveryWithDb(db, { recoveryID: invalid.id, now: now + 13 })),
-    ).rejects.toMatchObject({ name: "PaymentRecoveryRetryError", code: "invalid_event" })
+    const invalid = await recordPaymentDeadLetter({ body: { broken: true }, now: now + 12 }, { batch })
+    await expect(retryPaymentRecovery({ recoveryID: invalid.id, now: now + 13 }, { batch })).rejects.toMatchObject({
+      name: "PaymentRecoveryRetryError",
+      code: "invalid_event",
+    })
 
     await expect(
-      transaction((db) =>
-        retryPaymentRecoveryWithDb(db, { recoveryID: "prc_01JV5T0G9H5Q3N7S2R8M4K6WXA", now: now + 14 }),
-      ),
+      retryPaymentRecovery({ recoveryID: "prc_01JV5T0G9H5Q3N7S2R8M4K6WXA", now: now + 14 }, { batch }),
     ).rejects.toBeInstanceOf(PaymentRecoveryRetryError)
   })
 })

@@ -220,7 +220,11 @@ export function requestTarget(request: Request) {
 }
 
 export async function writeAdminAuditWithDb(tx: Database.TxOrDb, input: AdminAuditInput) {
-  await tx.insert(AdminAuditLogTable).values({
+  await adminAuditQuery(tx, input)
+}
+
+export function adminAuditQuery(tx: Database.TxOrDb, input: AdminAuditInput) {
+  return tx.insert(AdminAuditLogTable).values({
     id: `aud_${ulid()}`,
     admin_id: input.adminID,
     actor_email: input.actorEmail,

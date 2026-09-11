@@ -1,15 +1,10 @@
 import { z } from "zod"
 import { and, count, Database, desc, eq, isNull, sql } from "@mongolgpt/console-core/drizzle/index.js"
 import { PaymentQueueEventSchema } from "@mongolgpt/console-core/payment-queue.js"
-import { retryPaymentRecoveryWithDb, PaymentRecoveryRetryError } from "@mongolgpt/console-core/payment-recovery.js"
+import { retryPaymentRecovery, PaymentRecoveryRetryError } from "@mongolgpt/console-core/payment-recovery.js"
 import { PaymentRecoveryTable } from "@mongolgpt/console-core/schema/billing.sql.js"
 import type { PlatformAdminContext } from "./admin-context"
-import {
-  AdminAuthorizationError,
-  requirePlatformAdminPermission,
-  writeAdminAudit,
-  writeAdminAuditWithDb,
-} from "./admin-auth"
+import { AdminAuthorizationError, requirePlatformAdminPermission, writeAdminAudit, adminAuditQuery } from "./admin-auth"
 import { AdminMutationRequestError, requireSameOriginAdminMutation } from "./admin-mutation"
 
 const recoveryID = z.string().regex(/^prc_[0-9A-HJKMNP-TV-Z]{26}$/)
@@ -30,17 +25,17 @@ export const AdminPaymentRecoveryRetryInput = z
   .strict()
 
 export interface AdminPaymentRecoveryDependencies {
-  transaction: typeof Database.transaction
+  batch: typeof Database.batch
   writeAdminAudit: typeof writeAdminAudit
-  writeAdminAuditWithDb: typeof writeAdminAuditWithDb
-  retryPaymentRecoveryWithDb: typeof retryPaymentRecoveryWithDb
+  adminAuditQuery: typeof adminAuditQuery
+  retryPaymentRecovery: typeof retryPaymentRecovery
 }
 
 const adminPaymentRecoveryDependencies: AdminPaymentRecoveryDependencies = {
-  transaction: Database.transaction,
+  batch: Database.batch,
   writeAdminAudit,
-  writeAdminAuditWithDb,
-  retryPaymentRecoveryWithDb,
+  adminAuditQuery,
+  retryPaymentRecovery,
 }
 
 export async function listAdminPaymentRecoveries(context: PlatformAdminContext, now = new Date()) {
@@ -167,34 +162,36 @@ export async function retryAdminPaymentRecovery(
     requireSameOriginAdminMutation(request)
     const admin = requirePlatformAdminPermission(context, "payments.recover")
     const input = AdminPaymentRecoveryRetryInput.parse(raw)
-    return await dependencies.transaction(async (db) => {
-      const result = await dependencies.retryPaymentRecoveryWithDb(db, {
-        recoveryID: input.recoveryID,
-        now: Date.now(),
-      })
-      await dependencies.writeAdminAuditWithDb(db, {
-        adminID: admin.id,
-        actorEmail: admin.email,
-        action: "payment_recovery.retry",
-        outcome: "success",
-        request,
-        targetType: "payment_recovery",
-        targetID: input.recoveryID,
-        metadata: {
-          request_key: input.requestKey,
-          reason: input.reason,
-          before_status: result.previousStatus,
-          after_status: result.status,
-          previous_attempts: result.previousAttempts,
-          next_attempt_at: result.timeNextAttempt?.toISOString() ?? null,
-          previous_last_error_code: result.previousLastErrorCode,
-        },
-      })
-      return {
-        ok: true as const,
-        message: "Сэргээх бүртгэлийг дахин дараалалд орууллаа. Дараагийн хуваарьт ажил аюулгүйгээр боловсруулна.",
-      }
-    })
+    await dependencies.retryPaymentRecovery(
+      { recoveryID: input.recoveryID, now: Date.now() },
+      {
+        batch: dependencies.batch,
+        effect: (db, result) => [
+          dependencies.adminAuditQuery(db, {
+            adminID: admin.id,
+            actorEmail: admin.email,
+            action: "payment_recovery.retry",
+            outcome: "success",
+            request,
+            targetType: "payment_recovery",
+            targetID: input.recoveryID,
+            metadata: {
+              request_key: input.requestKey,
+              reason: input.reason,
+              before_status: result.previousStatus,
+              after_status: result.status,
+              previous_attempts: result.previousAttempts,
+              next_attempt_at: result.timeNextAttempt?.toISOString() ?? null,
+              previous_last_error_code: result.previousLastErrorCode,
+            },
+          }),
+        ],
+      },
+    )
+    return {
+      ok: true as const,
+      message: "Сэргээх бүртгэлийг дахин дараалалд орууллаа. Дараагийн хуваарьт ажил аюулгүйгээр боловсруулна.",
+    }
   } catch (error) {
     const failure = retryFailure(error)
     try {

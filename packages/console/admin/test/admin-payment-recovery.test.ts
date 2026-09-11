@@ -47,22 +47,29 @@ const validInput = {
 function dependencies(overrides: Partial<AdminPaymentRecoveryDependencies> = {}) {
   const audits: unknown[] = []
   const dependencySet: AdminPaymentRecoveryDependencies = {
-    transaction: async (callback) => callback({} as never),
+    batch: async () => {
+      throw new Error("Mock recovery primitive does not call D1")
+    },
     writeAdminAudit: async (audit) => {
       audits.push(audit)
     },
-    writeAdminAuditWithDb: async (_db, audit) => {
+    adminAuditQuery: (_db, audit) => {
       audits.push(audit)
+      return {} as never
     },
-    retryPaymentRecoveryWithDb: async () => ({
-      id: "prc_01JV5T0G9H5Q3N7S2R8M4K6WXA",
-      status: "pending" as const,
-      attempts: 0,
-      previousStatus: "manual_review",
-      previousAttempts: 6,
-      previousLastErrorCode: "payment_apply_failed",
-      timeNextAttempt: new Date("2026-08-31T00:00:00.000Z"),
-    }),
+    retryPaymentRecovery: async (_input, options) => {
+      const result = {
+        id: "prc_01JV5T0G9H5Q3N7S2R8M4K6WXA",
+        status: "pending" as const,
+        attempts: 0 as const,
+        previousStatus: "manual_review" as const,
+        previousAttempts: 6,
+        previousLastErrorCode: "payment_apply_failed",
+        timeNextAttempt: new Date("2026-08-31T00:00:00.000Z"),
+      }
+      options?.effect?.({} as never, result)
+      return result
+    },
     ...overrides,
   }
   return { audits, dependencySet }
@@ -109,7 +116,7 @@ describe("admin payment recovery retry", () => {
   test("rejects cross-origin requests before calling the recovery primitive", async () => {
     let called = false
     const { audits, dependencySet } = dependencies({
-      retryPaymentRecoveryWithDb: async () => {
+      retryPaymentRecovery: async () => {
         called = true
         throw new Error("must not run")
       },
@@ -135,7 +142,7 @@ describe("admin payment recovery retry", () => {
 
   test("does not report success when the atomic success audit fails", async () => {
     const { audits, dependencySet } = dependencies({
-      writeAdminAuditWithDb: async () => {
+      adminAuditQuery: () => {
         throw new Error("audit unavailable")
       },
     })

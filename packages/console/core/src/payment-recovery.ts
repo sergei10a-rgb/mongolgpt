@@ -1,4 +1,5 @@
-import { and, asc, Database, eq, isNull, lt, lte, or, sql } from "./drizzle"
+import { and, asc, Database, eq, exists, isNull, lt, lte, or, sql, type SQL } from "./drizzle"
+import { paymentBatchGuard, type PaymentBatchDatabase, type PaymentBatchQuery } from "./payment-ledger"
 import { PaymentQueueEventSchema, type PaymentQueueEvent } from "./payment-queue"
 import { AdminAuditLogTable } from "./schema/admin.sql"
 import { PaymentRecoveryTable } from "./schema/billing.sql"
@@ -12,8 +13,6 @@ export const PAYMENT_RECOVERY_MAX_RETRY_MS = 6 * 60 * 60 * 1_000
 const MAX_FINGERPRINT_INPUT_BYTES = 1_000_000
 const SYSTEM_ACTOR_EMAIL = "system@mgpt.mn"
 
-type Use = <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise<T>
-type Transaction = <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise<T>
 type Apply = (event: PaymentQueueEvent) => Promise<unknown>
 
 export class PaymentRecoveryRetryError extends Error {
@@ -28,7 +27,7 @@ export class PaymentRecoveryRetryError extends Error {
 
 export async function recordPaymentDeadLetter(
   input: { body: unknown; now?: number; trustedMessageHash?: string },
-  dependencies: { transaction?: Transaction } = {},
+  dependencies: { batch?: typeof Database.batch } = {},
 ) {
   const now = timestamp(input.now ?? Date.now())
   const parsed = PaymentQueueEventSchema.safeParse(input.body)
@@ -40,15 +39,15 @@ export async function recordPaymentDeadLetter(
   if (parsed.success && messageHash !== calculatedHash) {
     throw new Error("Төлбөрийн recovery event-ийн message hash зөрлөө")
   }
-  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
-
-  return transaction(async (db) => {
-    const date = new Date(now)
-    const event = parsed.success ? parsed.data : undefined
-    const inserted = await db
+  const batch = dependencies.batch ?? Database.batch
+  const date = new Date(now)
+  const event = parsed.success ? parsed.data : undefined
+  const id = `prc_${ulid()}`
+  const [[inserted], , [existing]] = await batch((db) => [
+    db
       .insert(PaymentRecoveryTable)
       .values({
-        id: `prc_${ulid()}`,
+        id,
         message_hash: messageHash,
         provider: event?.event.provider,
         merchant_account_id: event?.event.merchantAccountID,
@@ -66,25 +65,23 @@ export async function recordPaymentDeadLetter(
         timeUpdated: date,
       })
       .onConflictDoNothing()
-      .returning()
-      .then((rows) => rows[0])
-
-    if (inserted) {
-      await writeSystemAudit(db, {
-        recoveryID: inserted.id,
+      .returning(),
+    systemAuditQuery(
+      db,
+      {
+        recoveryID: id,
         action: "payment_recovery.dead_lettered",
         outcome: "failure",
         now: date,
         metadata: {
-          status: inserted.status,
+          status: event ? "pending" : "manual_review",
           validEvent: Boolean(event),
           provider: event?.event.provider ?? null,
         },
-      })
-      return recoveryState(inserted, true)
-    }
-
-    const existing = await db
+      },
+      eq(PaymentRecoveryTable.id, id),
+    ),
+    db
       .select()
       .from(PaymentRecoveryTable)
       .where(
@@ -99,28 +96,27 @@ export async function recordPaymentDeadLetter(
             )
           : eq(PaymentRecoveryTable.message_hash, messageHash),
       )
-      .limit(1)
-      .then((rows) => rows[0])
-    if (!existing) throw new Error("Төлбөрийн recovery бүртгэлийн давхардлыг баталгаажуулж чадсангүй")
-    const storedEvent = event ? PaymentQueueEventSchema.safeParse(existing.event) : undefined
-    if (
-      event &&
-      (!storedEvent?.success ||
-        existing.payload_hash !== event.event.payloadHash ||
-        !samePaymentEvent(storedEvent.data.event, event.event))
-    ) {
-      throw new Error("Төлбөрийн recovery event өмнөх event-тэй зөрчилдөж байна")
-    }
-    return recoveryState(existing, false)
-  })
+      .limit(1),
+  ])
+  if (inserted) return recoveryState(inserted, true)
+  if (!existing) throw new Error("Төлбөрийн recovery бүртгэлийн давхардлыг баталгаажуулж чадсангүй")
+  const storedEvent = event ? PaymentQueueEventSchema.safeParse(existing.event) : undefined
+  if (
+    event &&
+    (!storedEvent?.success ||
+      existing.payload_hash !== event.event.payloadHash ||
+      !samePaymentEvent(storedEvent.data.event, event.event))
+  ) {
+    throw new Error("Төлбөрийн recovery event өмнөх event-тэй зөрчилдөж байна")
+  }
+  return recoveryState(existing, false)
 }
 
 export async function processPaymentRecoveries(
   input: { now: number; limit?: number },
   dependencies: {
     apply: Apply
-    use?: Use
-    transaction?: Transaction
+    batch?: typeof Database.batch
   },
 ) {
   const now = timestamp(input.now)
@@ -128,17 +124,21 @@ export async function processPaymentRecoveries(
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
     throw new TypeError("Төлбөрийн recovery багцын хязгаар буруу байна")
   }
-  const use = dependencies.use ?? ((callback) => Database.use(callback))
-  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
+  const batch = dependencies.batch ?? Database.batch
   const date = new Date(now)
-  const candidates = await use((db) =>
+  const [candidates] = await batch((db) => [
     db
-      .select({ id: PaymentRecoveryTable.id })
+      .select({
+        id: PaymentRecoveryTable.id,
+        status: PaymentRecoveryTable.status,
+        attempts: PaymentRecoveryTable.attempts,
+        timeLeaseExpires: PaymentRecoveryTable.time_lease_expires,
+        timeUpdated: PaymentRecoveryTable.timeUpdated,
+      })
       .from(PaymentRecoveryTable)
       .where(
         and(
           isNull(PaymentRecoveryTable.timeDeleted),
-          lt(PaymentRecoveryTable.attempts, PAYMENT_RECOVERY_MAX_ATTEMPTS),
           or(
             and(eq(PaymentRecoveryTable.status, "pending"), lte(PaymentRecoveryTable.time_next_attempt, date)),
             and(eq(PaymentRecoveryTable.status, "processing"), lte(PaymentRecoveryTable.time_lease_expires, date)),
@@ -147,7 +147,7 @@ export async function processPaymentRecoveries(
       )
       .orderBy(asc(PaymentRecoveryTable.timeCreated), asc(PaymentRecoveryTable.id))
       .limit(limit),
-  )
+  ])
 
   let resolved = 0
   let retried = 0
@@ -155,7 +155,13 @@ export async function processPaymentRecoveries(
   let skipped = 0
 
   for (const candidate of candidates) {
-    const claimed = await transaction((db) => claimRecovery(db, candidate.id, now))
+    if (candidate.attempts >= PAYMENT_RECOVERY_MAX_ATTEMPTS) {
+      const marked = await markRecovery(batch, candidate, "manual_review", date, "recovery_attempts_exhausted")
+      if (marked) manualReview++
+      else skipped++
+      continue
+    }
+    const [[claimed]] = await batch((db) => [claimRecovery(db, candidate.id, now)])
     if (!claimed) {
       skipped++
       continue
@@ -163,9 +169,7 @@ export async function processPaymentRecoveries(
 
     const event = PaymentQueueEventSchema.safeParse(claimed.event)
     if (!event.success) {
-      const marked = await transaction((db) =>
-        markManualReview(db, claimed.id, claimed.attempts, "stored_event_invalid", date),
-      )
+      const marked = await markRecovery(batch, claimed, "manual_review", date, "stored_event_invalid")
       if (marked) manualReview++
       else skipped++
       continue
@@ -173,13 +177,14 @@ export async function processPaymentRecoveries(
 
     try {
       await dependencies.apply(event.data)
-      const marked = await transaction((db) => markResolved(db, claimed.id, claimed.attempts, date))
+      const marked = await markRecovery(batch, claimed, "resolved", date)
       if (marked) resolved++
       else skipped++
     } catch {
-      const marked = await transaction((db) => markApplyFailure(db, claimed.id, claimed.attempts, now))
-      if (marked === "manual_review") manualReview++
-      else if (marked === "pending") retried++
+      const status = claimed.attempts >= PAYMENT_RECOVERY_MAX_ATTEMPTS ? "manual_review" : "pending"
+      const marked = await markRecovery(batch, claimed, status, date, "payment_apply_failed")
+      if (marked && status === "manual_review") manualReview++
+      else if (marked) retried++
       else skipped++
     }
   }
@@ -187,20 +192,39 @@ export async function processPaymentRecoveries(
   return { resolved, retried, manualReview, skipped, truncated: candidates.length === limit }
 }
 
-export async function retryPaymentRecoveryWithDb(db: Database.TxOrDb, input: { recoveryID: string; now: number }) {
+type RecoveryRetryResult = {
+  id: string
+  status: "pending"
+  attempts: 0
+  previousStatus: "manual_review"
+  previousAttempts: number
+  previousLastErrorCode: string | null
+  timeNextAttempt: Date
+}
+
+export async function retryPaymentRecovery(
+  input: { recoveryID: string; now: number },
+  dependencies: {
+    batch?: typeof Database.batch
+    effect?: (db: PaymentBatchDatabase, result: RecoveryRetryResult) => readonly PaymentBatchQuery[]
+  } = {},
+) {
+  const batch = dependencies.batch ?? Database.batch
   const date = new Date(timestamp(input.now))
-  const current = await db
-    .select({
-      id: PaymentRecoveryTable.id,
-      status: PaymentRecoveryTable.status,
-      attempts: PaymentRecoveryTable.attempts,
-      last_error_code: PaymentRecoveryTable.last_error_code,
-      event: PaymentRecoveryTable.event,
-    })
-    .from(PaymentRecoveryTable)
-    .where(and(eq(PaymentRecoveryTable.id, input.recoveryID), isNull(PaymentRecoveryTable.timeDeleted)))
-    .limit(1)
-    .then((rows) => rows[0])
+  const [[current]] = await batch((db) => [
+    db
+      .select({
+        id: PaymentRecoveryTable.id,
+        status: PaymentRecoveryTable.status,
+        attempts: PaymentRecoveryTable.attempts,
+        last_error_code: PaymentRecoveryTable.last_error_code,
+        event: PaymentRecoveryTable.event,
+        timeUpdated: PaymentRecoveryTable.timeUpdated,
+      })
+      .from(PaymentRecoveryTable)
+      .where(and(eq(PaymentRecoveryTable.id, input.recoveryID), isNull(PaymentRecoveryTable.timeDeleted)))
+      .limit(1),
+  ])
 
   if (!current) throw new PaymentRecoveryRetryError("not_found")
   if (current.status !== "manual_review") {
@@ -210,47 +234,60 @@ export async function retryPaymentRecoveryWithDb(db: Database.TxOrDb, input: { r
     throw new PaymentRecoveryRetryError("invalid_event", current.status)
   }
 
-  const updated = await db
-    .update(PaymentRecoveryTable)
-    .set({
-      status: "pending",
-      attempts: 0,
-      last_error_code: null,
-      time_next_attempt: date,
-      time_lease_expires: null,
-      time_resolved: null,
-      timeUpdated: date,
-    })
-    .where(
-      and(
-        eq(PaymentRecoveryTable.id, input.recoveryID),
-        eq(PaymentRecoveryTable.status, "manual_review"),
-        isNull(PaymentRecoveryTable.timeDeleted),
-      ),
-    )
-    .returning({
-      id: PaymentRecoveryTable.id,
-      status: PaymentRecoveryTable.status,
-      attempts: PaymentRecoveryTable.attempts,
-      last_error_code: PaymentRecoveryTable.last_error_code,
-      time_next_attempt: PaymentRecoveryTable.time_next_attempt,
-    })
-    .then((rows) => rows[0])
-
-  if (!updated) throw new PaymentRecoveryRetryError("invalid_state", current.status)
-
-  return {
-    id: updated.id,
-    status: updated.status,
-    attempts: updated.attempts,
-    previousStatus: current.status,
+  const result: RecoveryRetryResult = {
+    id: current.id,
+    status: "pending",
+    attempts: 0,
+    previousStatus: "manual_review",
     previousAttempts: current.attempts,
     previousLastErrorCode: current.last_error_code,
-    timeNextAttempt: updated.time_next_attempt,
+    timeNextAttempt: date,
   }
+  await batch((db) => [
+    paymentBatchGuard(
+      db,
+      exists(
+        db
+          .select({ id: PaymentRecoveryTable.id })
+          .from(PaymentRecoveryTable)
+          .where(
+            and(
+              eq(PaymentRecoveryTable.id, current.id),
+              eq(PaymentRecoveryTable.status, "manual_review"),
+              eq(PaymentRecoveryTable.attempts, current.attempts),
+              sql`${PaymentRecoveryTable.timeUpdated} is ${current.timeUpdated?.getTime() ?? null}`,
+              sql`${PaymentRecoveryTable.last_error_code} is ${current.last_error_code}`,
+              eq(PaymentRecoveryTable.event, current.event),
+              isNull(PaymentRecoveryTable.timeDeleted),
+            ),
+          ),
+      ),
+    ),
+    db
+      .update(PaymentRecoveryTable)
+      .set({
+        status: "pending",
+        attempts: 0,
+        last_error_code: null,
+        time_next_attempt: date,
+        time_lease_expires: null,
+        time_resolved: null,
+        timeUpdated: date,
+      })
+      .where(
+        and(
+          eq(PaymentRecoveryTable.id, input.recoveryID),
+          eq(PaymentRecoveryTable.status, "manual_review"),
+          isNull(PaymentRecoveryTable.timeDeleted),
+        ),
+      )
+      .returning(),
+    ...(dependencies.effect?.(db, result) ?? []),
+  ])
+  return result
 }
 
-async function claimRecovery(db: Database.TxOrDb, id: string, now: number) {
+function claimRecovery(db: PaymentBatchDatabase, id: string, now: number) {
   const date = new Date(now)
   return db
     .update(PaymentRecoveryTable)
@@ -278,113 +315,71 @@ async function claimRecovery(db: Database.TxOrDb, id: string, now: number) {
       id: PaymentRecoveryTable.id,
       attempts: PaymentRecoveryTable.attempts,
       event: PaymentRecoveryTable.event,
+      timeLeaseExpires: PaymentRecoveryTable.time_lease_expires,
+      status: PaymentRecoveryTable.status,
+      timeUpdated: PaymentRecoveryTable.timeUpdated,
     })
-    .then((rows) => rows[0])
 }
 
-async function markResolved(db: Database.TxOrDb, id: string, attempts: number, now: Date) {
-  const updated = await db
-    .update(PaymentRecoveryTable)
-    .set({
-      status: "resolved",
-      last_error_code: null,
-      time_next_attempt: null,
-      time_lease_expires: null,
-      time_resolved: now,
-      timeUpdated: now,
-    })
-    .where(
-      and(
-        eq(PaymentRecoveryTable.id, id),
-        eq(PaymentRecoveryTable.status, "processing"),
-        eq(PaymentRecoveryTable.attempts, attempts),
-        isNull(PaymentRecoveryTable.timeDeleted),
-      ),
-    )
-    .returning({ id: PaymentRecoveryTable.id })
-    .then((rows) => rows[0])
-  if (!updated) return false
-  await writeSystemAudit(db, {
-    recoveryID: id,
-    action: "payment_recovery.resolved",
-    outcome: "success",
-    now,
-    metadata: { attempts },
-  })
-  return true
+type RecoveryClaim = {
+  id: string
+  status: typeof PaymentRecoveryTable.$inferSelect.status
+  attempts: number
+  timeLeaseExpires: Date | null
+  timeUpdated: Date | null
 }
 
-async function markApplyFailure(db: Database.TxOrDb, id: string, attempts: number, now: number) {
-  const manual = attempts >= PAYMENT_RECOVERY_MAX_ATTEMPTS
-  const date = new Date(now)
-  const status = manual ? "manual_review" : "pending"
-  const updated = await db
-    .update(PaymentRecoveryTable)
-    .set({
-      status,
-      last_error_code: "payment_apply_failed",
-      time_next_attempt: manual ? null : futureDate(now, retryDelay(attempts)),
-      time_lease_expires: null,
-      time_resolved: null,
-      timeUpdated: date,
-    })
-    .where(
-      and(
-        eq(PaymentRecoveryTable.id, id),
-        eq(PaymentRecoveryTable.status, "processing"),
-        eq(PaymentRecoveryTable.attempts, attempts),
-        isNull(PaymentRecoveryTable.timeDeleted),
-      ),
-    )
-    .returning({ id: PaymentRecoveryTable.id })
-    .then((rows) => rows[0])
-  if (!updated) return undefined
-  if (manual) {
-    await writeSystemAudit(db, {
-      recoveryID: id,
-      action: "payment_recovery.manual_review",
-      outcome: "failure",
-      now: date,
-      metadata: { attempts, errorCode: "payment_apply_failed" },
-    })
+async function markRecovery(
+  batch: typeof Database.batch,
+  claim: RecoveryClaim,
+  status: "resolved" | "pending" | "manual_review",
+  now: Date,
+  errorCode?: string,
+) {
+  const condition = and(
+    eq(PaymentRecoveryTable.id, claim.id),
+    eq(PaymentRecoveryTable.status, claim.status),
+    eq(PaymentRecoveryTable.attempts, claim.attempts),
+    sql`${PaymentRecoveryTable.time_lease_expires} is ${claim.timeLeaseExpires?.getTime() ?? null}`,
+    sql`${PaymentRecoveryTable.timeUpdated} is ${claim.timeUpdated?.getTime() ?? null}`,
+    isNull(PaymentRecoveryTable.timeDeleted),
+  )!
+  const update = (db: PaymentBatchDatabase) =>
+    db
+      .update(PaymentRecoveryTable)
+      .set({
+        status,
+        last_error_code: status === "resolved" ? null : errorCode,
+        time_next_attempt: status === "pending" ? futureDate(now.getTime(), retryDelay(claim.attempts)) : null,
+        time_lease_expires: null,
+        time_resolved: status === "resolved" ? now : null,
+        timeUpdated: now,
+      })
+      .where(condition)
+      .returning({ id: PaymentRecoveryTable.id })
+  if (status === "pending") {
+    const [updated] = await batch((db) => [update(db)])
+    return updated.length === 1
   }
-  return status
+  const [, updated] = await batch((db) => [
+    systemAuditQuery(
+      db,
+      {
+        recoveryID: claim.id,
+        action: status === "resolved" ? "payment_recovery.resolved" : "payment_recovery.manual_review",
+        outcome: status === "resolved" ? "success" : "failure",
+        now,
+        metadata: { attempts: claim.attempts, ...(errorCode ? { errorCode } : {}) },
+      },
+      condition,
+    ),
+    update(db),
+  ])
+  return updated.length === 1
 }
 
-async function markManualReview(db: Database.TxOrDb, id: string, attempts: number, errorCode: string, now: Date) {
-  const updated = await db
-    .update(PaymentRecoveryTable)
-    .set({
-      status: "manual_review",
-      last_error_code: errorCode,
-      time_next_attempt: null,
-      time_lease_expires: null,
-      time_resolved: null,
-      timeUpdated: now,
-    })
-    .where(
-      and(
-        eq(PaymentRecoveryTable.id, id),
-        eq(PaymentRecoveryTable.status, "processing"),
-        eq(PaymentRecoveryTable.attempts, attempts),
-        isNull(PaymentRecoveryTable.timeDeleted),
-      ),
-    )
-    .returning({ id: PaymentRecoveryTable.id })
-    .then((rows) => rows[0])
-  if (!updated) return false
-  await writeSystemAudit(db, {
-    recoveryID: id,
-    action: "payment_recovery.manual_review",
-    outcome: "failure",
-    now,
-    metadata: { attempts, errorCode },
-  })
-  return true
-}
-
-async function writeSystemAudit(
-  db: Database.TxOrDb,
+function systemAuditQuery(
+  db: PaymentBatchDatabase,
   input: {
     recoveryID: string
     action: string
@@ -392,21 +387,29 @@ async function writeSystemAudit(
     now: Date
     metadata: Record<string, string | number | boolean | null>
   },
+  condition: SQL,
 ) {
-  await db.insert(AdminAuditLogTable).values({
-    id: `aud_${ulid()}`,
-    admin_id: null,
-    actor_email: SYSTEM_ACTOR_EMAIL,
-    action: input.action,
-    target_type: "payment_recovery",
-    target_id: input.recoveryID,
-    outcome: input.outcome,
-    request_id: `payment-recovery:${input.recoveryID}`,
-    source_ip: null,
-    user_agent: null,
-    metadata: input.metadata,
-    time_created: input.now,
-  })
+  // The audit and state transition share one D1 batch and the same ownership predicate.
+  return db.insert(AdminAuditLogTable).select(
+    db
+      .select({
+        id: sql<string>`${`aud_${ulid()}`}`.as("id"),
+        admin_id: sql<null>`null`.as("admin_id"),
+        actor_email: sql<string>`${SYSTEM_ACTOR_EMAIL}`.as("actor_email"),
+        action: sql<string>`${input.action}`.as("action"),
+        target_type: sql<string>`'payment_recovery'`.as("target_type"),
+        target_id: sql<string>`${input.recoveryID}`.as("target_id"),
+        outcome: sql<"success" | "failure">`${input.outcome}`.as("outcome"),
+        request_id: sql<string>`${`payment-recovery:${input.recoveryID}`}`.as("request_id"),
+        source_ip: sql<null>`null`.as("source_ip"),
+        user_agent: sql<null>`null`.as("user_agent"),
+        metadata: sql<typeof input.metadata>`${JSON.stringify(input.metadata)}`.as("metadata"),
+        time_created: sql<Date>`${input.now.getTime()}`.as("time_created"),
+      })
+      .from(PaymentRecoveryTable)
+      .where(condition)
+      .limit(1),
+  )
 }
 
 export async function paymentRecoveryFingerprint(value: unknown) {
