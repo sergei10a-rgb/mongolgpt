@@ -5,7 +5,7 @@ import { tmpdir } from "node:os"
 import { isAbsolute, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 
-test("finance settlements and actual costs commit atomically on real D1", async () => {
+test("finance settlements, FX rates, costs and valuations commit atomically on real D1", async () => {
   const directory = await mkdtemp(join(tmpdir(), "mongolgpt-finance-native-"))
   try {
     const build = await Bun.build({
@@ -55,7 +55,7 @@ test("finance settlements and actual costs commit atomically on real D1", async 
     expect(receipt).toBeDefined()
     const result = JSON.parse(receipt!.slice("FINANCE_D1_RESULT ".length))
     expect(result.ok).toBe(true)
-    expect(result.checks).toBeGreaterThanOrEqual(80)
+    expect(result.checks).toBeGreaterThanOrEqual(200)
     console.log(`Finance D1: ${result.checks} checks passed`)
   } finally {
     const inside = relative(tmpdir(), directory)

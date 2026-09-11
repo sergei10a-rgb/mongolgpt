@@ -1,7 +1,9 @@
-import { and, desc, eq } from "drizzle-orm"
+import { and, desc, eq, exists, getTableColumns, isNull, type InferSelectModel, type SQL } from "drizzle-orm"
+import type { SQLiteTable } from "drizzle-orm/sqlite-core"
 import { z } from "zod"
 import { Database } from "./drizzle"
 import { Identifier } from "./identifier"
+import { paymentBatchGuard } from "./payment-ledger"
 import { sha256Hex, stableJson } from "./payment-provider"
 import {
   FinanceCostBases,
@@ -122,18 +124,7 @@ export type RecordFinanceCostValuationInput = z.input<typeof RecordFinanceCostVa
 
 export async function recordFinanceFxRateWithDb(db: Database.TxOrDb, input: RecordFinanceFxRateInput) {
   const rate = RecordFinanceFxRateSchema.parse(input)
-  const inserted = await db
-    .insert(FinanceFxRateTable)
-    .values({
-      id: rate.id ?? Identifier.create("financeFxRate"),
-      rate_micromnt_per_usd: rate.rateMicromntPerUSD,
-      source: rate.source,
-      source_reference: rate.sourceReference,
-      idempotency_key: rate.idempotencyKey,
-      payload_hash: rate.payloadHash,
-      time_effective: new Date(rate.effectiveAt),
-    })
-    .onConflictDoNothing()
+  const inserted = await db.insert(FinanceFxRateTable).values(financeFxRateValues(rate)).onConflictDoNothing()
 
   const stored = await findFxRate(db, rate)
   if (!stored) throw new Error("Санхүүгийн FX ханшийн давхцлын зөрчил гарлаа")
@@ -144,8 +135,38 @@ export async function recordFinanceFxRateWithDb(db: Database.TxOrDb, input: Reco
   }
 }
 
-export function recordFinanceFxRate(input: RecordFinanceFxRateInput) {
-  return Database.transaction((db) => recordFinanceFxRateWithDb(db, input))
+export async function recordFinanceFxRate(
+  input: RecordFinanceFxRateInput,
+  dependencies: { batch?: typeof Database.batch } = {},
+) {
+  const rate = RecordFinanceFxRateSchema.parse(input)
+  const { id, ...values } = financeFxRateValues(rate)
+  const [inserted, stored] = await (dependencies.batch ?? Database.batch)((db) => [
+    db
+      .insert(FinanceFxRateTable)
+      .values({ id, ...values })
+      .onConflictDoNothing(),
+    db.select().from(FinanceFxRateTable).where(eq(FinanceFxRateTable.idempotency_key, rate.idempotencyKey)),
+    paymentBatchGuard(
+      db,
+      exists(db.select().from(FinanceFxRateTable).where(financeRowMatches(FinanceFxRateTable, values))),
+    ),
+  ])
+  return { kind: resultChanges(inserted) === 0 ? ("duplicate" as const) : ("created" as const), rate: stored[0]! }
+}
+
+function financeFxRateValues(rate: z.infer<typeof RecordFinanceFxRateSchema>) {
+  return {
+    id: rate.id ?? Identifier.create("financeFxRate"),
+    base_currency: "USD" as const,
+    quote_currency: "MNT" as const,
+    rate_micromnt_per_usd: rate.rateMicromntPerUSD,
+    source: rate.source,
+    source_reference: rate.sourceReference,
+    idempotency_key: rate.idempotencyKey,
+    payload_hash: rate.payloadHash,
+    time_effective: new Date(rate.effectiveAt),
+  }
 }
 
 export async function recordFinanceCostEntryWithDb(db: Database.TxOrDb, input: RecordFinanceCostEntryInput) {
@@ -189,8 +210,39 @@ export function financeCostEntryValues(entry: z.infer<typeof RecordFinanceCostEn
   }
 }
 
-export function recordFinanceCostEntry(input: RecordFinanceCostEntryInput) {
-  return Database.transaction((db) => recordFinanceCostEntryWithDb(db, input))
+export async function recordFinanceCostEntry(
+  input: RecordFinanceCostEntryInput,
+  dependencies: { batch?: typeof Database.batch } = {},
+) {
+  const entry = RecordFinanceCostEntrySchema.parse(input)
+  const batch = dependencies.batch ?? Database.batch
+  const rate = entry.fxRateID
+    ? (
+        await batch((db) => [db.select().from(FinanceFxRateTable).where(eq(FinanceFxRateTable.id, entry.fxRateID!))])
+      )[0][0]
+    : undefined
+  const valuation = resolveMntValuationFromRate(entry, rate)
+  const { id, ...values } = financeCostEntryValues(entry, valuation)
+  const [inserted, stored] = await batch((db) => [
+    db
+      .insert(FinanceCostEntryTable)
+      .values({ id, ...values })
+      .onConflictDoNothing(),
+    db.select().from(FinanceCostEntryTable).where(eq(FinanceCostEntryTable.idempotency_key, entry.idempotencyKey)),
+    paymentBatchGuard(
+      db,
+      exists(db.select().from(FinanceCostEntryTable).where(financeRowMatches(FinanceCostEntryTable, values))),
+    ),
+    ...(rate
+      ? [
+          paymentBatchGuard(
+            db,
+            exists(db.select().from(FinanceFxRateTable).where(financeRowMatches(FinanceFxRateTable, rate))),
+          ),
+        ]
+      : []),
+  ])
+  return { kind: resultChanges(inserted) === 0 ? ("duplicate" as const) : ("created" as const), entry: stored[0]! }
 }
 
 export async function recordFinanceCostValuationWithDb(db: Database.TxOrDb, input: RecordFinanceCostValuationInput) {
@@ -200,22 +252,12 @@ export async function recordFinanceCostValuationWithDb(db: Database.TxOrDb, inpu
     .from(FinanceCostEntryTable)
     .where(eq(FinanceCostEntryTable.id, valuation.costEntryID))
     .then((rows) => rows[0])
-  if (!costEntry) throw new Error("Санхүүгийн зардлын үнэлгээ байхгүй зардлын бүртгэл зааж байна")
-  if (costEntry.original_currency !== "USD" || costEntry.fx_rate_id !== null || costEntry.amount_mnt_micros !== null) {
-    throw new Error("Санхүүгийн зардлын үнэлгээнд үнэлэгдээгүй USD зардлын бүртгэл шаардлагатай")
-  }
-
   const rate = await db
     .select()
     .from(FinanceFxRateTable)
     .where(eq(FinanceFxRateTable.id, valuation.fxRateID))
     .then((rows) => rows[0])
-  if (!rate) throw new Error("Санхүүгийн зардлын үнэлгээ байхгүй FX ханшийг зааж байна")
-  if (rate.base_currency !== "USD" || rate.quote_currency !== "MNT") {
-    throw new Error("Санхүүгийн зардлын үнэлгээ үл тохирох FX ханшийг зааж байна")
-  }
-
-  const amountMntMicros = valueUsdInMntMicros(costEntry.original_amount, rate.rate_micromnt_per_usd)
+  const amountMntMicros = costValuationAmount(costEntry, rate)
   const stored = await findCostValuation(db, valuation)
   if (stored) {
     assertCostValuationReplay(stored, valuation, amountMntMicros)
@@ -236,16 +278,7 @@ export async function recordFinanceCostValuationWithDb(db: Database.TxOrDb, inpu
 
   const inserted = await db
     .insert(FinanceCostValuationTable)
-    .values({
-      id: valuation.id ?? Identifier.create("financeCostValuation"),
-      cost_entry_id: valuation.costEntryID,
-      fx_rate_id: valuation.fxRateID,
-      method: valuation.method,
-      version: valuation.version,
-      amount_mnt_micros: amountMntMicros,
-      idempotency_key: valuation.idempotencyKey,
-      payload_hash: valuation.payloadHash,
-    })
+    .values(financeCostValuationValues(valuation, amountMntMicros))
     .onConflictDoNothing()
 
   const recorded = await findCostValuation(db, valuation)
@@ -257,8 +290,91 @@ export async function recordFinanceCostValuationWithDb(db: Database.TxOrDb, inpu
   }
 }
 
-export function recordFinanceCostValuation(input: RecordFinanceCostValuationInput) {
-  return Database.transaction((db) => recordFinanceCostValuationWithDb(db, input))
+export async function recordFinanceCostValuation(
+  input: RecordFinanceCostValuationInput,
+  dependencies: { batch?: typeof Database.batch } = {},
+) {
+  const valuation = RecordFinanceCostValuationSchema.parse(input)
+  const batch = dependencies.batch ?? Database.batch
+  const [costs, rates, previous, latest] = await batch((db) => [
+    db.select().from(FinanceCostEntryTable).where(eq(FinanceCostEntryTable.id, valuation.costEntryID)),
+    db.select().from(FinanceFxRateTable).where(eq(FinanceFxRateTable.id, valuation.fxRateID)),
+    db
+      .select()
+      .from(FinanceCostValuationTable)
+      .where(eq(FinanceCostValuationTable.idempotency_key, valuation.idempotencyKey)),
+    db
+      .select({ version: FinanceCostValuationTable.version })
+      .from(FinanceCostValuationTable)
+      .where(eq(FinanceCostValuationTable.cost_entry_id, valuation.costEntryID))
+      .orderBy(desc(FinanceCostValuationTable.version))
+      .limit(1),
+  ])
+  const amount = costValuationAmount(costs[0], rates[0])
+  if (previous[0]) assertCostValuationReplay(previous[0], valuation, amount)
+  if (!previous[0] && valuation.version !== (latest[0]?.version ?? 0) + 1) {
+    throw new Error(`Санхүүгийн зардлын үнэлгээний хувилбар ${(latest[0]?.version ?? 0) + 1} байх ёстой`)
+  }
+  const { id, ...values } = financeCostValuationValues(valuation, amount)
+  // D1's existing insert trigger enforces sequential versions inside this atomic batch.
+  const [inserted, stored] = await batch((db) => [
+    db
+      .insert(FinanceCostValuationTable)
+      .values({ id, ...values })
+      .onConflictDoNothing(),
+    db
+      .select()
+      .from(FinanceCostValuationTable)
+      .where(eq(FinanceCostValuationTable.idempotency_key, valuation.idempotencyKey)),
+    paymentBatchGuard(
+      db,
+      exists(db.select().from(FinanceCostValuationTable).where(financeRowMatches(FinanceCostValuationTable, values))),
+    ),
+    paymentBatchGuard(
+      db,
+      exists(db.select().from(FinanceCostEntryTable).where(financeRowMatches(FinanceCostEntryTable, costs[0]!))),
+    ),
+    paymentBatchGuard(
+      db,
+      exists(db.select().from(FinanceFxRateTable).where(financeRowMatches(FinanceFxRateTable, rates[0]!))),
+    ),
+  ])
+  return { kind: resultChanges(inserted) === 0 ? ("duplicate" as const) : ("created" as const), valuation: stored[0]! }
+}
+
+function financeCostValuationValues(valuation: z.infer<typeof RecordFinanceCostValuationSchema>, amount: number) {
+  return {
+    id: valuation.id ?? Identifier.create("financeCostValuation"),
+    cost_entry_id: valuation.costEntryID,
+    fx_rate_id: valuation.fxRateID,
+    method: valuation.method,
+    version: valuation.version,
+    amount_mnt_micros: amount,
+    idempotency_key: valuation.idempotencyKey,
+    payload_hash: valuation.payloadHash,
+  }
+}
+
+function costValuationAmount(
+  cost: typeof FinanceCostEntryTable.$inferSelect | undefined,
+  rate: typeof FinanceFxRateTable.$inferSelect | undefined,
+) {
+  if (!cost) throw new Error("Санхүүгийн зардлын үнэлгээ байхгүй зардлын бүртгэл зааж байна")
+  if (cost.original_currency !== "USD" || cost.fx_rate_id !== null || cost.amount_mnt_micros !== null) {
+    throw new Error("Санхүүгийн зардлын үнэлгээнд үнэлэгдээгүй USD зардлын бүртгэл шаардлагатай")
+  }
+  if (!rate) throw new Error("Санхүүгийн зардлын үнэлгээ байхгүй FX ханшийг зааж байна")
+  if (rate.base_currency !== "USD" || rate.quote_currency !== "MNT") {
+    throw new Error("Санхүүгийн зардлын үнэлгээ үл тохирох FX ханшийг зааж байна")
+  }
+  return valueUsdInMntMicros(cost.original_amount, rate.rate_micromnt_per_usd)
+}
+
+export function financeRowMatches<T extends SQLiteTable>(table: T, values: Partial<InferSelectModel<T>>): SQL {
+  const columns = getTableColumns(table)
+  return and(
+    ...Object.entries(values).map(([key, value]) => (value == null ? isNull(columns[key]) : eq(columns[key], value))),
+  )!
 }
 
 const EstimatedModelCostSchema = z
@@ -308,14 +424,22 @@ export async function recordEstimatedModelCostWithDb(
 }
 
 async function resolveMntValuation(db: Database.TxOrDb, entry: z.infer<typeof RecordFinanceCostEntrySchema>) {
+  const rate = entry.fxRateID
+    ? await db
+        .select()
+        .from(FinanceFxRateTable)
+        .where(eq(FinanceFxRateTable.id, entry.fxRateID))
+        .then((rows) => rows[0])
+    : undefined
+  return resolveMntValuationFromRate(entry, rate)
+}
+
+function resolveMntValuationFromRate(
+  entry: z.infer<typeof RecordFinanceCostEntrySchema>,
+  rate: typeof FinanceFxRateTable.$inferSelect | undefined,
+) {
   if (entry.originalCurrency === "MNT") return safeNumber(BigInt(entry.originalAmount) * 1_000_000n)
   if (!entry.fxRateID) return null
-
-  const rate = await db
-    .select()
-    .from(FinanceFxRateTable)
-    .where(eq(FinanceFxRateTable.id, entry.fxRateID))
-    .then((rows) => rows[0])
   if (!rate) throw new Error("Санхүүгийн зардлын бүртгэл байхгүй FX ханшийг зааж байна")
   if (rate.base_currency !== "USD" || rate.quote_currency !== "MNT") {
     throw new Error("Санхүүгийн зардлын бүртгэл үл тохирох FX ханшийг зааж байна")

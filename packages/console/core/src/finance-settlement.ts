@@ -1,7 +1,11 @@
 import { z } from "zod"
-import type { SQLiteTable } from "drizzle-orm/sqlite-core"
-import { and, Database, eq, exists, getTableColumns, isNull, or, type InferSelectModel, type SQL } from "./drizzle"
-import { financeCostEntryValues, RecordFinanceCostEntrySchema, recordFinanceCostEntryWithDb } from "./finance-ledger"
+import { and, Database, eq, exists, or } from "./drizzle"
+import {
+  financeCostEntryValues,
+  financeRowMatches,
+  RecordFinanceCostEntrySchema,
+  recordFinanceCostEntryWithDb,
+} from "./finance-ledger"
 import { Identifier } from "./identifier"
 import { paymentBatchGuard, type PaymentBatchQuery } from "./payment-ledger"
 import { sha256Hex, stableJson } from "./payment-provider"
@@ -249,7 +253,7 @@ export async function recordFinancePaymentSettlement(
             .onConflictDoNothing(),
           paymentBatchGuard(
             db,
-            exists(db.select().from(FinanceCostEntryTable).where(matchesValues(FinanceCostEntryTable, cost))),
+            exists(db.select().from(FinanceCostEntryTable).where(financeRowMatches(FinanceCostEntryTable, cost))),
           ),
         ])
         return [
@@ -266,13 +270,13 @@ export async function recordFinancePaymentSettlement(
             ),
           paymentBatchGuard(
             db,
-            exists(db.select().from(PaymentInvoiceTable).where(matchesValues(PaymentInvoiceTable, invoice))),
+            exists(db.select().from(PaymentInvoiceTable).where(financeRowMatches(PaymentInvoiceTable, invoice))),
           ),
           ...(event
             ? [
                 paymentBatchGuard(
                   db,
-                  exists(db.select().from(PaymentEventTable).where(matchesValues(PaymentEventTable, event))),
+                  exists(db.select().from(PaymentEventTable).where(financeRowMatches(PaymentEventTable, event))),
                 ),
               ]
             : []),
@@ -282,7 +286,7 @@ export async function recordFinancePaymentSettlement(
               db
                 .select()
                 .from(FinancePaymentSettlementTable)
-                .where(matchesValues(FinancePaymentSettlementTable, values)),
+                .where(financeRowMatches(FinancePaymentSettlementTable, values)),
             ),
           ),
           ...costQueries,
@@ -318,13 +322,6 @@ export async function recordFinancePaymentSettlement(
     }
   }
   throw new Error("Санхүүгийн төлбөрийн тооцоог хадгалж чадсангүй")
-}
-
-function matchesValues<T extends SQLiteTable>(table: T, values: Partial<InferSelectModel<T>>): SQL {
-  const columns = getTableColumns(table)
-  return and(
-    ...Object.entries(values).map(([key, value]) => (value == null ? isNull(columns[key]) : eq(columns[key], value))),
-  )!
 }
 
 async function findPaymentSettlement(db: Database.TxOrDb, input: z.infer<typeof RecordFinancePaymentSettlementSchema>) {

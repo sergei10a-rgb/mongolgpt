@@ -323,6 +323,297 @@ try {
   await rejects(() => record({ ...collision, id: String(source?.id) }))
   equal(await count(collision.paymentInvoiceID), { settlements: 0, costs: 0 })
 
+  const fxInput = (id: string) => ({
+    rateMicromntPerUSD: 3450123456,
+    source: "synthetic-reference",
+    sourceReference: `fx-${id}`,
+    idempotencyKey: `fx-${id}`,
+    payloadHash: "d".repeat(64),
+    effectiveAt: now,
+  })
+  const fx = (id: string, selectedBatch = batch) => native.recordFinanceFxRate(fxInput(id), { batch: selectedBatch })
+  const costInput = (id: string) => ({
+    workspaceID: "wrk_finance",
+    category: "model_cost" as const,
+    direction: "debit" as const,
+    basis: "actual" as const,
+    sourceType: "provider_statement" as const,
+    sourceReference: `cost-${id}`,
+    provider: "synthetic-provider",
+    model: "synthetic-model",
+    originalAmount: 150000000,
+    originalCurrency: "USD" as const,
+    idempotencyKey: `cost-${id}`,
+    payloadHash: "e".repeat(64),
+    effectiveAt: now,
+  })
+  const cost = (id: string, selectedBatch = batch) =>
+    native.recordFinanceCostEntry(costInput(id), { batch: selectedBatch })
+  const historical = await fx("historical")
+  equal(historical.kind, "created")
+  equal(historical.rate.rate_micromnt_per_usd, 3450123456)
+  equal((await fx("historical")).kind, "duplicate")
+  equal(
+    (await native.recordFinanceFxRate({ ...fxInput("historical"), id: "fxr_replay_ignored" }, { batch })).rate.id,
+    historical.rate.id,
+  )
+  for (const patch of [
+    { rateMicromntPerUSD: 3450123457 },
+    { source: "different" },
+    { sourceReference: "different" },
+    { idempotencyKey: "different-fx" },
+    { payloadHash: "f".repeat(64) },
+    { effectiveAt: now + 1 },
+  ]) {
+    await rejects(() => native.recordFinanceFxRate({ ...fxInput("historical"), ...patch }, { batch }))
+    equal((await fx("historical")).rate.id, historical.rate.id)
+  }
+  await rejects(() => native.recordFinanceFxRate({ ...fxInput("collision"), id: historical.rate.id }, { batch }))
+  equal(await row("select count(*) count from finance_fx_rate where idempotency_key='fx-collision'"), { count: 0 })
+  await rejects(() => fx("rollback", rollback))
+  equal(await row("select count(*) count from finance_fx_rate where idempotency_key='fx-rollback'"), { count: 0 })
+  const loseEveryAck: typeof Database.batch = async (callback) => {
+    await batch(callback)
+    throw new Error("Synthetic lost ledger commit acknowledgement")
+  }
+  await rejects(() => fx("lost", loseEveryAck))
+  equal((await fx("lost")).kind, "duplicate")
+  const fxRace = await Promise.all(Array.from({ length: 6 }, () => fx("race")))
+  equal(fxRace.filter((result) => result.kind === "created").length, 1)
+  equal(fxRace.filter((result) => result.kind === "duplicate").length, 5)
+  equal(new Set(fxRace.map((result) => result.rate.id)).size, 1)
+
+  const unvalued = await cost("unvalued")
+  equal(unvalued.kind, "created")
+  equal(unvalued.entry.amount_mnt_micros, null)
+  equal(unvalued.entry.fx_rate_id, null)
+  equal((await cost("unvalued")).kind, "duplicate")
+  for (const patch of [
+    { workspaceID: "different" },
+    { category: "adjustment" as const },
+    { direction: "credit" as const },
+    { basis: "estimated" as const },
+    { sourceType: "manual" as const },
+    { sourceReference: "different" },
+    { usageID: "usg_different" },
+    { paymentInvoiceID: "inv_different" },
+    { paymentEventID: "pev_different" },
+    { provider: "different" },
+    { model: "different" },
+    { originalAmount: 1 },
+    { originalCurrency: "MNT" as const },
+    { fxRateID: historical.rate.id },
+    { idempotencyKey: "different-cost" },
+    { payloadHash: "f".repeat(64) },
+    { effectiveAt: now + 1 },
+  ]) {
+    await rejects(() => native.recordFinanceCostEntry({ ...costInput("unvalued"), ...patch }, { batch }))
+    equal(
+      await row(
+        "select count(*) count from finance_cost_entry where idempotency_key in ('cost-unvalued','different-cost')",
+      ),
+      { count: 1 },
+    )
+  }
+  const valued = await native.recordFinanceCostEntry(
+    { ...costInput("valued"), fxRateID: historical.rate.id },
+    { batch },
+  )
+  equal(valued.entry.amount_mnt_micros, 5175185184)
+  equal(valued.entry.original_amount, 150000000)
+  equal(valued.entry.fx_rate_id, historical.rate.id)
+  equal(
+    (await native.recordFinanceCostEntry({ ...costInput("valued"), fxRateID: historical.rate.id }, { batch })).kind,
+    "duplicate",
+  )
+  equal(
+    (
+      await native.recordFinanceCostEntry(
+        { ...costInput("mnt"), originalCurrency: "MNT", originalAmount: 250 },
+        { batch },
+      )
+    ).entry.amount_mnt_micros,
+    250000000,
+  )
+  const maxMnt = Math.floor(Number.MAX_SAFE_INTEGER / 1000000)
+  equal(
+    (
+      await native.recordFinanceCostEntry(
+        { ...costInput("maxmnt"), originalCurrency: "MNT", originalAmount: maxMnt },
+        { batch },
+      )
+    ).entry.amount_mnt_micros,
+    maxMnt * 1000000,
+  )
+  for (const patch of [
+    { originalCurrency: "MNT" as const, originalAmount: maxMnt + 1 },
+    { originalCurrency: "MNT" as const, fxRateID: historical.rate.id },
+    { fxRateID: "missing" },
+    { originalAmount: Number.MAX_SAFE_INTEGER, fxRateID: historical.rate.id },
+  ]) {
+    await rejects(() => native.recordFinanceCostEntry({ ...costInput("invalid"), ...patch }, { batch }))
+    equal(await row("select count(*) count from finance_cost_entry where idempotency_key='cost-invalid'"), { count: 0 })
+  }
+  const half = await native.recordFinanceFxRate({ ...fxInput("half"), rateMicromntPerUSD: 50000000 }, { batch })
+  const less = await native.recordFinanceFxRate({ ...fxInput("less"), rateMicromntPerUSD: 49999999 }, { batch })
+  equal(
+    (
+      await native.recordFinanceCostEntry(
+        { ...costInput("half"), fxRateID: half.rate.id, originalAmount: 1 },
+        { batch },
+      )
+    ).entry.amount_mnt_micros,
+    1,
+  )
+  await rejects(() =>
+    native.recordFinanceCostEntry({ ...costInput("underflow"), fxRateID: less.rate.id, originalAmount: 1 }, { batch }),
+  )
+  await rejects(() => cost("rollback", rollback))
+  equal(await row("select count(*) count from finance_cost_entry where idempotency_key='cost-rollback'"), { count: 0 })
+  await rejects(() => cost("lost", loseEveryAck))
+  equal((await cost("lost")).kind, "duplicate")
+  const costRace = await Promise.all(Array.from({ length: 6 }, () => cost("race")))
+  equal(costRace.filter((result) => result.kind === "created").length, 1)
+  equal(costRace.filter((result) => result.kind === "duplicate").length, 5)
+  equal(new Set(costRace.map((result) => result.entry.id)).size, 1)
+  const conflictRace = await Promise.allSettled([
+    native.recordFinanceCostEntry({ ...costInput("conflictrace"), originalAmount: 123 }, { batch }),
+    native.recordFinanceCostEntry({ ...costInput("conflictrace"), originalAmount: 456 }, { batch }),
+  ])
+  equal(conflictRace.filter((result) => result.status === "fulfilled").length, 1)
+  equal(conflictRace.filter((result) => result.status === "rejected").length, 1)
+
+  const valuationInput = (id: string, costEntryID = unvalued.entry.id, version = 1) => ({
+    costEntryID,
+    fxRateID: historical.rate.id,
+    method: "historical_spot" as const,
+    version,
+    idempotencyKey: `valuation-${id}`,
+    payloadHash: "f".repeat(64),
+  })
+  const valuation = await native.recordFinanceCostValuation(valuationInput("first"), { batch })
+  equal(valuation.kind, "created")
+  equal(valuation.valuation.amount_mnt_micros, 5175185184)
+  equal(
+    (await native.recordFinanceCostValuation({ ...valuationInput("first"), id: "fvl_ignored_on_replay" }, { batch }))
+      .valuation.id,
+    valuation.valuation.id,
+  )
+  const latestRate = await native.recordFinanceFxRate(
+    { ...fxInput("latest"), rateMicromntPerUSD: 3500000000 },
+    { batch },
+  )
+  const correction = {
+    ...valuationInput("second", unvalued.entry.id, 2),
+    fxRateID: latestRate.rate.id,
+    method: "provider_settlement" as const,
+  }
+  const corrected = await native.recordFinanceCostValuation(correction, { batch })
+  equal(corrected.kind, "created")
+  equal(corrected.valuation.amount_mnt_micros, 5250000000)
+  equal((await native.recordFinanceCostValuation(valuationInput("first"), { batch })).kind, "duplicate")
+  equal((await cost("unvalued")).entry.amount_mnt_micros, null)
+  equal((await cost("unvalued")).entry.original_amount, 150000000)
+  for (const patch of [
+    { fxRateID: latestRate.rate.id },
+    { method: "manual" as const },
+    { payloadHash: "a".repeat(64) },
+    { version: 3 },
+    { costEntryID: costRace[0]!.entry.id },
+    { idempotencyKey: "different-valuation" },
+  ]) {
+    await rejects(() => native.recordFinanceCostValuation({ ...valuationInput("first"), ...patch }, { batch }))
+    equal(await row("select count(*) count from finance_cost_valuation where cost_entry_id=?", unvalued.entry.id), {
+      count: 2,
+    })
+  }
+  for (const input of [
+    valuationInput("missing-cost", "missing"),
+    { ...valuationInput("missing-fx"), fxRateID: "missing" },
+    valuationInput("already-valued", valued.entry.id),
+    valuationInput("out-of-order", unvalued.entry.id, 4),
+  ])
+    await rejects(() => native.recordFinanceCostValuation(input, { batch }))
+  const rolling = await cost("rollbackvaluation")
+  let valuationCalls = 0
+  await rejects(() =>
+    native.recordFinanceCostValuation(valuationInput("rollback", rolling.entry.id), {
+      batch: (callback) => (++valuationCalls === 2 ? rollback(callback) : batch(callback)),
+    }),
+  )
+  equal(valuationCalls, 2)
+  equal(await row("select count(*) count from finance_cost_valuation where cost_entry_id=?", rolling.entry.id), {
+    count: 0,
+  })
+  equal((await cost("rollbackvaluation")).entry.amount_mnt_micros, null)
+  let lostValuationCalls = 0
+  await rejects(() =>
+    native.recordFinanceCostValuation(valuationInput("lost", rolling.entry.id), {
+      batch: (callback) => (++lostValuationCalls === 2 ? loseEveryAck(callback) : batch(callback)),
+    }),
+  )
+  equal(
+    (await native.recordFinanceCostValuation(valuationInput("lost", rolling.entry.id), { batch })).kind,
+    "duplicate",
+  )
+
+  const concurrentCost = await cost("valuationrace")
+  const valuationBarrier = Promise.withResolvers<void>()
+  let valuationReaders = 0
+  const synchronizedValuation = () => {
+    let calls = 0
+    const selected: typeof Database.batch = async (callback) => {
+      const result = await batch(callback)
+      if (++calls === 1) {
+        if (++valuationReaders === 6) valuationBarrier.resolve()
+        await valuationBarrier.promise
+      }
+      return result
+    }
+    return selected
+  }
+  const valuationRace = await Promise.all(
+    Array.from({ length: 6 }, () =>
+      native.recordFinanceCostValuation(valuationInput("race", concurrentCost.entry.id), {
+        batch: synchronizedValuation(),
+      }),
+    ),
+  )
+  equal(valuationRace.filter((result) => result.kind === "created").length, 1)
+  equal(valuationRace.filter((result) => result.kind === "duplicate").length, 5)
+  equal(new Set(valuationRace.map((result) => result.valuation.id)).size, 1)
+  const valuationConflict = await Promise.allSettled([
+    native.recordFinanceCostValuation(valuationInput("competing-a", concurrentCost.entry.id, 2), { batch }),
+    native.recordFinanceCostValuation(
+      { ...valuationInput("competing-b", concurrentCost.entry.id, 2), fxRateID: latestRate.rate.id },
+      { batch },
+    ),
+  ])
+  equal(valuationConflict.filter((result) => result.status === "fulfilled").length, 1)
+  equal(valuationConflict.filter((result) => result.status === "rejected").length, 1)
+  equal(
+    await row(
+      "select count(*) count, max(version) latest from finance_cost_valuation where cost_entry_id=?",
+      concurrentCost.entry.id,
+    ),
+    { count: 2, latest: 2 },
+  )
+  // Native trigger checks protect the ledger even from direct SQL writes.
+  for (const [table, id, field] of [
+    ["finance_fx_rate", historical.rate.id, "rate_micromnt_per_usd"],
+    ["finance_cost_entry", unvalued.entry.id, "original_amount"],
+    ["finance_cost_valuation", valuation.valuation.id, "amount_mnt_micros"],
+  ]) {
+    await rejects(() => run(`update ${table} set ${field}=1 where id=?`, id))
+    await rejects(() => run(`delete from ${table} where id=?`, id))
+  }
+  equal((await fx("historical")).rate.rate_micromnt_per_usd, 3450123456)
+  equal((await cost("unvalued")).entry.original_amount, 150000000)
+  equal(
+    (await native.recordFinanceCostValuation(valuationInput("first"), { batch })).valuation.amount_mnt_micros,
+    5175185184,
+  )
+
   console.log(`FINANCE_D1_RESULT ${JSON.stringify({ ok: true, checks })}`)
 } finally {
   await platform?.dispose()
