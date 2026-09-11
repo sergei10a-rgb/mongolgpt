@@ -1,0 +1,56 @@
+name: Inspect dev runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "INSPECT DEV RUNTIME гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  inspect:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: dev
+    steps:
+      - name: Validate read-only inventory confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = "INSPECT DEV RUNTIME"
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify read-only inventory boundaries
+        run: bun --cwd packages/runtime test test/dev-runtime-inventory.test.ts
+
+      - name: Inspect old dev resources without starting containers
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_RUNTIME_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_SECRET }}
+          MONGOLGPT_INVENTORY_CONFIRMATION: ${{ inputs.confirmation }}
+        run: bun packages/runtime/script/inventory-dev-runtime.ts
+
+      - name: Upload content-free inventory
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dev-runtime-inventory-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: ${{ runner.temp }}/dev-runtime-inventory.json
