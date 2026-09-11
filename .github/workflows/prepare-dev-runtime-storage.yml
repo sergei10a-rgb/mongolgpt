@@ -1,0 +1,55 @@
+name: Prepare dev runtime storage
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "PREPARE DEV RUNTIME STORAGE гэж яг бичнэ"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  prepare:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: dev
+    steps:
+      - name: Validate storage preparation confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = "PREPARE DEV RUNTIME STORAGE"
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify storage preparation boundaries
+        run: bun --cwd packages/runtime test test/storage-preparation.test.ts
+
+      - name: Prepare only the new dev runtime storage
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_STORAGE_CONFIRMATION: ${{ inputs.confirmation }}
+        run: bun packages/runtime/script/prepare-storage.ts
+
+      - name: Upload storage preparation receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dev-runtime-storage-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: error
+          path: ${{ runner.temp }}/runtime-storage-receipt.json

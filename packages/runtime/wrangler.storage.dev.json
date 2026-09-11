@@ -1,0 +1,19 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mongolgpt-runtime-storage-dev",
+  "account_id": "cc97ad90bfaf8a1da5de612eef2658f5",
+  "d1_databases": [
+    {
+      "binding": "HISTORY",
+      "database_name": "mongolgpt-runtime-history-dev",
+      "database_id": "8415178b-8e73-46ae-947a-215eaf42d9b5",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "RUNTIME_BACKUPS",
+      "bucket_name": "mongolgpt-runtime-backups-dev"
+    }
+  ]
+}
