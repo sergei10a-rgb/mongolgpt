@@ -13,6 +13,8 @@ test.skipIf(process.platform !== "linux")(
   async () => {
     for (let attempt = 0; attempt < 3; attempt++) await inheritedControl()
   },
+  // Three sequential children each retain their own four-second kill deadline.
+  15_000,
 )
 
 async function inheritedControl() {
