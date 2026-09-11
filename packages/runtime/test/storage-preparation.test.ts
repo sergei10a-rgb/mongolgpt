@@ -127,12 +127,23 @@ test("storage workflow cannot deploy a Worker or automatically run on push", asy
     on: Record<string, unknown>
     concurrency: unknown
     permissions: unknown
-    jobs: { prepare: { if: string; environment: string; steps: Array<{ run?: string; env?: Record<string, string> }> } }
+    jobs: {
+      prepare: {
+        if: string
+        environment: string
+        steps: Array<{ run?: string; uses?: string; with?: Record<string, string>; env?: Record<string, string> }>
+      }
+    }
   }
   expect(Object.keys(workflow.on)).toEqual(["workflow_dispatch"])
   expect(workflow.concurrency).toEqual({ group: "cloudflare-deploy-dev", "cancel-in-progress": false })
   expect(workflow.permissions).toEqual({ contents: "read" })
   expect(workflow.jobs.prepare.environment).toBe("dev")
+  const node = workflow.jobs.prepare.steps.findIndex((step) => step.uses?.startsWith("actions/setup-node@"))
+  const bun = workflow.jobs.prepare.steps.findIndex((step) => step.uses === "./.github/actions/setup-bun")
+  expect(node).toBeGreaterThanOrEqual(0)
+  expect(node).toBeLessThan(bun)
+  expect(workflow.jobs.prepare.steps[node].with).toEqual({ "node-version": "24" })
   expect(workflow.jobs.prepare.if).toBe(
     "github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'",
   )
