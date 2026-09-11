@@ -123,10 +123,18 @@ function unwrapNamedError(error: unknown): unknown {
 }
 
 export function isSessionNotFoundError(error: unknown, sessionID: string) {
+  const status = readErrorStatus(error)
+  if (status !== undefined && status !== 404 && status !== "404") return false
   const unwrapped = unwrapNamedError(error)
   if (typeof unwrapped !== "object" || unwrapped === null) return false
   const value = unwrapped as Record<string, unknown>
-  return value._tag === "SessionNotFoundError" && value.sessionID === sessionID
+  if (value._tag === "SessionNotFoundError") return value.sessionID === sessionID
+  // Older servers identify the requested session only in this exact message.
+  // A generic 404 or a missing parent/project must not discard the selected tab.
+  if (status !== 404 && status !== "404") return false
+  if (value.name !== "NotFoundError" || typeof value.data !== "object" || value.data === null) return false
+  const message = (value.data as Record<string, unknown>).message
+  return message === `Сесс олдсонгүй: ${sessionID}` || message === `Session not found: ${sessionID}`
 }
 
 function isConfigInvalidErrorLike(error: unknown): error is ConfigInvalidError {

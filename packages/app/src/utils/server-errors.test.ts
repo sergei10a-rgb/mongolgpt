@@ -219,6 +219,29 @@ describe("formatServerError", () => {
 })
 
 describe("isSessionNotFoundError", () => {
+  test("recognizes only an exact legacy session 404", () => {
+    for (const message of ["Сесс олдсонгүй: ses_missing", "Session not found: ses_missing"]) {
+      const body = { name: "NotFoundError", data: { message } }
+      expect(isSessionNotFoundError(new Error(message, { cause: { body, status: 404 } }), "ses_missing")).toBe(true)
+      for (const status of [401, 403, 500, 502]) {
+        expect(isSessionNotFoundError(new Error(message, { cause: { body, status } }), "ses_missing")).toBe(false)
+      }
+      expect(isSessionNotFoundError(new Error(message, { cause: { body, status: 404 } }), "ses_miss")).toBe(false)
+      expect(isSessionNotFoundError(body, "ses_missing")).toBe(false)
+    }
+  })
+
+  test("does not discard a session on a conflicting error status", () => {
+    const body = { _tag: "SessionNotFoundError", sessionID: "ses_missing", message: "Session not found" }
+    for (const status of [401, 403, 500, 502]) {
+      expect(isSessionNotFoundError(new Error(body.message, { cause: { body, status } }), "ses_missing")).toBe(false)
+    }
+    const other = { name: "NotFoundError", data: { message: "Project not found: ses_missing" } }
+    expect(
+      isSessionNotFoundError(new Error(other.data.message, { cause: { body: other, status: 404 } }), "ses_missing"),
+    ).toBe(false)
+  })
+
   test("matches an SDK-wrapped error for the requested session", () => {
     const body = {
       _tag: "SessionNotFoundError",

@@ -8,6 +8,123 @@ const serverBPort = new URL(serverB).port
 const sessionA = session("ses_server_a", "C:/server-a", "Server A session")
 const sessionB = session("ses_server_b", "/home/server-b", "Server B session")
 
+for (const width of [1440, 390]) {
+  for (const format of ["legacy", "typed"] as const) {
+    test(`missing ${format} session opens the remaining tab at ${width}px`, async ({ page }, info) => {
+      await page.setViewportSize({ width, height: 900 })
+      await mockServers(page, [])
+      const missing = "ses_missing_handoff"
+      const body =
+        format === "legacy"
+          ? { name: "NotFoundError", data: { message: `Сесс олдсонгүй: ${missing}` } }
+          : { _tag: "SessionNotFoundError", sessionID: missing, message: `Сесс олдсонгүй: ${missing}` }
+      await page.route(`${serverA}/session/${missing}*`, (route) => json(route, body, 404))
+      await page.addInitScript(
+        ({ serverA, serverB, missing, kept }) => {
+          localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
+          localStorage.setItem("mongolgpt.global.dat:server", JSON.stringify({ list: [serverA, serverB] }))
+          localStorage.setItem(
+            "mongolgpt.global.dat:tabs",
+            JSON.stringify([
+              { type: "session", server: serverA, sessionId: missing },
+              { type: "session", server: serverB, sessionId: kept },
+            ]),
+          )
+        },
+        { serverA, serverB, missing, kept: sessionB.id },
+      )
+      const errors: string[] = []
+      page.on("pageerror", (error) => errors.push(error.message))
+      page.on("console", (message) => {
+        if (message.type() !== "error" || message.location().url.startsWith(`${serverA}/session/${missing}`)) return
+        errors.push(message.text())
+      })
+      await page.goto(`/server/${base64Encode(serverA)}/session/${missing}`)
+      await expect(page).toHaveURL(new RegExp(`/server/${base64Encode(serverB)}/session/${sessionB.id}$`))
+      await expect(page.getByRole("heading", { name: "Ямар нэг алдаа гарлаа" })).toHaveCount(0)
+      await expect
+        .poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem("mongolgpt.global.dat:tabs") ?? "[]")))
+        .toEqual([{ type: "session", server: serverB, sessionId: sessionB.id }])
+      await expect(page.locator("[data-titlebar-tab-slot] a").filter({ hasText: sessionB.title })).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      expect(errors).toEqual([])
+      await page.screenshot({ path: info.outputPath("missing-session-recovered.png"), fullPage: true })
+    })
+  }
+
+  test(`a missing bookmarked session returns home at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 })
+    await mockServers(page, [])
+    const missing = "ses_missing_bookmark"
+    await page.route(`${serverA}/session/${missing}*`, (route) =>
+      json(
+        route,
+        {
+          name: "NotFoundError",
+          data: { message: `Сесс олдсонгүй: ${missing}` },
+        },
+        404,
+      ),
+    )
+    await page.addInitScript(
+      ({ serverA }) => {
+        localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
+        localStorage.setItem("mongolgpt.global.dat:server", JSON.stringify({ list: [serverA] }))
+      },
+      { serverA },
+    )
+    const errors: string[] = []
+    page.on("pageerror", (error) => errors.push(error.message))
+    page.on("console", (message) => {
+      if (message.type() !== "error" || message.location().url.startsWith(`${serverA}/session/${missing}`)) return
+      errors.push(message.text())
+    })
+    await page.goto(`/server/${base64Encode(serverA)}/session/${missing}`)
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole("heading", { name: "Ямар нэг алдаа гарлаа" })).toHaveCount(0)
+    await expect(page.getByRole("button", { name: "Шинэ сешн", exact: true }).first()).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect(errors).toEqual([])
+    await page.screenshot({ path: info.outputPath("missing-session-home.png"), fullPage: true })
+  })
+}
+
+for (const status of [403, 503]) {
+  test(`a ${status} session failure keeps its tab and error visible`, async ({ page }) => {
+    await mockServers(page, [])
+    const id = "ses_not_authorized_missing"
+    await page.route(`${serverA}/session/${id}*`, (route) =>
+      json(
+        route,
+        {
+          _tag: "SessionNotFoundError",
+          sessionID: id,
+          message: `Сесс олдсонгүй: ${id}`,
+        },
+        status,
+      ),
+    )
+    await page.addInitScript(
+      ({ serverA, id }) => {
+        localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
+        localStorage.setItem("mongolgpt.global.dat:server", JSON.stringify({ list: [serverA] }))
+        localStorage.setItem(
+          "mongolgpt.global.dat:tabs",
+          JSON.stringify([{ type: "session", server: serverA, sessionId: id }]),
+        )
+      },
+      { serverA, id },
+    )
+    const href = `/server/${base64Encode(serverA)}/session/${id}`
+    await page.goto(href)
+    await expect(page.getByRole("heading", { name: "Ямар нэг алдаа гарлаа" })).toBeVisible()
+    expect(new URL(page.url()).pathname).toBe(href)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("mongolgpt.global.dat:tabs") ?? "[]"))).toEqual([
+      { type: "session", server: serverA, sessionId: id },
+    ])
+  })
+}
+
 test("closing the active server's last tab opens the remaining server tab", async ({ page }) => {
   const requests: string[] = []
   await mockServers(page, requests)
@@ -90,13 +207,13 @@ async function mockServers(page: Page, requests: string[]) {
     if (url.pathname === "/global/health") return json(route, { healthy: true })
     if (url.pathname === "/session") return json(route, [current])
     if (url.pathname === `/session/${current.id}`) return json(route, current)
-    if (/^\/session\/[^/]+$/.test(url.pathname)) return json(route, { name: "NotFoundError" }, 404)
     if (url.pathname === `/session/${current.id}/message`) return json(route, [])
     if (/^\/session\/[^/]+\/(children|todo|diff)$/.test(url.pathname)) return json(route, [])
     if (["/skill", "/command", "/lsp", "/formatter", "/permission", "/question", "/vcs/diff"].includes(url.pathname))
       return json(route, [])
     if (["/global/config", "/config", "/provider/auth", "/mcp", "/session/status"].includes(url.pathname))
       return json(route, {})
+    if (/^\/session\/[^/]+$/.test(url.pathname)) return json(route, { name: "NotFoundError" }, 404)
     if (url.pathname === "/provider")
       return json(route, { all: [], connected: [], default: { providerID: "", modelID: "" } })
     if (url.pathname === "/agent") return json(route, [{ name: "build", mode: "primary" }])

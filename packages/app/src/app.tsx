@@ -10,7 +10,7 @@ import { Font } from "@mongolgpt/ui/font"
 import { Splash } from "@mongolgpt/ui/logo"
 import { ThemeProvider } from "@mongolgpt/ui/theme/context"
 import { MetaProvider } from "@solidjs/meta"
-import { type BaseRouterProps, Navigate, Route, Router, useParams, useSearchParams } from "@solidjs/router"
+import { type BaseRouterProps, Navigate, Route, Router, useNavigate, useParams, useSearchParams } from "@solidjs/router"
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query"
 import { Effect } from "effect"
 import {
@@ -129,6 +129,7 @@ const TargetSessionRoute = () => {
 
 function ResolvedTargetSessionRoute() {
   const params = useParams<{ serverKey: string; id: string }>()
+  const navigate = useNavigate()
   const settings = useSettings()
   const tabs = useTabs()
   const sync = useServerSync()
@@ -141,8 +142,12 @@ function ResolvedTargetSessionRoute() {
     },
     ({ id, server, sync }) =>
       sync.session.lineage.resolve(id).catch((error) => {
-        if (isSessionNotFoundError(error, id)) tabs.removeSessionTab({ server, sessionId: id })
-        throw error
+        if (!isSessionNotFoundError(error, id)) throw error
+        if (id !== params.id || server !== serverKey()) return undefined
+        const opened = tabs.store.some((tab) => tab.type === "session" && tab.server === server && tab.sessionId === id)
+        if (opened) tabs.removeSessionTab({ server, sessionId: id })
+        if (!opened) navigate("/", { replace: true })
+        return undefined
       }),
   )
   const current = createMemo(() => selectSessionLineage(params.id, cached(), resolved()))
