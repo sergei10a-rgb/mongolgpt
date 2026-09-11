@@ -1,0 +1,74 @@
+name: Stage dev runtime candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "STAGE DEV RUNTIME CANDIDATE гэж яг бичнэ. Домэйн шилжүүлэхгүй."
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  stage:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: dev
+    steps:
+      - name: Validate candidate staging confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = "STAGE DEV RUNTIME CANDIDATE"
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify candidate staging boundaries
+        run: |
+          bun run --cwd packages/runtime typecheck
+          bun --cwd packages/runtime test test/candidate-config.test.ts test/candidate-staging.test.ts
+
+      - name: Build current hosted runtime payload
+        run: |
+          bun packages/runtime/script/build-sandbox.ts
+          runtime_version="$(node -p "require('./packages/runtime/package.json').version")"
+          MONGOLGPT_CHANNEL=dev MONGOLGPT_VERSION="$runtime_version" bun run --cwd packages/mongolgpt build --single --skip-embed-web-ui --skip-install
+          test -x packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt
+          cp packages/mongolgpt/dist/mongolgpt-linux-x64/bin/mongolgpt packages/runtime/container/mongolgpt
+
+      - name: Stage only the private runtime candidate
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_RUNTIME_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_SECRET }}
+          MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+          MONGOLGPT_RUNTIME_BACKUP_KEYS: ${{ secrets.MONGOLGPT_RUNTIME_BACKUP_KEYS }}
+          MONGOLGPT_CANDIDATE_CONFIRMATION: ${{ inputs.confirmation }}
+        run: bun packages/runtime/script/stage-dev-runtime.ts
+
+      - name: Upload only the candidate receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dev-runtime-candidate-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/runtime-candidate-receipt.json
