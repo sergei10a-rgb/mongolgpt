@@ -195,30 +195,36 @@ describe("encrypted SQLite preservation", () => {
     expect(await rows(source)).toEqual(before)
   })
 
-  test("rejects wrong keys, modified headers, ciphertext, tags and truncated archives without publishing plaintext", async () => {
-    await using temp = await tmpdir()
-    const source = join(temp.path, "source.sqlite")
-    const archive = join(temp.path, "archive")
-    const key = randomBytes(32)
-    await seed(source)
-    await Effect.runPromise(DatabaseBackup.create({ source, destination: archive, key }))
-    const bytes = await readFile(archive)
-    const wrong = join(temp.path, "wrong.sqlite")
-    await expect(
-      Effect.runPromise(DatabaseBackup.restore({ source: archive, destination: wrong, key: randomBytes(32) })),
-    ).rejects.toThrow()
-    for (const position of [0, 26, 100, bytes.length - 1, bytes.length]) {
+  // Each restore gets its own default deadline, including Windows private-staging ACL setup.
+  test.each(["wrong key", "magic", "nonce", "ciphertext", "tag", "truncated archive"] as const)(
+    "rejects %s without publishing plaintext",
+    async (corruption) => {
+      await using temp = await tmpdir()
+      const source = join(temp.path, "source.sqlite")
+      const archive = join(temp.path, "archive")
+      const key = randomBytes(32)
+      await seed(source)
+      await Effect.runPromise(DatabaseBackup.create({ source, destination: archive, key }))
+      const bytes = await readFile(archive)
       const altered = Buffer.from(bytes)
-      if (position < altered.length) altered[position] ^= 1
-      const input = join(temp.path, `altered-${position}`)
-      const destination = join(temp.path, `restored-${position}`)
-      await writeFile(input, position === bytes.length ? altered.subarray(0, bytes.length - 8) : altered)
-      await expect(Effect.runPromise(DatabaseBackup.restore({ source: input, destination, key }))).rejects.toThrow()
-      expect(await readdir(temp.path)).not.toContain(`restored-${position}`)
-    }
-    expect((await readdir(temp.path)).some((file) => file.startsWith(".mongolgpt-backup-"))).toBe(false)
-    expect(await readdir(temp.path)).not.toContain("wrong.sqlite")
-  })
+      const position = { magic: 0, nonce: 26, ciphertext: 100, tag: bytes.length - 1 }
+      if (corruption !== "wrong key" && corruption !== "truncated archive") altered[position[corruption]] ^= 1
+      const input = join(temp.path, "altered")
+      const destination = join(temp.path, "rejected.sqlite")
+      await writeFile(input, corruption === "truncated archive" ? altered.subarray(0, bytes.length - 8) : altered)
+      await expect(
+        Effect.runPromise(
+          DatabaseBackup.restore({
+            source: input,
+            destination,
+            key: corruption === "wrong key" ? randomBytes(32) : key,
+          }),
+        ),
+      ).rejects.toThrow()
+      expect(await readdir(temp.path)).not.toContain("rejected.sqlite")
+      expect((await readdir(temp.path)).some((file) => file.startsWith(".mongolgpt-backup-"))).toBe(false)
+    },
+  )
 
   test("publishes exactly one complete archive when two backups target the same new file", async () => {
     await using temp = await tmpdir()
