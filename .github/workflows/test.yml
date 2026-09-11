@@ -80,6 +80,10 @@ jobs:
         working-directory: packages/script
         run: bun test test/ci-unit-workflow.test.ts
 
+      - name: Verify real workerd bridge request framing
+        timeout-minutes: 2
+        run: node --experimental-strip-types packages/runtime/test/fixtures/container-checkpoint-bridge.ts --tcp-startup-only
+
       - name: Run unit tests
         # Windows runners become unreliable when package suites compete for child-process and filesystem IO.
         timeout-minutes: ${{ matrix.settings.timeout_minutes }}

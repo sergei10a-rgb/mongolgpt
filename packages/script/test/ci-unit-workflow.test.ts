@@ -92,3 +92,23 @@ test("Turbo cache reuses a pre-test hash without traversing root-private evidenc
   expect(JSON.stringify(cache)).not.toContain("hashFiles(")
   expect(cache["continue-on-error"]).not.toBe(true)
 })
+
+test("real workerd framing runs early on both platforms without replacing the compiled persistence gate", async () => {
+  const source = await Bun.file(new URL("../../../.github/workflows/test.yml", import.meta.url)).text()
+  const workflow = Bun.YAML.parse(source) as { jobs: { unit: { steps: Step[] } } }
+  const steps = workflow.jobs.unit.steps
+  const probe = steps.find((step) => step.name === "Verify real workerd bridge request framing")!
+  expect(probe).toBeDefined()
+  expect(probe.if).toBeUndefined()
+  expect(probe["continue-on-error"]).not.toBe(true)
+  expect(probe["timeout-minutes"]).toBe(2)
+  expect(probe.run).toBe(
+    "node --experimental-strip-types packages/runtime/test/fixtures/container-checkpoint-bridge.ts --tcp-startup-only",
+  )
+  expect(steps.indexOf(probe)).toBeGreaterThan(steps.findIndex((step) => step.name === "Setup Bun"))
+  expect(steps.indexOf(probe)).toBeLessThan(steps.findIndex((step) => step.name === "Run unit tests"))
+  expect(steps.filter((step) => step.run?.includes("--tcp-startup-only"))).toHaveLength(1)
+  expect(steps.find((step) => step.name === "Verify compiled hosted container persistence")?.run).toContain(
+    "packages/runtime/script/test-hosted-container.ts",
+  )
+})

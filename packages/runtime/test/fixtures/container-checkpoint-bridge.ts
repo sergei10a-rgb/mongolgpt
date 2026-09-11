@@ -8,6 +8,7 @@ import { Readable } from "node:stream"
 import { pipeline } from "node:stream/promises"
 import { scheduler } from "node:timers/promises"
 import { fileURLToPath } from "node:url"
+import { checkpointControlHeader, deriveCheckpointControlToken } from "@mongolgpt/runtime-auth/control"
 
 // esbuild captures this variable during import. The shared Windows checkout may
 // have a private Linux binary instead of the normal platform package link.
@@ -155,9 +156,13 @@ if (startupOnly && !tcpStartupOnly) {
       }),
       hostCheckpoint,
     )
-    void denied.body?.cancel().catch(() => {})
+    await bounded(denied.arrayBuffer(), 10_000)
     if (denied.status !== 403) throw new Error("startup probe checkpoint gate failed")
-    console.log('BRIDGE_STARTUP_RESULT {"ok":true,"assertions":3}')
+    const afterDenied = await workerAdmin("/__test/status")
+    const afterReceipt = await bounded(afterDenied.json(), 10_000)
+    if (JSON.stringify(afterReceipt) !== JSON.stringify(receipt))
+      throw new Error("startup probe denial changed storage")
+    console.log('BRIDGE_STARTUP_RESULT {"ok":true,"assertions":4}')
   } finally {
     await bounded(worker.dispose(), 10_000)
   }
@@ -263,7 +268,62 @@ if (tcpStartupOnly) {
       throw new Error("TCP initial state mismatch")
     phase = "admin_auth"
     await check("/__test/status", 403)
-    console.log('BRIDGE_TCP_STARTUP_RESULT {"ok":true,"assertions":7}')
+    phase = "fixed_length_upload"
+    // Transport-only synthetic bytes, never published as a restorable checkpoint.
+    const archive = "MONGOLGPT-SQLITE-BACKUP\0\x01" + "framing-proof".repeat(32)
+    const controlToken = await deriveCheckpointControlToken(config.secret, config.scope)
+    const uploadHeaders = {
+      host: hostCheckpoint,
+      "content-type": "application/octet-stream",
+      "x-mongolgpt-backup-key-id": bridgeKeyID,
+      [checkpointControlHeader]: controlToken,
+    }
+    const uploaded = await check("/v1/upload", 200, {
+      method: "POST",
+      headers: {
+        ...uploadHeaders,
+        "content-length": String(Buffer.byteLength(archive)),
+        "x-test-admin-token": "denied",
+        "x-test-outbound-host": "untrusted.invalid",
+      },
+      body: archive,
+    })
+    if (
+      !plainObject(uploaded) ||
+      uploaded.bytes !== Buffer.byteLength(archive) ||
+      uploaded.sha256 !== createHash("sha256").update(archive).digest("hex") ||
+      uploaded.keyID !== bridgeKeyID
+    )
+      throw new Error("TCP upload framing mismatch")
+    phase = "missing_length_upload"
+    await check("/v1/upload", 400, {
+      method: "POST",
+      headers: {
+        ...uploadHeaders,
+        "transfer-encoding": "chunked",
+      },
+      body: archive,
+    })
+    phase = "denied_length_upload"
+    await check("/v1/upload", 403, {
+      method: "POST",
+      headers: {
+        ...uploadHeaders,
+        "content-length": String(Buffer.byteLength(archive)),
+        [checkpointControlHeader]: "denied",
+      },
+      body: archive,
+    })
+    phase = "post_upload_state"
+    const afterUpload = await check("/__test/status", 200, { headers: { "x-test-admin-token": config.adminToken } })
+    if (
+      !plainObject(afterUpload) ||
+      afterUpload.epoch !== 0 ||
+      afterUpload.checkpoint !== null ||
+      afterUpload.revision !== null
+    )
+      throw new Error("TCP upload changed unpublished history")
+    console.log('BRIDGE_TCP_STARTUP_RESULT {"ok":true,"assertions":17}')
     await shutdown(0)
   } catch {
     console.error(`BRIDGE_TCP_STARTUP_FAILURE ${JSON.stringify({ phase, status })}`)
@@ -538,7 +598,7 @@ function safeWorkerError(error: unknown) {
 
 async function workerAdmin(path: "/__test/status") {
   const response = await bounded(
-    worker.fetch(`http://127.0.0.1${path}`, {
+    fetchWorker(`http://127.0.0.1${path}`, {
       headers: { "x-test-admin-token": config.adminToken },
       signal: AbortSignal.timeout(10_000),
     }),
@@ -552,6 +612,15 @@ async function workerAdmin(path: "/__test/status") {
   return response
 }
 
+// Exercise the real workerd handler, not Wrangler's extra hot-reload proxy:
+// early body rejection through that proxy can stall or spuriously return 503.
+async function fetchWorker(url: string, init: Parameters<typeof worker.fetch>[1]) {
+  const runtime = worker.raw.runtimes.find((runtime) => runtime.mf)?.mf
+  if (!runtime || !worker.config.name) throw new Error("local workerd unavailable")
+  const target = await runtime.getWorker(worker.config.name)
+  return target.fetch(url, init)
+}
+
 async function forwardToWorker(request: Request, host: string) {
   const url = new URL(request.url)
   const headers = new Headers(request.headers)
@@ -559,7 +628,7 @@ async function forwardToWorker(request: Request, host: string) {
   headers.set("x-test-outbound-host", host)
   headers.delete("host")
   headers.delete("transfer-encoding")
-  const response = await worker.fetch(`http://127.0.0.1${url.pathname}${url.search}`, {
+  const response = await fetchWorker(`http://127.0.0.1${url.pathname}${url.search}`, {
     method: request.method,
     headers: Array.from(headers),
     body: request.body
