@@ -153,27 +153,7 @@ export async function recordFinanceCostEntryWithDb(db: Database.TxOrDb, input: R
   const valuation = await resolveMntValuation(db, entry)
   const inserted = await db
     .insert(FinanceCostEntryTable)
-    .values({
-      id: entry.id ?? Identifier.create("financeCost"),
-      workspace_id: entry.workspaceID,
-      category: entry.category,
-      direction: entry.direction,
-      basis: entry.basis,
-      source_type: entry.sourceType,
-      source_reference: entry.sourceReference,
-      usage_id: entry.usageID,
-      payment_invoice_id: entry.paymentInvoiceID,
-      payment_event_id: entry.paymentEventID,
-      provider: entry.provider,
-      model: entry.model,
-      original_amount: entry.originalAmount,
-      original_currency: entry.originalCurrency,
-      fx_rate_id: entry.fxRateID,
-      amount_mnt_micros: valuation,
-      idempotency_key: entry.idempotencyKey,
-      payload_hash: entry.payloadHash,
-      time_effective: new Date(entry.effectiveAt),
-    })
+    .values(financeCostEntryValues(entry, valuation))
     .onConflictDoNothing()
 
   const stored = await findCostEntry(db, entry)
@@ -182,6 +162,30 @@ export async function recordFinanceCostEntryWithDb(db: Database.TxOrDb, input: R
   return {
     kind: resultChanges(inserted) === 0 ? ("duplicate" as const) : ("created" as const),
     entry: stored,
+  }
+}
+
+export function financeCostEntryValues(entry: z.infer<typeof RecordFinanceCostEntrySchema>, valuation: number | null) {
+  return {
+    id: entry.id ?? Identifier.create("financeCost"),
+    workspace_id: entry.workspaceID,
+    category: entry.category,
+    direction: entry.direction,
+    basis: entry.basis,
+    source_type: entry.sourceType,
+    source_reference: entry.sourceReference,
+    usage_id: entry.usageID ?? null,
+    payment_invoice_id: entry.paymentInvoiceID ?? null,
+    payment_event_id: entry.paymentEventID ?? null,
+    provider: entry.provider ?? null,
+    model: entry.model ?? null,
+    original_amount: entry.originalAmount,
+    original_currency: entry.originalCurrency,
+    fx_rate_id: entry.fxRateID ?? null,
+    amount_mnt_micros: valuation,
+    idempotency_key: entry.idempotencyKey,
+    payload_hash: entry.payloadHash,
+    time_effective: new Date(entry.effectiveAt),
   }
 }
 
