@@ -1,6 +1,5 @@
-import { and, asc, Database, desc, eq, gt, inArray, isNull, lte } from "./drizzle"
+import { and, asc, Database, desc, eq, exists, gt, inArray, isNull, lte, notExists, sql } from "./drizzle"
 import { Identifier } from "./identifier"
-import { recordPaymentInvoiceWithDb } from "./payment-ledger"
 import {
   PaymentCheckoutTable,
   PaymentCancellationTable,
@@ -70,14 +69,12 @@ export class PaymentCheckoutAuthorizationError extends Error {
   }
 }
 
-type Transaction = <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise<T>
-
 export async function createSubscriptionCheckout(
   input: SubscriptionCheckoutRequest,
   dependencies: {
     adapter: PaymentProviderAdapter
     catalog: PaymentPlanCatalog
-    transaction?: Transaction
+    batch?: typeof Database.batch
     now?: () => number
     invoiceTtlMs?: number
   },
@@ -98,19 +95,17 @@ export async function createSubscriptionCheckout(
   const expiresAt = createdAt + invoiceTtlMs
   if (!Number.isSafeInteger(expiresAt)) throw new TypeError("Төлбөрийн хүсэлтийн дуусах хугацаа буруу байна")
 
-  const transaction = dependencies.transaction ?? ((callback) => Database.transaction(callback))
+  const batch = dependencies.batch ?? Database.batch
   const plan = catalog[request.plan]
   const invoiceID = Identifier.create("paymentInvoice")
-  const reservation = await transaction((db) =>
-    reserveSubscriptionCheckoutWithDb(db, {
-      ...request,
-      invoiceID,
-      merchantAccountID: dependencies.adapter.merchantAccountID,
-      amount: plan.amount,
-      createdAt,
-      expiresAt,
-    }),
-  )
+  const reservation = await reserveSubscriptionCheckout(batch, {
+    ...request,
+    invoiceID,
+    merchantAccountID: dependencies.adapter.merchantAccountID,
+    amount: plan.amount,
+    createdAt,
+    expiresAt,
+  })
 
   if (reservation.kind === "replay") return checkoutResult(reservation.invoice)
   if (reservation.kind === "conflict") {
@@ -135,32 +130,30 @@ export async function createSubscriptionCheckout(
     })
   } catch (error) {
     const failure = classifyCreationFailure(error)
-    await transaction((db) =>
-      markCheckoutCreationWithDb(db, reservation.invoice.id, failure.state, failure.code, createdAt),
-    ).catch(() => undefined)
+    await markCheckoutCreation(batch, reservation.invoice.id, failure.state, failure.code, createdAt).catch(
+      () => undefined,
+    )
     throw new PaymentCheckoutCreationError(failure.state, failure.code)
   }
 
   const readyAt = now()
   if (!Number.isSafeInteger(readyAt) || readyAt < createdAt) {
-    await transaction((db) =>
-      markCheckoutCreationWithDb(db, reservation.invoice.id, "unknown", "persistence_failed", createdAt),
-    ).catch(() => undefined)
+    await markCheckoutCreation(batch, reservation.invoice.id, "unknown", "persistence_failed", createdAt).catch(
+      () => undefined,
+    )
     throw new PaymentCheckoutCreationError("unknown", "persistence_failed")
   }
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const completed = await transaction((db) =>
-        completeSubscriptionCheckoutWithDb(db, reservation.invoice.id, checkout, readyAt),
-      )
+      const completed = await completeSubscriptionCheckout(batch, reservation.invoice.id, checkout, readyAt)
       return checkoutResult(completed)
     } catch {
       if (attempt === 0) continue
     }
   }
-  await transaction((db) =>
-    markCheckoutCreationWithDb(db, reservation.invoice.id, "unknown", "persistence_failed", createdAt),
-  ).catch(() => undefined)
+  await markCheckoutCreation(batch, reservation.invoice.id, "unknown", "persistence_failed", createdAt).catch(
+    () => undefined,
+  )
   throw new PaymentCheckoutCreationError("unknown", "persistence_failed")
 }
 
@@ -280,8 +273,45 @@ export async function expireOpenPaymentCheckoutsWithDb(db: Database.TxOrDb, now 
   return applied
 }
 
-export function expireOpenPaymentCheckouts(now = Date.now(), limit = 100) {
-  return Database.transaction((db) => expireOpenPaymentCheckoutsWithDb(db, now, limit))
+export async function expireOpenPaymentCheckouts(
+  now = Date.now(),
+  limit = 100,
+  dependencies: { batch?: typeof Database.batch } = {},
+) {
+  validateSweepInput(now, limit)
+  const [, expired] = await (dependencies.batch ?? Database.batch)((db) => {
+    const eligible = db
+      .select({ id: PaymentCheckoutTable.id })
+      .from(PaymentCheckoutTable)
+      .where(
+        and(
+          inArray(PaymentCheckoutTable.status, OPEN_CHECKOUT_STATUSES),
+          isNull(PaymentCheckoutTable.timeDeleted),
+          lte(PaymentCheckoutTable.time_expires, new Date(Math.max(0, now - PAYMENT_EXPIRY_GRACE_MS))),
+        ),
+      )
+      .orderBy(asc(PaymentCheckoutTable.time_expires), asc(PaymentCheckoutTable.id))
+      .limit(limit)
+    // The ledger update leaves eligibility unchanged, so both statements affect the same bounded set.
+    return [
+      db
+        .update(PaymentInvoiceTable)
+        .set({ status: "expired", time_expired: new Date(now) })
+        .where(
+          and(
+            inArray(PaymentInvoiceTable.id, eligible),
+            inArray(PaymentInvoiceTable.status, ["created", "pending"]),
+            isNull(PaymentInvoiceTable.timeDeleted),
+          ),
+        ),
+      db
+        .update(PaymentCheckoutTable)
+        .set({ status: "expired", time_expired: new Date(now) })
+        .where(inArray(PaymentCheckoutTable.id, eligible))
+        .returning({ id: PaymentCheckoutTable.id }),
+    ] as const
+  })
+  return expired.length
 }
 
 export async function syncPaymentCheckoutStatusWithDb(
@@ -325,8 +355,8 @@ export async function syncPaymentCheckoutStatusWithDb(
   return true
 }
 
-async function reserveSubscriptionCheckoutWithDb(
-  db: Database.TxOrDb,
+async function reserveSubscriptionCheckout(
+  batch: typeof Database.batch,
   input: z.output<typeof SubscriptionCheckoutRequestSchema> & {
     invoiceID: string
     merchantAccountID: string
@@ -335,73 +365,136 @@ async function reserveSubscriptionCheckoutWithDb(
     expiresAt: number
   },
 ) {
-  const administrator = await db
-    .select({ id: UserTable.id })
-    .from(UserTable)
-    .where(
-      and(
-        eq(UserTable.workspaceID, input.workspaceID),
-        eq(UserTable.accountID, input.accountID),
-        eq(UserTable.role, "admin"),
-        isNull(UserTable.timeDeleted),
-      ),
+  // Policy checks, expiry, reservation and replay reads share one D1 transaction.
+  const [administrators, subscriptions, , , inserted, replays, open] = await batch((db) => {
+    const administrator = db
+      .select({ id: UserTable.id })
+      .from(UserTable)
+      .where(
+        and(
+          eq(UserTable.workspaceID, input.workspaceID),
+          eq(UserTable.accountID, input.accountID),
+          eq(UserTable.role, "admin"),
+          isNull(UserTable.timeDeleted),
+        ),
+      )
+      .limit(1)
+    const active = db
+      .select({ id: PlanSubscriptionTable.id })
+      .from(PlanSubscriptionTable)
+      .where(
+        and(
+          eq(PlanSubscriptionTable.workspaceID, input.workspaceID),
+          eq(PlanSubscriptionTable.status, "active"),
+          isNull(PlanSubscriptionTable.timeDeleted),
+          gt(PlanSubscriptionTable.timePeriodEnd, new Date(input.createdAt)),
+        ),
+      )
+      .limit(1)
+    const allowed = and(exists(administrator), notExists(active))
+    const expired = and(
+      eq(PaymentCheckoutTable.workspace_id, input.workspaceID),
+      eq(PaymentCheckoutTable.purpose, "subscription"),
+      inArray(PaymentCheckoutTable.status, OPEN_CHECKOUT_STATUSES),
+      isNull(PaymentCheckoutTable.timeDeleted),
+      lte(PaymentCheckoutTable.time_expires, new Date(Math.max(0, input.createdAt - PAYMENT_EXPIRY_GRACE_MS))),
     )
-    .limit(1)
-    .then((rows) => rows[0])
-  if (!administrator) throw new PaymentCheckoutAuthorizationError()
-
-  await expireWorkspaceOpenInvoices(db, input.workspaceID, input.createdAt)
-  const active = await db
-    .select({ id: PlanSubscriptionTable.id })
-    .from(PlanSubscriptionTable)
-    .where(
-      and(
-        eq(PlanSubscriptionTable.workspaceID, input.workspaceID),
-        eq(PlanSubscriptionTable.status, "active"),
-        isNull(PlanSubscriptionTable.timeDeleted),
-        gt(PlanSubscriptionTable.timePeriodEnd, new Date(input.createdAt)),
-      ),
-    )
-    .limit(1)
-    .then((rows) => rows[0])
-  if (active) throw new PaymentCheckoutConflictError("active_subscription")
-
-  const inserted = await db
-    .insert(PaymentCheckoutTable)
-    .values({
-      id: input.invoiceID,
-      workspace_id: input.workspaceID,
-      account_id: input.accountID,
-      request_key: input.requestKey,
-      provider: input.provider,
-      merchant_account_id: input.merchantAccountID,
-      purpose: "subscription",
-      plan: input.plan,
-      amount: input.amount,
-      currency: "MNT",
-      status: "creating",
-      time_expires: new Date(input.expiresAt),
-      timeCreated: new Date(input.createdAt),
-    })
-    .onConflictDoNothing()
-
-  if (resultChanges(inserted) === 1) {
-    return { kind: "reserved" as const, invoice: await requireInvoice(db, input.invoiceID) }
-  }
-
-  const requestReplay = await db
-    .select()
-    .from(PaymentCheckoutTable)
-    .where(
-      and(
-        eq(PaymentCheckoutTable.workspace_id, input.workspaceID),
-        eq(PaymentCheckoutTable.request_key, input.requestKey),
-      ),
-    )
-    .limit(1)
-    .then((rows) => rows[0])
+    return [
+      administrator,
+      active,
+      db
+        .update(PaymentInvoiceTable)
+        .set({ status: "expired", time_expired: new Date(input.createdAt) })
+        .where(
+          and(
+            allowed,
+            inArray(PaymentInvoiceTable.status, ["created", "pending"]),
+            isNull(PaymentInvoiceTable.timeDeleted),
+            inArray(
+              PaymentInvoiceTable.id,
+              db.select({ id: PaymentCheckoutTable.id }).from(PaymentCheckoutTable).where(expired),
+            ),
+          ),
+        ),
+      db
+        .update(PaymentCheckoutTable)
+        .set({ status: "expired", time_expired: new Date(input.createdAt) })
+        .where(and(allowed, expired)),
+      db
+        .insert(PaymentCheckoutTable)
+        .select(
+          db
+            .select({
+              id: sql<string>`${input.invoiceID}`.as("id"),
+              workspace_id: sql<string>`${input.workspaceID}`.as("workspace_id"),
+              account_id: sql<string>`${input.accountID}`.as("account_id"),
+              request_key: sql<string>`${input.requestKey}`.as("request_key"),
+              provider: sql<typeof input.provider>`${input.provider}`.as("provider"),
+              merchant_account_id: sql<string>`${input.merchantAccountID}`.as("merchant_account_id"),
+              external_invoice_id: sql<null>`null`.as("external_invoice_id"),
+              purpose: sql<"subscription">`'subscription'`.as("purpose"),
+              plan: sql<typeof input.plan>`${input.plan}`.as("plan"),
+              amount: sql<number>`${input.amount}`.as("amount"),
+              currency: sql<"MNT">`'MNT'`.as("currency"),
+              checkout: sql<null>`null`.as("checkout"),
+              creation_error_code: sql<null>`null`.as("creation_error_code"),
+              status: sql<"creating">`'creating'`.as("status"),
+              time_expires: sql<Date>`${input.expiresAt}`.as("time_expires"),
+              time_ready: sql<null>`null`.as("time_ready"),
+              time_failed: sql<null>`null`.as("time_failed"),
+              time_expired: sql<null>`null`.as("time_expired"),
+              time_cancelled: sql<null>`null`.as("time_cancelled"),
+              time_paid: sql<null>`null`.as("time_paid"),
+              time_refunded: sql<null>`null`.as("time_refunded"),
+              timeCreated: sql<Date>`${input.createdAt}`.as("time_created"),
+              timeUpdated: sql<Date>`${input.createdAt}`.as("time_updated"),
+              timeDeleted: sql<null>`null`.as("time_deleted"),
+            })
+            .from(UserTable)
+            .where(
+              and(
+                allowed,
+                eq(UserTable.workspaceID, input.workspaceID),
+                eq(UserTable.accountID, input.accountID),
+                eq(UserTable.role, "admin"),
+                isNull(UserTable.timeDeleted),
+              ),
+            )
+            .limit(1),
+        )
+        .onConflictDoNothing()
+        .returning(),
+      db
+        .select()
+        .from(PaymentCheckoutTable)
+        .where(
+          and(
+            eq(PaymentCheckoutTable.workspace_id, input.workspaceID),
+            eq(PaymentCheckoutTable.request_key, input.requestKey),
+          ),
+        )
+        .limit(1),
+      db
+        .select()
+        .from(PaymentCheckoutTable)
+        .where(
+          and(
+            eq(PaymentCheckoutTable.workspace_id, input.workspaceID),
+            eq(PaymentCheckoutTable.purpose, "subscription"),
+            inArray(PaymentCheckoutTable.status, OPEN_CHECKOUT_STATUSES),
+            isNull(PaymentCheckoutTable.timeDeleted),
+          ),
+        )
+        .limit(1),
+    ] as const
+  })
+  if (!administrators[0]) throw new PaymentCheckoutAuthorizationError()
+  if (subscriptions[0]) throw new PaymentCheckoutConflictError("active_subscription")
+  if (inserted[0]) return { kind: "reserved" as const, invoice: inserted[0] }
+  const requestReplay = replays[0]
   if (requestReplay) {
     assertCheckoutReplay(requestReplay, input)
+    if (requestReplay.timeDeleted) return { kind: "closed" as const, invoice: requestReplay }
     if (requestReplay.status === "ready" && requestReplay.checkout) {
       return { kind: "replay" as const, invoice: requestReplay }
     }
@@ -411,64 +504,97 @@ async function reserveSubscriptionCheckoutWithDb(
     return { kind: "closed" as const, invoice: requestReplay }
   }
 
-  const open = await db
-    .select()
-    .from(PaymentCheckoutTable)
-    .where(
-      and(
-        eq(PaymentCheckoutTable.workspace_id, input.workspaceID),
-        eq(PaymentCheckoutTable.purpose, "subscription"),
-        inArray(PaymentCheckoutTable.status, OPEN_CHECKOUT_STATUSES),
-        isNull(PaymentCheckoutTable.timeDeleted),
-      ),
-    )
-    .limit(1)
-    .then((rows) => rows[0])
-  if (open) return { kind: "conflict" as const, invoice: open }
+  if (open[0]) return { kind: "conflict" as const, invoice: open[0] }
   throw new Error("Зөрчилтэй нэхэмжлэх байхгүй боловч төлбөрийн хүсэлтийн нөөцлөлт амжилтгүй боллоо")
 }
 
-async function completeSubscriptionCheckoutWithDb(
-  db: Database.TxOrDb,
+async function completeSubscriptionCheckout(
+  batch: typeof Database.batch,
   invoiceID: string,
   input: z.input<typeof PaymentInvoiceCheckoutSchema>,
   readyAt: number,
 ) {
   const checkout = PaymentInvoiceCheckoutSchema.parse(input)
-  const intent = await requireInvoice(db, invoiceID)
-  if (intent.status === "ready" && intent.checkout && paymentCheckoutEqual(intent.checkout, checkout)) return intent
-  if (intent.status !== "creating") throw new Error("Төлбөрийн хүсэлт үүсэж байгаа төлөвтөө байхаа больсон")
-  if (checkout.provider !== intent.provider || checkout.merchantAccountID !== intent.merchant_account_id) {
-    throw new Error("Төлбөрийн хүсэлтийн нийлүүлэгчийн холболт нөөцлөлттэй таарахгүй байна")
-  }
-
-  await recordPaymentInvoiceWithDb(db, {
-    id: intent.id,
-    workspaceID: intent.workspace_id,
-    provider: intent.provider,
-    merchantAccountID: intent.merchant_account_id,
-    externalInvoiceID: checkout.externalInvoiceID,
-    purpose: intent.purpose,
-    plan: intent.plan ?? undefined,
-    amount: intent.amount,
-    currency: intent.currency,
-    createdAt: intent.timeCreated.getTime(),
-    expiresAt: intent.time_expires.getTime(),
+  const [, , rows] = await batch((db) => {
+    const creating = and(
+      eq(PaymentCheckoutTable.id, invoiceID),
+      eq(PaymentCheckoutTable.status, "creating"),
+      eq(PaymentCheckoutTable.provider, checkout.provider),
+      eq(PaymentCheckoutTable.merchant_account_id, checkout.merchantAccountID),
+      isNull(PaymentCheckoutTable.timeDeleted),
+    )
+    const ledger = db
+      .select({ id: PaymentInvoiceTable.id })
+      .from(PaymentInvoiceTable)
+      .where(
+        and(
+          eq(PaymentInvoiceTable.id, PaymentCheckoutTable.id),
+          eq(PaymentInvoiceTable.workspace_id, PaymentCheckoutTable.workspace_id),
+          eq(PaymentInvoiceTable.provider, PaymentCheckoutTable.provider),
+          eq(PaymentInvoiceTable.merchant_account_id, PaymentCheckoutTable.merchant_account_id),
+          eq(PaymentInvoiceTable.external_invoice_id, checkout.externalInvoiceID),
+          eq(PaymentInvoiceTable.purpose, PaymentCheckoutTable.purpose),
+          eq(PaymentInvoiceTable.plan, PaymentCheckoutTable.plan),
+          eq(PaymentInvoiceTable.amount, PaymentCheckoutTable.amount),
+          eq(PaymentInvoiceTable.currency, PaymentCheckoutTable.currency),
+          eq(PaymentInvoiceTable.time_expires, PaymentCheckoutTable.time_expires),
+          eq(PaymentInvoiceTable.status, "created"),
+          isNull(PaymentInvoiceTable.timeDeleted),
+        ),
+      )
+    return [
+      db
+        .insert(PaymentInvoiceTable)
+        .select(
+          db
+            .select({
+              id: PaymentCheckoutTable.id,
+              workspace_id: PaymentCheckoutTable.workspace_id,
+              provider: PaymentCheckoutTable.provider,
+              merchant_account_id: PaymentCheckoutTable.merchant_account_id,
+              external_invoice_id: sql<string>`${checkout.externalInvoiceID}`.as("external_invoice_id"),
+              external_payment_id: sql<null>`null`.as("external_payment_id"),
+              purpose: PaymentCheckoutTable.purpose,
+              plan: PaymentCheckoutTable.plan,
+              amount: PaymentCheckoutTable.amount,
+              currency: PaymentCheckoutTable.currency,
+              status: sql<"created">`'created'`.as("status"),
+              time_expires: PaymentCheckoutTable.time_expires,
+              time_failed: sql<null>`null`.as("time_failed"),
+              time_expired: sql<null>`null`.as("time_expired"),
+              time_cancelled: sql<null>`null`.as("time_cancelled"),
+              time_verified: sql<null>`null`.as("time_verified"),
+              time_refunded: sql<null>`null`.as("time_refunded"),
+              timeCreated: PaymentCheckoutTable.timeCreated,
+              timeUpdated: sql<Date>`${readyAt}`.as("time_updated"),
+              timeDeleted: sql<null>`null`.as("time_deleted"),
+            })
+            .from(PaymentCheckoutTable)
+            .where(creating),
+        )
+        .onConflictDoNothing(),
+      db
+        .update(PaymentCheckoutTable)
+        .set({
+          external_invoice_id: checkout.externalInvoiceID,
+          checkout,
+          status: "ready",
+          creation_error_code: null,
+          time_ready: new Date(readyAt),
+        })
+        .where(and(creating, exists(ledger))),
+      db.select().from(PaymentCheckoutTable).where(eq(PaymentCheckoutTable.id, invoiceID)).limit(1),
+    ] as const
   })
-
-  const changed = await db
-    .update(PaymentCheckoutTable)
-    .set({
-      external_invoice_id: checkout.externalInvoiceID,
-      checkout,
-      status: "ready",
-      creation_error_code: null,
-      time_ready: new Date(readyAt),
-    })
-    .where(and(eq(PaymentCheckoutTable.id, intent.id), eq(PaymentCheckoutTable.status, "creating")))
-    .returning({ id: PaymentCheckoutTable.id })
-  if (changed.length !== 1) throw new Error("Төлбөрийн хүсэлтийн мэдээлэл зэрэг өөрчлөгдсөн байна")
-  return requireInvoice(db, intent.id)
+  const intent = rows[0]
+  if (
+    intent?.status === "ready" &&
+    !intent.timeDeleted &&
+    intent.checkout &&
+    paymentCheckoutEqual(intent.checkout, checkout)
+  )
+    return intent
+  throw new Error("Төлбөрийн хүсэлт болон нэхэмжлэхийг хамтад нь баталгаажуулж чадсангүй")
 }
 
 function paymentCheckoutEqual(
@@ -492,34 +618,25 @@ function paymentCheckoutEqual(
   )
 }
 
-async function markCheckoutCreationWithDb(
-  db: Database.TxOrDb,
+async function markCheckoutCreation(
+  batch: typeof Database.batch,
   invoiceID: string,
   state: "failed" | "unknown",
   code: string,
   now: number,
 ) {
-  await db
-    .update(PaymentCheckoutTable)
-    .set({ status: state, creation_error_code: code, ...(state === "failed" ? { time_failed: new Date(now) } : {}) })
-    .where(and(eq(PaymentCheckoutTable.id, invoiceID), eq(PaymentCheckoutTable.status, "creating")))
-}
-
-async function expireWorkspaceOpenInvoices(db: Database.TxOrDb, workspaceID: string, now: number) {
-  const expired = await db
-    .update(PaymentCheckoutTable)
-    .set({ status: "expired", time_expired: new Date(now) })
-    .where(
-      and(
-        eq(PaymentCheckoutTable.workspace_id, workspaceID),
-        eq(PaymentCheckoutTable.purpose, "subscription"),
-        inArray(PaymentCheckoutTable.status, OPEN_CHECKOUT_STATUSES),
-        isNull(PaymentCheckoutTable.timeDeleted),
-        lte(PaymentCheckoutTable.time_expires, new Date(Math.max(0, now - PAYMENT_EXPIRY_GRACE_MS))),
+  await batch((db) => [
+    db
+      .update(PaymentCheckoutTable)
+      .set({ status: state, creation_error_code: code, ...(state === "failed" ? { time_failed: new Date(now) } : {}) })
+      .where(
+        and(
+          eq(PaymentCheckoutTable.id, invoiceID),
+          eq(PaymentCheckoutTable.status, "creating"),
+          isNull(PaymentCheckoutTable.timeDeleted),
+        ),
       ),
-    )
-    .returning({ id: PaymentCheckoutTable.id })
-  for (const row of expired) await expireLedgerInvoiceWithDb(db, row.id, now)
+  ])
 }
 
 async function expireLedgerInvoiceWithDb(db: Database.TxOrDb, invoiceID: string, now: number) {
@@ -581,24 +698,4 @@ function validateSweepInput(now: number, limit: number) {
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) {
     throw new TypeError("Төлбөр дуусах хугацааны хязгаар буруу байна")
   }
-}
-
-async function requireInvoice(db: Database.TxOrDb, invoiceID: string) {
-  const invoice = await db
-    .select()
-    .from(PaymentCheckoutTable)
-    .where(eq(PaymentCheckoutTable.id, invoiceID))
-    .limit(1)
-    .then((rows) => rows[0])
-  if (!invoice) throw new Error("Төлбөрийн хүсэлтийн нэхэмжлэх олдсонгүй")
-  return invoice
-}
-
-function resultChanges(result: unknown) {
-  if (!result || typeof result !== "object") return 0
-  if ("meta" in result && result.meta && typeof result.meta === "object" && "changes" in result.meta) {
-    return Number(result.meta.changes ?? 0)
-  }
-  if ("changes" in result) return Number(result.changes ?? 0)
-  return 0
 }

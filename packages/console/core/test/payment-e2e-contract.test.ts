@@ -1,6 +1,7 @@
 /// <reference path="../../admin/src/global.d.ts" />
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
+import { sqliteBatch } from "./fixtures/sqlite-batch"
 import { Database as SQLite } from "bun:sqlite"
 import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import { resolve } from "node:path"
@@ -145,7 +146,7 @@ describe("payment E2E contract", () => {
       {
         adapter,
         catalog,
-        transaction,
+        batch: sqliteBatch(transaction),
         now: () => NOW,
       },
     )
@@ -175,7 +176,9 @@ describe("payment E2E contract", () => {
     })
 
     const webhookResponse = await webhook(
-      new Request(`https://pay.dev.mgpt.mn/v1/webhooks/qpay?invoice=${checkout.invoiceID}&payment_id=${externalPaymentID}`),
+      new Request(
+        `https://pay.dev.mgpt.mn/v1/webhooks/qpay?invoice=${checkout.invoiceID}&payment_id=${externalPaymentID}`,
+      ),
     )
 
     expect(webhookResponse.status).toBe(200)
@@ -213,11 +216,15 @@ describe("payment E2E contract", () => {
       plan: "pro",
       amount: 39_000,
     })
-    expect(sqlite.query("select status, external_payment_id from payment_invoice where id = ?").get(checkout.invoiceID)).toEqual({
+    expect(
+      sqlite.query("select status, external_payment_id from payment_invoice where id = ?").get(checkout.invoiceID),
+    ).toEqual({
       status: "paid",
       external_payment_id: externalPaymentID,
     })
-    expect(sqlite.query("select status, plan from plan_subscription where invoice_id = ?").get(checkout.invoiceID)).toEqual({
+    expect(
+      sqlite.query("select status, plan from plan_subscription where invoice_id = ?").get(checkout.invoiceID),
+    ).toEqual({
       status: "active",
       plan: "pro",
     })
@@ -306,9 +313,11 @@ async function applyPaymentChain(sqlite: SQLite, db: Database.TxOrDb, event: Pay
     workspaceID: result.invoice.workspace_id,
     paymentInvoiceID: result.invoice.id,
     paymentEventID:
-      (sqlite.query("select id from payment_event where invoice_id = ? order by time_created desc limit 1").get(
-        result.invoice.id,
-      ) as { id?: string } | null)?.id ?? undefined,
+      (
+        sqlite
+          .query("select id from payment_event where invoice_id = ? order by time_created desc limit 1")
+          .get(result.invoice.id) as { id?: string } | null
+      )?.id ?? undefined,
     provider: "qpay",
     merchantAccountID: result.invoice.merchant_account_id,
     externalSettlementID: "qpay:settlement:pay-e2e-contract",

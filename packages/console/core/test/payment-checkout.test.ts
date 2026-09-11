@@ -14,6 +14,7 @@ import {
 } from "../src/payment-checkout"
 import { PaymentProviderResponseError, type PaymentProviderAdapter } from "../src/payment-provider"
 import { Database } from "../src/drizzle"
+import { sqliteBatch } from "./fixtures/sqlite-batch"
 import * as schema from "../src/schema-d1"
 
 const NOW = Date.UTC(2026, 6, 21, 12)
@@ -62,7 +63,7 @@ describe("subscription payment checkout", () => {
       }
     }
 
-    return { sqlite, db, workspaceID, accountID, transaction }
+    return { sqlite, db, workspaceID, accountID, batch: sqliteBatch(transaction) }
   }
 
   function adapter(
@@ -77,7 +78,7 @@ describe("subscription payment checkout", () => {
   }
 
   test("reserves before the provider call and replays one ready checkout", async () => {
-    const { sqlite, db, workspaceID, accountID, transaction } = await fixture()
+    const { sqlite, db, workspaceID, accountID, batch } = await fixture()
     const calls: Array<Record<string, unknown>> = []
     const provider = adapter(async (input) => {
       calls.push(input)
@@ -92,7 +93,7 @@ describe("subscription payment checkout", () => {
         deepLinks: [{ name: "Банк", description: "", link: "khanbank://q?qpay-qr" }],
       }
     })
-    const dependencies = { adapter: provider, catalog, transaction, now: () => NOW }
+    const dependencies = { adapter: provider, catalog, batch, now: () => NOW }
 
     const first = await createSubscriptionCheckout(request(workspaceID, accountID), dependencies)
     const replay = await createSubscriptionCheckout(request(workspaceID, accountID), dependencies)
@@ -120,7 +121,7 @@ describe("subscription payment checkout", () => {
   })
 
   test("requires an active workspace administrator before reserving or calling the provider", async () => {
-    const { sqlite, workspaceID, accountID, transaction } = await fixture()
+    const { sqlite, workspaceID, accountID, batch } = await fixture()
     let calls = 0
     const dependencies = {
       adapter: adapter(async () => {
@@ -128,7 +129,7 @@ describe("subscription payment checkout", () => {
         throw new Error("must not be called")
       }),
       catalog,
-      transaction,
+      batch,
       now: () => NOW,
     }
 
@@ -147,9 +148,9 @@ describe("subscription payment checkout", () => {
   })
 
   test("retries only local completion when the provider response was already created", async () => {
-    const { sqlite, workspaceID, accountID, transaction } = await fixture()
+    const { sqlite, workspaceID, accountID, batch } = await fixture()
     let providerCalls = 0
-    let transactions = 0
+    let batches = 0
     const result = await createSubscriptionCheckout(request(workspaceID, accountID), {
       adapter: adapter(async () => {
         providerCalls++
@@ -161,10 +162,10 @@ describe("subscription payment checkout", () => {
         }
       }),
       catalog,
-      transaction: async (callback) => {
-        transactions++
-        const value = await transaction(callback)
-        if (transactions === 2) throw new Error("committed response was lost")
+      batch: async (callback) => {
+        batches++
+        const value = await batch(callback)
+        if (batches === 2) throw new Error("committed response was lost")
         return value
       },
       now: () => NOW,
@@ -172,7 +173,7 @@ describe("subscription payment checkout", () => {
 
     expect(result).toMatchObject({ status: "ready", invoiceID: result.invoiceID })
     expect(providerCalls).toBe(1)
-    expect(transactions).toBe(3)
+    expect(batches).toBe(3)
     expect(sqlite.query("select status, external_invoice_id from payment_checkout").get()).toEqual({
       status: "ready",
       external_invoice_id: "qpay_checkout_committed",
@@ -180,7 +181,7 @@ describe("subscription payment checkout", () => {
   })
 
   test("blocks conflicting request replays and parallel open subscriptions", async () => {
-    const { workspaceID, accountID, transaction } = await fixture()
+    const { workspaceID, accountID, batch } = await fixture()
     let calls = 0
     const dependencies = {
       adapter: adapter(async () => {
@@ -193,7 +194,7 @@ describe("subscription payment checkout", () => {
         }
       }),
       catalog,
-      transaction,
+      batch,
       now: () => NOW,
     }
     await createSubscriptionCheckout(request(workspaceID, accountID), dependencies)
@@ -220,7 +221,7 @@ describe("subscription payment checkout", () => {
         throw new PaymentProviderResponseError({ provider: "qpay", operation: "create invoice", status: 400 })
       }),
       catalog,
-      transaction: definite.transaction,
+      batch: definite.batch,
       now: () => NOW,
     }
     const definiteError = await createSubscriptionCheckout(
@@ -240,7 +241,7 @@ describe("subscription payment checkout", () => {
         throw new PaymentProviderResponseError({ provider: "qpay", operation: "create invoice", status: 503 })
       }),
       catalog,
-      transaction: uncertain.transaction,
+      batch: uncertain.batch,
       now: () => NOW,
     }
     const uncertainError = await createSubscriptionCheckout(
@@ -257,13 +258,13 @@ describe("subscription payment checkout", () => {
   })
 
   test("expires abandoned intents after the provider grace window", async () => {
-    const { sqlite, db, workspaceID, accountID, transaction } = await fixture()
+    const { sqlite, db, workspaceID, accountID, batch } = await fixture()
     const unavailable = {
       adapter: adapter(async () => {
         throw new Error("network timeout")
       }),
       catalog,
-      transaction,
+      batch,
       now: () => NOW,
     }
     const uncertain = await createSubscriptionCheckout(request(workspaceID, accountID), unavailable).catch(
@@ -277,7 +278,7 @@ describe("subscription payment checkout", () => {
   })
 
   test("syncs only verified ledger events into checkout lifecycle", async () => {
-    const { sqlite, db, workspaceID, accountID, transaction } = await fixture()
+    const { sqlite, db, workspaceID, accountID, batch } = await fixture()
     const result = await createSubscriptionCheckout(request(workspaceID, accountID), {
       adapter: adapter(async () => ({
         provider: "qpay",
@@ -286,7 +287,7 @@ describe("subscription payment checkout", () => {
         deepLinks: [],
       })),
       catalog,
-      transaction,
+      batch,
       now: () => NOW,
     })
 
@@ -310,7 +311,7 @@ describe("subscription payment checkout", () => {
 
   test("repairs an expired or cancelled checkout when a verified payment arrives late", async () => {
     for (const [index, terminalStatus] of (["expired", "cancelled"] as const).entries()) {
-      const { sqlite, db, workspaceID, accountID, transaction } = await fixture()
+      const { sqlite, db, workspaceID, accountID, batch } = await fixture()
       const result = await createSubscriptionCheckout(request(workspaceID, accountID), {
         adapter: adapter(async () => ({
           provider: "qpay",
@@ -319,7 +320,7 @@ describe("subscription payment checkout", () => {
           deepLinks: [],
         })),
         catalog,
-        transaction,
+        batch,
         now: () => NOW,
       })
 
@@ -353,7 +354,7 @@ describe("subscription payment checkout", () => {
   })
 
   test("rejects purchase while an active plan entitlement exists", async () => {
-    const { sqlite, db, workspaceID, accountID, transaction } = await fixture()
+    const { sqlite, db, workspaceID, accountID, batch } = await fixture()
     sqlite
       .query(
         "insert into plan_subscription (id, workspace_id, invoice_id, plan, status, time_period_start, time_period_end) values (?, ?, ?, ?, ?, ?, ?)",
@@ -366,7 +367,7 @@ describe("subscription payment checkout", () => {
         throw new Error("must not be called")
       }),
       catalog,
-      transaction,
+      batch,
       now: () => NOW,
     }).catch((caught) => caught)
     expect(error).toBeInstanceOf(PaymentCheckoutConflictError)

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { sqliteBatch } from "./fixtures/sqlite-batch"
 import { Database as SQLite } from "bun:sqlite"
 import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import { resolve } from "node:path"
@@ -92,7 +93,7 @@ describe("subscription checkout cancellation", () => {
           provider,
           plan: "pro",
         },
-        { adapter, catalog, transaction, now: () => NOW },
+        { adapter, catalog, batch: sqliteBatch(transaction), now: () => NOW },
       )
       return { adapter, checkout, externalInvoiceID, merchantAccountID }
     }
