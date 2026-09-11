@@ -30,6 +30,65 @@ test("readiness deadlines remain finite and cancel a stalled transport", async (
   expect(calls).toBe(1)
 })
 
+test("delegates probe timing to the DO without serializing a Request", async () => {
+  const received: unknown[][] = []
+  const result = await runtimeReadiness(
+    {
+      containerFetch: async () => {
+        throw new Error("must use the DO-local probe")
+      },
+      probeReadiness: async (...args) => {
+        received.push(args)
+        return { code: "ready", status: 200 }
+      },
+    },
+    "synthetic-password",
+    true,
+    100,
+  )
+  expect(received).toEqual([["synthetic-password", true, 100]])
+  expect(result).toEqual({ code: "ready", status: 200 })
+})
+
+test("invalid or unresponsive DO probe receipts remain bounded admission failures", async () => {
+  const containerFetch = async () => {
+    throw new Error("must use the DO-local probe")
+  }
+  expect(
+    await runtimeReadiness(
+      {
+        containerFetch,
+        probeReadiness: async () => ({ code: "ready", status: 200, private: "must-not-return" }),
+      },
+      "test",
+      true,
+      100,
+    ),
+  ).toEqual({ code: "body_schema", status: null })
+  expect(
+    await runtimeReadiness(
+      {
+        containerFetch,
+        probeReadiness: async () => ({ code: "ready", status: null }),
+      },
+      "test",
+      true,
+      100,
+    ),
+  ).toEqual({ code: "body_schema", status: null })
+  expect(
+    await runtimeReadiness(
+      {
+        containerFetch,
+        probeReadiness: () => new Promise(() => {}),
+      },
+      "test",
+      true,
+      20,
+    ),
+  ).toEqual({ code: "timeout", status: null })
+})
+
 test("classifies the real admission guards without retaining private response data", async () => {
   const privateValue = "private-password-path-response-never-report"
   const scenarios = [
@@ -79,7 +138,7 @@ test("classifies the real admission guards without retaining private response da
     },
   ]
   for (const scenario of scenarios) {
-    for (const admission of scenario.status === 503 ? [false] : [false, true]) {
+    for (const admission of scenario.status === 503 || scenario.code === "transport" ? [false] : [false, true]) {
       let calls = 0
       const sandbox = {
         containerFetch: async (request, port) => {
@@ -128,6 +187,39 @@ test.each([500, 502, 503, 504])("rechecks transient HTTP %s with every readiness
   }
 })
 
+test.each(["headers", "body"])(
+  "recovers a stalled health %s request without exhausting admission",
+  async (phase) => {
+    const requests: Request[] = []
+    let cancelled = false
+    const started = performance.now()
+    const result = await waitForRestoredRuntimeReadiness(
+      {
+        containerFetch: async (request) => {
+          requests.push(request)
+          if (requests.length > 1) {
+            expect(requests[0].signal.aborted).toBe(true)
+            return new Response(body, { headers })
+          }
+          if (phase === "body")
+            return new Response(new ReadableStream({ cancel: () => void (cancelled = true) }), { headers })
+          return new Promise<Response>((_, reject) => {
+            request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true })
+          })
+        },
+      },
+      "test",
+      7_500,
+    )
+    expect(result).toEqual({ code: "ready", status: 200 })
+    expect(requests.length).toBe(2)
+    expect(requests.every((request) => request.method === "GET" && request.signal.aborted)).toBe(true)
+    expect(cancelled).toBe(phase === "body")
+    expect(performance.now() - started).toBeLessThan(7_500)
+  },
+  10_000,
+)
+
 test.each(["history", "isolation", "publication"])("a retry still rejects an invalid %s receipt", async (receipt) => {
   let calls = 0
   const result = await waitForRestoredRuntimeReadiness(
@@ -142,6 +234,22 @@ test.each(["history", "isolation", "publication"])("a retry still rejects an inv
     2_000,
   )
   expect(result).toEqual({ code: receipt, status: 200 })
+  expect(calls).toBe(2)
+})
+
+test("rechecks a lost health connection but still rejects missing authorization", async () => {
+  let calls = 0
+  const result = await waitForRestoredRuntimeReadiness(
+    {
+      containerFetch: async () => {
+        if (++calls === 1) throw new Error("private-transport-error")
+        return new Response("private-auth-error", { status: 403 })
+      },
+    },
+    "test",
+    2_000,
+  )
+  expect(result).toEqual({ code: "http_status", status: 403 })
   expect(calls).toBe(2)
 })
 

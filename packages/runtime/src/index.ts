@@ -3,6 +3,7 @@ import {
   createRuntimeHandler,
   createRuntimeProcessStarter,
   deriveRuntimeIdentity,
+  runtimeReadiness,
   RUNTIME_PROCESS_ID,
   type RuntimeVariables,
 } from "./runtime"
@@ -88,6 +89,19 @@ export class MongolGPTSandbox extends Sandbox {
 
   override async fetch(request: Request): Promise<Response> {
     return this.#retirement.run(() => this.#fetch(request))
+  }
+
+  // DO fetch does not propagate an in-flight caller abort to request.signal.
+  // Own the probe timer beside the TCP request and return only a bounded receipt.
+  async probeReadiness(password: string, restored: boolean, timeoutMs: number) {
+    return this.#retirement.run(() =>
+      runtimeReadiness(
+        { containerFetch: (request, port) => this.containerFetch(request, port) },
+        password,
+        restored,
+        timeoutMs,
+      ),
+    )
   }
 
   async #fetch(request: Request): Promise<Response> {
@@ -212,6 +226,7 @@ const handler = createRuntimeHandler<RuntimeEnvironment>({
       getProcess: (processID) => sandbox.getProcess(processID),
       startProcess: (command, options) => sandbox.startProcess(command, options),
       containerFetch: (request, port) => fetchRuntime(sandbox, request, port),
+      probeReadiness: (password, restored, timeoutMs) => sandbox.probeReadiness(password, restored, timeoutMs),
       wsConnect: (request, port) => sandbox.wsConnect(request, port),
     }
   },

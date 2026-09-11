@@ -9,6 +9,8 @@ export { ContainerProxy } from "../../src/index"
 export class NativeEndpoint extends MongolGPTSandbox {
   #invocations = 0
   #healthFailures = 0
+  #healthStalls = 0
+  #healthAborts = 0
 
   constructor(ctx: DurableObjectState<{}>, env: ConstructorParameters<typeof MongolGPTSandbox>[1]) {
     Object.defineProperty(ctx, "container", { value: { running: false } })
@@ -23,6 +25,15 @@ export class NativeEndpoint extends MongolGPTSandbox {
     this.#healthFailures = count
   }
 
+  async healthStalls(count: number) {
+    this.#healthStalls = count
+    this.#healthAborts = 0
+  }
+
+  async healthAborts() {
+    return this.#healthAborts
+  }
+
   override async containerFetch(...args: Parameters<MongolGPTSandbox["containerFetch"]>): Promise<Response> {
     const request = args[0]
     const port = typeof args[1] === "number" ? args[1] : args[2]
@@ -33,6 +44,17 @@ export class NativeEndpoint extends MongolGPTSandbox {
       return new Response(null, { status: 401 })
     if (new URL(request.url).pathname !== "/global/health") {
       return Response.json({ method: request.method, body: await request.text(), url: request.url })
+    }
+    if (this.#healthStalls > 0) {
+      this.#healthStalls--
+      return new Promise<Response>((_, reject) => {
+        const abort = () => {
+          this.#healthAborts++
+          reject(request.signal.reason)
+        }
+        if (request.signal.aborted) return abort()
+        request.signal.addEventListener("abort", abort, { once: true })
+      })
     }
     if (this.#healthFailures > 0) {
       this.#healthFailures--
@@ -61,6 +83,37 @@ export default {
       transport: "rpc",
     })
     const pathname = new URL(request.url).pathname
+    if (pathname === "/retry-stalled-health") {
+      const endpoint = env.Native.get(env.Native.idFromName("native-http"))
+      await endpoint.healthStalls(1)
+      const before = await endpoint.invocations()
+      const readiness = await waitForRestoredRuntimeReadiness(
+        {
+          containerFetch: (request, port) => fetchRuntime(sandbox, request, port),
+          probeReadiness: (password, restored, timeoutMs) => sandbox.probeReadiness(password, restored, timeoutMs),
+        },
+        "test",
+        8_000,
+      )
+      const response =
+        readiness.code === "ready"
+          ? await fetchRuntime(
+              sandbox,
+              new Request("http://localhost/session", {
+                method: "POST",
+                headers: { authorization: `Basic ${btoa("mongolgpt:test")}` },
+                body: "one-mutation-after-recovery",
+              }),
+              4096,
+            )
+          : undefined
+      return Response.json({
+        readiness,
+        invocations: (await endpoint.invocations()) - before,
+        aborted: await endpoint.healthAborts(),
+        mutation: await response?.json(),
+      })
+    }
     if (pathname === "/retry-health" || pathname === "/retry-deadline") {
       const endpoint = env.Native.get(env.Native.idFromName("native-http"))
       await endpoint.healthFailures(pathname === "/retry-health" ? 1 : 100)
@@ -76,7 +129,14 @@ export default {
       await endpoint.healthFailures(0)
       return Response.json({ readiness, invocations, elapsed })
     }
-    if (pathname === "/legacy") return Response.json(await runtimeReadiness(sandbox, "test", true))
+    if (pathname === "/legacy")
+      return Response.json(
+        await runtimeReadiness(
+          { containerFetch: (request, port) => sandbox.containerFetch(request, port) },
+          "test",
+          true,
+        ),
+      )
     if (pathname === "/health")
       return Response.json(
         await runtimeReadiness(

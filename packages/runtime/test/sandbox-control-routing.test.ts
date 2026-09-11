@@ -68,6 +68,7 @@ describe("sandbox control routing", () => {
         () => sandbox.startAndWaitForPorts([4096]),
         () => sandbox.startProcess("must-not-run"),
         () => sandbox.onStart(),
+        () => sandbox.probeReadiness("synthetic-password", true, 100),
         () => sandbox.fetch(new Request("http://sandbox/")),
         () => sandbox.containerFetch(new Request("http://sandbox/"), 4096),
         () => sandbox.wsConnect(new Request("http://sandbox/", { headers: { upgrade: "websocket" } }), 4096),

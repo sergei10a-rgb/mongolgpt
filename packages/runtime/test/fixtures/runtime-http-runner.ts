@@ -51,6 +51,12 @@ try {
   assert.deepEqual(exhausted.readiness, { code: "http_status", status: 500 })
   assert.ok(exhausted.invocations >= 1 && exhausted.invocations <= 2)
   assert.ok(exhausted.elapsed >= 549 && exhausted.elapsed < 2_000)
+  assert.deepEqual(await (await fetch("/retry-stalled-health")).json(), {
+    readiness: { code: "ready", status: 200 },
+    invocations: 3,
+    aborted: 1,
+    mutation: { method: "POST", body: "one-mutation-after-recovery", url: "http://localhost/session" },
+  })
   assert.deepEqual(await (await fetch("/post")).json(), {
     method: "POST",
     body: "synthetic-request-body",

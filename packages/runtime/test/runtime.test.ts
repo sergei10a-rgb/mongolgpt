@@ -853,9 +853,12 @@ describe("MongolGPT Cloudflare runtime", () => {
       )
       expect(response.status).toBe(200)
       expect(runtime.started).toHaveLength(existing ? 0 : 1)
-      expect(runtime.requests).toHaveLength(2)
-      expect(new URL(runtime.requests[0].url).pathname).toBe("/global/health")
-      expect(new URL(runtime.requests[1].url).pathname).toBe("/api/pty/pty_test")
+      expect(runtime.requests.map((request) => new URL(request.url).pathname)).toEqual([
+        "/global/health",
+        "/global/health",
+        "/api/pty/pty_test",
+      ])
+      expect(runtime.requests[0].signal.aborted).toBe(true)
     },
     15_000,
   )

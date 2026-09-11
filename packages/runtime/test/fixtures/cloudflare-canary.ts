@@ -321,6 +321,8 @@ async function canaryDiagnostics(request: Request, env: Environment, url: URL) {
             runtimeReadiness(
               {
                 containerFetch: (request, port) => fetchRuntime(sandbox, request, port),
+                probeReadiness: (password, restored, timeoutMs) =>
+                  sandbox.probeReadiness(password, restored, timeoutMs),
               },
               identity.password,
               true,

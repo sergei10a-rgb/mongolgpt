@@ -42,6 +42,7 @@ export interface RuntimeSandbox {
     },
   ): Promise<RuntimeProcess>
   containerFetch(request: Request, port: number): Promise<Response>
+  probeReadiness?(password: string, restored: boolean, timeoutMs: number): Promise<RuntimeReadiness>
   wsConnect(request: Request, port: number): Promise<Response>
 }
 
@@ -771,28 +772,37 @@ export function parseRuntimeReadiness(input: unknown): RuntimeReadiness | undefi
 }
 
 export async function waitForRestoredRuntimeReadiness(
-  sandbox: Pick<RuntimeSandbox, "containerFetch">,
+  sandbox: Pick<RuntimeSandbox, "containerFetch" | "probeReadiness">,
   password: string,
   timeoutMs: number,
 ): Promise<RuntimeReadiness> {
+  if (parseRuntimeReadinessBudget(timeoutMs) === undefined) throw new RangeError("Invalid runtime readiness deadline")
   const deadline = performance.now() + timeoutMs
-  let readiness = await runtimeReadiness(sandbox, password, true, timeoutMs)
+  let attemptMs = 5_000
+  let readiness = await runtimeReadiness(sandbox, password, true, Math.min(attemptMs, timeoutMs))
   // Only retry this authenticated GET, never the caller's command. Invalid
   // receipts and authorization failures remain terminal admission failures.
-  while (readiness.code === "http_status" && [500, 502, 503, 504].includes(readiness.status ?? 0)) {
+  while (
+    readiness.code === "timeout" ||
+    readiness.code === "transport" ||
+    (readiness.code === "http_status" && [500, 502, 503, 504].includes(readiness.status ?? 0))
+  ) {
     const remaining = Math.floor(deadline - performance.now())
     if (remaining <= 0) return readiness
+    // A stale connection cannot consume the whole startup budget. Longer later
+    // probes still accommodate a native writer frozen for durable publication.
+    if (readiness.code === "timeout") attemptMs = Math.min(attemptMs * 2, 60_000)
     await new Promise<void>((resolve) => setTimeout(resolve, Math.min(500, remaining)))
     const budgetMs = Math.floor(deadline - performance.now())
     if (budgetMs <= 0) return readiness
-    readiness = await runtimeReadiness(sandbox, password, true, budgetMs)
+    readiness = await runtimeReadiness(sandbox, password, true, Math.min(attemptMs, budgetMs))
   }
   return readiness
 }
 
 // Diagnostics use one bounded probe. Never retain the body or credentials.
 export async function runtimeReadiness(
-  sandbox: Pick<RuntimeSandbox, "containerFetch">,
+  sandbox: Pick<RuntimeSandbox, "containerFetch" | "probeReadiness">,
   password: string,
   restored = false,
   timeoutMs = 5_000,
@@ -809,6 +819,10 @@ export async function runtimeReadiness(
     }, timeoutMs)
   })
   const probe = async () => {
+    if (sandbox.probeReadiness) {
+      const readiness = await sandbox.probeReadiness(password, restored, timeoutMs)
+      return parseRuntimeReadiness(readiness) ?? result("body_schema")
+    }
     const response = await sandbox.containerFetch(
       new Request("http://localhost/global/health", {
         headers: { authorization: `Basic ${btoa(`${SERVER_USERNAME}:${password}`)}` },

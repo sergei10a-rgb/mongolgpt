@@ -70,6 +70,9 @@ const sandbox = {
     await fault("readiness")
     return Response.json({ private: privateValue }, { status: 503 })
   },
+  async probeReadiness(password: string, restored: boolean, timeoutMs: number) {
+    return actualRuntime.runtimeReadiness({ containerFetch: () => this.fetch() }, password, restored, timeoutMs)
+  },
 }
 const bucket = {
   pages: new Array<{
