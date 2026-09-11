@@ -1,4 +1,4 @@
-import { createServer, type IncomingHttpHeaders, type IncomingMessage, type ServerResponse } from "node:http"
+import { createServer, request, type IncomingHttpHeaders, type IncomingMessage, type ServerResponse } from "node:http"
 import { createHash, timingSafeEqual, randomBytes } from "node:crypto"
 import { constants } from "node:fs"
 import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises"
@@ -82,7 +82,10 @@ type HistoryRequestRecord = {
 }
 
 const configPath = process.argv[2]
-const startupOnly = configPath === "--startup-only"
+const tcpStartupOnly = configPath === "--tcp-startup-only"
+const startupOnly = configPath === "--startup-only" || tcpStartupOnly
+if (tcpStartupOnly && process.argv[3] !== undefined && process.argv[3] !== "80")
+  throw new Error("TCP startup probe accepts only optional isolated port 80")
 if (!configPath)
   throw new Error("usage: node --experimental-strip-types container-checkpoint-bridge.ts CONFIG_JSON_PATH")
 
@@ -90,7 +93,7 @@ const config = startupOnly
   ? decodeConfig({
       root: await mkdtemp(join(tmpdir(), "container-bridge-startup-")),
       nativeBundle: fileURLToPath(new URL("./history-native.ts", import.meta.url)),
-      port: 0,
+      port: tcpStartupOnly && process.argv[3] === "80" ? 80 : 0,
       scope: { accountID: "account_container_integration", workspaceID: "workspace_container_integration" },
       secret: randomBytes(32).toString("hex"),
       adminToken: randomBytes(32).toString("hex"),
@@ -134,7 +137,7 @@ await writeFile(
   { mode: 0o600 },
 )
 const worker = await startWorker()
-if (startupOnly) {
+if (startupOnly && !tcpStartupOnly) {
   try {
     const unauthorized = await worker.fetch("http://127.0.0.1/__test/status", { signal: AbortSignal.timeout(10_000) })
     void unauthorized.body?.cancel().catch(() => {})
@@ -162,7 +165,19 @@ if (startupOnly) {
 }
 
 const server = createServer((request, response) => {
-  void handleNodeRequest(request, response).catch(() => {
+  void handleNodeRequest(request, response).catch((error) => {
+    if (loggedResponses++ < 128) {
+      const path = pathnameOf(request)
+      const frame =
+        error instanceof Error ? error.stack?.match(/container-checkpoint-bridge\.ts:(\d+):(\d+)/) : undefined
+      console.error(
+        `BRIDGE_REQUEST_FAILURE ${JSON.stringify({
+          path: adminPaths.has(path) || checkpointPaths.has(path) || historyPaths.has(path) ? path : "unknown",
+          line: frame ? Number(frame[1]) : null,
+          ...safeWorkerError(error),
+        })}`,
+      )
+    }
     if (!response.destroyed) {
       writeJson(response, 500, { error: "bridge_unavailable" })
       incrementCounter(pathnameOf(request), 500)
@@ -189,6 +204,72 @@ process.stdout.write(`BRIDGE_READY ${JSON.stringify({ port: address.port })}\n`)
 
 process.once("SIGTERM", () => void shutdown(0))
 process.once("SIGINT", () => void shutdown(130))
+
+if (tcpStartupOnly) {
+  let phase = "health"
+  let status: number | null = null
+  try {
+    const origin = `http://127.0.0.1:${address.port}`
+    const check = (
+      path: string,
+      expected: number,
+      init: { method?: string; headers?: Record<string, string>; body?: string } = {},
+    ) =>
+      new Promise<unknown>((resolve, reject) => {
+        status = null
+        const outgoing = request(
+          `${origin}${path}`,
+          {
+            method: init.method,
+            headers: init.headers,
+            signal: AbortSignal.timeout(15_000),
+          },
+          (response) => {
+            status = response.statusCode ?? null
+            const chunks: Buffer[] = []
+            let bytes = 0
+            response.on("data", (chunk: Buffer) => {
+              bytes += chunk.length
+              if (bytes > 65_536) outgoing.destroy(new Error("TCP startup response too large"))
+              else chunks.push(chunk)
+            })
+            response.on("error", reject)
+            response.on("end", () => {
+              try {
+                if (status !== expected) throw new Error("TCP startup status mismatch")
+                resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")))
+              } catch (error) {
+                reject(error)
+              }
+            })
+          },
+        )
+        outgoing.on("error", reject)
+        outgoing.end(init.body)
+      })
+    await check("/__test/health", 200, { headers: { "x-test-admin-token": config.adminToken } })
+    phase = "checkpoint_auth"
+    await check("/v1/bootstrap", 403, { method: "POST", headers: { host: hostCheckpoint }, body: "{}" })
+    phase = "initial_state"
+    const initial = await check("/__test/status", 200, { headers: { "x-test-admin-token": config.adminToken } })
+    if (
+      !plainObject(initial) ||
+      initial.epoch !== 0 ||
+      initial.checkpoint !== null ||
+      initial.revision !== null ||
+      !plainObject(initial.injected) ||
+      initial.injected.archiveResponsesWithoutLength !== 0
+    )
+      throw new Error("TCP initial state mismatch")
+    phase = "admin_auth"
+    await check("/__test/status", 403)
+    console.log('BRIDGE_TCP_STARTUP_RESULT {"ok":true,"assertions":7}')
+    await shutdown(0)
+  } catch {
+    console.error(`BRIDGE_TCP_STARTUP_FAILURE ${JSON.stringify({ phase, status })}`)
+    await shutdown(1)
+  }
+}
 
 async function handleNodeRequest(request: IncomingMessage, response: ServerResponse) {
   const controller = new AbortController()
@@ -426,6 +507,8 @@ function safeWorkerError(error: unknown) {
     "UserError",
     "FatalError",
     "MiniflareCoreError",
+    "TimeoutError",
+    "AbortError",
   ])
   const codes = new Set([
     "ERR_MODULE_NOT_FOUND",
@@ -462,6 +545,7 @@ async function workerAdmin(path: "/__test/status") {
     10_000,
   )
   if (response.status !== 200) {
+    console.error(`BRIDGE_ADMIN_FAILURE ${JSON.stringify({ status: response.status })}`)
     void response.body?.cancel().catch(() => {})
     throw new Error("bridge worker status failed")
   }

@@ -241,6 +241,8 @@ async function isolated(output: string) {
   let phase = "bridge_readiness"
   let bridgeReadinessStatus: number | null = null
   let bridgeAuthStatus: number | null = null
+  let bridgeInitialStatus: number | null = null
+  let bridgeInitialJSON: boolean | null = null
   let outer: ReturnType<typeof Bun.spawn> | undefined
   try {
     await until(
@@ -261,8 +263,16 @@ async function isolated(output: string) {
     const blocked = await fetch("http://checkpoint.mongolgpt.internal/v1/bootstrap", { method: "POST", body: "{}" })
     bridgeAuthStatus = blocked.status
     assert.equal(blocked.status, 403, "Bridge must not bypass root checkpoint authentication")
-    phase = "bridge_initial_state"
-    const initial = await json<BridgeStatus>("http://127.0.0.1/__test/status", { headers: adminHeaders })
+    phase = "bridge_initial_http"
+    const initial = await json<BridgeStatus>(
+      "http://127.0.0.1/__test/status",
+      { headers: adminHeaders },
+      (response) => {
+        bridgeInitialStatus = response.status
+        bridgeInitialJSON = /application\/json/.test(response.headers.get("content-type") ?? "")
+      },
+    )
+    phase = "bridge_initial_metadata"
     assert.equal(initial.epoch, 0)
     assert.equal(initial.checkpoint, null)
     assert.equal(initial.revision, null)
@@ -692,7 +702,12 @@ async function isolated(output: string) {
       try {
         const buffer = Buffer.alloc(65_536)
         const { bytesRead } = await file.read(buffer, 0, buffer.length, 0)
-        summaries.push(summarizeCanaryLogs(buffer.subarray(0, bytesRead).toString("utf8"), ""))
+        const text = buffer.subarray(0, bytesRead).toString("utf8")
+        summaries.push({
+          ...summarizeCanaryLogs(text, ""),
+          bridgeRequestFailure: text.includes("BRIDGE_REQUEST_FAILURE "),
+          bridgeDeadline: text.includes('"errorType":"TimeoutError"') || text.includes('"timeout":true'),
+        })
       } finally {
         await file.close()
       }
@@ -704,6 +719,8 @@ async function isolated(output: string) {
         bridgeExitCode: bridge.exitCode,
         bridgeReadinessStatus,
         bridgeAuthStatus,
+        bridgeInitialStatus,
+        bridgeInitialJSON,
         errorCode:
           error instanceof Error &&
           "code" in error &&
@@ -770,13 +787,18 @@ type BridgeStatus = {
   requestPathStatusCounters: Record<string, Record<string, number>>
 }
 
-async function json<T = unknown>(url: string, init: RequestInit = {}): Promise<T> {
+async function json<T = unknown>(
+  url: string,
+  init: RequestInit = {},
+  observed?: (response: Response) => void,
+): Promise<T> {
   const response = await fetch(url, {
     ...init,
     headers: { "content-type": "application/json", ...init.headers },
     redirect: "error",
     signal: init.signal ?? AbortSignal.timeout(90_000),
   })
+  observed?.(response)
   assert.equal(
     response.status,
     200,
