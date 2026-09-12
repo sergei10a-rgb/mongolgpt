@@ -51,6 +51,7 @@ test("payment service audit is manual, owner/dev-scoped and never deploys", asyn
   expect(verification.run).toContain("test/payment-service-audit-workflow.test.ts")
   expect(verification.run).toContain("test/payment-service-pulumi-args.test.ts")
   expect(verification.run).toContain("test/payment-service-pulumi-launcher.test.ts")
+  expect(verification.run).toContain("test/payment-service-failure-report.test.ts")
   expect(verification.run).toContain("test/usage-queue-deployment-audit.test.ts")
   expect(verification.run).toContain("test/usage-queue-deployment-guard.test.ts")
   expect(preview.env?.CLOUDFLARE_ACCOUNT_ID).toBe("${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}")
@@ -65,7 +66,9 @@ test("payment service audit is manual, owner/dev-scoped and never deploys", asyn
   expect(commands).toContain("umask 077")
   expect(commands).toContain('mktemp "$RUNNER_TEMP/mongolgpt-payment-diff.XXXXXX"')
   expect(commands).toContain('mktemp "$RUNNER_TEMP/mongolgpt-payment-stderr.XXXXXX"')
-  expect(commands).toContain('trap \'rm -f "$diff_file" "$stderr_file" "$adapter_file"\' EXIT')
+  expect(commands).toContain('trap \'rm -f "$diff_file" "$stderr_file" "$adapter_file" "$diagnostic_file"\' EXIT')
+  expect(commands).toContain('export MONGOLGPT_PAYMENT_DIAGNOSTIC_FILE="$diagnostic_file"')
+  expect(commands).toContain('bun script/report-dev-payment-failure.ts "$diagnostic_file" "$diff_file" "$stderr_file"')
   expect(commands).toContain('export SST_PULUMI_PATH="$adapter_file"')
   expect(commands.indexOf("bun build script/pulumi-dev-payment.ts --compile")).toBeLessThan(
     commands.indexOf("bun sst diff"),

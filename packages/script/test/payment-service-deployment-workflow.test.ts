@@ -60,6 +60,7 @@ test("payment deployment is manually confirmed, disabled, owner/dev-only and gua
     "payment-service-deployment-workflow",
     "payment-service-pulumi-args",
     "payment-service-pulumi-launcher",
+    "payment-service-failure-report",
     "usage-queue-deployment-guard",
     "payment-webhook",
     "service-monitor",
@@ -70,7 +71,15 @@ test("payment deployment is manually confirmed, disabled, owner/dev-only and gua
   expect(commands).toContain('"$MONGOLGPT_DOMAIN" != "mgpt.mn"')
   expect(commands).toContain("set -euo pipefail")
   expect(commands).toContain("umask 077")
-  expect(commands).toContain('trap \'rm -f "$diff_file" "$stdout_file" "$stderr_file" "$adapter_file"\' EXIT')
+  expect(commands).toContain(
+    'trap \'rm -f "$diff_file" "$stdout_file" "$stderr_file" "$adapter_file" "$diagnostic_file"\' EXIT',
+  )
+  expect(commands).toContain('export MONGOLGPT_PAYMENT_DIAGNOSTIC_FILE="$diagnostic_file"')
+  expect(commands).toContain('bun script/report-dev-payment-failure.ts "$diagnostic_file" "$diff_file" "$stderr_file"')
+  expect(commands).toContain(
+    'bun script/report-dev-payment-failure.ts "$diagnostic_file" "$stdout_file" "$stderr_file"',
+  )
+  expect(commands).toContain(': >"$diagnostic_file"')
   const ordered = [
     "exit 1",
     "bun script/check-dev-payment-service.ts before",
@@ -119,11 +128,13 @@ printf '%s\\n' "$*" >> "$CALL_LOG"
 if [ "$1" = "sst" ]; then echo "private-stub-output"; echo "private-stub-error" >&2; fi
 if [ "$FAIL_AT" = "health" ] && [ "$1" = "script/check-dev-payment-service.ts" ]; then exit 21; fi
 if [ "$FAIL_AT" = "guard" ] && [ "$1" = "script/verify-payment-service-deployment.ts" ]; then exit 22; fi
+if [ "$FAIL_AT" = "preview" ] && [ "$1" = "sst" ] && [ "$2" = "diff" ]; then exit 23; fi
+if [ "$FAIL_AT" = "deploy" ] && [ "$1" = "sst" ] && [ "$2" = "deploy" ]; then exit 24; fi
 exit 0
 `,
     )
     await chmod(executable, 0o700)
-    for (const mode of ["health", "guard", "none"]) {
+    for (const mode of ["health", "guard", "preview", "deploy", "none"]) {
       await Bun.write(log, "")
       const child = Bun.spawn(
         [
@@ -151,13 +162,14 @@ exit 0
       )
       const output = await new Response(child.stdout).text()
       const error = await new Response(child.stderr).text()
-      expect(await child.exited).toBe(mode === "health" ? 21 : mode === "guard" ? 22 : 0)
+      expect(await child.exited).toBe(mode === "health" ? 21 : mode === "guard" ? 22 : mode === "none" ? 0 : 1)
       expect(output + error).not.toContain("private-stub")
       const calls = await Bun.file(log).text()
       expect(calls.startsWith("script/check-dev-payment-service.ts before")).toBe(true)
       expect(calls.includes("sst diff")).toBe(mode !== "health")
-      expect(calls.includes("sst deploy")).toBe(mode === "none")
+      expect(calls.includes("sst deploy")).toBe(mode === "none" || mode === "deploy")
       expect(calls.includes("script/check-dev-payment-service.ts after")).toBe(mode === "none")
+      expect(calls.includes("script/report-dev-payment-failure.ts")).toBe(mode === "preview" || mode === "deploy")
     }
   } finally {
     await rm(directory, { recursive: true, force: true })

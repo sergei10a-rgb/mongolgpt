@@ -44,7 +44,7 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       - name: Verify read-only private payment reporting
-        run: bun test --cwd packages/script test/payment-service-deployment-audit.test.ts test/payment-service-deployment-guard.test.ts test/payment-service-audit-workflow.test.ts test/payment-service-pulumi-args.test.ts test/payment-service-pulumi-launcher.test.ts test/usage-queue-deployment-audit.test.ts test/usage-queue-deployment-guard.test.ts
+        run: bun test --cwd packages/script test/payment-service-deployment-audit.test.ts test/payment-service-deployment-guard.test.ts test/payment-service-audit-workflow.test.ts test/payment-service-pulumi-args.test.ts test/payment-service-pulumi-launcher.test.ts test/payment-service-failure-report.test.ts test/usage-queue-deployment-audit.test.ts test/usage-queue-deployment-guard.test.ts
 
       - name: Preview disabled dev payment service without deploying
         env:
@@ -72,14 +72,17 @@ jobs:
           diff_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-diff.XXXXXX")"
           stderr_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-stderr.XXXXXX")"
           adapter_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-pulumi.XXXXXX")"
-          trap 'rm -f "$diff_file" "$stderr_file" "$adapter_file"' EXIT
+          diagnostic_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-diagnostic.XXXXXX")"
+          trap 'rm -f "$diff_file" "$stderr_file" "$adapter_file" "$diagnostic_file"' EXIT
           if ! bun build script/pulumi-dev-payment.ts --compile --outfile "$adapter_file" >"$stderr_file" 2>&1; then
             echo "Scoped dev payment launcher build failed."
             exit 1
           fi
           export SST_PULUMI_PATH="$adapter_file"
+          export MONGOLGPT_PAYMENT_DIAGNOSTIC_FILE="$diagnostic_file"
           if ! bun sst diff --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --json --print-logs >"$diff_file" 2>"$stderr_file"; then
             echo "Dev payment service preview failed; private output was not printed."
+            bun script/report-dev-payment-failure.ts "$diagnostic_file" "$diff_file" "$stderr_file"
             exit 1
           fi
           bun script/audit-payment-service-deployment.ts "$diff_file"

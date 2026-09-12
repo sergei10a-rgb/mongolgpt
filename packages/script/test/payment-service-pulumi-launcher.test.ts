@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { mkdtemp, mkdir, rm } from "node:fs/promises"
+import { mkdtemp, mkdir, rm, chmod, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 
@@ -11,6 +11,7 @@ test("compiled payment launcher invokes only the pinned executable with narrowed
   const launcher = join(directory, `launcher${suffix}`)
   const fixture = join(directory, "native.ts")
   const receipt = join(directory, "invoked.json")
+  const diagnostic = join(directory, "diagnostic.json")
   const script = resolve(import.meta.dir, "../../../script/pulumi-dev-payment.ts")
   const args = [
     "preview",
@@ -38,9 +39,11 @@ test("compiled payment launcher invokes only the pinned executable with narrowed
     MONGOLGPT_PAYMENT_ENVIRONMENT: "disabled",
     MONGOLGPT_ENABLE_REAL_PAYMENTS: "false",
     TEST_RECEIPT: receipt,
+    MONGOLGPT_PAYMENT_DIAGNOSTIC_FILE: diagnostic,
   }
   try {
     await mkdir(bin)
+    await Bun.write(diagnostic, "")
     await Bun.write(
       fixture,
       `
@@ -62,6 +65,9 @@ else {
       [fixture, native],
       [script, launcher],
     ]) {
+      // The workflow compiles over mktemp's existing 0600 file, not a new output path.
+      await Bun.write(output, "")
+      await chmod(output, 0o600)
       const build = Bun.spawn([process.execPath, "build", entry, "--compile", "--outfile", output], {
         stdout: "pipe",
         stderr: "pipe",
@@ -69,6 +75,7 @@ else {
       await new Response(build.stdout).text()
       const error = await new Response(build.stderr).text()
       expect(await build.exited, error).toBe(0)
+      if (process.platform !== "win32") expect((await stat(output)).mode & 0o100).toBe(0o100)
     }
     for (const [invocation, status] of [
       [args, 0],
@@ -85,14 +92,16 @@ else {
       const error = await new Response(child.stderr).text()
       expect(await child.exited, error).toBe(status)
       expect(output + error).toBe("")
+      expect(await Bun.file(diagnostic).json()).toEqual({ status: status === 0 ? "native-completed" : "native-failed" })
       expect(await Bun.file(receipt).json()).toEqual(invocation.filter((arg) => arg !== "--target-dependents"))
     }
     await rm(receipt)
-    for (const [argv, overrides] of [
-      [[...args, "--exclude", "private-resource"], {}],
-      [args, { TEST_VERSION: "private-non-pinned-version" }],
-      [args, { PULUMI_HOME: "private-relative-home" }],
-      [args, { MONGOLGPT_PAYMENT_ENVIRONMENT: "production" }],
+    for (const [argv, overrides, status] of [
+      [[...args, "--exclude", "private-resource"], {}, "unknown-option"],
+      [args, { TEST_VERSION: "private-non-pinned-version" }, "runtime-version"],
+      [args, { PULUMI_HOME: "private-relative-home" }, "runtime-home"],
+      [args, { PULUMI_HOME: join(directory, "private-missing-home") }, "runtime-file"],
+      [args, { MONGOLGPT_PAYMENT_ENVIRONMENT: "production" }, "environment"],
     ] as const) {
       const child = Bun.spawn([launcher, ...argv], {
         env: { ...env, ...overrides },
@@ -105,6 +114,7 @@ else {
       expect(output).toBe("")
       expect(error.trim()).toBe("Dev payment Pulumi invocation is not approved")
       expect(await Bun.file(receipt).exists()).toBe(false)
+      expect(await Bun.file(diagnostic).json()).toEqual({ status })
     }
     if (process.platform !== "win32") {
       const child = Bun.spawn([launcher, ...args], {
