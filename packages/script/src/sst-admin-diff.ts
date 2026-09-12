@@ -91,7 +91,20 @@ export function inspectAdminDeploymentDiff(
             "urn:pulumi:dev::mongolgpt-admin::cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication::AdminAccessApplication",
       )
     ) {
-      if (rejected.length < 12) rejected.push(`${op} ${type} ${parsed.name}`)
+      if (rejected.length < 12) {
+        rejected.push(`${op} ${type} ${parsed.name}`)
+        if (options.allowAccessCookieMigration && parsed.name === "AdminAccessApplication") {
+          const diff = record(entry?.detailedDiff)
+          const fields = Object.entries(diff ?? {})
+            .slice(0, 12)
+            .map(([key, value]) => {
+              const field = /^[a-zA-Z0-9_.\[\]]{1,100}$/.test(key) ? key : "redacted-path"
+              const kind = record(value)?.kind
+              return `${field}:${["add", "delete", "update", "add-replace", "delete-replace", "update-replace"].includes(String(kind)) ? kind : "unknown"}`
+            })
+          rejected.push(`Access cookie diff fields=${fields.join(",") || "missing"}`)
+        }
+      }
       continue
     }
     operations[op] = (operations[op] ?? 0) + 1

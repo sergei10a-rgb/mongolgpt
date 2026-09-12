@@ -192,6 +192,30 @@ describe("admin-only SST diff boundary", () => {
       ),
     ).toThrow("хэт олон")
   })
+
+  test("cookie migration diagnostics never print values or arbitrary property paths", () => {
+    const entry = {
+      ...change(
+        "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication",
+        "AdminAccessApplication",
+        "update",
+      ),
+      detailedDiff: {
+        sameSiteCookieAttribute: { kind: "update" },
+        "policies[private@example.com]": { kind: "secret-value", new: "do-not-print" },
+      },
+    }
+    try {
+      inspectAdminDeploymentDiff([entry], { allowAccessCookieMigration: true })
+      throw new Error("Expected the migration to be rejected")
+    } catch (error) {
+      expect(error).toBeInstanceOf(AdminDeploymentDiffError)
+      expect(String(error)).toContain("sameSiteCookieAttribute:update")
+      expect(String(error)).not.toContain("private@example.com")
+      expect(String(error)).not.toContain("do-not-print")
+      expect(String(error)).not.toContain("secret-value")
+    }
+  })
 })
 
 function change(urnType: string, name: string, op: string, type = urnType.split("$").at(-1)!) {
