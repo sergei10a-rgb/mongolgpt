@@ -1,4 +1,9 @@
 import type { Database } from "../../src/drizzle"
+import { drizzle } from "drizzle-orm/bun-sqlite"
+
+export function createSqliteDatabase(client: import("bun:sqlite").Database) {
+  return drizzle({ client }) as unknown as Database.TxOrDb
+}
 
 export function sqliteBatch(transaction: <T>(callback: (db: Database.TxOrDb) => Promise<T>) => Promise<T>) {
   // This adapter preserves rollback; the workerd suite separately verifies real D1 behavior.

@@ -7,8 +7,8 @@ describe("gateway handler HTTP boundary", () => {
     const result = await runCheck()
     const output = result.stdout + result.stderr
 
-    expect(result.code).toBe(0)
-    expect(output).toContain("3 pass")
+    expect(result.code, output).toBe(0)
+    expect(output).toContain("5 pass")
     expect(output).toContain("0 fail")
   })
 })

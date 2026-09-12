@@ -223,6 +223,183 @@ try {
   equal(await counts(cross), { usages: 0, costs: 0 })
   equal(await state(cross), initial)
   equal(await state(first), charged)
+  for (const kind of ["free", "byok", "balance"] as const) {
+    const event = await seed(`direct_${kind}`)
+    event.usage.enrichment = kind === "free" ? undefined : { plan: kind }
+    const debit = kind === "balance" ? 125 : 0
+    equal(await native.persistGatewayUsageEvent(event, { balanceCost: debit }, { batch }), true)
+    equal(await native.persistGatewayUsageEvent(event, { balanceCost: debit }, { batch }), true)
+    equal(await state(event), { balance: 10000 - debit, workspace_usage: 125, user_usage: 125 })
+    equal(await counts(event), { usages: 1, costs: kind === "byok" ? 0 : 1 })
+  }
+  const fallback = await seed("queue_fallback")
+  fallback.workspaceCost = 0
+  fallback.usage.enrichment = undefined
+  equal(
+    (await Promise.all([record(fallback), native.persistGatewayUsageEvent(fallback, { balanceCost: 0 }, { batch })]))
+      .length,
+    2,
+  )
+  equal(await state(fallback), { balance: 10000, workspace_usage: 0, user_usage: 125 })
+  equal(await counts(fallback), { usages: 1, costs: 1 })
+
+  const planSeed = async (id: string) => {
+    const event = await seed(id)
+    event.usage.enrichment = { plan: "pro" }
+    await run(
+      "insert into plan_subscription(id,workspace_id,invoice_id,plan,status,time_period_start,time_period_end) values (?,?,?,'pro','active',?,?)",
+      `pln_${id}`,
+      event.workspaceID,
+      `inv_${id}`,
+      Date.UTC(2026, 7, 20, 8),
+      Date.UTC(2026, 11, 20, 8),
+    )
+    return event
+  }
+  const planRecord = (event: UsageQueueEvent, selectedBatch = batch) =>
+    native.persistGatewayUsageEvent(
+      event,
+      {
+        entitlementID: `pln_${event.workspaceID.slice(4)}`,
+        tokens: 30,
+        rollingWindowHours: 5,
+      },
+      { batch: selectedBatch },
+    )
+  const planState = (event: UsageQueueEvent) =>
+    row(
+      "select fixed_usage,weekly_tokens,weekly_requests,monthly_cost,monthly_tokens,monthly_requests,rolling_usage from subscription where workspace_id=? and user_id=?",
+      event.workspaceID,
+      event.userID,
+    )
+  const measured = {
+    fixed_usage: 125,
+    weekly_tokens: 30,
+    weekly_requests: 1,
+    monthly_cost: 125,
+    monthly_tokens: 30,
+    monthly_requests: 1,
+    rolling_usage: 125,
+  }
+  const plan = await planSeed("plan_first")
+  equal(await planRecord(plan), true)
+  equal(await planRecord(plan), true)
+  equal(await planState(plan), measured)
+  equal(await state(plan), initial)
+  equal(await counts(plan), { usages: 1, costs: 1 })
+  await rejects(() => planRecord({ ...plan, usage: { ...plan.usage, outputTokens: 99 } }))
+  equal(await planState(plan), measured)
+  const planRace = await planSeed("plan_race")
+  equal((await Promise.all(Array.from({ length: 8 }, () => planRecord(planRace)))).every(Boolean), true)
+  equal(await planState(planRace), measured)
+  equal(await counts(planRace), { usages: 1, costs: 1 })
+  const planUnique = await planSeed("plan_unique")
+  equal(
+    (
+      await Promise.all(
+        Array.from({ length: 8 }, (_, index) => planRecord({ ...planUnique, id: `usg_plan_unique_${index}` })),
+      )
+    ).every(Boolean),
+    true,
+  )
+  equal(await planState(planUnique), {
+    fixed_usage: 1000,
+    weekly_tokens: 240,
+    weekly_requests: 8,
+    monthly_cost: 1000,
+    monthly_tokens: 240,
+    monthly_requests: 8,
+    rolling_usage: 1000,
+  })
+  equal(await counts(planUnique), { usages: 8, costs: 8 })
+
+  for (const [index, mutation] of [
+    "status='refunded'",
+    `time_period_end=${now}`,
+    `time_deleted=${now}`,
+    "plan='max'",
+    `time_period_start=${Date.UTC(2026, 8, 1)}`,
+    "invoice_id='inv_changed_snapshot'",
+  ].entries()) {
+    const event = await planSeed(`plan_stale_${index}`)
+    let calls = 0
+    const changed: typeof Database.batch = async (callback) => {
+      if (++calls === 2) await run(`update plan_subscription set ${mutation} where workspace_id=?`, event.workspaceID)
+      return batch(callback)
+    }
+    equal(await planRecord(event, changed), false)
+    equal(await planState(event), null)
+    equal(await counts(event), { usages: 1, costs: 1 })
+    equal(await state(event), initial)
+    equal(await planRecord(event), true)
+    equal(await planState(event), null)
+  }
+  const ended = await planSeed("plan_ended")
+  await run("update plan_subscription set time_period_end=? where workspace_id=?", now, ended.workspaceID)
+  equal(await planRecord(ended), false)
+  equal(await counts(ended), { usages: 1, costs: 1 })
+  equal(await planState(ended), null)
+  const replaced = await planSeed("plan_replaced")
+  equal(await planRecord(replaced), true)
+  let replacedCalls = 0
+  const replace: typeof Database.batch = async (callback) => {
+    if (++replacedCalls === 2) {
+      await run("update plan_subscription set status='refunded' where workspace_id=?", replaced.workspaceID)
+      await run(
+        "insert into plan_subscription(id,workspace_id,invoice_id,plan,status,time_period_start,time_period_end) values ('pln_replacement',?,'inv_replacement','max','active',?,?)",
+        replaced.workspaceID,
+        now,
+        now + 86400000,
+      )
+    }
+    return batch(callback)
+  }
+  equal(await planRecord({ ...replaced, id: "usg_replaced_late" }, replace), false)
+  equal(await planState(replaced), measured)
+  equal(await counts(replaced), { usages: 2, costs: 2 })
+
+  const atomic = await planSeed("plan_atomic")
+  let atomicCalls = 0
+  await rejects(() => planRecord(atomic, (callback) => (++atomicCalls === 1 ? batch(callback) : doomed(callback))))
+  equal(await planState(atomic), null)
+  equal(await counts(atomic), { usages: 0, costs: 0 })
+  await run(
+    "create trigger synthetic_plan_cost_failure before insert on finance_cost_entry when NEW.usage_id='usg_plan_atomic' begin select raise(ABORT, 'synthetic cost failure'); end",
+  )
+  await rejects(() => planRecord(atomic))
+  equal(await planState(atomic), null)
+  equal(await counts(atomic), { usages: 0, costs: 0 })
+  await run("drop trigger synthetic_plan_cost_failure")
+  let lostCalls = 0
+  await rejects(() =>
+    planRecord(atomic, async (callback) => {
+      const result = await batch(callback)
+      if (++lostCalls === 2) throw new Error("Synthetic lost plan acknowledgement")
+      return result
+    }),
+  )
+  equal(await planState(atomic), measured)
+  equal(await planRecord(atomic), true)
+  equal(await planState(atomic), measured)
+  equal(await counts(atomic), { usages: 1, costs: 1 })
+
+  const ordered = await planSeed("plan_ordered")
+  equal(await planRecord({ ...ordered, timeCreated: Date.UTC(2026, 8, 21, 8) }), true)
+  equal(await planRecord({ ...ordered, id: "usg_plan_previous", timeCreated: Date.UTC(2026, 8, 12, 8) }), true)
+  equal(await planState(ordered), measured)
+  equal(await planRecord({ ...ordered, id: "usg_plan_same", timeCreated: Date.UTC(2026, 8, 22, 8) }), true)
+  equal(await planState(ordered), {
+    ...measured,
+    fixed_usage: 250,
+    weekly_tokens: 60,
+    weekly_requests: 2,
+    monthly_cost: 250,
+    monthly_tokens: 60,
+    monthly_requests: 2,
+  })
+  equal(await planRecord({ ...ordered, id: "usg_plan_next", timeCreated: Date.UTC(2026, 9, 20, 8) }), true)
+  equal(await planState(ordered), measured)
+  equal(await counts(ordered), { usages: 4, costs: 4 })
   console.log(`USAGE_D1_RESULT ${JSON.stringify({ ok: true, checks })}`)
 } finally {
   await platform?.dispose()

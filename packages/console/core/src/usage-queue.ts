@@ -1,6 +1,6 @@
 import { and, eq, exists, notExists, or, sql, type SQL } from "drizzle-orm"
 import { Database } from "./drizzle"
-import { BillingTable, FinanceCostEntryTable, UsageTable } from "./schema/billing.sql"
+import { BillingTable, FinanceCostEntryTable, PlanSubscriptionTable, UsageTable } from "./schema/billing.sql"
 import { UserTable } from "./schema/user.sql"
 import { UsageQueueEventSchema, type UsageQueueEvent } from "./quota"
 import {
@@ -10,6 +10,7 @@ import {
   recordEstimatedModelCostWithDb,
 } from "./finance-ledger"
 import { paymentBatchGuard } from "./payment-ledger"
+import { planUsageEntitlementQuery, planUsageQuery, type PlanUsageInput } from "./plan-usage"
 
 function resultChanges(result: unknown) {
   if (!result || typeof result !== "object") return 0
@@ -69,12 +70,17 @@ export async function persistUsageQueueEventWithDb(db: Database.TxOrDb, input: U
   return "inserted" as const
 }
 
-function billingUsageQuery(db: Database.TxOrDb, event: UsageQueueEvent, condition?: SQL) {
+function billingUsageQuery(
+  db: Database.TxOrDb,
+  event: UsageQueueEvent,
+  condition?: SQL,
+  balanceCost = event.workspaceCost,
+) {
   const month = monthBounds(event.timeCreated)
   return db
     .update(BillingTable)
     .set({
-      balance: sql`${BillingTable.balance} - ${event.workspaceCost}`,
+      balance: sql`${BillingTable.balance} - ${balanceCost}`,
       monthlyUsage: sql`
         CASE
           WHEN ${BillingTable.timeMonthlyUsageUpdated} >= ${month.start}
@@ -131,6 +137,40 @@ export async function persistUsageQueueEvent(
   dependencies: { batch?: typeof Database.batch } = {},
 ) {
   const event = UsageQueueEventSchema.parse(input)
+  return (await persistUsageEvent(event, { kind: "balance", balanceCost: event.workspaceCost }, dependencies)).status
+}
+
+export async function persistGatewayUsageEvent(
+  input: UsageQueueEvent,
+  projection: { balanceCost: number } | { entitlementID: string; tokens: number; rollingWindowHours: number },
+  dependencies: { batch?: typeof Database.batch } = {},
+) {
+  const event = UsageQueueEventSchema.parse(input)
+  if ("balanceCost" in projection) {
+    if (!Number.isSafeInteger(projection.balanceCost) || projection.balanceCost < 0)
+      throw new TypeError("Хэрэглээний үлдэгдлээс хасах дүн буруу байна")
+    return (await persistUsageEvent(event, { kind: "balance", balanceCost: projection.balanceCost }, dependencies))
+      .recorded
+  }
+  const plan = {
+    ...projection,
+    workspaceID: event.workspaceID,
+    userID: event.userID,
+    costInMicroCents: event.usage.cost,
+    now: new Date(event.timeCreated),
+  }
+  const [entitlements] = await (dependencies.batch ?? Database.batch)((db) => [planUsageEntitlementQuery(db, plan)])
+  return (await persistUsageEvent(event, { kind: "plan", input: plan, entitlement: entitlements[0] }, dependencies))
+    .recorded
+}
+
+async function persistUsageEvent(
+  event: UsageQueueEvent,
+  projection:
+    | { kind: "balance"; balanceCost: number }
+    | { kind: "plan"; input: PlanUsageInput; entitlement?: typeof PlanSubscriptionTable.$inferSelect },
+  dependencies: { batch?: typeof Database.batch },
+) {
   const values = usageValues(event)
   const { timeUpdated, ...replay } = values
   const cost = await prepareEstimatedModelCost({
@@ -170,14 +210,24 @@ export async function persistUsageQueueEvent(
     return [
       paymentBatchGuard(db, or(exists(usage), and(exists(billing), exists(user)))),
       // Updates precede the insert: all share the same absence test in one atomic batch.
-      billingUsageQuery(db, event, notExists(usage)),
-      userUsageQuery(db, event, notExists(usage)),
+      projection.kind === "balance"
+        ? billingUsageQuery(db, event, notExists(usage), projection.balanceCost)
+        : projection.entitlement
+          ? planUsageQuery(db, projection.input, projection.entitlement, notExists(usage))
+          : paymentBatchGuard(db, sql`1`),
+      projection.kind === "balance" ? userUsageQuery(db, event, notExists(usage)) : paymentBatchGuard(db, sql`1`),
       db.insert(UsageTable).values(values).onConflictDoNothing(),
       paymentBatchGuard(db, exists(db.select().from(UsageTable).where(financeRowMatches(UsageTable, replay)))),
       ...costQueries,
     ]
   })
-  return resultChanges(result[3]) === 0 ? ("duplicate" as const) : ("inserted" as const)
+  const duplicate = resultChanges(result[3]) === 0
+  return {
+    status: duplicate ? ("duplicate" as const) : ("inserted" as const),
+    // An ended entitlement must not erase the cost of an already-completed model request.
+    recorded:
+      duplicate || projection.kind === "balance" || (!!projection.entitlement && resultChanges(result[1]) === 1),
+  }
 }
 
 function usageValues(event: UsageQueueEvent) {

@@ -11,8 +11,8 @@ import {
 import { centsToMicroCents } from "@mongolgpt/console-core/util/price.js"
 import { getWeekBounds } from "@mongolgpt/console-core/util/date.js"
 import { Identifier } from "@mongolgpt/console-core/identifier.js"
-import { recordPlanUsageWithDb } from "@mongolgpt/console-core/plan-usage.js"
-import { recordEstimatedModelCostWithDb } from "@mongolgpt/console-core/finance-ledger.js"
+import { persistGatewayUsageEvent } from "@mongolgpt/console-core/usage-queue.js"
+import type { UsageQueueEvent } from "@mongolgpt/console-core/quota.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { GatewayCatalog } from "@mongolgpt/console-core/model.js"
 import { isProviderAllowedForStage } from "@mongolgpt/console-core/model-config.js"
@@ -1370,7 +1370,6 @@ export async function handler(
     const totalTokens = usageTokenTotal(usageInfo)
     const now = new Date()
     const nowMs = now.getTime()
-    const currentMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
     const usageID = Identifier.create("usage")
     const cf = (input.request as Request & { cf?: { country?: string; continent?: string } }).cf
     const country = locationCode(cf?.country ?? input.request.headers.get("cf-ipcountry") ?? undefined)
@@ -1383,38 +1382,39 @@ export async function handler(
     })()
     const queueEligible = billingSource !== "plan" && HOT_WORKSPACES.has(authInfo.workspaceID)
     const queuedWorkspaceCost = billingSource === "free" || billingSource === "byok" ? 0 : cost
+    const event: UsageQueueEvent = {
+      version: 1,
+      id: usageID,
+      workspaceID: authInfo.workspaceID,
+      userID: authInfo.user.id,
+      timeCreated: nowMs,
+      workspaceCost: queueEligible ? queuedWorkspaceCost : cost,
+      userCost: cost,
+      usage: {
+        model: policyModelID,
+        provider: providerInfo.id,
+        inputTokens,
+        outputTokens,
+        reasoningTokens,
+        cacheReadTokens,
+        cacheWrite5mTokens,
+        cacheWrite1hTokens,
+        cost,
+        inputCost: inputCostInMicroCents,
+        outputCost: outputCostInMicroCents,
+        cacheReadCost: cacheReadCostInMicroCents,
+        cacheWriteCost: cacheWriteCostInMicroCents,
+        country,
+        continent,
+        keyID: authInfo.apiKeyId ?? undefined,
+        sessionID: sessionId.substring(0, 30),
+        enrichment,
+      },
+    }
 
     if (queueEligible) {
       try {
-        await enqueueBatchedUsage({
-          version: 1,
-          id: usageID,
-          workspaceID: authInfo.workspaceID,
-          userID: authInfo.user.id,
-          timeCreated: nowMs,
-          workspaceCost: queuedWorkspaceCost,
-          userCost: cost,
-          usage: {
-            model: policyModelID,
-            provider: providerInfo.id,
-            inputTokens,
-            outputTokens,
-            reasoningTokens,
-            cacheReadTokens,
-            cacheWrite5mTokens,
-            cacheWrite1hTokens,
-            cost,
-            inputCost: inputCostInMicroCents,
-            outputCost: outputCostInMicroCents,
-            cacheReadCost: cacheReadCostInMicroCents,
-            cacheWriteCost: cacheWriteCostInMicroCents,
-            country,
-            continent,
-            keyID: authInfo.apiKeyId ?? undefined,
-            sessionID: sessionId.substring(0, 30),
-            enrichment,
-          },
-        })
+        await enqueueBatchedUsage(event)
         return { costInMicroCents: cost }
       } catch (error) {
         // The D1 primary-key makes a late Queue delivery and this synchronous fallback idempotent.
@@ -1422,97 +1422,16 @@ export async function handler(
       }
     }
 
-    const planUsageRecorded = await Database.transaction(async (db) => {
-      const inserted = await db
-        .insert(UsageTable)
-        .values({
-          workspaceID: authInfo.workspaceID,
-          id: usageID,
-          timeCreated: now,
-          timeUpdated: now,
-          model: policyModelID,
-          provider: providerInfo.id,
-          inputTokens,
-          outputTokens,
-          reasoningTokens,
-          cacheReadTokens,
-          cacheWrite5mTokens,
-          cacheWrite1hTokens,
-          cost,
-          inputCost: inputCostInMicroCents,
-          outputCost: outputCostInMicroCents,
-          cacheReadCost: cacheReadCostInMicroCents,
-          cacheWriteCost: cacheWriteCostInMicroCents,
-          country,
-          continent,
-          userID: authInfo.user.id,
-          keyID: authInfo.apiKeyId,
-          sessionID: sessionId.substring(0, 30),
-          enrichment,
-        })
-        .onConflictDoNothing()
-      if (inserted.meta.changes === 0) return true
-
-      await recordEstimatedModelCostWithDb(db, {
-        workspaceID: authInfo.workspaceID,
-        usageID,
-        provider: providerInfo.id,
-        model: policyModelID,
-        costUSDInMicrocents: cost,
-        effectiveAt: nowMs,
-        plan: enrichment?.plan,
-      })
-
-      if (billingSource === "plan") {
-        const plan = authInfo.planEntitlement!.plan
-        const planLimits = limits.plans[plan]
-        return recordPlanUsageWithDb(db, {
-          workspaceID: authInfo.workspaceID,
-          userID: authInfo.user.id,
-          entitlementID: authInfo.planEntitlement!.id,
-          costInMicroCents: cost,
-          tokens: totalTokens,
-          rollingWindowHours: planLimits.rollingWindow,
-          now,
-        })
-      }
-
-      const updates = await (async () => {
-        const workspaceDelta = queueEligible ? queuedWorkspaceCost : cost
-        const userDelta = cost
-        const balanceDelta = billingSource === "free" || billingSource === "byok" ? 0 : workspaceDelta
-
-        return [
-          db
-            .update(BillingTable)
-            .set({
-              balance: sql`${BillingTable.balance} - ${balanceDelta}`,
-              monthlyUsage: sql`
-              CASE
-                WHEN ${BillingTable.timeMonthlyUsageUpdated} >= ${currentMonthStart.getTime()} THEN COALESCE(${BillingTable.monthlyUsage}, 0) + ${workspaceDelta}
-                ELSE ${workspaceDelta}
-              END
-            `,
-              timeMonthlyUsageUpdated: now,
-            })
-            .where(eq(BillingTable.workspaceID, authInfo.workspaceID)),
-          db
-            .update(UserTable)
-            .set({
-              monthlyUsage: sql`
-              CASE
-                WHEN ${UserTable.timeMonthlyUsageUpdated} >= ${currentMonthStart.getTime()} THEN COALESCE(${UserTable.monthlyUsage}, 0) + ${userDelta}
-                ELSE ${userDelta}
-              END
-            `,
-              timeMonthlyUsageUpdated: now,
-            })
-            .where(and(eq(UserTable.workspaceID, authInfo.workspaceID), eq(UserTable.id, authInfo.user.id))),
-        ]
-      })()
-      await Promise.all(updates)
-      return true
-    })
+    const planUsageRecorded = await persistGatewayUsageEvent(
+      event,
+      billingSource === "plan"
+        ? {
+            entitlementID: authInfo.planEntitlement!.id,
+            tokens: totalTokens,
+            rollingWindowHours: limits.plans[authInfo.planEntitlement!.plan].rollingWindow,
+          }
+        : { balanceCost: queuedWorkspaceCost },
+    )
 
     if (!planUsageRecorded) {
       throw new PlanUsageLimitError(

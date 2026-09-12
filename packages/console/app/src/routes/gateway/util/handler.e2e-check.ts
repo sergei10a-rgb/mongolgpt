@@ -1,32 +1,31 @@
 // This check runs in a child Bun process so module mocks cannot leak into the package test suite.
-import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
+import { fileURLToPath } from "node:url"
+import { createSqliteDatabase, sqliteBatch } from "../../../../../core/test/fixtures/sqlite-batch"
 
 const coreDrizzle = await import("@mongolgpt/console-core/drizzle/index.js")
+const { Database } = await import("bun:sqlite")
+const directory = fileURLToPath(new URL("../../../../../core/migrations-d1", import.meta.url))
+const paths = await Array.fromAsync(new Bun.Glob("*/migration.sql").scan({ cwd: directory, absolute: true }))
+const migration = (await Promise.all(paths.sort().map((path) => Bun.file(path).text()))).join("\n")
+let sqlite = new Database(":memory:")
 const endpoints = { baseFree: "", openrouter: "", nvidia: "", byok: "" }
-const authState = { credentials: null as string | null }
+const authState = { credentials: null as string | null, plan: false }
 const state = {
   metrics: [] as Array<Record<string, unknown>>,
-  usageRows: [] as Array<Record<string, unknown>>,
+  get usageRows() {
+    return sqlite
+      .query(
+        "select workspace_id workspaceID,user_id userID,model,provider,input_tokens inputTokens,output_tokens outputTokens,enrichment from usage",
+      )
+      .all()
+      .map((row) => {
+        const value = row as { enrichment: string | null }
+        return { ...value, enrichment: value.enrichment ? JSON.parse(value.enrichment) : undefined }
+      })
+  },
   providerAttempts: [] as Array<Record<string, unknown>>,
   circuit: [] as Array<{ provider: string; outcome: string }>,
-}
-
-const transactionDb = {
-  insert() {
-    return {
-      values(value: Record<string, unknown>) {
-        state.usageRows.push(value)
-        return { onConflictDoNothing: async () => ({ meta: { changes: 1 } }) }
-      },
-    }
-  },
-  update() {
-    return {
-      set() {
-        return { where: async () => ({ meta: { changes: 1 } }) }
-      },
-    }
-  },
 }
 
 await mock.module("@mongolgpt/console-resource", () => ({
@@ -74,6 +73,13 @@ await mock.module("@mongolgpt/console-core/model.js", () => ({
         },
       },
       models: {
+        "synthetic-paid": {
+          name: "Synthetic paid model",
+          allowAnonymous: false,
+          maxTokensPerRequest: 100,
+          providers: [{ id: "openrouter-free", model: "synthetic/paid", priority: 0, weight: 1 }],
+          cost: { input: 0.000001, output: 0.000002 },
+        },
         "free-auto": {
           name: "Free Auto",
           allowAnonymous: false,
@@ -111,11 +117,29 @@ await mock.module("@mongolgpt/console-core/model.js", () => ({
 }))
 
 await mock.module("@mongolgpt/console-core/subscription.js", () => ({
-  Subscription: { getLimits: async () => ({ free: {}, plans: {} }) },
+  Subscription: {
+    getLimits: async () => ({
+      free: {},
+      plans: {
+        pro: {
+          weeklyCostLimit: 10,
+          weeklyTokenLimit: 1000,
+          weeklyRequestLimit: 100,
+          monthlyCostLimit: 40,
+          monthlyTokenLimit: 4000,
+          monthlyRequestLimit: 400,
+          rollingCostLimit: 5,
+          rollingWindow: 5,
+        },
+      },
+    }),
+  },
 }))
 
-await mock.module("@mongolgpt/console-core/finance-ledger.js", () => ({
-  recordEstimatedModelCostWithDb: async () => undefined,
+const planQuota = await import("./plan-quota")
+await mock.module("./plan-quota", () => ({
+  ...planQuota,
+  reservePlanQuota: async () => ({ allowed: true, reservation: { settle: async () => undefined } }),
 }))
 
 await mock.module("@mongolgpt/console-core/drizzle/index.js", () => ({
@@ -127,12 +151,30 @@ await mock.module("@mongolgpt/console-core/drizzle/index.js", () => ({
       workspaceID: "wrk_gateway_e2e",
       billing: { balance: 0 },
       user: { id: "usr_gateway_e2e" },
-      planEntitlement: null,
+      planEntitlement: authState.plan
+        ? {
+            id: "pln_gateway_e2e",
+            invoiceID: "inv_gateway_e2e",
+            plan: "pro",
+            timePeriodStart: new Date(Date.now() - 86400000),
+            timePeriodEnd: new Date(Date.now() + 86400000),
+          }
+        : null,
       planUsage: null,
       provider: { credentials: authState.credentials },
       timeDisabled: null,
     }),
-    transaction: async (run: (db: typeof transactionDb) => Promise<unknown>) => run(transactionDb),
+    batch: sqliteBatch(async (run) => {
+      sqlite.exec("BEGIN IMMEDIATE")
+      try {
+        const result = await run(createSqliteDatabase(sqlite))
+        sqlite.exec("COMMIT")
+        return result
+      } catch (error) {
+        sqlite.exec("ROLLBACK")
+        throw error
+      }
+    }),
   },
 }))
 
@@ -169,18 +211,92 @@ const { handler } = await import("./handler")
 const { ProviderCredentials } = await import("@mongolgpt/console-core/provider-credentials.js")
 
 beforeEach(() => {
+  sqlite.close()
+  sqlite = new Database(":memory:")
+  sqlite.exec(migration)
+  sqlite.exec(
+    "insert into workspace(id,name) values ('wrk_gateway_e2e','Synthetic gateway'); insert into billing(id,workspace_id,balance) values ('bil_gateway_e2e','wrk_gateway_e2e',10000); insert into user(id,workspace_id,name,role) values ('usr_gateway_e2e','wrk_gateway_e2e','Synthetic user','member')",
+  )
   endpoints.baseFree = ""
   endpoints.openrouter = ""
   endpoints.nvidia = ""
   endpoints.byok = ""
   authState.credentials = null
+  authState.plan = false
   state.metrics.length = 0
-  state.usageRows.length = 0
   state.providerAttempts.length = 0
   state.circuit.length = 0
 })
+afterAll(() => sqlite.close())
 
 describe("gateway handler HTTP boundary", () => {
+  test.each([false, true])("persists paid model evidence when entitlement ends mid-request: %s", async (expired) => {
+    authState.plan = true
+    sqlite
+      .query(
+        "insert into plan_subscription(id,workspace_id,invoice_id,plan,status,time_period_start,time_period_end) values ('pln_gateway_e2e','wrk_gateway_e2e','inv_gateway_e2e','pro','active',?,?)",
+      )
+      .run(Date.now() - 86400000, Date.now() + 86400000)
+    using provider = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch() {
+        if (expired) sqlite.query("update plan_subscription set status='expired'").run()
+        return Response.json({
+          id: "chatcmpl-synthetic-paid",
+          object: "chat.completion",
+          model: "synthetic/paid",
+          choices: [{ index: 0, message: { role: "assistant", content: "synthetic-paid-ok" }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        })
+      },
+    })
+    endpoints.openrouter = `http://127.0.0.1:${provider.port}/v1`
+    const response = await handler(
+      {
+        request: new Request("https://dev.mgpt.mn/gateway/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            authorization: "Bearer synthetic-account-token",
+            "content-type": "application/json",
+            "accept-language": "mn",
+          },
+          body: JSON.stringify({
+            model: "synthetic-paid",
+            messages: [{ role: "user", content: "Synthetic billing check" }],
+            stream: false,
+          }),
+        }),
+      } as Parameters<typeof handler>[0],
+      {
+        format: "oa-compat",
+        modelList: "full",
+        parseApiKey: (headers) => headers.get("authorization")?.replace(/^Bearer /, ""),
+        parseModel: (_url, body) => body.model,
+        parseVariant: () => undefined,
+        parseIsStream: () => false,
+      },
+    )
+    expect(response.status, await response.clone().text()).toBe(expired ? 429 : 200)
+    expect(state.usageRows).toHaveLength(1)
+    expect(state.usageRows[0]).toMatchObject({
+      model: "synthetic-paid",
+      provider: "openrouter-free",
+      inputTokens: 10,
+      outputTokens: 5,
+      enrichment: { plan: "pro" },
+    })
+    const usage = sqlite.query("select cost from usage").get() as { cost: number }
+    expect(usage.cost).toBeGreaterThan(0)
+    expect(sqlite.query("select original_amount from finance_cost_entry").get()).toEqual({
+      original_amount: usage.cost,
+    })
+    expect(sqlite.query("select balance from billing").get()).toEqual({ balance: 10000 })
+    expect(sqlite.query("select monthly_cost,monthly_tokens,monthly_requests from subscription").get()).toEqual(
+      expired ? null : { monthly_cost: usage.cost, monthly_tokens: 15, monthly_requests: 1 },
+    )
+  })
+
   test("applies the shared Free Auto policy to a directly selected dynamic model", async () => {
     const observed: Array<{ authorization: string | null; model: string }> = []
     using baseFree = Bun.serve({
@@ -227,7 +343,7 @@ describe("gateway handler HTTP boundary", () => {
       },
     )
 
-    expect(response.status).toBe(200)
+    expect(response.status, await response.clone().text()).toBe(200)
     expect(observed).toEqual([{ authorization: "Bearer public", model: "big-pickle" }])
     expect(state.usageRows).toHaveLength(1)
     expect(state.usageRows[0]).toMatchObject({
@@ -326,7 +442,7 @@ describe("gateway handler HTTP boundary", () => {
       cost: string
     }
 
-    expect(response.status).toBe(200)
+    expect(response.status, JSON.stringify(payload)).toBe(200)
     expect(response.headers.get("content-type")).toContain("application/json")
     expect(payload.choices[0]?.message.content).toBe("handler-fallback-ok")
     expect(payload.usage).toMatchObject({ prompt_tokens: 11, completion_tokens: 7 })
@@ -476,7 +592,7 @@ describe("gateway handler HTTP boundary", () => {
       cost: string
     }
 
-    expect(response.status).toBe(200)
+    expect(response.status, JSON.stringify(payload)).toBe(200)
     expect(payload.choices[0]?.message.content).toBe("handler-byok-ok")
     expect(payload.cost).toBe("0")
     expect(observed).toEqual([{ authorization: "Bearer byok-handler-test-credential", model: "openrouter/byok" }])

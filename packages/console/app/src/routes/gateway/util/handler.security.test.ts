@@ -79,15 +79,21 @@ describe("Gateway handler telemetry security", () => {
     )
   })
 
-  test("rechecks plan entitlement inside the usage transaction", () => {
-    expect(source).toContain("await Database.transaction(async (db) =>")
-    expect(source).toContain("return recordPlanUsageWithDb(db, {")
+  test("uses atomic D1 persistence with a write-time entitlement recheck", async () => {
+    expect(source).not.toContain("Database.transaction(")
+    expect(source).toContain("await persistGatewayUsageEvent(")
     expect(source).toContain("entitlementID: authInfo.planEntitlement!.id")
     expect(source).toContain("if (!planUsageRecorded)")
     expect(source).toContain("throw new PlanUsageLimitError(")
     expect(source).toMatch(
       /lte\(PlanSubscriptionTable\.timePeriodStart, now\)[\s\S]*gt\(PlanSubscriptionTable\.timePeriodEnd, now\)/,
     )
+    const plan = await Bun.file(new URL("../../../../../core/src/plan-usage.ts", import.meta.url)).text()
+    expect(plan).toContain(".insert(SubscriptionTable)")
+    expect(plan).toContain('eq(PlanSubscriptionTable.status, "active")')
+    expect(plan).toContain("eq(PlanSubscriptionTable.invoiceID, entitlement.invoiceID)")
+    expect(plan).toContain("eq(PlanSubscriptionTable.timePeriodStart, entitlement.timePeriodStart)")
+    expect(plan).toContain("eq(PlanSubscriptionTable.timePeriodEnd, entitlement.timePeriodEnd)")
   })
 
   test("settles measured usage even when persistence fails and releases explicit provider rejections", () => {
