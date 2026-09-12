@@ -47,6 +47,7 @@ test("payment service audit is manual, owner/dev-scoped and never deploys", asyn
   if (!verification?.run || !preview?.run) throw new Error("Payment audit workflow steps are missing")
   expect(steps.indexOf(verification)).toBeLessThan(steps.indexOf(preview))
   expect(verification.run).toContain("test/payment-service-deployment-audit.test.ts")
+  expect(verification.run).toContain("test/payment-service-deployment-guard.test.ts")
   expect(verification.run).toContain("test/payment-service-audit-workflow.test.ts")
   expect(verification.run).toContain("test/usage-queue-deployment-audit.test.ts")
   expect(verification.run).toContain("test/usage-queue-deployment-guard.test.ts")
@@ -64,6 +65,7 @@ test("payment service audit is manual, owner/dev-scoped and never deploys", asyn
   expect(commands).toContain('mktemp "$RUNNER_TEMP/mongolgpt-payment-stderr.XXXXXX"')
   expect(commands).toContain('trap \'rm -f "$diff_file" "$stderr_file"\' EXIT')
   expect(commands).toContain('bun script/audit-payment-service-deployment.ts "$diff_file"')
+  expect(commands).toContain('bun script/verify-payment-service-deployment.ts "$diff_file"')
   expect(commands).toContain("No payment deployment was authorized or performed")
   expect(commands).not.toMatch(
     /sst (?:deploy|remove|refresh|unlock|state|secret|shell)|--decrypt|db:migrate|wrangler|curl|cat /,

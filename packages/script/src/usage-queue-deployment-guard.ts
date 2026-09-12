@@ -27,7 +27,7 @@ export const usageQueueWorkerComputedFields = new Set([
 // Optional+Computed in the pinned provider; only unconfigured root additions qualify.
 const workerOptionalComputedFields = new Set(["annotations", "placement", "tailConsumers"])
 
-const workers = new Map([
+const usageQueueWorkers = new Map([
   [
     "UsageQueueSubscriberFunctionScript",
     {
@@ -44,7 +44,16 @@ const workers = new Map([
   ],
 ])
 
-const workerUrls = new Map([...workers.values()].map((value) => [value.urlName, value.scriptName]))
+const paymentServiceWorkers = new Map([
+  [
+    "PaymentServiceScript",
+    {
+      scriptName: "mongolgpt-dev-paymentservicescript",
+      urlName: "PaymentServiceUrl.sst.cloudflare.WorkerUrl",
+    },
+  ],
+])
+
 const allowedOperations = new Set(["same", "update"])
 const hashPattern = /^[a-f0-9]{64}$/i
 // Public Pulumi serialization marker, not a credential.
@@ -92,6 +101,7 @@ type RejectionReason =
   | "missing-state"
   | "conflicting-state-identity"
   | "missing-state-inputs"
+  | "incomplete-deployment-plan"
   | `opaque-state-${(typeof comparableStateFields)[number]}`
   | `changed-state-${(typeof comparableStateFields)[number]}`
 
@@ -107,11 +117,48 @@ export interface UsageQueueDeploymentGuardSummary {
   urlUpdates: number
 }
 
+export class PaymentServiceDeploymentGuardError extends Error {
+  constructor(readonly reason: RejectionReason = "invalid-preview") {
+    super("Dev payment service deployment preview is not approved")
+    this.name = "PaymentServiceDeploymentGuardError"
+  }
+}
+
 export function verifyUsageQueueDeploymentDiff(value: unknown): UsageQueueDeploymentGuardSummary {
+  return verifyDeploymentDiff(value, {
+    workers: usageQueueWorkers,
+    allowHeartbeatLink: true,
+    requireExactWorkerAndUrlUpdate: false,
+  })
+}
+
+export function verifyPaymentServiceDeploymentDiff(value: unknown): UsageQueueDeploymentGuardSummary {
+  try {
+    return verifyDeploymentDiff(value, {
+      workers: paymentServiceWorkers,
+      allowHeartbeatLink: false,
+      requireExactWorkerAndUrlUpdate: true,
+    })
+  } catch (error) {
+    throw new PaymentServiceDeploymentGuardError(
+      error instanceof UsageQueueDeploymentGuardError ? error.reason : "invalid-preview",
+    )
+  }
+}
+
+function verifyDeploymentDiff(
+  value: unknown,
+  config: {
+    workers: Map<string, { scriptName: string; urlName: string }>
+    allowHeartbeatLink: boolean
+    requireExactWorkerAndUrlUpdate: boolean
+  },
+): UsageQueueDeploymentGuardSummary {
   if (!Array.isArray(value) || value.length > maximumEntries) reject("invalid-preview")
 
   const seen = new Map<string, Record<string, unknown>>()
   const repeatedLinks = new Set<string>()
+  const workerUrls = new Map([...config.workers.values()].map((value) => [value.urlName, value.scriptName]))
   let workerUpdates = 0
   let urlUpdates = 0
 
@@ -126,7 +173,13 @@ export function verifyUsageQueueDeploymentDiff(value: unknown): UsageQueueDeploy
     if (parsed.stack !== stack || parsed.type.split("$").at(-1) !== type || parsed.name.length === 0)
       reject("wrong-resource-scope")
     const previous = seen.get(urn)
-    if (type === linkType && parsed.type === linkType && parsed.name === heartbeatLinkName && op === "update") {
+    if (
+      config.allowHeartbeatLink &&
+      type === linkType &&
+      parsed.type === linkType &&
+      parsed.name === heartbeatLinkName &&
+      op === "update"
+    ) {
       assertHeartbeatLinkUpdate(entry, urn, type)
       // Pulumi emits a second component event when registerOutputs resolves.
       // Only its outputs may differ; inputs and all resource identity must agree.
@@ -153,7 +206,7 @@ export function verifyUsageQueueDeploymentDiff(value: unknown): UsageQueueDeploy
       continue
     }
 
-    const worker = workers.get(parsed.name)
+    const worker = config.workers.get(parsed.name)
     if (type === workerType && worker) {
       assertWorkerUpdate(entry, urn, type, worker.scriptName)
       workerUpdates += 1
@@ -169,6 +222,9 @@ export function verifyUsageQueueDeploymentDiff(value: unknown): UsageQueueDeploy
 
     reject()
   }
+
+  if (config.requireExactWorkerAndUrlUpdate && (workerUpdates !== 1 || urlUpdates !== 1))
+    reject("incomplete-deployment-plan")
 
   return { workerUpdates, urlUpdates }
 }

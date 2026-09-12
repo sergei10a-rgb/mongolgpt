@@ -1,7 +1,12 @@
-name: Audit dev payment service
+name: Update disabled dev payment service
 
 on:
   workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type UPDATE DISABLED DEV PAYMENTS"
+        required: true
+        type: string
 
 concurrency:
   group: cloudflare-deploy-dev
@@ -31,22 +36,33 @@ env:
   MONGOLGPT_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
 
 jobs:
-  audit:
+  deploy:
     if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: dev
     steps:
+      - name: Validate disabled dev confirmation
+        env:
+          DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$DEPLOY_CONFIRMATION" != "UPDATE DISABLED DEV PAYMENTS" ]; then
+            echo "Disabled dev payment confirmation does not match."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-      - name: Verify read-only private payment reporting
-        run: bun test --cwd packages/script test/payment-service-deployment-audit.test.ts test/payment-service-deployment-guard.test.ts test/payment-service-audit-workflow.test.ts test/usage-queue-deployment-audit.test.ts test/usage-queue-deployment-guard.test.ts
+      - name: Verify payment boundaries and disabled health contract
+        run: |
+          bun test --cwd packages/script test/payment-service-deployment-guard.test.ts test/payment-service-live-check.test.ts test/payment-service-deployment-workflow.test.ts test/usage-queue-deployment-guard.test.ts
+          bun test --cwd packages/console/function test/payment-webhook.test.ts test/service-monitor.test.ts
 
-      - name: Preview disabled dev payment service without deploying
+      - name: Guard and update only the disabled dev payment worker
         env:
           CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
@@ -68,15 +84,19 @@ jobs:
             echo "Unexpected Cloudflare dev account or domain."
             exit 1
           fi
+          bun script/check-dev-payment-service.ts before
           umask 077
           diff_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-diff.XXXXXX")"
+          stdout_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-output.XXXXXX")"
           stderr_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-stderr.XXXXXX")"
-          trap 'rm -f "$diff_file" "$stderr_file"' EXIT
-          # SST includes target dependents; keep the linked Console and its routes out of this preview.
+          trap 'rm -f "$diff_file" "$stdout_file" "$stderr_file"' EXIT
           if ! bun sst diff --stage=dev --target PaymentService --exclude Console --json --print-logs >"$diff_file" 2>"$stderr_file"; then
-            echo "Dev payment service preview failed; private output was not printed."
+            echo "Disabled dev payment preview failed; private output was not printed."
             exit 1
           fi
-          bun script/audit-payment-service-deployment.ts "$diff_file"
           bun script/verify-payment-service-deployment.ts "$diff_file"
-          echo "Read-only audit complete. No payment deployment was authorized or performed."
+          if ! bun sst deploy --stage=dev --target PaymentService --exclude Console --print-logs >"$stdout_file" 2>"$stderr_file"; then
+            echo "Disabled dev payment deployment failed; inspect current state before retrying. Private output was not printed."
+            exit 1
+          fi
+          bun script/check-dev-payment-service.ts after
