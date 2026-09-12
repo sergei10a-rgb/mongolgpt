@@ -36,4 +36,5 @@ export const requiredDocsSearchResults = [
   ["QPay Bonum", "/docs/billing/"],
   ["Нууцлал өгөгдлийн амьдралын мөчлөг", "/docs/privacy/"],
   ["RBAC MFA", "/docs/admin/"],
+  ["Мерчантын тооцоо нийлүүлэлт", "/docs/admin/"],
 ] as const

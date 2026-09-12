@@ -56,6 +56,19 @@ test("desktop агуулгын жагсаалтын урт Монгол гарч
   expect(rule).toContain("overflow-wrap: anywhere")
 })
 
+test("тооцооны заавар нь дугаартай алхам, бүхэл харагдах мөнгөн дүнтэй байна", () => {
+  const source = readFileSync(join(docsRoot, "admin.mdx"), "utf8")
+  const css = readFileSync(join(import.meta.dir, "..", "src", "styles", "custom.css"), "utf8")
+  expect(source).toContain('data-component="settlement-steps"')
+  expect(source).toContain('aria-label="Төлбөр ба буцаалтын тооцооны жишээ"')
+  expect(source).toContain('tabindex="0"')
+  expect(css).toMatch(/\[data-component="settlement-steps"\] ol \{[^}]*list-style: decimal !important/)
+  expect(css).toMatch(/\[data-component="settlement-steps"\] ol \{[^}]*padding-inline-start: 1.5em !important/)
+  expect(css).toMatch(/\[data-component="settlement-examples"\] \{[^}]*overflow-x: auto/)
+  expect(css).toMatch(/\[data-component="settlement-examples"\] table \{[^}]*min-width: 620px/)
+  expect(css).toMatch(/\[data-component="settlement-examples"\] :is\(th, td\) \{[^}]*white-space: nowrap/)
+})
+
 function collectLinks(value: unknown, links: string[]) {
   if (Array.isArray(value)) {
     for (const item of value) collectLinks(item, links)

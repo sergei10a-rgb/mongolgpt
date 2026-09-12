@@ -446,6 +446,39 @@ nav.sidebar ul.top-level > li > details > summary .group-label > span {
   }
 }
 
+.sl-markdown-content [data-component="settlement-steps"] ol {
+  list-style: decimal !important;
+  padding-inline-start: 1.5em !important;
+}
+
+.sl-markdown-content [data-component="settlement-examples"] {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.sl-markdown-content [data-component="settlement-examples"]:focus-visible {
+  outline: 2px solid var(--color-text-strong);
+  outline-offset: 2px;
+}
+
+.sl-markdown-content [data-component="settlement-examples"] table {
+  display: table;
+  width: 100%;
+  min-width: 620px;
+  table-layout: auto;
+}
+
+.sl-markdown-content [data-component="settlement-examples"] :is(th, td) {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.sl-markdown-content [data-component="settlement-examples"] :is(th, td):first-child {
+  width: 46%;
+  white-space: normal;
+}
+
 @media (prefers-color-scheme: dark) {
   .shiki,
   .shiki span {
