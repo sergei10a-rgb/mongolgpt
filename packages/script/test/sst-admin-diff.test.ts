@@ -151,14 +151,7 @@ describe("admin-only SST diff boundary", () => {
   })
 
   test("an explicit dev cookie migration allows only the SameSite attribute update", () => {
-    const entry = {
-      ...change(
-        "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication",
-        "AdminAccessApplication",
-        "update",
-      ),
-      detailedDiff: { sameSiteCookieAttribute: { kind: "update", inputDiff: true } },
-    }
+    const entry = cookieMigration()
     expect(() => inspectAdminDeploymentDiff([entry])).toThrow("AdminAccessApplication")
     expect(inspectAdminDeploymentDiff([entry], { allowAccessCookieMigration: true })).toEqual({
       changes: 1,
@@ -170,18 +163,96 @@ describe("admin-only SST diff boundary", () => {
       { ...entry, type: "cloudflare:index/other:Other" },
       { ...entry, op: "replace" },
       { ...entry, op: "delete" },
-      { ...entry, detailedDiff: undefined },
       { ...entry, detailedDiff: {} },
-      { ...entry, detailedDiff: { sameSiteCookieAttribute: { kind: "delete" } } },
-      { ...entry, detailedDiff: { sameSiteCookieAttribute: { kind: "update-replace" } } },
-      { ...entry, detailedDiff: { ...entry.detailedDiff, "mfaConfig.mfaDisabled": { kind: "update" } } },
-      { ...entry, detailedDiff: { ...entry.detailedDiff, policies: { kind: "update" } } },
-      { ...entry, detailedDiff: { ...entry.detailedDiff, domain: { kind: "update" } } },
-      { ...entry, detailedDiff: { ...entry.detailedDiff, enableBindingCookie: { kind: "update" } } },
+      { ...entry, detailedDiff: { sameSiteCookieAttribute: { kind: "update" } } },
+      { ...entry, detailedDiff: { sameSiteCookieAttribute: { diffKind: "delete" } } },
+      { ...entry, detailedDiff: { sameSiteCookieAttribute: { diffKind: "update-replace" } } },
+      { ...entry, detailedDiff: { ...entry.detailedDiff, "mfaConfig.mfaDisabled": { diffKind: "update" } } },
+      { ...entry, detailedDiff: { ...entry.detailedDiff, policies: { diffKind: "update" } } },
+      { ...entry, detailedDiff: { ...entry.detailedDiff, domain: { diffKind: "update" } } },
+      { ...entry, detailedDiff: { ...entry.detailedDiff, enableBindingCookie: { diffKind: "update" } } },
     ]) {
       expect(() => inspectAdminDeploymentDiff([rejected], { allowAccessCookieMigration: true })).toThrow(
         AdminDeploymentDiffError,
       )
+    }
+  })
+
+  test("accepts Pulumi output events without detailedDiff only with an exact input transition", () => {
+    for (const detailedDiff of [null, undefined]) {
+      for (const diffs of [null, undefined, ["sameSiteCookieAttribute"]]) {
+        expect(
+          inspectAdminDeploymentDiff([{ ...cookieMigration(), detailedDiff, diffs }], {
+            allowAccessCookieMigration: true,
+          }),
+        ).toEqual({
+          changes: 1,
+          operations: { update: 1 },
+        })
+      }
+    }
+  })
+
+  test("rejects cookie migrations with incomplete, opaque, or additional input and identity changes", () => {
+    const entry = cookieMigration()
+    for (const detailedDiff of [entry.detailedDiff, null]) {
+      for (const rejected of [
+        { ...entry, old: undefined },
+        { ...entry, new: undefined },
+        { ...entry, provider: "other-provider" },
+        { ...entry, keys: ["sameSiteCookieAttribute"] },
+        { ...entry, diffs: ["sameSiteCookieAttribute", "policies"] },
+        { ...entry, diffs: [] },
+        { ...entry, diffs: "sameSiteCookieAttribute" },
+        { ...entry, old: { ...entry.old, inputs: undefined } },
+        { ...entry, new: { ...entry.new, inputs: {} } },
+        ...["urn", "type", "id", "provider", "parent", "protect"].map((key) => ({
+          ...entry,
+          new: { ...entry.new, [key]: "changed" },
+        })),
+        ...["none", "strict", "", null].map((sameSiteCookieAttribute) => ({
+          ...entry,
+          new: { ...entry.new, inputs: { ...entry.new.inputs, sameSiteCookieAttribute } },
+        })),
+        { ...entry, old: { ...entry.old, inputs: { ...entry.old.inputs, sameSiteCookieAttribute: "none" } } },
+        ...[
+          { enableBindingCookie: false },
+          { httpOnlyCookieAttribute: false },
+          { mfaConfig: { mfaDisabled: true } },
+          { policies: [] },
+          { domain: "other.example.test" },
+          { added: true },
+        ].map((inputs) => ({ ...entry, new: { ...entry.new, inputs: { ...entry.new.inputs, ...inputs } } })),
+        ...[
+          "[secret]",
+          "04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+          {
+            "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
+            value: "opaque",
+          },
+        ].map((opaque) => ({
+          ...entry,
+          old: { ...entry.old, inputs: { ...entry.old.inputs, opaque } },
+          new: { ...entry.new, inputs: { ...entry.new.inputs, opaque } },
+        })),
+      ]) {
+        expect(() =>
+          inspectAdminDeploymentDiff([{ ...rejected, detailedDiff }], { allowAccessCookieMigration: true }),
+        ).toThrow(AdminDeploymentDiffError)
+      }
+    }
+  })
+
+  test("does not lose removed or prototype-named input fields when comparing the migration", () => {
+    const entry = cookieMigration()
+    const missing = { ...entry.new.inputs } as Record<string, unknown>
+    delete missing.enableBindingCookie
+    for (const inputs of [missing, { ...entry.new.inputs, ["__proto__"]: { hiddenChange: true } }]) {
+      expect(() =>
+        inspectAdminDeploymentDiff([{ ...entry, detailedDiff: null, new: { ...entry.new, inputs } }], {
+          allowAccessCookieMigration: true,
+        }),
+      ).toThrow("other-input-changes")
     }
   })
 
@@ -201,8 +272,8 @@ describe("admin-only SST diff boundary", () => {
         "update",
       ),
       detailedDiff: {
-        sameSiteCookieAttribute: { kind: "update" },
-        "policies[private@example.com]": { kind: "secret-value", new: "do-not-print" },
+        sameSiteCookieAttribute: { diffKind: "update" },
+        "policies[private@example.com]": { diffKind: "secret-value", new: "do-not-print" },
       },
     }
     try {
@@ -217,6 +288,40 @@ describe("admin-only SST diff boundary", () => {
     }
   })
 })
+
+function cookieMigration() {
+  const entry = change(
+    "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication",
+    "AdminAccessApplication",
+    "update",
+  )
+  const state = {
+    urn: entry.urn,
+    type: entry.type,
+    id: "test-access-app",
+    provider: "test-cloudflare-provider",
+    parent: `${stack}::pulumi:pulumi:Stack::mongolgpt-admin-dev`,
+    custom: true,
+    protect: true,
+    inputs: {
+      sameSiteCookieAttribute: "strict",
+      domain: "admin.dev.example.test",
+      enableBindingCookie: true,
+      httpOnlyCookieAttribute: true,
+      mfaConfig: { mfaDisabled: false },
+      policies: [{ id: "test-admin-policy" }],
+    },
+  }
+  return {
+    ...entry,
+    provider: state.provider,
+    keys: [],
+    diffs: ["sameSiteCookieAttribute"],
+    detailedDiff: { sameSiteCookieAttribute: { diffKind: "update", inputDiff: true } },
+    old: state,
+    new: { ...state, inputs: { ...state.inputs, sameSiteCookieAttribute: "lax" } },
+  }
+}
 
 function change(urnType: string, name: string, op: string, type = urnType.split("$").at(-1)!) {
   return {

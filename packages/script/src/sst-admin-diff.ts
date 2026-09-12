@@ -1,4 +1,8 @@
+import { isDeepStrictEqual } from "node:util"
+
 const adminSiteType = "sst:cloudflare:SolidStart"
+const accessApplicationType = "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication"
+const accessApplicationUrn = `urn:pulumi:dev::mongolgpt-admin::${accessApplicationType}::AdminAccessApplication`
 
 const exactResources = new Map<string, RegExp>([
   ["AdminAccessApplication", /zeroTrustAccessApplication/i],
@@ -86,9 +90,7 @@ export function inspectAdminDeploymentDiff(
         type,
         op,
         entry?.detailedDiff,
-        options.allowAccessCookieMigration === true &&
-          urn ===
-            "urn:pulumi:dev::mongolgpt-admin::cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication::AdminAccessApplication",
+        options.allowAccessCookieMigration === true && accessCookieMigrationError(entry) === undefined,
       )
     ) {
       if (rejected.length < 12) {
@@ -99,10 +101,11 @@ export function inspectAdminDeploymentDiff(
             .slice(0, 12)
             .map(([key, value]) => {
               const field = /^[a-zA-Z0-9_.\[\]]{1,100}$/.test(key) ? key : "redacted-path"
-              const kind = record(value)?.kind
+              const kind = record(value)?.diffKind
               return `${field}:${["add", "delete", "update", "add-replace", "delete-replace", "update-replace"].includes(String(kind)) ? kind : "unknown"}`
             })
           rejected.push(`Access cookie diff fields=${fields.join(",") || "missing"}`)
+          rejected.push(`Access cookie proof=${accessCookieMigrationError(entry) ?? "valid"}`)
         }
       }
       continue
@@ -144,14 +147,7 @@ function isAllowedAdminChange(
   if (type === "sst:sst:LinkRef") return op === "create" && createOnlyLinkRefs.has(name)
 
   if (name === "AdminAccessApplication" && op === "update") {
-    const diff = record(detailedDiff)
-    return (
-      allowAccessCookieMigration &&
-      type === "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication" &&
-      !!diff &&
-      Object.keys(diff).length === 1 &&
-      record(diff.sameSiteCookieAttribute)?.kind === "update"
-    )
+    return allowAccessCookieMigration && type === accessApplicationType
   }
 
   const exact = exactResources.get(name)
@@ -159,6 +155,55 @@ function isAllowedAdminChange(
 
   if (!name.startsWith("Admin") || !urnType.split("$").includes(adminSiteType)) return false
   return type === urnType.split("$").at(-1)
+}
+
+function accessCookieMigrationError(entry: Record<string, unknown> | undefined) {
+  if (entry?.urn !== accessApplicationUrn || entry.type !== accessApplicationType || entry.op !== "update") {
+    return "resource-mismatch"
+  }
+  if (entry.keys != null && (!Array.isArray(entry.keys) || entry.keys.length !== 0)) return "replacement-keys"
+  if (entry.diffs != null && !isDeepStrictEqual(entry.diffs, ["sameSiteCookieAttribute"])) return "unexpected-diffs"
+
+  // Pulumi output events may omit detailedDiff. Prove the exact input transition in either case.
+  if (entry.detailedDiff != null) {
+    const diff = record(entry.detailedDiff)
+    if (!diff || Object.keys(diff).length !== 1 || record(diff.sameSiteCookieAttribute)?.diffKind !== "update")
+      return "unexpected-detailed-diff"
+  }
+  const old = record(entry.old)
+  const next = record(entry.new)
+  if (
+    !old ||
+    !next ||
+    old.urn !== accessApplicationUrn ||
+    next.urn !== accessApplicationUrn ||
+    old.type !== accessApplicationType ||
+    next.type !== accessApplicationType ||
+    !text(old.id) ||
+    !text(old.provider) ||
+    entry.provider !== old.provider
+  )
+    return "missing-resource-state"
+
+  const metadata = (state: Record<string, unknown>) =>
+    Object.fromEntries(Object.entries(state).filter(([key]) => key !== "inputs" && key !== "outputs"))
+  if (!isDeepStrictEqual(metadata(old), metadata(next))) return "changed-resource-state"
+
+  const before = record(old.inputs)
+  const after = record(next.inputs)
+  if (!before || !after) return "missing-inputs"
+  if (hasOpaqueValue(before) || hasOpaqueValue(after)) return "opaque-inputs"
+  if (before.sameSiteCookieAttribute !== "strict" || after.sameSiteCookieAttribute !== "lax")
+    return "wrong-cookie-transition"
+  if (!isDeepStrictEqual({ ...before, sameSiteCookieAttribute: "lax" }, after)) return "other-input-changes"
+}
+
+function hasOpaqueValue(value: unknown): boolean {
+  if (typeof value === "string") return value.includes("[secret]") || value === "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
+  if (Array.isArray(value)) return value.some(hasOpaqueValue)
+  if (typeof value !== "object" || value === null) return false
+  if (Object.hasOwn(value, "4dabf18193072939515e22adb298388d")) return true
+  return Object.values(value).some(hasOpaqueValue)
 }
 
 function isAdminStackOutputDiff(value: unknown) {
@@ -185,7 +230,5 @@ function text(value: unknown) {
 
 function record(value: unknown): Record<string, unknown> | undefined {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined
-  const result: Record<string, unknown> = {}
-  for (const [key, item] of Object.entries(value)) result[key] = item
-  return result
+  return Object.fromEntries(Object.entries(value))
 }
