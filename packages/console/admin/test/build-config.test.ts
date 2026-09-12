@@ -22,3 +22,14 @@ test("admin enables the existing route normalizer for Windows page and API route
     { path: "/api/support/:ticketID" },
   ])
 })
+
+test("admin Access allows the cross-site login return while retaining security controls", async () => {
+  const infra = await Bun.file(new URL("../../../../infra/admin-deployment.ts", import.meta.url)).text()
+  expect(infra).toContain('sameSiteCookieAttribute: "lax"')
+  expect(infra).not.toContain('sameSiteCookieAttribute: "strict"')
+  expect(infra).toContain("enableBindingCookie: true")
+  expect(infra).toContain("httpOnlyCookieAttribute: true")
+  expect(infra).toContain("mfaDisabled: false")
+  expect(infra).toContain("allowAuthenticateViaWarp: false")
+  expect(infra).toContain("optionsPreflightBypass: false")
+})

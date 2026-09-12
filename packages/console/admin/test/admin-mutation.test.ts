@@ -57,4 +57,12 @@ describe("admin mutation request", () => {
       ),
     ).toThrow(AdminMutationRequestError)
   })
+
+  test("a cookie on a cross-site top-level GET never authorizes a mutation", () => {
+    const navigation = request({ method: "GET", fetchSite: "cross-site" })
+    navigation.headers.set("cookie", "CF_Authorization=test-only-session")
+    navigation.headers.set("sec-fetch-mode", "navigate")
+    navigation.headers.set("sec-fetch-dest", "document")
+    expect(() => requireSameOriginAdminMutation(navigation)).toThrow(AdminMutationRequestError)
+  })
 })

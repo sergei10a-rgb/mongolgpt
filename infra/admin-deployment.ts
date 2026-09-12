@@ -70,7 +70,8 @@ export function createAdminDeployment(sharedLinks: readonly object[]) {
           precedence: 1,
         },
       ]),
-      sameSiteCookieAttribute: "strict",
+      // Access returns from a different site; Strict can loop after successful MFA.
+      sameSiteCookieAttribute: "lax",
       sessionDuration: "4h",
       type: "self_hosted",
     },

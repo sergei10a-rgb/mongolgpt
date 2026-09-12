@@ -310,7 +310,7 @@ function inspectAdminApplication(application: Record<string, unknown>, hostname:
     ["enable_binding_cookie", application.enable_binding_cookie === true],
     ["http_only_cookie_attribute", application.http_only_cookie_attribute === true],
     ["options_preflight_bypass", application.options_preflight_bypass === false],
-    ["same_site_cookie_attribute", application.same_site_cookie_attribute === "strict"],
+    ["same_site_cookie_attribute", application.same_site_cookie_attribute === "lax"],
     ["aud", typeof application.aud === "string" && Boolean(application.aud.trim())],
     ["mfa_config", hasExactBrowserMfa(application.mfa_config)],
   ] as const

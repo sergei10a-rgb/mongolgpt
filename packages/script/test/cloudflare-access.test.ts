@@ -315,6 +315,24 @@ describe("Cloudflare admin Access deployment verification", () => {
     ])
   })
 
+  test.each(["strict", "none", "", undefined])("rejects incompatible admin cookie setting %s", async (sameSite) => {
+    const application = { ...adminApplication(), same_site_cookie_attribute: sameSite }
+    const responses = [organizationResponse(), response({ success: true, result: [application] })]
+    const error = await rejection(
+      verifyCloudflareAdminAccess({
+        accountId: "account-id",
+        token: "must-not-leak",
+        hostname: "admin.dev.mgpt.mn",
+        stage: "dev",
+        bootstrapEmails: "admin@example.com",
+        fetcher: async () => responses.shift()!,
+      }),
+    )
+    expect(error).toBeInstanceOf(CloudflareAccessPreflightError)
+    expect(String(error)).toContain("same_site_cookie_attribute")
+    expect(String(error)).not.toContain("must-not-leak")
+  })
+
   test("rejects broad policies, duplicate apps, and weakened MFA without leaking credentials", async () => {
     const broadResponses = [
       organizationResponse(),
@@ -414,7 +432,7 @@ function adminApplication() {
     enable_binding_cookie: true,
     http_only_cookie_attribute: true,
     options_preflight_bypass: false,
-    same_site_cookie_attribute: "strict",
+    same_site_cookie_attribute: "lax",
     mfa_config: browserMfa(),
   }
 }
