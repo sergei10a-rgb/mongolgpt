@@ -24,6 +24,16 @@ describe("admin security contract", () => {
     expect(middleware).toContain('"Content-Security-Policy"')
     expect(middleware).toContain('"X-Content-Type-Options", "nosniff"')
     expect(middleware).toContain('"X-Frame-Options", "DENY"')
+    expect(middleware).toContain('"Referrer-Policy", "no-referrer"')
+    expect(middleware).not.toContain("unsafe-eval")
+  })
+
+  test("admin router does not require Referer to complete mutations", async () => {
+    expect(await source("src/app.tsx")).toContain("singleFlight={false}")
+    const users = await source("src/routes/users/index.tsx")
+    expect(users).toContain("adminResponse(")
+    expect(users).toContain("submission.error")
+    expect(users).not.toContain("return json(")
   })
 
   test("contains no raw support lookup endpoint", async () => {

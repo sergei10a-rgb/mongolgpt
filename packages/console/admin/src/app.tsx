@@ -8,6 +8,8 @@ export default function App() {
   return (
     <Router
       explicitLinks={true}
+      // Single-flight requires a Referer header, which our no-referrer policy intentionally omits.
+      singleFlight={false}
       root={(props) => (
         <MetaProvider>
           <Title>MongolGPT удирдлага</Title>

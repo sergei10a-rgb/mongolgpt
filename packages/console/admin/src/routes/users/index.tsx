@@ -1,27 +1,27 @@
 import { Title } from "@solidjs/meta"
-import { A, action, createAsync, json, query, useSearchParams, useSubmission } from "@solidjs/router"
+import { A, action, createAsync, query, useSearchParams, useSubmission } from "@solidjs/router"
 import { getRequestEvent } from "solid-js/web"
 import { For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { changeAdminAccountStatus, listAdminUsers } from "~/lib/admin-users"
+import { adminResponse, adminResponseError } from "~/lib/admin-response"
 
 export const adminUsersQuery = query(
   async (input: { q?: string; status?: string; cursor?: string; limit?: number }) => {
     "use server"
-    return listAdminUsers(getPlatformAdminContext(), input)
+    return adminResponse(() => listAdminUsers(getPlatformAdminContext(), input))
   },
   "admin.users.list",
 )
 
 export const changeAccountStatusAction = action(async (form: FormData) => {
   "use server"
-  const event = getRequestEvent()
-  if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
-  return json(
-    await changeAdminAccountStatus(getPlatformAdminContext(), event.request, Object.fromEntries(form.entries())),
-    { revalidate: adminUsersQuery.key },
-  )
+  return adminResponse(async () => {
+    const event = getRequestEvent()
+    if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
+    return changeAdminAccountStatus(getPlatformAdminContext(), event.request, Object.fromEntries(form.entries()))
+  })
 }, "admin.users.status")
 
 export default function AdminUsersPage() {
@@ -71,9 +71,15 @@ export default function AdminUsersPage() {
                     role={result().ok ? "status" : "alert"}
                     aria-live="polite"
                   >
-                    {result().message}
+                    {result().message || adminResponseError}
                   </p>
                 )}
+              </Show>
+
+              <Show when={submission.error}>
+                <p data-component="action-message" data-outcome="failure" role="alert">
+                  {adminResponseError}
+                </p>
               </Show>
 
               <form method="get" data-component="user-filters" aria-label="Хэрэглэгч шүүх">
