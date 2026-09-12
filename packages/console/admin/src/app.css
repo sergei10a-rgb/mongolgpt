@@ -460,6 +460,12 @@ h2 {
   white-space: nowrap;
 }
 
+[data-component="finance-status"] strong[data-report-period] {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 [data-component="status-band"] > div {
   min-width: 0;
   display: grid;
@@ -1201,6 +1207,14 @@ td[data-support-subject] code {
   [data-component="support-actions"] > form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+td[data-audit-action] strong {
+  display: block;
+  max-width: 260px;
+  margin-bottom: 4px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 td[data-audit-action] code,

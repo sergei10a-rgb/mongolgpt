@@ -1,4 +1,6 @@
 import { Title } from "@solidjs/meta"
+import { formatAdminDate } from "~/lib/admin-date"
+import { adminPlanLabel, adminPaymentStatusLabel } from "~/lib/admin-labels"
 import { A, createAsync, query, useSearchParams } from "@solidjs/router"
 import { For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
@@ -533,27 +535,11 @@ function subscriptionLabel(status: string) {
 }
 
 function paymentStatusLabel(status: string) {
-  return (
-    {
-      created: "Үүссэн",
-      pending: "Хүлээгдэж буй",
-      paid: "Төлөгдсөн",
-      failed: "Амжилтгүй",
-      expired: "Хугацаа дууссан",
-      cancelled: "Цуцлагдсан",
-      refunded: "Буцаагдсан",
-    }[status] ?? `Тодорхойгүй (${status})`
-  )
+  return adminPaymentStatusLabel(status)
 }
 
 function planLabel(plan: string) {
-  return (
-    {
-      basic: "Basic",
-      pro: "Pro",
-      max: "Max",
-    }[plan] ?? plan
-  )
+  return adminPlanLabel(plan)
 }
 
 function formatRange(start: string, end: string) {
@@ -579,10 +565,5 @@ function formatNumber(value: number) {
 }
 
 function formatDate(value: string | number | null) {
-  if (!value) return "-"
-  return new Intl.DateTimeFormat("mn-MN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Ulaanbaatar",
-  }).format(new Date(value))
+  return formatAdminDate(value)
 }

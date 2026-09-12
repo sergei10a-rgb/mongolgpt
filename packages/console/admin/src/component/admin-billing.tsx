@@ -1,4 +1,6 @@
 import { A, action, useSubmission } from "@solidjs/router"
+import { formatAdminDate } from "~/lib/admin-date"
+import { adminPlanLabel, adminPaymentStatusLabel } from "~/lib/admin-labels"
 import { For, Show } from "solid-js"
 import { getRequestEvent } from "solid-js/web"
 import type { FinanceMarginUnavailableReason } from "@mongolgpt/console-core/finance-reporting.js"
@@ -310,7 +312,7 @@ export function AdminBillingView(props: { data: AdminBillingData; recoveries: Ad
           </div>
           <div>
             <span>Тайлангийн хугацаа</span>
-            <strong>
+            <strong data-report-period>
               {formatDate(props.data.period.start)} - {formatDate(props.data.period.end)}
             </strong>
           </div>
@@ -628,11 +630,7 @@ function formatNumber(value: number) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("mn-MN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Ulaanbaatar",
-  }).format(new Date(value))
+  return formatAdminDate(value)
 }
 
 function marginDetail(margin: AdminBillingData["finance"]["margin"]) {
@@ -657,27 +655,11 @@ function paymentProviderLabel(provider: string | null) {
 }
 
 function planLabel(plan: string | null) {
-  return (
-    {
-      basic: "Basic",
-      pro: "Pro",
-      max: "Max",
-    }[plan ?? ""] ?? "-"
-  )
+  return adminPlanLabel(plan)
 }
 
 function paymentStatusLabel(status: string) {
-  return (
-    {
-      created: "Үүссэн",
-      pending: "Хүлээгдэж буй",
-      paid: "Төлөгдсөн",
-      failed: "Амжилтгүй",
-      expired: "Хугацаа дууссан",
-      cancelled: "Цуцлагдсан",
-      refunded: "Буцаасан",
-    }[status] ?? `Тодорхойгүй төлөв (${status})`
-  )
+  return adminPaymentStatusLabel(status)
 }
 
 export function paymentRecoveryDetailURL(recoveryID: string) {

@@ -1,4 +1,5 @@
-export function formatAdminDate(value: string) {
+export function formatAdminDate(value: Date | string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") return "-"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "Тодорхойгүй огноо"
   const parts = Object.fromEntries(

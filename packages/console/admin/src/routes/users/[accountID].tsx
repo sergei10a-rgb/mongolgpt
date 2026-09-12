@@ -1,4 +1,6 @@
 import { Title } from "@solidjs/meta"
+import { formatAdminDate } from "~/lib/admin-date"
+import { adminPlanLabel, adminPaymentStatusLabel } from "~/lib/admin-labels"
 import { A, createAsync, query, useParams } from "@solidjs/router"
 import { For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
@@ -139,8 +141,8 @@ export default function AdminUserDetailPage() {
                               <h2 id="workspace-title">Оролцож буй ажлын орон зай</h2>
                             </div>
                             <span>
-                              Basic {formatNumber(account.totals.plans.basic)} · Pro{" "}
-                              {formatNumber(account.totals.plans.pro)} · Max {formatNumber(account.totals.plans.max)}
+                              Үндсэн {formatNumber(account.totals.plans.basic)} · Про{" "}
+                              {formatNumber(account.totals.plans.pro)} · Дээд {formatNumber(account.totals.plans.max)}
                             </span>
                           </div>
                           <div data-component="table-scroll">
@@ -438,21 +440,11 @@ function subscriptionLabel(status: string) {
 }
 
 function paymentStatusLabel(status: string) {
-  return (
-    {
-      created: "Үүссэн",
-      pending: "Хүлээгдэж буй",
-      paid: "Төлөгдсөн",
-      failed: "Амжилтгүй",
-      expired: "Хугацаа дууссан",
-      cancelled: "Цуцлагдсан",
-      refunded: "Буцаагдсан",
-    }[status] ?? status
-  )
+  return adminPaymentStatusLabel(status)
 }
 
 function planLabel(plan: string) {
-  return { basic: "Basic", pro: "Pro", max: "Max" }[plan] ?? plan
+  return adminPlanLabel(plan)
 }
 
 function renderLimits(
@@ -510,10 +502,5 @@ function formatNumber(value: number) {
 }
 
 function formatDate(value: string | null) {
-  if (!value) return "-"
-  return new Intl.DateTimeFormat("mn-MN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Ulaanbaatar",
-  }).format(new Date(value))
+  return formatAdminDate(value)
 }

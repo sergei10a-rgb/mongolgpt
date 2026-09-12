@@ -1,4 +1,6 @@
 import { Title } from "@solidjs/meta"
+import { formatAdminDate } from "~/lib/admin-date"
+import { adminPaymentStatusLabel } from "~/lib/admin-labels"
 import { A, createAsync, query, useParams, useSubmission } from "@solidjs/router"
 import { ErrorBoundary, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
@@ -112,7 +114,7 @@ export default function AdminPaymentRecoveryDetailPage() {
                             <DetailItem label="Гадаад үйл явдлын ID" value={recovery.externalEventID} />
                             <DetailItem label="Гадаад нэхэмжлэхийн ID" value={recovery.externalInvoiceID} />
                             <DetailItem label="Гадаад төлбөрийн ID" value={recovery.externalPaymentID ?? null} />
-                            <DetailItem label="Үйл явдлын төрөл" value={recovery.eventType ?? null} />
+                            <DetailItem label="Үйл явдлын төрөл" value={adminPaymentStatusLabel(recovery.eventType)} />
                             <DetailItem
                               label="Дүн"
                               value={
@@ -202,12 +204,7 @@ function DetailItem(props: { label: string; value: string | null; code?: boolean
 }
 
 function formatDate(value: string | null) {
-  if (!value) return "-"
-  return new Intl.DateTimeFormat("mn-MN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Ulaanbaatar",
-  }).format(new Date(value))
+  return formatAdminDate(value)
 }
 
 function formatNumber(value: number) {

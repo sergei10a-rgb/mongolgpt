@@ -3,6 +3,7 @@ import type { PlatformAdminContext } from "~/lib/admin-context"
 import type { SystemReadinessReport, SystemReadinessState } from "~/lib/system-readiness"
 import type { AdminProviderHealthItem, AdminProviderHealthState } from "~/lib/admin-provider-health.server"
 import { formatAdminDate } from "~/lib/admin-date"
+import { adminAuditActionLabel } from "~/lib/admin-labels"
 import { AdminHeader, roleLabel } from "./admin-header"
 
 export interface AdminOverviewData {
@@ -199,7 +200,8 @@ export function AdminOverviewView(props: { data: AdminOverviewData }) {
                   >
                     {(entry) => (
                       <tr>
-                        <td>
+                        <td data-audit-action>
+                          <strong>{adminAuditActionLabel(entry.action)}</strong>
                           <code>{entry.action}</code>
                         </td>
                         <td>{entry.actor}</td>

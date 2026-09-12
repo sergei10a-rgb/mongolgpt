@@ -1,4 +1,5 @@
 import { Title } from "@solidjs/meta"
+import { formatAdminDate } from "~/lib/admin-date"
 import { action, createAsync, query, useSubmission } from "@solidjs/router"
 import { getRequestEvent } from "solid-js/web"
 import { For, Show } from "solid-js"
@@ -298,9 +299,5 @@ function Loading() {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("mn-MN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Ulaanbaatar",
-  }).format(new Date(value))
+  return formatAdminDate(value)
 }

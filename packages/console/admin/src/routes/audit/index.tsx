@@ -1,4 +1,6 @@
 import { Title } from "@solidjs/meta"
+import { formatAdminDate } from "~/lib/admin-date"
+import { adminAuditActionLabel, adminAuditTargetLabel } from "~/lib/admin-labels"
 import { A, createAsync, query, useSearchParams } from "@solidjs/router"
 import { For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
@@ -115,11 +117,12 @@ export default function AdminAuditPage() {
                         {(entry) => (
                           <tr>
                             <td data-audit-action>
+                              <strong>{adminAuditActionLabel(entry.action)}</strong>
                               <code title={entry.action}>{entry.action}</code>
                             </td>
                             <td>{entry.actor}</td>
                             <td data-audit-target>
-                              <span>{entry.targetType || "-"}</span>
+                              <span>{adminAuditTargetLabel(entry.targetType)}</span>
                               <code title={entry.targetID ?? undefined}>{entry.targetID || "-"}</code>
                             </td>
                             <td>
@@ -175,9 +178,5 @@ function outcomeLabel(outcome: string) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("mn-MN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Ulaanbaatar",
-  }).format(new Date(value))
+  return formatAdminDate(value)
 }
