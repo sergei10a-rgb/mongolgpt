@@ -55,7 +55,10 @@ export interface AdminDeploymentDiffSummary {
   operations: Record<string, number>
 }
 
-export function inspectAdminDeploymentDiff(value: unknown): AdminDeploymentDiffSummary {
+export function inspectAdminDeploymentDiff(
+  value: unknown,
+  options: { allowAccessCookieMigration?: boolean } = {},
+): AdminDeploymentDiffSummary {
   if (!Array.isArray(value)) {
     throw new AdminDeploymentDiffError("SST admin diff нь JSON жагсаалт биш байна.")
   }
@@ -77,7 +80,16 @@ export function inspectAdminDeploymentDiff(value: unknown): AdminDeploymentDiffS
     const parsed = parseUrn(urn)
     if (
       !isAllowedAdminOperation(parsed.type, parsed.name, type, op) ||
-      !isAllowedAdminChange(parsed.type, parsed.name, type, op, entry?.detailedDiff)
+      !isAllowedAdminChange(
+        parsed.type,
+        parsed.name,
+        type,
+        op,
+        entry?.detailedDiff,
+        options.allowAccessCookieMigration === true &&
+          urn ===
+            "urn:pulumi:dev::mongolgpt-admin::cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication::AdminAccessApplication",
+      )
     ) {
       if (rejected.length < 12) rejected.push(`${op} ${type} ${parsed.name}`)
       continue
@@ -103,13 +115,31 @@ function isAllowedAdminOperation(urnType: string, name: string, type: string, op
   )
 }
 
-function isAllowedAdminChange(urnType: string, name: string, type: string, op: string, detailedDiff: unknown) {
+function isAllowedAdminChange(
+  urnType: string,
+  name: string,
+  type: string,
+  op: string,
+  detailedDiff: unknown,
+  allowAccessCookieMigration: boolean,
+) {
   if (type === "pulumi:pulumi:Stack") {
     if (name !== "mongolgpt-admin-dev") return false
     return op === "create" || (op === "update" && isAdminStackOutputDiff(detailedDiff))
   }
 
   if (type === "sst:sst:LinkRef") return op === "create" && createOnlyLinkRefs.has(name)
+
+  if (name === "AdminAccessApplication" && op === "update") {
+    const diff = record(detailedDiff)
+    return (
+      allowAccessCookieMigration &&
+      type === "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication" &&
+      !!diff &&
+      Object.keys(diff).length === 1 &&
+      record(diff.sameSiteCookieAttribute)?.kind === "update"
+    )
+  }
 
   const exact = exactResources.get(name)
   if (exact) return exact.test(type) && (!createOnlyResources.has(name) || op === "create")

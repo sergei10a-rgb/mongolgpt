@@ -10,7 +10,13 @@ try {
   const file = Bun.file(path)
   if (!(await file.exists())) throw new AdminDeploymentDiffError("SST admin diff JSON файл олдсонгүй.")
   if (file.size > 16 * 1024 * 1024) throw new AdminDeploymentDiffError("SST admin diff JSON файл хэт том байна.")
-  const summary = inspectAdminDeploymentDiff(await file.json())
+  const migration = process.env.MONGOLGPT_ADMIN_ACCESS_COOKIE_MIGRATION ?? "none"
+  if (migration !== "none" && migration !== "strict-to-lax") {
+    throw new AdminDeploymentDiffError("Admin Access cookie migration сонголт буруу байна.")
+  }
+  const summary = inspectAdminDeploymentDiff(await file.json(), {
+    allowAccessCookieMigration: migration === "strict-to-lax",
+  })
   const operations = Object.entries(summary.operations)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([operation, count]) => `${operation}=${count}`)

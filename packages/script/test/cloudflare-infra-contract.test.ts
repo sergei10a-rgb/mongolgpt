@@ -915,6 +915,16 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(parsed.concurrency).toEqual({ group: "cloudflare-deploy-dev", "cancel-in-progress": false })
     expect(parsed.jobs.deploy.environment).toBe("dev")
     expect(job.env?.MONGOLGPT_AUTH_EMAIL_DOMAINS).toBe("${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}")
+    expect(job.env?.MONGOLGPT_ADMIN_ACCESS_COOKIE_MIGRATION).toBe("${{ inputs.access_cookie_migration }}")
+    expect(parsed.on.workflow_dispatch).toMatchObject({
+      inputs: {
+        access_cookie_migration: {
+          type: "choice",
+          default: "none",
+          options: ["none", "strict-to-lax"],
+        },
+      },
+    })
     expect(job.condition).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
     expect(parsed.env.MONGOLGPT_ENABLE_HOSTED_SERVICES).toBe("true")
     expect(parsed.env.MONGOLGPT_DEPLOY_ADMIN_ONLY).toBe("true")
@@ -1450,7 +1460,7 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(deploymentSource).toContain("optionsPreflightBypass: false")
     expect(deploymentSource).toContain("enableBindingCookie: true")
     expect(deploymentSource).toContain("httpOnlyCookieAttribute: true")
-    expect(deploymentSource).toContain('sameSiteCookieAttribute: "strict"')
+    expect(deploymentSource).toContain('sameSiteCookieAttribute: "lax"')
     expect(deploymentSource).toContain('new sst.Linkable("AdminAccessConfig"')
     for (const resource of [
       "database",

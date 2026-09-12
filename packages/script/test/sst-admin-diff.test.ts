@@ -84,9 +84,7 @@ describe("admin-only SST diff boundary", () => {
       changes: 3,
       operations: { "create-replacement": 1, replace: 1, "delete-replaced": 1 },
     })
-    expect(() => inspectAdminDeploymentDiff([change(builderType, "AdminBuilder", "delete")])).toThrow(
-      "AdminBuilder",
-    )
+    expect(() => inspectAdminDeploymentDiff([change(builderType, "AdminBuilder", "delete")])).toThrow("AdminBuilder")
     expect(() =>
       inspectAdminDeploymentDiff([change("command:local:Command", "AdminBuilder", "create-replacement")]),
     ).toThrow("AdminBuilder")
@@ -150,6 +148,41 @@ describe("admin-only SST diff boundary", () => {
     expect(() => inspectAdminDeploymentDiff([change("pulumi:providers:pulumi-nodejs", "default", "update")])).toThrow(
       "default",
     )
+  })
+
+  test("an explicit dev cookie migration allows only the SameSite attribute update", () => {
+    const entry = {
+      ...change(
+        "cloudflare:index/zeroTrustAccessApplication:ZeroTrustAccessApplication",
+        "AdminAccessApplication",
+        "update",
+      ),
+      detailedDiff: { sameSiteCookieAttribute: { kind: "update", inputDiff: true } },
+    }
+    expect(() => inspectAdminDeploymentDiff([entry])).toThrow("AdminAccessApplication")
+    expect(inspectAdminDeploymentDiff([entry], { allowAccessCookieMigration: true })).toEqual({
+      changes: 1,
+      operations: { update: 1 },
+    })
+    for (const rejected of [
+      { ...entry, urn: entry.urn.replace(":dev::", ":production::") },
+      { ...entry, urn: entry.urn.replace("::mongolgpt-admin::", "::mongolgpt::") },
+      { ...entry, type: "cloudflare:index/other:Other" },
+      { ...entry, op: "replace" },
+      { ...entry, op: "delete" },
+      { ...entry, detailedDiff: undefined },
+      { ...entry, detailedDiff: {} },
+      { ...entry, detailedDiff: { sameSiteCookieAttribute: { kind: "delete" } } },
+      { ...entry, detailedDiff: { sameSiteCookieAttribute: { kind: "update-replace" } } },
+      { ...entry, detailedDiff: { ...entry.detailedDiff, "mfaConfig.mfaDisabled": { kind: "update" } } },
+      { ...entry, detailedDiff: { ...entry.detailedDiff, policies: { kind: "update" } } },
+      { ...entry, detailedDiff: { ...entry.detailedDiff, domain: { kind: "update" } } },
+      { ...entry, detailedDiff: { ...entry.detailedDiff, enableBindingCookie: { kind: "update" } } },
+    ]) {
+      expect(() => inspectAdminDeploymentDiff([rejected], { allowAccessCookieMigration: true })).toThrow(
+        AdminDeploymentDiffError,
+      )
+    }
   })
 
   test("rejects an unexpectedly large plan", () => {

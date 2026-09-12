@@ -7,6 +7,14 @@ on:
         description: "DEPLOY DEV ADMIN dev.mgpt.mn гэж яг бичнэ"
         required: true
         type: string
+      access_cookie_migration:
+        description: "Зөвшөөрсөн dev Access cookie засвар: Strict-ээс Lax"
+        required: true
+        type: choice
+        default: none
+        options:
+          - none
+          - strict-to-lax
 
 concurrency:
   group: cloudflare-deploy-dev
@@ -44,6 +52,7 @@ jobs:
       MONGOLGPT_AUTH_EMAIL_DOMAINS: ${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}
       CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+      MONGOLGPT_ADMIN_ACCESS_COOKIE_MIGRATION: ${{ inputs.access_cookie_migration }}
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
     steps:
       - name: Validate exact dev admin confirmation
