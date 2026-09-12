@@ -3,6 +3,8 @@ import { resolve } from "node:path"
 import type { PlatformAdminContext } from "../src/lib/admin-context"
 import { AdminPlanMutationInput, type AdminPlansDependencies, mutateAdminPlans } from "../src/lib/admin-plans"
 import { requirePlatformAdminPermission } from "../src/lib/admin-auth"
+import { Database } from "bun:sqlite"
+import { createSqliteDatabase, sqliteBatch } from "../../core/test/fixtures/sqlite-batch"
 
 const limits = {
   free: { promoTokens: 0, dailyRequests: 20, dailyRequestsFallback: 5 },
@@ -72,35 +74,35 @@ function updateRequest() {
   }
 }
 
-function dependencies(events: string[], overrides: Partial<AdminPlansDependencies> = {}): AdminPlansDependencies {
-  const tx = {} as never
-  return {
-    transaction: (async (callback) => callback(tx)) as AdminPlansDependencies["transaction"],
-    getRuntimeLimitsWithDb: (async () => ({
+async function fixture() {
+  const sqlite = new Database(":memory:")
+  const directory = resolve(import.meta.dir, "../../core/migrations-d1")
+  const paths: string[] = []
+  for await (const path of new Bun.Glob("*/migration.sql").scan({ cwd: directory, absolute: true })) paths.push(path)
+  for (const path of paths.sort()) sqlite.exec(await Bun.file(path).text())
+  sqlite
+    .query("insert into platform_admin(id,email,access_subject,role,status) values (?,?,?,'owner','active')")
+    .run(context.id, context.email, context.subject)
+  const db = createSqliteDatabase(sqlite)
+  const dependencies: AdminPlansDependencies = {
+    bootstrap: () => ({
       ...limits,
-      free: { ...limits.free, checkHeaders: { "x-mongolgpt-proxy": "test" } },
       lite: legacyLite,
-    })) as AdminPlansDependencies["getRuntimeLimitsWithDb"],
-    createVersionWithDb: (async () => {
-      events.push("create")
-      return { id: "01ARZ3NDEKTSV4RRFFQ69G5FAV", revision: 1 }
-    }) as unknown as AdminPlansDependencies["createVersionWithDb"],
-    cloneVersionForRollbackWithDb: (async () => {
-      events.push("clone")
-      return { id: "01ARZ3NDEKTSV4RRFFQ69G5FAV", revision: 1 }
-    }) as unknown as AdminPlansDependencies["cloneVersionForRollbackWithDb"],
-    activateVersionWithDb: (async () => {
-      events.push("activate")
-      return { activeVersionID: "01ARZ3NDEKTSV4RRFFQ69G5FAV", revision: 1 }
-    }) as AdminPlansDependencies["activateVersionWithDb"],
-    writeAdminAuditWithDb: (async () => {
-      events.push("success-audit")
-    }) as AdminPlansDependencies["writeAdminAuditWithDb"],
-    writeAdminAudit: (async () => {
-      events.push("failure-audit")
-    }) as AdminPlansDependencies["writeAdminAudit"],
-    ...overrides,
+      free: { ...limits.free, checkHeaders: { "x-proxy": "private-test" } },
+    }),
+    batch: sqliteBatch(async (callback) => {
+      sqlite.exec("BEGIN")
+      try {
+        const result = await callback(db)
+        sqlite.exec("COMMIT")
+        return result
+      } catch (error) {
+        sqlite.exec("ROLLBACK")
+        throw error
+      }
+    }),
   }
+  return { sqlite, dependencies }
 }
 
 describe("admin plan management", () => {
@@ -166,80 +168,95 @@ describe("admin plan management", () => {
     )
   })
 
-  test("runs update in create, activate, success-audit order inside one transaction", async () => {
-    const events: string[] = []
-    let stored: unknown
-    const result = await mutateAdminPlans(
-      context,
-      request(),
-      updateRequest(),
-      dependencies(events, {
-        createVersionWithDb: (async (_tx, input) => {
-          stored = input.limits
-          events.push("create")
-          return { id: "01ARZ3NDEKTSV4RRFFQ69G5FAV", revision: 1 }
-        }) as AdminPlansDependencies["createVersionWithDb"],
-      }),
-    )
-    expect(result).toMatchObject({ ok: true, versionID: "01ARZ3NDEKTSV4RRFFQ69G5FAV", revision: 1 })
-    expect(stored).toMatchObject({ lite: legacyLite })
-    expect(events).toEqual(["create", "activate", "success-audit"])
+  test("persists the version, activation and audit atomically without proxy secrets", async () => {
+    const { sqlite, dependencies } = await fixture()
+    try {
+      const result = await mutateAdminPlans(context, request(), updateRequest(), dependencies)
+      expect(result).toMatchObject({ ok: true, revision: 1 })
+      const version = sqlite
+        .query<{ id: string; limits: string }, []>("select id, limits from plan_config_version")
+        .get()!
+      expect(JSON.parse(version.limits)).toEqual({ ...limits, lite: legacyLite })
+      expect(version.limits).not.toContain("private-test")
+      expect(sqlite.query("select active_version_id,revision from plan_config_active").get()).toEqual({
+        active_version_id: version.id,
+        revision: 1,
+      })
+      expect(sqlite.query("select action,outcome,target_id from admin_audit_log").get()).toEqual({
+        action: "plans.update",
+        outcome: "success",
+        target_id: version.id,
+      })
+    } finally {
+      sqlite.close()
+    }
   })
 
-  test("runs rollback in clone, activate, success-audit order inside one transaction", async () => {
-    const events: string[] = []
-    const result = await mutateAdminPlans(
-      context,
-      request(),
-      {
-        operation: "rollback",
-        sourceVersionID: "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-        confirmation: "БУЦААХ",
-        expectedRevision: "0",
-        expectedActiveStateRevision: "none",
-        note: "Өмнөх тогтвортой хувилбар руу буцаалаа.",
-      },
-      dependencies(events),
-    )
-    expect(result).toMatchObject({ ok: true, versionID: "01ARZ3NDEKTSV4RRFFQ69G5FAV", revision: 1 })
-    expect(events).toEqual(["clone", "activate", "success-audit"])
+  test("rollback creates and activates a new immutable version", async () => {
+    const { sqlite, dependencies } = await fixture()
+    try {
+      const first = await mutateAdminPlans(context, request(), updateRequest(), dependencies)
+      if (!first.ok) throw new Error(first.message)
+      const before = sqlite.query("select * from plan_config_version").all()
+      const result = await mutateAdminPlans(
+        context,
+        request(),
+        {
+          operation: "rollback",
+          sourceVersionID: first.versionID,
+          confirmation: "БУЦААХ",
+          expectedRevision: "1",
+          expectedActiveStateRevision: "1",
+          note: "Өмнөх тогтвортой хувилбар руу буцаалаа.",
+        },
+        dependencies,
+      )
+      expect(result).toMatchObject({ ok: true, revision: 2 })
+      expect(sqlite.query("select * from plan_config_version where revision=1").all()).toEqual(before)
+      expect(sqlite.query("select source_version_id from plan_config_version where revision=2").get()).toEqual({
+        source_version_id: first.versionID,
+      })
+      expect(sqlite.query("select action,outcome from admin_audit_log order by id desc limit 1").get()).toEqual({
+        action: "plans.rollback",
+        outcome: "success",
+      })
+    } finally {
+      sqlite.close()
+    }
   })
 
-  test("does not report success when the transaction audit fails and records an external failure audit", async () => {
-    const events: string[] = []
-    const result = await mutateAdminPlans(
-      context,
-      request(),
-      updateRequest(),
-      dependencies(events, {
-        writeAdminAuditWithDb: (async () => {
-          events.push("success-audit")
-          throw new Error("audit unavailable")
-        }) as AdminPlansDependencies["writeAdminAuditWithDb"],
-      }),
-    )
-    expect(result).toMatchObject({ ok: false })
-    expect(result.message).toContain("Өөрчлөлт хийгдээгүй")
-    expect(events).toEqual(["create", "activate", "success-audit", "failure-audit"])
+  test("audit failure rolls back the version and activation and records a failure", async () => {
+    const { sqlite, dependencies } = await fixture()
+    try {
+      sqlite.exec(
+        "create trigger reject_audit before insert on admin_audit_log when NEW.outcome='success' begin select raise(abort,'synthetic audit failure'); end",
+      )
+      const result = await mutateAdminPlans(context, request(), updateRequest(), dependencies)
+      expect(result).toMatchObject({ ok: false })
+      expect(result.message).not.toContain("Өөрчлөлт хийгдээгүй")
+      expect(sqlite.query("select * from plan_config_version").all()).toEqual([])
+      expect(sqlite.query("select * from plan_config_active").all()).toEqual([])
+      expect(sqlite.query("select outcome from admin_audit_log").get()).toEqual({ outcome: "failure" })
+    } finally {
+      sqlite.close()
+    }
   })
 
   test("does not call plan primitives when origin, permission, or input validation is denied", async () => {
-    const originEvents: string[] = []
-    await mutateAdminPlans(
-      context,
-      request({ origin: "https://attacker.example" }),
-      updateRequest(),
-      dependencies(originEvents),
-    )
-    expect(originEvents).toEqual(["failure-audit"])
-
-    const permissionEvents: string[] = []
-    await mutateAdminPlans({ ...context, permissions: [] }, request(), updateRequest(), dependencies(permissionEvents))
-    expect(permissionEvents).toEqual(["failure-audit"])
-
-    const inputEvents: string[] = []
-    await mutateAdminPlans(context, request(), { operation: "update" }, dependencies(inputEvents))
-    expect(inputEvents).toEqual(["failure-audit"])
+    const { sqlite, dependencies } = await fixture()
+    try {
+      await mutateAdminPlans(context, request({ origin: "https://attacker.example" }), updateRequest(), dependencies)
+      await mutateAdminPlans({ ...context, permissions: [] }, request(), updateRequest(), dependencies)
+      await mutateAdminPlans(context, request(), { operation: "update" }, dependencies)
+      expect(sqlite.query("select * from plan_config_version").all()).toEqual([])
+      expect(sqlite.query("select outcome from admin_audit_log").all()).toEqual([
+        { outcome: "denied" },
+        { outcome: "denied" },
+        { outcome: "denied" },
+      ])
+    } finally {
+      sqlite.close()
+    }
   })
 
   test("keeps mutation ordering, bounded history, and secret-free contracts", async () => {
@@ -251,12 +268,11 @@ describe("admin plan management", () => {
 
     expect(plans).toContain('requirePlatformAdminPermission(context, "plans.manage")')
     expect(plans).toContain("requireSameOriginAdminMutation(request)")
-    expect(plans).toContain("transaction: Database.transaction")
-    expect(plans).toContain("getRuntimeLimitsWithDb: PlanConfig.getRuntimeLimitsWithDb")
-    expect(plans).toContain("dependencies.createVersionWithDb(tx")
-    expect(plans).toContain("dependencies.cloneVersionForRollbackWithDb(tx")
-    expect(plans).toContain("dependencies.activateVersionWithDb(tx")
-    expect(plans).toContain("dependencies.writeAdminAuditWithDb(tx")
+    expect(plans).not.toContain("Database.transaction")
+    expect(plans).toContain("dependencies.batch ?? Database.batch")
+    expect(plans).toContain("paymentBatchGuard")
+    expect(plans).toContain("PlatformAdminTable.access_subject")
+    expect(plans).toContain("adminAuditQuery(db")
     expect(plans).toContain(".limit(20)")
     expect(plans).toContain("stripCheckHeaders")
     expect(plans).not.toContain("metadata: { limits")

@@ -1,19 +1,28 @@
 import { z } from "zod"
-import { Database, desc } from "@mongolgpt/console-core/drizzle/index.js"
+import { ulid } from "ulid"
+import {
+  Database,
+  and,
+  desc,
+  eq,
+  exists,
+  inArray,
+  isNull,
+  notExists,
+  sql,
+} from "@mongolgpt/console-core/drizzle/index.js"
 import {
   PlanConfig,
   PlanConfigConflictError,
   PlanConfigInvalidActiveError,
 } from "@mongolgpt/console-core/plan-config.js"
-import { PlanConfigVersionTable } from "@mongolgpt/console-core/schema/plan-config.sql.js"
+import { PlanConfigActiveTable, PlanConfigVersionTable } from "@mongolgpt/console-core/schema/plan-config.sql.js"
+import { PlatformAdminRoles, PlatformAdminTable } from "@mongolgpt/console-core/schema/admin.sql.js"
+import { hasPlatformAdminPermission } from "@mongolgpt/console-core/platform-admin.js"
+import { paymentBatchGuard } from "@mongolgpt/console-core/payment-ledger.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 import type { PlatformAdminContext } from "./admin-context"
-import {
-  AdminAuthorizationError,
-  requirePlatformAdminPermission,
-  writeAdminAudit,
-  writeAdminAuditWithDb,
-} from "./admin-auth"
+import { AdminAuthorizationError, requirePlatformAdminPermission, adminAuditQuery } from "./admin-auth"
 import { AdminMutationRequestError, requireSameOriginAdminMutation } from "./admin-mutation"
 
 const safeInteger = (maximum: number) => z.coerce.number().finite().int().safe().nonnegative().max(maximum)
@@ -133,23 +142,8 @@ const rollbackInput = z
 export const AdminPlanMutationInput = z.discriminatedUnion("operation", [updateInput, rollbackInput])
 
 export interface AdminPlansDependencies {
-  transaction: typeof Database.transaction
-  getRuntimeLimitsWithDb: typeof PlanConfig.getRuntimeLimitsWithDb
-  createVersionWithDb: typeof PlanConfig.createVersionWithDb
-  cloneVersionForRollbackWithDb: typeof PlanConfig.cloneVersionForRollbackWithDb
-  activateVersionWithDb: typeof PlanConfig.activateVersionWithDb
-  writeAdminAuditWithDb: typeof writeAdminAuditWithDb
-  writeAdminAudit: typeof writeAdminAudit
-}
-
-const productionDependencies: AdminPlansDependencies = {
-  transaction: Database.transaction,
-  getRuntimeLimitsWithDb: PlanConfig.getRuntimeLimitsWithDb,
-  createVersionWithDb: PlanConfig.createVersionWithDb,
-  cloneVersionForRollbackWithDb: PlanConfig.cloneVersionForRollbackWithDb,
-  activateVersionWithDb: PlanConfig.activateVersionWithDb,
-  writeAdminAuditWithDb,
-  writeAdminAudit,
+  batch?: typeof Database.batch
+  bootstrap?: () => ReturnType<typeof Subscription.getBootstrapLimits>
 }
 
 export async function listAdminPlans(context: PlatformAdminContext) {
@@ -205,38 +199,138 @@ export async function mutateAdminPlans(
   context: PlatformAdminContext,
   request: Request,
   raw: unknown,
-  dependencies: AdminPlansDependencies = productionDependencies,
+  dependencies: AdminPlansDependencies = {},
 ) {
+  const batch = dependencies.batch ?? Database.batch
   const operation = rawOperation(raw)
   try {
     requireSameOriginAdminMutation(request)
     const admin = requirePlatformAdminPermission(context, "plans.manage")
     const input = AdminPlanMutationInput.parse(nestPlanInput(raw))
-    const result = await dependencies.transaction(async (tx) => {
-      const version = await (async () => {
-        if (input.operation === "update") {
-          const currentLimits = await dependencies.getRuntimeLimitsWithDb(tx)
-          return dependencies.createVersionWithDb(tx, {
-            limits: inputLimits(input, currentLimits.lite),
-            createdBy: admin.id,
-            note: input.note,
-            expectedRevision: input.expectedRevision,
-          })
-        }
-        return dependencies.cloneVersionForRollbackWithDb(tx, {
-          sourceVersionID: input.sourceVersionID,
-          createdBy: admin.id,
-          note: input.note,
-          expectedRevision: input.expectedRevision,
-        })
-      })()
-      const activation = await dependencies.activateVersionWithDb(tx, {
-        versionID: version.id,
-        updatedBy: admin.id,
-        expectedStateRevision: input.expectedActiveStateRevision,
-      })
-      try {
-        await dependencies.writeAdminAuditWithDb(tx, {
+    const actor = and(
+      eq(PlatformAdminTable.id, admin.id),
+      eq(PlatformAdminTable.email, admin.email),
+      eq(PlatformAdminTable.access_subject, admin.subject),
+      eq(PlatformAdminTable.status, "active"),
+      isNull(PlatformAdminTable.timeDeleted),
+      inArray(
+        PlatformAdminTable.role,
+        PlatformAdminRoles.filter((role) => hasPlatformAdminPermission(role, "plans.manage")),
+      ),
+    )
+    const snapshot = await batch((db) => [
+      db.select().from(PlanConfigVersionTable).orderBy(desc(PlanConfigVersionTable.revision)).limit(1),
+      db.select().from(PlanConfigActiveTable).where(eq(PlanConfigActiveTable.id, 1)).limit(1),
+      db
+        .select()
+        .from(PlanConfigVersionTable)
+        .where(eq(PlanConfigVersionTable.id, input.operation === "rollback" ? input.sourceVersionID : ""))
+        .limit(1),
+      db.select({ id: PlatformAdminTable.id }).from(PlatformAdminTable).where(actor).limit(1),
+      // D1 batch results collapse duplicate join column names; keep each table's result separate.
+      db
+        .select()
+        .from(PlanConfigVersionTable)
+        .where(
+          eq(
+            PlanConfigVersionTable.id,
+            db
+              .select({ id: PlanConfigActiveTable.active_version_id })
+              .from(PlanConfigActiveTable)
+              .where(eq(PlanConfigActiveTable.id, 1)),
+          ),
+        )
+        .limit(1),
+    ])
+    if (!snapshot[3][0])
+      throw new AdminAuthorizationError("forbidden", "Төлөвлөгөө өөрчлөх админы эрх хүрэлцэхгүй байна.")
+    const current = snapshot[1][0] ? { state: snapshot[1][0], version: snapshot[4][0] } : undefined
+    if (
+      (snapshot[0][0]?.revision ?? 0) !== input.expectedRevision ||
+      (current?.state.revision ?? null) !== input.expectedActiveStateRevision ||
+      input.expectedRevision >= 2_147_483_647 ||
+      (input.expectedActiveStateRevision ?? 0) >= 2_147_483_647
+    ) {
+      throw new PlanConfigConflictError("Төлөвлөгөөний хувилбар өөрчлөгдсөн байна")
+    }
+    const source = input.operation === "rollback" ? snapshot[2][0] : current?.version
+    if (!source && (input.operation === "rollback" || current))
+      throw new PlanConfigInvalidActiveError("Төлөвлөгөөний хувилбар олдсонгүй")
+    const sourceLimits = source
+      ? parseStoredPlanLimits(source.limits)
+      : PlanConfig.StoredLimitsSchema.parse(
+          stripCheckHeaders((dependencies.bootstrap ?? Subscription.getBootstrapLimits)()),
+        )
+    const version = {
+      id: ulid(),
+      revision: input.expectedRevision + 1,
+      limits: input.operation === "update" ? inputLimits(input, sourceLimits.lite) : sourceLimits,
+      created_by: admin.id,
+      source_version_id: input.operation === "rollback" ? input.sourceVersionID : null,
+      note: input.note,
+    }
+    const activation = {
+      id: 1,
+      active_version_id: version.id,
+      revision: (input.expectedActiveStateRevision ?? 0) + 1,
+      updated_by: admin.id,
+      time_updated: new Date(Math.max(Date.now(), (current?.state.time_updated.getTime() ?? 0) + 1)),
+    }
+    await batch((db) => {
+      const sameActive = current
+        ? and(
+            eq(PlanConfigActiveTable.id, 1),
+            eq(PlanConfigActiveTable.active_version_id, current.state.active_version_id),
+            eq(PlanConfigActiveTable.revision, current.state.revision),
+            eq(PlanConfigActiveTable.time_updated, current.state.time_updated),
+            eq(PlanConfigActiveTable.updated_by, current.state.updated_by),
+          )
+        : eq(PlanConfigActiveTable.id, 1)
+      return [
+        paymentBatchGuard(
+          db,
+          and(
+            exists(db.select({ id: PlatformAdminTable.id }).from(PlatformAdminTable).where(actor)),
+            sql`(select coalesce(max(${PlanConfigVersionTable.revision}), 0) from ${PlanConfigVersionTable}) = ${input.expectedRevision}`,
+            current
+              ? exists(db.select({ id: PlanConfigActiveTable.id }).from(PlanConfigActiveTable).where(sameActive))
+              : notExists(db.select({ id: PlanConfigActiveTable.id }).from(PlanConfigActiveTable).where(sameActive)),
+            source
+              ? exists(
+                  db
+                    .select({ id: PlanConfigVersionTable.id })
+                    .from(PlanConfigVersionTable)
+                    .where(
+                      and(eq(PlanConfigVersionTable.id, source.id), eq(PlanConfigVersionTable.limits, source.limits)),
+                    ),
+                )
+              : sql`1 = 1`,
+          ),
+        ),
+        db.insert(PlanConfigVersionTable).values(version),
+        paymentBatchGuard(db, sql`changes() = 1`),
+        current
+          ? db.update(PlanConfigActiveTable).set(activation).where(sameActive)
+          : db.insert(PlanConfigActiveTable).values(activation),
+        paymentBatchGuard(db, sql`changes() = 1`),
+        paymentBatchGuard(
+          db,
+          exists(
+            db
+              .select({ id: PlanConfigActiveTable.id })
+              .from(PlanConfigActiveTable)
+              .where(
+                and(
+                  eq(PlanConfigActiveTable.id, 1),
+                  eq(PlanConfigActiveTable.active_version_id, version.id),
+                  eq(PlanConfigActiveTable.revision, activation.revision),
+                  eq(PlanConfigActiveTable.updated_by, admin.id),
+                  eq(PlanConfigActiveTable.time_updated, activation.time_updated),
+                ),
+              ),
+          ),
+        ),
+        adminAuditQuery(db, {
           adminID: admin.id,
           actorEmail: admin.email,
           action: input.operation === "update" ? "plans.update" : "plans.rollback",
@@ -251,11 +345,8 @@ export async function mutateAdminPlans(
             revision: version.revision,
             active_state_revision: activation.revision,
           },
-        })
-      } catch (error) {
-        throw new AdminPlanAuditWriteError(error instanceof Error ? { cause: error } : undefined)
-      }
-      return { versionID: version.id, revision: version.revision }
+        }),
+      ]
     })
     return {
       ok: true as const,
@@ -263,27 +354,38 @@ export async function mutateAdminPlans(
         input.operation === "update"
           ? "Төлөвлөгөөний шинэ хувилбар идэвхжлээ."
           : "Сонгосон хувилбараас шинэ буцаалтын хувилбар үүсгэж идэвхжүүллээ.",
-      ...result,
+      versionID: version.id,
+      revision: version.revision,
     }
   } catch (error) {
     const failure = mutationFailure(error)
     try {
-      await dependencies.writeAdminAudit({
-        adminID: context.id,
-        actorEmail: context.email,
-        action: operation === "rollback" ? "plans.rollback" : "plans.update",
-        outcome: failure.outcome,
-        request,
-        targetType: "plan_config",
-        metadata: { operation, reason: failure.code },
-      })
+      await batch((db) => [
+        adminAuditQuery(db, {
+          adminID: context.id,
+          actorEmail: context.email,
+          action: operation === "rollback" ? "plans.rollback" : "plans.update",
+          outcome: failure.outcome,
+          request,
+          targetType: "plan_config",
+          metadata: { operation, reason: failure.code },
+        }),
+      ])
     } catch {
       return {
         ok: false as const,
-        message: "Өөрчлөлт хийгдээгүй. Аудитын бүртгэл бичигдээгүй тул үйлдлийг баталгаажуулсангүй.",
+        message: "Үйлдлийн үр дүнг баталгаажуулж чадсангүй. Хуудсаа шинэчилж идэвхтэй багцын тохиргоог шалгана уу.",
       }
     }
     return { ok: false as const, message: failure.message }
+  }
+}
+
+function parseStoredPlanLimits(value: unknown) {
+  try {
+    return PlanConfig.StoredLimitsSchema.parse(typeof value === "string" ? JSON.parse(value) : value)
+  } catch (error) {
+    throw new PlanConfigInvalidActiveError("Төлөвлөгөөний хувилбар хүчинтэй биш байна", { cause: error })
   }
 }
 
@@ -335,8 +437,6 @@ function nestPlanInput(raw: unknown) {
     expectedRevision: get("expectedRevision"),
     expectedActiveStateRevision: get("expectedActiveStateRevision"),
     note: get("note"),
-    sourceVersionID: get("sourceVersionID"),
-    confirmation: get("confirmation"),
     free: {
       promoTokens: get("free.promoTokens"),
       dailyRequests: get("free.dailyRequests"),
@@ -373,22 +473,14 @@ function mutationFailure(error: unknown) {
       code: "invalid_plan_config",
       message: "Төлөвлөгөөний хувилбар хүчинтэй биш байна.",
     }
-  if (error instanceof AdminPlanAuditWriteError)
-    return {
-      outcome: "failure" as const,
-      code: "audit_write_failed",
-      message: "Өөрчлөлт хийгдээгүй. Аудитын бүртгэл баталгаажаагүй тул үйлдлийг цуцаллаа.",
-    }
-  return { outcome: "failure" as const, code: "internal_error", message: "Төлөвлөгөөг өөрчлөх үед алдаа гарлаа." }
+  return {
+    outcome: "failure" as const,
+    code: "internal_error",
+    message:
+      "Үйлдлийн үр дүн тодорхойгүй байна. Дахин оролдохын өмнө хуудсаа шинэчилж идэвхтэй багцын тохиргоог шалгана уу.",
+  }
 }
 
 function iso(value: Date | string | number) {
   return (value instanceof Date ? value : new Date(value)).toISOString()
-}
-
-class AdminPlanAuditWriteError extends Error {
-  constructor(options?: ErrorOptions) {
-    super("audit_write_failed", options)
-    this.name = "AdminPlanAuditWriteError"
-  }
 }
