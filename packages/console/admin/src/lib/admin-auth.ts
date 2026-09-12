@@ -4,12 +4,13 @@ import {
   eq,
   exists,
   inArray,
+  is,
   isNull,
   notExists,
   or,
   sql,
+  SQL,
 } from "@mongolgpt/console-core/drizzle/index.js"
-import type { SQL } from "@mongolgpt/console-core/drizzle/index.js"
 import {
   hasPlatformAdminPermission,
   isPlatformAdminRole,
@@ -31,7 +32,7 @@ export interface AdminAuditInput {
   request: Request
   targetType?: string
   targetID?: string
-  metadata?: AuditMetadata
+  metadata?: AuditMetadata | SQL<AuditMetadata>
 }
 
 export class AdminAuthorizationError extends Error {
@@ -263,7 +264,10 @@ export function adminAuditQuery(tx: Database.TxOrDb, input: AdminAuditInput, con
         request_id: sql`${values.request_id}`.as("request_id"),
         source_ip: sql`${values.source_ip ?? null}`.as("source_ip"),
         user_agent: sql`${values.user_agent ?? null}`.as("user_agent"),
-        metadata: sql`${values.metadata === undefined ? null : JSON.stringify(values.metadata)}`.as("metadata"),
+        metadata:
+          sql`${values.metadata === undefined ? null : is(values.metadata, SQL) ? values.metadata : JSON.stringify(values.metadata)}`.as(
+            "metadata",
+          ),
         time_created: sql`${values.time_created.getTime()}`.as("time_created"),
       })
       .from(sql`(select 1)`)

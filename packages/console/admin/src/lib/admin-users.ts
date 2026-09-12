@@ -37,12 +37,7 @@ import { UserTable } from "@mongolgpt/console-core/schema/user.sql.js"
 import { WorkspaceTable } from "@mongolgpt/console-core/schema/workspace.sql.js"
 import { Subscription } from "@mongolgpt/console-core/subscription.js"
 import type { PlatformAdminContext } from "./admin-context"
-import {
-  AdminAuthorizationError,
-  requirePlatformAdminPermission,
-  writeAdminAudit,
-  writeAdminAuditWithDb,
-} from "./admin-auth"
+import { AdminAuthorizationError, requirePlatformAdminPermission, adminAuditQuery } from "./admin-auth"
 import { AdminMutationRequestError, requireSameOriginAdminMutation } from "./admin-mutation"
 
 const day = 86_400_000
@@ -521,7 +516,13 @@ export async function getAdminUserDetail(context: PlatformAdminContext, raw: unk
   })
 }
 
-export async function changeAdminAccountStatus(context: PlatformAdminContext, request: Request, raw: unknown) {
+export async function changeAdminAccountStatus(
+  context: PlatformAdminContext,
+  request: Request,
+  raw: unknown,
+  dependencies: { batch?: typeof Database.batch } = {},
+) {
+  const batch = dependencies.batch ?? Database.batch
   const targetID =
     typeof raw === "object" && raw !== null && "accountID" in raw && typeof raw.accountID === "string"
       ? raw.accountID.slice(0, 30)
@@ -535,72 +536,66 @@ export async function changeAdminAccountStatus(context: PlatformAdminContext, re
     requireSameOriginAdminMutation(request)
     const admin = requirePlatformAdminPermission(context, "users.suspend")
     const input = AdminAccountStatusInput.parse(raw)
-    return await Database.transaction(async (tx) => {
-      const target = await tx
-        .select({
-          id: AccountTable.id,
-          email: AuthTable.subject,
-        })
-        .from(AccountTable)
-        .leftJoin(
-          AuthTable,
-          and(eq(AuthTable.accountID, AccountTable.id), eq(AuthTable.provider, "email"), isNull(AuthTable.timeDeleted)),
-        )
-        .where(and(eq(AccountTable.id, input.accountID), isNull(AccountTable.timeDeleted)))
-      if (target.length === 0) throw new AdminAccountMutationError("not_found")
-      if (
-        input.operation === "suspend" &&
-        target.some((identity) => identity.email?.trim().toLowerCase() === admin.email)
-      ) {
-        throw new AdminAccountMutationError("self_suspend")
-      }
-
-      const transition = await AccountAccess.transition(tx, {
+    const transition = await AccountAccess.transition(
+      {
         accountID: input.accountID,
         adminID: admin.id,
         status: input.operation === "suspend" ? "suspended" : "active",
         reason: input.reason,
-      })
-      await writeAdminAuditWithDb(tx, {
-        adminID: admin.id,
-        actorEmail: admin.email,
-        action,
-        outcome: "success",
-        request,
-        targetType: "account",
-        targetID: input.accountID,
-        metadata: {
-          operation: input.operation,
-          reason: input.reason,
-          changed: transition.changed,
-          before: transition.before,
-          after: transition.after,
-          auth_version: transition.authVersion,
-          revoked_api_keys: transition.revokedApiKeys,
-        },
-      })
-      return {
-        ok: true as const,
-        accountID: input.accountID,
-        operation: input.operation,
-        changed: transition.changed,
-        message: transitionMessage(input.operation, transition.changed),
-      }
-    })
+      },
+      {
+        batch,
+        actor: { email: admin.email, subject: admin.subject },
+        effect: (tx, transition) => [
+          adminAuditQuery(tx, {
+            adminID: admin.id,
+            actorEmail: admin.email,
+            action,
+            outcome: "success",
+            request,
+            targetType: "account",
+            targetID: input.accountID,
+            metadata: sql`json_object(
+          'operation', ${input.operation}, 'reason', ${input.reason},
+          'changed', json(${transition.changed ? "true" : "false"}),
+          'before', ${transition.before}, 'after', ${transition.after},
+          'auth_version', ${transition.authVersion}, 'revoked_api_keys', ${transition.revokedApiKeys}
+        )`,
+          }),
+        ],
+      },
+    )
+    return {
+      ok: true as const,
+      accountID: input.accountID,
+      operation: input.operation,
+      changed: transition.changed,
+      message: transitionMessage(input.operation, transition.changed),
+    }
   } catch (error) {
     const failure = mutationFailure(error)
-    await writeAdminAudit({
-      adminID: context.id,
-      actorEmail: context.email,
-      action,
-      outcome: failure.outcome,
-      request,
-      targetType: "account",
-      targetID,
-      metadata: {
-        reason: failure.code,
-      },
-    })
+    try {
+      await batch((tx) => [
+        adminAuditQuery(tx, {
+          adminID: context.id,
+          actorEmail: context.email,
+          action,
+          outcome: failure.outcome,
+          request,
+          targetType: "account",
+          targetID,
+          metadata: {
+            reason: failure.code,
+          },
+        }),
+      ])
+    } catch {
+      return {
+        ok: false as const,
+        accountID: targetID,
+        message: "Үйлдлийн үр дүнг баталгаажуулж чадсангүй. Хуудсаа шинэчилж аккаунтын төлөвийг шалгана уу.",
+      }
+    }
     return {
       ok: false as const,
       accountID: targetID,
@@ -741,34 +736,23 @@ function mutationFailure(error: unknown) {
       message: "Аккаунтын ID, үйлдэл эсвэл шалтгаан буруу байна.",
     }
   }
-  if (error instanceof AdminAccountMutationError) {
-    return {
-      outcome: "denied" as const,
-      code: error.code,
-      message:
-        error.code === "self_suspend" ? "Өөрийн аккаунтыг түдгэлзүүлэх боломжгүй." : "Удирдах аккаунт олдсонгүй.",
-    }
-  }
   if (error instanceof AccountAccess.TransitionError) {
     return {
       outcome: error.code === "conflict" ? ("failure" as const) : ("denied" as const),
       code: error.code,
       message:
-        error.code === "conflict"
-          ? "Аккаунтын төлөв зэрэг өөрчлөгдсөн. Дахин оролдоно уу."
-          : "Удирдах аккаунт олдсонгүй.",
+        error.code === "self_suspend"
+          ? "Өөрийн аккаунтыг түдгэлзүүлэх боломжгүй."
+          : error.code === "forbidden"
+            ? "Аккаунтын төлөв өөрчлөх админы эрх хүрэлцэхгүй байна."
+            : error.code === "conflict"
+              ? "Аккаунтын төлөв зэрэг өөрчлөгдсөн. Дахин оролдоно уу."
+              : "Удирдах аккаунт олдсонгүй.",
     }
   }
   return {
     outcome: "failure" as const,
     code: "internal_error",
-    message: "Аккаунтын төлөв өөрчлөх үед алдаа гарлаа.",
-  }
-}
-
-class AdminAccountMutationError extends Error {
-  constructor(readonly code: "not_found" | "self_suspend") {
-    super(code)
-    this.name = "AdminAccountMutationError"
+    message: "Үйлдлийн үр дүн тодорхойгүй байна. Дахин оролдохын өмнө хуудсаа шинэчилж аккаунтын төлөвийг шалгана уу.",
   }
 }

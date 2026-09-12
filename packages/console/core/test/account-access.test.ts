@@ -6,6 +6,7 @@ import { AccountAccess } from "../src/account-access"
 import { AccountAccessPolicy } from "../src/account-access-policy"
 import type { Database } from "../src/drizzle"
 import * as schema from "../src/schema-d1"
+import { sqliteBatch } from "./fixtures/sqlite-batch"
 
 const active = {
   id: "acc_01K2A3B4C5D6E7F8G9H0J1K2M3",
@@ -77,6 +78,23 @@ describe("account access", () => {
     const drizzleDb: SQLiteBunDatabase<typeof schema> = drizzle({ client: sqlite, schema })
     // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- the test adapter implements the D1 subset
     const db = drizzleDb as unknown as Database.TxOrDb
+    const options: AccountAccess.TransitionOptions = {
+      actor: { email: "admin@example.test", subject: "verified-admin" },
+      batch: sqliteBatch(async (callback) => {
+        sqlite.exec("BEGIN")
+        try {
+          const result = await callback(db)
+          sqlite.exec("COMMIT")
+          return result
+        } catch (error) {
+          sqlite.exec("ROLLBACK")
+          throw error
+        }
+      }),
+    }
+    sqlite
+      .query("insert into platform_admin(id,email,access_subject,role,status) values (?,? ,?,'administrator','active')")
+      .run("adm_01K2A3B4C5D6E7F8G9H0J1K2M3", options.actor.email, options.actor.subject)
     const workspaceID = "wrk_account_access"
     const userID = "usr_account_access"
     const keyID = "key_account_access"
@@ -90,24 +108,30 @@ describe("account access", () => {
       .query("insert into key (id, workspace_id, name, key, user_id) values (?, ?, ?, ?, ?)")
       .run(keyID, workspaceID, "Before suspension", "mgpt_test_key", userID)
 
-    const suspended = await AccountAccess.transition(db, {
-      accountID: active.id,
-      adminID: "adm_01K2A3B4C5D6E7F8G9H0J1K2M3",
-      status: "suspended",
-      reason: "Үйлчилгээний нөхцөл зөрчсөн туршилтын шалтгаан.",
-    })
+    const suspended = await AccountAccess.transition(
+      {
+        accountID: active.id,
+        adminID: "adm_01K2A3B4C5D6E7F8G9H0J1K2M3",
+        status: "suspended",
+        reason: "Үйлчилгээний нөхцөл зөрчсөн туршилтын шалтгаан.",
+      },
+      options,
+    )
     expect(suspended).toMatchObject({
       changed: true,
       authVersion: 1,
       revokedApiKeys: 1,
     })
 
-    const reactivated = await AccountAccess.transition(db, {
-      accountID: active.id,
-      adminID: "adm_01K2A3B4C5D6E7F8G9H0J1K2M3",
-      status: "active",
-      reason: "Админ шалгаж дахин идэвхжүүлсэн туршилтын шалтгаан.",
-    })
+    const reactivated = await AccountAccess.transition(
+      {
+        accountID: active.id,
+        adminID: "adm_01K2A3B4C5D6E7F8G9H0J1K2M3",
+        status: "active",
+        reason: "Админ шалгаж дахин идэвхжүүлсэн туршилтын шалтгаан.",
+      },
+      options,
+    )
     expect(reactivated).toMatchObject({
       changed: true,
       authVersion: 1,
@@ -116,5 +140,6 @@ describe("account access", () => {
     expect(sqlite.query("select time_deleted from key where id = ?").get(keyID)).toEqual({
       time_deleted: expect.any(Number),
     })
+    sqlite.close()
   })
 })
