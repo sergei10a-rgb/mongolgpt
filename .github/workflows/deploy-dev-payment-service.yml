@@ -98,14 +98,14 @@ jobs:
           fi
           export SST_PULUMI_PATH="$adapter_file"
           export MONGOLGPT_PAYMENT_DIAGNOSTIC_FILE="$diagnostic_file"
-          if ! bun sst diff --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --json --print-logs >"$diff_file" 2>"$stderr_file"; then
+          if ! bun sst diff --stage=dev --target PaymentServiceScript,PaymentServiceUrl.sst.cloudflare.WorkerUrl --json --print-logs >"$diff_file" 2>"$stderr_file"; then
             echo "Disabled dev payment preview failed; private output was not printed."
             bun script/report-dev-payment-failure.ts "$diagnostic_file" "$diff_file" "$stderr_file"
             exit 1
           fi
           bun script/verify-payment-service-deployment.ts "$diff_file"
           : >"$diagnostic_file"
-          if ! bun sst deploy --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --print-logs >"$stdout_file" 2>"$stderr_file"; then
+          if ! bun sst deploy --stage=dev --target PaymentServiceScript,PaymentServiceUrl.sst.cloudflare.WorkerUrl --print-logs >"$stdout_file" 2>"$stderr_file"; then
             echo "Disabled dev payment deployment failed; inspect current state before retrying. Private output was not printed."
             bun script/report-dev-payment-failure.ts "$diagnostic_file" "$stdout_file" "$stderr_file"
             exit 1

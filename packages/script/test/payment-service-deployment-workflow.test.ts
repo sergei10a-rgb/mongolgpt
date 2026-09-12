@@ -93,9 +93,16 @@ test("payment deployment is manually confirmed, disabled, owner/dev-only and gua
   expect(ordered.every((index) => index >= 0)).toBe(true)
   expect(ordered).toEqual([...ordered].sort((left, right) => left - right))
   expect(commands.match(/bun sst [^\n]*/g)).toEqual([
-    'bun sst diff --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --json --print-logs >"$diff_file" 2>"$stderr_file"; then',
-    'bun sst deploy --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --print-logs >"$stdout_file" 2>"$stderr_file"; then',
+    'bun sst diff --stage=dev --target PaymentServiceScript,PaymentServiceUrl.sst.cloudflare.WorkerUrl --json --print-logs >"$diff_file" 2>"$stderr_file"; then',
+    'bun sst deploy --stage=dev --target PaymentServiceScript,PaymentServiceUrl.sst.cloudflare.WorkerUrl --print-logs >"$stdout_file" 2>"$stderr_file"; then',
   ])
+  for (const command of commands.match(/bun sst [^\n]*/g) ?? []) {
+    expect(command.match(/--target\b/g)).toHaveLength(1)
+    expect(command.match(/--target (\S+)/)?.[1].split(",")).toEqual([
+      "PaymentServiceScript",
+      "PaymentServiceUrl.sst.cloudflare.WorkerUrl",
+    ])
+  }
   expect(commands).not.toMatch(/sst (?:remove|state|refresh|unlock|secret|shell)|--decrypt|curl|wrangler|cat /)
   expect(source).not.toMatch(/continue-on-error|upload-artifact|REAL_PAYMENT_CONFIRMATION|secrets\.(?:QPAY|BONUM)/)
   const audit = Bun.YAML.parse(

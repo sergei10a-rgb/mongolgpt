@@ -61,7 +61,13 @@ test("payment service audit is manual, owner/dev-scoped and never deploys", asyn
   expect(preview.run.indexOf("exit 1")).toBeLessThan(preview.run.indexOf("bun sst diff"))
   const commands = steps.map((step) => step.run ?? "").join("\n")
   expect(commands.match(/bun sst [^\n]*/g)).toEqual([
-    'bun sst diff --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --json --print-logs >"$diff_file" 2>"$stderr_file"; then',
+    'bun sst diff --stage=dev --target PaymentServiceScript,PaymentServiceUrl.sst.cloudflare.WorkerUrl --json --print-logs >"$diff_file" 2>"$stderr_file"; then',
+  ])
+  // SST 4.17.1 reads one string flag and splits on commas; repeated flags overwrite the first target.
+  expect(commands.match(/--target\b/g)).toHaveLength(1)
+  expect(commands.match(/--target (\S+)/)?.[1].split(",")).toEqual([
+    "PaymentServiceScript",
+    "PaymentServiceUrl.sst.cloudflare.WorkerUrl",
   ])
   expect(commands).toContain("umask 077")
   expect(commands).toContain('mktemp "$RUNNER_TEMP/mongolgpt-payment-diff.XXXXXX"')
