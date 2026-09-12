@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { randomBytes } from "node:crypto"
 import { readFile, writeFile, readdir, stat, symlink } from "node:fs/promises"
 import { join } from "node:path"
@@ -70,6 +70,20 @@ async function rows(filename: string) {
 }
 
 describe("encrypted SQLite preservation", () => {
+  let corruptionFixture: Awaited<ReturnType<typeof encryptedCorruptionFixture>> | undefined
+
+  // Encrypt the large synthetic database once. The per-case restore still has
+  // its own default deadline, while setup and final Windows cleanup are bounded
+  // independently from Bun's five-second test timeout.
+  beforeAll(async () => {
+    corruptionFixture = await encryptedCorruptionFixture()
+  }, 30_000)
+
+  afterAll(async () => {
+    await corruptionFixture?.temp[Symbol.asyncDispose]()
+    corruptionFixture = undefined
+  }, 15_000)
+
   test("readonly adapter does not switch journal mode and releases uncached statement handles", async () => {
     await using temp = await tmpdir()
     const source = join(temp.path, "readonly.sqlite")
@@ -199,30 +213,25 @@ describe("encrypted SQLite preservation", () => {
   test.each(["wrong key", "magic", "nonce", "ciphertext", "tag", "truncated archive"] as const)(
     "rejects %s without publishing plaintext",
     async (corruption) => {
-      await using temp = await tmpdir()
-      const source = join(temp.path, "source.sqlite")
-      const archive = join(temp.path, "archive")
-      const key = randomBytes(32)
-      await seed(source)
-      await Effect.runPromise(DatabaseBackup.create({ source, destination: archive, key }))
-      const bytes = await readFile(archive)
+      const fixture = corruptionFixture!
+      const bytes = fixture.archive
       const altered = Buffer.from(bytes)
       const position = { magic: 0, nonce: 26, ciphertext: 100, tag: bytes.length - 1 }
       if (corruption !== "wrong key" && corruption !== "truncated archive") altered[position[corruption]] ^= 1
-      const input = join(temp.path, "altered")
-      const destination = join(temp.path, "rejected.sqlite")
+      const input = join(fixture.temp.path, `${corruption}-altered`)
+      const destination = join(fixture.temp.path, `${corruption}-rejected.sqlite`)
       await writeFile(input, corruption === "truncated archive" ? altered.subarray(0, bytes.length - 8) : altered)
       await expect(
         Effect.runPromise(
           DatabaseBackup.restore({
             source: input,
             destination,
-            key: corruption === "wrong key" ? randomBytes(32) : key,
+            key: corruption === "wrong key" ? randomBytes(32) : fixture.key,
           }),
         ),
       ).rejects.toThrow()
-      expect(await readdir(temp.path)).not.toContain("rejected.sqlite")
-      expect((await readdir(temp.path)).some((file) => file.startsWith(".mongolgpt-backup-"))).toBe(false)
+      expect(await readdir(fixture.temp.path)).not.toContain(`${corruption}-rejected.sqlite`)
+      expect((await readdir(fixture.temp.path)).some((file) => file.startsWith(".mongolgpt-backup-"))).toBe(false)
     },
   )
 
@@ -316,3 +325,18 @@ describe("encrypted SQLite preservation", () => {
     expect(await readdir(temp.path)).not.toContain("absent-target")
   })
 })
+
+async function encryptedCorruptionFixture() {
+  const temp = await tmpdir()
+  const source = join(temp.path, "source.sqlite")
+  const archive = join(temp.path, "archive")
+  const key = randomBytes(32)
+  try {
+    await seed(source)
+    await Effect.runPromise(DatabaseBackup.create({ source, destination: archive, key }))
+    return { temp, key, archive: await readFile(archive) }
+  } catch (error) {
+    await temp[Symbol.asyncDispose]()
+    throw error
+  }
+}
